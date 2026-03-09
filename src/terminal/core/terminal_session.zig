@@ -75,6 +75,19 @@ pub const PresentationFeedback = struct {
     alt_exit_info: ?AltExitPresentationInfo = null,
 };
 
+pub const PtyWriteGuard = struct {
+    mutex: *std.Thread.Mutex,
+    pty: *Pty,
+
+    pub fn write(self: *PtyWriteGuard, bytes: []const u8) !usize {
+        return self.pty.write(bytes);
+    }
+
+    pub fn unlock(self: *PtyWriteGuard) void {
+        self.mutex.unlock();
+    }
+};
+
 pub fn debugSnapshot(self: *TerminalSession) DebugSnapshot {
     if (!debugAccessAllowed()) @panic("debugSnapshot is test-only");
     return .{
@@ -589,6 +602,23 @@ pub const TerminalSession = struct {
         return self.hasData() or self.hasPublishedGenerationBacklog();
     }
 
+    pub fn lockPtyWriter(self: *TerminalSession) ?PtyWriteGuard {
+        if (self.pty) |*pty| {
+            self.pty_write_mutex.lock();
+            return .{
+                .mutex = &self.pty_write_mutex,
+                .pty = pty,
+            };
+        }
+        return null;
+    }
+
+    pub fn writePtyBytes(self: *TerminalSession, bytes: []const u8) !void {
+        var writer = self.lockPtyWriter() orelse return;
+        defer writer.unlock();
+        _ = try writer.write(bytes);
+    }
+
     pub fn sendKey(self: *TerminalSession, key: Key, mod: Modifier) !void {
         try self.sendKeyAction(key, mod, input_mod.KeyAction.press);
     }
@@ -609,9 +639,9 @@ pub const TerminalSession = struct {
                 key_mode_flags,
             });
         }
-        if (self.pty) |*pty| {
-            self.pty_write_mutex.lock();
-            defer self.pty_write_mutex.unlock();
+        if (self.lockPtyWriter()) |writer_guard| {
+            var writer = writer_guard;
+            defer writer.unlock();
             if (key_mode_flags == 0 and app_cursor and mod == types.VTERM_MOD_NONE and action == .press) {
                 const seq = switch (key) {
                     VTERM_KEY_UP => "\x1bOA",
@@ -626,14 +656,14 @@ pub const TerminalSession = struct {
                     if (isNavigationKey(key)) {
                         log.logf(.info, "sendKey path=app_cursor seq_len={d}", .{seq.len});
                     }
-                    _ = try pty.write(seq);
+                    _ = try writer.write(seq);
                     return;
                 }
             }
             if (isNavigationKey(key)) {
                 log.logf(.info, "sendKey path=encoded", .{});
             }
-            _ = try input_mod.sendKeyAction(pty, key, mod, key_mode_flags, action);
+            _ = try input_mod.sendKeyAction(writer.pty, key, mod, key_mode_flags, action);
         }
     }
 
@@ -660,9 +690,9 @@ pub const TerminalSession = struct {
                 alternate_meta != null,
             });
         }
-        if (self.pty) |*pty| {
-            self.pty_write_mutex.lock();
-            defer self.pty_write_mutex.unlock();
+        if (self.lockPtyWriter()) |writer_guard| {
+            var writer = writer_guard;
+            defer writer.unlock();
             if (key_mode_flags == 0 and app_cursor and mod == types.VTERM_MOD_NONE and action == .press) {
                 const seq = switch (key) {
                     VTERM_KEY_UP => "\x1bOA",
@@ -677,14 +707,14 @@ pub const TerminalSession = struct {
                     if (isNavigationKey(key)) {
                         log.logf(.info, "sendKey(meta) path=app_cursor seq_len={d}", .{seq.len});
                     }
-                    _ = try pty.write(seq);
+                    _ = try writer.write(seq);
                     return;
                 }
             }
             if (isNavigationKey(key)) {
                 log.logf(.info, "sendKey(meta) path=encoded", .{});
             }
-            _ = try input_mod.sendKeyActionEvent(pty, .{
+            _ = try input_mod.sendKeyActionEvent(writer.pty, .{
                 .key = key,
                 .mod = mod,
                 .key_mode_flags = key_mode_flags,
@@ -711,11 +741,11 @@ pub const TerminalSession = struct {
             app_keypad,
             key_mode_flags,
         });
-        if (self.pty) |*pty| {
-            self.pty_write_mutex.lock();
-            defer self.pty_write_mutex.unlock();
+        if (self.lockPtyWriter()) |writer_guard| {
+            var writer = writer_guard;
+            defer writer.unlock();
             if (action == .press) {
-                _ = try input_mod.sendKeypad(pty, key, mod, app_keypad, key_mode_flags);
+                _ = try input_mod.sendKeypad(writer.pty, key, mod, app_keypad, key_mode_flags);
             }
         }
     }
@@ -739,10 +769,10 @@ pub const TerminalSession = struct {
             @tagName(action),
             key_mode_flags,
         });
-        if (self.pty) |*pty| {
-            self.pty_write_mutex.lock();
-            defer self.pty_write_mutex.unlock();
-            _ = try input_mod.sendCharAction(pty, char, mod, key_mode_flags, action);
+        if (self.lockPtyWriter()) |writer_guard| {
+            var writer = writer_guard;
+            defer writer.unlock();
+            _ = try input_mod.sendCharAction(writer.pty, char, mod, key_mode_flags, action);
         } else {
             self.echoCharLocallyIfEnabled(char, mod, action);
         }
@@ -766,10 +796,10 @@ pub const TerminalSession = struct {
             key_mode_flags,
             alternate_meta != null,
         });
-        if (self.pty) |*pty| {
-            self.pty_write_mutex.lock();
-            defer self.pty_write_mutex.unlock();
-            _ = try input_mod.sendCharActionEvent(pty, .{
+        if (self.lockPtyWriter()) |writer_guard| {
+            var writer = writer_guard;
+            defer writer.unlock();
+            _ = try input_mod.sendCharActionEvent(writer.pty, .{
                 .codepoint = char,
                 .mod = mod,
                 .key_mode_flags = key_mode_flags,
@@ -794,10 +824,10 @@ pub const TerminalSession = struct {
     pub fn reportMouseEvent(self: *TerminalSession, event: MouseEvent) !bool {
         if (self.pty == null) return false;
         const screen = self.activeScreen();
-        if (self.pty) |*pty| {
-            self.pty_write_mutex.lock();
-            defer self.pty_write_mutex.unlock();
-            return self.input.reportMouseEvent(pty, event, screen.grid.rows, screen.grid.cols);
+        if (self.lockPtyWriter()) |writer_guard| {
+            var writer = writer_guard;
+            defer writer.unlock();
+            return self.input.reportMouseEvent(writer.pty, event, screen.grid.rows, screen.grid.cols);
         }
         return false;
     }
@@ -819,19 +849,19 @@ pub const TerminalSession = struct {
         if (text.len == 0) return;
         const log = app_logger.logger("terminal.input");
         log.logf(.info, "sendText len={d}", .{text.len});
-        if (self.pty) |*pty| {
-            self.pty_write_mutex.lock();
-            defer self.pty_write_mutex.unlock();
-            try input_mod.sendText(pty, text);
+        if (self.lockPtyWriter()) |writer_guard| {
+            var writer = writer_guard;
+            defer writer.unlock();
+            try input_mod.sendText(writer.pty, text);
         }
     }
 
     pub fn sendBytes(self: *TerminalSession, bytes: []const u8) !void {
         if (bytes.len == 0) return;
-        if (self.pty) |*pty| {
-            self.pty_write_mutex.lock();
-            defer self.pty_write_mutex.unlock();
-            _ = try pty.write(bytes);
+        if (self.lockPtyWriter()) |writer_guard| {
+            var writer = writer_guard;
+            defer writer.unlock();
+            _ = try writer.write(bytes);
         }
     }
 
@@ -841,10 +871,10 @@ pub const TerminalSession = struct {
             log.logf(.debug, "focus report skipped focused={d} reason=disabled", .{@intFromBool(focused)});
             return false;
         }
-        if (self.pty) |*pty| {
-            self.pty_write_mutex.lock();
-            defer self.pty_write_mutex.unlock();
-            _ = try pty.write(if (focused) "\x1b[I" else "\x1b[O");
+        if (self.lockPtyWriter()) |writer_guard| {
+            var writer = writer_guard;
+            defer writer.unlock();
+            _ = try writer.write(if (focused) "\x1b[I" else "\x1b[O");
             return true;
         }
         log.logf(.warning, "focus report dropped focused={d} reason=missing-pty", .{@intFromBool(focused)});
@@ -858,12 +888,12 @@ pub const TerminalSession = struct {
             log.logf(.debug, "color-scheme report skipped dark={d} reason=disabled", .{@intFromBool(dark)});
             return false;
         }
-        if (self.pty) |*pty| {
+        if (self.lockPtyWriter()) |writer_guard| {
+            var writer = writer_guard;
             var buf: [16]u8 = undefined;
             const seq = try std.fmt.bufPrint(&buf, "\x1b[?997;{d}n", .{if (dark) @as(u8, 1) else @as(u8, 2)});
-            self.pty_write_mutex.lock();
-            defer self.pty_write_mutex.unlock();
-            _ = try pty.write(seq);
+            defer writer.unlock();
+            _ = try writer.write(seq);
             return true;
         }
         log.logf(.warning, "color-scheme report dropped dark={d} reason=missing-pty", .{@intFromBool(dark)});
@@ -877,7 +907,8 @@ pub const TerminalSession = struct {
 
     fn reportInBandResize2048(self: *TerminalSession, rows: u16, cols: u16) !void {
         if (!self.inband_resize_notifications_2048) return;
-        if (self.pty) |*pty| {
+        if (self.lockPtyWriter()) |writer_guard| {
+            var writer = writer_guard;
             const rows_px: u32 = @as(u32, rows) * @as(u32, self.cell_height);
             const cols_px: u32 = @as(u32, cols) * @as(u32, self.cell_width);
             var buf: [64]u8 = undefined;
@@ -886,9 +917,8 @@ pub const TerminalSession = struct {
                 "\x1b[48;{d};{d};{d};{d}t",
                 .{ rows, cols, rows_px, cols_px },
             );
-            self.pty_write_mutex.lock();
-            defer self.pty_write_mutex.unlock();
-            _ = try pty.write(seq);
+            defer writer.unlock();
+            _ = try writer.write(seq);
         }
     }
 
@@ -1514,10 +1544,10 @@ pub const TerminalSession = struct {
             try self.kitty_osc5522_clipboard_png.appendSlice(self.allocator, png_bytes);
         }
 
-        if (self.pty) |*pty| {
-            self.pty_write_mutex.lock();
-            defer self.pty_write_mutex.unlock();
-            osc_kitty_clipboard.sendPasteEventMimes(self, pty, .st);
+        if (self.lockPtyWriter()) |writer_guard| {
+            var writer = writer_guard;
+            defer writer.unlock();
+            osc_kitty_clipboard.sendPasteEventMimes(self, &writer, .st);
             return true;
         }
         log.logf(.warning, "osc5522 paste dropped after buffer prep reason=missing-pty", .{});

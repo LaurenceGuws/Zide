@@ -1782,7 +1782,6 @@ pub fn writeKittyResponse(self: anytype, control: KittyControl, image_id: u32, o
     const log = app_logger.logger("terminal.kitty");
     if (control.quiet == 2) return;
     if (control.quiet == 1 and ok) return;
-    if (self.pty == null) return;
     var seq = std.ArrayList(u8).empty;
     defer seq.deinit(self.allocator);
     _ = seq.appendSlice(self.allocator, "\x1b_G") catch |err| {
@@ -1830,12 +1829,9 @@ pub fn writeKittyResponse(self: anytype, control: KittyControl, image_id: u32, o
         log.logf(.warning, "kitty response terminator append failed err={s}", .{@errorName(err)});
         return;
     };
-    if (self.pty) |*pty| {
-        _ = pty.write(seq.items) catch |err| blk: {
-            app_logger.logger("terminal.kitty").logf(.warning, "kitty response write failed len={d} err={s}", .{ seq.items.len, @errorName(err) });
-            break :blk 0;
-        };
-    }
+    self.writePtyBytes(seq.items) catch |err| {
+        app_logger.logger("terminal.kitty").logf(.warning, "kitty response write failed len={d} err={s}", .{ seq.items.len, @errorName(err) });
+    };
 }
 
 pub fn clearKittyImages(self: anytype) void {
