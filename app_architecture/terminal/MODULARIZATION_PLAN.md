@@ -356,7 +356,7 @@ Statuses are strict:
   - 2026-03-09: DCS/CSI/OSC/kitty reply paths and input-mode queries were rewired onto the session-owned write contract, while reply-byte unit tests were kept intact by teaching the test harnesses the same locked-writer surface.
 
 3) Session state/publication locking cleanup
-- status: `todo`
+- status: `done`
 - priority: `P0`
 - scope:
   - remove unlocked mutation/publication paths such as default-color/theme publication
@@ -366,6 +366,12 @@ Statuses are strict:
   - `src/terminal/core/terminal_session.zig`
   - `src/terminal/protocol/palette.zig`
   - `src/app/terminal_theme_apply.zig`
+- progress:
+  - 2026-03-09: first slice landed on feature branch work: default-color publication now has an explicit `setDefaultColorsLocked(...)` contract for parser-owned state mutations, and app-side theme application now uses `applyThemePalette(...)` so palette capture, default-color mutation, ANSI replacement, and remap happen under one session lock instead of a partly unlocked sequence.
+  - 2026-03-09: second slice landed on feature branch work: OSC palette and dynamic-color protocol handlers now mutate session palette/default state through explicit locked helpers (`setPaletteColorLocked(...)`, `resetAllPaletteColorsLocked(...)`, `setDynamicColorCodeLocked(...)`) instead of reaching into raw session fields ad hoc.
+  - 2026-03-09: third slice landed on feature branch work: parser-owned synchronized-update and DECCOLM mode changes now call explicit locked session helpers (`setSyncUpdatesLocked(...)`, `setColumnMode132Locked(...)`) instead of generic mutators with ambiguous lock ownership, aligning the protocol/session seam more closely with kitty-style parser-held mutation and Ghostty-style explicit lock contracts.
+  - 2026-03-09: fourth slice landed on feature branch work: public scrollback viewport mutation (`setScrollOffset(...)`, `scrollBy(...)`) and cell-size updates now take the session lock, while resize/reflow uses explicit locked viewport helpers when it already owns the lock. This removes another UI-thread mutation path that previously raced parser-owned session state.
+  - 2026-03-09: fifth slice landed on feature branch work: terminal selection mutation now follows the same split as other shared session state. UI-facing selection APIs lock, while parser-owned/internal paths use explicit locked helpers (`clearSelectionLocked(...)`, `startSelectionLocked(...)`, `updateSelectionLocked(...)`, `finishSelectionLocked(...)`) when they already hold the session mutex.
 
 4) `TerminalSession` surface reduction
 - status: `todo`
