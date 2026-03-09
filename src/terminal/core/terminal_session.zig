@@ -414,7 +414,7 @@ pub const TerminalSession = struct {
         return self.active == .alt;
     }
 
-    pub fn setDefaultColors(self: *TerminalSession, fg: types.Color, bg: types.Color) void {
+    pub fn setDefaultColorsLocked(self: *TerminalSession, fg: types.Color, bg: types.Color) void {
         const old_attrs = self.primary.default_attrs;
         var new_attrs = types.defaultCell().attrs;
         new_attrs.fg = fg;
@@ -427,9 +427,13 @@ pub const TerminalSession = struct {
         self.updateViewCacheNoLock(self.output_generation.load(.acquire), self.history.scrollOffset());
     }
 
-    pub fn setAnsiColors(self: *TerminalSession, colors: [16]types.Color) void {
+    pub fn setDefaultColors(self: *TerminalSession, fg: types.Color, bg: types.Color) void {
         self.lock();
         defer self.unlock();
+        self.setDefaultColorsLocked(fg, bg);
+    }
+
+    fn setAnsiColorsLocked(self: *TerminalSession, colors: [16]types.Color) void {
         for (0..16) |i| {
             self.palette_default[i] = colors[i];
             self.palette_current[i] = colors[i];
@@ -437,13 +441,81 @@ pub const TerminalSession = struct {
         self.updateViewCacheNoLock(self.output_generation.load(.acquire), self.history.scrollOffset());
     }
 
-    pub fn remapAnsiColors(self: *TerminalSession, old_colors: [16]types.Color, new_colors: [16]types.Color) void {
+    pub fn setAnsiColors(self: *TerminalSession, colors: [16]types.Color) void {
         self.lock();
         defer self.unlock();
+        self.setAnsiColorsLocked(colors);
+    }
+
+    fn remapAnsiColorsLocked(self: *TerminalSession, old_colors: [16]types.Color, new_colors: [16]types.Color) void {
         self.primary.updateAnsiColors(old_colors, new_colors);
         self.alt.updateAnsiColors(old_colors, new_colors);
         self.history.updateAnsiColors(old_colors, new_colors);
         self.updateViewCacheNoLock(self.output_generation.load(.acquire), self.history.scrollOffset());
+    }
+
+    pub fn remapAnsiColors(self: *TerminalSession, old_colors: [16]types.Color, new_colors: [16]types.Color) void {
+        self.lock();
+        defer self.unlock();
+        self.remapAnsiColorsLocked(old_colors, new_colors);
+    }
+
+    fn snapshotAnsiColorsLocked(self: *const TerminalSession) [16]types.Color {
+        var colors: [16]types.Color = undefined;
+        for (0..16) |i| {
+            colors[i] = self.palette_current[i];
+        }
+        return colors;
+    }
+
+    pub fn setPaletteColorLocked(self: *TerminalSession, idx: usize, color: types.Color) void {
+        if (idx >= self.palette_current.len) return;
+        self.palette_current[idx] = color;
+    }
+
+    pub fn resetPaletteColorLocked(self: *TerminalSession, idx: usize) void {
+        if (idx >= self.palette_current.len) return;
+        self.palette_current[idx] = self.palette_default[idx];
+    }
+
+    pub fn resetAllPaletteColorsLocked(self: *TerminalSession) void {
+        self.palette_current = self.palette_default;
+    }
+
+    pub fn setDynamicColorCodeLocked(self: *TerminalSession, code: u8, color: ?types.Color) void {
+        switch (code) {
+            10 => {
+                const default_attrs = self.primary.default_attrs;
+                self.setDefaultColorsLocked(color orelse self.base_default_attrs.fg, default_attrs.bg);
+            },
+            11 => {
+                const default_attrs = self.primary.default_attrs;
+                self.setDefaultColorsLocked(default_attrs.fg, color orelse self.base_default_attrs.bg);
+            },
+            else => {
+                const idx = @as(usize, code - 10);
+                if (idx < self.dynamic_colors.len) {
+                    self.dynamic_colors[idx] = color;
+                }
+            },
+        }
+    }
+
+    pub fn applyThemePalette(
+        self: *TerminalSession,
+        fg: types.Color,
+        bg: types.Color,
+        ansi: ?[16]types.Color,
+    ) void {
+        self.lock();
+        defer self.unlock();
+
+        const old_ansi = if (ansi != null) self.snapshotAnsiColorsLocked() else undefined;
+        self.setDefaultColorsLocked(fg, bg);
+        if (ansi) |colors| {
+            self.setAnsiColorsLocked(colors);
+            self.remapAnsiColorsLocked(old_ansi, colors);
+        }
     }
 
     pub fn deinit(self: *TerminalSession) void {
@@ -923,6 +995,12 @@ pub const TerminalSession = struct {
     }
 
     pub fn setColumnMode132(self: *TerminalSession, enabled: bool) void {
+        self.lock();
+        defer self.unlock();
+        self.setColumnMode132Locked(enabled);
+    }
+
+    pub fn setColumnMode132Locked(self: *TerminalSession, enabled: bool) void {
         if (self.column_mode_132 == enabled) return;
         self.column_mode_132 = enabled;
         if (!enabled) return;
@@ -935,6 +1013,8 @@ pub const TerminalSession = struct {
     }
 
     pub fn setCellSize(self: *TerminalSession, cell_width: u16, cell_height: u16) void {
+        self.lock();
+        defer self.unlock();
         self.cell_width = cell_width;
         self.cell_height = cell_height;
     }
@@ -990,7 +1070,7 @@ pub const TerminalSession = struct {
         const blank_cell = screen.blankCell();
         screen.eraseDisplay(mode, blank_cell);
         if (mode == 2 or mode == 3) {
-            self.clearSelection();
+            self.clearSelectionLocked();
             _ = self.clear_generation.fetchAdd(1, .acq_rel);
         }
     }
@@ -1100,8 +1180,16 @@ pub const TerminalSession = struct {
         scrollback_view.setScrollOffset(self, offset);
     }
 
+    pub fn setScrollOffsetLocked(self: *TerminalSession, offset: usize) void {
+        scrollback_view.setScrollOffsetLocked(self, offset);
+    }
+
     pub fn scrollBy(self: *TerminalSession, delta: isize) void {
         scrollback_view.scrollBy(self, delta);
+    }
+
+    pub fn scrollByLocked(self: *TerminalSession, delta: isize) void {
+        scrollback_view.scrollByLocked(self, delta);
     }
 
     pub fn updateViewCacheForScroll(self: *TerminalSession) void {
@@ -1315,7 +1403,7 @@ pub const TerminalSession = struct {
             self.saveCursor();
         }
         self.history.saveScrollOffset();
-        self.clearSelection();
+        self.clearSelectionLocked();
         self.setActiveScreenMode(.alt);
         kitty_mod.clearKittyImages(self);
         if (clear) {
@@ -1332,7 +1420,7 @@ pub const TerminalSession = struct {
         self.alt_exit_pending.store(true, .release);
         self.alt_exit_time_ms.store(std.time.milliTimestamp(), .release);
         self.history.restoreScrollOffset(self.primary.grid.rows);
-        self.clearSelection();
+        self.clearSelectionLocked();
         if (restore_cursor) {
             self.restoreCursor();
         }
@@ -1413,6 +1501,12 @@ pub const TerminalSession = struct {
     }
 
     pub fn setSyncUpdates(self: *TerminalSession, enabled: bool) void {
+        self.lock();
+        defer self.unlock();
+        self.setSyncUpdatesLocked(enabled);
+    }
+
+    pub fn setSyncUpdatesLocked(self: *TerminalSession, enabled: bool) void {
         if (self.sync_updates_active == enabled) return;
         self.sync_updates_active = enabled;
         const offset: usize = self.history.scrollOffset();
@@ -1460,16 +1554,32 @@ pub const TerminalSession = struct {
         selection_mod.clearSelection(self);
     }
 
+    pub fn clearSelectionLocked(self: *TerminalSession) void {
+        selection_mod.clearSelectionLocked(self);
+    }
+
     pub fn startSelection(self: *TerminalSession, row: usize, col: usize) void {
         selection_mod.startSelection(self, row, col);
+    }
+
+    pub fn startSelectionLocked(self: *TerminalSession, row: usize, col: usize) void {
+        selection_mod.startSelectionLocked(self, row, col);
     }
 
     pub fn updateSelection(self: *TerminalSession, row: usize, col: usize) void {
         selection_mod.updateSelection(self, row, col);
     }
 
+    pub fn updateSelectionLocked(self: *TerminalSession, row: usize, col: usize) void {
+        selection_mod.updateSelectionLocked(self, row, col);
+    }
+
     pub fn finishSelection(self: *TerminalSession) void {
         selection_mod.finishSelection(self);
+    }
+
+    pub fn finishSelectionLocked(self: *TerminalSession) void {
+        selection_mod.finishSelectionLocked(self);
     }
 
     pub fn selectionState(self: *TerminalSession) ?TerminalSelection {

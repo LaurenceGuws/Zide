@@ -348,7 +348,7 @@ pub fn handleCsi(self: anytype, action: parser_csi.CsiAction) void {
                         1 => {
                             self.setAppCursorKeys(true);
                         },
-                        3 => self.setColumnMode132(true),
+                        3 => self.setColumnMode132Locked(true),
                         5 => self.activeScreen().*.setScreenReverse(true),
                         6 => self.activeScreen().*.setOriginMode(true),
                         7 => self.activeScreen().*.setAutowrap(true),
@@ -372,7 +372,7 @@ pub fn handleCsi(self: anytype, action: parser_csi.CsiAction) void {
                         2004 => {
                             self.setBracketedPaste(true);
                         },
-                        2026 => self.setSyncUpdates(true),
+                        2026 => self.setSyncUpdatesLocked(true),
                         2027 => {
                             self.grapheme_cluster_shaping_2027 = true;
                             self.primary.setGraphemeClusterShaping2027(true);
@@ -430,7 +430,7 @@ pub fn handleCsi(self: anytype, action: parser_csi.CsiAction) void {
                         1 => {
                             self.setAppCursorKeys(false);
                         },
-                        3 => self.setColumnMode132(false),
+                        3 => self.setColumnMode132Locked(false),
                         5 => self.activeScreen().*.setScreenReverse(false),
                         6 => self.activeScreen().*.setOriginMode(false),
                         7 => self.activeScreen().*.setAutowrap(false),
@@ -454,7 +454,7 @@ pub fn handleCsi(self: anytype, action: parser_csi.CsiAction) void {
                         2004 => {
                             self.setBracketedPaste(false);
                         },
-                        2026 => self.setSyncUpdates(false),
+                        2026 => self.setSyncUpdatesLocked(false),
                         2027 => {
                             self.grapheme_cluster_shaping_2027 = false;
                             self.primary.setGraphemeClusterShaping2027(false);
@@ -584,7 +584,7 @@ fn applyDecstr(self: anytype) void {
     self.kitty_paste_events_5522 = false;
     self.resetInputModes();
     self.column_mode_132 = false;
-    self.setSyncUpdates(false);
+    self.setSyncUpdatesLocked(false);
 
     // Reset kitty graphics state across both screens as part of DECSTR.
     // This follows foot-style soft reset behavior and avoids hidden-screen leaks.
