@@ -752,6 +752,267 @@ const KittyStorageOps = struct {
     }
 };
 
+const KittyProtocolOps = struct {
+    pub fn parseAndDispatch(self: anytype, payload: []const u8) void {
+        const log = app_logger.logger("terminal.kitty");
+        var control = KittyControl{};
+        var raw_kv = std.ArrayList(KittyKV).empty;
+        defer raw_kv.deinit(self.allocator);
+        const data = parseControl(self.allocator, payload, &control, &raw_kv);
+        if (!validateControl(control)) {
+            log.logf(.info, "kitty invalid command a={c} data_len={d}", .{ control.action, data.len });
+            writeResponse(self, control, resolveImageId(control) orelse 0, false, "EINVAL");
+            return;
+        }
+        switch (control.action) {
+            'd' => handleDelete(self, control),
+            'p' => handlePlacementRequest(self, control),
+            'q' => handleQuery(self, control, data),
+            't', 'T' => handleUpload(self, control, data),
+            else => {},
+        }
+    }
+
+    fn handleDelete(self: anytype, control: KittyControl) void {
+        if (!deleteKittyByAction(self, control)) {
+            writeResponse(self, control, resolveImageId(control) orelse 0, false, "EINVAL");
+        }
+    }
+
+    fn handlePlacementRequest(self: anytype, control: KittyControl) void {
+        const image_id = resolveImageId(control) orelse return;
+        if (placeKittyImage(self, image_id, control)) |err_msg| {
+            writeResponse(self, control, image_id, false, err_msg);
+            return;
+        }
+        writeResponse(self, control, image_id, true, "OK");
+    }
+
+    fn handleQuery(self: anytype, control: KittyControl, data: []const u8) void {
+        if (handleQueryEarlyReply(self, control, data.len)) return;
+
+        const image_id = resolveImageId(control).?;
+        var query_control = control;
+        if (query_control.format == 0) {
+            query_control.format = 32;
+        }
+        if (handleQueryPayloadPreflightReply(self, query_control, image_id)) return;
+
+        var chunk = KittyTransport.loadPayload(self, &query_control, data) orelse {
+            handleQueryPayloadLoadFailureReply(self, query_control, image_id);
+            return;
+        };
+        chunk = inflateQueryChunk(self, query_control, image_id, chunk) orelse return;
+        defer self.allocator.free(chunk);
+
+        if (handleQueryPayloadSizeReply(self, query_control, image_id, chunk.len)) return;
+        _ = handleQueryChunkBuildReply(self, query_control, image_id, chunk.len, QueryBuilder{ .chunk = chunk }, QueryBuilder.run);
+    }
+
+    fn handleUpload(self: anytype, control: KittyControl, data: []const u8) void {
+        const log = app_logger.logger("terminal.kitty");
+        const upload = resolveUpload(self, control) orelse return;
+        var upload_control = upload.control;
+
+        const decoded = KittyTransport.loadPayload(self, &upload_control, data) orelse {
+            log.logf(.info, "kitty decode failed len={d}", .{data.len});
+            clearKittyLoading(kittyState(self), upload.image_id);
+            writeResponse(self, upload_control, upload.image_id, false, "EINVAL");
+            return;
+        };
+
+        const final_data = KittyTransport.accumulate(self, upload.image_id, &upload_control, decoded) orelse {
+            if (!upload_control.more) {
+                clearKittyLoading(kittyState(self), upload.image_id);
+            }
+            return;
+        };
+
+        finishUpload(self, upload_control, upload.image_id, final_data);
+    }
+
+    fn finishUpload(self: anytype, control: KittyControl, image_id: u32, final_data: []u8) void {
+        const log = app_logger.logger("terminal.kitty");
+        var upload_control = control;
+        defer clearKittyLoading(kittyState(self), image_id);
+
+        if (upload_control.format == 0) {
+            upload_control.format = 32;
+        }
+        if (handleUploadSizeReply(self, upload_control, image_id, final_data)) return;
+
+        const image = KittyTransport.buildImage(self, image_id, upload_control, final_data) catch |err| {
+            log.logf(.info, "kitty build failed id={d} format={d} data_len={d}", .{ image_id, upload_control.format, final_data.len });
+            writeResponse(self, upload_control, image_id, false, queryBuildErrorReplyMessage(err));
+            return;
+        };
+        KittyStorageOps.store(self, image);
+        if (upload_control.action == 'T') {
+            if (placeKittyImage(self, image_id, upload_control)) |err_msg| {
+                writeResponse(self, upload_control, image_id, false, err_msg);
+                return;
+            }
+        }
+        writeResponse(self, upload_control, image_id, true, "OK");
+    }
+
+    fn handleUploadSizeReply(self: anytype, control: KittyControl, image_id: u32, final_data: []u8) bool {
+        if (KittyTransport.expectedDataBytes(control)) |expected| {
+            if (final_data.len < expected) {
+                var message = std.ArrayList(u8).empty;
+                defer message.deinit(self.allocator);
+                _ = message.writer(self.allocator).print(
+                    "ENODATA:Insufficient image data: {d} < {d}",
+                    .{ final_data.len, expected },
+                ) catch {
+                    self.allocator.free(final_data);
+                    return true;
+                };
+                self.allocator.free(final_data);
+                writeResponse(self, control, image_id, false, message.items);
+                return true;
+            }
+        }
+        return false;
+    }
+
+    fn handleQueryEarlyReply(self: anytype, control: KittyControl, data_len: usize) bool {
+        const image_id = resolveImageId(control) orelse return true;
+        if (data_len == 0 and control.size == 0 and control.width == 0 and control.height == 0) {
+            writeResponse(self, control, image_id, true, "OK");
+            return true;
+        }
+        return false;
+    }
+
+    fn handleQueryPayloadPreflightReply(self: anytype, control: KittyControl, image_id: u32) bool {
+        if (control.more or control.offset != 0) {
+            writeResponse(self, control, image_id, false, "EINVAL");
+            return true;
+        }
+        return false;
+    }
+
+    fn handleQueryPayloadLoadFailureReply(self: anytype, control: KittyControl, image_id: u32) void {
+        writeResponse(self, control, image_id, false, "EINVAL");
+    }
+
+    fn handleQueryPayloadSizeReply(self: anytype, control: KittyControl, image_id: u32, chunk_len: usize) bool {
+        const log = app_logger.logger("terminal.kitty");
+        if (KittyTransport.expectedDataBytes(control)) |expected| {
+            if (chunk_len < expected) {
+                var message = std.ArrayList(u8).empty;
+                defer message.deinit(self.allocator);
+                _ = message.writer(self.allocator).print(
+                    "ENODATA:Insufficient image data: {d} < {d}",
+                    .{ chunk_len, expected },
+                ) catch |err| {
+                    log.logf(.warning, "kitty query payload size message format failed len={d} expected={d} err={s}", .{ chunk_len, expected, @errorName(err) });
+                    return false;
+                };
+                writeResponse(self, control, image_id, false, message.items);
+                return true;
+            }
+        }
+        return false;
+    }
+
+    fn handleQueryChunkBuildReply(
+        self: anytype,
+        control: KittyControl,
+        image_id: u32,
+        chunk_len: usize,
+        builder_ctx: anytype,
+        comptime build_fn: anytype,
+    ) bool {
+        if (handleQueryPayloadSizeReply(self, control, image_id, chunk_len)) {
+            return true;
+        }
+        build_fn(builder_ctx, self, image_id, control) catch |err| {
+            writeResponse(self, control, image_id, false, queryBuildErrorReplyMessage(err));
+            return true;
+        };
+        writeResponse(self, control, image_id, true, "OK");
+        return true;
+    }
+
+    fn queryBuildErrorReplyMessage(err: KittyBuildError) []const u8 {
+        return switch (err) {
+            error.BadPng => "EBADPNG",
+            else => "EINVAL",
+        };
+    }
+
+    fn inflateQueryChunk(self: anytype, control: KittyControl, image_id: u32, chunk: []u8) ?[]u8 {
+        if (control.compression == 'z') {
+            const inflated = KittyTransport.inflate(self, chunk, control.size) orelse {
+                self.allocator.free(chunk);
+                writeResponse(self, control, image_id, false, "EINVAL");
+                return null;
+            };
+            self.allocator.free(chunk);
+            return inflated;
+        }
+        if (control.compression != 0) {
+            self.allocator.free(chunk);
+            writeResponse(self, control, image_id, false, "EINVAL");
+            return null;
+        }
+        return chunk;
+    }
+
+    fn resolveUpload(self: anytype, control: KittyControl) ?UploadResolution {
+        const kitty = kittyState(self);
+        var upload_control = control;
+        var image_id = resolveImageId(upload_control);
+        if (kitty.loading_image_id) |loading_id| {
+            if (image_id) |explicit_id| {
+                if (explicit_id != loading_id and upload_control.more) {
+                    kitty.loading_image_id = null;
+                    writeResponse(self, upload_control, explicit_id, false, "EINVAL");
+                    return null;
+                }
+            } else {
+                image_id = loading_id;
+            }
+        }
+        if (image_id == null) {
+            const id = kitty.next_id;
+            kitty.next_id += 1;
+            image_id = id;
+        }
+        const final_image_id = image_id.?;
+        if (upload_control.more and kitty.loading_image_id == null) {
+            kitty.loading_image_id = final_image_id;
+        }
+        if (upload_control.format == 0 and kitty.partials.getEntry(final_image_id) == null) {
+            upload_control.format = 32;
+        }
+        return .{ .image_id = final_image_id, .control = upload_control };
+    }
+
+    fn parseControl(
+        allocator: std.mem.Allocator,
+        payload: []const u8,
+        control: *KittyControl,
+        raw_kv: *std.ArrayList(KittyKV),
+    ) []const u8 {
+        return parseKittyControl(allocator, payload, control, raw_kv);
+    }
+
+    fn validateControl(control: KittyControl) bool {
+        return validateKittyControl(control);
+    }
+
+    fn resolveImageId(control: KittyControl) ?u32 {
+        return resolveKittyImageId(control);
+    }
+
+    fn writeResponse(self: anytype, control: KittyControl, image_id: u32, ok: bool, message: []const u8) void {
+        writeKittyResponse(self, control, image_id, ok, message);
+    }
+};
+
 pub const KittyState = struct {
     images: std.ArrayList(KittyImage),
     placements: std.ArrayList(KittyPlacement),
@@ -793,135 +1054,7 @@ pub fn deinitKittyState(self: anytype, state: *KittyState) void {
 }
 
 pub fn parseKittyGraphics(self: anytype, payload: []const u8) void {
-    const log = app_logger.logger("terminal.kitty");
-    var control = KittyControl{};
-    var raw_kv = std.ArrayList(KittyKV).empty;
-    defer raw_kv.deinit(self.allocator);
-    const data = parseKittyControl(self.allocator, payload, &control, &raw_kv);
-    if (!validateKittyControl(control)) {
-        log.logf(.info, "kitty invalid command a={c} data_len={d}", .{ control.action, data.len });
-        writeKittyResponse(self, control, resolveKittyImageId(control) orelse 0, false, "EINVAL");
-        return;
-    }
-    if (control.action == 'd') {
-        handleKittyDelete(self, control);
-        return;
-    }
-
-    if (control.action == 'p') {
-        handleKittyPlacementRequest(self, control);
-        return;
-    }
-
-    if (control.action == 'q') {
-        handleKittyQuery(self, control, data);
-        return;
-    }
-    if (control.action != 't' and control.action != 'T') return;
-    handleKittyUpload(self, control, data);
-}
-
-fn handleKittyDelete(self: anytype, control: KittyControl) void {
-    if (!deleteKittyByAction(self, control)) {
-        writeKittyResponse(self, control, resolveKittyImageId(control) orelse 0, false, "EINVAL");
-    }
-}
-
-fn handleKittyPlacementRequest(self: anytype, control: KittyControl) void {
-    const image_id = resolveKittyImageId(control) orelse return;
-    if (placeKittyImage(self, image_id, control)) |err_msg| {
-        writeKittyResponse(self, control, image_id, false, err_msg);
-        return;
-    }
-    writeKittyResponse(self, control, image_id, true, "OK");
-}
-
-pub fn handleKittyQueryEarlyReply(self: anytype, control: KittyControl, data_len: usize) bool {
-    const image_id = resolveKittyImageId(control) orelse return true;
-    if (data_len == 0 and control.size == 0 and control.width == 0 and control.height == 0) {
-        writeKittyResponse(self, control, image_id, true, "OK");
-        return true;
-    }
-    return false;
-}
-
-pub fn handleKittyQueryPayloadPreflightReply(self: anytype, control: KittyControl, image_id: u32) bool {
-    if (control.more or control.offset != 0) {
-        writeKittyResponse(self, control, image_id, false, "EINVAL");
-        return true;
-    }
-    return false;
-}
-
-pub fn handleKittyQueryPayloadLoadFailureReply(self: anytype, control: KittyControl, image_id: u32) void {
-    writeKittyResponse(self, control, image_id, false, "EINVAL");
-}
-
-pub fn handleKittyQueryPayloadSizeReply(self: anytype, control: KittyControl, image_id: u32, chunk_len: usize) bool {
-    const log = app_logger.logger("terminal.kitty");
-    if (KittyTransport.expectedDataBytes(control)) |expected| {
-        if (chunk_len < expected) {
-            var message = std.ArrayList(u8).empty;
-            defer message.deinit(self.allocator);
-            _ = message.writer(self.allocator).print(
-                "ENODATA:Insufficient image data: {d} < {d}",
-                .{ chunk_len, expected },
-            ) catch |err| {
-                log.logf(.warning, "kitty query payload size message format failed len={d} expected={d} err={s}", .{ chunk_len, expected, @errorName(err) });
-                return false;
-            };
-            writeKittyResponse(self, control, image_id, false, message.items);
-            return true;
-        }
-    }
-    return false;
-}
-
-pub fn handleKittyQueryChunkBuildReply(
-    self: anytype,
-    control: KittyControl,
-    image_id: u32,
-    chunk_len: usize,
-    builder_ctx: anytype,
-    comptime build_fn: anytype,
-) bool {
-    if (handleKittyQueryPayloadSizeReply(self, control, image_id, chunk_len)) {
-        return true;
-    }
-    build_fn(builder_ctx, self, image_id, control) catch |err| {
-        writeKittyResponse(self, control, image_id, false, kittyQueryBuildErrorReplyMessage(err));
-        return true;
-    };
-    writeKittyResponse(self, control, image_id, true, "OK");
-    return true;
-}
-
-pub fn kittyQueryBuildErrorReplyMessage(err: KittyBuildError) []const u8 {
-    return switch (err) {
-        error.BadPng => "EBADPNG",
-        else => "EINVAL",
-    };
-}
-
-fn handleKittyQuery(self: anytype, control: KittyControl, data: []const u8) void {
-    if (handleKittyQueryEarlyReply(self, control, data.len)) return;
-
-    const image_id = resolveKittyImageId(control).?;
-    var query_control = control;
-    if (query_control.format == 0) {
-        query_control.format = 32;
-    }
-    if (handleKittyQueryPayloadPreflightReply(self, query_control, image_id)) return;
-
-    var chunk = KittyTransport.loadPayload(self, &query_control, data) orelse {
-        handleKittyQueryPayloadLoadFailureReply(self, query_control, image_id);
-        return;
-    };
-    chunk = inflateKittyQueryChunk(self, query_control, image_id, chunk) orelse return;
-    defer self.allocator.free(chunk);
-
-    if (handleKittyQueryPayloadSizeReply(self, query_control, image_id, chunk.len)) return;
-    _ = handleKittyQueryChunkBuildReply(self, query_control, image_id, chunk.len, QueryBuilder{ .chunk = chunk }, QueryBuilder.run);
+    KittyProtocolOps.parseAndDispatch(self, payload);
 }
 
 const QueryBuilder = struct {
@@ -933,125 +1066,10 @@ const QueryBuilder = struct {
     }
 };
 
-fn inflateKittyQueryChunk(self: anytype, control: KittyControl, image_id: u32, chunk: []u8) ?[]u8 {
-    if (control.compression == 'z') {
-        const inflated = KittyTransport.inflate(self, chunk, control.size) orelse {
-            self.allocator.free(chunk);
-            writeKittyResponse(self, control, image_id, false, "EINVAL");
-            return null;
-        };
-        self.allocator.free(chunk);
-        return inflated;
-    }
-    if (control.compression != 0) {
-        self.allocator.free(chunk);
-        writeKittyResponse(self, control, image_id, false, "EINVAL");
-        return null;
-    }
-    return chunk;
-}
-
-fn handleKittyUpload(self: anytype, control: KittyControl, data: []const u8) void {
-    const log = app_logger.logger("terminal.kitty");
-    const upload = resolveKittyUpload(self, control) orelse return;
-    var upload_control = upload.control;
-
-    const decoded = KittyTransport.loadPayload(self, &upload_control, data) orelse {
-        log.logf(.info, "kitty decode failed len={d}", .{data.len});
-        clearKittyLoading(kittyState(self), upload.image_id);
-        writeKittyResponse(self, upload_control, upload.image_id, false, "EINVAL");
-        return;
-    };
-
-    const final_data = KittyTransport.accumulate(self, upload.image_id, &upload_control, decoded) orelse {
-        if (!upload_control.more) {
-            clearKittyLoading(kittyState(self), upload.image_id);
-        }
-        return;
-    };
-
-    finishKittyUpload(self, upload_control, upload.image_id, final_data);
-}
-
 const UploadResolution = struct {
     image_id: u32,
     control: KittyControl,
 };
-
-fn resolveKittyUpload(self: anytype, control: KittyControl) ?UploadResolution {
-    const kitty = kittyState(self);
-    var upload_control = control;
-    var image_id = resolveKittyImageId(upload_control);
-    if (kitty.loading_image_id) |loading_id| {
-        if (image_id) |explicit_id| {
-            if (explicit_id != loading_id and upload_control.more) {
-                kitty.loading_image_id = null;
-                writeKittyResponse(self, upload_control, explicit_id, false, "EINVAL");
-                return null;
-            }
-        } else {
-            image_id = loading_id;
-        }
-    }
-    if (image_id == null) {
-        const id = kitty.next_id;
-        kitty.next_id += 1;
-        image_id = id;
-    }
-    const final_image_id = image_id.?;
-    if (upload_control.more and kitty.loading_image_id == null) {
-        kitty.loading_image_id = final_image_id;
-    }
-    if (upload_control.format == 0 and kitty.partials.getEntry(final_image_id) == null) {
-        upload_control.format = 32;
-    }
-    return .{ .image_id = final_image_id, .control = upload_control };
-}
-
-fn finishKittyUpload(self: anytype, control: KittyControl, image_id: u32, final_data: []u8) void {
-    const log = app_logger.logger("terminal.kitty");
-    var upload_control = control;
-    defer clearKittyLoading(kittyState(self), image_id);
-
-    if (upload_control.format == 0) {
-        upload_control.format = 32;
-    }
-    if (handleKittyUploadSizeReply(self, upload_control, image_id, final_data)) return;
-
-    const image = KittyTransport.buildImage(self, image_id, upload_control, final_data) catch |err| {
-        log.logf(.info, "kitty build failed id={d} format={d} data_len={d}", .{ image_id, upload_control.format, final_data.len });
-        writeKittyResponse(self, upload_control, image_id, false, kittyQueryBuildErrorReplyMessage(err));
-        return;
-    };
-    KittyStorageOps.store(self, image);
-    if (upload_control.action == 'T') {
-        if (placeKittyImage(self, image_id, upload_control)) |err_msg| {
-            writeKittyResponse(self, upload_control, image_id, false, err_msg);
-            return;
-        }
-    }
-    writeKittyResponse(self, upload_control, image_id, true, "OK");
-}
-
-fn handleKittyUploadSizeReply(self: anytype, control: KittyControl, image_id: u32, final_data: []u8) bool {
-    if (KittyTransport.expectedDataBytes(control)) |expected| {
-        if (final_data.len < expected) {
-            var message = std.ArrayList(u8).empty;
-            defer message.deinit(self.allocator);
-            _ = message.writer(self.allocator).print(
-                "ENODATA:Insufficient image data: {d} < {d}",
-                .{ final_data.len, expected },
-            ) catch {
-                self.allocator.free(final_data);
-                return true;
-            };
-            self.allocator.free(final_data);
-            writeKittyResponse(self, control, image_id, false, message.items);
-            return true;
-        }
-    }
-    return false;
-}
 
 fn parseKittyControl(
     allocator: std.mem.Allocator,
