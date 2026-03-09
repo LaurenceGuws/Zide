@@ -265,12 +265,14 @@ pub const TerminalWidget = struct {
 
         var text = std.ArrayList(u8).empty;
         defer text.deinit(self.session.allocator);
+        var history_row_buf = std.ArrayList(Cell).empty;
+        defer history_row_buf.deinit(self.session.allocator);
 
         var row_idx: usize = start_sel.row;
         while (row_idx <= end_sel.row and row_idx < total_lines_copy) : (row_idx += 1) {
             const row_cells = blk: {
                 if (row_idx < history) {
-                    if (self.session.scrollbackRow(row_idx)) |history_row| break :blk history_row;
+                    if ((self.session.copyScrollbackRow(self.session.allocator, row_idx, &history_row_buf) catch null)) |history_row| break :blk history_row;
                 }
                 const grid_row = row_idx - history;
                 const row_start = grid_row * cols_snapshot;
@@ -418,6 +420,8 @@ pub const TerminalWidget = struct {
 
         var out = std.ArrayList(u8).empty;
         errdefer out.deinit(allocator);
+        var history_row_buf = std.ArrayList(Cell).empty;
+        defer history_row_buf.deinit(allocator);
 
         var buf: [4]u8 = undefined;
 
@@ -425,7 +429,7 @@ pub const TerminalWidget = struct {
         while (line_idx < history + rows) : (line_idx += 1) {
             const row_cells = blk: {
                 if (line_idx < history) {
-                    if (self.session.scrollbackRow(line_idx)) |history_row| break :blk history_row;
+                    if ((self.session.copyScrollbackRow(allocator, line_idx, &history_row_buf) catch null)) |history_row| break :blk history_row;
                     continue;
                 }
                 const grid_row = line_idx - history;
@@ -523,6 +527,8 @@ pub const TerminalWidget = struct {
 
         var out = std.ArrayList(u8).empty;
         errdefer out.deinit(allocator);
+        var history_row_buf = std.ArrayList(Cell).empty;
+        defer history_row_buf.deinit(allocator);
 
         var buf: [4]u8 = undefined;
 
@@ -530,7 +536,7 @@ pub const TerminalWidget = struct {
         while (line_idx < history + rows) : (line_idx += 1) {
             const row_cells = blk: {
                 if (line_idx < history) {
-                    if (self.session.scrollbackRow(line_idx)) |history_row| break :blk history_row;
+                    if ((self.session.copyScrollbackRow(allocator, line_idx, &history_row_buf) catch null)) |history_row| break :blk history_row;
                     continue;
                 }
                 const grid_row = line_idx - history;

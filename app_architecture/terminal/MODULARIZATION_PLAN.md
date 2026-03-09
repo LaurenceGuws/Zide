@@ -388,6 +388,7 @@ Statuses are strict:
   - 2026-03-09: second slice started on feature branch work: workspace tab metadata no longer borrows `title/cwd` directly from a live session. `TerminalWorkspace.copyMetadataAt(...)` now fills caller-owned buffers, so the tab-bar sync path stops depending on borrowed `TerminalSession` string storage.
   - 2026-03-09: third slice started on feature branch work: new-terminal launch cwd no longer borrows the active session cwd through workspace. `TerminalWorkspace.copyActiveSessionCwd(...)` now copies into caller-owned storage before runtime uses it as launch input.
   - 2026-03-09: fourth slice started on feature branch work: FFI scrollback export no longer walks borrowed row slices from a live session. `TerminalSession.copyScrollbackRow(...)` now copies rows into caller-owned storage before the bridge maps them into ABI cells.
+  - 2026-03-09: fifth slice started on feature branch work: widget-side selection/plain/ANSI export paths no longer walk borrowed scrollback rows directly. They now use `TerminalSession.copyScrollbackRow(...)` for history rows, reducing another external dependency on live session-owned row slices.
 
 5) Workspace/session boundary tightening
 - status: `todo`
