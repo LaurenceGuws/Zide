@@ -446,8 +446,8 @@ pub fn snapshotRelease(snapshot: *Snapshot) void {
 
 pub fn scrollbackCount(handle: ?*ZideTerminalHandle, out_count: *u32) Status {
     const h = fromOpaque(handle) orelse return .invalid_argument;
-    const count = h.session.scrollbackCount();
-    out_count.* = std.math.cast(u32, count) orelse std.math.maxInt(u32);
+    const info = h.session.scrollbackInfo();
+    out_count.* = std.math.cast(u32, info.total_rows) orelse std.math.maxInt(u32);
     return .ok;
 }
 
