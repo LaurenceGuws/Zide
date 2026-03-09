@@ -13,9 +13,7 @@ pub fn parseClipboard(self: anytype, text: []const u8, terminator: OscTerminator
         return;
     }
     if (std.mem.eql(u8, payload, "?")) {
-        if (self.pty) |*pty| {
-            writeClipboardReply(self, pty, selection, terminator);
-        }
+        writeClipboardReply(self, selection, terminator);
         return;
     }
 
@@ -51,7 +49,7 @@ pub fn parseClipboard(self: anytype, text: []const u8, terminator: OscTerminator
     self.osc_clipboard_pending = true;
 }
 
-fn writeClipboardReply(self: anytype, pty: anytype, selection: []const u8, terminator: OscTerminator) void {
+fn writeClipboardReply(self: anytype, selection: []const u8, terminator: OscTerminator) void {
     const log = app_logger.logger("terminal.osc");
     const end = if (terminator == .bel) "\x07" else "\x1b\\";
     var data = self.osc_clipboard.items;
@@ -96,8 +94,7 @@ fn writeClipboardReply(self: anytype, pty: anytype, selection: []const u8, termi
     };
 
             log.logf(.info, "osc reply=\"{s}\"", .{seq.items});
-    _ = pty.write(seq.items) catch |err| blk: {
+    self.writePtyBytes(seq.items) catch |err| {
         log.logf(.warning, "osc52 reply write failed len={d} err={s}", .{ seq.items.len, @errorName(err) });
-        break :blk 0;
     };
 }

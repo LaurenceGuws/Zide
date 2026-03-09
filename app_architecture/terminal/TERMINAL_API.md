@@ -49,6 +49,7 @@ important than the exact file layout.
 | VT parser dispatch + protocol semantics | parser/protocol layer | renderer policy, widget state |
 | screen/history/selection state | model layer | frame pacing, GL upload decisions |
 | damage publication -> render cache publication | publication/cache layer | app-level scheduling, widget interaction policy |
+| terminal-originated PTY writes | session-owned write contract | protocol helpers bypassing `pty_write_mutex` |
 | presented-generation ack / dirty retirement | backend publication boundary | renderer-local heuristics |
 | tab ownership + simple active/background polling surface | workspace | app-global frame timing state |
 | frame sleep, redraw cadence, metrics aggregation | app runtime | terminal model mutation |
