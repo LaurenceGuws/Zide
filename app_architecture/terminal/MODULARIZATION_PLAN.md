@@ -390,6 +390,8 @@ Statuses are strict:
   - 2026-03-09: fourth slice started on feature branch work: FFI scrollback export no longer walks borrowed row slices from a live session. `TerminalSession.copyScrollbackRow(...)` now copies rows into caller-owned storage before the bridge maps them into ABI cells.
   - 2026-03-09: fifth slice started on feature branch work: widget-side selection/plain/ANSI export paths no longer walk borrowed scrollback rows directly. They now use `TerminalSession.copyScrollbackRow(...)` for history rows, reducing another external dependency on live session-owned row slices.
   - 2026-03-09: sixth slice started on feature branch work: snapshot now publishes `scrollback_count`, `scrollback_offset`, and `selection`, and widget/input paths are being rewired to prefer snapshot/render-cache metadata over separate live session reads for the same state.
+  - 2026-03-09: seventh slice started on feature branch work: terminal text export is now backend-owned. Selection/plain/ANSI export moved out of `terminal_widget.zig` into `src/terminal/core/text_export.zig` and is exposed through `TerminalSession`, so app shortcuts and pager flow through terminal core instead of widget-owned serialization.
+  - 2026-03-09: eighth slice started on feature branch work: the new terminal-owned export seam is now exposed to FFI through string-returning bridge/C APIs for selection text plus plain/ANSI scrollback dumps, and obsolete borrowed session reads (`currentTitle`, `currentCwd`, `scrollbackRow`, `scrollOffset`, `selectionState`) were deleted from the public `TerminalSession` surface.
 
 5) Workspace/session boundary tightening
 - status: `todo`
