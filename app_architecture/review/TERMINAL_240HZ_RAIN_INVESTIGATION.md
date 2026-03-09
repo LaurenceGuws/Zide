@@ -230,6 +230,7 @@ This confirms a practical scheduler race window around `hasData` gating and idle
   - disabling synchronized updates no longer synthesizes a full-screen dirty event on its own; the renderer already freezes presentation while sync mode is active, so disable now publishes the accumulated real screen damage (`none` or partial/full as already tracked) instead of forcing `sync_updates_disabled` full redraws every frame batch
   - kitty/image redraw policy is now narrower on the renderer side: partial redraw no longer escalates to full just because kitty content exists somewhere in the viewport; full redraw is now reserved for actual dirty/blink overlap with visible placements, while static or non-overlapping kitty content stays on the normal partial path
   - kitty placement occupancy is now published in the render cache itself (`kitty_rows` + per-row column spans), so draw no longer scans raw placements every frame just to decide whether partial damage overlaps an image region
+  - retired the temporary `terminal.ui.pattern` aggregation path from `TerminalSession`; the remaining redraw/full-dirty attribution now lives on authoritative cache/model signals (`terminal.ui.perf` + `full_dirty_reason`) instead of sidecar investigation counters
 
 ## Applied Fix Candidate (2026-03-09)
 

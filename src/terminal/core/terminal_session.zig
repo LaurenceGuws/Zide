@@ -48,66 +48,6 @@ const SavedCharsetState = struct {
     target: CharsetTarget = .g0,
 };
 
-const PatternStats = struct {
-    window_start_ms: i64 = 0,
-    force_full_el: u32 = 0,
-    force_full_el_same_generation: u32 = 0,
-    force_full_el_mode0: u32 = 0,
-    force_full_el_mode1: u32 = 0,
-    force_full_el_mode2: u32 = 0,
-    force_full_el_row_min: ?usize = null,
-    force_full_el_row_max: ?usize = null,
-    force_full_el_last_generation: ?u64 = null,
-    full_dirty_screen_clear: u32 = 0,
-    full_dirty_erase_display: u32 = 0,
-    full_dirty_alt_enter: u32 = 0,
-    full_dirty_alt_exit: u32 = 0,
-    kitty_image_store: u32 = 0,
-    kitty_place: u32 = 0,
-    kitty_delete: u32 = 0,
-
-    fn reset(self: *PatternStats, now_ms: i64) void {
-        self.* = .{ .window_start_ms = now_ms };
-    }
-
-    fn total(self: *const PatternStats) u32 {
-        return self.force_full_el +
-            self.full_dirty_screen_clear +
-            self.full_dirty_erase_display +
-            self.full_dirty_alt_enter +
-            self.full_dirty_alt_exit +
-            self.kitty_image_store +
-            self.kitty_place +
-            self.kitty_delete;
-    }
-
-    fn noteEl(self: *PatternStats, mode: i32, row: usize, generation: u64) void {
-        self.force_full_el += 1;
-        if (self.force_full_el_last_generation) |last_generation| {
-            if (last_generation == generation) self.force_full_el_same_generation += 1;
-        }
-        self.force_full_el_last_generation = generation;
-        switch (mode) {
-            0 => self.force_full_el_mode0 += 1,
-            1 => self.force_full_el_mode1 += 1,
-            2 => self.force_full_el_mode2 += 1,
-            else => {},
-        }
-        self.force_full_el_row_min = if (self.force_full_el_row_min) |min_row| @min(min_row, row) else row;
-        self.force_full_el_row_max = if (self.force_full_el_row_max) |max_row| @max(max_row, row) else row;
-    }
-};
-
-pub const PatternEvent = enum {
-    full_dirty_screen_clear,
-    full_dirty_erase_display,
-    full_dirty_alt_enter,
-    full_dirty_alt_exit,
-    kitty_image_store,
-    kitty_place,
-    kitty_delete,
-};
-
 pub const KittyImageFormat = snapshot_mod.KittyImageFormat;
 pub const KittyImage = snapshot_mod.KittyImage;
 pub const KittyPlacement = snapshot_mod.KittyPlacement;
@@ -240,7 +180,6 @@ pub const TerminalSession = struct {
     view_cache_request_offset: std.atomic.Value(u64),
     alt_last_active: bool,
     clear_generation: std.atomic.Value(u64),
-    pattern_stats: PatternStats,
     saved_charset: SavedCharsetState,
     child_exited: std.atomic.Value(bool),
     child_exit_code: std.atomic.Value(i32),
@@ -360,7 +299,6 @@ pub const TerminalSession = struct {
             .view_cache_request_offset = std.atomic.Value(u64).init(0),
             .alt_last_active = false,
             .clear_generation = std.atomic.Value(u64).init(0),
-            .pattern_stats = .{},
             .saved_charset = .{},
             .child_exited = std.atomic.Value(bool).init(false),
             .child_exit_code = std.atomic.Value(i32).init(-1),
@@ -438,70 +376,6 @@ pub const TerminalSession = struct {
 
     fn isAltActive(self: *const TerminalSession) bool {
         return self.active == .alt;
-    }
-
-    fn flushPatternStats(self: *TerminalSession, now_ms: i64) void {
-        if (self.pattern_stats.total() == 0) {
-            self.pattern_stats.window_start_ms = now_ms;
-            return;
-        }
-        const screen = self.activeScreenConst();
-        app_logger.logger("terminal.ui.pattern").logf(
-            .info,
-            "window_ms={d} rows={d} cols={d} alt={d} sync={d} force_full(el={d}) full_dirty(screen_clear={d} ed_full={d} alt_enter={d} alt_exit={d}) kitty(store={d} place={d} delete={d})",
-            .{
-                now_ms - self.pattern_stats.window_start_ms,
-                screen.grid.rows,
-                screen.grid.cols,
-                @intFromBool(self.isAltActive()),
-                @intFromBool(self.sync_updates_active),
-                self.pattern_stats.force_full_el,
-                self.pattern_stats.full_dirty_screen_clear,
-                self.pattern_stats.full_dirty_erase_display,
-                self.pattern_stats.full_dirty_alt_enter,
-                self.pattern_stats.full_dirty_alt_exit,
-                self.pattern_stats.kitty_image_store,
-                self.pattern_stats.kitty_place,
-                self.pattern_stats.kitty_delete,
-            },
-        );
-        if (self.pattern_stats.force_full_el > 0) {
-            app_logger.logger("terminal.ui.pattern").logf(
-                .info,
-                "el_detail window_ms={d} rows={d} cols={d} count={d} same_generation={d} modes(0={d} 1={d} 2={d}) row_span={d}..{d}",
-                .{
-                    now_ms - self.pattern_stats.window_start_ms,
-                    screen.grid.rows,
-                    screen.grid.cols,
-                    self.pattern_stats.force_full_el,
-                    self.pattern_stats.force_full_el_same_generation,
-                    self.pattern_stats.force_full_el_mode0,
-                    self.pattern_stats.force_full_el_mode1,
-                    self.pattern_stats.force_full_el_mode2,
-                    self.pattern_stats.force_full_el_row_min orelse 0,
-                    self.pattern_stats.force_full_el_row_max orelse 0,
-                },
-            );
-        }
-        self.pattern_stats.reset(now_ms);
-    }
-
-    pub fn notePatternEvent(self: *TerminalSession, event: PatternEvent) void {
-        const now_ms = std.time.milliTimestamp();
-        if (self.pattern_stats.window_start_ms == 0) {
-            self.pattern_stats.window_start_ms = now_ms;
-        } else if (now_ms - self.pattern_stats.window_start_ms >= 500) {
-            self.flushPatternStats(now_ms);
-        }
-        switch (event) {
-            .full_dirty_screen_clear => self.pattern_stats.full_dirty_screen_clear += 1,
-            .full_dirty_erase_display => self.pattern_stats.full_dirty_erase_display += 1,
-            .full_dirty_alt_enter => self.pattern_stats.full_dirty_alt_enter += 1,
-            .full_dirty_alt_exit => self.pattern_stats.full_dirty_alt_exit += 1,
-            .kitty_image_store => self.pattern_stats.kitty_image_store += 1,
-            .kitty_place => self.pattern_stats.kitty_place += 1,
-            .kitty_delete => self.pattern_stats.kitty_delete += 1,
-        }
     }
 
     pub fn setDefaultColors(self: *TerminalSession, fg: types.Color, bg: types.Color) void {
@@ -1046,7 +920,6 @@ pub const TerminalSession = struct {
         const blank_cell = screen.blankCell();
         screen.eraseDisplay(mode, blank_cell);
         if (mode == 2 or mode == 3) {
-            self.notePatternEvent(.full_dirty_erase_display);
             self.clearSelection();
             _ = self.clear_generation.fetchAdd(1, .acq_rel);
         }
@@ -1056,17 +929,6 @@ pub const TerminalSession = struct {
         const screen = self.activeScreen();
         const blank_cell = screen.blankCell();
         screen.eraseLine(mode, blank_cell);
-        self.notePatternEventEl(mode, screen.cursor.row, self.output_generation.load(.acquire));
-    }
-
-    fn notePatternEventEl(self: *TerminalSession, mode: i32, row: usize, generation: u64) void {
-        const now_ms = std.time.milliTimestamp();
-        if (self.pattern_stats.window_start_ms == 0) {
-            self.pattern_stats.window_start_ms = now_ms;
-        } else if (now_ms - self.pattern_stats.window_start_ms >= 500) {
-            self.flushPatternStats(now_ms);
-        }
-        self.pattern_stats.noteEl(mode, row, generation);
     }
 
     pub fn insertChars(self: *TerminalSession, count: usize) void {
@@ -1345,9 +1207,7 @@ pub const TerminalSession = struct {
         if (clear) {
             self.activeScreen().clear();
             self.activeScreen().setCursor(0, 0);
-            self.notePatternEvent(.full_dirty_screen_clear);
         }
-        self.notePatternEvent(.full_dirty_alt_enter);
         self.activeScreen().markDirtyAllWithReason(.alt_enter, @src());
         self.updateInputSnapshot();
     }
@@ -1363,7 +1223,6 @@ pub const TerminalSession = struct {
         if (restore_cursor) {
             self.restoreCursor();
         }
-        self.notePatternEvent(.full_dirty_alt_exit);
         self.activeScreen().markDirtyAllWithReason(.alt_exit, @src());
         self.updateInputSnapshot();
     }
