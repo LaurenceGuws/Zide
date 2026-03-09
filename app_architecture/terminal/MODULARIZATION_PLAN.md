@@ -400,7 +400,7 @@ Statuses are strict:
   - 2026-03-09: fourteenth slice started on feature branch work: the public `childExitCode(...)` session getter was deleted after the FFI bridge moved fully onto `copyMetadata(...)` for exit-status reads and derived-event sync. That removes another raw process-state escape hatch that only survived for older FFI layering.
 
 5) Workspace/session boundary tightening
-- status: `todo`
+- status: `in_progress`
 - priority: `P1`
 - scope:
   - keep reducing raw `TerminalSession*` escape paths from `TerminalWorkspace`
@@ -411,6 +411,9 @@ Statuses are strict:
   - `src/app/terminal_active_session.zig`
   - `src/app/new_terminal_runtime.zig`
   - remaining workspace/session consumers
+- progress:
+  - 2026-03-09: first slice started on feature branch work: app clipboard shortcuts stopped resolving raw sessions through workspace entirely and now operate on the already-resolved active widget/session. The dead `src/app/terminal_active_session.zig` resolver was deleted.
+  - 2026-03-09: second slice started on feature branch work: workspace tab creation now has an explicit mutable creation contract (`createTabWithSession(...)`) so app runtime no longer does `createTab(...)` followed by a separate `activeSession()` lookup just to configure the newly-created tab.
 
 6) Runtime scheduling ownership cleanup
 - status: `todo`

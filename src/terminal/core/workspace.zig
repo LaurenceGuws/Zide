@@ -163,7 +163,12 @@ pub const TerminalWorkspace = struct {
         };
     }
 
-    pub fn createTab(self: *TerminalWorkspace, rows: u16, cols: u16) !TabId {
+    pub const CreatedTab = struct {
+        id: TabId,
+        session: *TerminalSession,
+    };
+
+    pub fn createTabWithSession(self: *TerminalWorkspace, rows: u16, cols: u16) !CreatedTab {
         const session = try TerminalSession.initWithOptions(self.allocator, rows, cols, self.init_options);
         errdefer session.deinit();
 
@@ -175,7 +180,14 @@ pub const TerminalWorkspace = struct {
         });
         self.active_index = self.tabs.items.len - 1;
         self.background_poll_cursor = self.active_index;
-        return tab_id;
+        return .{
+            .id = tab_id,
+            .session = session,
+        };
+    }
+
+    pub fn createTab(self: *TerminalWorkspace, rows: u16, cols: u16) !TabId {
+        return (try self.createTabWithSession(rows, cols)).id;
     }
 
     pub fn activateIndex(self: *TerminalWorkspace, index: usize) bool {
