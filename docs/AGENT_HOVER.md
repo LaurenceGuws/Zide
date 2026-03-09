@@ -1,6 +1,6 @@
 # Agent Handover (High-Level Editor Context)
 
-Date: 2026-03-06
+Date: 2026-03-09
 
 This file is intentionally high-level. Detailed progress belongs in:
 - `app_architecture/app_mode_layering_todo.yaml`
@@ -9,16 +9,12 @@ This file is intentionally high-level. Detailed progress belongs in:
 - `app_architecture/editor/*_todo.yaml`
 
 Current state summary:
-- Ongoing extraction track: mode/runtime decomposition to reduce `main.zig` ownership while preserving behavior.
-- Dependency migration baseline has shifted:
-  - SDL3, Lua, tree-sitter core are Zig package managed in normal flow.
-  - FreeType/HarfBuzz are Zig package managed in normal flow (non-vcpkg paths).
-- Build graph supports focused compile-time app planning (`-Dmode=terminal|editor|ide`).
-- Terminal-only packaging and identity were tightened recently (bundle/runtime/terminfo docs must stay aligned with code).
+- Active focus is no longer the narrow rain bug. The current focus is terminal architecture cleanup now that the worst redraw fault has been stabilized.
+- The detailed findings and recent cleanup history live in `app_architecture/review/TERMINAL_240HZ_RAIN_INVESTIGATION.md`.
+- The current architectural hotspots and sequencing guidance live in `app_architecture/terminal/MODULARIZATION_PLAN.md` and `app_architecture/terminal/DAMAGE_TRACKING.md`.
 
 Editor context:
-- Continue editor work through its todo trackers; avoid introducing behavior changes during extraction-only refactors.
-- Keep cached/immediate render parity and selection/search overlay correctness stable.
-- Keep logs scoped and intentional in `./.zide.lua` during investigations.
+- Prefer structural cleanup at terminal boundaries: session ownership, scheduler ownership, render publication, input snapshot publication, and widget/backend seams.
+- Keep logs scoped and intentional in `./.zide.lua` during investigations; default to minimal useful signal.
 
 If this file conflicts with task todos or architecture docs, treat this file as stale and update it.

@@ -5,6 +5,7 @@ const screen_mod = @import("screen/screen.zig");
 
 pub const Dirty = grid_mod.Dirty;
 pub const Damage = grid_mod.Damage;
+pub const FullDirtyReason = grid_mod.FullDirtyReason;
 pub const TerminalGrid = grid_mod.TerminalGrid;
 pub const TabStops = tab_mod.TabStops;
 pub const Screen = screen_mod.Screen;

@@ -53,6 +53,67 @@ pub fn setKeypadMode(self: anytype, enabled: bool) void {
     self.updateInputSnapshot();
 }
 
+pub fn setAppCursorKeys(self: anytype, enabled: bool) void {
+    self.app_cursor_keys = enabled;
+    self.updateInputSnapshot();
+}
+
+pub fn setAutoRepeat(self: anytype, enabled: bool) void {
+    self.auto_repeat = enabled;
+    self.updateInputSnapshot();
+}
+
+pub fn setBracketedPaste(self: anytype, enabled: bool) void {
+    self.bracketed_paste = enabled;
+    self.updateInputSnapshot();
+}
+
+pub fn setFocusReporting(self: anytype, enabled: bool) void {
+    self.focus_reporting = enabled;
+    self.updateInputSnapshot();
+}
+
+pub fn setMouseAlternateScroll(self: anytype, enabled: bool) void {
+    self.mouse_alternate_scroll = enabled;
+    self.updateInputSnapshot();
+}
+
+pub fn setMouseModeX10(self: anytype, enabled: bool) void {
+    self.input.mouse_mode_x10 = enabled;
+    self.updateInputSnapshot();
+}
+
+pub fn setMouseModeButton(self: anytype, enabled: bool) void {
+    self.input.mouse_mode_button = enabled;
+    self.updateInputSnapshot();
+}
+
+pub fn setMouseModeAny(self: anytype, enabled: bool) void {
+    self.input.mouse_mode_any = enabled;
+    self.updateInputSnapshot();
+}
+
+pub fn setMouseModeSgr(self: anytype, enabled: bool) void {
+    self.input.mouse_mode_sgr = enabled;
+    self.updateInputSnapshot();
+}
+
+pub fn setMouseModeSgrPixels(self: anytype, enabled: bool) void {
+    self.input.mouse_mode_sgr_pixels_1016 = enabled;
+    self.updateInputSnapshot();
+}
+
+pub fn resetInputModes(self: anytype) void {
+    self.app_cursor_keys = false;
+    self.app_keypad = false;
+    self.auto_repeat = true;
+    self.mouse_alternate_scroll = true;
+    self.input.resetMouse();
+    self.bracketed_paste = false;
+    self.focus_reporting = false;
+    self.updateInputSnapshot();
+}
+
 pub fn appKeypadEnabled(self: anytype) bool {
     return self.input_snapshot.app_keypad.load(.acquire);
 }

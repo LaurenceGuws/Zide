@@ -115,7 +115,7 @@ pub fn handle(state: anytype, shell: *Shell, batch: *input_types.InputBatch, now
                         inner_state.terminals.items.len,
                         inner_state.terminal_widgets.items,
                     )) |term_widget| {
-                        const rc = term_widget.session.renderCache();
+                        const rc = &term_widget.draw_cache;
                         cache = app_cursor_blink_frame.Input{
                             .cursor_visible = rc.cursor_visible,
                             .cursor_blink = rc.cursor_style.blink,
@@ -132,15 +132,16 @@ pub fn handle(state: anytype, shell: *Shell, batch: *input_types.InputBatch, now
 
                     if (result.blink_armed_changed) {
                         const cursor_log = app_logger.logger("terminal.cursor");
-                                                    cursor_log.logf(.info, 
-                                "cursor blink armed={any} visible={any} blink={any} scroll_offset={d}",
-                                .{
-                                    result.blink_armed,
-                                    cache.?.cursor_visible,
-                                    cache.?.cursor_blink,
-                                    cache.?.scroll_offset,
-                                },
-                            );
+                        cursor_log.logf(
+                            .info,
+                            "cursor blink armed={any} visible={any} blink={any} scroll_offset={d}",
+                            .{
+                                result.blink_armed,
+                                cache.?.cursor_visible,
+                                cache.?.cursor_blink,
+                                cache.?.scroll_offset,
+                            },
+                        );
                     }
                     if (result.needs_redraw) inner_state.needs_redraw = true;
                 }

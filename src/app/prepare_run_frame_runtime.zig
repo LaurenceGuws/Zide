@@ -85,8 +85,7 @@ fn handlePendingTerminalWindowClose(state: anytype, app_mode: app_bootstrap.AppM
     var next_confirm_idx: ?usize = null;
     var i: usize = 0;
     while (i < workspace.tabCount()) : (i += 1) {
-        const session = workspace.sessionAt(i) orelse continue;
-        if (!session.shouldConfirmClose()) continue;
+        if (!workspace.shouldConfirmCloseAt(i)) continue;
         next_confirm_idx = i;
         break;
     }

@@ -1,11 +1,44 @@
 const std = @import("std");
 const types = @import("../types.zig");
+const app_logger = @import("../../../app_logger.zig");
 
 pub const Dirty = enum {
     none,
     partial,
     full,
 };
+
+pub const FullDirtyReason = enum {
+    unknown,
+    init,
+    resize,
+    alt_enter,
+    alt_exit,
+    decstr_soft_reset,
+    resize_reflow,
+    kitty_graphics_changed,
+    view_cache_geometry_change,
+    view_cache_scroll_offset_change,
+    view_cache_alt_state_change,
+    view_cache_view_dirty_full,
+};
+
+fn fullDirtyReasonNote(reason: FullDirtyReason) []const u8 {
+    return switch (reason) {
+        .unknown => "fallback full invalidate without explicit semantic reason",
+        .init => "grid initialized with full damage",
+        .resize => "grid resized and needs full repaint",
+        .alt_enter => "switched to alt screen backing store",
+        .alt_exit => "returned from alt screen to primary backing store",
+        .decstr_soft_reset => "DECSTR soft reset can rewrite broad terminal state",
+        .resize_reflow => "resize reflow moved content and requires full repaint",
+        .kitty_graphics_changed => "kitty graphics mutation fell back to a conservative full redraw",
+        .view_cache_geometry_change => "view cache geometry no longer matches terminal size",
+        .view_cache_scroll_offset_change => "view cache scroll offset changed",
+        .view_cache_alt_state_change => "alt-screen active state changed in view cache",
+        .view_cache_view_dirty_full => "view snapshot itself reported full dirty state",
+    };
+}
 
 pub const Damage = struct {
     start_row: usize,
@@ -25,6 +58,8 @@ pub const TerminalGrid = struct {
     dirty_cols_end: std.ArrayList(u16),
     dirty: Dirty,
     damage: Damage,
+    full_dirty_reason: FullDirtyReason,
+    full_dirty_seq: u64,
 
     pub fn init(allocator: std.mem.Allocator, rows: u16, cols: u16, default_cell: types.Cell) !TerminalGrid {
         var cells = std.ArrayList(types.Cell).empty;
@@ -67,6 +102,8 @@ pub const TerminalGrid = struct {
                 .start_col = 0,
                 .end_col = if (cols > 0) @as(usize, cols - 1) else 0,
             },
+            .full_dirty_reason = .init,
+            .full_dirty_seq = 1,
         };
     }
 
@@ -142,7 +179,7 @@ pub const TerminalGrid = struct {
         self.dirty_cols_end = new_dirty_cols_end;
         self.rows = rows;
         self.cols = cols;
-        self.markDirtyAll();
+        self.markDirtyAll(@src());
     }
 
     pub fn setRowWrapped(self: *TerminalGrid, row: usize, wrapped: bool) void {
@@ -208,7 +245,11 @@ pub const TerminalGrid = struct {
         }
     }
 
-    pub fn markDirtyAll(self: *TerminalGrid) void {
+    pub fn markDirtyAll(self: *TerminalGrid, src: std.builtin.SourceLocation) void {
+        self.markDirtyAllWithReason(.unknown, src);
+    }
+
+    pub fn markDirtyAllWithReason(self: *TerminalGrid, reason: FullDirtyReason, src: std.builtin.SourceLocation) void {
         self.dirty = .full;
         self.damage = .{
             .start_row = 0,
@@ -216,12 +257,20 @@ pub const TerminalGrid = struct {
             .start_col = 0,
             .end_col = if (self.cols > 0) @as(usize, self.cols - 1) else 0,
         };
+        self.full_dirty_reason = reason;
+        self.full_dirty_seq +%= 1;
         self.setAllDirtyRows(true);
         if (self.cols > 0) {
             self.setAllDirtyCols(0, self.cols - 1);
         } else {
             self.setAllDirtyCols(0, 0);
         }
+        app_logger.logger("terminal.ui.invalidate").logfSrc(
+            .info,
+            src,
+            "full_dirty reason={s} seq={d} rows={d} cols={d} note={s}",
+            .{ @tagName(reason), self.full_dirty_seq, self.rows, self.cols, fullDirtyReasonNote(reason) },
+        );
     }
 
     pub fn clearDirty(self: *TerminalGrid) void {

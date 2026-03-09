@@ -6,6 +6,7 @@ const types = @import("../model/types.zig");
 const Cell = types.Cell;
 const Dirty = screen_mod.Dirty;
 const Damage = screen_mod.Damage;
+const FullDirtyReason = screen_mod.FullDirtyReason;
 
 pub const KittyImage = snapshot_mod.KittyImage;
 pub const KittyPlacement = snapshot_mod.KittyPlacement;
@@ -25,6 +26,7 @@ pub const RenderCache = struct {
     cols: usize,
     history_len: usize,
     total_lines: usize,
+    visible_history_generation: u64,
     generation: u64,
     scroll_offset: usize,
     cursor: types.CursorPos,
@@ -33,6 +35,8 @@ pub const RenderCache = struct {
     has_blink: bool,
     dirty: Dirty,
     damage: Damage,
+    full_dirty_reason: FullDirtyReason,
+    full_dirty_seq: u64,
     alt_active: bool,
     selection_active: bool,
     sync_updates_active: bool,
@@ -40,6 +44,7 @@ pub const RenderCache = struct {
     kitty_generation: u64,
     clear_generation: u64,
     viewport_shift_rows: i32,
+    viewport_shift_exposed_only: bool,
 
     pub fn init() RenderCache {
         return .{
@@ -57,6 +62,7 @@ pub const RenderCache = struct {
             .cols = 0,
             .history_len = 0,
             .total_lines = 0,
+            .visible_history_generation = 0,
             .generation = 0,
             .scroll_offset = 0,
             .cursor = .{ .row = 0, .col = 0 },
@@ -65,6 +71,8 @@ pub const RenderCache = struct {
             .has_blink = false,
             .dirty = .none,
             .damage = .{ .start_row = 0, .end_row = 0, .start_col = 0, .end_col = 0 },
+            .full_dirty_reason = .unknown,
+            .full_dirty_seq = 0,
             .alt_active = false,
             .selection_active = false,
             .sync_updates_active = false,
@@ -72,6 +80,7 @@ pub const RenderCache = struct {
             .kitty_generation = 0,
             .clear_generation = 0,
             .viewport_shift_rows = 0,
+            .viewport_shift_exposed_only = false,
         };
     }
 

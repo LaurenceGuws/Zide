@@ -98,13 +98,13 @@ pub fn handle(
             .poll_visible_sessions = struct {
                 fn call(route_raw: *anyopaque, poll_batch: *input_types.InputBatch) !void {
                     const route = @as(*@TypeOf(runtime_state), @ptrCast(@alignCast(route_raw)));
-                    app_poll_visible_terminal_sessions_runtime.setTerminalInputActivityHint(hasTerminalInputActivity(poll_batch));
                     if (try app_poll_visible_terminal_sessions_runtime.handle(
                         route.app_mode,
                         route.show_terminal,
                         route.terminal_workspace,
                         route.terminals,
                         poll_batch.events.items.len > 0,
+                        hasTerminalInputActivity(poll_batch),
                     )) route.hooks.mark_redraw(route.user_ctx);
                 }
             }.call,

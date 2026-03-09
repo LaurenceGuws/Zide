@@ -48,11 +48,45 @@ Historical fixes/notes (keep as reference):
 3) Make scroll and clear operations authoritative for damage:
 - Scroll region changes and scrollRegionUp/Down must mark full region dirty, not partial bounds.
 - eraseDisplay should mark full dirty for mode 2 and set a clear-generation marker to force redraw.
-- Sync updates (CSI ? 2026) should buffer rendering and force full redraw on disable.
+- Sync updates (CSI ? 2026) should buffer rendering while active; disable should publish the buffered real damage rather than inventing a blanket full redraw.
 
 4) Add replay fixtures for full-screen TUIs:
 - Capture gping/nvim redraw scenarios with the replay harness.
 - Assert no stale rows appear after sequences of clear + redraw.
+
+## Current Architectural Follow-Up (2026-03-09)
+
+The redraw incident work removed many conservative full-redraw escape hatches, but it
+also exposed broader structural smells around damage/publication ownership.
+
+1) Damage publication still depends on too many channels.
+- Current channels include:
+  - grid dirty rows/cols + dirty mode
+  - `output_generation`
+  - published render-cache generation
+  - presented generation
+  - `clear_generation`
+  - `view_cache_pending`
+- This is workable, but it is brittle because multiple callsites must keep these in sync.
+
+2) `view_cache` is carrying more than damage projection.
+- It now merges history + screen, selection overlay, row-hash refinement, viewport-shift
+  publication, kitty ordering, and some redraw-policy decisions.
+- That makes it both important and fragile: correctness and optimization live in the same layer.
+
+3) Dirty acknowledgement is narrower, but the renderer still triggers it.
+- `terminal_widget_draw` now uses a single backend-owned presented-ack API instead of
+  selecting between multiple dirty-clear paths itself.
+- Long-term, the renderer should consume a publication contract and not explicitly
+  trigger retirement at all.
+
+4) Some full-dirty paths are now semantically justified, but they still need explicit ownership.
+- Examples:
+  - alt-screen transitions
+  - resize reflow
+  - DECSTR
+  - unresolved kitty geometry fallback
+- These should remain deliberate publication events, not incidental renderer policy.
 
 ## Todo
 
@@ -60,3 +94,5 @@ Historical fixes/notes (keep as reference):
 - [x] Add replay harness fixture for vttest wraparound mode test (`vttest_wraparound`).
 - [ ] Add explicit assertions/tests that no stale rows remain after clear+redraw cycles.
 - [ ] Consider a frame-based damage tracker and integrate with terminal widget partial redraw.
+- [ ] Collapse damage/publication ownership into a smaller set of explicit contracts (model dirty, published cache, presented ack).
+- [ ] Move dirty acknowledgement out of renderer-facing widget code and behind a terminal publication boundary.

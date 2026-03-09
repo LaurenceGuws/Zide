@@ -243,6 +243,7 @@ pub const Renderer = struct {
     text_linear_correction: bool,
     editor_selection_overlay_style: SelectionOverlayStyle,
     terminal_selection_overlay_style: SelectionOverlayStyle,
+    terminal_texture_shift_enabled: bool,
 
     // Text background behind glyphs (used for optional linear correction).
     // Default is alpha=0, which disables correction in the shader.
@@ -387,6 +388,7 @@ pub const Renderer = struct {
             .text_linear_correction = true,
             .editor_selection_overlay_style = .{},
             .terminal_selection_overlay_style = .{},
+            .terminal_texture_shift_enabled = true,
             .text_bg_rgba = .{ .r = 0, .g = 0, .b = 0, .a = 0 },
             .font_size = font_size,
             .base_font_size = base_font_size,
@@ -605,6 +607,14 @@ pub const Renderer = struct {
 
     pub fn terminalSelectionOverlayStyle(self: *const Renderer) SelectionOverlayStyle {
         return self.terminal_selection_overlay_style;
+    }
+
+    pub fn setTerminalTextureShiftEnabled(self: *Renderer, enabled: bool) void {
+        self.terminal_texture_shift_enabled = enabled;
+    }
+
+    pub fn terminalTextureShiftEnabled(self: *const Renderer) bool {
+        return self.terminal_texture_shift_enabled;
     }
 
     pub fn setTerminalLigatureConfig(self: *Renderer, strategy: ?TerminalDisableLigaturesStrategy, features_raw: ?[]const u8) void {
