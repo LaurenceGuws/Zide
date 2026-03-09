@@ -22,8 +22,7 @@ pub fn main() !void {
     const deadline = std.time.milliTimestamp() + 4000;
     var saw_marker = false;
     var saw_child_exit = false;
-    var saw_title = false;
-    var saw_cwd = false;
+    var saw_metadata = false;
 
     while (std.time.milliTimestamp() < deadline) {
         if (c_api.zide_terminal_poll(handle) != 0) return error.PollFailed;
@@ -37,17 +36,12 @@ pub fn main() !void {
         }
 
         {
-            var title: c_api.ZideTerminalStringBuffer = .{};
-            if (c_api.zide_terminal_current_title(handle, &title) != 0) return error.CurrentTitleFailed;
-            defer c_api.zide_terminal_string_free(&title);
-            saw_title = std.mem.eql(u8, ptrBytes(title.ptr, title.len), "ffi-pty-title");
-        }
-
-        {
-            var cwd: c_api.ZideTerminalStringBuffer = .{};
-            if (c_api.zide_terminal_current_cwd(handle, &cwd) != 0) return error.CurrentCwdFailed;
-            defer c_api.zide_terminal_string_free(&cwd);
-            saw_cwd = std.mem.eql(u8, ptrBytes(cwd.ptr, cwd.len), "/tmp/ffi-pty");
+            var metadata: c_api.ZideTerminalMetadata = .{};
+            if (c_api.zide_terminal_metadata_acquire(handle, &metadata) != 0) return error.MetadataAcquireFailed;
+            defer c_api.zide_terminal_metadata_release(&metadata);
+            saw_metadata =
+                std.mem.eql(u8, ptrBytes(metadata.title_ptr, metadata.title_len), "ffi-pty-title") and
+                std.mem.eql(u8, ptrBytes(metadata.cwd_ptr, metadata.cwd_len), "/tmp/ffi-pty");
         }
 
         {
@@ -65,7 +59,7 @@ pub fn main() !void {
             }
         }
 
-        if (saw_marker and saw_child_exit and saw_title and saw_cwd) {
+        if (saw_marker and saw_child_exit and saw_metadata) {
             var code: i32 = -1;
             var has_status: u8 = 0;
             if (c_api.zide_terminal_child_exit_status(handle, &code, &has_status) != 0) return error.ChildExitStatusFailed;
@@ -78,8 +72,7 @@ pub fn main() !void {
 
     if (!saw_marker) return error.MissingMarker;
     if (!saw_child_exit) return error.MissingChildExit;
-    if (!saw_title) return error.MissingTitle;
-    if (!saw_cwd) return error.MissingCwd;
+    if (!saw_metadata) return error.MissingMetadata;
 }
 
 fn snapshotContains(snapshot: *const c_api.ZideTerminalSnapshot, needle: []const u8) bool {

@@ -14,6 +14,7 @@ pub const snapshot_abi_version: u32 = 1;
 pub const event_abi_version: u32 = 1;
 pub const scrollback_abi_version: u32 = 1;
 pub const renderer_metadata_abi_version: u32 = 1;
+pub const metadata_abi_version: u32 = 1;
 
 pub const EventKind = enum(c_int) {
     none = 0,
@@ -114,6 +115,22 @@ pub const ScrollbackBuffer = extern struct {
     _ctx: ?*anyopaque = null,
 };
 
+pub const Metadata = extern struct {
+    abi_version: u32 = 0,
+    struct_size: u32 = 0,
+    scrollback_count: u32 = 0,
+    scrollback_offset: u32 = 0,
+    alive: u8 = 0,
+    has_exit_code: u8 = 0,
+    _padding0: [2]u8 = .{ 0, 0 },
+    exit_code: i32 = 0,
+    title_ptr: ?[*]const u8 = null,
+    title_len: usize = 0,
+    cwd_ptr: ?[*]const u8 = null,
+    cwd_len: usize = 0,
+    _ctx: ?*anyopaque = null,
+};
+
 pub const KeyEvent = extern struct {
     key: u32,
     modifiers: u8,
@@ -172,12 +189,22 @@ const Handle = struct {
     pending_events: std.ArrayList(PendingEvent),
     last_title: std.ArrayList(u8),
     last_cwd: std.ArrayList(u8),
+    scratch_title: std.ArrayList(u8),
+    scratch_cwd: std.ArrayList(u8),
+    scratch_clipboard: std.ArrayList(u8),
+    scratch_scrollback_cells: std.ArrayList(types.Cell),
     exit_delivered: bool,
 };
 
 const SnapshotOwner = struct {
     allocator: std.mem.Allocator,
     cells: []Cell,
+    title: []u8,
+    cwd: []u8,
+};
+
+const MetadataOwner = struct {
+    allocator: std.mem.Allocator,
     title: []u8,
     cwd: []u8,
 };
@@ -231,14 +258,14 @@ pub fn create(config: ?*const CreateConfig, out_handle: *?*ZideTerminalHandle) S
         .pending_events = .empty,
         .last_title = .empty,
         .last_cwd = .empty,
+        .scratch_title = .empty,
+        .scratch_cwd = .empty,
+        .scratch_clipboard = .empty,
+        .scratch_scrollback_cells = .empty,
         .exit_delivered = false,
     };
-    handle.last_title.appendSlice(allocator, session.currentTitle()) catch |err| {
-        log.logf(.warning, "create last_title append failed err={s}", .{@errorName(err)});
-        return .out_of_memory;
-    };
-    handle.last_cwd.appendSlice(allocator, session.currentCwd()) catch |err| {
-        log.logf(.warning, "create last_cwd append failed err={s}", .{@errorName(err)});
+    _ = session.copyMetadata(allocator, &handle.last_title, &handle.last_cwd) catch |err| {
+        log.logf(.warning, "create metadata copy failed err={s}", .{@errorName(err)});
         return .out_of_memory;
     };
 
@@ -255,6 +282,10 @@ pub fn destroy(handle: ?*ZideTerminalHandle) void {
     h.pending_events.deinit(h.allocator);
     h.last_title.deinit(h.allocator);
     h.last_cwd.deinit(h.allocator);
+    h.scratch_title.deinit(h.allocator);
+    h.scratch_cwd.deinit(h.allocator);
+    h.scratch_clipboard.deinit(h.allocator);
+    h.scratch_scrollback_cells.deinit(h.allocator);
     h.session.deinit();
     h.allocator.destroy(h);
 }
@@ -361,12 +392,16 @@ pub fn snapshotAcquire(handle: ?*ZideTerminalHandle, out_snapshot: *Snapshot) St
         cells[i] = mapCell(cell);
     }
 
-    const title = allocator.dupe(u8, h.session.currentTitle()) catch |err| {
+    const metadata = h.session.copyMetadata(allocator, &h.scratch_title, &h.scratch_cwd) catch |err| {
+        log.logf(.warning, "snapshot metadata copy failed err={s}", .{@errorName(err)});
+        return .out_of_memory;
+    };
+    const title = allocator.dupe(u8, metadata.title) catch |err| {
         log.logf(.warning, "snapshot title dup failed err={s}", .{@errorName(err)});
         return .out_of_memory;
     };
     errdefer allocator.free(title);
-    const cwd = allocator.dupe(u8, h.session.currentCwd()) catch |err| {
+    const cwd = allocator.dupe(u8, metadata.cwd) catch |err| {
         log.logf(.warning, "snapshot cwd dup failed err={s}", .{@errorName(err)});
         return .out_of_memory;
     };
@@ -424,27 +459,26 @@ pub fn snapshotRelease(snapshot: *Snapshot) void {
     snapshot.* = .{};
 }
 
-pub fn scrollbackCount(handle: ?*ZideTerminalHandle, out_count: *u32) Status {
-    const h = fromOpaque(handle) orelse return .invalid_argument;
-    const count = h.session.scrollbackCount();
-    out_count.* = std.math.cast(u32, count) orelse std.math.maxInt(u32);
-    return .ok;
-}
-
 pub fn scrollbackAcquire(handle: ?*ZideTerminalHandle, start_row: u32, max_rows: u32, out_buffer: *ScrollbackBuffer) Status {
     const log = app_logger.logger("terminal.ffi");
     const h = fromOpaque(handle) orelse return .invalid_argument;
     out_buffer.* = .{};
-
-    const total_rows = h.session.scrollbackCount();
-    const start_index: usize = start_row;
-    if (start_index > total_rows) return .invalid_argument;
-
-    const available = total_rows - start_index;
-    const requested = if (max_rows == 0) available else @min(available, @as(usize, max_rows));
-    const cols = h.session.gridCols();
-    const cell_count = requested * cols;
     const allocator = h.allocator;
+
+    const range = h.session.copyScrollbackRange(
+        allocator,
+        @intCast(start_row),
+        @intCast(max_rows),
+        &h.scratch_scrollback_cells,
+    ) catch |err| switch (err) {
+        error.InvalidArgument => return .invalid_argument,
+        else => {
+            log.logf(.warning, "scrollback range export failed start={d} max={d} err={s}", .{ start_row, max_rows, @errorName(err) });
+            return mapError(err);
+        },
+    };
+
+    const cell_count = range.row_count * range.cols;
 
     const owner = allocator.create(ScrollbackOwner) catch |err| {
         log.logf(.warning, "scrollback owner alloc failed err={s}", .{@errorName(err)});
@@ -457,14 +491,8 @@ pub fn scrollbackAcquire(handle: ?*ZideTerminalHandle, start_row: u32, max_rows:
     };
     errdefer allocator.free(cells);
 
-    var row_index: usize = 0;
-    while (row_index < requested) : (row_index += 1) {
-        const source_row = h.session.scrollbackRow(start_index + row_index) orelse return .backend_error;
-        if (source_row.len != cols) return .backend_error;
-        const dst_start = row_index * cols;
-        for (source_row, 0..) |cell, col| {
-            cells[dst_start + col] = mapCell(cell);
-        }
+    for (h.scratch_scrollback_cells.items, 0..) |cell, idx| {
+        cells[idx] = mapCell(cell);
     }
 
     owner.* = .{
@@ -475,10 +503,10 @@ pub fn scrollbackAcquire(handle: ?*ZideTerminalHandle, start_row: u32, max_rows:
     out_buffer.* = .{
         .abi_version = scrollback_abi_version,
         .struct_size = @sizeOf(ScrollbackBuffer),
-        .total_rows = std.math.cast(u32, total_rows) orelse std.math.maxInt(u32),
+        .total_rows = std.math.cast(u32, range.total_rows) orelse std.math.maxInt(u32),
         .start_row = start_row,
-        .row_count = std.math.cast(u32, requested) orelse std.math.maxInt(u32),
-        .cols = std.math.cast(u32, cols) orelse std.math.maxInt(u32),
+        .row_count = std.math.cast(u32, range.row_count) orelse std.math.maxInt(u32),
+        .cols = std.math.cast(u32, range.cols) orelse std.math.maxInt(u32),
         .cell_count = cell_count,
         .cells = if (cell_count == 0) null else cells.ptr,
         ._ctx = owner,
@@ -494,6 +522,66 @@ pub fn scrollbackRelease(scrollback: *ScrollbackBuffer) void {
     owner.allocator.free(owner.cells);
     owner.allocator.destroy(owner);
     scrollback.* = .{};
+}
+
+pub fn metadataAcquire(handle: ?*ZideTerminalHandle, out_metadata: *Metadata) Status {
+    const log = app_logger.logger("terminal.ffi");
+    const h = fromOpaque(handle) orelse return .invalid_argument;
+    out_metadata.* = .{};
+
+    const allocator = h.allocator;
+    const owner = allocator.create(MetadataOwner) catch |err| {
+        log.logf(.warning, "metadata owner alloc failed err={s}", .{@errorName(err)});
+        return .out_of_memory;
+    };
+    errdefer allocator.destroy(owner);
+
+    const metadata = h.session.copyMetadata(allocator, &h.scratch_title, &h.scratch_cwd) catch |err| {
+        log.logf(.warning, "metadata copy failed err={s}", .{@errorName(err)});
+        return mapError(err);
+    };
+    const title = allocator.dupe(u8, metadata.title) catch |err| {
+        log.logf(.warning, "metadata title dup failed err={s}", .{@errorName(err)});
+        return .out_of_memory;
+    };
+    errdefer allocator.free(title);
+    const cwd = allocator.dupe(u8, metadata.cwd) catch |err| {
+        log.logf(.warning, "metadata cwd dup failed err={s}", .{@errorName(err)});
+        return .out_of_memory;
+    };
+    errdefer allocator.free(cwd);
+
+    owner.* = .{
+        .allocator = allocator,
+        .title = title,
+        .cwd = cwd,
+    };
+    out_metadata.* = .{
+        .abi_version = metadata_abi_version,
+        .struct_size = @sizeOf(Metadata),
+        .scrollback_count = std.math.cast(u32, metadata.scrollback_count) orelse std.math.maxInt(u32),
+        .scrollback_offset = std.math.cast(u32, metadata.scrollback_offset) orelse std.math.maxInt(u32),
+        .alive = @intFromBool(metadata.alive),
+        .has_exit_code = @intFromBool(metadata.exit_code != null),
+        .exit_code = metadata.exit_code orelse 0,
+        .title_ptr = if (title.len == 0) null else title.ptr,
+        .title_len = title.len,
+        .cwd_ptr = if (cwd.len == 0) null else cwd.ptr,
+        .cwd_len = cwd.len,
+        ._ctx = owner,
+    };
+    return .ok;
+}
+
+pub fn metadataRelease(metadata: *Metadata) void {
+    const owner = metadataOwner(metadata._ctx) orelse {
+        metadata.* = .{};
+        return;
+    };
+    owner.allocator.free(owner.title);
+    owner.allocator.free(owner.cwd);
+    owner.allocator.destroy(owner);
+    metadata.* = .{};
 }
 
 pub fn eventDrain(handle: ?*ZideTerminalHandle, out_events: *EventBuffer) Status {
@@ -565,14 +653,28 @@ pub fn isAlive(handle: ?*ZideTerminalHandle) u8 {
     return @intFromBool(h.session.isAlive());
 }
 
-pub fn currentTitle(handle: ?*ZideTerminalHandle, out_string: *StringBuffer) Status {
+pub fn selectionText(handle: ?*ZideTerminalHandle, out_string: *StringBuffer) Status {
     const h = fromOpaque(handle) orelse return .invalid_argument;
-    return stringFromSlice(h.allocator, h.session.currentTitle(), out_string);
+    const text = (h.session.selectionPlainTextAlloc(h.allocator) catch |err| {
+        return mapError(err);
+    }) orelse return stringFromSlice(h.allocator, "", out_string);
+    return stringFromOwnedSlice(h.allocator, text, out_string);
 }
 
-pub fn currentCwd(handle: ?*ZideTerminalHandle, out_string: *StringBuffer) Status {
+pub fn scrollbackPlainText(handle: ?*ZideTerminalHandle, out_string: *StringBuffer) Status {
     const h = fromOpaque(handle) orelse return .invalid_argument;
-    return stringFromSlice(h.allocator, h.session.currentCwd(), out_string);
+    const text = h.session.scrollbackPlainTextAlloc(h.allocator) catch |err| {
+        return mapError(err);
+    };
+    return stringFromOwnedSlice(h.allocator, text, out_string);
+}
+
+pub fn scrollbackAnsiText(handle: ?*ZideTerminalHandle, out_string: *StringBuffer) Status {
+    const h = fromOpaque(handle) orelse return .invalid_argument;
+    const text = h.session.scrollbackAnsiTextAlloc(h.allocator) catch |err| {
+        return mapError(err);
+    };
+    return stringFromOwnedSlice(h.allocator, text, out_string);
 }
 
 pub fn stringFree(string: *StringBuffer) void {
@@ -587,7 +689,8 @@ pub fn stringFree(string: *StringBuffer) void {
 
 pub fn childExitStatus(handle: ?*ZideTerminalHandle, out_code: *i32, out_has_status: *u8) Status {
     const h = fromOpaque(handle) orelse return .invalid_argument;
-    if (h.session.childExitCode()) |code| {
+    const metadata = h.session.copyMetadata(h.allocator, &h.scratch_title, &h.scratch_cwd) catch |err| return mapError(err);
+    if (metadata.exit_code) |code| {
         out_code.* = code;
         out_has_status.* = 1;
     } else {
@@ -626,14 +729,17 @@ pub fn rendererMetadata(codepoint: u32, out_metadata: *RendererMetadata) Status 
 }
 
 fn syncDerivedEvents(handle: *Handle) Status {
-    syncStringEvent(handle, .title_changed, &handle.last_title, handle.session.currentTitle()) catch |err| return mapError(err);
-    syncStringEvent(handle, .cwd_changed, &handle.last_cwd, handle.session.currentCwd()) catch |err| return mapError(err);
-    if (handle.session.takeOscClipboard()) |clip| {
+    const metadata = handle.session.copyMetadata(handle.allocator, &handle.scratch_title, &handle.scratch_cwd) catch |err| return mapError(err);
+    syncStringEvent(handle, .title_changed, &handle.last_title, metadata.title) catch |err| return mapError(err);
+    syncStringEvent(handle, .cwd_changed, &handle.last_cwd, metadata.cwd) catch |err| return mapError(err);
+
+    if (handle.session.takeOscClipboardCopy(handle.allocator, &handle.scratch_clipboard) catch |err| return mapError(err)) {
+        const clip = handle.scratch_clipboard.items;
         const payload = if (clip.len > 0 and clip[clip.len - 1] == 0) clip[0 .. clip.len - 1] else clip;
         queueEvent(handle, .clipboard_write, payload, 0, 0) catch |err| return mapError(err);
     }
     if (!handle.exit_delivered) {
-        if (handle.session.childExitCode()) |code| {
+        if (metadata.exit_code) |code| {
             queueEvent(handle, .child_exit, &[_]u8{}, code, 1) catch |err| return mapError(err);
             handle.exit_delivered = true;
         }
@@ -705,6 +811,11 @@ fn snapshotOwner(ctx: ?*anyopaque) ?*SnapshotOwner {
     return @ptrCast(@alignCast(value));
 }
 
+fn metadataOwner(ctx: ?*anyopaque) ?*MetadataOwner {
+    const value = ctx orelse return null;
+    return @ptrCast(@alignCast(value));
+}
+
 fn eventOwner(ctx: ?*anyopaque) ?*EventOwner {
     const value = ctx orelse return null;
     return @ptrCast(@alignCast(value));
@@ -748,6 +859,27 @@ fn stringFromSlice(allocator: std.mem.Allocator, value: []const u8, out_string: 
     out_string.* = .{
         .ptr = if (bytes.len == 0) null else bytes.ptr,
         .len = bytes.len,
+        ._ctx = owner,
+    };
+    return .ok;
+}
+
+fn stringFromOwnedSlice(allocator: std.mem.Allocator, value: []u8, out_string: *StringBuffer) Status {
+    const log = app_logger.logger("terminal.ffi");
+    out_string.* = .{};
+    const owner = allocator.create(StringOwner) catch |err| {
+        log.logf(.warning, "string owner alloc failed len={d} err={s}", .{ value.len, @errorName(err) });
+        allocator.free(value);
+        return .out_of_memory;
+    };
+
+    owner.* = .{
+        .allocator = allocator,
+        .bytes = value,
+    };
+    out_string.* = .{
+        .ptr = if (value.len == 0) null else value.ptr,
+        .len = value.len,
         ._ctx = owner,
     };
     return .ok;

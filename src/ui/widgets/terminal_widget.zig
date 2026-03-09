@@ -1,5 +1,4 @@
 const std = @import("std");
-const builtin = @import("builtin");
 const app_shell = @import("../../app_shell.zig");
 const terminal_mod = @import("../../terminal/core/terminal.zig");
 const key_encoder = @import("../../terminal/input/key_encoder.zig");
@@ -13,11 +12,8 @@ const input_mod = @import("terminal_widget_input.zig");
 const render_cache_mod = @import("../../terminal/core/render_cache.zig");
 
 const Shell = app_shell.Shell;
-const Color = app_shell.Color;
 const TerminalSession = terminal_mod.TerminalSession;
 const CursorPos = terminal_mod.CursorPos;
-const Cell = terminal_mod.Cell;
-const CellAttrs = terminal_mod.CellAttrs;
 const KittyImage = terminal_mod.KittyImage;
 const KittyPlacement = terminal_mod.KittyPlacement;
 const RenderCache = render_cache_mod.RenderCache;
@@ -225,136 +221,6 @@ pub const TerminalWidget = struct {
         self.terminal_texture_ready = false;
     }
 
-    pub fn copySelectionToClipboard(self: *TerminalWidget, shell: *Shell) bool {
-        const log = app_logger.logger("terminal.widget");
-        const selection = self.session.selectionState() orelse return false;
-        const rowLastContentCol = struct {
-            fn apply(row_cells: []const Cell, cols_count: usize) ?usize {
-                if (cols_count == 0 or row_cells.len < cols_count) return null;
-                var last: ?usize = null;
-                var col_idx: usize = 0;
-                while (col_idx < cols_count) : (col_idx += 1) {
-                    const cell = row_cells[col_idx];
-                    if (cell.x != 0 or cell.y != 0) continue;
-                    if (cell.codepoint == 0 and cell.combining_len == 0) continue;
-                    const width_units = @as(usize, @max(@as(u8, 1), cell.width));
-                    const end_col = @min(cols_count - 1, col_idx + width_units - 1);
-                    last = end_col;
-                }
-                return last;
-            }
-        }.apply;
-        const sel_snapshot = self.session.snapshot();
-        const rows_snapshot = sel_snapshot.rows;
-        const cols_snapshot = sel_snapshot.cols;
-        const history = self.session.scrollbackCount();
-        const total_lines_copy = history + rows_snapshot;
-        if (rows_snapshot == 0 or cols_snapshot == 0 or total_lines_copy == 0) return false;
-
-        var start_sel = selection.start;
-        var end_sel = selection.end;
-        if (start_sel.row > end_sel.row or (start_sel.row == end_sel.row and start_sel.col > end_sel.col)) {
-            const tmp = start_sel;
-            start_sel = end_sel;
-            end_sel = tmp;
-        }
-        start_sel.row = @min(start_sel.row, total_lines_copy - 1);
-        end_sel.row = @min(end_sel.row, total_lines_copy - 1);
-        start_sel.col = @min(start_sel.col, cols_snapshot - 1);
-        end_sel.col = @min(end_sel.col, cols_snapshot - 1);
-
-        var text = std.ArrayList(u8).empty;
-        defer text.deinit(self.session.allocator);
-
-        var row_idx: usize = start_sel.row;
-        while (row_idx <= end_sel.row and row_idx < total_lines_copy) : (row_idx += 1) {
-            const row_cells = blk: {
-                if (row_idx < history) {
-                    if (self.session.scrollbackRow(row_idx)) |history_row| break :blk history_row;
-                }
-                const grid_row = row_idx - history;
-                const row_start = grid_row * cols_snapshot;
-                break :blk sel_snapshot.cells[row_start .. row_start + cols_snapshot];
-            };
-
-            const col_start = if (row_idx == start_sel.row) start_sel.col else 0;
-            const col_end = if (row_idx == end_sel.row) end_sel.col else cols_snapshot - 1;
-            const last_content_col = rowLastContentCol(row_cells, cols_snapshot) orelse {
-                if (row_idx != end_sel.row) {
-                    text.append(self.session.allocator, '\n') catch {
-                        log.logf(.warning, "copy selection failed appending newline for empty row", .{});
-                        return false;
-                    };
-                }
-                continue;
-            };
-            const clamped_end = @min(col_end, last_content_col);
-            if (clamped_end < col_start) {
-                if (row_idx != end_sel.row) {
-                    text.append(self.session.allocator, '\n') catch {
-                        log.logf(.warning, "copy selection failed appending newline for clamped row", .{});
-                        return false;
-                    };
-                }
-                continue;
-            }
-            var col_idx: usize = col_start;
-            while (col_idx <= clamped_end and col_idx < cols_snapshot) : (col_idx += 1) {
-                const cell = row_cells[col_idx];
-                if (cell.x != 0 or cell.y != 0) {
-                    continue;
-                }
-                if (cell.codepoint == 0) {
-                    text.append(self.session.allocator, ' ') catch {
-                        log.logf(.warning, "copy selection failed appending space", .{});
-                        return false;
-                    };
-                    continue;
-                }
-                var buf: [4]u8 = undefined;
-                const len = std.unicode.utf8Encode(@intCast(cell.codepoint), &buf) catch 0;
-                if (len > 0) {
-                    text.appendSlice(self.session.allocator, buf[0..len]) catch {
-                        log.logf(.warning, "copy selection failed appending codepoint", .{});
-                        return false;
-                    };
-                }
-                if (cell.combining_len > 0) {
-                    var ci: usize = 0;
-                    while (ci < @as(usize, @intCast(cell.combining_len)) and ci < cell.combining.len) : (ci += 1) {
-                        const cp = cell.combining[ci];
-                        const c_len = std.unicode.utf8Encode(@intCast(cp), &buf) catch 0;
-                        if (c_len > 0) {
-                            text.appendSlice(self.session.allocator, buf[0..c_len]) catch {
-                                log.logf(.warning, "copy selection failed appending combining codepoint", .{});
-                                return false;
-                            };
-                        }
-                    }
-                }
-            }
-
-            while (text.items.len > 0 and text.items[text.items.len - 1] == ' ') {
-                _ = text.pop();
-            }
-
-            if (row_idx != end_sel.row) {
-                text.append(self.session.allocator, '\n') catch {
-                    log.logf(.warning, "copy selection failed appending row newline", .{});
-                    return false;
-                };
-            }
-        }
-
-        text.append(self.session.allocator, 0) catch {
-            log.logf(.warning, "copy selection failed appending c-string terminator", .{});
-            return false;
-        };
-        const cstr: [*:0]const u8 = @ptrCast(text.items.ptr);
-        shell.setClipboardText(cstr);
-        return true;
-    }
-
     pub fn pasteClipboardFromSystem(self: *TerminalWidget, shell: *Shell) bool {
         const log = app_logger.logger("terminal.widget");
         const clip_opt = shell.getClipboardText();
@@ -367,7 +233,7 @@ pub const TerminalWidget = struct {
         const clip = clip_opt orelse "";
         const has_supported_clipboard_data = clip_opt != null or html != null or uri_list != null or png != null;
         if (!has_supported_clipboard_data) return false;
-        if (self.session.scrollOffset() > 0) {
+        if (self.session.renderCache().scroll_offset > 0) {
             self.session.setScrollOffset(0);
         }
         if (self.session.sendKittyPasteEvent5522WithMimeRich(clip, html, uri_list, png) catch |err| {
@@ -408,172 +274,6 @@ pub const TerminalWidget = struct {
             };
         }
         return true;
-    }
-
-    pub fn scrollbackPlainTextAlloc(self: *TerminalWidget, allocator: std.mem.Allocator) ![]u8 {
-        const snap = self.session.snapshot();
-        const rows = snap.rows;
-        const cols = snap.cols;
-        const history = self.session.scrollbackCount();
-
-        var out = std.ArrayList(u8).empty;
-        errdefer out.deinit(allocator);
-
-        var buf: [4]u8 = undefined;
-
-        var line_idx: usize = 0;
-        while (line_idx < history + rows) : (line_idx += 1) {
-            const row_cells = blk: {
-                if (line_idx < history) {
-                    if (self.session.scrollbackRow(line_idx)) |history_row| break :blk history_row;
-                    continue;
-                }
-                const grid_row = line_idx - history;
-                if (grid_row >= rows or cols == 0) continue;
-                const row_start = grid_row * cols;
-                break :blk snap.cells[row_start .. row_start + cols];
-            };
-
-            var line = std.ArrayList(u8).empty;
-            defer line.deinit(allocator);
-
-            var col_idx: usize = 0;
-            while (col_idx < row_cells.len) : (col_idx += 1) {
-                const cell = row_cells[col_idx];
-                if (cell.x != 0 or cell.y != 0) continue;
-                if (cell.codepoint == 0) {
-                    try line.append(allocator, ' ');
-                    continue;
-                }
-                const len = std.unicode.utf8Encode(@intCast(cell.codepoint), &buf) catch 0;
-                if (len > 0) try line.appendSlice(allocator, buf[0..len]);
-                if (cell.combining_len > 0) {
-                    var ci: usize = 0;
-                    while (ci < @as(usize, @intCast(cell.combining_len)) and ci < cell.combining.len) : (ci += 1) {
-                        const cp = cell.combining[ci];
-                        const clen = std.unicode.utf8Encode(@intCast(cp), &buf) catch 0;
-                        if (clen > 0) try line.appendSlice(allocator, buf[0..clen]);
-                    }
-                }
-            }
-
-            while (line.items.len > 0 and line.items[line.items.len - 1] == ' ') {
-                _ = line.pop();
-            }
-            try out.appendSlice(allocator, line.items);
-            try out.append(allocator, '\n');
-        }
-
-        return out.toOwnedSlice(allocator);
-    }
-
-    fn appendSgrForAttrs(out: *std.ArrayList(u8), allocator: std.mem.Allocator, attrs: CellAttrs) !void {
-        const bold = if (attrs.bold) ";1" else "";
-        const underline = if (attrs.underline) ";4" else "";
-        const reverse = if (attrs.reverse) ";7" else "";
-        const blink = if (attrs.blink) (if (attrs.blink_fast) ";6" else ";5") else "";
-        const seq = try std.fmt.allocPrint(
-            allocator,
-            "\x1b[0{s}{s}{s}{s};38;2;{d};{d};{d};48;2;{d};{d};{d};58;2;{d};{d};{d}m",
-            .{
-                bold,
-                underline,
-                reverse,
-                blink,
-                attrs.fg.r,
-                attrs.fg.g,
-                attrs.fg.b,
-                attrs.bg.r,
-                attrs.bg.g,
-                attrs.bg.b,
-                attrs.underline_color.r,
-                attrs.underline_color.g,
-                attrs.underline_color.b,
-            },
-        );
-        defer allocator.free(seq);
-        try out.appendSlice(allocator, seq);
-    }
-
-    fn attrsEqual(a: CellAttrs, b: CellAttrs) bool {
-        return a.fg.r == b.fg.r and
-            a.fg.g == b.fg.g and
-            a.fg.b == b.fg.b and
-            a.fg.a == b.fg.a and
-            a.bg.r == b.bg.r and
-            a.bg.g == b.bg.g and
-            a.bg.b == b.bg.b and
-            a.bg.a == b.bg.a and
-            a.bold == b.bold and
-            a.blink == b.blink and
-            a.blink_fast == b.blink_fast and
-            a.reverse == b.reverse and
-            a.underline == b.underline and
-            a.underline_color.r == b.underline_color.r and
-            a.underline_color.g == b.underline_color.g and
-            a.underline_color.b == b.underline_color.b and
-            a.underline_color.a == b.underline_color.a;
-    }
-
-    pub fn scrollbackAnsiTextAlloc(self: *TerminalWidget, allocator: std.mem.Allocator) ![]u8 {
-        const snap = self.session.snapshot();
-        const rows = snap.rows;
-        const cols = snap.cols;
-        const history = self.session.scrollbackCount();
-
-        var out = std.ArrayList(u8).empty;
-        errdefer out.deinit(allocator);
-
-        var buf: [4]u8 = undefined;
-
-        var line_idx: usize = 0;
-        while (line_idx < history + rows) : (line_idx += 1) {
-            const row_cells = blk: {
-                if (line_idx < history) {
-                    if (self.session.scrollbackRow(line_idx)) |history_row| break :blk history_row;
-                    continue;
-                }
-                const grid_row = line_idx - history;
-                if (grid_row >= rows or cols == 0) continue;
-                const row_start = grid_row * cols;
-                break :blk snap.cells[row_start .. row_start + cols];
-            };
-
-            var active_attrs: ?CellAttrs = null;
-            var col_idx: usize = 0;
-            while (col_idx < row_cells.len) : (col_idx += 1) {
-                const cell = row_cells[col_idx];
-                if (cell.x != 0 or cell.y != 0) continue;
-                if (active_attrs == null or !attrsEqual(active_attrs.?, cell.attrs)) {
-                    try appendSgrForAttrs(&out, allocator, cell.attrs);
-                    active_attrs = cell.attrs;
-                }
-
-                if (cell.codepoint == 0) {
-                    try out.append(allocator, ' ');
-                    continue;
-                }
-                const len = std.unicode.utf8Encode(@intCast(cell.codepoint), &buf) catch 0;
-                if (len > 0) {
-                    try out.appendSlice(allocator, buf[0..len]);
-                }
-                if (cell.combining_len > 0) {
-                    var ci: usize = 0;
-                    while (ci < @as(usize, @intCast(cell.combining_len)) and ci < cell.combining.len) : (ci += 1) {
-                        const cp = cell.combining[ci];
-                        const clen = std.unicode.utf8Encode(@intCast(cp), &buf) catch 0;
-                        if (clen > 0) try out.appendSlice(allocator, buf[0..clen]);
-                    }
-                }
-            }
-
-            if (active_attrs != null) {
-                try out.appendSlice(allocator, "\x1b[0m");
-            }
-            try out.append(allocator, '\n');
-        }
-
-        return out.toOwnedSlice(allocator);
     }
 
     pub fn draw(

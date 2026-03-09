@@ -24,6 +24,7 @@ const input_modes = @import("input_modes.zig");
 const hyperlink_table = @import("hyperlink_table.zig");
 const state_reset = @import("state_reset.zig");
 const scrollback_view = @import("scrollback_view.zig");
+const text_export = @import("text_export.zig");
 const osc_kitty_clipboard = @import("../protocol/osc_kitty_clipboard.zig");
 const Pty = pty_mod.Pty;
 const PtySize = pty_mod.PtySize;
@@ -56,6 +57,16 @@ const RenderCache = render_cache_mod.RenderCache;
 
 pub const TerminalSnapshot = snapshot_mod.TerminalSnapshot;
 pub const DebugSnapshot = snapshot_mod.DebugSnapshot;
+pub const ScrollbackInfo = scrollback_view.ScrollbackInfo;
+pub const ScrollbackRange = scrollback_view.ScrollbackRange;
+pub const SessionMetadata = struct {
+    title: []const u8,
+    cwd: []const u8,
+    scrollback_count: usize,
+    scrollback_offset: usize,
+    alive: bool,
+    exit_code: ?i32,
+};
 pub const PresentedRenderCache = struct {
     generation: u64,
     dirty: Dirty,
@@ -99,7 +110,7 @@ pub fn debugSnapshot(self: *TerminalSession) DebugSnapshot {
         .scrollback_count = self.history.scrollbackCount(),
         .scrollback_offset = self.history.scrollOffset(),
         .focus_reporting = self.focus_reporting,
-        .selection = self.selectionState(),
+        .selection = selection_mod.selectionState(self),
         .base_default_attrs = self.base_default_attrs,
     };
 }
@@ -576,11 +587,6 @@ pub const TerminalSession = struct {
     pub fn poll(self: *TerminalSession) !void {
         self.maybeUpdateChildExit();
         return pty_io.poll(self);
-    }
-
-    pub fn childExitCode(self: *TerminalSession) ?i32 {
-        if (!self.child_exited.load(.acquire)) return null;
-        return self.child_exit_code.load(.acquire);
     }
 
     fn maybeUpdateChildExit(self: *TerminalSession) void {
@@ -1156,24 +1162,30 @@ pub const TerminalSession = struct {
         return self.activeScreenConst().cursorPos();
     }
 
-    pub fn gridRows(self: *TerminalSession) usize {
-        return self.activeScreenConst().rowCount();
+    pub fn scrollbackInfo(self: *TerminalSession) ScrollbackInfo {
+        return scrollback_view.scrollbackInfo(self);
     }
 
-    pub fn gridCols(self: *TerminalSession) usize {
-        return self.activeScreenConst().colCount();
+    pub fn copyScrollbackRange(
+        self: *TerminalSession,
+        allocator: std.mem.Allocator,
+        start_row: usize,
+        max_rows: usize,
+        out: *std.ArrayList(Cell),
+    ) !ScrollbackRange {
+        return scrollback_view.copyScrollbackRange(self, allocator, start_row, max_rows, out);
     }
 
-    pub fn scrollbackCount(self: *TerminalSession) usize {
-        return scrollback_view.scrollbackCount(self);
+    pub fn selectionPlainTextAlloc(self: *TerminalSession, allocator: std.mem.Allocator) !?[]u8 {
+        return text_export.selectionPlainTextAlloc(self, allocator);
     }
 
-    pub fn scrollbackRow(self: *TerminalSession, index: usize) ?[]const Cell {
-        return scrollback_view.scrollbackRow(self, index);
+    pub fn scrollbackPlainTextAlloc(self: *TerminalSession, allocator: std.mem.Allocator) ![]u8 {
+        return text_export.scrollbackPlainTextAlloc(self, allocator);
     }
 
-    pub fn scrollOffset(self: *TerminalSession) usize {
-        return scrollback_view.scrollOffset(self);
+    pub fn scrollbackAnsiTextAlloc(self: *TerminalSession, allocator: std.mem.Allocator) ![]u8 {
+        return text_export.scrollbackAnsiTextAlloc(self, allocator);
     }
 
     pub fn setScrollOffset(self: *TerminalSession, offset: usize) void {
@@ -1444,6 +1456,9 @@ pub const TerminalSession = struct {
             .cursor_visible = view.cursor_visible,
             .dirty = view.dirty,
             .damage = view.damage,
+            .scrollback_count = self.history.scrollbackCount(),
+            .scrollback_offset = self.history.scrollOffset(),
+            .selection = selection_mod.selectionState(self),
             .alt_active = alt_active,
             .screen_reverse = screen.screen_reverse,
             .generation = self.output_generation.load(.acquire),
@@ -1513,27 +1528,72 @@ pub const TerminalSession = struct {
         self.updateViewCacheNoLock(self.output_generation.load(.acquire), offset);
     }
 
-    pub fn takeOscClipboard(self: *TerminalSession) ?[]const u8 {
-        if (!self.osc_clipboard_pending) return null;
+    fn copyTextInto(allocator: std.mem.Allocator, out: *std.ArrayList(u8), text: []const u8) ![]const u8 {
+        out.clearRetainingCapacity();
+        try out.appendSlice(allocator, text);
+        return out.items;
+    }
+
+    fn takeOscClipboardCopyLocked(self: *TerminalSession, allocator: std.mem.Allocator, out: *std.ArrayList(u8)) !bool {
+        out.clearRetainingCapacity();
+        if (!self.osc_clipboard_pending) return false;
+        try out.appendSlice(allocator, self.osc_clipboard.items);
         self.osc_clipboard_pending = false;
-        return self.osc_clipboard.items;
+        return true;
     }
 
-    pub fn hyperlinkUri(self: *const TerminalSession, link_id: u32) ?[]const u8 {
-        return hyperlink_table.hyperlinkUri(self, link_id);
+    pub fn takeOscClipboardCopy(self: *TerminalSession, allocator: std.mem.Allocator, out: *std.ArrayList(u8)) !bool {
+        self.lock();
+        defer self.unlock();
+        return self.takeOscClipboardCopyLocked(allocator, out);
     }
 
-    pub fn currentCwd(self: *const TerminalSession) []const u8 {
-        return self.cwd;
+    pub fn tryTakeOscClipboardCopy(self: *TerminalSession, allocator: std.mem.Allocator, out: *std.ArrayList(u8)) !bool {
+        out.clearRetainingCapacity();
+        if (!self.tryLock()) return false;
+        defer self.unlock();
+        return self.takeOscClipboardCopyLocked(allocator, out);
     }
 
-    pub fn currentTitle(self: *TerminalSession) []const u8 {
-        if (self.pty) |*pty| {
-            if (pty.foregroundProcessLabel()) |label| {
-                return label;
-            }
-        }
-        return self.title;
+    pub fn copyHyperlinkUri(self: *TerminalSession, allocator: std.mem.Allocator, link_id: u32, out: *std.ArrayList(u8)) !?[]const u8 {
+        self.lock();
+        defer self.unlock();
+        out.clearRetainingCapacity();
+        const uri = hyperlink_table.hyperlinkUri(self, link_id) orelse return null;
+        try out.appendSlice(allocator, uri);
+        return out.items;
+    }
+
+    pub fn copyMetadata(
+        self: *TerminalSession,
+        allocator: std.mem.Allocator,
+        title_out: *std.ArrayList(u8),
+        cwd_out: *std.ArrayList(u8),
+    ) !SessionMetadata {
+        self.lock();
+        defer self.unlock();
+
+        const title = if (self.pty) |*pty|
+            (pty.foregroundProcessLabel() orelse self.title)
+        else
+            self.title;
+        const cwd = self.cwd;
+        const scrollback = scrollback_view.scrollbackInfo(self);
+        const scroll_offset: usize = if (self.active == .alt) 0 else self.history.scrollOffset();
+        const alive = if (self.pty) |*pty| pty.isAlive() else false;
+        const exit_code = if (self.child_exited.load(.acquire))
+            self.child_exit_code.load(.acquire)
+        else
+            null;
+
+        return .{
+            .title = try copyTextInto(allocator, title_out, title),
+            .cwd = try copyTextInto(allocator, cwd_out, cwd),
+            .scrollback_count = scrollback.total_rows,
+            .scrollback_offset = scroll_offset,
+            .alive = alive,
+            .exit_code = exit_code,
+        };
     }
 
     fn clearPublishedDamageIfGeneration(self: *TerminalSession, expected_generation: u64, clear_screen_dirty: bool) bool {
@@ -1580,10 +1640,6 @@ pub const TerminalSession = struct {
 
     pub fn finishSelectionLocked(self: *TerminalSession) void {
         selection_mod.finishSelectionLocked(self);
-    }
-
-    pub fn selectionState(self: *TerminalSession) ?TerminalSelection {
-        return selection_mod.selectionState(self);
     }
 
     pub fn bracketedPasteEnabled(self: *TerminalSession) bool {
@@ -1880,7 +1936,7 @@ test "full-region scroll publishes partial cache damage at live bottom" {
     const cache = session.renderCache();
     try std.testing.expectEqual(Dirty.partial, cache.dirty);
     try std.testing.expectEqual(@as(i32, 1), cache.viewport_shift_rows);
-    try std.testing.expectEqual(@as(usize, 1), session.scrollbackCount());
+    try std.testing.expectEqual(@as(usize, 1), session.scrollbackInfo().total_rows);
 }
 
 test "feedOutputBytes keeps incremental damage after baseline publish" {
@@ -2421,4 +2477,129 @@ test "screen clear stays on partial path" {
     try std.testing.expectEqual(@as(usize, 1), cache.damage.end_row);
     try std.testing.expectEqual(@as(usize, 0), cache.damage.start_col);
     try std.testing.expectEqual(@as(usize, 3), cache.damage.end_col);
+}
+
+test "selection plain text export is terminal-owned across history and grid" {
+    const allocator = std.testing.allocator;
+
+    var session = try TerminalSession.init(allocator, 2, 4);
+    defer session.deinit();
+
+    const base = session.primary.defaultCell();
+    var history_row = [_]Cell{ base, base, base, base };
+    history_row[0].codepoint = 'A';
+    history_row[1].codepoint = 'B';
+    session.history.pushRow(&history_row, false, base);
+
+    session.primary.grid.cells.items[0] = base;
+    session.primary.grid.cells.items[1] = base;
+    session.primary.grid.cells.items[2] = base;
+    session.primary.grid.cells.items[3] = base;
+    session.primary.grid.cells.items[0].codepoint = 'C';
+    session.primary.grid.cells.items[1].codepoint = 'D';
+
+    session.startSelection(0, 1);
+    session.updateSelection(1, 1);
+    session.finishSelection();
+
+    const text_opt = try session.selectionPlainTextAlloc(allocator);
+    try std.testing.expect(text_opt != null);
+    const text = text_opt.?;
+    defer allocator.free(text);
+
+    try std.testing.expectEqualStrings("B\nCD", text);
+}
+
+test "scrollback plain text export is terminal-owned" {
+    const allocator = std.testing.allocator;
+
+    var session = try TerminalSession.init(allocator, 2, 4);
+    defer session.deinit();
+
+    const base = session.primary.defaultCell();
+    var history_row = [_]Cell{ base, base, base, base };
+    history_row[0].codepoint = 'A';
+    history_row[1].codepoint = 'B';
+    session.history.pushRow(&history_row, false, base);
+
+    session.primary.grid.cells.items[0] = base;
+    session.primary.grid.cells.items[1] = base;
+    session.primary.grid.cells.items[2] = base;
+    session.primary.grid.cells.items[3] = base;
+    session.primary.grid.cells.items[4] = base;
+    session.primary.grid.cells.items[5] = base;
+    session.primary.grid.cells.items[6] = base;
+    session.primary.grid.cells.items[7] = base;
+    session.primary.grid.cells.items[0].codepoint = 'C';
+    session.primary.grid.cells.items[1].codepoint = 'D';
+    session.primary.grid.cells.items[4].codepoint = 'E';
+    session.primary.grid.cells.items[5].codepoint = 'F';
+
+    const text = try session.scrollbackPlainTextAlloc(allocator);
+    defer allocator.free(text);
+
+    try std.testing.expectEqualStrings("AB\nCD\nEF\n", text);
+}
+
+test "scrollback ansi text export is terminal-owned" {
+    const allocator = std.testing.allocator;
+
+    var session = try TerminalSession.init(allocator, 1, 1);
+    defer session.deinit();
+
+    var cell = session.primary.defaultCell();
+    cell.codepoint = 'A';
+    session.primary.grid.cells.items[0] = cell;
+
+    const text = try session.scrollbackAnsiTextAlloc(allocator);
+    defer allocator.free(text);
+
+    const expected = try std.fmt.allocPrint(
+        allocator,
+        "\x1b[0;38;2;{d};{d};{d};48;2;{d};{d};{d};58;2;{d};{d};{d}mA\x1b[0m\n",
+        .{
+            cell.attrs.fg.r,
+            cell.attrs.fg.g,
+            cell.attrs.fg.b,
+            cell.attrs.bg.r,
+            cell.attrs.bg.g,
+            cell.attrs.bg.b,
+            cell.attrs.underline_color.r,
+            cell.attrs.underline_color.g,
+            cell.attrs.underline_color.b,
+        },
+    );
+    defer allocator.free(expected);
+
+    try std.testing.expectEqualStrings(expected, text);
+}
+
+test "scrollback range export is terminal-owned" {
+    const allocator = std.testing.allocator;
+
+    var session = try TerminalSession.init(allocator, 2, 3);
+    defer session.deinit();
+
+    const base = session.primary.defaultCell();
+    var row0 = [_]Cell{ base, base, base };
+    var row1 = [_]Cell{ base, base, base };
+    row0[0].codepoint = 'A';
+    row0[1].codepoint = 'B';
+    row1[0].codepoint = 'C';
+    row1[1].codepoint = 'D';
+    session.history.pushRow(&row0, false, base);
+    session.history.pushRow(&row1, false, base);
+
+    var cells = std.ArrayList(Cell).empty;
+    defer cells.deinit(allocator);
+    const range = try session.copyScrollbackRange(allocator, 0, 0, &cells);
+
+    try std.testing.expectEqual(@as(usize, 2), range.total_rows);
+    try std.testing.expectEqual(@as(usize, 2), range.row_count);
+    try std.testing.expectEqual(@as(usize, 3), range.cols);
+    try std.testing.expectEqual(@as(usize, 6), cells.items.len);
+    try std.testing.expectEqual(@as(u32, 'A'), cells.items[0].codepoint);
+    try std.testing.expectEqual(@as(u32, 'B'), cells.items[1].codepoint);
+    try std.testing.expectEqual(@as(u32, 'C'), cells.items[3].codepoint);
+    try std.testing.expectEqual(@as(u32, 'D'), cells.items[4].codepoint);
 }
