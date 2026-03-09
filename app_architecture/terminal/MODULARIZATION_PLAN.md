@@ -155,6 +155,7 @@ Progress:
 - Follow-up (2026-03-09): removed additional dead leftovers from the old snapshot/open seam (`TerminalSession.clearDirty()` and the unused snapshot row helper in `terminal_widget_open.zig`).
 - Follow-up (2026-03-09): removed the dead unbounded `TerminalWorkspace.pollAll()` API so workspace polling surface now matches the budgeted scheduler design.
 - Follow-up (2026-03-09): extracted workspace polling/fairness implementation into `src/terminal/core/workspace_polling.zig` so `workspace.zig` moves closer to tab/session ownership rather than scheduling policy.
+- Follow-up (2026-03-09): extracted terminal frame pacing/latency/generation observation into `src/app/terminal_frame_pacing_runtime.zig` so `frame_render_idle_runtime.zig` acts as a coordinator instead of embedding terminal scheduler policy inline.
 
 ## Regression Checklist (keep in sync)
 - OSC coverage: 0/2/7/8/10/11/12/19/52 + XTGETTCAP.
@@ -198,13 +199,15 @@ ordered by how much they constrain future correctness and simplification work.
 - `terminal_widget_draw` still performs backend-facing lifecycle work such as
   pending-cache service, presented-generation ack, and dirty clearing.
 
-3) Scheduler ownership is spread across app runtime globals and workspace policy.
+3) Scheduler ownership is still spread across app runtime helpers and workspace policy.
 - Files:
   - `src/app/frame_render_idle_runtime.zig`
+  - `src/app/terminal_frame_pacing_runtime.zig`
   - `src/app/poll_visible_terminal_sessions_runtime.zig`
   - `src/terminal/core/workspace.zig`
 - Poll cadence, backlog hints, draw cadence, and active/background fairness are
-  split across multiple modules with file-scope runtime state.
+  still split across multiple modules even though the obvious file-global runtime
+  state has now been removed.
 
 4) Input snapshot publication is manual and drift-prone.
 - Files:
