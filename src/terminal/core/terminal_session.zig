@@ -541,12 +541,21 @@ pub const TerminalSession = struct {
         self.presented_generation.store(generation, .release);
     }
 
-    pub fn acknowledgePresentedGeneration(self: *TerminalSession, generation: u64, sync_updates: bool) bool {
+    pub fn acknowledgePresentedGeneration(self: *TerminalSession, generation: u64) bool {
         self.notePresentedGeneration(generation);
-        if (sync_updates) {
+        if (self.renderCacheSyncUpdatesActiveForGeneration(generation)) {
             return self.clearRenderCacheDirtyIfGeneration(generation);
         }
         return self.clearDirtyIfGeneration(generation);
+    }
+
+    fn renderCacheSyncUpdatesActiveForGeneration(self: *TerminalSession, generation: u64) bool {
+        inline for (0..2) |i| {
+            if (self.render_caches[i].generation == generation) {
+                return self.render_caches[i].sync_updates_active;
+            }
+        }
+        return self.sync_updates_active;
     }
 
     pub fn hasPublishedGenerationBacklog(self: *TerminalSession) bool {
@@ -1705,6 +1714,28 @@ test "feedOutputBytes keeps incremental damage after baseline publish" {
     try std.testing.expectEqual(@as(usize, 0), cache.damage.end_row);
     try std.testing.expectEqual(@as(usize, 0), cache.damage.start_col);
     try std.testing.expectEqual(@as(usize, 0), cache.damage.end_col);
+}
+
+test "acknowledgePresentedGeneration derives sync dirty retirement from cache" {
+    const allocator = std.testing.allocator;
+
+    var session = try TerminalSession.init(allocator, 1, 4);
+    defer session.deinit();
+
+    session.primary.markDirtyAllWithReason(.unknown, @src());
+    _ = session.output_generation.fetchAdd(1, .acq_rel);
+    session.updateViewCacheNoLock(session.output_generation.load(.acquire), session.history.scrollOffset());
+    const normal_generation = session.renderCache().generation;
+    try std.testing.expect(session.acknowledgePresentedGeneration(normal_generation));
+    try std.testing.expectEqual(Dirty.none, session.primary.grid.dirty);
+
+    session.primary.markDirtyAllWithReason(.unknown, @src());
+    session.setSyncUpdates(true);
+    _ = session.output_generation.fetchAdd(1, .acq_rel);
+    session.updateViewCacheNoLock(session.output_generation.load(.acquire), session.history.scrollOffset());
+    const sync_generation = session.renderCache().generation;
+    try std.testing.expect(session.acknowledgePresentedGeneration(sync_generation));
+    try std.testing.expectEqual(Dirty.full, session.primary.grid.dirty);
 }
 
 test "row hash refinement does not skip unpresented top rows" {
