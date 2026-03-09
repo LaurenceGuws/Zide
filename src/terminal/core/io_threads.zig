@@ -20,7 +20,7 @@ pub fn logCsiSequences(log: app_logger.Logger, buf: []const u8) void {
                         _ = std.fmt.bufPrint(hex_buf[pos..], "{x:0>2} ", .{sb}) catch break;
                         out = hex_buf[0 .. pos + 3];
                     }
-                    log.logf(.info, "csi raw len={d} hex={s}", .{ seq.len, out });
+                    log.logf(.debug, "csi raw len={d} hex={s}", .{ seq.len, out });
                 }
                 break;
             }
