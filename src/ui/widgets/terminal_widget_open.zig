@@ -68,12 +68,15 @@ pub fn ctrlClickOpenVisibleMaybe(
                 } else if (std.mem.startsWith(u8, parsed.path, "file://") or (parsed.path.len > 0 and parsed.path[0] == '/')) {
                     resolved = resolveLinkPath(allocator, session, parsed.path);
                 } else {
+                    var title_buf = std.ArrayList(u8).empty;
+                    defer title_buf.deinit(allocator);
                     var cwd_buf = std.ArrayList(u8).empty;
                     defer cwd_buf.deinit(allocator);
-                    const cwd = session.copyCurrentCwd(allocator, &cwd_buf) catch |err| {
-                        log.logf(.warning, "ctrl-open failed copying cwd err={s}", .{@errorName(err)});
+                    const metadata = session.copyMetadata(allocator, &title_buf, &cwd_buf) catch |err| {
+                        log.logf(.warning, "ctrl-open failed copying metadata err={s}", .{@errorName(err)});
                         return false;
                     };
+                    const cwd = metadata.cwd;
                     if (cwd.len > 0) {
                         resolved = std.fs.path.join(allocator, &.{ cwd, parsed.path }) catch |err| {
                             log.logf(.warning, "ctrl-open failed joining cwd-relative path err={s}", .{@errorName(err)});
@@ -183,12 +186,15 @@ fn resolveLinkPath(allocator: std.mem.Allocator, session: *TerminalSession, uri:
             return null;
         };
     }
+    var title_buf = std.ArrayList(u8).empty;
+    defer title_buf.deinit(allocator);
     var cwd_buf = std.ArrayList(u8).empty;
     defer cwd_buf.deinit(allocator);
-    const cwd = session.copyCurrentCwd(allocator, &cwd_buf) catch |err| {
-        log.logf(.warning, "resolveLinkPath failed copying cwd err={s}", .{@errorName(err)});
+    const metadata = session.copyMetadata(allocator, &title_buf, &cwd_buf) catch |err| {
+        log.logf(.warning, "resolveLinkPath failed copying metadata err={s}", .{@errorName(err)});
         return null;
     };
+    const cwd = metadata.cwd;
     if (cwd.len == 0) return null;
     return std.fs.path.join(allocator, &.{ cwd, uri }) catch |err| {
         log.logf(.warning, "resolveLinkPath failed joining cwd path err={s}", .{@errorName(err)});
