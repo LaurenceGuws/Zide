@@ -6,7 +6,7 @@ const polling = @import("workspace_polling.zig");
 pub const TerminalSession = session_mod.TerminalSession;
 pub const TabId = u64;
 
-pub const Tab = struct {
+const Tab = struct {
     id: TabId,
     session: *TerminalSession,
 };
@@ -76,10 +76,6 @@ pub const TerminalWorkspace = struct {
         return @min(self.active_index, self.tabs.items.len - 1);
     }
 
-    pub fn tabsSlice(self: *const TerminalWorkspace) []const Tab {
-        return self.tabs.items;
-    }
-
     pub fn tabIdAt(self: *const TerminalWorkspace, index: usize) ?TabId {
         if (index >= self.tabs.items.len) return null;
         return self.tabs.items[index].id;
@@ -90,12 +86,12 @@ pub const TerminalWorkspace = struct {
         return self.tabs.items[self.activeIndex()].id;
     }
 
-    pub fn sessionAt(self: *TerminalWorkspace, index: usize) ?*TerminalSession {
+    fn sessionAt(self: *TerminalWorkspace, index: usize) ?*TerminalSession {
         if (index >= self.tabs.items.len) return null;
         return self.tabs.items[index].session;
     }
 
-    pub fn activeSession(self: *TerminalWorkspace) ?*TerminalSession {
+    fn activeSession(self: *TerminalWorkspace) ?*TerminalSession {
         if (self.tabs.items.len == 0) return null;
         return self.tabs.items[self.activeIndex()].session;
     }
@@ -163,7 +159,12 @@ pub const TerminalWorkspace = struct {
         };
     }
 
-    pub fn createTab(self: *TerminalWorkspace, rows: u16, cols: u16) !TabId {
+    pub const CreatedTab = struct {
+        id: TabId,
+        session: *TerminalSession,
+    };
+
+    pub fn createTabWithSession(self: *TerminalWorkspace, rows: u16, cols: u16) !CreatedTab {
         const session = try TerminalSession.initWithOptions(self.allocator, rows, cols, self.init_options);
         errdefer session.deinit();
 
@@ -175,7 +176,14 @@ pub const TerminalWorkspace = struct {
         });
         self.active_index = self.tabs.items.len - 1;
         self.background_poll_cursor = self.active_index;
-        return tab_id;
+        return .{
+            .id = tab_id,
+            .session = session,
+        };
+    }
+
+    pub fn createTab(self: *TerminalWorkspace, rows: u16, cols: u16) !TabId {
+        return (try self.createTabWithSession(rows, cols)).id;
     }
 
     pub fn activateIndex(self: *TerminalWorkspace, index: usize) bool {
