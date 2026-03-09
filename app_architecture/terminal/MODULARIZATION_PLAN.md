@@ -505,6 +505,7 @@ Statuses are strict:
   - 2026-03-09: twelfth slice landed on feature-branch work: `osc_semantic` internal helper paths now run on an explicit local `SessionState` context (allocator + semantic prompt/cmdline/user-vars pointers) instead of `anytype` helper signatures, narrowing another implicit OSC-internal seam without behavior changes.
   - 2026-03-09: thirteenth slice landed on feature-branch work: `osc_semantic` parse entry paths now dispatch directly into explicit `SessionState`-based functions (`parseSemanticPromptWithState`, `parseUserVarWithState`) so helper chaining no longer depends on `anytype` at those internal call sites.
   - 2026-03-09: fourteenth slice landed on feature-branch work: CSI `DECRQM` state-query helpers now run off one explicit `ModeSnapshot` capture instead of reading session/screen state through generic helper signatures, reducing another implicit `anytype` seam in protocol internals.
+  - 2026-03-10: fifteenth slice landed on feature-branch work: CSI `DECSTR` reset path now runs through an explicit `DecstrContext` contract (parser/reset/mode/dirty operations) instead of direct `anytype` helper mutation, tightening the reset seam without behavior changes.
 
 10) Investigation/probe residue cleanup
 - status: `in_progress`
