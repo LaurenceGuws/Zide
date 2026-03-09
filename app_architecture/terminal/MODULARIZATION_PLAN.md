@@ -171,6 +171,7 @@ Progress:
 - Follow-up (2026-03-09): extracted DECSTR input-mode reset into `input_modes.resetInputModes(...)` so soft reset stops duplicating snapshot-owned field resets inline.
 - Follow-up (2026-03-09): routed alt-screen transitions through `setActiveScreenMode(...)` so active-screen publication and snapshot refresh stop being open-coded in enter/exit paths.
 - Follow-up (2026-03-10): typed OSC 5522 clipboard write boundaries behind `WriterFacade` so reply/status/data emission no longer depends on implicit `anytype` PTY write seams.
+- Follow-up (2026-03-10): typed CSI reply emission behind `CsiWriter` (`DA`/`DSR`/`DECRQM`/window op/color-scheme replies) while keeping compatibility wrappers at the public helper surface.
 
 ## Regression Checklist (keep in sync)
 - OSC coverage: 0/2/7/8/10/11/12/19/52 + XTGETTCAP.
