@@ -414,6 +414,7 @@ Statuses are strict:
 - progress:
   - 2026-03-09: first slice started on feature branch work: app clipboard shortcuts stopped resolving raw sessions through workspace entirely and now operate on the already-resolved active widget/session. The dead `src/app/terminal_active_session.zig` resolver was deleted.
   - 2026-03-09: second slice started on feature branch work: workspace tab creation now has an explicit mutable creation contract (`createTabWithSession(...)`) so app runtime no longer does `createTab(...)` followed by a separate `activeSession()` lookup just to configure the newly-created tab.
+  - 2026-03-09: third slice started on feature branch work: `TerminalWorkspace.sessionAt(...)`, `activeSession(...)`, and `tabsSlice(...)` stopped being part of the live public app/runtime surface. The remaining raw session helpers are now internal to `workspace.zig`, and the dead `TerminalTab` re-export was removed from `terminal/core/terminal.zig`.
 
 6) Runtime scheduling ownership cleanup
 - status: `todo`
