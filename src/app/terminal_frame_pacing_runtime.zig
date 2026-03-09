@@ -88,19 +88,6 @@ pub fn consumePollMetrics(state: anytype) ?PollMetrics {
     return null;
 }
 
-pub fn clearPressure(state: anytype) void {
-    state.terminal_frame_pacing.pressure_since = null;
-}
-
-pub fn noteIdle(state: anytype, now: f64, redraw_pending: bool) void {
-    const pacing = &state.terminal_frame_pacing;
-    if (redraw_pending) {
-        if (pacing.pressure_since == null) pacing.pressure_since = now;
-    } else {
-        pacing.pressure_since = null;
-    }
-}
-
 pub fn sleepDuration(state: anytype, now: f64, snapshot: Snapshot) f64 {
     const pacing = &state.terminal_frame_pacing;
     const generation_recently_advanced = pacing.last_generation_change_time > 0 and

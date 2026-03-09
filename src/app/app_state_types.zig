@@ -56,7 +56,6 @@ pub const TerminalNewTabStartLocationMode = enum {
 pub const TerminalFramePacingState = struct {
     last_draw_seq: u64 = 0,
     last_poll_seq: u64 = 0,
-    pressure_since: ?f64 = null,
     last_observed_generation: u64 = 0,
     last_observed_current_generation: u64 = 0,
     last_drawn_generation: u64 = 0,

@@ -710,3 +710,17 @@ Reason:
   - reduce the easiest-to-miss `input_snapshot` publication drift points without
     claiming that the broader snapshot design is solved
   - prepare the input lane for a later facade/state-object refactor
+
+## Pacing Probe Retirement (2026-03-09)
+
+- Files:
+  - `src/app/app_state_types.zig`
+  - `src/app/frame_render_idle_runtime.zig`
+  - `src/app/terminal_frame_pacing_runtime.zig`
+- Change:
+  - removed the stale `pressure_since` pacing field and its write-only maintenance
+    path after the runtime extraction confirmed that no current scheduler logic
+    consumes it
+- Intent:
+  - keep investigation-era state from lingering as misleading runtime design
+  - reduce dead scheduler bookkeeping before the next lane split

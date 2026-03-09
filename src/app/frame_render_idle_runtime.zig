@@ -52,7 +52,6 @@ pub fn handle(
         hooks.maybe_log_metrics(ctx, draw_end);
         state.needs_redraw = false;
         state.idle_frames = 0;
-        app_terminal_frame_pacing_runtime.clearPressure(state);
         if (input_batch.events.items.len > 0) {
             const total_ms = poll_ms + build_ms + update_ms + draw_ms;
             if (total_ms >= 1.0) {
@@ -66,7 +65,6 @@ pub fn handle(
     }
 
     state.idle_frames +|= 1;
-    app_terminal_frame_pacing_runtime.noteIdle(state, now, terminal_snapshot.redraw_pending);
 
     if (input_batch.events.items.len > 0) {
         const total_ms = poll_ms + build_ms + update_ms;
