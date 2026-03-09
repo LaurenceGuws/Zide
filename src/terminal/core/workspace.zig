@@ -100,9 +100,16 @@ pub const TerminalWorkspace = struct {
         return self.tabs.items[self.activeIndex()].session;
     }
 
-    pub fn activeSessionCwd(self: *const TerminalWorkspace) []const u8 {
-        if (self.tabs.items.len == 0) return "";
-        return self.tabs.items[self.activeIndex()].session.currentCwd();
+    pub fn copyActiveSessionCwd(
+        self: *TerminalWorkspace,
+        allocator: std.mem.Allocator,
+        out: *std.ArrayList(u8),
+    ) ![]const u8 {
+        const session = self.activeSession() orelse {
+            out.clearRetainingCapacity();
+            return "";
+        };
+        return session.copyCurrentCwd(allocator, out);
     }
 
     pub fn activeSessionShouldConfirmClose(self: *const TerminalWorkspace) bool {
@@ -135,12 +142,20 @@ pub const TerminalWorkspace = struct {
         return self.tabs.items[index].session.shouldConfirmClose();
     }
 
-    pub fn metadataAt(self: *TerminalWorkspace, index: usize) ?TabMetadata {
+    pub fn copyMetadataAt(
+        self: *TerminalWorkspace,
+        allocator: std.mem.Allocator,
+        index: usize,
+        title_out: *std.ArrayList(u8),
+        cwd_out: *std.ArrayList(u8),
+    ) !?TabMetadata {
         const session = self.sessionAt(index) orelse return null;
+        const title = try session.copyCurrentTitle(allocator, title_out);
+        const cwd = try session.copyCurrentCwd(allocator, cwd_out);
         return .{
             .id = self.tabs.items[index].id,
-            .title = session.currentTitle(),
-            .cwd = session.currentCwd(),
+            .title = title,
+            .cwd = cwd,
             .alive = session.isAlive(),
             .exit_code = session.childExitCode(),
         };
