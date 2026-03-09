@@ -589,11 +589,6 @@ pub const TerminalSession = struct {
         return pty_io.poll(self);
     }
 
-    pub fn childExitCode(self: *TerminalSession) ?i32 {
-        if (!self.child_exited.load(.acquire)) return null;
-        return self.child_exit_code.load(.acquire);
-    }
-
     fn maybeUpdateChildExit(self: *TerminalSession) void {
         if (self.child_exited.load(.acquire)) return;
         if (self.pty) |*pty| {

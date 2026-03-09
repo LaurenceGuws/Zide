@@ -689,7 +689,8 @@ pub fn stringFree(string: *StringBuffer) void {
 
 pub fn childExitStatus(handle: ?*ZideTerminalHandle, out_code: *i32, out_has_status: *u8) Status {
     const h = fromOpaque(handle) orelse return .invalid_argument;
-    if (h.session.childExitCode()) |code| {
+    const metadata = h.session.copyMetadata(h.allocator, &h.scratch_title, &h.scratch_cwd) catch |err| return mapError(err);
+    if (metadata.exit_code) |code| {
         out_code.* = code;
         out_has_status.* = 1;
     } else {
@@ -738,7 +739,7 @@ fn syncDerivedEvents(handle: *Handle) Status {
         queueEvent(handle, .clipboard_write, payload, 0, 0) catch |err| return mapError(err);
     }
     if (!handle.exit_delivered) {
-        if (handle.session.childExitCode()) |code| {
+        if (metadata.exit_code) |code| {
             queueEvent(handle, .child_exit, &[_]u8{}, code, 1) catch |err| return mapError(err);
             handle.exit_delivered = true;
         }
