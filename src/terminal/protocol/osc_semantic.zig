@@ -15,13 +15,15 @@ pub const SessionFacade = struct {
             .parse_semantic_prompt_fn = struct {
                 fn call(ctx: *anyopaque, text: []const u8) void {
                     const s: SessionPtr = @ptrCast(@alignCast(ctx));
-                    parseSemanticPromptOnSession(s, text);
+                    var state = SessionState.from(s);
+                    parseSemanticPromptWithState(&state, text);
                 }
             }.call,
             .parse_user_var_fn = struct {
                 fn call(ctx: *anyopaque, text: []const u8) void {
                     const s: SessionPtr = @ptrCast(@alignCast(ctx));
-                    parseUserVarOnSession(s, text);
+                    var state = SessionState.from(s);
+                    parseUserVarWithState(&state, text);
                 }
             }.call,
         };
@@ -64,8 +66,7 @@ pub fn parseUserVar(session: SessionFacade, text: []const u8) void {
     session.parseUserVar(text);
 }
 
-fn parseSemanticPromptOnSession(self: anytype, text: []const u8) void {
-    var state = SessionState.from(self);
+fn parseSemanticPromptWithState(state: *SessionState, text: []const u8) void {
     if (text.len == 0) return;
     const log = app_logger.logger("terminal.osc");
     const kind = text[0];
@@ -83,25 +84,25 @@ fn parseSemanticPromptOnSession(self: anytype, text: []const u8) void {
             state.semantic_prompt.exit_code = null;
             state.semantic_prompt_aid.clearRetainingCapacity();
             state.semantic_cmdline_valid.* = false;
-            applySemanticPromptOptions(&state, rest, true);
+            applySemanticPromptOptions(state, rest, true);
         },
         'B' => {
             state.semantic_prompt.prompt_active = false;
             state.semantic_prompt.input_active = true;
             state.semantic_prompt.output_active = false;
-            applySemanticPromptOptions(&state, rest, false);
+            applySemanticPromptOptions(state, rest, false);
         },
         'C' => {
             state.semantic_prompt.prompt_active = false;
             state.semantic_prompt.input_active = false;
             state.semantic_prompt.output_active = true;
-            applySemanticPromptEndInput(&state, rest);
+            applySemanticPromptEndInput(state, rest);
         },
         'D' => {
             state.semantic_prompt.prompt_active = false;
             state.semantic_prompt.input_active = false;
             state.semantic_prompt.output_active = false;
-            applySemanticPromptEndCommand(&state, rest);
+            applySemanticPromptEndCommand(state, rest);
         },
         else => {
                             log.logf(.debug, "osc 133: unknown kind={c}", .{kind});
@@ -109,8 +110,7 @@ fn parseSemanticPromptOnSession(self: anytype, text: []const u8) void {
     }
 }
 
-fn parseUserVarOnSession(self: anytype, text: []const u8) void {
-    var state = SessionState.from(self);
+fn parseUserVarWithState(state: *SessionState, text: []const u8) void {
     const log = app_logger.logger("terminal.osc");
     const prefix = "SetUserVar=";
     if (!std.mem.startsWith(u8, text, prefix)) return;
@@ -141,7 +141,7 @@ fn parseUserVarOnSession(self: anytype, text: []const u8) void {
         };
     }
 
-    setUserVar(&state, name, decoded.items);
+    setUserVar(state, name, decoded.items);
 }
 
 fn applySemanticPromptOptions(state: *SessionState, text: []const u8, allow_aid: bool) void {
