@@ -1338,7 +1338,6 @@ pub fn draw(
             }
             self.terminal_texture_ready = true;
             self.last_render_generation = cache.generation;
-            self.session.notePresentedGeneration(cache.generation);
             self.last_cell_w_i = cell_w_i;
             self.last_cell_h_i = cell_h_i;
             self.last_render_scale = r.render_scale;
@@ -1680,11 +1679,7 @@ pub fn draw(
     }
 
     if (updated or cache.dirty == .none) {
-        if (sync_updates) {
-            dirty_clear_ok = self.session.clearRenderCacheDirtyIfGeneration(cache.generation);
-        } else {
-            dirty_clear_ok = self.session.clearDirtyIfGeneration(cache.generation);
-        }
+        dirty_clear_ok = self.session.acknowledgePresentedGeneration(cache.generation, sync_updates);
     }
     overlay_ms = time_utils.secondsToMs(app_shell.getTime() - overlay_phase_start);
 

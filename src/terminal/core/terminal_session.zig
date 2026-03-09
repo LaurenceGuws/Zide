@@ -541,6 +541,14 @@ pub const TerminalSession = struct {
         self.presented_generation.store(generation, .release);
     }
 
+    pub fn acknowledgePresentedGeneration(self: *TerminalSession, generation: u64, sync_updates: bool) bool {
+        self.notePresentedGeneration(generation);
+        if (sync_updates) {
+            return self.clearRenderCacheDirtyIfGeneration(generation);
+        }
+        return self.clearDirtyIfGeneration(generation);
+    }
+
     pub fn hasPublishedGenerationBacklog(self: *TerminalSession) bool {
         return self.currentGeneration() != self.publishedGeneration();
     }
