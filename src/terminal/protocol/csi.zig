@@ -566,19 +566,13 @@ fn applyDecstr(self: anytype) void {
     self.title_buffer.clearRetainingCapacity();
     self.title = "Terminal";
 
-    self.app_cursor_keys = false;
-    self.app_keypad = false;
-    self.auto_repeat = true;
-    self.mouse_alternate_scroll = true;
     self.report_color_scheme_2031 = false;
     self.grapheme_cluster_shaping_2027 = false;
     self.primary.setGraphemeClusterShaping2027(false);
     self.alt.setGraphemeClusterShaping2027(false);
     self.inband_resize_notifications_2048 = false;
     self.kitty_paste_events_5522 = false;
-    self.input.resetMouse();
-    self.bracketed_paste = false;
-    self.focus_reporting = false;
+    self.resetInputModes();
     self.column_mode_132 = false;
     self.setSyncUpdates(false);
 
@@ -589,8 +583,6 @@ fn applyDecstr(self: anytype) void {
     const screen = self.activeScreen();
     screen.resetState();
     screen.markDirtyAllWithReason(.decstr_soft_reset, @src());
-
-    self.updateInputSnapshot();
 }
 
 fn decrqmPrivateModeState(self: anytype, screen: anytype, mode: i32) DecrpmState {
