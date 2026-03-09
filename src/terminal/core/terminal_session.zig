@@ -1816,6 +1816,45 @@ test "visible history changes publish partial cache damage without force-full" {
     try std.testing.expectEqual(new_fg, cache.cells.items[0].attrs.fg);
 }
 
+test "visible history changes without presented diff base stay partial" {
+    const allocator = std.testing.allocator;
+
+    var session = try TerminalSession.init(allocator, 2, 4);
+    defer session.deinit();
+
+    const base = session.primary.defaultCell();
+    var row_a = [_]Cell{ base, base, base, base };
+    var row_b = [_]Cell{ base, base, base, base };
+    for (&row_a, 0..) |*cell, col| cell.codepoint = @as(u32, 'A') + @as(u32, @intCast(col));
+    for (&row_b, 0..) |*cell, col| cell.codepoint = @as(u32, 'E') + @as(u32, @intCast(col));
+
+    session.history.pushRow(&row_a, false, base);
+    session.history.pushRow(&row_b, false, base);
+    session.history.ensureViewCache(session.primary.grid.cols, base);
+    session.history.setScrollOffset(session.primary.grid.rows, 2);
+
+    _ = session.output_generation.fetchAdd(1, .acq_rel);
+    session.updateViewCacheNoLock(session.output_generation.load(.acquire), session.history.scrollOffset());
+
+    session.primary.clearDirty();
+    session.alt.clearDirty();
+    try std.testing.expect(session.clearRenderCacheDirtyIfGeneration(session.output_generation.load(.acquire)));
+
+    const new_fg = Color{ .r = 0x44, .g = 0x55, .b = 0x66, .a = 0xff };
+    session.history.updateDefaultColors(base.attrs.fg, base.attrs.bg, new_fg, base.attrs.bg);
+    session.updateViewCacheNoLock(session.output_generation.load(.acquire), session.history.scrollOffset());
+
+    const cache = session.renderCache();
+    try std.testing.expectEqual(Dirty.partial, cache.dirty);
+    try std.testing.expectEqual(@as(usize, 0), cache.damage.start_row);
+    try std.testing.expectEqual(@as(usize, 1), cache.damage.end_row);
+    try std.testing.expect(cache.dirty_rows.items[0]);
+    try std.testing.expect(cache.dirty_rows.items[1]);
+    try std.testing.expectEqual(@as(u16, 0), cache.dirty_cols_start.items[0]);
+    try std.testing.expectEqual(@as(u16, 3), cache.dirty_cols_end.items[0]);
+    try std.testing.expectEqual(new_fg, cache.cells.items[0].attrs.fg);
+}
+
 test "scrollback offset change publishes shift-exposed partial damage" {
     const allocator = std.testing.allocator;
 
