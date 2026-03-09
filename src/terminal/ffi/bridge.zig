@@ -175,7 +175,7 @@ const Handle = struct {
     scratch_title: std.ArrayList(u8),
     scratch_cwd: std.ArrayList(u8),
     scratch_clipboard: std.ArrayList(u8),
-    scratch_scrollback_row: std.ArrayList(types.Cell),
+    scratch_scrollback_cells: std.ArrayList(types.Cell),
     exit_delivered: bool,
 };
 
@@ -238,7 +238,7 @@ pub fn create(config: ?*const CreateConfig, out_handle: *?*ZideTerminalHandle) S
         .scratch_title = .empty,
         .scratch_cwd = .empty,
         .scratch_clipboard = .empty,
-        .scratch_scrollback_row = .empty,
+        .scratch_scrollback_cells = .empty,
         .exit_delivered = false,
     };
     session.copyCurrentTitle(allocator, &handle.last_title) catch |err| {
@@ -266,7 +266,7 @@ pub fn destroy(handle: ?*ZideTerminalHandle) void {
     h.scratch_title.deinit(h.allocator);
     h.scratch_cwd.deinit(h.allocator);
     h.scratch_clipboard.deinit(h.allocator);
-    h.scratch_scrollback_row.deinit(h.allocator);
+    h.scratch_scrollback_cells.deinit(h.allocator);
     h.session.deinit();
     h.allocator.destroy(h);
 }
@@ -455,16 +455,22 @@ pub fn scrollbackAcquire(handle: ?*ZideTerminalHandle, start_row: u32, max_rows:
     const log = app_logger.logger("terminal.ffi");
     const h = fromOpaque(handle) orelse return .invalid_argument;
     out_buffer.* = .{};
-
-    const total_rows = h.session.scrollbackCount();
-    const start_index: usize = start_row;
-    if (start_index > total_rows) return .invalid_argument;
-
-    const available = total_rows - start_index;
-    const requested = if (max_rows == 0) available else @min(available, @as(usize, max_rows));
-    const cols = h.session.gridCols();
-    const cell_count = requested * cols;
     const allocator = h.allocator;
+
+    const range = h.session.copyScrollbackRange(
+        allocator,
+        @intCast(start_row),
+        @intCast(max_rows),
+        &h.scratch_scrollback_cells,
+    ) catch |err| switch (err) {
+        error.InvalidArgument => return .invalid_argument,
+        else => {
+            log.logf(.warning, "scrollback range export failed start={d} max={d} err={s}", .{ start_row, max_rows, @errorName(err) });
+            return mapError(err);
+        },
+    };
+
+    const cell_count = range.row_count * range.cols;
 
     const owner = allocator.create(ScrollbackOwner) catch |err| {
         log.logf(.warning, "scrollback owner alloc failed err={s}", .{@errorName(err)});
@@ -477,17 +483,8 @@ pub fn scrollbackAcquire(handle: ?*ZideTerminalHandle, start_row: u32, max_rows:
     };
     errdefer allocator.free(cells);
 
-    var row_index: usize = 0;
-    while (row_index < requested) : (row_index += 1) {
-        const source_row = (h.session.copyScrollbackRow(allocator, start_index + row_index, &h.scratch_scrollback_row) catch |err| {
-            log.logf(.warning, "scrollback row copy failed row={d} err={s}", .{ start_index + row_index, @errorName(err) });
-            return mapError(err);
-        }) orelse return .backend_error;
-        if (source_row.len != cols) return .backend_error;
-        const dst_start = row_index * cols;
-        for (source_row, 0..) |cell, col| {
-            cells[dst_start + col] = mapCell(cell);
-        }
+    for (h.scratch_scrollback_cells.items, 0..) |cell, idx| {
+        cells[idx] = mapCell(cell);
     }
 
     owner.* = .{
@@ -498,10 +495,10 @@ pub fn scrollbackAcquire(handle: ?*ZideTerminalHandle, start_row: u32, max_rows:
     out_buffer.* = .{
         .abi_version = scrollback_abi_version,
         .struct_size = @sizeOf(ScrollbackBuffer),
-        .total_rows = std.math.cast(u32, total_rows) orelse std.math.maxInt(u32),
+        .total_rows = std.math.cast(u32, range.total_rows) orelse std.math.maxInt(u32),
         .start_row = start_row,
-        .row_count = std.math.cast(u32, requested) orelse std.math.maxInt(u32),
-        .cols = std.math.cast(u32, cols) orelse std.math.maxInt(u32),
+        .row_count = std.math.cast(u32, range.row_count) orelse std.math.maxInt(u32),
+        .cols = std.math.cast(u32, range.cols) orelse std.math.maxInt(u32),
         .cell_count = cell_count,
         .cells = if (cell_count == 0) null else cells.ptr,
         ._ctx = owner,
