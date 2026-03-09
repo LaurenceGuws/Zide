@@ -152,6 +152,7 @@ Progress:
 - Follow-up (2026-03-09): moved terminal idle/pacing bookkeeping out of `frame_render_idle_runtime` file globals and into `AppState` so scheduler state is instance-owned.
 - Follow-up (2026-03-09): removed the stale snapshot-based hover/open widget path so terminal hover/open now has one authoritative visible-cache seam.
 - Follow-up (2026-03-09): removed the dead `TerminalSession.markDirty()` / `Screen.markDirtyAll()` escape-hatch APIs and their dedicated full-dirty reasons.
+- Follow-up (2026-03-09): removed additional dead leftovers from the old snapshot/open seam (`TerminalSession.clearDirty()` and the unused snapshot row helper in `terminal_widget_open.zig`).
 
 ## Regression Checklist (keep in sync)
 - OSC coverage: 0/2/7/8/10/11/12/19/52 + XTGETTCAP.

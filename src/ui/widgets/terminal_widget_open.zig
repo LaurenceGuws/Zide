@@ -201,29 +201,6 @@ fn normalizeWindowsFileUriPath(allocator: std.mem.Allocator, path: []const u8) ?
     return null;
 }
 
-fn rowCellsAtVisibleRow(
-    session: *TerminalSession,
-    snapshot: terminal_mod.TerminalSnapshot,
-    history_len: usize,
-    start_line: usize,
-    rows: usize,
-    cols: usize,
-    row: usize,
-) ?[]const Cell {
-    if (rows == 0 or cols == 0) return null;
-    if (row >= rows) return null;
-    const global_row = start_line + row;
-    if (global_row < history_len) {
-        if (session.scrollbackRow(global_row)) |history_row| return history_row;
-        return null;
-    }
-    const grid_row = global_row - history_len;
-    if (grid_row < rows and snapshot.cells.len >= rows * cols) {
-        return snapshot.cells[grid_row * cols .. grid_row * cols + cols];
-    }
-    return null;
-}
-
 fn visibleRowCells(view_cells: []const Cell, cols: usize, row: usize) ?[]const Cell {
     if (cols == 0) return null;
     const row_start = row * cols;
