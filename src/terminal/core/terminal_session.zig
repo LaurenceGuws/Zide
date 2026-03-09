@@ -692,7 +692,7 @@ pub const TerminalSession = struct {
         const key_mode_flags = input_snapshot.key_mode_flags.load(.acquire);
         const app_cursor = input_snapshot.app_cursor_keys.load(.acquire);
         if (isNavigationKey(key)) {
-            log.logf(.info, "sendKey key={s} code={d} mod=0x{x} action={s} app_cursor={any} key_mode=0x{x}", .{
+            log.logf(.debug, "sendKey key={s} code={d} mod=0x{x} action={s} app_cursor={any} key_mode=0x{x}", .{
                 keyName(key),
                 key,
                 mod,
@@ -716,14 +716,14 @@ pub const TerminalSession = struct {
                 };
                 if (seq.len > 0) {
                     if (isNavigationKey(key)) {
-                        log.logf(.info, "sendKey path=app_cursor seq_len={d}", .{seq.len});
+                        log.logf(.debug, "sendKey path=app_cursor seq_len={d}", .{seq.len});
                     }
                     _ = try writer.write(seq);
                     return;
                 }
             }
             if (isNavigationKey(key)) {
-                log.logf(.info, "sendKey path=encoded", .{});
+                log.logf(.debug, "sendKey path=encoded", .{});
             }
             _ = try input_mod.sendKeyAction(writer.pty, key, mod, key_mode_flags, action);
         }
@@ -742,7 +742,7 @@ pub const TerminalSession = struct {
         const key_mode_flags = input_snapshot.key_mode_flags.load(.acquire);
         const app_cursor = input_snapshot.app_cursor_keys.load(.acquire);
         if (isNavigationKey(key)) {
-            log.logf(.info, "sendKey(meta) key={s} code={d} mod=0x{x} action={s} app_cursor={any} key_mode=0x{x} alt_meta={any}", .{
+            log.logf(.debug, "sendKey(meta) key={s} code={d} mod=0x{x} action={s} app_cursor={any} key_mode=0x{x} alt_meta={any}", .{
                 keyName(key),
                 key,
                 mod,
@@ -767,14 +767,14 @@ pub const TerminalSession = struct {
                 };
                 if (seq.len > 0) {
                     if (isNavigationKey(key)) {
-                        log.logf(.info, "sendKey(meta) path=app_cursor seq_len={d}", .{seq.len});
+                        log.logf(.debug, "sendKey(meta) path=app_cursor seq_len={d}", .{seq.len});
                     }
                     _ = try writer.write(seq);
                     return;
                 }
             }
             if (isNavigationKey(key)) {
-                log.logf(.info, "sendKey(meta) path=encoded", .{});
+                log.logf(.debug, "sendKey(meta) path=encoded", .{});
             }
             _ = try input_mod.sendKeyActionEvent(writer.pty, .{
                 .key = key,
@@ -796,7 +796,7 @@ pub const TerminalSession = struct {
         const input_snapshot = self.input_snapshot;
         const key_mode_flags = input_snapshot.key_mode_flags.load(.acquire);
         const app_keypad = input_snapshot.app_keypad.load(.acquire);
-        log.logf(.info, "sendKeypad key={s} mod=0x{x} action={s} app_keypad={any} key_mode=0x{x}", .{
+        log.logf(.debug, "sendKeypad key={s} mod=0x{x} action={s} app_keypad={any} key_mode=0x{x}", .{
             keypadKeyName(key),
             mod,
             @tagName(action),
@@ -829,7 +829,7 @@ pub const TerminalSession = struct {
         const log = app_logger.logger("terminal.input");
         const input_snapshot = self.input_snapshot;
         const key_mode_flags = input_snapshot.key_mode_flags.load(.acquire);
-        log.logf(.info, "sendChar cp={d} mod=0x{x} action={s} key_mode=0x{x}", .{
+        log.logf(.debug, "sendChar cp={d} mod=0x{x} action={s} key_mode=0x{x}", .{
             char,
             mod,
             @tagName(action),
@@ -855,7 +855,7 @@ pub const TerminalSession = struct {
         const log = app_logger.logger("terminal.input");
         const input_snapshot = self.input_snapshot;
         const key_mode_flags = input_snapshot.key_mode_flags.load(.acquire);
-        log.logf(.info, "sendChar(meta) cp={d} mod=0x{x} action={s} key_mode=0x{x} alt_meta={any}", .{
+        log.logf(.debug, "sendChar(meta) cp={d} mod=0x{x} action={s} key_mode=0x{x} alt_meta={any}", .{
             char,
             mod,
             @tagName(action),
@@ -914,7 +914,7 @@ pub const TerminalSession = struct {
     pub fn sendText(self: *TerminalSession, text: []const u8) !void {
         if (text.len == 0) return;
         const log = app_logger.logger("terminal.input");
-        log.logf(.info, "sendText len={d}", .{text.len});
+        log.logf(.debug, "sendText len={d}", .{text.len});
         if (self.lockPtyWriter()) |writer_guard| {
             var writer = writer_guard;
             defer writer.unlock();
