@@ -7,14 +7,14 @@
   - damage/dirty notes: `app_architecture/terminal/DAMAGE_TRACKING.md`
   - UI/backend seam tracker: `app_architecture/ui/ui_widget_modularization_todo.yaml`
 - Active execution order now lives in `app_architecture/terminal/MODULARIZATION_PLAN.md` under `Strict Cleanup Queue (2026-03-09)`.
-- Current top-of-queue focus: presentation/publication ownership cleanup, then PTY write contract unification, then session state/publication locking cleanup.
+- Current top-of-queue focus: PTY write contract unification, then session state/publication locking cleanup, then `TerminalSession` surface reduction.
 
 ### Recent Changes (High-Level)
 - The high-refresh rain investigation removed most renderer-side force-full and stale invalidation escape hatches.
 - Full-screen `ascii-rain` is now close to stable, so the stronger remaining work is structural rather than incident-driven.
 - Current high-risk architectural seams are:
   - `TerminalSession` is still a large multi-domain owner (PTY/parser/screens/history/render publication/UI-facing APIs).
-  - redraw lifecycle ownership is still split between `view_cache`, `terminal_widget_draw`, and frame runtime helpers, although presented-generation ack and dirty-retirement policy are now behind a single backend API instead of widget-local sequencing.
+- redraw lifecycle ownership is significantly cleaner: published cache capture and post-draw completion are now behind backend APIs, although `view_cache`, widget wrapper code, and frame runtime still participate in the presentation pipeline.
   - scheduler/poll state is still split across app runtime helpers and `TerminalWorkspace`, but concrete workspace poll budgets now live behind the workspace contract instead of the app hook.
   - input-mode snapshot publication is still manual and duplicated in places, although the common CSI mode toggles now flow through explicit setters instead of open-coded field flips.
   - widget input/draw still contain backend-policy behavior rather than being thin presentation/orchestration layers.

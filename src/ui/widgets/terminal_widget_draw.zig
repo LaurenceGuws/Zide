@@ -30,6 +30,7 @@ const Renderer = renderer_mod.Renderer;
 const TerminalDisableLigaturesStrategy = renderer_mod.TerminalDisableLigaturesStrategy;
 const RenderCache = render_cache_mod.RenderCache;
 const PresentedRenderCache = terminal_mod.PresentedRenderCache;
+const PresentationFeedback = terminal_mod.PresentationFeedback;
 const kitty_unicode_placeholder: u32 = 0x10EEEE;
 
 var jitter_debug_enabled_cache: ?bool = null;
@@ -47,19 +48,7 @@ pub const FrameLatencyMetrics = struct {
     draw_ms: f64 = 0.0,
 };
 
-pub const DrawOutcome = struct {
-    pub const AltExitInfo = struct {
-        draw_ms: f64,
-        rows: usize,
-        cols: usize,
-        history_len: usize,
-        scroll_offset: usize,
-    };
-
-    presented: ?PresentedRenderCache = null,
-    texture_updated: bool = false,
-    alt_exit_info: ?AltExitInfo = null,
-};
+pub const DrawOutcome = PresentationFeedback;
 
 pub const DrawPreparation = struct {
     draw_start: f64,

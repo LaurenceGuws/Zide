@@ -68,7 +68,10 @@ important than the exact file layout.
 ### Current Violations To Reduce
 
 - `TerminalSession` still owns too many domains.
-- `terminal_widget_draw` still clears backend dirty state after upload.
+- widget/runtime flow still initiates presentation capture/completion, even though
+  backend retirement and alt-exit presentation policy are now behind
+  `TerminalSession.copyPublishedRenderCache(...)` and
+  `TerminalSession.completePresentationFeedback(...)`.
 - `view_cache` still embeds both cache publication and some redraw-policy knowledge.
 - poll/render runtime still carries terminal-global state in helper modules.
 - protocol handlers still rely on implicit `self` capabilities.
