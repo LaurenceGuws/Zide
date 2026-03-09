@@ -604,6 +604,22 @@ pub const TerminalWidget = struct {
         if (outcome.presented) |presented| {
             _ = self.session.retirePresentedRenderCache(presented, outcome.texture_updated);
         }
+        if (outcome.alt_exit_info) |info| {
+            const exit_time_ms = self.session.takeAltExitPresentationTimeMs();
+            const exit_to_draw_ms: f64 = if (exit_time_ms >= 0)
+                @as(f64, @floatFromInt(std.time.milliTimestamp() - exit_time_ms))
+            else
+                -1.0;
+            const log = app_logger.logger("terminal.alt");
+            log.logf(.info, "alt_exit_draw_ms={d:.2} exit_to_draw_ms={d:.2} rows={d} cols={d} history={d} scroll_offset={d}", .{
+                info.draw_ms,
+                exit_to_draw_ms,
+                info.rows,
+                info.cols,
+                info.history_len,
+                info.scroll_offset,
+            });
+        }
     }
 
     /// Handle input, returns true if any input was processed
