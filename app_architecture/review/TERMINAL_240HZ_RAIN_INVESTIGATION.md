@@ -600,3 +600,17 @@ Reason:
 - Intent:
   - reduce process-global runtime state in the terminal frame scheduler
   - make future scheduler cleanup safer for multi-surface/multi-window ownership
+
+## Widget-Seam Cleanup (2026-03-09)
+
+- Files:
+  - `src/ui/widgets/terminal_widget_hover.zig`
+  - `src/ui/widgets/terminal_widget_open.zig`
+  - `src/input_tests.zig`
+- Change:
+  - removed the stale snapshot-based hover/open helper path
+  - retained the visible-cache path as the sole production and test seam for terminal hover/open behavior
+  - updated input tests accordingly
+- Intent:
+  - reduce widget-side maintenance surface
+  - avoid drift between dead snapshot helpers and the actual visible-cache input path
