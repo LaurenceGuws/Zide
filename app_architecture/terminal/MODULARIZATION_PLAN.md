@@ -177,6 +177,7 @@ Progress:
 - Follow-up (2026-03-10): extracted explicit terminal poll and sleep policy structs plus unit coverage in `src/app/terminal_poll_runtime.zig` and `src/app/terminal_frame_pacing_runtime.zig` so runtime scheduling constants stop living as anonymous inline heuristics.
 - Follow-up (2026-03-10): typed the top-level parser dispatch seam in `src/terminal/core/parser_hooks.zig` behind an explicit session facade, so `TerminalSession` no longer calls parser hook entrypoints through raw `anytype` generics.
 - Follow-up (2026-03-10): removed the dead public `TerminalSession.parseKittyGraphics(...)` bounce and rewired `src/terminal/protocol/dcs_apc.zig` to target the kitty graphics parser module directly, reducing one more protocol-to-session indirection seam.
+- Follow-up (2026-03-10): typed the VT parser callback contract in `src/terminal/parser/parser.zig` behind `Parser.SessionFacade`, and rewired terminal-session, PTY polling, IO-thread parsing, and test debug feed paths to use that explicit parser/session boundary.
 
 ## Regression Checklist (keep in sync)
 - OSC coverage: 0/2/7/8/10/11/12/19/52 + XTGETTCAP.
