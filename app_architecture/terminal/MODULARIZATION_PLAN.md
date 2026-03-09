@@ -507,6 +507,7 @@ Statuses are strict:
   - 2026-03-09: fourteenth slice landed on feature-branch work: CSI `DECRQM` state-query helpers now run off one explicit `ModeSnapshot` capture instead of reading session/screen state through generic helper signatures, reducing another implicit `anytype` seam in protocol internals.
   - 2026-03-10: fifteenth slice landed on feature-branch work: CSI `DECSTR` reset path now runs through an explicit `DecstrContext` contract (parser/reset/mode/dirty operations) instead of direct `anytype` helper mutation, tightening the reset seam without behavior changes.
   - 2026-03-10: sixteenth slice landed on feature-branch work: CSI `applySgr` now runs through an explicit `SgrContext` contract (palette lookup + active-screen attr pointers) instead of direct `anytype` session mutation, narrowing another hot protocol helper seam.
+  - 2026-03-10: seventeenth slice landed on feature-branch work: CSI `DECRQM` snapshot capture is now built through explicit capture/context structs (`ModeCaptureContext` -> `ModeSnapshot`) at the call site instead of relying on a generic capture helper signature.
 
 10) Investigation/probe residue cleanup
 - status: `in_progress`
