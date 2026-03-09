@@ -148,47 +148,7 @@ pub fn parseKittyGraphics(self: anytype, payload: []const u8) void {
     }
 
     if (control.action == 'q') {
-        if (handleKittyQueryEarlyReply(self, control, data.len)) {
-            return;
-        }
-        const image_id = resolveKittyImageId(control).?;
-        if (control.format == 0) {
-            control.format = 32;
-        }
-        if (handleKittyQueryPayloadPreflightReply(self, control, image_id)) {
-            return;
-        }
-        var chunk = loadKittyPayload(self, &control, data) orelse {
-            handleKittyQueryPayloadLoadFailureReply(self, control, image_id);
-            return;
-        };
-        if (control.compression == 'z') {
-            const inflated = inflateKittyData(self, chunk, control.size) orelse {
-                self.allocator.free(chunk);
-                writeKittyResponse(self, control, image_id, false, "EINVAL");
-                return;
-            };
-            self.allocator.free(chunk);
-            chunk = inflated;
-        } else if (control.compression != 0) {
-            self.allocator.free(chunk);
-            writeKittyResponse(self, control, image_id, false, "EINVAL");
-            return;
-        }
-        if (handleKittyQueryPayloadSizeReply(self, control, image_id, chunk.len)) {
-            self.allocator.free(chunk);
-            return;
-        }
-        const Builder = struct {
-            chunk: []u8,
-            fn run(ctx: @This(), session: anytype, target_image_id: u32, ctl: KittyControl) KittyBuildError!void {
-                const image = try buildKittyImage(session, target_image_id, ctl, ctx.chunk);
-                session.allocator.free(image.data);
-            }
-        };
-        if (handleKittyQueryChunkBuildReply(self, control, image_id, chunk.len, Builder{ .chunk = chunk }, Builder.run)) {
-            return;
-        }
+        handleKittyQuery(self, control, data);
         return;
     }
     if (control.action != 't' and control.action != 'T') return;
@@ -343,6 +303,54 @@ pub fn kittyQueryBuildErrorReplyMessage(err: KittyBuildError) []const u8 {
         error.BadPng => "EBADPNG",
         else => "EINVAL",
     };
+}
+
+fn handleKittyQuery(self: anytype, control: KittyControl, data: []const u8) void {
+    if (handleKittyQueryEarlyReply(self, control, data.len)) return;
+
+    const image_id = resolveKittyImageId(control).?;
+    var query_control = control;
+    if (query_control.format == 0) {
+        query_control.format = 32;
+    }
+    if (handleKittyQueryPayloadPreflightReply(self, query_control, image_id)) return;
+
+    var chunk = loadKittyPayload(self, &query_control, data) orelse {
+        handleKittyQueryPayloadLoadFailureReply(self, query_control, image_id);
+        return;
+    };
+    chunk = inflateKittyQueryChunk(self, query_control, image_id, chunk) orelse return;
+    defer self.allocator.free(chunk);
+
+    if (handleKittyQueryPayloadSizeReply(self, query_control, image_id, chunk.len)) return;
+    _ = handleKittyQueryChunkBuildReply(self, query_control, image_id, chunk.len, QueryBuilder{ .chunk = chunk }, QueryBuilder.run);
+}
+
+const QueryBuilder = struct {
+    chunk: []u8,
+
+    fn run(ctx: @This(), session: anytype, target_image_id: u32, ctl: KittyControl) KittyBuildError!void {
+        const image = try buildKittyImage(session, target_image_id, ctl, ctx.chunk);
+        session.allocator.free(image.data);
+    }
+};
+
+fn inflateKittyQueryChunk(self: anytype, control: KittyControl, image_id: u32, chunk: []u8) ?[]u8 {
+    if (control.compression == 'z') {
+        const inflated = inflateKittyData(self, chunk, control.size) orelse {
+            self.allocator.free(chunk);
+            writeKittyResponse(self, control, image_id, false, "EINVAL");
+            return null;
+        };
+        self.allocator.free(chunk);
+        return inflated;
+    }
+    if (control.compression != 0) {
+        self.allocator.free(chunk);
+        writeKittyResponse(self, control, image_id, false, "EINVAL");
+        return null;
+    }
+    return chunk;
 }
 
 fn parseKittyControl(
