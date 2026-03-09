@@ -21,8 +21,6 @@ fn pickForcedFullDirtyReason(
     cache_alt_active: bool,
     screen_reverse: bool,
     cache_screen_reverse: bool,
-    kitty_generation: u64,
-    cache_kitty_generation: u64,
     view_dirty: anytype,
     view_reason: FullDirtyReason,
 ) FullDirtyReason {
@@ -32,7 +30,6 @@ fn pickForcedFullDirtyReason(
     if (requires_full_damage_for_clear_generation) return .view_cache_clear_generation_change;
     if (active_is_alt != cache_alt_active) return .view_cache_alt_state_change;
     if (screen_reverse != cache_screen_reverse) return .view_cache_screen_reverse_change;
-    if (kitty_generation != cache_kitty_generation) return .view_cache_kitty_generation_change;
     if (view_dirty == .full) {
         return if (view_reason == .unknown) .view_cache_view_dirty_full else view_reason;
     }
@@ -516,8 +513,6 @@ pub fn updateViewCacheNoLock(self: anytype, generation: u64, scroll_offset: usiz
             active_cache.alt_active,
             screen_reverse,
             active_cache.screen_reverse,
-            kitty_generation,
-            active_cache.kitty_generation,
             view.dirty,
             view.full_dirty_reason,
         );

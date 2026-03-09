@@ -30,7 +30,6 @@ pub const FullDirtyReason = enum {
     view_cache_clear_generation_change,
     view_cache_alt_state_change,
     view_cache_screen_reverse_change,
-    view_cache_kitty_generation_change,
     view_cache_view_dirty_full,
 };
 
@@ -57,7 +56,6 @@ fn fullDirtyReasonNote(reason: FullDirtyReason) []const u8 {
         .view_cache_clear_generation_change => "clear-generation change requested conservative full redraw",
         .view_cache_alt_state_change => "alt-screen active state changed in view cache",
         .view_cache_screen_reverse_change => "screen reverse mode changed in view cache",
-        .view_cache_kitty_generation_change => "kitty image generation changed in view cache",
         .view_cache_view_dirty_full => "view snapshot itself reported full dirty state",
     };
 }
