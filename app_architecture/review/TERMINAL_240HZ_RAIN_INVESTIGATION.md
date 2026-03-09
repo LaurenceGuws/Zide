@@ -724,3 +724,18 @@ Reason:
 - Intent:
   - keep investigation-era state from lingering as misleading runtime design
   - reduce dead scheduler bookkeeping before the next lane split
+
+## Poll Runtime Extraction (2026-03-09)
+
+- Files:
+  - `src/app/poll_visible_terminal_sessions_runtime.zig`
+  - `src/app/terminal_poll_runtime.zig`
+- Change:
+  - extracted terminal poll-pressure calculation, workspace poll-budget selection,
+    and “did polling publish new terminal state?” checks into a dedicated
+    `terminal_poll_runtime.zig` helper
+  - reduced `poll_visible_terminal_sessions_runtime` to mode/surface coordination
+    plus delegation
+- Intent:
+  - keep the runtime lane consistent with the earlier frame-pacing extraction
+  - stop the visible-terminal hook from owning terminal scheduler heuristics
