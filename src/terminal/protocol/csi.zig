@@ -359,6 +359,28 @@ fn effectiveSgrParamCount(action: parser_csi.CsiAction) usize {
     return raw_count;
 }
 
+const CsiWriter = struct {
+    ctx: *anyopaque,
+    write_fn: *const fn (ctx: *anyopaque, bytes: []const u8) anyerror!usize,
+
+    pub fn from(writer: anytype) CsiWriter {
+        const WriterPtr = @TypeOf(writer);
+        return .{
+            .ctx = @ptrCast(writer),
+            .write_fn = struct {
+                fn call(ctx: *anyopaque, bytes: []const u8) anyerror!usize {
+                    const typed: WriterPtr = @ptrCast(@alignCast(ctx));
+                    return try typed.write(bytes);
+                }
+            }.call,
+        };
+    }
+
+    pub fn write(self: CsiWriter, bytes: []const u8) anyerror!usize {
+        return try self.write_fn(self.ctx, bytes);
+    }
+};
+
 pub const SessionFacade = struct {
     ctx: *anyopaque,
     handle_csi_fn: *const fn (ctx: *anyopaque, action: parser_csi.CsiAction) void,
@@ -585,18 +607,18 @@ fn handleCsiOnSession(self: anytype, action: parser_csi.CsiAction) void {
                     switch (mode) {
                         6 => { // DECXCPR
                             const pos = screen.cursorReport();
-                            _ = writeDsrReply(&writer, action.leader, mode, pos.row_1, pos.col_1);
+                            _ = writeDsrReplyWithWriter(CsiWriter.from(&writer), action.leader, mode, pos.row_1, pos.col_1);
                         },
-                        15, 25, 26, 55, 56, 75, 85 => _ = writeDsrReply(&writer, action.leader, mode, 0, 0),
-                        996 => _ = writeColorSchemePreferenceReply(&writer, self.color_scheme_dark),
+                        15, 25, 26, 55, 56, 75, 85 => _ = writeDsrReplyWithWriter(CsiWriter.from(&writer), action.leader, mode, 0, 0),
+                        996 => _ = writeColorSchemePreferenceReplyWithWriter(CsiWriter.from(&writer), self.color_scheme_dark),
                         else => {},
                     }
                 } else if (action.leader == 0) {
                     switch (mode) {
-                        5 => _ = writeDsrReply(&writer, action.leader, mode, 0, 0),
+                        5 => _ = writeDsrReplyWithWriter(CsiWriter.from(&writer), action.leader, mode, 0, 0),
                         6 => { // Cursor position report
                             const pos = screen.cursorReport();
-                            _ = writeDsrReply(&writer, action.leader, mode, pos.row_1, pos.col_1);
+                            _ = writeDsrReplyWithWriter(CsiWriter.from(&writer), action.leader, mode, pos.row_1, pos.col_1);
                         },
                         else => {},
                     }
@@ -608,7 +630,7 @@ fn handleCsiOnSession(self: anytype, action: parser_csi.CsiAction) void {
                 if (self.lockPtyWriter()) |writer_guard| {
                     var writer = writer_guard;
                     defer writer.unlock();
-                    _ = writeDaPrimaryReply(&writer);
+                    _ = writeDaPrimaryReplyWithWriter(CsiWriter.from(&writer));
                 }
             }
         },
@@ -619,10 +641,10 @@ fn handleCsiOnSession(self: anytype, action: parser_csi.CsiAction) void {
                 var writer = writer_guard;
                 defer writer.unlock();
                 switch (mode) {
-                    14 => _ = writeWindowOpPixelsReply(&writer, @as(u32, self.cell_height) * screen.grid.rows, @as(u32, self.cell_width) * screen.grid.cols),
-                    16 => _ = writeWindowOpCellPixelsReply(&writer, self.cell_height, self.cell_width),
-                    18 => _ = writeWindowOpCharsReply(&writer, screen.grid.rows, screen.grid.cols),
-                    19 => _ = writeWindowOpScreenCharsReply(&writer, screen.grid.rows, screen.grid.cols),
+                    14 => _ = writeWindowOpPixelsReplyWithWriter(CsiWriter.from(&writer), @as(u32, self.cell_height) * screen.grid.rows, @as(u32, self.cell_width) * screen.grid.cols),
+                    16 => _ = writeWindowOpCellPixelsReplyWithWriter(CsiWriter.from(&writer), self.cell_height, self.cell_width),
+                    18 => _ = writeWindowOpCharsReplyWithWriter(CsiWriter.from(&writer), screen.grid.rows, screen.grid.cols),
+                    19 => _ = writeWindowOpScreenCharsReplyWithWriter(CsiWriter.from(&writer), screen.grid.rows, screen.grid.cols),
                     else => {},
                 }
             }
@@ -674,7 +696,7 @@ fn handleCsiOnSession(self: anytype, action: parser_csi.CsiAction) void {
                     var writer = writer_guard;
                     defer writer.unlock();
                     const state = decrqmPrivateModeState(snapshot, mode);
-                    _ = writeDecrqmReply(&writer, true, mode, state);
+                    _ = writeDecrqmReplyWithWriter(CsiWriter.from(&writer), true, mode, state);
                 }
                 return;
             }
@@ -684,7 +706,7 @@ fn handleCsiOnSession(self: anytype, action: parser_csi.CsiAction) void {
                     var writer = writer_guard;
                     defer writer.unlock();
                     const state = decrqmAnsiModeState(snapshot, mode);
-                    _ = writeDecrqmReply(&writer, false, mode, state);
+                    _ = writeDecrqmReplyWithWriter(CsiWriter.from(&writer), false, mode, state);
                 }
             }
         },
@@ -857,8 +879,12 @@ fn handleCsiOnSession(self: anytype, action: parser_csi.CsiAction) void {
 }
 
 pub fn writeDaPrimaryReply(pty: anytype) bool {
+    return writeDaPrimaryReplyWithWriter(CsiWriter.from(pty));
+}
+
+fn writeDaPrimaryReplyWithWriter(writer: CsiWriter) bool {
     const log = app_logger.logger("terminal.csi");
-    _ = pty.write("\x1b[?62;1;2;4;6;7;8;9;15;18;21;22;28;29c") catch |err| {
+    _ = writer.write("\x1b[?62;1;2;4;6;7;8;9;15;18;21;22;28;29c") catch |err| {
         log.logf(.warning, "DA primary reply write failed: {s}", .{@errorName(err)});
         return false;
     };
@@ -866,6 +892,10 @@ pub fn writeDaPrimaryReply(pty: anytype) bool {
 }
 
 pub fn writeDsrReply(pty: anytype, leader: u8, mode: i32, row_1: usize, col_1: usize) bool {
+    return writeDsrReplyWithWriter(CsiWriter.from(pty), leader, mode, row_1, col_1);
+}
+
+fn writeDsrReplyWithWriter(writer: CsiWriter, leader: u8, mode: i32, row_1: usize, col_1: usize) bool {
     const log = app_logger.logger("terminal.csi");
     if (leader == '?') {
         switch (mode) {
@@ -875,32 +905,32 @@ pub fn writeDsrReply(pty: anytype, leader: u8, mode: i32, row_1: usize, col_1: u
                     log.logf(.warning, "DSR private cursor reply format failed: {s}", .{@errorName(err)});
                     return false;
                 };
-                _ = pty.write(seq) catch |err| {
+                _ = writer.write(seq) catch |err| {
                     log.logf(.warning, "DSR private cursor reply write failed: {s}", .{@errorName(err)});
                     return false;
                 };
                 return true;
             },
-            15 => return writeConst(pty, "\x1b[?10n"),
-            25 => return writeConst(pty, "\x1b[?20n"),
-            26 => return writeConst(pty, "\x1b[?27;1;0;0n"),
-            55 => return writeConst(pty, "\x1b[?50n"),
-            56 => return writeConst(pty, "\x1b[?57;0n"),
-            75 => return writeConst(pty, "\x1b[?70n"),
-            85 => return writeConst(pty, "\x1b[?83n"),
+            15 => return writeConst(writer, "\x1b[?10n"),
+            25 => return writeConst(writer, "\x1b[?20n"),
+            26 => return writeConst(writer, "\x1b[?27;1;0;0n"),
+            55 => return writeConst(writer, "\x1b[?50n"),
+            56 => return writeConst(writer, "\x1b[?57;0n"),
+            75 => return writeConst(writer, "\x1b[?70n"),
+            85 => return writeConst(writer, "\x1b[?83n"),
             else => return false,
         }
     }
     if (leader == 0) {
         switch (mode) {
-            5 => return writeConst(pty, "\x1b[0n"),
+            5 => return writeConst(writer, "\x1b[0n"),
             6 => {
                 var buf: [32]u8 = undefined;
                 const seq = std.fmt.bufPrint(&buf, "\x1b[{d};{d}R", .{ row_1, col_1 }) catch |err| {
                     log.logf(.warning, "DSR cursor reply format failed: {s}", .{@errorName(err)});
                     return false;
                 };
-                _ = pty.write(seq) catch |err| {
+                _ = writer.write(seq) catch |err| {
                     log.logf(.warning, "DSR cursor reply write failed: {s}", .{@errorName(err)});
                     return false;
                 };
@@ -913,6 +943,10 @@ pub fn writeDsrReply(pty: anytype, leader: u8, mode: i32, row_1: usize, col_1: u
 }
 
 pub fn writeDecrqmReply(pty: anytype, private: bool, mode: i32, state: DecrpmState) bool {
+    return writeDecrqmReplyWithWriter(CsiWriter.from(pty), private, mode, state);
+}
+
+fn writeDecrqmReplyWithWriter(writer: CsiWriter, private: bool, mode: i32, state: DecrpmState) bool {
     const log = app_logger.logger("terminal.csi");
     var buf: [32]u8 = undefined;
     const seq = if (private)
@@ -923,7 +957,7 @@ pub fn writeDecrqmReply(pty: anytype, private: bool, mode: i32, state: DecrpmSta
         log.logf(.warning, "DECRQM reply format failed mode={d} private={d}: {s}", .{ mode, @as(u8, @intFromBool(private)), @errorName(err) });
         return false;
     };
-    _ = pty.write(bytes) catch |err| {
+    _ = writer.write(bytes) catch |err| {
         log.logf(.warning, "DECRQM reply write failed mode={d} private={d}: {s}", .{ mode, @as(u8, @intFromBool(private)), @errorName(err) });
         return false;
     };
@@ -1010,9 +1044,9 @@ fn boolModeState(enabled: bool) DecrpmState {
     return if (enabled) .set else .reset;
 }
 
-fn writeConst(pty: anytype, seq: []const u8) bool {
+fn writeConst(writer: CsiWriter, seq: []const u8) bool {
     const log = app_logger.logger("terminal.csi");
-    _ = pty.write(seq) catch |err| {
+    _ = writer.write(seq) catch |err| {
         log.logf(.warning, "CSI const reply write failed: {s}", .{@errorName(err)});
         return false;
     };
@@ -1020,13 +1054,17 @@ fn writeConst(pty: anytype, seq: []const u8) bool {
 }
 
 pub fn writeColorSchemePreferenceReply(pty: anytype, dark: bool) bool {
+    return writeColorSchemePreferenceReplyWithWriter(CsiWriter.from(pty), dark);
+}
+
+fn writeColorSchemePreferenceReplyWithWriter(writer: CsiWriter, dark: bool) bool {
     const log = app_logger.logger("terminal.csi");
     var buf: [16]u8 = undefined;
     const seq = std.fmt.bufPrint(&buf, "\x1b[?997;{d}n", .{if (dark) @as(u8, 1) else @as(u8, 2)}) catch |err| {
         log.logf(.warning, "color scheme preference reply format failed: {s}", .{@errorName(err)});
         return false;
     };
-    _ = pty.write(seq) catch |err| {
+    _ = writer.write(seq) catch |err| {
         log.logf(.warning, "color scheme preference reply write failed: {s}", .{@errorName(err)});
         return false;
     };
@@ -1034,13 +1072,17 @@ pub fn writeColorSchemePreferenceReply(pty: anytype, dark: bool) bool {
 }
 
 pub fn writeWindowOpCharsReply(pty: anytype, rows: u16, cols: u16) bool {
+    return writeWindowOpCharsReplyWithWriter(CsiWriter.from(pty), rows, cols);
+}
+
+fn writeWindowOpCharsReplyWithWriter(writer: CsiWriter, rows: u16, cols: u16) bool {
     const log = app_logger.logger("terminal.csi");
     var buf: [32]u8 = undefined;
     const seq = std.fmt.bufPrint(&buf, "\x1b[8;{d};{d}t", .{ rows, cols }) catch |err| {
         log.logf(.warning, "window chars reply format failed: {s}", .{@errorName(err)});
         return false;
     };
-    _ = pty.write(seq) catch |err| {
+    _ = writer.write(seq) catch |err| {
         log.logf(.warning, "window chars reply write failed: {s}", .{@errorName(err)});
         return false;
     };
@@ -1048,13 +1090,17 @@ pub fn writeWindowOpCharsReply(pty: anytype, rows: u16, cols: u16) bool {
 }
 
 pub fn writeWindowOpScreenCharsReply(pty: anytype, rows: u16, cols: u16) bool {
+    return writeWindowOpScreenCharsReplyWithWriter(CsiWriter.from(pty), rows, cols);
+}
+
+fn writeWindowOpScreenCharsReplyWithWriter(writer: CsiWriter, rows: u16, cols: u16) bool {
     const log = app_logger.logger("terminal.csi");
     var buf: [32]u8 = undefined;
     const seq = std.fmt.bufPrint(&buf, "\x1b[9;{d};{d}t", .{ rows, cols }) catch |err| {
         log.logf(.warning, "window screen chars reply format failed: {s}", .{@errorName(err)});
         return false;
     };
-    _ = pty.write(seq) catch |err| {
+    _ = writer.write(seq) catch |err| {
         log.logf(.warning, "window screen chars reply write failed: {s}", .{@errorName(err)});
         return false;
     };
@@ -1062,13 +1108,17 @@ pub fn writeWindowOpScreenCharsReply(pty: anytype, rows: u16, cols: u16) bool {
 }
 
 pub fn writeWindowOpPixelsReply(pty: anytype, height_px: u32, width_px: u32) bool {
+    return writeWindowOpPixelsReplyWithWriter(CsiWriter.from(pty), height_px, width_px);
+}
+
+fn writeWindowOpPixelsReplyWithWriter(writer: CsiWriter, height_px: u32, width_px: u32) bool {
     const log = app_logger.logger("terminal.csi");
     var buf: [40]u8 = undefined;
     const seq = std.fmt.bufPrint(&buf, "\x1b[4;{d};{d}t", .{ height_px, width_px }) catch |err| {
         log.logf(.warning, "window pixels reply format failed: {s}", .{@errorName(err)});
         return false;
     };
-    _ = pty.write(seq) catch |err| {
+    _ = writer.write(seq) catch |err| {
         log.logf(.warning, "window pixels reply write failed: {s}", .{@errorName(err)});
         return false;
     };
@@ -1076,13 +1126,17 @@ pub fn writeWindowOpPixelsReply(pty: anytype, height_px: u32, width_px: u32) boo
 }
 
 pub fn writeWindowOpCellPixelsReply(pty: anytype, cell_h: u16, cell_w: u16) bool {
+    return writeWindowOpCellPixelsReplyWithWriter(CsiWriter.from(pty), cell_h, cell_w);
+}
+
+fn writeWindowOpCellPixelsReplyWithWriter(writer: CsiWriter, cell_h: u16, cell_w: u16) bool {
     const log = app_logger.logger("terminal.csi");
     var buf: [32]u8 = undefined;
     const seq = std.fmt.bufPrint(&buf, "\x1b[6;{d};{d}t", .{ cell_h, cell_w }) catch |err| {
         log.logf(.warning, "window cell pixels reply format failed: {s}", .{@errorName(err)});
         return false;
     };
-    _ = pty.write(seq) catch |err| {
+    _ = writer.write(seq) catch |err| {
         log.logf(.warning, "window cell pixels reply write failed: {s}", .{@errorName(err)});
         return false;
     };
