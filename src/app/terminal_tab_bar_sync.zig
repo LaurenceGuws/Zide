@@ -2,11 +2,9 @@ const std = @import("std");
 const terminal_mod = @import("../terminal/core/terminal.zig");
 const widgets = @import("../ui/widgets.zig");
 
-fn terminalTabLabel(metadata: terminal_mod.TerminalTabMetadata) []const u8 {
-    const title = metadata.title;
+fn terminalTabLabel(title: []const u8, cwd: []const u8) []const u8 {
     if (title.len > 0 and !std.mem.eql(u8, title, "Terminal")) return title;
 
-    const cwd = metadata.cwd;
     if (cwd.len > 0) {
         if (std.mem.eql(u8, cwd, "/")) return "/";
         const trimmed = std.mem.trimRight(u8, cwd, "/");
@@ -22,16 +20,24 @@ fn terminalTabLabel(metadata: terminal_mod.TerminalTabMetadata) []const u8 {
     return "Terminal";
 }
 
+fn hasTabId(entries: []const terminal_mod.TerminalTabSyncEntry, tab_id: u64) bool {
+    for (entries) |entry| {
+        if (entry.id == tab_id) return true;
+    }
+    return false;
+}
+
 pub fn syncFromWorkspace(
     tab_bar: *widgets.TabBar,
     terminal_workspace: *?terminal_mod.TerminalWorkspace,
 ) !void {
     if (terminal_workspace.*) |*workspace| {
-        const count = workspace.tabCount();
-        var title_buf = std.ArrayList(u8).empty;
-        defer title_buf.deinit(tab_bar.allocator);
-        var cwd_buf = std.ArrayList(u8).empty;
-        defer cwd_buf.deinit(tab_bar.allocator);
+        var entry_buf = std.ArrayList(terminal_mod.TerminalTabSyncEntry).empty;
+        defer entry_buf.deinit(tab_bar.allocator);
+        var string_buf = std.ArrayList(u8).empty;
+        defer string_buf.deinit(tab_bar.allocator);
+        const sync_state = try workspace.copyTabSyncState(tab_bar.allocator, &entry_buf, &string_buf);
+
         var has_non_terminal = false;
         for (tab_bar.tabs.items) |tab| {
             if (tab.kind != .terminal) {
@@ -56,23 +62,13 @@ pub fn syncFromWorkspace(
                 tab_bar.removeTabAt(i);
                 continue;
             };
-            var found = false;
-            for (0..count) |widx| {
-                if (workspace.tabIdAt(widx)) |wid| {
-                    if (wid == tab_id) {
-                        found = true;
-                        break;
-                    }
-                }
-            }
-            if (!found) tab_bar.removeTabAt(i);
+            if (!hasTabId(sync_state.tabs, tab_id)) tab_bar.removeTabAt(i);
         }
 
         // Add missing tabs and refresh titles while preserving current visual order.
-        for (0..count) |widx| {
-            const tab_id = workspace.tabIdAt(widx) orelse continue;
-            const metadata = (try workspace.copyMetadataAt(tab_bar.allocator, widx, &title_buf, &cwd_buf)) orelse continue;
-            const title = terminalTabLabel(metadata);
+        for (sync_state.tabs) |entry| {
+            const title = terminalTabLabel(entry.title(sync_state.strings), entry.cwd(sync_state.strings));
+            const tab_id = entry.id;
             if (tab_bar.indexOfTerminalTabId(tab_id)) |bar_idx| {
                 try tab_bar.setTabTitle(bar_idx, title);
             } else {
@@ -81,7 +77,7 @@ pub fn syncFromWorkspace(
         }
 
         // Ensure active index mirrors workspace active tab.
-        if (workspace.activeTabId()) |active_id| {
+        if (sync_state.active_tab_id) |active_id| {
             tab_bar.active_index = tab_bar.indexOfTerminalTabId(active_id) orelse 0;
         } else {
             tab_bar.active_index = 0;
