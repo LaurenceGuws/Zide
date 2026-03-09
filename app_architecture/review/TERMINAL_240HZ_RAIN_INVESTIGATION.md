@@ -383,6 +383,19 @@ This confirms a practical scheduler race window around `hasData` gating and idle
   - reduce one more unconditional renderer-side full-redraw reason
   - keep kitty generation changes authoritative while avoiding extra work for unchanged kitty scenes
 
+## Blink Partial-Damage Cleanup (2026-03-09)
+
+- Files:
+  - `src/ui/widgets/terminal_widget_draw.zig`
+- Change:
+  - blink phase changes no longer count as an unconditional full-redraw reason in the texture update plan
+  - blink-only updates now enter the existing partial redraw path, with blink rows added explicitly to the partial row/column plan
+  - kitty overlap remains conservative: if kitty content exists and blink work must be reconciled, the path still upgrades to full until finer overlap metadata exists
+  - added unit coverage proving that blink-only changes request partial redraw work instead of a full upload
+- Intent:
+  - turn another broad renderer-side redraw policy into explicit partial work
+  - keep correctness while moving the renderer closer to a damage-driven model
+
 ## Applied Texture-Shift Kill-Switch (2026-03-08)
 
 - Files:

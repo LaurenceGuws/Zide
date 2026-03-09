@@ -289,8 +289,7 @@ fn chooseTextureUpdatePlan(
     render_scale_changed: bool,
     kitty_requires_full: bool,
     kitty_changed: bool,
-    has_blink: bool,
-    blink_phase_changed: bool,
+    blink_requires_partial: bool,
     terminal_texture_ready: bool,
 ) TextureUpdatePlan {
     var needs_full = recreated or
@@ -298,9 +297,8 @@ fn chooseTextureUpdatePlan(
         render_scale_changed or
         cache_dirty == .full or
         kitty_requires_full or
-        kitty_changed or
-        (has_blink and blink_phase_changed);
-    var needs_partial = cache_dirty == .partial and !needs_full;
+        kitty_changed;
+    var needs_partial = (cache_dirty == .partial or blink_requires_partial) and !needs_full;
     if (!terminal_texture_ready) {
         needs_full = true;
         needs_partial = false;
@@ -309,6 +307,70 @@ fn chooseTextureUpdatePlan(
         .needs_full = needs_full,
         .needs_partial = needs_partial,
     };
+}
+
+fn markPartialPlanRows(
+    partial_rows: []bool,
+    partial_cols_start: []u16,
+    partial_cols_end: []u16,
+    rows: usize,
+    row: usize,
+    col_start: usize,
+    col_end: usize,
+) void {
+    const affect_start = row -| 1;
+    const affect_end = @min(rows - 1, row + 1);
+    const col_start_u16: u16 = @intCast(col_start);
+    const col_end_u16: u16 = @intCast(col_end);
+    var affect_row = affect_start;
+    while (affect_row <= affect_end) : (affect_row += 1) {
+        partial_rows[affect_row] = true;
+        if (partial_cols_start[affect_row] > col_start_u16) {
+            partial_cols_start[affect_row] = col_start_u16;
+        }
+        if (partial_cols_end[affect_row] < col_end_u16) {
+            partial_cols_end[affect_row] = col_end_u16;
+        }
+    }
+}
+
+fn addBlinkRowsToPartialPlan(
+    cache: *const RenderCache,
+    partial_rows: []bool,
+    partial_cols_start: []u16,
+    partial_cols_end: []u16,
+) void {
+    const rows = cache.rows;
+    const cols = cache.cols;
+    if (rows == 0 or cols == 0) return;
+
+    var row: usize = 0;
+    while (row < rows) : (row += 1) {
+        const row_start = row * cols;
+        const row_cells = cache.cells.items[row_start .. row_start + cols];
+        var first_col: ?usize = null;
+        var last_col: usize = 0;
+        var col: usize = 0;
+        while (col < cols) : (col += 1) {
+            const cell = row_cells[col];
+            if (cell.x != 0 or cell.y != 0) continue;
+            if (!cell.attrs.blink) continue;
+            const width_units = @as(usize, @max(@as(u8, 1), cell.width));
+            if (first_col == null) first_col = col;
+            last_col = @max(last_col, @min(cols - 1, col + width_units - 1));
+        }
+        if (first_col) |start_col| {
+            markPartialPlanRows(
+                partial_rows,
+                partial_cols_start,
+                partial_cols_end,
+                rows,
+                row,
+                start_col,
+                last_col,
+            );
+        }
+    }
 }
 
 pub fn draw(
@@ -417,6 +479,7 @@ pub fn draw(
     const has_blink = blink_style != .off and cache.has_blink;
     const blink_phase_changed = self.blink_phase_changed_pending;
     self.blink_phase_changed_pending = false;
+    const blink_requires_partial = has_blink and blink_phase_changed;
 
     self.kitty.updateViews(self.session.allocator, rows, cols, cache.kitty_images.items, cache.kitty_placements.items);
 
@@ -1059,7 +1122,6 @@ pub fn draw(
     var full_reason_dirty_full = false;
     var full_reason_kitty = false;
     var full_reason_kitty_gen = false;
-    var full_reason_blink = false;
     const texture_phase_start = app_shell.getTime();
     if (rows > 0 and cols > 0) {
         const cell_w_i: i32 = @intFromFloat(std.math.round(r.terminal_cell_width));
@@ -1072,14 +1134,13 @@ pub fn draw(
         const recreated = r.ensureTerminalTexture(texture_w, texture_h);
         const kitty_changed = kitty_generation != self.kitty.last_generation;
         const gen_changed = cache.generation != self.last_render_generation;
-        const kitty_requires_full = has_kitty and cache.dirty != .none;
+        const kitty_requires_full = has_kitty and (cache.dirty != .none or blink_requires_partial);
         full_reason_recreated = recreated;
         full_reason_cell_metrics = cell_metrics_changed;
         full_reason_scale = render_scale_changed;
         full_reason_dirty_full = cache.dirty == .full;
         full_reason_kitty = kitty_requires_full;
         full_reason_kitty_gen = kitty_changed;
-        full_reason_blink = has_blink and blink_phase_changed;
         const update_plan = chooseTextureUpdatePlan(
             cache.dirty,
             full_reason_recreated,
@@ -1087,8 +1148,7 @@ pub fn draw(
             full_reason_scale,
             kitty_requires_full,
             full_reason_kitty_gen,
-            has_blink,
-            blink_phase_changed,
+            blink_requires_partial,
             self.terminal_texture_ready,
         );
         const needs_full = update_plan.needs_full;
@@ -1195,20 +1255,23 @@ pub fn draw(
                         col_start = @min(@as(usize, cache.dirty_cols_start.items[row]), cols - 1);
                         col_end = @min(@as(usize, cache.dirty_cols_end.items[row]), cols - 1);
                     }
-                    const affect_start = row -| 1;
-                    const affect_end = @min(rows - 1, row + 1);
-                    var affect_row = affect_start;
-                    while (affect_row <= affect_end) : (affect_row += 1) {
-                        self.partial_draw_rows.items[affect_row] = true;
-                        const col_start_u16: u16 = @intCast(col_start);
-                        const col_end_u16: u16 = @intCast(col_end);
-                        if (self.partial_draw_cols_start.items[affect_row] > col_start_u16) {
-                            self.partial_draw_cols_start.items[affect_row] = col_start_u16;
-                        }
-                        if (self.partial_draw_cols_end.items[affect_row] < col_end_u16) {
-                            self.partial_draw_cols_end.items[affect_row] = col_end_u16;
-                        }
-                    }
+                    markPartialPlanRows(
+                        self.partial_draw_rows.items,
+                        self.partial_draw_cols_start.items,
+                        self.partial_draw_cols_end.items,
+                        rows,
+                        row,
+                        col_start,
+                        col_end,
+                    );
+                }
+                if (blink_requires_partial) {
+                    addBlinkRowsToPartialPlan(
+                        cache,
+                        self.partial_draw_rows.items,
+                        self.partial_draw_cols_start.items,
+                        self.partial_draw_cols_end.items,
+                    );
                 }
 
                 r.beginTerminalBatch();
@@ -1627,7 +1690,7 @@ pub fn draw(
         );
         perf_log.logf(
             .info,
-            "draw_ms={d:.2} lock_ms={d:.2} cache_copy_ms={d:.2} texture_update_ms={d:.2} overlay_ms={d:.2} full={d} partial={d} updated={d} sync={d} clear_ok={d} dirty={s} dirty_rows={d} damage_rows={d} damage_cols={d} blink_cells={d} blink_phase_changed={d} full_reasons={d}/{d}/{d}/{d}/{d}/{d}/{d} full_dirty_reason={s} full_dirty_seq={d} rows={d} cols={d}",
+            "draw_ms={d:.2} lock_ms={d:.2} cache_copy_ms={d:.2} texture_update_ms={d:.2} overlay_ms={d:.2} full={d} partial={d} updated={d} sync={d} clear_ok={d} dirty={s} dirty_rows={d} damage_rows={d} damage_cols={d} blink_cells={d} blink_phase_changed={d} full_reasons={d}/{d}/{d}/{d}/{d}/{d} full_dirty_reason={s} full_dirty_seq={d} rows={d} cols={d}",
             .{
                 elapsed_ms,
                 lock_ms,
@@ -1651,7 +1714,6 @@ pub fn draw(
                 @intFromBool(full_reason_dirty_full),
                 @intFromBool(full_reason_kitty),
                 @intFromBool(full_reason_kitty_gen),
-                @intFromBool(full_reason_blink),
                 @tagName(cache.full_dirty_reason),
                 cache.full_dirty_seq,
                 rows,
@@ -1969,4 +2031,19 @@ test "texture update plan forces full redraw when dirty cells overlap kitty cont
     );
     try std.testing.expect(plan.needs_full);
     try std.testing.expect(!plan.needs_partial);
+}
+
+test "texture update plan uses partial redraw for blink-only changes" {
+    const plan = chooseTextureUpdatePlan(
+        .none,
+        false,
+        false,
+        false,
+        false,
+        false,
+        true,
+        true,
+    );
+    try std.testing.expect(!plan.needs_full);
+    try std.testing.expect(plan.needs_partial);
 }
