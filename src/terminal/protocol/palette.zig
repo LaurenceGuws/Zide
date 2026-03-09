@@ -152,7 +152,7 @@ fn writeOscColorReply(self: anytype, code: u8, color: types.Color, terminator: O
         log.logf(.warning, "osc color reply format failed code={d} err={s}", .{ code, @errorName(err) });
         return;
     };
-    log.logf(.info, "osc reply=\"{s}\"", .{seq});
+    log.logf(.debug, "osc reply=\"{s}\"", .{seq});
     logOscReplyHex(log, seq);
     self.writePtyBytes(seq) catch |err| {
         log.logf(.warning, "osc reply write failed code={d} err={s}", .{ code, @errorName(err) });
@@ -174,7 +174,7 @@ fn writeOscPaletteReply(self: anytype, idx: u8, color: types.Color, terminator: 
         log.logf(.warning, "osc palette reply format failed idx={d} err={s}", .{ idx, @errorName(err) });
         return;
     };
-            log.logf(.info, "osc reply=\"{s}\"", .{seq});
+            log.logf(.debug, "osc reply=\"{s}\"", .{seq});
         logOscReplyHex(log, seq);
     self.writePtyBytes(seq) catch |err| {
         log.logf(.warning, "osc palette reply write failed idx={d} err={s}", .{ idx, @errorName(err) });
@@ -190,5 +190,5 @@ fn logOscReplyHex(log: app_logger.Logger, seq: []const u8) void {
         _ = std.fmt.bufPrint(buf[start..], "{x:0>2} ", .{b}) catch break;
         out = buf[0 .. start + 3];
     }
-    log.logf(.info, "osc reply bytes len={d} hex={s}", .{ seq.len, out });
+    log.logf(.debug, "osc reply bytes len={d} hex={s}", .{ seq.len, out });
 }

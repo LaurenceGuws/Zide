@@ -60,7 +60,7 @@ fn handleCsiOnSession(self: anytype, action: parser_csi.CsiAction) void {
     const log = app_logger.logger("terminal.csi");
     const csi_param_count = effectiveCsiParamCount(action);
     log.logf(
-        .info,
+        .debug,
         "csi final={c} leader={c} private={d} interm={s} count={d} params={d},{d},{d},{d},{d},{d},{d},{d},{d},{d},{d},{d},{d},{d},{d},{d}",
         .{
             action.final,

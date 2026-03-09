@@ -1,127 +1,175 @@
 const std = @import("std");
 const app_logger = @import("../../app_logger.zig");
 
-pub fn parseDcs(self: anytype, payload: []const u8) void {
+pub const SessionFacade = struct {
+    ctx: *anyopaque,
+    allocator: std.mem.Allocator,
+    write_pty_bytes_fn: *const fn (ctx: *anyopaque, bytes: []const u8) anyerror!void,
+    parse_kitty_graphics_fn: *const fn (ctx: *anyopaque, payload: []const u8) void,
+    decrqss_reply_into_fn: *const fn (ctx: *anyopaque, text: []const u8, buf: []u8) ?[]const u8,
+    set_sync_updates_locked_fn: *const fn (ctx: *anyopaque, enabled: bool) void,
+
+    pub fn from(session: anytype) SessionFacade {
+        const SessionPtr = @TypeOf(session);
+        return .{
+            .ctx = @ptrCast(session),
+            .allocator = session.allocator,
+            .write_pty_bytes_fn = struct {
+                fn call(ctx: *anyopaque, bytes: []const u8) anyerror!void {
+                    const s: SessionPtr = @ptrCast(@alignCast(ctx));
+                    try s.writePtyBytes(bytes);
+                }
+            }.call,
+            .parse_kitty_graphics_fn = struct {
+                fn call(ctx: *anyopaque, payload: []const u8) void {
+                    const s: SessionPtr = @ptrCast(@alignCast(ctx));
+                    s.parseKittyGraphics(payload);
+                }
+            }.call,
+            .decrqss_reply_into_fn = struct {
+                fn call(ctx: *anyopaque, text: []const u8, buf: []u8) ?[]const u8 {
+                    const s: SessionPtr = @ptrCast(@alignCast(ctx));
+                    return s.decrqssReplyInto(text, buf);
+                }
+            }.call,
+            .set_sync_updates_locked_fn = struct {
+                fn call(ctx: *anyopaque, enabled: bool) void {
+                    const s: SessionPtr = @ptrCast(@alignCast(ctx));
+                    s.setSyncUpdatesLocked(enabled);
+                }
+            }.call,
+        };
+    }
+
+    pub fn writePtyBytes(self: *const SessionFacade, bytes: []const u8) !void {
+        try self.write_pty_bytes_fn(self.ctx, bytes);
+    }
+
+    pub fn parseKittyGraphics(self: *const SessionFacade, payload: []const u8) void {
+        self.parse_kitty_graphics_fn(self.ctx, payload);
+    }
+
+    pub fn decrqssReplyInto(self: *const SessionFacade, text: []const u8, buf: []u8) ?[]const u8 {
+        return self.decrqss_reply_into_fn(self.ctx, text, buf);
+    }
+
+    pub fn setSyncUpdatesLocked(self: *const SessionFacade, enabled: bool) void {
+        self.set_sync_updates_locked_fn(self.ctx, enabled);
+    }
+};
+
+pub fn parseDcs(session: SessionFacade, payload: []const u8) void {
     if (payload.len < 2) return;
     if (payload[0] == '+' and payload[1] == 'q') {
-        handleXtgettcap(self, payload[2..]);
+        handleXtgettcap(&session, payload[2..]);
         return;
     }
     if (payload[0] == '$' and payload[1] == 'q') {
-        handleDecrqss(self, payload[2..]);
+        handleDecrqss(&session, payload[2..]);
         return;
     }
-    _ = handleLegacySyncUpdates(self, payload);
+    _ = handleLegacySyncUpdates(&session, payload);
 }
 
-pub fn parseApc(self: anytype, payload: []const u8) void {
+pub fn parseApc(session: SessionFacade, payload: []const u8) void {
     const log = app_logger.logger("terminal.apc");
     const max_len: usize = 160;
     const slice = if (payload.len > max_len) payload[0..max_len] else payload;
-    log.logf(.info, "apc payload len={d} prefix=\"{s}\"", .{ payload.len, slice });
+    log.logf(.debug, "apc payload len={d} prefix=\"{s}\"", .{ payload.len, slice });
     if (payload.len == 0) return;
     if (payload[0] != 'G') return;
-    self.parseKittyGraphics(payload[1..]);
+    session.parseKittyGraphics(payload[1..]);
 }
 
-fn handleXtgettcap(self: anytype, text: []const u8) void {
-    var writer = self.lockPtyWriter() orelse return;
-    defer writer.unlock();
+fn handleXtgettcap(session: *const SessionFacade, text: []const u8) void {
     if (text.len == 0) {
-        writeXtgettcapReply(self, &writer, false, "", null);
+        writeXtgettcapReply(session, false, "", null);
         return;
     }
     var it = std.mem.splitScalar(u8, text, ';');
     while (it.next()) |cap_hex| {
         if (cap_hex.len == 0) continue;
-        replyXtgettcap(self, &writer, cap_hex);
+        replyXtgettcap(session, cap_hex);
     }
 }
 
-fn handleDecrqss(self: anytype, text: []const u8) void {
-    var writer = self.lockPtyWriter() orelse return;
-    defer writer.unlock();
+fn handleDecrqss(session: *const SessionFacade, text: []const u8) void {
     var buf: [128]u8 = undefined;
-    const ok_reply = if (@hasDecl(@TypeOf(self.*), "decrqssReplyInto"))
-        self.decrqssReplyInto(text, &buf)
-    else if (@hasDecl(@TypeOf(self.*), "decrqssReply"))
-        self.decrqssReply(text)
-    else
-        null;
-    writeDecrqssReply(self, &writer, ok_reply != null, ok_reply);
+    const ok_reply = session.decrqssReplyInto(text, &buf);
+    writeDecrqssReply(session, ok_reply != null, ok_reply);
 }
 
-fn replyXtgettcap(self: anytype, writer: anytype, cap_hex: []const u8) void {
+fn replyXtgettcap(session: *const SessionFacade, cap_hex: []const u8) void {
     var decoded = std.ArrayList(u8).empty;
-    defer decoded.deinit(self.allocator);
-    if (!decodeHex(self.allocator, &decoded, cap_hex)) {
-        writeXtgettcapReply(self, writer, false, cap_hex, null);
+    defer decoded.deinit(session.allocator);
+    if (!decodeHex(session.allocator, &decoded, cap_hex)) {
+        writeXtgettcapReply(session, false, cap_hex, null);
         return;
     }
 
     const value = xtgettcapValue(decoded.items);
     if (value) |val| {
-        writeXtgettcapReply(self, writer, true, cap_hex, val);
+        writeXtgettcapReply(session, true, cap_hex, val);
     } else {
-        writeXtgettcapReply(self, writer, false, cap_hex, null);
+        writeXtgettcapReply(session, false, cap_hex, null);
     }
 }
 
-fn writeXtgettcapReply(self: anytype, writer: anytype, ok: bool, cap_hex: []const u8, value: ?[]const u8) void {
+fn writeXtgettcapReply(session: *const SessionFacade, ok: bool, cap_hex: []const u8, value: ?[]const u8) void {
     const log = app_logger.logger("terminal.apc");
     var reply = std.ArrayList(u8).empty;
-    defer reply.deinit(self.allocator);
+    defer reply.deinit(session.allocator);
 
     const prefix = if (ok) "\x1bP1+r" else "\x1bP0+r";
-    _ = reply.appendSlice(self.allocator, prefix) catch |err| {
+    _ = reply.appendSlice(session.allocator, prefix) catch |err| {
         log.logf(.warning, "xtgettcap reply prefix append failed: {s}", .{@errorName(err)});
         return;
     };
-    _ = reply.appendSlice(self.allocator, cap_hex) catch |err| {
+    _ = reply.appendSlice(session.allocator, cap_hex) catch |err| {
         log.logf(.warning, "xtgettcap reply cap append failed: {s}", .{@errorName(err)});
         return;
     };
     if (ok and value != null) {
-        _ = reply.append(self.allocator, '=') catch |err| {
+        _ = reply.append(session.allocator, '=') catch |err| {
             log.logf(.warning, "xtgettcap reply separator append failed: {s}", .{@errorName(err)});
             return;
         };
-        if (!encodeHex(self.allocator, &reply, value.?)) return;
+        if (!encodeHex(session.allocator, &reply, value.?)) return;
     }
-    _ = reply.appendSlice(self.allocator, "\x1b\\") catch |err| {
+    _ = reply.appendSlice(session.allocator, "\x1b\\") catch |err| {
         log.logf(.warning, "xtgettcap reply terminator append failed: {s}", .{@errorName(err)});
         return;
     };
-    _ = writer.write(reply.items) catch |err| blk: {
+    session.writePtyBytes(reply.items) catch |err| {
         log.logf(.warning, "xtgettcap reply write failed len={d} err={s}", .{ reply.items.len, @errorName(err) });
-        break :blk 0;
+        return;
     };
 }
 
-fn writeDecrqssReply(self: anytype, writer: anytype, ok: bool, value: ?[]const u8) void {
+fn writeDecrqssReply(session: *const SessionFacade, ok: bool, value: ?[]const u8) void {
     const log = app_logger.logger("terminal.apc");
     var reply = std.ArrayList(u8).empty;
-    defer reply.deinit(self.allocator);
+    defer reply.deinit(session.allocator);
 
-    _ = reply.appendSlice(self.allocator, if (ok) "\x1bP1$r" else "\x1bP0$r") catch |err| {
+    _ = reply.appendSlice(session.allocator, if (ok) "\x1bP1$r" else "\x1bP0$r") catch |err| {
         log.logf(.warning, "decrqss reply prefix append failed: {s}", .{@errorName(err)});
         return;
     };
     if (ok) {
         if (value) |val| {
-            _ = reply.appendSlice(self.allocator, val) catch |err| {
+            _ = reply.appendSlice(session.allocator, val) catch |err| {
                 log.logf(.warning, "decrqss reply value append failed: {s}", .{@errorName(err)});
                 return;
             };
         }
     }
-    _ = reply.appendSlice(self.allocator, "\x1b\\") catch |err| {
+    _ = reply.appendSlice(session.allocator, "\x1b\\") catch |err| {
         log.logf(.warning, "decrqss reply terminator append failed: {s}", .{@errorName(err)});
         return;
     };
-    _ = writer.write(reply.items) catch |err| blk: {
+    session.writePtyBytes(reply.items) catch |err| {
         log.logf(.warning, "decrqss reply write failed len={d} err={s}", .{ reply.items.len, @errorName(err) });
-        break :blk 0;
+        return;
     };
 }
 
@@ -174,7 +222,7 @@ fn hexNibble(c: u8) ?u8 {
     };
 }
 
-fn handleLegacySyncUpdates(self: anytype, payload: []const u8) bool {
+fn handleLegacySyncUpdates(session: *const SessionFacade, payload: []const u8) bool {
     const log = app_logger.logger("terminal.apc");
     // Legacy synchronized update control:
     // DCS = 1 s ST -> enable
@@ -188,8 +236,8 @@ fn handleLegacySyncUpdates(self: anytype, payload: []const u8) bool {
         return false;
     };
     switch (mode) {
-        1 => self.setSyncUpdatesLocked(true),
-        2 => self.setSyncUpdatesLocked(false),
+        1 => session.setSyncUpdatesLocked(true),
+        2 => session.setSyncUpdatesLocked(false),
         else => return false,
     }
     return true;
