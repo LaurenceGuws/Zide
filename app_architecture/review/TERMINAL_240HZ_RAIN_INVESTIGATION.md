@@ -769,6 +769,19 @@ Reason:
   - keep renderer-side publication lifecycle knowledge shrinking toward zero
   - make dirty-retirement policy backend-owned instead of cache-consumer owned
 
+## Dirty-Clear Surface Collapse (2026-03-09)
+
+- Files:
+  - `src/terminal/core/terminal_session.zig`
+- Change:
+  - removed the old public `clearDirtyIfGeneration(...)` and
+    `clearRenderCacheDirtyIfGeneration(...)` split
+  - session tests now establish baseline presentation through
+    `acknowledgePresentedGeneration(...)`, matching the production renderer path
+- Intent:
+  - reduce the public publication/retirement surface to one backend-owned ack path
+  - stop tests and future callers from depending on the old split clear APIs
+
 ## Input Reset Extraction (2026-03-09)
 
 - Files:

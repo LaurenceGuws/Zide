@@ -74,10 +74,11 @@ also exposed broader structural smells around damage/publication ownership.
   publication, kitty ordering, and some redraw-policy decisions.
 - That makes it both important and fragile: correctness and optimization live in the same layer.
 
-3) Dirty acknowledgement still leaks into the renderer.
-- `terminal_widget_draw` clears terminal dirty state after upload via generation-guarded
-  session APIs.
-- Long-term, the renderer should consume a publication contract, not participate in model ack.
+3) Dirty acknowledgement is narrower, but the renderer still triggers it.
+- `terminal_widget_draw` now uses a single backend-owned presented-ack API instead of
+  selecting between multiple dirty-clear paths itself.
+- Long-term, the renderer should consume a publication contract and not explicitly
+  trigger retirement at all.
 
 4) Some full-dirty paths are now semantically justified, but they still need explicit ownership.
 - Examples:

@@ -161,6 +161,7 @@ Progress:
 - Follow-up (2026-03-09): extracted visible-terminal poll budget/pressure/publication detection into `src/app/terminal_poll_runtime.zig` so `poll_visible_terminal_sessions_runtime.zig` stops embedding terminal polling policy inline.
 - Follow-up (2026-03-09): introduced `TerminalSession.acknowledgePresentedGeneration(...)` so widget draw no longer manually composes presented-generation publication with dirty-retirement calls.
 - Follow-up (2026-03-09): moved sync-updates dirty-retirement choice behind `TerminalSession.acknowledgePresentedGeneration(...)` so widget draw no longer supplies that policy bit either.
+- Follow-up (2026-03-09): removed the old paired generation-guarded dirty-clear APIs from the public session surface and collapsed them into one backend-owned retirement helper behind `acknowledgePresentedGeneration(...)`.
 - Follow-up (2026-03-09): routed common input-mode snapshot updates through explicit `input_modes` setters so CSI mode toggles no longer open-code field mutation plus `updateInputSnapshot()` at each call site.
 - Follow-up (2026-03-09): extracted DECSTR input-mode reset into `input_modes.resetInputModes(...)` so soft reset stops duplicating snapshot-owned field resets inline.
 - Follow-up (2026-03-09): routed alt-screen transitions through `setActiveScreenMode(...)` so active-screen publication and snapshot refresh stop being open-coded in enter/exit paths.

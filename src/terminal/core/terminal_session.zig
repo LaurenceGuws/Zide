@@ -549,9 +549,9 @@ pub const TerminalSession = struct {
     pub fn acknowledgePresentedGeneration(self: *TerminalSession, generation: u64) bool {
         self.notePresentedGeneration(generation);
         if (self.renderCacheSyncUpdatesActiveForGeneration(generation)) {
-            return self.clearRenderCacheDirtyIfGeneration(generation);
+            return self.clearPublishedDamageIfGeneration(generation, false);
         }
-        return self.clearDirtyIfGeneration(generation);
+        return self.clearPublishedDamageIfGeneration(generation, true);
     }
 
     fn renderCacheSyncUpdatesActiveForGeneration(self: *TerminalSession, generation: u64) bool {
@@ -1356,22 +1356,13 @@ pub const TerminalSession = struct {
         return self.title;
     }
 
-    pub fn clearDirtyIfGeneration(self: *TerminalSession, expected_generation: u64) bool {
+    fn clearPublishedDamageIfGeneration(self: *TerminalSession, expected_generation: u64, clear_screen_dirty: bool) bool {
         self.lock();
         defer self.unlock();
         if (self.output_generation.load(.acquire) != expected_generation) return false;
-        self.activeScreen().clearDirty();
-        inline for (0..2) |i| {
-            self.render_caches[i].dirty = .none;
-            self.render_caches[i].damage = .{ .start_row = 0, .end_row = 0, .start_col = 0, .end_col = 0 };
+        if (clear_screen_dirty) {
+            self.activeScreen().clearDirty();
         }
-        return true;
-    }
-
-    pub fn clearRenderCacheDirtyIfGeneration(self: *TerminalSession, expected_generation: u64) bool {
-        self.lock();
-        defer self.unlock();
-        if (self.output_generation.load(.acquire) != expected_generation) return false;
         inline for (0..2) |i| {
             self.render_caches[i].dirty = .none;
             self.render_caches[i].damage = .{ .start_row = 0, .end_row = 0, .start_col = 0, .end_col = 0 };
@@ -1684,7 +1675,7 @@ test "full-region scroll publishes partial cache damage at live bottom" {
 
     session.primary.clearDirty();
     session.alt.clearDirty();
-    try std.testing.expect(session.clearRenderCacheDirtyIfGeneration(session.output_generation.load(.acquire)));
+    try std.testing.expect(session.acknowledgePresentedGeneration(session.renderCache().generation));
 
     session.scrollUp();
     _ = session.output_generation.fetchAdd(1, .acq_rel);
@@ -1707,7 +1698,7 @@ test "feedOutputBytes keeps incremental damage after baseline publish" {
 
     session.primary.clearDirty();
     session.alt.clearDirty();
-    try std.testing.expect(session.clearRenderCacheDirtyIfGeneration(session.output_generation.load(.acquire)));
+    try std.testing.expect(session.acknowledgePresentedGeneration(session.renderCache().generation));
 
     session.feedOutputBytes("A");
 
@@ -1765,7 +1756,7 @@ test "row hash refinement does not skip unpresented top rows" {
 
     session.primary.clearDirty();
     session.alt.clearDirty();
-    try std.testing.expect(session.clearRenderCacheDirtyIfGeneration(session.output_generation.load(.acquire)));
+    try std.testing.expect(session.acknowledgePresentedGeneration(session.renderCache().generation));
 
     session.scrollUp();
     _ = session.output_generation.fetchAdd(1, .acq_rel);
@@ -1791,7 +1782,7 @@ test "setSyncUpdates enable does not force redraw when screen is otherwise clean
     session.updateViewCacheNoLock(session.output_generation.load(.acquire), session.history.scrollOffset());
     session.primary.clearDirty();
     session.alt.clearDirty();
-    try std.testing.expect(session.clearRenderCacheDirtyIfGeneration(session.output_generation.load(.acquire)));
+    try std.testing.expect(session.acknowledgePresentedGeneration(session.renderCache().generation));
 
     session.setSyncUpdates(true);
 
@@ -1812,7 +1803,7 @@ test "setSyncUpdates disable stays clean when no buffered changes exist" {
     session.updateViewCacheNoLock(session.output_generation.load(.acquire), session.history.scrollOffset());
     session.primary.clearDirty();
     session.alt.clearDirty();
-    try std.testing.expect(session.clearRenderCacheDirtyIfGeneration(session.output_generation.load(.acquire)));
+    try std.testing.expect(session.acknowledgePresentedGeneration(session.renderCache().generation));
 
     session.setSyncUpdates(false);
 
@@ -1831,7 +1822,7 @@ test "setSyncUpdates disable preserves buffered partial damage" {
     session.updateViewCacheNoLock(session.output_generation.load(.acquire), session.history.scrollOffset());
     session.primary.clearDirty();
     session.alt.clearDirty();
-    try std.testing.expect(session.clearRenderCacheDirtyIfGeneration(session.output_generation.load(.acquire)));
+    try std.testing.expect(session.acknowledgePresentedGeneration(session.renderCache().generation));
 
     session.setSyncUpdates(true);
 
@@ -1876,7 +1867,7 @@ test "visible history changes publish partial cache damage without force-full" {
 
     session.primary.clearDirty();
     session.alt.clearDirty();
-    try std.testing.expect(session.clearRenderCacheDirtyIfGeneration(session.output_generation.load(.acquire)));
+    try std.testing.expect(session.acknowledgePresentedGeneration(session.renderCache().generation));
 
     const new_fg = Color{ .r = 0x11, .g = 0x22, .b = 0x33, .a = 0xff };
     session.history.updateDefaultColors(base.attrs.fg, base.attrs.bg, new_fg, base.attrs.bg);
@@ -1911,7 +1902,7 @@ test "visible history changes without presented diff base stay partial" {
 
     session.primary.clearDirty();
     session.alt.clearDirty();
-    try std.testing.expect(session.clearRenderCacheDirtyIfGeneration(session.output_generation.load(.acquire)));
+    try std.testing.expect(session.acknowledgePresentedGeneration(session.renderCache().generation));
 
     const new_fg = Color{ .r = 0x44, .g = 0x55, .b = 0x66, .a = 0xff };
     session.history.updateDefaultColors(base.attrs.fg, base.attrs.bg, new_fg, base.attrs.bg);
@@ -1956,7 +1947,7 @@ test "scrollback offset change publishes shift-exposed partial damage" {
 
     session.primary.clearDirty();
     session.alt.clearDirty();
-    try std.testing.expect(session.clearRenderCacheDirtyIfGeneration(session.output_generation.load(.acquire)));
+    try std.testing.expect(session.acknowledgePresentedGeneration(session.renderCache().generation));
 
     session.setScrollOffset(1);
 
@@ -1978,7 +1969,7 @@ test "cursor style updates publish through cache without texture invalidation" {
     session.updateViewCacheNoLock(session.output_generation.load(.acquire), session.history.scrollOffset());
     session.primary.clearDirty();
     session.alt.clearDirty();
-    try std.testing.expect(session.clearRenderCacheDirtyIfGeneration(session.output_generation.load(.acquire)));
+    try std.testing.expect(session.acknowledgePresentedGeneration(session.renderCache().generation));
 
     session.primary.cursor_style = .{ .shape = .bar, .blink = false };
     session.updateViewCacheNoLock(session.output_generation.load(.acquire), session.history.scrollOffset());
@@ -2000,7 +1991,7 @@ test "kitty generation delta does not force full damage when cell damage is part
 
     session.primary.clearDirty();
     session.alt.clearDirty();
-    try std.testing.expect(session.clearRenderCacheDirtyIfGeneration(session.output_generation.load(.acquire)));
+    try std.testing.expect(session.acknowledgePresentedGeneration(session.renderCache().generation));
 
     session.kitty_primary.generation += 1;
     session.primary.grid.markDirtyRange(0, 0, 0, 0);
@@ -2027,7 +2018,7 @@ test "kitty generation delta without visible damage stays clean" {
 
     session.primary.clearDirty();
     session.alt.clearDirty();
-    try std.testing.expect(session.clearRenderCacheDirtyIfGeneration(session.output_generation.load(.acquire)));
+    try std.testing.expect(session.acknowledgePresentedGeneration(session.renderCache().generation));
 
     session.kitty_primary.generation += 1;
     session.updateViewCacheNoLock(session.output_generation.load(.acquire), session.history.scrollOffset());
@@ -2048,7 +2039,7 @@ test "clear generation delta without visible damage stays clean" {
 
     session.primary.clearDirty();
     session.alt.clearDirty();
-    try std.testing.expect(session.clearRenderCacheDirtyIfGeneration(session.output_generation.load(.acquire)));
+    try std.testing.expect(session.acknowledgePresentedGeneration(session.renderCache().generation));
 
     _ = session.clear_generation.fetchAdd(1, .acq_rel);
     session.updateViewCacheNoLock(session.output_generation.load(.acquire), session.history.scrollOffset());
@@ -2069,7 +2060,7 @@ test "default color remap stays on partial path" {
 
     session.primary.clearDirty();
     session.alt.clearDirty();
-    try std.testing.expect(session.clearRenderCacheDirtyIfGeneration(session.output_generation.load(.acquire)));
+    try std.testing.expect(session.acknowledgePresentedGeneration(session.renderCache().generation));
 
     const old_attrs = session.primary.default_attrs;
     const new_fg = Color{ .r = 0xaa, .g = 0xbb, .b = 0xcc, .a = 0xff };
@@ -2096,7 +2087,7 @@ test "screen reverse toggle stays on partial path" {
 
     session.primary.clearDirty();
     session.alt.clearDirty();
-    try std.testing.expect(session.clearRenderCacheDirtyIfGeneration(session.output_generation.load(.acquire)));
+    try std.testing.expect(session.acknowledgePresentedGeneration(session.renderCache().generation));
 
     session.activeScreen().setScreenReverse(true);
     session.updateViewCacheNoLock(session.output_generation.load(.acquire), session.history.scrollOffset());
@@ -2129,7 +2120,7 @@ test "eraseDisplay cursor-to-end keeps partial damage" {
 
     session.primary.clearDirty();
     session.alt.clearDirty();
-    try std.testing.expect(session.clearRenderCacheDirtyIfGeneration(session.output_generation.load(.acquire)));
+    try std.testing.expect(session.acknowledgePresentedGeneration(session.renderCache().generation));
 
     session.eraseDisplay(0);
     _ = session.output_generation.fetchAdd(1, .acq_rel);
@@ -2160,7 +2151,7 @@ test "eraseDisplay start-to-cursor keeps partial damage" {
 
     session.primary.clearDirty();
     session.alt.clearDirty();
-    try std.testing.expect(session.clearRenderCacheDirtyIfGeneration(session.output_generation.load(.acquire)));
+    try std.testing.expect(session.acknowledgePresentedGeneration(session.renderCache().generation));
 
     session.eraseDisplay(1);
     _ = session.output_generation.fetchAdd(1, .acq_rel);
@@ -2190,7 +2181,7 @@ test "eraseDisplay full keeps full-width partial damage" {
 
     session.primary.clearDirty();
     session.alt.clearDirty();
-    try std.testing.expect(session.clearRenderCacheDirtyIfGeneration(session.output_generation.load(.acquire)));
+    try std.testing.expect(session.acknowledgePresentedGeneration(session.renderCache().generation));
 
     session.eraseDisplay(2);
     _ = session.output_generation.fetchAdd(1, .acq_rel);
@@ -2222,7 +2213,7 @@ test "screen clear stays on partial path" {
 
     session.primary.clearDirty();
     session.alt.clearDirty();
-    try std.testing.expect(session.clearRenderCacheDirtyIfGeneration(session.output_generation.load(.acquire)));
+    try std.testing.expect(session.acknowledgePresentedGeneration(session.renderCache().generation));
 
     session.activeScreen().clear();
     _ = session.output_generation.fetchAdd(1, .acq_rel);
