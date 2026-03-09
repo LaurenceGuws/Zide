@@ -468,6 +468,39 @@ pub const TerminalSession = struct {
         return colors;
     }
 
+    pub fn setPaletteColorLocked(self: *TerminalSession, idx: usize, color: types.Color) void {
+        if (idx >= self.palette_current.len) return;
+        self.palette_current[idx] = color;
+    }
+
+    pub fn resetPaletteColorLocked(self: *TerminalSession, idx: usize) void {
+        if (idx >= self.palette_current.len) return;
+        self.palette_current[idx] = self.palette_default[idx];
+    }
+
+    pub fn resetAllPaletteColorsLocked(self: *TerminalSession) void {
+        self.palette_current = self.palette_default;
+    }
+
+    pub fn setDynamicColorCodeLocked(self: *TerminalSession, code: u8, color: ?types.Color) void {
+        switch (code) {
+            10 => {
+                const default_attrs = self.primary.default_attrs;
+                self.setDefaultColorsLocked(color orelse self.base_default_attrs.fg, default_attrs.bg);
+            },
+            11 => {
+                const default_attrs = self.primary.default_attrs;
+                self.setDefaultColorsLocked(default_attrs.fg, color orelse self.base_default_attrs.bg);
+            },
+            else => {
+                const idx = @as(usize, code - 10);
+                if (idx < self.dynamic_colors.len) {
+                    self.dynamic_colors[idx] = color;
+                }
+            },
+        }
+    }
+
     pub fn applyThemePalette(
         self: *TerminalSession,
         fg: types.Color,

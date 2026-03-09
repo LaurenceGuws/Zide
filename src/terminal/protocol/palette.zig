@@ -28,21 +28,20 @@ pub fn handleOscPalette(self: anytype, text: []const u8, terminator: OscTerminat
             continue;
         }
         if (parseOscColor(color_text)) |color| {
-            self.palette_current[idx] = color;
+            self.setPaletteColorLocked(idx, color);
         }
     }
 }
 
 pub fn handleOscPaletteReset(self: anytype, text: []const u8) void {
     if (text.len == 0) {
-        self.palette_current = self.palette_default;
+        self.resetAllPaletteColorsLocked();
         return;
     }
     var it = std.mem.splitScalar(u8, text, ';');
     while (it.next()) |idx_text| {
         const idx = parseOscIndex(idx_text) orelse continue;
-        if (idx >= self.palette_current.len) continue;
-        self.palette_current[idx] = self.palette_default[idx];
+        self.resetPaletteColorLocked(idx);
     }
 }
 
@@ -53,43 +52,12 @@ pub fn handleOscDynamicColor(self: anytype, code: u8, text: []const u8, terminat
         return;
     }
     if (parseOscColor(text)) |color| {
-        switch (code) {
-            10 => {
-                const default_attrs = self.primary.default_attrs;
-                self.setDefaultColorsLocked(color, default_attrs.bg);
-            },
-            11 => {
-                const default_attrs = self.primary.default_attrs;
-                self.setDefaultColorsLocked(default_attrs.fg, color);
-            },
-            else => {
-                const idx = @as(usize, code - dynamic_color_base);
-                if (idx < self.dynamic_colors.len) {
-                    self.dynamic_colors[idx] = color;
-                }
-            },
-        }
+        self.setDynamicColorCodeLocked(code, color);
     }
 }
 
 pub fn handleOscDynamicReset(self: anytype, code: u8) void {
-    const target = code - 100;
-    switch (target) {
-        10 => {
-            const default_attrs = self.primary.default_attrs;
-            self.setDefaultColorsLocked(self.base_default_attrs.fg, default_attrs.bg);
-        },
-        11 => {
-            const default_attrs = self.primary.default_attrs;
-            self.setDefaultColorsLocked(default_attrs.fg, self.base_default_attrs.bg);
-        },
-        else => {
-            const idx = @as(usize, target - dynamic_color_base);
-            if (idx < self.dynamic_colors.len) {
-                self.dynamic_colors[idx] = null;
-            }
-        },
-    }
+    self.setDynamicColorCodeLocked(code - 100, null);
 }
 
 pub fn dynamicColorValue(self: anytype, code: u8) types.Color {
