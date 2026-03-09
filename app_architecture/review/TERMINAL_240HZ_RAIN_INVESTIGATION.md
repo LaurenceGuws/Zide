@@ -228,8 +228,7 @@ This confirms a practical scheduler race window around `hasData` gating and idle
   - after removing the last callers, the `force_full_damage` session-side invalidation flag and the `view_cache_force_full_damage` fallback reason were deleted entirely; full redraw authority now comes from published cache/model state instead of an unused side-channel
   - scrollback-view movement is no longer published as a screen-model full dirty event; `view_cache` now distinguishes pure viewport remaps and publishes `viewport_shift_exposed_only` partial damage, so draw can use the texture-shift fast path for scrolled history and only fall back to full when that copy path is unavailable
   - disabling synchronized updates no longer synthesizes a full-screen dirty event on its own; the renderer already freezes presentation while sync mode is active, so disable now publishes the accumulated real screen damage (`none` or partial/full as already tracked) instead of forcing `sync_updates_disabled` full redraws every frame batch
-  - kitty/image redraw policy is now narrower on the renderer side: partial redraw no longer escalates to full just because kitty content exists somewhere in the viewport; full redraw is now reserved for actual dirty/blink overlap with visible placements, while static or non-overlapping kitty content stays on the normal partial path
-  - kitty placement occupancy is now published in the render cache itself (`kitty_rows` + per-row column spans), so draw no longer scans raw placements every frame just to decide whether partial damage overlaps an image region
+  - kitty/image redraw policy no longer depends on renderer-side overlap forcing: kitty mutations now publish real dirty ranges from the backend, and partial texture updates repaint kitty layers directly instead of escalating to full on kitty generation/overlap checks
   - retired the temporary `terminal.ui.pattern` aggregation path from `TerminalSession`; the remaining redraw/full-dirty attribution now lives on authoritative cache/model signals (`terminal.ui.perf` + `full_dirty_reason`) instead of sidecar investigation counters
 
 ## Applied Fix Candidate (2026-03-09)
@@ -401,11 +400,26 @@ This confirms a practical scheduler race window around `hasData` gating and idle
 - Change:
   - blink phase changes no longer count as an unconditional full-redraw reason in the texture update plan
   - blink-only updates now enter the existing partial redraw path, with blink rows added explicitly to the partial row/column plan
-  - kitty overlap remains conservative: if kitty content exists and blink work must be reconciled, the path still upgrades to full until finer overlap metadata exists
   - added unit coverage proving that blink-only changes request partial redraw work instead of a full upload
 - Intent:
   - turn another broad renderer-side redraw policy into explicit partial work
   - keep correctness while moving the renderer closer to a damage-driven model
+
+## Kitty Partial-Damage Cleanup (2026-03-09)
+
+- Files:
+  - `src/terminal/kitty/graphics.zig`
+  - `src/ui/widgets/terminal_widget_draw.zig`
+  - `src/terminal/core/render_cache.zig`
+  - `src/terminal/core/view_cache.zig`
+- Change:
+  - kitty image/placement mutations now dirty their affected cell ranges directly instead of calling full-screen `kitty_graphics_changed` invalidation by default
+  - partial texture updates now repaint kitty layers on both below-text and above-text passes, so kitty generation changes no longer require renderer-side full redraw escalation
+  - removed the temporary kitty occupancy side-channel from the render cache because backend dirty publication now carries the authoritative redraw contract
+  - added unit coverage for implicit kitty dirty-region derivation and the conservative full fallback when image geometry cannot be projected into cells
+- Intent:
+  - move kitty redraw authority out of renderer heuristics and into backend-published damage
+  - keep kitty correctness while making the normal path incremental instead of blanket-full
 
 ## Sync-Updates Force-Full Cleanup (2026-03-09)
 

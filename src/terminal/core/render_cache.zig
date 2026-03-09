@@ -19,9 +19,6 @@ pub const RenderCache = struct {
     selection_rows: std.ArrayList(bool),
     selection_cols_start: std.ArrayList(u16),
     selection_cols_end: std.ArrayList(u16),
-    kitty_rows: std.ArrayList(bool),
-    kitty_cols_start: std.ArrayList(u16),
-    kitty_cols_end: std.ArrayList(u16),
     row_hashes: std.ArrayList(u64),
     kitty_images: std.ArrayList(KittyImage),
     kitty_placements: std.ArrayList(KittyPlacement),
@@ -58,9 +55,6 @@ pub const RenderCache = struct {
             .selection_rows = std.ArrayList(bool).empty,
             .selection_cols_start = std.ArrayList(u16).empty,
             .selection_cols_end = std.ArrayList(u16).empty,
-            .kitty_rows = std.ArrayList(bool).empty,
-            .kitty_cols_start = std.ArrayList(u16).empty,
-            .kitty_cols_end = std.ArrayList(u16).empty,
             .row_hashes = std.ArrayList(u64).empty,
             .kitty_images = std.ArrayList(KittyImage).empty,
             .kitty_placements = std.ArrayList(KittyPlacement).empty,
@@ -98,9 +92,6 @@ pub const RenderCache = struct {
         self.selection_rows.deinit(allocator);
         self.selection_cols_start.deinit(allocator);
         self.selection_cols_end.deinit(allocator);
-        self.kitty_rows.deinit(allocator);
-        self.kitty_cols_start.deinit(allocator);
-        self.kitty_cols_end.deinit(allocator);
         self.row_hashes.deinit(allocator);
         self.kitty_images.deinit(allocator);
         self.kitty_placements.deinit(allocator);

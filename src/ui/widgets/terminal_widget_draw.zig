@@ -226,15 +226,6 @@ fn copyRenderCacheSnapshot(dst: *RenderCache, allocator: std.mem.Allocator, src:
     try dst.selection_cols_end.resize(allocator, src.selection_cols_end.items.len);
     std.mem.copyForwards(u16, dst.selection_cols_end.items, src.selection_cols_end.items);
 
-    try dst.kitty_rows.resize(allocator, src.kitty_rows.items.len);
-    std.mem.copyForwards(bool, dst.kitty_rows.items, src.kitty_rows.items);
-
-    try dst.kitty_cols_start.resize(allocator, src.kitty_cols_start.items.len);
-    std.mem.copyForwards(u16, dst.kitty_cols_start.items, src.kitty_cols_start.items);
-
-    try dst.kitty_cols_end.resize(allocator, src.kitty_cols_end.items.len);
-    std.mem.copyForwards(u16, dst.kitty_cols_end.items, src.kitty_cols_end.items);
-
     try dst.row_hashes.resize(allocator, src.row_hashes.items.len);
     std.mem.copyForwards(u64, dst.row_hashes.items, src.row_hashes.items);
 
@@ -298,17 +289,13 @@ fn chooseTextureUpdatePlan(
     recreated: bool,
     cell_metrics_changed: bool,
     render_scale_changed: bool,
-    kitty_requires_full: bool,
-    kitty_changed: bool,
     blink_requires_partial: bool,
     terminal_texture_ready: bool,
 ) TextureUpdatePlan {
     var needs_full = recreated or
         cell_metrics_changed or
         render_scale_changed or
-        cache_dirty == .full or
-        kitty_requires_full or
-        kitty_changed;
+        cache_dirty == .full;
     var needs_partial = (cache_dirty == .partial or blink_requires_partial) and !needs_full;
     if (!terminal_texture_ready) {
         needs_full = true;
@@ -386,38 +373,6 @@ fn addBlinkRowsToPartialPlan(
 
 fn spansOverlap(start_a: usize, end_a: usize, start_b: usize, end_b: usize) bool {
     return start_a <= end_b and start_b <= end_a;
-}
-
-fn kittyPlacementOverlapRequiresFull(
-    cache: *const RenderCache,
-    blink_requires_partial: bool,
-) bool {
-    if (cache.rows == 0 or cache.cols == 0 or cache.kitty_rows.items.len != cache.rows) return false;
-
-    var row_idx: usize = 0;
-    while (row_idx < cache.rows) : (row_idx += 1) {
-        if (!cache.kitty_rows.items[row_idx]) continue;
-
-        const kitty_col_start = if (row_idx < cache.kitty_cols_start.items.len) @as(usize, cache.kitty_cols_start.items[row_idx]) else 0;
-        const kitty_col_end = if (row_idx < cache.kitty_cols_end.items.len) @as(usize, cache.kitty_cols_end.items[row_idx]) else cache.cols - 1;
-        if (kitty_col_start >= cache.cols or kitty_col_start > kitty_col_end) continue;
-
-        if (cache.dirty == .partial and row_idx < cache.dirty_rows.items.len and cache.dirty_rows.items[row_idx]) {
-            const dirty_col_start = if (row_idx < cache.dirty_cols_start.items.len) @as(usize, cache.dirty_cols_start.items[row_idx]) else 0;
-            const dirty_col_end = if (row_idx < cache.dirty_cols_end.items.len) @as(usize, cache.dirty_cols_end.items[row_idx]) else cache.cols - 1;
-            if (spansOverlap(dirty_col_start, dirty_col_end, kitty_col_start, kitty_col_end)) return true;
-        }
-
-        if (blink_requires_partial) {
-            const row_start = row_idx * cache.cols;
-            const row_cells = cache.cells.items[row_start .. row_start + cache.cols];
-            var col = kitty_col_start;
-            while (col <= kitty_col_end and col < cache.cols) : (col += 1) {
-                if (row_cells[col].attrs.blink) return true;
-            }
-        }
-    }
-    return false;
 }
 
 pub fn draw(
@@ -1167,8 +1122,6 @@ pub fn draw(
     var full_reason_cell_metrics = false;
     var full_reason_scale = false;
     var full_reason_dirty_full = false;
-    var full_reason_kitty = false;
-    var full_reason_kitty_gen = false;
     const texture_phase_start = app_shell.getTime();
     if (rows > 0 and cols > 0) {
         const cell_w_i: i32 = @intFromFloat(std.math.round(r.terminal_cell_width));
@@ -1179,22 +1132,16 @@ pub fn draw(
         const texture_w = cell_w_i * @as(i32, @intCast(cols)) + padding_x_i;
         const texture_h = cell_h_i * @as(i32, @intCast(rows));
         const recreated = r.ensureTerminalTexture(texture_w, texture_h);
-        const kitty_changed = kitty_generation != self.kitty.last_generation;
         const gen_changed = cache.generation != self.last_render_generation;
-        const kitty_requires_full = has_kitty and kittyPlacementOverlapRequiresFull(cache, blink_requires_partial);
         full_reason_recreated = recreated;
         full_reason_cell_metrics = cell_metrics_changed;
         full_reason_scale = render_scale_changed;
         full_reason_dirty_full = cache.dirty == .full;
-        full_reason_kitty = kitty_requires_full;
-        full_reason_kitty_gen = kitty_changed;
         const update_plan = chooseTextureUpdatePlan(
             cache.dirty,
             full_reason_recreated,
             full_reason_cell_metrics,
             full_reason_scale,
-            kitty_requires_full,
-            full_reason_kitty_gen,
             blink_requires_partial,
             self.terminal_texture_ready,
         );
@@ -1341,6 +1288,10 @@ pub fn draw(
                     drawRowBackgrounds(shell, view_cells, cols, row, col_start, col_end, base_x_local, base_y_local, padding_x_i, draw_padding, screen_reverse);
                 }
                 r.flushTerminalBatch();
+                if (has_kitty) {
+                    self.kitty.cleanupTextures(self.session.allocator, self.kitty.images_view.items);
+                    self.kitty.drawImages(self.session.allocator, shell, base_x_local, base_y_local, false, start_line, rows, cols);
+                }
                 r.beginTerminalGlyphBatch();
                 row = 0;
                 while (row < rows) : (row += 1) {
@@ -1350,9 +1301,12 @@ pub fn draw(
                     drawRowGlyphs(shell, view_cells, cols, row, col_start, col_end, base_x_local, base_y_local, padding_x_i, hover_link_id, screen_reverse, blink_style, blink_time, draw_cursor, cursor, r.terminal_disable_ligatures);
                 }
                 r.flushTerminalGlyphBatch();
+                if (has_kitty) {
+                    self.kitty.drawImages(self.session.allocator, shell, base_x_local, base_y_local, true, start_line, rows, cols);
+                }
             }
             r.endTerminalTexture();
-            if (kitty_changed) {
+            if (kitty_generation != self.kitty.last_generation) {
                 self.kitty.last_generation = kitty_generation;
             }
             self.terminal_texture_ready = true;
@@ -1747,7 +1701,7 @@ pub fn draw(
         );
         perf_log.logf(
             .info,
-            "draw_ms={d:.2} lock_ms={d:.2} cache_copy_ms={d:.2} texture_update_ms={d:.2} overlay_ms={d:.2} full={d} partial={d} updated={d} sync={d} clear_ok={d} dirty={s} dirty_rows={d} damage_rows={d} damage_cols={d} blink_cells={d} blink_phase_changed={d} full_reasons={d}/{d}/{d}/{d}/{d}/{d} full_dirty_reason={s} full_dirty_seq={d} rows={d} cols={d}",
+            "draw_ms={d:.2} lock_ms={d:.2} cache_copy_ms={d:.2} texture_update_ms={d:.2} overlay_ms={d:.2} full={d} partial={d} updated={d} sync={d} clear_ok={d} dirty={s} dirty_rows={d} damage_rows={d} damage_cols={d} blink_cells={d} blink_phase_changed={d} full_reasons={d}/{d}/{d}/{d} full_dirty_reason={s} full_dirty_seq={d} rows={d} cols={d}",
             .{
                 elapsed_ms,
                 lock_ms,
@@ -1769,8 +1723,6 @@ pub fn draw(
                 @intFromBool(full_reason_cell_metrics),
                 @intFromBool(full_reason_scale),
                 @intFromBool(full_reason_dirty_full),
-                @intFromBool(full_reason_kitty),
-                @intFromBool(full_reason_kitty_gen),
                 @tagName(cache.full_dirty_reason),
                 cache.full_dirty_seq,
                 rows,
@@ -2057,21 +2009,14 @@ test "texture update plan forces full redraw when texture is not ready" {
         false,
         false,
         false,
-        false,
-        false,
-        false,
     );
     try std.testing.expect(plan.needs_full);
     try std.testing.expect(!plan.needs_partial);
 }
 
-test "texture update plan does not force full redraw for static kitty content alone" {
+test "texture update plan stays idle when dirty state is clean" {
     const plan = chooseTextureUpdatePlan(
         .none,
-        false,
-        false,
-        false,
-        false,
         false,
         false,
         false,
@@ -2081,20 +2026,16 @@ test "texture update plan does not force full redraw for static kitty content al
     try std.testing.expect(!plan.needs_partial);
 }
 
-test "texture update plan forces full redraw when dirty cells overlap kitty content policy" {
+test "texture update plan keeps partial redraw for normal partial damage" {
     const plan = chooseTextureUpdatePlan(
         .partial,
         false,
         false,
         false,
         true,
-        false,
-        false,
-        false,
-        true,
     );
-    try std.testing.expect(plan.needs_full);
-    try std.testing.expect(!plan.needs_partial);
+    try std.testing.expect(!plan.needs_full);
+    try std.testing.expect(plan.needs_partial);
 }
 
 test "texture update plan uses partial redraw for blink-only changes" {
@@ -2103,73 +2044,9 @@ test "texture update plan uses partial redraw for blink-only changes" {
         false,
         false,
         false,
-        false,
-        false,
         true,
         true,
     );
     try std.testing.expect(!plan.needs_full);
     try std.testing.expect(plan.needs_partial);
-}
-
-test "kitty overlap policy ignores non-overlapping dirty rows" {
-    var cache = RenderCache.init();
-    defer cache.deinit(std.testing.allocator);
-
-    try cache.cells.resize(std.testing.allocator, 4);
-    try cache.dirty_rows.resize(std.testing.allocator, 2);
-    try cache.dirty_cols_start.resize(std.testing.allocator, 2);
-    try cache.dirty_cols_end.resize(std.testing.allocator, 2);
-    try cache.kitty_rows.resize(std.testing.allocator, 2);
-    try cache.kitty_cols_start.resize(std.testing.allocator, 2);
-    try cache.kitty_cols_end.resize(std.testing.allocator, 2);
-
-    cache.rows = 2;
-    cache.cols = 2;
-    cache.dirty = .partial;
-    cache.dirty_rows.items[0] = true;
-    cache.dirty_rows.items[1] = false;
-    cache.dirty_cols_start.items[0] = 0;
-    cache.dirty_cols_end.items[0] = 1;
-    cache.dirty_cols_start.items[1] = 0;
-    cache.dirty_cols_end.items[1] = 0;
-    cache.kitty_rows.items[0] = false;
-    cache.kitty_rows.items[1] = true;
-    cache.kitty_cols_start.items[0] = 2;
-    cache.kitty_cols_end.items[0] = 0;
-    cache.kitty_cols_start.items[1] = 0;
-    cache.kitty_cols_end.items[1] = 1;
-    for (cache.cells.items) |*cell| cell.* = terminal_mod.defaultCell();
-    try std.testing.expect(!kittyPlacementOverlapRequiresFull(&cache, false));
-}
-
-test "kitty overlap policy requires full redraw for overlapping dirty cells" {
-    var cache = RenderCache.init();
-    defer cache.deinit(std.testing.allocator);
-
-    try cache.cells.resize(std.testing.allocator, 4);
-    try cache.dirty_rows.resize(std.testing.allocator, 2);
-    try cache.dirty_cols_start.resize(std.testing.allocator, 2);
-    try cache.dirty_cols_end.resize(std.testing.allocator, 2);
-    try cache.kitty_rows.resize(std.testing.allocator, 2);
-    try cache.kitty_cols_start.resize(std.testing.allocator, 2);
-    try cache.kitty_cols_end.resize(std.testing.allocator, 2);
-
-    cache.rows = 2;
-    cache.cols = 2;
-    cache.dirty = .partial;
-    cache.dirty_rows.items[0] = true;
-    cache.dirty_rows.items[1] = false;
-    cache.dirty_cols_start.items[0] = 0;
-    cache.dirty_cols_end.items[0] = 0;
-    cache.dirty_cols_start.items[1] = 0;
-    cache.dirty_cols_end.items[1] = 0;
-    cache.kitty_rows.items[0] = true;
-    cache.kitty_rows.items[1] = false;
-    cache.kitty_cols_start.items[0] = 0;
-    cache.kitty_cols_end.items[0] = 0;
-    cache.kitty_cols_start.items[1] = 2;
-    cache.kitty_cols_end.items[1] = 0;
-    for (cache.cells.items) |*cell| cell.* = terminal_mod.defaultCell();
-    try std.testing.expect(kittyPlacementOverlapRequiresFull(&cache, false));
 }
