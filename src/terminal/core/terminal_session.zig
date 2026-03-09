@@ -1031,10 +1031,6 @@ pub const TerminalSession = struct {
         return hyperlink_table.appendHyperlink(self, uri, max_hyperlinks);
     }
 
-    pub fn parseKittyGraphics(self: *TerminalSession, payload: []const u8) void {
-        parser_hooks.parseKittyGraphics(parser_hooks.SessionFacade.from(self), payload);
-    }
-
     pub fn clearAllKittyImages(self: *TerminalSession) void {
         kitty_mod.clearAllKittyImages(self);
     }
