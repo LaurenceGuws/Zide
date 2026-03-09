@@ -320,7 +320,7 @@ Statuses are strict:
 - `done`: landed and documented
 
 1) Presentation/publication ownership cleanup
-- status: `in_progress`
+- status: `done`
 - priority: `P0`
 - scope:
   - move presented-generation acknowledgement and dirty retirement out of widget draw initiation
@@ -337,6 +337,7 @@ Statuses are strict:
   - 2026-03-09: fourth slice landed on feature branch work: `TerminalWidget` no longer stores pending presentation outcome as widget state; draw now returns the outcome directly and terminal surface/runtime passes it through explicitly to presentation retirement.
   - 2026-03-09: fifth slice landed on feature branch work: render-cache capture moved out of `terminal_widget_draw` and into the widget wrapper, and mouse-reporting visibility is now published in `RenderCache`, so draw depends less on live session state during presentation.
   - 2026-03-09: sixth slice landed on feature branch work: alt-exit timing consumption moved out of the draw module and into the post-draw presentation finish path, removing the last direct live-session atomic access from `terminal_widget_draw`.
+  - 2026-03-09: seventh slice landed on feature branch work: the post-draw presentation feedback contract moved into `TerminalSession.completePresentationFeedback(...)`, so widget flow no longer owns backend dirty-retirement or alt-exit presentation policy.
 
 2) PTY write contract unification
 - status: `todo`
