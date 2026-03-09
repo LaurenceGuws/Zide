@@ -32,12 +32,6 @@ pub const TerminalWidget = struct {
         window,
         pane,
     };
-    pub const MultiClickSelectionMode = enum {
-        none,
-        word,
-        line,
-    };
-
     session: *TerminalSession,
     blink_style: BlinkStyle = .kitty,
     kitty: kitty_mod.KittyState,
@@ -69,10 +63,8 @@ pub const TerminalWidget = struct {
     scrollbar_hover_anim: f32 = 0,
     scrollbar_anim_last_time: f64 = 0,
     scrollbar_drag_active: bool = false,
-    multi_click_selection_mode: MultiClickSelectionMode = .none,
-    multi_click_anchor_row: usize = 0,
-    multi_click_anchor_col_start: usize = 0,
-    multi_click_anchor_col_end: usize = 0,
+    scrollbar_grab_offset: f32 = 0,
+    selection_gesture: terminal_mod.SelectionGesture = .{},
     selection_press_origin: ?shared_types.input.MousePos = null,
     selection_drag_active: bool = false,
 
@@ -108,10 +100,8 @@ pub const TerminalWidget = struct {
             .scrollbar_hover_anim = 0,
             .scrollbar_anim_last_time = 0,
             .scrollbar_drag_active = false,
-            .multi_click_selection_mode = .none,
-            .multi_click_anchor_row = 0,
-            .multi_click_anchor_col_start = 0,
-            .multi_click_anchor_col_end = 0,
+            .scrollbar_grab_offset = 0,
+            .selection_gesture = .{},
             .selection_press_origin = null,
             .selection_drag_active = false,
         };
@@ -313,8 +303,6 @@ pub const TerminalWidget = struct {
         width: f32,
         height: f32,
         allow_input: bool,
-        scroll_dragging: *bool,
-        scroll_grab_offset: *f32,
         suppress_shortcuts: bool,
         input_batch: *shared_types.input.InputBatch,
     ) !bool {
@@ -326,8 +314,6 @@ pub const TerminalWidget = struct {
             width,
             height,
             allow_input,
-            scroll_dragging,
-            scroll_grab_offset,
             suppress_shortcuts,
             input_batch,
         );

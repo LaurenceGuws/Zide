@@ -172,6 +172,9 @@ Progress:
 - Follow-up (2026-03-09): routed alt-screen transitions through `setActiveScreenMode(...)` so active-screen publication and snapshot refresh stop being open-coded in enter/exit paths.
 - Follow-up (2026-03-10): typed OSC 5522 clipboard write boundaries behind `WriterFacade` so reply/status/data emission no longer depends on implicit `anytype` PTY write seams.
 - Follow-up (2026-03-10): typed CSI reply emission behind `CsiWriter` (`DA`/`DSR`/`DECRQM`/window op/color-scheme replies) while keeping compatibility wrappers at the public helper surface.
+- Follow-up (2026-03-10): moved terminal selection row/word/range semantics into `src/terminal/model/selection_semantics.zig` and routed widget click/drag/scrollbar selection behavior through backend-owned helpers in `src/terminal/core/selection.zig`.
+- Follow-up (2026-03-10): removed terminal-only scrollbar drag state from generic app runtime state and moved that ownership onto `TerminalWidget`, shrinking the app/widget glue surface.
+- Follow-up (2026-03-10): extracted explicit terminal poll and sleep policy structs plus unit coverage in `src/app/terminal_poll_runtime.zig` and `src/app/terminal_frame_pacing_runtime.zig` so runtime scheduling constants stop living as anonymous inline heuristics.
 
 ## Regression Checklist (keep in sync)
 - OSC coverage: 0/2/7/8/10/11/12/19/52 + XTGETTCAP.

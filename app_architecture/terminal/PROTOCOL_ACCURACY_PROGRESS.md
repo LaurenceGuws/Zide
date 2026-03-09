@@ -1424,6 +1424,7 @@ Status:
 Implemented (increment 1):
 - Unsupported `alternate_key` flag is now sanitized out when pushed/modified/queried via key mode flags.
 - Prevents `CSI ?u` query replies and input snapshots from advertising a flag the encoder does not implement.
+- 2026-03-09: parser-fed kitty keyboard protocol setup (`CSI >/< /=/? ... u`) now routes through explicit locked key-mode push/pop/modify/query helpers instead of the generic lock-taking APIs. This fixed a real nested-lock startup freeze in TUI apps that enable kitty keyboard mode during init (`nvim`, `lazygit`, `codex-cli`).
 
 Files:
 - `src/terminal/core/input_modes.zig`
@@ -3218,6 +3219,8 @@ Planned work (decomposition / `PA-08h` first promoted CSI family: `DECSTR` soft 
   1. Docs-only reset matrix (what `DECSTR` resets vs preserves in Zide scope).
   2. Behavior-preserving parser/dispatch hook for `CSI ! p` (no-op handler + tests proving exact dispatch family).
   3. Implement the first safe subset (mode resets only) with PTY/replay coverage.
+ - Follow-up (2026-03-09):
+   - tightened the contrasting hard-reset path too: `RIS` / `ESC c` now runs through a locked reset helper and resets the full input-mode subset coherently instead of partially clearing `app_keypad` via a raw field poke.
 
 `PA-08h` DECSTR reset matrix (Zide first implementation scope):
 

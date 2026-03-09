@@ -273,8 +273,6 @@ pub fn handle(state: anytype, input_batch: *shared_types.input.InputBatch) !void
                                             frame_terminal_close_modal_active,
                                             at,
                                             inner_state.allocator,
-                                            &inner_state.terminal_scroll_dragging,
-                                            &inner_state.terminal_scroll_grab_offset,
                                             inner_raw,
                                             .{
                                                 .open_file = struct {
@@ -349,8 +347,6 @@ pub fn handle(state: anytype, input_batch: *shared_types.input.InputBatch) !void
                                             frame_suppress_terminal_shortcuts,
                                             frame_terminal_close_modal_active,
                                             inner_state.allocator,
-                                            &inner_state.terminal_scroll_dragging,
-                                            &inner_state.terminal_scroll_grab_offset,
                                             at,
                                             &inner_state.needs_redraw,
                                             &inner_state.metrics,

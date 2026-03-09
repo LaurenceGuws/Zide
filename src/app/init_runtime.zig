@@ -261,8 +261,6 @@ fn initWithMode(
         .window_resize_pending = false,
         .window_resize_last_time = 0,
         .mouse_debug = std.c.getenv("ZIDE_MOUSE_DEBUG") != null,
-        .terminal_scroll_dragging = false,
-        .terminal_scroll_grab_offset = 0,
         .last_mouse_redraw_time = 0,
         .last_ctrl_down = false,
         .editor_dragging = false,

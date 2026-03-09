@@ -51,8 +51,6 @@ pub fn handle(
     suppress_terminal_shortcuts: bool,
     terminal_close_modal_active: bool,
     terminal_allocator: std.mem.Allocator,
-    terminal_scroll_dragging: *bool,
-    terminal_scroll_grab_offset: *f32,
     now: f64,
     needs_redraw: *bool,
     metrics: anytype,
@@ -127,8 +125,6 @@ pub fn handle(
         terminal_close_modal_active,
         now,
         terminal_allocator,
-        terminal_scroll_dragging,
-        terminal_scroll_grab_offset,
         @ptrCast(&runtime_state),
         .{
             .open_file = struct {

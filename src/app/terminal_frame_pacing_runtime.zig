@@ -1,6 +1,31 @@
+const std = @import("std");
 const terminal_widget_draw = @import("../ui/widgets/terminal_widget_draw.zig");
 
 const TerminalDrawLatencyMetrics = terminal_widget_draw.FrameLatencyMetrics;
+
+pub const SleepPolicy = struct {
+    active_sleep_s: f64,
+    startup_window_s: f64,
+    startup_sleep_s: f64,
+    recent_generation_window_s: f64,
+    short_idle_frame_limit: u32,
+    medium_idle_frame_limit: u32,
+    short_idle_sleep_s: f64,
+    medium_idle_sleep_s: f64,
+    deep_idle_sleep_s: f64,
+};
+
+pub const default_sleep_policy: SleepPolicy = .{
+    .active_sleep_s = 0.001,
+    .startup_window_s = 3.0,
+    .startup_sleep_s = 0.016,
+    .recent_generation_window_s = 0.25,
+    .short_idle_frame_limit = 10,
+    .medium_idle_frame_limit = 60,
+    .short_idle_sleep_s = 0.016,
+    .medium_idle_sleep_s = 0.033,
+    .deep_idle_sleep_s = 0.100,
+};
 
 pub const PollMetrics = struct {
     tab_count: usize,
@@ -98,19 +123,23 @@ pub fn noteIdle(state: anytype) void {
 }
 
 pub fn sleepDuration(state: anytype, now: f64, snapshot: Snapshot) f64 {
+    return sleepDurationWithPolicy(default_sleep_policy, state, now, snapshot);
+}
+
+pub fn sleepDurationWithPolicy(policy: SleepPolicy, state: anytype, now: f64, snapshot: Snapshot) f64 {
     const pacing = &state.terminal_frame_pacing;
     const generation_recently_advanced = pacing.last_generation_change_time > 0 and
-        (now - pacing.last_generation_change_time) <= 0.25;
+        (now - pacing.last_generation_change_time) <= policy.recent_generation_window_s;
     return if (snapshot.redraw_pending or snapshot.output_pressure or generation_recently_advanced)
-        0.001
-    else if (now < 3.0)
-        0.016
-    else if (pacing.idle_frames < 10)
-        0.016
-    else if (pacing.idle_frames < 60)
-        0.033
+        policy.active_sleep_s
+    else if (now < policy.startup_window_s)
+        policy.startup_sleep_s
+    else if (pacing.idle_frames < policy.short_idle_frame_limit)
+        policy.short_idle_sleep_s
+    else if (pacing.idle_frames < policy.medium_idle_frame_limit)
+        policy.medium_idle_sleep_s
     else
-        0.100;
+        policy.deep_idle_sleep_s;
 }
 
 pub fn logInputLatency(state: anytype, poll_ms: f64, build_ms: f64, update_ms: f64, draw_ms: f64, term_ctx: LatencyContext) void {
@@ -225,4 +254,60 @@ fn activeFrameState(state: anytype) struct {
         .current_generation = 0,
         .published_generation = 0,
     };
+}
+
+test "default sleep policy stays hot while redraw or backlog is active" {
+    const State = struct {
+        terminal_frame_pacing: struct {
+            idle_frames: u32 = 0,
+            last_generation_change_time: f64 = 0,
+        } = .{},
+    };
+
+    var state = State{};
+    try std.testing.expectEqual(default_sleep_policy.active_sleep_s, sleepDurationWithPolicy(default_sleep_policy, &state, 10.0, .{
+        .redraw_pending = true,
+        .output_pressure = false,
+    }));
+    try std.testing.expectEqual(default_sleep_policy.active_sleep_s, sleepDurationWithPolicy(default_sleep_policy, &state, 10.0, .{
+        .redraw_pending = false,
+        .output_pressure = true,
+    }));
+}
+
+test "default sleep policy backs off by startup and idle tiers" {
+    const State = struct {
+        terminal_frame_pacing: struct {
+            idle_frames: u32 = 0,
+            last_generation_change_time: f64 = 0,
+        } = .{},
+    };
+
+    var state = State{};
+    try std.testing.expectEqual(default_sleep_policy.startup_sleep_s, sleepDurationWithPolicy(default_sleep_policy, &state, 2.0, .{}));
+
+    state.terminal_frame_pacing.idle_frames = default_sleep_policy.short_idle_frame_limit - 1;
+    try std.testing.expectEqual(default_sleep_policy.short_idle_sleep_s, sleepDurationWithPolicy(default_sleep_policy, &state, 10.0, .{}));
+
+    state.terminal_frame_pacing.idle_frames = default_sleep_policy.short_idle_frame_limit;
+    try std.testing.expectEqual(default_sleep_policy.medium_idle_sleep_s, sleepDurationWithPolicy(default_sleep_policy, &state, 10.0, .{}));
+
+    state.terminal_frame_pacing.idle_frames = default_sleep_policy.medium_idle_frame_limit;
+    try std.testing.expectEqual(default_sleep_policy.deep_idle_sleep_s, sleepDurationWithPolicy(default_sleep_policy, &state, 10.0, .{}));
+}
+
+test "default sleep policy stays hot briefly after generation advancement" {
+    const State = struct {
+        terminal_frame_pacing: struct {
+            idle_frames: u32 = 0,
+            last_generation_change_time: f64 = 0,
+        } = .{},
+    };
+
+    var state = State{};
+    state.terminal_frame_pacing.last_generation_change_time = 9.9;
+    try std.testing.expectEqual(default_sleep_policy.active_sleep_s, sleepDurationWithPolicy(default_sleep_policy, &state, 10.0, .{}));
+
+    state.terminal_frame_pacing.last_generation_change_time = 9.0;
+    try std.testing.expectEqual(default_sleep_policy.short_idle_sleep_s, sleepDurationWithPolicy(default_sleep_policy, &state, 10.0, .{}));
 }
