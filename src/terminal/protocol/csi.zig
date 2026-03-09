@@ -737,7 +737,7 @@ pub fn applySgr(self: anytype, action: parser_csi.CsiAction) void {
     const n_params = effectiveSgrParamCount(action);
     const log = app_logger.logger("terminal.sgr");
     log.logf(
-        .info,
+        .debug,
         "sgr count={d} params={d},{d},{d},{d},{d},{d},{d},{d},{d},{d},{d},{d},{d},{d},{d},{d}",
         .{
             n_params,

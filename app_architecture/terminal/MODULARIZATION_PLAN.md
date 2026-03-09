@@ -516,6 +516,7 @@ Statuses are strict:
   - 2026-03-09: second slice landed on feature-branch work: removed `terminal.inputpath` CSI probe logs from hot cursor/erase handlers (`CUF`, `CUB`, `EL`) so protocol dispatch no longer emits per-sequence investigation noise in steady-state TUI traffic.
   - 2026-03-09: third slice landed on feature-branch work: demoted remaining high-frequency protocol trace logs from `.info` to `.debug` across CSI/OSC/APC and OSC reply emitters, preserving diagnostics while preventing default-info log spam on normal terminal traffic.
   - 2026-03-09: fourth slice landed on feature-branch work: removed `terminal.trace.scroll` and `terminal.trace.control` probe logging plus extra `terminal.core` scroll info/stdout spam from core scrolling/control handlers, reducing hot-path logging residue from the rain investigation.
+  - 2026-03-09: fifth slice landed on feature-branch work: demoted `terminal.sgr` per-sequence logs from `.info` to `.debug` so high-volume SGR traffic no longer pollutes default-info logs.
 
 11) Kitty subsystem split
 - status: `todo`
