@@ -12,16 +12,14 @@ pub fn closeActive(state: anytype, ctx: *anyopaque, hooks: Hooks) !bool {
     if (state.terminal_workspace) |*workspace| {
         if (workspace.tabCount() == 0) return false;
         if (workspace.activeTabId()) |active_tab_id| {
-            if (workspace.activeSession()) |active_session| {
-                if (app_terminal_close_confirm_state.shouldArmCloseConfirm(
-                    state.terminal_close_confirm_tab,
-                    active_tab_id,
-                    active_session.shouldConfirmClose(),
-                )) {
-                    state.terminal_close_confirm_tab = active_tab_id;
-                    state.needs_redraw = true;
-                    return false;
-                }
+            if (app_terminal_close_confirm_state.shouldArmCloseConfirm(
+                state.terminal_close_confirm_tab,
+                active_tab_id,
+                workspace.activeSessionShouldConfirmClose(),
+            )) {
+                state.terminal_close_confirm_tab = active_tab_id;
+                state.needs_redraw = true;
+                return false;
             }
         }
         const active_idx = workspace.activeIndex();

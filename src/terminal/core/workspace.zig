@@ -100,6 +100,16 @@ pub const TerminalWorkspace = struct {
         return self.tabs.items[self.activeIndex()].session;
     }
 
+    pub fn activeSessionCwd(self: *const TerminalWorkspace) []const u8 {
+        if (self.tabs.items.len == 0) return "";
+        return self.tabs.items[self.activeIndex()].session.currentCwd();
+    }
+
+    pub fn activeSessionShouldConfirmClose(self: *const TerminalWorkspace) bool {
+        if (self.tabs.items.len == 0) return false;
+        return self.tabs.items[self.activeIndex()].session.shouldConfirmClose();
+    }
+
     pub fn activeSessionHasData(self: *const TerminalWorkspace) bool {
         if (self.tabs.items.len == 0) return false;
         return self.tabs.items[self.activeIndex()].session.hasData();
@@ -118,6 +128,11 @@ pub const TerminalWorkspace = struct {
     pub fn publishedGenerationAt(self: *const TerminalWorkspace, index: usize) ?u64 {
         if (index >= self.tabs.items.len) return null;
         return self.tabs.items[index].session.publishedGeneration();
+    }
+
+    pub fn shouldConfirmCloseAt(self: *const TerminalWorkspace, index: usize) bool {
+        if (index >= self.tabs.items.len) return false;
+        return self.tabs.items[index].session.shouldConfirmClose();
     }
 
     pub fn metadataAt(self: *TerminalWorkspace, index: usize) ?TabMetadata {
