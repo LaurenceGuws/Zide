@@ -20,15 +20,6 @@ pub const TabMetadata = struct {
 };
 
 pub const TerminalWorkspace = struct {
-    pub const PollBudget = struct {
-        /// Maximum number of sessions to inspect for data and poll in a single frame.
-        max_tabs_per_frame: usize = 4,
-        /// Maximum number of background (non-active) sessions to inspect per frame.
-        max_background_tabs_per_frame: usize = 2,
-        /// Maximum number of poll passes for the active tab in one frame.
-        /// This helps high-throughput active tabs stay smooth without unbounded all-tab polling.
-        max_active_polls_per_frame: usize = 1,
-    };
     pub const PollFrameMetrics = struct {
         seq: u64 = 0,
         tab_count: usize = 0,
