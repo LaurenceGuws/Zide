@@ -1322,6 +1322,15 @@ pub const TerminalSession = struct {
         return &self.render_caches[idx];
     }
 
+    pub fn copyPublishedRenderCache(self: *TerminalSession, dst: *RenderCache) !void {
+        self.lock();
+        defer self.unlock();
+        if (self.view_cache_pending.load(.acquire)) {
+            self.updateViewCacheForScrollLocked();
+        }
+        try render_cache_mod.copySnapshot(dst, self.allocator, self.renderCache());
+    }
+
     pub fn syncUpdatesActive(self: *const TerminalSession) bool {
         return self.sync_updates_active;
     }
