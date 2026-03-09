@@ -37,5 +37,6 @@ pub fn draw(state: anytype, shell: anytype, layout: layout_types.WidgetLayout) v
         if (layout.terminal.width > 0 and term_height > 0) {
             shell.endClip();
         }
+        term_widget.finishFramePresentation();
     }
 }

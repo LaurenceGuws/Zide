@@ -21,6 +21,7 @@ const CellAttrs = terminal_mod.CellAttrs;
 const KittyImage = terminal_mod.KittyImage;
 const KittyPlacement = terminal_mod.KittyPlacement;
 const RenderCache = render_cache_mod.RenderCache;
+const DrawOutcome = draw_mod.DrawOutcome;
 
 /// Terminal widget for drawing a terminal view
 pub const TerminalWidget = struct {
@@ -77,6 +78,7 @@ pub const TerminalWidget = struct {
     multi_click_anchor_col_end: usize = 0,
     selection_press_origin: ?shared_types.input.MousePos = null,
     selection_drag_active: bool = false,
+    pending_draw_outcome: DrawOutcome = .{},
 
     pub fn init(session: *TerminalSession, blink_style: BlinkStyle) TerminalWidget {
         return .{
@@ -116,6 +118,7 @@ pub const TerminalWidget = struct {
             .multi_click_anchor_col_end = 0,
             .selection_press_origin = null,
             .selection_drag_active = false,
+            .pending_draw_outcome = .{},
         };
     }
 
@@ -583,7 +586,13 @@ pub const TerminalWidget = struct {
         height: f32,
         input: shared_types.input.InputSnapshot,
     ) void {
-        draw_mod.draw(self, shell, x, y, width, height, input);
+        self.pending_draw_outcome = draw_mod.draw(self, shell, x, y, width, height, input);
+    }
+
+    pub fn finishFramePresentation(self: *TerminalWidget) void {
+        if (!self.pending_draw_outcome.should_acknowledge_presentation) return;
+        _ = self.session.acknowledgePresentedGeneration(self.pending_draw_outcome.generation);
+        self.pending_draw_outcome = .{};
     }
 
     /// Handle input, returns true if any input was processed
