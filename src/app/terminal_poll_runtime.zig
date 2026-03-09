@@ -5,10 +5,9 @@ pub fn inputPressure(input_has_events: bool, terminal_input_activity: bool) bool
 
 pub fn pollWorkspace(workspace: anytype, input_active_index: ?usize, has_input: bool) !bool {
     const active_idx = input_active_index orelse 0;
-    const active_session = if (input_active_index) |idx| workspace.sessionAt(idx) else null;
-    const pubgen_pre = if (active_session) |s| s.publishedGeneration() else 0;
+    const pubgen_pre = if (input_active_index) |idx| workspace.publishedGenerationAt(idx) orelse 0 else 0;
     _ = try workspace.pollForFrame(active_idx, has_input);
-    const pubgen_post = if (active_session) |s| s.publishedGeneration() else 0;
+    const pubgen_post = if (input_active_index) |idx| workspace.publishedGenerationAt(idx) orelse 0 else 0;
     return pubgen_post != pubgen_pre;
 }
 

@@ -100,6 +100,26 @@ pub const TerminalWorkspace = struct {
         return self.tabs.items[self.activeIndex()].session;
     }
 
+    pub fn activeSessionHasData(self: *const TerminalWorkspace) bool {
+        if (self.tabs.items.len == 0) return false;
+        return self.tabs.items[self.activeIndex()].session.hasData();
+    }
+
+    pub fn activeSessionPublishedGeneration(self: *const TerminalWorkspace) u64 {
+        if (self.tabs.items.len == 0) return 0;
+        return self.tabs.items[self.activeIndex()].session.publishedGeneration();
+    }
+
+    pub fn activeSessionCurrentGeneration(self: *const TerminalWorkspace) u64 {
+        if (self.tabs.items.len == 0) return 0;
+        return self.tabs.items[self.activeIndex()].session.currentGeneration();
+    }
+
+    pub fn publishedGenerationAt(self: *const TerminalWorkspace, index: usize) ?u64 {
+        if (index >= self.tabs.items.len) return null;
+        return self.tabs.items[index].session.publishedGeneration();
+    }
+
     pub fn metadataAt(self: *TerminalWorkspace, index: usize) ?TabMetadata {
         const session = self.sessionAt(index) orelse return null;
         return .{
