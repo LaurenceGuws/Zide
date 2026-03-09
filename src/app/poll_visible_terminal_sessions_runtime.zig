@@ -3,14 +3,8 @@ const app_terminal_surface_gate = @import("terminal_surface_gate.zig");
 const app_terminal_tabs_runtime = @import("terminal_tabs_runtime.zig");
 const app_bootstrap = @import("bootstrap.zig");
 
-var terminal_input_activity_hint: ?bool = null;
-
-pub fn setTerminalInputActivityHint(active: bool) void {
-    terminal_input_activity_hint = active;
-}
-
-fn terminalInputPressure(input_has_events: bool) bool {
-    return terminal_input_activity_hint orelse input_has_events;
+fn terminalInputPressure(input_has_events: bool, terminal_input_activity: bool) bool {
+    return terminal_input_activity or input_has_events;
 }
 
 pub fn handle(
@@ -19,11 +13,12 @@ pub fn handle(
     terminal_workspace: anytype,
     terminals: anytype,
     input_has_events: bool,
+    terminal_input_activity: bool,
 ) !bool {
     if (!app_terminal_surface_gate.hasVisibleTerminalTabs(app_mode, show_terminal, terminal_workspace.*, terminals.len)) return false;
 
     // Poll pressure should track terminal-relevant activity, not unrelated UI events.
-    const input_pressure = terminalInputPressure(input_has_events);
+    const input_pressure = terminalInputPressure(input_has_events, terminal_input_activity);
 
     if (app_modes.ide.shouldUseTerminalWorkspace(app_mode)) {
         if (terminal_workspace.*) |*workspace| {

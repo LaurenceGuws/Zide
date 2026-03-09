@@ -240,6 +240,40 @@ ui_widget_modularization_todo:
             - "2026-03-07: Replaced frame-path grammar auto-bootstrap `spawnAndWait` with detached background worker + shared state (`idle/running/succeeded/failed`)."
             - "2026-03-07: Highlighter init now returns immediately while bootstrap is running; load is retried after completion without blocking update/draw."
 
+    - name: "Phase 6 - Terminal UI Boundary Cleanup"
+      tasks:
+        - id: UI-TB-01
+          title: "Shrink TerminalWidget to presentation/orchestration only"
+          status: todo
+          files_to_edit:
+            - src/ui/widgets/terminal_widget.zig
+            - src/ui/widgets/terminal_widget_draw.zig
+            - src/ui/widgets/terminal_widget_input.zig
+          notes:
+            - "Current hotspot review (2026-03-09): the widget still owns backend/app policy including dirty ack, kitty upload lifecycle, selection/scrollbar policy, and open/hover policy."
+            - "Do not mix this with `TerminalSession` decomposition until ownership contracts are written down."
+
+        - id: UI-TB-02
+          title: "Remove duplicate snapshot-vs-visible hover/open paths"
+          status: todo
+          files_to_edit:
+            - src/ui/widgets/terminal_widget_hover.zig
+            - src/ui/widgets/terminal_widget_open.zig
+            - src/ui/widgets/terminal_widget_input.zig
+          notes:
+            - "The current code keeps both visible-cache and snapshot-based paths; converge on one authoritative UI-side contract after boundary cleanup."
+
+        - id: UI-TB-03
+          title: "Move terminal dirty acknowledgement out of widget draw"
+          status: todo
+          files_to_edit:
+            - src/ui/widgets/terminal_widget_draw.zig
+            - src/terminal/core/terminal_session.zig
+            - src/terminal/core/view_cache.zig
+          notes:
+            - "Current hotspot review (2026-03-09): widget draw still calls generation-guarded dirty-clear APIs after upload."
+            - "Long-term target: renderer consumes published terminal state; backend owns ack/publication lifecycle."
+
         - id: UI-PERF-05
           title: "Move search recompute off UI thread with generation cancellation"
           status: done
