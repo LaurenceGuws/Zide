@@ -228,6 +228,7 @@ This confirms a practical scheduler race window around `hasData` gating and idle
   - after removing the last callers, the `force_full_damage` session-side invalidation flag and the `view_cache_force_full_damage` fallback reason were deleted entirely; full redraw authority now comes from published cache/model state instead of an unused side-channel
   - scrollback-view movement is no longer published as a screen-model full dirty event; `view_cache` now distinguishes pure viewport remaps and publishes `viewport_shift_exposed_only` partial damage, so draw can use the texture-shift fast path for scrolled history and only fall back to full when that copy path is unavailable
   - disabling synchronized updates no longer synthesizes a full-screen dirty event on its own; the renderer already freezes presentation while sync mode is active, so disable now publishes the accumulated real screen damage (`none` or partial/full as already tracked) instead of forcing `sync_updates_disabled` full redraws every frame batch
+  - kitty/image redraw policy is now narrower on the renderer side: partial redraw no longer escalates to full just because kitty content exists somewhere in the viewport; full redraw is now reserved for actual dirty/blink overlap with visible placements, while static or non-overlapping kitty content stays on the normal partial path
 
 ## Applied Fix Candidate (2026-03-09)
 
