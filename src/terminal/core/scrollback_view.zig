@@ -27,7 +27,6 @@ pub fn setScrollOffset(self: anytype, offset: usize) void {
     }
     self.history.ensureViewCache(self.primary.grid.cols, self.primary.defaultCell());
     self.history.setScrollOffset(self.primary.grid.rows, offset);
-    self.primary.markDirtyAllWithReason(.scrollback_view_offset_change, @src());
     self.view_cache_request_offset.store(@intCast(self.history.scrollOffset()), .release);
     self.view_cache_pending.store(true, .release);
     self.io_wait_cond.signal();
@@ -43,7 +42,6 @@ pub fn scrollBy(self: anytype, delta: isize) void {
     if (delta == 0) return;
     self.history.ensureViewCache(self.primary.grid.cols, self.primary.defaultCell());
     self.history.scrollBy(self.primary.grid.rows, delta);
-    self.primary.markDirtyAllWithReason(.scrollback_view_offset_change, @src());
     self.view_cache_request_offset.store(@intCast(self.history.scrollOffset()), .release);
     self.view_cache_pending.store(true, .release);
     self.io_wait_cond.signal();
