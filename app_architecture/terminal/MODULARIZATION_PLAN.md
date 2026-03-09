@@ -432,6 +432,7 @@ Statuses are strict:
 - progress:
   - 2026-03-09: first slice started on feature branch work: workspace now owns active-frame scheduling observation through `activeFrameState()` and poll-result publication through `PollFrameResult`. Runtime pacing/poll helpers no longer reconstruct those decisions from separate getters plus app-side pre/post generation comparisons, and the old raw getters (`activeSessionHasData`, `activeSessionPublishedGeneration`, `activeSessionCurrentGeneration`, `publishedGenerationAt`) were deleted.
   - 2026-03-09: second slice started on feature branch work: runtime now owns poll profile selection again. `terminal_poll_runtime` chooses a `PollPolicy` and workspace executes it, so `workspace_polling` no longer hardcodes the input-vs-idle budget table internally.
+  - 2026-03-09: third slice started on feature branch work: terminal idle/backoff bookkeeping moved fully under `TerminalFramePacingState`. The old generic `AppState.idle_frames` counter was deleted, and `frame_render_idle_runtime` now drives idle progression through explicit pacing hooks (`noteDraw`, `noteIdle`) instead of mutating terminal sleep state directly.
 
 7) Input publication redesign
 - status: `todo`

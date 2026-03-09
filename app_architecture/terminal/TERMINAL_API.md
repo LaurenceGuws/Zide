@@ -92,17 +92,15 @@ important than the exact file layout.
 | TerminalWorkspace.activateTab | tab_id | bool | n/a | none | tab id maps to one active entry | terminal_workspace_tests |
 | TerminalWorkspace.activateNext/Prev | - | bool | n/a | none | wraps when more than one tab exists | terminal_workspace_tests |
 | TerminalWorkspace.moveTab | tab_id, to_index | bool | n/a | may move backing entries | active tab id preserved across move | terminal_workspace_tests |
-| TerminalWorkspace.metadataAt | index | ?TabMetadata | borrowed from active session state | none | metadata is session-derived, not duplicated | terminal_workspace_tests |
-| TerminalWorkspace.activeSessionCwd | - | []const u8 | borrowed from active session state | none | empty slice when no tabs exist | pending |
+| TerminalWorkspace.createTabWithSession | rows, cols | CreatedTab | session owned by workspace | allocates one session + tab entry | created tab becomes active and returned session matches active tab | terminal_workspace_tests |
+| TerminalWorkspace.copyActiveSessionCwd | allocator, out | []const u8 | caller-owned buffer | may grow output buffer | empty slice when no tabs exist | pending |
 | TerminalWorkspace.activeSessionShouldConfirmClose | - | bool | n/a | none | false when no tabs exist | pending |
-| TerminalWorkspace.activeSessionHasData | - | bool | n/a | none | read-only active-session pacing query; returns false when no tabs exist | pending |
-| TerminalWorkspace.activeSessionPublishedGeneration | - | u64 | n/a | none | read-only active-session publication query; returns 0 when no tabs exist | pending |
-| TerminalWorkspace.activeSessionCurrentGeneration | - | u64 | n/a | none | read-only active-session parser/backlog query; returns 0 when no tabs exist | pending |
-| TerminalWorkspace.publishedGenerationAt | index | ?u64 | n/a | none | read-only per-tab publication query; null when index is invalid | pending |
-| TerminalWorkspace.shouldConfirmCloseAt | index | bool | n/a | none | false when index is invalid | pending |
+| TerminalWorkspace.firstConfirmCloseTab | - | ?TabTarget | n/a | none | null when no live tab requires close confirmation | terminal_workspace_tests |
+| TerminalWorkspace.activeFrameState | - | ActiveFrameState | n/a | none | zeroed state when no tabs exist | pending |
+| TerminalWorkspace.copyTabSyncState | allocator, entries_out, strings_out | TabSyncState | slices point into caller-owned buffers | may grow output buffers | tab order and active tab id match workspace order/source of truth | terminal_workspace_tests |
 | TerminalWorkspace.resizeAll | rows, cols | void/error | n/a | session-internal resize alloc behavior | applies consistently across all tabs | pending |
 | TerminalWorkspace.setCellSizeAll | cell_width, cell_height | void | n/a | none | applies consistently across all tabs | pending |
-| TerminalWorkspace.pollForFrame | input_active_index, has_input | bool/error | n/a | none | workspace-owned polling fairness policy; return value means published generation advanced for the tracked active session | pending |
+| TerminalWorkspace.pollForFrame | input_active_index, policy | PollFrameResult/error | n/a | none | workspace executes the supplied poll profile and reports whether tracked active publication advanced | pending |
 
 ## Layering Rules (Imports)
 

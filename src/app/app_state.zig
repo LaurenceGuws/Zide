@@ -46,7 +46,6 @@ pub const AppState = struct {
     config_reload_notice_success: bool,
 
     needs_redraw: bool,
-    idle_frames: u32,
     terminal_frame_pacing: t.TerminalFramePacingState,
     last_mouse_pos: t.MousePos,
     resizing_terminal: bool,
