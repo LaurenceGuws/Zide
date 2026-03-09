@@ -175,6 +175,7 @@ Progress:
 - Follow-up (2026-03-10): moved terminal selection row/word/range semantics into `src/terminal/model/selection_semantics.zig` and routed widget click/drag/scrollbar selection behavior through backend-owned helpers in `src/terminal/core/selection.zig`.
 - Follow-up (2026-03-10): removed terminal-only scrollbar drag state from generic app runtime state and moved that ownership onto `TerminalWidget`, shrinking the app/widget glue surface.
 - Follow-up (2026-03-10): extracted explicit terminal poll and sleep policy structs plus unit coverage in `src/app/terminal_poll_runtime.zig` and `src/app/terminal_frame_pacing_runtime.zig` so runtime scheduling constants stop living as anonymous inline heuristics.
+- Follow-up (2026-03-10): typed the top-level parser dispatch seam in `src/terminal/core/parser_hooks.zig` behind an explicit session facade, so `TerminalSession` no longer calls parser hook entrypoints through raw `anytype` generics.
 
 ## Regression Checklist (keep in sync)
 - OSC coverage: 0/2/7/8/10/11/12/19/52 + XTGETTCAP.
