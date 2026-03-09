@@ -159,6 +159,7 @@ Progress:
 - Follow-up (2026-03-09): grouped terminal frame pacing bookkeeping into `AppState.terminal_frame_pacing` so runtime scheduler state stops leaking across the top-level app state as unrelated scalar fields.
 - Follow-up (2026-03-09): removed the dead frame-pacing `pressure_since` timestamp after the runtime extraction confirmed it was no longer read by any scheduler path.
 - Follow-up (2026-03-09): extracted visible-terminal poll budget/pressure/publication detection into `src/app/terminal_poll_runtime.zig` so `poll_visible_terminal_sessions_runtime.zig` stops embedding terminal polling policy inline.
+- Follow-up (2026-03-09): moved concrete per-frame workspace poll budgets behind `TerminalWorkspace.pollForFrame(...)` so app runtime no longer owns those fairness constants directly.
 - Follow-up (2026-03-09): introduced `TerminalSession.acknowledgePresentedGeneration(...)` so widget draw no longer manually composes presented-generation publication with dirty-retirement calls.
 - Follow-up (2026-03-09): moved sync-updates dirty-retirement choice behind `TerminalSession.acknowledgePresentedGeneration(...)` so widget draw no longer supplies that policy bit either.
 - Follow-up (2026-03-09): removed the old paired generation-guarded dirty-clear APIs from the public session surface and collapsed them into one backend-owned retirement helper behind `acknowledgePresentedGeneration(...)`.

@@ -740,6 +740,21 @@ Reason:
   - keep the runtime lane consistent with the earlier frame-pacing extraction
   - stop the visible-terminal hook from owning terminal scheduler heuristics
 
+## Workspace Poll Policy Cleanup (2026-03-09)
+
+- Files:
+  - `src/terminal/core/workspace.zig`
+  - `src/terminal/core/workspace_polling.zig`
+  - `src/app/terminal_poll_runtime.zig`
+- Change:
+  - introduced `TerminalWorkspace.pollForFrame(...)` and moved the concrete
+    active/background per-frame budget selection behind workspace polling code
+  - removed those budget constants from `terminal_poll_runtime.zig`
+- Intent:
+  - keep app runtime responsible for pressure/input scope, not for workspace
+    fairness constants
+  - move one more scheduler policy decision behind the workspace contract
+
 ## Presented-Ack API Cleanup (2026-03-09)
 
 - Files:

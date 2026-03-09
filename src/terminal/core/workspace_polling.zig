@@ -1,5 +1,20 @@
 const std = @import("std");
 
+pub fn budgetForFrame(comptime PollBudget: type, has_input: bool) PollBudget {
+    return if (has_input)
+        .{
+            .max_tabs_per_frame = 3,
+            .max_background_tabs_per_frame = 1,
+            .max_active_polls_per_frame = 2,
+        }
+    else
+        .{
+            .max_tabs_per_frame = 6,
+            .max_background_tabs_per_frame = 3,
+            .max_active_polls_per_frame = 4,
+        };
+}
+
 pub fn pollBudgeted(self: anytype, input_active_index: ?usize, has_input: bool, budget: anytype) !bool {
     const count = self.tabs.items.len;
     if (count == 0) {
@@ -116,6 +131,11 @@ pub fn pollBudgeted(self: anytype, input_active_index: ?usize, has_input: bool, 
         .background_backlog_hint = background_backlog_hint,
     });
     return any_polled;
+}
+
+pub fn pollForFrame(self: anytype, input_active_index: ?usize, has_input: bool) !bool {
+    const PollBudget = @TypeOf(self.*).PollBudget;
+    return pollBudgeted(self, input_active_index, has_input, budgetForFrame(PollBudget, has_input));
 }
 
 pub fn clearInputPressure(self: anytype) void {
