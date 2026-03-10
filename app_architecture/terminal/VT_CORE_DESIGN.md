@@ -306,6 +306,19 @@ Embedded-host wake semantics also moved forward:
   PTY-backed foreign hosts and no-PTY embedded hosts both get an immediate
   redraw signal after visible size changes
 
+This matches the general shape used by stronger reference terminals:
+
+- Ghostty's termio/renderer split wakes the renderer after stream-handling and
+  mailbox publication, not just at process start
+- Alacritty marks the terminal/window dirty and requests redraw after actual
+  visible-state changes, especially resize and PTY-driven updates
+
+So the current Zide FFI direction is:
+
+- no synthetic wake on `start(...)` alone
+- wake on visible-state transitions such as streamed output, poll-driven PTY
+  updates, and resize
+
 Protocol execution also moved another step toward core ownership:
 
 - saved-cursor restore and alt-screen core state transitions now live behind

@@ -217,6 +217,7 @@ test "ffi child_exit event carries exit code and present flag" {
 
     const deadline = std.time.milliTimestamp() + 4000;
     var saw_child_exit = false;
+    var saw_redraw = false;
     while (std.time.milliTimestamp() < deadline) {
         try std.testing.expectEqual(@as(c_int, 0), c_api.zide_terminal_poll(handle));
 
@@ -227,6 +228,9 @@ test "ffi child_exit event carries exit code and present flag" {
 
             if (events.events) |event_ptr| {
                 for (event_ptr[0..events.count]) |event| {
+                    if (event.kind == @intFromEnum(c_api.ZideTerminalEventKind.redraw_ready)) {
+                        saw_redraw = true;
+                    }
                     if (event.kind != @intFromEnum(c_api.ZideTerminalEventKind.child_exit)) continue;
                     try std.testing.expectEqual(@as(usize, 0), event.data_len);
                     try std.testing.expect(event.data_ptr == null);
@@ -240,6 +244,7 @@ test "ffi child_exit event carries exit code and present flag" {
         std.Thread.sleep(20 * std.time.ns_per_ms);
     }
 
+    try std.testing.expect(saw_redraw);
     try std.testing.expect(saw_child_exit);
 
     var code: i32 = -1;
