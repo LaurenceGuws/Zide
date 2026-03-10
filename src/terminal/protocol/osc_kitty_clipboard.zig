@@ -129,19 +129,23 @@ fn parseOsc5522OnSession(self: anytype, text: []const u8, terminator: OscTermina
     const payload_b64 = text[split + 1 ..];
 
     var req = parseReadRequest(session, metadata, payload_b64) catch |err| {
-        if (self.pty) |*pty| {
-            const writer = WriterFacade.from(pty);
+        if (self.lockPtyWriter()) |writer_guard| {
+            var writer = writer_guard;
+            defer writer.unlock();
+            const facade = WriterFacade.from(&writer);
             switch (err) {
                 error.UnsupportedPacketType => {},
-                error.UnsupportedPrimarySelection => writeReadStatus(session, writer, terminator, "", "ENOSYS"),
-                else => writeReadStatus(session, writer, terminator, "", "EINVAL"),
+                error.UnsupportedPrimarySelection => writeReadStatus(session, facade, terminator, "", "ENOSYS"),
+                else => writeReadStatus(session, facade, terminator, "", "EINVAL"),
             }
         }
         return;
     };
 
-    if (self.pty) |*pty| {
-        replyReadRequest(session, WriterFacade.from(pty), &req, terminator);
+    if (self.lockPtyWriter()) |writer_guard| {
+        var writer = writer_guard;
+        defer writer.unlock();
+        replyReadRequest(session, WriterFacade.from(&writer), &req, terminator);
     }
 }
 

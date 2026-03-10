@@ -18,7 +18,8 @@
   - writer path is now transport-owned via `terminal_transport.Writer`
   - read/poll byte pumps now also route through `terminal_transport.Transport.read(...)` and `waitForData(...)`
   - low-risk writable-transport presence gates now also go through `terminal_transport` helpers
-  - PTY attach/detach setup now also goes through `terminal_transport`; the main remaining PTY-direct area is narrower transport-shape residue
+  - PTY attach/detach setup now also goes through `terminal_transport`
+  - OSC 5522 protocol replies now also use the transport writer guard; the main remaining PTY-direct area is narrower transport-shape residue
   - the FFI-first split now has explicit internal owners: shared ABI/state/helpers in `src/terminal/ffi/shared.zig`, PTY-host operations in `src/terminal/ffi/host_api.zig`, core-facing export logic in `src/terminal/ffi/core_api.zig`, and `bridge.zig` as a thin facade
 - Repo-structure cleanup is complete enough; do not keep grinding non-product cleanup unless a new concrete smell appears.
 - Terminal correctness cleanup remains the quality bar, but the current active lane is architectural center-of-gravity correction.
