@@ -383,13 +383,15 @@ become fully core-owned.
 Parser byte feed is now split one step further:
 
 - `src/terminal/core/terminal_core_feed.zig` owns the actual parser feed call
+- `src/terminal/core/terminal_core_feed.zig` now also returns an explicit
+  `FeedResult` carrying publication-relevant state
 - `session_protocol.zig` now only wraps that feed with:
   - state mutex ownership
-  - output generation publication
-  - view-cache refresh publication
+  - delegation of generation/view-cache publication to
+    `src/terminal/core/session_rendering.zig`
 
 This makes the remaining session-owned part of parser feed explicit: it is not
-parsing anymore, it is publication choreography.
+parsing anymore, it is lock and publication choreography.
 
 ### 2026-03-10 first transport contract
 
