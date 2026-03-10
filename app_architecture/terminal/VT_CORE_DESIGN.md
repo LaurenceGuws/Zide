@@ -319,6 +319,13 @@ So the current Zide FFI direction is:
 - wake on visible-state transitions such as streamed output, poll-driven PTY
   updates, and resize
 
+The `TerminalSession` root also shed another non-runtime owner:
+
+- the input-mode query/toggle surface now routes through
+  `src/terminal/core/session_interaction.zig`
+- the root session facade still exports the same API, but it no longer carries
+  that interaction/mode-management block inline
+
 Protocol execution also moved another step toward core ownership:
 
 - saved-cursor restore and alt-screen core state transitions now live behind
