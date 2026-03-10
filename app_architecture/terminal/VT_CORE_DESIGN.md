@@ -276,6 +276,9 @@ It is also no longer FFI-only:
 - the replay harness now uses external transport for normal non-reply fixtures
 - PTY attachment remains only for the reply-capture subset that genuinely needs
   a writable transport sink
+- higher-level callers now go through `TerminalSession` host-wrapper methods for
+  external transport attach/enqueue/close instead of reaching into
+  `terminal_transport` directly for that path
 
 ## Compatibility Strategy
 

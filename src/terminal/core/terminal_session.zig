@@ -342,6 +342,18 @@ pub const TerminalSession = struct {
         try session_runtime.startNoThreads(self, shell);
     }
 
+    pub fn attachExternalTransport(self: *TerminalSession) void {
+        session_runtime.attachExternalTransport(self);
+    }
+
+    pub fn enqueueExternalBytes(self: *TerminalSession, bytes: []const u8) !bool {
+        return try session_runtime.enqueueExternalBytes(self, bytes);
+    }
+
+    pub fn closeExternalTransport(self: *TerminalSession) bool {
+        return session_runtime.closeExternalTransport(self);
+    }
+
     pub fn poll(self: *TerminalSession) !void {
         return session_runtime.poll(self);
     }

@@ -52,6 +52,7 @@ items:
       - First non-PTY transport shape is now landed internally: terminal_transport.zig has an in-memory external transport, FFI-created sessions attach it by default, and feed_output now goes through transport enqueue + session poll instead of bypassing transport ownership
       - External transport is now also covered in terminal core tests, including enqueue/poll behavior and explicit alive/closed metadata semantics
       - Replay harness now also consumes external transport for normal VT fixtures, leaving PTY attachment only for reply-capture cases that need a writable sink
+      - Higher-level callers now use session-owned external transport wrapper methods instead of directly assembling that path through terminal_transport
 
   - id: VTCORE-04
     title: Move protocol execution onto core/model contracts
