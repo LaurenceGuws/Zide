@@ -1,11 +1,64 @@
 const std = @import("std");
 const types = @import("../model/types.zig");
 const session_mod = @import("terminal_session.zig");
+const terminal_transport = @import("terminal_transport.zig");
 
 const TerminalSession = session_mod.TerminalSession;
 const Cell = session_mod.Cell;
 const Color = session_mod.Color;
 const Dirty = session_mod.Dirty;
+
+fn expectSnapshotRow(snapshot: session_mod.TerminalSnapshot, row: usize, expected: []const u8) !void {
+    const cells = snapshot.rowSlice(row);
+    try std.testing.expectEqual(expected.len, cells.len);
+    for (cells, expected) |cell, ch| {
+        try std.testing.expectEqual(@as(u32, ch), cell.codepoint);
+    }
+}
+
+test "external transport poll updates screen and metadata" {
+    const allocator = std.testing.allocator;
+
+    var session = try TerminalSession.init(allocator, 2, 12);
+    defer session.deinit();
+    terminal_transport.attachExternalTransport(session);
+
+    try std.testing.expect(session.isAlive());
+
+    try std.testing.expect(try terminal_transport.enqueueExternalBytes(session, "\x1b]0;ext-title\x07hello\r\n"));
+    try session.poll();
+
+    const snapshot = session.snapshot();
+    try std.testing.expectEqualStrings("ext-title", snapshot.title);
+    try expectSnapshotRow(snapshot, 0, "hello       ");
+
+    var title_buf = std.ArrayList(u8).empty;
+    defer title_buf.deinit(allocator);
+    var cwd_buf = std.ArrayList(u8).empty;
+    defer cwd_buf.deinit(allocator);
+    const metadata = try session.copyMetadata(allocator, &title_buf, &cwd_buf);
+    try std.testing.expect(metadata.alive);
+    try std.testing.expectEqualStrings("ext-title", metadata.title);
+}
+
+test "external transport close updates alive metadata" {
+    const allocator = std.testing.allocator;
+
+    var session = try TerminalSession.init(allocator, 2, 12);
+    defer session.deinit();
+    terminal_transport.attachExternalTransport(session);
+
+    try std.testing.expect(session.isAlive());
+    try std.testing.expect(terminal_transport.closeExternalTransport(session));
+    try std.testing.expect(!session.isAlive());
+
+    var title_buf = std.ArrayList(u8).empty;
+    defer title_buf.deinit(allocator);
+    var cwd_buf = std.ArrayList(u8).empty;
+    defer cwd_buf.deinit(allocator);
+    const metadata = try session.copyMetadata(allocator, &title_buf, &cwd_buf);
+    try std.testing.expect(!metadata.alive);
+}
 
 test "full-region scroll publishes partial cache damage at live bottom" {
     const allocator = std.testing.allocator;

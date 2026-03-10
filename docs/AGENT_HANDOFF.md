@@ -21,6 +21,7 @@
   - PTY attach/detach setup now also goes through `terminal_transport`
   - OSC 5522 protocol replies now also use the transport writer guard; the main remaining PTY-direct area is narrower transport-shape residue
   - first non-PTY transport shape now exists too: FFI-created no-PTY sessions attach an in-memory external transport, and `feed_output` now enters through that transport + `poll()` rather than bypassing transport ownership
+  - that external transport path is now also covered by core tests, including explicit alive/closed semantics
   - the FFI-first split now has explicit internal owners: shared ABI/state/helpers in `src/terminal/ffi/shared.zig`, PTY-host operations in `src/terminal/ffi/host_api.zig`, core-facing export logic in `src/terminal/ffi/core_api.zig`, and `bridge.zig` as a thin facade
 - Repo-structure cleanup is complete enough; do not keep grinding non-product cleanup unless a new concrete smell appears.
 - Terminal correctness cleanup remains the quality bar, but the current active lane is architectural center-of-gravity correction.

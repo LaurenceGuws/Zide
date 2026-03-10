@@ -372,6 +372,14 @@ pub fn detachExternalTransport(self: anytype) void {
     }
 }
 
+pub fn closeExternalTransport(self: anytype) bool {
+    if (self.external_transport) |*transport| {
+        transport.alive = false;
+        return true;
+    }
+    return false;
+}
+
 pub fn enqueueExternalBytes(self: anytype, bytes: []const u8) !bool {
     if (self.external_transport) |*transport| {
         try transport.enqueue(bytes);

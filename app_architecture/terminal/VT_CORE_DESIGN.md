@@ -263,6 +263,14 @@ The first non-PTY transport shape is now also landed internally:
 This keeps the no-PTY host path closer to the future embed/mobile shape while
 preserving the existing exported FFI API.
 
+That path is now also core-tested:
+
+- terminal session tests cover external transport enqueue/poll
+- metadata/aliveness are asserted through the same core session surface used by
+  other hosts
+- external transport now has an explicit "closed" state instead of only
+  "attached vs detached"
+
 ## Compatibility Strategy
 
 We do not go from zero to hero in one patch.
