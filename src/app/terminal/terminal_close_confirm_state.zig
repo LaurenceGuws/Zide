@@ -1,5 +1,5 @@
-const app_modes = @import("modes/mod.zig");
-const terminal_mod = @import("../terminal/core/terminal.zig");
+const app_modes = @import("../modes/mod.zig");
+const terminal_mod = @import("../../terminal/core/terminal.zig");
 
 const TerminalTabId = terminal_mod.TerminalTabId;
 const TerminalWorkspace = terminal_mod.TerminalWorkspace;

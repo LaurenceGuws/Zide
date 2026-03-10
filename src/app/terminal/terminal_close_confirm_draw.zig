@@ -1,6 +1,6 @@
-const app_modes = @import("modes/mod.zig");
-const app_shell = @import("../app_shell.zig");
-const shared_types = @import("../types/mod.zig");
+const app_modes = @import("../modes/mod.zig");
+const app_shell = @import("../../app_shell.zig");
+const shared_types = @import("../../types/mod.zig");
 
 const Shell = app_shell.Shell;
 const WidgetLayout = shared_types.layout.WidgetLayout;

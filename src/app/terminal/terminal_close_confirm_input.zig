@@ -1,7 +1,7 @@
-const app_modes = @import("modes/mod.zig");
-const shared_types = @import("../types/mod.zig");
+const app_modes = @import("../modes/mod.zig");
+const shared_types = @import("../../types/mod.zig");
 
-const input_actions = @import("../input/input_actions.zig");
+const input_actions = @import("../../input/input_actions.zig");
 const layout_types = shared_types.layout;
 
 pub fn handleInput(
@@ -21,4 +21,3 @@ pub fn handleInput(
     );
     return apply_fn(ctx, decision, now);
 }
-
