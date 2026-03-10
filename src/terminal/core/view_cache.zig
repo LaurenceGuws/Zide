@@ -3,6 +3,7 @@ const types = @import("../model/types.zig");
 const kitty_mod = @import("../kitty/graphics.zig");
 const render_cache_mod = @import("render_cache.zig");
 const app_logger = @import("../../app_logger.zig");
+const damage_mod = @import("view_cache_damage.zig");
 const publication = @import("view_cache_publication.zig");
 const plan_mod = @import("view_cache_plan.zig");
 const refinement = @import("view_cache_refinement.zig");
@@ -292,24 +293,7 @@ pub fn updateViewCacheNoLock(self: anytype, generation: u64, scroll_offset: usiz
             break;
         }
     }
-    cache.dirty = if (plan.needs_full_damage)
-        .full
-    else if (plan.can_publish_scroll_shift)
-        .partial
-    else if (plan.visible_history_changed and view.dirty == .none)
-        .partial
-    else
-        view.dirty;
-    cache.damage = if (plan.needs_full_damage)
-        .{ .start_row = 0, .end_row = if (rows > 0) rows - 1 else 0, .start_col = 0, .end_col = if (cols > 0) cols - 1 else 0 }
-    else if (plan.can_publish_scroll_shift and plan.viewport_shift_rows > 0)
-        .{ .start_row = rows - plan.shift_abs, .end_row = rows - 1, .start_col = 0, .end_col = if (cols > 0) cols - 1 else 0 }
-    else if (plan.can_publish_scroll_shift)
-        .{ .start_row = 0, .end_row = plan.shift_abs - 1, .start_col = 0, .end_col = if (cols > 0) cols - 1 else 0 }
-    else if (plan.visible_history_changed and view.dirty == .none)
-        .{ .start_row = 0, .end_row = if (rows > 0) rows - 1 else 0, .start_col = 0, .end_col = if (cols > 0) cols - 1 else 0 }
-    else
-        view.damage;
+    damage_mod.assignBaseDamage(cache, view, plan, rows, cols);
     if (plan.needs_full_damage) {
         const forced_reason = publication.pickForcedFullDirtyReason(
             rows,
@@ -342,23 +326,7 @@ pub fn updateViewCacheNoLock(self: anytype, generation: u64, scroll_offset: usiz
     // Cursor is rendered as a UI overlay in terminal_widget_draw, so cursor visibility
     // changes should not dirty the cached terminal texture rows every frame.
 
-    if (cache.dirty == .partial and cols > 0) {
-        var row_idx: usize = 0;
-        while (row_idx < rows) : (row_idx += 1) {
-            if (!cache.dirty_rows.items[row_idx]) continue;
-            const start_col = cache.dirty_cols_start.items[row_idx];
-            const end_col = cache.dirty_cols_end.items[row_idx];
-            if (start_col > 0) {
-                cache.dirty_cols_start.items[row_idx] = start_col - 1;
-                cache.damage.start_col = @min(cache.damage.start_col, @as(usize, start_col - 1));
-            }
-            const end_col_usize = @as(usize, end_col);
-            if (end_col_usize + 1 < cols) {
-                cache.dirty_cols_end.items[row_idx] = @intCast(end_col_usize + 1);
-                cache.damage.end_col = @max(cache.damage.end_col, end_col_usize + 1);
-            }
-        }
-    }
+    damage_mod.widenPartialDamage(cache, rows, cols);
     cache.alt_active = self.core.active == .alt;
     cache.selection_active = selection_active;
     cache.sync_updates_active = self.core.sync_updates_active;
