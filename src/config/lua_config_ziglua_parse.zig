@@ -1,6 +1,7 @@
 const std = @import("std");
 const zlua = @import("zlua");
 const iface = @import("./lua_config_iface.zig");
+const lua_font_parse = @import("./lua_config_font_parse.zig");
 const lua_keybind_parse = @import("./lua_config_keybind_parse.zig");
 const lua_log_parse = @import("./lua_config_log_parse.zig");
 const lua_shared = @import("./lua_config_shared.zig");
@@ -11,8 +12,6 @@ pub const Config = iface.Config;
 const ThemeConfig = iface.ThemeConfig;
 const TabBarWidthMode = std.meta.Child(@TypeOf((@as(Config, undefined)).editor_tab_bar_width_mode));
 const CursorShape = std.meta.Child(@TypeOf((@as(Config, undefined)).terminal_cursor_shape));
-const FontHinting = std.meta.Child(@TypeOf((@as(Config, undefined)).font_hinting));
-const GlyphOverflow = std.meta.Child(@TypeOf((@as(Config, undefined)).font_glyph_overflow));
 const TerminalBlinkStyle = std.meta.Child(@TypeOf((@as(Config, undefined)).terminal_blink_style));
 const LigatureStrategy = std.meta.Child(@TypeOf((@as(Config, undefined)).terminal_disable_ligatures));
 const TerminalNewTabStartLocationMode = std.meta.Child(@TypeOf((@as(Config, undefined)).terminal_new_tab_start_location));
@@ -48,37 +47,6 @@ fn parseFilterValueOwned(allocator: std.mem.Allocator, lua: *zlua.Lua, idx: i32)
     return try out.toOwnedSlice(allocator);
 }
 
-fn parseFontSetting(
-    allocator: std.mem.Allocator,
-    lua: *zlua.Lua,
-    idx: i32,
-    path_out: *?[]u8,
-    size_out: *?f32,
-) !void {
-    if (lua.isString(idx)) {
-        if (lua.toString(idx)) |v| {
-            replaceOwnedString(allocator, path_out, try allocator.dupe(u8, v));
-        } else |_| {}
-        return;
-    }
-    if (!lua.isTable(idx)) return;
-
-    const table_idx = lua.absIndex(idx);
-    _ = lua.getField(table_idx, "path");
-    if (lua.isString(-1)) {
-        if (lua.toString(-1)) |v| replaceOwnedString(allocator, path_out, try allocator.dupe(u8, v)) else |_| {}
-    }
-    lua.pop(1);
-
-    _ = lua.getField(table_idx, "size");
-    if (lua.isNumber(-1)) {
-        if (lua.toNumber(-1)) |v| {
-            if (v > 0) size_out.* = @floatCast(v);
-        } else |_| {}
-    }
-    lua.pop(1);
-}
-
 fn parseTabBarWidthModeFromString(value: []const u8) ?TabBarWidthMode {
     if (std.mem.eql(u8, value, "fixed")) return .fixed;
     if (std.mem.eql(u8, value, "dynamic")) return .dynamic;
@@ -90,21 +58,6 @@ fn parseCursorShapeFromString(value: []const u8) ?CursorShape {
     if (std.mem.eql(u8, value, "block")) return .block;
     if (std.mem.eql(u8, value, "bar")) return .bar;
     if (std.mem.eql(u8, value, "underline")) return .underline;
-    return null;
-}
-
-fn parseFontHintingFromString(value: []const u8) ?FontHinting {
-    if (std.mem.eql(u8, value, "default")) return .default;
-    if (std.mem.eql(u8, value, "none")) return .none;
-    if (std.mem.eql(u8, value, "light")) return .light;
-    if (std.mem.eql(u8, value, "normal")) return .normal;
-    return null;
-}
-
-fn parseGlyphOverflowFromString(value: []const u8) ?GlyphOverflow {
-    if (std.mem.eql(u8, value, "when_followed_by_space")) return .when_followed_by_space;
-    if (std.mem.eql(u8, value, "never")) return .never;
-    if (std.mem.eql(u8, value, "always")) return .always;
     return null;
 }
 
@@ -274,77 +227,7 @@ fn parseNativeScalarOverlay(allocator: std.mem.Allocator, lua: *zlua.Lua, table_
     if (lua.isBoolean(-1)) out.keybinds_no_defaults = lua.toBoolean(-1);
     lua.pop(1);
 
-    _ = lua.getField(table_index, "font_lcd");
-    if (lua.isBoolean(-1)) out.font_lcd = lua.toBoolean(-1);
-    lua.pop(1);
-
-    _ = lua.getField(table_index, "font_autohint");
-    if (lua.isBoolean(-1)) out.font_autohint = lua.toBoolean(-1);
-    lua.pop(1);
-
-    _ = lua.getField(table_index, "text_linear_correction");
-    if (lua.isBoolean(-1)) out.text_linear_correction = lua.toBoolean(-1);
-    lua.pop(1);
-
-    _ = lua.getField(table_index, "text_gamma");
-    if (lua.isNumber(-1)) {
-        if (lua.toNumber(-1)) |v| out.text_gamma = @floatCast(v) else |_| {}
-    }
-    lua.pop(1);
-
-    _ = lua.getField(table_index, "text_contrast");
-    if (lua.isNumber(-1)) {
-        if (lua.toNumber(-1)) |v| out.text_contrast = @floatCast(v) else |_| {}
-    }
-    lua.pop(1);
-
-    _ = lua.getField(table_index, "app_font_size");
-    if (lua.isNumber(-1)) {
-        if (lua.toNumber(-1)) |v| out.app_font_size = @floatCast(v) else |_| {}
-    }
-    lua.pop(1);
-
-    _ = lua.getField(table_index, "editor_font_size");
-    if (lua.isNumber(-1)) {
-        if (lua.toNumber(-1)) |v| out.editor_font_size = @floatCast(v) else |_| {}
-    }
-    lua.pop(1);
-
-    _ = lua.getField(table_index, "terminal_font_size");
-    if (lua.isNumber(-1)) {
-        if (lua.toNumber(-1)) |v| out.terminal_font_size = @floatCast(v) else |_| {}
-    }
-    lua.pop(1);
-
-    _ = lua.getField(table_index, "app_font_path");
-    if (lua.isString(-1)) {
-        if (lua.toString(-1)) |v| out.app_font_path = try allocator.dupe(u8, v) else |_| {}
-    }
-    lua.pop(1);
-
-    _ = lua.getField(table_index, "editor_font_path");
-    if (lua.isString(-1)) {
-        if (lua.toString(-1)) |v| out.editor_font_path = try allocator.dupe(u8, v) else |_| {}
-    }
-    lua.pop(1);
-
-    _ = lua.getField(table_index, "terminal_font_path");
-    if (lua.isString(-1)) {
-        if (lua.toString(-1)) |v| out.terminal_font_path = try allocator.dupe(u8, v) else |_| {}
-    }
-    lua.pop(1);
-
-    _ = lua.getField(table_index, "editor_font_features");
-    if (lua.isString(-1)) {
-        if (lua.toString(-1)) |v| out.editor_font_features = try allocator.dupe(u8, v) else |_| {}
-    }
-    lua.pop(1);
-
-    _ = lua.getField(table_index, "terminal_font_features");
-    if (lua.isString(-1)) {
-        if (lua.toString(-1)) |v| out.terminal_font_features = try allocator.dupe(u8, v) else |_| {}
-    }
-    lua.pop(1);
+    try lua_font_parse.parseRootFontSettings(allocator, lua, table_index, &out);
 
     _ = lua.getField(table_index, "terminal_default_start_location");
     if (lua.isString(-1)) {
@@ -412,31 +295,13 @@ fn parseNativeScalarOverlay(allocator: std.mem.Allocator, lua: *zlua.Lua, table_
     }
     lua.pop(1);
 
-    _ = lua.getField(table_index, "font_hinting");
-    if (lua.isString(-1)) {
-        if (lua.toString(-1)) |v| {
-            if (parseFontHintingFromString(v)) |hint| out.font_hinting = hint;
-        } else |_| {}
-    }
-    lua.pop(1);
-
-    _ = lua.getField(table_index, "font_glyph_overflow");
-    if (lua.isString(-1)) {
-        if (lua.toString(-1)) |v| {
-            if (parseGlyphOverflowFromString(v)) |mode| out.font_glyph_overflow = mode;
-        } else |_| {}
-    }
-    lua.pop(1);
-
     _ = lua.getField(table_index, "app");
     if (lua.isTable(-1)) {
         const app_idx = lua.absIndex(-1);
         _ = lua.getField(app_idx, "theme");
         if (try lua_theme_parse.parseThemeAtStackIndex(lua, -1)) |parsed| out.app_theme = parsed;
         lua.pop(1);
-        _ = lua.getField(app_idx, "font");
-        try parseFontSetting(allocator, lua, -1, &out.app_font_path, &out.app_font_size);
-        lua.pop(1);
+        try lua_font_parse.parseAppFontTable(allocator, lua, app_idx, &out);
     }
     lua.pop(1);
 
@@ -456,29 +321,20 @@ fn parseNativeScalarOverlay(allocator: std.mem.Allocator, lua: *zlua.Lua, table_
         }
         lua.pop(1);
 
-        _ = lua.getField(editor_idx, "font");
-        try parseFontSetting(allocator, lua, -1, &out.editor_font_path, &out.editor_font_size);
-        lua.pop(1);
-
         _ = lua.getField(editor_idx, "theme");
         if (lua.isTable(-1)) {
             if (lua_theme_parse.parseEditorThemeAtStackIndex(lua, -1)) |parsed| out.editor_theme = parsed;
         }
         lua.pop(1);
-
-        _ = lua.getField(editor_idx, "font_features");
-        if (try parseFilterValueOwned(allocator, lua, -1)) |v| replaceOwnedString(allocator, &out.editor_font_features, v);
-        lua.pop(1);
-
-        _ = lua.getField(editor_idx, "disable_ligatures");
-        if (lua.isString(-1)) {
-            if (lua.toString(-1)) |v| {
-                if (parseLigatureStrategyFromString(v)) |strategy| {
-                    out.editor_disable_ligatures = strategy;
-                }
-            } else |_| {}
-        }
-        lua.pop(1);
+        try lua_font_parse.parseEditorFontTable(
+            allocator,
+            lua,
+            editor_idx,
+            &out,
+            parseFilterValueOwned,
+            replaceOwnedString,
+            parseLigatureStrategyFromString,
+        );
 
         _ = lua.getField(editor_idx, "render");
         if (lua.isTable(-1)) {
@@ -525,17 +381,18 @@ fn parseNativeScalarOverlay(allocator: std.mem.Allocator, lua: *zlua.Lua, table_
     if (lua.isTable(-1)) {
         const terminal_idx = lua.absIndex(-1);
 
-        _ = lua.getField(terminal_idx, "font");
-        try parseFontSetting(allocator, lua, -1, &out.terminal_font_path, &out.terminal_font_size);
-        lua.pop(1);
-
         _ = lua.getField(terminal_idx, "theme");
         if (try lua_theme_parse.parseThemeAtStackIndex(lua, -1)) |parsed| out.terminal_theme = parsed;
         lua.pop(1);
-
-        _ = lua.getField(terminal_idx, "font_features");
-        if (try parseFilterValueOwned(allocator, lua, -1)) |v| replaceOwnedString(allocator, &out.terminal_font_features, v);
-        lua.pop(1);
+        try lua_font_parse.parseTerminalFontTable(
+            allocator,
+            lua,
+            terminal_idx,
+            &out,
+            parseFilterValueOwned,
+            replaceOwnedString,
+            parseLigatureStrategyFromString,
+        );
 
         _ = lua.getField(terminal_idx, "blink");
         if (lua.isBoolean(-1)) {
@@ -544,16 +401,6 @@ fn parseNativeScalarOverlay(allocator: std.mem.Allocator, lua: *zlua.Lua, table_
             if (lua.toString(-1)) |v| {
                 if (parseBlinkStyleFromString(v)) |style| {
                     out.terminal_blink_style = style;
-                }
-            } else |_| {}
-        }
-        lua.pop(1);
-
-        _ = lua.getField(terminal_idx, "disable_ligatures");
-        if (lua.isString(-1)) {
-            if (lua.toString(-1)) |v| {
-                if (parseLigatureStrategyFromString(v)) |strategy| {
-                    out.terminal_disable_ligatures = strategy;
                 }
             } else |_| {}
         }
@@ -651,55 +498,7 @@ fn parseNativeScalarOverlay(allocator: std.mem.Allocator, lua: *zlua.Lua, table_
     lua.pop(1);
 
     _ = lua.getField(table_index, "font_rendering");
-    if (lua.isTable(-1)) {
-        const fr_idx = lua.absIndex(-1);
-        _ = lua.getField(fr_idx, "lcd");
-        if (lua.isBoolean(-1)) out.font_lcd = lua.toBoolean(-1);
-        lua.pop(1);
-        _ = lua.getField(fr_idx, "autohint");
-        if (lua.isBoolean(-1)) out.font_autohint = lua.toBoolean(-1);
-        lua.pop(1);
-        _ = lua.getField(fr_idx, "hinting");
-        if (lua.isString(-1)) {
-            if (lua.toString(-1)) |v| {
-                if (parseFontHintingFromString(v)) |hint| {
-                    out.font_hinting = hint;
-                }
-            } else |_| {}
-        }
-        lua.pop(1);
-        _ = lua.getField(fr_idx, "glyph_overflow");
-        if (lua.isString(-1)) {
-            if (lua.toString(-1)) |v| {
-                if (parseGlyphOverflowFromString(v)) |go| {
-                    out.font_glyph_overflow = go;
-                }
-            } else |_| {}
-        }
-        lua.pop(1);
-        _ = lua.getField(fr_idx, "text");
-        if (lua.isTable(-1)) {
-            const text_idx = lua.absIndex(-1);
-            _ = lua.getField(text_idx, "gamma");
-            if (lua.isNumber(-1)) {
-                if (lua.toNumber(-1)) |v| {
-                    if (v > 0) out.text_gamma = @floatCast(v);
-                } else |_| {}
-            }
-            lua.pop(1);
-            _ = lua.getField(text_idx, "contrast");
-            if (lua.isNumber(-1)) {
-                if (lua.toNumber(-1)) |v| {
-                    if (v > 0) out.text_contrast = @floatCast(v);
-                } else |_| {}
-            }
-            lua.pop(1);
-            _ = lua.getField(text_idx, "linear_correction");
-            if (lua.isBoolean(-1)) out.text_linear_correction = lua.toBoolean(-1);
-            lua.pop(1);
-        }
-        lua.pop(1);
-    }
+    lua_font_parse.parseFontRenderingTable(lua, -1, &out);
     lua.pop(1);
 
     _ = lua.getField(table_index, "keybinds");
