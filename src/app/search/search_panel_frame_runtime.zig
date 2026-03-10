@@ -2,7 +2,7 @@ const std = @import("std");
 const app_search_panel_input = @import("search_panel_input.zig");
 const app_search_panel_runtime = @import("search_panel_runtime.zig");
 const app_search_panel_state = @import("search_panel_state.zig");
-const shared_types = @import("../types/mod.zig");
+const shared_types = @import("../../types/mod.zig");
 
 const input_types = shared_types.input;
 
