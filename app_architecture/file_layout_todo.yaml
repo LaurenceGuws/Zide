@@ -151,7 +151,7 @@ file_layout_todo:
 
         - id: FL-UI-03
           title: "Thin src/ui/renderer.zig into a real facade over src/ui/renderer/"
-          status: in_progress
+          status: done
           files:
             - src/ui/renderer.zig
             - src/ui/renderer
@@ -160,6 +160,7 @@ file_layout_todo:
             - "2026-03-10: first slice landed in progress by extracting SDL/input event polling, event dispatch, and frame queue compaction into `src/ui/renderer/input_runtime.zig`, leaving `renderer.zig` thinner around top-level renderer orchestration."
             - "2026-03-10: second slice landed in progress by extracting font-feature config plus UI-scale/zoom runtime into `src/ui/renderer/font_runtime.zig`, leaving `renderer.zig` thinner around rendering entrypoints instead of also owning font runtime policy inline."
             - "2026-03-10: third slice landed in progress by extracting text/glyph rendering, shaping, and terminal cell draw paths into `src/ui/renderer/text_runtime.zig`, leaving `renderer.zig` thinner around draw coordination and backend wrappers."
+            - "2026-03-10: task closed. After the input, font-runtime, and text-runtime splits, `renderer.zig` is down to facade/coordinator size; what remains is legitimate renderer ownership and wrapper glue rather than another hidden subsystem blob."
 
         - id: FL-UI-04
           title: "Move src/ui/terminal_font.zig under a focused font/text subsystem"
