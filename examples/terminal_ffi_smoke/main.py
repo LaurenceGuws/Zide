@@ -1,9 +1,14 @@
 #!/usr/bin/env python3
 import argparse
 import ctypes
-import os
 import sys
 from pathlib import Path
+
+ROOT = Path(__file__).resolve().parents[2]
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
+
+from examples.common.ffi_host_boot import as_bytes, load_cdll, STATUS_OK  # noqa: E402
 
 STATUS_OK = 0
 EVENT_TITLE_CHANGED = 1
@@ -174,10 +179,8 @@ class MockTerminalService:
         for chunk in self._chunks:
             yield chunk
 
-
 def load_library(path: Path):
-    os.environ.setdefault("ZIDE_LOG", "none")
-    lib = ctypes.CDLL(str(path))
+    lib = load_cdll(path)
     lib.zide_terminal_create.argtypes = [ctypes.POINTER(CreateConfig), ctypes.POINTER(HandlePtr)]
     lib.zide_terminal_create.restype = ctypes.c_int
     lib.zide_terminal_destroy.argtypes = [HandlePtr]
@@ -226,13 +229,6 @@ def load_library(path: Path):
     lib.zide_terminal_status_string.argtypes = [ctypes.c_int]
     lib.zide_terminal_status_string.restype = ctypes.c_char_p
     return lib
-
-
-def as_bytes(ptr, length: int) -> bytes:
-    if not ptr or length == 0:
-        return b""
-    return ctypes.string_at(ptr, length)
-
 
 def render_first_row(snapshot: Snapshot) -> str:
     return render_snapshot_row(snapshot, 0)
