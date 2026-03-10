@@ -471,10 +471,7 @@ pub fn handleInput(
                 self.scrollbar_drag_active = true;
                 const track_h = scrollbar_h;
                 const min_thumb_h: f32 = 18;
-                const ratio = if (max_scroll_offset > 0)
-                    @as(f32, @floatFromInt(max_scroll_offset - live_scroll_offset)) / @as(f32, @floatFromInt(max_scroll_offset))
-                else
-                    1.0;
+                const ratio = common.scrollbarTrackRatio(max_scroll_offset, live_scroll_offset);
                 const thumb = common.computeScrollbarThumb(scrollbar_y, track_h, rows, total_lines, min_thumb_h, ratio);
                 self.scrollbar_grab_offset = mouse.y - thumb.thumb_y;
                 scroll_log.logf(.info, "scrollbar press offset={d}", .{live_scroll_offset});

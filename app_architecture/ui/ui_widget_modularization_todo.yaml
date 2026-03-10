@@ -195,6 +195,7 @@ ui_widget_modularization_todo:
             - "2026-03-10: System clipboard paste fallback policy no longer lives in `terminal_widget.zig`; widget paste now delegates to backend-owned `pasteSystemClipboard(...)` for scrollback reset, OSC 5522 attempt, bracketed framing, and filtered plain-text fallback."
             - "2026-03-10: Middle-click selection paste fallback no longer duplicates paste policy in `terminal_widget_input.zig`; it now delegates to backend-owned `pasteSelectionClipboard(...)` for OSC 5522, bracketed paste, and plain-text fallback behavior."
             - "2026-03-10: Widget input no longer owns the actual scrollback-collapse-on-input rule; it now delegates that decision to backend-owned `resetToLiveBottomForInputLocked(...)` in the terminal backend."
+            - "2026-03-10: Terminal draw and input now share one scrollbar ratio helper (`common.scrollbarTrackRatio(...)`) instead of duplicating offset-to-thumb mapping formulas."
 
         - id: UI-PERF-02
           title: "Avoid blocking lock in terminal widget input path"

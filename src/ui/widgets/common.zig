@@ -67,6 +67,12 @@ pub fn computeScrollbarThumb(scrollbar_y: f32, track_h: f32, visible_lines: usiz
     return .{ .thumb_h = thumb_h, .available = available, .thumb_y = thumb_y };
 }
 
+pub fn scrollbarTrackRatio(max_scroll_offset: usize, scroll_offset: usize) f32 {
+    if (max_scroll_offset == 0) return 1.0;
+    return @as(f32, @floatFromInt(max_scroll_offset - scroll_offset)) /
+        @as(f32, @floatFromInt(max_scroll_offset));
+}
+
 pub fn drawTruncatedText(shell: *Shell, text: []const u8, x: f32, y: f32, color: Color, max_width: f32) TruncResult {
     return drawTruncatedTextImpl(shell, text, x, y, color, max_width, null);
 }
