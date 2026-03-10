@@ -587,7 +587,9 @@ fn validateAssertions(
         if (std.mem.eql(u8, tag, "viewport-shift")) {
             const cache = fixtureRenderCache(debug) orelse return error.AssertionViewportShiftMissingCache;
             if (fixture.meta.expected_viewport_shift_rows) |expected_rows| {
-                if (cache.viewport_shift_rows != expected_rows) return error.AssertionViewportShiftRowsMismatch;
+                if (cache.viewport_shift_rows != expected_rows) {
+                    return error.AssertionViewportShiftRowsMismatch;
+                }
             }
             if (fixture.meta.expected_viewport_shift_exposed_only) |expected_exposed_only| {
                 if (cache.viewport_shift_exposed_only != expected_exposed_only) return error.AssertionViewportShiftExposureMismatch;
@@ -705,12 +707,6 @@ fn applyScrollFullUp(session: *terminal.TerminalSession, count: usize) void {
     var i: usize = 0;
     while (i < count) : (i += 1) {
         terminal.debugScrollUp(session);
-    }
-}
-
-fn applyScrollOffsetActions(session: *terminal.TerminalSession, actions: []const ScrollOffsetAction) void {
-    for (actions) |action| {
-        session.setScrollOffset(action.offset);
     }
 }
 
