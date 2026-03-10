@@ -23,6 +23,7 @@
   - replay-backed redraw-contract coverage has now started too: `replay_harness.zig` supports a presented baseline phase plus explicit damage assertions, and the first fixtures lock narrow partial publication for gutter rewrites and indent-guide rewrites after a baseline publish
   - replay-backed redraw coverage now also locks dense clear+repaint loops, keeping `ED 2` plus a full visible repaint on the partial path with full-width viewport damage after a presented baseline
   - replay-backed redraw coverage now also locks live-bottom full-region scroll, including the current widened full-viewport damage bounds plus `viewport_shift_rows` metadata after a presented baseline
+  - replay-backed redraw coverage now also locks a multi-row narrow rewrite case that currently widens to full-row damage across the viewport, giving the next invalidation lane an explicit over-broad-damage regression target
   - stale private root-session shims for SGR application and key-mode flag reads are now also gone
   - protocol execution is beginning to split along the same line: pure engine-side helpers now live under `terminal_core_protocol.zig`, while session-coupled protocol behavior remains in `session_protocol.zig`
   - parser/control dispatch entry helpers now also live under `terminal_core_dispatch.zig`; parser byte feed still stays session-owned because locking and publication are not split yet

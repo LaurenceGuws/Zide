@@ -105,7 +105,6 @@ pub const FixtureMeta = struct {
     expected_viewport_shift_rows: ?i32 = null,
     expected_viewport_shift_exposed_only: ?bool = null,
     selection: []const SelectionAction = &.{},
-    scroll_offsets: []const ScrollOffsetAction = &.{},
     mouse: []const MouseAction = &.{},
     encoder: ?EncoderSpec = null,
     osc_5522_clipboard_text: ?[]const u8 = null,
@@ -351,7 +350,6 @@ pub fn runFixture(
 
     if (fixture.meta.fixture_type == .harness_api) {
         applySelectionActions(session, fixture.meta.selection);
-        applyScrollOffsetActions(session, fixture.meta.scroll_offsets);
     }
     try applyMouseActions(session, fixture.meta.mouse);
 
@@ -555,19 +553,24 @@ fn validateAssertions(
             continue;
         }
         if (std.mem.eql(u8, tag, "damage")) {
+            const cache = fixtureRenderCache(debug);
+            const actual_dirty = if (cache) |c| c.dirty else snapshot.dirty;
+            const actual_damage = if (cache) |c| c.damage else snapshot.damage;
             if (fixture.meta.expected_dirty) |expected_dirty| {
                 const expected = switch (expected_dirty) {
                     .none => screen_mod.Dirty.none,
                     .partial => screen_mod.Dirty.partial,
                     .full => screen_mod.Dirty.full,
                 };
-                if (snapshot.dirty != expected) return error.AssertionDamageDirtyMismatch;
+                if (actual_dirty != expected) {
+                    return error.AssertionDamageDirtyMismatch;
+                }
             }
             if (fixture.meta.expected_damage) |expected_damage| {
-                if (snapshot.damage.start_row != expected_damage.start_row or
-                    snapshot.damage.end_row != expected_damage.end_row or
-                    snapshot.damage.start_col != expected_damage.start_col or
-                    snapshot.damage.end_col != expected_damage.end_col)
+                if (actual_damage.start_row != expected_damage.start_row or
+                    actual_damage.end_row != expected_damage.end_row or
+                    actual_damage.start_col != expected_damage.start_col or
+                    actual_damage.end_col != expected_damage.end_col)
                 {
                     return error.AssertionDamageBoundsMismatch;
                 }
