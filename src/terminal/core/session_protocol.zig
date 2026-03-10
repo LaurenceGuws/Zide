@@ -1,11 +1,8 @@
-const std = @import("std");
 const parser_mod = @import("../parser/parser.zig");
 const core_protocol = @import("terminal_core_protocol.zig");
 const core_dispatch = @import("terminal_core_dispatch.zig");
 const core_feed = @import("terminal_core_feed.zig");
-const core_modes = @import("terminal_core_modes.zig");
-const core_reset = @import("terminal_core_reset.zig");
-const input_modes = @import("input_modes.zig");
+const session_mode_effects = @import("session_mode_effects.zig");
 const session_rendering = @import("session_rendering.zig");
 const types = @import("../model/types.zig");
 
@@ -51,8 +48,7 @@ pub fn resetState(self: anytype) void {
 }
 
 pub fn resetStateLocked(self: anytype) void {
-    core_reset.resetStateCore(self);
-    input_modes.resetInputModesLocked(self);
+    session_mode_effects.resetStateLocked(self);
 }
 
 pub fn reverseIndex(self: anytype) void {
@@ -132,11 +128,11 @@ pub fn decrqssReplyInto(self: anytype, text: []const u8, buf: []u8) ?[]const u8 
 }
 
 pub fn saveCursor(self: anytype) void {
-    core_modes.saveCursor(self);
+    @import("terminal_core_modes.zig").saveCursor(self);
 }
 
 pub fn restoreCursor(self: anytype) void {
-    core_modes.restoreCursor(self);
+    @import("terminal_core_modes.zig").restoreCursor(self);
 }
 
 pub fn setTabAtCursor(self: anytype) void {
@@ -144,15 +140,9 @@ pub fn setTabAtCursor(self: anytype) void {
 }
 
 pub fn enterAltScreen(self: anytype, clear: bool, save_cursor: bool) void {
-    if (!core_modes.enterAltScreenCore(self, clear, save_cursor)) return;
-    self.clearSelectionLocked();
-    input_modes.publishSnapshot(self);
+    session_mode_effects.enterAltScreen(self, clear, save_cursor);
 }
 
 pub fn exitAltScreen(self: anytype, restore_cursor: bool) void {
-    if (!core_modes.exitAltScreenCore(self, restore_cursor)) return;
-    input_modes.publishSnapshot(self);
-    self.alt_exit_pending.store(true, .release);
-    self.alt_exit_time_ms.store(std.time.milliTimestamp(), .release);
-    self.clearSelectionLocked();
+    session_mode_effects.exitAltScreen(self, restore_cursor);
 }
