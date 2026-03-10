@@ -1,8 +1,8 @@
-const app_modes = @import("modes/mod.zig");
+const app_modes = @import("../modes/mod.zig");
 const app_terminal_poll_runtime = @import("terminal_poll_runtime.zig");
-const app_terminal_surface_gate = @import("terminal/terminal_surface_gate.zig");
-const app_terminal_tabs_runtime = @import("terminal/terminal_tabs_runtime.zig");
-const app_bootstrap = @import("bootstrap.zig");
+const app_terminal_surface_gate = @import("terminal_surface_gate.zig");
+const app_terminal_tabs_runtime = @import("terminal_tabs_runtime.zig");
+const app_bootstrap = @import("../bootstrap.zig");
 
 pub fn handle(
     app_mode: app_bootstrap.AppMode,

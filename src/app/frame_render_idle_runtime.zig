@@ -1,5 +1,5 @@
 const app_shell = @import("../app_shell.zig");
-const app_terminal_frame_pacing_runtime = @import("terminal_frame_pacing_runtime.zig");
+const app_terminal_frame_pacing_runtime = @import("terminal/terminal_frame_pacing_runtime.zig");
 const shared_types = @import("../types/mod.zig");
 
 const input_types = shared_types.input;

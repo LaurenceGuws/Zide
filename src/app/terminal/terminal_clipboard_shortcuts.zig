@@ -1,6 +1,6 @@
 const std = @import("std");
 const app_terminal_clipboard_shortcuts_runtime = @import("terminal_clipboard_shortcuts_runtime.zig");
-const terminal_scrollback_pager = @import("../terminal_scrollback_pager.zig");
+const terminal_scrollback_pager = @import("terminal_scrollback_pager.zig");
 const input_actions = @import("../../input/input_actions.zig");
 const app_shell = @import("../../app_shell.zig");
 const widgets = @import("../../ui/widgets.zig");

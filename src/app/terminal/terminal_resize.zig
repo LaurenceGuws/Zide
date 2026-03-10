@@ -1,5 +1,5 @@
-const app_shell = @import("../app_shell.zig");
-const terminal_mod = @import("../terminal/core/terminal.zig");
+const app_shell = @import("../../app_shell.zig");
+const terminal_mod = @import("../../terminal/core/terminal.zig");
 
 const Shell = app_shell.Shell;
 const TerminalWorkspace = terminal_mod.TerminalWorkspace;
