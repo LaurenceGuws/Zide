@@ -29,6 +29,7 @@ const Rgba = terminal_font_mod.Rgba;
 const Renderer = renderer_mod.Renderer;
 const TerminalDisableLigaturesStrategy = renderer_mod.TerminalDisableLigaturesStrategy;
 const RenderCache = render_cache_mod.RenderCache;
+const PresentationCapture = terminal_mod.PresentationCapture;
 const PresentedRenderCache = terminal_mod.PresentedRenderCache;
 const PresentationFeedback = terminal_mod.PresentationFeedback;
 const kitty_unicode_placeholder: u32 = 0x10EEEE;
@@ -54,6 +55,14 @@ pub const DrawPreparation = struct {
     draw_start: f64,
     lock_ms: f64,
     presented: PresentedRenderCache,
+
+    pub fn fromCapture(draw_start: f64, capture: PresentationCapture) DrawPreparation {
+        return .{
+            .draw_start = draw_start,
+            .lock_ms = capture.lock_ms,
+            .presented = capture.presented,
+        };
+    }
 };
 
 const ViewportTextureShiftPlan = union(enum) {

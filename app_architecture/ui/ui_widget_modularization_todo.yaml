@@ -191,6 +191,7 @@ ui_widget_modularization_todo:
             - "2026-03-07: Blink presence no longer unconditionally forces full texture redraw; full redraw now gates on actual blink phase toggles (`blink_phase_changed_pending`)."
             - "2026-03-08: Pending view-cache refreshes are now consumed under the draw snapshot lock before copying the published render cache, instead of a best-effort lock-free read of possibly stale cache state."
             - "2026-03-08: Cursor blink arming and widget blink-phase checks no longer read `TerminalSession.renderCache()` lock-free from app/widget code; they use widget-owned snapshot state."
+            - "2026-03-10: Widget draw no longer assembles the published-cache capture timing and finish-frame feedback handshake inline; that presentation lifecycle now goes through backend-owned `capturePresentation(...)` / `finishFramePresentation(...)` methods."
 
         - id: UI-PERF-02
           title: "Avoid blocking lock in terminal widget input path"

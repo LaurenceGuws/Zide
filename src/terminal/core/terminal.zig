@@ -8,6 +8,7 @@ pub const KittyPlacement = session_mod.KittyPlacement;
 pub const TerminalSnapshot = session_mod.TerminalSnapshot;
 pub const DebugSnapshot = session_mod.DebugSnapshot;
 pub const PresentedRenderCache = session_mod.PresentedRenderCache;
+pub const PresentationCapture = session_mod.PresentationCapture;
 pub const AltExitPresentationInfo = session_mod.AltExitPresentationInfo;
 pub const PresentationFeedback = session_mod.PresentationFeedback;
 

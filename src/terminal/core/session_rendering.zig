@@ -1,3 +1,4 @@
+const std = @import("std");
 const kitty_mod = @import("../kitty/graphics.zig");
 const render_cache_mod = @import("render_cache.zig");
 const snapshot_mod = @import("snapshot.zig");
@@ -9,6 +10,11 @@ pub const TerminalSnapshot = snapshot_mod.TerminalSnapshot;
 pub const PresentedRenderCache = struct {
     generation: u64,
     dirty: @import("../model/screen.zig").Dirty,
+};
+
+pub const PresentationCapture = struct {
+    lock_ms: f64,
+    presented: PresentedRenderCache,
 };
 
 pub fn snapshot(self: anytype) TerminalSnapshot {
@@ -56,6 +62,16 @@ pub fn copyPublishedRenderCache(self: anytype, dst: *RenderCache) !PresentedRend
     return .{
         .generation = cache.generation,
         .dirty = cache.dirty,
+    };
+}
+
+pub fn capturePresentation(self: anytype, dst: *RenderCache) !PresentationCapture {
+    const lock_start_ns = std.time.nanoTimestamp();
+    const presented = try copyPublishedRenderCache(self, dst);
+    const lock_end_ns = std.time.nanoTimestamp();
+    return .{
+        .lock_ms = @as(f64, @floatFromInt(lock_end_ns - lock_start_ns)) / @as(f64, @floatFromInt(std.time.ns_per_ms)),
+        .presented = presented,
     };
 }
 

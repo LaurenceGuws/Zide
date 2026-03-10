@@ -71,6 +71,7 @@ pub const SelectionGesture = session_selection.SelectionGesture;
 pub const ClickSelectionResult = session_selection.ClickSelectionResult;
 pub const SessionMetadata = session_queries.SessionMetadata;
 pub const PresentedRenderCache = session_rendering.PresentedRenderCache;
+pub const PresentationCapture = session_rendering.PresentationCapture;
 
 pub const AltExitPresentationInfo = struct {
     draw_ms: f64,
@@ -1073,7 +1074,15 @@ pub const TerminalSession = struct {
         return session_rendering.copyPublishedRenderCache(self, dst);
     }
 
+    pub fn capturePresentation(self: *TerminalSession, dst: *RenderCache) !PresentationCapture {
+        return session_rendering.capturePresentation(self, dst);
+    }
+
     pub fn completePresentationFeedback(self: *TerminalSession, feedback: PresentationFeedback) void {
+        session_publication.completePresentationFeedback(self, feedback);
+    }
+
+    pub fn finishFramePresentation(self: *TerminalSession, feedback: PresentationFeedback) void {
         session_publication.completePresentationFeedback(self, feedback);
     }
 
