@@ -11,6 +11,7 @@ Quick map of where to look for common needs.
 - `app_architecture/**/_todo.yaml` — active task lists and status.
   - `app_architecture/repo_structure_todo.yaml` — non-product repo structure cleanup (tests, tools, stale docs/tests).
   - `app_architecture/file_layout_todo.yaml` — file/folder layout cleanup queue (split large folders/files, collapse low-value micro-files).
+  - `app_architecture/terminal/vt_core_rearchitecture_todo.yaml` — next terminal-core redesign lane: VT core, FFI-first boundary, and transport separation.
   - `app_architecture/ui/renderer_todo.yaml` — renderer modularization + OS abstraction.
   - `app_architecture/ui/ui_widget_modularization_todo.yaml` — UI widget modularization (TerminalWidget/UI splits).
   - `app_architecture/ui/font_rendering_todo.yaml` — font rendering strategy + implementation plan (kitty/ghostty-tier goals).
@@ -50,6 +51,7 @@ Quick map of where to look for common needs.
   - `app_architecture/review/FILE_LAYOUT_HOTSPOTS_REVIEW.md` — current structure smell review and reference-repo comparison.
   - `app_architecture/review/REPO_STRUCTURE_REVIEW.md` — repo hygiene review for tests, tooling roots, and stale docs/tests.
   - `app_architecture/review/SRC_APP_DOMAIN_MAP.md` — authoritative `src/app` ownership map for the ongoing folder cleanup.
+  - `app_architecture/review/TERMINAL_CORE_ARCHITECTURE_REVIEW_2026-03-10.md` — Ghostty-informed review of remaining terminal-core architectural blockers.
   - `app_architecture/review/app_mode_layering_todo.yaml` — completed mode-layering extraction tracker retained as historical rollout record.
   - `app_architecture/review/app_mode_layering_validation.md` — mode-layering extraction validation matrix and gate bundle authority.
   - `app_architecture/review/mode_binary_size_baseline.md` — focused-binary size snapshot used by the mode extraction lane.
