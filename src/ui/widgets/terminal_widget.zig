@@ -276,22 +276,17 @@ pub const TerminalWidget = struct {
         input: shared_types.input.InputSnapshot,
     ) DrawOutcome {
         const draw_start = app_shell.getTime();
-        const lock_phase_start = draw_start;
-        const presented = self.session.copyPublishedRenderCache(&self.draw_cache) catch |err| {
+        const capture = self.session.capturePresentation(&self.draw_cache) catch |err| {
             const log = app_logger.logger("terminal.ui.redraw");
             log.logf(.warning, "draw snapshot copy failed err={s}", .{@errorName(err)});
             return .{};
         };
-        const preparation: DrawPreparation = .{
-            .draw_start = draw_start,
-            .lock_ms = @as(f64, @floatCast(app_shell.getTime() - lock_phase_start)) * 1000.0,
-            .presented = presented,
-        };
+        const preparation = DrawPreparation.fromCapture(draw_start, capture);
         return draw_mod.drawPrepared(self, shell, x, y, width, height, input, preparation);
     }
 
     pub fn finishFramePresentation(self: *TerminalWidget, outcome: DrawOutcome) void {
-        self.session.completePresentationFeedback(outcome);
+        self.session.finishFramePresentation(outcome);
     }
 
     /// Handle input, returns true if any input was processed
