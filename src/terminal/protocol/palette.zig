@@ -8,22 +8,22 @@ const dynamic_color_base: u8 = 10;
 
 pub const SessionFacade = struct {
     ctx: *anyopaque,
+    palette_current: *const [256]types.Color,
+    primary_default_attrs: *const types.CellAttrs,
+    dynamic_colors: []const ?types.Color,
     write_pty_bytes_fn: *const fn (ctx: *anyopaque, bytes: []const u8) anyerror!void,
     set_palette_color_locked_fn: *const fn (ctx: *anyopaque, idx: usize, color: types.Color) void,
     reset_palette_color_locked_fn: *const fn (ctx: *anyopaque, idx: usize) void,
     reset_all_palette_colors_locked_fn: *const fn (ctx: *anyopaque) void,
     set_dynamic_color_code_locked_fn: *const fn (ctx: *anyopaque, code: u8, color: ?types.Color) void,
-    palette_len_fn: *const fn (ctx: *anyopaque) usize,
-    palette_color_at_fn: *const fn (ctx: *anyopaque, idx: usize) types.Color,
-    default_fg_fn: *const fn (ctx: *anyopaque) types.Color,
-    default_bg_fn: *const fn (ctx: *anyopaque) types.Color,
-    dynamic_color_at_fn: *const fn (ctx: *anyopaque, idx: usize) ?types.Color,
-    dynamic_color_len_fn: *const fn (ctx: *anyopaque) usize,
 
     pub fn from(session: anytype) SessionFacade {
         const SessionPtr = @TypeOf(session);
         return .{
             .ctx = @ptrCast(session),
+            .palette_current = &session.palette_current,
+            .primary_default_attrs = &session.primary.default_attrs,
+            .dynamic_colors = session.dynamic_colors[0..],
             .write_pty_bytes_fn = struct {
                 fn call(ctx: *anyopaque, bytes: []const u8) anyerror!void {
                     const s: SessionPtr = @ptrCast(@alignCast(ctx));
@@ -54,42 +54,6 @@ pub const SessionFacade = struct {
                     s.setDynamicColorCodeLocked(code, color);
                 }
             }.call,
-            .palette_len_fn = struct {
-                fn call(ctx: *anyopaque) usize {
-                    const s: SessionPtr = @ptrCast(@alignCast(ctx));
-                    return s.palette_current.len;
-                }
-            }.call,
-            .palette_color_at_fn = struct {
-                fn call(ctx: *anyopaque, idx: usize) types.Color {
-                    const s: SessionPtr = @ptrCast(@alignCast(ctx));
-                    return s.palette_current[idx];
-                }
-            }.call,
-            .default_fg_fn = struct {
-                fn call(ctx: *anyopaque) types.Color {
-                    const s: SessionPtr = @ptrCast(@alignCast(ctx));
-                    return s.primary.default_attrs.fg;
-                }
-            }.call,
-            .default_bg_fn = struct {
-                fn call(ctx: *anyopaque) types.Color {
-                    const s: SessionPtr = @ptrCast(@alignCast(ctx));
-                    return s.primary.default_attrs.bg;
-                }
-            }.call,
-            .dynamic_color_at_fn = struct {
-                fn call(ctx: *anyopaque, idx: usize) ?types.Color {
-                    const s: SessionPtr = @ptrCast(@alignCast(ctx));
-                    return s.dynamic_colors[idx];
-                }
-            }.call,
-            .dynamic_color_len_fn = struct {
-                fn call(ctx: *anyopaque) usize {
-                    const s: SessionPtr = @ptrCast(@alignCast(ctx));
-                    return s.dynamic_colors.len;
-                }
-            }.call,
         };
     }
 
@@ -114,27 +78,27 @@ pub const SessionFacade = struct {
     }
 
     pub fn paletteLen(self: *const SessionFacade) usize {
-        return self.palette_len_fn(self.ctx);
+        return self.palette_current.len;
     }
 
     pub fn paletteColorAt(self: *const SessionFacade, idx: usize) types.Color {
-        return self.palette_color_at_fn(self.ctx, idx);
+        return self.palette_current[idx];
     }
 
     pub fn defaultFg(self: *const SessionFacade) types.Color {
-        return self.default_fg_fn(self.ctx);
+        return self.primary_default_attrs.fg;
     }
 
     pub fn defaultBg(self: *const SessionFacade) types.Color {
-        return self.default_bg_fn(self.ctx);
+        return self.primary_default_attrs.bg;
     }
 
     pub fn dynamicColorAt(self: *const SessionFacade, idx: usize) ?types.Color {
-        return self.dynamic_color_at_fn(self.ctx, idx);
+        return self.dynamic_colors[idx];
     }
 
     pub fn dynamicColorLen(self: *const SessionFacade) usize {
-        return self.dynamic_color_len_fn(self.ctx);
+        return self.dynamic_colors.len;
     }
 };
 
