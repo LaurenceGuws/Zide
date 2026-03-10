@@ -30,6 +30,7 @@ const session_selection = @import("session_selection.zig");
 const session_input = @import("session_input.zig");
 const session_interaction = @import("session_interaction.zig");
 const session_rendering = @import("session_rendering.zig");
+const session_protocol = @import("session_protocol.zig");
 const osc_kitty_clipboard = @import("../protocol/osc_kitty_clipboard.zig");
 const Pty = pty_mod.Pty;
 const PtySize = pty_mod.PtySize;
@@ -778,107 +779,82 @@ pub const TerminalSession = struct {
     }
 
     pub fn handleControl(self: *TerminalSession, byte: u8) void {
-        control_handlers.handleControl(self, byte);
+        session_protocol.handleControl(self, byte);
     }
 
     pub fn parseDcs(self: *TerminalSession, payload: []const u8) void {
-        parser_hooks.parseDcs(parser_hooks.SessionFacade.from(self), payload);
+        session_protocol.parseDcs(self, payload);
     }
 
     pub fn parseApc(self: *TerminalSession, payload: []const u8) void {
-        parser_hooks.parseApc(parser_hooks.SessionFacade.from(self), payload);
+        session_protocol.parseApc(self, payload);
     }
 
     pub fn parseOsc(self: *TerminalSession, payload: []const u8, terminator: OscTerminator) void {
-        parser_hooks.parseOsc(parser_hooks.SessionFacade.from(self), payload, terminator);
+        session_protocol.parseOsc(self, payload, terminator);
     }
     pub fn appendHyperlink(self: *TerminalSession, uri: []const u8) ?u32 {
-        return hyperlink_table.appendHyperlink(self, uri, max_hyperlinks);
+        return session_protocol.appendHyperlink(self, uri, max_hyperlinks);
     }
 
     pub fn clearAllKittyImages(self: *TerminalSession) void {
-        kitty_mod.clearAllKittyImages(self);
+        session_protocol.clearAllKittyImages(self);
     }
 
     pub fn handleCsi(self: *TerminalSession, action: csi_mod.CsiAction) void {
-        parser_hooks.handleCsi(parser_hooks.SessionFacade.from(self), action);
+        session_protocol.handleCsi(self, action);
     }
 
     pub fn feedOutputBytes(self: *TerminalSession, bytes: []const u8) void {
-        if (bytes.len == 0) return;
-        self.state_mutex.lock();
-        defer self.state_mutex.unlock();
-        self.parser.handleSlice(parser_mod.Parser.SessionFacade.from(self), bytes);
-        _ = self.output_generation.fetchAdd(1, .acq_rel);
-        self.updateViewCacheNoLock(self.output_generation.load(.acquire), self.history.scrollOffset());
+        session_protocol.feedOutputBytes(self, bytes);
     }
 
     pub fn resetState(self: *TerminalSession) void {
-        self.state_mutex.lock();
-        defer self.state_mutex.unlock();
-        state_reset.resetStateLocked(self);
+        session_protocol.resetState(self);
     }
 
     pub fn resetStateLocked(self: *TerminalSession) void {
-        state_reset.resetStateLocked(self);
+        session_protocol.resetStateLocked(self);
     }
 
     pub fn reverseIndex(self: *TerminalSession) void {
-        control_handlers.reverseIndex(self);
+        session_protocol.reverseIndex(self);
     }
 
     pub fn eraseDisplay(self: *TerminalSession, mode: i32) void {
-        const screen = self.activeScreen();
-        const blank_cell = screen.blankCell();
-        screen.eraseDisplay(mode, blank_cell);
-        if (mode == 2 or mode == 3) {
-            self.clearSelectionLocked();
-            _ = self.clear_generation.fetchAdd(1, .acq_rel);
-        }
+        session_protocol.eraseDisplay(self, mode);
     }
 
     pub fn eraseLine(self: *TerminalSession, mode: i32) void {
-        const screen = self.activeScreen();
-        const blank_cell = screen.blankCell();
-        screen.eraseLine(mode, blank_cell);
+        session_protocol.eraseLine(self, mode);
     }
 
     pub fn insertChars(self: *TerminalSession, count: usize) void {
-        const screen = self.activeScreen();
-        const blank_cell = screen.blankCell();
-        screen.insertChars(count, blank_cell);
+        session_protocol.insertChars(self, count);
     }
 
     pub fn deleteChars(self: *TerminalSession, count: usize) void {
-        const screen = self.activeScreen();
-        const blank_cell = screen.blankCell();
-        screen.deleteChars(count, blank_cell);
+        session_protocol.deleteChars(self, count);
     }
 
     pub fn eraseChars(self: *TerminalSession, count: usize) void {
-        const screen = self.activeScreen();
-        const blank_cell = screen.blankCell();
-        screen.eraseChars(count, blank_cell);
+        session_protocol.eraseChars(self, count);
     }
 
     pub fn insertLines(self: *TerminalSession, count: usize) void {
-        const screen = self.activeScreen();
-        const blank_cell = screen.blankCell();
-        screen.insertLines(count, blank_cell);
+        session_protocol.insertLines(self, count);
     }
 
     pub fn deleteLines(self: *TerminalSession, count: usize) void {
-        const screen = self.activeScreen();
-        const blank_cell = screen.blankCell();
-        screen.deleteLines(count, blank_cell);
+        session_protocol.deleteLines(self, count);
     }
 
     pub fn scrollRegionUp(self: *TerminalSession, count: usize) void {
-        scrolling_mod.scrollRegionUp(self, count);
+        session_protocol.scrollRegionUp(self, count);
     }
 
     pub fn scrollRegionDown(self: *TerminalSession, count: usize) void {
-        scrolling_mod.scrollRegionDown(self, count);
+        session_protocol.scrollRegionDown(self, count);
     }
 
     fn applySgr(self: *TerminalSession, action: csi_mod.CsiAction) void {
@@ -886,23 +862,23 @@ pub const TerminalSession = struct {
     }
 
     pub fn paletteColor(self: *const TerminalSession, idx: u8) types.Color {
-        return self.palette_current[idx];
+        return session_protocol.paletteColor(self, idx);
     }
 
     pub fn handleCodepoint(self: *TerminalSession, codepoint: u32) void {
-        parser_hooks.handleCodepoint(parser_hooks.SessionFacade.from(self), codepoint);
+        session_protocol.handleCodepoint(self, codepoint);
     }
 
     pub fn handleAsciiSlice(self: *TerminalSession, bytes: []const u8) void {
-        parser_hooks.handleAsciiSlice(parser_hooks.SessionFacade.from(self), bytes);
+        session_protocol.handleAsciiSlice(self, bytes);
     }
 
     pub fn newline(self: *TerminalSession) void {
-        control_handlers.newline(self);
+        session_protocol.newline(self);
     }
 
     pub fn wrapNewline(self: *TerminalSession) void {
-        control_handlers.wrapNewline(self);
+        session_protocol.wrapNewline(self);
     }
 
     fn scrollUp(self: *TerminalSession) void {
@@ -910,12 +886,11 @@ pub const TerminalSession = struct {
     }
 
     pub fn getCell(self: *TerminalSession, row: usize, col: usize) Cell {
-        const screen = self.activeScreenConst();
-        return screen.cellAtOr(row, col, self.primary.defaultCell());
+        return session_protocol.getCell(self, row, col);
     }
 
     pub fn getCursorPos(self: *TerminalSession) CursorPos {
-        return self.activeScreenConst().cursorPos();
+        return session_protocol.getCursorPos(self);
     }
 
     pub fn scrollbackInfo(self: *TerminalSession) ScrollbackInfo {
@@ -1113,43 +1088,11 @@ pub const TerminalSession = struct {
     }
 
     pub fn setCursorStyle(self: *TerminalSession, mode: i32) void {
-        self.activeScreen().setCursorStyle(mode);
+        session_protocol.setCursorStyle(self, mode);
     }
 
     pub fn decrqssReplyInto(self: *TerminalSession, text: []const u8, buf: []u8) ?[]const u8 {
-        const log = app_logger.logger("terminal.apc");
-        if (std.mem.eql(u8, text, " q")) {
-            const style = self.activeScreen().cursor_style;
-            return switch (style.shape) {
-                .block => if (style.blink) "1 q" else "2 q",
-                .underline => if (style.blink) "3 q" else "4 q",
-                .bar => if (style.blink) "5 q" else "6 q",
-            };
-        }
-        if (std.mem.eql(u8, text, "m")) {
-            return self.decrqssSgrReply(buf);
-        }
-        if (std.mem.eql(u8, text, "r")) {
-            const screen = self.activeScreen();
-            return std.fmt.bufPrint(buf, "{d};{d}r", .{
-                screen.scroll_top + 1,
-                screen.scroll_bottom + 1,
-            }) catch |err| {
-                log.logf(.warning, "decrqss r reply format failed err={s}", .{@errorName(err)});
-                return null;
-            };
-        }
-        if (std.mem.eql(u8, text, "s")) {
-            const screen = self.activeScreen();
-            return std.fmt.bufPrint(buf, "{d};{d}s", .{
-                screen.left_margin + 1,
-                screen.right_margin + 1,
-            }) catch |err| {
-                log.logf(.warning, "decrqss s reply format failed err={s}", .{@errorName(err)});
-                return null;
-            };
-        }
-        return null;
+        return session_protocol.decrqssReplyInto(self, text, buf);
     }
 
     fn decrqssSgrReply(self: *TerminalSession, buf: []u8) ?[]const u8 {
@@ -1226,7 +1169,7 @@ pub const TerminalSession = struct {
     }
 
     pub fn saveCursor(self: *TerminalSession) void {
-        state_reset.saveCursor(self);
+        session_protocol.saveCursor(self);
     }
 
     pub fn setKeypadMode(self: *TerminalSession, enabled: bool) void {
@@ -1238,41 +1181,19 @@ pub const TerminalSession = struct {
     }
 
     pub fn restoreCursor(self: *TerminalSession) void {
-        state_reset.restoreCursor(self);
+        session_protocol.restoreCursor(self);
     }
 
     pub fn setTabAtCursor(self: *TerminalSession) void {
-        self.activeScreen().setTabAtCursor();
+        session_protocol.setTabAtCursor(self);
     }
 
     pub fn enterAltScreen(self: *TerminalSession, clear: bool, save_cursor: bool) void {
-        if (self.isAltActive()) return;
-        if (save_cursor) {
-            self.saveCursor();
-        }
-        self.history.saveScrollOffset();
-        self.clearSelectionLocked();
-        self.setActiveScreenMode(.alt);
-        kitty_mod.clearKittyImages(self);
-        if (clear) {
-            self.activeScreen().clear();
-            self.activeScreen().setCursor(0, 0);
-        }
-        self.activeScreen().markDirtyAllWithReason(.alt_enter, @src());
+        session_protocol.enterAltScreen(self, clear, save_cursor);
     }
 
     pub fn exitAltScreen(self: *TerminalSession, restore_cursor: bool) void {
-        if (!self.isAltActive()) return;
-        kitty_mod.clearKittyImages(self);
-        self.setActiveScreenMode(.primary);
-        self.alt_exit_pending.store(true, .release);
-        self.alt_exit_time_ms.store(std.time.milliTimestamp(), .release);
-        self.history.restoreScrollOffset(self.primary.grid.rows);
-        self.clearSelectionLocked();
-        if (restore_cursor) {
-            self.restoreCursor();
-        }
-        self.activeScreen().markDirtyAllWithReason(.alt_exit, @src());
+        session_protocol.exitAltScreen(self, restore_cursor);
     }
 
     pub fn snapshot(self: *TerminalSession) TerminalSnapshot {
