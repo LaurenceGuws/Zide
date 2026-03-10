@@ -4,7 +4,7 @@ This doc explains how workflow and documentation are intended to be used.
 
 ## Workflow (agent + contributors)
 - **Primary source of truth** for tasks is the relevant todo in `app_architecture/**/_todo.yaml`.
-- **Handoff docs** (`docs/AGENT_HANDOFF.md`, `docs/AGENT_HOVER.md`) are **high‑level only**.
+- **Handoff docs** use `docs/AGENT_HANDOFF.md` as the single high‑level entrypoint.
 - **Progress tracking** belongs in todo files and app_architecture docs, not in handoff.
 - **Research notes** that informed a todo item must live in the relevant `app_architecture/` doc.
 - **Implementation** follows AGENTS.md workflow: read handoff → read todo → implement → update docs → tests → approval → commit.
@@ -23,7 +23,6 @@ This doc explains how workflow and documentation are intended to be used.
 ## Docs roles (what goes where)
 - `AGENTS.md`: authoritative workflow rules.
 - `docs/AGENT_HANDOFF.md`: short entrypoint for the next session (focus, constraints, where to look).
-- `docs/AGENT_HOVER.md`: high‑level editor context only; can be removed if redundant.
 - `docs/INDEX.md`: map of docs and where to look.
 - `app_architecture/*_todo.yaml`: task tracker and status for each area.
 - `app_architecture/**.md`: design decisions, research notes, and architecture guidance.

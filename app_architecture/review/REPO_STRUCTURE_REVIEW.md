@@ -126,6 +126,7 @@ Status:
 - the next cleanup slices should target obvious placement/naming outliers before broader stale-doc deletion
 - first cleanup slice landed: the old root-level `app_architecture/terminal_editor_ffi_host_migration_beta_todo.md` outlier was re-homed to `app_architecture/terminal/ffi_host_migration_todo.md`
 - second cleanup slice landed: mode-layering validation and binary-size baseline records were re-homed from `docs/` into `app_architecture/review/`
+- third cleanup slice landed: redundant `docs/AGENT_HOVER.md` was removed so there is one authoritative high-level handoff surface
 
 ## Priority Order
 
