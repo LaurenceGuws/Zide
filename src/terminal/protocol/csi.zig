@@ -979,7 +979,7 @@ const ReplyCsiContext = struct {
                     if (s.lockPtyWriter()) |writer_guard| {
                         var writer = writer_guard;
                         defer writer.unlock();
-                        handleDsrQuery(QueryContext.from(s), CsiWriter.from(&writer), s.activeScreen(), action, param_len, params);
+                        handleDsrQuery(QueryContext.from(s), CsiWriter.from(&writer), ScreenQueryContext.from(s.activeScreen()), action, param_len, params);
                     }
                 }
             }.call,
@@ -1001,7 +1001,7 @@ const ReplyCsiContext = struct {
                     if (s.lockPtyWriter()) |writer_guard| {
                         var writer = writer_guard;
                         defer writer.unlock();
-                        handleWindowOpQuery(QueryContext.from(s), CsiWriter.from(&writer), s.activeScreen(), param_len, params);
+                        handleWindowOpQuery(QueryContext.from(s), CsiWriter.from(&writer), ScreenQueryContext.from(s.activeScreen()), param_len, params);
                     }
                 }
             }.call,
@@ -1126,6 +1126,56 @@ const QueryContext = struct {
 
     pub fn cellWidth(self: *const QueryContext) u16 {
         return self.cell_width_fn(self.ctx);
+    }
+};
+
+const CursorReport = struct {
+    row_1: usize,
+    col_1: usize,
+};
+
+const ScreenQueryContext = struct {
+    ctx: *anyopaque,
+    cursor_report_fn: *const fn (ctx: *anyopaque) CursorReport,
+    rows_fn: *const fn (ctx: *anyopaque) u16,
+    cols_fn: *const fn (ctx: *anyopaque) u16,
+
+    pub fn from(screen: anytype) ScreenQueryContext {
+        const ScreenPtr = @TypeOf(screen);
+        return .{
+            .ctx = @ptrCast(screen),
+            .cursor_report_fn = struct {
+                fn call(ctx: *anyopaque) CursorReport {
+                    const typed: ScreenPtr = @ptrCast(@alignCast(ctx));
+                    const pos = typed.cursorReport();
+                    return .{ .row_1 = pos.row_1, .col_1 = pos.col_1 };
+                }
+            }.call,
+            .rows_fn = struct {
+                fn call(ctx: *anyopaque) u16 {
+                    const typed: ScreenPtr = @ptrCast(@alignCast(ctx));
+                    return typed.grid.rows;
+                }
+            }.call,
+            .cols_fn = struct {
+                fn call(ctx: *anyopaque) u16 {
+                    const typed: ScreenPtr = @ptrCast(@alignCast(ctx));
+                    return typed.grid.cols;
+                }
+            }.call,
+        };
+    }
+
+    pub fn cursorReport(self: *const ScreenQueryContext) CursorReport {
+        return self.cursor_report_fn(self.ctx);
+    }
+
+    pub fn rows(self: *const ScreenQueryContext) u16 {
+        return self.rows_fn(self.ctx);
+    }
+
+    pub fn cols(self: *const ScreenQueryContext) u16 {
+        return self.cols_fn(self.ctx);
     }
 };
 
@@ -1590,7 +1640,7 @@ fn boolModeState(enabled: bool) DecrpmState {
     return if (enabled) .set else .reset;
 }
 
-fn handleDsrQuery(query: QueryContext, writer: CsiWriter, screen: anytype, action: parser_csi.CsiAction, param_len: usize, params: [parser_csi.max_params]i32) void {
+fn handleDsrQuery(query: QueryContext, writer: CsiWriter, screen: ScreenQueryContext, action: parser_csi.CsiAction, param_len: usize, params: [parser_csi.max_params]i32) void {
     const mode = if (param_len > 0) params[0] else 0;
     if (action.leader == '?') {
         switch (mode) {
@@ -1618,13 +1668,13 @@ fn handleDaQuery(writer: CsiWriter) void {
     _ = writeDaPrimaryReplyWithWriter(writer);
 }
 
-fn handleWindowOpQuery(query: QueryContext, writer: CsiWriter, screen: anytype, param_len: usize, params: [parser_csi.max_params]i32) void {
+fn handleWindowOpQuery(query: QueryContext, writer: CsiWriter, screen: ScreenQueryContext, param_len: usize, params: [parser_csi.max_params]i32) void {
     const mode = if (param_len > 0) params[0] else 0;
     switch (mode) {
-        14 => _ = writeWindowOpPixelsReplyWithWriter(writer, @as(u32, query.cellHeight()) * screen.grid.rows, @as(u32, query.cellWidth()) * screen.grid.cols),
+        14 => _ = writeWindowOpPixelsReplyWithWriter(writer, @as(u32, query.cellHeight()) * screen.rows(), @as(u32, query.cellWidth()) * screen.cols()),
         16 => _ = writeWindowOpCellPixelsReplyWithWriter(writer, query.cellHeight(), query.cellWidth()),
-        18 => _ = writeWindowOpCharsReplyWithWriter(writer, screen.grid.rows, screen.grid.cols),
-        19 => _ = writeWindowOpScreenCharsReplyWithWriter(writer, screen.grid.rows, screen.grid.cols),
+        18 => _ = writeWindowOpCharsReplyWithWriter(writer, screen.rows(), screen.cols()),
+        19 => _ = writeWindowOpScreenCharsReplyWithWriter(writer, screen.rows(), screen.cols()),
         else => {},
     }
 }

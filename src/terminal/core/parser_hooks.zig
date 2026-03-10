@@ -1,4 +1,5 @@
 const screen_mod = @import("../model/screen.zig");
+const types = @import("../model/types.zig");
 const csi_mod = @import("../parser/csi.zig");
 const protocol_csi = @import("../protocol/csi.zig");
 const protocol_dcs_apc = @import("../protocol/dcs_apc.zig");
@@ -96,6 +97,77 @@ pub const SessionFacade = struct {
     }
 };
 
+const TextWriteContext = struct {
+    ctx: *anyopaque,
+    active_screen_fn: *const fn (ctx: *anyopaque) *screen_mod.Screen,
+    gl_charset_fn: *const fn (ctx: *anyopaque) parser_mod.Charset,
+    hyperlink_attrs_fn: *const fn (ctx: *anyopaque, attrs: *types.CellAttrs) void,
+    wrap_newline_fn: *const fn (ctx: *anyopaque) void,
+    insert_chars_fn: *const fn (ctx: *anyopaque, count: usize) void,
+
+    pub fn from(session: anytype) TextWriteContext {
+        const SessionPtr = @TypeOf(session);
+        return .{
+            .ctx = @ptrCast(session),
+            .active_screen_fn = struct {
+                fn call(ctx: *anyopaque) *screen_mod.Screen {
+                    const s: SessionPtr = @ptrCast(@alignCast(ctx));
+                    return s.activeScreen();
+                }
+            }.call,
+            .gl_charset_fn = struct {
+                fn call(ctx: *anyopaque) parser_mod.Charset {
+                    const s: SessionPtr = @ptrCast(@alignCast(ctx));
+                    return s.parser.gl_charset;
+                }
+            }.call,
+            .hyperlink_attrs_fn = struct {
+                fn call(ctx: *anyopaque, attrs: *types.CellAttrs) void {
+                    const s: SessionPtr = @ptrCast(@alignCast(ctx));
+                    if (s.osc_hyperlink_active and s.current_hyperlink_id > 0) {
+                        attrs.link_id = s.current_hyperlink_id;
+                        attrs.underline = true;
+                    } else {
+                        attrs.link_id = 0;
+                    }
+                }
+            }.call,
+            .wrap_newline_fn = struct {
+                fn call(ctx: *anyopaque) void {
+                    const s: SessionPtr = @ptrCast(@alignCast(ctx));
+                    s.wrapNewline();
+                }
+            }.call,
+            .insert_chars_fn = struct {
+                fn call(ctx: *anyopaque, count: usize) void {
+                    const s: SessionPtr = @ptrCast(@alignCast(ctx));
+                    s.insertChars(count);
+                }
+            }.call,
+        };
+    }
+
+    pub fn activeScreen(self: *const TextWriteContext) *screen_mod.Screen {
+        return self.active_screen_fn(self.ctx);
+    }
+
+    pub fn glCharset(self: *const TextWriteContext) parser_mod.Charset {
+        return self.gl_charset_fn(self.ctx);
+    }
+
+    pub fn applyHyperlinkAttrs(self: *const TextWriteContext, attrs: *types.CellAttrs) void {
+        self.hyperlink_attrs_fn(self.ctx, attrs);
+    }
+
+    pub fn wrapNewline(self: *const TextWriteContext) void {
+        self.wrap_newline_fn(self.ctx);
+    }
+
+    pub fn insertChars(self: *const TextWriteContext, count: usize) void {
+        self.insert_chars_fn(self.ctx, count);
+    }
+};
+
 pub fn parseDcs(session: SessionFacade, payload: []const u8) void {
     session.parseDcs(payload);
 }
@@ -120,16 +192,20 @@ pub fn handleCodepoint(session: SessionFacade, codepoint: u32) void {
     session.handleCodepoint(codepoint);
 }
 
-fn handleCodepointOnSession(self: anytype, codepoint: u32) void {
+fn handleCodepointOnSession(session: anytype, codepoint: u32) void {
+    handleCodepointWithContext(TextWriteContext.from(session), codepoint);
+}
+
+fn handleCodepointWithContext(context: TextWriteContext, codepoint: u32) void {
     if (codepoint == 0) return;
     if (codepoint > 0x10FFFF or (codepoint >= 0xD800 and codepoint <= 0xDFFF)) return;
 
     var cp = codepoint;
-    if (self.parser.gl_charset == .dec_special) {
+    if (context.glCharset() == .dec_special) {
         cp = screen_mod.mapDecSpecial(codepoint);
     }
 
-    const screen = self.activeScreen();
+    const screen = context.activeScreen();
     const rows = @as(usize, screen.grid.rows);
     const cols = @as(usize, screen.grid.cols);
     if (rows == 0 or cols == 0) return;
@@ -137,7 +213,7 @@ fn handleCodepointOnSession(self: anytype, codepoint: u32) void {
     while (true) {
         switch (screen.prepareWrite()) {
             .done => return,
-            .need_wrap => self.wrapNewline(),
+            .need_wrap => context.wrapNewline(),
             .proceed => break,
         }
     }
@@ -149,11 +225,11 @@ fn handleCodepointOnSession(self: anytype, codepoint: u32) void {
         const right = screen.writeRightBoundary();
         const cpw: usize = cp_width;
         if (cp_width > 1 and screen.cursor.col + cpw > right + 1) {
-            self.wrapNewline();
+            context.wrapNewline();
             while (true) {
                 switch (screen.prepareWrite()) {
                     .done => return,
-                    .need_wrap => self.wrapNewline(),
+                    .need_wrap => context.wrapNewline(),
                     .proceed => break,
                 }
             }
@@ -161,15 +237,10 @@ fn handleCodepointOnSession(self: anytype, codepoint: u32) void {
     }
 
     var attrs = screen.current_attrs;
-    if (self.osc_hyperlink_active and self.current_hyperlink_id > 0) {
-        attrs.link_id = self.current_hyperlink_id;
-        attrs.underline = true;
-    } else {
-        attrs.link_id = 0;
-    }
+    context.applyHyperlinkAttrs(&attrs);
     const cp_width = screen_mod.Screen.codepointCellWidth(cp);
     if (screen.insert_mode and cp_width > 0) {
-        self.insertChars(@intCast(cp_width));
+        context.insertChars(@intCast(cp_width));
     }
     screen.writeCodepoint(cp, attrs);
 }
@@ -178,22 +249,21 @@ pub fn handleAsciiSlice(session: SessionFacade, bytes: []const u8) void {
     session.handleAsciiSlice(bytes);
 }
 
-fn handleAsciiSliceOnSession(self: anytype, bytes: []const u8) void {
+fn handleAsciiSliceOnSession(session: anytype, bytes: []const u8) void {
+    handleAsciiSliceWithContext(TextWriteContext.from(session), bytes);
+}
+
+fn handleAsciiSliceWithContext(context: TextWriteContext, bytes: []const u8) void {
     if (bytes.len == 0) return;
-    const screen = self.activeScreen();
+    const screen = context.activeScreen();
     const rows = @as(usize, screen.grid.rows);
     const cols = @as(usize, screen.grid.cols);
     if (rows == 0 or cols == 0) return;
     if (screen.cursor.row >= rows) return;
 
     var attrs = screen.current_attrs;
-    if (self.osc_hyperlink_active and self.current_hyperlink_id > 0) {
-        attrs.link_id = self.current_hyperlink_id;
-        attrs.underline = true;
-    } else {
-        attrs.link_id = 0;
-    }
-    const use_dec_special = self.parser.gl_charset == .dec_special;
+    context.applyHyperlinkAttrs(&attrs);
+    const use_dec_special = context.glCharset() == .dec_special;
 
     if (screen.insert_mode) {
         for (bytes) |b| {
@@ -201,13 +271,13 @@ fn handleAsciiSliceOnSession(self: anytype, bytes: []const u8) void {
                 switch (screen.prepareWrite()) {
                     .done => return,
                     .need_wrap => {
-                        self.wrapNewline();
+                        context.wrapNewline();
                         continue;
                     },
                     .proceed => break,
                 }
             }
-            self.insertChars(1);
+            context.insertChars(1);
             screen.writeCodepoint(@intCast(b), attrs);
         }
         return;
@@ -218,7 +288,7 @@ fn handleAsciiSliceOnSession(self: anytype, bytes: []const u8) void {
         switch (screen.prepareWrite()) {
             .done => break,
             .need_wrap => {
-                self.wrapNewline();
+                context.wrapNewline();
                 continue;
             },
             .proceed => {},
