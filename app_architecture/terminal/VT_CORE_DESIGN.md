@@ -347,6 +347,9 @@ Session construction also moved one step toward host-wrapper ownership:
   allocation + runtime-state assembly path
 - `terminal_session.zig` now delegates `initWithOptions(...)` to that runtime
   owner instead of constructing the whole session inline
+- replay/test-only debug helpers now also live in
+  `src/terminal/core/terminal_session_debug.zig`, so that non-runtime surface is
+  no longer embedded directly in the root session file
 
 ### 2026-03-10 protocol split follow-up
 

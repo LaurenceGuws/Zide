@@ -31,6 +31,7 @@ const session_rendering = @import("session_rendering.zig");
 const session_protocol = @import("session_protocol.zig");
 const session_config = @import("session_config.zig");
 const session_runtime = @import("session_runtime.zig");
+const session_debug = @import("terminal_session_debug.zig");
 const osc_kitty_clipboard = @import("../protocol/osc_kitty_clipboard.zig");
 const terminal_transport = @import("terminal_transport.zig");
 const Pty = pty_mod.Pty;
@@ -38,7 +39,6 @@ const PtySize = pty_mod.PtySize;
 const Screen = screen_mod.Screen;
 const Dirty = screen_mod.Dirty;
 const Damage = screen_mod.Damage;
-const builtin = @import("builtin");
 const OscTerminator = parser_mod.OscTerminator;
 const Charset = parser_mod.Charset;
 const CharsetTarget = parser_mod.CharsetTarget;
@@ -82,40 +82,19 @@ pub const PresentationFeedback = struct {
 pub const PtyWriteGuard = terminal_transport.Writer;
 
 pub fn debugSnapshot(self: *TerminalSession) DebugSnapshot {
-    if (!debugAccessAllowed()) @panic("debugSnapshot is test-only");
-    return .{
-        .title = self.core.title,
-        .cwd = self.core.cwd,
-        .osc_clipboard = self.core.osc_clipboard.items,
-        .osc_clipboard_pending = self.core.osc_clipboard_pending,
-        .hyperlinks = self.core.hyperlink_table.items,
-        .scrollback_count = self.core.history.scrollbackCount(),
-        .scrollback_offset = self.core.history.scrollOffset(),
-        .focus_reporting = self.focus_reporting,
-        .selection = selection_mod.selectionState(self),
-        .base_default_attrs = self.core.base_default_attrs,
-    };
+    return session_debug.debugSnapshot(self);
 }
 
 pub fn debugScrollbackRow(self: *TerminalSession, index: usize) ?[]const Cell {
-    if (!debugAccessAllowed()) @panic("debugScrollbackRow is test-only");
-    return self.core.history.scrollbackRow(index);
+    return session_debug.debugScrollbackRow(self, index);
 }
 
 pub fn debugSetCursor(self: *TerminalSession, row: usize, col: usize) void {
-    if (!debugAccessAllowed()) @panic("debugSetCursor is test-only");
-    self.activeScreen().setCursor(row, col);
+    session_debug.debugSetCursor(self, row, col);
 }
 
 pub fn debugFeedBytes(self: *TerminalSession, bytes: []const u8) void {
-    if (!debugAccessAllowed()) @panic("debugFeedBytes is test-only");
-    self.core.parser.handleSlice(parser_mod.Parser.SessionFacade.from(self), bytes);
-}
-
-fn debugAccessAllowed() bool {
-    if (builtin.is_test) return true;
-    const root = @import("root");
-    return @hasDecl(root, "terminal_replay_enabled") and root.terminal_replay_enabled;
+    session_debug.debugFeedBytes(self, bytes);
 }
 
 /// Minimal terminal stub so the UI panel stays wired while backend is removed.
