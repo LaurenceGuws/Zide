@@ -57,6 +57,14 @@ pub fn updateViewCacheNoLock(self: anytype, generation: u64, scroll_offset: usiz
     view_cache.updateViewCacheNoLock(self, generation, scroll_offset);
 }
 
+pub fn updateViewCacheForScroll(self: anytype) void {
+    view_cache.updateViewCacheForScroll(self);
+}
+
+pub fn updateViewCacheForScrollLocked(self: anytype) void {
+    view_cache.updateViewCacheForScrollLocked(self);
+}
+
 pub fn renderCache(self: anytype) *const RenderCache {
     const idx = self.render_cache_index.load(.acquire);
     return &self.render_caches[idx];
@@ -172,6 +180,10 @@ pub fn completePresentationFeedback(self: anytype, feedback: anytype) void {
             info.scroll_offset,
         });
     }
+}
+
+pub fn finishFramePresentation(self: anytype, feedback: anytype) void {
+    completePresentationFeedback(self, feedback);
 }
 
 fn renderCacheSyncUpdatesActiveForGeneration(self: anytype, generation: u64) bool {

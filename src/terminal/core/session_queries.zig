@@ -37,6 +37,19 @@ pub fn takeOscClipboardCopyLocked(self: anytype, allocator: std.mem.Allocator, o
     return true;
 }
 
+pub fn takeOscClipboardCopy(self: anytype, allocator: std.mem.Allocator, out: *std.ArrayList(u8)) !bool {
+    self.lock();
+    defer self.unlock();
+    return takeOscClipboardCopyLocked(self, allocator, out);
+}
+
+pub fn tryTakeOscClipboardCopy(self: anytype, allocator: std.mem.Allocator, out: *std.ArrayList(u8)) !bool {
+    out.clearRetainingCapacity();
+    if (!self.tryLock()) return false;
+    defer self.unlock();
+    return takeOscClipboardCopyLocked(self, allocator, out);
+}
+
 pub fn copyHyperlinkUri(self: anytype, allocator: std.mem.Allocator, link_id: u32, out: *std.ArrayList(u8)) !?[]const u8 {
     self.lock();
     defer self.unlock();

@@ -24,6 +24,7 @@ items:
       - Session-construction assembly now also lives under src/terminal/core/session_runtime.zig, so TerminalSession init is moving toward a host-wrapper creation facade instead of owning the full zeroed-field/runtime setup block inline
       - Replay/test-only debug helpers now also live under src/terminal/core/terminal_session_debug.zig, so terminal_session.zig no longer embeds that non-runtime surface inline
       - Dead local root-session helper residue (unused screen-mode/hash/inactive-screen helpers) is now removed, and the remaining test-facing view-cache shim delegates through src/terminal/core/session_rendering.zig instead of owning view-cache plumbing inline
+      - Remaining scroll-refresh and OSC clipboard copy wrappers now also delegate through src/terminal/core/session_rendering.zig and src/terminal/core/session_queries.zig, reducing more root-session orchestration residue without changing behavior
 
   - id: VTCORE-02
     title: Make FFI a first-class core interface

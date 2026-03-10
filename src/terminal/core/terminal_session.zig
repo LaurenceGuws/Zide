@@ -574,11 +574,11 @@ pub const TerminalSession = struct {
     }
 
     pub fn updateViewCacheForScroll(self: *TerminalSession) void {
-        view_cache.updateViewCacheForScroll(self);
+        session_rendering.updateViewCacheForScroll(self);
     }
 
     pub fn updateViewCacheForScrollLocked(self: *TerminalSession) void {
-        view_cache.updateViewCacheForScrollLocked(self);
+        session_rendering.updateViewCacheForScrollLocked(self);
     }
 
     fn keyModeFlags(self: *TerminalSession) u32 {
@@ -766,7 +766,7 @@ pub const TerminalSession = struct {
     }
 
     pub fn finishFramePresentation(self: *TerminalSession, feedback: PresentationFeedback) void {
-        session_rendering.completePresentationFeedback(self, feedback);
+        session_rendering.finishFramePresentation(self, feedback);
     }
 
     pub fn pasteSystemClipboard(
@@ -801,21 +801,12 @@ pub const TerminalSession = struct {
         session_rendering.setSyncUpdatesLocked(self, enabled);
     }
 
-    fn takeOscClipboardCopyLocked(self: *TerminalSession, allocator: std.mem.Allocator, out: *std.ArrayList(u8)) !bool {
-        return session_queries.takeOscClipboardCopyLocked(self, allocator, out);
-    }
-
     pub fn takeOscClipboardCopy(self: *TerminalSession, allocator: std.mem.Allocator, out: *std.ArrayList(u8)) !bool {
-        self.lock();
-        defer self.unlock();
-        return self.takeOscClipboardCopyLocked(allocator, out);
+        return session_queries.takeOscClipboardCopy(self, allocator, out);
     }
 
     pub fn tryTakeOscClipboardCopy(self: *TerminalSession, allocator: std.mem.Allocator, out: *std.ArrayList(u8)) !bool {
-        out.clearRetainingCapacity();
-        if (!self.tryLock()) return false;
-        defer self.unlock();
-        return self.takeOscClipboardCopyLocked(allocator, out);
+        return session_queries.tryTakeOscClipboardCopy(self, allocator, out);
     }
 
     pub fn copyHyperlinkUri(self: *TerminalSession, allocator: std.mem.Allocator, link_id: u32, out: *std.ArrayList(u8)) !?[]const u8 {
