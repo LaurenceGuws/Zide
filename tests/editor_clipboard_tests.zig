@@ -1,7 +1,7 @@
 const std = @import("std");
-const editor_mod = @import("editor/editor.zig");
-const grammar_manager_mod = @import("editor/grammar_manager.zig");
-const types = @import("editor/types.zig");
+const editor_mod = @import("../src/editor/editor.zig");
+const grammar_manager_mod = @import("../src/editor/grammar_manager.zig");
+const types = @import("../src/editor/types.zig");
 
 const EditorFixture = struct {
     grammar_manager: grammar_manager_mod.GrammarManager,

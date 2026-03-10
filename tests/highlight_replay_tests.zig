@@ -1,8 +1,8 @@
 const std = @import("std");
-const syntax_mod = @import("editor/syntax.zig");
-const text_store = @import("editor/text_store.zig");
-const zig_language_mod = @import("editor/zig_language.zig");
-const ts_api = @import("editor/treesitter_api.zig");
+const syntax_mod = @import("../src/editor/syntax.zig");
+const text_store = @import("../src/editor/text_store.zig");
+const zig_language_mod = @import("../src/editor/zig_language.zig");
+const ts_api = @import("../src/editor/treesitter_api.zig");
 const c = ts_api.c_api;
 
 const TextStore = text_store.TextStore;

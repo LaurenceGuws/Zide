@@ -1,8 +1,8 @@
 const std = @import("std");
-const shared_types = @import("types/mod.zig");
-const terminal_mod = @import("terminal/core/terminal.zig");
-const terminal_widget_mod = @import("ui/widgets/terminal_widget.zig");
-const terminal_hover_mod = @import("ui/widgets/terminal_widget_hover.zig");
+const shared_types = @import("../src/types/mod.zig");
+const terminal_mod = @import("../src/terminal/core/terminal.zig");
+const terminal_widget_mod = @import("../src/ui/widgets/terminal_widget.zig");
+const terminal_hover_mod = @import("../src/ui/widgets/terminal_widget_hover.zig");
 
 test "input batch append/clear" {
     const allocator = std.testing.allocator;
