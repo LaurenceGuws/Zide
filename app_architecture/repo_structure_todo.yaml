@@ -47,3 +47,4 @@ items:
       - First cleanup slice landed: moved the old root-level terminal/editor FFI host migration beta todo into app_architecture/terminal/ with stable naming
       - Second cleanup slice landed: moved mode-layering validation and binary-size baseline records out of top-level docs/ into app_architecture/review/
       - Third cleanup slice landed: removed redundant docs/AGENT_HOVER.md so there is one authoritative high-level handoff doc
+      - Fourth cleanup slice landed: removed stale app_architecture/PLANNING.md and rewired remaining references to owning subsystem docs
