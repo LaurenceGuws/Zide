@@ -99,6 +99,7 @@ items:
       - Contract target is now defined in app_architecture/terminal/RENDER_PUBLICATION_CONTRACT.md
       - Start this lane only after the current VT core/session/transport split stops moving fundamental backend ownership every patch
       - First prep slice landed: pure publication/diff helpers now live under src/terminal/core/view_cache_publication.zig, so src/terminal/core/view_cache.zig is beginning to separate projection from publication planning without changing behavior
+      - Second prep slice landed: selection projection now lives under src/terminal/core/view_cache_selection.zig, so view_cache.zig no longer owns both selection projection and publication/diff helpers inline
 
   - id: VTCORE-06
     title: Keep input encoding as a peer subsystem
