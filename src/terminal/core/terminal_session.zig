@@ -578,127 +578,127 @@ pub const TerminalSession = struct {
     }
 
     pub fn keyModeFlagsValue(self: *TerminalSession) u32 {
-        return self.input_snapshot.key_mode_flags.load(.acquire);
+        return session_interaction.keyModeFlagsValue(self);
     }
 
     pub fn keyModePush(self: *TerminalSession, flags: u32) void {
-        input_modes.keyModePush(self, flags);
+        session_interaction.keyModePush(self, flags);
     }
 
     pub fn keyModePushLocked(self: *TerminalSession, flags: u32) void {
-        input_modes.keyModePushLocked(self, flags);
+        session_interaction.keyModePushLocked(self, flags);
     }
 
     pub fn keyModePop(self: *TerminalSession, count: usize) void {
-        input_modes.keyModePop(self, count);
+        session_interaction.keyModePop(self, count);
     }
 
     pub fn keyModePopLocked(self: *TerminalSession, count: usize) void {
-        input_modes.keyModePopLocked(self, count);
+        session_interaction.keyModePopLocked(self, count);
     }
 
     pub fn keyModeModify(self: *TerminalSession, flags: u32, mode: u32) void {
-        input_modes.keyModeModify(self, flags, mode);
+        session_interaction.keyModeModify(self, flags, mode);
     }
 
     pub fn keyModeModifyLocked(self: *TerminalSession, flags: u32, mode: u32) void {
-        input_modes.keyModeModifyLocked(self, flags, mode);
+        session_interaction.keyModeModifyLocked(self, flags, mode);
     }
 
     pub fn keyModeQuery(self: *TerminalSession) void {
-        input_modes.keyModeQuery(self);
+        session_interaction.keyModeQuery(self);
     }
 
     pub fn keyModeQueryLocked(self: *TerminalSession) void {
-        input_modes.keyModeQueryLocked(self);
+        session_interaction.keyModeQueryLocked(self);
     }
 
     pub fn setAppCursorKeys(self: *TerminalSession, enabled: bool) void {
-        input_modes.setAppCursorKeys(self, enabled);
+        session_interaction.setAppCursorKeys(self, enabled);
     }
 
     pub fn setAppCursorKeysLocked(self: *TerminalSession, enabled: bool) void {
-        input_modes.setAppCursorKeysLocked(self, enabled);
+        session_interaction.setAppCursorKeysLocked(self, enabled);
     }
 
     pub fn setAutoRepeat(self: *TerminalSession, enabled: bool) void {
-        input_modes.setAutoRepeat(self, enabled);
+        session_interaction.setAutoRepeat(self, enabled);
     }
 
     pub fn setAutoRepeatLocked(self: *TerminalSession, enabled: bool) void {
-        input_modes.setAutoRepeatLocked(self, enabled);
+        session_interaction.setAutoRepeatLocked(self, enabled);
     }
 
     pub fn setBracketedPaste(self: *TerminalSession, enabled: bool) void {
-        input_modes.setBracketedPaste(self, enabled);
+        session_interaction.setBracketedPaste(self, enabled);
     }
 
     pub fn setBracketedPasteLocked(self: *TerminalSession, enabled: bool) void {
-        input_modes.setBracketedPasteLocked(self, enabled);
+        session_interaction.setBracketedPasteLocked(self, enabled);
     }
 
     pub fn setFocusReporting(self: *TerminalSession, enabled: bool) void {
-        input_modes.setFocusReporting(self, enabled);
+        session_interaction.setFocusReporting(self, enabled);
     }
 
     pub fn setFocusReportingLocked(self: *TerminalSession, enabled: bool) void {
-        input_modes.setFocusReportingLocked(self, enabled);
+        session_interaction.setFocusReportingLocked(self, enabled);
     }
 
     pub fn setMouseAlternateScroll(self: *TerminalSession, enabled: bool) void {
-        input_modes.setMouseAlternateScroll(self, enabled);
+        session_interaction.setMouseAlternateScroll(self, enabled);
     }
 
     pub fn setMouseAlternateScrollLocked(self: *TerminalSession, enabled: bool) void {
-        input_modes.setMouseAlternateScrollLocked(self, enabled);
+        session_interaction.setMouseAlternateScrollLocked(self, enabled);
     }
 
     pub fn setMouseModeX10(self: *TerminalSession, enabled: bool) void {
-        input_modes.setMouseModeX10(self, enabled);
+        session_interaction.setMouseModeX10(self, enabled);
     }
 
     pub fn setMouseModeX10Locked(self: *TerminalSession, enabled: bool) void {
-        input_modes.setMouseModeX10Locked(self, enabled);
+        session_interaction.setMouseModeX10Locked(self, enabled);
     }
 
     pub fn setMouseModeButton(self: *TerminalSession, enabled: bool) void {
-        input_modes.setMouseModeButton(self, enabled);
+        session_interaction.setMouseModeButton(self, enabled);
     }
 
     pub fn setMouseModeButtonLocked(self: *TerminalSession, enabled: bool) void {
-        input_modes.setMouseModeButtonLocked(self, enabled);
+        session_interaction.setMouseModeButtonLocked(self, enabled);
     }
 
     pub fn setMouseModeAny(self: *TerminalSession, enabled: bool) void {
-        input_modes.setMouseModeAny(self, enabled);
+        session_interaction.setMouseModeAny(self, enabled);
     }
 
     pub fn setMouseModeAnyLocked(self: *TerminalSession, enabled: bool) void {
-        input_modes.setMouseModeAnyLocked(self, enabled);
+        session_interaction.setMouseModeAnyLocked(self, enabled);
     }
 
     pub fn setMouseModeSgr(self: *TerminalSession, enabled: bool) void {
-        input_modes.setMouseModeSgr(self, enabled);
+        session_interaction.setMouseModeSgr(self, enabled);
     }
 
     pub fn setMouseModeSgrLocked(self: *TerminalSession, enabled: bool) void {
-        input_modes.setMouseModeSgrLocked(self, enabled);
+        session_interaction.setMouseModeSgrLocked(self, enabled);
     }
 
     pub fn setMouseModeSgrPixels(self: *TerminalSession, enabled: bool) void {
-        input_modes.setMouseModeSgrPixels(self, enabled);
+        session_interaction.setMouseModeSgrPixels(self, enabled);
     }
 
     pub fn setMouseModeSgrPixelsLocked(self: *TerminalSession, enabled: bool) void {
-        input_modes.setMouseModeSgrPixelsLocked(self, enabled);
+        session_interaction.setMouseModeSgrPixelsLocked(self, enabled);
     }
 
     pub fn resetInputModes(self: *TerminalSession) void {
-        input_modes.resetInputModes(self);
+        session_interaction.resetInputModes(self);
     }
 
     pub fn resetInputModesLocked(self: *TerminalSession) void {
-        input_modes.resetInputModesLocked(self);
+        session_interaction.resetInputModesLocked(self);
     }
 
     pub fn setCursorStyle(self: *TerminalSession, mode: i32) void {
@@ -714,11 +714,11 @@ pub const TerminalSession = struct {
     }
 
     pub fn setKeypadMode(self: *TerminalSession, enabled: bool) void {
-        input_modes.setKeypadMode(self, enabled);
+        session_interaction.setKeypadMode(self, enabled);
     }
 
     pub fn setKeypadModeLocked(self: *TerminalSession, enabled: bool) void {
-        input_modes.setKeypadModeLocked(self, enabled);
+        session_interaction.setKeypadModeLocked(self, enabled);
     }
 
     pub fn restoreCursor(self: *TerminalSession) void {

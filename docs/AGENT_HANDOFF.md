@@ -39,6 +39,7 @@
   - terminal FFI now also emits a derived `redraw_ready` event when snapshot generation advances, giving embedded hosts a minimal wake signal for pulling fresh snapshots without introducing a second damage model
   - host-side FFI resize now also participates in that same `redraw_ready` contract, so PTY-backed foreign hosts and no-PTY embedded hosts share the same wake rule after visible size changes
   - reference-repo read against Ghostty and Alacritty now informs the host wake rule too: keep `start(...)` poll-driven, but emit redraw wake on actual visible-state changes such as streamed output, PTY poll-driven updates, and resize
+  - the input-mode query/toggle surface now also routes through `session_interaction.zig`, shaving another non-runtime API cluster off the root `TerminalSession` facade
   - the FFI-first split now has explicit internal owners: shared ABI/state/helpers in `src/terminal/ffi/shared.zig`, PTY-host operations in `src/terminal/ffi/host_api.zig`, core-facing export logic in `src/terminal/ffi/core_api.zig`, and `bridge.zig` as a thin facade
 - Repo-structure cleanup is complete enough; do not keep grinding non-product cleanup unless a new concrete smell appears.
 - Terminal correctness cleanup remains the quality bar, but the current active lane is architectural center-of-gravity correction.
