@@ -149,6 +149,7 @@ Progress:
 - Migration step: extracted scrollback accessors to `src/terminal/core/scrollback_view.zig` (no behavior change).
 - Migration step: extracted session metadata/hyperlink/clipboard/close-confirm query helpers to `src/terminal/core/session_queries.zig` (no behavior change).
 - Migration step: extracted generation/backlog/presentation feedback helpers to `src/terminal/core/session_publication.zig` (no behavior change).
+- Migration step: extracted scrollback/text-export/scroll-offset content helpers to `src/terminal/core/session_content.zig` (no behavior change).
 - Follow-up (2026-03-09): expanded `app_architecture/terminal/TERMINAL_API.md` with an explicit boundary contract for runtime/protocol/model/publication/widget ownership.
 - Follow-up (2026-03-09): removed the file-global visible-terminal poll input-activity hint; terminal input pressure is now passed explicitly into `poll_visible_terminal_sessions_runtime.handle(...)`.
 - Follow-up (2026-03-09): moved terminal idle/pacing bookkeeping out of `frame_render_idle_runtime` file globals and into `AppState` so scheduler state is instance-owned.
