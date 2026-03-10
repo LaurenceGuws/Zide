@@ -4,6 +4,7 @@
 - Primary: terminal core architecture redesign planning.
   - terminal core review: `app_architecture/review/TERMINAL_CORE_ARCHITECTURE_REVIEW_2026-03-10.md`
   - active terminal core queue: `app_architecture/terminal/vt_core_rearchitecture_todo.yaml`
+  - core boundary design: `app_architecture/terminal/VT_CORE_DESIGN.md`
   - terminal architecture baseline: `app_architecture/terminal/MODULARIZATION_PLAN.md`
 - Current top-of-queue focus:
   - define a real VT core below `TerminalSession`

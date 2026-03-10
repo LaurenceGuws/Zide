@@ -1,0 +1,279 @@
+# VT Core Design
+
+Date: 2026-03-10
+
+Purpose: define the exact ownership split for the next terminal-core redesign
+lane so code changes do not drift between "session cleanup", "FFI cleanup", and
+"embed-friendly cleanup".
+
+This doc is the concrete follow-up to:
+
+- `app_architecture/review/TERMINAL_CORE_ARCHITECTURE_REVIEW_2026-03-10.md`
+- `app_architecture/terminal/vt_core_rearchitecture_todo.yaml`
+
+## Main Goal
+
+Turn Zide's terminal backend into a real embeddable VT engine with:
+
+- a pure terminal emulation core
+- a first-class FFI boundary
+- transport-agnostic host integration
+- renderer-agnostic snapshots and damage
+
+Desktop PTY-backed Zide remains a supported host, but it must stop defining the
+architectural center.
+
+## Target Types
+
+### 1. `TerminalCore`
+
+This becomes the engine-owned center.
+
+It owns:
+
+- parser state
+- protocol execution
+- primary/alt screens
+- history/scrollback
+- selection semantics
+- terminal modes
+- OSC/CSI/DCS/APC state
+- kitty graphics state
+- title/cwd/semantic prompt/backend metadata that belongs to terminal semantics
+- damage generation
+- snapshot generation
+
+It does not own:
+
+- PTY
+- host threads
+- workspace tabs
+- SDL/widget/render state
+- process lifecycle policy
+
+Expected direction:
+
+- `src/terminal/core/terminal_session.zig` stops being the owner of the above
+- the future public engine center should live under `src/terminal/core/` or
+  `src/terminal/engine/`
+
+### 2. `TerminalTransport`
+
+This is the byte-stream boundary around the core.
+
+It owns host-specific delivery of:
+
+- input bytes into the terminal
+- output bytes from the host side into the core
+- resize notifications
+- host lifecycle/wakeup integration
+
+There should be multiple implementations:
+
+- PTY transport
+- external transport adapter
+- test/replay transport
+
+This is the key requirement for:
+
+- Flutter hosts
+- mobile SSH-backed sessions
+- non-PTY embedded environments
+
+`TerminalTransport` should not own terminal semantics. It only moves bytes and
+host signals.
+
+### 3. `PtyTerminalSession`
+
+This is the desktop-host runtime wrapper.
+
+It owns:
+
+- PTY creation/start/stop
+- read/write pumping
+- child exit observation
+- optional threads
+- host polling and pressure hints
+
+It wraps:
+
+- `TerminalCore`
+- one PTY transport implementation
+
+This is the likely future role of today's `TerminalSession`.
+
+### 4. `TerminalSnapshot`
+
+This remains renderer-agnostic and becomes more explicitly core-owned.
+
+It should expose:
+
+- rows/cols
+- flat cell state
+- cursor state
+- damage summary
+- title/cwd metadata needed by hosts
+- selection state needed by hosts/renderers
+- kitty image placement metadata needed by renderers
+
+The snapshot contract should be valid for:
+
+- SDL/OpenGL renderer
+- Flutter renderer
+- FFI consumers
+- replay/test tooling
+
+### 5. `TerminalInputEncoder`
+
+This remains a peer subsystem.
+
+It consumes:
+
+- terminal mode state
+- key/mouse/text events
+
+It emits:
+
+- encoded terminal input bytes
+
+It should be usable:
+
+- from PTY-backed desktop hosts
+- from FFI hosts
+- without pulling in session/runtime code
+
+## Ownership Map
+
+### Core-owned behavior
+
+These behaviors must move toward `TerminalCore` ownership:
+
+- parser feed
+- protocol dispatch
+- screen mutation
+- history/scrollback mutation
+- selection mutation semantics
+- alt-screen behavior
+- terminal mode state
+- protocol-triggered title/cwd/clipboard metadata
+- kitty graphics protocol state
+- snapshot generation
+
+### Host/runtime-owned behavior
+
+These must stay outside the core:
+
+- PTY open/start/stop
+- thread creation
+- child process shutdown
+- desktop polling cadence
+- workspace tab management
+- SDL widget gesture orchestration
+- GPU upload policy
+
+### Shared boundary behavior
+
+These must be explicit contracts:
+
+- feed terminal output bytes into the core
+- request encoded input bytes from host events
+- consume snapshots and damage
+- drain host-visible events
+- resize core state
+
+## Event Model
+
+The core should own a narrow event queue for host-visible state changes.
+
+Candidate core-visible events:
+
+- title changed
+- cwd changed
+- clipboard write request
+- bell
+- child exit observed by host wrapper
+- wake/dirty
+
+Important distinction:
+
+- `bell`, `title`, `cwd`, `clipboard` are terminal/core-facing semantics
+- `child exit` is host/runtime-facing and may be injected into the same exported
+  event stream by a host wrapper
+
+## FFI Direction
+
+The current `zide_terminal_ffi.h` surface is still effectively session-backed.
+
+Future shape:
+
+### Core-facing operations
+
+- create/destroy core-backed handle
+- feed output bytes
+- resize
+- encode/send key/mouse/text
+- snapshot acquire/release
+- scrollback acquire/release
+- event drain/free
+- state getters
+
+### Optional host/runtime operations
+
+- create PTY-backed host session
+- start child
+- poll runtime
+- query child exit
+
+This should become two layers in the API model even if they are initially
+exported from one shared library:
+
+- core API
+- optional PTY host API
+
+That keeps Flutter and mobile consumers from depending on PTY/session semantics
+they do not need.
+
+## Compatibility Strategy
+
+We do not go from zero to hero in one patch.
+
+Migration approach:
+
+1. define `TerminalCore` contract in docs
+2. introduce a new internal core type without changing behavior
+3. make current `TerminalSession` wrap that core
+4. move protocol execution and state ownership onto the core
+5. move FFI to target the core boundary first
+6. keep PTY-backed desktop behavior working through the wrapper
+
+## Immediate Naming Direction
+
+These names are recommended to avoid ambiguity:
+
+- `TerminalCore`
+- `TerminalCoreSnapshot`
+- `TerminalCoreEvent`
+- `TerminalTransport`
+- `PtyTerminalSession`
+
+Avoid continuing to use `TerminalSession` as the name of the engine center once
+the new boundary exists.
+
+## Non-goals
+
+- no Flutter-specific rendering API
+- no renderer rewrite in this lane
+- no protocol behavior change just to fit the new names
+- no broad workspace/UI redesign mixed into the core move
+
+## First Code-Cut Intent
+
+The first implementation slice should be:
+
+- introduce a new internal `TerminalCore` owner
+- move no UI behavior
+- keep current PTY-backed session behavior identical
+- leave FFI surface stable for that slice
+
+That gives the redesign a real center without forcing a full bridge rewrite in
+the same patch.

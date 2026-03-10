@@ -3,39 +3,43 @@ version: 1
 items:
   - id: VTCORE-00
     title: Define the terminal core boundary
-    status: todo
+    status: done
     priority: high
     notes:
       - Introduce a clear engine-owned center below TerminalSession
       - Engine owns terminal emulation state and protocol behavior
       - PTY, workspace, UI, and FFI must become consumers around that core
+      - Concrete boundary and target types are now defined in app_architecture/terminal/VT_CORE_DESIGN.md
 
   - id: VTCORE-01
     title: Separate VT core from host session/runtime
-    status: todo
+    status: in_progress
     priority: high
     notes:
       - Shrink TerminalSession into a host/runtime wrapper
       - Remove parser, screen, history, protocol, and terminal-mode gravity from TerminalSession
       - Preserve behavior while moving ownership, not by adding compatibility sludge
+      - First code-cut intent: introduce an internal TerminalCore while keeping PTY-backed desktop behavior unchanged
 
   - id: VTCORE-02
     title: Make FFI a first-class core interface
-    status: todo
+    status: in_progress
     priority: high
     notes:
       - FFI must target the new terminal core and stable snapshot contracts
       - Do not keep FFI structurally tied to desktop session/workspace design
       - Support non-UI consumers such as Flutter hosts cleanly
+      - Design direction now distinguishes core-facing operations from optional PTY host/runtime operations
 
   - id: VTCORE-03
     title: Introduce transport-agnostic host integration
-    status: todo
+    status: in_progress
     priority: high
     notes:
       - PTY must become one transport implementation, not the architectural center
       - Support externally supplied byte streams/write sinks for SSH/mobile/embed hosts
       - Resize and lifecycle delivery must work without host-owned PTY assumptions
+      - Target type and ownership rules are now defined in app_architecture/terminal/VT_CORE_DESIGN.md
 
   - id: VTCORE-04
     title: Move protocol execution onto core/model contracts
