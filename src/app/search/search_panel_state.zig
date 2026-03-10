@@ -1,5 +1,5 @@
 const std = @import("std");
-const editor_mod = @import("../editor/editor.zig");
+const editor_mod = @import("../../editor/editor.zig");
 
 const Editor = editor_mod.Editor;
 

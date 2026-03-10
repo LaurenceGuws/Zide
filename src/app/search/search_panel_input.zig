@@ -1,5 +1,5 @@
 const std = @import("std");
-const shared_types = @import("../types/mod.zig");
+const shared_types = @import("../../types/mod.zig");
 
 pub const SearchPanelCommand = enum {
     none,

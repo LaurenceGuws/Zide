@@ -2,7 +2,7 @@ const app_search_panel_input = @import("search_panel_input.zig");
 const app_search_panel_state = @import("search_panel_state.zig");
 const std = @import("std");
 
-const Editor = @import("../editor/editor.zig").Editor;
+const Editor = @import("../../editor/editor.zig").Editor;
 
 pub const CommandApplyResult = struct {
     handled: bool = false,
@@ -49,4 +49,3 @@ pub fn applyCommand(
     }
     return out;
 }
-

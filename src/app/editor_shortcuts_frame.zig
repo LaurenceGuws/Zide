@@ -1,6 +1,6 @@
 const std = @import("std");
 const app_editor_actions = @import("editor_actions.zig");
-const app_search_panel_state = @import("search_panel_state.zig");
+const app_search_panel_state = @import("search/search_panel_state.zig");
 const app_shell = @import("../app_shell.zig");
 const editor_mod = @import("../editor/editor.zig");
 const shared_types = @import("../types/mod.zig");
@@ -182,4 +182,3 @@ pub fn handle(
 
     return out;
 }
-
