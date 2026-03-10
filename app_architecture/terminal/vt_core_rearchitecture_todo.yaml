@@ -102,6 +102,7 @@ items:
       - Second prep slice landed: selection projection now lives under src/terminal/core/view_cache_selection.zig, so view_cache.zig no longer owns both selection projection and publication/diff helpers inline
       - Third prep slice landed: viewport-shift/full-vs-partial publication planning now lives under src/terminal/core/view_cache_plan.zig, so view_cache.zig no longer owns those publication decisions inline
       - Fourth prep slice landed: row-hash refinement now lives under src/terminal/core/view_cache_refinement.zig, isolating that optional publication optimization from the base view-cache update flow
+      - Fifth prep slice landed: selection-change dirty expansion now lives under src/terminal/core/view_cache_selection_dirty.zig, so selection-driven damage widening is no longer embedded in the base view-cache update path
 
   - id: VTCORE-06
     title: Keep input encoding as a peer subsystem
