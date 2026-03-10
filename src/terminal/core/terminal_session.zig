@@ -25,6 +25,7 @@ const hyperlink_table = @import("hyperlink_table.zig");
 const state_reset = @import("state_reset.zig");
 const scrollback_view = @import("scrollback_view.zig");
 const text_export = @import("text_export.zig");
+const session_queries = @import("session_queries.zig");
 const osc_kitty_clipboard = @import("../protocol/osc_kitty_clipboard.zig");
 const Pty = pty_mod.Pty;
 const PtySize = pty_mod.PtySize;
@@ -61,14 +62,7 @@ pub const ScrollbackInfo = scrollback_view.ScrollbackInfo;
 pub const ScrollbackRange = scrollback_view.ScrollbackRange;
 pub const SelectionGesture = selection_mod.SelectionGesture;
 pub const ClickSelectionResult = selection_mod.ClickSelectionResult;
-pub const SessionMetadata = struct {
-    title: []const u8,
-    cwd: []const u8,
-    scrollback_count: usize,
-    scrollback_offset: usize,
-    alive: bool,
-    exit_code: ?i32,
-};
+pub const SessionMetadata = session_queries.SessionMetadata;
 pub const PresentedRenderCache = struct {
     generation: u64,
     dirty: Dirty,
@@ -1599,18 +1593,8 @@ pub const TerminalSession = struct {
         self.updateViewCacheNoLock(self.output_generation.load(.acquire), offset);
     }
 
-    fn copyTextInto(allocator: std.mem.Allocator, out: *std.ArrayList(u8), text: []const u8) ![]const u8 {
-        out.clearRetainingCapacity();
-        try out.appendSlice(allocator, text);
-        return out.items;
-    }
-
     fn takeOscClipboardCopyLocked(self: *TerminalSession, allocator: std.mem.Allocator, out: *std.ArrayList(u8)) !bool {
-        out.clearRetainingCapacity();
-        if (!self.osc_clipboard_pending) return false;
-        try out.appendSlice(allocator, self.osc_clipboard.items);
-        self.osc_clipboard_pending = false;
-        return true;
+        return session_queries.takeOscClipboardCopyLocked(self, allocator, out);
     }
 
     pub fn takeOscClipboardCopy(self: *TerminalSession, allocator: std.mem.Allocator, out: *std.ArrayList(u8)) !bool {
@@ -1627,12 +1611,7 @@ pub const TerminalSession = struct {
     }
 
     pub fn copyHyperlinkUri(self: *TerminalSession, allocator: std.mem.Allocator, link_id: u32, out: *std.ArrayList(u8)) !?[]const u8 {
-        self.lock();
-        defer self.unlock();
-        out.clearRetainingCapacity();
-        const uri = hyperlink_table.hyperlinkUri(self, link_id) orelse return null;
-        try out.appendSlice(allocator, uri);
-        return out.items;
+        return session_queries.copyHyperlinkUri(self, allocator, link_id, out);
     }
 
     pub fn copyMetadata(
@@ -1641,30 +1620,7 @@ pub const TerminalSession = struct {
         title_out: *std.ArrayList(u8),
         cwd_out: *std.ArrayList(u8),
     ) !SessionMetadata {
-        self.lock();
-        defer self.unlock();
-
-        const title = if (self.pty) |*pty|
-            (pty.foregroundProcessLabel() orelse self.title)
-        else
-            self.title;
-        const cwd = self.cwd;
-        const scrollback = scrollback_view.scrollbackInfo(self);
-        const scroll_offset: usize = if (self.active == .alt) 0 else self.history.scrollOffset();
-        const alive = if (self.pty) |*pty| pty.isAlive() else false;
-        const exit_code = if (self.child_exited.load(.acquire))
-            self.child_exit_code.load(.acquire)
-        else
-            null;
-
-        return .{
-            .title = try copyTextInto(allocator, title_out, title),
-            .cwd = try copyTextInto(allocator, cwd_out, cwd),
-            .scrollback_count = scrollback.total_rows,
-            .scrollback_offset = scroll_offset,
-            .alive = alive,
-            .exit_code = exit_code,
-        };
+        return session_queries.copyMetadata(self, allocator, title_out, cwd_out);
     }
 
     fn clearPublishedDamageIfGeneration(self: *TerminalSession, expected_generation: u64, clear_screen_dirty: bool) bool {
@@ -1880,39 +1836,18 @@ pub const TerminalSession = struct {
         return input_snapshot.mouse_mode_x10.load(.acquire) or input_snapshot.mouse_mode_button.load(.acquire) or input_snapshot.mouse_mode_any.load(.acquire);
     }
 
-    pub const CloseConfirmSignals = struct {
-        foreground_process: bool = false,
-        semantic_command: bool = false,
-        alt_screen: bool = false,
-        mouse_reporting: bool = false,
-
-        pub fn any(self: CloseConfirmSignals) bool {
-            return self.foreground_process or self.semantic_command or self.alt_screen or self.mouse_reporting;
-        }
-    };
+    pub const CloseConfirmSignals = session_queries.CloseConfirmSignals;
 
     pub fn closeConfirmSignals(self: *TerminalSession) CloseConfirmSignals {
-        var signals = CloseConfirmSignals{};
-        if (!self.isAlive()) return signals;
-
-        if (self.pty) |*pty| {
-            signals.foreground_process = pty.hasForegroundProcessOutsideShell();
-        }
-        signals.semantic_command = self.semantic_prompt.input_active or self.semantic_prompt.output_active;
-        signals.alt_screen = self.isAltActive();
-        signals.mouse_reporting = self.mouseReportingEnabled();
-        return signals;
+        return session_queries.closeConfirmSignals(self);
     }
 
     pub fn shouldConfirmClose(self: *TerminalSession) bool {
-        return self.closeConfirmSignals().any();
+        return session_queries.shouldConfirmClose(self);
     }
 
     pub fn isAlive(self: *TerminalSession) bool {
-        if (self.pty) |*pty| {
-            return pty.isAlive();
-        }
-        return false;
+        return session_queries.isAlive(self);
     }
 
     pub fn getDamage(self: *TerminalSession) ?struct {
