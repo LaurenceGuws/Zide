@@ -302,6 +302,9 @@ Embedded-host wake semantics also moved forward:
   inventing a second damage model in the FFI layer
 - damage and generation still remain authoritative in snapshot acquisition;
   `redraw_ready` is only a scheduling hint for host event loops
+- host-side `resize(...)` now also goes through that derived wake path, so
+  PTY-backed foreign hosts and no-PTY embedded hosts both get an immediate
+  redraw signal after visible size changes
 
 Protocol execution also moved another step toward core ownership:
 

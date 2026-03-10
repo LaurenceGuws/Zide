@@ -37,6 +37,17 @@ test "ffi non-pty snapshot and event ownership smoke" {
 
     try std.testing.expectEqual(@as(c_int, 0), c_api.zide_terminal_resize(handle, 80, 24, 8, 16));
 
+    {
+        var resize_events: c_api.ZideTerminalEventBuffer = .{};
+        try std.testing.expectEqual(@as(c_int, 0), c_api.zide_terminal_event_drain(handle, &resize_events));
+        defer c_api.zide_terminal_events_free(&resize_events);
+        try std.testing.expectEqual(@as(usize, 1), resize_events.count);
+        try std.testing.expectEqual(
+            @as(c_int, @intFromEnum(c_api.ZideTerminalEventKind.redraw_ready)),
+            resize_events.events.?[0].kind,
+        );
+    }
+
     const vt = "\x1b]0;ffi-title\x07\x1b]52;c;ZmZpLWNsaXA=\x07";
     try std.testing.expectEqual(@as(c_int, 0), c_api.zide_terminal_feed_output(handle, vt.ptr, vt.len));
 
@@ -69,13 +80,17 @@ test "ffi non-pty snapshot and event ownership smoke" {
     var events: c_api.ZideTerminalEventBuffer = .{};
     try std.testing.expectEqual(@as(c_int, 0), c_api.zide_terminal_event_drain(handle, &events));
     defer c_api.zide_terminal_events_free(&events);
-    try std.testing.expectEqual(@as(usize, 2), events.count);
+    try std.testing.expectEqual(@as(usize, 3), events.count);
 
     var saw_title = false;
     var saw_clipboard = false;
+    var saw_redraw = false;
     for (events.events.?[0..events.count]) |event| {
         const payload = ptrBytes(event.data_ptr, event.data_len);
         switch (event.kind) {
+            @intFromEnum(c_api.ZideTerminalEventKind.redraw_ready) => {
+                saw_redraw = true;
+            },
             @intFromEnum(c_api.ZideTerminalEventKind.title_changed) => {
                 saw_title = std.mem.eql(u8, payload, "ffi-title");
             },
@@ -86,6 +101,7 @@ test "ffi non-pty snapshot and event ownership smoke" {
         }
     }
 
+    try std.testing.expect(saw_redraw);
     try std.testing.expect(saw_title);
     try std.testing.expect(saw_clipboard);
 }
