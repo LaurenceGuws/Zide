@@ -18,6 +18,7 @@ pub const debugSnapshot = session_mod.debugSnapshot;
 pub const debugScrollbackRow = session_mod.debugScrollbackRow;
 pub const debugSetCursor = session_mod.debugSetCursor;
 pub const debugFeedBytes = session_mod.debugFeedBytes;
+pub const debugScrollUp = session_mod.debugScrollUp;
 
 pub const TerminalSession = session_mod.TerminalSession;
 pub const TerminalWorkspace = workspace_mod.TerminalWorkspace;

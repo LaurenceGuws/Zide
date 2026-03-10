@@ -111,6 +111,11 @@ test "full-region scroll publishes partial cache damage at live bottom" {
     const cache = session.renderCache();
     try std.testing.expectEqual(Dirty.partial, cache.dirty);
     try std.testing.expectEqual(@as(i32, 1), cache.viewport_shift_rows);
+    try std.testing.expect(cache.viewport_shift_exposed_only);
+    try std.testing.expectEqual(@as(usize, 2), cache.damage.start_row);
+    try std.testing.expectEqual(@as(usize, 2), cache.damage.end_row);
+    try std.testing.expectEqual(@as(usize, 0), cache.damage.start_col);
+    try std.testing.expectEqual(@as(usize, 3), cache.damage.end_col);
     try std.testing.expectEqual(@as(usize, 1), session.scrollbackInfo().total_rows);
 }
 

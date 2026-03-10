@@ -98,6 +98,10 @@ pub fn debugFeedBytes(self: *TerminalSession, bytes: []const u8) void {
     session_debug.debugFeedBytes(self, bytes);
 }
 
+pub fn debugScrollUp(self: *TerminalSession) void {
+    session_debug.debugScrollUp(self);
+}
+
 /// Minimal terminal stub so the UI panel stays wired while backend is removed.
 pub const TerminalSession = struct {
     allocator: std.mem.Allocator,

@@ -258,6 +258,22 @@ The first non-PTY transport shape is now also landed internally:
 - FFI-created terminal sessions attach that external transport by default
 - `zide_terminal_feed_output(...)` now enqueues bytes into that transport and
   runs the normal session poll path, instead of bypassing backend transport
+
+### 2026-03-11 first render-publication behavior change
+
+`VTCORE-05` is no longer prep-only.
+
+The first real publication behavior change is now landed:
+
+- live-bottom full-region scroll publication can use viewport-shift exposure
+  instead of widening damage to the whole viewport
+- the replay contract for that case is now harness-owned rather than relying on
+  mixed baseline VT input plus direct scroll actions
+- row-hash refinement is also skipped for scroll-shift publication, so that
+  row-position hashing does not undo a valid exposed-row shift plan
+
+This matters because it is the first backend publication optimization locked by
+replay authority instead of only by unit tests or visual anecdotes.
   ownership through a direct parser-only shortcut
 
 This keeps the no-PTY host path closer to the future embed/mobile shape while

@@ -1,5 +1,5 @@
 {
-  "fixture_type": "vt",
+  "fixture_type": "harness_api",
   "rows": 3,
   "cols": 4,
   "cursor": { "row": 0, "col": 0 },
@@ -8,11 +8,12 @@
   "assertions": ["grid", "damage", "viewport-shift", "scrollback"],
   "expected_dirty": "partial",
   "expected_damage": {
-    "start_row": 0,
+    "start_row": 2,
     "end_row": 2,
     "start_col": 0,
     "end_col": 3
   },
-  "expected_viewport_shift_rows": 2,
-  "expected_viewport_shift_exposed_only": false
+  "expected_viewport_shift_rows": 1,
+  "expected_viewport_shift_exposed_only": true,
+  "scroll_full_up_count": 1
 }
