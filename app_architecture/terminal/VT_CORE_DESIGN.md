@@ -417,6 +417,9 @@ Session construction also moved one step toward host-wrapper ownership:
   helpers live under `src/terminal/core/view_cache_publication.zig`, so
   `view_cache.zig` is beginning to separate projection from publication
   planning without changing behavior
+- selection projection now also lives under
+  `src/terminal/core/view_cache_selection.zig`, so `view_cache.zig` is no
+  longer carrying both selection projection and publication/diff helpers inline
 - stale private root-session shims for SGR application and key-mode flag reads
   are now removed too, keeping the root session file closer to a real facade
   instead of a pile of dead internal forwarding
