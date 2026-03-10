@@ -284,6 +284,14 @@ It is also no longer FFI-only:
 - at this point higher-level setup callers no longer need raw
   `terminal_transport.attach*/detach*` for normal session assembly paths
 
+Protocol execution also moved another step toward core ownership:
+
+- saved-cursor restore and alt-screen core state transitions now live behind
+  `src/terminal/core/terminal_core_modes.zig`
+- `session_protocol.zig` now only layers the remaining session-owned side
+  effects around that core transition, such as selection clearing, input
+  snapshot publication, and alt-exit presentation signaling
+
 ## Compatibility Strategy
 
 We do not go from zero to hero in one patch.
