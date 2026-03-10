@@ -177,17 +177,18 @@ file_layout_todo:
 
         - id: FL-CFG-01
           title: "Split src/config/lua_config_ziglua_parse.zig by parser/validation/domain mapping concerns"
-          status: todo
+          status: in_progress
           files:
             - src/config/lua_config_ziglua_parse.zig
           notes:
             - "Keep public config loading entrypoints stable."
+            - "2026-03-10: first slice landed in progress by extracting theme/color/editor-theme parsing into `src/config/lua_config_theme_parse.zig`. `lua_config_ziglua_parse.zig` now focuses more tightly on scalar option parsing and keybind parsing instead of also owning the full theme parser."
 
     - name: "Phase 3 - Over-Split Artifact Collapse"
       tasks:
         - id: FL-TERM-01
           title: "Collapse low-value session_* micro-files into fewer coherent owners"
-          status: in_progress
+          status: done
           files:
             - src/terminal/core
           notes:
@@ -195,6 +196,7 @@ file_layout_todo:
             - "Keep protocol/input/rendering/runtime as distinct owners."
             - "2026-03-10: first slice landed in progress by collapsing `session_clipboard.zig` into `session_interaction.zig`. Paste fallback policy and input-snapshot/OSC 5522 interaction were already one cohesive surface, so the extra file only added navigation overhead without buying a real ownership boundary."
             - "2026-03-10: second slice landed in progress by collapsing `session_publication.zig` into `session_rendering.zig`. Generation tracking, backlog hints, presented-generation acknowledgement, and presentation feedback were already one presentation lifecycle surface, so the split no longer paid for itself."
+            - "2026-03-10: task closed after those two collapses. The remaining `session_*` files still map cleanly to real owners (`input`, `protocol`, `rendering`, `runtime`, `selection`, `queries`, `content`, `config`), so more merging there would re-mix domains rather than reduce layout smell."
 
         - id: FL-UI-05
           title: "Collapse low-value renderer micro-files into stronger local owners"
