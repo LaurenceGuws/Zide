@@ -32,6 +32,10 @@ pub export fn zide_terminal_feed_output(handle: ?*c_api.ZideTerminalHandle, byte
     return c_api.zide_terminal_feed_output(handle, bytes, len);
 }
 
+pub export fn zide_terminal_close_input(handle: ?*c_api.ZideTerminalHandle) c_int {
+    return c_api.zide_terminal_close_input(handle);
+}
+
 pub export fn zide_terminal_send_key(handle: ?*c_api.ZideTerminalHandle, event: ?*const c_api.ZideTerminalKeyEvent) c_int {
     return c_api.zide_terminal_send_key(handle, event);
 }

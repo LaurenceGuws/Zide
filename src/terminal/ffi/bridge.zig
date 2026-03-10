@@ -57,6 +57,10 @@ pub fn feedOutput(handle: ?*ZideTerminalHandle, bytes: ?[*]const u8, len: usize)
     return core_api.feedOutput(handle, bytes, len);
 }
 
+pub fn closeInput(handle: ?*ZideTerminalHandle) Status {
+    return core_api.closeInput(handle);
+}
+
 pub fn sendKey(handle: ?*ZideTerminalHandle, event: ?*const KeyEvent) Status {
     return host_api.sendKey(handle, event);
 }

@@ -35,6 +35,7 @@
   - higher-level callers now use session-owned wrapper methods for external transport attach/enqueue/close instead of touching `terminal_transport` directly for that path
   - reply-capture PTY attachment in replay now also goes through the same session-owned wrapper style
   - higher-level session assembly now consistently chooses PTY vs external transport through `TerminalSession` wrapper methods rather than raw `terminal_transport` attach/detach calls
+  - terminal FFI now also exposes `close_input(...)` plus a derived `alive_changed` event for no-PTY hosts, so embedded consumers can observe external-input closure without keeping the terminal alive forever by polling metadata only
   - the FFI-first split now has explicit internal owners: shared ABI/state/helpers in `src/terminal/ffi/shared.zig`, PTY-host operations in `src/terminal/ffi/host_api.zig`, core-facing export logic in `src/terminal/ffi/core_api.zig`, and `bridge.zig` as a thin facade
 - Repo-structure cleanup is complete enough; do not keep grinding non-product cleanup unless a new concrete smell appears.
 - Terminal correctness cleanup remains the quality bar, but the current active lane is architectural center-of-gravity correction.
