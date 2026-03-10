@@ -29,6 +29,7 @@ const session_content = @import("session_content.zig");
 const session_selection = @import("session_selection.zig");
 const session_input = @import("session_input.zig");
 const session_interaction = @import("session_interaction.zig");
+const session_rendering = @import("session_rendering.zig");
 const osc_kitty_clipboard = @import("../protocol/osc_kitty_clipboard.zig");
 const Pty = pty_mod.Pty;
 const PtySize = pty_mod.PtySize;
@@ -66,10 +67,7 @@ pub const ScrollbackRange = session_content.ScrollbackRange;
 pub const SelectionGesture = session_selection.SelectionGesture;
 pub const ClickSelectionResult = session_selection.ClickSelectionResult;
 pub const SessionMetadata = session_queries.SessionMetadata;
-pub const PresentedRenderCache = struct {
-    generation: u64,
-    dirty: Dirty,
-};
+pub const PresentedRenderCache = session_rendering.PresentedRenderCache;
 
 pub const AltExitPresentationInfo = struct {
     draw_ms: f64,
@@ -1278,51 +1276,15 @@ pub const TerminalSession = struct {
     }
 
     pub fn snapshot(self: *TerminalSession) TerminalSnapshot {
-        const screen = self.activeScreenConst();
-        const view = screen.snapshotView();
-        const alt_active = self.isAltActive();
-        const kitty = kitty_mod.kittyStateConst(self);
-        return TerminalSnapshot{
-            .rows = view.rows,
-            .cols = view.cols,
-            .cells = view.cells,
-            .dirty_rows = view.dirty_rows,
-            .dirty_cols_start = view.dirty_cols_start,
-            .dirty_cols_end = view.dirty_cols_end,
-            .cursor = view.cursor,
-            .cursor_style = view.cursor_style,
-            .cursor_visible = view.cursor_visible,
-            .dirty = view.dirty,
-            .damage = view.damage,
-            .scrollback_count = self.history.scrollbackCount(),
-            .scrollback_offset = self.history.scrollOffset(),
-            .selection = selection_mod.selectionState(self),
-            .alt_active = alt_active,
-            .screen_reverse = screen.screen_reverse,
-            .generation = self.output_generation.load(.acquire),
-            .kitty_images = kitty.images.items,
-            .kitty_placements = kitty.placements.items,
-            .kitty_generation = kitty.generation,
-        };
+        return session_rendering.snapshot(self);
     }
 
     pub fn renderCache(self: *TerminalSession) *const RenderCache {
-        const idx = self.render_cache_index.load(.acquire);
-        return &self.render_caches[idx];
+        return session_rendering.renderCache(self);
     }
 
     pub fn copyPublishedRenderCache(self: *TerminalSession, dst: *RenderCache) !PresentedRenderCache {
-        self.lock();
-        defer self.unlock();
-        if (self.view_cache_pending.load(.acquire)) {
-            self.updateViewCacheForScrollLocked();
-        }
-        const cache = self.renderCache();
-        try render_cache_mod.copySnapshot(dst, self.allocator, cache);
-        return .{
-            .generation = cache.generation,
-            .dirty = cache.dirty,
-        };
+        return session_rendering.copyPublishedRenderCache(self, dst);
     }
 
     pub fn completePresentationFeedback(self: *TerminalSession, feedback: PresentationFeedback) void {
@@ -1330,20 +1292,15 @@ pub const TerminalSession = struct {
     }
 
     pub fn syncUpdatesActive(self: *const TerminalSession) bool {
-        return self.sync_updates_active;
+        return session_rendering.syncUpdatesActive(self);
     }
 
     pub fn setSyncUpdates(self: *TerminalSession, enabled: bool) void {
-        self.lock();
-        defer self.unlock();
-        self.setSyncUpdatesLocked(enabled);
+        session_rendering.setSyncUpdates(self, enabled);
     }
 
     pub fn setSyncUpdatesLocked(self: *TerminalSession, enabled: bool) void {
-        if (self.sync_updates_active == enabled) return;
-        self.sync_updates_active = enabled;
-        const offset: usize = self.history.scrollOffset();
-        self.updateViewCacheNoLock(self.output_generation.load(.acquire), offset);
+        session_rendering.setSyncUpdatesLocked(self, enabled);
     }
 
     fn takeOscClipboardCopyLocked(self: *TerminalSession, allocator: std.mem.Allocator, out: *std.ArrayList(u8)) !bool {
@@ -1377,17 +1334,7 @@ pub const TerminalSession = struct {
     }
 
     pub fn clearPublishedDamageIfGeneration(self: *TerminalSession, expected_generation: u64, clear_screen_dirty: bool) bool {
-        self.lock();
-        defer self.unlock();
-        if (self.output_generation.load(.acquire) != expected_generation) return false;
-        if (clear_screen_dirty) {
-            self.activeScreen().clearDirty();
-        }
-        inline for (0..2) |i| {
-            self.render_caches[i].dirty = .none;
-            self.render_caches[i].damage = .{ .start_row = 0, .end_row = 0, .start_col = 0, .end_col = 0 };
-        }
-        return true;
+        return session_rendering.clearPublishedDamageIfGeneration(self, expected_generation, clear_screen_dirty);
     }
 
     pub fn clearSelection(self: *TerminalSession) void {
