@@ -46,3 +46,4 @@ Quick map of where to look for common needs.
 ## Reviews and audits
 - `app_architecture/review/` — past review notes (scope + date in file).
   - `app_architecture/review/FILE_LAYOUT_HOTSPOTS_REVIEW.md` — current structure smell review and reference-repo comparison.
+  - `app_architecture/review/SRC_APP_DOMAIN_MAP.md` — authoritative `src/app` ownership map for the ongoing folder cleanup.

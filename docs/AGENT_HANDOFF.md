@@ -3,10 +3,11 @@
 ### Current Focus
 - Primary: structural file/folder layout cleanup after the terminal correctness rewrite substantially reduced the worst backend/UI design smells.
   - file/folder hotspot review: `app_architecture/review/FILE_LAYOUT_HOTSPOTS_REVIEW.md`
+  - `src/app` placement authority: `app_architecture/review/SRC_APP_DOMAIN_MAP.md`
   - active cleanup queue: `app_architecture/file_layout_todo.yaml`
   - terminal architecture baseline: `app_architecture/terminal/MODULARIZATION_PLAN.md`
   - UI/backend seam tracker: `app_architecture/ui/ui_widget_modularization_todo.yaml`
-- Current top-of-queue focus: `src/app` folder restructuring, remaining giant file splits (`editor`, widget draw, renderer/font, config parse), and collapse of low-value micro-files created by earlier extraction work.
+- Current top-of-queue focus: execute the new `src/app` domain map starting with the `src/app/terminal/` subtree move, then continue with the remaining giant file splits (`editor`, widget draw, renderer/font, config parse) and collapse of low-value micro-files created by earlier extraction work.
 - Terminal correctness cleanup is not abandoned; it is now background context and baseline, not the primary structural review lane.
 
 ### Recent Changes (High-Level)

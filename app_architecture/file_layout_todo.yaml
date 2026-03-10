@@ -10,6 +10,7 @@ file_layout_todo:
   context:
     references:
       - app_architecture/review/FILE_LAYOUT_HOTSPOTS_REVIEW.md
+      - app_architecture/review/SRC_APP_DOMAIN_MAP.md
       - app_architecture/terminal/MODULARIZATION_PLAN.md
       - app_architecture/ui/ui_widget_modularization_todo.yaml
       - app_architecture/editor/MODULARIZATION_PLAN.md
@@ -57,13 +58,15 @@ file_layout_todo:
       tasks:
         - id: FL-APP-01
           title: "Define a stable domain map for src/app"
-          status: todo
+          status: done
           files:
             - src/app
+            - app_architecture/review/SRC_APP_DOMAIN_MAP.md
           notes:
             - "Goal: replace suffix-driven flatness with domain-owned folders."
             - "Likely targets: runtime, frame, terminal, editor, tabs, search, config."
-            - "Do not move files yet until the ownership map is written down."
+            - "Done: authoritative domain map recorded in `app_architecture/review/SRC_APP_DOMAIN_MAP.md`."
+            - "Move order starts with `src/app/terminal/` as the first high-value subtree."
 
         - id: FL-APP-02
           title: "Move terminal-owned app runtime files under a focused src/app/terminal subtree"
