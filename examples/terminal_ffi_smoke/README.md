@@ -47,6 +47,10 @@ Mock external-host scenario:
 1. `zig build build-terminal-ffi`
 2. `python3 examples/terminal_ffi_smoke/main.py --scenario mock-service --lib zig-out/lib/libzide-terminal-ffi.so`
 
+ABI-shape regression scenario:
+1. `zig build build-terminal-ffi`
+2. `python3 examples/terminal_ffi_smoke/main.py --scenario abi-mismatch --lib zig-out/lib/libzide-terminal-ffi.so`
+
 Shared Python host boot helpers:
 - `examples/common/ffi_host_boot.py`
 

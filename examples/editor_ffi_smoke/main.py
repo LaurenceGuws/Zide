@@ -105,6 +105,11 @@ def to_buf(data: bytes):
     return arr, len(data)
 
 
+def expect_invalid_argument(status: int, context: str) -> None:
+    if status != STATUS_OK + 1:
+        raise RuntimeError(f"{context} expected invalid_argument, got {status}")
+
+
 def run_smoke(lib_path: Path) -> int:
     lib = load_library(lib_path)
     handle = HandlePtr()
@@ -192,6 +197,40 @@ def run_smoke(lib_path: Path) -> int:
         lib.zide_editor_destroy(handle)
 
 
+def run_invalid_argument_smoke(lib_path: Path) -> int:
+    lib = load_library(lib_path)
+
+    out_count = ctypes.c_size_t(0)
+    expect_invalid_argument(
+        lib.zide_editor_total_len(HandlePtr(), ctypes.byref(out_count)),
+        "total_len(null handle)",
+    )
+
+    expect_invalid_argument(
+        lib.zide_editor_replace_range(HandlePtr(), 5, 3, *to_buf(b"x")),
+        "replace_range(end<start)",
+    )
+
+    handle = HandlePtr()
+    status = lib.zide_editor_create(ctypes.byref(handle))
+    if status != STATUS_OK:
+        raise RuntimeError(f"create failed: {status}")
+    try:
+        expect_invalid_argument(
+            lib.zide_editor_search_match_get(handle, 0, ctypes.byref(SearchMatch())),
+            "search_match_get(out of bounds)",
+        )
+        expect_invalid_argument(
+            lib.zide_editor_aux_caret_get(handle, 0, ctypes.byref(ctypes.c_size_t(0))),
+            "aux_caret_get(out of bounds)",
+        )
+        print("editor ffi invalid argument regression ok")
+        print("cases=null-handle,replace-range-order,search-match-oob,aux-caret-oob")
+        return 0
+    finally:
+        lib.zide_editor_destroy(handle)
+
+
 def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument(
@@ -199,7 +238,14 @@ def main() -> int:
         default="zig-out/lib/libzide-editor-ffi.so",
         help="Path to editor ffi shared library",
     )
+    parser.add_argument(
+        "--scenario",
+        choices=("baseline", "invalid-args"),
+        default="baseline",
+    )
     args = parser.parse_args()
+    if args.scenario == "invalid-args":
+        return run_invalid_argument_smoke(Path(args.lib))
     return run_smoke(Path(args.lib))
 
 

@@ -230,6 +230,11 @@ def load_library(path: Path):
     lib.zide_terminal_status_string.restype = ctypes.c_char_p
     return lib
 
+
+def expect_invalid_argument(status: int, context: str) -> None:
+    if status != 1:
+        raise RuntimeError(f"{context} expected invalid_argument, got {status}")
+
 def render_first_row(snapshot: Snapshot) -> str:
     return render_snapshot_row(snapshot, 0)
 
@@ -478,10 +483,90 @@ def run_mock_service_smoke(lib_path: Path) -> int:
         lib.zide_terminal_destroy(handle)
 
 
+def run_abi_mismatch_smoke(lib_path: Path) -> int:
+    lib = load_library(lib_path)
+    handle = HandlePtr()
+    cfg = CreateConfig(rows=4, cols=16, scrollback_rows=16, cursor_shape=0, cursor_blink=0)
+
+    status = lib.zide_terminal_create(ctypes.byref(cfg), ctypes.byref(handle))
+    if status != STATUS_OK:
+        raise RuntimeError(f"create failed: {status}")
+    try:
+        if lib.zide_terminal_resize(handle, 16, 4, 8, 16) != STATUS_OK:
+            raise RuntimeError("resize failed")
+
+        snapshot = Snapshot()
+        snapshot.abi_version = 999
+        snapshot.struct_size = 1
+        status = lib.zide_terminal_snapshot_acquire(handle, ctypes.byref(snapshot))
+        if status != STATUS_OK:
+            raise RuntimeError(f"snapshot_acquire failed: {status}")
+        try:
+            if snapshot.abi_version != lib.zide_terminal_snapshot_abi_version():
+                raise RuntimeError(f"unexpected snapshot abi_version: {snapshot.abi_version}")
+            if snapshot.struct_size != ctypes.sizeof(Snapshot):
+                raise RuntimeError(f"unexpected snapshot struct_size: {snapshot.struct_size}")
+            snapshot_result = (snapshot.abi_version, snapshot.struct_size)
+        finally:
+            lib.zide_terminal_snapshot_release(ctypes.byref(snapshot))
+
+        scrollback = ScrollbackBuffer()
+        scrollback.abi_version = 999
+        scrollback.struct_size = 1
+        status = lib.zide_terminal_scrollback_acquire(handle, 0, 1, ctypes.byref(scrollback))
+        if status != STATUS_OK:
+            raise RuntimeError(f"scrollback_acquire failed: {status}")
+        try:
+            if scrollback.abi_version != lib.zide_terminal_scrollback_abi_version():
+                raise RuntimeError(f"unexpected scrollback abi_version: {scrollback.abi_version}")
+            if scrollback.struct_size != ctypes.sizeof(ScrollbackBuffer):
+                raise RuntimeError(f"unexpected scrollback struct_size: {scrollback.struct_size}")
+            scrollback_result = (scrollback.abi_version, scrollback.struct_size)
+        finally:
+            lib.zide_terminal_scrollback_release(ctypes.byref(scrollback))
+
+        metadata = Metadata()
+        metadata.abi_version = 999
+        metadata.struct_size = 1
+        status = lib.zide_terminal_metadata_acquire(handle, ctypes.byref(metadata))
+        if status != STATUS_OK:
+            raise RuntimeError(f"metadata_acquire failed: {status}")
+        try:
+            if metadata.abi_version != lib.zide_terminal_metadata_abi_version():
+                raise RuntimeError(f"unexpected metadata abi_version: {metadata.abi_version}")
+            if metadata.struct_size != ctypes.sizeof(Metadata):
+                raise RuntimeError(f"unexpected metadata struct_size: {metadata.struct_size}")
+            metadata_result = (metadata.abi_version, metadata.struct_size)
+        finally:
+            lib.zide_terminal_metadata_release(ctypes.byref(metadata))
+
+        renderer = RendererMetadata()
+        renderer.abi_version = 999
+        renderer.struct_size = 1
+        status = lib.zide_terminal_renderer_metadata(0x41, ctypes.byref(renderer))
+        if status != STATUS_OK:
+            raise RuntimeError(f"renderer_metadata failed: {status}")
+        if renderer.abi_version != lib.zide_terminal_renderer_metadata_abi_version():
+            raise RuntimeError(f"unexpected renderer abi_version: {renderer.abi_version}")
+        if renderer.struct_size != ctypes.sizeof(RendererMetadata):
+            raise RuntimeError(f"unexpected renderer struct_size: {renderer.struct_size}")
+
+        print("terminal ffi abi mismatch regression ok")
+        print(
+            f"snapshot={snapshot_result} "
+            f"scrollback={scrollback_result} "
+            f"metadata={metadata_result} "
+            f"renderer=({renderer.abi_version},{renderer.struct_size})"
+        )
+        return 0
+    finally:
+        lib.zide_terminal_destroy(handle)
+
+
 def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--lib", default="zig-out/lib/libzide-terminal-ffi.so")
-    parser.add_argument("--scenario", choices=("baseline", "mock-service"), default="baseline")
+    parser.add_argument("--scenario", choices=("baseline", "mock-service", "abi-mismatch"), default="baseline")
     args = parser.parse_args()
 
     lib_path = Path(args.lib)
@@ -492,6 +577,8 @@ def main() -> int:
     try:
         if args.scenario == "mock-service":
             return run_mock_service_smoke(lib_path)
+        if args.scenario == "abi-mismatch":
+            return run_abi_mismatch_smoke(lib_path)
         return run_smoke(lib_path)
     except Exception as exc:
         print(f"ffi smoke failed: {exc}", file=sys.stderr)
