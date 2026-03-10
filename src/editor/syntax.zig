@@ -197,18 +197,18 @@ const injection_priority_bias: i32 = 100000;
 const InjectionSettings = syntax_predicates.InjectionSettings;
 
 const RuntimeHelpers = struct {
-    const max_injection_depth = @import("syntax.zig").max_injection_depth;
-    const InjectionSettings = @import("syntax.zig").InjectionSettings;
-    const tsRead = @import("syntax.zig").tsRead;
-    const emptyTokens = @import("syntax.zig").emptyTokens;
-    const fullDocumentRange = @import("syntax.zig").fullDocumentRange;
-    const splitHighlightOverlaps = @import("syntax.zig").splitHighlightOverlaps;
-    const appendHighlightTokens = @import("syntax.zig").appendHighlightTokens;
-    const predicatesMatch = @import("syntax.zig").predicatesMatch;
-    const readNodeTextAlloc = @import("syntax.zig").readNodeTextAlloc;
-    const collectInjectionSettings = @import("syntax.zig").collectInjectionSettings;
-    const resolveInjectionLanguageName = @import("syntax.zig").resolveInjectionLanguageName;
-    const intersectRanges = @import("syntax.zig").intersectRanges;
+    pub const max_injection_depth = @import("syntax.zig").max_injection_depth;
+    pub const InjectionSettings = @import("syntax.zig").InjectionSettings;
+    pub const tsRead = @import("syntax.zig").tsRead;
+    pub const emptyTokens = @import("syntax.zig").emptyTokens;
+    pub const fullDocumentRange = @import("syntax.zig").fullDocumentRange;
+    pub const splitHighlightOverlaps = @import("syntax.zig").splitHighlightOverlaps;
+    pub const appendHighlightTokens = @import("syntax.zig").appendHighlightTokens;
+    pub const predicatesMatch = @import("syntax.zig").predicatesMatch;
+    pub const readNodeTextAlloc = @import("syntax.zig").readNodeTextAlloc;
+    pub const collectInjectionSettings = @import("syntax.zig").collectInjectionSettings;
+    pub const resolveInjectionLanguageName = @import("syntax.zig").resolveInjectionLanguageName;
+    pub const intersectRanges = @import("syntax.zig").intersectRanges;
 };
 
 const SyntaxRuntimeMod = syntax_runtime.SyntaxRuntime(
@@ -251,7 +251,7 @@ pub fn createHighlighter(
     );
 }
 
-fn tsRead(
+pub fn tsRead(
     payload: ?*anyopaque,
     byte_offset: u32,
     _: c.TSPoint,
@@ -280,7 +280,7 @@ fn pointForByte(buffer: *TextStore, byte_offset: usize) c.TSPoint {
     };
 }
 
-fn fullDocumentRange(buffer: *TextStore) c.TSRange {
+pub fn fullDocumentRange(buffer: *TextStore) c.TSRange {
     const total = buffer.totalLen();
     return .{
         .start_point = .{ .row = 0, .column = 0 },
@@ -290,7 +290,7 @@ fn fullDocumentRange(buffer: *TextStore) c.TSRange {
     };
 }
 
-fn emptyTokens(allocator: std.mem.Allocator) ![]HighlightToken {
+pub fn emptyTokens(allocator: std.mem.Allocator) ![]HighlightToken {
     return allocator.alloc(HighlightToken, 0);
 }
 
@@ -509,7 +509,7 @@ fn intersectRanges(
     return result.toOwnedSlice(allocator);
 }
 
-const splitHighlightOverlaps = SyntaxTokensMod.splitHighlightOverlaps;
+pub const splitHighlightOverlaps = SyntaxTokensMod.splitHighlightOverlaps;
 
 test "map capture kind covers common alias captures" {
     try std.testing.expectEqual(TokenKind.keyword, mapCaptureKind("import"));

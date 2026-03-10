@@ -120,7 +120,7 @@ pub fn QueryInfra(comptime HighlightToken: type, comptime TokenKind: type) type 
                     const name = name_ptr[0..name_len];
                     capture_names[i] = try self.allocator.dupe(u8, name);
                     capture_names_loaded += 1;
-                    const kind = mapCaptureKind(name);
+                    const kind = mapCaptureKind(TokenKind, name);
                     const skip = shouldSkipCapture(name);
                     capture_noop[i] = skip or kind == .plain;
                     if (skip) {
