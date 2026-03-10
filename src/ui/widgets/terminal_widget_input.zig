@@ -294,18 +294,19 @@ pub fn handleInput(
             }
         }.apply;
 
-        var reset_scrollback = false;
+        var saw_non_modifier_key_press = false;
+        var saw_text_input = false;
         if (scroll_offset > 0) {
             for (input_batch.events.items) |event| {
                 switch (event) {
                     .key => |key_event| {
                         if (key_event.pressed and !isModifierKey(key_event.key)) {
-                            reset_scrollback = true;
+                            saw_non_modifier_key_press = true;
                             break;
                         }
                     },
                     .text => {
-                        reset_scrollback = true;
+                        saw_text_input = true;
                         break;
                     },
                     else => {},
@@ -456,16 +457,14 @@ pub fn handleInput(
         }
 
         const suppress_selection_for_scrollbar = mouse_on_scrollbar or self.scrollbar_drag_active;
-        if (!mouse_reporting and (reset_scrollback or in_terminal or self.scrollbar_drag_active)) {
+        if (!mouse_reporting and ((saw_non_modifier_key_press or saw_text_input) or in_terminal or self.scrollbar_drag_active)) {
             var live_scroll_offset = scroll_offset;
             var selection_active = cache.selection_active;
             self.session.lock();
             defer self.session.unlock();
 
-            if (reset_scrollback and live_scroll_offset > 0) {
-                if (self.session.resetToLiveBottomLocked()) {
-                    live_scroll_offset = 0;
-                }
+            if (live_scroll_offset > 0 and self.session.resetToLiveBottomForInputLocked(saw_non_modifier_key_press, saw_text_input)) {
+                live_scroll_offset = 0;
             }
 
             if (in_terminal and mouse_on_scrollbar and input_batch.mousePressed(.left)) {
