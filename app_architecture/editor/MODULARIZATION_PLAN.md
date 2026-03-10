@@ -78,6 +78,7 @@ Use `zig build check-editor-imports` to enforce these rules.
 - Completed step 3 (scrolling + visual-row mapping delegated to `src/editor/view/scroll.zig`).
 - Extracted cursor movement helpers into `src/editor/view/cursor.zig`.
 - Extracted viewport + line metrics helpers into `src/editor/view/metrics.zig`.
+- 2026-03-10: began the `editor.zig` large-file split by extracting the search/highlight subsystem into `src/editor/search_highlight.zig`; `editor.zig` now delegates search worker lifecycle, regex matching, query replacement, and highlighter lifecycle through a focused subsystem module instead of carrying that logic inline.
 
 ## Non-goals (for now)
 - No new features or UI changes.
