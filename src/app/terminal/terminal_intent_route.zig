@@ -1,5 +1,5 @@
 const app_modes = @import("../modes/mod.zig");
-const app_tab_action_route = @import("../tab_action_route.zig");
+const app_tab_action_route = @import("../tabs/tab_action_route.zig");
 const app_terminal_tab_intents = @import("terminal_tab_intents.zig");
 const std = @import("std");
 

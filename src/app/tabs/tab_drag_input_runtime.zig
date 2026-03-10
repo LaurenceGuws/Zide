@@ -1,9 +1,9 @@
-const app_bootstrap = @import("bootstrap.zig");
-const app_modes = @import("modes/mod.zig");
+const app_bootstrap = @import("../bootstrap.zig");
+const app_modes = @import("../modes/mod.zig");
 const app_tab_drag_frame = @import("tab_drag_frame.zig");
 const app_tab_drag_routing_runtime = @import("tab_drag_routing_runtime.zig");
-const shared_types = @import("../types/mod.zig");
-const widgets = @import("../ui/widgets.zig");
+const shared_types = @import("../../types/mod.zig");
+const widgets = @import("../../ui/widgets.zig");
 
 const input_types = shared_types.input;
 const layout_types = shared_types.layout;

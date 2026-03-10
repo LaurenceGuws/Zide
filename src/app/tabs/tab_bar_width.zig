@@ -1,7 +1,7 @@
-const config_mod = @import("../config/lua_config.zig");
-const app_bootstrap = @import("bootstrap.zig");
-const app_modes = @import("modes/mod.zig");
-const widgets = @import("../ui/widgets.zig");
+const config_mod = @import("../../config/lua_config.zig");
+const app_bootstrap = @import("../bootstrap.zig");
+const app_modes = @import("../modes/mod.zig");
+const widgets = @import("../../ui/widgets.zig");
 
 const TabBar = widgets.TabBar;
 const AppMode = app_bootstrap.AppMode;

@@ -1,5 +1,5 @@
 const app_terminal_runtime_intents = @import("terminal_runtime_intents.zig");
-const app_tab_action_apply_runtime = @import("../tab_action_apply_runtime.zig");
+const app_tab_action_apply_runtime = @import("../tabs/tab_action_apply_runtime.zig");
 const app_modes = @import("../modes/mod.zig");
 const terminal_mod = @import("../../terminal/core/terminal.zig");
 

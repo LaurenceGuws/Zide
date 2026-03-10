@@ -1,8 +1,8 @@
-const app_modes = @import("modes/mod.zig");
-const app_terminal_tabs_runtime = @import("terminal/terminal_tabs_runtime.zig");
-const app_theme_utils = @import("theme_utils.zig");
-const widgets_common = @import("../ui/widgets/common.zig");
-const shared_types = @import("../types/mod.zig");
+const app_modes = @import("../modes/mod.zig");
+const app_terminal_tabs_runtime = @import("../terminal/terminal_tabs_runtime.zig");
+const app_theme_utils = @import("../theme_utils.zig");
+const widgets_common = @import("../../ui/widgets/common.zig");
+const shared_types = @import("../../types/mod.zig");
 
 const layout_types = shared_types.layout;
 
