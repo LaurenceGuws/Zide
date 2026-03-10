@@ -125,11 +125,12 @@ file_layout_todo:
 
         - id: FL-UI-01
           title: "Split src/ui/widgets/terminal_widget_draw.zig by draw ownership"
-          status: todo
+          status: in_progress
           files:
             - src/ui/widgets/terminal_widget_draw.zig
           notes:
             - "Possible owners: grid/text, overlays, chrome/scrollbar, kitty draw path."
+            - "2026-03-10: first slice landed in progress by extracting terminal grid/text rendering ownership into `src/ui/widgets/terminal_widget_draw_grid.zig`, including row background drawing, HarfBuzz shaping runs, underline drawing, sprite/box glyph paths, and glyph-cache submission. `terminal_widget_draw.zig` now keeps higher-level draw orchestration, texture update policy, overlays, cursor, selection, and scrollbar chrome."
 
         - id: FL-UI-02
           title: "Split src/ui/widgets/editor_widget_draw.zig by draw ownership"
