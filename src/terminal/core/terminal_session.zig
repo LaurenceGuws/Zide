@@ -28,6 +28,7 @@ const session_publication = @import("session_publication.zig");
 const session_content = @import("session_content.zig");
 const session_selection = @import("session_selection.zig");
 const session_input = @import("session_input.zig");
+const session_interaction = @import("session_interaction.zig");
 const osc_kitty_clipboard = @import("../protocol/osc_kitty_clipboard.zig");
 const Pty = pty_mod.Pty;
 const PtySize = pty_mod.PtySize;
@@ -1486,55 +1487,55 @@ pub const TerminalSession = struct {
     }
 
     pub fn bracketedPasteEnabled(self: *TerminalSession) bool {
-        return self.input_snapshot.bracketed_paste.load(.acquire);
+        return session_interaction.bracketedPasteEnabled(self);
     }
 
     pub fn focusReportingEnabled(self: *TerminalSession) bool {
-        return self.input_snapshot.focus_reporting.load(.acquire);
+        return session_interaction.focusReportingEnabled(self);
     }
 
     pub fn autoRepeatEnabled(self: *TerminalSession) bool {
-        return self.input_snapshot.auto_repeat.load(.acquire);
+        return session_interaction.autoRepeatEnabled(self);
     }
 
     pub fn mouseAlternateScrollEnabled(self: *TerminalSession) bool {
-        return self.input_snapshot.mouse_alternate_scroll.load(.acquire);
+        return session_interaction.mouseAlternateScrollEnabled(self);
     }
 
     pub fn mouseModeX10Enabled(self: *const TerminalSession) bool {
-        return self.input_snapshot.mouse_mode_x10.load(.acquire);
+        return session_interaction.mouseModeX10Enabled(self);
     }
 
     pub fn mouseModeButtonEnabled(self: *const TerminalSession) bool {
-        return self.input_snapshot.mouse_mode_button.load(.acquire);
+        return session_interaction.mouseModeButtonEnabled(self);
     }
 
     pub fn mouseModeAnyEnabled(self: *const TerminalSession) bool {
-        return self.input_snapshot.mouse_mode_any.load(.acquire);
+        return session_interaction.mouseModeAnyEnabled(self);
     }
 
     pub fn mouseModeSgrEnabled(self: *const TerminalSession) bool {
-        return self.input_snapshot.mouse_mode_sgr.load(.acquire);
+        return session_interaction.mouseModeSgrEnabled(self);
     }
 
     pub fn mouseModeSgrPixelsEnabled(self: *const TerminalSession) bool {
-        return self.input_snapshot.mouse_mode_sgr_pixels_1016.load(.acquire);
+        return session_interaction.mouseModeSgrPixelsEnabled(self);
     }
 
     pub fn kittyPasteEvents5522Enabled(self: *TerminalSession) bool {
-        return self.kitty_paste_events_5522;
+        return session_interaction.kittyPasteEvents5522Enabled(self);
     }
 
     pub fn sendKittyPasteEvent5522(self: *TerminalSession, clip: []const u8) !bool {
-        return self.sendKittyPasteEvent5522WithMime(clip, null, null);
+        return session_interaction.sendKittyPasteEvent5522(self, clip);
     }
 
     pub fn sendKittyPasteEvent5522WithHtml(self: *TerminalSession, clip: []const u8, html: ?[]const u8) !bool {
-        return self.sendKittyPasteEvent5522WithMime(clip, html, null);
+        return session_interaction.sendKittyPasteEvent5522WithHtml(self, clip, html);
     }
 
     pub fn sendKittyPasteEvent5522WithMime(self: *TerminalSession, clip: []const u8, html: ?[]const u8, uri_list: ?[]const u8) !bool {
-        return self.sendKittyPasteEvent5522WithMimeRich(clip, html, uri_list, null);
+        return session_interaction.sendKittyPasteEvent5522WithMime(self, clip, html, uri_list);
     }
 
     pub fn sendKittyPasteEvent5522WithMimeRich(
@@ -1544,48 +1545,11 @@ pub const TerminalSession = struct {
         uri_list: ?[]const u8,
         png: ?[]const u8,
     ) !bool {
-        const log = app_logger.logger("terminal.osc");
-        if (!self.kitty_paste_events_5522) {
-            log.logf(.debug, "osc5522 paste skipped reason=disabled", .{});
-            return false;
-        }
-        if (self.pty == null) {
-            log.logf(.warning, "osc5522 paste dropped reason=missing-pty", .{});
-            return false;
-        }
-
-        self.kitty_osc5522_clipboard_text.clearRetainingCapacity();
-        try self.kitty_osc5522_clipboard_text.ensureTotalCapacity(self.allocator, clip.len);
-        try self.kitty_osc5522_clipboard_text.appendSlice(self.allocator, clip);
-        self.kitty_osc5522_clipboard_html.clearRetainingCapacity();
-        if (html) |html_bytes| {
-            try self.kitty_osc5522_clipboard_html.ensureTotalCapacity(self.allocator, html_bytes.len);
-            try self.kitty_osc5522_clipboard_html.appendSlice(self.allocator, html_bytes);
-        }
-        self.kitty_osc5522_clipboard_uri_list.clearRetainingCapacity();
-        if (uri_list) |uri_bytes| {
-            try self.kitty_osc5522_clipboard_uri_list.ensureTotalCapacity(self.allocator, uri_bytes.len);
-            try self.kitty_osc5522_clipboard_uri_list.appendSlice(self.allocator, uri_bytes);
-        }
-        self.kitty_osc5522_clipboard_png.clearRetainingCapacity();
-        if (png) |png_bytes| {
-            try self.kitty_osc5522_clipboard_png.ensureTotalCapacity(self.allocator, png_bytes.len);
-            try self.kitty_osc5522_clipboard_png.appendSlice(self.allocator, png_bytes);
-        }
-
-        if (self.lockPtyWriter()) |writer_guard| {
-            var writer = writer_guard;
-            defer writer.unlock();
-            osc_kitty_clipboard.sendPasteEventMimes(osc_kitty_clipboard.SessionFacade.from(self), &writer, .st);
-            return true;
-        }
-        log.logf(.warning, "osc5522 paste dropped after buffer prep reason=missing-pty", .{});
-        return false;
+        return session_interaction.sendKittyPasteEvent5522WithMimeRich(self, clip, html, uri_list, png);
     }
 
     pub fn mouseReportingEnabled(self: *TerminalSession) bool {
-        const input_snapshot = self.input_snapshot;
-        return input_snapshot.mouse_mode_x10.load(.acquire) or input_snapshot.mouse_mode_button.load(.acquire) or input_snapshot.mouse_mode_any.load(.acquire);
+        return session_interaction.mouseReportingEnabled(self);
     }
 
     pub const CloseConfirmSignals = session_queries.CloseConfirmSignals;
@@ -1608,7 +1572,7 @@ pub const TerminalSession = struct {
         start_col: usize,
         end_col: usize,
     } {
-        return self.activeScreenConst().getDamage();
+        return session_interaction.getDamage(self);
     }
 };
 
