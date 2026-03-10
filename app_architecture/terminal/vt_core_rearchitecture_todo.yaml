@@ -112,6 +112,8 @@ items:
       - First real behavior change landed: live-bottom full-region scroll now publishes as exposed-row viewport shift with exposed-row damage only, and the replay fixture was converted to a pure harness-owned scroll action so the contract is not polluted by stray VT input
       - Twelfth replay contract landed: repeated line-number/sign-column style leading-column churn now has an explicit fixture, and it currently locks the over-broad full-row damage behavior that the next invalidation slice should narrow
       - Thirteenth replay contract landed: one-column line-number churn now also has a corrected harness-owned fixture that stays on the narrow damage path, while the adjacent two-column sign-column churn fixture still locks the current broad full-row damage behavior
+      - Fourteenth VTCORE-05 behavior change landed: unpublished partial refinement now preserves prior dirty rows without dragging forward stale broad column spans, so both one-column line-number churn and single-packet two-column sign-column churn stay on narrow leading-column damage paths
+      - Remaining gutter redraw target is now multi-packet accumulation behavior rather than single-packet gutter rewrites
 
   - id: VTCORE-06
     title: Keep input encoding as a peer subsystem

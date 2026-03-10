@@ -319,9 +319,16 @@ pub fn updateViewCacheNoLock(self: anytype, generation: u64, scroll_offset: usiz
         active_cache.rows == rows and
         active_cache.cols == cols and
         active_cache.row_hashes.items.len == rows and
-        active_cache.generation == presented_generation)
+        (active_cache.generation == presented_generation or active_cache.dirty == .partial))
     {
-        refinement.refineRowHashDamage(cache, active_cache, rows, cols, fullwidth_origin_log);
+        refinement.refineRowHashDamage(
+            cache,
+            active_cache,
+            rows,
+            cols,
+            fullwidth_origin_log,
+            active_cache.generation != presented_generation,
+        );
     }
 
     // Cursor is rendered as a UI overlay in terminal_widget_draw, so cursor visibility
