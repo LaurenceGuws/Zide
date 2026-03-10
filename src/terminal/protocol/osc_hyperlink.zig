@@ -3,40 +3,20 @@ const app_logger = @import("../../app_logger.zig");
 
 pub const SessionFacade = struct {
     ctx: *anyopaque,
-    clear_osc_hyperlink_fn: *const fn (ctx: *anyopaque) void,
-    set_osc_hyperlink_active_fn: *const fn (ctx: *anyopaque, active: bool) void,
-    set_current_hyperlink_id_fn: *const fn (ctx: *anyopaque, id: u32) void,
-    append_osc_hyperlink_uri_fn: *const fn (ctx: *anyopaque, uri: []const u8) anyerror!void,
+    allocator: std.mem.Allocator,
+    osc_hyperlink: *std.ArrayList(u8),
+    osc_hyperlink_active: *bool,
+    current_hyperlink_id: *u32,
     append_hyperlink_fn: *const fn (ctx: *anyopaque, uri: []const u8) ?u32,
 
     pub fn from(session: anytype) SessionFacade {
         const SessionPtr = @TypeOf(session);
         return .{
             .ctx = @ptrCast(session),
-            .clear_osc_hyperlink_fn = struct {
-                fn call(ctx: *anyopaque) void {
-                    const s: SessionPtr = @ptrCast(@alignCast(ctx));
-                    s.osc_hyperlink.clearRetainingCapacity();
-                }
-            }.call,
-            .set_osc_hyperlink_active_fn = struct {
-                fn call(ctx: *anyopaque, active: bool) void {
-                    const s: SessionPtr = @ptrCast(@alignCast(ctx));
-                    s.osc_hyperlink_active = active;
-                }
-            }.call,
-            .set_current_hyperlink_id_fn = struct {
-                fn call(ctx: *anyopaque, id: u32) void {
-                    const s: SessionPtr = @ptrCast(@alignCast(ctx));
-                    s.current_hyperlink_id = id;
-                }
-            }.call,
-            .append_osc_hyperlink_uri_fn = struct {
-                fn call(ctx: *anyopaque, uri: []const u8) anyerror!void {
-                    const s: SessionPtr = @ptrCast(@alignCast(ctx));
-                    _ = try s.osc_hyperlink.appendSlice(s.allocator, uri);
-                }
-            }.call,
+            .allocator = session.allocator,
+            .osc_hyperlink = &session.osc_hyperlink,
+            .osc_hyperlink_active = &session.osc_hyperlink_active,
+            .current_hyperlink_id = &session.current_hyperlink_id,
             .append_hyperlink_fn = struct {
                 fn call(ctx: *anyopaque, uri: []const u8) ?u32 {
                     const s: SessionPtr = @ptrCast(@alignCast(ctx));
@@ -47,19 +27,19 @@ pub const SessionFacade = struct {
     }
 
     pub fn clearOscHyperlink(self: *const SessionFacade) void {
-        self.clear_osc_hyperlink_fn(self.ctx);
+        self.osc_hyperlink.clearRetainingCapacity();
     }
 
     pub fn setOscHyperlinkActive(self: *const SessionFacade, active: bool) void {
-        self.set_osc_hyperlink_active_fn(self.ctx, active);
+        self.osc_hyperlink_active.* = active;
     }
 
     pub fn setCurrentHyperlinkId(self: *const SessionFacade, id: u32) void {
-        self.set_current_hyperlink_id_fn(self.ctx, id);
+        self.current_hyperlink_id.* = id;
     }
 
     pub fn appendOscHyperlinkUri(self: *const SessionFacade, uri: []const u8) !void {
-        try self.append_osc_hyperlink_uri_fn(self.ctx, uri);
+        _ = try self.osc_hyperlink.appendSlice(self.allocator, uri);
     }
 
     pub fn appendHyperlink(self: *const SessionFacade, uri: []const u8) ?u32 {
