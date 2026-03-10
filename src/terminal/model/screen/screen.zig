@@ -3,6 +3,7 @@ const types = @import("../types.zig");
 const grid_mod = @import("grid.zig");
 const tab_mod = @import("tabstops.zig");
 const key_mod = @import("key_mode.zig");
+const navigation_ops = @import("navigation_ops.zig");
 const edit_ops = @import("edit_ops.zig");
 const app_logger = @import("../../../app_logger.zig");
 
@@ -659,170 +660,79 @@ pub const Screen = struct {
     }
 
     pub fn setCursor(self: *Screen, row: usize, col: usize) void {
-        self.cursor = .{ .row = row, .col = col };
-        self.clampCursorToMargins();
+        navigation_ops.setCursor(self, row, col);
     }
 
     pub fn backspace(self: *Screen) void {
-        if (self.cursor.col > 0) {
-            self.cursor.col -= 1;
-            self.wrap_next = false;
-            return;
-        }
-        if (self.reverse_wrap and self.cursor.row > self.scroll_top and self.grid.rowWrapped(self.cursor.row - 1)) {
-            self.cursor.row -= 1;
-            self.cursor.col = @as(usize, self.grid.cols - 1);
-        }
-        self.wrap_next = false;
+        navigation_ops.backspace(self);
     }
 
     pub fn tab(self: *Screen) void {
-        if (self.grid.cols == 0) return;
-        const max_col = self.rightBoundary();
-        const next = self.tabstops.next(self.cursor.col, max_col);
-        self.cursor.col = @min(next, max_col);
-        self.wrap_next = false;
+        navigation_ops.tab(self);
     }
 
     pub fn backTab(self: *Screen) void {
-        if (self.grid.cols == 0) return;
-        self.cursor.col = @max(self.leftBoundary(), self.tabstops.prev(self.cursor.col));
-        self.wrap_next = false;
+        navigation_ops.backTab(self);
     }
 
     pub fn clearTabAtCursor(self: *Screen) void {
-        self.tabstops.clearAt(self.cursor.col);
+        navigation_ops.clearTabAtCursor(self);
     }
 
     pub fn setTabAtCursor(self: *Screen) void {
-        self.tabstops.setAt(self.cursor.col);
+        navigation_ops.setTabAtCursor(self);
     }
 
     pub fn resetTabStops(self: *Screen) void {
-        self.tabstops.reset();
+        navigation_ops.resetTabStops(self);
     }
 
     pub fn clearAllTabs(self: *Screen) void {
-        self.tabstops.clearAll();
+        navigation_ops.clearAllTabs(self);
     }
 
     pub fn carriageReturn(self: *Screen) void {
-        self.cursor.col = self.leftBoundary();
-        self.wrap_next = false;
+        navigation_ops.carriageReturn(self);
     }
 
     pub fn cursorUp(self: *Screen, delta: usize) void {
-        if (self.origin_mode) {
-            if (self.cursor.row > self.scroll_top + delta) {
-                self.cursor.row -= delta;
-            } else {
-                self.cursor.row = self.scroll_top;
-            }
-        } else {
-            self.cursor.row = if (self.cursor.row > delta) self.cursor.row - delta else 0;
-        }
-        self.wrap_next = false;
+        navigation_ops.cursorUp(self, delta);
     }
 
     pub fn cursorDown(self: *Screen, delta: usize) void {
-        if (self.origin_mode) {
-            const max_row = @min(@as(usize, self.grid.rows - 1), self.scroll_bottom);
-            self.cursor.row = @min(max_row, self.cursor.row + delta);
-        } else {
-            const max_row = @as(usize, self.grid.rows - 1);
-            self.cursor.row = @min(max_row, self.cursor.row + delta);
-        }
-        self.wrap_next = false;
+        navigation_ops.cursorDown(self, delta);
     }
 
     pub fn cursorForward(self: *Screen, delta: usize) void {
-        const max_col = self.rightBoundary();
-        self.cursor.col = @min(max_col, self.cursor.col + delta);
-        self.wrap_next = false;
+        navigation_ops.cursorForward(self, delta);
     }
 
     pub fn cursorBack(self: *Screen, delta: usize) void {
-        const left_bound = self.leftBoundary();
-        var remaining = delta;
-        while (remaining > 0) : (remaining -= 1) {
-            if (self.cursor.col > left_bound) {
-                self.cursor.col -= 1;
-                continue;
-            }
-            if (self.reverse_wrap and self.cursor.row > self.scroll_top and self.grid.rowWrapped(self.cursor.row - 1)) {
-                self.cursor.row -= 1;
-                self.cursor.col = @as(usize, self.grid.cols - 1);
-                continue;
-            }
-            break;
-        }
-        self.wrap_next = false;
+        navigation_ops.cursorBack(self, delta);
     }
 
     pub fn setReverseWrap(self: *Screen, enabled: bool) void {
-        self.reverse_wrap = enabled;
+        navigation_ops.setReverseWrap(self, enabled);
     }
 
     pub fn cursorNextLine(self: *Screen, delta: usize) void {
-        if (self.origin_mode) {
-            const max_row = @min(@as(usize, self.grid.rows - 1), self.scroll_bottom);
-            self.cursor.row = @min(max_row, self.cursor.row + delta);
-        } else {
-            const max_row = @as(usize, self.grid.rows - 1);
-            self.cursor.row = @min(max_row, self.cursor.row + delta);
-        }
-        self.cursor.col = self.leftBoundary();
-        self.wrap_next = false;
+        navigation_ops.cursorNextLine(self, delta);
     }
 
     pub fn cursorPrevLine(self: *Screen, delta: usize) void {
-        if (self.origin_mode) {
-            if (self.cursor.row > self.scroll_top + delta) {
-                self.cursor.row -= delta;
-            } else {
-                self.cursor.row = self.scroll_top;
-            }
-        } else {
-            self.cursor.row = if (self.cursor.row > delta) self.cursor.row - delta else 0;
-        }
-        self.cursor.col = self.leftBoundary();
-        self.wrap_next = false;
+        navigation_ops.cursorPrevLine(self, delta);
     }
 
     pub fn cursorColAbsolute(self: *Screen, col_1: i32) void {
-        const col = @min(@as(usize, self.grid.cols - 1), @as(usize, @intCast(col_1 - 1)));
-        self.cursor.col = col;
-        self.clampCursorToMargins();
-        self.wrap_next = false;
+        navigation_ops.cursorColAbsolute(self, col_1);
     }
 
     pub fn cursorPosAbsolute(self: *Screen, row_1: i32, col_1: i32) void {
-        var row: usize = @intCast(@max(row_1 - 1, 0));
-        if (self.origin_mode) {
-            row = self.scroll_top + row;
-            const max_row = @min(@as(usize, self.grid.rows - 1), self.scroll_bottom);
-            if (row > max_row) row = max_row;
-        } else {
-            row = @min(@as(usize, self.grid.rows - 1), row);
-        }
-        const col = @min(@as(usize, self.grid.cols - 1), @as(usize, @intCast(col_1 - 1)));
-        self.cursor.row = row;
-        self.cursor.col = col;
-        self.clampCursorToMargins();
-        self.wrap_next = false;
+        navigation_ops.cursorPosAbsolute(self, row_1, col_1);
     }
 
     pub fn cursorRowAbsolute(self: *Screen, row_1: i32) void {
-        var row: usize = @intCast(@max(row_1 - 1, 0));
-        if (self.origin_mode) {
-            row = self.scroll_top + row;
-            const max_row = @min(@as(usize, self.grid.rows - 1), self.scroll_bottom);
-            if (row > max_row) row = max_row;
-        } else {
-            row = @min(@as(usize, self.grid.rows - 1), row);
-        }
-        self.cursor.row = row;
-        self.wrap_next = false;
+        navigation_ops.cursorRowAbsolute(self, row_1);
     }
 
     pub fn setCursorVisible(self: *Screen, visible: bool) void {
@@ -830,11 +740,8 @@ pub const Screen = struct {
     }
 
     pub fn cursorReport(self: *const Screen) struct { row_1: usize, col_1: usize } {
-        const row_1 = if (self.origin_mode and self.cursor.row >= self.scroll_top)
-            (self.cursor.row - self.scroll_top) + 1
-        else
-            self.cursor.row + 1;
-        return .{ .row_1 = row_1, .col_1 = self.cursor.col + 1 };
+        const report = navigation_ops.cursorReport(self);
+        return .{ .row_1 = report.row_1, .col_1 = report.col_1 };
     }
 
     pub const NewlineAction = enum {
@@ -844,99 +751,39 @@ pub const Screen = struct {
     };
 
     pub fn newlineAction(self: *Screen) NewlineAction {
-        if (self.cursor.row + 1 < @as(usize, self.grid.rows) and self.cursor.row != self.scroll_bottom) {
-            self.cursor.row += 1;
-            if (self.newline_mode) {
-                self.cursor.col = self.leftBoundary();
-            }
-            self.wrap_next = false;
-            return .moved;
-        }
-        if (self.cursor.row == self.scroll_bottom) {
-            self.wrap_next = false;
-            return .scroll_region;
-        }
-        self.wrap_next = false;
-        return .scroll_full;
+        return navigation_ops.newlineAction(self);
     }
 
     pub fn wrapNewlineAction(self: *Screen) NewlineAction {
-        const left = self.leftBoundary();
-        if (self.cursor.row + 1 < @as(usize, self.grid.rows) and self.cursor.row != self.scroll_bottom) {
-            self.cursor.row += 1;
-            self.cursor.col = left;
-            self.wrap_next = false;
-            return .moved;
-        }
-        if (self.cursor.row == self.scroll_bottom) {
-            self.cursor.col = left;
-            self.wrap_next = false;
-            return .scroll_region;
-        }
-        self.cursor.col = left;
-        self.wrap_next = false;
-        return .scroll_full;
+        return navigation_ops.wrapNewlineAction(self);
     }
 
     pub fn setScrollRegion(self: *Screen, top: usize, bot: usize) void {
-        self.scroll_top = top;
-        self.scroll_bottom = bot;
-        if (self.origin_mode) {
-            self.cursor.row = top;
-            self.cursor.col = self.leftBoundary();
-        } else {
-            self.cursor.row = 0;
-            self.cursor.col = 0;
-        }
-        self.wrap_next = false;
+        navigation_ops.setScrollRegion(self, top, bot);
     }
 
     pub fn setLeftRightMarginMode69(self: *Screen, enabled: bool) void {
-        self.left_right_margin_mode_69 = enabled;
-        if (!enabled) {
-            self.left_margin = 0;
-            self.right_margin = if (self.grid.cols > 0) @as(usize, self.grid.cols - 1) else 0;
-        }
-        self.clampCursorToMargins();
+        navigation_ops.setLeftRightMarginMode69(self, enabled);
     }
 
     pub fn setLeftRightMargins(self: *Screen, left: usize, right: usize) void {
-        if (self.grid.cols == 0) return;
-        self.left_margin = @min(left, @as(usize, self.grid.cols - 1));
-        self.right_margin = @min(right, @as(usize, self.grid.cols - 1));
-        if (self.left_margin > self.right_margin) {
-            self.left_margin = 0;
-            self.right_margin = @as(usize, self.grid.cols - 1);
-        }
-        // xterm-compatible DECSLRM behavior homes cursor to row 1 at left margin.
-        self.cursor.row = 0;
-        self.cursor.col = self.leftBoundary();
-        self.wrap_next = false;
+        navigation_ops.setLeftRightMargins(self, left, right);
     }
 
     pub fn leftBoundary(self: *const Screen) usize {
-        if (self.left_right_margin_mode_69) return self.left_margin;
-        return 0;
+        return navigation_ops.leftBoundary(self);
     }
 
     pub fn rightBoundary(self: *const Screen) usize {
-        if (self.left_right_margin_mode_69) return self.right_margin;
-        return if (self.grid.cols > 0) @as(usize, self.grid.cols - 1) else 0;
+        return navigation_ops.rightBoundary(self);
     }
 
     pub fn writeRightBoundary(self: *const Screen) usize {
-        return self.rightBoundary();
+        return navigation_ops.writeRightBoundary(self);
     }
 
-    fn clampCursorToMargins(self: *Screen) void {
-        if (self.grid.cols == 0) {
-            self.cursor.col = 0;
-            return;
-        }
-        const left = self.leftBoundary();
-        const right = self.rightBoundary();
-        if (self.cursor.col < left) self.cursor.col = left;
-        if (self.cursor.col > right) self.cursor.col = right;
+    pub fn clampCursorToMargins(self: *Screen) void {
+        navigation_ops.clampCursorToMargins(self);
     }
 
     pub fn cursorPos(self: *const Screen) types.CursorPos {
