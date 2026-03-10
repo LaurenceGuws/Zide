@@ -78,6 +78,7 @@ file_layout_todo:
             - "Includes terminal frame/runtime/intent/tab/close-confirm glue where ownership is terminal-specific."
             - "2026-03-10: started with the terminal close-confirm cluster (`terminal_close_*`) moved under `src/app/terminal/` as the first extraction-only subtree slice."
             - "2026-03-10: moved the terminal shortcut/intent/tab-routing cluster (`terminal_shortcut_*`, `terminal_intent_route*`, `terminal_runtime_intents`, `terminal_tab_*`, `terminal_tabs*`, `terminal_workspace_route`) under `src/app/terminal/` as the second subtree slice."
+            - "2026-03-10: moved the clipboard/input-surface/bootstrap cluster (`terminal_clipboard_shortcuts*`, `terminal_widget_input*`, `terminal_active_widget`, `terminal_draw_surface_runtime`, `terminal_surface_gate`, `terminal_grid`, `terminal_theme_apply`, `terminal_refresh_sizing_runtime`, `terminal_session_bootstrap`) under `src/app/terminal/` as the third subtree slice."
             - "Validation passed for the moved slice: `zig build test`, `zig build check-app-imports`, `zig build check-input-imports`."
 
         - id: FL-APP-03

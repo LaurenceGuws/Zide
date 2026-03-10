@@ -1,4 +1,4 @@
-const input_actions = @import("../input/input_actions.zig");
+const input_actions = @import("../../input/input_actions.zig");
 
 pub const RuntimeHooks = struct {
     copy: *const fn (ctx: *anyopaque) anyerror!bool,
@@ -36,4 +36,3 @@ pub fn handle(
     }
     return out;
 }
-

@@ -1,4 +1,4 @@
-const app_terminal_active_widget = @import("../terminal_active_widget.zig");
+const app_terminal_active_widget = @import("terminal_active_widget.zig");
 const app_terminal_tab_ops = @import("terminal_tab_ops.zig");
 
 pub fn focusByIndex(state: anytype, index: usize) bool {

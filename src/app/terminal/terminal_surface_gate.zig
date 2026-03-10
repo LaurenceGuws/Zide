@@ -1,7 +1,7 @@
-const app_bootstrap = @import("bootstrap.zig");
-const app_modes = @import("modes/mod.zig");
-const app_terminal_tabs_runtime = @import("terminal/terminal_tabs_runtime.zig");
-const terminal_mod = @import("../terminal/core/terminal.zig");
+const app_bootstrap = @import("../bootstrap.zig");
+const app_modes = @import("../modes/mod.zig");
+const app_terminal_tabs_runtime = @import("terminal_tabs_runtime.zig");
+const terminal_mod = @import("../../terminal/core/terminal.zig");
 
 pub fn hasVisibleTerminalTabs(
     app_mode: app_bootstrap.AppMode,
