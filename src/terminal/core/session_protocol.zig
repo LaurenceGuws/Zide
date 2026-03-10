@@ -1,9 +1,5 @@
 const std = @import("std");
 const parser_mod = @import("../parser/parser.zig");
-const hyperlink_table = @import("hyperlink_table.zig");
-const kitty_mod = @import("../kitty/graphics.zig");
-const state_reset = @import("state_reset.zig");
-const scrolling_mod = @import("scrolling.zig");
 const core_protocol = @import("terminal_core_protocol.zig");
 const core_dispatch = @import("terminal_core_dispatch.zig");
 const core_feed = @import("terminal_core_feed.zig");
@@ -29,11 +25,11 @@ pub fn parseOsc(self: anytype, payload: []const u8, terminator: parser_mod.OscTe
 }
 
 pub fn appendHyperlink(self: anytype, uri: []const u8, max_hyperlinks: usize) ?u32 {
-    return hyperlink_table.appendHyperlink(self, uri, max_hyperlinks);
+    return core_protocol.appendHyperlink(self, uri, max_hyperlinks);
 }
 
 pub fn clearAllKittyImages(self: anytype) void {
-    kitty_mod.clearAllKittyImages(self);
+    core_protocol.clearAllKittyImages(self);
 }
 
 pub fn handleCsi(self: anytype, action: @import("../parser/csi.zig").CsiAction) void {
@@ -97,11 +93,11 @@ pub fn deleteLines(self: anytype, count: usize) void {
 }
 
 pub fn scrollRegionUp(self: anytype, count: usize) void {
-    scrolling_mod.scrollRegionUp(self, count);
+    core_protocol.scrollRegionUp(self, count);
 }
 
 pub fn scrollRegionDown(self: anytype, count: usize) void {
-    scrolling_mod.scrollRegionDown(self, count);
+    core_protocol.scrollRegionDown(self, count);
 }
 
 pub fn paletteColor(self: anytype, idx: u8) types.Color {

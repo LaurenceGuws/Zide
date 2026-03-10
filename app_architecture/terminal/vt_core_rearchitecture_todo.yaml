@@ -58,7 +58,7 @@ items:
 
   - id: VTCORE-04
     title: Move protocol execution onto core/model contracts
-    status: todo
+    status: in_progress
     priority: high
     notes:
       - CSI/OSC/DCS/APC should execute against terminal core contracts, not session service facades
@@ -68,6 +68,7 @@ items:
       - Third slice landed: parser byte feed itself now runs through src/terminal/core/terminal_core_feed.zig, with session_protocol retaining only the lock/generation/view-cache publication wrapper
       - Fourth slice landed: saved-cursor restore and alt-screen core state transitions now live behind src/terminal/core/terminal_core_modes.zig, leaving session_protocol with only the remaining session-owned side effects around those transitions
       - Fifth slice landed: RIS/reset core mutation now lives behind src/terminal/core/terminal_core_reset.zig, leaving session_protocol with only the session-owned input snapshot republish step
+      - Sixth slice landed: hyperlink allocation, kitty image clearing, and scroll-region mutation helpers now also live behind src/terminal/core/terminal_core_protocol.zig, leaving session_protocol with publication/selection wrappers instead of more pure core-state mutation entrypoints
 
   - id: VTCORE-05
     title: Simplify snapshot and render publication

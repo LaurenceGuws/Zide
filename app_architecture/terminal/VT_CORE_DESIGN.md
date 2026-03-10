@@ -294,6 +294,10 @@ Protocol execution also moved another step toward core ownership:
 - RIS/reset core mutation now also lives behind
   `src/terminal/core/terminal_core_reset.zig`, with `session_protocol.zig`
   keeping only the session-owned input-mode snapshot republish step
+- hyperlink allocation, kitty image clearing, and scroll-region mutation now
+  also live behind `src/terminal/core/terminal_core_protocol.zig`, leaving
+  `session_protocol.zig` closer to a session-owned publication/selection wrapper
+  instead of another mixed core-mutation owner
 
 ## Compatibility Strategy
 
