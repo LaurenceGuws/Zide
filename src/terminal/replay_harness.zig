@@ -33,6 +33,10 @@ pub const SelectionAction = struct {
     col: usize = 0,
 };
 
+pub const ScrollOffsetAction = struct {
+    offset: usize,
+};
+
 pub const MouseAction = struct {
     kind: types.MouseEventKind,
     button: types.MouseButton,
@@ -98,7 +102,10 @@ pub const FixtureMeta = struct {
     reply_hex: ?[]const u8 = null,
     expected_dirty: ?DirtyExpectation = null,
     expected_damage: ?ExpectedDamage = null,
+    expected_viewport_shift_rows: ?i32 = null,
+    expected_viewport_shift_exposed_only: ?bool = null,
     selection: []const SelectionAction = &.{},
+    scroll_offsets: []const ScrollOffsetAction = &.{},
     mouse: []const MouseAction = &.{},
     encoder: ?EncoderSpec = null,
     osc_5522_clipboard_text: ?[]const u8 = null,
@@ -344,6 +351,7 @@ pub fn runFixture(
 
     if (fixture.meta.fixture_type == .harness_api) {
         applySelectionActions(session, fixture.meta.selection);
+        applyScrollOffsetActions(session, fixture.meta.scroll_offsets);
     }
     try applyMouseActions(session, fixture.meta.mouse);
 
@@ -569,8 +577,25 @@ fn validateAssertions(
             }
             continue;
         }
+        if (std.mem.eql(u8, tag, "viewport-shift")) {
+            const cache = fixtureRenderCache(debug) orelse return error.AssertionViewportShiftMissingCache;
+            if (fixture.meta.expected_viewport_shift_rows) |expected_rows| {
+                if (cache.viewport_shift_rows != expected_rows) return error.AssertionViewportShiftRowsMismatch;
+            }
+            if (fixture.meta.expected_viewport_shift_exposed_only) |expected_exposed_only| {
+                if (cache.viewport_shift_exposed_only != expected_exposed_only) return error.AssertionViewportShiftExposureMismatch;
+            }
+            if (fixture.meta.expected_viewport_shift_rows == null and fixture.meta.expected_viewport_shift_exposed_only == null) {
+                return error.AssertionViewportShiftExpectationMissing;
+            }
+            continue;
+        }
         return error.UnknownAssertionTag;
     }
+}
+
+fn fixtureRenderCache(debug: terminal.DebugSnapshot) ?*const terminal.RenderCache {
+    return debug.render_cache;
 }
 
 fn decodeHex(allocator: std.mem.Allocator, hex: []const u8) ![]u8 {
@@ -666,6 +691,12 @@ fn applySelectionActions(session: *terminal.TerminalSession, actions: []const Se
             .update => session.updateSelection(action.row, action.col),
             .finish => session.finishSelection(),
         }
+    }
+}
+
+fn applyScrollOffsetActions(session: *terminal.TerminalSession, actions: []const ScrollOffsetAction) void {
+    for (actions) |action| {
+        session.setScrollOffset(action.offset);
     }
 }
 

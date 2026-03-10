@@ -15,6 +15,7 @@ pub fn debugSnapshot(self: anytype) @import("snapshot.zig").DebugSnapshot {
         .focus_reporting = self.focus_reporting,
         .selection = selection_mod.selectionState(self),
         .base_default_attrs = self.core.base_default_attrs,
+        .render_cache = self.renderCache(),
     };
 }
 
