@@ -4,26 +4,18 @@ const osc_util = @import("osc_util.zig");
 const app_logger = @import("../../app_logger.zig");
 
 pub const SessionFacade = struct {
-    ctx: *anyopaque,
     allocator: std.mem.Allocator,
-    normalize_cwd_fn: *const fn (ctx: *anyopaque, raw_path: []const u8) void,
+    cwd: osc_util.SessionFacade,
 
     pub fn from(session: anytype) SessionFacade {
-        const SessionPtr = @TypeOf(session);
         return .{
-            .ctx = @ptrCast(session),
             .allocator = session.allocator,
-            .normalize_cwd_fn = struct {
-                fn call(ctx: *anyopaque, raw_path: []const u8) void {
-                    const s: SessionPtr = @ptrCast(@alignCast(ctx));
-                    osc_util.normalizeCwd(osc_util.SessionFacade.from(s), raw_path);
-                }
-            }.call,
+            .cwd = osc_util.SessionFacade.from(session),
         };
     }
 
     pub fn normalizeCwd(self: *const SessionFacade, raw_path: []const u8) void {
-        self.normalize_cwd_fn(self.ctx, raw_path);
+        osc_util.normalizeCwd(self.cwd, raw_path);
     }
 };
 
