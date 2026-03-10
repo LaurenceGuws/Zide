@@ -85,6 +85,7 @@ Use `zig build check-editor-imports` to enforce these rules.
 - 2026-03-10: began the `syntax.zig` large-file split by extracting query loading, capture-kind mapping, and query-cache ownership into `src/editor/syntax_queries.zig`; `syntax.zig` now keeps more of the actual runtime highlight/injection execution and less cache/bootstrap code inline.
 - 2026-03-10: continued the `syntax.zig` split by extracting syntax highlighter runtime lifecycle, layered highlighting, injected-language loading, and injection execution into `src/editor/syntax_runtime.zig`; `syntax.zig` now leans more toward predicate/directive/token utility ownership.
 - 2026-03-10: continued the `syntax.zig` split by extracting predicate evaluation, directive handling, injection-setting collection, node-text helpers, and the simple regex matcher into `src/editor/syntax_predicates.zig`; `syntax.zig` is now down to 855 LOC and is primarily a facade over query/runtime/predicate modules plus token overlap assembly.
+- 2026-03-10: finished the `syntax.zig` split by extracting highlight-token overlap splitting/post-processing into `src/editor/syntax_tokens.zig`; `syntax.zig` is now down to 733 LOC and acts as the root syntax facade over focused subsystem modules rather than a god-file.
 
 ## Non-goals (for now)
 - No new features or UI changes.
