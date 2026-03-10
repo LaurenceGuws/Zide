@@ -1,6 +1,6 @@
 const app_run_mode_init = @import("run_mode_init.zig");
-const app_terminal_tab_bar_sync_runtime = @import("terminal_tab_bar_sync_runtime.zig");
-const app_terminal_tabs_runtime = @import("terminal_tabs_runtime.zig");
+const app_terminal_tab_bar_sync_runtime = @import("terminal/terminal_tab_bar_sync_runtime.zig");
+const app_terminal_tabs_runtime = @import("terminal/terminal_tabs_runtime.zig");
 const app_modes = @import("modes/mod.zig");
 
 pub fn handle(state: anytype) !void {

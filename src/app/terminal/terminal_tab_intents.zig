@@ -1,4 +1,4 @@
-const app_modes = @import("modes/mod.zig");
+const app_modes = @import("../modes/mod.zig");
 const std = @import("std");
 
 pub fn closeIntentForTabId(tab_id: ?u64) ?app_modes.shared.actions.TabAction {

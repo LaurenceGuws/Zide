@@ -3,7 +3,7 @@ const app_bootstrap = @import("bootstrap.zig");
 const app_run_loop_driver = @import("run_loop_driver.zig");
 const app_shell = @import("../app_shell.zig");
 const app_signals = @import("signals.zig");
-const app_terminal_tab_navigation_runtime = @import("terminal_tab_navigation_runtime.zig");
+const app_terminal_tab_navigation_runtime = @import("terminal/terminal_tab_navigation_runtime.zig");
 const input_builder = @import("../input/input_builder.zig");
 
 pub fn prepare(state: anytype) !?app_run_loop_driver.FrameSetup {

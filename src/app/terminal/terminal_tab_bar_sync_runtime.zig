@@ -1,6 +1,6 @@
-const app_modes = @import("modes/mod.zig");
+const app_modes = @import("../modes/mod.zig");
 const app_terminal_tab_bar_sync = @import("terminal_tab_bar_sync.zig");
-const app_mode_adapter_sync_runtime = @import("mode_adapter_sync_runtime.zig");
+const app_mode_adapter_sync_runtime = @import("../mode_adapter_sync_runtime.zig");
 
 pub fn syncIfWorkspace(state: anytype) !void {
     if (!app_modes.ide.shouldUseTerminalWorkspace(state.app_mode)) return;

@@ -1,5 +1,5 @@
 const app_modes = @import("modes/mod.zig");
-const app_terminal_tabs_runtime = @import("terminal_tabs_runtime.zig");
+const app_terminal_tabs_runtime = @import("terminal/terminal_tabs_runtime.zig");
 const shared_types = @import("../types/mod.zig");
 
 const layout_types = shared_types.layout;

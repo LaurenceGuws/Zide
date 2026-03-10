@@ -1,4 +1,4 @@
-const terminal_mod = @import("../terminal/core/terminal.zig");
+const terminal_mod = @import("../../terminal/core/terminal.zig");
 const std = @import("std");
 
 pub fn routeActiveTabId(

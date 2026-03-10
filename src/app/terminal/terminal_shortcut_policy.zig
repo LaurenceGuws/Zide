@@ -1,5 +1,5 @@
-const app_bootstrap = @import("bootstrap.zig");
-const app_modes = @import("modes/mod.zig");
+const app_bootstrap = @import("../bootstrap.zig");
+const app_modes = @import("../modes/mod.zig");
 const std = @import("std");
 
 const AppMode = app_bootstrap.AppMode;

@@ -1,6 +1,6 @@
-const app_bootstrap = @import("bootstrap.zig");
-const app_modes = @import("modes/mod.zig");
-const terminal_mod = @import("../terminal/core/terminal.zig");
+const app_bootstrap = @import("../bootstrap.zig");
+const app_modes = @import("../modes/mod.zig");
+const terminal_mod = @import("../../terminal/core/terminal.zig");
 
 const AppMode = app_bootstrap.AppMode;
 const TerminalWorkspace = terminal_mod.TerminalWorkspace;
