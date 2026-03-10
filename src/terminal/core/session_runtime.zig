@@ -77,14 +77,7 @@ pub fn hasData(self: anytype) bool {
 }
 
 pub fn lockPtyWriter(self: anytype) ?@import("terminal_session.zig").PtyWriteGuard {
-    if (self.pty) |*pty| {
-        self.pty_write_mutex.lock();
-        return .{
-            .mutex = &self.pty_write_mutex,
-            .pty = pty,
-        };
-    }
-    return null;
+    return terminal_transport.Writer.fromSession(self);
 }
 
 pub fn writePtyBytes(self: anytype, bytes: []const u8) !void {

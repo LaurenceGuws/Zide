@@ -2,8 +2,109 @@ const std = @import("std");
 const builtin = @import("builtin");
 const pty_mod = @import("../io/pty.zig");
 const io_threads = @import("io_threads.zig");
+const input_mod = @import("../input/input.zig");
+const types = @import("../model/types.zig");
 
 pub const PtySize = pty_mod.PtySize;
+
+pub const Writer = struct {
+    ctx: *anyopaque,
+    mutex: *std.Thread.Mutex,
+    write_bytes_fn: *const fn (ctx: *anyopaque, bytes: []const u8) anyerror!usize,
+    send_key_action_fn: *const fn (ctx: *anyopaque, key: types.Key, mod: types.Modifier, key_mode_flags: u32, action: input_mod.KeyAction) anyerror!bool,
+    send_key_action_event_fn: *const fn (ctx: *anyopaque, event: input_mod.KeyInputEvent) anyerror!bool,
+    send_keypad_fn: *const fn (ctx: *anyopaque, key: input_mod.KeypadKey, mod: types.Modifier, app_keypad: bool, key_mode_flags: u32) anyerror!bool,
+    send_char_action_fn: *const fn (ctx: *anyopaque, char: u32, mod: types.Modifier, key_mode_flags: u32, action: input_mod.KeyAction) anyerror!bool,
+    send_char_action_event_fn: *const fn (ctx: *anyopaque, event: input_mod.CharInputEvent) anyerror!bool,
+    report_mouse_event_fn: *const fn (ctx: *anyopaque, input: *input_mod.InputState, event: types.MouseEvent, rows: u16, cols: u16) anyerror!bool,
+    send_text_fn: *const fn (ctx: *anyopaque, text: []const u8) anyerror!void,
+
+    pub fn fromSession(session: anytype) ?Writer {
+        if (session.pty == null) return null;
+        const SessionPtr = @TypeOf(session);
+        session.pty_write_mutex.lock();
+        return .{
+            .ctx = @ptrCast(session),
+            .mutex = &session.pty_write_mutex,
+            .write_bytes_fn = struct {
+                fn call(ctx: *anyopaque, bytes: []const u8) anyerror!usize {
+                    const s: SessionPtr = @ptrCast(@alignCast(ctx));
+                    return if (s.pty) |*pty| try pty.write(bytes) else 0;
+                }
+            }.call,
+            .send_key_action_fn = struct {
+                fn call(ctx: *anyopaque, key: types.Key, mod: types.Modifier, key_mode_flags: u32, action: input_mod.KeyAction) anyerror!bool {
+                    const s: SessionPtr = @ptrCast(@alignCast(ctx));
+                    return if (s.pty) |*pty| try input_mod.sendKeyAction(pty, key, mod, key_mode_flags, action) else false;
+                }
+            }.call,
+            .send_key_action_event_fn = struct {
+                fn call(ctx: *anyopaque, event: input_mod.KeyInputEvent) anyerror!bool {
+                    const s: SessionPtr = @ptrCast(@alignCast(ctx));
+                    return if (s.pty) |*pty| try input_mod.sendKeyActionEvent(pty, event) else false;
+                }
+            }.call,
+            .send_keypad_fn = struct {
+                fn call(ctx: *anyopaque, key: input_mod.KeypadKey, mod: types.Modifier, app_keypad: bool, key_mode_flags: u32) anyerror!bool {
+                    const s: SessionPtr = @ptrCast(@alignCast(ctx));
+                    return if (s.pty) |*pty| try input_mod.sendKeypad(pty, key, mod, app_keypad, key_mode_flags) else false;
+                }
+            }.call,
+            .send_char_action_fn = struct {
+                fn call(ctx: *anyopaque, char: u32, mod: types.Modifier, key_mode_flags: u32, action: input_mod.KeyAction) anyerror!bool {
+                    const s: SessionPtr = @ptrCast(@alignCast(ctx));
+                    return if (s.pty) |*pty| try input_mod.sendCharAction(pty, char, mod, key_mode_flags, action) else false;
+                }
+            }.call,
+            .send_char_action_event_fn = struct {
+                fn call(ctx: *anyopaque, event: input_mod.CharInputEvent) anyerror!bool {
+                    const s: SessionPtr = @ptrCast(@alignCast(ctx));
+                    return if (s.pty) |*pty| try input_mod.sendCharActionEvent(pty, event) else false;
+                }
+            }.call,
+            .report_mouse_event_fn = struct {
+                fn call(ctx: *anyopaque, input: *input_mod.InputState, event: types.MouseEvent, rows: u16, cols: u16) anyerror!bool {
+                    const s: SessionPtr = @ptrCast(@alignCast(ctx));
+                    return if (s.pty) |*pty| try input.reportMouseEvent(pty, event, rows, cols) else false;
+                }
+            }.call,
+            .send_text_fn = struct {
+                fn call(ctx: *anyopaque, text: []const u8) anyerror!void {
+                    const s: SessionPtr = @ptrCast(@alignCast(ctx));
+                    if (s.pty) |*pty| try input_mod.sendText(pty, text);
+                }
+            }.call,
+        };
+    }
+
+    pub fn write(self: *Writer, bytes: []const u8) !usize {
+        return self.write_bytes_fn(self.ctx, bytes);
+    }
+    pub fn sendKeyAction(self: *Writer, key: types.Key, mod: types.Modifier, key_mode_flags: u32, action: input_mod.KeyAction) !bool {
+        return self.send_key_action_fn(self.ctx, key, mod, key_mode_flags, action);
+    }
+    pub fn sendKeyActionEvent(self: *Writer, event: input_mod.KeyInputEvent) !bool {
+        return self.send_key_action_event_fn(self.ctx, event);
+    }
+    pub fn sendKeypad(self: *Writer, key: input_mod.KeypadKey, mod: types.Modifier, app_keypad: bool, key_mode_flags: u32) !bool {
+        return self.send_keypad_fn(self.ctx, key, mod, app_keypad, key_mode_flags);
+    }
+    pub fn sendCharAction(self: *Writer, char: u32, mod: types.Modifier, key_mode_flags: u32, action: input_mod.KeyAction) !bool {
+        return self.send_char_action_fn(self.ctx, char, mod, key_mode_flags, action);
+    }
+    pub fn sendCharActionEvent(self: *Writer, event: input_mod.CharInputEvent) !bool {
+        return self.send_char_action_event_fn(self.ctx, event);
+    }
+    pub fn reportMouseEvent(self: *Writer, input: *input_mod.InputState, event: types.MouseEvent, rows: u16, cols: u16) !bool {
+        return self.report_mouse_event_fn(self.ctx, input, event, rows, cols);
+    }
+    pub fn sendText(self: *Writer, text: []const u8) !void {
+        try self.send_text_fn(self.ctx, text);
+    }
+    pub fn unlock(self: *Writer) void {
+        self.mutex.unlock();
+    }
+};
 
 pub const Transport = struct {
     ctx: *anyopaque,

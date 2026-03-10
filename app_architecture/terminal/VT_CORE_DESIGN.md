@@ -350,6 +350,30 @@ This is intentionally not the final transport split yet. The byte pumps and
 writer path still reach the PTY field directly, but host lifecycle and metadata
 no longer have to.
 
+### 2026-03-10 writer contract follow-up
+
+The transport boundary now also owns the main locked writer contract:
+
+- `terminal_transport.Writer` replaces the old raw `Pty` writer guard
+- input send paths now call transport-owned writer methods for:
+  - key actions
+  - key action events
+  - keypad sends
+  - char actions
+  - char action events
+  - mouse reports
+  - plain text sends
+  - raw byte writes
+
+This means the common protocol/input write surface no longer depends on a raw
+`Pty*` shape.
+
+What still remains PTY-direct:
+
+- the read/poll byte pumps
+- places that still check `self.pty` directly for “transport exists”
+- replay-harness setup paths
+
 ## Immediate Naming Direction
 
 These names are recommended to avoid ambiguity:
