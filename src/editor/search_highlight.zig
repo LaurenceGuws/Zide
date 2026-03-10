@@ -215,7 +215,7 @@ pub fn SearchHighlightOps(comptime Editor: type) type {
             }
         }
 
-        fn tryAutoBootstrapGrammars(self: *Editor) bool {
+        pub fn tryAutoBootstrapGrammars(self: *Editor) bool {
             _ = self;
             grammar_auto_bootstrap_lock.lock();
             defer grammar_auto_bootstrap_lock.unlock();
@@ -232,7 +232,7 @@ pub fn SearchHighlightOps(comptime Editor: type) type {
             return true;
         }
 
-        fn emitMissingGrammarNotice(
+        pub fn emitMissingGrammarNotice(
             self: *Editor,
             auto_bootstrap_enabled: bool,
             bootstrap_attempted: bool,
@@ -663,7 +663,7 @@ pub fn SearchHighlightOps(comptime Editor: type) type {
             }
         }
 
-        fn pickSearchActiveIndex(self: *const Editor, preferred_offset: usize) ?usize {
+        pub fn pickSearchActiveIndex(self: *const Editor, preferred_offset: usize) ?usize {
             if (self.search_matches.items.len == 0) return null;
             for (self.search_matches.items, 0..) |match, idx| {
                 if (match.start >= preferred_offset) return idx;
