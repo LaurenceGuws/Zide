@@ -112,7 +112,7 @@ file_layout_todo:
 
         - id: FL-ED-02
           title: "Split src/editor/syntax.zig into a focused syntax subdir"
-          status: in_progress
+          status: done
           files:
             - src/editor/syntax.zig
             - src/editor/syntax_queries.zig
@@ -121,6 +121,7 @@ file_layout_todo:
             - "2026-03-10: first slice landed in progress by extracting syntax query loading, capture-kind mapping, and query-cache ownership into `src/editor/syntax_queries.zig`, leaving `syntax.zig` focused more tightly on runtime highlighting and injection execution."
             - "2026-03-10: second slice landed in progress by extracting syntax highlighter runtime lifecycle and layered injection execution into `src/editor/syntax_runtime.zig`, leaving `syntax.zig` more focused on predicate/directive/token utility logic."
             - "2026-03-10: third slice landed in progress by extracting predicate evaluation, directive handling, injection-setting collection, node-text helpers, and the mini regex engine into `src/editor/syntax_predicates.zig`, reducing `syntax.zig` to token assembly, overlap splitting, and top-level facade wiring."
+            - "2026-03-10: final slice landed by extracting token overlap splitting/post-processing into `src/editor/syntax_tokens.zig`; `syntax.zig` is now a small facade over query/runtime/predicate/token subsystems instead of another large mixed-responsibility file."
 
         - id: FL-UI-01
           title: "Split src/ui/widgets/terminal_widget_draw.zig by draw ownership"
