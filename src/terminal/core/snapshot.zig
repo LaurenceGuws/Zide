@@ -81,6 +81,7 @@ pub const DebugSnapshot = struct {
     focus_reporting: bool,
     selection: ?types.TerminalSelection,
     base_default_attrs: types.CellAttrs,
+    render_cache: ?*const @import("render_cache.zig").RenderCache = null,
 };
 
 pub fn encodeSnapshot(

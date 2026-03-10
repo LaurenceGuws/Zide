@@ -445,6 +445,10 @@ Session construction also moved one step toward host-wrapper ownership:
 - replay-backed redraw coverage now also includes dense clear+repaint loops,
   locking the current contract that `ED 2` plus a full visible repaint stays on
   the partial path with full-width viewport damage after a presented baseline
+- replay-backed redraw coverage now also includes live-bottom full-region
+  scroll, locking the current contract that viewport-shift publication still
+  carries widened full-viewport damage bounds while separately tracking
+  `viewport_shift_rows`
 - stale private root-session shims for SGR application and key-mode flag reads
   are now removed too, keeping the root session file closer to a real facade
   instead of a pile of dead internal forwarding
