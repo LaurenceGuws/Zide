@@ -24,7 +24,6 @@ const input_modes = @import("input_modes.zig");
 const hyperlink_table = @import("hyperlink_table.zig");
 const state_reset = @import("state_reset.zig");
 const session_queries = @import("session_queries.zig");
-const session_publication = @import("session_publication.zig");
 const session_content = @import("session_content.zig");
 const session_selection = @import("session_selection.zig");
 const session_input = @import("session_input.zig");
@@ -517,31 +516,31 @@ pub const TerminalSession = struct {
     }
 
     pub fn currentGeneration(self: *const TerminalSession) u64 {
-        return session_publication.currentGeneration(self);
+        return session_rendering.currentGeneration(self);
     }
 
     pub fn publishedGeneration(self: *const TerminalSession) u64 {
-        return session_publication.publishedGeneration(self);
+        return session_rendering.publishedGeneration(self);
     }
 
     pub fn presentedGeneration(self: *const TerminalSession) u64 {
-        return session_publication.presentedGeneration(self);
+        return session_rendering.presentedGeneration(self);
     }
 
     pub fn notePresentedGeneration(self: *TerminalSession, generation: u64) void {
-        session_publication.notePresentedGeneration(self, generation);
+        session_rendering.notePresentedGeneration(self, generation);
     }
 
     pub fn acknowledgePresentedGeneration(self: *TerminalSession, generation: u64) bool {
-        return session_publication.acknowledgePresentedGeneration(self, generation);
+        return session_rendering.acknowledgePresentedGeneration(self, generation);
     }
 
     pub fn hasPublishedGenerationBacklog(self: *TerminalSession) bool {
-        return session_publication.hasPublishedGenerationBacklog(self);
+        return session_rendering.hasPublishedGenerationBacklog(self);
     }
 
     pub fn pollBacklogHint(self: *TerminalSession) bool {
-        return session_publication.pollBacklogHint(self);
+        return session_rendering.pollBacklogHint(self);
     }
 
     pub fn lockPtyWriter(self: *TerminalSession) ?PtyWriteGuard {
@@ -1083,11 +1082,11 @@ pub const TerminalSession = struct {
     }
 
     pub fn completePresentationFeedback(self: *TerminalSession, feedback: PresentationFeedback) void {
-        session_publication.completePresentationFeedback(self, feedback);
+        session_rendering.completePresentationFeedback(self, feedback);
     }
 
     pub fn finishFramePresentation(self: *TerminalSession, feedback: PresentationFeedback) void {
-        session_publication.completePresentationFeedback(self, feedback);
+        session_rendering.completePresentationFeedback(self, feedback);
     }
 
     pub fn pasteSystemClipboard(
