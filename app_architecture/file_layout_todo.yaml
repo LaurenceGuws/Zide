@@ -137,15 +137,17 @@ file_layout_todo:
 
         - id: FL-UI-02
           title: "Split src/ui/widgets/editor_widget_draw.zig by draw ownership"
-          status: in_progress
+          status: done
           files:
             - src/ui/widgets/editor_widget_draw.zig
             - src/ui/widgets/editor_widget_draw_overlay.zig
             - src/ui/widgets/editor_widget_draw_text.zig
+            - src/ui/widgets/editor_widget_draw_cache.zig
           notes:
             - "Possible owners: text/layout, gutter/chrome, overlays/cursor/selection."
             - "2026-03-10: first slice landed in progress by extracting draw-list primitives, selection/search overlays, caret helpers, selection-state hashing, and scrollbar rendering into `src/ui/widgets/editor_widget_draw_overlay.zig`. `editor_widget_draw.zig` now keeps text/layout/highlight assembly, cached-vs-live draw orchestration, and precompute/hash helpers."
             - "2026-03-10: second slice landed in progress by extracting byte-range mapping, selection-text background splitting, token color selection, and highlighted segment rendering into `src/ui/widgets/editor_widget_draw_text.zig`. `editor_widget_draw.zig` is now down near coordinator size and mostly owns draw entrypoints plus precompute/hash fallback helpers."
+            - "2026-03-10: task closed. Fallback tokenization, precompute passes, and segment-hash planning now live in `src/ui/widgets/editor_widget_draw_cache.zig`. `editor_widget_draw.zig` is down to 807 LOC and now reads as a real draw coordinator over overlay/text/cache helper modules rather than another mixed-ownership file."
 
         - id: FL-UI-03
           title: "Thin src/ui/renderer.zig into a real facade over src/ui/renderer/"
