@@ -233,6 +233,20 @@ exported from one shared library:
 That keeps Flutter and mobile consumers from depending on PTY/session semantics
 they do not need.
 
+### 2026-03-10 first internal split
+
+The first code cut for that FFI direction is now landed:
+
+- shared terminal FFI ABI types, handle state, event/string helpers, and
+  glyph-class metadata helpers live in `src/terminal/ffi/shared.zig`
+- PTY-host/runtime-facing operations live in `src/terminal/ffi/host_api.zig`
+- `src/terminal/ffi/bridge.zig` is now a thinner facade over that shared state
+  plus the remaining core-facing operations
+
+The exported C ABI is unchanged in this slice. The gain is internal ownership:
+host/runtime operations are no longer mixed inline with snapshot/scrollback/
+metadata/event export logic in one large bridge implementation.
+
 ## Compatibility Strategy
 
 We do not go from zero to hero in one patch.
