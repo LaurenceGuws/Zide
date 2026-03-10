@@ -122,7 +122,7 @@ windows_impl:
       status: done
       files_to_edit:
         - scripts/bootstrap.sh
-        - src/tools/grammar_update.zig
+        - tools/grammar_update.zig
       notes:
         - "grammar_update: on Windows, run .sh scripts via `bash` if available (Git Bash / MSYS2 / WSL bash on PATH)."
         - "Bootstrap: added PowerShell bootstrap script for Windows."

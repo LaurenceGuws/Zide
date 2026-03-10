@@ -9,6 +9,7 @@ Quick map of where to look for common needs.
 
 ## Task tracking (source of truth)
 - `app_architecture/**/_todo.yaml` — active task lists and status.
+  - `app_architecture/repo_structure_todo.yaml` — non-product repo structure cleanup (tests, tools, stale docs/tests).
   - `app_architecture/file_layout_todo.yaml` — file/folder layout cleanup queue (split large folders/files, collapse low-value micro-files).
   - `app_architecture/ui/renderer_todo.yaml` — renderer modularization + OS abstraction.
   - `app_architecture/ui/ui_widget_modularization_todo.yaml` — UI widget modularization (TerminalWidget/UI splits).
@@ -46,4 +47,5 @@ Quick map of where to look for common needs.
 ## Reviews and audits
 - `app_architecture/review/` — past review notes (scope + date in file).
   - `app_architecture/review/FILE_LAYOUT_HOTSPOTS_REVIEW.md` — current structure smell review and reference-repo comparison.
+  - `app_architecture/review/REPO_STRUCTURE_REVIEW.md` — repo hygiene review for tests, tooling roots, and stale docs/tests.
   - `app_architecture/review/SRC_APP_DOMAIN_MAP.md` — authoritative `src/app` ownership map for the ongoing folder cleanup.

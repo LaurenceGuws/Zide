@@ -399,7 +399,7 @@ pub fn planIdeExtendedBuildGraph(
         target,
         optimize,
         "grammar-update",
-        "src/tools/grammar_update.zig",
+        "tools/grammar_update.zig",
     );
     const grammar_update_run = addRunArtifactStep(
         b,
