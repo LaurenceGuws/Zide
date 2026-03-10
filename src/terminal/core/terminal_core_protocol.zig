@@ -1,5 +1,16 @@
 const std = @import("std");
 const types = @import("../model/types.zig");
+const hyperlink_table = @import("hyperlink_table.zig");
+const kitty_mod = @import("../kitty/graphics.zig");
+const scrolling_mod = @import("scrolling.zig");
+
+pub fn appendHyperlink(self: anytype, uri: []const u8, max_hyperlinks: usize) ?u32 {
+    return hyperlink_table.appendHyperlink(self, uri, max_hyperlinks);
+}
+
+pub fn clearAllKittyImages(self: anytype) void {
+    kitty_mod.clearAllKittyImages(self);
+}
 
 pub fn eraseDisplay(self: anytype, mode: i32) void {
     const screen = self.core.activeScreen();
@@ -45,6 +56,14 @@ pub fn deleteLines(self: anytype, count: usize) void {
     const screen = self.core.activeScreen();
     const blank_cell = screen.blankCell();
     screen.deleteLines(count, blank_cell);
+}
+
+pub fn scrollRegionUp(self: anytype, count: usize) void {
+    scrolling_mod.scrollRegionUp(self, count);
+}
+
+pub fn scrollRegionDown(self: anytype, count: usize) void {
+    scrolling_mod.scrollRegionDown(self, count);
 }
 
 pub fn paletteColor(self: anytype, idx: u8) types.Color {
