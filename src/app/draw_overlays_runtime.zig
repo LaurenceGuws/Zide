@@ -1,7 +1,7 @@
 const app_config_reload_notice = @import("config_reload_notice.zig");
 const app_modes = @import("modes/mod.zig");
 const app_terminal_close_confirm_draw = @import("terminal/terminal_close_confirm_draw.zig");
-const app_terminal_tabs_runtime = @import("terminal_tabs_runtime.zig");
+const app_terminal_tabs_runtime = @import("terminal/terminal_tabs_runtime.zig");
 const shared_types = @import("../types/mod.zig");
 
 const layout_types = shared_types.layout;

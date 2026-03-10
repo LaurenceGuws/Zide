@@ -1,6 +1,6 @@
-const app_bootstrap = @import("bootstrap.zig");
+const app_bootstrap = @import("../bootstrap.zig");
 const app_terminal_tabs = @import("terminal_tabs.zig");
-const terminal_mod = @import("../terminal/core/terminal.zig");
+const terminal_mod = @import("../../terminal/core/terminal.zig");
 
 pub fn count(
     app_mode: app_bootstrap.AppMode,
@@ -34,4 +34,3 @@ pub fn activeIndex(
         count(app_mode, terminal_workspace, terminals_len),
     );
 }
-

@@ -1,7 +1,7 @@
-const app_modes = @import("modes/mod.zig");
+const app_modes = @import("../modes/mod.zig");
 const app_terminal_intent_route = @import("terminal_intent_route.zig");
 const app_terminal_workspace_route = @import("terminal_workspace_route.zig");
-const terminal_mod = @import("../terminal/core/terminal.zig");
+const terminal_mod = @import("../../terminal/core/terminal.zig");
 const std = @import("std");
 
 pub const Intent = enum {
@@ -114,4 +114,3 @@ test "routeByTabIdAndSync emits close and activate only when id exists" {
     try std.testing.expectEqual(@as(usize, 1), ctx.close_calls);
     try std.testing.expectEqual(@as(usize, 1), ctx.activate_calls);
 }
-

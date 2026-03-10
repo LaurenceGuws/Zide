@@ -1,6 +1,6 @@
 const std = @import("std");
-const terminal_mod = @import("../terminal/core/terminal.zig");
-const widgets = @import("../ui/widgets.zig");
+const terminal_mod = @import("../../terminal/core/terminal.zig");
+const widgets = @import("../../ui/widgets.zig");
 
 fn terminalTabLabel(title: []const u8, cwd: []const u8) []const u8 {
     if (title.len > 0 and !std.mem.eql(u8, title, "Terminal")) return title;
