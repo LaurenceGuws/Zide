@@ -31,6 +31,7 @@ const session_input = @import("session_input.zig");
 const session_interaction = @import("session_interaction.zig");
 const session_rendering = @import("session_rendering.zig");
 const session_protocol = @import("session_protocol.zig");
+const session_config = @import("session_config.zig");
 const osc_kitty_clipboard = @import("../protocol/osc_kitty_clipboard.zig");
 const Pty = pty_mod.Pty;
 const PtySize = pty_mod.PtySize;
@@ -398,90 +399,35 @@ pub const TerminalSession = struct {
     }
 
     pub fn setDefaultColorsLocked(self: *TerminalSession, fg: types.Color, bg: types.Color) void {
-        const old_attrs = self.primary.default_attrs;
-        var new_attrs = types.defaultCell().attrs;
-        new_attrs.fg = fg;
-        new_attrs.bg = bg;
-        new_attrs.underline_color = fg;
-
-        self.primary.updateDefaultColors(old_attrs, new_attrs);
-        self.alt.updateDefaultColors(old_attrs, new_attrs);
-        self.history.updateDefaultColors(old_attrs.fg, old_attrs.bg, new_attrs.fg, new_attrs.bg);
-        self.updateViewCacheNoLock(self.output_generation.load(.acquire), self.history.scrollOffset());
+        session_config.setDefaultColorsLocked(self, fg, bg);
     }
 
     pub fn setDefaultColors(self: *TerminalSession, fg: types.Color, bg: types.Color) void {
-        self.lock();
-        defer self.unlock();
-        self.setDefaultColorsLocked(fg, bg);
-    }
-
-    fn setAnsiColorsLocked(self: *TerminalSession, colors: [16]types.Color) void {
-        for (0..16) |i| {
-            self.palette_default[i] = colors[i];
-            self.palette_current[i] = colors[i];
-        }
-        self.updateViewCacheNoLock(self.output_generation.load(.acquire), self.history.scrollOffset());
+        session_config.setDefaultColors(self, fg, bg);
     }
 
     pub fn setAnsiColors(self: *TerminalSession, colors: [16]types.Color) void {
-        self.lock();
-        defer self.unlock();
-        self.setAnsiColorsLocked(colors);
-    }
-
-    fn remapAnsiColorsLocked(self: *TerminalSession, old_colors: [16]types.Color, new_colors: [16]types.Color) void {
-        self.primary.updateAnsiColors(old_colors, new_colors);
-        self.alt.updateAnsiColors(old_colors, new_colors);
-        self.history.updateAnsiColors(old_colors, new_colors);
-        self.updateViewCacheNoLock(self.output_generation.load(.acquire), self.history.scrollOffset());
+        session_config.setAnsiColors(self, colors);
     }
 
     pub fn remapAnsiColors(self: *TerminalSession, old_colors: [16]types.Color, new_colors: [16]types.Color) void {
-        self.lock();
-        defer self.unlock();
-        self.remapAnsiColorsLocked(old_colors, new_colors);
-    }
-
-    fn snapshotAnsiColorsLocked(self: *const TerminalSession) [16]types.Color {
-        var colors: [16]types.Color = undefined;
-        for (0..16) |i| {
-            colors[i] = self.palette_current[i];
-        }
-        return colors;
+        session_config.remapAnsiColors(self, old_colors, new_colors);
     }
 
     pub fn setPaletteColorLocked(self: *TerminalSession, idx: usize, color: types.Color) void {
-        if (idx >= self.palette_current.len) return;
-        self.palette_current[idx] = color;
+        session_config.setPaletteColorLocked(self, idx, color);
     }
 
     pub fn resetPaletteColorLocked(self: *TerminalSession, idx: usize) void {
-        if (idx >= self.palette_current.len) return;
-        self.palette_current[idx] = self.palette_default[idx];
+        session_config.resetPaletteColorLocked(self, idx);
     }
 
     pub fn resetAllPaletteColorsLocked(self: *TerminalSession) void {
-        self.palette_current = self.palette_default;
+        session_config.resetAllPaletteColorsLocked(self);
     }
 
     pub fn setDynamicColorCodeLocked(self: *TerminalSession, code: u8, color: ?types.Color) void {
-        switch (code) {
-            10 => {
-                const default_attrs = self.primary.default_attrs;
-                self.setDefaultColorsLocked(color orelse self.base_default_attrs.fg, default_attrs.bg);
-            },
-            11 => {
-                const default_attrs = self.primary.default_attrs;
-                self.setDefaultColorsLocked(default_attrs.fg, color orelse self.base_default_attrs.bg);
-            },
-            else => {
-                const idx = @as(usize, code - 10);
-                if (idx < self.dynamic_colors.len) {
-                    self.dynamic_colors[idx] = color;
-                }
-            },
-        }
+        session_config.setDynamicColorCodeLocked(self, code, color);
     }
 
     pub fn applyThemePalette(
@@ -490,15 +436,7 @@ pub const TerminalSession = struct {
         bg: types.Color,
         ansi: ?[16]types.Color,
     ) void {
-        self.lock();
-        defer self.unlock();
-
-        const old_ansi = if (ansi != null) self.snapshotAnsiColorsLocked() else undefined;
-        self.setDefaultColorsLocked(fg, bg);
-        if (ansi) |colors| {
-            self.setAnsiColorsLocked(colors);
-            self.remapAnsiColorsLocked(old_ansi, colors);
-        }
+        session_config.applyThemePalette(self, fg, bg, ansi);
     }
 
     pub fn deinit(self: *TerminalSession) void {
@@ -754,28 +692,15 @@ pub const TerminalSession = struct {
     }
 
     pub fn setColumnMode132(self: *TerminalSession, enabled: bool) void {
-        self.lock();
-        defer self.unlock();
-        self.setColumnMode132Locked(enabled);
+        session_config.setColumnMode132(self, enabled);
     }
 
     pub fn setColumnMode132Locked(self: *TerminalSession, enabled: bool) void {
-        if (self.column_mode_132 == enabled) return;
-        self.column_mode_132 = enabled;
-        if (!enabled) return;
-        self.primary.clear();
-        self.alt.clear();
-        self.primary.setCursor(0, 0);
-        self.alt.setCursor(0, 0);
-        _ = self.clear_generation.fetchAdd(1, .acq_rel);
-        self.updateViewCacheNoLock(self.output_generation.load(.acquire), self.history.scrollOffset());
+        session_config.setColumnMode132Locked(self, enabled);
     }
 
     pub fn setCellSize(self: *TerminalSession, cell_width: u16, cell_height: u16) void {
-        self.lock();
-        defer self.unlock();
-        self.cell_width = cell_width;
-        self.cell_height = cell_height;
+        session_config.setCellSize(self, cell_width, cell_height);
     }
 
     pub fn handleControl(self: *TerminalSession, byte: u8) void {
