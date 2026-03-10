@@ -8,6 +8,18 @@ pub fn start(self: anytype, shell: ?[:0]const u8) !void {
     try terminal_transport.openPty(self, shell, true);
 }
 
+pub fn attachExternalTransport(self: anytype) void {
+    terminal_transport.attachExternalTransport(self);
+}
+
+pub fn enqueueExternalBytes(self: anytype, bytes: []const u8) !bool {
+    return try terminal_transport.enqueueExternalBytes(self, bytes);
+}
+
+pub fn closeExternalTransport(self: anytype) bool {
+    return terminal_transport.closeExternalTransport(self);
+}
+
 pub fn deinit(self: anytype) void {
     if (self.read_thread) |thread| {
         self.read_thread_running.store(false, .release);

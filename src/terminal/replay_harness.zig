@@ -300,7 +300,7 @@ pub fn runFixture(
         reply_capture = try ReplayPtyCapture.init();
         terminal_transport.attachPty(session, reply_capture.?.pty);
     } else {
-        terminal_transport.attachExternalTransport(session);
+        session.attachExternalTransport();
     }
     defer {
         if (reply_capture != null) {
@@ -318,7 +318,7 @@ pub fn runFixture(
     if (reply_capture != null) {
         terminal.debugFeedBytes(session, normalized);
     } else {
-        _ = try terminal_transport.enqueueExternalBytes(session, normalized);
+        _ = try session.enqueueExternalBytes(normalized);
         try session.poll();
     }
 

@@ -21,11 +21,11 @@ test "external transport poll updates screen and metadata" {
 
     var session = try TerminalSession.init(allocator, 2, 12);
     defer session.deinit();
-    terminal_transport.attachExternalTransport(session);
+    session.attachExternalTransport();
 
     try std.testing.expect(session.isAlive());
 
-    try std.testing.expect(try terminal_transport.enqueueExternalBytes(session, "\x1b]0;ext-title\x07hello\r\n"));
+    try std.testing.expect(try session.enqueueExternalBytes("\x1b]0;ext-title\x07hello\r\n"));
     try session.poll();
 
     const snapshot = session.snapshot();
@@ -46,10 +46,10 @@ test "external transport close updates alive metadata" {
 
     var session = try TerminalSession.init(allocator, 2, 12);
     defer session.deinit();
-    terminal_transport.attachExternalTransport(session);
+    session.attachExternalTransport();
 
     try std.testing.expect(session.isAlive());
-    try std.testing.expect(terminal_transport.closeExternalTransport(session));
+    try std.testing.expect(session.closeExternalTransport());
     try std.testing.expect(!session.isAlive());
 
     var title_buf = std.ArrayList(u8).empty;
