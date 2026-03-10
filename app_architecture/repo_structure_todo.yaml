@@ -48,3 +48,4 @@ items:
       - Second cleanup slice landed: moved mode-layering validation and binary-size baseline records out of top-level docs/ into app_architecture/review/
       - Third cleanup slice landed: removed redundant docs/AGENT_HOVER.md so there is one authoritative high-level handoff doc
       - Fourth cleanup slice landed: removed stale app_architecture/PLANNING.md and rewired remaining references to owning subsystem docs
+      - Fifth cleanup slice landed: moved the completed app mode layering tracker into app_architecture/review/ as historical rollout record
