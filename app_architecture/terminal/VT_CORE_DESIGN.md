@@ -293,6 +293,25 @@ core/model-centered:
 - selection/cache invalidation coordination
 - runtime-facing protocol side effects
 
+### 2026-03-10 dispatch split follow-up
+
+Parser/control dispatch ownership is now partially split again:
+
+- `src/terminal/core/terminal_core_dispatch.zig` owns control, CSI, OSC, APC,
+  DCS, codepoint, and ASCII dispatch entry helpers
+- `session_protocol.zig` now keeps the session-coupled pieces that still depend
+  on session-owned locking and publication
+
+The main remaining reason parser feed still lives in `session_protocol.zig` is
+that byte feed currently owns:
+
+- state mutex acquisition
+- output generation increments
+- view-cache publication updates
+
+That is the next real boundary to cleanly separate if we want parser feed to
+become fully core-owned.
+
 ## Immediate Naming Direction
 
 These names are recommended to avoid ambiguity:

@@ -50,6 +50,7 @@ items:
       - CSI/OSC/DCS/APC should execute against terminal core contracts, not session service facades
       - Preserve recent typed seam work and continue replacing session-centric execution targets
       - First slice landed: pure engine-side screen/palette/query protocol helpers moved behind src/terminal/core/terminal_core_protocol.zig, leaving session_protocol with the still session-coupled parts
+      - Second slice landed: parser/control/CSI/OSC/DCS/APC dispatch entry helpers now live behind src/terminal/core/terminal_core_dispatch.zig, while byte feed/publication stays in session_protocol because locking and generation publication are still session-owned
 
   - id: VTCORE-05
     title: Simplify snapshot and render publication

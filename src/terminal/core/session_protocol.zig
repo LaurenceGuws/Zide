@@ -1,30 +1,28 @@
 const std = @import("std");
-const csi_mod = @import("../parser/csi.zig");
 const parser_mod = @import("../parser/parser.zig");
-const parser_hooks = @import("parser_hooks.zig");
-const control_handlers = @import("control_handlers.zig");
 const hyperlink_table = @import("hyperlink_table.zig");
 const kitty_mod = @import("../kitty/graphics.zig");
 const state_reset = @import("state_reset.zig");
 const scrolling_mod = @import("scrolling.zig");
 const core_protocol = @import("terminal_core_protocol.zig");
+const core_dispatch = @import("terminal_core_dispatch.zig");
 const input_modes = @import("input_modes.zig");
 const types = @import("../model/types.zig");
 
 pub fn handleControl(self: anytype, byte: u8) void {
-    control_handlers.handleControl(self, byte);
+    core_dispatch.handleControl(self, byte);
 }
 
 pub fn parseDcs(self: anytype, payload: []const u8) void {
-    parser_hooks.parseDcs(parser_hooks.SessionFacade.from(self), payload);
+    core_dispatch.parseDcs(self, payload);
 }
 
 pub fn parseApc(self: anytype, payload: []const u8) void {
-    parser_hooks.parseApc(parser_hooks.SessionFacade.from(self), payload);
+    core_dispatch.parseApc(self, payload);
 }
 
 pub fn parseOsc(self: anytype, payload: []const u8, terminator: parser_mod.OscTerminator) void {
-    parser_hooks.parseOsc(parser_hooks.SessionFacade.from(self), payload, terminator);
+    core_dispatch.parseOsc(self, payload, terminator);
 }
 
 pub fn appendHyperlink(self: anytype, uri: []const u8, max_hyperlinks: usize) ?u32 {
@@ -35,8 +33,8 @@ pub fn clearAllKittyImages(self: anytype) void {
     kitty_mod.clearAllKittyImages(self);
 }
 
-pub fn handleCsi(self: anytype, action: csi_mod.CsiAction) void {
-    parser_hooks.handleCsi(parser_hooks.SessionFacade.from(self), action);
+pub fn handleCsi(self: anytype, action: @import("../parser/csi.zig").CsiAction) void {
+    core_dispatch.handleCsi(self, action);
 }
 
 pub fn feedOutputBytes(self: anytype, bytes: []const u8) void {
@@ -59,7 +57,7 @@ pub fn resetStateLocked(self: anytype) void {
 }
 
 pub fn reverseIndex(self: anytype) void {
-    control_handlers.reverseIndex(self);
+    core_dispatch.handleControl(self, 0x8D);
 }
 
 pub fn eraseDisplay(self: anytype, mode: i32) void {
@@ -103,19 +101,19 @@ pub fn paletteColor(self: anytype, idx: u8) types.Color {
 }
 
 pub fn handleCodepoint(self: anytype, codepoint: u32) void {
-    parser_hooks.handleCodepoint(parser_hooks.SessionFacade.from(self), codepoint);
+    core_dispatch.handleCodepoint(self, codepoint);
 }
 
 pub fn handleAsciiSlice(self: anytype, bytes: []const u8) void {
-    parser_hooks.handleAsciiSlice(parser_hooks.SessionFacade.from(self), bytes);
+    core_dispatch.handleAsciiSlice(self, bytes);
 }
 
 pub fn newline(self: anytype) void {
-    control_handlers.newline(self);
+    core_dispatch.newline(self);
 }
 
 pub fn wrapNewline(self: anytype) void {
-    control_handlers.wrapNewline(self);
+    core_dispatch.wrapNewline(self);
 }
 
 pub fn getCell(self: anytype, row: usize, col: usize) types.Cell {
