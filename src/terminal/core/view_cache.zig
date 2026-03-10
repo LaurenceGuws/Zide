@@ -5,6 +5,7 @@ const render_cache_mod = @import("render_cache.zig");
 const app_logger = @import("../../app_logger.zig");
 const publication = @import("view_cache_publication.zig");
 const plan_mod = @import("view_cache_plan.zig");
+const refinement = @import("view_cache_refinement.zig");
 const selection_projection = @import("view_cache_selection.zig");
 
 const RenderCache = render_cache_mod.RenderCache;
@@ -374,64 +375,7 @@ pub fn updateViewCacheNoLock(self: anytype, generation: u64, scroll_offset: usiz
         active_cache.row_hashes.items.len == rows and
         active_cache.generation == presented_generation)
     {
-        var any_dirty = false;
-        var row_idx: usize = 0;
-        while (row_idx < rows) : (row_idx += 1) {
-            if (!cache.dirty_rows.items[row_idx]) continue;
-            const row_start = row_idx * cols;
-            const row_cells = cache.cells.items[row_start .. row_start + cols];
-            const old_row_cells = active_cache.cells.items[row_start .. row_start + cols];
-            const hash_now = publication.hashRow(row_cells);
-            cache.row_hashes.items[row_idx] = hash_now;
-            const hash_changed = hash_now != active_cache.row_hashes.items[row_idx];
-            cache.dirty_rows.items[row_idx] = hash_changed;
-            if (hash_changed) {
-                if (publication.rowDiffSpan(row_cells, old_row_cells, cols)) |span| {
-                    cache.dirty_cols_start.items[row_idx] = @intCast(span.start);
-                    cache.dirty_cols_end.items[row_idx] = @intCast(span.end);
-                } else {
-                    cache.dirty_rows.items[row_idx] = false;
-                    continue;
-                }
-                fullwidth_origin_log.logf(
-                    .info,
-                    "source=view_cache row={d} reason=row_hash_changed cols={d}..{d} rows={d} cols={d}",
-                    .{
-                        row_idx,
-                        cache.dirty_cols_start.items[row_idx],
-                        cache.dirty_cols_end.items[row_idx],
-                        rows,
-                        cols,
-                    },
-                );
-                any_dirty = true;
-            }
-        }
-        if (!any_dirty) {
-            cache.dirty = .none;
-        } else {
-            var first_dirty = true;
-            row_idx = 0;
-            while (row_idx < rows) : (row_idx += 1) {
-                if (!cache.dirty_rows.items[row_idx]) continue;
-                const start_col = @as(usize, cache.dirty_cols_start.items[row_idx]);
-                const end_col = @as(usize, cache.dirty_cols_end.items[row_idx]);
-                if (first_dirty) {
-                    cache.damage = .{
-                        .start_row = row_idx,
-                        .end_row = row_idx,
-                        .start_col = start_col,
-                        .end_col = end_col,
-                    };
-                    first_dirty = false;
-                } else {
-                    cache.damage.start_row = @min(cache.damage.start_row, row_idx);
-                    cache.damage.end_row = @max(cache.damage.end_row, row_idx);
-                    cache.damage.start_col = @min(cache.damage.start_col, start_col);
-                    cache.damage.end_col = @max(cache.damage.end_col, end_col);
-                }
-            }
-        }
+        refinement.refineRowHashDamage(cache, active_cache, rows, cols, fullwidth_origin_log);
     }
 
     // Cursor is rendered as a UI overlay in terminal_widget_draw, so cursor visibility

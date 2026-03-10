@@ -423,6 +423,10 @@ Session construction also moved one step toward host-wrapper ownership:
 - viewport-shift and full-vs-partial publication planning now also lives under
   `src/terminal/core/view_cache_plan.zig`, so `view_cache.zig` is losing more
   publication-policy ownership instead of keeping it mixed with projection
+- row-hash refinement now also lives under
+  `src/terminal/core/view_cache_refinement.zig`, making that optional
+  publication-narrowing step explicit instead of leaving it embedded in the
+  base view-cache update path
 - stale private root-session shims for SGR application and key-mode flag reads
   are now removed too, keeping the root session file closer to a real facade
   instead of a pile of dead internal forwarding
