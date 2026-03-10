@@ -64,6 +64,7 @@ items:
       - Terminal Python mock-service smoke now validates close_input -> alive_changed -> metadata.alive=false for the external transport path
       - The derived event stream now also emits redraw_ready when snapshot generation advances, giving embedded hosts a minimal wake signal for snapshot pulls without introducing a second damage model
       - Host-side resize now also emits redraw_ready through the same derived event path, so PTY-backed foreign hosts and no-PTY embedded hosts share the same basic wake contract after visible size changes
+      - Reference-repo read confirms the same general model: Ghostty wakes after stream/mailbox publication and Alacritty requests redraw after actual visible-state changes, so start() is intentionally left poll-driven rather than gaining a synthetic wake event
 
   - id: VTCORE-04
     title: Move protocol execution onto core/model contracts
