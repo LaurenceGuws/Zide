@@ -314,6 +314,7 @@ pub fn updateViewCacheNoLock(self: anytype, generation: u64, scroll_offset: usiz
     }
 
     if (!plan.needs_full_damage and
+        !plan.can_publish_scroll_shift and
         (view.dirty == .partial or plan.visible_history_changed) and
         active_cache.rows == rows and
         active_cache.cols == cols and

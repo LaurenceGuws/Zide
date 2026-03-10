@@ -34,6 +34,13 @@ pub fn debugFeedBytes(self: anytype, bytes: []const u8) void {
     self.core.parser.handleSlice(parser_mod.Parser.SessionFacade.from(self), bytes);
 }
 
+pub fn debugScrollUp(self: anytype) void {
+    if (!debugAccessAllowed()) @panic("debugScrollUp is test-only");
+    @import("scrolling.zig").scrollUp(self);
+    _ = self.output_generation.fetchAdd(1, .acq_rel);
+    @import("session_rendering.zig").updateViewCacheNoLock(self, self.output_generation.load(.acquire), self.core.history.scrollOffset());
+}
+
 fn debugAccessAllowed() bool {
     if (builtin.is_test) return true;
     const root = @import("root");

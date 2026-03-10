@@ -31,7 +31,9 @@ pub fn buildPublicationPlan(
     cache_alt_active: bool,
 ) PublicationPlan {
     const visible_history_changed = visible_history_generation != active_visible_history_generation or
-        (clamped_offset > 0 and (history_len != active_history_len or total_lines != active_total_lines));
+        (clamped_offset > 0 and (history_len != active_history_len or total_lines != active_total_lines)) or
+        (clamped_offset == 0 and active_scroll_offset == 0 and
+            (history_len != active_history_len or total_lines != active_total_lines));
 
     const start_line = if (total_lines > rows + clamped_offset)
         total_lines - rows - clamped_offset
@@ -50,7 +52,7 @@ pub fn buildPublicationPlan(
 
     const shift_abs: usize = @intCast(if (viewport_shift_rows < 0) -viewport_shift_rows else viewport_shift_rows);
     const scroll_offset_changed = clamped_offset != active_scroll_offset;
-    const can_publish_scroll_shift = scroll_offset_changed and
+    const can_publish_offset_scroll_shift = scroll_offset_changed and
         !selection_active and
         !active_selection_active and
         !visible_history_changed and
@@ -60,6 +62,21 @@ pub fn buildPublicationPlan(
         active_generation == presented_generation and
         shift_abs > 0 and
         shift_abs < rows;
+    const history_delta = total_lines -| active_total_lines;
+    const can_publish_live_scroll_shift = !scroll_offset_changed and
+        clamped_offset == 0 and
+        active_scroll_offset == 0 and
+        !selection_active and
+        !active_selection_active and
+        visible_history_changed and
+        view_dirty != .full and
+        active_rows == rows and
+        active_cols == cols and
+        active_generation == presented_generation and
+        shift_abs > 0 and
+        shift_abs < rows and
+        history_delta == shift_abs;
+    const can_publish_scroll_shift = can_publish_offset_scroll_shift or can_publish_live_scroll_shift;
     const requires_full_damage_for_scroll_offset_change = scroll_offset_changed and !can_publish_scroll_shift;
     const needs_full_damage = rows != active_rows or
         cols != active_cols or

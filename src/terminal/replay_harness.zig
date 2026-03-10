@@ -105,6 +105,7 @@ pub const FixtureMeta = struct {
     expected_viewport_shift_rows: ?i32 = null,
     expected_viewport_shift_exposed_only: ?bool = null,
     selection: []const SelectionAction = &.{},
+    scroll_full_up_count: usize = 0,
     mouse: []const MouseAction = &.{},
     encoder: ?EncoderSpec = null,
     osc_5522_clipboard_text: ?[]const u8 = null,
@@ -346,10 +347,13 @@ pub fn runFixture(
 
     const normalized = try normalizeLineEndings(allocator, fixture.input, fixture.meta.line_ending);
     defer allocator.free(normalized);
-    try runFixtureInputPhase(session, normalized, reply_capture != null);
+    if (normalized.len > 0) {
+        try runFixtureInputPhase(session, normalized, reply_capture != null);
+    }
 
     if (fixture.meta.fixture_type == .harness_api) {
         applySelectionActions(session, fixture.meta.selection);
+        applyScrollFullUp(session, fixture.meta.scroll_full_up_count);
     }
     try applyMouseActions(session, fixture.meta.mouse);
 
@@ -694,6 +698,13 @@ fn applySelectionActions(session: *terminal.TerminalSession, actions: []const Se
             .update => session.updateSelection(action.row, action.col),
             .finish => session.finishSelection(),
         }
+    }
+}
+
+fn applyScrollFullUp(session: *terminal.TerminalSession, count: usize) void {
+    var i: usize = 0;
+    while (i < count) : (i += 1) {
+        terminal.debugScrollUp(session);
     }
 }
 
