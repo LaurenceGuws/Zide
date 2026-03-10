@@ -1,8 +1,8 @@
 const std = @import("std");
-const dcs_apc = @import("terminal/protocol/dcs_apc.zig");
-const osc_clipboard = @import("terminal/protocol/osc_clipboard.zig");
-const palette = @import("terminal/protocol/palette.zig");
-const types = @import("terminal/model/types.zig");
+const dcs_apc = @import("../src/terminal/protocol/dcs_apc.zig");
+const osc_clipboard = @import("../src/terminal/protocol/osc_clipboard.zig");
+const palette = @import("../src/terminal/protocol/palette.zig");
+const types = @import("../src/terminal/model/types.zig");
 
 const FakePty = struct {
     writes: std.ArrayList(u8),

@@ -1,5 +1,5 @@
 const std = @import("std");
-const terminal = @import("terminal/core/terminal.zig");
+const terminal = @import("../src/terminal/core/terminal.zig");
 
 test "terminal workspace create switch move close lifecycle" {
     var workspace = terminal.TerminalWorkspace.init(std.testing.allocator, .{});

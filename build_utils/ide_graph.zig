@@ -277,7 +277,7 @@ pub fn planIdeExtendedBuildGraph(
         b,
         target,
         optimize,
-        "src/terminal_ffi_smoke_tests.zig",
+        "tests/terminal_ffi_smoke_tests.zig",
     );
     addVendorAndStb(terminal_ffi_tests);
     _ = addRunArtifactStep(

@@ -2,9 +2,9 @@ const std = @import("std");
 const builtin = @import("builtin");
 const posix = std.posix;
 
-const terminal = @import("terminal/core/terminal.zig");
-const pty_mod = @import("terminal/io/pty.zig");
-const terminal_widget_mod = @import("ui/widgets/terminal_widget.zig");
+const terminal = @import("../src/terminal/core/terminal.zig");
+const pty_mod = @import("../src/terminal/io/pty.zig");
+const terminal_widget_mod = @import("../src/ui/widgets/terminal_widget.zig");
 
 fn requireUnix() !void {
     if (builtin.os.tag != .linux and builtin.os.tag != .macos) return error.SkipZigTest;

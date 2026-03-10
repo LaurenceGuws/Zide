@@ -65,19 +65,19 @@ pub const TerminalTestSpec = struct {
 
 pub const terminal_tests = [_]TerminalTestSpec{
     .{
-        .root_source_file = "src/terminal_kitty_query_parse_tests.zig",
+        .root_source_file = "tests/terminal_kitty_query_parse_tests.zig",
         .step_name = "test-terminal-kitty-query-parse",
         .step_desc = "Run project-integrated kitty query parse-path tests",
         .profile = target_profile.test_terminal_kitty_query,
     },
     .{
-        .root_source_file = "src/terminal_focus_reporting_tests.zig",
+        .root_source_file = "tests/terminal_focus_reporting_tests.zig",
         .step_name = "test-terminal-focus-reporting",
         .step_desc = "Run project-integrated terminal focus reporting tests",
         .profile = target_profile.test_terminal_focus_reporting,
     },
     .{
-        .root_source_file = "src/terminal_workspace_tests.zig",
+        .root_source_file = "tests/terminal_workspace_tests.zig",
         .step_name = "test-terminal-workspace",
         .step_desc = "Run terminal workspace lifecycle tests",
         .profile = target_profile.test_terminal_workspace,
