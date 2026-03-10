@@ -111,6 +111,7 @@ items:
       - Eleventh prep slice landed: replay-backed redraw coverage now also locks a multi-row narrow rewrite case that currently widens to full-row damage across the viewport, giving the later invalidation lane an explicit regression target instead of a hand-wavy nvim-style complaint
       - First real behavior change landed: live-bottom full-region scroll now publishes as exposed-row viewport shift with exposed-row damage only, and the replay fixture was converted to a pure harness-owned scroll action so the contract is not polluted by stray VT input
       - Twelfth replay contract landed: repeated line-number/sign-column style leading-column churn now has an explicit fixture, and it currently locks the over-broad full-row damage behavior that the next invalidation slice should narrow
+      - Thirteenth replay contract landed: one-column line-number churn now also has a corrected harness-owned fixture that stays on the narrow damage path, while the adjacent two-column sign-column churn fixture still locks the current broad full-row damage behavior
 
   - id: VTCORE-06
     title: Keep input encoding as a peer subsystem

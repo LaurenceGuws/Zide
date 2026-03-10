@@ -104,6 +104,7 @@ pub const FixtureMeta = struct {
     expected_damage: ?ExpectedDamage = null,
     expected_viewport_shift_rows: ?i32 = null,
     expected_viewport_shift_exposed_only: ?bool = null,
+    output_chunks: []const []const u8 = &.{},
     selection: []const SelectionAction = &.{},
     scroll_full_up_count: usize = 0,
     mouse: []const MouseAction = &.{},
@@ -352,6 +353,7 @@ pub fn runFixture(
     }
 
     if (fixture.meta.fixture_type == .harness_api) {
+        try applyOutputChunks(allocator, session, fixture.meta.output_chunks, fixture.meta.line_ending, reply_capture != null);
         applySelectionActions(session, fixture.meta.selection);
         applyScrollFullUp(session, fixture.meta.scroll_full_up_count);
     }
@@ -700,6 +702,20 @@ fn applySelectionActions(session: *terminal.TerminalSession, actions: []const Se
             .update => session.updateSelection(action.row, action.col),
             .finish => session.finishSelection(),
         }
+    }
+}
+
+fn applyOutputChunks(
+    allocator: std.mem.Allocator,
+    session: *terminal.TerminalSession,
+    chunks: []const []const u8,
+    line_ending: LineEnding,
+    uses_reply_capture: bool,
+) !void {
+    for (chunks) |chunk| {
+        const normalized = try normalizeLineEndings(allocator, chunk, line_ending);
+        defer allocator.free(normalized);
+        try runFixtureInputPhase(session, normalized, uses_reply_capture);
     }
 }
 

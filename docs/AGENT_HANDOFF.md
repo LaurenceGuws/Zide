@@ -26,6 +26,7 @@
   - the first real `VTCORE-05` behavior change is now landed too: live-bottom full-region scroll now publishes as `viewport_shift_exposed_only` with exposed-row damage instead of widening to the full viewport
   - replay-backed redraw coverage now also locks a multi-row narrow rewrite case that currently widens to full-row damage across the viewport, giving the next invalidation lane an explicit over-broad-damage regression target
   - replay-backed redraw coverage now also locks repeated line-number/sign-column churn, and the fixture currently records the same broad full-row damage behavior we still need to narrow for `nvim`-style gutters
+  - that gutter-churn coverage is now split more precisely too: one-column line-number churn stays narrow, while adjacent two-column sign-column churn still widens to full-row damage and is the sharper next invalidation target
   - stale private root-session shims for SGR application and key-mode flag reads are now also gone
   - protocol execution is beginning to split along the same line: pure engine-side helpers now live under `terminal_core_protocol.zig`, while session-coupled protocol behavior remains in `session_protocol.zig`
   - parser/control dispatch entry helpers now also live under `terminal_core_dispatch.zig`; parser byte feed still stays session-owned because locking and publication are not split yet
