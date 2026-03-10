@@ -46,6 +46,7 @@ items:
       - First internal transport contract landed in src/terminal/core/terminal_transport.zig for PTY lifecycle, resize, aliveness, exit polling, and foreground-process metadata
       - Writer path now also goes through the transport boundary: the old raw Pty writer guard was replaced by a transport-owned Writer contract used by session_input and existing protocol write callers
       - Read/poll byte pumps now also go through the transport boundary: io_threads.zig and pty_io.zig consume transport.read(...) and transport.waitForData(...) instead of reaching into raw Pty ownership directly
+      - PTY attach/detach setup now also goes through terminal_transport helpers, including the replay harness reply-capture path
       - Low-risk transport existence gates now also route through terminal_transport helpers, so session_input/session_interaction no longer peek at self.pty directly just to answer "is there a writable transport?"
 
   - id: VTCORE-04

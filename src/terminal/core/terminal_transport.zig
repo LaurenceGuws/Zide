@@ -231,7 +231,7 @@ pub fn openPty(self: anytype, shell: ?[:0]const u8, spawn_threads: bool) !void {
         .cell_height = self.cell_height,
     };
     const pty = try pty_mod.Pty.init(self.allocator, size, shell);
-    self.pty = pty;
+    attachPty(self, pty);
     if (!spawn_threads) return;
     if (builtin.os.tag == .linux or builtin.os.tag == .macos) {
         self.read_thread_running.store(true, .release);
@@ -239,4 +239,12 @@ pub fn openPty(self: anytype, shell: ?[:0]const u8, spawn_threads: bool) !void {
         self.parse_thread_running.store(true, .release);
         self.parse_thread = try std.Thread.spawn(.{}, io_threads.parseThreadMain, .{self});
     }
+}
+
+pub fn attachPty(self: anytype, pty: pty_mod.Pty) void {
+    self.pty = pty;
+}
+
+pub fn detachPty(self: anytype) void {
+    self.pty = null;
 }
