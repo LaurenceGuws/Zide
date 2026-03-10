@@ -125,7 +125,7 @@ file_layout_todo:
 
         - id: FL-UI-01
           title: "Split src/ui/widgets/terminal_widget_draw.zig by draw ownership"
-          status: in_progress
+          status: done
           files:
             - src/ui/widgets/terminal_widget_draw.zig
           notes:
@@ -133,6 +133,7 @@ file_layout_todo:
             - "2026-03-10: first slice landed in progress by extracting terminal grid/text rendering ownership into `src/ui/widgets/terminal_widget_draw_grid.zig`, including row background drawing, HarfBuzz shaping runs, underline drawing, sprite/box glyph paths, and glyph-cache submission. `terminal_widget_draw.zig` now keeps higher-level draw orchestration, texture update policy, overlays, cursor, selection, and scrollbar chrome."
             - "2026-03-10: second slice landed in progress by extracting overlay/chrome ownership into `src/ui/widgets/terminal_widget_draw_overlay.zig`, including selection overlays, hover underline, cursor drawing, IME composition preview, scrollbar chrome, and the scrollback badge. `terminal_widget_draw.zig` now leans much more heavily toward texture-update orchestration plus the remaining kitty/presentation-specific glue."
             - "2026-03-10: third slice landed in progress by extracting viewport-shift, texture-update, and partial redraw planning into `src/ui/widgets/terminal_widget_draw_texture.zig`, including the test-backed partial-plan helpers. `terminal_widget_draw.zig` is now primarily draw orchestration plus remaining kitty/presentation glue."
+            - "2026-03-10: task closed. After the grid, overlay, and texture-planning splits, `terminal_widget_draw.zig` is down to coordinator size and the remaining kitty/presentation/perf glue reads as legitimate top-level orchestration rather than another hidden subsystem owner."
 
         - id: FL-UI-02
           title: "Split src/ui/widgets/editor_widget_draw.zig by draw ownership"
