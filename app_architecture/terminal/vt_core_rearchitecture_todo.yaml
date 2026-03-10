@@ -113,8 +113,10 @@ items:
       - Twelfth replay contract landed: repeated line-number/sign-column style leading-column churn now has an explicit fixture, and it currently locks the over-broad full-row damage behavior that the next invalidation slice should narrow
       - Thirteenth replay contract landed: one-column line-number churn now also has a corrected harness-owned fixture that stays on the narrow damage path, while the adjacent two-column sign-column churn fixture still locks the current broad full-row damage behavior
       - Fourteenth VTCORE-05 behavior change landed: unpublished partial refinement now preserves prior dirty rows without dragging forward stale broad column spans, so both one-column line-number churn and single-packet two-column sign-column churn stay on narrow leading-column damage paths
-      - Fifteenth replay-contract refinement landed: uniform multi-packet two-column gutter churn also stays narrow, so the sharper remaining gutter target is now mixed alternating line-number/sign-column churn rather than simple packet accumulation alone
-      - Sixteenth replay contract landed: alternating one-column line-number and two-column sign-column updates across packets still widen to full-row damage, giving the next invalidation change a more realistic nvim-style gutter target
+      - Fifteenth replay-contract refinement landed: uniform multi-packet two-column gutter churn also stays narrow, so simple packet accumulation is no longer the right gutter target
+      - Sixteenth VTCORE-05 behavior change landed: unpublished partial refinement now restores carried-over row-local column spans in pre-widen form, so previously unpublished rows do not get widened again on every generation
+      - That carry-over damage fix keeps one-column line-number churn, single-packet two-column sign-column churn, uniform multi-packet gutter churn, and mixed alternating line-number/sign-column churn all on narrow leading-column damage paths
+      - Remaining redraw target should now move beyond synthetic gutter-only churn and toward more realistic mixed nvim-style update patterns with stable interior text and repeated sign/number/guide interaction
 
   - id: VTCORE-06
     title: Keep input encoding as a peer subsystem

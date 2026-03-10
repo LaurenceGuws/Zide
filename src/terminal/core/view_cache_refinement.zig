@@ -45,6 +45,12 @@ pub fn refineRowHashDamage(
         row_idx = 0;
         while (row_idx < rows) : (row_idx += 1) {
             if (!active_cache.dirty_rows.items[row_idx]) continue;
+            if (!cache.dirty_rows.items[row_idx]) {
+                const active_start = active_cache.dirty_cols_start.items[row_idx];
+                const active_end = active_cache.dirty_cols_end.items[row_idx];
+                cache.dirty_cols_start.items[row_idx] = if (active_start > 0) active_start + 1 else 0;
+                cache.dirty_cols_end.items[row_idx] = if (@as(usize, active_end) + 1 < cols and active_end > 0) active_end - 1 else active_end;
+            }
             cache.dirty_rows.items[row_idx] = true;
             any_dirty = true;
         }
