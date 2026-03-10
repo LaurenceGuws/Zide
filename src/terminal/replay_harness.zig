@@ -299,6 +299,8 @@ pub fn runFixture(
     if (fixture.meta.reply_hex != null) {
         reply_capture = try ReplayPtyCapture.init();
         terminal_transport.attachPty(session, reply_capture.?.pty);
+    } else {
+        terminal_transport.attachExternalTransport(session);
     }
     defer {
         if (reply_capture != null) {
@@ -313,7 +315,12 @@ pub fn runFixture(
 
     const normalized = try normalizeLineEndings(allocator, fixture.input, fixture.meta.line_ending);
     defer allocator.free(normalized);
-    terminal.debugFeedBytes(session, normalized);
+    if (reply_capture != null) {
+        terminal.debugFeedBytes(session, normalized);
+    } else {
+        _ = try terminal_transport.enqueueExternalBytes(session, normalized);
+        try session.poll();
+    }
 
     if (fixture.meta.fixture_type == .harness_api) {
         applySelectionActions(session, fixture.meta.selection);
@@ -337,26 +344,26 @@ pub fn runFixture(
 
 fn seedOsc5522Clipboard(session: *terminal.TerminalSession, meta: FixtureMeta) !void {
     if (meta.osc_5522_clipboard_text) |text| {
-        session.kitty_osc5522_clipboard_text.clearRetainingCapacity();
-        try session.kitty_osc5522_clipboard_text.ensureTotalCapacity(session.allocator, text.len);
-        try session.kitty_osc5522_clipboard_text.appendSlice(session.allocator, text);
+        session.core.kitty_osc5522_clipboard_text.clearRetainingCapacity();
+        try session.core.kitty_osc5522_clipboard_text.ensureTotalCapacity(session.allocator, text.len);
+        try session.core.kitty_osc5522_clipboard_text.appendSlice(session.allocator, text);
     }
     if (meta.osc_5522_clipboard_html) |html| {
-        session.kitty_osc5522_clipboard_html.clearRetainingCapacity();
-        try session.kitty_osc5522_clipboard_html.ensureTotalCapacity(session.allocator, html.len);
-        try session.kitty_osc5522_clipboard_html.appendSlice(session.allocator, html);
+        session.core.kitty_osc5522_clipboard_html.clearRetainingCapacity();
+        try session.core.kitty_osc5522_clipboard_html.ensureTotalCapacity(session.allocator, html.len);
+        try session.core.kitty_osc5522_clipboard_html.appendSlice(session.allocator, html);
     }
     if (meta.osc_5522_clipboard_uri_list) |uri_list| {
-        session.kitty_osc5522_clipboard_uri_list.clearRetainingCapacity();
-        try session.kitty_osc5522_clipboard_uri_list.ensureTotalCapacity(session.allocator, uri_list.len);
-        try session.kitty_osc5522_clipboard_uri_list.appendSlice(session.allocator, uri_list);
+        session.core.kitty_osc5522_clipboard_uri_list.clearRetainingCapacity();
+        try session.core.kitty_osc5522_clipboard_uri_list.ensureTotalCapacity(session.allocator, uri_list.len);
+        try session.core.kitty_osc5522_clipboard_uri_list.appendSlice(session.allocator, uri_list);
     }
     if (meta.osc_5522_clipboard_png_hex) |hex| {
         const bytes = try decodeHex(session.allocator, hex);
         defer session.allocator.free(bytes);
-        session.kitty_osc5522_clipboard_png.clearRetainingCapacity();
-        try session.kitty_osc5522_clipboard_png.ensureTotalCapacity(session.allocator, bytes.len);
-        try session.kitty_osc5522_clipboard_png.appendSlice(session.allocator, bytes);
+        session.core.kitty_osc5522_clipboard_png.clearRetainingCapacity();
+        try session.core.kitty_osc5522_clipboard_png.ensureTotalCapacity(session.allocator, bytes.len);
+        try session.core.kitty_osc5522_clipboard_png.appendSlice(session.allocator, bytes);
     }
 }
 
