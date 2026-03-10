@@ -6,533 +6,14 @@ const metrics_mod = @import("../../editor/view/metrics.zig");
 const cache_mod = @import("../../editor/render/cache.zig");
 const draw_list_mod = @import("../../editor/render/draw_list.zig");
 const app_logger = @import("../../app_logger.zig");
-const scrollbar_mod = @import("editor_scrollbar.zig");
+const overlay_mod = @import("editor_widget_draw_overlay.zig");
 
 const HighlightToken = syntax_mod.HighlightToken;
 const TokenKind = syntax_mod.TokenKind;
 const SelectionRange = selection_mod.SelectionRange;
 const EditorDrawList = draw_list_mod.EditorDrawList;
-const TextOp = draw_list_mod.TextOp;
-const RectOp = draw_list_mod.RectOp;
-const CursorOp = draw_list_mod.CursorOp;
+const ByteRange = overlay_mod.ByteRange;
 const large_file_fallback_threshold_bytes: usize = 8 * 1024 * 1024;
-
-fn packColor(color: anytype) u32 {
-    return @as(u32, color.r) | (@as(u32, color.g) << 8) | (@as(u32, color.b) << 16) | (@as(u32, color.a) << 24);
-}
-
-fn unpackColor(comptime ColorType: type, color: u32) ColorType {
-    return .{
-        .r = @intCast(color & 0xff),
-        .g = @intCast((color >> 8) & 0xff),
-        .b = @intCast((color >> 16) & 0xff),
-        .a = @intCast((color >> 24) & 0xff),
-    };
-}
-
-fn addRectOp(list: *EditorDrawList, x: f32, y: f32, w: f32, h: f32, color: anytype) bool {
-    list.add(.{ .rect = RectOp{ .x = x, .y = y, .w = w, .h = h, .color = packColor(color) } }) catch |err| {
-        const log = app_logger.logger("editor.draw");
-                    log.logf(.warning, "draw list rect append failed err={s}", .{ @errorName(err) });
-        return false;
-    };
-    return true;
-}
-
-fn addTextOp(list: *EditorDrawList, x: f32, y: f32, text: []const u8, color: anytype, disable_programming_ligatures: bool) bool {
-    list.add(.{ .text = TextOp{ .x = x, .y = y, .text = text, .color = packColor(color), .bg_color = 0, .disable_programming_ligatures = disable_programming_ligatures } }) catch |err| {
-        const log = app_logger.logger("editor.draw");
-                    log.logf(.warning, "draw list text append failed err={s}", .{ @errorName(err) });
-        return false;
-    };
-    return true;
-}
-
-fn addTextOpBg(list: *EditorDrawList, x: f32, y: f32, text: []const u8, color: anytype, bg: anytype, disable_programming_ligatures: bool) bool {
-    list.add(.{ .text = TextOp{ .x = x, .y = y, .text = text, .color = packColor(color), .bg_color = packColor(bg), .disable_programming_ligatures = disable_programming_ligatures } }) catch |err| {
-        const log = app_logger.logger("editor.draw");
-                    log.logf(.warning, "draw list text-bg append failed err={s}", .{ @errorName(err) });
-        return false;
-    };
-    return true;
-}
-
-fn addCursorOp(list: *EditorDrawList, x: f32, y: f32, h: f32, color: anytype) bool {
-    list.add(.{ .cursor = CursorOp{ .x = x, .y = y, .h = h, .color = packColor(color) } }) catch |err| {
-        const log = app_logger.logger("editor.draw");
-                    log.logf(.warning, "draw list cursor append failed err={s}", .{ @errorName(err) });
-        return false;
-    };
-    return true;
-}
-
-fn drawExtraCarets(
-    widget: anytype,
-    r: anytype,
-    line_idx: usize,
-    line_text: []const u8,
-    cluster_slice: ?[]const u32,
-    seg_start_col: usize,
-    seg_end_col: usize,
-    line_width: usize,
-    seg_y: f32,
-    text_start_x: f32,
-) void {
-    for (widget.editor.selections.items) |sel| {
-        const caret = sel.normalized();
-        if (!caret.isEmpty()) continue;
-        if (caret.start.offset == widget.editor.cursor.offset) continue;
-        if (caret.start.line != line_idx) continue;
-        const caret_col = selection_mod.visualColumnForByteIndex(line_text, caret.start.col, cluster_slice);
-        const in_segment = if (seg_start_col == seg_end_col)
-            caret_col == seg_start_col
-        else if (caret_col == line_width and seg_end_col == line_width)
-            caret_col >= seg_start_col and caret_col <= seg_end_col
-        else
-            caret_col >= seg_start_col and caret_col < seg_end_col;
-        if (!in_segment) continue;
-        const local_col = caret_col - seg_start_col;
-        const cursor_x = text_start_x + @as(f32, @floatFromInt(local_col)) * r.char_width;
-        r.drawCursor(cursor_x, seg_y, .line);
-    }
-}
-
-fn addExtraCaretOps(
-    list: *EditorDrawList,
-    widget: anytype,
-    r: anytype,
-    line_idx: usize,
-    line_text: []const u8,
-    cluster_slice: ?[]const u32,
-    seg_start_col: usize,
-    seg_end_col: usize,
-    line_width: usize,
-    seg_y: f32,
-    text_start_x: f32,
-) bool {
-    var ok = true;
-    for (widget.editor.selections.items) |sel| {
-        const caret = sel.normalized();
-        if (!caret.isEmpty()) continue;
-        if (caret.start.offset == widget.editor.cursor.offset) continue;
-        if (caret.start.line != line_idx) continue;
-        const caret_col = selection_mod.visualColumnForByteIndex(line_text, caret.start.col, cluster_slice);
-        const in_segment = if (seg_start_col == seg_end_col)
-            caret_col == seg_start_col
-        else if (caret_col == line_width and seg_end_col == line_width)
-            caret_col >= seg_start_col and caret_col <= seg_end_col
-        else
-            caret_col >= seg_start_col and caret_col < seg_end_col;
-        if (!in_segment) continue;
-        const local_col = caret_col - seg_start_col;
-        const cursor_x = text_start_x + @as(f32, @floatFromInt(local_col)) * r.char_width;
-        ok = ok and addCursorOp(list, cursor_x, seg_y, r.char_height, r.theme.cursor);
-    }
-    return ok;
-}
-
-fn selectionStateHash(editor: anytype) u64 {
-    var h: u64 = 1469598103934665603;
-    h ^= @as(u64, editor.cursor.offset);
-    h *%= 1099511628211;
-    if (editor.selection) |sel| {
-        h ^= @as(u64, sel.start.offset);
-        h *%= 1099511628211;
-        h ^= @as(u64, sel.end.offset);
-        h *%= 1099511628211;
-    }
-    h ^= @as(u64, editor.selections.items.len);
-    h *%= 1099511628211;
-    for (editor.selections.items) |sel| {
-        h ^= @as(u64, sel.start.offset);
-        h *%= 1099511628211;
-        h ^= @as(u64, sel.end.offset);
-        h *%= 1099511628211;
-    }
-    h ^= editor.search_epoch;
-    h *%= 1099511628211;
-    return h;
-}
-
-const RowBand = struct {
-    y_i: i32,
-    h_i: i32,
-    y_f: f32,
-    h_f: f32,
-};
-
-fn rowBandForRow(base_y: f32, row: usize, h: f32) RowBand {
-    const top_f = base_y + @as(f32, @floatFromInt(row)) * h;
-    const bottom_f = base_y + @as(f32, @floatFromInt(row + 1)) * h;
-    const top = @as(i32, @intFromFloat(std.math.round(top_f)));
-    const bottom = @as(i32, @intFromFloat(std.math.round(bottom_f)));
-    const hi = @max(1, bottom - top);
-    return .{
-        .y_i = top,
-        .h_i = hi,
-        .y_f = @floatFromInt(top),
-        .h_f = @floatFromInt(hi),
-    };
-}
-
-fn selectionBandForRowBand(band: RowBand) RowBand {
-    return .{
-        .y_i = band.y_i,
-        .h_i = band.h_i + 1,
-        .y_f = band.y_f,
-        .h_f = band.h_f + 1.0,
-    };
-}
-
-fn softSelectionColor(base: anytype) @TypeOf(base) {
-    var color = base;
-    color.a = @min(@as(u8, 132), color.a);
-    return color;
-}
-
-fn softSelectionInset(scale: f32) f32 {
-    return @max(1.0, std.math.floor(scale * 0.75));
-}
-
-const SelectionCornerMask = struct {
-    top_left_outward: bool = false,
-    top_right_outward: bool = false,
-    bottom_left_outward: bool = false,
-    bottom_right_outward: bool = false,
-    top_left_inward: bool = false,
-    top_right_inward: bool = false,
-    bottom_left_inward: bool = false,
-    bottom_right_inward: bool = false,
-};
-
-fn drawTopSelectionScanline(r: anytype, x: f32, y: f32, w: f32, color: anytype, left_inset: f32, right_inset: f32) void {
-    const line_x = x + left_inset;
-    const line_w = w - left_inset - right_inset;
-    if (line_w <= 0) return;
-    r.drawRect(
-        @intFromFloat(line_x),
-        @intFromFloat(y),
-        @intFromFloat(line_w),
-        1,
-        color,
-    );
-}
-
-fn drawSoftSelectionRect(r: anytype, x: f32, y: f32, w: f32, h: f32, color: anytype, mask: SelectionCornerMask) void {
-    if (w <= 0 or h <= 0) return;
-    const style = r.editorSelectionOverlayStyle();
-    if (!style.smooth_enabled) {
-        r.drawRect(
-            @intFromFloat(x),
-            @intFromFloat(y),
-            @intFromFloat(w),
-            @intFromFloat(h),
-            color,
-        );
-        return;
-    }
-    const smooth_active = mask.top_left_outward or mask.top_right_outward or mask.bottom_left_outward or mask.bottom_right_outward or mask.top_left_inward or mask.top_right_inward or mask.bottom_left_inward or mask.bottom_right_inward;
-    const inset_x: f32 = style.corner_px orelse softSelectionInset(r.uiScaleFactor());
-    const pad_x: f32 = if (smooth_active) (style.pad_px orelse @max(1.0, std.math.round(r.uiScaleFactor() * 0.5))) else 0.0;
-    const draw_x = x + inset_x - pad_x;
-    const draw_y = y;
-    const draw_w = @max(1.0, w - inset_x * 2.0 + pad_x * 2.0);
-    const draw_h = h;
-    const corner = @max(1.0, @min(inset_x, std.math.floor(draw_h / 4.0)));
-    const cornerDelta = struct {
-        fn resolve(outward: bool, inward: bool, amount: f32) f32 {
-            if (outward) return amount;
-            if (inward) return -amount;
-            return 0.0;
-        }
-    }.resolve;
-    const top_left_inset = cornerDelta(mask.top_left_outward, mask.top_left_inward, corner);
-    const top_right_inset = cornerDelta(mask.top_right_outward, mask.top_right_inward, corner);
-    const bottom_left_inset = cornerDelta(mask.bottom_left_outward, mask.bottom_left_inward, corner);
-    const bottom_right_inset = cornerDelta(mask.bottom_right_outward, mask.bottom_right_inward, corner);
-    const compensatedInset = struct {
-        fn apply(value: f32, pad: f32) f32 {
-            if (value > 0.0) return @max(0.0, value - pad);
-            if (value < 0.0) return value - pad;
-            return 0.0;
-        }
-    }.apply;
-    const top_left_edge = compensatedInset(top_left_inset, pad_x);
-    const top_right_edge = compensatedInset(top_right_inset, pad_x);
-    const bottom_left_edge = compensatedInset(bottom_left_inset, pad_x);
-    const bottom_right_edge = compensatedInset(bottom_right_inset, pad_x);
-    const draw_h_i = @as(i32, @intFromFloat(draw_h));
-
-    if (draw_h_i <= 1) {
-        drawTopSelectionScanline(
-            r,
-            draw_x,
-            draw_y,
-            draw_w,
-            color,
-            if (top_left_edge != 0.0) top_left_edge else bottom_left_edge,
-            if (top_right_edge != 0.0) top_right_edge else bottom_right_edge,
-        );
-        return;
-    }
-    if (draw_h_i == 2) {
-        drawTopSelectionScanline(r, draw_x, draw_y, draw_w, color, top_left_edge, top_right_edge);
-        drawTopSelectionScanline(r, draw_x, draw_y + 1.0, draw_w, color, bottom_left_edge, bottom_right_edge);
-        return;
-    }
-
-    if (top_left_edge == 0 and top_right_edge == 0 and bottom_left_edge == 0 and bottom_right_edge == 0) {
-        r.drawRect(
-            @intFromFloat(draw_x),
-            @intFromFloat(draw_y),
-            @intFromFloat(draw_w),
-            @intFromFloat(draw_h),
-            color,
-        );
-        return;
-    }
-
-    drawTopSelectionScanline(r, draw_x, draw_y, draw_w, color, top_left_edge, top_right_edge);
-    r.drawRect(
-        @intFromFloat(draw_x),
-        @intFromFloat(draw_y + 1.0),
-        @intFromFloat(draw_w),
-        @intFromFloat(draw_h - 2.0),
-        color,
-    );
-    drawTopSelectionScanline(
-        r,
-        draw_x,
-        draw_y + draw_h - 1.0,
-        draw_w,
-        color,
-        bottom_left_edge,
-        bottom_right_edge,
-    );
-}
-
-fn addSoftSelectionRectOp(list: *EditorDrawList, r: anytype, x: f32, y: f32, w: f32, h: f32, color: anytype, mask: SelectionCornerMask) bool {
-    if (w <= 0 or h <= 0) return true;
-    const style = r.editorSelectionOverlayStyle();
-    if (!style.smooth_enabled) {
-        return addRectOp(list, x, y, w, h, color);
-    }
-    const smooth_active = mask.top_left_outward or mask.top_right_outward or mask.bottom_left_outward or mask.bottom_right_outward or mask.top_left_inward or mask.top_right_inward or mask.bottom_left_inward or mask.bottom_right_inward;
-    const inset_x: f32 = style.corner_px orelse softSelectionInset(r.uiScaleFactor());
-    const pad_x: f32 = if (smooth_active) (style.pad_px orelse @max(1.0, std.math.round(r.uiScaleFactor() * 0.5))) else 0.0;
-    const draw_x = x + inset_x - pad_x;
-    const draw_y = y;
-    const draw_w = @max(1.0, w - inset_x * 2.0 + pad_x * 2.0);
-    const draw_h = h;
-    const corner = @max(1.0, @min(inset_x, std.math.floor(draw_h / 4.0)));
-    const cornerDelta = struct {
-        fn resolve(outward: bool, inward: bool, amount: f32) f32 {
-            if (outward) return amount;
-            if (inward) return -amount;
-            return 0.0;
-        }
-    }.resolve;
-    const top_left_inset = cornerDelta(mask.top_left_outward, mask.top_left_inward, corner);
-    const top_right_inset = cornerDelta(mask.top_right_outward, mask.top_right_inward, corner);
-    const bottom_left_inset = cornerDelta(mask.bottom_left_outward, mask.bottom_left_inward, corner);
-    const bottom_right_inset = cornerDelta(mask.bottom_right_outward, mask.bottom_right_inward, corner);
-    const compensatedInset = struct {
-        fn apply(value: f32, pad: f32) f32 {
-            if (value > 0.0) return @max(0.0, value - pad);
-            if (value < 0.0) return value - pad;
-            return 0.0;
-        }
-    }.apply;
-    const top_left_edge = compensatedInset(top_left_inset, pad_x);
-    const top_right_edge = compensatedInset(top_right_inset, pad_x);
-    const bottom_left_edge = compensatedInset(bottom_left_inset, pad_x);
-    const bottom_right_edge = compensatedInset(bottom_right_inset, pad_x);
-    const draw_h_i = @as(i32, @intFromFloat(draw_h));
-
-    if (draw_h_i <= 1) {
-        const left_inset = if (top_left_edge != 0.0) top_left_edge else bottom_left_edge;
-        const right_inset = if (top_right_edge != 0.0) top_right_edge else bottom_right_edge;
-        const line_x = draw_x + left_inset;
-        const line_w = draw_w - left_inset - right_inset;
-        if (line_w <= 0) return true;
-        return addRectOp(list, line_x, draw_y, line_w, 1.0, color);
-    }
-    if (draw_h_i == 2) {
-        var ok = true;
-        const top_x = draw_x + top_left_edge;
-        const top_w = draw_w - top_left_edge - top_right_edge;
-        if (top_w > 0) ok = ok and addRectOp(list, top_x, draw_y, top_w, 1.0, color);
-        const bottom_x = draw_x + bottom_left_edge;
-        const bottom_w = draw_w - bottom_left_edge - bottom_right_edge;
-        if (bottom_w > 0) ok = ok and addRectOp(list, bottom_x, draw_y + 1.0, bottom_w, 1.0, color);
-        return ok;
-    }
-
-    if (top_left_edge == 0 and top_right_edge == 0 and bottom_left_edge == 0 and bottom_right_edge == 0) {
-        return addRectOp(list, draw_x, draw_y, draw_w, draw_h, color);
-    }
-
-    var ok = true;
-    const top_x = draw_x + top_left_edge;
-    const top_w = draw_w - top_left_edge - top_right_edge;
-    if (top_w > 0) ok = ok and addRectOp(list, top_x, draw_y, top_w, 1.0, color);
-    ok = ok and addRectOp(list, draw_x, draw_y + 1.0, draw_w, draw_h - 2.0, color);
-    const bottom_x = draw_x + bottom_left_edge;
-    const bottom_w = draw_w - bottom_left_edge - bottom_right_edge;
-    if (bottom_w > 0) ok = ok and addRectOp(list, bottom_x, draw_y + draw_h - 1.0, bottom_w, 1.0, color);
-    return ok;
-}
-
-const NeighborEdgeState = struct {
-    left_connected: bool = false,
-    right_connected: bool = false,
-    left_inward: bool = false,
-    right_inward: bool = false,
-};
-
-fn accumulateNeighborEdgeState(state: *NeighborEdgeState, sel_start: usize, sel_end: usize, neighbor_start: usize, neighbor_end: usize) void {
-    if (neighbor_end <= neighbor_start) return;
-
-    const overlaps_left_edge = neighbor_start <= sel_start and neighbor_end > sel_start;
-    const overlaps_right_edge = neighbor_start < sel_end and neighbor_end >= sel_end;
-    if (overlaps_left_edge) state.left_connected = true;
-    if (overlaps_right_edge) state.right_connected = true;
-    if (neighbor_start < sel_start and neighbor_end > sel_start) state.left_inward = true;
-    if (neighbor_end > sel_end and neighbor_start < sel_end) state.right_inward = true;
-}
-
-fn lineNeighborEdgeState(editor: anytype, line_idx: usize, sel_start: usize, sel_end: usize) NeighborEdgeState {
-    var state: NeighborEdgeState = .{};
-
-    const mergeSelection = struct {
-        fn apply(state_local: *NeighborEdgeState, line_idx_local: usize, sel_start_local: usize, sel_end_local: usize, selection: anytype) void {
-            const norm = selection.normalized();
-            if (norm.isEmpty()) return;
-            if (line_idx_local < norm.start.line or line_idx_local > norm.end.line) return;
-
-            const neighbor_start: usize = if (line_idx_local == norm.start.line) norm.start.col else 0;
-            const neighbor_end: usize = if (line_idx_local == norm.end.line) norm.end.col else std.math.maxInt(usize);
-            accumulateNeighborEdgeState(state_local, sel_start_local, sel_end_local, neighbor_start, neighbor_end);
-        }
-    }.apply;
-
-    if (editor.selection) |sel| {
-        mergeSelection(&state, line_idx, sel_start, sel_end, sel);
-    }
-    for (editor.selections.items) |sel| {
-        mergeSelection(&state, line_idx, sel_start, sel_end, sel);
-    }
-    return state;
-}
-
-fn selectionCornerMaskForSegment(
-    editor: anytype,
-    line_idx: usize,
-    cols: usize,
-    line_width: usize,
-    seg: usize,
-    total_visual_lines: usize,
-    seg_start_col: usize,
-    seg_end_col: usize,
-    range: SelectionRange,
-) SelectionCornerMask {
-    const sel_start = @max(range.start_col, seg_start_col);
-    const sel_end = @min(range.end_col, seg_end_col);
-    if (sel_end <= sel_start) return .{};
-
-    var top_state: NeighborEdgeState = .{};
-    if (seg > 0 and cols > 0) {
-        const prev_seg = seg - 1;
-        const prev_seg_start = prev_seg * cols;
-        const prev_seg_end = @min(line_width, prev_seg_start + cols);
-        const prev_start = @max(range.start_col, prev_seg_start);
-        const prev_end = @min(range.end_col, prev_seg_end);
-        accumulateNeighborEdgeState(&top_state, sel_start, sel_end, prev_start, prev_end);
-    } else if (seg == 0 and line_idx > 0 and range.start_col == 0) {
-        top_state = lineNeighborEdgeState(editor, line_idx - 1, sel_start, sel_end);
-    }
-
-    var bottom_state: NeighborEdgeState = .{};
-    if (seg + 1 < total_visual_lines and cols > 0) {
-        const next_seg = seg + 1;
-        const next_seg_start = next_seg * cols;
-        const next_seg_end = @min(line_width, next_seg_start + cols);
-        const next_start = @max(range.start_col, next_seg_start);
-        const next_end = @min(range.end_col, next_seg_end);
-        accumulateNeighborEdgeState(&bottom_state, sel_start, sel_end, next_start, next_end);
-    } else if (seg + 1 >= total_visual_lines and line_idx + 1 < editor.lineCount() and range.end_col >= line_width) {
-        bottom_state = lineNeighborEdgeState(editor, line_idx + 1, sel_start, sel_end);
-    }
-
-    return .{
-        .top_left_outward = !top_state.left_connected,
-        .top_right_outward = !top_state.right_connected,
-        .bottom_left_outward = !bottom_state.left_connected,
-        .bottom_right_outward = !bottom_state.right_connected,
-        .top_left_inward = top_state.left_inward,
-        .top_right_inward = top_state.right_inward,
-        .bottom_left_inward = bottom_state.left_inward,
-        .bottom_right_inward = bottom_state.right_inward,
-    };
-}
-
-fn searchHighlightColor(theme: anytype) @TypeOf(theme.selection) {
-    var color = if (@hasField(@TypeOf(theme), "ui_accent")) theme.ui_accent else theme.selection;
-    color.a = 80;
-    return color;
-}
-
-fn activeSearchHighlightColor(theme: anytype) @TypeOf(theme.selection) {
-    var color = if (@hasField(@TypeOf(theme), "ui_accent")) theme.ui_accent else theme.selection;
-    color.a = 152;
-    return color;
-}
-
-fn searchActiveByteRange(editor: anytype) ?ByteRange {
-    const active = editor.searchActiveMatch() orelse return null;
-    return .{ .start = active.start, .end = active.end };
-}
-
-fn rangeContains(haystack: ByteRange, needle: ByteRange) bool {
-    return needle.start >= haystack.start and needle.end <= haystack.end;
-}
-
-fn flushDrawList(list: *EditorDrawList, r: anytype) void {
-    const ColorType = @TypeOf(r.theme.foreground);
-    for (list.ops.items) |op| {
-        switch (op) {
-            .rect => |rect| {
-                r.drawRect(
-                    @intFromFloat(rect.x),
-                    @intFromFloat(rect.y),
-                    @intFromFloat(rect.w),
-                    @intFromFloat(rect.h),
-                    unpackColor(ColorType, rect.color),
-                );
-            },
-            .text => |text| {
-                const fg = unpackColor(ColorType, text.color);
-                const bg = unpackColor(ColorType, text.bg_color);
-                if (bg.a != 0) {
-                    r.drawTextMonospaceOnBgPolicy(text.text, text.x, text.y, fg, bg, text.disable_programming_ligatures);
-                } else {
-                    r.drawTextMonospacePolicy(text.text, text.x, text.y, fg, text.disable_programming_ligatures);
-                }
-            },
-            .cursor => |cursor| {
-                const color = unpackColor(ColorType, cursor.color);
-                const scale = r.uiScaleFactor();
-                const edge_inset: i32 = @max(0, @as(i32, @intFromFloat(std.math.floor(scale * 0.5))));
-                const stroke: i32 = @max(1, @as(i32, @intFromFloat(std.math.round(scale))));
-                const x_i: i32 = @as(i32, @intFromFloat(cursor.x)) + edge_inset;
-                const cursor_h_i: i32 = @as(i32, @intFromFloat(cursor.h));
-                const h_i: i32 = @max(1, cursor_h_i - edge_inset * 2);
-                const y_i: i32 = @as(i32, @intFromFloat(cursor.y)) + @divFloor(@max(0, cursor_h_i - h_i), 2);
-                r.drawRect(x_i, y_i, stroke, h_i, color);
-            },
-        }
-    }
-}
 
 fn addEditorLineBaseOps(
     list: *EditorDrawList,
@@ -548,7 +29,7 @@ fn addEditorLineBaseOps(
     var ok = true;
 
     if (is_current) {
-        ok = ok and addRectOp(
+        ok = ok and overlay_mod.addRectOp(
             list,
             x + gutter_width,
             y,
@@ -556,7 +37,7 @@ fn addEditorLineBaseOps(
             r.char_height,
             r.theme.current_line,
         );
-        ok = ok and addRectOp(
+        ok = ok and overlay_mod.addRectOp(
             list,
             x,
             y,
@@ -574,11 +55,9 @@ fn addEditorLineBaseOps(
     const pad = 4 * r.uiScaleFactor();
     const line_color = if (is_current) r.theme.foreground else r.theme.line_number;
     const line_bg = if (is_current) r.theme.current_line else r.theme.line_number_bg;
-    ok = ok and addTextOpBg(list, x + pad, y, num_str, line_color, line_bg, false);
+    ok = ok and overlay_mod.addTextOpBg(list, x + pad, y, num_str, line_color, line_bg, false);
     return ok;
 }
-
-const ByteRange = struct { start: usize, end: usize };
 
 fn xForByteOffset(
     r: anytype,
@@ -754,20 +233,20 @@ fn addTextSliceOpsWithSelectionBg(
             const a0 = cursor;
             const a1 = @min(sr.start, slice_end);
             const x = xForByteOffset(r, line_text, seg_start_byte, seg_start_vis, a0, text_start_x);
-            ok = ok and addTextOpBg(list, x, y, line_text[a0..a1], fg, base_bg, disable_programming_ligatures);
+            ok = ok and overlay_mod.addTextOpBg(list, x, y, line_text[a0..a1], fg, base_bg, disable_programming_ligatures);
         }
         const b0 = @max(cursor, sr.start);
         const b1 = @min(slice_end, sr.end);
         if (b1 > b0) {
             const x = xForByteOffset(r, line_text, seg_start_byte, seg_start_vis, b0, text_start_x);
-            ok = ok and addTextOpBg(list, x, y, line_text[b0..b1], fg, selection_bg, disable_programming_ligatures);
+            ok = ok and overlay_mod.addTextOpBg(list, x, y, line_text[b0..b1], fg, selection_bg, disable_programming_ligatures);
             cursor = b1;
         }
         if (cursor >= slice_end) break;
     }
     if (cursor < slice_end) {
         const x = xForByteOffset(r, line_text, seg_start_byte, seg_start_vis, cursor, text_start_x);
-        ok = ok and addTextOpBg(list, x, y, line_text[cursor..slice_end], fg, base_bg, disable_programming_ligatures);
+        ok = ok and overlay_mod.addTextOpBg(list, x, y, line_text[cursor..slice_end], fg, base_bg, disable_programming_ligatures);
     }
     return ok;
 }
@@ -888,7 +367,7 @@ fn appendHighlightedLineSegmentOps(
             if (ctext.len > 0) {
                 const bg = selectionOverlapBg(slice_start, slice_end, base_bg, selection_bg, sel_ranges);
                 const x = xForByteOffset(r, line_text, seg_start, seg_start_vis, slice_start, text_x);
-                ok = ok and addTextOpBg(list, x, y, ctext, color, bg, disable_programming_ligatures);
+                ok = ok and overlay_mod.addTextOpBg(list, x, y, ctext, color, bg, disable_programming_ligatures);
             }
         } else {
             ok = ok and addTextSliceOpsWithSelectionBg(
@@ -1068,7 +547,7 @@ pub fn draw(
             // Keep processing empty segments so cached selection overlays are
             // always cleared correctly after deselect/collapse.
             const seg_y = y + @as(f32, @floatFromInt(visual_row)) * r.char_height;
-            const seg_band = rowBandForRow(y, visual_row, r.char_height);
+            const seg_band = overlay_mod.rowBandForRow(y, visual_row, r.char_height);
             const seg_start_byte = selection_mod.byteIndexForVisualColumn(line_text, seg_start_col, cluster_slice);
             const seg_end_byte = selection_mod.byteIndexForVisualColumn(line_text, seg_end_col, cluster_slice);
             const disable_programming_ligatures = switch (r.editor_disable_ligatures) {
@@ -1097,8 +576,8 @@ pub fn draw(
             }
 
             if (range_count > 0) {
-                const sel_band = selectionBandForRowBand(seg_band);
-                const selection_color = softSelectionColor(r.theme.selection);
+                const sel_band = overlay_mod.selectionBandForRowBand(seg_band);
+                const selection_color = overlay_mod.softSelectionColor(r.theme.selection);
                 var r_i: usize = 0;
                 while (r_i < range_count) : (r_i += 1) {
                     const range = ranges[r_i];
@@ -1107,8 +586,8 @@ pub fn draw(
                     if (sel_end <= sel_start) continue;
                     const sel_x = text_start_x + @as(f32, @floatFromInt(sel_start - seg_start_col)) * r.char_width;
                     const sel_w = @as(f32, @floatFromInt(sel_end - sel_start)) * r.char_width;
-                    const corner_mask = selectionCornerMaskForSegment(widget.editor, line_idx, cols, line_width, seg, total_visual_lines, seg_start_col, seg_end_col, range);
-                    drawSoftSelectionRect(r, sel_x, sel_band.y_f, sel_w, sel_band.h_f, selection_color, corner_mask);
+                    const corner_mask = overlay_mod.selectionCornerMaskForSegment(widget.editor, line_idx, cols, line_width, seg, total_visual_lines, seg_start_col, seg_end_col, range);
+                    overlay_mod.drawSoftSelectionRect(r, sel_x, sel_band.y_f, sel_w, sel_band.h_f, selection_color, corner_mask);
                 }
             }
 
@@ -1120,16 +599,16 @@ pub fn draw(
                 &search_ranges,
             );
             if (search_count > 0) {
-                const search_color = searchHighlightColor(r.theme);
-                const active_search = searchActiveByteRange(widget.editor);
-                const search_band = selectionBandForRowBand(seg_band);
+                const search_color = overlay_mod.searchHighlightColor(r.theme);
+                const active_search = overlay_mod.searchActiveByteRange(widget.editor);
+                const search_band = overlay_mod.selectionBandForRowBand(seg_band);
                 for (search_ranges[0..search_count]) |match| {
                     const local_start = match.start - line_start;
                     const local_end = match.end - line_start;
                     const sx = xForByteOffset(r, line_text, seg_start_byte, seg_start_col, local_start, text_start_x);
                     const ex = xForByteOffset(r, line_text, seg_start_byte, seg_start_col, local_end, text_start_x);
                     if (ex <= sx) continue;
-                    const draw_color = if (active_search) |active| if (rangeContains(active, match)) activeSearchHighlightColor(r.theme) else search_color else search_color;
+                    const draw_color = if (active_search) |active| if (overlay_mod.rangeContains(active, match)) overlay_mod.activeSearchHighlightColor(r.theme) else search_color else search_color;
                     r.drawRect(
                         @intFromFloat(sx),
                         search_band.y_i,
@@ -1141,7 +620,7 @@ pub fn draw(
             }
 
             const base_bg = if (is_current) r.theme.current_line else r.theme.background;
-            const selection_bg = softSelectionColor(r.theme.selection);
+            const selection_bg = overlay_mod.softSelectionColor(r.theme.selection);
             var sel_bytes: [8]ByteRange = undefined;
             const sel_count = if (range_count > 0)
                 buildSelectionByteRanges(
@@ -1196,7 +675,7 @@ pub fn draw(
                 cursor_draw_x = text_start_x + @as(f32, @floatFromInt(local_col)) * r.char_width;
                 cursor_draw_y = seg_y;
             }
-            drawExtraCarets(widget, r, line_idx, line_text, cluster_slice, seg_start_col, seg_end_col, line_width, seg_y, text_start_x);
+            overlay_mod.drawExtraCarets(widget, r, line_idx, line_text, cluster_slice, seg_start_col, seg_end_col, line_width, seg_y, text_start_x);
             visual_row += 1;
         }
     }
@@ -1232,7 +711,7 @@ pub fn draw(
     }
 
     if (!widget.wrap_enabled) {
-        drawEditorScrollbars(widget, r, x, y, width, height, visible_lines, total_lines, cols, input.mouse_pos, &draw_list);
+        overlay_mod.drawEditorScrollbars(widget, r, x, y, width, height, visible_lines, total_lines, cols, input.mouse_pos, &draw_list);
     }
 }
 
@@ -1275,7 +754,7 @@ pub fn drawCached(
         widget.editor.scroll_line,
         widget.editor.scroll_row_offset,
         widget.editor.scroll_col,
-        selectionStateHash(widget.editor),
+        overlay_mod.selectionStateHash(widget.editor),
     );
     if (texture_changed) force_redraw = true;
 
@@ -1360,7 +839,7 @@ pub fn drawCached(
             // Keep processing empty segments so cached selection overlays are
             // always cleared correctly after deselect/collapse.
             const seg_y = origin_y + @as(f32, @floatFromInt(visual_row)) * r.char_height;
-            const seg_band = rowBandForRow(origin_y, visual_row, r.char_height);
+            const seg_band = overlay_mod.rowBandForRow(origin_y, visual_row, r.char_height);
             const seg_start_byte = selection_mod.byteIndexForVisualColumn(line_text, seg_start_col, cluster_slice);
             const seg_end_byte = selection_mod.byteIndexForVisualColumn(line_text, seg_end_col, cluster_slice);
             const disable_programming_ligatures = switch (r.editor_disable_ligatures) {
@@ -1396,8 +875,8 @@ pub fn drawCached(
                     );
                     draw_list.clear();
                     var list_ok = true;
-                    list_ok = list_ok and addRectOp(draw_list, origin_x, seg_band.y_f, width, seg_band.h_f, r.theme.background);
-                    list_ok = list_ok and addRectOp(draw_list, origin_x, seg_band.y_f, widget.gutter_width, seg_band.h_f, r.theme.line_number_bg);
+                    list_ok = list_ok and overlay_mod.addRectOp(draw_list, origin_x, seg_band.y_f, width, seg_band.h_f, r.theme.background);
+                    list_ok = list_ok and overlay_mod.addRectOp(draw_list, origin_x, seg_band.y_f, widget.gutter_width, seg_band.h_f, r.theme.line_number_bg);
 
                     if (seg == seg_start_idx) {
                         var num_buf: [16]u8 = undefined;
@@ -1413,13 +892,13 @@ pub fn drawCached(
                             &num_buf,
                         );
                     } else if (is_current) {
-                        list_ok = list_ok and addRectOp(draw_list, origin_x, seg_band.y_f, widget.gutter_width, seg_band.h_f, r.theme.current_line);
-                        list_ok = list_ok and addRectOp(draw_list, origin_x + widget.gutter_width, seg_band.y_f, width - widget.gutter_width, seg_band.h_f, r.theme.current_line);
+                        list_ok = list_ok and overlay_mod.addRectOp(draw_list, origin_x, seg_band.y_f, widget.gutter_width, seg_band.h_f, r.theme.current_line);
+                        list_ok = list_ok and overlay_mod.addRectOp(draw_list, origin_x + widget.gutter_width, seg_band.y_f, width - widget.gutter_width, seg_band.h_f, r.theme.current_line);
                     }
 
                     if (range_count > 0) {
-                        const sel_band = selectionBandForRowBand(seg_band);
-                        const selection_color = softSelectionColor(r.theme.selection);
+                        const sel_band = overlay_mod.selectionBandForRowBand(seg_band);
+                        const selection_color = overlay_mod.softSelectionColor(r.theme.selection);
                         var r_i: usize = 0;
                         while (r_i < range_count) : (r_i += 1) {
                             const range = ranges[r_i];
@@ -1428,8 +907,8 @@ pub fn drawCached(
                             if (sel_end <= sel_start) continue;
                             const sel_x = origin_x + widget.gutter_width + 8 * r.uiScaleFactor() + @as(f32, @floatFromInt(sel_start - seg_start_col)) * r.char_width;
                             const sel_w = @as(f32, @floatFromInt(sel_end - sel_start)) * r.char_width;
-                            const corner_mask = selectionCornerMaskForSegment(widget.editor, line_idx, cols, line_width, seg, total_visual_lines, seg_start_col, seg_end_col, range);
-                            list_ok = list_ok and addSoftSelectionRectOp(draw_list, r, sel_x, sel_band.y_f, sel_w, sel_band.h_f, selection_color, corner_mask);
+                            const corner_mask = overlay_mod.selectionCornerMaskForSegment(widget.editor, line_idx, cols, line_width, seg, total_visual_lines, seg_start_col, seg_end_col, range);
+                            list_ok = list_ok and overlay_mod.addSoftSelectionRectOp(draw_list, r, sel_x, sel_band.y_f, sel_w, sel_band.h_f, selection_color, corner_mask);
                         }
                     }
 
@@ -1441,22 +920,22 @@ pub fn drawCached(
                         &search_ranges,
                     );
                     if (search_count > 0) {
-                        const search_color = searchHighlightColor(r.theme);
-                        const active_search = searchActiveByteRange(widget.editor);
-                        const search_band = selectionBandForRowBand(seg_band);
+                        const search_color = overlay_mod.searchHighlightColor(r.theme);
+                        const active_search = overlay_mod.searchActiveByteRange(widget.editor);
+                        const search_band = overlay_mod.selectionBandForRowBand(seg_band);
                         for (search_ranges[0..search_count]) |match| {
                             const local_start = match.start - line_start;
                             const local_end = match.end - line_start;
                             const sx = xForByteOffset(r, line_text, seg_start_byte, seg_start_col, local_start, origin_x + widget.gutter_width + 8 * r.uiScaleFactor());
                             const ex = xForByteOffset(r, line_text, seg_start_byte, seg_start_col, local_end, origin_x + widget.gutter_width + 8 * r.uiScaleFactor());
                             if (ex <= sx) continue;
-                            const draw_color = if (active_search) |active| if (rangeContains(active, match)) activeSearchHighlightColor(r.theme) else search_color else search_color;
-                            list_ok = list_ok and addRectOp(draw_list, sx, search_band.y_f, ex - sx, search_band.h_f, draw_color);
+                            const draw_color = if (active_search) |active| if (overlay_mod.rangeContains(active, match)) overlay_mod.activeSearchHighlightColor(r.theme) else search_color else search_color;
+                            list_ok = list_ok and overlay_mod.addRectOp(draw_list, sx, search_band.y_f, ex - sx, search_band.h_f, draw_color);
                         }
                     }
 
                     const base_bg = if (is_current) r.theme.current_line else r.theme.background;
-                    const selection_bg = softSelectionColor(r.theme.selection);
+                    const selection_bg = overlay_mod.softSelectionColor(r.theme.selection);
                     var sel_bytes: [8]ByteRange = undefined;
                     const sel_count = if (range_count > 0)
                         buildSelectionByteRanges(
@@ -1513,9 +992,9 @@ pub fn drawCached(
                     if (is_current and seg == cursor_seg) {
                         const local_col = cursor_col_vis - seg_start_col;
                         const cursor_draw_x = text_start_x + @as(f32, @floatFromInt(local_col)) * r.char_width;
-                        list_ok = list_ok and addCursorOp(draw_list, cursor_draw_x, seg_y, r.char_height, r.theme.cursor);
+                        list_ok = list_ok and overlay_mod.addCursorOp(draw_list, cursor_draw_x, seg_y, r.char_height, r.theme.cursor);
                     }
-                    list_ok = list_ok and addExtraCaretOps(
+                    list_ok = list_ok and overlay_mod.addExtraCaretOps(
                         draw_list,
                         widget,
                         r,
@@ -1530,7 +1009,7 @@ pub fn drawCached(
                     );
 
                     if (list_ok) {
-                        flushDrawList(draw_list, r);
+                        overlay_mod.flushDrawList(draw_list, r);
                     } else {
                         r.drawRect(
                             @intFromFloat(origin_x),
@@ -1567,8 +1046,8 @@ pub fn drawCached(
                         }
 
                         if (range_count > 0) {
-                            const sel_band = selectionBandForRowBand(seg_band);
-                            const selection_color = softSelectionColor(r.theme.selection);
+                            const sel_band = overlay_mod.selectionBandForRowBand(seg_band);
+                            const selection_color = overlay_mod.softSelectionColor(r.theme.selection);
                             var r_i: usize = 0;
                             while (r_i < range_count) : (r_i += 1) {
                                 const range = ranges[r_i];
@@ -1577,14 +1056,14 @@ pub fn drawCached(
                                 if (sel_end <= sel_start) continue;
                                 const sel_x = origin_x + widget.gutter_width + 8 * r.uiScaleFactor() + @as(f32, @floatFromInt(sel_start - seg_start_col)) * r.char_width;
                                 const sel_w = @as(f32, @floatFromInt(sel_end - sel_start)) * r.char_width;
-                                const corner_mask = selectionCornerMaskForSegment(widget.editor, line_idx, cols, line_width, seg, total_visual_lines, seg_start_col, seg_end_col, range);
-                                drawSoftSelectionRect(r, sel_x, sel_band.y_f, sel_w, sel_band.h_f, selection_color, corner_mask);
+                                const corner_mask = overlay_mod.selectionCornerMaskForSegment(widget.editor, line_idx, cols, line_width, seg, total_visual_lines, seg_start_col, seg_end_col, range);
+                                overlay_mod.drawSoftSelectionRect(r, sel_x, sel_band.y_f, sel_w, sel_band.h_f, selection_color, corner_mask);
                             }
                         }
 
                         if (effective_tokens.len == 0) {
                             const seg_base_bg = base_bg;
-                            const selection_bg_local = softSelectionColor(r.theme.selection);
+                            const selection_bg_local = overlay_mod.softSelectionColor(r.theme.selection);
                             if (sel_count == 0) {
                                 r.drawTextMonospaceOnBgPolicy(line_text[seg_start_byte..seg_end_byte], text_start_x, seg_y, r.theme.foreground, seg_base_bg, disable_programming_ligatures);
                             } else {
@@ -1627,7 +1106,7 @@ pub fn drawCached(
                             const cursor_draw_x = text_start_x + @as(f32, @floatFromInt(local_col)) * r.char_width;
                             r.drawCursor(cursor_draw_x, seg_y, .line);
                         }
-                        drawExtraCarets(widget, r, line_idx, line_text, cluster_slice, seg_start_col, seg_end_col, line_width, seg_y, text_start_x);
+                        overlay_mod.drawExtraCarets(widget, r, line_idx, line_text, cluster_slice, seg_start_col, seg_end_col, line_width, seg_y, text_start_x);
                     }
 
                     r.endClip();
@@ -1647,63 +1126,10 @@ pub fn drawCached(
     // Draw scrollbars as final overlays (outside cached editor texture) to avoid
     // stale dirty-region artifacts when geometry changes frame-to-frame.
     if (!widget.wrap_enabled) {
-        drawEditorScrollbars(widget, r, draw_x, draw_y, width, height, visible_lines, total_lines, cols, input.mouse_pos, null);
+        overlay_mod.drawEditorScrollbars(widget, r, draw_x, draw_y, width, height, visible_lines, total_lines, cols, input.mouse_pos, null);
     }
 }
 
-fn drawEditorScrollbars(
-    widget: anytype,
-    r: anytype,
-    x: f32,
-    y: f32,
-    width: f32,
-    height: f32,
-    visible_lines: usize,
-    total_lines: usize,
-    cols: usize,
-    mouse: anytype,
-    list: ?*EditorDrawList,
-) void {
-    const scale = r.uiScaleFactor();
-    const max_line_width = widget.editor.maxLineWidthCached();
-
-    const h = scrollbar_mod.computeHorizontal(
-        scale,
-        widget.gutter_width,
-        x,
-        y,
-        width,
-        height,
-        mouse,
-        max_line_width,
-        cols,
-        total_lines,
-        visible_lines,
-        widget.editor.scroll_col,
-        false,
-    );
-    if (h.visible) {
-        if (widget.editor.scroll_col != h.effective_scroll_col) widget.editor.scroll_col = h.effective_scroll_col;
-        drawHorizontalScrollbar(r, h, list);
-    }
-
-    const v = scrollbar_mod.computeVertical(
-        scale,
-        x,
-        y,
-        width,
-        height,
-        mouse,
-        visible_lines,
-        total_lines,
-        widget.editor.scroll_line,
-        false,
-    );
-    if (v.visible) {
-        if (widget.editor.scroll_line != v.effective_scroll_line) widget.editor.scroll_line = v.effective_scroll_line;
-        drawVerticalScrollbar(r, v, list);
-    }
-}
 
 pub fn hashLine(text: []const u8) u64 {
     var h: u64 = 1469598103934665603;
@@ -2023,69 +1449,6 @@ fn hashScrollState(
     return h;
 }
 
-fn drawHorizontalScrollbar(r: anytype, h: scrollbar_mod.HorizontalGeometry, list: ?*EditorDrawList) void {
-    const show_track = h.focus_t > 0.01;
-    if (show_track) {
-        if (list) |ops| {
-            _ = addRectOp(ops, h.track_x, h.track_max_y, h.track_w, h.track_max_h, r.theme.line_number_bg);
-        } else {
-            r.drawRect(
-                @intFromFloat(h.track_x),
-                @intFromFloat(h.track_max_y),
-                @intFromFloat(h.track_w),
-                @intFromFloat(h.track_max_h),
-                r.theme.line_number_bg,
-            );
-        }
-    }
-    const inset: f32 = if (show_track) blk: {
-        const inset_limit = @max(0.0, h.track_h * 0.5 - 1.0);
-        break :blk @min(@max(1.0, r.uiScaleFactor()), inset_limit);
-    } else 0;
-    if (list) |ops| {
-        _ = addRectOp(ops, h.thumb_x, h.track_y + inset, h.thumb_w, @max(1, h.track_h - inset * 2), r.theme.selection);
-    } else {
-        r.drawRect(
-            @intFromFloat(h.thumb_x),
-            @intFromFloat(h.track_y + inset),
-            @intFromFloat(h.thumb_w),
-            @intFromFloat(@max(1, h.track_h - inset * 2)),
-            r.theme.selection,
-        );
-    }
-}
-
-fn drawVerticalScrollbar(r: anytype, v: scrollbar_mod.VerticalGeometry, list: ?*EditorDrawList) void {
-    const show_track = v.focus_t > 0.01;
-    if (show_track) {
-        if (list) |ops| {
-            _ = addRectOp(ops, v.scrollbar_x, v.scrollbar_y, v.scrollbar_w, v.scrollbar_h, r.theme.line_number_bg);
-        } else {
-            r.drawRect(
-                @intFromFloat(v.scrollbar_x),
-                @intFromFloat(v.scrollbar_y),
-                @intFromFloat(v.scrollbar_w),
-                @intFromFloat(v.scrollbar_h),
-                r.theme.line_number_bg,
-            );
-        }
-    }
-    const inset: f32 = if (show_track) blk: {
-        const inset_limit = @max(0.0, v.scrollbar_w * 0.5 - 1.0);
-        break :blk @min(@max(1.0, r.uiScaleFactor()), inset_limit);
-    } else 0;
-    if (list) |ops| {
-        _ = addRectOp(ops, v.scrollbar_x + inset, v.thumb.thumb_y, @max(1, v.scrollbar_w - inset * 2), v.thumb.thumb_h, r.theme.selection);
-    } else {
-        r.drawRect(
-            @intFromFloat(v.scrollbar_x + inset),
-            @intFromFloat(v.thumb.thumb_y),
-            @intFromFloat(@max(1, v.scrollbar_w - inset * 2)),
-            @intFromFloat(v.thumb.thumb_h),
-            r.theme.selection,
-        );
-    }
-}
 
 fn drawHighlightedLineSegment(
     r: anytype,

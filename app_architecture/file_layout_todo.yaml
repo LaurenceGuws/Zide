@@ -137,11 +137,13 @@ file_layout_todo:
 
         - id: FL-UI-02
           title: "Split src/ui/widgets/editor_widget_draw.zig by draw ownership"
-          status: todo
+          status: in_progress
           files:
             - src/ui/widgets/editor_widget_draw.zig
+            - src/ui/widgets/editor_widget_draw_overlay.zig
           notes:
             - "Possible owners: text/layout, gutter/chrome, overlays/cursor/selection."
+            - "2026-03-10: first slice landed in progress by extracting draw-list primitives, selection/search overlays, caret helpers, selection-state hashing, and scrollbar rendering into `src/ui/widgets/editor_widget_draw_overlay.zig`. `editor_widget_draw.zig` now keeps text/layout/highlight assembly, cached-vs-live draw orchestration, and precompute/hash helpers."
 
         - id: FL-UI-03
           title: "Thin src/ui/renderer.zig into a real facade over src/ui/renderer/"
