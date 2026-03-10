@@ -159,6 +159,7 @@ file_layout_todo:
             - "Only move logic that already has a natural renderer sub-owner."
             - "2026-03-10: first slice landed in progress by extracting SDL/input event polling, event dispatch, and frame queue compaction into `src/ui/renderer/input_runtime.zig`, leaving `renderer.zig` thinner around top-level renderer orchestration."
             - "2026-03-10: second slice landed in progress by extracting font-feature config plus UI-scale/zoom runtime into `src/ui/renderer/font_runtime.zig`, leaving `renderer.zig` thinner around rendering entrypoints instead of also owning font runtime policy inline."
+            - "2026-03-10: third slice landed in progress by extracting text/glyph rendering, shaping, and terminal cell draw paths into `src/ui/renderer/text_runtime.zig`, leaving `renderer.zig` thinner around draw coordination and backend wrappers."
 
         - id: FL-UI-04
           title: "Move src/ui/terminal_font.zig under a focused font/text subsystem"
