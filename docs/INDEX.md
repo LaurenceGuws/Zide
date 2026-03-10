@@ -35,7 +35,6 @@ Quick map of where to look for common needs.
 - `app_architecture/terminal/DAMAGE_TRACKING.md` — terminal damage/dirty tracking notes + todo.
 - `app_architecture/DECISIONS.md` — decision log.
 - `app_architecture/ENGINEERING.md` — engineering guidelines (ownership, threading, FFI).
-- `app_architecture/PLANNING.md` — active plans with status.
 
 ## Setup + usage
 - `README.md` — user-facing overview.

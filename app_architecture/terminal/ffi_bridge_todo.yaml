@@ -101,7 +101,7 @@ terminal_ffi_bridge_todo:
           status: done
           files_to_edit:
             - app_architecture/terminal/FFI_BRIDGE_DESIGN.md
-            - app_architecture/PLANNING.md
+            - app_architecture/terminal/FFI_BRIDGE_DESIGN.md
           notes:
             - "Success means a host can spawn a shell, resize, send bytes/keys/text, poll, and render from snapshots without importing UI code."
             - "Flutter adapter is explicitly downstream of the bridge, not part of milestone 0."
