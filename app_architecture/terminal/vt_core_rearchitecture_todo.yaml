@@ -90,7 +90,7 @@ items:
 
   - id: VTCORE-05
     title: Simplify snapshot and render publication
-    status: todo
+    status: in_progress
     priority: medium
     notes:
       - Keep renderer-agnostic snapshot/damage contracts
@@ -98,6 +98,7 @@ items:
       - Preserve correctness for widget and FFI render consumers
       - Contract target is now defined in app_architecture/terminal/RENDER_PUBLICATION_CONTRACT.md
       - Start this lane only after the current VT core/session/transport split stops moving fundamental backend ownership every patch
+      - First prep slice landed: pure publication/diff helpers now live under src/terminal/core/view_cache_publication.zig, so src/terminal/core/view_cache.zig is beginning to separate projection from publication planning without changing behavior
 
   - id: VTCORE-06
     title: Keep input encoding as a peer subsystem

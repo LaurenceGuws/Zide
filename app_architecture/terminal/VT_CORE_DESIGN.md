@@ -413,6 +413,10 @@ Session construction also moved one step toward host-wrapper ownership:
 - workspace/runtime input-pressure hinting now also routes through
   `src/terminal/core/session_runtime.zig` instead of staying inline in the root
   session facade
+- the first explicit `view_cache` split is now landed too: pure publication/diff
+  helpers live under `src/terminal/core/view_cache_publication.zig`, so
+  `view_cache.zig` is beginning to separate projection from publication
+  planning without changing behavior
 - stale private root-session shims for SGR application and key-mode flag reads
   are now removed too, keeping the root session file closer to a real facade
   instead of a pile of dead internal forwarding

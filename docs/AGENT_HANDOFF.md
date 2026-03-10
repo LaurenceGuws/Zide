@@ -19,6 +19,7 @@
   - backlog hinting now also routes through `session_runtime.zig` instead of `session_rendering.zig`, so transport ingress pressure no longer sits in the render/publication owner
   - host-facing metadata, liveness, and close-confirm signal queries now also route through `session_host_queries.zig`, leaving `session_queries.zig` focused on terminal-data query surfaces
   - workspace/runtime input-pressure hinting now also routes through `session_runtime.zig` instead of staying inline in the root session file
+  - `VTCORE-05` has now started in prep form: pure publication/diff helpers were split into `view_cache_publication.zig`, so `view_cache.zig` is beginning to separate projection from publication planning without changing behavior
   - stale private root-session shims for SGR application and key-mode flag reads are now also gone
   - protocol execution is beginning to split along the same line: pure engine-side helpers now live under `terminal_core_protocol.zig`, while session-coupled protocol behavior remains in `session_protocol.zig`
   - parser/control dispatch entry helpers now also live under `terminal_core_dispatch.zig`; parser byte feed still stays session-owned because locking and publication are not split yet
