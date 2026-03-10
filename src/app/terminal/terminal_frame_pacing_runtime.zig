@@ -1,5 +1,5 @@
 const std = @import("std");
-const terminal_widget_draw = @import("../ui/widgets/terminal_widget_draw.zig");
+const terminal_widget_draw = @import("../../ui/widgets/terminal_widget_draw.zig");
 
 const TerminalDrawLatencyMetrics = terminal_widget_draw.FrameLatencyMetrics;
 

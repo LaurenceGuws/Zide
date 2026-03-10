@@ -9,12 +9,12 @@ const app_window_resize_event_frame = @import("window_resize_event_frame.zig");
 const app_cursor_blink_frame = @import("cursor_blink_frame.zig");
 const app_terminal_active_widget = @import("terminal/terminal_active_widget.zig");
 const app_logger = @import("../app_logger.zig");
-const app_deferred_terminal_resize_frame = @import("deferred_terminal_resize_frame.zig");
+const app_deferred_terminal_resize_frame = @import("terminal/deferred_terminal_resize_frame.zig");
 const app_terminal_tabs_runtime = @import("terminal/terminal_tabs_runtime.zig");
-const app_terminal_resize = @import("terminal_resize.zig");
+const app_terminal_resize = @import("terminal/terminal_resize.zig");
 const app_terminal_grid = @import("terminal/terminal_grid.zig");
 const app_pointer_activity_frame = @import("pointer_activity_frame.zig");
-const app_terminal_split_resize_frame = @import("terminal_split_resize_frame.zig");
+const app_terminal_split_resize_frame = @import("terminal/terminal_split_resize_frame.zig");
 const app_shell = @import("../app_shell.zig");
 const shared_types = @import("../types/mod.zig");
 

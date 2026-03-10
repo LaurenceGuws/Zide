@@ -1,7 +1,7 @@
 const std = @import("std");
 const builtin = @import("builtin");
-const app_logger = @import("../app_logger.zig");
-const terminal_mod = @import("../terminal/core/terminal.zig");
+const app_logger = @import("../../app_logger.zig");
+const terminal_mod = @import("../../terminal/core/terminal.zig");
 
 const TerminalSession = terminal_mod.TerminalSession;
 
