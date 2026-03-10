@@ -5,10 +5,11 @@ const gl = @import("renderer/gl.zig");
 const types = @import("renderer/types.zig");
 const terminal_glyphs = @import("renderer/terminal_glyphs.zig");
 const font_atlas = @import("font/atlas.zig");
+const font_fallback = @import("font/fallback.zig");
 
-var windows_com_initialized = std.atomic.Value(bool).init(false);
+pub var windows_com_initialized = std.atomic.Value(bool).init(false);
 
-const windows_dwrite = if (builtin.target.os.tag == .windows) struct {
+pub const windows_dwrite = if (builtin.target.os.tag == .windows) struct {
     const HRESULT = i32;
     const ULONG = u32;
     const UINT32 = u32;
@@ -225,7 +226,7 @@ fn computeFtLoadFlagsBase(opts: RenderingOptions) c_int {
     return flags;
 }
 
-fn applyHbLoadFlags(hb_font: *c.hb_font_t, ft_load_flags: c_int) void {
+pub fn applyHbLoadFlags(hb_font: *c.hb_font_t, ft_load_flags: c_int) void {
     // HarfBuzz should use the same load flags as rasterization for consistent
     // advances and layout.
     if (@hasDecl(c, "hb_ft_font_set_load_flags")) {
@@ -233,7 +234,7 @@ fn applyHbLoadFlags(hb_font: *c.hb_font_t, ft_load_flags: c_int) void {
     }
 }
 
-const fc = if (builtin.target.os.tag == .linux) @cImport({
+pub const fc = if (builtin.target.os.tag == .linux) @cImport({
     @cInclude("fontconfig/fontconfig.h");
 }) else struct {
     pub const FcConfig = opaque {};
@@ -336,7 +337,7 @@ pub const SpecialGlyphSpriteKey = types.SpecialGlyphSpriteKey;
 pub const SpecialGlyphVariant = types.SpecialGlyphVariant;
 pub const SpecialGlyphSprite = types.SpecialGlyphSprite;
 
-const FacePair = struct {
+pub const FacePair = struct {
     face: ?c.FT_Face = null,
     hb: ?*c.hb_font_t = null,
 
@@ -755,14 +756,14 @@ pub const TerminalFont = struct {
 
         var face = self.ft_face;
         var hb_font = self.hb_font;
-        const preferred = self.pickPreferred(codepoint);
+        const preferred = font_fallback.pickPreferred(self, codepoint);
         if (preferred.face) |p_face| {
             if (preferred.hb) |p_hb| {
                 face = p_face;
                 hb_font = p_hb;
             }
         } else if (!hasGlyph(face, codepoint)) {
-            const fallback = self.pickFallback(codepoint);
+            const fallback = font_fallback.pickFallback(self, codepoint);
             if (fallback.face) |fb_face| {
                 if (fallback.hb) |fb_hb| {
                     face = fb_face;
@@ -1188,14 +1189,14 @@ pub const TerminalFont = struct {
         // Shape the grapheme cluster using the chosen face for the base glyph.
         var face = self.ft_face;
         var hb_font = self.hb_font;
-        const preferred = self.pickPreferred(base);
+        const preferred = font_fallback.pickPreferred(self, base);
         if (preferred.face) |p_face| {
             if (preferred.hb) |p_hb| {
                 face = p_face;
                 hb_font = p_hb;
             }
         } else if (!hasGlyph(face, base)) {
-            const fallback = self.pickFallback(base);
+            const fallback = font_fallback.pickFallback(self, base);
             if (fallback.face) |fb_face| {
                 if (fallback.hb) |fb_hb| {
                     face = fb_face;
@@ -1299,14 +1300,14 @@ pub const TerminalFont = struct {
 
         var face = self.ft_face;
         var hb_font = self.hb_font;
-        const preferred = self.pickPreferred(codepoint);
+        const preferred = font_fallback.pickPreferred(self, codepoint);
         if (preferred.face) |p_face| {
             if (preferred.hb) |p_hb| {
                 face = p_face;
                 hb_font = p_hb;
             }
         } else if (!hasGlyph(face, codepoint)) {
-            const fallback = self.pickFallback(codepoint);
+            const fallback = font_fallback.pickFallback(self, codepoint);
             if (fallback.face) |fb_face| {
                 if (fallback.hb) |fb_hb| {
                     face = fb_face;

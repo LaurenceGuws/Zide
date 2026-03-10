@@ -170,6 +170,7 @@ file_layout_todo:
           notes:
             - "Prefer one cohesive subsystem move over another giant top-level file."
             - "2026-03-10: first slice landed in progress by extracting atlas allocation/upload/compaction into `src/ui/font/atlas.zig`, establishing `src/ui/font/` as the focused font subsystem root and shrinking `terminal_font.zig` around font selection/shaping/fallback ownership."
+            - "2026-03-10: second slice landed in progress by extracting preferred/fallback face selection policy into `src/ui/font/fallback.zig`, reducing `terminal_font.zig` around glyph shaping and system font discovery instead of also carrying the full fallback preference matrix inline."
 
         - id: FL-CFG-01
           title: "Split src/config/lua_config_ziglua_parse.zig by parser/validation/domain mapping concerns"
