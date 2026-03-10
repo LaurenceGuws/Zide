@@ -156,6 +156,7 @@ Progress:
 - Migration step: extracted snapshot/render-cache/sync-updates damage-retirement helpers to `src/terminal/core/session_rendering.zig` (no behavior change).
 - Migration step: extracted parser/control/screen-edit/alt-screen/DECRQSS protocol helpers to `src/terminal/core/session_protocol.zig` (no behavior change).
 - Migration step: extracted palette/theme/column-mode/cell-size config helpers to `src/terminal/core/session_config.zig` (no behavior change).
+- Migration step: extracted PTY startup/poll/child-exit/write-lock/resize runtime helpers to `src/terminal/core/session_runtime.zig` (no behavior change).
 - Follow-up (2026-03-09): expanded `app_architecture/terminal/TERMINAL_API.md` with an explicit boundary contract for runtime/protocol/model/publication/widget ownership.
 - Follow-up (2026-03-09): removed the file-global visible-terminal poll input-activity hint; terminal input pressure is now passed explicitly into `poll_visible_terminal_sessions_runtime.handle(...)`.
 - Follow-up (2026-03-09): moved terminal idle/pacing bookkeeping out of `frame_render_idle_runtime` file globals and into `AppState` so scheduler state is instance-owned.
