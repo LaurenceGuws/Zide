@@ -8,6 +8,7 @@ const core_protocol = @import("terminal_core_protocol.zig");
 const core_dispatch = @import("terminal_core_dispatch.zig");
 const core_feed = @import("terminal_core_feed.zig");
 const core_modes = @import("terminal_core_modes.zig");
+const core_reset = @import("terminal_core_reset.zig");
 const input_modes = @import("input_modes.zig");
 const types = @import("../model/types.zig");
 
@@ -55,11 +56,12 @@ fn publishCoreFeedLocked(self: anytype) void {
 pub fn resetState(self: anytype) void {
     self.state_mutex.lock();
     defer self.state_mutex.unlock();
-    state_reset.resetStateLocked(self);
+    resetStateLocked(self);
 }
 
 pub fn resetStateLocked(self: anytype) void {
-    state_reset.resetStateLocked(self);
+    core_reset.resetStateCore(self);
+    input_modes.resetInputModesLocked(self);
 }
 
 pub fn reverseIndex(self: anytype) void {
