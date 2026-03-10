@@ -427,6 +427,9 @@ Session construction also moved one step toward host-wrapper ownership:
   `src/terminal/core/view_cache_refinement.zig`, making that optional
   publication-narrowing step explicit instead of leaving it embedded in the
   base view-cache update path
+- selection-change dirty expansion now also lives under
+  `src/terminal/core/view_cache_selection_dirty.zig`, so selection-driven
+  damage widening is no longer embedded in the base `view_cache` update path
 - stale private root-session shims for SGR application and key-mode flag reads
   are now removed too, keeping the root session file closer to a real facade
   instead of a pile of dead internal forwarding
