@@ -298,6 +298,10 @@ Protocol execution also moved another step toward core ownership:
   also live behind `src/terminal/core/terminal_core_protocol.zig`, leaving
   `session_protocol.zig` closer to a session-owned publication/selection wrapper
   instead of another mixed core-mutation owner
+- the remaining session-owned alt-screen/reset side effects now also live in
+  `src/terminal/core/session_mode_effects.zig`, making those selection/input-
+  snapshot/presentation consequences explicit instead of leaving them embedded
+  inline in `session_protocol.zig`
 
 ## Compatibility Strategy
 
