@@ -8,7 +8,7 @@ ROOT = Path(__file__).resolve().parents[2]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-from examples.common.ffi_host_boot import STATUS_OK  # noqa: E402
+from examples.common.ffi_host_boot import STATUS_OK, poll_terminal_then_editor_once  # noqa: E402
 from examples.terminal_ffi_smoke.main import CreateConfig, HandlePtr as TerminalHandlePtr, Snapshot, load_library as load_terminal_library
 from examples.editor_ffi_smoke.main import HandlePtr as EditorHandlePtr, StringBuffer, load_library as load_editor_library, to_buf, as_bytes
 
@@ -24,26 +24,31 @@ def run_combo(terminal_lib_path: Path, editor_lib_path: Path) -> int:
     if terminal_lib.zide_terminal_create(ctypes.byref(cfg), ctypes.byref(terminal_handle)) != STATUS_OK:
         raise RuntimeError("terminal create failed")
     try:
-        if terminal_lib.zide_terminal_resize(terminal_handle, 32, 6, 8, 16) != STATUS_OK:
-            raise RuntimeError("terminal resize failed")
-        chunk = b"\x1b]0;combo-title\x07combo-line\r\n"
-        chunk_buf = (ctypes.c_uint8 * len(chunk)).from_buffer_copy(chunk)
-        if terminal_lib.zide_terminal_feed_output(terminal_handle, chunk_buf, len(chunk)) != STATUS_OK:
-            raise RuntimeError("terminal feed_output failed")
+        state: dict[str, object] = {}
 
-        snapshot = Snapshot()
-        if terminal_lib.zide_terminal_snapshot_acquire(terminal_handle, ctypes.byref(snapshot)) != STATUS_OK:
-            raise RuntimeError("terminal snapshot failed")
-        try:
-            title = as_bytes(snapshot.title_ptr, snapshot.title_len).decode("utf-8", errors="replace")
-            if title != "combo-title":
-                raise RuntimeError(f"unexpected combo terminal title: {title!r}")
-        finally:
-            terminal_lib.zide_terminal_snapshot_release(ctypes.byref(snapshot))
+        def terminal_step() -> None:
+            if terminal_lib.zide_terminal_resize(terminal_handle, 32, 6, 8, 16) != STATUS_OK:
+                raise RuntimeError("terminal resize failed")
+            chunk = b"\x1b]0;combo-title\x07combo-line\r\n"
+            chunk_buf = (ctypes.c_uint8 * len(chunk)).from_buffer_copy(chunk)
+            if terminal_lib.zide_terminal_feed_output(terminal_handle, chunk_buf, len(chunk)) != STATUS_OK:
+                raise RuntimeError("terminal feed_output failed")
 
-        if editor_lib.zide_editor_create(ctypes.byref(editor_handle)) != STATUS_OK:
-            raise RuntimeError("editor create failed")
-        try:
+            snapshot = Snapshot()
+            if terminal_lib.zide_terminal_snapshot_acquire(terminal_handle, ctypes.byref(snapshot)) != STATUS_OK:
+                raise RuntimeError("terminal snapshot failed")
+            try:
+                title = as_bytes(snapshot.title_ptr, snapshot.title_len).decode("utf-8", errors="replace")
+                if title != "combo-title":
+                    raise RuntimeError(f"unexpected combo terminal title: {title!r}")
+                state["title"] = title
+            finally:
+                terminal_lib.zide_terminal_snapshot_release(ctypes.byref(snapshot))
+
+        def editor_step() -> None:
+            if editor_lib.zide_editor_create(ctypes.byref(editor_handle)) != STATUS_OK:
+                raise RuntimeError("editor create failed")
+
             editor_text = b"combo editor text\n"
             if editor_lib.zide_editor_set_text(editor_handle, *to_buf(editor_text)) != STATUS_OK:
                 raise RuntimeError("editor set_text failed")
@@ -63,12 +68,21 @@ def run_combo(terminal_lib_path: Path, editor_lib_path: Path) -> int:
             if text_value != "combo editor text\n":
                 raise RuntimeError(f"unexpected combo editor text: {text_value!r}")
 
-            print("ffi combo smoke ok")
-            print(f"terminal_title={title!r} editor_cursor={cursor.value} editor_text={text_value!r}")
-            return 0
-        finally:
-            editor_lib.zide_editor_destroy(editor_handle)
+            state["cursor"] = cursor.value
+            state["text_value"] = text_value
+
+        poll_terminal_then_editor_once(terminal_step, editor_step)
+
+        print("ffi combo smoke ok")
+        print(
+            f"terminal_title={state['title']!r} "
+            f"editor_cursor={state['cursor']} "
+            f"editor_text={state['text_value']!r}"
+        )
+        return 0
     finally:
+        if editor_handle:
+            editor_lib.zide_editor_destroy(editor_handle)
         terminal_lib.zide_terminal_destroy(terminal_handle)
 
 

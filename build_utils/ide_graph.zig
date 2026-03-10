@@ -166,6 +166,21 @@ pub fn planIdeExtendedBuildGraph(
     editor_ffi_step.dependOn(&install_editor_ffi.step);
     editor_ffi_step.dependOn(&install_editor_ffi_header.step);
 
+    _ = addSystemCommandStep(
+        b,
+        "test-ffi-host-combo",
+        "Run non-interactive terminal+editor FFI combo smoke",
+        &.{
+            "python3",
+            "examples/ffi_host_combo_smoke/main.py",
+            "--terminal-lib",
+            "zig-out/lib/libzide-terminal-ffi.so",
+            "--editor-lib",
+            "zig-out/lib/libzide-editor-ffi.so",
+        },
+        &.{ terminal_ffi_step, editor_ffi_step },
+    );
+
     // Core test suites
     const unit_tests = addSdlConfiguredTest(
         b,
