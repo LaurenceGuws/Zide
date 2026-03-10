@@ -3,84 +3,10 @@ const types = @import("../model/types.zig");
 const kitty_mod = @import("../kitty/graphics.zig");
 const render_cache_mod = @import("render_cache.zig");
 const app_logger = @import("../../app_logger.zig");
-const screen_mod = @import("../model/screen.zig");
+const publication = @import("view_cache_publication.zig");
 
 const RenderCache = render_cache_mod.RenderCache;
 const Cell = types.Cell;
-const FullDirtyReason = screen_mod.FullDirtyReason;
-
-fn pickForcedFullDirtyReason(
-    rows: usize,
-    active_rows: usize,
-    cols: usize,
-    active_cols: usize,
-    requires_full_damage_for_scroll_offset_change: bool,
-    active_is_alt: bool,
-    cache_alt_active: bool,
-    view_dirty: anytype,
-    view_reason: FullDirtyReason,
-) FullDirtyReason {
-    if (rows != active_rows or cols != active_cols) return .view_cache_geometry_change;
-    if (requires_full_damage_for_scroll_offset_change) return .view_cache_scroll_offset_change;
-    if (active_is_alt != cache_alt_active) return .view_cache_alt_state_change;
-    if (view_dirty == .full) {
-        return if (view_reason == .unknown) .view_cache_view_dirty_full else view_reason;
-    }
-    return .unknown;
-}
-
-fn rowLastContentCol(row_cells: []const Cell, cols: usize) ?usize {
-    if (cols == 0 or row_cells.len < cols) return null;
-    var last: ?usize = null;
-    var col: usize = 0;
-    while (col < cols) : (col += 1) {
-        const cell = row_cells[col];
-        if (cell.x != 0 or cell.y != 0) continue;
-        if (cell.codepoint == 0 and cell.combining_len == 0) continue;
-        const width_units = @as(usize, @max(@as(u8, 1), cell.width));
-        const end_col = @min(cols - 1, col + width_units - 1);
-        last = end_col;
-    }
-    return last;
-}
-
-fn cellsEqual(a: Cell, b: Cell) bool {
-    if (a.codepoint != b.codepoint) return false;
-    if (a.combining_len != b.combining_len) return false;
-    if (a.width != b.width or a.height != b.height or a.x != b.x or a.y != b.y) return false;
-    if (!std.meta.eql(a.attrs, b.attrs)) return false;
-    var i: usize = 0;
-    while (i < a.combining.len) : (i += 1) {
-        if (a.combining[i] != b.combining[i]) return false;
-    }
-    return true;
-}
-
-fn rowDiffSpan(new_row: []const Cell, old_row: []const Cell, cols: usize) ?struct { start: usize, end: usize } {
-    if (cols == 0 or new_row.len < cols or old_row.len < cols) return null;
-
-    var start_opt: ?usize = null;
-    var col: usize = 0;
-    while (col < cols) : (col += 1) {
-        if (!cellsEqual(new_row[col], old_row[col])) {
-            start_opt = col;
-            break;
-        }
-    }
-    const start = start_opt orelse return null;
-
-    var end: usize = start;
-    var rev: usize = cols;
-    while (rev > start) {
-        rev -= 1;
-        if (!cellsEqual(new_row[rev], old_row[rev])) {
-            end = rev;
-            break;
-        }
-    }
-
-    return .{ .start = start, .end = end };
-}
 
 pub fn updateViewCacheNoLock(self: anytype, generation: u64, scroll_offset: usize) void {
     const fullwidth_origin_log = app_logger.logger("terminal.ui.row_fullwidth_origin");
@@ -305,7 +231,7 @@ pub fn updateViewCacheNoLock(self: anytype, generation: u64, scroll_offset: usiz
             const global_row = start_line + row;
             const row_start = row * cols;
             const row_cells = cache.cells.items[row_start .. row_start + cols];
-            const last_content_col = rowLastContentCol(row_cells, cols);
+            const last_content_col = publication.rowLastContentCol(row_cells, cols);
             if (global_row < start_sel.row or global_row > end_sel.row) {
                 cache.selection_rows.items[row] = false;
                 continue;
@@ -341,7 +267,7 @@ pub fn updateViewCacheNoLock(self: anytype, generation: u64, scroll_offset: usiz
         while (row < rows) : (row += 1) {
             const row_start = row * cols;
             const row_cells = cache.cells.items[row_start .. row_start + cols];
-            cache.row_hashes.items[row] = hashRow(row_cells);
+            cache.row_hashes.items[row] = publication.hashRow(row_cells);
         }
     }
 
@@ -485,7 +411,7 @@ pub fn updateViewCacheNoLock(self: anytype, generation: u64, scroll_offset: usiz
     else
         view.damage;
     if (needs_full_damage) {
-        const forced_reason = pickForcedFullDirtyReason(
+        const forced_reason = publication.pickForcedFullDirtyReason(
             rows,
             active_cache.rows,
             cols,
@@ -517,12 +443,12 @@ pub fn updateViewCacheNoLock(self: anytype, generation: u64, scroll_offset: usiz
             const row_start = row_idx * cols;
             const row_cells = cache.cells.items[row_start .. row_start + cols];
             const old_row_cells = active_cache.cells.items[row_start .. row_start + cols];
-            const hash_now = hashRow(row_cells);
+            const hash_now = publication.hashRow(row_cells);
             cache.row_hashes.items[row_idx] = hash_now;
             const hash_changed = hash_now != active_cache.row_hashes.items[row_idx];
             cache.dirty_rows.items[row_idx] = hash_changed;
             if (hash_changed) {
-                if (rowDiffSpan(row_cells, old_row_cells, cols)) |span| {
+                if (publication.rowDiffSpan(row_cells, old_row_cells, cols)) |span| {
                     cache.dirty_cols_start.items[row_idx] = @intCast(span.start);
                     cache.dirty_cols_end.items[row_idx] = @intCast(span.end);
                 } else {
@@ -615,42 +541,6 @@ pub fn updateViewCacheForScrollLocked(self: anytype) void {
     if (!self.view_cache_pending.swap(false, .acq_rel)) return;
     const offset: usize = @intCast(self.view_cache_request_offset.load(.acquire));
     updateViewCacheNoLock(self, self.output_generation.load(.acquire), offset);
-}
-
-fn hashRow(cells: []const Cell) u64 {
-    var h: u64 = 1469598103934665603;
-    const prime: u64 = 1099511628211;
-    for (cells) |cell| {
-        h = (h ^ @as(u64, cell.codepoint)) *% prime;
-        h = (h ^ @as(u64, cell.combining_len)) *% prime;
-        if (cell.combining_len > 0) {
-            var i: usize = 0;
-            while (i < cell.combining_len and i < cell.combining.len) : (i += 1) {
-                h = (h ^ @as(u64, cell.combining[i])) *% prime;
-            }
-        }
-        h = (h ^ @as(u64, cell.width)) *% prime;
-        const attrs = cell.attrs;
-        h = (h ^ @as(u64, attrs.fg.r)) *% prime;
-        h = (h ^ @as(u64, attrs.fg.g)) *% prime;
-        h = (h ^ @as(u64, attrs.fg.b)) *% prime;
-        h = (h ^ @as(u64, attrs.fg.a)) *% prime;
-        h = (h ^ @as(u64, attrs.bg.r)) *% prime;
-        h = (h ^ @as(u64, attrs.bg.g)) *% prime;
-        h = (h ^ @as(u64, attrs.bg.b)) *% prime;
-        h = (h ^ @as(u64, attrs.bg.a)) *% prime;
-        h = (h ^ @as(u64, attrs.underline_color.r)) *% prime;
-        h = (h ^ @as(u64, attrs.underline_color.g)) *% prime;
-        h = (h ^ @as(u64, attrs.underline_color.b)) *% prime;
-        h = (h ^ @as(u64, attrs.underline_color.a)) *% prime;
-        h = (h ^ @as(u64, @intFromBool(attrs.bold))) *% prime;
-        h = (h ^ @as(u64, @intFromBool(attrs.blink))) *% prime;
-        h = (h ^ @as(u64, @intFromBool(attrs.blink_fast))) *% prime;
-        h = (h ^ @as(u64, @intFromBool(attrs.reverse))) *% prime;
-        h = (h ^ @as(u64, @intFromBool(attrs.underline))) *% prime;
-        h = (h ^ @as(u64, attrs.link_id)) *% prime;
-    }
-    return h;
 }
 
 fn updateKittyViewNoLock(self: anytype, cache: *RenderCache) void {
