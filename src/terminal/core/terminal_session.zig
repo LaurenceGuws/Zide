@@ -33,6 +33,7 @@ const session_rendering = @import("session_rendering.zig");
 const session_protocol = @import("session_protocol.zig");
 const session_config = @import("session_config.zig");
 const session_runtime = @import("session_runtime.zig");
+const session_clipboard = @import("session_clipboard.zig");
 const osc_kitty_clipboard = @import("../protocol/osc_kitty_clipboard.zig");
 const Pty = pty_mod.Pty;
 const PtySize = pty_mod.PtySize;
@@ -1084,6 +1085,16 @@ pub const TerminalSession = struct {
 
     pub fn finishFramePresentation(self: *TerminalSession, feedback: PresentationFeedback) void {
         session_publication.completePresentationFeedback(self, feedback);
+    }
+
+    pub fn pasteSystemClipboard(
+        self: *TerminalSession,
+        clip_opt: ?[]const u8,
+        html: ?[]const u8,
+        uri_list: ?[]const u8,
+        png: ?[]const u8,
+    ) !bool {
+        return session_clipboard.pasteSystemClipboard(self, clip_opt, html, uri_list, png);
     }
 
     pub fn syncUpdatesActive(self: *const TerminalSession) bool {
