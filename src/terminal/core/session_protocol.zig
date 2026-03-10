@@ -6,6 +6,7 @@ const state_reset = @import("state_reset.zig");
 const scrolling_mod = @import("scrolling.zig");
 const core_protocol = @import("terminal_core_protocol.zig");
 const core_dispatch = @import("terminal_core_dispatch.zig");
+const core_feed = @import("terminal_core_feed.zig");
 const input_modes = @import("input_modes.zig");
 const types = @import("../model/types.zig");
 
@@ -38,10 +39,14 @@ pub fn handleCsi(self: anytype, action: @import("../parser/csi.zig").CsiAction) 
 }
 
 pub fn feedOutputBytes(self: anytype, bytes: []const u8) void {
-    if (bytes.len == 0) return;
     self.state_mutex.lock();
     defer self.state_mutex.unlock();
-    self.parser.handleSlice(parser_mod.Parser.SessionFacade.from(self), bytes);
+    const result = core_feed.feedOutputBytesLocked(self, bytes);
+    if (!result.parsed) return;
+    publishCoreFeedLocked(self);
+}
+
+fn publishCoreFeedLocked(self: anytype) void {
     _ = self.output_generation.fetchAdd(1, .acq_rel);
     @import("view_cache.zig").updateViewCacheNoLock(self, self.output_generation.load(.acquire), self.core.history.scrollOffset());
 }

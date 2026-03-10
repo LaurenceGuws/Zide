@@ -312,6 +312,19 @@ that byte feed currently owns:
 That is the next real boundary to cleanly separate if we want parser feed to
 become fully core-owned.
 
+### 2026-03-10 feed split follow-up
+
+Parser byte feed is now split one step further:
+
+- `src/terminal/core/terminal_core_feed.zig` owns the actual parser feed call
+- `session_protocol.zig` now only wraps that feed with:
+  - state mutex ownership
+  - output generation publication
+  - view-cache refresh publication
+
+This makes the remaining session-owned part of parser feed explicit: it is not
+parsing anymore, it is publication choreography.
+
 ## Immediate Naming Direction
 
 These names are recommended to avoid ambiguity:
