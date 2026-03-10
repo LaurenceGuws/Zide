@@ -954,6 +954,98 @@ const SpecialCsiContext = struct {
     }
 };
 
+const ReplyCsiContext = struct {
+    ctx: *anyopaque,
+    active_screen_fn: *const fn (ctx: *anyopaque) *screen_mod.Screen,
+    handle_dsr_fn: *const fn (ctx: *anyopaque, action: parser_csi.CsiAction, param_len: usize, params: [parser_csi.max_params]i32) void,
+    handle_da_fn: *const fn (ctx: *anyopaque, action: parser_csi.CsiAction) void,
+    handle_window_op_fn: *const fn (ctx: *anyopaque, action: parser_csi.CsiAction, param_len: usize, params: [parser_csi.max_params]i32) void,
+    handle_decrqm_fn: *const fn (ctx: *anyopaque, action: parser_csi.CsiAction, param_len: usize, params: [parser_csi.max_params]i32) void,
+    apply_decstr_fn: *const fn (ctx: *anyopaque) void,
+
+    pub fn from(session: anytype) ReplyCsiContext {
+        const SessionPtr = @TypeOf(session);
+        return .{
+            .ctx = @ptrCast(session),
+            .active_screen_fn = struct {
+                fn call(ctx: *anyopaque) *screen_mod.Screen {
+                    const s: SessionPtr = @ptrCast(@alignCast(ctx));
+                    return s.activeScreen();
+                }
+            }.call,
+            .handle_dsr_fn = struct {
+                fn call(ctx: *anyopaque, action: parser_csi.CsiAction, param_len: usize, params: [parser_csi.max_params]i32) void {
+                    const s: SessionPtr = @ptrCast(@alignCast(ctx));
+                    if (s.lockPtyWriter()) |writer_guard| {
+                        var writer = writer_guard;
+                        defer writer.unlock();
+                        handleDsrQuery(QueryContext.from(s), CsiWriter.from(&writer), s.activeScreen(), action, param_len, params);
+                    }
+                }
+            }.call,
+            .handle_da_fn = struct {
+                fn call(ctx: *anyopaque, action: parser_csi.CsiAction) void {
+                    const s: SessionPtr = @ptrCast(@alignCast(ctx));
+                    if (!(action.leader == 0 or action.leader == '?')) return;
+                    if (s.lockPtyWriter()) |writer_guard| {
+                        var writer = writer_guard;
+                        defer writer.unlock();
+                        handleDaQuery(CsiWriter.from(&writer));
+                    }
+                }
+            }.call,
+            .handle_window_op_fn = struct {
+                fn call(ctx: *anyopaque, action: parser_csi.CsiAction, param_len: usize, params: [parser_csi.max_params]i32) void {
+                    const s: SessionPtr = @ptrCast(@alignCast(ctx));
+                    if (action.leader != 0 or action.private) return;
+                    if (s.lockPtyWriter()) |writer_guard| {
+                        var writer = writer_guard;
+                        defer writer.unlock();
+                        handleWindowOpQuery(QueryContext.from(s), CsiWriter.from(&writer), s.activeScreen(), param_len, params);
+                    }
+                }
+            }.call,
+            .handle_decrqm_fn = struct {
+                fn call(ctx: *anyopaque, action: parser_csi.CsiAction, param_len: usize, params: [parser_csi.max_params]i32) void {
+                    const s: SessionPtr = @ptrCast(@alignCast(ctx));
+                    if (!csiIntermediatesEq(action, "$")) return;
+                    if (param_len != 1) return;
+                    if (s.lockPtyWriter()) |writer_guard| {
+                        var writer = writer_guard;
+                        defer writer.unlock();
+                        handleDecrqmQuery(CsiWriter.from(&writer), action, params[0], ModeQueryContext.from(s).snapshot());
+                    }
+                }
+            }.call,
+            .apply_decstr_fn = struct {
+                fn call(ctx: *anyopaque) void {
+                    const s: SessionPtr = @ptrCast(@alignCast(ctx));
+                    applyDecstrReset(DecstrContext.from(s));
+                }
+            }.call,
+        };
+    }
+
+    pub fn activeScreen(self: *const ReplyCsiContext) *screen_mod.Screen {
+        return self.active_screen_fn(self.ctx);
+    }
+    pub fn handleDsr(self: *const ReplyCsiContext, action: parser_csi.CsiAction, param_len: usize, params: [parser_csi.max_params]i32) void {
+        self.handle_dsr_fn(self.ctx, action, param_len, params);
+    }
+    pub fn handleDa(self: *const ReplyCsiContext, action: parser_csi.CsiAction) void {
+        self.handle_da_fn(self.ctx, action);
+    }
+    pub fn handleWindowOp(self: *const ReplyCsiContext, action: parser_csi.CsiAction, param_len: usize, params: [parser_csi.max_params]i32) void {
+        self.handle_window_op_fn(self.ctx, action, param_len, params);
+    }
+    pub fn handleDecrqm(self: *const ReplyCsiContext, action: parser_csi.CsiAction, param_len: usize, params: [parser_csi.max_params]i32) void {
+        self.handle_decrqm_fn(self.ctx, action, param_len, params);
+    }
+    pub fn applyDecstr(self: *const ReplyCsiContext) void {
+        self.apply_decstr_fn(self.ctx);
+    }
+};
+
 fn csiIntermediatesEq(action: parser_csi.CsiAction, bytes: []const u8) bool {
     if (action.intermediates_len != bytes.len) return false;
     return std.mem.eql(u8, action.intermediates[0..action.intermediates_len], bytes);
@@ -1095,12 +1187,10 @@ fn handleCsiOnSession(self: anytype, action: parser_csi.CsiAction) void {
     );
     const p = action.params;
     const param_len = csi_param_count;
-    const screen = self.activeScreen();
-    const query = QueryContext.from(self);
     const mode_context = ModeMutationContext.from(self);
-    const mode_query = ModeQueryContext.from(self);
     const simple = SimpleCsiContext.from(self);
     const special = SpecialCsiContext.from(self);
+    const reply = ReplyCsiContext.from(self);
 
     switch (action.final) {
         'A', 'B', 'C', 'D', 'E', 'F', 'G', 'I', 'H', 'f', 'd', 'J', 'K', '@', 'P', 'X', 'L', 'M', 'S', 'T', 'Z', 'r' => {
@@ -1122,45 +1212,22 @@ fn handleCsiOnSession(self: anytype, action: parser_csi.CsiAction) void {
             handleSpecialCsi(special, action, param_len, p);
         },
         'n' => { // DSR
-            if (self.lockPtyWriter()) |writer_guard| {
-                var writer = writer_guard;
-                defer writer.unlock();
-                handleDsrQuery(query, CsiWriter.from(&writer), screen, action, param_len, p);
-            }
+            reply.handleDsr(action, param_len, p);
         },
         'c' => { // DA
-            if (action.leader == 0 or action.leader == '?') {
-                if (self.lockPtyWriter()) |writer_guard| {
-                    var writer = writer_guard;
-                    defer writer.unlock();
-                    handleDaQuery(CsiWriter.from(&writer));
-                }
-            }
+            reply.handleDa(action);
         },
         't' => { // Window ops (bounded subset)
-            if (action.leader != 0 or action.private) return;
-            if (self.lockPtyWriter()) |writer_guard| {
-                var writer = writer_guard;
-                defer writer.unlock();
-                handleWindowOpQuery(query, CsiWriter.from(&writer), screen, param_len, p);
-            }
+            reply.handleWindowOp(action, param_len, p);
         },
         'p' => { // DECRQM (requires '$' intermediate)
             if (csiIntermediatesEq(action, "!")) { // DECSTR (soft terminal reset)
                 if (action.leader == 0 and !action.private) {
-                    applyDecstr(DecstrContext.from(self));
+                    reply.applyDecstr();
                 }
                 return;
             }
-            if (!csiIntermediatesEq(action, "$")) return;
-            // DECRQM is valid only with exactly one parameter; invalid cardinality is ignored.
-            if (param_len != 1) return;
-            const snapshot = mode_query.snapshot();
-            if (self.lockPtyWriter()) |writer_guard| {
-                var writer = writer_guard;
-                defer writer.unlock();
-                handleDecrqmQuery(CsiWriter.from(&writer), action, p[0], snapshot);
-            }
+            reply.handleDecrqm(action, param_len, p);
         },
         'h' => { // SM
             applyModeMutation(mode_context, action, param_len, p, true);
@@ -1443,7 +1510,7 @@ fn writeDecrqmReplyWithWriter(writer: CsiWriter, private: bool, mode: i32, state
     return true;
 }
 
-fn applyDecstr(context: DecstrContext) void {
+fn applyDecstrReset(context: DecstrContext) void {
     // DECSTR is a soft reset: reset parser/mode state but preserve screen contents,
     // scrollback, and kitty graphics. Do not call the hard reset path.
     context.resetParser();
