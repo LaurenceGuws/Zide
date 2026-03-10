@@ -128,6 +128,7 @@ Status:
 - second cleanup slice landed: mode-layering validation and binary-size baseline records were re-homed from `docs/` into `app_architecture/review/`
 - third cleanup slice landed: redundant `docs/AGENT_HOVER.md` was removed so there is one authoritative high-level handoff surface
 - fourth cleanup slice landed: stale `app_architecture/PLANNING.md` was removed because its remaining content already had clearer owners elsewhere
+- fifth cleanup slice landed: the completed `app_mode_layering_todo.yaml` tracker was moved into `app_architecture/review/` because it is now historical rollout context, not an active queue
 
 ## Priority Order
 

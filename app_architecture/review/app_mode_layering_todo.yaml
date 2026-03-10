@@ -80,7 +80,7 @@ app_mode_layering_todo:
           status: done
           files_to_edit:
             - app_architecture/APP_LAYERING.md
-            - app_architecture/app_mode_layering_todo.yaml
+            - app_architecture/review/app_mode_layering_todo.yaml
           notes:
             - "Shared/backend/ide import allow/deny constraints are now explicitly documented and authoritative."
             - "Until dedicated checks are added, enforce this task by review + existing import checks."

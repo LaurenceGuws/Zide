@@ -77,7 +77,7 @@ Review/enforcement policy:
 - `zig build check-app-imports` now includes explicit mode-layer boundary checks for `src/app/modes/shared`, `backend`, and `ide`.
 
 Execution authority for this split is tracked in:
-- `app_architecture/app_mode_layering_todo.yaml`
+- `app_architecture/review/app_mode_layering_todo.yaml`
 
 Regression policy for this split:
 - Run compatibility gates after every extraction slice (unit + import checks + mode smokes + terminal replay).
