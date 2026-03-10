@@ -55,6 +55,10 @@ pub fn zide_terminal_feed_output(handle: ?*ZideTerminalHandle, bytes: ?[*]const 
     return @intFromEnum(bridge.feedOutput(handle, bytes, len));
 }
 
+pub fn zide_terminal_close_input(handle: ?*ZideTerminalHandle) c_int {
+    return @intFromEnum(bridge.closeInput(handle));
+}
+
 pub fn zide_terminal_send_key(handle: ?*ZideTerminalHandle, event: ?*const ZideTerminalKeyEvent) c_int {
     return @intFromEnum(bridge.sendKey(handle, event));
 }

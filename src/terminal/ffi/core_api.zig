@@ -48,13 +48,15 @@ pub fn create(config: ?*const shared.CreateConfig, out_handle: *?*shared.ZideTer
         .scratch_cwd = .empty,
         .scratch_clipboard = .empty,
         .scratch_scrollback_cells = .empty,
+        .last_alive = true,
         .exit_delivered = false,
     };
     session.attachExternalTransport();
-    _ = session.copyMetadata(allocator, &handle.last_title, &handle.last_cwd) catch |err| {
+    const initial_metadata = session.copyMetadata(allocator, &handle.last_title, &handle.last_cwd) catch |err| {
         log.logf(.warning, "create metadata copy failed err={s}", .{@errorName(err)});
         return .out_of_memory;
     };
+    handle.last_alive = initial_metadata.alive;
 
     out_handle.* = shared.toOpaque(handle);
     return .ok;
@@ -85,6 +87,12 @@ pub fn feedOutput(handle: ?*shared.ZideTerminalHandle, bytes: ?[*]const u8, len:
     } else {
         h.session.feedOutputBytes(slice);
     }
+    return shared.syncDerivedEvents(h);
+}
+
+pub fn closeInput(handle: ?*shared.ZideTerminalHandle) shared.Status {
+    const h = shared.fromOpaque(handle) orelse return .invalid_argument;
+    if (!h.session.closeExternalTransport()) return .invalid_argument;
     return shared.syncDerivedEvents(h);
 }
 

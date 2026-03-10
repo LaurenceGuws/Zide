@@ -60,6 +60,8 @@ items:
       - Higher-level callers now use session-owned external transport wrapper methods instead of directly assembling that path through terminal_transport
       - Replay reply-capture PTY attachment now also goes through session-owned wrapper methods instead of raw terminal_transport attach/detach calls
       - Higher-level session assembly paths no longer need raw terminal_transport attach/detach helpers for PTY vs external transport selection
+      - Terminal FFI now exposes close_input for no-PTY hosts, and the derived event stream now emits alive_changed when external input is explicitly closed
+      - Terminal Python mock-service smoke now validates close_input -> alive_changed -> metadata.alive=false for the external transport path
 
   - id: VTCORE-04
     title: Move protocol execution onto core/model contracts

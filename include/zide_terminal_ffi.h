@@ -23,11 +23,12 @@ typedef enum ZideTerminalEventKind {
     ZIDE_TERMINAL_EVENT_CWD_CHANGED = 2,
     ZIDE_TERMINAL_EVENT_CLIPBOARD_WRITE = 3,
     ZIDE_TERMINAL_EVENT_CHILD_EXIT = 4,
+    ZIDE_TERMINAL_EVENT_ALIVE_CHANGED = 5,
 } ZideTerminalEventKind;
 
 enum {
     ZIDE_TERMINAL_SNAPSHOT_ABI_VERSION = 1,
-    ZIDE_TERMINAL_EVENT_ABI_VERSION = 1,
+    ZIDE_TERMINAL_EVENT_ABI_VERSION = 2,
     ZIDE_TERMINAL_SCROLLBACK_ABI_VERSION = 1,
     ZIDE_TERMINAL_RENDERER_METADATA_ABI_VERSION = 1,
     ZIDE_TERMINAL_METADATA_ABI_VERSION = 1,
@@ -191,6 +192,7 @@ int zide_terminal_resize(ZideTerminalHandle *handle, uint16_t cols, uint16_t row
 int zide_terminal_send_bytes(ZideTerminalHandle *handle, const uint8_t *bytes, size_t len);
 int zide_terminal_send_text(ZideTerminalHandle *handle, const uint8_t *text, size_t len);
 int zide_terminal_feed_output(ZideTerminalHandle *handle, const uint8_t *bytes, size_t len);
+int zide_terminal_close_input(ZideTerminalHandle *handle);
 int zide_terminal_send_key(ZideTerminalHandle *handle, const ZideTerminalKeyEvent *event);
 int zide_terminal_send_mouse(ZideTerminalHandle *handle, const ZideTerminalMouseEvent *event);
 int zide_terminal_snapshot_acquire(ZideTerminalHandle *handle, ZideTerminalSnapshot *out_snapshot);

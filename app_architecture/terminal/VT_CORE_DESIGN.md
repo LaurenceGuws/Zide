@@ -284,6 +284,16 @@ It is also no longer FFI-only:
 - at this point higher-level setup callers no longer need raw
   `terminal_transport.attach*/detach*` for normal session assembly paths
 
+The external-host lifecycle contract also moved forward:
+
+- terminal FFI now exposes `zide_terminal_close_input(...)` for no-PTY hosts
+  that want to signal end-of-stream without destroying the terminal
+- the derived event contract now includes `alive_changed`
+- the mock-service Python smoke now validates that closing external input:
+  - flips metadata `alive` to false
+  - emits an `alive_changed` event
+  - preserves snapshot readability for final rendered content
+
 Protocol execution also moved another step toward core ownership:
 
 - saved-cursor restore and alt-screen core state transitions now live behind

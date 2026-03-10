@@ -87,6 +87,8 @@ It verifies:
 - incremental output feeding from a host-owned service loop
 - title/cwd updates
 - clipboard-write events
+- explicit external-input close through `close_input`
+- `alive_changed` event delivery after close
 - final snapshot content
 - scrollback content after streamed line output
 

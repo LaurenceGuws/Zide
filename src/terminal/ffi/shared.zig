@@ -11,7 +11,7 @@ pub const Status = enum(c_int) {
 };
 
 pub const snapshot_abi_version: u32 = 1;
-pub const event_abi_version: u32 = 1;
+pub const event_abi_version: u32 = 2;
 pub const scrollback_abi_version: u32 = 1;
 pub const renderer_metadata_abi_version: u32 = 1;
 pub const metadata_abi_version: u32 = 1;
@@ -22,6 +22,7 @@ pub const EventKind = enum(c_int) {
     cwd_changed = 2,
     clipboard_write = 3,
     child_exit = 4,
+    alive_changed = 5,
 };
 
 pub const GlyphClassFlags = enum(u32) {
@@ -193,6 +194,7 @@ pub const Handle = struct {
     scratch_cwd: std.ArrayList(u8),
     scratch_clipboard: std.ArrayList(u8),
     scratch_scrollback_cells: std.ArrayList(types.Cell),
+    last_alive: bool,
     exit_delivered: bool,
 };
 
@@ -351,6 +353,10 @@ pub fn syncDerivedEvents(handle: *Handle) Status {
         const clip = handle.scratch_clipboard.items;
         const payload = if (clip.len > 0 and clip[clip.len - 1] == 0) clip[0 .. clip.len - 1] else clip;
         queueEvent(handle, .clipboard_write, payload, 0, 0) catch |err| return mapError(err);
+    }
+    if (handle.last_alive != metadata.alive) {
+        queueEvent(handle, .alive_changed, &[_]u8{}, @intFromBool(metadata.alive), 0) catch |err| return mapError(err);
+        handle.last_alive = metadata.alive;
     }
     if (!handle.exit_delivered) {
         if (metadata.exit_code) |code| {

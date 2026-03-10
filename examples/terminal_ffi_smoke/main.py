@@ -12,6 +12,7 @@ from examples.common.ffi_host_boot import as_bytes, load_cdll, STATUS_OK  # noqa
 
 STATUS_OK = 0
 EVENT_TITLE_CHANGED = 1
+EVENT_ALIVE_CHANGED = 5
 EVENT_CLIPBOARD_WRITE = 3
 GLYPH_CLASS_BOX = 1 << 0
 GLYPH_CLASS_BOX_ROUNDED = 1 << 1
@@ -189,6 +190,8 @@ def load_library(path: Path):
     lib.zide_terminal_resize.restype = ctypes.c_int
     lib.zide_terminal_feed_output.argtypes = [HandlePtr, ctypes.POINTER(ctypes.c_uint8), ctypes.c_size_t]
     lib.zide_terminal_feed_output.restype = ctypes.c_int
+    lib.zide_terminal_close_input.argtypes = [HandlePtr]
+    lib.zide_terminal_close_input.restype = ctypes.c_int
     lib.zide_terminal_snapshot_acquire.argtypes = [HandlePtr, ctypes.POINTER(Snapshot)]
     lib.zide_terminal_snapshot_acquire.restype = ctypes.c_int
     lib.zide_terminal_snapshot_release.argtypes = [ctypes.POINTER(Snapshot)]
@@ -424,6 +427,7 @@ def run_mock_service_smoke(lib_path: Path) -> int:
         service = MockTerminalService()
         saw_title = False
         saw_clipboard = False
+        saw_alive_closed = False
 
         for chunk in service.stream():
             buf = (ctypes.c_uint8 * len(chunk)).from_buffer_copy(chunk)
@@ -444,6 +448,20 @@ def run_mock_service_smoke(lib_path: Path) -> int:
             finally:
                 lib.zide_terminal_events_free(ctypes.byref(events))
 
+        if lib.zide_terminal_close_input(handle) != STATUS_OK:
+            raise RuntimeError("close_input(mock) failed")
+
+        events = EventBuffer()
+        if lib.zide_terminal_event_drain(handle, ctypes.byref(events)) != STATUS_OK:
+            raise RuntimeError("event_drain(close_input) failed")
+        try:
+            for i in range(events.count):
+                event = events.events[i]
+                if event.kind == EVENT_ALIVE_CHANGED and event.int0 == 0:
+                    saw_alive_closed = True
+        finally:
+            lib.zide_terminal_events_free(ctypes.byref(events))
+
         snapshot = Snapshot()
         if lib.zide_terminal_snapshot_acquire(handle, ctypes.byref(snapshot)) != STATUS_OK:
             raise RuntimeError("snapshot_acquire(mock) failed")
@@ -457,6 +475,7 @@ def run_mock_service_smoke(lib_path: Path) -> int:
                 raise RuntimeError("metadata_acquire(mock) failed")
             try:
                 scrollback_count = metadata.scrollback_count
+                alive = metadata.alive
             finally:
                 lib.zide_terminal_metadata_release(ctypes.byref(metadata))
             if title != "mock-title":
@@ -469,8 +488,10 @@ def run_mock_service_smoke(lib_path: Path) -> int:
                 raise RuntimeError(f"unexpected mock row2: {row2!r}")
             if scrollback_count != 0:
                 raise RuntimeError(f"unexpected mock scrollback_count: {scrollback_count}")
+            if alive != 0:
+                raise RuntimeError(f"unexpected mock alive after close_input: {alive}")
             print("terminal ffi mock service ok")
-            print(f"title={title!r} cwd={cwd!r} row0={row0!r} row2={row2!r} scrollback_count={scrollback_count}")
+            print(f"title={title!r} cwd={cwd!r} row0={row0!r} row2={row2!r} scrollback_count={scrollback_count} alive={alive}")
         finally:
             lib.zide_terminal_snapshot_release(ctypes.byref(snapshot))
 
@@ -478,6 +499,8 @@ def run_mock_service_smoke(lib_path: Path) -> int:
             raise RuntimeError("missing mock title_changed event")
         if not saw_clipboard:
             raise RuntimeError("missing mock clipboard_write event")
+        if not saw_alive_closed:
+            raise RuntimeError("missing mock alive_changed event after close_input")
         return 0
     finally:
         lib.zide_terminal_destroy(handle)
