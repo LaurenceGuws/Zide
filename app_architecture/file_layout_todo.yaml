@@ -164,7 +164,7 @@ file_layout_todo:
 
         - id: FL-UI-04
           title: "Move src/ui/terminal_font.zig under a focused font/text subsystem"
-          status: in_progress
+          status: done
           files:
             - src/ui/terminal_font.zig
           notes:
@@ -173,6 +173,7 @@ file_layout_todo:
             - "2026-03-10: second slice landed in progress by extracting preferred/fallback face selection policy into `src/ui/font/fallback.zig`, reducing `terminal_font.zig` around glyph shaping and system font discovery instead of also carrying the full fallback preference matrix inline."
             - "2026-03-10: third slice landed in progress by extracting special-glyph sprite generation, powerline outline rasterization, and sprite-cache population into `src/ui/font/special_glyphs.zig`, leaving `terminal_font.zig` thinner around regular glyph shaping/draw flow and system font discovery."
             - "2026-03-10: fourth slice landed in progress by extracting regular glyph shaping, grapheme shaping, glyph-advance lookup, and draw placement into `src/ui/font/shaping.zig`, leaving `terminal_font.zig` thinner around face selection and system font discovery."
+            - "2026-03-10: final slice landed by extracting system font discovery, FreeType face loading, and platform fallback resolution into `src/ui/font/system_fallback.zig`. `terminal_font.zig` is now under 1k LOC and acts as the root owner over focused font subsystem modules instead of remaining another large mixed-responsibility file."
 
         - id: FL-CFG-01
           title: "Split src/config/lua_config_ziglua_parse.zig by parser/validation/domain mapping concerns"
