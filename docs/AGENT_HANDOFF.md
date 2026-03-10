@@ -20,6 +20,7 @@
 - Widget/backend presentation ownership also moved forward: terminal widget draw now goes through backend-owned presentation capture/finish methods instead of assembling published-cache copy timing and feedback handoff inline in the widget.
 - Clipboard/paste ownership also moved forward: system and middle-click selection paste fallback policy now lives in backend code instead of widget code, including scrollback reset for system paste, OSC 5522 attempt, bracketed paste framing, and plain-text fallback behavior.
 - Scrollback-view collapse policy also moved forward: widget input no longer owns the actual “snap back to live bottom on input activity” rule; that decision now goes through backend scrollback helpers.
+- Terminal widget input ownership also moved forward: the keyboard/text dispatch path now lives in a dedicated UI helper module instead of staying embedded inside `terminal_widget_input.zig`, making the widget input file more focused on pointer/selection/scroll orchestration.
 - Investigation residue cleanup is active: probe-grade scroll/control trace logging was removed from core hot paths, protocol trace noise now defaults to debug level, high-frequency input/scrollback send-path logs were demoted out of default-info output, raw CSI-byte tracing now defaults to debug, and duplicate stdout lifecycle logs were removed.
 - Current high-risk architectural seams are:
   - `TerminalSession` is still a large multi-domain owner (PTY/parser/screens/history/render publication/UI-facing APIs).

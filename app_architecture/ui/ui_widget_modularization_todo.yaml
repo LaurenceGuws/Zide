@@ -256,7 +256,7 @@ ui_widget_modularization_todo:
       tasks:
         - id: UI-TB-01
           title: "Shrink TerminalWidget to presentation/orchestration only"
-          status: todo
+          status: in_progress
           files_to_edit:
             - src/ui/widgets/terminal_widget.zig
             - src/ui/widgets/terminal_widget_draw.zig
