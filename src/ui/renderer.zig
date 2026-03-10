@@ -28,7 +28,6 @@ const terminal_glyphs = @import("renderer/terminal_glyphs.zig");
 const terminal_underline = @import("renderer/terminal_underline.zig");
 const texture_draw = @import("renderer/texture_draw.zig");
 const input_logging = @import("renderer/input_logging.zig");
-const window_metrics_state = @import("renderer/window_metrics_state.zig");
 const screenshot = @import("renderer/screenshot.zig");
 const input_runtime = @import("renderer/input_runtime.zig");
 const font_runtime = @import("renderer/font_runtime.zig");
@@ -46,6 +45,12 @@ const app_logger = @import("../app_logger.zig");
 
 const sdl = gl.c;
 const TextPress = platform_input_events.TextPress;
+const WindowSizes = struct {
+    width: i32,
+    height: i32,
+    render_width: i32,
+    render_height: i32,
+};
 
 var active_renderer: ?*Renderer = null;
 var mouse_wheel_delta: f32 = 0.0;
@@ -662,7 +667,7 @@ pub const Renderer = struct {
     }
 
     pub fn beginFrame(self: *Renderer) void {
-        const sizes = window_metrics_state.refresh(self.window);
+        const sizes = refreshWindowSizes(self.window);
         self.width = sizes.width;
         self.height = sizes.height;
         self.render_width = sizes.render_width;
@@ -687,6 +692,17 @@ pub const Renderer = struct {
 
     pub fn endFrame(self: *Renderer) void {
         sdl_api.glSwapWindow(self.window);
+    }
+
+    fn refreshWindowSizes(window: *sdl.SDL_Window) WindowSizes {
+        const window_size = platform_window.getWindowSize(window);
+        const drawable = platform_window.getDrawableSize(window);
+        return .{
+            .width = window_size.w,
+            .height = window_size.h,
+            .render_width = drawable.w,
+            .render_height = drawable.h,
+        };
     }
 
     pub fn dumpWindowScreenshotPpm(self: *Renderer, path: []const u8) !void {
