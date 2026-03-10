@@ -25,6 +25,7 @@ items:
       - Replay/test-only debug helpers now also live under src/terminal/core/terminal_session_debug.zig, so terminal_session.zig no longer embeds that non-runtime surface inline
       - Dead local root-session helper residue (unused screen-mode/hash/inactive-screen helpers) is now removed, and the remaining test-facing view-cache shim delegates through src/terminal/core/session_rendering.zig instead of owning view-cache plumbing inline
       - Remaining scroll-refresh and OSC clipboard copy wrappers now also delegate through src/terminal/core/session_rendering.zig and src/terminal/core/session_queries.zig, reducing more root-session orchestration residue without changing behavior
+      - Backlog hinting now also routes through src/terminal/core/session_runtime.zig instead of session_rendering.zig, keeping transport ingress pressure out of the render/publication owner
       - Stale private root-session shims for SGR application and key-mode flag reads are now removed, leaving fewer dead internal forwarding surfaces in terminal_session.zig
 
   - id: VTCORE-02

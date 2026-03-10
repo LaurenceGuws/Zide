@@ -164,6 +164,10 @@ pub fn hasData(self: anytype) bool {
     return false;
 }
 
+pub fn pollBacklogHint(self: anytype) bool {
+    return hasData(self) or @import("session_rendering.zig").hasPublishedGenerationBacklog(self);
+}
+
 pub fn lockPtyWriter(self: anytype) ?@import("terminal_session.zig").PtyWriteGuard {
     return terminal_transport.Writer.fromSession(self);
 }

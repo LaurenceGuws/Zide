@@ -403,6 +403,9 @@ Session construction also moved one step toward host-wrapper ownership:
   delegate through `src/terminal/core/session_rendering.zig` and
   `src/terminal/core/session_queries.zig`, instead of carrying that
   orchestration inline in `terminal_session.zig`
+- backlog hinting now also routes through `src/terminal/core/session_runtime.zig`
+  instead of `session_rendering.zig`, so render/publication ownership no longer
+  depends on transport ingress state
 - stale private root-session shims for SGR application and key-mode flag reads
   are now removed too, keeping the root session file closer to a real facade
   instead of a pile of dead internal forwarding

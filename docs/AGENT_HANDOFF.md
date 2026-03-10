@@ -16,6 +16,7 @@
   - replay/test-only debug helpers now also live under `terminal_session_debug.zig`, so that non-runtime surface is no longer embedded in the root session file
   - dead local root-session helper residue is also starting to disappear; the remaining test-facing view-cache shim now delegates through `session_rendering.zig` instead of owning view-cache plumbing inline
   - remaining scroll-refresh and OSC clipboard copy wrappers now also delegate through `session_rendering.zig` and `session_queries.zig` instead of sitting inline in the root session file
+  - backlog hinting now also routes through `session_runtime.zig` instead of `session_rendering.zig`, so transport ingress pressure no longer sits in the render/publication owner
   - stale private root-session shims for SGR application and key-mode flag reads are now also gone
   - protocol execution is beginning to split along the same line: pure engine-side helpers now live under `terminal_core_protocol.zig`, while session-coupled protocol behavior remains in `session_protocol.zig`
   - parser/control dispatch entry helpers now also live under `terminal_core_dispatch.zig`; parser byte feed still stays session-owned because locking and publication are not split yet
