@@ -111,6 +111,11 @@ pub fn resetToLiveBottomLocked(self: anytype) bool {
     return true;
 }
 
+pub fn resetToLiveBottomForInputLocked(self: anytype, saw_non_modifier_key_press: bool, saw_text_input: bool) bool {
+    if (!saw_non_modifier_key_press and !saw_text_input) return false;
+    return resetToLiveBottomLocked(self);
+}
+
 pub fn setScrollOffsetFromNormalizedTrackLocked(self: anytype, track_ratio: f32) ?usize {
     if (self.active == .alt) return null;
     self.history.ensureViewCache(self.primary.grid.cols, self.primary.defaultCell());

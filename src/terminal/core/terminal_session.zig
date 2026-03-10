@@ -798,6 +798,10 @@ pub const TerminalSession = struct {
         return session_content.resetToLiveBottomLocked(self);
     }
 
+    pub fn resetToLiveBottomForInputLocked(self: *TerminalSession, saw_non_modifier_key_press: bool, saw_text_input: bool) bool {
+        return session_content.resetToLiveBottomForInputLocked(self, saw_non_modifier_key_press, saw_text_input);
+    }
+
     pub fn setScrollOffsetFromNormalizedTrackLocked(self: *TerminalSession, track_ratio: f32) ?usize {
         return session_content.setScrollOffsetFromNormalizedTrackLocked(self, track_ratio);
     }
