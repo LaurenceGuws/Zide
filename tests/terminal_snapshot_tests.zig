@@ -1,7 +1,7 @@
 const std = @import("std");
-const term_mod = @import("terminal/core/terminal.zig");
-const adapter = @import("terminal/core/snapshot_adapter.zig");
-const shared = @import("types/mod.zig").snapshots;
+const term_mod = @import("../src/terminal/core/terminal.zig");
+const adapter = @import("../src/terminal/core/snapshot_adapter.zig");
+const shared = @import("../src/types/mod.zig").snapshots;
 
 test "terminal snapshot adapter empty" {
     const allocator = std.testing.allocator;

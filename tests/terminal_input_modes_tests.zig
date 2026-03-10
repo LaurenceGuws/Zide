@@ -1,6 +1,6 @@
 const std = @import("std");
-const input_modes = @import("terminal/core/input_modes.zig");
-const key_encoding = @import("terminal/input/key_encoding.zig");
+const input_modes = @import("../src/terminal/core/input_modes.zig");
+const key_encoding = @import("../src/terminal/input/key_encoding.zig");
 
 test "sanitize key mode flags preserves alternate-key bit" {
     const flags = key_encoding.key_mode_report_alternate_key |

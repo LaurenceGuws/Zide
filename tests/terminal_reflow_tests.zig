@@ -1,5 +1,5 @@
 const std = @import("std");
-const term_mod = @import("terminal/core/terminal.zig");
+const term_mod = @import("../src/terminal/core/terminal.zig");
 
 fn firstCodepoint(session: *term_mod.TerminalSession, global_row: usize) ?u32 {
     const snapshot = session.snapshot();

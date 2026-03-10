@@ -96,6 +96,8 @@ Status:
 - `tests/` root established
 - aggregate test entrypoint moved out of `src/`
 - first category-based re-home landed for generic root-level app/editor/config/layout/widget test entrypoints
+- second category-based re-home landed for standalone terminal root test entrypoints
+- tightly coupled subsystem tests still stay source-adjacent where locality is useful
 - category-based re-homing of scattered root-level test files remains follow-up work
 
 ### Tools

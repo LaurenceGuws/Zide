@@ -1,6 +1,6 @@
 const std = @import("std");
-const key_encoder = @import("terminal/input/key_encoder.zig");
-const input_types = @import("types/input.zig");
+const key_encoder = @import("../src/terminal/input/key_encoder.zig");
+const input_types = @import("../src/types/input.zig");
 
 test "terminal key encoder base char mapping" {
     try std.testing.expectEqual(@as(?u32, 'a'), key_encoder.baseCharForKey(.a));

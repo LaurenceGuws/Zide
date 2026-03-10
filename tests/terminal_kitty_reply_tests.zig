@@ -1,5 +1,5 @@
 const std = @import("std");
-const kitty = @import("terminal/kitty/graphics.zig");
+const kitty = @import("../src/terminal/kitty/graphics.zig");
 
 const FakePty = struct {
     writes: std.ArrayList(u8),

@@ -1,8 +1,8 @@
 const std = @import("std");
-const input_mod = @import("terminal/input/input.zig");
-const alt_probe = @import("terminal/input/alternate_probe.zig");
-const types = @import("terminal/model/types.zig");
-const shared_types = @import("types/mod.zig");
+const input_mod = @import("../src/terminal/input/input.zig");
+const alt_probe = @import("../src/terminal/input/alternate_probe.zig");
+const types = @import("../src/terminal/model/types.zig");
+const shared_types = @import("../src/types/mod.zig");
 
 test "terminal input encodes arrow keys with modifiers" {
     const allocator = std.testing.allocator;

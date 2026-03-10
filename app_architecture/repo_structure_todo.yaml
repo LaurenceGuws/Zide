@@ -33,6 +33,7 @@ items:
       - Apply the REPO-TEST-01 policy
       - Prefer reviewable, category-based moves instead of one large migration
       - First slice landed: generic root-level app/editor/config/layout/widget test entrypoints moved from src/ into tests/
+      - Second slice landed: standalone terminal root test entrypoints moved from src/ into tests/, while tightly coupled subsystem tests remain source-adjacent
 
   - id: REPO-DOC-02
     title: Remove or archive stale docs and stale completed todos

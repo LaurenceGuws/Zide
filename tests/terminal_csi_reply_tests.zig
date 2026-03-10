@@ -1,5 +1,5 @@
 const std = @import("std");
-const csi = @import("terminal/protocol/csi.zig");
+const csi = @import("../src/terminal/protocol/csi.zig");
 
 const FakePty = struct {
     writes: std.ArrayList(u8),

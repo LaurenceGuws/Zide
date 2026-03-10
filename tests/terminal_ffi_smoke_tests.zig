@@ -1,6 +1,6 @@
 const std = @import("std");
-const app_logger = @import("app_logger.zig");
-const c_api = @import("terminal/ffi/c_api.zig");
+const app_logger = @import("../src/app_logger.zig");
+const c_api = @import("../src/terminal/ffi/c_api.zig");
 
 test "ffi non-pty snapshot and event ownership smoke" {
     try app_logger.setConsoleFilterString("none");

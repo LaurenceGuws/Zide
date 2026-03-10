@@ -2,9 +2,9 @@ const std = @import("std");
 const builtin = @import("builtin");
 const posix = std.posix;
 
-const terminal = @import("terminal/core/terminal.zig");
-const kitty = @import("terminal/kitty/graphics.zig");
-const pty_mod = @import("terminal/io/pty.zig");
+const terminal = @import("../src/terminal/core/terminal.zig");
+const kitty = @import("../src/terminal/kitty/graphics.zig");
+const pty_mod = @import("../src/terminal/io/pty.zig");
 
 const tiny_png_1x1 = "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR4nGNgYAAAAAMAASsJTYQAAAAASUVORK5CYII=";
 const zlib_rgba_1x1 = "eJxjYGD4DwABAwEA";
