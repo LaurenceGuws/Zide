@@ -82,6 +82,7 @@ Use `zig build check-editor-imports` to enforce these rules.
 - 2026-03-10: continued the `editor.zig` split by extracting selection state, multi-caret movement, rectangular selection expansion, and undo-selection bookkeeping into `src/editor/selection_state.zig`; `editor.zig` now owns less raw selection machinery directly.
 - 2026-03-10: continued the `editor.zig` split by extracting cursor navigation, selection-extension commands, and cursor position/setter bookkeeping into `src/editor/navigation.zig`; `editor.zig` is now much closer to an edit-operation facade.
 - 2026-03-10: continued the `editor.zig` split by extracting text mutation operations into `src/editor/edit_ops.zig`; insert/delete/replace flows and mutation-side highlight update plumbing now live outside the root editor owner.
+- 2026-03-10: began the `syntax.zig` large-file split by extracting query loading, capture-kind mapping, and query-cache ownership into `src/editor/syntax_queries.zig`; `syntax.zig` now keeps more of the actual runtime highlight/injection execution and less cache/bootstrap code inline.
 
 ## Non-goals (for now)
 - No new features or UI changes.
