@@ -41,6 +41,7 @@ items:
       - Support externally supplied byte streams/write sinks for SSH/mobile/embed hosts
       - Resize and lifecycle delivery must work without host-owned PTY assumptions
       - Target type and ownership rules are now defined in app_architecture/terminal/VT_CORE_DESIGN.md
+      - First internal transport contract landed in src/terminal/core/terminal_transport.zig for PTY lifecycle, resize, aliveness, exit polling, and foreground-process metadata
 
   - id: VTCORE-04
     title: Move protocol execution onto core/model contracts

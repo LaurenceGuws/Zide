@@ -1,10 +1,10 @@
 const std = @import("std");
-const pty_mod = @import("../io/pty.zig");
+const terminal_transport = @import("terminal_transport.zig");
 const scrollback_buffer = @import("../model/scrollback_buffer.zig");
 const types = @import("../model/types.zig");
 const app_logger = @import("../../app_logger.zig");
 
-const PtySize = pty_mod.PtySize;
+const PtySize = terminal_transport.PtySize;
 const Cell = types.Cell;
 
 const RowMapEntry = struct {
@@ -17,18 +17,17 @@ pub fn resize(self: anytype, rows: u16, cols: u16) !void {
     try resizeLocked(self, rows, cols);
     const log = app_logger.logger("terminal.core");
     log.logf(.info, "terminal resize rows={d} cols={d} scrollback_cols={d}", .{ rows, cols, self.core.primary.grid.cols });
-    var pty = self.pty;
     const cell_width = self.cell_width;
     const cell_height = self.cell_height;
     self.state_mutex.unlock();
-    if (pty) |*pty_ref| {
+    if (terminal_transport.Transport.fromSession(self)) |transport| {
         const size = PtySize{
             .rows = rows,
             .cols = cols,
             .cell_width = cell_width,
             .cell_height = cell_height,
         };
-        try pty_ref.resize(size);
+        try transport.resize(size);
     }
 }
 

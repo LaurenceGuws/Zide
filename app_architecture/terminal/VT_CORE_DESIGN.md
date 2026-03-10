@@ -325,6 +325,31 @@ Parser byte feed is now split one step further:
 This makes the remaining session-owned part of parser feed explicit: it is not
 parsing anymore, it is publication choreography.
 
+### 2026-03-10 first transport contract
+
+The first internal `TerminalTransport` contract is now landed in
+`src/terminal/core/terminal_transport.zig`.
+
+Current scope:
+
+- PTY open/start wiring
+- transport resize delivery
+- has-data checks
+- child-exit polling
+- aliveness checks
+- foreground-process label and close-confirm metadata
+- transport deinit
+
+Current PTY-backed runtime code now consumes that contract in:
+
+- `session_runtime.zig`
+- `resize_reflow.zig`
+- `session_queries.zig`
+
+This is intentionally not the final transport split yet. The byte pumps and
+writer path still reach the PTY field directly, but host lifecycle and metadata
+no longer have to.
+
 ## Immediate Naming Direction
 
 These names are recommended to avoid ambiguity:

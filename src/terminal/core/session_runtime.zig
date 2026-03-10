@@ -2,9 +2,10 @@ const std = @import("std");
 const app_logger = @import("../../app_logger.zig");
 const pty_io = @import("pty_io.zig");
 const resize_reflow = @import("resize_reflow.zig");
+const terminal_transport = @import("terminal_transport.zig");
 
 pub fn start(self: anytype, shell: ?[:0]const u8) !void {
-    try pty_io.start(self, shell);
+    try terminal_transport.openPty(self, shell, true);
 }
 
 pub fn deinit(self: anytype) void {
@@ -19,8 +20,8 @@ pub fn deinit(self: anytype) void {
         thread.join();
         self.parse_thread = null;
     }
-    if (self.pty) |*pty| {
-        pty.deinit();
+    if (terminal_transport.Transport.fromSession(self)) |transport| {
+        transport.deinit();
     }
     self.render_caches[0].deinit(self.allocator);
     self.render_caches[1].deinit(self.allocator);
@@ -30,7 +31,7 @@ pub fn deinit(self: anytype) void {
 }
 
 pub fn startNoThreads(self: anytype, shell: ?[:0]const u8) !void {
-    try pty_io.startNoThreads(self, shell);
+    try terminal_transport.openPty(self, shell, false);
 }
 
 pub fn poll(self: anytype) !void {
@@ -40,8 +41,8 @@ pub fn poll(self: anytype) !void {
 
 fn maybeUpdateChildExit(self: anytype) void {
     if (self.child_exited.load(.acquire)) return;
-    if (self.pty) |*pty| {
-        if (pty.pollExit() catch |err| blk: {
+    if (terminal_transport.Transport.fromSession(self)) |transport| {
+        if (transport.pollExit() catch |err| blk: {
             const log = app_logger.logger("terminal.pty");
             log.logf(.warning, "pty pollExit failed err={s}", .{@errorName(err)});
             break :blk null;
@@ -69,8 +70,8 @@ pub fn hasData(self: anytype) bool {
         self.io_mutex.unlock();
         return pending;
     }
-    if (self.pty) |*pty| {
-        return pty.hasData();
+    if (terminal_transport.Transport.fromSession(self)) |transport| {
+        return transport.hasData();
     }
     return false;
 }

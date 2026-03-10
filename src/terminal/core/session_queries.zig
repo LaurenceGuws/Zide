@@ -1,6 +1,7 @@
 const std = @import("std");
 const hyperlink_table = @import("hyperlink_table.zig");
 const scrollback_view = @import("scrollback_view.zig");
+const terminal_transport = @import("terminal_transport.zig");
 
 pub const SessionMetadata = struct {
     title: []const u8,
@@ -54,14 +55,14 @@ pub fn copyMetadata(
     self.lock();
     defer self.unlock();
 
-    const title = if (self.pty) |*pty|
-        (pty.foregroundProcessLabel() orelse self.core.title)
+    const title = if (terminal_transport.Transport.fromSession(self)) |transport|
+        (transport.foregroundProcessLabel() orelse self.core.title)
     else
         self.core.title;
     const cwd = self.core.cwd;
     const scrollback = scrollback_view.scrollbackInfo(self);
     const scroll_offset: usize = if (self.core.active == .alt) 0 else self.core.history.scrollOffset();
-    const alive = if (self.pty) |*pty| pty.isAlive() else false;
+    const alive = if (terminal_transport.Transport.fromSession(self)) |transport| transport.isAlive() else false;
     const exit_code = if (self.child_exited.load(.acquire))
         self.child_exit_code.load(.acquire)
     else
@@ -81,8 +82,8 @@ pub fn closeConfirmSignals(self: anytype) CloseConfirmSignals {
     var signals = CloseConfirmSignals{};
     if (!isAlive(self)) return signals;
 
-    if (self.pty) |*pty| {
-        signals.foreground_process = pty.hasForegroundProcessOutsideShell();
+    if (terminal_transport.Transport.fromSession(self)) |transport| {
+        signals.foreground_process = transport.hasForegroundProcessOutsideShell();
     }
     signals.semantic_command = self.core.semantic_prompt.input_active or self.core.semantic_prompt.output_active;
     signals.alt_screen = self.core.active == .alt;
@@ -95,8 +96,8 @@ pub fn shouldConfirmClose(self: anytype) bool {
 }
 
 pub fn isAlive(self: anytype) bool {
-    if (self.pty) |*pty| {
-        return pty.isAlive();
+    if (terminal_transport.Transport.fromSession(self)) |transport| {
+        return transport.isAlive();
     }
     return false;
 }
