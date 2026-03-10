@@ -212,6 +212,7 @@ file_layout_todo:
             - "2026-03-10: first slice landed in progress by collapsing the renderer input micro-files (`key_state.zig`, `mouse_state.zig`, `mouse_wheel.zig`, `key_queue.zig`, `input_queue.zig`, `text_composition.zig`) into `input_state.zig`, `input_runtime.zig`, and the root renderer facade. Those files only wrapped trivial input-state reads/resets/queue pops and were adding navigation cost without owning a real subsystem boundary."
             - "2026-03-10: second slice landed in progress by collapsing `clipboard_state.zig` into `clipboard.zig`. The old split was just a forwarding layer over SDL clipboard calls plus copy/logging helpers, so keeping both files only added another navigation hop without creating a meaningful renderer ownership boundary."
             - "2026-03-10: third slice landed in progress by collapsing `window_flags.zig` into `input_runtime.zig`. Resize/close event classification only existed to support the SDL input loop, so keeping it as a standalone file was another low-value wrapper rather than a real renderer subsystem."
+            - "2026-03-10: fourth slice landed in progress by collapsing `window_metrics_state.zig` into `renderer.zig`. That file only wrapped one local begin-frame size refresh and had no independent renderer ownership, so the separate file was pure navigation overhead."
 
     - name: "Phase 4 - Verification and Drift Control"
       tasks:
