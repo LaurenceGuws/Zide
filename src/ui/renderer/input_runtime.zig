@@ -5,7 +5,6 @@ const input_state = @import("input_state.zig");
 const text_input = @import("text_input.zig");
 const input_logging = @import("input_logging.zig");
 const sdl_api = @import("../../platform/sdl_api.zig");
-const window_flags = @import("window_flags.zig");
 
 pub fn pollInputEvents(
     self: anytype,
@@ -71,7 +70,7 @@ fn handleEvent(
     switch (event.type) {
         sdl_api.EVENT_QUIT => self.should_close_flag = true,
         sdl_api.EVENT_WINDOW => {
-            window_flags.handleWindowEvent(event.type, &self.should_close_flag, &self.window_resized_flag);
+            handleWindowEvent(event.type, &self.should_close_flag, &self.window_resized_flag);
             if (sdl_api.isFocusGainedEvent(event.type)) {
                 sdl_api.startTextInput(self.window);
                 text_input.reapplyRect(&self.text_input_state, self.window);
@@ -161,7 +160,7 @@ fn handleEvent(
         sdl_api.EVENT_MOUSE_WHEEL => input_state.addMouseWheel(state.mouse_wheel_delta, platform_input_events.wheelDelta(event)),
         else => {
             if (sdl_api.isWindowEventType(event.type)) {
-                window_flags.handleWindowEvent(event.type, &self.should_close_flag, &self.window_resized_flag);
+                handleWindowEvent(event.type, &self.should_close_flag, &self.window_resized_flag);
                 if (sdl_api.isFocusGainedEvent(event.type)) {
                     sdl_api.startTextInput(self.window);
                     text_input.reapplyRect(&self.text_input_state, self.window);
@@ -183,6 +182,16 @@ fn handleEvent(
                 });
             }
         },
+    }
+}
+
+fn handleWindowEvent(event_type: c_uint, should_close: *bool, window_resized: *bool) void {
+    if (sdl_api.isResizeEvent(event_type)) {
+        window_resized.* = true;
+        return;
+    }
+    if (sdl_api.isCloseEvent(event_type)) {
+        should_close.* = true;
     }
 }
 

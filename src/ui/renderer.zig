@@ -27,7 +27,6 @@ const shape_draw = @import("renderer/shape_draw.zig");
 const terminal_glyphs = @import("renderer/terminal_glyphs.zig");
 const terminal_underline = @import("renderer/terminal_underline.zig");
 const texture_draw = @import("renderer/texture_draw.zig");
-const window_flags = @import("renderer/window_flags.zig");
 const input_logging = @import("renderer/input_logging.zig");
 const window_metrics_state = @import("renderer/window_metrics_state.zig");
 const screenshot = @import("renderer/screenshot.zig");
