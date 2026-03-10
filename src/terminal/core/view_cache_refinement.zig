@@ -6,6 +6,7 @@ pub fn refineRowHashDamage(
     rows: usize,
     cols: usize,
     fullwidth_origin_log: anytype,
+    merge_active_partial: bool,
 ) void {
     var any_dirty = false;
     var row_idx: usize = 0;
@@ -37,6 +38,14 @@ pub fn refineRowHashDamage(
                     cols,
                 },
             );
+            any_dirty = true;
+        }
+    }
+    if (merge_active_partial and active_cache.dirty == .partial) {
+        row_idx = 0;
+        while (row_idx < rows) : (row_idx += 1) {
+            if (!active_cache.dirty_rows.items[row_idx]) continue;
+            cache.dirty_rows.items[row_idx] = true;
             any_dirty = true;
         }
     }
