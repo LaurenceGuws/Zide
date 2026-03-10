@@ -164,11 +164,12 @@ file_layout_todo:
 
         - id: FL-UI-04
           title: "Move src/ui/terminal_font.zig under a focused font/text subsystem"
-          status: todo
+          status: in_progress
           files:
             - src/ui/terminal_font.zig
           notes:
             - "Prefer one cohesive subsystem move over another giant top-level file."
+            - "2026-03-10: first slice landed in progress by extracting atlas allocation/upload/compaction into `src/ui/font/atlas.zig`, establishing `src/ui/font/` as the focused font subsystem root and shrinking `terminal_font.zig` around font selection/shaping/fallback ownership."
 
         - id: FL-CFG-01
           title: "Split src/config/lua_config_ziglua_parse.zig by parser/validation/domain mapping concerns"
