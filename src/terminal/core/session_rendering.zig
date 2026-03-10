@@ -53,6 +53,10 @@ pub fn publishFeedResultLocked(self: anytype, result: core_feed.FeedResult) void
     view_cache.updateViewCacheNoLock(self, self.output_generation.load(.acquire), result.scroll_offset);
 }
 
+pub fn updateViewCacheNoLock(self: anytype, generation: u64, scroll_offset: usize) void {
+    view_cache.updateViewCacheNoLock(self, generation, scroll_offset);
+}
+
 pub fn renderCache(self: anytype) *const RenderCache {
     const idx = self.render_cache_index.load(.acquire);
     return &self.render_caches[idx];

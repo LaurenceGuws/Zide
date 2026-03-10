@@ -350,6 +350,10 @@ Session construction also moved one step toward host-wrapper ownership:
 - replay/test-only debug helpers now also live in
   `src/terminal/core/terminal_session_debug.zig`, so that non-runtime surface is
   no longer embedded directly in the root session file
+- dead root-session local helper residue has also started disappearing: unused
+  screen-mode/hash/inactive-screen helpers are gone, and the remaining
+  test-facing view-cache shim now delegates through
+  `src/terminal/core/session_rendering.zig`
 
 ### 2026-03-10 protocol split follow-up
 
