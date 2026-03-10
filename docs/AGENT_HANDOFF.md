@@ -13,7 +13,7 @@
   - current implementation state: `TerminalSession` now wraps an internal `TerminalCore` owner for engine state, with PTY/runtime/threading still session-owned
   - protocol execution is beginning to split along the same line: pure engine-side helpers now live under `terminal_core_protocol.zig`, while session-coupled protocol behavior remains in `session_protocol.zig`
   - parser/control dispatch entry helpers now also live under `terminal_core_dispatch.zig`; parser byte feed still stays session-owned because locking and publication are not split yet
-  - parser feed now runs through `terminal_core_feed.zig`; the remaining session-owned wrapper is specifically lock/generation/view-cache publication
+  - parser feed now runs through `terminal_core_feed.zig` with an explicit `FeedResult` publication contract; the remaining session-owned wrapper is specifically state locking plus delegation of generation/view-cache publication to `session_rendering.zig`
   - saved-cursor restore and alt-screen core state transitions now also live under `terminal_core_modes.zig`; `session_protocol` keeps only the remaining session-owned side effects around those transitions
   - RIS/reset core mutation now also lives under `terminal_core_reset.zig`; `session_protocol` keeps only the input snapshot republish step around reset
   - hyperlink allocation, kitty image clearing, and scroll-region mutation now also live under `terminal_core_protocol.zig`; `session_protocol` is trending toward a publication/selection wrapper rather than another core-mutation owner

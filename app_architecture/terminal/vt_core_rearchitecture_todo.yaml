@@ -65,10 +65,11 @@ items:
       - Preserve recent typed seam work and continue replacing session-centric execution targets
       - First slice landed: pure engine-side screen/palette/query protocol helpers moved behind src/terminal/core/terminal_core_protocol.zig, leaving session_protocol with the still session-coupled parts
       - Second slice landed: parser/control/CSI/OSC/DCS/APC dispatch entry helpers now live behind src/terminal/core/terminal_core_dispatch.zig, while byte feed/publication stays in session_protocol because locking and generation publication are still session-owned
-      - Third slice landed: parser byte feed itself now runs through src/terminal/core/terminal_core_feed.zig, with session_protocol retaining only the lock/generation/view-cache publication wrapper
+      - Third slice landed: parser byte feed itself now runs through src/terminal/core/terminal_core_feed.zig, with session_protocol initially retaining the lock/generation/view-cache publication wrapper
       - Fourth slice landed: saved-cursor restore and alt-screen core state transitions now live behind src/terminal/core/terminal_core_modes.zig, leaving session_protocol with only the remaining session-owned side effects around those transitions
       - Fifth slice landed: RIS/reset core mutation now lives behind src/terminal/core/terminal_core_reset.zig, leaving session_protocol with only the session-owned input snapshot republish step
       - Sixth slice landed: hyperlink allocation, kitty image clearing, and scroll-region mutation helpers now also live behind src/terminal/core/terminal_core_protocol.zig, leaving session_protocol with publication/selection wrappers instead of more pure core-state mutation entrypoints
+      - Seventh slice landed: parser feed now returns an explicit core_feed.FeedResult publication contract, and session-owned generation/view-cache publication now runs through src/terminal/core/session_rendering.zig instead of a hidden inline helper in session_protocol
 
   - id: VTCORE-05
     title: Simplify snapshot and render publication

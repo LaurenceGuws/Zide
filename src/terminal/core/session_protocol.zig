@@ -6,6 +6,7 @@ const core_feed = @import("terminal_core_feed.zig");
 const core_modes = @import("terminal_core_modes.zig");
 const core_reset = @import("terminal_core_reset.zig");
 const input_modes = @import("input_modes.zig");
+const session_rendering = @import("session_rendering.zig");
 const types = @import("../model/types.zig");
 
 pub fn handleControl(self: anytype, byte: u8) void {
@@ -40,13 +41,7 @@ pub fn feedOutputBytes(self: anytype, bytes: []const u8) void {
     self.state_mutex.lock();
     defer self.state_mutex.unlock();
     const result = core_feed.feedOutputBytesLocked(self, bytes);
-    if (!result.parsed) return;
-    publishCoreFeedLocked(self);
-}
-
-fn publishCoreFeedLocked(self: anytype) void {
-    _ = self.output_generation.fetchAdd(1, .acq_rel);
-    @import("view_cache.zig").updateViewCacheNoLock(self, self.output_generation.load(.acquire), self.core.history.scrollOffset());
+    session_rendering.publishFeedResultLocked(self, result);
 }
 
 pub fn resetState(self: anytype) void {

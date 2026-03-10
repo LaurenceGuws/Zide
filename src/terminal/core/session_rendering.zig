@@ -4,6 +4,7 @@ const render_cache_mod = @import("render_cache.zig");
 const snapshot_mod = @import("snapshot.zig");
 const selection_mod = @import("selection.zig");
 const view_cache = @import("view_cache.zig");
+const core_feed = @import("terminal_core_feed.zig");
 
 pub const RenderCache = render_cache_mod.RenderCache;
 pub const TerminalSnapshot = snapshot_mod.TerminalSnapshot;
@@ -44,6 +45,12 @@ pub fn snapshot(self: anytype) TerminalSnapshot {
         .kitty_placements = kitty.placements.items,
         .kitty_generation = kitty.generation,
     };
+}
+
+pub fn publishFeedResultLocked(self: anytype, result: core_feed.FeedResult) void {
+    if (!result.parsed) return;
+    _ = self.output_generation.fetchAdd(1, .acq_rel);
+    view_cache.updateViewCacheNoLock(self, self.output_generation.load(.acquire), result.scroll_offset);
 }
 
 pub fn renderCache(self: anytype) *const RenderCache {
