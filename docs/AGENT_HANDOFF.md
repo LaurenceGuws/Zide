@@ -14,8 +14,9 @@
   - protocol execution is beginning to split along the same line: pure engine-side helpers now live under `terminal_core_protocol.zig`, while session-coupled protocol behavior remains in `session_protocol.zig`
   - parser/control dispatch entry helpers now also live under `terminal_core_dispatch.zig`; parser byte feed still stays session-owned because locking and publication are not split yet
   - parser feed now runs through `terminal_core_feed.zig`; the remaining session-owned wrapper is specifically lock/generation/view-cache publication
-  - first internal transport contract now exists in `terminal_transport.zig`; PTY lifecycle/resize/aliveness/exit/foreground-process metadata are routed through it, while byte pumps and writer path are still direct
-  - writer path is now also transport-owned via `terminal_transport.Writer`; the main remaining PTY-direct area is the read/poll pump plus a few existence checks and replay setup paths
+  - first internal transport contract now exists in `terminal_transport.zig`; PTY lifecycle/resize/aliveness/exit/foreground-process metadata are routed through it
+  - writer path is now transport-owned via `terminal_transport.Writer`
+  - read/poll byte pumps now also route through `terminal_transport.Transport.read(...)` and `waitForData(...)`; the main remaining PTY-direct area is a narrower set of transport-existence checks and replay/setup paths
 - Repo-structure cleanup is complete enough; do not keep grinding non-product cleanup unless a new concrete smell appears.
 - Terminal correctness cleanup remains the quality bar, but the current active lane is architectural center-of-gravity correction.
 

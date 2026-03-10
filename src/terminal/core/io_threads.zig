@@ -1,6 +1,7 @@
 const std = @import("std");
 const parser_mod = @import("../parser/parser.zig");
 const app_logger = @import("../../app_logger.zig");
+const terminal_transport = @import("terminal_transport.zig");
 
 pub fn logCsiSequences(log: app_logger.Logger, buf: []const u8) void {
     var i: usize = 0;
@@ -34,15 +35,13 @@ pub fn readThreadMain(session: anytype) void {
     var buf: [max_read]u8 = undefined;
 
     while (session.read_thread_running.load(.acquire)) {
-        if (session.pty) |*pty| {
-            if (!pty.waitForData(10)) {
-                continue;
-            }
+        if (terminal_transport.Transport.fromSession(session)) |transport| {
+            if (!transport.waitForData(10)) continue;
             var processed: usize = 0;
             const start_ms = std.time.milliTimestamp();
             const io_log = app_logger.logger("terminal.io");
             while (session.read_thread_running.load(.acquire)) {
-                const n = pty.read(&buf) catch break;
+                const n = transport.read(&buf) catch break;
                 if (n == null or n.? == 0) break;
                 processed += n.?;
                 logCsiSequences(io_log, buf[0..n.?]);

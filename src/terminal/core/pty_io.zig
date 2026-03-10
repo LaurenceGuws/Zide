@@ -1,40 +1,8 @@
 const std = @import("std");
-const builtin = @import("builtin");
-const pty_mod = @import("../io/pty.zig");
 const parser_mod = @import("../parser/parser.zig");
 const app_logger = @import("../../app_logger.zig");
 const io_threads = @import("io_threads.zig");
-
-const Pty = pty_mod.Pty;
-const PtySize = pty_mod.PtySize;
-
-pub fn start(self: anytype, shell: ?[:0]const u8) !void {
-    const size = PtySize{
-        .rows = self.core.primary.grid.rows,
-        .cols = self.core.primary.grid.cols,
-        .cell_width = self.cell_width,
-        .cell_height = self.cell_height,
-    };
-    const pty = try Pty.init(self.allocator, size, shell);
-    self.pty = pty;
-    if (builtin.os.tag == .linux or builtin.os.tag == .macos) {
-        self.read_thread_running.store(true, .release);
-        self.read_thread = try std.Thread.spawn(.{}, io_threads.readThreadMain, .{self});
-        self.parse_thread_running.store(true, .release);
-        self.parse_thread = try std.Thread.spawn(.{}, io_threads.parseThreadMain, .{self});
-    }
-}
-
-pub fn startNoThreads(self: anytype, shell: ?[:0]const u8) !void {
-    const size = PtySize{
-        .rows = self.core.primary.grid.rows,
-        .cols = self.core.primary.grid.cols,
-        .cell_width = self.cell_width,
-        .cell_height = self.cell_height,
-    };
-    const pty = try Pty.init(self.allocator, size, shell);
-    self.pty = pty;
-}
+const terminal_transport = @import("terminal_transport.zig");
 
 pub fn poll(self: anytype) !void {
     const input_pressure = self.input_pressure.load(.acquire);
@@ -134,7 +102,7 @@ pub fn poll(self: anytype) !void {
         return;
     }
 
-    if (self.pty) |*pty| {
+    if (terminal_transport.Transport.fromSession(self)) |transport| {
         const perf_log = app_logger.logger("terminal.parse");
         var buf: [262144]u8 = undefined;
         var had_data = false;
@@ -143,7 +111,7 @@ pub fn poll(self: anytype) !void {
         const start_ms = std.time.milliTimestamp();
         const io_log = app_logger.logger("terminal.io");
         while (true) {
-            const n = try pty.read(&buf);
+            const n = try transport.read(&buf);
             if (n == null or n.? == 0) break;
             had_data = true;
             processed += n.?;

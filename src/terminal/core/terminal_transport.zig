@@ -108,6 +108,8 @@ pub const Writer = struct {
 
 pub const Transport = struct {
     ctx: *anyopaque,
+    read_fn: *const fn (ctx: *anyopaque, buffer: []u8) anyerror!?usize,
+    wait_for_data_fn: *const fn (ctx: *anyopaque, timeout_ms: i32) bool,
     has_data_fn: *const fn (ctx: *anyopaque) bool,
     poll_exit_fn: *const fn (ctx: *anyopaque) anyerror!?i32,
     resize_fn: *const fn (ctx: *anyopaque, size: PtySize) anyerror!void,
@@ -121,6 +123,18 @@ pub const Transport = struct {
         const SessionPtr = @TypeOf(session);
         return .{
             .ctx = @ptrCast(session),
+            .read_fn = struct {
+                fn call(ctx: *anyopaque, buffer: []u8) anyerror!?usize {
+                    const s: SessionPtr = @ptrCast(@alignCast(ctx));
+                    return if (s.pty) |*pty| try pty.read(buffer) else null;
+                }
+            }.call,
+            .wait_for_data_fn = struct {
+                fn call(ctx: *anyopaque, timeout_ms: i32) bool {
+                    const s: SessionPtr = @ptrCast(@alignCast(ctx));
+                    return if (s.pty) |*pty| pty.waitForData(timeout_ms) else false;
+                }
+            }.call,
             .has_data_fn = struct {
                 fn call(ctx: *anyopaque) bool {
                     const s: SessionPtr = @ptrCast(@alignCast(ctx));
@@ -168,6 +182,12 @@ pub const Transport = struct {
         };
     }
 
+    pub fn read(self: *const Transport, buffer: []u8) !?usize {
+        return self.read_fn(self.ctx, buffer);
+    }
+    pub fn waitForData(self: *const Transport, timeout_ms: i32) bool {
+        return self.wait_for_data_fn(self.ctx, timeout_ms);
+    }
     pub fn hasData(self: *const Transport) bool {
         return self.has_data_fn(self.ctx);
     }
