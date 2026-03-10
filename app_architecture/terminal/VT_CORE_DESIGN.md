@@ -281,6 +281,8 @@ It is also no longer FFI-only:
   `terminal_transport` directly for that path
 - reply-capture PTY attachment in the replay harness now also goes through
   `TerminalSession` host-wrapper methods instead of raw transport assembly
+- at this point higher-level setup callers no longer need raw
+  `terminal_transport.attach*/detach*` for normal session assembly paths
 
 ## Compatibility Strategy
 

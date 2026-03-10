@@ -1,7 +1,6 @@
 const std = @import("std");
 const builtin = @import("builtin");
 const terminal = @import("core/terminal.zig");
-const terminal_transport = @import("core/terminal_transport.zig");
 const pty_mod = @import("io/pty.zig");
 const snapshot_mod = @import("core/snapshot.zig");
 const input_mod = @import("input/input.zig");
