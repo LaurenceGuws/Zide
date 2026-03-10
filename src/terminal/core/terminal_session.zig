@@ -124,6 +124,7 @@ fn debugAccessAllowed() bool {
 pub const TerminalSession = struct {
     allocator: std.mem.Allocator,
     pty: ?Pty,
+    external_transport: ?terminal_transport.ExternalTransport,
     core: TerminalCoreType,
     bracketed_paste: bool,
     focus_reporting: bool,
@@ -185,6 +186,7 @@ pub const TerminalSession = struct {
         session.* = .{
             .allocator = allocator,
             .pty = null,
+            .external_transport = null,
             .core = core,
             .bracketed_paste = false,
             .focus_reporting = false,
