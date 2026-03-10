@@ -128,7 +128,7 @@ Enforcement:
 - Core app logic
   - `src/main.zig`
   - `src/config/*`
-  - `src/tools/*`
+  - `tools/*` (repo tooling only; not product/runtime modules)
 - UI shell
   - `src/ui/renderer.zig`
   - `src/ui/*` (excluding widgets)

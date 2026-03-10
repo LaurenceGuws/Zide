@@ -1,0 +1,41 @@
+version: 1
+
+items:
+  - id: REPO-TEST-01
+    title: Define explicit repo-wide testing layout
+    status: todo
+    priority: high
+    notes:
+      - Establish the canonical split between src-adjacent tests, tests/, and fixtures/
+      - Do not mass-move tests before the policy is written down
+
+  - id: REPO-TOOLS-01
+    title: Collapse duplicated tooling roots
+    status: done
+    priority: high
+    notes:
+      - Removed src/tools as a parallel tooling root
+      - Grammar maintenance tools now live under tools/
+
+  - id: REPO-DOC-01
+    title: Classify active versus historical documentation
+    status: todo
+    priority: high
+    notes:
+      - Define what belongs in docs/, app_architecture/, and app_architecture/review/
+      - Identify stale completed docs/todos for archival or deletion
+
+  - id: REPO-TEST-02
+    title: Re-home scattered multi-module Zig test entrypoints
+    status: todo
+    priority: medium
+    notes:
+      - Apply the REPO-TEST-01 policy
+      - Prefer reviewable, category-based moves instead of one large migration
+
+  - id: REPO-DOC-02
+    title: Remove or archive stale docs and stale completed todos
+    status: todo
+    priority: medium
+    notes:
+      - Run only after active-vs-historical classification is documented

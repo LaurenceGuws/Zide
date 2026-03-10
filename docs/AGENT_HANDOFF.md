@@ -1,17 +1,16 @@
 ## Handoff (High-Level)
 
 ### Current Focus
-- Primary: structural file/folder layout cleanup after the terminal correctness rewrite substantially reduced the worst backend/UI design smells.
-- Primary: structural file/folder layout cleanup is now largely complete; remaining top files are mostly terminal architecture owners rather than generic layout smells.
+- Primary: non-product repo structure cleanup.
+  - repo structure review: `app_architecture/review/REPO_STRUCTURE_REVIEW.md`
+  - active repo structure queue: `app_architecture/repo_structure_todo.yaml`
   - file/folder hotspot review: `app_architecture/review/FILE_LAYOUT_HOTSPOTS_REVIEW.md`
-  - `src/app` placement authority: `app_architecture/review/SRC_APP_DOMAIN_MAP.md`
-  - active cleanup queue: `app_architecture/file_layout_todo.yaml`
-  - editor structural split tracker: `app_architecture/editor/MODULARIZATION_PLAN.md`
   - terminal architecture baseline: `app_architecture/terminal/MODULARIZATION_PLAN.md`
-  - UI/backend seam tracker: `app_architecture/ui/ui_widget_modularization_todo.yaml`
-- Current top-of-queue focus: continue the post-`src/app` giant file splits, now moving from the completed `src/editor` large-file reductions into widget draw, renderer/font, and config parse, while collapsing low-value micro-files created by earlier extraction work.
-- Current top-of-queue focus: the old layout queue is mostly exhausted. The strongest remaining hotspots are now terminal-heavy root owners such as `src/terminal/core/terminal_session.zig`, `src/terminal/protocol/csi.zig`, and `src/terminal/model/screen/screen.zig`, which are better treated as architecture/correctness work than as generic folder cleanup.
-- Terminal correctness cleanup is not abandoned; it is now background context and baseline, not the primary structural review lane.
+- Current top-of-queue focus:
+  - define an explicit repo-wide testing layout
+  - collapse duplicated tooling roots (`tools/` vs `src/tools/`)
+  - classify active versus historical docs and identify stale doc/test surfaces
+- Terminal correctness cleanup is not abandoned; it is now background context and baseline, not the active repo-structure lane.
 
 ### Recent Changes (High-Level)
 - The high-refresh rain investigation removed most renderer-side force-full and stale invalidation escape hatches.
