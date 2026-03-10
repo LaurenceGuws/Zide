@@ -5,6 +5,7 @@ const snapshot_mod = @import("snapshot.zig");
 const selection_mod = @import("selection.zig");
 const view_cache = @import("view_cache.zig");
 const core_feed = @import("terminal_core_feed.zig");
+const retirement = @import("session_rendering_retirement.zig");
 
 pub const RenderCache = render_cache_mod.RenderCache;
 pub const TerminalSnapshot = snapshot_mod.TerminalSnapshot;
@@ -112,17 +113,7 @@ pub fn setSyncUpdatesLocked(self: anytype, enabled: bool) void {
 }
 
 pub fn clearPublishedDamageIfGeneration(self: anytype, expected_generation: u64, clear_screen_dirty: bool) bool {
-    self.lock();
-    defer self.unlock();
-    if (self.output_generation.load(.acquire) != expected_generation) return false;
-    if (clear_screen_dirty) {
-        self.activeScreen().clearDirty();
-    }
-    inline for (0..2) |i| {
-        self.render_caches[i].dirty = .none;
-        self.render_caches[i].damage = .{ .start_row = 0, .end_row = 0, .start_col = 0, .end_col = 0 };
-    }
-    return true;
+    return retirement.clearPublishedDamageIfGeneration(self, expected_generation, clear_screen_dirty);
 }
 
 pub fn currentGeneration(self: anytype) u64 {
@@ -139,15 +130,11 @@ pub fn presentedGeneration(self: anytype) u64 {
 }
 
 pub fn notePresentedGeneration(self: anytype, generation: u64) void {
-    self.presented_generation.store(generation, .release);
+    retirement.notePresentedGeneration(self, generation);
 }
 
 pub fn acknowledgePresentedGeneration(self: anytype, generation: u64) bool {
-    notePresentedGeneration(self, generation);
-    if (renderCacheSyncUpdatesActiveForGeneration(self, generation)) {
-        return self.clearPublishedDamageIfGeneration(generation, false);
-    }
-    return self.clearPublishedDamageIfGeneration(generation, true);
+    return retirement.acknowledgePresentedGeneration(self, generation);
 }
 
 pub fn hasPublishedGenerationBacklog(self: anytype) bool {
@@ -185,13 +172,4 @@ pub fn completePresentationFeedback(self: anytype, feedback: anytype) void {
 
 pub fn finishFramePresentation(self: anytype, feedback: anytype) void {
     completePresentationFeedback(self, feedback);
-}
-
-fn renderCacheSyncUpdatesActiveForGeneration(self: anytype, generation: u64) bool {
-    inline for (0..2) |i| {
-        if (self.render_caches[i].generation == generation) {
-            return self.render_caches[i].sync_updates_active;
-        }
-    }
-    return self.core.sync_updates_active;
 }

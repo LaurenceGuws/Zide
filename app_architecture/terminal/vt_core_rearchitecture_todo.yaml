@@ -104,6 +104,7 @@ items:
       - Fourth prep slice landed: row-hash refinement now lives under src/terminal/core/view_cache_refinement.zig, isolating that optional publication optimization from the base view-cache update flow
       - Fifth prep slice landed: selection-change dirty expansion now lives under src/terminal/core/view_cache_selection_dirty.zig, so selection-driven damage widening is no longer embedded in the base view-cache update path
       - Sixth prep slice landed: base dirty/damage assignment plus partial-damage widening now lives under src/terminal/core/view_cache_damage.zig, so the remaining view_cache.zig path is closer to projection/orchestration than publication policy
+      - Seventh prep slice landed: presented-generation acknowledgement and damage retirement now lives under src/terminal/core/session_rendering_retirement.zig, so session_rendering.zig no longer mixes capture/feedback with retirement policy inline
 
   - id: VTCORE-06
     title: Keep input encoding as a peer subsystem

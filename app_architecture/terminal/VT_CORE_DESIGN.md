@@ -433,6 +433,10 @@ Session construction also moved one step toward host-wrapper ownership:
 - base dirty/damage assignment and partial-damage widening now also lives under
   `src/terminal/core/view_cache_damage.zig`, so `view_cache.zig` is closer
   again to projection/orchestration than publication policy
+- presented-generation acknowledgement and damage retirement now also lives
+  under `src/terminal/core/session_rendering_retirement.zig`, so
+  `session_rendering.zig` no longer mixes capture/feedback with retirement
+  policy inline
 - stale private root-session shims for SGR application and key-mode flag reads
   are now removed too, keeping the root session file closer to a real facade
   instead of a pile of dead internal forwarding
