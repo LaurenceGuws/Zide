@@ -5,6 +5,7 @@
   - terminal core review: `app_architecture/review/TERMINAL_CORE_ARCHITECTURE_REVIEW_2026-03-10.md`
   - active terminal core queue: `app_architecture/terminal/vt_core_rearchitecture_todo.yaml`
   - core boundary design: `app_architecture/terminal/VT_CORE_DESIGN.md`
+  - later redraw/publication contract target: `app_architecture/terminal/RENDER_PUBLICATION_CONTRACT.md`
   - terminal architecture baseline: `app_architecture/terminal/MODULARIZATION_PLAN.md`
 - Current top-of-queue focus:
   - define a real VT core below `TerminalSession`
@@ -116,6 +117,7 @@
 - Primary architecture review + recent cleanup history: `app_architecture/review/TERMINAL_240HZ_RAIN_INVESTIGATION.md`
 - Terminal architecture plan + current hotspot list: `app_architecture/terminal/MODULARIZATION_PLAN.md`
 - Terminal damage/dirty background + redraw/publication hotspot list: `app_architecture/terminal/DAMAGE_TRACKING.md`
+- Future redraw/publication lane contract target: `app_architecture/terminal/RENDER_PUBLICATION_CONTRACT.md`
 - Current UI/backend seam tracker: `app_architecture/ui/ui_widget_modularization_todo.yaml`
 - Doc workflow policy: `docs/WORKFLOW.md`
 

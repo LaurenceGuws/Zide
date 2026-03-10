@@ -92,6 +92,8 @@ items:
       - Keep renderer-agnostic snapshot/damage contracts
       - Reduce session/cache choreography where it is only compensating for session-centered ownership
       - Preserve correctness for widget and FFI render consumers
+      - Contract target is now defined in app_architecture/terminal/RENDER_PUBLICATION_CONTRACT.md
+      - Start this lane only after the current VT core/session/transport split stops moving fundamental backend ownership every patch
 
   - id: VTCORE-06
     title: Keep input encoding as a peer subsystem
