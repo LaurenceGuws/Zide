@@ -15,6 +15,7 @@
   - parser/control dispatch entry helpers now also live under `terminal_core_dispatch.zig`; parser byte feed still stays session-owned because locking and publication are not split yet
   - parser feed now runs through `terminal_core_feed.zig`; the remaining session-owned wrapper is specifically lock/generation/view-cache publication
   - first internal transport contract now exists in `terminal_transport.zig`; PTY lifecycle/resize/aliveness/exit/foreground-process metadata are routed through it, while byte pumps and writer path are still direct
+  - writer path is now also transport-owned via `terminal_transport.Writer`; the main remaining PTY-direct area is the read/poll pump plus a few existence checks and replay setup paths
 - Repo-structure cleanup is complete enough; do not keep grinding non-product cleanup unless a new concrete smell appears.
 - Terminal correctness cleanup remains the quality bar, but the current active lane is architectural center-of-gravity correction.
 

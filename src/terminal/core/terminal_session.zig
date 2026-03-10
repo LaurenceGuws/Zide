@@ -34,6 +34,7 @@ const session_protocol = @import("session_protocol.zig");
 const session_config = @import("session_config.zig");
 const session_runtime = @import("session_runtime.zig");
 const osc_kitty_clipboard = @import("../protocol/osc_kitty_clipboard.zig");
+const terminal_transport = @import("terminal_transport.zig");
 const Pty = pty_mod.Pty;
 const PtySize = pty_mod.PtySize;
 const Screen = screen_mod.Screen;
@@ -80,18 +81,7 @@ pub const PresentationFeedback = struct {
     alt_exit_info: ?AltExitPresentationInfo = null,
 };
 
-pub const PtyWriteGuard = struct {
-    mutex: *std.Thread.Mutex,
-    pty: *Pty,
-
-    pub fn write(self: *PtyWriteGuard, bytes: []const u8) !usize {
-        return self.pty.write(bytes);
-    }
-
-    pub fn unlock(self: *PtyWriteGuard) void {
-        self.mutex.unlock();
-    }
-};
+pub const PtyWriteGuard = terminal_transport.Writer;
 
 pub fn debugSnapshot(self: *TerminalSession) DebugSnapshot {
     if (!debugAccessAllowed()) @panic("debugSnapshot is test-only");

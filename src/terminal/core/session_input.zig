@@ -110,7 +110,7 @@ pub fn sendKeyAction(self: anytype, key: Key, mod: Modifier, action: input_mod.K
         if (isNavigationKey(key)) {
             log.logf(.debug, "sendKey path=encoded", .{});
         }
-        _ = try input_mod.sendKeyAction(writer.pty, key, mod, key_mode_flags, action);
+        _ = try writer.sendKeyAction(key, mod, key_mode_flags, action);
     }
 }
 
@@ -161,7 +161,7 @@ pub fn sendKeyActionWithMetadata(
         if (isNavigationKey(key)) {
             log.logf(.debug, "sendKey(meta) path=encoded", .{});
         }
-        _ = try input_mod.sendKeyActionEvent(writer.pty, .{
+        _ = try writer.sendKeyActionEvent(.{
             .key = key,
             .mod = mod,
             .key_mode_flags = key_mode_flags,
@@ -192,7 +192,7 @@ pub fn sendKeypadAction(self: anytype, key: input_mod.KeypadKey, mod: Modifier, 
         var writer = writer_guard;
         defer writer.unlock();
         if (action == .press) {
-            _ = try input_mod.sendKeypad(writer.pty, key, mod, app_keypad, key_mode_flags);
+            _ = try writer.sendKeypad(key, mod, app_keypad, key_mode_flags);
         }
     }
 }
@@ -223,7 +223,7 @@ pub fn sendCharAction(self: anytype, char: u32, mod: Modifier, action: input_mod
     if (self.lockPtyWriter()) |writer_guard| {
         var writer = writer_guard;
         defer writer.unlock();
-        _ = try input_mod.sendCharAction(writer.pty, char, mod, key_mode_flags, action);
+        _ = try writer.sendCharAction(char, mod, key_mode_flags, action);
     } else {
         echoCharLocallyIfEnabled(self, char, mod, action);
     }
@@ -250,7 +250,7 @@ pub fn sendCharActionWithMetadata(
     if (self.lockPtyWriter()) |writer_guard| {
         var writer = writer_guard;
         defer writer.unlock();
-        _ = try input_mod.sendCharActionEvent(writer.pty, .{
+        _ = try writer.sendCharActionEvent(.{
             .codepoint = char,
             .mod = mod,
             .key_mode_flags = key_mode_flags,
@@ -268,7 +268,7 @@ pub fn reportMouseEvent(self: anytype, event: MouseEvent) !bool {
     if (self.lockPtyWriter()) |writer_guard| {
         var writer = writer_guard;
         defer writer.unlock();
-        return self.input.reportMouseEvent(writer.pty, event, screen.grid.rows, screen.grid.cols);
+        return writer.reportMouseEvent(&self.input, event, screen.grid.rows, screen.grid.cols);
     }
     return false;
 }
@@ -293,7 +293,7 @@ pub fn sendText(self: anytype, text: []const u8) !void {
     if (self.lockPtyWriter()) |writer_guard| {
         var writer = writer_guard;
         defer writer.unlock();
-        try input_mod.sendText(writer.pty, text);
+        try writer.sendText(text);
     }
 }
 
