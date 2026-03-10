@@ -98,12 +98,14 @@ file_layout_todo:
       tasks:
         - id: FL-ED-01
           title: "Split src/editor/editor.zig into focused editor subsystem modules"
-          status: todo
+          status: in_progress
           files:
             - src/editor/editor.zig
+            - src/editor/search_highlight.zig
           notes:
             - "Keep editor.zig as facade/orchestrator."
             - "Avoid creating a spray of tiny files; group by editing ownership."
+            - "2026-03-10: first slice landed in progress by extracting the search/highlight subsystem into `src/editor/search_highlight.zig`, leaving `editor.zig` as the owning facade over search worker, regex matching, query replacement, and highlighter lifecycle behavior."
 
         - id: FL-ED-02
           title: "Split src/editor/syntax.zig into a focused syntax subdir"
