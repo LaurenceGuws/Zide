@@ -14,9 +14,9 @@ pub const SessionFacade = struct {
         return .{
             .ctx = @ptrCast(session),
             .allocator = session.allocator,
-            .osc_hyperlink = &session.osc_hyperlink,
-            .osc_hyperlink_active = &session.osc_hyperlink_active,
-            .current_hyperlink_id = &session.current_hyperlink_id,
+            .osc_hyperlink = &session.core.osc_hyperlink,
+            .osc_hyperlink_active = &session.core.osc_hyperlink_active,
+            .current_hyperlink_id = &session.core.current_hyperlink_id,
             .append_hyperlink_fn = struct {
                 fn call(ctx: *anyopaque, uri: []const u8) ?u32 {
                     const s: SessionPtr = @ptrCast(@alignCast(ctx));

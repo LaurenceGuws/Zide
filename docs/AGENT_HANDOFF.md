@@ -10,6 +10,7 @@
   - define a real VT core below `TerminalSession`
   - keep FFI first-class and host-agnostic
   - make PTY one transport implementation, not the architectural center
+  - current implementation state: `TerminalSession` now wraps an internal `TerminalCore` owner for engine state, with PTY/runtime/threading still session-owned
 - Repo-structure cleanup is complete enough; do not keep grinding non-product cleanup unless a new concrete smell appears.
 - Terminal correctness cleanup remains the quality bar, but the current active lane is architectural center-of-gravity correction.
 

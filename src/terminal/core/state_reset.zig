@@ -2,34 +2,34 @@ const kitty_mod = @import("../kitty/graphics.zig");
 const input_modes = @import("input_modes.zig");
 
 pub fn resetStateLocked(self: anytype) void {
-    self.parser.reset();
-    self.saved_charset = .{};
-    self.primary.resetState();
-    self.alt.resetState();
-    self.current_hyperlink_id = 0;
+    self.core.parser.reset();
+    self.core.saved_charset = .{};
+    self.core.primary.resetState();
+    self.core.alt.resetState();
+    self.core.current_hyperlink_id = 0;
     input_modes.resetInputModesLocked(self);
-    self.primary.clear();
-    self.alt.clear();
+    self.core.primary.clear();
+    self.core.alt.clear();
     kitty_mod.clearKittyImages(self);
-    _ = self.clear_generation.fetchAdd(1, .acq_rel);
+    _ = self.core.clear_generation.fetchAdd(1, .acq_rel);
 }
 
 pub fn saveCursor(self: anytype) void {
     self.activeScreen().saveCursor();
-    self.saved_charset = .{
+    self.core.saved_charset = .{
         .active = true,
-        .g0 = self.parser.g0_charset,
-        .g1 = self.parser.g1_charset,
-        .gl = self.parser.gl_charset,
-        .target = self.parser.charset_target,
+        .g0 = self.core.parser.g0_charset,
+        .g1 = self.core.parser.g1_charset,
+        .gl = self.core.parser.gl_charset,
+        .target = self.core.parser.charset_target,
     };
 }
 
 pub fn restoreCursor(self: anytype) void {
     self.activeScreen().restoreCursor();
-    if (!self.saved_charset.active) return;
-    self.parser.g0_charset = self.saved_charset.g0;
-    self.parser.g1_charset = self.saved_charset.g1;
-    self.parser.gl_charset = self.saved_charset.gl;
-    self.parser.charset_target = self.saved_charset.target;
+    if (!self.core.saved_charset.active) return;
+    self.core.parser.g0_charset = self.core.saved_charset.g0;
+    self.core.parser.g1_charset = self.core.saved_charset.g1;
+    self.core.parser.gl_charset = self.core.saved_charset.gl;
+    self.core.parser.charset_target = self.core.saved_charset.target;
 }

@@ -34,8 +34,8 @@ pub fn snapshot(self: anytype) TerminalSnapshot {
         .cursor_visible = view.cursor_visible,
         .dirty = view.dirty,
         .damage = view.damage,
-        .scrollback_count = self.history.scrollbackCount(),
-        .scrollback_offset = self.history.scrollOffset(),
+        .scrollback_count = self.core.history.scrollbackCount(),
+        .scrollback_offset = self.core.history.scrollOffset(),
         .selection = selection_mod.selectionState(self),
         .alt_active = alt_active,
         .screen_reverse = screen.screen_reverse,
@@ -76,7 +76,7 @@ pub fn capturePresentation(self: anytype, dst: *RenderCache) !PresentationCaptur
 }
 
 pub fn syncUpdatesActive(self: anytype) bool {
-    return self.sync_updates_active;
+    return self.core.sync_updates_active;
 }
 
 pub fn setSyncUpdates(self: anytype, enabled: bool) void {
@@ -86,9 +86,9 @@ pub fn setSyncUpdates(self: anytype, enabled: bool) void {
 }
 
 pub fn setSyncUpdatesLocked(self: anytype, enabled: bool) void {
-    if (self.sync_updates_active == enabled) return;
-    self.sync_updates_active = enabled;
-    const offset: usize = self.history.scrollOffset();
+    if (self.core.sync_updates_active == enabled) return;
+    self.core.sync_updates_active = enabled;
+    const offset: usize = self.core.history.scrollOffset();
     view_cache.updateViewCacheNoLock(self, self.output_generation.load(.acquire), offset);
 }
 
@@ -169,5 +169,5 @@ fn renderCacheSyncUpdatesActiveForGeneration(self: anytype, generation: u64) boo
             return self.render_caches[i].sync_updates_active;
         }
     }
-    return self.sync_updates_active;
+    return self.core.sync_updates_active;
 }

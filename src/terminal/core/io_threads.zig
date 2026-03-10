@@ -148,14 +148,14 @@ pub fn parseThreadMain(session: anytype) void {
             if (chunk_len == 0) break;
 
             session.state_mutex.lock();
-            session.parser.handleSlice(parser_mod.Parser.SessionFacade.from(session), temp[0..chunk_len]);
+            session.core.parser.handleSlice(parser_mod.Parser.SessionFacade.from(session), temp[0..chunk_len]);
             session.state_mutex.unlock();
             processed += chunk_len;
             _ = session.output_generation.fetchAdd(1, .acq_rel);
         }
 
         if (had_data or pending_offset != null) {
-            const target_offset = pending_offset orelse session.history.scrollOffset();
+            const target_offset = pending_offset orelse session.core.history.scrollOffset();
             session.state_mutex.lock();
             @import("view_cache.zig").updateViewCacheNoLock(session, session.output_generation.load(.acquire), target_offset);
             session.state_mutex.unlock();

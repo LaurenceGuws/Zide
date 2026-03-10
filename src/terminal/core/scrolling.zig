@@ -1,7 +1,7 @@
 const kitty_mod = @import("../kitty/graphics.zig");
 
 pub fn scrollRegionUp(self: anytype, count: usize) void {
-    const screen = self.activeScreen();
+    const screen = self.core.activeScreen();
     const cols = @as(usize, screen.grid.cols);
     if (cols == 0 or screen.grid.rows == 0) return;
     const n = @min(count, screen.scroll_bottom - screen.scroll_top + 1);
@@ -21,7 +21,7 @@ pub fn scrollRegionUp(self: anytype, count: usize) void {
 }
 
 pub fn scrollRegionDown(self: anytype, count: usize) void {
-    const screen = self.activeScreen();
+    const screen = self.core.activeScreen();
     const cols = @as(usize, screen.grid.cols);
     if (cols == 0 or screen.grid.rows == 0) return;
     const n = @min(count, screen.scroll_bottom - screen.scroll_top + 1);
@@ -32,7 +32,7 @@ pub fn scrollRegionDown(self: anytype, count: usize) void {
 }
 
 pub fn scrollUp(self: anytype) void {
-    const screen = self.activeScreen();
+    const screen = self.core.activeScreen();
     const cols = @as(usize, screen.grid.cols);
     const rows = @as(usize, screen.grid.rows);
     if (rows == 0 or cols == 0) return;
@@ -49,17 +49,17 @@ pub fn scrollUp(self: anytype) void {
 }
 
 fn isFullScrollRegion(self: anytype) bool {
-    return self.activeScreenConst().isFullScrollRegion();
+    return self.core.activeScreenConst().isFullScrollRegion();
 }
 
 fn pushScrollbackRow(self: anytype, row: usize) void {
-    if (self.active == .alt) return;
-    const screen = &self.primary;
+    if (self.core.active == .alt) return;
+    const screen = &self.core.primary;
     const cols = @as(usize, screen.grid.cols);
     if (cols == 0 or screen.grid.rows == 0) return;
     if (row >= @as(usize, screen.grid.rows)) return;
     const row_start = row * cols;
     const wrapped = screen.grid.rowWrapped(row);
-    self.history.pushRow(screen.grid.cells.items[row_start .. row_start + cols], wrapped, screen.defaultCell());
-    self.kitty_primary.scrollback_total += 1;
+    self.core.history.pushRow(screen.grid.cells.items[row_start .. row_start + cols], wrapped, screen.defaultCell());
+    self.core.kitty_primary.scrollback_total += 1;
 }

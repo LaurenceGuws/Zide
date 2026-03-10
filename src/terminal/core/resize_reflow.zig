@@ -16,7 +16,7 @@ pub fn resize(self: anytype, rows: u16, cols: u16) !void {
     self.state_mutex.lock();
     try resizeLocked(self, rows, cols);
     const log = app_logger.logger("terminal.core");
-    log.logf(.info, "terminal resize rows={d} cols={d} scrollback_cols={d}", .{ rows, cols, self.primary.grid.cols });
+    log.logf(.info, "terminal resize rows={d} cols={d} scrollback_cols={d}", .{ rows, cols, self.core.primary.grid.cols });
     var pty = self.pty;
     const cell_width = self.cell_width;
     const cell_height = self.cell_height;
@@ -33,31 +33,31 @@ pub fn resize(self: anytype, rows: u16, cols: u16) !void {
 }
 
 fn resizeLocked(self: anytype, rows: u16, cols: u16) !void {
-    const old_cols: u16 = self.primary.grid.cols;
-    const old_rows: u16 = self.primary.grid.rows;
-    self.history.ensureViewCache(old_cols, self.primary.defaultCell());
-    const old_history_len: usize = self.history.scrollbackCount();
+    const old_cols: u16 = self.core.primary.grid.cols;
+    const old_rows: u16 = self.core.primary.grid.rows;
+    self.core.history.ensureViewCache(old_cols, self.core.primary.defaultCell());
+    const old_history_len: usize = self.core.history.scrollbackCount();
     const old_total_lines: usize = old_history_len + @as(usize, old_rows);
-    const old_scroll_offset: usize = self.history.scrollOffset();
-    const old_cursor = self.primary.cursorPos();
-    const old_selection = self.history.selectionState();
+    const old_scroll_offset: usize = self.core.history.scrollOffset();
+    const old_cursor = self.core.primary.cursorPos();
+    const old_selection = self.core.history.selectionState();
 
     if (cols != old_cols and cols > 0 and old_cols > 0) {
         try reflowResizePrimary(self, rows, cols, old_rows, old_cols, old_total_lines, old_scroll_offset, old_cursor, old_selection);
     } else {
-        try self.primary.resize(rows, cols);
-        try self.alt.resize(rows, cols);
+        try self.core.primary.resize(rows, cols);
+        try self.core.alt.resize(rows, cols);
         if (cols != old_cols) {
-            try self.history.resizePreserve(cols, self.primary.defaultCell());
+            try self.core.history.resizePreserve(cols, self.core.primary.defaultCell());
         }
-        if (self.active == .alt) {
-            const max_offset = self.history.maxScrollOffset(self.primary.grid.rows);
-            if (self.history.saved_scrollback_offset > max_offset) {
-                self.history.saved_scrollback_offset = max_offset;
+        if (self.core.active == .alt) {
+            const max_offset = self.core.history.maxScrollOffset(self.core.primary.grid.rows);
+            if (self.core.history.saved_scrollback_offset > max_offset) {
+                self.core.history.saved_scrollback_offset = max_offset;
             }
-            self.history.scrollback_offset = 0;
+            self.core.history.scrollback_offset = 0;
         } else {
-            self.setScrollOffsetLocked(self.history.scrollback_offset);
+            self.setScrollOffsetLocked(self.core.history.scrollback_offset);
         }
     }
 }
@@ -85,11 +85,11 @@ fn reflowResizePrimary(
     old_selection: ?types.TerminalSelection,
 ) !void {
     const allocator = self.allocator;
-    const default_cell = self.primary.defaultCell();
+    const default_cell = self.core.primary.defaultCell();
     const old_cols_usize = @as(usize, old_cols);
     const new_cols_usize = @as(usize, cols);
-    const old_history_len = self.history.scrollbackCount();
-    const old_saved_cursor = self.primary.saved_cursor;
+    const old_history_len = self.core.history.scrollbackCount();
+    const old_saved_cursor = self.core.primary.saved_cursor;
 
     const isBlankCell = struct {
         fn check(cell: Cell) bool {
@@ -124,16 +124,16 @@ fn reflowResizePrimary(
     var global_row: usize = 0;
     while (global_row < old_total_lines) : (global_row += 1) {
         const row_cells = if (global_row < old_history_len)
-            self.history.scrollbackRow(global_row) orelse fallback_row.items
+            self.core.history.scrollbackRow(global_row) orelse fallback_row.items
         else blk: {
             const row = global_row - old_history_len;
             const row_start = row * old_cols_usize;
-            break :blk self.primary.grid.cells.items[row_start .. row_start + old_cols_usize];
+            break :blk self.core.primary.grid.cells.items[row_start .. row_start + old_cols_usize];
         };
         const wrapped = if (global_row < old_history_len)
-            self.history.scrollbackRowWrapped(global_row)
+            self.core.history.scrollbackRowWrapped(global_row)
         else
-            self.primary.grid.rowWrapped(global_row - old_history_len);
+            self.core.primary.grid.rowWrapped(global_row - old_history_len);
         last_row_wrapped = wrapped;
 
         row_map.items[global_row] = .{ .line_index = line_index, .col_offset = line_cells.items.len };
@@ -298,7 +298,7 @@ fn reflowResizePrimary(
             }
         }
     }
-    const max_scrollback = self.history.scrollbackCapacity();
+    const max_scrollback = self.core.history.scrollbackCapacity();
     const visible_rows = @as(usize, rows);
     const keep_rows = if (effective_total_rows > max_scrollback + visible_rows) max_scrollback + visible_rows else effective_total_rows;
     const drop_rows = effective_total_rows - keep_rows;
@@ -313,12 +313,12 @@ fn reflowResizePrimary(
         _ = try new_scrollback.pushLine(slice, rows_wraps.items[src_row]);
     }
 
-    self.history.scrollback.deinit();
-    self.history.scrollback = new_scrollback;
-    self.history.markScrollbackChanged();
+    self.core.history.scrollback.deinit();
+    self.core.history.scrollback = new_scrollback;
+    self.core.history.markScrollbackChanged();
 
-    try self.primary.resize(rows, cols);
-    try self.alt.resize(rows, cols);
+    try self.core.primary.resize(rows, cols);
+    try self.core.alt.resize(rows, cols);
 
     row_idx = 0;
     while (row_idx < visible_rows) : (row_idx += 1) {
@@ -326,14 +326,14 @@ fn reflowResizePrimary(
         const dest_start = row_idx * new_cols_usize;
         if (src_row < keep_rows) {
             const src_start = src_row * new_cols_usize;
-            std.mem.copyForwards(Cell, self.primary.grid.cells.items[dest_start .. dest_start + new_cols_usize], rows_cells.items[src_start .. src_start + new_cols_usize]);
-            self.primary.grid.setRowWrapped(row_idx, rows_wraps.items[src_row]);
+            std.mem.copyForwards(Cell, self.core.primary.grid.cells.items[dest_start .. dest_start + new_cols_usize], rows_cells.items[src_start .. src_start + new_cols_usize]);
+            self.core.primary.grid.setRowWrapped(row_idx, rows_wraps.items[src_row]);
         } else {
-            for (self.primary.grid.cells.items[dest_start .. dest_start + new_cols_usize]) |*cell| cell.* = default_cell;
-            self.primary.grid.setRowWrapped(row_idx, false);
+            for (self.core.primary.grid.cells.items[dest_start .. dest_start + new_cols_usize]) |*cell| cell.* = default_cell;
+            self.core.primary.grid.setRowWrapped(row_idx, false);
         }
     }
-    self.primary.grid.markDirtyAllWithReason(.resize_reflow, @src());
+    self.core.primary.grid.markDirtyAllWithReason(.resize_reflow, @src());
 
     const old_start_line = if (old_total_lines > @as(usize, old_rows) + old_scroll_offset)
         old_total_lines - @as(usize, old_rows) - old_scroll_offset
@@ -360,18 +360,18 @@ fn reflowResizePrimary(
         new_scroll_offset = 0;
     }
 
-    if (self.active == .alt) {
-        self.history.scrollback_offset = 0;
+    if (self.core.active == .alt) {
+        self.core.history.scrollback_offset = 0;
     } else {
-        self.history.scrollback_offset = new_scroll_offset;
-        self.view_cache_request_offset.store(@intCast(self.history.scrollback_offset), .release);
+        self.core.history.scrollback_offset = new_scroll_offset;
+        self.view_cache_request_offset.store(@intCast(self.core.history.scrollback_offset), .release);
         self.view_cache_pending.store(true, .release);
         self.io_wait_cond.signal();
         self.updateViewCacheForScrollLocked();
     }
-    const max_offset = self.history.maxScrollOffset(rows);
-    if (self.history.saved_scrollback_offset > max_offset) {
-        self.history.saved_scrollback_offset = max_offset;
+    const max_offset = self.core.history.maxScrollOffset(rows);
+    if (self.core.history.saved_scrollback_offset > max_offset) {
+        self.core.history.saved_scrollback_offset = max_offset;
     }
 
     if (old_selection) |selection| {
@@ -390,21 +390,21 @@ fn reflowResizePrimary(
                 if (start_global.row >= drop_rows and end_global.row >= drop_rows) {
                     const new_start_row = start_global.row - drop_rows;
                     const new_end_row = end_global.row - drop_rows;
-                    self.history.selection.selection.active = selection.active;
-                    self.history.selection.selection.selecting = selection.selecting;
-                    self.history.selection.selection.start = .{ .row = new_start_row, .col = start_global.col };
-                    self.history.selection.selection.end = .{ .row = new_end_row, .col = end_global.col };
+                    self.core.history.selection.selection.active = selection.active;
+                    self.core.history.selection.selection.selecting = selection.selecting;
+                    self.core.history.selection.selection.start = .{ .row = new_start_row, .col = start_global.col };
+                    self.core.history.selection.selection.end = .{ .row = new_end_row, .col = end_global.col };
                 } else {
-                    self.history.clearSelection();
+                    self.core.history.clearSelection();
                 }
             } else {
-                self.history.clearSelection();
+                self.core.history.clearSelection();
             }
         } else {
-            self.history.clearSelection();
+            self.core.history.clearSelection();
         }
     } else {
-        self.history.clearSelection();
+        self.core.history.clearSelection();
     }
 
     if (cursor_global_row < row_map.items.len) {
@@ -415,7 +415,7 @@ fn reflowResizePrimary(
             const screen_row = if (row_after_drop >= scrollback_rows) row_after_drop - scrollback_rows else 0;
             const clamped_row = if (screen_row >= visible_rows) visible_rows - 1 else screen_row;
             const clamped_col = if (pos.col >= new_cols_usize) new_cols_usize - 1 else pos.col;
-            self.primary.setCursor(clamped_row, clamped_col);
+            self.core.primary.setCursor(clamped_row, clamped_col);
         }
     }
 
@@ -429,20 +429,20 @@ fn reflowResizePrimary(
                 const screen_row = if (row_after_drop >= scrollback_rows) row_after_drop - scrollback_rows else 0;
                 const clamped_row = if (screen_row >= visible_rows) visible_rows - 1 else screen_row;
                 const clamped_col = if (pos.col >= new_cols_usize) new_cols_usize - 1 else pos.col;
-                self.primary.saved_cursor.cursor = .{ .row = clamped_row, .col = clamped_col };
+                self.core.primary.saved_cursor.cursor = .{ .row = clamped_row, .col = clamped_col };
             } else if (rows > 0 and cols > 0) {
-                self.primary.saved_cursor.cursor = .{
+                self.core.primary.saved_cursor.cursor = .{
                     .row = @min(old_saved_cursor.cursor.row, @as(usize, rows - 1)),
                     .col = @min(old_saved_cursor.cursor.col, new_cols_usize - 1),
                 };
             }
         } else if (rows > 0 and cols > 0) {
-            self.primary.saved_cursor.cursor = .{
+            self.core.primary.saved_cursor.cursor = .{
                 .row = @min(old_saved_cursor.cursor.row, @as(usize, rows - 1)),
                 .col = @min(old_saved_cursor.cursor.col, new_cols_usize - 1),
             };
         }
     }
 
-    self.primary.wrap_next = false;
+    self.core.primary.wrap_next = false;
 }

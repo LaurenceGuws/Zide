@@ -246,6 +246,31 @@ Migration approach:
 5. move FFI to target the core boundary first
 6. keep PTY-backed desktop behavior working through the wrapper
 
+## Progress
+
+### 2026-03-10 first code cut
+
+The first `VTCORE-01` extraction is now landed internally:
+
+- `src/terminal/core/terminal_core.zig` owns the engine-centered terminal state
+- `TerminalSession` now wraps `core: TerminalCore`
+- PTY/runtime/thread/render-publication ownership stays in `TerminalSession` for now
+
+This first cut moved these owners under `TerminalCore` without changing behavior:
+
+- primary/alt screens and active-screen state
+- history/scrollback
+- parser state
+- OSC title/cwd/clipboard/hyperlink state
+- semantic prompt and user vars
+- kitty image state
+- palette/default-color state
+- saved charset and clear-generation state
+
+This is intentionally not the end-state. Protocol execution and FFI still route
+through `TerminalSession`, but they now do so against a real internal core owner
+instead of one flat session struct.
+
 ## Immediate Naming Direction
 
 These names are recommended to avoid ambiguity:

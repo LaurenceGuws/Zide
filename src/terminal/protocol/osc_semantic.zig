@@ -34,11 +34,11 @@ const SessionState = struct {
     pub fn from(session: anytype) SessionState {
         return .{
             .allocator = session.allocator,
-            .semantic_prompt = &session.semantic_prompt,
-            .semantic_prompt_aid = &session.semantic_prompt_aid,
-            .semantic_cmdline = &session.semantic_cmdline,
-            .semantic_cmdline_valid = &session.semantic_cmdline_valid,
-            .user_vars = &session.user_vars,
+            .semantic_prompt = &session.core.semantic_prompt,
+            .semantic_prompt_aid = &session.core.semantic_prompt_aid,
+            .semantic_cmdline = &session.core.semantic_cmdline,
+            .semantic_cmdline_valid = &session.core.semantic_cmdline_valid,
+            .user_vars = &session.core.user_vars,
         };
     }
 };

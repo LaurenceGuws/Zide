@@ -21,9 +21,9 @@ pub const SessionFacade = struct {
         const SessionPtr = @TypeOf(session);
         return .{
             .ctx = @ptrCast(session),
-            .palette_current = &session.palette_current,
-            .primary_default_attrs = &session.primary.default_attrs,
-            .dynamic_colors = session.dynamic_colors[0..],
+            .palette_current = &session.core.palette_current,
+            .primary_default_attrs = &session.core.primary.default_attrs,
+            .dynamic_colors = session.core.dynamic_colors[0..],
             .write_pty_bytes_fn = struct {
                 fn call(ctx: *anyopaque, bytes: []const u8) anyerror!void {
                     const s: SessionPtr = @ptrCast(@alignCast(ctx));

@@ -195,8 +195,8 @@ pub fn handle(state: anytype, ctx: *anyopaque, hooks: Hooks) !void {
         }
         state.terminal_cursor_style = cursor_style;
         for (state.terminals.items) |term| {
-            term.primary.cursor_style = cursor_style;
-            term.alt.cursor_style = cursor_style;
+            term.core.primary.cursor_style = cursor_style;
+            term.core.alt.cursor_style = cursor_style;
             term.updateViewCacheForScroll();
         }
         state.needs_redraw = true;

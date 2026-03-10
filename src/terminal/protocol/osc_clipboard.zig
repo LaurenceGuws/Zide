@@ -15,8 +15,8 @@ pub const SessionFacade = struct {
         return .{
             .ctx = @ptrCast(session),
             .allocator = session.allocator,
-            .osc_clipboard = &session.osc_clipboard,
-            .osc_clipboard_pending = &session.osc_clipboard_pending,
+            .osc_clipboard = &session.core.osc_clipboard,
+            .osc_clipboard_pending = &session.core.osc_clipboard_pending,
             .write_pty_bytes_fn = struct {
                 fn call(ctx: *anyopaque, bytes: []const u8) anyerror!void {
                     const s: SessionPtr = @ptrCast(@alignCast(ctx));

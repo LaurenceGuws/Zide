@@ -11,6 +11,7 @@ pub const PresentedRenderCache = session_mod.PresentedRenderCache;
 pub const PresentationCapture = session_mod.PresentationCapture;
 pub const AltExitPresentationInfo = session_mod.AltExitPresentationInfo;
 pub const PresentationFeedback = session_mod.PresentationFeedback;
+pub const TerminalCore = session_mod.TerminalCore;
 
 pub const debugSnapshot = session_mod.debugSnapshot;
 pub const debugScrollbackRow = session_mod.debugScrollbackRow;

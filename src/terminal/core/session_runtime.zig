@@ -25,32 +25,7 @@ pub fn deinit(self: anytype) void {
     self.render_caches[0].deinit(self.allocator);
     self.render_caches[1].deinit(self.allocator);
     self.io_buffer.deinit(self.allocator);
-    self.history.deinit();
-    self.primary.deinit();
-    self.alt.deinit();
-    self.parser.deinit();
-    self.osc_clipboard.deinit(self.allocator);
-    self.kitty_osc5522_clipboard_text.deinit(self.allocator);
-    self.kitty_osc5522_clipboard_html.deinit(self.allocator);
-    self.kitty_osc5522_clipboard_uri_list.deinit(self.allocator);
-    self.kitty_osc5522_clipboard_png.deinit(self.allocator);
-    self.osc_hyperlink.deinit(self.allocator);
-    self.cwd_buffer.deinit(self.allocator);
-    self.semantic_prompt_aid.deinit(self.allocator);
-    self.semantic_cmdline.deinit(self.allocator);
-    var user_it = self.user_vars.iterator();
-    while (user_it.next()) |entry| {
-        self.allocator.free(entry.key_ptr.*);
-        self.allocator.free(entry.value_ptr.*);
-    }
-    self.user_vars.deinit();
-    @import("../kitty/graphics.zig").deinitKittyState(self, &self.kitty_primary);
-    @import("../kitty/graphics.zig").deinitKittyState(self, &self.kitty_alt);
-    for (self.hyperlink_table.items) |link| {
-        self.allocator.free(link.uri);
-    }
-    self.hyperlink_table.deinit(self.allocator);
-    self.title_buffer.deinit(self.allocator);
+    self.core.deinit(self);
     self.allocator.destroy(self);
 }
 

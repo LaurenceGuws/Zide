@@ -85,11 +85,11 @@ pub const KittyState = struct {
 };
 
 pub fn kittyState(self: anytype) *KittyState {
-    return if (self.active == .alt) &self.kitty_alt else &self.kitty_primary;
+    return if (self.core.active == .alt) &self.core.kitty_alt else &self.core.kitty_primary;
 }
 
 pub fn kittyStateConst(self: anytype) *const KittyState {
-    return if (self.active == .alt) &self.kitty_alt else &self.kitty_primary;
+    return if (self.core.active == .alt) &self.core.kitty_alt else &self.core.kitty_primary;
 }
 
 pub fn clearKittyLoading(kitty: *KittyState, image_id: u32) void {
@@ -116,9 +116,9 @@ pub fn kittyImageHasPlacement(self: anytype, image_id: u32) bool {
 }
 
 pub fn kittyVisibleTop(self: anytype) u64 {
-    if (self.active == .alt) return 0;
+    if (self.core.active == .alt) return 0;
     const kitty = kittyStateConst(self);
-    const count = self.history.scrollbackCount();
+    const count = self.core.history.scrollbackCount();
     if (kitty.scrollback_total < count) return 0;
     return kitty.scrollback_total - count;
 }
