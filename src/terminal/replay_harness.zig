@@ -1,6 +1,7 @@
 const std = @import("std");
 const builtin = @import("builtin");
 const terminal = @import("core/terminal.zig");
+const screen_mod = @import("model/screen.zig");
 const pty_mod = @import("io/pty.zig");
 const snapshot_mod = @import("core/snapshot.zig");
 const input_mod = @import("input/input.zig");
@@ -92,8 +93,11 @@ pub const FixtureMeta = struct {
     cols: u16,
     cursor: types.CursorPos = .{ .row = 0, .col = 0 },
     line_ending: LineEnding = .lf,
+    baseline_input: ?[]const u8 = null,
     assertions: []const []const u8 = &.{},
     reply_hex: ?[]const u8 = null,
+    expected_dirty: ?DirtyExpectation = null,
+    expected_damage: ?ExpectedDamage = null,
     selection: []const SelectionAction = &.{},
     mouse: []const MouseAction = &.{},
     encoder: ?EncoderSpec = null,
@@ -101,6 +105,19 @@ pub const FixtureMeta = struct {
     osc_5522_clipboard_html: ?[]const u8 = null,
     osc_5522_clipboard_uri_list: ?[]const u8 = null,
     osc_5522_clipboard_png_hex: ?[]const u8 = null,
+};
+
+pub const DirtyExpectation = enum {
+    none,
+    partial,
+    full,
+};
+
+pub const ExpectedDamage = struct {
+    start_row: usize,
+    end_row: usize,
+    start_col: usize,
+    end_col: usize,
 };
 
 const ReplayPtyCapture = struct {
@@ -312,14 +329,18 @@ pub fn runFixture(
     terminal.debugSetCursor(session, fixture.meta.cursor.row, fixture.meta.cursor.col);
     try seedOsc5522Clipboard(session, fixture.meta);
 
+    if (fixture.meta.baseline_input) |baseline_input| {
+        const normalized_baseline = try normalizeLineEndings(allocator, baseline_input, fixture.meta.line_ending);
+        defer allocator.free(normalized_baseline);
+        try runFixtureInputPhase(session, normalized_baseline, reply_capture != null);
+        if (!session.acknowledgePresentedGeneration(session.renderCache().generation)) {
+            return error.BaselinePublishAcknowledgeFailed;
+        }
+    }
+
     const normalized = try normalizeLineEndings(allocator, fixture.input, fixture.meta.line_ending);
     defer allocator.free(normalized);
-    if (reply_capture != null) {
-        terminal.debugFeedBytes(session, normalized);
-    } else {
-        _ = try session.enqueueExternalBytes(normalized);
-        try session.poll();
-    }
+    try runFixtureInputPhase(session, normalized, reply_capture != null);
 
     if (fixture.meta.fixture_type == .harness_api) {
         applySelectionActions(session, fixture.meta.selection);
@@ -339,6 +360,15 @@ pub fn runFixture(
     }
 
     return snapshot_mod.encodeSnapshot(allocator, session, snapshot, debug, terminal.debugScrollbackRow);
+}
+
+fn runFixtureInputPhase(session: *terminal.TerminalSession, input: []const u8, uses_reply_capture: bool) !void {
+    if (uses_reply_capture) {
+        terminal.debugFeedBytes(session, input);
+    } else {
+        _ = try session.enqueueExternalBytes(input);
+        try session.poll();
+    }
 }
 
 fn seedOsc5522Clipboard(session: *terminal.TerminalSession, meta: FixtureMeta) !void {
@@ -514,6 +544,29 @@ fn validateAssertions(
                 std.mem.indexOf(u8, input, "\x1b[?1049h") != null or
                 std.mem.indexOf(u8, input, "\x1b[?1049l") != null;
             if (!has_alt) return error.AssertionAltScreenNotExercised;
+            continue;
+        }
+        if (std.mem.eql(u8, tag, "damage")) {
+            if (fixture.meta.expected_dirty) |expected_dirty| {
+                const expected = switch (expected_dirty) {
+                    .none => screen_mod.Dirty.none,
+                    .partial => screen_mod.Dirty.partial,
+                    .full => screen_mod.Dirty.full,
+                };
+                if (snapshot.dirty != expected) return error.AssertionDamageDirtyMismatch;
+            }
+            if (fixture.meta.expected_damage) |expected_damage| {
+                if (snapshot.damage.start_row != expected_damage.start_row or
+                    snapshot.damage.end_row != expected_damage.end_row or
+                    snapshot.damage.start_col != expected_damage.start_col or
+                    snapshot.damage.end_col != expected_damage.end_col)
+                {
+                    return error.AssertionDamageBoundsMismatch;
+                }
+            }
+            if (fixture.meta.expected_dirty == null and fixture.meta.expected_damage == null) {
+                return error.AssertionDamageExpectationMissing;
+            }
             continue;
         }
         return error.UnknownAssertionTag;
