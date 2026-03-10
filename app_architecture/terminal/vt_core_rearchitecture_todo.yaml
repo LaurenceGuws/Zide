@@ -83,6 +83,7 @@ items:
       - Sixth slice landed: hyperlink allocation, kitty image clearing, and scroll-region mutation helpers now also live behind src/terminal/core/terminal_core_protocol.zig, leaving session_protocol with publication/selection wrappers instead of more pure core-state mutation entrypoints
       - Seventh slice landed: parser feed now returns an explicit core_feed.FeedResult publication contract, and session-owned generation/view-cache publication now runs through src/terminal/core/session_rendering.zig instead of a hidden inline helper in session_protocol
       - Eighth slice landed: the remaining session-owned alt-screen/reset side effects now live under src/terminal/core/session_mode_effects.zig, leaving session_protocol closer to a dispatch facade over core helpers plus explicit session effect owners
+      - Ninth slice landed: alt-screen exit presentation timing now also routes through src/terminal/core/session_rendering.zig, so session_mode_effects no longer mutates render/publication timing state inline
 
   - id: VTCORE-05
     title: Simplify snapshot and render publication

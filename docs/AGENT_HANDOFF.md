@@ -24,6 +24,7 @@
   - RIS/reset core mutation now also lives under `terminal_core_reset.zig`; `session_protocol` keeps only the input snapshot republish step around reset
   - hyperlink allocation, kitty image clearing, and scroll-region mutation now also live under `terminal_core_protocol.zig`; `session_protocol` is trending toward a publication/selection wrapper rather than another core-mutation owner
   - those remaining alt-screen/reset session-only side effects now also live under `session_mode_effects.zig`, so `session_protocol` is closer again to a dispatch facade over core helpers plus explicit session effect owners
+  - alt-screen exit presentation timing now also routes through `session_rendering.zig`, so mode-side-effect code no longer mutates render/publication timing state inline
   - first internal transport contract now exists in `terminal_transport.zig`; PTY lifecycle/resize/aliveness/exit/foreground-process metadata are routed through it
   - writer path is now transport-owned via `terminal_transport.Writer`
   - read/poll byte pumps now also route through `terminal_transport.Transport.read(...)` and `waitForData(...)`

@@ -158,6 +158,11 @@ pub fn pollBacklogHint(self: anytype) bool {
     return self.hasData() or hasPublishedGenerationBacklog(self);
 }
 
+pub fn noteAltExitPending(self: anytype) void {
+    self.alt_exit_pending.store(true, .release);
+    self.alt_exit_time_ms.store(std.time.milliTimestamp(), .release);
+}
+
 pub fn completePresentationFeedback(self: anytype, feedback: anytype) void {
     if (feedback.presented) |presented| {
         if (feedback.texture_updated or presented.dirty == .none) {
