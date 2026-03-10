@@ -205,6 +205,7 @@ Progress:
 - Follow-up (2026-03-10): consolidated kitty image lifecycle teardown in `src/terminal/kitty/graphics.zig` so `evict`, `delete`, and image replacement now share explicit helpers for dropping placements, partial upload state, and stored image bytes instead of open-coding those destructive paths in multiple places.
 - Follow-up (2026-03-10): consolidated kitty payload transport/build logic behind an internal `KittyTransport` boundary in `src/terminal/kitty/graphics.zig`, so query/upload paths now share one authoritative implementation for payload load, file/shm transport, inflate, partial accumulation, expected-size checks, and image build.
 - Follow-up (2026-03-10): extracted kitty shared state/types into `src/terminal/kitty/common.zig` and payload transport/build into `src/terminal/kitty/transport.zig`, so `graphics.zig` no longer owns the shared kitty data model plus transport/build implementation in one file.
+- Follow-up (2026-03-10): extracted kitty placement mutation/query/scroll/placement execution into `src/terminal/kitty/placement_ops.zig`, so `graphics.zig` no longer embeds the placement graph helper implementation alongside protocol/storage code.
 - Follow-up (2026-03-10): extracted kitty placement-graph mutation/query/dirty logic behind an internal `KittyPlacementOps` boundary in `src/terminal/kitty/graphics.zig`, so placement lookup, dirty marking, image-placement teardown, and effective cursor-span calculation no longer stay duplicated across store/place/delete paths.
 - Follow-up (2026-03-10): extracted kitty image storage/eviction/clear ownership behind an internal `KittyStorageOps` boundary in `src/terminal/kitty/graphics.zig`, so byte-store replacement, capacity eviction, partial cleanup, and clear-all flows no longer stay interleaved with placement and top-level parser dispatch code.
 - Follow-up (2026-03-10): extracted kitty top-level parse/control/reply policy behind an internal `KittyProtocolOps` boundary in `src/terminal/kitty/graphics.zig`, so command parsing, validation, query/upload reply policy, and dispatch no longer stay smeared across the module-level entry helpers.
@@ -579,8 +580,10 @@ Statuses are strict:
   - `src/terminal/kitty/graphics.zig`
   - `src/terminal/kitty/common.zig`
   - `src/terminal/kitty/transport.zig`
+  - `src/terminal/kitty/placement_ops.zig`
 - progress:
   - 2026-03-10: first post-plan slice landed on main-line work: extracted shared kitty state/types into `common.zig` and payload transport/build into `transport.zig`, so `graphics.zig` now delegates the shared transport/build ownership instead of embedding those subsystems inline.
+  - 2026-03-10: second post-plan slice landed on main-line work: extracted kitty placement mutation/query/scroll/placement execution into `placement_ops.zig`, so `graphics.zig` now delegates the placement graph implementation instead of embedding it inline with storage/protocol code.
 
 ## Recommended Sequencing (2026-03-09)
 
