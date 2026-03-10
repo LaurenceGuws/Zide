@@ -108,6 +108,7 @@ items:
       - Eighth prep slice landed: replay_harness now supports a presented baseline phase plus explicit damage assertions, and the first replay-backed redraw-contract fixtures now lock narrow partial publication for gutter rewrites and indent-guide rewrites after a baseline publish
       - Ninth prep slice landed: replay-backed redraw coverage now also locks dense clear+repaint loops, keeping ED2 plus full visible repaint on the partial path with full-width viewport damage after a presented baseline
       - Tenth prep slice landed: replay-backed redraw coverage now also locks live-bottom viewport-shift publication for full-region scroll, including the current widened full-viewport damage bounds plus tracked viewport_shift_rows metadata after a presented baseline
+      - Eleventh prep slice landed: replay-backed redraw coverage now also locks a multi-row narrow rewrite case that currently widens to full-row damage across the viewport, giving the later invalidation lane an explicit regression target instead of a hand-wavy nvim-style complaint
 
   - id: VTCORE-06
     title: Keep input encoding as a peer subsystem

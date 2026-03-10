@@ -449,6 +449,10 @@ Session construction also moved one step toward host-wrapper ownership:
   scroll, locking the current contract that viewport-shift publication still
   carries widened full-viewport damage bounds while separately tracking
   `viewport_shift_rows`
+- replay-backed redraw coverage now also includes a multi-row narrow rewrite
+  case that currently widens to full-row damage across the viewport, which is
+  exactly the kind of over-broad invalidation we want the later publication
+  lane to reduce for gutter/scope-guide-heavy TUIs
 - stale private root-session shims for SGR application and key-mode flag reads
   are now removed too, keeping the root session file closer to a real facade
   instead of a pile of dead internal forwarding
