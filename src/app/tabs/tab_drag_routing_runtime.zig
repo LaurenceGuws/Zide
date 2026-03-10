@@ -1,6 +1,6 @@
-const app_modes = @import("modes/mod.zig");
-const shared_types = @import("../types/mod.zig");
-const widgets = @import("../ui/widgets.zig");
+const app_modes = @import("../modes/mod.zig");
+const shared_types = @import("../../types/mod.zig");
+const widgets = @import("../../ui/widgets.zig");
 
 const layout_types = shared_types.layout;
 const input_types = shared_types.input;

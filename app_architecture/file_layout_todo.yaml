@@ -84,13 +84,14 @@ file_layout_todo:
 
         - id: FL-APP-03
           title: "Move editor/search/tab runtime files under focused app subtrees"
-          status: in_progress
+          status: done
           files:
             - src/app
           notes:
             - "Do this after terminal slice establishes the domain-map pattern."
             - "2026-03-10: moved the search-panel cluster (`search_panel_frame_runtime`, `search_panel_input`, `search_panel_runtime`, `search_panel_state`) under `src/app/search/` as the first non-terminal subtree slice."
             - "2026-03-10: moved the editor host-glue cluster (`new_editor_runtime`, `editor_actions`, `editor_*runtime`, `editor_*intents`, `editor_*prepare`, `active_editor_frame`, `open_file_runtime`, `file_detect`) under `src/app/editor/` as the second non-terminal subtree slice."
+            - "2026-03-10: moved the shared tab cluster (`tab_action_apply*`, `tab_action_route`, `tab_bar_width`, `tab_drag_*`, `tabbar_draw_runtime`) under `src/app/tabs/` as the third non-terminal subtree slice."
             - "Validation passed for the moved slice: `zig build test`, `zig build check-app-imports`, `zig build check-input-imports`."
 
     - name: "Phase 2 - Large File Splits"

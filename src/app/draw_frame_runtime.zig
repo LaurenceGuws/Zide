@@ -1,5 +1,5 @@
 const app_font_sample_draw_runtime = @import("font_sample_draw_runtime.zig");
-const app_tabbar_draw_runtime = @import("tabbar_draw_runtime.zig");
+const app_tabbar_draw_runtime = @import("tabs/tabbar_draw_runtime.zig");
 const app_terminal_draw_surface_runtime = @import("terminal/terminal_draw_surface_runtime.zig");
 const app_shell_chrome_draw_runtime = @import("shell_chrome_draw_runtime.zig");
 const app_draw_overlays_runtime = @import("draw_overlays_runtime.zig");
