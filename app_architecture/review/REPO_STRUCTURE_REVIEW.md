@@ -90,6 +90,13 @@ Adopt one explicit repo-wide rule:
 
 That means the problem is not "tests near code"; the problem is "no explicit layout contract."
 
+Status:
+
+- policy written
+- `tests/` root established
+- aggregate test entrypoint moved out of `src/`
+- category-based re-homing of scattered root-level test files remains follow-up work
+
 ### Tools
 
 Adopt one repo tooling root:

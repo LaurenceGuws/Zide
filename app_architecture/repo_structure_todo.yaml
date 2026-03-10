@@ -3,11 +3,11 @@ version: 1
 items:
   - id: REPO-TEST-01
     title: Define explicit repo-wide testing layout
-    status: todo
+    status: done
     priority: high
     notes:
-      - Establish the canonical split between src-adjacent tests, tests/, and fixtures/
-      - Do not mass-move tests before the policy is written down
+      - Canonical split is now documented between src-adjacent tests, tests/, and fixtures/
+      - tests/ root has been established with the aggregate test entrypoint
 
   - id: REPO-TOOLS-01
     title: Collapse duplicated tooling roots
@@ -27,7 +27,7 @@ items:
 
   - id: REPO-TEST-02
     title: Re-home scattered multi-module Zig test entrypoints
-    status: todo
+    status: in_progress
     priority: medium
     notes:
       - Apply the REPO-TEST-01 policy

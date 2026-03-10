@@ -182,7 +182,7 @@ pub fn planIdeExtendedBuildGraph(
         b,
         target,
         optimize,
-        "src/tests_main.zig",
+        "tests/tests_main.zig",
         build_options,
         app_link_ctx,
         target_profile.test_editor,
