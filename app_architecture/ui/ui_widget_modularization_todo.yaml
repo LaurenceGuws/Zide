@@ -256,11 +256,13 @@ ui_widget_modularization_todo:
       tasks:
         - id: UI-TB-01
           title: "Shrink TerminalWidget to presentation/orchestration only"
-          status: in_progress
+          status: done
           files_to_edit:
           notes:
             - "2026-03-10: keyboard/text dispatch moved to `terminal_widget_keyboard.zig`."
             - "2026-03-10: locked pointer/selection/scrollback orchestration moved to `terminal_widget_pointer.zig`."
+            - "2026-03-10: terminal mouse-reporting path moved to `terminal_widget_mouse_reporting.zig`."
+            - "Result: `terminal_widget.zig` and `terminal_widget_input.zig` now act as orchestrators over focused helper modules instead of carrying the full terminal UI behavior inline."
             - src/ui/widgets/terminal_widget.zig
             - src/ui/widgets/terminal_widget_draw.zig
             - src/ui/widgets/terminal_widget_input.zig

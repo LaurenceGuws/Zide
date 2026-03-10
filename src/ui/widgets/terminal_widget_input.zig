@@ -8,6 +8,7 @@ const shared_types = @import("../../types/mod.zig");
 const open_mod = @import("terminal_widget_open.zig");
 const hover_mod = @import("terminal_widget_hover.zig");
 const keyboard_mod = @import("terminal_widget_keyboard.zig");
+const mouse_reporting_mod = @import("terminal_widget_mouse_reporting.zig");
 const pointer_mod = @import("terminal_widget_pointer.zig");
 const common = @import("common.zig");
 
@@ -205,58 +206,22 @@ pub fn handleInput(
             handled = handled or pointer_result.handled;
         }
         if (mouse_reporting and rows > 0 and cols > 0) {
-            self.session.lock();
-            defer self.session.unlock();
-            // Mouse reporting uses terminal input-state bookkeeping and grid dimensions.
-            var buttons_down: u8 = 0;
-            if (input_batch.mouseDown(.left)) buttons_down |= 1;
-            if (input_batch.mouseDown(.middle)) buttons_down |= 2;
-            if (input_batch.mouseDown(.right)) buttons_down |= 4;
-
-            var col: usize = 0;
-            if (mouse.x > hit_base_x) col = @as(usize, @intFromFloat((mouse.x - hit_base_x) / hit_cell_w));
-            var row: usize = 0;
-            if (mouse.y > hit_base_y) row = @as(usize, @intFromFloat((mouse.y - hit_base_y) / hit_cell_h));
-            row = @min(row, rows - 1);
-            col = @min(col, cols - 1);
-            const grid_px_w = @as(u32, @intCast(cols)) * @as(u32, @intFromFloat(hit_cell_w));
-            const grid_px_h = @as(u32, @intCast(rows)) * @as(u32, @intFromFloat(hit_cell_h));
-            const raw_px_x_f = @max(0.0, mouse.x - hit_base_x);
-            const raw_px_y_f = @max(0.0, mouse.y - hit_base_y);
-            var pixel_x: u32 = @intFromFloat(raw_px_x_f);
-            var pixel_y: u32 = @intFromFloat(raw_px_y_f);
-            if (grid_px_w > 0) pixel_x = @min(pixel_x, grid_px_w - 1);
-            if (grid_px_h > 0) pixel_y = @min(pixel_y, grid_px_h - 1);
-
-            if (wheel_steps != 0) {
-                var remaining = wheel_steps;
-                while (remaining != 0) {
-                    const button: terminal_mod.MouseButton = if (remaining > 0) .wheel_up else .wheel_down;
-                    if (try self.session.reportMouseEvent(.{ .kind = .wheel, .button = button, .row = row, .col = col, .pixel_x = pixel_x, .pixel_y = pixel_y, .mod = mod, .buttons_down = buttons_down })) {
-                        handled = true;
-                    }
-                    remaining += if (remaining > 0) -1 else 1;
-                }
-            }
-            if (input_batch.mousePressed(.left) and !skip_mouse_click) {
-                if (try self.session.reportMouseEvent(.{ .kind = .press, .button = .left, .row = row, .col = col, .pixel_x = pixel_x, .pixel_y = pixel_y, .mod = mod, .buttons_down = buttons_down })) handled = true;
-            }
-            if (input_batch.mousePressed(.middle)) {
-                if (try self.session.reportMouseEvent(.{ .kind = .press, .button = .middle, .row = row, .col = col, .pixel_x = pixel_x, .pixel_y = pixel_y, .mod = mod, .buttons_down = buttons_down })) handled = true;
-            }
-            if (input_batch.mousePressed(.right)) {
-                if (try self.session.reportMouseEvent(.{ .kind = .press, .button = .right, .row = row, .col = col, .pixel_x = pixel_x, .pixel_y = pixel_y, .mod = mod, .buttons_down = buttons_down })) handled = true;
-            }
-            if (input_batch.mouseReleased(.left)) {
-                if (try self.session.reportMouseEvent(.{ .kind = .release, .button = .left, .row = row, .col = col, .pixel_x = pixel_x, .pixel_y = pixel_y, .mod = mod, .buttons_down = buttons_down })) handled = true;
-            }
-            if (input_batch.mouseReleased(.middle)) {
-                if (try self.session.reportMouseEvent(.{ .kind = .release, .button = .middle, .row = row, .col = col, .pixel_x = pixel_x, .pixel_y = pixel_y, .mod = mod, .buttons_down = buttons_down })) handled = true;
-            }
-            if (input_batch.mouseReleased(.right)) {
-                if (try self.session.reportMouseEvent(.{ .kind = .release, .button = .right, .row = row, .col = col, .pixel_x = pixel_x, .pixel_y = pixel_y, .mod = mod, .buttons_down = buttons_down })) handled = true;
-            }
-            if (try self.session.reportMouseEvent(.{ .kind = .move, .button = .none, .row = row, .col = col, .pixel_x = pixel_x, .pixel_y = pixel_y, .mod = mod, .buttons_down = buttons_down })) handled = true;
+            handled = handled or try mouse_reporting_mod.handleMouseReporting(
+                self,
+                .{
+                    .mouse = mouse,
+                    .hit_base_x = hit_base_x,
+                    .hit_base_y = hit_base_y,
+                    .hit_cell_w = hit_cell_w,
+                    .hit_cell_h = hit_cell_h,
+                    .rows = rows,
+                    .cols = cols,
+                    .mod = mod,
+                },
+                input_batch,
+                skip_mouse_click,
+                wheel_steps,
+            );
         }
     }
 
