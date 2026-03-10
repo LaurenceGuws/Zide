@@ -23,10 +23,9 @@ const parser_hooks = @import("parser_hooks.zig");
 const input_modes = @import("input_modes.zig");
 const hyperlink_table = @import("hyperlink_table.zig");
 const state_reset = @import("state_reset.zig");
-const scrollback_view = @import("scrollback_view.zig");
-const text_export = @import("text_export.zig");
 const session_queries = @import("session_queries.zig");
 const session_publication = @import("session_publication.zig");
+const session_content = @import("session_content.zig");
 const osc_kitty_clipboard = @import("../protocol/osc_kitty_clipboard.zig");
 const Pty = pty_mod.Pty;
 const PtySize = pty_mod.PtySize;
@@ -59,8 +58,8 @@ const RenderCache = render_cache_mod.RenderCache;
 
 pub const TerminalSnapshot = snapshot_mod.TerminalSnapshot;
 pub const DebugSnapshot = snapshot_mod.DebugSnapshot;
-pub const ScrollbackInfo = scrollback_view.ScrollbackInfo;
-pub const ScrollbackRange = scrollback_view.ScrollbackRange;
+pub const ScrollbackInfo = session_content.ScrollbackInfo;
+pub const ScrollbackRange = session_content.ScrollbackRange;
 pub const SelectionGesture = selection_mod.SelectionGesture;
 pub const ClickSelectionResult = selection_mod.ClickSelectionResult;
 pub const SessionMetadata = session_queries.SessionMetadata;
@@ -1135,7 +1134,7 @@ pub const TerminalSession = struct {
     }
 
     pub fn scrollbackInfo(self: *TerminalSession) ScrollbackInfo {
-        return scrollback_view.scrollbackInfo(self);
+        return session_content.scrollbackInfo(self);
     }
 
     pub fn copyScrollbackRange(
@@ -1145,51 +1144,51 @@ pub const TerminalSession = struct {
         max_rows: usize,
         out: *std.ArrayList(Cell),
     ) !ScrollbackRange {
-        return scrollback_view.copyScrollbackRange(self, allocator, start_row, max_rows, out);
+        return session_content.copyScrollbackRange(self, allocator, start_row, max_rows, out);
     }
 
     pub fn selectionPlainTextAlloc(self: *TerminalSession, allocator: std.mem.Allocator) !?[]u8 {
-        return text_export.selectionPlainTextAlloc(self, allocator);
+        return session_content.selectionPlainTextAlloc(self, allocator);
     }
 
     pub fn scrollbackPlainTextAlloc(self: *TerminalSession, allocator: std.mem.Allocator) ![]u8 {
-        return text_export.scrollbackPlainTextAlloc(self, allocator);
+        return session_content.scrollbackPlainTextAlloc(self, allocator);
     }
 
     pub fn scrollbackAnsiTextAlloc(self: *TerminalSession, allocator: std.mem.Allocator) ![]u8 {
-        return text_export.scrollbackAnsiTextAlloc(self, allocator);
+        return session_content.scrollbackAnsiTextAlloc(self, allocator);
     }
 
     pub fn setScrollOffset(self: *TerminalSession, offset: usize) void {
-        scrollback_view.setScrollOffset(self, offset);
+        session_content.setScrollOffset(self, offset);
     }
 
     pub fn setScrollOffsetLocked(self: *TerminalSession, offset: usize) void {
-        scrollback_view.setScrollOffsetLocked(self, offset);
+        session_content.setScrollOffsetLocked(self, offset);
     }
 
     pub fn resetToLiveBottomLocked(self: *TerminalSession) bool {
-        return scrollback_view.resetToLiveBottomLocked(self);
+        return session_content.resetToLiveBottomLocked(self);
     }
 
     pub fn setScrollOffsetFromNormalizedTrackLocked(self: *TerminalSession, track_ratio: f32) ?usize {
-        return scrollback_view.setScrollOffsetFromNormalizedTrackLocked(self, track_ratio);
+        return session_content.setScrollOffsetFromNormalizedTrackLocked(self, track_ratio);
     }
 
     pub fn scrollSelectionDragLocked(self: *TerminalSession, toward_top: bool) bool {
-        return scrollback_view.scrollSelectionDragLocked(self, toward_top);
+        return session_content.scrollSelectionDragLocked(self, toward_top);
     }
 
     pub fn scrollBy(self: *TerminalSession, delta: isize) void {
-        scrollback_view.scrollBy(self, delta);
+        session_content.scrollBy(self, delta);
     }
 
     pub fn scrollByLocked(self: *TerminalSession, delta: isize) void {
-        scrollback_view.scrollByLocked(self, delta);
+        session_content.scrollByLocked(self, delta);
     }
 
     pub fn scrollWheelLocked(self: *TerminalSession, wheel_steps: i32) bool {
-        return scrollback_view.scrollWheelLocked(self, wheel_steps);
+        return session_content.scrollWheelLocked(self, wheel_steps);
     }
 
     pub fn updateViewCacheForScroll(self: *TerminalSession) void {
