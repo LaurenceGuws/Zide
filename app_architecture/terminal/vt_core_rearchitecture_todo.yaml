@@ -43,6 +43,7 @@ items:
       - Target type and ownership rules are now defined in app_architecture/terminal/VT_CORE_DESIGN.md
       - First internal transport contract landed in src/terminal/core/terminal_transport.zig for PTY lifecycle, resize, aliveness, exit polling, and foreground-process metadata
       - Writer path now also goes through the transport boundary: the old raw Pty writer guard was replaced by a transport-owned Writer contract used by session_input and existing protocol write callers
+      - Read/poll byte pumps now also go through the transport boundary: io_threads.zig and pty_io.zig consume transport.read(...) and transport.waitForData(...) instead of reaching into raw Pty ownership directly
 
   - id: VTCORE-04
     title: Move protocol execution onto core/model contracts

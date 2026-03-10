@@ -346,9 +346,8 @@ Current PTY-backed runtime code now consumes that contract in:
 - `resize_reflow.zig`
 - `session_queries.zig`
 
-This is intentionally not the final transport split yet. The byte pumps and
-writer path still reach the PTY field directly, but host lifecycle and metadata
-no longer have to.
+This was intentionally not the final transport split at first: host lifecycle
+and metadata were moved behind the contract before byte IO.
 
 ### 2026-03-10 writer contract follow-up
 
@@ -370,9 +369,24 @@ This means the common protocol/input write surface no longer depends on a raw
 
 What still remains PTY-direct:
 
-- the read/poll byte pumps
 - places that still check `self.pty` directly for “transport exists”
 - replay-harness setup paths
+
+### 2026-03-10 read path follow-up
+
+The transport boundary now also owns the common read side:
+
+- `terminal_transport.Transport.read(...)`
+- `terminal_transport.Transport.waitForData(...)`
+
+Current PTY-backed runtime code now uses those methods in:
+
+- `io_threads.zig`
+- `pty_io.zig`
+
+This means the main byte pump no longer depends on raw `Pty` ownership in the
+runtime helpers. The remaining PTY-direct uses are narrower and mostly about
+transport existence checks plus setup paths that have not been re-cut yet.
 
 ## Immediate Naming Direction
 
