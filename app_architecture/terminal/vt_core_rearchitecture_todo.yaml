@@ -62,6 +62,7 @@ items:
       - Higher-level session assembly paths no longer need raw terminal_transport attach/detach helpers for PTY vs external transport selection
       - Terminal FFI now exposes close_input for no-PTY hosts, and the derived event stream now emits alive_changed when external input is explicitly closed
       - Terminal Python mock-service smoke now validates close_input -> alive_changed -> metadata.alive=false for the external transport path
+      - The derived event stream now also emits redraw_ready when snapshot generation advances, giving embedded hosts a minimal wake signal for snapshot pulls without introducing a second damage model
 
   - id: VTCORE-04
     title: Move protocol execution onto core/model contracts
