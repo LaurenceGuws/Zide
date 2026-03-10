@@ -72,7 +72,7 @@ fn handleWithMode(
                     const rs = @as(*@TypeOf(runtime_state), @ptrCast(@alignCast(raw)));
                     const s = rs.state;
                     if (s.editors.items.len > 0) {
-                        const app_editor_seed = @import("editor_seed.zig");
+                        const app_editor_seed = @import("editor/editor_seed.zig");
                         const editor = s.editors.items[0];
                         try app_editor_seed.seedDefaultWelcomeBuffer(editor);
                     }

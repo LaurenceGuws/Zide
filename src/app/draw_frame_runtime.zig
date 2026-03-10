@@ -36,7 +36,7 @@ pub fn draw(state: anytype, shell: anytype, ctx: *anyopaque, hooks: Hooks) void 
     );
 
     if (comptime mode_build.focused_mode != .terminal) {
-        const app_editor_draw_surface_runtime = @import("editor_draw_surface_runtime.zig");
+        const app_editor_draw_surface_runtime = @import("editor/editor_draw_surface_runtime.zig");
         app_editor_draw_surface_runtime.draw(state, shell, layout);
     }
     app_terminal_draw_surface_runtime.draw(state, shell, layout);

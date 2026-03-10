@@ -100,7 +100,7 @@ pub fn handle(
 
     if (comptime mode_build.focused_mode != .terminal) {
         if (focus == .editor and editors.len > 0) {
-            const app_editor_shortcuts_frame = @import("editor_shortcuts_frame.zig");
+            const app_editor_shortcuts_frame = @import("editor/editor_shortcuts_frame.zig");
             const action_layout = hooks.compute_layout(ctx, @floatFromInt(r.width), @floatFromInt(r.height));
             const editor_idx = @min(active_tab, editors.len - 1);
             const editor = editors[editor_idx];

@@ -1,8 +1,8 @@
-const app_shell = @import("../app_shell.zig");
-const app_logger = @import("../app_logger.zig");
-const shared_types = @import("../types/mod.zig");
-const editor_types = @import("../editor/types.zig");
-const widgets = @import("../ui/widgets.zig");
+const app_shell = @import("../../app_shell.zig");
+const app_logger = @import("../../app_logger.zig");
+const shared_types = @import("../../types/mod.zig");
+const editor_types = @import("../../editor/types.zig");
+const widgets = @import("../../ui/widgets.zig");
 
 const EditorWidget = widgets.EditorWidget;
 const layout_types = shared_types.layout;
