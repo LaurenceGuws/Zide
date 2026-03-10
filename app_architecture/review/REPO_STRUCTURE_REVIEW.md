@@ -120,6 +120,12 @@ Additionally:
 - generated evidence should live with fixtures or dedicated evidence folders, not mixed into active docs
 - completed stale todos should be closed or archived instead of lingering as active planning surfaces
 
+Status:
+
+- doc lifecycle policy is now explicitly recorded in `docs/WORKFLOW.md` and summarized in `docs/INDEX.md`
+- the next cleanup slices should target obvious placement/naming outliers before broader stale-doc deletion
+- first cleanup slice landed: the old root-level `app_architecture/terminal_editor_ffi_host_migration_beta_todo.md` outlier was re-homed to `app_architecture/terminal/ffi_host_migration_todo.md`
+
 ## Priority Order
 
 1. define and document the repo-wide testing layout

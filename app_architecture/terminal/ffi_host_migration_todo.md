@@ -1,4 +1,4 @@
-# Terminal + Editor FFI Host Migration (Beta Todo)
+# Terminal + Editor FFI Host Migration Todo
 
 - [ ] Add one shared FFI host boot helper (`examples/common/ffi_host_boot.py`) that loads both `libzide-terminal-ffi` and `libzide-editor-ffi` with version/struct-size checks.
 - [ ] Define a tiny cross-surface event pump contract doc (`poll_terminal_then_editor_once`) and wire it in both smoke hosts.

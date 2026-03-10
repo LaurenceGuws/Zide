@@ -29,6 +29,19 @@ This doc explains how workflow and documentation are intended to be used.
 - `app_architecture/**.md`: design decisions, research notes, and architecture guidance.
 - `README.md`: user‑facing overview and quick start.
 
+## Doc lifecycle policy
+- `docs/` holds active operator workflow, contributor guidance, and user-facing reference docs.
+- `app_architecture/` holds active design docs, active plans, and active todo trackers.
+- `app_architecture/review/` holds historical reviews, investigations, audits, and one-off evidence summaries.
+- Evidence snapshots that are primarily outputs or baselines should live next to the workflow they support or under fixtures/tools, not as unnamed active architecture docs.
+
+Use these rules when deciding whether to update, move, archive, or delete a doc:
+- If it tells contributors how to work right now, it belongs in `docs/`.
+- If it defines current architecture or an active queue, it belongs in `app_architecture/`.
+- If it explains why a decision was made during a past review or investigation, it belongs in `app_architecture/review/`.
+- If it is a finished checklist with no remaining active work, close it or archive it instead of leaving it in an active root.
+- Avoid generic names like `*_beta_todo.md` once the scope is known; place the file under its owning subsystem and name it by the work it tracks.
+
 ## Updating docs
 - If a change **advances a task**, update the matching todo entry.
 - If a change **adds research or design decisions**, update the relevant app_architecture doc.

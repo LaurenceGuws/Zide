@@ -7,11 +7,12 @@
   - file/folder hotspot review: `app_architecture/review/FILE_LAYOUT_HOTSPOTS_REVIEW.md`
   - terminal architecture baseline: `app_architecture/terminal/MODULARIZATION_PLAN.md`
 - Current top-of-queue focus:
-  - apply the new repo-wide testing layout category by category
-  - collapse duplicated tooling roots (`tools/` vs `src/tools/`)
+  - finish the repo-wide testing layout cleanup by documenting what remains source-adjacent
   - classify active versus historical docs and identify stale doc/test surfaces
+  - clean obvious stale doc naming/placement outliers before broader archive/deletion passes
 - Terminal correctness cleanup is not abandoned; it is now background context and baseline, not the active repo-structure lane.
 - Repo-structure progress is now real: `src/tools` has been collapsed into `tools/`, a `tests/` root now exists, the aggregate test entrypoint has moved out of `src/` into `tests/tests_main.zig`, generic root-level app/editor/config/layout/widget test entry files have moved into `tests/`, and standalone terminal root test entry files have also moved into `tests/`. Tightly coupled subsystem tests still stay source-adjacent where locality is useful.
+- Repo-structure progress is now real on docs too: doc lifecycle policy is now explicit in `docs/WORKFLOW.md`, and the old root-level terminal/editor FFI host migration beta todo has been re-homed under `app_architecture/terminal/` with stable naming.
 
 ### Recent Changes (High-Level)
 - The high-refresh rain investigation removed most renderer-side force-full and stale invalidation escape hatches.

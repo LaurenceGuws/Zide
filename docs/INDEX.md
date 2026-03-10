@@ -26,6 +26,7 @@ Quick map of where to look for common needs.
 - `app_architecture/terminal/DESIGN.md` — terminal architecture + decisions.
 - `app_architecture/terminal/TERMINAL_WORKSPACE.md` — backend tab/workspace ownership contract for terminal mode.
 - `app_architecture/terminal/ffi_bridge_todo.yaml` — terminal backend embeddability / FFI bridge plan.
+- `app_architecture/terminal/ffi_host_migration_todo.md` — combined terminal/editor FFI host migration follow-up checklist.
 - `app_architecture/terminal/FFI_BRIDGE_DESIGN.md` — terminal bridge shape, ownership model, and smoke-host plan.
 - `app_architecture/terminal/FFI_EVENT_INVENTORY.md` — host-facing terminal events and export classification.
 - `app_architecture/terminal/FFI_EVENT_ABI.md` — exported event buffer layout, payload semantics, and ownership rules.
@@ -50,3 +51,8 @@ Quick map of where to look for common needs.
   - `app_architecture/review/FILE_LAYOUT_HOTSPOTS_REVIEW.md` — current structure smell review and reference-repo comparison.
   - `app_architecture/review/REPO_STRUCTURE_REVIEW.md` — repo hygiene review for tests, tooling roots, and stale docs/tests.
   - `app_architecture/review/SRC_APP_DOMAIN_MAP.md` — authoritative `src/app` ownership map for the ongoing folder cleanup.
+
+## Doc ownership quick rule
+- `docs/` — active workflow and top-level contributor/operator guidance.
+- `app_architecture/` — active designs, plans, and todo trackers.
+- `app_architecture/review/` — historical reviews, audits, and investigation records.
