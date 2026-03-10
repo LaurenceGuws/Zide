@@ -60,6 +60,25 @@ test "external transport close updates alive metadata" {
     try std.testing.expect(!metadata.alive);
 }
 
+test "alt screen core helpers preserve cursor save restore behavior" {
+    const allocator = std.testing.allocator;
+
+    var session = try TerminalSession.init(allocator, 3, 8);
+    defer session.deinit();
+
+    session.primary.setCursor(2, 3);
+    session.enterAltScreen(true, true);
+    try std.testing.expect(session.core.isAltActive());
+    try std.testing.expectEqual(@as(usize, 0), session.activeScreen().cursor.row);
+    try std.testing.expectEqual(@as(usize, 0), session.activeScreen().cursor.col);
+
+    session.activeScreen().setCursor(1, 1);
+    session.exitAltScreen(true);
+    try std.testing.expect(!session.core.isAltActive());
+    try std.testing.expectEqual(@as(usize, 2), session.activeScreen().cursor.row);
+    try std.testing.expectEqual(@as(usize, 3), session.activeScreen().cursor.col);
+}
+
 test "full-region scroll publishes partial cache damage at live bottom" {
     const allocator = std.testing.allocator;
 
