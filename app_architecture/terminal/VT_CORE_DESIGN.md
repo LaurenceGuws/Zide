@@ -240,8 +240,10 @@ The first code cut for that FFI direction is now landed:
 - shared terminal FFI ABI types, handle state, event/string helpers, and
   glyph-class metadata helpers live in `src/terminal/ffi/shared.zig`
 - PTY-host/runtime-facing operations live in `src/terminal/ffi/host_api.zig`
-- `src/terminal/ffi/bridge.zig` is now a thinner facade over that shared state
-  plus the remaining core-facing operations
+- core-facing snapshot/scrollback/metadata/event/text-export operations live in
+  `src/terminal/ffi/core_api.zig`
+- `src/terminal/ffi/bridge.zig` is now a thin facade over `core_api` +
+  `host_api`
 
 The exported C ABI is unchanged in this slice. The gain is internal ownership:
 host/runtime operations are no longer mixed inline with snapshot/scrollback/

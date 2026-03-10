@@ -17,7 +17,7 @@
   - first internal transport contract now exists in `terminal_transport.zig`; PTY lifecycle/resize/aliveness/exit/foreground-process metadata are routed through it
   - writer path is now transport-owned via `terminal_transport.Writer`
   - read/poll byte pumps now also route through `terminal_transport.Transport.read(...)` and `waitForData(...)`; the main remaining PTY-direct area is a narrower set of transport-existence checks and replay/setup paths
-  - the first FFI-first split is also landed: shared terminal FFI ABI/state/helpers now live in `src/terminal/ffi/shared.zig`, PTY-host operations in `src/terminal/ffi/host_api.zig`, and `bridge.zig` is thinner
+  - the FFI-first split now has explicit internal owners: shared ABI/state/helpers in `src/terminal/ffi/shared.zig`, PTY-host operations in `src/terminal/ffi/host_api.zig`, core-facing export logic in `src/terminal/ffi/core_api.zig`, and `bridge.zig` as a thin facade
 - Repo-structure cleanup is complete enough; do not keep grinding non-product cleanup unless a new concrete smell appears.
 - Terminal correctness cleanup remains the quality bar, but the current active lane is architectural center-of-gravity correction.
 
