@@ -59,25 +59,25 @@ pub const SessionFacade = struct {
             .clipboard_text_fn = struct {
                 fn call(ctx: *anyopaque) []const u8 {
                     const s: SessionPtr = @ptrCast(@alignCast(ctx));
-                    return s.kitty_osc5522_clipboard_text.items;
+                    return s.core.kitty_osc5522_clipboard_text.items;
                 }
             }.call,
             .clipboard_html_fn = struct {
                 fn call(ctx: *anyopaque) []const u8 {
                     const s: SessionPtr = @ptrCast(@alignCast(ctx));
-                    return s.kitty_osc5522_clipboard_html.items;
+                    return s.core.kitty_osc5522_clipboard_html.items;
                 }
             }.call,
             .clipboard_uri_list_fn = struct {
                 fn call(ctx: *anyopaque) []const u8 {
                     const s: SessionPtr = @ptrCast(@alignCast(ctx));
-                    return s.kitty_osc5522_clipboard_uri_list.items;
+                    return s.core.kitty_osc5522_clipboard_uri_list.items;
                 }
             }.call,
             .clipboard_png_fn = struct {
                 fn call(ctx: *anyopaque) []const u8 {
                     const s: SessionPtr = @ptrCast(@alignCast(ctx));
-                    return s.kitty_osc5522_clipboard_png.items;
+                    return s.core.kitty_osc5522_clipboard_png.items;
                 }
             }.call,
         };

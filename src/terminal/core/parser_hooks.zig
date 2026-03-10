@@ -118,14 +118,14 @@ const TextWriteContext = struct {
             .gl_charset_fn = struct {
                 fn call(ctx: *anyopaque) parser_mod.Charset {
                     const s: SessionPtr = @ptrCast(@alignCast(ctx));
-                    return s.parser.gl_charset;
+                    return s.core.parser.gl_charset;
                 }
             }.call,
             .hyperlink_attrs_fn = struct {
                 fn call(ctx: *anyopaque, attrs: *types.CellAttrs) void {
                     const s: SessionPtr = @ptrCast(@alignCast(ctx));
-                    if (s.osc_hyperlink_active and s.current_hyperlink_id > 0) {
-                        attrs.link_id = s.current_hyperlink_id;
+                    if (s.core.osc_hyperlink_active and s.core.current_hyperlink_id > 0) {
+                        attrs.link_id = s.core.current_hyperlink_id;
                         attrs.underline = true;
                     } else {
                         attrs.link_id = 0;

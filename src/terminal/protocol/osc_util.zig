@@ -9,8 +9,8 @@ pub const SessionFacade = struct {
     pub fn from(session: anytype) SessionFacade {
         return .{
             .allocator = session.allocator,
-            .cwd_buffer = &session.cwd_buffer,
-            .cwd = &session.cwd,
+            .cwd_buffer = &session.core.cwd_buffer,
+            .cwd = &session.core.cwd,
         };
     }
 

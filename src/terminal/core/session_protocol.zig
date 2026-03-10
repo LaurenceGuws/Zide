@@ -44,7 +44,7 @@ pub fn feedOutputBytes(self: anytype, bytes: []const u8) void {
     defer self.state_mutex.unlock();
     self.parser.handleSlice(parser_mod.Parser.SessionFacade.from(self), bytes);
     _ = self.output_generation.fetchAdd(1, .acq_rel);
-    @import("view_cache.zig").updateViewCacheNoLock(self, self.output_generation.load(.acquire), self.history.scrollOffset());
+    @import("view_cache.zig").updateViewCacheNoLock(self, self.output_generation.load(.acquire), self.core.history.scrollOffset());
 }
 
 pub fn resetState(self: anytype) void {
@@ -62,47 +62,47 @@ pub fn reverseIndex(self: anytype) void {
 }
 
 pub fn eraseDisplay(self: anytype, mode: i32) void {
-    const screen = self.activeScreen();
+    const screen = self.core.activeScreen();
     const blank_cell = screen.blankCell();
     screen.eraseDisplay(mode, blank_cell);
     if (mode == 2 or mode == 3) {
         self.clearSelectionLocked();
-        _ = self.clear_generation.fetchAdd(1, .acq_rel);
+        _ = self.core.clear_generation.fetchAdd(1, .acq_rel);
     }
 }
 
 pub fn eraseLine(self: anytype, mode: i32) void {
-    const screen = self.activeScreen();
+    const screen = self.core.activeScreen();
     const blank_cell = screen.blankCell();
     screen.eraseLine(mode, blank_cell);
 }
 
 pub fn insertChars(self: anytype, count: usize) void {
-    const screen = self.activeScreen();
+    const screen = self.core.activeScreen();
     const blank_cell = screen.blankCell();
     screen.insertChars(count, blank_cell);
 }
 
 pub fn deleteChars(self: anytype, count: usize) void {
-    const screen = self.activeScreen();
+    const screen = self.core.activeScreen();
     const blank_cell = screen.blankCell();
     screen.deleteChars(count, blank_cell);
 }
 
 pub fn eraseChars(self: anytype, count: usize) void {
-    const screen = self.activeScreen();
+    const screen = self.core.activeScreen();
     const blank_cell = screen.blankCell();
     screen.eraseChars(count, blank_cell);
 }
 
 pub fn insertLines(self: anytype, count: usize) void {
-    const screen = self.activeScreen();
+    const screen = self.core.activeScreen();
     const blank_cell = screen.blankCell();
     screen.insertLines(count, blank_cell);
 }
 
 pub fn deleteLines(self: anytype, count: usize) void {
-    const screen = self.activeScreen();
+    const screen = self.core.activeScreen();
     const blank_cell = screen.blankCell();
     screen.deleteLines(count, blank_cell);
 }
@@ -116,7 +116,7 @@ pub fn scrollRegionDown(self: anytype, count: usize) void {
 }
 
 pub fn paletteColor(self: anytype, idx: u8) types.Color {
-    return self.palette_current[idx];
+    return self.core.palette_current[idx];
 }
 
 pub fn handleCodepoint(self: anytype, codepoint: u32) void {
@@ -136,22 +136,22 @@ pub fn wrapNewline(self: anytype) void {
 }
 
 pub fn getCell(self: anytype, row: usize, col: usize) types.Cell {
-    const screen = self.activeScreenConst();
-    return screen.cellAtOr(row, col, self.primary.defaultCell());
+    const screen = self.core.activeScreenConst();
+    return screen.cellAtOr(row, col, self.core.primary.defaultCell());
 }
 
 pub fn getCursorPos(self: anytype) types.CursorPos {
-    return self.activeScreenConst().cursorPos();
+    return self.core.activeScreenConst().cursorPos();
 }
 
 pub fn setCursorStyle(self: anytype, mode: i32) void {
-    self.activeScreen().setCursorStyle(mode);
+    self.core.activeScreen().setCursorStyle(mode);
 }
 
 pub fn decrqssReplyInto(self: anytype, text: []const u8, buf: []u8) ?[]const u8 {
     const log = @import("../../app_logger.zig").logger("terminal.apc");
     if (std.mem.eql(u8, text, " q")) {
-        const style = self.activeScreen().cursor_style;
+        const style = self.core.activeScreen().cursor_style;
         return switch (style.shape) {
             .block => if (style.blink) "1 q" else "2 q",
             .underline => if (style.blink) "3 q" else "4 q",
@@ -162,7 +162,7 @@ pub fn decrqssReplyInto(self: anytype, text: []const u8, buf: []u8) ?[]const u8 
         return decrqssSgrReply(self, buf);
     }
     if (std.mem.eql(u8, text, "r")) {
-        const screen = self.activeScreen();
+        const screen = self.core.activeScreen();
         return std.fmt.bufPrint(buf, "{d};{d}r", .{
             screen.scroll_top + 1,
             screen.scroll_bottom + 1,
@@ -172,7 +172,7 @@ pub fn decrqssReplyInto(self: anytype, text: []const u8, buf: []u8) ?[]const u8 
         };
     }
     if (std.mem.eql(u8, text, "s")) {
-        const screen = self.activeScreen();
+        const screen = self.core.activeScreen();
         return std.fmt.bufPrint(buf, "{d};{d}s", .{
             screen.left_margin + 1,
             screen.right_margin + 1,
@@ -193,43 +193,43 @@ pub fn restoreCursor(self: anytype) void {
 }
 
 pub fn setTabAtCursor(self: anytype) void {
-    self.activeScreen().setTabAtCursor();
+    self.core.activeScreen().setTabAtCursor();
 }
 
 pub fn enterAltScreen(self: anytype, clear: bool, save_cursor: bool) void {
-    if (self.active == .alt) return;
+    if (self.core.active == .alt) return;
     if (save_cursor) {
         saveCursor(self);
     }
-    self.history.saveScrollOffset();
+    self.core.history.saveScrollOffset();
     self.clearSelectionLocked();
-    self.active = .alt;
+    self.core.active = .alt;
     input_modes.publishSnapshot(self);
     kitty_mod.clearKittyImages(self);
     if (clear) {
-        self.activeScreen().clear();
-        self.activeScreen().setCursor(0, 0);
+        self.core.activeScreen().clear();
+        self.core.activeScreen().setCursor(0, 0);
     }
-    self.activeScreen().markDirtyAllWithReason(.alt_enter, @src());
+    self.core.activeScreen().markDirtyAllWithReason(.alt_enter, @src());
 }
 
 pub fn exitAltScreen(self: anytype, restore_cursor: bool) void {
-    if (self.active != .alt) return;
+    if (self.core.active != .alt) return;
     kitty_mod.clearKittyImages(self);
-    self.active = .primary;
+    self.core.active = .primary;
     input_modes.publishSnapshot(self);
     self.alt_exit_pending.store(true, .release);
     self.alt_exit_time_ms.store(std.time.milliTimestamp(), .release);
-    self.history.restoreScrollOffset(self.primary.grid.rows);
+    self.core.history.restoreScrollOffset(self.core.primary.grid.rows);
     self.clearSelectionLocked();
     if (restore_cursor) {
         restoreCursor(self);
     }
-    self.activeScreen().markDirtyAllWithReason(.alt_exit, @src());
+    self.core.activeScreen().markDirtyAllWithReason(.alt_exit, @src());
 }
 
 fn decrqssSgrReply(self: anytype, buf: []u8) ?[]const u8 {
-    const screen = self.activeScreen();
+    const screen = self.core.activeScreen();
     const attrs = screen.current_attrs;
     const defaults = screen.default_attrs;
     var pos: usize = 0;

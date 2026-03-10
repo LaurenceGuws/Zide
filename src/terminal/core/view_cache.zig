@@ -84,7 +84,7 @@ fn rowDiffSpan(new_row: []const Cell, old_row: []const Cell, cols: usize) ?struc
 
 pub fn updateViewCacheNoLock(self: anytype, generation: u64, scroll_offset: usize) void {
     const fullwidth_origin_log = app_logger.logger("terminal.ui.row_fullwidth_origin");
-    const screen = self.activeScreenConst();
+    const screen = self.core.activeScreenConst();
     const view = screen.snapshotView();
     const screen_reverse = screen.screen_reverse;
     const rows = view.rows;
@@ -92,21 +92,21 @@ pub fn updateViewCacheNoLock(self: anytype, generation: u64, scroll_offset: usiz
     const active_index = self.render_cache_index.load(.acquire);
     const target_index: u8 = if (active_index == 0) 1 else 0;
     var cache = &self.render_caches[target_index];
-    if (self.active != .alt) {
-        self.history.ensureViewCache(@intCast(cols), self.primary.defaultCell());
+    if (self.core.active != .alt) {
+        self.core.history.ensureViewCache(@intCast(cols), self.core.primary.defaultCell());
     }
-    const history_len = if (self.active == .alt) 0 else self.history.scrollbackCount();
+    const history_len = if (self.core.active == .alt) 0 else self.core.history.scrollbackCount();
     const total_lines = history_len + rows;
     const max_offset = if (total_lines > rows) total_lines - rows else 0;
     const clamped_offset = if (scroll_offset > max_offset) max_offset else scroll_offset;
-    const visible_history_generation: u64 = if (self.active == .alt or clamped_offset == 0)
+    const visible_history_generation: u64 = if (self.core.active == .alt or clamped_offset == 0)
         0
     else
-        self.history.view_generation;
+        self.core.history.view_generation;
     const kitty_generation = kitty_mod.kittyStateConst(self).generation;
-    const clear_generation = self.clear_generation.load(.acquire);
+    const clear_generation = self.core.clear_generation.load(.acquire);
     const mouse_reporting_active = self.mouseReportingEnabled();
-    const selection_active = self.active != .alt and self.history.selectionState() != null;
+    const selection_active = self.core.active != .alt and self.core.history.selectionState() != null;
     const active_cache = &self.render_caches[active_index];
     const presented_generation = self.presentedGeneration();
     if (active_cache.rows == rows and
@@ -117,8 +117,8 @@ pub fn updateViewCacheNoLock(self: anytype, generation: u64, scroll_offset: usiz
         active_cache.scroll_offset == clamped_offset and
         active_cache.generation == generation and
         active_cache.clear_generation == clear_generation and
-        active_cache.alt_active == (self.active == .alt) and
-        active_cache.sync_updates_active == self.sync_updates_active and
+        active_cache.alt_active == (self.core.active == .alt) and
+        active_cache.sync_updates_active == self.core.sync_updates_active and
         active_cache.screen_reverse == screen_reverse and
         active_cache.kitty_generation == kitty_generation and
         std.meta.eql(active_cache.cursor, view.cursor) and
@@ -138,8 +138,8 @@ pub fn updateViewCacheNoLock(self: anytype, generation: u64, scroll_offset: usiz
         active_cache.visible_history_generation == visible_history_generation and
         active_cache.scroll_offset == clamped_offset and
         active_cache.clear_generation == clear_generation and
-        active_cache.alt_active == (self.active == .alt) and
-        active_cache.sync_updates_active == self.sync_updates_active and
+        active_cache.alt_active == (self.core.active == .alt) and
+        active_cache.sync_updates_active == self.core.sync_updates_active and
         active_cache.screen_reverse == screen_reverse and
         active_cache.kitty_generation == kitty_generation and
         view.dirty == .none and
@@ -179,9 +179,9 @@ pub fn updateViewCacheNoLock(self: anytype, generation: u64, scroll_offset: usiz
         cache.damage = .{ .start_row = 0, .end_row = 0, .start_col = 0, .end_col = 0 };
         cache.full_dirty_reason = view.full_dirty_reason;
         cache.full_dirty_seq = view.full_dirty_seq;
-        cache.alt_active = self.active == .alt;
+        cache.alt_active = self.core.active == .alt;
         cache.selection_active = selection_active;
-        cache.sync_updates_active = self.sync_updates_active;
+        cache.sync_updates_active = self.core.sync_updates_active;
         cache.screen_reverse = screen_reverse;
         cache.mouse_reporting_active = mouse_reporting_active;
         cache.clear_generation = clear_generation;
@@ -261,7 +261,7 @@ pub fn updateViewCacheNoLock(self: anytype, generation: u64, scroll_offset: usiz
         const row_start = row * cols;
         const row_dest = cache.cells.items[row_start .. row_start + cols];
         if (global_row < history_len) {
-            if (self.history.scrollbackRow(global_row)) |history_row| {
+            if (self.core.history.scrollbackRow(global_row)) |history_row| {
                 std.mem.copyForwards(Cell, row_dest, history_row[0..cols]);
             } else {
                 std.mem.copyForwards(Cell, row_dest, view.cells[0..cols]);
@@ -273,12 +273,12 @@ pub fn updateViewCacheNoLock(self: anytype, generation: u64, scroll_offset: usiz
         }
     }
 
-    if (self.active == .alt) {
+    if (self.core.active == .alt) {
         for (cache.selection_rows.items) |*row_selected| {
             row_selected.* = false;
         }
         cache.selection_active = selection_active;
-    } else if (self.history.selectionState()) |selection| {
+    } else if (self.core.history.selectionState()) |selection| {
         cache.selection_active = selection_active;
         var start_sel = selection.start;
         var end_sel = selection.end;
@@ -334,7 +334,7 @@ pub fn updateViewCacheNoLock(self: anytype, generation: u64, scroll_offset: usiz
     const needs_full_damage = rows != active_cache.rows or
         cols != active_cache.cols or
         requires_full_damage_for_scroll_offset_change or
-        (self.active == .alt) != active_cache.alt_active or
+        (self.core.active == .alt) != active_cache.alt_active or
         view.dirty == .full;
     if (needs_full_damage) {
         row = 0;
@@ -491,7 +491,7 @@ pub fn updateViewCacheNoLock(self: anytype, generation: u64, scroll_offset: usiz
             cols,
             active_cache.cols,
             requires_full_damage_for_scroll_offset_change,
-            self.active == .alt,
+            self.core.active == .alt,
             active_cache.alt_active,
             view.dirty,
             view.full_dirty_reason,
@@ -590,9 +590,9 @@ pub fn updateViewCacheNoLock(self: anytype, generation: u64, scroll_offset: usiz
             }
         }
     }
-    cache.alt_active = self.active == .alt;
+    cache.alt_active = self.core.active == .alt;
     cache.selection_active = selection_active;
-    cache.sync_updates_active = self.sync_updates_active;
+    cache.sync_updates_active = self.core.sync_updates_active;
     cache.screen_reverse = screen_reverse;
     cache.mouse_reporting_active = mouse_reporting_active;
     cache.clear_generation = clear_generation;

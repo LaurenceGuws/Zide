@@ -155,23 +155,23 @@ pub fn sendKittyPasteEvent5522WithMimeRich(
         return false;
     }
 
-    self.kitty_osc5522_clipboard_text.clearRetainingCapacity();
-    try self.kitty_osc5522_clipboard_text.ensureTotalCapacity(self.allocator, clip.len);
-    try self.kitty_osc5522_clipboard_text.appendSlice(self.allocator, clip);
-    self.kitty_osc5522_clipboard_html.clearRetainingCapacity();
+    self.core.kitty_osc5522_clipboard_text.clearRetainingCapacity();
+    try self.core.kitty_osc5522_clipboard_text.ensureTotalCapacity(self.allocator, clip.len);
+    try self.core.kitty_osc5522_clipboard_text.appendSlice(self.allocator, clip);
+    self.core.kitty_osc5522_clipboard_html.clearRetainingCapacity();
     if (html) |html_bytes| {
-        try self.kitty_osc5522_clipboard_html.ensureTotalCapacity(self.allocator, html_bytes.len);
-        try self.kitty_osc5522_clipboard_html.appendSlice(self.allocator, html_bytes);
+        try self.core.kitty_osc5522_clipboard_html.ensureTotalCapacity(self.allocator, html_bytes.len);
+        try self.core.kitty_osc5522_clipboard_html.appendSlice(self.allocator, html_bytes);
     }
-    self.kitty_osc5522_clipboard_uri_list.clearRetainingCapacity();
+    self.core.kitty_osc5522_clipboard_uri_list.clearRetainingCapacity();
     if (uri_list) |uri_bytes| {
-        try self.kitty_osc5522_clipboard_uri_list.ensureTotalCapacity(self.allocator, uri_bytes.len);
-        try self.kitty_osc5522_clipboard_uri_list.appendSlice(self.allocator, uri_bytes);
+        try self.core.kitty_osc5522_clipboard_uri_list.ensureTotalCapacity(self.allocator, uri_bytes.len);
+        try self.core.kitty_osc5522_clipboard_uri_list.appendSlice(self.allocator, uri_bytes);
     }
-    self.kitty_osc5522_clipboard_png.clearRetainingCapacity();
+    self.core.kitty_osc5522_clipboard_png.clearRetainingCapacity();
     if (png) |png_bytes| {
-        try self.kitty_osc5522_clipboard_png.ensureTotalCapacity(self.allocator, png_bytes.len);
-        try self.kitty_osc5522_clipboard_png.appendSlice(self.allocator, png_bytes);
+        try self.core.kitty_osc5522_clipboard_png.ensureTotalCapacity(self.allocator, png_bytes.len);
+        try self.core.kitty_osc5522_clipboard_png.appendSlice(self.allocator, png_bytes);
     }
 
     if (self.lockPtyWriter()) |writer_guard| {

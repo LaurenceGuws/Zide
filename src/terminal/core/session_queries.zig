@@ -30,9 +30,9 @@ fn copyTextInto(allocator: std.mem.Allocator, out: *std.ArrayList(u8), text: []c
 
 pub fn takeOscClipboardCopyLocked(self: anytype, allocator: std.mem.Allocator, out: *std.ArrayList(u8)) !bool {
     out.clearRetainingCapacity();
-    if (!self.osc_clipboard_pending) return false;
-    try out.appendSlice(allocator, self.osc_clipboard.items);
-    self.osc_clipboard_pending = false;
+    if (!self.core.osc_clipboard_pending) return false;
+    try out.appendSlice(allocator, self.core.osc_clipboard.items);
+    self.core.osc_clipboard_pending = false;
     return true;
 }
 
@@ -55,12 +55,12 @@ pub fn copyMetadata(
     defer self.unlock();
 
     const title = if (self.pty) |*pty|
-        (pty.foregroundProcessLabel() orelse self.title)
+        (pty.foregroundProcessLabel() orelse self.core.title)
     else
-        self.title;
-    const cwd = self.cwd;
+        self.core.title;
+    const cwd = self.core.cwd;
     const scrollback = scrollback_view.scrollbackInfo(self);
-    const scroll_offset: usize = if (self.active == .alt) 0 else self.history.scrollOffset();
+    const scroll_offset: usize = if (self.core.active == .alt) 0 else self.core.history.scrollOffset();
     const alive = if (self.pty) |*pty| pty.isAlive() else false;
     const exit_code = if (self.child_exited.load(.acquire))
         self.child_exit_code.load(.acquire)
@@ -84,8 +84,8 @@ pub fn closeConfirmSignals(self: anytype) CloseConfirmSignals {
     if (self.pty) |*pty| {
         signals.foreground_process = pty.hasForegroundProcessOutsideShell();
     }
-    signals.semantic_command = self.semantic_prompt.input_active or self.semantic_prompt.output_active;
-    signals.alt_screen = self.active == .alt;
+    signals.semantic_command = self.core.semantic_prompt.input_active or self.core.semantic_prompt.output_active;
+    signals.alt_screen = self.core.active == .alt;
     signals.mouse_reporting = self.mouseReportingEnabled();
     return signals;
 }

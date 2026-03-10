@@ -10,8 +10,8 @@ const PtySize = pty_mod.PtySize;
 
 pub fn start(self: anytype, shell: ?[:0]const u8) !void {
     const size = PtySize{
-        .rows = self.primary.grid.rows,
-        .cols = self.primary.grid.cols,
+        .rows = self.core.primary.grid.rows,
+        .cols = self.core.primary.grid.cols,
         .cell_width = self.cell_width,
         .cell_height = self.cell_height,
     };
@@ -27,8 +27,8 @@ pub fn start(self: anytype, shell: ?[:0]const u8) !void {
 
 pub fn startNoThreads(self: anytype, shell: ?[:0]const u8) !void {
     const size = PtySize{
-        .rows = self.primary.grid.rows,
-        .cols = self.primary.grid.cols,
+        .rows = self.core.primary.grid.rows,
+        .cols = self.core.primary.grid.cols,
         .cell_width = self.cell_width,
         .cell_height = self.cell_height,
     };
@@ -93,7 +93,7 @@ pub fn poll(self: anytype) !void {
             if (chunk_len == 0) break;
 
             self.state_mutex.lock();
-            self.parser.handleSlice(parser_mod.Parser.SessionFacade.from(self), temp[0..chunk_len]);
+            self.core.parser.handleSlice(parser_mod.Parser.SessionFacade.from(self), temp[0..chunk_len]);
             self.state_mutex.unlock();
             processed += chunk_len;
             _ = self.output_generation.fetchAdd(1, .acq_rel);
@@ -101,7 +101,7 @@ pub fn poll(self: anytype) !void {
 
         if (had_data) {
             self.state_mutex.lock();
-            @import("view_cache.zig").updateViewCacheNoLock(self, self.output_generation.load(.acquire), self.history.scrollOffset());
+            @import("view_cache.zig").updateViewCacheNoLock(self, self.output_generation.load(.acquire), self.core.history.scrollOffset());
             self.state_mutex.unlock();
         }
 
@@ -148,12 +148,12 @@ pub fn poll(self: anytype) !void {
             had_data = true;
             processed += n.?;
             io_threads.logCsiSequences(io_log, buf[0..n.?]);
-            self.parser.handleSlice(parser_mod.Parser.SessionFacade.from(self), buf[0..n.?]);
+            self.core.parser.handleSlice(parser_mod.Parser.SessionFacade.from(self), buf[0..n.?]);
             _ = self.output_generation.fetchAdd(1, .acq_rel);
             if (processed >= max_bytes_per_poll) break;
         }
         if (had_data) {
-            @import("view_cache.zig").updateViewCacheNoLock(self, self.output_generation.load(.acquire), self.history.scrollOffset());
+            @import("view_cache.zig").updateViewCacheNoLock(self, self.output_generation.load(.acquire), self.core.history.scrollOffset());
         }
         if (processed > 0 and self.alt_exit_pending.swap(false, .acq_rel)) {
             const elapsed_ms = @as(f64, @floatFromInt(std.time.milliTimestamp() - start_ms));

@@ -26,8 +26,8 @@ pub fn clearSelection(self: anytype) void {
 }
 
 pub fn clearSelectionLocked(self: anytype) void {
-    self.history.clearSelection();
-    self.view_cache_request_offset.store(@intCast(self.history.scrollOffset()), .release);
+    self.core.history.clearSelection();
+    self.view_cache_request_offset.store(@intCast(self.core.history.scrollOffset()), .release);
     self.view_cache_pending.store(true, .release);
     self.io_wait_cond.signal();
 }
@@ -45,9 +45,9 @@ pub fn startSelection(self: anytype, row: usize, col: usize) void {
 }
 
 pub fn startSelectionLocked(self: anytype, row: usize, col: usize) void {
-    if (self.active == .alt) return;
-    self.history.startSelection(row, col);
-    self.view_cache_request_offset.store(@intCast(self.history.scrollOffset()), .release);
+    if (self.core.active == .alt) return;
+    self.core.history.startSelection(row, col);
+    self.view_cache_request_offset.store(@intCast(self.core.history.scrollOffset()), .release);
     self.view_cache_pending.store(true, .release);
     self.io_wait_cond.signal();
 }
@@ -59,9 +59,9 @@ pub fn updateSelection(self: anytype, row: usize, col: usize) void {
 }
 
 pub fn updateSelectionLocked(self: anytype, row: usize, col: usize) void {
-    if (self.active == .alt) return;
-    self.history.updateSelection(row, col);
-    self.view_cache_request_offset.store(@intCast(self.history.scrollOffset()), .release);
+    if (self.core.active == .alt) return;
+    self.core.history.updateSelection(row, col);
+    self.view_cache_request_offset.store(@intCast(self.core.history.scrollOffset()), .release);
     self.view_cache_pending.store(true, .release);
     self.io_wait_cond.signal();
 }
@@ -73,9 +73,9 @@ pub fn finishSelection(self: anytype) void {
 }
 
 pub fn finishSelectionLocked(self: anytype) void {
-    if (self.active == .alt) return;
-    self.history.finishSelection();
-    self.view_cache_request_offset.store(@intCast(self.history.scrollOffset()), .release);
+    if (self.core.active == .alt) return;
+    self.core.history.finishSelection();
+    self.view_cache_request_offset.store(@intCast(self.core.history.scrollOffset()), .release);
     self.view_cache_pending.store(true, .release);
     self.io_wait_cond.signal();
 }
@@ -93,13 +93,13 @@ pub fn selectRange(self: anytype, start: types.SelectionPos, end: types.Selectio
 }
 
 pub fn selectRangeLocked(self: anytype, start: types.SelectionPos, end: types.SelectionPos, finished: bool) void {
-    if (self.active == .alt) return;
-    self.history.startSelection(start.row, start.col);
-    self.history.updateSelection(end.row, end.col);
+    if (self.core.active == .alt) return;
+    self.core.history.startSelection(start.row, start.col);
+    self.core.history.updateSelection(end.row, end.col);
     if (finished) {
-        self.history.finishSelection();
+        self.core.history.finishSelection();
     }
-    self.view_cache_request_offset.store(@intCast(self.history.scrollOffset()), .release);
+    self.view_cache_request_offset.store(@intCast(self.core.history.scrollOffset()), .release);
     self.view_cache_pending.store(true, .release);
     self.io_wait_cond.signal();
 }
@@ -242,6 +242,6 @@ pub fn extendGestureSelectionLocked(
 }
 
 pub fn selectionState(self: anytype) ?types.TerminalSelection {
-    if (self.active == .alt) return null;
-    return self.history.selectionState();
+    if (self.core.active == .alt) return null;
+    return self.core.history.selectionState();
 }

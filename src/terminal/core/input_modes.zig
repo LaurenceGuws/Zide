@@ -25,7 +25,7 @@ pub fn publishSnapshot(self: anytype) void {
         },
         else => @compileError("publishSnapshot expects a pointer receiver"),
     };
-    const screen = if (session.active == .alt) &session.alt else &session.primary;
+    const screen = if (session.core.active == .alt) &session.core.alt else &session.core.primary;
     session.input_snapshot.app_cursor_keys.store(session.app_cursor_keys, .release);
     session.input_snapshot.app_keypad.store(session.app_keypad, .release);
     session.input_snapshot.key_mode_flags.store(keyModeFlags(session), .release);
@@ -38,7 +38,7 @@ pub fn publishSnapshot(self: anytype) void {
     session.input_snapshot.bracketed_paste.store(session.bracketed_paste, .release);
     session.input_snapshot.auto_repeat.store(session.auto_repeat, .release);
     session.input_snapshot.mouse_alternate_scroll.store(session.mouse_alternate_scroll, .release);
-    session.input_snapshot.alt_active.store(session.active == .alt, .release);
+    session.input_snapshot.alt_active.store(session.core.active == .alt, .release);
     session.input_snapshot.screen_rows.store(screen.grid.rows, .release);
     session.input_snapshot.screen_cols.store(screen.grid.cols, .release);
 }

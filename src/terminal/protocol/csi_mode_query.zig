@@ -113,7 +113,7 @@ pub const ModeQueryContext = struct {
                     const screen = s.activeScreen();
                     return modeSnapshotFromContext(.{
                         .app_cursor_keys = s.appCursorKeysEnabled(),
-                        .column_mode_132 = s.column_mode_132,
+                        .column_mode_132 = s.core.column_mode_132,
                         .screen_reverse = screen.screen_reverse,
                         .origin_mode = screen.origin_mode,
                         .auto_wrap = screen.auto_wrap,
@@ -123,7 +123,7 @@ pub const ModeQueryContext = struct {
                         .cursor_visible = screen.cursor_visible,
                         .reverse_wrap = screen.reverse_wrap,
                         .left_right_margin_mode_69 = screen.left_right_margin_mode_69,
-                        .alt_active = s.active == .alt,
+                        .alt_active = s.core.active == .alt,
                         .save_cursor_mode_1048 = screen.save_cursor_mode_1048,
                         .app_keypad = s.appKeypadEnabled(),
                         .mouse_mode_button = s.mouseModeButtonEnabled(),
@@ -133,7 +133,7 @@ pub const ModeQueryContext = struct {
                         .mouse_alternate_scroll = s.mouseAlternateScrollEnabled(),
                         .mouse_mode_sgr_pixels = s.mouseModeSgrPixelsEnabled(),
                         .bracketed_paste = s.bracketedPasteEnabled(),
-                        .sync_updates_active = s.sync_updates_active,
+                        .sync_updates_active = s.core.sync_updates_active,
                         .grapheme_cluster_shaping_2027 = s.grapheme_cluster_shaping_2027,
                         .report_color_scheme_2031 = s.report_color_scheme_2031,
                         .inband_resize_notifications_2048 = s.inband_resize_notifications_2048,

@@ -77,8 +77,8 @@ pub const KittyStorageOps = struct {
     }
 
     pub fn clearAll(self: anytype) void {
-        clearState(self, &self.kitty_primary);
-        clearState(self, &self.kitty_alt);
+        clearState(self, &self.core.kitty_primary);
+        clearState(self, &self.core.kitty_alt);
     }
 
     pub fn deinitKittyState(self: anytype, state: *common.KittyState) void {

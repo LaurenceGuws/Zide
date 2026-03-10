@@ -23,6 +23,7 @@ const parser_hooks = @import("parser_hooks.zig");
 const input_modes = @import("input_modes.zig");
 const hyperlink_table = @import("hyperlink_table.zig");
 const state_reset = @import("state_reset.zig");
+const terminal_core_mod = @import("terminal_core.zig");
 const session_queries = @import("session_queries.zig");
 const session_content = @import("session_content.zig");
 const session_selection = @import("session_selection.zig");
@@ -43,18 +44,11 @@ const OscTerminator = parser_mod.OscTerminator;
 const Charset = parser_mod.Charset;
 const CharsetTarget = parser_mod.CharsetTarget;
 
-const dynamic_color_count: usize = 10;
-
 const SemanticPromptKind = semantic_prompt_mod.SemanticPromptKind;
 const SemanticPromptState = semantic_prompt_mod.SemanticPromptState;
-
-const SavedCharsetState = struct {
-    active: bool = false,
-    g0: Charset = .ascii,
-    g1: Charset = .ascii,
-    gl: Charset = .ascii,
-    target: CharsetTarget = .g0,
-};
+const TerminalCoreType = terminal_core_mod.TerminalCore;
+const ActiveScreen = terminal_core_mod.ActiveScreen;
+pub const TerminalCore = terminal_core_mod.TerminalCore;
 
 pub const KittyImageFormat = snapshot_mod.KittyImageFormat;
 pub const KittyImage = snapshot_mod.KittyImage;
@@ -102,22 +96,22 @@ pub const PtyWriteGuard = struct {
 pub fn debugSnapshot(self: *TerminalSession) DebugSnapshot {
     if (!debugAccessAllowed()) @panic("debugSnapshot is test-only");
     return .{
-        .title = self.title,
-        .cwd = self.cwd,
-        .osc_clipboard = self.osc_clipboard.items,
-        .osc_clipboard_pending = self.osc_clipboard_pending,
-        .hyperlinks = self.hyperlink_table.items,
-        .scrollback_count = self.history.scrollbackCount(),
-        .scrollback_offset = self.history.scrollOffset(),
+        .title = self.core.title,
+        .cwd = self.core.cwd,
+        .osc_clipboard = self.core.osc_clipboard.items,
+        .osc_clipboard_pending = self.core.osc_clipboard_pending,
+        .hyperlinks = self.core.hyperlink_table.items,
+        .scrollback_count = self.core.history.scrollbackCount(),
+        .scrollback_offset = self.core.history.scrollOffset(),
         .focus_reporting = self.focus_reporting,
         .selection = selection_mod.selectionState(self),
-        .base_default_attrs = self.base_default_attrs,
+        .base_default_attrs = self.core.base_default_attrs,
     };
 }
 
 pub fn debugScrollbackRow(self: *TerminalSession, index: usize) ?[]const Cell {
     if (!debugAccessAllowed()) @panic("debugScrollbackRow is test-only");
-    return self.history.scrollbackRow(index);
+    return self.core.history.scrollbackRow(index);
 }
 
 pub fn debugSetCursor(self: *TerminalSession, row: usize, col: usize) void {
@@ -127,7 +121,7 @@ pub fn debugSetCursor(self: *TerminalSession, row: usize, col: usize) void {
 
 pub fn debugFeedBytes(self: *TerminalSession, bytes: []const u8) void {
     if (!debugAccessAllowed()) @panic("debugFeedBytes is test-only");
-    self.parser.handleSlice(parser_mod.Parser.SessionFacade.from(self), bytes);
+    self.core.parser.handleSlice(parser_mod.Parser.SessionFacade.from(self), bytes);
 }
 
 fn debugAccessAllowed() bool {
@@ -136,21 +130,11 @@ fn debugAccessAllowed() bool {
     return @hasDecl(root, "terminal_replay_enabled") and root.terminal_replay_enabled;
 }
 
-const ActiveScreen = enum {
-    primary,
-    alt,
-};
-
 /// Minimal terminal stub so the UI panel stays wired while backend is removed.
 pub const TerminalSession = struct {
     allocator: std.mem.Allocator,
-    title: []const u8,
-    title_buffer: std.ArrayList(u8),
     pty: ?Pty,
-    primary: Screen,
-    alt: Screen,
-    active: ActiveScreen,
-    history: history_mod.TerminalHistory,
+    core: TerminalCoreType,
     bracketed_paste: bool,
     focus_reporting: bool,
     auto_repeat: bool,
@@ -167,30 +151,6 @@ pub const TerminalSession = struct {
     pty_write_mutex: std.Thread.Mutex,
     cell_width: u16,
     cell_height: u16,
-    parser: parser_mod.Parser,
-    osc_clipboard: std.ArrayList(u8),
-    osc_clipboard_pending: bool,
-    kitty_osc5522_clipboard_text: std.ArrayList(u8),
-    kitty_osc5522_clipboard_html: std.ArrayList(u8),
-    kitty_osc5522_clipboard_uri_list: std.ArrayList(u8),
-    kitty_osc5522_clipboard_png: std.ArrayList(u8),
-    osc_hyperlink: std.ArrayList(u8),
-    osc_hyperlink_active: bool,
-    hyperlink_table: std.ArrayList(Hyperlink),
-    current_hyperlink_id: u32,
-    cwd: []const u8,
-    cwd_buffer: std.ArrayList(u8),
-    semantic_prompt: SemanticPromptState,
-    semantic_prompt_aid: std.ArrayList(u8),
-    semantic_cmdline: std.ArrayList(u8),
-    semantic_cmdline_valid: bool,
-    user_vars: std.StringHashMap([]u8),
-    kitty_primary: kitty_mod.KittyState,
-    kitty_alt: kitty_mod.KittyState,
-    base_default_attrs: types.CellAttrs,
-    palette_default: [256]types.Color,
-    palette_current: [256]types.Color,
-    dynamic_colors: [dynamic_color_count]?types.Color,
     read_thread: ?std.Thread,
     read_thread_running: std.atomic.Value(bool),
     parse_thread: ?std.Thread,
@@ -200,8 +160,6 @@ pub const TerminalSession = struct {
     io_wait_cond: std.Thread.Condition,
     io_buffer: std.ArrayList(u8),
     io_read_offset: usize,
-    sync_updates_active: bool,
-    column_mode_132: bool,
     output_pending: std.atomic.Value(bool),
     output_generation: std.atomic.Value(u64),
     presented_generation: std.atomic.Value(u64),
@@ -213,9 +171,6 @@ pub const TerminalSession = struct {
     render_cache_index: std.atomic.Value(u8),
     view_cache_pending: std.atomic.Value(bool),
     view_cache_request_offset: std.atomic.Value(u64),
-    alt_last_active: bool,
-    clear_generation: std.atomic.Value(u64),
-    saved_charset: SavedCharsetState,
     child_exited: std.atomic.Value(bool),
     child_exit_code: std.atomic.Value(i32),
 
@@ -230,27 +185,17 @@ pub const TerminalSession = struct {
 
     pub fn initWithOptions(allocator: std.mem.Allocator, rows: u16, cols: u16, options: InitOptions) !*TerminalSession {
         const session = try allocator.create(TerminalSession);
-        const default_attrs = types.defaultCell().attrs;
-        var primary = try Screen.init(allocator, rows, cols, default_attrs);
-        var alt = try Screen.init(allocator, rows, cols, default_attrs);
-        if (options.cursor_style) |cursor_style| {
-            primary.cursor_style = cursor_style;
-            alt.cursor_style = cursor_style;
-        }
         const scrollback_rows = options.scrollback_rows orelse default_scrollback_rows;
-        const history = try history_mod.TerminalHistory.init(allocator, scrollback_rows, cols);
         const log = app_logger.logger("terminal.core");
         log.logf(.info, "terminal init rows={d} cols={d} scrollback_max={d}", .{ rows, cols, scrollback_rows });
-        const palette_default = palette_mod.buildDefaultPalette();
+        const core = try TerminalCoreType.init(allocator, rows, cols, .{
+            .scrollback_rows = scrollback_rows,
+            .cursor_style = options.cursor_style,
+        });
         session.* = .{
             .allocator = allocator,
-            .title = "Terminal",
-            .title_buffer = .empty,
             .pty = null,
-            .primary = primary,
-            .alt = alt,
-            .active = .primary,
-            .history = history,
+            .core = core,
             .bracketed_paste = false,
             .focus_reporting = false,
             .auto_repeat = true,
@@ -267,48 +212,6 @@ pub const TerminalSession = struct {
             .pty_write_mutex = .{},
             .cell_width = 0,
             .cell_height = 0,
-            .parser = parser_mod.Parser.init(allocator),
-            .osc_clipboard = .empty,
-            .osc_clipboard_pending = false,
-            .kitty_osc5522_clipboard_text = .empty,
-            .kitty_osc5522_clipboard_html = .empty,
-            .kitty_osc5522_clipboard_uri_list = .empty,
-            .kitty_osc5522_clipboard_png = .empty,
-            .osc_hyperlink = .empty,
-            .osc_hyperlink_active = false,
-            .hyperlink_table = .empty,
-            .current_hyperlink_id = 0,
-            .cwd = "",
-            .cwd_buffer = .empty,
-            .semantic_prompt = .{},
-            .semantic_prompt_aid = .empty,
-            .semantic_cmdline = .empty,
-            .semantic_cmdline_valid = false,
-            .user_vars = std.StringHashMap([]u8).init(allocator),
-            .kitty_primary = .{
-                .images = .empty,
-                .placements = .empty,
-                .partials = std.AutoHashMap(u32, kitty_mod.KittyPartial).init(allocator),
-                .next_id = 1,
-                .loading_image_id = null,
-                .generation = 0,
-                .total_bytes = 0,
-                .scrollback_total = 0,
-            },
-            .kitty_alt = .{
-                .images = .empty,
-                .placements = .empty,
-                .partials = std.AutoHashMap(u32, kitty_mod.KittyPartial).init(allocator),
-                .next_id = 1,
-                .loading_image_id = null,
-                .generation = 0,
-                .total_bytes = 0,
-                .scrollback_total = 0,
-            },
-            .base_default_attrs = default_attrs,
-            .palette_default = palette_default,
-            .palette_current = palette_default,
-            .dynamic_colors = [_]?types.Color{null} ** dynamic_color_count,
             .read_thread = null,
             .read_thread_running = std.atomic.Value(bool).init(false),
             .parse_thread = null,
@@ -318,8 +221,6 @@ pub const TerminalSession = struct {
             .io_wait_cond = .{},
             .io_buffer = .empty,
             .io_read_offset = 0,
-            .sync_updates_active = false,
-            .column_mode_132 = false,
             .output_pending = std.atomic.Value(bool).init(false),
             .output_generation = std.atomic.Value(u64).init(0),
             .presented_generation = std.atomic.Value(u64).init(0),
@@ -331,9 +232,6 @@ pub const TerminalSession = struct {
             .render_cache_index = std.atomic.Value(u8).init(0),
             .view_cache_pending = std.atomic.Value(bool).init(false),
             .view_cache_request_offset = std.atomic.Value(u64).init(0),
-            .alt_last_active = false,
-            .clear_generation = std.atomic.Value(u64).init(0),
-            .saved_charset = .{},
             .child_exited = std.atomic.Value(bool).init(false),
             .child_exit_code = std.atomic.Value(i32).init(-1),
         };
@@ -342,11 +240,11 @@ pub const TerminalSession = struct {
     }
 
     pub fn activeScreen(self: *TerminalSession) *Screen {
-        return if (self.active == .alt) &self.alt else &self.primary;
+        return self.core.activeScreen();
     }
 
     pub fn activeScreenConst(self: *const TerminalSession) *const Screen {
-        return if (self.active == .alt) &self.alt else &self.primary;
+        return self.core.activeScreenConst();
     }
 
     pub fn setInputPressure(self: *TerminalSession, value: bool) void {
@@ -354,7 +252,7 @@ pub const TerminalSession = struct {
     }
 
     fn setActiveScreenMode(self: *TerminalSession, active: ActiveScreen) void {
-        self.active = active;
+        self.core.active = active;
         input_modes.publishSnapshot(self);
     }
 
@@ -392,11 +290,11 @@ pub const TerminalSession = struct {
     }
 
     fn inactiveScreen(self: *TerminalSession) *Screen {
-        return if (self.active == .alt) &self.primary else &self.alt;
+        return self.core.inactiveScreen();
     }
 
     fn isAltActive(self: *const TerminalSession) bool {
-        return self.active == .alt;
+        return self.core.isAltActive();
     }
 
     pub fn setDefaultColorsLocked(self: *TerminalSession, fg: types.Color, bg: types.Color) void {

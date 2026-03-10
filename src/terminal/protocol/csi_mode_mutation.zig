@@ -204,8 +204,8 @@ pub const ModeMutationContext = struct {
                 fn call(ctx: *anyopaque, enabled: bool) void {
                     const s: SessionPtr = @ptrCast(@alignCast(ctx));
                     s.grapheme_cluster_shaping_2027 = enabled;
-                    s.primary.setGraphemeClusterShaping2027(enabled);
-                    s.alt.setGraphemeClusterShaping2027(enabled);
+                    s.core.primary.setGraphemeClusterShaping2027(enabled);
+                    s.core.alt.setGraphemeClusterShaping2027(enabled);
                 }
             }.call,
             .set_report_color_scheme_2031_fn = struct {
