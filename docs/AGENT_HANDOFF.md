@@ -1,20 +1,16 @@
 ## Handoff (High-Level)
 
 ### Current Focus
-- Primary: non-product repo structure cleanup.
-  - repo structure review: `app_architecture/review/REPO_STRUCTURE_REVIEW.md`
-  - active repo structure queue: `app_architecture/repo_structure_todo.yaml`
-  - file/folder hotspot review: `app_architecture/review/FILE_LAYOUT_HOTSPOTS_REVIEW.md`
+- Primary: terminal core architecture redesign planning.
+  - terminal core review: `app_architecture/review/TERMINAL_CORE_ARCHITECTURE_REVIEW_2026-03-10.md`
+  - active terminal core queue: `app_architecture/terminal/vt_core_rearchitecture_todo.yaml`
   - terminal architecture baseline: `app_architecture/terminal/MODULARIZATION_PLAN.md`
 - Current top-of-queue focus:
-  - repo-structure cleanup is largely complete; use the review/todo docs as the record of what landed
-  - avoid inventing more non-product churn now that the obvious test/tool/doc structure problems are addressed
-  - return to product architecture/correctness work unless a new concrete repo-structure smell appears
-- Terminal correctness cleanup is not abandoned; it is now background context and baseline, not the active repo-structure lane.
-- Repo-structure progress is now real: `src/tools` has been collapsed into `tools/`, a `tests/` root now exists, the aggregate test entrypoint has moved out of `src/` into `tests/tests_main.zig`, generic root-level app/editor/config/layout/widget test entry files have moved into `tests/`, and standalone terminal root test entry files have also moved into `tests/`. Tightly coupled subsystem tests still stay source-adjacent where locality is useful.
-- Repo-structure progress is now real on docs too: doc lifecycle policy is now explicit in `docs/WORKFLOW.md`, and the old root-level terminal/editor FFI host migration beta todo has been re-homed under `app_architecture/terminal/` with stable naming.
-- Repo-structure progress is also reducing top-level doc noise: mode-layering validation and binary-size baseline records now live under `app_architecture/review/` instead of `docs/`.
-- Repo-structure cleanup lane is now effectively exhausted: the test layout is explicit, tooling-root duplication is gone, redundant handoff/planning surfaces were removed, and completed rollout records were re-homed out of active roots.
+  - define a real VT core below `TerminalSession`
+  - keep FFI first-class and host-agnostic
+  - make PTY one transport implementation, not the architectural center
+- Repo-structure cleanup is complete enough; do not keep grinding non-product cleanup unless a new concrete smell appears.
+- Terminal correctness cleanup remains the quality bar, but the current active lane is architectural center-of-gravity correction.
 
 ### Recent Changes (High-Level)
 - The high-refresh rain investigation removed most renderer-side force-full and stale invalidation escape hatches.

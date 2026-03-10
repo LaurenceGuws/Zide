@@ -4,6 +4,12 @@ Date: 2026-01-24
 
 Goal: split the terminal implementation into clear layers with a stable API surface, while preserving behavior and minimizing regressions.
 
+Current follow-up:
+
+- The extraction/modularization lane is no longer the main blocker by itself.
+- The next terminal architecture lane is tracked in `app_architecture/terminal/vt_core_rearchitecture_todo.yaml`.
+- See `app_architecture/review/TERMINAL_CORE_ARCHITECTURE_REVIEW_2026-03-10.md` for the Ghostty-informed re-rank of remaining architectural blockers.
+
 ## Scope
 - Terminal core + protocol handling + screen model + snapshot API.
 - Keep UI rendering in `src/ui/widgets/terminal_widget.zig` and renderer/font code in `src/ui/`.

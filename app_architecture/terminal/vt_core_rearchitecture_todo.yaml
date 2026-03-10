@@ -1,0 +1,73 @@
+version: 1
+
+items:
+  - id: VTCORE-00
+    title: Define the terminal core boundary
+    status: todo
+    priority: high
+    notes:
+      - Introduce a clear engine-owned center below TerminalSession
+      - Engine owns terminal emulation state and protocol behavior
+      - PTY, workspace, UI, and FFI must become consumers around that core
+
+  - id: VTCORE-01
+    title: Separate VT core from host session/runtime
+    status: todo
+    priority: high
+    notes:
+      - Shrink TerminalSession into a host/runtime wrapper
+      - Remove parser, screen, history, protocol, and terminal-mode gravity from TerminalSession
+      - Preserve behavior while moving ownership, not by adding compatibility sludge
+
+  - id: VTCORE-02
+    title: Make FFI a first-class core interface
+    status: todo
+    priority: high
+    notes:
+      - FFI must target the new terminal core and stable snapshot contracts
+      - Do not keep FFI structurally tied to desktop session/workspace design
+      - Support non-UI consumers such as Flutter hosts cleanly
+
+  - id: VTCORE-03
+    title: Introduce transport-agnostic host integration
+    status: todo
+    priority: high
+    notes:
+      - PTY must become one transport implementation, not the architectural center
+      - Support externally supplied byte streams/write sinks for SSH/mobile/embed hosts
+      - Resize and lifecycle delivery must work without host-owned PTY assumptions
+
+  - id: VTCORE-04
+    title: Move protocol execution onto core/model contracts
+    status: todo
+    priority: high
+    notes:
+      - CSI/OSC/DCS/APC should execute against terminal core contracts, not session service facades
+      - Preserve recent typed seam work and continue replacing session-centric execution targets
+
+  - id: VTCORE-05
+    title: Simplify snapshot and render publication
+    status: todo
+    priority: medium
+    notes:
+      - Keep renderer-agnostic snapshot/damage contracts
+      - Reduce session/cache choreography where it is only compensating for session-centered ownership
+      - Preserve correctness for widget and FFI render consumers
+
+  - id: VTCORE-06
+    title: Keep input encoding as a peer subsystem
+    status: todo
+    priority: medium
+    notes:
+      - Input encoding should consume terminal mode state cleanly
+      - Avoid re-entangling encoder logic with PTY/session runtime concerns
+      - Keep keyboard and mouse encoding usable through FFI hosts
+
+  - id: VTCORE-07
+    title: Preserve desktop Zide behavior while opening the embedding path
+    status: todo
+    priority: medium
+    notes:
+      - Existing PTY-backed desktop behavior must remain valid during the redesign
+      - Flutter/mobile consumers should not require Flutter-specific logic in the terminal core
+      - The redesign is about separation of concerns, not rewriting for a single host
