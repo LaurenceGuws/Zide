@@ -2,7 +2,6 @@ const std = @import("std");
 const app_logger = @import("../../app_logger.zig");
 const platform_input_events = @import("../../platform/input_events.zig");
 const input_state = @import("input_state.zig");
-const mouse_wheel = @import("mouse_wheel.zig");
 const text_input = @import("text_input.zig");
 const input_logging = @import("input_logging.zig");
 const sdl_api = @import("../../platform/sdl_api.zig");
@@ -49,7 +48,7 @@ pub fn pollInputEvents(
     };
     input_state.resetForFrame(state);
     @memset(self.mouse_press_pos_valid[0..], false);
-    mouse_wheel.reset(mouse_wheel_delta);
+    input_state.resetMouseWheel(mouse_wheel_delta);
 
     var event: sdl_api.c.SDL_Event = undefined;
     var event_count: usize = 0;
@@ -159,7 +158,7 @@ fn handleEvent(
             platform_input_events.handleMouseButtonUp(event, self.mouse_down[0..], self.mouse_released[0..]);
             if (!self.anyMouseButtonsDown()) sdl_api.setEventEnabled(sdl_api.EVENT_MOUSE_MOTION, false);
         },
-        sdl_api.EVENT_MOUSE_WHEEL => mouse_wheel.add(state.mouse_wheel_delta, platform_input_events.wheelDelta(event)),
+        sdl_api.EVENT_MOUSE_WHEEL => input_state.addMouseWheel(state.mouse_wheel_delta, platform_input_events.wheelDelta(event)),
         else => {
             if (sdl_api.isWindowEventType(event.type)) {
                 window_flags.handleWindowEvent(event.type, &self.should_close_flag, &self.window_resized_flag);
