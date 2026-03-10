@@ -108,6 +108,7 @@ file_layout_todo:
             - "2026-03-10: first slice landed in progress by extracting the search/highlight subsystem into `src/editor/search_highlight.zig`, leaving `editor.zig` as the owning facade over search worker, regex matching, query replacement, and highlighter lifecycle behavior."
             - "2026-03-10: second slice landed in progress by extracting selection, multi-caret, rectangular selection, and undo-selection bookkeeping into `src/editor/selection_state.zig`, leaving `editor.zig` as a thinner owner over editing operations."
             - "2026-03-10: third slice landed in progress by extracting cursor movement, selection extension, cursor setters, and cursor position bookkeeping into `src/editor/navigation.zig`, reducing `editor.zig` to a smaller orchestration surface."
+            - "2026-03-10: fourth slice landed in progress by extracting text mutation operations into `src/editor/edit_ops.zig`, including insert/delete/replace flows and the mutation-side highlight update plumbing."
 
         - id: FL-ED-02
           title: "Split src/editor/syntax.zig into a focused syntax subdir"
