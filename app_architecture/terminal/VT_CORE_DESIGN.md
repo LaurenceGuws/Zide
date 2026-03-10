@@ -331,8 +331,8 @@ Protocol execution also moved another step toward core ownership:
 - saved-cursor restore and alt-screen core state transitions now live behind
   `src/terminal/core/terminal_core_modes.zig`
 - `session_protocol.zig` now only layers the remaining session-owned side
-  effects around that core transition, such as selection clearing, input
-  snapshot publication, and alt-exit presentation signaling
+  effects around that core transition, such as selection clearing and input
+  snapshot publication
 - RIS/reset core mutation now also lives behind
   `src/terminal/core/terminal_core_reset.zig`, with `session_protocol.zig`
   keeping only the session-owned input-mode snapshot republish step
@@ -344,6 +344,9 @@ Protocol execution also moved another step toward core ownership:
   `src/terminal/core/session_mode_effects.zig`, making those selection/input-
   snapshot/presentation consequences explicit instead of leaving them embedded
   inline in `session_protocol.zig`
+- alt-screen exit presentation timing now also routes through
+  `src/terminal/core/session_rendering.zig`, so mode-side effects no longer
+  mutate render/publication timing state inline
 
 ## Compatibility Strategy
 
