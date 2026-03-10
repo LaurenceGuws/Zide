@@ -39,6 +39,7 @@ const window_metrics_state = @import("renderer/window_metrics_state.zig");
 const key_queue = @import("renderer/key_queue.zig");
 const screenshot = @import("renderer/screenshot.zig");
 const input_runtime = @import("renderer/input_runtime.zig");
+const font_runtime = @import("renderer/font_runtime.zig");
 const glyph_cache = @import("glyph_cache.zig");
 const platform_window = @import("../platform/window.zig");
 const platform_input_events = @import("../platform/input_events.zig");
@@ -559,27 +560,11 @@ pub const Renderer = struct {
     }
 
     pub fn setFontRenderingOptions(self: *Renderer, opts: FontRenderingOptions) void {
-        self.font_rendering = opts;
+        font_runtime.setFontRenderingOptions(self, opts);
     }
 
     pub fn setTextRenderingConfig(self: *Renderer, gamma: ?f32, contrast: ?f32, linear_correction: ?bool) void {
-        if (gamma) |v| {
-            if (v > 0) self.text_gamma = v;
-        }
-        if (contrast) |v| {
-            if (v > 0) self.text_contrast = v;
-        }
-        if (linear_correction) |v| {
-            self.text_linear_correction = v;
-        }
-
-        // Update shader uniforms if GL is initialized.
-        if (self.shader_program != 0) {
-            gl.UseProgram(self.shader_program);
-            if (self.uniform_text_gamma >= 0) gl.Uniform1f(self.uniform_text_gamma, self.text_gamma);
-            if (self.uniform_text_contrast >= 0) gl.Uniform1f(self.uniform_text_contrast, self.text_contrast);
-            if (self.uniform_linear_correction >= 0) gl.Uniform1i(self.uniform_linear_correction, if (self.text_linear_correction) 1 else 0);
-        }
+        font_runtime.setTextRenderingConfig(self, gamma, contrast, linear_correction);
     }
 
     pub fn setEditorSelectionOverlayStyle(self: *Renderer, smooth_enabled: ?bool, corner_px: ?f32, pad_px: ?f32) void {
@@ -619,86 +604,15 @@ pub const Renderer = struct {
     }
 
     pub fn setTerminalLigatureConfig(self: *Renderer, strategy: ?TerminalDisableLigaturesStrategy, features_raw: ?[]const u8) void {
-        if (strategy) |s| {
-            self.terminal_disable_ligatures = s;
-        }
-        if (features_raw) |raw| {
-            self.setFontFeatureListRaw(&self.terminal_font_features_raw, &self.terminal_font_features, raw);
-        }
+        font_runtime.setTerminalLigatureConfig(self, strategy, features_raw);
     }
 
     pub fn setEditorLigatureConfig(self: *Renderer, strategy: ?TerminalDisableLigaturesStrategy, features_raw: ?[]const u8) void {
-        if (strategy) |s| {
-            self.editor_disable_ligatures = s;
-        }
-        if (features_raw) |raw| {
-            self.setFontFeatureListRaw(&self.editor_font_features_raw, &self.editor_font_features, raw);
-        }
+        font_runtime.setEditorLigatureConfig(self, strategy, features_raw);
     }
-
-    fn setFontFeatureListRaw(self: *Renderer, raw_slot: *?[]u8, list: *std.ArrayListUnmanaged(hb.hb_feature_t), raw: []const u8) void {
-        const log = app_logger.logger("renderer.font");
-        if (raw_slot.*) |owned| {
-            self.allocator.free(owned);
-            raw_slot.* = null;
-        }
-        raw_slot.* = self.allocator.dupe(u8, raw) catch |err| blk: {
-            log.logf(.warning, "font feature raw dup failed len={d} err={s}", .{ raw.len, @errorName(err) });
-            break :blk null;
-        };
-        self.rebuildFontFeaturesList(raw_slot.*, list);
-    }
-
-    fn rebuildFontFeaturesList(self: *Renderer, raw_opt: ?[]u8, list: *std.ArrayListUnmanaged(hb.hb_feature_t)) void {
-        const log = app_logger.logger("renderer.font");
-        list.items.len = 0;
-        const raw = raw_opt orelse return;
-        var it = std.mem.splitScalar(u8, raw, ',');
-        while (it.next()) |piece| {
-            const token = std.mem.trim(u8, piece, " \t\r\n");
-            if (token.len == 0) continue;
-            var feature: hb.hb_feature_t = undefined;
-            if (hb.hb_feature_from_string(token.ptr, @intCast(token.len), &feature) != 0) {
-                list.append(self.allocator, feature) catch |err| {
-                    log.logf(.warning, "font feature append failed token={s} err={s}", .{ token, @errorName(err) });
-                    return;
-                };
-            }
-        }
-    }
-
-    fn hbTag(a: u8, b: u8, cch: u8, d: u8) u32 {
-        return (@as(u32, a) << 24) | (@as(u32, b) << 16) | (@as(u32, cch) << 8) | @as(u32, d);
-    }
-
-    const hb_feature_all: u32 = 0xFFFFFFFF;
 
     pub fn collectShapeFeatures(self: *Renderer, domain: ShapeFeatureDomain, disable_programming_ligatures: bool, out: []hb.hb_feature_t) usize {
-        var len: usize = 0;
-        const base = switch (domain) {
-            .terminal => self.terminal_font_features.items,
-            .editor => if (self.editor_font_features_raw != null)
-                self.editor_font_features.items
-            else
-                self.terminal_font_features.items,
-        };
-
-        for (base) |f| {
-            if (len >= out.len) break;
-            out[len] = f;
-            len += 1;
-        }
-
-        if (disable_programming_ligatures and len < out.len) {
-            out[len] = .{
-                .tag = hbTag('c', 'a', 'l', 't'),
-                .value = 0,
-                .start = 0,
-                .end = hb_feature_all,
-            };
-            len += 1;
-        }
-        return len;
+        return font_runtime.collectShapeFeatures(self, domain, disable_programming_ligatures, out);
     }
 
     pub fn loadFontWithGlyphs(self: *Renderer, allocator: std.mem.Allocator, path: [*:0]const u8, size: f32) void {
@@ -707,100 +621,27 @@ pub const Renderer = struct {
     }
 
     fn queryUiScale(self: *Renderer) f32 {
-        const dpi = self.getDpiScale();
-        var wayland = scale_utils.WaylandScaleState{
-            .cache = self.wayland_scale_cache,
-            .last_update = self.wayland_scale_last_update,
-        };
-        const scale = scale_utils.queryUiScale(self.allocator, dpi, getTime(), &wayland);
-        self.wayland_scale_cache = wayland.cache;
-        self.wayland_scale_last_update = wayland.last_update;
-        return scale;
+        return font_runtime.queryUiScale(self);
     }
 
     fn applyFontScale(self: *Renderer) !void {
-        try font_manager.applyFontScale(self);
-        text_input.reapplyRect(&self.text_input_state, self.window);
+        try font_runtime.applyFontScale(self);
     }
 
     pub fn queueUserZoom(self: *Renderer, delta: f32, now: f64) bool {
-        const result = scale_utils.queueUserZoom(self.user_zoom_target, delta, now, 0.5, 3.0);
-        self.user_zoom_target = result.next_target;
-        self.last_zoom_request_time = result.request_time;
-        return result.changed;
+        return font_runtime.queueUserZoom(self, delta, now);
     }
 
     pub fn resetUserZoomTarget(self: *Renderer, now: f64) bool {
-        const result = scale_utils.resetUserZoomTarget(self.user_zoom_target, now);
-        self.user_zoom_target = result.next_target;
-        self.last_zoom_request_time = result.request_time;
-        return result.changed;
+        return font_runtime.resetUserZoomTarget(self, now);
     }
 
     pub fn refreshUiScale(self: *Renderer) !bool {
-        const next = self.queryUiScale();
-        const next_render = platform_window.getRenderScale(self.window);
-        const scale_changed = !std.math.approxEqAbs(f32, next, self.ui_scale, 0.0001);
-        const render_changed = !std.math.approxEqAbs(f32, next_render, self.render_scale, 0.0001);
-        if (!scale_changed and !render_changed) return false;
-        const log = app_logger.logger("ui.scale");
-        const layout_size = self.base_font_size * next * self.user_zoom;
-        const raster_size = layout_size * next_render;
-        log.logf(.info, "ui_scale window={d:.3} render={d:.3}->{d:.3} user_zoom={d:.3} font={d:.2}->{d:.2}", .{
-            next,
-            self.render_scale,
-            next_render,
-            self.user_zoom,
-            self.font_size,
-            layout_size,
-        });
-        log.logf(.info, "ui_scale layout_size={d:.2} raster_size={d:.2}", .{ layout_size, raster_size });
-        self.ui_scale = next;
-        self.render_scale = next_render;
-        try self.applyFontScale();
-        return true;
+        return font_runtime.refreshUiScale(self);
     }
 
     pub fn applyPendingZoom(self: *Renderer, now: f64) !bool {
-        const result = scale_utils.applyPendingZoom(
-            self.user_zoom,
-            self.user_zoom_target,
-            now,
-            self.last_zoom_request_time,
-            self.last_zoom_apply_time,
-            0.04,
-            0.02,
-        );
-        if (!result.changed) return false;
-        self.user_zoom = result.next_zoom;
-        const log = app_logger.logger("ui.scale");
-        const layout_size = self.base_font_size * self.ui_scale * self.user_zoom;
-        const raster_size = layout_size * self.render_scale;
-        log.logf(.info, "ui_zoom window={d:.3} render={d:.3} user_zoom={d:.3} font={d:.2}->{d:.2}", .{
-            self.ui_scale,
-            self.render_scale,
-            self.user_zoom,
-            self.font_size,
-            layout_size,
-        });
-        log.logf(.info, "ui_zoom layout_size={d:.2} raster_size={d:.2}", .{ layout_size, raster_size });
-        try self.applyFontScale();
-        log.logf(
-            .info,
-            "ui_zoom_effective base={d:.2} ui={d:.3} zoom={d:.3} target={d:.3} render={d:.3} font={d:.2} term_cell={d:.2}x{d:.2}",
-            .{
-                self.base_font_size,
-                self.ui_scale,
-                self.user_zoom,
-                self.user_zoom_target,
-                self.render_scale,
-                self.font_size,
-                self.terminal_cell_width,
-                self.terminal_cell_height,
-            },
-        );
-        self.last_zoom_apply_time = result.apply_time;
-        return true;
+        return font_runtime.applyPendingZoom(self, now);
     }
 
     pub fn uiScaleFactor(self: *const Renderer) f32 {
@@ -1566,7 +1407,7 @@ pub const Renderer = struct {
     }
 
     fn fontForSize(self: *Renderer, size: f32) ?*TerminalFont {
-        return font_manager.fontForSize(self, size);
+        return font_runtime.fontForSize(self, size);
     }
 
     const TextOrigin = struct {
