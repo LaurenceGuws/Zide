@@ -172,6 +172,7 @@ file_layout_todo:
             - "2026-03-10: first slice landed in progress by extracting atlas allocation/upload/compaction into `src/ui/font/atlas.zig`, establishing `src/ui/font/` as the focused font subsystem root and shrinking `terminal_font.zig` around font selection/shaping/fallback ownership."
             - "2026-03-10: second slice landed in progress by extracting preferred/fallback face selection policy into `src/ui/font/fallback.zig`, reducing `terminal_font.zig` around glyph shaping and system font discovery instead of also carrying the full fallback preference matrix inline."
             - "2026-03-10: third slice landed in progress by extracting special-glyph sprite generation, powerline outline rasterization, and sprite-cache population into `src/ui/font/special_glyphs.zig`, leaving `terminal_font.zig` thinner around regular glyph shaping/draw flow and system font discovery."
+            - "2026-03-10: fourth slice landed in progress by extracting regular glyph shaping, grapheme shaping, glyph-advance lookup, and draw placement into `src/ui/font/shaping.zig`, leaving `terminal_font.zig` thinner around face selection and system font discovery."
 
         - id: FL-CFG-01
           title: "Split src/config/lua_config_ziglua_parse.zig by parser/validation/domain mapping concerns"
