@@ -26,6 +26,7 @@ const state_reset = @import("state_reset.zig");
 const session_queries = @import("session_queries.zig");
 const session_publication = @import("session_publication.zig");
 const session_content = @import("session_content.zig");
+const session_selection = @import("session_selection.zig");
 const osc_kitty_clipboard = @import("../protocol/osc_kitty_clipboard.zig");
 const Pty = pty_mod.Pty;
 const PtySize = pty_mod.PtySize;
@@ -60,8 +61,8 @@ pub const TerminalSnapshot = snapshot_mod.TerminalSnapshot;
 pub const DebugSnapshot = snapshot_mod.DebugSnapshot;
 pub const ScrollbackInfo = session_content.ScrollbackInfo;
 pub const ScrollbackRange = session_content.ScrollbackRange;
-pub const SelectionGesture = selection_mod.SelectionGesture;
-pub const ClickSelectionResult = selection_mod.ClickSelectionResult;
+pub const SelectionGesture = session_selection.SelectionGesture;
+pub const ClickSelectionResult = session_selection.ClickSelectionResult;
 pub const SessionMetadata = session_queries.SessionMetadata;
 pub const PresentedRenderCache = struct {
     generation: u64,
@@ -1604,59 +1605,59 @@ pub const TerminalSession = struct {
     }
 
     pub fn clearSelection(self: *TerminalSession) void {
-        selection_mod.clearSelection(self);
+        session_selection.clearSelection(self);
     }
 
     pub fn clearSelectionLocked(self: *TerminalSession) void {
-        selection_mod.clearSelectionLocked(self);
+        session_selection.clearSelectionLocked(self);
     }
 
     pub fn clearSelectionIfActiveLocked(self: *TerminalSession) bool {
-        return selection_mod.clearSelectionIfActiveLocked(self);
+        return session_selection.clearSelectionIfActiveLocked(self);
     }
 
     pub fn startSelection(self: *TerminalSession, row: usize, col: usize) void {
-        selection_mod.startSelection(self, row, col);
+        session_selection.startSelection(self, row, col);
     }
 
     pub fn startSelectionLocked(self: *TerminalSession, row: usize, col: usize) void {
-        selection_mod.startSelectionLocked(self, row, col);
+        session_selection.startSelectionLocked(self, row, col);
     }
 
     pub fn updateSelection(self: *TerminalSession, row: usize, col: usize) void {
-        selection_mod.updateSelection(self, row, col);
+        session_selection.updateSelection(self, row, col);
     }
 
     pub fn updateSelectionLocked(self: *TerminalSession, row: usize, col: usize) void {
-        selection_mod.updateSelectionLocked(self, row, col);
+        session_selection.updateSelectionLocked(self, row, col);
     }
 
     pub fn finishSelection(self: *TerminalSession) void {
-        selection_mod.finishSelection(self);
+        session_selection.finishSelection(self);
     }
 
     pub fn finishSelectionLocked(self: *TerminalSession) void {
-        selection_mod.finishSelectionLocked(self);
+        session_selection.finishSelectionLocked(self);
     }
 
     pub fn finishSelectionIfActiveLocked(self: *TerminalSession) bool {
-        return selection_mod.finishSelectionIfActiveLocked(self);
+        return session_selection.finishSelectionIfActiveLocked(self);
     }
 
     pub fn selectRange(self: *TerminalSession, start_pos: SelectionPos, end_pos: SelectionPos, finished: bool) void {
-        selection_mod.selectRange(self, start_pos, end_pos, finished);
+        session_selection.selectRange(self, start_pos, end_pos, finished);
     }
 
     pub fn selectRangeLocked(self: *TerminalSession, start_pos: SelectionPos, end_pos: SelectionPos, finished: bool) void {
-        selection_mod.selectRangeLocked(self, start_pos, end_pos, finished);
+        session_selection.selectRangeLocked(self, start_pos, end_pos, finished);
     }
 
     pub fn selectCellLocked(self: *TerminalSession, pos: SelectionPos, finished: bool) void {
-        selection_mod.selectCellLocked(self, pos, finished);
+        session_selection.selectCellLocked(self, pos, finished);
     }
 
     pub fn selectOrUpdateCellLocked(self: *TerminalSession, pos: SelectionPos) bool {
-        return selection_mod.selectOrUpdateCellLocked(self, pos);
+        return session_selection.selectOrUpdateCellLocked(self, pos);
     }
 
     pub fn selectOrderedRangeLocked(
@@ -1667,7 +1668,7 @@ pub const TerminalSession = struct {
         target_end: SelectionPos,
         finished: bool,
     ) bool {
-        return selection_mod.selectOrderedRangeLocked(self, anchor_start, anchor_end, target_start, target_end, finished);
+        return session_selection.selectOrderedRangeLocked(self, anchor_start, anchor_end, target_start, target_end, finished);
     }
 
     pub fn beginClickSelectionLocked(
@@ -1677,7 +1678,7 @@ pub const TerminalSession = struct {
         col: usize,
         click_count: u8,
     ) ClickSelectionResult {
-        return selection_mod.beginClickSelectionLocked(self, row_cells, global_row, col, click_count);
+        return session_selection.beginClickSelectionLocked(self, row_cells, global_row, col, click_count);
     }
 
     pub fn extendGestureSelectionLocked(
@@ -1687,7 +1688,7 @@ pub const TerminalSession = struct {
         global_row: usize,
         col: usize,
     ) bool {
-        return selection_mod.extendGestureSelectionLocked(self, gesture, row_cells, global_row, col);
+        return session_selection.extendGestureSelectionLocked(self, gesture, row_cells, global_row, col);
     }
 
     pub fn selectOrUpdateCellInRowLocked(
@@ -1696,7 +1697,7 @@ pub const TerminalSession = struct {
         global_row: usize,
         col: usize,
     ) bool {
-        return selection_mod.selectOrUpdateCellInRowLocked(self, row_cells, global_row, col);
+        return session_selection.selectOrUpdateCellInRowLocked(self, row_cells, global_row, col);
     }
 
     pub fn bracketedPasteEnabled(self: *TerminalSession) bool {
