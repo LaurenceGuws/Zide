@@ -1,12 +1,12 @@
 const std = @import("std");
-const Editor = @import("editor/editor.zig").Editor;
-const grammar_manager_mod = @import("editor/grammar_manager.zig");
-const syntax_mod = @import("editor/syntax.zig");
-const zig_language_mod = @import("editor/zig_language.zig");
-const shared_types = @import("types/mod.zig");
-const renderer_mod = @import("ui/renderer.zig");
-const cursor_mod = @import("editor/view/cursor.zig");
-const Selection = @import("editor/types.zig").Selection;
+const Editor = @import("../src/editor/editor.zig").Editor;
+const grammar_manager_mod = @import("../src/editor/grammar_manager.zig");
+const syntax_mod = @import("../src/editor/syntax.zig");
+const zig_language_mod = @import("../src/editor/zig_language.zig");
+const shared_types = @import("../src/types/mod.zig");
+const renderer_mod = @import("../src/ui/renderer.zig");
+const cursor_mod = @import("../src/editor/view/cursor.zig");
+const Selection = @import("../src/editor/types.zig").Selection;
 
 const EditorFixture = struct {
     grammar_manager: grammar_manager_mod.GrammarManager,
@@ -1062,9 +1062,9 @@ test "editor visual selection extend preserves multi-caret set" {
     try std.testing.expectEqual(@as(usize, 9), editor.selectionAt(0).?.end.offset);
 }
 
-const draw_mod = @import("ui/widgets/editor_widget_draw.zig");
-const editor_render = @import("editor/render/renderer_ops.zig");
-const cache_mod = @import("editor/render/cache.zig");
+const draw_mod = @import("../src/ui/widgets/editor_widget_draw.zig");
+const editor_render = @import("../src/editor/render/renderer_ops.zig");
+const cache_mod = @import("../src/editor/render/cache.zig");
 
 const Color = struct {
     r: u8,

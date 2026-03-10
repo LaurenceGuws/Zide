@@ -1,8 +1,8 @@
 const std = @import("std");
-const editor_mod = @import("editor/editor.zig");
-const grammar_manager_mod = @import("editor/grammar_manager.zig");
-const snapshot_mod = @import("editor/snapshot.zig");
-const shared = @import("types/mod.zig").snapshots;
+const editor_mod = @import("../src/editor/editor.zig");
+const grammar_manager_mod = @import("../src/editor/grammar_manager.zig");
+const snapshot_mod = @import("../src/editor/snapshot.zig");
+const shared = @import("../src/types/mod.zig").snapshots;
 
 test "editor snapshot stub is empty" {
     const allocator = std.testing.allocator;

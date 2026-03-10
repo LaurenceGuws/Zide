@@ -1,5 +1,5 @@
 const std = @import("std");
-const layout = @import("types/mod.zig").layout;
+const layout = @import("../src/types/mod.zig").layout;
 
 test "widget layout rects store sizes" {
     const rect = layout.Rect{ .x = 1, .y = 2, .width = 3, .height = 4 };

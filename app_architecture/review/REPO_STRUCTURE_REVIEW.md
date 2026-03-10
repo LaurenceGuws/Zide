@@ -95,6 +95,7 @@ Status:
 - policy written
 - `tests/` root established
 - aggregate test entrypoint moved out of `src/`
+- first category-based re-home landed for generic root-level app/editor/config/layout/widget test entrypoints
 - category-based re-homing of scattered root-level test files remains follow-up work
 
 ### Tools

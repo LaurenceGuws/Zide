@@ -11,7 +11,7 @@
   - collapse duplicated tooling roots (`tools/` vs `src/tools/`)
   - classify active versus historical docs and identify stale doc/test surfaces
 - Terminal correctness cleanup is not abandoned; it is now background context and baseline, not the active repo-structure lane.
-- Repo-structure progress is now real: `src/tools` has been collapsed into `tools/`, a `tests/` root now exists, and the aggregate test entrypoint has moved out of `src/` into `tests/tests_main.zig`. The next repo-hygiene work is category-based re-homing of scattered root-level test entrypoints, not another blind global move.
+- Repo-structure progress is now real: `src/tools` has been collapsed into `tools/`, a `tests/` root now exists, the aggregate test entrypoint has moved out of `src/` into `tests/tests_main.zig`, and the first category-based re-home moved generic root-level app/editor/config/layout/widget test entry files into `tests/`. The next repo-hygiene work is the next category move, not another blind global move.
 
 ### Recent Changes (High-Level)
 - The high-refresh rain investigation removed most renderer-side force-full and stale invalidation escape hatches.

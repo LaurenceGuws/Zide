@@ -1,5 +1,5 @@
 const std = @import("std");
-const types = @import("types/mod.zig");
+const types = @import("../src/types/mod.zig");
 
 test "widget action unions compile" {
     const alloc = std.testing.allocator;
