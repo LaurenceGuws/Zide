@@ -16,27 +16,21 @@ const text_input = @import("renderer/text_input.zig");
 const time_utils = @import("renderer/time_utils.zig");
 const window_init = @import("renderer/window_init.zig");
 const input_state = @import("renderer/input_state.zig");
-const input_queue = @import("renderer/input_queue.zig");
 const scale_utils = @import("renderer/scale_utils.zig");
 const targets = @import("renderer/targets.zig");
 const text_draw = @import("renderer/text_draw.zig");
 const gl_resources = @import("renderer/gl_resources.zig");
 const draw_batch = @import("renderer/draw_batch.zig");
 const target_draw = @import("renderer/target_draw.zig");
-const key_state = @import("renderer/key_state.zig");
 const shape_utils = @import("renderer/shape_utils.zig");
 const shape_draw = @import("renderer/shape_draw.zig");
 const terminal_glyphs = @import("renderer/terminal_glyphs.zig");
 const clipboard_state = @import("renderer/clipboard_state.zig");
 const terminal_underline = @import("renderer/terminal_underline.zig");
-const mouse_state = @import("renderer/mouse_state.zig");
 const texture_draw = @import("renderer/texture_draw.zig");
-const text_composition = @import("renderer/text_composition.zig");
 const window_flags = @import("renderer/window_flags.zig");
-const mouse_wheel = @import("renderer/mouse_wheel.zig");
 const input_logging = @import("renderer/input_logging.zig");
 const window_metrics_state = @import("renderer/window_metrics_state.zig");
-const key_queue = @import("renderer/key_queue.zig");
 const screenshot = @import("renderer/screenshot.zig");
 const input_runtime = @import("renderer/input_runtime.zig");
 const font_runtime = @import("renderer/font_runtime.zig");
@@ -1010,10 +1004,10 @@ pub const Renderer = struct {
         return value;
     }
 
-    pub const TextComposition = text_composition.TextComposition;
+    pub const TextComposition = input_state.TextComposition;
 
     pub fn getTextComposition(self: *Renderer) TextComposition {
-        return text_composition.snapshot(
+        return input_state.snapshotTextComposition(
             self.composing_text.items,
             self.composing_cursor,
             self.composing_selection_len,
@@ -1022,7 +1016,7 @@ pub const Renderer = struct {
     }
 
     pub fn getKeyPressed(self: *Renderer) ?KeyPress {
-        return key_queue.pop(&self.key_queue, &self.key_queue_head);
+        return input_state.popKeyPress(&self.key_queue, &self.key_queue_head);
     }
 
     pub fn keycodeFromScancode(_: *Renderer, scancode: i32, shift: bool) i32 {
@@ -1038,19 +1032,19 @@ pub const Renderer = struct {
     }
 
     pub fn isKeyDown(self: *Renderer, key: i32) bool {
-        return key_state.isKeyDown(self.key_down[0..], key);
+        return input_state.isKeyActive(self.key_down[0..], key);
     }
 
     pub fn isKeyPressed(self: *Renderer, key: i32) bool {
-        return key_state.isKeyPressed(self.key_pressed[0..], key);
+        return input_state.isKeyActive(self.key_pressed[0..], key);
     }
 
     pub fn isKeyRepeated(self: *Renderer, key: i32) bool {
-        return key_state.isKeyRepeated(self.key_repeated[0..], key);
+        return input_state.isKeyActive(self.key_repeated[0..], key);
     }
 
     pub fn isKeyReleased(self: *Renderer, key: i32) bool {
-        return key_state.isKeyReleased(self.key_released[0..], key);
+        return input_state.isKeyActive(self.key_released[0..], key);
     }
 
     pub fn getMousePos(self: *Renderer) MousePos {
@@ -1104,15 +1098,15 @@ pub const Renderer = struct {
     }
 
     pub fn isMouseButtonPressed(self: *Renderer, button: i32) bool {
-        return mouse_state.isMouseButtonPressed(self.mouse_pressed[0..], button);
+        return input_state.isMouseButtonActive(self.mouse_pressed[0..], button);
     }
 
     pub fn isMouseButtonDown(self: *Renderer, button: i32) bool {
-        return mouse_state.isMouseButtonDown(self.mouse_down[0..], button);
+        return input_state.isMouseButtonActive(self.mouse_down[0..], button);
     }
 
     pub fn isMouseButtonReleased(self: *Renderer, button: i32) bool {
-        return mouse_state.isMouseButtonReleased(self.mouse_released[0..], button);
+        return input_state.isMouseButtonActive(self.mouse_released[0..], button);
     }
 
     pub fn mouseButtonClicks(self: *Renderer, button: i32) u8 {

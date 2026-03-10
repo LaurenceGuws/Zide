@@ -204,11 +204,12 @@ file_layout_todo:
 
         - id: FL-UI-05
           title: "Collapse low-value renderer micro-files into stronger local owners"
-          status: todo
+          status: in_progress
           files:
             - src/ui/renderer
           notes:
             - "Examples include tiny queue/state/flag helper files that add navigation cost without owning real behavior."
+            - "2026-03-10: first slice landed in progress by collapsing the renderer input micro-files (`key_state.zig`, `mouse_state.zig`, `mouse_wheel.zig`, `key_queue.zig`, `input_queue.zig`, `text_composition.zig`) into `input_state.zig`, `input_runtime.zig`, and the root renderer facade. Those files only wrapped trivial input-state reads/resets/queue pops and were adding navigation cost without owning a real subsystem boundary."
 
     - name: "Phase 4 - Verification and Drift Control"
       tasks:
