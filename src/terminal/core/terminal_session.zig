@@ -964,79 +964,6 @@ pub const TerminalSession = struct {
         return session_protocol.decrqssReplyInto(self, text, buf);
     }
 
-    fn decrqssSgrReply(self: *TerminalSession, buf: []u8) ?[]const u8 {
-        const screen = self.activeScreen();
-        const attrs = screen.current_attrs;
-        const defaults = screen.default_attrs;
-        var pos: usize = 0;
-
-        if (attrs.bold) if (!appendParam(buf, &pos, 1)) return null;
-        if (attrs.blink and !attrs.blink_fast) {
-            if (!appendParam(buf, &pos, 5)) return null;
-        }
-        if (attrs.blink and attrs.blink_fast) {
-            if (!appendParam(buf, &pos, 6)) return null;
-        }
-        if (attrs.reverse) {
-            if (!appendParam(buf, &pos, 7)) return null;
-        }
-        if (attrs.underline) {
-            if (!appendParam(buf, &pos, 4)) return null;
-        }
-
-        if (!colorEq(attrs.fg, defaults.fg)) {
-            const code = self.decrqssPaletteSgrCode(attrs.fg, true) orelse return null;
-            if (!appendParam(buf, &pos, code)) return null;
-        }
-        if (!colorEq(attrs.bg, defaults.bg)) {
-            const code = self.decrqssPaletteSgrCode(attrs.bg, false) orelse return null;
-            if (!appendParam(buf, &pos, code)) return null;
-        }
-
-        if (pos == 0) {
-            if (buf.len < 1) return null;
-            buf[0] = 'm';
-            return buf[0..1];
-        }
-        if (pos + 1 > buf.len) return null;
-        buf[pos] = 'm';
-        return buf[0 .. pos + 1];
-    }
-
-    fn decrqssPaletteSgrCode(self: *TerminalSession, color: types.Color, fg: bool) ?u8 {
-        var idx: u8 = 0;
-        while (idx < 16) : (idx += 1) {
-            if (colorEq(color, self.paletteColor(idx))) {
-                if (idx < 8) return (if (fg) @as(u8, 30) else @as(u8, 40)) + idx;
-                return (if (fg) @as(u8, 90) else @as(u8, 100)) + (idx - 8);
-            }
-        }
-        return null;
-    }
-
-    fn colorEq(a: types.Color, b: types.Color) bool {
-        return a.r == b.r and a.g == b.g and a.b == b.b and a.a == b.a;
-    }
-
-    fn appendParam(buf: []u8, pos: *usize, param: u8) bool {
-        const log = app_logger.logger("terminal.csi");
-        var tmp: [4]u8 = undefined;
-        const text = std.fmt.bufPrint(&tmp, "{d}", .{param}) catch |err| {
-            log.logf(.warning, "appendParam format failed param={d}: {s}", .{ param, @errorName(err) });
-            return false;
-        };
-        var needed = text.len;
-        if (pos.* > 0) needed += 1;
-        if (pos.* + needed > buf.len) return false;
-        if (pos.* > 0) {
-            buf[pos.*] = ';';
-            pos.* += 1;
-        }
-        @memcpy(buf[pos.* .. pos.* + text.len], text);
-        pos.* += text.len;
-        return true;
-    }
-
     pub fn saveCursor(self: *TerminalSession) void {
         session_protocol.saveCursor(self);
     }
@@ -1435,4 +1362,3 @@ pub const Modifier = types.Modifier;
 pub const MouseButton = types.MouseButton;
 pub const MouseEventKind = types.MouseEventKind;
 pub const MouseEvent = types.MouseEvent;
-
