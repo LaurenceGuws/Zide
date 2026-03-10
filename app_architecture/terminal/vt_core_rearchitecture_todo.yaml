@@ -116,7 +116,7 @@ items:
       - Fifteenth replay-contract refinement landed: uniform multi-packet two-column gutter churn also stays narrow, so simple packet accumulation is no longer the right gutter target
       - Sixteenth VTCORE-05 behavior change landed: unpublished partial refinement now restores carried-over row-local column spans in pre-widen form, so previously unpublished rows do not get widened again on every generation
       - That carry-over damage fix keeps one-column line-number churn, single-packet two-column sign-column churn, uniform multi-packet gutter churn, and mixed alternating line-number/sign-column churn all on narrow leading-column damage paths
-      - Remaining redraw target should now move beyond synthetic gutter-only churn and toward more realistic mixed nvim-style update patterns with stable interior text and repeated sign/number/guide interaction
+      - Seventeenth replay contract landed: mixed gutter-plus-guide churn widens publication through the first interior guide column, so the next invalidation target is no longer pure gutter activity but combined sign/number/guide interaction
 
   - id: VTCORE-06
     title: Keep input encoding as a peer subsystem
