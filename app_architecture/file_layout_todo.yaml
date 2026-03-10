@@ -141,9 +141,11 @@ file_layout_todo:
           files:
             - src/ui/widgets/editor_widget_draw.zig
             - src/ui/widgets/editor_widget_draw_overlay.zig
+            - src/ui/widgets/editor_widget_draw_text.zig
           notes:
             - "Possible owners: text/layout, gutter/chrome, overlays/cursor/selection."
             - "2026-03-10: first slice landed in progress by extracting draw-list primitives, selection/search overlays, caret helpers, selection-state hashing, and scrollbar rendering into `src/ui/widgets/editor_widget_draw_overlay.zig`. `editor_widget_draw.zig` now keeps text/layout/highlight assembly, cached-vs-live draw orchestration, and precompute/hash helpers."
+            - "2026-03-10: second slice landed in progress by extracting byte-range mapping, selection-text background splitting, token color selection, and highlighted segment rendering into `src/ui/widgets/editor_widget_draw_text.zig`. `editor_widget_draw.zig` is now down near coordinator size and mostly owns draw entrypoints plus precompute/hash fallback helpers."
 
         - id: FL-UI-03
           title: "Thin src/ui/renderer.zig into a real facade over src/ui/renderer/"

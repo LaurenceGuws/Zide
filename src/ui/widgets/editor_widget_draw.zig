@@ -7,6 +7,7 @@ const cache_mod = @import("../../editor/render/cache.zig");
 const draw_list_mod = @import("../../editor/render/draw_list.zig");
 const app_logger = @import("../../app_logger.zig");
 const overlay_mod = @import("editor_widget_draw_overlay.zig");
+const text_mod = @import("editor_widget_draw_text.zig");
 
 const HighlightToken = syntax_mod.HighlightToken;
 const TokenKind = syntax_mod.TokenKind;
@@ -59,361 +60,6 @@ fn addEditorLineBaseOps(
     return ok;
 }
 
-fn xForByteOffset(
-    r: anytype,
-    line_text: []const u8,
-    seg_start_byte: usize,
-    seg_start_vis: usize,
-    byte_index: usize,
-    text_x: f32,
-) f32 {
-    const target = @min(byte_index, line_text.len);
-    if (target <= seg_start_byte) return text_x;
-
-    var idx = seg_start_byte;
-    var vis = seg_start_vis;
-    while (idx < target) {
-        const first = line_text[idx];
-        if (first == '\t') {
-            const tab_width: usize = 4;
-            vis += tab_width - (vis % tab_width);
-            idx += 1;
-            continue;
-        }
-        if (first < 0x80) {
-            vis += 1;
-            idx += 1;
-            continue;
-        }
-        const seq_len = std.unicode.utf8ByteSequenceLength(first) catch {
-            vis += 1;
-            idx += 1;
-            continue;
-        };
-        if (idx + seq_len > line_text.len) {
-            vis += 1;
-            idx += 1;
-            continue;
-        }
-        vis += 1;
-        idx += seq_len;
-    }
-    return text_x + @as(f32, @floatFromInt(vis - seg_start_vis)) * r.char_width;
-}
-
-fn buildSelectionByteRanges(
-    line_text: []const u8,
-    cluster_slice: ?[]const u32,
-    seg_start_col: usize,
-    seg_end_col: usize,
-    seg_start_byte: usize,
-    seg_end_byte: usize,
-    ranges: []const SelectionRange,
-    out: *[8]ByteRange,
-) usize {
-    var count: usize = 0;
-    for (ranges) |range| {
-        const sel_start_col = @max(range.start_col, seg_start_col);
-        const sel_end_col = @min(range.end_col, seg_end_col);
-        if (sel_end_col <= sel_start_col) continue;
-        const sel_start_byte = selection_mod.byteIndexForVisualColumn(line_text, sel_start_col, cluster_slice);
-        const sel_end_byte = selection_mod.byteIndexForVisualColumn(line_text, sel_end_col, cluster_slice);
-        const s = @max(seg_start_byte, sel_start_byte);
-        const e = @min(seg_end_byte, sel_end_byte);
-        if (e <= s) continue;
-        if (count < out.len) {
-            out[count] = .{ .start = s, .end = e };
-            count += 1;
-        }
-    }
-
-    // Sort by start (insertion sort) and merge overlaps.
-    var i: usize = 1;
-    while (i < count) : (i += 1) {
-        const key = out[i];
-        var j: usize = i;
-        while (j > 0 and out[j - 1].start > key.start) : (j -= 1) {
-            out[j] = out[j - 1];
-        }
-        out[j] = key;
-    }
-    var merged: usize = 0;
-    var k: usize = 0;
-    while (k < count) : (k += 1) {
-        const r = out[k];
-        if (merged == 0) {
-            out[0] = r;
-            merged = 1;
-            continue;
-        }
-        const last = &out[merged - 1];
-        if (r.start <= last.end) {
-            if (r.end > last.end) last.end = r.end;
-        } else {
-            out[merged] = r;
-            merged += 1;
-        }
-    }
-    return merged;
-}
-
-fn collectSearchByteRanges(
-    seg_abs_start: usize,
-    seg_abs_end: usize,
-    matches: anytype,
-    out: *[16]ByteRange,
-) usize {
-    if (seg_abs_end <= seg_abs_start) return 0;
-    var count: usize = 0;
-    for (matches) |m| {
-        if (m.end <= seg_abs_start) continue;
-        if (m.start >= seg_abs_end) break;
-        const s = @max(seg_abs_start, m.start);
-        const e = @min(seg_abs_end, m.end);
-        if (e <= s) continue;
-        if (count < out.len) {
-            out[count] = .{ .start = s, .end = e };
-            count += 1;
-        }
-    }
-
-    var i: usize = 1;
-    while (i < count) : (i += 1) {
-        const key = out[i];
-        var j: usize = i;
-        while (j > 0 and out[j - 1].start > key.start) : (j -= 1) {
-            out[j] = out[j - 1];
-        }
-        out[j] = key;
-    }
-
-    var merged: usize = 0;
-    var k: usize = 0;
-    while (k < count) : (k += 1) {
-        const r = out[k];
-        if (merged == 0) {
-            out[0] = r;
-            merged = 1;
-            continue;
-        }
-        const last = &out[merged - 1];
-        if (r.start <= last.end) {
-            if (r.end > last.end) last.end = r.end;
-        } else {
-            out[merged] = r;
-            merged += 1;
-        }
-    }
-    return merged;
-}
-
-fn addTextSliceOpsWithSelectionBg(
-    list: *EditorDrawList,
-    r: anytype,
-    text_start_x: f32,
-    y: f32,
-    line_text: []const u8,
-    seg_start_byte: usize,
-    seg_start_vis: usize,
-    slice_start: usize,
-    slice_end: usize,
-    fg: anytype,
-    base_bg: anytype,
-    selection_bg: anytype,
-    sel_ranges: []const ByteRange,
-    disable_programming_ligatures: bool,
-) bool {
-    if (slice_end <= slice_start) return true;
-    var ok = true;
-    var cursor = slice_start;
-    for (sel_ranges) |sr| {
-        if (sr.end <= cursor) continue;
-        if (sr.start >= slice_end) break;
-        if (sr.start > cursor) {
-            const a0 = cursor;
-            const a1 = @min(sr.start, slice_end);
-            const x = xForByteOffset(r, line_text, seg_start_byte, seg_start_vis, a0, text_start_x);
-            ok = ok and overlay_mod.addTextOpBg(list, x, y, line_text[a0..a1], fg, base_bg, disable_programming_ligatures);
-        }
-        const b0 = @max(cursor, sr.start);
-        const b1 = @min(slice_end, sr.end);
-        if (b1 > b0) {
-            const x = xForByteOffset(r, line_text, seg_start_byte, seg_start_vis, b0, text_start_x);
-            ok = ok and overlay_mod.addTextOpBg(list, x, y, line_text[b0..b1], fg, selection_bg, disable_programming_ligatures);
-            cursor = b1;
-        }
-        if (cursor >= slice_end) break;
-    }
-    if (cursor < slice_end) {
-        const x = xForByteOffset(r, line_text, seg_start_byte, seg_start_vis, cursor, text_start_x);
-        ok = ok and overlay_mod.addTextOpBg(list, x, y, line_text[cursor..slice_end], fg, base_bg, disable_programming_ligatures);
-    }
-    return ok;
-}
-
-fn selectionOverlapBg(
-    slice_start: usize,
-    slice_end: usize,
-    base_bg: anytype,
-    selection_bg: anytype,
-    sel_ranges: []const ByteRange,
-) @TypeOf(base_bg) {
-    for (sel_ranges) |sr| {
-        if (sr.end <= slice_start) continue;
-        if (sr.start >= slice_end) break;
-        return selection_bg;
-    }
-    return base_bg;
-}
-
-fn drawTextSliceWithSelectionBg(
-    r: anytype,
-    text_start_x: f32,
-    y: f32,
-    line_text: []const u8,
-    seg_start_byte: usize,
-    seg_start_vis: usize,
-    slice_start: usize,
-    slice_end: usize,
-    fg: anytype,
-    base_bg: anytype,
-    selection_bg: anytype,
-    sel_ranges: []const ByteRange,
-    disable_programming_ligatures: bool,
-) void {
-    if (slice_end <= slice_start) return;
-    var cursor = slice_start;
-    for (sel_ranges) |sr| {
-        if (sr.end <= cursor) continue;
-        if (sr.start >= slice_end) break;
-        if (sr.start > cursor) {
-            const a0 = cursor;
-            const a1 = @min(sr.start, slice_end);
-            const x = xForByteOffset(r, line_text, seg_start_byte, seg_start_vis, a0, text_start_x);
-            r.drawTextMonospaceOnBgPolicy(line_text[a0..a1], x, y, fg, base_bg, disable_programming_ligatures);
-        }
-        const b0 = @max(cursor, sr.start);
-        const b1 = @min(slice_end, sr.end);
-        if (b1 > b0) {
-            const x = xForByteOffset(r, line_text, seg_start_byte, seg_start_vis, b0, text_start_x);
-            r.drawTextMonospaceOnBgPolicy(line_text[b0..b1], x, y, fg, selection_bg, disable_programming_ligatures);
-            cursor = b1;
-        }
-        if (cursor >= slice_end) break;
-    }
-    if (cursor < slice_end) {
-        const x = xForByteOffset(r, line_text, seg_start_byte, seg_start_vis, cursor, text_start_x);
-        r.drawTextMonospaceOnBgPolicy(line_text[cursor..slice_end], x, y, fg, base_bg, disable_programming_ligatures);
-    }
-}
-
-fn appendHighlightedLineSegmentOps(
-    list: *EditorDrawList,
-    r: anytype,
-    line_text: []const u8,
-    y: f32,
-    text_x: f32,
-    line_start: usize,
-    seg_start: usize,
-    seg_end: usize,
-    seg_start_vis: usize,
-    tokens: []HighlightToken,
-    base_bg: anytype,
-    selection_bg: anytype,
-    seg_start_byte: usize,
-    sel_ranges: []const ByteRange,
-    disable_programming_ligatures: bool,
-) bool {
-    if (seg_start >= seg_end or line_text.len == 0) return true;
-
-    var ok = true;
-    var cursor = seg_start;
-    for (tokens) |token| {
-        if (token.end <= line_start + seg_start or token.start >= line_start + seg_end) continue;
-        const rel_start = if (token.start > line_start) token.start - line_start else 0;
-        const start = @max(rel_start, seg_start);
-        const end = @min(token.end - line_start, seg_end);
-        if (start > cursor) {
-            const slice_start = cursor;
-            const slice_end = start;
-            ok = ok and addTextSliceOpsWithSelectionBg(
-                list,
-                r,
-                text_x,
-                y,
-                line_text,
-                seg_start_byte,
-                seg_start_vis,
-                slice_start,
-                slice_end,
-                r.theme.foreground,
-                base_bg,
-                selection_bg,
-                sel_ranges,
-                disable_programming_ligatures,
-            );
-        }
-        const slice_start = start;
-        const slice_end = end;
-        const conceal_text: ?[]const u8 = if (token.conceal != null or token.conceal_lines)
-            token.conceal orelse ""
-        else
-            null;
-        var color = colorForToken(r, token.kind);
-        if (token.url != null) {
-            color = r.theme.link;
-        }
-        if (conceal_text) |ctext| {
-            if (ctext.len > 0) {
-                const bg = selectionOverlapBg(slice_start, slice_end, base_bg, selection_bg, sel_ranges);
-                const x = xForByteOffset(r, line_text, seg_start, seg_start_vis, slice_start, text_x);
-                ok = ok and overlay_mod.addTextOpBg(list, x, y, ctext, color, bg, disable_programming_ligatures);
-            }
-        } else {
-            ok = ok and addTextSliceOpsWithSelectionBg(
-                list,
-                r,
-                text_x,
-                y,
-                line_text,
-                seg_start_byte,
-                seg_start_vis,
-                slice_start,
-                slice_end,
-                color,
-                base_bg,
-                selection_bg,
-                sel_ranges,
-                disable_programming_ligatures,
-            );
-        }
-        if (end > cursor) {
-            cursor = end;
-        }
-    }
-
-    if (cursor < seg_end) {
-        const slice_start = cursor;
-        ok = ok and addTextSliceOpsWithSelectionBg(
-            list,
-            r,
-            text_x,
-            y,
-            line_text,
-            seg_start_byte,
-            seg_start_vis,
-            slice_start,
-            seg_end,
-            r.theme.foreground,
-            base_bg,
-            selection_bg,
-            sel_ranges,
-            disable_programming_ligatures,
-        );
-    }
-
-    return ok;
-}
 
 pub fn draw(
     widget: anytype,
@@ -453,7 +99,7 @@ pub fn draw(
                 highlight_tokens = tokens;
                 highlight_tokens_allocated = true;
                 if (highlight_tokens.len > 1) {
-                    std.sort.heap(HighlightToken, highlight_tokens, {}, highlightTokenLessThan);
+                    std.sort.heap(HighlightToken, highlight_tokens, {}, text_mod.highlightTokenLessThan);
                 }
             }
         }
@@ -592,7 +238,7 @@ pub fn draw(
             }
 
             var search_ranges: [16]ByteRange = undefined;
-            const search_count = collectSearchByteRanges(
+            const search_count = text_mod.collectSearchByteRanges(
                 line_start + seg_start_byte,
                 line_start + seg_end_byte,
                 widget.editor.searchMatches(),
@@ -605,8 +251,8 @@ pub fn draw(
                 for (search_ranges[0..search_count]) |match| {
                     const local_start = match.start - line_start;
                     const local_end = match.end - line_start;
-                    const sx = xForByteOffset(r, line_text, seg_start_byte, seg_start_col, local_start, text_start_x);
-                    const ex = xForByteOffset(r, line_text, seg_start_byte, seg_start_col, local_end, text_start_x);
+                    const sx = text_mod.xForByteOffset(r, line_text, seg_start_byte, seg_start_col, local_start, text_start_x);
+                    const ex = text_mod.xForByteOffset(r, line_text, seg_start_byte, seg_start_col, local_end, text_start_x);
                     if (ex <= sx) continue;
                     const draw_color = if (active_search) |active| if (overlay_mod.rangeContains(active, match)) overlay_mod.activeSearchHighlightColor(r.theme) else search_color else search_color;
                     r.drawRect(
@@ -623,7 +269,7 @@ pub fn draw(
             const selection_bg = overlay_mod.softSelectionColor(r.theme.selection);
             var sel_bytes: [8]ByteRange = undefined;
             const sel_count = if (range_count > 0)
-                buildSelectionByteRanges(
+                text_mod.buildSelectionByteRanges(
                     line_text,
                     cluster_slice,
                     seg_start_col,
@@ -637,7 +283,7 @@ pub fn draw(
                 0;
 
             if (effective_tokens.len == 0) {
-                drawTextSliceWithSelectionBg(
+                text_mod.drawTextSliceWithSelectionBg(
                     r,
                     text_start_x,
                     seg_y,
@@ -653,7 +299,7 @@ pub fn draw(
                     disable_programming_ligatures,
                 );
             } else {
-                drawHighlightedLineSegment(
+                text_mod.drawHighlightedLineSegment(
                     r,
                     line_text,
                     seg_y,
@@ -913,7 +559,7 @@ pub fn drawCached(
                     }
 
                     var search_ranges: [16]ByteRange = undefined;
-                    const search_count = collectSearchByteRanges(
+                    const search_count = text_mod.collectSearchByteRanges(
                         line_start + seg_start_byte,
                         line_start + seg_end_byte,
                         widget.editor.searchMatches(),
@@ -926,8 +572,8 @@ pub fn drawCached(
                         for (search_ranges[0..search_count]) |match| {
                             const local_start = match.start - line_start;
                             const local_end = match.end - line_start;
-                            const sx = xForByteOffset(r, line_text, seg_start_byte, seg_start_col, local_start, origin_x + widget.gutter_width + 8 * r.uiScaleFactor());
-                            const ex = xForByteOffset(r, line_text, seg_start_byte, seg_start_col, local_end, origin_x + widget.gutter_width + 8 * r.uiScaleFactor());
+                            const sx = text_mod.xForByteOffset(r, line_text, seg_start_byte, seg_start_col, local_start, origin_x + widget.gutter_width + 8 * r.uiScaleFactor());
+                            const ex = text_mod.xForByteOffset(r, line_text, seg_start_byte, seg_start_col, local_end, origin_x + widget.gutter_width + 8 * r.uiScaleFactor());
                             if (ex <= sx) continue;
                             const draw_color = if (active_search) |active| if (overlay_mod.rangeContains(active, match)) overlay_mod.activeSearchHighlightColor(r.theme) else search_color else search_color;
                             list_ok = list_ok and overlay_mod.addRectOp(draw_list, sx, search_band.y_f, ex - sx, search_band.h_f, draw_color);
@@ -938,7 +584,7 @@ pub fn drawCached(
                     const selection_bg = overlay_mod.softSelectionColor(r.theme.selection);
                     var sel_bytes: [8]ByteRange = undefined;
                     const sel_count = if (range_count > 0)
-                        buildSelectionByteRanges(
+                        text_mod.buildSelectionByteRanges(
                             line_text,
                             cluster_slice,
                             seg_start_col,
@@ -953,7 +599,7 @@ pub fn drawCached(
 
                     const text_start_x = origin_x + widget.gutter_width + 8 * r.uiScaleFactor();
                     if (effective_tokens.len == 0) {
-                        list_ok = list_ok and addTextSliceOpsWithSelectionBg(
+                        list_ok = list_ok and text_mod.addTextSliceOpsWithSelectionBg(
                             draw_list,
                             r,
                             text_start_x,
@@ -970,7 +616,7 @@ pub fn drawCached(
                             disable_programming_ligatures,
                         );
                     } else {
-                        list_ok = list_ok and appendHighlightedLineSegmentOps(
+                        list_ok = list_ok and text_mod.appendHighlightedLineSegmentOps(
                             draw_list,
                             r,
                             line_text,
@@ -1071,20 +717,20 @@ pub fn drawCached(
                                 var cursor_b: usize = seg_start_byte;
                                 for (sel_bytes[0..sel_count]) |sr| {
                                     if (sr.start > cursor_b) {
-                                        const x0 = xForByteOffset(r, line_text, seg_start_byte, seg_start_col, cursor_b, text_start_x);
+                                        const x0 = text_mod.xForByteOffset(r, line_text, seg_start_byte, seg_start_col, cursor_b, text_start_x);
                                         r.drawTextMonospaceOnBgPolicy(line_text[cursor_b..sr.start], x0, seg_y, r.theme.foreground, seg_base_bg, disable_programming_ligatures);
                                     }
-                                    const x1 = xForByteOffset(r, line_text, seg_start_byte, seg_start_col, sr.start, text_start_x);
+                                    const x1 = text_mod.xForByteOffset(r, line_text, seg_start_byte, seg_start_col, sr.start, text_start_x);
                                     r.drawTextMonospaceOnBgPolicy(line_text[sr.start..sr.end], x1, seg_y, r.theme.foreground, selection_bg_local, disable_programming_ligatures);
                                     cursor_b = sr.end;
                                 }
                                 if (cursor_b < seg_end_byte) {
-                                    const x2 = xForByteOffset(r, line_text, seg_start_byte, seg_start_col, cursor_b, text_start_x);
+                                    const x2 = text_mod.xForByteOffset(r, line_text, seg_start_byte, seg_start_col, cursor_b, text_start_x);
                                     r.drawTextMonospaceOnBgPolicy(line_text[cursor_b..seg_end_byte], x2, seg_y, r.theme.foreground, seg_base_bg, disable_programming_ligatures);
                                 }
                             }
                         } else {
-                            drawHighlightedLineSegment(
+                            text_mod.drawHighlightedLineSegment(
                                 r,
                                 line_text,
                                 seg_y,
@@ -1449,134 +1095,3 @@ fn hashScrollState(
     return h;
 }
 
-
-fn drawHighlightedLineSegment(
-    r: anytype,
-    line_text: []const u8,
-    y: f32,
-    text_x: f32,
-    line_start: usize,
-    seg_start: usize,
-    seg_end: usize,
-    seg_start_vis: usize,
-    tokens: []HighlightToken,
-    base_bg: anytype,
-    selection_bg: anytype,
-    sel_ranges: []const ByteRange,
-    disable_programming_ligatures: bool,
-) void {
-    if (seg_start >= seg_end or line_text.len == 0) return;
-
-    var cursor = seg_start;
-    for (tokens) |token| {
-        if (token.end <= line_start + seg_start or token.start >= line_start + seg_end) continue;
-        const start = @max(token.start - line_start, seg_start);
-        const end = @min(token.end - line_start, seg_end);
-        if (start > cursor) {
-            const slice_start = cursor;
-            const slice_end = start;
-            drawTextSliceWithSelectionBg(
-                r,
-                text_x,
-                y,
-                line_text,
-                seg_start,
-                seg_start_vis,
-                slice_start,
-                slice_end,
-                r.theme.foreground,
-                base_bg,
-                selection_bg,
-                sel_ranges,
-                disable_programming_ligatures,
-            );
-        }
-        const slice_start = start;
-        const slice_end = end;
-        const x = xForByteOffset(r, line_text, seg_start, seg_start_vis, slice_start, text_x);
-        const conceal_text: ?[]const u8 = if (token.conceal != null or token.conceal_lines)
-            token.conceal orelse ""
-        else
-            null;
-        var color = colorForToken(r, token.kind);
-        if (token.url != null) {
-            color = r.theme.link;
-        }
-        if (conceal_text) |text| {
-            if (text.len > 0) {
-                const bg = selectionOverlapBg(slice_start, slice_end, base_bg, selection_bg, sel_ranges);
-                r.drawTextMonospaceOnBgPolicy(text, x, y, color, bg, disable_programming_ligatures);
-            }
-        } else {
-            drawTextSliceWithSelectionBg(
-                r,
-                text_x,
-                y,
-                line_text,
-                seg_start,
-                seg_start_vis,
-                slice_start,
-                slice_end,
-                color,
-                base_bg,
-                selection_bg,
-                sel_ranges,
-                disable_programming_ligatures,
-            );
-        }
-        if (end > cursor) {
-            cursor = end;
-        }
-    }
-
-    if (cursor < seg_end) {
-        const slice_start = cursor;
-        drawTextSliceWithSelectionBg(
-            r,
-            text_x,
-            y,
-            line_text,
-            seg_start,
-            seg_start_vis,
-            slice_start,
-            seg_end,
-            r.theme.foreground,
-            base_bg,
-            selection_bg,
-            sel_ranges,
-            disable_programming_ligatures,
-        );
-    }
-}
-
-fn highlightTokenLessThan(_: void, a: HighlightToken, b: HighlightToken) bool {
-    return syntax_mod.highlightTokenLessThanStable(a, b);
-}
-
-fn colorForToken(r: anytype, kind: TokenKind) @TypeOf(r.theme.foreground) {
-    return switch (kind) {
-        .comment => r.theme.comment_color,
-        .string => r.theme.string,
-        .keyword => r.theme.keyword,
-        .number => r.theme.number,
-        .function => r.theme.function,
-        .variable => r.theme.variable,
-        .type_name => r.theme.type_name,
-        .operator => r.theme.operator,
-        .builtin => r.theme.builtin_color,
-        .punctuation => r.theme.punctuation,
-        .constant => r.theme.constant,
-        .attribute => r.theme.attribute,
-        .namespace => r.theme.namespace,
-        .label => r.theme.label,
-        .link => r.theme.link,
-        .error_token => r.theme.error_token,
-        .preproc => r.theme.preproc,
-        .macro => r.theme.macro,
-        .escape => r.theme.escape,
-        .keyword_control => r.theme.keyword_control,
-        .function_method => r.theme.function_method,
-        .type_builtin => r.theme.type_builtin,
-        else => r.theme.foreground,
-    };
-}
