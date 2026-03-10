@@ -291,6 +291,9 @@ Protocol execution also moved another step toward core ownership:
 - `session_protocol.zig` now only layers the remaining session-owned side
   effects around that core transition, such as selection clearing, input
   snapshot publication, and alt-exit presentation signaling
+- RIS/reset core mutation now also lives behind
+  `src/terminal/core/terminal_core_reset.zig`, with `session_protocol.zig`
+  keeping only the session-owned input-mode snapshot republish step
 
 ## Compatibility Strategy
 

@@ -67,6 +67,7 @@ items:
       - Second slice landed: parser/control/CSI/OSC/DCS/APC dispatch entry helpers now live behind src/terminal/core/terminal_core_dispatch.zig, while byte feed/publication stays in session_protocol because locking and generation publication are still session-owned
       - Third slice landed: parser byte feed itself now runs through src/terminal/core/terminal_core_feed.zig, with session_protocol retaining only the lock/generation/view-cache publication wrapper
       - Fourth slice landed: saved-cursor restore and alt-screen core state transitions now live behind src/terminal/core/terminal_core_modes.zig, leaving session_protocol with only the remaining session-owned side effects around those transitions
+      - Fifth slice landed: RIS/reset core mutation now lives behind src/terminal/core/terminal_core_reset.zig, leaving session_protocol with only the session-owned input snapshot republish step
 
   - id: VTCORE-05
     title: Simplify snapshot and render publication

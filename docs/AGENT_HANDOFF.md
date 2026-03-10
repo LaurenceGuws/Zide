@@ -15,6 +15,7 @@
   - parser/control dispatch entry helpers now also live under `terminal_core_dispatch.zig`; parser byte feed still stays session-owned because locking and publication are not split yet
   - parser feed now runs through `terminal_core_feed.zig`; the remaining session-owned wrapper is specifically lock/generation/view-cache publication
   - saved-cursor restore and alt-screen core state transitions now also live under `terminal_core_modes.zig`; `session_protocol` keeps only the remaining session-owned side effects around those transitions
+  - RIS/reset core mutation now also lives under `terminal_core_reset.zig`; `session_protocol` keeps only the input snapshot republish step around reset
   - first internal transport contract now exists in `terminal_transport.zig`; PTY lifecycle/resize/aliveness/exit/foreground-process metadata are routed through it
   - writer path is now transport-owned via `terminal_transport.Writer`
   - read/poll byte pumps now also route through `terminal_transport.Transport.read(...)` and `waitForData(...)`
