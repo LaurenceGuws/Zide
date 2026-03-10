@@ -106,6 +106,7 @@ items:
       - Sixth prep slice landed: base dirty/damage assignment plus partial-damage widening now lives under src/terminal/core/view_cache_damage.zig, so the remaining view_cache.zig path is closer to projection/orchestration than publication policy
       - Seventh prep slice landed: presented-generation acknowledgement and damage retirement now lives under src/terminal/core/session_rendering_retirement.zig, so session_rendering.zig no longer mixes capture/feedback with retirement policy inline
       - Eighth prep slice landed: replay_harness now supports a presented baseline phase plus explicit damage assertions, and the first replay-backed redraw-contract fixtures now lock narrow partial publication for gutter rewrites and indent-guide rewrites after a baseline publish
+      - Ninth prep slice landed: replay-backed redraw coverage now also locks dense clear+repaint loops, keeping ED2 plus full visible repaint on the partial path with full-width viewport damage after a presented baseline
 
   - id: VTCORE-06
     title: Keep input encoding as a peer subsystem
