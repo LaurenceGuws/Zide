@@ -8,6 +8,7 @@ comptime {
     _ = @import("layout_tests.zig");
     _ = @import("terminal_reflow_tests.zig");
     _ = @import("terminal/core/terminal_session.zig");
+    _ = @import("terminal/core/terminal_session_tests.zig");
     _ = @import("ui/widgets/terminal_widget_draw.zig");
     _ = @import("terminal_key_encoder_tests.zig");
     _ = @import("terminal_input_encoding_tests.zig");
