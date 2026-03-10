@@ -11,7 +11,7 @@ pub const Status = enum(c_int) {
 };
 
 pub const snapshot_abi_version: u32 = 1;
-pub const event_abi_version: u32 = 2;
+pub const event_abi_version: u32 = 3;
 pub const scrollback_abi_version: u32 = 1;
 pub const renderer_metadata_abi_version: u32 = 1;
 pub const metadata_abi_version: u32 = 1;
@@ -23,6 +23,7 @@ pub const EventKind = enum(c_int) {
     clipboard_write = 3,
     child_exit = 4,
     alive_changed = 5,
+    redraw_ready = 6,
 };
 
 pub const GlyphClassFlags = enum(u32) {
@@ -194,6 +195,7 @@ pub const Handle = struct {
     scratch_cwd: std.ArrayList(u8),
     scratch_clipboard: std.ArrayList(u8),
     scratch_scrollback_cells: std.ArrayList(types.Cell),
+    last_generation: u64,
     last_alive: bool,
     exit_delivered: bool,
 };
@@ -345,6 +347,11 @@ pub fn syncStringEvent(handle: *Handle, kind: EventKind, last: *std.ArrayList(u8
 }
 
 pub fn syncDerivedEvents(handle: *Handle) Status {
+    const generation = handle.session.snapshot().generation;
+    if (handle.last_generation != generation) {
+        queueEvent(handle, .redraw_ready, &[_]u8{}, 0, 0) catch |err| return mapError(err);
+        handle.last_generation = generation;
+    }
     const metadata = handle.session.copyMetadata(handle.allocator, &handle.scratch_title, &handle.scratch_cwd) catch |err| return mapError(err);
     syncStringEvent(handle, .title_changed, &handle.last_title, metadata.title) catch |err| return mapError(err);
     syncStringEvent(handle, .cwd_changed, &handle.last_cwd, metadata.cwd) catch |err| return mapError(err);

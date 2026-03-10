@@ -48,10 +48,12 @@ pub fn create(config: ?*const shared.CreateConfig, out_handle: *?*shared.ZideTer
         .scratch_cwd = .empty,
         .scratch_clipboard = .empty,
         .scratch_scrollback_cells = .empty,
+        .last_generation = 0,
         .last_alive = true,
         .exit_delivered = false,
     };
     session.attachExternalTransport();
+    handle.last_generation = session.snapshot().generation;
     const initial_metadata = session.copyMetadata(allocator, &handle.last_title, &handle.last_cwd) catch |err| {
         log.logf(.warning, "create metadata copy failed err={s}", .{@errorName(err)});
         return .out_of_memory;

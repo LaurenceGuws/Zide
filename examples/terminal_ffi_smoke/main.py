@@ -13,6 +13,7 @@ from examples.common.ffi_host_boot import as_bytes, load_cdll, STATUS_OK  # noqa
 STATUS_OK = 0
 EVENT_TITLE_CHANGED = 1
 EVENT_ALIVE_CHANGED = 5
+EVENT_REDRAW_READY = 6
 EVENT_CLIPBOARD_WRITE = 3
 GLYPH_CLASS_BOX = 1 << 0
 GLYPH_CLASS_BOX_ROUNDED = 1 << 1
@@ -428,6 +429,7 @@ def run_mock_service_smoke(lib_path: Path) -> int:
         saw_title = False
         saw_clipboard = False
         saw_alive_closed = False
+        redraw_events = 0
 
         for chunk in service.stream():
             buf = (ctypes.c_uint8 * len(chunk)).from_buffer_copy(chunk)
@@ -445,6 +447,8 @@ def run_mock_service_smoke(lib_path: Path) -> int:
                         saw_title = True
                     if event.kind == EVENT_CLIPBOARD_WRITE and payload == b"mock-clip":
                         saw_clipboard = True
+                    if event.kind == EVENT_REDRAW_READY:
+                        redraw_events += 1
             finally:
                 lib.zide_terminal_events_free(ctypes.byref(events))
 
@@ -501,6 +505,8 @@ def run_mock_service_smoke(lib_path: Path) -> int:
             raise RuntimeError("missing mock clipboard_write event")
         if not saw_alive_closed:
             raise RuntimeError("missing mock alive_changed event after close_input")
+        if redraw_events == 0:
+            raise RuntimeError("missing mock redraw_ready event")
         return 0
     finally:
         lib.zide_terminal_destroy(handle)

@@ -85,6 +85,7 @@ external non-PTY byte source feeding the terminal through FFI in chunks.
 
 It verifies:
 - incremental output feeding from a host-owned service loop
+- redraw-ready wake events for streamed output
 - title/cwd updates
 - clipboard-write events
 - explicit external-input close through `close_input`

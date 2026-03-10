@@ -294,6 +294,15 @@ The external-host lifecycle contract also moved forward:
   - emits an `alive_changed` event
   - preserves snapshot readability for final rendered content
 
+Embedded-host wake semantics also moved forward:
+
+- the derived terminal event stream now emits `redraw_ready` whenever terminal
+  snapshot generation advances
+- this gives non-PTY hosts a minimal "pull snapshot now" wake signal without
+  inventing a second damage model in the FFI layer
+- damage and generation still remain authoritative in snapshot acquisition;
+  `redraw_ready` is only a scheduling hint for host event loops
+
 Protocol execution also moved another step toward core ownership:
 
 - saved-cursor restore and alt-screen core state transitions now live behind
