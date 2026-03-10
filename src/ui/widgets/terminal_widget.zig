@@ -212,7 +212,6 @@ pub const TerminalWidget = struct {
     }
 
     pub fn pasteClipboardFromSystem(self: *TerminalWidget, shell: *Shell) bool {
-        const log = app_logger.logger("terminal.widget");
         const clip_opt = shell.getClipboardText();
         const html = shell.getClipboardMimeData(self.session.allocator, "text/html");
         const uri_list = shell.getClipboardMimeData(self.session.allocator, "text/uri-list");
@@ -220,50 +219,7 @@ pub const TerminalWidget = struct {
         defer if (html) |buf| self.session.allocator.free(buf);
         defer if (uri_list) |buf| self.session.allocator.free(buf);
         defer if (png) |buf| self.session.allocator.free(buf);
-        const clip = clip_opt orelse "";
-        const has_supported_clipboard_data = clip_opt != null or html != null or uri_list != null or png != null;
-        if (!has_supported_clipboard_data) return false;
-        if (self.session.renderCache().scroll_offset > 0) {
-            self.session.setScrollOffset(0);
-        }
-        if (self.session.sendKittyPasteEvent5522WithMimeRich(clip, html, uri_list, png) catch |err| {
-            log.logf(.warning, "kitty mime paste event failed err={s}", .{@errorName(err)});
-            return false;
-        }) {
-            return true;
-        }
-        if (clip_opt == null) return false;
-        if (self.session.bracketedPasteEnabled()) {
-            self.session.sendText("\x1b[200~") catch |err| {
-                log.logf(.warning, "paste failed sending bracketed prefix err={s}", .{@errorName(err)});
-                return false;
-            };
-            var filtered = std.ArrayList(u8).empty;
-            defer filtered.deinit(self.session.allocator);
-            for (clip_opt.?) |b| {
-                if (b == 0x1b or b == 0x03) continue;
-                filtered.append(self.session.allocator, b) catch {
-                    log.logf(.warning, "paste failed appending filtered clipboard byte", .{});
-                    return false;
-                };
-            }
-            if (filtered.items.len > 0) {
-                self.session.sendText(filtered.items) catch |err| {
-                    log.logf(.warning, "paste failed sending filtered clipboard err={s}", .{@errorName(err)});
-                    return false;
-                };
-            }
-            self.session.sendText("\x1b[201~") catch |err| {
-                log.logf(.warning, "paste failed sending bracketed suffix err={s}", .{@errorName(err)});
-                return false;
-            };
-        } else {
-            self.session.sendText(clip_opt.?) catch |err| {
-                log.logf(.warning, "paste failed sending clipboard err={s}", .{@errorName(err)});
-                return false;
-            };
-        }
-        return true;
+        return self.session.pasteSystemClipboard(clip_opt, html, uri_list, png) catch false;
     }
 
     pub fn draw(
