@@ -40,6 +40,32 @@ The highest-value cleanup is not "make everything deeply nested." It is:
 2. split the remaining true god-files
 3. collapse micro-files that only exist as extraction residue
 
+## 2026-03-10 Re-rank
+
+The original queue is now largely complete.
+
+What is materially better than when this review started:
+- `src/app` is no longer the primary dumping-ground hotspot. Terminal, editor, search, and tabs now live under focused subtrees.
+- `src/editor/editor.zig` and `src/editor/syntax.zig` are no longer the worst god-files in the repo.
+- `src/ui/widgets/*draw*.zig`, `src/ui/renderer.zig`, `src/ui/terminal_font.zig`, and `src/config/lua_config_ziglua_parse.zig` all moved from "active hotspot" to "acceptable facade/root owner" territory.
+- `src/ui/renderer/` micro-file sludge is mostly gone.
+
+What remains as the new top layout-sensitive hotspots:
+1. `src/terminal/core/terminal_session.zig`
+2. `src/terminal/protocol/csi.zig`
+3. `src/terminal/model/screen/screen.zig`
+4. `src/ui/renderer.zig`
+5. `src/editor/search_highlight.zig`
+
+Important distinction:
+- The first three are no longer "file layout only" problems. They are architecture-sensitive terminal core/protocol owners.
+- That means the file-layout lane is approaching completion, and further work should likely move back under the terminal architecture/correctness track instead of continuing generic structure churn.
+
+Current judgment:
+- `renderer.zig` is still large, but it now reads as a legitimate facade over renderer sub-owners rather than an obvious split target.
+- `editor.zig`, `syntax.zig`, and `lua_config_ziglua_parse.zig` are no longer worth further splitting right now.
+- The strongest next cleanup is probably not another folder move. It is a fresh terminal architecture review focused on the remaining large root owners.
+
 ## Inventory Snapshot
 
 Top-level `src/` pressure by file count:

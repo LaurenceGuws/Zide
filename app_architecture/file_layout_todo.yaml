@@ -31,6 +31,7 @@ file_layout_todo:
     - "FL-TERM-01 collapse low-value session_* micro-files into fewer coherent owners"
     - "FL-UI-05 collapse low-value src/ui/renderer micro-files"
     - "FL-CFG-01 split lua_config_ziglua_parse.zig by parser/validation/domain mapping concerns"
+    - "FL-R-01 re-rank remaining hotspots and hand terminal-heavy owners back to the architecture track"
 
   phases:
     - name: "Phase 0 - Structural Baseline"
@@ -220,6 +221,17 @@ file_layout_todo:
 
     - name: "Phase 4 - Verification and Drift Control"
       tasks:
+        - id: FL-R-01
+          title: "Re-rank the remaining hotspots after the major layout cleanup"
+          status: done
+          files:
+            - app_architecture/review/FILE_LAYOUT_HOTSPOTS_REVIEW.md
+            - app_architecture/file_layout_todo.yaml
+          notes:
+            - "2026-03-10: reranked the remaining large files after the app/editor/ui/config cleanup lane."
+            - "Result: the strongest remaining files are now `src/terminal/core/terminal_session.zig`, `src/terminal/protocol/csi.zig`, and `src/terminal/model/screen/screen.zig`."
+            - "Conclusion: the file-layout lane is mostly exhausted; the next real work should likely move back to the terminal architecture/correctness track rather than forcing more generic structure churn."
+
         - id: FL-V-01
           title: "Validate build and import checks after each structural slice"
           status: todo
