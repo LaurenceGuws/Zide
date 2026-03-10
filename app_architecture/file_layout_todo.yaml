@@ -119,6 +119,7 @@ file_layout_todo:
           notes:
             - "Likely boundaries: registry, parse/update orchestration, highlight state, language/query helpers."
             - "2026-03-10: first slice landed in progress by extracting syntax query loading, capture-kind mapping, and query-cache ownership into `src/editor/syntax_queries.zig`, leaving `syntax.zig` focused more tightly on runtime highlighting and injection execution."
+            - "2026-03-10: second slice landed in progress by extracting syntax highlighter runtime lifecycle and layered injection execution into `src/editor/syntax_runtime.zig`, leaving `syntax.zig` more focused on predicate/directive/token utility logic."
 
         - id: FL-UI-01
           title: "Split src/ui/widgets/terminal_widget_draw.zig by draw ownership"
