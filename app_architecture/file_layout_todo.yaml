@@ -1,0 +1,186 @@
+file_layout_todo:
+  scope:
+    description: "File and folder layout cleanup focused on ownership clarity, navigability, and removal of split/flat structural code smells."
+    priorities:
+      - "split large general folders into focused ownership domains"
+      - "split true god-files into cohesive submodules"
+      - "collapse extraction-residue micro-files where independent ownership is fake"
+      - "avoid churn: no bulk moves without an explicit domain map and validation"
+
+  context:
+    references:
+      - app_architecture/review/FILE_LAYOUT_HOTSPOTS_REVIEW.md
+      - app_architecture/terminal/MODULARIZATION_PLAN.md
+      - app_architecture/ui/ui_widget_modularization_todo.yaml
+      - app_architecture/editor/MODULARIZATION_PLAN.md
+      - app_architecture/ui/renderer_todo.yaml
+    notes:
+      - "Reference layout guidance is comparative, not prescriptive: Ghostty is the stronger structural model for Zide than Kitty."
+      - "Do not collapse recently-correct subsystem splits just because file count increased."
+      - "Extraction-only rules still apply unless a task explicitly scopes behavior changes."
+
+  strict_cleanup_queue:
+    - "FL-APP-01 define stable src/app domain map and move one slice at a time"
+    - "FL-ED-01 split src/editor/editor.zig into a real subsystem layout"
+    - "FL-ED-02 split src/editor/syntax.zig into focused syntax modules"
+    - "FL-UI-01 split terminal_widget_draw.zig by draw ownership"
+    - "FL-UI-02 split editor_widget_draw.zig by draw ownership"
+    - "FL-UI-03 thin src/ui/renderer.zig against src/ui/renderer/"
+    - "FL-UI-04 move terminal_font.zig under a focused font/text subsystem"
+    - "FL-TERM-01 collapse low-value session_* micro-files into fewer coherent owners"
+    - "FL-UI-05 collapse low-value src/ui/renderer micro-files"
+    - "FL-CFG-01 split lua_config_ziglua_parse.zig by parser/validation/domain mapping concerns"
+
+  phases:
+    - name: "Phase 0 - Structural Baseline"
+      tasks:
+        - id: FL-0-01
+          title: "Record file-layout hotspot review and reference comparisons"
+          status: done
+          files:
+            - app_architecture/review/FILE_LAYOUT_HOTSPOTS_REVIEW.md
+            - app_architecture/file_layout_todo.yaml
+          notes:
+            - "Local evidence source: tree/scc/file-count review of src/."
+            - "Reference repos reviewed: Ghostty, Kitty, Alacritty."
+
+        - id: FL-0-02
+          title: "Adopt file-layout cleanup as active architecture track"
+          status: done
+          files:
+            - docs/AGENT_HANDOFF.md
+            - docs/INDEX.md
+          notes:
+            - "Handoff should point new sessions to this review/todo."
+
+    - name: "Phase 1 - Folder-Level Dumping Ground Cleanup"
+      tasks:
+        - id: FL-APP-01
+          title: "Define a stable domain map for src/app"
+          status: todo
+          files:
+            - src/app
+          notes:
+            - "Goal: replace suffix-driven flatness with domain-owned folders."
+            - "Likely targets: runtime, frame, terminal, editor, tabs, search, config."
+            - "Do not move files yet until the ownership map is written down."
+
+        - id: FL-APP-02
+          title: "Move terminal-owned app runtime files under a focused src/app/terminal subtree"
+          status: todo
+          files:
+            - src/app
+          notes:
+            - "Includes terminal frame/runtime/intent/tab/close-confirm glue where ownership is terminal-specific."
+
+        - id: FL-APP-03
+          title: "Move editor/search/tab runtime files under focused app subtrees"
+          status: todo
+          files:
+            - src/app
+          notes:
+            - "Do this after terminal slice establishes the domain-map pattern."
+
+    - name: "Phase 2 - Large File Splits"
+      tasks:
+        - id: FL-ED-01
+          title: "Split src/editor/editor.zig into focused editor subsystem modules"
+          status: todo
+          files:
+            - src/editor/editor.zig
+          notes:
+            - "Keep editor.zig as facade/orchestrator."
+            - "Avoid creating a spray of tiny files; group by editing ownership."
+
+        - id: FL-ED-02
+          title: "Split src/editor/syntax.zig into a focused syntax subdir"
+          status: todo
+          files:
+            - src/editor/syntax.zig
+          notes:
+            - "Likely boundaries: registry, parse/update orchestration, highlight state, language/query helpers."
+
+        - id: FL-UI-01
+          title: "Split src/ui/widgets/terminal_widget_draw.zig by draw ownership"
+          status: todo
+          files:
+            - src/ui/widgets/terminal_widget_draw.zig
+          notes:
+            - "Possible owners: grid/text, overlays, chrome/scrollbar, kitty draw path."
+
+        - id: FL-UI-02
+          title: "Split src/ui/widgets/editor_widget_draw.zig by draw ownership"
+          status: todo
+          files:
+            - src/ui/widgets/editor_widget_draw.zig
+          notes:
+            - "Possible owners: text/layout, gutter/chrome, overlays/cursor/selection."
+
+        - id: FL-UI-03
+          title: "Thin src/ui/renderer.zig into a real facade over src/ui/renderer/"
+          status: todo
+          files:
+            - src/ui/renderer.zig
+            - src/ui/renderer
+          notes:
+            - "Only move logic that already has a natural renderer sub-owner."
+
+        - id: FL-UI-04
+          title: "Move src/ui/terminal_font.zig under a focused font/text subsystem"
+          status: todo
+          files:
+            - src/ui/terminal_font.zig
+          notes:
+            - "Prefer one cohesive subsystem move over another giant top-level file."
+
+        - id: FL-CFG-01
+          title: "Split src/config/lua_config_ziglua_parse.zig by parser/validation/domain mapping concerns"
+          status: todo
+          files:
+            - src/config/lua_config_ziglua_parse.zig
+          notes:
+            - "Keep public config loading entrypoints stable."
+
+    - name: "Phase 3 - Over-Split Artifact Collapse"
+      tasks:
+        - id: FL-TERM-01
+          title: "Collapse low-value session_* micro-files into fewer coherent owners"
+          status: todo
+          files:
+            - src/terminal/core
+          notes:
+            - "Target only the smallest adjacent helpers where the split no longer pays for itself."
+            - "Keep protocol/input/rendering/runtime as distinct owners."
+
+        - id: FL-UI-05
+          title: "Collapse low-value renderer micro-files into stronger local owners"
+          status: todo
+          files:
+            - src/ui/renderer
+          notes:
+            - "Examples include tiny queue/state/flag helper files that add navigation cost without owning real behavior."
+
+    - name: "Phase 4 - Verification and Drift Control"
+      tasks:
+        - id: FL-V-01
+          title: "Validate build and import checks after each structural slice"
+          status: todo
+          commands:
+            - zig build test
+            - zig build check-app-imports
+            - zig build check-editor-imports
+            - zig build check-input-imports
+            - zig build -Dmode=terminal -Doptimize=ReleaseFast
+          notes:
+            - "Use per-slice validation; do not batch large file moves without a clean checkpoint."
+
+        - id: FL-V-02
+          title: "Update owning architecture docs after each completed slice"
+          status: todo
+          files:
+            - docs/AGENT_HANDOFF.md
+            - docs/INDEX.md
+            - app_architecture/review/FILE_LAYOUT_HOTSPOTS_REVIEW.md
+            - app_architecture/file_layout_todo.yaml
+          notes:
+            - "Avoid doc drift between active hotspot review and cleanup queue."

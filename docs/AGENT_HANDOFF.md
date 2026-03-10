@@ -1,14 +1,13 @@
 ## Handoff (High-Level)
 
 ### Current Focus
-- Primary: terminal architecture cleanup after the rain/render investigation stabilized the worst redraw faults.
-  - detailed review + recent fix history: `app_architecture/review/TERMINAL_240HZ_RAIN_INVESTIGATION.md`
-  - terminal architecture plan: `app_architecture/terminal/MODULARIZATION_PLAN.md`
-  - damage/dirty notes: `app_architecture/terminal/DAMAGE_TRACKING.md`
+- Primary: structural file/folder layout cleanup after the terminal correctness rewrite substantially reduced the worst backend/UI design smells.
+  - file/folder hotspot review: `app_architecture/review/FILE_LAYOUT_HOTSPOTS_REVIEW.md`
+  - active cleanup queue: `app_architecture/file_layout_todo.yaml`
+  - terminal architecture baseline: `app_architecture/terminal/MODULARIZATION_PLAN.md`
   - UI/backend seam tracker: `app_architecture/ui/ui_widget_modularization_todo.yaml`
-- Active execution order now lives in `app_architecture/terminal/MODULARIZATION_PLAN.md` under `Strict Cleanup Queue (2026-03-09)`.
-- Current top-of-queue focus: widget input/draw policy reduction and protocol/parser boundary typing cleanup.
-- Latest correctness pitfall in that area: parser-owned startup sequences were still able to hit lock-taking input-mode helpers from inside `feedOutputBytes(...)`; kitty keyboard protocol setup now uses explicit locked key-mode paths after that bug froze `nvim`/`lazygit`/`codex-cli` during init.
+- Current top-of-queue focus: `src/app` folder restructuring, remaining giant file splits (`editor`, widget draw, renderer/font, config parse), and collapse of low-value micro-files created by earlier extraction work.
+- Terminal correctness cleanup is not abandoned; it is now background context and baseline, not the primary structural review lane.
 
 ### Recent Changes (High-Level)
 - The high-refresh rain investigation removed most renderer-side force-full and stale invalidation escape hatches.
@@ -40,6 +39,8 @@
 - Do not keep dead seams or compatibility wrappers just to avoid a hard cut when the old surface is holding the terminal back.
 
 ### Where to Look
+- Primary file/folder layout review: `app_architecture/review/FILE_LAYOUT_HOTSPOTS_REVIEW.md`
+- Active file/folder cleanup queue: `app_architecture/file_layout_todo.yaml`
 - Primary architecture review + recent cleanup history: `app_architecture/review/TERMINAL_240HZ_RAIN_INVESTIGATION.md`
 - Terminal architecture plan + current hotspot list: `app_architecture/terminal/MODULARIZATION_PLAN.md`
 - Terminal damage/dirty background + redraw/publication hotspot list: `app_architecture/terminal/DAMAGE_TRACKING.md`

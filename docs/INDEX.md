@@ -9,6 +9,7 @@ Quick map of where to look for common needs.
 
 ## Task tracking (source of truth)
 - `app_architecture/**/_todo.yaml` — active task lists and status.
+  - `app_architecture/file_layout_todo.yaml` — file/folder layout cleanup queue (split large folders/files, collapse low-value micro-files).
   - `app_architecture/ui/renderer_todo.yaml` — renderer modularization + OS abstraction.
   - `app_architecture/ui/ui_widget_modularization_todo.yaml` — UI widget modularization (TerminalWidget/UI splits).
   - `app_architecture/ui/font_rendering_todo.yaml` — font rendering strategy + implementation plan (kitty/ghostty-tier goals).
@@ -44,3 +45,4 @@ Quick map of where to look for common needs.
 
 ## Reviews and audits
 - `app_architecture/review/` — past review notes (scope + date in file).
+  - `app_architecture/review/FILE_LAYOUT_HOTSPOTS_REVIEW.md` — current structure smell review and reference-repo comparison.
