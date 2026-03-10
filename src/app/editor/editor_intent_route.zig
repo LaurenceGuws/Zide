@@ -1,6 +1,6 @@
 const app_editor_tab_intents = @import("editor_tab_intents.zig");
-const app_modes = @import("modes/mod.zig");
-const app_tab_action_route = @import("tab_action_route.zig");
+const app_modes = @import("../modes/mod.zig");
+const app_tab_action_route = @import("../tab_action_route.zig");
 const std = @import("std");
 
 pub fn routeCreateAndSync(

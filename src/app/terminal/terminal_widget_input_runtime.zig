@@ -1,5 +1,5 @@
 const std = @import("std");
-const app_file_detect = @import("../file_detect.zig");
+const app_file_detect = @import("../editor/file_detect.zig");
 const app_logger = @import("../../app_logger.zig");
 const app_shell = @import("../../app_shell.zig");
 const shared_types = @import("../../types/mod.zig");

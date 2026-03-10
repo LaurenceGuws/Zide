@@ -1,5 +1,5 @@
-const editor_mod = @import("../editor/editor.zig");
-const editor_render_cache_mod = @import("../editor/render/cache.zig");
+const editor_mod = @import("../../editor/editor.zig");
+const editor_render_cache_mod = @import("../../editor/render/cache.zig");
 
 const Editor = editor_mod.Editor;
 const EditorRenderCache = editor_render_cache_mod.EditorRenderCache;

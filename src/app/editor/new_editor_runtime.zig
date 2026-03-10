@@ -1,6 +1,6 @@
 const app_editor_create_intent_runtime = @import("editor_create_intent_runtime.zig");
-const app_mode_adapter_sync_runtime = @import("mode_adapter_sync_runtime.zig");
-const editor_mod = @import("../editor/editor.zig");
+const app_mode_adapter_sync_runtime = @import("../mode_adapter_sync_runtime.zig");
+const editor_mod = @import("../../editor/editor.zig");
 
 const Editor = editor_mod.Editor;
 

@@ -1,5 +1,5 @@
-const input_actions = @import("../input/input_actions.zig");
-const editor_mod = @import("../editor/editor.zig");
+const input_actions = @import("../../input/input_actions.zig");
+const editor_mod = @import("../../editor/editor.zig");
 
 const Editor = editor_mod.Editor;
 

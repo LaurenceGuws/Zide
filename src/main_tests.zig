@@ -1,5 +1,5 @@
 const std = @import("std");
-const app_editor_actions = @import("app/editor_actions.zig");
+const app_editor_actions = @import("app/editor/editor_actions.zig");
 const app_mode_adapter_sync_runtime = @import("app/mode_adapter_sync_runtime.zig");
 const app_modes = @import("app/modes/mod.zig");
 const app_search_panel_input = @import("app/search/search_panel_input.zig");

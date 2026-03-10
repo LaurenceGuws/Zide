@@ -1,11 +1,11 @@
 const std = @import("std");
 const app_editor_actions = @import("editor_actions.zig");
-const app_search_panel_state = @import("search/search_panel_state.zig");
-const app_shell = @import("../app_shell.zig");
-const editor_mod = @import("../editor/editor.zig");
-const shared_types = @import("../types/mod.zig");
-const widgets = @import("../ui/widgets.zig");
-const input_actions = @import("../input/input_actions.zig");
+const app_search_panel_state = @import("../search/search_panel_state.zig");
+const app_shell = @import("../../app_shell.zig");
+const editor_mod = @import("../../editor/editor.zig");
+const shared_types = @import("../../types/mod.zig");
+const widgets = @import("../../ui/widgets.zig");
+const input_actions = @import("../../input/input_actions.zig");
 
 const Editor = editor_mod.Editor;
 const EditorWidget = widgets.EditorWidget;

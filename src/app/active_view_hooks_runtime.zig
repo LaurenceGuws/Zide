@@ -1,6 +1,6 @@
 const std = @import("std");
 const app_active_view_runtime = @import("active_view_runtime.zig");
-const app_editor_frame_hooks_runtime = @import("editor_frame_hooks_runtime.zig");
+const app_editor_frame_hooks_runtime = @import("editor/editor_frame_hooks_runtime.zig");
 const app_bootstrap = @import("bootstrap.zig");
 const app_modes = @import("modes/mod.zig");
 const app_terminal_tab_bar_sync_runtime = @import("terminal/terminal_tab_bar_sync_runtime.zig");
