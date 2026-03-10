@@ -28,13 +28,14 @@ items:
 
   - id: REPO-TEST-02
     title: Re-home scattered multi-module Zig test entrypoints
-    status: in_progress
+    status: done
     priority: medium
     notes:
       - Apply the REPO-TEST-01 policy
       - Prefer reviewable, category-based moves instead of one large migration
       - First slice landed: generic root-level app/editor/config/layout/widget test entrypoints moved from src/ into tests/
       - Second slice landed: standalone terminal root test entrypoints moved from src/ into tests/, while tightly coupled subsystem tests remain source-adjacent
+      - Remaining src-adjacent exceptions are now documented explicitly in tests/README.md
 
   - id: REPO-DOC-02
     title: Remove or archive stale docs and stale completed todos
@@ -44,3 +45,4 @@ items:
       - Run only after active-vs-historical classification is documented
       - First cleanup slice should target obvious placement/naming outliers before broader stale-doc deletion
       - First cleanup slice landed: moved the old root-level terminal/editor FFI host migration beta todo into app_architecture/terminal/ with stable naming
+      - Second cleanup slice landed: moved mode-layering validation and binary-size baseline records out of top-level docs/ into app_architecture/review/

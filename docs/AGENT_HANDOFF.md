@@ -13,6 +13,7 @@
 - Terminal correctness cleanup is not abandoned; it is now background context and baseline, not the active repo-structure lane.
 - Repo-structure progress is now real: `src/tools` has been collapsed into `tools/`, a `tests/` root now exists, the aggregate test entrypoint has moved out of `src/` into `tests/tests_main.zig`, generic root-level app/editor/config/layout/widget test entry files have moved into `tests/`, and standalone terminal root test entry files have also moved into `tests/`. Tightly coupled subsystem tests still stay source-adjacent where locality is useful.
 - Repo-structure progress is now real on docs too: doc lifecycle policy is now explicit in `docs/WORKFLOW.md`, and the old root-level terminal/editor FFI host migration beta todo has been re-homed under `app_architecture/terminal/` with stable naming.
+- Repo-structure progress is also reducing top-level doc noise: mode-layering validation and binary-size baseline records now live under `app_architecture/review/` instead of `docs/`.
 
 ### Recent Changes (High-Level)
 - The high-refresh rain investigation removed most renderer-side force-full and stale invalidation escape hatches.

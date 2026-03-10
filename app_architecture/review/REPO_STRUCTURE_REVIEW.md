@@ -98,7 +98,7 @@ Status:
 - first category-based re-home landed for generic root-level app/editor/config/layout/widget test entrypoints
 - second category-based re-home landed for standalone terminal root test entrypoints
 - tightly coupled subsystem tests still stay source-adjacent where locality is useful
-- category-based re-homing of scattered root-level test files remains follow-up work
+- remaining source-adjacent exceptions are now explicitly documented in `tests/README.md`
 
 ### Tools
 
@@ -125,6 +125,7 @@ Status:
 - doc lifecycle policy is now explicitly recorded in `docs/WORKFLOW.md` and summarized in `docs/INDEX.md`
 - the next cleanup slices should target obvious placement/naming outliers before broader stale-doc deletion
 - first cleanup slice landed: the old root-level `app_architecture/terminal_editor_ffi_host_migration_beta_todo.md` outlier was re-homed to `app_architecture/terminal/ffi_host_migration_todo.md`
+- second cleanup slice landed: mode-layering validation and binary-size baseline records were re-homed from `docs/` into `app_architecture/review/`
 
 ## Priority Order
 

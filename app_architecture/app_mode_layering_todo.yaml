@@ -430,7 +430,7 @@ app_mode_layering_todo:
           title: "Capture pre/post compatibility matrix"
           status: done
           files_to_add:
-            - docs/app_mode_layering_validation.md
+            - app_architecture/review/app_mode_layering_validation.md
           notes:
             - "Record command matrix and expected outcomes for all modes."
         - id: MODE-04-02

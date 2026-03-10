@@ -51,6 +51,8 @@ Quick map of where to look for common needs.
   - `app_architecture/review/FILE_LAYOUT_HOTSPOTS_REVIEW.md` — current structure smell review and reference-repo comparison.
   - `app_architecture/review/REPO_STRUCTURE_REVIEW.md` — repo hygiene review for tests, tooling roots, and stale docs/tests.
   - `app_architecture/review/SRC_APP_DOMAIN_MAP.md` — authoritative `src/app` ownership map for the ongoing folder cleanup.
+  - `app_architecture/review/app_mode_layering_validation.md` — mode-layering extraction validation matrix and gate bundle authority.
+  - `app_architecture/review/mode_binary_size_baseline.md` — focused-binary size snapshot used by the mode extraction lane.
 
 ## Doc ownership quick rule
 - `docs/` — active workflow and top-level contributor/operator guidance.
