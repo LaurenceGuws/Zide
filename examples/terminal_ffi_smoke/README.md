@@ -50,6 +50,12 @@ Mock external-host scenario:
 Shared Python host boot helpers:
 - `examples/common/ffi_host_boot.py`
 
+Host migration checklist:
+- poll terminal-side output/publication before editor-side work when a host owns both surfaces
+- release owned buffers in reverse order of acquisition
+- keep terminal snapshot/scrollback/event lifetimes scoped to one host pump tick
+- treat no-PTY feed loops as first-class, not just fallback smokes
+
 Installed bridge artifacts:
 - `zig-out/lib/libzide-terminal-ffi.so`
 - `zig-out/include/zide_terminal_ffi.h`

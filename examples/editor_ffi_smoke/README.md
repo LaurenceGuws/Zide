@@ -28,3 +28,8 @@ Installed bridge artifacts:
 
 Shared Python host boot helpers:
 - `examples/common/ffi_host_boot.py`
+
+Host migration checklist:
+- if a host owns both bridges, run one terminal pump tick before editor-side mutations/queries
+- free editor-owned strings after each query scope instead of caching borrowed pointers
+- keep the editor bridge independent of PTY/session assumptions
