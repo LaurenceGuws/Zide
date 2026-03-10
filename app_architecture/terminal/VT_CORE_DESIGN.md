@@ -358,6 +358,9 @@ Session construction also moved one step toward host-wrapper ownership:
   delegate through `src/terminal/core/session_rendering.zig` and
   `src/terminal/core/session_queries.zig`, instead of carrying that
   orchestration inline in `terminal_session.zig`
+- stale private root-session shims for SGR application and key-mode flag reads
+  are now removed too, keeping the root session file closer to a real facade
+  instead of a pile of dead internal forwarding
 
 ### 2026-03-10 protocol split follow-up
 

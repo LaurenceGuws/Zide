@@ -475,10 +475,6 @@ pub const TerminalSession = struct {
         session_protocol.scrollRegionDown(self, count);
     }
 
-    fn applySgr(self: *TerminalSession, action: csi_mod.CsiAction) void {
-        protocol_csi.applySgr(self, action);
-    }
-
     pub fn paletteColor(self: *const TerminalSession, idx: u8) types.Color {
         return session_protocol.paletteColor(self, idx);
     }
@@ -579,10 +575,6 @@ pub const TerminalSession = struct {
 
     pub fn updateViewCacheForScrollLocked(self: *TerminalSession) void {
         session_rendering.updateViewCacheForScrollLocked(self);
-    }
-
-    fn keyModeFlags(self: *TerminalSession) u32 {
-        return input_modes.keyModeFlags(self);
     }
 
     pub fn keyModeFlagsValue(self: *TerminalSession) u32 {
