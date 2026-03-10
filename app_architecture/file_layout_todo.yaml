@@ -151,12 +151,13 @@ file_layout_todo:
 
         - id: FL-UI-03
           title: "Thin src/ui/renderer.zig into a real facade over src/ui/renderer/"
-          status: todo
+          status: in_progress
           files:
             - src/ui/renderer.zig
             - src/ui/renderer
           notes:
             - "Only move logic that already has a natural renderer sub-owner."
+            - "2026-03-10: first slice landed in progress by extracting SDL/input event polling, event dispatch, and frame queue compaction into `src/ui/renderer/input_runtime.zig`, leaving `renderer.zig` thinner around top-level renderer orchestration."
 
         - id: FL-UI-04
           title: "Move src/ui/terminal_font.zig under a focused font/text subsystem"
