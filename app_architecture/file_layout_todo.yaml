@@ -183,6 +183,7 @@ file_layout_todo:
           notes:
             - "Keep public config loading entrypoints stable."
             - "2026-03-10: first slice landed in progress by extracting theme/color/editor-theme parsing into `src/config/lua_config_theme_parse.zig`. `lua_config_ziglua_parse.zig` now focuses more tightly on scalar option parsing and keybind parsing instead of also owning the full theme parser."
+            - "2026-03-10: second slice landed in progress by extracting keybind parsing into `src/config/lua_config_keybind_parse.zig`. `lua_config_ziglua_parse.zig` now focuses more tightly on scalar/domain option parsing instead of also owning the full keybind parser."
 
     - name: "Phase 3 - Over-Split Artifact Collapse"
       tasks:
