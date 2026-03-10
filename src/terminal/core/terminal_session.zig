@@ -22,6 +22,7 @@ const input_modes = @import("input_modes.zig");
 const hyperlink_table = @import("hyperlink_table.zig");
 const state_reset = @import("state_reset.zig");
 const terminal_core_mod = @import("terminal_core.zig");
+const session_host_queries = @import("session_host_queries.zig");
 const session_queries = @import("session_queries.zig");
 const session_content = @import("session_content.zig");
 const session_selection = @import("session_selection.zig");
@@ -61,7 +62,7 @@ pub const ScrollbackInfo = session_content.ScrollbackInfo;
 pub const ScrollbackRange = session_content.ScrollbackRange;
 pub const SelectionGesture = session_selection.SelectionGesture;
 pub const ClickSelectionResult = session_selection.ClickSelectionResult;
-pub const SessionMetadata = session_queries.SessionMetadata;
+pub const SessionMetadata = session_host_queries.SessionMetadata;
 pub const PresentedRenderCache = session_rendering.PresentedRenderCache;
 pub const PresentationCapture = session_rendering.PresentationCapture;
 
@@ -811,7 +812,7 @@ pub const TerminalSession = struct {
         title_out: *std.ArrayList(u8),
         cwd_out: *std.ArrayList(u8),
     ) !SessionMetadata {
-        return session_queries.copyMetadata(self, allocator, title_out, cwd_out);
+        return session_host_queries.copyMetadata(self, allocator, title_out, cwd_out);
     }
 
     pub fn clearPublishedDamageIfGeneration(self: *TerminalSession, expected_generation: u64, clear_screen_dirty: bool) bool {
@@ -980,18 +981,18 @@ pub const TerminalSession = struct {
         return session_interaction.mouseReportingEnabled(self);
     }
 
-    pub const CloseConfirmSignals = session_queries.CloseConfirmSignals;
+    pub const CloseConfirmSignals = session_host_queries.CloseConfirmSignals;
 
     pub fn closeConfirmSignals(self: *TerminalSession) CloseConfirmSignals {
-        return session_queries.closeConfirmSignals(self);
+        return session_host_queries.closeConfirmSignals(self);
     }
 
     pub fn shouldConfirmClose(self: *TerminalSession) bool {
-        return session_queries.shouldConfirmClose(self);
+        return session_host_queries.shouldConfirmClose(self);
     }
 
     pub fn isAlive(self: *TerminalSession) bool {
-        return session_queries.isAlive(self);
+        return session_host_queries.isAlive(self);
     }
 
     pub fn getDamage(self: *TerminalSession) ?struct {
