@@ -12,6 +12,7 @@
   - make PTY one transport implementation, not the architectural center
   - current implementation state: `TerminalSession` now wraps an internal `TerminalCore` owner for engine state, with PTY/runtime/threading still session-owned
   - protocol execution is beginning to split along the same line: pure engine-side helpers now live under `terminal_core_protocol.zig`, while session-coupled protocol behavior remains in `session_protocol.zig`
+  - parser/control dispatch entry helpers now also live under `terminal_core_dispatch.zig`; parser byte feed still stays session-owned because locking and publication are not split yet
 - Repo-structure cleanup is complete enough; do not keep grinding non-product cleanup unless a new concrete smell appears.
 - Terminal correctness cleanup remains the quality bar, but the current active lane is architectural center-of-gravity correction.
 
