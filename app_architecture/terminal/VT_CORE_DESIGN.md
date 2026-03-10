@@ -271,6 +271,12 @@ That path is now also core-tested:
 - external transport now has an explicit "closed" state instead of only
   "attached vs detached"
 
+It is also no longer FFI-only:
+
+- the replay harness now uses external transport for normal non-reply fixtures
+- PTY attachment remains only for the reply-capture subset that genuinely needs
+  a writable transport sink
+
 ## Compatibility Strategy
 
 We do not go from zero to hero in one patch.
