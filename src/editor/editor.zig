@@ -7,6 +7,7 @@ const ts_api = @import("treesitter_api.zig");
 const grammar_manager_mod = @import("grammar_manager.zig");
 const editor_search_highlight = @import("search_highlight.zig");
 const editor_selection_state = @import("selection_state.zig");
+const editor_navigation = @import("navigation.zig");
 const app_logger = @import("../app_logger.zig");
 
 const TextStore = text_store.TextStore;
@@ -19,6 +20,7 @@ pub const Editor = struct {
     const highlighter_large_file_threshold_bytes: usize = 8 * 1024 * 1024;
     const SearchHighlight = editor_search_highlight.SearchHighlightOps(@This());
     const SelectionState = editor_selection_state.SelectionStateOps(@This());
+    const Navigation = editor_navigation.NavigationOps(@This());
 
     pub const ClusterProvider = struct {
         ctx: *anyopaque,
@@ -245,194 +247,14 @@ pub const Editor = struct {
     // Cursor movement
     // ─────────────────────────────────────────────────────────────────────────
 
-    pub fn moveCursorLeft(self: *Editor) void {
-        const log = app_logger.logger("editor.input");
-        if (self.hasOnlyCaretSelections()) {
-            self.moveCaretSetHorizontal(-1) catch |err| {
-                log.logf(.warning, "move caret set left failed: {s}", .{@errorName(err)});
-            };
-            return;
-        }
-        if (self.hasSelectionSetState() and !self.hasRectangularSelectionState()) {
-            var collapsed = std.ArrayList(usize).empty;
-            defer collapsed.deinit(self.allocator);
-            if (self.selection) |sel| {
-                self.tryAppendCollapseOffset(&collapsed, sel.normalized().start.offset);
-            } else {
-                self.tryAppendCollapseOffset(&collapsed, self.cursor.offset);
-            }
-            for (self.selections.items) |sel| {
-                self.tryAppendCollapseOffset(&collapsed, sel.normalized().start.offset);
-            }
-            self.restoreCaretSelections(collapsed.items, collapsed.items[0]) catch |err| {
-                log.logf(.warning, "restore collapsed carets (left) failed: {s}", .{@errorName(err)});
-            };
-            self.selection = null;
-            return;
-        }
-        if (self.cursor.offset == 0) return;
-        self.cursor.offset -= 1;
-        self.updateCursorPosition();
-        self.preferred_visual_col = null;
-        self.selection = null;
-        self.clearSelections();
-    }
-
-    pub fn moveCursorRight(self: *Editor) void {
-        const log = app_logger.logger("editor.input");
-        if (self.hasOnlyCaretSelections()) {
-            self.moveCaretSetHorizontal(1) catch |err| {
-                log.logf(.warning, "move caret set right failed: {s}", .{@errorName(err)});
-            };
-            return;
-        }
-        if (self.hasSelectionSetState() and !self.hasRectangularSelectionState()) {
-            var collapsed = std.ArrayList(usize).empty;
-            defer collapsed.deinit(self.allocator);
-            if (self.selection) |sel| {
-                self.tryAppendCollapseOffset(&collapsed, sel.normalized().end.offset);
-            } else {
-                self.tryAppendCollapseOffset(&collapsed, self.cursor.offset);
-            }
-            for (self.selections.items) |sel| {
-                self.tryAppendCollapseOffset(&collapsed, sel.normalized().end.offset);
-            }
-            self.restoreCaretSelections(collapsed.items, collapsed.items[0]) catch |err| {
-                log.logf(.warning, "restore collapsed carets (right) failed: {s}", .{@errorName(err)});
-            };
-            self.selection = null;
-            return;
-        }
-        const total = self.buffer.totalLen();
-        if (self.cursor.offset >= total) return;
-        self.cursor.offset += 1;
-        self.updateCursorPosition();
-        self.preferred_visual_col = null;
-        self.selection = null;
-        self.clearSelections();
-    }
-
-    pub fn moveCursorUp(self: *Editor) void {
-        const log = app_logger.logger("editor.input");
-        if (self.hasOnlyCaretSelections()) return;
-        if (self.hasSelectionSetState() and !self.hasRectangularSelectionState()) {
-            var collapsed = std.ArrayList(usize).empty;
-            defer collapsed.deinit(self.allocator);
-            if (self.selection) |sel| {
-                self.tryAppendCollapseOffset(&collapsed, sel.normalized().start.offset);
-            } else {
-                self.tryAppendCollapseOffset(&collapsed, self.cursor.offset);
-            }
-            for (self.selections.items) |sel| {
-                self.tryAppendCollapseOffset(&collapsed, sel.normalized().start.offset);
-            }
-            self.restoreCaretSelections(collapsed.items, collapsed.items[0]) catch |err| {
-                log.logf(.warning, "restore collapsed carets (up) failed: {s}", .{@errorName(err)});
-            };
-            self.selection = null;
-            return;
-        }
-        if (self.cursor.line == 0) return;
-        const target_col = self.cursor.col;
-        self.cursor.line -= 1;
-        const line_len = self.buffer.lineLen(self.cursor.line);
-        self.cursor.col = @min(target_col, line_len);
-        self.updateCursorOffset();
-        self.preferred_visual_col = null;
-        self.selection = null;
-        self.clearSelections();
-    }
-
-    pub fn moveCursorDown(self: *Editor) void {
-        const log = app_logger.logger("editor.input");
-        if (self.hasOnlyCaretSelections()) return;
-        if (self.hasSelectionSetState() and !self.hasRectangularSelectionState()) {
-            var collapsed = std.ArrayList(usize).empty;
-            defer collapsed.deinit(self.allocator);
-            if (self.selection) |sel| {
-                self.tryAppendCollapseOffset(&collapsed, sel.normalized().end.offset);
-            } else {
-                self.tryAppendCollapseOffset(&collapsed, self.cursor.offset);
-            }
-            for (self.selections.items) |sel| {
-                self.tryAppendCollapseOffset(&collapsed, sel.normalized().end.offset);
-            }
-            self.restoreCaretSelections(collapsed.items, collapsed.items[0]) catch |err| {
-                log.logf(.warning, "restore collapsed carets (down) failed: {s}", .{@errorName(err)});
-            };
-            self.selection = null;
-            return;
-        }
-        const line_count = self.buffer.lineCount();
-        if (self.cursor.line + 1 >= line_count) return;
-        const target_col = self.cursor.col;
-        self.cursor.line += 1;
-        const line_len = self.buffer.lineLen(self.cursor.line);
-        self.cursor.col = @min(target_col, line_len);
-        self.updateCursorOffset();
-        self.preferred_visual_col = null;
-        self.selection = null;
-        self.clearSelections();
-    }
-
-    pub fn moveCursorToLineStart(self: *Editor) void {
-        const log = app_logger.logger("editor.input");
-        if (self.hasOnlyCaretSelections()) {
-            self.moveCaretSetToLineBoundary(true) catch |err| {
-                log.logf(.warning, "move caret set to line start failed: {s}", .{@errorName(err)});
-            };
-            return;
-        }
-        self.cursor.col = 0;
-        self.updateCursorOffset();
-        self.preferred_visual_col = null;
-        self.selection = null;
-        self.clearSelections();
-    }
-
-    pub fn moveCursorToLineEnd(self: *Editor) void {
-        const log = app_logger.logger("editor.input");
-        if (self.hasOnlyCaretSelections()) {
-            self.moveCaretSetToLineBoundary(false) catch |err| {
-                log.logf(.warning, "move caret set to line end failed: {s}", .{@errorName(err)});
-            };
-            return;
-        }
-        const line_len = self.buffer.lineLen(self.cursor.line);
-        self.cursor.col = line_len;
-        self.updateCursorOffset();
-        self.preferred_visual_col = null;
-        self.selection = null;
-        self.clearSelections();
-    }
-
-    pub fn moveCursorWordLeft(self: *Editor) void {
-        const log = app_logger.logger("editor.input");
-        if (self.hasOnlyCaretSelections()) {
-            self.moveCaretSetByWord(true) catch |err| {
-                log.logf(.warning, "move caret set word-left failed: {s}", .{@errorName(err)});
-            };
-            return;
-        }
-        const target = self.wordLeftOffset(self.cursor.offset);
-        self.setCursorOffsetNoClear(target);
-        self.selection = null;
-        self.clearSelections();
-    }
-
-    pub fn moveCursorWordRight(self: *Editor) void {
-        const log = app_logger.logger("editor.input");
-        if (self.hasOnlyCaretSelections()) {
-            self.moveCaretSetByWord(false) catch |err| {
-                log.logf(.warning, "move caret set word-right failed: {s}", .{@errorName(err)});
-            };
-            return;
-        }
-        const target = self.wordRightOffset(self.cursor.offset);
-        self.setCursorOffsetNoClear(target);
-        self.selection = null;
-        self.clearSelections();
-    }
+    pub fn moveCursorLeft(self: *Editor) void { Navigation.moveCursorLeft(self); }
+    pub fn moveCursorRight(self: *Editor) void { Navigation.moveCursorRight(self); }
+    pub fn moveCursorUp(self: *Editor) void { Navigation.moveCursorUp(self); }
+    pub fn moveCursorDown(self: *Editor) void { Navigation.moveCursorDown(self); }
+    pub fn moveCursorToLineStart(self: *Editor) void { Navigation.moveCursorToLineStart(self); }
+    pub fn moveCursorToLineEnd(self: *Editor) void { Navigation.moveCursorToLineEnd(self); }
+    pub fn moveCursorWordLeft(self: *Editor) void { Navigation.moveCursorWordLeft(self); }
+    pub fn moveCursorWordRight(self: *Editor) void { Navigation.moveCursorWordRight(self); }
 
     pub fn hasRectangularSelectionState(self: *Editor) bool {
         return SelectionState.hasRectangularSelectionState(self);
@@ -454,171 +276,16 @@ pub const Editor = struct {
         try SelectionState.extendSelectionSetWithHeads(self, target_heads);
     }
 
-    pub fn extendSelectionLeft(self: *Editor) void {
-        const log = app_logger.logger("editor.input");
-        if (self.hasSelectionSetState() and !self.hasRectangularSelectionState()) {
-            var anchors = std.ArrayList(usize).empty;
-            defer anchors.deinit(self.allocator);
-            var target_heads = std.ArrayList(usize).empty;
-            defer target_heads.deinit(self.allocator);
-            self.collectSelectionAnchorsAndHeads(&anchors, &target_heads) catch |err| {
-                log.logf(.warning, "collect selection anchors/heads (left) failed: {s}", .{@errorName(err)});
-                return;
-            };
-            for (target_heads.items) |*offset| {
-                if (offset.* > 0) offset.* -= 1;
-            }
-            self.restoreExtendedCaretSelections(anchors.items, target_heads.items) catch |err| {
-                log.logf(.warning, "restore extended carets (left) failed: {s}", .{@errorName(err)});
-            };
-            return;
-        }
-        self.extendPrimarySelectionToOffset(if (self.cursor.offset > 0) self.cursor.offset - 1 else 0);
-    }
-
-    pub fn extendSelectionRight(self: *Editor) void {
-        const log = app_logger.logger("editor.input");
-        if (self.hasSelectionSetState() and !self.hasRectangularSelectionState()) {
-            var anchors = std.ArrayList(usize).empty;
-            defer anchors.deinit(self.allocator);
-            var target_heads = std.ArrayList(usize).empty;
-            defer target_heads.deinit(self.allocator);
-            self.collectSelectionAnchorsAndHeads(&anchors, &target_heads) catch |err| {
-                log.logf(.warning, "collect selection anchors/heads (right) failed: {s}", .{@errorName(err)});
-                return;
-            };
-            const total = self.buffer.totalLen();
-            for (target_heads.items) |*offset| {
-                if (offset.* < total) offset.* += 1;
-            }
-            self.restoreExtendedCaretSelections(anchors.items, target_heads.items) catch |err| {
-                log.logf(.warning, "restore extended carets (right) failed: {s}", .{@errorName(err)});
-            };
-            return;
-        }
-        const total = self.buffer.totalLen();
-        self.extendPrimarySelectionToOffset(if (self.cursor.offset < total) self.cursor.offset + 1 else total);
-    }
-
-    pub fn extendSelectionToLineStart(self: *Editor) void {
-        const log = app_logger.logger("editor.input");
-        if (self.hasSelectionSetState() and !self.hasRectangularSelectionState()) {
-            var anchors = std.ArrayList(usize).empty;
-            defer anchors.deinit(self.allocator);
-            var target_heads = std.ArrayList(usize).empty;
-            defer target_heads.deinit(self.allocator);
-            self.collectSelectionAnchorsAndHeads(&anchors, &target_heads) catch |err| {
-                log.logf(.warning, "collect selection anchors/heads (line-start) failed: {s}", .{@errorName(err)});
-                return;
-            };
-            for (target_heads.items) |*offset| {
-                const caret = self.cursorPosForOffset(offset.*);
-                offset.* = self.buffer.lineStart(caret.line);
-            }
-            self.restoreExtendedCaretSelections(anchors.items, target_heads.items) catch |err| {
-                log.logf(.warning, "restore extended carets (line-start) failed: {s}", .{@errorName(err)});
-            };
-            return;
-        }
-        self.extendPrimarySelectionToOffset(self.buffer.lineStart(self.cursor.line));
-    }
-
-    pub fn extendSelectionToLineEnd(self: *Editor) void {
-        const log = app_logger.logger("editor.input");
-        if (self.hasSelectionSetState() and !self.hasRectangularSelectionState()) {
-            var anchors = std.ArrayList(usize).empty;
-            defer anchors.deinit(self.allocator);
-            var target_heads = std.ArrayList(usize).empty;
-            defer target_heads.deinit(self.allocator);
-            self.collectSelectionAnchorsAndHeads(&anchors, &target_heads) catch |err| {
-                log.logf(.warning, "collect selection anchors/heads (line-end) failed: {s}", .{@errorName(err)});
-                return;
-            };
-            for (target_heads.items) |*offset| {
-                const caret = self.cursorPosForOffset(offset.*);
-                offset.* = self.buffer.lineStart(caret.line) + self.buffer.lineLen(caret.line);
-            }
-            self.restoreExtendedCaretSelections(anchors.items, target_heads.items) catch |err| {
-                log.logf(.warning, "restore extended carets (line-end) failed: {s}", .{@errorName(err)});
-            };
-            return;
-        }
-        self.extendPrimarySelectionToOffset(self.buffer.lineStart(self.cursor.line) + self.buffer.lineLen(self.cursor.line));
-    }
-
-    pub fn extendSelectionWordLeft(self: *Editor) void {
-        const log = app_logger.logger("editor.input");
-        if (self.hasSelectionSetState() and !self.hasRectangularSelectionState()) {
-            var anchors = std.ArrayList(usize).empty;
-            defer anchors.deinit(self.allocator);
-            var target_heads = std.ArrayList(usize).empty;
-            defer target_heads.deinit(self.allocator);
-            self.collectSelectionAnchorsAndHeads(&anchors, &target_heads) catch |err| {
-                log.logf(.warning, "collect selection anchors/heads (word-left) failed: {s}", .{@errorName(err)});
-                return;
-            };
-            for (target_heads.items) |*offset| {
-                offset.* = self.wordLeftOffset(offset.*);
-            }
-            self.restoreExtendedCaretSelections(anchors.items, target_heads.items) catch |err| {
-                log.logf(.warning, "restore extended carets (word-left) failed: {s}", .{@errorName(err)});
-            };
-            return;
-        }
-        self.extendPrimarySelectionToOffset(self.wordLeftOffset(self.cursor.offset));
-    }
-
-    pub fn extendSelectionWordRight(self: *Editor) void {
-        const log = app_logger.logger("editor.input");
-        if (self.hasSelectionSetState() and !self.hasRectangularSelectionState()) {
-            var anchors = std.ArrayList(usize).empty;
-            defer anchors.deinit(self.allocator);
-            var target_heads = std.ArrayList(usize).empty;
-            defer target_heads.deinit(self.allocator);
-            self.collectSelectionAnchorsAndHeads(&anchors, &target_heads) catch |err| {
-                log.logf(.warning, "collect selection anchors/heads (word-right) failed: {s}", .{@errorName(err)});
-                return;
-            };
-            for (target_heads.items) |*offset| {
-                offset.* = self.wordRightOffset(offset.*);
-            }
-            self.restoreExtendedCaretSelections(anchors.items, target_heads.items) catch |err| {
-                log.logf(.warning, "restore extended carets (word-right) failed: {s}", .{@errorName(err)});
-            };
-            return;
-        }
-        self.extendPrimarySelectionToOffset(self.wordRightOffset(self.cursor.offset));
-    }
-
-    pub fn setCursor(self: *Editor, line: usize, col: usize) void {
-        self.cursor.line = line;
-        self.cursor.col = col;
-        self.updateCursorOffset();
-        self.preferred_visual_col = null;
-        self.selection = null;
-        self.clearSelections();
-    }
-
-    pub fn setCursorPreservePreferred(self: *Editor, line: usize, col: usize) void {
-        self.cursor.line = line;
-        self.cursor.col = col;
-        self.updateCursorOffset();
-        self.selection = null;
-        self.clearSelections();
-    }
-
-    pub fn setCursorNoClear(self: *Editor, line: usize, col: usize) void {
-        self.cursor.line = line;
-        self.cursor.col = col;
-        self.updateCursorOffset();
-        self.preferred_visual_col = null;
-    }
-
-    pub fn setCursorOffsetNoClear(self: *Editor, offset: usize) void {
-        self.cursor.offset = offset;
-        self.updateCursorPosition();
-        self.preferred_visual_col = null;
-    }
+    pub fn extendSelectionLeft(self: *Editor) void { Navigation.extendSelectionLeft(self); }
+    pub fn extendSelectionRight(self: *Editor) void { Navigation.extendSelectionRight(self); }
+    pub fn extendSelectionToLineStart(self: *Editor) void { Navigation.extendSelectionToLineStart(self); }
+    pub fn extendSelectionToLineEnd(self: *Editor) void { Navigation.extendSelectionToLineEnd(self); }
+    pub fn extendSelectionWordLeft(self: *Editor) void { Navigation.extendSelectionWordLeft(self); }
+    pub fn extendSelectionWordRight(self: *Editor) void { Navigation.extendSelectionWordRight(self); }
+    pub fn setCursor(self: *Editor, line: usize, col: usize) void { Navigation.setCursor(self, line, col); }
+    pub fn setCursorPreservePreferred(self: *Editor, line: usize, col: usize) void { Navigation.setCursorPreservePreferred(self, line, col); }
+    pub fn setCursorNoClear(self: *Editor, line: usize, col: usize) void { Navigation.setCursorNoClear(self, line, col); }
+    pub fn setCursorOffsetNoClear(self: *Editor, offset: usize) void { Navigation.setCursorOffsetNoClear(self, offset); }
 
     pub fn clearSelections(self: *Editor) void { SelectionState.clearSelections(self); }
     pub fn primaryCaret(self: *Editor) CursorPos { return SelectionState.primaryCaret(self); }
@@ -669,16 +336,8 @@ pub const Editor = struct {
         return text_columns.byteIndexForVisualColumnWithClusters(line_text, column, clusters);
     }
 
-    fn updateCursorPosition(self: *Editor) void {
-        self.cursor.line = self.buffer.lineIndexForOffset(self.cursor.offset);
-        const line_start = self.buffer.lineStart(self.cursor.line);
-        self.cursor.col = self.cursor.offset - line_start;
-    }
-
-    fn updateCursorOffset(self: *Editor) void {
-        const line_start = self.buffer.lineStart(self.cursor.line);
-        self.cursor.offset = line_start + self.cursor.col;
-    }
+    fn updateCursorPosition(self: *Editor) void { Navigation.updateCursorPosition(self); }
+    fn updateCursorOffset(self: *Editor) void { Navigation.updateCursorOffset(self); }
 
     fn noteTextChangedBase(self: *Editor) void {
         self.modified = true;
