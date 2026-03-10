@@ -283,7 +283,7 @@ pub const TerminalSession = struct {
         return self.core.inactiveScreen();
     }
 
-    fn isAltActive(self: *const TerminalSession) bool {
+    pub fn isAltActive(self: *const TerminalSession) bool {
         return self.core.isAltActive();
     }
 

@@ -6,3 +6,4 @@
 - [ ] Add one ABI mismatch regression test per bridge (bad `abi_version`, bad `struct_size`) that asserts deterministic error codes.
 - [ ] Add a host-migration checklist section in both smoke READMEs describing minimum required calls and resource free order.
 - [ ] Add a single `zig build` step that runs the combo smoke in non-interactive mode (no PTY dependency) to verify dual-bridge loading/lifetime.
+- [x] Add a mock external-service scenario to `examples/terminal_ffi_smoke/main.py` so the no-PTY host path can stream chunks incrementally instead of only doing one-shot feed smoke.

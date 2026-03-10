@@ -102,6 +102,24 @@ class ScrollbackBuffer(ctypes.Structure):
     ]
 
 
+class Metadata(ctypes.Structure):
+    _fields_ = [
+        ("abi_version", ctypes.c_uint32),
+        ("struct_size", ctypes.c_uint32),
+        ("scrollback_count", ctypes.c_uint32),
+        ("scrollback_offset", ctypes.c_uint32),
+        ("alive", ctypes.c_uint8),
+        ("has_exit_code", ctypes.c_uint8),
+        ("_padding0", ctypes.c_uint8 * 2),
+        ("exit_code", ctypes.c_int32),
+        ("title_ptr", ctypes.POINTER(ctypes.c_uint8)),
+        ("title_len", ctypes.c_size_t),
+        ("cwd_ptr", ctypes.POINTER(ctypes.c_uint8)),
+        ("cwd_len", ctypes.c_size_t),
+        ("_ctx", ctypes.c_void_p),
+    ]
+
+
 class Event(ctypes.Structure):
     _fields_ = [
         ("kind", ctypes.c_int),
@@ -141,6 +159,22 @@ class RendererMetadata(ctypes.Structure):
 HandlePtr = ctypes.POINTER(ZideTerminalHandle)
 
 
+class MockTerminalService:
+    def __init__(self) -> None:
+        self._chunks = [
+            b"\x1b]0;mock-title\x07",
+            b"\x1b]7;file://localhost/mock/service\x07",
+            b"mock-line-1\r\n",
+            b"mock-line-2\r\n",
+            b"\x1b]52;c;bW9jay1jbGlw\x07",
+            b"tail",
+        ]
+
+    def stream(self):
+        for chunk in self._chunks:
+            yield chunk
+
+
 def load_library(path: Path):
     os.environ.setdefault("ZIDE_LOG", "none")
     lib = ctypes.CDLL(str(path))
@@ -156,8 +190,6 @@ def load_library(path: Path):
     lib.zide_terminal_snapshot_acquire.restype = ctypes.c_int
     lib.zide_terminal_snapshot_release.argtypes = [ctypes.POINTER(Snapshot)]
     lib.zide_terminal_snapshot_release.restype = None
-    lib.zide_terminal_scrollback_count.argtypes = [HandlePtr, ctypes.POINTER(ctypes.c_uint32)]
-    lib.zide_terminal_scrollback_count.restype = ctypes.c_int
     lib.zide_terminal_scrollback_acquire.argtypes = [
         HandlePtr,
         ctypes.c_uint32,
@@ -167,16 +199,16 @@ def load_library(path: Path):
     lib.zide_terminal_scrollback_acquire.restype = ctypes.c_int
     lib.zide_terminal_scrollback_release.argtypes = [ctypes.POINTER(ScrollbackBuffer)]
     lib.zide_terminal_scrollback_release.restype = None
+    lib.zide_terminal_metadata_acquire.argtypes = [HandlePtr, ctypes.POINTER(Metadata)]
+    lib.zide_terminal_metadata_acquire.restype = ctypes.c_int
+    lib.zide_terminal_metadata_release.argtypes = [ctypes.POINTER(Metadata)]
+    lib.zide_terminal_metadata_release.restype = None
     lib.zide_terminal_event_drain.argtypes = [HandlePtr, ctypes.POINTER(EventBuffer)]
     lib.zide_terminal_event_drain.restype = ctypes.c_int
     lib.zide_terminal_events_free.argtypes = [ctypes.POINTER(EventBuffer)]
     lib.zide_terminal_events_free.restype = None
     lib.zide_terminal_is_alive.argtypes = [HandlePtr]
     lib.zide_terminal_is_alive.restype = ctypes.c_uint8
-    lib.zide_terminal_current_title.argtypes = [HandlePtr, ctypes.POINTER(StringBuffer)]
-    lib.zide_terminal_current_title.restype = ctypes.c_int
-    lib.zide_terminal_current_cwd.argtypes = [HandlePtr, ctypes.POINTER(StringBuffer)]
-    lib.zide_terminal_current_cwd.restype = ctypes.c_int
     lib.zide_terminal_string_free.argtypes = [ctypes.POINTER(StringBuffer)]
     lib.zide_terminal_string_free.restype = None
     lib.zide_terminal_child_exit_status.argtypes = [HandlePtr, ctypes.POINTER(ctypes.c_int32), ctypes.POINTER(ctypes.c_uint8)]
@@ -203,12 +235,17 @@ def as_bytes(ptr, length: int) -> bytes:
 
 
 def render_first_row(snapshot: Snapshot) -> str:
+    return render_snapshot_row(snapshot, 0)
+
+
+def render_snapshot_row(snapshot: Snapshot, row: int) -> str:
     if not snapshot.cells:
         return ""
     cols = int(snapshot.cols)
+    start = row * cols
     chars: list[str] = []
     for col in range(cols):
-        cell = snapshot.cells[col]
+        cell = snapshot.cells[start + col]
         if cell.width == 0:
             continue
         cp = int(cell.codepoint)
@@ -263,18 +300,15 @@ def run_smoke(lib_path: Path) -> int:
             title = as_bytes(snapshot.title_ptr, snapshot.title_len).decode("utf-8", errors="replace")
             cwd = as_bytes(snapshot.cwd_ptr, snapshot.cwd_len).decode("utf-8", errors="replace")
             row0 = render_first_row(snapshot)
-            title_buf = StringBuffer()
-            cwd_buf = StringBuffer()
-            if lib.zide_terminal_current_title(handle, ctypes.byref(title_buf)) != STATUS_OK:
-                raise RuntimeError("current_title failed")
-            if lib.zide_terminal_current_cwd(handle, ctypes.byref(cwd_buf)) != STATUS_OK:
-                raise RuntimeError("current_cwd failed")
+            metadata = Metadata()
+            if lib.zide_terminal_metadata_acquire(handle, ctypes.byref(metadata)) != STATUS_OK:
+                raise RuntimeError("metadata_acquire failed")
             try:
-                title_getter = as_bytes(title_buf.ptr, title_buf.len).decode("utf-8", errors="replace")
-                cwd_getter = as_bytes(cwd_buf.ptr, cwd_buf.len).decode("utf-8", errors="replace")
+                title_getter = as_bytes(metadata.title_ptr, metadata.title_len).decode("utf-8", errors="replace")
+                cwd_getter = as_bytes(metadata.cwd_ptr, metadata.cwd_len).decode("utf-8", errors="replace")
+                scrollback_count = metadata.scrollback_count
             finally:
-                lib.zide_terminal_string_free(ctypes.byref(title_buf))
-                lib.zide_terminal_string_free(ctypes.byref(cwd_buf))
+                lib.zide_terminal_metadata_release(ctypes.byref(metadata))
 
             exit_code = ctypes.c_int32(-1)
             has_exit = ctypes.c_uint8(0)
@@ -333,13 +367,10 @@ def run_smoke(lib_path: Path) -> int:
             f"damage=0x{rounded_powerline_meta.damage_policy_flags:x}"
         )
 
-        scrollback_count = ctypes.c_uint32(0)
-        if lib.zide_terminal_scrollback_count(handle, ctypes.byref(scrollback_count)) != STATUS_OK:
-            raise RuntimeError("scrollback_count failed")
-        if scrollback_count.value == 0:
+        if scrollback_count == 0:
             raise RuntimeError("expected scrollback rows")
         scrollback = ScrollbackBuffer()
-        status = lib.zide_terminal_scrollback_acquire(handle, 0, min(2, scrollback_count.value), ctypes.byref(scrollback))
+        status = lib.zide_terminal_scrollback_acquire(handle, 0, min(2, scrollback_count), ctypes.byref(scrollback))
         if status != STATUS_OK:
             raise RuntimeError(f"scrollback_acquire failed: {status}")
         try:
@@ -377,9 +408,84 @@ def run_smoke(lib_path: Path) -> int:
         lib.zide_terminal_destroy(handle)
 
 
+def run_mock_service_smoke(lib_path: Path) -> int:
+    lib = load_library(lib_path)
+    handle = HandlePtr()
+    cfg = CreateConfig(rows=8, cols=40, scrollback_rows=64, cursor_shape=0, cursor_blink=1)
+
+    status = lib.zide_terminal_create(ctypes.byref(cfg), ctypes.byref(handle))
+    if status != STATUS_OK:
+        raise RuntimeError(f"create failed: {status}")
+    try:
+        if lib.zide_terminal_resize(handle, 40, 8, 8, 16) != STATUS_OK:
+            raise RuntimeError("resize failed")
+
+        service = MockTerminalService()
+        saw_title = False
+        saw_clipboard = False
+
+        for chunk in service.stream():
+            buf = (ctypes.c_uint8 * len(chunk)).from_buffer_copy(chunk)
+            if lib.zide_terminal_feed_output(handle, buf, len(chunk)) != STATUS_OK:
+                raise RuntimeError("feed_output(mock chunk) failed")
+
+            events = EventBuffer()
+            if lib.zide_terminal_event_drain(handle, ctypes.byref(events)) != STATUS_OK:
+                raise RuntimeError("event_drain(mock) failed")
+            try:
+                for i in range(events.count):
+                    event = events.events[i]
+                    payload = as_bytes(event.data_ptr, event.data_len)
+                    if event.kind == EVENT_TITLE_CHANGED and payload == b"mock-title":
+                        saw_title = True
+                    if event.kind == EVENT_CLIPBOARD_WRITE and payload == b"mock-clip":
+                        saw_clipboard = True
+            finally:
+                lib.zide_terminal_events_free(ctypes.byref(events))
+
+        snapshot = Snapshot()
+        if lib.zide_terminal_snapshot_acquire(handle, ctypes.byref(snapshot)) != STATUS_OK:
+            raise RuntimeError("snapshot_acquire(mock) failed")
+        try:
+            title = as_bytes(snapshot.title_ptr, snapshot.title_len).decode("utf-8", errors="replace")
+            cwd = as_bytes(snapshot.cwd_ptr, snapshot.cwd_len).decode("utf-8", errors="replace")
+            row0 = render_snapshot_row(snapshot, 0)
+            row2 = render_snapshot_row(snapshot, 2)
+            metadata = Metadata()
+            if lib.zide_terminal_metadata_acquire(handle, ctypes.byref(metadata)) != STATUS_OK:
+                raise RuntimeError("metadata_acquire(mock) failed")
+            try:
+                scrollback_count = metadata.scrollback_count
+            finally:
+                lib.zide_terminal_metadata_release(ctypes.byref(metadata))
+            if title != "mock-title":
+                raise RuntimeError(f"unexpected mock title: {title!r}")
+            if cwd != "/mock/service":
+                raise RuntimeError(f"unexpected mock cwd: {cwd!r}")
+            if row0 != "mock-line-1":
+                raise RuntimeError(f"unexpected mock row0: {row0!r}")
+            if row2 != "tail":
+                raise RuntimeError(f"unexpected mock row2: {row2!r}")
+            if scrollback_count != 0:
+                raise RuntimeError(f"unexpected mock scrollback_count: {scrollback_count}")
+            print("terminal ffi mock service ok")
+            print(f"title={title!r} cwd={cwd!r} row0={row0!r} row2={row2!r} scrollback_count={scrollback_count}")
+        finally:
+            lib.zide_terminal_snapshot_release(ctypes.byref(snapshot))
+
+        if not saw_title:
+            raise RuntimeError("missing mock title_changed event")
+        if not saw_clipboard:
+            raise RuntimeError("missing mock clipboard_write event")
+        return 0
+    finally:
+        lib.zide_terminal_destroy(handle)
+
+
 def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--lib", default="zig-out/lib/libzide-terminal-ffi.so")
+    parser.add_argument("--scenario", choices=("baseline", "mock-service"), default="baseline")
     args = parser.parse_args()
 
     lib_path = Path(args.lib)
@@ -388,6 +494,8 @@ def main() -> int:
         return 2
 
     try:
+        if args.scenario == "mock-service":
+            return run_mock_service_smoke(lib_path)
         return run_smoke(lib_path)
     except Exception as exc:
         print(f"ffi smoke failed: {exc}", file=sys.stderr)

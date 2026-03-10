@@ -30,6 +30,7 @@ enum {
     ZIDE_TERMINAL_EVENT_ABI_VERSION = 1,
     ZIDE_TERMINAL_SCROLLBACK_ABI_VERSION = 1,
     ZIDE_TERMINAL_RENDERER_METADATA_ABI_VERSION = 1,
+    ZIDE_TERMINAL_METADATA_ABI_VERSION = 1,
 };
 
 enum {
@@ -121,6 +122,22 @@ typedef struct ZideTerminalScrollbackBuffer {
     void *_ctx;
 } ZideTerminalScrollbackBuffer;
 
+typedef struct ZideTerminalMetadata {
+    uint32_t abi_version;
+    uint32_t struct_size;
+    uint32_t scrollback_count;
+    uint32_t scrollback_offset;
+    uint8_t alive;
+    uint8_t has_exit_code;
+    uint8_t _padding0[2];
+    int32_t exit_code;
+    const uint8_t *title_ptr;
+    size_t title_len;
+    const uint8_t *cwd_ptr;
+    size_t cwd_len;
+    void *_ctx;
+} ZideTerminalMetadata;
+
 typedef struct ZideTerminalKeyEvent {
     uint32_t key;
     uint8_t modifiers;
@@ -178,23 +195,26 @@ int zide_terminal_send_key(ZideTerminalHandle *handle, const ZideTerminalKeyEven
 int zide_terminal_send_mouse(ZideTerminalHandle *handle, const ZideTerminalMouseEvent *event);
 int zide_terminal_snapshot_acquire(ZideTerminalHandle *handle, ZideTerminalSnapshot *out_snapshot);
 void zide_terminal_snapshot_release(ZideTerminalSnapshot *snapshot);
-int zide_terminal_scrollback_count(ZideTerminalHandle *handle, uint32_t *out_count);
 int zide_terminal_scrollback_acquire(
     ZideTerminalHandle *handle,
     uint32_t start_row,
     uint32_t max_rows,
     ZideTerminalScrollbackBuffer *out_buffer);
 void zide_terminal_scrollback_release(ZideTerminalScrollbackBuffer *scrollback);
+int zide_terminal_metadata_acquire(ZideTerminalHandle *handle, ZideTerminalMetadata *out_metadata);
+void zide_terminal_metadata_release(ZideTerminalMetadata *metadata);
 int zide_terminal_event_drain(ZideTerminalHandle *handle, ZideTerminalEventBuffer *out_events);
 void zide_terminal_events_free(ZideTerminalEventBuffer *events);
 uint8_t zide_terminal_is_alive(ZideTerminalHandle *handle);
-int zide_terminal_current_title(ZideTerminalHandle *handle, ZideTerminalStringBuffer *out_string);
-int zide_terminal_current_cwd(ZideTerminalHandle *handle, ZideTerminalStringBuffer *out_string);
+int zide_terminal_selection_text(ZideTerminalHandle *handle, ZideTerminalStringBuffer *out_string);
+int zide_terminal_scrollback_plain_text(ZideTerminalHandle *handle, ZideTerminalStringBuffer *out_string);
+int zide_terminal_scrollback_ansi_text(ZideTerminalHandle *handle, ZideTerminalStringBuffer *out_string);
 void zide_terminal_string_free(ZideTerminalStringBuffer *string);
 int zide_terminal_child_exit_status(ZideTerminalHandle *handle, int32_t *out_code, uint8_t *out_has_status);
 uint32_t zide_terminal_snapshot_abi_version(void);
 uint32_t zide_terminal_event_abi_version(void);
 uint32_t zide_terminal_scrollback_abi_version(void);
+uint32_t zide_terminal_metadata_abi_version(void);
 uint32_t zide_terminal_renderer_metadata_abi_version(void);
 int zide_terminal_renderer_metadata(uint32_t codepoint, ZideTerminalRendererMetadata *out_metadata);
 const char *zide_terminal_status_string(int status);
