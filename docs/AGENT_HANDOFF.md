@@ -25,8 +25,8 @@
   - replay-backed redraw coverage now also locks live-bottom full-region scroll through a harness-owned direct scroll action instead of mixed VT input
   - the first real `VTCORE-05` behavior change is now landed too: live-bottom full-region scroll now publishes as `viewport_shift_exposed_only` with exposed-row damage instead of widening to the full viewport
   - replay-backed redraw coverage now also locks a multi-row narrow rewrite case that currently widens to full-row damage across the viewport, giving the next invalidation lane an explicit over-broad-damage regression target
-  - replay-backed redraw coverage now also locks repeated line-number/sign-column churn, and the gutter coverage is now sharper: one-column line-number churn stays narrow, and single-packet adjacent two-column sign-column churn now stays narrow too after the unpublished-partial refinement fix
-  - the next gutter redraw target is now likely multi-packet accumulation behavior rather than single-packet gutter rewrites
+  - replay-backed redraw coverage now also locks repeated line-number/sign-column churn, and the gutter coverage is now sharper: one-column line-number churn stays narrow, single-packet adjacent two-column sign-column churn stays narrow, and even uniform multi-packet two-column churn stays narrow after the unpublished-partial refinement fix
+  - the sharper remaining gutter redraw target is now mixed alternating line-number/sign-column churn across packets, which still widens to full-row damage and is a better match for real nvim-style gutter activity
   - stale private root-session shims for SGR application and key-mode flag reads are now also gone
   - protocol execution is beginning to split along the same line: pure engine-side helpers now live under `terminal_core_protocol.zig`, while session-coupled protocol behavior remains in `session_protocol.zig`
   - parser/control dispatch entry helpers now also live under `terminal_core_dispatch.zig`; parser byte feed still stays session-owned because locking and publication are not split yet

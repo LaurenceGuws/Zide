@@ -1,0 +1,24 @@
+TERM_SNAPSHOT v1
+size: 3x6
+cursor: r=1 c=2 visible=1 style=block-blink
+alt: 0
+scrollback: count=1 view_offset=0
+title: "Terminal"
+cwd: ""
+clipboard: ""
+selection: none
+grid:
+row0: "4" "|" "b" "b" "b" " "
+row1: "+" ">" "c" "c" "c" " "
+row2: "6" . . . . .
+attrs:
+row0: cols 0-5 fg=default bg=default bold=0 rev=0 ul=0 ulc=default link=0
+row1: cols 0-5 fg=default bg=default bold=0 rev=0 ul=0 ulc=default link=0
+row2: cols 0-5 fg=default bg=default bold=0 rev=0 ul=0 ulc=default link=0
+links: none
+scrollback:
+line0: "1" "|" "a" "a" "a" " "
+kitty:
+images=0 placements=0
+image ids: []
+placement ids: []
