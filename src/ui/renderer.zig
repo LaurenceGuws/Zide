@@ -25,7 +25,6 @@ const target_draw = @import("renderer/target_draw.zig");
 const shape_utils = @import("renderer/shape_utils.zig");
 const shape_draw = @import("renderer/shape_draw.zig");
 const terminal_glyphs = @import("renderer/terminal_glyphs.zig");
-const clipboard_state = @import("renderer/clipboard_state.zig");
 const terminal_underline = @import("renderer/terminal_underline.zig");
 const texture_draw = @import("renderer/texture_draw.zig");
 const window_flags = @import("renderer/window_flags.zig");
@@ -809,12 +808,12 @@ pub const Renderer = struct {
     }
 
     pub fn getClipboardText(self: *Renderer) ?[]const u8 {
-        return clipboard_state.getText(self.allocator, &self.clipboard_buffer);
+        return clipboard.copyText(self.allocator, &self.clipboard_buffer);
     }
 
     pub fn getClipboardMimeData(self: *Renderer, allocator: std.mem.Allocator, mime_type: [*:0]const u8) ?[]u8 {
         _ = self;
-        return clipboard_state.getData(allocator, mime_type);
+        return clipboard.copyData(allocator, mime_type);
     }
 
     pub fn drawText(self: *Renderer, text: []const u8, x: f32, y: f32, color: Color) void {
