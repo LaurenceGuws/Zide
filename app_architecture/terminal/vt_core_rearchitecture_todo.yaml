@@ -31,6 +31,7 @@ items:
       - Do not keep FFI structurally tied to desktop session/workspace design
       - Support non-UI consumers such as Flutter hosts cleanly
       - Design direction now distinguishes core-facing operations from optional PTY host/runtime operations
+      - First code slice landed: shared terminal FFI ABI/state/helpers now live in src/terminal/ffi/shared.zig, and PTY-host operations now live in src/terminal/ffi/host_api.zig while bridge.zig acts as a thinner facade over host-facing and core-facing groups
 
   - id: VTCORE-03
     title: Introduce transport-agnostic host integration
