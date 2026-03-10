@@ -1,12 +1,12 @@
 const std = @import("std");
-const app_bootstrap = @import("bootstrap.zig");
+const app_bootstrap = @import("../bootstrap.zig");
 const app_terminal_active_widget = @import("terminal_active_widget.zig");
 const app_terminal_clipboard_shortcuts = @import("terminal_clipboard_shortcuts.zig");
 const app_terminal_clipboard_shortcuts_runtime = @import("terminal_clipboard_shortcuts_runtime.zig");
-const input_actions = @import("../input/input_actions.zig");
-const app_shell = @import("../app_shell.zig");
-const widgets = @import("../ui/widgets.zig");
-const terminal_mod = @import("../terminal/core/terminal.zig");
+const input_actions = @import("../../input/input_actions.zig");
+const app_shell = @import("../../app_shell.zig");
+const widgets = @import("../../ui/widgets.zig");
+const terminal_mod = @import("../../terminal/core/terminal.zig");
 
 pub fn handle(
     actions: []const input_actions.InputAction,

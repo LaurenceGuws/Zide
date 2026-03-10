@@ -1,9 +1,9 @@
 const std = @import("std");
-const app_theme_utils = @import("theme_utils.zig");
-const app_shell = @import("../app_shell.zig");
-const term_types = @import("../terminal/model/types.zig");
-const terminal_mod = @import("../terminal/core/terminal.zig");
-const widgets = @import("../ui/widgets.zig");
+const app_theme_utils = @import("../theme_utils.zig");
+const app_shell = @import("../../app_shell.zig");
+const term_types = @import("../../terminal/model/types.zig");
+const terminal_mod = @import("../../terminal/core/terminal.zig");
+const widgets = @import("../../ui/widgets.zig");
 
 const TerminalSession = terminal_mod.TerminalSession;
 const TerminalWidget = widgets.TerminalWidget;

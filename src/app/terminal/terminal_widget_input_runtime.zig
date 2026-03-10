@@ -1,11 +1,9 @@
 const std = @import("std");
-const app_file_detect = @import("file_detect.zig");
-const app_logger = @import("../app_logger.zig");
-const app_shell = @import("../app_shell.zig");
-const shared_types = @import("../types/mod.zig");
-const widgets = @import("../ui/widgets.zig");
-
-const layout_types = shared_types.layout;
+const app_file_detect = @import("../file_detect.zig");
+const app_logger = @import("../../app_logger.zig");
+const app_shell = @import("../../app_shell.zig");
+const shared_types = @import("../../types/mod.zig");
+const widgets = @import("../../ui/widgets.zig");
 const input_types = shared_types.input;
 const TerminalWidget = widgets.TerminalWidget;
 

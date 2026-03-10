@@ -1,7 +1,7 @@
-const app_modes = @import("modes/mod.zig");
+const app_modes = @import("../modes/mod.zig");
 const app_terminal_active_widget = @import("terminal_active_widget.zig");
 const app_terminal_surface_gate = @import("terminal_surface_gate.zig");
-const shared_types = @import("../types/mod.zig");
+const shared_types = @import("../../types/mod.zig");
 
 const layout_types = shared_types.layout;
 

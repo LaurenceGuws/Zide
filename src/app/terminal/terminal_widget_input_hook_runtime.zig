@@ -1,8 +1,8 @@
 const std = @import("std");
 const app_terminal_widget_input_runtime = @import("terminal_widget_input_runtime.zig");
-const app_shell = @import("../app_shell.zig");
-const shared_types = @import("../types/mod.zig");
-const widgets = @import("../ui/widgets.zig");
+const app_shell = @import("../../app_shell.zig");
+const shared_types = @import("../../types/mod.zig");
+const widgets = @import("../../ui/widgets.zig");
 
 const input_types = shared_types.input;
 const Shell = app_shell.Shell;

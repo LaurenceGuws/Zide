@@ -1,10 +1,10 @@
 const std = @import("std");
 const app_modes = @import("modes/mod.zig");
-const app_terminal_grid = @import("terminal_grid.zig");
-const app_terminal_refresh_sizing_runtime = @import("terminal_refresh_sizing_runtime.zig");
-const app_terminal_session_bootstrap = @import("terminal_session_bootstrap.zig");
+const app_terminal_grid = @import("terminal/terminal_grid.zig");
+const app_terminal_refresh_sizing_runtime = @import("terminal/terminal_refresh_sizing_runtime.zig");
+const app_terminal_session_bootstrap = @import("terminal/terminal_session_bootstrap.zig");
 const app_terminal_tab_bar_sync_runtime = @import("terminal/terminal_tab_bar_sync_runtime.zig");
-const app_terminal_theme_apply = @import("terminal_theme_apply.zig");
+const app_terminal_theme_apply = @import("terminal/terminal_theme_apply.zig");
 const app_ui_layout_runtime = @import("ui_layout_runtime.zig");
 const terminal_mod = @import("../terminal/core/terminal.zig");
 

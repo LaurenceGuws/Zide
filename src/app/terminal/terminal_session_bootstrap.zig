@@ -1,7 +1,7 @@
 const std = @import("std");
-const app_shell = @import("../app_shell.zig");
-const terminal_mod = @import("../terminal/core/terminal.zig");
-const widgets = @import("../ui/widgets.zig");
+const app_shell = @import("../../app_shell.zig");
+const terminal_mod = @import("../../terminal/core/terminal.zig");
+const widgets = @import("../../ui/widgets.zig");
 const c = @cImport({
     @cInclude("stdlib.h");
 });
