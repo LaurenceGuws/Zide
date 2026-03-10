@@ -354,6 +354,10 @@ Session construction also moved one step toward host-wrapper ownership:
   screen-mode/hash/inactive-screen helpers are gone, and the remaining
   test-facing view-cache shim now delegates through
   `src/terminal/core/session_rendering.zig`
+- the remaining scroll-refresh and OSC clipboard copy wrappers also now
+  delegate through `src/terminal/core/session_rendering.zig` and
+  `src/terminal/core/session_queries.zig`, instead of carrying that
+  orchestration inline in `terminal_session.zig`
 
 ### 2026-03-10 protocol split follow-up
 
