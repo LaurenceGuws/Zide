@@ -6,6 +6,7 @@ const types = @import("renderer/types.zig");
 const terminal_glyphs = @import("renderer/terminal_glyphs.zig");
 const font_atlas = @import("font/atlas.zig");
 const font_fallback = @import("font/fallback.zig");
+const font_shaping = @import("font/shaping.zig");
 const font_special_glyphs = @import("font/special_glyphs.zig");
 
 pub var windows_com_initialized = std.atomic.Value(bool).init(false);
@@ -791,11 +792,6 @@ pub const TerminalFont = struct {
         font_atlas.setAtlasFilterPoint(self);
     }
 
-    fn snapToDevicePixel(value: f32, render_scale: f32) f32 {
-        const scale = if (render_scale > 0.0) render_scale else 1.0;
-        return @as(f32, @floatFromInt(@as(i32, @intFromFloat(std.math.round(value * scale))))) / scale;
-    }
-
     pub fn specialGlyphSpriteKey(
         self: *const TerminalFont,
         codepoint: u32,
@@ -834,77 +830,7 @@ pub const TerminalFont = struct {
     }
 
     pub fn drawGlyph(self: *TerminalFont, draw: DrawContext, codepoint: u32, x: f32, y: f32, cell_width: f32, cell_height: f32, followed_by_space: bool, color: Rgba) void {
-        if (codepoint == 0) return;
-        const glyph = self.getGlyphForCodepoint(codepoint) catch |err| {
-            app_logger.logger("terminal.glyph").logf(.debug, "drawGlyph getGlyphForCodepoint failed cp=U+{X} err={s}", .{ codepoint, @errorName(err) });
-            return;
-        };
-        const render_scale = if (self.render_scale > 0.0) self.render_scale else 1.0;
-        const inv_scale = 1.0 / render_scale;
-        const baseline = y + self.baseline_from_top * inv_scale;
-
-        const glyph_w = @as(f32, @floatFromInt(glyph.width)) * inv_scale;
-        const glyph_h = @as(f32, @floatFromInt(glyph.height)) * inv_scale;
-
-        // Check if codepoint is in Private Use Area (PUA) or symbol ranges.
-        // These are typically icons that should be allowed to overflow.
-        const is_symbol_glyph = (codepoint >= 0xE000 and codepoint <= 0xF8FF) or // BMP PUA (Nerd Font)
-            (codepoint >= 0xF0000 and codepoint <= 0xFFFFD) or // Supplementary PUA-A
-            (codepoint >= 0x100000 and codepoint <= 0x10FFFD) or // Supplementary PUA-B
-            (codepoint >= 0x2700 and codepoint <= 0x27BF) or // Dingbats (❯, etc.)
-            (codepoint >= 0x2600 and codepoint <= 0x26FF); // Misc Symbols
-
-        const aspect = if (cell_height > 0) glyph_w / cell_height else 0.0;
-        const is_square_or_wide = aspect >= 0.7;
-        const allow_width_overflow = if (is_symbol_glyph) true else if (is_square_or_wide) switch (self.overflow_policy) {
-            .never => false,
-            .always => true,
-            .when_followed_by_space => followed_by_space,
-        } else false;
-
-        // Only apply width-fit scaling for square/wide glyphs (icons, box-ish symbols).
-        // Scaling normal text glyphs to fit the cell can cause visible baseline jitter at
-        // certain fractional scales.
-        const overflow_eps: f32 = 0.25;
-        const should_fit = (!allow_width_overflow) and is_square_or_wide;
-        const overflow_scale = if (should_fit and glyph_w > cell_width + overflow_eps and glyph_w > 0) cell_width / glyph_w else 1.0;
-        const scaled_w = glyph_w * overflow_scale;
-        const scaled_h = glyph_h * overflow_scale;
-
-        const bearing = @as(f32, @floatFromInt(glyph.bearing_x)) * inv_scale;
-        const bearing_y = @as(f32, @floatFromInt(glyph.bearing_y)) * inv_scale;
-
-        // For symbol/icon glyphs: center in cell with left bias to prevent right clipping.
-        const draw_color = if (glyph.is_color)
-            Rgba{ .r = 255, .g = 255, .b = 255, .a = 255 }
-        else
-            color;
-
-        if (is_symbol_glyph) {
-            const draw_x = @max(x, x + bearing * overflow_scale);
-            const draw_y = baseline - bearing_y * overflow_scale;
-            const snapped_x = snapToDevicePixel(draw_x, render_scale);
-            const snapped_y = snapToDevicePixel(draw_y, render_scale);
-            const dest = Rect{ .x = snapped_x, .y = snapped_y, .width = scaled_w, .height = scaled_h };
-            if (glyph.is_color) {
-                draw.drawTexture(draw.ctx, self.color_texture, glyph.rect, dest, draw_color, .rgba);
-            } else {
-                draw.drawTexture(draw.ctx, self.coverage_texture, glyph.rect, dest, draw_color, .font_coverage);
-            }
-            return;
-        }
-
-        // Normal glyph: draw at bearing position, clamped to not go left of cell.
-        const draw_x = if (allow_width_overflow) x + bearing * overflow_scale else @max(x, x + bearing * overflow_scale);
-        const draw_y = baseline - bearing_y * overflow_scale;
-        const snapped_x = snapToDevicePixel(draw_x, render_scale);
-        const snapped_y = snapToDevicePixel(draw_y, render_scale);
-        const dest = Rect{ .x = snapped_x, .y = snapped_y, .width = scaled_w, .height = scaled_h };
-        if (glyph.is_color) {
-            draw.drawTexture(draw.ctx, self.color_texture, glyph.rect, dest, draw_color, .rgba);
-        } else {
-            draw.drawTexture(draw.ctx, self.coverage_texture, glyph.rect, dest, draw_color, .font_coverage);
-        }
+        font_shaping.drawGlyph(self, draw, codepoint, x, y, cell_width, cell_height, followed_by_space, color);
     }
 
     pub fn drawGrapheme(
@@ -919,168 +845,15 @@ pub const TerminalFont = struct {
         followed_by_space: bool,
         color: Rgba,
     ) void {
-        if (base == 0) return;
-        if (combining.len == 0) {
-            self.drawGlyph(draw, base, x, y, cell_width, cell_height, followed_by_space, color);
-            return;
-        }
-
-        // Shape the grapheme cluster using the chosen face for the base glyph.
-        var face = self.ft_face;
-        var hb_font = self.hb_font;
-        const preferred = font_fallback.pickPreferred(self, base);
-        if (preferred.face) |p_face| {
-            if (preferred.hb) |p_hb| {
-                face = p_face;
-                hb_font = p_hb;
-            }
-        } else if (!hasGlyph(face, base)) {
-            const fallback = font_fallback.pickFallback(self, base);
-            if (fallback.face) |fb_face| {
-                if (fallback.hb) |fb_hb| {
-                    face = fb_face;
-                    hb_font = fb_hb;
-                }
-            }
-        }
-
-        var cps_buf: [3]u32 = .{ base, 0, 0 };
-        var cps_len: usize = 1;
-        for (combining) |cp| {
-            if (cps_len >= cps_buf.len) break;
-            cps_buf[cps_len] = cp;
-            cps_len += 1;
-        }
-
-        const buffer = c.hb_buffer_create();
-        defer c.hb_buffer_destroy(buffer);
-        c.hb_buffer_add_utf32(buffer, &cps_buf, @intCast(cps_len), 0, @intCast(cps_len));
-        c.hb_buffer_guess_segment_properties(buffer);
-        c.hb_shape(hb_font, buffer, null, 0);
-
-        var length: c_uint = 0;
-        const infos = c.hb_buffer_get_glyph_infos(buffer, &length);
-        const positions = c.hb_buffer_get_glyph_positions(buffer, &length);
-        if (length == 0) return;
-
-        const render_scale = if (self.render_scale > 0.0) self.render_scale else 1.0;
-        const inv_scale = 1.0 / render_scale;
-        const baseline = y + self.baseline_from_top * inv_scale;
-
-        const is_color_face = c.FT_HAS_COLOR(face) or (self.emoji_color_ft_face != null and face == self.emoji_color_ft_face.?);
-        const want_color = is_color_face;
-
-        // Use the base codepoint for symbol overflow policy.
-        const is_symbol_glyph = (base >= 0xE000 and base <= 0xF8FF) or
-            (base >= 0xF0000 and base <= 0xFFFFD) or
-            (base >= 0x100000 and base <= 0x10FFFD) or
-            (base >= 0x2700 and base <= 0x27BF) or
-            (base >= 0x2600 and base <= 0x26FF);
-
-        var pen_x: f32 = 0;
-        var i: usize = 0;
-        while (i < length) : (i += 1) {
-            const gid: u32 = infos[i].codepoint;
-            const key = GlyphKey{ .face = face, .glyph_id = gid, .want_color = want_color };
-            const glyph = self.getGlyphByKey(key, positions[i].x_advance) catch continue;
-
-            const gx_off = (@as(f32, @floatFromInt(positions[i].x_offset)) / 64.0) * inv_scale;
-            const gy_off = (@as(f32, @floatFromInt(positions[i].y_offset)) / 64.0) * inv_scale;
-            const origin_x = x + pen_x + gx_off;
-
-            const glyph_w = @as(f32, @floatFromInt(glyph.width)) * inv_scale;
-            const glyph_h = @as(f32, @floatFromInt(glyph.height)) * inv_scale;
-            const bearing_x = @as(f32, @floatFromInt(glyph.bearing_x)) * inv_scale;
-            const bearing_y = @as(f32, @floatFromInt(glyph.bearing_y)) * inv_scale;
-
-            const aspect = if (cell_height > 0) glyph_w / cell_height else 0.0;
-            const is_square_or_wide = aspect >= 0.7;
-            const allow_width_overflow = if (is_symbol_glyph) true else if (is_square_or_wide) switch (self.overflow_policy) {
-                .never => false,
-                .always => true,
-                .when_followed_by_space => followed_by_space,
-            } else false;
-            const overflow_eps: f32 = 0.25;
-            const should_fit = (!allow_width_overflow) and is_square_or_wide;
-            const overflow_scale = if (should_fit and glyph_w > cell_width + overflow_eps and glyph_w > 0) cell_width / glyph_w else 1.0;
-            const scaled_w = glyph_w * overflow_scale;
-            const scaled_h = glyph_h * overflow_scale;
-
-            const draw_x = if (allow_width_overflow) origin_x + bearing_x * overflow_scale else @max(x, origin_x + bearing_x * overflow_scale);
-            const draw_y = (baseline - bearing_y * overflow_scale) - gy_off;
-
-            const snapped_x = snapToDevicePixel(draw_x, render_scale);
-            const snapped_y = snapToDevicePixel(draw_y, render_scale);
-            const dest = Rect{ .x = snapped_x, .y = snapped_y, .width = scaled_w, .height = scaled_h };
-
-            const draw_color = if (glyph.is_color)
-                Rgba{ .r = 255, .g = 255, .b = 255, .a = 255 }
-            else
-                color;
-
-            if (glyph.is_color) {
-                draw.drawTexture(draw.ctx, self.color_texture, glyph.rect, dest, draw_color, .rgba);
-            } else {
-                draw.drawTexture(draw.ctx, self.coverage_texture, glyph.rect, dest, draw_color, .font_coverage);
-            }
-
-            pen_x += (@as(f32, @floatFromInt(positions[i].x_advance)) / 64.0) * inv_scale;
-        }
+        font_shaping.drawGrapheme(self, draw, base, combining, x, y, cell_width, cell_height, followed_by_space, color);
     }
 
     pub fn glyphAdvance(self: *TerminalFont, codepoint: u32) GlyphError!f32 {
-        const glyph = try self.getGlyphForCodepoint(codepoint);
-        const render_scale = if (self.render_scale > 0.0) self.render_scale else 1.0;
-        return glyph.advance / render_scale;
+        return font_shaping.glyphAdvance(self, codepoint);
     }
 
     fn getGlyphForCodepoint(self: *TerminalFont, codepoint: u32) GlyphError!*Glyph {
-        if (codepoint == 0) return error.FtLoadFailed;
-
-        var face = self.ft_face;
-        var hb_font = self.hb_font;
-        const preferred = font_fallback.pickPreferred(self, codepoint);
-        if (preferred.face) |p_face| {
-            if (preferred.hb) |p_hb| {
-                face = p_face;
-                hb_font = p_hb;
-            }
-        } else if (!hasGlyph(face, codepoint)) {
-            const fallback = font_fallback.pickFallback(self, codepoint);
-            if (fallback.face) |fb_face| {
-                if (fallback.hb) |fb_hb| {
-                    face = fb_face;
-                    hb_font = fb_hb;
-                }
-            }
-            if (!hasGlyph(face, codepoint)) {
-                if (self.systemFallback(codepoint)) |pair| {
-                    if (pair.face) |sf_face| {
-                        if (pair.hb) |sf_hb| {
-                            face = sf_face;
-                            hb_font = sf_hb;
-                        }
-                    }
-                }
-            }
-        }
-
-        const buffer = c.hb_buffer_create();
-        defer c.hb_buffer_destroy(buffer);
-        c.hb_buffer_add_utf32(buffer, &codepoint, 1, 0, 1);
-        c.hb_buffer_guess_segment_properties(buffer);
-        c.hb_shape(hb_font, buffer, null, 0);
-
-        var length: c_uint = 0;
-        const infos = c.hb_buffer_get_glyph_infos(buffer, &length);
-        const positions = c.hb_buffer_get_glyph_positions(buffer, &length);
-        if (length == 0) return error.HbShapeFailed;
-
-        const glyph_id: u32 = infos[0].codepoint;
-        const is_color_face = c.FT_HAS_COLOR(face) or (self.emoji_color_ft_face != null and face == self.emoji_color_ft_face.?);
-        const want_color = is_color_face;
-        const key = GlyphKey{ .face = face, .glyph_id = glyph_id, .want_color = want_color };
-        return self.getGlyphByKey(key, positions[0].x_advance);
+        return font_shaping.getGlyphForCodepoint(self, codepoint);
     }
 
     fn hasGlyph(face: c.FT_Face, codepoint: u32) bool {
