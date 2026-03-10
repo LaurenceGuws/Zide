@@ -165,7 +165,7 @@ pub const TerminalSession = struct {
     }
 
     pub fn setInputPressure(self: *TerminalSession, value: bool) void {
-        self.input_pressure.store(value, .release);
+        session_runtime.setInputPressure(self, value);
     }
 
     fn updateViewCacheNoLock(self: *TerminalSession, generation: u64, scroll_offset: usize) void {

@@ -122,6 +122,10 @@ pub fn startNoThreads(self: anytype, shell: ?[:0]const u8) !void {
     try terminal_transport.openPty(self, shell, false);
 }
 
+pub fn setInputPressure(self: anytype, value: bool) void {
+    self.input_pressure.store(value, .release);
+}
+
 pub fn poll(self: anytype) !void {
     maybeUpdateChildExit(self);
     return pty_io.poll(self);
