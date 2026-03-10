@@ -26,6 +26,7 @@ const state_reset = @import("state_reset.zig");
 const scrollback_view = @import("scrollback_view.zig");
 const text_export = @import("text_export.zig");
 const session_queries = @import("session_queries.zig");
+const session_publication = @import("session_publication.zig");
 const osc_kitty_clipboard = @import("../protocol/osc_kitty_clipboard.zig");
 const Pty = pty_mod.Pty;
 const PtySize = pty_mod.PtySize;
@@ -616,45 +617,31 @@ pub const TerminalSession = struct {
     }
 
     pub fn currentGeneration(self: *const TerminalSession) u64 {
-        return self.output_generation.load(.acquire);
+        return session_publication.currentGeneration(self);
     }
 
     pub fn publishedGeneration(self: *const TerminalSession) u64 {
-        const idx = self.render_cache_index.load(.acquire);
-        return self.render_caches[idx].generation;
+        return session_publication.publishedGeneration(self);
     }
 
     pub fn presentedGeneration(self: *const TerminalSession) u64 {
-        return self.presented_generation.load(.acquire);
+        return session_publication.presentedGeneration(self);
     }
 
     pub fn notePresentedGeneration(self: *TerminalSession, generation: u64) void {
-        self.presented_generation.store(generation, .release);
+        session_publication.notePresentedGeneration(self, generation);
     }
 
     pub fn acknowledgePresentedGeneration(self: *TerminalSession, generation: u64) bool {
-        self.notePresentedGeneration(generation);
-        if (self.renderCacheSyncUpdatesActiveForGeneration(generation)) {
-            return self.clearPublishedDamageIfGeneration(generation, false);
-        }
-        return self.clearPublishedDamageIfGeneration(generation, true);
-    }
-
-    fn renderCacheSyncUpdatesActiveForGeneration(self: *TerminalSession, generation: u64) bool {
-        inline for (0..2) |i| {
-            if (self.render_caches[i].generation == generation) {
-                return self.render_caches[i].sync_updates_active;
-            }
-        }
-        return self.sync_updates_active;
+        return session_publication.acknowledgePresentedGeneration(self, generation);
     }
 
     pub fn hasPublishedGenerationBacklog(self: *TerminalSession) bool {
-        return self.currentGeneration() != self.publishedGeneration();
+        return session_publication.hasPublishedGenerationBacklog(self);
     }
 
     pub fn pollBacklogHint(self: *TerminalSession) bool {
-        return self.hasData() or self.hasPublishedGenerationBacklog();
+        return session_publication.pollBacklogHint(self);
     }
 
     pub fn lockPtyWriter(self: *TerminalSession) ?PtyWriteGuard {
@@ -1553,27 +1540,7 @@ pub const TerminalSession = struct {
     }
 
     pub fn completePresentationFeedback(self: *TerminalSession, feedback: PresentationFeedback) void {
-        if (feedback.presented) |presented| {
-            if (feedback.texture_updated or presented.dirty == .none) {
-                _ = self.acknowledgePresentedGeneration(presented.generation);
-            }
-        }
-        if (feedback.alt_exit_info) |info| {
-            const exit_time_ms = self.alt_exit_time_ms.swap(-1, .acq_rel);
-            const exit_to_draw_ms: f64 = if (exit_time_ms >= 0)
-                @as(f64, @floatFromInt(std.time.milliTimestamp() - exit_time_ms))
-            else
-                -1.0;
-            const log = app_logger.logger("terminal.alt");
-            log.logf(.info, "alt_exit_draw_ms={d:.2} exit_to_draw_ms={d:.2} rows={d} cols={d} history={d} scroll_offset={d}", .{
-                info.draw_ms,
-                exit_to_draw_ms,
-                info.rows,
-                info.cols,
-                info.history_len,
-                info.scroll_offset,
-            });
-        }
+        session_publication.completePresentationFeedback(self, feedback);
     }
 
     pub fn syncUpdatesActive(self: *const TerminalSession) bool {
@@ -1623,7 +1590,7 @@ pub const TerminalSession = struct {
         return session_queries.copyMetadata(self, allocator, title_out, cwd_out);
     }
 
-    fn clearPublishedDamageIfGeneration(self: *TerminalSession, expected_generation: u64, clear_screen_dirty: bool) bool {
+    pub fn clearPublishedDamageIfGeneration(self: *TerminalSession, expected_generation: u64, clear_screen_dirty: bool) bool {
         self.lock();
         defer self.unlock();
         if (self.output_generation.load(.acquire) != expected_generation) return false;
