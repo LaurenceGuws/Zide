@@ -167,46 +167,8 @@ pub const TerminalSession = struct {
         self.input_pressure.store(value, .release);
     }
 
-    fn setActiveScreenMode(self: *TerminalSession, active: ActiveScreen) void {
-        self.core.active = active;
-        input_modes.publishSnapshot(self);
-    }
-
-    fn hashRow(cells: []const Cell) u64 {
-        var h: u64 = 1469598103934665603;
-        const prime: u64 = 1099511628211;
-        for (cells) |cell| {
-            h = (h ^ @as(u64, cell.codepoint)) *% prime;
-            h = (h ^ @as(u64, cell.width)) *% prime;
-            const attrs = cell.attrs;
-            h = (h ^ @as(u64, attrs.fg.r)) *% prime;
-            h = (h ^ @as(u64, attrs.fg.g)) *% prime;
-            h = (h ^ @as(u64, attrs.fg.b)) *% prime;
-            h = (h ^ @as(u64, attrs.fg.a)) *% prime;
-            h = (h ^ @as(u64, attrs.bg.r)) *% prime;
-            h = (h ^ @as(u64, attrs.bg.g)) *% prime;
-            h = (h ^ @as(u64, attrs.bg.b)) *% prime;
-            h = (h ^ @as(u64, attrs.bg.a)) *% prime;
-            h = (h ^ @as(u64, attrs.underline_color.r)) *% prime;
-            h = (h ^ @as(u64, attrs.underline_color.g)) *% prime;
-            h = (h ^ @as(u64, attrs.underline_color.b)) *% prime;
-            h = (h ^ @as(u64, attrs.underline_color.a)) *% prime;
-            h = (h ^ @as(u64, @intFromBool(attrs.bold))) *% prime;
-            h = (h ^ @as(u64, @intFromBool(attrs.blink))) *% prime;
-            h = (h ^ @as(u64, @intFromBool(attrs.blink_fast))) *% prime;
-            h = (h ^ @as(u64, @intFromBool(attrs.reverse))) *% prime;
-            h = (h ^ @as(u64, @intFromBool(attrs.underline))) *% prime;
-            h = (h ^ @as(u64, attrs.link_id)) *% prime;
-        }
-        return h;
-    }
-
     fn updateViewCacheNoLock(self: *TerminalSession, generation: u64, scroll_offset: usize) void {
-        view_cache.updateViewCacheNoLock(self, generation, scroll_offset);
-    }
-
-    fn inactiveScreen(self: *TerminalSession) *Screen {
-        return self.core.inactiveScreen();
+        session_rendering.updateViewCacheNoLock(self, generation, scroll_offset);
     }
 
     pub fn isAltActive(self: *const TerminalSession) bool {
