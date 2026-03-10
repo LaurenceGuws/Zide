@@ -1,6 +1,7 @@
 const std = @import("std");
 const app_logger = @import("../../app_logger.zig");
 const input_modes = @import("input_modes.zig");
+const terminal_transport = @import("terminal_transport.zig");
 const input_mod = @import("../input/input.zig");
 const types = @import("../model/types.zig");
 
@@ -263,7 +264,7 @@ pub fn sendCharActionWithMetadata(
 }
 
 pub fn reportMouseEvent(self: anytype, event: MouseEvent) !bool {
-    if (self.pty == null) return false;
+    if (!terminal_transport.Writer.exists(self)) return false;
     const screen = self.activeScreen();
     if (self.lockPtyWriter()) |writer_guard| {
         var writer = writer_guard;

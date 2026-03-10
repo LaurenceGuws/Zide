@@ -77,6 +77,14 @@ pub const Writer = struct {
         };
     }
 
+    pub fn exists(session: anytype) bool {
+        return fromSessionUnlocked(session);
+    }
+
+    fn fromSessionUnlocked(session: anytype) bool {
+        return session.pty != null;
+    }
+
     pub fn write(self: *Writer, bytes: []const u8) !usize {
         return self.write_bytes_fn(self.ctx, bytes);
     }
@@ -180,6 +188,10 @@ pub const Transport = struct {
                 }
             }.call,
         };
+    }
+
+    pub fn exists(session: anytype) bool {
+        return session.pty != null;
     }
 
     pub fn read(self: *const Transport, buffer: []u8) !?usize {

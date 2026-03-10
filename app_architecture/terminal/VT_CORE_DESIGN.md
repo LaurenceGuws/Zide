@@ -385,7 +385,7 @@ This means the common protocol/input write surface no longer depends on a raw
 
 What still remains PTY-direct:
 
-- places that still check `self.pty` directly for “transport exists”
+- a smaller set of transport setup/existence paths
 - replay-harness setup paths
 
 ### 2026-03-10 read path follow-up
@@ -403,6 +403,18 @@ Current PTY-backed runtime code now uses those methods in:
 This means the main byte pump no longer depends on raw `Pty` ownership in the
 runtime helpers. The remaining PTY-direct uses are narrower and mostly about
 transport existence checks plus setup paths that have not been re-cut yet.
+
+### 2026-03-10 transport presence follow-up
+
+The remaining low-risk presence gates are now also routed through
+`terminal_transport` helpers:
+
+- `terminal_transport.Writer.exists(...)`
+- `terminal_transport.Transport.exists(...)`
+
+Current session-side users no longer peek at `self.pty` directly just to answer
+"is there a writable transport?" for the mouse-report and OSC 5522 paste-event
+paths.
 
 ## Immediate Naming Direction
 

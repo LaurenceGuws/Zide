@@ -1,5 +1,6 @@
 const std = @import("std");
 const app_logger = @import("../../app_logger.zig");
+const terminal_transport = @import("terminal_transport.zig");
 const osc_kitty_clipboard = @import("../protocol/osc_kitty_clipboard.zig");
 
 pub fn bracketedPasteEnabled(self: anytype) bool {
@@ -150,7 +151,7 @@ pub fn sendKittyPasteEvent5522WithMimeRich(
         log.logf(.debug, "osc5522 paste skipped reason=disabled", .{});
         return false;
     }
-    if (self.pty == null) {
+    if (!terminal_transport.Writer.exists(self)) {
         log.logf(.warning, "osc5522 paste dropped reason=missing-pty", .{});
         return false;
     }
