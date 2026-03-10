@@ -338,6 +338,14 @@ pub const TerminalSession = struct {
         try session_runtime.start(self, shell);
     }
 
+    pub fn attachPtyTransport(self: *TerminalSession, pty: Pty) void {
+        session_runtime.attachPtyTransport(self, pty);
+    }
+
+    pub fn detachPtyTransport(self: *TerminalSession) void {
+        session_runtime.detachPtyTransport(self);
+    }
+
     pub fn startNoThreads(self: *TerminalSession, shell: ?[:0]const u8) !void {
         try session_runtime.startNoThreads(self, shell);
     }

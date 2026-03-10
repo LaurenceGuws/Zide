@@ -3,9 +3,20 @@ const app_logger = @import("../../app_logger.zig");
 const pty_io = @import("pty_io.zig");
 const resize_reflow = @import("resize_reflow.zig");
 const terminal_transport = @import("terminal_transport.zig");
+const pty_mod = @import("../io/pty.zig");
+
+const Pty = pty_mod.Pty;
 
 pub fn start(self: anytype, shell: ?[:0]const u8) !void {
     try terminal_transport.openPty(self, shell, true);
+}
+
+pub fn attachPtyTransport(self: anytype, pty: Pty) void {
+    terminal_transport.attachPty(self, pty);
+}
+
+pub fn detachPtyTransport(self: anytype) void {
+    terminal_transport.detachPty(self);
 }
 
 pub fn attachExternalTransport(self: anytype) void {

@@ -279,6 +279,8 @@ It is also no longer FFI-only:
 - higher-level callers now go through `TerminalSession` host-wrapper methods for
   external transport attach/enqueue/close instead of reaching into
   `terminal_transport` directly for that path
+- reply-capture PTY attachment in the replay harness now also goes through
+  `TerminalSession` host-wrapper methods instead of raw transport assembly
 
 ## Compatibility Strategy
 
