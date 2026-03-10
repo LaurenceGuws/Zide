@@ -271,6 +271,28 @@ This is intentionally not the end-state. Protocol execution and FFI still route
 through `TerminalSession`, but they now do so against a real internal core owner
 instead of one flat session struct.
 
+### 2026-03-10 protocol split follow-up
+
+The next extraction-only step moved pure engine-side protocol helpers behind
+`src/terminal/core/terminal_core_protocol.zig`.
+
+This module currently owns the protocol behaviors that are already clearly
+core/model-centered:
+
+- screen erase/insert/delete helpers
+- palette lookups
+- core cursor and cell queries
+- cursor style changes
+- tab-stop-at-cursor
+- DECRQSS reply formatting that only depends on core state
+
+`session_protocol.zig` now remains focused on the still session-coupled pieces:
+
+- parser feed/dispatch entrypoints
+- alt-screen transitions
+- selection/cache invalidation coordination
+- runtime-facing protocol side effects
+
 ## Immediate Naming Direction
 
 These names are recommended to avoid ambiguity:
