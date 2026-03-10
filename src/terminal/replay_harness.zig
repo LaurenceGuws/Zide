@@ -298,13 +298,13 @@ pub fn runFixture(
     var reply_capture: ?ReplayPtyCapture = null;
     if (fixture.meta.reply_hex != null) {
         reply_capture = try ReplayPtyCapture.init();
-        terminal_transport.attachPty(session, reply_capture.?.pty);
+        session.attachPtyTransport(reply_capture.?.pty);
     } else {
         session.attachExternalTransport();
     }
     defer {
         if (reply_capture != null) {
-            terminal_transport.detachPty(session);
+            session.detachPtyTransport();
             var capture = reply_capture.?;
             capture.deinit();
         }
