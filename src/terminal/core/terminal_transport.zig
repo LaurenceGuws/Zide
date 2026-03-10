@@ -7,6 +7,57 @@ const types = @import("../model/types.zig");
 
 pub const PtySize = pty_mod.PtySize;
 
+pub const ExternalTransport = struct {
+    allocator: std.mem.Allocator,
+    pending: std.ArrayList(u8),
+    read_offset: usize,
+    alive: bool,
+
+    pub fn init(allocator: std.mem.Allocator) ExternalTransport {
+        return .{
+            .allocator = allocator,
+            .pending = .empty,
+            .read_offset = 0,
+            .alive = true,
+        };
+    }
+
+    pub fn deinit(self: *ExternalTransport) void {
+        self.pending.deinit(self.allocator);
+        self.* = undefined;
+    }
+
+    pub fn enqueue(self: *ExternalTransport, bytes: []const u8) !void {
+        try self.pending.appendSlice(self.allocator, bytes);
+    }
+
+    pub fn read(self: *ExternalTransport, buffer: []u8) ?usize {
+        const available = if (self.pending.items.len > self.read_offset)
+            self.pending.items.len - self.read_offset
+        else
+            0;
+        if (available == 0) return null;
+
+        const n = @min(buffer.len, available);
+        std.mem.copyForwards(u8, buffer[0..n], self.pending.items[self.read_offset .. self.read_offset + n]);
+        self.read_offset += n;
+        if (self.read_offset >= self.pending.items.len) {
+            self.pending.items.len = 0;
+            self.read_offset = 0;
+        } else if (self.read_offset > 4096 and self.read_offset > self.pending.items.len / 2) {
+            const remaining = self.pending.items.len - self.read_offset;
+            std.mem.copyForwards(u8, self.pending.items[0..remaining], self.pending.items[self.read_offset..self.pending.items.len]);
+            self.pending.items.len = remaining;
+            self.read_offset = 0;
+        }
+        return n;
+    }
+
+    pub fn hasData(self: *const ExternalTransport) bool {
+        return self.pending.items.len > self.read_offset;
+    }
+};
+
 pub const Writer = struct {
     ctx: *anyopaque,
     mutex: *std.Thread.Mutex,
@@ -127,71 +178,127 @@ pub const Transport = struct {
     has_foreground_process_outside_shell_fn: *const fn (ctx: *anyopaque) bool,
 
     pub fn fromSession(session: anytype) ?Transport {
-        if (session.pty == null) return null;
         const SessionPtr = @TypeOf(session);
-        return .{
-            .ctx = @ptrCast(session),
-            .read_fn = struct {
-                fn call(ctx: *anyopaque, buffer: []u8) anyerror!?usize {
-                    const s: SessionPtr = @ptrCast(@alignCast(ctx));
-                    return if (s.pty) |*pty| try pty.read(buffer) else null;
-                }
-            }.call,
-            .wait_for_data_fn = struct {
-                fn call(ctx: *anyopaque, timeout_ms: i32) bool {
-                    const s: SessionPtr = @ptrCast(@alignCast(ctx));
-                    return if (s.pty) |*pty| pty.waitForData(timeout_ms) else false;
-                }
-            }.call,
-            .has_data_fn = struct {
-                fn call(ctx: *anyopaque) bool {
-                    const s: SessionPtr = @ptrCast(@alignCast(ctx));
-                    return s.pty != null and s.pty.?.hasData();
-                }
-            }.call,
-            .poll_exit_fn = struct {
-                fn call(ctx: *anyopaque) anyerror!?i32 {
-                    const s: SessionPtr = @ptrCast(@alignCast(ctx));
-                    if (s.pty) |*pty| return try pty.pollExit();
-                    return null;
-                }
-            }.call,
-            .resize_fn = struct {
-                fn call(ctx: *anyopaque, size: PtySize) anyerror!void {
-                    const s: SessionPtr = @ptrCast(@alignCast(ctx));
-                    if (s.pty) |*pty| try pty.resize(size);
-                }
-            }.call,
-            .deinit_fn = struct {
-                fn call(ctx: *anyopaque) void {
-                    const s: SessionPtr = @ptrCast(@alignCast(ctx));
-                    if (s.pty) |*pty| pty.deinit();
-                    s.pty = null;
-                }
-            }.call,
-            .is_alive_fn = struct {
-                fn call(ctx: *anyopaque) bool {
-                    const s: SessionPtr = @ptrCast(@alignCast(ctx));
-                    return if (s.pty) |*pty| pty.isAlive() else false;
-                }
-            }.call,
-            .foreground_process_label_fn = struct {
-                fn call(ctx: *anyopaque) ?[]const u8 {
-                    const s: SessionPtr = @ptrCast(@alignCast(ctx));
-                    return if (s.pty) |*pty| pty.foregroundProcessLabel() else null;
-                }
-            }.call,
-            .has_foreground_process_outside_shell_fn = struct {
-                fn call(ctx: *anyopaque) bool {
-                    const s: SessionPtr = @ptrCast(@alignCast(ctx));
-                    return if (s.pty) |*pty| pty.hasForegroundProcessOutsideShell() else false;
-                }
-            }.call,
-        };
+        if (session.pty != null) {
+            return .{
+                .ctx = @ptrCast(session),
+                .read_fn = struct {
+                    fn call(ctx: *anyopaque, buffer: []u8) anyerror!?usize {
+                        const s: SessionPtr = @ptrCast(@alignCast(ctx));
+                        return if (s.pty) |*pty| try pty.read(buffer) else null;
+                    }
+                }.call,
+                .wait_for_data_fn = struct {
+                    fn call(ctx: *anyopaque, timeout_ms: i32) bool {
+                        const s: SessionPtr = @ptrCast(@alignCast(ctx));
+                        return if (s.pty) |*pty| pty.waitForData(timeout_ms) else false;
+                    }
+                }.call,
+                .has_data_fn = struct {
+                    fn call(ctx: *anyopaque) bool {
+                        const s: SessionPtr = @ptrCast(@alignCast(ctx));
+                        return s.pty != null and s.pty.?.hasData();
+                    }
+                }.call,
+                .poll_exit_fn = struct {
+                    fn call(ctx: *anyopaque) anyerror!?i32 {
+                        const s: SessionPtr = @ptrCast(@alignCast(ctx));
+                        if (s.pty) |*pty| return try pty.pollExit();
+                        return null;
+                    }
+                }.call,
+                .resize_fn = struct {
+                    fn call(ctx: *anyopaque, size: PtySize) anyerror!void {
+                        const s: SessionPtr = @ptrCast(@alignCast(ctx));
+                        if (s.pty) |*pty| try pty.resize(size);
+                    }
+                }.call,
+                .deinit_fn = struct {
+                    fn call(ctx: *anyopaque) void {
+                        const s: SessionPtr = @ptrCast(@alignCast(ctx));
+                        if (s.pty) |*pty| pty.deinit();
+                        s.pty = null;
+                    }
+                }.call,
+                .is_alive_fn = struct {
+                    fn call(ctx: *anyopaque) bool {
+                        const s: SessionPtr = @ptrCast(@alignCast(ctx));
+                        return if (s.pty) |*pty| pty.isAlive() else false;
+                    }
+                }.call,
+                .foreground_process_label_fn = struct {
+                    fn call(ctx: *anyopaque) ?[]const u8 {
+                        const s: SessionPtr = @ptrCast(@alignCast(ctx));
+                        return if (s.pty) |*pty| pty.foregroundProcessLabel() else null;
+                    }
+                }.call,
+                .has_foreground_process_outside_shell_fn = struct {
+                    fn call(ctx: *anyopaque) bool {
+                        const s: SessionPtr = @ptrCast(@alignCast(ctx));
+                        return if (s.pty) |*pty| pty.hasForegroundProcessOutsideShell() else false;
+                    }
+                }.call,
+            };
+        }
+        if (session.external_transport != null) {
+            return .{
+                .ctx = @ptrCast(session),
+                .read_fn = struct {
+                    fn call(ctx: *anyopaque, buffer: []u8) anyerror!?usize {
+                        const s: SessionPtr = @ptrCast(@alignCast(ctx));
+                        return if (s.external_transport) |*transport| transport.read(buffer) else null;
+                    }
+                }.call,
+                .wait_for_data_fn = struct {
+                    fn call(ctx: *anyopaque, _: i32) bool {
+                        const s: SessionPtr = @ptrCast(@alignCast(ctx));
+                        return if (s.external_transport) |*transport| transport.hasData() else false;
+                    }
+                }.call,
+                .has_data_fn = struct {
+                    fn call(ctx: *anyopaque) bool {
+                        const s: SessionPtr = @ptrCast(@alignCast(ctx));
+                        return if (s.external_transport) |*transport| transport.hasData() else false;
+                    }
+                }.call,
+                .poll_exit_fn = struct {
+                    fn call(_: *anyopaque) anyerror!?i32 {
+                        return null;
+                    }
+                }.call,
+                .resize_fn = struct {
+                    fn call(_: *anyopaque, _: PtySize) anyerror!void {}
+                }.call,
+                .deinit_fn = struct {
+                    fn call(ctx: *anyopaque) void {
+                        const s: SessionPtr = @ptrCast(@alignCast(ctx));
+                        if (s.external_transport) |*transport| transport.deinit();
+                        s.external_transport = null;
+                    }
+                }.call,
+                .is_alive_fn = struct {
+                    fn call(ctx: *anyopaque) bool {
+                        const s: SessionPtr = @ptrCast(@alignCast(ctx));
+                        return if (s.external_transport) |*transport| transport.alive else false;
+                    }
+                }.call,
+                .foreground_process_label_fn = struct {
+                    fn call(_: *anyopaque) ?[]const u8 {
+                        return null;
+                    }
+                }.call,
+                .has_foreground_process_outside_shell_fn = struct {
+                    fn call(_: *anyopaque) bool {
+                        return false;
+                    }
+                }.call,
+            };
+        }
+        return null;
     }
 
     pub fn exists(session: anytype) bool {
-        return session.pty != null;
+        return session.pty != null or session.external_transport != null;
     }
 
     pub fn read(self: *const Transport, buffer: []u8) !?usize {
@@ -242,9 +349,33 @@ pub fn openPty(self: anytype, shell: ?[:0]const u8, spawn_threads: bool) !void {
 }
 
 pub fn attachPty(self: anytype, pty: pty_mod.Pty) void {
+    detachExternalTransport(self);
     self.pty = pty;
 }
 
 pub fn detachPty(self: anytype) void {
     self.pty = null;
+}
+
+pub fn attachExternalTransport(self: anytype) void {
+    if (self.external_transport == null) {
+        self.external_transport = ExternalTransport.init(self.allocator);
+    } else if (self.pty != null) {
+        detachPty(self);
+    }
+}
+
+pub fn detachExternalTransport(self: anytype) void {
+    if (self.external_transport) |*transport| {
+        transport.deinit();
+        self.external_transport = null;
+    }
+}
+
+pub fn enqueueExternalBytes(self: anytype, bytes: []const u8) !bool {
+    if (self.external_transport) |*transport| {
+        try transport.enqueue(bytes);
+        return true;
+    }
+    return false;
 }

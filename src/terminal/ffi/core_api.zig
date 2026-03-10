@@ -1,5 +1,6 @@
 const std = @import("std");
 const terminal = @import("../core/terminal.zig");
+const terminal_transport = @import("../core/terminal_transport.zig");
 const types = @import("../model/types.zig");
 const app_logger = @import("../../app_logger.zig");
 const shared = @import("shared.zig");
@@ -49,6 +50,7 @@ pub fn create(config: ?*const shared.CreateConfig, out_handle: *?*shared.ZideTer
         .scratch_scrollback_cells = .empty,
         .exit_delivered = false,
     };
+    terminal_transport.attachExternalTransport(session);
     _ = session.copyMetadata(allocator, &handle.last_title, &handle.last_cwd) catch |err| {
         log.logf(.warning, "create metadata copy failed err={s}", .{@errorName(err)});
         return .out_of_memory;
@@ -78,7 +80,11 @@ pub fn destroy(handle: ?*shared.ZideTerminalHandle) void {
 pub fn feedOutput(handle: ?*shared.ZideTerminalHandle, bytes: ?[*]const u8, len: usize) shared.Status {
     const h = shared.fromOpaque(handle) orelse return .invalid_argument;
     const slice = shared.ptrLen(bytes, len) orelse return .invalid_argument;
-    h.session.feedOutputBytes(slice);
+    if (terminal_transport.enqueueExternalBytes(h.session, slice) catch |err| return shared.mapError(err)) {
+        h.session.poll() catch |err| return shared.mapError(err);
+    } else {
+        h.session.feedOutputBytes(slice);
+    }
     return shared.syncDerivedEvents(h);
 }
 

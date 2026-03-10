@@ -249,6 +249,20 @@ The exported C ABI is unchanged in this slice. The gain is internal ownership:
 host/runtime operations are no longer mixed inline with snapshot/scrollback/
 metadata/event export logic in one large bridge implementation.
 
+### 2026-03-10 no-PTY transport-backed FFI feed path
+
+The first non-PTY transport shape is now also landed internally:
+
+- `src/terminal/core/terminal_transport.zig` now has an in-memory external
+  transport implementation alongside the PTY-backed transport facade
+- FFI-created terminal sessions attach that external transport by default
+- `zide_terminal_feed_output(...)` now enqueues bytes into that transport and
+  runs the normal session poll path, instead of bypassing backend transport
+  ownership through a direct parser-only shortcut
+
+This keeps the no-PTY host path closer to the future embed/mobile shape while
+preserving the existing exported FFI API.
+
 ## Compatibility Strategy
 
 We do not go from zero to hero in one patch.
