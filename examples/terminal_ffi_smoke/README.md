@@ -47,6 +47,9 @@ Mock external-host scenario:
 1. `zig build build-terminal-ffi`
 2. `python3 examples/terminal_ffi_smoke/main.py --scenario mock-service --lib zig-out/lib/libzide-terminal-ffi.so`
 
+Shared Python host boot helpers:
+- `examples/common/ffi_host_boot.py`
+
 Installed bridge artifacts:
 - `zig-out/lib/libzide-terminal-ffi.so`
 - `zig-out/include/zide_terminal_ffi.h`

@@ -1,10 +1,14 @@
 #!/usr/bin/env python3
 import argparse
 import ctypes
-import os
+import sys
 from pathlib import Path
 
-STATUS_OK = 0
+ROOT = Path(__file__).resolve().parents[2]
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
+
+from examples.common.ffi_host_boot import as_bytes, load_cdll, STATUS_OK  # noqa: E402
 
 
 class ZideEditorHandle(ctypes.Structure):
@@ -29,16 +33,8 @@ class SearchMatch(ctypes.Structure):
 
 HandlePtr = ctypes.POINTER(ZideEditorHandle)
 
-
-def as_bytes(ptr, length: int) -> bytes:
-    if not ptr or length == 0:
-        return b""
-    return ctypes.string_at(ptr, length)
-
-
 def load_library(path: Path):
-    os.environ.setdefault("ZIDE_LOG", "none")
-    lib = ctypes.CDLL(str(path))
+    lib = load_cdll(path)
     lib.zide_editor_create.argtypes = [ctypes.POINTER(HandlePtr)]
     lib.zide_editor_create.restype = ctypes.c_int
     lib.zide_editor_destroy.argtypes = [HandlePtr]

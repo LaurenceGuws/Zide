@@ -348,7 +348,7 @@ pub const Editor = struct {
     }
 
     pub fn pointForByte(self: *Editor, byte_offset: usize) c.TSPoint { return EditOps.pointForByte(self, byte_offset); }
-    fn replaceByteRangeInternal(self: *Editor, start: usize, end: usize, replacement: []const u8, refresh_search: bool) !void {
+    pub fn replaceByteRangeInternal(self: *Editor, start: usize, end: usize, replacement: []const u8, refresh_search: bool) !void {
         try EditOps.replaceByteRangeInternal(self, start, end, replacement, refresh_search);
     }
 
@@ -562,7 +562,7 @@ pub const Editor = struct {
         SearchHighlight.noteTextChanged(self);
     }
 
-    fn noteTextChangedNoSearchRefresh(self: *Editor) void {
+    pub fn noteTextChangedNoSearchRefresh(self: *Editor) void {
         SearchHighlight.noteTextChangedNoSearchRefresh(self);
     }
 
@@ -645,7 +645,7 @@ pub const Editor = struct {
         SearchHighlight.jumpToSearchActive(self);
     }
 
-    fn findSearchMatchAtOrAfter(self: *const Editor, offset: usize) ?usize {
+    pub fn findSearchMatchAtOrAfter(self: *const Editor, offset: usize) ?usize {
         return SearchHighlight.findSearchMatchAtOrAfter(self, offset);
     }
 
@@ -661,7 +661,7 @@ pub const Editor = struct {
         try SearchHighlight.recomputeSearchMatchesPrefer(self, preferred_offset);
     }
 
-    fn recomputeSearchMatchesSync(self: *Editor) !void {
+    pub fn recomputeSearchMatchesSync(self: *Editor) !void {
         try SearchHighlight.recomputeSearchMatchesSync(self);
     }
 

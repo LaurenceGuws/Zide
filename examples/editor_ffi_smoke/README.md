@@ -25,3 +25,6 @@ Same reason as terminal smoke:
 Installed bridge artifacts:
 - `zig-out/lib/libzide-editor-ffi.so`
 - `zig-out/include/zide_editor_ffi.h`
+
+Shared Python host boot helpers:
+- `examples/common/ffi_host_boot.py`
