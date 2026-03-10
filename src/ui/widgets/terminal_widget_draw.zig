@@ -1564,10 +1564,7 @@ pub fn drawPrepared(
     if (show_scrollbar and height > 0 and width > 0) {
         const track_h = scrollbar_h;
         const min_thumb_h: f32 = 18;
-        const ratio = if (max_scroll_offset > 0)
-            @as(f32, @floatFromInt(max_scroll_offset - scroll_offset)) / @as(f32, @floatFromInt(max_scroll_offset))
-        else
-            1.0;
+        const ratio = common.scrollbarTrackRatio(max_scroll_offset, scroll_offset);
         const thumb = common.computeScrollbarThumb(scrollbar_y, track_h, rows, total_lines, min_thumb_h, ratio);
 
         const show_track = self.scrollbar_drag_active or self.scrollbar_hover_anim > 0.05;
