@@ -7,7 +7,7 @@
   - active cleanup queue: `app_architecture/file_layout_todo.yaml`
   - terminal architecture baseline: `app_architecture/terminal/MODULARIZATION_PLAN.md`
   - UI/backend seam tracker: `app_architecture/ui/ui_widget_modularization_todo.yaml`
-- Current top-of-queue focus: execute the new `src/app` domain map starting with the `src/app/terminal/` subtree move, then continue with the remaining giant file splits (`editor`, widget draw, renderer/font, config parse) and collapse of low-value micro-files created by earlier extraction work.
+- Current top-of-queue focus: continue the `src/app/terminal/` subtree move from the landed close-confirm cluster, then continue with the remaining giant file splits (`editor`, widget draw, renderer/font, config parse) and collapse of low-value micro-files created by earlier extraction work.
 - Terminal correctness cleanup is not abandoned; it is now background context and baseline, not the primary structural review lane.
 
 ### Recent Changes (High-Level)
@@ -41,6 +41,7 @@
 
 ### Where to Look
 - Primary file/folder layout review: `app_architecture/review/FILE_LAYOUT_HOTSPOTS_REVIEW.md`
+- `src/app` placement authority + move order: `app_architecture/review/SRC_APP_DOMAIN_MAP.md`
 - Active file/folder cleanup queue: `app_architecture/file_layout_todo.yaml`
 - Primary architecture review + recent cleanup history: `app_architecture/review/TERMINAL_240HZ_RAIN_INVESTIGATION.md`
 - Terminal architecture plan + current hotspot list: `app_architecture/terminal/MODULARIZATION_PLAN.md`

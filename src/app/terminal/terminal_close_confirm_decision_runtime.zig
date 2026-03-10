@@ -1,4 +1,4 @@
-const app_modes = @import("modes/mod.zig");
+const app_modes = @import("../modes/mod.zig");
 const app_terminal_close_confirm_actions_runtime = @import("terminal_close_confirm_actions_runtime.zig");
 
 pub const Hooks = app_terminal_close_confirm_actions_runtime.Hooks;

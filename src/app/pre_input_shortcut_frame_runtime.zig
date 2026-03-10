@@ -1,6 +1,6 @@
 const std = @import("std");
 const app_reload_config_shortcut_runtime = @import("reload_config_shortcut_runtime.zig");
-const app_terminal_close_confirm_input = @import("terminal_close_confirm_input.zig");
+const app_terminal_close_confirm_input = @import("terminal/terminal_close_confirm_input.zig");
 const app_terminal_shortcut_suppress = @import("terminal_shortcut_suppress.zig");
 const app_terminal_surface_gate = @import("terminal_surface_gate.zig");
 const app_terminal_clipboard_shortcuts_frame = @import("terminal_clipboard_shortcuts_frame.zig");

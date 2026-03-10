@@ -70,11 +70,14 @@ file_layout_todo:
 
         - id: FL-APP-02
           title: "Move terminal-owned app runtime files under a focused src/app/terminal subtree"
-          status: todo
+          status: in_progress
           files:
             - src/app
+            - src/app/terminal
           notes:
             - "Includes terminal frame/runtime/intent/tab/close-confirm glue where ownership is terminal-specific."
+            - "2026-03-10: started with the terminal close-confirm cluster (`terminal_close_*`) moved under `src/app/terminal/` as the first extraction-only subtree slice."
+            - "Validation passed for the moved slice: `zig build test`, `zig build check-app-imports`, `zig build check-input-imports`."
 
         - id: FL-APP-03
           title: "Move editor/search/tab runtime files under focused app subtrees"
