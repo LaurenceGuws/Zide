@@ -23,6 +23,7 @@ pub fn main() !void {
     var saw_marker = false;
     var saw_child_exit = false;
     var saw_metadata = false;
+    var saw_redraw = false;
 
     while (std.time.milliTimestamp() < deadline) {
         if (c_api.zide_terminal_poll(handle) != 0) return error.PollFailed;
@@ -51,6 +52,9 @@ pub fn main() !void {
 
             if (events.events) |event_ptr| {
                 for (event_ptr[0..events.count]) |event| {
+                    if (event.kind == @intFromEnum(c_api.ZideTerminalEventKind.redraw_ready)) {
+                        saw_redraw = true;
+                    }
                     if (event.kind == @intFromEnum(c_api.ZideTerminalEventKind.child_exit)) {
                         if (event.int0 != 7 or event.int1 != 1) return error.UnexpectedChildExitEvent;
                         saw_child_exit = true;
@@ -59,7 +63,7 @@ pub fn main() !void {
             }
         }
 
-        if (saw_marker and saw_child_exit and saw_metadata) {
+        if (saw_marker and saw_child_exit and saw_metadata and saw_redraw) {
             var code: i32 = -1;
             var has_status: u8 = 0;
             if (c_api.zide_terminal_child_exit_status(handle, &code, &has_status) != 0) return error.ChildExitStatusFailed;
@@ -71,6 +75,7 @@ pub fn main() !void {
     }
 
     if (!saw_marker) return error.MissingMarker;
+    if (!saw_redraw) return error.MissingRedrawReady;
     if (!saw_child_exit) return error.MissingChildExit;
     if (!saw_metadata) return error.MissingMetadata;
 }

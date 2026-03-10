@@ -76,6 +76,7 @@ Behavior:
 - starts `/bin/sh` on Unix-like systems
 - sends a small command over the bridge
 - polls until output appears or the child exits
+- requires `redraw_ready` on PTY-driven visible updates
 - checks for a child-exit event separately from the base no-PTY ownership smoke
 
 This path is intentionally separate so PTY-hosting issues do not blur the baseline Python FFI contract.
