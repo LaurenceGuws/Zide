@@ -386,7 +386,6 @@ This means the common protocol/input write surface no longer depends on a raw
 What still remains PTY-direct:
 
 - a smaller set of transport setup/existence paths
-- replay-harness setup paths
 
 ### 2026-03-10 read path follow-up
 
@@ -415,6 +414,21 @@ The remaining low-risk presence gates are now also routed through
 Current session-side users no longer peek at `self.pty` directly just to answer
 "is there a writable transport?" for the mouse-report and OSC 5522 paste-event
 paths.
+
+### 2026-03-10 attach/detach follow-up
+
+PTY setup now also has a transport-owned attach/detach seam:
+
+- `terminal_transport.attachPty(...)`
+- `terminal_transport.detachPty(...)`
+
+Current users:
+
+- `terminal_transport.openPty(...)`
+- `replay_harness.zig` reply-capture setup
+
+That removes another direct `session.pty = ...` / `session.pty = null` setup
+pair from callers outside the transport owner.
 
 ## Immediate Naming Direction
 
