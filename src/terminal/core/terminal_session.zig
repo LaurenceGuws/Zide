@@ -1097,6 +1097,16 @@ pub const TerminalSession = struct {
         return session_clipboard.pasteSystemClipboard(self, clip_opt, html, uri_list, png);
     }
 
+    pub fn pasteSelectionClipboard(
+        self: *TerminalSession,
+        clip_opt: ?[]const u8,
+        html: ?[]const u8,
+        uri_list: ?[]const u8,
+        png: ?[]const u8,
+    ) !bool {
+        return session_clipboard.pasteSelectionClipboard(self, clip_opt, html, uri_list, png);
+    }
+
     pub fn syncUpdatesActive(self: *const TerminalSession) bool {
         return session_rendering.syncUpdatesActive(self);
     }
