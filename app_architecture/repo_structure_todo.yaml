@@ -19,11 +19,12 @@ items:
 
   - id: REPO-DOC-01
     title: Classify active versus historical documentation
-    status: todo
+    status: done
     priority: high
     notes:
       - Define what belongs in docs/, app_architecture/, and app_architecture/review/
       - Identify stale completed docs/todos for archival or deletion
+      - Doc lifecycle policy is now explicitly recorded in docs/WORKFLOW.md and summarized in docs/INDEX.md
 
   - id: REPO-TEST-02
     title: Re-home scattered multi-module Zig test entrypoints
@@ -37,7 +38,9 @@ items:
 
   - id: REPO-DOC-02
     title: Remove or archive stale docs and stale completed todos
-    status: todo
+    status: in_progress
     priority: medium
     notes:
       - Run only after active-vs-historical classification is documented
+      - First cleanup slice should target obvious placement/naming outliers before broader stale-doc deletion
+      - First cleanup slice landed: moved the old root-level terminal/editor FFI host migration beta todo into app_architecture/terminal/ with stable naming
