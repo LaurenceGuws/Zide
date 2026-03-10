@@ -437,6 +437,11 @@ Session construction also moved one step toward host-wrapper ownership:
   under `src/terminal/core/session_rendering_retirement.zig`, so
   `session_rendering.zig` no longer mixes capture/feedback with retirement
   policy inline
+- replay-backed redraw-contract coverage has now started too: the replay
+  harness supports a presented baseline phase plus explicit damage assertions,
+  and the first fixtures lock narrow partial publication for gutter rewrites
+  and indent-guide rewrites instead of leaving those redraw shapes covered only
+  by unit tests
 - stale private root-session shims for SGR application and key-mode flag reads
   are now removed too, keeping the root session file closer to a real facade
   instead of a pile of dead internal forwarding
