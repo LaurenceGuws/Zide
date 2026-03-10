@@ -57,3 +57,30 @@ pub fn pasteSystemClipboard(
     };
     return true;
 }
+
+pub fn pasteSelectionClipboard(
+    self: anytype,
+    clip_opt: ?[]const u8,
+    html: ?[]const u8,
+    uri_list: ?[]const u8,
+    png: ?[]const u8,
+) !bool {
+    const has_supported_clipboard_data = clip_opt != null or html != null or uri_list != null or png != null;
+    if (!has_supported_clipboard_data) return false;
+
+    const clip = clip_opt orelse "";
+    if (try self.sendKittyPasteEvent5522WithMimeRich(clip, html, uri_list, png)) {
+        return true;
+    }
+    if (clip_opt) |clip_text| {
+        if (self.bracketedPasteEnabled()) {
+            try self.sendText("\x1b[200~");
+            try self.sendText(clip_text);
+            try self.sendText("\x1b[201~");
+        } else {
+            try self.sendText(clip_text);
+        }
+        return true;
+    }
+    return false;
+}

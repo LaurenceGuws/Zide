@@ -596,21 +596,8 @@ pub fn handleInput(
             }
 
             if (in_terminal and input_batch.mousePressed(.middle)) {
-                const has_supported_clipboard_data = clip_opt != null or html != null or uri_list != null or png != null;
-                if (has_supported_clipboard_data) {
-                    const clip = clip_opt orelse "";
-                    if (try self.session.sendKittyPasteEvent5522WithMimeRich(clip, html, uri_list, png)) {
-                        handled = true;
-                    } else if (clip_opt) |clip_text| {
-                        if (self.session.bracketedPasteEnabled()) {
-                            try self.session.sendText("\x1b[200~");
-                            try self.session.sendText(clip_text);
-                            try self.session.sendText("\x1b[201~");
-                        } else {
-                            try self.session.sendText(clip_text);
-                        }
-                        handled = true;
-                    }
+                if (try self.session.pasteSelectionClipboard(clip_opt, html, uri_list, png)) {
+                    handled = true;
                 }
             }
             if (in_terminal and wheel_steps != 0) {
