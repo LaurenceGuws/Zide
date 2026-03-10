@@ -43,6 +43,10 @@ The PTY-backed smoke remains a follow-on once the bridge-owned shell path is sta
 1. `zig build build-terminal-ffi`
 2. `python3 examples/terminal_ffi_smoke/main.py --lib zig-out/lib/libzide-terminal-ffi.so`
 
+Mock external-host scenario:
+1. `zig build build-terminal-ffi`
+2. `python3 examples/terminal_ffi_smoke/main.py --scenario mock-service --lib zig-out/lib/libzide-terminal-ffi.so`
+
 Installed bridge artifacts:
 - `zig-out/lib/libzide-terminal-ffi.so`
 - `zig-out/include/zide_terminal_ffi.h`
@@ -60,3 +64,18 @@ Behavior:
 - checks for a child-exit event separately from the base no-PTY ownership smoke
 
 This path is intentionally separate so PTY-hosting issues do not blur the baseline Python FFI contract.
+
+## Mock Service Scenario
+
+The Python smoke host also includes a `mock-service` scenario that simulates an
+external non-PTY byte source feeding the terminal through FFI in chunks.
+
+It verifies:
+- incremental output feeding from a host-owned service loop
+- title/cwd updates
+- clipboard-write events
+- final snapshot content
+- scrollback content after streamed line output
+
+This is meant to model the first embedded/mobile/Flutter-style host shape more
+closely than the baseline one-shot smoke.
