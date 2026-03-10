@@ -337,6 +337,13 @@ This is intentionally not the end-state. Protocol execution and FFI still route
 through `TerminalSession`, but they now do so against a real internal core owner
 instead of one flat session struct.
 
+Session construction also moved one step toward host-wrapper ownership:
+
+- `src/terminal/core/session_runtime.zig` now owns the `TerminalSession`
+  allocation + runtime-state assembly path
+- `terminal_session.zig` now delegates `initWithOptions(...)` to that runtime
+  owner instead of constructing the whole session inline
+
 ### 2026-03-10 protocol split follow-up
 
 The next extraction-only step moved pure engine-side protocol helpers behind

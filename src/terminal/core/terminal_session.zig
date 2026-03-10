@@ -6,10 +6,8 @@ const csi_mod = @import("../parser/csi.zig");
 const parser_mod = @import("../parser/parser.zig");
 const protocol_csi = @import("../protocol/csi.zig");
 const screen_mod = @import("../model/screen.zig");
-const render_cache_mod = @import("render_cache.zig");
 const snapshot_mod = @import("snapshot.zig");
 const types = @import("../model/types.zig");
-const app_logger = @import("../../app_logger.zig");
 const kitty_mod = @import("../kitty/graphics.zig");
 const semantic_prompt_mod = @import("semantic_prompt.zig");
 const palette_mod = @import("../protocol/palette.zig");
@@ -55,7 +53,7 @@ pub const KittyImageFormat = snapshot_mod.KittyImageFormat;
 pub const KittyImage = snapshot_mod.KittyImage;
 pub const KittyPlacement = snapshot_mod.KittyPlacement;
 
-const RenderCache = render_cache_mod.RenderCache;
+const RenderCache = @import("render_cache.zig").RenderCache;
 
 pub const TerminalSnapshot = snapshot_mod.TerminalSnapshot;
 pub const DebugSnapshot = snapshot_mod.DebugSnapshot;
@@ -175,60 +173,7 @@ pub const TerminalSession = struct {
     }
 
     pub fn initWithOptions(allocator: std.mem.Allocator, rows: u16, cols: u16, options: InitOptions) !*TerminalSession {
-        const session = try allocator.create(TerminalSession);
-        const scrollback_rows = options.scrollback_rows orelse default_scrollback_rows;
-        const log = app_logger.logger("terminal.core");
-        log.logf(.info, "terminal init rows={d} cols={d} scrollback_max={d}", .{ rows, cols, scrollback_rows });
-        const core = try TerminalCoreType.init(allocator, rows, cols, .{
-            .scrollback_rows = scrollback_rows,
-            .cursor_style = options.cursor_style,
-        });
-        session.* = .{
-            .allocator = allocator,
-            .pty = null,
-            .external_transport = null,
-            .core = core,
-            .bracketed_paste = false,
-            .focus_reporting = false,
-            .auto_repeat = true,
-            .app_cursor_keys = false,
-            .app_keypad = false,
-            .mouse_alternate_scroll = true,
-            .inband_resize_notifications_2048 = false,
-            .report_color_scheme_2031 = false,
-            .grapheme_cluster_shaping_2027 = false,
-            .color_scheme_dark = true,
-            .kitty_paste_events_5522 = false,
-            .input = input_mod.InputState.init(),
-            .input_snapshot = InputSnapshot.init(),
-            .pty_write_mutex = .{},
-            .cell_width = 0,
-            .cell_height = 0,
-            .read_thread = null,
-            .read_thread_running = std.atomic.Value(bool).init(false),
-            .parse_thread = null,
-            .parse_thread_running = std.atomic.Value(bool).init(false),
-            .state_mutex = .{},
-            .io_mutex = .{},
-            .io_wait_cond = .{},
-            .io_buffer = .empty,
-            .io_read_offset = 0,
-            .output_pending = std.atomic.Value(bool).init(false),
-            .output_generation = std.atomic.Value(u64).init(0),
-            .presented_generation = std.atomic.Value(u64).init(0),
-            .input_pressure = std.atomic.Value(bool).init(false),
-            .alt_exit_pending = std.atomic.Value(bool).init(false),
-            .alt_exit_time_ms = std.atomic.Value(i64).init(-1),
-            .last_parse_log_ms = 0,
-            .render_caches = .{ RenderCache.init(), RenderCache.init() },
-            .render_cache_index = std.atomic.Value(u8).init(0),
-            .view_cache_pending = std.atomic.Value(bool).init(false),
-            .view_cache_request_offset = std.atomic.Value(u64).init(0),
-            .child_exited = std.atomic.Value(bool).init(false),
-            .child_exit_code = std.atomic.Value(i32).init(-1),
-        };
-        input_modes.publishSnapshot(&session);
-        return session;
+        return try session_runtime.init(allocator, rows, cols, options);
     }
 
     pub fn activeScreen(self: *TerminalSession) *Screen {
@@ -1206,7 +1151,7 @@ pub const VTERM_MOD_SHIFT = types.VTERM_MOD_SHIFT;
 pub const VTERM_MOD_ALT = types.VTERM_MOD_ALT;
 pub const VTERM_MOD_CTRL = types.VTERM_MOD_CTRL;
 
-const default_scrollback_rows: usize = 1000;
+pub const default_scrollback_rows: usize = 1000;
 const key_mode_disambiguate: u32 = 1;
 const key_mode_report_all_event_types: u32 = 2;
 const key_mode_report_alternate_key: u32 = 4;
