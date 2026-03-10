@@ -8,6 +8,7 @@ const shared_types = @import("../../types/mod.zig");
 const open_mod = @import("terminal_widget_open.zig");
 const hover_mod = @import("terminal_widget_hover.zig");
 const keyboard_mod = @import("terminal_widget_keyboard.zig");
+const pointer_mod = @import("terminal_widget_pointer.zig");
 const common = @import("common.zig");
 
 const Shell = app_shell.Shell;
@@ -64,8 +65,6 @@ pub fn handleInput(
         scrollbar_w + scrollbar_hit_margin,
         scrollbar_h,
     );
-    const scroll_log = app_logger.logger("terminal.scroll");
-
     const r = shell.rendererPtr();
     const hit_cell_w = @as(f32, @floatFromInt(@max(1, @as(i32, @intFromFloat(std.math.round(r.terminal_cell_width))))));
     const hit_cell_h = @as(f32, @floatFromInt(@max(1, @as(i32, @intFromFloat(std.math.round(r.terminal_cell_height))))));
@@ -165,159 +164,45 @@ pub fn handleInput(
             png = shell.getClipboardMimeData(self.session.allocator, "image/png");
         }
 
-        const suppress_selection_for_scrollbar = mouse_on_scrollbar or self.scrollbar_drag_active;
-        if (!mouse_reporting and ((saw_non_modifier_key_press or saw_text_input) or in_terminal or self.scrollbar_drag_active)) {
-            var live_scroll_offset = scroll_offset;
-            var selection_active = cache.selection_active;
-            self.session.lock();
-            defer self.session.unlock();
-
-            if (live_scroll_offset > 0 and self.session.resetToLiveBottomForInputLocked(saw_non_modifier_key_press, saw_text_input)) {
-                live_scroll_offset = 0;
-            }
-
-            if (in_terminal and mouse_on_scrollbar and input_batch.mousePressed(.left)) {
-                self.scrollbar_drag_active = true;
-                const track_h = scrollbar_h;
-                const min_thumb_h: f32 = 18;
-                const ratio = common.scrollbarTrackRatio(max_scroll_offset, live_scroll_offset);
-                const thumb = common.computeScrollbarThumb(scrollbar_y, track_h, rows, total_lines, min_thumb_h, ratio);
-                self.scrollbar_grab_offset = mouse.y - thumb.thumb_y;
-                scroll_log.logf(.info, "scrollbar press offset={d}", .{live_scroll_offset});
-                handled = true;
-            }
-
-            if (self.scrollbar_drag_active) {
-                if (input_batch.mouseDown(.left)) {
-                    const track_h = scrollbar_h;
-                    const min_thumb_h: f32 = 18;
-                    const thumb = common.computeScrollbarThumb(scrollbar_y, track_h, rows, total_lines, min_thumb_h, 0.0);
-                    const available = thumb.available;
-                    const clamped_mouse = @min(@max(mouse.y - self.scrollbar_grab_offset, scrollbar_y), scrollbar_y + available);
-                    const ratio = if (available > 0) (clamped_mouse - scrollbar_y) / available else 0;
-                    if (self.session.setScrollOffsetFromNormalizedTrackLocked(ratio)) |new_offset| {
-                        live_scroll_offset = new_offset;
-                        scroll_log.logf(.info, "scrollbar drag offset={d} ratio={d:.3}", .{ live_scroll_offset, ratio });
-                        handled = true;
-                    }
-                } else {
-                    self.scrollbar_drag_active = false;
-                }
-            }
-
-            if (in_terminal and input_batch.mousePressed(.left) and selection_active) {
-                if (self.session.clearSelectionIfActiveLocked()) {
-                    selection_active = false;
-                    handled = true;
-                }
-            }
-            if (has_visible_grid and in_terminal and !suppress_selection_for_scrollbar) {
-                if (input_batch.mousePressed(.left)) {
-                    const press_mouse = input_batch.mousePressPos(.left) orelse mouse;
-                    const col = @as(usize, @intFromFloat((press_mouse.x - hit_base_x) / hit_cell_w));
-                    const row = @as(usize, @intFromFloat((press_mouse.y - hit_base_y) / hit_cell_h));
-                    const clamped_col = @min(col, cols - 1);
-                    const clamped_row = @min(row, rows - 1);
-                    const global_row = start_line + clamped_row;
-                    if (global_row < history_len + rows) {
-                        const row_cells = view_cells[clamped_row * cols .. (clamped_row + 1) * cols];
-                        const click_result = self.session.beginClickSelectionLocked(
-                            row_cells,
-                            global_row,
-                            clamped_col,
-                            input_batch.mouseClicks(.left),
-                        );
-                        self.selection_press_origin = press_mouse;
-                        self.selection_drag_active = false;
-                        self.selection_gesture = click_result.gesture;
-                        if (click_result.started) {
-                            selection_active = true;
-                            handled = true;
-                        }
-                    }
-                }
-
-                const drag_select_active = selectionDragIsActive(self, input_batch, mouse, hit_cell_w);
-                const drag_select_multi = drag_select_active and self.selection_gesture.mode != .none;
-                const drag_select_normal = drag_select_active and self.selection_gesture.mode == .none;
-                if (drag_select_multi) {
-                    const col = @as(usize, @intFromFloat((mouse.x - hit_base_x) / hit_cell_w));
-                    const row = @as(usize, @intFromFloat((mouse.y - hit_base_y) / hit_cell_h));
-                    const clamped_col = @min(col, cols - 1);
-                    const clamped_row = @min(row, rows - 1);
-                    const global_row = start_line + clamped_row;
-                    if (global_row < history_len + rows) {
-                        const row_cells = view_cells[clamped_row * cols .. (clamped_row + 1) * cols];
-                        if (self.session.extendGestureSelectionLocked(self.selection_gesture, row_cells, global_row, clamped_col)) {
-                            selection_active = true;
-                            handled = true;
-                        }
-                    }
-
-                    if (selection_active) {
-                        // Autoscroll when dragging outside terminal area
-                        if (mouse.y < y) {
-                            _ = self.session.scrollSelectionDragLocked(true);
-                            handled = true;
-                        } else if (mouse.y > y + height) {
-                            _ = self.session.scrollSelectionDragLocked(false);
-                            handled = true;
-                        }
-                    }
-                }
-                if (drag_select_normal) {
-                    const col = @as(usize, @intFromFloat((mouse.x - hit_base_x) / hit_cell_w));
-                    const row = @as(usize, @intFromFloat((mouse.y - hit_base_y) / hit_cell_h));
-                    const clamped_col = @min(col, cols - 1);
-                    const clamped_row = @min(row, rows - 1);
-                    const global_row = start_line + clamped_row;
-                    if (global_row < history_len + rows) {
-                        const row_cells = view_cells[clamped_row * cols .. (clamped_row + 1) * cols];
-                        // Late-start selection when drag begins on blank space and enters content.
-                        if (self.session.selectOrUpdateCellInRowLocked(row_cells, global_row, clamped_col)) {
-                            selection_active = true;
-                            handled = true;
-                        }
-                    }
-
-                    if (selection_active) {
-                        // Autoscroll when dragging outside terminal area
-                        if (mouse.y < y) {
-                            _ = self.session.scrollSelectionDragLocked(true);
-                            handled = true;
-                        } else if (mouse.y > y + height) {
-                            _ = self.session.scrollSelectionDragLocked(false);
-                            handled = true;
-                        }
-                    }
-                }
-
-                if (input_batch.mouseReleased(.left)) {
-                    if (selection_active and self.session.finishSelectionIfActiveLocked()) {
-                        selection_active = true;
-                        handled = true;
-                    }
-                }
-            }
-
-            if (in_terminal and input_batch.mousePressed(.middle)) {
-                if (try self.session.pasteSelectionClipboard(clip_opt, html, uri_list, png)) {
-                    handled = true;
-                }
-            }
-            if (in_terminal and wheel_steps != 0) {
-                if (try self.session.reportAlternateScrollWheel(wheel_steps, mod)) {
-                    scroll_log.logf(.info, "alt-scroll wheel steps={d}", .{wheel_steps});
-                    handled = true;
-                    wheel_steps = 0;
-                }
-            }
-            if (in_terminal and wheel_steps != 0) {
-                if (self.session.scrollWheelLocked(wheel_steps)) {
-                    scroll_log.logf(.info, "scroll wheel steps={d}", .{wheel_steps});
-                    handled = true;
-                }
-            }
+        if (!mouse_reporting) {
+            const pointer_result = try pointer_mod.handlePointerInput(
+                self,
+                .{
+                    .in_terminal = in_terminal,
+                    .mouse_on_scrollbar = mouse_on_scrollbar,
+                    .mouse = mouse,
+                    .x = x,
+                    .y = y,
+                    .width = width,
+                    .height = height,
+                    .scrollbar_y = scrollbar_y,
+                    .scrollbar_h = scrollbar_h,
+                    .hit_base_x = hit_base_x,
+                    .hit_base_y = hit_base_y,
+                    .hit_cell_w = hit_cell_w,
+                    .hit_cell_h = hit_cell_h,
+                    .rows = rows,
+                    .cols = cols,
+                    .total_lines = total_lines,
+                    .history_len = history_len,
+                    .start_line = start_line,
+                    .scroll_offset = scroll_offset,
+                    .max_scroll_offset = max_scroll_offset,
+                    .has_visible_grid = has_visible_grid,
+                    .cache_selection_active = cache.selection_active,
+                    .mod = mod,
+                },
+                view_cells,
+                input_batch,
+                clip_opt,
+                html,
+                uri_list,
+                png,
+                saw_non_modifier_key_press,
+                saw_text_input,
+                &wheel_steps,
+            );
+            handled = handled or pointer_result.handled;
         }
         if (mouse_reporting and rows > 0 and cols > 0) {
             self.session.lock();
@@ -375,33 +260,6 @@ pub fn handleInput(
         }
     }
 
-    if (input_batch.mouseReleased(.left)) resetLeftDragState(self);
+    if (input_batch.mouseReleased(.left)) pointer_mod.resetLeftDragState(self);
     return handled;
-}
-
-fn selectionDragIsActive(
-    self: anytype,
-    input_batch: *const shared_types.input.InputBatch,
-    mouse: shared_types.input.MousePos,
-    hit_cell_w: f32,
-) bool {
-    const drag_select_active = input_batch.mouseDown(.left) and !input_batch.mousePressed(.left);
-    if (!drag_select_active) return false;
-    if (self.selection_drag_active) return true;
-    const origin = self.selection_press_origin orelse return false;
-    const dx = mouse.x - origin.x;
-    const dy = mouse.y - origin.y;
-    const dist2 = dx * dx + dy * dy;
-    const threshold2 = hit_cell_w * hit_cell_w;
-    if (dist2 < threshold2) return false;
-    self.selection_drag_active = true;
-    return true;
-}
-
-fn resetLeftDragState(self: anytype) void {
-    self.scrollbar_drag_active = false;
-    self.scrollbar_grab_offset = 0;
-    self.selection_gesture = .{};
-    self.selection_press_origin = null;
-    self.selection_drag_active = false;
 }

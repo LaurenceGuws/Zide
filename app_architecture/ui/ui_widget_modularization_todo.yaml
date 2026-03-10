@@ -258,6 +258,9 @@ ui_widget_modularization_todo:
           title: "Shrink TerminalWidget to presentation/orchestration only"
           status: in_progress
           files_to_edit:
+          notes:
+            - "2026-03-10: keyboard/text dispatch moved to `terminal_widget_keyboard.zig`."
+            - "2026-03-10: locked pointer/selection/scrollback orchestration moved to `terminal_widget_pointer.zig`."
             - src/ui/widgets/terminal_widget.zig
             - src/ui/widgets/terminal_widget_draw.zig
             - src/ui/widgets/terminal_widget_input.zig
