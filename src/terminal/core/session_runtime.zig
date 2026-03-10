@@ -4,8 +4,73 @@ const pty_io = @import("pty_io.zig");
 const resize_reflow = @import("resize_reflow.zig");
 const terminal_transport = @import("terminal_transport.zig");
 const pty_mod = @import("../io/pty.zig");
+const terminal_core_mod = @import("terminal_core.zig");
+const input_mod = @import("../input/input.zig");
+const render_cache_mod = @import("render_cache.zig");
+const input_modes = @import("input_modes.zig");
 
 const Pty = pty_mod.Pty;
+const TerminalCore = terminal_core_mod.TerminalCore;
+const RenderCache = render_cache_mod.RenderCache;
+const InputSnapshot = @import("terminal_session.zig").InputSnapshot;
+
+pub fn init(allocator: std.mem.Allocator, rows: u16, cols: u16, options: anytype) !*@import("terminal_session.zig").TerminalSession {
+    const Session = @import("terminal_session.zig").TerminalSession;
+    const session = try allocator.create(Session);
+    const scrollback_rows = options.scrollback_rows orelse @import("terminal_session.zig").default_scrollback_rows;
+    const log = app_logger.logger("terminal.core");
+    log.logf(.info, "terminal init rows={d} cols={d} scrollback_max={d}", .{ rows, cols, scrollback_rows });
+    const core = try TerminalCore.init(allocator, rows, cols, .{
+        .scrollback_rows = scrollback_rows,
+        .cursor_style = options.cursor_style,
+    });
+    session.* = .{
+        .allocator = allocator,
+        .pty = null,
+        .external_transport = null,
+        .core = core,
+        .bracketed_paste = false,
+        .focus_reporting = false,
+        .auto_repeat = true,
+        .app_cursor_keys = false,
+        .app_keypad = false,
+        .mouse_alternate_scroll = true,
+        .inband_resize_notifications_2048 = false,
+        .report_color_scheme_2031 = false,
+        .grapheme_cluster_shaping_2027 = false,
+        .color_scheme_dark = true,
+        .kitty_paste_events_5522 = false,
+        .input = input_mod.InputState.init(),
+        .input_snapshot = InputSnapshot.init(),
+        .pty_write_mutex = .{},
+        .cell_width = 0,
+        .cell_height = 0,
+        .read_thread = null,
+        .read_thread_running = std.atomic.Value(bool).init(false),
+        .parse_thread = null,
+        .parse_thread_running = std.atomic.Value(bool).init(false),
+        .state_mutex = .{},
+        .io_mutex = .{},
+        .io_wait_cond = .{},
+        .io_buffer = .empty,
+        .io_read_offset = 0,
+        .output_pending = std.atomic.Value(bool).init(false),
+        .output_generation = std.atomic.Value(u64).init(0),
+        .presented_generation = std.atomic.Value(u64).init(0),
+        .input_pressure = std.atomic.Value(bool).init(false),
+        .alt_exit_pending = std.atomic.Value(bool).init(false),
+        .alt_exit_time_ms = std.atomic.Value(i64).init(-1),
+        .last_parse_log_ms = 0,
+        .render_caches = .{ RenderCache.init(), RenderCache.init() },
+        .render_cache_index = std.atomic.Value(u8).init(0),
+        .view_cache_pending = std.atomic.Value(bool).init(false),
+        .view_cache_request_offset = std.atomic.Value(u64).init(0),
+        .child_exited = std.atomic.Value(bool).init(false),
+        .child_exit_code = std.atomic.Value(i32).init(-1),
+    };
+    input_modes.publishSnapshot(session);
+    return session;
+}
 
 pub fn start(self: anytype, shell: ?[:0]const u8) !void {
     try terminal_transport.openPty(self, shell, true);

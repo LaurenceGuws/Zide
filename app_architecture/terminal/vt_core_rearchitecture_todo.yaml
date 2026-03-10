@@ -21,6 +21,7 @@ items:
       - Preserve behavior while moving ownership, not by adding compatibility sludge
       - First code-cut intent: introduce an internal TerminalCore while keeping PTY-backed desktop behavior unchanged
       - First code cut landed: engine-owned screen/history/parser/metadata/palette/kitty state now lives under src/terminal/core/terminal_core.zig, with TerminalSession wrapping it while PTY/runtime/threading stay session-owned
+      - Session-construction assembly now also lives under src/terminal/core/session_runtime.zig, so TerminalSession init is moving toward a host-wrapper creation facade instead of owning the full zeroed-field/runtime setup block inline
 
   - id: VTCORE-02
     title: Make FFI a first-class core interface

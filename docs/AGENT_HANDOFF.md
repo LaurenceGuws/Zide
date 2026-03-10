@@ -11,6 +11,7 @@
   - keep FFI first-class and host-agnostic
   - make PTY one transport implementation, not the architectural center
   - current implementation state: `TerminalSession` now wraps an internal `TerminalCore` owner for engine state, with PTY/runtime/threading still session-owned
+  - `TerminalSession` construction now also delegates to `session_runtime.zig`, so the root session file is moving toward a host-wrapper facade instead of owning full runtime-state assembly inline
   - protocol execution is beginning to split along the same line: pure engine-side helpers now live under `terminal_core_protocol.zig`, while session-coupled protocol behavior remains in `session_protocol.zig`
   - parser/control dispatch entry helpers now also live under `terminal_core_dispatch.zig`; parser byte feed still stays session-owned because locking and publication are not split yet
   - parser feed now runs through `terminal_core_feed.zig` with an explicit `FeedResult` publication contract; the remaining session-owned wrapper is specifically state locking plus delegation of generation/view-cache publication to `session_rendering.zig`
