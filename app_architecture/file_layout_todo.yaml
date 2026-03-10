@@ -177,16 +177,19 @@ file_layout_todo:
 
         - id: FL-CFG-01
           title: "Split src/config/lua_config_ziglua_parse.zig by parser/validation/domain mapping concerns"
-          status: in_progress
+          status: done
           files:
             - src/config/lua_config_ziglua_parse.zig
             - src/config/lua_config_font_parse.zig
+            - src/config/lua_config_runtime_parse.zig
           notes:
             - "Keep public config loading entrypoints stable."
             - "2026-03-10: first slice landed in progress by extracting theme/color/editor-theme parsing into `src/config/lua_config_theme_parse.zig`. `lua_config_ziglua_parse.zig` now focuses more tightly on scalar option parsing and keybind parsing instead of also owning the full theme parser."
             - "2026-03-10: second slice landed in progress by extracting keybind parsing into `src/config/lua_config_keybind_parse.zig`. `lua_config_ziglua_parse.zig` now focuses more tightly on scalar/domain option parsing instead of also owning the full keybind parser."
             - "2026-03-10: third slice landed in progress by extracting log/filter/SDL-log parsing into `src/config/lua_config_log_parse.zig`. `lua_config_ziglua_parse.zig` now focuses more tightly on the remaining scalar domain config groups instead of also owning the full logging parser."
             - "2026-03-10: fourth slice landed in progress by extracting top-level font settings, nested app/editor/terminal font option parsing, and the `font_rendering` table into `src/config/lua_config_font_parse.zig`. `lua_config_ziglua_parse.zig` now focuses more tightly on the remaining scalar runtime/domain groups instead of also owning the full font/rendering parser."
+            - "2026-03-10: fifth slice landed in progress by extracting the shared runtime-option helpers and nested app/editor/terminal runtime parsing support into `src/config/lua_config_runtime_parse.zig`. `lua_config_ziglua_parse.zig` is now down near facade size and owns final root assembly rather than acting as another mixed parser blob."
+            - "2026-03-10: task closed. After the theme, keybind, log, font, and runtime splits, the remaining root parser is a reasonable entrypoint/facade over focused config parse owners rather than another structural hotspot."
 
     - name: "Phase 3 - Over-Split Artifact Collapse"
       tasks:

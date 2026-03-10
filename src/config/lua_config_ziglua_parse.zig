@@ -4,20 +4,13 @@ const iface = @import("./lua_config_iface.zig");
 const lua_font_parse = @import("./lua_config_font_parse.zig");
 const lua_keybind_parse = @import("./lua_config_keybind_parse.zig");
 const lua_log_parse = @import("./lua_config_log_parse.zig");
+const lua_runtime_parse = @import("./lua_config_runtime_parse.zig");
 const lua_shared = @import("./lua_config_shared.zig");
 const lua_theme_parse = @import("./lua_config_theme_parse.zig");
 
 pub const LuaConfigError = iface.LuaConfigError;
 pub const Config = iface.Config;
 const ThemeConfig = iface.ThemeConfig;
-const TabBarWidthMode = std.meta.Child(@TypeOf((@as(Config, undefined)).editor_tab_bar_width_mode));
-const CursorShape = std.meta.Child(@TypeOf((@as(Config, undefined)).terminal_cursor_shape));
-const TerminalBlinkStyle = std.meta.Child(@TypeOf((@as(Config, undefined)).terminal_blink_style));
-const LigatureStrategy = std.meta.Child(@TypeOf((@as(Config, undefined)).terminal_disable_ligatures));
-const TerminalNewTabStartLocationMode = std.meta.Child(@TypeOf((@as(Config, undefined)).terminal_new_tab_start_location));
-const terminal_scrollback_default: usize = 1000;
-const terminal_scrollback_min: usize = 100;
-const terminal_scrollback_max: usize = 100000;
 
 fn replaceOwnedString(allocator: std.mem.Allocator, slot: *?[]u8, value: ?[]u8) void {
     if (slot.*) |old| allocator.free(old);
@@ -45,102 +38,6 @@ fn parseFilterValueOwned(allocator: std.mem.Allocator, lua: *zlua.Lua, idx: i32)
         }
     }
     return try out.toOwnedSlice(allocator);
-}
-
-fn parseTabBarWidthModeFromString(value: []const u8) ?TabBarWidthMode {
-    if (std.mem.eql(u8, value, "fixed")) return .fixed;
-    if (std.mem.eql(u8, value, "dynamic")) return .dynamic;
-    if (std.mem.eql(u8, value, "label_length")) return .label_length;
-    return null;
-}
-
-fn parseCursorShapeFromString(value: []const u8) ?CursorShape {
-    if (std.mem.eql(u8, value, "block")) return .block;
-    if (std.mem.eql(u8, value, "bar")) return .bar;
-    if (std.mem.eql(u8, value, "underline")) return .underline;
-    return null;
-}
-
-fn parseBlinkStyleFromString(value: []const u8) ?TerminalBlinkStyle {
-    if (std.mem.eql(u8, value, "kitty")) return .kitty;
-    if (std.mem.eql(u8, value, "off")) return .off;
-    if (std.mem.eql(u8, value, "ghostty")) return .off;
-    return null;
-}
-
-fn parseLigatureStrategyFromString(value: []const u8) ?LigatureStrategy {
-    if (std.mem.eql(u8, value, "never")) return .never;
-    if (std.mem.eql(u8, value, "cursor")) return .cursor;
-    if (std.mem.eql(u8, value, "always")) return .always;
-    return null;
-}
-
-fn parseTerminalNewTabStartLocationModeFromString(value: []const u8) ?TerminalNewTabStartLocationMode {
-    if (std.mem.eql(u8, value, "current")) return .current;
-    if (std.mem.eql(u8, value, "default")) return .default;
-    return null;
-}
-
-fn normalizeScrollback(value: i64) usize {
-    if (value < @as(i64, @intCast(terminal_scrollback_min)) or value > @as(i64, @intCast(terminal_scrollback_max))) {
-        return terminal_scrollback_default;
-    }
-    return @intCast(value);
-}
-
-fn parsePositiveF32(lua: *zlua.Lua, idx: i32) ?f32 {
-    if (!lua.isNumber(idx)) return null;
-    if (lua.toNumber(idx)) |v| {
-        if (v > 0) return @floatCast(v);
-    } else |_| {}
-    return null;
-}
-
-const SelectionOverlayPrefix = enum {
-    global,
-    editor,
-    terminal,
-};
-
-fn parseSelectionOverlayTable(
-    lua: *zlua.Lua,
-    idx: i32,
-    out: *Config,
-    prefix: SelectionOverlayPrefix,
-) void {
-    if (!lua.isTable(idx)) return;
-    const table_idx = lua.absIndex(idx);
-
-    _ = lua.getField(table_idx, "smooth");
-    if (lua.isBoolean(-1)) {
-        const value = lua.toBoolean(-1);
-        switch (prefix) {
-            .global => out.selection_overlay_smooth = value,
-            .editor => out.editor_selection_overlay_smooth = value,
-            .terminal => out.terminal_selection_overlay_smooth = value,
-        }
-    }
-    lua.pop(1);
-
-    _ = lua.getField(table_idx, "corner_px");
-    if (parsePositiveF32(lua, -1)) |value| {
-        switch (prefix) {
-            .global => out.selection_overlay_corner_px = value,
-            .editor => out.editor_selection_overlay_corner_px = value,
-            .terminal => out.terminal_selection_overlay_corner_px = value,
-        }
-    }
-    lua.pop(1);
-
-    _ = lua.getField(table_idx, "pad_px");
-    if (parsePositiveF32(lua, -1)) |value| {
-        switch (prefix) {
-            .global => out.selection_overlay_pad_px = value,
-            .editor => out.editor_selection_overlay_pad_px = value,
-            .terminal => out.terminal_selection_overlay_pad_px = value,
-        }
-    }
-    lua.pop(1);
 }
 
 fn parseNativeScalarOverlay(allocator: std.mem.Allocator, lua: *zlua.Lua, table_index: i32) !Config {
@@ -192,21 +89,21 @@ fn parseNativeScalarOverlay(allocator: std.mem.Allocator, lua: *zlua.Lua, table_
     lua.pop(1);
 
     _ = lua.getField(table_index, "selection_overlay_corner_px");
-    if (parsePositiveF32(lua, -1)) |v| out.selection_overlay_corner_px = v;
+    if (lua_runtime_parse.parsePositiveF32(lua, -1)) |v| out.selection_overlay_corner_px = v;
     lua.pop(1);
 
     _ = lua.getField(table_index, "selection_overlay_pad_px");
-    if (parsePositiveF32(lua, -1)) |v| out.selection_overlay_pad_px = v;
+    if (lua_runtime_parse.parsePositiveF32(lua, -1)) |v| out.selection_overlay_pad_px = v;
     lua.pop(1);
 
     _ = lua.getField(table_index, "selection_overlay");
-    parseSelectionOverlayTable(lua, -1, &out, .global);
+    lua_runtime_parse.parseSelectionOverlayTable(lua, -1, &out, .global);
     lua.pop(1);
 
     _ = lua.getField(table_index, "terminal_scrollback_rows");
     if (lua.isNumber(-1)) {
         if (lua.toInteger(-1)) |v| {
-            out.terminal_scrollback_rows = normalizeScrollback(v);
+            out.terminal_scrollback_rows = lua_runtime_parse.normalizeScrollback(v);
         } else |_| {}
     }
     lua.pop(1);
@@ -240,7 +137,7 @@ fn parseNativeScalarOverlay(allocator: std.mem.Allocator, lua: *zlua.Lua, table_
     _ = lua.getField(table_index, "terminal_new_tab_start_location");
     if (lua.isString(-1)) {
         if (lua.toString(-1)) |v| {
-            if (parseTerminalNewTabStartLocationModeFromString(v)) |mode| {
+            if (lua_runtime_parse.parseTerminalNewTabStartLocationModeFromString(v)) |mode| {
                 out.terminal_new_tab_start_location = mode;
             }
         } else |_| {}
@@ -250,7 +147,7 @@ fn parseNativeScalarOverlay(allocator: std.mem.Allocator, lua: *zlua.Lua, table_
     _ = lua.getField(table_index, "editor_tab_bar_width_mode");
     if (lua.isString(-1)) {
         if (lua.toString(-1)) |v| {
-            if (parseTabBarWidthModeFromString(v)) |mode| out.editor_tab_bar_width_mode = mode;
+            if (lua_runtime_parse.parseTabBarWidthModeFromString(v)) |mode| out.editor_tab_bar_width_mode = mode;
         } else |_| {}
     }
     lua.pop(1);
@@ -258,7 +155,7 @@ fn parseNativeScalarOverlay(allocator: std.mem.Allocator, lua: *zlua.Lua, table_
     _ = lua.getField(table_index, "terminal_tab_bar_width_mode");
     if (lua.isString(-1)) {
         if (lua.toString(-1)) |v| {
-            if (parseTabBarWidthModeFromString(v)) |mode| out.terminal_tab_bar_width_mode = mode;
+            if (lua_runtime_parse.parseTabBarWidthModeFromString(v)) |mode| out.terminal_tab_bar_width_mode = mode;
         } else |_| {}
     }
     lua.pop(1);
@@ -266,7 +163,7 @@ fn parseNativeScalarOverlay(allocator: std.mem.Allocator, lua: *zlua.Lua, table_
     _ = lua.getField(table_index, "terminal_cursor_shape");
     if (lua.isString(-1)) {
         if (lua.toString(-1)) |v| {
-            if (parseCursorShapeFromString(v)) |shape| out.terminal_cursor_shape = shape;
+            if (lua_runtime_parse.parseCursorShapeFromString(v)) |shape| out.terminal_cursor_shape = shape;
         } else |_| {}
     }
     lua.pop(1);
@@ -274,7 +171,7 @@ fn parseNativeScalarOverlay(allocator: std.mem.Allocator, lua: *zlua.Lua, table_
     _ = lua.getField(table_index, "terminal_blink_style");
     if (lua.isString(-1)) {
         if (lua.toString(-1)) |v| {
-            if (parseBlinkStyleFromString(v)) |style| out.terminal_blink_style = style;
+            if (lua_runtime_parse.parseBlinkStyleFromString(v)) |style| out.terminal_blink_style = style;
         } else |_| {}
     }
     lua.pop(1);
@@ -282,7 +179,7 @@ fn parseNativeScalarOverlay(allocator: std.mem.Allocator, lua: *zlua.Lua, table_
     _ = lua.getField(table_index, "terminal_disable_ligatures");
     if (lua.isString(-1)) {
         if (lua.toString(-1)) |v| {
-            if (parseLigatureStrategyFromString(v)) |strategy| out.terminal_disable_ligatures = strategy;
+            if (lua_runtime_parse.parseLigatureStrategyFromString(v)) |strategy| out.terminal_disable_ligatures = strategy;
         } else |_| {}
     }
     lua.pop(1);
@@ -290,7 +187,7 @@ fn parseNativeScalarOverlay(allocator: std.mem.Allocator, lua: *zlua.Lua, table_
     _ = lua.getField(table_index, "editor_disable_ligatures");
     if (lua.isString(-1)) {
         if (lua.toString(-1)) |v| {
-            if (parseLigatureStrategyFromString(v)) |strategy| out.editor_disable_ligatures = strategy;
+            if (lua_runtime_parse.parseLigatureStrategyFromString(v)) |strategy| out.editor_disable_ligatures = strategy;
         } else |_| {}
     }
     lua.pop(1);
@@ -333,7 +230,7 @@ fn parseNativeScalarOverlay(allocator: std.mem.Allocator, lua: *zlua.Lua, table_
             &out,
             parseFilterValueOwned,
             replaceOwnedString,
-            parseLigatureStrategyFromString,
+            lua_runtime_parse.parseLigatureStrategyFromString,
         );
 
         _ = lua.getField(editor_idx, "render");
@@ -362,7 +259,7 @@ fn parseNativeScalarOverlay(allocator: std.mem.Allocator, lua: *zlua.Lua, table_
             _ = lua.getField(tab_idx, "width_mode");
             if (lua.isString(-1)) {
                 if (lua.toString(-1)) |v| {
-                    if (parseTabBarWidthModeFromString(v)) |mode| {
+                    if (lua_runtime_parse.parseTabBarWidthModeFromString(v)) |mode| {
                         out.editor_tab_bar_width_mode = mode;
                     }
                 } else |_| {}
@@ -372,7 +269,7 @@ fn parseNativeScalarOverlay(allocator: std.mem.Allocator, lua: *zlua.Lua, table_
         lua.pop(1);
 
         _ = lua.getField(editor_idx, "selection_overlay");
-        parseSelectionOverlayTable(lua, -1, &out, .editor);
+        lua_runtime_parse.parseSelectionOverlayTable(lua, -1, &out, .editor);
         lua.pop(1);
     }
     lua.pop(1);
@@ -391,7 +288,7 @@ fn parseNativeScalarOverlay(allocator: std.mem.Allocator, lua: *zlua.Lua, table_
             &out,
             parseFilterValueOwned,
             replaceOwnedString,
-            parseLigatureStrategyFromString,
+            lua_runtime_parse.parseLigatureStrategyFromString,
         );
 
         _ = lua.getField(terminal_idx, "blink");
@@ -399,7 +296,7 @@ fn parseNativeScalarOverlay(allocator: std.mem.Allocator, lua: *zlua.Lua, table_
             out.terminal_blink_style = if (lua.toBoolean(-1)) .kitty else .off;
         } else if (lua.isString(-1)) {
             if (lua.toString(-1)) |v| {
-                if (parseBlinkStyleFromString(v)) |style| {
+                if (lua_runtime_parse.parseBlinkStyleFromString(v)) |style| {
                     out.terminal_blink_style = style;
                 }
             } else |_| {}
@@ -408,7 +305,7 @@ fn parseNativeScalarOverlay(allocator: std.mem.Allocator, lua: *zlua.Lua, table_
 
         _ = lua.getField(terminal_idx, "scrollback");
         if (lua.isNumber(-1)) {
-            if (lua.toInteger(-1)) |v| out.terminal_scrollback_rows = normalizeScrollback(v) else |_| {}
+            if (lua.toInteger(-1)) |v| out.terminal_scrollback_rows = lua_runtime_parse.normalizeScrollback(v) else |_| {}
         }
         lua.pop(1);
 
@@ -418,7 +315,7 @@ fn parseNativeScalarOverlay(allocator: std.mem.Allocator, lua: *zlua.Lua, table_
             _ = lua.getField(cursor_idx, "shape");
             if (lua.isString(-1)) {
                 if (lua.toString(-1)) |v| {
-                    if (parseCursorShapeFromString(v)) |shape| {
+                    if (lua_runtime_parse.parseCursorShapeFromString(v)) |shape| {
                         out.terminal_cursor_shape = shape;
                     }
                 } else |_| {}
@@ -443,7 +340,7 @@ fn parseNativeScalarOverlay(allocator: std.mem.Allocator, lua: *zlua.Lua, table_
             _ = lua.getField(tab_idx, "width_mode");
             if (lua.isString(-1)) {
                 if (lua.toString(-1)) |v| {
-                    if (parseTabBarWidthModeFromString(v)) |mode| {
+                    if (lua_runtime_parse.parseTabBarWidthModeFromString(v)) |mode| {
                         out.terminal_tab_bar_width_mode = mode;
                     }
                 } else |_| {}
@@ -482,7 +379,7 @@ fn parseNativeScalarOverlay(allocator: std.mem.Allocator, lua: *zlua.Lua, table_
             _ = lua.getField(start_location_idx, "new_tab");
             if (lua.isString(-1)) {
                 if (lua.toString(-1)) |v| {
-                    if (parseTerminalNewTabStartLocationModeFromString(v)) |mode| {
+                    if (lua_runtime_parse.parseTerminalNewTabStartLocationModeFromString(v)) |mode| {
                         out.terminal_new_tab_start_location = mode;
                     }
                 } else |_| {}
@@ -492,7 +389,7 @@ fn parseNativeScalarOverlay(allocator: std.mem.Allocator, lua: *zlua.Lua, table_
         lua.pop(1);
 
         _ = lua.getField(terminal_idx, "selection_overlay");
-        parseSelectionOverlayTable(lua, -1, &out, .terminal);
+        lua_runtime_parse.parseSelectionOverlayTable(lua, -1, &out, .terminal);
         lua.pop(1);
     }
     lua.pop(1);
