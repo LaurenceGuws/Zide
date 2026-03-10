@@ -37,6 +37,7 @@
   - higher-level session assembly now consistently chooses PTY vs external transport through `TerminalSession` wrapper methods rather than raw `terminal_transport` attach/detach calls
   - terminal FFI now also exposes `close_input(...)` plus a derived `alive_changed` event for no-PTY hosts, so embedded consumers can observe external-input closure without keeping the terminal alive forever by polling metadata only
   - terminal FFI now also emits a derived `redraw_ready` event when snapshot generation advances, giving embedded hosts a minimal wake signal for pulling fresh snapshots without introducing a second damage model
+  - host-side FFI resize now also participates in that same `redraw_ready` contract, so PTY-backed foreign hosts and no-PTY embedded hosts share the same wake rule after visible size changes
   - the FFI-first split now has explicit internal owners: shared ABI/state/helpers in `src/terminal/ffi/shared.zig`, PTY-host operations in `src/terminal/ffi/host_api.zig`, core-facing export logic in `src/terminal/ffi/core_api.zig`, and `bridge.zig` as a thin facade
 - Repo-structure cleanup is complete enough; do not keep grinding non-product cleanup unless a new concrete smell appears.
 - Terminal correctness cleanup remains the quality bar, but the current active lane is architectural center-of-gravity correction.

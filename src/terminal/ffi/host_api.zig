@@ -20,7 +20,7 @@ pub fn resize(handle: ?*shared.ZideTerminalHandle, cols: u16, rows: u16, cell_wi
     if (rows == 0 or cols == 0) return .invalid_argument;
     h.session.resize(rows, cols) catch |err| return shared.mapError(err);
     h.session.setCellSize(cell_width, cell_height);
-    return .ok;
+    return shared.syncDerivedEvents(h);
 }
 
 pub fn sendBytes(handle: ?*shared.ZideTerminalHandle, bytes: ?[*]const u8, len: usize) shared.Status {
