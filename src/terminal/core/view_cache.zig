@@ -4,6 +4,7 @@ const kitty_mod = @import("../kitty/graphics.zig");
 const render_cache_mod = @import("render_cache.zig");
 const app_logger = @import("../../app_logger.zig");
 const publication = @import("view_cache_publication.zig");
+const plan_mod = @import("view_cache_plan.zig");
 const selection_projection = @import("view_cache_selection.zig");
 
 const RenderCache = render_cache_mod.RenderCache;
@@ -158,30 +159,28 @@ pub fn updateViewCacheNoLock(self: anytype, generation: u64, scroll_offset: usiz
         total_lines - rows - clamped_offset
     else
         0;
-    const visible_history_changed = visible_history_generation != active_cache.visible_history_generation or
-        (clamped_offset > 0 and (history_len != active_cache.history_len or total_lines != active_cache.total_lines));
-    var viewport_shift_rows: i32 = 0;
-    if (active_cache.rows == rows) {
-        const prev_end_line = if (active_cache.total_lines > active_cache.scroll_offset)
-            active_cache.total_lines - active_cache.scroll_offset
-        else
-            0;
-        const prev_start_line = if (prev_end_line > rows) prev_end_line - rows else 0;
-        viewport_shift_rows = @as(i32, @intCast(start_line)) - @as(i32, @intCast(prev_start_line));
-    }
-    const shift_abs: usize = @intCast(if (viewport_shift_rows < 0) -viewport_shift_rows else viewport_shift_rows);
-    const scroll_offset_changed = clamped_offset != active_cache.scroll_offset;
-    const can_publish_scroll_shift = scroll_offset_changed and
-        !selection_active and
-        !active_cache.selection_active and
-        !visible_history_changed and
-        view.dirty == .none and
-        active_cache.rows == rows and
-        active_cache.cols == cols and
-        active_cache.generation == presented_generation and
-        shift_abs > 0 and
-        shift_abs < rows;
-    const requires_full_damage_for_scroll_offset_change = scroll_offset_changed and !can_publish_scroll_shift;
+    const plan = plan_mod.buildPublicationPlan(
+        visible_history_generation,
+        active_cache.visible_history_generation,
+        clamped_offset,
+        active_cache.scroll_offset,
+        history_len,
+        active_cache.history_len,
+        total_lines,
+        active_cache.total_lines,
+        rows,
+        active_cache.rows,
+        cols,
+        active_cache.cols,
+        selection_active,
+        active_cache.selection_active,
+        view.dirty,
+        view.dirty == .none,
+        presented_generation,
+        active_cache.generation,
+        self.core.active == .alt,
+        active_cache.alt_active,
+    );
     var row: usize = 0;
     while (row < rows) : (row += 1) {
         const global_row = start_line + row;
@@ -201,12 +200,7 @@ pub fn updateViewCacheNoLock(self: anytype, generation: u64, scroll_offset: usiz
     }
 
     selection_projection.projectSelection(self, cache, total_lines, start_line, rows, cols, selection_active);
-    const needs_full_damage = rows != active_cache.rows or
-        cols != active_cache.cols or
-        requires_full_damage_for_scroll_offset_change or
-        (self.core.active == .alt) != active_cache.alt_active or
-        view.dirty == .full;
-    if (needs_full_damage) {
+    if (plan.needs_full_damage) {
         row = 0;
         while (row < rows) : (row += 1) {
             const row_start = row * cols;
@@ -215,34 +209,34 @@ pub fn updateViewCacheNoLock(self: anytype, generation: u64, scroll_offset: usiz
         }
     }
 
-    if (can_publish_scroll_shift) {
+    if (plan.can_publish_scroll_shift) {
         for (cache.dirty_rows.items) |*row_dirty| {
             row_dirty.* = false;
         }
-    } else if (view.dirty_rows.len == rows and !needs_full_damage and !visible_history_changed) {
+    } else if (view.dirty_rows.len == rows and !plan.needs_full_damage and !plan.visible_history_changed) {
         std.mem.copyForwards(bool, cache.dirty_rows.items, view.dirty_rows);
     } else {
         for (cache.dirty_rows.items) |*row_dirty| {
             row_dirty.* = true;
         }
     }
-    if (can_publish_scroll_shift) {
+    if (plan.can_publish_scroll_shift) {
         for (cache.dirty_cols_start.items, cache.dirty_cols_end.items) |*col_start, *col_end| {
             col_start.* = 0;
             col_end.* = if (cols > 0) @intCast(cols - 1) else 0;
         }
-        if (viewport_shift_rows > 0) {
-            var row_idx = rows - shift_abs;
+        if (plan.viewport_shift_rows > 0) {
+            var row_idx = rows - plan.shift_abs;
             while (row_idx < rows) : (row_idx += 1) {
                 cache.dirty_rows.items[row_idx] = true;
             }
         } else {
             var row_idx: usize = 0;
-            while (row_idx < shift_abs) : (row_idx += 1) {
+            while (row_idx < plan.shift_abs) : (row_idx += 1) {
                 cache.dirty_rows.items[row_idx] = true;
             }
         }
-    } else if (view.dirty_cols_start.len == rows and view.dirty_cols_end.len == rows and !needs_full_damage and !visible_history_changed) {
+    } else if (view.dirty_cols_start.len == rows and view.dirty_cols_end.len == rows and !plan.needs_full_damage and !plan.visible_history_changed) {
         std.mem.copyForwards(u16, cache.dirty_cols_start.items, view.dirty_cols_start);
         std.mem.copyForwards(u16, cache.dirty_cols_end.items, view.dirty_cols_end);
         if (cols > 0 and view.dirty == .partial) {
@@ -275,7 +269,7 @@ pub fn updateViewCacheNoLock(self: anytype, generation: u64, scroll_offset: usiz
         }
     }
 
-    if (!needs_full_damage and active_cache.rows == rows and active_cache.cols == cols and active_cache.selection_rows.items.len == rows) {
+    if (!plan.needs_full_damage and active_cache.rows == rows and active_cache.cols == cols and active_cache.selection_rows.items.len == rows) {
         var row_idx: usize = 0;
         while (row_idx < rows) : (row_idx += 1) {
             const was_selected = active_cache.selection_rows.items[row_idx];
@@ -336,31 +330,31 @@ pub fn updateViewCacheNoLock(self: anytype, generation: u64, scroll_offset: usiz
             break;
         }
     }
-    cache.dirty = if (needs_full_damage)
+    cache.dirty = if (plan.needs_full_damage)
         .full
-    else if (can_publish_scroll_shift)
+    else if (plan.can_publish_scroll_shift)
         .partial
-    else if (visible_history_changed and view.dirty == .none)
+    else if (plan.visible_history_changed and view.dirty == .none)
         .partial
     else
         view.dirty;
-    cache.damage = if (needs_full_damage)
+    cache.damage = if (plan.needs_full_damage)
         .{ .start_row = 0, .end_row = if (rows > 0) rows - 1 else 0, .start_col = 0, .end_col = if (cols > 0) cols - 1 else 0 }
-    else if (can_publish_scroll_shift and viewport_shift_rows > 0)
-        .{ .start_row = rows - shift_abs, .end_row = rows - 1, .start_col = 0, .end_col = if (cols > 0) cols - 1 else 0 }
-    else if (can_publish_scroll_shift)
-        .{ .start_row = 0, .end_row = shift_abs - 1, .start_col = 0, .end_col = if (cols > 0) cols - 1 else 0 }
-    else if (visible_history_changed and view.dirty == .none)
+    else if (plan.can_publish_scroll_shift and plan.viewport_shift_rows > 0)
+        .{ .start_row = rows - plan.shift_abs, .end_row = rows - 1, .start_col = 0, .end_col = if (cols > 0) cols - 1 else 0 }
+    else if (plan.can_publish_scroll_shift)
+        .{ .start_row = 0, .end_row = plan.shift_abs - 1, .start_col = 0, .end_col = if (cols > 0) cols - 1 else 0 }
+    else if (plan.visible_history_changed and view.dirty == .none)
         .{ .start_row = 0, .end_row = if (rows > 0) rows - 1 else 0, .start_col = 0, .end_col = if (cols > 0) cols - 1 else 0 }
     else
         view.damage;
-    if (needs_full_damage) {
+    if (plan.needs_full_damage) {
         const forced_reason = publication.pickForcedFullDirtyReason(
             rows,
             active_cache.rows,
             cols,
             active_cache.cols,
-            requires_full_damage_for_scroll_offset_change,
+            plan.requires_full_damage_for_scroll_offset_change,
             self.core.active == .alt,
             active_cache.alt_active,
             view.dirty,
@@ -373,8 +367,8 @@ pub fn updateViewCacheNoLock(self: anytype, generation: u64, scroll_offset: usiz
         cache.full_dirty_seq = view.full_dirty_seq;
     }
 
-    if (!needs_full_damage and
-        (view.dirty == .partial or visible_history_changed) and
+    if (!plan.needs_full_damage and
+        (view.dirty == .partial or plan.visible_history_changed) and
         active_cache.rows == rows and
         active_cache.cols == cols and
         active_cache.row_hashes.items.len == rows and
@@ -466,8 +460,8 @@ pub fn updateViewCacheNoLock(self: anytype, generation: u64, scroll_offset: usiz
     cache.screen_reverse = screen_reverse;
     cache.mouse_reporting_active = mouse_reporting_active;
     cache.clear_generation = clear_generation;
-    cache.viewport_shift_rows = viewport_shift_rows;
-    cache.viewport_shift_exposed_only = can_publish_scroll_shift;
+    cache.viewport_shift_rows = plan.viewport_shift_rows;
+    cache.viewport_shift_exposed_only = plan.can_publish_scroll_shift;
     updateKittyViewNoLock(self, cache);
     self.render_cache_index.store(target_index, .release);
 }
