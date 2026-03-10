@@ -48,6 +48,7 @@ items:
       - Read/poll byte pumps now also go through the transport boundary: io_threads.zig and pty_io.zig consume transport.read(...) and transport.waitForData(...) instead of reaching into raw Pty ownership directly
       - PTY attach/detach setup now also goes through terminal_transport helpers, including the replay harness reply-capture path
       - Low-risk transport existence gates now also route through terminal_transport helpers, so session_input/session_interaction no longer peek at self.pty directly just to answer "is there a writable transport?"
+      - OSC 5522 reply/status writes now also go through the transport writer guard instead of direct self.pty access inside protocol code
 
   - id: VTCORE-04
     title: Move protocol execution onto core/model contracts

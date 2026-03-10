@@ -415,6 +415,9 @@ Current session-side users no longer peek at `self.pty` directly just to answer
 "is there a writable transport?" for the mouse-report and OSC 5522 paste-event
 paths.
 
+The protocol-side OSC 5522 reply/read path now also uses the locked transport
+writer contract instead of reaching into raw `self.pty` ownership directly.
+
 ### 2026-03-10 attach/detach follow-up
 
 PTY setup now also has a transport-owned attach/detach seam:
