@@ -293,7 +293,7 @@ pub const TerminalSession = struct {
     }
 
     pub fn pollBacklogHint(self: *TerminalSession) bool {
-        return session_rendering.pollBacklogHint(self);
+        return session_runtime.pollBacklogHint(self);
     }
 
     pub fn lockPtyWriter(self: *TerminalSession) ?PtyWriteGuard {
