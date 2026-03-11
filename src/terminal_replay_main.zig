@@ -185,6 +185,7 @@ fn runVtFixture(
         .{ .validate_assertions = !observe_only },
     );
     defer allocator.free(observed.output);
+    defer allocator.free(observed.observed.row_spans);
     const path = try writeOutputFile(allocator, fixture.name, false, observed.output);
     defer allocator.free(path);
     log.logf(.info, "wrote {s}", .{path});
@@ -365,7 +366,15 @@ fn writeObservedFixtureState(
     } else {
         try out.writeAll("null");
     }
-    try out.writeAll("}");
+    try out.writeAll(",\"row_spans\":[");
+    for (observed.row_spans, 0..) |span, idx| {
+        if (idx > 0) try out.writeAll(",");
+        try out.print(
+            "{{\"row\":{d},\"start_col\":{d},\"end_col\":{d}}}",
+            .{ span.row, span.start_col, span.end_col },
+        );
+    }
+    try out.writeAll("]}");
 }
 
 fn reportGoldenDiff(name: []const u8, expected: []const u8, actual: []const u8) void {

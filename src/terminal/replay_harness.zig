@@ -129,6 +129,12 @@ pub const ExpectedDamage = struct {
 };
 
 pub const ObservedFixtureState = struct {
+    pub const RowSpan = struct {
+        row: usize,
+        start_col: usize,
+        end_col: usize,
+    };
+
     dirty: DirtyExpectation,
     damage: ExpectedDamage,
     viewport_shift_rows: ?i32,
@@ -136,6 +142,7 @@ pub const ObservedFixtureState = struct {
     history_len: ?usize,
     total_lines: ?usize,
     scroll_offset: ?usize,
+    row_spans: []const RowSpan,
 };
 
 pub const RunFixtureObserved = struct {
@@ -332,6 +339,7 @@ pub fn runFixture(
     fixture: *const Fixture,
 ) ![]u8 {
     const observed = try runFixtureObserved(allocator, fixture);
+    allocator.free(observed.observed.row_spans);
     return observed.output;
 }
 
@@ -411,7 +419,7 @@ pub fn runFixtureObservedWithOptions(
     const output = try snapshot_mod.encodeSnapshot(allocator, session, snapshot, debug, terminal.debugScrollbackRow);
     return .{
         .output = output,
-        .observed = observedFixtureState(snapshot, debug),
+        .observed = try observedFixtureState(allocator, snapshot, debug),
     };
 }
 
@@ -651,12 +659,38 @@ fn fixtureRenderCache(debug: terminal.DebugSnapshot) ?*const terminal.RenderCach
 }
 
 fn observedFixtureState(
+    allocator: std.mem.Allocator,
     snapshot: terminal.TerminalSnapshot,
     debug: terminal.DebugSnapshot,
-) ObservedFixtureState {
+) !ObservedFixtureState {
     const cache = fixtureRenderCache(debug);
     const actual_dirty = if (cache) |c| c.dirty else snapshot.dirty;
     const actual_damage = if (cache) |c| c.damage else snapshot.damage;
+    var row_spans = std.ArrayList(ObservedFixtureState.RowSpan).empty;
+    errdefer row_spans.deinit(allocator);
+
+    if (cache) |c| {
+        var row_idx: usize = 0;
+        while (row_idx < c.rows) : (row_idx += 1) {
+            if (!c.dirty_rows.items[row_idx]) continue;
+            try row_spans.append(allocator, .{
+                .row = row_idx,
+                .start_col = c.dirty_cols_start.items[row_idx],
+                .end_col = c.dirty_cols_end.items[row_idx],
+            });
+        }
+    } else {
+        var row_idx: usize = 0;
+        while (row_idx < snapshot.rows) : (row_idx += 1) {
+            if (!snapshot.dirty_rows[row_idx]) continue;
+            try row_spans.append(allocator, .{
+                .row = row_idx,
+                .start_col = snapshot.dirty_cols_start[row_idx],
+                .end_col = snapshot.dirty_cols_end[row_idx],
+            });
+        }
+    }
+
     return .{
         .dirty = switch (actual_dirty) {
             .none => .none,
@@ -674,6 +708,7 @@ fn observedFixtureState(
         .history_len = if (cache) |c| c.history_len else null,
         .total_lines = if (cache) |c| c.total_lines else null,
         .scroll_offset = if (cache) |c| c.scroll_offset else null,
+        .row_spans = try row_spans.toOwnedSlice(allocator),
     };
 }
 
