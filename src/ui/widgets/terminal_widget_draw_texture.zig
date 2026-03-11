@@ -20,6 +20,39 @@ pub const PartialPlanBounds = struct {
     end_col: usize,
 };
 
+pub fn formatPartialPlanRows(
+    buf: []u8,
+    partial_rows: []const bool,
+    partial_cols_start: []const u16,
+    partial_cols_end: []const u16,
+    max_rows: usize,
+) []const u8 {
+    if (buf.len == 0) return "";
+
+    var stream = std.io.fixedBufferStream(buf);
+    const writer = stream.writer();
+    var emitted: usize = 0;
+
+    for (partial_rows, 0..) |dirty, row| {
+        if (!dirty) continue;
+        if (emitted > 0) {
+            writer.writeAll(" ") catch break;
+        }
+        if (emitted == max_rows) {
+            writer.writeAll("...") catch {};
+            break;
+        }
+        std.fmt.format(
+            writer,
+            "{d}:{d}-{d}",
+            .{ row, partial_cols_start[row], partial_cols_end[row] },
+        ) catch break;
+        emitted += 1;
+    }
+
+    return stream.getWritten();
+}
+
 pub fn buildPartialPlan(
     cache: *const RenderCache,
     partial_rows: []bool,
@@ -512,4 +545,38 @@ test "buildPartialPlan reproduces cursorcolumn live draw shape" {
     try std.testing.expectEqual(@as(u16, 6), partial_cols_end[9]);
     try std.testing.expectEqual(@as(u16, 33), partial_cols_start[10]);
     try std.testing.expectEqual(@as(u16, 33), partial_cols_end[10]);
+}
+
+test "formatPartialPlanRows summarizes row-local spans" {
+    var partial_rows = [_]bool{ true, false, true, true };
+    var partial_cols_start = [_]u16{ 6, 0, 4, 33 };
+    var partial_cols_end = [_]u16{ 6, 0, 6, 33 };
+    var buf: [64]u8 = undefined;
+
+    const summary = formatPartialPlanRows(
+        &buf,
+        &partial_rows,
+        &partial_cols_start,
+        &partial_cols_end,
+        8,
+    );
+
+    try std.testing.expectEqualStrings("0:6-6 2:4-6 3:33-33", summary);
+}
+
+test "formatPartialPlanRows truncates long plans" {
+    var partial_rows = [_]bool{ true, true, true, true };
+    var partial_cols_start = [_]u16{ 1, 2, 3, 4 };
+    var partial_cols_end = [_]u16{ 1, 2, 3, 4 };
+    var buf: [64]u8 = undefined;
+
+    const summary = formatPartialPlanRows(
+        &buf,
+        &partial_rows,
+        &partial_cols_start,
+        &partial_cols_end,
+        2,
+    );
+
+    try std.testing.expectEqualStrings("0:1-1 1:2-2 ...", summary);
 }
