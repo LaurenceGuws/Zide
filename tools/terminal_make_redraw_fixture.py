@@ -2,9 +2,12 @@
 """
 Create a harness_api terminal redraw fixture from captured baseline/update bytes.
 
-This tool can either create a fixture skeleton with placeholder damage or
-hydrate the expected redraw contract from an observed-state JSON emitted by the
-replay runner.
+This tool can:
+- create a fixture skeleton with placeholder damage
+- hydrate the expected redraw contract from an observed-state JSON emitted by
+  the replay runner
+- strip the common baseline prefix/suffix from update captures, so staged PTY
+  sessions can be turned into honest update chunks with less manual editing
 """
 
 from __future__ import annotations
@@ -20,6 +23,50 @@ def read_text(path: Path) -> str:
 
 def read_json(path: Path) -> dict:
     return json.loads(path.read_text(encoding="utf-8"))
+
+
+def common_prefix_len(a: str, b: str) -> int:
+    size = min(len(a), len(b))
+    idx = 0
+    while idx < size and a[idx] == b[idx]:
+        idx += 1
+    return idx
+
+
+def trimmed_prefix_len(a: str, b: str) -> int:
+    prefix_len = common_prefix_len(a, b)
+    while prefix_len > 0:
+        candidate = a[:prefix_len]
+        if (
+            not candidate.endswith("\x1b")
+            and not candidate.endswith("\x1b[")
+            and not candidate.endswith("\x9b")
+        ):
+            return prefix_len
+        prefix_len -= 1
+    return 0
+
+
+def common_suffix_len(a: str, b: str) -> int:
+    size = min(len(a), len(b))
+    idx = 0
+    while idx < size and a[len(a) - 1 - idx] == b[len(b) - 1 - idx]:
+        idx += 1
+    return idx
+
+
+def trimmed_suffix_len(baseline_tail: str, trimmed: str) -> int:
+    suffix_len = common_suffix_len(baseline_tail, trimmed)
+    while suffix_len > 0:
+        candidate = trimmed[:-suffix_len]
+        if (
+            not candidate.endswith("\x1b")
+            and not candidate.endswith("\x1b[")
+            and not candidate.endswith("\x9b")
+        ):
+            return suffix_len
+        suffix_len -= 1
+    return 0
 
 
 def main() -> int:
@@ -46,6 +93,16 @@ def main() -> int:
     parser.add_argument(
         "--observed-file",
         help="JSON emitted by terminal-replay --print-observed/--observed-file; fills expected redraw fields",
+    )
+    parser.add_argument(
+        "--strip-baseline-prefix",
+        action="store_true",
+        help="Strip the shared baseline prefix from each update capture before writing output_chunks",
+    )
+    parser.add_argument(
+        "--strip-shared-suffix",
+        action="store_true",
+        help="Strip the shared baseline suffix from each update capture after prefix stripping",
     )
     parser.add_argument(
         "--line-ending",
@@ -80,7 +137,20 @@ def main() -> int:
     vt_path = fixture_dir / f"{args.name}.vt"
 
     baseline = read_text(Path(args.baseline_file))
-    output_chunks = [read_text(Path(path)) for path in args.update_files]
+    raw_output_chunks = [read_text(Path(path)) for path in args.update_files]
+    if args.strip_baseline_prefix:
+        output_chunks = []
+        for chunk in raw_output_chunks:
+            prefix_len = trimmed_prefix_len(baseline, chunk)
+            trimmed = chunk[prefix_len:]
+            if args.strip_shared_suffix:
+                baseline_tail = baseline[prefix_len:]
+                suffix_len = trimmed_suffix_len(baseline_tail, trimmed)
+                if suffix_len > 0:
+                    trimmed = trimmed[:-suffix_len]
+            output_chunks.append(trimmed)
+    else:
+        output_chunks = raw_output_chunks
 
     fixture = {
         "fixture_type": "harness_api",

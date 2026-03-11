@@ -39,6 +39,7 @@ pub fn main() !void {
     var update_goldens = false;
     var print_observed = false;
     var observed_file_path: ?[]const u8 = null;
+    var observe_only = false;
 
     while (args.next()) |arg| {
         if (std.mem.eql(u8, arg, "--list")) {
@@ -54,6 +55,8 @@ pub fn main() !void {
             print_observed = true;
         } else if (std.mem.eql(u8, arg, "--observed-file")) {
             observed_file_path = args.next() orelse return error.MissingObservedFilePath;
+        } else if (std.mem.eql(u8, arg, "--observe-only")) {
+            observe_only = true;
         }
     }
 
@@ -91,7 +94,7 @@ pub fn main() !void {
             return error.FixtureNotFound;
         }
         if (findFixture(vt_fixtures, name)) |fixture| {
-            try runVtFixture(log, allocator, fixture, update_goldens, print_observed, observed_file_path);
+            try runVtFixture(log, allocator, fixture, update_goldens, print_observed, observed_file_path, observe_only);
             return;
         }
         if (findFixture(encoder_fixtures, name)) |fixture| {
@@ -108,7 +111,7 @@ pub fn main() !void {
         }
         for (vt_fixtures) |*fixture| {
             log.logf(.info, "running fixture {s}", .{fixture.name});
-            try runVtFixture(log, allocator, fixture, update_goldens, print_observed, observed_file_path);
+            try runVtFixture(log, allocator, fixture, update_goldens, print_observed, observed_file_path, observe_only);
         }
         for (encoder_fixtures) |*fixture| {
             log.logf(.info, "running fixture encoder:{s}", .{fixture.name});
@@ -174,8 +177,13 @@ fn runVtFixture(
     update_goldens: bool,
     print_observed: bool,
     observed_file_path: ?[]const u8,
+    observe_only: bool,
 ) !void {
-    const observed = try harness.runFixtureObserved(allocator, fixture);
+    const observed = try harness.runFixtureObservedWithOptions(
+        allocator,
+        fixture,
+        .{ .validate_assertions = !observe_only },
+    );
     defer allocator.free(observed.output);
     const path = try writeOutputFile(allocator, fixture.name, false, observed.output);
     defer allocator.free(path);
@@ -192,6 +200,7 @@ fn runVtFixture(
         log.logf(.info, "updated golden {s}", .{golden_path});
         return;
     }
+    if (observe_only) return;
     try compareGolden(fixture.name, fixture.golden, observed.output);
 }
 

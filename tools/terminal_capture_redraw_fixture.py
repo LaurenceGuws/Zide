@@ -27,6 +27,16 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--fixture-dir", default="fixtures/terminal")
     parser.add_argument("--capture-dir", default="/tmp/zide-redraw-captures")
     parser.add_argument(
+        "--strip-baseline-prefix",
+        action="store_true",
+        help="Strip the shared baseline prefix from each update capture when generating output_chunks",
+    )
+    parser.add_argument(
+        "--strip-shared-suffix",
+        action="store_true",
+        help="Strip the shared baseline suffix from each update capture after prefix stripping",
+    )
+    parser.add_argument(
         "--hydrate-observed",
         action="store_true",
         help="Run terminal replay after fixture generation and hydrate expected redraw fields from observed output",
@@ -172,6 +182,10 @@ def main() -> int:
         "--baseline-file",
         str(baseline_file),
     ]
+    if args.strip_baseline_prefix:
+        argv.append("--strip-baseline-prefix")
+    if args.strip_shared_suffix:
+        argv.append("--strip-shared-suffix")
     for update_file in update_files:
         argv.extend(["--update-file", str(update_file)])
     subprocess.run(argv, check=True)
@@ -186,6 +200,7 @@ def main() -> int:
                 "--",
                 "--fixture",
                 args.name,
+                "--observe-only",
                 "--observed-file",
                 str(observed_file),
             ],
@@ -201,7 +216,9 @@ def main() -> int:
                 args.fixture_dir,
                 "--observed-file",
                 str(observed_file),
-            ],
+            ]
+            + (["--strip-baseline-prefix"] if args.strip_baseline_prefix else [])
+            + (["--strip-shared-suffix"] if args.strip_shared_suffix else []),
             check=True,
         )
 

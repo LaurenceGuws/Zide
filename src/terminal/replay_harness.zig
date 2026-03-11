@@ -140,6 +140,10 @@ pub const RunFixtureObserved = struct {
     observed: ObservedFixtureState,
 };
 
+pub const RunFixtureOptions = struct {
+    validate_assertions: bool = true,
+};
+
 const ReplayPtyCapture = struct {
     read_fd: std.posix.fd_t,
     pty: pty_mod.Pty,
@@ -332,6 +336,14 @@ pub fn runFixtureObserved(
     allocator: std.mem.Allocator,
     fixture: *const Fixture,
 ) !RunFixtureObserved {
+    return runFixtureObservedWithOptions(allocator, fixture, .{});
+}
+
+pub fn runFixtureObservedWithOptions(
+    allocator: std.mem.Allocator,
+    fixture: *const Fixture,
+    options: RunFixtureOptions,
+) !RunFixtureObserved {
     if (fixture.meta.rows == 0 or fixture.meta.cols == 0) {
         return error.InvalidFixtureSize;
     }
@@ -381,7 +393,9 @@ pub fn runFixtureObserved(
 
     const snapshot = session.snapshot();
     const debug = terminal.debugSnapshot(session);
-    try validateAssertions(fixture, snapshot, debug);
+    if (options.validate_assertions) {
+        try validateAssertions(fixture, snapshot, debug);
+    }
     if (fixture.meta.reply_hex) |reply_hex| {
         var capture = reply_capture orelse return error.ReplyAssertionMissingCapture;
         const actual = try capture.readAll(allocator);
