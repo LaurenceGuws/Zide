@@ -44,8 +44,10 @@ python3 tools/terminal_summarize_redraw_log.py --json
 That prints the latest aggregate redraw record plus the latest row-local partial
 plan span summary, which is the fastest way to compare:
 
+- current frame `dirty` vs `current_reason`
 - backend `damage_rows` / `damage_cols`
 - live widget `plan_rows` / `plan_row_span` / `plan_col_span`
+- `shift_rows` / `shift_exposed_only`
 - row-local `spans=...`
 
 ## Capture Shape

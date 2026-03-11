@@ -541,6 +541,14 @@ pub fn drawPrepared(
     const elapsed_ms = time_utils.secondsToMs(now - draw_start);
     const has_kitty_images = self.kitty.images_view.items.len > 0;
     const log_partial_update = texture_partial_update and updated and (draw_log.enabled_file or draw_log.enabled_console or perf_log.enabled_file or perf_log.enabled_console);
+    const current_reason = switch (cache.dirty) {
+        .full => @tagName(cache.full_dirty_reason),
+        .partial => if (cache.viewport_shift_rows != 0)
+            (if (cache.viewport_shift_exposed_only) "viewport_shift_exposed" else "viewport_shift")
+        else
+            "partial",
+        .none => "clean",
+    };
     if ((elapsed_ms >= 4.0 or has_kitty_images or log_partial_update) and (now - self.last_draw_log_time) >= 0.1) {
         self.last_draw_log_time = now;
         draw_log.logf(
@@ -558,7 +566,7 @@ pub fn drawPrepared(
         );
         perf_log.logf(
             .info,
-            "draw_ms={d:.2} lock_ms={d:.2} cache_copy_ms={d:.2} texture_update_ms={d:.2} overlay_ms={d:.2} full={d} partial={d} updated={d} sync={d} clear_ok={d} dirty={s} dirty_rows={d} damage_rows={d} damage_cols={d} plan_rows={d} plan_row_span={d} plan_col_span={d} blink_cells={d} blink_phase_changed={d} full_reasons={d}/{d}/{d}/{d} full_dirty_reason={s} full_dirty_seq={d} rows={d} cols={d}",
+            "draw_ms={d:.2} lock_ms={d:.2} cache_copy_ms={d:.2} texture_update_ms={d:.2} overlay_ms={d:.2} full={d} partial={d} updated={d} sync={d} clear_ok={d} dirty={s} current_reason={s} dirty_rows={d} damage_rows={d} damage_cols={d} plan_rows={d} plan_row_span={d} plan_col_span={d} blink_cells={d} blink_phase_changed={d} full_reasons={d}/{d}/{d}/{d} full_dirty_reason={s} full_dirty_seq={d} shift_rows={d} shift_exposed_only={d} rows={d} cols={d}",
             .{
                 elapsed_ms,
                 lock_ms,
@@ -571,6 +579,7 @@ pub fn drawPrepared(
                 @intFromBool(sync_updates),
                 @intFromBool(outcome.presented != null and (outcome.texture_updated or cache.dirty == .none)),
                 @tagName(cache.dirty),
+                current_reason,
                 dirty_rows_count,
                 damage_row_span,
                 damage_col_span,
@@ -585,6 +594,8 @@ pub fn drawPrepared(
                 @intFromBool(full_reason_dirty_full),
                 @tagName(cache.full_dirty_reason),
                 cache.full_dirty_seq,
+                viewport_shift_rows,
+                @intFromBool(cache.viewport_shift_exposed_only),
                 rows,
                 cols,
             },

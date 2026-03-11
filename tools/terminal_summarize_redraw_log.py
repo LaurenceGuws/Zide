@@ -139,11 +139,14 @@ def main() -> int:
             print(
                 "  parsed: "
                 f"dirty={perf_fields.get('dirty', '?')} "
+                f"current_reason={perf_fields.get('current_reason', '?')} "
                 f"damage_rows={perf_fields.get('damage_rows', '?')} "
                 f"damage_cols={perf_fields.get('damage_cols', '?')} "
                 f"plan_rows={perf_fields.get('plan_rows', '?')} "
                 f"plan_row_span={perf_fields.get('plan_row_span', '?')} "
-                f"plan_col_span={perf_fields.get('plan_col_span', '?')}"
+                f"plan_col_span={perf_fields.get('plan_col_span', '?')} "
+                f"shift_rows={perf_fields.get('shift_rows', '?')} "
+                f"shift_exposed_only={perf_fields.get('shift_exposed_only', '?')}"
             )
     if redraw is not None:
         redraw_fields = parse_fields(redraw["message"])
