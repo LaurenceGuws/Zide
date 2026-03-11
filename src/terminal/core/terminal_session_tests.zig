@@ -142,6 +142,35 @@ test "feedOutputBytes keeps incremental damage after baseline publish" {
     try std.testing.expectEqual(@as(usize, 0), cache.damage.end_col);
 }
 
+test "repeat guide chunks do not grow scrollback unexpectedly" {
+    const allocator = std.testing.allocator;
+
+    var session = try TerminalSession.init(allocator, 4, 10);
+    defer session.deinit();
+    session.attachExternalTransport();
+
+    try std.testing.expect(try session.enqueueExternalBytes("\x1b[H1| |aaa \x1b[2;1H2| |bbb \x1b[3;1H3| |ccc \x1b[4;1H4| |ddd "));
+    try session.poll();
+    try std.testing.expectEqual(@as(usize, 0), session.scrollbackInfo().total_rows);
+
+    try std.testing.expect(session.acknowledgePresentedGeneration(session.renderCache().generation));
+
+    try std.testing.expect(try session.enqueueExternalBytes("\x1b[H5\x1b[2;1H+>"));
+    try session.poll();
+    try std.testing.expectEqual(@as(usize, 0), session.scrollbackInfo().total_rows);
+
+    try std.testing.expect(try session.enqueueExternalBytes("\x1b[1;4H|\x1b[2;4H|"));
+    try session.poll();
+
+    try std.testing.expectEqual(@as(usize, 0), session.scrollbackInfo().total_rows);
+
+    const snapshot = session.snapshot();
+    try expectSnapshotRow(snapshot, 0, "5| |aaa   ");
+    try expectSnapshotRow(snapshot, 1, "+> |bbb   ");
+    try expectSnapshotRow(snapshot, 2, "3| |ccc   ");
+    try expectSnapshotRow(snapshot, 3, "4| |ddd   ");
+}
+
 test "acknowledgePresentedGeneration derives sync dirty retirement from cache" {
     const allocator = std.testing.allocator;
 
