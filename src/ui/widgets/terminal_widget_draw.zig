@@ -204,12 +204,15 @@ pub fn drawPrepared(
 
     const view_cells = cache.cells.items;
     const view_dirty_rows = cache.dirty_rows.items;
+    const draw_log = app_logger.logger("terminal.ui.redraw");
     var dirty_rows_count: usize = 0;
     var damage_row_span: usize = 0;
     var damage_col_span: usize = 0;
     var partial_plan_rows_count: usize = 0;
     var partial_plan_row_span: usize = 0;
     var partial_plan_col_span: usize = 0;
+    var partial_plan_summary: []const u8 = "";
+    var partial_plan_summary_buf: [256]u8 = undefined;
     if (cache.dirty != .none) {
         for (view_dirty_rows) |row_dirty| {
             if (row_dirty) dirty_rows_count += 1;
@@ -412,6 +415,15 @@ pub fn drawPrepared(
                     partial_plan_row_span = bounds.end_row - bounds.start_row + 1;
                     partial_plan_col_span = bounds.end_col - bounds.start_col + 1;
                 }
+                if ((draw_log.enabled_file or draw_log.enabled_console) and texture_partial_update) {
+                    partial_plan_summary = draw_texture.formatPartialPlanRows(
+                        &partial_plan_summary_buf,
+                        self.partial_draw_rows.items,
+                        self.partial_draw_cols_start.items,
+                        self.partial_draw_cols_end.items,
+                        12,
+                    );
+                }
 
                 r.beginTerminalBatch();
                 for (0..rows) |row| {
@@ -524,7 +536,6 @@ pub fn drawPrepared(
         };
     }
 
-    const draw_log = app_logger.logger("terminal.ui.redraw");
     const perf_log = app_logger.logger("terminal.ui.perf");
     const now = app_shell.getTime();
     const elapsed_ms = time_utils.secondsToMs(now - draw_start);
@@ -577,6 +588,18 @@ pub fn drawPrepared(
                 cols,
             },
         );
+        if (partial_plan_summary.len > 0) {
+            draw_log.logf(
+                .debug,
+                "partial_plan rows={d} row_span={d} col_span={d} spans={s}",
+                .{
+                    partial_plan_rows_count,
+                    partial_plan_row_span,
+                    partial_plan_col_span,
+                    partial_plan_summary,
+                },
+            );
+        }
     }
 
     if (self.bench_enabled) {
