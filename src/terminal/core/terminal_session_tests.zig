@@ -267,6 +267,39 @@ test "repeat guide second packet keeps raw screen bottom row clean" {
     try std.testing.expect(!view.dirty_rows[3]);
 }
 
+test "manual repeat guide publication still dirties bottom row today" {
+    const allocator = std.testing.allocator;
+
+    var session = try TerminalSession.init(allocator, 4, 10);
+    defer session.deinit();
+
+    session.debugFeedBytes("\x1b[H1| |aaa \x1b[2;1H2| |bbb \x1b[3;1H3| |ccc \x1b[4;1H4| |ddd ");
+    _ = session.output_generation.fetchAdd(1, .acq_rel);
+    session.updateViewCacheNoLock(session.output_generation.load(.acquire), session.history.scrollOffset());
+    session.primary.clearDirty();
+    session.alt.clearDirty();
+    try std.testing.expect(session.acknowledgePresentedGeneration(session.renderCache().generation));
+
+    session.debugFeedBytes("\x1b[H5\x1b[2;1H+>");
+    _ = session.output_generation.fetchAdd(1, .acq_rel);
+    session.updateViewCacheNoLock(session.output_generation.load(.acquire), session.history.scrollOffset());
+
+    session.debugFeedBytes("\x1b[1;4H|\x1b[2;4H|");
+    const view = session.activeScreenConst().snapshotView();
+    try std.testing.expect(view.dirty_rows[0]);
+    try std.testing.expect(view.dirty_rows[1]);
+    try std.testing.expect(!view.dirty_rows[2]);
+    try std.testing.expect(!view.dirty_rows[3]);
+
+    _ = session.output_generation.fetchAdd(1, .acq_rel);
+    session.updateViewCacheNoLock(session.output_generation.load(.acquire), session.history.scrollOffset());
+
+    const cache = session.renderCache();
+    try std.testing.expect(cache.dirty_rows.items[3]);
+    try std.testing.expectEqual(@as(u16, 0), cache.dirty_cols_start.items[3]);
+    try std.testing.expectEqual(@as(u16, 9), cache.dirty_cols_end.items[3]);
+}
+
 test "acknowledgePresentedGeneration derives sync dirty retirement from cache" {
     const allocator = std.testing.allocator;
 
