@@ -392,45 +392,19 @@ pub fn drawPrepared(
                     return outcome;
                 };
 
-                for (self.partial_draw_rows.items) |*row_draw| {
-                    row_draw.* = false;
-                }
-                for (self.partial_draw_cols_start.items, self.partial_draw_cols_end.items) |*col_start, *col_end| {
-                    col_start.* = if (cols > 0) @intCast(cols) else 0;
-                    col_end.* = 0;
-                }
-
-                var row: usize = 0;
-                if (shift_requires_fullwidth_partial) {
-                    markAllRowsFullWidthPartialPlan(
-                        self.partial_draw_rows.items,
-                        self.partial_draw_cols_start.items,
-                        self.partial_draw_cols_end.items,
-                        rows,
-                        cols,
-                    );
-                } else {
-                    const shift_up = viewport_shift_rows > 0;
-                    while (row < rows) : (row += 1) {
-                        const is_shift_row = shifted_rows > 0 and (if (shift_up) row >= rows - shifted_rows else row < shifted_rows);
-                        if (!((row < view_dirty_rows.len and view_dirty_rows[row]) or is_shift_row)) continue;
-
-                        var col_start: usize = 0;
-                        var col_end: usize = cols - 1;
-                        if (!is_shift_row and row < cache.dirty_cols_start.items.len and row < cache.dirty_cols_end.items.len) {
-                            col_start = @min(@as(usize, cache.dirty_cols_start.items[row]), cols - 1);
-                            col_end = @min(@as(usize, cache.dirty_cols_end.items[row]), cols - 1);
-                        }
-                        markPartialPlanRow(
-                            self.partial_draw_rows.items,
-                            self.partial_draw_cols_start.items,
-                            self.partial_draw_cols_end.items,
-                            row,
-                            col_start,
-                            col_end,
-                        );
-                    }
-                }
+                buildBasePartialPlan(
+                    self.partial_draw_rows.items,
+                    self.partial_draw_cols_start.items,
+                    self.partial_draw_cols_end.items,
+                    view_dirty_rows,
+                    cache.dirty_cols_start.items,
+                    cache.dirty_cols_end.items,
+                    rows,
+                    cols,
+                    shifted_rows,
+                    viewport_shift_rows,
+                    shift_requires_fullwidth_partial,
+                );
                 if (blink_requires_partial) {
                     addBlinkRowsToPartialPlan(
                         cache,
@@ -441,8 +415,7 @@ pub fn drawPrepared(
                 }
 
                 r.beginTerminalBatch();
-                row = 0;
-                while (row < rows) : (row += 1) {
+                for (0..rows) |row| {
                     if (!self.partial_draw_rows.items[row]) continue;
                     const col_start = @min(@as(usize, self.partial_draw_cols_start.items[row]), cols - 1);
                     const col_end = @min(@as(usize, self.partial_draw_cols_end.items[row]), cols - 1);
@@ -455,8 +428,7 @@ pub fn drawPrepared(
                     self.kitty.drawImages(self.session.allocator, shell, base_x_local, base_y_local, false, start_line, rows, cols);
                 }
                 r.beginTerminalGlyphBatch();
-                row = 0;
-                while (row < rows) : (row += 1) {
+                for (0..rows) |row| {
                     if (!self.partial_draw_rows.items[row]) continue;
                     const col_start = @min(@as(usize, self.partial_draw_cols_start.items[row]), cols - 1);
                     const col_end = @min(@as(usize, self.partial_draw_cols_end.items[row]), cols - 1);
@@ -762,6 +734,7 @@ test "full-width partial plan marks every row" {
 }
 const planViewportTextureShift = draw_texture.planViewportTextureShift;
 const chooseTextureUpdatePlan = draw_texture.chooseTextureUpdatePlan;
+const buildBasePartialPlan = draw_texture.buildBasePartialPlan;
 const markPartialPlanRows = draw_texture.markPartialPlanRows;
 const markPartialPlanRow = draw_texture.markPartialPlanRow;
 const markAllRowsFullWidthPartialPlan = draw_texture.markAllRowsFullWidthPartialPlan;
