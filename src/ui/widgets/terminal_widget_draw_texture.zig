@@ -136,3 +136,33 @@ pub fn addBlinkRowsToPartialPlan(
         }
     }
 }
+
+test "markPartialPlanRows widens to adjacent rows" {
+    var partial_rows = [_]bool{false} ** 5;
+    var partial_cols_start = [_]u16{99} ** 5;
+    var partial_cols_end = [_]u16{0} ** 5;
+
+    markPartialPlanRows(&partial_rows, &partial_cols_start, &partial_cols_end, 5, 2, 4, 6);
+
+    try std.testing.expectEqualSlices(bool, &[_]bool{ false, true, true, true, false }, &partial_rows);
+    try std.testing.expectEqual(@as(u16, 4), partial_cols_start[1]);
+    try std.testing.expectEqual(@as(u16, 6), partial_cols_end[1]);
+    try std.testing.expectEqual(@as(u16, 4), partial_cols_start[2]);
+    try std.testing.expectEqual(@as(u16, 6), partial_cols_end[2]);
+    try std.testing.expectEqual(@as(u16, 4), partial_cols_start[3]);
+    try std.testing.expectEqual(@as(u16, 6), partial_cols_end[3]);
+}
+
+test "markPartialPlanRows clamps at top edge" {
+    var partial_rows = [_]bool{false} ** 4;
+    var partial_cols_start = [_]u16{99} ** 4;
+    var partial_cols_end = [_]u16{0} ** 4;
+
+    markPartialPlanRows(&partial_rows, &partial_cols_start, &partial_cols_end, 4, 0, 2, 3);
+
+    try std.testing.expectEqualSlices(bool, &[_]bool{ true, true, false, false }, &partial_rows);
+    try std.testing.expectEqual(@as(u16, 2), partial_cols_start[0]);
+    try std.testing.expectEqual(@as(u16, 3), partial_cols_end[0]);
+    try std.testing.expectEqual(@as(u16, 2), partial_cols_start[1]);
+    try std.testing.expectEqual(@as(u16, 3), partial_cols_end[1]);
+}

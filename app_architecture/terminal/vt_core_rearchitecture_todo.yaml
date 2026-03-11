@@ -156,7 +156,8 @@ items:
       - Mixed single-session `nvim` authority now also exists as `redraw_nvim_guides_cursorline_move.*`; it survives the new capture guards, but its broad rows appear to be dominated by real `:set cursorline` command-line churn plus line-highlight/statusline changes, so it should be treated as evidence of a legitimately broad sequence rather than the next narrowable publication bug
       - Cleaner startup-configured mixed `nvim` authority now also exists as `redraw_nvim_guides_clean_move.*`; this one avoids command-line mode churn and currently publishes rows `0..10`, cols `4..49`, with row spans showing gutter-only churn on rows `0..7`, full-width active-row churn on rows `8..9`, and a statusline cursor box at row `10`
       - Cleaner startup-configured cursorcolumn-only authority now also exists as `redraw_nvim_guides_cursorcolumn_move.*`; this is the sharpest mixed redraw evidence so far because its row spans stay narrow (`rows 0..7 col 6`, `rows 8..9 cols 4..6`, `row 10 col 33`) while the aggregate damage box still widens to `rows 0..10 cols 4..33`
-      - That makes `redraw_nvim_guides_cursorcolumn_move.*` the next honest optimization target, but likely on the publication/render-consumption boundary rather than in the basic row-local dirty-span detection itself
+      - Code read after that fixture now sharpens the likely target further: `view_cache` row spans are already narrow, and the aggregate `damage` box is mostly a coarse union summary; the next suspicious widening point is UI-side partial draw planning, where `markPartialPlanRows(...)` in `src/ui/widgets/terminal_widget_draw_texture.zig` expands each dirty row to adjacent rows
+      - That makes `redraw_nvim_guides_cursorcolumn_move.*` the next honest optimization target, but on the publication/render-consumption boundary rather than in the basic row-local dirty-span detection itself
 
   - id: VTCORE-06
     title: Keep input encoding as a peer subsystem
