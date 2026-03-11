@@ -161,7 +161,7 @@ items:
       - First UI-side narrowing cut is now landed too: non-blink partial redraw rows no longer automatically widen to adjacent rows in `terminal_widget_draw.zig`; blink-driven expansion still uses the old adjacent-row helper
       - Important scope note: the replay fixture's observed `damage` box does not change from that cut, because replay authority currently reflects backend publication, not renderer-side partial-plan expansion; this change is locked by the new unit tests around `markPartialPlanRow(...)` vs `markPartialPlanRows(...)`
       - UI-side partial-plan tests now also lock the sharper result explicitly: the aggregate union bounds for the `cursorcolumn` case remain `rows 0..10 cols 4..33`, but rows `0..7` no longer inherit rows `8..10`'s wider columns, which is the actual renderer-side improvement we were after
-      - Live redraw logging now also exposes both aggregate widget partial-plan fields (`plan_rows`, `plan_row_span`, `plan_col_span`) and row-local `spans=...`, with `tools/terminal_summarize_redraw_log.py` added as the cheap readback path for the next manual `nvim` repro; it now also parses the key perf fields directly and can emit JSON for scripted comparison
+      - Live redraw logging now also exposes both aggregate widget partial-plan fields (`plan_rows`, `plan_row_span`, `plan_col_span`) and row-local `spans=...`, with `tools/terminal_summarize_redraw_log.py` added as the cheap readback path for the next manual `nvim` repro; it now parses the key perf fields directly, can emit JSON for scripted comparison, and has an `--interesting` mode that skips common lifecycle churn (`init`, `alt_enter`, `alt_exit`)
 
   - id: VTCORE-06
     title: Keep input encoding as a peer subsystem

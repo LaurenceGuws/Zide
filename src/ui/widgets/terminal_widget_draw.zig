@@ -540,7 +540,8 @@ pub fn drawPrepared(
     const now = app_shell.getTime();
     const elapsed_ms = time_utils.secondsToMs(now - draw_start);
     const has_kitty_images = self.kitty.images_view.items.len > 0;
-    if ((elapsed_ms >= 4.0 or has_kitty_images) and (now - self.last_draw_log_time) >= 0.1) {
+    const log_partial_update = texture_partial_update and updated and (draw_log.enabled_file or draw_log.enabled_console or perf_log.enabled_file or perf_log.enabled_console);
+    if ((elapsed_ms >= 4.0 or has_kitty_images or log_partial_update) and (now - self.last_draw_log_time) >= 0.1) {
         self.last_draw_log_time = now;
         draw_log.logf(
             .info,

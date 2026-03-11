@@ -7,7 +7,7 @@ return {
         file = "terminal.ui.perf,terminal.ui.redraw",
     },
     logs = {
-        file_level = "info",
+        file_level = "debug",
         console_level = "info",
     },
 }
