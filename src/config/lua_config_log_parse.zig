@@ -35,6 +35,31 @@ fn parseFilterValueOwned(allocator: std.mem.Allocator, lua: *zlua.Lua, idx: i32)
     return try out.toOwnedSlice(allocator);
 }
 
+fn parseLevelOverrideValueOwned(allocator: std.mem.Allocator, lua: *zlua.Lua, idx: i32) !?[]u8 {
+    if (lua.isString(idx)) {
+        if (lua.toString(idx)) |v| return try allocator.dupe(u8, v) else |_| return null;
+    }
+    if (!lua.isTable(idx)) return null;
+
+    var out = std.ArrayList(u8).empty;
+    errdefer out.deinit(allocator);
+
+    const table_index = lua.absIndex(idx);
+    lua.pushNil();
+    while (lua.next(table_index)) {
+        defer lua.pop(1);
+        if (!lua.isString(-2) or !lua.isString(-1)) continue;
+        const key = lua.toString(-2) catch continue;
+        const value = lua.toString(-1) catch continue;
+        if (parseLoggerLevelFromString(value) == null) continue;
+        if (out.items.len > 0) try out.append(allocator, ',');
+        try out.appendSlice(allocator, key);
+        try out.append(allocator, '=');
+        try out.appendSlice(allocator, value);
+    }
+    return try out.toOwnedSlice(allocator);
+}
+
 fn parseSdlLogLevelFromString(value: []const u8) ?SdlLogLevel {
     if (std.mem.eql(u8, value, "critical")) return 6;
     if (std.mem.eql(u8, value, "error")) return 5;
@@ -91,6 +116,14 @@ pub fn parseLogSettings(allocator: std.mem.Allocator, lua: *zlua.Lua, table_inde
     }
     lua.pop(1);
 
+    _ = lua.getField(table_index, "log_file_level_overrides");
+    if (try parseLevelOverrideValueOwned(allocator, lua, -1)) |v| out.log_file_level_overrides = v;
+    lua.pop(1);
+
+    _ = lua.getField(table_index, "log_console_level_overrides");
+    if (try parseLevelOverrideValueOwned(allocator, lua, -1)) |v| out.log_console_level_overrides = v;
+    lua.pop(1);
+
     _ = lua.getField(table_index, "logs");
     if (lua.isTable(-1)) {
         const logs_idx = lua.absIndex(-1);
@@ -122,6 +155,14 @@ pub fn parseLogSettings(allocator: std.mem.Allocator, lua: *zlua.Lua, table_inde
                 if (parseLoggerLevelFromString(v)) |level| out.log_file_level = level;
             } else |_| {}
         }
+        lua.pop(1);
+
+        _ = lua.getField(logs_idx, "file_levels");
+        if (try parseLevelOverrideValueOwned(allocator, lua, -1)) |v| replaceOwnedString(allocator, &out.log_file_level_overrides, v);
+        lua.pop(1);
+
+        _ = lua.getField(logs_idx, "console_levels");
+        if (try parseLevelOverrideValueOwned(allocator, lua, -1)) |v| replaceOwnedString(allocator, &out.log_console_level_overrides, v);
         lua.pop(1);
 
         _ = lua.getField(logs_idx, "console_level");

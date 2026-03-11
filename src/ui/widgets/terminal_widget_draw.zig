@@ -33,6 +33,9 @@ pub const FrameLatencyMetrics = struct {
     lock_ms: f64 = 0.0,
     cache_copy_ms: f64 = 0.0,
     texture_update_ms: f64 = 0.0,
+    texture_bg_ms: f64 = 0.0,
+    texture_glyph_ms: f64 = 0.0,
+    texture_kitty_ms: f64 = 0.0,
     overlay_ms: f64 = 0.0,
     render_ms: f64 = 0.0,
     draw_ms: f64 = 0.0,
@@ -42,6 +45,7 @@ pub const DrawOutcome = PresentationFeedback;
 const drawRowBackgrounds = draw_grid.drawRowBackgrounds;
 const drawRowGlyphs = draw_grid.drawRowGlyphs;
 const drawOverlays = draw_overlay.drawOverlays;
+const GlyphDrawStats = draw_grid.GlyphDrawStats;
 
 pub const DrawPreparation = struct {
     draw_start: f64,
@@ -69,6 +73,9 @@ fn publishFrameLatencyMetrics(
     lock_ms: f64,
     cache_copy_ms: f64,
     texture_update_ms: f64,
+    texture_bg_ms: f64,
+    texture_glyph_ms: f64,
+    texture_kitty_ms: f64,
     overlay_ms: f64,
     render_ms: f64,
     draw_ms: f64,
@@ -80,6 +87,9 @@ fn publishFrameLatencyMetrics(
         .lock_ms = lock_ms,
         .cache_copy_ms = cache_copy_ms,
         .texture_update_ms = texture_update_ms,
+        .texture_bg_ms = texture_bg_ms,
+        .texture_glyph_ms = texture_glyph_ms,
+        .texture_kitty_ms = texture_kitty_ms,
         .overlay_ms = overlay_ms,
         .render_ms = render_ms,
         .draw_ms = draw_ms,
@@ -115,6 +125,10 @@ pub fn drawPrepared(
     const lock_ms: f64 = preparation.lock_ms;
     const cache_copy_ms: f64 = preparation.lock_ms;
     var texture_update_ms: f64 = 0.0;
+    var texture_bg_ms: f64 = 0.0;
+    var texture_glyph_ms: f64 = 0.0;
+    var texture_kitty_ms: f64 = 0.0;
+    var glyph_draw_stats = GlyphDrawStats{};
     var overlay_ms: f64 = 0.0;
     var render_phase_start = draw_start;
     var outcome = DrawOutcome{ .presented = preparation.presented };
@@ -127,6 +141,9 @@ pub fn drawPrepared(
             lock_ms,
             cache_copy_ms,
             texture_update_ms,
+            texture_bg_ms,
+            texture_glyph_ms,
+            texture_kitty_ms,
             overlay_ms,
             render_ms,
             draw_ms_total,
@@ -211,8 +228,11 @@ pub fn drawPrepared(
     var partial_plan_rows_count: usize = 0;
     var partial_plan_row_span: usize = 0;
     var partial_plan_col_span: usize = 0;
+    var partial_plan_cells: usize = 0;
+    var partial_plan_union_cells: usize = 0;
     var partial_plan_summary: []const u8 = "";
     var partial_plan_summary_buf: [256]u8 = undefined;
+    var glyph_stats_summary_buf: [160]u8 = undefined;
     if (cache.dirty != .none) {
         for (view_dirty_rows) |row_dirty| {
             if (row_dirty) dirty_rows_count += 1;
@@ -276,11 +296,10 @@ pub fn drawPrepared(
     var updated = false;
     var texture_full_update = false;
     var texture_partial_update = false;
-    var full_reason_recreated = false;
-    var full_reason_cell_metrics = false;
-    var full_reason_scale = false;
-    var full_reason_dirty_full = false;
+    var active_viewport_shift_rows: i32 = 0;
+    var active_shift_exposed_only = false;
     const texture_phase_start = app_shell.getTime();
+    const texture_ready_before_draw = self.terminal_texture_ready;
     if (rows > 0 and cols > 0) {
         const cell_w_i: i32 = @intFromFloat(std.math.round(r.terminal_cell_width));
         const cell_h_i: i32 = @intFromFloat(std.math.round(r.terminal_cell_height));
@@ -291,47 +310,46 @@ pub fn drawPrepared(
         const texture_h = cell_h_i * @as(i32, @intCast(rows));
         const recreated = r.ensureTerminalTexture(texture_w, texture_h);
         const gen_changed = cache.generation != self.last_render_generation;
-        full_reason_recreated = recreated;
-        full_reason_cell_metrics = cell_metrics_changed;
-        full_reason_scale = render_scale_changed;
-        full_reason_dirty_full = cache.dirty == .full;
         const update_plan = chooseTextureUpdatePlan(
             cache.dirty,
-            full_reason_recreated,
-            full_reason_cell_metrics,
-            full_reason_scale,
+            recreated,
+            cell_metrics_changed,
+            render_scale_changed,
             blink_requires_partial,
             self.terminal_texture_ready,
         );
         const needs_full = update_plan.needs_full;
         var needs_partial = update_plan.needs_partial;
+        const use_viewport_shift = draw_texture.useViewportShiftForPartialPlan(cache.dirty, viewport_shift_rows);
+        active_viewport_shift_rows = if (use_viewport_shift) viewport_shift_rows else 0;
+        active_shift_exposed_only = use_viewport_shift and cache.viewport_shift_exposed_only;
         var shifted_rows: usize = 0;
         var shift_requires_fullwidth_partial = false;
         switch (planViewportTextureShift(
             r.terminalTextureShiftEnabled(),
             gen_changed,
-            viewport_shift_rows,
-            cache.viewport_shift_exposed_only,
+            active_viewport_shift_rows,
+            active_shift_exposed_only,
             scroll_offset,
             needs_full,
             self.terminal_texture_ready,
             rows,
         )) {
             .attempt => |shift_rows| {
-                const dy_pixels: i32 = -viewport_shift_rows * cell_h_i;
+                const dy_pixels: i32 = -active_viewport_shift_rows * cell_h_i;
                 if (r.scrollTerminalTexture(0, dy_pixels)) {
                     needs_partial = true;
                     shifted_rows = shift_rows;
                 } else {
                     shifted_rows = 0;
-                    if (cache.viewport_shift_exposed_only) {
+                    if (active_shift_exposed_only) {
                         needs_partial = true;
                         shift_requires_fullwidth_partial = true;
                     }
                 }
             },
             .none => {
-                if (cache.viewport_shift_exposed_only) {
+                if (active_shift_exposed_only) {
                     needs_partial = true;
                     shift_requires_fullwidth_partial = true;
                 }
@@ -348,6 +366,7 @@ pub fn drawPrepared(
             const base_y_local: f32 = 0;
 
             if (needs_full) {
+                const bg_phase_start = app_shell.getTime();
                 const bg = if (view_cells.len > 0) blk: {
                     const cell = view_cells[0];
                     const reversed = cell.attrs.reverse != screen_reverse;
@@ -365,18 +384,25 @@ pub fn drawPrepared(
                     drawRowBackgrounds(shell, view_cells, cols, row, 0, cols - 1, base_x_local, base_y_local, padding_x_i, true, screen_reverse);
                 }
                 r.flushTerminalBatch();
+                texture_bg_ms += time_utils.secondsToMs(app_shell.getTime() - bg_phase_start);
                 if (has_kitty) {
+                    const kitty_phase_start = app_shell.getTime();
                     self.kitty.cleanupTextures(self.session.allocator, self.kitty.images_view.items);
                     self.kitty.drawImages(self.session.allocator, shell, base_x_local, base_y_local, false, start_line, rows, cols);
+                    texture_kitty_ms += time_utils.secondsToMs(app_shell.getTime() - kitty_phase_start);
                 }
+                const glyph_phase_start = app_shell.getTime();
                 r.beginTerminalGlyphBatch();
                 row = 0;
                 while (row < rows) : (row += 1) {
-                    drawRowGlyphs(shell, view_cells, cols, row, 0, cols - 1, base_x_local, base_y_local, padding_x_i, hover_link_id, screen_reverse, blink_style, blink_time, draw_cursor, cursor, r.terminal_disable_ligatures);
+                    drawRowGlyphs(shell, view_cells, cols, row, 0, cols - 1, base_x_local, base_y_local, padding_x_i, hover_link_id, screen_reverse, blink_style, blink_time, draw_cursor, cursor, r.terminal_disable_ligatures, &glyph_draw_stats);
                 }
                 r.flushTerminalGlyphBatch();
+                texture_glyph_ms += time_utils.secondsToMs(app_shell.getTime() - glyph_phase_start);
                 if (has_kitty) {
+                    const kitty_phase_start = app_shell.getTime();
                     self.kitty.drawImages(self.session.allocator, shell, base_x_local, base_y_local, true, start_line, rows, cols);
+                    texture_kitty_ms += time_utils.secondsToMs(app_shell.getTime() - kitty_phase_start);
                 }
             } else if (needs_partial) {
                 self.partial_draw_rows.resize(self.session.allocator, rows) catch |err| {
@@ -404,16 +430,23 @@ pub fn drawPrepared(
                     self.partial_draw_cols_start.items,
                     self.partial_draw_cols_end.items,
                     shifted_rows,
-                    viewport_shift_rows,
+                    active_viewport_shift_rows,
                     shift_requires_fullwidth_partial,
                     blink_requires_partial,
                 );
                 for (self.partial_draw_rows.items) |row_draw| {
                     if (row_draw) partial_plan_rows_count += 1;
                 }
+                for (self.partial_draw_rows.items, 0..) |row_draw, row| {
+                    if (!row_draw) continue;
+                    const row_start = @as(usize, self.partial_draw_cols_start.items[row]);
+                    const row_end = @as(usize, self.partial_draw_cols_end.items[row]);
+                    if (row_end >= row_start) partial_plan_cells += row_end - row_start + 1;
+                }
                 if (partial_plan_bounds) |bounds| {
                     partial_plan_row_span = bounds.end_row - bounds.start_row + 1;
                     partial_plan_col_span = bounds.end_col - bounds.start_col + 1;
+                    partial_plan_union_cells = partial_plan_row_span * partial_plan_col_span;
                 }
                 if ((draw_log.enabled_file or draw_log.enabled_console) and texture_partial_update) {
                     partial_plan_summary = draw_texture.formatPartialPlanRows(
@@ -425,6 +458,7 @@ pub fn drawPrepared(
                     );
                 }
 
+                const bg_phase_start = app_shell.getTime();
                 r.beginTerminalBatch();
                 for (0..rows) |row| {
                     if (!self.partial_draw_rows.items[row]) continue;
@@ -434,20 +468,27 @@ pub fn drawPrepared(
                     drawRowBackgrounds(shell, view_cells, cols, row, col_start, col_end, base_x_local, base_y_local, padding_x_i, draw_padding, screen_reverse);
                 }
                 r.flushTerminalBatch();
+                texture_bg_ms += time_utils.secondsToMs(app_shell.getTime() - bg_phase_start);
                 if (has_kitty) {
+                    const kitty_phase_start = app_shell.getTime();
                     self.kitty.cleanupTextures(self.session.allocator, self.kitty.images_view.items);
                     self.kitty.drawImages(self.session.allocator, shell, base_x_local, base_y_local, false, start_line, rows, cols);
+                    texture_kitty_ms += time_utils.secondsToMs(app_shell.getTime() - kitty_phase_start);
                 }
+                const glyph_phase_start = app_shell.getTime();
                 r.beginTerminalGlyphBatch();
                 for (0..rows) |row| {
                     if (!self.partial_draw_rows.items[row]) continue;
                     const col_start = @min(@as(usize, self.partial_draw_cols_start.items[row]), cols - 1);
                     const col_end = @min(@as(usize, self.partial_draw_cols_end.items[row]), cols - 1);
-                    drawRowGlyphs(shell, view_cells, cols, row, col_start, col_end, base_x_local, base_y_local, padding_x_i, hover_link_id, screen_reverse, blink_style, blink_time, draw_cursor, cursor, r.terminal_disable_ligatures);
+                    drawRowGlyphs(shell, view_cells, cols, row, col_start, col_end, base_x_local, base_y_local, padding_x_i, hover_link_id, screen_reverse, blink_style, blink_time, draw_cursor, cursor, r.terminal_disable_ligatures, &glyph_draw_stats);
                 }
                 r.flushTerminalGlyphBatch();
+                texture_glyph_ms += time_utils.secondsToMs(app_shell.getTime() - glyph_phase_start);
                 if (has_kitty) {
+                    const kitty_phase_start = app_shell.getTime();
                     self.kitty.drawImages(self.session.allocator, shell, base_x_local, base_y_local, true, start_line, rows, cols);
+                    texture_kitty_ms += time_utils.secondsToMs(app_shell.getTime() - kitty_phase_start);
                 }
             }
             r.endTerminalTexture();
@@ -537,10 +578,19 @@ pub fn drawPrepared(
     }
 
     const perf_log = app_logger.logger("terminal.ui.perf");
+    const lifecycle_log = app_logger.logger("terminal.ui.lifecycle");
     const now = app_shell.getTime();
     const elapsed_ms = time_utils.secondsToMs(now - draw_start);
     const has_kitty_images = self.kitty.images_view.items.len > 0;
-    const log_partial_update = texture_partial_update and updated and (draw_log.enabled_file or draw_log.enabled_console or perf_log.enabled_file or perf_log.enabled_console);
+    const lifecycle_reason = if (!texture_ready_before_draw)
+        "init"
+    else if (alt_state_changed)
+        (if (cache.alt_active) "alt_enter" else "alt_exit")
+    else
+        null;
+    const active_draw_log = if (lifecycle_reason != null) lifecycle_log else draw_log;
+    const active_perf_log = if (lifecycle_reason != null) lifecycle_log else perf_log;
+    const log_partial_update = texture_partial_update and updated and (active_draw_log.enabled_file or active_draw_log.enabled_console or active_perf_log.enabled_file or active_perf_log.enabled_console);
     const current_reason = switch (cache.dirty) {
         .full => @tagName(cache.full_dirty_reason),
         .partial => if (cache.viewport_shift_rows != 0)
@@ -551,7 +601,7 @@ pub fn drawPrepared(
     };
     if ((elapsed_ms >= 4.0 or has_kitty_images or log_partial_update) and (now - self.last_draw_log_time) >= 0.1) {
         self.last_draw_log_time = now;
-        draw_log.logf(
+        active_draw_log.logf(
             .info,
             "draw_ms={d:.2} rows={d} cols={d} history={d} cells={d} kitty_images={d} kitty_placements={d}",
             .{
@@ -564,14 +614,17 @@ pub fn drawPrepared(
                 self.kitty.placements_view.items.len,
             },
         );
-        perf_log.logf(
+        active_perf_log.logf(
             .info,
-            "draw_ms={d:.2} lock_ms={d:.2} cache_copy_ms={d:.2} texture_update_ms={d:.2} overlay_ms={d:.2} full={d} partial={d} updated={d} sync={d} clear_ok={d} dirty={s} current_reason={s} dirty_rows={d} damage_rows={d} damage_cols={d} plan_rows={d} plan_row_span={d} plan_col_span={d} blink_cells={d} blink_phase_changed={d} full_reasons={d}/{d}/{d}/{d} full_dirty_reason={s} full_dirty_seq={d} shift_rows={d} shift_exposed_only={d} rows={d} cols={d}",
+            "draw_ms={d:.2} lock_ms={d:.2} cache_copy_ms={d:.2} texture_update_ms={d:.2} texture_bg_ms={d:.2} texture_glyph_ms={d:.2} texture_kitty_ms={d:.2} overlay_ms={d:.2} full={d} partial={d} updated={d} sync={d} clear_ok={d} dirty={s} current_reason={s} dirty_rows={d} damage_rows={d} damage_cols={d} plan_rows={d} plan_row_span={d} plan_col_span={d} plan_cells={d} plan_union_cells={d} blink_cells={d} blink_phase_changed={d} shift_rows={d} shift_exposed_only={d} glyph_stats={s} rows={d} cols={d}",
             .{
                 elapsed_ms,
                 lock_ms,
                 cache_copy_ms,
                 texture_update_ms,
+                texture_bg_ms,
+                texture_glyph_ms,
+                texture_kitty_ms,
                 overlay_ms,
                 @intFromBool(texture_full_update),
                 @intFromBool(texture_partial_update),
@@ -586,22 +639,39 @@ pub fn drawPrepared(
                 partial_plan_rows_count,
                 partial_plan_row_span,
                 partial_plan_col_span,
+                partial_plan_cells,
+                partial_plan_union_cells,
                 @intFromBool(has_blink),
                 @intFromBool(blink_phase_changed),
-                @intFromBool(full_reason_recreated),
-                @intFromBool(full_reason_cell_metrics),
-                @intFromBool(full_reason_scale),
-                @intFromBool(full_reason_dirty_full),
-                @tagName(cache.full_dirty_reason),
-                cache.full_dirty_seq,
-                viewport_shift_rows,
-                @intFromBool(cache.viewport_shift_exposed_only),
+                active_viewport_shift_rows,
+                @intFromBool(active_shift_exposed_only),
+                std.fmt.bufPrint(&glyph_stats_summary_buf, "{d}/{d}/{d}/{d}/{d}/{d}/{d}/{d}/{d:.2}/{d:.2}/{d:.2}/{d:.2}/{d:.2}/{d:.2}/{d:.2}/{d:.2}/{d:.2}/{d:.2}/{d:.2}", .{
+                    glyph_draw_stats.shaping_spans,
+                    glyph_draw_stats.shaped_glyphs,
+                    glyph_draw_stats.fallback_cells,
+                    glyph_draw_stats.special_sprite_glyphs,
+                    glyph_draw_stats.box_glyphs,
+                    glyph_draw_stats.shaped_text_glyphs,
+                    glyph_draw_stats.shaped_special_glyphs,
+                    glyph_draw_stats.shaped_space_skips,
+                    glyph_draw_stats.shape_ms,
+                    glyph_draw_stats.submit_ms,
+                    glyph_draw_stats.shaped_text_submit_ms,
+                    glyph_draw_stats.shaped_special_submit_ms,
+                    glyph_draw_stats.special_sprite_submit_ms,
+                    glyph_draw_stats.box_submit_ms,
+                    glyph_draw_stats.box_sprite_submit_ms,
+                    glyph_draw_stats.box_rect_submit_ms,
+                    glyph_draw_stats.special_sprite_lookup_ms,
+                    glyph_draw_stats.direct_lookup_ms,
+                    glyph_draw_stats.direct_draw_ms,
+                }) catch "overflow",
                 rows,
                 cols,
             },
         );
         if (partial_plan_summary.len > 0) {
-            draw_log.logf(
+            active_draw_log.logf(
                 .debug,
                 "partial_plan rows={d} row_span={d} col_span={d} spans={s}",
                 .{
@@ -770,6 +840,13 @@ test "full-width partial plan marks every row" {
     }
 }
 const planViewportTextureShift = draw_texture.planViewportTextureShift;
+const useViewportShiftForPartialPlan = draw_texture.useViewportShiftForPartialPlan;
 const chooseTextureUpdatePlan = draw_texture.chooseTextureUpdatePlan;
 const buildPartialPlan = draw_texture.buildPartialPlan;
 const markAllRowsFullWidthPartialPlan = draw_texture.markAllRowsFullWidthPartialPlan;
+
+test "useViewportShiftForPartialPlan ignores stale shift metadata on clean frames" {
+    try std.testing.expect(!useViewportShiftForPartialPlan(.none, 1));
+    try std.testing.expect(!useViewportShiftForPartialPlan(.full, 1));
+    try std.testing.expect(useViewportShiftForPartialPlan(.partial, 1));
+}

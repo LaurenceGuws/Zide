@@ -36,3 +36,7 @@ packaging/local/**/pkg/
 packaging/local/**/src/
 packaging/local/**/*.pkg.tar.*
 fixtures/editor/stress/
+
+# Local Python cache noise
+__pycache__/
+*.pyc

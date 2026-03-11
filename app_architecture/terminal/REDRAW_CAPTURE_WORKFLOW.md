@@ -21,6 +21,17 @@ For manual `nvim` / TUI runs, prefer the scoped redraw log pair now enabled in
 
 - `terminal.ui.perf`
 - `terminal.ui.redraw`
+- `terminal.ui.lifecycle`
+
+The logger now also supports per-tag sink-level overrides through config. The
+default local redraw setup uses:
+
+- a coarse file sink filter
+- `logs.file_level = "warning"`
+- `logs.file_levels` to raise only redraw-relevant tags back to `info`/`debug`
+
+That keeps redraw analysis visible without dragging every other debug/info tag
+into `zide.log`.
 
 For quick manual terminal-only repros, `zide-terminal` now also supports:
 
@@ -144,6 +155,11 @@ steady-state frame:
 python3 tools/terminal_summarize_redraw_log.py --interesting
 ```
 
+Lifecycle frames are now emitted on `terminal.ui.lifecycle` instead of being
+mixed into `terminal.ui.perf` / `terminal.ui.redraw`, so `--interesting` is now
+meant to find real steady-state redraws rather than filtering stale
+`full_dirty_reason` noise.
+
 To inspect several recent interesting frames instead of only the latest one:
 
 ```bash
@@ -162,6 +178,8 @@ plan span summary, which is the fastest way to compare:
 - current frame `dirty` vs `current_reason`
 - backend `damage_rows` / `damage_cols`
 - live widget `plan_rows` / `plan_row_span` / `plan_col_span`
+- live widget `plan_cells` vs `plan_union_cells`
+- live widget `texture_bg_ms` / `texture_glyph_ms` / `texture_kitty_ms`
 - `shift_rows` / `shift_exposed_only`
 - row-local `spans=...`
 

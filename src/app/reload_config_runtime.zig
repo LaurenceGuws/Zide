@@ -44,6 +44,7 @@ pub fn handle(state: anytype, ctx: *anyopaque, hooks: Hooks) !void {
     var config = try config_mod.loadConfig(state.allocator);
     defer config_mod.freeConfig(state.allocator, &config);
 
+    app_logger.resetConfig();
     if (config.log_file_filter) |filter| {
         app_logger.setFileFilterString(filter) catch |err| {
             std.debug.print("reload log file filter parse error: {any}\n", .{err});
@@ -59,6 +60,16 @@ pub fn handle(state: anytype, ctx: *anyopaque, hooks: Hooks) !void {
     }
     if (config.log_console_level) |level| {
         app_logger.setConsoleLevel(level);
+    }
+    if (config.log_file_level_overrides) |value| {
+        app_logger.setFileLevelOverrideString(value) catch |err| {
+            std.debug.print("reload log file level overrides parse error: {any}\n", .{err});
+        };
+    }
+    if (config.log_console_level_overrides) |value| {
+        app_logger.setConsoleLevelOverrideString(value) catch |err| {
+            std.debug.print("reload log console level overrides parse error: {any}\n", .{err});
+        };
     }
     if (config.sdl_log_level) |level| {
         app_shell.setSdlLogLevel(level);

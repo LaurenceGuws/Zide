@@ -7,6 +7,8 @@ var log_filter_file: ?[]u8 = null;
 var log_filter_console: ?[]u8 = null;
 var log_level_file: Level = .info;
 var log_level_console: Level = .info;
+var log_level_overrides_file: ?[]u8 = null;
+var log_level_overrides_console: ?[]u8 = null;
 var log_start_ns: i128 = 0;
 
 pub const Level = enum(u8) {
@@ -82,6 +84,11 @@ pub fn deinit() void {
         file.close();
     }
     log_file = null;
+    resetConfig();
+    log_start_ns = 0;
+}
+
+pub fn resetConfig() void {
     if (log_filter_file) |filter| {
         std.heap.c_allocator.free(filter);
     }
@@ -90,23 +97,32 @@ pub fn deinit() void {
         std.heap.c_allocator.free(filter);
     }
     log_filter_console = null;
+    if (log_level_overrides_file) |overrides| {
+        std.heap.c_allocator.free(overrides);
+    }
+    log_level_overrides_file = null;
+    if (log_level_overrides_console) |overrides| {
+        std.heap.c_allocator.free(overrides);
+    }
+    log_level_overrides_console = null;
     log_level_file = .info;
     log_level_console = .info;
-    log_start_ns = 0;
 }
 
 pub const Logger = struct {
     name: []const u8,
     enabled_file: bool,
     enabled_console: bool,
+    file_level: Level,
+    console_level: Level,
 
     pub fn logfSrc(self: Logger, level: Level, src: std.builtin.SourceLocation, comptime fmt: []const u8, args: anytype) void {
         self.logf(level, "{s}:{d} " ++ fmt, .{ src.file, src.line } ++ args);
     }
 
     pub fn logf(self: Logger, level: Level, comptime fmt: []const u8, args: anytype) void {
-        const emit_file = self.enabled_file and log_file != null and shouldEmit(level, log_level_file);
-        const emit_console = self.enabled_console and shouldEmit(level, log_level_console);
+        const emit_file = self.enabled_file and log_file != null and shouldEmit(level, self.file_level);
+        const emit_console = self.enabled_console and shouldEmit(level, self.console_level);
         if (!emit_file and !emit_console) return;
 
         var buf: [1024]u8 = undefined;
@@ -156,8 +172,8 @@ pub const Logger = struct {
     }
 
     pub fn logStdout(self: Logger, level: Level, comptime fmt: []const u8, args: anytype) void {
-        const emit_file = self.enabled_file and log_file != null and shouldEmit(level, log_level_file);
-        const emit_console = self.enabled_console and shouldEmit(level, log_level_console);
+        const emit_file = self.enabled_file and log_file != null and shouldEmit(level, self.file_level);
+        const emit_console = self.enabled_console and shouldEmit(level, self.console_level);
         if (!emit_file and !emit_console) return;
 
         var buf: [1024]u8 = undefined;
@@ -211,6 +227,8 @@ pub fn logger(name: []const u8) Logger {
         .name = name,
         .enabled_file = isEnabled(name, log_filter_file, "ZIDE_LOG_FILE\x00"),
         .enabled_console = isEnabled(name, log_filter_console, "ZIDE_LOG_CONSOLE\x00"),
+        .file_level = effectiveLevel(name, log_level_overrides_file, "ZIDE_LOG_FILE_LEVELS\x00", log_level_file),
+        .console_level = effectiveLevel(name, log_level_overrides_console, "ZIDE_LOG_CONSOLE_LEVELS\x00", log_level_console),
     };
 }
 
@@ -236,6 +254,20 @@ pub fn setConsoleLevel(level: Level) void {
     log_level_console = level;
 }
 
+pub fn setFileLevelOverrideString(value: []const u8) !void {
+    if (log_level_overrides_file) |overrides| {
+        std.heap.c_allocator.free(overrides);
+    }
+    log_level_overrides_file = try std.heap.c_allocator.dupe(u8, value);
+}
+
+pub fn setConsoleLevelOverrideString(value: []const u8) !void {
+    if (log_level_overrides_console) |overrides| {
+        std.heap.c_allocator.free(overrides);
+    }
+    log_level_overrides_console = try std.heap.c_allocator.dupe(u8, value);
+}
+
 fn isEnabled(name: []const u8, filter_override: ?[]const u8, env_key: [:0]const u8) bool {
     const raw = if (filter_override) |filter| filter else blk: {
         if (std.c.getenv("ZIDE_LOG")) |env_all| {
@@ -258,4 +290,59 @@ fn isEnabled(name: []const u8, filter_override: ?[]const u8, env_key: [:0]const 
         if (std.mem.eql(u8, trimmed, name)) return true;
     }
     return false;
+}
+
+fn effectiveLevel(name: []const u8, overrides_override: ?[]u8, env_key: [:0]const u8, fallback: Level) Level {
+    const raw = if (overrides_override) |overrides|
+        overrides
+    else if (std.c.getenv(env_key)) |env|
+        std.mem.sliceTo(env, 0)
+    else
+        return fallback;
+    return levelOverrideFor(name, raw) orelse fallback;
+}
+
+fn levelOverrideFor(name: []const u8, raw: []const u8) ?Level {
+    if (raw.len == 0) return null;
+
+    var it = std.mem.splitScalar(u8, raw, ',');
+    while (it.next()) |chunk| {
+        const trimmed = std.mem.trim(u8, chunk, " \t");
+        if (trimmed.len == 0) continue;
+        const eq_index = std.mem.indexOfScalar(u8, trimmed, '=') orelse continue;
+        const key = std.mem.trim(u8, trimmed[0..eq_index], " \t");
+        const value = std.mem.trim(u8, trimmed[eq_index + 1 ..], " \t");
+        if (key.len == 0 or value.len == 0) continue;
+        if (!std.mem.eql(u8, key, name)) continue;
+        if (levelFromString(value)) |level| return level;
+    }
+    return null;
+}
+
+test "levelOverrideFor parses exact tag overrides" {
+    try std.testing.expectEqual(@as(?Level, .debug), levelOverrideFor("terminal.ui.redraw", "terminal.ui.redraw=debug,terminal.ui.perf=info"));
+    try std.testing.expectEqual(@as(?Level, .info), levelOverrideFor("terminal.ui.perf", "terminal.ui.redraw=debug, terminal.ui.perf = info "));
+    try std.testing.expectEqual(@as(?Level, null), levelOverrideFor("terminal.ui.lifecycle", "terminal.ui.redraw=debug"));
+}
+
+test "resetConfig clears logger filters and level overrides" {
+    defer deinit();
+
+    try setFileFilterString("terminal.ui.redraw");
+    try setConsoleFilterString("terminal.ui.redraw");
+    setFileLevel(.warning);
+    setConsoleLevel(.warning);
+    try setFileLevelOverrideString("terminal.ui.redraw=debug");
+    try setConsoleLevelOverrideString("terminal.ui.redraw=trace");
+
+    try std.testing.expect(logger("terminal.ui.redraw").enabled_file);
+    try std.testing.expectEqual(Level.debug, logger("terminal.ui.redraw").file_level);
+    try std.testing.expectEqual(Level.trace, logger("terminal.ui.redraw").console_level);
+
+    resetConfig();
+
+    try std.testing.expect(!logger("terminal.ui.redraw").enabled_file);
+    try std.testing.expect(!logger("terminal.ui.redraw").enabled_console);
+    try std.testing.expectEqual(Level.info, logger("terminal.ui.redraw").file_level);
+    try std.testing.expectEqual(Level.info, logger("terminal.ui.redraw").console_level);
 }

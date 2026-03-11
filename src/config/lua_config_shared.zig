@@ -64,6 +64,8 @@ pub fn emptyConfig() Config {
         .log_console_filter = null,
         .log_file_level = null,
         .log_console_level = null,
+        .log_file_level_overrides = null,
+        .log_console_level_overrides = null,
         .sdl_log_level = null,
         .editor_wrap = null,
         .editor_large_jump_rows = null,
@@ -124,6 +126,14 @@ pub fn freeConfig(allocator: std.mem.Allocator, config: *Config) void {
     if (config.log_console_filter) |filter| {
         allocator.free(filter);
         config.log_console_filter = null;
+    }
+    if (config.log_file_level_overrides) |overrides| {
+        allocator.free(overrides);
+        config.log_file_level_overrides = null;
+    }
+    if (config.log_console_level_overrides) |overrides| {
+        allocator.free(overrides);
+        config.log_console_level_overrides = null;
     }
     if (config.app_font_path) |path| {
         allocator.free(path);
@@ -250,15 +260,31 @@ fn mergeKeybinds(
 
 pub fn mergeConfig(allocator: std.mem.Allocator, base: *Config, overlay: Config) void {
     if (overlay.log_file_filter) |filter| {
-        if (base.log_file_filter) |old| allocator.free(old);
-        base.log_file_filter = allocator.dupe(u8, filter) catch base.log_file_filter;
+        if (allocator.dupe(u8, filter)) |dup| {
+            if (base.log_file_filter) |old| allocator.free(old);
+            base.log_file_filter = dup;
+        } else |_| {}
     }
     if (overlay.log_console_filter) |filter| {
-        if (base.log_console_filter) |old| allocator.free(old);
-        base.log_console_filter = allocator.dupe(u8, filter) catch base.log_console_filter;
+        if (allocator.dupe(u8, filter)) |dup| {
+            if (base.log_console_filter) |old| allocator.free(old);
+            base.log_console_filter = dup;
+        } else |_| {}
     }
     if (overlay.log_file_level) |level| base.log_file_level = level;
     if (overlay.log_console_level) |level| base.log_console_level = level;
+    if (overlay.log_file_level_overrides) |overrides| {
+        if (allocator.dupe(u8, overrides)) |dup| {
+            if (base.log_file_level_overrides) |old| allocator.free(old);
+            base.log_file_level_overrides = dup;
+        } else |_| {}
+    }
+    if (overlay.log_console_level_overrides) |overrides| {
+        if (allocator.dupe(u8, overrides)) |dup| {
+            if (base.log_console_level_overrides) |old| allocator.free(old);
+            base.log_console_level_overrides = dup;
+        } else |_| {}
+    }
     if (overlay.sdl_log_level) |level| base.sdl_log_level = level;
     if (overlay.editor_wrap != null) base.editor_wrap = overlay.editor_wrap;
     if (overlay.editor_large_jump_rows != null) base.editor_large_jump_rows = overlay.editor_large_jump_rows;

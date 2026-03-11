@@ -7,6 +7,7 @@ const lua_log_parse = @import("./lua_config_log_parse.zig");
 const lua_runtime_parse = @import("./lua_config_runtime_parse.zig");
 const lua_shared = @import("./lua_config_shared.zig");
 const lua_theme_parse = @import("./lua_config_theme_parse.zig");
+const app_logger = @import("../app_logger.zig");
 
 pub const LuaConfigError = iface.LuaConfigError;
 pub const Config = iface.Config;
@@ -428,4 +429,49 @@ pub fn parseConfigFromLuaState(allocator: std.mem.Allocator, L: *anyopaque) LuaC
     lua.pop(2);
 
     return try parseNativeScalarOverlay(allocator, lua, table_index);
+}
+
+test "parseConfigFromLuaState parses per-tag log level overrides" {
+    const allocator = std.testing.allocator;
+    const lua = try zlua.Lua.init(allocator);
+    defer lua.deinit();
+    lua.openLibs();
+
+    try lua.loadString(
+        \\return {
+        \\    logs = {
+        \\        file_level = "warning",
+        \\        console_level = "error",
+        \\        file_levels = {
+        \\            ["terminal.ui.redraw"] = "debug",
+        \\            ["terminal.ui.perf"] = "info",
+        \\        },
+        \\        console_levels = {
+        \\            ["terminal.ui.lifecycle"] = "info",
+        \\        },
+        \\    },
+        \\}
+    );
+    try lua.protectedCall(.{ .args = 0, .results = 1 });
+
+    var config = try parseConfigFromLuaState(allocator, @ptrCast(lua));
+    defer lua_shared.freeConfig(allocator, &config);
+    defer app_logger.deinit();
+
+    try std.testing.expectEqual(@as(?app_logger.Level, .warning), config.log_file_level);
+    try std.testing.expectEqual(@as(?app_logger.Level, .@"error"), config.log_console_level);
+    try std.testing.expect(config.log_file_level_overrides != null);
+    try std.testing.expect(config.log_console_level_overrides != null);
+
+    app_logger.resetConfig();
+    app_logger.setFileLevel(config.log_file_level.?);
+    app_logger.setConsoleLevel(config.log_console_level.?);
+    try app_logger.setFileLevelOverrideString(config.log_file_level_overrides.?);
+    try app_logger.setConsoleLevelOverrideString(config.log_console_level_overrides.?);
+
+    try std.testing.expectEqual(app_logger.Level.debug, app_logger.logger("terminal.ui.redraw").file_level);
+    try std.testing.expectEqual(app_logger.Level.info, app_logger.logger("terminal.ui.perf").file_level);
+    try std.testing.expectEqual(app_logger.Level.warning, app_logger.logger("terminal.env").file_level);
+    try std.testing.expectEqual(app_logger.Level.info, app_logger.logger("terminal.ui.lifecycle").console_level);
+    try std.testing.expectEqual(app_logger.Level.@"error", app_logger.logger("terminal.ui.redraw").console_level);
 }
