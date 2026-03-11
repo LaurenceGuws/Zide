@@ -28,6 +28,12 @@ To summarize the latest pair quickly:
 python3 tools/terminal_summarize_redraw_log.py
 ```
 
+For machine-readable output:
+
+```bash
+python3 tools/terminal_summarize_redraw_log.py --json
+```
+
 That prints the latest aggregate redraw record plus the latest row-local partial
 plan span summary, which is the fastest way to compare:
 
