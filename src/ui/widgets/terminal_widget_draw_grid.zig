@@ -45,6 +45,11 @@ pub const GlyphDrawStats = struct {
     direct_draw_ms: f64 = 0.0,
 };
 
+const RowSpecialSpriteCache = struct {
+    key: ?terminal_font_mod.SpecialGlyphSpriteKey = null,
+    sprite: ?terminal_font_mod.SpecialGlyphSprite = null,
+};
+
 pub fn snapToDevicePixel(value: f32, render_scale: f32) f32 {
     const scale = if (render_scale > 0.0) render_scale else 1.0;
     return @as(f32, @floatFromInt(@as(i32, @intFromFloat(std.math.round(value * scale))))) / scale;
@@ -429,6 +434,7 @@ fn drawAlignedSpecialGlyphSprite(
     box_h_i: i32,
     fg_draw: Color,
     render_scale: f32,
+    row_sprite_cache: ?*RowSpecialSpriteCache,
     stats: ?*GlyphDrawStats,
 ) bool {
     const x0 = snapToDevicePixel(@as(f32, @floatFromInt(box_x_i)), render_scale);
@@ -441,7 +447,17 @@ fn drawAlignedSpecialGlyphSprite(
     const raster_w_i: i32 = @max(1, @as(i32, @intFromFloat(std.math.round(@as(f32, @floatFromInt(box_w_i)) * render_scale))));
     const raster_h_i: i32 = @max(1, @as(i32, @intFromFloat(std.math.round(snapped_h * render_scale))));
     const lookup_start = app_shell.getTime();
-    const sprite_fetch = rr.terminal_font.getOrCreateSpecialGlyphSpriteWithStatus(codepoint, box_w_i, box_h_i, raster_w_i, raster_h_i, variant);
+    const sprite_key = rr.terminal_font.specialGlyphSpriteKey(codepoint, raster_w_i, raster_h_i, variant);
+    const sprite_fetch = if (row_sprite_cache) |cache|
+        if (cache.key) |cached_key|
+            if (std.meta.eql(cached_key, sprite_key) and cache.sprite != null)
+                terminal_font_mod.SpecialGlyphSpriteFetch{ .sprite = &cache.sprite.?, .created = false }
+            else
+                rr.terminal_font.getOrCreateSpecialGlyphSpriteWithStatus(codepoint, box_w_i, box_h_i, raster_w_i, raster_h_i, variant)
+        else
+            rr.terminal_font.getOrCreateSpecialGlyphSpriteWithStatus(codepoint, box_w_i, box_h_i, raster_w_i, raster_h_i, variant)
+    else
+        rr.terminal_font.getOrCreateSpecialGlyphSpriteWithStatus(codepoint, box_w_i, box_h_i, raster_w_i, raster_h_i, variant);
     const sprite = sprite_fetch.sprite;
     if (stats) |s| {
         if (sprite_fetch.created) {
@@ -452,6 +468,10 @@ fn drawAlignedSpecialGlyphSprite(
         } else {
             s.special_sprite_cache_misses += 1;
         }
+    }
+    if (row_sprite_cache) |cache| {
+        cache.key = sprite_key;
+        cache.sprite = if (sprite) |sp| sp.* else null;
     }
     if (stats) |s| s.special_sprite_lookup_ms += (app_shell.getTime() - lookup_start) * 1000.0;
     if (sprite) |sp| {
@@ -549,6 +569,7 @@ pub fn drawRowGlyphs(
         const span_w = @as(usize, @max(@as(u8, 1), split_cell.width));
         break :blk @min(cols_count, cursor_split_col + span_w);
     } else 0;
+    var row_sprite_cache = RowSpecialSpriteCache{};
 
     var col: usize = col_start;
     while (col <= col_end and col < cols_count) {
@@ -690,7 +711,7 @@ pub fn drawRowGlyphs(
                 const box_w_i = cell_w_i * @as(i32, @intCast(width_units));
                 const box_h_i = cell_h_i;
                 if (terminal_glyphs.specialVariantForCodepoint(cell.codepoint)) |variant| {
-                    _ = drawAlignedSpecialGlyphSprite(rr, row_cells, special_col, width_units, screen_reverse_mode, cell.codepoint, variant, box_x_i, box_y_i, box_w_i, box_h_i, fg_draw, if (rr.terminal_font.render_scale > 0.0) rr.terminal_font.render_scale else 1.0, stats);
+                    _ = drawAlignedSpecialGlyphSprite(rr, row_cells, special_col, width_units, screen_reverse_mode, cell.codepoint, variant, box_x_i, box_y_i, box_w_i, box_h_i, fg_draw, if (rr.terminal_font.render_scale > 0.0) rr.terminal_font.render_scale else 1.0, &row_sprite_cache, stats);
                 } else if (isTerminalBoxGlyph(cell.codepoint)) {
                     const special_submit_start = app_shell.getTime();
                     _ = terminal_glyphs.drawBoxGlyphBatched(addTerminalGlyphRect, rr, cell.codepoint, @as(f32, @floatFromInt(box_x_i)), @as(f32, @floatFromInt(box_y_i)), @as(f32, @floatFromInt(box_w_i)), @as(f32, @floatFromInt(box_h_i)), fg_draw);
@@ -883,7 +904,7 @@ pub fn drawRowGlyphs(
                 const box_w_i = cell_w_i * @as(i32, @intCast(width_units));
                 const box_h_i = cell_h_i;
                 if (terminal_glyphs.specialVariantForCodepoint(cell.codepoint)) |variant| {
-                    if (drawAlignedSpecialGlyphSprite(rr, row_cells, abs_col, width_units, screen_reverse_mode, cell.codepoint, variant, box_x_i, box_y_i, box_w_i, box_h_i, fg_draw, render_scale, stats)) {
+                    if (drawAlignedSpecialGlyphSprite(rr, row_cells, abs_col, width_units, screen_reverse_mode, cell.codepoint, variant, box_x_i, box_y_i, box_w_i, box_h_i, fg_draw, render_scale, &row_sprite_cache, stats)) {
                         continue;
                     }
                     if (variant == .powerline or variant == .box or variant == .braille or variant == .legacy or variant == .branch or variant == .shade) {
