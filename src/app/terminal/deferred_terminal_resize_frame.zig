@@ -40,7 +40,7 @@ pub fn handle(
         layout.terminal.height,
         terminal_height,
     );
-    const grid = app_terminal_grid.compute(
+    const grid = app_terminal_grid.computeWithEnvOverride(
         layout.terminal.width,
         effective_height,
         terminal_cell_width,

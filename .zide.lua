@@ -4,7 +4,7 @@ return {
     },
     log = {
         console = "",
-        file = "terminal.ui.perf,terminal.ui.redraw",
+        file = "terminal.ui.perf,terminal.ui.redraw,terminal.env",
     },
     logs = {
         file_level = "debug",
