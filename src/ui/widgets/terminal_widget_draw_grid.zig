@@ -38,6 +38,9 @@ pub const GlyphDrawStats = struct {
     box_sprite_submit_ms: f64 = 0.0,
     box_rect_submit_ms: f64 = 0.0,
     special_sprite_lookup_ms: f64 = 0.0,
+    special_sprite_cache_hits: usize = 0,
+    special_sprite_cache_misses: usize = 0,
+    special_sprite_creates: usize = 0,
     direct_lookup_ms: f64 = 0.0,
     direct_draw_ms: f64 = 0.0,
 };
@@ -438,8 +441,18 @@ fn drawAlignedSpecialGlyphSprite(
     const raster_w_i: i32 = @max(1, @as(i32, @intFromFloat(std.math.round(@as(f32, @floatFromInt(box_w_i)) * render_scale))));
     const raster_h_i: i32 = @max(1, @as(i32, @intFromFloat(std.math.round(snapped_h * render_scale))));
     const lookup_start = app_shell.getTime();
-    const sprite_key = rr.terminal_font.specialGlyphSpriteKey(codepoint, raster_w_i, raster_h_i, variant);
-    const sprite = rr.terminal_font.getSpecialGlyphSprite(sprite_key) orelse rr.terminal_font.getOrCreateSpecialGlyphSprite(codepoint, box_w_i, box_h_i, raster_w_i, raster_h_i, variant);
+    const sprite_fetch = rr.terminal_font.getOrCreateSpecialGlyphSpriteWithStatus(codepoint, box_w_i, box_h_i, raster_w_i, raster_h_i, variant);
+    const sprite = sprite_fetch.sprite;
+    if (stats) |s| {
+        if (sprite_fetch.created) {
+            s.special_sprite_cache_misses += 1;
+            s.special_sprite_creates += 1;
+        } else if (sprite != null) {
+            s.special_sprite_cache_hits += 1;
+        } else {
+            s.special_sprite_cache_misses += 1;
+        }
+    }
     if (stats) |s| s.special_sprite_lookup_ms += (app_shell.getTime() - lookup_start) * 1000.0;
     if (sprite) |sp| {
         const submit_start = app_shell.getTime();
