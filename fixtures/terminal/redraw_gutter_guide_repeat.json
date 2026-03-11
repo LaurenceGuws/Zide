@@ -1,7 +1,7 @@
 {
   "fixture_type": "harness_api",
   "rows": 4,
-  "cols": 9,
+  "cols": 10,
   "cursor": { "row": 0, "col": 0 },
   "line_ending": "lf",
   "baseline_input": "\u001b[H1| |aaa \u001b[2;1H2| |bbb \u001b[3;1H3| |ccc \u001b[4;1H4| |ddd ",
@@ -15,6 +15,6 @@
     "start_row": 0,
     "end_row": 3,
     "start_col": 0,
-    "end_col": 8
+    "end_col": 9
   }
 }
