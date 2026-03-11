@@ -65,6 +65,7 @@
   - that points at the publication/render-consumption boundary as the next likely optimization target, not the basic row-local dirty-span detection
   - the first UI-side narrowing cut is now landed too: non-blink partial redraw rows no longer widen to adjacent rows by default, while blink-driven expansion still uses the old adjacent-row helper
   - important scope note: replay observed `damage` does not move from that cut because replay authority currently reflects backend publication, not renderer-side partial-plan expansion; the new behavior is locked by unit tests in `terminal_widget_draw_texture.zig`
+  - the sharper renderer-side result is now also locked in tests: for the `cursorcolumn` case, the aggregate union bounds stay `rows 0..10 cols 4..33`, but rows `0..7` no longer inherit rows `8..10`'s wider columns, which is the actual draw-plan improvement from the UI cut
   - stale private root-session shims for SGR application and key-mode flag reads are now also gone
   - protocol execution is beginning to split along the same line: pure engine-side helpers now live under `terminal_core_protocol.zig`, while session-coupled protocol behavior remains in `session_protocol.zig`
   - parser/control dispatch entry helpers now also live under `terminal_core_dispatch.zig`; parser byte feed still stays session-owned because locking and publication are not split yet
