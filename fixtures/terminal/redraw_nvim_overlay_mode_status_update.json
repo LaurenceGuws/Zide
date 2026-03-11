@@ -1,0 +1,19 @@
+{
+  "fixture_type": "harness_api",
+  "rows": 6,
+  "cols": 20,
+  "cursor": { "row": 0, "col": 0 },
+  "line_ending": "lf",
+  "baseline_input": "\u001b[2J\u001b[Hfile.txt\u001b[2;1Hline1\u001b[3;1Hline2\u001b[5;1H:wq\u001b[6;1HNORMAL\u001b[6;8H0,0",
+  "output_chunks": [
+    "\u001b[6;1HINSERT\u001b[6;8H1,2"
+  ],
+  "assertions": ["grid", "damage"],
+  "expected_dirty": "partial",
+  "expected_damage": {
+    "start_row": 5,
+    "end_row": 5,
+    "start_col": 0,
+    "end_col": 9
+  }
+}
