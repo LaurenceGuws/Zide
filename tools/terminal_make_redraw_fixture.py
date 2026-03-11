@@ -140,7 +140,7 @@ def main() -> int:
     raw_output_chunks = [read_text(Path(path)) for path in args.update_files]
     if args.strip_baseline_prefix:
         output_chunks = []
-        for chunk in raw_output_chunks:
+        for idx, chunk in enumerate(raw_output_chunks, start=1):
             prefix_len = trimmed_prefix_len(baseline, chunk)
             trimmed = chunk[prefix_len:]
             if args.strip_shared_suffix:
@@ -148,6 +148,11 @@ def main() -> int:
                 suffix_len = trimmed_suffix_len(baseline_tail, trimmed)
                 if suffix_len > 0:
                     trimmed = trimmed[:-suffix_len]
+            if trimmed == "":
+                parser.error(
+                    f"update chunk {idx} became empty after shared prefix/suffix stripping; "
+                    "capture a later update, disable stripping, or use a different staged input shape"
+                )
             output_chunks.append(trimmed)
     else:
         output_chunks = raw_output_chunks

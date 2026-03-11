@@ -240,6 +240,13 @@ Use generous timing gaps. The goal is not perfect frame-accurate tracing; it is
 to split one live TUI session into a stable baseline chunk and a later redraw
 delta without restarting the app.
 
+Important guardrail:
+
+- fixture generation now fails if prefix/suffix stripping would erase an update
+  chunk completely
+- treat that as evidence that the staged capture timing is wrong for that repro,
+  not as a valid "no-op redraw" authority
+
 Current limitation:
 
 - `--hydrate-observed` currently requires `--fixture-dir fixtures/terminal`, because the replay build step only discovers fixtures from the repo fixture root.
