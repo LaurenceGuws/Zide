@@ -347,6 +347,24 @@ fn writeObservedFixtureState(
     } else {
         try out.writeAll("null");
     }
+    try out.writeAll(",\"history_len\":");
+    if (observed.history_len) |value| {
+        try out.print("{d}", .{value});
+    } else {
+        try out.writeAll("null");
+    }
+    try out.writeAll(",\"total_lines\":");
+    if (observed.total_lines) |value| {
+        try out.print("{d}", .{value});
+    } else {
+        try out.writeAll("null");
+    }
+    try out.writeAll(",\"scroll_offset\":");
+    if (observed.scroll_offset) |value| {
+        try out.print("{d}", .{value});
+    } else {
+        try out.writeAll("null");
+    }
     try out.writeAll("}");
 }
 

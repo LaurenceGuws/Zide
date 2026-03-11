@@ -50,6 +50,7 @@
   - PTY capture now also honors explicit rows/cols, so new redraw authorities can trust that capture viewport size matches replay fixture size instead of inheriting the outer terminal geometry
   - first real single-session `nvim` gutter fixture is now landed, captured from one long-lived PTY session with a baseline checkpoint and a later redraw checkpoint
   - a cleaner no-wrap single-session `nvim` gutter movement fixture is now also landed as `redraw_nvim_gutter_clean_move_down.*`; its current observed publication contract is suspicious enough to be the next concrete redraw/publication investigation target
+  - replay observed-state output now also includes `history_len`, `total_lines`, and `scroll_offset`, and the current `redraw_nvim_gutter_clean_move_down.*` authority is observing `history_len=46`, `total_lines=58`, `scroll_offset=0` alongside `viewport_shift_rows=1`
   - stale private root-session shims for SGR application and key-mode flag reads are now also gone
   - protocol execution is beginning to split along the same line: pure engine-side helpers now live under `terminal_core_protocol.zig`, while session-coupled protocol behavior remains in `session_protocol.zig`
   - parser/control dispatch entry helpers now also live under `terminal_core_dispatch.zig`; parser byte feed still stays session-owned because locking and publication are not split yet
