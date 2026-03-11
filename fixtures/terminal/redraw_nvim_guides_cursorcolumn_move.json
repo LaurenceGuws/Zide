@@ -1,0 +1,27 @@
+{
+  "fixture_type": "harness_api",
+  "rows": 12,
+  "cols": 50,
+  "cursor": {
+    "row": 0,
+    "col": 0
+  },
+  "line_ending": "lf",
+  "baseline_input": "\u001b[?1049h\u001b[22;0;0t\u001b[?1h\u001b=\u001b[H\u001b[2J\u001b[?2004h\u001b[?2026$p\u001b[?2027$p\u001b[?2031$p\u001b[?2048$p\u001b[0m\u001b[4:3m\u001bP$qm\u001b\\\u001b[?u\u001b[c\u001b[?25h\u001b]11;?\u0007\u001bP+q5463;524742;73657472676266;73657472676262\u001b\\\u001b[0m\u001b[48;2;1;2;3m\u001bP$qm\u001b\\\u001b[?25l\u001b(B\u001b[m\u001b[H                                                  \n                                                  \n                                                  \n                                                  \n                                                  \n                                                  \n                                                  \n                                                  \n                                                  \n                                                  \n                                                  \n                                                  \u001b[H\u001b(B\u001b[m    1   if cond_one:\u001b[K\n      1     alpha()\u001b[K\n      2     beta()\u001b[K\n      3     gamma()\u001b[K\n      4 if cond_two:\u001b[K\n      5     delta()\u001b[K\n      6     epsilon()\u001b[K\n      7     zeta()\u001b[K\n      8 if cond_three:\u001b[K\n      9     eta()\u001b[K\n\u001b(B\u001b[0;7mzide-nvim-guides-clean.txt      1,1            Top\u001b(B\u001b[m\n\u001b[J\u001b[2 q\u001b[2 q\u001b[?1002h\u001b[?1006h\u001b[H    1   if cond_one:\u001b[K\n      1     alpha()\u001b[K\n      2     beta()\u001b[K\n      3     gamma()\u001b[K\n      4 if cond_two:\u001b[K\n      5     delta()\u001b[K\n      6     epsilon()\u001b[K\n      7     zeta()\u001b[K\n      8 if cond_three:\u001b[K\n      9     eta()\u001b[K\n\u001b(B\u001b[0;7mzide-nvim-guides-clean.txt      1,1            Top\u001b(B\u001b[m\n\u001b[J\u001b[1;9H\u001b[?25h\u001b[?25l\u001b[?1004h\u001b[?25h\u001b[?25l\u001b[12;40HG\u001b[1;9H\u001b[?25h\u001b[?25l\u001b[12;40H \u001b[1;10r\u001b[H\u001b[2M\u001b[r\u001b[1;7H9\u001b[2;7H8\u001b[3;7H7\u001b[4;7H6\u001b[5;7H5\u001b[6;7H4\u001b[7;7H3\u001b[8;7H2\n      1     theta()\u001b[K\n    12      iota()\u001b[K\u001b[11;34H\u001b(B\u001b[0;7m2,1           Bot\u001b[10;9H\u001b[?25h\u001b[?25l\u001b[12;40H\u001b(B\u001b[mk\u001b[10;9H\u001b[?25h\u001b[?25l\u001b[12;40H \u001b[1;7H8\u001b[2;7H7\u001b[3;7H6\u001b[4;7H5\u001b[5;7H4\u001b[6;7H3\u001b[7;7H2\u001b[8;7H1\u001b[9;5H11   \u001b[10;5H  1  \u001b[11;34H\u001b(B\u001b[0;7m1\u001b[9;9H\u001b[?25h",
+  "output_chunks": [
+    "\u001b[?25l\u001b[12;40H\u001b(B\u001b[mj\u001b[9;9H\u001b[?25h\u001b[?25l\u001b[12;40H \u001b[1;7H9\u001b[2;7H8\u001b[3;7H7\u001b[4;7H6\u001b[5;7H5\u001b[6;7H4\u001b[7;7H3\u001b[8;7H2\u001b[9;5H  1  \u001b[10;5H12   \u001b[11;34H\u001b(B\u001b[0;7m2\u001b[10;9H\u001b[?25h"
+  ],
+  "assertions": [
+    "grid",
+    "damage"
+  ],
+  "expected_dirty": "partial",
+  "expected_damage": {
+    "start_row": 0,
+    "end_row": 10,
+    "start_col": 4,
+    "end_col": 33
+  },
+  "expected_viewport_shift_rows": 0,
+  "expected_viewport_shift_exposed_only": false
+}
