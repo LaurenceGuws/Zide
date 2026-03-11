@@ -334,7 +334,6 @@ pub fn updateViewCacheNoLock(self: anytype, generation: u64, scroll_offset: usiz
     // Cursor is rendered as a UI overlay in terminal_widget_draw, so cursor visibility
     // changes should not dirty the cached terminal texture rows every frame.
 
-    damage_mod.widenPartialDamage(cache, rows, cols);
     cache.alt_active = self.core.active == .alt;
     cache.selection_active = selection_active;
     cache.sync_updates_active = self.core.sync_updates_active;
