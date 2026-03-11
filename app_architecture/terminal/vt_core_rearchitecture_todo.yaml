@@ -150,6 +150,8 @@ items:
       - Current conclusion: not every `nvim` gutter move is being misclassified as a scroll shift; the suspicious `clean_move_down` authority needs to be compared against the narrower `single_j` authority before changing `view_cache_plan`
       - Follow-up staged recapture of the same `5j` movement now shows the real pattern: with an earlier update checkpoint, the delta stays in alt-screen and emits explicit gutter rewrites similar to `redraw_nvim_gutter_single_j.*`; this strongly suggests `redraw_nvim_gutter_clean_move_down.*` is a late-cut capture artifact, not the right backend target
       - A better real gutter target is now landed as `redraw_nvim_gutter_width_shift.*`: it stays in alt-screen with `history_len=0`, `total_lines=12`, `scroll_offset=0`, publishes no viewport shift, and widens naturally to rows `0..9`, cols `2..8` around the `99/100` width-transition region
+      - Replay observed output now also exposes per-row dirty spans, which makes the width-transition case less suspicious than the aggregate box alone: most rows only touch col `2`, and the wider spans line up with rows the captured PTY delta actually rewrites more broadly
+      - Current redraw conclusion after that row-span inspection: `redraw_nvim_gutter_width_shift.*` is not a clean one-box publication overshoot target either, so the next meaningful optimization target still needs a fresher real non-clear reproducer
 
   - id: VTCORE-06
     title: Keep input encoding as a peer subsystem
