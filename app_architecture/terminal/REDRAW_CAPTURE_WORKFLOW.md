@@ -28,6 +28,13 @@ To summarize the latest pair quickly:
 python3 tools/terminal_summarize_redraw_log.py
 ```
 
+To skip the common startup/alt-screen churn and prefer the latest interesting
+steady-state frame:
+
+```bash
+python3 tools/terminal_summarize_redraw_log.py --interesting
+```
+
 For machine-readable output:
 
 ```bash

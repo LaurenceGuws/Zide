@@ -38,28 +38,47 @@ def parse_fields(message: str) -> dict[str, str]:
     return {match.group("key"): match.group("value") for match in FIELD_RE.finditer(message)}
 
 
-def parse_latest_pair(lines: list[str]) -> tuple[dict[str, str] | None, dict[str, str] | None]:
-    latest_perf = parse_latest(lines, "terminal.ui.perf")
-    latest_redraw = parse_latest(lines, "terminal.ui.redraw")
-    if latest_perf is None or latest_redraw is None:
-        return latest_perf, latest_redraw
-
-    # Prefer the latest redraw at or before the latest perf, so the pair stays
-    # temporally coherent during manual investigation.
-    if latest_redraw["timestamp"] <= latest_perf["timestamp"]:
-        return latest_perf, latest_redraw
-
+def find_latest_perf(lines: list[str], skip_reasons: set[str]) -> dict[str, str] | None:
     for line in reversed(lines):
         match = LOG_LINE_RE.match(line)
-        if not match or match.group("tag") != "terminal.ui.redraw":
+        if not match or match.group("tag") != "terminal.ui.perf":
             continue
-        if match.group("ts") <= latest_perf["timestamp"]:
-            latest_redraw = {
+        record = {
+            "timestamp": match.group("ts"),
+            "level": match.group("level"),
+            "message": match.group("msg"),
+        }
+        fields = parse_fields(record["message"])
+        reason = fields.get("full_dirty_reason")
+        if reason is not None and reason in skip_reasons:
+            continue
+        return record
+    return None
+
+
+def parse_latest_pair(lines: list[str], skip_reasons: set[str]) -> tuple[dict[str, str] | None, dict[str, str] | None]:
+    latest_perf = find_latest_perf(lines, skip_reasons)
+    if latest_perf is None and not skip_reasons:
+        latest_perf = parse_latest(lines, "terminal.ui.perf")
+
+    latest_redraw: dict[str, str] | None = None
+    if latest_perf is not None:
+        for line in reversed(lines):
+            match = LOG_LINE_RE.match(line)
+            if not match or match.group("tag") != "terminal.ui.redraw":
+                continue
+            if match.group("ts") > latest_perf["timestamp"]:
+                continue
+            candidate = {
                 "timestamp": match.group("ts"),
                 "level": match.group("level"),
                 "message": match.group("msg"),
             }
-            break
+            if "partial_plan " in candidate["message"]:
+                latest_redraw = candidate
+                break
+            if latest_redraw is None:
+                latest_redraw = candidate
     return latest_perf, latest_redraw
 
 
@@ -68,6 +87,17 @@ def main() -> int:
     parser.add_argument("--log-file", default="zide.log", help="Path to zide.log")
     parser.add_argument("--tail-lines", type=int, default=2000, help="How many trailing log lines to inspect")
     parser.add_argument("--json", action="store_true", help="Emit parsed output as JSON")
+    parser.add_argument(
+        "--skip-full-dirty-reason",
+        action="append",
+        default=[],
+        help="Ignore perf lines with these full_dirty_reason values",
+    )
+    parser.add_argument(
+        "--interesting",
+        action="store_true",
+        help="Shorthand for skipping common lifecycle churn (init, alt_enter, alt_exit)",
+    )
     args = parser.parse_args()
 
     log_path = pathlib.Path(args.log_file)
@@ -76,7 +106,17 @@ def main() -> int:
         return 1
 
     lines = tail_lines(log_path, args.tail_lines)
-    perf, redraw = parse_latest_pair(lines)
+    skip_reasons = set(args.skip_full_dirty_reason)
+    if args.interesting:
+        skip_reasons.update({"init", "alt_enter", "alt_exit"})
+    perf, redraw = parse_latest_pair(lines, skip_reasons)
+    if perf is None and skip_reasons:
+        print(
+            "no interesting terminal.ui.perf entries found after skipping "
+            + ", ".join(sorted(skip_reasons)),
+            file=sys.stderr,
+        )
+        return 1
 
     if perf is None and redraw is None:
         print("no terminal.ui.perf or terminal.ui.redraw entries found", file=sys.stderr)
