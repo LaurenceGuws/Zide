@@ -36,6 +36,7 @@
   - a fresh `nvim`-shaped redraw authority now exists too: `redraw_nvim_overlay_status_update.*` derives from the existing `nvim_overlay` sample
   - first statusline narrowing change is now landed too: the old unconditional per-row `-1/+1` partial-damage widening was removed from view-cache publication, so that `nvim`-shaped bottom-row statusline cursor-position update now publishes on the exact edited span at row 5 cols 7..9 instead of the older row 5 cols 6..10 overshoot
   - an adjacent `nvim`-style overlay authority now exists too: `redraw_nvim_overlay_mode_status_update.*` locks combined mode-text plus cursor-position churn on the statusline row, and the current backend already publishes that case exactly at row 5 cols 0..9
+  - a two-row `nvim`-style body-plus-status authority now exists too: `redraw_nvim_overlay_body_status_update.*` locks command-line text growth plus statusline churn in one frame, and the current backend already keeps that case narrow at rows 4..5 cols 0..9 without dragging in the untouched `:wq` row
   - stale private root-session shims for SGR application and key-mode flag reads are now also gone
   - protocol execution is beginning to split along the same line: pure engine-side helpers now live under `terminal_core_protocol.zig`, while session-coupled protocol behavior remains in `session_protocol.zig`
   - parser/control dispatch entry helpers now also live under `terminal_core_dispatch.zig`; parser byte feed still stays session-owned because locking and publication are not split yet
