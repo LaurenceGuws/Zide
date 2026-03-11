@@ -1,3 +1,5 @@
+const std = @import("std");
+
 pub fn assignBaseDamage(
     cache: anytype,
     view: anytype,
@@ -44,4 +46,60 @@ pub fn widenPartialDamage(cache: anytype, rows: usize, cols: usize) void {
             cache.damage.end_col = @max(cache.damage.end_col, end_col_usize + 1);
         }
     }
+}
+
+test "assignBaseDamage exposes only shifted rows for scroll shift publication" {
+    const screen = @import("../model/screen.zig");
+    var cache = @import("render_cache.zig").RenderCache.init();
+
+    assignBaseDamage(
+        &cache,
+        .{
+            .dirty = screen.Dirty.none,
+            .damage = .{ .start_row = 0, .end_row = 0, .start_col = 0, .end_col = 0 },
+        },
+        .{
+            .needs_full_damage = false,
+            .can_publish_scroll_shift = true,
+            .viewport_shift_rows = 1,
+            .shift_abs = 1,
+            .visible_history_changed = true,
+        },
+        12,
+        40,
+    );
+
+    try std.testing.expectEqual(screen.Dirty.partial, cache.dirty);
+    try std.testing.expectEqual(@as(usize, 11), cache.damage.start_row);
+    try std.testing.expectEqual(@as(usize, 11), cache.damage.end_row);
+    try std.testing.expectEqual(@as(usize, 0), cache.damage.start_col);
+    try std.testing.expectEqual(@as(usize, 39), cache.damage.end_col);
+}
+
+test "assignBaseDamage uses full viewport when history changed without row-local truth" {
+    const screen = @import("../model/screen.zig");
+    var cache = @import("render_cache.zig").RenderCache.init();
+
+    assignBaseDamage(
+        &cache,
+        .{
+            .dirty = screen.Dirty.none,
+            .damage = .{ .start_row = 0, .end_row = 0, .start_col = 0, .end_col = 0 },
+        },
+        .{
+            .needs_full_damage = false,
+            .can_publish_scroll_shift = false,
+            .viewport_shift_rows = 0,
+            .shift_abs = 0,
+            .visible_history_changed = true,
+        },
+        12,
+        40,
+    );
+
+    try std.testing.expectEqual(screen.Dirty.partial, cache.dirty);
+    try std.testing.expectEqual(@as(usize, 0), cache.damage.start_row);
+    try std.testing.expectEqual(@as(usize, 11), cache.damage.end_row);
+    try std.testing.expectEqual(@as(usize, 0), cache.damage.start_col);
+    try std.testing.expectEqual(@as(usize, 39), cache.damage.end_col);
 }

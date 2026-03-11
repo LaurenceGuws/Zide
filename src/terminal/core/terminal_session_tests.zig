@@ -362,6 +362,58 @@ test "row hash refinement does not skip unpresented top rows" {
     try std.testing.expect(cache.dirty_rows.items[0]);
 }
 
+test "row hash refinement does not suppress newly dirty rows against unpresented cache" {
+    const allocator = std.testing.allocator;
+
+    var session = try TerminalSession.init(allocator, 2, 4);
+    defer session.deinit();
+
+    const base = session.primary.defaultCell();
+    var row: usize = 0;
+    while (row < 2) : (row += 1) {
+        var col: usize = 0;
+        while (col < 4) : (col += 1) {
+            var cell = base;
+            cell.codepoint = @as(u32, 'A') + @as(u32, @intCast(row));
+            session.primary.grid.cells.items[row * 4 + col] = cell;
+        }
+    }
+
+    _ = session.output_generation.fetchAdd(1, .acq_rel);
+    session.updateViewCacheNoLock(session.output_generation.load(.acquire), session.history.scrollOffset());
+    session.notePresentedGeneration(session.renderCache().generation);
+
+    session.primary.clearDirty();
+    session.alt.clearDirty();
+    try std.testing.expect(session.acknowledgePresentedGeneration(session.renderCache().generation));
+
+    var cell = session.primary.grid.cells.items[0];
+    cell.codepoint = 'Z';
+    session.primary.grid.cells.items[0] = cell;
+    session.primary.grid.markDirtyRange(0, 0, 0, 0);
+    _ = session.output_generation.fetchAdd(1, .acq_rel);
+    session.updateViewCacheNoLock(session.output_generation.load(.acquire), session.history.scrollOffset());
+
+    const unpresented_generation = session.renderCache().generation;
+    try std.testing.expect(unpresented_generation != session.presentedGeneration());
+    try std.testing.expectEqual(Dirty.partial, session.renderCache().dirty);
+
+    session.primary.clearDirty();
+    session.primary.grid.markDirtyRange(0, 0, 0, 0);
+    _ = session.output_generation.fetchAdd(1, .acq_rel);
+    session.updateViewCacheNoLock(session.output_generation.load(.acquire), session.history.scrollOffset());
+
+    const cache = session.renderCache();
+    try std.testing.expectEqual(Dirty.partial, cache.dirty);
+    try std.testing.expect(cache.generation != session.presentedGeneration());
+    try std.testing.expect(cache.dirty_rows.items[0]);
+    try std.testing.expectEqual(@as(usize, 0), cache.damage.start_row);
+    try std.testing.expectEqual(@as(usize, 0), cache.damage.end_row);
+    try std.testing.expectEqual(@as(usize, 0), cache.damage.start_col);
+    try std.testing.expectEqual(@as(usize, 0), cache.damage.end_col);
+    try std.testing.expectEqual(@as(u32, 'Z'), cache.cells.items[0].codepoint);
+}
+
 test "setSyncUpdates enable does not force redraw when screen is otherwise clean" {
     const allocator = std.testing.allocator;
 
@@ -549,6 +601,102 @@ test "scrollback offset change publishes shift-exposed partial damage" {
     try std.testing.expect(cache.dirty_rows.items[1]);
 }
 
+test "scrollback offset change advances published generation" {
+    const allocator = std.testing.allocator;
+
+    var session = try TerminalSession.init(allocator, 2, 4);
+    defer session.deinit();
+
+    session.debugPushScrollbackRow("AAAA");
+    session.debugPushScrollbackRow("BBBB");
+    session.debugSetGridRow(0, "CCCC");
+    session.debugSetGridRow(1, "DDDD");
+    session.notePresentedGeneration(session.renderCache().generation);
+
+    session.primary.clearDirty();
+    session.alt.clearDirty();
+    try std.testing.expect(session.acknowledgePresentedGeneration(session.renderCache().generation));
+
+    const baseline_generation = session.renderCache().generation;
+    session.setScrollOffset(1);
+
+    const cache = session.renderCache();
+    try std.testing.expectEqual(@as(usize, 1), cache.scroll_offset);
+    try std.testing.expect(cache.generation != baseline_generation);
+}
+
+test "acknowledgePresentedGeneration does not retire newer scrollback view publication" {
+    const allocator = std.testing.allocator;
+
+    var session = try TerminalSession.init(allocator, 2, 4);
+    defer session.deinit();
+
+    session.debugPushScrollbackRow("AAAA");
+    session.debugPushScrollbackRow("BBBB");
+    session.debugSetGridRow(0, "CCCC");
+    session.debugSetGridRow(1, "DDDD");
+    session.notePresentedGeneration(session.renderCache().generation);
+
+    session.primary.clearDirty();
+    session.alt.clearDirty();
+    try std.testing.expect(session.acknowledgePresentedGeneration(session.renderCache().generation));
+
+    const baseline_generation = session.renderCache().generation;
+    session.setScrollOffset(1);
+
+    const cache = session.renderCache();
+    try std.testing.expectEqual(Dirty.partial, cache.dirty);
+    try std.testing.expect(!session.acknowledgePresentedGeneration(baseline_generation));
+    try std.testing.expectEqual(Dirty.partial, session.renderCache().dirty);
+    try std.testing.expectEqual(@as(usize, 1), session.renderCache().scroll_offset);
+}
+
+test "acknowledgePresentedGeneration does not retire newer normal publication" {
+    const allocator = std.testing.allocator;
+
+    var session = try TerminalSession.init(allocator, 2, 4);
+    defer session.deinit();
+
+    _ = session.output_generation.fetchAdd(1, .acq_rel);
+    session.updateViewCacheNoLock(session.output_generation.load(.acquire), session.history.scrollOffset());
+    session.notePresentedGeneration(session.renderCache().generation);
+
+    session.primary.clearDirty();
+    session.alt.clearDirty();
+    try std.testing.expect(session.acknowledgePresentedGeneration(session.renderCache().generation));
+
+    const baseline_generation = session.renderCache().generation;
+    session.primary.grid.markDirtyRange(0, 0, 0, 0);
+    _ = session.output_generation.fetchAdd(1, .acq_rel);
+    session.updateViewCacheNoLock(session.output_generation.load(.acquire), session.history.scrollOffset());
+
+    const cache = session.renderCache();
+    try std.testing.expectEqual(Dirty.partial, cache.dirty);
+    try std.testing.expectEqual(@as(usize, 0), cache.damage.start_row);
+    try std.testing.expectEqual(@as(usize, 0), cache.damage.end_row);
+    try std.testing.expectEqual(@as(usize, 0), cache.damage.start_col);
+    try std.testing.expectEqual(@as(usize, 0), cache.damage.end_col);
+    try std.testing.expect(!session.acknowledgePresentedGeneration(baseline_generation));
+    try std.testing.expectEqual(cache.generation - 1, session.presentedGeneration());
+    try std.testing.expectEqual(Dirty.partial, session.renderCache().dirty);
+    try std.testing.expectEqual(@as(usize, 0), session.renderCache().damage.start_row);
+    try std.testing.expectEqual(@as(usize, 0), session.renderCache().damage.end_row);
+    try std.testing.expectEqual(@as(usize, 0), session.renderCache().damage.start_col);
+    try std.testing.expectEqual(@as(usize, 0), session.renderCache().damage.end_col);
+}
+
+test "notePresentedGeneration does not regress presented generation" {
+    const allocator = std.testing.allocator;
+
+    var session = try TerminalSession.init(allocator, 2, 4);
+    defer session.deinit();
+
+    session.notePresentedGeneration(7);
+    session.notePresentedGeneration(3);
+
+    try std.testing.expectEqual(@as(u64, 7), session.presentedGeneration());
+}
+
 test "cursor style updates publish through cache without texture invalidation" {
     const allocator = std.testing.allocator;
 
@@ -615,6 +763,66 @@ test "kitty generation delta without visible damage stays clean" {
 
     const cache = session.renderCache();
     try std.testing.expectEqual(Dirty.none, cache.dirty);
+}
+
+test "kitty placement move stays dirty even when text cells are unchanged" {
+    const allocator = std.testing.allocator;
+
+    var session = try TerminalSession.init(allocator, 2, 4);
+    defer session.deinit();
+
+    const image_data = try allocator.alloc(u8, 4);
+    @memset(image_data, 0);
+    try session.kitty_primary.images.append(allocator, .{
+        .id = 7,
+        .width = 1,
+        .height = 1,
+        .format = .rgba,
+        .data = image_data,
+        .version = 1,
+    });
+    try session.kitty_primary.placements.append(allocator, .{
+        .image_id = 7,
+        .placement_id = 1,
+        .row = 0,
+        .col = 0,
+        .cols = 1,
+        .rows = 1,
+        .z = 0,
+        .anchor_row = 0,
+        .is_virtual = false,
+        .parent_image_id = 0,
+        .parent_placement_id = 0,
+        .offset_x = 0,
+        .offset_y = 0,
+    });
+    session.kitty_primary.generation = 1;
+
+    _ = session.output_generation.fetchAdd(1, .acq_rel);
+    session.updateViewCacheNoLock(session.output_generation.load(.acquire), session.history.scrollOffset());
+    session.notePresentedGeneration(session.renderCache().generation);
+
+    session.primary.clearDirty();
+    session.alt.clearDirty();
+    try std.testing.expect(session.acknowledgePresentedGeneration(session.renderCache().generation));
+
+    session.kitty_primary.placements.items[0].row = 1;
+    session.kitty_primary.placements.items[0].anchor_row = 1;
+    session.kitty_primary.generation += 1;
+    session.primary.grid.markDirtyRange(0, 0, 0, 0);
+    session.primary.grid.markDirtyRange(1, 1, 0, 0);
+
+    _ = session.output_generation.fetchAdd(1, .acq_rel);
+    session.updateViewCacheNoLock(session.output_generation.load(.acquire), session.history.scrollOffset());
+
+    const cache = session.renderCache();
+    try std.testing.expectEqual(Dirty.partial, cache.dirty);
+    try std.testing.expectEqual(@as(usize, 0), cache.damage.start_row);
+    try std.testing.expectEqual(@as(usize, 1), cache.damage.end_row);
+    try std.testing.expectEqual(@as(usize, 0), cache.damage.start_col);
+    try std.testing.expectEqual(@as(usize, 0), cache.damage.end_col);
+    try std.testing.expectEqual(@as(usize, 1), cache.kitty_placements.items.len);
+    try std.testing.expectEqual(@as(u16, 1), cache.kitty_placements.items[0].row);
 }
 
 test "clear generation delta without visible damage stays clean" {
@@ -689,6 +897,279 @@ test "screen reverse toggle stays on partial path" {
     try std.testing.expect(cache.screen_reverse);
     try std.testing.expectEqual(@as(u16, 0), cache.dirty_cols_start.items[0]);
     try std.testing.expectEqual(@as(u16, 3), cache.dirty_cols_end.items[0]);
+}
+
+test "visible history change narrows to projected diff against presented base" {
+    const allocator = std.testing.allocator;
+
+    var session = try TerminalSession.init(allocator, 2, 4);
+    defer session.deinit();
+
+    const base = session.primary.defaultCell();
+    var row_a = [_]Cell{ base, base, base, base };
+    var row_b = [_]Cell{ base, base, base, base };
+    for (&row_a, 0..) |*cell, col| cell.codepoint = @as(u32, 'A') + @as(u32, @intCast(col));
+    for (&row_b, 0..) |*cell, col| cell.codepoint = @as(u32, 'E') + @as(u32, @intCast(col));
+
+    session.history.pushRow(&row_a, false, base);
+    session.history.pushRow(&row_b, false, base);
+    session.history.ensureViewCache(session.primary.grid.cols, base);
+    session.history.setScrollOffset(session.primary.grid.rows, 2);
+
+    _ = session.output_generation.fetchAdd(1, .acq_rel);
+    session.updateViewCacheNoLock(session.output_generation.load(.acquire), session.history.scrollOffset());
+    session.notePresentedGeneration(session.renderCache().generation);
+
+    session.primary.clearDirty();
+    session.alt.clearDirty();
+    try std.testing.expect(session.acknowledgePresentedGeneration(session.renderCache().generation));
+
+    const history_row = session.history.scrollback.lineByIndexMut(0).?;
+    history_row.cells[0].codepoint = 'Z';
+    session.history.markScrollbackChanged();
+    session.updateViewCacheNoLock(session.output_generation.load(.acquire), session.history.scrollOffset());
+
+    const cache = session.renderCache();
+    try std.testing.expectEqual(Dirty.partial, cache.dirty);
+    try std.testing.expectEqual(@as(usize, 0), cache.damage.start_row);
+    try std.testing.expectEqual(@as(usize, 0), cache.damage.end_row);
+    try std.testing.expectEqual(@as(usize, 0), cache.damage.start_col);
+    try std.testing.expectEqual(@as(usize, 0), cache.damage.end_col);
+    try std.testing.expect(cache.dirty_rows.items[0]);
+    try std.testing.expect(!cache.dirty_rows.items[1]);
+    try std.testing.expectEqual(@as(u16, 0), cache.dirty_cols_start.items[0]);
+    try std.testing.expectEqual(@as(u16, 0), cache.dirty_cols_end.items[0]);
+    try std.testing.expectEqual(@as(u32, 'Z'), cache.cells.items[0].codepoint);
+}
+
+test "visible history change stays conservative against unpresented base" {
+    const allocator = std.testing.allocator;
+
+    var session = try TerminalSession.init(allocator, 2, 4);
+    defer session.deinit();
+
+    const base = session.primary.defaultCell();
+    var row_a = [_]Cell{ base, base, base, base };
+    var row_b = [_]Cell{ base, base, base, base };
+    for (&row_a, 0..) |*cell, col| cell.codepoint = @as(u32, 'A') + @as(u32, @intCast(col));
+    for (&row_b, 0..) |*cell, col| cell.codepoint = @as(u32, 'E') + @as(u32, @intCast(col));
+
+    session.history.pushRow(&row_a, false, base);
+    session.history.pushRow(&row_b, false, base);
+    session.history.ensureViewCache(session.primary.grid.cols, base);
+    session.history.setScrollOffset(session.primary.grid.rows, 2);
+
+    _ = session.output_generation.fetchAdd(1, .acq_rel);
+    session.updateViewCacheNoLock(session.output_generation.load(.acquire), session.history.scrollOffset());
+    session.notePresentedGeneration(session.renderCache().generation);
+
+    session.primary.clearDirty();
+    session.alt.clearDirty();
+    try std.testing.expect(session.acknowledgePresentedGeneration(session.renderCache().generation));
+
+    const first_update = session.history.scrollback.lineByIndexMut(0).?;
+    first_update.cells[0].codepoint = 'Z';
+    session.history.markScrollbackChanged();
+    session.updateViewCacheNoLock(session.output_generation.load(.acquire), session.history.scrollOffset());
+
+    const second_update = session.history.scrollback.lineByIndexMut(0).?;
+    second_update.cells[1].codepoint = 'Y';
+    session.history.markScrollbackChanged();
+    session.updateViewCacheNoLock(session.output_generation.load(.acquire), session.history.scrollOffset());
+
+    const cache = session.renderCache();
+    try std.testing.expectEqual(Dirty.partial, cache.dirty);
+    try std.testing.expectEqual(@as(usize, 0), cache.damage.start_row);
+    try std.testing.expectEqual(@as(usize, 1), cache.damage.end_row);
+    try std.testing.expectEqual(@as(usize, 0), cache.damage.start_col);
+    try std.testing.expectEqual(@as(usize, 3), cache.damage.end_col);
+    try std.testing.expect(cache.dirty_rows.items[0]);
+    try std.testing.expect(cache.dirty_rows.items[1]);
+}
+
+test "debug scrollback helpers preserve visible-history baseline shape" {
+    const allocator = std.testing.allocator;
+
+    var session = try TerminalSession.init(allocator, 2, 4);
+    defer session.deinit();
+
+    session.debugPushScrollbackRow("ABCD");
+    session.debugPushScrollbackRow("EFGH");
+    session.debugSetScrollOffset(2);
+    session.notePresentedGeneration(session.renderCache().generation);
+    try std.testing.expect(session.acknowledgePresentedGeneration(session.renderCache().generation));
+
+    const cache = session.renderCache();
+    try std.testing.expectEqual(@as(usize, 2), cache.history_len);
+    try std.testing.expectEqual(@as(usize, 4), cache.total_lines);
+    try std.testing.expectEqual(@as(usize, 2), cache.scroll_offset);
+    try std.testing.expectEqual(Dirty.none, cache.dirty);
+    try std.testing.expectEqualStrings("ABCD", &[_]u8{
+        @intCast(cache.cells.items[0].codepoint),
+        @intCast(cache.cells.items[1].codepoint),
+        @intCast(cache.cells.items[2].codepoint),
+        @intCast(cache.cells.items[3].codepoint),
+    });
+    try std.testing.expectEqualStrings("EFGH", &[_]u8{
+        @intCast(cache.cells.items[4].codepoint),
+        @intCast(cache.cells.items[5].codepoint),
+        @intCast(cache.cells.items[6].codepoint),
+        @intCast(cache.cells.items[7].codepoint),
+    });
+}
+
+test "debug scrollback cell mutation keeps two-row visible-history shape" {
+    const allocator = std.testing.allocator;
+
+    var session = try TerminalSession.init(allocator, 2, 4);
+    defer session.deinit();
+
+    session.debugPushScrollbackRow("ABCD");
+    session.debugPushScrollbackRow("EFGH");
+    session.debugSetScrollOffset(2);
+    session.notePresentedGeneration(session.renderCache().generation);
+    try std.testing.expect(session.acknowledgePresentedGeneration(session.renderCache().generation));
+
+    session.debugSetScrollbackCell(0, 0, 'Z');
+
+    const cache = session.renderCache();
+    try std.testing.expectEqual(@as(usize, 2), cache.history_len);
+    try std.testing.expectEqual(@as(usize, 4), cache.total_lines);
+    try std.testing.expectEqual(@as(usize, 2), cache.scroll_offset);
+    try std.testing.expectEqual(Dirty.partial, cache.dirty);
+    try std.testing.expectEqual(@as(usize, 0), cache.damage.start_row);
+    try std.testing.expectEqual(@as(usize, 0), cache.damage.end_row);
+    try std.testing.expectEqual(@as(usize, 0), cache.damage.start_col);
+    try std.testing.expectEqual(@as(usize, 0), cache.damage.end_col);
+    try std.testing.expect(cache.dirty_rows.items[0]);
+    try std.testing.expect(!cache.dirty_rows.items[1]);
+    try std.testing.expectEqualStrings("ZBCD", &[_]u8{
+        @intCast(cache.cells.items[0].codepoint),
+        @intCast(cache.cells.items[1].codepoint),
+        @intCast(cache.cells.items[2].codepoint),
+        @intCast(cache.cells.items[3].codepoint),
+    });
+    try std.testing.expectEqualStrings("EFGH", &[_]u8{
+        @intCast(cache.cells.items[4].codepoint),
+        @intCast(cache.cells.items[5].codepoint),
+        @intCast(cache.cells.items[6].codepoint),
+        @intCast(cache.cells.items[7].codepoint),
+    });
+}
+
+test "debug scrollback helper stays conservative on second unpresented visible-history mutation" {
+    const allocator = std.testing.allocator;
+
+    var session = try TerminalSession.init(allocator, 2, 4);
+    defer session.deinit();
+
+    session.debugPushScrollbackRow("ABCD");
+    session.debugPushScrollbackRow("EFGH");
+    session.debugSetScrollOffset(2);
+    session.notePresentedGeneration(session.renderCache().generation);
+    try std.testing.expect(session.acknowledgePresentedGeneration(session.renderCache().generation));
+
+    session.debugSetScrollbackCell(0, 0, 'Z');
+    session.debugSetScrollbackCell(0, 1, 'Y');
+
+    const cache = session.renderCache();
+    try std.testing.expectEqual(Dirty.partial, cache.dirty);
+    try std.testing.expectEqual(@as(usize, 0), cache.damage.start_row);
+    try std.testing.expectEqual(@as(usize, 1), cache.damage.end_row);
+    try std.testing.expectEqual(@as(usize, 0), cache.damage.start_col);
+    try std.testing.expectEqual(@as(usize, 3), cache.damage.end_col);
+    try std.testing.expect(cache.dirty_rows.items[0]);
+    try std.testing.expect(cache.dirty_rows.items[1]);
+}
+
+test "debug scrollback helper with replay cursor setup stays conservative on second visible-history mutation" {
+    const allocator = std.testing.allocator;
+
+    var session = try TerminalSession.init(allocator, 2, 4);
+    defer session.deinit();
+
+    session.debugSetCursor(1, 0);
+    session.debugPushScrollbackRow("ABCD");
+    session.debugPushScrollbackRow("EFGH");
+    session.debugSetScrollOffset(2);
+    session.notePresentedGeneration(session.renderCache().generation);
+    try std.testing.expect(session.acknowledgePresentedGeneration(session.renderCache().generation));
+
+    session.debugSetScrollbackCell(0, 0, 'Z');
+    session.debugSetScrollbackCell(0, 1, 'Y');
+
+    const cache = session.renderCache();
+    try std.testing.expectEqual(Dirty.partial, cache.dirty);
+    try std.testing.expectEqual(@as(usize, 0), cache.damage.start_row);
+    try std.testing.expectEqual(@as(usize, 1), cache.damage.end_row);
+    try std.testing.expectEqual(@as(usize, 0), cache.damage.start_col);
+    try std.testing.expectEqual(@as(usize, 3), cache.damage.end_col);
+    try std.testing.expect(cache.dirty_rows.items[0]);
+    try std.testing.expect(cache.dirty_rows.items[1]);
+}
+
+test "debug scrollback helper with replay transport setup stays conservative on second visible-history mutation" {
+    const allocator = std.testing.allocator;
+
+    var session = try TerminalSession.init(allocator, 2, 4);
+    defer session.deinit();
+    session.attachExternalTransport();
+
+    session.debugSetCursor(1, 0);
+    session.debugPushScrollbackRow("ABCD");
+    session.debugPushScrollbackRow("EFGH");
+    session.debugSetScrollOffset(2);
+    session.notePresentedGeneration(session.renderCache().generation);
+    try std.testing.expect(session.acknowledgePresentedGeneration(session.renderCache().generation));
+
+    session.debugSetScrollbackCell(0, 0, 'Z');
+    session.debugSetScrollbackCell(0, 1, 'Y');
+
+    const cache = session.renderCache();
+    try std.testing.expectEqual(Dirty.partial, cache.dirty);
+    try std.testing.expectEqual(@as(usize, 0), cache.damage.start_row);
+    try std.testing.expectEqual(@as(usize, 1), cache.damage.end_row);
+    try std.testing.expectEqual(@as(usize, 0), cache.damage.start_col);
+    try std.testing.expectEqual(@as(usize, 3), cache.damage.end_col);
+    try std.testing.expect(cache.dirty_rows.items[0]);
+    try std.testing.expect(cache.dirty_rows.items[1]);
+}
+
+test "selection dirty expansion does not suppress repeated unpresented selection state" {
+    const allocator = std.testing.allocator;
+
+    var session = try TerminalSession.init(allocator, 2, 4);
+    defer session.deinit();
+
+    const base = session.primary.defaultCell();
+    var cell = base;
+    cell.codepoint = 'A';
+    session.primary.grid.cells.items[0] = cell;
+
+    _ = session.output_generation.fetchAdd(1, .acq_rel);
+    session.updateViewCacheNoLock(session.output_generation.load(.acquire), session.history.scrollOffset());
+    session.notePresentedGeneration(session.renderCache().generation);
+
+    session.primary.clearDirty();
+    session.alt.clearDirty();
+    try std.testing.expect(session.acknowledgePresentedGeneration(session.renderCache().generation));
+
+    session.selectRange(.{ .row = 0, .col = 0 }, .{ .row = 0, .col = 0 }, true);
+
+    var cache = session.renderCache();
+    try std.testing.expectEqual(Dirty.partial, cache.dirty);
+    try std.testing.expect(cache.dirty_rows.items[0]);
+
+    session.selectRange(.{ .row = 0, .col = 0 }, .{ .row = 0, .col = 0 }, true);
+
+    cache = session.renderCache();
+    try std.testing.expectEqual(Dirty.partial, cache.dirty);
+    try std.testing.expect(cache.generation != session.presentedGeneration());
+    try std.testing.expect(cache.dirty_rows.items[0]);
+    try std.testing.expectEqual(@as(usize, 0), cache.damage.start_row);
+    try std.testing.expectEqual(@as(usize, 0), cache.damage.end_row);
+    try std.testing.expectEqual(@as(usize, 0), cache.damage.start_col);
+    try std.testing.expectEqual(@as(usize, 3), cache.damage.end_col);
 }
 
 test "eraseDisplay cursor-to-end keeps partial damage" {

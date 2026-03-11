@@ -78,6 +78,44 @@ pub fn rowDiffSpan(new_row: []const Cell, old_row: []const Cell, cols: usize) ?s
     return .{ .start = start, .end = end };
 }
 
+pub fn assignProjectedDiffDamage(cache: anytype, active_cache: anytype, rows: usize, cols: usize) void {
+    var first_dirty = true;
+    var row_idx: usize = 0;
+    while (row_idx < rows) : (row_idx += 1) {
+        const row_start = row_idx * cols;
+        const row_cells = cache.cells.items[row_start .. row_start + cols];
+        const old_row_cells = active_cache.cells.items[row_start .. row_start + cols];
+        if (rowDiffSpan(row_cells, old_row_cells, cols)) |span| {
+            cache.dirty_rows.items[row_idx] = true;
+            cache.dirty_cols_start.items[row_idx] = @intCast(span.start);
+            cache.dirty_cols_end.items[row_idx] = @intCast(span.end);
+            if (first_dirty) {
+                cache.damage = .{
+                    .start_row = row_idx,
+                    .end_row = row_idx,
+                    .start_col = span.start,
+                    .end_col = span.end,
+                };
+                first_dirty = false;
+            } else {
+                cache.damage.start_row = @min(cache.damage.start_row, row_idx);
+                cache.damage.end_row = @max(cache.damage.end_row, row_idx);
+                cache.damage.start_col = @min(cache.damage.start_col, span.start);
+                cache.damage.end_col = @max(cache.damage.end_col, span.end);
+            }
+        } else {
+            cache.dirty_rows.items[row_idx] = false;
+        }
+    }
+
+    if (first_dirty) {
+        cache.dirty = .none;
+        cache.damage = .{ .start_row = 0, .end_row = 0, .start_col = 0, .end_col = 0 };
+    } else {
+        cache.dirty = .partial;
+    }
+}
+
 pub fn hashRow(cells: []const Cell) u64 {
     var h: u64 = 1469598103934665603;
     const prime: u64 = 1099511628211;

@@ -1,0 +1,37 @@
+{
+  "fixture_type": "harness_api",
+  "rows": 2,
+  "cols": 4,
+  "cursor": {
+    "row": 1,
+    "col": 0
+  },
+  "line_ending": "lf",
+  "baseline_scrollback_rows": [
+    "ABCD",
+    "EFGH"
+  ],
+  "baseline_scroll_offsets": [
+    {
+      "offset": 2
+    }
+  ],
+  "assertions": [
+    "damage",
+    "scrollback"
+  ],
+  "expected_dirty": "partial",
+  "expected_damage": {
+    "start_row": 0,
+    "end_row": 0,
+    "start_col": 0,
+    "end_col": 0
+  },
+  "scrollback_cells": [
+    {
+      "row": 0,
+      "col": 0,
+      "codepoint": 90
+    }
+  ]
+}

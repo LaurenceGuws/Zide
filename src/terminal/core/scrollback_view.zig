@@ -94,7 +94,12 @@ pub fn setScrollOffsetLocked(self: anytype, offset: usize) void {
         return;
     }
     self.core.history.ensureViewCache(self.core.primary.grid.cols, self.core.primary.defaultCell());
+    const before = self.core.history.scrollOffset();
     self.core.history.setScrollOffset(self.core.primary.grid.rows, offset);
+    const after = self.core.history.scrollOffset();
+    if (after != before) {
+        _ = self.output_generation.fetchAdd(1, .acq_rel);
+    }
     self.view_cache_request_offset.store(@intCast(self.core.history.scrollOffset()), .release);
     self.view_cache_pending.store(true, .release);
     self.io_wait_cond.signal();
@@ -152,7 +157,12 @@ pub fn scrollByLocked(self: anytype, delta: isize) void {
     if (self.core.active == .alt) return;
     if (delta == 0) return;
     self.core.history.ensureViewCache(self.core.primary.grid.cols, self.core.primary.defaultCell());
+    const before = self.core.history.scrollOffset();
     self.core.history.scrollBy(self.core.primary.grid.rows, delta);
+    const after = self.core.history.scrollOffset();
+    if (after != before) {
+        _ = self.output_generation.fetchAdd(1, .acq_rel);
+    }
     self.view_cache_request_offset.store(@intCast(self.core.history.scrollOffset()), .release);
     self.view_cache_pending.store(true, .release);
     self.io_wait_cond.signal();

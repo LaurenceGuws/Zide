@@ -27,6 +27,7 @@ pub fn clearSelection(self: anytype) void {
 
 pub fn clearSelectionLocked(self: anytype) void {
     self.core.history.clearSelection();
+    _ = self.output_generation.fetchAdd(1, .acq_rel);
     self.view_cache_request_offset.store(@intCast(self.core.history.scrollOffset()), .release);
     self.view_cache_pending.store(true, .release);
     self.io_wait_cond.signal();
@@ -47,6 +48,7 @@ pub fn startSelection(self: anytype, row: usize, col: usize) void {
 pub fn startSelectionLocked(self: anytype, row: usize, col: usize) void {
     if (self.core.active == .alt) return;
     self.core.history.startSelection(row, col);
+    _ = self.output_generation.fetchAdd(1, .acq_rel);
     self.view_cache_request_offset.store(@intCast(self.core.history.scrollOffset()), .release);
     self.view_cache_pending.store(true, .release);
     self.io_wait_cond.signal();
@@ -61,6 +63,7 @@ pub fn updateSelection(self: anytype, row: usize, col: usize) void {
 pub fn updateSelectionLocked(self: anytype, row: usize, col: usize) void {
     if (self.core.active == .alt) return;
     self.core.history.updateSelection(row, col);
+    _ = self.output_generation.fetchAdd(1, .acq_rel);
     self.view_cache_request_offset.store(@intCast(self.core.history.scrollOffset()), .release);
     self.view_cache_pending.store(true, .release);
     self.io_wait_cond.signal();
@@ -75,6 +78,7 @@ pub fn finishSelection(self: anytype) void {
 pub fn finishSelectionLocked(self: anytype) void {
     if (self.core.active == .alt) return;
     self.core.history.finishSelection();
+    _ = self.output_generation.fetchAdd(1, .acq_rel);
     self.view_cache_request_offset.store(@intCast(self.core.history.scrollOffset()), .release);
     self.view_cache_pending.store(true, .release);
     self.io_wait_cond.signal();
@@ -99,6 +103,7 @@ pub fn selectRangeLocked(self: anytype, start: types.SelectionPos, end: types.Se
     if (finished) {
         self.core.history.finishSelection();
     }
+    _ = self.output_generation.fetchAdd(1, .acq_rel);
     self.view_cache_request_offset.store(@intCast(self.core.history.scrollOffset()), .release);
     self.view_cache_pending.store(true, .release);
     self.io_wait_cond.signal();

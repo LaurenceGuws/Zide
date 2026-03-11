@@ -273,7 +273,14 @@ pub fn updateViewCacheNoLock(self: anytype, generation: u64, scroll_offset: usiz
     }
 
     if (!plan.needs_full_damage and active_cache.rows == rows and active_cache.cols == cols) {
-        selection_dirty.applySelectionDirtyExpansion(cache, active_cache, rows, cols, fullwidth_origin_log);
+        selection_dirty.applySelectionDirtyExpansion(
+            cache,
+            active_cache,
+            rows,
+            cols,
+            fullwidth_origin_log,
+            active_cache.generation == presented_generation,
+        );
     }
 
     cache.rows = rows;
@@ -294,6 +301,19 @@ pub fn updateViewCacheNoLock(self: anytype, generation: u64, scroll_offset: usiz
         }
     }
     damage_mod.assignBaseDamage(cache, view, plan, rows, cols);
+    const kitty_generation_unchanged = active_cache.kitty_generation == kitty_generation;
+
+    if (!plan.needs_full_damage and
+        !plan.can_publish_scroll_shift and
+        plan.visible_history_changed and
+        view.dirty == .none and
+        active_cache.rows == rows and
+        active_cache.cols == cols and
+        active_cache.generation == presented_generation and
+        active_cache.cells.items.len == cache.cells.items.len)
+    {
+        publication.assignProjectedDiffDamage(cache, active_cache, rows, cols);
+    }
     if (plan.needs_full_damage) {
         const forced_reason = publication.pickForcedFullDirtyReason(
             rows,
@@ -318,6 +338,7 @@ pub fn updateViewCacheNoLock(self: anytype, generation: u64, scroll_offset: usiz
         (view.dirty == .partial or plan.visible_history_changed) and
         active_cache.rows == rows and
         active_cache.cols == cols and
+        kitty_generation_unchanged and
         active_cache.row_hashes.items.len == rows and
         (active_cache.generation == presented_generation or active_cache.dirty == .partial))
     {
@@ -327,6 +348,7 @@ pub fn updateViewCacheNoLock(self: anytype, generation: u64, scroll_offset: usiz
             rows,
             cols,
             fullwidth_origin_log,
+            active_cache.generation == presented_generation,
             active_cache.generation != presented_generation,
         );
     }

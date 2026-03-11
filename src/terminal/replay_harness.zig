@@ -25,16 +25,26 @@ pub const SelectionOp = enum {
     start,
     update,
     finish,
+    select_range,
 };
 
 pub const SelectionAction = struct {
     op: SelectionOp,
     row: usize = 0,
     col: usize = 0,
+    end_row: usize = 0,
+    end_col: usize = 0,
+    finished: bool = true,
 };
 
 pub const ScrollOffsetAction = struct {
     offset: usize,
+};
+
+pub const ScrollbackCellAction = struct {
+    row: usize,
+    col: usize,
+    codepoint: u32,
 };
 
 pub const MouseAction = struct {
@@ -98,15 +108,21 @@ pub const FixtureMeta = struct {
     cursor: types.CursorPos = .{ .row = 0, .col = 0 },
     line_ending: LineEnding = .lf,
     baseline_input: ?[]const u8 = null,
+    baseline_scrollback_rows: []const []const u8 = &.{},
+    baseline_grid_rows: []const []const u8 = &.{},
+    baseline_scroll_offsets: []const ScrollOffsetAction = &.{},
     assertions: []const []const u8 = &.{},
     reply_hex: ?[]const u8 = null,
     expected_dirty: ?DirtyExpectation = null,
     expected_damage: ?ExpectedDamage = null,
     expected_viewport_shift_rows: ?i32 = null,
     expected_viewport_shift_exposed_only: ?bool = null,
+    expected_generation_advanced_from_baseline: ?bool = null,
     output_chunks: []const []const u8 = &.{},
     selection: []const SelectionAction = &.{},
+    scroll_offsets: []const ScrollOffsetAction = &.{},
     scroll_full_up_count: usize = 0,
+    scrollback_cells: []const ScrollbackCellAction = &.{},
     mouse: []const MouseAction = &.{},
     encoder: ?EncoderSpec = null,
     osc_5522_clipboard_text: ?[]const u8 = null,
@@ -139,6 +155,8 @@ pub const ObservedFixtureState = struct {
     damage: ExpectedDamage,
     viewport_shift_rows: ?i32,
     viewport_shift_exposed_only: ?bool,
+    generation: u64,
+    baseline_generation: ?u64,
     history_len: ?usize,
     total_lines: ?usize,
     scroll_offset: ?usize,
@@ -148,6 +166,10 @@ pub const ObservedFixtureState = struct {
 pub const RunFixtureObserved = struct {
     output: []u8,
     observed: ObservedFixtureState,
+};
+
+const BaselinePublication = struct {
+    generation: ?u64 = null,
 };
 
 pub const RunFixtureOptions = struct {
@@ -361,6 +383,7 @@ pub fn runFixtureObservedWithOptions(
 
     var session = try terminal.TerminalSession.init(allocator, fixture.meta.rows, fixture.meta.cols);
     defer session.deinit();
+    var baseline_publication: BaselinePublication = .{};
 
     var reply_capture: ?ReplayPtyCapture = null;
     if (fixture.meta.reply_hex != null) {
@@ -380,10 +403,21 @@ pub fn runFixtureObservedWithOptions(
     terminal.debugSetCursor(session, fixture.meta.cursor.row, fixture.meta.cursor.col);
     try seedOsc5522Clipboard(session, fixture.meta);
 
-    if (fixture.meta.baseline_input) |baseline_input| {
-        const normalized_baseline = try normalizeLineEndings(allocator, baseline_input, fixture.meta.line_ending);
-        defer allocator.free(normalized_baseline);
-        try runFixtureInputPhase(session, normalized_baseline, reply_capture != null);
+    if (fixture.meta.baseline_input != null or
+        fixture.meta.baseline_scrollback_rows.len > 0 or
+        fixture.meta.baseline_grid_rows.len > 0 or
+        fixture.meta.baseline_scroll_offsets.len > 0)
+    {
+        if (fixture.meta.baseline_input) |baseline_input| {
+            const normalized_baseline = try normalizeLineEndings(allocator, baseline_input, fixture.meta.line_ending);
+            defer allocator.free(normalized_baseline);
+            try runFixtureInputPhase(session, normalized_baseline, reply_capture != null);
+        }
+        applyBaselineScrollbackRows(session, fixture.meta.baseline_scrollback_rows);
+        applyBaselineGridRows(session, fixture.meta.baseline_grid_rows);
+        applyScrollOffsetActions(session, fixture.meta.baseline_scroll_offsets);
+        baseline_publication.generation = session.renderCache().generation;
+        session.notePresentedGeneration(session.renderCache().generation);
         if (!session.acknowledgePresentedGeneration(session.renderCache().generation)) {
             return error.BaselinePublishAcknowledgeFailed;
         }
@@ -391,21 +425,27 @@ pub fn runFixtureObservedWithOptions(
 
     const normalized = try normalizeLineEndings(allocator, fixture.input, fixture.meta.line_ending);
     defer allocator.free(normalized);
-    if (normalized.len > 0) {
+    const has_meaningful_input = if (fixture.meta.fixture_type == .harness_api)
+        std.mem.trim(u8, normalized, "\r\n\t ").len > 0
+    else
+        normalized.len > 0;
+    if (has_meaningful_input) {
         try runFixtureInputPhase(session, normalized, reply_capture != null);
     }
 
     if (fixture.meta.fixture_type == .harness_api) {
         try applyOutputChunks(allocator, session, fixture.meta.output_chunks, fixture.meta.line_ending, reply_capture != null);
         applySelectionActions(session, fixture.meta.selection);
+        applyScrollOffsetActions(session, fixture.meta.scroll_offsets);
         applyScrollFullUp(session, fixture.meta.scroll_full_up_count);
+        applyScrollbackCellActions(session, fixture.name, fixture.meta.scrollback_cells);
     }
     try applyMouseActions(session, fixture.meta.mouse);
 
     const snapshot = session.snapshot();
     const debug = terminal.debugSnapshot(session);
     if (options.validate_assertions) {
-        try validateAssertions(fixture, snapshot, debug);
+        try validateAssertions(fixture, snapshot, debug, baseline_publication);
     }
     if (fixture.meta.reply_hex) |reply_hex| {
         var capture = reply_capture orelse return error.ReplyAssertionMissingCapture;
@@ -419,7 +459,7 @@ pub fn runFixtureObservedWithOptions(
     const output = try snapshot_mod.encodeSnapshot(allocator, session, snapshot, debug, terminal.debugScrollbackRow);
     return .{
         .output = output,
-        .observed = try observedFixtureState(allocator, snapshot, debug),
+        .observed = try observedFixtureState(allocator, snapshot, debug, baseline_publication),
     };
 }
 
@@ -546,6 +586,7 @@ fn validateAssertions(
     fixture: *const Fixture,
     snapshot: terminal.TerminalSnapshot,
     debug: terminal.DebugSnapshot,
+    baseline_publication: BaselinePublication,
 ) !void {
     for (fixture.meta.assertions) |tag| {
         if (std.mem.eql(u8, tag, "grid")) {
@@ -650,6 +691,17 @@ fn validateAssertions(
             }
             continue;
         }
+        if (std.mem.eql(u8, tag, "generation")) {
+            if (fixture.meta.expected_generation_advanced_from_baseline) |expected_advanced| {
+                const baseline_generation = baseline_publication.generation orelse return error.AssertionGenerationMissingBaseline;
+                const actual_advanced = snapshot.generation != baseline_generation;
+                if (actual_advanced != expected_advanced) return error.AssertionGenerationMismatch;
+            }
+            if (fixture.meta.expected_generation_advanced_from_baseline == null) {
+                return error.AssertionGenerationExpectationMissing;
+            }
+            continue;
+        }
         return error.UnknownAssertionTag;
     }
 }
@@ -662,6 +714,7 @@ fn observedFixtureState(
     allocator: std.mem.Allocator,
     snapshot: terminal.TerminalSnapshot,
     debug: terminal.DebugSnapshot,
+    baseline_publication: BaselinePublication,
 ) !ObservedFixtureState {
     const cache = fixtureRenderCache(debug);
     const actual_dirty = if (cache) |c| c.dirty else snapshot.dirty;
@@ -705,6 +758,8 @@ fn observedFixtureState(
         },
         .viewport_shift_rows = if (cache) |c| c.viewport_shift_rows else null,
         .viewport_shift_exposed_only = if (cache) |c| c.viewport_shift_exposed_only else null,
+        .generation = snapshot.generation,
+        .baseline_generation = baseline_publication.generation,
         .history_len = if (cache) |c| c.history_len else null,
         .total_lines = if (cache) |c| c.total_lines else null,
         .scroll_offset = if (cache) |c| c.scroll_offset else null,
@@ -804,7 +859,13 @@ fn applySelectionActions(session: *terminal.TerminalSession, actions: []const Se
             .start => session.startSelection(action.row, action.col),
             .update => session.updateSelection(action.row, action.col),
             .finish => session.finishSelection(),
+            .select_range => session.selectRange(
+                .{ .row = action.row, .col = action.col },
+                .{ .row = action.end_row, .col = action.end_col },
+                action.finished,
+            ),
         }
+        session.updateViewCacheForScroll();
     }
 }
 
@@ -828,6 +889,32 @@ fn applyScrollFullUp(session: *terminal.TerminalSession, count: usize) void {
         terminal.debugScrollUp(session);
     }
 }
+
+fn applyScrollOffsetActions(session: *terminal.TerminalSession, actions: []const ScrollOffsetAction) void {
+    for (actions) |action| {
+        terminal.debugSetScrollOffset(session, action.offset);
+    }
+}
+
+fn applyScrollbackCellActions(session: *terminal.TerminalSession, fixture_name: []const u8, actions: []const ScrollbackCellAction) void {
+    _ = fixture_name;
+    for (actions) |action| {
+        terminal.debugSetScrollbackCell(session, action.row, action.col, action.codepoint);
+    }
+}
+
+fn applyBaselineScrollbackRows(session: *terminal.TerminalSession, rows: []const []const u8) void {
+    for (rows) |row| {
+        terminal.debugPushScrollbackRow(session, row);
+    }
+}
+
+fn applyBaselineGridRows(session: *terminal.TerminalSession, rows: []const []const u8) void {
+    for (rows, 0..) |row, idx| {
+        terminal.debugSetGridRow(session, idx, row);
+    }
+}
+
 
 fn applyMouseActions(session: *terminal.TerminalSession, actions: []const MouseAction) !void {
     for (actions) |action| {

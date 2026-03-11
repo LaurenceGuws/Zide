@@ -4,6 +4,7 @@ pub fn applySelectionDirtyExpansion(
     rows: usize,
     cols: usize,
     fullwidth_origin_log: anytype,
+    allow_selection_narrowing: bool,
 ) void {
     if (active_cache.selection_rows.items.len != rows) return;
 
@@ -11,8 +12,11 @@ pub fn applySelectionDirtyExpansion(
     while (row_idx < rows) : (row_idx += 1) {
         const was_selected = active_cache.selection_rows.items[row_idx];
         const is_selected = cache.selection_rows.items[row_idx];
-        var changed = was_selected != is_selected;
-        if (!changed and is_selected and active_cache.selection_cols_start.items.len == rows and active_cache.selection_cols_end.items.len == rows) {
+        var changed = if (allow_selection_narrowing)
+            was_selected != is_selected
+        else
+            was_selected or is_selected;
+        if (allow_selection_narrowing and !changed and is_selected and active_cache.selection_cols_start.items.len == rows and active_cache.selection_cols_end.items.len == rows) {
             changed = active_cache.selection_cols_start.items[row_idx] != cache.selection_cols_start.items[row_idx] or
                 active_cache.selection_cols_end.items[row_idx] != cache.selection_cols_end.items[row_idx];
         }
