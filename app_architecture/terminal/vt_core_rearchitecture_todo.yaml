@@ -149,6 +149,7 @@ items:
       - Adjacent comparator authority is now also landed as `redraw_nvim_gutter_single_j.*`; that capture stays in alt-screen with `history_len=0`, `total_lines=12`, `scroll_offset=0`, and publishes narrow damage at rows `0..9`, cols `0..5` with no viewport shift
       - Current conclusion: not every `nvim` gutter move is being misclassified as a scroll shift; the suspicious `clean_move_down` authority needs to be compared against the narrower `single_j` authority before changing `view_cache_plan`
       - Follow-up staged recapture of the same `5j` movement now shows the real pattern: with an earlier update checkpoint, the delta stays in alt-screen and emits explicit gutter rewrites similar to `redraw_nvim_gutter_single_j.*`; this strongly suggests `redraw_nvim_gutter_clean_move_down.*` is a late-cut capture artifact, not the right backend target
+      - A better real gutter target is now landed as `redraw_nvim_gutter_width_shift.*`: it stays in alt-screen with `history_len=0`, `total_lines=12`, `scroll_offset=0`, publishes no viewport shift, and widens naturally to rows `0..9`, cols `2..8` around the `99/100` width-transition region
 
   - id: VTCORE-06
     title: Keep input encoding as a peer subsystem
