@@ -43,6 +43,21 @@ python3 tools/terminal_capture_pty.py \
   -- -- nvim
 ```
 
+For a longer-lived single session with staged input and explicit output splits:
+
+```bash
+python3 tools/terminal_capture_pty.py \
+  --output-file /tmp/nvim-full.txt \
+  --checkpoint 0.30:/tmp/nvim-baseline.txt \
+  --checkpoint 0.60:/tmp/nvim-update.txt \
+  --stdin-step 0.35:/tmp/nvim-keys.txt \
+  --no-stdout \
+  bash -lc 'nvim -u NONE -N "+set number relativenumber signcolumn=yes foldcolumn=2" /tmp/sample.txt'
+```
+
+This is now the preferred low-level path when separate baseline/update sessions
+carry too much shared startup or teardown noise.
+
 For scripted input or a second update phase:
 
 ```bash
@@ -161,6 +176,15 @@ Useful options:
 - `--hydrate-observed` to run replay immediately and fill `expected_dirty`, `expected_damage`, and viewport-shift assertions from the current backend output
 - `--update-goldens` to update the fixture golden immediately after generation/hydration
 - `--validate` to run the fixture immediately after generation/hydration
+
+Single-session capture options in `terminal_capture_pty.py`:
+
+- `--stdin-step <seconds>:<file>` to inject scripted input later in the same PTY session
+- `--checkpoint <seconds>:<output-file>` to write the bytes captured since the previous checkpoint
+
+Use generous timing gaps. The goal is not perfect frame-accurate tracing; it is
+to split one live TUI session into a stable baseline chunk and a later redraw
+delta without restarting the app.
 
 Current limitation:
 

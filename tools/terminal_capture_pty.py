@@ -19,6 +19,7 @@ import signal
 import subprocess
 import sys
 import termios
+import time
 import tty
 from pathlib import Path
 
@@ -40,6 +41,18 @@ def parse_args() -> argparse.Namespace:
         help="Optional working directory for the child command",
     )
     parser.add_argument(
+        "--stdin-step",
+        action="append",
+        default=[],
+        help="Timed stdin injection as <seconds>:<file>; repeat for multiple steps",
+    )
+    parser.add_argument(
+        "--checkpoint",
+        action="append",
+        default=[],
+        help="Timed output checkpoint as <seconds>:<output-file>; writes bytes captured since the previous checkpoint",
+    )
+    parser.add_argument(
         "cmd",
         nargs=argparse.REMAINDER,
         help="Command to execute after '--', or as remaining args",
@@ -59,6 +72,22 @@ def write_all(fd: int, data: bytes) -> None:
         offset += written
 
 
+def parse_timed_path(spec: str, what: str) -> tuple[float, str]:
+    try:
+        delay_text, path = spec.split(":", 1)
+    except ValueError as exc:
+        raise SystemExit(f"invalid {what} '{spec}'; expected <seconds>:<path>") from exc
+    try:
+        delay = float(delay_text)
+    except ValueError as exc:
+        raise SystemExit(f"invalid {what} delay '{delay_text}' in '{spec}'") from exc
+    if delay < 0:
+        raise SystemExit(f"invalid {what} delay '{delay_text}' in '{spec}'; must be >= 0")
+    if not path:
+        raise SystemExit(f"invalid {what} '{spec}'; missing path")
+    return delay, path
+
+
 def main() -> int:
     args = parse_args()
     output_path = Path(args.output_file)
@@ -67,6 +96,20 @@ def main() -> int:
     scripted_stdin = b""
     if args.stdin_file:
         scripted_stdin = Path(args.stdin_file).read_bytes()
+
+    stdin_steps: list[tuple[float, bytes]] = []
+    for spec in args.stdin_step:
+        delay, path = parse_timed_path(spec, "stdin step")
+        stdin_steps.append((delay, Path(path).read_bytes()))
+    stdin_steps.sort(key=lambda item: item[0])
+
+    checkpoints: list[tuple[float, Path]] = []
+    for spec in args.checkpoint:
+        delay, path = parse_timed_path(spec, "checkpoint")
+        checkpoint_path = Path(path)
+        checkpoint_path.parent.mkdir(parents=True, exist_ok=True)
+        checkpoints.append((delay, checkpoint_path))
+    checkpoints.sort(key=lambda item: item[0])
 
     master_fd, slave_fd = pty.openpty()
     try:
@@ -90,6 +133,21 @@ def main() -> int:
 
     captured = bytearray()
     pending_script = memoryview(scripted_stdin)
+    step_index = 0
+    checkpoint_index = 0
+    checkpoint_start = 0
+    started_at = time.monotonic()
+
+    def flush_due_checkpoints(final: bool = False) -> None:
+        nonlocal checkpoint_index, checkpoint_start
+        elapsed = time.monotonic() - started_at
+        while checkpoint_index < len(checkpoints):
+            delay, path = checkpoints[checkpoint_index]
+            if not final and elapsed < delay:
+                break
+            path.write_bytes(bytes(captured[checkpoint_start:]))
+            checkpoint_start = len(captured)
+            checkpoint_index += 1
 
     def restore_tty() -> None:
         nonlocal old_tty, interactive_fd
@@ -99,6 +157,14 @@ def main() -> int:
 
     try:
         while True:
+            flush_due_checkpoints()
+            elapsed = time.monotonic() - started_at
+            while step_index < len(stdin_steps) and elapsed >= stdin_steps[step_index][0]:
+                delay, data = stdin_steps[step_index]
+                _ = delay
+                pending_script = memoryview(bytes(pending_script) + data)
+                step_index += 1
+
             read_fds = [master_fd]
             if interactive_fd is not None:
                 read_fds.append(interactive_fd)
@@ -118,6 +184,7 @@ def main() -> int:
                     data = b""
                 if data:
                     captured.extend(data)
+                    flush_due_checkpoints()
                     if not args.no_stdout:
                         os.write(sys.stdout.fileno(), data)
                 elif proc.poll() is not None:
@@ -137,6 +204,7 @@ def main() -> int:
                     data = b""
                 if data:
                     captured.extend(data)
+                    flush_due_checkpoints()
                     if not args.no_stdout:
                         os.write(sys.stdout.fileno(), data)
                 else:
@@ -145,6 +213,7 @@ def main() -> int:
         restore_tty()
         os.close(master_fd)
 
+    flush_due_checkpoints(final=True)
     output_path.write_bytes(bytes(captured))
     if proc.returncode is None:
         proc.wait()
