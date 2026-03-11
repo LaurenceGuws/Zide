@@ -75,7 +75,7 @@ pub fn getOrCreateSpecialGlyphSpriteWithStatus(
     const width = raster_w_px;
     const height = raster_h_px;
     const needed: usize = @intCast(width * height);
-    if (needed == 0) return null;
+    if (needed == 0) return .{ .sprite = null, .created = false };
     if (needed > self.upload_buffer_capacity) {
         if (self.upload_buffer_capacity > 0) {
             self.allocator.free(self.upload_buffer);

@@ -233,6 +233,7 @@ pub fn drawPrepared(
     var partial_plan_summary: []const u8 = "";
     var partial_plan_summary_buf: [256]u8 = undefined;
     var glyph_stats_summary_buf: [220]u8 = undefined;
+    var sprite_stats_summary_buf: [48]u8 = undefined;
     if (cache.dirty != .none) {
         for (view_dirty_rows) |row_dirty| {
             if (row_dirty) dirty_rows_count += 1;
@@ -616,7 +617,7 @@ pub fn drawPrepared(
         );
         active_perf_log.logf(
             .info,
-            "draw_ms={d:.2} lock_ms={d:.2} cache_copy_ms={d:.2} texture_update_ms={d:.2} texture_bg_ms={d:.2} texture_glyph_ms={d:.2} texture_kitty_ms={d:.2} overlay_ms={d:.2} full={d} partial={d} updated={d} sync={d} clear_ok={d} dirty={s} current_reason={s} dirty_rows={d} damage_rows={d} damage_cols={d} plan_rows={d} plan_row_span={d} plan_col_span={d} plan_cells={d} plan_union_cells={d} blink_cells={d} blink_phase_changed={d} shift_rows={d} shift_exposed_only={d} sprite_hits={d} sprite_misses={d} sprite_creates={d} sprite_lookup_ms={d:.2} glyph_stats={s} rows={d} cols={d}",
+            "draw_ms={d:.2} lock_ms={d:.2} cache_copy_ms={d:.2} texture_update_ms={d:.2} texture_bg_ms={d:.2} texture_glyph_ms={d:.2} texture_kitty_ms={d:.2} overlay_ms={d:.2} full={d} partial={d} updated={d} sync={d} clear_ok={d} dirty={s} current_reason={s} dirty_rows={d} damage_rows={d} damage_cols={d} plan_rows={d} plan_row_span={d} plan_col_span={d} plan_cells={d} plan_union_cells={d} blink_cells={d} blink_phase_changed={d} shift_rows={d} shift_exposed_only={d} sprite_stats={s} glyph_stats={s} rows={d} cols={d}",
             .{
                 elapsed_ms,
                 lock_ms,
@@ -645,10 +646,12 @@ pub fn drawPrepared(
                 @intFromBool(blink_phase_changed),
                 active_viewport_shift_rows,
                 @intFromBool(active_shift_exposed_only),
-                glyph_draw_stats.special_sprite_cache_hits,
-                glyph_draw_stats.special_sprite_cache_misses,
-                glyph_draw_stats.special_sprite_creates,
-                glyph_draw_stats.special_sprite_lookup_ms,
+                std.fmt.bufPrint(&sprite_stats_summary_buf, "{d}/{d}/{d}/{d:.2}", .{
+                    glyph_draw_stats.special_sprite_cache_hits,
+                    glyph_draw_stats.special_sprite_cache_misses,
+                    glyph_draw_stats.special_sprite_creates,
+                    glyph_draw_stats.special_sprite_lookup_ms,
+                }) catch "overflow",
                 std.fmt.bufPrint(&glyph_stats_summary_buf, "{d}/{d}/{d}/{d}/{d}/{d}/{d}/{d}/{d:.2}/{d:.2}/{d:.2}/{d:.2}/{d:.2}/{d:.2}/{d:.2}/{d:.2}/{d:.2}/{d:.2}/{d:.2}", .{
                     glyph_draw_stats.shaping_spans,
                     glyph_draw_stats.shaped_glyphs,
