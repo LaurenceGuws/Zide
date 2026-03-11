@@ -81,6 +81,8 @@ python3 tools/terminal_capture_redraw_fixture.py \
   --name redraw_nvim_real_sample \
   --rows 40 \
   --cols 120 \
+  --cwd /path/to/project \
+  --no-stdout \
   --baseline-shell 'nvim' \
   --update-shell 'nvim'
 ```
@@ -92,6 +94,12 @@ That:
 - writes the harness-api fixture skeleton
 - keeps intermediate capture files under `/tmp/zide-redraw-captures/<name>/`
 - is the preferred path when capturing a fresh live `nvim`/TUI redraw repro
+
+Useful options:
+
+- `--cwd` to run every capture phase in the same project directory
+- `--no-stdout` to keep capture quiet while still recording raw PTY bytes
+- `--baseline-stdin-file` / `--update-stdin-file` for scripted keystroke phases
 
 ## Authoring Rules
 
