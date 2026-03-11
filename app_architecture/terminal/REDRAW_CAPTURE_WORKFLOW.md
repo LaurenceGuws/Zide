@@ -22,6 +22,18 @@ For manual `nvim` / TUI runs, prefer the scoped redraw log pair now enabled in
 - `terminal.ui.perf`
 - `terminal.ui.redraw`
 
+For quick manual terminal-only repros, `zide-terminal` now also supports:
+
+```bash
+./zig-out/bin/zide-terminal --cwd /path/to/repo --command "nvim -u NONE -N file.zig"
+```
+
+And an explicit shell/program override when needed:
+
+```bash
+./zig-out/bin/zide-terminal --shell /bin/zsh --command "btop"
+```
+
 To summarize the latest pair quickly:
 
 ```bash
