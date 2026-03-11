@@ -93,6 +93,7 @@ That:
 - records each update capture
 - writes the harness-api fixture skeleton
 - keeps intermediate capture files under `/tmp/zide-redraw-captures/<name>/`
+- writes a `manifest.json` beside those captures so the exact command/cwd/input recipe stays attached to the reproducer
 - is the preferred path when capturing a fresh live `nvim`/TUI redraw repro
 
 Useful options:

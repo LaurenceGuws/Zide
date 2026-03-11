@@ -9,6 +9,7 @@ Drive the redraw-capture workflow end-to-end:
 from __future__ import annotations
 
 import argparse
+import json
 import shlex
 import shutil
 import subprocess
@@ -110,6 +111,30 @@ def main() -> int:
         run_capture(update_file, stdin_file, cmd, args.cwd, args.no_stdout)
         update_files.append(update_file)
 
+    manifest = {
+        "name": args.name,
+        "rows": args.rows,
+        "cols": args.cols,
+        "line_ending": args.line_ending,
+        "cwd": args.cwd,
+        "no_stdout": args.no_stdout,
+        "baseline": {
+            "cmd": baseline_cmd,
+            "stdin_file": args.baseline_stdin_file,
+            "output_file": str(baseline_file),
+        },
+        "updates": [
+            {
+                "cmd": cmd,
+                "stdin_file": args.update_stdin_files[idx] if idx < len(args.update_stdin_files) else None,
+                "output_file": str(update_file),
+            }
+            for idx, (cmd, update_file) in enumerate(zip(update_cmds, update_files))
+        ],
+    }
+    manifest_path = capture_dir / "manifest.json"
+    manifest_path.write_text(json.dumps(manifest, indent=2) + "\n", encoding="utf-8")
+
     argv = [
         sys.executable,
         "tools/terminal_make_redraw_fixture.py",
@@ -131,6 +156,7 @@ def main() -> int:
     subprocess.run(argv, check=True)
 
     print(f"captures stored in {capture_dir}")
+    print(f"manifest written to {manifest_path}")
     return 0
 
 
