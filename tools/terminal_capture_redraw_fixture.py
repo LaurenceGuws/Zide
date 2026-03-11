@@ -24,6 +24,12 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--line-ending", default="lf", choices=("lf", "crlf", "cr"))
     parser.add_argument("--fixture-dir", default="fixtures/terminal")
     parser.add_argument("--capture-dir", default="/tmp/zide-redraw-captures")
+    parser.add_argument("--cwd", help="Optional working directory for all PTY capture phases")
+    parser.add_argument(
+        "--no-stdout",
+        action="store_true",
+        help="Do not mirror PTY output to the current stdout during capture",
+    )
     parser.add_argument("--baseline-stdin-file")
     parser.add_argument(
         "--update-stdin-file",
@@ -57,13 +63,23 @@ def parse_args() -> argparse.Namespace:
     return args
 
 
-def run_capture(output_file: Path, stdin_file: str | None, cmd: list[str]) -> None:
+def run_capture(
+    output_file: Path,
+    stdin_file: str | None,
+    cmd: list[str],
+    cwd: str | None,
+    no_stdout: bool,
+) -> None:
     argv = [
         sys.executable,
         "tools/terminal_capture_pty.py",
         "--output-file",
         str(output_file),
     ]
+    if cwd:
+        argv.extend(["--cwd", cwd])
+    if no_stdout:
+        argv.append("--no-stdout")
     if stdin_file:
         argv.extend(["--stdin-file", stdin_file])
     argv.extend(["--", *cmd])
@@ -85,13 +101,13 @@ def main() -> int:
     capture_dir.mkdir(parents=True, exist_ok=True)
 
     baseline_file = capture_dir / "baseline.txt"
-    run_capture(baseline_file, args.baseline_stdin_file, baseline_cmd)
+    run_capture(baseline_file, args.baseline_stdin_file, baseline_cmd, args.cwd, args.no_stdout)
 
     update_files: list[Path] = []
     for idx, cmd in enumerate(update_cmds, start=1):
         update_file = capture_dir / f"update_{idx}.txt"
         stdin_file = args.update_stdin_files[idx - 1] if idx - 1 < len(args.update_stdin_files) else None
-        run_capture(update_file, stdin_file, cmd)
+        run_capture(update_file, stdin_file, cmd, args.cwd, args.no_stdout)
         update_files.append(update_file)
 
     argv = [
