@@ -7,6 +7,8 @@ pub const Config = struct {
     cwd: ?[]u8 = null,
     shell: ?[]u8 = null,
     command: ?[]u8 = null,
+    rows: ?u16 = null,
+    cols: ?u16 = null,
     close_on_child_exit: bool = false,
     help: bool = false,
 
@@ -33,6 +35,24 @@ fn parseIterator(allocator: std.mem.Allocator, args: anytype) !Config {
         }
         if (std.mem.eql(u8, arg, "--close-on-child-exit")) {
             config.close_on_child_exit = true;
+            continue;
+        }
+        if (std.mem.eql(u8, arg, "--rows")) {
+            const value = args.next() orelse return error.MissingRows;
+            config.rows = try parseDimension(value);
+            continue;
+        }
+        if (std.mem.startsWith(u8, arg, "--rows=")) {
+            config.rows = try parseDimension(arg["--rows=".len..]);
+            continue;
+        }
+        if (std.mem.eql(u8, arg, "--cols")) {
+            const value = args.next() orelse return error.MissingCols;
+            config.cols = try parseDimension(value);
+            continue;
+        }
+        if (std.mem.startsWith(u8, arg, "--cols=")) {
+            config.cols = try parseDimension(arg["--cols=".len..]);
             continue;
         }
         if (std.mem.eql(u8, arg, "--cwd")) {
@@ -81,11 +101,19 @@ fn SliceArgsIterator(comptime T: type) type {
     };
 }
 
+fn parseDimension(value: []const u8) !u16 {
+    const parsed = try std.fmt.parseUnsigned(u16, value, 10);
+    if (parsed == 0) return error.InvalidDimension;
+    return parsed;
+}
+
 pub fn printHelp(writer: anytype) !void {
     try writer.writeAll(
         \\Usage: zide-terminal [options]
         \\
         \\Options:
+        \\  --rows <n>           Override terminal row count for backend repro.
+        \\  --cols <n>           Override terminal column count for backend repro.
         \\  --cwd <path>         Start the terminal command in this working directory.
         \\  --shell <path>       Override the shell/program used for the PTY child.
         \\  --command <string>   Run a command through the PTY shell for repro/testing.
@@ -94,16 +122,28 @@ pub fn printHelp(writer: anytype) !void {
         \\  -h, --help           Show this help and exit.
         \\
         \\Examples:
-        \\  zide-terminal --cwd /tmp --command "nvim -u NONE -N file.zig" --close-on-child-exit
+        \\  zide-terminal --rows 40 --cols 120 --cwd /tmp --command "nvim -u NONE -N file.zig" --close-on-child-exit
         \\  zide-terminal --shell /bin/zsh
         \\
     );
 }
 
 pub fn applyEnv(config: *const Config, allocator: std.mem.Allocator) !void {
+    var rows_buf: [16]u8 = undefined;
+    var cols_buf: [16]u8 = undefined;
     try applyEnvOverride(allocator, "ZIDE_LAUNCH_CWD", config.cwd);
     try applyEnvOverride(allocator, "ZIDE_TERMINAL_SHELL", config.shell);
     try applyEnvOverride(allocator, "ZIDE_TERMINAL_COMMAND", config.command);
+    try applyEnvOverride(
+        allocator,
+        "ZIDE_TERMINAL_ROWS",
+        if (config.rows) |rows| try std.fmt.bufPrint(&rows_buf, "{d}", .{rows}) else null,
+    );
+    try applyEnvOverride(
+        allocator,
+        "ZIDE_TERMINAL_COLS",
+        if (config.cols) |cols| try std.fmt.bufPrint(&cols_buf, "{d}", .{cols}) else null,
+    );
     try applyEnvOverride(
         allocator,
         "ZIDE_TERMINAL_CLOSE_ON_CHILD_EXIT",
@@ -125,6 +165,9 @@ fn applyEnvOverride(allocator: std.mem.Allocator, name: []const u8, value: ?[]co
 
 test "parse terminal cli args" {
     const argv = [_][]const u8{
+        "--rows=40",
+        "--cols",
+        "120",
         "--cwd",
         "/tmp",
         "--shell=/bin/zsh",
@@ -135,6 +178,8 @@ test "parse terminal cli args" {
     var args = SliceArgsIterator([]const u8){ .items = &argv };
     var config = try parseIterator(std.testing.allocator, &args);
     defer config.deinit(std.testing.allocator);
+    try std.testing.expectEqual(@as(?u16, 40), config.rows);
+    try std.testing.expectEqual(@as(?u16, 120), config.cols);
     try std.testing.expectEqualStrings("/tmp", config.cwd.?);
     try std.testing.expectEqualStrings("/bin/zsh", config.shell.?);
     try std.testing.expectEqualStrings("nvim -u NONE test.zig", config.command.?);
