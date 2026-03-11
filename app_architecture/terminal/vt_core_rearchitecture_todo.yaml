@@ -119,7 +119,7 @@ items:
       - Seventeenth replay contract landed: mixed gutter-plus-guide churn widens publication through the first interior guide column, so the next invalidation target is no longer pure gutter activity but combined sign/number/guide interaction
       - Eighteenth replay contract landed: repeated guide updates on rows that are already gutter-dirty still blow out to full-viewport damage even in a spare-row viewport, making that denser mixed guide/sign pattern the sharper next invalidation target
       - Guide-mixed replay fixtures are now also rebaselined on a non-wrap viewport, so the remaining guide churn blowout is no longer polluted by last-column wrap state
-      - Investigation note: a focused TerminalSession regression now shows the raw two-packet repeat-guide feed does not grow scrollback unexpectedly, so the remaining discrepancy looks narrower than "core mutation bug" and likely sits in the replay/publication path rather than the underlying terminal feed alone
+      - Investigation note: focused TerminalSession regressions now show the raw two-packet repeat-guide feed does not grow scrollback unexpectedly, but the raw published render cache still carries the same broad full-viewport damage contract as replay, so the next backend pass should target publication/view-cache logic rather than feed/history mutation
 
   - id: VTCORE-06
     title: Keep input encoding as a peer subsystem
