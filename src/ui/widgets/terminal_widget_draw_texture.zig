@@ -82,6 +82,21 @@ pub fn markPartialPlanRows(
     }
 }
 
+pub fn markPartialPlanRow(
+    partial_rows: []bool,
+    partial_cols_start: []u16,
+    partial_cols_end: []u16,
+    row: usize,
+    col_start: usize,
+    col_end: usize,
+) void {
+    const col_start_u16: u16 = @intCast(col_start);
+    const col_end_u16: u16 = @intCast(col_end);
+    partial_rows[row] = true;
+    if (partial_cols_start[row] > col_start_u16) partial_cols_start[row] = col_start_u16;
+    if (partial_cols_end[row] < col_end_u16) partial_cols_end[row] = col_end_u16;
+}
+
 pub fn markAllRowsFullWidthPartialPlan(
     partial_rows: []bool,
     partial_cols_start: []u16,
@@ -202,4 +217,29 @@ test "markPartialPlanRows reproduces cursorcolumn aggregate box" {
     try std.testing.expectEqual(@as(usize, 10), last_row);
     try std.testing.expectEqual(@as(usize, 4), min_start);
     try std.testing.expectEqual(@as(usize, 33), max_end);
+}
+
+test "markPartialPlanRow preserves cursorcolumn row spans" {
+    var partial_rows = [_]bool{false} ** 12;
+    var partial_cols_start = [_]u16{99} ** 12;
+    var partial_cols_end = [_]u16{0} ** 12;
+
+    inline for (0..8) |row| {
+        markPartialPlanRow(&partial_rows, &partial_cols_start, &partial_cols_end, row, 6, 6);
+    }
+    markPartialPlanRow(&partial_rows, &partial_cols_start, &partial_cols_end, 8, 4, 6);
+    markPartialPlanRow(&partial_rows, &partial_cols_start, &partial_cols_end, 9, 4, 6);
+    markPartialPlanRow(&partial_rows, &partial_cols_start, &partial_cols_end, 10, 33, 33);
+
+    try std.testing.expectEqualSlices(
+        bool,
+        &[_]bool{ true, true, true, true, true, true, true, true, true, true, true, false },
+        &partial_rows,
+    );
+    try std.testing.expectEqual(@as(u16, 6), partial_cols_start[0]);
+    try std.testing.expectEqual(@as(u16, 6), partial_cols_end[7]);
+    try std.testing.expectEqual(@as(u16, 4), partial_cols_start[8]);
+    try std.testing.expectEqual(@as(u16, 6), partial_cols_end[9]);
+    try std.testing.expectEqual(@as(u16, 33), partial_cols_start[10]);
+    try std.testing.expectEqual(@as(u16, 33), partial_cols_end[10]);
 }

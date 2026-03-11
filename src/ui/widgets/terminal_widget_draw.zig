@@ -421,11 +421,10 @@ pub fn drawPrepared(
                             col_start = @min(@as(usize, cache.dirty_cols_start.items[row]), cols - 1);
                             col_end = @min(@as(usize, cache.dirty_cols_end.items[row]), cols - 1);
                         }
-                        markPartialPlanRows(
+                        markPartialPlanRow(
                             self.partial_draw_rows.items,
                             self.partial_draw_cols_start.items,
                             self.partial_draw_cols_end.items,
-                            rows,
                             row,
                             col_start,
                             col_end,
@@ -764,5 +763,6 @@ test "full-width partial plan marks every row" {
 const planViewportTextureShift = draw_texture.planViewportTextureShift;
 const chooseTextureUpdatePlan = draw_texture.chooseTextureUpdatePlan;
 const markPartialPlanRows = draw_texture.markPartialPlanRows;
+const markPartialPlanRow = draw_texture.markPartialPlanRow;
 const markAllRowsFullWidthPartialPlan = draw_texture.markAllRowsFullWidthPartialPlan;
 const addBlinkRowsToPartialPlan = draw_texture.addBlinkRowsToPartialPlan;
