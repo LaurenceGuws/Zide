@@ -1,0 +1,82 @@
+Date: 2026-03-11
+
+Purpose: make it cheap to turn a real terminal redraw repro into a replay-backed
+authority once the current in-tree sample set is exhausted.
+
+## When To Use This
+
+Use this when:
+
+- manual `nvim` / TUI behavior still looks wrong
+- the current replay fixtures no longer expose the problem
+- we need a fresh real non-clear reproducer before changing publication logic
+
+Do not use this to invent synthetic targets when an existing replay fixture is
+already authoritative.
+
+## Capture Shape
+
+For redraw/publication work, prefer a `harness_api` fixture:
+
+- `baseline_input`
+- one or more `output_chunks`
+
+This is better than mixing everything into one `.vt` stream because:
+
+- we can acknowledge a presented baseline cleanly
+- we can model multi-packet redraws honestly
+- we can assert damage only on the update phase
+
+## Tool
+
+Use:
+
+- [terminal_make_redraw_fixture.py](/home/home/personal/zide/tools/terminal_make_redraw_fixture.py)
+
+Example:
+
+```bash
+python3 tools/terminal_make_redraw_fixture.py \
+  --name redraw_nvim_real_sample \
+  --rows 40 \
+  --cols 120 \
+  --baseline-file /tmp/nvim-baseline.txt \
+  --update-file /tmp/nvim-update-1.txt \
+  --update-file /tmp/nvim-update-2.txt
+```
+
+That writes:
+
+- `fixtures/terminal/redraw_nvim_real_sample.json`
+- `fixtures/terminal/redraw_nvim_real_sample.vt`
+
+The tool intentionally leaves `expected_damage` as a placeholder. Fill it in
+from the observed current backend behavior first, then update the golden.
+
+## Authoring Rules
+
+1. Keep the fixture real.
+   Use captured terminal bytes from an actual TUI state transition.
+
+2. Keep the viewport small enough to inspect.
+   Trim rows/cols to the smallest viewport that still reproduces the bug.
+
+3. Preserve packet boundaries when they matter.
+   If the bad publication only appears across multiple writes, keep separate
+   `--update-file` chunks.
+
+4. Capture current behavior before fixing it.
+   The replay fixture must first lock what the backend actually does today.
+
+5. Only then change publication logic.
+
+## Validation
+
+After filling in `expected_damage`, run:
+
+```bash
+zig build test-terminal-replay -- --fixture <name> --update-goldens
+zig build test-terminal-replay -- --fixture <name>
+```
+
+Then run the broader local validation set before committing the behavior change.
