@@ -152,7 +152,7 @@ items:
       - A better real gutter target is now landed as `redraw_nvim_gutter_width_shift.*`: it stays in alt-screen with `history_len=0`, `total_lines=12`, `scroll_offset=0`, publishes no viewport shift, and widens naturally to rows `0..9`, cols `2..8` around the `99/100` width-transition region
       - Replay observed output now also exposes per-row dirty spans, which makes the width-transition case less suspicious than the aggregate box alone: most rows only touch col `2`, and the wider spans line up with rows the captured PTY delta actually rewrites more broadly
       - Current redraw conclusion after that row-span inspection: `redraw_nvim_gutter_width_shift.*` is not a clean one-box publication overshoot target either, so the next meaningful optimization target still needs a fresher real non-clear reproducer
-      - Capture tooling now also guards against a fresh failure mode discovered during mixed `nvim` single-session probing: if shared prefix/suffix stripping would erase an update chunk completely, fixture generation aborts instead of writing a fake no-op redraw authority
+      - Capture tooling now also guards against the two failure modes discovered during mixed `nvim` single-session probing: if shared prefix/suffix stripping would erase an update chunk completely, or if a raw staged update is empty, fixture generation aborts instead of writing a fake no-op redraw authority
 
   - id: VTCORE-06
     title: Keep input encoding as a peer subsystem

@@ -155,6 +155,11 @@ def main() -> int:
                 )
             output_chunks.append(trimmed)
     else:
+        for idx, chunk in enumerate(raw_output_chunks, start=1):
+            if chunk == "":
+                parser.error(
+                    f"update chunk {idx} is empty; capture a later update or adjust checkpoint timing before authoring a redraw fixture"
+                )
         output_chunks = raw_output_chunks
 
     fixture = {
