@@ -9,6 +9,32 @@ import subprocess
 import sys
 
 
+def run_summary(args: argparse.Namespace) -> int:
+    summary_cmd = [
+        sys.executable,
+        "tools/terminal_summarize_redraw_log.py",
+        "--log-file",
+        args.log_file,
+        "--interesting",
+        "--empty-ok",
+        "--count",
+        str(args.count),
+        "--select",
+        args.select,
+        "--tail-lines",
+        str(args.tail_lines),
+    ]
+    summary_result = subprocess.run(summary_cmd, check=False)
+    if args.summary_json_file:
+        json_cmd = summary_cmd + ["--json"]
+        json_result = subprocess.run(json_cmd, check=False, capture_output=True, text=True)
+        if json_result.returncode != 0:
+            sys.stderr.write(json_result.stderr)
+            return json_result.returncode
+        pathlib.Path(args.summary_json_file).write_text(json_result.stdout, encoding="utf-8")
+    return summary_result.returncode
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--binary", default="./zig-out/bin/zide-terminal", help="Path to zide-terminal")
@@ -21,6 +47,12 @@ def main() -> int:
     command_group.add_argument("--command-file", help="Read the terminal child command from this file")
     parser.add_argument("--log-file", default="zide.log", help="Log file to summarize")
     parser.add_argument("--count", type=int, default=5, help="How many interesting redraw frames to print")
+    parser.add_argument(
+        "--select",
+        choices=("latest", "max-damage-area", "max-plan-area", "max-dirty-rows"),
+        default="latest",
+        help="How to choose interesting redraw frames from the log",
+    )
     parser.add_argument("--tail-lines", type=int, default=4000, help="How many log lines to inspect")
     parser.add_argument("--timeout-seconds", type=float, default=30.0, help="Kill the terminal run if it exceeds this timeout")
     parser.add_argument("--summary-json-file", help="Also write the parsed redraw summary as JSON to this path")
@@ -54,32 +86,13 @@ def main() -> int:
             f"zide-terminal timed out after {args.timeout_seconds:.1f}s while running {command!r}",
             file=sys.stderr,
         )
+        run_summary(args)
         return 124
     if completed.returncode != 0:
         print(f"zide-terminal exited with code {completed.returncode}", file=sys.stderr)
         return completed.returncode
 
-    summary_cmd = [
-        sys.executable,
-        "tools/terminal_summarize_redraw_log.py",
-        "--log-file",
-        args.log_file,
-        "--interesting",
-        "--empty-ok",
-        "--count",
-        str(args.count),
-        "--tail-lines",
-        str(args.tail_lines),
-    ]
-    summary_result = subprocess.run(summary_cmd, check=False)
-    if args.summary_json_file:
-        json_cmd = summary_cmd + ["--json"]
-        json_result = subprocess.run(json_cmd, check=False, capture_output=True, text=True)
-        if json_result.returncode != 0:
-            sys.stderr.write(json_result.stderr)
-            return json_result.returncode
-        pathlib.Path(args.summary_json_file).write_text(json_result.stdout, encoding="utf-8")
-    return summary_result.returncode
+    return run_summary(args)
 
 
 if __name__ == "__main__":
