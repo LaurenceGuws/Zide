@@ -153,6 +153,7 @@ items:
       - Replay observed output now also exposes per-row dirty spans, which makes the width-transition case less suspicious than the aggregate box alone: most rows only touch col `2`, and the wider spans line up with rows the captured PTY delta actually rewrites more broadly
       - Current redraw conclusion after that row-span inspection: `redraw_nvim_gutter_width_shift.*` is not a clean one-box publication overshoot target either, so the next meaningful optimization target still needs a fresher real non-clear reproducer
       - Capture tooling now also guards against the two failure modes discovered during mixed `nvim` single-session probing: if shared prefix/suffix stripping would erase an update chunk completely, or if a raw staged update is empty, fixture generation aborts instead of writing a fake no-op redraw authority
+      - Mixed single-session `nvim` authority now also exists as `redraw_nvim_guides_cursorline_move.*`; it survives the new capture guards, but its broad rows appear to be dominated by real `:set cursorline` command-line churn plus line-highlight/statusline changes, so it should be treated as evidence of a legitimately broad sequence rather than the next narrowable publication bug
 
   - id: VTCORE-06
     title: Keep input encoding as a peer subsystem
