@@ -71,6 +71,7 @@ pub fn specialVariantForCodepoint(codepoint: u32) ?types.SpecialGlyphVariant {
     return null;
 }
 
+
 pub fn rasterizeSpecialGlyphCoverage(
     codepoint: u32,
     width: i32,

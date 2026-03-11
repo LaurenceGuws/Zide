@@ -409,6 +409,7 @@ pub const TerminalFont = struct {
     render_scale: f32,
     use_lcd: bool,
     overflow_policy: AllowSquareGlyphOverflow,
+    ascii_primary_glyph_ids: [128]u32,
 
     pub const FontChoice = struct {
         face: c.FT_Face,
@@ -690,6 +691,7 @@ pub const TerminalFont = struct {
             .render_scale = 1.0,
             .use_lcd = opts.lcd,
             .overflow_policy = opts.glyph_overflow,
+            .ascii_primary_glyph_ids = buildAsciiPrimaryGlyphIds(ft_face),
         };
     }
 
@@ -789,6 +791,29 @@ pub const TerminalFont = struct {
         return .{ .face = face, .hb_font = hb_font, .want_color = is_color_face };
     }
 
+    pub const DirectFastGlyph = struct {
+        face: c.FT_Face,
+        want_color: bool,
+        glyph_id: u32,
+        simple_ascii: bool,
+    };
+
+    pub fn directFastGlyphForCodepoint(self: *TerminalFont, codepoint_in: u32) ?DirectFastGlyph {
+        const codepoint = if (codepoint_in == 0) @as(u32, ' ') else codepoint_in;
+        if (codepoint < self.ascii_primary_glyph_ids.len) {
+            const glyph_id = self.ascii_primary_glyph_ids[codepoint];
+            if (glyph_id != 0) {
+                return .{
+                    .face = self.ft_face,
+                    .want_color = false,
+                    .glyph_id = glyph_id,
+                    .simple_ascii = true,
+                };
+            }
+        }
+        return null;
+    }
+
     pub fn setAtlasFilterPoint(self: *TerminalFont) void {
         font_atlas.setAtlasFilterPoint(self);
     }
@@ -859,6 +884,16 @@ pub const TerminalFont = struct {
 
     fn hasGlyph(face: c.FT_Face, codepoint: u32) bool {
         return c.FT_Get_Char_Index(face, codepoint) != 0;
+    }
+
+    fn buildAsciiPrimaryGlyphIds(face: c.FT_Face) [128]u32 {
+        var glyph_ids: [128]u32 = [_]u32{0} ** 128;
+        var cp: usize = 0;
+        while (cp < glyph_ids.len) : (cp += 1) {
+            const mapped = if (cp == 0) @as(u32, ' ') else @as(u32, @intCast(cp));
+            glyph_ids[cp] = c.FT_Get_Char_Index(face, mapped);
+        }
+        return glyph_ids;
     }
 
     pub fn ftLoadFlags(self: *const TerminalFont, want_color: bool) c_int {

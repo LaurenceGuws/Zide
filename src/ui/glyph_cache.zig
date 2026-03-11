@@ -58,17 +58,17 @@ pub const GlyphCache = struct {
         const y1 = dest.y + dest.height;
 
         const base = self.vertices.items.len;
-        const verts = [_]Vertex{
+        const verts = self.vertices.addManyAsArray(self.allocator, 6) catch |err| {
+            log.logf(.warning, "glyph cache vertices reserve failed texture={d} err={s}", .{ texture.id, @errorName(err) });
+            return;
+        };
+        verts.* = .{
             .{ .x = x0, .y = y0, .u = u_min, .v = v_min, .r = r, .g = g, .b = b, .a = a, .br = br, .bg = bg, .bb = bb, .ba = ba },
             .{ .x = x1, .y = y0, .u = u_max, .v = v_min, .r = r, .g = g, .b = b, .a = a, .br = br, .bg = bg, .bb = bb, .ba = ba },
             .{ .x = x1, .y = y1, .u = u_max, .v = v_max, .r = r, .g = g, .b = b, .a = a, .br = br, .bg = bg, .bb = bb, .ba = ba },
             .{ .x = x0, .y = y0, .u = u_min, .v = v_min, .r = r, .g = g, .b = b, .a = a, .br = br, .bg = bg, .bb = bb, .ba = ba },
             .{ .x = x1, .y = y1, .u = u_max, .v = v_max, .r = r, .g = g, .b = b, .a = a, .br = br, .bg = bg, .bb = bb, .ba = ba },
             .{ .x = x0, .y = y1, .u = u_min, .v = v_max, .r = r, .g = g, .b = b, .a = a, .br = br, .bg = bg, .bb = bb, .ba = ba },
-        };
-        self.vertices.appendSlice(self.allocator, &verts) catch |err| {
-                            log.logf(.warning, "glyph cache vertices append failed texture={d} err={s}", .{ texture.id, @errorName(err) });
-            return;
         };
         if (self.draws.items.len > 0) {
             const last_idx = self.draws.items.len - 1;
