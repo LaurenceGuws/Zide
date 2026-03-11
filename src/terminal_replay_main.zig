@@ -37,6 +37,8 @@ pub fn main() !void {
     var mode: Mode = .none;
     var fixture_name: ?[]const u8 = null;
     var update_goldens = false;
+    var print_observed = false;
+    var observed_file_path: ?[]const u8 = null;
 
     while (args.next()) |arg| {
         if (std.mem.eql(u8, arg, "--list")) {
@@ -48,6 +50,10 @@ pub fn main() !void {
             mode = .fixture;
         } else if (std.mem.eql(u8, arg, "--update-goldens")) {
             update_goldens = true;
+        } else if (std.mem.eql(u8, arg, "--print-observed")) {
+            print_observed = true;
+        } else if (std.mem.eql(u8, arg, "--observed-file")) {
+            observed_file_path = args.next() orelse return error.MissingObservedFilePath;
         }
     }
 
@@ -85,7 +91,7 @@ pub fn main() !void {
             return error.FixtureNotFound;
         }
         if (findFixture(vt_fixtures, name)) |fixture| {
-            try runVtFixture(log, allocator, fixture, update_goldens);
+            try runVtFixture(log, allocator, fixture, update_goldens, print_observed, observed_file_path);
             return;
         }
         if (findFixture(encoder_fixtures, name)) |fixture| {
@@ -102,7 +108,7 @@ pub fn main() !void {
         }
         for (vt_fixtures) |*fixture| {
             log.logf(.info, "running fixture {s}", .{fixture.name});
-            try runVtFixture(log, allocator, fixture, update_goldens);
+            try runVtFixture(log, allocator, fixture, update_goldens, print_observed, observed_file_path);
         }
         for (encoder_fixtures) |*fixture| {
             log.logf(.info, "running fixture encoder:{s}", .{fixture.name});
@@ -166,19 +172,27 @@ fn runVtFixture(
     allocator: std.mem.Allocator,
     fixture: *const harness.Fixture,
     update_goldens: bool,
+    print_observed: bool,
+    observed_file_path: ?[]const u8,
 ) !void {
-    const output = try harness.runFixture(allocator, fixture);
-    defer allocator.free(output);
-    const path = try writeOutputFile(allocator, fixture.name, false, output);
+    const observed = try harness.runFixtureObserved(allocator, fixture);
+    defer allocator.free(observed.output);
+    const path = try writeOutputFile(allocator, fixture.name, false, observed.output);
     defer allocator.free(path);
     log.logf(.info, "wrote {s}", .{path});
+    if (observed_file_path) |file_path| {
+        try writeObservedFixtureStateFile(file_path, observed.observed);
+    }
+    if (print_observed) {
+        try printObservedFixtureState(observed.observed);
+    }
     if (update_goldens) {
-        const golden_path = try writeGoldenFile(allocator, fixture.name, false, output);
+        const golden_path = try writeGoldenFile(allocator, fixture.name, false, observed.output);
         defer allocator.free(golden_path);
         log.logf(.info, "updated golden {s}", .{golden_path});
         return;
     }
-    try compareGolden(fixture.name, fixture.golden, output);
+    try compareGolden(fixture.name, fixture.golden, observed.output);
 }
 
 fn runEncoderFixture(
@@ -283,6 +297,48 @@ fn compareGolden(name: []const u8, golden: ?[]const u8, output: []const u8) !voi
     if (std.mem.eql(u8, expected, output)) return;
     reportGoldenDiff(name, expected, output);
     return error.GoldenMismatch;
+}
+
+fn printObservedFixtureState(observed: harness.ObservedFixtureState) !void {
+    const out = std.fs.File.stdout().deprecatedWriter();
+    try writeObservedFixtureState(out, observed);
+    try out.writeByte('\n');
+}
+
+fn writeObservedFixtureStateFile(path: []const u8, observed: harness.ObservedFixtureState) !void {
+    var file = try std.fs.cwd().createFile(path, .{ .truncate = true });
+    defer file.close();
+    const out = file.deprecatedWriter();
+    try writeObservedFixtureState(out, observed);
+    try out.writeByte('\n');
+}
+
+fn writeObservedFixtureState(
+    out: anytype,
+    observed: harness.ObservedFixtureState,
+) !void {
+    try out.print(
+        "{{\"dirty\":\"{s}\",\"damage\":{{\"start_row\":{d},\"end_row\":{d},\"start_col\":{d},\"end_col\":{d}}},\"viewport_shift_rows\":",
+        .{
+            @tagName(observed.dirty),
+            observed.damage.start_row,
+            observed.damage.end_row,
+            observed.damage.start_col,
+            observed.damage.end_col,
+        },
+    );
+    if (observed.viewport_shift_rows) |rows| {
+        try out.print("{d}", .{rows});
+    } else {
+        try out.writeAll("null");
+    }
+    try out.writeAll(",\"viewport_shift_exposed_only\":");
+    if (observed.viewport_shift_exposed_only) |exposed_only| {
+        try out.writeAll(if (exposed_only) "true" else "false");
+    } else {
+        try out.writeAll("null");
+    }
+    try out.writeAll("}");
 }
 
 fn reportGoldenDiff(name: []const u8, expected: []const u8, actual: []const u8) void {

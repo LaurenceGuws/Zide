@@ -128,6 +128,18 @@ pub const ExpectedDamage = struct {
     end_col: usize,
 };
 
+pub const ObservedFixtureState = struct {
+    dirty: DirtyExpectation,
+    damage: ExpectedDamage,
+    viewport_shift_rows: ?i32,
+    viewport_shift_exposed_only: ?bool,
+};
+
+pub const RunFixtureObserved = struct {
+    output: []u8,
+    observed: ObservedFixtureState,
+};
+
 const ReplayPtyCapture = struct {
     read_fd: std.posix.fd_t,
     pty: pty_mod.Pty,
@@ -312,6 +324,14 @@ pub fn runFixture(
     allocator: std.mem.Allocator,
     fixture: *const Fixture,
 ) ![]u8 {
+    const observed = try runFixtureObserved(allocator, fixture);
+    return observed.output;
+}
+
+pub fn runFixtureObserved(
+    allocator: std.mem.Allocator,
+    fixture: *const Fixture,
+) !RunFixtureObserved {
     if (fixture.meta.rows == 0 or fixture.meta.cols == 0) {
         return error.InvalidFixtureSize;
     }
@@ -371,7 +391,11 @@ pub fn runFixture(
         if (!std.mem.eql(u8, actual, expected)) return error.ReplyAssertionMismatch;
     }
 
-    return snapshot_mod.encodeSnapshot(allocator, session, snapshot, debug, terminal.debugScrollbackRow);
+    const output = try snapshot_mod.encodeSnapshot(allocator, session, snapshot, debug, terminal.debugScrollbackRow);
+    return .{
+        .output = output,
+        .observed = observedFixtureState(snapshot, debug),
+    };
 }
 
 fn runFixtureInputPhase(session: *terminal.TerminalSession, input: []const u8, uses_reply_capture: bool) !void {
@@ -607,6 +631,30 @@ fn validateAssertions(
 
 fn fixtureRenderCache(debug: terminal.DebugSnapshot) ?*const terminal.RenderCache {
     return debug.render_cache;
+}
+
+fn observedFixtureState(
+    snapshot: terminal.TerminalSnapshot,
+    debug: terminal.DebugSnapshot,
+) ObservedFixtureState {
+    const cache = fixtureRenderCache(debug);
+    const actual_dirty = if (cache) |c| c.dirty else snapshot.dirty;
+    const actual_damage = if (cache) |c| c.damage else snapshot.damage;
+    return .{
+        .dirty = switch (actual_dirty) {
+            .none => .none,
+            .partial => .partial,
+            .full => .full,
+        },
+        .damage = .{
+            .start_row = actual_damage.start_row,
+            .end_row = actual_damage.end_row,
+            .start_col = actual_damage.start_col,
+            .end_col = actual_damage.end_col,
+        },
+        .viewport_shift_rows = if (cache) |c| c.viewport_shift_rows else null,
+        .viewport_shift_exposed_only = if (cache) |c| c.viewport_shift_exposed_only else null,
+    };
 }
 
 fn decodeHex(allocator: std.mem.Allocator, hex: []const u8) ![]u8 {
