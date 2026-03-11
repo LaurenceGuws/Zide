@@ -32,6 +32,26 @@ This is better than mixing everything into one `.vt` stream because:
 Use:
 
 - [terminal_make_redraw_fixture.py](/home/home/personal/zide/tools/terminal_make_redraw_fixture.py)
+- [terminal_capture_pty.py](/home/home/personal/zide/tools/terminal_capture_pty.py)
+
+Capture raw PTY output first:
+
+```bash
+python3 tools/terminal_capture_pty.py \
+  --output-file /tmp/nvim-baseline.txt \
+  -- -- nvim
+```
+
+For scripted input or a second update phase:
+
+```bash
+python3 tools/terminal_capture_pty.py \
+  --output-file /tmp/nvim-update-1.txt \
+  --stdin-file /tmp/nvim-keys-1.txt \
+  -- -- nvim
+```
+
+Then turn those captures into a harness-api fixture:
 
 Example:
 
@@ -56,7 +76,8 @@ from the observed current backend behavior first, then update the golden.
 ## Authoring Rules
 
 1. Keep the fixture real.
-   Use captured terminal bytes from an actual TUI state transition.
+   Use captured terminal bytes from an actual TUI state transition, ideally from
+   `terminal_capture_pty.py`.
 
 2. Keep the viewport small enough to inspect.
    Trim rows/cols to the smallest viewport that still reproduces the bug.
