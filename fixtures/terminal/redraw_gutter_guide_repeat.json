@@ -1,0 +1,20 @@
+{
+  "fixture_type": "harness_api",
+  "rows": 4,
+  "cols": 8,
+  "cursor": { "row": 0, "col": 0 },
+  "line_ending": "lf",
+  "baseline_input": "\u001b[H1| |aaa \u001b[2;1H2| |bbb \u001b[3;1H3| |ccc \u001b[4;1H4| |ddd ",
+  "output_chunks": [
+    "\u001b[H5\u001b[2;1H+>\u001b[3;1H7",
+    "\u001b[1;4H|\u001b[2;4H|\u001b[3;4H|"
+  ],
+  "assertions": ["grid", "damage"],
+  "expected_dirty": "partial",
+  "expected_damage": {
+    "start_row": 0,
+    "end_row": 3,
+    "start_col": 0,
+    "end_col": 7
+  }
+}
