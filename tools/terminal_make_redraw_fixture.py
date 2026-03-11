@@ -2,9 +2,9 @@
 """
 Create a harness_api terminal redraw fixture from captured baseline/update bytes.
 
-This tool does not guess expected damage. It creates the fixture skeleton plus
-an empty `.vt` sidecar so `terminal-replay --update-goldens` can be used to
-generate the golden after the expected damage bounds are filled in.
+This tool can either create a fixture skeleton with placeholder damage or
+hydrate the expected redraw contract from an observed-state JSON emitted by the
+replay runner.
 """
 
 from __future__ import annotations
@@ -16,6 +16,10 @@ from pathlib import Path
 
 def read_text(path: Path) -> str:
     return path.read_text(encoding="utf-8")
+
+
+def read_json(path: Path) -> dict:
+    return json.loads(path.read_text(encoding="utf-8"))
 
 
 def main() -> int:
@@ -38,6 +42,10 @@ def main() -> int:
     parser.add_argument(
         "--manifest-file",
         help="Manifest emitted by terminal_capture_redraw_fixture.py; fills name/rows/cols/baseline/update files",
+    )
+    parser.add_argument(
+        "--observed-file",
+        help="JSON emitted by terminal-replay --print-observed/--observed-file; fills expected redraw fields",
     )
     parser.add_argument(
         "--line-ending",
@@ -92,14 +100,27 @@ def main() -> int:
         },
     }
 
+    if args.observed_file:
+        observed = read_json(Path(args.observed_file))
+        fixture["expected_dirty"] = observed["dirty"]
+        fixture["expected_damage"] = observed["damage"]
+        if observed.get("viewport_shift_rows") is not None:
+            fixture["expected_viewport_shift_rows"] = observed["viewport_shift_rows"]
+        if observed.get("viewport_shift_exposed_only") is not None:
+            fixture["expected_viewport_shift_exposed_only"] = observed["viewport_shift_exposed_only"]
+
     fixture_path.write_text(json.dumps(fixture, indent=2) + "\n", encoding="utf-8")
     vt_path.write_text("", encoding="utf-8")
 
     print(f"wrote {fixture_path}")
     print(f"wrote {vt_path}")
     print("next:")
-    print(f"  1. set expected_damage in {fixture_path.name}")
-    print(f"  2. run: zig build test-terminal-replay -- --fixture {args.name} --update-goldens")
+    if args.observed_file:
+        print(f"  1. review expected redraw fields in {fixture_path.name}")
+        print(f"  2. run: zig build test-terminal-replay -- --fixture {args.name} --update-goldens")
+    else:
+        print(f"  1. set expected_damage in {fixture_path.name}")
+        print(f"  2. run: zig build test-terminal-replay -- --fixture {args.name} --update-goldens")
     return 0
 
 

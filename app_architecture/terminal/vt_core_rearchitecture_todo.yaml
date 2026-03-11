@@ -131,6 +131,7 @@ items:
       - Current rerank after the `nvim` overlay and `gping` refresh probes: the in-tree real-sample redraw family now looks mostly explained, so the next optimization target likely requires a fresh real reproducer from `nvim` gutters/guides or another non-clear TUI region with stable untouched interiors
       - Capture workflow is now explicit in `app_architecture/terminal/REDRAW_CAPTURE_WORKFLOW.md`, with `tools/terminal_capture_pty.py` recording raw PTY output, `tools/terminal_make_redraw_fixture.py` generating harness-api fixture skeletons from real baseline/update byte captures, and `tools/terminal_capture_redraw_fixture.py` now smoke-tested as the preferred staged baseline/update wrapper so the next redraw target can be locked quickly once a fresh repro is observed
       - Replay runner now also supports `--print-observed` and `--observed-file <path>`, so fresh redraw captures can record the current backend dirty/damage contract directly from `zig build test-terminal-replay` instead of hand-transcribing it from logs
+      - Fixture generation can now also consume that observed redraw JSON directly, and the staged capture wrapper can hydrate expected redraw fields automatically, so the next fresh `nvim`/TUI repro can move from PTY capture to replay authority with much less manual editing
 
   - id: VTCORE-06
     title: Keep input encoding as a peer subsystem
