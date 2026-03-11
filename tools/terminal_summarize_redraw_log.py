@@ -12,6 +12,7 @@ import sys
 
 LOG_LINE_RE = re.compile(r"^\[(?P<ts>[^\]]+)\]\[\+[^\]]+\]\[(?P<level>[^\]]+)\]\[(?P<tag>[^\]]+)\] (?P<msg>.*)$")
 FIELD_RE = re.compile(r"(?P<key>[a-zA-Z0-9_]+)=(?P<value>[^ ]+)")
+SPANS_RE = re.compile(r"\bspans=(?P<spans>.*)$")
 
 
 def tail_lines(path: pathlib.Path, limit: int) -> list[str]:
@@ -35,7 +36,11 @@ def parse_latest(lines: list[str], tag: str) -> dict[str, str] | None:
 
 
 def parse_fields(message: str) -> dict[str, str]:
-    return {match.group("key"): match.group("value") for match in FIELD_RE.finditer(message)}
+    fields = {match.group("key"): match.group("value") for match in FIELD_RE.finditer(message)}
+    spans_match = SPANS_RE.search(message)
+    if spans_match is not None:
+        fields["spans"] = spans_match.group("spans")
+    return fields
 
 
 def field_int(fields: dict[str, str], key: str) -> int:
@@ -284,6 +289,11 @@ def main() -> int:
                     f"plan_rows={perf_fields.get('plan_rows', '?')} "
                     f"plan_row_span={perf_fields.get('plan_row_span', '?')} "
                     f"plan_col_span={perf_fields.get('plan_col_span', '?')} "
+                    f"plan_cells={perf_fields.get('plan_cells', '?')} "
+                    f"plan_union_cells={perf_fields.get('plan_union_cells', '?')} "
+                    f"texture_bg_ms={perf_fields.get('texture_bg_ms', '?')} "
+                    f"texture_glyph_ms={perf_fields.get('texture_glyph_ms', '?')} "
+                    f"texture_kitty_ms={perf_fields.get('texture_kitty_ms', '?')} "
                     f"shift_rows={perf_fields.get('shift_rows', '?')} "
                     f"shift_exposed_only={perf_fields.get('shift_exposed_only', '?')}"
                 )

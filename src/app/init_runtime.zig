@@ -72,6 +72,7 @@ fn initWithMode(
     };
     defer config_mod.freeConfig(allocator, &config);
 
+    app_logger.resetConfig();
     if (config.log_file_filter) |filter| {
         app_logger.setFileFilterString(filter) catch |err| {
             std.debug.print("log file filter parse error: {any}\n", .{err});
@@ -87,6 +88,16 @@ fn initWithMode(
     }
     if (config.log_console_level) |level| {
         app_logger.setConsoleLevel(level);
+    }
+    if (config.log_file_level_overrides) |value| {
+        app_logger.setFileLevelOverrideString(value) catch |err| {
+            std.debug.print("log file level overrides parse error: {any}\n", .{err});
+        };
+    }
+    if (config.log_console_level_overrides) |value| {
+        app_logger.setConsoleLevelOverrideString(value) catch |err| {
+            std.debug.print("log console level overrides parse error: {any}\n", .{err});
+        };
     }
     try app_logger.init();
 

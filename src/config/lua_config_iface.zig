@@ -99,6 +99,8 @@ pub const Config = struct {
     log_console_filter: ?[]u8,
     log_file_level: ?app_logger.Level = null,
     log_console_level: ?app_logger.Level = null,
+    log_file_level_overrides: ?[]u8 = null,
+    log_console_level_overrides: ?[]u8 = null,
     sdl_log_level: ?c_int,
     editor_wrap: ?bool,
     editor_large_jump_rows: ?usize,
