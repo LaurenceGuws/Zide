@@ -173,6 +173,9 @@ pub fn parseThreadMain(session: anytype) void {
             session.state_mutex.unlock();
             publish_lock_hold_ns += std.time.nanoTimestamp() - publish_lock_start_ns;
             session.output_pending.store(true, .release);
+            if (presentation_backlog) {
+                std.Thread.yield() catch {};
+            }
         }
 
         if (processed > 0) {
