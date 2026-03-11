@@ -49,7 +49,7 @@ def find_latest_perf(lines: list[str], skip_reasons: set[str]) -> dict[str, str]
             "message": match.group("msg"),
         }
         fields = parse_fields(record["message"])
-        reason = fields.get("full_dirty_reason")
+        reason = fields.get("current_reason") or fields.get("full_dirty_reason")
         if reason is not None and reason in skip_reasons:
             continue
         return record
