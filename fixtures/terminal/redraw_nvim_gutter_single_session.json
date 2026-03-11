@@ -1,0 +1,27 @@
+{
+  "fixture_type": "harness_api",
+  "rows": 12,
+  "cols": 40,
+  "cursor": {
+    "row": 0,
+    "col": 0
+  },
+  "line_ending": "lf",
+  "baseline_input": "\u001b[?2004h\u001b[?2026$p\u001b[?2027$p\u001b[?2031$p\u001b[?2048$p\u001b[0m\u001b[4:3m\u001bP$qm\u001b\\\u001b[?u\u001b[c\u001b]11;?\u0007\u001bP+q5463;524742;73657472676266;73657472676262\u001b\\\u001b[0m\u001b[48;2;1;2;3m\u001bP$qm\u001b\\                                                                                \n                                                                                \n                                                                                \n                                                                                \n                                                                                \n                                                                                \n                                                                                \n                                                                                \n                                                                                \n                                                                                \n                                                                                \n                                                                                \n                                                                                \n                                                                                \n                                                                                \n                                                                                \n                                                                                \n                                                                                \n                                                                                \n                                                                                \n                                                                                \n                                                                                \n                                                                                \n                                                                                    1   one\n      1 two\n      2 three\n      3 four\n      4 five\n      5 six\n      6 seven\n      7 eight\n      8 nine\n      9 ten\n~\n~\n~\n~\n~\n~\n~\n~\n~\n~\n~\n~\n/tmp/zide-nvim-redraw/sample.txt                              1,1            All\n\u001b[?1002h\u001b[?1006h    1   one\n      1 two\n      2 three\n      3 four\n      4 five\n      5 six\n      6 seven\n      7 eight\n      8 nine\n      9 ten\n~\n~\n~\n~\n~\n~\n~\n~\n~\n~\n~\n~\n/tmp/zide-nvim-redraw/sample.txt                              1,1            All\n\u001b[?1004h",
+  "output_chunks": [
+    "  12  123456782^@  2  13  12345673"
+  ],
+  "assertions": [
+    "grid",
+    "damage"
+  ],
+  "expected_dirty": "partial",
+  "expected_damage": {
+    "start_row": 11,
+    "end_row": 11,
+    "start_col": 0,
+    "end_col": 39
+  },
+  "expected_viewport_shift_rows": 1,
+  "expected_viewport_shift_exposed_only": true
+}
