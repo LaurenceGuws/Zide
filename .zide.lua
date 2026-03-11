@@ -4,7 +4,7 @@ return {
     },
     log = {
         console = "",
-        file = "terminal.ui.perf,terminal.ui.redraw,terminal.ui.lifecycle,terminal.parse,terminal.env",
+        file = "terminal.ui.perf,terminal.ui.redraw,terminal.ui.lifecycle,terminal.parse,terminal.view_cache,terminal.env",
     },
     logs = {
         file_level = "warning",
@@ -14,6 +14,7 @@ return {
             ["terminal.ui.redraw"] = "debug",
             ["terminal.ui.lifecycle"] = "info",
             ["terminal.parse"] = "info",
+            ["terminal.view_cache"] = "info",
             ["terminal.env"] = "info",
         },
     },
