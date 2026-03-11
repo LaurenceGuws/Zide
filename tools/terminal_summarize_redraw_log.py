@@ -45,7 +45,8 @@ def timestamp_key(timestamp: str) -> tuple[int, int, int, int] | None:
     return parts[0], parts[1], parts[2], parts[-1]
 
 
-def find_latest_perf(lines: list[str], skip_reasons: set[str]) -> tuple[int, dict[str, str]] | None:
+def find_perf_matches(lines: list[str], skip_reasons: set[str], count: int) -> list[tuple[int, dict[str, str]]]:
+    matches: list[tuple[int, dict[str, str]]] = []
     for index in range(len(lines) - 1, -1, -1):
         match = LOG_LINE_RE.match(lines[index])
         if not match or match.group("tag") != "terminal.ui.perf":
@@ -59,25 +60,15 @@ def find_latest_perf(lines: list[str], skip_reasons: set[str]) -> tuple[int, dic
         reason = fields.get("current_reason") or fields.get("full_dirty_reason")
         if reason is not None and reason in skip_reasons:
             continue
-        return index, record
-    return None
+        matches.append((index, record))
+        if len(matches) >= count:
+            break
+    return matches
 
 
-def parse_latest_pair(lines: list[str], skip_reasons: set[str]) -> tuple[dict[str, str] | None, dict[str, str] | None]:
-    perf_match = find_latest_perf(lines, skip_reasons)
-    latest_perf: dict[str, str] | None = None
-    perf_index: int | None = None
-    if perf_match is not None:
-        perf_index, latest_perf = perf_match
-    elif not skip_reasons:
-        latest_perf = parse_latest(lines, "terminal.ui.perf")
-        if latest_perf is not None:
-            for index in range(len(lines) - 1, -1, -1):
-                match = LOG_LINE_RE.match(lines[index])
-                if match and match.group("tag") == "terminal.ui.perf":
-                    perf_index = index
-                    break
-
+def parse_pair_for_perf(
+    lines: list[str], perf_index: int | None, latest_perf: dict[str, str] | None
+) -> tuple[dict[str, str] | None, dict[str, str] | None]:
     latest_redraw: dict[str, str] | None = None
     if perf_index is not None:
         perf_time = timestamp_key(latest_perf["timestamp"]) if latest_perf is not None else None
@@ -110,11 +101,31 @@ def parse_latest_pair(lines: list[str], skip_reasons: set[str]) -> tuple[dict[st
     return latest_perf, latest_redraw
 
 
+def parse_latest_pair(lines: list[str], skip_reasons: set[str]) -> tuple[dict[str, str] | None, dict[str, str] | None]:
+    perf_matches = find_perf_matches(lines, skip_reasons, 1)
+    if perf_matches:
+        perf_index, latest_perf = perf_matches[0]
+        return parse_pair_for_perf(lines, perf_index, latest_perf)
+
+    latest_perf: dict[str, str] | None = None
+    perf_index: int | None = None
+    if not skip_reasons:
+        latest_perf = parse_latest(lines, "terminal.ui.perf")
+        if latest_perf is not None:
+            for index in range(len(lines) - 1, -1, -1):
+                match = LOG_LINE_RE.match(lines[index])
+                if match and match.group("tag") == "terminal.ui.perf":
+                    perf_index = index
+                    break
+    return parse_pair_for_perf(lines, perf_index, latest_perf)
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--log-file", default="zide.log", help="Path to zide.log")
     parser.add_argument("--tail-lines", type=int, default=2000, help="How many trailing log lines to inspect")
     parser.add_argument("--json", action="store_true", help="Emit parsed output as JSON")
+    parser.add_argument("--count", type=int, default=1, help="How many matching perf frames to print")
     parser.add_argument(
         "--skip-full-dirty-reason",
         action="append",
@@ -137,8 +148,20 @@ def main() -> int:
     skip_reasons = set(args.skip_full_dirty_reason)
     if args.interesting:
         skip_reasons.update({"init", "alt_enter", "alt_exit"})
-    perf, redraw = parse_latest_pair(lines, skip_reasons)
-    if perf is None and skip_reasons:
+    if args.count < 1:
+        print("error: --count must be >= 1", file=sys.stderr)
+        return 1
+
+    pairs: list[tuple[dict[str, str] | None, dict[str, str] | None]] = []
+    perf_matches = find_perf_matches(lines, skip_reasons, args.count)
+    if perf_matches:
+        pairs = [parse_pair_for_perf(lines, perf_index, perf) for perf_index, perf in perf_matches]
+    else:
+        perf, redraw = parse_latest_pair(lines, skip_reasons)
+        if perf is not None or redraw is not None:
+            pairs = [(perf, redraw)]
+
+    if not pairs and skip_reasons:
         print(
             "no interesting terminal.ui.perf entries found after skipping "
             + ", ".join(sorted(skip_reasons)),
@@ -146,42 +169,60 @@ def main() -> int:
         )
         return 1
 
-    if perf is None and redraw is None:
+    if not pairs:
         print("no terminal.ui.perf or terminal.ui.redraw entries found", file=sys.stderr)
         return 1
 
     if args.json:
-        payload = {}
-        if perf is not None:
-            payload["perf"] = perf | {"fields": parse_fields(perf["message"])}
-        if redraw is not None:
-            payload["redraw"] = redraw | {"fields": parse_fields(redraw["message"])}
+        payload: dict[str, object]
+        if len(pairs) == 1:
+            perf, redraw = pairs[0]
+            payload = {}
+            if perf is not None:
+                payload["perf"] = perf | {"fields": parse_fields(perf["message"])}
+            if redraw is not None:
+                payload["redraw"] = redraw | {"fields": parse_fields(redraw["message"])}
+        else:
+            frames = []
+            for perf, redraw in pairs:
+                entry = {}
+                if perf is not None:
+                    entry["perf"] = perf | {"fields": parse_fields(perf["message"])}
+                if redraw is not None:
+                    entry["redraw"] = redraw | {"fields": parse_fields(redraw["message"])}
+                frames.append(entry)
+            payload = {"frames": frames}
         json.dump(payload, sys.stdout, indent=2, sort_keys=True)
         sys.stdout.write("\n")
         return 0
 
-    if perf is not None:
-        perf_fields = parse_fields(perf["message"])
-        print(f"perf[{perf['timestamp']}]: {perf['message']}")
-        if perf_fields:
-            print(
-                "  parsed: "
-                f"dirty={perf_fields.get('dirty', '?')} "
-                f"current_reason={perf_fields.get('current_reason', '?')} "
-                f"damage_rows={perf_fields.get('damage_rows', '?')} "
-                f"damage_cols={perf_fields.get('damage_cols', '?')} "
-                f"plan_rows={perf_fields.get('plan_rows', '?')} "
-                f"plan_row_span={perf_fields.get('plan_row_span', '?')} "
-                f"plan_col_span={perf_fields.get('plan_col_span', '?')} "
-                f"shift_rows={perf_fields.get('shift_rows', '?')} "
-                f"shift_exposed_only={perf_fields.get('shift_exposed_only', '?')}"
-            )
-    if redraw is not None:
-        redraw_fields = parse_fields(redraw["message"])
-        print(f"redraw[{redraw['timestamp']}]: {redraw['message']}")
-        if redraw_fields:
-            spans = redraw_fields.get("spans", "?")
-            print(f"  parsed: spans={spans}")
+    for idx, (perf, redraw) in enumerate(pairs):
+        if len(pairs) > 1:
+            print(f"frame[{idx}]")
+        if perf is not None:
+            perf_fields = parse_fields(perf["message"])
+            print(f"perf[{perf['timestamp']}]: {perf['message']}")
+            if perf_fields:
+                print(
+                    "  parsed: "
+                    f"dirty={perf_fields.get('dirty', '?')} "
+                    f"current_reason={perf_fields.get('current_reason', '?')} "
+                    f"damage_rows={perf_fields.get('damage_rows', '?')} "
+                    f"damage_cols={perf_fields.get('damage_cols', '?')} "
+                    f"plan_rows={perf_fields.get('plan_rows', '?')} "
+                    f"plan_row_span={perf_fields.get('plan_row_span', '?')} "
+                    f"plan_col_span={perf_fields.get('plan_col_span', '?')} "
+                    f"shift_rows={perf_fields.get('shift_rows', '?')} "
+                    f"shift_exposed_only={perf_fields.get('shift_exposed_only', '?')}"
+                )
+        if redraw is not None:
+            redraw_fields = parse_fields(redraw["message"])
+            print(f"redraw[{redraw['timestamp']}]: {redraw['message']}")
+            if redraw_fields:
+                spans = redraw_fields.get("spans", "?")
+                print(f"  parsed: spans={spans}")
+        if len(pairs) > 1 and idx + 1 < len(pairs):
+            print()
 
     return 0
 
