@@ -74,6 +74,16 @@ That writes:
 The tool intentionally leaves `expected_damage` as a placeholder. Fill it in
 from the observed current backend behavior first, then update the golden.
 
+If you already have a staged capture manifest, rebuild from it directly:
+
+```bash
+python3 tools/terminal_make_redraw_fixture.py \
+  --manifest-file /tmp/zide-redraw-captures/redraw_nvim_real_sample/manifest.json
+```
+
+That reuses the captured baseline/update files recorded in the manifest instead
+of retyping the fixture inputs.
+
 Or use the staged wrapper:
 
 ```bash
