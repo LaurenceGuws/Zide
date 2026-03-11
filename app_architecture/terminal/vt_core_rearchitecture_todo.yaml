@@ -139,6 +139,7 @@ items:
       - `terminal_capture_pty.py` now also supports timed stdin steps and timed output checkpoints, which gives the redraw lane a real single-session capture path for apps like `nvim` where separate baseline/update sessions still carry too much startup noise
       - Timed checkpoints now also support a quiet window before flush, so single-session captures are less likely to cut through an active repaint burst and produce misleading partial deltas
       - `terminal_capture_pty.py` now also supports richer staged stdin scripts (`file`, `text`, `hex`), and the staged redraw wrapper can pass those through per phase, which should make it easier to drive longer-lived `nvim` probes without piling up many tiny temp input files
+      - The staged redraw wrapper now also supports a true single-session mode with baseline/update checkpoints over one long-lived PTY run, which is the preferred path for real `nvim` movement probes because it avoids restart noise entirely
       - First real single-session `nvim` gutter authority is now landed as `redraw_nvim_gutter_single_session.*`, captured from one long-lived PTY session with a baseline checkpoint, a later movement step, and a later redraw checkpoint
 
   - id: VTCORE-06

@@ -59,6 +59,7 @@ def parse_args() -> argparse.Namespace:
     )
     parser.add_argument("--baseline-stdin-file")
     parser.add_argument("--baseline-stdin-script")
+    parser.add_argument("--checkpoint-quiet-ms", type=int, default=120)
     parser.add_argument(
         "--update-stdin-file",
         action="append",
@@ -72,6 +73,18 @@ def parse_args() -> argparse.Namespace:
         dest="update_stdin_scripts",
         default=[],
         help="Optional scripted stdin action file per update PTY capture; repeat to match update-count",
+    )
+    parser.add_argument("--single-session-shell", help="Run one long-lived PTY session and split it into baseline/update checkpoints.")
+    parser.add_argument("--single-session-cmd", nargs="+", help="Single-session PTY command; alternative to --single-session-shell.")
+    parser.add_argument("--single-session-stdin-file")
+    parser.add_argument("--single-session-stdin-script")
+    parser.add_argument("--single-session-baseline-at", type=float, help="Seconds to flush the baseline checkpoint in single-session mode.")
+    parser.add_argument(
+        "--single-session-update-at",
+        action="append",
+        type=float,
+        default=[],
+        help="Seconds to flush an update checkpoint in single-session mode; repeat for multiple chunks.",
     )
     parser.add_argument("--baseline-cmd", nargs="+", help="Baseline command to run in the PTY")
     parser.add_argument(
@@ -91,6 +104,18 @@ def parse_args() -> argparse.Namespace:
         help="Shell command string for an update PTY capture; repeat for multiple update chunks",
     )
     args = parser.parse_args()
+    single_session = bool(args.single_session_shell) or bool(args.single_session_cmd)
+    split_sessions = bool(args.baseline_cmd) or bool(args.baseline_shell) or bool(args.update_cmd) or bool(args.update_shell)
+    if single_session and split_sessions:
+        raise SystemExit("choose either single-session mode or split baseline/update mode, not both")
+    if not single_session and not split_sessions:
+        raise SystemExit("provide either single-session args or baseline/update args")
+    if single_session:
+        if bool(args.single_session_shell) == bool(args.single_session_cmd):
+            raise SystemExit("choose exactly one of --single-session-shell or --single-session-cmd")
+        if args.single_session_baseline_at is None or not args.single_session_update_at:
+            raise SystemExit("single-session mode requires --single-session-baseline-at and at least one --single-session-update-at")
+        return args
     if bool(args.baseline_cmd) == bool(args.baseline_shell):
         raise SystemExit("choose exactly one of --baseline-cmd or --baseline-shell")
     if not args.update_cmd and not args.update_shell:
@@ -105,6 +130,8 @@ def run_capture(
     cmd: list[str],
     cwd: str | None,
     no_stdout: bool,
+    checkpoint_quiet_ms: int,
+    checkpoints: list[tuple[float, Path]] | None = None,
 ) -> None:
     argv = [
         sys.executable,
@@ -116,10 +143,14 @@ def run_capture(
         argv.extend(["--cwd", cwd])
     if no_stdout:
         argv.append("--no-stdout")
+    argv.extend(["--checkpoint-quiet-ms", str(checkpoint_quiet_ms)])
     if stdin_file:
         argv.extend(["--stdin-file", stdin_file])
     if stdin_script:
         argv.extend(["--stdin-script", stdin_script])
+    if checkpoints:
+        for delay, checkpoint_file in checkpoints:
+            argv.extend(["--checkpoint", f"{delay}:{checkpoint_file}"])
     argv.extend(["--", *cmd])
     subprocess.run(argv, check=True)
 
@@ -131,63 +162,114 @@ def main() -> int:
     if (args.update_goldens or args.validate) and Path(args.fixture_dir) != Path("fixtures/terminal"):
         raise SystemExit("--update-goldens/--validate currently require --fixture-dir fixtures/terminal")
 
-    update_cmds = list(args.update_cmd or [])
-    update_cmds.extend([["bash", "-lc", cmd] for cmd in args.update_shell])
-    baseline_cmd = args.baseline_cmd or ["bash", "-lc", args.baseline_shell]
-
-    if args.update_stdin_files and len(args.update_stdin_files) not in (0, len(update_cmds)):
-        raise SystemExit("--update-stdin-file count must be zero or match --update-cmd count")
-    if args.update_stdin_scripts and len(args.update_stdin_scripts) not in (0, len(update_cmds)):
-        raise SystemExit("--update-stdin-script count must be zero or match --update-cmd count")
-
     capture_dir = Path(args.capture_dir) / args.name
     if capture_dir.exists():
         shutil.rmtree(capture_dir)
     capture_dir.mkdir(parents=True, exist_ok=True)
 
     baseline_file = capture_dir / "baseline.txt"
-    run_capture(
-        baseline_file,
-        args.baseline_stdin_file,
-        args.baseline_stdin_script,
-        baseline_cmd,
-        args.cwd,
-        args.no_stdout,
-    )
-
     update_files: list[Path] = []
-    for idx, cmd in enumerate(update_cmds, start=1):
-        update_file = capture_dir / f"update_{idx}.txt"
-        stdin_file = args.update_stdin_files[idx - 1] if idx - 1 < len(args.update_stdin_files) else None
-        stdin_script = (
-            args.update_stdin_scripts[idx - 1] if idx - 1 < len(args.update_stdin_scripts) else None
-        )
-        run_capture(update_file, stdin_file, stdin_script, cmd, args.cwd, args.no_stdout)
-        update_files.append(update_file)
+    manifest: dict[str, object]
 
-    manifest = {
-        "name": args.name,
-        "rows": args.rows,
-        "cols": args.cols,
-        "line_ending": args.line_ending,
-        "cwd": args.cwd,
-        "no_stdout": args.no_stdout,
-        "baseline": {
-            "cmd": baseline_cmd,
-            "stdin_file": args.baseline_stdin_file,
-            "stdin_script": args.baseline_stdin_script,
-            "output_file": str(baseline_file),
-        },
-        "updates": [
-            {
-                "cmd": cmd,
-                "stdin_file": args.update_stdin_files[idx] if idx < len(args.update_stdin_files) else None,
-                "stdin_script": args.update_stdin_scripts[idx] if idx < len(args.update_stdin_scripts) else None,
-                "output_file": str(update_file),
-            }
-            for idx, (cmd, update_file) in enumerate(zip(update_cmds, update_files))
-        ],
-    }
+    if args.single_session_shell or args.single_session_cmd:
+        session_cmd = args.single_session_cmd or ["bash", "-lc", args.single_session_shell]
+        full_output_file = capture_dir / "full.txt"
+        checkpoints = [(args.single_session_baseline_at, baseline_file)]
+        for idx, delay in enumerate(args.single_session_update_at, start=1):
+            update_file = capture_dir / f"update_{idx}.txt"
+            checkpoints.append((delay, update_file))
+            update_files.append(update_file)
+        run_capture(
+            full_output_file,
+            args.single_session_stdin_file,
+            args.single_session_stdin_script,
+            session_cmd,
+            args.cwd,
+            args.no_stdout,
+            args.checkpoint_quiet_ms,
+            checkpoints=checkpoints,
+        )
+        manifest = {
+            "name": args.name,
+            "rows": args.rows,
+            "cols": args.cols,
+            "line_ending": args.line_ending,
+            "cwd": args.cwd,
+            "no_stdout": args.no_stdout,
+            "capture_mode": "single_session",
+            "single_session": {
+                "cmd": session_cmd,
+                "stdin_file": args.single_session_stdin_file,
+                "stdin_script": args.single_session_stdin_script,
+                "output_file": str(full_output_file),
+                "baseline_at": args.single_session_baseline_at,
+                "update_at": args.single_session_update_at,
+                "checkpoint_quiet_ms": args.checkpoint_quiet_ms,
+            },
+            "baseline": {"output_file": str(baseline_file)},
+            "updates": [{"output_file": str(update_file)} for update_file in update_files],
+        }
+    else:
+        update_cmds = list(args.update_cmd or [])
+        update_cmds.extend([["bash", "-lc", cmd] for cmd in args.update_shell])
+        baseline_cmd = args.baseline_cmd or ["bash", "-lc", args.baseline_shell]
+
+        if args.update_stdin_files and len(args.update_stdin_files) not in (0, len(update_cmds)):
+            raise SystemExit("--update-stdin-file count must be zero or match --update-cmd count")
+        if args.update_stdin_scripts and len(args.update_stdin_scripts) not in (0, len(update_cmds)):
+            raise SystemExit("--update-stdin-script count must be zero or match --update-cmd count")
+
+        run_capture(
+            baseline_file,
+            args.baseline_stdin_file,
+            args.baseline_stdin_script,
+            baseline_cmd,
+            args.cwd,
+            args.no_stdout,
+            args.checkpoint_quiet_ms,
+        )
+
+        for idx, cmd in enumerate(update_cmds, start=1):
+            update_file = capture_dir / f"update_{idx}.txt"
+            stdin_file = args.update_stdin_files[idx - 1] if idx - 1 < len(args.update_stdin_files) else None
+            stdin_script = (
+                args.update_stdin_scripts[idx - 1] if idx - 1 < len(args.update_stdin_scripts) else None
+            )
+            run_capture(
+                update_file,
+                stdin_file,
+                stdin_script,
+                cmd,
+                args.cwd,
+                args.no_stdout,
+                args.checkpoint_quiet_ms,
+            )
+            update_files.append(update_file)
+
+        manifest = {
+            "name": args.name,
+            "rows": args.rows,
+            "cols": args.cols,
+            "line_ending": args.line_ending,
+            "cwd": args.cwd,
+            "no_stdout": args.no_stdout,
+            "capture_mode": "split_sessions",
+            "baseline": {
+                "cmd": baseline_cmd,
+                "stdin_file": args.baseline_stdin_file,
+                "stdin_script": args.baseline_stdin_script,
+                "output_file": str(baseline_file),
+            },
+            "updates": [
+                {
+                    "cmd": cmd,
+                    "stdin_file": args.update_stdin_files[idx] if idx < len(args.update_stdin_files) else None,
+                    "stdin_script": args.update_stdin_scripts[idx] if idx < len(args.update_stdin_scripts) else None,
+                    "output_file": str(update_file),
+                }
+                for idx, (cmd, update_file) in enumerate(zip(update_cmds, update_files))
+            ],
+        }
     manifest_path = capture_dir / "manifest.json"
     manifest_path.write_text(json.dumps(manifest, indent=2) + "\n", encoding="utf-8")
 
