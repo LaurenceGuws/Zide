@@ -32,21 +32,36 @@ pub fn formatPartialPlanRows(
     var stream = std.io.fixedBufferStream(buf);
     const writer = stream.writer();
     var emitted: usize = 0;
+    var row_buf: [32]u8 = undefined;
 
     for (partial_rows, 0..) |dirty, row| {
         if (!dirty) continue;
-        if (emitted > 0) {
-            writer.writeAll(" ") catch break;
-        }
         if (emitted == max_rows) {
-            writer.writeAll("...") catch {};
+            const ellipsis_needed: usize = if (emitted > 0) 4 else 3;
+            if (stream.pos + ellipsis_needed <= buf.len) {
+                if (emitted > 0) writer.writeAll(" ") catch {};
+                writer.writeAll("...") catch {};
+            }
             break;
         }
-        std.fmt.format(
-            writer,
+        const row_token = std.fmt.bufPrint(
+            &row_buf,
             "{d}:{d}-{d}",
             .{ row, partial_cols_start[row], partial_cols_end[row] },
         ) catch break;
+        const needed = row_token.len + @as(usize, if (emitted > 0) 1 else 0);
+        if (stream.pos + needed > buf.len) {
+            const ellipsis_needed: usize = if (emitted > 0) 4 else 3;
+            if (stream.pos + ellipsis_needed <= buf.len) {
+                if (emitted > 0) writer.writeAll(" ") catch {};
+                writer.writeAll("...") catch {};
+            }
+            break;
+        }
+        if (emitted > 0) {
+            writer.writeAll(" ") catch break;
+        }
+        writer.writeAll(row_token) catch break;
         emitted += 1;
     }
 
@@ -161,6 +176,13 @@ pub fn planViewportTextureShift(
         return .{ .attempt = @as(usize, @intCast(shift_abs_i)) };
     }
     return .none;
+}
+
+pub fn useViewportShiftForPartialPlan(
+    cache_dirty: @TypeOf(RenderCache.init().dirty),
+    viewport_shift_rows: i32,
+) bool {
+    return cache_dirty == .partial and viewport_shift_rows != 0;
 }
 
 pub fn chooseTextureUpdatePlan(
@@ -299,11 +321,10 @@ pub fn addBlinkRowsToPartialPlan(
             last_col = @max(last_col, @min(cols - 1, col + width_units - 1));
         }
         if (first_col) |start_col| {
-            markPartialPlanRows(
+            markPartialPlanRow(
                 partial_rows,
                 partial_cols_start,
                 partial_cols_end,
-                rows,
                 row,
                 start_col,
                 last_col,
@@ -547,6 +568,70 @@ test "buildPartialPlan reproduces cursorcolumn live draw shape" {
     try std.testing.expectEqual(@as(u16, 33), partial_cols_end[10]);
 }
 
+test "addBlinkRowsToPartialPlan preserves row-local blink spans" {
+    var cache = RenderCache.init();
+    defer cache.deinit(std.testing.allocator);
+
+    cache.rows = 4;
+    cache.cols = 8;
+    try cache.cells.resize(std.testing.allocator, cache.rows * cache.cols);
+    @memset(cache.cells.items, std.mem.zeroes(@TypeOf(cache.cells.items[0])));
+
+    cache.cells.items[1].attrs.blink = true;
+    cache.cells.items[1].width = 1;
+    cache.cells.items[2 * cache.cols + 4].attrs.blink = true;
+    cache.cells.items[2 * cache.cols + 4].width = 1;
+
+    var partial_rows = [_]bool{false} ** 4;
+    var partial_cols_start = [_]u16{99} ** 4;
+    var partial_cols_end = [_]u16{0} ** 4;
+
+    addBlinkRowsToPartialPlan(&cache, &partial_rows, &partial_cols_start, &partial_cols_end);
+
+    try std.testing.expectEqualSlices(bool, &[_]bool{ true, false, true, false }, &partial_rows);
+    try std.testing.expectEqual(@as(u16, 1), partial_cols_start[0]);
+    try std.testing.expectEqual(@as(u16, 1), partial_cols_end[0]);
+    try std.testing.expectEqual(@as(u16, 4), partial_cols_start[2]);
+    try std.testing.expectEqual(@as(u16, 4), partial_cols_end[2]);
+}
+
+test "buildPartialPlan keeps blink-only updates row-local" {
+    var cache = RenderCache.init();
+    defer cache.deinit(std.testing.allocator);
+
+    cache.rows = 4;
+    cache.cols = 8;
+    cache.dirty = .none;
+    try cache.cells.resize(std.testing.allocator, cache.rows * cache.cols);
+    @memset(cache.cells.items, std.mem.zeroes(@TypeOf(cache.cells.items[0])));
+
+    cache.cells.items[1].attrs.blink = true;
+    cache.cells.items[1].width = 1;
+    cache.cells.items[2 * cache.cols + 4].attrs.blink = true;
+    cache.cells.items[2 * cache.cols + 4].width = 1;
+
+    var partial_rows = [_]bool{false} ** 4;
+    var partial_cols_start = [_]u16{99} ** 4;
+    var partial_cols_end = [_]u16{0} ** 4;
+
+    const bounds = buildPartialPlan(
+        &cache,
+        &partial_rows,
+        &partial_cols_start,
+        &partial_cols_end,
+        0,
+        0,
+        false,
+        true,
+    ).?;
+
+    try std.testing.expectEqual(@as(usize, 0), bounds.start_row);
+    try std.testing.expectEqual(@as(usize, 2), bounds.end_row);
+    try std.testing.expectEqual(@as(usize, 1), bounds.start_col);
+    try std.testing.expectEqual(@as(usize, 4), bounds.end_col);
+    try std.testing.expectEqualSlices(bool, &[_]bool{ true, false, true, false }, &partial_rows);
+}
+
 test "formatPartialPlanRows summarizes row-local spans" {
     var partial_rows = [_]bool{ true, false, true, true };
     var partial_cols_start = [_]u16{ 6, 0, 4, 33 };
@@ -579,4 +664,22 @@ test "formatPartialPlanRows truncates long plans" {
     );
 
     try std.testing.expectEqualStrings("0:1-1 1:2-2 ...", summary);
+}
+
+test "formatPartialPlanRows never truncates a row token mid-span" {
+    var partial_rows = [_]bool{true} ** 16;
+    var partial_cols_start = [_]u16{146} ** 16;
+    var partial_cols_end = [_]u16{148} ** 16;
+    var buf: [40]u8 = undefined;
+
+    const summary = formatPartialPlanRows(
+        &buf,
+        &partial_rows,
+        &partial_cols_start,
+        &partial_cols_end,
+        16,
+    );
+
+    try std.testing.expect(std.mem.endsWith(u8, summary, "..."));
+    try std.testing.expect(std.mem.indexOf(u8, summary, "146-13") == null);
 }

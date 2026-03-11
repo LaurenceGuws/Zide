@@ -311,6 +311,7 @@ pub const Renderer = struct {
     terminal_glyph_cache: glyph_cache.GlyphCache,
 
     // Terminal run-based shaping scratch buffers.
+    terminal_shape_buffer: *hb.hb_buffer_t,
     terminal_shape_first_pen: std.ArrayListUnmanaged(f32),
     terminal_shape_first_pen_set: std.ArrayListUnmanaged(bool),
     should_close_flag: bool,
@@ -357,6 +358,7 @@ pub const Renderer = struct {
         const ui_scale: f32 = 1.0;
         const font_size = base_font_size * ui_scale;
         const render_scale = platform_window.getRenderScale(window);
+        const terminal_shape_buffer = hb.hb_buffer_create() orelse return error.OutOfMemory;
 
         renderer.* = .{
             .allocator = allocator,
@@ -448,6 +450,7 @@ pub const Renderer = struct {
             .batch_vertices = std.ArrayList(Vertex).empty,
             .batch_draws = std.ArrayList(BatchDraw).empty,
             .terminal_glyph_cache = glyph_cache.GlyphCache.init(allocator),
+            .terminal_shape_buffer = terminal_shape_buffer,
             .terminal_shape_first_pen = .{},
             .terminal_shape_first_pen_set = .{},
             .should_close_flag = false,
@@ -513,6 +516,7 @@ pub const Renderer = struct {
         self.batch_vertices.deinit(self.allocator);
         self.batch_draws.deinit(self.allocator);
         self.terminal_glyph_cache.deinit();
+        hb.hb_buffer_destroy(self.terminal_shape_buffer);
 
         self.terminal_shape_first_pen.deinit(self.allocator);
         self.terminal_shape_first_pen_set.deinit(self.allocator);
