@@ -196,6 +196,32 @@ test "repeat guide chunks publish current broad cache contract" {
     try std.testing.expectEqual(@as(usize, 9), cache.damage.end_col);
 }
 
+test "repeat guide chunks mark unexpected bottom row dirty today" {
+    const allocator = std.testing.allocator;
+
+    var session = try TerminalSession.init(allocator, 4, 10);
+    defer session.deinit();
+    session.attachExternalTransport();
+
+    try std.testing.expect(try session.enqueueExternalBytes("\x1b[H1| |aaa \x1b[2;1H2| |bbb \x1b[3;1H3| |ccc \x1b[4;1H4| |ddd "));
+    try session.poll();
+    try std.testing.expect(session.acknowledgePresentedGeneration(session.renderCache().generation));
+
+    try std.testing.expect(try session.enqueueExternalBytes("\x1b[H5\x1b[2;1H+>"));
+    try session.poll();
+
+    try std.testing.expect(try session.enqueueExternalBytes("\x1b[1;4H|\x1b[2;4H|"));
+    try session.poll();
+
+    const cache = session.renderCache();
+    try std.testing.expect(cache.dirty_rows.items[0]);
+    try std.testing.expect(cache.dirty_rows.items[1]);
+    try std.testing.expect(!cache.dirty_rows.items[2]);
+    try std.testing.expect(cache.dirty_rows.items[3]);
+    try std.testing.expectEqual(@as(u16, 0), cache.dirty_cols_start.items[3]);
+    try std.testing.expectEqual(@as(u16, 9), cache.dirty_cols_end.items[3]);
+}
+
 test "acknowledgePresentedGeneration derives sync dirty retirement from cache" {
     const allocator = std.testing.allocator;
 
