@@ -123,6 +123,8 @@ python3 tools/terminal_capture_redraw_fixture.py \
   --cwd /path/to/project \
   --no-stdout \
   --hydrate-observed \
+  --update-goldens \
+  --validate \
   --baseline-shell 'nvim' \
   --update-shell 'nvim'
 ```
@@ -133,6 +135,7 @@ That:
 - records each update capture
 - writes the harness-api fixture skeleton
 - optionally runs the replay runner and writes the observed redraw contract back into the fixture
+- can optionally update the fixture golden and validate the fixture immediately
 - keeps intermediate capture files under `/tmp/zide-redraw-captures/<name>/`
 - writes a `manifest.json` beside those captures so the exact command/cwd/input recipe stays attached to the reproducer
 - is the preferred path when capturing a fresh live `nvim`/TUI redraw repro
@@ -143,10 +146,13 @@ Useful options:
 - `--no-stdout` to keep capture quiet while still recording raw PTY bytes
 - `--baseline-stdin-file` / `--update-stdin-file` for scripted keystroke phases
 - `--hydrate-observed` to run replay immediately and fill `expected_dirty`, `expected_damage`, and viewport-shift assertions from the current backend output
+- `--update-goldens` to update the fixture golden immediately after generation/hydration
+- `--validate` to run the fixture immediately after generation/hydration
 
 Current limitation:
 
 - `--hydrate-observed` currently requires `--fixture-dir fixtures/terminal`, because the replay build step only discovers fixtures from the repo fixture root.
+- `--update-goldens` and `--validate` currently have the same fixture-root requirement for the same reason.
 
 ## Authoring Rules
 
