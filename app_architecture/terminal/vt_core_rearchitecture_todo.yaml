@@ -123,6 +123,7 @@ items:
       - Follow-up note: the first repeat-guide packet keeps the untouched bottom row clean, while the second packet introduces that bottom row as dirty with a full-width span, which points more specifically at carried unpublished-damage merge/refinement rather than the base packet-1 damage assignment
       - Raw-screen follow-up: after the second repeat-guide packet, the active screen snapshot still keeps the bottom row clean, so the unexpected row-3 full-width dirty span is introduced after snapshotView in the publication/view-cache layer, not in screen/grid dirty tracking
       - Manual-publication follow-up: the same row-3 full-width dirty span reproduces with direct parser feed plus explicit updateViewCacheNoLock, so the next fix should target view-cache publication/refinement directly rather than poll/transport sequencing
+      - Replay-fixture correction landed: harness-api gutter/guide fixtures no longer carry a stray placeholder newline through their `.vt` sidecar files, and the affected replay goldens/damage expectations are now rebaselined on the honest no-scroll path
 
   - id: VTCORE-06
     title: Keep input encoding as a peer subsystem
