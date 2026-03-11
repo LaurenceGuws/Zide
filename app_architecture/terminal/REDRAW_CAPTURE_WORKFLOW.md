@@ -59,6 +59,10 @@ python3 tools/terminal_capture_pty.py \
 This is now the preferred low-level path when separate baseline/update sessions
 carry too much shared startup or teardown noise.
 
+`terminal_capture_pty.py` now also honors `--rows` and `--cols`, so the PTY
+viewport can match the intended replay fixture size instead of inheriting the
+current terminal geometry by accident.
+
 For scripted input or a second update phase:
 
 ```bash
