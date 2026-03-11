@@ -207,6 +207,9 @@ pub fn drawPrepared(
     var dirty_rows_count: usize = 0;
     var damage_row_span: usize = 0;
     var damage_col_span: usize = 0;
+    var partial_plan_rows_count: usize = 0;
+    var partial_plan_row_span: usize = 0;
+    var partial_plan_col_span: usize = 0;
     if (cache.dirty != .none) {
         for (view_dirty_rows) |row_dirty| {
             if (row_dirty) dirty_rows_count += 1;
@@ -392,7 +395,7 @@ pub fn drawPrepared(
                     return outcome;
                 };
 
-                _ = buildPartialPlan(
+                const partial_plan_bounds = buildPartialPlan(
                     cache,
                     self.partial_draw_rows.items,
                     self.partial_draw_cols_start.items,
@@ -402,6 +405,13 @@ pub fn drawPrepared(
                     shift_requires_fullwidth_partial,
                     blink_requires_partial,
                 );
+                for (self.partial_draw_rows.items) |row_draw| {
+                    if (row_draw) partial_plan_rows_count += 1;
+                }
+                if (partial_plan_bounds) |bounds| {
+                    partial_plan_row_span = bounds.end_row - bounds.start_row + 1;
+                    partial_plan_col_span = bounds.end_col - bounds.start_col + 1;
+                }
 
                 r.beginTerminalBatch();
                 for (0..rows) |row| {
@@ -536,7 +546,7 @@ pub fn drawPrepared(
         );
         perf_log.logf(
             .info,
-            "draw_ms={d:.2} lock_ms={d:.2} cache_copy_ms={d:.2} texture_update_ms={d:.2} overlay_ms={d:.2} full={d} partial={d} updated={d} sync={d} clear_ok={d} dirty={s} dirty_rows={d} damage_rows={d} damage_cols={d} blink_cells={d} blink_phase_changed={d} full_reasons={d}/{d}/{d}/{d} full_dirty_reason={s} full_dirty_seq={d} rows={d} cols={d}",
+            "draw_ms={d:.2} lock_ms={d:.2} cache_copy_ms={d:.2} texture_update_ms={d:.2} overlay_ms={d:.2} full={d} partial={d} updated={d} sync={d} clear_ok={d} dirty={s} dirty_rows={d} damage_rows={d} damage_cols={d} plan_rows={d} plan_row_span={d} plan_col_span={d} blink_cells={d} blink_phase_changed={d} full_reasons={d}/{d}/{d}/{d} full_dirty_reason={s} full_dirty_seq={d} rows={d} cols={d}",
             .{
                 elapsed_ms,
                 lock_ms,
@@ -552,6 +562,9 @@ pub fn drawPrepared(
                 dirty_rows_count,
                 damage_row_span,
                 damage_col_span,
+                partial_plan_rows_count,
+                partial_plan_row_span,
+                partial_plan_col_span,
                 @intFromBool(has_blink),
                 @intFromBool(blink_phase_changed),
                 @intFromBool(full_reason_recreated),
