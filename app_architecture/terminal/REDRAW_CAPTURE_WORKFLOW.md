@@ -35,6 +35,12 @@ steady-state frame:
 python3 tools/terminal_summarize_redraw_log.py --interesting
 ```
 
+To inspect several recent interesting frames instead of only the latest one:
+
+```bash
+python3 tools/terminal_summarize_redraw_log.py --interesting --count 5
+```
+
 For machine-readable output:
 
 ```bash
