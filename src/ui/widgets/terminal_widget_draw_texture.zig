@@ -166,3 +166,40 @@ test "markPartialPlanRows clamps at top edge" {
     try std.testing.expectEqual(@as(u16, 2), partial_cols_start[1]);
     try std.testing.expectEqual(@as(u16, 3), partial_cols_end[1]);
 }
+
+test "markPartialPlanRows reproduces cursorcolumn aggregate box" {
+    var partial_rows = [_]bool{false} ** 12;
+    var partial_cols_start = [_]u16{99} ** 12;
+    var partial_cols_end = [_]u16{0} ** 12;
+
+    inline for (0..8) |row| {
+        markPartialPlanRows(&partial_rows, &partial_cols_start, &partial_cols_end, 12, row, 6, 6);
+    }
+    markPartialPlanRows(&partial_rows, &partial_cols_start, &partial_cols_end, 12, 8, 4, 6);
+    markPartialPlanRows(&partial_rows, &partial_cols_start, &partial_cols_end, 12, 9, 4, 6);
+    markPartialPlanRows(&partial_rows, &partial_cols_start, &partial_cols_end, 12, 10, 33, 33);
+
+    try std.testing.expectEqualSlices(
+        bool,
+        &[_]bool{ true, true, true, true, true, true, true, true, true, true, true, false },
+        &partial_rows,
+    );
+    try std.testing.expectEqual(@as(u16, 4), partial_cols_start[0]);
+    try std.testing.expectEqual(@as(u16, 33), partial_cols_end[10]);
+
+    var min_start: usize = 99;
+    var max_end: usize = 0;
+    var first_row: ?usize = null;
+    var last_row: usize = 0;
+    for (partial_rows, 0..) |dirty, row| {
+        if (!dirty) continue;
+        if (first_row == null) first_row = row;
+        last_row = row;
+        min_start = @min(min_start, partial_cols_start[row]);
+        max_end = @max(max_end, partial_cols_end[row]);
+    }
+    try std.testing.expectEqual(@as(usize, 0), first_row.?);
+    try std.testing.expectEqual(@as(usize, 10), last_row);
+    try std.testing.expectEqual(@as(usize, 4), min_start);
+    try std.testing.expectEqual(@as(usize, 33), max_end);
+}
