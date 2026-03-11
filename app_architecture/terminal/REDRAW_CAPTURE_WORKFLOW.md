@@ -45,6 +45,22 @@ python3 tools/terminal_run_backend_repro.py \
   --command "nvim -u NONE -N file.zig"
 ```
 
+For more complex scripted commands, use a command file instead of shell-quoting
+everything inline, and optionally write the parsed summary as JSON:
+
+```bash
+python3 tools/terminal_run_backend_repro.py \
+  --rows 40 \
+  --cols 120 \
+  --cwd /path/to/repo \
+  --command-file /tmp/zide-repro-command.sh \
+  --summary-json-file /tmp/zide-repro-summary.json
+```
+
+The wrapper now treats "no interesting redraw frames" as a successful backend
+run and can still emit an empty JSON summary, which keeps automation honest
+without failing the whole repro loop on pure lifecycle churn.
+
 If the child command is expected to be short-lived, the wrapper now also has a
 hard timeout so backend repro runs do not hang indefinitely:
 
