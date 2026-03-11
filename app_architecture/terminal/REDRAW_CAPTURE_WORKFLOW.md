@@ -33,6 +33,7 @@ Use:
 
 - [terminal_make_redraw_fixture.py](/home/home/personal/zide/tools/terminal_make_redraw_fixture.py)
 - [terminal_capture_pty.py](/home/home/personal/zide/tools/terminal_capture_pty.py)
+- [terminal_capture_redraw_fixture.py](/home/home/personal/zide/tools/terminal_capture_redraw_fixture.py)
 
 Capture raw PTY output first:
 
@@ -72,6 +73,25 @@ That writes:
 
 The tool intentionally leaves `expected_damage` as a placeholder. Fill it in
 from the observed current backend behavior first, then update the golden.
+
+Or use the staged wrapper:
+
+```bash
+python3 tools/terminal_capture_redraw_fixture.py \
+  --name redraw_nvim_real_sample \
+  --rows 40 \
+  --cols 120 \
+  --baseline-shell 'nvim' \
+  --update-shell 'nvim'
+```
+
+That:
+
+- records the baseline capture
+- records each update capture
+- writes the harness-api fixture skeleton
+- keeps intermediate capture files under `/tmp/zide-redraw-captures/<name>/`
+- is the preferred path when capturing a fresh live `nvim`/TUI redraw repro
 
 ## Authoring Rules
 

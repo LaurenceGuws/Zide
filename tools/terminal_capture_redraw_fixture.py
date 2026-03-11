@@ -1,0 +1,122 @@
+#!/usr/bin/env python3
+"""
+Drive the redraw-capture workflow end-to-end:
+- capture a baseline PTY session
+- capture one or more update PTY sessions
+- emit a harness_api fixture skeleton
+"""
+
+from __future__ import annotations
+
+import argparse
+import shlex
+import shutil
+import subprocess
+import sys
+from pathlib import Path
+
+
+def parse_args() -> argparse.Namespace:
+    parser = argparse.ArgumentParser(description="Capture baseline/update PTY sessions and emit a redraw fixture skeleton.")
+    parser.add_argument("--name", required=True, help="Fixture stem")
+    parser.add_argument("--rows", required=True, type=int, help="Viewport rows")
+    parser.add_argument("--cols", required=True, type=int, help="Viewport cols")
+    parser.add_argument("--line-ending", default="lf", choices=("lf", "crlf", "cr"))
+    parser.add_argument("--fixture-dir", default="fixtures/terminal")
+    parser.add_argument("--capture-dir", default="/tmp/zide-redraw-captures")
+    parser.add_argument("--baseline-stdin-file")
+    parser.add_argument(
+        "--update-stdin-file",
+        action="append",
+        dest="update_stdin_files",
+        default=[],
+        help="Optional scripted stdin per update PTY capture; repeat to match update-count",
+    )
+    parser.add_argument("--baseline-cmd", nargs="+", help="Baseline command to run in the PTY")
+    parser.add_argument(
+        "--baseline-shell",
+        help="Shell command string for the baseline PTY capture (alternative to --baseline-cmd)",
+    )
+    parser.add_argument(
+        "--update-cmd",
+        action="append",
+        nargs="+",
+        help="Update command to run in the PTY; repeat for multiple update chunks",
+    )
+    parser.add_argument(
+        "--update-shell",
+        action="append",
+        default=[],
+        help="Shell command string for an update PTY capture; repeat for multiple update chunks",
+    )
+    args = parser.parse_args()
+    if bool(args.baseline_cmd) == bool(args.baseline_shell):
+        raise SystemExit("choose exactly one of --baseline-cmd or --baseline-shell")
+    if not args.update_cmd and not args.update_shell:
+        raise SystemExit("provide at least one --update-cmd or --update-shell")
+    return args
+
+
+def run_capture(output_file: Path, stdin_file: str | None, cmd: list[str]) -> None:
+    argv = [
+        sys.executable,
+        "tools/terminal_capture_pty.py",
+        "--output-file",
+        str(output_file),
+    ]
+    if stdin_file:
+        argv.extend(["--stdin-file", stdin_file])
+    argv.extend(["--", *cmd])
+    subprocess.run(argv, check=True)
+
+
+def main() -> int:
+    args = parse_args()
+    update_cmds = list(args.update_cmd or [])
+    update_cmds.extend([["bash", "-lc", cmd] for cmd in args.update_shell])
+    baseline_cmd = args.baseline_cmd or ["bash", "-lc", args.baseline_shell]
+
+    if args.update_stdin_files and len(args.update_stdin_files) not in (0, len(update_cmds)):
+        raise SystemExit("--update-stdin-file count must be zero or match --update-cmd count")
+
+    capture_dir = Path(args.capture_dir) / args.name
+    if capture_dir.exists():
+        shutil.rmtree(capture_dir)
+    capture_dir.mkdir(parents=True, exist_ok=True)
+
+    baseline_file = capture_dir / "baseline.txt"
+    run_capture(baseline_file, args.baseline_stdin_file, baseline_cmd)
+
+    update_files: list[Path] = []
+    for idx, cmd in enumerate(update_cmds, start=1):
+        update_file = capture_dir / f"update_{idx}.txt"
+        stdin_file = args.update_stdin_files[idx - 1] if idx - 1 < len(args.update_stdin_files) else None
+        run_capture(update_file, stdin_file, cmd)
+        update_files.append(update_file)
+
+    argv = [
+        sys.executable,
+        "tools/terminal_make_redraw_fixture.py",
+        "--name",
+        args.name,
+        "--rows",
+        str(args.rows),
+        "--cols",
+        str(args.cols),
+        "--line-ending",
+        args.line_ending,
+        "--fixture-dir",
+        args.fixture_dir,
+        "--baseline-file",
+        str(baseline_file),
+    ]
+    for update_file in update_files:
+        argv.extend(["--update-file", str(update_file)])
+    subprocess.run(argv, check=True)
+
+    print(f"captures stored in {capture_dir}")
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())
