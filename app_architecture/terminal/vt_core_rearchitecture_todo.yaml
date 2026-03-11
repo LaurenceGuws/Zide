@@ -129,6 +129,7 @@ items:
       - A real `gping` refresh authority landed too: `redraw_gping_refresh.*` locks a full-clear metric refresh on the honest harness path, and the current backend still publishes it as full-viewport damage at rows 0..5 cols 0..19, which matches the existing clear+repaint contract rather than exposing a new narrowable overlay bug
       - Two more real dashboard-style partial-refresh authorities landed too: `redraw_gping_metric_update.*` and `redraw_gping_metric_width_change.*` lock non-clear metric-only row updates, including width-changing numbers, and the current backend already keeps both cases narrow on the exact touched metric spans at rows 2..3 cols 6..7 and rows 2..3 cols 6..10 respectively
       - Current rerank after the `nvim` overlay and `gping` refresh probes: the in-tree real-sample redraw family now looks mostly explained, so the next optimization target likely requires a fresh real reproducer from `nvim` gutters/guides or another non-clear TUI region with stable untouched interiors
+      - Capture workflow is now explicit in `app_architecture/terminal/REDRAW_CAPTURE_WORKFLOW.md`, with `tools/terminal_make_redraw_fixture.py` generating harness-api fixture skeletons from real baseline/update byte captures so the next redraw target can be locked quickly once a fresh repro is observed
 
   - id: VTCORE-06
     title: Keep input encoding as a peer subsystem
