@@ -65,6 +65,25 @@ The wrapper now treats "no interesting redraw frames" as a successful backend
 run and can still emit an empty JSON summary, which keeps automation honest
 without failing the whole repro loop on pure lifecycle churn.
 
+When a run contains both tiny and broad partial frames, prefer selecting the
+largest interesting frame directly:
+
+```bash
+python3 tools/terminal_run_backend_repro.py \
+  --rows 34 \
+  --cols 149 \
+  --cwd /path/to/repo \
+  --command-file /tmp/zide-repro-command.sh \
+  --select max-plan-area
+```
+
+The summarizer and wrapper now support:
+
+- `latest`
+- `max-damage-area`
+- `max-plan-area`
+- `max-dirty-rows`
+
 For long-lived interactive apps that need delayed keystrokes, use the TTY
 driver helper inside the terminal child command:
 
@@ -107,6 +126,10 @@ python3 tools/terminal_run_backend_repro.py \
   --command "printf 'hello\\n'" \
   --timeout-seconds 10
 ```
+
+Even on timeout, the wrapper now still runs the redraw summarizer and writes the
+optional JSON summary, which keeps long-lived or stubborn scripted `nvim` runs
+useful instead of throwing away the frame data we were trying to inspect.
 
 To summarize the latest pair quickly:
 

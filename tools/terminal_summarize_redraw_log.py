@@ -38,6 +38,16 @@ def parse_fields(message: str) -> dict[str, str]:
     return {match.group("key"): match.group("value") for match in FIELD_RE.finditer(message)}
 
 
+def field_int(fields: dict[str, str], key: str) -> int:
+    value = fields.get(key)
+    if value is None:
+        return -1
+    try:
+        return int(value)
+    except ValueError:
+        return -1
+
+
 def timestamp_key(timestamp: str) -> tuple[int, int, int, int] | None:
     parts = [int(part) for part in re.findall(r"\d+", timestamp)]
     if len(parts) < 4:
@@ -45,7 +55,26 @@ def timestamp_key(timestamp: str) -> tuple[int, int, int, int] | None:
     return parts[0], parts[1], parts[2], parts[-1]
 
 
-def find_perf_matches(lines: list[str], skip_reasons: set[str], count: int) -> list[tuple[int, dict[str, str]]]:
+def perf_sort_key(select: str, record: dict[str, str]) -> tuple[int, int, int, int]:
+    fields = parse_fields(record["message"])
+    damage_rows = field_int(fields, "damage_rows")
+    damage_cols = field_int(fields, "damage_cols")
+    plan_rows = field_int(fields, "plan_rows")
+    plan_col_span = field_int(fields, "plan_col_span")
+    dirty_rows = field_int(fields, "dirty_rows")
+    timestamp = timestamp_key(record["timestamp"])
+    tiebreak = timestamp[-1] if timestamp is not None else -1
+
+    if select == "max-damage-area":
+        return damage_rows * damage_cols, damage_rows, damage_cols, tiebreak
+    if select == "max-plan-area":
+        return plan_rows * plan_col_span, plan_rows, plan_col_span, tiebreak
+    if select == "max-dirty-rows":
+        return dirty_rows, damage_rows, plan_rows, tiebreak
+    return tiebreak, damage_rows, damage_cols, plan_rows
+
+
+def find_perf_matches(lines: list[str], skip_reasons: set[str], count: int, select: str) -> list[tuple[int, dict[str, str]]]:
     matches: list[tuple[int, dict[str, str]]] = []
     for index in range(len(lines) - 1, -1, -1):
         match = LOG_LINE_RE.match(lines[index])
@@ -61,8 +90,11 @@ def find_perf_matches(lines: list[str], skip_reasons: set[str], count: int) -> l
         if reason is not None and reason in skip_reasons:
             continue
         matches.append((index, record))
-        if len(matches) >= count:
+        if select == "latest" and len(matches) >= count:
             break
+    if select != "latest":
+        matches.sort(key=lambda item: perf_sort_key(select, item[1]), reverse=True)
+        matches = matches[:count]
     return matches
 
 
@@ -119,7 +151,7 @@ def parse_pair_for_perf(
 
 
 def parse_latest_pair(lines: list[str], skip_reasons: set[str]) -> tuple[dict[str, str] | None, dict[str, str] | None]:
-    perf_matches = find_perf_matches(lines, skip_reasons, 1)
+    perf_matches = find_perf_matches(lines, skip_reasons, 1, "latest")
     if perf_matches:
         perf_index, latest_perf = perf_matches[0]
         return parse_pair_for_perf(lines, perf_index, latest_perf)
@@ -149,6 +181,12 @@ def main() -> int:
     )
     parser.add_argument("--count", type=int, default=1, help="How many matching perf frames to print")
     parser.add_argument(
+        "--select",
+        choices=("latest", "max-damage-area", "max-plan-area", "max-dirty-rows"),
+        default="latest",
+        help="How to choose frames when more than one interesting redraw exists",
+    )
+    parser.add_argument(
         "--skip-full-dirty-reason",
         action="append",
         default=[],
@@ -175,7 +213,7 @@ def main() -> int:
         return 1
 
     pairs: list[tuple[dict[str, str] | None, dict[str, str] | None]] = []
-    perf_matches = find_perf_matches(lines, skip_reasons, args.count)
+    perf_matches = find_perf_matches(lines, skip_reasons, args.count, args.select)
     if perf_matches:
         pairs = [parse_pair_for_perf(lines, perf_index, perf) for perf_index, perf in perf_matches]
     else:
