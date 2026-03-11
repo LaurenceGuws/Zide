@@ -14,6 +14,27 @@ Use this when:
 Do not use this to invent synthetic targets when an existing replay fixture is
 already authoritative.
 
+## Live Log Readback
+
+For manual `nvim` / TUI runs, prefer the scoped redraw log pair now enabled in
+`./.zide.lua`:
+
+- `terminal.ui.perf`
+- `terminal.ui.redraw`
+
+To summarize the latest pair quickly:
+
+```bash
+python3 tools/terminal_summarize_redraw_log.py
+```
+
+That prints the latest aggregate redraw record plus the latest row-local partial
+plan span summary, which is the fastest way to compare:
+
+- backend `damage_rows` / `damage_cols`
+- live widget `plan_rows` / `plan_row_span` / `plan_col_span`
+- row-local `spans=...`
+
 ## Capture Shape
 
 For redraw/publication work, prefer a `harness_api` fixture:
