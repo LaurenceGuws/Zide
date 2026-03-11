@@ -16,17 +16,25 @@ def main() -> int:
     parser.add_argument("--cols", type=int, help="Fixed terminal column count for the repro run")
     parser.add_argument("--cwd", help="Working directory for the child command")
     parser.add_argument("--shell", help="Explicit shell/program override")
-    parser.add_argument("--command", required=True, help="Terminal child command to run")
+    command_group = parser.add_mutually_exclusive_group(required=True)
+    command_group.add_argument("--command", help="Terminal child command to run")
+    command_group.add_argument("--command-file", help="Read the terminal child command from this file")
     parser.add_argument("--log-file", default="zide.log", help="Log file to summarize")
     parser.add_argument("--count", type=int, default=5, help="How many interesting redraw frames to print")
     parser.add_argument("--tail-lines", type=int, default=4000, help="How many log lines to inspect")
     parser.add_argument("--timeout-seconds", type=float, default=30.0, help="Kill the terminal run if it exceeds this timeout")
+    parser.add_argument("--summary-json-file", help="Also write the parsed redraw summary as JSON to this path")
     parser.add_argument("--keep-log", action="store_true", help="Do not delete the previous log before running")
     args = parser.parse_args()
 
     log_path = pathlib.Path(args.log_file)
     if not args.keep_log and log_path.exists():
         log_path.unlink()
+
+    command = args.command
+    if args.command_file is not None:
+        command = pathlib.Path(args.command_file).read_text(encoding="utf-8").strip()
+    assert command is not None
 
     cmd = [args.binary]
     if args.rows is not None:
@@ -37,13 +45,13 @@ def main() -> int:
         cmd.extend(["--cwd", args.cwd])
     if args.shell:
         cmd.extend(["--shell", args.shell])
-    cmd.extend(["--command", args.command, "--close-on-child-exit"])
+    cmd.extend(["--command", command, "--close-on-child-exit"])
 
     try:
         completed = subprocess.run(cmd, check=False, timeout=args.timeout_seconds)
     except subprocess.TimeoutExpired:
         print(
-            f"zide-terminal timed out after {args.timeout_seconds:.1f}s while running {args.command!r}",
+            f"zide-terminal timed out after {args.timeout_seconds:.1f}s while running {command!r}",
             file=sys.stderr,
         )
         return 124
@@ -57,12 +65,21 @@ def main() -> int:
         "--log-file",
         args.log_file,
         "--interesting",
+        "--empty-ok",
         "--count",
         str(args.count),
         "--tail-lines",
         str(args.tail_lines),
     ]
-    return subprocess.run(summary_cmd, check=False).returncode
+    summary_result = subprocess.run(summary_cmd, check=False)
+    if args.summary_json_file:
+        json_cmd = summary_cmd + ["--json"]
+        json_result = subprocess.run(json_cmd, check=False, capture_output=True, text=True)
+        if json_result.returncode != 0:
+            sys.stderr.write(json_result.stderr)
+            return json_result.returncode
+        pathlib.Path(args.summary_json_file).write_text(json_result.stdout, encoding="utf-8")
+    return summary_result.returncode
 
 
 if __name__ == "__main__":

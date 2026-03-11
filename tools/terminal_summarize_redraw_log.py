@@ -142,6 +142,11 @@ def main() -> int:
     parser.add_argument("--log-file", default="zide.log", help="Path to zide.log")
     parser.add_argument("--tail-lines", type=int, default=2000, help="How many trailing log lines to inspect")
     parser.add_argument("--json", action="store_true", help="Emit parsed output as JSON")
+    parser.add_argument(
+        "--empty-ok",
+        action="store_true",
+        help="Return success with empty output when no matching frames are found",
+    )
     parser.add_argument("--count", type=int, default=1, help="How many matching perf frames to print")
     parser.add_argument(
         "--skip-full-dirty-reason",
@@ -179,6 +184,12 @@ def main() -> int:
             pairs = [(perf, redraw)]
 
     if not pairs and skip_reasons:
+        if args.json and args.empty_ok:
+            json.dump({"frames": []}, sys.stdout, indent=2, sort_keys=True)
+            sys.stdout.write("\n")
+            return 0
+        if args.empty_ok:
+            return 0
         print(
             "no interesting terminal.ui.perf entries found after skipping "
             + ", ".join(sorted(skip_reasons)),
@@ -187,6 +198,12 @@ def main() -> int:
         return 1
 
     if not pairs:
+        if args.json and args.empty_ok:
+            json.dump({"frames": []}, sys.stdout, indent=2, sort_keys=True)
+            sys.stdout.write("\n")
+            return 0
+        if args.empty_ok:
+            return 0
         print("no terminal.ui.perf or terminal.ui.redraw entries found", file=sys.stderr)
         return 1
 
