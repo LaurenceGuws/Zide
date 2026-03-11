@@ -117,6 +117,14 @@ pub fn parseThreadMain(session: anytype) void {
             max_bytes = if (input_pressure) 128 * 1024 else 512 * 1024;
             max_ms = if (input_pressure) 2 else 8;
         }
+        // Keep live presentation cadence smoother under large flood even before
+        // the draw side has observed the first published batch.
+        if (queued_bytes >= 256 * 1024) {
+            const cadence_max_bytes: usize = if (input_pressure) 64 * 1024 else 128 * 1024;
+            const cadence_max_ms: i64 = if (input_pressure) 1 else 2;
+            max_bytes = @min(max_bytes, cadence_max_bytes);
+            max_ms = @min(max_ms, cadence_max_ms);
+        }
         if (presentation_backlog) {
             const backlog_max_bytes: usize = if (input_pressure) 32 * 1024 else 64 * 1024;
             max_bytes = @min(max_bytes, backlog_max_bytes);
