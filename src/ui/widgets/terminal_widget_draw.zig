@@ -31,6 +31,9 @@ pub const FrameLatencyMetrics = struct {
     seq: u64 = 0,
     generation: u64 = 0,
     lock_ms: f64 = 0.0,
+    lock_wait_ms: f64 = 0.0,
+    lock_hold_ms: f64 = 0.0,
+    view_cache_ms: f64 = 0.0,
     cache_copy_ms: f64 = 0.0,
     texture_update_ms: f64 = 0.0,
     texture_bg_ms: f64 = 0.0,
@@ -50,12 +53,20 @@ const GlyphDrawStats = draw_grid.GlyphDrawStats;
 pub const DrawPreparation = struct {
     draw_start: f64,
     lock_ms: f64,
+    lock_wait_ms: f64,
+    lock_hold_ms: f64,
+    view_cache_ms: f64,
+    cache_copy_ms: f64,
     presented: PresentedRenderCache,
 
     pub fn fromCapture(draw_start: f64, capture: PresentationCapture) DrawPreparation {
         return .{
             .draw_start = draw_start,
             .lock_ms = capture.lock_ms,
+            .lock_wait_ms = capture.lock_wait_ms,
+            .lock_hold_ms = capture.lock_hold_ms,
+            .view_cache_ms = capture.view_cache_ms,
+            .cache_copy_ms = capture.cache_copy_ms,
             .presented = capture.presented,
         };
     }
@@ -71,6 +82,9 @@ pub fn latestFrameLatencyMetrics() FrameLatencyMetrics {
 fn publishFrameLatencyMetrics(
     generation: u64,
     lock_ms: f64,
+    lock_wait_ms: f64,
+    lock_hold_ms: f64,
+    view_cache_ms: f64,
     cache_copy_ms: f64,
     texture_update_ms: f64,
     texture_bg_ms: f64,
@@ -85,6 +99,9 @@ fn publishFrameLatencyMetrics(
         .seq = frame_latency_seq,
         .generation = generation,
         .lock_ms = lock_ms,
+        .lock_wait_ms = lock_wait_ms,
+        .lock_hold_ms = lock_hold_ms,
+        .view_cache_ms = view_cache_ms,
         .cache_copy_ms = cache_copy_ms,
         .texture_update_ms = texture_update_ms,
         .texture_bg_ms = texture_bg_ms,
@@ -123,7 +140,10 @@ pub fn drawPrepared(
 ) DrawOutcome {
     const draw_start = preparation.draw_start;
     const lock_ms: f64 = preparation.lock_ms;
-    const cache_copy_ms: f64 = preparation.lock_ms;
+    const lock_wait_ms: f64 = preparation.lock_wait_ms;
+    const lock_hold_ms: f64 = preparation.lock_hold_ms;
+    const view_cache_ms: f64 = preparation.view_cache_ms;
+    const cache_copy_ms: f64 = preparation.cache_copy_ms;
     var texture_update_ms: f64 = 0.0;
     var texture_bg_ms: f64 = 0.0;
     var texture_glyph_ms: f64 = 0.0;
@@ -139,6 +159,9 @@ pub fn drawPrepared(
         publishFrameLatencyMetrics(
             self.draw_cache.generation,
             lock_ms,
+            lock_wait_ms,
+            lock_hold_ms,
+            view_cache_ms,
             cache_copy_ms,
             texture_update_ms,
             texture_bg_ms,
@@ -234,6 +257,7 @@ pub fn drawPrepared(
     var partial_plan_summary_buf: [256]u8 = undefined;
     var glyph_stats_summary_buf: [220]u8 = undefined;
     var sprite_stats_summary_buf: [48]u8 = undefined;
+    var lock_stats_summary_buf: [64]u8 = undefined;
     if (cache.dirty != .none) {
         for (view_dirty_rows) |row_dirty| {
             if (row_dirty) dirty_rows_count += 1;
@@ -617,11 +641,16 @@ pub fn drawPrepared(
         );
         active_perf_log.logf(
             .info,
-            "draw_ms={d:.2} lock_ms={d:.2} cache_copy_ms={d:.2} texture_update_ms={d:.2} texture_bg_ms={d:.2} texture_glyph_ms={d:.2} texture_kitty_ms={d:.2} overlay_ms={d:.2} full={d} partial={d} updated={d} sync={d} clear_ok={d} dirty={s} current_reason={s} dirty_rows={d} damage_rows={d} damage_cols={d} plan_rows={d} plan_row_span={d} plan_col_span={d} plan_cells={d} plan_union_cells={d} blink_cells={d} blink_phase_changed={d} shift_rows={d} shift_exposed_only={d} sprite_stats={s} glyph_stats={s} rows={d} cols={d}",
+            "draw_ms={d:.2} lock_stats={s} texture_update_ms={d:.2} texture_bg_ms={d:.2} texture_glyph_ms={d:.2} texture_kitty_ms={d:.2} overlay_ms={d:.2} full={d} partial={d} updated={d} sync={d} clear_ok={d} dirty={s} current_reason={s} dirty_rows={d} damage_rows={d} damage_cols={d} plan_rows={d} plan_row_span={d} plan_col_span={d} plan_cells={d} plan_union_cells={d} blink_cells={d} blink_phase_changed={d} shift_rows={d} shift_exposed_only={d} sprite_stats={s} glyph_stats={s} rows={d} cols={d}",
             .{
                 elapsed_ms,
-                lock_ms,
-                cache_copy_ms,
+                std.fmt.bufPrint(&lock_stats_summary_buf, "{d:.2}/{d:.2}/{d:.2}/{d:.2}/{d:.2}", .{
+                    lock_ms,
+                    lock_wait_ms,
+                    lock_hold_ms,
+                    view_cache_ms,
+                    cache_copy_ms,
+                }) catch "overflow",
                 texture_update_ms,
                 texture_bg_ms,
                 texture_glyph_ms,

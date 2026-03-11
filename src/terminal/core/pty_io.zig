@@ -33,6 +33,8 @@ pub fn poll(self: anytype) !void {
         var processed: usize = 0;
         var had_data = false;
         var temp: [4096]u8 = undefined;
+        var parse_lock_hold_ns: i128 = 0;
+        var publish_lock_hold_ns: i128 = 0;
 
         while (processed < max_bytes_per_poll and std.time.milliTimestamp() - start_ms < max_ms) {
             var chunk_len: usize = 0;
@@ -60,17 +62,21 @@ pub fn poll(self: anytype) !void {
 
             if (chunk_len == 0) break;
 
+            const parse_lock_start_ns = std.time.nanoTimestamp();
             self.state_mutex.lock();
             self.core.parser.handleSlice(parser_mod.Parser.SessionFacade.from(self), temp[0..chunk_len]);
             self.state_mutex.unlock();
+            parse_lock_hold_ns += std.time.nanoTimestamp() - parse_lock_start_ns;
             processed += chunk_len;
             _ = self.output_generation.fetchAdd(1, .acq_rel);
         }
 
         if (had_data) {
+            const publish_lock_start_ns = std.time.nanoTimestamp();
             self.state_mutex.lock();
             @import("view_cache.zig").updateViewCacheNoLock(self, self.output_generation.load(.acquire), self.core.history.scrollOffset());
             self.state_mutex.unlock();
+            publish_lock_hold_ns += std.time.nanoTimestamp() - publish_lock_start_ns;
         }
 
         if (processed > 0) {
@@ -79,8 +85,10 @@ pub fn poll(self: anytype) !void {
             const should_log = elapsed_ms >= 8.0 or queued_bytes >= 1024 * 1024 or processed >= 512 * 1024;
             if (should_log and (end_ms - self.last_parse_log_ms) >= 100) {
                 self.last_parse_log_ms = end_ms;
-                perf_log.logf(.info, "parse_ms={d:.2} bytes={d} queued_bytes={d} input_pressure={any}", .{
+                perf_log.logf(.info, "parse_ms={d:.2} parse_lock_ms={d:.2} publish_lock_ms={d:.2} bytes={d} queued_bytes={d} input_pressure={any}", .{
                     elapsed_ms,
+                    @as(f64, @floatFromInt(parse_lock_hold_ns)) / @as(f64, @floatFromInt(std.time.ns_per_ms)),
+                    @as(f64, @floatFromInt(publish_lock_hold_ns)) / @as(f64, @floatFromInt(std.time.ns_per_ms)),
                     processed,
                     queued_bytes,
                     input_pressure,
@@ -107,6 +115,8 @@ pub fn poll(self: anytype) !void {
         var buf: [262144]u8 = undefined;
         var had_data = false;
         var processed: usize = 0;
+        var parse_lock_hold_ns: i128 = 0;
+        var publish_lock_hold_ns: i128 = 0;
         const max_bytes_per_poll: usize = 256 * 1024;
         const start_ms = std.time.milliTimestamp();
         const io_log = app_logger.logger("terminal.io");
@@ -116,12 +126,16 @@ pub fn poll(self: anytype) !void {
             had_data = true;
             processed += n.?;
             io_threads.logCsiSequences(io_log, buf[0..n.?]);
+            const parse_lock_start_ns = std.time.nanoTimestamp();
             self.core.parser.handleSlice(parser_mod.Parser.SessionFacade.from(self), buf[0..n.?]);
+            parse_lock_hold_ns += std.time.nanoTimestamp() - parse_lock_start_ns;
             _ = self.output_generation.fetchAdd(1, .acq_rel);
             if (processed >= max_bytes_per_poll) break;
         }
         if (had_data) {
+            const publish_lock_start_ns = std.time.nanoTimestamp();
             @import("view_cache.zig").updateViewCacheNoLock(self, self.output_generation.load(.acquire), self.core.history.scrollOffset());
+            publish_lock_hold_ns += std.time.nanoTimestamp() - publish_lock_start_ns;
         }
         if (processed > 0 and self.alt_exit_pending.swap(false, .acq_rel)) {
             const elapsed_ms = @as(f64, @floatFromInt(std.time.milliTimestamp() - start_ms));
@@ -133,8 +147,10 @@ pub fn poll(self: anytype) !void {
             const should_log = elapsed_ms >= 8.0 or processed >= 512 * 1024;
             if (should_log and (end_ms - self.last_parse_log_ms) >= 100) {
                 self.last_parse_log_ms = end_ms;
-                perf_log.logf(.info, "parse_ms={d:.2} bytes={d} input_pressure={any}", .{
+                perf_log.logf(.info, "parse_ms={d:.2} parse_lock_ms={d:.2} publish_lock_ms={d:.2} bytes={d} input_pressure={any}", .{
                     elapsed_ms,
+                    @as(f64, @floatFromInt(parse_lock_hold_ns)) / @as(f64, @floatFromInt(std.time.ns_per_ms)),
+                    @as(f64, @floatFromInt(publish_lock_hold_ns)) / @as(f64, @floatFromInt(std.time.ns_per_ms)),
                     processed,
                     input_pressure,
                 });
@@ -142,7 +158,9 @@ pub fn poll(self: anytype) !void {
         }
         if (self.view_cache_pending.swap(false, .acq_rel)) {
             const offset: usize = @intCast(self.view_cache_request_offset.load(.acquire));
+            const publish_lock_start_ns = std.time.nanoTimestamp();
             @import("view_cache.zig").updateViewCacheNoLock(self, self.output_generation.load(.acquire), offset);
+            publish_lock_hold_ns += std.time.nanoTimestamp() - publish_lock_start_ns;
         }
     }
 }

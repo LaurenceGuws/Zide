@@ -71,6 +71,7 @@ pub fn parseThreadMain(session: anytype) void {
 
     while (session.parse_thread_running.load(.acquire)) {
         const input_pressure = session.input_pressure.load(.acquire);
+        const presentation_backlog = session.output_pending.load(.acquire);
         var max_bytes: usize = if (input_pressure) 64 * 1024 else 512 * 1024;
         var max_ms: i64 = if (input_pressure) 2 else 8;
         var pending_offset: ?usize = null;
@@ -85,7 +86,9 @@ pub fn parseThreadMain(session: anytype) void {
         } else {
             if (pending_offset == null) {
                 session.io_wait_cond.timedWait(&session.io_mutex, 10 * std.time.ns_per_ms) catch |err| {
-                    app_logger.logger("terminal.parse").logf(.warning, "parse wait timedWait failed err={s}", .{@errorName(err)});
+                    if (err != error.Timeout) {
+                        app_logger.logger("terminal.parse").logf(.warning, "parse wait timedWait failed err={s}", .{@errorName(err)});
+                    }
                 };
             }
             if (!session.parse_thread_running.load(.acquire)) {
@@ -114,11 +117,18 @@ pub fn parseThreadMain(session: anytype) void {
             max_bytes = if (input_pressure) 128 * 1024 else 512 * 1024;
             max_ms = if (input_pressure) 2 else 8;
         }
+        if (presentation_backlog) {
+            const backlog_max_bytes: usize = if (input_pressure) 32 * 1024 else 64 * 1024;
+            max_bytes = @min(max_bytes, backlog_max_bytes);
+            max_ms = @min(max_ms, @as(i64, 1));
+        }
 
         const perf_log = app_logger.logger("terminal.parse");
         const start_ms = std.time.milliTimestamp();
         var processed: usize = 0;
         var had_data = false;
+        var parse_lock_hold_ns: i128 = 0;
+        var publish_lock_hold_ns: i128 = 0;
 
         while (processed < max_bytes and std.time.milliTimestamp() - start_ms < max_ms) {
             var chunk_len: usize = 0;
@@ -146,18 +156,22 @@ pub fn parseThreadMain(session: anytype) void {
 
             if (chunk_len == 0) break;
 
+            const parse_lock_start_ns = std.time.nanoTimestamp();
             session.state_mutex.lock();
             session.core.parser.handleSlice(parser_mod.Parser.SessionFacade.from(session), temp[0..chunk_len]);
             session.state_mutex.unlock();
+            parse_lock_hold_ns += std.time.nanoTimestamp() - parse_lock_start_ns;
             processed += chunk_len;
             _ = session.output_generation.fetchAdd(1, .acq_rel);
         }
 
         if (had_data or pending_offset != null) {
             const target_offset = pending_offset orelse session.core.history.scrollOffset();
+            const publish_lock_start_ns = std.time.nanoTimestamp();
             session.state_mutex.lock();
             @import("view_cache.zig").updateViewCacheNoLock(session, session.output_generation.load(.acquire), target_offset);
             session.state_mutex.unlock();
+            publish_lock_hold_ns += std.time.nanoTimestamp() - publish_lock_start_ns;
             session.output_pending.store(true, .release);
         }
 
@@ -167,11 +181,14 @@ pub fn parseThreadMain(session: anytype) void {
             const should_log = elapsed_ms >= 8.0 or queued_bytes >= 1024 * 1024 or processed >= 512 * 1024;
             if (should_log and (end_ms - session.last_parse_log_ms) >= 100) {
                 session.last_parse_log_ms = end_ms;
-                perf_log.logf(.info, "parse_ms={d:.2} bytes={d} queued_bytes={d} input_pressure={any}", .{
+                perf_log.logf(.info, "parse_ms={d:.2} parse_lock_ms={d:.2} publish_lock_ms={d:.2} bytes={d} queued_bytes={d} input_pressure={any} presentation_backlog={any}", .{
                     elapsed_ms,
+                    @as(f64, @floatFromInt(parse_lock_hold_ns)) / @as(f64, @floatFromInt(std.time.ns_per_ms)),
+                    @as(f64, @floatFromInt(publish_lock_hold_ns)) / @as(f64, @floatFromInt(std.time.ns_per_ms)),
                     processed,
                     queued_bytes,
                     input_pressure,
+                    presentation_backlog,
                 });
             }
         }

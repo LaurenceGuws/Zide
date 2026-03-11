@@ -16,6 +16,10 @@ pub const PresentedRenderCache = struct {
 
 pub const PresentationCapture = struct {
     lock_ms: f64,
+    lock_wait_ms: f64,
+    lock_hold_ms: f64,
+    view_cache_ms: f64,
+    cache_copy_ms: f64,
     presented: PresentedRenderCache,
 };
 
@@ -86,11 +90,34 @@ pub fn copyPublishedRenderCache(self: anytype, dst: *RenderCache) !PresentedRend
 }
 
 pub fn capturePresentation(self: anytype, dst: *RenderCache) !PresentationCapture {
-    const lock_start_ns = std.time.nanoTimestamp();
-    const presented = try copyPublishedRenderCache(self, dst);
-    const lock_end_ns = std.time.nanoTimestamp();
+    const wait_start_ns = std.time.nanoTimestamp();
+    self.lock();
+    defer self.unlock();
+    const lock_acquired_ns = std.time.nanoTimestamp();
+    var view_cache_ms: f64 = 0.0;
+    if (self.view_cache_pending.load(.acquire)) {
+        const view_cache_start_ns = std.time.nanoTimestamp();
+        self.updateViewCacheForScrollLocked();
+        const view_cache_end_ns = std.time.nanoTimestamp();
+        view_cache_ms = @as(f64, @floatFromInt(view_cache_end_ns - view_cache_start_ns)) / @as(f64, @floatFromInt(std.time.ns_per_ms));
+    }
+    const copy_start_ns = std.time.nanoTimestamp();
+    const cache = renderCache(self);
+    try render_cache_mod.copySnapshot(dst, self.allocator, cache);
+    const copy_end_ns = std.time.nanoTimestamp();
+    const presented = PresentedRenderCache{
+        .generation = cache.generation,
+        .dirty = cache.dirty,
+    };
+    const lock_release_ns = std.time.nanoTimestamp();
+    const lock_wait_ms = @as(f64, @floatFromInt(lock_acquired_ns - wait_start_ns)) / @as(f64, @floatFromInt(std.time.ns_per_ms));
+    const lock_hold_ms = @as(f64, @floatFromInt(lock_release_ns - lock_acquired_ns)) / @as(f64, @floatFromInt(std.time.ns_per_ms));
     return .{
-        .lock_ms = @as(f64, @floatFromInt(lock_end_ns - lock_start_ns)) / @as(f64, @floatFromInt(std.time.ns_per_ms)),
+        .lock_ms = lock_wait_ms + lock_hold_ms,
+        .lock_wait_ms = lock_wait_ms,
+        .lock_hold_ms = lock_hold_ms,
+        .view_cache_ms = view_cache_ms,
+        .cache_copy_ms = @as(f64, @floatFromInt(copy_end_ns - copy_start_ns)) / @as(f64, @floatFromInt(std.time.ns_per_ms)),
         .presented = presented,
     };
 }
