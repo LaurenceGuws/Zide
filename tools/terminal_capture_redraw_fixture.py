@@ -131,6 +131,8 @@ def run_capture(
     cwd: str | None,
     no_stdout: bool,
     checkpoint_quiet_ms: int,
+    rows: int,
+    cols: int,
     checkpoints: list[tuple[float, Path]] | None = None,
 ) -> None:
     argv = [
@@ -138,6 +140,10 @@ def run_capture(
         "tools/terminal_capture_pty.py",
         "--output-file",
         str(output_file),
+        "--rows",
+        str(rows),
+        "--cols",
+        str(cols),
     ]
     if cwd:
         argv.extend(["--cwd", cwd])
@@ -187,6 +193,8 @@ def main() -> int:
             args.cwd,
             args.no_stdout,
             args.checkpoint_quiet_ms,
+            args.rows,
+            args.cols,
             checkpoints=checkpoints,
         )
         manifest = {
@@ -227,6 +235,8 @@ def main() -> int:
             args.cwd,
             args.no_stdout,
             args.checkpoint_quiet_ms,
+            args.rows,
+            args.cols,
         )
 
         for idx, cmd in enumerate(update_cmds, start=1):
@@ -243,6 +253,8 @@ def main() -> int:
                 args.cwd,
                 args.no_stdout,
                 args.checkpoint_quiet_ms,
+                args.rows,
+                args.cols,
             )
             update_files.append(update_file)
 

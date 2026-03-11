@@ -47,6 +47,7 @@
   - timed PTY checkpoints now also wait for a short quiet window before flushing, which should reduce partial-burst capture noise in single-session `nvim` redraw probes
   - `terminal_capture_pty.py` now also supports richer staged stdin scripts (`file`, `text`, `hex`), and the staged redraw wrapper can pass those through per phase, which should make it easier to drive longer-lived `nvim` probes without piling up many tiny temp input files
   - `terminal_capture_redraw_fixture.py` now also supports a true single-session mode with baseline/update checkpoints over one long-lived PTY run, which should be the default path for the next real `nvim` gutter/guide probe
+  - PTY capture now also honors explicit rows/cols, so new redraw authorities can trust that capture viewport size matches replay fixture size instead of inheriting the outer terminal geometry
   - first real single-session `nvim` gutter fixture is now landed, captured from one long-lived PTY session with a baseline checkpoint and a later redraw checkpoint
   - stale private root-session shims for SGR application and key-mode flag reads are now also gone
   - protocol execution is beginning to split along the same line: pure engine-side helpers now live under `terminal_core_protocol.zig`, while session-coupled protocol behavior remains in `session_protocol.zig`

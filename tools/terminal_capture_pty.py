@@ -21,6 +21,8 @@ import sys
 import termios
 import time
 import tty
+import fcntl
+import struct
 from pathlib import Path
 
 
@@ -40,6 +42,8 @@ def parse_args() -> argparse.Namespace:
         "--cwd",
         help="Optional working directory for the child command",
     )
+    parser.add_argument("--rows", type=int, help="Optional PTY row count")
+    parser.add_argument("--cols", type=int, help="Optional PTY column count")
     parser.add_argument(
         "--stdin-step",
         action="append",
@@ -172,6 +176,11 @@ def main() -> int:
 
     master_fd, slave_fd = pty.openpty()
     try:
+        if args.rows or args.cols:
+            rows = args.rows or 24
+            cols = args.cols or 80
+            winsz = struct.pack("HHHH", rows, cols, 0, 0)
+            fcntl.ioctl(slave_fd, termios.TIOCSWINSZ, winsz)
         proc = subprocess.Popen(
             args.cmd,
             stdin=slave_fd,
