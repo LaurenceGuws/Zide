@@ -31,6 +31,16 @@ def parse_args() -> argparse.Namespace:
         action="store_true",
         help="Run terminal replay after fixture generation and hydrate expected redraw fields from observed output",
     )
+    parser.add_argument(
+        "--update-goldens",
+        action="store_true",
+        help="After fixture generation/hydration, run terminal replay with --update-goldens for this fixture",
+    )
+    parser.add_argument(
+        "--validate",
+        action="store_true",
+        help="After fixture generation/hydration, run terminal replay validation for this fixture",
+    )
     parser.add_argument("--cwd", help="Optional working directory for all PTY capture phases")
     parser.add_argument(
         "--no-stdout",
@@ -97,6 +107,8 @@ def main() -> int:
     args = parse_args()
     if args.hydrate_observed and Path(args.fixture_dir) != Path("fixtures/terminal"):
         raise SystemExit("--hydrate-observed currently requires --fixture-dir fixtures/terminal")
+    if (args.update_goldens or args.validate) and Path(args.fixture_dir) != Path("fixtures/terminal"):
+        raise SystemExit("--update-goldens/--validate currently require --fixture-dir fixtures/terminal")
 
     update_cmds = list(args.update_cmd or [])
     update_cmds.extend([["bash", "-lc", cmd] for cmd in args.update_shell])
@@ -193,10 +205,41 @@ def main() -> int:
             check=True,
         )
 
+    if args.update_goldens:
+        subprocess.run(
+            [
+                "zig",
+                "build",
+                "test-terminal-replay",
+                "--",
+                "--fixture",
+                args.name,
+                "--update-goldens",
+            ],
+            check=True,
+        )
+
+    if args.validate:
+        subprocess.run(
+            [
+                "zig",
+                "build",
+                "test-terminal-replay",
+                "--",
+                "--fixture",
+                args.name,
+            ],
+            check=True,
+        )
+
     print(f"captures stored in {capture_dir}")
     print(f"manifest written to {manifest_path}")
     if args.hydrate_observed:
         print(f"observed redraw state written to {capture_dir / 'observed.json'}")
+    if args.update_goldens:
+        print(f"golden updated for fixture {args.name}")
+    if args.validate:
+        print(f"validated fixture {args.name}")
     return 0
 
 
