@@ -53,6 +53,7 @@
   - replay observed-state output now also includes `history_len`, `total_lines`, and `scroll_offset`, and the current `redraw_nvim_gutter_clean_move_down.*` authority is observing `history_len=46`, `total_lines=58`, `scroll_offset=0` alongside `viewport_shift_rows=1`
   - there is now also a direct plan-level regression in `view_cache_plan.zig` proving the backend currently classifies those exact observed `nvim` values as a live scroll shift; the next step is to judge that rule, not to keep rediscovering the same output from fixtures
   - there is now also an adjacent counterexample fixture, `redraw_nvim_gutter_single_j.*`, which stays in alt-screen and publishes narrow gutter damage with `history_len=0`, `total_lines=12`, `scroll_offset=0`, and no viewport shift
+  - a later recapture of the same `5j` movement with an earlier update checkpoint stayed in alt-screen and produced explicit gutter rewrite bytes too, so the older `redraw_nvim_gutter_clean_move_down.*` authority now looks more like a late-cut capture artifact than a true backend scroll-shift bug
   - stale private root-session shims for SGR application and key-mode flag reads are now also gone
   - protocol execution is beginning to split along the same line: pure engine-side helpers now live under `terminal_core_protocol.zig`, while session-coupled protocol behavior remains in `session_protocol.zig`
   - parser/control dispatch entry helpers now also live under `terminal_core_dispatch.zig`; parser byte feed still stays session-owned because locking and publication are not split yet
