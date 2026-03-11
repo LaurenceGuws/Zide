@@ -339,6 +339,7 @@ pub const Glyph = struct {
 pub const SpecialGlyphSpriteKey = types.SpecialGlyphSpriteKey;
 pub const SpecialGlyphVariant = types.SpecialGlyphVariant;
 pub const SpecialGlyphSprite = types.SpecialGlyphSprite;
+pub const SpecialGlyphSpriteFetch = font_special_glyphs.SpecialGlyphSpriteFetch;
 
 pub const FacePair = struct {
     face: ?c.FT_Face = null,
@@ -853,6 +854,18 @@ pub const TerminalFont = struct {
         variant: SpecialGlyphVariant,
     ) ?*SpecialGlyphSprite {
         return font_special_glyphs.getOrCreateSpecialGlyphSprite(self, codepoint, cell_w_px, cell_h_px, raster_w_px, raster_h_px, variant);
+    }
+
+    pub fn getOrCreateSpecialGlyphSpriteWithStatus(
+        self: *TerminalFont,
+        codepoint: u32,
+        cell_w_px: i32,
+        cell_h_px: i32,
+        raster_w_px: i32,
+        raster_h_px: i32,
+        variant: SpecialGlyphVariant,
+    ) SpecialGlyphSpriteFetch {
+        return font_special_glyphs.getOrCreateSpecialGlyphSpriteWithStatus(self, codepoint, cell_w_px, cell_h_px, raster_w_px, raster_h_px, variant);
     }
 
     pub fn drawGlyph(self: *TerminalFont, draw: DrawContext, codepoint: u32, x: f32, y: f32, cell_width: f32, cell_height: f32, followed_by_space: bool, color: Rgba) void {

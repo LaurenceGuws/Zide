@@ -10,6 +10,11 @@ const SpecialGlyphSprite = terminal_font.SpecialGlyphSprite;
 const SpecialGlyphSpriteKey = terminal_font.SpecialGlyphSpriteKey;
 const SpecialGlyphVariant = terminal_font.SpecialGlyphVariant;
 
+pub const SpecialGlyphSpriteFetch = struct {
+    sprite: ?*SpecialGlyphSprite,
+    created: bool,
+};
+
 pub fn specialGlyphSpriteKey(
     self: anytype,
     codepoint: u32,
@@ -49,10 +54,22 @@ pub fn getOrCreateSpecialGlyphSprite(
     raster_h_px: i32,
     variant: SpecialGlyphVariant,
 ) ?*SpecialGlyphSprite {
+    return getOrCreateSpecialGlyphSpriteWithStatus(self, codepoint, cell_w_px, cell_h_px, raster_w_px, raster_h_px, variant).sprite;
+}
+
+pub fn getOrCreateSpecialGlyphSpriteWithStatus(
+    self: anytype,
+    codepoint: u32,
+    cell_w_px: i32,
+    cell_h_px: i32,
+    raster_w_px: i32,
+    raster_h_px: i32,
+    variant: SpecialGlyphVariant,
+) SpecialGlyphSpriteFetch {
     const special_log = app_logger.logger("terminal.glyph.special");
-    if (cell_w_px <= 0 or cell_h_px <= 0 or raster_w_px <= 0 or raster_h_px <= 0) return null;
+    if (cell_w_px <= 0 or cell_h_px <= 0 or raster_w_px <= 0 or raster_h_px <= 0) return .{ .sprite = null, .created = false };
     const key = specialGlyphSpriteKey(self, codepoint, raster_w_px, raster_h_px, variant);
-    if (self.special_glyph_sprites.getPtr(key)) |existing| return existing;
+    if (self.special_glyph_sprites.getPtr(key)) |existing| return .{ .sprite = existing, .created = false };
 
     const rs = if (self.render_scale > 0.0) self.render_scale else 1.0;
     const width = raster_w_px;
@@ -65,7 +82,7 @@ pub fn getOrCreateSpecialGlyphSprite(
         }
         self.upload_buffer = self.allocator.alloc(u8, needed) catch |err| {
             special_log.logf(.warning, "special glyph upload buffer alloc failed bytes={d} err={s}", .{ needed, @errorName(err) });
-            return null;
+            return .{ .sprite = null, .created = false };
         };
         self.upload_buffer_capacity = needed;
     }
@@ -85,7 +102,7 @@ pub fn getOrCreateSpecialGlyphSprite(
         if (variant == .powerline or isPowerlineCodepoint(codepoint)) {
             special_log.logf(.info, "sprite_create_fail cp=U+{X} reason=rasterize_failed cell={d}x{d} raster={d}x{d} rs={d:.3}", .{ codepoint, cell_w_px, cell_h_px, width, height, rs });
         }
-        return null;
+        return .{ .sprite = null, .created = false };
     }
 
     var non_zero = false;
@@ -99,7 +116,7 @@ pub fn getOrCreateSpecialGlyphSprite(
         if (variant == .powerline or isPowerlineCodepoint(codepoint)) {
             special_log.logf(.info, "sprite_create_fail cp=U+{X} reason=empty_mask cell={d}x{d} raster={d}x{d} rs={d:.3}", .{ codepoint, cell_w_px, cell_h_px, width, height, rs });
         }
-        return null;
+        return .{ .sprite = null, .created = false };
     }
 
     if (self.pen_x + width + self.padding > self.atlas_width) {
@@ -111,7 +128,7 @@ pub fn getOrCreateSpecialGlyphSprite(
         if (variant == .powerline or isPowerlineCodepoint(codepoint)) {
             special_log.logf(.info, "sprite_create_fail cp=U+{X} reason=atlas_full cell={d}x{d} raster={d}x{d} rs={d:.3}", .{ codepoint, cell_w_px, cell_h_px, width, height, rs });
         }
-        return null;
+        return .{ .sprite = null, .created = false };
     }
 
     const rec = Rect{
@@ -135,12 +152,12 @@ pub fn getOrCreateSpecialGlyphSprite(
     };
     self.special_glyph_sprites.put(key, sprite) catch |err| {
         special_log.logf(.warning, "special glyph sprite cache insert failed cp=U+{X} err={s}", .{ codepoint, @errorName(err) });
-        return null;
+        return .{ .sprite = null, .created = false };
     };
     if (variant == .powerline or isPowerlineCodepoint(codepoint)) {
         special_log.logf(.info, "sprite_create cp=U+{X} variant={s} path={s} cell={d}x{d} raster={d}x{d} rs={d:.3}", .{ codepoint, @tagName(variant), path_name, cell_w_px, cell_h_px, width, height, rs });
     }
-    return self.special_glyph_sprites.getPtr(key);
+    return .{ .sprite = self.special_glyph_sprites.getPtr(key), .created = true };
 }
 
 fn rasterizePowerlineOutlineMask(
