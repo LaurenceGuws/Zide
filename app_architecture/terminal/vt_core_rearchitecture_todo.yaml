@@ -136,6 +136,7 @@ items:
       - The staged capture wrapper can now also update goldens and validate the new fixture immediately, so the next real redraw repro can be captured, hydrated, and checked in one supported workflow
       - Fixture generation and the staged wrapper can now also strip the shared baseline prefix from fresh update captures, which is important for real PTY-driven apps like `nvim` where a naive second session otherwise repeats the startup stream before the actual redraw delta
       - Fixture generation and the staged wrapper can now also strip a shared baseline suffix, which should make separate baseline/update PTY sessions more usable for apps like `nvim` that share both startup and quit-path terminal noise
+      - `terminal_capture_pty.py` now also supports timed stdin steps and timed output checkpoints, which gives the redraw lane a real single-session capture path for apps like `nvim` where separate baseline/update sessions still carry too much startup noise
 
   - id: VTCORE-06
     title: Keep input encoding as a peer subsystem

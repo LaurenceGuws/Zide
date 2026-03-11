@@ -43,6 +43,7 @@
   - the staged redraw wrapper can now also update the new fixture golden and validate the fixture immediately, so the next real repro can move from PTY capture to replay authority in one supported flow
   - redraw fixture generation and the staged wrapper can now also strip the shared baseline prefix from update captures, which is important for real PTY-driven apps like `nvim` where a second capture session otherwise repeats most of the startup stream
   - redraw fixture generation and the staged wrapper can now also strip shared teardown suffixes, which should make separate baseline/update PTY sessions more usable for real `nvim`-style captures
+  - `terminal_capture_pty.py` now also supports timed stdin steps and timed output checkpoints, giving the redraw lane a real single-session capture path when separate `nvim` baseline/update sessions still carry too much shared startup noise
   - stale private root-session shims for SGR application and key-mode flag reads are now also gone
   - protocol execution is beginning to split along the same line: pure engine-side helpers now live under `terminal_core_protocol.zig`, while session-coupled protocol behavior remains in `session_protocol.zig`
   - parser/control dispatch entry helpers now also live under `terminal_core_dispatch.zig`; parser byte feed still stays session-owned because locking and publication are not split yet
