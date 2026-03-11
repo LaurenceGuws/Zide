@@ -15,16 +15,30 @@ const Cell = types.Cell;
 
 pub fn updateViewCacheNoLock(self: anytype, generation: u64, scroll_offset: usize) void {
     const fullwidth_origin_log = app_logger.logger("terminal.ui.row_fullwidth_origin");
+    const perf_log = app_logger.logger("terminal.view_cache");
+    const update_start_ns = std.time.nanoTimestamp();
+    var snapshot_ms: f64 = 0.0;
+    var ensure_view_cache_ms: f64 = 0.0;
+    var plan_ms: f64 = 0.0;
+    var resize_ms: f64 = 0.0;
+    var copy_rows_ms: f64 = 0.0;
+    var selection_ms: f64 = 0.0;
+    var damage_ms: f64 = 0.0;
+    var kitty_ms: f64 = 0.0;
+    const snapshot_start_ns = std.time.nanoTimestamp();
     const screen = self.core.activeScreenConst();
     const view = screen.snapshotView();
+    snapshot_ms = @as(f64, @floatFromInt(std.time.nanoTimestamp() - snapshot_start_ns)) / @as(f64, @floatFromInt(std.time.ns_per_ms));
     const screen_reverse = screen.screen_reverse;
     const rows = view.rows;
     const cols = view.cols;
     const active_index = self.render_cache_index.load(.acquire);
     const target_index: u8 = if (active_index == 0) 1 else 0;
     var cache = &self.render_caches[target_index];
-    if (self.core.active != .alt) {
+    if (self.core.active != .alt and !(scroll_offset == 0 and self.core.history.view_cols == cols and self.core.history.view_row_count_generation == self.core.history.scrollback_generation)) {
+        const ensure_view_cache_start_ns = std.time.nanoTimestamp();
         self.core.history.ensureViewCache(@intCast(cols), self.core.primary.defaultCell());
+        ensure_view_cache_ms = @as(f64, @floatFromInt(std.time.nanoTimestamp() - ensure_view_cache_start_ns)) / @as(f64, @floatFromInt(std.time.ns_per_ms));
     }
     const history_len = if (self.core.active == .alt) 0 else self.core.history.scrollbackCount();
     const total_lines = history_len + rows;
@@ -123,8 +137,9 @@ pub fn updateViewCacheNoLock(self: anytype, generation: u64, scroll_offset: usiz
         return;
     }
 
+    const resize_start_ns = std.time.nanoTimestamp();
     const view_count = rows * cols;
-    const log = app_logger.logger("terminal.view_cache");
+    const log = perf_log;
     cache.cells.resize(self.allocator, view_count) catch |err| {
         log.logf(.warning, "view cache resize failed field=cells view_count={d} err={s}", .{ view_count, @errorName(err) });
         return;
@@ -157,11 +172,13 @@ pub fn updateViewCacheNoLock(self: anytype, generation: u64, scroll_offset: usiz
         log.logf(.warning, "view cache resize failed field=row_hashes rows={d} err={s}", .{ rows, @errorName(err) });
         return;
     };
+    resize_ms = @as(f64, @floatFromInt(std.time.nanoTimestamp() - resize_start_ns)) / @as(f64, @floatFromInt(std.time.ns_per_ms));
 
     const start_line = if (total_lines > rows + clamped_offset)
         total_lines - rows - clamped_offset
     else
         0;
+    const plan_start_ns = std.time.nanoTimestamp();
     const plan = plan_mod.buildPublicationPlan(
         visible_history_generation,
         active_cache.visible_history_generation,
@@ -184,6 +201,8 @@ pub fn updateViewCacheNoLock(self: anytype, generation: u64, scroll_offset: usiz
         self.core.active == .alt,
         active_cache.alt_active,
     );
+    plan_ms = @as(f64, @floatFromInt(std.time.nanoTimestamp() - plan_start_ns)) / @as(f64, @floatFromInt(std.time.ns_per_ms));
+    const copy_rows_start_ns = std.time.nanoTimestamp();
     var row: usize = 0;
     while (row < rows) : (row += 1) {
         const global_row = start_line + row;
@@ -201,7 +220,9 @@ pub fn updateViewCacheNoLock(self: anytype, generation: u64, scroll_offset: usiz
             std.mem.copyForwards(Cell, row_dest, view.cells[src_start .. src_start + cols]);
         }
     }
+    copy_rows_ms = @as(f64, @floatFromInt(std.time.nanoTimestamp() - copy_rows_start_ns)) / @as(f64, @floatFromInt(std.time.ns_per_ms));
 
+    const selection_start_ns = std.time.nanoTimestamp();
     selection_projection.projectSelection(self, cache, total_lines, start_line, rows, cols, selection_active);
     if (plan.needs_full_damage) {
         row = 0;
@@ -211,7 +232,9 @@ pub fn updateViewCacheNoLock(self: anytype, generation: u64, scroll_offset: usiz
             cache.row_hashes.items[row] = publication.hashRow(row_cells);
         }
     }
+    selection_ms = @as(f64, @floatFromInt(std.time.nanoTimestamp() - selection_start_ns)) / @as(f64, @floatFromInt(std.time.ns_per_ms));
 
+    const damage_start_ns = std.time.nanoTimestamp();
     if (plan.can_publish_scroll_shift) {
         for (cache.dirty_rows.items) |*row_dirty| {
             row_dirty.* = false;
@@ -364,8 +387,33 @@ pub fn updateViewCacheNoLock(self: anytype, generation: u64, scroll_offset: usiz
     cache.clear_generation = clear_generation;
     cache.viewport_shift_rows = plan.viewport_shift_rows;
     cache.viewport_shift_exposed_only = plan.can_publish_scroll_shift;
+    damage_ms = @as(f64, @floatFromInt(std.time.nanoTimestamp() - damage_start_ns)) / @as(f64, @floatFromInt(std.time.ns_per_ms));
+    const kitty_start_ns = std.time.nanoTimestamp();
     updateKittyViewNoLock(self, cache);
+    kitty_ms = @as(f64, @floatFromInt(std.time.nanoTimestamp() - kitty_start_ns)) / @as(f64, @floatFromInt(std.time.ns_per_ms));
     self.render_cache_index.store(target_index, .release);
+
+    const total_ms = @as(f64, @floatFromInt(std.time.nanoTimestamp() - update_start_ns)) / @as(f64, @floatFromInt(std.time.ns_per_ms));
+    if (total_ms >= 2.0) {
+        perf_log.logf(
+            .info,
+            "update_ms={d:.2} snapshot_ms={d:.2} ensure_view_cache_ms={d:.2} plan_ms={d:.2} resize_ms={d:.2} copy_rows_ms={d:.2} selection_ms={d:.2} damage_ms={d:.2} kitty_ms={d:.2} history={d} scroll_offset={d} visible_history_changed={any}",
+            .{
+                total_ms,
+                snapshot_ms,
+                ensure_view_cache_ms,
+                plan_ms,
+                resize_ms,
+                copy_rows_ms,
+                selection_ms,
+                damage_ms,
+                kitty_ms,
+                history_len,
+                clamped_offset,
+                plan.visible_history_changed,
+            },
+        );
+    }
 }
 
 pub fn updateViewCacheForScroll(self: anytype) void {

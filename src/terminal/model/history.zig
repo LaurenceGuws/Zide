@@ -18,6 +18,7 @@ pub const TerminalHistory = struct {
     view_cols: u16,
     scrollback_generation: u64,
     view_generation: u64,
+    view_row_count_generation: u64,
 
     pub fn init(allocator: std.mem.Allocator, max_rows: usize, cols: u16) !TerminalHistory {
         _ = cols;
@@ -34,6 +35,7 @@ pub const TerminalHistory = struct {
             .view_cols = 0,
             .scrollback_generation = 0,
             .view_generation = 0,
+            .view_row_count_generation = 0,
         };
     }
 
@@ -50,9 +52,11 @@ pub const TerminalHistory = struct {
             self.view_rows = 0;
             self.view_cols = 0;
             self.view_generation = self.scrollback_generation;
+            self.view_row_count_generation = self.scrollback_generation;
             return;
         }
         self.view_generation = if (self.scrollback_generation > 0) self.scrollback_generation - 1 else 0;
+        self.view_row_count_generation = if (self.scrollback_generation > 0) self.scrollback_generation - 1 else 0;
         self.ensureViewCache(cols, default_cell);
     }
 
@@ -64,6 +68,7 @@ pub const TerminalHistory = struct {
         self.view_rows = 0;
         self.view_cols = 0;
         self.view_generation = self.scrollback_generation;
+        self.view_row_count_generation = self.scrollback_generation;
         self.scrollback_offset = 0;
         self.saved_scrollback_offset = 0;
     }
@@ -131,6 +136,7 @@ pub const TerminalHistory = struct {
             self.view_rows = 0;
             self.view_cols = 0;
             self.view_generation = self.scrollback_generation;
+            self.view_row_count_generation = self.scrollback_generation;
             return;
         }
         if (self.view_cols == cols and self.view_generation == self.scrollback_generation) return;
@@ -182,6 +188,7 @@ pub const TerminalHistory = struct {
         }
 
         self.view_generation = self.scrollback_generation;
+        self.view_row_count_generation = self.scrollback_generation;
 
                     log.logf(.info, "scroll cache rows={d} cells={d}", .{ self.view_rows, self.view_cache.items.len });
     }
@@ -190,14 +197,34 @@ pub const TerminalHistory = struct {
         self.scrollback_generation +|= 1;
     }
 
+    fn flattenedRowsForLen(cols: u16, line_len: usize) usize {
+        if (cols == 0) return 0;
+        const cols_usize = @as(usize, cols);
+        if (line_len == 0) return 1;
+        return (line_len + cols_usize - 1) / cols_usize;
+    }
+
     pub fn pushRow(self: *TerminalHistory, row: []const types.Cell, wrapped: bool, default_cell: types.Cell) void {
         const row_len_full = row.len;
         if (row_len_full == 0) return;
+        const row_cols: u16 = @intCast(row_len_full);
+        const can_update_view_rows = self.view_cols != 0 and self.view_cols == row_cols;
+        const old_scrollback_generation = self.scrollback_generation;
+        var dropped_view_rows: usize = 0;
+        var last_view_rows_before: usize = 0;
+        if (can_update_view_rows and self.scrollback.count() == self.scrollback.capacityLines() and !wrapped) {
+            if (self.scrollback.lineByIndex(0)) |first_line| {
+                dropped_view_rows = flattenedRowsForLen(self.view_cols, first_line.cells.len);
+            }
+        }
 
         var append_to_last = false;
         if (self.scrollback.count() > 0) {
             if (self.scrollback.lineByIndex(self.scrollback.count() - 1)) |last_line| {
                 append_to_last = last_line.wrapped;
+                if (can_update_view_rows and append_to_last) {
+                    last_view_rows_before = flattenedRowsForLen(self.view_cols, last_line.cells.len);
+                }
             }
         }
 
@@ -243,6 +270,9 @@ pub const TerminalHistory = struct {
                 if (row_len == 0) {
                     last_line.wrapped = wrapped;
                     self.markScrollbackChanged();
+                    if (can_update_view_rows and self.view_row_count_generation == old_scrollback_generation) {
+                        self.view_row_count_generation = self.scrollback_generation;
+                    }
                     return;
                 }
 
@@ -255,12 +285,21 @@ pub const TerminalHistory = struct {
                         break :blk 0;
                     };
                     self.markScrollbackChanged();
+                    if (can_update_view_rows and self.view_row_count_generation == old_scrollback_generation) {
+                        self.view_rows += flattenedRowsForLen(self.view_cols, row_len);
+                        self.view_row_count_generation = self.scrollback_generation;
+                    }
                     return;
                 };
                 last_line.cells = new_cells;
                 std.mem.copyForwards(types.Cell, last_line.cells[old_len .. old_len + row_len], row[0..row_len]);
                 last_line.wrapped = wrapped;
                 self.markScrollbackChanged();
+                if (can_update_view_rows and self.view_row_count_generation == old_scrollback_generation) {
+                    const last_view_rows_after = flattenedRowsForLen(self.view_cols, last_line.cells.len);
+                    self.view_rows = self.view_rows - last_view_rows_before + last_view_rows_after;
+                    self.view_row_count_generation = self.scrollback_generation;
+                }
                 return;
             }
         }
@@ -270,6 +309,11 @@ pub const TerminalHistory = struct {
             break :blk 0;
         };
         self.markScrollbackChanged();
+        if (can_update_view_rows and self.view_row_count_generation == old_scrollback_generation) {
+            if (dropped_view_rows > 0) self.view_rows -= dropped_view_rows;
+            self.view_rows += flattenedRowsForLen(self.view_cols, row_len);
+            self.view_row_count_generation = self.scrollback_generation;
+        }
     }
 
     pub fn scrollbackCount(self: *TerminalHistory) usize {
