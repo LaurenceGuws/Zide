@@ -1,3 +1,5 @@
+const std = @import("std");
+
 pub const PublicationPlan = struct {
     visible_history_changed: bool,
     viewport_shift_rows: i32,
@@ -7,6 +9,37 @@ pub const PublicationPlan = struct {
     requires_full_damage_for_scroll_offset_change: bool,
     needs_full_damage: bool,
 };
+
+test "buildPublicationPlan classifies observed nvim gutter move as live scroll shift" {
+    const plan = buildPublicationPlan(
+        0,
+        0,
+        0,
+        0,
+        46,
+        45,
+        58,
+        57,
+        12,
+        12,
+        40,
+        40,
+        false,
+        false,
+        .partial,
+        false,
+        1,
+        1,
+        false,
+        false,
+    );
+
+    try std.testing.expect(plan.visible_history_changed);
+    try std.testing.expectEqual(@as(i32, 1), plan.viewport_shift_rows);
+    try std.testing.expectEqual(@as(usize, 1), plan.shift_abs);
+    try std.testing.expect(plan.can_publish_scroll_shift);
+    try std.testing.expect(!plan.needs_full_damage);
+}
 
 pub fn buildPublicationPlan(
     visible_history_generation: u64,
