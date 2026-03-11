@@ -128,6 +128,7 @@ items:
       - Nvim-shaped redraw authority landed: `redraw_nvim_overlay_status_update.*` now locks a simple statusline cursor-position update derived from the existing `nvim_overlay` sample
       - First statusline narrowing change landed too: unconditional per-row `-1/+1` partial-damage widening was removed from view-cache publication, so that `nvim`-shaped status update now publishes on the exact edited span at row 5 cols 7..9 instead of the older row 5 cols 6..10 overshoot
       - Adjacent `nvim`-style overlay authority landed too: `redraw_nvim_overlay_mode_status_update.*` locks combined mode-text plus cursor-position churn on the statusline row, and the current backend already publishes that case exactly at row 5 cols 0..9
+      - A two-row `nvim`-style body-plus-status authority landed too: `redraw_nvim_overlay_body_status_update.*` locks command-line text growth plus statusline churn in one frame, and the current backend already keeps that case narrow at rows 4..5 cols 0..9 without dragging in the untouched `:wq` row
 
   - id: VTCORE-06
     title: Keep input encoding as a peer subsystem
