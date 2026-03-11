@@ -351,6 +351,8 @@ fn childProcess(slave_fd: posix.fd_t, shell: ?[:0]const u8) !void {
     if (slave_fd > 2) posix.close(slave_fd);
 
     const shell_path = shell orelse defaultShell();
+    const command_c = std.c.getenv("ZIDE_TERMINAL_COMMAND");
+    const command = if (command_c) |value| std.mem.sliceTo(value, 0) else null;
 
     const term = chooseTermName(terminfoExists);
     _ = c.setenv("TERM", term, 1);
@@ -424,16 +426,34 @@ fn childProcess(slave_fd: posix.fd_t, shell: ?[:0]const u8) !void {
                 \\fi
                 \\__zide_emit_osc7
             );
-            const argv = [_:null]?[*:0]const u8{ shell_path.ptr, "--rcfile", rc_path.ptr, "-i" };
             env_log.logf(.info, "spawn bash rcfile prepared path={s}", .{rc_path});
-            env_log.logf(.info, "spawn exec shell={s} (bash rcfile inject)", .{shell_path});
-            const envp: [*:null]const ?[*:0]const u8 = @ptrCast(@constCast(std.c.environ));
-            const exec_err = posix.execvpeZ(shell_path.ptr, &argv, envp);
-            env_log.logf(.warning, "spawn exec shell failed shell={s} err={s}", .{ shell_path, @errorName(exec_err) });
-            posix.exit(127);
+            if (command_c) |command_ptr| {
+                const argv = [_:null]?[*:0]const u8{ shell_path.ptr, "--rcfile", rc_path.ptr, "-ic", command_ptr };
+                env_log.logf(.info, "spawn exec shell={s} command={s} (bash rcfile inject)", .{ shell_path, command.? });
+                const envp: [*:null]const ?[*:0]const u8 = @ptrCast(@constCast(std.c.environ));
+                const exec_err = posix.execvpeZ(shell_path.ptr, &argv, envp);
+                env_log.logf(.warning, "spawn exec shell failed shell={s} err={s}", .{ shell_path, @errorName(exec_err) });
+                posix.exit(127);
+            } else {
+                const argv = [_:null]?[*:0]const u8{ shell_path.ptr, "--rcfile", rc_path.ptr, "-i" };
+                env_log.logf(.info, "spawn exec shell={s} (bash rcfile inject)", .{shell_path});
+                const envp: [*:null]const ?[*:0]const u8 = @ptrCast(@constCast(std.c.environ));
+                const exec_err = posix.execvpeZ(shell_path.ptr, &argv, envp);
+                env_log.logf(.warning, "spawn exec shell failed shell={s} err={s}", .{ shell_path, @errorName(exec_err) });
+                posix.exit(127);
+            }
         } else |err| {
             env_log.logf(.info, "spawn bash rcfile prepare failed path={s} err={s}", .{ rc_path, @errorName(err) });
         }
+    }
+
+    if (command_c) |command_ptr| {
+        const argv = [_:null]?[*:0]const u8{ shell_path.ptr, "-lc", command_ptr };
+        env_log.logf(.info, "spawn exec shell={s} command={s}", .{ shell_path, command.? });
+        const envp: [*:null]const ?[*:0]const u8 = @ptrCast(@constCast(std.c.environ));
+        const exec_err = posix.execvpeZ(shell_path.ptr, &argv, envp);
+        env_log.logf(.warning, "spawn exec shell command failed shell={s} err={s}", .{ shell_path, @errorName(exec_err) });
+        posix.exit(127);
     }
 
     if (builtin.os.tag == .macos and shell == null) {

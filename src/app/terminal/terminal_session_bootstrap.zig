@@ -15,6 +15,10 @@ pub fn startSessionWithShellCellSize(term: *TerminalSession, shell: *Shell, laun
         @intFromFloat(shell.terminalCellWidth()),
         @intFromFloat(shell.terminalCellHeight()),
     );
+    const shell_override = if (std.c.getenv("ZIDE_TERMINAL_SHELL")) |value|
+        std.mem.sliceTo(value, 0)
+    else
+        null;
     const previous_launch_cwd = if (std.c.getenv("ZIDE_LAUNCH_CWD")) |value|
         try term.allocator.dupeZ(u8, std.mem.sliceTo(value, 0))
     else
@@ -36,7 +40,7 @@ pub fn startSessionWithShellCellSize(term: *TerminalSession, shell: *Shell, laun
         _ = c.unsetenv("ZIDE_LAUNCH_CWD");
     }
 
-    try term.start(null);
+    try term.start(if (shell_override) |value| value else null);
 }
 
 pub fn initWidget(
