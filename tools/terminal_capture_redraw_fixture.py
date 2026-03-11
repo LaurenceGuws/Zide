@@ -58,12 +58,20 @@ def parse_args() -> argparse.Namespace:
         help="Do not mirror PTY output to the current stdout during capture",
     )
     parser.add_argument("--baseline-stdin-file")
+    parser.add_argument("--baseline-stdin-script")
     parser.add_argument(
         "--update-stdin-file",
         action="append",
         dest="update_stdin_files",
         default=[],
         help="Optional scripted stdin per update PTY capture; repeat to match update-count",
+    )
+    parser.add_argument(
+        "--update-stdin-script",
+        action="append",
+        dest="update_stdin_scripts",
+        default=[],
+        help="Optional scripted stdin action file per update PTY capture; repeat to match update-count",
     )
     parser.add_argument("--baseline-cmd", nargs="+", help="Baseline command to run in the PTY")
     parser.add_argument(
@@ -93,6 +101,7 @@ def parse_args() -> argparse.Namespace:
 def run_capture(
     output_file: Path,
     stdin_file: str | None,
+    stdin_script: str | None,
     cmd: list[str],
     cwd: str | None,
     no_stdout: bool,
@@ -109,6 +118,8 @@ def run_capture(
         argv.append("--no-stdout")
     if stdin_file:
         argv.extend(["--stdin-file", stdin_file])
+    if stdin_script:
+        argv.extend(["--stdin-script", stdin_script])
     argv.extend(["--", *cmd])
     subprocess.run(argv, check=True)
 
@@ -126,6 +137,8 @@ def main() -> int:
 
     if args.update_stdin_files and len(args.update_stdin_files) not in (0, len(update_cmds)):
         raise SystemExit("--update-stdin-file count must be zero or match --update-cmd count")
+    if args.update_stdin_scripts and len(args.update_stdin_scripts) not in (0, len(update_cmds)):
+        raise SystemExit("--update-stdin-script count must be zero or match --update-cmd count")
 
     capture_dir = Path(args.capture_dir) / args.name
     if capture_dir.exists():
@@ -133,13 +146,23 @@ def main() -> int:
     capture_dir.mkdir(parents=True, exist_ok=True)
 
     baseline_file = capture_dir / "baseline.txt"
-    run_capture(baseline_file, args.baseline_stdin_file, baseline_cmd, args.cwd, args.no_stdout)
+    run_capture(
+        baseline_file,
+        args.baseline_stdin_file,
+        args.baseline_stdin_script,
+        baseline_cmd,
+        args.cwd,
+        args.no_stdout,
+    )
 
     update_files: list[Path] = []
     for idx, cmd in enumerate(update_cmds, start=1):
         update_file = capture_dir / f"update_{idx}.txt"
         stdin_file = args.update_stdin_files[idx - 1] if idx - 1 < len(args.update_stdin_files) else None
-        run_capture(update_file, stdin_file, cmd, args.cwd, args.no_stdout)
+        stdin_script = (
+            args.update_stdin_scripts[idx - 1] if idx - 1 < len(args.update_stdin_scripts) else None
+        )
+        run_capture(update_file, stdin_file, stdin_script, cmd, args.cwd, args.no_stdout)
         update_files.append(update_file)
 
     manifest = {
@@ -152,12 +175,14 @@ def main() -> int:
         "baseline": {
             "cmd": baseline_cmd,
             "stdin_file": args.baseline_stdin_file,
+            "stdin_script": args.baseline_stdin_script,
             "output_file": str(baseline_file),
         },
         "updates": [
             {
                 "cmd": cmd,
                 "stdin_file": args.update_stdin_files[idx] if idx < len(args.update_stdin_files) else None,
+                "stdin_script": args.update_stdin_scripts[idx] if idx < len(args.update_stdin_scripts) else None,
                 "output_file": str(update_file),
             }
             for idx, (cmd, update_file) in enumerate(zip(update_cmds, update_files))

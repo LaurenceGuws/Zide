@@ -47,6 +47,13 @@ def parse_args() -> argparse.Namespace:
         help="Timed stdin injection as <seconds>:<file>; repeat for multiple steps",
     )
     parser.add_argument(
+        "--stdin-script",
+        help=(
+            "Scripted stdin actions file. Each non-comment line is "
+            "<seconds> <file|text|hex> <payload>; merged with --stdin-step."
+        ),
+    )
+    parser.add_argument(
         "--checkpoint",
         action="append",
         default=[],
@@ -94,6 +101,50 @@ def parse_timed_path(spec: str, what: str) -> tuple[float, str]:
     return delay, path
 
 
+def parse_delay(delay_text: str, what: str) -> float:
+    try:
+        delay = float(delay_text)
+    except ValueError as exc:
+        raise SystemExit(f"invalid {what} delay '{delay_text}'") from exc
+    if delay < 0:
+        raise SystemExit(f"invalid {what} delay '{delay_text}'; must be >= 0")
+    return delay
+
+
+def parse_script_step(line: str, line_no: int) -> tuple[float, bytes]:
+    parts = line.split(maxsplit=2)
+    if len(parts) != 3:
+        raise SystemExit(
+            f"invalid stdin script line {line_no}: expected '<seconds> <file|text|hex> <payload>'"
+        )
+    delay_text, kind, payload = parts
+    delay = parse_delay(delay_text, f"stdin script line {line_no}")
+    if kind == "file":
+        return delay, Path(payload).read_bytes()
+    if kind == "text":
+        return delay, bytes(payload, "utf-8").decode("unicode_escape").encode("utf-8")
+    if kind == "hex":
+        compact = payload.replace(" ", "")
+        try:
+            return delay, bytes.fromhex(compact)
+        except ValueError as exc:
+            raise SystemExit(f"invalid hex payload on stdin script line {line_no}") from exc
+    raise SystemExit(
+        f"invalid stdin script line {line_no}: kind must be one of file, text, hex"
+    )
+
+
+def load_script_steps(path: str) -> list[tuple[float, bytes]]:
+    steps: list[tuple[float, bytes]] = []
+    script_path = Path(path)
+    for line_no, raw_line in enumerate(script_path.read_text(encoding="utf-8").splitlines(), start=1):
+        line = raw_line.strip()
+        if not line or line.startswith("#"):
+            continue
+        steps.append(parse_script_step(line, line_no))
+    return steps
+
+
 def main() -> int:
     args = parse_args()
     output_path = Path(args.output_file)
@@ -107,6 +158,8 @@ def main() -> int:
     for spec in args.stdin_step:
         delay, path = parse_timed_path(spec, "stdin step")
         stdin_steps.append((delay, Path(path).read_bytes()))
+    if args.stdin_script:
+        stdin_steps.extend(load_script_steps(args.stdin_script))
     stdin_steps.sort(key=lambda item: item[0])
 
     checkpoints: list[tuple[float, Path]] = []

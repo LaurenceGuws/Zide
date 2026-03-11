@@ -172,6 +172,7 @@ Useful options:
 - `--cwd` to run every capture phase in the same project directory
 - `--no-stdout` to keep capture quiet while still recording raw PTY bytes
 - `--baseline-stdin-file` / `--update-stdin-file` for scripted keystroke phases
+- `--baseline-stdin-script` / `--update-stdin-script` for richer timed staged-input scripts
 - `--strip-baseline-prefix` to remove the shared startup prefix from each update capture before writing `output_chunks`
 - `--strip-shared-suffix` to remove shared teardown bytes after prefix stripping, which helps when separate PTY sessions share the same quit path
 - `--hydrate-observed` to run replay immediately and fill `expected_dirty`, `expected_damage`, and viewport-shift assertions from the current backend output
@@ -181,8 +182,26 @@ Useful options:
 Single-session capture options in `terminal_capture_pty.py`:
 
 - `--stdin-step <seconds>:<file>` to inject scripted input later in the same PTY session
+- `--stdin-script <path>` for richer staged input without many temp files
 - `--checkpoint <seconds>:<output-file>` to write the bytes captured since the previous checkpoint
 - `--checkpoint-quiet-ms <ms>` to wait for a short idle window before a due checkpoint flushes, which helps avoid slicing active repaint bursts in half
+
+`--stdin-script` format:
+
+```text
+# <seconds> <file|text|hex> <payload>
+0.35 text j
+0.55 text :
+0.65 text wq\\r
+0.80 hex 1b 5b 42
+1.00 file /tmp/nvim-extra-keys.bin
+```
+
+Notes:
+
+- `text` payloads use Python-style escapes, so `\\r`, `\\n`, and `\\x1b` work.
+- `hex` payloads accept space-separated or compact hex bytes.
+- Scripted actions are merged with any `--stdin-step` entries and sorted by time.
 
 Use generous timing gaps. The goal is not perfect frame-accurate tracing; it is
 to split one live TUI session into a stable baseline chunk and a later redraw
