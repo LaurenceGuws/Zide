@@ -62,6 +62,8 @@ python3 tools/terminal_make_redraw_fixture.py \
   --rows 40 \
   --cols 120 \
   --baseline-file /tmp/nvim-baseline.txt \
+  --strip-baseline-prefix \
+  --strip-shared-suffix \
   --update-file /tmp/nvim-update-1.txt \
   --update-file /tmp/nvim-update-2.txt
 ```
@@ -80,6 +82,7 @@ To record the current observed publication contract for a fixture:
 ```bash
 zig build test-terminal-replay -- \
   --fixture redraw_nvim_real_sample \
+  --observe-only \
   --observed-file zig-cache/terminal-replay/redraw_nvim_real_sample.observed.json
 ```
 
@@ -93,11 +96,17 @@ That writes a clean JSON record of:
 Use that file to fill the fixture's `expected_dirty`, `expected_damage`, and
 viewport-shift assertions before updating goldens.
 
+`--observe-only` is important for fresh fixture authoring because it records the
+current backend contract without requiring the fixture's placeholder damage
+assertions to pass first.
+
 You can also feed the observed JSON back into the fixture generator directly:
 
 ```bash
 python3 tools/terminal_make_redraw_fixture.py \
   --manifest-file /tmp/zide-redraw-captures/redraw_nvim_real_sample/manifest.json \
+  --strip-baseline-prefix \
+  --strip-shared-suffix \
   --observed-file zig-cache/terminal-replay/redraw_nvim_real_sample.observed.json
 ```
 
@@ -122,6 +131,8 @@ python3 tools/terminal_capture_redraw_fixture.py \
   --cols 120 \
   --cwd /path/to/project \
   --no-stdout \
+  --strip-baseline-prefix \
+  --strip-shared-suffix \
   --hydrate-observed \
   --update-goldens \
   --validate \
@@ -145,6 +156,8 @@ Useful options:
 - `--cwd` to run every capture phase in the same project directory
 - `--no-stdout` to keep capture quiet while still recording raw PTY bytes
 - `--baseline-stdin-file` / `--update-stdin-file` for scripted keystroke phases
+- `--strip-baseline-prefix` to remove the shared startup prefix from each update capture before writing `output_chunks`
+- `--strip-shared-suffix` to remove shared teardown bytes after prefix stripping, which helps when separate PTY sessions share the same quit path
 - `--hydrate-observed` to run replay immediately and fill `expected_dirty`, `expected_damage`, and viewport-shift assertions from the current backend output
 - `--update-goldens` to update the fixture golden immediately after generation/hydration
 - `--validate` to run the fixture immediately after generation/hydration
