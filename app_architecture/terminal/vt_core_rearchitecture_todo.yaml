@@ -142,6 +142,8 @@ items:
       - The staged redraw wrapper now also supports a true single-session mode with baseline/update checkpoints over one long-lived PTY run, which is the preferred path for real `nvim` movement probes because it avoids restart noise entirely
       - PTY capture now also honors explicit rows/cols, so fresh redraw authorities can trust that the capture viewport matches the replay fixture viewport instead of inheriting host terminal size accidentally
       - First real single-session `nvim` gutter authority is now landed as `redraw_nvim_gutter_single_session.*`, captured from one long-lived PTY session with a baseline checkpoint, a later movement step, and a later redraw checkpoint
+      - A cleaner no-wrap single-session `nvim` gutter movement authority is now also landed as `redraw_nvim_gutter_clean_move_down.*`, captured from one long-lived PTY session with a later quiet baseline and a later downward movement step
+      - Current observed contract for `redraw_nvim_gutter_clean_move_down.*` is suspicious enough to be the next real redraw target: partial dirty with full-width bottom-row damage plus `viewport_shift_rows=1` / `exposed_only=true` after a small downward gutter move
 
   - id: VTCORE-06
     title: Keep input encoding as a peer subsystem

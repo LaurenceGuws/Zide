@@ -49,6 +49,7 @@
   - `terminal_capture_redraw_fixture.py` now also supports a true single-session mode with baseline/update checkpoints over one long-lived PTY run, which should be the default path for the next real `nvim` gutter/guide probe
   - PTY capture now also honors explicit rows/cols, so new redraw authorities can trust that capture viewport size matches replay fixture size instead of inheriting the outer terminal geometry
   - first real single-session `nvim` gutter fixture is now landed, captured from one long-lived PTY session with a baseline checkpoint and a later redraw checkpoint
+  - a cleaner no-wrap single-session `nvim` gutter movement fixture is now also landed as `redraw_nvim_gutter_clean_move_down.*`; its current observed publication contract is suspicious enough to be the next concrete redraw/publication investigation target
   - stale private root-session shims for SGR application and key-mode flag reads are now also gone
   - protocol execution is beginning to split along the same line: pure engine-side helpers now live under `terminal_core_protocol.zig`, while session-coupled protocol behavior remains in `session_protocol.zig`
   - parser/control dispatch entry helpers now also live under `terminal_core_dispatch.zig`; parser byte feed still stays session-owned because locking and publication are not split yet
