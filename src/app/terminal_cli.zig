@@ -7,6 +7,7 @@ pub const Config = struct {
     cwd: ?[]u8 = null,
     shell: ?[]u8 = null,
     command: ?[]u8 = null,
+    close_on_child_exit: bool = false,
     help: bool = false,
 
     pub fn deinit(self: *Config, allocator: std.mem.Allocator) void {
@@ -28,6 +29,10 @@ fn parseIterator(allocator: std.mem.Allocator, args: anytype) !Config {
     while (args.next()) |arg| {
         if (std.mem.eql(u8, arg, "--help") or std.mem.eql(u8, arg, "-h")) {
             config.help = true;
+            continue;
+        }
+        if (std.mem.eql(u8, arg, "--close-on-child-exit")) {
+            config.close_on_child_exit = true;
             continue;
         }
         if (std.mem.eql(u8, arg, "--cwd")) {
@@ -84,10 +89,12 @@ pub fn printHelp(writer: anytype) !void {
         \\  --cwd <path>         Start the terminal command in this working directory.
         \\  --shell <path>       Override the shell/program used for the PTY child.
         \\  --command <string>   Run a command through the PTY shell for repro/testing.
+        \\  --close-on-child-exit
+        \\                       Exit terminal mode when the PTY child exits.
         \\  -h, --help           Show this help and exit.
         \\
         \\Examples:
-        \\  zide-terminal --cwd /tmp --command "nvim -u NONE -N file.zig"
+        \\  zide-terminal --cwd /tmp --command "nvim -u NONE -N file.zig" --close-on-child-exit
         \\  zide-terminal --shell /bin/zsh
         \\
     );
@@ -97,6 +104,11 @@ pub fn applyEnv(config: *const Config, allocator: std.mem.Allocator) !void {
     try applyEnvOverride(allocator, "ZIDE_LAUNCH_CWD", config.cwd);
     try applyEnvOverride(allocator, "ZIDE_TERMINAL_SHELL", config.shell);
     try applyEnvOverride(allocator, "ZIDE_TERMINAL_COMMAND", config.command);
+    try applyEnvOverride(
+        allocator,
+        "ZIDE_TERMINAL_CLOSE_ON_CHILD_EXIT",
+        if (config.close_on_child_exit) "1" else null,
+    );
 }
 
 fn applyEnvOverride(allocator: std.mem.Allocator, name: []const u8, value: ?[]const u8) !void {
@@ -118,6 +130,7 @@ test "parse terminal cli args" {
         "--shell=/bin/zsh",
         "--command",
         "nvim -u NONE test.zig",
+        "--close-on-child-exit",
     };
     var args = SliceArgsIterator([]const u8){ .items = &argv };
     var config = try parseIterator(std.testing.allocator, &args);
@@ -125,4 +138,5 @@ test "parse terminal cli args" {
     try std.testing.expectEqualStrings("/tmp", config.cwd.?);
     try std.testing.expectEqualStrings("/bin/zsh", config.shell.?);
     try std.testing.expectEqualStrings("nvim -u NONE test.zig", config.command.?);
+    try std.testing.expect(config.close_on_child_exit);
 }

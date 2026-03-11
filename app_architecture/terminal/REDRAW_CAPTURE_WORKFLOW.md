@@ -34,6 +34,25 @@ And an explicit shell/program override when needed:
 ./zig-out/bin/zide-terminal --shell /bin/zsh --command "btop"
 ```
 
+For a fully automated backend repro loop that runs the terminal, waits for the
+child to exit, and prints the redraw summary:
+
+```bash
+python3 tools/terminal_run_backend_repro.py \
+  --cwd /path/to/repo \
+  --command "nvim -u NONE -N file.zig"
+```
+
+If the child command is expected to be short-lived, the wrapper now also has a
+hard timeout so backend repro runs do not hang indefinitely:
+
+```bash
+python3 tools/terminal_run_backend_repro.py \
+  --cwd /path/to/repo \
+  --command "printf 'hello\\n'" \
+  --timeout-seconds 10
+```
+
 To summarize the latest pair quickly:
 
 ```bash

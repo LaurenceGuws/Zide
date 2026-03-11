@@ -155,6 +155,16 @@ pub const TerminalWorkspace = struct {
         return self.tabs.items[self.activeIndex()].session.shouldConfirmClose();
     }
 
+    pub fn activeSessionAlive(self: *const TerminalWorkspace) bool {
+        if (self.tabs.items.len == 0) return false;
+        return self.tabs.items[self.activeIndex()].session.isAlive();
+    }
+
+    pub fn refreshActiveSessionChildExit(self: *TerminalWorkspace) void {
+        if (self.tabs.items.len == 0) return;
+        self.tabs.items[self.activeIndex()].session.refreshChildExit();
+    }
+
     pub fn activeFrameState(self: *const TerminalWorkspace) ActiveFrameState {
         if (self.tabs.items.len == 0) return .{};
         const session = self.tabs.items[self.activeIndex()].session;

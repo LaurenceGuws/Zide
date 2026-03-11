@@ -257,6 +257,10 @@ pub const TerminalSession = struct {
         return session_runtime.poll(self);
     }
 
+    pub fn refreshChildExit(self: *TerminalSession) void {
+        session_runtime.refreshChildExit(self);
+    }
+
     pub fn hasData(self: *TerminalSession) bool {
         return session_runtime.hasData(self);
     }
