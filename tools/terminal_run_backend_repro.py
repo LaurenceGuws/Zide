@@ -12,6 +12,8 @@ import sys
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--binary", default="./zig-out/bin/zide-terminal", help="Path to zide-terminal")
+    parser.add_argument("--rows", type=int, help="Fixed terminal row count for the repro run")
+    parser.add_argument("--cols", type=int, help="Fixed terminal column count for the repro run")
     parser.add_argument("--cwd", help="Working directory for the child command")
     parser.add_argument("--shell", help="Explicit shell/program override")
     parser.add_argument("--command", required=True, help="Terminal child command to run")
@@ -27,6 +29,10 @@ def main() -> int:
         log_path.unlink()
 
     cmd = [args.binary]
+    if args.rows is not None:
+        cmd.extend(["--rows", str(args.rows)])
+    if args.cols is not None:
+        cmd.extend(["--cols", str(args.cols)])
     if args.cwd:
         cmd.extend(["--cwd", args.cwd])
     if args.shell:

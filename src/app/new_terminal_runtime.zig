@@ -59,7 +59,7 @@ pub fn handle(state: anytype) !void {
     } else if (app_modes.ide.isEditorOnly(state.app_mode)) {
         state.active_kind = .editor;
     }
-    const initial_grid = app_terminal_grid.compute(
+    const initial_grid = app_terminal_grid.computeWithEnvOverride(
         layout.terminal.width,
         layout.terminal.height,
         shell.terminalCellWidth(),

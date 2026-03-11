@@ -25,7 +25,7 @@ For manual `nvim` / TUI runs, prefer the scoped redraw log pair now enabled in
 For quick manual terminal-only repros, `zide-terminal` now also supports:
 
 ```bash
-./zig-out/bin/zide-terminal --cwd /path/to/repo --command "nvim -u NONE -N file.zig"
+./zig-out/bin/zide-terminal --rows 40 --cols 120 --cwd /path/to/repo --command "nvim -u NONE -N file.zig"
 ```
 
 And an explicit shell/program override when needed:
@@ -39,6 +39,8 @@ child to exit, and prints the redraw summary:
 
 ```bash
 python3 tools/terminal_run_backend_repro.py \
+  --rows 40 \
+  --cols 120 \
   --cwd /path/to/repo \
   --command "nvim -u NONE -N file.zig"
 ```
