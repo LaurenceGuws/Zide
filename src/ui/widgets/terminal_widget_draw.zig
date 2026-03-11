@@ -392,27 +392,16 @@ pub fn drawPrepared(
                     return outcome;
                 };
 
-                buildBasePartialPlan(
+                _ = buildPartialPlan(
+                    cache,
                     self.partial_draw_rows.items,
                     self.partial_draw_cols_start.items,
                     self.partial_draw_cols_end.items,
-                    view_dirty_rows,
-                    cache.dirty_cols_start.items,
-                    cache.dirty_cols_end.items,
-                    rows,
-                    cols,
                     shifted_rows,
                     viewport_shift_rows,
                     shift_requires_fullwidth_partial,
+                    blink_requires_partial,
                 );
-                if (blink_requires_partial) {
-                    addBlinkRowsToPartialPlan(
-                        cache,
-                        self.partial_draw_rows.items,
-                        self.partial_draw_cols_start.items,
-                        self.partial_draw_cols_end.items,
-                    );
-                }
 
                 r.beginTerminalBatch();
                 for (0..rows) |row| {
@@ -734,8 +723,5 @@ test "full-width partial plan marks every row" {
 }
 const planViewportTextureShift = draw_texture.planViewportTextureShift;
 const chooseTextureUpdatePlan = draw_texture.chooseTextureUpdatePlan;
-const buildBasePartialPlan = draw_texture.buildBasePartialPlan;
-const markPartialPlanRows = draw_texture.markPartialPlanRows;
-const markPartialPlanRow = draw_texture.markPartialPlanRow;
+const buildPartialPlan = draw_texture.buildPartialPlan;
 const markAllRowsFullWidthPartialPlan = draw_texture.markAllRowsFullWidthPartialPlan;
-const addBlinkRowsToPartialPlan = draw_texture.addBlinkRowsToPartialPlan;

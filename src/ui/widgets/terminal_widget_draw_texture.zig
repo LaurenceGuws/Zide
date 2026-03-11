@@ -20,6 +20,40 @@ pub const PartialPlanBounds = struct {
     end_col: usize,
 };
 
+pub fn buildPartialPlan(
+    cache: *const RenderCache,
+    partial_rows: []bool,
+    partial_cols_start: []u16,
+    partial_cols_end: []u16,
+    shifted_rows: usize,
+    viewport_shift_rows: i32,
+    shift_requires_fullwidth_partial: bool,
+    blink_requires_partial: bool,
+) ?PartialPlanBounds {
+    buildBasePartialPlan(
+        partial_rows,
+        partial_cols_start,
+        partial_cols_end,
+        cache.dirty_rows.items,
+        cache.dirty_cols_start.items,
+        cache.dirty_cols_end.items,
+        cache.rows,
+        cache.cols,
+        shifted_rows,
+        viewport_shift_rows,
+        shift_requires_fullwidth_partial,
+    );
+    if (blink_requires_partial) {
+        addBlinkRowsToPartialPlan(
+            cache,
+            partial_rows,
+            partial_cols_start,
+            partial_cols_end,
+        );
+    }
+    return summarizePartialPlan(partial_rows, partial_cols_start, partial_cols_end);
+}
+
 pub fn buildBasePartialPlan(
     partial_rows: []bool,
     partial_cols_start: []u16,
@@ -402,6 +436,68 @@ test "buildBasePartialPlan preserves cursorcolumn row-locality" {
     );
 
     const bounds = summarizePartialPlan(&partial_rows, &partial_cols_start, &partial_cols_end).?;
+    try std.testing.expectEqual(@as(usize, 0), bounds.start_row);
+    try std.testing.expectEqual(@as(usize, 10), bounds.end_row);
+    try std.testing.expectEqual(@as(usize, 4), bounds.start_col);
+    try std.testing.expectEqual(@as(usize, 33), bounds.end_col);
+
+    var row: usize = 0;
+    while (row < 8) : (row += 1) {
+        try std.testing.expectEqual(@as(u16, 6), partial_cols_start[row]);
+        try std.testing.expectEqual(@as(u16, 6), partial_cols_end[row]);
+    }
+    try std.testing.expectEqual(@as(u16, 4), partial_cols_start[8]);
+    try std.testing.expectEqual(@as(u16, 6), partial_cols_end[9]);
+    try std.testing.expectEqual(@as(u16, 33), partial_cols_start[10]);
+    try std.testing.expectEqual(@as(u16, 33), partial_cols_end[10]);
+}
+
+test "buildPartialPlan reproduces cursorcolumn live draw shape" {
+    var cache = RenderCache.init();
+    defer cache.deinit(std.testing.allocator);
+
+    cache.rows = 12;
+    cache.cols = 50;
+    try cache.dirty_rows.resize(std.testing.allocator, 12);
+    try cache.dirty_cols_start.resize(std.testing.allocator, 12);
+    try cache.dirty_cols_end.resize(std.testing.allocator, 12);
+    try cache.cells.resize(std.testing.allocator, 12 * 50);
+
+    @memset(cache.dirty_rows.items, false);
+    @memset(cache.dirty_cols_start.items, 0);
+    @memset(cache.dirty_cols_end.items, 0);
+    @memset(cache.cells.items, std.mem.zeroes(@TypeOf(cache.cells.items[0])));
+
+    inline for (0..8) |row| {
+        cache.dirty_rows.items[row] = true;
+        cache.dirty_cols_start.items[row] = 6;
+        cache.dirty_cols_end.items[row] = 6;
+    }
+    cache.dirty_rows.items[8] = true;
+    cache.dirty_rows.items[9] = true;
+    cache.dirty_cols_start.items[8] = 4;
+    cache.dirty_cols_end.items[8] = 6;
+    cache.dirty_cols_start.items[9] = 4;
+    cache.dirty_cols_end.items[9] = 6;
+    cache.dirty_rows.items[10] = true;
+    cache.dirty_cols_start.items[10] = 33;
+    cache.dirty_cols_end.items[10] = 33;
+
+    var partial_rows = [_]bool{false} ** 12;
+    var partial_cols_start = [_]u16{99} ** 12;
+    var partial_cols_end = [_]u16{0} ** 12;
+
+    const bounds = buildPartialPlan(
+        &cache,
+        &partial_rows,
+        &partial_cols_start,
+        &partial_cols_end,
+        0,
+        0,
+        false,
+        false,
+    ).?;
+
     try std.testing.expectEqual(@as(usize, 0), bounds.start_row);
     try std.testing.expectEqual(@as(usize, 10), bounds.end_row);
     try std.testing.expectEqual(@as(usize, 4), bounds.start_col);
