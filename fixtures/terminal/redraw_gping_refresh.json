@@ -1,0 +1,19 @@
+{
+  "fixture_type": "harness_api",
+  "rows": 6,
+  "cols": 20,
+  "cursor": { "row": 0, "col": 0 },
+  "line_ending": "lf",
+  "baseline_input": "\u001b[2J\u001b[Hgping\u001b[3;1Hhost1 10ms\u001b[4;1Hhost2 20ms",
+  "output_chunks": [
+    "\u001b[2J\u001b[Hgping\u001b[3;1Hhost1 12ms\u001b[4;1Hhost2 18ms"
+  ],
+  "assertions": ["grid", "damage"],
+  "expected_dirty": "partial",
+  "expected_damage": {
+    "start_row": 0,
+    "end_row": 5,
+    "start_col": 0,
+    "end_col": 19
+  }
+}
