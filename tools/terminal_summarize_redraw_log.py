@@ -38,9 +38,16 @@ def parse_fields(message: str) -> dict[str, str]:
     return {match.group("key"): match.group("value") for match in FIELD_RE.finditer(message)}
 
 
-def find_latest_perf(lines: list[str], skip_reasons: set[str]) -> dict[str, str] | None:
-    for line in reversed(lines):
-        match = LOG_LINE_RE.match(line)
+def timestamp_key(timestamp: str) -> tuple[int, int, int, int] | None:
+    parts = [int(part) for part in re.findall(r"\d+", timestamp)]
+    if len(parts) < 4:
+        return None
+    return parts[0], parts[1], parts[2], parts[-1]
+
+
+def find_latest_perf(lines: list[str], skip_reasons: set[str]) -> tuple[int, dict[str, str]] | None:
+    for index in range(len(lines) - 1, -1, -1):
+        match = LOG_LINE_RE.match(lines[index])
         if not match or match.group("tag") != "terminal.ui.perf":
             continue
         record = {
@@ -52,33 +59,54 @@ def find_latest_perf(lines: list[str], skip_reasons: set[str]) -> dict[str, str]
         reason = fields.get("current_reason") or fields.get("full_dirty_reason")
         if reason is not None and reason in skip_reasons:
             continue
-        return record
+        return index, record
     return None
 
 
 def parse_latest_pair(lines: list[str], skip_reasons: set[str]) -> tuple[dict[str, str] | None, dict[str, str] | None]:
-    latest_perf = find_latest_perf(lines, skip_reasons)
-    if latest_perf is None and not skip_reasons:
+    perf_match = find_latest_perf(lines, skip_reasons)
+    latest_perf: dict[str, str] | None = None
+    perf_index: int | None = None
+    if perf_match is not None:
+        perf_index, latest_perf = perf_match
+    elif not skip_reasons:
         latest_perf = parse_latest(lines, "terminal.ui.perf")
+        if latest_perf is not None:
+            for index in range(len(lines) - 1, -1, -1):
+                match = LOG_LINE_RE.match(lines[index])
+                if match and match.group("tag") == "terminal.ui.perf":
+                    perf_index = index
+                    break
 
     latest_redraw: dict[str, str] | None = None
-    if latest_perf is not None:
-        for line in reversed(lines):
-            match = LOG_LINE_RE.match(line)
-            if not match or match.group("tag") != "terminal.ui.redraw":
+    if perf_index is not None:
+        perf_time = timestamp_key(latest_perf["timestamp"]) if latest_perf is not None else None
+        latest_plan_redraw: dict[str, str] | None = None
+        for index in range(perf_index - 1, -1, -1):
+            match = LOG_LINE_RE.match(lines[index])
+            if not match:
                 continue
-            if match.group("ts") > latest_perf["timestamp"]:
+            tag = match.group("tag")
+            if tag == "terminal.ui.perf":
+                break
+            if tag != "terminal.ui.redraw":
                 continue
             candidate = {
                 "timestamp": match.group("ts"),
                 "level": match.group("level"),
                 "message": match.group("msg"),
             }
-            if "partial_plan " in candidate["message"]:
-                latest_redraw = candidate
-                break
+            candidate_time = timestamp_key(candidate["timestamp"])
+            if perf_time is not None and candidate_time is not None:
+                if candidate_time[:3] != perf_time[:3]:
+                    continue
             if latest_redraw is None:
                 latest_redraw = candidate
+            if "partial_plan " in candidate["message"]:
+                latest_plan_redraw = candidate
+                break
+        if latest_plan_redraw is not None:
+            latest_redraw = latest_plan_redraw
     return latest_perf, latest_redraw
 
 
