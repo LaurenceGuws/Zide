@@ -243,6 +243,30 @@ test "repeat guide chunks mark unexpected bottom row dirty today" {
     try std.testing.expectEqual(@as(u16, 9), cache.dirty_cols_end.items[3]);
 }
 
+test "repeat guide second packet keeps raw screen bottom row clean" {
+    const allocator = std.testing.allocator;
+
+    var session = try TerminalSession.init(allocator, 4, 10);
+    defer session.deinit();
+    session.attachExternalTransport();
+
+    try std.testing.expect(try session.enqueueExternalBytes("\x1b[H1| |aaa \x1b[2;1H2| |bbb \x1b[3;1H3| |ccc \x1b[4;1H4| |ddd "));
+    try session.poll();
+    try std.testing.expect(session.acknowledgePresentedGeneration(session.renderCache().generation));
+
+    try std.testing.expect(try session.enqueueExternalBytes("\x1b[H5\x1b[2;1H+>"));
+    try session.poll();
+
+    try std.testing.expect(try session.enqueueExternalBytes("\x1b[1;4H|\x1b[2;4H|"));
+    try session.poll();
+
+    const view = session.activeScreenConst().snapshotView();
+    try std.testing.expect(view.dirty_rows[0]);
+    try std.testing.expect(view.dirty_rows[1]);
+    try std.testing.expect(!view.dirty_rows[2]);
+    try std.testing.expect(!view.dirty_rows[3]);
+}
+
 test "acknowledgePresentedGeneration derives sync dirty retirement from cache" {
     const allocator = std.testing.allocator;
 
