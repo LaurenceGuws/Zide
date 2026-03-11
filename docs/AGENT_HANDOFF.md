@@ -57,7 +57,7 @@
   - the current best real gutter authority is now `redraw_nvim_gutter_width_shift.*`, which stays in alt-screen and publishes rows `0..9`, cols `2..8` around the `99/100` gutter-width transition with no viewport shift
   - replay observed output now also exposes per-row dirty spans, and that row-level read made the width-transition case less suspicious than the aggregate box alone: most rows only touch col `2`, while the wider spans line up with rows the captured PTY delta actually rewrites more broadly
   - current redraw conclusion after that row-span inspection: `redraw_nvim_gutter_width_shift.*` is not a clean one-box publication overshoot target either, so the next meaningful optimization target still needs a fresher real non-clear reproducer
-  - capture tooling now also rejects stripped update chunks that collapse to empty, so mixed `nvim` probes that only reproduce shared startup/teardown noise fail loudly instead of creating fake no-op redraw fixtures
+  - capture tooling now also rejects redraw fixtures whose update chunk collapses to empty, either after shared prefix/suffix stripping or as a raw staged checkpoint, so mixed `nvim` probes that only reproduce timing/startup noise fail loudly instead of creating fake no-op redraw fixtures
   - stale private root-session shims for SGR application and key-mode flag reads are now also gone
   - protocol execution is beginning to split along the same line: pure engine-side helpers now live under `terminal_core_protocol.zig`, while session-coupled protocol behavior remains in `session_protocol.zig`
   - parser/control dispatch entry helpers now also live under `terminal_core_dispatch.zig`; parser byte feed still stays session-owned because locking and publication are not split yet

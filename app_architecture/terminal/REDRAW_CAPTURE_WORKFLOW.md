@@ -244,6 +244,7 @@ Important guardrail:
 
 - fixture generation now fails if prefix/suffix stripping would erase an update
   chunk completely
+- fixture generation also fails if an unstripped update chunk is empty
 - treat that as evidence that the staged capture timing is wrong for that repro,
   not as a valid "no-op redraw" authority
 
