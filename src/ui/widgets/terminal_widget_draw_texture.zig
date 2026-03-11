@@ -13,6 +13,13 @@ pub const TextureUpdatePlan = struct {
     needs_partial: bool,
 };
 
+pub const PartialPlanBounds = struct {
+    start_row: usize,
+    end_row: usize,
+    start_col: usize,
+    end_col: usize,
+};
+
 pub fn planViewportTextureShift(
     texture_shift_enabled: bool,
     gen_changed: bool,
@@ -111,6 +118,41 @@ pub fn markAllRowsFullWidthPartialPlan(
         partial_cols_start[row] = 0;
         partial_cols_end[row] = @intCast(cols - 1);
     }
+}
+
+pub fn summarizePartialPlan(
+    partial_rows: []const bool,
+    partial_cols_start: []const u16,
+    partial_cols_end: []const u16,
+) ?PartialPlanBounds {
+    var first_row: ?usize = null;
+    var last_row: usize = 0;
+    var min_start: usize = 0;
+    var max_end: usize = 0;
+
+    for (partial_rows, 0..) |dirty, row| {
+        if (!dirty) continue;
+        if (first_row == null) {
+            first_row = row;
+            last_row = row;
+            min_start = partial_cols_start[row];
+            max_end = partial_cols_end[row];
+            continue;
+        }
+        last_row = row;
+        min_start = @min(min_start, partial_cols_start[row]);
+        max_end = @max(max_end, partial_cols_end[row]);
+    }
+
+    if (first_row) |start_row| {
+        return .{
+            .start_row = start_row,
+            .end_row = last_row,
+            .start_col = min_start,
+            .end_col = max_end,
+        };
+    }
+    return null;
 }
 
 pub fn addBlinkRowsToPartialPlan(
@@ -242,4 +284,31 @@ test "markPartialPlanRow preserves cursorcolumn row spans" {
     try std.testing.expectEqual(@as(u16, 6), partial_cols_end[9]);
     try std.testing.expectEqual(@as(u16, 33), partial_cols_start[10]);
     try std.testing.expectEqual(@as(u16, 33), partial_cols_end[10]);
+}
+
+test "markPartialPlanRow narrows cursorcolumn aggregate bounds" {
+    var partial_rows = [_]bool{false} ** 12;
+    var partial_cols_start = [_]u16{99} ** 12;
+    var partial_cols_end = [_]u16{0} ** 12;
+
+    inline for (0..8) |row| {
+        markPartialPlanRow(&partial_rows, &partial_cols_start, &partial_cols_end, row, 6, 6);
+    }
+    markPartialPlanRow(&partial_rows, &partial_cols_start, &partial_cols_end, 8, 4, 6);
+    markPartialPlanRow(&partial_rows, &partial_cols_start, &partial_cols_end, 9, 4, 6);
+    markPartialPlanRow(&partial_rows, &partial_cols_start, &partial_cols_end, 10, 33, 33);
+
+    const bounds = summarizePartialPlan(&partial_rows, &partial_cols_start, &partial_cols_end).?;
+    try std.testing.expectEqual(@as(usize, 0), bounds.start_row);
+    try std.testing.expectEqual(@as(usize, 10), bounds.end_row);
+    try std.testing.expectEqual(@as(usize, 4), bounds.start_col);
+    try std.testing.expectEqual(@as(usize, 33), bounds.end_col);
+
+    // The important improvement is row-locality, not the union box itself:
+    // rows 0..7 no longer inherit rows 8..10's wider columns.
+    var row: usize = 0;
+    while (row < 8) : (row += 1) {
+        try std.testing.expectEqual(@as(u16, 6), partial_cols_start[row]);
+        try std.testing.expectEqual(@as(u16, 6), partial_cols_end[row]);
+    }
 }

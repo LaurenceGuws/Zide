@@ -160,6 +160,7 @@ items:
       - That makes `redraw_nvim_guides_cursorcolumn_move.*` the next honest optimization target, but on the publication/render-consumption boundary rather than in the basic row-local dirty-span detection itself
       - First UI-side narrowing cut is now landed too: non-blink partial redraw rows no longer automatically widen to adjacent rows in `terminal_widget_draw.zig`; blink-driven expansion still uses the old adjacent-row helper
       - Important scope note: the replay fixture's observed `damage` box does not change from that cut, because replay authority currently reflects backend publication, not renderer-side partial-plan expansion; this change is locked by the new unit tests around `markPartialPlanRow(...)` vs `markPartialPlanRows(...)`
+      - UI-side partial-plan tests now also lock the sharper result explicitly: the aggregate union bounds for the `cursorcolumn` case remain `rows 0..10 cols 4..33`, but rows `0..7` no longer inherit rows `8..10`'s wider columns, which is the actual renderer-side improvement we were after
 
   - id: VTCORE-06
     title: Keep input encoding as a peer subsystem
