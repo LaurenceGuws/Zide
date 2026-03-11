@@ -1,4 +1,5 @@
 const std = @import("std");
+const app_logger = @import("../../app_logger.zig");
 const terminal_widget_draw = @import("../../ui/widgets/terminal_widget_draw.zig");
 
 const TerminalDrawLatencyMetrics = terminal_widget_draw.FrameLatencyMetrics;
@@ -140,6 +141,38 @@ pub fn sleepDurationWithPolicy(policy: SleepPolicy, state: anytype, now: f64, sn
         policy.medium_idle_sleep_s
     else
         policy.deep_idle_sleep_s;
+}
+
+pub fn logFramePacing(state: anytype, now: f64, snapshot: Snapshot, drew: bool, draw_ms: f64, sleep_s: ?f64) void {
+    const log = app_logger.logger("terminal.frame");
+    if (!log.enabled_file and !log.enabled_console) return;
+
+    const pacing = &state.terminal_frame_pacing;
+    const published_delta = snapshot.published_generation -| pacing.last_drawn_generation;
+    const current_delta = snapshot.current_generation -| snapshot.published_generation;
+    const draw_gap_ms = if (pacing.last_draw_time > 0) (now - pacing.last_draw_time) * 1000.0 else 0.0;
+
+    log.logf(
+        .info,
+        "drew={d} draw_ms={d:.2} draw_gap_ms={d:.2} sleep_ms={d:.2} redraw_pending={d} parse_backlog={d} output_pressure={d} idle_frames={d} gen={d}/{d}/{d} delta={d}/{d}",
+        .{
+            @intFromBool(drew),
+            draw_ms,
+            draw_gap_ms,
+            if (sleep_s) |v| v * 1000.0 else 0.0,
+            @intFromBool(snapshot.redraw_pending),
+            @intFromBool(snapshot.parse_backlog),
+            @intFromBool(snapshot.output_pressure),
+            pacing.idle_frames,
+            pacing.last_drawn_generation,
+            snapshot.published_generation,
+            snapshot.current_generation,
+            published_delta,
+            current_delta,
+        },
+    );
+
+    if (drew) pacing.last_draw_time = now;
 }
 
 pub fn logInputLatency(state: anytype, poll_ms: f64, build_ms: f64, update_ms: f64, draw_ms: f64, term_ctx: LatencyContext) void {
