@@ -74,6 +74,24 @@ That writes:
 The tool intentionally leaves `expected_damage` as a placeholder. Fill it in
 from the observed current backend behavior first, then update the golden.
 
+To record the current observed publication contract for a fixture:
+
+```bash
+zig build test-terminal-replay -- \
+  --fixture redraw_nvim_real_sample \
+  --observed-file zig-cache/terminal-replay/redraw_nvim_real_sample.observed.json
+```
+
+That writes a clean JSON record of:
+
+- `dirty`
+- `damage`
+- `viewport_shift_rows`
+- `viewport_shift_exposed_only`
+
+Use that file to fill the fixture's `expected_dirty`, `expected_damage`, and
+viewport-shift assertions before updating goldens.
+
 If you already have a staged capture manifest, rebuild from it directly:
 
 ```bash
