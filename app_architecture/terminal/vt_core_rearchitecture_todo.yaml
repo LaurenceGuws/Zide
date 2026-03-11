@@ -158,6 +158,8 @@ items:
       - Cleaner startup-configured cursorcolumn-only authority now also exists as `redraw_nvim_guides_cursorcolumn_move.*`; this is the sharpest mixed redraw evidence so far because its row spans stay narrow (`rows 0..7 col 6`, `rows 8..9 cols 4..6`, `row 10 col 33`) while the aggregate damage box still widens to `rows 0..10 cols 4..33`
       - Code read after that fixture now sharpens the likely target further: `view_cache` row spans are already narrow, and the aggregate `damage` box is mostly a coarse union summary; the next suspicious widening point is UI-side partial draw planning, where `markPartialPlanRows(...)` in `src/ui/widgets/terminal_widget_draw_texture.zig` expands each dirty row to adjacent rows
       - That makes `redraw_nvim_guides_cursorcolumn_move.*` the next honest optimization target, but on the publication/render-consumption boundary rather than in the basic row-local dirty-span detection itself
+      - First UI-side narrowing cut is now landed too: non-blink partial redraw rows no longer automatically widen to adjacent rows in `terminal_widget_draw.zig`; blink-driven expansion still uses the old adjacent-row helper
+      - Important scope note: the replay fixture's observed `damage` box does not change from that cut, because replay authority currently reflects backend publication, not renderer-side partial-plan expansion; this change is locked by the new unit tests around `markPartialPlanRow(...)` vs `markPartialPlanRows(...)`
 
   - id: VTCORE-06
     title: Keep input encoding as a peer subsystem
