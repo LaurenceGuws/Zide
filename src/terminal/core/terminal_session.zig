@@ -102,6 +102,22 @@ pub fn debugScrollUp(self: *TerminalSession) void {
     session_debug.debugScrollUp(self);
 }
 
+pub fn debugSetScrollOffset(self: *TerminalSession, offset: usize) void {
+    session_debug.debugSetScrollOffset(self, offset);
+}
+
+pub fn debugSetScrollbackCell(self: *TerminalSession, row: usize, col: usize, codepoint: u32) void {
+    session_debug.debugSetScrollbackCell(self, row, col, codepoint);
+}
+
+pub fn debugPushScrollbackRow(self: *TerminalSession, text: []const u8) void {
+    session_debug.debugPushScrollbackRow(self, text);
+}
+
+pub fn debugSetGridRow(self: *TerminalSession, row_index: usize, text: []const u8) void {
+    session_debug.debugSetGridRow(self, row_index, text);
+}
+
 /// Minimal terminal stub so the UI panel stays wired while backend is removed.
 pub const TerminalSession = struct {
     allocator: std.mem.Allocator,

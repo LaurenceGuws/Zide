@@ -13,7 +13,10 @@ pub fn clearPublishedDamageIfGeneration(self: anytype, expected_generation: u64,
 }
 
 pub fn notePresentedGeneration(self: anytype, generation: u64) void {
-    self.presented_generation.store(generation, .release);
+    var current = self.presented_generation.load(.acquire);
+    while (generation > current) {
+        current = self.presented_generation.cmpxchgWeak(current, generation, .acq_rel, .acquire) orelse return;
+    }
 }
 
 pub fn acknowledgePresentedGeneration(self: anytype, generation: u64) bool {

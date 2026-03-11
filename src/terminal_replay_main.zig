@@ -348,6 +348,13 @@ fn writeObservedFixtureState(
     } else {
         try out.writeAll("null");
     }
+    try out.print(",\"generation\":{d}", .{observed.generation});
+    try out.writeAll(",\"baseline_generation\":");
+    if (observed.baseline_generation) |value| {
+        try out.print("{d}", .{value});
+    } else {
+        try out.writeAll("null");
+    }
     try out.writeAll(",\"history_len\":");
     if (observed.history_len) |value| {
         try out.print("{d}", .{value});

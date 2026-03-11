@@ -1,0 +1,23 @@
+TERM_SNAPSHOT v1
+size: 2x4
+cursor: r=1 c=0 visible=1 style=block-blink
+alt: 0
+scrollback: count=2 view_offset=2
+title: "Terminal"
+cwd: ""
+clipboard: ""
+selection: none
+grid:
+row0: . . . .
+row1: . . . .
+attrs:
+row0: cols 0-3 fg=default bg=default bold=0 rev=0 ul=0 ulc=default link=0
+row1: cols 0-3 fg=default bg=default bold=0 rev=0 ul=0 ulc=default link=0
+links: none
+scrollback:
+line0: "Z" "B" "C" "D"
+line1: "E" "F" "G" "H"
+kitty:
+images=0 placements=0
+image ids: []
+placement ids: []
