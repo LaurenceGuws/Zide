@@ -71,8 +71,9 @@ That writes:
 - `fixtures/terminal/redraw_nvim_real_sample.json`
 - `fixtures/terminal/redraw_nvim_real_sample.vt`
 
-The tool intentionally leaves `expected_damage` as a placeholder. Fill it in
-from the observed current backend behavior first, then update the golden.
+Without an observed-state file, the tool leaves `expected_damage` as a
+placeholder. Fill it in from the observed current backend behavior first, then
+update the golden.
 
 To record the current observed publication contract for a fixture:
 
@@ -91,6 +92,16 @@ That writes a clean JSON record of:
 
 Use that file to fill the fixture's `expected_dirty`, `expected_damage`, and
 viewport-shift assertions before updating goldens.
+
+You can also feed the observed JSON back into the fixture generator directly:
+
+```bash
+python3 tools/terminal_make_redraw_fixture.py \
+  --manifest-file /tmp/zide-redraw-captures/redraw_nvim_real_sample/manifest.json \
+  --observed-file zig-cache/terminal-replay/redraw_nvim_real_sample.observed.json
+```
+
+That rewrites the fixture with the observed redraw contract populated.
 
 If you already have a staged capture manifest, rebuild from it directly:
 
@@ -111,6 +122,7 @@ python3 tools/terminal_capture_redraw_fixture.py \
   --cols 120 \
   --cwd /path/to/project \
   --no-stdout \
+  --hydrate-observed \
   --baseline-shell 'nvim' \
   --update-shell 'nvim'
 ```
@@ -120,6 +132,7 @@ That:
 - records the baseline capture
 - records each update capture
 - writes the harness-api fixture skeleton
+- optionally runs the replay runner and writes the observed redraw contract back into the fixture
 - keeps intermediate capture files under `/tmp/zide-redraw-captures/<name>/`
 - writes a `manifest.json` beside those captures so the exact command/cwd/input recipe stays attached to the reproducer
 - is the preferred path when capturing a fresh live `nvim`/TUI redraw repro
@@ -129,6 +142,11 @@ Useful options:
 - `--cwd` to run every capture phase in the same project directory
 - `--no-stdout` to keep capture quiet while still recording raw PTY bytes
 - `--baseline-stdin-file` / `--update-stdin-file` for scripted keystroke phases
+- `--hydrate-observed` to run replay immediately and fill `expected_dirty`, `expected_damage`, and viewport-shift assertions from the current backend output
+
+Current limitation:
+
+- `--hydrate-observed` currently requires `--fixture-dir fixtures/terminal`, because the replay build step only discovers fixtures from the repo fixture root.
 
 ## Authoring Rules
 

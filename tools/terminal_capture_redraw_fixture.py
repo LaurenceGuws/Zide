@@ -4,6 +4,7 @@ Drive the redraw-capture workflow end-to-end:
 - capture a baseline PTY session
 - capture one or more update PTY sessions
 - emit a harness_api fixture skeleton
+- optionally populate expected redraw fields from the replay runner
 """
 
 from __future__ import annotations
@@ -25,6 +26,11 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--line-ending", default="lf", choices=("lf", "crlf", "cr"))
     parser.add_argument("--fixture-dir", default="fixtures/terminal")
     parser.add_argument("--capture-dir", default="/tmp/zide-redraw-captures")
+    parser.add_argument(
+        "--hydrate-observed",
+        action="store_true",
+        help="Run terminal replay after fixture generation and hydrate expected redraw fields from observed output",
+    )
     parser.add_argument("--cwd", help="Optional working directory for all PTY capture phases")
     parser.add_argument(
         "--no-stdout",
@@ -89,6 +95,9 @@ def run_capture(
 
 def main() -> int:
     args = parse_args()
+    if args.hydrate_observed and Path(args.fixture_dir) != Path("fixtures/terminal"):
+        raise SystemExit("--hydrate-observed currently requires --fixture-dir fixtures/terminal")
+
     update_cmds = list(args.update_cmd or [])
     update_cmds.extend([["bash", "-lc", cmd] for cmd in args.update_shell])
     baseline_cmd = args.baseline_cmd or ["bash", "-lc", args.baseline_shell]
@@ -155,8 +164,39 @@ def main() -> int:
         argv.extend(["--update-file", str(update_file)])
     subprocess.run(argv, check=True)
 
+    if args.hydrate_observed:
+        observed_file = capture_dir / "observed.json"
+        subprocess.run(
+            [
+                "zig",
+                "build",
+                "test-terminal-replay",
+                "--",
+                "--fixture",
+                args.name,
+                "--observed-file",
+                str(observed_file),
+            ],
+            check=True,
+        )
+        subprocess.run(
+            [
+                sys.executable,
+                "tools/terminal_make_redraw_fixture.py",
+                "--manifest-file",
+                str(manifest_path),
+                "--fixture-dir",
+                args.fixture_dir,
+                "--observed-file",
+                str(observed_file),
+            ],
+            check=True,
+        )
+
     print(f"captures stored in {capture_dir}")
     print(f"manifest written to {manifest_path}")
+    if args.hydrate_observed:
+        print(f"observed redraw state written to {capture_dir / 'observed.json'}")
     return 0
 
 
