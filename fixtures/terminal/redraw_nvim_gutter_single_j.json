@@ -1,0 +1,27 @@
+{
+  "fixture_type": "harness_api",
+  "rows": 12,
+  "cols": 40,
+  "cursor": {
+    "row": 0,
+    "col": 0
+  },
+  "line_ending": "lf",
+  "baseline_input": "\u001b[?1049h\u001b[22;0;0t\u001b[?1h\u001b=\u001b[H\u001b[2J\u001b[?2004h\u001b[?2026$p\u001b[?2027$p\u001b[?2031$p\u001b[?2048$p\u001b[0m\u001b[4:3m\u001bP$qm\u001b\\\u001b[?u\u001b[c\u001b[?25h\u001b]11;?\u0007\u001bP+q5463;524742;73657472676266;73657472676262\u001b\\\u001b[0m\u001b[48;2;1;2;3m\u001bP$qm\u001b\\\u001b[?25l\u001b(B\u001b[m\u001b[H                                        \n                                        \n                                        \n                                        \n                                        \n                                        \n                                        \n                                        \n                                        \n                                        \n                                        \n                                        \u001b[H\u001b(B\u001b[m1   001 aaa bbb ccc\u001b[K\n  1 002 aaa bbb ccc\u001b[K\n  2 003 aaa bbb ccc\u001b[K\n  3 004 aaa bbb ccc\u001b[K\n  4 005 aaa bbb ccc\u001b[K\n  5 006 aaa bbb ccc\u001b[K\n  6 007 aaa bbb ccc\u001b[K\n  7 008 aaa bbb ccc\u001b[K\n  8 009 aaa bbb ccc\u001b[K\n  9 010 aaa bbb ccc\u001b[K\n\u001b(B\u001b[0;7m/tmp/zide-nvim-gutter-clean.txt         \u001b(B\u001b[m\n\u001b[J\u001b[2 q\u001b[2 q\u001b[?1002h\u001b[?1006h\u001b[H1   001 aaa bbb ccc\u001b[K\n  1 002 aaa bbb ccc\u001b[K\n  2 003 aaa bbb ccc\u001b[K\n  3 004 aaa bbb ccc\u001b[K\n  4 005 aaa bbb ccc\u001b[K\n  5 006 aaa bbb ccc\u001b[K\n  6 007 aaa bbb ccc\u001b[K\n  7 008 aaa bbb ccc\u001b[K\n  8 009 aaa bbb ccc\u001b[K\n  9 010 aaa bbb ccc\u001b[K\n\u001b(B\u001b[0;7m/tmp/zide-nvim-gutter-clean.txt         \u001b(B\u001b[m\n\u001b[J\u001b[1;5H\u001b[?25h\u001b[?25l\u001b[?1004h\u001b[?25h",
+  "output_chunks": [
+    "\u001b[?25l\u001b[H  1\n2  \u001b[3;3H1\u001b[4;3H2\u001b[5;3H3\u001b[6;3H4\u001b[7;3H5\u001b[8;3H6\u001b[9;3H7\u001b[10;3H8\u001b[2;5H\u001b[?25h"
+  ],
+  "assertions": [
+    "grid",
+    "damage"
+  ],
+  "expected_dirty": "partial",
+  "expected_damage": {
+    "start_row": 0,
+    "end_row": 9,
+    "start_col": 0,
+    "end_col": 5
+  },
+  "expected_viewport_shift_rows": 0,
+  "expected_viewport_shift_exposed_only": false
+}

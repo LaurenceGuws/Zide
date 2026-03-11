@@ -146,6 +146,8 @@ items:
       - Current observed contract for `redraw_nvim_gutter_clean_move_down.*` is suspicious enough to be the next real redraw target: partial dirty with full-width bottom-row damage plus `viewport_shift_rows=1` / `exposed_only=true` after a small downward gutter move
       - Replay observed-state output now also exposes `history_len`, `total_lines`, and `scroll_offset`; for `redraw_nvim_gutter_clean_move_down.*` the current observed values are `history_len=46`, `total_lines=58`, `scroll_offset=0`, which should make the next shift-classification investigation concrete instead of guesswork
       - Direct plan-level regression now also locks that same classification in `view_cache_plan.zig`: with the observed `nvim` values (`history_len=46`, `active_history_len=45`, `total_lines=58`, `active_total_lines=57`, `rows=12`, `scroll_offset=0`) the current backend deliberately classifies the move as a live scroll shift, so the next step is deciding whether that rule is semantically right or too permissive
+      - Adjacent comparator authority is now also landed as `redraw_nvim_gutter_single_j.*`; that capture stays in alt-screen with `history_len=0`, `total_lines=12`, `scroll_offset=0`, and publishes narrow damage at rows `0..9`, cols `0..5` with no viewport shift
+      - Current conclusion: not every `nvim` gutter move is being misclassified as a scroll shift; the suspicious `clean_move_down` authority needs to be compared against the narrower `single_j` authority before changing `view_cache_plan`
 
   - id: VTCORE-06
     title: Keep input encoding as a peer subsystem

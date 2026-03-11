@@ -1,0 +1,46 @@
+TERM_SNAPSHOT v1
+size: 12x40
+cursor: r=1 c=4 visible=1 style=block-steady
+alt: 1
+scrollback: count=0 view_offset=0
+focus_reporting: 1
+title: "Terminal"
+cwd: ""
+clipboard: ""
+selection: none
+grid:
+row0: " " " " "1" . . . . . . . . . . " " " " "7" " " "0" "0" "8" " " "a" "a" "a" " " "b" "b" "b" " " "c" "c" "c" . . . . " " " " "4" " "
+row1: "0" "0" "5" "2" " " " " "a" " " "b" "b" "b" " " "c" "c" "c" . . . . . . . . . . . . . . . . . . . . . . . . .
+row2: "a" "a" "1" " " "b" "b" "b" " " "c" "c" "c" . . . . " " " " "5" " " "0" "0" "6" " " "a" "a" "a" " " "b" "b" "b" " " "c" "c" "c" . . . . . .
+row3: . . "2" . . . . . . . . " " " " "9" " " "0" "1" "0" " " "a" "a" "a" " " "b" "b" "b" " " "c" "c" "c" . . . . " " " " "6" " " "0" "0"
+row4: "7" " " "3" "a" "a" " " "b" "b" "b" " " "c" "c" "c" . . . . . . . . . . . . . . . . . . . . . . . . . . .
+row5: "n" "v" "4" "m" "-" "g" "u" "t" "t" "e" "r" "-" "c" " " " " "7" " " "0" "0" "8" " " "a" "a" "a" " " "b" "b" "b" " " "c" "c" "c" . . . . . . . .
+row6: . . "5" . . . . . . . . . . . . . . . . . . . . . . . . . . . . . " " " " "8" " " "0" "0" "9" " "
+row7: "a" "a" "6" " " "b" "b" "b" " " "c" "c" "c" . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+row8: . . "7" . . . . . . . . " " " " "9" " " "0" "1" "0" " " "a" "a" "a" " " "b" "b" "b" " " "c" "c" "c" . . . . . . . . . .
+row9: . . "8" . . . . . . . . . . . . . . . . . . . . . . . . . . . "/" "t" "m" "p" "/" "z" "i" "d" "e" "-"
+row10: "n" "v" "i" "m" "-" "g" "u" "t" "t" "e" "r" "-" "c" "l" "e" "a" "n" "." "t" "x" "t" " " " " " " " " " " " " " " " " " " . . . . . . . . . .
+row11: . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+attrs:
+row0: cols 0-39 fg=default bg=default bold=0 rev=0 ul=0 ulc=default link=0
+row1: cols 0-39 fg=default bg=default bold=0 rev=0 ul=0 ulc=default link=0
+row2: cols 0-39 fg=default bg=default bold=0 rev=0 ul=0 ulc=default link=0
+row3: cols 0-39 fg=default bg=default bold=0 rev=0 ul=0 ulc=default link=0
+row4: cols 0-39 fg=default bg=default bold=0 rev=0 ul=0 ulc=default link=0
+row5: cols 0-1 fg=default bg=default bold=0 rev=1 ul=0 ulc=default link=0
+row5: cols 2-2 fg=default bg=default bold=0 rev=0 ul=0 ulc=default link=0
+row5: cols 3-12 fg=default bg=default bold=0 rev=1 ul=0 ulc=default link=0
+row5: cols 13-39 fg=default bg=default bold=0 rev=0 ul=0 ulc=default link=0
+row6: cols 0-39 fg=default bg=default bold=0 rev=0 ul=0 ulc=default link=0
+row7: cols 0-39 fg=default bg=default bold=0 rev=0 ul=0 ulc=default link=0
+row8: cols 0-39 fg=default bg=default bold=0 rev=0 ul=0 ulc=default link=0
+row9: cols 0-29 fg=default bg=default bold=0 rev=0 ul=0 ulc=default link=0
+row9: cols 30-39 fg=default bg=default bold=0 rev=1 ul=0 ulc=default link=0
+row10: cols 0-39 fg=default bg=default bold=0 rev=1 ul=0 ulc=default link=0
+row11: cols 0-39 fg=default bg=default bold=0 rev=0 ul=0 ulc=default link=0
+links: none
+scrollback: none
+kitty:
+images=0 placements=0
+image ids: []
+placement ids: []
