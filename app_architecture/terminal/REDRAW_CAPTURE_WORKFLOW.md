@@ -45,6 +45,10 @@ python3 tools/terminal_run_backend_repro.py \
   --command "nvim -u NONE -N file.zig"
 ```
 
+The backend wrapper now really honors both `--cwd` and fixed `--rows/--cols`
+all the way through startup and deferred terminal resize. That makes it safe to
+use as backend authority instead of asking for manual backend repro loops.
+
 For more complex scripted commands, use a command file instead of shell-quoting
 everything inline, and optionally write the parsed summary as JSON:
 
@@ -85,6 +89,14 @@ python3 tools/terminal_drive_tty.py \
 
 That keeps the backend repro loop fully automated without needing manual input
 in the terminal window.
+
+Current baseline from the automated `nvim` loop:
+
+- long-line files can still produce broad partial frames, and those should not
+  be assumed to be renderer bugs by default
+- a short-line `nvim -u NONE -N '+set number relativenumber cursorcolumn'`
+  sample now stays on narrow one-row gutter updates, which is the current
+  control case for the backend loop
 
 If the child command is expected to be short-lived, the wrapper now also has a
 hard timeout so backend repro runs do not hang indefinitely:

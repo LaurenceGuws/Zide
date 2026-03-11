@@ -21,7 +21,20 @@ const LaunchCwd = struct {
     }
 };
 
-fn fallbackDefaultStartLocation(state: anytype) LaunchCwd {
+fn launchCwdFromEnvOverride(state: anytype) !LaunchCwd {
+    const cwd_c = std.c.getenv("ZIDE_LAUNCH_CWD") orelse return .{};
+    const cwd = std.mem.sliceTo(cwd_c, 0);
+    if (cwd.len == 0) return .{};
+    const owned = try state.allocator.dupe(u8, cwd);
+    return .{
+        .value = owned,
+        .owned = owned,
+    };
+}
+
+fn fallbackDefaultStartLocation(state: anytype) !LaunchCwd {
+    const env_override = try launchCwdFromEnvOverride(state);
+    if (env_override.value != null) return env_override;
     return .{
         .value = if (state.terminal_default_start_location) |path|
             if (path.len > 0) path else null
@@ -31,6 +44,8 @@ fn fallbackDefaultStartLocation(state: anytype) LaunchCwd {
 }
 
 fn launchCwdForWorkspaceNewTab(state: anytype, workspace: *TerminalWorkspace) !LaunchCwd {
+    const env_override = try launchCwdFromEnvOverride(state);
+    if (env_override.value != null) return env_override;
     switch (state.terminal_new_tab_start_location) {
         .default => return fallbackDefaultStartLocation(state),
         .current => {
@@ -108,7 +123,7 @@ pub fn handle(state: anytype) !void {
         .cursor_style = state.terminal_cursor_style,
     });
     app_terminal_theme_apply.setSessionPalette(term, theme);
-    var launch_cwd = fallbackDefaultStartLocation(state);
+    var launch_cwd = try fallbackDefaultStartLocation(state);
     defer launch_cwd.deinit(state.allocator);
     try app_terminal_session_bootstrap.startSessionWithShellCellSize(term, shell, launch_cwd.value);
     try state.terminals.append(state.allocator, term);

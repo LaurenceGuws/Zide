@@ -229,7 +229,7 @@ pub fn handle(state: anytype, shell: *Shell, batch: *input_types.InputBatch, now
                         inner_state.terminal_height = new_height;
                         if (inner_state.terminals.items.len > 0) {
                             const term = inner_state.terminals.items[0];
-                            const grid = app_terminal_grid.compute(
+                            const grid = app_terminal_grid.computeWithEnvOverride(
                                 width,
                                 inner_state.terminal_height,
                                 inner_state.shell.terminalCellWidth(),
