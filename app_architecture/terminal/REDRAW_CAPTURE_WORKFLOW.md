@@ -61,6 +61,31 @@ The wrapper now treats "no interesting redraw frames" as a successful backend
 run and can still emit an empty JSON summary, which keeps automation honest
 without failing the whole repro loop on pure lifecycle churn.
 
+For long-lived interactive apps that need delayed keystrokes, use the TTY
+driver helper inside the terminal child command:
+
+```bash
+python3 tools/terminal_run_backend_repro.py \
+  --rows 34 \
+  --cols 149 \
+  --cwd /path/to/repo \
+  --command-file /tmp/zide-repro-command.sh
+```
+
+Where `/tmp/zide-repro-command.sh` contains something like:
+
+```bash
+python3 tools/terminal_drive_tty.py \
+  --step 0.40:text:j \
+  --step 0.80:text:k \
+  --step 1.20:text::q!\\r \
+  -- \
+  nvim -u NONE -N '+set number relativenumber cursorcolumn' src/main.zig
+```
+
+That keeps the backend repro loop fully automated without needing manual input
+in the terminal window.
+
 If the child command is expected to be short-lived, the wrapper now also has a
 hard timeout so backend repro runs do not hang indefinitely:
 
