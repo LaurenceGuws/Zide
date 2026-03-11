@@ -102,6 +102,18 @@ pub fn parseThreadMain(session: anytype) void {
         session.io_mutex.unlock();
 
         if (queued_bytes == 0) {
+            if (session.parse_bytes_since_publish > 0 and pending_offset == null) {
+                const publish_lock_start_ns = std.time.nanoTimestamp();
+                session.state_mutex.lock();
+                @import("view_cache.zig").updateViewCacheNoLock(session, session.output_generation.load(.acquire), session.core.history.scrollOffset());
+                session.state_mutex.unlock();
+                _ = std.time.nanoTimestamp() - publish_lock_start_ns;
+                session.parse_publishes_since_log += 1;
+                session.parse_bytes_since_log += session.parse_bytes_since_publish;
+                session.parse_bytes_since_publish = 0;
+                session.last_parse_publish_ms = std.time.milliTimestamp();
+                session.output_pending.store(true, .release);
+            }
             if (pending_offset) |offset| {
                 session.state_mutex.lock();
                 @import("view_cache.zig").updateViewCacheNoLock(session, session.output_generation.load(.acquire), offset);
@@ -173,31 +185,52 @@ pub fn parseThreadMain(session: anytype) void {
             _ = session.output_generation.fetchAdd(1, .acq_rel);
         }
 
-        if (had_data or pending_offset != null) {
-            const target_offset = pending_offset orelse session.core.history.scrollOffset();
-            const publish_lock_start_ns = std.time.nanoTimestamp();
-            session.state_mutex.lock();
-            @import("view_cache.zig").updateViewCacheNoLock(session, session.output_generation.load(.acquire), target_offset);
-            session.state_mutex.unlock();
-            publish_lock_hold_ns += std.time.nanoTimestamp() - publish_lock_start_ns;
-            session.output_pending.store(true, .release);
-            if (presentation_backlog) {
-                std.Thread.yield() catch {};
-            }
-        }
-
         if (processed > 0) {
             const end_ms = std.time.milliTimestamp();
+            session.parse_bytes_since_publish += processed;
+            if (had_data or pending_offset != null) {
+                const backlog_publish_max_ms: i64 = if (input_pressure) 2 else 8;
+                const backlog_publish_min_bytes: usize = if (input_pressure) 32 * 1024 else 128 * 1024;
+                const elapsed_since_publish = if (session.last_parse_publish_ms == 0)
+                    backlog_publish_max_ms
+                else
+                    end_ms - session.last_parse_publish_ms;
+                const drained_available = queued_bytes > 0 and processed >= queued_bytes;
+                const should_publish = pending_offset != null or !presentation_backlog or drained_available or session.parse_bytes_since_publish >= backlog_publish_min_bytes or elapsed_since_publish >= backlog_publish_max_ms;
+                if (should_publish) {
+                    const target_offset = pending_offset orelse session.core.history.scrollOffset();
+                    const publish_lock_start_ns = std.time.nanoTimestamp();
+                    session.state_mutex.lock();
+                    @import("view_cache.zig").updateViewCacheNoLock(session, session.output_generation.load(.acquire), target_offset);
+                    session.state_mutex.unlock();
+                    publish_lock_hold_ns += std.time.nanoTimestamp() - publish_lock_start_ns;
+                    session.parse_publishes_since_log += 1;
+                    session.parse_bytes_since_log += session.parse_bytes_since_publish;
+                    session.parse_bytes_since_publish = 0;
+                    session.last_parse_publish_ms = end_ms;
+                    session.output_pending.store(true, .release);
+                    if (presentation_backlog) {
+                        std.Thread.yield() catch {};
+                    }
+                }
+            }
+
             const elapsed_ms = @as(f64, @floatFromInt(end_ms - start_ms));
-            const should_log = elapsed_ms >= 8.0 or queued_bytes >= 1024 * 1024 or processed >= 512 * 1024;
+            const should_log = elapsed_ms >= 2.0 or queued_bytes >= 128 * 1024 or processed >= 64 * 1024;
             if (should_log and (end_ms - session.last_parse_log_ms) >= 100) {
+                const publishes = session.parse_publishes_since_log;
+                const publish_bytes = session.parse_bytes_since_log;
+                session.parse_publishes_since_log = 0;
+                session.parse_bytes_since_log = 0;
                 session.last_parse_log_ms = end_ms;
-                perf_log.logf(.info, "parse_ms={d:.2} parse_lock_ms={d:.2} publish_lock_ms={d:.2} bytes={d} queued_bytes={d} input_pressure={any} presentation_backlog={any}", .{
+                perf_log.logf(.info, "parse_ms={d:.2} parse_lock_ms={d:.2} publish_lock_ms={d:.2} bytes={d} queued_bytes={d} publishes={d} avg_publish_bytes={d} input_pressure={any} presentation_backlog={any}", .{
                     elapsed_ms,
                     @as(f64, @floatFromInt(parse_lock_hold_ns)) / @as(f64, @floatFromInt(std.time.ns_per_ms)),
                     @as(f64, @floatFromInt(publish_lock_hold_ns)) / @as(f64, @floatFromInt(std.time.ns_per_ms)),
                     processed,
                     queued_bytes,
+                    publishes,
+                    if (publishes > 0) publish_bytes / publishes else 0,
                     input_pressure,
                     presentation_backlog,
                 });
