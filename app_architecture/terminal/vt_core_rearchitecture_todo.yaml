@@ -127,6 +127,7 @@ items:
       - Current rerank: the replay-backed gutter/guide set is now largely narrow and stable again, so the next redraw/publication target should come from a new real reproducer (for example an actual `nvim` gutter/guide trace or a denser mixed rewrite pattern) rather than the corrected guide fixtures
       - Nvim-shaped redraw authority landed: `redraw_nvim_overlay_status_update.*` now locks a simple statusline cursor-position update derived from the existing `nvim_overlay` sample
       - First statusline narrowing change landed too: unconditional per-row `-1/+1` partial-damage widening was removed from view-cache publication, so that `nvim`-shaped status update now publishes on the exact edited span at row 5 cols 7..9 instead of the older row 5 cols 6..10 overshoot
+      - Adjacent `nvim`-style overlay authority landed too: `redraw_nvim_overlay_mode_status_update.*` locks combined mode-text plus cursor-position churn on the statusline row, and the current backend already publishes that case exactly at row 5 cols 0..9
 
   - id: VTCORE-06
     title: Keep input encoding as a peer subsystem
