@@ -73,6 +73,26 @@ def parse_pair_for_perf(
     if perf_index is not None:
         perf_time = timestamp_key(latest_perf["timestamp"]) if latest_perf is not None else None
         latest_plan_redraw: dict[str, str] | None = None
+        for index in range(perf_index + 1, len(lines)):
+            match = LOG_LINE_RE.match(lines[index])
+            if not match:
+                continue
+            tag = match.group("tag")
+            if tag == "terminal.ui.perf":
+                break
+            if tag != "terminal.ui.redraw":
+                continue
+            candidate = {
+                "timestamp": match.group("ts"),
+                "level": match.group("level"),
+                "message": match.group("msg"),
+            }
+            candidate_time = timestamp_key(candidate["timestamp"])
+            if perf_time is not None and candidate_time is not None and candidate_time[:3] != perf_time[:3]:
+                continue
+            if "partial_plan " in candidate["message"]:
+                latest_plan_redraw = candidate
+                break
         for index in range(perf_index - 1, -1, -1):
             match = LOG_LINE_RE.match(lines[index])
             if not match:
@@ -93,9 +113,6 @@ def parse_pair_for_perf(
                     continue
             if latest_redraw is None:
                 latest_redraw = candidate
-            if "partial_plan " in candidate["message"]:
-                latest_plan_redraw = candidate
-                break
         if latest_plan_redraw is not None:
             latest_redraw = latest_plan_redraw
     return latest_perf, latest_redraw

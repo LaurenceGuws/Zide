@@ -131,6 +131,10 @@ pub fn poll(self: anytype) !void {
     return pty_io.poll(self);
 }
 
+pub fn refreshChildExit(self: anytype) void {
+    maybeUpdateChildExit(self);
+}
+
 fn maybeUpdateChildExit(self: anytype) void {
     if (self.child_exited.load(.acquire)) return;
     if (terminal_transport.Transport.fromSession(self)) |transport| {

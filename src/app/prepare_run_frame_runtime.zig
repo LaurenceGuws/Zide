@@ -5,6 +5,7 @@ const app_shell = @import("../app_shell.zig");
 const app_signals = @import("signals.zig");
 const app_terminal_tab_navigation_runtime = @import("terminal/terminal_tab_navigation_runtime.zig");
 const input_builder = @import("../input/input_builder.zig");
+const std = @import("std");
 
 pub fn prepare(state: anytype) !?app_run_loop_driver.FrameSetup {
     return try prepareWithMode(state, null);
@@ -36,6 +37,11 @@ fn prepareWithMode(
         }
     }
 
+    if (shouldAutoCloseTerminalOnChildExit(state, app_mode)) {
+        state.shell.requestClose();
+        return null;
+    }
+
     if (state.shell.shouldClose()) return null;
     if (app_signals.requested()) {
         state.shell.requestClose();
@@ -58,6 +64,16 @@ fn prepareWithMode(
         .poll_ms = (poll_end - poll_start) * 1000.0,
         .build_ms = (build_end - build_start) * 1000.0,
     };
+}
+
+fn shouldAutoCloseTerminalOnChildExit(state: anytype, app_mode: app_bootstrap.AppMode) bool {
+    if (!app_modes.ide.shouldUseTerminalWorkspace(app_mode)) return false;
+    if (std.c.getenv("ZIDE_TERMINAL_CLOSE_ON_CHILD_EXIT") == null) return false;
+    if (state.terminal_window_close_pending or state.terminal_close_confirm_tab != null) return false;
+    const workspace = if (state.terminal_workspace) |*workspace| workspace else return false;
+    if (workspace.tabCount() == 0) return false;
+    workspace.refreshActiveSessionChildExit();
+    return !workspace.activeSessionAlive();
 }
 
 fn handlePendingTerminalWindowClose(state: anytype, app_mode: app_bootstrap.AppMode) bool {
