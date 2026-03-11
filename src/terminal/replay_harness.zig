@@ -133,6 +133,9 @@ pub const ObservedFixtureState = struct {
     damage: ExpectedDamage,
     viewport_shift_rows: ?i32,
     viewport_shift_exposed_only: ?bool,
+    history_len: ?usize,
+    total_lines: ?usize,
+    scroll_offset: ?usize,
 };
 
 pub const RunFixtureObserved = struct {
@@ -668,6 +671,9 @@ fn observedFixtureState(
         },
         .viewport_shift_rows = if (cache) |c| c.viewport_shift_rows else null,
         .viewport_shift_exposed_only = if (cache) |c| c.viewport_shift_exposed_only else null,
+        .history_len = if (cache) |c| c.history_len else null,
+        .total_lines = if (cache) |c| c.total_lines else null,
+        .scroll_offset = if (cache) |c| c.scroll_offset else null,
     };
 }
 
