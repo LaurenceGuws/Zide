@@ -120,6 +120,7 @@ items:
       - Eighteenth replay contract landed: repeated guide updates on rows that are already gutter-dirty still blow out to full-viewport damage even in a spare-row viewport, making that denser mixed guide/sign pattern the sharper next invalidation target
       - Guide-mixed replay fixtures are now also rebaselined on a non-wrap viewport, so the remaining guide churn blowout is no longer polluted by last-column wrap state
       - Investigation note: focused TerminalSession regressions now show the raw two-packet repeat-guide feed does not grow scrollback unexpectedly, but the raw published render cache still carries the same broad full-viewport damage contract as replay, so the next backend pass should target publication/view-cache logic rather than feed/history mutation
+      - Follow-up note: the first repeat-guide packet keeps the untouched bottom row clean, while the second packet introduces that bottom row as dirty with a full-width span, which points more specifically at carried unpublished-damage merge/refinement rather than the base packet-1 damage assignment
 
   - id: VTCORE-06
     title: Keep input encoding as a peer subsystem
