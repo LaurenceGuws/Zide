@@ -167,12 +167,41 @@ That:
 - writes a `manifest.json` beside those captures so the exact command/cwd/input recipe stays attached to the reproducer
 - is the preferred path when capturing a fresh live `nvim`/TUI redraw repro
 
+For a true single-session capture, use the wrapper directly over one long-lived
+PTY run:
+
+```bash
+python3 tools/terminal_capture_redraw_fixture.py \
+  --name redraw_nvim_real_single_session \
+  --rows 40 \
+  --cols 120 \
+  --fixture-dir fixtures/terminal \
+  --cwd /path/to/project \
+  --no-stdout \
+  --single-session-shell 'nvim -u NONE -N "+set number relativenumber signcolumn=yes foldcolumn=2" sample.txt' \
+  --single-session-stdin-script /tmp/nvim-redraw.script \
+  --single-session-baseline-at 0.80 \
+  --single-session-update-at 1.20 \
+  --checkpoint-quiet-ms 150 \
+  --hydrate-observed \
+  --update-goldens \
+  --validate
+```
+
+This is the preferred path for real `nvim` movement probes because it keeps one
+editor session alive and splits baseline vs redraw with timed checkpoints
+instead of restarting `nvim` for each phase.
+
 Useful options:
 
 - `--cwd` to run every capture phase in the same project directory
 - `--no-stdout` to keep capture quiet while still recording raw PTY bytes
 - `--baseline-stdin-file` / `--update-stdin-file` for scripted keystroke phases
 - `--baseline-stdin-script` / `--update-stdin-script` for richer timed staged-input scripts
+- `--single-session-shell` / `--single-session-cmd` to capture one long-lived PTY session
+- `--single-session-stdin-file` / `--single-session-stdin-script` for scripted single-session input
+- `--single-session-baseline-at` / `--single-session-update-at` to split one session into baseline and redraw chunks
+- `--checkpoint-quiet-ms` to control how long a due single-session checkpoint waits for output to go idle before flushing
 - `--strip-baseline-prefix` to remove the shared startup prefix from each update capture before writing `output_chunks`
 - `--strip-shared-suffix` to remove shared teardown bytes after prefix stripping, which helps when separate PTY sessions share the same quit path
 - `--hydrate-observed` to run replay immediately and fill `expected_dirty`, `expected_damage`, and viewport-shift assertions from the current backend output
