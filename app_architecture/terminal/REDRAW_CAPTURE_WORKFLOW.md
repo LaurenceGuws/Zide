@@ -50,6 +50,7 @@ python3 tools/terminal_capture_pty.py \
   --output-file /tmp/nvim-full.txt \
   --checkpoint 0.30:/tmp/nvim-baseline.txt \
   --checkpoint 0.60:/tmp/nvim-update.txt \
+  --checkpoint-quiet-ms 150 \
   --stdin-step 0.35:/tmp/nvim-keys.txt \
   --no-stdout \
   bash -lc 'nvim -u NONE -N "+set number relativenumber signcolumn=yes foldcolumn=2" /tmp/sample.txt'
@@ -181,6 +182,7 @@ Single-session capture options in `terminal_capture_pty.py`:
 
 - `--stdin-step <seconds>:<file>` to inject scripted input later in the same PTY session
 - `--checkpoint <seconds>:<output-file>` to write the bytes captured since the previous checkpoint
+- `--checkpoint-quiet-ms <ms>` to wait for a short idle window before a due checkpoint flushes, which helps avoid slicing active repaint bursts in half
 
 Use generous timing gaps. The goal is not perfect frame-accurate tracing; it is
 to split one live TUI session into a stable baseline chunk and a later redraw

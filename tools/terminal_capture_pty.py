@@ -53,6 +53,12 @@ def parse_args() -> argparse.Namespace:
         help="Timed output checkpoint as <seconds>:<output-file>; writes bytes captured since the previous checkpoint",
     )
     parser.add_argument(
+        "--checkpoint-quiet-ms",
+        type=int,
+        default=120,
+        help="Idle time after a checkpoint becomes due before it flushes captured bytes (default: 120ms)",
+    )
+    parser.add_argument(
         "cmd",
         nargs=argparse.REMAINDER,
         help="Command to execute after '--', or as remaining args",
@@ -137,6 +143,8 @@ def main() -> int:
     checkpoint_index = 0
     checkpoint_start = 0
     started_at = time.monotonic()
+    last_output_at = started_at
+    checkpoint_quiet_seconds = args.checkpoint_quiet_ms / 1000.0
 
     def flush_due_checkpoints(final: bool = False) -> None:
         nonlocal checkpoint_index, checkpoint_start
@@ -144,6 +152,8 @@ def main() -> int:
         while checkpoint_index < len(checkpoints):
             delay, path = checkpoints[checkpoint_index]
             if not final and elapsed < delay:
+                break
+            if not final and (time.monotonic() - last_output_at) < checkpoint_quiet_seconds:
                 break
             path.write_bytes(bytes(captured[checkpoint_start:]))
             checkpoint_start = len(captured)
@@ -184,6 +194,7 @@ def main() -> int:
                     data = b""
                 if data:
                     captured.extend(data)
+                    last_output_at = time.monotonic()
                     flush_due_checkpoints()
                     if not args.no_stdout:
                         os.write(sys.stdout.fileno(), data)
@@ -204,6 +215,7 @@ def main() -> int:
                     data = b""
                 if data:
                     captured.extend(data)
+                    last_output_at = time.monotonic()
                     flush_due_checkpoints()
                     if not args.no_stdout:
                         os.write(sys.stdout.fileno(), data)
