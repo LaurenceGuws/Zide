@@ -83,6 +83,186 @@ This is the key requirement for:
 `TerminalTransport` should not own terminal semantics. It only moves bytes and
 host signals.
 
+Important flood-handling bias:
+
+- transport/read ingress should stay aggressive and non-semantic
+- flood fairness should be solved by bounded parser/publication/render wake
+  policy, not by teaching the reader to pace itself heuristically
+- startup flood behavior may still need a host/runtime policy layer, but the
+  transport itself should not become a second redraw scheduler
+
+## Current Real-Config `nvim` Cursor-Step Authority
+
+The current settled real-config `nvim` lane on `src/app_logger.zig` is now
+clean enough to use as authority instead of generic "plugin-heavy `nvim` feels
+broad" complaints.
+
+Settled controls:
+
+- narrow, non-shift:
+  - `20G + l`
+  - `20G + w`
+- broad, shift-path:
+  - `20G + h`
+  - `20G + b`
+  - `10G + j`
+  - `15G + j`
+  - `20G + k`
+
+The important clarification is that the broad controls are already broad in the
+PTY delta itself:
+
+- `20G + w` is only a tiny status/cursor token update
+- `20G + b` / `20G + h` rewrite real buffer body rows (`debug = 4`,
+  `trace = 5`) plus the bottom status token
+
+So the current question for that lane is not "why did backend publication widen
+a tiny update?" It is:
+
+- which real-config UI surface is causing those backward/leftward and vertical
+  motions to emit broad body-plus-status terminal output
+- and whether later shift-path publication is still too optimistic for that
+  already-broad-but-structured update shape
+
+The current replay evidence narrows that second question further:
+
+- for the settled `20G+b` authority, baseline-to-final replay diff is
+  internally consistent with `viewport_shift_rows=2` and
+  `viewport_shift_exposed_only=true`
+- so the next correctness suspicion is not simple damage undercounting
+- it is the renderer-side texture-shift reuse seam, where copied terminal
+  pixels are trusted for non-exposed rows during scroll-path updates
+
+That is why the current renderer cut in this lane is a safety cut rather than a
+damage-model cut: terminal texture scroll now uses a scratch render target
+instead of copying from an FBO back into the same attached texture.
+
+The latest live ghosting logs also clarify that this is not the only lane. The
+active user-visible ghost case we are chasing right now is currently showing:
+
+- `shift_rows=0`
+- `shift_exposed_only=false`
+- same-row dirty union growth under `origin=parser.ascii_run`
+
+So the next diagnostic seam for that exact symptom class is still upstream
+parser/grid write provenance rather than the scroll-texture path.
+
+The current bug-scoped live probe for that seam is `terminal.ui.write_ascii_origin`.
+It only logs broad `parser.ascii_run*` writes and includes a short preview of
+the payload, which should let us tell whether the second same-row write is
+body text, gutter/status text, or guide-style repeated columns.
+
+## Multi-Span Row Damage Direction
+
+The current backend damage model is too weak for the real-config ghosting lane.
+Today the terminal keeps only:
+
+- `dirty_rows[row]`
+- `dirty_cols_start[row]`
+- `dirty_cols_end[row]`
+
+That means each dirty row can represent only one union span. For the current
+`nvim` symptom class, that is exactly where quality is lost:
+
+- one small earlier region on the row is dirtied first
+- a later broad body-text write lands farther right on the same row
+- backend damage collapses both into one large row union
+
+The next backend-quality step should therefore be structural, not heuristic:
+
+- row damage should support multiple spans per row
+- overflow/coarsening should be explicit and local to that row
+- publication/refinement/rendering should consume backend-authored spans rather
+  than reconstructing them heuristically later
+
+### Proposed Shape
+
+Start with a fixed-cap per-row span set in the backend:
+
+- `dirty_rows[row]` remains as the cheap row activity bit
+- replace `dirty_cols_start/end[row]` as the primary truth with:
+  - `row_dirty_span_counts[row]`
+  - `row_dirty_span_overflow[row]`
+  - `row_dirty_spans[row][N]`
+
+Initial design constraints:
+
+- keep `N` small and fixed first, for example `4`
+- merge overlapping/touching spans in-row
+- if a row exceeds `N`, mark only that row as overflow and collapse that row to
+  one union span
+- do not collapse unrelated rows or the whole frame because one row overflowed
+
+### Ownership Rules
+
+Best-quality contract for this lane:
+
+- `TerminalGrid` owns authoritative multi-span dirty truth
+- `snapshotView()` exports that truth without reinterpreting it
+- `view_cache` carries/refines spans but does not invent them
+- row-hash refinement remains optimization-only
+- renderer partial planning consumes spans directly
+
+### Migration Order
+
+Implement this in reviewable backend-first steps:
+
+1. Add multi-span data structures to `TerminalGrid` while keeping the old
+   single-span fields as compatibility/export mirrors.
+2. Teach `markDirtyRange...()` to append/merge spans instead of widening one
+   union span immediately.
+3. Export spans through snapshot/view-cache/publication.
+4. Switch renderer partial planning to consume spans.
+5. Only then retire the old single-span row truth.
+
+### First Authority To Lock
+
+Before implementation, lock one focused authority for:
+
+- small earlier row-local region
+- later same-row body rewrite
+- expected result: two preserved row-local spans, not one huge row union
+
+That authority is now the right next backend target for the ghosting lane.
+
+The current before-state is now also locked in a backend unit test at
+`src/terminal/model/screen/grid.zig`: the same-row sequence currently collapses
+from `2..5` plus `10..18` down to one union span `2..18`. That is the exact
+behavior the future multi-span row model is meant to replace.
+
+The first migration checkpoint after that is now landed too:
+
+- `TerminalGrid` owns fixed-cap per-row span storage
+- `snapshotView()` exports that span truth
+- `view_cache` / `render_cache` preserve it end-to-end
+- the old `dirty_cols_start/end` union fields still exist only as compatibility
+  mirrors for now
+
+The next backend publication checkpoint is now landed too:
+
+- projected diff preserves multiple same-row spans instead of collapsing back to
+  one `rowDiffSpan(...)`
+- row-hash refinement preserves/discovers multiple row-local spans and rebuilds
+  the old union bounds only as compatibility mirrors
+- selection-dirty expansion and partial-damage widening now keep the new
+  per-row span truth in sync instead of mutating only `dirty_cols_start/end`
+
+The next renderer checkpoint is now landed too:
+
+- partial-plan construction in `terminal_widget_draw_texture.zig` now prefers
+  backend row spans directly
+- the old `dirty_cols_start/end` union bounds remain only as fallback when span
+  truth is absent
+- partial background/glyph draw loops now also iterate those per-row spans
+  directly instead of redrawing one union box per row
+- that means backend-authored multi-span damage now survives all the way into
+  the live partial draw path instead of being forced back through a one-span
+  row box at the renderer seam
+
+That means the next implementation step can move from storage/export into
+damage/publication consumption without guessing whether the backend is already
+losing span truth before the renderer sees it.
+
 ### 3. `PtyTerminalSession`
 
 This is the desktop-host runtime wrapper.
@@ -469,6 +649,77 @@ Session construction also moved one step toward host-wrapper ownership:
   case that currently widens to full-row damage across the viewport, which is
   exactly the kind of over-broad invalidation we want the later publication
   lane to reduce for gutter/scope-guide-heavy TUIs
+- replay-backed redraw coverage now also includes a denser built-in `nvim`
+  movement probe (`redraw_nvim_dynamic_builtin_probe.*`) with `statuscolumn`,
+  `signcolumn`, `foldcolumn`, `cursorline`, `cursorcolumn`, and a dynamic
+  statusline enabled from startup; its observed backend contract is broad, but
+  it still preserves the distant statusline row in the same non-shift frame,
+  which is useful because it shows backend publication can already carry one
+  secondary remote region when the upstream dirty-row truth contains it
+- replay-backed redraw coverage now also includes two probes captured against
+  the local real Neovim config (`redraw_nvim_real_config_probe.*` and
+  `redraw_nvim_real_config_symbols_probe.*`); both preserve remote chrome in
+  non-shift frames, and the symbol-aware probe is broad across almost the full
+  viewport, which is useful because it shows at least one plugin-heavy config
+  path is genuinely emitting broad body-plus-chrome redraws rather than merely
+  dropping a remote invalidation region
+- deeper live tracing on the same plugin-heavy lane now also shows the
+  broadening mechanism more directly: the offending rows are being widened in
+  `TerminalGrid.markDirtyRange(...)` by unioning multiple same-row requests,
+  not by `view_cache` refinement, widget planning, or skipped dirty retirement
+- a scripted capture wrapper now exists for that same lane in
+  `tools/terminal_capture_nvim_real_config_cursor_repro.py`, which automates
+  the current dashboard -> `:e src/app_logger.zig` -> settle -> slow `j`
+  cursor-step repro against the real local Neovim config
+- that automation now also has a replay-safe reduced mode (`--open-directly`,
+  `16x100`, one aggregate late cursor-step update), and the resulting
+  single-session authority is now checked in as
+  `redraw_nvim_real_config_cursor_step_probe.*`
+- a later-step tuned variant is now also checked in as
+  `redraw_nvim_real_config_cursor_step_probe_tuned.*`; it waits longer before
+  capturing the first step and keeps one later update chunk, which makes it a
+  better automated base for the next narrowing pass even though it is still
+  broad overall
+- the sharper automated base is now the heavier
+  `redraw_nvim_real_config_cursor_step_app_logger_tuned.*` authority captured
+  against the real `src/app_logger.zig` file; it comes back as a partial
+  viewport-shift-exposed update (`rows 7..15 cols 0..99`, `shift_rows=9`),
+  which is closer to the live ghosting lane than the smaller synthetic sample
+- follow-up scripted `app_logger.zig` captures now tighten that scope further:
+  the attempted "pre-shift" variants still replay as shift-path updates too,
+  including a single-step `20Gzt` capture that comes back as
+  `viewport_shift_rows=3`, `viewport_shift_exposed_only=true`
+- the low-level grid trace on that one-step case now attributes the broad rows
+  directly to `origin=scroll_region_up_full`
+- a lower-level idle control narrows that further: an open-direct
+  `app_logger.zig` capture with `20G` and no cursor-step at all still replays
+  as a smaller shift-path update (`rows 14..15`, `shift_rows=2`), again
+  attributed to `origin=scroll_region_up_full`
+- a longer-settle split now separates startup churn from real movement:
+  - idle after a long settle goes empty
+  - same-line `l` after settle stays narrow and non-shift
+    (`row 15 cols 75..76`, `shift_rows=0`)
+  - same-row `w` after settle also stays narrow and non-shift
+    (`row 15 cols 11..21`, `shift_rows=0`)
+  - vertical `j`/`k` cases in the same settled lane still publish broad
+    full-width shift-path updates
+  - left/backward motion is asymmetric there too: `h` and `b` still blow out
+    to the same bottom-band shift class, while `l` and `w` stay narrow
+- current interpretation:
+  - the scripted real-config `app_logger` lane is good authority for
+    shift/scroll ghosting
+  - it is currently dominated by async post-open shift churn
+  - after the long settle, movement class matters: forward/rightward motions
+    (`l`, `w`) are true narrow non-shift controls, while backward/leftward or
+    vertical motions (`h`, `b`, `j`, `k`) currently belong to the broad
+    bottom-band shift-path class
+  - it is not yet valid authority for the user-reported true small-move
+    non-shift ghosting path
+  - the next missing capture is therefore a genuine pre-shift real-config
+    cursor-step authority
+- replay harness fixture metadata loading was widened from `64 KiB` to
+  `1 MiB` so legitimate plugin-heavy redraw fixtures like this can be loaded
+  directly instead of forcing another side channel
 - stale private root-session shims for SGR application and key-mode flag reads
   are now removed too, keeping the root session file closer to a real facade
   instead of a pile of dead internal forwarding

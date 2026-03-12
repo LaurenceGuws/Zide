@@ -254,7 +254,7 @@ pub fn loadFixtures(allocator: std.mem.Allocator, dir_path: []const u8) ![]Fixtu
 
         const meta_name = try std.fmt.allocPrint(allocator, "{s}.json", .{stem});
         defer allocator.free(meta_name);
-        const meta_bytes = try dir.readFileAlloc(allocator, meta_name, 64 * 1024);
+        const meta_bytes = try dir.readFileAlloc(allocator, meta_name, 1024 * 1024);
         defer allocator.free(meta_bytes);
         const parsed = try std.json.parseFromSlice(
             FixtureMeta,

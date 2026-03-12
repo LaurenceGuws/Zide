@@ -245,6 +245,7 @@ pub fn drawPrepared(
     const view_cells = cache.cells.items;
     const view_dirty_rows = cache.dirty_rows.items;
     const draw_log = app_logger.logger("terminal.ui.redraw");
+    const texture_shift_log = app_logger.logger("terminal.ui.texture_shift");
     var dirty_rows_count: usize = 0;
     var damage_row_span: usize = 0;
     var damage_col_span: usize = 0;
@@ -323,6 +324,7 @@ pub fn drawPrepared(
     var texture_partial_update = false;
     var active_viewport_shift_rows: i32 = 0;
     var active_shift_exposed_only = false;
+    const row_render_log = app_logger.logger("terminal.ui.row_render_pass");
     const texture_phase_start = app_shell.getTime();
     const texture_ready_before_draw = self.terminal_texture_ready;
     if (rows > 0 and cols > 0) {
@@ -365,8 +367,34 @@ pub fn drawPrepared(
                 if (r.scrollTerminalTexture(0, dy_pixels)) {
                     needs_partial = true;
                     shifted_rows = shift_rows;
+                    texture_shift_log.logf(
+                        .info,
+                        "result=scroll_copy_ok gen={d} dirty={s} shift_rows={d} exposed_only={d} scroll_offset={d} damage={d}..{d}/{d}..{d}",
+                        .{
+                            cache.generation,
+                            @tagName(cache.dirty),
+                            active_viewport_shift_rows,
+                            @intFromBool(active_shift_exposed_only),
+                            scroll_offset,
+                            cache.damage.start_row,
+                            cache.damage.end_row,
+                            cache.damage.start_col,
+                            cache.damage.end_col,
+                        },
+                    );
                 } else {
                     shifted_rows = 0;
+                    texture_shift_log.logf(
+                        .info,
+                        "result=scroll_copy_failed gen={d} dirty={s} shift_rows={d} exposed_only={d} scroll_offset={d}",
+                        .{
+                            cache.generation,
+                            @tagName(cache.dirty),
+                            active_viewport_shift_rows,
+                            @intFromBool(active_shift_exposed_only),
+                            scroll_offset,
+                        },
+                    );
                     if (active_shift_exposed_only) {
                         needs_partial = true;
                         shift_requires_fullwidth_partial = true;
@@ -374,6 +402,20 @@ pub fn drawPrepared(
                 }
             },
             .none => {
+                if (active_viewport_shift_rows != 0) {
+                    texture_shift_log.logf(
+                        .info,
+                        "result=scroll_copy_skipped gen={d} dirty={s} shift_rows={d} exposed_only={d} scroll_offset={d} full={d}",
+                        .{
+                            cache.generation,
+                            @tagName(cache.dirty),
+                            active_viewport_shift_rows,
+                            @intFromBool(active_shift_exposed_only),
+                            scroll_offset,
+                            @intFromBool(needs_full),
+                        },
+                    );
+                }
                 if (active_shift_exposed_only) {
                     needs_partial = true;
                     shift_requires_fullwidth_partial = true;
@@ -449,9 +491,24 @@ pub fn drawPrepared(
                     return outcome;
                 };
 
+                self.partial_draw_span_counts.resize(self.session.allocator, rows) catch |err| {
+                    const log = app_logger.logger("terminal.ui.redraw");
+                    log.logf(.warning, "partial row plan resize failed field=span_counts rows={d} err={s}", .{ rows, @errorName(err) });
+                    r.endTerminalTexture();
+                    return outcome;
+                };
+                self.partial_draw_spans.resize(self.session.allocator, rows) catch |err| {
+                    const log = app_logger.logger("terminal.ui.redraw");
+                    log.logf(.warning, "partial row plan resize failed field=spans rows={d} err={s}", .{ rows, @errorName(err) });
+                    r.endTerminalTexture();
+                    return outcome;
+                };
+
                 const partial_plan_bounds = buildPartialPlan(
                     cache,
                     self.partial_draw_rows.items,
+                    self.partial_draw_span_counts.items,
+                    self.partial_draw_spans.items,
                     self.partial_draw_cols_start.items,
                     self.partial_draw_cols_end.items,
                     shifted_rows,
@@ -464,9 +521,19 @@ pub fn drawPrepared(
                 }
                 for (self.partial_draw_rows.items, 0..) |row_draw, row| {
                     if (!row_draw) continue;
-                    const row_start = @as(usize, self.partial_draw_cols_start.items[row]);
-                    const row_end = @as(usize, self.partial_draw_cols_end.items[row]);
-                    if (row_end >= row_start) partial_plan_cells += row_end - row_start + 1;
+                    if (row < self.partial_draw_span_counts.items.len and row < self.partial_draw_spans.items.len and self.partial_draw_span_counts.items[row] > 0) {
+                        var span_idx: usize = 0;
+                        while (span_idx < self.partial_draw_span_counts.items[row]) : (span_idx += 1) {
+                            const span = self.partial_draw_spans.items[row][span_idx];
+                            const row_start = @as(usize, span.start);
+                            const row_end = @as(usize, span.end);
+                            if (row_end >= row_start) partial_plan_cells += row_end - row_start + 1;
+                        }
+                    } else {
+                        const row_start = @as(usize, self.partial_draw_cols_start.items[row]);
+                        const row_end = @as(usize, self.partial_draw_cols_end.items[row]);
+                        if (row_end >= row_start) partial_plan_cells += row_end - row_start + 1;
+                    }
                 }
                 if (partial_plan_bounds) |bounds| {
                     partial_plan_row_span = bounds.end_row - bounds.start_row + 1;
@@ -477,9 +544,28 @@ pub fn drawPrepared(
                     partial_plan_summary = draw_texture.formatPartialPlanRows(
                         &partial_plan_summary_buf,
                         self.partial_draw_rows.items,
+                        self.partial_draw_span_counts.items,
+                        self.partial_draw_spans.items,
                         self.partial_draw_cols_start.items,
                         self.partial_draw_cols_end.items,
                         12,
+                    );
+                }
+                if (shifted_rows > 0 or shift_requires_fullwidth_partial) {
+                    texture_shift_log.logf(
+                        .info,
+                        "result=partial_plan gen={d} shifted_rows={d} fullwidth_exposed={d} plan_rows={d} plan_row_span={d} plan_col_span={d} plan_cells={d} plan_union_cells={d} spans={s}",
+                        .{
+                            cache.generation,
+                            shifted_rows,
+                            @intFromBool(shift_requires_fullwidth_partial),
+                            partial_plan_rows_count,
+                            partial_plan_row_span,
+                            partial_plan_col_span,
+                            partial_plan_cells,
+                            partial_plan_union_cells,
+                            partial_plan_summary,
+                        },
                     );
                 }
 
@@ -487,6 +573,17 @@ pub fn drawPrepared(
                 r.beginTerminalBatch();
                 for (0..rows) |row| {
                     if (!self.partial_draw_rows.items[row]) continue;
+                    if (row < self.partial_draw_span_counts.items.len and row < self.partial_draw_spans.items.len and self.partial_draw_span_counts.items[row] > 0) {
+                        var span_idx: usize = 0;
+                        while (span_idx < self.partial_draw_span_counts.items[row]) : (span_idx += 1) {
+                            const span = self.partial_draw_spans.items[row][span_idx];
+                            const col_start = @min(@as(usize, span.start), cols - 1);
+                            const col_end = @min(@as(usize, span.end), cols - 1);
+                            const draw_padding = col_end >= cols - 1;
+                            drawRowBackgrounds(shell, view_cells, cols, row, col_start, col_end, base_x_local, base_y_local, padding_x_i, draw_padding, screen_reverse);
+                        }
+                        continue;
+                    }
                     const col_start = @min(@as(usize, self.partial_draw_cols_start.items[row]), cols - 1);
                     const col_end = @min(@as(usize, self.partial_draw_cols_end.items[row]), cols - 1);
                     const draw_padding = col_end >= cols - 1;
@@ -504,9 +601,76 @@ pub fn drawPrepared(
                 r.beginTerminalGlyphBatch();
                 for (0..rows) |row| {
                     if (!self.partial_draw_rows.items[row]) continue;
-                    const col_start = @min(@as(usize, self.partial_draw_cols_start.items[row]), cols - 1);
-                    const col_end = @min(@as(usize, self.partial_draw_cols_end.items[row]), cols - 1);
-                    drawRowGlyphs(shell, view_cells, cols, row, col_start, col_end, base_x_local, base_y_local, padding_x_i, hover_link_id, screen_reverse, blink_style, blink_time, draw_cursor, cursor, r.terminal_disable_ligatures, &glyph_draw_stats);
+                    const before_stats = glyph_draw_stats;
+                    var row_bg_runs: usize = 0;
+                    var row_span_count: usize = 0;
+                    var row_col_min: usize = cols;
+                    var row_col_max: usize = 0;
+                    var row_bg_summary = draw_grid.BackgroundRunSummary{};
+                    if (row < self.partial_draw_span_counts.items.len and row < self.partial_draw_spans.items.len and self.partial_draw_span_counts.items[row] > 0) {
+                        var span_idx: usize = 0;
+                        while (span_idx < self.partial_draw_span_counts.items[row]) : (span_idx += 1) {
+                            const span = self.partial_draw_spans.items[row][span_idx];
+                            const col_start = @min(@as(usize, span.start), cols - 1);
+                            const col_end = @min(@as(usize, span.end), cols - 1);
+                            const draw_padding = col_end >= cols - 1;
+                            row_bg_runs += draw_grid.countRowBackgroundRuns(view_cells, cols, row, col_start, col_end, draw_padding, screen_reverse);
+                            if (row_bg_summary.runs == 0) {
+                                row_bg_summary = draw_grid.summarizeRowBackgroundRuns(view_cells, cols, row, col_start, col_end, draw_padding, screen_reverse);
+                            }
+                            row_span_count += 1;
+                            row_col_min = @min(row_col_min, col_start);
+                            row_col_max = @max(row_col_max, col_end);
+                            drawRowGlyphs(shell, view_cells, cols, row, col_start, col_end, base_x_local, base_y_local, padding_x_i, hover_link_id, screen_reverse, blink_style, blink_time, draw_cursor, cursor, r.terminal_disable_ligatures, &glyph_draw_stats);
+                        }
+                    } else {
+                        const col_start = @min(@as(usize, self.partial_draw_cols_start.items[row]), cols - 1);
+                        const col_end = @min(@as(usize, self.partial_draw_cols_end.items[row]), cols - 1);
+                        const draw_padding = col_end >= cols - 1;
+                        row_bg_runs += draw_grid.countRowBackgroundRuns(view_cells, cols, row, col_start, col_end, draw_padding, screen_reverse);
+                        row_bg_summary = draw_grid.summarizeRowBackgroundRuns(view_cells, cols, row, col_start, col_end, draw_padding, screen_reverse);
+                        row_span_count = 1;
+                        row_col_min = col_start;
+                        row_col_max = col_end;
+                        drawRowGlyphs(shell, view_cells, cols, row, col_start, col_end, base_x_local, base_y_local, padding_x_i, hover_link_id, screen_reverse, blink_style, blink_time, draw_cursor, cursor, r.terminal_disable_ligatures, &glyph_draw_stats);
+                    }
+                    if ((row_render_log.enabled_file or row_render_log.enabled_console) and row_span_count > 0) {
+                        const row_width = if (row_col_min < cols and row_col_max >= row_col_min) row_col_max - row_col_min + 1 else 0;
+                        if (row_width >= cols / 2 or row == cursor.row) {
+                            row_render_log.logf(
+                                .info,
+                                "row={d} cols={d}..{d} width={d} spans={d} bg_runs={d} bg1={d}..{d}@{d}:{d}:{d} bg2={d}..{d}@{d}:{d}:{d} bg3={d}..{d}@{d}:{d}:{d} glyph_delta={d} direct_draw_ms={d:.2} special_lookup_ms={d:.2} special_submit_ms={d:.2} box_submit_ms={d:.2}",
+                                .{
+                                    row,
+                                    row_col_min,
+                                    row_col_max,
+                                    row_width,
+                                    row_span_count,
+                                    row_bg_runs,
+                                    row_bg_summary.first_start,
+                                    row_bg_summary.first_end,
+                                    row_bg_summary.first_color.r,
+                                    row_bg_summary.first_color.g,
+                                    row_bg_summary.first_color.b,
+                                    row_bg_summary.second_start,
+                                    row_bg_summary.second_end,
+                                    row_bg_summary.second_color.r,
+                                    row_bg_summary.second_color.g,
+                                    row_bg_summary.second_color.b,
+                                    row_bg_summary.third_start,
+                                    row_bg_summary.third_end,
+                                    row_bg_summary.third_color.r,
+                                    row_bg_summary.third_color.g,
+                                    row_bg_summary.third_color.b,
+                                    glyph_draw_stats.shaped_glyphs - before_stats.shaped_glyphs,
+                                    glyph_draw_stats.direct_draw_ms - before_stats.direct_draw_ms,
+                                    glyph_draw_stats.special_sprite_lookup_ms - before_stats.special_sprite_lookup_ms,
+                                    glyph_draw_stats.shaped_special_submit_ms - before_stats.shaped_special_submit_ms,
+                                    glyph_draw_stats.box_submit_ms - before_stats.box_submit_ms,
+                                },
+                            );
+                        }
+                    }
                 }
                 r.flushTerminalGlyphBatch();
                 texture_glyph_ms += time_utils.secondsToMs(app_shell.getTime() - glyph_phase_start);

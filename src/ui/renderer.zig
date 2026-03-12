@@ -272,6 +272,7 @@ pub const Renderer = struct {
     font_path_owned: ?[]u8,
 
     terminal_target: ?RenderTarget,
+    terminal_scroll_target: ?RenderTarget,
     editor_target: ?RenderTarget,
 
     theme: Theme,
@@ -414,6 +415,7 @@ pub const Renderer = struct {
             .font_path = FONT_PATH,
             .font_path_owned = null,
             .terminal_target = null,
+            .terminal_scroll_target = null,
             .editor_target = null,
             .theme = .{},
             .mouse_scale = .{ .x = 1.0, .y = 1.0 },
@@ -481,6 +483,7 @@ pub const Renderer = struct {
 
     pub fn deinit(self: *Renderer) void {
         self.destroyRenderTarget(&self.terminal_target);
+        self.destroyRenderTarget(&self.terminal_scroll_target);
         self.destroyRenderTarget(&self.editor_target);
 
         var font_it = self.font_cache.iterator();
@@ -751,7 +754,9 @@ pub const Renderer = struct {
     }
 
     pub fn ensureTerminalTexture(self: *Renderer, width: i32, height: i32) bool {
-        return self.ensureRenderTargetScaled(&self.terminal_target, width, height, target_draw.nearestFilter());
+        const recreated = self.ensureRenderTargetScaled(&self.terminal_target, width, height, target_draw.nearestFilter());
+        _ = self.ensureRenderTargetScaled(&self.terminal_scroll_target, width, height, target_draw.nearestFilter());
+        return recreated;
     }
 
     pub fn ensureEditorTexture(self: *Renderer, width: i32, height: i32) bool {
@@ -791,7 +796,15 @@ pub const Renderer = struct {
 
     pub fn scrollTerminalTexture(self: *Renderer, dx: i32, dy: i32) bool {
         if (self.terminal_target) |target| {
-            return targets.scrollRenderTarget(self, self.terminal_target, dx, dy, target.logical_width, target.logical_height);
+            return targets.scrollRenderTarget(
+                self,
+                self.terminal_target,
+                &self.terminal_scroll_target,
+                dx,
+                dy,
+                target.logical_width,
+                target.logical_height,
+            );
         }
         return false;
     }

@@ -12,6 +12,7 @@ pub const GLsizeiptr = c.GLsizeiptr;
 pub const GLintptr = c.GLintptr;
 pub const GLfloat = c.GLfloat;
 pub const GLboolean = c.GLboolean;
+pub const GLbitfield = c.GLbitfield;
 
 pub var CreateShader: *const fn (GLenum) callconv(.c) GLuint = undefined;
 pub var ShaderSource: *const fn (GLuint, GLsizei, [*]const [*]const GLchar, ?[*]const GLint) callconv(.c) void = undefined;
@@ -58,6 +59,7 @@ pub var GenFramebuffers: *const fn (GLsizei, *GLuint) callconv(.c) void = undefi
 pub var BindFramebuffer: *const fn (GLenum, GLuint) callconv(.c) void = undefined;
 pub var FramebufferTexture2D: *const fn (GLenum, GLenum, GLenum, GLuint, GLint) callconv(.c) void = undefined;
 pub var CheckFramebufferStatus: *const fn (GLenum) callconv(.c) GLenum = undefined;
+pub var BlitFramebuffer: *const fn (GLint, GLint, GLint, GLint, GLint, GLint, GLint, GLint, GLbitfield, GLenum) callconv(.c) void = undefined;
 pub var DeleteFramebuffers: *const fn (GLsizei, *const GLuint) callconv(.c) void = undefined;
 
 pub var Enable: *const fn (GLenum) callconv(.c) void = undefined;
@@ -121,6 +123,7 @@ pub fn load() !void {
     BindFramebuffer = try loadProc(@TypeOf(BindFramebuffer), "glBindFramebuffer");
     FramebufferTexture2D = try loadProc(@TypeOf(FramebufferTexture2D), "glFramebufferTexture2D");
     CheckFramebufferStatus = try loadProc(@TypeOf(CheckFramebufferStatus), "glCheckFramebufferStatus");
+    BlitFramebuffer = try loadProc(@TypeOf(BlitFramebuffer), "glBlitFramebuffer");
     DeleteFramebuffers = try loadProc(@TypeOf(DeleteFramebuffers), "glDeleteFramebuffers");
 
     Enable = try loadProc(@TypeOf(Enable), "glEnable");

@@ -220,7 +220,15 @@ pub fn beginRenderTarget(renderer: anytype, target: ?RenderTarget) bool {
     return false;
 }
 
-pub fn scrollRenderTarget(renderer: anytype, target: ?RenderTarget, dx: i32, dy: i32, width: i32, height: i32) bool {
+pub fn scrollRenderTarget(
+    renderer: anytype,
+    target: ?RenderTarget,
+    scratch: *?RenderTarget,
+    dx: i32,
+    dy: i32,
+    width: i32,
+    height: i32,
+) bool {
     if (target == null) return false;
     if (dx == 0 and dy == 0) return true;
     const t = target.?;
@@ -228,21 +236,57 @@ pub fn scrollRenderTarget(renderer: anytype, target: ?RenderTarget, dx: i32, dy:
     const abs_dx: i32 = if (dx < 0) -dx else dx;
     const abs_dy: i32 = if (dy < 0) -dy else dy;
     if (abs_dx >= width or abs_dy >= height) return false;
+    if (!ensureRenderTarget(
+        scratch,
+        t.texture.width,
+        t.texture.height,
+        t.logical_width,
+        t.logical_height,
+        gl.c.GL_NEAREST,
+    )) return false;
+    const scratch_target = scratch.* orelse return false;
+
+    const copy_w: i32 = width - abs_dx;
+    const copy_h: i32 = height - abs_dy;
+    const src_x: i32 = if (dx > 0) dx else 0;
+    const src_y: i32 = if (dy > 0) dy else 0;
+    const dst_x: i32 = if (dx > 0) 0 else -dx;
+    const dst_y: i32 = if (dy > 0) 0 else -dy;
+
+    gl.BindFramebuffer(gl.c.GL_READ_FRAMEBUFFER, t.fbo);
+    gl.BindFramebuffer(gl.c.GL_DRAW_FRAMEBUFFER, scratch_target.fbo);
+    gl.BlitFramebuffer(
+        src_x,
+        src_y,
+        src_x + copy_w,
+        src_y + copy_h,
+        dst_x,
+        dst_y,
+        dst_x + copy_w,
+        dst_y + copy_h,
+        gl.c.GL_COLOR_BUFFER_BIT,
+        gl.c.GL_NEAREST,
+    );
+
+    gl.BindFramebuffer(gl.c.GL_READ_FRAMEBUFFER, scratch_target.fbo);
+    gl.BindFramebuffer(gl.c.GL_DRAW_FRAMEBUFFER, t.fbo);
+    gl.BlitFramebuffer(
+        0,
+        0,
+        width,
+        height,
+        0,
+        0,
+        width,
+        height,
+        gl.c.GL_COLOR_BUFFER_BIT,
+        gl.c.GL_NEAREST,
+    );
 
     gl.BindFramebuffer(gl.c.GL_FRAMEBUFFER, t.fbo);
     renderer.target_pixel_width = t.texture.width;
     renderer.target_pixel_height = t.texture.height;
     updateProjection(renderer, t.logical_width, t.logical_height);
-
-    const src_x: i32 = if (dx > 0) dx else 0;
-    const src_y: i32 = if (dy > 0) dy else 0;
-    const dst_x: i32 = if (dx > 0) 0 else -dx;
-    const dst_y: i32 = if (dy > 0) 0 else -dy;
-    const copy_w: i32 = width - abs_dx;
-    const copy_h: i32 = height - abs_dy;
-
-    gl.BindTexture(gl.c.GL_TEXTURE_2D, t.texture.id);
-    gl.CopyTexSubImage2D(gl.c.GL_TEXTURE_2D, 0, dst_x, dst_y, src_x, src_y, copy_w, copy_h);
     return true;
 }
 

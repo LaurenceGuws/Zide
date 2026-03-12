@@ -38,11 +38,17 @@ pub const Hyperlink = struct {
     uri: []u8,
 };
 
+pub const RowDirtySpan = screen_mod.RowDirtySpan;
+pub const max_row_dirty_spans = screen_mod.max_row_dirty_spans;
+
 pub const TerminalSnapshot = struct {
     rows: usize,
     cols: usize,
     cells: []const types.Cell,
     dirty_rows: []const bool,
+    row_dirty_span_counts: []const u8,
+    row_dirty_span_overflow: []const bool,
+    row_dirty_spans: []const [max_row_dirty_spans]RowDirtySpan,
     dirty_cols_start: []const u16,
     dirty_cols_end: []const u16,
     cursor: types.CursorPos,

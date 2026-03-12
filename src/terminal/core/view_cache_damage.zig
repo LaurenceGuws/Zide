@@ -1,4 +1,5 @@
 const std = @import("std");
+const publication = @import("view_cache_publication.zig");
 
 pub fn assignBaseDamage(
     cache: anytype,
@@ -45,6 +46,14 @@ pub fn widenPartialDamage(cache: anytype, rows: usize, cols: usize) void {
             cache.dirty_cols_end.items[row_idx] = @intCast(end_col_usize + 1);
             cache.damage.end_col = @max(cache.damage.end_col, end_col_usize + 1);
         }
+        publication.clearRowDirtySpans(cache, row_idx, cols);
+        publication.addRowDirtySpan(
+            cache,
+            row_idx,
+            cache.dirty_cols_start.items[row_idx],
+            cache.dirty_cols_end.items[row_idx],
+            cols,
+        );
     }
 }
 

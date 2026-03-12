@@ -1,6 +1,7 @@
 const std = @import("std");
 const types = @import("../types.zig");
 const screen_mod = @import("screen.zig");
+const app_logger = @import("../../../app_logger.zig");
 
 const Screen = screen_mod.Screen;
 
@@ -43,11 +44,11 @@ pub fn writeCodepoint(self: *Screen, cp: u32, attrs: types.CellAttrs) void {
             prev.combining[prev.combining_len] = cp;
             prev.combining_len += 1;
             self.grid.cells.items[prev_idx] = prev;
-            self.grid.markDirtyRange(row, row, prev_col, prev_col);
+            self.grid.markDirtyRangeWithOrigin("write.combining_append", row, row, prev_col, prev_col);
         } else if (self.grapheme_cluster_shaping_2027 and isGraphemeClusterPriorityMark(cp)) {
             prev.combining[prev.combining.len - 1] = cp;
             self.grid.cells.items[prev_idx] = prev;
-            self.grid.markDirtyRange(row, row, prev_col, prev_col);
+            self.grid.markDirtyRangeWithOrigin("write.combining_replace", row, row, prev_col, prev_col);
         }
         return;
     }
@@ -100,7 +101,7 @@ pub fn writeCodepoint(self: *Screen, cp: u32, attrs: types.CellAttrs) void {
     } else {
         self.cursor.col += advance;
     }
-    self.grid.markDirtyRange(row, row, col, @min(right, col + advance - 1));
+    self.grid.markDirtyRangeWithOrigin("write.codepoint", row, row, col, @min(right, col + advance - 1));
 }
 
 fn isCombiningMark(codepoint: u32) bool {
@@ -162,7 +163,13 @@ pub fn codepointCellWidth(codepoint: u32) u8 {
     return 1;
 }
 
-pub fn writeAsciiRun(self: *Screen, bytes: []const u8, attrs: types.CellAttrs, use_dec_special: bool) usize {
+pub fn writeAsciiRun(
+    self: *Screen,
+    bytes: []const u8,
+    attrs: types.CellAttrs,
+    use_dec_special: bool,
+    origin: ?[]const u8,
+) usize {
     const rows = @as(usize, self.grid.rows);
     const cols = @as(usize, self.grid.cols);
     if (rows == 0 or cols == 0) return 0;
@@ -176,6 +183,7 @@ pub fn writeAsciiRun(self: *Screen, bytes: []const u8, attrs: types.CellAttrs, u
     const remaining_cols = right - col + 1;
     const run_len = @min(remaining_cols, bytes.len);
     const row_start = row * cols + col;
+    const broad_run = run_len >= @max(@as(usize, 1), cols / 2);
     if (use_dec_special) {
         var j: usize = 0;
         while (j < run_len) {
@@ -224,7 +232,21 @@ pub fn writeAsciiRun(self: *Screen, bytes: []const u8, attrs: types.CellAttrs, u
             j += same_len;
         }
     }
-    self.grid.markDirtyRange(row, row, col, col + run_len - 1);
+    if (broad_run) {
+        app_logger.logger("terminal.ui.write_ascii_origin").logf(
+            .info,
+            "origin={s} row={d} col={d} len={d} dec_special={d} preview=\"{s}\"",
+            .{
+                origin orelse "write.ascii_run",
+                row,
+                col,
+                run_len,
+                @intFromBool(use_dec_special),
+                asciiPreview(bytes[0..run_len]),
+            },
+        );
+    }
+    self.grid.markDirtyRangeWithOrigin(origin orelse "write.ascii_run", row, row, col, col + run_len - 1);
 
     if (run_len == remaining_cols) {
         self.cursor.col = right;
@@ -236,6 +258,16 @@ pub fn writeAsciiRun(self: *Screen, bytes: []const u8, attrs: types.CellAttrs, u
         self.cursor.col += run_len;
     }
     return run_len;
+}
+
+fn asciiPreview(bytes: []const u8) []const u8 {
+    const limit = @min(bytes.len, 48);
+    var end: usize = 0;
+    while (end < limit) : (end += 1) {
+        const b = bytes[end];
+        if (b < 0x20 or b > 0x7e) break;
+    }
+    return bytes[0..end];
 }
 
 pub fn prepareWrite(self: *Screen) WritePrep {

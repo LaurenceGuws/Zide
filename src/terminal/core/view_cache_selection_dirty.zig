@@ -1,3 +1,5 @@
+const publication = @import("view_cache_publication.zig");
+
 pub fn applySelectionDirtyExpansion(
     cache: anytype,
     active_cache: anytype,
@@ -22,9 +24,11 @@ pub fn applySelectionDirtyExpansion(
         }
         if (!changed) continue;
 
-        cache.dirty_rows.items[row_idx] = true;
-        cache.dirty_cols_start.items[row_idx] = 0;
-        cache.dirty_cols_end.items[row_idx] = if (cols > 0) @intCast(cols - 1) else 0;
+        publication.clearRowDirtySpans(cache, row_idx, cols);
+        if (cols > 0) {
+            publication.addRowDirtySpan(cache, row_idx, 0, cols - 1, cols);
+        }
+        publication.rebuildRowDirtyUnion(cache, row_idx, cols);
         fullwidth_origin_log.logf(
             .info,
             "source=view_cache row={d} reason=selection_change cols=0..{d} was_selected={d} is_selected={d} rows={d} cols={d}",

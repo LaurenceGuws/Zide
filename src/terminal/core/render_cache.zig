@@ -7,6 +7,8 @@ const Cell = types.Cell;
 const Dirty = screen_mod.Dirty;
 const Damage = screen_mod.Damage;
 const FullDirtyReason = screen_mod.FullDirtyReason;
+pub const RowDirtySpan = screen_mod.RowDirtySpan;
+pub const max_row_dirty_spans = screen_mod.max_row_dirty_spans;
 
 pub const KittyImage = snapshot_mod.KittyImage;
 pub const KittyPlacement = snapshot_mod.KittyPlacement;
@@ -14,6 +16,9 @@ pub const KittyPlacement = snapshot_mod.KittyPlacement;
 pub const RenderCache = struct {
     cells: std.ArrayList(Cell),
     dirty_rows: std.ArrayList(bool),
+    row_dirty_span_counts: std.ArrayList(u8),
+    row_dirty_span_overflow: std.ArrayList(bool),
+    row_dirty_spans: std.ArrayList([max_row_dirty_spans]RowDirtySpan),
     dirty_cols_start: std.ArrayList(u16),
     dirty_cols_end: std.ArrayList(u16),
     selection_rows: std.ArrayList(bool),
@@ -51,6 +56,9 @@ pub const RenderCache = struct {
         return .{
             .cells = std.ArrayList(Cell).empty,
             .dirty_rows = std.ArrayList(bool).empty,
+            .row_dirty_span_counts = std.ArrayList(u8).empty,
+            .row_dirty_span_overflow = std.ArrayList(bool).empty,
+            .row_dirty_spans = std.ArrayList([max_row_dirty_spans]RowDirtySpan).empty,
             .dirty_cols_start = std.ArrayList(u16).empty,
             .dirty_cols_end = std.ArrayList(u16).empty,
             .selection_rows = std.ArrayList(bool).empty,
@@ -89,6 +97,9 @@ pub const RenderCache = struct {
     pub fn deinit(self: *RenderCache, allocator: std.mem.Allocator) void {
         self.cells.deinit(allocator);
         self.dirty_rows.deinit(allocator);
+        self.row_dirty_span_counts.deinit(allocator);
+        self.row_dirty_span_overflow.deinit(allocator);
+        self.row_dirty_spans.deinit(allocator);
         self.dirty_cols_start.deinit(allocator);
         self.dirty_cols_end.deinit(allocator);
         self.selection_rows.deinit(allocator);
@@ -106,6 +117,15 @@ pub fn copySnapshot(dst: *RenderCache, allocator: std.mem.Allocator, src: *const
 
     try dst.dirty_rows.resize(allocator, src.dirty_rows.items.len);
     std.mem.copyForwards(bool, dst.dirty_rows.items, src.dirty_rows.items);
+
+    try dst.row_dirty_span_counts.resize(allocator, src.row_dirty_span_counts.items.len);
+    std.mem.copyForwards(u8, dst.row_dirty_span_counts.items, src.row_dirty_span_counts.items);
+
+    try dst.row_dirty_span_overflow.resize(allocator, src.row_dirty_span_overflow.items.len);
+    std.mem.copyForwards(bool, dst.row_dirty_span_overflow.items, src.row_dirty_span_overflow.items);
+
+    try dst.row_dirty_spans.resize(allocator, src.row_dirty_spans.items.len);
+    std.mem.copyForwards([max_row_dirty_spans]RowDirtySpan, dst.row_dirty_spans.items, src.row_dirty_spans.items);
 
     try dst.dirty_cols_start.resize(allocator, src.dirty_cols_start.items.len);
     std.mem.copyForwards(u16, dst.dirty_cols_start.items, src.dirty_cols_start.items);

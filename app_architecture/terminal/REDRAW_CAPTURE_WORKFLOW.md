@@ -203,6 +203,7 @@ Use:
 - [terminal_make_redraw_fixture.py](/home/home/personal/zide/tools/terminal_make_redraw_fixture.py)
 - [terminal_capture_pty.py](/home/home/personal/zide/tools/terminal_capture_pty.py)
 - [terminal_capture_redraw_fixture.py](/home/home/personal/zide/tools/terminal_capture_redraw_fixture.py)
+- [terminal_capture_nvim_real_config_cursor_repro.py](/home/home/personal/zide/tools/terminal_capture_nvim_real_config_cursor_repro.py)
 
 Capture raw PTY output first:
 
@@ -231,6 +232,37 @@ carry too much shared startup or teardown noise.
 `terminal_capture_pty.py` now also honors `--rows` and `--cols`, so the PTY
 viewport can match the intended replay fixture size instead of inheriting the
 current terminal geometry by accident.
+
+For the current plugin-heavy real-config Neovim cursor-step lane, prefer the
+scripted wrapper instead of manual typing first:
+
+```bash
+python3 tools/terminal_capture_nvim_real_config_cursor_repro.py --no-stdout
+```
+
+That wrapper drives the current reproducer shape automatically:
+
+- launch real-config `nvim` from the dashboard
+- `:e src/app_logger.zig`
+- wait for LSP/plugin chrome to settle
+- jump to mid-buffer
+- step `j` slowly enough to expose row-union broadening near the first viewport
+  shift
+
+Current note:
+
+- the full plugin-heavy `24x120` `app_logger.zig` baseline is still noisy enough
+  that it is better treated as capture automation first
+- the reduced replay-safe path is now:
+  - `--open-directly`
+  - `16x100`
+  - one aggregate late cursor-step update
+  - target file `fixtures/terminal/assets/nvim_real_config_cursor_sample.zig`
+- that shape now hydrates cleanly into
+  `redraw_nvim_real_config_cursor_step_probe.*`
+- the wrapper also supports idle-control captures with `--step-count 0`, which
+  is useful when you need to separate async post-open churn from actual
+  cursor-step invalidation in the same real-config lane
 
 For scripted input or a second update phase:
 

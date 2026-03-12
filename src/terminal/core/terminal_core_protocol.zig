@@ -62,6 +62,10 @@ pub fn scrollRegionUp(self: anytype, count: usize) void {
     scrolling_mod.scrollRegionUp(self, count);
 }
 
+pub fn scrollRegionUpWithOrigin(self: anytype, count: usize, origin: ?[]const u8) void {
+    scrolling_mod.scrollRegionUpWithOrigin(self, count, origin);
+}
+
 pub fn scrollRegionDown(self: anytype, count: usize) void {
     scrolling_mod.scrollRegionDown(self, count);
 }

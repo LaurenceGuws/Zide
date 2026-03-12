@@ -268,7 +268,7 @@ pub fn deleteLines(self: anytype, count: usize, blank_cell: types.Cell) void {
     self.markDirtyRangeWithOrigin("delete_lines_full", self.cursor.row, self.scroll_bottom, 0, cols - 1);
 }
 
-pub fn scrollRegionUpBy(self: anytype, n: usize, blank_cell: types.Cell) void {
+pub fn scrollRegionUpByWithOrigin(self: anytype, n: usize, blank_cell: types.Cell, origin: ?[]const u8) void {
     const cols = @as(usize, self.grid.cols);
     if (cols == 0 or self.grid.rows == 0) return;
     if (n == 0) return;
@@ -288,7 +288,7 @@ pub fn scrollRegionUpBy(self: anytype, n: usize, blank_cell: types.Cell) void {
             }
             self.grid.setRowWrapped(row, false);
         }
-        self.markDirtyRangeWithOrigin("scroll_region_up_margin", self.scroll_top, self.scroll_bottom, left, right);
+        self.markDirtyRangeWithOrigin(origin orelse "scroll_region_up_margin", self.scroll_top, self.scroll_bottom, left, right);
         return;
     }
     const region_start = self.scroll_top * cols;
@@ -310,16 +310,24 @@ pub fn scrollRegionUpBy(self: anytype, n: usize, blank_cell: types.Cell) void {
             self.grid.setRowWrapped(row, false);
         }
     }
-    self.markDirtyRangeWithOrigin("scroll_region_up_full", self.scroll_top, self.scroll_bottom, 0, cols - 1);
+    self.markDirtyRangeWithOrigin(origin orelse "scroll_region_up_full", self.scroll_top, self.scroll_bottom, 0, cols - 1);
 }
 
-pub fn scrollRegionUp(self: anytype, count: usize, blank_cell: types.Cell) usize {
+pub fn scrollRegionUpBy(self: anytype, n: usize, blank_cell: types.Cell) void {
+    scrollRegionUpByWithOrigin(self, n, blank_cell, null);
+}
+
+pub fn scrollRegionUpWithOrigin(self: anytype, count: usize, blank_cell: types.Cell, origin: ?[]const u8) usize {
     const cols = @as(usize, self.grid.cols);
     if (cols == 0 or self.grid.rows == 0) return 0;
     const n = @min(count, self.scroll_bottom - self.scroll_top + 1);
     if (n == 0) return 0;
-    scrollRegionUpBy(self, n, blank_cell);
+    scrollRegionUpByWithOrigin(self, n, blank_cell, origin);
     return n;
+}
+
+pub fn scrollRegionUp(self: anytype, count: usize, blank_cell: types.Cell) usize {
+    return scrollRegionUpWithOrigin(self, count, blank_cell, null);
 }
 
 pub fn scrollRegionDownBy(self: anytype, n: usize, blank_cell: types.Cell) void {

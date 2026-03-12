@@ -1,5 +1,4 @@
 const scrolling_mod = @import("scrolling.zig");
-
 pub fn handleControl(self: anytype, byte: u8) void {
     const screen = self.activeScreen();
     switch (byte) {
@@ -37,7 +36,7 @@ pub fn newline(self: anytype) void {
     const screen = self.activeScreen();
     switch (screen.newlineAction()) {
         .moved => {},
-        .scroll_region => self.scrollRegionUp(1),
+        .scroll_region => self.scrollRegionUpWithOrigin(1, "control.lf.scroll_region"),
         .scroll_full => scrolling_mod.scrollUp(self),
     }
 }
@@ -46,7 +45,7 @@ pub fn wrapNewline(self: anytype) void {
     const screen = self.activeScreen();
     switch (screen.wrapNewlineAction()) {
         .moved => {},
-        .scroll_region => self.scrollRegionUp(1),
+        .scroll_region => self.scrollRegionUpWithOrigin(1, "control.wrap_newline.scroll_region"),
         .scroll_full => scrolling_mod.scrollUp(self),
     }
 }
