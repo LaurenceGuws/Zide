@@ -43,6 +43,7 @@ pub const SimpleCsiContext = struct {
     insert_lines_fn: *const fn (ctx: *anyopaque, count: usize) void,
     delete_lines_fn: *const fn (ctx: *anyopaque, count: usize) void,
     scroll_region_up_fn: *const fn (ctx: *anyopaque, count: usize) void,
+    scroll_region_up_with_origin_fn: *const fn (ctx: *anyopaque, count: usize, origin: ?[]const u8) void,
     scroll_region_down_fn: *const fn (ctx: *anyopaque, count: usize) void,
     save_cursor_fn: *const fn (ctx: *anyopaque) void,
     restore_cursor_fn: *const fn (ctx: *anyopaque) void,
@@ -106,6 +107,12 @@ pub const SimpleCsiContext = struct {
                     s.scrollRegionUp(count);
                 }
             }.call,
+            .scroll_region_up_with_origin_fn = struct {
+                fn call(ctx: *anyopaque, count: usize, origin: ?[]const u8) void {
+                    const s: SessionPtr = @ptrCast(@alignCast(ctx));
+                    s.scrollRegionUpWithOrigin(count, origin);
+                }
+            }.call,
             .scroll_region_down_fn = struct {
                 fn call(ctx: *anyopaque, count: usize) void {
                     const s: SessionPtr = @ptrCast(@alignCast(ctx));
@@ -159,6 +166,9 @@ pub const SimpleCsiContext = struct {
     }
     pub fn scrollRegionUp(self: *const SimpleCsiContext, count: usize) void {
         self.scroll_region_up_fn(self.ctx, count);
+    }
+    pub fn scrollRegionUpWithOrigin(self: *const SimpleCsiContext, count: usize, origin: ?[]const u8) void {
+        self.scroll_region_up_with_origin_fn(self.ctx, count, origin);
     }
     pub fn scrollRegionDown(self: *const SimpleCsiContext, count: usize) void {
         self.scroll_region_down_fn(self.ctx, count);

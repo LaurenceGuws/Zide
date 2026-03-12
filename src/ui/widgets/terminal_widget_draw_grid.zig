@@ -20,6 +20,19 @@ const Rgba = terminal_font_mod.Rgba;
 
 const kitty_unicode_placeholder: u32 = 0x10EEEE;
 
+pub const BackgroundRunSummary = struct {
+    runs: usize = 0,
+    first_start: usize = 0,
+    first_end: usize = 0,
+    first_color: Color = Color.black,
+    second_start: usize = 0,
+    second_end: usize = 0,
+    second_color: Color = Color.black,
+    third_start: usize = 0,
+    third_end: usize = 0,
+    third_color: Color = Color.black,
+};
+
 pub const GlyphDrawStats = struct {
     shaping_spans: usize = 0,
     shaped_glyphs: usize = 0,
@@ -148,6 +161,85 @@ pub fn drawRowBackgrounds(
             resolvedBackgroundColor(last_cell, screen_reverse_mode),
         );
     }
+}
+
+pub fn countRowBackgroundRuns(
+    snapshot_cells: []const Cell,
+    cols_count: usize,
+    row_idx: usize,
+    col_start_in: usize,
+    col_end_in: usize,
+    draw_padding: bool,
+    screen_reverse_mode: bool,
+) usize {
+    const row_cells = rowSlice(snapshot_cells, cols_count, row_idx);
+    if (row_cells.len != cols_count) return 0;
+    const col_start = @min(col_start_in, cols_count - 1);
+    const col_end = @min(col_end_in, cols_count - 1);
+    if (col_start > col_end) return 0;
+
+    var run_count: usize = 0;
+    var col: usize = col_start;
+    while (col <= col_end and col < cols_count) : (col += 1) {
+        const cell = row_cells[col];
+        if (cell.x != 0 or cell.y != 0) continue;
+        const run_color = resolvedBackgroundColor(cell, screen_reverse_mode);
+        const run_end = backgroundRunEnd(row_cells, cols_count, col, col_end, screen_reverse_mode, run_color);
+        run_count += 1;
+        col = run_end - 1;
+    }
+
+    if (draw_padding and cols_count > 0) run_count += 1;
+    return run_count;
+}
+
+pub fn summarizeRowBackgroundRuns(
+    snapshot_cells: []const Cell,
+    cols_count: usize,
+    row_idx: usize,
+    col_start_in: usize,
+    col_end_in: usize,
+    draw_padding: bool,
+    screen_reverse_mode: bool,
+) BackgroundRunSummary {
+    var summary = BackgroundRunSummary{};
+    const row_cells = rowSlice(snapshot_cells, cols_count, row_idx);
+    if (row_cells.len != cols_count) return summary;
+    const col_start = @min(col_start_in, cols_count - 1);
+    const col_end = @min(col_end_in, cols_count - 1);
+    if (col_start > col_end) return summary;
+
+    var col: usize = col_start;
+    while (col <= col_end and col < cols_count) : (col += 1) {
+        const cell = row_cells[col];
+        if (cell.x != 0 or cell.y != 0) continue;
+        const run_color = resolvedBackgroundColor(cell, screen_reverse_mode);
+        const run_end_excl = backgroundRunEnd(row_cells, cols_count, col, col_end, screen_reverse_mode, run_color);
+        const run_end = run_end_excl - 1;
+        switch (summary.runs) {
+            0 => {
+                summary.first_start = col;
+                summary.first_end = run_end;
+                summary.first_color = run_color;
+            },
+            1 => {
+                summary.second_start = col;
+                summary.second_end = run_end;
+                summary.second_color = run_color;
+            },
+            2 => {
+                summary.third_start = col;
+                summary.third_end = run_end;
+                summary.third_color = run_color;
+            },
+            else => {},
+        }
+        summary.runs += 1;
+        col = run_end;
+    }
+
+    if (draw_padding and cols_count > 0) summary.runs += 1;
+    return summary;
 }
 
 test "backgroundRunEnd coalesces adjacent cells with same resolved background" {

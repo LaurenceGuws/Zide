@@ -38,7 +38,10 @@ pub fn handleSimpleCsi(
         'X' => context.eraseChars(@intCast(@max(1, get(params, 0, 1)))),
         'L' => context.insertLines(@intCast(@max(1, get(params, 0, 1)))),
         'M' => context.deleteLines(@intCast(@max(1, get(params, 0, 1)))),
-        'S' => context.scrollRegionUp(@intCast(@max(1, get(params, 0, 1)))),
+        'S' => {
+            const count = @as(usize, @intCast(@max(1, get(params, 0, 1))));
+            context.scrollRegionUpWithOrigin(count, "csi.S.scroll_region_up");
+        },
         'T' => context.scrollRegionDown(@intCast(@max(1, get(params, 0, 1)))),
         'Z' => {
             var i: i32 = 0;

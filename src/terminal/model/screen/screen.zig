@@ -375,18 +375,20 @@ pub const Screen = struct {
         const clamped_end_col = @min(end_col, cols - 1);
         if (clamped_start_row > clamped_end_row or clamped_start_col > clamped_end_col) return;
 
-        if (clamped_start_col == 0 and clamped_end_col + 1 == cols) {
+        const span_cols = clamped_end_col - clamped_start_col + 1;
+        if (span_cols >= cols / 2) {
             const dirty_origin_log = app_logger.logger("terminal.ui.screen_dirty_origin");
             dirty_origin_log.logf(
                 .info,
-                "op={s} rows={d}..{d} cols=0..{d} span_rows={d} span_cols={d} cursor={d},{d} scroll={d}..{d} margins={d}..{d}",
+                "op={s} rows={d}..{d} cols={d}..{d} span_rows={d} span_cols={d} cursor={d},{d} scroll={d}..{d} margins={d}..{d}",
                 .{
                     op,
                     clamped_start_row,
                     clamped_end_row,
-                    cols - 1,
+                    clamped_start_col,
+                    clamped_end_col,
                     clamped_end_row - clamped_start_row + 1,
-                    cols,
+                    span_cols,
                     self.cursor.row,
                     self.cursor.col,
                     self.scroll_top,
@@ -397,7 +399,7 @@ pub const Screen = struct {
             );
         }
 
-        self.grid.markDirtyRange(clamped_start_row, clamped_end_row, clamped_start_col, clamped_end_col);
+        self.grid.markDirtyRangeWithOrigin(op, clamped_start_row, clamped_end_row, clamped_start_col, clamped_end_col);
     }
 
     pub fn writeCodepoint(self: *Screen, cp: u32, attrs: types.CellAttrs) void {
@@ -410,8 +412,14 @@ pub const Screen = struct {
         return write_ops.codepointCellWidth(codepoint);
     }
 
-    pub fn writeAsciiRun(self: *Screen, bytes: []const u8, attrs: types.CellAttrs, use_dec_special: bool) usize {
-        return write_ops.writeAsciiRun(self, bytes, attrs, use_dec_special);
+    pub fn writeAsciiRun(
+        self: *Screen,
+        bytes: []const u8,
+        attrs: types.CellAttrs,
+        use_dec_special: bool,
+        origin: ?[]const u8,
+    ) usize {
+        return write_ops.writeAsciiRun(self, bytes, attrs, use_dec_special, origin);
     }
 
     pub fn prepareWrite(self: *Screen) WritePrep {
@@ -562,6 +570,9 @@ pub const Screen = struct {
         cols: usize,
         cells: []const types.Cell,
         dirty_rows: []const bool,
+        row_dirty_span_counts: []const u8,
+        row_dirty_span_overflow: []const bool,
+        row_dirty_spans: []const [grid_mod.max_row_dirty_spans]grid_mod.RowDirtySpan,
         dirty_cols_start: []const u16,
         dirty_cols_end: []const u16,
         cursor: types.CursorPos,
@@ -579,6 +590,9 @@ pub const Screen = struct {
             .cols = @as(usize, self.grid.cols),
             .cells = self.grid.cells.items,
             .dirty_rows = self.grid.dirty_rows.items,
+            .row_dirty_span_counts = self.grid.row_dirty_span_counts.items,
+            .row_dirty_span_overflow = self.grid.row_dirty_span_overflow.items,
+            .row_dirty_spans = self.grid.row_dirty_spans.items,
             .dirty_cols_start = self.grid.dirty_cols_start.items,
             .dirty_cols_end = self.grid.dirty_cols_end.items,
             .cursor = self.cursor,
@@ -629,7 +643,7 @@ pub const Screen = struct {
             flag.* = false;
         }
         if (self.grid.rows > 0 and self.grid.cols > 0) {
-            self.grid.markDirtyRange(0, self.grid.rows - 1, 0, self.grid.cols - 1);
+            self.grid.markDirtyRangeWithOrigin("screen.clear", 0, self.grid.rows - 1, 0, self.grid.cols - 1);
         }
     }
 
@@ -678,7 +692,7 @@ pub const Screen = struct {
             if (colorsEqual(cell.attrs.underline_color, old_attrs.underline_color)) cell.attrs.underline_color = new_attrs.underline_color;
         }
         if (self.grid.rows > 0 and self.grid.cols > 0) {
-            self.grid.markDirtyRange(0, self.grid.rows - 1, 0, self.grid.cols - 1);
+            self.grid.markDirtyRangeWithOrigin("screen.update_default_colors", 0, self.grid.rows - 1, 0, self.grid.cols - 1);
         }
     }
 
@@ -697,7 +711,7 @@ pub const Screen = struct {
             cell.attrs.underline_color = remapAnsiColor(cell.attrs.underline_color, old_colors, new_colors);
         }
         if (self.grid.rows > 0 and self.grid.cols > 0) {
-            self.grid.markDirtyRange(0, self.grid.rows - 1, 0, self.grid.cols - 1);
+            self.grid.markDirtyRangeWithOrigin("screen.update_ansi_colors", 0, self.grid.rows - 1, 0, self.grid.cols - 1);
         }
     }
 
@@ -716,8 +730,16 @@ pub const Screen = struct {
         edit_ops.scrollRegionUpBy(self, n, blank_cell);
     }
 
+    pub fn scrollRegionUpByWithOrigin(self: *Screen, n: usize, blank_cell: types.Cell, origin: ?[]const u8) void {
+        edit_ops.scrollRegionUpByWithOrigin(self, n, blank_cell, origin);
+    }
+
     pub fn scrollRegionUp(self: *Screen, count: usize, blank_cell: types.Cell) usize {
         return edit_ops.scrollRegionUp(self, count, blank_cell);
+    }
+
+    pub fn scrollRegionUpWithOrigin(self: *Screen, count: usize, blank_cell: types.Cell, origin: ?[]const u8) usize {
+        return edit_ops.scrollRegionUpWithOrigin(self, count, blank_cell, origin);
     }
 
     pub fn scrollRegionDownBy(self: *Screen, n: usize, blank_cell: types.Cell) void {

@@ -1,6 +1,6 @@
 const kitty_mod = @import("../kitty/graphics.zig");
 
-pub fn scrollRegionUp(self: anytype, count: usize) void {
+pub fn scrollRegionUpWithOrigin(self: anytype, count: usize, origin: ?[]const u8) void {
     const screen = self.core.activeScreen();
     const cols = @as(usize, screen.grid.cols);
     if (cols == 0 or screen.grid.rows == 0) return;
@@ -14,10 +14,14 @@ pub fn scrollRegionUp(self: anytype, count: usize) void {
         }
         kitty_mod.updateKittyPlacementsForScroll(self);
     }
-    screen.scrollRegionUpBy(n, blank_cell);
+    screen.scrollRegionUpByWithOrigin(n, blank_cell, origin);
     if (!isFullScrollRegion(self)) {
         kitty_mod.shiftKittyPlacementsUp(self, screen.scroll_top, screen.scroll_bottom, n);
     }
+}
+
+pub fn scrollRegionUp(self: anytype, count: usize) void {
+    scrollRegionUpWithOrigin(self, count, null);
 }
 
 pub fn scrollRegionDown(self: anytype, count: usize) void {

@@ -1,5 +1,6 @@
 const std = @import("std");
 const render_cache_mod = @import("../../terminal/core/render_cache.zig");
+const screen_mod = @import("../../terminal/model/screen.zig");
 
 const RenderCache = render_cache_mod.RenderCache;
 
@@ -23,6 +24,8 @@ pub const PartialPlanBounds = struct {
 pub fn formatPartialPlanRows(
     buf: []u8,
     partial_rows: []const bool,
+    partial_span_counts: []const u8,
+    partial_spans: []const [screen_mod.max_row_dirty_spans]screen_mod.RowDirtySpan,
     partial_cols_start: []const u16,
     partial_cols_end: []const u16,
     max_rows: usize,
@@ -44,7 +47,18 @@ pub fn formatPartialPlanRows(
             }
             break;
         }
-        const row_token = std.fmt.bufPrint(
+        const row_token = if (row < partial_span_counts.len and row < partial_spans.len and partial_span_counts[row] > 0) blk: {
+            var row_stream = std.io.fixedBufferStream(&row_buf);
+            const row_writer = row_stream.writer();
+            row_writer.print("{d}:", .{row}) catch break :blk std.fmt.bufPrint(&row_buf, "{d}:{d}-{d}", .{ row, partial_cols_start[row], partial_cols_end[row] }) catch break;
+            var span_idx: usize = 0;
+            while (span_idx < partial_span_counts[row]) : (span_idx += 1) {
+                if (span_idx > 0) row_writer.writeAll("|") catch break;
+                const span = partial_spans[row][span_idx];
+                row_writer.print("{d}-{d}", .{ span.start, span.end }) catch break;
+            }
+            break :blk row_stream.getWritten();
+        } else std.fmt.bufPrint(
             &row_buf,
             "{d}:{d}-{d}",
             .{ row, partial_cols_start[row], partial_cols_end[row] },
@@ -71,6 +85,8 @@ pub fn formatPartialPlanRows(
 pub fn buildPartialPlan(
     cache: *const RenderCache,
     partial_rows: []bool,
+    partial_span_counts: []u8,
+    partial_spans: [] [screen_mod.max_row_dirty_spans]screen_mod.RowDirtySpan,
     partial_cols_start: []u16,
     partial_cols_end: []u16,
     shifted_rows: usize,
@@ -80,9 +96,13 @@ pub fn buildPartialPlan(
 ) ?PartialPlanBounds {
     buildBasePartialPlan(
         partial_rows,
+        partial_span_counts,
+        partial_spans,
         partial_cols_start,
         partial_cols_end,
         cache.dirty_rows.items,
+        cache.row_dirty_span_counts.items,
+        cache.row_dirty_spans.items,
         cache.dirty_cols_start.items,
         cache.dirty_cols_end.items,
         cache.rows,
@@ -95,6 +115,8 @@ pub fn buildPartialPlan(
         addBlinkRowsToPartialPlan(
             cache,
             partial_rows,
+            partial_span_counts,
+            partial_spans,
             partial_cols_start,
             partial_cols_end,
         );
@@ -104,9 +126,13 @@ pub fn buildPartialPlan(
 
 pub fn buildBasePartialPlan(
     partial_rows: []bool,
+    partial_span_counts: []u8,
+    partial_spans: [] [screen_mod.max_row_dirty_spans]screen_mod.RowDirtySpan,
     partial_cols_start: []u16,
     partial_cols_end: []u16,
     view_dirty_rows: []const bool,
+    row_dirty_span_counts: []const u8,
+    row_dirty_spans: []const [screen_mod.max_row_dirty_spans]screen_mod.RowDirtySpan,
     dirty_cols_start: []const u16,
     dirty_cols_end: []const u16,
     rows: usize,
@@ -118,6 +144,14 @@ pub fn buildBasePartialPlan(
     for (partial_rows) |*row_draw| {
         row_draw.* = false;
     }
+    for (partial_span_counts) |*count| {
+        count.* = 0;
+    }
+    for (partial_spans) |*row_spans| {
+        for (row_spans) |*span| {
+            span.* = .{ .start = @intCast(cols), .end = 0 };
+        }
+    }
     for (partial_cols_start, partial_cols_end) |*col_start, *col_end| {
         col_start.* = if (cols > 0) @intCast(cols) else 0;
         col_end.* = 0;
@@ -126,7 +160,15 @@ pub fn buildBasePartialPlan(
     if (rows == 0 or cols == 0) return;
 
     if (shift_requires_fullwidth_partial) {
-        markAllRowsFullWidthPartialPlan(partial_rows, partial_cols_start, partial_cols_end, rows, cols);
+        markAllRowsFullWidthPartialPlan(
+            partial_rows,
+            partial_span_counts,
+            partial_spans,
+            partial_cols_start,
+            partial_cols_end,
+            rows,
+            cols,
+        );
         return;
     }
 
@@ -136,6 +178,24 @@ pub fn buildBasePartialPlan(
         const is_shift_row = shifted_rows > 0 and (if (shift_up) row >= rows - shifted_rows else row < shifted_rows);
         if (!((row < view_dirty_rows.len and view_dirty_rows[row]) or is_shift_row)) continue;
 
+        if (!is_shift_row and row < row_dirty_span_counts.len and row < row_dirty_spans.len and row_dirty_span_counts[row] > 0) {
+            var span_idx: usize = 0;
+            while (span_idx < row_dirty_span_counts[row]) : (span_idx += 1) {
+                const span = row_dirty_spans[row][span_idx];
+                if (span.start > span.end) continue;
+                markPartialPlanRow(
+                    partial_rows,
+                    partial_span_counts,
+                    partial_spans,
+                    partial_cols_start,
+                    partial_cols_end,
+                    row,
+                    @min(@as(usize, span.start), cols - 1),
+                    @min(@as(usize, span.end), cols - 1),
+                );
+            }
+            continue;
+        }
         var col_start: usize = 0;
         var col_end: usize = cols - 1;
         if (!is_shift_row and row < dirty_cols_start.len and row < dirty_cols_end.len) {
@@ -144,6 +204,8 @@ pub fn buildBasePartialPlan(
         }
         markPartialPlanRow(
             partial_rows,
+            partial_span_counts,
+            partial_spans,
             partial_cols_start,
             partial_cols_end,
             row,
@@ -210,6 +272,8 @@ pub fn chooseTextureUpdatePlan(
 
 pub fn markPartialPlanRows(
     partial_rows: []bool,
+    partial_span_counts: []u8,
+    partial_spans: [] [screen_mod.max_row_dirty_spans]screen_mod.RowDirtySpan,
     partial_cols_start: []u16,
     partial_cols_end: []u16,
     rows: usize,
@@ -223,20 +287,32 @@ pub fn markPartialPlanRows(
     const col_end_u16: u16 = @intCast(col_end);
     var affect_row = affect_start;
     while (affect_row <= affect_end) : (affect_row += 1) {
-        partial_rows[affect_row] = true;
-        if (partial_cols_start[affect_row] > col_start_u16) partial_cols_start[affect_row] = col_start_u16;
-        if (partial_cols_end[affect_row] < col_end_u16) partial_cols_end[affect_row] = col_end_u16;
+        markPartialPlanRow(
+            partial_rows,
+            partial_span_counts,
+            partial_spans,
+            partial_cols_start,
+            partial_cols_end,
+            affect_row,
+            col_start_u16,
+            col_end_u16,
+        );
     }
 }
 
 pub fn markPartialPlanRow(
     partial_rows: []bool,
+    partial_span_counts: []u8,
+    partial_spans: [] [screen_mod.max_row_dirty_spans]screen_mod.RowDirtySpan,
     partial_cols_start: []u16,
     partial_cols_end: []u16,
     row: usize,
     col_start: usize,
     col_end: usize,
 ) void {
+    if (row < partial_span_counts.len and row < partial_spans.len) {
+        mergePartialPlanSpan(partial_span_counts, partial_spans, row, col_start, col_end);
+    }
     const col_start_u16: u16 = @intCast(col_start);
     const col_end_u16: u16 = @intCast(col_end);
     partial_rows[row] = true;
@@ -244,8 +320,68 @@ pub fn markPartialPlanRow(
     if (partial_cols_end[row] < col_end_u16) partial_cols_end[row] = col_end_u16;
 }
 
+fn mergePartialPlanSpan(
+    partial_span_counts: []u8,
+    partial_spans: [] [screen_mod.max_row_dirty_spans]screen_mod.RowDirtySpan,
+    row: usize,
+    col_start: usize,
+    col_end: usize,
+) void {
+    var merged_start: u16 = @intCast(col_start);
+    var merged_end: u16 = @intCast(col_end);
+    var count = @as(usize, partial_span_counts[row]);
+    var row_spans = &partial_spans[row];
+
+    var read_idx: usize = 0;
+    var write_idx: usize = 0;
+    while (read_idx < count) : (read_idx += 1) {
+        const span = row_spans[read_idx];
+        if (span.end + 1 < merged_start or merged_end + 1 < span.start) {
+            row_spans[write_idx] = span;
+            write_idx += 1;
+            continue;
+        }
+        merged_start = @min(merged_start, span.start);
+        merged_end = @max(merged_end, span.end);
+    }
+    count = write_idx;
+    if (count >= screen_mod.max_row_dirty_spans) {
+        var union_start = merged_start;
+        var union_end = merged_end;
+        var idx: usize = 0;
+        while (idx < count) : (idx += 1) {
+            union_start = @min(union_start, row_spans[idx].start);
+            union_end = @max(union_end, row_spans[idx].end);
+        }
+        row_spans[0] = .{ .start = union_start, .end = union_end };
+        partial_span_counts[row] = 1;
+        var clear_idx: usize = 1;
+        while (clear_idx < screen_mod.max_row_dirty_spans) : (clear_idx += 1) {
+            row_spans[clear_idx] = .{ .start = union_end + 1, .end = union_end };
+        }
+        return;
+    }
+    row_spans[count] = .{ .start = merged_start, .end = merged_end };
+    count += 1;
+    if (count > 1) {
+        std.sort.block(screen_mod.RowDirtySpan, row_spans[0..count], {}, struct {
+            fn lessThan(_: void, a: screen_mod.RowDirtySpan, b: screen_mod.RowDirtySpan) bool {
+                if (a.start == b.start) return a.end < b.end;
+                return a.start < b.start;
+            }
+        }.lessThan);
+    }
+    partial_span_counts[row] = @intCast(count);
+    var clear_idx: usize = count;
+    while (clear_idx < screen_mod.max_row_dirty_spans) : (clear_idx += 1) {
+        row_spans[clear_idx] = .{ .start = merged_end + 1, .end = merged_end };
+    }
+}
+
 pub fn markAllRowsFullWidthPartialPlan(
     partial_rows: []bool,
+    partial_span_counts: []u8,
+    partial_spans: [] [screen_mod.max_row_dirty_spans]screen_mod.RowDirtySpan,
     partial_cols_start: []u16,
     partial_cols_end: []u16,
     rows: usize,
@@ -255,6 +391,14 @@ pub fn markAllRowsFullWidthPartialPlan(
     var row: usize = 0;
     while (row < rows) : (row += 1) {
         partial_rows[row] = true;
+        if (row < partial_span_counts.len and row < partial_spans.len) {
+            partial_span_counts[row] = 1;
+            partial_spans[row][0] = .{ .start = 0, .end = @intCast(cols - 1) };
+            var span_idx: usize = 1;
+            while (span_idx < screen_mod.max_row_dirty_spans) : (span_idx += 1) {
+                partial_spans[row][span_idx] = .{ .start = @intCast(cols), .end = @intCast(cols - 1) };
+            }
+        }
         partial_cols_start[row] = 0;
         partial_cols_end[row] = @intCast(cols - 1);
     }
@@ -298,6 +442,8 @@ pub fn summarizePartialPlan(
 pub fn addBlinkRowsToPartialPlan(
     cache: *const RenderCache,
     partial_rows: []bool,
+    partial_span_counts: []u8,
+    partial_spans: [] [screen_mod.max_row_dirty_spans]screen_mod.RowDirtySpan,
     partial_cols_start: []u16,
     partial_cols_end: []u16,
 ) void {
@@ -323,6 +469,8 @@ pub fn addBlinkRowsToPartialPlan(
         if (first_col) |start_col| {
             markPartialPlanRow(
                 partial_rows,
+                partial_span_counts,
+                partial_spans,
                 partial_cols_start,
                 partial_cols_end,
                 row,
@@ -338,7 +486,9 @@ test "markPartialPlanRows widens to adjacent rows" {
     var partial_cols_start = [_]u16{99} ** 5;
     var partial_cols_end = [_]u16{0} ** 5;
 
-    markPartialPlanRows(&partial_rows, &partial_cols_start, &partial_cols_end, 5, 2, 4, 6);
+    var partial_span_counts = [_]u8{0} ** 5;
+    var partial_spans = [_][screen_mod.max_row_dirty_spans]screen_mod.RowDirtySpan{[_]screen_mod.RowDirtySpan{.{ .start = 99, .end = 0 }} ** screen_mod.max_row_dirty_spans} ** 5;
+    markPartialPlanRows(&partial_rows, &partial_span_counts, &partial_spans, &partial_cols_start, &partial_cols_end, 5, 2, 4, 6);
 
     try std.testing.expectEqualSlices(bool, &[_]bool{ false, true, true, true, false }, &partial_rows);
     try std.testing.expectEqual(@as(u16, 4), partial_cols_start[1]);
@@ -354,7 +504,9 @@ test "markPartialPlanRows clamps at top edge" {
     var partial_cols_start = [_]u16{99} ** 4;
     var partial_cols_end = [_]u16{0} ** 4;
 
-    markPartialPlanRows(&partial_rows, &partial_cols_start, &partial_cols_end, 4, 0, 2, 3);
+    var partial_span_counts = [_]u8{0} ** 4;
+    var partial_spans = [_][screen_mod.max_row_dirty_spans]screen_mod.RowDirtySpan{[_]screen_mod.RowDirtySpan{.{ .start = 99, .end = 0 }} ** screen_mod.max_row_dirty_spans} ** 4;
+    markPartialPlanRows(&partial_rows, &partial_span_counts, &partial_spans, &partial_cols_start, &partial_cols_end, 4, 0, 2, 3);
 
     try std.testing.expectEqualSlices(bool, &[_]bool{ true, true, false, false }, &partial_rows);
     try std.testing.expectEqual(@as(u16, 2), partial_cols_start[0]);
@@ -365,15 +517,17 @@ test "markPartialPlanRows clamps at top edge" {
 
 test "markPartialPlanRows reproduces cursorcolumn aggregate box" {
     var partial_rows = [_]bool{false} ** 12;
+    var partial_span_counts = [_]u8{0} ** 12;
+    var partial_spans = [_][screen_mod.max_row_dirty_spans]screen_mod.RowDirtySpan{[_]screen_mod.RowDirtySpan{.{ .start = 99, .end = 0 }} ** screen_mod.max_row_dirty_spans} ** 12;
     var partial_cols_start = [_]u16{99} ** 12;
     var partial_cols_end = [_]u16{0} ** 12;
 
     inline for (0..8) |row| {
-        markPartialPlanRows(&partial_rows, &partial_cols_start, &partial_cols_end, 12, row, 6, 6);
+        markPartialPlanRows(&partial_rows, &partial_span_counts, &partial_spans, &partial_cols_start, &partial_cols_end, 12, row, 6, 6);
     }
-    markPartialPlanRows(&partial_rows, &partial_cols_start, &partial_cols_end, 12, 8, 4, 6);
-    markPartialPlanRows(&partial_rows, &partial_cols_start, &partial_cols_end, 12, 9, 4, 6);
-    markPartialPlanRows(&partial_rows, &partial_cols_start, &partial_cols_end, 12, 10, 33, 33);
+    markPartialPlanRows(&partial_rows, &partial_span_counts, &partial_spans, &partial_cols_start, &partial_cols_end, 12, 8, 4, 6);
+    markPartialPlanRows(&partial_rows, &partial_span_counts, &partial_spans, &partial_cols_start, &partial_cols_end, 12, 9, 4, 6);
+    markPartialPlanRows(&partial_rows, &partial_span_counts, &partial_spans, &partial_cols_start, &partial_cols_end, 12, 10, 33, 33);
 
     try std.testing.expectEqualSlices(
         bool,
@@ -402,15 +556,17 @@ test "markPartialPlanRows reproduces cursorcolumn aggregate box" {
 
 test "markPartialPlanRow preserves cursorcolumn row spans" {
     var partial_rows = [_]bool{false} ** 12;
+    var partial_span_counts = [_]u8{0} ** 12;
+    var partial_spans = [_][screen_mod.max_row_dirty_spans]screen_mod.RowDirtySpan{[_]screen_mod.RowDirtySpan{.{ .start = 99, .end = 0 }} ** screen_mod.max_row_dirty_spans} ** 12;
     var partial_cols_start = [_]u16{99} ** 12;
     var partial_cols_end = [_]u16{0} ** 12;
 
     inline for (0..8) |row| {
-        markPartialPlanRow(&partial_rows, &partial_cols_start, &partial_cols_end, row, 6, 6);
+        markPartialPlanRow(&partial_rows, &partial_span_counts, &partial_spans, &partial_cols_start, &partial_cols_end, row, 6, 6);
     }
-    markPartialPlanRow(&partial_rows, &partial_cols_start, &partial_cols_end, 8, 4, 6);
-    markPartialPlanRow(&partial_rows, &partial_cols_start, &partial_cols_end, 9, 4, 6);
-    markPartialPlanRow(&partial_rows, &partial_cols_start, &partial_cols_end, 10, 33, 33);
+    markPartialPlanRow(&partial_rows, &partial_span_counts, &partial_spans, &partial_cols_start, &partial_cols_end, 8, 4, 6);
+    markPartialPlanRow(&partial_rows, &partial_span_counts, &partial_spans, &partial_cols_start, &partial_cols_end, 9, 4, 6);
+    markPartialPlanRow(&partial_rows, &partial_span_counts, &partial_spans, &partial_cols_start, &partial_cols_end, 10, 33, 33);
 
     try std.testing.expectEqualSlices(
         bool,
@@ -427,15 +583,17 @@ test "markPartialPlanRow preserves cursorcolumn row spans" {
 
 test "markPartialPlanRow narrows cursorcolumn aggregate bounds" {
     var partial_rows = [_]bool{false} ** 12;
+    var partial_span_counts = [_]u8{0} ** 12;
+    var partial_spans = [_][screen_mod.max_row_dirty_spans]screen_mod.RowDirtySpan{[_]screen_mod.RowDirtySpan{.{ .start = 99, .end = 0 }} ** screen_mod.max_row_dirty_spans} ** 12;
     var partial_cols_start = [_]u16{99} ** 12;
     var partial_cols_end = [_]u16{0} ** 12;
 
     inline for (0..8) |row| {
-        markPartialPlanRow(&partial_rows, &partial_cols_start, &partial_cols_end, row, 6, 6);
+        markPartialPlanRow(&partial_rows, &partial_span_counts, &partial_spans, &partial_cols_start, &partial_cols_end, row, 6, 6);
     }
-    markPartialPlanRow(&partial_rows, &partial_cols_start, &partial_cols_end, 8, 4, 6);
-    markPartialPlanRow(&partial_rows, &partial_cols_start, &partial_cols_end, 9, 4, 6);
-    markPartialPlanRow(&partial_rows, &partial_cols_start, &partial_cols_end, 10, 33, 33);
+    markPartialPlanRow(&partial_rows, &partial_span_counts, &partial_spans, &partial_cols_start, &partial_cols_end, 8, 4, 6);
+    markPartialPlanRow(&partial_rows, &partial_span_counts, &partial_spans, &partial_cols_start, &partial_cols_end, 9, 4, 6);
+    markPartialPlanRow(&partial_rows, &partial_span_counts, &partial_spans, &partial_cols_start, &partial_cols_end, 10, 33, 33);
 
     const bounds = summarizePartialPlan(&partial_rows, &partial_cols_start, &partial_cols_end).?;
     try std.testing.expectEqual(@as(usize, 0), bounds.start_row);
@@ -477,9 +635,13 @@ test "buildBasePartialPlan preserves cursorcolumn row-locality" {
 
     buildBasePartialPlan(
         &partial_rows,
+        &[_]u8{0} ** 12,
+        &[_][screen_mod.max_row_dirty_spans]screen_mod.RowDirtySpan{[_]screen_mod.RowDirtySpan{.{ .start = 0, .end = 0 }} ** screen_mod.max_row_dirty_spans} ** 12,
         &partial_cols_start,
         &partial_cols_end,
         &dirty_rows,
+        &[_]u8{0} ** 12,
+        &[_][screen_mod.max_row_dirty_spans]screen_mod.RowDirtySpan{[_]screen_mod.RowDirtySpan{.{ .start = 0, .end = 0 }} ** screen_mod.max_row_dirty_spans} ** 12,
         &dirty_start,
         &dirty_end,
         12,
@@ -506,6 +668,133 @@ test "buildBasePartialPlan preserves cursorcolumn row-locality" {
     try std.testing.expectEqual(@as(u16, 33), partial_cols_end[10]);
 }
 
+test "buildBasePartialPlan prefers multi-span row truth over union mirror" {
+    var partial_rows = [_]bool{false} ** 4;
+    var partial_span_counts_out = [_]u8{0} ** 4;
+    var partial_spans_out = [_][screen_mod.max_row_dirty_spans]screen_mod.RowDirtySpan{[_]screen_mod.RowDirtySpan{.{ .start = 99, .end = 0 }} ** screen_mod.max_row_dirty_spans} ** 4;
+    var partial_cols_start = [_]u16{99} ** 4;
+    var partial_cols_end = [_]u16{0} ** 4;
+    var dirty_rows = [_]bool{false} ** 4;
+    var dirty_start = [_]u16{0} ** 4;
+    var dirty_end = [_]u16{0} ** 4;
+    var row_dirty_span_counts = [_]u8{0} ** 4;
+    var row_dirty_spans = [_][screen_mod.max_row_dirty_spans]screen_mod.RowDirtySpan{
+        [_]screen_mod.RowDirtySpan{.{ .start = 50, .end = 0 }} ** screen_mod.max_row_dirty_spans,
+        [_]screen_mod.RowDirtySpan{.{ .start = 50, .end = 0 }} ** screen_mod.max_row_dirty_spans,
+        [_]screen_mod.RowDirtySpan{.{ .start = 50, .end = 0 }} ** screen_mod.max_row_dirty_spans,
+        [_]screen_mod.RowDirtySpan{.{ .start = 50, .end = 0 }} ** screen_mod.max_row_dirty_spans,
+    };
+
+    dirty_rows[1] = true;
+    dirty_start[1] = 2;
+    dirty_end[1] = 18;
+    row_dirty_span_counts[1] = 2;
+    row_dirty_spans[1][0] = .{ .start = 2, .end = 5 };
+    row_dirty_spans[1][1] = .{ .start = 10, .end = 18 };
+
+    buildBasePartialPlan(
+        &partial_rows,
+        &partial_span_counts_out,
+        &partial_spans_out,
+        &partial_cols_start,
+        &partial_cols_end,
+        &dirty_rows,
+        &row_dirty_span_counts,
+        &row_dirty_spans,
+        &dirty_start,
+        &dirty_end,
+        4,
+        50,
+        0,
+        0,
+        false,
+    );
+
+    try std.testing.expect(partial_rows[1]);
+    try std.testing.expectEqual(@as(u16, 2), partial_cols_start[1]);
+    try std.testing.expectEqual(@as(u16, 18), partial_cols_end[1]);
+    try std.testing.expectEqual(@as(u8, 2), partial_span_counts_out[1]);
+    try std.testing.expectEqual(@as(u16, 2), partial_spans_out[1][0].start);
+    try std.testing.expectEqual(@as(u16, 5), partial_spans_out[1][0].end);
+    try std.testing.expectEqual(@as(u16, 10), partial_spans_out[1][1].start);
+    try std.testing.expectEqual(@as(u16, 18), partial_spans_out[1][1].end);
+}
+
+test "buildPartialPlan keeps nvim-style gutter and body spans disjoint on one row" {
+    var cache = RenderCache.init();
+    defer cache.deinit(std.testing.allocator);
+
+    cache.rows = 6;
+    cache.cols = 120;
+    cache.dirty = .partial;
+    try cache.dirty_rows.resize(std.testing.allocator, 6);
+    try cache.row_dirty_span_counts.resize(std.testing.allocator, 6);
+    try cache.row_dirty_spans.resize(std.testing.allocator, 6);
+    try cache.dirty_cols_start.resize(std.testing.allocator, 6);
+    try cache.dirty_cols_end.resize(std.testing.allocator, 6);
+    try cache.cells.resize(std.testing.allocator, 6 * 120);
+
+    @memset(cache.dirty_rows.items, false);
+    @memset(cache.row_dirty_span_counts.items, 0);
+    for (cache.row_dirty_spans.items) |*row_spans| {
+        @memset(row_spans, .{ .start = 120, .end = 0 });
+    }
+    @memset(cache.dirty_cols_start.items, 0);
+    @memset(cache.dirty_cols_end.items, 0);
+    @memset(cache.cells.items, std.mem.zeroes(@TypeOf(cache.cells.items[0])));
+
+    cache.dirty_rows.items[3] = true;
+    cache.row_dirty_span_counts.items[3] = 2;
+    cache.row_dirty_spans.items[3][0] = .{ .start = 2, .end = 5 };
+    cache.row_dirty_spans.items[3][1] = .{ .start = 39, .end = 117 };
+    cache.dirty_cols_start.items[3] = 2;
+    cache.dirty_cols_end.items[3] = 117;
+
+    var partial_rows = [_]bool{false} ** 6;
+    var partial_span_counts = [_]u8{0} ** 6;
+    var partial_spans = [_][screen_mod.max_row_dirty_spans]screen_mod.RowDirtySpan{[_]screen_mod.RowDirtySpan{.{ .start = 120, .end = 0 }} ** screen_mod.max_row_dirty_spans} ** 6;
+    var partial_cols_start = [_]u16{120} ** 6;
+    var partial_cols_end = [_]u16{0} ** 6;
+
+    const bounds = buildPartialPlan(
+        &cache,
+        &partial_rows,
+        &partial_span_counts,
+        &partial_spans,
+        &partial_cols_start,
+        &partial_cols_end,
+        0,
+        0,
+        false,
+        false,
+    ).?;
+
+    try std.testing.expect(partial_rows[3]);
+    try std.testing.expectEqual(@as(u8, 2), partial_span_counts[3]);
+    try std.testing.expectEqual(@as(u16, 2), partial_spans[3][0].start);
+    try std.testing.expectEqual(@as(u16, 5), partial_spans[3][0].end);
+    try std.testing.expectEqual(@as(u16, 39), partial_spans[3][1].start);
+    try std.testing.expectEqual(@as(u16, 117), partial_spans[3][1].end);
+    try std.testing.expectEqual(@as(u16, 2), partial_cols_start[3]);
+    try std.testing.expectEqual(@as(u16, 117), partial_cols_end[3]);
+    try std.testing.expectEqual(@as(usize, 3), bounds.start_row);
+    try std.testing.expectEqual(@as(usize, 3), bounds.end_row);
+    try std.testing.expectEqual(@as(usize, 2), bounds.start_col);
+    try std.testing.expectEqual(@as(usize, 117), bounds.end_col);
+
+    var buf: [64]u8 = undefined;
+    const summary = formatPartialPlanRows(
+        &buf,
+        &partial_rows,
+        &partial_span_counts,
+        &partial_spans,
+        &partial_cols_start,
+        &partial_cols_end,
+        6,
+    );
+    try std.testing.expectEqualStrings("3:2-5|39-117", summary);
+}
+
 test "buildPartialPlan reproduces cursorcolumn live draw shape" {
     var cache = RenderCache.init();
     defer cache.deinit(std.testing.allocator);
@@ -513,27 +802,41 @@ test "buildPartialPlan reproduces cursorcolumn live draw shape" {
     cache.rows = 12;
     cache.cols = 50;
     try cache.dirty_rows.resize(std.testing.allocator, 12);
+    try cache.row_dirty_span_counts.resize(std.testing.allocator, 12);
+    try cache.row_dirty_spans.resize(std.testing.allocator, 12);
     try cache.dirty_cols_start.resize(std.testing.allocator, 12);
     try cache.dirty_cols_end.resize(std.testing.allocator, 12);
     try cache.cells.resize(std.testing.allocator, 12 * 50);
 
     @memset(cache.dirty_rows.items, false);
+    @memset(cache.row_dirty_span_counts.items, 0);
+    for (cache.row_dirty_spans.items) |*row_spans| {
+        @memset(row_spans, .{ .start = 50, .end = 0 });
+    }
     @memset(cache.dirty_cols_start.items, 0);
     @memset(cache.dirty_cols_end.items, 0);
     @memset(cache.cells.items, std.mem.zeroes(@TypeOf(cache.cells.items[0])));
 
     inline for (0..8) |row| {
         cache.dirty_rows.items[row] = true;
+        cache.row_dirty_span_counts.items[row] = 1;
+        cache.row_dirty_spans.items[row][0] = .{ .start = 6, .end = 6 };
         cache.dirty_cols_start.items[row] = 6;
         cache.dirty_cols_end.items[row] = 6;
     }
     cache.dirty_rows.items[8] = true;
     cache.dirty_rows.items[9] = true;
+    cache.row_dirty_span_counts.items[8] = 1;
+    cache.row_dirty_span_counts.items[9] = 1;
+    cache.row_dirty_spans.items[8][0] = .{ .start = 4, .end = 6 };
+    cache.row_dirty_spans.items[9][0] = .{ .start = 4, .end = 6 };
     cache.dirty_cols_start.items[8] = 4;
     cache.dirty_cols_end.items[8] = 6;
     cache.dirty_cols_start.items[9] = 4;
     cache.dirty_cols_end.items[9] = 6;
     cache.dirty_rows.items[10] = true;
+    cache.row_dirty_span_counts.items[10] = 1;
+    cache.row_dirty_spans.items[10][0] = .{ .start = 33, .end = 33 };
     cache.dirty_cols_start.items[10] = 33;
     cache.dirty_cols_end.items[10] = 33;
 
@@ -544,6 +847,8 @@ test "buildPartialPlan reproduces cursorcolumn live draw shape" {
     const bounds = buildPartialPlan(
         &cache,
         &partial_rows,
+        &cache.row_dirty_span_counts.items,
+        &cache.row_dirty_spans.items,
         &partial_cols_start,
         &partial_cols_end,
         0,
@@ -583,10 +888,12 @@ test "addBlinkRowsToPartialPlan preserves row-local blink spans" {
     cache.cells.items[2 * cache.cols + 4].width = 1;
 
     var partial_rows = [_]bool{false} ** 4;
+    var partial_span_counts = [_]u8{0} ** 4;
+    var partial_spans = [_][screen_mod.max_row_dirty_spans]screen_mod.RowDirtySpan{[_]screen_mod.RowDirtySpan{.{ .start = 99, .end = 0 }} ** screen_mod.max_row_dirty_spans} ** 4;
     var partial_cols_start = [_]u16{99} ** 4;
     var partial_cols_end = [_]u16{0} ** 4;
 
-    addBlinkRowsToPartialPlan(&cache, &partial_rows, &partial_cols_start, &partial_cols_end);
+    addBlinkRowsToPartialPlan(&cache, &partial_rows, &partial_span_counts, &partial_spans, &partial_cols_start, &partial_cols_end);
 
     try std.testing.expectEqualSlices(bool, &[_]bool{ true, false, true, false }, &partial_rows);
     try std.testing.expectEqual(@as(u16, 1), partial_cols_start[0]);
@@ -611,12 +918,16 @@ test "buildPartialPlan keeps blink-only updates row-local" {
     cache.cells.items[2 * cache.cols + 4].width = 1;
 
     var partial_rows = [_]bool{false} ** 4;
+    var partial_span_counts = [_]u8{0} ** 4;
+    var partial_spans = [_][screen_mod.max_row_dirty_spans]screen_mod.RowDirtySpan{[_]screen_mod.RowDirtySpan{.{ .start = 99, .end = 0 }} ** screen_mod.max_row_dirty_spans} ** 4;
     var partial_cols_start = [_]u16{99} ** 4;
     var partial_cols_end = [_]u16{0} ** 4;
 
     const bounds = buildPartialPlan(
         &cache,
         &partial_rows,
+        &partial_span_counts,
+        &partial_spans,
         &partial_cols_start,
         &partial_cols_end,
         0,
@@ -641,6 +952,13 @@ test "formatPartialPlanRows summarizes row-local spans" {
     const summary = formatPartialPlanRows(
         &buf,
         &partial_rows,
+        &[_]u8{1, 0, 1, 1},
+        &[_][screen_mod.max_row_dirty_spans]screen_mod.RowDirtySpan{
+            [_]screen_mod.RowDirtySpan{.{ .start = 6, .end = 6 }} ** screen_mod.max_row_dirty_spans,
+            [_]screen_mod.RowDirtySpan{.{ .start = 0, .end = 0 }} ** screen_mod.max_row_dirty_spans,
+            [_]screen_mod.RowDirtySpan{.{ .start = 4, .end = 6 }} ** screen_mod.max_row_dirty_spans,
+            [_]screen_mod.RowDirtySpan{.{ .start = 33, .end = 33 }} ** screen_mod.max_row_dirty_spans,
+        },
         &partial_cols_start,
         &partial_cols_end,
         8,
@@ -658,6 +976,13 @@ test "formatPartialPlanRows truncates long plans" {
     const summary = formatPartialPlanRows(
         &buf,
         &partial_rows,
+        &[_]u8{1, 1, 1, 1},
+        &[_][screen_mod.max_row_dirty_spans]screen_mod.RowDirtySpan{
+            [_]screen_mod.RowDirtySpan{.{ .start = 1, .end = 1 }} ** screen_mod.max_row_dirty_spans,
+            [_]screen_mod.RowDirtySpan{.{ .start = 2, .end = 2 }} ** screen_mod.max_row_dirty_spans,
+            [_]screen_mod.RowDirtySpan{.{ .start = 3, .end = 3 }} ** screen_mod.max_row_dirty_spans,
+            [_]screen_mod.RowDirtySpan{.{ .start = 4, .end = 4 }} ** screen_mod.max_row_dirty_spans,
+        },
         &partial_cols_start,
         &partial_cols_end,
         2,
@@ -675,6 +1000,8 @@ test "formatPartialPlanRows never truncates a row token mid-span" {
     const summary = formatPartialPlanRows(
         &buf,
         &partial_rows,
+        &[_]u8{1} ** 16,
+        &[_][screen_mod.max_row_dirty_spans]screen_mod.RowDirtySpan{[_]screen_mod.RowDirtySpan{.{ .start = 146, .end = 148 }} ** screen_mod.max_row_dirty_spans} ** 16,
         &partial_cols_start,
         &partial_cols_end,
         16,

@@ -500,6 +500,10 @@ pub const TerminalSession = struct {
         session_protocol.scrollRegionUp(self, count);
     }
 
+    pub fn scrollRegionUpWithOrigin(self: *TerminalSession, count: usize, origin: ?[]const u8) void {
+        session_protocol.scrollRegionUpWithOrigin(self, count, origin);
+    }
+
     pub fn scrollRegionDown(self: *TerminalSession, count: usize) void {
         session_protocol.scrollRegionDown(self, count);
     }

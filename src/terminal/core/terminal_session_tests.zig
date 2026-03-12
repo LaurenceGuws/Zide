@@ -414,6 +414,53 @@ test "row hash refinement does not suppress newly dirty rows against unpresented
     try std.testing.expectEqual(@as(u32, 'Z'), cache.cells.items[0].codepoint);
 }
 
+test "snapshot view preserves disjoint same-row dirty spans" {
+    const allocator = std.testing.allocator;
+
+    var session = try TerminalSession.init(allocator, 2, 20);
+    defer session.deinit();
+
+    session.primary.clearDirty();
+    session.primary.grid.markDirtyRangeWithOrigin("test.small_region", 0, 0, 2, 5);
+    session.primary.grid.markDirtyRangeWithOrigin("test.body_rewrite", 0, 0, 10, 18);
+
+    const view = session.activeScreenConst().snapshotView();
+    try std.testing.expect(view.dirty_rows[0]);
+    try std.testing.expectEqual(@as(u8, 2), view.row_dirty_span_counts[0]);
+    try std.testing.expect(!view.row_dirty_span_overflow[0]);
+    try std.testing.expectEqual(@as(u16, 2), view.row_dirty_spans[0][0].start);
+    try std.testing.expectEqual(@as(u16, 5), view.row_dirty_spans[0][0].end);
+    try std.testing.expectEqual(@as(u16, 10), view.row_dirty_spans[0][1].start);
+    try std.testing.expectEqual(@as(u16, 18), view.row_dirty_spans[0][1].end);
+    try std.testing.expectEqual(@as(u16, 2), view.dirty_cols_start[0]);
+    try std.testing.expectEqual(@as(u16, 18), view.dirty_cols_end[0]);
+}
+
+test "view cache preserves disjoint same-row dirty spans" {
+    const allocator = std.testing.allocator;
+
+    var session = try TerminalSession.init(allocator, 2, 20);
+    defer session.deinit();
+
+    session.primary.clearDirty();
+    session.primary.grid.markDirtyRangeWithOrigin("test.small_region", 0, 0, 2, 5);
+    session.primary.grid.markDirtyRangeWithOrigin("test.body_rewrite", 0, 0, 10, 18);
+
+    _ = session.output_generation.fetchAdd(1, .acq_rel);
+    session.updateViewCacheNoLock(session.output_generation.load(.acquire), session.history.scrollOffset());
+
+    const cache = session.renderCache();
+    try std.testing.expect(cache.dirty_rows.items[0]);
+    try std.testing.expectEqual(@as(u8, 2), cache.row_dirty_span_counts.items[0]);
+    try std.testing.expect(!cache.row_dirty_span_overflow.items[0]);
+    try std.testing.expectEqual(@as(u16, 2), cache.row_dirty_spans.items[0][0].start);
+    try std.testing.expectEqual(@as(u16, 5), cache.row_dirty_spans.items[0][0].end);
+    try std.testing.expectEqual(@as(u16, 10), cache.row_dirty_spans.items[0][1].start);
+    try std.testing.expectEqual(@as(u16, 18), cache.row_dirty_spans.items[0][1].end);
+    try std.testing.expectEqual(@as(u16, 2), cache.dirty_cols_start.items[0]);
+    try std.testing.expectEqual(@as(u16, 18), cache.dirty_cols_end.items[0]);
+}
+
 test "setSyncUpdates enable does not force redraw when screen is otherwise clean" {
     const allocator = std.testing.allocator;
 

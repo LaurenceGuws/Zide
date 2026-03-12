@@ -40,6 +40,8 @@ pub const TerminalWidget = struct {
     last_draw_log_time: f64 = 0,
     draw_cache: RenderCache,
     partial_draw_rows: std.ArrayList(bool),
+    partial_draw_span_counts: std.ArrayList(u8),
+    partial_draw_spans: std.ArrayList([render_cache_mod.max_row_dirty_spans]render_cache_mod.RowDirtySpan),
     partial_draw_cols_start: std.ArrayList(u16),
     partial_draw_cols_end: std.ArrayList(u16),
     bench_enabled: bool = false,
@@ -78,6 +80,8 @@ pub const TerminalWidget = struct {
             .last_draw_log_time = 0,
             .draw_cache = RenderCache.init(),
             .partial_draw_rows = std.ArrayList(bool).empty,
+            .partial_draw_span_counts = std.ArrayList(u8).empty,
+            .partial_draw_spans = std.ArrayList([render_cache_mod.max_row_dirty_spans]render_cache_mod.RowDirtySpan).empty,
             .partial_draw_cols_start = std.ArrayList(u16).empty,
             .partial_draw_cols_end = std.ArrayList(u16).empty,
             .bench_enabled = std.c.getenv("ZIDE_TERMINAL_UI_BENCH") != null,
@@ -196,6 +200,8 @@ pub const TerminalWidget = struct {
         }
         self.draw_cache.deinit(self.session.allocator);
         self.partial_draw_rows.deinit(self.session.allocator);
+        self.partial_draw_span_counts.deinit(self.session.allocator);
+        self.partial_draw_spans.deinit(self.session.allocator);
         self.partial_draw_cols_start.deinit(self.session.allocator);
         self.partial_draw_cols_end.deinit(self.session.allocator);
         self.kitty.deinit(self.session.allocator);

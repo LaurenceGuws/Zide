@@ -294,7 +294,11 @@ fn handleAsciiSliceWithContext(context: TextWriteContext, bytes: []const u8) voi
             .proceed => {},
         }
 
-        const run_len = screen.writeAsciiRun(bytes[i..], attrs, use_dec_special);
+        const ascii_origin = if (use_dec_special)
+            "parser.ascii_run.dec_special"
+        else
+            "parser.ascii_run";
+        const run_len = screen.writeAsciiRun(bytes[i..], attrs, use_dec_special, ascii_origin);
         if (run_len == 0) break;
         i += run_len;
     }

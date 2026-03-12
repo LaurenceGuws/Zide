@@ -1,8 +1,50 @@
+const app_logger = @import("../../app_logger.zig");
+
 pub fn clearPublishedDamageIfGeneration(self: anytype, expected_generation: u64, clear_screen_dirty: bool) bool {
     self.lock();
     defer self.unlock();
-    if (self.output_generation.load(.acquire) != expected_generation) return false;
+    const current_generation = self.output_generation.load(.acquire);
+    if (current_generation != expected_generation) {
+        if (clear_screen_dirty) {
+            const view = self.activeScreenConst().snapshotView();
+            const rows = view.rows;
+            const cols = view.cols;
+            const damage_rows = if (view.damage.end_row >= view.damage.start_row) view.damage.end_row - view.damage.start_row + 1 else 0;
+            const damage_cols = if (view.damage.end_col >= view.damage.start_col) view.damage.end_col - view.damage.start_col + 1 else 0;
+            app_logger.logger("terminal.ui.dirty_retirement").logf(
+                .info,
+                "result=skipped expected_generation={d} current_generation={d} dirty={s} damage_rows={d} damage_cols={d} rows={d} cols={d}",
+                .{
+                    expected_generation,
+                    current_generation,
+                    @tagName(view.dirty),
+                    damage_rows,
+                    damage_cols,
+                    rows,
+                    cols,
+                },
+            );
+        }
+        return false;
+    }
     if (clear_screen_dirty) {
+        const view = self.activeScreenConst().snapshotView();
+        const rows = view.rows;
+        const cols = view.cols;
+        const damage_rows = if (view.damage.end_row >= view.damage.start_row) view.damage.end_row - view.damage.start_row + 1 else 0;
+        const damage_cols = if (view.damage.end_col >= view.damage.start_col) view.damage.end_col - view.damage.start_col + 1 else 0;
+        app_logger.logger("terminal.ui.dirty_retirement").logf(
+            .info,
+            "result=cleared generation={d} dirty={s} damage_rows={d} damage_cols={d} rows={d} cols={d}",
+            .{
+                expected_generation,
+                @tagName(view.dirty),
+                damage_rows,
+                damage_cols,
+                rows,
+                cols,
+            },
+        );
         self.activeScreen().clearDirty();
     }
     inline for (0..2) |i| {

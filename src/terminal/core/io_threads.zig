@@ -33,6 +33,10 @@ pub fn logCsiSequences(log: app_logger.Logger, buf: []const u8) void {
 pub fn readThreadMain(session: anytype) void {
     const max_read: usize = 64 * 1024;
     var buf: [max_read]u8 = undefined;
+    var last_io_log_ms: i64 = 0;
+    var bytes_since_log: usize = 0;
+    var reads_since_log: usize = 0;
+    var peak_queue_bytes_since_log: usize = 0;
 
     while (session.read_thread_running.load(.acquire)) {
         if (terminal_transport.Transport.fromSession(session)) |transport| {
@@ -49,7 +53,27 @@ pub fn readThreadMain(session: anytype) void {
                 session.io_buffer.appendSlice(session.allocator, buf[0..n.?]) catch |err| {
                     io_log.logf(.warning, "io buffer append failed bytes={d} err={s}", .{ n.?, @errorName(err) });
                 };
+                const queue_bytes = if (session.io_buffer.items.len > session.io_read_offset)
+                    session.io_buffer.items.len - session.io_read_offset
+                else
+                    0;
                 session.io_mutex.unlock();
+                bytes_since_log += n.?;
+                reads_since_log += 1;
+                peak_queue_bytes_since_log = @max(peak_queue_bytes_since_log, queue_bytes);
+                const now_ms = std.time.milliTimestamp();
+                if ((queue_bytes >= 1024 * 1024 or bytes_since_log >= 256 * 1024) and (now_ms - last_io_log_ms) >= 100) {
+                    last_io_log_ms = now_ms;
+                    app_logger.logger("terminal.io").logf(.info, "read_bytes={d} reads={d} queued_bytes={d} peak_queue_bytes={d}", .{
+                        bytes_since_log,
+                        reads_since_log,
+                        queue_bytes,
+                        peak_queue_bytes_since_log,
+                    });
+                    bytes_since_log = 0;
+                    reads_since_log = 0;
+                    peak_queue_bytes_since_log = queue_bytes;
+                }
                 session.io_wait_cond.signal();
                 if (session.parse_thread == null) {
                     session.output_pending.store(true, .release);
@@ -149,6 +173,8 @@ pub fn parseThreadMain(session: anytype) void {
         var had_data = false;
         var parse_lock_hold_ns: i128 = 0;
         var publish_lock_hold_ns: i128 = 0;
+        const queued_before = queued_bytes;
+        var queued_after: usize = queued_before;
 
         while (processed < max_bytes and std.time.milliTimestamp() - start_ms < max_ms) {
             var chunk_len: usize = 0;
@@ -184,6 +210,13 @@ pub fn parseThreadMain(session: anytype) void {
             processed += chunk_len;
             _ = session.output_generation.fetchAdd(1, .acq_rel);
         }
+
+        session.io_mutex.lock();
+        queued_after = if (session.io_buffer.items.len > session.io_read_offset)
+            session.io_buffer.items.len - session.io_read_offset
+        else
+            0;
+        session.io_mutex.unlock();
 
         if (processed > 0) {
             const end_ms = std.time.milliTimestamp();
@@ -223,12 +256,14 @@ pub fn parseThreadMain(session: anytype) void {
                 session.parse_publishes_since_log = 0;
                 session.parse_bytes_since_log = 0;
                 session.last_parse_log_ms = end_ms;
-                perf_log.logf(.info, "parse_ms={d:.2} parse_lock_ms={d:.2} publish_lock_ms={d:.2} bytes={d} queued_bytes={d} publishes={d} avg_publish_bytes={d} input_pressure={any} presentation_backlog={any}", .{
+                perf_log.logf(.info, "parse_ms={d:.2} parse_lock_ms={d:.2} publish_lock_ms={d:.2} bytes={d} queued_before={d} queued_after={d} queue_delta={d} publishes={d} avg_publish_bytes={d} input_pressure={any} presentation_backlog={any}", .{
                     elapsed_ms,
                     @as(f64, @floatFromInt(parse_lock_hold_ns)) / @as(f64, @floatFromInt(std.time.ns_per_ms)),
                     @as(f64, @floatFromInt(publish_lock_hold_ns)) / @as(f64, @floatFromInt(std.time.ns_per_ms)),
                     processed,
-                    queued_bytes,
+                    queued_before,
+                    queued_after,
+                    @as(i64, @intCast(queued_after)) - @as(i64, @intCast(queued_before)),
                     publishes,
                     if (publishes > 0) publish_bytes / publishes else 0,
                     input_pressure,
