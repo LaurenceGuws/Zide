@@ -19,6 +19,7 @@ pub const AppState = struct {
     terminals: std.ArrayList(*t.TerminalSession),
     terminal_widgets: std.ArrayList(t.TerminalWidget),
     terminal_workspace: ?t.TerminalWorkspace,
+    pending_terminal_presentation_feedback: ?t.PendingTerminalPresentationFeedback,
 
     app_theme: t.Theme,
     editor_theme: t.Theme,

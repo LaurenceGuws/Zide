@@ -348,10 +348,6 @@ pub const TerminalWidget = struct {
         return draw_mod.drawPrepared(self, shell, x, y, width, height, input, preparation);
     }
 
-    pub fn finishFramePresentation(self: *TerminalWidget, outcome: DrawOutcome) void {
-        self.session.finishFramePresentation(outcome);
-    }
-
     /// Handle input, returns true if any input was processed
     pub fn handleInput(
         self: *TerminalWidget,

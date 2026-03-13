@@ -225,9 +225,12 @@ Current status:
 - current live result on this Phase 2 path:
   - `nvim` scrolling/cursorline ghosting is gone in normal use
   - the old `btop` shaded-block corruption is gone too
-  - remaining validation should now shift to other TUI/special lanes such as
-    `rain`, and then to present-ack ownership, not back to direct-default main
-    composition
+  - fullscreen `rain` is materially better after the follow-through pacing
+    change in `src/app/frame_render_idle_runtime.zig`, but it still has a
+    smaller residual cadence artifact under dense full-screen churn
+  - remaining validation should now stay on other TUI/special lanes such as
+    that narrower `rain` follow-up, and then move to present-ack ownership,
+    not back to direct-default main composition
 
 ### Phase 3: Rebind Present Acknowledgement to Renderer Scene Truth
 
@@ -256,6 +259,21 @@ Validation gate:
 Rollback boundary:
 
 - scene/present ownership only
+
+Current status:
+
+- first Phase 3 slice is now landed in the app/runtime path
+- terminal draw no longer retires presentation feedback immediately after
+  widget draw
+- terminal presentation feedback is now staged during
+  `terminal_draw_surface_runtime.draw(...)` and flushed only after
+  `shell.endFrame()`
+- that means terminal presented-generation retirement now crosses the
+  renderer-owned scene submission boundary instead of hanging directly off
+  widget-local draw completion
+- renderer swap success/failure is still not propagated as an explicit ack
+  contract yet, so the next Phase 3 slice should tighten that authority
+  further instead of stopping at the post-`endFrame()` boundary
 
 ### Phase 4: Remove the Legacy Direct-Default Main Path
 
