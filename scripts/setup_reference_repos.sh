@@ -37,10 +37,13 @@ TEXT_REPOS=(
 
 # Fill these with backend/library URLs. Each entry should be "name - URL".
 BACKEND_REPOS=(
+  "sdl - https://github.com/libsdl-org/SDL.git"
   "libtsm - https://github.com/Aetf/libtsm.git"
   "gnome_vte - https://github.com/GNOME/vte.git"
   "libvterm - https://github.com/neovim/libvterm.git"
   "alacritty_vte - https://github.com/alacritty/vte.git"
+  "wayland - https://gitlab.freedesktop.org/wayland/wayland.git"
+  "wayland_protocols - https://gitlab.freedesktop.org/wayland/wayland-protocols.git"
 )
 
 # Fonts / shaping (name - URL)
@@ -54,9 +57,12 @@ FONT_REPOS=(
 
 # Rendering / GPU refs (name - URL)
 RENDER_REPOS=(
+  "mesa - https://gitlab.freedesktop.org/mesa/mesa.git"
   "skia - https://github.com/google/skia.git"
   "pixman - https://gitlab.freedesktop.org/pixman/pixman.git"
   "wgpu - https://github.com/gfx-rs/wgpu.git"
+  "egl_registry - https://github.com/KhronosGroup/EGL-Registry.git"
+  "opengl_registry - https://github.com/KhronosGroup/OpenGL-Registry.git"
 )
 
 # Base folder for all reference repos
@@ -83,6 +89,23 @@ clone_list() {
     local dest="$target_dir/$name"
     if [ -d "$dest" ]; then
       echo "skip $name (already exists)"
+      continue
+    fi
+    if [ "$name" = "mesa" ]; then
+      if git clone --depth 1 --filter=blob:none --sparse "$url" "$dest"; then
+        (
+          cd "$dest"
+          git sparse-checkout set \
+            docs \
+            src/egl \
+            src/gallium/frontends/dri \
+            src/gallium/drivers/zink \
+            src/egl/wayland \
+            src/egl/drivers
+        ) || echo "failed sparse-checkout for $url"
+      else
+        echo "failed $url"
+      fi
       continue
     fi
     git clone --depth 1 "$url" "$dest" || echo "failed $url"

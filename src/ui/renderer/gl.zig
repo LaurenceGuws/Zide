@@ -72,6 +72,7 @@ pub var Scissor: *const fn (GLint, GLint, GLsizei, GLsizei) callconv(.c) void = 
 pub var ClearColor: *const fn (GLfloat, GLfloat, GLfloat, GLfloat) callconv(.c) void = undefined;
 pub var Clear: *const fn (GLenum) callconv(.c) void = undefined;
 pub var Finish: *const fn () callconv(.c) void = undefined;
+pub var GetIntegerv: *const fn (GLenum, *GLint) callconv(.c) void = undefined;
 pub var ReadBuffer: *const fn (GLenum) callconv(.c) void = undefined;
 pub var DrawBuffer: *const fn (GLenum) callconv(.c) void = undefined;
 pub var ReadPixels: *const fn (GLint, GLint, GLsizei, GLsizei, GLenum, GLenum, *anyopaque) callconv(.c) void = undefined;
@@ -139,6 +140,7 @@ pub fn load() !void {
     ClearColor = try loadProc(@TypeOf(ClearColor), "glClearColor");
     Clear = try loadProc(@TypeOf(Clear), "glClear");
     Finish = try loadProc(@TypeOf(Finish), "glFinish");
+    GetIntegerv = try loadProc(@TypeOf(GetIntegerv), "glGetIntegerv");
     ReadBuffer = try loadProc(@TypeOf(ReadBuffer), "glReadBuffer");
     DrawBuffer = try loadProc(@TypeOf(DrawBuffer), "glDrawBuffer");
     ReadPixels = try loadProc(@TypeOf(ReadPixels), "glReadPixels");

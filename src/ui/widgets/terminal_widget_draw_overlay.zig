@@ -241,7 +241,7 @@ pub fn drawOverlays(
     overlay_probe_set: ?*const OverlayProbeSet,
 ) void {
     const r = shell.rendererPtr();
-    const overlay_probe_log = app_logger.logger("terminal.ui.target_sample");
+    const overlay_probe_log = app_logger.logger("terminal.ui.overlay_probe");
     const overlay_probe_enabled = overlay_probe_set != null and (overlay_probe_log.enabled_file or overlay_probe_log.enabled_console);
     const show_scrollbar = !cache.alt_active and !cache.mouse_reporting_active and total_lines > rows;
     const show_scrollback_badge = scroll_offset > 0 and width > 0 and height > 0;

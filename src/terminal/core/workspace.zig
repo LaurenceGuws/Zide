@@ -43,8 +43,10 @@ pub const TabTarget = struct {
 pub const TerminalWorkspace = struct {
     pub const ActiveFrameState = struct {
         has_data: bool = false,
+        session_ptr: usize = 0,
         current_generation: u64 = 0,
         published_generation: u64 = 0,
+        presented_generation: u64 = 0,
     };
 
     pub const PollFrameResult = struct {
@@ -170,8 +172,10 @@ pub const TerminalWorkspace = struct {
         const session = self.tabs.items[self.activeIndex()].session;
         return .{
             .has_data = session.hasData(),
+            .session_ptr = @intFromPtr(session),
             .current_generation = session.currentGeneration(),
             .published_generation = session.publishedGeneration(),
+            .presented_generation = session.presentedGeneration(),
         };
     }
 

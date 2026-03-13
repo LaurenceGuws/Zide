@@ -7,10 +7,22 @@
   - core boundary design: `app_architecture/terminal/VT_CORE_DESIGN.md`
   - later redraw/publication contract target: `app_architecture/terminal/RENDER_PUBLICATION_CONTRACT.md`
   - terminal architecture baseline: `app_architecture/terminal/MODULARIZATION_PLAN.md`
-- Current top-of-queue focus:
-  - define a real VT core below `TerminalSession`
-  - keep FFI first-class and host-agnostic
-  - make PTY one transport implementation, not the architectural center
+- Present-path redesign is now in design consolidation.
+  - brief: `app_architecture/terminal/WAYLAND_PRESENT_DESIGN_BRIEF.md`
+  - topic ledger: `app_architecture/terminal/WAYLAND_PRESENT_RESEARCH_TOPICS.md`
+  - consolidated writeup: `app_architecture/terminal/WAYLAND_PRESENT_TECHNICAL_WRITEUP.md`
+  - supporting reports: `app_architecture/terminal/research/wayland_present/`
+- Current present-path conclusion:
+  - the surviving Wayland ghost lane is on the swap/present seam, not terminal publication ownership or pre-swap renderer content generation
+  - the authoritative Wayland/EGL contract on the failing path is `EGL_RENDER_BUFFER = EGL_BACK_BUFFER`, `EGL_SWAP_BEHAVIOR = EGL_BUFFER_DESTROYED`, and no preserved-swap bit
+  - the chosen direction is a hybrid renderer architecture:
+    - keep narrow retained widget-local targets where they pay off, especially terminal textures
+    - add a renderer-owned authoritative scene target
+    - treat the default framebuffer as a one-frame present sink only
+- Immediate next task on `main` should be implementation planning from the writeup, not more broad war-room probing.
+- Define a real VT core below `TerminalSession`.
+- Keep FFI first-class and host-agnostic.
+- Make PTY one transport implementation, not the architectural center.
   - current implementation state: `TerminalSession` now wraps an internal `TerminalCore` owner for engine state, with PTY/runtime/threading still session-owned
   - `TerminalSession` construction now also delegates to `session_runtime.zig`, so the root session file is moving toward a host-wrapper facade instead of owning full runtime-state assembly inline
   - replay/test-only debug helpers now also live under `terminal_session_debug.zig`, so that non-runtime surface is no longer embedded in the root session file
@@ -102,7 +114,7 @@
     - `terminal.ui.row_glyph_sample`
     - `terminal.ui.target_sample`
   - `terminal.ui.row_glyph_sample` is no longer the primary unknown for this lane: it already logs up to three direct-glyph style-transition samples per row (`slot=0..2`), and the current evidence says those direct submission inputs are correct even on visibly broken rows
-  - the current decisive probe is now `terminal.ui.target_sample`: it samples the terminal FBO on broad partial rows before glyph flush (`phase=bg`) and after glyph flush (`phase=glyph`) at the exact `slot=0..2` direct-glyph cells plus the `bg2` run-start cell when present. Those lines are also mirrored into `terminal.ui.row_render_pass` as `event=target_sample ...`, so the decisive probe still appears even if the dedicated tag is missing from a live run.
+  - the current decisive probe is now `terminal.ui.target_sample`: the widget still registers the same sampled cells/bands and final baselines, but the active present-side lane no longer writes every intermediate probe phase every frame. Instead, the renderer emits only the suspicious frame cut (`present_state`, `phase=pre_swap_back`, `phase=present`, plus matching row/column bands) when it actually detects a present-side mismatch, which keeps the repro closer to live timing.
   - the readback probe now also reports `diff_hits` and `diff_max` on `phase=glyph`, comparing a 3x3 in-cell sample grid against the stored `phase=bg` baseline for the same cell. That makes ordinary ASCII rows decisive even when the cell-center pixel happens to land in background.
   - latest marker-driven live captures (`Java`, `Scrolling`) show non-zero `diff_hits` on sampled body cells during the visibly broken frames, so the sampled glyph ink is already present in the terminal FBO
   - fast-scroll-only captures now also show sampled cells surviving the default-target composite: `phase=window` reports non-zero `diff_hits` on those body samples even during the heavy artifact lane
@@ -151,7 +163,7 @@
   - the default policy is now configurable from Lua via `terminal.presentation.recent_input_force_full` and `terminal.presentation.recent_input_force_full_ms`
   - raw repros are still available without code edits via `ZIDE_DEBUG_DISABLE_TERMINAL_PRESENT_MITIGATION=1`, which disables the default mitigation path so the original post-swap Wayland bug can still be chased directly
   - held keyboard modifiers were also found to block recovery under the recent-input modes because the original proxy only watched recent terminal input timestamps; the draw-side condition now treats active modifier state as ongoing pressure too, so holding `Ctrl+Shift` no longer lets the recent-input window expire
-  - overlay attribution is now wired into that same probe path: `drawOverlays(...)` receives the sampled `bg2`/`slot=0..2` cells and emits `event=overlay_state ...` plus `event=overlay_touch branch=selection|hover_underline|cursor|ime ...` on `terminal.ui.target_sample` whenever one of those overlay-owned ranges covers a sampled cell
+  - overlay attribution is still available when needed, but it no longer rides on the active present probe tag: `drawOverlays(...)` emits `event=overlay_state ...` plus `event=overlay_touch branch=selection|hover_underline|cursor|ime ...` on `terminal.ui.overlay_probe`
   - a terminal-local debug shortcut now exists too: `Ctrl+Shift+F12` dumps the widget's current visible viewport cache, including alt-screen content, to `zide_terminal_view_dump.txt` in the process cwd. The dump is fixed-width ASCII with row numbers, a column ruler, `resolved_bg_runs` per visible row, and a `non_ascii_cells` footer so visible corruption and stale highlight rows can be mapped back to `target_sample` row/col logs.
   - latest `write_ascii_origin` logs point toward a structural backend fix: the broad second writes are mostly real body text plus padding, so the quality problem is that the backend currently allows only one dirty span per row; the next design/implementation target should be fixed-cap multi-span row damage with explicit per-row overflow
   - the first backend authority for that lane is now locked too: `src/terminal/model/screen/grid.zig` has a focused test proving the current same-row `2..5` then `10..18` sequence collapses to one union span `2..18`, which is the explicit before-state for the future multi-span row model

@@ -74,7 +74,7 @@ pub fn poll(self: anytype) !void {
         if (had_data) {
             const publish_lock_start_ns = std.time.nanoTimestamp();
             self.state_mutex.lock();
-            @import("view_cache.zig").updateViewCacheNoLock(self, self.output_generation.load(.acquire), self.core.history.scrollOffset());
+            @import("view_cache.zig").updateViewCacheNoLockTagged(self, self.output_generation.load(.acquire), self.core.history.scrollOffset(), "pty_poll_publish");
             self.state_mutex.unlock();
             publish_lock_hold_ns += std.time.nanoTimestamp() - publish_lock_start_ns;
         }
@@ -104,7 +104,7 @@ pub fn poll(self: anytype) !void {
         if (self.view_cache_pending.swap(false, .acq_rel)) {
             self.state_mutex.lock();
             const offset: usize = @intCast(self.view_cache_request_offset.load(.acquire));
-            @import("view_cache.zig").updateViewCacheNoLock(self, self.output_generation.load(.acquire), offset);
+            @import("view_cache.zig").updateViewCacheNoLockTagged(self, self.output_generation.load(.acquire), offset, "pty_pending_offset");
             self.state_mutex.unlock();
         }
         return;
@@ -134,7 +134,7 @@ pub fn poll(self: anytype) !void {
         }
         if (had_data) {
             const publish_lock_start_ns = std.time.nanoTimestamp();
-            @import("view_cache.zig").updateViewCacheNoLock(self, self.output_generation.load(.acquire), self.core.history.scrollOffset());
+            @import("view_cache.zig").updateViewCacheNoLockTagged(self, self.output_generation.load(.acquire), self.core.history.scrollOffset(), "transport_poll_publish");
             publish_lock_hold_ns += std.time.nanoTimestamp() - publish_lock_start_ns;
         }
         if (processed > 0 and self.alt_exit_pending.swap(false, .acq_rel)) {
@@ -159,7 +159,7 @@ pub fn poll(self: anytype) !void {
         if (self.view_cache_pending.swap(false, .acq_rel)) {
             const offset: usize = @intCast(self.view_cache_request_offset.load(.acquire));
             const publish_lock_start_ns = std.time.nanoTimestamp();
-            @import("view_cache.zig").updateViewCacheNoLock(self, self.output_generation.load(.acquire), offset);
+            @import("view_cache.zig").updateViewCacheNoLockTagged(self, self.output_generation.load(.acquire), offset, "transport_pending_offset");
             publish_lock_hold_ns += std.time.nanoTimestamp() - publish_lock_start_ns;
         }
     }
