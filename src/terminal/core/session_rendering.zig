@@ -55,11 +55,11 @@ pub fn snapshot(self: anytype) TerminalSnapshot {
 pub fn publishFeedResultLocked(self: anytype, result: core_feed.FeedResult) void {
     if (!result.parsed) return;
     _ = self.output_generation.fetchAdd(1, .acq_rel);
-    view_cache.updateViewCacheNoLock(self, self.output_generation.load(.acquire), result.scroll_offset);
+    view_cache.updateViewCacheNoLockTagged(self, self.output_generation.load(.acquire), result.scroll_offset, "publish_feed_result");
 }
 
 pub fn updateViewCacheNoLock(self: anytype, generation: u64, scroll_offset: usize) void {
-    view_cache.updateViewCacheNoLock(self, generation, scroll_offset);
+    view_cache.updateViewCacheNoLockTagged(self, generation, scroll_offset, "session_rendering_direct");
 }
 
 pub fn updateViewCacheForScroll(self: anytype) void {
@@ -90,12 +90,17 @@ pub fn copyPublishedRenderCache(self: anytype, dst: *RenderCache) !PresentedRend
 }
 
 pub fn capturePresentation(self: anytype, dst: *RenderCache) !PresentationCapture {
+    const handoff_log = @import("../../app_logger.zig").logger("terminal.generation_handoff");
     const wait_start_ns = std.time.nanoTimestamp();
     self.lock();
     defer self.unlock();
     const lock_acquired_ns = std.time.nanoTimestamp();
+    const current_generation = self.output_generation.load(.acquire);
+    const published_generation = publishedGeneration(self);
+    const presented_generation = presentedGeneration(self);
+    const had_view_cache_pending = self.view_cache_pending.load(.acquire);
     var view_cache_ms: f64 = 0.0;
-    if (self.view_cache_pending.load(.acquire)) {
+    if (had_view_cache_pending) {
         const view_cache_start_ns = std.time.nanoTimestamp();
         self.updateViewCacheForScrollLocked();
         const view_cache_end_ns = std.time.nanoTimestamp();
@@ -112,6 +117,24 @@ pub fn capturePresentation(self: anytype, dst: *RenderCache) !PresentationCaptur
     const lock_release_ns = std.time.nanoTimestamp();
     const lock_wait_ms = @as(f64, @floatFromInt(lock_acquired_ns - wait_start_ns)) / @as(f64, @floatFromInt(std.time.ns_per_ms));
     const lock_hold_ms = @as(f64, @floatFromInt(lock_release_ns - lock_acquired_ns)) / @as(f64, @floatFromInt(std.time.ns_per_ms));
+    if (handoff_log.enabled_file or handoff_log.enabled_console) {
+        handoff_log.logf(
+            .info,
+            "stage=capture sid={x} view_cache_pending={d} cur={d} pub_before={d} presented={d} captured={d} dirty={s} lock_wait_ms={d:.2} view_cache_ms={d:.2} copy_ms={d:.2}",
+            .{
+                @intFromPtr(self),
+                @intFromBool(had_view_cache_pending),
+                current_generation,
+                published_generation,
+                presented_generation,
+                presented.generation,
+                @tagName(presented.dirty),
+                lock_wait_ms,
+                view_cache_ms,
+                @as(f64, @floatFromInt(copy_end_ns - copy_start_ns)) / @as(f64, @floatFromInt(std.time.ns_per_ms)),
+            },
+        );
+    }
     return .{
         .lock_ms = lock_wait_ms + lock_hold_ms,
         .lock_wait_ms = lock_wait_ms,
@@ -135,8 +158,12 @@ pub fn setSyncUpdates(self: anytype, enabled: bool) void {
 pub fn setSyncUpdatesLocked(self: anytype, enabled: bool) void {
     if (self.core.sync_updates_active == enabled) return;
     self.core.sync_updates_active = enabled;
+    const cache = renderCache(self);
+    const presented_generation = presentedGeneration(self);
+    if (cache.generation == presented_generation and cache.dirty == .none) return;
+    _ = self.output_generation.fetchAdd(1, .acq_rel);
     const offset: usize = self.core.history.scrollOffset();
-    view_cache.updateViewCacheNoLock(self, self.output_generation.load(.acquire), offset);
+    view_cache.updateViewCacheNoLockTagged(self, self.output_generation.load(.acquire), offset, "set_sync_updates");
 }
 
 pub fn clearPublishedDamageIfGeneration(self: anytype, expected_generation: u64, clear_screen_dirty: bool) bool {

@@ -328,6 +328,22 @@ pub const TerminalWidget = struct {
             log.logf(.warning, "draw snapshot copy failed err={s}", .{@errorName(err)});
             return .{};
         };
+        const handoff_log = app_logger.logger("terminal.generation_handoff");
+        if (handoff_log.enabled_file or handoff_log.enabled_console) {
+            handoff_log.logf(
+                .info,
+                "stage=widget_prepare sid={x} last_render={d} captured={d} cur={d} pub={d} presented={d} texture_ready={d}",
+                .{
+                    @intFromPtr(self.session),
+                    self.last_render_generation,
+                    capture.presented.generation,
+                    self.session.currentGeneration(),
+                    self.session.publishedGeneration(),
+                    self.session.presentedGeneration(),
+                    @intFromBool(self.terminal_texture_ready),
+                },
+            );
+        }
         const preparation = DrawPreparation.fromCapture(draw_start, capture);
         return draw_mod.drawPrepared(self, shell, x, y, width, height, input, preparation);
     }

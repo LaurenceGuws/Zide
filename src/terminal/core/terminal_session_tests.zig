@@ -481,6 +481,43 @@ test "setSyncUpdates enable does not force redraw when screen is otherwise clean
     try std.testing.expectEqual(@as(u64, 0), cache.full_dirty_seq);
 }
 
+test "setSyncUpdates enable does not publish dirty screen state on presented generation" {
+    const allocator = std.testing.allocator;
+
+    var session = try TerminalSession.init(allocator, 2, 4);
+    defer session.deinit();
+
+    _ = session.output_generation.fetchAdd(1, .acq_rel);
+    session.updateViewCacheNoLock(session.output_generation.load(.acquire), session.history.scrollOffset());
+    session.primary.clearDirty();
+    session.alt.clearDirty();
+    try std.testing.expect(session.acknowledgePresentedGeneration(session.renderCache().generation));
+
+    const baseline_generation = session.renderCache().generation;
+    var cell = session.primary.defaultCell();
+    cell.codepoint = 'Z';
+    session.primary.grid.cells.items[0] = cell;
+    session.primary.grid.markDirtyRange(0, 0, 0, 0);
+
+    session.setSyncUpdates(true);
+
+    var cache = session.renderCache();
+    try std.testing.expect(session.syncUpdatesActive());
+    try std.testing.expectEqual(baseline_generation, cache.generation);
+    try std.testing.expectEqual(Dirty.none, cache.dirty);
+
+    _ = session.output_generation.fetchAdd(1, .acq_rel);
+    session.updateViewCacheNoLock(session.output_generation.load(.acquire), session.history.scrollOffset());
+
+    cache = session.renderCache();
+    try std.testing.expectEqual(baseline_generation + 1, cache.generation);
+    try std.testing.expectEqual(Dirty.partial, cache.dirty);
+    try std.testing.expectEqual(@as(usize, 0), cache.damage.start_row);
+    try std.testing.expectEqual(@as(usize, 0), cache.damage.end_row);
+    try std.testing.expectEqual(@as(usize, 0), cache.damage.start_col);
+    try std.testing.expectEqual(@as(usize, 0), cache.damage.end_col);
+}
+
 test "setSyncUpdates disable stays clean when no buffered changes exist" {
     const allocator = std.testing.allocator;
 
@@ -730,6 +767,48 @@ test "acknowledgePresentedGeneration does not retire newer normal publication" {
     try std.testing.expectEqual(@as(usize, 0), session.renderCache().damage.end_row);
     try std.testing.expectEqual(@as(usize, 0), session.renderCache().damage.start_col);
     try std.testing.expectEqual(@as(usize, 0), session.renderCache().damage.end_col);
+}
+
+test "clean publication does not overwrite unpresented dirty publication" {
+    const allocator = std.testing.allocator;
+
+    var session = try TerminalSession.init(allocator, 2, 4);
+    defer session.deinit();
+
+    _ = session.output_generation.fetchAdd(1, .acq_rel);
+    session.updateViewCacheNoLock(session.output_generation.load(.acquire), session.history.scrollOffset());
+    session.notePresentedGeneration(session.renderCache().generation);
+
+    session.primary.clearDirty();
+    session.alt.clearDirty();
+    try std.testing.expect(session.acknowledgePresentedGeneration(session.renderCache().generation));
+
+    var cell = session.primary.grid.cells.items[0];
+    cell.codepoint = 'Z';
+    session.primary.grid.cells.items[0] = cell;
+    session.primary.grid.markDirtyRange(0, 0, 0, 0);
+    _ = session.output_generation.fetchAdd(1, .acq_rel);
+    session.updateViewCacheNoLock(session.output_generation.load(.acquire), session.history.scrollOffset());
+
+    const dirty_generation = session.renderCache().generation;
+    try std.testing.expectEqual(Dirty.partial, session.renderCache().dirty);
+    try std.testing.expectEqual(@as(u32, 'Z'), session.renderCache().cells.items[0].codepoint);
+
+    session.primary.clearDirty();
+    session.alt.clearDirty();
+    _ = session.output_generation.fetchAdd(1, .acq_rel);
+    session.updateViewCacheNoLock(session.output_generation.load(.acquire), session.history.scrollOffset());
+
+    const cache = session.renderCache();
+    try std.testing.expectEqual(dirty_generation + 1, cache.generation);
+    try std.testing.expect(cache.generation != session.presentedGeneration());
+    try std.testing.expectEqual(Dirty.partial, cache.dirty);
+    try std.testing.expect(cache.dirty_rows.items[0]);
+    try std.testing.expectEqual(@as(usize, 0), cache.damage.start_row);
+    try std.testing.expectEqual(@as(usize, 0), cache.damage.end_row);
+    try std.testing.expectEqual(@as(usize, 0), cache.damage.start_col);
+    try std.testing.expectEqual(@as(usize, 0), cache.damage.end_col);
+    try std.testing.expectEqual(@as(u32, 'Z'), cache.cells.items[0].codepoint);
 }
 
 test "notePresentedGeneration does not regress presented generation" {

@@ -1,4 +1,5 @@
 const std = @import("std");
+const app_logger = @import("../../app_logger.zig");
 const app_bootstrap = @import("../bootstrap.zig");
 const app_modes = @import("../modes/mod.zig");
 const app_poll_visible_terminal_sessions_runtime = @import("poll_visible_terminal_sessions_runtime.zig");
@@ -92,14 +93,29 @@ pub fn handle(
             .poll_visible_sessions = struct {
                 fn call(route_raw: *anyopaque, poll_batch: *input_types.InputBatch) !void {
                     const route = @as(*@TypeOf(runtime_state), @ptrCast(@alignCast(route_raw)));
-                    if (try app_poll_visible_terminal_sessions_runtime.handle(
+                    const wake_log = app_logger.logger("terminal.wake");
+                    const input_has_events = poll_batch.events.items.len > 0;
+                    const terminal_input_activity = hasTerminalInputActivity(poll_batch);
+                    const published_changed = try app_poll_visible_terminal_sessions_runtime.handle(
                         route.app_mode,
                         route.show_terminal,
                         route.terminal_workspace,
                         route.terminals,
-                        poll_batch.events.items.len > 0,
-                        hasTerminalInputActivity(poll_batch),
-                    )) route.hooks.mark_redraw(route.user_ctx);
+                        input_has_events,
+                        terminal_input_activity,
+                    );
+                    if (wake_log.enabled_file or wake_log.enabled_console) {
+                        wake_log.logf(
+                            .info,
+                            "stage=visible_poll input_events={d} terminal_input_activity={d} published_changed={d}",
+                            .{
+                                @intFromBool(input_has_events),
+                                @intFromBool(terminal_input_activity),
+                                @intFromBool(published_changed),
+                            },
+                        );
+                    }
+                    if (published_changed) route.hooks.mark_redraw(route.user_ctx);
                 }
             }.call,
             .handle_terminal_widget_input = struct {

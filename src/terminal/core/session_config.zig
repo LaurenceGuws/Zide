@@ -12,7 +12,7 @@ pub fn setDefaultColorsLocked(self: anytype, fg: types.Color, bg: types.Color) v
     self.core.primary.updateDefaultColors(old_attrs, new_attrs);
     self.core.alt.updateDefaultColors(old_attrs, new_attrs);
     self.core.history.updateDefaultColors(old_attrs.fg, old_attrs.bg, new_attrs.fg, new_attrs.bg);
-    view_cache.updateViewCacheNoLock(self, self.output_generation.load(.acquire), self.core.history.scrollOffset());
+    view_cache.updateViewCacheNoLockTagged(self, self.output_generation.load(.acquire), self.core.history.scrollOffset(), "session_config_default_colors");
 }
 
 pub fn setDefaultColors(self: anytype, fg: types.Color, bg: types.Color) void {
@@ -26,7 +26,7 @@ fn setAnsiColorsLocked(self: anytype, colors: [16]types.Color) void {
         self.core.palette_default[i] = colors[i];
         self.core.palette_current[i] = colors[i];
     }
-    view_cache.updateViewCacheNoLock(self, self.output_generation.load(.acquire), self.core.history.scrollOffset());
+    view_cache.updateViewCacheNoLockTagged(self, self.output_generation.load(.acquire), self.core.history.scrollOffset(), "session_config_ansi_colors");
 }
 
 pub fn setAnsiColors(self: anytype, colors: [16]types.Color) void {
@@ -39,7 +39,7 @@ fn remapAnsiColorsLocked(self: anytype, old_colors: [16]types.Color, new_colors:
     self.core.primary.updateAnsiColors(old_colors, new_colors);
     self.core.alt.updateAnsiColors(old_colors, new_colors);
     self.core.history.updateAnsiColors(old_colors, new_colors);
-    view_cache.updateViewCacheNoLock(self, self.output_generation.load(.acquire), self.core.history.scrollOffset());
+    view_cache.updateViewCacheNoLockTagged(self, self.output_generation.load(.acquire), self.core.history.scrollOffset(), "session_config_remap_ansi");
 }
 
 pub fn remapAnsiColors(self: anytype, old_colors: [16]types.Color, new_colors: [16]types.Color) void {
@@ -116,7 +116,7 @@ pub fn setColumnMode132Locked(self: anytype, enabled: bool) void {
     self.core.primary.setCursor(0, 0);
     self.core.alt.setCursor(0, 0);
     _ = self.core.clear_generation.fetchAdd(1, .acq_rel);
-    view_cache.updateViewCacheNoLock(self, self.output_generation.load(.acquire), self.core.history.scrollOffset());
+    view_cache.updateViewCacheNoLockTagged(self, self.output_generation.load(.acquire), self.core.history.scrollOffset(), "session_config_column_mode_132");
 }
 
 pub fn setCellSize(self: anytype, cell_width: u16, cell_height: u16) void {

@@ -8,6 +8,59 @@
   - later redraw/publication contract target: `app_architecture/terminal/RENDER_PUBLICATION_CONTRACT.md`
   - terminal architecture baseline: `app_architecture/terminal/MODULARIZATION_PLAN.md`
 - Current top-of-queue focus:
+  - active branch-level investigation: `wayland-war-room`
+  - current live war-room repro to debug first:
+    - the older `nvim` text-buffer cursorline scrolling ghost lane
+    - run raw with `ZIDE_DEBUG_DISABLE_TERMINAL_PRESENT_MITIGATION=1 ./zig-out/bin/zide-terminal --cwd "$(pwd)"`
+    - symptom: stale/ghosted text survives during smooth cursorline scrolling in normal text buffers even after the `wiki_life` terminal-buffer lane was fixed
+  - current war-room logs for that lane are:
+    - `terminal.ui.target_sample` only
+    - it is now suspicion-driven rather than per-frame: the widget still registers the same sampled cells/bands and final baselines, but the renderer only emits `present_state`, `phase=pre_swap_front`, `phase=pre_swap_back`, `phase=present`, and the matching row/column bands when a present-side mismatch is actually detected
+    - overlay attribution has been moved off that tag onto `terminal.ui.overlay_probe`, which is intentionally not enabled in `.zide.lua` for this lane
+    - the active probe selector is now cursor-centered rather than row-by-row broad scanning: it keeps one cheap cross around the cursor (`cursor.col ± 5` on the cursor row, plus `cursor.row ± 5` at the cursor column) instead of the heavier multi-row neighborhood pass
+    - important implementation detail: the widget now still performs silent `bg/glyph/window/final` captures for those probes even when it is not writing per-frame target-sample lines, so the renderer's suspicious-frame diff once again has real final baselines to compare against
+    - current swap-semantics cut: suspicious frames now also capture `GL_FRONT` immediately before swap, so the next log can compare pre-swap front, pre-swap back, post-swap front, and post-swap back on the same sampled cells/bands
+    - current swap-boundary instrumentation also logs raw default-framebuffer GL state on suspicious frames via `event=present_gl_state`, covering pre/post `READ_BUFFER`, `DRAW_BUFFER`, `FRAMEBUFFER_BINDING`, `READ_FRAMEBUFFER_BINDING`, and `DRAW_FRAMEBUFFER_BINDING`
+    - there is also a debug-only whole-frame compose experiment behind `ZIDE_DEBUG_COMPOSE_MAIN_TO_OFFSCREEN=1`, but it is currently not trustworthy as a classifier:
+      - on live runs it introduces its own background-only / skipped-frame artifact
+      - suspicious frames show `compose_main_to_offscreen=1` with `pre_swap_front` and `pre_swap_back` already wrong (`22:22:28`) before swap, which is not the original lane
+      - keep it as historical context only for now; do not use it as authority for the current bug
+  - latest raw-log result:
+    - `wiki_life` is now fixed by the `setSyncUpdatesLocked` publication-ownership change
+    - the surviving old scrolling lane does not currently look like the same backend seam:
+      - `capturePresentation()` is still seeing `dirty=partial`
+      - widget planning still chooses `plan_partial=1`
+      - presented-generation ack still retires those generations cleanly
+    - the first renderer-facing probe pass also proved something narrower:
+      - the sampled broad partial rows stayed coherent across `phase=bg/glyph/window/final/present`
+      - but the visible artifact in that run landed on much narrower guide/scope rows, which the earlier probe selector was not sampling
+    - the retargeted narrow-row probe plus the new `phase=pre_swap_back` cut now answers that:
+      - live bad guide rows such as `rows 46..49 col 6` and `rows 49..51 col 10` are correct in `phase=final`
+      - they are still correct in `phase=pre_swap_back`
+      - then they flip to the wrong background-only result at `phase=present`
+    - the newer `pre_swap_front` cut makes the seam even narrower:
+      - on live ghost frames, `phase=pre_swap_front` and `phase=pre_swap_back` are both correct before `SDL_GL_SwapWindow`
+      - then both post-swap reads agree on the same wrong image
+      - so the remaining question is not "which buffer was stale before swap?" but whether Wayland/EGL default-framebuffer semantics collapse or mutate across swap itself
+    - the whole-frame offscreen compose experiment is currently invalid for classification because it triggers a different broken lane (background-only / skipped frames) before swap
+    - the next classifier should therefore stay on the direct-default path and A/B only the swap boundary itself (`finish_before_swap`, `finish_before_and_after_swap`, `copy_back_to_front`) instead of the broken compose path
+    - latest live A/B result:
+      - `finish_before_swap` and `finish_before_and_after_swap` did not materially improve the old scrolling ghost
+      - `copy_back_to_front` did make a visible difference: the bug still exists, but it takes more rendering iterations to force it
+      - that is the strongest current signal that the remaining seam is tied to front/back/default-framebuffer ownership semantics on this Wayland path more than generic GPU submission timing
+    - SDL setup/swap validation is now less blind:
+      - `SDL_GL_SetAttribute`, `SDL_GL_MakeCurrent`, `SDL_GL_SetSwapInterval`, and `SDL_GL_SwapWindow` no longer silently discard boolean failure
+      - startup now logs the realized SDL GL context attributes (`major/minor/profile/doublebuffer/color/depth/stencil/swap_interval`) so Wayland runs can be compared against what SDL actually negotiated
+    - local upstream docs/references for the present seam are now staged too:
+      - official Khronos refpages mirrored as markdown under `reference_repos/rendering/khronos_refpages_md`
+      - official upstream repos cloned under `reference_repos/backends/wayland`, `reference_repos/backends/wayland_protocols`, `reference_repos/rendering/egl_registry`, and `reference_repos/rendering/opengl_registry`
+      - reproducible mirror script: `scripts/setup_khronos_refpages_md.sh`
+    - current focused probe for that lane is now inside `copy_back_to_front` itself:
+      - `pre_fallback_back` / `pre_fallback_front` are captured before the explicit back-to-front blit
+      - the existing `pre_swap_back` / `pre_swap_front` captures are after that blit but still before swap
+      - so the next `copy_back_to_front` run can finally answer what the explicit blit changed on the same sampled cells/bands
+    - that is the strongest current proof that the remaining old scrolling ghost is on the swap / Wayland presentation side, not in backend publication or pre-swap renderer consumption
+  - next cut should stay on `terminal.ui.target_sample` only and focus on the present seam, because the broader row/glyph probes are now just perturbing timing and the current target probe has already been trimmed to suspicious frames only
   - define a real VT core below `TerminalSession`
   - keep FFI first-class and host-agnostic
   - make PTY one transport implementation, not the architectural center
@@ -102,7 +155,7 @@
     - `terminal.ui.row_glyph_sample`
     - `terminal.ui.target_sample`
   - `terminal.ui.row_glyph_sample` is no longer the primary unknown for this lane: it already logs up to three direct-glyph style-transition samples per row (`slot=0..2`), and the current evidence says those direct submission inputs are correct even on visibly broken rows
-  - the current decisive probe is now `terminal.ui.target_sample`: it samples the terminal FBO on broad partial rows before glyph flush (`phase=bg`) and after glyph flush (`phase=glyph`) at the exact `slot=0..2` direct-glyph cells plus the `bg2` run-start cell when present. Those lines are also mirrored into `terminal.ui.row_render_pass` as `event=target_sample ...`, so the decisive probe still appears even if the dedicated tag is missing from a live run.
+  - the current decisive probe is now `terminal.ui.target_sample`: the widget still registers the same sampled cells/bands and final baselines, but the active present-side lane no longer writes every intermediate probe phase every frame. Instead, the renderer emits only the suspicious frame cut (`present_state`, `phase=pre_swap_back`, `phase=present`, plus matching row/column bands) when it actually detects a present-side mismatch, which keeps the repro closer to live timing.
   - the readback probe now also reports `diff_hits` and `diff_max` on `phase=glyph`, comparing a 3x3 in-cell sample grid against the stored `phase=bg` baseline for the same cell. That makes ordinary ASCII rows decisive even when the cell-center pixel happens to land in background.
   - latest marker-driven live captures (`Java`, `Scrolling`) show non-zero `diff_hits` on sampled body cells during the visibly broken frames, so the sampled glyph ink is already present in the terminal FBO
   - fast-scroll-only captures now also show sampled cells surviving the default-target composite: `phase=window` reports non-zero `diff_hits` on those body samples even during the heavy artifact lane
@@ -151,7 +204,7 @@
   - the default policy is now configurable from Lua via `terminal.presentation.recent_input_force_full` and `terminal.presentation.recent_input_force_full_ms`
   - raw repros are still available without code edits via `ZIDE_DEBUG_DISABLE_TERMINAL_PRESENT_MITIGATION=1`, which disables the default mitigation path so the original post-swap Wayland bug can still be chased directly
   - held keyboard modifiers were also found to block recovery under the recent-input modes because the original proxy only watched recent terminal input timestamps; the draw-side condition now treats active modifier state as ongoing pressure too, so holding `Ctrl+Shift` no longer lets the recent-input window expire
-  - overlay attribution is now wired into that same probe path: `drawOverlays(...)` receives the sampled `bg2`/`slot=0..2` cells and emits `event=overlay_state ...` plus `event=overlay_touch branch=selection|hover_underline|cursor|ime ...` on `terminal.ui.target_sample` whenever one of those overlay-owned ranges covers a sampled cell
+  - overlay attribution is still available when needed, but it no longer rides on the active present probe tag: `drawOverlays(...)` emits `event=overlay_state ...` plus `event=overlay_touch branch=selection|hover_underline|cursor|ime ...` on `terminal.ui.overlay_probe`
   - a terminal-local debug shortcut now exists too: `Ctrl+Shift+F12` dumps the widget's current visible viewport cache, including alt-screen content, to `zide_terminal_view_dump.txt` in the process cwd. The dump is fixed-width ASCII with row numbers, a column ruler, `resolved_bg_runs` per visible row, and a `non_ascii_cells` footer so visible corruption and stale highlight rows can be mapped back to `target_sample` row/col logs.
   - latest `write_ascii_origin` logs point toward a structural backend fix: the broad second writes are mostly real body text plus padding, so the quality problem is that the backend currently allows only one dirty span per row; the next design/implementation target should be fixed-cap multi-span row damage with explicit per-row overflow
   - the first backend authority for that lane is now locked too: `src/terminal/model/screen/grid.zig` has a focused test proving the current same-row `2..5` then `10..18` sequence collapses to one union span `2..18`, which is the explicit before-state for the future multi-span row model
