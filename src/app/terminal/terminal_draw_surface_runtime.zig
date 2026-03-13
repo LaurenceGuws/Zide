@@ -37,6 +37,16 @@ pub fn draw(state: anytype, shell: anytype, layout: layout_types.WidgetLayout) v
         if (layout.terminal.width > 0 and term_height > 0) {
             shell.endClip();
         }
-        term_widget.finishFramePresentation(draw_outcome);
+        state.pending_terminal_presentation_feedback = .{
+            .session = term_widget.session,
+            .feedback = draw_outcome,
+        };
+    }
+}
+
+pub fn flushPresentationFeedback(state: anytype) void {
+    if (state.pending_terminal_presentation_feedback) |pending| {
+        pending.session.finishFramePresentation(pending.feedback);
+        state.pending_terminal_presentation_feedback = null;
     }
 }

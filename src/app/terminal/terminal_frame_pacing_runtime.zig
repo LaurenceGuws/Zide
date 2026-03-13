@@ -131,10 +131,19 @@ pub fn sleepDuration(state: anytype, now: f64, snapshot: Snapshot) f64 {
     return sleepDurationWithPolicy(default_sleep_policy, state, now, snapshot);
 }
 
+pub fn generationRecentlyAdvanced(state: anytype, now: f64) bool {
+    return generationRecentlyAdvancedWithPolicy(default_sleep_policy, state, now);
+}
+
+pub fn generationRecentlyAdvancedWithPolicy(policy: SleepPolicy, state: anytype, now: f64) bool {
+    const pacing = &state.terminal_frame_pacing;
+    return pacing.last_generation_change_time > 0 and
+        (now - pacing.last_generation_change_time) <= policy.recent_generation_window_s;
+}
+
 pub fn sleepDurationWithPolicy(policy: SleepPolicy, state: anytype, now: f64, snapshot: Snapshot) f64 {
     const pacing = &state.terminal_frame_pacing;
-    const generation_recently_advanced = pacing.last_generation_change_time > 0 and
-        (now - pacing.last_generation_change_time) <= policy.recent_generation_window_s;
+    const generation_recently_advanced = generationRecentlyAdvancedWithPolicy(policy, state, now);
     return if (snapshot.redraw_pending or snapshot.output_pressure or generation_recently_advanced)
         policy.active_sleep_s
     else if (now < policy.startup_window_s)

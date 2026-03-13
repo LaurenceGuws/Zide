@@ -28,6 +28,12 @@ pub const EditorClusterCache = widgets.EditorClusterCache;
 pub const TerminalSession = terminal_mod.TerminalSession;
 pub const TerminalWorkspace = terminal_mod.TerminalWorkspace;
 pub const TerminalTabId = terminal_mod.TerminalTabId;
+pub const TerminalPresentationFeedback = terminal_mod.PresentationFeedback;
+
+pub const PendingTerminalPresentationFeedback = struct {
+    session: *TerminalSession,
+    feedback: TerminalPresentationFeedback,
+};
 
 pub const Metrics = metrics_mod.Metrics;
 pub const Logger = app_logger.Logger;
@@ -62,6 +68,7 @@ pub const TerminalFramePacingState = struct {
     last_generation_change_time: f64 = 0,
     last_draw_time: f64 = 0,
     idle_frames: u32 = 0,
+    recent_generation_followthrough_draws: u8 = 0,
 };
 
 pub const SearchPanelState = struct {

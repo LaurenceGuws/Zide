@@ -21,7 +21,10 @@ pub fn handle(
     var draw_ms: f64 = 0.0;
     const now = app_shell.getTime();
     const terminal_snapshot = app_terminal_frame_pacing_runtime.observe(state, now);
-    if (terminal_snapshot.redraw_pending) {
+    const generation_recently_advanced = app_terminal_frame_pacing_runtime.generationRecentlyAdvanced(state, now);
+    const can_followthrough_draw = generation_recently_advanced and
+        state.terminal_frame_pacing.recent_generation_followthrough_draws < 2;
+    if (terminal_snapshot.redraw_pending or terminal_snapshot.output_pressure or can_followthrough_draw) {
         state.needs_redraw = true;
     }
 
@@ -49,6 +52,11 @@ pub fn handle(
         }
         hooks.maybe_log_metrics(ctx, draw_end);
         state.needs_redraw = false;
+        if (!terminal_snapshot.redraw_pending and !terminal_snapshot.output_pressure and generation_recently_advanced) {
+            state.terminal_frame_pacing.recent_generation_followthrough_draws +|= 1;
+        } else {
+            state.terminal_frame_pacing.recent_generation_followthrough_draws = 0;
+        }
         app_terminal_frame_pacing_runtime.noteDraw(state);
         app_terminal_frame_pacing_runtime.logFramePacing(state, draw_end, terminal_snapshot, true, draw_ms, null);
         if (input_batch.events.items.len > 0) {
@@ -63,6 +71,7 @@ pub fn handle(
         return;
     }
 
+    state.terminal_frame_pacing.recent_generation_followthrough_draws = 0;
     app_terminal_frame_pacing_runtime.noteIdle(state);
 
     if (input_batch.events.items.len > 0) {

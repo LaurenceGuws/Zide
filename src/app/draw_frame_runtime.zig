@@ -19,6 +19,7 @@ pub fn draw(state: anytype, shell: anytype, ctx: *anyopaque, hooks: Hooks) void 
 
     if (app_font_sample_draw_runtime.handle(state, shell)) {
         shell.endFrame();
+        app_terminal_draw_surface_runtime.flushPresentationFeedback(state);
         return;
     }
 
@@ -52,4 +53,5 @@ pub fn draw(state: anytype, shell: anytype, ctx: *anyopaque, hooks: Hooks) void 
     );
 
     shell.endFrame();
+    app_terminal_draw_surface_runtime.flushPresentationFeedback(state);
 }
