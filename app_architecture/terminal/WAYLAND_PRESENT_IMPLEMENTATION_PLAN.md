@@ -206,6 +206,29 @@ Rollback boundary:
 
 - renderer composition path only; terminal-core publication untouched
 
+Current status:
+
+- first Phase 2 slice landed in `src/ui/renderer.zig`
+- `beginFrame()` now composes into the renderer-owned scene target when it is
+  available
+- `endFrame()` now performs one explicit scene-to-default draw before the
+  existing swap/probe path
+- widget-local retained targets remain unchanged
+- follow-up fixes on that same Phase 2 path are now landed too:
+  - terminal/editor subpasses restore to the active main composition target
+    instead of blindly rebinding the default framebuffer
+  - the final scene-to-default draw overwrites rather than blends into the
+    default framebuffer
+  - special glyph sprite quads now use snapped edge-to-edge geometry
+  - shaded block glyphs (`░▒▓`) now render analytically as continuous
+    fractional-coverage fills instead of relying on the sprite-atlas path
+- current live result on this Phase 2 path:
+  - `nvim` scrolling/cursorline ghosting is gone in normal use
+  - the old `btop` shaded-block corruption is gone too
+  - remaining validation should now shift to other TUI/special lanes such as
+    `rain`, and then to present-ack ownership, not back to direct-default main
+    composition
+
 ### Phase 3: Rebind Present Acknowledgement to Renderer Scene Truth
 
 Goal:
