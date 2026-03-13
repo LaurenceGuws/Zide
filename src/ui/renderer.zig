@@ -415,6 +415,39 @@ const RenderTarget = targets.RenderTarget;
 const BatchDraw = draw_ops.BatchDraw;
 const Vertex = draw_ops.Vertex;
 
+const SceneTargetInvalidation = packed struct(u8) {
+    uninitialized: bool = false,
+    drawable_resize: bool = false,
+    display_change: bool = false,
+    render_scale_change: bool = false,
+    target_recreate_failure: bool = false,
+    _padding: u3 = 0,
+
+    fn any(self: SceneTargetInvalidation) bool {
+        return self.uninitialized or
+            self.drawable_resize or
+            self.display_change or
+            self.render_scale_change or
+            self.target_recreate_failure;
+    }
+};
+
+const SceneTargetContract = struct {
+    logical_width: i32 = 0,
+    logical_height: i32 = 0,
+    drawable_width: i32 = 0,
+    drawable_height: i32 = 0,
+    display_index: i32 = -1,
+    render_scale: f32 = 1.0,
+};
+
+const SceneTargetState = struct {
+    target: ?RenderTarget = null,
+    contract: SceneTargetContract = .{},
+    invalidation: SceneTargetInvalidation = .{ .uninitialized = true },
+    ready: bool = false,
+};
+
 pub const Renderer = struct {
     pub const SelectionOverlayStyle = struct {
         smooth_enabled: bool = true,
@@ -488,6 +521,7 @@ pub const Renderer = struct {
     terminal_target: ?RenderTarget,
     terminal_scroll_target: ?RenderTarget,
     editor_target: ?RenderTarget,
+    scene_target: SceneTargetState,
 
     theme: Theme,
     mouse_scale: MousePos,
@@ -656,6 +690,7 @@ pub const Renderer = struct {
             .terminal_target = null,
             .terminal_scroll_target = null,
             .editor_target = null,
+            .scene_target = .{},
             .theme = .{},
             .mouse_scale = .{ .x = 1.0, .y = 1.0 },
             .render_scale = render_scale,
@@ -767,6 +802,7 @@ pub const Renderer = struct {
         self.destroyRenderTarget(&self.terminal_target);
         self.destroyRenderTarget(&self.terminal_scroll_target);
         self.destroyRenderTarget(&self.editor_target);
+        self.destroyRenderTarget(&self.scene_target.target);
 
         var font_it = self.font_cache.iterator();
         while (font_it.next()) |entry| {
@@ -1043,6 +1079,7 @@ pub const Renderer = struct {
         self.height = sizes.height;
         self.render_width = sizes.render_width;
         self.render_height = sizes.render_height;
+        self.refreshSceneTargetContract();
 
         // Avoid leaking background context across different text draws.
         self.text_bg_rgba = .{ .r = 0, .g = 0, .b = 0, .a = 0 };
@@ -1162,6 +1199,84 @@ pub const Renderer = struct {
             .render_width = drawable.w,
             .render_height = drawable.h,
         };
+    }
+
+    fn sceneTargetContractSnapshot(self: *const Renderer) SceneTargetContract {
+        return .{
+            .logical_width = self.width,
+            .logical_height = self.height,
+            .drawable_width = self.render_width,
+            .drawable_height = self.render_height,
+            .display_index = sdl_api.getWindowDisplayIndex(self.window),
+            .render_scale = platform_window.getRenderScale(self.window),
+        };
+    }
+
+    fn refreshSceneTargetContract(self: *Renderer) void {
+        const next = self.sceneTargetContractSnapshot();
+        var reasons: SceneTargetInvalidation = .{};
+        const previous = self.scene_target.contract;
+
+        if (!self.scene_target.ready and self.scene_target.target == null) {
+            reasons.uninitialized = true;
+        }
+        if (previous.drawable_width != next.drawable_width or
+            previous.drawable_height != next.drawable_height or
+            previous.logical_width != next.logical_width or
+            previous.logical_height != next.logical_height)
+        {
+            reasons.drawable_resize = true;
+        }
+        if (previous.display_index != next.display_index) {
+            reasons.display_change = true;
+        }
+        if (!std.math.approxEqAbs(f32, previous.render_scale, next.render_scale, 0.0001)) {
+            reasons.render_scale_change = true;
+        }
+
+        self.scene_target.contract = next;
+        if (!reasons.any()) return;
+
+        self.scene_target.invalidation = reasons;
+        self.scene_target.ready = false;
+        if (self.scene_target.target != null) {
+            self.destroyRenderTarget(&self.scene_target.target);
+        }
+    }
+
+    fn noteSceneTargetRecreateFailure(self: *Renderer) void {
+        self.scene_target.invalidation.target_recreate_failure = true;
+        self.scene_target.ready = false;
+    }
+
+    fn clearSceneTargetInvalidation(self: *Renderer) void {
+        self.scene_target.invalidation = .{};
+        self.scene_target.ready = true;
+    }
+
+    fn ensureSceneTarget(self: *Renderer, filter: i32) bool {
+        const contract = self.scene_target.contract;
+        if (contract.logical_width <= 0 or contract.logical_height <= 0 or
+            contract.drawable_width <= 0 or contract.drawable_height <= 0)
+        {
+            self.noteSceneTargetRecreateFailure();
+            return false;
+        }
+
+        const recreated = self.ensureRenderTargetScaled(
+            &self.scene_target.target,
+            contract.logical_width,
+            contract.logical_height,
+            filter,
+        );
+        if (self.scene_target.target == null) {
+            self.noteSceneTargetRecreateFailure();
+            return false;
+        }
+        if (recreated or !self.scene_target.ready) {
+            self.clearSceneTargetInvalidation();
+        }
+        return recreated;
     }
 
     pub fn dumpWindowScreenshotPpm(self: *Renderer, path: []const u8) !void {
