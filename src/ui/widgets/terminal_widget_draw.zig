@@ -18,6 +18,7 @@ const Shell = app_shell.Shell;
 const Color = app_shell.Color;
 const CursorPos = terminal_mod.CursorPos;
 const Cell = terminal_mod.Cell;
+const Rgba = terminal_font_mod.Rgba;
 
 const RenderCache = render_cache_mod.RenderCache;
 const PresentationCapture = terminal_mod.PresentationCapture;
@@ -126,6 +127,490 @@ fn rowSlice(cells: []const Cell, cols_count: usize, row: usize) []const Cell {
     const row_start = row * cols_count;
     if (row_start + cols_count > cells.len) return cells[0..0];
     return cells[row_start .. row_start + cols_count];
+}
+
+const max_target_sample_rows: usize = 4;
+
+const TargetReadbackProbe = struct {
+    row: usize = 0,
+    col_start: usize = 0,
+    col_end: usize = 0,
+    column_present: bool = false,
+    column_col: usize = 0,
+    column_row_start: usize = 0,
+    column_row_end: usize = 0,
+    bg2_present: bool = false,
+    bg2_col: usize = 0,
+    bg2_codepoint: u32 = 0,
+    bg2_expected: Color = Color.black,
+    direct_samples: [draw_grid.max_direct_glyph_samples]draw_grid.DirectGlyphSample = [_]draw_grid.DirectGlyphSample{.{}} ** draw_grid.max_direct_glyph_samples,
+    bg2_baseline: TargetGridSample = .{},
+    bg2_glyph: TargetGridSample = .{},
+    bg2_window: TargetGridSample = .{},
+    bg2_final: TargetGridSample = .{},
+    band_window: TargetBandSample = .{},
+    band_final: TargetBandSample = .{},
+    column_band_window: TargetBandSample = .{},
+    column_band_final: TargetBandSample = .{},
+    direct_baselines: [draw_grid.max_direct_glyph_samples]TargetGridSample = [_]TargetGridSample{.{}} ** draw_grid.max_direct_glyph_samples,
+    direct_glyphs: [draw_grid.max_direct_glyph_samples]TargetGridSample = [_]TargetGridSample{.{}} ** draw_grid.max_direct_glyph_samples,
+    direct_windows: [draw_grid.max_direct_glyph_samples]TargetGridSample = [_]TargetGridSample{.{}} ** draw_grid.max_direct_glyph_samples,
+    direct_finals: [draw_grid.max_direct_glyph_samples]TargetGridSample = [_]TargetGridSample{.{}} ** draw_grid.max_direct_glyph_samples,
+};
+
+const TargetProbePhase = enum {
+    bg,
+    glyph,
+    window,
+    final,
+};
+
+const target_grid_side: usize = 3;
+const target_grid_samples: usize = target_grid_side * target_grid_side;
+const target_delta_threshold: u16 = 24;
+
+const TargetGridSample = struct {
+    pixels: [target_grid_samples]Rgba = undefined,
+    valid: [target_grid_samples]bool = [_]bool{false} ** target_grid_samples,
+};
+
+const TargetGridDiff = struct {
+    hits: usize = 0,
+    samples: usize = 0,
+    max_delta: u16 = 0,
+};
+
+const target_band_cols: usize = 8;
+const target_band_rows: usize = 3;
+const target_band_samples: usize = target_band_cols * target_band_rows;
+
+const TargetBandSample = struct {
+    pixels: [target_band_samples]Rgba = undefined,
+    valid: [target_band_samples]bool = [_]bool{false} ** target_band_samples,
+};
+
+const TargetBandDiff = struct {
+    hits: usize = 0,
+    samples: usize = 0,
+    max_delta: u16 = 0,
+};
+
+fn rgbaDelta(a: Rgba, b: Rgba) u16 {
+    const dr: u16 = @intCast(@abs(@as(i16, @intCast(a.r)) - @as(i16, @intCast(b.r))));
+    const dg: u16 = @intCast(@abs(@as(i16, @intCast(a.g)) - @as(i16, @intCast(b.g))));
+    const db: u16 = @intCast(@abs(@as(i16, @intCast(a.b)) - @as(i16, @intCast(b.b))));
+    return dr + dg + db;
+}
+
+fn captureTargetGrid(
+    rr: anytype,
+    logical_x: f32,
+    logical_y: f32,
+    cell_w_i: i32,
+    cell_h_i: i32,
+) TargetGridSample {
+    const offsets = [_]f32{ -0.25, 0.0, 0.25 };
+    var sample = TargetGridSample{};
+    var idx: usize = 0;
+    for (offsets) |y_off| {
+        for (offsets) |x_off| {
+            const sample_x = logical_x + x_off * @as(f32, @floatFromInt(cell_w_i));
+            const sample_y = logical_y + y_off * @as(f32, @floatFromInt(cell_h_i));
+            if (rr.sampleCurrentTargetPixel(sample_x, sample_y)) |rgba| {
+                sample.valid[idx] = true;
+                sample.pixels[idx] = rgba;
+            }
+            idx += 1;
+        }
+    }
+    return sample;
+}
+
+fn diffTargetGrid(current: *const TargetGridSample, baseline: *const TargetGridSample) TargetGridDiff {
+    var diff = TargetGridDiff{};
+    var idx: usize = 0;
+    while (idx < target_grid_samples) : (idx += 1) {
+        if (!current.valid[idx] or !baseline.valid[idx]) continue;
+        diff.samples += 1;
+        const delta = rgbaDelta(current.pixels[idx], baseline.pixels[idx]);
+        if (delta > diff.max_delta) diff.max_delta = delta;
+        if (delta >= target_delta_threshold) diff.hits += 1;
+    }
+    return diff;
+}
+
+fn captureTargetBand(
+    rr: anytype,
+    logical_x: f32,
+    logical_y: f32,
+    logical_width: f32,
+    logical_height: f32,
+) TargetBandSample {
+    var sample = TargetBandSample{};
+    if (logical_width <= 0.0 or logical_height <= 0.0) return sample;
+
+    const step_x = logical_width / @as(f32, @floatFromInt(target_band_cols));
+    const step_y = logical_height / @as(f32, @floatFromInt(target_band_rows));
+    var idx: usize = 0;
+    var row_idx: usize = 0;
+    while (row_idx < target_band_rows) : (row_idx += 1) {
+        var col_idx: usize = 0;
+        while (col_idx < target_band_cols) : (col_idx += 1) {
+            const sample_x = logical_x + step_x * (@as(f32, @floatFromInt(col_idx)) + 0.5);
+            const sample_y = logical_y + step_y * (@as(f32, @floatFromInt(row_idx)) + 0.5);
+            if (rr.sampleCurrentTargetPixel(sample_x, sample_y)) |rgba| {
+                sample.valid[idx] = true;
+                sample.pixels[idx] = rgba;
+            }
+            idx += 1;
+        }
+    }
+    return sample;
+}
+
+fn diffTargetBand(current: *const TargetBandSample, baseline: *const TargetBandSample) TargetBandDiff {
+    var diff = TargetBandDiff{};
+    var idx: usize = 0;
+    while (idx < target_band_samples) : (idx += 1) {
+        if (!current.valid[idx] or !baseline.valid[idx]) continue;
+        diff.samples += 1;
+        const delta = rgbaDelta(current.pixels[idx], baseline.pixels[idx]);
+        if (delta > diff.max_delta) diff.max_delta = delta;
+        if (delta >= target_delta_threshold) diff.hits += 1;
+    }
+    return diff;
+}
+
+fn hashTargetBand(sample: *const TargetBandSample) u64 {
+    var hasher = std.hash.Fnv1a_64.init();
+    var idx: usize = 0;
+    while (idx < target_band_samples) : (idx += 1) {
+        const valid: u8 = @intFromBool(sample.valid[idx]);
+        hasher.update(&[_]u8{valid});
+        if (sample.valid[idx]) {
+            const rgba = sample.pixels[idx];
+            hasher.update(&[_]u8{ rgba.r, rgba.g, rgba.b, rgba.a });
+        }
+    }
+    return hasher.final();
+}
+
+fn logTargetSamplePixel(
+    rr: anytype,
+    log: anytype,
+    phase: TargetProbePhase,
+    kind: []const u8,
+    row: usize,
+    slot: isize,
+    col: usize,
+    codepoint: u32,
+    logical_x: f32,
+    logical_y: f32,
+    fg: Color,
+    bg: Color,
+    baseline: ?*const TargetGridSample,
+    baseline_store: ?*TargetGridSample,
+    cell_w_i: i32,
+    cell_h_i: i32,
+) void {
+    const rgba = rr.sampleCurrentTargetPixel(logical_x, logical_y) orelse return;
+    const grid = captureTargetGrid(rr, logical_x, logical_y, cell_w_i, cell_h_i);
+    if (baseline_store) |store| store.* = grid;
+    if (baseline) |base| {
+        const diff = diffTargetGrid(&grid, base);
+        log.logf(
+            .info,
+            "event=target_sample phase={s} kind={s} row={d} slot={d} col={d} cp={d} rgba={d}:{d}:{d}:{d} fg={d}:{d}:{d} bg={d}:{d}:{d} diff_hits={d}/{d} diff_max={d}",
+            .{
+                @tagName(phase),
+                kind,
+                row,
+                slot,
+                col,
+                codepoint,
+                rgba.r,
+                rgba.g,
+                rgba.b,
+                rgba.a,
+                fg.r,
+                fg.g,
+                fg.b,
+                bg.r,
+                bg.g,
+                bg.b,
+                diff.hits,
+                diff.samples,
+                diff.max_delta,
+            },
+        );
+        return;
+    }
+    log.logf(
+        .info,
+        "event=target_sample phase={s} kind={s} row={d} slot={d} col={d} cp={d} rgba={d}:{d}:{d}:{d} fg={d}:{d}:{d} bg={d}:{d}:{d}",
+        .{
+            @tagName(phase),
+            kind,
+            row,
+            slot,
+            col,
+            codepoint,
+            rgba.r,
+            rgba.g,
+            rgba.b,
+            rgba.a,
+            fg.r,
+            fg.g,
+            fg.b,
+            bg.r,
+            bg.g,
+            bg.b,
+        },
+    );
+}
+
+fn logTargetProbePhase(
+    rr: anytype,
+    log: anytype,
+    phase: TargetProbePhase,
+    probe: *TargetReadbackProbe,
+    origin_x: f32,
+    origin_y: f32,
+    cell_w_i: i32,
+    cell_h_i: i32,
+) void {
+    const sample_y = origin_y + (@as(f32, @floatFromInt(@as(i32, @intCast(probe.row)) * cell_h_i)) + @as(f32, @floatFromInt(cell_h_i)) * 0.5);
+    if (probe.bg2_present) {
+        const sample_x = origin_x + (@as(f32, @floatFromInt(@as(i32, @intCast(probe.bg2_col)) * cell_w_i)) + @as(f32, @floatFromInt(cell_w_i)) * 0.5);
+        logTargetSamplePixel(
+            rr,
+            log,
+            phase,
+            "bg2",
+            probe.row,
+            -1,
+            probe.bg2_col,
+            probe.bg2_codepoint,
+            sample_x,
+            sample_y,
+            Color.black,
+            probe.bg2_expected,
+            switch (phase) {
+                .glyph => &probe.bg2_baseline,
+                .window => &probe.bg2_glyph,
+                .final => &probe.bg2_window,
+                .bg => null,
+            },
+            switch (phase) {
+                .bg => &probe.bg2_baseline,
+                .glyph => &probe.bg2_glyph,
+                .window => &probe.bg2_window,
+                .final => &probe.bg2_final,
+            },
+            cell_w_i,
+            cell_h_i,
+        );
+    }
+    var sample_idx: usize = 0;
+    while (sample_idx < probe.direct_samples.len) : (sample_idx += 1) {
+        const sample = probe.direct_samples[sample_idx];
+        if (!sample.present) break;
+        const sample_x = origin_x + (@as(f32, @floatFromInt(@as(i32, @intCast(sample.col)) * cell_w_i)) + @as(f32, @floatFromInt(cell_w_i)) * 0.5);
+        logTargetSamplePixel(
+            rr,
+            log,
+            phase,
+            "direct",
+            sample.row,
+            @intCast(sample_idx),
+            sample.col,
+            sample.codepoint,
+            sample_x,
+            sample_y,
+            sample.fg,
+            sample.bg,
+            switch (phase) {
+                .glyph => &probe.direct_baselines[sample_idx],
+                .window => &probe.direct_glyphs[sample_idx],
+                .final => &probe.direct_windows[sample_idx],
+                .bg => null,
+            },
+            switch (phase) {
+                .bg => &probe.direct_baselines[sample_idx],
+                .glyph => &probe.direct_glyphs[sample_idx],
+                .window => &probe.direct_windows[sample_idx],
+                .final => &probe.direct_finals[sample_idx],
+            },
+            cell_w_i,
+            cell_h_i,
+        );
+    }
+}
+
+fn logTargetProbeBandPhase(
+    rr: anytype,
+    log: anytype,
+    phase: TargetProbePhase,
+    probe: *TargetReadbackProbe,
+    origin_x: f32,
+    origin_y: f32,
+    cell_w_i: i32,
+    cell_h_i: i32,
+) void {
+    if (probe.col_end < probe.col_start) return;
+    const band_x = origin_x + @as(f32, @floatFromInt(@as(i32, @intCast(probe.col_start)) * cell_w_i));
+    const band_y = origin_y + @as(f32, @floatFromInt(@as(i32, @intCast(probe.row)) * cell_h_i));
+    const band_width = @as(f32, @floatFromInt(@as(i32, @intCast(probe.col_end - probe.col_start + 1)) * cell_w_i));
+    const band_height = @as(f32, @floatFromInt(cell_h_i));
+    const sample = captureTargetBand(rr, band_x, band_y, band_width, band_height);
+    const signature = hashTargetBand(&sample);
+    switch (phase) {
+        .window => {
+            probe.band_window = sample;
+            log.logf(
+                .info,
+                "event=target_band phase=window row={d} cols={d}..{d} sig={x}",
+                .{ probe.row, probe.col_start, probe.col_end, signature },
+            );
+        },
+        .final => {
+            const diff = diffTargetBand(&sample, &probe.band_window);
+            probe.band_final = sample;
+            log.logf(
+                .info,
+                "event=target_band phase=final row={d} cols={d}..{d} sig={x} diff_hits={d}/{d} diff_max={d}",
+                .{ probe.row, probe.col_start, probe.col_end, signature, diff.hits, diff.samples, diff.max_delta },
+            );
+        },
+        else => {},
+    }
+}
+
+fn logTargetProbeColumnBandPhase(
+    rr: anytype,
+    log: anytype,
+    phase: TargetProbePhase,
+    probe: *TargetReadbackProbe,
+    origin_x: f32,
+    origin_y: f32,
+    cell_w_i: i32,
+    cell_h_i: i32,
+    rows: usize,
+) void {
+    if (!probe.column_present or rows == 0) return;
+    const row_start = probe.column_row_start;
+    const row_end = probe.column_row_end;
+    if (row_end < row_start or row_end >= rows) return;
+    const band_x = origin_x + @as(f32, @floatFromInt(@as(i32, @intCast(probe.column_col)) * cell_w_i));
+    const band_y = origin_y + @as(f32, @floatFromInt(@as(i32, @intCast(row_start)) * cell_h_i));
+    const band_width = @as(f32, @floatFromInt(cell_w_i));
+    const band_height = @as(f32, @floatFromInt(@as(i32, @intCast(row_end - row_start + 1)) * cell_h_i));
+    const sample = captureTargetBand(rr, band_x, band_y, band_width, band_height);
+    const signature = hashTargetBand(&sample);
+    switch (phase) {
+        .window => {
+            probe.column_band_window = sample;
+            log.logf(
+                .info,
+                "event=target_band phase=window axis=column col={d} rows={d}..{d} sig={x}",
+                .{ probe.column_col, row_start, row_end, signature },
+            );
+        },
+        .final => {
+            const diff = diffTargetBand(&sample, &probe.column_band_window);
+            probe.column_band_final = sample;
+            log.logf(
+                .info,
+                "event=target_band phase=final axis=column col={d} rows={d}..{d} sig={x} diff_hits={d}/{d} diff_max={d}",
+                .{ probe.column_col, row_start, row_end, signature, diff.hits, diff.samples, diff.max_delta },
+            );
+        },
+        else => {},
+    }
+}
+
+fn registerPresentationProbes(
+    rr: anytype,
+    probe: *const TargetReadbackProbe,
+    origin_x: f32,
+    origin_y: f32,
+    cell_w_i: i32,
+    cell_h_i: i32,
+    rows: usize,
+) void {
+    const sample_y = origin_y + (@as(f32, @floatFromInt(@as(i32, @intCast(probe.row)) * cell_h_i)) + @as(f32, @floatFromInt(cell_h_i)) * 0.5);
+    if (probe.bg2_present) {
+        const sample_x = origin_x + (@as(f32, @floatFromInt(@as(i32, @intCast(probe.bg2_col)) * cell_w_i)) + @as(f32, @floatFromInt(cell_w_i)) * 0.5);
+        rr.registerPresentationProbe(
+            .bg2,
+            probe.row,
+            -1,
+            probe.bg2_col,
+            probe.bg2_codepoint,
+            sample_x,
+            sample_y,
+            Color.black,
+            probe.bg2_expected,
+            probe.bg2_final.valid,
+            probe.bg2_final.pixels,
+        );
+    }
+    var sample_idx: usize = 0;
+    while (sample_idx < probe.direct_samples.len) : (sample_idx += 1) {
+        const sample = probe.direct_samples[sample_idx];
+        if (!sample.present) continue;
+        const sample_x = origin_x + (@as(f32, @floatFromInt(@as(i32, @intCast(sample.col)) * cell_w_i)) + @as(f32, @floatFromInt(cell_w_i)) * 0.5);
+        rr.registerPresentationProbe(
+            .direct,
+            sample.row,
+            @intCast(sample_idx),
+            sample.col,
+            sample.codepoint,
+            sample_x,
+            sample_y,
+            sample.fg,
+            sample.bg,
+            probe.direct_finals[sample_idx].valid,
+            probe.direct_finals[sample_idx].pixels,
+        );
+    }
+    if (probe.col_end >= probe.col_start) {
+        const band_x = origin_x + @as(f32, @floatFromInt(@as(i32, @intCast(probe.col_start)) * cell_w_i));
+        const band_y = origin_y + @as(f32, @floatFromInt(@as(i32, @intCast(probe.row)) * cell_h_i));
+        const band_width = @as(f32, @floatFromInt(@as(i32, @intCast(probe.col_end - probe.col_start + 1)) * cell_w_i));
+        const band_height = @as(f32, @floatFromInt(cell_h_i));
+        rr.registerPresentationBandProbe(
+            probe.row,
+            probe.col_start,
+            probe.col_end,
+            band_x,
+            band_y,
+            band_width,
+            band_height,
+            probe.band_final.valid,
+            probe.band_final.pixels,
+        );
+    }
+    if (probe.column_present) {
+        const row_start = probe.column_row_start;
+        const row_end = probe.column_row_end;
+        if (row_end >= rows or row_end < row_start) return;
+        const band_x = origin_x + @as(f32, @floatFromInt(@as(i32, @intCast(probe.column_col)) * cell_w_i));
+        const band_y = origin_y + @as(f32, @floatFromInt(@as(i32, @intCast(row_start)) * cell_h_i));
+        const band_width = @as(f32, @floatFromInt(cell_w_i));
+        const band_height = @as(f32, @floatFromInt(@as(i32, @intCast(row_end - row_start + 1)) * cell_h_i));
+        rr.registerPresentationColumnBandProbe(
+            probe.column_col,
+            row_start,
+            row_end,
+            band_x,
+            band_y,
+            band_width,
+            band_height,
+            probe.column_band_final.valid,
+            probe.column_band_final.pixels,
+        );
+    }
 }
 
 pub fn drawPrepared(
@@ -246,6 +731,7 @@ pub fn drawPrepared(
     const view_dirty_rows = cache.dirty_rows.items;
     const draw_log = app_logger.logger("terminal.ui.redraw");
     const texture_shift_log = app_logger.logger("terminal.ui.texture_shift");
+    const target_sample_log = app_logger.logger("terminal.ui.target_sample");
     var dirty_rows_count: usize = 0;
     var damage_row_span: usize = 0;
     var damage_col_span: usize = 0;
@@ -324,12 +810,17 @@ pub fn drawPrepared(
     var texture_partial_update = false;
     var active_viewport_shift_rows: i32 = 0;
     var active_shift_exposed_only = false;
+    var cell_w_i: i32 = 0;
+    var cell_h_i: i32 = 0;
+    var target_probes = [_]TargetReadbackProbe{.{}} ** max_target_sample_rows;
+    var target_probe_count: usize = 0;
     const row_render_log = app_logger.logger("terminal.ui.row_render_pass");
+    const row_render_runs_log = app_logger.logger("terminal.ui.row_render_pass_runs");
     const texture_phase_start = app_shell.getTime();
     const texture_ready_before_draw = self.terminal_texture_ready;
     if (rows > 0 and cols > 0) {
-        const cell_w_i: i32 = @intFromFloat(std.math.round(r.terminal_cell_width));
-        const cell_h_i: i32 = @intFromFloat(std.math.round(r.terminal_cell_height));
+        cell_w_i = @intFromFloat(std.math.round(r.terminal_cell_width));
+        cell_h_i = @intFromFloat(std.math.round(r.terminal_cell_height));
         const cell_metrics_changed = cell_w_i != self.last_cell_w_i or cell_h_i != self.last_cell_h_i;
         const render_scale_changed = r.render_scale != self.last_render_scale;
         const padding_x_i: i32 = @max(2, @divTrunc(cell_w_i, 2));
@@ -337,13 +828,39 @@ pub fn drawPrepared(
         const texture_h = cell_h_i * @as(i32, @intCast(rows));
         const recreated = r.ensureTerminalTexture(texture_w, texture_h);
         const gen_changed = cache.generation != self.last_render_generation;
-        const update_plan = chooseTextureUpdatePlan(
+        var update_plan = chooseTextureUpdatePlan(
             cache.dirty,
             recreated,
             cell_metrics_changed,
             render_scale_changed,
             blink_requires_partial,
             self.terminal_texture_ready,
+        );
+        const force_full_recovery_window = r.forceFullTerminalTexturePublicationRecoveryWindow();
+        const recovery_window_seconds = r.fullTerminalTexturePublicationRecoveryWindowSeconds();
+        const force_full_recent_input_window = r.forceFullTerminalTexturePublicationRecentInputWindow();
+        const recent_input_window_seconds = r.fullTerminalTexturePublicationRecentInputWindowSeconds();
+        const modifier_pressure_active = input.mods.ctrl or input.mods.shift or input.mods.alt or input.mods.super;
+        const plan_was_active = update_plan.needs_full or update_plan.needs_partial;
+        const plan_time = app_shell.getTime();
+        update_plan = forceFullTextureUpdatePlan(update_plan, r.forceFullTerminalTexturePublication());
+        update_plan = forceFullTextureUpdatePlanEveryFrame(update_plan, r.forceFullTerminalTexturePublicationEveryFrame());
+        if (force_full_recovery_window and plan_was_active) {
+            self.force_full_texture_publish_until = @max(
+                self.force_full_texture_publish_until,
+                plan_time + recovery_window_seconds,
+            );
+        }
+        update_plan = forceFullTextureUpdatePlanEveryFrame(
+            update_plan,
+            force_full_recovery_window and plan_time < self.force_full_texture_publish_until,
+        );
+        update_plan = forceFullTextureUpdatePlanEveryFrame(
+            update_plan,
+            force_full_recent_input_window and
+                (modifier_pressure_active or
+                    (self.last_terminal_input_time > 0 and
+                        (plan_time - self.last_terminal_input_time) <= recent_input_window_seconds)),
         );
         const needs_full = update_plan.needs_full;
         var needs_partial = update_plan.needs_partial;
@@ -424,6 +941,7 @@ pub fn drawPrepared(
         }
         texture_full_update = needs_full;
         texture_partial_update = needs_partial;
+        target_probe_count = 0;
 
         if ((needs_full or needs_partial) and r.beginTerminalTexture()) {
             // Disable scissor while updating the offscreen texture.
@@ -462,7 +980,7 @@ pub fn drawPrepared(
                 r.beginTerminalGlyphBatch();
                 row = 0;
                 while (row < rows) : (row += 1) {
-                    drawRowGlyphs(shell, view_cells, cols, row, 0, cols - 1, base_x_local, base_y_local, padding_x_i, hover_link_id, screen_reverse, blink_style, blink_time, draw_cursor, cursor, r.terminal_disable_ligatures, &glyph_draw_stats);
+                    drawRowGlyphs(shell, view_cells, cols, row, 0, cols - 1, base_x_local, base_y_local, padding_x_i, hover_link_id, screen_reverse, blink_style, blink_time, draw_cursor, cursor, r.terminal_disable_ligatures, null, &glyph_draw_stats);
                 }
                 r.flushTerminalGlyphBatch();
                 texture_glyph_ms += time_utils.secondsToMs(app_shell.getTime() - glyph_phase_start);
@@ -599,6 +1117,11 @@ pub fn drawPrepared(
                 }
                 const glyph_phase_start = app_shell.getTime();
                 r.beginTerminalGlyphBatch();
+                const target_probe_enabled =
+                    target_sample_log.enabled_file or
+                    target_sample_log.enabled_console or
+                    row_render_log.enabled_file or
+                    row_render_log.enabled_console;
                 for (0..rows) |row| {
                     if (!self.partial_draw_rows.items[row]) continue;
                     const before_stats = glyph_draw_stats;
@@ -607,6 +1130,7 @@ pub fn drawPrepared(
                     var row_col_min: usize = cols;
                     var row_col_max: usize = 0;
                     var row_bg_summary = draw_grid.BackgroundRunSummary{};
+                    var row_direct_samples = [_]draw_grid.DirectGlyphSample{.{}} ** draw_grid.max_direct_glyph_samples;
                     if (row < self.partial_draw_span_counts.items.len and row < self.partial_draw_spans.items.len and self.partial_draw_span_counts.items[row] > 0) {
                         var span_idx: usize = 0;
                         while (span_idx < self.partial_draw_span_counts.items[row]) : (span_idx += 1) {
@@ -621,7 +1145,7 @@ pub fn drawPrepared(
                             row_span_count += 1;
                             row_col_min = @min(row_col_min, col_start);
                             row_col_max = @max(row_col_max, col_end);
-                            drawRowGlyphs(shell, view_cells, cols, row, col_start, col_end, base_x_local, base_y_local, padding_x_i, hover_link_id, screen_reverse, blink_style, blink_time, draw_cursor, cursor, r.terminal_disable_ligatures, &glyph_draw_stats);
+                            drawRowGlyphs(shell, view_cells, cols, row, col_start, col_end, base_x_local, base_y_local, padding_x_i, hover_link_id, screen_reverse, blink_style, blink_time, draw_cursor, cursor, r.terminal_disable_ligatures, &row_direct_samples, &glyph_draw_stats);
                         }
                     } else {
                         const col_start = @min(@as(usize, self.partial_draw_cols_start.items[row]), cols - 1);
@@ -632,14 +1156,53 @@ pub fn drawPrepared(
                         row_span_count = 1;
                         row_col_min = col_start;
                         row_col_max = col_end;
-                        drawRowGlyphs(shell, view_cells, cols, row, col_start, col_end, base_x_local, base_y_local, padding_x_i, hover_link_id, screen_reverse, blink_style, blink_time, draw_cursor, cursor, r.terminal_disable_ligatures, &glyph_draw_stats);
+                        drawRowGlyphs(shell, view_cells, cols, row, col_start, col_end, base_x_local, base_y_local, padding_x_i, hover_link_id, screen_reverse, blink_style, blink_time, draw_cursor, cursor, r.terminal_disable_ligatures, &row_direct_samples, &glyph_draw_stats);
+                    }
+                    if (target_probe_enabled and
+                        target_probe_count < target_probes.len and
+                        row_span_count > 0 and
+                        row_col_min < cols and
+                        row_col_max >= row_col_min and
+                        (row_col_max - row_col_min + 1) >= cols / 2 and
+                        row_direct_samples[1].present)
+                    {
+                        target_probes[target_probe_count] = .{
+                            .row = row,
+                            .col_start = row_col_min,
+                            .col_end = row_col_max,
+                            .column_present = true,
+                            .column_col = if (row_bg_summary.second_sample.present)
+                                row_bg_summary.second_sample.col
+                            else
+                                row_direct_samples[1].col,
+                            .column_row_start = if (row > 0) row - 1 else row,
+                            .column_row_end = @min(rows - 1, row + 1),
+                            .bg2_present = row_bg_summary.second_sample.present,
+                            .bg2_col = row_bg_summary.second_sample.col,
+                            .bg2_codepoint = row_bg_summary.second_sample.codepoint,
+                            .bg2_expected = row_bg_summary.second_sample.resolved_bg,
+                            .direct_samples = row_direct_samples,
+                        };
+                        if (target_sample_log.enabled_file or target_sample_log.enabled_console) {
+                            logTargetProbePhase(r, target_sample_log, .bg, &target_probes[target_probe_count], 0, 0, cell_w_i, cell_h_i);
+                        }
+                        if (row_render_log.enabled_file or row_render_log.enabled_console) {
+                            logTargetProbePhase(r, row_render_log, .bg, &target_probes[target_probe_count], 0, 0, cell_w_i, cell_h_i);
+                        }
+                        target_probe_count += 1;
                     }
                     if ((row_render_log.enabled_file or row_render_log.enabled_console) and row_span_count > 0) {
                         const row_width = if (row_col_min < cols and row_col_max >= row_col_min) row_col_max - row_col_min + 1 else 0;
                         if (row_width >= cols / 2 or row == cursor.row) {
+                            const row_shaped_total = glyph_draw_stats.shaped_glyphs - before_stats.shaped_glyphs;
+                            const row_direct_text = glyph_draw_stats.direct_text_glyphs - before_stats.direct_text_glyphs;
+                            const row_special = glyph_draw_stats.special_sprite_glyphs - before_stats.special_sprite_glyphs;
+                            const row_box = glyph_draw_stats.box_glyphs - before_stats.box_glyphs;
+                            const row_shaped_text = glyph_draw_stats.shaped_text_glyphs - before_stats.shaped_text_glyphs;
+                            const row_fallback = glyph_draw_stats.fallback_cells - before_stats.fallback_cells;
                             row_render_log.logf(
                                 .info,
-                                "row={d} cols={d}..{d} width={d} spans={d} bg_runs={d} bg1={d}..{d}@{d}:{d}:{d} bg2={d}..{d}@{d}:{d}:{d} bg3={d}..{d}@{d}:{d}:{d} glyph_delta={d} direct_draw_ms={d:.2} special_lookup_ms={d:.2} special_submit_ms={d:.2} box_submit_ms={d:.2}",
+                                "row={d} cols={d}..{d} width={d} spans={d} bg_runs={d} bg1={d}..{d}@{d}:{d}:{d} bg2={d}..{d}@{d}:{d}:{d} bg3={d}..{d}@{d}:{d}:{d} glyph_total={d} direct_text={d} shaped_text={d} special={d} box={d} fallback={d} direct_draw_ms={d:.2} special_lookup_ms={d:.2} special_submit_ms={d:.2} box_submit_ms={d:.2}",
                                 .{
                                     row,
                                     row_col_min,
@@ -662,17 +1225,53 @@ pub fn drawPrepared(
                                     row_bg_summary.third_color.r,
                                     row_bg_summary.third_color.g,
                                     row_bg_summary.third_color.b,
-                                    glyph_draw_stats.shaped_glyphs - before_stats.shaped_glyphs,
+                                    row_shaped_total,
+                                    row_direct_text,
+                                    row_shaped_text,
+                                    row_special,
+                                    row_box,
+                                    row_fallback,
                                     glyph_draw_stats.direct_draw_ms - before_stats.direct_draw_ms,
                                     glyph_draw_stats.special_sprite_lookup_ms - before_stats.special_sprite_lookup_ms,
                                     glyph_draw_stats.shaped_special_submit_ms - before_stats.shaped_special_submit_ms,
                                     glyph_draw_stats.box_submit_ms - before_stats.box_submit_ms,
                                 },
                             );
+                            row_render_runs_log.logf(
+                                .info,
+                                "row={d} bg2s=p{d} col={d} cp={d} fg={d}:{d}:{d} bg={d}:{d}:{d} rev={d} res={d}:{d}:{d}",
+                                .{
+                                    row,
+                                    @intFromBool(row_bg_summary.second_sample.present),
+                                    row_bg_summary.second_sample.col,
+                                    row_bg_summary.second_sample.codepoint,
+                                    row_bg_summary.second_sample.fg.r,
+                                    row_bg_summary.second_sample.fg.g,
+                                    row_bg_summary.second_sample.fg.b,
+                                    row_bg_summary.second_sample.bg.r,
+                                    row_bg_summary.second_sample.bg.g,
+                                    row_bg_summary.second_sample.bg.b,
+                                    @intFromBool(row_bg_summary.second_sample.reverse),
+                                    row_bg_summary.second_sample.resolved_bg.r,
+                                    row_bg_summary.second_sample.resolved_bg.g,
+                                    row_bg_summary.second_sample.resolved_bg.b,
+                                },
+                            );
                         }
                     }
                 }
                 r.flushTerminalGlyphBatch();
+                if (target_probe_count > 0) {
+                    var probe_idx: usize = 0;
+                    while (probe_idx < target_probe_count) : (probe_idx += 1) {
+                        if (target_sample_log.enabled_file or target_sample_log.enabled_console) {
+                            logTargetProbePhase(r, target_sample_log, .glyph, &target_probes[probe_idx], 0, 0, cell_w_i, cell_h_i);
+                        }
+                        if (row_render_log.enabled_file or row_render_log.enabled_console) {
+                            logTargetProbePhase(r, row_render_log, .glyph, &target_probes[probe_idx], 0, 0, cell_w_i, cell_h_i);
+                        }
+                    }
+                }
                 texture_glyph_ms += time_utils.secondsToMs(app_shell.getTime() - glyph_phase_start);
                 if (has_kitty) {
                     const kitty_phase_start = app_shell.getTime();
@@ -722,11 +1321,54 @@ pub fn drawPrepared(
             );
         }
         r.drawTerminalTexture(base_x, base_y);
+        if (target_probe_count > 0) {
+            var probe_idx: usize = 0;
+            while (probe_idx < target_probe_count) : (probe_idx += 1) {
+                if (target_sample_log.enabled_file or target_sample_log.enabled_console) {
+                    logTargetProbePhase(r, target_sample_log, .window, &target_probes[probe_idx], base_x, base_y, cell_w_i, cell_h_i);
+                    logTargetProbeBandPhase(r, target_sample_log, .window, &target_probes[probe_idx], base_x, base_y, cell_w_i, cell_h_i);
+                    logTargetProbeColumnBandPhase(r, target_sample_log, .window, &target_probes[probe_idx], base_x, base_y, cell_w_i, cell_h_i, rows);
+                }
+                if (row_render_log.enabled_file or row_render_log.enabled_console) {
+                    logTargetProbePhase(r, row_render_log, .window, &target_probes[probe_idx], base_x, base_y, cell_w_i, cell_h_i);
+                    logTargetProbeBandPhase(r, row_render_log, .window, &target_probes[probe_idx], base_x, base_y, cell_w_i, cell_h_i);
+                    logTargetProbeColumnBandPhase(r, row_render_log, .window, &target_probes[probe_idx], base_x, base_y, cell_w_i, cell_h_i, rows);
+                }
+            }
+        }
     }
     texture_update_ms = time_utils.secondsToMs(app_shell.getTime() - texture_phase_start);
     const overlay_phase_start = app_shell.getTime();
     if (!has_kitty and self.kitty.textures.count() > 0) {
         self.kitty.cleanupTextures(self.session.allocator, self.kitty.images_view.items);
+    }
+    var overlay_probe_set = draw_overlay.OverlayProbeSet{};
+    if (target_probe_count > 0) {
+        var probe_idx: usize = 0;
+        while (probe_idx < target_probe_count) : (probe_idx += 1) {
+            const probe = &target_probes[probe_idx];
+            if (probe.bg2_present) {
+                overlay_probe_set.append(.{
+                    .kind = .bg2,
+                    .row = probe.row,
+                    .slot = -1,
+                    .col = probe.bg2_col,
+                    .codepoint = probe.bg2_codepoint,
+                });
+            }
+            var sample_idx: usize = 0;
+            while (sample_idx < probe.direct_samples.len) : (sample_idx += 1) {
+                const sample = probe.direct_samples[sample_idx];
+                if (!sample.present) continue;
+                overlay_probe_set.append(.{
+                    .kind = .direct,
+                    .row = probe.row,
+                    .slot = @as(isize, @intCast(sample_idx)),
+                    .col = sample.col,
+                    .codepoint = sample.codepoint,
+                });
+            }
+        }
     }
 
     drawOverlays(
@@ -749,7 +1391,24 @@ pub fn drawPrepared(
         draw_cursor,
         cursor,
         cursor_style,
+        if (overlay_probe_set.count > 0) &overlay_probe_set else null,
     );
+    if (target_probe_count > 0) {
+        var probe_idx: usize = 0;
+        while (probe_idx < target_probe_count) : (probe_idx += 1) {
+            if (target_sample_log.enabled_file or target_sample_log.enabled_console) {
+                logTargetProbePhase(r, target_sample_log, .final, &target_probes[probe_idx], base_x, base_y, cell_w_i, cell_h_i);
+                logTargetProbeBandPhase(r, target_sample_log, .final, &target_probes[probe_idx], base_x, base_y, cell_w_i, cell_h_i);
+                logTargetProbeColumnBandPhase(r, target_sample_log, .final, &target_probes[probe_idx], base_x, base_y, cell_w_i, cell_h_i, rows);
+            }
+            if (row_render_log.enabled_file or row_render_log.enabled_console) {
+                logTargetProbePhase(r, row_render_log, .final, &target_probes[probe_idx], base_x, base_y, cell_w_i, cell_h_i);
+                logTargetProbeBandPhase(r, row_render_log, .final, &target_probes[probe_idx], base_x, base_y, cell_w_i, cell_h_i);
+                logTargetProbeColumnBandPhase(r, row_render_log, .final, &target_probes[probe_idx], base_x, base_y, cell_w_i, cell_h_i, rows);
+            }
+            registerPresentationProbes(r, &target_probes[probe_idx], base_x, base_y, cell_w_i, cell_h_i, rows);
+        }
+    }
 
     if (updated or cache.dirty == .none) {
         outcome.texture_updated = updated;
@@ -1042,6 +1701,8 @@ test "full-width partial plan marks every row" {
 const planViewportTextureShift = draw_texture.planViewportTextureShift;
 const useViewportShiftForPartialPlan = draw_texture.useViewportShiftForPartialPlan;
 const chooseTextureUpdatePlan = draw_texture.chooseTextureUpdatePlan;
+const forceFullTextureUpdatePlan = draw_texture.forceFullTextureUpdatePlan;
+const forceFullTextureUpdatePlanEveryFrame = draw_texture.forceFullTextureUpdatePlanEveryFrame;
 const buildPartialPlan = draw_texture.buildPartialPlan;
 const markAllRowsFullWidthPartialPlan = draw_texture.markAllRowsFullWidthPartialPlan;
 

@@ -326,6 +326,17 @@ return {
         -- Viewport texture shift optimization used for scroll-like updates.
         -- Disable to force redraw fallback instead of the texture self-copy path.
         texture_shift = true,
+        -- Wayland-present mitigation for the current beta terminal lane.
+        -- During recent terminal input, Zide can temporarily force full terminal
+        -- texture publication to avoid the post-swap row remap bug seen under
+        -- sustained scroll/input pressure.
+        presentation = {
+            -- Master switch for the recent-input force-full policy.
+            recent_input_force_full = true,
+            -- Keep the aggressive publication path active for this many
+            -- milliseconds after recent terminal input/modifier pressure.
+            recent_input_force_full_ms = 2000,
+        },
         -- Scrollback line cap (min 100, max 100000). Invalid values warn and fall back to 1000.
         scrollback = 10000,
         -- Terminal start-location policy.

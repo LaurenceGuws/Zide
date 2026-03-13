@@ -1,5 +1,6 @@
 const std = @import("std");
 const app_shell = @import("../../app_shell.zig");
+const app_logger = @import("../../app_logger.zig");
 const terminal_mod = @import("../../terminal/core/terminal.zig");
 const render_cache_mod = @import("../../terminal/core/render_cache.zig");
 const shared_types = @import("../../types/mod.zig");
@@ -11,6 +12,32 @@ const Color = app_shell.Color;
 const CursorPos = terminal_mod.CursorPos;
 const Cell = terminal_mod.Cell;
 const RenderCache = render_cache_mod.RenderCache;
+
+pub const max_overlay_probe_cells: usize = 16;
+
+pub const OverlayProbeKind = enum {
+    bg2,
+    direct,
+};
+
+pub const OverlayProbeCell = struct {
+    kind: OverlayProbeKind = .direct,
+    row: usize = 0,
+    slot: isize = 0,
+    col: usize = 0,
+    codepoint: u32 = 0,
+};
+
+pub const OverlayProbeSet = struct {
+    count: usize = 0,
+    cells: [max_overlay_probe_cells]OverlayProbeCell = [_]OverlayProbeCell{.{}} ** max_overlay_probe_cells,
+
+    pub fn append(self: *OverlayProbeSet, probe: OverlayProbeCell) void {
+        if (self.count >= self.cells.len) return;
+        self.cells[self.count] = probe;
+        self.count += 1;
+    }
+};
 
 const SelectionCornerMask = struct {
     top_left_outward: bool = false,
@@ -118,6 +145,79 @@ fn rowSlice(cells: []const Cell, cols_count: usize, row: usize) []const Cell {
     return cells[row_start .. row_start + cols_count];
 }
 
+fn logOverlayState(
+    log: app_logger.Logger,
+    cache: *const RenderCache,
+    hover_link_id: u32,
+    draw_cursor: bool,
+    cursor_overlay_disabled: bool,
+    cursor: CursorPos,
+    composing_active: bool,
+    composing_len: usize,
+    show_scrollbar: bool,
+    show_scrollback_badge: bool,
+) void {
+    log.logf(
+        .info,
+        "event=overlay_state selection_active={d} hover_link_id={d} draw_cursor={d} cursor_overlay_disabled={d} cursor={d}:{d} composing={d}/{d} alt_active={d} scroll_offset={d} show_scrollbar={d} scrollback_badge={d}",
+        .{
+            @intFromBool(cache.selection_active),
+            hover_link_id,
+            @intFromBool(draw_cursor),
+            @intFromBool(cursor_overlay_disabled),
+            cursor.row,
+            cursor.col,
+            @intFromBool(composing_active),
+            composing_len,
+            @intFromBool(cache.alt_active),
+            cache.scroll_offset,
+            @intFromBool(show_scrollbar),
+            @intFromBool(show_scrollback_badge),
+        },
+    );
+}
+
+fn logOverlayRangeTouches(
+    log: app_logger.Logger,
+    probe_set: *const OverlayProbeSet,
+    branch: []const u8,
+    row: usize,
+    col_start: usize,
+    col_end: usize,
+) void {
+    if (probe_set.count == 0 or col_end < col_start) return;
+    var idx: usize = 0;
+    while (idx < probe_set.count) : (idx += 1) {
+        const probe = probe_set.cells[idx];
+        if (probe.row != row) continue;
+        if (probe.col < col_start or probe.col > col_end) continue;
+        log.logf(
+            .info,
+            "event=overlay_touch branch={s} kind={s} row={d} slot={d} col={d} cp={d} range={d}..{d}",
+            .{
+                branch,
+                @tagName(probe.kind),
+                probe.row,
+                probe.slot,
+                probe.col,
+                probe.codepoint,
+                col_start,
+                col_end,
+            },
+        );
+    }
+}
+
+fn debugDisableCursorOverlay() bool {
+    const raw = std.c.getenv("ZIDE_DEBUG_DISABLE_TERMINAL_CURSOR_OVERLAY") orelse return false;
+    const slice = std.mem.sliceTo(raw, 0);
+    if (slice.len == 0) return false;
+    return std.mem.eql(u8, slice, "1") or
+        std.ascii.eqlIgnoreCase(slice, "true") or
+        std.ascii.eqlIgnoreCase(slice, "yes") or
+        std.ascii.eqlIgnoreCase(slice, "on");
+}
+
 pub fn drawOverlays(
     self: anytype,
     shell: *Shell,
@@ -138,8 +238,35 @@ pub fn drawOverlays(
     draw_cursor: bool,
     cursor: CursorPos,
     cursor_style: @TypeOf(RenderCache.init().cursor_style),
+    overlay_probe_set: ?*const OverlayProbeSet,
 ) void {
     const r = shell.rendererPtr();
+    const overlay_probe_log = app_logger.logger("terminal.ui.target_sample");
+    const overlay_probe_enabled = overlay_probe_set != null and (overlay_probe_log.enabled_file or overlay_probe_log.enabled_console);
+    const show_scrollbar = !cache.alt_active and !cache.mouse_reporting_active and total_lines > rows;
+    const show_scrollback_badge = scroll_offset > 0 and width > 0 and height > 0;
+    const debug_disable_cursor_overlay = debugDisableCursorOverlay();
+    const composing_len: usize = if (input.composing_active and input.composing_text.len > 0) blk: {
+        var count: usize = 0;
+        var count_iter = std.unicode.Utf8Iterator{ .bytes = input.composing_text, .i = 0 };
+        while (count_iter.nextCodepoint()) |_| count += 1;
+        break :blk count;
+    } else 0;
+
+    if (overlay_probe_enabled) {
+        logOverlayState(
+            overlay_probe_log,
+            cache,
+            hover_link_id,
+            draw_cursor,
+            debug_disable_cursor_overlay,
+            cursor,
+            input.composing_active and input.composing_text.len > 0,
+            composing_len,
+            show_scrollbar,
+            show_scrollback_badge,
+        );
+    }
 
     if (rows > 0 and cols > 0 and cache.selection_active) {
         const selection_rows = cache.selection_rows.items;
@@ -183,13 +310,35 @@ pub fn drawOverlays(
                         .bottom_right_inward = has_next and rowSelectionNearColumn(cache, selection_rows, row_idx + 1, col_end, edge_tolerance) and rowSelectionEnd(cache, row_idx + 1) > col_end + edge_tolerance,
                     },
                 );
+                if (overlay_probe_enabled) {
+                    logOverlayRangeTouches(overlay_probe_log, overlay_probe_set.?, "selection", row_idx, col_start, col_end);
+                }
             }
         }
     }
 
     hover_mod.drawHoverUnderlineOverlay(r, x, y, rows, cols, hover_link_id, view_cells);
+    if (overlay_probe_enabled and hover_link_id != 0 and view_cells.len >= rows * cols) {
+        var row_idx: usize = 0;
+        while (row_idx < rows) : (row_idx += 1) {
+            var col_idx: usize = 0;
+            while (col_idx < cols) {
+                const cell = view_cells[row_idx * cols + col_idx];
+                if (cell.attrs.link_id != hover_link_id) {
+                    col_idx += 1;
+                    continue;
+                }
+                const start_col = col_idx;
+                col_idx += 1;
+                while (col_idx < cols and view_cells[row_idx * cols + col_idx].attrs.link_id == hover_link_id) {
+                    col_idx += 1;
+                }
+                logOverlayRangeTouches(overlay_probe_log, overlay_probe_set.?, "hover_underline", row_idx, start_col, col_idx - 1);
+            }
+        }
+    }
 
-    if (draw_cursor and rows > 0 and cols > 0 and cursor.row < rows and cursor.col < cols and view_cells.len >= rows * cols) {
+    if (!debug_disable_cursor_overlay and draw_cursor and rows > 0 and cols > 0 and cursor.row < rows and cursor.col < cols and view_cells.len >= rows * cols) {
         const row_cells = rowSlice(view_cells, cols, cursor.row);
         if (row_cells.len != 0) {
             const cell = row_cells[cursor.col];
@@ -223,6 +372,9 @@ pub fn drawOverlays(
             };
 
             const cursor_w_i: i32 = cell_w_i * @as(i32, @intCast(cell_width_units));
+            if (overlay_probe_enabled) {
+                logOverlayRangeTouches(overlay_probe_log, overlay_probe_set.?, "cursor", cursor.row, cursor.col, cursor.col + cell_width_units - 1);
+            }
             if (!self.ui_focused) {
                 const border_w: i32 = 1;
                 const box_x = cell_x_i + cursor_edge_inset;
@@ -255,12 +407,7 @@ pub fn drawOverlays(
                 },
             }
 
-            const composing_cells: usize = if (input.composing_active and input.composing_text.len > 0) blk: {
-                var count: usize = 0;
-                var count_iter = std.unicode.Utf8Iterator{ .bytes = input.composing_text, .i = 0 };
-                while (count_iter.nextCodepoint()) |_| count += 1;
-                break :blk count;
-            } else 0;
+            const composing_cells: usize = composing_len;
             const cursor_rect_w = if (composing_cells > 0) @as(i32, @intCast(@max(@as(usize, 1), composing_cells))) * cell_w_i else cell_w_i;
             shell.setTextInputRect(cell_x_i, cell_y_i, cursor_rect_w, cell_h_i);
 
@@ -274,11 +421,13 @@ pub fn drawOverlays(
                 }
                 const underline_w = @as(i32, @intCast(@max(@as(usize, 1), comp_col))) * cell_w_i;
                 r.drawRect(cell_x_i, cell_y_i + cell_h_i - 2, underline_w, 2, r.theme.selection);
+                if (overlay_probe_enabled and comp_col > 0) {
+                    logOverlayRangeTouches(overlay_probe_log, overlay_probe_set.?, "ime", cursor.row, cursor.col, cursor.col + comp_col - 1);
+                }
             }
         }
     }
 
-    const show_scrollbar = !cache.alt_active and !cache.mouse_reporting_active and total_lines > rows;
     if (show_scrollbar and height > 0 and width > 0) {
         const scrollbar_base_w: f32 = common.scrollbarWidth(r.uiScaleFactor());
         const scrollbar_hover_w: f32 = common.scrollbarHoverWidth(r.uiScaleFactor());

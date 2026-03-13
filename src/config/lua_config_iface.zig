@@ -132,6 +132,8 @@ pub const Config = struct {
     terminal_cursor_shape: ?term_types.CursorShape,
     terminal_cursor_blink: ?bool,
     terminal_texture_shift: ?bool,
+    terminal_recent_input_force_full: ?bool,
+    terminal_recent_input_force_full_ms: ?usize,
     editor_tab_bar_width_mode: ?TabBarWidthMode,
     terminal_tab_bar_show_single_tab: ?bool,
     terminal_tab_bar_width_mode: ?TabBarWidthMode,

@@ -183,6 +183,12 @@ pub fn glDeleteContext(context: c.SDL_GLContext) void {
     _ = c.SDL_GL_DestroyContext(context);
 }
 
+pub fn glGetSwapInterval() i32 {
+    var interval: c_int = 0;
+    if (!c.SDL_GL_GetSwapInterval(&interval)) return 0;
+    return @intCast(interval);
+}
+
 pub fn getWindowSize(window: *c.SDL_Window, w: *c_int, h: *c_int) void {
     _ = c.SDL_GetWindowSize(window, w, h);
 }
@@ -383,6 +389,11 @@ pub fn getPerformanceCounter() u64 {
 
 pub fn getPerformanceFrequency() u64 {
     return c.SDL_GetPerformanceFrequency();
+}
+
+pub fn getCurrentVideoDriver() ?[]const u8 {
+    const ptr = c.SDL_GetCurrentVideoDriver() orelse return null;
+    return std.mem.span(ptr);
 }
 
 pub fn setClipboardText(text: [*:0]const u8) void {

@@ -97,6 +97,8 @@ pub fn emptyConfig() Config {
         .terminal_cursor_shape = null,
         .terminal_cursor_blink = null,
         .terminal_texture_shift = null,
+        .terminal_recent_input_force_full = null,
+        .terminal_recent_input_force_full_ms = null,
         .editor_tab_bar_width_mode = null,
         .terminal_tab_bar_show_single_tab = null,
         .terminal_tab_bar_width_mode = null,
@@ -333,6 +335,9 @@ pub fn mergeConfig(allocator: std.mem.Allocator, base: *Config, overlay: Config)
     if (overlay.terminal_scrollback_rows != null) base.terminal_scrollback_rows = overlay.terminal_scrollback_rows;
     if (overlay.terminal_cursor_shape != null) base.terminal_cursor_shape = overlay.terminal_cursor_shape;
     if (overlay.terminal_cursor_blink != null) base.terminal_cursor_blink = overlay.terminal_cursor_blink;
+    if (overlay.terminal_texture_shift != null) base.terminal_texture_shift = overlay.terminal_texture_shift;
+    if (overlay.terminal_recent_input_force_full != null) base.terminal_recent_input_force_full = overlay.terminal_recent_input_force_full;
+    if (overlay.terminal_recent_input_force_full_ms != null) base.terminal_recent_input_force_full_ms = overlay.terminal_recent_input_force_full_ms;
     if (overlay.editor_tab_bar_width_mode != null) base.editor_tab_bar_width_mode = overlay.editor_tab_bar_width_mode;
     if (overlay.terminal_tab_bar_show_single_tab != null) base.terminal_tab_bar_show_single_tab = overlay.terminal_tab_bar_show_single_tab;
     if (overlay.terminal_tab_bar_width_mode != null) base.terminal_tab_bar_width_mode = overlay.terminal_tab_bar_width_mode;

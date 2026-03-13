@@ -155,6 +155,19 @@ pub fn handle(state: anytype, ctx: *anyopaque, hooks: Hooks) !void {
         log.logStdout(.info, "reload terminal.texture_shift={any}", .{enabled});
     }
 
+    if (config.terminal_recent_input_force_full != null or config.terminal_recent_input_force_full_ms != null) {
+        state.shell.rendererPtr().setTerminalRecentInputFullPublicationPolicy(
+            config.terminal_recent_input_force_full orelse state.shell.rendererPtr().terminalRecentInputFullPublicationConfiguredEnabled(),
+            config.terminal_recent_input_force_full_ms,
+        );
+        state.needs_redraw = true;
+        log.logStdout(.info, "reload terminal.presentation recent_input_force_full={any} recent_input_force_full_ms={d} debug_disabled={any}", .{
+            state.shell.rendererPtr().terminalRecentInputFullPublicationEnabled(),
+            state.shell.rendererPtr().terminalRecentInputFullPublicationWindowMs(),
+            state.shell.rendererPtr().terminalPresentMitigationDebugDisabled(),
+        });
+    }
+
     if (config.editor_disable_ligatures != null or config.editor_font_features != null) {
         state.shell.rendererPtr().setEditorLigatureConfig(
             if (config.editor_disable_ligatures) |v| switch (v) {
