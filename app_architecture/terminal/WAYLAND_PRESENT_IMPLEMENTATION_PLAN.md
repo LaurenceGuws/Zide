@@ -170,6 +170,9 @@ Current status:
 - renderer-local visibility also exists now under `renderer.scene_target`,
   logging only on invalidation, recreate failure, and ready transitions when
   that tag is enabled
+- the next Phase 1 slice is now landed too: the scene target is created and
+  cleared on recreate during frame startup, then the renderer returns to the
+  default target so active composition semantics still do not change yet
 
 ### Phase 2: Route Final UI Composition Into the Scene Target
 
