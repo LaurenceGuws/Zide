@@ -19,7 +19,12 @@ download_md() {
 EGL_DOCS=(
   "eglBindAPI https://registry.khronos.org/EGL/sdk/docs/man/html/eglBindAPI.xhtml"
   "eglChooseConfig https://registry.khronos.org/EGL/sdk/docs/man/html/eglChooseConfig.xhtml"
+  "eglCreateContext https://registry.khronos.org/EGL/sdk/docs/man/html/eglCreateContext.xhtml"
   "eglCreateWindowSurface https://registry.khronos.org/EGL/sdk/docs/man/html/eglCreateWindowSurface.xhtml"
+  "eglGetConfigAttrib https://registry.khronos.org/EGL/sdk/docs/man/html/eglGetConfigAttrib.xhtml"
+  "eglGetError https://registry.khronos.org/EGL/sdk/docs/man/html/eglGetError.xhtml"
+  "eglMakeCurrent https://registry.khronos.org/EGL/sdk/docs/man/html/eglMakeCurrent.xhtml"
+  "eglQueryContext https://registry.khronos.org/EGL/sdk/docs/man/html/eglQueryContext.xhtml"
   "eglQuerySurface https://registry.khronos.org/EGL/sdk/docs/man/html/eglQuerySurface.xhtml"
   "eglSurfaceAttrib https://registry.khronos.org/EGL/sdk/docs/man/html/eglSurfaceAttrib.xhtml"
   "eglSwapBuffers https://registry.khronos.org/EGL/sdk/docs/man/html/eglSwapBuffers.xhtml"
@@ -33,6 +38,7 @@ OPENGL_DOCS=(
   "glFinish https://registry.khronos.org/OpenGL-Refpages/gl4/html/glFinish.xhtml"
   "glFlush https://registry.khronos.org/OpenGL-Refpages/gl4/html/glFlush.xhtml"
   "glReadBuffer https://registry.khronos.org/OpenGL-Refpages/gl4/html/glReadBuffer.xhtml"
+  "glReadPixels https://registry.khronos.org/OpenGL-Refpages/gl4/html/glReadPixels.xhtml"
 )
 
 for entry in "${EGL_DOCS[@]}"; do

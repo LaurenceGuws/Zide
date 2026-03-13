@@ -426,8 +426,15 @@ So the next decisive live probe is now `terminal.ui.target_sample`:
       realized context, which is a direct warning against assuming the default
       framebuffer behaves like the double-buffered surface we requested
   - local upstream docs are now staged for agentic use too:
+    - SDL source now lives under `reference_repos/backends/sdl`, which gives
+      the Wayland/EGL implementation files directly (`src/video/SDL_egl.c`,
+      `src/video/wayland/SDL_waylandopengles.c`,
+      `src/video/wayland/SDL_waylandwindow.c`, etc.)
     - official Khronos EGL/OpenGL refpages mirrored under
       `reference_repos/rendering/khronos_refpages_md`
+    - Mesa source/docs are now cloned sparsely under
+      `reference_repos/rendering/mesa`, with the EGL tree and docs present for
+      this lane (`docs/egl.rst`, `src/egl/main/*`, `src/egl/wayland/*`)
     - official upstream source repos cloned under
       `reference_repos/backends/wayland`,
       `reference_repos/backends/wayland_protocols`,
@@ -450,6 +457,14 @@ So the next decisive live probe is now `terminal.ui.target_sample`:
       - the current log includes queried `EGL_RENDER_BUFFER`,
         `EGL_SWAP_BEHAVIOR`, `EGL_SURFACE_TYPE`, `EGL_CONFIG_ID`, surface
         `width/height`, and EGL `vendor/version/client_apis`
+    - the curated Khronos mirror now also includes the missing context/config
+      query pages we need for design work:
+      - `eglCreateContext`
+      - `eglGetConfigAttrib`
+      - `eglGetError`
+      - `eglMakeCurrent`
+      - `eglQueryContext`
+      - `glReadPixels`
   - suspicious frames now also emit `event=present_gl_state`, which records
     pre/post default-framebuffer GL state (`READ_BUFFER`, `DRAW_BUFFER`, and
     framebuffer bindings) around `SDL_GL_SwapWindow`
@@ -495,6 +510,11 @@ So the next decisive live probe is now `terminal.ui.target_sample`:
   - specifically: reconcile the realized `doublebuffer=0` report against the
     queried `EGL_RENDER_BUFFER`, `EGL_SWAP_BEHAVIOR`, `EGL_SURFACE_TYPE`, and
     whether the chosen config even advertises preserved-swap support
+  - use the now-complete local reference set for the design pass rather than
+    fetching more authorities first: terminal-side architecture refs
+    (`ghostty`, `foot`, `kitty`, `wezterm`, `rio`) plus backend authorities
+    (SDL source, Mesa EGL tree, Wayland/protocol repos, and the expanded
+    Khronos refpages)
   - only after that decide whether the durable renderer fix should abandon any
     dependence on default-framebuffer preservation semantics
 - the latest direct-default swap A/B already sharpened that further:
