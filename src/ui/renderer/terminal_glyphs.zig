@@ -71,7 +71,6 @@ pub fn specialVariantForCodepoint(codepoint: u32) ?types.SpecialGlyphVariant {
     return null;
 }
 
-
 pub fn rasterizeSpecialGlyphCoverage(
     codepoint: u32,
     width: i32,
@@ -502,7 +501,7 @@ fn drawPowerlineGlyphAnalytic(
     const log = app_logger.logger("renderer.terminal.glyphs");
     const len: usize = @intCast(iw * ih);
     const mask = std.heap.page_allocator.alloc(u8, len) catch |err| {
-                    log.logf(.warning, "analytic powerline mask alloc failed bytes={d} err={s}", .{ len, @errorName(err) });
+        log.logf(.warning, "analytic powerline mask alloc failed bytes={d} err={s}", .{ len, @errorName(err) });
         return;
     };
     defer std.heap.page_allocator.free(mask);
@@ -576,6 +575,29 @@ fn drawBrailleGlyph(
     }
 }
 
+fn drawShadeGlyph(
+    drawRect: *const fn (ctx: *anyopaque, x: i32, y: i32, w: i32, h: i32, color: Color) void,
+    ctx: *anyopaque,
+    codepoint: u32,
+    ix: i32,
+    iy: i32,
+    iw: i32,
+    ih: i32,
+    color: Color,
+) bool {
+    const alpha: u8 = switch (codepoint) {
+        0x2591 => 0x40, // 25%
+        0x2592 => 0x80, // 50%
+        0x2593 => 0xC0, // 75%
+        else => return false,
+    };
+    var fill = color;
+    fill.a = @intCast((@as(u16, color.a) * alpha) / 255);
+    if (fill.a == 0) return true;
+    drawRect(ctx, ix, iy, iw, ih, fill);
+    return true;
+}
+
 pub fn drawBoxGlyph(
     drawRect: *const fn (ctx: *anyopaque, x: i32, y: i32, w: i32, h: i32, color: Color) void,
     ctx: *anyopaque,
@@ -604,6 +626,9 @@ pub fn drawBoxGlyph(
 
     if (codepoint >= 0x2800 and codepoint <= 0x28FF) {
         drawBrailleGlyph(drawRect, ctx, codepoint, ix, iy, iw, ih, color);
+        return true;
+    }
+    if (drawShadeGlyph(drawRect, ctx, codepoint, ix, iy, iw, ih, color)) {
         return true;
     }
 
@@ -785,4 +810,31 @@ pub fn drawBoxGlyphBatched(
     color: Color,
 ) bool {
     return drawBoxGlyph(addRect, ctx, codepoint, x, y, w, h, color);
+}
+
+test "shade glyph coverage exists and increases by density" {
+    var light: [16 * 16]u8 = undefined;
+    var medium: [16 * 16]u8 = undefined;
+    var dark: [16 * 16]u8 = undefined;
+
+    try std.testing.expect(rasterizeSpecialGlyphCoverage(0x2591, 16, 16, light[0..]));
+    try std.testing.expect(rasterizeSpecialGlyphCoverage(0x2592, 16, 16, medium[0..]));
+    try std.testing.expect(rasterizeSpecialGlyphCoverage(0x2593, 16, 16, dark[0..]));
+
+    var light_sum: usize = 0;
+    var medium_sum: usize = 0;
+    var dark_sum: usize = 0;
+    for (light) |a| {
+        light_sum += a;
+    }
+    for (medium) |a| {
+        medium_sum += a;
+    }
+    for (dark) |a| {
+        dark_sum += a;
+    }
+
+    try std.testing.expect(light_sum > 0);
+    try std.testing.expect(light_sum < medium_sum);
+    try std.testing.expect(medium_sum < dark_sum);
 }

@@ -1114,7 +1114,7 @@ pub const Renderer = struct {
         // Avoid leaking background context across different text draws.
         self.text_bg_rgba = .{ .r = 0, .g = 0, .b = 0, .a = 0 };
 
-        self.bindDefaultTarget();
+        self.bindMainCompositionTarget();
         self.updateMouseScale();
         gl.Disable(gl.c.GL_SCISSOR_TEST);
 
@@ -1131,6 +1131,7 @@ pub const Renderer = struct {
     }
 
     pub fn endFrame(self: *Renderer) void {
+        self.drawSceneTargetToDefault();
         const swap_start = sdl_api.getPerformanceCounter();
         if (self.present_edge_fallback_mode == .copy_back_to_front) self.capturePreFallbackFrameProbes();
         self.applyPreSwapFallback();
@@ -1343,6 +1344,51 @@ pub const Renderer = struct {
         );
         gl.Clear(gl.c.GL_COLOR_BUFFER_BIT);
         self.bindDefaultTarget();
+    }
+
+    fn beginSceneFrame(self: *Renderer) bool {
+        if (self.scene_target.target == null) return false;
+        if (!self.beginRenderTarget(self.scene_target.target)) {
+            self.noteSceneTargetRecreateFailure();
+            return false;
+        }
+        return true;
+    }
+
+    fn drawSceneTargetToDefault(self: *Renderer) void {
+        const target = self.scene_target.target orelse return;
+        self.bindDefaultTarget();
+        gl.Disable(gl.c.GL_SCISSOR_TEST);
+        const bg = self.theme.background.toRgba();
+        gl.ClearColor(
+            @as(f32, @floatFromInt(bg.r)) / 255.0,
+            @as(f32, @floatFromInt(bg.g)) / 255.0,
+            @as(f32, @floatFromInt(bg.b)) / 255.0,
+            @as(f32, @floatFromInt(bg.a)) / 255.0,
+        );
+        gl.Clear(gl.c.GL_COLOR_BUFFER_BIT);
+        const src = texture_draw.fullTextureSrcRect(target.texture);
+        const dest = types.Rect{
+            .x = 0,
+            .y = 0,
+            .width = @floatFromInt(target.logical_width),
+            .height = @floatFromInt(target.logical_height),
+        };
+        gl.Disable(gl.c.GL_BLEND);
+        draw_ops.drawTextureRect(
+            self,
+            target.texture,
+            src,
+            dest,
+            Color.white.toRgba(),
+            types.Rgba{ .r = 0, .g = 0, .b = 0, .a = 0 },
+            .linear_premul,
+        );
+        gl.Enable(gl.c.GL_BLEND);
+    }
+
+    fn bindMainCompositionTarget(self: *Renderer) void {
+        if (!self.beginSceneFrame()) self.bindDefaultTarget();
     }
 
     pub fn dumpWindowScreenshotPpm(self: *Renderer, path: []const u8) !void {
@@ -2237,7 +2283,7 @@ pub const Renderer = struct {
     }
 
     pub fn endTerminalTexture(self: *Renderer) void {
-        self.bindDefaultTarget();
+        self.bindMainCompositionTarget();
     }
 
     pub fn beginEditorTexture(self: *Renderer) bool {
@@ -2245,7 +2291,7 @@ pub const Renderer = struct {
     }
 
     pub fn endEditorTexture(self: *Renderer) void {
-        self.bindDefaultTarget();
+        self.bindMainCompositionTarget();
     }
 
     pub fn drawTerminalTexture(self: *Renderer, x: f32, y: f32) void {
