@@ -1109,6 +1109,7 @@ pub const Renderer = struct {
         self.render_width = sizes.render_width;
         self.render_height = sizes.render_height;
         self.refreshSceneTargetContract();
+        self.prepareSceneTarget(target_draw.nearestFilter());
 
         // Avoid leaking background context across different text draws.
         self.text_bg_rgba = .{ .r = 0, .g = 0, .b = 0, .a = 0 };
@@ -1322,6 +1323,26 @@ pub const Renderer = struct {
             self.clearSceneTargetInvalidation();
         }
         return recreated;
+    }
+
+    fn prepareSceneTarget(self: *Renderer, filter: i32) void {
+        const recreated = self.ensureSceneTarget(filter);
+        if (self.scene_target.target == null or !recreated) return;
+
+        if (!self.beginRenderTarget(self.scene_target.target)) {
+            self.noteSceneTargetRecreateFailure();
+            return;
+        }
+        gl.Disable(gl.c.GL_SCISSOR_TEST);
+        const bg = self.theme.background.toRgba();
+        gl.ClearColor(
+            @as(f32, @floatFromInt(bg.r)) / 255.0,
+            @as(f32, @floatFromInt(bg.g)) / 255.0,
+            @as(f32, @floatFromInt(bg.b)) / 255.0,
+            @as(f32, @floatFromInt(bg.a)) / 255.0,
+        );
+        gl.Clear(gl.c.GL_COLOR_BUFFER_BIT);
+        self.bindDefaultTarget();
     }
 
     pub fn dumpWindowScreenshotPpm(self: *Renderer, path: []const u8) !void {
