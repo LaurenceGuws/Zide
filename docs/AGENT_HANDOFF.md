@@ -7,81 +7,22 @@
   - core boundary design: `app_architecture/terminal/VT_CORE_DESIGN.md`
   - later redraw/publication contract target: `app_architecture/terminal/RENDER_PUBLICATION_CONTRACT.md`
   - terminal architecture baseline: `app_architecture/terminal/MODULARIZATION_PLAN.md`
-- Current top-of-queue focus:
-  - active branch-level investigation: `wayland-war-room`
-  - current live war-room repro to debug first:
-    - the older `nvim` text-buffer cursorline scrolling ghost lane
-    - run raw with `ZIDE_DEBUG_DISABLE_TERMINAL_PRESENT_MITIGATION=1 ./zig-out/bin/zide-terminal --cwd "$(pwd)"`
-    - symptom: stale/ghosted text survives during smooth cursorline scrolling in normal text buffers even after the `wiki_life` terminal-buffer lane was fixed
-  - current war-room logs for that lane are:
-    - `terminal.ui.target_sample` only
-    - it is now suspicion-driven rather than per-frame: the widget still registers the same sampled cells/bands and final baselines, but the renderer only emits `present_state`, `phase=pre_swap_front`, `phase=pre_swap_back`, `phase=present`, and the matching row/column bands when a present-side mismatch is actually detected
-    - overlay attribution has been moved off that tag onto `terminal.ui.overlay_probe`, which is intentionally not enabled in `.zide.lua` for this lane
-    - the active probe selector is now cursor-centered rather than row-by-row broad scanning: it keeps one cheap cross around the cursor (`cursor.col ± 5` on the cursor row, plus `cursor.row ± 5` at the cursor column) instead of the heavier multi-row neighborhood pass
-    - important implementation detail: the widget now still performs silent `bg/glyph/window/final` captures for those probes even when it is not writing per-frame target-sample lines, so the renderer's suspicious-frame diff once again has real final baselines to compare against
-    - current swap-semantics cut: suspicious frames now also capture `GL_FRONT` immediately before swap, so the next log can compare pre-swap front, pre-swap back, post-swap front, and post-swap back on the same sampled cells/bands
-    - current swap-boundary instrumentation also logs raw default-framebuffer GL state on suspicious frames via `event=present_gl_state`, covering pre/post `READ_BUFFER`, `DRAW_BUFFER`, `FRAMEBUFFER_BINDING`, `READ_FRAMEBUFFER_BINDING`, and `DRAW_FRAMEBUFFER_BINDING`
-    - there is also a debug-only whole-frame compose experiment behind `ZIDE_DEBUG_COMPOSE_MAIN_TO_OFFSCREEN=1`, but it is currently not trustworthy as a classifier:
-      - on live runs it introduces its own background-only / skipped-frame artifact
-      - suspicious frames show `compose_main_to_offscreen=1` with `pre_swap_front` and `pre_swap_back` already wrong (`22:22:28`) before swap, which is not the original lane
-      - keep it as historical context only for now; do not use it as authority for the current bug
-  - latest raw-log result:
-    - `wiki_life` is now fixed by the `setSyncUpdatesLocked` publication-ownership change
-    - the surviving old scrolling lane does not currently look like the same backend seam:
-      - `capturePresentation()` is still seeing `dirty=partial`
-      - widget planning still chooses `plan_partial=1`
-      - presented-generation ack still retires those generations cleanly
-    - the first renderer-facing probe pass also proved something narrower:
-      - the sampled broad partial rows stayed coherent across `phase=bg/glyph/window/final/present`
-      - but the visible artifact in that run landed on much narrower guide/scope rows, which the earlier probe selector was not sampling
-    - the retargeted narrow-row probe plus the new `phase=pre_swap_back` cut now answers that:
-      - live bad guide rows such as `rows 46..49 col 6` and `rows 49..51 col 10` are correct in `phase=final`
-      - they are still correct in `phase=pre_swap_back`
-      - then they flip to the wrong background-only result at `phase=present`
-    - the newer `pre_swap_front` cut makes the seam even narrower:
-      - on live ghost frames, `phase=pre_swap_front` and `phase=pre_swap_back` are both correct before `SDL_GL_SwapWindow`
-      - then both post-swap reads agree on the same wrong image
-      - so the remaining question is not "which buffer was stale before swap?" but whether Wayland/EGL default-framebuffer semantics collapse or mutate across swap itself
-    - the whole-frame offscreen compose experiment is currently invalid for classification because it triggers a different broken lane (background-only / skipped frames) before swap
-    - the next classifier should therefore stay on the direct-default path and A/B only the swap boundary itself (`finish_before_swap`, `finish_before_and_after_swap`, `copy_back_to_front`) instead of the broken compose path
-    - latest live A/B result:
-      - `finish_before_swap` and `finish_before_and_after_swap` did not materially improve the old scrolling ghost
-      - `copy_back_to_front` did make a visible difference: the bug still exists, but it takes more rendering iterations to force it
-      - that is the strongest current signal that the remaining seam is tied to front/back/default-framebuffer ownership semantics on this Wayland path more than generic GPU submission timing
-    - SDL setup/swap validation is now less blind:
-      - `SDL_GL_SetAttribute`, `SDL_GL_MakeCurrent`, `SDL_GL_SetSwapInterval`, and `SDL_GL_SwapWindow` no longer silently discard boolean failure
-      - startup now logs the realized SDL GL context attributes (`major/minor/profile/doublebuffer/color/depth/stencil/swap_interval`) so Wayland runs can be compared against what SDL actually negotiated
-      - latest live Wayland log now reports `doublebuffer=0` on the realized context, which is a red flag against our current front/back/default-framebuffer assumptions
-      - startup now also logs the native Wayland handles (`event=wayland_handles` on `sdl.window`) plus the actual queried EGL surface/config contract (`SDL EGL contract ...` on `sdl.gl`)
-    - local upstream docs/references for the present seam are now staged too:
-      - SDL source repo cloned under `reference_repos/backends/sdl`
-      - official Khronos refpages mirrored as markdown under `reference_repos/rendering/khronos_refpages_md`
-      - Mesa source/docs now cloned sparsely under `reference_repos/rendering/mesa`
-      - official upstream repos cloned under `reference_repos/backends/wayland`, `reference_repos/backends/wayland_protocols`, `reference_repos/rendering/egl_registry`, and `reference_repos/rendering/opengl_registry`
-      - reproducible mirror script: `scripts/setup_khronos_refpages_md.sh`
-      - reproducible repo sync script: `scripts/setup_reference_repos.sh`
-      - the most relevant local contract finding so far is from `eglSwapBuffers`: post-swap color is undefined unless `EGL_SWAP_BEHAVIOR == EGL_BUFFER_PRESERVED`, so our post-swap default-framebuffer reads are probes, not preservation authority
-      - SDL’s local docs also show the next direct introspection path exists without leaving SDL:
-        - `SDL_EGL_GetCurrentDisplay`
-        - `SDL_EGL_GetCurrentConfig`
-        - `SDL_EGL_GetWindowSurface`
-        - `SDL_GetWindowProperties` for Wayland/EGL window handles
-      - the local reference set is now sufficient to begin renderer-design work without another fetch pass:
-        - terminal-side architecture references: `ghostty`, `foot`, `kitty`, `wezterm`, `rio`
-        - backend/present-path authorities: SDL source, Mesa EGL tree, Wayland source/protocols, and the expanded Khronos EGL/OpenGL refpages
-    - current focused probe for that lane is now inside `copy_back_to_front` itself:
-      - `pre_fallback_back` / `pre_fallback_front` are captured before the explicit back-to-front blit
-      - the existing `pre_swap_back` / `pre_swap_front` captures are after that blit but still before swap
-      - so the next `copy_back_to_front` run can finally answer what the explicit blit changed on the same sampled cells/bands
-    - that is the strongest current proof that the remaining old scrolling ghost is on the swap / Wayland presentation side, not in backend publication or pre-swap renderer consumption
-    - next investigation step is now more concrete than “more swap A/B”:
-      - inspect the new startup EGL contract log on the failing Wayland run
-      - at minimum, reconcile `doublebuffer=0` against the queried `EGL_RENDER_BUFFER`, `EGL_SWAP_BEHAVIOR`, `EGL_SURFACE_TYPE`, and `EGL_CONFIG_ID`
-      - only after that decide whether the long-term fix should stop depending on default-framebuffer preservation semantics entirely
-  - next cut should stay on `terminal.ui.target_sample` only and focus on the present seam, because the broader row/glyph probes are now just perturbing timing and the current target probe has already been trimmed to suspicious frames only
-  - define a real VT core below `TerminalSession`
-  - keep FFI first-class and host-agnostic
-  - make PTY one transport implementation, not the architectural center
+- Present-path redesign is now in design consolidation.
+  - brief: `app_architecture/terminal/WAYLAND_PRESENT_DESIGN_BRIEF.md`
+  - topic ledger: `app_architecture/terminal/WAYLAND_PRESENT_RESEARCH_TOPICS.md`
+  - consolidated writeup: `app_architecture/terminal/WAYLAND_PRESENT_TECHNICAL_WRITEUP.md`
+  - supporting reports: `app_architecture/terminal/research/wayland_present/`
+- Current present-path conclusion:
+  - the surviving Wayland ghost lane is on the swap/present seam, not terminal publication ownership or pre-swap renderer content generation
+  - the authoritative Wayland/EGL contract on the failing path is `EGL_RENDER_BUFFER = EGL_BACK_BUFFER`, `EGL_SWAP_BEHAVIOR = EGL_BUFFER_DESTROYED`, and no preserved-swap bit
+  - the chosen direction is a hybrid renderer architecture:
+    - keep narrow retained widget-local targets where they pay off, especially terminal textures
+    - add a renderer-owned authoritative scene target
+    - treat the default framebuffer as a one-frame present sink only
+- Immediate next task on `main` should be implementation planning from the writeup, not more broad war-room probing.
+- Define a real VT core below `TerminalSession`.
+- Keep FFI first-class and host-agnostic.
+- Make PTY one transport implementation, not the architectural center.
   - current implementation state: `TerminalSession` now wraps an internal `TerminalCore` owner for engine state, with PTY/runtime/threading still session-owned
   - `TerminalSession` construction now also delegates to `session_runtime.zig`, so the root session file is moving toward a host-wrapper facade instead of owning full runtime-state assembly inline
   - replay/test-only debug helpers now also live under `terminal_session_debug.zig`, so that non-runtime surface is no longer embedded in the root session file

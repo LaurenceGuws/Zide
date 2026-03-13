@@ -373,15 +373,6 @@ fn parseTerminalPresentMitigationDisabled() bool {
     return false;
 }
 
-fn parseComposeMainToOffscreen() bool {
-    const raw = std.c.getenv("ZIDE_DEBUG_COMPOSE_MAIN_TO_OFFSCREEN") orelse return false;
-    const slice = std.mem.sliceTo(raw, 0);
-    if (slice.len == 0) return false;
-    if (std.mem.eql(u8, slice, "1") or std.ascii.eqlIgnoreCase(slice, "true") or std.ascii.eqlIgnoreCase(slice, "yes") or std.ascii.eqlIgnoreCase(slice, "on")) return true;
-    if (std.mem.eql(u8, slice, "0") or std.ascii.eqlIgnoreCase(slice, "false") or std.ascii.eqlIgnoreCase(slice, "no") or std.ascii.eqlIgnoreCase(slice, "off")) return false;
-    return false;
-}
-
 fn presentEdgeFallbackName(mode: PresentEdgeFallbackMode) []const u8 {
     return switch (mode) {
         .off => "off",
@@ -466,7 +457,6 @@ pub const Renderer = struct {
     terminal_recent_input_force_full_enabled: bool,
     terminal_recent_input_force_full_window_seconds: f64,
     terminal_present_mitigation_debug_disabled: bool,
-    compose_main_to_offscreen_enabled: bool,
     present_edge_fallback_mode: PresentEdgeFallbackMode,
 
     // Text background behind glyphs (used for optional linear correction).
@@ -498,7 +488,6 @@ pub const Renderer = struct {
     terminal_target: ?RenderTarget,
     terminal_scroll_target: ?RenderTarget,
     editor_target: ?RenderTarget,
-    main_compose_target: ?RenderTarget,
 
     theme: Theme,
     mouse_scale: MousePos,
@@ -641,7 +630,6 @@ pub const Renderer = struct {
             .terminal_recent_input_force_full_enabled = true,
             .terminal_recent_input_force_full_window_seconds = 0.375,
             .terminal_present_mitigation_debug_disabled = parseTerminalPresentMitigationDisabled(),
-            .compose_main_to_offscreen_enabled = parseComposeMainToOffscreen(),
             .present_edge_fallback_mode = parsePresentEdgeFallbackMode(),
             .text_bg_rgba = .{ .r = 0, .g = 0, .b = 0, .a = 0 },
             .font_size = font_size,
@@ -668,7 +656,6 @@ pub const Renderer = struct {
             .terminal_target = null,
             .terminal_scroll_target = null,
             .editor_target = null,
-            .main_compose_target = null,
             .theme = .{},
             .mouse_scale = .{ .x = 1.0, .y = 1.0 },
             .render_scale = render_scale,
@@ -780,7 +767,6 @@ pub const Renderer = struct {
         self.destroyRenderTarget(&self.terminal_target);
         self.destroyRenderTarget(&self.terminal_scroll_target);
         self.destroyRenderTarget(&self.editor_target);
-        self.destroyRenderTarget(&self.main_compose_target);
 
         var font_it = self.font_cache.iterator();
         while (font_it.next()) |entry| {
@@ -1061,12 +1047,7 @@ pub const Renderer = struct {
         // Avoid leaking background context across different text draws.
         self.text_bg_rgba = .{ .r = 0, .g = 0, .b = 0, .a = 0 };
 
-        if (self.compose_main_to_offscreen_enabled) {
-            _ = self.ensureRenderTargetScaled(&self.main_compose_target, self.width, self.height, target_draw.nearestFilter());
-            if (!self.beginRenderTarget(self.main_compose_target)) self.bindDefaultTarget();
-        } else {
-            self.bindDefaultTarget();
-        }
+        self.bindDefaultTarget();
         self.updateMouseScale();
         gl.Disable(gl.c.GL_SCISSOR_TEST);
 
@@ -1083,7 +1064,6 @@ pub const Renderer = struct {
     }
 
     pub fn endFrame(self: *Renderer) void {
-        if (self.compose_main_to_offscreen_enabled) self.drawMainComposeTargetToDefault();
         const swap_start = sdl_api.getPerformanceCounter();
         if (self.present_edge_fallback_mode == .copy_back_to_front) self.capturePreFallbackFrameProbes();
         self.applyPreSwapFallback();
@@ -1146,36 +1126,6 @@ pub const Renderer = struct {
             .swap_interval_0_finish_before_and_after_swap => gl.Finish(),
             else => {},
         }
-    }
-
-    fn drawMainComposeTargetToDefault(self: *Renderer) void {
-        const target = self.main_compose_target orelse return;
-        self.bindDefaultTarget();
-        gl.Disable(gl.c.GL_SCISSOR_TEST);
-        const bg = self.theme.background.toRgba();
-        gl.ClearColor(
-            @as(f32, @floatFromInt(bg.r)) / 255.0,
-            @as(f32, @floatFromInt(bg.g)) / 255.0,
-            @as(f32, @floatFromInt(bg.b)) / 255.0,
-            @as(f32, @floatFromInt(bg.a)) / 255.0,
-        );
-        gl.Clear(gl.c.GL_COLOR_BUFFER_BIT);
-        const src = texture_draw.fullTextureSrcRect(target.texture);
-        const dest = types.Rect{
-            .x = 0,
-            .y = 0,
-            .width = @floatFromInt(target.logical_width),
-            .height = @floatFromInt(target.logical_height),
-        };
-        draw_ops.drawTextureRect(
-            self,
-            target.texture,
-            src,
-            dest,
-            Color.white.toRgba(),
-            types.Rgba{ .r = 0, .g = 0, .b = 0, .a = 0 },
-            .linear_premul,
-        );
     }
 
     fn copyBackBufferToFrontBuffer(self: *Renderer) void {
@@ -1686,11 +1636,6 @@ pub const Renderer = struct {
                 );
                 target_sample_log.logf(
                     .info,
-                    "event=present_mode compose_main_to_offscreen={d}",
-                    .{@intFromBool(self.compose_main_to_offscreen_enabled)},
-                );
-                target_sample_log.logf(
-                    .info,
                     "event=present_gl_state pre_read={x} pre_draw={x} pre_fb={d} pre_read_fb={d} pre_draw_fb={d} post_read={x} post_draw={x} post_fb={d} post_read_fb={d} post_draw_fb={d}",
                     .{
                         @as(u32, @bitCast(self.pre_swap_gl_state.read_buffer)),
@@ -1912,11 +1857,6 @@ pub const Renderer = struct {
                         self.presentation_probe_count,
                         self.presentation_band_probe_count,
                     },
-                );
-                target_sample_log.logf(
-                    .info,
-                    "event=present_mode compose_main_to_offscreen={d}",
-                    .{@intFromBool(self.compose_main_to_offscreen_enabled)},
                 );
                 target_sample_log.logf(
                     .info,

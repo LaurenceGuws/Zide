@@ -468,11 +468,9 @@ So the next decisive live probe is now `terminal.ui.target_sample`:
   - suspicious frames now also emit `event=present_gl_state`, which records
     pre/post default-framebuffer GL state (`READ_BUFFER`, `DRAW_BUFFER`, and
     framebuffer bindings) around `SDL_GL_SwapWindow`
-  - there is also a debug-only whole-frame offscreen compose experiment behind
-    `ZIDE_DEBUG_COMPOSE_MAIN_TO_OFFSCREEN=1`, but it is currently not a valid
-    classifier for this bug because live runs show a different broken lane:
-    background-only / skipped frames with `pre_swap_front` and
-    `pre_swap_back` already wrong before swap
+  - the broken whole-frame offscreen compose experiment has now been removed;
+    the design authority for the replacement path lives in
+    `WAYLAND_PRESENT_TECHNICAL_WRITEUP.md`
 - the latest live probe pass sharpened that instrumentation again:
   - the broad sampled partial rows stayed coherent across
     `phase=bg/glyph/window/final/present`
