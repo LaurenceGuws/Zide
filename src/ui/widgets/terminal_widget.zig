@@ -1,6 +1,7 @@
 const std = @import("std");
 const app_shell = @import("../../app_shell.zig");
 const terminal_mod = @import("../../terminal/core/terminal.zig");
+const terminal_types = @import("../../terminal/model/types.zig");
 const key_encoder = @import("../../terminal/input/key_encoder.zig");
 const app_logger = @import("../../app_logger.zig");
 const shared_types = @import("../../types/mod.zig");
@@ -19,6 +20,9 @@ const KittyPlacement = terminal_mod.KittyPlacement;
 const RenderCache = render_cache_mod.RenderCache;
 const DrawOutcome = draw_mod.DrawOutcome;
 const DrawPreparation = draw_mod.DrawPreparation;
+const Cell = terminal_mod.Cell;
+
+const visible_ascii_dump_path = "zide_terminal_view_dump.txt";
 
 /// Terminal widget for drawing a terminal view
 pub const TerminalWidget = struct {
@@ -51,8 +55,10 @@ pub const TerminalWidget = struct {
     blink_last_active: bool = false,
     blink_phase_changed_pending: bool = false,
     cursor_blink_pause_until: f64 = 0,
+    last_terminal_input_time: f64 = 0,
     terminal_texture_ready: bool = false,
     last_render_generation: u64 = 0,
+    force_full_texture_publish_until: f64 = 0,
     last_alt_active: bool = false,
     last_cell_w_i: i32 = 0,
     last_cell_h_i: i32 = 0,
@@ -90,8 +96,10 @@ pub const TerminalWidget = struct {
             .blink_last_fast_on = true,
             .blink_last_active = false,
             .blink_phase_changed_pending = false,
+            .last_terminal_input_time = 0,
             .terminal_texture_ready = false,
             .last_render_generation = 0,
+            .force_full_texture_publish_until = 0,
             .last_alt_active = false,
             .last_cell_w_i = 0,
             .last_cell_h_i = 0,
@@ -191,6 +199,7 @@ pub const TerminalWidget = struct {
 
     pub fn noteInput(self: *TerminalWidget, now: f64) void {
         self.cursor_blink_pause_until = now + 0.4;
+        self.last_terminal_input_time = now;
     }
 
     pub fn deinit(self: *TerminalWidget) void {
@@ -215,6 +224,82 @@ pub const TerminalWidget = struct {
 
     pub fn invalidateTextureCache(self: *TerminalWidget) void {
         self.terminal_texture_ready = false;
+        self.force_full_texture_publish_until = 0;
+    }
+
+    pub fn dumpVisibleAsciiView(self: *TerminalWidget) !void {
+        var out = std.ArrayList(u8).empty;
+        defer out.deinit(self.session.allocator);
+
+        try out.writer(self.session.allocator).print(
+            "# Zide terminal visible-view dump\npath={s}\nrows={d} cols={d} generation={d} scroll_offset={d} alt_active={d} cursor={d}:{d} cursor_visible={d} screen_reverse={d}\n",
+            .{
+                visible_ascii_dump_path,
+                self.draw_cache.rows,
+                self.draw_cache.cols,
+                self.draw_cache.generation,
+                self.draw_cache.scroll_offset,
+                @intFromBool(self.draw_cache.alt_active),
+                self.draw_cache.cursor.row,
+                self.draw_cache.cursor.col,
+                @intFromBool(self.draw_cache.cursor_visible),
+                @intFromBool(self.draw_cache.screen_reverse),
+            },
+        );
+
+        try appendViewportColumnRuler(&out, self.session.allocator, self.draw_cache.cols);
+        try out.append(self.session.allocator, '\n');
+
+        if (self.draw_cache.rows == 0 or self.draw_cache.cols == 0 or self.draw_cache.cells.items.len == 0) {
+            try out.appendSlice(self.session.allocator, "# empty draw cache\n");
+        } else {
+            var row: usize = 0;
+            while (row < self.draw_cache.rows) : (row += 1) {
+                try out.writer(self.session.allocator).print("{d:0>3}|", .{row});
+                try appendViewportAsciiRow(&out, self.session.allocator, self.draw_cache, row);
+                try out.appendSlice(self.session.allocator, "|\n");
+            }
+        }
+
+        try out.appendSlice(self.session.allocator, "\n# resolved_bg_runs\n");
+        if (self.draw_cache.rows == 0 or self.draw_cache.cols == 0 or self.draw_cache.cells.items.len == 0) {
+            try out.appendSlice(self.session.allocator, "none\n");
+        } else {
+            var row: usize = 0;
+            while (row < self.draw_cache.rows) : (row += 1) {
+                try appendResolvedBackgroundRuns(&out, self.session.allocator, self.draw_cache, row);
+            }
+        }
+
+        try out.appendSlice(self.session.allocator, "\n# non_ascii_cells\n");
+        var listed_non_ascii = false;
+        if (self.draw_cache.rows > 0 and self.draw_cache.cols > 0 and self.draw_cache.cells.items.len > 0) {
+            var row: usize = 0;
+            while (row < self.draw_cache.rows) : (row += 1) {
+                var col: usize = 0;
+                while (col < self.draw_cache.cols) : (col += 1) {
+                    const idx = row * self.draw_cache.cols + col;
+                    if (idx >= self.draw_cache.cells.items.len) break;
+                    const cell = self.draw_cache.cells.items[idx];
+                    if (cell.x != 0 or cell.y != 0) continue;
+                    if (cell.codepoint == 0) continue;
+                    if (cell.codepoint >= 32 and cell.codepoint <= 126 and cell.combining_len == 0 and cell.width <= 1) continue;
+                    listed_non_ascii = true;
+                    try out.writer(self.session.allocator).print(
+                        "row={d} col={d} cp={d} width={d} combining={d}\n",
+                        .{ row, col, cell.codepoint, cell.width, cell.combining_len },
+                    );
+                }
+            }
+        }
+        if (!listed_non_ascii) {
+            try out.appendSlice(self.session.allocator, "none\n");
+        }
+
+        try std.fs.cwd().writeFile(.{
+            .sub_path = visible_ascii_dump_path,
+            .data = out.items,
+        });
     }
 
     pub fn pasteClipboardFromSystem(self: *TerminalWidget, shell: *Shell) bool {
@@ -276,3 +361,105 @@ pub const TerminalWidget = struct {
         );
     }
 };
+
+fn appendViewportColumnRuler(out: *std.ArrayList(u8), allocator: std.mem.Allocator, cols: usize) !void {
+    try out.appendSlice(allocator, "   |");
+    var col: usize = 0;
+    while (col < cols) : (col += 1) {
+        const digit: u8 = @intCast((col / 10) % 10);
+        try out.append(allocator, '0' + digit);
+    }
+    try out.appendSlice(allocator, "|\n");
+
+    try out.appendSlice(allocator, "   |");
+    col = 0;
+    while (col < cols) : (col += 1) {
+        const digit: u8 = @intCast(col % 10);
+        try out.append(allocator, '0' + digit);
+    }
+    try out.appendSlice(allocator, "|");
+}
+
+fn appendViewportAsciiRow(
+    out: *std.ArrayList(u8),
+    allocator: std.mem.Allocator,
+    cache: RenderCache,
+    row: usize,
+) !void {
+    if (cache.cols == 0 or row >= cache.rows) return;
+    const row_start = row * cache.cols;
+    var col: usize = 0;
+    while (col < cache.cols) : (col += 1) {
+        const idx = row_start + col;
+        if (idx >= cache.cells.items.len) break;
+        try out.append(allocator, viewportAsciiChar(cache.cells.items[idx]));
+    }
+}
+
+fn viewportAsciiChar(cell: Cell) u8 {
+    if (cell.x != 0 or cell.y != 0) return '<';
+    if (cell.codepoint == 0 or cell.codepoint == ' ') return ' ';
+    if (cell.combining_len > 0) return '+';
+    if (cell.codepoint >= 33 and cell.codepoint <= 126 and cell.width <= 1) {
+        return @intCast(cell.codepoint);
+    }
+    return '?';
+}
+
+fn appendResolvedBackgroundRuns(
+    out: *std.ArrayList(u8),
+    allocator: std.mem.Allocator,
+    cache: RenderCache,
+    row: usize,
+) !void {
+    if (cache.cols == 0 or row >= cache.rows) {
+        try out.writer(allocator).print("row={d:0>3} cursor_here=0 cursor_col=-1 runs=none\n", .{row});
+        return;
+    }
+
+    const row_start = row * cache.cols;
+    if (row_start >= cache.cells.items.len) {
+        try out.writer(allocator).print("row={d:0>3} cursor_here=0 cursor_col=-1 runs=none\n", .{row});
+        return;
+    }
+
+    const cursor_here = cache.cursor_visible and cache.cursor.row == row and cache.cursor.col < cache.cols;
+    try out.writer(allocator).print(
+        "row={d:0>3} cursor_here={d} cursor_col={d} runs=",
+        .{
+            row,
+            @intFromBool(cursor_here),
+            if (cursor_here) @as(i64, @intCast(cache.cursor.col)) else -1,
+        },
+    );
+
+    var col: usize = 0;
+    while (col < cache.cols) {
+        const idx = row_start + col;
+        if (idx >= cache.cells.items.len) break;
+        const run_color = resolvedBackgroundColor(cache.cells.items[idx], cache.screen_reverse);
+        var end_col = col;
+        while (end_col + 1 < cache.cols) : (end_col += 1) {
+            const next_idx = row_start + end_col + 1;
+            if (next_idx >= cache.cells.items.len) break;
+            const next_color = resolvedBackgroundColor(cache.cells.items[next_idx], cache.screen_reverse);
+            if (!sameColor(run_color, next_color)) break;
+        }
+        try out.writer(allocator).print(
+            "{d}..{d}@{d}:{d}:{d}",
+            .{ col, end_col, run_color.r, run_color.g, run_color.b },
+        );
+        col = end_col + 1;
+        if (col < cache.cols) try out.appendSlice(allocator, " ");
+    }
+    try out.append(allocator, '\n');
+}
+
+fn resolvedBackgroundColor(cell: Cell, screen_reverse: bool) terminal_types.Color {
+    const reversed = cell.attrs.reverse != screen_reverse;
+    return if (reversed) cell.attrs.fg else cell.attrs.bg;
+}
+
+fn sameColor(a: terminal_types.Color, b: terminal_types.Color) bool {
+    return a.r == b.r and a.g == b.g and a.b == b.b and a.a == b.a;
+}

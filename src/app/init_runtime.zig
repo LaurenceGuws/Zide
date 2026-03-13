@@ -128,6 +128,10 @@ fn initWithMode(
         config.editor_font_features,
     );
     shell.rendererPtr().setTerminalTextureShiftEnabled(config.terminal_texture_shift orelse true);
+    shell.rendererPtr().setTerminalRecentInputFullPublicationPolicy(
+        config.terminal_recent_input_force_full orelse true,
+        config.terminal_recent_input_force_full_ms,
+    );
     shell.rendererPtr().setEditorSelectionOverlayStyle(
         config.editor_selection_overlay_smooth orelse config.selection_overlay_smooth,
         config.editor_selection_overlay_corner_px orelse config.selection_overlay_corner_px,
@@ -157,6 +161,11 @@ fn initWithMode(
     const app_log = app_logger.logger("app.core");
     app_log.logStdout(.info, "logger initialized", .{});
     app_log.logStdout(.info, "config lua backend: impl={s}", .{"ziglua"});
+    app_log.logStdout(.info, "terminal present mitigation recent_input_force_full={any} recent_input_force_full_ms={d} debug_disabled={any}", .{
+        shell.rendererPtr().terminalRecentInputFullPublicationEnabled(),
+        shell.rendererPtr().terminalRecentInputFullPublicationWindowMs(),
+        shell.rendererPtr().terminalPresentMitigationDebugDisabled(),
+    });
     const metrics_log = app_logger.logger("terminal.metrics");
     const input_latency_log = app_logger.logger("input.latency");
     const perf_log = app_logger.logger("editor.perf");

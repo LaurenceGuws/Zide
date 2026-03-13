@@ -29,6 +29,7 @@ pub fn handleKeyboardInput(
 
     const altmeta_log = app_logger.logger("terminal.input.altmeta");
     const key_log = app_logger.logger("terminal.input.keys");
+    const dump_log = app_logger.logger("terminal.ui.dump");
 
     const key_mode_flags = self.session.keyModeFlagsValue();
     const report_text_enabled = key_encoder.reportTextEnabled(key_mode_flags);
@@ -76,6 +77,24 @@ pub fn handleKeyboardInput(
             if (event != .key) continue;
             const key = event.key.key;
             const event_mod = keyModFromEvent(event.key);
+            if (event.key.pressed and !event.key.repeated and event.key.mods.ctrl and event.key.mods.shift and !event.key.mods.alt and !event.key.mods.altgr and !event.key.mods.super and key == .f12) {
+                self.dumpVisibleAsciiView() catch |err| {
+                    dump_log.logf(.warning, "visible_ascii_dump failed err={s}", .{@errorName(err)});
+                    result.handled = true;
+                    result.skip_chars = true;
+                    continue;
+                };
+                dump_log.logf(.info, "visible_ascii_dump path={s} rows={d} cols={d} alt_active={d} generation={d}", .{
+                    "zide_terminal_view_dump.txt",
+                    self.draw_cache.rows,
+                    self.draw_cache.cols,
+                    @intFromBool(self.draw_cache.alt_active),
+                    self.draw_cache.generation,
+                });
+                result.handled = true;
+                result.skip_chars = true;
+                continue;
+            }
             key_log.logf(
                 .info,
                 "event key={d} pressed={d} repeated={d} mods(s={d} a={d} c={d} g={d} super={d})",

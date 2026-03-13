@@ -21,21 +21,35 @@ const Rgba = terminal_font_mod.Rgba;
 const kitty_unicode_placeholder: u32 = 0x10EEEE;
 
 pub const BackgroundRunSummary = struct {
+    pub const RunSample = struct {
+        present: bool = false,
+        col: usize = 0,
+        codepoint: u32 = 0,
+        fg: Color = Color.black,
+        bg: Color = Color.black,
+        reverse: bool = false,
+        resolved_bg: Color = Color.black,
+    };
+
     runs: usize = 0,
     first_start: usize = 0,
     first_end: usize = 0,
     first_color: Color = Color.black,
+    first_sample: RunSample = .{},
     second_start: usize = 0,
     second_end: usize = 0,
     second_color: Color = Color.black,
+    second_sample: RunSample = .{},
     third_start: usize = 0,
     third_end: usize = 0,
     third_color: Color = Color.black,
+    third_sample: RunSample = .{},
 };
 
 pub const GlyphDrawStats = struct {
     shaping_spans: usize = 0,
     shaped_glyphs: usize = 0,
+    direct_text_glyphs: usize = 0,
     fallback_cells: usize = 0,
     special_sprite_glyphs: usize = 0,
     box_glyphs: usize = 0,
@@ -57,6 +71,20 @@ pub const GlyphDrawStats = struct {
     direct_lookup_ms: f64 = 0.0,
     direct_draw_ms: f64 = 0.0,
 };
+
+pub const DirectGlyphSample = struct {
+    present: bool = false,
+    row: usize = 0,
+    col: usize = 0,
+    codepoint: u32 = 0,
+    glyph_id: u32 = 0,
+    simple_ascii: bool = false,
+    want_color: bool = false,
+    fg: Color = Color.black,
+    bg: Color = Color.black,
+};
+
+pub const max_direct_glyph_samples: usize = 3;
 
 const RowSpecialSpriteCache = struct {
     key: ?terminal_font_mod.SpecialGlyphSpriteKey = null,
@@ -83,6 +111,65 @@ fn resolvedBackgroundColor(cell: Cell, screen_reverse_mode: bool) Color {
 
 fn sameColor(a: Color, b: Color) bool {
     return a.r == b.r and a.g == b.g and a.b == b.b and a.a == b.a;
+}
+
+fn sameDirectGlyphSampleStyle(sample: DirectGlyphSample, simple_ascii: bool, want_color: bool, fg: Color, bg: Color) bool {
+    return sample.simple_ascii == simple_ascii and
+        sample.want_color == want_color and
+        sameColor(sample.fg, fg) and
+        sameColor(sample.bg, bg);
+}
+
+fn recordDirectGlyphSample(
+    samples: *[max_direct_glyph_samples]DirectGlyphSample,
+    row: usize,
+    col: usize,
+    codepoint: u32,
+    glyph_id: u32,
+    simple_ascii: bool,
+    want_color: bool,
+    fg: Color,
+    bg: Color,
+) void {
+    var first_free: ?usize = null;
+    var last_present: ?usize = null;
+    var idx: usize = 0;
+    while (idx < samples.len) : (idx += 1) {
+        if (samples[idx].present) {
+            last_present = idx;
+        } else if (first_free == null) {
+            first_free = idx;
+        }
+    }
+
+    if (last_present) |last_idx| {
+        if (sameDirectGlyphSampleStyle(samples[last_idx], simple_ascii, want_color, fg, bg)) return;
+    }
+
+    const write_idx = first_free orelse return;
+    samples[write_idx] = .{
+        .present = true,
+        .row = row,
+        .col = col,
+        .codepoint = codepoint,
+        .glyph_id = glyph_id,
+        .simple_ascii = simple_ascii,
+        .want_color = want_color,
+        .fg = fg,
+        .bg = bg,
+    };
+}
+
+fn makeRunSample(cell: Cell, col: usize, screen_reverse_mode: bool) BackgroundRunSummary.RunSample {
+    return .{
+        .present = true,
+        .col = col,
+        .codepoint = cell.codepoint,
+        .fg = .{ .r = cell.attrs.fg.r, .g = cell.attrs.fg.g, .b = cell.attrs.fg.b, .a = cell.attrs.fg.a },
+        .bg = .{ .r = cell.attrs.bg.r, .g = cell.attrs.bg.g, .b = cell.attrs.bg.b, .a = cell.attrs.bg.a },
+        .reverse = cell.attrs.reverse != screen_reverse_mode,
+        .resolved_bg = resolvedBackgroundColor(cell, screen_reverse_mode),
+    };
 }
 
 fn backgroundRunEnd(
@@ -221,16 +308,19 @@ pub fn summarizeRowBackgroundRuns(
                 summary.first_start = col;
                 summary.first_end = run_end;
                 summary.first_color = run_color;
+                summary.first_sample = makeRunSample(cell, col, screen_reverse_mode);
             },
             1 => {
                 summary.second_start = col;
                 summary.second_end = run_end;
                 summary.second_color = run_color;
+                summary.second_sample = makeRunSample(cell, col, screen_reverse_mode);
             },
             2 => {
                 summary.third_start = col;
                 summary.third_end = run_end;
                 summary.third_color = run_color;
+                summary.third_sample = makeRunSample(cell, col, screen_reverse_mode);
             },
             else => {},
         }
@@ -287,10 +377,32 @@ fn addTerminalGlyphRect(ctx: *anyopaque, x: i32, y: i32, w: i32, h: i32, color: 
 
 fn isTerminalBoxGlyph(codepoint: u32) bool {
     return switch (codepoint) {
-        0x2500, 0x2501, 0x2502, 0x2503, 0x256d, 0x256e, 0x256f, 0x2570,
-        0x250c, 0x2510, 0x2514, 0x2518, 0x2574, 0x2575, 0x2576, 0x2577,
-        0x251c, 0x2524, 0x252c, 0x2534, 0x253c, 0x2580, 0x2584, 0x2588,
-        0xE0B1, 0xE0B3,
+        0x2500,
+        0x2501,
+        0x2502,
+        0x2503,
+        0x256d,
+        0x256e,
+        0x256f,
+        0x2570,
+        0x250c,
+        0x2510,
+        0x2514,
+        0x2518,
+        0x2574,
+        0x2575,
+        0x2576,
+        0x2577,
+        0x251c,
+        0x2524,
+        0x252c,
+        0x2534,
+        0x253c,
+        0x2580,
+        0x2584,
+        0x2588,
+        0xE0B1,
+        0xE0B3,
         => true,
         else => false,
     };
@@ -635,6 +747,7 @@ pub fn drawRowGlyphs(
     draw_cursor_mode: bool,
     cursor_pos: CursorPos,
     ligature_strategy: TerminalDisableLigaturesStrategy,
+    sample_capture: ?*[max_direct_glyph_samples]DirectGlyphSample,
     stats: ?*GlyphDrawStats,
 ) void {
     _ = padding_x_i;
@@ -662,6 +775,7 @@ pub fn drawRowGlyphs(
         break :blk @min(cols_count, cursor_split_col + span_w);
     } else 0;
     var row_sprite_cache = RowSpecialSpriteCache{};
+    var direct_samples = [1]DirectGlyphSample{.{}} ** max_direct_glyph_samples;
 
     var col: usize = col_start;
     while (col <= col_end and col < cols_count) {
@@ -754,7 +868,7 @@ pub fn drawRowGlyphs(
                         const next_cell = row_cells[next_col];
                         break :blk next_cell.codepoint == ' ' or next_cell.codepoint == 0;
                     }
-                        break :blk true;
+                    break :blk true;
                 };
                 drawDirectGlyphById(
                     &rr.terminal_font,
@@ -774,7 +888,14 @@ pub fn drawRowGlyphs(
                     fg_draw.toRgba(),
                     stats,
                 );
-                if (stats) |s| s.shaped_glyphs += 1;
+                recordDirectGlyphSample(&direct_samples, row_idx, direct_col, cell.codepoint, choice.glyph_id, choice.simple_ascii, choice.want_color, fg_draw, bg_draw);
+                if (sample_capture) |capture| {
+                    recordDirectGlyphSample(capture, row_idx, direct_col, cell.codepoint, choice.glyph_id, choice.simple_ascii, choice.want_color, fg_draw, bg_draw);
+                }
+                if (stats) |s| {
+                    s.shaped_glyphs += 1;
+                    s.direct_text_glyphs += 1;
+                }
             }
             col = span_end_excl;
             continue;
@@ -1034,5 +1155,33 @@ pub fn drawRowGlyphs(
         if (stats) |s| s.submit_ms += (app_shell.getTime() - submit_phase_start) * 1000.0;
 
         col = span_end_excl;
+    }
+
+    if (direct_samples[0].present) {
+        const direct_log = app_logger.logger("terminal.ui.row_glyph_sample");
+        var sample_idx: usize = 0;
+        while (sample_idx < direct_samples.len) : (sample_idx += 1) {
+            const sample = direct_samples[sample_idx];
+            if (!sample.present) break;
+            direct_log.logf(
+                .info,
+                "kind=direct slot={d} row={d} col={d} cp={d} gid={d} ascii={d} color={d} fg={d}:{d}:{d} bg={d}:{d}:{d}",
+                .{
+                    sample_idx,
+                    sample.row,
+                    sample.col,
+                    sample.codepoint,
+                    sample.glyph_id,
+                    @intFromBool(sample.simple_ascii),
+                    @intFromBool(sample.want_color),
+                    sample.fg.r,
+                    sample.fg.g,
+                    sample.fg.b,
+                    sample.bg.r,
+                    sample.bg.g,
+                    sample.bg.b,
+                },
+            );
+        }
     }
 }

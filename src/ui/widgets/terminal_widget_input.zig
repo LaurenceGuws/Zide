@@ -226,5 +226,6 @@ pub fn handleInput(
     }
 
     if (input_batch.mouseReleased(.left)) pointer_mod.resetLeftDragState(self);
+    if (handled) self.noteInput(app_shell.getTime());
     return handled;
 }

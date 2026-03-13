@@ -29,6 +29,8 @@ const CellWindowSummary = struct {
     codepoint: u32,
     fg: types.Color,
     bg: types.Color,
+    reverse: bool,
+    resolved_bg: types.Color,
 };
 
 const RowStyleDiffSummary = struct {
@@ -74,12 +76,16 @@ fn summarizeCellWindow(
     if (row_start + col >= cache.cells.items.len or row_start + col >= active_cache.cells.items.len) return null;
     const cell = cache.cells.items[row_start + col];
     const active_cell = active_cache.cells.items[row_start + col];
+    const screen_reverse_mode = cache.screen_reverse;
+    const cell_reverse = cell.attrs.reverse != screen_reverse_mode;
     return .{
         .col = col,
         .changed = !publication.cellsEqual(cell, active_cell),
         .codepoint = cell.codepoint,
         .fg = cell.attrs.fg,
         .bg = cell.attrs.bg,
+        .reverse = cell_reverse,
+        .resolved_bg = if (cell_reverse) cell.attrs.fg else cell.attrs.bg,
     };
 }
 
@@ -393,7 +399,7 @@ fn logCursorMotionDamage(
             if (summarizeCellWindow(cache, active_cache, old_row, probe_col, cols)) |summary| {
                 logger.logf(
                     .info,
-                    "style_window row={d} col={d} changed={d} cp={d} fg={d}:{d}:{d} bg={d}:{d}:{d}",
+                    "style_window row={d} col={d} changed={d} cp={d} fg={d}:{d}:{d} bg={d}:{d}:{d} rev={d} resolved_bg={d}:{d}:{d}",
                     .{
                         old_row,
                         summary.col,
@@ -405,6 +411,10 @@ fn logCursorMotionDamage(
                         summary.bg.r,
                         summary.bg.g,
                         summary.bg.b,
+                        @intFromBool(summary.reverse),
+                        summary.resolved_bg.r,
+                        summary.resolved_bg.g,
+                        summary.resolved_bg.b,
                     },
                 );
             }
@@ -413,7 +423,7 @@ fn logCursorMotionDamage(
             if (summarizeCellWindow(cache, active_cache, new_row, probe_col, cols)) |summary| {
                 logger.logf(
                     .info,
-                    "style_window row={d} col={d} changed={d} cp={d} fg={d}:{d}:{d} bg={d}:{d}:{d}",
+                    "style_window row={d} col={d} changed={d} cp={d} fg={d}:{d}:{d} bg={d}:{d}:{d} rev={d} resolved_bg={d}:{d}:{d}",
                     .{
                         new_row,
                         summary.col,
@@ -425,6 +435,10 @@ fn logCursorMotionDamage(
                         summary.bg.r,
                         summary.bg.g,
                         summary.bg.b,
+                        @intFromBool(summary.reverse),
+                        summary.resolved_bg.r,
+                        summary.resolved_bg.g,
+                        summary.resolved_bg.b,
                     },
                 );
             }

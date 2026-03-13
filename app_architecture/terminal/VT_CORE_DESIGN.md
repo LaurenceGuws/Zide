@@ -152,6 +152,268 @@ It only logs broad `parser.ascii_run*` writes and includes a short preview of
 the payload, which should let us tell whether the second same-row write is
 body text, gutter/status text, or guide-style repeated columns.
 
+That provenance pass is now effectively complete for the current live lane:
+
+- backend damage matches backend diff truth on the bad rows
+- dirty retirement is clearing, not carrying stale rows forward
+- left-edge omitted-cell theory is ruled out for the sampled rows
+- background-run construction is reading real resolved cell state
+
+So the remaining bug is no longer best explained as backend under-damage or
+background-run invention. The current live conclusion is mixed stale renderer
+state.
+
+## Current Live Renderer Conclusion
+
+The active repro class is not foreground-only and not background-only. It now
+includes:
+
+- fast `nvim` motion ghosts
+- palette/notification/UI-close ghosts
+- `btop` graph foreground loss
+
+The common pattern is that backend/publication selects and redraws the rows, but
+some pixels recover only when a later unrelated redraw passes over them.
+
+Current attribution is now below the direct glyph input lane:
+
+- bad rows are overwhelmingly `direct_text` rows
+- shaped-text work is usually absent on those rows
+- special/box lanes exist, but they are minor on the active repros
+
+`terminal.ui.row_glyph_sample` has now done its job for this lane:
+
+- it logs up to three direct-glyph style-transition samples per affected row
+  (`slot=0..2`)
+- recent live traces show the expected body `gid/fg/bg` at `slot=1/2` even on
+  visibly broken rows
+
+So the next decisive live probe is now `terminal.ui.target_sample`:
+
+- on broad partial rows it samples the terminal FBO before glyph flush
+  (`phase=bg`) and after glyph flush (`phase=glyph`)
+- it samples the same `slot=0..2` direct-glyph cells plus the `bg2` run-start
+  cell when present
+- those readback lines are also mirrored into `terminal.ui.row_render_pass` as
+  `event=target_sample ...`, so the decisive probe still appears when the
+  dedicated tag is missing from a live capture
+- `phase=glyph` now also reports `diff_hits` and `diff_max`, comparing a 3x3
+  in-cell sample grid against the stored `phase=bg` baseline for the same cell;
+  this avoids false negatives when the cell-center pixel lands in background on
+  ordinary ASCII glyphs
+- marker-driven live captures (`Java`, `Scrolling`) now show non-zero
+  `diff_hits` on sampled body cells during visibly broken frames, so sampled
+  glyph ink is already present in the terminal FBO on that lane
+- fast-scroll-only captures now also show sampled cells surviving the
+  terminal-texture composite: `phase=window` reports non-zero `diff_hits` on
+  the sampled body cells even during the high-volume artifact lane
+- the live cut now extends one step later than that renderer-local sample:
+  the stored `phase=final` grids are carried into `Renderer.endFrame()` and
+  re-read after `SDL_GL_SwapWindow` as `phase=present`, so the active lane can
+  distinguish "final backbuffer is right but the presented front buffer is
+  wrong" from "the sampled cells were never correct in the first place"
+- that presentation-side cut now also includes swap-context and one-frame
+  history: `event=present_state ...` logs frame/focus/resize/swap-interval and
+  drawable sizing around swap, while each `phase=present` sample now also
+  carries `back_rgba/back_hits/back_max` and a paired
+  `event=present_compare ...` line with `prev_cp/prev_hits` plus
+  `prev_final_cp/prev_final_hits`, keyed by sampled screen location rather
+  than codepoint, so stale presented reuse can be distinguished from a fresh
+  bad post-swap image
+- the decisive zebra captures now show the terminal draw path is clean on the
+  sampled cells right up to swap: `phase=final diff_hits=0/9` remains true on
+  the bad frames, but `phase=present` diverges immediately afterward while
+  `event=present_state ...` stays stable (`focused=1 resized=0 swap_interval=1`
+  on the reproduced frames)
+- that divergence is not just a front-buffer quirk either: the same zebra
+  frames report matching bad `back_rgba/back_hits` after swap, so the active
+  suspicion is swap/buffer-rotation behavior rather than terminal FBO draw
+  corruption or a pure front-buffer presentation glitch
+- full-log review now also shows stale presented reuse after the first bad
+  frame: once the wrong post-swap image appears, later `phase=present`
+  samples can match both the previous frame's correct final baseline
+  (`prev_final_hits`) and the previously presented bad image (`prev_hits`)
+- that presentation-side mitigation experiment is now landed in temporary
+  opt-in form too: `ZIDE_PRESENT_EDGE_FALLBACK=copy_back_to_front` makes
+  `Renderer.endFrame()` blit the default `GL_BACK` buffer into `GL_FRONT`
+  immediately before `SDL_GL_SwapWindow`, and `event=present_state ...` now
+  carries `present_edge=off|copy_back_to_front` so captures say which swap-edge
+  path was active
+- that fallback has now been exercised on the live zebra lane and made no
+  visible difference, so the simple pre-swap front/back equalization did not
+  suppress the corruption
+- the active next probe is now a wider row-band signature: broad sampled rows
+  emit `event=target_band phase=window|final ... sig=...` before swap, and
+  `Renderer.endFrame()` now emits `event=present_band ... sig/back_sig/final_sig
+  ...` for the same row span after swap so captures can distinguish a coherent
+  row-band mutation from a sparse per-cell mismatch
+- that probe now also carries a representative full-height vertical lane for
+  the user-reported scope-line column ghosts: each sampled broad row uses its
+  middle direct sample column as an `axis=column` band and logs the same
+  `window|final|present` signature chain for that vertical seam
+- later local-column captures show that lane participating too: adjacent row
+  bands still remap after swap, and local `axis=column` bands around the
+  affected rows now diverge as well
+- the next controlled mitigation experiment is now
+  `ZIDE_PRESENT_EDGE_FALLBACK=finish_before_swap`, which calls `glFinish()`
+  immediately before `SDL_GL_SwapWindow` to test whether input-pressure failure
+  is an in-flight present-queue problem
+- `finish_before_swap` now has a real effect: it partially stabilizes the
+  neighborhood remap under pressure (one row can stay correct and local column
+  divergence drops), so present-edge timing is definitely part of the failure
+- `ZIDE_PRESENT_EDGE_FALLBACK=finish_before_and_after_swap` has now been
+  exercised too: it can reduce some frames further than `finish_before_swap`,
+  but the decisive captures still show exact adjacent-row aliasing after swap
+  on the bad lane, so full GL completion around `SDL_GL_SwapWindow` is not
+  sufficient to suppress the remap
+- the next present-edge experiment is now
+  `ZIDE_PRESENT_EDGE_FALLBACK=swap_interval_0`, which disables swap interval at
+  renderer init while leaving the same probes active so the next repro can
+  distinguish "vsync/queued present pacing" from "post-swap corruption that
+  survives even without swap throttling"
+- `swap_interval_0` now has the strongest mitigation effect so far: on the
+  latest repro lane the broad row/column bands can stay exact across multiple
+  consecutive frames, with only smaller per-cell post-swap diffs surviving on a
+  few sampled glyph cells, so queued/vsync present pacing is clearly part of
+  the trigger
+- `event=present_state ...` now also logs `swap_ms` and `present_gap_ms`; use
+  those fields on the next repro to tell whether "no logs, then a burst" is a
+  real long swap/present stall or just delayed visibility of otherwise normal
+  frame logging
+- latest `swap_interval_0` captures now say the burst pattern is not a long
+  swap stall: the quiet-then-burst frames show tiny `swap_ms` with large
+  `present_gap_ms`, so the next cut should treat that as a long gap between
+  sampled present frames rather than `SDL_GL_SwapWindow` blocking for the whole
+  interval
+- the remaining `swap_interval_0` failures now also intersect the cursor lane
+  explicitly: `event=overlay_touch branch=cursor ...` can coincide with a
+  `phase=final` mutation on the sampled `bg2`/column seam before swap, followed
+  by a worse post-swap version of the same neighborhood; a temporary
+  `ZIDE_DEBUG_DISABLE_TERMINAL_CURSOR_OVERLAY=1` switch is now available to
+  test whether the remaining failures are cursor-overlay driven
+- that cursor-overlay experiment is now negative: `cursor_overlay_disabled=1`
+  still reproduces the same adjacent-row remap under `swap_interval_0`, so the
+  remaining failure survives with the terminal cursor overlay removed
+- the next pacing experiment is now
+  `ZIDE_PRESENT_EDGE_FALLBACK=swap_interval_0_cap_60hz`, which keeps swap
+  interval disabled but also caps present cadence from the app side after each
+  frame so the next repro can distinguish "vsync path is buggy" from "too many
+  presents queued under pressure"
+- `swap_interval_0_cap_60hz` is now also negative: even with
+  `present_gap_ms` held around one capped frame, the same row remap still
+  reproduces, so simple app-side queue-depth reduction is not enough
+- the next combined experiment is now
+  `ZIDE_PRESENT_EDGE_FALLBACK=swap_interval_0_finish_before_swap`, which keeps
+  swap interval disabled but adds `glFinish()` before swap so the next repro
+  can tell whether the residual no-vsync failure is still GL-completion related
+  or already below the GL queue
+- `swap_interval_0_finish_before_swap` also looks negative on the current lane:
+  the residual no-vsync failure still reproduces with the same row/column band
+  corruption profile, so simple pre-swap GL completion is not enough either
+- the last cheap GL-side matrix point is now
+  `ZIDE_PRESENT_EDGE_FALLBACK=swap_interval_0_finish_before_and_after_swap`,
+  which keeps swap interval disabled and serializes both sides of swap before
+  the investigation moves fully below the GL queue
+- `swap_interval_0_finish_before_and_after_swap` is now also negative on the
+  Wayland-only repro lane: the same adjacent-row remap still survives, so the
+  next experiment should stop spending effort on GL-side swap serialization and
+  instead test a more conservative terminal publication path from the app side
+- the active Wayland-only experiment is now
+  `ZIDE_PRESENT_EDGE_FALLBACK=swap_interval_0_force_full_terminal_texture`,
+  which keeps `swap_interval=0` but forces full terminal texture publication
+  whenever we would otherwise take the partial texture-update path; this is
+  intended to distinguish Wayland/SDL post-swap damage from a bug in our
+  partial terminal texture publication path
+- that force-full-on-partial mode now changes the symptom: the bad image can
+  recover, but recovery can take seconds after input stops, which implies a
+  clean frame can still skip terminal texture publication and leave recovery
+  waiting for the next dirty redraw
+- the active follow-up is now
+  `ZIDE_PRESENT_EDGE_FALLBACK=swap_interval_0_force_full_terminal_texture_every_frame`,
+  which keeps `swap_interval=0` and forces full terminal texture publication
+  even on otherwise clean frames; this is intended to tell whether the slow
+  recovery is just waiting for the next dirty publish
+- `swap_interval_0_force_full_terminal_texture_every_frame` is now much better
+  on the live Wayland repro, which means aggressive republishing can actively
+  heal the bad image rather than merely containing it
+- the next narrowing experiment is now
+  `ZIDE_PRESENT_EDGE_FALLBACK=swap_interval_0_force_full_terminal_texture_recovery_500ms`,
+  which keeps `swap_interval=0` and forces full terminal texture publication
+  for 500ms after an otherwise-dirty frame; this is intended to test whether
+  the improvement needs constant brute force or only a short post-activity
+  recovery window
+- `swap_interval_0_force_full_terminal_texture_recovery_500ms` is now much
+  worse than the every-frame mode, so a tiny recovery window is not enough
+- the active follow-up is now
+  `ZIDE_PRESENT_EDGE_FALLBACK=swap_interval_0_force_full_terminal_texture_recovery_2000ms`,
+  which keeps the same mechanism but stretches the bounded recovery window to
+  2 seconds
+- `swap_interval_0_force_full_terminal_texture_recovery_2000ms` is better
+  again, but still loses footing slightly on long arrow-down `nvim`
+  scrolling, which suggests recent input pressure is a better driver than
+  dirty-history alone
+- the active follow-up is now
+  `ZIDE_PRESENT_EDGE_FALLBACK=swap_interval_0_force_full_terminal_texture_recent_input_2000ms`,
+  which keeps `swap_interval=0` and forces full terminal texture publication
+  while terminal input was seen within the last 2 seconds
+- `swap_interval_0_force_full_terminal_texture_recent_input_2000ms` is now
+  basically perfect on the live repro, so input-pressure-driven publication is
+  the strongest lead so far
+- the next narrowing experiment is now
+  `ZIDE_PRESENT_EDGE_FALLBACK=swap_interval_0_force_full_terminal_texture_recent_input_1000ms`,
+  which halves that input window to 1 second so we can find a cheaper fix
+  candidate
+- `swap_interval_0_force_full_terminal_texture_recent_input_1000ms` is also
+  basically perfect on the live repro, so the next floor test is
+  `ZIDE_PRESENT_EDGE_FALLBACK=swap_interval_0_force_full_terminal_texture_recent_input_500ms`
+- `swap_interval_0_force_full_terminal_texture_recent_input_500ms` is also
+  basically perfect on the live repro, so the next floor test is
+  `ZIDE_PRESENT_EDGE_FALLBACK=swap_interval_0_force_full_terminal_texture_recent_input_250ms`
+- `swap_interval_0_force_full_terminal_texture_recent_input_250ms` is now
+  noticeably worse, so the current bracket is between `500ms` and `250ms`
+- `swap_interval_0_force_full_terminal_texture_recent_input_375ms` is now
+  basically perfect on the live repro too, after extending the recent-input
+  pressure proxy to include held modifiers
+- `swap_interval_0_force_full_terminal_texture_recent_input_300ms` is now
+  noticeably more janky on the user's real `nvim` smooth-scrolling plugin, so
+  the useful bracket is currently `375ms` good and `300ms` worse
+- that input-pressure publication policy is now promoted into the default app
+  path with a `375ms` recent-input window, while the older
+  `ZIDE_PRESENT_EDGE_FALLBACK=swap_interval_0_force_full_terminal_texture_recent_input_*`
+  modes remain available as explicit debug/experiment overrides
+- the default policy is now configurable from Lua via
+  `terminal.presentation.recent_input_force_full` and
+  `terminal.presentation.recent_input_force_full_ms`
+- raw repros are still available without code edits via
+  `ZIDE_DEBUG_DISABLE_TERMINAL_PRESENT_MITIGATION=1`, which disables the
+  default mitigation path so the original post-swap Wayland bug can still be
+  chased directly
+- held keyboard modifiers were also found to block recovery under the
+  recent-input modes because the original proxy only watched recent terminal
+  input timestamps; the draw-side condition now treats active modifier state as
+  ongoing pressure too, so holding `Ctrl+Shift` no longer lets the recent-input
+  window expire
+- overlay attribution now rides on that same cut too: `drawOverlays(...)`
+  receives the sampled `bg2` and `slot=0..2` direct cells and emits
+  `event=overlay_state ...` plus
+  `event=overlay_touch branch=selection|hover_underline|cursor|ime ...` on
+  `terminal.ui.target_sample` whenever one of those overlay-owned ranges
+  covers a sampled cell
+- `Ctrl+Shift+F12` now also dumps the terminal widget's current visible
+  viewport cache to `zide_terminal_view_dump.txt` in the process cwd. The dump
+  is fixed-width ASCII with row numbers, a column ruler, `resolved_bg_runs` per
+  visible row, and a `non_ascii_cells` footer so a visibly deformed cell or
+  stale highlight row can be mapped back to the renderer-side row/col probes,
+  including alt-screen content
+
+The current design implication is:
+
+- do not keep pushing on backend damage/publication by default for this lane
+- do not keep pushing on background-run construction by default for this lane
+- focus the next renderer cut on offscreen target write/composite behavior and
+  only return to lower layers if new evidence contradicts the current
+  attribution
+
 ## Multi-Span Row Damage Direction
 
 The current backend damage model is too weak for the real-config ghosting lane.

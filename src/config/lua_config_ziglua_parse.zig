@@ -117,6 +117,18 @@ fn parseNativeScalarOverlay(allocator: std.mem.Allocator, lua: *zlua.Lua, table_
     if (lua.isBoolean(-1)) out.terminal_texture_shift = lua.toBoolean(-1);
     lua.pop(1);
 
+    _ = lua.getField(table_index, "terminal_recent_input_force_full");
+    if (lua.isBoolean(-1)) out.terminal_recent_input_force_full = lua.toBoolean(-1);
+    lua.pop(1);
+
+    _ = lua.getField(table_index, "terminal_recent_input_force_full_ms");
+    if (lua.isNumber(-1)) {
+        if (lua.toInteger(-1)) |v| {
+            if (v > 0) out.terminal_recent_input_force_full_ms = @intCast(v);
+        } else |_| {}
+    }
+    lua.pop(1);
+
     _ = lua.getField(table_index, "terminal_tab_bar_show_single_tab");
     if (lua.isBoolean(-1)) out.terminal_tab_bar_show_single_tab = lua.toBoolean(-1);
     lua.pop(1);
@@ -330,6 +342,22 @@ fn parseNativeScalarOverlay(allocator: std.mem.Allocator, lua: *zlua.Lua, table_
 
         _ = lua.getField(terminal_idx, "texture_shift");
         if (lua.isBoolean(-1)) out.terminal_texture_shift = lua.toBoolean(-1);
+        lua.pop(1);
+
+        _ = lua.getField(terminal_idx, "presentation");
+        if (lua.isTable(-1)) {
+            const presentation_idx = lua.absIndex(-1);
+            _ = lua.getField(presentation_idx, "recent_input_force_full");
+            if (lua.isBoolean(-1)) out.terminal_recent_input_force_full = lua.toBoolean(-1);
+            lua.pop(1);
+            _ = lua.getField(presentation_idx, "recent_input_force_full_ms");
+            if (lua.isNumber(-1)) {
+                if (lua.toInteger(-1)) |v| {
+                    if (v > 0) out.terminal_recent_input_force_full_ms = @intCast(v);
+                } else |_| {}
+            }
+            lua.pop(1);
+        }
         lua.pop(1);
 
         _ = lua.getField(terminal_idx, "tab_bar");

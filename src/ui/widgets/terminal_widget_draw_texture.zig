@@ -86,7 +86,7 @@ pub fn buildPartialPlan(
     cache: *const RenderCache,
     partial_rows: []bool,
     partial_span_counts: []u8,
-    partial_spans: [] [screen_mod.max_row_dirty_spans]screen_mod.RowDirtySpan,
+    partial_spans: [][screen_mod.max_row_dirty_spans]screen_mod.RowDirtySpan,
     partial_cols_start: []u16,
     partial_cols_end: []u16,
     shifted_rows: usize,
@@ -127,7 +127,7 @@ pub fn buildPartialPlan(
 pub fn buildBasePartialPlan(
     partial_rows: []bool,
     partial_span_counts: []u8,
-    partial_spans: [] [screen_mod.max_row_dirty_spans]screen_mod.RowDirtySpan,
+    partial_spans: [][screen_mod.max_row_dirty_spans]screen_mod.RowDirtySpan,
     partial_cols_start: []u16,
     partial_cols_end: []u16,
     view_dirty_rows: []const bool,
@@ -270,10 +270,26 @@ pub fn chooseTextureUpdatePlan(
     };
 }
 
+pub fn forceFullTextureUpdatePlan(plan: TextureUpdatePlan, enabled: bool) TextureUpdatePlan {
+    if (!enabled or plan.needs_full or !plan.needs_partial) return plan;
+    return .{
+        .needs_full = true,
+        .needs_partial = false,
+    };
+}
+
+pub fn forceFullTextureUpdatePlanEveryFrame(plan: TextureUpdatePlan, enabled: bool) TextureUpdatePlan {
+    if (!enabled or plan.needs_full) return plan;
+    return .{
+        .needs_full = true,
+        .needs_partial = false,
+    };
+}
+
 pub fn markPartialPlanRows(
     partial_rows: []bool,
     partial_span_counts: []u8,
-    partial_spans: [] [screen_mod.max_row_dirty_spans]screen_mod.RowDirtySpan,
+    partial_spans: [][screen_mod.max_row_dirty_spans]screen_mod.RowDirtySpan,
     partial_cols_start: []u16,
     partial_cols_end: []u16,
     rows: usize,
@@ -303,7 +319,7 @@ pub fn markPartialPlanRows(
 pub fn markPartialPlanRow(
     partial_rows: []bool,
     partial_span_counts: []u8,
-    partial_spans: [] [screen_mod.max_row_dirty_spans]screen_mod.RowDirtySpan,
+    partial_spans: [][screen_mod.max_row_dirty_spans]screen_mod.RowDirtySpan,
     partial_cols_start: []u16,
     partial_cols_end: []u16,
     row: usize,
@@ -322,7 +338,7 @@ pub fn markPartialPlanRow(
 
 fn mergePartialPlanSpan(
     partial_span_counts: []u8,
-    partial_spans: [] [screen_mod.max_row_dirty_spans]screen_mod.RowDirtySpan,
+    partial_spans: [][screen_mod.max_row_dirty_spans]screen_mod.RowDirtySpan,
     row: usize,
     col_start: usize,
     col_end: usize,
@@ -381,7 +397,7 @@ fn mergePartialPlanSpan(
 pub fn markAllRowsFullWidthPartialPlan(
     partial_rows: []bool,
     partial_span_counts: []u8,
-    partial_spans: [] [screen_mod.max_row_dirty_spans]screen_mod.RowDirtySpan,
+    partial_spans: [][screen_mod.max_row_dirty_spans]screen_mod.RowDirtySpan,
     partial_cols_start: []u16,
     partial_cols_end: []u16,
     rows: usize,
@@ -443,7 +459,7 @@ pub fn addBlinkRowsToPartialPlan(
     cache: *const RenderCache,
     partial_rows: []bool,
     partial_span_counts: []u8,
-    partial_spans: [] [screen_mod.max_row_dirty_spans]screen_mod.RowDirtySpan,
+    partial_spans: [][screen_mod.max_row_dirty_spans]screen_mod.RowDirtySpan,
     partial_cols_start: []u16,
     partial_cols_end: []u16,
 ) void {
@@ -952,7 +968,7 @@ test "formatPartialPlanRows summarizes row-local spans" {
     const summary = formatPartialPlanRows(
         &buf,
         &partial_rows,
-        &[_]u8{1, 0, 1, 1},
+        &[_]u8{ 1, 0, 1, 1 },
         &[_][screen_mod.max_row_dirty_spans]screen_mod.RowDirtySpan{
             [_]screen_mod.RowDirtySpan{.{ .start = 6, .end = 6 }} ** screen_mod.max_row_dirty_spans,
             [_]screen_mod.RowDirtySpan{.{ .start = 0, .end = 0 }} ** screen_mod.max_row_dirty_spans,
@@ -976,7 +992,7 @@ test "formatPartialPlanRows truncates long plans" {
     const summary = formatPartialPlanRows(
         &buf,
         &partial_rows,
-        &[_]u8{1, 1, 1, 1},
+        &[_]u8{ 1, 1, 1, 1 },
         &[_][screen_mod.max_row_dirty_spans]screen_mod.RowDirtySpan{
             [_]screen_mod.RowDirtySpan{.{ .start = 1, .end = 1 }} ** screen_mod.max_row_dirty_spans,
             [_]screen_mod.RowDirtySpan{.{ .start = 2, .end = 2 }} ** screen_mod.max_row_dirty_spans,
