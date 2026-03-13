@@ -167,6 +167,9 @@ Current status:
   - render scale
 - those boundaries now invalidate/destroy stale scene-target state without
   changing the active direct-default composition path yet
+- renderer-local visibility also exists now under `renderer.scene_target`,
+  logging only on invalidation, recreate failure, and ready transitions when
+  that tag is enabled
 
 ### Phase 2: Route Final UI Composition Into the Scene Target
 
