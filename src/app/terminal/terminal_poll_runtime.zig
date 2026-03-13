@@ -1,4 +1,5 @@
 const std = @import("std");
+const app_logger = @import("../../app_logger.zig");
 
 pub const PollProfile = struct {
     max_tabs_per_frame: usize,
@@ -49,12 +50,32 @@ pub fn pollWorkspace(workspace: anytype, input_active_index: ?usize, has_input: 
 }
 
 pub fn pollSingleSession(term: anytype, has_input: bool) !bool {
+    const wake_log = app_logger.logger("terminal.wake");
     const pubgen_pre = term.publishedGeneration();
-    if (term.hasData()) {
+    const had_data = term.hasData();
+    var polled = false;
+    if (had_data) {
         term.setInputPressure(has_input);
         try term.poll();
+        polled = true;
     }
-    return term.publishedGeneration() != pubgen_pre;
+    const pubgen_post = term.publishedGeneration();
+    const published_changed = pubgen_post != pubgen_pre;
+    if (wake_log.enabled_file or wake_log.enabled_console) {
+        wake_log.logf(
+            .info,
+            "stage=single_poll has_input={d} had_data={d} polled={d} published_changed={d} pub={d}->{d}",
+            .{
+                @intFromBool(has_input),
+                @intFromBool(had_data),
+                @intFromBool(polled),
+                @intFromBool(published_changed),
+                pubgen_pre,
+                pubgen_post,
+            },
+        );
+    }
+    return published_changed;
 }
 
 test "default poll profiles select interactive and idle budgets explicitly" {

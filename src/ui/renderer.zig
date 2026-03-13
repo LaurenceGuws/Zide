@@ -168,6 +168,17 @@ const FinalProbeHistory = struct {
     grid: PresentationGridSample = .{},
 };
 
+const PreSwapProbeCapture = struct {
+    present: bool = false,
+    back_grid: PresentationGridSample = .{},
+    front_grid: PresentationGridSample = .{},
+};
+
+const PreFallbackProbeCapture = struct {
+    present: bool = false,
+    front_grid: PresentationGridSample = .{},
+};
+
 const PresentationBandProbe = struct {
     present: bool = false,
     axis: enum {
@@ -183,6 +194,20 @@ const PresentationBandProbe = struct {
     logical_width: f32 = 0.0,
     logical_height: f32 = 0.0,
     baseline: PresentationBandSample = .{},
+};
+
+const PreSwapBandCapture = struct {
+    present: bool = false,
+    back_sample: PresentationBandSample = .{},
+    front_sample: PresentationBandSample = .{},
+};
+
+const SwapGlState = struct {
+    read_buffer: i32 = 0,
+    draw_buffer: i32 = 0,
+    framebuffer_binding: i32 = 0,
+    read_framebuffer_binding: i32 = 0,
+    draw_framebuffer_binding: i32 = 0,
 };
 pub const TerminalDisableLigaturesStrategy = enum {
     never,
@@ -520,6 +545,13 @@ pub const Renderer = struct {
     presentation_probes: [max_presentation_probes]PresentationProbe,
     presentation_band_probe_count: usize,
     presentation_band_probes: [max_presentation_probes]PresentationBandProbe,
+    pre_fallback_probe_count: usize,
+    pre_fallback_probes: [max_presentation_probes]PreFallbackProbeCapture,
+    pre_swap_probe_count: usize,
+    pre_swap_probes: [max_presentation_probes]PreSwapProbeCapture,
+    pre_swap_band_probe_count: usize,
+    pre_swap_band_probes: [max_presentation_probes]PreSwapBandCapture,
+    pre_swap_gl_state: SwapGlState,
     previous_present_probe_count: usize,
     previous_present_probes: [max_presentation_probes]PresentedProbeHistory,
     previous_final_probe_count: usize,
@@ -542,7 +574,7 @@ pub const Renderer = struct {
         try window_init.initSdl();
         errdefer sdl.SDL_Quit();
 
-        window_init.configureGlAttributes();
+        try window_init.configureGlAttributes();
 
         const window = try window_init.createWindow(width, height, title);
         errdefer sdl.SDL_DestroyWindow(window);
@@ -677,6 +709,13 @@ pub const Renderer = struct {
             .presentation_probes = [_]PresentationProbe{.{}} ** max_presentation_probes,
             .presentation_band_probe_count = 0,
             .presentation_band_probes = [_]PresentationBandProbe{.{}} ** max_presentation_probes,
+            .pre_fallback_probe_count = 0,
+            .pre_fallback_probes = [_]PreFallbackProbeCapture{.{}} ** max_presentation_probes,
+            .pre_swap_probe_count = 0,
+            .pre_swap_probes = [_]PreSwapProbeCapture{.{}} ** max_presentation_probes,
+            .pre_swap_band_probe_count = 0,
+            .pre_swap_band_probes = [_]PreSwapBandCapture{.{}} ** max_presentation_probes,
+            .pre_swap_gl_state = .{},
             .previous_present_probe_count = 0,
             .previous_present_probes = [_]PresentedProbeHistory{.{}} ** max_presentation_probes,
             .previous_final_probe_count = 0,
@@ -700,7 +739,9 @@ pub const Renderer = struct {
             renderer.present_edge_fallback_mode == .swap_interval_0_force_full_terminal_texture_recent_input_300ms or
             renderer.present_edge_fallback_mode == .swap_interval_0_force_full_terminal_texture_recent_input_250ms)
         {
-            sdl_api.glSetSwapInterval(0);
+            if (!sdl_api.glSetSwapInterval(0)) {
+                app_logger.logger("sdl.gl").logStdout(.warning, "SDL_GL_SetSwapInterval failed interval=0 err={s}", .{sdl_api.getError()});
+            }
         }
 
         try renderer.initGlResources();
@@ -1024,8 +1065,12 @@ pub const Renderer = struct {
 
     pub fn endFrame(self: *Renderer) void {
         const swap_start = sdl_api.getPerformanceCounter();
+        if (self.present_edge_fallback_mode == .copy_back_to_front) self.capturePreFallbackFrameProbes();
         self.applyPreSwapFallback();
-        sdl_api.glSwapWindow(self.window);
+        self.capturePreSwapBackFrameProbes();
+        if (!sdl_api.glSwapWindow(self.window)) {
+            app_logger.logger("sdl.gl").logStdout(.warning, "SDL_GL_SwapWindow failed err={s}", .{sdl_api.getError()});
+        }
         const swap_end = sdl_api.getPerformanceCounter();
         self.last_swap_ms = performanceDeltaMs(swap_start, swap_end, self.perf_freq);
         self.applyPostSwapFallback();
@@ -1296,6 +1341,17 @@ pub const Renderer = struct {
         return self.sampleWindowPixelFromBuffer(logical_x, logical_y, .front);
     }
 
+    fn captureSwapGlState(self: *Renderer) SwapGlState {
+        var state = SwapGlState{};
+        self.bindDefaultTarget();
+        gl.GetIntegerv(gl.c.GL_READ_BUFFER, &state.read_buffer);
+        gl.GetIntegerv(gl.c.GL_DRAW_BUFFER, &state.draw_buffer);
+        gl.GetIntegerv(gl.c.GL_FRAMEBUFFER_BINDING, &state.framebuffer_binding);
+        gl.GetIntegerv(gl.c.GL_READ_FRAMEBUFFER_BINDING, &state.read_framebuffer_binding);
+        gl.GetIntegerv(gl.c.GL_DRAW_FRAMEBUFFER_BINDING, &state.draw_framebuffer_binding);
+        return state;
+    }
+
     fn previousPresentedProbeIndex(self: *const Renderer, probe: PresentationProbe) ?usize {
         var idx: usize = 0;
         while (idx < self.previous_present_probe_count) : (idx += 1) {
@@ -1388,6 +1444,12 @@ pub const Renderer = struct {
         return self.captureWindowBand(logical_x, logical_y, logical_width, logical_height, .front);
     }
 
+    fn presentationGridCenterPixel(sample: *const PresentationGridSample) ?types.Rgba {
+        const center_idx = presentation_grid_samples / 2;
+        if (!sample.valid[center_idx]) return null;
+        return sample.pixels[center_idx];
+    }
+
     fn diffPresentationGrid(current: *const PresentationGridSample, baseline: *const PresentationGridSample) PresentationGridDiff {
         var diff = PresentationGridDiff{};
         var idx: usize = 0;
@@ -1471,34 +1533,13 @@ pub const Renderer = struct {
         const present_counter = sdl_api.getPerformanceCounter();
         const compositor_info = compositor.detect();
         const video_driver = sdl_api.getCurrentVideoDriver() orelse "unknown";
+        const post_swap_gl_state = self.captureSwapGlState();
         self.last_present_gap_ms = if (self.last_present_counter == 0)
             0.0
         else
             performanceDeltaMs(self.last_present_counter, present_counter, self.perf_freq);
         self.last_present_counter = present_counter;
-
-        target_sample_log.logf(
-            .info,
-            "event=present_state frame={d} focused={d} resized={d} swap_interval={d} present_edge={s} swap_ms={d:.2} present_gap_ms={d:.2} video_driver={s} wayland={d} compositor={s} window={d}x{d} drawable={d}x{d} probes={d} bands={d}",
-            .{
-                self.frame_seq,
-                @intFromBool(self.window_focused),
-                @intFromBool(self.window_resized_flag),
-                sdl_api.glGetSwapInterval(),
-                presentEdgeFallbackName(self.present_edge_fallback_mode),
-                self.last_swap_ms,
-                self.last_present_gap_ms,
-                video_driver,
-                @intFromBool(compositor_info.wayland),
-                compositorName(compositor_info.compositor),
-                self.width,
-                self.height,
-                self.render_width,
-                self.render_height,
-                self.presentation_probe_count,
-                self.presentation_band_probe_count,
-            },
-        );
+        var state_logged = false;
 
         var probe_idx: usize = 0;
         while (probe_idx < self.presentation_probe_count) : (probe_idx += 1) {
@@ -1511,6 +1552,24 @@ pub const Renderer = struct {
             const back_grid = self.captureWindowGrid(probe.logical_x, probe.logical_y, .back);
             const diff = diffPresentationGrid(&grid, &probe.baseline);
             const back_diff = diffPresentationGrid(&back_grid, &probe.baseline);
+            const pre_swap_back_grid = if (probe_idx < self.pre_swap_probe_count and self.pre_swap_probes[probe_idx].present)
+                self.pre_swap_probes[probe_idx].back_grid
+            else
+                probe.baseline;
+            const pre_swap_front_grid = if (probe_idx < self.pre_swap_probe_count and self.pre_swap_probes[probe_idx].present)
+                self.pre_swap_probes[probe_idx].front_grid
+            else
+                probe.baseline;
+            const pre_fallback_front_grid = if (probe_idx < self.pre_fallback_probe_count and self.pre_fallback_probes[probe_idx].present)
+                self.pre_fallback_probes[probe_idx].front_grid
+            else
+                probe.baseline;
+            const pre_swap_back_rgba = presentationGridCenterPixel(&pre_swap_back_grid) orelse rgba;
+            const pre_swap_back_diff = diffPresentationGrid(&pre_swap_back_grid, &probe.baseline);
+            const pre_swap_front_rgba = presentationGridCenterPixel(&pre_swap_front_grid) orelse rgba;
+            const pre_swap_front_diff = diffPresentationGrid(&pre_swap_front_grid, &probe.baseline);
+            const pre_fallback_front_rgba = presentationGridCenterPixel(&pre_fallback_front_grid) orelse rgba;
+            const pre_fallback_front_diff = diffPresentationGrid(&pre_fallback_front_grid, &probe.baseline);
             const previous_idx = self.previousPresentedProbeIndex(probe);
             const previous_diff = if (previous_idx) |idx|
                 diffPresentationGrid(&grid, &self.previous_present_probes[idx].grid)
@@ -1523,6 +1582,159 @@ pub const Renderer = struct {
             else
                 PresentationGridDiff{};
             const previous_final_codepoint: u32 = if (previous_final_idx) |idx| self.previous_final_probes[idx].codepoint else 0;
+            const suspicious = diff.hits > 0 or
+                back_diff.hits > 0 or
+                pre_swap_back_diff.hits > 0 or
+                pre_swap_front_diff.hits > 0;
+            if (!suspicious) {
+                if (probe_idx < self.previous_present_probes.len) {
+                    self.previous_present_probes[probe_idx] = .{
+                        .present = true,
+                        .kind = probe.kind,
+                        .row = probe.row,
+                        .slot = probe.slot,
+                        .col = probe.col,
+                        .codepoint = probe.codepoint,
+                        .grid = grid,
+                    };
+                }
+                if (probe_idx < self.previous_final_probes.len) {
+                    self.previous_final_probes[probe_idx] = .{
+                        .present = true,
+                        .kind = probe.kind,
+                        .row = probe.row,
+                        .slot = probe.slot,
+                        .col = probe.col,
+                        .codepoint = probe.codepoint,
+                        .grid = probe.baseline,
+                    };
+                }
+                continue;
+            }
+            if (!state_logged) {
+                target_sample_log.logf(
+                    .info,
+                    "event=present_state frame={d} focused={d} resized={d} swap_interval={d} present_edge={s} swap_ms={d:.2} present_gap_ms={d:.2} video_driver={s} wayland={d} compositor={s} window={d}x{d} drawable={d}x{d} probes={d} bands={d}",
+                    .{
+                        self.frame_seq,
+                        @intFromBool(self.window_focused),
+                        @intFromBool(self.window_resized_flag),
+                        sdl_api.glGetSwapInterval(),
+                        presentEdgeFallbackName(self.present_edge_fallback_mode),
+                        self.last_swap_ms,
+                        self.last_present_gap_ms,
+                        video_driver,
+                        @intFromBool(compositor_info.wayland),
+                        compositorName(compositor_info.compositor),
+                        self.width,
+                        self.height,
+                        self.render_width,
+                        self.render_height,
+                        self.presentation_probe_count,
+                        self.presentation_band_probe_count,
+                    },
+                );
+                target_sample_log.logf(
+                    .info,
+                    "event=present_gl_state pre_read={x} pre_draw={x} pre_fb={d} pre_read_fb={d} pre_draw_fb={d} post_read={x} post_draw={x} post_fb={d} post_read_fb={d} post_draw_fb={d}",
+                    .{
+                        @as(u32, @bitCast(self.pre_swap_gl_state.read_buffer)),
+                        @as(u32, @bitCast(self.pre_swap_gl_state.draw_buffer)),
+                        self.pre_swap_gl_state.framebuffer_binding,
+                        self.pre_swap_gl_state.read_framebuffer_binding,
+                        self.pre_swap_gl_state.draw_framebuffer_binding,
+                        @as(u32, @bitCast(post_swap_gl_state.read_buffer)),
+                        @as(u32, @bitCast(post_swap_gl_state.draw_buffer)),
+                        post_swap_gl_state.framebuffer_binding,
+                        post_swap_gl_state.read_framebuffer_binding,
+                        post_swap_gl_state.draw_framebuffer_binding,
+                    },
+                );
+                state_logged = true;
+            }
+            target_sample_log.logf(
+                .info,
+                "event=target_sample phase=pre_swap_back kind={s} row={d} slot={d} col={d} cp={d} rgba={d}:{d}:{d}:{d} fg={d}:{d}:{d} bg={d}:{d}:{d} diff_hits={d}/{d} diff_max={d}",
+                .{
+                    switch (probe.kind) {
+                        .bg2 => "bg2",
+                        .direct => "direct",
+                    },
+                    probe.row,
+                    probe.slot,
+                    probe.col,
+                    probe.codepoint,
+                    pre_swap_back_rgba.r,
+                    pre_swap_back_rgba.g,
+                    pre_swap_back_rgba.b,
+                    pre_swap_back_rgba.a,
+                    probe.fg.r,
+                    probe.fg.g,
+                    probe.fg.b,
+                    probe.bg.r,
+                    probe.bg.g,
+                    probe.bg.b,
+                    pre_swap_back_diff.hits,
+                    pre_swap_back_diff.samples,
+                    pre_swap_back_diff.max_delta,
+                },
+            );
+            if (self.present_edge_fallback_mode == .copy_back_to_front) {
+                target_sample_log.logf(
+                    .info,
+                    "event=target_sample phase=pre_fallback_front kind={s} row={d} slot={d} col={d} cp={d} rgba={d}:{d}:{d}:{d} fg={d}:{d}:{d} bg={d}:{d}:{d} diff_hits={d}/{d} diff_max={d}",
+                    .{
+                        switch (probe.kind) {
+                            .bg2 => "bg2",
+                            .direct => "direct",
+                        },
+                        probe.row,
+                        probe.slot,
+                        probe.col,
+                        probe.codepoint,
+                        pre_fallback_front_rgba.r,
+                        pre_fallback_front_rgba.g,
+                        pre_fallback_front_rgba.b,
+                        pre_fallback_front_rgba.a,
+                        probe.fg.r,
+                        probe.fg.g,
+                        probe.fg.b,
+                        probe.bg.r,
+                        probe.bg.g,
+                        probe.bg.b,
+                        pre_fallback_front_diff.hits,
+                        pre_fallback_front_diff.samples,
+                        pre_fallback_front_diff.max_delta,
+                    },
+                );
+            }
+            target_sample_log.logf(
+                .info,
+                "event=target_sample phase=pre_swap_front kind={s} row={d} slot={d} col={d} cp={d} rgba={d}:{d}:{d}:{d} fg={d}:{d}:{d} bg={d}:{d}:{d} diff_hits={d}/{d} diff_max={d}",
+                .{
+                    switch (probe.kind) {
+                        .bg2 => "bg2",
+                        .direct => "direct",
+                    },
+                    probe.row,
+                    probe.slot,
+                    probe.col,
+                    probe.codepoint,
+                    pre_swap_front_rgba.r,
+                    pre_swap_front_rgba.g,
+                    pre_swap_front_rgba.b,
+                    pre_swap_front_rgba.a,
+                    probe.fg.r,
+                    probe.fg.g,
+                    probe.fg.b,
+                    probe.bg.r,
+                    probe.bg.g,
+                    probe.bg.b,
+                    pre_swap_front_diff.hits,
+                    pre_swap_front_diff.samples,
+                    pre_swap_front_diff.max_delta,
+                },
+            );
             target_sample_log.logf(
                 .info,
                 "event=target_sample phase=present kind={s} row={d} slot={d} col={d} cp={d} rgba={d}:{d}:{d}:{d} fg={d}:{d}:{d} bg={d}:{d}:{d} diff_hits={d}/{d} diff_max={d} back_rgba={d}:{d}:{d}:{d} back_hits={d}/{d} back_max={d}",
@@ -1612,6 +1824,116 @@ pub const Renderer = struct {
             const back = self.captureWindowBand(band.logical_x, band.logical_y, band.logical_width, band.logical_height, .back);
             const front_diff = diffPresentationBand(&front, &band.baseline);
             const back_diff = diffPresentationBand(&back, &band.baseline);
+            const pre_swap_back = if (band_idx < self.pre_swap_band_probe_count and self.pre_swap_band_probes[band_idx].present)
+                self.pre_swap_band_probes[band_idx].back_sample
+            else
+                band.baseline;
+            const pre_swap_front = if (band_idx < self.pre_swap_band_probe_count and self.pre_swap_band_probes[band_idx].present)
+                self.pre_swap_band_probes[band_idx].front_sample
+            else
+                band.baseline;
+            const pre_swap_back_diff = diffPresentationBand(&pre_swap_back, &band.baseline);
+            const pre_swap_front_diff = diffPresentationBand(&pre_swap_front, &band.baseline);
+            if (front_diff.hits == 0 and back_diff.hits == 0 and pre_swap_back_diff.hits == 0 and pre_swap_front_diff.hits == 0) continue;
+            if (!state_logged) {
+                target_sample_log.logf(
+                    .info,
+                    "event=present_state frame={d} focused={d} resized={d} swap_interval={d} present_edge={s} swap_ms={d:.2} present_gap_ms={d:.2} video_driver={s} wayland={d} compositor={s} window={d}x{d} drawable={d}x{d} probes={d} bands={d}",
+                    .{
+                        self.frame_seq,
+                        @intFromBool(self.window_focused),
+                        @intFromBool(self.window_resized_flag),
+                        sdl_api.glGetSwapInterval(),
+                        presentEdgeFallbackName(self.present_edge_fallback_mode),
+                        self.last_swap_ms,
+                        self.last_present_gap_ms,
+                        video_driver,
+                        @intFromBool(compositor_info.wayland),
+                        compositorName(compositor_info.compositor),
+                        self.width,
+                        self.height,
+                        self.render_width,
+                        self.render_height,
+                        self.presentation_probe_count,
+                        self.presentation_band_probe_count,
+                    },
+                );
+                target_sample_log.logf(
+                    .info,
+                    "event=present_gl_state pre_read={x} pre_draw={x} pre_fb={d} pre_read_fb={d} pre_draw_fb={d} post_read={x} post_draw={x} post_fb={d} post_read_fb={d} post_draw_fb={d}",
+                    .{
+                        @as(u32, @bitCast(self.pre_swap_gl_state.read_buffer)),
+                        @as(u32, @bitCast(self.pre_swap_gl_state.draw_buffer)),
+                        self.pre_swap_gl_state.framebuffer_binding,
+                        self.pre_swap_gl_state.read_framebuffer_binding,
+                        self.pre_swap_gl_state.draw_framebuffer_binding,
+                        @as(u32, @bitCast(post_swap_gl_state.read_buffer)),
+                        @as(u32, @bitCast(post_swap_gl_state.draw_buffer)),
+                        post_swap_gl_state.framebuffer_binding,
+                        post_swap_gl_state.read_framebuffer_binding,
+                        post_swap_gl_state.draw_framebuffer_binding,
+                    },
+                );
+                state_logged = true;
+            }
+            switch (band.axis) {
+                .row => {
+                    target_sample_log.logf(
+                        .info,
+                        "event=target_band phase=pre_swap_back axis=row row={d} cols={d}..{d} sig={x} diff_hits={d}/{d} diff_max={d}",
+                        .{
+                            band.row_start,
+                            band.col_start,
+                            band.col_end,
+                            hashPresentationBand(&pre_swap_back),
+                            pre_swap_back_diff.hits,
+                            pre_swap_back_diff.samples,
+                            pre_swap_back_diff.max_delta,
+                        },
+                    );
+                    target_sample_log.logf(
+                        .info,
+                        "event=target_band phase=pre_swap_front axis=row row={d} cols={d}..{d} sig={x} diff_hits={d}/{d} diff_max={d}",
+                        .{
+                            band.row_start,
+                            band.col_start,
+                            band.col_end,
+                            hashPresentationBand(&pre_swap_front),
+                            pre_swap_front_diff.hits,
+                            pre_swap_front_diff.samples,
+                            pre_swap_front_diff.max_delta,
+                        },
+                    );
+                },
+                .column => {
+                    target_sample_log.logf(
+                        .info,
+                        "event=target_band phase=pre_swap_back axis=column col={d} rows={d}..{d} sig={x} diff_hits={d}/{d} diff_max={d}",
+                        .{
+                            band.col_start,
+                            band.row_start,
+                            band.row_end,
+                            hashPresentationBand(&pre_swap_back),
+                            pre_swap_back_diff.hits,
+                            pre_swap_back_diff.samples,
+                            pre_swap_back_diff.max_delta,
+                        },
+                    );
+                    target_sample_log.logf(
+                        .info,
+                        "event=target_band phase=pre_swap_front axis=column col={d} rows={d}..{d} sig={x} diff_hits={d}/{d} diff_max={d}",
+                        .{
+                            band.col_start,
+                            band.row_start,
+                            band.row_end,
+                            hashPresentationBand(&pre_swap_front),
+                            pre_swap_front_diff.hits,
+                            pre_swap_front_diff.samples,
+                            pre_swap_front_diff.max_delta,
+                        },
+                    );
+                },
+            }
             switch (band.axis) {
                 .row => {
                     const alias = self.bestMatchingRowBandBaseline(band_idx, &front);
@@ -1661,6 +1983,58 @@ pub const Renderer = struct {
         }
         self.previous_present_probe_count = self.presentation_probe_count;
         self.previous_final_probe_count = self.presentation_probe_count;
+    }
+
+    fn capturePreSwapBackFrameProbes(self: *Renderer) void {
+        self.pre_swap_gl_state = self.captureSwapGlState();
+        self.pre_swap_probe_count = self.presentation_probe_count;
+        var probe_idx: usize = 0;
+        while (probe_idx < self.presentation_probe_count) : (probe_idx += 1) {
+            const probe = self.presentation_probes[probe_idx];
+            self.pre_swap_probes[probe_idx] = .{
+                .present = probe.present,
+                .back_grid = if (probe.present)
+                    self.captureWindowGrid(probe.logical_x, probe.logical_y, .back)
+                else
+                    .{},
+                .front_grid = if (probe.present)
+                    self.captureWindowGrid(probe.logical_x, probe.logical_y, .front)
+                else
+                    .{},
+            };
+        }
+
+        self.pre_swap_band_probe_count = self.presentation_band_probe_count;
+        var band_idx: usize = 0;
+        while (band_idx < self.presentation_band_probe_count) : (band_idx += 1) {
+            const band = self.presentation_band_probes[band_idx];
+            self.pre_swap_band_probes[band_idx] = .{
+                .present = band.present,
+                .back_sample = if (band.present)
+                    self.captureWindowBand(band.logical_x, band.logical_y, band.logical_width, band.logical_height, .back)
+                else
+                    .{},
+                .front_sample = if (band.present)
+                    self.captureWindowBand(band.logical_x, band.logical_y, band.logical_width, band.logical_height, .front)
+                else
+                    .{},
+            };
+        }
+    }
+
+    fn capturePreFallbackFrameProbes(self: *Renderer) void {
+        self.pre_fallback_probe_count = self.presentation_probe_count;
+        var probe_idx: usize = 0;
+        while (probe_idx < self.presentation_probe_count) : (probe_idx += 1) {
+            const probe = self.presentation_probes[probe_idx];
+            self.pre_fallback_probes[probe_idx] = .{
+                .present = probe.present,
+                .front_grid = if (probe.present)
+                    self.captureWindowGrid(probe.logical_x, probe.logical_y, .front)
+                else
+                    .{},
+            };
+        }
     }
 
     pub fn setTextInputRect(self: *Renderer, x: i32, y: i32, w: i32, h: i32) void {

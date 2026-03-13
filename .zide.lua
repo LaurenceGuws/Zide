@@ -4,13 +4,10 @@ return {
     },
     log = {
         console = "",
-        file = "terminal.ui.target_sample",
+        file = "",
     },
     logs = {
         file_level = "warning",
-        console_level = "info",
-        file_levels = {
-            ["terminal.ui.target_sample"] = "info",
-        },
+        console_level = "warning",
     },
 }

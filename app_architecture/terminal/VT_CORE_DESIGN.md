@@ -384,6 +384,216 @@ So the next decisive live probe is now `terminal.ui.target_sample`:
 - the default policy is now configurable from Lua via
   `terminal.presentation.recent_input_force_full` and
   `terminal.presentation.recent_input_force_full_ms`
+- current war-room scope is now narrower again:
+  - the original fast-scroll row-remap lane is still best explained as a
+    post-final/present-side failure under pressure
+  - the newer `wiki_life` repro inside an `nvim` terminal buffer is now fixed
+    by the `setSyncUpdatesLocked` publication-ownership change
+  - raw debugging for the remaining lane should currently use
+    `ZIDE_DEBUG_DISABLE_TERMINAL_PRESENT_MITIGATION=1`, because the active
+    question is no longer "which mitigation window feels best?" and no longer
+    "which publication entrypoint is wrong for `wiki_life`?", but whether the
+    remaining old `nvim` text-buffer scroll ghost is downstream in renderer
+    consumption / present
+- the active root-cause instrumentation is now trimmed again for the remaining
+  live lane:
+  - `terminal.ui.target_sample` is the active tag
+  - the widget still registers the same sampled cells/bands and final baselines
+  - but the renderer now emits only the suspicious frame cut:
+    `present_state`, `phase=pre_swap_back`, `phase=present`, and matching
+    row/column bands when it actually detects a present-side mismatch
+  - overlay attribution now uses its own dormant tag,
+    `terminal.ui.overlay_probe`, so cursor/selection chatter no longer
+    pollutes the active present-side capture
+  - the probe selector is now also biased toward the real `nvim` text-buffer
+    lane, but in a cheaper form again: one cursor-centered cross probe watches
+    `cursor.col ± 5` on the cursor row plus `cursor.row ± 5` at the cursor
+    column, rather than the heavier row-by-row neighborhood scan
+  - the widget also keeps the target-probe baselines alive silently now:
+    `bg/glyph/window/final` captures still populate the final comparison data
+    even though the per-frame target-sample writes were removed from this lane
+  - the current swap-semantics cut is now richer too: suspicious frames capture
+    both `GL_FRONT` and `GL_BACK` immediately before swap, so the next live log
+    can compare pre-swap front, pre-swap back, and post-swap front/back on the
+    same sampled cells/bands
+  - SDL setup/swap validation is now less blind too:
+    - critical SDL GL calls (`SetAttribute`, `MakeCurrent`, `SetSwapInterval`,
+      `SwapWindow`) no longer silently ignore failure
+    - startup now logs the realized SDL GL context attributes after creation,
+      so Wayland runs can be compared against the actual negotiated context
+      rather than only the requested one
+    - the latest live Wayland run now reports `doublebuffer=0` on that
+      realized context, which is a direct warning against assuming the default
+      framebuffer behaves like the double-buffered surface we requested
+  - local upstream docs are now staged for agentic use too:
+    - SDL source now lives under `reference_repos/backends/sdl`, which gives
+      the Wayland/EGL implementation files directly (`src/video/SDL_egl.c`,
+      `src/video/wayland/SDL_waylandopengles.c`,
+      `src/video/wayland/SDL_waylandwindow.c`, etc.)
+    - official Khronos EGL/OpenGL refpages mirrored under
+      `reference_repos/rendering/khronos_refpages_md`
+    - Mesa source/docs are now cloned sparsely under
+      `reference_repos/rendering/mesa`, with the EGL tree and docs present for
+      this lane (`docs/egl.rst`, `src/egl/main/*`, `src/egl/wayland/*`)
+    - official upstream source repos cloned under
+      `reference_repos/backends/wayland`,
+      `reference_repos/backends/wayland_protocols`,
+      `reference_repos/rendering/egl_registry`, and
+      `reference_repos/rendering/opengl_registry`
+    - reproducible fetch path: `scripts/setup_khronos_refpages_md.sh`
+    - the most important local contract finding from those refs so far is that
+      `eglSwapBuffers` leaves the color buffer undefined unless
+      `EGL_SWAP_BEHAVIOR == EGL_BUFFER_PRESERVED`; post-swap reads are useful
+      probes, but not proof of preserved-buffer semantics on Wayland/EGL
+    - SDL’s own local docs also show the next honest introspection path exists
+      without leaving SDL:
+      - `SDL_EGL_GetCurrentDisplay`
+      - `SDL_EGL_GetCurrentConfig`
+      - `SDL_EGL_GetWindowSurface`
+      - `SDL_GetWindowProperties` for Wayland/EGL window handles
+    - that introspection cut is now live in startup too:
+      - `sdl.window` emits `event=wayland_handles ...`
+      - `sdl.gl` emits `SDL EGL contract ...`
+      - the current log includes queried `EGL_RENDER_BUFFER`,
+        `EGL_SWAP_BEHAVIOR`, `EGL_SURFACE_TYPE`, `EGL_CONFIG_ID`, surface
+        `width/height`, and EGL `vendor/version/client_apis`
+    - the curated Khronos mirror now also includes the missing context/config
+      query pages we need for design work:
+      - `eglCreateContext`
+      - `eglGetConfigAttrib`
+      - `eglGetError`
+      - `eglMakeCurrent`
+      - `eglQueryContext`
+      - `glReadPixels`
+  - suspicious frames now also emit `event=present_gl_state`, which records
+    pre/post default-framebuffer GL state (`READ_BUFFER`, `DRAW_BUFFER`, and
+    framebuffer bindings) around `SDL_GL_SwapWindow`
+  - the broken whole-frame offscreen compose experiment has now been removed;
+    the design authority for the replacement path lives in
+    `WAYLAND_PRESENT_TECHNICAL_WRITEUP.md`
+- the latest live probe pass sharpened that instrumentation again:
+  - the broad sampled partial rows stayed coherent across
+    `phase=bg/glyph/window/final/present`
+  - but the visible defect in that run landed on narrow one-column
+    guide/scope rows, which the original target-probe selector ignored because
+    it only armed on broad direct-text rows
+  - the current probe selector now also seeds a cheap fallback sample on narrow
+    box/guide rows so those rows can ride the same `final/present` readback cut
+- that retargeted probe has now paid off too:
+  - the active live lane currently hits narrow guide rows around
+    `rows 19..22 col 6`
+  - those rows are correct through `phase=final`
+  - then at least one bad frame shows them wrong at `phase=present`
+- that ambiguity is now resolved too:
+  - `phase=pre_swap_back` samples those same rows/bands from the backbuffer
+    immediately before `glSwapWindow`
+  - on the live bad rows, `phase=pre_swap_back` is still correct while
+    `phase=present` is wrong
+  - the remaining old `nvim` text-buffer scrolling ghost is therefore back on
+    the swap / Wayland presentation seam rather than backend publication or any
+    pre-swap renderer draw path
+- the newer `pre_swap_front` cut sharpens that conclusion further:
+  - on live ghost frames, `phase=pre_swap_front` and `phase=pre_swap_back` are
+    both correct before swap
+  - then both post-swap reads agree on the same wrong image
+  - so the next active question is no longer "which buffer was stale before
+    swap?", but whether default-framebuffer semantics on this Wayland/EGL lane
+    collapse or mutate across swap itself
+- the whole-frame offscreen compose experiment is currently invalid for
+  classification because it produces a different broken lane before swap, so
+  the next honest classifier should stay on the direct-default path and vary
+  only the swap boundary itself
+- the next step is now narrower than another broad swap matrix:
+  - inspect the new startup EGL contract log on the active Wayland path
+  - specifically: reconcile the realized `doublebuffer=0` report against the
+    queried `EGL_RENDER_BUFFER`, `EGL_SWAP_BEHAVIOR`, `EGL_SURFACE_TYPE`, and
+    whether the chosen config even advertises preserved-swap support
+  - use the now-complete local reference set for the design pass rather than
+    fetching more authorities first: terminal-side architecture refs
+    (`ghostty`, `foot`, `kitty`, `wezterm`, `rio`) plus backend authorities
+    (SDL source, Mesa EGL tree, Wayland/protocol repos, and the expanded
+    Khronos refpages)
+  - only after that decide whether the durable renderer fix should abandon any
+    dependence on default-framebuffer preservation semantics
+- the latest direct-default swap A/B already sharpened that further:
+  - `finish_before_swap` and `finish_before_and_after_swap` did not materially
+    improve the surviving old scrolling ghost
+  - `copy_back_to_front` did help somewhat: the bug still survives, but it
+    takes more rendering iterations to force it
+  - that currently points more toward front/back/default-framebuffer ownership
+    semantics on this Wayland lane than toward generic GPU submission timing
+- the current focused instrumentation now sits inside that helpful path:
+  - `pre_fallback_back` / `pre_fallback_front` are sampled before the explicit
+    back-to-front blit in `copy_back_to_front`
+  - the existing `pre_swap_back` / `pre_swap_front` samples are after the blit
+    but still before swap
+  - the next useful question is therefore: on a `copy_back_to_front` run, what
+    exactly does the explicit blit change on the sampled cells/bands before the
+    remaining post-swap corruption still appears?
+- that probe path is now also lighter-weight:
+  - the older always-log `bg/glyph/window/final` trace is no longer emitted on
+    every frame for this lane
+  - the goal is to preserve the decisive present-side proof while taking less
+    timing out of the scrolling repro
+- the next explicit question for the remaining old `nvim` text-buffer scroll
+  ghost lane is: if backend publication and widget partial planning are already
+  correct, where does the visible stale state first diverge between row/glyph
+  submission, terminal-texture contents, final backbuffer, and presented
+  frontbuffer?
+- that earlier handoff question is now materially answered:
+  - generation lineage across session/workspace poll, frame snapshot, widget
+    prepare/plan, and presented-generation retirement is coherent enough that it
+    no longer looks like the primary seam
+  - the decisive raw `wiki_life` cut moved one step downstream into
+    `view_cache` publication ownership:
+    - `view_cache_publish_final` can emit a partial-dirty generation `N`
+    - then emit a newer clean generation `N+1` before widget capture
+    - and `capturePresentation()` then sees only `N+1 dirty=none`, so widget
+      texture planning correctly decides `plan_full=0 plan_partial=0` while the
+      on-GPU texture is still stale
+  - the contract implication is stricter than “keep generations coherent”:
+    unpresented dirty publication is pending render work and must survive later
+    clean publication until it is either presented/acked or conservatively
+    promoted
+  - current fix shape:
+    - if a newer clean publication would overwrite an unpresented dirty cache,
+      `view_cache` now preserves that pending dirty metadata on the newer cache
+    - if the pending dirty cache depended on viewport-shift reuse, the newer
+      cache is conservatively promoted to full damage instead of carrying a stale
+      shift assumption forward
+  - the latest raw repro showed that this still was not the whole seam:
+    - the disappearing dirty work is first being published on the already
+      presented generation
+    - then a later clean `N+1` cache replaces it
+    - so the preserved-pending-damage rule never even gets a chance to fire on
+      that lane
+  - the active question is therefore now generation ownership at publication
+    entrypoints, not retirement:
+    - which caller is issuing same-generation dirty
+      `updateViewCacheNoLock(...)` work before the outer generation-bump path
+      runs?
+    - `terminal.generation_handoff` now carries `source=...` tags on
+      `view_cache_*` stages plus a dedicated
+      `stage=view_cache_same_generation_dirty` log for that exact question
+  - that question is now answered for the active live lane:
+    - the caller was `setSyncUpdatesLocked`
+    - DEC synchronized-updates toggles were republishing dirty cache state inline
+      on the already-presented generation
+    - the following normal parse-thread publish then advanced to `N+1 dirty=none`
+      and hid the stale texture seam from the earlier pending-damage fix
+  - current rule:
+    - `setSyncUpdatesLocked` must not republish dirty state on the currently
+      presented generation
+    - it now only advances generation and republishes when there is already
+      unpresented or dirty published state to carry forward
+  - that fix has now done its job for the `wiki_life` lane
+  - the next question is no longer “which caller is doing this?” but whether the
+    remaining old scrolling ghost persists even when:
+    - published cache state is partial-dirty
+    - widget planning still chooses `plan_partial=1`
+    - presented-generation ack retires those generations cleanly
+  - current answer: yes, so the remaining seam is now downstream of backend
+    publication truth and widget update-plan choice
 - raw repros are still available without code edits via
   `ZIDE_DEBUG_DISABLE_TERMINAL_PRESENT_MITIGATION=1`, which disables the
   default mitigation path so the original post-swap Wayland bug can still be
@@ -393,12 +603,11 @@ So the next decisive live probe is now `terminal.ui.target_sample`:
   input timestamps; the draw-side condition now treats active modifier state as
   ongoing pressure too, so holding `Ctrl+Shift` no longer lets the recent-input
   window expire
-- overlay attribution now rides on that same cut too: `drawOverlays(...)`
-  receives the sampled `bg2` and `slot=0..2` direct cells and emits
+- overlay attribution still exists for targeted follow-up work, but it no
+  longer rides on the active present-side tag: `drawOverlays(...)` emits
   `event=overlay_state ...` plus
   `event=overlay_touch branch=selection|hover_underline|cursor|ime ...` on
-  `terminal.ui.target_sample` whenever one of those overlay-owned ranges
-  covers a sampled cell
+  `terminal.ui.overlay_probe`
 - `Ctrl+Shift+F12` now also dumps the terminal widget's current visible
   viewport cache to `zide_terminal_view_dump.txt` in the process cwd. The dump
   is fixed-width ASCII with row numbers, a column ruler, `resolved_bg_runs` per
