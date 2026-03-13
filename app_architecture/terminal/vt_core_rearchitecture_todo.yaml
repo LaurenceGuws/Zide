@@ -244,7 +244,7 @@ items:
       - The active war-room instrumentation for that remaining lane is now minimal again:
         - `terminal.ui.target_sample` only
         - It is now suspicion-driven: the widget still registers sampled cells/bands and final baselines, but the renderer only emits `present_state`, `event=present_gl_state`, `phase=pre_swap_back`, `phase=pre_swap_front`, `phase=present`, and matching row/column bands when it actually detects a present-side mismatch.
-      - Suspicious frames now also log `event=present_mode compose_main_to_offscreen=0|1`, but that whole-frame offscreen compose experiment is currently not a valid classifier: live runs show a different background-only / skipped-frame lane with `pre_swap_front` and `pre_swap_back` already wrong before swap.
+      - The broken whole-frame offscreen compose experiment has now been removed; the replacement direction is tracked in `WAYLAND_PRESENT_TECHNICAL_WRITEUP.md`.
         - Overlay attribution has been moved back onto `terminal.ui.overlay_probe`, which is intentionally disabled in `.zide.lua` for this lane so cursor chatter does not drown the present probe.
         - The active probe selector is now cursor-centered in a cheaper form again: one fixed cross watches `cursor.col ± 5` on the cursor row plus `cursor.row ± 5` at the cursor column, so the `nvim` text-buffer lane stays targeted without reintroducing the heavy multi-row neighborhood scan.
         - Silent widget-side `bg/glyph/window/final` captures are back for those probes too, so the suspicion-driven renderer diff once again has real final baselines instead of empty comparison slots.
