@@ -1130,13 +1130,14 @@ pub const Renderer = struct {
         self.presentation_band_probe_count = 0;
     }
 
-    pub fn endFrame(self: *Renderer) void {
+    pub fn endFrame(self: *Renderer) bool {
         self.drawSceneTargetToDefault();
         const swap_start = sdl_api.getPerformanceCounter();
         if (self.present_edge_fallback_mode == .copy_back_to_front) self.capturePreFallbackFrameProbes();
         self.applyPreSwapFallback();
         self.capturePreSwapBackFrameProbes();
-        if (!sdl_api.glSwapWindow(self.window)) {
+        const swap_ok = sdl_api.glSwapWindow(self.window);
+        if (!swap_ok) {
             app_logger.logger("sdl.gl").logStdout(.warning, "SDL_GL_SwapWindow failed err={s}", .{sdl_api.getError()});
         }
         const swap_end = sdl_api.getPerformanceCounter();
@@ -1146,6 +1147,7 @@ pub const Renderer = struct {
         self.presentation_probe_count = 0;
         self.presentation_band_probe_count = 0;
         self.applyPresentFrameCap();
+        return swap_ok;
     }
 
     fn performanceDeltaMs(start: u64, end: u64, freq: f64) f64 {

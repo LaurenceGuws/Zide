@@ -44,9 +44,11 @@ pub fn draw(state: anytype, shell: anytype, layout: layout_types.WidgetLayout) v
     }
 }
 
-pub fn flushPresentationFeedback(state: anytype) void {
+pub fn flushPresentationFeedback(state: anytype, swap_succeeded: bool) void {
     if (state.pending_terminal_presentation_feedback) |pending| {
-        pending.session.finishFramePresentation(pending.feedback);
+        if (swap_succeeded) {
+            pending.session.finishFramePresentation(pending.feedback);
+        }
         state.pending_terminal_presentation_feedback = null;
     }
 }

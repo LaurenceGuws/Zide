@@ -271,9 +271,13 @@ Current status:
 - that means terminal presented-generation retirement now crosses the
   renderer-owned scene submission boundary instead of hanging directly off
   widget-local draw completion
-- renderer swap success/failure is still not propagated as an explicit ack
-  contract yet, so the next Phase 3 slice should tighten that authority
-  further instead of stopping at the post-`endFrame()` boundary
+- renderer swap success/failure now also participates in that boundary:
+  `Renderer.endFrame()` returns explicit submission success, and terminal
+  presentation feedback is only flushed on successful submission instead of
+  unconditionally after `endFrame()`
+- the next Phase 3 slice should now tighten the boundary further by moving
+  from boolean swap success to a more explicit renderer-owned scene submission
+  token/sequence if needed
 
 ### Phase 4: Remove the Legacy Direct-Default Main Path
 
