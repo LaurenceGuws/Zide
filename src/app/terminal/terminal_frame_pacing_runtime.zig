@@ -48,8 +48,10 @@ pub const LatencyContext = struct {
 };
 
 pub const Snapshot = struct {
+    session_ptr: usize = 0,
     current_generation: u64 = 0,
     published_generation: u64 = 0,
+    presented_generation: u64 = 0,
     redraw_pending: bool = false,
     parse_backlog: bool = false,
     output_pressure: bool = false,
@@ -72,8 +74,10 @@ pub fn observe(state: anytype, now: f64) Snapshot {
     const redraw_pending = published_generation != pacing.last_drawn_generation;
     const parse_backlog = current_generation != published_generation;
     return .{
+        .session_ptr = frame_state.session_ptr,
         .current_generation = current_generation,
         .published_generation = published_generation,
+        .presented_generation = frame_state.presented_generation,
         .redraw_pending = redraw_pending,
         .parse_backlog = parse_backlog,
         .output_pressure = frame_state.has_data or parse_backlog,
@@ -173,6 +177,28 @@ pub fn logFramePacing(state: anytype, now: f64, snapshot: Snapshot, drew: bool, 
     );
 
     if (drew) pacing.last_draw_time = now;
+
+    const handoff_log = app_logger.logger("terminal.generation_handoff");
+    if ((handoff_log.enabled_file or handoff_log.enabled_console) and
+        (snapshot.redraw_pending or snapshot.parse_backlog or drew))
+    {
+        handoff_log.logf(
+            .info,
+            "stage=frame_state sid={x} drew={d} has_output_pressure={d} redraw_pending={d} parse_backlog={d} draw_ms={d:.2} sleep_ms={d:.2} gen={d}/{d}/{d}",
+            .{
+                snapshot.session_ptr,
+                @intFromBool(drew),
+                @intFromBool(snapshot.output_pressure),
+                @intFromBool(snapshot.redraw_pending),
+                @intFromBool(snapshot.parse_backlog),
+                draw_ms,
+                if (sleep_s) |v| v * 1000.0 else 0.0,
+                snapshot.presented_generation,
+                snapshot.published_generation,
+                snapshot.current_generation,
+            },
+        );
+    }
 }
 
 pub fn logInputLatency(state: anytype, poll_ms: f64, build_ms: f64, update_ms: f64, draw_ms: f64, term_ctx: LatencyContext) void {
@@ -262,15 +288,19 @@ pub fn logInputLatency(state: anytype, poll_ms: f64, build_ms: f64, update_ms: f
 
 fn activeFrameState(state: anytype) struct {
     has_data: bool,
+    session_ptr: usize,
     current_generation: u64,
     published_generation: u64,
+    presented_generation: u64,
 } {
     const State = @TypeOf(state.*);
     if (!@hasField(State, "terminal_workspace")) {
         return .{
             .has_data = false,
+            .session_ptr = 0,
             .current_generation = 0,
             .published_generation = 0,
+            .presented_generation = 0,
         };
     }
 
@@ -278,14 +308,18 @@ fn activeFrameState(state: anytype) struct {
         const frame_state = workspace.activeFrameState();
         return .{
             .has_data = frame_state.has_data,
+            .session_ptr = frame_state.session_ptr,
             .current_generation = frame_state.current_generation,
             .published_generation = frame_state.published_generation,
+            .presented_generation = frame_state.presented_generation,
         };
     }
     return .{
         .has_data = false,
+        .session_ptr = 0,
         .current_generation = 0,
         .published_generation = 0,
+        .presented_generation = 0,
     };
 }
 

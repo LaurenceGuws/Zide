@@ -446,9 +446,71 @@ fn logCursorMotionDamage(
     }
 }
 
-pub fn updateViewCacheNoLock(self: anytype, generation: u64, scroll_offset: usize) void {
+fn shouldPreserveUnpresentedDirtyPublication(
+    active_cache: *const RenderCache,
+    cache: *const RenderCache,
+    presented_generation: u64,
+) bool {
+    return active_cache.generation != presented_generation and
+        active_cache.dirty != .none and
+        cache.dirty == .none and
+        active_cache.rows == cache.rows and
+        active_cache.cols == cache.cols;
+}
+
+fn setFullDamageMetadata(cache: *RenderCache, rows: usize, cols: usize) void {
+    cache.dirty = .full;
+    cache.damage = .{
+        .start_row = 0,
+        .end_row = if (rows > 0) rows - 1 else 0,
+        .start_col = 0,
+        .end_col = if (cols > 0) cols - 1 else 0,
+    };
+    var row_idx: usize = 0;
+    while (row_idx < rows) : (row_idx += 1) {
+        cache.dirty_rows.items[row_idx] = true;
+        cache.row_dirty_span_counts.items[row_idx] = if (cols > 0) 1 else 0;
+        cache.row_dirty_span_overflow.items[row_idx] = false;
+        cache.row_dirty_spans.items[row_idx][0] = .{
+            .start = 0,
+            .end = if (cols > 0) @intCast(cols - 1) else 0,
+        };
+        cache.dirty_cols_start.items[row_idx] = 0;
+        cache.dirty_cols_end.items[row_idx] = if (cols > 0) @intCast(cols - 1) else 0;
+        var span_idx: usize = 1;
+        while (span_idx < screen_mod.max_row_dirty_spans) : (span_idx += 1) {
+            cache.row_dirty_spans.items[row_idx][span_idx] = publication.invalidRowSpan(cols);
+        }
+    }
+}
+
+fn preserveUnpresentedDirtyPublication(cache: *RenderCache, active_cache: *const RenderCache, rows: usize, cols: usize) []const u8 {
+    if (active_cache.dirty == .full or active_cache.viewport_shift_rows != 0) {
+        setFullDamageMetadata(cache, rows, cols);
+        cache.full_dirty_reason = active_cache.full_dirty_reason;
+        cache.full_dirty_seq = active_cache.full_dirty_seq;
+        cache.viewport_shift_rows = 0;
+        cache.viewport_shift_exposed_only = false;
+        return "promote_full";
+    }
+
+    cache.dirty = active_cache.dirty;
+    cache.damage = active_cache.damage;
+    std.mem.copyForwards(bool, cache.dirty_rows.items, active_cache.dirty_rows.items);
+    std.mem.copyForwards(u8, cache.row_dirty_span_counts.items, active_cache.row_dirty_span_counts.items);
+    std.mem.copyForwards(bool, cache.row_dirty_span_overflow.items, active_cache.row_dirty_span_overflow.items);
+    std.mem.copyForwards([screen_mod.max_row_dirty_spans]screen_mod.RowDirtySpan, cache.row_dirty_spans.items, active_cache.row_dirty_spans.items);
+    std.mem.copyForwards(u16, cache.dirty_cols_start.items, active_cache.dirty_cols_start.items);
+    std.mem.copyForwards(u16, cache.dirty_cols_end.items, active_cache.dirty_cols_end.items);
+    cache.viewport_shift_rows = 0;
+    cache.viewport_shift_exposed_only = false;
+    return "carry_partial";
+}
+
+pub fn updateViewCacheNoLockTagged(self: anytype, generation: u64, scroll_offset: usize, source: []const u8) void {
     const fullwidth_origin_log = app_logger.logger("terminal.ui.row_fullwidth_origin");
     const cursor_motion_log = app_logger.logger("terminal.ui.cursor_motion_damage");
+    const handoff_log = app_logger.logger("terminal.generation_handoff");
     const screen = self.core.activeScreenConst();
     const view = screen.snapshotView();
     const screen_reverse = screen.screen_reverse;
@@ -474,6 +536,16 @@ pub fn updateViewCacheNoLock(self: anytype, generation: u64, scroll_offset: usiz
     const selection_active = self.core.active != .alt and self.core.history.selectionState() != null;
     const active_cache = &self.render_caches[active_index];
     const presented_generation = self.presentedGeneration();
+
+    const finalDirtyRowCount = struct {
+        fn count(rows_slice: []const bool) usize {
+            var total: usize = 0;
+            for (rows_slice) |dirty| {
+                if (dirty) total += 1;
+            }
+            return total;
+        }
+    }.count;
     if (active_cache.rows == rows and
         active_cache.cols == cols and
         active_cache.history_len == history_len and
@@ -512,6 +584,27 @@ pub fn updateViewCacheNoLock(self: anytype, generation: u64, scroll_offset: usiz
         !selection_active and
         !active_cache.selection_active)
     {
+        if ((handoff_log.enabled_file or handoff_log.enabled_console) and generation != active_cache.generation) {
+            handoff_log.logf(
+                .info,
+                "stage=view_cache_clean_advance sid={x} source={s} cache_gen={d}->{d} presented={d} dirty_view={s} dirty_cache={s} cursor={d}:{d}->{d}:{d} cursor_visible={d}->{d}",
+                .{
+                    @intFromPtr(self),
+                    source,
+                    active_cache.generation,
+                    generation,
+                    presented_generation,
+                    @tagName(view.dirty),
+                    @tagName(active_cache.dirty),
+                    active_cache.cursor.row,
+                    active_cache.cursor.col,
+                    view.cursor.row,
+                    view.cursor.col,
+                    @intFromBool(active_cache.cursor_visible),
+                    @intFromBool(view.cursor_visible),
+                },
+            );
+        }
         // Generation can advance without visible cell changes (e.g. cursor-only shell
         // movement). Keep overlay-facing state current even when cell contents stay the same.
         active_cache.generation = generation;
@@ -553,6 +646,24 @@ pub fn updateViewCacheNoLock(self: anytype, generation: u64, scroll_offset: usiz
         cache.viewport_shift_rows = 0;
         cache.viewport_shift_exposed_only = false;
         updateKittyViewNoLock(self, cache);
+        if (handoff_log.enabled_file or handoff_log.enabled_console) {
+            handoff_log.logf(
+                .info,
+                "stage=view_cache_publish_final sid={x} source={s} cache_gen={d} dirty={s} damage={d}..{d}/{d}..{d} dirty_rows={d} target_index={d}",
+                .{
+                    @intFromPtr(self),
+                    source,
+                    cache.generation,
+                    @tagName(cache.dirty),
+                    cache.damage.start_row,
+                    cache.damage.end_row,
+                    cache.damage.start_col,
+                    cache.damage.end_col,
+                    0,
+                    target_index,
+                },
+            );
+        }
         self.render_cache_index.store(target_index, .release);
         return;
     }
@@ -629,6 +740,46 @@ pub fn updateViewCacheNoLock(self: anytype, generation: u64, scroll_offset: usiz
         self.core.active == .alt,
         active_cache.alt_active,
     );
+    if ((handoff_log.enabled_file or handoff_log.enabled_console) and generation != active_cache.generation) {
+        handoff_log.logf(
+            .info,
+            "stage=view_cache_publish sid={x} source={s} cache_gen={d}->{d} presented={d} dirty_view={s} dirty_cache={s} plan_full={d} plan_shift={d} visible_history_changed={d} cursor={d}:{d}->{d}:{d}",
+            .{
+                @intFromPtr(self),
+                source,
+                active_cache.generation,
+                generation,
+                presented_generation,
+                @tagName(view.dirty),
+                @tagName(active_cache.dirty),
+                @intFromBool(plan.needs_full_damage),
+                @intFromBool(plan.can_publish_scroll_shift),
+                @intFromBool(plan.visible_history_changed),
+                active_cache.cursor.row,
+                active_cache.cursor.col,
+                view.cursor.row,
+                view.cursor.col,
+            },
+        );
+    }
+    if ((handoff_log.enabled_file or handoff_log.enabled_console) and
+        generation == active_cache.generation and
+        view.dirty != .none)
+    {
+        handoff_log.logf(
+            .info,
+            "stage=view_cache_same_generation_dirty sid={x} source={s} generation={d} presented={d} dirty_view={s} dirty_cache={s} scroll_offset={d}",
+            .{
+                @intFromPtr(self),
+                source,
+                generation,
+                presented_generation,
+                @tagName(view.dirty),
+                @tagName(active_cache.dirty),
+                clamped_offset,
+            },
+        );
+    }
     var row: usize = 0;
     while (row < rows) : (row += 1) {
         const global_row = start_line + row;
@@ -882,6 +1033,28 @@ pub fn updateViewCacheNoLock(self: anytype, generation: u64, scroll_offset: usiz
     cache.clear_generation = clear_generation;
     cache.viewport_shift_rows = plan.viewport_shift_rows;
     cache.viewport_shift_exposed_only = plan.can_publish_scroll_shift;
+    if (shouldPreserveUnpresentedDirtyPublication(active_cache, cache, presented_generation)) {
+        const preserve_mode = preserveUnpresentedDirtyPublication(cache, active_cache, rows, cols);
+        if (handoff_log.enabled_file or handoff_log.enabled_console) {
+            handoff_log.logf(
+                .info,
+                "stage=view_cache_preserve_pending_damage sid={x} source={s} mode={s} active_gen={d} cache_gen={d} presented={d} dirty_active={s} damage={d}..{d}/{d}..{d}",
+                .{
+                    @intFromPtr(self),
+                    source,
+                    preserve_mode,
+                    active_cache.generation,
+                    cache.generation,
+                    presented_generation,
+                    @tagName(active_cache.dirty),
+                    cache.damage.start_row,
+                    cache.damage.end_row,
+                    cache.damage.start_col,
+                    cache.damage.end_col,
+                },
+            );
+        }
+    }
     if ((view.cursor.row != active_cache.cursor.row or view.cursor.col != active_cache.cursor.col) and
         cache.dirty == .partial and
         !plan.needs_full_damage)
@@ -889,7 +1062,31 @@ pub fn updateViewCacheNoLock(self: anytype, generation: u64, scroll_offset: usiz
         logCursorMotionDamage(cursor_motion_log, cache, active_cache, active_cache.cursor, view.cursor, rows, cols);
     }
     updateKittyViewNoLock(self, cache);
+    if (handoff_log.enabled_file or handoff_log.enabled_console) {
+        handoff_log.logf(
+            .info,
+            "stage=view_cache_publish_final sid={x} source={s} cache_gen={d} dirty={s} damage={d}..{d}/{d}..{d} dirty_rows={d} target_index={d} shift_rows={d} shift_exposed_only={d}",
+            .{
+                @intFromPtr(self),
+                source,
+                cache.generation,
+                @tagName(cache.dirty),
+                cache.damage.start_row,
+                cache.damage.end_row,
+                cache.damage.start_col,
+                cache.damage.end_col,
+                finalDirtyRowCount(cache.dirty_rows.items),
+                target_index,
+                cache.viewport_shift_rows,
+                @intFromBool(cache.viewport_shift_exposed_only),
+            },
+        );
+    }
     self.render_cache_index.store(target_index, .release);
+}
+
+pub fn updateViewCacheNoLock(self: anytype, generation: u64, scroll_offset: usize) void {
+    updateViewCacheNoLockTagged(self, generation, scroll_offset, "direct");
 }
 
 pub fn updateViewCacheForScroll(self: anytype) void {
@@ -897,14 +1094,14 @@ pub fn updateViewCacheForScroll(self: anytype) void {
         defer self.state_mutex.unlock();
         if (!self.view_cache_pending.swap(false, .acq_rel)) return;
         const offset: usize = @intCast(self.view_cache_request_offset.load(.acquire));
-        updateViewCacheNoLock(self, self.output_generation.load(.acquire), offset);
+        updateViewCacheNoLockTagged(self, self.output_generation.load(.acquire), offset, "view_cache_for_scroll");
     }
 }
 
 pub fn updateViewCacheForScrollLocked(self: anytype) void {
     if (!self.view_cache_pending.swap(false, .acq_rel)) return;
     const offset: usize = @intCast(self.view_cache_request_offset.load(.acquire));
-    updateViewCacheNoLock(self, self.output_generation.load(.acquire), offset);
+    updateViewCacheNoLockTagged(self, self.output_generation.load(.acquire), offset, "view_cache_for_scroll_locked");
 }
 
 fn updateKittyViewNoLock(self: anytype, cache: *RenderCache) void {

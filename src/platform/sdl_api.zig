@@ -146,6 +146,11 @@ pub fn setHint(name: [*:0]const u8, value: [*:0]const u8) void {
     _ = c.SDL_SetHint(name, value);
 }
 
+pub fn getError() []const u8 {
+    const raw = c.SDL_GetError();
+    return std.mem.sliceTo(raw, 0);
+}
+
 pub fn init(flags: c_uint) bool {
     return c.SDL_Init(flags);
 }
@@ -160,8 +165,14 @@ pub fn quit() void {
 
 pub const GlAttr = c.SDL_GLAttr;
 
-pub fn glSetAttribute(attr: GlAttr, value: c_int) void {
-    _ = c.SDL_GL_SetAttribute(attr, value);
+pub fn glSetAttribute(attr: GlAttr, value: c_int) bool {
+    return c.SDL_GL_SetAttribute(attr, value);
+}
+
+pub fn glGetAttribute(attr: GlAttr) ?c_int {
+    var value: c_int = 0;
+    if (!c.SDL_GL_GetAttribute(attr, &value)) return null;
+    return value;
 }
 
 pub fn createWindow(title: [*:0]const u8, width: c_int, height: c_int) ?*c.SDL_Window {
@@ -359,16 +370,16 @@ pub fn textSpanWithLen(field: anytype, len: usize) []const u8 {
     };
 }
 
-pub fn glMakeCurrent(window: *c.SDL_Window, context: c.SDL_GLContext) void {
-    _ = c.SDL_GL_MakeCurrent(window, context);
+pub fn glMakeCurrent(window: *c.SDL_Window, context: c.SDL_GLContext) bool {
+    return c.SDL_GL_MakeCurrent(window, context);
 }
 
-pub fn glSetSwapInterval(interval: c_int) void {
-    _ = c.SDL_GL_SetSwapInterval(interval);
+pub fn glSetSwapInterval(interval: c_int) bool {
+    return c.SDL_GL_SetSwapInterval(interval);
 }
 
-pub fn glSwapWindow(window: *c.SDL_Window) void {
-    _ = c.SDL_GL_SwapWindow(window);
+pub fn glSwapWindow(window: *c.SDL_Window) bool {
+    return c.SDL_GL_SwapWindow(window);
 }
 
 pub fn displayModeRefreshHz(mode: *const c.SDL_DisplayMode) i32 {

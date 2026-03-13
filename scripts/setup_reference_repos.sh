@@ -41,6 +41,8 @@ BACKEND_REPOS=(
   "gnome_vte - https://github.com/GNOME/vte.git"
   "libvterm - https://github.com/neovim/libvterm.git"
   "alacritty_vte - https://github.com/alacritty/vte.git"
+  "wayland - https://gitlab.freedesktop.org/wayland/wayland.git"
+  "wayland_protocols - https://gitlab.freedesktop.org/wayland/wayland-protocols.git"
 )
 
 # Fonts / shaping (name - URL)
@@ -57,6 +59,8 @@ RENDER_REPOS=(
   "skia - https://github.com/google/skia.git"
   "pixman - https://gitlab.freedesktop.org/pixman/pixman.git"
   "wgpu - https://github.com/gfx-rs/wgpu.git"
+  "egl_registry - https://github.com/KhronosGroup/EGL-Registry.git"
+  "opengl_registry - https://github.com/KhronosGroup/OpenGL-Registry.git"
 )
 
 # Base folder for all reference repos

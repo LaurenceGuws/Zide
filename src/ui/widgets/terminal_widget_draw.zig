@@ -129,7 +129,9 @@ fn rowSlice(cells: []const Cell, cols_count: usize, row: usize) []const Cell {
     return cells[row_start .. row_start + cols_count];
 }
 
-const max_target_sample_rows: usize = 4;
+const max_target_sample_rows: usize = 8;
+const cursor_probe_row_radius: usize = 5;
+const cursor_probe_col_radius: usize = 5;
 
 const TargetReadbackProbe = struct {
     row: usize = 0,
@@ -193,6 +195,15 @@ const TargetBandDiff = struct {
     hits: usize = 0,
     samples: usize = 0,
     max_delta: u16 = 0,
+};
+
+const SilentTargetProbeLogger = struct {
+    fn logf(self: @This(), level: anytype, comptime fmt: []const u8, args: anytype) void {
+        _ = self;
+        _ = level;
+        _ = fmt;
+        _ = args;
+    }
 };
 
 fn rgbaDelta(a: Rgba, b: Rgba) u16 {
@@ -486,6 +497,72 @@ fn logTargetProbeBandPhase(
     }
 }
 
+fn seedFallbackProbeSample(
+    samples: *[draw_grid.max_direct_glyph_samples]draw_grid.DirectGlyphSample,
+    view_cells: []const Cell,
+    cols: usize,
+    row: usize,
+    col: usize,
+    screen_reverse_mode: bool,
+) void {
+    if (samples[0].present or cols == 0 or col >= cols) return;
+    const cell_idx = row * cols + col;
+    if (cell_idx >= view_cells.len) return;
+    const cell = view_cells[cell_idx];
+    if (cell.codepoint == 0) return;
+    const fg = Color{ .r = cell.attrs.fg.r, .g = cell.attrs.fg.g, .b = cell.attrs.fg.b, .a = cell.attrs.fg.a };
+    const bg = Color{ .r = cell.attrs.bg.r, .g = cell.attrs.bg.g, .b = cell.attrs.bg.b, .a = cell.attrs.bg.a };
+    const cell_reverse = cell.attrs.reverse != screen_reverse_mode;
+    samples[0] = .{
+        .present = true,
+        .row = row,
+        .col = col,
+        .codepoint = cell.codepoint,
+        .glyph_id = 0,
+        .simple_ascii = cell.codepoint < 128,
+        .want_color = false,
+        .fg = if (cell_reverse) bg else fg,
+        .bg = if (cell_reverse) fg else bg,
+    };
+}
+
+fn appendFixedCursorNeighborhoodProbes(
+    target_probes: *[max_target_sample_rows]TargetReadbackProbe,
+    target_probe_count: *usize,
+    view_cells: []const Cell,
+    rows: usize,
+    cols: usize,
+    cursor: CursorPos,
+    screen_reverse_mode: bool,
+) void {
+    if (rows == 0 or cols == 0 or cursor.row >= rows or target_probe_count.* >= target_probes.len) return;
+    var idx: usize = 0;
+    while (idx < target_probe_count.*) : (idx += 1) {
+        if (target_probes[idx].row == cursor.row and target_probes[idx].column_present and target_probes[idx].column_col == cursor.col) {
+            return;
+        }
+    }
+    const row_start = cursor.row -| cursor_probe_row_radius;
+    const row_end = @min(rows - 1, cursor.row + cursor_probe_row_radius);
+    const col = std.math.clamp(cursor.col, @as(usize, 0), cols - 1);
+    const col_start = col -| cursor_probe_col_radius;
+    const col_end = @min(cols - 1, col + cursor_probe_col_radius);
+    var direct_samples = [_]draw_grid.DirectGlyphSample{.{}} ** draw_grid.max_direct_glyph_samples;
+    seedFallbackProbeSample(&direct_samples, view_cells, cols, cursor.row, col, screen_reverse_mode);
+    if (!direct_samples[0].present) return;
+    target_probes[target_probe_count.*] = .{
+        .row = cursor.row,
+        .col_start = col_start,
+        .col_end = col_end,
+        .column_present = true,
+        .column_col = col,
+        .column_row_start = row_start,
+        .column_row_end = row_end,
+        .direct_samples = direct_samples,
+    };
+    target_probe_count.* += 1;
+}
+
 fn logTargetProbeColumnBandPhase(
     rr: anytype,
     log: anytype,
@@ -705,6 +782,7 @@ pub fn drawPrepared(
     const start_line = if (end_line > rows) end_line - rows else 0;
     var draw_cursor = scroll_offset == 0 and cache.cursor_visible;
     const cursor = if (draw_cursor) cache.cursor else CursorPos{ .row = rows + 1, .col = cols + 1 };
+    const probe_cursor = cache.cursor;
     const cursor_style = cache.cursor_style;
     if (draw_cursor and self.ui_focused and cursor_style.blink) {
         if (blink_time >= self.cursor_blink_pause_until) {
@@ -851,17 +929,75 @@ pub fn drawPrepared(
                 plan_time + recovery_window_seconds,
             );
         }
+        const recovery_window_active = force_full_recovery_window and plan_time < self.force_full_texture_publish_until;
+        const recent_input_age_s = if (self.last_terminal_input_time > 0 and plan_time >= self.last_terminal_input_time)
+            plan_time - self.last_terminal_input_time
+        else
+            -1.0;
+        const recent_input_window_active = force_full_recent_input_window and
+            (modifier_pressure_active or
+                (self.last_terminal_input_time > 0 and
+                    recent_input_age_s >= 0 and
+                    recent_input_age_s <= recent_input_window_seconds));
         update_plan = forceFullTextureUpdatePlanEveryFrame(
             update_plan,
-            force_full_recovery_window and plan_time < self.force_full_texture_publish_until,
+            recovery_window_active,
         );
         update_plan = forceFullTextureUpdatePlanEveryFrame(
             update_plan,
-            force_full_recent_input_window and
-                (modifier_pressure_active or
-                    (self.last_terminal_input_time > 0 and
-                        (plan_time - self.last_terminal_input_time) <= recent_input_window_seconds)),
+            recent_input_window_active,
         );
+        const pressure_log = app_logger.logger("terminal.ui.present_pressure");
+        if ((pressure_log.enabled_file or pressure_log.enabled_console) and
+            (plan_was_active or gen_changed or recovery_window_active or recent_input_window_active or modifier_pressure_active))
+        {
+            pressure_log.logf(
+                .info,
+                "gen_changed={d} pub_gen={d}->{d} texture_ready={d} recreated={d} plan_active={d} plan_full={d} plan_partial={d} recent_cfg={d} recent_active={d} recent_age_ms={d:.2} recent_window_ms={d:.2} modifier={d} recovery_cfg={d} recovery_active={d} recovery_until_ms={d:.2}",
+                .{
+                    @intFromBool(gen_changed),
+                    self.last_render_generation,
+                    cache.generation,
+                    @intFromBool(texture_ready_before_draw),
+                    @intFromBool(recreated),
+                    @intFromBool(plan_was_active),
+                    @intFromBool(update_plan.needs_full),
+                    @intFromBool(update_plan.needs_partial),
+                    @intFromBool(force_full_recent_input_window),
+                    @intFromBool(recent_input_window_active),
+                    if (recent_input_age_s >= 0) recent_input_age_s * 1000.0 else -1.0,
+                    recent_input_window_seconds * 1000.0,
+                    @intFromBool(modifier_pressure_active),
+                    @intFromBool(force_full_recovery_window),
+                    @intFromBool(recovery_window_active),
+                    if (self.force_full_texture_publish_until > 0 and plan_time <= self.force_full_texture_publish_until)
+                        (self.force_full_texture_publish_until - plan_time) * 1000.0
+                    else
+                        0.0,
+                },
+            );
+        }
+        const handoff_log = app_logger.logger("terminal.generation_handoff");
+        if ((handoff_log.enabled_file or handoff_log.enabled_console) and
+            (gen_changed or plan_was_active or update_plan.needs_full or update_plan.needs_partial))
+        {
+            handoff_log.logf(
+                .info,
+                "stage=widget_plan sid={x} last_render={d} cache_gen={d} cur={d} pub={d} presented={d} gen_changed={d} plan_full={d} plan_partial={d} texture_ready={d}",
+                .{
+                    @intFromPtr(self.session),
+                    self.last_render_generation,
+                    cache.generation,
+                    self.session.currentGeneration(),
+                    self.session.publishedGeneration(),
+                    self.session.presentedGeneration(),
+                    @intFromBool(gen_changed),
+                    @intFromBool(update_plan.needs_full),
+                    @intFromBool(update_plan.needs_partial),
+                    @intFromBool(texture_ready_before_draw),
+                },
+            );
+        }
         const needs_full = update_plan.needs_full;
         var needs_partial = update_plan.needs_partial;
         const use_viewport_shift = draw_texture.useViewportShiftForPartialPlan(cache.dirty, viewport_shift_rows);
@@ -1122,6 +1258,15 @@ pub fn drawPrepared(
                     target_sample_log.enabled_console or
                     row_render_log.enabled_file or
                     row_render_log.enabled_console;
+                if (target_sample_log.enabled_file or target_sample_log.enabled_console) {
+                    appendFixedCursorNeighborhoodProbes(&target_probes, &target_probe_count, view_cells, rows, cols, probe_cursor, screen_reverse);
+                    if (target_probe_count > 0) {
+                        var probe_idx: usize = 0;
+                        while (probe_idx < target_probe_count) : (probe_idx += 1) {
+                            logTargetProbePhase(r, SilentTargetProbeLogger{}, .bg, &target_probes[probe_idx], 0, 0, cell_w_i, cell_h_i);
+                        }
+                    }
+                }
                 for (0..rows) |row| {
                     if (!self.partial_draw_rows.items[row]) continue;
                     const before_stats = glyph_draw_stats;
@@ -1158,48 +1303,76 @@ pub fn drawPrepared(
                         row_col_max = col_end;
                         drawRowGlyphs(shell, view_cells, cols, row, col_start, col_end, base_x_local, base_y_local, padding_x_i, hover_link_id, screen_reverse, blink_style, blink_time, draw_cursor, cursor, r.terminal_disable_ligatures, &row_direct_samples, &glyph_draw_stats);
                     }
+                    const row_width = if (row_col_min < cols and row_col_max >= row_col_min) row_col_max - row_col_min + 1 else 0;
+                    const row_shaped_total = glyph_draw_stats.shaped_glyphs - before_stats.shaped_glyphs;
+                    const row_direct_text = glyph_draw_stats.direct_text_glyphs - before_stats.direct_text_glyphs;
+                    const row_special = glyph_draw_stats.special_sprite_glyphs - before_stats.special_sprite_glyphs;
+                    const row_box = glyph_draw_stats.box_glyphs - before_stats.box_glyphs;
+                    const row_shaped_text = glyph_draw_stats.shaped_text_glyphs - before_stats.shaped_text_glyphs;
+                    const row_fallback = glyph_draw_stats.fallback_cells - before_stats.fallback_cells;
+                    const broad_probe_candidate = row_width >= cols / 2 and row_direct_samples[1].present;
+                    const narrow_box_probe_candidate = row_width > 0 and row_width <= 2 and row_box > 0;
+                    const cursor_probe_row_start = if (cursor.row > 0) cursor.row - 1 else cursor.row;
+                    const cursor_probe_row_end = @min(rows - 1, cursor.row + 1);
+                    const cursor_probe_candidate = row_width > 0 and cursor.row < rows and row >= cursor_probe_row_start and row <= cursor_probe_row_end;
+                    const cursor_probe_col = if (row_width > 0)
+                        std.math.clamp(cursor.col, row_col_min, row_col_max)
+                    else
+                        row_col_min;
+                    if (narrow_box_probe_candidate) {
+                        seedFallbackProbeSample(&row_direct_samples, view_cells, cols, row, row_col_min, screen_reverse);
+                    }
+                    if (cursor_probe_candidate) {
+                        seedFallbackProbeSample(&row_direct_samples, view_cells, cols, row, cursor_probe_col, screen_reverse);
+                    }
                     if (target_probe_enabled and
                         target_probe_count < target_probes.len and
                         row_span_count > 0 and
                         row_col_min < cols and
                         row_col_max >= row_col_min and
-                        (row_col_max - row_col_min + 1) >= cols / 2 and
-                        row_direct_samples[1].present)
+                        (broad_probe_candidate or
+                            (narrow_box_probe_candidate and row_direct_samples[0].present) or
+                            (cursor_probe_candidate and row_direct_samples[0].present)))
                     {
                         target_probes[target_probe_count] = .{
                             .row = row,
                             .col_start = row_col_min,
                             .col_end = row_col_max,
                             .column_present = true,
-                            .column_col = if (row_bg_summary.second_sample.present)
+                            .column_col = if (cursor_probe_candidate)
+                                cursor_probe_col
+                            else if (row_bg_summary.second_sample.present)
                                 row_bg_summary.second_sample.col
+                            else if (row_direct_samples[1].present)
+                                row_direct_samples[1].col
                             else
-                                row_direct_samples[1].col,
-                            .column_row_start = if (row > 0) row - 1 else row,
-                            .column_row_end = @min(rows - 1, row + 1),
+                                row_direct_samples[0].col,
+                            .column_row_start = if (cursor_probe_candidate)
+                                cursor_probe_row_start
+                            else if (row > 0)
+                                row - 1
+                            else
+                                row,
+                            .column_row_end = if (cursor_probe_candidate)
+                                cursor_probe_row_end
+                            else
+                                @min(rows - 1, row + 1),
                             .bg2_present = row_bg_summary.second_sample.present,
                             .bg2_col = row_bg_summary.second_sample.col,
                             .bg2_codepoint = row_bg_summary.second_sample.codepoint,
                             .bg2_expected = row_bg_summary.second_sample.resolved_bg,
                             .direct_samples = row_direct_samples,
                         };
-                        if (target_sample_log.enabled_file or target_sample_log.enabled_console) {
-                            logTargetProbePhase(r, target_sample_log, .bg, &target_probes[target_probe_count], 0, 0, cell_w_i, cell_h_i);
-                        }
                         if (row_render_log.enabled_file or row_render_log.enabled_console) {
                             logTargetProbePhase(r, row_render_log, .bg, &target_probes[target_probe_count], 0, 0, cell_w_i, cell_h_i);
+                        }
+                        if (target_sample_log.enabled_file or target_sample_log.enabled_console) {
+                            logTargetProbePhase(r, SilentTargetProbeLogger{}, .bg, &target_probes[target_probe_count], 0, 0, cell_w_i, cell_h_i);
                         }
                         target_probe_count += 1;
                     }
                     if ((row_render_log.enabled_file or row_render_log.enabled_console) and row_span_count > 0) {
-                        const row_width = if (row_col_min < cols and row_col_max >= row_col_min) row_col_max - row_col_min + 1 else 0;
                         if (row_width >= cols / 2 or row == cursor.row) {
-                            const row_shaped_total = glyph_draw_stats.shaped_glyphs - before_stats.shaped_glyphs;
-                            const row_direct_text = glyph_draw_stats.direct_text_glyphs - before_stats.direct_text_glyphs;
-                            const row_special = glyph_draw_stats.special_sprite_glyphs - before_stats.special_sprite_glyphs;
-                            const row_box = glyph_draw_stats.box_glyphs - before_stats.box_glyphs;
-                            const row_shaped_text = glyph_draw_stats.shaped_text_glyphs - before_stats.shaped_text_glyphs;
-                            const row_fallback = glyph_draw_stats.fallback_cells - before_stats.fallback_cells;
                             row_render_log.logf(
                                 .info,
                                 "row={d} cols={d}..{d} width={d} spans={d} bg_runs={d} bg1={d}..{d}@{d}:{d}:{d} bg2={d}..{d}@{d}:{d}:{d} bg3={d}..{d}@{d}:{d}:{d} glyph_total={d} direct_text={d} shaped_text={d} special={d} box={d} fallback={d} direct_draw_ms={d:.2} special_lookup_ms={d:.2} special_submit_ms={d:.2} box_submit_ms={d:.2}",
@@ -1260,12 +1433,15 @@ pub fn drawPrepared(
                         }
                     }
                 }
+                if (target_sample_log.enabled_file or target_sample_log.enabled_console) {
+                    appendFixedCursorNeighborhoodProbes(&target_probes, &target_probe_count, view_cells, rows, cols, probe_cursor, screen_reverse);
+                }
                 r.flushTerminalGlyphBatch();
                 if (target_probe_count > 0) {
                     var probe_idx: usize = 0;
                     while (probe_idx < target_probe_count) : (probe_idx += 1) {
                         if (target_sample_log.enabled_file or target_sample_log.enabled_console) {
-                            logTargetProbePhase(r, target_sample_log, .glyph, &target_probes[probe_idx], 0, 0, cell_w_i, cell_h_i);
+                            logTargetProbePhase(r, SilentTargetProbeLogger{}, .glyph, &target_probes[probe_idx], 0, 0, cell_w_i, cell_h_i);
                         }
                         if (row_render_log.enabled_file or row_render_log.enabled_console) {
                             logTargetProbePhase(r, row_render_log, .glyph, &target_probes[probe_idx], 0, 0, cell_w_i, cell_h_i);
@@ -1284,6 +1460,22 @@ pub fn drawPrepared(
                 self.kitty.last_generation = kitty_generation;
             }
             self.terminal_texture_ready = true;
+            if (handoff_log.enabled_file or handoff_log.enabled_console) {
+                handoff_log.logf(
+                    .info,
+                    "stage=widget_commit sid={x} last_render={d}->{d} cur={d} pub={d} presented={d} full={d} partial={d}",
+                    .{
+                        @intFromPtr(self.session),
+                        self.last_render_generation,
+                        cache.generation,
+                        self.session.currentGeneration(),
+                        self.session.publishedGeneration(),
+                        self.session.presentedGeneration(),
+                        @intFromBool(texture_full_update),
+                        @intFromBool(texture_partial_update),
+                    },
+                );
+            }
             self.last_render_generation = cache.generation;
             self.last_cell_w_i = cell_w_i;
             self.last_cell_h_i = cell_h_i;
@@ -1325,9 +1517,9 @@ pub fn drawPrepared(
             var probe_idx: usize = 0;
             while (probe_idx < target_probe_count) : (probe_idx += 1) {
                 if (target_sample_log.enabled_file or target_sample_log.enabled_console) {
-                    logTargetProbePhase(r, target_sample_log, .window, &target_probes[probe_idx], base_x, base_y, cell_w_i, cell_h_i);
-                    logTargetProbeBandPhase(r, target_sample_log, .window, &target_probes[probe_idx], base_x, base_y, cell_w_i, cell_h_i);
-                    logTargetProbeColumnBandPhase(r, target_sample_log, .window, &target_probes[probe_idx], base_x, base_y, cell_w_i, cell_h_i, rows);
+                    logTargetProbePhase(r, SilentTargetProbeLogger{}, .window, &target_probes[probe_idx], base_x, base_y, cell_w_i, cell_h_i);
+                    logTargetProbeBandPhase(r, SilentTargetProbeLogger{}, .window, &target_probes[probe_idx], base_x, base_y, cell_w_i, cell_h_i);
+                    logTargetProbeColumnBandPhase(r, SilentTargetProbeLogger{}, .window, &target_probes[probe_idx], base_x, base_y, cell_w_i, cell_h_i, rows);
                 }
                 if (row_render_log.enabled_file or row_render_log.enabled_console) {
                     logTargetProbePhase(r, row_render_log, .window, &target_probes[probe_idx], base_x, base_y, cell_w_i, cell_h_i);
@@ -1397,9 +1589,9 @@ pub fn drawPrepared(
         var probe_idx: usize = 0;
         while (probe_idx < target_probe_count) : (probe_idx += 1) {
             if (target_sample_log.enabled_file or target_sample_log.enabled_console) {
-                logTargetProbePhase(r, target_sample_log, .final, &target_probes[probe_idx], base_x, base_y, cell_w_i, cell_h_i);
-                logTargetProbeBandPhase(r, target_sample_log, .final, &target_probes[probe_idx], base_x, base_y, cell_w_i, cell_h_i);
-                logTargetProbeColumnBandPhase(r, target_sample_log, .final, &target_probes[probe_idx], base_x, base_y, cell_w_i, cell_h_i, rows);
+                logTargetProbePhase(r, SilentTargetProbeLogger{}, .final, &target_probes[probe_idx], base_x, base_y, cell_w_i, cell_h_i);
+                logTargetProbeBandPhase(r, SilentTargetProbeLogger{}, .final, &target_probes[probe_idx], base_x, base_y, cell_w_i, cell_h_i);
+                logTargetProbeColumnBandPhase(r, SilentTargetProbeLogger{}, .final, &target_probes[probe_idx], base_x, base_y, cell_w_i, cell_h_i, rows);
             }
             if (row_render_log.enabled_file or row_render_log.enabled_console) {
                 logTargetProbePhase(r, row_render_log, .final, &target_probes[probe_idx], base_x, base_y, cell_w_i, cell_h_i);

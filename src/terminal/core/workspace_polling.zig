@@ -1,4 +1,5 @@
 const std = @import("std");
+const app_logger = @import("../../app_logger.zig");
 
 pub fn pollBudgeted(self: anytype, input_active_index: ?usize, policy: anytype) !bool {
     const count = self.tabs.items.len;
@@ -119,20 +120,72 @@ pub fn pollBudgeted(self: anytype, input_active_index: ?usize, policy: anytype) 
 }
 
 pub fn pollForFrame(self: anytype, input_active_index: ?usize, policy: anytype) !@TypeOf(self.*).PollFrameResult {
+    const wake_log = app_logger.logger("terminal.wake");
     const count = self.tabs.items.len;
     const active_idx = normalizeIndex(input_active_index, count);
+    const session_ptr = if (active_idx) |idx|
+        @intFromPtr(self.tabs.items[idx].session)
+    else
+        0;
+    const current_pre = if (active_idx) |idx|
+        self.tabs.items[idx].session.currentGeneration()
+    else
+        0;
     const published_pre = if (active_idx) |idx|
         self.tabs.items[idx].session.publishedGeneration()
     else
         0;
+    const presented_pre = if (active_idx) |idx|
+        self.tabs.items[idx].session.presentedGeneration()
+    else
+        0;
+    const active_has_data_pre = if (active_idx) |idx|
+        self.tabs.items[idx].session.hasData()
+    else
+        false;
     const any_polled = try pollBudgeted(self, input_active_index, policy);
+    const current_post = if (active_idx) |idx|
+        self.tabs.items[idx].session.currentGeneration()
+    else
+        0;
     const published_post = if (active_idx) |idx|
         self.tabs.items[idx].session.publishedGeneration()
     else
         0;
+    const presented_post = if (active_idx) |idx|
+        self.tabs.items[idx].session.presentedGeneration()
+    else
+        0;
+    const active_has_data_post = if (active_idx) |idx|
+        self.tabs.items[idx].session.hasData()
+    else
+        false;
+    const active_published_changed = published_post != published_pre;
+    if (wake_log.enabled_file or wake_log.enabled_console) {
+        wake_log.logf(
+            .info,
+            "stage=workspace_poll sid={x} tabs={d} active_idx={d} has_input={d} any_polled={d} active_has_data={d}->{d} cur={d}->{d} published_changed={d} pub={d}->{d} presented={d}->{d}",
+            .{
+                session_ptr,
+                count,
+                if (active_idx) |idx| idx else std.math.maxInt(usize),
+                @intFromBool(policy.has_input),
+                @intFromBool(any_polled),
+                @intFromBool(active_has_data_pre),
+                @intFromBool(active_has_data_post),
+                current_pre,
+                current_post,
+                @intFromBool(active_published_changed),
+                published_pre,
+                published_post,
+                presented_pre,
+                presented_post,
+            },
+        );
+    }
     return @TypeOf(self.*).PollFrameResult{
         .any_polled = any_polled,
-        .active_published_changed = published_post != published_pre,
+        .active_published_changed = active_published_changed,
     };
 }
 

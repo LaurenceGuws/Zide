@@ -55,18 +55,46 @@ pub fn clearPublishedDamageIfGeneration(self: anytype, expected_generation: u64,
 }
 
 pub fn notePresentedGeneration(self: anytype, generation: u64) void {
+    const log = app_logger.logger("terminal.generation_handoff");
     var current = self.presented_generation.load(.acquire);
     while (generation > current) {
-        current = self.presented_generation.cmpxchgWeak(current, generation, .acq_rel, .acquire) orelse return;
+        current = self.presented_generation.cmpxchgWeak(current, generation, .acq_rel, .acquire) orelse {
+            if (log.enabled_file or log.enabled_console) {
+                log.logf(
+                    .info,
+                    "stage=note_presented sid={x} presented={d}->{d}",
+                    .{ @intFromPtr(self), current, generation },
+                );
+            }
+            return;
+        };
     }
 }
 
 pub fn acknowledgePresentedGeneration(self: anytype, generation: u64) bool {
+    const log = app_logger.logger("terminal.generation_handoff");
     notePresentedGeneration(self, generation);
-    if (renderCacheSyncUpdatesActiveForGeneration(self, generation)) {
-        return clearPublishedDamageIfGeneration(self, generation, false);
+    const sync_updates_active = renderCacheSyncUpdatesActiveForGeneration(self, generation);
+    const cleared = if (sync_updates_active)
+        clearPublishedDamageIfGeneration(self, generation, false)
+    else
+        clearPublishedDamageIfGeneration(self, generation, true);
+    if (log.enabled_file or log.enabled_console) {
+        log.logf(
+            .info,
+            "stage=ack_presented sid={x} generation={d} cleared={d} sync_updates={d} cur={d} pub={d} presented={d}",
+            .{
+                @intFromPtr(self),
+                generation,
+                @intFromBool(cleared),
+                @intFromBool(sync_updates_active),
+                self.output_generation.load(.acquire),
+                self.publishedGeneration(),
+                self.presented_generation.load(.acquire),
+            },
+        );
     }
-    return clearPublishedDamageIfGeneration(self, generation, true);
+    return cleared;
 }
 
 fn renderCacheSyncUpdatesActiveForGeneration(self: anytype, generation: u64) bool {

@@ -129,7 +129,7 @@ pub fn parseThreadMain(session: anytype) void {
             if (session.parse_bytes_since_publish > 0 and pending_offset == null) {
                 const publish_lock_start_ns = std.time.nanoTimestamp();
                 session.state_mutex.lock();
-                @import("view_cache.zig").updateViewCacheNoLock(session, session.output_generation.load(.acquire), session.core.history.scrollOffset());
+                @import("view_cache.zig").updateViewCacheNoLockTagged(session, session.output_generation.load(.acquire), session.core.history.scrollOffset(), "parse_thread_idle_publish");
                 session.state_mutex.unlock();
                 _ = std.time.nanoTimestamp() - publish_lock_start_ns;
                 session.parse_publishes_since_log += 1;
@@ -140,7 +140,7 @@ pub fn parseThreadMain(session: anytype) void {
             }
             if (pending_offset) |offset| {
                 session.state_mutex.lock();
-                @import("view_cache.zig").updateViewCacheNoLock(session, session.output_generation.load(.acquire), offset);
+                @import("view_cache.zig").updateViewCacheNoLockTagged(session, session.output_generation.load(.acquire), offset, "parse_thread_pending_offset");
                 session.state_mutex.unlock();
             }
             continue;
@@ -234,7 +234,7 @@ pub fn parseThreadMain(session: anytype) void {
                     const target_offset = pending_offset orelse session.core.history.scrollOffset();
                     const publish_lock_start_ns = std.time.nanoTimestamp();
                     session.state_mutex.lock();
-                    @import("view_cache.zig").updateViewCacheNoLock(session, session.output_generation.load(.acquire), target_offset);
+                    @import("view_cache.zig").updateViewCacheNoLockTagged(session, session.output_generation.load(.acquire), target_offset, "parse_thread_publish");
                     session.state_mutex.unlock();
                     publish_lock_hold_ns += std.time.nanoTimestamp() - publish_lock_start_ns;
                     session.parse_publishes_since_log += 1;
