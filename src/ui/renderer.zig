@@ -448,6 +448,35 @@ const SceneTargetState = struct {
     ready: bool = false,
 };
 
+fn logSceneTargetState(
+    logger: app_logger.Logger,
+    event: []const u8,
+    contract: SceneTargetContract,
+    invalidation: SceneTargetInvalidation,
+    ready: bool,
+) void {
+    if (!(logger.enabled_console or logger.enabled_file)) return;
+    logger.logf(
+        .info,
+        "event={s} ready={d} logical={d}x{d} drawable={d}x{d} display={d} render_scale={d:.3} invalidation=uninitialized:{d},drawable_resize:{d},display_change:{d},render_scale_change:{d},target_recreate_failure:{d}",
+        .{
+            event,
+            @intFromBool(ready),
+            contract.logical_width,
+            contract.logical_height,
+            contract.drawable_width,
+            contract.drawable_height,
+            contract.display_index,
+            contract.render_scale,
+            @intFromBool(invalidation.uninitialized),
+            @intFromBool(invalidation.drawable_resize),
+            @intFromBool(invalidation.display_change),
+            @intFromBool(invalidation.render_scale_change),
+            @intFromBool(invalidation.target_recreate_failure),
+        },
+    );
+}
+
 pub const Renderer = struct {
     pub const SelectionOverlayStyle = struct {
         smooth_enabled: bool = true,
@@ -1213,6 +1242,7 @@ pub const Renderer = struct {
     }
 
     fn refreshSceneTargetContract(self: *Renderer) void {
+        const log = app_logger.logger("renderer.scene_target");
         const next = self.sceneTargetContractSnapshot();
         var reasons: SceneTargetInvalidation = .{};
         const previous = self.scene_target.contract;
@@ -1242,16 +1272,31 @@ pub const Renderer = struct {
         if (self.scene_target.target != null) {
             self.destroyRenderTarget(&self.scene_target.target);
         }
+        logSceneTargetState(log, "invalidate", self.scene_target.contract, self.scene_target.invalidation, self.scene_target.ready);
     }
 
     fn noteSceneTargetRecreateFailure(self: *Renderer) void {
         self.scene_target.invalidation.target_recreate_failure = true;
         self.scene_target.ready = false;
+        logSceneTargetState(
+            app_logger.logger("renderer.scene_target"),
+            "recreate_failed",
+            self.scene_target.contract,
+            self.scene_target.invalidation,
+            self.scene_target.ready,
+        );
     }
 
     fn clearSceneTargetInvalidation(self: *Renderer) void {
         self.scene_target.invalidation = .{};
         self.scene_target.ready = true;
+        logSceneTargetState(
+            app_logger.logger("renderer.scene_target"),
+            "ready",
+            self.scene_target.contract,
+            self.scene_target.invalidation,
+            self.scene_target.ready,
+        );
     }
 
     fn ensureSceneTarget(self: *Renderer, filter: i32) bool {
