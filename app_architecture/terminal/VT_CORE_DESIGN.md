@@ -422,6 +422,9 @@ So the next decisive live probe is now `terminal.ui.target_sample`:
     - startup now logs the realized SDL GL context attributes after creation,
       so Wayland runs can be compared against the actual negotiated context
       rather than only the requested one
+    - the latest live Wayland run now reports `doublebuffer=0` on that
+      realized context, which is a direct warning against assuming the default
+      framebuffer behaves like the double-buffered surface we requested
   - local upstream docs are now staged for agentic use too:
     - official Khronos EGL/OpenGL refpages mirrored under
       `reference_repos/rendering/khronos_refpages_md`
@@ -431,6 +434,22 @@ So the next decisive live probe is now `terminal.ui.target_sample`:
       `reference_repos/rendering/egl_registry`, and
       `reference_repos/rendering/opengl_registry`
     - reproducible fetch path: `scripts/setup_khronos_refpages_md.sh`
+    - the most important local contract finding from those refs so far is that
+      `eglSwapBuffers` leaves the color buffer undefined unless
+      `EGL_SWAP_BEHAVIOR == EGL_BUFFER_PRESERVED`; post-swap reads are useful
+      probes, but not proof of preserved-buffer semantics on Wayland/EGL
+    - SDL’s own local docs also show the next honest introspection path exists
+      without leaving SDL:
+      - `SDL_EGL_GetCurrentDisplay`
+      - `SDL_EGL_GetCurrentConfig`
+      - `SDL_EGL_GetWindowSurface`
+      - `SDL_GetWindowProperties` for Wayland/EGL window handles
+    - that introspection cut is now live in startup too:
+      - `sdl.window` emits `event=wayland_handles ...`
+      - `sdl.gl` emits `SDL EGL contract ...`
+      - the current log includes queried `EGL_RENDER_BUFFER`,
+        `EGL_SWAP_BEHAVIOR`, `EGL_SURFACE_TYPE`, `EGL_CONFIG_ID`, surface
+        `width/height`, and EGL `vendor/version/client_apis`
   - suspicious frames now also emit `event=present_gl_state`, which records
     pre/post default-framebuffer GL state (`READ_BUFFER`, `DRAW_BUFFER`, and
     framebuffer bindings) around `SDL_GL_SwapWindow`
@@ -471,6 +490,13 @@ So the next decisive live probe is now `terminal.ui.target_sample`:
   classification because it produces a different broken lane before swap, so
   the next honest classifier should stay on the direct-default path and vary
   only the swap boundary itself
+- the next step is now narrower than another broad swap matrix:
+  - inspect the new startup EGL contract log on the active Wayland path
+  - specifically: reconcile the realized `doublebuffer=0` report against the
+    queried `EGL_RENDER_BUFFER`, `EGL_SWAP_BEHAVIOR`, `EGL_SURFACE_TYPE`, and
+    whether the chosen config even advertises preserved-swap support
+  - only after that decide whether the durable renderer fix should abandon any
+    dependence on default-framebuffer preservation semantics
 - the latest direct-default swap A/B already sharpened that further:
   - `finish_before_swap` and `finish_before_and_after_swap` did not materially
     improve the surviving old scrolling ghost

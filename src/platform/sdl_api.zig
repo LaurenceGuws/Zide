@@ -164,6 +164,11 @@ pub fn quit() void {
 }
 
 pub const GlAttr = c.SDL_GLAttr;
+pub const PropertiesId = c.SDL_PropertiesID;
+pub const EglDisplay = c.SDL_EGLDisplay;
+pub const EglConfig = c.SDL_EGLConfig;
+pub const EglSurface = c.SDL_EGLSurface;
+pub const FunctionPointer = c.SDL_FunctionPointer;
 
 pub fn glSetAttribute(attr: GlAttr, value: c_int) bool {
     return c.SDL_GL_SetAttribute(attr, value);
@@ -184,6 +189,16 @@ pub fn createWindow(title: [*:0]const u8, width: c_int, height: c_int) ?*c.SDL_W
 
 pub fn destroyWindow(window: *c.SDL_Window) void {
     c.SDL_DestroyWindow(window);
+}
+
+pub fn getWindowProperties(window: *c.SDL_Window) ?PropertiesId {
+    const props = c.SDL_GetWindowProperties(window);
+    if (props == 0) return null;
+    return props;
+}
+
+pub fn getPointerProperty(props: PropertiesId, name: [*:0]const u8) ?*anyopaque {
+    return c.SDL_GetPointerProperty(props, name, null);
 }
 
 pub fn glCreateContext(window: *c.SDL_Window) ?c.SDL_GLContext {
@@ -380,6 +395,22 @@ pub fn glSetSwapInterval(interval: c_int) bool {
 
 pub fn glSwapWindow(window: *c.SDL_Window) bool {
     return c.SDL_GL_SwapWindow(window);
+}
+
+pub fn eglGetCurrentDisplay() ?EglDisplay {
+    return c.SDL_EGL_GetCurrentDisplay();
+}
+
+pub fn eglGetCurrentConfig() ?EglConfig {
+    return c.SDL_EGL_GetCurrentConfig();
+}
+
+pub fn eglGetWindowSurface(window: *c.SDL_Window) ?EglSurface {
+    return c.SDL_EGL_GetWindowSurface(window);
+}
+
+pub fn eglGetProcAddress(proc: [*:0]const u8) ?FunctionPointer {
+    return c.SDL_EGL_GetProcAddress(proc);
 }
 
 pub fn displayModeRefreshHz(mode: *const c.SDL_DisplayMode) i32 {

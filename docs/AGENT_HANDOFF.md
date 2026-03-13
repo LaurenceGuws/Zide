@@ -51,15 +51,27 @@
     - SDL setup/swap validation is now less blind:
       - `SDL_GL_SetAttribute`, `SDL_GL_MakeCurrent`, `SDL_GL_SetSwapInterval`, and `SDL_GL_SwapWindow` no longer silently discard boolean failure
       - startup now logs the realized SDL GL context attributes (`major/minor/profile/doublebuffer/color/depth/stencil/swap_interval`) so Wayland runs can be compared against what SDL actually negotiated
+      - latest live Wayland log now reports `doublebuffer=0` on the realized context, which is a red flag against our current front/back/default-framebuffer assumptions
+      - startup now also logs the native Wayland handles (`event=wayland_handles` on `sdl.window`) plus the actual queried EGL surface/config contract (`SDL EGL contract ...` on `sdl.gl`)
     - local upstream docs/references for the present seam are now staged too:
       - official Khronos refpages mirrored as markdown under `reference_repos/rendering/khronos_refpages_md`
       - official upstream repos cloned under `reference_repos/backends/wayland`, `reference_repos/backends/wayland_protocols`, `reference_repos/rendering/egl_registry`, and `reference_repos/rendering/opengl_registry`
       - reproducible mirror script: `scripts/setup_khronos_refpages_md.sh`
+      - the most relevant local contract finding so far is from `eglSwapBuffers`: post-swap color is undefined unless `EGL_SWAP_BEHAVIOR == EGL_BUFFER_PRESERVED`, so our post-swap default-framebuffer reads are probes, not preservation authority
+      - SDL’s local docs also show the next direct introspection path exists without leaving SDL:
+        - `SDL_EGL_GetCurrentDisplay`
+        - `SDL_EGL_GetCurrentConfig`
+        - `SDL_EGL_GetWindowSurface`
+        - `SDL_GetWindowProperties` for Wayland/EGL window handles
     - current focused probe for that lane is now inside `copy_back_to_front` itself:
       - `pre_fallback_back` / `pre_fallback_front` are captured before the explicit back-to-front blit
       - the existing `pre_swap_back` / `pre_swap_front` captures are after that blit but still before swap
       - so the next `copy_back_to_front` run can finally answer what the explicit blit changed on the same sampled cells/bands
     - that is the strongest current proof that the remaining old scrolling ghost is on the swap / Wayland presentation side, not in backend publication or pre-swap renderer consumption
+    - next investigation step is now more concrete than “more swap A/B”:
+      - inspect the new startup EGL contract log on the failing Wayland run
+      - at minimum, reconcile `doublebuffer=0` against the queried `EGL_RENDER_BUFFER`, `EGL_SWAP_BEHAVIOR`, `EGL_SURFACE_TYPE`, and `EGL_CONFIG_ID`
+      - only after that decide whether the long-term fix should stop depending on default-framebuffer preservation semantics entirely
   - next cut should stay on `terminal.ui.target_sample` only and focus on the present seam, because the broader row/glyph probes are now just perturbing timing and the current target probe has already been trimmed to suspicious frames only
   - define a real VT core below `TerminalSession`
   - keep FFI first-class and host-agnostic
