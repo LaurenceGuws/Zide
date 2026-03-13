@@ -11,6 +11,7 @@
   - brief: `app_architecture/terminal/WAYLAND_PRESENT_DESIGN_BRIEF.md`
   - topic ledger: `app_architecture/terminal/WAYLAND_PRESENT_RESEARCH_TOPICS.md`
   - consolidated writeup: `app_architecture/terminal/WAYLAND_PRESENT_TECHNICAL_WRITEUP.md`
+  - implementation plan: `app_architecture/terminal/WAYLAND_PRESENT_IMPLEMENTATION_PLAN.md`
   - supporting reports: `app_architecture/terminal/research/wayland_present/`
 - Current present-path conclusion:
   - the surviving Wayland ghost lane is on the swap/present seam, not terminal publication ownership or pre-swap renderer content generation
@@ -19,7 +20,7 @@
     - keep narrow retained widget-local targets where they pay off, especially terminal textures
     - add a renderer-owned authoritative scene target
     - treat the default framebuffer as a one-frame present sink only
-- Immediate next task on `main` should be implementation planning from the writeup, not more broad war-room probing.
+- Immediate next task on `main` should follow `WAYLAND_PRESENT_IMPLEMENTATION_PLAN.md`, starting with the renderer-owned scene-target lifecycle boundary before changing active composition semantics.
 - Define a real VT core below `TerminalSession`.
 - Keep FFI first-class and host-agnostic.
 - Make PTY one transport implementation, not the architectural center.
