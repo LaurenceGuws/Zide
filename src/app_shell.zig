@@ -252,8 +252,8 @@ pub const Shell = struct {
         self.renderer.beginFrame();
     }
 
-    pub fn endFrame(self: *Shell) void {
-        self.renderer.endFrame();
+    pub fn endFrame(self: *Shell) bool {
+        return self.renderer.endFrame();
     }
 
     pub fn beginClip(self: *Shell, x: i32, y: i32, w: i32, h: i32) void {
