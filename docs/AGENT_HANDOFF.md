@@ -54,15 +54,21 @@
       - latest live Wayland log now reports `doublebuffer=0` on the realized context, which is a red flag against our current front/back/default-framebuffer assumptions
       - startup now also logs the native Wayland handles (`event=wayland_handles` on `sdl.window`) plus the actual queried EGL surface/config contract (`SDL EGL contract ...` on `sdl.gl`)
     - local upstream docs/references for the present seam are now staged too:
+      - SDL source repo cloned under `reference_repos/backends/sdl`
       - official Khronos refpages mirrored as markdown under `reference_repos/rendering/khronos_refpages_md`
+      - Mesa source/docs now cloned sparsely under `reference_repos/rendering/mesa`
       - official upstream repos cloned under `reference_repos/backends/wayland`, `reference_repos/backends/wayland_protocols`, `reference_repos/rendering/egl_registry`, and `reference_repos/rendering/opengl_registry`
       - reproducible mirror script: `scripts/setup_khronos_refpages_md.sh`
+      - reproducible repo sync script: `scripts/setup_reference_repos.sh`
       - the most relevant local contract finding so far is from `eglSwapBuffers`: post-swap color is undefined unless `EGL_SWAP_BEHAVIOR == EGL_BUFFER_PRESERVED`, so our post-swap default-framebuffer reads are probes, not preservation authority
       - SDL’s local docs also show the next direct introspection path exists without leaving SDL:
         - `SDL_EGL_GetCurrentDisplay`
         - `SDL_EGL_GetCurrentConfig`
         - `SDL_EGL_GetWindowSurface`
         - `SDL_GetWindowProperties` for Wayland/EGL window handles
+      - the local reference set is now sufficient to begin renderer-design work without another fetch pass:
+        - terminal-side architecture references: `ghostty`, `foot`, `kitty`, `wezterm`, `rio`
+        - backend/present-path authorities: SDL source, Mesa EGL tree, Wayland source/protocols, and the expanded Khronos EGL/OpenGL refpages
     - current focused probe for that lane is now inside `copy_back_to_front` itself:
       - `pre_fallback_back` / `pre_fallback_front` are captured before the explicit back-to-front blit
       - the existing `pre_swap_back` / `pre_swap_front` captures are after that blit but still before swap
