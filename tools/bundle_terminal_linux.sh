@@ -13,7 +13,8 @@ MODE="${4:-auto}"
 BIN_DIR="$OUT_DIR/bin"
 LIB_DIR="$OUT_DIR/lib"
 TERMINFO_DIR="$OUT_DIR/terminfo"
-LAUNCHER="$OUT_DIR/zide-terminal"
+LAUNCH_NAME="$(basename "$BIN_PATH")"
+LAUNCHER="$OUT_DIR/$LAUNCH_NAME"
 
 if [[ ! -f "$BIN_PATH" ]]; then
   echo "missing binary: $BIN_PATH" >&2
@@ -81,7 +82,7 @@ copy_assets_for_mode() {
 }
 
 mkdir -p "$BIN_DIR" "$LIB_DIR" "$TERMINFO_DIR"
-cp -f "$BIN_PATH" "$BIN_DIR/zide-terminal"
+cp -f "$BIN_PATH" "$BIN_DIR/$LAUNCH_NAME"
 copy_assets_for_mode "$ASSETS_DIR" "$OUT_DIR/assets" "$MODE"
 
 # Compile bundled zide terminfo (required for stable TERM=zide behavior).
@@ -122,7 +123,8 @@ cat > "$LAUNCHER" <<'EOF'
 set -euo pipefail
 SELF_DIR="$(dirname -- "$(readlink -f -- "$0")")"
 LAUNCH_CWD="${PWD:-$HOME}"
-RUNTIME_DIR="${XDG_STATE_HOME:-$HOME/.local/state}/zide-terminal"
+LAUNCH_NAME="$(basename -- "$0")"
+RUNTIME_DIR="${XDG_STATE_HOME:-$HOME/.local/state}/${LAUNCH_NAME}"
 export LD_LIBRARY_PATH="$SELF_DIR/lib${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
 export ZIDE_LAUNCH_CWD="$LAUNCH_CWD"
 
@@ -133,8 +135,8 @@ if [[ -f "$SELF_DIR/.zide.lua" ]]; then
 fi
 
 cd "$RUNTIME_DIR"
-exec "$SELF_DIR/bin/zide-terminal" "$@"
+exec "$SELF_DIR/bin/$LAUNCH_NAME" "$@"
 EOF
 chmod +x "$LAUNCHER"
 
-echo "bundled terminal at: $OUT_DIR (mode=$MODE)"
+echo "bundled app at: $OUT_DIR (mode=$MODE launcher=$LAUNCH_NAME)"
