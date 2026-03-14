@@ -215,6 +215,20 @@ Current bridge catch-up already landed:
 So the bridge now exposes the same basic host-facing semantics as the shared
 contract without leaking native renderer details.
 
+Lifecycle/latest-state policy:
+
+- `zide_terminal_metadata_acquire(...)` is the preferred latest-state summary
+  for:
+  - alive
+  - exit status presence/code
+  - title
+  - cwd
+  - scrollback counts
+- `zide_terminal_is_alive(...)` and `zide_terminal_child_exit_status(...)`
+  remain focused convenience helpers
+- hosts should not reconstruct lifecycle truth from multiple narrow calls when
+  `metadata_acquire(...)` already carries the same authoritative state
+
 Bridge policy decision:
 
 - `redraw_ready` stays wake-only

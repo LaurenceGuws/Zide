@@ -18,7 +18,7 @@ That means:
 - the bridge creates and owns the PTY/process when `start()` is called
 - the host does not supply file descriptors, pipes, or byte streams
 - the host drives progress by calling `poll()`
-- process liveness is exposed through `is_alive()` and child-exit events
+- process liveness is exposed through metadata, `is_alive()`, and child-exit events
 
 This matches the current `TerminalSession` architecture and keeps the first bridge small.
 
@@ -61,7 +61,9 @@ Relevant exported calls:
 - `zide_terminal_send_text(handle, ptr, len)`
 - `zide_terminal_send_key(handle, event)`
 - `zide_terminal_send_mouse(handle, event)`
+- `zide_terminal_metadata_acquire(handle, out_metadata)`
 - `zide_terminal_is_alive(handle)`
+- `zide_terminal_child_exit_status(handle, out_code, out_has_status)`
 
 ## Poll model
 
@@ -76,8 +78,10 @@ Expected host loop:
 1. start session
 2. send input if needed
 3. call `poll()` periodically
-4. acquire snapshot and/or drain events
-5. stop when `is_alive()` is false or the host is done
+4. acquire metadata/snapshot and/or drain events
+5. prefer metadata as the authoritative latest-state summary
+6. use `is_alive()` / `child_exit_status()` only as narrow focused helpers when needed
+7. stop when metadata or focused lifecycle helpers indicate the process is done, or the host is done
 
 ## Platform notes
 
