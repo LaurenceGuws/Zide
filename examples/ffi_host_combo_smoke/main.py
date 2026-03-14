@@ -113,6 +113,10 @@ def run_combo(terminal_lib_path: Path, editor_lib_path: Path) -> int:
             if editor_lib.zide_editor_text_alloc(editor_handle, ctypes.byref(text)) != STATUS_OK:
                 raise RuntimeError("editor text_alloc failed")
             try:
+                if text.abi_version != editor_lib.zide_editor_string_abi_version():
+                    raise RuntimeError(f"unexpected combo editor string abi_version: {text.abi_version}")
+                if text.struct_size != ctypes.sizeof(StringBuffer):
+                    raise RuntimeError(f"unexpected combo editor string struct_size: {text.struct_size}")
                 text_value = as_bytes(text.ptr, text.len).decode("utf-8", errors="replace")
             finally:
                 editor_lib.zide_editor_string_free(ctypes.byref(text))
