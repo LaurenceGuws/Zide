@@ -1,7 +1,6 @@
 const std = @import("std");
 const builtin = @import("builtin");
 const app_logger = @import("../../app_logger.zig");
-const pty_mod = @import("../io/pty.zig");
 const types = @import("../model/types.zig");
 const mouse_report = @import("mouse_report.zig");
 const key_encoding = @import("key_encoding.zig");
@@ -71,7 +70,7 @@ pub const InputState = struct {
         return self.mouse_mode_any or (self.mouse_mode_button and buttons_down);
     }
 
-    pub fn reportMouseEvent(self: *InputState, pty: *pty_mod.Pty, event: types.MouseEvent, rows: u16, cols: u16) !bool {
+    pub fn reportMouseEvent(self: *InputState, writer: anytype, event: types.MouseEvent, rows: u16, cols: u16) !bool {
         const log = app_logger.logger("terminal.input");
         if (!self.mouseTrackingActive()) return false;
         if (rows == 0 or cols == 0) return false;
@@ -120,7 +119,7 @@ pub const InputState = struct {
                 log.logf(.warning, "mouse sgr sequence format failed: {s}", .{@errorName(err)});
                 return false;
             };
-            _ = try pty.write(seq);
+            _ = try writer.write(seq);
         } else {
             var buf: [6]u8 = undefined;
             buf[0] = 0x1b;
@@ -129,7 +128,7 @@ pub const InputState = struct {
             buf[3] = @intCast(32 + code);
             buf[4] = mouse_report.mouseEncodeCoordX10(col);
             buf[5] = mouse_report.mouseEncodeCoordX10(row);
-            _ = try pty.write(buf[0..6]);
+            _ = try writer.write(buf[0..6]);
         }
 
         self.mouse_last_row = row;
@@ -159,10 +158,10 @@ pub const KeypadKey = enum {
     kp_equal,
 };
 
-pub fn sendKey(pty: *pty_mod.Pty, key: types.Key, mod: types.Modifier, key_mode_flags: u32) !bool {
-    if (sendKeyWithProtocol(pty, key, mod, key_mode_flags, .press)) return true;
+pub fn sendKey(writer: anytype, key: types.Key, mod: types.Modifier, key_mode_flags: u32) !bool {
+    if (sendKeyWithProtocol(writer, key, mod, key_mode_flags, .press)) return true;
     if (mod != types.VTERM_MOD_NONE) {
-        if (sendLegacyModifiedKey(pty, key, mod)) return true;
+        if (sendLegacyModifiedKey(writer, key, mod)) return true;
     }
     const seq = switch (key) {
         types.VTERM_KEY_ENTER => "\r",
@@ -182,88 +181,88 @@ pub fn sendKey(pty: *pty_mod.Pty, key: types.Key, mod: types.Modifier, key_mode_
         else => "",
     };
     if (seq.len > 0) {
-        _ = try pty.write(seq);
+        _ = try writer.write(seq);
     }
     return seq.len > 0;
 }
 
-pub fn sendKeyAction(pty: *pty_mod.Pty, key: types.Key, mod: types.Modifier, key_mode_flags: u32, action: KeyAction) !bool {
-    if (sendKeyWithProtocol(pty, key, mod, key_mode_flags, action)) return true;
+pub fn sendKeyAction(writer: anytype, key: types.Key, mod: types.Modifier, key_mode_flags: u32, action: KeyAction) !bool {
+    if (sendKeyWithProtocol(writer, key, mod, key_mode_flags, action)) return true;
     if (action == .release) return false;
-    return sendKey(pty, key, mod, key_mode_flags);
+    return sendKey(writer, key, mod, key_mode_flags);
 }
 
-pub fn sendKeyActionEvent(pty: *pty_mod.Pty, event: KeyInputEvent) !bool {
+pub fn sendKeyActionEvent(writer: anytype, event: KeyInputEvent) !bool {
     // Metadata is threaded through the input boundary for future kitty alternate-key parity work.
     _ = event.protocol;
-    return sendKeyAction(pty, event.key, event.mod, event.key_mode_flags, event.action);
+    return sendKeyAction(writer, event.key, event.mod, event.key_mode_flags, event.action);
 }
 
-pub fn sendKeypad(pty: *pty_mod.Pty, key: KeypadKey, mod: types.Modifier, app_keypad: bool, key_mode_flags: u32) !bool {
+pub fn sendKeypad(writer: anytype, key: KeypadKey, mod: types.Modifier, app_keypad: bool, key_mode_flags: u32) !bool {
     if (app_keypad and mod == types.VTERM_MOD_NONE) {
         if (keypad.keypadAppCode(key)) |code| {
             var buf: [3]u8 = undefined;
             buf[0] = 0x1b;
             buf[1] = 'O';
             buf[2] = code;
-            _ = try pty.write(buf[0..3]);
+            _ = try writer.write(buf[0..3]);
             return true;
         }
     }
     if (keypad.keypadChar(key)) |ch| {
-        return sendChar(pty, ch, mod, key_mode_flags);
+        return sendChar(writer, ch, mod, key_mode_flags);
     }
     return false;
 }
 
-pub fn sendChar(pty: *pty_mod.Pty, char: u32, mod: types.Modifier, key_mode_flags: u32) !bool {
-    return sendCharAction(pty, char, mod, key_mode_flags, .press);
+pub fn sendChar(writer: anytype, char: u32, mod: types.Modifier, key_mode_flags: u32) !bool {
+    return sendCharAction(writer, char, mod, key_mode_flags, .press);
 }
 
-pub fn sendCharAction(pty: *pty_mod.Pty, char: u32, mod: types.Modifier, key_mode_flags: u32, action: KeyAction) !bool {
+pub fn sendCharAction(writer: anytype, char: u32, mod: types.Modifier, key_mode_flags: u32, action: KeyAction) !bool {
     const log = app_logger.logger("terminal.input");
     if (char > 0x10FFFF or (char >= 0xD800 and char <= 0xDFFF)) return false;
-    if (sendCharWithProtocol(pty, char, mod, key_mode_flags, action)) return true;
+    if (sendCharWithProtocol(writer, char, mod, key_mode_flags, action)) return true;
     const report_all = (key_mode_flags & key_encoding.key_mode_report_all_event_types) != 0;
     if (!report_all and action == .release) return false;
     const report_text = (key_mode_flags & key_encoding.key_mode_report_text) != 0;
     if (!report_text and (mod & types.VTERM_MOD_CTRL) != 0) {
         if (ctrlChar(char)) |mapped| {
             if ((mod & types.VTERM_MOD_ALT) != 0) {
-                _ = try pty.write(&[_]u8{0x1b});
+                _ = try writer.write(&[_]u8{0x1b});
             }
-            _ = try pty.write(&[_]u8{mapped});
+            _ = try writer.write(&[_]u8{mapped});
             return true;
         }
     }
     if (!report_text and (mod & types.VTERM_MOD_ALT) != 0) {
-        _ = try pty.write(&[_]u8{0x1b});
+        _ = try writer.write(&[_]u8{0x1b});
     }
     var buf: [4]u8 = undefined;
     const len = std.unicode.utf8Encode(@intCast(char), &buf) catch |err| {
         log.logf(.warning, "utf8 encode char failed cp={d}: {s}", .{ char, @errorName(err) });
         return false;
     };
-    _ = try pty.write(buf[0..len]);
+    _ = try writer.write(buf[0..len]);
     return true;
 }
 
-pub fn sendCharActionEvent(pty: *pty_mod.Pty, event: CharInputEvent) !bool {
+pub fn sendCharActionEvent(writer: anytype, event: CharInputEvent) !bool {
     if (event.codepoint > 0x10FFFF or (event.codepoint >= 0xD800 and event.codepoint <= 0xDFFF)) return false;
     if (sendCharWithProtocolMeta(
-        pty,
+        writer,
         event.codepoint,
         event.mod,
         event.key_mode_flags,
         event.action,
         event.protocol.alternate,
     )) return true;
-    return sendCharAction(pty, event.codepoint, event.mod, event.key_mode_flags, event.action);
+    return sendCharAction(writer, event.codepoint, event.mod, event.key_mode_flags, event.action);
 }
 
-pub fn sendText(pty: *pty_mod.Pty, text: []const u8) !void {
+pub fn sendText(writer: anytype, text: []const u8) !void {
     if (text.len == 0) return;
-    _ = try pty.write(text);
+    _ = try writer.write(text);
 }
 
 fn ctrlChar(char: u32) ?u8 {
@@ -285,7 +284,7 @@ fn encodeModifier(mod: types.Modifier) u8 {
     return key_encoding.encodeModifier(mod);
 }
 
-fn sendCsiWithMod(pty: *pty_mod.Pty, prefix: []const u8, mod_code: u8, suffix: []const u8) bool {
+fn sendCsiWithMod(writer: anytype, prefix: []const u8, mod_code: u8, suffix: []const u8) bool {
     const log = app_logger.logger("terminal.input");
     var buf: [32]u8 = undefined;
     const seq = if (mod_code > 1)
@@ -298,32 +297,32 @@ fn sendCsiWithMod(pty: *pty_mod.Pty, prefix: []const u8, mod_code: u8, suffix: [
             log.logf(.warning, "CSI sequence format failed: {s}", .{@errorName(err)});
             return false;
         };
-    _ = pty.write(seq) catch |err| {
+    _ = writer.write(seq) catch |err| {
         log.logf(.warning, "CSI sequence write failed: {s}", .{@errorName(err)});
         return false;
     };
     return true;
 }
 
-fn sendLegacyModifiedKey(pty: *pty_mod.Pty, key: types.Key, mod: types.Modifier) bool {
+fn sendLegacyModifiedKey(writer: anytype, key: types.Key, mod: types.Modifier) bool {
     const mod_code = encodeModifier(mod);
     if (mod_code <= 1) return false;
     return switch (key) {
-        types.VTERM_KEY_UP => sendCsiWithMod(pty, "1", mod_code, "A"),
-        types.VTERM_KEY_DOWN => sendCsiWithMod(pty, "1", mod_code, "B"),
-        types.VTERM_KEY_RIGHT => sendCsiWithMod(pty, "1", mod_code, "C"),
-        types.VTERM_KEY_LEFT => sendCsiWithMod(pty, "1", mod_code, "D"),
-        types.VTERM_KEY_HOME => sendCsiWithMod(pty, "1", mod_code, "H"),
-        types.VTERM_KEY_END => sendCsiWithMod(pty, "1", mod_code, "F"),
-        types.VTERM_KEY_PAGEUP => sendCsiWithMod(pty, "5", mod_code, "~"),
-        types.VTERM_KEY_PAGEDOWN => sendCsiWithMod(pty, "6", mod_code, "~"),
-        types.VTERM_KEY_INS => sendCsiWithMod(pty, "2", mod_code, "~"),
-        types.VTERM_KEY_DEL => sendCsiWithMod(pty, "3", mod_code, "~"),
+        types.VTERM_KEY_UP => sendCsiWithMod(writer, "1", mod_code, "A"),
+        types.VTERM_KEY_DOWN => sendCsiWithMod(writer, "1", mod_code, "B"),
+        types.VTERM_KEY_RIGHT => sendCsiWithMod(writer, "1", mod_code, "C"),
+        types.VTERM_KEY_LEFT => sendCsiWithMod(writer, "1", mod_code, "D"),
+        types.VTERM_KEY_HOME => sendCsiWithMod(writer, "1", mod_code, "H"),
+        types.VTERM_KEY_END => sendCsiWithMod(writer, "1", mod_code, "F"),
+        types.VTERM_KEY_PAGEUP => sendCsiWithMod(writer, "5", mod_code, "~"),
+        types.VTERM_KEY_PAGEDOWN => sendCsiWithMod(writer, "6", mod_code, "~"),
+        types.VTERM_KEY_INS => sendCsiWithMod(writer, "2", mod_code, "~"),
+        types.VTERM_KEY_DEL => sendCsiWithMod(writer, "3", mod_code, "~"),
         else => false,
     };
 }
 
-fn sendKeyWithProtocol(pty: *pty_mod.Pty, key: types.Key, mod: types.Modifier, flags: u32, action: KeyAction) bool {
+fn sendKeyWithProtocol(writer: anytype, key: types.Key, mod: types.Modifier, flags: u32, action: KeyAction) bool {
     if (flags == 0) return false;
     if (!key_encoding.supportsKeyEncoding(flags)) return false;
 
@@ -337,15 +336,15 @@ fn sendKeyWithProtocol(pty: *pty_mod.Pty, key: types.Key, mod: types.Modifier, f
     if (!report_all and action == .release) return false;
 
     const mapping = key_encoding.kittyFunctionKeyMapping(key) orelse return false;
-    return key_encoding.sendKittyFunctionKey(pty, mapping.number, mapping.trailer, mod, action, flags);
+    return key_encoding.sendKittyFunctionKey(writer, mapping.number, mapping.trailer, mod, action, flags);
 }
 
-fn sendCharWithProtocol(pty: *pty_mod.Pty, char: u32, mod: types.Modifier, flags: u32, action: KeyAction) bool {
-    return sendCharWithProtocolMeta(pty, char, mod, flags, action, null);
+fn sendCharWithProtocol(writer: anytype, char: u32, mod: types.Modifier, flags: u32, action: KeyAction) bool {
+    return sendCharWithProtocolMeta(writer, char, mod, flags, action, null);
 }
 
 fn sendCharWithProtocolMeta(
-    pty: *pty_mod.Pty,
+    writer: anytype,
     char: u32,
     mod: types.Modifier,
     flags: u32,
@@ -434,7 +433,7 @@ fn sendCharWithProtocolMeta(
     }
     buf[pos] = 'u';
     pos += 1;
-    _ = pty.write(buf[0..pos]) catch |err| {
+    _ = writer.write(buf[0..pos]) catch |err| {
         log.logf(.warning, "kitty protocol sequence write failed: {s}", .{@errorName(err)});
         return false;
     };
@@ -901,4 +900,54 @@ fn debugAccessAllowed() bool {
     if (builtin.is_test) return true;
     const root = @import("root");
     return @hasDecl(root, "terminal_replay_enabled") and root.terminal_replay_enabled;
+}
+
+const FakeWriter = struct {
+    buffer: std.ArrayList(u8),
+
+    fn init(_: std.mem.Allocator) FakeWriter {
+        return .{ .buffer = .empty };
+    }
+
+    fn deinit(self: *FakeWriter, allocator: std.mem.Allocator) void {
+        self.buffer.deinit(allocator);
+    }
+
+    fn write(self: *FakeWriter, bytes: []const u8) !usize {
+        try self.buffer.appendSlice(std.testing.allocator, bytes);
+        return bytes.len;
+    }
+};
+
+test "sendKeyAction uses generic writer for legacy modified keys" {
+    var writer = FakeWriter.init(std.testing.allocator);
+    defer writer.deinit(std.testing.allocator);
+
+    try std.testing.expect(try sendKeyAction(
+        &writer,
+        types.VTERM_KEY_UP,
+        types.VTERM_MOD_ALT,
+        0,
+        .press,
+    ));
+    try std.testing.expectEqualStrings("\x1b[1;3A", writer.buffer.items);
+}
+
+test "reportMouseEvent uses generic writer for sgr mouse mode" {
+    var writer = FakeWriter.init(std.testing.allocator);
+    defer writer.deinit(std.testing.allocator);
+
+    var input = InputState.init();
+    input.mouse_mode_button = true;
+    input.mouse_mode_sgr = true;
+
+    try std.testing.expect(try input.reportMouseEvent(&writer, .{
+        .kind = .press,
+        .button = .left,
+        .row = 4,
+        .col = 2,
+        .mod = types.VTERM_MOD_SHIFT,
+        .buttons_down = 1,
+    }, 24, 80));
+    try std.testing.expectEqualStrings("\x1b[<4;3;5M", writer.buffer.items);
 }
