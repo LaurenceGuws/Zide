@@ -78,10 +78,12 @@ Expected host loop:
 1. start session
 2. send input if needed
 3. call `poll()` periodically
-4. acquire metadata/snapshot and/or drain events
-5. prefer metadata as the authoritative latest-state summary
-6. use `is_alive()` / `child_exit_status()` only as narrow focused helpers when needed
-7. stop when metadata or focused lifecycle helpers indicate the process is done, or the host is done
+4. if visible work is expected, query `zide_terminal_redraw_state(...)`
+5. when redraw is pending, acquire a snapshot and acknowledge it with `present_ack(...)`
+6. use `metadata_acquire(...)` as the authoritative latest-state summary
+7. drain events for discrete change boundaries
+8. use `is_alive()` / `child_exit_status()` only as narrow focused helpers when needed
+9. stop when metadata or focused lifecycle helpers indicate the process is done, or the host is done
 
 ## Platform notes
 
@@ -187,7 +189,7 @@ But it is not part of milestone 1.
 
 A future out-of-process model may still reuse the same high-level contracts:
 - poll or drain output
-- acquire snapshot
+- query redraw truth, acquire snapshot, acknowledge presentation
 - drain events
 - resize and send input
 
@@ -212,5 +214,5 @@ The next PTY-hosting step should be a dedicated bridge slice:
 
 Current status:
 - the base `ctypes` smoke remains non-PTY and is the stable contract authority
-- a separate opt-in PTY smoke may start `/bin/sh`, send bytes, poll, inspect snapshots, and observe child-exit behavior
+- a separate opt-in PTY smoke may start `/bin/sh`, send bytes, poll, resolve the same redraw-state -> snapshot -> `present_ack(...)` cycle, and observe child-exit behavior
 - PTY smoke failures should not weaken the non-PTY ownership/lifetime contract
