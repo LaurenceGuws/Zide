@@ -136,7 +136,7 @@ terminal_ffi_bridge_todo:
             - "Cover title changes, cwd updates, clipboard requests/data, bell, process exit, link activation, dirty/resize notifications."
             - "Classify each event as pull-based, callback-based, or snapshot-derived."
             - "Milestone-1 queue ABI is now locked for title/cwd/clipboard_write/child_exit in `app_architecture/terminal/FFI_EVENT_ABI.md`."
-            - "Current catch-up gap is now explicit too: `alive_changed` / `redraw_ready` are implemented, but there is still no explicit host present acknowledgement or acknowledged-generation contract matching the stronger native renderer-owned submission boundary."
+            - "The event/action inventory is now aligned with the stronger native contract: `alive_changed` / `redraw_ready` stay in the event queue, while explicit host present acknowledgement and acknowledged-generation truth live in direct bridge calls/getters instead of the event stream."
 
     - name: "FFI-02 Snapshot and diff ABI"
       tasks:
