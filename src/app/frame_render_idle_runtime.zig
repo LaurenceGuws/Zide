@@ -71,7 +71,9 @@ pub fn handle(
         return;
     }
 
-    state.terminal_frame_pacing.recent_generation_followthrough_draws = 0;
+    if (!generation_recently_advanced) {
+        state.terminal_frame_pacing.recent_generation_followthrough_draws = 0;
+    }
     app_terminal_frame_pacing_runtime.noteIdle(state);
 
     if (input_batch.events.items.len > 0) {
