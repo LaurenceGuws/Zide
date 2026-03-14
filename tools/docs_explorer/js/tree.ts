@@ -1,7 +1,20 @@
 import { escapeHtml } from "./utils.js";
 
-function buildTreeModel(paths) {
-  const root = { name: "", path: "", dirs: new Map(), files: [] };
+type TreeFile = {
+  path: string;
+  label: string;
+  detail: string;
+};
+
+type TreeNode = {
+  name: string;
+  path: string;
+  dirs: Map<string, TreeNode>;
+  files: TreeFile[];
+};
+
+function buildTreeModel(paths: string[]): TreeNode {
+  const root: TreeNode = { name: "", path: "", dirs: new Map(), files: [] };
 
   for (const path of paths) {
     const parts = path.split("/");
@@ -26,7 +39,7 @@ function buildTreeModel(paths) {
             files: [],
           });
         }
-        node = node.dirs.get(part);
+        node = node.dirs.get(part)!;
       }
     }
   }
@@ -34,7 +47,7 @@ function buildTreeModel(paths) {
   return root;
 }
 
-function renderTreeNode(node, activePath) {
+function renderTreeNode(node: TreeNode, activePath: string): string {
   const dirEntries = Array.from(node.dirs.values()).sort((a, b) => a.name.localeCompare(b.name));
   const fileEntries = node.files.slice().sort((a, b) => a.path.localeCompare(b.path));
 
@@ -69,14 +82,14 @@ function renderTreeNode(node, activePath) {
   return dirList + fileList;
 }
 
-export function syncActiveLink(activePath) {
+export function syncActiveLink(activePath: string | null): void {
   const active = activePath || "";
-  document.querySelectorAll("[data-doc-link]").forEach((el) => {
+  document.querySelectorAll<HTMLElement>("[data-doc-link]").forEach((el) => {
     el.classList.toggle("active", el.getAttribute("data-doc-link") === active);
   });
 }
 
-export function buildTree(treeEl, docs, activePath, filter = "") {
+export function buildTree(treeEl: HTMLElement, docs: string[], activePath: string | null, filter = ""): void {
   const q = filter.trim().toLowerCase();
   const filtered = docs.filter((path) => q === "" || path.toLowerCase().includes(q));
   const model = buildTreeModel(filtered);

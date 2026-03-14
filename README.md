@@ -62,6 +62,9 @@ UI renderer roadmap:
 
 Local docs explorer:
 ```bash
+cd /home/home/personal/zide
+npm run build:docs-explorer
+
 cd tools/docs_explorer
 python3 docs_explorer.py
 ```

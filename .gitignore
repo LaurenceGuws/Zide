@@ -15,6 +15,7 @@ vendor/wayland-protocols/
 
 # Build artifacts
 build/
+/tools/docs_explorer/build/
 /dist/
 /releases/
 reference_repos
@@ -40,3 +41,6 @@ fixtures/editor/stress/
 # Local Python cache noise
 __pycache__/
 *.pyc
+
+# Local JS package installs
+node_modules/

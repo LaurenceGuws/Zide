@@ -1,25 +1,16 @@
 import { escapeHtml } from "./utils.js";
 import { setViewerHtml } from "./state.js";
+import type { AppState } from "./types.js";
 
-/** @param {import("./types.js").AppState} state
- *  @param {string} path
- */
-export function setViewerLoading(state, path) {
+export function setViewerLoading(state: AppState, path: string): void {
   setViewerHtml(state, `<p class="status">Loading ${escapeHtml(path)}...</p>`);
 }
 
-/** @param {import("./types.js").AppState} state
- *  @param {string} html
- */
-export function setViewerContent(state, html) {
+export function setViewerContent(state: AppState, html: string): void {
   setViewerHtml(state, html);
 }
 
-/** @param {import("./types.js").AppState} state
- *  @param {string} path
- *  @param {unknown} err
- */
-export function setViewerError(state, path, err) {
+export function setViewerError(state: AppState, path: string, err: unknown): void {
   setViewerHtml(state, `
     <div class="callout">
       Failed to load <code>${escapeHtml(path)}</code>.
@@ -31,9 +22,6 @@ python3 docs_explorer.py</code></pre>
   `);
 }
 
-/** @param {import("./types.js").AppState} state
- *  @param {HTMLElement} viewerEl
- */
-export function renderViewer(state, viewerEl) {
+export function renderViewer(state: AppState, viewerEl: HTMLElement): void {
   viewerEl.innerHTML = state.viewer.html;
 }

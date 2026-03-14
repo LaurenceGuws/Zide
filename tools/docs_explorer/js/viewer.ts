@@ -2,20 +2,36 @@ import { repoRelative } from "./utils.js";
 import { syncActiveLink } from "./tree.js";
 import { renderMermaidBlocks } from "./mermaid.js";
 import { renderViewer, setViewerContent, setViewerError, setViewerLoading } from "./viewer_state.js";
+import type { AppState } from "./types.js";
+import type { MarkedApi, MermaidApi } from "./vendor_types.js";
 
-export async function loadDoc({
-  state,
-  path,
-  marked,
-  mermaid,
-  rootEl,
-  viewerEl,
-  docs,
-  defaultDocPath,
-  onLoading,
-  onReady,
-  onError,
-}) {
+export async function loadDoc(args: {
+  state: AppState;
+  path: string | null;
+  marked: MarkedApi;
+  mermaid: MermaidApi;
+  rootEl: HTMLElement;
+  viewerEl: HTMLElement;
+  docs: string[];
+  defaultDocPath: string;
+  onLoading: (state: AppState, path: string) => void;
+  onReady: (state: AppState, path: string) => void;
+  onError: (state: AppState, path: string) => void;
+}): Promise<void> {
+  const {
+    state,
+    path,
+    marked,
+    mermaid,
+    rootEl,
+    viewerEl,
+    onLoading,
+    onReady,
+    onError,
+  } = args;
+
+  if (!path) return;
+
   onLoading(state, path);
   setViewerLoading(state, path);
   renderViewer(state, viewerEl);

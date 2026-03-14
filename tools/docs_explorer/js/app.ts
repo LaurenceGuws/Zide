@@ -11,7 +11,7 @@ import { installOptionsMenu } from "./options_menu.js";
 import { createAppState, persistTheme, setTheme } from "./state.js";
 import { applyTheme } from "./theme.js";
 
-export async function startApp() {
+export async function startApp(): Promise<void> {
   const { project, docs } = await loadProjectConfig();
   const state = createAppState();
   const shell = getAppShell();
@@ -39,8 +39,8 @@ export async function startApp() {
     state,
     optionsToggleEl: shell.optionsToggleEl,
     optionsMenuEl: shell.optionsMenuEl,
-    onThemeToggle(registerClose) {
-      const handleThemeToggle = async () => {
+    onThemeToggle(registerClose: () => void) {
+      const handleThemeToggle = async (): Promise<void> => {
         const nextTheme = state.theme === "dark" ? "light" : "dark";
         registerClose();
         setTheme(state, nextTheme);
@@ -53,7 +53,7 @@ export async function startApp() {
         );
       };
 
-      shell.themeToggleEl.addEventListener("click", async (event) => {
+      shell.themeToggleEl.addEventListener("click", async (event: MouseEvent) => {
         event.stopPropagation();
         await handleThemeToggle();
       });

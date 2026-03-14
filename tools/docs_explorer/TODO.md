@@ -24,6 +24,7 @@
       - First stabilize module boundaries and state ownership.
       - Then move straight to real TypeScript.
       - Lightweight JSDoc is allowed only as a temporary seam aid.
+      - Initial TS migration has started from the stable center.
 
 ### Module refactor
 

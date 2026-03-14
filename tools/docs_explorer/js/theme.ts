@@ -1,8 +1,10 @@
-export function currentTheme(rootEl) {
+import type { ThemeName } from "./types.js";
+
+export function currentTheme(rootEl: HTMLElement): ThemeName {
   return rootEl.dataset.theme === "light" ? "light" : "dark";
 }
 
-export function themeVariables(rootEl, theme) {
+export function themeVariables(rootEl: HTMLElement, theme: ThemeName): Record<string, string | boolean> {
   const css = getComputedStyle(rootEl);
   return {
     primaryColor: css.getPropertyValue("--mermaid-primary").trim(),
@@ -19,7 +21,7 @@ export function themeVariables(rootEl, theme) {
   };
 }
 
-export function syncThemeVariables(rootEl, theme) {
+export function syncThemeVariables(rootEl: HTMLElement, theme: ThemeName): void {
   const varNames = [
     "--bg",
     "--bg-2",
@@ -41,13 +43,19 @@ export function syncThemeVariables(rootEl, theme) {
   }
 }
 
-export function updateThemeToggle(toggleEl, theme) {
+export function updateThemeToggle(toggleEl: HTMLButtonElement, theme: ThemeName): void {
   toggleEl.setAttribute("aria-label", theme === "dark" ? "Switch to light theme" : "Switch to dark theme");
   toggleEl.title = theme === "dark" ? "Switch to light theme" : "Switch to dark theme";
   toggleEl.setAttribute("aria-pressed", theme === "light" ? "true" : "false");
 }
 
-export async function applyTheme(rootEl, toggleEl, theme, persistTheme, rerenderVisibleMermaid) {
+export async function applyTheme(
+  rootEl: HTMLElement,
+  toggleEl: HTMLButtonElement,
+  theme: ThemeName,
+  persistTheme: (theme: ThemeName) => void,
+  rerenderVisibleMermaid: () => Promise<void>,
+): Promise<void> {
   rootEl.dataset.theme = theme;
   persistTheme(theme);
   syncThemeVariables(rootEl, theme);

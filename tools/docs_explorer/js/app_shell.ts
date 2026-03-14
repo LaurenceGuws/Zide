@@ -1,9 +1,9 @@
 import { applySidebarWidth, syncResponsiveSidebarState } from "./layout.js";
 import { applyProjectTheme } from "./project_theme.js";
 import { syncThemeVariables, updateThemeToggle } from "./theme.js";
+import type { AppShell, AppState, ProjectConfig } from "./types.js";
 
-/** @returns {import("./types.js").AppShell} */
-export function getAppShell() {
+export function getAppShell(): AppShell {
   return {
     rootEl: document.documentElement,
     appEl: requiredElement(".app"),
@@ -25,14 +25,8 @@ export function getAppShell() {
   };
 }
 
-/**
- * @param {{
- *   shell: import("./types.js").AppShell,
- *   project: import("./types.js").ProjectConfig,
- *   state: import("./types.js").AppState,
- * }} args
- */
-export function initializeAppShell({ shell, project, state }) {
+export function initializeAppShell(args: { shell: AppShell; project: ProjectConfig; state: AppState }): void {
+  const { shell, project, state } = args;
   document.title = project.title;
   shell.appTitleEl.textContent = project.title;
   shell.brandMarkEl.src = project.icon;
@@ -47,9 +41,8 @@ export function initializeAppShell({ shell, project, state }) {
   updateThemeToggle(shell.themeToggleEl, state.theme);
 }
 
-/** @param {string} selector */
-function requiredElement(selector) {
-  const el = document.querySelector(selector);
+function requiredElement<T extends Element>(selector: string): T {
+  const el = document.querySelector<T>(selector);
   if (!el) {
     throw new Error(`Missing required element: ${selector}`);
   }

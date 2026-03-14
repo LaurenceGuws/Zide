@@ -1,7 +1,8 @@
 import { startApp } from "./app.js";
 
-startApp().catch((err) => {
+startApp().catch((err: unknown) => {
   const viewerEl = document.getElementById("viewer");
+  if (!viewerEl) return;
   viewerEl.innerHTML = `
     <div class="callout">
       Failed to initialize docs explorer.
