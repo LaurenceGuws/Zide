@@ -16,6 +16,9 @@ requiring a frontend framework or backend service.
 - `js/app.js`
   - application composition root
   - runtime wiring between state, shell, docs, layout, and options
+- `tsconfig.json`
+  - minimal TypeScript compile config for docs explorer
+  - emits browser ESM into `build/js`
 - `styles/base.css`
   - stylesheet manifest/import root
 - `styles/theme.css`
@@ -148,10 +151,10 @@ is enough.
 
 The current typing direction is:
 
-- keep refactoring in plain JS while the architecture is still moving
-- use light JSDoc only where it clarifies important seams
-- when the module/state shape is stable enough, move straight to `.ts`
-- do not invest in a longer-lived `checkJs` intermediate workflow
+- the stable center has started moving to `.ts`
+- browser output is compiled into `build/js`
+- remaining `.js` modules can move over incrementally
+- no long-lived `checkJs` path
 
 ## Typing Direction
 

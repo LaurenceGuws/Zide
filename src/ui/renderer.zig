@@ -546,6 +546,8 @@ pub const Renderer = struct {
     should_close_flag: bool,
     window_resized_flag: bool,
     text_input_state: text_input.TextInputState,
+    pending_wait_event: sdl_api.c.SDL_Event,
+    pending_wait_event_valid: bool,
 
     start_counter: u64,
     perf_freq: f64,
@@ -707,6 +709,8 @@ pub const Renderer = struct {
             .should_close_flag = false,
             .window_resized_flag = false,
             .text_input_state = text_input.initState(),
+            .pending_wait_event = undefined,
+            .pending_wait_event_valid = false,
             .start_counter = sdl_api.getPerformanceCounter(),
             .perf_freq = @as(f64, @floatFromInt(sdl_api.getPerformanceFrequency())),
             .frame_seq = 0,
@@ -2531,6 +2535,22 @@ pub fn waitTime(seconds: f64) void {
     } else {
         time_utils.waitTime(seconds);
     }
+}
+
+pub fn waitForWakeOrTimeout(seconds: f64) void {
+    if (seconds <= 0) return;
+    if (active_renderer) |renderer| {
+        if (renderer.pending_wait_event_valid) return;
+        const timeout_ms: c_int = @intFromFloat(@ceil(seconds * 1000.0));
+        if (timeout_ms <= 0) return;
+        var event: sdl_api.c.SDL_Event = undefined;
+        if (sdl_api.waitEventTimeout(&event, timeout_ms)) {
+            renderer.pending_wait_event = event;
+            renderer.pending_wait_event_valid = true;
+            return;
+        }
+    }
+    time_utils.waitTime(seconds);
 }
 
 pub fn getTime() f64 {

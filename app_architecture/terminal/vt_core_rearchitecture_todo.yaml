@@ -14,6 +14,9 @@ meta:
       - Replay authority for that Zig lane now exists as
         `fixtures/terminal/zig_progress_sync_rewrite_bottom_edge.*`, so the
         synchronized bottom-edge redraw pattern is locked beyond unit tests.
+      - Focused native input latency is back in the good pre-rewrite band
+        because focused idle now waits on SDL wake events instead of sleeping
+        blindly through input windows.
 
 items:
   - id: VTCORE-00

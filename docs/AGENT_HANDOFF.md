@@ -20,6 +20,7 @@
 - The scene-owned composition path is active on `main` and the initial render-seam redesign is effectively landed.
 - `nvim` scrolling/cursorline behavior is currently good on the rewritten path.
 - `btop` shaded-block rendering is currently good on the rewritten path.
+- Focused native input latency is currently much tighter again after replacing blind focused-idle sleep with event-aware wake waiting; steady-state CPU stayed in the good pre-rewrite band on the user validation pass.
 - `rain` is no longer part of the active renderer/present validation matrix. Treat it as deferred special-character / visual-polish follow-up work only; do not let it reopen redraw/publication investigation.
 - Recently closed native compatibility bugs:
   - Codex inline resume history now retires into real primary scrollback on the rewritten path.

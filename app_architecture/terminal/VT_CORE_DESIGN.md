@@ -13,6 +13,9 @@ Status note, 2026-03-14:
   - Zig `std.Progress` redraw now rewrites in place correctly because
     reverse-index (`ESC M`) dispatch no longer falls through a dead C1 control
     path.
+  - Focused native input latency is back in the good pre-rewrite band because
+    idle waiting now wakes on SDL events instead of sleeping blindly through
+    focused input windows.
 
 Purpose: define the exact ownership split for the next terminal-core redesign
 lane so code changes do not drift between "session cleanup", "FFI cleanup", and

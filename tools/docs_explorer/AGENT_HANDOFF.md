@@ -23,6 +23,10 @@
   - `js/layout.js`
   - `js/options_menu.js`
   - `js/project_theme.js`
+- TypeScript migration has started from the stable center.
+- Current build path:
+  - `npm run build:docs-explorer`
+  - output goes to `tools/docs_explorer/build/js/`
 - The UI now supports:
   - dark/light theme toggle
   - Markdown rendering

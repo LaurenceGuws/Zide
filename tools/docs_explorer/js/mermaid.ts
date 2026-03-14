@@ -1,7 +1,9 @@
 import { currentTheme, themeVariables } from "./theme.js";
 import { escapeHtml } from "./utils.js";
+import type { ThemeName } from "./types.js";
+import type { MermaidApi } from "./vendor_types.js";
 
-export function initMermaidForTheme(mermaid, rootEl, theme) {
+export function initMermaidForTheme(mermaid: MermaidApi, rootEl: HTMLElement, theme: ThemeName): void {
   mermaid.initialize({
     startOnLoad: false,
     theme: "base",
@@ -9,12 +11,17 @@ export function initMermaidForTheme(mermaid, rootEl, theme) {
   });
 }
 
-export async function renderMermaidBlocks(mermaid, rootEl, viewerEl) {
-  const blocks = viewerEl.querySelectorAll("pre > code.language-mermaid");
+export async function renderMermaidBlocks(
+  mermaid: MermaidApi,
+  rootEl: HTMLElement,
+  viewerEl: HTMLElement,
+): Promise<void> {
+  const blocks = Array.from(viewerEl.querySelectorAll<HTMLElement>("pre > code.language-mermaid"));
   let idx = 0;
   for (const code of blocks) {
     const pre = code.parentElement;
-    const graph = code.textContent;
+    if (!pre) continue;
+    const graph = code.textContent || "";
     const host = document.createElement("div");
     host.className = "mermaid";
     host.dataset.graph = graph;
@@ -29,8 +36,12 @@ export async function renderMermaidBlocks(mermaid, rootEl, viewerEl) {
   }
 }
 
-export async function rerenderVisibleMermaid(mermaid, rootEl, viewerEl) {
-  const blocks = viewerEl.querySelectorAll(".mermaid[data-graph]");
+export async function rerenderVisibleMermaid(
+  mermaid: MermaidApi,
+  rootEl: HTMLElement,
+  viewerEl: HTMLElement,
+): Promise<void> {
+  const blocks = Array.from(viewerEl.querySelectorAll<HTMLElement>(".mermaid[data-graph]"));
   if (blocks.length === 0) return;
   initMermaidForTheme(mermaid, rootEl, currentTheme(rootEl));
   let idx = 0;

@@ -118,6 +118,7 @@ pub const setSdlLogLevel = r.setSdlLogLevel;
 pub const pollInputEvents = input.pollInputEvents;
 pub const getTime = input.getTime;
 pub const waitTime = input.waitTime;
+pub const waitForWakeOrTimeout = r.waitForWakeOrTimeout;
 pub const isWindowResized = r.isWindowResized;
 pub const getScreenWidth = r.getScreenWidth;
 pub const getScreenHeight = r.getScreenHeight;
@@ -162,6 +163,10 @@ pub const Shell = struct {
 
     pub fn shouldClose(self: *Shell) bool {
         return self.renderer.shouldClose();
+    }
+
+    pub fn windowFocused(self: *Shell) bool {
+        return self.renderer.window_focused;
     }
 
     pub fn requestClose(self: *Shell) void {

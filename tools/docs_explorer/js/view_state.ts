@@ -1,10 +1,8 @@
 import { setDocumentState } from "./state.js";
 import { repoRelative } from "./utils.js";
+import type { AppShell, AppState } from "./types.js";
 
-/** @param {import("./types.js").AppState} state
- *  @param {string} path
- */
-export function setDocumentLoading(state, path) {
+export function setDocumentLoading(state: AppState, path: string): void {
   setDocumentState(state, {
     title: path,
     subtitle: "",
@@ -13,10 +11,7 @@ export function setDocumentLoading(state, path) {
   });
 }
 
-/** @param {import("./types.js").AppState} state
- *  @param {string} path
- */
-export function setDocumentReady(state, path) {
+export function setDocumentReady(state: AppState, path: string): void {
   setDocumentState(state, {
     title: path,
     subtitle: "",
@@ -25,10 +20,7 @@ export function setDocumentReady(state, path) {
   });
 }
 
-/** @param {import("./types.js").AppState} state
- *  @param {string} path
- */
-export function setDocumentError(state, path) {
+export function setDocumentError(state: AppState, path: string): void {
   setDocumentState(state, {
     title: path,
     subtitle: "",
@@ -37,10 +29,7 @@ export function setDocumentError(state, path) {
   });
 }
 
-/** @param {import("./types.js").AppState} state
- *  @param {import("./types.js").AppShell} shell
- */
-export function renderDocumentChrome(state, shell) {
+export function renderDocumentChrome(state: AppState, shell: AppShell): void {
   shell.titleEl.textContent = state.document.title;
   shell.subtitleEl.textContent = state.document.subtitle;
   shell.rawLinkEl.href = state.document.rawLink;

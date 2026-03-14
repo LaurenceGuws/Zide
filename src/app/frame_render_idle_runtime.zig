@@ -88,6 +88,10 @@ pub fn handle(
 
     const sleep_ms = app_terminal_frame_pacing_runtime.sleepDuration(state, now, terminal_snapshot);
     app_terminal_frame_pacing_runtime.logFramePacing(state, now, terminal_snapshot, false, 0.0, sleep_ms);
-    app_shell.waitTime(sleep_ms);
+    if (state.shell.windowFocused()) {
+        app_shell.waitForWakeOrTimeout(sleep_ms);
+    } else {
+        app_shell.waitTime(sleep_ms);
+    }
     hooks.maybe_log_metrics(ctx, app_shell.getTime());
 }

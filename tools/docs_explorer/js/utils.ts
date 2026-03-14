@@ -1,4 +1,4 @@
-export function escapeHtml(text) {
+export function escapeHtml(text: string): string {
   return text
     .replaceAll("&", "&amp;")
     .replaceAll("<", "&lt;")
@@ -6,12 +6,12 @@ export function escapeHtml(text) {
     .replaceAll('"', "&quot;");
 }
 
-export function repoRelative(path) {
+export function repoRelative(path: string): string {
   return `../../${path}`;
 }
 
-export function currentDocFromHash(docs, defaultDocPath) {
+export function currentDocFromHash(docs: string[], defaultDocPath: string): string {
   const hash = new URLSearchParams(location.hash.replace(/^#/, ""));
   const doc = hash.get("doc");
-  return docs.includes(doc) ? doc : defaultDocPath;
+  return doc && docs.includes(doc) ? doc : defaultDocPath;
 }

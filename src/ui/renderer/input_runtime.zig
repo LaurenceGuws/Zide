@@ -49,8 +49,14 @@ pub fn pollInputEvents(
     @memset(self.mouse_press_pos_valid[0..], false);
     input_state.resetMouseWheel(mouse_wheel_delta);
 
-    var event: sdl_api.c.SDL_Event = undefined;
     var event_count: usize = 0;
+    if (self.pending_wait_event_valid) {
+        event_count += 1;
+        handleEvent(self, &self.pending_wait_event, input_log, window_log, state, sdl3_textinput_layout_logged, sdl3_textediting_layout_logged);
+        self.pending_wait_event_valid = false;
+    }
+
+    var event: sdl_api.c.SDL_Event = undefined;
     while (sdl_api.pollEvent(&event)) {
         event_count += 1;
         handleEvent(self, &event, input_log, window_log, state, sdl3_textinput_layout_logged, sdl3_textediting_layout_logged);
