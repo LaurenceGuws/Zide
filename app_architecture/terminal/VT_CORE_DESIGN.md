@@ -414,6 +414,9 @@ So the next decisive live probe is now `terminal.ui.target_sample`:
   below was useful for the rewrite war room, but it has since been removed from
   the live runtime during post-beta cleanup. Keep the details as investigation
   history, not as current implementation guidance.
+- the same applies to the old `terminal.ui.overlay_probe` / `ZIDE_DEBUG_DISABLE_TERMINAL_CURSOR_OVERLAY`
+  lane described later in the war-room notes: it was investigation-only and is
+  no longer part of the live overlay path.
 - the active root-cause instrumentation is now trimmed again for the remaining
   live lane:
   - `terminal.ui.target_sample` is the active tag
