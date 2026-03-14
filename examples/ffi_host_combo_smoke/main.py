@@ -10,13 +10,16 @@ if str(ROOT) not in sys.path:
 
 from examples.common.ffi_host_boot import (  # noqa: E402
     STATUS_OK,
+    consume_terminal_events_once,
     consume_terminal_metadata_once,
     consume_terminal_publication_once,
     poll_terminal_then_editor_once,
 )
 from examples.terminal_ffi_smoke.main import (
     CreateConfig,
+    EVENT_TITLE_CHANGED,
     HandlePtr as TerminalHandlePtr,
+    EventBuffer,
     Metadata,
     Snapshot,
     load_library as load_terminal_library,
@@ -76,6 +79,24 @@ def run_combo(terminal_lib_path: Path, editor_lib_path: Path) -> int:
                 consume_metadata,
             )
 
+            def consume_events(events: EventBuffer) -> None:
+                seen_title_event = False
+                for i in range(events.count):
+                    event = events.events[i]
+                    payload = as_bytes(event.data_ptr, event.data_len).decode("utf-8", errors="replace")
+                    if event.kind == EVENT_TITLE_CHANGED and payload == "combo-title":
+                        seen_title_event = True
+                if not seen_title_event:
+                    raise RuntimeError("missing combo terminal title_changed event")
+                state["saw_title_event"] = True
+
+            consume_terminal_events_once(
+                terminal_lib,
+                terminal_handle,
+                EventBuffer,
+                consume_events,
+            )
+
         def editor_step() -> None:
             if editor_lib.zide_editor_create(ctypes.byref(editor_handle)) != STATUS_OK:
                 raise RuntimeError("editor create failed")
@@ -109,6 +130,7 @@ def run_combo(terminal_lib_path: Path, editor_lib_path: Path) -> int:
             f"terminal_snapshot_title={state['snapshot_title']!r} "
             f"terminal_metadata_title={state['metadata_title']!r} "
             f"terminal_alive={state['metadata_alive']} "
+            f"terminal_title_event={state['saw_title_event']} "
             f"editor_cursor={state['cursor']} "
             f"editor_text={state['text_value']!r}"
         )

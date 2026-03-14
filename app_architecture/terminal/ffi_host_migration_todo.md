@@ -8,6 +8,7 @@
 - [x] Extract shared terminal metadata consumption helper (`consume_terminal_metadata_once(...)`) so Python hosts do not duplicate metadata acquire/release ownership boilerplate.
 - [x] Extract shared terminal event consumption helper (`consume_terminal_events_once(...)`) so Python hosts do not duplicate `event_drain(...)` / `events_free(...)` ownership boilerplate.
 - [x] Tighten the mixed terminal+editor smoke so it validates authoritative terminal metadata state, not snapshot publication alone.
+- [x] Tighten the mixed terminal+editor smoke so it validates terminal event ownership as part of the same shared host tick.
 - [~] Add ABI-shape regression coverage per bridge.
   - [x] Terminal Python smoke now verifies bad prefilled `abi_version` / `struct_size` inputs are overwritten with canonical values on all ABI-versioned output structs.
   - [x] Editor Python smoke now verifies deterministic `invalid_argument` behavior for bad bridge calls.
