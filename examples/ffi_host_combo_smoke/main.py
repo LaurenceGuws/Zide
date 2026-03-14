@@ -8,7 +8,7 @@ ROOT = Path(__file__).resolve().parents[2]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-from examples.common.ffi_host_boot import STATUS_OK, poll_terminal_then_editor_once  # noqa: E402
+from examples.common.ffi_host_boot import STATUS_OK, consume_terminal_publication_once, poll_terminal_then_editor_once  # noqa: E402
 from examples.terminal_ffi_smoke.main import (
     CreateConfig,
     HandlePtr as TerminalHandlePtr,
@@ -40,28 +40,19 @@ def run_combo(terminal_lib_path: Path, editor_lib_path: Path) -> int:
             if terminal_lib.zide_terminal_feed_output(terminal_handle, chunk_buf, len(chunk)) != STATUS_OK:
                 raise RuntimeError("terminal feed_output failed")
 
-            redraw_state = query_redraw_state(terminal_lib, terminal_handle)
-            if redraw_state.needs_redraw != 1:
-                raise RuntimeError("terminal redraw_state did not report pending redraw")
-
-            snapshot = Snapshot()
-            if terminal_lib.zide_terminal_snapshot_acquire(terminal_handle, ctypes.byref(snapshot)) != STATUS_OK:
-                raise RuntimeError("terminal snapshot failed")
-            try:
+            def consume_snapshot(snapshot: Snapshot) -> None:
                 title = as_bytes(snapshot.title_ptr, snapshot.title_len).decode("utf-8", errors="replace")
                 if title != "combo-title":
                     raise RuntimeError(f"unexpected combo terminal title: {title!r}")
                 state["title"] = title
-            finally:
-                terminal_lib.zide_terminal_snapshot_release(ctypes.byref(snapshot))
 
-            if terminal_lib.zide_terminal_present_ack(terminal_handle, redraw_state.published_generation) != STATUS_OK:
-                raise RuntimeError("terminal present_ack failed")
-            redraw_state_after_ack = query_redraw_state(terminal_lib, terminal_handle)
-            if redraw_state_after_ack.acknowledged_generation != redraw_state.published_generation:
-                raise RuntimeError("terminal acknowledged_generation did not advance in combo smoke")
-            if redraw_state_after_ack.needs_redraw != 0:
-                raise RuntimeError("terminal redraw_state did not cool off in combo smoke")
+            consume_terminal_publication_once(
+                terminal_lib,
+                terminal_handle,
+                Snapshot,
+                query_redraw_state,
+                consume_snapshot,
+            )
 
         def editor_step() -> None:
             if editor_lib.zide_editor_create(ctypes.byref(editor_handle)) != STATUS_OK:
