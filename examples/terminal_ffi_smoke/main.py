@@ -8,7 +8,7 @@ ROOT = Path(__file__).resolve().parents[2]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-from examples.common.ffi_host_boot import as_bytes, load_cdll, STATUS_OK  # noqa: E402
+from examples.common.ffi_host_boot import as_bytes, consume_terminal_publication_once, load_cdll, STATUS_OK  # noqa: E402
 
 STATUS_OK = 0
 EVENT_TITLE_CHANGED = 1
@@ -328,15 +328,9 @@ def run_smoke(lib_path: Path) -> int:
         if status != STATUS_OK:
             raise RuntimeError(f"feed_output(history) failed: {status}")
 
-        redraw_state = query_redraw_state(lib, handle)
-        if redraw_state.needs_redraw != 1:
-            raise RuntimeError("expected redraw_state.needs_redraw after publication")
+        snapshot_state: dict[str, object] = {}
 
-        snapshot = Snapshot()
-        status = lib.zide_terminal_snapshot_acquire(handle, ctypes.byref(snapshot))
-        if status != STATUS_OK:
-            raise RuntimeError(f"snapshot_acquire failed: {status}")
-        try:
+        def consume_snapshot(snapshot: Snapshot) -> None:
             title = as_bytes(snapshot.title_ptr, snapshot.title_len).decode("utf-8", errors="replace")
             cwd = as_bytes(snapshot.cwd_ptr, snapshot.cwd_len).decode("utf-8", errors="replace")
             row0 = render_first_row(snapshot)
@@ -355,40 +349,50 @@ def run_smoke(lib_path: Path) -> int:
             if lib.zide_terminal_child_exit_status(handle, ctypes.byref(exit_code), ctypes.byref(has_exit)) != STATUS_OK:
                 raise RuntimeError("child_exit_status failed")
 
-            print("ffi smoke ok")
-            print(
-                f"snapshot_abi={lib.zide_terminal_snapshot_abi_version()} "
-                f"event_abi={lib.zide_terminal_event_abi_version()} "
-                f"scrollback_abi={lib.zide_terminal_scrollback_abi_version()} "
-                f"metadata_abi={lib.zide_terminal_metadata_abi_version()} "
-                f"redraw_state_abi={lib.zide_terminal_redraw_state_abi_version()} "
-                f"renderer_meta_abi={lib.zide_terminal_renderer_metadata_abi_version()}"
+            snapshot_state.update(
+                {
+                    "rows": snapshot.rows,
+                    "cols": snapshot.cols,
+                    "cell_count": snapshot.cell_count,
+                    "title": title,
+                    "cwd": cwd,
+                    "row0": row0,
+                    "title_getter": title_getter,
+                    "cwd_getter": cwd_getter,
+                    "scrollback_count": scrollback_count,
+                    "exit_code": exit_code.value,
+                    "has_exit": has_exit.value,
+                }
             )
-            print(f"status_ok={lib.zide_terminal_status_string(STATUS_OK).decode()} status_unknown={lib.zide_terminal_status_string(99).decode()}")
-            print(f"size={snapshot.rows}x{snapshot.cols} cells={snapshot.cell_count}")
-            print(f"title={title!r} cwd={cwd!r} alive={lib.zide_terminal_is_alive(handle)}")
-            print(f"title_getter={title_getter!r} cwd_getter={cwd_getter!r} exit_status=({has_exit.value},{exit_code.value})")
-            print(f"row0={row0!r}")
-            if snapshot.rows != 12 or snapshot.cols != 60:
-                raise RuntimeError("unexpected snapshot dimensions")
-            if snapshot.cell_count != 12 * 60:
-                raise RuntimeError("unexpected cell count")
-            if title != "ffi-title":
-                raise RuntimeError(f"unexpected title: {title!r}")
-            if title_getter != title or cwd_getter != cwd:
-                raise RuntimeError("getter mismatch")
-        finally:
-            lib.zide_terminal_snapshot_release(ctypes.byref(snapshot))
 
-        if lib.zide_terminal_present_ack(handle, redraw_state.published_generation) != STATUS_OK:
-            raise RuntimeError("present_ack failed")
-        redraw_state_after_ack = query_redraw_state(lib, handle)
-        if redraw_state_after_ack.published_generation != redraw_state.published_generation:
-            raise RuntimeError("published_generation changed unexpectedly after ack")
-        if redraw_state_after_ack.acknowledged_generation != redraw_state.published_generation:
-            raise RuntimeError("acknowledged_generation did not advance after ack")
-        if redraw_state_after_ack.needs_redraw != 0:
-            raise RuntimeError("expected redraw_state.needs_redraw to clear after ack")
+        consume_terminal_publication_once(lib, handle, Snapshot, query_redraw_state, consume_snapshot)
+
+        print("ffi smoke ok")
+        print(
+            f"snapshot_abi={lib.zide_terminal_snapshot_abi_version()} "
+            f"event_abi={lib.zide_terminal_event_abi_version()} "
+            f"scrollback_abi={lib.zide_terminal_scrollback_abi_version()} "
+            f"metadata_abi={lib.zide_terminal_metadata_abi_version()} "
+            f"redraw_state_abi={lib.zide_terminal_redraw_state_abi_version()} "
+            f"renderer_meta_abi={lib.zide_terminal_renderer_metadata_abi_version()}"
+        )
+        print(f"status_ok={lib.zide_terminal_status_string(STATUS_OK).decode()} status_unknown={lib.zide_terminal_status_string(99).decode()}")
+        print(f"size={snapshot_state['rows']}x{snapshot_state['cols']} cells={snapshot_state['cell_count']}")
+        print(f"title={snapshot_state['title']!r} cwd={snapshot_state['cwd']!r} alive={lib.zide_terminal_is_alive(handle)}")
+        print(
+            f"title_getter={snapshot_state['title_getter']!r} "
+            f"cwd_getter={snapshot_state['cwd_getter']!r} "
+            f"exit_status=({snapshot_state['has_exit']},{snapshot_state['exit_code']})"
+        )
+        print(f"row0={snapshot_state['row0']!r}")
+        if snapshot_state["rows"] != 12 or snapshot_state["cols"] != 60:
+            raise RuntimeError("unexpected snapshot dimensions")
+        if snapshot_state["cell_count"] != 12 * 60:
+            raise RuntimeError("unexpected cell count")
+        if snapshot_state["title"] != "ffi-title":
+            raise RuntimeError(f"unexpected title: {snapshot_state['title']!r}")
+        if snapshot_state["title_getter"] != snapshot_state["title"] or snapshot_state["cwd_getter"] != snapshot_state["cwd"]:
+            raise RuntimeError("getter mismatch")
 
         rounded_box_meta = RendererMetadata()
         if lib.zide_terminal_renderer_metadata(0x256D, ctypes.byref(rounded_box_meta)) != STATUS_OK:
@@ -480,15 +484,12 @@ def run_mock_service_smoke(lib_path: Path) -> int:
         saw_clipboard = False
         saw_alive_closed = False
         redraw_events = 0
-        last_redraw_state = None
+        last_snapshot_state: dict[str, object] = {}
 
         for chunk in service.stream():
             buf = (ctypes.c_uint8 * len(chunk)).from_buffer_copy(chunk)
             if lib.zide_terminal_feed_output(handle, buf, len(chunk)) != STATUS_OK:
                 raise RuntimeError("feed_output(mock chunk) failed")
-            last_redraw_state = query_redraw_state(lib, handle)
-            if last_redraw_state.needs_redraw != 1:
-                raise RuntimeError("expected redraw_state.needs_redraw during mock publication")
 
             events = EventBuffer()
             if lib.zide_terminal_event_drain(handle, ctypes.byref(events)) != STATUS_OK:
@@ -520,10 +521,7 @@ def run_mock_service_smoke(lib_path: Path) -> int:
         finally:
             lib.zide_terminal_events_free(ctypes.byref(events))
 
-        snapshot = Snapshot()
-        if lib.zide_terminal_snapshot_acquire(handle, ctypes.byref(snapshot)) != STATUS_OK:
-            raise RuntimeError("snapshot_acquire(mock) failed")
-        try:
+        def consume_mock_snapshot(snapshot: Snapshot) -> None:
             title = as_bytes(snapshot.title_ptr, snapshot.title_len).decode("utf-8", errors="replace")
             cwd = as_bytes(snapshot.cwd_ptr, snapshot.cwd_len).decode("utf-8", errors="replace")
             row0 = render_snapshot_row(snapshot, 0)
@@ -536,32 +534,37 @@ def run_mock_service_smoke(lib_path: Path) -> int:
                 alive = metadata.alive
             finally:
                 lib.zide_terminal_metadata_release(ctypes.byref(metadata))
-            if title != "mock-title":
-                raise RuntimeError(f"unexpected mock title: {title!r}")
-            if cwd != "/mock/service":
-                raise RuntimeError(f"unexpected mock cwd: {cwd!r}")
-            if row0 != "mock-line-1":
-                raise RuntimeError(f"unexpected mock row0: {row0!r}")
-            if row2 != "tail":
-                raise RuntimeError(f"unexpected mock row2: {row2!r}")
-            if scrollback_count != 0:
-                raise RuntimeError(f"unexpected mock scrollback_count: {scrollback_count}")
-            if alive != 0:
-                raise RuntimeError(f"unexpected mock alive after close_input: {alive}")
-            print("terminal ffi mock service ok")
-            print(f"title={title!r} cwd={cwd!r} row0={row0!r} row2={row2!r} scrollback_count={scrollback_count} alive={alive}")
-        finally:
-            lib.zide_terminal_snapshot_release(ctypes.byref(snapshot))
+            last_snapshot_state.update(
+                {
+                    "title": title,
+                    "cwd": cwd,
+                    "row0": row0,
+                    "row2": row2,
+                    "scrollback_count": scrollback_count,
+                    "alive": alive,
+                }
+            )
 
-        if last_redraw_state is None:
-            raise RuntimeError("missing redraw_state in mock scenario")
-        if lib.zide_terminal_present_ack(handle, last_redraw_state.published_generation) != STATUS_OK:
-            raise RuntimeError("present_ack(mock) failed")
-        redraw_state_after_ack = query_redraw_state(lib, handle)
-        if redraw_state_after_ack.acknowledged_generation != last_redraw_state.published_generation:
-            raise RuntimeError("mock acknowledged_generation did not advance after ack")
-        if redraw_state_after_ack.needs_redraw != 0:
-            raise RuntimeError("expected mock redraw_state.needs_redraw to clear after ack")
+        consume_terminal_publication_once(lib, handle, Snapshot, query_redraw_state, consume_mock_snapshot)
+
+        if last_snapshot_state["title"] != "mock-title":
+            raise RuntimeError(f"unexpected mock title: {last_snapshot_state['title']!r}")
+        if last_snapshot_state["cwd"] != "/mock/service":
+            raise RuntimeError(f"unexpected mock cwd: {last_snapshot_state['cwd']!r}")
+        if last_snapshot_state["row0"] != "mock-line-1":
+            raise RuntimeError(f"unexpected mock row0: {last_snapshot_state['row0']!r}")
+        if last_snapshot_state["row2"] != "tail":
+            raise RuntimeError(f"unexpected mock row2: {last_snapshot_state['row2']!r}")
+        if last_snapshot_state["scrollback_count"] != 0:
+            raise RuntimeError(f"unexpected mock scrollback_count: {last_snapshot_state['scrollback_count']}")
+        if last_snapshot_state["alive"] != 0:
+            raise RuntimeError(f"unexpected mock alive after close_input: {last_snapshot_state['alive']}")
+        print("terminal ffi mock service ok")
+        print(
+            f"title={last_snapshot_state['title']!r} cwd={last_snapshot_state['cwd']!r} "
+            f"row0={last_snapshot_state['row0']!r} row2={last_snapshot_state['row2']!r} "
+            f"scrollback_count={last_snapshot_state['scrollback_count']} alive={last_snapshot_state['alive']}"
+        )
 
         if not saw_title:
             raise RuntimeError("missing mock title_changed event")
