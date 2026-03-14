@@ -79,6 +79,9 @@ This beta should be described honestly:
 ## Release Checklist
 
 - Replace `<tag>` with the actual release tag.
+- Use the canonical split:
+  - product version: `0.x.y[-beta.n]`
+  - release tag: `v0.x.y[-beta.n]`
 - Confirm the release asset list matches what was published.
 - Mention only the highest-value compatibility wins from that checkpoint.
 - Keep the final notes short enough to scan quickly.
