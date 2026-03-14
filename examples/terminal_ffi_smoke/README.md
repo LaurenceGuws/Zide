@@ -23,15 +23,20 @@ If the bridge is painful to bind from Python, the ABI is probably too clever.
 1. load the terminal bridge shared library
 2. create a terminal session
 3. resize it through the bridge
-4. query `zide_terminal_redraw_state(...)` to confirm newer content is pending
-5. acquire a snapshot
-6. verify dimensions, cell count, title/cwd pointers, and initial row data
-7. acknowledge the published generation with `present_ack(...)`
-8. verify redraw state cools off after acknowledgement
-9. query renderer metadata for representative glyphs (box/rounded, braille/graph, powerline) and validate damage-policy flags
-10. acquire a scrollback window and verify copied row content
-11. drain events and verify ownership/release paths
-12. destroy the session
+4. resolve one terminal publication cycle through the shared Python host helper
+5. verify dimensions, cell count, title/cwd pointers, and initial row data
+6. query renderer metadata for representative glyphs (box/rounded, braille/graph, powerline) and validate damage-policy flags
+7. acquire a scrollback window and verify copied row content
+8. drain events and verify ownership/release paths
+9. destroy the session
+
+The shared publication helper performs the authoritative redraw/present steps:
+- query `zide_terminal_redraw_state(...)`
+- acquire/release the snapshot
+- acknowledge the published generation with `present_ack(...)`
+- verify redraw state cools off after acknowledgement
+
+This keeps the dedicated terminal smoke aligned with the mixed terminal+editor host path.
 
 This is intentionally a no-PTY smoke today.
 
@@ -56,6 +61,7 @@ ABI-shape regression scenario:
 
 Shared Python host boot helpers:
 - `examples/common/ffi_host_boot.py`
+  - `consume_terminal_publication_once(...)` is the shared terminal publication primitive for both dedicated and mixed hosts
 
 Host migration checklist:
 - poll terminal-side output/publication before editor-side work when a host owns both surfaces
@@ -96,8 +102,7 @@ external non-PTY byte source feeding the terminal through FFI in chunks.
 It verifies:
 - incremental output feeding from a host-owned service loop
 - redraw-ready wake events for streamed output
-- `zide_terminal_redraw_state(...)` as redraw-truth authority during streaming
-- explicit host acknowledgement via `present_ack(...)` after consumption
+- the same shared publication helper used by the baseline and combo hosts
 - title/cwd updates
 - clipboard-write events
 - explicit external-input close through `close_input`
