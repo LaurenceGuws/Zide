@@ -6,9 +6,18 @@ export async function fetchJson<T>(path: string): Promise<T> {
   return res.json() as Promise<T>;
 }
 
+export function selectedProjectConfigPath(): string {
+  const params = new URLSearchParams(location.search);
+  const selected = params.get("config");
+  if (!selected) return "./config/project.json";
+
+  const safe = selected.replace(/[^a-zA-Z0-9._-]/g, "");
+  return `./config/${safe}`;
+}
+
 export async function loadProjectConfig(): Promise<{ project: ProjectConfig; docs: string[] }> {
   return Promise.all([
-    fetchJson<ProjectConfig>("./config/project.json"),
+    fetchJson<ProjectConfig>(selectedProjectConfigPath()),
     fetchJson<string[]>("./config/docs-index.json"),
   ]).then(([project, docs]) => ({ project, docs }));
 }

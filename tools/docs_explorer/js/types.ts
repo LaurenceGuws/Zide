@@ -22,6 +22,7 @@ export type ProjectConfig = {
   title: string;
   icon: string;
   repoBasePath: string;
+  runtimeMode?: string;
   defaultDoc: string;
   docRoots: string[];
   includeExtensions: string[];

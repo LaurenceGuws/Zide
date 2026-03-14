@@ -74,7 +74,7 @@
 - [ ] Better iconography for controls.
 - [x] Add a tiny runtime/about surface in the options menu.
 - [ ] Auto-generate `config/docs-index.json`.
-- [ ] Add support for multiple project configs.
+- [x] Add support for multiple project configs.
 
 ## Deliberately Deferred
 

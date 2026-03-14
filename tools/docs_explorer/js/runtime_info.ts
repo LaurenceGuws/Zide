@@ -5,7 +5,7 @@ export function renderRuntimeInfo(shell: AppShell, project: ProjectConfig): void
     <div class="options-info-label">About</div>
     <div class="options-info-row">
       <span class="options-info-key">Mode</span>
-      <span class="options-info-value">Built ESM</span>
+      <span class="options-info-value">${escapeInfo(project.runtimeMode || "built-esm")}</span>
     </div>
     <div class="options-info-row">
       <span class="options-info-key">Repo Base</span>
