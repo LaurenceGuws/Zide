@@ -160,6 +160,7 @@ terminal_ffi_bridge_todo:
             - "Added explicit copied scrollback side-buffer API (`zide_terminal_metadata_acquire` for counts plus `zide_terminal_scrollback_acquire/release`) so hosts can consume history without changing viewport snapshot ABI."
             - "Policy is now explicit too: metadata + scrollback side-buffer are the authoritative structured history surfaces; selection/plain/ANSI text exports are convenience copied-text views."
             - "Selection contract is now explicit too: milestone-1 `selection_text` is a copied-text convenience export, not a structured selection-geometry authority."
+            - "Copied string/text export buffers now also carry inline `abi_version` / `struct_size`, matching the stronger ABI discipline used by the other output surfaces."
         - id: FFI-02-02
           title: "Specify ownership rules for exported snapshot buffers"
           status: done

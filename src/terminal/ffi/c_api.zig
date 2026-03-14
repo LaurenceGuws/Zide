@@ -7,6 +7,7 @@ pub const ZIDE_TERMINAL_SCROLLBACK_ABI_VERSION = bridge.scrollback_abi_version;
 pub const ZIDE_TERMINAL_RENDERER_METADATA_ABI_VERSION = bridge.renderer_metadata_abi_version;
 pub const ZIDE_TERMINAL_METADATA_ABI_VERSION = bridge.metadata_abi_version;
 pub const ZIDE_TERMINAL_REDRAW_STATE_ABI_VERSION = bridge.redraw_state_abi_version;
+pub const ZIDE_TERMINAL_STRING_ABI_VERSION = bridge.string_abi_version;
 pub const ZideTerminalCreateConfig = bridge.CreateConfig;
 pub const ZideTerminalColor = bridge.Color;
 pub const ZideTerminalCell = bridge.Cell;
@@ -163,6 +164,10 @@ pub fn zide_terminal_metadata_abi_version() u32 {
 
 pub fn zide_terminal_redraw_state_abi_version() u32 {
     return bridge.redrawStateAbiVersion();
+}
+
+pub fn zide_terminal_string_abi_version() u32 {
+    return bridge.stringAbiVersion();
 }
 
 pub fn zide_terminal_renderer_metadata_abi_version() u32 {

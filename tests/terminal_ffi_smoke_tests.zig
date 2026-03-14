@@ -11,6 +11,7 @@ test "ffi non-pty snapshot and event ownership smoke" {
     try std.testing.expectEqual(c_api.ZIDE_TERMINAL_RENDERER_METADATA_ABI_VERSION, c_api.zide_terminal_renderer_metadata_abi_version());
     try std.testing.expectEqual(c_api.ZIDE_TERMINAL_METADATA_ABI_VERSION, c_api.zide_terminal_metadata_abi_version());
     try std.testing.expectEqual(c_api.ZIDE_TERMINAL_REDRAW_STATE_ABI_VERSION, c_api.zide_terminal_redraw_state_abi_version());
+    try std.testing.expectEqual(c_api.ZIDE_TERMINAL_STRING_ABI_VERSION, c_api.zide_terminal_string_abi_version());
 
     var rounded_box_meta: c_api.ZideTerminalRendererMetadata = .{};
     try std.testing.expectEqual(@as(c_int, 0), c_api.zide_terminal_renderer_metadata(0x256D, &rounded_box_meta));
@@ -102,6 +103,12 @@ test "ffi non-pty snapshot and event ownership smoke" {
     try std.testing.expectEqualStrings("ffi-title", ptrBytes(metadata.title_ptr, metadata.title_len));
     try std.testing.expectEqual(@as(usize, 0), metadata.cwd_len);
     try std.testing.expectEqual(@as(u32, 0), metadata.scrollback_count);
+
+    var title_text: c_api.ZideTerminalStringBuffer = .{};
+    try std.testing.expectEqual(@as(c_int, 0), c_api.zide_terminal_scrollback_plain_text(handle, &title_text));
+    defer c_api.zide_terminal_string_free(&title_text);
+    try std.testing.expectEqual(c_api.ZIDE_TERMINAL_STRING_ABI_VERSION, title_text.abi_version);
+    try std.testing.expectEqual(@as(u32, @sizeOf(c_api.ZideTerminalStringBuffer)), title_text.struct_size);
 
     try std.testing.expectEqualStrings("ok", std.mem.span(c_api.zide_terminal_status_string(0)));
     try std.testing.expectEqualStrings("invalid_argument", std.mem.span(c_api.zide_terminal_status_string(1)));
@@ -232,6 +239,14 @@ test "ffi snapshot and event release zero exported structs" {
     try std.testing.expectEqual(@as(u32, 0), events.struct_size);
     try std.testing.expectEqual(@as(usize, 0), events.count);
     try std.testing.expectEqual(@as(?*anyopaque, null), events._ctx);
+
+    var text: c_api.ZideTerminalStringBuffer = .{};
+    try std.testing.expectEqual(@as(c_int, 0), c_api.zide_terminal_selection_text(handle, &text));
+    c_api.zide_terminal_string_free(&text);
+    try std.testing.expectEqual(@as(u32, 0), text.abi_version);
+    try std.testing.expectEqual(@as(u32, 0), text.struct_size);
+    try std.testing.expectEqual(@as(usize, 0), text.len);
+    try std.testing.expectEqual(@as(?*anyopaque, null), text._ctx);
 }
 
 test "ffi child_exit event carries exit code and present flag" {

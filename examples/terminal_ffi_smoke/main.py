@@ -167,6 +167,8 @@ class EventBuffer(ctypes.Structure):
 
 class StringBuffer(ctypes.Structure):
     _fields_ = [
+        ("abi_version", ctypes.c_uint32),
+        ("struct_size", ctypes.c_uint32),
         ("ptr", ctypes.POINTER(ctypes.c_uint8)),
         ("len", ctypes.c_size_t),
         ("_ctx", ctypes.c_void_p),
@@ -258,6 +260,8 @@ def load_library(path: Path):
     lib.zide_terminal_metadata_abi_version.restype = ctypes.c_uint32
     lib.zide_terminal_redraw_state_abi_version.argtypes = []
     lib.zide_terminal_redraw_state_abi_version.restype = ctypes.c_uint32
+    lib.zide_terminal_string_abi_version.argtypes = []
+    lib.zide_terminal_string_abi_version.restype = ctypes.c_uint32
     lib.zide_terminal_renderer_metadata_abi_version.argtypes = []
     lib.zide_terminal_renderer_metadata_abi_version.restype = ctypes.c_uint32
     lib.zide_terminal_renderer_metadata.argtypes = [ctypes.c_uint32, ctypes.POINTER(RendererMetadata)]
@@ -380,6 +384,7 @@ def run_smoke(lib_path: Path) -> int:
             f"scrollback_abi={lib.zide_terminal_scrollback_abi_version()} "
             f"metadata_abi={lib.zide_terminal_metadata_abi_version()} "
             f"redraw_state_abi={lib.zide_terminal_redraw_state_abi_version()} "
+            f"string_abi={lib.zide_terminal_string_abi_version()} "
             f"renderer_meta_abi={lib.zide_terminal_renderer_metadata_abi_version()}"
         )
         print(f"status_ok={lib.zide_terminal_status_string(STATUS_OK).decode()} status_unknown={lib.zide_terminal_status_string(99).decode()}")
@@ -647,11 +652,27 @@ def run_abi_mismatch_smoke(lib_path: Path) -> int:
         if renderer.struct_size != ctypes.sizeof(RendererMetadata):
             raise RuntimeError(f"unexpected renderer struct_size: {renderer.struct_size}")
 
+        string_text = StringBuffer()
+        string_text.abi_version = 999
+        string_text.struct_size = 1
+        status = lib.zide_terminal_scrollback_plain_text(handle, ctypes.byref(string_text))
+        if status != STATUS_OK:
+            raise RuntimeError(f"scrollback_plain_text failed: {status}")
+        try:
+            if string_text.abi_version != lib.zide_terminal_string_abi_version():
+                raise RuntimeError(f"unexpected string abi_version: {string_text.abi_version}")
+            if string_text.struct_size != ctypes.sizeof(StringBuffer):
+                raise RuntimeError(f"unexpected string struct_size: {string_text.struct_size}")
+            string_result = (string_text.abi_version, string_text.struct_size)
+        finally:
+            lib.zide_terminal_string_free(ctypes.byref(string_text))
+
         print("terminal ffi abi mismatch regression ok")
         print(
             f"snapshot={snapshot_result} "
             f"scrollback={scrollback_result} "
             f"metadata={metadata_result} "
+            f"string={string_result} "
             f"renderer=({renderer.abi_version},{renderer.struct_size})"
         )
         return 0
