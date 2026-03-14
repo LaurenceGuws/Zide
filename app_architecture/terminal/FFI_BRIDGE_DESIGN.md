@@ -91,17 +91,27 @@ Required operations for milestone 1:
 - `zide_terminal_resize(handle, cols, rows, cell_width_px, cell_height_px)`
 - `zide_terminal_send_bytes(handle, ptr, len)`
 - `zide_terminal_send_text(handle, utf8_ptr, utf8_len)`
+- `zide_terminal_feed_output(handle, ptr, len)`
+- `zide_terminal_close_input(handle)`
 - `zide_terminal_send_key(handle, key_event)`
 - `zide_terminal_send_mouse(handle, mouse_event)`
+- `zide_terminal_present_ack(handle, generation)`
+- `zide_terminal_acknowledged_generation(handle, &generation)`
+- `zide_terminal_published_generation(handle, &generation)`
+- `zide_terminal_redraw_state(handle, &state)`
+- `zide_terminal_needs_redraw(handle)`
 - `zide_terminal_snapshot_acquire(handle, out_snapshot)`
 - `zide_terminal_snapshot_release(snapshot)`
-- `zide_terminal_scrollback_count(handle, out_count)`
 - `zide_terminal_scrollback_acquire(handle, start_row, max_rows, out_buffer)`
 - `zide_terminal_scrollback_release(out_buffer)`
+- `zide_terminal_metadata_acquire(handle, out_metadata)`
+- `zide_terminal_metadata_release(metadata)`
 - `zide_terminal_event_drain(handle, out_events)`
 - `zide_terminal_events_free(events)`
-- `zide_terminal_current_title(handle, out_string)`
-- `zide_terminal_current_cwd(handle, out_string)`
+- `zide_terminal_is_alive(handle)`
+- `zide_terminal_selection_text(handle, out_string)`
+- `zide_terminal_scrollback_plain_text(handle, out_string)`
+- `zide_terminal_scrollback_ansi_text(handle, out_string)`
 - `zide_terminal_string_free(string)`
 - `zide_terminal_child_exit_status(handle, out_code, out_has_status)`
 - `zide_terminal_snapshot_abi_version()`
