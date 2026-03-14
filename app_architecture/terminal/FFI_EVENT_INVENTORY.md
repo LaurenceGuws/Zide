@@ -27,7 +27,7 @@ Milestone 1 default:
 | Clipboard write received | OSC 52 write path | `event-drain` | Host must decide what to do with clipboard data. |
 | Clipboard read requested | protocol/read path when supported | `out-of-scope` | Not exported in milestone 1. |
 | Bell | terminal/session bell signal | `out-of-scope` | Deferred; not exported in milestone 1. |
-| Child exited | PTY/process state | `event-drain` + getter | Host needs exit status and liveness updates. |
+| Child exited | PTY/process state | `event-drain` + metadata/getter | Host needs exit status and liveness updates, but latest-state truth can come from metadata. |
 | Hyperlink open intent | hyperlink activation path | `out-of-scope` | Deferred; not exported in milestone 1. |
 | Dirty/wakeup hint | dirty tracking / pending output | `event-drain` + direct getter | `redraw_ready` is wake-only; `redraw_state` / generation getters provide redraw truth. |
 | Cursor position | snapshot | `snapshot-derived` | Render state, not a discrete event. |
@@ -35,7 +35,7 @@ Milestone 1 default:
 | Selection state | snapshot or getter | `snapshot-derived` | Only if preserved as core backend state. |
 | Scroll offset / scrollback size | snapshot | `snapshot-derived` | View/model state, not an event. |
 | Sync-update active | snapshot or getter | `snapshot-derived` | Render coordination state. |
-| Process alive | getter | `snapshot-derived` or direct getter | Simple state query. |
+| Process alive | metadata/getter | `snapshot-derived` or direct getter | Prefer metadata as the authoritative latest-state summary; keep `is_alive` as a narrow convenience helper. |
 | Window title stack semantics | internal only | `out-of-scope` | Too implementation-specific for the first bridge. |
 | IME/preedit visuals | UI/widget state | `out-of-scope` | Not terminal-backend export work. |
 | Hovered link / mouse hover | widget state | `out-of-scope` | UI concern. |
@@ -73,6 +73,8 @@ These should complement event drains, not replace them.
 
 Reason:
 - hosts need both the latest state and the change boundary
+- `metadata_acquire(...)` is the preferred latest-state summary for lifecycle/title/cwd/scrollback state
+- `is_alive(...)` and `child_exit_status(...)` remain focused helpers, not the primary lifecycle summary
 
 ## Notable open questions
 
