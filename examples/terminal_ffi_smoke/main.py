@@ -3,6 +3,7 @@ import argparse
 import ctypes
 import sys
 from pathlib import Path
+from typing import cast
 
 ROOT = Path(__file__).resolve().parents[2]
 if str(ROOT) not in sys.path:
@@ -437,6 +438,7 @@ def run_smoke(lib_path: Path) -> int:
             f"damage=0x{rounded_powerline_meta.damage_policy_flags:x}"
         )
 
+        scrollback_count = cast(int, snapshot_state["scrollback_count"])
         if scrollback_count == 0:
             raise RuntimeError("expected scrollback rows")
         scrollback = ScrollbackBuffer()

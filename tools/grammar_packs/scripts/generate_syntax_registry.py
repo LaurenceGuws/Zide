@@ -69,8 +69,9 @@ def parse_parsers(path):
     with open(path, "r", encoding="utf-8") as f:
         for line in f:
             indent = len(line) - len(line.lstrip(" "))
-            if indent == lang_indent and lang_re.match(line):
-                current = lang_re.match(line).group(1)
+            lang_match = lang_re.match(line)
+            if indent == lang_indent and lang_match:
+                current = lang_match.group(1)
                 in_lang = True
                 in_filetype_list = False
                 filetypes = []
