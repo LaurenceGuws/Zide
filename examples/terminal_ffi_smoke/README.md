@@ -37,6 +37,9 @@ The shared publication helper performs the authoritative redraw/present steps:
 - verify redraw state cools off after acknowledgement
 
 This keeps the dedicated terminal smoke aligned with the mixed terminal+editor host path.
+The baseline smoke now also uses `metadata_acquire(...)` as its single
+lifecycle/title/cwd summary instead of reconstructing that state from multiple
+focused getters.
 
 This is intentionally a no-PTY smoke today.
 
