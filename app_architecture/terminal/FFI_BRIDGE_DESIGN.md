@@ -242,6 +242,15 @@ History/export policy:
 - hosts should prefer the text exports when they explicitly want copied text,
   not structured history state
 
+Selection/export policy:
+
+- milestone 1 does not export structured selection geometry/ranges as a stable
+  bridge surface
+- `zide_terminal_selection_text(...)` is therefore a convenience copied-text
+  export, not a structured selection-state authority
+- hosts should treat it as "give me the current selected text", not as a way to
+  reconstruct selection ownership, anchors, or geometry
+
 Bridge policy decision:
 
 - `redraw_ready` stays wake-only
