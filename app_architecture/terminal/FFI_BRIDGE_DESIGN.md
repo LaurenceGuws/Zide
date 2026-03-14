@@ -377,3 +377,42 @@ The bridge is successful when all of the following are true:
 - daemon/session-sharing evaluation
 - Flutter adapter work
 - richer test host(s) beyond Python
+
+## Daemon / Multiplexer Position
+
+Daemon or multiplexer mode is explicitly a follow-on, not a prerequisite for
+the embedded bridge.
+
+Current decision:
+- the in-process bridge remains the primary productization target
+- daemon/session-sharing work is allowed later only after the in-process
+  redraw/publication/present contract is boring and test-backed
+- no current bridge design choice should require a daemon to be viable
+
+Why:
+- `foot` shows that server mode is a real product direction, but it is a
+  different system shape with socket/session orchestration overhead that is not
+  needed to prove embeddability first
+- `wezterm` shows multiplexing domains are valuable, but they sit above an
+  already-credible local terminal/mux contract rather than replacing the need
+  for a clean in-process host boundary
+- `contour`'s daemon draft reinforces that multi-client session sharing brings
+  additional protocol, history, and redraw responsibilities that should not be
+  mixed into the initial embedded bridge milestone
+
+What this means for Zide:
+- Linux native quality and the in-process FFI bridge stay first
+- the bridge contract must remain daemon-compatible in spirit:
+  - explicit ownership
+  - explicit latest-state getters
+  - explicit present acknowledgement
+  - host-driven polling
+- but we do not add daemon-specific protocol, server lifecycle, or multi-client
+  coordination requirements to the current milestone
+
+When daemon/session-sharing becomes worth revisiting:
+- the in-process bridge is stable and boring
+- no-PTY host-fed mode is healthy
+- native and embedded host semantics are aligned
+- there is a concrete product need for shared remote/local sessions or host
+  resource consolidation beyond what the current embedded contract solves
