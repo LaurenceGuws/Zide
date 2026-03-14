@@ -204,6 +204,12 @@ def load_library(path: Path):
     lib.zide_terminal_feed_output.restype = ctypes.c_int
     lib.zide_terminal_close_input.argtypes = [HandlePtr]
     lib.zide_terminal_close_input.restype = ctypes.c_int
+    lib.zide_terminal_present_ack.argtypes = [HandlePtr, ctypes.c_uint64]
+    lib.zide_terminal_present_ack.restype = ctypes.c_int
+    lib.zide_terminal_acknowledged_generation.argtypes = [HandlePtr, ctypes.POINTER(ctypes.c_uint64)]
+    lib.zide_terminal_acknowledged_generation.restype = ctypes.c_int
+    lib.zide_terminal_published_generation.argtypes = [HandlePtr, ctypes.POINTER(ctypes.c_uint64)]
+    lib.zide_terminal_published_generation.restype = ctypes.c_int
     lib.zide_terminal_snapshot_acquire.argtypes = [HandlePtr, ctypes.POINTER(Snapshot)]
     lib.zide_terminal_snapshot_acquire.restype = ctypes.c_int
     lib.zide_terminal_snapshot_release.argtypes = [ctypes.POINTER(Snapshot)]
