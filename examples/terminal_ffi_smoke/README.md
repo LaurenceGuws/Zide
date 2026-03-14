@@ -88,8 +88,7 @@ Behavior:
 - sends a small command over the bridge
 - polls until output appears or the child exits
 - requires `redraw_ready` on PTY-driven visible updates
-- queries `zide_terminal_redraw_state(...)` as redraw truth during polling
-- acknowledges the published generation before declaring success
+- resolves the same redraw-state -> snapshot -> `present_ack(...)` cycle as the dedicated and mixed host smokes
 - checks for a child-exit event separately from the base no-PTY ownership smoke
 
 This path is intentionally separate so PTY-hosting issues do not blur the baseline Python FFI contract.
