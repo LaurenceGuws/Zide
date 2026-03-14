@@ -50,6 +50,21 @@ gh release upload "$TAG" \
   --clobber
 ```
 
+## Release Notes Policy
+
+- Beta notes should stay high-level and technical, not read like a raw commit log.
+- The next release after `beta-0.0.2` should include a concise technical
+  breakdown of the first VT/render rewrite release:
+  - renderer-owned scene target as the normal main composition path
+  - default framebuffer reduced to present sink / degraded fallback
+  - explicit renderer-owned present acknowledgement semantics
+  - major post-rewrite hardening fixes that closed real compatibility gaps
+    (`Codex` inline history, Zig `std.Progress`, focused input latency)
+- Keep the tone honest: frame this as the first public release of the rewritten
+  VT/render architecture, not as final parity with `kitty` / `ghostty`.
+- Prefer a short architecture summary plus the most important user-visible
+  compatibility wins over a long inventory of smaller fixes.
+
 ## Consumer Guidance
 
 - Host apps should pin an explicit release tag and verify checksums before loading binaries.
