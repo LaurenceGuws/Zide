@@ -10,6 +10,7 @@ if str(ROOT) not in sys.path:
 
 from examples.common.ffi_host_boot import (  # noqa: E402
     as_bytes,
+    consume_terminal_events_once,
     consume_terminal_metadata_once,
     consume_terminal_publication_once,
     load_cdll,
@@ -445,11 +446,7 @@ def run_smoke(lib_path: Path) -> int:
         finally:
             lib.zide_terminal_scrollback_release(ctypes.byref(scrollback))
 
-        events = EventBuffer()
-        status = lib.zide_terminal_event_drain(handle, ctypes.byref(events))
-        if status != STATUS_OK:
-            raise RuntimeError(f"event_drain failed: {status}")
-        try:
+        def consume_events(events: EventBuffer) -> None:
             seen_title = False
             seen_clip = False
             for i in range(events.count):
@@ -463,8 +460,8 @@ def run_smoke(lib_path: Path) -> int:
                 raise RuntimeError("missing title_changed event")
             if not seen_clip:
                 raise RuntimeError("missing clipboard_write event")
-        finally:
-            lib.zide_terminal_events_free(ctypes.byref(events))
+
+        consume_terminal_events_once(lib, handle, EventBuffer, consume_events)
         return 0
     finally:
         lib.zide_terminal_destroy(handle)
@@ -494,10 +491,8 @@ def run_mock_service_smoke(lib_path: Path) -> int:
             if lib.zide_terminal_feed_output(handle, buf, len(chunk)) != STATUS_OK:
                 raise RuntimeError("feed_output(mock chunk) failed")
 
-            events = EventBuffer()
-            if lib.zide_terminal_event_drain(handle, ctypes.byref(events)) != STATUS_OK:
-                raise RuntimeError("event_drain(mock) failed")
-            try:
+            def consume_chunk_events(events: EventBuffer) -> None:
+                nonlocal saw_title, saw_clipboard, redraw_events
                 for i in range(events.count):
                     event = events.events[i]
                     payload = as_bytes(event.data_ptr, event.data_len)
@@ -507,22 +502,20 @@ def run_mock_service_smoke(lib_path: Path) -> int:
                         saw_clipboard = True
                     if event.kind == EVENT_REDRAW_READY:
                         redraw_events += 1
-            finally:
-                lib.zide_terminal_events_free(ctypes.byref(events))
+
+            consume_terminal_events_once(lib, handle, EventBuffer, consume_chunk_events)
 
         if lib.zide_terminal_close_input(handle) != STATUS_OK:
             raise RuntimeError("close_input(mock) failed")
 
-        events = EventBuffer()
-        if lib.zide_terminal_event_drain(handle, ctypes.byref(events)) != STATUS_OK:
-            raise RuntimeError("event_drain(close_input) failed")
-        try:
+        def consume_close_input_events(events: EventBuffer) -> None:
+            nonlocal saw_alive_closed
             for i in range(events.count):
                 event = events.events[i]
                 if event.kind == EVENT_ALIVE_CHANGED and event.int0 == 0:
                     saw_alive_closed = True
-        finally:
-            lib.zide_terminal_events_free(ctypes.byref(events))
+
+        consume_terminal_events_once(lib, handle, EventBuffer, consume_close_input_events)
 
         def consume_mock_snapshot(snapshot: Snapshot) -> None:
             title = as_bytes(snapshot.title_ptr, snapshot.title_len).decode("utf-8", errors="replace")

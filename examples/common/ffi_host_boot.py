@@ -90,3 +90,26 @@ def consume_terminal_metadata_once(
         metadata_consumer(metadata)
     finally:
         terminal_lib.zide_terminal_metadata_release(ctypes.byref(metadata))
+
+
+def consume_terminal_events_once(
+    terminal_lib,
+    terminal_handle,
+    event_buffer_cls,
+    event_consumer,
+) -> None:
+    """Resolve one event drain/free cycle for host-owned change boundaries.
+
+    Contract:
+    - drain the currently queued discrete events through the bridge
+    - let the caller inspect them while the buffer is live
+    - always free the event buffer before returning
+    """
+
+    events = event_buffer_cls()
+    if terminal_lib.zide_terminal_event_drain(terminal_handle, ctypes.byref(events)) != STATUS_OK:
+        raise RuntimeError("terminal event_drain failed")
+    try:
+        event_consumer(events)
+    finally:
+        terminal_lib.zide_terminal_events_free(ctypes.byref(events))
