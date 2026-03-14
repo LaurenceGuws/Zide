@@ -81,6 +81,8 @@ gh release upload "$TAG" \
   VT/render architecture, not as final parity with `kitty` / `ghostty`.
 - Prefer a short architecture summary plus the most important user-visible
   compatibility wins over a long inventory of smaller fixes.
+- Start from [`docs/NEXT_BETA_RELEASE_NOTES_TEMPLATE.md`](docs/NEXT_BETA_RELEASE_NOTES_TEMPLATE.md)
+  so the first VT/render rewrite release story stays consistent.
 
 ## Artifact Naming
 
