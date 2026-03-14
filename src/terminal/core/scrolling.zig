@@ -1,4 +1,5 @@
 const kitty_mod = @import("../kitty/graphics.zig");
+const app_logger = @import("../../app_logger.zig");
 
 pub fn scrollRegionUpWithOrigin(self: anytype, count: usize, origin: ?[]const u8) void {
     const screen = self.core.activeScreen();
@@ -7,15 +8,24 @@ pub fn scrollRegionUpWithOrigin(self: anytype, count: usize, origin: ?[]const u8
     const n = @min(count, screen.scroll_bottom - screen.scroll_top + 1);
     if (n == 0) return;
     const blank_cell = screen.blankCell();
-    if (isFullScrollRegion(self)) {
+    if (regionFeedsScrollback(self)) {
         var row: usize = 0;
         while (row < n) : (row += 1) {
             pushScrollbackRow(self, screen.scroll_top + row);
         }
         kitty_mod.updateKittyPlacementsForScroll(self);
+        const scroll_log = app_logger.logger("terminal.scroll");
+        scroll_log.logf(.info, "scroll_region_up feeds_scrollback top={d} bottom={d} n={d} full_region={d} top_anchored={d} history={d}", .{
+            screen.scroll_top,
+            screen.scroll_bottom,
+            n,
+            @intFromBool(isFullScrollRegion(self)),
+            @intFromBool(isTopAnchoredFullWidthRegion(self)),
+            self.core.history.scrollbackCount(),
+        });
     }
     screen.scrollRegionUpByWithOrigin(n, blank_cell, origin);
-    if (!isFullScrollRegion(self)) {
+    if (!regionFeedsScrollback(self)) {
         kitty_mod.shiftKittyPlacementsUp(self, screen.scroll_top, screen.scroll_bottom, n);
     }
 }
@@ -54,6 +64,20 @@ pub fn scrollUp(self: anytype) void {
 
 fn isFullScrollRegion(self: anytype) bool {
     return self.core.activeScreenConst().isFullScrollRegion();
+}
+
+fn isTopAnchoredFullWidthRegion(self: anytype) bool {
+    const screen = self.core.activeScreenConst();
+    if (self.core.active == .alt) return false;
+    if (screen.scroll_top != 0) return false;
+    if (screen.left_right_margin_mode_69) return false;
+    const cols = @as(usize, screen.grid.cols);
+    if (cols == 0) return false;
+    return screen.leftBoundary() == 0 and screen.rightBoundary() + 1 == cols;
+}
+
+fn regionFeedsScrollback(self: anytype) bool {
+    return isFullScrollRegion(self) or isTopAnchoredFullWidthRegion(self);
 }
 
 fn pushScrollbackRow(self: anytype, row: usize) void {
