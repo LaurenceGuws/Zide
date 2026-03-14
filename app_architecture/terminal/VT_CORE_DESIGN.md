@@ -2,6 +2,21 @@
 
 Date: 2026-03-10
 
+Status note, 2026-03-14:
+
+- The initial VT/render rewrite phase is no longer the main active lane.
+- The current phase is post-rewrite bug hunting, compatibility hardening, and
+  native/FFI convergence against the rewritten architecture.
+- Current active session focus is Codex CLI scrolling compatibility on Linux
+  native.
+- Current Codex-specific conclusion:
+  - Zide's native wheel-input path is behaving correctly
+  - Codex TUI currently relies on alternate-scroll (`DECSET 1007`) instead of
+    real mouse tracking in this lane
+  - local Codex source inspection shows mouse events are dropped in the TUI
+    event mapping, so this is currently a compatibility investigation, not a
+    generic native wheel-input regression in Zide
+
 Purpose: define the exact ownership split for the next terminal-core redesign
 lane so code changes do not drift between "session cleanup", "FFI cleanup", and
 "embed-friendly cleanup".
