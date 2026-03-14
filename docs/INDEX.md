@@ -23,6 +23,7 @@ Quick map of where to look for common needs.
 - `app_architecture/ui/DEVELOPMENT_JOURNEY.md` — renderer plan and per-OS journey.
 - `app_architecture/APP_LAYERING.md` — module boundaries and import rules.
 - `app_architecture/DEPENDENCIES.md` — dependency packaging architecture notes and migration constraints.
+- `app_architecture/tools/DOCS_EXPLORER.md` — local docs-explorer scope, ownership, and constraints.
 - `app_architecture/editor/DESIGN.md` — editor architecture + references.
 - `app_architecture/terminal/DESIGN.md` — terminal architecture + decisions.
 - `app_architecture/terminal/TERMINAL_WORKSPACE.md` — backend tab/workspace ownership contract for terminal mode.
@@ -42,6 +43,7 @@ Quick map of where to look for common needs.
 - `README.md` — user-facing overview.
 - `tests/README.md` — repo-wide test layout policy.
 - `app_architecture/BOOTSTRAP.md` — dependencies, bootstrap, build, run, test.
+- `tools/docs_explorer/README.md` — run instructions for the local docs explorer.
 - `app_architecture/CONFIG.md` — Lua config subsystem: parser surface, merge rules, runtime consumers, and reload truth.
 - `app_architecture/config_todo.yaml` — config subsystem tracker: contract drift, reload gaps, validation, and binding semantics.
 - `docs/DEPENDENCIES.md` — native dependency setup (vcpkg + system packages).
