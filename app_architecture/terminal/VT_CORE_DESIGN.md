@@ -410,6 +410,10 @@ So the next decisive live probe is now `terminal.ui.target_sample`:
     "which publication entrypoint is wrong for `wiki_life`?", but whether the
     remaining old `nvim` text-buffer scroll ghost is downstream in renderer
     consumption / present
+- historical note: the heavy `terminal.ui.target_sample` probe path described
+  below was useful for the rewrite war room, but it has since been removed from
+  the live runtime during post-beta cleanup. Keep the details as investigation
+  history, not as current implementation guidance.
 - the active root-cause instrumentation is now trimmed again for the remaining
   live lane:
   - `terminal.ui.target_sample` is the active tag
