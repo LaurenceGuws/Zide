@@ -28,6 +28,15 @@ Publish them as GitHub Release assets instead.
   - editor FFI package (`libzide-editor-ffi.so`, header, `RELEASE.txt`, `SHA256SUMS`)
   - combined `dist/` archives + top-level checksums
 
+## Release Branch Policy
+
+- Cut a release branch from the exact `main` commit you intend to publish.
+- Treat that branch as the stable release snapshot.
+- If release-specific artifacts or Pages assets must be committed, do that on
+  the release branch, not on `main`.
+- Tag the release from the release-branch commit that actually produced the
+  published artifacts.
+
 ## Publish to GitHub Release
 
 Example with GitHub CLI:
