@@ -42,6 +42,8 @@ test "ffi non-pty snapshot and event ownership smoke" {
         var resize_events: c_api.ZideTerminalEventBuffer = .{};
         try std.testing.expectEqual(@as(c_int, 0), c_api.zide_terminal_event_drain(handle, &resize_events));
         defer c_api.zide_terminal_events_free(&resize_events);
+        try std.testing.expectEqual(c_api.ZIDE_TERMINAL_EVENT_ABI_VERSION, resize_events.abi_version);
+        try std.testing.expectEqual(@as(u32, @sizeOf(c_api.ZideTerminalEventBuffer)), resize_events.struct_size);
         try std.testing.expectEqual(@as(usize, 1), resize_events.count);
         try std.testing.expectEqual(
             @as(c_int, @intFromEnum(c_api.ZideTerminalEventKind.redraw_ready)),
@@ -108,6 +110,8 @@ test "ffi non-pty snapshot and event ownership smoke" {
     var events: c_api.ZideTerminalEventBuffer = .{};
     try std.testing.expectEqual(@as(c_int, 0), c_api.zide_terminal_event_drain(handle, &events));
     defer c_api.zide_terminal_events_free(&events);
+    try std.testing.expectEqual(c_api.ZIDE_TERMINAL_EVENT_ABI_VERSION, events.abi_version);
+    try std.testing.expectEqual(@as(u32, @sizeOf(c_api.ZideTerminalEventBuffer)), events.struct_size);
     try std.testing.expectEqual(@as(usize, 3), events.count);
 
     var saw_title = false;
@@ -224,6 +228,8 @@ test "ffi snapshot and event release zero exported structs" {
     var events: c_api.ZideTerminalEventBuffer = .{};
     try std.testing.expectEqual(@as(c_int, 0), c_api.zide_terminal_event_drain(handle, &events));
     c_api.zide_terminal_events_free(&events);
+    try std.testing.expectEqual(@as(u32, 0), events.abi_version);
+    try std.testing.expectEqual(@as(u32, 0), events.struct_size);
     try std.testing.expectEqual(@as(usize, 0), events.count);
     try std.testing.expectEqual(@as(?*anyopaque, null), events._ctx);
 }
@@ -253,6 +259,8 @@ test "ffi child_exit event carries exit code and present flag" {
             var events: c_api.ZideTerminalEventBuffer = .{};
             try std.testing.expectEqual(@as(c_int, 0), c_api.zide_terminal_event_drain(handle, &events));
             defer c_api.zide_terminal_events_free(&events);
+            try std.testing.expectEqual(c_api.ZIDE_TERMINAL_EVENT_ABI_VERSION, events.abi_version);
+            try std.testing.expectEqual(@as(u32, @sizeOf(c_api.ZideTerminalEventBuffer)), events.struct_size);
 
             if (events.events) |event_ptr| {
                 for (event_ptr[0..events.count]) |event| {

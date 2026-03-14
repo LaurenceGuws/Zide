@@ -9,15 +9,19 @@ Status: milestone-1 baseline. This document describes the event shape currently 
 ## Versioning
 
 Current scalar version queries:
-- `zide_terminal_event_abi_version() -> 3`
+- `zide_terminal_event_abi_version() -> 4`
 
 Current event struct:
 - `ZideTerminalEvent`
 - `ZideTerminalEventBuffer`
 
-Unlike snapshots, the event buffer does not yet carry an inline struct header.
-Hosts should treat the exported scalar version query as the authority for the
-current event layout.
+The event buffer now follows the same ABI/header discipline as the other
+structured FFI surfaces:
+- `abi_version`
+- `struct_size`
+
+Hosts should validate both the scalar version query and the inline buffer
+header before consuming drained events.
 
 ## Exported types
 
@@ -38,11 +42,15 @@ Rules:
 ### `ZideTerminalEventBuffer`
 
 Fields:
+- `abi_version`
+- `struct_size`
 - `events`
 - `count`
 - `_ctx`
 
 Rules:
+- `abi_version` must equal `zide_terminal_event_abi_version()`
+- `struct_size` must equal `sizeof(ZideTerminalEventBuffer)` for the host build
 - `events` points to a flat array of `count` events
 - `_ctx` is release bookkeeping only and is not host data
 
@@ -188,10 +196,11 @@ Current authority split:
 Recommended host behavior:
 1. call `zide_terminal_event_abi_version()`
 2. drain events
-3. dispatch by `kind`
-4. consume `data_ptr` bytes before release
-5. release the whole buffer with `zide_terminal_events_free()`
-6. if `redraw_ready` is observed, consult `zide_terminal_redraw_state(...)`
+3. validate `events.abi_version` and `events.struct_size`
+4. dispatch by `kind`
+5. consume `data_ptr` bytes before release
+6. release the whole buffer with `zide_terminal_events_free()`
+7. if `redraw_ready` is observed, consult `zide_terminal_redraw_state(...)`
    or equivalent direct getters for redraw truth
 
 Do not:

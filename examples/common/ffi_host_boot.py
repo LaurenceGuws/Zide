@@ -110,6 +110,10 @@ def consume_terminal_events_once(
     if terminal_lib.zide_terminal_event_drain(terminal_handle, ctypes.byref(events)) != STATUS_OK:
         raise RuntimeError("terminal event_drain failed")
     try:
+        if events.abi_version != terminal_lib.zide_terminal_event_abi_version():
+            raise RuntimeError(f"unexpected event abi_version: {events.abi_version}")
+        if events.struct_size != ctypes.sizeof(event_buffer_cls):
+            raise RuntimeError(f"unexpected event struct_size: {events.struct_size}")
         event_consumer(events)
     finally:
         terminal_lib.zide_terminal_events_free(ctypes.byref(events))

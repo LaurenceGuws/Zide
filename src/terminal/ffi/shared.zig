@@ -11,7 +11,7 @@ pub const Status = enum(c_int) {
 };
 
 pub const snapshot_abi_version: u32 = 1;
-pub const event_abi_version: u32 = 3;
+pub const event_abi_version: u32 = 4;
 pub const scrollback_abi_version: u32 = 1;
 pub const renderer_metadata_abi_version: u32 = 1;
 pub const metadata_abi_version: u32 = 1;
@@ -177,6 +177,8 @@ pub const RendererMetadata = extern struct {
 };
 
 pub const EventBuffer = extern struct {
+    abi_version: u32 = 0,
+    struct_size: u32 = 0,
     events: ?[*]const Event = null,
     count: usize = 0,
     _ctx: ?*anyopaque = null,
