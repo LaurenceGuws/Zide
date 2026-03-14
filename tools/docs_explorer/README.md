@@ -47,3 +47,7 @@ Notes:
 - `build/js/` is generated output and is intentionally not checked in.
 - The launcher expects `build/js/main.js` to exist and will tell you to run the
   build step if it is missing.
+- `main` stays source-only for this tool.
+- If GitHub Pages is published for a release, built explorer assets may be
+  committed on the release branch as part of the release ritual instead of on
+  `main`.
