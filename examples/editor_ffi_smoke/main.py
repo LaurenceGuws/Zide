@@ -243,6 +243,39 @@ def run_invalid_argument_smoke(lib_path: Path) -> int:
         lib.zide_editor_destroy(handle)
 
 
+def run_abi_mismatch_smoke(lib_path: Path) -> int:
+    lib = load_library(lib_path)
+    handle = HandlePtr()
+    status = lib.zide_editor_create(ctypes.byref(handle))
+    if status != STATUS_OK:
+        raise RuntimeError(f"create failed: {status}")
+
+    try:
+        data, data_len = to_buf(b"editor abi string\n")
+        if lib.zide_editor_set_text(handle, data, data_len) != STATUS_OK:
+            raise RuntimeError("set_text failed")
+
+        text = StringBuffer()
+        text.abi_version = 999
+        text.struct_size = 1
+        if lib.zide_editor_text_alloc(handle, ctypes.byref(text)) != STATUS_OK:
+            raise RuntimeError("text_alloc failed")
+        try:
+            if text.abi_version != lib.zide_editor_string_abi_version():
+                raise RuntimeError(f"unexpected string abi_version: {text.abi_version}")
+            if text.struct_size != ctypes.sizeof(StringBuffer):
+                raise RuntimeError(f"unexpected string struct_size: {text.struct_size}")
+            text_result = (text.abi_version, text.struct_size)
+        finally:
+            lib.zide_editor_string_free(ctypes.byref(text))
+
+        print("editor ffi abi mismatch regression ok")
+        print(f"string={text_result}")
+        return 0
+    finally:
+        lib.zide_editor_destroy(handle)
+
+
 def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument(
@@ -252,12 +285,14 @@ def main() -> int:
     )
     parser.add_argument(
         "--scenario",
-        choices=("baseline", "invalid-args"),
+        choices=("baseline", "invalid-args", "abi-mismatch"),
         default="baseline",
     )
     args = parser.parse_args()
     if args.scenario == "invalid-args":
         return run_invalid_argument_smoke(Path(args.lib))
+    if args.scenario == "abi-mismatch":
+        return run_abi_mismatch_smoke(Path(args.lib))
     return run_smoke(Path(args.lib))
 
 
