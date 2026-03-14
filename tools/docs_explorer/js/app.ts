@@ -23,6 +23,7 @@ export async function startApp(): Promise<void> {
   const docController = createDocController({
     state,
     shell,
+    repoBasePath: project.repoBasePath,
     docs,
     defaultDocPath: project.defaultDoc,
     treeEl: shell.treeEl,

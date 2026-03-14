@@ -6,8 +6,8 @@ export function escapeHtml(text: string): string {
     .replaceAll('"', "&quot;");
 }
 
-export function repoRelative(path: string): string {
-  return `../../${path}`;
+export function repoRelative(basePath: string, path: string): string {
+  return `${basePath}${path}`;
 }
 
 export function currentDocFromHash(docs: string[], defaultDocPath: string): string {

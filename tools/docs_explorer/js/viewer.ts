@@ -7,6 +7,7 @@ import type { MarkedApi, MermaidApi } from "./vendor_types.js";
 
 export async function loadDoc(args: {
   state: AppState;
+  repoBasePath: string;
   path: string | null;
   marked: MarkedApi;
   mermaid: MermaidApi;
@@ -20,6 +21,7 @@ export async function loadDoc(args: {
 }): Promise<void> {
   const {
     state,
+    repoBasePath,
     path,
     marked,
     mermaid,
@@ -38,7 +40,7 @@ export async function loadDoc(args: {
   syncActiveLink(state.tree.activePath);
 
   try {
-    const res = await fetch(repoRelative(path));
+    const res = await fetch(repoRelative(repoBasePath, path));
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     const source = await res.text();
     const html = marked.parse(source);
