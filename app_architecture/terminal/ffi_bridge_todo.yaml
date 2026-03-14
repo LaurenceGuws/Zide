@@ -284,12 +284,13 @@ terminal_ffi_bridge_todo:
       tasks:
         - id: FFI-05-01
           title: "Document Flutter adapter design constraints"
-          status: todo
+          status: done
           files_to_add:
             - app_architecture/terminal/FLUTTER_ADAPTER_NOTES.md
           notes:
             - "Record why snapshot/diff transport beats trying to export SDL or renderer internals."
             - "Document desktop-first assumptions and texture/view-hosting alternatives."
+            - "Doc now landed in `app_architecture/terminal/FLUTTER_ADAPTER_NOTES.md`: Flutter stays downstream of the bridge, inherits the shared redraw/publication/present contract, and should consume snapshots/metadata/events instead of exported native renderer internals."
         - id: FFI-05-02
           title: "Evaluate daemon or multiplexer mode as a follow-on, not a prerequisite"
           status: todo
