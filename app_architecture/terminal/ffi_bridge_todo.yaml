@@ -180,6 +180,7 @@ terminal_ffi_bridge_todo:
           title: "Define published-vs-acknowledged generation contract for foreign hosts"
           status: partial
           files_to_edit:
+            - app_architecture/terminal/RENDER_PUBLICATION_CONTRACT.md
             - app_architecture/terminal/FFI_SNAPSHOT_ABI.md
             - app_architecture/terminal/FFI_EVENT_ABI.md
             - app_architecture/terminal/FFI_BRIDGE_DESIGN.md
@@ -189,6 +190,7 @@ terminal_ffi_bridge_todo:
             - "Keep publication truth in the core, but let the bridge distinguish latest published generation from latest host-acknowledged generation."
             - "First slice is now landed in the bridge/C ABI/header: `zide_terminal_present_ack(handle, generation)`, `zide_terminal_acknowledged_generation(handle, &generation)`, `zide_terminal_published_generation(handle, &generation)`, and `zide_terminal_needs_redraw(handle)`."
             - "The bridge now has both edge-triggered wake (`redraw_ready`) and level-triggered redraw state (`needs_redraw`) without exporting native renderer details."
+            - "Shared semantic authority now lives in `app_architecture/terminal/RENDER_PUBLICATION_CONTRACT.md` so native and FFI are judged against one contract instead of parallel narratives."
             - "Remaining work is to decide whether future event semantics or metadata/getter surfaces should explicitly incorporate acknowledged generation beyond this minimal pair."
 
     - name: "FFI-03 PTY + host IO seam"

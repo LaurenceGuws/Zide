@@ -144,12 +144,9 @@ Payload:
 Notes:
 - current milestone-1 meaning is only: a newer snapshot generation exists
 - this is a wake signal for snapshot pull, not a presentation contract
-- there is currently no explicit host-facing present acknowledgement surface
-- so the bridge cannot yet distinguish:
-  - latest published generation
-  - latest host-acknowledged/presented generation
-- that gap is now intentional follow-on work, because the native renderer path
-  has moved to explicit renderer-owned presentation acknowledgement
+- shared semantic authority now lives in:
+  - `app_architecture/terminal/RENDER_PUBLICATION_CONTRACT.md`
+- this event remains intentionally separate from present acknowledgement
 
 Update:
 - the first explicit host-facing present acknowledgement surface is now landed
@@ -194,7 +191,8 @@ Not exported yet:
 - hyperlink open intent
 - MIME-tagged clipboard events
 - wakeup hints or callbacks
-- explicit host present acknowledgement
 - acknowledged/presented generation events or getters
 
-Those remain follow-on bridge work after the baseline queue contract.
+Explicit host present acknowledgement is now handled by direct getters/calls
+instead of by overloading the event stream. Additional acknowledged-generation
+event semantics remain follow-on work after the baseline queue contract.

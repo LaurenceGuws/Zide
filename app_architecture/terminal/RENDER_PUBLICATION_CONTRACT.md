@@ -1,219 +1,239 @@
-Date: 2026-03-10
+Date: 2026-03-14
 
-Purpose: define the backend contract for the next redraw/dirty-tracking lane so
-we can improve `nvim`, gutters, scope guides, and dense full-screen redraw
-workloads without re-entangling UI scheduling with terminal-core ownership.
+Purpose: define the shared redraw/publication/present contract that both the
+native Linux GUI path and the FFI/embedded host path must satisfy.
 
-This is not a "do optimizations now" doc. It is the contract target for the
-later lane once VT core/session/transport separation is far enough along.
+This document replaces the older "future redraw lane" framing. The contract is
+now active design authority for:
 
-## Why This Needs Its Own Contract
+- native renderer-owned scene submission
+- FFI host-facing publication and present acknowledgement
+- later convergence work toward one honest host-facing engine contract
 
-Recent terminal work made the backend cleaner:
+## Quality Bar
 
-- `TerminalCore` now owns more real engine state
-- transport/FFI host wake semantics are clearer
-- PTY and no-PTY hosts now share a basic redraw wake contract
+This contract exists to support a quality target in the same band as
+`kitty` / `ghostty` for:
 
-But redraw quality is still limited by backend publication shape:
+- correctness
+- smoothness
+- steady-state cost
+- host/embed portability
 
-- `view_cache` still blends projection, publication, and redraw policy
-- dirty retirement still depends on presented-generation acknowledgement
-- widget/runtime layers still participate in redraw choreography more than they
-  should
-
-That is why workloads such as:
-
-- `nvim` line numbers and gutter updates
-- scope-guide redraws
-- `ascii-rain`
-- repeated clear+redraw TUI patterns
-
-still need a stronger backend contract before another optimization push.
+The native GUI is the proving ground. The FFI/embedded path is expected to
+catch up to the same semantics, not invent a lower-grade side path.
 
 ## Reference Direction
 
 Reference read, local snapshots:
 
 - Ghostty:
-  - wake renderer after stream/mailbox publication
-  - renderer consumes terminal state plus explicit dirty state
-  - scheduling and redraw wake stay outside the VT core, but visible-state
-    transitions are authoritative
-- Alacritty:
-  - terminal/display dirty state is explicit
-  - window redraw is requested after visible-state changes
-  - per-frame damage is a renderer concern, but it is driven from terminal-side
-    dirty truth, not guessed in the UI layer
+  - explicit host/runtime boundary
+  - renderer wake and render ownership stay outside VT core
+  - embedded host surface is narrow and explicit
+- WezTerm:
+  - render-facing state is monotonic and sequence-driven
+  - host/render side consumes explicit latest state instead of inferring it
+- Foot / Kitty:
+  - terminal-side truth and render-side scheduling stay cleanly separated
+  - correctness does not depend on accidental compositor/default-buffer behavior
 
-The shared lesson:
+Shared lesson:
 
-- terminal/backend owns state change truth
-- host/UI owns scheduling and actual drawing
-- the seam between them must be explicit and narrow
+- terminal/backend owns publication truth
+- host owns scheduling and presentation
+- acknowledgement is explicit
+- wake and present are not the same contract
 
-## Current Zide Problems
+## Contract Goals
 
-### 1. Too many publication channels
+1. One publication truth.
+   Terminal/backend state changes must collapse into one authoritative published
+   generation plus damage metadata.
 
-Current redraw/publication decisions are influenced by:
+2. One acknowledgement truth.
+   Hosts must explicitly communicate which published generation they have
+   actually presented/consumed.
 
-- grid dirty state
-- `output_generation`
-- published render-cache generation
-- presented generation
-- `clear_generation`
-- kitty generation
-- visible-history generation
-- view-cache pending state
+3. Wake is advisory, not authoritative.
+   Wake signals say "go look again"; they do not define what is dirty.
 
-This works, but it is easy for one path to drift.
+4. Native and FFI stay semantically aligned.
+   The native path may have richer renderer internals, but it must not rely on
+   weaker or different publication/present semantics than foreign hosts.
 
-### 2. `view_cache` carries policy, not just projection
+## Ownership Model
 
-`view_cache` currently does all of these:
+### Terminal Core / Backend
 
-- history + screen projection
-- selection overlay projection
-- kitty ordering sensitivity
-- row-hash refinement
-- viewport-shift publication support
-- some full-vs-partial redraw choice
+Owns:
 
-That is too much for one layer.
+- model mutation truth
+- published generation truth
+- published damage truth
+- stable render-facing snapshot/view truth
 
-### 3. Renderer wake and renderer correctness are still too coupled
+Does not own:
 
-The FFI host path is now better:
+- frame pacing
+- present timing
+- swap/default-framebuffer semantics
+- host-local draw scheduling
 
-- `redraw_ready` is a wake hint
-- snapshot generation/damage remain authoritative
+### Host
 
-But the native widget/runtime path still carries more publication behavior than
-we want long-term.
+Owns:
 
-### 4. Presented-generation ack is still too structural
+- wake handling and scheduling
+- actual drawing/presentation
+- explicit acknowledgement of presented/consumed generations
 
-Presented-generation ack is valuable, but it currently has too much influence
-over when backend damage is refined or retired.
+Hosts include:
 
-That makes correctness sensitive to whether the renderer has caught up, which is
-exactly where top-row starvation and stale-gutter bugs appear.
+- native renderer/widget/frame loop
+- FFI/embedded hosts such as a future Flutter runtime
 
-## Target Contract
+### Renderer
 
-### A. Backend owns three explicit states
+Native-only specialization of host responsibilities:
+
+- owns authoritative scene composition before swap
+- owns renderer submission identity
+- owns renderer-side present diagnostics
+
+It does not become publication truth.
+
+## Shared State Model
+
+Every host path should be explainable in terms of these states:
 
 1. Model dirty state
-- authoritative mutation truth at screen/history/kitty level
+- backend mutation truth only
 
-2. Published view state
-- stable render-facing snapshot/cache state
-- includes generation + damage bounds + viewport context
+2. Published state
+- stable render-facing state
+- authoritative `published_generation`
+- authoritative damage/full-redraw reason
 
-3. Presented acknowledgement
-- renderer feedback only
-- used for retirement and optimization
-- must not become a second correctness truth
+3. Acknowledged state
+- latest generation the host says it has actually presented/consumed
+- optimization and retirement input
+- never a second publication truth
 
-### B. Host/UI owns only two things
+4. Wake state
+- advisory signal that fresh published state may exist
+- host may coalesce wakes
+- host must still consult published/acknowledged state
 
-1. Wake/scheduling
-- frame requests
-- redraw throttling
-- coalescing
+## Required Shared Semantics
 
-2. Drawing
-- texture upload/update
-- overlay rendering
-- final presentation
+### A. Published generation is authoritative
 
-The UI should not decide whether backend state is “really dirty.”
+Hosts answer "is there newer terminal content?" from published generation
+truth, not widget-local flags or ad hoc side channels.
 
-### C. Wake events remain advisory
+### B. Acknowledged generation is monotonic
 
-For both FFI and native UI:
+Hosts may only acknowledge:
 
-- wake events/hints say “fetch fresh published state”
-- snapshot/render-cache generation + damage remain authoritative
-- hosts may coalesce wakes, but must not invent redraw state
+- the current published generation, or
+- an older published generation not older than the current acknowledged one
 
-### D. Published state must stand on its own
+In practice we reject backward acknowledgement because it blurs ownership and
+does not help optimization.
 
-The renderer/host should be able to answer:
+### C. Wake does not mean present
 
-- do I need to redraw?
-- what bounds are dirty?
-- is this a safe partial update?
+Wake semantics must remain separate from presentation semantics:
 
-without also consulting unrelated backend flags or side channels.
+- wake/`redraw_ready` means "fetch fresh published state"
+- it does not mean "the host has now presented generation N"
 
-## Concrete Follow-Up Goals
+### D. Damage is advisory to the host, authoritative from the backend
 
-### 1. Reduce publication inputs
+Backend owns the damage/full-redraw decision. Hosts may choose how to draw from
+that information, but must not invent their own notion of whether backend state
+is really dirty.
 
-Collapse the publication contract around:
+### E. Present acknowledgement is optimization-only feedback
 
-- model dirty
-- published generation
-- published damage
-- explicit full-dirty reason when applicable
+Presented/acknowledged generation influences:
 
-Keep `presented_generation` as optimization/retirement feedback only.
+- retirement
+- redraw cooling
+- later optimization/refinement
 
-### 2. Split `view_cache` into projection vs publication policy
+It must not become the reason published damage or correctness is lost.
 
-Desired separation:
+## Native Mapping
 
-- projection/cache building
-- publication decision
-- damage refinement/retirement
+Current native path on `main`:
 
-These do not all need to live in one file or one owner.
+- terminal draw stages presentation feedback during widget/render-input work
+- renderer owns authoritative scene composition
+- renderer submission now has:
+  - `succeeded`
+  - monotonic submission `sequence`
+- terminal presentation feedback flushes only after successful renderer
+  submission
 
-### 3. Keep scroll/clear/alt/resize authoritative
+That means the native path now distinguishes:
 
-Operations that must remain explicit publication events:
+- latest published generation
+- latest successfully submitted renderer scene
+- latest terminal presentation feedback flushed after submission
 
-- resize reflow
-- alt-screen enter/exit
-- RIS/DECSTR
-- clear-display full clears
-- scrollback viewport movement
-- kitty geometry/state changes that affect visible composition
+This is the stronger host-side contract the FFI path is catching up to.
 
-These should stay backend-owned and explicit.
+## FFI Mapping
 
-### 4. Make row-hash refinement strictly optional optimization
+Current FFI path now exposes the minimal shared contract explicitly:
 
-Refinement must never be allowed to override correctness when:
+- `zide_terminal_published_generation(handle, &generation)`
+- `zide_terminal_present_ack(handle, generation)`
+- `zide_terminal_acknowledged_generation(handle, &generation)`
+- `zide_terminal_needs_redraw(handle)`
+- `redraw_ready` event remains wake-only
 
-- presented generation is behind
-- viewport context changed
-- source damage already implies visible redraw
+Current FFI meaning:
 
-It should only narrow already-valid damage, never become the reason damage is
-lost.
+- `published_generation` is publication truth
+- `acknowledged_generation` is host-consumption truth
+- `needs_redraw == (published_generation != acknowledged_generation)`
+- `redraw_ready` is an edge-triggered wake hint for snapshot pull
 
-## Entry Criteria For The Lane
+This keeps the FFI bridge aligned with native semantics without exporting
+native renderer details.
 
-Start the redraw/publication lane when:
+## Current Convergence Point
 
-- VT core/session/transport split is stable enough that we are not moving the
-  backend center every patch
-- PTY and no-PTY host wake semantics are already explicit
-- replay fixtures remain the regression authority
+Native and FFI are not on the same implementation path yet, but they are now
+converging on the same host-facing semantics:
 
-That is close, but not finished yet.
+- backend publishes authoritative generations
+- hosts consume/present explicitly
+- hosts acknowledge explicitly
+- wake remains advisory and cheap
 
-## First Implementation Order When This Lane Starts
+That is the contract a future embedded/mobile host should inherit.
 
-1. Define one explicit published-state contract for native widget and FFI hosts.
-2. Move damage/publication ownership out of ad hoc widget/runtime code.
-3. Separate `view_cache` projection from publication-policy decisions.
-4. Add targeted regressions for:
-   - `nvim` gutter/line-number updates
-   - scope-guide redraws
-   - dense clear+redraw loops
-   - scrollback-offset transitions
-5. Only then tune partial texture update behavior.
+## Non-Goals
+
+This contract does not require:
+
+- exporting native renderer internals into FFI
+- preserving old widget-local correctness heuristics
+- making `redraw_ready` into a present event
+- forcing native and FFI to share the same concrete rendering code today
+
+## Follow-On Work
+
+1. Keep tightening native present ownership around renderer-owned submission
+   truth.
+2. Decide whether future FFI metadata/event surfaces need to expose additional
+   acknowledged-generation-aware state beyond the current getter pair.
+3. Keep `view_cache` / publication cleanup aligned with this shared contract,
+   not with widget-local historical behavior.
+4. When native and FFI are mature enough, collapse toward one explicit
+   host-facing engine contract wherever that unification remains honest and
+   cheap.
