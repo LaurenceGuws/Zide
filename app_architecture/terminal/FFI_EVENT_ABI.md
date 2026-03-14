@@ -159,6 +159,9 @@ Update:
   - `zide_terminal_needs_redraw(handle)`
 - `redraw_ready` itself remains a wake signal for snapshot pull; it is still
   not a present event
+- this is now a deliberate contract decision, not a temporary omission:
+  acknowledged-generation-aware redraw truth belongs in direct getters, not
+  in the event stream
 
 ## Drain semantics
 
@@ -178,11 +181,14 @@ Recommended host behavior:
 3. dispatch by `kind`
 4. consume `data_ptr` bytes before release
 5. release the whole buffer with `zide_terminal_events_free()`
+6. if `redraw_ready` is observed, consult `zide_terminal_redraw_state(...)`
+   or equivalent direct getters for redraw truth
 
 Do not:
 - hold onto event payload pointers after release
 - assume every event kind has string payload bytes
 - infer ownership from `data_ptr` alone
+- treat `redraw_ready` as equivalent to present acknowledgement or redraw truth
 
 ## Deliberate omissions in milestone 1
 

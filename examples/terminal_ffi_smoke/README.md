@@ -59,8 +59,10 @@ Host migration checklist:
 - release owned buffers in reverse order of acquisition
 - keep terminal snapshot/scrollback/event lifetimes scoped to one host pump tick
 - treat no-PTY feed loops as first-class, not just fallback smokes
-- treat `redraw_ready` as a wake hint only; fetch snapshot generation/damage to
-  decide what to repaint
+- treat `redraw_ready` as a wake hint only
+- use `zide_terminal_redraw_state(...)` as the cheap redraw-truth getter
+- use snapshot generation/damage only after redraw-state says newer content is
+  actually pending for the host
 
 Installed bridge artifacts:
 - `zig-out/lib/libzide-terminal-ffi.so`
