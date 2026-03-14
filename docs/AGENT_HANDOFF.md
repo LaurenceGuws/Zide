@@ -17,7 +17,7 @@
 - The scene-owned composition path is active on `main`.
 - `nvim` scrolling/cursorline behavior is currently good on the new path.
 - `btop` shaded-block rendering is currently good on the new path.
-- `rain` is improved but still considered a narrower follow-up lane; do not let it reopen the older broad redraw/publication investigation.
+- `rain` is no longer part of the active renderer/present validation matrix. Treat it as deferred special-character / visual-polish follow-up work only; do not let it reopen redraw/publication investigation.
 - The current active implementation authority is the phased present-plan doc, not ad hoc investigation notes.
 
 ### Near-Term Plan

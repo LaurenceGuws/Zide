@@ -229,12 +229,10 @@ Current status:
 - current live result on this Phase 2 path:
   - `nvim` scrolling/cursorline ghosting is gone in normal use
   - the old `btop` shaded-block corruption is gone too
-  - fullscreen `rain` is materially better after the follow-through pacing
-    change in `src/app/frame_render_idle_runtime.zig`, but it still has a
-    smaller residual cadence artifact under dense full-screen churn
-  - remaining validation should now stay on other TUI/special lanes such as
-    that narrower `rain` follow-up, and then move to present-ack ownership,
-    not back to direct-default main composition
+  - fullscreen `rain` is no longer part of the active present-path validation
+    matrix; keep it deferred for future special-character / visual-polish work
+  - remaining validation should now stay on other TUI/special lanes and then
+    move to present-ack ownership, not back to direct-default main composition
 
 ### Phase 3: Rebind Present Acknowledgement to Renderer Scene Truth
 
