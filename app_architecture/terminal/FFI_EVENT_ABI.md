@@ -155,6 +155,7 @@ Update:
   - `zide_terminal_acknowledged_generation(handle, &generation)`
 - the bridge now also exposes:
   - `zide_terminal_published_generation(handle, &generation)`
+  - `zide_terminal_redraw_state(handle, &state)`
   - `zide_terminal_needs_redraw(handle)`
 - `redraw_ready` itself remains a wake signal for snapshot pull; it is still
   not a present event

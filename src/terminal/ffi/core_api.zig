@@ -86,6 +86,20 @@ pub fn publishedGeneration(handle: ?*shared.ZideTerminalHandle, out_generation: 
     return .ok;
 }
 
+pub fn redrawState(handle: ?*shared.ZideTerminalHandle, out_state: *shared.RedrawState) shared.Status {
+    const h = shared.fromOpaque(handle) orelse return .invalid_argument;
+    const published_generation = h.session.snapshot().generation;
+    const acknowledged_generation = h.last_acknowledged_generation;
+    out_state.* = .{
+        .abi_version = shared.redraw_state_abi_version,
+        .struct_size = @sizeOf(shared.RedrawState),
+        .published_generation = published_generation,
+        .acknowledged_generation = acknowledged_generation,
+        .needs_redraw = @intFromBool(published_generation != acknowledged_generation),
+    };
+    return .ok;
+}
+
 pub fn needsRedraw(handle: ?*shared.ZideTerminalHandle) u8 {
     const h = shared.fromOpaque(handle) orelse return 0;
     const published_generation = h.session.snapshot().generation;

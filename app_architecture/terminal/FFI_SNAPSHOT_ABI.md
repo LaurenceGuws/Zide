@@ -165,6 +165,8 @@ Update:
 - the bridge now also exposes `zide_terminal_published_generation(handle, &generation)`
   so hosts can compare published vs acknowledged generation without forcing a
   snapshot acquire
+- `zide_terminal_redraw_state(handle, &state)` so hosts can acquire both
+  generations plus `needs_redraw` atomically in one cheap getter
 - and `zide_terminal_needs_redraw(handle)` so hosts can ask the cheap
   level-triggered question directly instead of deriving it themselves from
   multiple calls
