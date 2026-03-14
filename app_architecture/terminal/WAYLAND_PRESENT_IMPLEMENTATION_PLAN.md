@@ -328,6 +328,13 @@ Current status:
 - the default framebuffer remains only as an explicit degraded fallback when
   scene-target activation fails during frame startup or subpass restoration; it
   is no longer the architectural alternative main path
+- the old swap-edge experiment matrix is no longer part of the live renderer
+  surface:
+  - removed: `copy_back_to_front`, `finish_before_swap`,
+    `finish_before_and_after_swap`, cap/recovery/every-frame experiment modes,
+    and the old `pre_fallback_front` probe path
+  - kept: `swap_interval_0` plus the recent-input publication-window A/B
+    overrides that still map to the current scene-owned mitigation path
 
 ## Validation Matrix
 
