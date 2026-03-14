@@ -284,6 +284,10 @@ Current status:
   renderer-owned submission result, and terminal presentation feedback records
   the last successful terminal submission sequence instead of relying on a
   naked success boolean alone
+- the old renderer-local `endFrame() -> bool` seam is now gone too:
+  submission is owned directly by `Renderer.submitFrame()`, so Phase 3 no
+  longer straddles both a legacy boolean swap path and the newer
+  renderer-owned submission identity
 - the next Phase 3 slice, if still needed, should build on that explicit
   renderer-owned submission sequence rather than widening app/widget-local
   present ownership again

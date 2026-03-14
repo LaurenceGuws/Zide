@@ -1137,7 +1137,7 @@ pub const Renderer = struct {
         self.presentation_band_probe_count = 0;
     }
 
-    pub fn endFrame(self: *Renderer) bool {
+    pub fn submitFrame(self: *Renderer) FrameSubmission {
         self.drawSceneTargetToDefault();
         const swap_start = sdl_api.getPerformanceCounter();
         if (self.present_edge_fallback_mode == .copy_back_to_front) self.capturePreFallbackFrameProbes();
@@ -1154,14 +1154,9 @@ pub const Renderer = struct {
         self.presentation_probe_count = 0;
         self.presentation_band_probe_count = 0;
         self.applyPresentFrameCap();
-        return swap_ok;
-    }
-
-    pub fn submitFrame(self: *Renderer) FrameSubmission {
-        const succeeded = self.endFrame();
-        if (succeeded) self.submission_sequence += 1;
+        if (swap_ok) self.submission_sequence += 1;
         return .{
-            .succeeded = succeeded,
+            .succeeded = swap_ok,
             .sequence = self.submission_sequence,
         };
     }
