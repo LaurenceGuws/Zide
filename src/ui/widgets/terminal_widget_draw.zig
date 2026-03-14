@@ -866,7 +866,6 @@ pub fn drawPrepared(
         draw_cursor,
         cursor,
         cursor_style,
-        null,
     );
 
     if (updated or cache.dirty == .none) {
