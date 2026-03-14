@@ -346,13 +346,12 @@ Current status:
     and the old `pre_fallback_front` probe path
   - kept: `swap_interval_0` plus the recent-input publication-window A/B
     overrides that still map to the current scene-owned mitigation path
-- the remaining present-probe path is now also single-owner again:
-  `terminal.ui.target_sample` is the only tag that can arm probe capture and
-  renderer-side present readback; row-render logs remain row stats only
-- the remaining present diagnostics are now current-frame only:
-  old previous-present / previous-final history and `event=present_compare`
-  have been removed, leaving the live probe focused on baseline vs
-  pre-swap-front/back vs present mismatches on the current frame
+- post-beta cleanup has now removed the remaining heavyweight
+  `terminal.ui.target_sample` readback path from the live renderer/runtime
+  surface
+- row-render logs remain available for lightweight row stats, but suspicious
+  present readback is no longer carried as normal runtime code until a new
+  issue proves it is worth reintroducing in a cheaper form
 
 ## Validation Matrix
 
