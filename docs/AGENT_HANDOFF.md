@@ -21,11 +21,9 @@
 - `nvim` scrolling/cursorline behavior is currently good on the rewritten path.
 - `btop` shaded-block rendering is currently good on the rewritten path.
 - `rain` is no longer part of the active renderer/present validation matrix. Treat it as deferred special-character / visual-polish follow-up work only; do not let it reopen redraw/publication investigation.
-- Current session bug focus: Codex CLI scrolling compatibility.
-- Current Codex conclusion:
-  - native wheel delivery in Zide is working
-  - Codex TUI does not currently use real mouse tracking for this lane
-  - local source inspection shows Codex relies on alternate-scroll (`DECSET 1007`) and drops mouse events in its TUI event mapping
+- Recently closed native compatibility bugs:
+  - Codex inline resume history now retires into real primary scrollback on the rewritten path.
+  - Zig `std.Progress` redraw now rewrites in place correctly; `ESC M` / reverse-index dispatch is no longer dropped during synchronized progress updates.
 - The current active implementation authority is the terminal architecture/docs, not ad hoc investigation notes.
 
 ### Near-Term Plan

@@ -177,6 +177,157 @@ test "feedOutputBytes keeps incremental damage after baseline publish" {
     try std.testing.expectEqual(@as(usize, 0), cache.damage.end_col);
 }
 
+test "carriage return plus erase line rewrites current row in place" {
+    const allocator = std.testing.allocator;
+
+    var session = try TerminalSession.init(allocator, 4, 20);
+    defer session.deinit();
+
+    session.feedOutputBytes("hello");
+    session.feedOutputBytes("\r\x1b[2Kbye");
+
+    try std.testing.expectEqual(@as(usize, 0), session.scrollbackInfo().total_rows);
+    const snapshot = session.snapshot();
+    try expectSnapshotRow(snapshot, 0, "bye                 ");
+
+    session.feedOutputBytes("\r\x1b[2Kstep 1");
+    session.feedOutputBytes("\r\x1b[2Kstep 2");
+
+    try std.testing.expectEqual(@as(usize, 0), session.scrollbackInfo().total_rows);
+    try expectSnapshotRow(session.snapshot(), 0, "step 2              ");
+}
+
+test "zig progress redraw pattern rewrites block instead of appending" {
+    const allocator = std.testing.allocator;
+
+    var session = try TerminalSession.init(allocator, 6, 20);
+    defer session.deinit();
+
+    debugSetCursor(&session, 4, 0);
+
+    session.feedOutputBytes("\x1b[Jbuild one\nitem a\n\r\x1bM\x1bM");
+    session.feedOutputBytes("\x1b[Jbuild two\nitem b\n\r\x1bM\x1bM");
+
+    const snapshot = session.snapshot();
+    try std.testing.expectEqual(@as(usize, 0), snapshot.scrollback_count);
+    try expectSnapshotRow(snapshot, 2, "build two           ");
+    try expectSnapshotRow(snapshot, 3, "item b              ");
+}
+
+test "zig progress redraw invalidates cleared tail rows" {
+    const allocator = std.testing.allocator;
+
+    var session = try TerminalSession.init(allocator, 6, 20);
+    defer session.deinit();
+
+    debugSetCursor(&session, 4, 0);
+    session.feedOutputBytes("\x1b[Jbuild one\nitem a\n\r\x1bM\x1bM");
+
+    _ = session.output_generation.fetchAdd(1, .acq_rel);
+    session.updateViewCacheNoLock(session.output_generation.load(.acquire), session.history.scrollOffset());
+
+    session.primary.clearDirty();
+    session.alt.clearDirty();
+    try std.testing.expect(session.acknowledgePresentedGeneration(session.renderCache().generation));
+
+    session.feedOutputBytes("\x1b[Jbuild two\nitem b\n\r\x1bM\x1bM");
+
+    const cache = session.renderCache();
+    try std.testing.expectEqual(Dirty.partial, cache.dirty);
+    try std.testing.expectEqual(@as(usize, 2), cache.damage.start_row);
+    try std.testing.expectEqual(@as(usize, 5), cache.damage.end_row);
+    try std.testing.expectEqual(@as(usize, 0), cache.damage.start_col);
+    try std.testing.expectEqual(@as(usize, 19), cache.damage.end_col);
+}
+
+test "synchronized zig progress redraw does not retire intermediate scrollback" {
+    const allocator = std.testing.allocator;
+
+    var session = try TerminalSession.init(allocator, 68, 20);
+    defer session.deinit();
+
+    debugSetCursor(&session, 67, 0);
+
+    session.feedOutputBytes("\x1b[?2026h");
+    try std.testing.expect(session.syncUpdatesActive());
+
+    session.feedOutputBytes("\x1b[Jbuild one\nitem a\n\r\x1bM\x1bM");
+    session.feedOutputBytes("\x1b[Jbuild two\nitem b\n\r\x1bM\x1bM");
+
+    try std.testing.expectEqual(@as(usize, 0), session.scrollbackInfo().total_rows);
+
+    session.feedOutputBytes("\x1b[?2026l");
+    try std.testing.expect(!session.syncUpdatesActive());
+
+    const snapshot = session.snapshot();
+    try std.testing.expectEqual(@as(usize, 0), snapshot.scrollback_count);
+    try expectSnapshotRow(snapshot, 65, "build two           ");
+    try expectSnapshotRow(snapshot, 66, "item b              ");
+}
+
+test "single-chunk synchronized progress sequence keeps newline scroll inside sync window" {
+    const allocator = std.testing.allocator;
+
+    var session = try TerminalSession.init(allocator, 68, 20);
+    defer session.deinit();
+
+    debugSetCursor(&session, 67, 0);
+    session.feedOutputBytes("\x1b[?2026h\x1b[Jbuild one\nitem a\r\x1bM\x1b[?2026l");
+
+    try std.testing.expectEqual(@as(usize, 0), session.scrollbackInfo().total_rows);
+    try std.testing.expect(!session.syncUpdatesActive());
+
+    const snapshot = session.snapshot();
+    try std.testing.expectEqual(@as(usize, 0), snapshot.scrollback_count);
+    try expectSnapshotRow(snapshot, 66, "build one           ");
+    try expectSnapshotRow(snapshot, 67, "item a              ");
+}
+
+test "reverse index moves cursor up inside scroll region" {
+    const allocator = std.testing.allocator;
+
+    var session = try TerminalSession.init(allocator, 6, 8);
+    defer session.deinit();
+
+    debugSetCursor(&session, 4, 2);
+    session.feedOutputBytes("\x1bM");
+
+    const cursor = session.getCursorPos();
+    try std.testing.expectEqual(@as(usize, 3), cursor.row);
+    try std.testing.expectEqual(@as(usize, 2), cursor.col);
+}
+
+test "real zig redraw chunk rewrites in place at bottom edge" {
+    const allocator = std.testing.allocator;
+
+    var session = try TerminalSession.init(allocator, 68, 80);
+    defer session.deinit();
+
+    debugSetCursor(&session, 67, 0);
+    session.feedOutputBytes(
+        "\x1b[?2026h" ++
+            "\x1b[J" ++
+            "[3] Compile Build Script\r\n" ++
+            "\x1b(0tq\x1b(B [1137/5878] Linking\r\n" ++
+            "\x1b(0tq\x1b(B [1133/1376] Code Generation\r\n" ++
+            "\x1b(0mq\x1b(B [7017] Semantic Analysis\r\n" ++
+            "   \x1b(0mq\x1b(B Target.powerpc.all_features\r\n" ++
+            "\x1b]9;4;3\x07" ++
+            "\r\x1bM\x1bM\x1bM\x1bM\x1bM" ++
+            "\x1b[?2026l",
+    );
+
+    try std.testing.expectEqual(@as(usize, 0), session.scrollbackInfo().total_rows);
+    try std.testing.expect(!session.syncUpdatesActive());
+
+    const snapshot = session.snapshot();
+    try expectSnapshotRow(snapshot, 63, "[3] Compile Build Script                                                         ");
+    try expectSnapshotRow(snapshot, 64, "qq [1137/5878] Linking                                                           ");
+    try expectSnapshotRow(snapshot, 65, "qq [1133/1376] Code Generation                                                   ");
+    try expectSnapshotRow(snapshot, 66, "q  [7017] Semantic Analysis                                                      ");
+    try expectSnapshotRow(snapshot, 67, "   q  Target.powerpc.all_features                                                ");
+}
+
 test "repeat guide chunks do not grow scrollback unexpectedly" {
     const allocator = std.testing.allocator;
 

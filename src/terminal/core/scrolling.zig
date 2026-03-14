@@ -77,6 +77,7 @@ fn isTopAnchoredFullWidthRegion(self: anytype) bool {
 }
 
 fn regionFeedsScrollback(self: anytype) bool {
+    if (self.core.sync_updates_active) return false;
     return isFullScrollRegion(self) or isTopAnchoredFullWidthRegion(self);
 }
 
