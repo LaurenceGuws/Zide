@@ -15,6 +15,7 @@ export function getAppShell(): AppShell {
     searchEl: requiredElement("#search"),
     optionsToggleEl: requiredElement("#options-toggle"),
     optionsMenuEl: requiredElement("#options-menu"),
+    optionsInfoEl: requiredElement("#options-info"),
     themeRowEl: requiredElement("#theme-row"),
     themeToggleEl: requiredElement("#theme-toggle"),
     sidebarToggleEl: requiredElement("#sidebar-toggle"),

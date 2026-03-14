@@ -67,6 +67,7 @@ export type AppShell = {
   searchEl: HTMLInputElement;
   optionsToggleEl: HTMLButtonElement;
   optionsMenuEl: HTMLElement;
+  optionsInfoEl: HTMLElement;
   themeRowEl: HTMLElement;
   themeToggleEl: HTMLButtonElement;
   sidebarToggleEl: HTMLButtonElement;

@@ -59,6 +59,8 @@ requiring a frontend framework or backend service.
 - `js/viewer_state.js`
   - viewer body render state transitions
   - loading/error/content HTML rendering from explicit state
+- `js/runtime_info.ts`
+  - small runtime/about metadata surface in the options menu
 - `js/tree.js`
   - tree rendering and active-node sync
 - `js/viewer.js`
