@@ -8,10 +8,16 @@ ROOT = Path(__file__).resolve().parents[2]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-from examples.common.ffi_host_boot import STATUS_OK, consume_terminal_publication_once, poll_terminal_then_editor_once  # noqa: E402
+from examples.common.ffi_host_boot import (  # noqa: E402
+    STATUS_OK,
+    consume_terminal_metadata_once,
+    consume_terminal_publication_once,
+    poll_terminal_then_editor_once,
+)
 from examples.terminal_ffi_smoke.main import (
     CreateConfig,
     HandlePtr as TerminalHandlePtr,
+    Metadata,
     Snapshot,
     load_library as load_terminal_library,
     query_redraw_state,
@@ -44,7 +50,7 @@ def run_combo(terminal_lib_path: Path, editor_lib_path: Path) -> int:
                 title = as_bytes(snapshot.title_ptr, snapshot.title_len).decode("utf-8", errors="replace")
                 if title != "combo-title":
                     raise RuntimeError(f"unexpected combo terminal title: {title!r}")
-                state["title"] = title
+                state["snapshot_title"] = title
 
             consume_terminal_publication_once(
                 terminal_lib,
@@ -52,6 +58,22 @@ def run_combo(terminal_lib_path: Path, editor_lib_path: Path) -> int:
                 Snapshot,
                 query_redraw_state,
                 consume_snapshot,
+            )
+
+            def consume_metadata(metadata: Metadata) -> None:
+                title = as_bytes(metadata.title_ptr, metadata.title_len).decode("utf-8", errors="replace")
+                if title != "combo-title":
+                    raise RuntimeError(f"unexpected combo metadata title: {title!r}")
+                if metadata.alive != 1:
+                    raise RuntimeError(f"unexpected combo metadata alive: {metadata.alive}")
+                state["metadata_title"] = title
+                state["metadata_alive"] = metadata.alive
+
+            consume_terminal_metadata_once(
+                terminal_lib,
+                terminal_handle,
+                Metadata,
+                consume_metadata,
             )
 
         def editor_step() -> None:
@@ -84,7 +106,9 @@ def run_combo(terminal_lib_path: Path, editor_lib_path: Path) -> int:
 
         print("ffi combo smoke ok")
         print(
-            f"terminal_title={state['title']!r} "
+            f"terminal_snapshot_title={state['snapshot_title']!r} "
+            f"terminal_metadata_title={state['metadata_title']!r} "
+            f"terminal_alive={state['metadata_alive']} "
             f"editor_cursor={state['cursor']} "
             f"editor_text={state['text_value']!r}"
         )
