@@ -151,6 +151,37 @@ Important:
 - the host must treat the full snapshot as authoritative
 - hosts may ignore damage and redraw from the full cell buffer
 
+Current known contract gap:
+- snapshot `generation` is publication truth only
+- it is not yet paired with any explicit host-facing presented/acknowledged
+  generation contract
+- this is now behind the native renderer path, which already distinguishes
+  renderer-owned submission from publication truth
+
+That means milestone-1 FFI hosts currently have:
+- full snapshot truth
+- advisory damage bounds
+- wakeup via `redraw_ready`
+
+But they do not yet have:
+- explicit acknowledgement of "host has now presented generation N"
+- bridge-visible retirement semantics derived from host presentation
+
+Update:
+- the first host-facing acknowledgement slice is now landed as explicit bridge
+  calls:
+  - `zide_terminal_present_ack(handle, generation)`
+  - `zide_terminal_acknowledged_generation(handle, &generation)`
+- the bridge now also exposes `zide_terminal_published_generation(handle, &generation)`
+  so hosts can compare published vs acknowledged generation without forcing a
+  snapshot acquire
+- and `zide_terminal_needs_redraw(handle)` so hosts can ask the cheap
+  level-triggered question directly instead of deriving it themselves from
+  multiple calls
+- snapshot ABI itself is unchanged; the acknowledged-generation contract lives
+  alongside snapshot acquisition instead of mutating the snapshot struct in
+  milestone 1
+
 This keeps the snapshot usable even while damage tracking evolves.
 
 ## Deliberate omissions in milestone 1

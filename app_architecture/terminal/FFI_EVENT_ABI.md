@@ -115,6 +115,53 @@ Notes:
 - hosts may still call `zide_terminal_is_alive()` as the latest-state check
 - hosts may also call `zide_terminal_child_exit_status()` as the latest-state getter
 
+### `alive_changed`
+
+Kind:
+- `ZideTerminalEventKind.alive_changed`
+
+Payload:
+- `data_ptr = null`
+- `data_len = 0`
+- `int0 = 1` when alive, `0` when not alive
+- `int1 = 0`
+
+Notes:
+- this is emitted when the bridge observes host/session liveness change
+- it is latest-state compatible with `zide_terminal_is_alive()`
+
+### `redraw_ready`
+
+Kind:
+- `ZideTerminalEventKind.redraw_ready`
+
+Payload:
+- `data_ptr = null`
+- `data_len = 0`
+- `int0 = 0`
+- `int1 = 0`
+
+Notes:
+- current milestone-1 meaning is only: a newer snapshot generation exists
+- this is a wake signal for snapshot pull, not a presentation contract
+- there is currently no explicit host-facing present acknowledgement surface
+- so the bridge cannot yet distinguish:
+  - latest published generation
+  - latest host-acknowledged/presented generation
+- that gap is now intentional follow-on work, because the native renderer path
+  has moved to explicit renderer-owned presentation acknowledgement
+
+Update:
+- the first explicit host-facing present acknowledgement surface is now landed
+  as direct bridge calls:
+  - `zide_terminal_present_ack(handle, generation)`
+  - `zide_terminal_acknowledged_generation(handle, &generation)`
+- the bridge now also exposes:
+  - `zide_terminal_published_generation(handle, &generation)`
+  - `zide_terminal_needs_redraw(handle)`
+- `redraw_ready` itself remains a wake signal for snapshot pull; it is still
+  not a present event
+
 ## Drain semantics
 
 Event delivery is destructive:
@@ -147,5 +194,7 @@ Not exported yet:
 - hyperlink open intent
 - MIME-tagged clipboard events
 - wakeup hints or callbacks
+- explicit host present acknowledgement
+- acknowledged/presented generation events or getters
 
 Those remain follow-on bridge work after the baseline queue contract.

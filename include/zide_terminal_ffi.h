@@ -194,6 +194,10 @@ int zide_terminal_send_bytes(ZideTerminalHandle *handle, const uint8_t *bytes, s
 int zide_terminal_send_text(ZideTerminalHandle *handle, const uint8_t *text, size_t len);
 int zide_terminal_feed_output(ZideTerminalHandle *handle, const uint8_t *bytes, size_t len);
 int zide_terminal_close_input(ZideTerminalHandle *handle);
+int zide_terminal_present_ack(ZideTerminalHandle *handle, uint64_t generation);
+int zide_terminal_acknowledged_generation(ZideTerminalHandle *handle, uint64_t *out_generation);
+int zide_terminal_published_generation(ZideTerminalHandle *handle, uint64_t *out_generation);
+uint8_t zide_terminal_needs_redraw(ZideTerminalHandle *handle);
 int zide_terminal_send_key(ZideTerminalHandle *handle, const ZideTerminalKeyEvent *event);
 int zide_terminal_send_mouse(ZideTerminalHandle *handle, const ZideTerminalMouseEvent *event);
 int zide_terminal_snapshot_acquire(ZideTerminalHandle *handle, ZideTerminalSnapshot *out_snapshot);

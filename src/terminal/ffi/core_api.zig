@@ -49,6 +49,7 @@ pub fn create(config: ?*const shared.CreateConfig, out_handle: *?*shared.ZideTer
         .scratch_clipboard = .empty,
         .scratch_scrollback_cells = .empty,
         .last_generation = 0,
+        .last_acknowledged_generation = 0,
         .last_alive = true,
         .exit_delivered = false,
     };
@@ -62,6 +63,33 @@ pub fn create(config: ?*const shared.CreateConfig, out_handle: *?*shared.ZideTer
 
     out_handle.* = shared.toOpaque(handle);
     return .ok;
+}
+
+pub fn presentAck(handle: ?*shared.ZideTerminalHandle, generation: u64) shared.Status {
+    const h = shared.fromOpaque(handle) orelse return .invalid_argument;
+    const published_generation = h.session.snapshot().generation;
+    if (generation > published_generation) return .invalid_argument;
+    if (generation < h.last_acknowledged_generation) return .invalid_argument;
+    h.last_acknowledged_generation = generation;
+    return .ok;
+}
+
+pub fn acknowledgedGeneration(handle: ?*shared.ZideTerminalHandle, out_generation: *u64) shared.Status {
+    const h = shared.fromOpaque(handle) orelse return .invalid_argument;
+    out_generation.* = h.last_acknowledged_generation;
+    return .ok;
+}
+
+pub fn publishedGeneration(handle: ?*shared.ZideTerminalHandle, out_generation: *u64) shared.Status {
+    const h = shared.fromOpaque(handle) orelse return .invalid_argument;
+    out_generation.* = h.session.snapshot().generation;
+    return .ok;
+}
+
+pub fn needsRedraw(handle: ?*shared.ZideTerminalHandle) u8 {
+    const h = shared.fromOpaque(handle) orelse return 0;
+    const published_generation = h.session.snapshot().generation;
+    return @intFromBool(published_generation != h.last_acknowledged_generation);
 }
 
 pub fn destroy(handle: ?*shared.ZideTerminalHandle) void {

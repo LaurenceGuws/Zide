@@ -196,6 +196,7 @@ pub const Handle = struct {
     scratch_clipboard: std.ArrayList(u8),
     scratch_scrollback_cells: std.ArrayList(types.Cell),
     last_generation: u64,
+    last_acknowledged_generation: u64,
     last_alive: bool,
     exit_delivered: bool,
 };

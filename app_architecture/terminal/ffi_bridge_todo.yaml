@@ -136,6 +136,7 @@ terminal_ffi_bridge_todo:
             - "Cover title changes, cwd updates, clipboard requests/data, bell, process exit, link activation, dirty/resize notifications."
             - "Classify each event as pull-based, callback-based, or snapshot-derived."
             - "Milestone-1 queue ABI is now locked for title/cwd/clipboard_write/child_exit in `app_architecture/terminal/FFI_EVENT_ABI.md`."
+            - "Current catch-up gap is now explicit too: `alive_changed` / `redraw_ready` are implemented, but there is still no explicit host present acknowledgement or acknowledged-generation contract matching the stronger native renderer-owned submission boundary."
 
     - name: "FFI-02 Snapshot and diff ABI"
       tasks:
@@ -175,6 +176,20 @@ terminal_ffi_bridge_todo:
           notes:
             - "Do not let diff sophistication block milestone 1."
             - "Damage should be an extension surface once correctness and ownership are proven."
+        - id: FFI-02-04
+          title: "Define published-vs-acknowledged generation contract for foreign hosts"
+          status: partial
+          files_to_edit:
+            - app_architecture/terminal/FFI_SNAPSHOT_ABI.md
+            - app_architecture/terminal/FFI_EVENT_ABI.md
+            - app_architecture/terminal/FFI_BRIDGE_DESIGN.md
+          notes:
+            - "Catch the FFI bridge up to the stronger native contract without exporting native renderer details."
+            - "Define explicit host-facing present acknowledgement and how it relates to snapshot generation."
+            - "Keep publication truth in the core, but let the bridge distinguish latest published generation from latest host-acknowledged generation."
+            - "First slice is now landed in the bridge/C ABI/header: `zide_terminal_present_ack(handle, generation)`, `zide_terminal_acknowledged_generation(handle, &generation)`, `zide_terminal_published_generation(handle, &generation)`, and `zide_terminal_needs_redraw(handle)`."
+            - "The bridge now has both edge-triggered wake (`redraw_ready`) and level-triggered redraw state (`needs_redraw`) without exporting native renderer details."
+            - "Remaining work is to decide whether future event semantics or metadata/getter surfaces should explicitly incorporate acknowledged generation beyond this minimal pair."
 
     - name: "FFI-03 PTY + host IO seam"
       tasks:

@@ -36,6 +36,22 @@ pub export fn zide_terminal_close_input(handle: ?*c_api.ZideTerminalHandle) c_in
     return c_api.zide_terminal_close_input(handle);
 }
 
+pub export fn zide_terminal_present_ack(handle: ?*c_api.ZideTerminalHandle, generation: u64) c_int {
+    return c_api.zide_terminal_present_ack(handle, generation);
+}
+
+pub export fn zide_terminal_acknowledged_generation(handle: ?*c_api.ZideTerminalHandle, out_generation: *u64) c_int {
+    return c_api.zide_terminal_acknowledged_generation(handle, out_generation);
+}
+
+pub export fn zide_terminal_published_generation(handle: ?*c_api.ZideTerminalHandle, out_generation: *u64) c_int {
+    return c_api.zide_terminal_published_generation(handle, out_generation);
+}
+
+pub export fn zide_terminal_needs_redraw(handle: ?*c_api.ZideTerminalHandle) u8 {
+    return c_api.zide_terminal_needs_redraw(handle);
+}
+
 pub export fn zide_terminal_send_key(handle: ?*c_api.ZideTerminalHandle, event: ?*const c_api.ZideTerminalKeyEvent) c_int {
     return c_api.zide_terminal_send_key(handle, event);
 }
