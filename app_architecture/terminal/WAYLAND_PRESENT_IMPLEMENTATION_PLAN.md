@@ -335,6 +335,9 @@ Current status:
     and the old `pre_fallback_front` probe path
   - kept: `swap_interval_0` plus the recent-input publication-window A/B
     overrides that still map to the current scene-owned mitigation path
+- the remaining present-probe path is now also single-owner again:
+  `terminal.ui.target_sample` is the only tag that can arm probe capture and
+  renderer-side present readback; row-render logs remain row stats only
 
 ## Validation Matrix
 
