@@ -119,6 +119,41 @@ test "full-region scroll publishes partial cache damage at live bottom" {
     try std.testing.expectEqual(@as(usize, 1), session.scrollbackInfo().total_rows);
 }
 
+test "top-anchored partial scroll region retires rows into scrollback" {
+    const allocator = std.testing.allocator;
+
+    var session = try TerminalSession.init(allocator, 6, 4);
+    defer session.deinit();
+
+    const base = session.primary.defaultCell();
+    inline for ([_]struct { row: usize, cp: u8 }{
+        .{ .row = 0, .cp = 'A' },
+        .{ .row = 1, .cp = 'B' },
+        .{ .row = 2, .cp = 'C' },
+    }) |entry| {
+        var col: usize = 0;
+        while (col < 4) : (col += 1) {
+            var cell = base;
+            cell.codepoint = entry.cp;
+            session.primary.grid.cells.items[entry.row * 4 + col] = cell;
+        }
+    }
+
+    session.feedOutputBytes("\x1b[1;3r");
+    session.scrollRegionUpWithOrigin(1, "test.top_anchored_scroll_region");
+
+    try std.testing.expectEqual(@as(usize, 1), session.scrollbackInfo().total_rows);
+    const history_row = session.scrollbackRow(0) orelse return error.TestExpectedEqual;
+    try std.testing.expectEqual(@as(usize, 4), history_row.len);
+    for (history_row) |cell| {
+        try std.testing.expectEqual(@as(u32, 'A'), cell.codepoint);
+    }
+
+    const snapshot = session.snapshot();
+    try expectSnapshotRow(snapshot, 0, "BBBB");
+    try expectSnapshotRow(snapshot, 1, "CCCC");
+}
+
 test "feedOutputBytes keeps incremental damage after baseline publish" {
     const allocator = std.testing.allocator;
 
