@@ -48,6 +48,10 @@ pub export fn zide_terminal_published_generation(handle: ?*c_api.ZideTerminalHan
     return c_api.zide_terminal_published_generation(handle, out_generation);
 }
 
+pub export fn zide_terminal_redraw_state(handle: ?*c_api.ZideTerminalHandle, out_state: *c_api.ZideTerminalRedrawState) c_int {
+    return c_api.zide_terminal_redraw_state(handle, out_state);
+}
+
 pub export fn zide_terminal_needs_redraw(handle: ?*c_api.ZideTerminalHandle) u8 {
     return c_api.zide_terminal_needs_redraw(handle);
 }

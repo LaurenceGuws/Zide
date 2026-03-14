@@ -33,6 +33,7 @@ enum {
     ZIDE_TERMINAL_SCROLLBACK_ABI_VERSION = 1,
     ZIDE_TERMINAL_RENDERER_METADATA_ABI_VERSION = 1,
     ZIDE_TERMINAL_METADATA_ABI_VERSION = 1,
+    ZIDE_TERMINAL_REDRAW_STATE_ABI_VERSION = 1,
 };
 
 enum {
@@ -140,6 +141,15 @@ typedef struct ZideTerminalMetadata {
     void *_ctx;
 } ZideTerminalMetadata;
 
+typedef struct ZideTerminalRedrawState {
+    uint32_t abi_version;
+    uint32_t struct_size;
+    uint64_t published_generation;
+    uint64_t acknowledged_generation;
+    uint8_t needs_redraw;
+    uint8_t _padding0[7];
+} ZideTerminalRedrawState;
+
 typedef struct ZideTerminalKeyEvent {
     uint32_t key;
     uint8_t modifiers;
@@ -197,6 +207,7 @@ int zide_terminal_close_input(ZideTerminalHandle *handle);
 int zide_terminal_present_ack(ZideTerminalHandle *handle, uint64_t generation);
 int zide_terminal_acknowledged_generation(ZideTerminalHandle *handle, uint64_t *out_generation);
 int zide_terminal_published_generation(ZideTerminalHandle *handle, uint64_t *out_generation);
+int zide_terminal_redraw_state(ZideTerminalHandle *handle, ZideTerminalRedrawState *out_state);
 uint8_t zide_terminal_needs_redraw(ZideTerminalHandle *handle);
 int zide_terminal_send_key(ZideTerminalHandle *handle, const ZideTerminalKeyEvent *event);
 int zide_terminal_send_mouse(ZideTerminalHandle *handle, const ZideTerminalMouseEvent *event);

@@ -192,6 +192,7 @@ Current FFI path now exposes the minimal shared contract explicitly:
 - `zide_terminal_published_generation(handle, &generation)`
 - `zide_terminal_present_ack(handle, generation)`
 - `zide_terminal_acknowledged_generation(handle, &generation)`
+- `zide_terminal_redraw_state(handle, &state)`
 - `zide_terminal_needs_redraw(handle)`
 - `redraw_ready` event remains wake-only
 
@@ -199,6 +200,8 @@ Current FFI meaning:
 
 - `published_generation` is publication truth
 - `acknowledged_generation` is host-consumption truth
+- `redraw_state` is the cheap atomic getter for both generations plus redraw
+  level state
 - `needs_redraw == (published_generation != acknowledged_generation)`
 - `redraw_ready` is an edge-triggered wake hint for snapshot pull
 

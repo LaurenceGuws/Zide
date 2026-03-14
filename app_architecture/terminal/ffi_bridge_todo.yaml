@@ -188,8 +188,9 @@ terminal_ffi_bridge_todo:
             - "Catch the FFI bridge up to the stronger native contract without exporting native renderer details."
             - "Define explicit host-facing present acknowledgement and how it relates to snapshot generation."
             - "Keep publication truth in the core, but let the bridge distinguish latest published generation from latest host-acknowledged generation."
-            - "First slice is now landed in the bridge/C ABI/header: `zide_terminal_present_ack(handle, generation)`, `zide_terminal_acknowledged_generation(handle, &generation)`, `zide_terminal_published_generation(handle, &generation)`, and `zide_terminal_needs_redraw(handle)`."
+            - "First slice is now landed in the bridge/C ABI/header: `zide_terminal_present_ack(handle, generation)`, `zide_terminal_acknowledged_generation(handle, &generation)`, `zide_terminal_published_generation(handle, &generation)`, `zide_terminal_redraw_state(handle, &state)`, and `zide_terminal_needs_redraw(handle)`."
             - "The bridge now has both edge-triggered wake (`redraw_ready`) and level-triggered redraw state (`needs_redraw`) without exporting native renderer details."
+            - "It also now has a cheap atomic redraw-state getter so foreign hosts do not have to assemble publication truth from multiple calls."
             - "Shared semantic authority now lives in `app_architecture/terminal/RENDER_PUBLICATION_CONTRACT.md` so native and FFI are judged against one contract instead of parallel narratives."
             - "Remaining work is to decide whether future event semantics or metadata/getter surfaces should explicitly incorporate acknowledged generation beyond this minimal pair."
 

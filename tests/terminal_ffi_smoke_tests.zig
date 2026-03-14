@@ -70,6 +70,14 @@ test "ffi non-pty snapshot and event ownership smoke" {
     try std.testing.expectEqual(@as(c_int, 0), c_api.zide_terminal_published_generation(handle, &published_generation));
     try std.testing.expectEqual(snapshot.generation, published_generation);
 
+    var redraw_state: c_api.ZideTerminalRedrawState = .{};
+    try std.testing.expectEqual(@as(c_int, 0), c_api.zide_terminal_redraw_state(handle, &redraw_state));
+    try std.testing.expectEqual(c_api.ZIDE_TERMINAL_REDRAW_STATE_ABI_VERSION, redraw_state.abi_version);
+    try std.testing.expectEqual(@as(u32, @sizeOf(c_api.ZideTerminalRedrawState)), redraw_state.struct_size);
+    try std.testing.expectEqual(snapshot.generation, redraw_state.published_generation);
+    try std.testing.expectEqual(@as(u64, 0), redraw_state.acknowledged_generation);
+    try std.testing.expectEqual(@as(u8, 1), redraw_state.needs_redraw);
+
     var acknowledged_generation: u64 = 99;
     try std.testing.expectEqual(@as(c_int, 0), c_api.zide_terminal_acknowledged_generation(handle, &acknowledged_generation));
     try std.testing.expectEqual(@as(u64, 0), acknowledged_generation);
@@ -77,6 +85,10 @@ test "ffi non-pty snapshot and event ownership smoke" {
     try std.testing.expectEqual(@as(c_int, 0), c_api.zide_terminal_acknowledged_generation(handle, &acknowledged_generation));
     try std.testing.expectEqual(snapshot.generation, acknowledged_generation);
     try std.testing.expectEqual(@as(u8, 0), c_api.zide_terminal_needs_redraw(handle));
+    try std.testing.expectEqual(@as(c_int, 0), c_api.zide_terminal_redraw_state(handle, &redraw_state));
+    try std.testing.expectEqual(snapshot.generation, redraw_state.published_generation);
+    try std.testing.expectEqual(snapshot.generation, redraw_state.acknowledged_generation);
+    try std.testing.expectEqual(@as(u8, 0), redraw_state.needs_redraw);
     try std.testing.expectEqual(@as(c_int, 1), c_api.zide_terminal_present_ack(handle, snapshot.generation + 1));
 
     var metadata: c_api.ZideTerminalMetadata = .{};

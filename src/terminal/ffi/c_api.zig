@@ -6,12 +6,14 @@ pub const ZIDE_TERMINAL_EVENT_ABI_VERSION = bridge.event_abi_version;
 pub const ZIDE_TERMINAL_SCROLLBACK_ABI_VERSION = bridge.scrollback_abi_version;
 pub const ZIDE_TERMINAL_RENDERER_METADATA_ABI_VERSION = bridge.renderer_metadata_abi_version;
 pub const ZIDE_TERMINAL_METADATA_ABI_VERSION = bridge.metadata_abi_version;
+pub const ZIDE_TERMINAL_REDRAW_STATE_ABI_VERSION = bridge.redraw_state_abi_version;
 pub const ZideTerminalCreateConfig = bridge.CreateConfig;
 pub const ZideTerminalColor = bridge.Color;
 pub const ZideTerminalCell = bridge.Cell;
 pub const ZideTerminalSnapshot = bridge.Snapshot;
 pub const ZideTerminalScrollbackBuffer = bridge.ScrollbackBuffer;
 pub const ZideTerminalMetadata = bridge.Metadata;
+pub const ZideTerminalRedrawState = bridge.RedrawState;
 pub const ZideTerminalKeyEvent = bridge.KeyEvent;
 pub const ZideTerminalMouseEvent = bridge.MouseEvent;
 pub const ZideTerminalEvent = bridge.Event;
@@ -69,6 +71,10 @@ pub fn zide_terminal_acknowledged_generation(handle: ?*ZideTerminalHandle, out_g
 
 pub fn zide_terminal_published_generation(handle: ?*ZideTerminalHandle, out_generation: *u64) c_int {
     return @intFromEnum(bridge.publishedGeneration(handle, out_generation));
+}
+
+pub fn zide_terminal_redraw_state(handle: ?*ZideTerminalHandle, out_state: *ZideTerminalRedrawState) c_int {
+    return @intFromEnum(bridge.redrawState(handle, out_state));
 }
 
 pub fn zide_terminal_needs_redraw(handle: ?*ZideTerminalHandle) u8 {

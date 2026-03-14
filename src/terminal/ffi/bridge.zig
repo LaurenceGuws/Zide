@@ -8,6 +8,7 @@ pub const event_abi_version = shared.event_abi_version;
 pub const scrollback_abi_version = shared.scrollback_abi_version;
 pub const renderer_metadata_abi_version = shared.renderer_metadata_abi_version;
 pub const metadata_abi_version = shared.metadata_abi_version;
+pub const redraw_state_abi_version = shared.redraw_state_abi_version;
 pub const EventKind = shared.EventKind;
 pub const GlyphClassFlags = shared.GlyphClassFlags;
 pub const DamagePolicyFlags = shared.DamagePolicyFlags;
@@ -18,6 +19,7 @@ pub const Cell = shared.Cell;
 pub const Snapshot = shared.Snapshot;
 pub const ScrollbackBuffer = shared.ScrollbackBuffer;
 pub const Metadata = shared.Metadata;
+pub const RedrawState = shared.RedrawState;
 pub const KeyEvent = shared.KeyEvent;
 pub const MouseEvent = shared.MouseEvent;
 pub const Event = shared.Event;
@@ -71,6 +73,10 @@ pub fn acknowledgedGeneration(handle: ?*ZideTerminalHandle, out_generation: *u64
 
 pub fn publishedGeneration(handle: ?*ZideTerminalHandle, out_generation: *u64) Status {
     return core_api.publishedGeneration(handle, out_generation);
+}
+
+pub fn redrawState(handle: ?*ZideTerminalHandle, out_state: *RedrawState) Status {
+    return core_api.redrawState(handle, out_state);
 }
 
 pub fn needsRedraw(handle: ?*ZideTerminalHandle) u8 {

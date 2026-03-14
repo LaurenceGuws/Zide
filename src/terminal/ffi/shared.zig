@@ -15,6 +15,7 @@ pub const event_abi_version: u32 = 3;
 pub const scrollback_abi_version: u32 = 1;
 pub const renderer_metadata_abi_version: u32 = 1;
 pub const metadata_abi_version: u32 = 1;
+pub const redraw_state_abi_version: u32 = 1;
 
 pub const EventKind = enum(c_int) {
     none = 0,
@@ -131,6 +132,15 @@ pub const Metadata = extern struct {
     cwd_ptr: ?[*]const u8 = null,
     cwd_len: usize = 0,
     _ctx: ?*anyopaque = null,
+};
+
+pub const RedrawState = extern struct {
+    abi_version: u32 = 0,
+    struct_size: u32 = 0,
+    published_generation: u64 = 0,
+    acknowledged_generation: u64 = 0,
+    needs_redraw: u8 = 0,
+    _padding0: [7]u8 = .{ 0, 0, 0, 0, 0, 0, 0 },
 };
 
 pub const KeyEvent = extern struct {
