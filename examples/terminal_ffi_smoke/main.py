@@ -127,6 +127,17 @@ class Metadata(ctypes.Structure):
     ]
 
 
+class RedrawState(ctypes.Structure):
+    _fields_ = [
+        ("abi_version", ctypes.c_uint32),
+        ("struct_size", ctypes.c_uint32),
+        ("published_generation", ctypes.c_uint64),
+        ("acknowledged_generation", ctypes.c_uint64),
+        ("needs_redraw", ctypes.c_uint8),
+        ("_padding0", ctypes.c_uint8 * 7),
+    ]
+
+
 class Event(ctypes.Structure):
     _fields_ = [
         ("kind", ctypes.c_int),
@@ -210,6 +221,8 @@ def load_library(path: Path):
     lib.zide_terminal_metadata_acquire.restype = ctypes.c_int
     lib.zide_terminal_metadata_release.argtypes = [ctypes.POINTER(Metadata)]
     lib.zide_terminal_metadata_release.restype = None
+    lib.zide_terminal_redraw_state.argtypes = [HandlePtr, ctypes.POINTER(RedrawState)]
+    lib.zide_terminal_redraw_state.restype = ctypes.c_int
     lib.zide_terminal_event_drain.argtypes = [HandlePtr, ctypes.POINTER(EventBuffer)]
     lib.zide_terminal_event_drain.restype = ctypes.c_int
     lib.zide_terminal_events_free.argtypes = [ctypes.POINTER(EventBuffer)]
@@ -233,6 +246,14 @@ def load_library(path: Path):
     lib.zide_terminal_status_string.argtypes = [ctypes.c_int]
     lib.zide_terminal_status_string.restype = ctypes.c_char_p
     return lib
+
+
+def query_redraw_state(lib, handle) -> RedrawState:
+    state = RedrawState()
+    status = lib.zide_terminal_redraw_state(handle, ctypes.byref(state))
+    if status != STATUS_OK:
+        raise RuntimeError(f"redraw_state failed: {status}")
+    return state
 
 
 def expect_invalid_argument(status: int, context: str) -> None:
@@ -297,6 +318,10 @@ def run_smoke(lib_path: Path) -> int:
         if status != STATUS_OK:
             raise RuntimeError(f"feed_output(history) failed: {status}")
 
+        redraw_state = query_redraw_state(lib, handle)
+        if redraw_state.needs_redraw != 1:
+            raise RuntimeError("expected redraw_state.needs_redraw after publication")
+
         snapshot = Snapshot()
         status = lib.zide_terminal_snapshot_acquire(handle, ctypes.byref(snapshot))
         if status != STATUS_OK:
@@ -339,6 +364,16 @@ def run_smoke(lib_path: Path) -> int:
                 raise RuntimeError("getter mismatch")
         finally:
             lib.zide_terminal_snapshot_release(ctypes.byref(snapshot))
+
+        if lib.zide_terminal_present_ack(handle, redraw_state.published_generation) != STATUS_OK:
+            raise RuntimeError("present_ack failed")
+        redraw_state_after_ack = query_redraw_state(lib, handle)
+        if redraw_state_after_ack.published_generation != redraw_state.published_generation:
+            raise RuntimeError("published_generation changed unexpectedly after ack")
+        if redraw_state_after_ack.acknowledged_generation != redraw_state.published_generation:
+            raise RuntimeError("acknowledged_generation did not advance after ack")
+        if redraw_state_after_ack.needs_redraw != 0:
+            raise RuntimeError("expected redraw_state.needs_redraw to clear after ack")
 
         rounded_box_meta = RendererMetadata()
         if lib.zide_terminal_renderer_metadata(0x256D, ctypes.byref(rounded_box_meta)) != STATUS_OK:
@@ -430,11 +465,15 @@ def run_mock_service_smoke(lib_path: Path) -> int:
         saw_clipboard = False
         saw_alive_closed = False
         redraw_events = 0
+        last_redraw_state = None
 
         for chunk in service.stream():
             buf = (ctypes.c_uint8 * len(chunk)).from_buffer_copy(chunk)
             if lib.zide_terminal_feed_output(handle, buf, len(chunk)) != STATUS_OK:
                 raise RuntimeError("feed_output(mock chunk) failed")
+            last_redraw_state = query_redraw_state(lib, handle)
+            if last_redraw_state.needs_redraw != 1:
+                raise RuntimeError("expected redraw_state.needs_redraw during mock publication")
 
             events = EventBuffer()
             if lib.zide_terminal_event_drain(handle, ctypes.byref(events)) != STATUS_OK:
@@ -498,6 +537,16 @@ def run_mock_service_smoke(lib_path: Path) -> int:
             print(f"title={title!r} cwd={cwd!r} row0={row0!r} row2={row2!r} scrollback_count={scrollback_count} alive={alive}")
         finally:
             lib.zide_terminal_snapshot_release(ctypes.byref(snapshot))
+
+        if last_redraw_state is None:
+            raise RuntimeError("missing redraw_state in mock scenario")
+        if lib.zide_terminal_present_ack(handle, last_redraw_state.published_generation) != STATUS_OK:
+            raise RuntimeError("present_ack(mock) failed")
+        redraw_state_after_ack = query_redraw_state(lib, handle)
+        if redraw_state_after_ack.acknowledged_generation != last_redraw_state.published_generation:
+            raise RuntimeError("mock acknowledged_generation did not advance after ack")
+        if redraw_state_after_ack.needs_redraw != 0:
+            raise RuntimeError("expected mock redraw_state.needs_redraw to clear after ack")
 
         if not saw_title:
             raise RuntimeError("missing mock title_changed event")

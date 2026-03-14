@@ -23,12 +23,15 @@ If the bridge is painful to bind from Python, the ABI is probably too clever.
 1. load the terminal bridge shared library
 2. create a terminal session
 3. resize it through the bridge
-4. acquire a snapshot
-5. verify dimensions, cell count, title/cwd pointers, and initial row data
-6. query renderer metadata for representative glyphs (box/rounded, braille/graph, powerline) and validate damage-policy flags
-7. acquire a scrollback window and verify copied row content
-8. drain events and verify ownership/release paths
-9. destroy the session
+4. query `zide_terminal_redraw_state(...)` to confirm newer content is pending
+5. acquire a snapshot
+6. verify dimensions, cell count, title/cwd pointers, and initial row data
+7. acknowledge the published generation with `present_ack(...)`
+8. verify redraw state cools off after acknowledgement
+9. query renderer metadata for representative glyphs (box/rounded, braille/graph, powerline) and validate damage-policy flags
+10. acquire a scrollback window and verify copied row content
+11. drain events and verify ownership/release paths
+12. destroy the session
 
 This is intentionally a no-PTY smoke today.
 
@@ -91,6 +94,8 @@ external non-PTY byte source feeding the terminal through FFI in chunks.
 It verifies:
 - incremental output feeding from a host-owned service loop
 - redraw-ready wake events for streamed output
+- `zide_terminal_redraw_state(...)` as redraw-truth authority during streaming
+- explicit host acknowledgement via `present_ack(...)` after consumption
 - title/cwd updates
 - clipboard-write events
 - explicit external-input close through `close_input`
