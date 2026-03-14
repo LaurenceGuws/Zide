@@ -15,7 +15,8 @@ vendor/wayland-protocols/
 
 # Build artifacts
 build/
-/tools/docs_explorer/build/
+!tools/docs_explorer/build/
+!tools/docs_explorer/build/**
 /dist/
 /releases/
 reference_repos
