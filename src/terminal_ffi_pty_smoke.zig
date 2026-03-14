@@ -24,9 +24,14 @@ pub fn main() !void {
     var saw_child_exit = false;
     var saw_metadata = false;
     var saw_redraw = false;
+    var last_redraw_state: c_api.ZideTerminalRedrawState = .{};
+    var have_redraw_state = false;
 
     while (std.time.milliTimestamp() < deadline) {
         if (c_api.zide_terminal_poll(handle) != 0) return error.PollFailed;
+
+        if (c_api.zide_terminal_redraw_state(handle, &last_redraw_state) != 0) return error.RedrawStateFailed;
+        have_redraw_state = true;
 
         {
             var snapshot: c_api.ZideTerminalSnapshot = .{};
@@ -64,6 +69,16 @@ pub fn main() !void {
         }
 
         if (saw_marker and saw_child_exit and saw_metadata and saw_redraw) {
+            if (!have_redraw_state) return error.MissingRedrawState;
+            if (last_redraw_state.needs_redraw != 1) return error.ExpectedPendingRedraw;
+            if (c_api.zide_terminal_present_ack(handle, last_redraw_state.published_generation) != 0) {
+                return error.PresentAckFailed;
+            }
+            if (c_api.zide_terminal_redraw_state(handle, &last_redraw_state) != 0) return error.RedrawStateFailed;
+            if (last_redraw_state.acknowledged_generation != last_redraw_state.published_generation) {
+                return error.AckDidNotAdvance;
+            }
+            if (last_redraw_state.needs_redraw != 0) return error.RedrawDidNotCoolOff;
             var code: i32 = -1;
             var has_status: u8 = 0;
             if (c_api.zide_terminal_child_exit_status(handle, &code, &has_status) != 0) return error.ChildExitStatusFailed;
@@ -78,6 +93,7 @@ pub fn main() !void {
     if (!saw_redraw) return error.MissingRedrawReady;
     if (!saw_child_exit) return error.MissingChildExit;
     if (!saw_metadata) return error.MissingMetadata;
+    if (!have_redraw_state) return error.MissingRedrawState;
 }
 
 fn snapshotContains(snapshot: *const c_api.ZideTerminalSnapshot, needle: []const u8) bool {
