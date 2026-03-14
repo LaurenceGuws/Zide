@@ -4,6 +4,7 @@
 - [x] Define a tiny cross-surface event pump contract doc (`poll_terminal_then_editor_once`) and wire it in both smoke hosts.
 - [x] Add terminal+editor combined smoke script (`examples/ffi_host_combo_smoke/main.py`) that runs: publish terminal content, confirm redraw truth, acquire snapshot, acknowledge presentation, then run editor work and clean shutdown.
 - [x] Extract shared terminal publication consumption helper (`consume_terminal_publication_once(...)`) so mixed hosts do not hand-roll redraw-state and present-ack sequencing.
+- [x] Move the standalone terminal smoke onto the same shared publication helper so dedicated and mixed hosts validate the same redraw/present contract.
 - [~] Add ABI-shape regression coverage per bridge.
   - [x] Terminal Python smoke now verifies bad prefilled `abi_version` / `struct_size` inputs are overwritten with canonical values on all ABI-versioned output structs.
   - [x] Editor Python smoke now verifies deterministic `invalid_argument` behavior for bad bridge calls.
