@@ -65,6 +65,8 @@ ABI-shape regression scenario:
 Shared Python host boot helpers:
 - `examples/common/ffi_host_boot.py`
   - `consume_terminal_publication_once(...)` is the shared terminal publication primitive for both dedicated and mixed hosts
+  - `consume_terminal_metadata_once(...)` is the shared terminal latest-state metadata primitive for both dedicated and mixed hosts
+  - `consume_terminal_events_once(...)` is the shared terminal event ownership primitive for Python hosts
 
 Host migration checklist:
 - poll terminal-side output/publication before editor-side work when a host owns both surfaces
@@ -105,6 +107,7 @@ It verifies:
 - incremental output feeding from a host-owned service loop
 - redraw-ready wake events for streamed output
 - the same shared publication helper used by the baseline and combo hosts
+- the same shared metadata/event ownership helpers used by the Python host path
 - title/cwd updates
 - clipboard-write events
 - explicit external-input close through `close_input`
