@@ -112,8 +112,10 @@ Payload:
 
 Notes:
 - current implementation emits one `child_exit` event per session
-- hosts may still call `zide_terminal_is_alive()` as the latest-state check
-- hosts may also call `zide_terminal_child_exit_status()` as the latest-state getter
+- hosts should prefer `zide_terminal_metadata_acquire(...)` as the latest-state
+  summary for alive / exit-status truth
+- `zide_terminal_is_alive()` and `zide_terminal_child_exit_status()` remain
+  focused convenience helpers when only one narrow field is needed
 
 ### `alive_changed`
 
@@ -128,7 +130,9 @@ Payload:
 
 Notes:
 - this is emitted when the bridge observes host/session liveness change
-- it is latest-state compatible with `zide_terminal_is_alive()`
+- latest-state truth should still come from `zide_terminal_metadata_acquire(...)`
+  when the host already needs broader lifecycle metadata
+- `zide_terminal_is_alive()` remains the narrow convenience helper
 
 ### `redraw_ready`
 
@@ -172,6 +176,12 @@ Event delivery is destructive:
 
 This is intentional. The event queue marks change boundaries, while snapshots
 and direct getters provide latest state.
+
+Current authority split:
+- event drain defines queued change boundaries
+- `zide_terminal_metadata_acquire(...)` defines latest lifecycle/title/cwd
+  state
+- `zide_terminal_redraw_state(...)` defines latest redraw/publication truth
 
 ## Host guidance
 
