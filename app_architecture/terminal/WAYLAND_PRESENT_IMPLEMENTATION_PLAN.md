@@ -316,6 +316,19 @@ Rollback boundary:
 - this is the first irreversible architectural cut; do not take it until the
   scene path is already the authoritative live path
 
+Current status:
+
+- first Phase 4 slice is now landed in `src/ui/renderer.zig`
+- frame startup no longer treats the default framebuffer as a valid normal
+  main composition target
+- the active main path is now:
+  - begin the frame in the renderer-owned scene target
+  - restore terminal/editor subpasses back into that same scene target
+  - do one final scene-to-default present draw before swap
+- the default framebuffer remains only as an explicit degraded fallback when
+  scene-target activation fails during frame startup or subpass restoration; it
+  is no longer the architectural alternative main path
+
 ## Validation Matrix
 
 Every phase should be checked against:
