@@ -2,6 +2,30 @@
   "title": "Zide Docs Explorer",
   "icon": "../../assets/icon/color_icon.png",
   "defaultDoc": "app_architecture/terminal/TERMINAL_ARCHITECTURE_COMPARISON.md",
+  "theme": {
+    "dark": {
+      "accent": "#d47a45",
+      "accentSoft": "rgba(212, 122, 69, 0.14)",
+      "accentStrong": "#f09a63",
+      "activeLink": "#ffd8c2",
+      "panel": "#11161d",
+      "panel2": "#171e27",
+      "panel3": "#1d2530",
+      "bg": "#0d1117",
+      "bg2": "#151a22"
+    },
+    "light": {
+      "accent": "#a6532a",
+      "accentSoft": "rgba(166, 83, 42, 0.12)",
+      "accentStrong": "#8d401d",
+      "activeLink": "#4c2413",
+      "panel": "#f6f1e6",
+      "panel2": "#fbf7ef",
+      "panel3": "#ede5d7",
+      "bg": "#ece6da",
+      "bg2": "#ddd6c8"
+    }
+  },
   "docRoots": [
     "docs",
     "app_architecture"

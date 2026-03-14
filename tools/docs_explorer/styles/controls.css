@@ -1,0 +1,142 @@
+.pill {
+  display: inline-flex;
+  align-items: center;
+  border: 1px solid var(--line);
+  border-radius: 0;
+  background: #0d131a;
+  padding: 4px 8px;
+  color: var(--muted);
+  font-size: 0.76rem;
+  text-decoration: none;
+}
+
+.options-wrap {
+  position: relative;
+}
+
+.options-toggle {
+  cursor: pointer;
+  min-width: 34px;
+  justify-content: center;
+  padding-left: 0;
+  padding-right: 0;
+  font-size: 1rem;
+  line-height: 1;
+}
+
+.options-menu {
+  position: absolute;
+  right: 0;
+  top: calc(100% + 6px);
+  min-width: 160px;
+  padding: 6px;
+  border: 1px solid var(--line);
+  background: var(--panel-3);
+  box-shadow: var(--shadow);
+  z-index: 20;
+}
+
+.options-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  width: 100%;
+  padding: 8px 10px;
+  border: 0;
+  background: transparent;
+  color: var(--ink);
+  text-align: left;
+  text-decoration: none;
+  font: inherit;
+  cursor: pointer;
+}
+
+.options-theme-row {
+  cursor: default;
+}
+
+.options-label {
+  color: var(--ink);
+  font-size: 0.84rem;
+}
+
+.options-item:hover {
+  background: var(--surface-hover);
+}
+
+.theme-switch {
+  border: 0;
+  background: transparent;
+  padding: 0;
+  cursor: pointer;
+  font: inherit;
+}
+
+.theme-switch-track {
+  position: relative;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  align-items: center;
+  min-width: 96px;
+  border: 1px solid var(--line);
+  background: #0d131a;
+  padding: 2px;
+}
+
+.theme-switch-option {
+  position: relative;
+  z-index: 1;
+  padding: 3px 8px;
+  text-align: center;
+  font-size: 0.72rem;
+  color: var(--muted);
+  transition: color 120ms ease;
+}
+
+.theme-switch-thumb {
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  bottom: 2px;
+  width: calc(50% - 2px);
+  background: var(--accent-soft);
+  border: 1px solid rgba(212, 122, 69, 0.25);
+  transition: transform 140ms ease;
+}
+
+:root[data-theme="dark"] .theme-switch-option-dark,
+:root[data-theme="light"] .theme-switch-option-light {
+  color: var(--active-link);
+}
+
+:root[data-theme="light"] .theme-switch-thumb {
+  transform: translateX(100%);
+}
+
+.sidebar-toggle {
+  display: inline-flex;
+  border: 1px solid var(--line);
+  background: #0d131a;
+  color: var(--ink);
+  border-radius: 0;
+  padding: 4px 8px;
+  cursor: pointer;
+  font: inherit;
+  line-height: 1.1;
+}
+
+.sidebar-toggle:hover {
+  border-color: var(--accent);
+  color: var(--accent-strong);
+}
+
+:root[data-theme="light"] .options-menu {
+  background: #f7f1e6;
+}
+
+:root[data-theme="light"] .pill,
+:root[data-theme="light"] .theme-switch-track,
+:root[data-theme="light"] .sidebar-toggle {
+  background: #fdfaf4;
+}

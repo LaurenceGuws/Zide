@@ -18,7 +18,6 @@
       </div>
       <div class="search-wrap">
         <input id="search" type="search" placeholder="Filter docs...">
-        <button id="theme-toggle" class="theme-toggle" type="button" aria-label="Toggle theme" title="Toggle theme">◐</button>
       </div>
       <div id="tree" class="tree"></div>
     </aside>
@@ -35,7 +34,22 @@
           <p id="doc-subtitle">Select a document from the left. Serve this folder with <code>python3 docs_explorer.py</code> for local file loading.</p>
         </div>
         <div class="meta-row">
-          <a class="pill" id="raw-link" href="#" target="_blank" rel="noopener noreferrer">Open Raw</a>
+          <div class="options-wrap">
+            <button id="options-toggle" class="pill options-toggle" type="button" aria-label="Open options" aria-expanded="false" aria-controls="options-menu">⋯</button>
+            <div id="options-menu" class="options-menu" hidden>
+              <div id="theme-row" class="options-item options-theme-row">
+                <span class="options-label">Theme</span>
+                <button id="theme-toggle" class="theme-switch" type="button" aria-label="Toggle theme">
+                  <span class="theme-switch-track">
+                    <span class="theme-switch-option theme-switch-option-dark">Dark</span>
+                    <span class="theme-switch-option theme-switch-option-light">Light</span>
+                    <span class="theme-switch-thumb"></span>
+                  </span>
+                </button>
+              </div>
+              <a class="options-item" id="raw-link" href="#" target="_blank" rel="noopener noreferrer">Open Raw</a>
+            </div>
+          </div>
         </div>
       </div>
       <div class="viewer" id="viewer">

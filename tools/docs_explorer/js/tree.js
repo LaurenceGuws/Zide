@@ -1,4 +1,4 @@
-import { escapeHtml, currentDocFromHash } from "./utils.js";
+import { escapeHtml } from "./utils.js";
 
 function buildTreeModel(paths) {
   const root = { name: "", path: "", dirs: new Map(), files: [] };
@@ -69,17 +69,17 @@ function renderTreeNode(node, activePath) {
   return dirList + fileList;
 }
 
-export function syncActiveLink(docs, defaultDocPath) {
-  const active = currentDocFromHash(docs, defaultDocPath);
+export function syncActiveLink(activePath) {
+  const active = activePath || "";
   document.querySelectorAll("[data-doc-link]").forEach((el) => {
     el.classList.toggle("active", el.getAttribute("data-doc-link") === active);
   });
 }
 
-export function buildTree(treeEl, docs, defaultDocPath, filter = "") {
+export function buildTree(treeEl, docs, activePath, filter = "") {
   const q = filter.trim().toLowerCase();
   const filtered = docs.filter((path) => q === "" || path.toLowerCase().includes(q));
   const model = buildTreeModel(filtered);
-  treeEl.innerHTML = `<ul class="tree-root">${renderTreeNode(model, currentDocFromHash(docs, defaultDocPath))}</ul>`;
-  syncActiveLink(docs, defaultDocPath);
+  treeEl.innerHTML = `<ul class="tree-root">${renderTreeNode(model, activePath || "")}</ul>`;
+  syncActiveLink(activePath);
 }

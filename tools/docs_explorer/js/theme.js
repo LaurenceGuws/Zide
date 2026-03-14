@@ -1,13 +1,5 @@
-export const themeStorageKey = "zide_docs_explorer.theme";
-
 export function currentTheme(rootEl) {
   return rootEl.dataset.theme === "light" ? "light" : "dark";
-}
-
-export function preferredTheme() {
-  const stored = localStorage.getItem(themeStorageKey);
-  if (stored === "light" || stored === "dark") return stored;
-  return window.matchMedia && window.matchMedia("(prefers-color-scheme: light)").matches ? "light" : "dark";
 }
 
 export function themeVariables(rootEl, theme) {
@@ -27,15 +19,38 @@ export function themeVariables(rootEl, theme) {
   };
 }
 
-export function updateThemeToggle(toggleEl, theme) {
-  toggleEl.textContent = theme === "dark" ? "◐" : "◑";
-  toggleEl.setAttribute("aria-label", theme === "dark" ? "Switch to light theme" : "Switch to dark theme");
-  toggleEl.title = theme === "dark" ? "Switch to light theme" : "Switch to dark theme";
+export function syncThemeVariables(rootEl, theme) {
+  const varNames = [
+    "--bg",
+    "--bg-2",
+    "--panel",
+    "--panel-2",
+    "--panel-3",
+    "--accent",
+    "--accent-soft",
+    "--accent-strong",
+    "--active-link",
+  ];
+
+  for (const varName of varNames) {
+    const scoped = `${varName}-${theme}`;
+    const value = getComputedStyle(rootEl).getPropertyValue(scoped).trim();
+    if (value) {
+      rootEl.style.setProperty(varName, value);
+    }
+  }
 }
 
-export async function applyTheme(rootEl, toggleEl, theme, rerenderVisibleMermaid) {
+export function updateThemeToggle(toggleEl, theme) {
+  toggleEl.setAttribute("aria-label", theme === "dark" ? "Switch to light theme" : "Switch to dark theme");
+  toggleEl.title = theme === "dark" ? "Switch to light theme" : "Switch to dark theme";
+  toggleEl.setAttribute("aria-pressed", theme === "light" ? "true" : "false");
+}
+
+export async function applyTheme(rootEl, toggleEl, theme, persistTheme, rerenderVisibleMermaid) {
   rootEl.dataset.theme = theme;
-  localStorage.setItem(themeStorageKey, theme);
+  persistTheme(theme);
+  syncThemeVariables(rootEl, theme);
   updateThemeToggle(toggleEl, theme);
   await rerenderVisibleMermaid();
 }
