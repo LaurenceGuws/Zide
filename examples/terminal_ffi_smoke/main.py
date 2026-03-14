@@ -8,7 +8,13 @@ ROOT = Path(__file__).resolve().parents[2]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-from examples.common.ffi_host_boot import as_bytes, consume_terminal_publication_once, load_cdll, STATUS_OK  # noqa: E402
+from examples.common.ffi_host_boot import (  # noqa: E402
+    as_bytes,
+    consume_terminal_metadata_once,
+    consume_terminal_publication_once,
+    load_cdll,
+    STATUS_OK,
+)
 
 STATUS_OK = 0
 EVENT_TITLE_CHANGED = 1
@@ -334,18 +340,21 @@ def run_smoke(lib_path: Path) -> int:
             title = as_bytes(snapshot.title_ptr, snapshot.title_len).decode("utf-8", errors="replace")
             cwd = as_bytes(snapshot.cwd_ptr, snapshot.cwd_len).decode("utf-8", errors="replace")
             row0 = render_first_row(snapshot)
-            metadata = Metadata()
-            if lib.zide_terminal_metadata_acquire(handle, ctypes.byref(metadata)) != STATUS_OK:
-                raise RuntimeError("metadata_acquire failed")
-            try:
-                title_getter = as_bytes(metadata.title_ptr, metadata.title_len).decode("utf-8", errors="replace")
-                cwd_getter = as_bytes(metadata.cwd_ptr, metadata.cwd_len).decode("utf-8", errors="replace")
-                scrollback_count = metadata.scrollback_count
-                alive = metadata.alive
-                has_exit = metadata.has_exit_code
-                exit_code = metadata.exit_code
-            finally:
-                lib.zide_terminal_metadata_release(ctypes.byref(metadata))
+            metadata_state: dict[str, object] = {}
+
+            def consume_metadata(metadata: Metadata) -> None:
+                metadata_state.update(
+                    {
+                        "title_getter": as_bytes(metadata.title_ptr, metadata.title_len).decode("utf-8", errors="replace"),
+                        "cwd_getter": as_bytes(metadata.cwd_ptr, metadata.cwd_len).decode("utf-8", errors="replace"),
+                        "scrollback_count": metadata.scrollback_count,
+                        "alive": metadata.alive,
+                        "has_exit": metadata.has_exit_code,
+                        "exit_code": metadata.exit_code,
+                    }
+                )
+
+            consume_terminal_metadata_once(lib, handle, Metadata, consume_metadata)
 
             snapshot_state.update(
                 {
@@ -355,12 +364,7 @@ def run_smoke(lib_path: Path) -> int:
                     "title": title,
                     "cwd": cwd,
                     "row0": row0,
-                    "title_getter": title_getter,
-                    "cwd_getter": cwd_getter,
-                    "scrollback_count": scrollback_count,
-                    "alive": alive,
-                    "exit_code": exit_code,
-                    "has_exit": has_exit,
+                    **metadata_state,
                 }
             )
 
@@ -525,22 +529,24 @@ def run_mock_service_smoke(lib_path: Path) -> int:
             cwd = as_bytes(snapshot.cwd_ptr, snapshot.cwd_len).decode("utf-8", errors="replace")
             row0 = render_snapshot_row(snapshot, 0)
             row2 = render_snapshot_row(snapshot, 2)
-            metadata = Metadata()
-            if lib.zide_terminal_metadata_acquire(handle, ctypes.byref(metadata)) != STATUS_OK:
-                raise RuntimeError("metadata_acquire(mock) failed")
-            try:
-                scrollback_count = metadata.scrollback_count
-                alive = metadata.alive
-            finally:
-                lib.zide_terminal_metadata_release(ctypes.byref(metadata))
+            metadata_state: dict[str, object] = {}
+
+            def consume_mock_metadata(metadata: Metadata) -> None:
+                metadata_state.update(
+                    {
+                        "scrollback_count": metadata.scrollback_count,
+                        "alive": metadata.alive,
+                    }
+                )
+
+            consume_terminal_metadata_once(lib, handle, Metadata, consume_mock_metadata)
             last_snapshot_state.update(
                 {
                     "title": title,
                     "cwd": cwd,
                     "row0": row0,
                     "row2": row2,
-                    "scrollback_count": scrollback_count,
-                    "alive": alive,
+                    **metadata_state,
                 }
             )
 

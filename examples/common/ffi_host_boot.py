@@ -67,3 +67,26 @@ def consume_terminal_publication_once(
         raise RuntimeError("terminal acknowledged_generation did not advance")
     if redraw_state_after_ack.needs_redraw != 0:
         raise RuntimeError("terminal redraw_state did not cool off")
+
+
+def consume_terminal_metadata_once(
+    terminal_lib,
+    terminal_handle,
+    metadata_cls,
+    metadata_consumer,
+) -> None:
+    """Resolve one metadata acquire/release cycle for host-owned latest state.
+
+    Contract:
+    - acquire metadata through the bridge
+    - let the caller consume fields while the buffer is live
+    - always release before returning
+    """
+
+    metadata = metadata_cls()
+    if terminal_lib.zide_terminal_metadata_acquire(terminal_handle, ctypes.byref(metadata)) != STATUS_OK:
+        raise RuntimeError("terminal metadata_acquire failed")
+    try:
+        metadata_consumer(metadata)
+    finally:
+        terminal_lib.zide_terminal_metadata_release(ctypes.byref(metadata))
