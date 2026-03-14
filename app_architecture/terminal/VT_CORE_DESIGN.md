@@ -417,6 +417,10 @@ So the next decisive live probe is now `terminal.ui.target_sample`:
 - the same applies to the old `terminal.ui.overlay_probe` / `ZIDE_DEBUG_DISABLE_TERMINAL_CURSOR_OVERLAY`
   lane described later in the war-room notes: it was investigation-only and is
   no longer part of the live overlay path.
+- the same also applies to the older `ZIDE_PRESENT_EDGE_FALLBACK` /
+  `ZIDE_DEBUG_DISABLE_TERMINAL_PRESENT_MITIGATION` override matrix described
+  later in the war-room notes: the live runtime now uses the config-backed
+  recent-input publication policy directly, without those debug env overrides.
 - the active root-cause instrumentation is now trimmed again for the remaining
   live lane:
   - `terminal.ui.target_sample` is the active tag

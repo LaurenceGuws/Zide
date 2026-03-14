@@ -161,10 +161,9 @@ pub fn handle(state: anytype, ctx: *anyopaque, hooks: Hooks) !void {
             config.terminal_recent_input_force_full_ms,
         );
         state.needs_redraw = true;
-        log.logStdout(.info, "reload terminal.presentation recent_input_force_full={any} recent_input_force_full_ms={d} debug_disabled={any}", .{
+        log.logStdout(.info, "reload terminal.presentation recent_input_force_full={any} recent_input_force_full_ms={d}", .{
             state.shell.rendererPtr().terminalRecentInputFullPublicationEnabled(),
             state.shell.rendererPtr().terminalRecentInputFullPublicationWindowMs(),
-            state.shell.rendererPtr().terminalPresentMitigationDebugDisabled(),
         });
     }
 

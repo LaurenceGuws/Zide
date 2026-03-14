@@ -73,18 +73,6 @@ pub const Color = iface.Color;
 pub const MousePos = iface.MousePos;
 pub const Theme = iface.Theme;
 
-const PresentEdgeFallbackMode = enum {
-    off,
-    swap_interval_0,
-    swap_interval_0_force_full_terminal_texture_recent_input_2000ms,
-    swap_interval_0_force_full_terminal_texture_recent_input_1000ms,
-    swap_interval_0_force_full_terminal_texture_recent_input_500ms,
-    swap_interval_0_force_full_terminal_texture_recent_input_375ms,
-    swap_interval_0_force_full_terminal_texture_recent_input_350ms,
-    swap_interval_0_force_full_terminal_texture_recent_input_300ms,
-    swap_interval_0_force_full_terminal_texture_recent_input_250ms,
-};
-
 pub const FrameSubmission = struct {
     succeeded: bool,
     sequence: u64,
@@ -212,51 +200,6 @@ fn parseRendererBackend(_: []const u8) RendererBackend {
     return .sdl_gl;
 }
 
-fn parsePresentEdgeFallbackMode() PresentEdgeFallbackMode {
-    const raw = std.c.getenv("ZIDE_PRESENT_EDGE_FALLBACK") orelse return .off;
-    const slice = std.mem.sliceTo(raw, 0);
-    if (slice.len == 0) return .off;
-    if (std.mem.eql(u8, slice, "1") or
-        std.ascii.eqlIgnoreCase(slice, "true") or
-        std.ascii.eqlIgnoreCase(slice, "yes") or
-        std.ascii.eqlIgnoreCase(slice, "on"))
-    {
-        return .swap_interval_0;
-    }
-    if (std.ascii.eqlIgnoreCase(slice, "swap_interval_0")) return .swap_interval_0;
-    if (std.ascii.eqlIgnoreCase(slice, "swap_interval_0_force_full_terminal_texture_recent_input_2000ms")) return .swap_interval_0_force_full_terminal_texture_recent_input_2000ms;
-    if (std.ascii.eqlIgnoreCase(slice, "swap_interval_0_force_full_terminal_texture_recent_input_1000ms")) return .swap_interval_0_force_full_terminal_texture_recent_input_1000ms;
-    if (std.ascii.eqlIgnoreCase(slice, "swap_interval_0_force_full_terminal_texture_recent_input_500ms")) return .swap_interval_0_force_full_terminal_texture_recent_input_500ms;
-    if (std.ascii.eqlIgnoreCase(slice, "swap_interval_0_force_full_terminal_texture_recent_input_375ms")) return .swap_interval_0_force_full_terminal_texture_recent_input_375ms;
-    if (std.ascii.eqlIgnoreCase(slice, "swap_interval_0_force_full_terminal_texture_recent_input_350ms")) return .swap_interval_0_force_full_terminal_texture_recent_input_350ms;
-    if (std.ascii.eqlIgnoreCase(slice, "swap_interval_0_force_full_terminal_texture_recent_input_300ms")) return .swap_interval_0_force_full_terminal_texture_recent_input_300ms;
-    if (std.ascii.eqlIgnoreCase(slice, "swap_interval_0_force_full_terminal_texture_recent_input_250ms")) return .swap_interval_0_force_full_terminal_texture_recent_input_250ms;
-    return .off;
-}
-
-fn parseTerminalPresentMitigationDisabled() bool {
-    const raw = std.c.getenv("ZIDE_DEBUG_DISABLE_TERMINAL_PRESENT_MITIGATION") orelse return false;
-    const slice = std.mem.sliceTo(raw, 0);
-    if (slice.len == 0) return false;
-    if (std.mem.eql(u8, slice, "1") or std.ascii.eqlIgnoreCase(slice, "true") or std.ascii.eqlIgnoreCase(slice, "yes") or std.ascii.eqlIgnoreCase(slice, "on")) return true;
-    if (std.mem.eql(u8, slice, "0") or std.ascii.eqlIgnoreCase(slice, "false") or std.ascii.eqlIgnoreCase(slice, "no") or std.ascii.eqlIgnoreCase(slice, "off")) return false;
-    return false;
-}
-
-fn presentEdgeFallbackName(mode: PresentEdgeFallbackMode) []const u8 {
-    return switch (mode) {
-        .off => "off",
-        .swap_interval_0 => "swap_interval_0",
-        .swap_interval_0_force_full_terminal_texture_recent_input_2000ms => "swap_interval_0_force_full_terminal_texture_recent_input_2000ms",
-        .swap_interval_0_force_full_terminal_texture_recent_input_1000ms => "swap_interval_0_force_full_terminal_texture_recent_input_1000ms",
-        .swap_interval_0_force_full_terminal_texture_recent_input_500ms => "swap_interval_0_force_full_terminal_texture_recent_input_500ms",
-        .swap_interval_0_force_full_terminal_texture_recent_input_375ms => "swap_interval_0_force_full_terminal_texture_recent_input_375ms",
-        .swap_interval_0_force_full_terminal_texture_recent_input_350ms => "swap_interval_0_force_full_terminal_texture_recent_input_350ms",
-        .swap_interval_0_force_full_terminal_texture_recent_input_300ms => "swap_interval_0_force_full_terminal_texture_recent_input_300ms",
-        .swap_interval_0_force_full_terminal_texture_recent_input_250ms => "swap_interval_0_force_full_terminal_texture_recent_input_250ms",
-    };
-}
-
 fn compositorName(kind: compositor.Compositor) []const u8 {
     return switch (kind) {
         .hyprland => "hyprland",
@@ -378,8 +321,6 @@ pub const Renderer = struct {
     terminal_texture_shift_enabled: bool,
     terminal_recent_input_force_full_enabled: bool,
     terminal_recent_input_force_full_window_seconds: f64,
-    terminal_present_mitigation_debug_disabled: bool,
-    present_edge_fallback_mode: PresentEdgeFallbackMode,
 
     // Text background behind glyphs (used for optional linear correction).
     // Default is alpha=0, which disables correction in the shader.
@@ -540,8 +481,6 @@ pub const Renderer = struct {
             .terminal_texture_shift_enabled = true,
             .terminal_recent_input_force_full_enabled = true,
             .terminal_recent_input_force_full_window_seconds = 0.375,
-            .terminal_present_mitigation_debug_disabled = parseTerminalPresentMitigationDisabled(),
-            .present_edge_fallback_mode = parsePresentEdgeFallbackMode(),
             .text_bg_rgba = .{ .r = 0, .g = 0, .b = 0, .a = 0 },
             .font_size = font_size,
             .base_font_size = base_font_size,
@@ -622,16 +561,7 @@ pub const Renderer = struct {
             .scene_frame_active = false,
         };
 
-        if ((renderer.present_edge_fallback_mode == .off and !renderer.terminal_present_mitigation_debug_disabled) or
-            renderer.present_edge_fallback_mode == .swap_interval_0 or
-            renderer.present_edge_fallback_mode == .swap_interval_0_force_full_terminal_texture_recent_input_2000ms or
-            renderer.present_edge_fallback_mode == .swap_interval_0_force_full_terminal_texture_recent_input_1000ms or
-            renderer.present_edge_fallback_mode == .swap_interval_0_force_full_terminal_texture_recent_input_500ms or
-            renderer.present_edge_fallback_mode == .swap_interval_0_force_full_terminal_texture_recent_input_375ms or
-            renderer.present_edge_fallback_mode == .swap_interval_0_force_full_terminal_texture_recent_input_350ms or
-            renderer.present_edge_fallback_mode == .swap_interval_0_force_full_terminal_texture_recent_input_300ms or
-            renderer.present_edge_fallback_mode == .swap_interval_0_force_full_terminal_texture_recent_input_250ms)
-        {
+        if (renderer.terminal_recent_input_force_full_enabled) {
             if (!sdl_api.glSetSwapInterval(0)) {
                 app_logger.logger("sdl.gl").logStdout(.warning, "SDL_GL_SetSwapInterval failed interval=0 err={s}", .{sdl_api.getError()});
             }
@@ -793,16 +723,6 @@ pub const Renderer = struct {
     }
 
     pub fn terminalRecentInputFullPublicationEnabled(self: *const Renderer) bool {
-        if (self.terminal_present_mitigation_debug_disabled) return false;
-        if (self.present_edge_fallback_mode != .off) {
-            return self.present_edge_fallback_mode == .swap_interval_0_force_full_terminal_texture_recent_input_2000ms or
-                self.present_edge_fallback_mode == .swap_interval_0_force_full_terminal_texture_recent_input_1000ms or
-                self.present_edge_fallback_mode == .swap_interval_0_force_full_terminal_texture_recent_input_500ms or
-                self.present_edge_fallback_mode == .swap_interval_0_force_full_terminal_texture_recent_input_375ms or
-                self.present_edge_fallback_mode == .swap_interval_0_force_full_terminal_texture_recent_input_350ms or
-                self.present_edge_fallback_mode == .swap_interval_0_force_full_terminal_texture_recent_input_300ms or
-                self.present_edge_fallback_mode == .swap_interval_0_force_full_terminal_texture_recent_input_250ms;
-        }
         return self.terminal_recent_input_force_full_enabled;
     }
 
@@ -812,27 +732,11 @@ pub const Renderer = struct {
 
     pub fn terminalRecentInputFullPublicationWindowSeconds(self: *const Renderer) f64 {
         if (!self.terminalRecentInputFullPublicationEnabled()) return 0.0;
-        if (self.present_edge_fallback_mode != .off) {
-            return switch (self.present_edge_fallback_mode) {
-                .swap_interval_0_force_full_terminal_texture_recent_input_250ms => 0.25,
-                .swap_interval_0_force_full_terminal_texture_recent_input_300ms => 0.3,
-                .swap_interval_0_force_full_terminal_texture_recent_input_350ms => 0.35,
-                .swap_interval_0_force_full_terminal_texture_recent_input_375ms => 0.375,
-                .swap_interval_0_force_full_terminal_texture_recent_input_500ms => 0.5,
-                .swap_interval_0_force_full_terminal_texture_recent_input_1000ms => 1.0,
-                .swap_interval_0_force_full_terminal_texture_recent_input_2000ms => 2.0,
-                else => 0.0,
-            };
-        }
         return self.terminal_recent_input_force_full_window_seconds;
     }
 
     pub fn terminalRecentInputFullPublicationWindowMs(self: *const Renderer) usize {
         return @intFromFloat(std.math.round(self.terminalRecentInputFullPublicationWindowSeconds() * 1000.0));
-    }
-
-    pub fn terminalPresentMitigationDebugDisabled(self: *const Renderer) bool {
-        return self.terminal_present_mitigation_debug_disabled;
     }
 
     pub fn forceFullTerminalTexturePublicationRecentInputWindow(self: *const Renderer) bool {
@@ -939,7 +843,6 @@ pub const Renderer = struct {
     pub fn submitFrame(self: *Renderer) FrameSubmission {
         if (self.scene_frame_active) self.drawSceneTargetToDefault();
         const swap_start = sdl_api.getPerformanceCounter();
-        self.applyPreSwapFallback();
         const swap_ok = sdl_api.glSwapWindow(self.window);
         if (!swap_ok) {
             app_logger.logger("sdl.gl").logStdout(.warning, "SDL_GL_SwapWindow failed err={s}", .{sdl_api.getError()});
@@ -957,20 +860,6 @@ pub const Renderer = struct {
     fn performanceDeltaMs(start: u64, end: u64, freq: f64) f64 {
         if (end <= start or freq <= 0.0) return 0.0;
         return (@as(f64, @floatFromInt(end - start)) * 1000.0) / freq;
-    }
-
-    fn applyPreSwapFallback(self: *Renderer) void {
-        switch (self.present_edge_fallback_mode) {
-            .off => {},
-            .swap_interval_0 => {},
-            .swap_interval_0_force_full_terminal_texture_recent_input_2000ms => {},
-            .swap_interval_0_force_full_terminal_texture_recent_input_1000ms => {},
-            .swap_interval_0_force_full_terminal_texture_recent_input_500ms => {},
-            .swap_interval_0_force_full_terminal_texture_recent_input_375ms => {},
-            .swap_interval_0_force_full_terminal_texture_recent_input_350ms => {},
-            .swap_interval_0_force_full_terminal_texture_recent_input_300ms => {},
-            .swap_interval_0_force_full_terminal_texture_recent_input_250ms => {},
-        }
     }
 
     fn refreshWindowSizes(window: *sdl.SDL_Window) WindowSizes {
