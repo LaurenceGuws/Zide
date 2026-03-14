@@ -1,0 +1,33 @@
+TERM_SNAPSHOT v1
+size: 8x80
+cursor: r=1 c=65 visible=1 style=block-blink
+alt: 0
+scrollback: count=0 view_offset=0
+title: "Terminal"
+cwd: ""
+clipboard: ""
+selection: none
+grid:
+row0: "─" " " "[" "1" "5" "5" "8" "/" "7" "2" "4" "9" "]" " " "L" "i" "n" "k" "i" "n" "g" . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+row1: . . . . . . . . . . . . . . . . . . . . . "│" " " " " "└" "─" " " "B" "u" "i" "l" "d" "." "F" "u" "z" "z" "." "i" "n" "i" "t" . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+row2: . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . "├" "─" " " "[" "8" "6" "0" "2" "]" " " "S" "e" "m" "a" "n" "t" "i" "c" " " "A" "n" "a" "l" "y" "s" "i" "s" . . . . . . . . . . .
+row3: . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . "│" " " " " "└" "─" " " "m" "u" "l" "t" "i"
+row4: "_" "a" "r" "r" "a" "y" "_" "l" "i" "s" "t" "." "M" "u" "l" "t" "i" "A" "r" "r" "a" "y" "L" "i" "s" "t" "(" "a" "r" "r" "a" "y" "_" "h" "a" . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+row5: . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . "└" "─" " " "[" "1" "5" "6" "0" "/" "1" "8" "7" "1" "]" " " "C" "o" "d" "e" " " "G" "e" "n" "e" "r" "a" "t" "i" "o" "n" . . . . . . . . . . . . . . .
+row6: . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+row7: . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+attrs:
+row0: cols 0-79 fg=default bg=default bold=0 rev=0 ul=0 ulc=default link=0
+row1: cols 0-79 fg=default bg=default bold=0 rev=0 ul=0 ulc=default link=0
+row2: cols 0-79 fg=default bg=default bold=0 rev=0 ul=0 ulc=default link=0
+row3: cols 0-79 fg=default bg=default bold=0 rev=0 ul=0 ulc=default link=0
+row4: cols 0-79 fg=default bg=default bold=0 rev=0 ul=0 ulc=default link=0
+row5: cols 0-79 fg=default bg=default bold=0 rev=0 ul=0 ulc=default link=0
+row6: cols 0-79 fg=default bg=default bold=0 rev=0 ul=0 ulc=default link=0
+row7: cols 0-79 fg=default bg=default bold=0 rev=0 ul=0 ulc=default link=0
+links: none
+scrollback: none
+kitty:
+images=0 placements=0
+image ids: []
+placement ids: []

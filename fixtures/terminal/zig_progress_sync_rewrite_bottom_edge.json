@@ -1,0 +1,8 @@
+{
+  "fixture_type": "vt",
+  "rows": 8,
+  "cols": 80,
+  "cursor": { "row": 7, "col": 0 },
+  "line_ending": "lf",
+  "assertions": ["grid", "cursor", "scrollback"]
+}

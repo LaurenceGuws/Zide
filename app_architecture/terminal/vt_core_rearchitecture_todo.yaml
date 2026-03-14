@@ -11,6 +11,9 @@ meta:
       - Zig `std.Progress` redraw now rewrites in place correctly because
         reverse-index (`ESC M`) dispatch no longer falls through a dead control
         path.
+      - Replay authority for that Zig lane now exists as
+        `fixtures/terminal/zig_progress_sync_rewrite_bottom_edge.*`, so the
+        synchronized bottom-edge redraw pattern is locked beyond unit tests.
 
 items:
   - id: VTCORE-00
