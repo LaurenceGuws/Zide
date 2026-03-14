@@ -6,6 +6,7 @@
 - [x] Extract shared terminal publication consumption helper (`consume_terminal_publication_once(...)`) so mixed hosts do not hand-roll redraw-state and present-ack sequencing.
 - [x] Move the standalone terminal smoke onto the same shared publication helper so dedicated and mixed hosts validate the same redraw/present contract.
 - [x] Extract shared terminal metadata consumption helper (`consume_terminal_metadata_once(...)`) so Python hosts do not duplicate metadata acquire/release ownership boilerplate.
+- [x] Extract shared terminal event consumption helper (`consume_terminal_events_once(...)`) so Python hosts do not duplicate `event_drain(...)` / `events_free(...)` ownership boilerplate.
 - [~] Add ABI-shape regression coverage per bridge.
   - [x] Terminal Python smoke now verifies bad prefilled `abi_version` / `struct_size` inputs are overwritten with canonical values on all ABI-versioned output structs.
   - [x] Editor Python smoke now verifies deterministic `invalid_argument` behavior for bad bridge calls.
@@ -18,6 +19,7 @@ Cross-surface event pump contract:
 - `poll_terminal_then_editor_once(...)` is the minimal shared host tick for mixed terminal/editor embedders.
 - `consume_terminal_publication_once(...)` is the shared terminal-side publication step inside that tick.
 - `consume_terminal_metadata_once(...)` is the shared terminal-side latest-state metadata step for Python hosts.
+- `consume_terminal_events_once(...)` is the shared terminal-side event ownership step for Python hosts.
 - Terminal-side publication/drain work runs first.
 - Terminal-side redraw truth and presentation acknowledgement are resolved before editor-side work.
 - Editor-side mutations/queries run second.
