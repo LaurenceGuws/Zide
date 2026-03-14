@@ -355,12 +355,20 @@ items:
 
   - id: VTCORE-06
     title: Keep input encoding as a peer subsystem
-    status: todo
+    status: in_progress
     priority: medium
     notes:
       - Input encoding should consume terminal mode state cleanly
       - Avoid re-entangling encoder logic with PTY/session runtime concerns
       - Keep keyboard and mouse encoding usable through FFI hosts
+      - First code slice landed: `src/terminal/input/input.zig` and
+        `src/terminal/input/key_encoding.zig` now encode against any writer with
+        a `write(...)` surface instead of hard-wiring raw `Pty` ownership into
+        the encoder itself; the existing session/runtime writer guard remains
+        the behavioral boundary for now.
+      - Regression coverage now includes fake-writer input tests so keyboard and
+        mouse encoding stay transport-agnostic without changing desktop
+        behavior.
 
   - id: VTCORE-07
     title: Preserve desktop Zide behavior while opening the embedding path

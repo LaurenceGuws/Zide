@@ -1,9 +1,6 @@
 const std = @import("std");
 const app_logger = @import("../../app_logger.zig");
-const pty_mod = @import("../io/pty.zig");
 const types = @import("../model/types.zig");
-
-const Pty = pty_mod.Pty;
 
 pub const KeyAction = enum(u8) {
     press = 0,
@@ -72,7 +69,7 @@ pub fn kittyFunctionKeyMapping(key: types.Key) ?KittyKeyMapping {
 }
 
 pub fn sendKittyFunctionKey(
-    pty: *Pty,
+    writer: anytype,
     key_number: u32,
     trailer: u8,
     mod: types.Modifier,
@@ -127,7 +124,7 @@ pub fn sendKittyFunctionKey(
     }
     buf[pos] = trailer;
     pos += 1;
-    _ = pty.write(buf[0..pos]) catch |err| {
+    _ = writer.write(buf[0..pos]) catch |err| {
         log.logf(.warning, "kitty function key write failed: {s}", .{@errorName(err)});
         return false;
     };

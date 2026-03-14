@@ -819,6 +819,15 @@ It should be usable:
 - from FFI hosts
 - without pulling in session/runtime code
 
+Current landed direction:
+
+- the encoder now targets a writer surface rather than raw `Pty` ownership
+- keyboard and mouse encoding in `src/terminal/input/` only assumes
+  `write(...)`, while the existing session/runtime writer guard still owns
+  locking and host selection
+- this keeps behavior unchanged on the desktop path while moving the encoder
+  toward a real host-agnostic peer subsystem
+
 ## Ownership Map
 
 ### Core-owned behavior
