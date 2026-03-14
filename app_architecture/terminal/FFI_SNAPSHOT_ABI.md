@@ -211,11 +211,18 @@ special glyph paths and conservative damage handling.
 
 Recommended host behavior:
 1. call `poll()`
-2. acquire snapshot
-3. verify `abi_version` and `struct_size`
-4. render or inspect all rows
-5. optionally use damage as a redraw hint
-6. release snapshot
+2. query `zide_terminal_redraw_state(...)` and require `needs_redraw == 1`
+3. acquire snapshot
+4. verify `abi_version` and `struct_size`
+5. render or inspect all rows
+6. optionally use damage as a redraw hint
+7. acknowledge the published generation with `zide_terminal_present_ack(...)`
+8. verify redraw state cools off
+9. release snapshot
+
+If the host also needs lifecycle/title/cwd/scrollback latest-state truth, it
+should use `zide_terminal_metadata_acquire(...)` instead of reconstructing that
+state from multiple narrow getters alongside the snapshot.
 
 Do not:
 - cache raw snapshot pointers between polls
