@@ -1,6 +1,6 @@
 .{
     .name = .zide,
-    .version = "0.1.0",
+    .version = "0.1.0-beta.1",
     .fingerprint = 0x5e89543fb5473eca,
     .minimum_zig_version = "0.15.2",
 

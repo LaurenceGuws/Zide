@@ -1,0 +1,12 @@
+{
+  "exclude": [
+    "**/__pycache__",
+    "node_modules",
+    "reference_repos",
+    "tools/docs_explorer/build",
+    "tools/grammar_packs/work",
+    "vendor",
+    "zig-out",
+    ".zig-cache"
+  ]
+}

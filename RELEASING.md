@@ -83,8 +83,8 @@ gh release upload "$TAG" \
 ## Release Notes Policy
 
 - Beta notes should stay high-level and technical, not read like a raw commit log.
-- The next prerelease after `0.1.0-beta.2` should include a concise technical
-  breakdown of the first VT/render rewrite release:
+- The next semver prerelease on the `0.1.0-beta.*` line should include a
+  concise technical breakdown of the first VT/render rewrite release:
   - renderer-owned scene target as the normal main composition path
   - default framebuffer reduced to present sink / degraded fallback
   - explicit renderer-owned present acknowledgement semantics
