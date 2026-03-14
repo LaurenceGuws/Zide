@@ -233,6 +233,7 @@ uint32_t zide_terminal_snapshot_abi_version(void);
 uint32_t zide_terminal_event_abi_version(void);
 uint32_t zide_terminal_scrollback_abi_version(void);
 uint32_t zide_terminal_metadata_abi_version(void);
+uint32_t zide_terminal_redraw_state_abi_version(void);
 uint32_t zide_terminal_renderer_metadata_abi_version(void);
 int zide_terminal_renderer_metadata(uint32_t codepoint, ZideTerminalRendererMetadata *out_metadata);
 const char *zide_terminal_status_string(int status);

@@ -161,6 +161,10 @@ pub fn zide_terminal_metadata_abi_version() u32 {
     return bridge.metadata_abi_version;
 }
 
+pub fn zide_terminal_redraw_state_abi_version() u32 {
+    return bridge.redrawStateAbiVersion();
+}
+
 pub fn zide_terminal_renderer_metadata_abi_version() u32 {
     return bridge.rendererMetadataAbiVersion();
 }
