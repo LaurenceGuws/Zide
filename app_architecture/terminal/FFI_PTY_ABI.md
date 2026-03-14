@@ -86,10 +86,8 @@ The PTY backend is already platform-split:
 - `src/terminal/io/pty_windows.zig`
 - stub for unsupported platforms
 
-Bridge implication:
-- exported behavior is conceptually uniform
-- implementation differences remain platform-specific underneath
-- the bridge docs must not pretend unsupported platforms behave the same
+The bridge surface stays high-level and shared, but the implementation
+guarantees are **not** identical underneath.
 
 Milestone 1 target platforms:
 - Linux
@@ -98,6 +96,61 @@ Milestone 1 target platforms:
 
 Non-goal for milestone 1:
 - browser/mobile PTY stories
+
+### Unix-like path
+
+Current Unix-like implementation:
+- `openpty`
+- `fork`
+- child-side session/controlling-terminal setup
+- non-blocking master FD
+- `poll`-based readiness
+- PTY resize through `TIOCSWINSZ`
+
+Current Unix-like extras:
+- foreground-process detection exists
+- Linux-only foreground-process labeling via `/proc/...`
+
+Implications:
+- Linux/macOS have the most mature host behavior today
+- Linux is the current polish target
+- foreground-process affordances are presently Unix-weighted, especially Linux
+
+### Windows path
+
+Current Windows implementation:
+- ConPTY / `CreatePseudoConsole`
+- pipe-backed input/output handles
+- `CreateProcessW`
+- readiness approximated through `PeekNamedPipe`
+- PTY resize through `ResizePseudoConsole`
+
+Current Windows limitations relative to Unix:
+- no foreground-process detection
+- no foreground-process label
+- different readiness/wait behavior than Unix `poll`
+- shell defaults and process-launch semantics are Windows-specific
+
+Implications:
+- Windows bridge shape is supported, but not yet at Linux polish depth
+- foreign hosts must not assume Unix-style PTY details behind the shared calls
+
+### Contract consequence
+
+The exported bridge promises:
+- host-owned lifecycle
+- backend-owned PTY/process
+- polling-driven progress
+- explicit snapshot/event/present contracts
+
+The exported bridge does **not** promise:
+- identical OS-level PTY semantics
+- identical foreground-process metadata
+- identical readiness internals
+- identical shell-launch behavior
+
+That difference should stay explicit in the docs until the platform backends are
+genuinely closer.
 
 ## Shell parameter policy
 
