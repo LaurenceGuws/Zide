@@ -11,6 +11,7 @@ Current entrypoints:
 - `js/`: TypeScript source modules
 - `build/js/`: generated browser ESM output
 - `config/project.json`: project-specific metadata
+- `config/project.pages.json`: alternate hosted/pages metadata
 - `config/docs-index.json`: repo doc index
 
 Run:
@@ -24,6 +25,19 @@ python3 docs_explorer.py
 ```
 
 Then open the printed URL.
+
+Alternate config:
+
+```bash
+cd /home/home/personal/zide/tools/docs_explorer
+python3 docs_explorer.py 8000 project.pages.json
+```
+
+You can also select config directly in the browser:
+
+```text
+http://127.0.0.1:8000/tools/docs_explorer/?config=project.pages.json
+```
 
 Structure is intentionally small and framework-free so the tool can be reused
 across other repos later by swapping project config and doc-index JSON.

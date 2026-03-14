@@ -19,13 +19,19 @@ def main() -> int:
 
     host = "127.0.0.1"
     port = 8000
+    config_name = None
 
     if len(sys.argv) > 1:
         port = int(sys.argv[1])
+    if len(sys.argv) > 2:
+        config_name = sys.argv[2]
 
     server = ThreadingHTTPServer((host, port), SimpleHTTPRequestHandler)
     print(f"serving {repo_root}")
-    print(f"open http://{host}:{port}/tools/docs_explorer/")
+    url = f"http://{host}:{port}/tools/docs_explorer/"
+    if config_name:
+        url = f"{url}?config={config_name}"
+    print(f"open {url}")
     try:
         server.serve_forever()
     except KeyboardInterrupt:

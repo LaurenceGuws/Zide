@@ -1,8 +1,8 @@
 {
   "title": "Zide Docs Explorer",
-  "icon": "../../assets/icon/color_icon.png",
-  "repoBasePath": "../../",
-  "runtimeMode": "local-dev",
+  "icon": "/Zide/assets/icon/color_icon.png",
+  "repoBasePath": "/Zide/",
+  "runtimeMode": "github-pages",
   "defaultDoc": "app_architecture/terminal/TERMINAL_ARCHITECTURE_COMPARISON.md",
   "theme": {
     "dark": {
