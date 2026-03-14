@@ -60,6 +60,14 @@ Expected value is `xterm-zide` (preferred), with `zide-256color` as an alternate
 UI renderer roadmap:
 - `app_architecture/ui/DEVELOPMENT_JOURNEY.md`
 
+Local docs explorer:
+```bash
+cd tools/docs_explorer
+python3 docs_explorer.py
+```
+Then open the printed local URL to browse `docs/` and `app_architecture/`
+in a file-tree Markdown viewer with Mermaid support.
+
 Tree-sitter grammar packs:
 ```bash
 zig build grammar-update -- --skip-git --continue-on-error --jobs 8
