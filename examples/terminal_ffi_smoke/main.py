@@ -341,13 +341,11 @@ def run_smoke(lib_path: Path) -> int:
                 title_getter = as_bytes(metadata.title_ptr, metadata.title_len).decode("utf-8", errors="replace")
                 cwd_getter = as_bytes(metadata.cwd_ptr, metadata.cwd_len).decode("utf-8", errors="replace")
                 scrollback_count = metadata.scrollback_count
+                alive = metadata.alive
+                has_exit = metadata.has_exit_code
+                exit_code = metadata.exit_code
             finally:
                 lib.zide_terminal_metadata_release(ctypes.byref(metadata))
-
-            exit_code = ctypes.c_int32(-1)
-            has_exit = ctypes.c_uint8(0)
-            if lib.zide_terminal_child_exit_status(handle, ctypes.byref(exit_code), ctypes.byref(has_exit)) != STATUS_OK:
-                raise RuntimeError("child_exit_status failed")
 
             snapshot_state.update(
                 {
@@ -360,8 +358,9 @@ def run_smoke(lib_path: Path) -> int:
                     "title_getter": title_getter,
                     "cwd_getter": cwd_getter,
                     "scrollback_count": scrollback_count,
-                    "exit_code": exit_code.value,
-                    "has_exit": has_exit.value,
+                    "alive": alive,
+                    "exit_code": exit_code,
+                    "has_exit": has_exit,
                 }
             )
 
@@ -378,7 +377,7 @@ def run_smoke(lib_path: Path) -> int:
         )
         print(f"status_ok={lib.zide_terminal_status_string(STATUS_OK).decode()} status_unknown={lib.zide_terminal_status_string(99).decode()}")
         print(f"size={snapshot_state['rows']}x{snapshot_state['cols']} cells={snapshot_state['cell_count']}")
-        print(f"title={snapshot_state['title']!r} cwd={snapshot_state['cwd']!r} alive={lib.zide_terminal_is_alive(handle)}")
+        print(f"title={snapshot_state['title']!r} cwd={snapshot_state['cwd']!r} alive={snapshot_state['alive']}")
         print(
             f"title_getter={snapshot_state['title_getter']!r} "
             f"cwd_getter={snapshot_state['cwd_getter']!r} "
