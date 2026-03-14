@@ -5,6 +5,7 @@ pub const ZideEditorStringBuffer = bridge.StringBuffer;
 pub const ZideEditorCaretOffset = bridge.CaretOffset;
 pub const ZideEditorSearchMatch = bridge.SearchMatch;
 pub const ZideEditorStatus = bridge.Status;
+pub const ZIDE_EDITOR_STRING_ABI_VERSION = bridge.string_abi_version;
 
 pub fn zide_editor_create(out_handle: *?*ZideEditorHandle) c_int {
     return @intFromEnum(bridge.create(out_handle));
@@ -44,6 +45,10 @@ pub fn zide_editor_text_alloc(handle: ?*ZideEditorHandle, out_string: *ZideEdito
 
 pub fn zide_editor_string_free(string: *ZideEditorStringBuffer) void {
     bridge.stringFree(string);
+}
+
+pub fn zide_editor_string_abi_version() u32 {
+    return bridge.stringAbiVersion();
 }
 
 pub fn zide_editor_set_cursor_offset(handle: ?*ZideEditorHandle, offset: usize) c_int {

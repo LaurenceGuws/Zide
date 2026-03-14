@@ -17,7 +17,13 @@ typedef enum ZideEditorStatus {
     ZIDE_EDITOR_STATUS_BACKEND_ERROR = 3,
 } ZideEditorStatus;
 
+enum {
+    ZIDE_EDITOR_STRING_ABI_VERSION = 1,
+};
+
 typedef struct ZideEditorStringBuffer {
+    uint32_t abi_version;
+    uint32_t struct_size;
     const uint8_t *ptr;
     size_t len;
     void *_ctx;
@@ -43,6 +49,7 @@ int zide_editor_begin_undo_group(ZideEditorHandle *handle);
 int zide_editor_end_undo_group(ZideEditorHandle *handle);
 int zide_editor_text_alloc(ZideEditorHandle *handle, ZideEditorStringBuffer *out_string);
 void zide_editor_string_free(ZideEditorStringBuffer *string);
+uint32_t zide_editor_string_abi_version(void);
 
 int zide_editor_set_cursor_offset(ZideEditorHandle *handle, size_t offset);
 int zide_editor_primary_caret_offset(ZideEditorHandle *handle, size_t *out_offset);
