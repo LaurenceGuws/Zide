@@ -468,6 +468,10 @@ pub fn rendererMetadataAbiVersion() u32 {
     return shared.renderer_metadata_abi_version;
 }
 
+pub fn redrawStateAbiVersion() u32 {
+    return shared.redraw_state_abi_version;
+}
+
 pub fn rendererMetadata(codepoint: u32, out_metadata: *shared.RendererMetadata) shared.Status {
     out_metadata.* = .{
         .abi_version = shared.renderer_metadata_abi_version,

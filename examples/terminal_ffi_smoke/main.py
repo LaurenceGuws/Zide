@@ -245,6 +245,10 @@ def load_library(path: Path):
     lib.zide_terminal_event_abi_version.restype = ctypes.c_uint32
     lib.zide_terminal_scrollback_abi_version.argtypes = []
     lib.zide_terminal_scrollback_abi_version.restype = ctypes.c_uint32
+    lib.zide_terminal_metadata_abi_version.argtypes = []
+    lib.zide_terminal_metadata_abi_version.restype = ctypes.c_uint32
+    lib.zide_terminal_redraw_state_abi_version.argtypes = []
+    lib.zide_terminal_redraw_state_abi_version.restype = ctypes.c_uint32
     lib.zide_terminal_renderer_metadata_abi_version.argtypes = []
     lib.zide_terminal_renderer_metadata_abi_version.restype = ctypes.c_uint32
     lib.zide_terminal_renderer_metadata.argtypes = [ctypes.c_uint32, ctypes.POINTER(RendererMetadata)]
@@ -353,7 +357,12 @@ def run_smoke(lib_path: Path) -> int:
 
             print("ffi smoke ok")
             print(
-                f"snapshot_abi={lib.zide_terminal_snapshot_abi_version()} event_abi={lib.zide_terminal_event_abi_version()} scrollback_abi={lib.zide_terminal_scrollback_abi_version()} renderer_meta_abi={lib.zide_terminal_renderer_metadata_abi_version()}"
+                f"snapshot_abi={lib.zide_terminal_snapshot_abi_version()} "
+                f"event_abi={lib.zide_terminal_event_abi_version()} "
+                f"scrollback_abi={lib.zide_terminal_scrollback_abi_version()} "
+                f"metadata_abi={lib.zide_terminal_metadata_abi_version()} "
+                f"redraw_state_abi={lib.zide_terminal_redraw_state_abi_version()} "
+                f"renderer_meta_abi={lib.zide_terminal_renderer_metadata_abi_version()}"
             )
             print(f"status_ok={lib.zide_terminal_status_string(STATUS_OK).decode()} status_unknown={lib.zide_terminal_status_string(99).decode()}")
             print(f"size={snapshot.rows}x{snapshot.cols} cells={snapshot.cell_count}")

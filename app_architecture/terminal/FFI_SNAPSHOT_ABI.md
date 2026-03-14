@@ -167,6 +167,8 @@ Update:
   snapshot acquire
 - `zide_terminal_redraw_state(handle, &state)` so hosts can acquire both
   generations plus `needs_redraw` atomically in one cheap getter
+- `zide_terminal_redraw_state_abi_version()` so redraw-state ABI validation
+  follows the same query pattern as snapshot/event/scrollback/metadata surfaces
 - and `zide_terminal_needs_redraw(handle)` so hosts can ask the cheap
   level-triggered question directly instead of deriving it themselves from
   multiple calls

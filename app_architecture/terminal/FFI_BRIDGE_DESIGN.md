@@ -197,6 +197,7 @@ Current bridge catch-up already landed:
 - `zide_terminal_acknowledged_generation(handle, &generation)`
 - `zide_terminal_published_generation(handle, &generation)`
 - `zide_terminal_redraw_state(handle, &state)`
+- `zide_terminal_redraw_state_abi_version()`
 - `zide_terminal_needs_redraw(handle)`
 
 So the bridge now exposes the same basic host-facing semantics as the shared

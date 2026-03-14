@@ -10,6 +10,7 @@ test "ffi non-pty snapshot and event ownership smoke" {
     try std.testing.expectEqual(c_api.ZIDE_TERMINAL_SCROLLBACK_ABI_VERSION, c_api.zide_terminal_scrollback_abi_version());
     try std.testing.expectEqual(c_api.ZIDE_TERMINAL_RENDERER_METADATA_ABI_VERSION, c_api.zide_terminal_renderer_metadata_abi_version());
     try std.testing.expectEqual(c_api.ZIDE_TERMINAL_METADATA_ABI_VERSION, c_api.zide_terminal_metadata_abi_version());
+    try std.testing.expectEqual(c_api.ZIDE_TERMINAL_REDRAW_STATE_ABI_VERSION, c_api.zide_terminal_redraw_state_abi_version());
 
     var rounded_box_meta: c_api.ZideTerminalRendererMetadata = .{};
     try std.testing.expectEqual(@as(c_int, 0), c_api.zide_terminal_renderer_metadata(0x256D, &rounded_box_meta));

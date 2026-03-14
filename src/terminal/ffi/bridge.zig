@@ -163,6 +163,10 @@ pub fn rendererMetadataAbiVersion() u32 {
     return core_api.rendererMetadataAbiVersion();
 }
 
+pub fn redrawStateAbiVersion() u32 {
+    return core_api.redrawStateAbiVersion();
+}
+
 pub fn rendererMetadata(codepoint: u32, out_metadata: *RendererMetadata) Status {
     return core_api.rendererMetadata(codepoint, out_metadata);
 }
