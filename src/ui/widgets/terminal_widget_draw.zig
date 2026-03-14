@@ -914,22 +914,10 @@ pub fn drawPrepared(
             blink_requires_partial,
             self.terminal_texture_ready,
         );
-        const force_full_recovery_window = r.forceFullTerminalTexturePublicationRecoveryWindow();
-        const recovery_window_seconds = r.fullTerminalTexturePublicationRecoveryWindowSeconds();
         const force_full_recent_input_window = r.forceFullTerminalTexturePublicationRecentInputWindow();
         const recent_input_window_seconds = r.fullTerminalTexturePublicationRecentInputWindowSeconds();
         const modifier_pressure_active = input.mods.ctrl or input.mods.shift or input.mods.alt or input.mods.super;
-        const plan_was_active = update_plan.needs_full or update_plan.needs_partial;
         const plan_time = app_shell.getTime();
-        update_plan = forceFullTextureUpdatePlan(update_plan, r.forceFullTerminalTexturePublication());
-        update_plan = forceFullTextureUpdatePlanEveryFrame(update_plan, r.forceFullTerminalTexturePublicationEveryFrame());
-        if (force_full_recovery_window and plan_was_active) {
-            self.force_full_texture_publish_until = @max(
-                self.force_full_texture_publish_until,
-                plan_time + recovery_window_seconds,
-            );
-        }
-        const recovery_window_active = force_full_recovery_window and plan_time < self.force_full_texture_publish_until;
         const recent_input_age_s = if (self.last_terminal_input_time > 0 and plan_time >= self.last_terminal_input_time)
             plan_time - self.last_terminal_input_time
         else
@@ -941,19 +929,16 @@ pub fn drawPrepared(
                     recent_input_age_s <= recent_input_window_seconds));
         update_plan = forceFullTextureUpdatePlanEveryFrame(
             update_plan,
-            recovery_window_active,
-        );
-        update_plan = forceFullTextureUpdatePlanEveryFrame(
-            update_plan,
             recent_input_window_active,
         );
+        const plan_was_active = update_plan.needs_full or update_plan.needs_partial;
         const pressure_log = app_logger.logger("terminal.ui.present_pressure");
         if ((pressure_log.enabled_file or pressure_log.enabled_console) and
-            (plan_was_active or gen_changed or recovery_window_active or recent_input_window_active or modifier_pressure_active))
+            (plan_was_active or gen_changed or recent_input_window_active or modifier_pressure_active))
         {
             pressure_log.logf(
                 .info,
-                "gen_changed={d} pub_gen={d}->{d} texture_ready={d} recreated={d} plan_active={d} plan_full={d} plan_partial={d} recent_cfg={d} recent_active={d} recent_age_ms={d:.2} recent_window_ms={d:.2} modifier={d} recovery_cfg={d} recovery_active={d} recovery_until_ms={d:.2}",
+                "gen_changed={d} pub_gen={d}->{d} texture_ready={d} recreated={d} plan_active={d} plan_full={d} plan_partial={d} recent_cfg={d} recent_active={d} recent_age_ms={d:.2} recent_window_ms={d:.2} modifier={d}",
                 .{
                     @intFromBool(gen_changed),
                     self.last_render_generation,
@@ -968,12 +953,6 @@ pub fn drawPrepared(
                     if (recent_input_age_s >= 0) recent_input_age_s * 1000.0 else -1.0,
                     recent_input_window_seconds * 1000.0,
                     @intFromBool(modifier_pressure_active),
-                    @intFromBool(force_full_recovery_window),
-                    @intFromBool(recovery_window_active),
-                    if (self.force_full_texture_publish_until > 0 and plan_time <= self.force_full_texture_publish_until)
-                        (self.force_full_texture_publish_until - plan_time) * 1000.0
-                    else
-                        0.0,
                 },
             );
         }

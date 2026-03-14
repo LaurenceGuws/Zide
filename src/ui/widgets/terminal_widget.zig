@@ -58,7 +58,6 @@ pub const TerminalWidget = struct {
     last_terminal_input_time: f64 = 0,
     terminal_texture_ready: bool = false,
     last_render_generation: u64 = 0,
-    force_full_texture_publish_until: f64 = 0,
     last_alt_active: bool = false,
     last_cell_w_i: i32 = 0,
     last_cell_h_i: i32 = 0,
@@ -99,7 +98,6 @@ pub const TerminalWidget = struct {
             .last_terminal_input_time = 0,
             .terminal_texture_ready = false,
             .last_render_generation = 0,
-            .force_full_texture_publish_until = 0,
             .last_alt_active = false,
             .last_cell_w_i = 0,
             .last_cell_h_i = 0,
@@ -224,7 +222,6 @@ pub const TerminalWidget = struct {
 
     pub fn invalidateTextureCache(self: *TerminalWidget) void {
         self.terminal_texture_ready = false;
-        self.force_full_texture_publish_until = 0;
     }
 
     pub fn dumpVisibleAsciiView(self: *TerminalWidget) !void {

@@ -88,17 +88,7 @@ const PresentationReadBuffer = enum {
 
 const PresentEdgeFallbackMode = enum {
     off,
-    copy_back_to_front,
-    finish_before_swap,
-    finish_before_and_after_swap,
     swap_interval_0,
-    swap_interval_0_cap_60hz,
-    swap_interval_0_finish_before_swap,
-    swap_interval_0_finish_before_and_after_swap,
-    swap_interval_0_force_full_terminal_texture,
-    swap_interval_0_force_full_terminal_texture_every_frame,
-    swap_interval_0_force_full_terminal_texture_recovery_500ms,
-    swap_interval_0_force_full_terminal_texture_recovery_2000ms,
     swap_interval_0_force_full_terminal_texture_recent_input_2000ms,
     swap_interval_0_force_full_terminal_texture_recent_input_1000ms,
     swap_interval_0_force_full_terminal_texture_recent_input_500ms,
@@ -171,11 +161,6 @@ const FinalProbeHistory = struct {
 const PreSwapProbeCapture = struct {
     present: bool = false,
     back_grid: PresentationGridSample = .{},
-    front_grid: PresentationGridSample = .{},
-};
-
-const PreFallbackProbeCapture = struct {
-    present: bool = false,
     front_grid: PresentationGridSample = .{},
 };
 
@@ -344,21 +329,11 @@ fn parsePresentEdgeFallbackMode() PresentEdgeFallbackMode {
     if (std.mem.eql(u8, slice, "1") or
         std.ascii.eqlIgnoreCase(slice, "true") or
         std.ascii.eqlIgnoreCase(slice, "yes") or
-        std.ascii.eqlIgnoreCase(slice, "on") or
-        std.ascii.eqlIgnoreCase(slice, "copy_back_to_front"))
+        std.ascii.eqlIgnoreCase(slice, "on"))
     {
-        return .copy_back_to_front;
+        return .swap_interval_0;
     }
-    if (std.ascii.eqlIgnoreCase(slice, "finish_before_swap")) return .finish_before_swap;
-    if (std.ascii.eqlIgnoreCase(slice, "finish_before_and_after_swap")) return .finish_before_and_after_swap;
     if (std.ascii.eqlIgnoreCase(slice, "swap_interval_0")) return .swap_interval_0;
-    if (std.ascii.eqlIgnoreCase(slice, "swap_interval_0_cap_60hz")) return .swap_interval_0_cap_60hz;
-    if (std.ascii.eqlIgnoreCase(slice, "swap_interval_0_finish_before_swap")) return .swap_interval_0_finish_before_swap;
-    if (std.ascii.eqlIgnoreCase(slice, "swap_interval_0_finish_before_and_after_swap")) return .swap_interval_0_finish_before_and_after_swap;
-    if (std.ascii.eqlIgnoreCase(slice, "swap_interval_0_force_full_terminal_texture")) return .swap_interval_0_force_full_terminal_texture;
-    if (std.ascii.eqlIgnoreCase(slice, "swap_interval_0_force_full_terminal_texture_every_frame")) return .swap_interval_0_force_full_terminal_texture_every_frame;
-    if (std.ascii.eqlIgnoreCase(slice, "swap_interval_0_force_full_terminal_texture_recovery_500ms")) return .swap_interval_0_force_full_terminal_texture_recovery_500ms;
-    if (std.ascii.eqlIgnoreCase(slice, "swap_interval_0_force_full_terminal_texture_recovery_2000ms")) return .swap_interval_0_force_full_terminal_texture_recovery_2000ms;
     if (std.ascii.eqlIgnoreCase(slice, "swap_interval_0_force_full_terminal_texture_recent_input_2000ms")) return .swap_interval_0_force_full_terminal_texture_recent_input_2000ms;
     if (std.ascii.eqlIgnoreCase(slice, "swap_interval_0_force_full_terminal_texture_recent_input_1000ms")) return .swap_interval_0_force_full_terminal_texture_recent_input_1000ms;
     if (std.ascii.eqlIgnoreCase(slice, "swap_interval_0_force_full_terminal_texture_recent_input_500ms")) return .swap_interval_0_force_full_terminal_texture_recent_input_500ms;
@@ -381,17 +356,7 @@ fn parseTerminalPresentMitigationDisabled() bool {
 fn presentEdgeFallbackName(mode: PresentEdgeFallbackMode) []const u8 {
     return switch (mode) {
         .off => "off",
-        .copy_back_to_front => "copy_back_to_front",
-        .finish_before_swap => "finish_before_swap",
-        .finish_before_and_after_swap => "finish_before_and_after_swap",
         .swap_interval_0 => "swap_interval_0",
-        .swap_interval_0_cap_60hz => "swap_interval_0_cap_60hz",
-        .swap_interval_0_finish_before_swap => "swap_interval_0_finish_before_swap",
-        .swap_interval_0_finish_before_and_after_swap => "swap_interval_0_finish_before_and_after_swap",
-        .swap_interval_0_force_full_terminal_texture => "swap_interval_0_force_full_terminal_texture",
-        .swap_interval_0_force_full_terminal_texture_every_frame => "swap_interval_0_force_full_terminal_texture_every_frame",
-        .swap_interval_0_force_full_terminal_texture_recovery_500ms => "swap_interval_0_force_full_terminal_texture_recovery_500ms",
-        .swap_interval_0_force_full_terminal_texture_recovery_2000ms => "swap_interval_0_force_full_terminal_texture_recovery_2000ms",
         .swap_interval_0_force_full_terminal_texture_recent_input_2000ms => "swap_interval_0_force_full_terminal_texture_recent_input_2000ms",
         .swap_interval_0_force_full_terminal_texture_recent_input_1000ms => "swap_interval_0_force_full_terminal_texture_recent_input_1000ms",
         .swap_interval_0_force_full_terminal_texture_recent_input_500ms => "swap_interval_0_force_full_terminal_texture_recent_input_500ms",
@@ -609,13 +574,10 @@ pub const Renderer = struct {
     last_present_counter: u64,
     last_present_gap_ms: f64,
     last_swap_ms: f64,
-    last_present_cap_counter: u64,
     presentation_probe_count: usize,
     presentation_probes: [max_presentation_probes]PresentationProbe,
     presentation_band_probe_count: usize,
     presentation_band_probes: [max_presentation_probes]PresentationBandProbe,
-    pre_fallback_probe_count: usize,
-    pre_fallback_probes: [max_presentation_probes]PreFallbackProbeCapture,
     pre_swap_probe_count: usize,
     pre_swap_probes: [max_presentation_probes]PreSwapProbeCapture,
     pre_swap_band_probe_count: usize,
@@ -776,13 +738,10 @@ pub const Renderer = struct {
             .last_present_counter = 0,
             .last_present_gap_ms = 0.0,
             .last_swap_ms = 0.0,
-            .last_present_cap_counter = 0,
             .presentation_probe_count = 0,
             .presentation_probes = [_]PresentationProbe{.{}} ** max_presentation_probes,
             .presentation_band_probe_count = 0,
             .presentation_band_probes = [_]PresentationBandProbe{.{}} ** max_presentation_probes,
-            .pre_fallback_probe_count = 0,
-            .pre_fallback_probes = [_]PreFallbackProbeCapture{.{}} ** max_presentation_probes,
             .pre_swap_probe_count = 0,
             .pre_swap_probes = [_]PreSwapProbeCapture{.{}} ** max_presentation_probes,
             .pre_swap_band_probe_count = 0,
@@ -797,13 +756,6 @@ pub const Renderer = struct {
 
         if ((renderer.present_edge_fallback_mode == .off and !renderer.terminal_present_mitigation_debug_disabled) or
             renderer.present_edge_fallback_mode == .swap_interval_0 or
-            renderer.present_edge_fallback_mode == .swap_interval_0_cap_60hz or
-            renderer.present_edge_fallback_mode == .swap_interval_0_finish_before_swap or
-            renderer.present_edge_fallback_mode == .swap_interval_0_finish_before_and_after_swap or
-            renderer.present_edge_fallback_mode == .swap_interval_0_force_full_terminal_texture or
-            renderer.present_edge_fallback_mode == .swap_interval_0_force_full_terminal_texture_every_frame or
-            renderer.present_edge_fallback_mode == .swap_interval_0_force_full_terminal_texture_recovery_500ms or
-            renderer.present_edge_fallback_mode == .swap_interval_0_force_full_terminal_texture_recovery_2000ms or
             renderer.present_edge_fallback_mode == .swap_interval_0_force_full_terminal_texture_recent_input_2000ms or
             renderer.present_edge_fallback_mode == .swap_interval_0_force_full_terminal_texture_recent_input_1000ms or
             renderer.present_edge_fallback_mode == .swap_interval_0_force_full_terminal_texture_recent_input_500ms or
@@ -1015,28 +967,6 @@ pub const Renderer = struct {
         return self.terminal_present_mitigation_debug_disabled;
     }
 
-    pub fn forceFullTerminalTexturePublication(self: *const Renderer) bool {
-        return self.present_edge_fallback_mode == .swap_interval_0_force_full_terminal_texture or
-            self.present_edge_fallback_mode == .swap_interval_0_force_full_terminal_texture_every_frame;
-    }
-
-    pub fn forceFullTerminalTexturePublicationEveryFrame(self: *const Renderer) bool {
-        return self.present_edge_fallback_mode == .swap_interval_0_force_full_terminal_texture_every_frame;
-    }
-
-    pub fn forceFullTerminalTexturePublicationRecoveryWindow(self: *const Renderer) bool {
-        return self.present_edge_fallback_mode == .swap_interval_0_force_full_terminal_texture_recovery_500ms or
-            self.present_edge_fallback_mode == .swap_interval_0_force_full_terminal_texture_recovery_2000ms;
-    }
-
-    pub fn fullTerminalTexturePublicationRecoveryWindowSeconds(self: *const Renderer) f64 {
-        return switch (self.present_edge_fallback_mode) {
-            .swap_interval_0_force_full_terminal_texture_recovery_500ms => 0.5,
-            .swap_interval_0_force_full_terminal_texture_recovery_2000ms => 2.0,
-            else => 0.0,
-        };
-    }
-
     pub fn forceFullTerminalTexturePublicationRecentInputWindow(self: *const Renderer) bool {
         return self.terminalRecentInputFullPublicationEnabled();
     }
@@ -1143,7 +1073,6 @@ pub const Renderer = struct {
     pub fn submitFrame(self: *Renderer) FrameSubmission {
         if (self.scene_frame_active) self.drawSceneTargetToDefault();
         const swap_start = sdl_api.getPerformanceCounter();
-        if (self.present_edge_fallback_mode == .copy_back_to_front) self.capturePreFallbackFrameProbes();
         self.applyPreSwapFallback();
         self.capturePreSwapBackFrameProbes();
         const swap_ok = sdl_api.glSwapWindow(self.window);
@@ -1152,11 +1081,9 @@ pub const Renderer = struct {
         }
         const swap_end = sdl_api.getPerformanceCounter();
         self.last_swap_ms = performanceDeltaMs(swap_start, swap_end, self.perf_freq);
-        self.applyPostSwapFallback();
         self.logPresentedFrameProbes();
         self.presentation_probe_count = 0;
         self.presentation_band_probe_count = 0;
-        self.applyPresentFrameCap();
         self.scene_frame_active = false;
         if (swap_ok) self.submission_sequence += 1;
         return .{
@@ -1170,31 +1097,10 @@ pub const Renderer = struct {
         return (@as(f64, @floatFromInt(end - start)) * 1000.0) / freq;
     }
 
-    fn applyPresentFrameCap(self: *Renderer) void {
-        if (self.present_edge_fallback_mode != .swap_interval_0_cap_60hz) return;
-        const cap_counter = sdl_api.getPerformanceCounter();
-        defer self.last_present_cap_counter = sdl_api.getPerformanceCounter();
-        if (self.last_present_cap_counter == 0 or self.perf_freq <= 0.0) return;
-        const elapsed_ms = performanceDeltaMs(self.last_present_cap_counter, cap_counter, self.perf_freq);
-        const target_ms = 1000.0 / 60.0;
-        if (elapsed_ms >= target_ms) return;
-        time_utils.waitTime((target_ms - elapsed_ms) / 1000.0);
-    }
-
     fn applyPreSwapFallback(self: *Renderer) void {
         switch (self.present_edge_fallback_mode) {
             .off => {},
-            .copy_back_to_front => self.copyBackBufferToFrontBuffer(),
-            .finish_before_swap => gl.Finish(),
-            .finish_before_and_after_swap => gl.Finish(),
             .swap_interval_0 => {},
-            .swap_interval_0_cap_60hz => {},
-            .swap_interval_0_finish_before_swap => gl.Finish(),
-            .swap_interval_0_finish_before_and_after_swap => gl.Finish(),
-            .swap_interval_0_force_full_terminal_texture => {},
-            .swap_interval_0_force_full_terminal_texture_every_frame => {},
-            .swap_interval_0_force_full_terminal_texture_recovery_500ms => {},
-            .swap_interval_0_force_full_terminal_texture_recovery_2000ms => {},
             .swap_interval_0_force_full_terminal_texture_recent_input_2000ms => {},
             .swap_interval_0_force_full_terminal_texture_recent_input_1000ms => {},
             .swap_interval_0_force_full_terminal_texture_recent_input_500ms => {},
@@ -1203,39 +1109,6 @@ pub const Renderer = struct {
             .swap_interval_0_force_full_terminal_texture_recent_input_300ms => {},
             .swap_interval_0_force_full_terminal_texture_recent_input_250ms => {},
         }
-    }
-
-    fn applyPostSwapFallback(self: *Renderer) void {
-        switch (self.present_edge_fallback_mode) {
-            .finish_before_and_after_swap => gl.Finish(),
-            .swap_interval_0_finish_before_and_after_swap => gl.Finish(),
-            else => {},
-        }
-    }
-
-    fn copyBackBufferToFrontBuffer(self: *Renderer) void {
-        if (self.render_width <= 0 or self.render_height <= 0) return;
-        self.bindDefaultTarget();
-        gl.BindFramebuffer(gl.c.GL_READ_FRAMEBUFFER, 0);
-        gl.BindFramebuffer(gl.c.GL_DRAW_FRAMEBUFFER, 0);
-        gl.ReadBuffer(gl.c.GL_BACK);
-        gl.DrawBuffer(gl.c.GL_FRONT);
-        gl.BlitFramebuffer(
-            0,
-            0,
-            self.render_width,
-            self.render_height,
-            0,
-            0,
-            self.render_width,
-            self.render_height,
-            gl.c.GL_COLOR_BUFFER_BIT,
-            gl.c.GL_NEAREST,
-        );
-        // Keep subsequent frames on the normal back-buffer draw/read path.
-        gl.DrawBuffer(gl.c.GL_BACK);
-        gl.ReadBuffer(gl.c.GL_BACK);
-        gl.BindFramebuffer(gl.c.GL_FRAMEBUFFER, 0);
     }
 
     fn refreshWindowSizes(window: *sdl.SDL_Window) WindowSizes {
@@ -1811,16 +1684,10 @@ pub const Renderer = struct {
                 self.pre_swap_probes[probe_idx].front_grid
             else
                 probe.baseline;
-            const pre_fallback_front_grid = if (probe_idx < self.pre_fallback_probe_count and self.pre_fallback_probes[probe_idx].present)
-                self.pre_fallback_probes[probe_idx].front_grid
-            else
-                probe.baseline;
             const pre_swap_back_rgba = presentationGridCenterPixel(&pre_swap_back_grid) orelse rgba;
             const pre_swap_back_diff = diffPresentationGrid(&pre_swap_back_grid, &probe.baseline);
             const pre_swap_front_rgba = presentationGridCenterPixel(&pre_swap_front_grid) orelse rgba;
             const pre_swap_front_diff = diffPresentationGrid(&pre_swap_front_grid, &probe.baseline);
-            const pre_fallback_front_rgba = presentationGridCenterPixel(&pre_fallback_front_grid) orelse rgba;
-            const pre_fallback_front_diff = diffPresentationGrid(&pre_fallback_front_grid, &probe.baseline);
             const previous_idx = self.previousPresentedProbeIndex(probe);
             const previous_diff = if (previous_idx) |idx|
                 diffPresentationGrid(&grid, &self.previous_present_probes[idx].grid)
@@ -1930,35 +1797,6 @@ pub const Renderer = struct {
                     pre_swap_back_diff.max_delta,
                 },
             );
-            if (self.present_edge_fallback_mode == .copy_back_to_front) {
-                target_sample_log.logf(
-                    .info,
-                    "event=target_sample phase=pre_fallback_front kind={s} row={d} slot={d} col={d} cp={d} rgba={d}:{d}:{d}:{d} fg={d}:{d}:{d} bg={d}:{d}:{d} diff_hits={d}/{d} diff_max={d}",
-                    .{
-                        switch (probe.kind) {
-                            .bg2 => "bg2",
-                            .direct => "direct",
-                        },
-                        probe.row,
-                        probe.slot,
-                        probe.col,
-                        probe.codepoint,
-                        pre_fallback_front_rgba.r,
-                        pre_fallback_front_rgba.g,
-                        pre_fallback_front_rgba.b,
-                        pre_fallback_front_rgba.a,
-                        probe.fg.r,
-                        probe.fg.g,
-                        probe.fg.b,
-                        probe.bg.r,
-                        probe.bg.g,
-                        probe.bg.b,
-                        pre_fallback_front_diff.hits,
-                        pre_fallback_front_diff.samples,
-                        pre_fallback_front_diff.max_delta,
-                    },
-                );
-            }
             target_sample_log.logf(
                 .info,
                 "event=target_sample phase=pre_swap_front kind={s} row={d} slot={d} col={d} cp={d} rgba={d}:{d}:{d}:{d} fg={d}:{d}:{d} bg={d}:{d}:{d} diff_hits={d}/{d} diff_max={d}",
@@ -2267,21 +2105,6 @@ pub const Renderer = struct {
                     .{},
                 .front_sample = if (band.present)
                     self.captureWindowBand(band.logical_x, band.logical_y, band.logical_width, band.logical_height, .front)
-                else
-                    .{},
-            };
-        }
-    }
-
-    fn capturePreFallbackFrameProbes(self: *Renderer) void {
-        self.pre_fallback_probe_count = self.presentation_probe_count;
-        var probe_idx: usize = 0;
-        while (probe_idx < self.presentation_probe_count) : (probe_idx += 1) {
-            const probe = self.presentation_probes[probe_idx];
-            self.pre_fallback_probes[probe_idx] = .{
-                .present = probe.present,
-                .front_grid = if (probe.present)
-                    self.captureWindowGrid(probe.logical_x, probe.logical_y, .front)
                 else
                     .{},
             };
