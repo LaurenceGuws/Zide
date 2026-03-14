@@ -17,7 +17,7 @@ def main() -> int:
 
     server = ThreadingHTTPServer((host, port), SimpleHTTPRequestHandler)
     print(f"serving {repo_root}")
-    print(f"open http://{host}:{port}/tools/docs_explorer.html")
+    print(f"open http://{host}:{port}/tools/docs_explorer/")
     try:
         server.serve_forever()
     except KeyboardInterrupt:

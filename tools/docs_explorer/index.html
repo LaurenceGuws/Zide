@@ -340,7 +340,7 @@
       <div class="content-head">
         <div>
           <h1 id="doc-title">Docs Explorer</h1>
-          <p id="doc-subtitle">Select a document from the left. Serve this folder with <code>python3 -m http.server</code> for local file loading.</p>
+          <p id="doc-subtitle">Select a document from the left. Serve this folder with <code>python3 docs_explorer.py</code> for local file loading.</p>
         </div>
         <div class="meta-row">
           <span class="pill" id="doc-path-pill">No document selected</span>
@@ -489,7 +489,7 @@
     });
 
     function repoRelative(path) {
-      return `../${path}`;
+      return `../../${path}`;
     }
 
     function escapeHtml(text) {
