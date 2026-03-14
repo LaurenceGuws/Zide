@@ -202,6 +202,22 @@ Current bridge catch-up already landed:
 So the bridge now exposes the same basic host-facing semantics as the shared
 contract without leaking native renderer details.
 
+Bridge policy decision:
+
+- `redraw_ready` stays wake-only
+- it is not upgraded into an acknowledged-generation-aware present event
+- acknowledged-generation-aware redraw truth belongs in direct getters:
+  - `zide_terminal_redraw_state(...)`
+  - `zide_terminal_published_generation(...)`
+  - `zide_terminal_acknowledged_generation(...)`
+
+Reason:
+
+- matches the cleaner reference direction
+- keeps the event stream cheap and edge-triggered
+- keeps redraw truth level-triggered and explicit
+- avoids forcing hosts to infer state from event history
+
 ## PTY model direction
 
 Milestone 1 PTY policy:

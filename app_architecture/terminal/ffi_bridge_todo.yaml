@@ -192,7 +192,8 @@ terminal_ffi_bridge_todo:
             - "The bridge now has both edge-triggered wake (`redraw_ready`) and level-triggered redraw state (`needs_redraw`) without exporting native renderer details."
             - "It also now has a cheap atomic redraw-state getter so foreign hosts do not have to assemble publication truth from multiple calls."
             - "Shared semantic authority now lives in `app_architecture/terminal/RENDER_PUBLICATION_CONTRACT.md` so native and FFI are judged against one contract instead of parallel narratives."
-            - "Remaining work is to decide whether future event semantics or metadata/getter surfaces should explicitly incorporate acknowledged generation beyond this minimal pair."
+            - "Policy is now to keep `redraw_ready` wake-only; acknowledged-generation-aware redraw truth belongs in direct getters, not in the event stream."
+            - "Remaining work is to decide whether future metadata/getter surfaces should explicitly incorporate more acknowledged-generation-aware state beyond this minimal pair."
 
     - name: "FFI-03 PTY + host IO seam"
       tasks:
