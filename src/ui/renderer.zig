@@ -625,6 +625,7 @@ pub const Renderer = struct {
     previous_present_probes: [max_presentation_probes]PresentedProbeHistory,
     previous_final_probe_count: usize,
     previous_final_probes: [max_presentation_probes]FinalProbeHistory,
+    scene_frame_active: bool,
 
     fn snapInt(value: f32) i32 {
         return @intFromFloat(std.math.round(value));
@@ -791,6 +792,7 @@ pub const Renderer = struct {
             .previous_present_probes = [_]PresentedProbeHistory{.{}} ** max_presentation_probes,
             .previous_final_probe_count = 0,
             .previous_final_probes = [_]FinalProbeHistory{.{}} ** max_presentation_probes,
+            .scene_frame_active = false,
         };
 
         if ((renderer.present_edge_fallback_mode == .off and !renderer.terminal_present_mitigation_debug_disabled) or
@@ -1121,7 +1123,8 @@ pub const Renderer = struct {
         // Avoid leaking background context across different text draws.
         self.text_bg_rgba = .{ .r = 0, .g = 0, .b = 0, .a = 0 };
 
-        self.bindMainCompositionTarget();
+        self.scene_frame_active = self.beginSceneFrame();
+        if (!self.scene_frame_active) self.bindDefaultTarget();
         self.updateMouseScale();
         gl.Disable(gl.c.GL_SCISSOR_TEST);
 
@@ -1138,7 +1141,7 @@ pub const Renderer = struct {
     }
 
     pub fn submitFrame(self: *Renderer) FrameSubmission {
-        self.drawSceneTargetToDefault();
+        if (self.scene_frame_active) self.drawSceneTargetToDefault();
         const swap_start = sdl_api.getPerformanceCounter();
         if (self.present_edge_fallback_mode == .copy_back_to_front) self.capturePreFallbackFrameProbes();
         self.applyPreSwapFallback();
@@ -1154,6 +1157,7 @@ pub const Renderer = struct {
         self.presentation_probe_count = 0;
         self.presentation_band_probe_count = 0;
         self.applyPresentFrameCap();
+        self.scene_frame_active = false;
         if (swap_ok) self.submission_sequence += 1;
         return .{
             .succeeded = swap_ok,
@@ -1400,8 +1404,15 @@ pub const Renderer = struct {
         gl.Enable(gl.c.GL_BLEND);
     }
 
-    fn bindMainCompositionTarget(self: *Renderer) void {
-        if (!self.beginSceneFrame()) self.bindDefaultTarget();
+    fn restoreMainCompositionTarget(self: *Renderer) void {
+        if (self.scene_frame_active) {
+            if (!self.beginSceneFrame()) {
+                self.scene_frame_active = false;
+                self.bindDefaultTarget();
+            }
+            return;
+        }
+        self.bindDefaultTarget();
     }
 
     pub fn dumpWindowScreenshotPpm(self: *Renderer, path: []const u8) !void {
@@ -2296,7 +2307,7 @@ pub const Renderer = struct {
     }
 
     pub fn endTerminalTexture(self: *Renderer) void {
-        self.bindMainCompositionTarget();
+        self.restoreMainCompositionTarget();
     }
 
     pub fn beginEditorTexture(self: *Renderer) bool {
@@ -2304,7 +2315,7 @@ pub const Renderer = struct {
     }
 
     pub fn endEditorTexture(self: *Renderer) void {
-        self.bindMainCompositionTarget();
+        self.restoreMainCompositionTarget();
     }
 
     pub fn drawTerminalTexture(self: *Renderer, x: f32, y: f32) void {
