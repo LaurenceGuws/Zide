@@ -161,10 +161,9 @@ fn initWithMode(
     const app_log = app_logger.logger("app.core");
     app_log.logStdout(.info, "logger initialized", .{});
     app_log.logStdout(.info, "config lua backend: impl={s}", .{"ziglua"});
-    app_log.logStdout(.info, "terminal present mitigation recent_input_force_full={any} recent_input_force_full_ms={d} debug_disabled={any}", .{
+    app_log.logStdout(.info, "terminal present mitigation recent_input_force_full={any} recent_input_force_full_ms={d}", .{
         shell.rendererPtr().terminalRecentInputFullPublicationEnabled(),
         shell.rendererPtr().terminalRecentInputFullPublicationWindowMs(),
-        shell.rendererPtr().terminalPresentMitigationDebugDisabled(),
     });
     const metrics_log = app_logger.logger("terminal.metrics");
     const input_latency_log = app_logger.logger("input.latency");
