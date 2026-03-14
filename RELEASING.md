@@ -8,14 +8,24 @@ Publish them as GitHub Release assets instead.
 - Use one semver-first version line across package metadata, release tags,
   artifact names, and docs.
 - Canonical product/package version lives in [`build.zig.zon`](build.zig.zon).
+- Distinguish clearly between:
+  - product version: plain semver, e.g. `0.1.0-beta.1`
+  - git/GitHub release tag: `v` + product version, e.g. `v0.1.0-beta.1`
 - Prereleases should use semver prerelease tags:
-  - `0.1.0-beta.1`
-  - `0.1.0-beta.2`
+  - product version: `0.1.0-beta.1`
+  - release tag: `v0.1.0-beta.1`
+  - product version: `0.1.0-beta.2`
+  - release tag: `v0.1.0-beta.2`
 - Stable releases should use plain semver tags:
-  - `0.1.0`
-  - `0.1.1`
+  - product version: `0.1.0`
+  - release tag: `v0.1.0`
+  - product version: `0.1.1`
+  - release tag: `v0.1.1`
 - Avoid ad hoc tag formats like `beta-0.0.2`; they make the project look less
   disciplined and drift from package metadata.
+- Legacy `beta-0.0.x` releases should be treated as historical snapshots only.
+  Do not continue that tag line; all new releases should use the semver + `v`
+  tag scheme above.
 
 ## Build Output Layout
 
@@ -42,27 +52,30 @@ Publish them as GitHub Release assets instead.
 Example with GitHub CLI:
 
 ```bash
-TAG=0.1.0-beta.2
+VERSION=0.1.0-beta.2
+TAG="v$VERSION"
 gh release create "$TAG" \
   --title "$TAG" \
   --notes "zide beta release $TAG" \
-  releases/$TAG/dist/zide-terminal-bundle-$TAG-linux-x86_64.tar.gz \
-  releases/$TAG/dist/zide-editor-bundle-$TAG-linux-x86_64.tar.gz \
-  releases/$TAG/dist/zide-ide-bundle-$TAG-linux-x86_64.tar.gz \
-  releases/$TAG/dist/zide-terminal-ffi-$TAG-linux-x86_64.tar.gz \
-  releases/$TAG/dist/zide-editor-ffi-$TAG-linux-x86_64.tar.gz \
+  releases/$TAG/dist/zide-terminal-bundle-$VERSION-linux-x86_64.tar.gz \
+  releases/$TAG/dist/zide-editor-bundle-$VERSION-linux-x86_64.tar.gz \
+  releases/$TAG/dist/zide-ide-bundle-$VERSION-linux-x86_64.tar.gz \
+  releases/$TAG/dist/zide-terminal-ffi-$VERSION-linux-x86_64.tar.gz \
+  releases/$TAG/dist/zide-editor-ffi-$VERSION-linux-x86_64.tar.gz \
   releases/$TAG/dist/SHA256SUMS
 ```
 
 If the release already exists:
 
 ```bash
+VERSION=0.1.0-beta.2
+TAG="v$VERSION"
 gh release upload "$TAG" \
-  releases/$TAG/dist/zide-terminal-bundle-$TAG-linux-x86_64.tar.gz \
-  releases/$TAG/dist/zide-editor-bundle-$TAG-linux-x86_64.tar.gz \
-  releases/$TAG/dist/zide-ide-bundle-$TAG-linux-x86_64.tar.gz \
-  releases/$TAG/dist/zide-terminal-ffi-$TAG-linux-x86_64.tar.gz \
-  releases/$TAG/dist/zide-editor-ffi-$TAG-linux-x86_64.tar.gz \
+  releases/$TAG/dist/zide-terminal-bundle-$VERSION-linux-x86_64.tar.gz \
+  releases/$TAG/dist/zide-editor-bundle-$VERSION-linux-x86_64.tar.gz \
+  releases/$TAG/dist/zide-ide-bundle-$VERSION-linux-x86_64.tar.gz \
+  releases/$TAG/dist/zide-terminal-ffi-$VERSION-linux-x86_64.tar.gz \
+  releases/$TAG/dist/zide-editor-ffi-$VERSION-linux-x86_64.tar.gz \
   releases/$TAG/dist/SHA256SUMS \
   --clobber
 ```
@@ -86,7 +99,8 @@ gh release upload "$TAG" \
 
 ## Artifact Naming
 
-- Release artifacts should embed the exact release tag.
+- Release artifacts should embed the product version, not the `v`-prefixed git
+  tag.
 - Example:
   - `zide-terminal-bundle-0.1.0-beta.2-linux-x86_64.tar.gz`
   - `zide-editor-bundle-0.1.0-beta.2-linux-x86_64.tar.gz`

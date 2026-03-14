@@ -22,6 +22,8 @@ makepkg -si
 
 ## Notes
 
-- `pkgver` must match a released tag (`v${pkgver}`) that contains:
+- `pkgver` is the plain product version.
+- GitHub release tags are `v${pkgver}`.
+- The corresponding release must contain:
   - `zide-terminal-bundle-${pkgver}-linux-x86_64.tar.gz`
 - `sha256sums` is `SKIP` in this skeleton; replace with pinned checksum for release-grade packaging.
