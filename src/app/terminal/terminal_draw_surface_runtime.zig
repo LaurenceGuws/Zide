@@ -44,10 +44,11 @@ pub fn draw(state: anytype, shell: anytype, layout: layout_types.WidgetLayout) v
     }
 }
 
-pub fn flushPresentationFeedback(state: anytype, swap_succeeded: bool) void {
+pub fn flushPresentationFeedback(state: anytype, submission: anytype) void {
     if (state.pending_terminal_presentation_feedback) |pending| {
-        if (swap_succeeded) {
+        if (submission.succeeded) {
             pending.session.finishFramePresentation(pending.feedback);
+            state.last_terminal_submission_sequence = submission.sequence;
         }
         state.pending_terminal_presentation_feedback = null;
     }

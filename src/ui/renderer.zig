@@ -179,6 +179,11 @@ const PreFallbackProbeCapture = struct {
     front_grid: PresentationGridSample = .{},
 };
 
+pub const FrameSubmission = struct {
+    succeeded: bool,
+    sequence: u64,
+};
+
 const PresentationBandProbe = struct {
     present: bool = false,
     axis: enum {
@@ -600,6 +605,7 @@ pub const Renderer = struct {
     start_counter: u64,
     perf_freq: f64,
     frame_seq: u64,
+    submission_sequence: u64,
     last_present_counter: u64,
     last_present_gap_ms: f64,
     last_swap_ms: f64,
@@ -765,6 +771,7 @@ pub const Renderer = struct {
             .start_counter = sdl_api.getPerformanceCounter(),
             .perf_freq = @as(f64, @floatFromInt(sdl_api.getPerformanceFrequency())),
             .frame_seq = 0,
+            .submission_sequence = 0,
             .last_present_counter = 0,
             .last_present_gap_ms = 0.0,
             .last_swap_ms = 0.0,
@@ -1148,6 +1155,15 @@ pub const Renderer = struct {
         self.presentation_band_probe_count = 0;
         self.applyPresentFrameCap();
         return swap_ok;
+    }
+
+    pub fn submitFrame(self: *Renderer) FrameSubmission {
+        const succeeded = self.endFrame();
+        if (succeeded) self.submission_sequence += 1;
+        return .{
+            .succeeded = succeeded,
+            .sequence = self.submission_sequence,
+        };
     }
 
     fn performanceDeltaMs(start: u64, end: u64, freq: f64) f64 {
