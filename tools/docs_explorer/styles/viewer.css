@@ -1,0 +1,97 @@
+.viewer {
+  padding: 18px 24px 30px;
+  min-height: 70vh;
+}
+
+.callout {
+  margin: 0 0 22px;
+  padding: 10px 12px;
+  border-left: 4px solid var(--accent);
+  border-radius: 0;
+  background: rgba(212, 122, 69, 0.1);
+}
+
+.status {
+  color: var(--muted);
+  font-style: italic;
+}
+
+.viewer h1,
+.viewer h2,
+.viewer h3,
+.viewer h4 {
+  line-height: 1.16;
+  margin: 1.08em 0 0.38em;
+}
+
+.viewer h1:first-child,
+.viewer h2:first-child,
+.viewer h3:first-child {
+  margin-top: 0;
+}
+
+.viewer p,
+.viewer li {
+  max-width: 84ch;
+}
+
+.viewer a {
+  color: var(--accent-strong);
+}
+
+.viewer pre {
+  background: #0b1118;
+  border: 1px solid var(--line);
+  border-radius: 0;
+  padding: 12px 14px;
+  overflow: auto;
+}
+
+.viewer code {
+  background: var(--code);
+  border-radius: 0;
+  padding: 0.1rem 0.3rem;
+  font-size: 0.94em;
+}
+
+.viewer pre code {
+  background: transparent;
+  padding: 0;
+}
+
+.viewer blockquote {
+  margin: 1.1em 0;
+  padding: 0 0 0 14px;
+  border-left: 4px solid var(--line);
+  color: var(--muted);
+}
+
+.viewer table {
+  border-collapse: collapse;
+  width: 100%;
+  margin: 1rem 0 1.4rem;
+  background: #0c1218;
+}
+
+.viewer th,
+.viewer td {
+  border: 1px solid var(--line);
+  padding: 6px 8px;
+  text-align: left;
+  vertical-align: top;
+}
+
+.viewer .mermaid {
+  background: #0b1118;
+  border: 1px solid var(--line);
+  border-radius: 0;
+  padding: 14px;
+  overflow-x: auto;
+  margin: 18px 0 22px;
+}
+
+:root[data-theme="light"] .viewer pre,
+:root[data-theme="light"] .viewer .mermaid,
+:root[data-theme="light"] .viewer table {
+  background: #fdfaf4;
+}
