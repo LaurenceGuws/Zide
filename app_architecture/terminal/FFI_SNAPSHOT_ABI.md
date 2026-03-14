@@ -192,7 +192,7 @@ Reason:
 
 Note:
 - explicit copied scrollback export is now provided via the dedicated buffer API
-  (`zide_terminal_scrollback_count`, `zide_terminal_scrollback_acquire`, `zide_terminal_scrollback_release`)
+  (`zide_terminal_metadata_acquire`, `zide_terminal_scrollback_acquire`, `zide_terminal_scrollback_release`)
   so snapshot ABI remains viewport-only while hosts can consume history through a separate ownership contract.
 
 ## Renderer metadata helper (beta-safe extension)
