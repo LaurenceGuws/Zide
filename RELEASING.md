@@ -1,13 +1,21 @@
-# Releasing Beta Artifacts
+# Releasing Artifacts
 
 This repository should not commit generated release binaries (`releases/`, `dist/`).
 Publish them as GitHub Release assets instead.
 
 ## Versioning
 
-- Use semver-style tags, including prerelease tags when needed:
-  - `beta-0.0.1`
-  - `v0.1.0`
+- Use one semver-first version line across package metadata, release tags,
+  artifact names, and docs.
+- Canonical product/package version lives in [`build.zig.zon`](build.zig.zon).
+- Prereleases should use semver prerelease tags:
+  - `0.1.0-beta.1`
+  - `0.1.0-beta.2`
+- Stable releases should use plain semver tags:
+  - `0.1.0`
+  - `0.1.1`
+- Avoid ad hoc tag formats like `beta-0.0.2`; they make the project look less
+  disciplined and drift from package metadata.
 
 ## Build Output Layout
 
@@ -25,7 +33,7 @@ Publish them as GitHub Release assets instead.
 Example with GitHub CLI:
 
 ```bash
-TAG=beta-0.0.2
+TAG=0.1.0-beta.2
 gh release create "$TAG" \
   --title "$TAG" \
   --notes "zide beta release $TAG" \
@@ -53,7 +61,7 @@ gh release upload "$TAG" \
 ## Release Notes Policy
 
 - Beta notes should stay high-level and technical, not read like a raw commit log.
-- The next release after `beta-0.0.2` should include a concise technical
+- The next prerelease after `0.1.0-beta.2` should include a concise technical
   breakdown of the first VT/render rewrite release:
   - renderer-owned scene target as the normal main composition path
   - default framebuffer reduced to present sink / degraded fallback
@@ -64,6 +72,14 @@ gh release upload "$TAG" \
   VT/render architecture, not as final parity with `kitty` / `ghostty`.
 - Prefer a short architecture summary plus the most important user-visible
   compatibility wins over a long inventory of smaller fixes.
+
+## Artifact Naming
+
+- Release artifacts should embed the exact release tag.
+- Example:
+  - `zide-terminal-bundle-0.1.0-beta.2-linux-x86_64.tar.gz`
+  - `zide-editor-bundle-0.1.0-beta.2-linux-x86_64.tar.gz`
+  - `zide-ide-bundle-0.1.0-beta.2-linux-x86_64.tar.gz`
 
 ## Consumer Guidance
 
