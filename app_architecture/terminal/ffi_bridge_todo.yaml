@@ -156,7 +156,7 @@ terminal_ffi_bridge_todo:
             - "Decide between full-frame flat cells and damage-driven rows/rects."
             - "The first exported ABI should bias toward simplicity over minimal bandwidth."
             - "Baseline documented in `app_architecture/terminal/FFI_SNAPSHOT_ABI.md` and implemented as copy-based full snapshots in `src/terminal/ffi/bridge.zig`."
-            - "Added explicit copied scrollback side-buffer API (`zide_terminal_scrollback_count/acquire/release`) so hosts can consume history without changing viewport snapshot ABI."
+            - "Added explicit copied scrollback side-buffer API (`zide_terminal_metadata_acquire` for counts plus `zide_terminal_scrollback_acquire/release`) so hosts can consume history without changing viewport snapshot ABI."
         - id: FFI-02-02
           title: "Specify ownership rules for exported snapshot buffers"
           status: done

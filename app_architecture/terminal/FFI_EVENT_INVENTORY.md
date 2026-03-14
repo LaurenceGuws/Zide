@@ -22,14 +22,14 @@ Milestone 1 default:
 
 | Signal | Current local source | Classification | Why |
 | --- | --- | --- | --- |
-| Title changed | OSC title handling / session title state | `event-drain` + getter | Discrete change, useful for host window/tab titles. |
-| Current working directory changed | OSC 7 / session cwd state | `event-drain` + getter | Discrete metadata change; hosts often update breadcrumbs or tabs. |
+| Title changed | OSC title handling / session title state | `event-drain` + direct getter | Discrete change, useful for host window/tab titles. |
+| Current working directory changed | OSC 7 / session cwd state | `event-drain` + direct getter | Discrete metadata change; hosts often update breadcrumbs or tabs. |
 | Clipboard write received | OSC 52 write path | `event-drain` | Host must decide what to do with clipboard data. |
 | Clipboard read requested | protocol/read path when supported | `out-of-scope` | Not exported in milestone 1. |
 | Bell | terminal/session bell signal | `out-of-scope` | Deferred; not exported in milestone 1. |
 | Child exited | PTY/process state | `event-drain` + getter | Host needs exit status and liveness updates. |
 | Hyperlink open intent | hyperlink activation path | `out-of-scope` | Deferred; not exported in milestone 1. |
-| Dirty/wakeup hint | dirty tracking / pending output | `callback-later` or getter | Useful for efficient hosts, but not required for milestone 1. |
+| Dirty/wakeup hint | dirty tracking / pending output | `event-drain` + direct getter | `redraw_ready` is wake-only; `redraw_state` / generation getters provide redraw truth. |
 | Cursor position | snapshot | `snapshot-derived` | Render state, not a discrete event. |
 | Grid cells | snapshot | `snapshot-derived` | Core render/input inspection data. |
 | Selection state | snapshot or getter | `snapshot-derived` | Only if preserved as core backend state. |
@@ -50,6 +50,8 @@ Implemented milestone-1 kinds:
 - `cwd_changed { utf8_ptr, utf8_len }`
 - `clipboard_write { data_ptr, data_len }`
 - `child_exit { exit_code, has_status }`
+- `alive_changed { alive }`
+- `redraw_ready {}`
 
 Notes:
 - string payloads should live in the same owned event buffer returned by `event_drain`
@@ -59,10 +61,13 @@ Notes:
 ## Getter candidates
 
 Simple direct getters can reduce event volume:
-- `current_title`
-- `current_cwd`
-- `is_alive`
-- `exit_status` once dead
+- `zide_terminal_metadata_acquire`
+- `zide_terminal_is_alive`
+- `zide_terminal_child_exit_status`
+- `zide_terminal_published_generation`
+- `zide_terminal_acknowledged_generation`
+- `zide_terminal_redraw_state`
+- `zide_terminal_needs_redraw`
 
 These should complement event drains, not replace them.
 
@@ -78,7 +83,9 @@ Reason:
 
 2. Should damage notifications be events?
 - Not initially.
-- A cheap getter or snapshot flag is enough for the first smoke host.
+- Current decision is stronger:
+  - `redraw_ready` is wake-only
+  - redraw truth lives in direct getters and snapshot metadata
 
 3. Should hyperlink activation be emitted by the backend?
 - Only if activation semantics are already backend-owned.
@@ -95,6 +102,8 @@ Current required/shipped:
 - cwd changed
 - clipboard write
 - child exit
+- alive changed
+- redraw ready (wake-only)
 
 Deferred but likely useful:
 - clipboard read request
