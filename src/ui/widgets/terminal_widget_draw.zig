@@ -24,7 +24,6 @@ const RenderCache = render_cache_mod.RenderCache;
 const PresentationCapture = terminal_mod.PresentationCapture;
 const PresentedRenderCache = terminal_mod.PresentedRenderCache;
 const PresentationFeedback = terminal_mod.PresentationFeedback;
-var jitter_debug_enabled_cache: ?bool = null;
 var frame_latency_seq: u64 = 0;
 var frame_latency_metrics: FrameLatencyMetrics = .{};
 
@@ -1002,30 +1001,6 @@ pub fn drawPrepared(
     }
 
     return outcome;
-}
-
-fn jitterDebugEnabled() bool {
-    if (jitter_debug_enabled_cache) |cached| return cached;
-    const raw = std.c.getenv("ZIDE_TERMINAL_FONT_JITTER");
-    if (raw == null) {
-        jitter_debug_enabled_cache = false;
-        return false;
-    }
-    const value = std.mem.sliceTo(raw.?, 0);
-    if (value.len == 0) {
-        jitter_debug_enabled_cache = true;
-        return true;
-    }
-    if (std.ascii.eqlIgnoreCase(value, "0") or
-        std.ascii.eqlIgnoreCase(value, "false") or
-        std.ascii.eqlIgnoreCase(value, "off") or
-        std.ascii.eqlIgnoreCase(value, "no"))
-    {
-        jitter_debug_enabled_cache = false;
-        return false;
-    }
-    jitter_debug_enabled_cache = true;
-    return true;
 }
 
 test "viewport texture shift attempts only when fast path is eligible" {
