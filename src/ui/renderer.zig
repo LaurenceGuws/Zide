@@ -138,26 +138,6 @@ const PresentationProbe = struct {
     baseline: PresentationGridSample = .{},
 };
 
-const PresentedProbeHistory = struct {
-    present: bool = false,
-    kind: PresentationProbeKind = .direct,
-    row: usize = 0,
-    slot: isize = 0,
-    col: usize = 0,
-    codepoint: u32 = 0,
-    grid: PresentationGridSample = .{},
-};
-
-const FinalProbeHistory = struct {
-    present: bool = false,
-    kind: PresentationProbeKind = .direct,
-    row: usize = 0,
-    slot: isize = 0,
-    col: usize = 0,
-    codepoint: u32 = 0,
-    grid: PresentationGridSample = .{},
-};
-
 const PreSwapProbeCapture = struct {
     present: bool = false,
     back_grid: PresentationGridSample = .{},
@@ -583,10 +563,6 @@ pub const Renderer = struct {
     pre_swap_band_probe_count: usize,
     pre_swap_band_probes: [max_presentation_probes]PreSwapBandCapture,
     pre_swap_gl_state: SwapGlState,
-    previous_present_probe_count: usize,
-    previous_present_probes: [max_presentation_probes]PresentedProbeHistory,
-    previous_final_probe_count: usize,
-    previous_final_probes: [max_presentation_probes]FinalProbeHistory,
     scene_frame_active: bool,
 
     fn snapInt(value: f32) i32 {
@@ -747,10 +723,6 @@ pub const Renderer = struct {
             .pre_swap_band_probe_count = 0,
             .pre_swap_band_probes = [_]PreSwapBandCapture{.{}} ** max_presentation_probes,
             .pre_swap_gl_state = .{},
-            .previous_present_probe_count = 0,
-            .previous_present_probes = [_]PresentedProbeHistory{.{}} ** max_presentation_probes,
-            .previous_final_probe_count = 0,
-            .previous_final_probes = [_]FinalProbeHistory{.{}} ** max_presentation_probes,
             .scene_frame_active = false,
         };
 
@@ -1476,34 +1448,6 @@ pub const Renderer = struct {
         return state;
     }
 
-    fn previousPresentedProbeIndex(self: *const Renderer, probe: PresentationProbe) ?usize {
-        var idx: usize = 0;
-        while (idx < self.previous_present_probe_count) : (idx += 1) {
-            const previous = self.previous_present_probes[idx];
-            if (!previous.present) continue;
-            if (previous.kind != probe.kind) continue;
-            if (previous.row != probe.row) continue;
-            if (previous.slot != probe.slot) continue;
-            if (previous.col != probe.col) continue;
-            return idx;
-        }
-        return null;
-    }
-
-    fn previousFinalProbeIndex(self: *const Renderer, probe: PresentationProbe) ?usize {
-        var idx: usize = 0;
-        while (idx < self.previous_final_probe_count) : (idx += 1) {
-            const previous = self.previous_final_probes[idx];
-            if (!previous.present) continue;
-            if (previous.kind != probe.kind) continue;
-            if (previous.row != probe.row) continue;
-            if (previous.slot != probe.slot) continue;
-            if (previous.col != probe.col) continue;
-            return idx;
-        }
-        return null;
-    }
-
     fn captureWindowGrid(self: *Renderer, logical_x: f32, logical_y: f32, read_buffer: PresentationReadBuffer) PresentationGridSample {
         const offsets = [_]f32{ -0.25, 0.0, 0.25 };
         const cell_w = if (self.terminal_cell_width > 0.0) self.terminal_cell_width else 1.0;
@@ -1688,47 +1632,11 @@ pub const Renderer = struct {
             const pre_swap_back_diff = diffPresentationGrid(&pre_swap_back_grid, &probe.baseline);
             const pre_swap_front_rgba = presentationGridCenterPixel(&pre_swap_front_grid) orelse rgba;
             const pre_swap_front_diff = diffPresentationGrid(&pre_swap_front_grid, &probe.baseline);
-            const previous_idx = self.previousPresentedProbeIndex(probe);
-            const previous_diff = if (previous_idx) |idx|
-                diffPresentationGrid(&grid, &self.previous_present_probes[idx].grid)
-            else
-                PresentationGridDiff{};
-            const previous_codepoint: u32 = if (previous_idx) |idx| self.previous_present_probes[idx].codepoint else 0;
-            const previous_final_idx = self.previousFinalProbeIndex(probe);
-            const previous_final_diff = if (previous_final_idx) |idx|
-                diffPresentationGrid(&grid, &self.previous_final_probes[idx].grid)
-            else
-                PresentationGridDiff{};
-            const previous_final_codepoint: u32 = if (previous_final_idx) |idx| self.previous_final_probes[idx].codepoint else 0;
             const suspicious = diff.hits > 0 or
                 back_diff.hits > 0 or
                 pre_swap_back_diff.hits > 0 or
                 pre_swap_front_diff.hits > 0;
-            if (!suspicious) {
-                if (probe_idx < self.previous_present_probes.len) {
-                    self.previous_present_probes[probe_idx] = .{
-                        .present = true,
-                        .kind = probe.kind,
-                        .row = probe.row,
-                        .slot = probe.slot,
-                        .col = probe.col,
-                        .codepoint = probe.codepoint,
-                        .grid = grid,
-                    };
-                }
-                if (probe_idx < self.previous_final_probes.len) {
-                    self.previous_final_probes[probe_idx] = .{
-                        .present = true,
-                        .kind = probe.kind,
-                        .row = probe.row,
-                        .slot = probe.slot,
-                        .col = probe.col,
-                        .codepoint = probe.codepoint,
-                        .grid = probe.baseline,
-                    };
-                }
-                continue;
-            }
+            if (!suspicious) continue;
             if (!state_logged) {
                 target_sample_log.logf(
                     .info,
@@ -1858,51 +1766,6 @@ pub const Renderer = struct {
                     back_diff.max_delta,
                 },
             );
-            target_sample_log.logf(
-                .info,
-                "event=present_compare kind={s} row={d} slot={d} col={d} cp={d} prev_cp={d} prev_hits={d}/{d} prev_max={d} prev_final_cp={d} prev_final_hits={d}/{d} prev_final_max={d}",
-                .{
-                    switch (probe.kind) {
-                        .bg2 => "bg2",
-                        .direct => "direct",
-                    },
-                    probe.row,
-                    probe.slot,
-                    probe.col,
-                    probe.codepoint,
-                    previous_codepoint,
-                    previous_diff.hits,
-                    previous_diff.samples,
-                    previous_diff.max_delta,
-                    previous_final_codepoint,
-                    previous_final_diff.hits,
-                    previous_final_diff.samples,
-                    previous_final_diff.max_delta,
-                },
-            );
-
-            if (probe_idx < self.previous_present_probes.len) {
-                self.previous_present_probes[probe_idx] = .{
-                    .present = true,
-                    .kind = probe.kind,
-                    .row = probe.row,
-                    .slot = probe.slot,
-                    .col = probe.col,
-                    .codepoint = probe.codepoint,
-                    .grid = grid,
-                };
-            }
-            if (probe_idx < self.previous_final_probes.len) {
-                self.previous_final_probes[probe_idx] = .{
-                    .present = true,
-                    .kind = probe.kind,
-                    .row = probe.row,
-                    .slot = probe.slot,
-                    .col = probe.col,
-                    .codepoint = probe.codepoint,
-                    .grid = probe.baseline,
-                };
-            }
         }
         var band_idx: usize = 0;
         while (band_idx < self.presentation_band_probe_count) : (band_idx += 1) {
@@ -2070,8 +1933,6 @@ pub const Renderer = struct {
                 ),
             }
         }
-        self.previous_present_probe_count = self.presentation_probe_count;
-        self.previous_final_probe_count = self.presentation_probe_count;
     }
 
     fn capturePreSwapBackFrameProbes(self: *Renderer) void {

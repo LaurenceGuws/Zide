@@ -338,6 +338,10 @@ Current status:
 - the remaining present-probe path is now also single-owner again:
   `terminal.ui.target_sample` is the only tag that can arm probe capture and
   renderer-side present readback; row-render logs remain row stats only
+- the remaining present diagnostics are now current-frame only:
+  old previous-present / previous-final history and `event=present_compare`
+  have been removed, leaving the live probe focused on baseline vs
+  pre-swap-front/back vs present mismatches on the current frame
 
 ## Validation Matrix
 
