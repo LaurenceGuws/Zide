@@ -28,12 +28,45 @@
   position: absolute;
   right: 0;
   top: calc(100% + 6px);
-  min-width: 160px;
+  min-width: 220px;
   padding: 6px;
   border: 1px solid var(--line);
   background: var(--panel-3);
   box-shadow: var(--shadow);
   z-index: 20;
+}
+
+.options-info {
+  padding: 6px 10px 8px;
+  border-bottom: 1px solid var(--line);
+  margin-bottom: 4px;
+}
+
+.options-info-label {
+  color: var(--muted);
+  font-size: 0.68rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  margin-bottom: 4px;
+}
+
+.options-info-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  font-size: 0.76rem;
+  line-height: 1.35;
+  color: var(--ink);
+}
+
+.options-info-key {
+  color: var(--muted);
+}
+
+.options-info-value {
+  text-align: right;
+  color: var(--ink);
+  word-break: break-word;
 }
 
 .options-item {
