@@ -6,7 +6,7 @@ import sys
 
 
 def main() -> int:
-    repo_root = Path(__file__).resolve().parent.parent
+    repo_root = Path(__file__).resolve().parent.parent.parent
     os.chdir(repo_root)
 
     host = "127.0.0.1"
