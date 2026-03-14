@@ -9,7 +9,7 @@ Status: milestone-1 baseline. This document describes the event shape currently 
 ## Versioning
 
 Current scalar version queries:
-- `zide_terminal_event_abi_version() -> 1`
+- `zide_terminal_event_abi_version() -> 3`
 
 Current event struct:
 - `ZideTerminalEvent`

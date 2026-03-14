@@ -107,6 +107,8 @@ Required operations for milestone 1:
 - `zide_terminal_snapshot_abi_version()`
 - `zide_terminal_event_abi_version()`
 - `zide_terminal_scrollback_abi_version()`
+- `zide_terminal_metadata_abi_version()`
+- `zide_terminal_redraw_state_abi_version()`
 - `zide_terminal_renderer_metadata_abi_version()`
 - `zide_terminal_renderer_metadata(codepoint, out_metadata)`
 - `zide_terminal_status_string(status)`
