@@ -229,6 +229,19 @@ Lifecycle/latest-state policy:
 - hosts should not reconstruct lifecycle truth from multiple narrow calls when
   `metadata_acquire(...)` already carries the same authoritative state
 
+History/export policy:
+
+- `zide_terminal_metadata_acquire(...)` plus
+  `zide_terminal_scrollback_acquire(...)` are the authoritative structured
+  history surfaces
+- `zide_terminal_selection_text(...)`,
+  `zide_terminal_scrollback_plain_text(...)`, and
+  `zide_terminal_scrollback_ansi_text(...)` are convenience export views
+- hosts should prefer the structured history path when they need stable row
+  counts, row windows, or richer host-local rendering/inspection logic
+- hosts should prefer the text exports when they explicitly want copied text,
+  not structured history state
+
 Bridge policy decision:
 
 - `redraw_ready` stays wake-only

@@ -157,6 +157,7 @@ terminal_ffi_bridge_todo:
             - "The first exported ABI should bias toward simplicity over minimal bandwidth."
             - "Baseline documented in `app_architecture/terminal/FFI_SNAPSHOT_ABI.md` and implemented as copy-based full snapshots in `src/terminal/ffi/bridge.zig`."
             - "Added explicit copied scrollback side-buffer API (`zide_terminal_metadata_acquire` for counts plus `zide_terminal_scrollback_acquire/release`) so hosts can consume history without changing viewport snapshot ABI."
+            - "Policy is now explicit too: metadata + scrollback side-buffer are the authoritative structured history surfaces; selection/plain/ANSI text exports are convenience copied-text views."
         - id: FFI-02-02
           title: "Specify ownership rules for exported snapshot buffers"
           status: done

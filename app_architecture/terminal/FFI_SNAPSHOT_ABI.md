@@ -194,6 +194,10 @@ Note:
 - explicit copied scrollback export is now provided via the dedicated buffer API
   (`zide_terminal_metadata_acquire`, `zide_terminal_scrollback_acquire`, `zide_terminal_scrollback_release`)
   so snapshot ABI remains viewport-only while hosts can consume history through a separate ownership contract.
+- this structured history path is the authoritative history surface; the text
+  exports (`selection_text`, `scrollback_plain_text`, `scrollback_ansi_text`)
+  are convenience views for copied text, not replacements for structured
+  history state
 
 ## Renderer metadata helper (beta-safe extension)
 
