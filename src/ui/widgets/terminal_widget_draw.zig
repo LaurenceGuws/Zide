@@ -894,6 +894,9 @@ pub fn drawPrepared(
     var target_probe_count: usize = 0;
     const row_render_log = app_logger.logger("terminal.ui.row_render_pass");
     const row_render_runs_log = app_logger.logger("terminal.ui.row_render_pass_runs");
+    const target_probe_enabled =
+        target_sample_log.enabled_file or
+        target_sample_log.enabled_console;
     const texture_phase_start = app_shell.getTime();
     const texture_ready_before_draw = self.terminal_texture_ready;
     if (rows > 0 and cols > 0) {
@@ -1232,12 +1235,7 @@ pub fn drawPrepared(
                 }
                 const glyph_phase_start = app_shell.getTime();
                 r.beginTerminalGlyphBatch();
-                const target_probe_enabled =
-                    target_sample_log.enabled_file or
-                    target_sample_log.enabled_console or
-                    row_render_log.enabled_file or
-                    row_render_log.enabled_console;
-                if (target_sample_log.enabled_file or target_sample_log.enabled_console) {
+                if (target_probe_enabled) {
                     appendFixedCursorNeighborhoodProbes(&target_probes, &target_probe_count, view_cells, rows, cols, probe_cursor, screen_reverse);
                     if (target_probe_count > 0) {
                         var probe_idx: usize = 0;
@@ -1342,10 +1340,7 @@ pub fn drawPrepared(
                             .bg2_expected = row_bg_summary.second_sample.resolved_bg,
                             .direct_samples = row_direct_samples,
                         };
-                        if (row_render_log.enabled_file or row_render_log.enabled_console) {
-                            logTargetProbePhase(r, row_render_log, .bg, &target_probes[target_probe_count], 0, 0, cell_w_i, cell_h_i);
-                        }
-                        if (target_sample_log.enabled_file or target_sample_log.enabled_console) {
+                        if (target_probe_enabled) {
                             logTargetProbePhase(r, SilentTargetProbeLogger{}, .bg, &target_probes[target_probe_count], 0, 0, cell_w_i, cell_h_i);
                         }
                         target_probe_count += 1;
@@ -1412,18 +1407,15 @@ pub fn drawPrepared(
                         }
                     }
                 }
-                if (target_sample_log.enabled_file or target_sample_log.enabled_console) {
+                if (target_probe_enabled) {
                     appendFixedCursorNeighborhoodProbes(&target_probes, &target_probe_count, view_cells, rows, cols, probe_cursor, screen_reverse);
                 }
                 r.flushTerminalGlyphBatch();
                 if (target_probe_count > 0) {
                     var probe_idx: usize = 0;
                     while (probe_idx < target_probe_count) : (probe_idx += 1) {
-                        if (target_sample_log.enabled_file or target_sample_log.enabled_console) {
+                        if (target_probe_enabled) {
                             logTargetProbePhase(r, SilentTargetProbeLogger{}, .glyph, &target_probes[probe_idx], 0, 0, cell_w_i, cell_h_i);
-                        }
-                        if (row_render_log.enabled_file or row_render_log.enabled_console) {
-                            logTargetProbePhase(r, row_render_log, .glyph, &target_probes[probe_idx], 0, 0, cell_w_i, cell_h_i);
                         }
                     }
                 }
@@ -1495,15 +1487,10 @@ pub fn drawPrepared(
         if (target_probe_count > 0) {
             var probe_idx: usize = 0;
             while (probe_idx < target_probe_count) : (probe_idx += 1) {
-                if (target_sample_log.enabled_file or target_sample_log.enabled_console) {
+                if (target_probe_enabled) {
                     logTargetProbePhase(r, SilentTargetProbeLogger{}, .window, &target_probes[probe_idx], base_x, base_y, cell_w_i, cell_h_i);
                     logTargetProbeBandPhase(r, SilentTargetProbeLogger{}, .window, &target_probes[probe_idx], base_x, base_y, cell_w_i, cell_h_i);
                     logTargetProbeColumnBandPhase(r, SilentTargetProbeLogger{}, .window, &target_probes[probe_idx], base_x, base_y, cell_w_i, cell_h_i, rows);
-                }
-                if (row_render_log.enabled_file or row_render_log.enabled_console) {
-                    logTargetProbePhase(r, row_render_log, .window, &target_probes[probe_idx], base_x, base_y, cell_w_i, cell_h_i);
-                    logTargetProbeBandPhase(r, row_render_log, .window, &target_probes[probe_idx], base_x, base_y, cell_w_i, cell_h_i);
-                    logTargetProbeColumnBandPhase(r, row_render_log, .window, &target_probes[probe_idx], base_x, base_y, cell_w_i, cell_h_i, rows);
                 }
             }
         }
@@ -1567,15 +1554,10 @@ pub fn drawPrepared(
     if (target_probe_count > 0) {
         var probe_idx: usize = 0;
         while (probe_idx < target_probe_count) : (probe_idx += 1) {
-            if (target_sample_log.enabled_file or target_sample_log.enabled_console) {
+            if (target_probe_enabled) {
                 logTargetProbePhase(r, SilentTargetProbeLogger{}, .final, &target_probes[probe_idx], base_x, base_y, cell_w_i, cell_h_i);
                 logTargetProbeBandPhase(r, SilentTargetProbeLogger{}, .final, &target_probes[probe_idx], base_x, base_y, cell_w_i, cell_h_i);
                 logTargetProbeColumnBandPhase(r, SilentTargetProbeLogger{}, .final, &target_probes[probe_idx], base_x, base_y, cell_w_i, cell_h_i, rows);
-            }
-            if (row_render_log.enabled_file or row_render_log.enabled_console) {
-                logTargetProbePhase(r, row_render_log, .final, &target_probes[probe_idx], base_x, base_y, cell_w_i, cell_h_i);
-                logTargetProbeBandPhase(r, row_render_log, .final, &target_probes[probe_idx], base_x, base_y, cell_w_i, cell_h_i);
-                logTargetProbeColumnBandPhase(r, row_render_log, .final, &target_probes[probe_idx], base_x, base_y, cell_w_i, cell_h_i, rows);
             }
             registerPresentationProbes(r, &target_probes[probe_idx], base_x, base_y, cell_w_i, cell_h_i, rows);
         }
