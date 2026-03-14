@@ -52,6 +52,7 @@
 - [~] Move project identity into config instead of code/CSS edits.
       - Title/icon/default doc already live in `config/project.json`.
       - Brand-level light/dark palette overrides now live there too.
+      - Repo fetch base path now lives there too.
       - Remaining work: decide whether typography and more shell accents belong
         in config or should stay in CSS defaults.
 - [x] Split `styles/base.css` by concern.

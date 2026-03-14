@@ -1,6 +1,7 @@
 {
   "title": "Zide Docs Explorer",
   "icon": "../../assets/icon/color_icon.png",
+  "repoBasePath": "../../",
   "defaultDoc": "app_architecture/terminal/TERMINAL_ARCHITECTURE_COMPARISON.md",
   "theme": {
     "dark": {

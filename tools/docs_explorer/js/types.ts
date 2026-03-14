@@ -21,6 +21,7 @@ export type ProjectThemeConfig = {
 export type ProjectConfig = {
   title: string;
   icon: string;
+  repoBasePath: string;
   defaultDoc: string;
   docRoots: string[];
   includeExtensions: string[];

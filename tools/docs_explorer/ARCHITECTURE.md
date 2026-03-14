@@ -74,6 +74,7 @@ requiring a frontend framework or backend service.
 - `config/project.json`
   - project-specific title/icon/defaults
   - project-specific palette overrides for light/dark theme identity
+  - explicit `repoBasePath` for hosted/local content fetches
 - `config/docs-index.json`
   - project-specific doc list
 - `docs_explorer.py`
@@ -191,6 +192,8 @@ To reuse this tool across repos:
 
 The generic app should not know about Zide-specific architecture concepts.
 It also should not require CSS edits for simple project-level branding changes.
+Hosted/local path handling should be explicit in config rather than buried in
+hardcoded relative URL helpers.
 
 ## Refactor Targets
 

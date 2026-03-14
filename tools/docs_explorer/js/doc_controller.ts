@@ -10,6 +10,7 @@ import type { MarkedApi, MermaidApi } from "./vendor_types.js";
 export function createDocController(args: {
   state: AppState;
   shell: AppShell;
+  repoBasePath: string;
   docs: string[];
   defaultDocPath: string;
   treeEl: HTMLElement;
@@ -22,6 +23,7 @@ export function createDocController(args: {
   const {
     state,
     shell,
+    repoBasePath,
     docs,
     defaultDocPath,
     treeEl,
@@ -39,6 +41,7 @@ export function createDocController(args: {
     renderTree();
     await loadDoc({
       state,
+      repoBasePath,
       path: state.currentDoc,
       marked,
       mermaid,
@@ -47,15 +50,15 @@ export function createDocController(args: {
       docs,
       defaultDocPath,
       onLoading(nextState: AppState, path: string) {
-        setDocumentLoading(nextState, path);
+        setDocumentLoading(nextState, repoBasePath, path);
         renderDocumentChrome(nextState, shell);
       },
       onReady(nextState: AppState, path: string) {
-        setDocumentReady(nextState, path);
+        setDocumentReady(nextState, repoBasePath, path);
         renderDocumentChrome(nextState, shell);
       },
       onError(nextState: AppState, path: string) {
-        setDocumentError(nextState, path);
+        setDocumentError(nextState, repoBasePath, path);
         renderDocumentChrome(nextState, shell);
       },
     });
