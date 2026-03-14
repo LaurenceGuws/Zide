@@ -1001,17 +1001,6 @@ pub fn drawPrepared(
         }
     }
 
-    if (self.bench_enabled) {
-        const bench_log = app_logger.logger("terminal.ui.bench");
-        if ((now - self.last_bench_log_time) >= 0.1) {
-            self.last_bench_log_time = now;
-            bench_log.logf(
-                .info,
-                "draw_ms={d:.2} rows={d} cols={d} upload_images={d} upload_bytes={d}",
-                .{ elapsed_ms, rows, cols, upload_stats.images, upload_stats.bytes },
-            );
-        }
-    }
     return outcome;
 }
 

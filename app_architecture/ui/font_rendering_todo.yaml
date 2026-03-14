@@ -52,7 +52,6 @@ font_rendering_todo:
       - zig build run -- --mode terminal
       - zig build run
     debug_toggles_env:
-      - "ZIDE_TERMINAL_UI_BENCH=1 (per-frame terminal draw timing)"
       - "config.font_rendering.lcd=true (subpixel path; not a final solution)"
       - "config.font_rendering.hinting=\"default\"|\"none\"|\"light\"|\"normal\""
       - "config.font_rendering.autohint=true (forces FreeType autohint)"
