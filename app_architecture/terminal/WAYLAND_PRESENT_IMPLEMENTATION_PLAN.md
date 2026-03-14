@@ -14,6 +14,19 @@ into an execution plan with:
 This plan is the implementation authority for the renderer-present redesign on
 `main`.
 
+Status note, 2026-03-14:
+
+- The initial native present-path redesign is effectively landed.
+- This doc remains the architectural authority for the rewritten path, but it
+  is no longer the primary day-to-day invention queue.
+- Active work has shifted to post-rewrite bug hunting, compatibility hardening,
+  and quality validation on top of this design.
+- `rain` remains explicitly out of the active validation matrix until future
+  special-character / visual-polish work.
+- Current session bug focus is Codex CLI scrolling compatibility, which is
+  currently being treated as an app-compatibility investigation rather than a
+  generic native wheel-input failure.
+
 Shared redraw/publication/present semantic authority lives in:
 
 - `app_architecture/terminal/RENDER_PUBLICATION_CONTRACT.md`

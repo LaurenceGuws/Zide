@@ -1,29 +1,37 @@
 ## Handoff
 
 ### Current Focus
-- Primary active product lane: terminal and present-path quality on Linux native.
-- Quality bar: native terminal behavior must land in the same band as `kitty` / `ghostty` for correctness, smoothness, and steady-state cost.
-- Native GUI is the proving ground for the embedded engine contract. Finish the native path cleanly first, then catch the FFI/embedded host path up to the same redraw/publication/present semantics, and only then converge toward one shared host-facing path where practical.
+- Primary active product lane: post-rewrite terminal quality hardening and bug hunting on Linux native.
+- Quality bar: native terminal behavior must land in the same band as `kitty` / `ghostty` for correctness, smoothness, compatibility, and steady-state cost.
+- Native GUI is still the proving ground for the embedded engine contract. Keep the native path honest first, then catch the FFI/embedded host path up to the same redraw/publication/present semantics, and only then converge toward one shared host-facing path where practical.
 
 ### Current Direction
-- The Wayland present-path redesign is active on `main`.
-- Chosen architecture:
+- The initial VT/present rewrite is no longer the main invention lane on `main`.
+- Current work should default to:
+  - bug hunting on top of the rewritten VT/render seams
+  - compatibility fixes against real workloads and terminals
+  - native/FFI contract convergence where it materially improves quality
+- The chosen native renderer architecture is already set:
   - keep narrow retained widget-local targets where they pay off
-  - add a renderer-owned authoritative scene target
+  - use a renderer-owned authoritative scene target
   - treat the default framebuffer as a one-frame present sink only
-- Present acknowledgement is being moved under renderer ownership instead of relying on widget-local draw completion or ambiguous default-framebuffer behavior.
 
 ### Current State
-- The scene-owned composition path is active on `main`.
-- `nvim` scrolling/cursorline behavior is currently good on the new path.
-- `btop` shaded-block rendering is currently good on the new path.
+- The scene-owned composition path is active on `main` and the initial render-seam redesign is effectively landed.
+- `nvim` scrolling/cursorline behavior is currently good on the rewritten path.
+- `btop` shaded-block rendering is currently good on the rewritten path.
 - `rain` is no longer part of the active renderer/present validation matrix. Treat it as deferred special-character / visual-polish follow-up work only; do not let it reopen redraw/publication investigation.
-- The current active implementation authority is the phased present-plan doc, not ad hoc investigation notes.
+- Current session bug focus: Codex CLI scrolling compatibility.
+- Current Codex conclusion:
+  - native wheel delivery in Zide is working
+  - Codex TUI does not currently use real mouse tracking for this lane
+  - local source inspection shows Codex relies on alternate-scroll (`DECSET 1007`) and drops mouse events in its TUI event mapping
+- The current active implementation authority is the terminal architecture/docs, not ad hoc investigation notes.
 
 ### Near-Term Plan
-- Finish the current native present-path ownership work cleanly.
-- After that, review and tighten the FFI/embedded contract so it matches the stronger native redraw/publication/present semantics.
-- Long-term intent: one strong engine contract serving both native GUI and embedded/mobile hosts where that unification is architecturally honest.
+- Use the rewritten VT/render path as the baseline and close real bugs against it.
+- Keep tightening the FFI/embedded contract only where it materially matches the stronger native redraw/publication/present semantics.
+- Long-term intent remains one strong engine contract serving both native GUI and embedded/mobile hosts where that unification is architecturally honest.
 
 ### Where To Look
 - Native present implementation authority:
