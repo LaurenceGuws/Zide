@@ -8,6 +8,7 @@ const platform_input_events = @import("platform/input_events.zig");
 pub const MousePos = iface.MousePos;
 pub const Color = iface.Color;
 pub const Theme = iface.Theme;
+pub const FrameSubmission = r.FrameSubmission;
 
 pub const MOUSE_LEFT = input.MOUSE_LEFT;
 pub const MOUSE_RIGHT = input.MOUSE_RIGHT;
@@ -252,8 +253,8 @@ pub const Shell = struct {
         self.renderer.beginFrame();
     }
 
-    pub fn endFrame(self: *Shell) bool {
-        return self.renderer.endFrame();
+    pub fn endFrame(self: *Shell) FrameSubmission {
+        return self.renderer.submitFrame();
     }
 
     pub fn beginClip(self: *Shell, x: i32, y: i32, w: i32, h: i32) void {

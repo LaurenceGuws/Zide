@@ -249,6 +249,7 @@ fn initWithMode(
         .terminal_widgets = .empty,
         .terminal_workspace = terminal_workspace,
         .pending_terminal_presentation_feedback = null,
+        .last_terminal_submission_sequence = 0,
         .app_theme = app_theme,
         .editor_theme = editor_theme,
         .terminal_theme = terminal_theme,

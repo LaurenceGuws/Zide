@@ -275,9 +275,14 @@ Current status:
   `Renderer.endFrame()` returns explicit submission success, and terminal
   presentation feedback is only flushed on successful submission instead of
   unconditionally after `endFrame()`
-- the next Phase 3 slice should now tighten the boundary further by moving
-  from boolean swap success to a more explicit renderer-owned scene submission
-  token/sequence if needed
+- that boundary is now tighter again: renderer submission now carries an
+  explicit monotonic submission sequence, `Shell.endFrame()` returns that
+  renderer-owned submission result, and terminal presentation feedback records
+  the last successful terminal submission sequence instead of relying on a
+  naked success boolean alone
+- the next Phase 3 slice, if still needed, should build on that explicit
+  renderer-owned submission sequence rather than widening app/widget-local
+  present ownership again
 
 ### Phase 4: Remove the Legacy Direct-Default Main Path
 

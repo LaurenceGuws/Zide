@@ -41,6 +41,7 @@ pub const Logger = app_logger.Logger;
 pub const Theme = app_shell.Theme;
 pub const MousePos = app_shell.MousePos;
 pub const Shell = app_shell.Shell;
+pub const FrameSubmission = app_shell.FrameSubmission;
 
 pub const TabBar = widgets.TabBar;
 pub const OptionsBar = widgets.OptionsBar;
