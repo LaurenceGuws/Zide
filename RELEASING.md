@@ -69,3 +69,15 @@ gh release upload "$TAG" \
 
 - Host apps should pin an explicit release tag and verify checksums before loading binaries.
 - Keep local path overrides for development, but use release assets for shared testing/distribution.
+
+## Docs Explorer Pages Policy
+
+- `main` stays source-only for `tools/docs_explorer`; do not commit generated
+  `build/js/` assets there.
+- If a release needs a GitHub Pages snapshot of the docs explorer, publish it
+  from the release branch.
+- Release-branch ritual for docs explorer Pages:
+  - run `npm run build:docs-explorer`
+  - verify `tools/docs_explorer/config/project.pages.json`
+  - commit the built explorer assets on the release branch if needed for Pages
+  - point GitHub Pages at that release branch snapshot
