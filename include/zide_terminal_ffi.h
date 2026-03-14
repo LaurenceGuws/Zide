@@ -29,7 +29,7 @@ typedef enum ZideTerminalEventKind {
 
 enum {
     ZIDE_TERMINAL_SNAPSHOT_ABI_VERSION = 1,
-    ZIDE_TERMINAL_EVENT_ABI_VERSION = 3,
+    ZIDE_TERMINAL_EVENT_ABI_VERSION = 4,
     ZIDE_TERMINAL_SCROLLBACK_ABI_VERSION = 1,
     ZIDE_TERMINAL_RENDERER_METADATA_ABI_VERSION = 1,
     ZIDE_TERMINAL_METADATA_ABI_VERSION = 1,
@@ -176,6 +176,8 @@ typedef struct ZideTerminalEvent {
 } ZideTerminalEvent;
 
 typedef struct ZideTerminalEventBuffer {
+    uint32_t abi_version;
+    uint32_t struct_size;
     const ZideTerminalEvent *events;
     size_t count;
     void *_ctx;

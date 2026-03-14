@@ -137,6 +137,7 @@ terminal_ffi_bridge_todo:
             - "Classify each event as pull-based, callback-based, or snapshot-derived."
             - "Milestone-1 queue ABI is now locked for title/cwd/clipboard_write/child_exit in `app_architecture/terminal/FFI_EVENT_ABI.md`."
             - "The event/action inventory is now aligned with the stronger native contract: `alive_changed` / `redraw_ready` stay in the event queue, while explicit host present acknowledgement and acknowledged-generation truth live in direct bridge calls/getters instead of the event stream."
+            - "Event buffers now also carry inline `abi_version` / `struct_size`, matching the stronger ABI discipline already used by snapshots/metadata/redraw-state surfaces."
 
     - name: "FFI-02 Snapshot and diff ABI"
       tasks:

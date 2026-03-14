@@ -397,6 +397,8 @@ pub fn eventDrain(handle: ?*shared.ZideTerminalHandle, out_events: *shared.Event
     h.pending_events.clearRetainingCapacity();
 
     out_events.* = .{
+        .abi_version = shared.event_abi_version,
+        .struct_size = @sizeOf(shared.EventBuffer),
         .events = events.ptr,
         .count = events.len,
         ._ctx = owner,

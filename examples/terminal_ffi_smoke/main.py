@@ -157,6 +157,8 @@ class Event(ctypes.Structure):
 
 class EventBuffer(ctypes.Structure):
     _fields_ = [
+        ("abi_version", ctypes.c_uint32),
+        ("struct_size", ctypes.c_uint32),
         ("events", ctypes.POINTER(Event)),
         ("count", ctypes.c_size_t),
         ("_ctx", ctypes.c_void_p),
