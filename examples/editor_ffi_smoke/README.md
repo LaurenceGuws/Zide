@@ -6,6 +6,7 @@ This host is intentionally small and disposable. It verifies:
 - shared library loading
 - opaque handle lifecycle
 - text set/get ownership (`text_alloc`/`string_free`)
+- inline editor string ABI header validation (`abi_version` / `struct_size`)
 - range edits + grouped undo/redo
 - multicursor caret set/get
 - search/replace flow (literal + regex)

@@ -2,6 +2,8 @@ const std = @import("std");
 const c_api = @import("editor/ffi/c_api.zig");
 
 test "editor ffi basic text, cursor, and undo/redo flow" {
+    try std.testing.expectEqual(c_api.ZIDE_EDITOR_STRING_ABI_VERSION, c_api.zide_editor_string_abi_version());
+
     var handle: ?*c_api.ZideEditorHandle = null;
     try std.testing.expectEqual(@as(c_int, 0), c_api.zide_editor_create(&handle));
     defer c_api.zide_editor_destroy(handle);
@@ -24,6 +26,8 @@ test "editor ffi basic text, cursor, and undo/redo flow" {
     var text: c_api.ZideEditorStringBuffer = .{};
     try std.testing.expectEqual(@as(c_int, 0), c_api.zide_editor_text_alloc(handle, &text));
     defer c_api.zide_editor_string_free(&text);
+    try std.testing.expectEqual(c_api.ZIDE_EDITOR_STRING_ABI_VERSION, text.abi_version);
+    try std.testing.expectEqual(@as(u32, @sizeOf(c_api.ZideEditorStringBuffer)), text.struct_size);
     const edited = ptrBytes(text.ptr, text.len);
     try std.testing.expect(std.mem.indexOf(u8, edited, "alpha_X_") != null);
 
@@ -34,6 +38,8 @@ test "editor ffi basic text, cursor, and undo/redo flow" {
     var undo_text: c_api.ZideEditorStringBuffer = .{};
     try std.testing.expectEqual(@as(c_int, 0), c_api.zide_editor_text_alloc(handle, &undo_text));
     defer c_api.zide_editor_string_free(&undo_text);
+    try std.testing.expectEqual(c_api.ZIDE_EDITOR_STRING_ABI_VERSION, undo_text.abi_version);
+    try std.testing.expectEqual(@as(u32, @sizeOf(c_api.ZideEditorStringBuffer)), undo_text.struct_size);
     try std.testing.expectEqualStrings(initial, ptrBytes(undo_text.ptr, undo_text.len));
 
     try std.testing.expectEqual(@as(c_int, 0), c_api.zide_editor_redo(handle, &changed));
@@ -53,6 +59,8 @@ test "editor ffi replace/delete range and grouped undo" {
     var text: c_api.ZideEditorStringBuffer = .{};
     try std.testing.expectEqual(@as(c_int, 0), c_api.zide_editor_text_alloc(handle, &text));
     defer c_api.zide_editor_string_free(&text);
+    try std.testing.expectEqual(c_api.ZIDE_EDITOR_STRING_ABI_VERSION, text.abi_version);
+    try std.testing.expectEqual(@as(u32, @sizeOf(c_api.ZideEditorStringBuffer)), text.struct_size);
     try std.testing.expectEqualStrings("aXXf", ptrBytes(text.ptr, text.len));
 
     try std.testing.expectEqual(@as(c_int, 0), c_api.zide_editor_set_text(handle, initial.ptr, initial.len));
@@ -68,7 +76,26 @@ test "editor ffi replace/delete range and grouped undo" {
     var undo_text: c_api.ZideEditorStringBuffer = .{};
     try std.testing.expectEqual(@as(c_int, 0), c_api.zide_editor_text_alloc(handle, &undo_text));
     defer c_api.zide_editor_string_free(&undo_text);
+    try std.testing.expectEqual(c_api.ZIDE_EDITOR_STRING_ABI_VERSION, undo_text.abi_version);
+    try std.testing.expectEqual(@as(u32, @sizeOf(c_api.ZideEditorStringBuffer)), undo_text.struct_size);
     try std.testing.expectEqualStrings(initial, ptrBytes(undo_text.ptr, undo_text.len));
+}
+
+test "editor ffi string release zeroes exported struct" {
+    var handle: ?*c_api.ZideEditorHandle = null;
+    try std.testing.expectEqual(@as(c_int, 0), c_api.zide_editor_create(&handle));
+    defer c_api.zide_editor_destroy(handle);
+
+    const text_value = "abc";
+    try std.testing.expectEqual(@as(c_int, 0), c_api.zide_editor_set_text(handle, text_value.ptr, text_value.len));
+
+    var text: c_api.ZideEditorStringBuffer = .{};
+    try std.testing.expectEqual(@as(c_int, 0), c_api.zide_editor_text_alloc(handle, &text));
+    c_api.zide_editor_string_free(&text);
+    try std.testing.expectEqual(@as(u32, 0), text.abi_version);
+    try std.testing.expectEqual(@as(u32, 0), text.struct_size);
+    try std.testing.expectEqual(@as(usize, 0), text.len);
+    try std.testing.expectEqual(@as(?*anyopaque, null), text._ctx);
 }
 
 test "editor ffi validates pointer+len contracts" {

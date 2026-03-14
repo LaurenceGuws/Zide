@@ -17,6 +17,8 @@ class ZideEditorHandle(ctypes.Structure):
 
 class StringBuffer(ctypes.Structure):
     _fields_ = [
+        ("abi_version", ctypes.c_uint32),
+        ("struct_size", ctypes.c_uint32),
         ("ptr", ctypes.POINTER(ctypes.c_uint8)),
         ("len", ctypes.c_size_t),
         ("_ctx", ctypes.c_void_p),
@@ -55,6 +57,8 @@ def load_library(path: Path):
     lib.zide_editor_text_alloc.restype = ctypes.c_int
     lib.zide_editor_string_free.argtypes = [ctypes.POINTER(StringBuffer)]
     lib.zide_editor_string_free.restype = None
+    lib.zide_editor_string_abi_version.argtypes = []
+    lib.zide_editor_string_abi_version.restype = ctypes.c_uint32
     lib.zide_editor_set_cursor_offset.argtypes = [HandlePtr, ctypes.c_size_t]
     lib.zide_editor_set_cursor_offset.restype = ctypes.c_int
     lib.zide_editor_primary_caret_offset.argtypes = [HandlePtr, ctypes.POINTER(ctypes.c_size_t)]
@@ -176,6 +180,10 @@ def run_smoke(lib_path: Path) -> int:
         if lib.zide_editor_text_alloc(handle, ctypes.byref(text)) != STATUS_OK:
             raise RuntimeError("text_alloc failed")
         try:
+            if text.abi_version != lib.zide_editor_string_abi_version():
+                raise RuntimeError(f"unexpected string abi_version: {text.abi_version}")
+            if text.struct_size != ctypes.sizeof(StringBuffer):
+                raise RuntimeError(f"unexpected string struct_size: {text.struct_size}")
             text_value = as_bytes(text.ptr, text.len).decode("utf-8", errors="replace")
         finally:
             lib.zide_editor_string_free(ctypes.byref(text))
@@ -188,7 +196,11 @@ def run_smoke(lib_path: Path) -> int:
             raise RuntimeError("total_len failed")
 
         print("editor ffi smoke ok")
-        print(f"status_ok={lib.zide_editor_status_string(0).decode()} status_unknown={lib.zide_editor_status_string(99).decode()}")
+        print(
+            f"status_ok={lib.zide_editor_status_string(0).decode()} "
+            f"status_unknown={lib.zide_editor_status_string(99).decode()} "
+            f"string_abi={lib.zide_editor_string_abi_version()}"
+        )
         print(f"primary={primary.value} aux_count={aux_count.value} matches={match_count.value} replaced_all={replaced_all.value}")
         print(f"line_count={line_count.value} total_len={total_len.value}")
         print(f"text={text_value!r}")

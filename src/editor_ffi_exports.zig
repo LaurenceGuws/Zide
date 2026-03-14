@@ -46,6 +46,10 @@ pub export fn zide_editor_string_free(string: *c_api.ZideEditorStringBuffer) voi
     c_api.zide_editor_string_free(string);
 }
 
+pub export fn zide_editor_string_abi_version() u32 {
+    return c_api.zide_editor_string_abi_version();
+}
+
 pub export fn zide_editor_set_cursor_offset(handle: ?*c_api.ZideEditorHandle, offset: usize) c_int {
     return c_api.zide_editor_set_cursor_offset(handle, offset);
 }

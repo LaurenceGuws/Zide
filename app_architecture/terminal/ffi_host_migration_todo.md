@@ -12,7 +12,7 @@
 - [~] Add ABI-shape regression coverage per bridge.
   - [x] Terminal Python smoke now verifies bad prefilled `abi_version` / `struct_size` inputs are overwritten with canonical values on all ABI-versioned output structs.
   - [x] Editor Python smoke now verifies deterministic `invalid_argument` behavior for bad bridge calls.
-  - [ ] If editor FFI later gains ABI-versioned structs, add the same `abi_version` / `struct_size` mismatch regression there.
+  - [x] Editor string buffers now also carry inline `abi_version` / `struct_size`, and the editor Python smoke validates them on acquire.
 - [x] Add a host-migration checklist section in both smoke READMEs describing minimum required calls and resource free order.
 - [x] Add a single `zig build` step that runs the combo smoke in non-interactive mode (no PTY dependency) to verify dual-bridge loading/lifetime.
 - [x] Add a mock external-service scenario to `examples/terminal_ffi_smoke/main.py` so the no-PTY host path can stream chunks incrementally instead of only doing one-shot feed smoke.

@@ -11,9 +11,13 @@ pub const Status = enum(c_int) {
     backend_error = 3,
 };
 
+pub const string_abi_version: u32 = 1;
+
 pub const ZideEditorHandle = opaque {};
 
 pub const StringBuffer = extern struct {
+    abi_version: u32 = 0,
+    struct_size: u32 = 0,
     ptr: ?[*]const u8 = null,
     len: usize = 0,
     _ctx: ?*anyopaque = null,
@@ -169,6 +173,8 @@ pub fn textAlloc(handle: ?*ZideEditorHandle, out_string: *StringBuffer) Status {
         .bytes = bytes,
     };
     out_string.* = .{
+        .abi_version = string_abi_version,
+        .struct_size = @sizeOf(StringBuffer),
         .ptr = if (bytes.len > 0) bytes.ptr else null,
         .len = bytes.len,
         ._ctx = owner,
@@ -184,6 +190,10 @@ pub fn stringFree(string: *StringBuffer) void {
     owner.allocator.free(owner.bytes);
     owner.allocator.destroy(owner);
     string.* = .{};
+}
+
+pub fn stringAbiVersion() u32 {
+    return string_abi_version;
 }
 
 pub fn setCursorOffset(handle: ?*ZideEditorHandle, offset: usize) Status {
