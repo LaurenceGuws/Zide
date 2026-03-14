@@ -174,76 +174,32 @@ Event families likely needed:
 
 Some data can remain snapshot-derived instead of event-driven. The event inventory document will decide this per item.
 
-## Current native-vs-FFI contract gap
+## Current native-vs-FFI contract position
 
-The native Linux path is now ahead of the FFI bridge in one important way:
+The shared redraw/publication/present authority now lives in:
 
-- native presentation acknowledgement is no longer tied directly to widget draw
-  completion
-- renderer-owned scene submission is now the authority
-- submission success is explicit
-- submission identity is explicit via a monotonic renderer-owned submission
-  sequence
+- `app_architecture/terminal/RENDER_PUBLICATION_CONTRACT.md`
 
-The current FFI bridge does **not** expose an equivalent host-facing contract.
-Today it gives hosts:
+This bridge document should stay bridge-specific. The contract split is now:
 
-- snapshot `generation`
-- advisory `damage`
-- coarse `redraw_ready`
-- state-change events such as `title_changed`, `cwd_changed`,
-  `clipboard_write`, `child_exit`, and `alive_changed`
+- shared semantic authority:
+  - published generation truth
+  - acknowledged generation truth
+  - wake-vs-present separation
+- bridge-specific authority:
+  - exact exported FFI calls
+  - ownership/lifetime rules
+  - milestone-specific ABI choices
 
-What it does **not** give hosts yet:
-
-- an explicit host present acknowledgement call
-- a distinction between "new snapshot published" and "host has presented
-  snapshot N"
-- a monotonic host-facing presentation/submission sequence separate from raw
-  snapshot generation
-- a normalized contract for when redraw wake should cool off after successful
-  host presentation
-
-This is now the main FFI catch-up lane.
-
-The goal is **not** to export native renderer details into FFI. The goal is to
-promote the same ownership semantics into a host-agnostic contract:
-
-- terminal core owns publication truth
-- host owns presentation
-- host reports presentation acknowledgement explicitly
-- bridge can then distinguish:
-  - latest published generation
-  - latest acknowledged/presented generation
-
-That contract is the likely convergence point for:
-
-- native GUI
-- Flutter/mobile embedding
-- other non-PTY embedded hosts
-
-The next bridge slices should therefore target:
-
-1. explicit host-facing present acknowledgement
-2. monotonic acknowledged-generation tracking
-3. redraw-ready semantics that remain strong without assuming a native renderer
-
-First catch-up slice now landed:
+Current bridge catch-up already landed:
 
 - `zide_terminal_present_ack(handle, generation)`
 - `zide_terminal_acknowledged_generation(handle, &generation)`
 - `zide_terminal_published_generation(handle, &generation)`
 - `zide_terminal_needs_redraw(handle)`
 
-This is intentionally minimal:
-
-- the host explicitly reports which published generation it has presented
-- the bridge exposes the latest published generation explicitly
-- the bridge tracks the latest acknowledged generation monotonically
-- the bridge exposes a cheap level-triggered redraw predicate:
-  `published_generation != acknowledged_generation`
-- future bridge logic can now distinguish published generation from
-  acknowledged generation without exporting native renderer details
+So the bridge now exposes the same basic host-facing semantics as the shared
+contract without leaking native renderer details.
 
 ## PTY model direction
 

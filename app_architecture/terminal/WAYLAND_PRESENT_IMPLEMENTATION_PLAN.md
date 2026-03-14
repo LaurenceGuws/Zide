@@ -14,6 +14,10 @@ into an execution plan with:
 This plan is the implementation authority for the renderer-present redesign on
 `main`.
 
+Shared redraw/publication/present semantic authority lives in:
+
+- `app_architecture/terminal/RENDER_PUBLICATION_CONTRACT.md`
+
 ## Design Summary
 
 The chosen direction is a hybrid renderer architecture:

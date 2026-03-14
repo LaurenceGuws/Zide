@@ -151,21 +151,11 @@ Important:
 - the host must treat the full snapshot as authoritative
 - hosts may ignore damage and redraw from the full cell buffer
 
-Current known contract gap:
-- snapshot `generation` is publication truth only
-- it is not yet paired with any explicit host-facing presented/acknowledged
-  generation contract
-- this is now behind the native renderer path, which already distinguishes
-  renderer-owned submission from publication truth
+Shared semantic authority now lives in:
+- `app_architecture/terminal/RENDER_PUBLICATION_CONTRACT.md`
 
-That means milestone-1 FFI hosts currently have:
-- full snapshot truth
-- advisory damage bounds
-- wakeup via `redraw_ready`
-
-But they do not yet have:
-- explicit acknowledgement of "host has now presented generation N"
-- bridge-visible retirement semantics derived from host presentation
+Snapshot `generation` remains publication truth only. It is intentionally kept
+separate from host acknowledgement/presentation semantics.
 
 Update:
 - the first host-facing acknowledgement slice is now landed as explicit bridge
