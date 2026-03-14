@@ -12,10 +12,10 @@ import re
 import subprocess
 import sys
 from collections import defaultdict
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from http import HTTPStatus
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
-from typing import Any
+from typing import Any, TypedDict
 
 
 COMMIT_PREFIX = "@@@"
@@ -31,7 +31,15 @@ class CommitStat:
     additions: int = 0
     deletions: int = 0
     files_touched: int = 0
-    file_changes: list[tuple[str, int, int]] | None = None
+    file_changes: list[tuple[str, int, int]] = field(default_factory=list)
+
+
+class DailyAggregate(TypedDict):
+    days: list[str]
+    commits: list[int]
+    additions: list[int]
+    deletions: list[int]
+    files: list[int]
 
 
 class GitError(RuntimeError):
@@ -193,7 +201,7 @@ def snapshot_sections_and_top_files(
     return dict(data), top_files
 
 
-def aggregate_daily(commits: list[CommitStat]) -> dict[str, list[int] | list[str]]:
+def aggregate_daily(commits: list[CommitStat]) -> DailyAggregate:
     by_day: dict[str, dict[str, int]] = defaultdict(lambda: {"commits": 0, "additions": 0, "deletions": 0, "files": 0})
     for c in commits:
         day = c.timestamp.date().isoformat()
@@ -242,8 +250,6 @@ def top_files_data(commits: list[CommitStat], top_n: int) -> dict[str, Any]:
 
     for c in commits:
         day = c.timestamp.date().isoformat()
-        if c.file_changes is None:
-            continue
         for path, added, deleted in c.file_changes:
             touches[path] += 1
             delta = added + deleted
@@ -312,7 +318,7 @@ def author_stats_data(commits: list[CommitStat], top_n: int) -> dict[str, Any]:
 
 def commit_heatmap_data(commits: list[CommitStat]) -> dict[str, Any]:
     # Monday=0..Sunday=6 as Python weekday()
-    grid = [[0 for _hour in range(24)] for _day in range(7)]
+    grid = [[0 for _ in range(24)] for _ in range(7)]
     for c in commits:
         grid[c.timestamp.weekday()][c.timestamp.hour] += 1
     return {
@@ -358,7 +364,7 @@ def build_dashboard_data(
         key=lambda item: item[1],
         reverse=True,
     )
-    section_names = [name for name, _size in ranked_sections[:top_sections]]
+    section_names = [name for name, _ in ranked_sections[:top_sections]]
 
     timeline_dates = [entry["date"] for entry in snapshots]
     total_files = [entry["sections"].get("__TOTAL__", {}).get("files", 0) for entry in snapshots]
@@ -374,10 +380,12 @@ def build_dashboard_data(
             bytes_by_section[name].append(meta["bytes"])
 
     daily = aggregate_daily(commits)
-    additions = list(daily["additions"])
-    deletions = list(daily["deletions"])
+    daily_days = [str(day) for day in daily["days"]]
+    commits_daily = [int(value) for value in daily["commits"]]
+    additions = [int(value) for value in daily["additions"]]
+    deletions = [int(value) for value in daily["deletions"]]
     churn_abs = [a + d for a, d in zip(additions, deletions)]
-    commits_daily = list(daily["commits"])
+    files_touched = [int(value) for value in daily["files"]]
 
     return {
         "repo": str(repo),
@@ -393,11 +401,11 @@ def build_dashboard_data(
             "bytes_by_section": bytes_by_section,
         },
         "activity": {
-            "days": list(daily["days"]),
+            "days": daily_days,
             "commits": commits_daily,
             "additions": additions,
             "deletions": deletions,
-            "files_touched": list(daily["files"]),
+            "files_touched": files_touched,
             "commit_rolling_30d": rolling_mean(commits_daily, 30),
             "churn_rolling_30d": rolling_mean(churn_abs, 30),
             "cumulative_commits": cumulative_sum(commits_daily),
