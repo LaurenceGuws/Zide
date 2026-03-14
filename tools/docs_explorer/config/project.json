@@ -1,0 +1,13 @@
+{
+  "title": "Zide Docs Explorer",
+  "icon": "../../assets/icon/color_icon.png",
+  "defaultDoc": "app_architecture/terminal/TERMINAL_ARCHITECTURE_COMPARISON.md",
+  "docRoots": [
+    "docs",
+    "app_architecture"
+  ],
+  "includeExtensions": [
+    ".md",
+    ".yaml"
+  ]
+}
