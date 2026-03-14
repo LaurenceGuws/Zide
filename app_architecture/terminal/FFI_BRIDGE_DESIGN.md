@@ -275,10 +275,14 @@ Current baseline smoke flow:
 2. create a terminal session
 3. resize through the foreign API
 4. feed terminal output bytes through the parser-facing bridge call (`zide_terminal_feed_output`)
-5. acquire a snapshot
-6. inspect title/cwd/cell buffer metadata
-7. drain title/clipboard events
-8. release snapshot and destroy session
+5. query `zide_terminal_redraw_state(...)` and require pending redraw truth
+6. acquire a snapshot
+7. inspect title/cwd/cell buffer metadata
+8. use `zide_terminal_metadata_acquire(...)` for the authoritative latest-state summary when lifecycle/title/cwd/scrollback state matters
+9. acknowledge the published generation with `zide_terminal_present_ack(...)`
+10. verify redraw state cools off
+11. drain title/clipboard events
+12. release snapshot and destroy session
 
 Dedicated PTY smoke flow (separate verifier):
 1. use a separate focused verifier
@@ -309,6 +313,9 @@ Getter policy:
 - latest-state string getters return owned bridge buffers
 - hosts must free them with `zide_terminal_string_free()`
 - scalar state like child exit status should use direct out-parameter getters instead of synthetic event payload decoding
+- when metadata already carries the latest-state summary, hosts should prefer
+  `zide_terminal_metadata_acquire(...)` over reconstructing that state from
+  multiple narrow getters
 
 ## Reference patterns
 
