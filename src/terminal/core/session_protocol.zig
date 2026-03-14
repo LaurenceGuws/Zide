@@ -52,7 +52,7 @@ pub fn resetStateLocked(self: anytype) void {
 }
 
 pub fn reverseIndex(self: anytype) void {
-    core_dispatch.handleControl(self, 0x8D);
+    core_dispatch.reverseIndex(self);
 }
 
 pub fn eraseDisplay(self: anytype, mode: i32) void {

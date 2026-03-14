@@ -16,8 +16,10 @@ pub fn eraseDisplay(self: anytype, mode: i32) void {
     const screen = self.core.activeScreen();
     const blank_cell = screen.blankCell();
     screen.eraseDisplay(mode, blank_cell);
-    if (mode == 2 or mode == 3) {
-        self.clearSelectionLocked();
+    if (mode == 0 or mode == 2 or mode == 3) {
+        if (mode == 2 or mode == 3) {
+            self.clearSelectionLocked();
+        }
         _ = self.core.clear_generation.fetchAdd(1, .acq_rel);
     }
 }

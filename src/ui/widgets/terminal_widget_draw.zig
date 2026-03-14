@@ -909,9 +909,11 @@ pub fn drawPrepared(
         const texture_h = cell_h_i * @as(i32, @intCast(rows));
         const recreated = r.ensureTerminalTexture(texture_w, texture_h);
         const gen_changed = cache.generation != self.last_render_generation;
+        const clear_generation_changed = cache.clear_generation != self.last_render_clear_generation;
         var update_plan = chooseTextureUpdatePlan(
             cache.dirty,
             recreated,
+            clear_generation_changed,
             cell_metrics_changed,
             render_scale_changed,
             blink_requires_partial,
@@ -1448,6 +1450,7 @@ pub fn drawPrepared(
                 );
             }
             self.last_render_generation = cache.generation;
+            self.last_render_clear_generation = cache.clear_generation;
             self.last_cell_w_i = cell_w_i;
             self.last_cell_h_i = cell_h_i;
             self.last_render_scale = r.render_scale;

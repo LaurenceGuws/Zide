@@ -3,6 +3,24 @@ const parser_mod = @import("../parser/parser.zig");
 const app_logger = @import("../../app_logger.zig");
 const terminal_transport = @import("terminal_transport.zig");
 
+fn shouldPublishParseBatch(
+    sync_updates_active: bool,
+    pending_offset: ?usize,
+    presentation_backlog: bool,
+    drained_available: bool,
+    parse_bytes_since_publish: usize,
+    elapsed_since_publish: i64,
+    backlog_publish_min_bytes: usize,
+    backlog_publish_max_ms: i64,
+) bool {
+    if (sync_updates_active) return false;
+    return pending_offset != null or
+        !presentation_backlog or
+        drained_available or
+        parse_bytes_since_publish >= backlog_publish_min_bytes or
+        elapsed_since_publish >= backlog_publish_max_ms;
+}
+
 pub fn logCsiSequences(log: app_logger.Logger, buf: []const u8) void {
     var i: usize = 0;
     while (i + 1 < buf.len) : (i += 1) {
@@ -126,7 +144,7 @@ pub fn parseThreadMain(session: anytype) void {
         session.io_mutex.unlock();
 
         if (queued_bytes == 0) {
-            if (session.parse_bytes_since_publish > 0 and pending_offset == null) {
+            if (session.parse_bytes_since_publish > 0 and pending_offset == null and !session.core.sync_updates_active) {
                 const publish_lock_start_ns = std.time.nanoTimestamp();
                 session.state_mutex.lock();
                 @import("view_cache.zig").updateViewCacheNoLockTagged(session, session.output_generation.load(.acquire), session.core.history.scrollOffset(), "parse_thread_idle_publish");
@@ -140,7 +158,9 @@ pub fn parseThreadMain(session: anytype) void {
             }
             if (pending_offset) |offset| {
                 session.state_mutex.lock();
-                @import("view_cache.zig").updateViewCacheNoLockTagged(session, session.output_generation.load(.acquire), offset, "parse_thread_pending_offset");
+                if (!session.core.sync_updates_active) {
+                    @import("view_cache.zig").updateViewCacheNoLockTagged(session, session.output_generation.load(.acquire), offset, "parse_thread_pending_offset");
+                }
                 session.state_mutex.unlock();
             }
             continue;
@@ -229,7 +249,16 @@ pub fn parseThreadMain(session: anytype) void {
                 else
                     end_ms - session.last_parse_publish_ms;
                 const drained_available = queued_bytes > 0 and processed >= queued_bytes;
-                const should_publish = pending_offset != null or !presentation_backlog or drained_available or session.parse_bytes_since_publish >= backlog_publish_min_bytes or elapsed_since_publish >= backlog_publish_max_ms;
+                const should_publish = shouldPublishParseBatch(
+                    session.core.sync_updates_active,
+                    pending_offset,
+                    presentation_backlog,
+                    drained_available,
+                    session.parse_bytes_since_publish,
+                    elapsed_since_publish,
+                    backlog_publish_min_bytes,
+                    backlog_publish_max_ms,
+                );
                 if (should_publish) {
                     const target_offset = pending_offset orelse session.core.history.scrollOffset();
                     const publish_lock_start_ns = std.time.nanoTimestamp();
@@ -272,4 +301,12 @@ pub fn parseThreadMain(session: anytype) void {
             }
         }
     }
+}
+
+test "shouldPublishParseBatch suppresses intermediate publish during sync updates" {
+    try std.testing.expect(!shouldPublishParseBatch(true, null, false, true, 1024, 99, 1, 1));
+}
+
+test "shouldPublishParseBatch publishes once sync updates are inactive" {
+    try std.testing.expect(shouldPublishParseBatch(false, null, false, false, 0, 0, 128 * 1024, 8));
 }

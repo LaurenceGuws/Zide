@@ -250,12 +250,14 @@ pub fn useViewportShiftForPartialPlan(
 pub fn chooseTextureUpdatePlan(
     cache_dirty: @TypeOf(RenderCache.init().dirty),
     recreated: bool,
+    clear_generation_changed: bool,
     cell_metrics_changed: bool,
     render_scale_changed: bool,
     blink_requires_partial: bool,
     terminal_texture_ready: bool,
 ) TextureUpdatePlan {
     var needs_full = recreated or
+        clear_generation_changed or
         cell_metrics_changed or
         render_scale_changed or
         cache_dirty == .full;

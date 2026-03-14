@@ -38,3 +38,7 @@ pub fn newline(self: anytype) void {
 pub fn wrapNewline(self: anytype) void {
     control_handlers.wrapNewline(self);
 }
+
+pub fn reverseIndex(self: anytype) void {
+    control_handlers.reverseIndex(self);
+}
