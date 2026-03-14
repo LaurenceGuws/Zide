@@ -2,7 +2,7 @@
 
 - [x] Add one shared FFI host boot helper (`examples/common/ffi_host_boot.py`) that loads both `libzide-terminal-ffi` and `libzide-editor-ffi` with shared Python host setup.
 - [x] Define a tiny cross-surface event pump contract doc (`poll_terminal_then_editor_once`) and wire it in both smoke hosts.
-- [x] Add terminal+editor combined smoke script (`examples/ffi_host_combo_smoke/main.py`) that runs: start terminal, acquire snapshot, create editor, set text, query cursor, clean shutdown.
+- [x] Add terminal+editor combined smoke script (`examples/ffi_host_combo_smoke/main.py`) that runs: publish terminal content, confirm redraw truth, acquire snapshot, acknowledge presentation, then run editor work and clean shutdown.
 - [~] Add ABI-shape regression coverage per bridge.
   - [x] Terminal Python smoke now verifies bad prefilled `abi_version` / `struct_size` inputs are overwritten with canonical values on all ABI-versioned output structs.
   - [x] Editor Python smoke now verifies deterministic `invalid_argument` behavior for bad bridge calls.
@@ -14,5 +14,6 @@
 Cross-surface event pump contract:
 - `poll_terminal_then_editor_once(...)` is the minimal shared host tick for mixed terminal/editor embedders.
 - Terminal-side publication/drain work runs first.
+- Terminal-side redraw truth and presentation acknowledgement are resolved before editor-side work.
 - Editor-side mutations/queries run second.
 - Any snapshot/string/event buffers acquired during the tick are freed before the tick returns.
