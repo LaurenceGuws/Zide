@@ -119,6 +119,7 @@ Required operations for milestone 1:
 - `zide_terminal_scrollback_abi_version()`
 - `zide_terminal_metadata_abi_version()`
 - `zide_terminal_redraw_state_abi_version()`
+- `zide_terminal_string_abi_version()`
 - `zide_terminal_renderer_metadata_abi_version()`
 - `zide_terminal_renderer_metadata(codepoint, out_metadata)`
 - `zide_terminal_status_string(status)`
@@ -140,6 +141,10 @@ Baseline rules:
   - owned copied buffers with explicit release, or
   - a pinned bridge object whose release invalidates all interior pointers.
 - Event drains return owned flat arrays plus explicit free.
+- Copied string/text exports return owned buffers plus explicit free.
+- All exported acquired/output buffer structs now carry inline:
+  - `abi_version`
+  - `struct_size`
 - String fields in exported events/snapshots must either:
   - be inline/fixed-size, or
   - point into an owned bridge allocation released by the paired free.

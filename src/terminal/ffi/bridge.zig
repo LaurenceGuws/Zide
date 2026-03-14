@@ -9,6 +9,7 @@ pub const scrollback_abi_version = shared.scrollback_abi_version;
 pub const renderer_metadata_abi_version = shared.renderer_metadata_abi_version;
 pub const metadata_abi_version = shared.metadata_abi_version;
 pub const redraw_state_abi_version = shared.redraw_state_abi_version;
+pub const string_abi_version = shared.string_abi_version;
 pub const EventKind = shared.EventKind;
 pub const GlyphClassFlags = shared.GlyphClassFlags;
 pub const DamagePolicyFlags = shared.DamagePolicyFlags;
@@ -165,6 +166,10 @@ pub fn rendererMetadataAbiVersion() u32 {
 
 pub fn redrawStateAbiVersion() u32 {
     return core_api.redrawStateAbiVersion();
+}
+
+pub fn stringAbiVersion() u32 {
+    return core_api.stringAbiVersion();
 }
 
 pub fn rendererMetadata(codepoint: u32, out_metadata: *RendererMetadata) Status {

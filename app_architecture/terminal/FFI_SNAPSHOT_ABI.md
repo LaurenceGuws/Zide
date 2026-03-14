@@ -198,6 +198,9 @@ Note:
   exports (`selection_text`, `scrollback_plain_text`, `scrollback_ansi_text`)
   are convenience views for copied text, not replacements for structured
   history state
+- those copied text buffers now also carry inline `abi_version` /
+  `struct_size`, matching the stronger ABI discipline used by the other
+  exported output surfaces
 - likewise, `selection_text` is a copied-text convenience export because
   milestone 1 does not yet ship structured selection geometry/ranges as an
   authoritative bridge surface

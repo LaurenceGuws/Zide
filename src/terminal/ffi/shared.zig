@@ -16,6 +16,7 @@ pub const scrollback_abi_version: u32 = 1;
 pub const renderer_metadata_abi_version: u32 = 1;
 pub const metadata_abi_version: u32 = 1;
 pub const redraw_state_abi_version: u32 = 1;
+pub const string_abi_version: u32 = 1;
 
 pub const EventKind = enum(c_int) {
     none = 0,
@@ -185,6 +186,8 @@ pub const EventBuffer = extern struct {
 };
 
 pub const StringBuffer = extern struct {
+    abi_version: u32 = 0,
+    struct_size: u32 = 0,
     ptr: ?[*]const u8 = null,
     len: usize = 0,
     _ctx: ?*anyopaque = null,
@@ -313,6 +316,8 @@ pub fn stringFromSlice(allocator: std.mem.Allocator, value: []const u8, out_stri
         .bytes = bytes,
     };
     out_string.* = .{
+        .abi_version = string_abi_version,
+        .struct_size = @sizeOf(StringBuffer),
         .ptr = if (bytes.len == 0) null else bytes.ptr,
         .len = bytes.len,
         ._ctx = owner,
@@ -334,6 +339,8 @@ pub fn stringFromOwnedSlice(allocator: std.mem.Allocator, value: []u8, out_strin
         .bytes = value,
     };
     out_string.* = .{
+        .abi_version = string_abi_version,
+        .struct_size = @sizeOf(StringBuffer),
         .ptr = if (value.len == 0) null else value.ptr,
         .len = value.len,
         ._ctx = owner,

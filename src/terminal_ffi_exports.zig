@@ -128,6 +128,10 @@ pub export fn zide_terminal_redraw_state_abi_version() u32 {
     return c_api.zide_terminal_redraw_state_abi_version();
 }
 
+pub export fn zide_terminal_string_abi_version() u32 {
+    return c_api.zide_terminal_string_abi_version();
+}
+
 pub export fn zide_terminal_renderer_metadata_abi_version() u32 {
     return c_api.zide_terminal_renderer_metadata_abi_version();
 }
