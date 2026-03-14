@@ -61,6 +61,22 @@ pub fn closeInput(handle: ?*ZideTerminalHandle) Status {
     return core_api.closeInput(handle);
 }
 
+pub fn presentAck(handle: ?*ZideTerminalHandle, generation: u64) Status {
+    return core_api.presentAck(handle, generation);
+}
+
+pub fn acknowledgedGeneration(handle: ?*ZideTerminalHandle, out_generation: *u64) Status {
+    return core_api.acknowledgedGeneration(handle, out_generation);
+}
+
+pub fn publishedGeneration(handle: ?*ZideTerminalHandle, out_generation: *u64) Status {
+    return core_api.publishedGeneration(handle, out_generation);
+}
+
+pub fn needsRedraw(handle: ?*ZideTerminalHandle) u8 {
+    return core_api.needsRedraw(handle);
+}
+
 pub fn sendKey(handle: ?*ZideTerminalHandle, event: ?*const KeyEvent) Status {
     return host_api.sendKey(handle, event);
 }

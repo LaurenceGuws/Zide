@@ -63,6 +63,21 @@ test "ffi non-pty snapshot and event ownership smoke" {
     try std.testing.expect(snapshot.cells != null);
     try std.testing.expect(snapshot.title_ptr != null);
     try std.testing.expectEqualStrings("ffi-title", ptrBytes(snapshot.title_ptr, snapshot.title_len));
+    try std.testing.expect(snapshot.generation > 0);
+    try std.testing.expectEqual(@as(u8, 1), c_api.zide_terminal_needs_redraw(handle));
+
+    var published_generation: u64 = 0;
+    try std.testing.expectEqual(@as(c_int, 0), c_api.zide_terminal_published_generation(handle, &published_generation));
+    try std.testing.expectEqual(snapshot.generation, published_generation);
+
+    var acknowledged_generation: u64 = 99;
+    try std.testing.expectEqual(@as(c_int, 0), c_api.zide_terminal_acknowledged_generation(handle, &acknowledged_generation));
+    try std.testing.expectEqual(@as(u64, 0), acknowledged_generation);
+    try std.testing.expectEqual(@as(c_int, 0), c_api.zide_terminal_present_ack(handle, snapshot.generation));
+    try std.testing.expectEqual(@as(c_int, 0), c_api.zide_terminal_acknowledged_generation(handle, &acknowledged_generation));
+    try std.testing.expectEqual(snapshot.generation, acknowledged_generation);
+    try std.testing.expectEqual(@as(u8, 0), c_api.zide_terminal_needs_redraw(handle));
+    try std.testing.expectEqual(@as(c_int, 1), c_api.zide_terminal_present_ack(handle, snapshot.generation + 1));
 
     var metadata: c_api.ZideTerminalMetadata = .{};
     try std.testing.expectEqual(@as(c_int, 0), c_api.zide_terminal_metadata_acquire(handle, &metadata));

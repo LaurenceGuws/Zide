@@ -59,6 +59,22 @@ pub fn zide_terminal_close_input(handle: ?*ZideTerminalHandle) c_int {
     return @intFromEnum(bridge.closeInput(handle));
 }
 
+pub fn zide_terminal_present_ack(handle: ?*ZideTerminalHandle, generation: u64) c_int {
+    return @intFromEnum(bridge.presentAck(handle, generation));
+}
+
+pub fn zide_terminal_acknowledged_generation(handle: ?*ZideTerminalHandle, out_generation: *u64) c_int {
+    return @intFromEnum(bridge.acknowledgedGeneration(handle, out_generation));
+}
+
+pub fn zide_terminal_published_generation(handle: ?*ZideTerminalHandle, out_generation: *u64) c_int {
+    return @intFromEnum(bridge.publishedGeneration(handle, out_generation));
+}
+
+pub fn zide_terminal_needs_redraw(handle: ?*ZideTerminalHandle) u8 {
+    return bridge.needsRedraw(handle);
+}
+
 pub fn zide_terminal_send_key(handle: ?*ZideTerminalHandle, event: ?*const ZideTerminalKeyEvent) c_int {
     return @intFromEnum(bridge.sendKey(handle, event));
 }
