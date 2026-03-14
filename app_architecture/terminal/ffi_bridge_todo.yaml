@@ -213,13 +213,15 @@ terminal_ffi_bridge_todo:
             - "Decision locked in `app_architecture/terminal/FFI_PTY_ABI.md`."
         - id: FFI-03-02
           title: "Audit platform split for exported bridge expectations"
-          status: todo
+          status: partial
           files_to_edit:
             - src/terminal/io/pty_unix.zig
             - src/terminal/io/pty_windows.zig
             - app_architecture/terminal/FFI_PTY_ABI.md
           notes:
             - "Make platform divergence explicit in the bridge doc rather than hiding it behind vague promises."
+            - "Doc audit now landed in `app_architecture/terminal/FFI_PTY_ABI.md`: Unix and Windows share the high-level bridge calls, but do not currently promise identical PTY internals or foreground-process capabilities."
+            - "Remaining work is implementation-side: decide whether any bridge-visible expectations need to change, or whether the current divergence is acceptable as documented."
 
     - name: "FFI-04 Export surface + smoke host"
       tasks:
