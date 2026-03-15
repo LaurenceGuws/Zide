@@ -23,6 +23,7 @@ export type ProjectConfig = {
   icon: string;
   repoAbsolutePath?: string;
   repoBasePath: string;
+  sourceUrlBase?: string;
   runtimeMode?: string;
   defaultDoc: string;
   docRoots: string[];
@@ -37,6 +38,7 @@ export type AppState = {
     title: string;
     subtitle: string;
     rawLink: string;
+    sourceLink: string;
     status: DocumentStatus;
   };
   viewer: {
@@ -48,6 +50,7 @@ export type AppState = {
   tree: {
     filter: string;
     activePath: string | null;
+    expandedPaths: string[];
   };
   sidebar: {
     width: number;
@@ -66,16 +69,17 @@ export type AppShell = {
   titleEl: HTMLElement;
   subtitleEl: HTMLElement;
   rawLinkEl: HTMLAnchorElement;
+  sourceLinkEl: HTMLAnchorElement;
+  sourceLinkIconEl: HTMLElement;
   searchEl: HTMLInputElement;
   optionsToggleEl: HTMLButtonElement;
+  optionsToggleIconEl: HTMLElement;
   optionsMenuEl: HTMLElement;
-  optionsInfoEl: HTMLElement;
   themeRowEl: HTMLElement;
   themeToggleEl: HTMLButtonElement;
   sidebarToggleEl: HTMLButtonElement;
+  sidebarToggleIconEl: HTMLElement;
   sidebarResizerEl: HTMLElement;
-  appTitleEl: HTMLElement;
-  brandMarkEl: HTMLImageElement;
   faviconEl: HTMLLinkElement;
   highlightDarkThemeEl: HTMLLinkElement;
   highlightLightThemeEl: HTMLLinkElement;
