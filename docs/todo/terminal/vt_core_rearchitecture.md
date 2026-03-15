@@ -51,6 +51,7 @@ Supporting cleanup:
   Current judgment:
   - the highest-yield session/core seams have materially cooled after the recent host-query, clipboard, sync-update, column-mode, and palette/default-color cuts
   - remaining `session_config` seams are increasingly internal core bookkeeping rather than host-contract asymmetries
+  - the stronger remaining center-of-gravity issue is no longer mostly raw VT semantics living on the root facade; it is that `session_runtime.zig`, `session_rendering.zig`, and `session_rendering_retirement.zig` still carry a lot of runtime/publication assembly around `TerminalCore`
   - do not keep pushing this lane for symmetry alone; prefer `VTCORE-02` unless another native-only ownership leak is clearly identified
 - [ ] `VTCORE-02` Make FFI a first-class core interface.
   Notes: shared FFI state plus `host_api` and `core_api` splits are landed; remaining work is maturity and convergence, not proving the shape. Recent slices closed real host-facing gaps such as close-confirm signals and backend-owned viewport control.
@@ -63,7 +64,7 @@ Supporting cleanup:
 - [ ] `VTCORE-04` Move protocol execution onto core/model contracts.
   Notes: the main core-side dispatch, feed, mode, reset, and protocol helper slices are landed; remaining work is finishing the session-owned residue.
 - [ ] `VTCORE-05` Simplify snapshot and render publication.
-  Notes: publication planning has been heavily split and hardened, replay authority is broad, multi-span row damage now survives through backend and renderer planning, the scene-owned presentation path is live, and present-ack ownership moved later in submission. The active work is now narrower: keep the new publication/present contract honest, continue redraw/perf hardening, and avoid reopening old default-framebuffer assumptions.
+  Notes: publication planning has been heavily split and hardened, replay authority is broad, multi-span row damage now survives through backend and renderer planning, the scene-owned presentation path is live, and present-ack ownership moved later in submission. The active work is now narrower but also more structurally important than the older wording implied: `session_rendering.zig` and `session_rendering_retirement.zig` now look like the strongest remaining "session still feels like the center" lane because they still own published/presented generation bookkeeping, render-cache handoff, view-cache update choreography, and sync-update publication behavior around `TerminalCore`. Keep the new publication/present contract honest, continue redraw/perf hardening, and avoid reopening old default-framebuffer assumptions.
 - [ ] `VTCORE-06` Keep input encoding as a peer subsystem.
   Notes: transport-agnostic writer-based encoding, fake-writer regression coverage, and PTY-backed `TerminalSession.sendText(...)` / `sendKey(...)` regressions through the real session writer boundary are in place; remaining work is keeping the subsystem decoupled as the rest of the split finishes.
 - [ ] `VTCORE-07` Preserve desktop Zide behavior while opening the embedding path.
@@ -75,3 +76,12 @@ Supporting cleanup:
 - [ ] Continue post-rewrite compatibility hardening on real workloads.
 - [ ] Keep recent-input publication mitigation and scene-target ownership aligned with the current Wayland/present plan.
 - [ ] Avoid reintroducing session-centered or default-framebuffer-centered assumptions.
+
+## Current Audit Result
+
+- The engine-center gap versus `libghostty-vt` is smaller than the older docs implied.
+- The remaining structural gap is now more specifically runtime/publication center-of-gravity:
+  - `session_runtime.zig` still owns thread lifecycle, parse/read loop assembly, PTY/external transport switching, and child-exit truth assembly.
+  - `session_rendering.zig` and `session_rendering_retirement.zig` still own published/presented generation bookkeeping, render-cache handoff, view-cache update choreography, and sync-update publication behavior.
+  - `terminal_session.zig` is still large, but increasingly as the assembly shell around those runtime/publication lanes rather than as the place where raw VT semantics live.
+- That means the next strongest comparison lane against Ghostty is not "trim more facade methods for symmetry"; it is "keep moving runtime/publication ownership toward a clearer engine-centered contract."

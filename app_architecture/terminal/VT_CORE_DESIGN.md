@@ -78,6 +78,12 @@ Status note, 2026-03-14:
     surface than Ghostty's current public `libghostty-vt` umbrella.
   - So the remaining gap is primarily center-of-gravity and ownership clarity,
     not "we need to catch up by exporting more random API."
+  - More specifically, the strongest remaining gap is no longer raw VT
+    semantics living all over the root session facade. It is that
+    `session_runtime.zig`, `session_rendering.zig`, and
+    `session_rendering_retirement.zig` still carry a lot of thread/runtime and
+    publication/present assembly around `TerminalCore`, which keeps
+    `TerminalSession` heavier than the cleaner Ghostty-style engine center.
 
 Purpose: define the exact ownership split for the next terminal-core redesign
 lane so code changes do not drift between "session cleanup", "FFI cleanup", and
@@ -280,6 +286,19 @@ This is the key requirement for:
 `TerminalTransport` should not own terminal semantics. It only moves bytes and
 host signals.
 
+Current remaining gap:
+
+- the transport split is real and external transport is no longer second-class
+- but `session_runtime.zig` still owns much of the runtime center-of-gravity
+  around that split:
+  - thread lifecycle
+  - parse/read loop assembly
+  - PTY vs external transport switching
+  - child-exit truth assembly
+- that means transport is no longer the main missing invention, but the runtime
+  ownership around it is still part of why Zide reads heavier than Ghostty's
+  engine-centered boundary
+
 Important flood-handling bias:
 
 - transport/read ingress should stay aggressive and non-semantic
@@ -309,6 +328,28 @@ Current conclusion relevant to this file:
 - remaining terminal quality work should default to compatibility hardening and
   contract convergence, not reopening settled ownership boundaries without new
   evidence
+- the strongest remaining structural ownership question is now publication and
+  runtime assembly around `TerminalCore`, not whether the old raw terminal
+  semantics still belong on `TerminalSession`
+
+## Publication/Present Ownership Gap
+
+The publication contract is now explicit and far stronger than the early
+rewrite period, but it is also the clearest remaining center-of-gravity gap in
+the current codebase.
+
+Today, `session_rendering.zig` and `session_rendering_retirement.zig` still own
+much of the choreography around:
+
+- published vs acknowledged generation bookkeeping
+- render-cache handoff
+- view-cache update sequencing
+- sync-update publication behavior
+
+That is not a bug in the current design, but it is now the strongest remaining
+reason Zide still reads heavier than Ghostty's engine-centered split. The next
+high-value restructure work should therefore prefer publication/runtime
+ownership cleanup over cosmetic root-facade trimming.
 
 ## Multi-Span Row Damage Direction
 
