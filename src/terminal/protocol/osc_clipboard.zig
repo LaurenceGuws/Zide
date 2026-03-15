@@ -141,7 +141,7 @@ fn writeClipboardReply(session: SessionFacade, selection: []const u8, terminator
         return;
     };
 
-            log.logf(.debug, "osc reply=\"{s}\"", .{seq.items});
+    log.logf(.debug, "osc reply=\"{s}\"", .{seq.items});
     session.writePtyBytes(seq.items) catch |err| {
         log.logf(.warning, "osc52 reply write failed len={d} err={s}", .{ seq.items.len, @errorName(err) });
     };

@@ -72,7 +72,11 @@ function rewriteMediaUrls(
       if (!raw) return;
       if (isRepoAbsolutePath(raw, repoAbsolutePath)) {
         const relative = raw.slice(repoAbsolutePath!.length + 1);
-        if (attribute === "href" && isDocPath(relative) && docs.includes(relative)) {
+        if (
+          attribute === "href" &&
+          isDocPath(relative) &&
+          docs.includes(relative)
+        ) {
           el.setAttribute(attribute, asDocHash(relative));
         } else {
           el.setAttribute(attribute, `${repoBasePath}${relative}`);
@@ -81,7 +85,11 @@ function rewriteMediaUrls(
       }
       if (isExternalUrl(raw)) return;
       const resolved = resolveDocRelativePath(docPath, raw);
-      if (attribute === "href" && isDocPath(resolved) && docs.includes(resolved)) {
+      if (
+        attribute === "href" &&
+        isDocPath(resolved) &&
+        docs.includes(resolved)
+      ) {
         el.setAttribute(attribute, asDocHash(resolved));
       } else {
         el.setAttribute(attribute, `${repoBasePath}${resolved}`);

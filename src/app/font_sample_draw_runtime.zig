@@ -18,7 +18,8 @@ pub fn handle(state: anytype, shell: *Shell) bool {
             const screenshot_h = app_bootstrap.parseEnvI32("ZIDE_FONT_SAMPLE_SCREENSHOT_HEIGHT", 0);
             if (screenshot_w > 0 and screenshot_h > 0) {
                 shell.rendererPtr().dumpWindowScreenshotPpmSized(path, screenshot_w, screenshot_h) catch |err| {
-                    log.logf(.warning, 
+                    log.logf(
+                        .warning,
                         "screenshot failed path={s} mode=sized size={d}x{d} err={s}",
                         .{ path, screenshot_w, screenshot_h, @errorName(err) },
                     );

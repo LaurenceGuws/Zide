@@ -21,7 +21,10 @@ export function selectedProjectConfigPath(): string {
   return `./config/${safe}`;
 }
 
-export async function loadProjectConfig(): Promise<{ project: ProjectConfig; docs: string[] }> {
+export async function loadProjectConfig(): Promise<{
+  project: ProjectConfig;
+  docs: string[];
+}> {
   return Promise.all([
     fetchJson<ProjectConfig>(selectedProjectConfigPath()),
     fetchJson<string[]>("./config/docs-index.json"),

@@ -22,7 +22,10 @@ function normalizedLanguage(codeEl: HTMLElement): string | null {
   return null;
 }
 
-export function renderHighlightedCode(hljs: HighlightJsApi | undefined, viewerEl: HTMLElement): void {
+export function renderHighlightedCode(
+  hljs: HighlightJsApi | undefined,
+  viewerEl: HTMLElement,
+): void {
   if (!hljs) return;
   const blocks = viewerEl.querySelectorAll<HTMLElement>("pre > code");
   blocks.forEach((code) => {

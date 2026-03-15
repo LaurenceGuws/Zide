@@ -57,4 +57,3 @@ pub fn install() void {
 pub fn requested() bool {
     return sigint_requested.load(.acquire);
 }
-

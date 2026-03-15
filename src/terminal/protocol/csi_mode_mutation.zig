@@ -229,37 +229,99 @@ pub const ModeMutationContext = struct {
         };
     }
 
-    pub fn setInsertMode(self: *const ModeMutationContext, enabled: bool) void { self.set_insert_mode_fn(self.ctx, enabled); }
-    pub fn setLocalEchoMode12(self: *const ModeMutationContext, enabled: bool) void { self.set_local_echo_mode_12_fn(self.ctx, enabled); }
-    pub fn setNewlineMode(self: *const ModeMutationContext, enabled: bool) void { self.set_newline_mode_fn(self.ctx, enabled); }
-    pub fn setScreenReverse(self: *const ModeMutationContext, enabled: bool) void { self.set_screen_reverse_fn(self.ctx, enabled); }
-    pub fn setOriginMode(self: *const ModeMutationContext, enabled: bool) void { self.set_origin_mode_fn(self.ctx, enabled); }
-    pub fn setAutowrap(self: *const ModeMutationContext, enabled: bool) void { self.set_autowrap_fn(self.ctx, enabled); }
-    pub fn setCursorBlink(self: *const ModeMutationContext, enabled: bool) void { self.set_cursor_blink_fn(self.ctx, enabled); }
-    pub fn setReverseWrap(self: *const ModeMutationContext, enabled: bool) void { self.set_reverse_wrap_fn(self.ctx, enabled); }
-    pub fn setLeftRightMarginMode69(self: *const ModeMutationContext, enabled: bool) void { self.set_left_right_margin_mode_69_fn(self.ctx, enabled); }
-    pub fn setCursorVisible(self: *const ModeMutationContext, enabled: bool) void { self.set_cursor_visible_fn(self.ctx, enabled); }
-    pub fn setSaveCursorMode1048(self: *const ModeMutationContext, enabled: bool) void { self.set_save_cursor_mode_1048_fn(self.ctx, enabled); }
-    pub fn setAppCursorKeysLocked(self: *const ModeMutationContext, enabled: bool) void { self.set_app_cursor_keys_locked_fn(self.ctx, enabled); }
-    pub fn setColumnMode132Locked(self: *const ModeMutationContext, enabled: bool) void { self.set_column_mode_132_locked_fn(self.ctx, enabled); }
-    pub fn setAutoRepeatLocked(self: *const ModeMutationContext, enabled: bool) void { self.set_auto_repeat_locked_fn(self.ctx, enabled); }
-    pub fn setMouseModeX10Locked(self: *const ModeMutationContext, enabled: bool) void { self.set_mouse_mode_x10_locked_fn(self.ctx, enabled); }
-    pub fn setBracketedPasteLocked(self: *const ModeMutationContext, enabled: bool) void { self.set_bracketed_paste_locked_fn(self.ctx, enabled); }
-    pub fn setSyncUpdatesLocked(self: *const ModeMutationContext, enabled: bool) void { self.set_sync_updates_locked_fn(self.ctx, enabled); }
-    pub fn setFocusReportingLocked(self: *const ModeMutationContext, enabled: bool) void { self.set_focus_reporting_locked_fn(self.ctx, enabled); }
-    pub fn setMouseModeButtonLocked(self: *const ModeMutationContext, enabled: bool) void { self.set_mouse_mode_button_locked_fn(self.ctx, enabled); }
-    pub fn setMouseModeAnyLocked(self: *const ModeMutationContext, enabled: bool) void { self.set_mouse_mode_any_locked_fn(self.ctx, enabled); }
-    pub fn setMouseModeSgrLocked(self: *const ModeMutationContext, enabled: bool) void { self.set_mouse_mode_sgr_locked_fn(self.ctx, enabled); }
-    pub fn setMouseAlternateScrollLocked(self: *const ModeMutationContext, enabled: bool) void { self.set_mouse_alternate_scroll_locked_fn(self.ctx, enabled); }
-    pub fn setMouseModeSgrPixelsLocked(self: *const ModeMutationContext, enabled: bool) void { self.set_mouse_mode_sgr_pixels_locked_fn(self.ctx, enabled); }
-    pub fn enterAltScreen(self: *const ModeMutationContext, clear: bool, save_cursor: bool) void { self.enter_alt_screen_fn(self.ctx, clear, save_cursor); }
-    pub fn exitAltScreen(self: *const ModeMutationContext, restore_cursor: bool) void { self.exit_alt_screen_fn(self.ctx, restore_cursor); }
-    pub fn saveCursor(self: *const ModeMutationContext) void { self.save_cursor_fn(self.ctx); }
-    pub fn restoreCursor(self: *const ModeMutationContext) void { self.restore_cursor_fn(self.ctx); }
-    pub fn setGraphemeClusterShaping2027(self: *const ModeMutationContext, enabled: bool) void { self.set_grapheme_cluster_shaping_2027_fn(self.ctx, enabled); }
-    pub fn setReportColorScheme2031(self: *const ModeMutationContext, enabled: bool) void { self.set_report_color_scheme_2031_fn(self.ctx, enabled); }
-    pub fn setInbandResizeNotifications2048(self: *const ModeMutationContext, enabled: bool) void { self.set_inband_resize_notifications_2048_fn(self.ctx, enabled); }
-    pub fn setKittyPasteEvents5522(self: *const ModeMutationContext, enabled: bool) void { self.set_kitty_paste_events_5522_fn(self.ctx, enabled); }
+    pub fn setInsertMode(self: *const ModeMutationContext, enabled: bool) void {
+        self.set_insert_mode_fn(self.ctx, enabled);
+    }
+    pub fn setLocalEchoMode12(self: *const ModeMutationContext, enabled: bool) void {
+        self.set_local_echo_mode_12_fn(self.ctx, enabled);
+    }
+    pub fn setNewlineMode(self: *const ModeMutationContext, enabled: bool) void {
+        self.set_newline_mode_fn(self.ctx, enabled);
+    }
+    pub fn setScreenReverse(self: *const ModeMutationContext, enabled: bool) void {
+        self.set_screen_reverse_fn(self.ctx, enabled);
+    }
+    pub fn setOriginMode(self: *const ModeMutationContext, enabled: bool) void {
+        self.set_origin_mode_fn(self.ctx, enabled);
+    }
+    pub fn setAutowrap(self: *const ModeMutationContext, enabled: bool) void {
+        self.set_autowrap_fn(self.ctx, enabled);
+    }
+    pub fn setCursorBlink(self: *const ModeMutationContext, enabled: bool) void {
+        self.set_cursor_blink_fn(self.ctx, enabled);
+    }
+    pub fn setReverseWrap(self: *const ModeMutationContext, enabled: bool) void {
+        self.set_reverse_wrap_fn(self.ctx, enabled);
+    }
+    pub fn setLeftRightMarginMode69(self: *const ModeMutationContext, enabled: bool) void {
+        self.set_left_right_margin_mode_69_fn(self.ctx, enabled);
+    }
+    pub fn setCursorVisible(self: *const ModeMutationContext, enabled: bool) void {
+        self.set_cursor_visible_fn(self.ctx, enabled);
+    }
+    pub fn setSaveCursorMode1048(self: *const ModeMutationContext, enabled: bool) void {
+        self.set_save_cursor_mode_1048_fn(self.ctx, enabled);
+    }
+    pub fn setAppCursorKeysLocked(self: *const ModeMutationContext, enabled: bool) void {
+        self.set_app_cursor_keys_locked_fn(self.ctx, enabled);
+    }
+    pub fn setColumnMode132Locked(self: *const ModeMutationContext, enabled: bool) void {
+        self.set_column_mode_132_locked_fn(self.ctx, enabled);
+    }
+    pub fn setAutoRepeatLocked(self: *const ModeMutationContext, enabled: bool) void {
+        self.set_auto_repeat_locked_fn(self.ctx, enabled);
+    }
+    pub fn setMouseModeX10Locked(self: *const ModeMutationContext, enabled: bool) void {
+        self.set_mouse_mode_x10_locked_fn(self.ctx, enabled);
+    }
+    pub fn setBracketedPasteLocked(self: *const ModeMutationContext, enabled: bool) void {
+        self.set_bracketed_paste_locked_fn(self.ctx, enabled);
+    }
+    pub fn setSyncUpdatesLocked(self: *const ModeMutationContext, enabled: bool) void {
+        self.set_sync_updates_locked_fn(self.ctx, enabled);
+    }
+    pub fn setFocusReportingLocked(self: *const ModeMutationContext, enabled: bool) void {
+        self.set_focus_reporting_locked_fn(self.ctx, enabled);
+    }
+    pub fn setMouseModeButtonLocked(self: *const ModeMutationContext, enabled: bool) void {
+        self.set_mouse_mode_button_locked_fn(self.ctx, enabled);
+    }
+    pub fn setMouseModeAnyLocked(self: *const ModeMutationContext, enabled: bool) void {
+        self.set_mouse_mode_any_locked_fn(self.ctx, enabled);
+    }
+    pub fn setMouseModeSgrLocked(self: *const ModeMutationContext, enabled: bool) void {
+        self.set_mouse_mode_sgr_locked_fn(self.ctx, enabled);
+    }
+    pub fn setMouseAlternateScrollLocked(self: *const ModeMutationContext, enabled: bool) void {
+        self.set_mouse_alternate_scroll_locked_fn(self.ctx, enabled);
+    }
+    pub fn setMouseModeSgrPixelsLocked(self: *const ModeMutationContext, enabled: bool) void {
+        self.set_mouse_mode_sgr_pixels_locked_fn(self.ctx, enabled);
+    }
+    pub fn enterAltScreen(self: *const ModeMutationContext, clear: bool, save_cursor: bool) void {
+        self.enter_alt_screen_fn(self.ctx, clear, save_cursor);
+    }
+    pub fn exitAltScreen(self: *const ModeMutationContext, restore_cursor: bool) void {
+        self.exit_alt_screen_fn(self.ctx, restore_cursor);
+    }
+    pub fn saveCursor(self: *const ModeMutationContext) void {
+        self.save_cursor_fn(self.ctx);
+    }
+    pub fn restoreCursor(self: *const ModeMutationContext) void {
+        self.restore_cursor_fn(self.ctx);
+    }
+    pub fn setGraphemeClusterShaping2027(self: *const ModeMutationContext, enabled: bool) void {
+        self.set_grapheme_cluster_shaping_2027_fn(self.ctx, enabled);
+    }
+    pub fn setReportColorScheme2031(self: *const ModeMutationContext, enabled: bool) void {
+        self.set_report_color_scheme_2031_fn(self.ctx, enabled);
+    }
+    pub fn setInbandResizeNotifications2048(self: *const ModeMutationContext, enabled: bool) void {
+        self.set_inband_resize_notifications_2048_fn(self.ctx, enabled);
+    }
+    pub fn setKittyPasteEvents5522(self: *const ModeMutationContext, enabled: bool) void {
+        self.set_kitty_paste_events_5522_fn(self.ctx, enabled);
+    }
 };
 
 pub fn applyModeMutation(

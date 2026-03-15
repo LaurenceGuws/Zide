@@ -29,7 +29,11 @@ export function getAppShell(): AppShell {
   };
 }
 
-export async function initializeAppShell(args: { shell: AppShell; project: ProjectConfig; state: AppState }): Promise<void> {
+export async function initializeAppShell(args: {
+  shell: AppShell;
+  project: ProjectConfig;
+  state: AppState;
+}): Promise<void> {
   const { shell, project, state } = args;
   document.title = project.title;
   shell.faviconEl.href = project.icon;
@@ -49,7 +53,10 @@ export async function initializeAppShell(args: { shell: AppShell; project: Proje
   updateThemeToggle(shell.themeToggleEl, state.theme);
 }
 
-export function syncHighlightTheme(shell: AppShell, theme: AppState["theme"]): void {
+export function syncHighlightTheme(
+  shell: AppShell,
+  theme: AppState["theme"],
+): void {
   const isDark = theme === "dark";
   shell.highlightDarkThemeEl.disabled = !isDark;
   shell.highlightLightThemeEl.disabled = isDark;

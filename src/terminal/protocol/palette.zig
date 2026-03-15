@@ -270,8 +270,8 @@ fn writeOscPaletteReply(session: SessionFacade, idx: u8, color: types.Color, ter
         log.logf(.warning, "osc palette reply format failed idx={d} err={s}", .{ idx, @errorName(err) });
         return;
     };
-            log.logf(.debug, "osc reply=\"{s}\"", .{seq});
-        logOscReplyHex(log, seq);
+    log.logf(.debug, "osc reply=\"{s}\"", .{seq});
+    logOscReplyHex(log, seq);
     session.writePtyBytes(seq) catch |err| {
         log.logf(.warning, "osc palette reply write failed idx={d} err={s}", .{ idx, @errorName(err) });
     };

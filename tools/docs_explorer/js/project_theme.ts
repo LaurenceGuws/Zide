@@ -12,7 +12,10 @@ const themeVarMap: Record<keyof ProjectPalette, string> = {
   activeLink: "--active-link",
 };
 
-export function applyProjectTheme(rootEl: HTMLElement, project: ProjectConfig): void {
+export function applyProjectTheme(
+  rootEl: HTMLElement,
+  project: ProjectConfig,
+): void {
   const theme = project.theme || {};
   applyThemeOverrides(rootEl, theme.dark, "dark");
   applyThemeOverrides(rootEl, theme.light, "light");
@@ -24,7 +27,9 @@ function applyThemeOverrides(
   themeName: ThemeName,
 ): void {
   if (!themeValues) return;
-  for (const [key, cssVar] of Object.entries(themeVarMap) as Array<[keyof ProjectPalette, string]>) {
+  for (const [key, cssVar] of Object.entries(themeVarMap) as Array<
+    [keyof ProjectPalette, string]
+  >) {
     const value = themeValues[key];
     if (value === undefined) continue;
     rootEl.style.setProperty(scopedThemeVar(cssVar, themeName), value);

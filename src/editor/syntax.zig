@@ -178,7 +178,8 @@ const PlainCaptureSampler = struct {
                 return;
             };
         }
-        log.logf(.info, 
+        log.logf(
+            .info,
             "runtime unmapped captures phase={s} lang={s} total_hits={d} distinct={d} top=\"{s}\"",
             .{
                 phase,

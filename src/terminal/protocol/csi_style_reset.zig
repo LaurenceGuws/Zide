@@ -35,9 +35,15 @@ pub const SgrContext = struct {
         };
     }
 
-    pub fn paletteColor(self: *const SgrContext, idx: u8) Color { return self.palette_color_fn(self.ctx, idx); }
-    pub fn currentAttrs(self: *const SgrContext) *types.CellAttrs { return self.current_attrs_ptr_fn(self.ctx); }
-    pub fn defaultAttrs(self: *const SgrContext) *const types.CellAttrs { return self.default_attrs_ptr_fn(self.ctx); }
+    pub fn paletteColor(self: *const SgrContext, idx: u8) Color {
+        return self.palette_color_fn(self.ctx, idx);
+    }
+    pub fn currentAttrs(self: *const SgrContext) *types.CellAttrs {
+        return self.current_attrs_ptr_fn(self.ctx);
+    }
+    pub fn defaultAttrs(self: *const SgrContext) *const types.CellAttrs {
+        return self.default_attrs_ptr_fn(self.ctx);
+    }
 };
 
 pub const DecstrContext = struct {
@@ -63,41 +69,153 @@ pub const DecstrContext = struct {
         const SessionPtr = @TypeOf(session);
         return .{
             .ctx = @ptrCast(session),
-            .reset_parser_fn = struct { fn call(ctx: *anyopaque) void { const s: SessionPtr = @ptrCast(@alignCast(ctx)); s.core.parser.reset(); } }.call,
-            .reset_saved_charset_fn = struct { fn call(ctx: *anyopaque) void { const s: SessionPtr = @ptrCast(@alignCast(ctx)); s.core.saved_charset = .{}; } }.call,
-            .clear_title_buffer_fn = struct { fn call(ctx: *anyopaque) void { const s: SessionPtr = @ptrCast(@alignCast(ctx)); s.core.title_buffer.clearRetainingCapacity(); } }.call,
-            .set_default_title_fn = struct { fn call(ctx: *anyopaque) void { const s: SessionPtr = @ptrCast(@alignCast(ctx)); s.core.title = "Terminal"; } }.call,
-            .set_report_color_scheme_2031_fn = struct { fn call(ctx: *anyopaque, enabled: bool) void { const s: SessionPtr = @ptrCast(@alignCast(ctx)); s.report_color_scheme_2031 = enabled; } }.call,
-            .set_grapheme_cluster_shaping_2027_fn = struct { fn call(ctx: *anyopaque, enabled: bool) void { const s: SessionPtr = @ptrCast(@alignCast(ctx)); s.grapheme_cluster_shaping_2027 = enabled; } }.call,
-            .set_primary_grapheme_cluster_shaping_2027_fn = struct { fn call(ctx: *anyopaque, enabled: bool) void { const s: SessionPtr = @ptrCast(@alignCast(ctx)); s.core.primary.setGraphemeClusterShaping2027(enabled); } }.call,
-            .set_alt_grapheme_cluster_shaping_2027_fn = struct { fn call(ctx: *anyopaque, enabled: bool) void { const s: SessionPtr = @ptrCast(@alignCast(ctx)); s.core.alt.setGraphemeClusterShaping2027(enabled); } }.call,
-            .set_inband_resize_notifications_2048_fn = struct { fn call(ctx: *anyopaque, enabled: bool) void { const s: SessionPtr = @ptrCast(@alignCast(ctx)); s.inband_resize_notifications_2048 = enabled; } }.call,
-            .set_kitty_paste_events_5522_fn = struct { fn call(ctx: *anyopaque, enabled: bool) void { const s: SessionPtr = @ptrCast(@alignCast(ctx)); s.kitty_paste_events_5522 = enabled; } }.call,
-            .reset_input_modes_locked_fn = struct { fn call(ctx: *anyopaque) void { const s: SessionPtr = @ptrCast(@alignCast(ctx)); s.resetInputModesLocked(); } }.call,
-            .set_column_mode_132_fn = struct { fn call(ctx: *anyopaque, enabled: bool) void { const s: SessionPtr = @ptrCast(@alignCast(ctx)); s.core.column_mode_132 = enabled; } }.call,
-            .set_sync_updates_locked_fn = struct { fn call(ctx: *anyopaque, enabled: bool) void { const s: SessionPtr = @ptrCast(@alignCast(ctx)); s.setSyncUpdatesLocked(enabled); } }.call,
-            .clear_all_kitty_images_fn = struct { fn call(ctx: *anyopaque) void { const s: SessionPtr = @ptrCast(@alignCast(ctx)); s.clearAllKittyImages(); } }.call,
-            .reset_active_screen_state_fn = struct { fn call(ctx: *anyopaque) void { const s: SessionPtr = @ptrCast(@alignCast(ctx)); s.activeScreen().resetState(); } }.call,
-            .mark_active_screen_decstr_dirty_fn = struct { fn call(ctx: *anyopaque) void { const s: SessionPtr = @ptrCast(@alignCast(ctx)); s.activeScreen().markDirtyAllWithReason(.decstr_soft_reset, @src()); } }.call,
+            .reset_parser_fn = struct {
+                fn call(ctx: *anyopaque) void {
+                    const s: SessionPtr = @ptrCast(@alignCast(ctx));
+                    s.core.parser.reset();
+                }
+            }.call,
+            .reset_saved_charset_fn = struct {
+                fn call(ctx: *anyopaque) void {
+                    const s: SessionPtr = @ptrCast(@alignCast(ctx));
+                    s.core.saved_charset = .{};
+                }
+            }.call,
+            .clear_title_buffer_fn = struct {
+                fn call(ctx: *anyopaque) void {
+                    const s: SessionPtr = @ptrCast(@alignCast(ctx));
+                    s.core.title_buffer.clearRetainingCapacity();
+                }
+            }.call,
+            .set_default_title_fn = struct {
+                fn call(ctx: *anyopaque) void {
+                    const s: SessionPtr = @ptrCast(@alignCast(ctx));
+                    s.core.title = "Terminal";
+                }
+            }.call,
+            .set_report_color_scheme_2031_fn = struct {
+                fn call(ctx: *anyopaque, enabled: bool) void {
+                    const s: SessionPtr = @ptrCast(@alignCast(ctx));
+                    s.report_color_scheme_2031 = enabled;
+                }
+            }.call,
+            .set_grapheme_cluster_shaping_2027_fn = struct {
+                fn call(ctx: *anyopaque, enabled: bool) void {
+                    const s: SessionPtr = @ptrCast(@alignCast(ctx));
+                    s.grapheme_cluster_shaping_2027 = enabled;
+                }
+            }.call,
+            .set_primary_grapheme_cluster_shaping_2027_fn = struct {
+                fn call(ctx: *anyopaque, enabled: bool) void {
+                    const s: SessionPtr = @ptrCast(@alignCast(ctx));
+                    s.core.primary.setGraphemeClusterShaping2027(enabled);
+                }
+            }.call,
+            .set_alt_grapheme_cluster_shaping_2027_fn = struct {
+                fn call(ctx: *anyopaque, enabled: bool) void {
+                    const s: SessionPtr = @ptrCast(@alignCast(ctx));
+                    s.core.alt.setGraphemeClusterShaping2027(enabled);
+                }
+            }.call,
+            .set_inband_resize_notifications_2048_fn = struct {
+                fn call(ctx: *anyopaque, enabled: bool) void {
+                    const s: SessionPtr = @ptrCast(@alignCast(ctx));
+                    s.inband_resize_notifications_2048 = enabled;
+                }
+            }.call,
+            .set_kitty_paste_events_5522_fn = struct {
+                fn call(ctx: *anyopaque, enabled: bool) void {
+                    const s: SessionPtr = @ptrCast(@alignCast(ctx));
+                    s.kitty_paste_events_5522 = enabled;
+                }
+            }.call,
+            .reset_input_modes_locked_fn = struct {
+                fn call(ctx: *anyopaque) void {
+                    const s: SessionPtr = @ptrCast(@alignCast(ctx));
+                    s.resetInputModesLocked();
+                }
+            }.call,
+            .set_column_mode_132_fn = struct {
+                fn call(ctx: *anyopaque, enabled: bool) void {
+                    const s: SessionPtr = @ptrCast(@alignCast(ctx));
+                    s.core.column_mode_132 = enabled;
+                }
+            }.call,
+            .set_sync_updates_locked_fn = struct {
+                fn call(ctx: *anyopaque, enabled: bool) void {
+                    const s: SessionPtr = @ptrCast(@alignCast(ctx));
+                    s.setSyncUpdatesLocked(enabled);
+                }
+            }.call,
+            .clear_all_kitty_images_fn = struct {
+                fn call(ctx: *anyopaque) void {
+                    const s: SessionPtr = @ptrCast(@alignCast(ctx));
+                    s.clearAllKittyImages();
+                }
+            }.call,
+            .reset_active_screen_state_fn = struct {
+                fn call(ctx: *anyopaque) void {
+                    const s: SessionPtr = @ptrCast(@alignCast(ctx));
+                    s.activeScreen().resetState();
+                }
+            }.call,
+            .mark_active_screen_decstr_dirty_fn = struct {
+                fn call(ctx: *anyopaque) void {
+                    const s: SessionPtr = @ptrCast(@alignCast(ctx));
+                    s.activeScreen().markDirtyAllWithReason(.decstr_soft_reset, @src());
+                }
+            }.call,
         };
     }
 
-    pub fn resetParser(self: *const DecstrContext) void { self.reset_parser_fn(self.ctx); }
-    pub fn resetSavedCharset(self: *const DecstrContext) void { self.reset_saved_charset_fn(self.ctx); }
-    pub fn clearTitleBuffer(self: *const DecstrContext) void { self.clear_title_buffer_fn(self.ctx); }
-    pub fn setDefaultTitle(self: *const DecstrContext) void { self.set_default_title_fn(self.ctx); }
-    pub fn setReportColorScheme2031(self: *const DecstrContext, enabled: bool) void { self.set_report_color_scheme_2031_fn(self.ctx, enabled); }
-    pub fn setGraphemeClusterShaping2027(self: *const DecstrContext, enabled: bool) void { self.set_grapheme_cluster_shaping_2027_fn(self.ctx, enabled); }
-    pub fn setPrimaryGraphemeClusterShaping2027(self: *const DecstrContext, enabled: bool) void { self.set_primary_grapheme_cluster_shaping_2027_fn(self.ctx, enabled); }
-    pub fn setAltGraphemeClusterShaping2027(self: *const DecstrContext, enabled: bool) void { self.set_alt_grapheme_cluster_shaping_2027_fn(self.ctx, enabled); }
-    pub fn setInbandResizeNotifications2048(self: *const DecstrContext, enabled: bool) void { self.set_inband_resize_notifications_2048_fn(self.ctx, enabled); }
-    pub fn setKittyPasteEvents5522(self: *const DecstrContext, enabled: bool) void { self.set_kitty_paste_events_5522_fn(self.ctx, enabled); }
-    pub fn resetInputModesLocked(self: *const DecstrContext) void { self.reset_input_modes_locked_fn(self.ctx); }
-    pub fn setColumnMode132(self: *const DecstrContext, enabled: bool) void { self.set_column_mode_132_fn(self.ctx, enabled); }
-    pub fn setSyncUpdatesLocked(self: *const DecstrContext, enabled: bool) void { self.set_sync_updates_locked_fn(self.ctx, enabled); }
-    pub fn clearAllKittyImages(self: *const DecstrContext) void { self.clear_all_kitty_images_fn(self.ctx); }
-    pub fn resetActiveScreenState(self: *const DecstrContext) void { self.reset_active_screen_state_fn(self.ctx); }
-    pub fn markActiveScreenDecstrDirty(self: *const DecstrContext) void { self.mark_active_screen_decstr_dirty_fn(self.ctx); }
+    pub fn resetParser(self: *const DecstrContext) void {
+        self.reset_parser_fn(self.ctx);
+    }
+    pub fn resetSavedCharset(self: *const DecstrContext) void {
+        self.reset_saved_charset_fn(self.ctx);
+    }
+    pub fn clearTitleBuffer(self: *const DecstrContext) void {
+        self.clear_title_buffer_fn(self.ctx);
+    }
+    pub fn setDefaultTitle(self: *const DecstrContext) void {
+        self.set_default_title_fn(self.ctx);
+    }
+    pub fn setReportColorScheme2031(self: *const DecstrContext, enabled: bool) void {
+        self.set_report_color_scheme_2031_fn(self.ctx, enabled);
+    }
+    pub fn setGraphemeClusterShaping2027(self: *const DecstrContext, enabled: bool) void {
+        self.set_grapheme_cluster_shaping_2027_fn(self.ctx, enabled);
+    }
+    pub fn setPrimaryGraphemeClusterShaping2027(self: *const DecstrContext, enabled: bool) void {
+        self.set_primary_grapheme_cluster_shaping_2027_fn(self.ctx, enabled);
+    }
+    pub fn setAltGraphemeClusterShaping2027(self: *const DecstrContext, enabled: bool) void {
+        self.set_alt_grapheme_cluster_shaping_2027_fn(self.ctx, enabled);
+    }
+    pub fn setInbandResizeNotifications2048(self: *const DecstrContext, enabled: bool) void {
+        self.set_inband_resize_notifications_2048_fn(self.ctx, enabled);
+    }
+    pub fn setKittyPasteEvents5522(self: *const DecstrContext, enabled: bool) void {
+        self.set_kitty_paste_events_5522_fn(self.ctx, enabled);
+    }
+    pub fn resetInputModesLocked(self: *const DecstrContext) void {
+        self.reset_input_modes_locked_fn(self.ctx);
+    }
+    pub fn setColumnMode132(self: *const DecstrContext, enabled: bool) void {
+        self.set_column_mode_132_fn(self.ctx, enabled);
+    }
+    pub fn setSyncUpdatesLocked(self: *const DecstrContext, enabled: bool) void {
+        self.set_sync_updates_locked_fn(self.ctx, enabled);
+    }
+    pub fn clearAllKittyImages(self: *const DecstrContext) void {
+        self.clear_all_kitty_images_fn(self.ctx);
+    }
+    pub fn resetActiveScreenState(self: *const DecstrContext) void {
+        self.reset_active_screen_state_fn(self.ctx);
+    }
+    pub fn markActiveScreenDecstrDirty(self: *const DecstrContext) void {
+        self.mark_active_screen_decstr_dirty_fn(self.ctx);
+    }
 };
 
 pub fn applyDecstrReset(context: DecstrContext) void {
@@ -137,7 +255,12 @@ pub fn applySgr(context: SgrContext, action: parser_csi.CsiAction, effective_sgr
                 if (mode == 5 and i + 2 < n_params) {
                     const idx = types.clampColorIndex(params[i + 2]);
                     const color = context.paletteColor(idx);
-                    switch (p) { 38 => current_attrs.fg = color, 48 => current_attrs.bg = color, 58 => current_attrs.underline_color = color, else => {} }
+                    switch (p) {
+                        38 => current_attrs.fg = color,
+                        48 => current_attrs.bg = color,
+                        58 => current_attrs.underline_color = color,
+                        else => {},
+                    }
                     i += 3;
                     continue;
                 }
@@ -148,7 +271,12 @@ pub fn applySgr(context: SgrContext, action: parser_csi.CsiAction, effective_sgr
                         const g = types.clampColorIndex(params[base + 1]);
                         const b = types.clampColorIndex(params[base + 2]);
                         const color = Color{ .r = r, .g = g, .b = b, .a = 255 };
-                        switch (p) { 38 => current_attrs.fg = color, 48 => current_attrs.bg = color, 58 => current_attrs.underline_color = color, else => {} }
+                        switch (p) {
+                            38 => current_attrs.fg = color,
+                            48 => current_attrs.bg = color,
+                            58 => current_attrs.underline_color = color,
+                            else => {},
+                        }
                         i = base + 3;
                         continue;
                     }
@@ -161,7 +289,12 @@ pub fn applySgr(context: SgrContext, action: parser_csi.CsiAction, effective_sgr
                         const b = types.clampColorIndex(params[base + 2]);
                         const a = types.clampColorIndex(params[base + 3]);
                         const color = Color{ .r = r, .g = g, .b = b, .a = a };
-                        switch (p) { 38 => current_attrs.fg = color, 48 => current_attrs.bg = color, 58 => current_attrs.underline_color = color, else => {} }
+                        switch (p) {
+                            38 => current_attrs.fg = color,
+                            48 => current_attrs.bg = color,
+                            58 => current_attrs.underline_color = color,
+                            else => {},
+                        }
                         i = base + 4;
                         continue;
                     }
@@ -173,10 +306,19 @@ pub fn applySgr(context: SgrContext, action: parser_csi.CsiAction, effective_sgr
         switch (p) {
             0 => current_attrs.* = default_attrs.*,
             1 => current_attrs.bold = true,
-            5 => { current_attrs.blink = true; current_attrs.blink_fast = false; },
-            6 => { current_attrs.blink = true; current_attrs.blink_fast = true; },
+            5 => {
+                current_attrs.blink = true;
+                current_attrs.blink_fast = false;
+            },
+            6 => {
+                current_attrs.blink = true;
+                current_attrs.blink_fast = true;
+            },
             22 => current_attrs.bold = false,
-            25 => { current_attrs.blink = false; current_attrs.blink_fast = false; },
+            25 => {
+                current_attrs.blink = false;
+                current_attrs.blink_fast = false;
+            },
             4 => current_attrs.underline = true,
             24 => current_attrs.underline = false,
             7 => current_attrs.reverse = true,

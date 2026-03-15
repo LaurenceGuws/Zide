@@ -16,13 +16,22 @@ export function installOptionsMenu(args: {
   document.addEventListener("click", (event: MouseEvent) => {
     const target = event.target;
     if (!(target instanceof Node)) return;
-    if (!optionsMenuEl.hidden && !optionsMenuEl.contains(target) && !optionsToggleEl.contains(target)) {
+    if (
+      !optionsMenuEl.hidden &&
+      !optionsMenuEl.contains(target) &&
+      !optionsToggleEl.contains(target)
+    ) {
       setOptionsMenuOpen(state, optionsToggleEl, optionsMenuEl, false);
     }
   });
 
   optionsToggleEl.addEventListener("click", () => {
-    setOptionsMenuOpen(state, optionsToggleEl, optionsMenuEl, optionsMenuEl.hidden);
+    setOptionsMenuOpen(
+      state,
+      optionsToggleEl,
+      optionsMenuEl,
+      optionsMenuEl.hidden,
+    );
   });
 
   onThemeToggle(() => {

@@ -27,4 +27,3 @@ pub const ModeAction = union(enum) {
     focus: FocusAction,
     theme: ThemeAction,
 };
-

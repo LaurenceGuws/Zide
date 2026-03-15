@@ -531,7 +531,8 @@ pub const TerminalFont = struct {
             }
         }.call;
 
-        log.logf(.info,
+        log.logf(
+            .info,
             "font load: primary={d} symbols={d} sym2={d} sym={d} mono={d} sans={d} emoji_color={d} emoji_text={d}",
             .{
                 @as(u8, if (ft_face != null) 1 else 0),
@@ -544,7 +545,8 @@ pub const TerminalFont = struct {
                 @as(u8, if (emoji_text_pair.face != null) 1 else 0),
             },
         );
-        log.logf(.info,
+        log.logf(
+            .info,
             "glyph coverage: ⇡ p={d} sym={d} s2={d} s={d} m={d} sans={d} | ⣿ p={d} sym={d} s2={d} s={d} m={d} sans={d} | 😀 p={d} sym={d} s2={d} s={d} m={d} sans={d} ec={d} et={d}",
             .{
                 @as(u8, if (has_cp(ft_face, cp_arrow)) 1 else 0),

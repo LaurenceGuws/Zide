@@ -83,7 +83,7 @@ pub const GlyphCache = struct {
             .start = base,
             .count = 6,
         }) catch |err| {
-                            log.logf(.warning, "glyph cache draw append failed texture={d} err={s}", .{ texture.id, @errorName(err) });
+            log.logf(.warning, "glyph cache draw append failed texture={d} err={s}", .{ texture.id, @errorName(err) });
         };
     }
 

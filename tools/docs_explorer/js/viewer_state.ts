@@ -10,8 +10,14 @@ export function setViewerContent(state: AppState, html: string): void {
   setViewerHtml(state, html);
 }
 
-export function setViewerError(state: AppState, path: string, err: unknown): void {
-  setViewerHtml(state, `
+export function setViewerError(
+  state: AppState,
+  path: string,
+  err: unknown,
+): void {
+  setViewerHtml(
+    state,
+    `
     <div class="callout">
       Failed to load <code>${escapeHtml(path)}</code>.
     </div>
@@ -19,7 +25,8 @@ export function setViewerError(state: AppState, path: string, err: unknown): voi
     <pre><code>cd /home/home/personal/zide/tools/docs_explorer
 python3 docs_explorer.py</code></pre>
     <p>Error: <code>${escapeHtml(String(err))}</code></p>
-  `);
+  `,
+  );
 }
 
 export function renderViewer(state: AppState, viewerEl: HTMLElement): void {

@@ -2,8 +2,18 @@ import { rerenderVisibleMermaid } from "./mermaid.js";
 import { renderHighlightedCode } from "./highlight.js";
 import { currentDocFromHash } from "./utils.js";
 import { setCurrentDoc, setSearchQuery } from "./state.js";
-import { renderTreeFromState, updateTreeActivePath, updateTreeExpandedPaths, updateTreeFilter } from "./tree_state.js";
-import { renderDocumentChrome, setDocumentError, setDocumentLoading, setDocumentReady } from "./view_state.js";
+import {
+  renderTreeFromState,
+  updateTreeActivePath,
+  updateTreeExpandedPaths,
+  updateTreeFilter,
+} from "./tree_state.js";
+import {
+  renderDocumentChrome,
+  setDocumentError,
+  setDocumentLoading,
+  setDocumentReady,
+} from "./view_state.js";
 import { loadDoc } from "./viewer.js";
 import type { AppShell, AppState } from "./types.js";
 import type { HighlightJsApi, MarkedApi, MermaidApi } from "./vendor_types.js";
@@ -57,16 +67,16 @@ export function createDocController(args: {
       defaultDocPath,
       onLoading(nextState: AppState, path: string) {
         setDocumentLoading(nextState, repoBasePath, path);
-        renderDocumentChrome(nextState, shell);
+        renderDocumentChrome(nextState, shell, docs);
       },
       onReady(nextState: AppState, path: string) {
         setDocumentReady(nextState, repoBasePath, path);
-        renderDocumentChrome(nextState, shell);
+        renderDocumentChrome(nextState, shell, docs);
         renderHighlightedCode(hljs, viewerEl);
       },
       onError(nextState: AppState, path: string) {
         setDocumentError(nextState, repoBasePath, path);
-        renderDocumentChrome(nextState, shell);
+        renderDocumentChrome(nextState, shell, docs);
       },
     });
   }

@@ -111,7 +111,7 @@ pub const FontSampleView = struct {
             iface.EMOJI_TEXT_FALLBACK_PATH,
             renderer.font_rendering,
         ) catch |err| {
-            log.logf(.warning, "font sample left font rebuild failed err={s}", .{ @errorName(err) });
+            log.logf(.warning, "font sample left font rebuild failed err={s}", .{@errorName(err)});
             return false;
         };
         errdefer new_left.deinit();
@@ -131,7 +131,7 @@ pub const FontSampleView = struct {
             iface.EMOJI_TEXT_FALLBACK_PATH,
             renderer.font_rendering,
         ) catch |err| {
-            log.logf(.warning, "font sample right font rebuild failed err={s}", .{ @errorName(err) });
+            log.logf(.warning, "font sample right font rebuild failed err={s}", .{@errorName(err)});
             new_left.deinit();
             return false;
         };

@@ -86,7 +86,8 @@ pub fn handleMouseSelectionInput(
             selection.drag_rect.* = alt;
             if (alt) {
                 widget.editor.expandRectSelection(pos.line, pos.line, pos.col, pos.col) catch |err| {
-                    log.logf(.warning, 
+                    log.logf(
+                        .warning,
                         "expandRectSelection start failed line={d} col={d} err={s}",
                         .{ pos.line, pos.col, @errorName(err) },
                     );
@@ -109,7 +110,8 @@ pub fn handleMouseSelectionInput(
                 const start_col = @min(selection.drag_start.col, pos.col);
                 const end_col = @max(selection.drag_start.col, pos.col);
                 widget.editor.expandRectSelection(start_line, end_line, start_col, end_col) catch |err| {
-                    log.logf(.warning, 
+                    log.logf(
+                        .warning,
                         "expandRectSelection drag failed start={d}:{d} end={d}:{d} err={s}",
                         .{ start_line, start_col, end_line, end_col, @errorName(err) },
                     );

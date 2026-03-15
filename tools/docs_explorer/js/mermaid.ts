@@ -3,7 +3,11 @@ import { escapeHtml } from "./utils.js";
 import type { ThemeName } from "./types.js";
 import type { MermaidApi } from "./vendor_types.js";
 
-export function initMermaidForTheme(mermaid: MermaidApi, rootEl: HTMLElement, theme: ThemeName): void {
+export function initMermaidForTheme(
+  mermaid: MermaidApi,
+  rootEl: HTMLElement,
+  theme: ThemeName,
+): void {
   mermaid.initialize({
     startOnLoad: false,
     theme: "base",
@@ -16,7 +20,9 @@ export async function renderMermaidBlocks(
   rootEl: HTMLElement,
   viewerEl: HTMLElement,
 ): Promise<void> {
-  const blocks = Array.from(viewerEl.querySelectorAll<HTMLElement>("pre > code.language-mermaid"));
+  const blocks = Array.from(
+    viewerEl.querySelectorAll<HTMLElement>("pre > code.language-mermaid"),
+  );
   let idx = 0;
   for (const code of blocks) {
     const pre = code.parentElement;
@@ -41,7 +47,9 @@ export async function rerenderVisibleMermaid(
   rootEl: HTMLElement,
   viewerEl: HTMLElement,
 ): Promise<void> {
-  const blocks = Array.from(viewerEl.querySelectorAll<HTMLElement>(".mermaid[data-graph]"));
+  const blocks = Array.from(
+    viewerEl.querySelectorAll<HTMLElement>(".mermaid[data-graph]"),
+  );
   if (blocks.length === 0) return;
   initMermaidForTheme(mermaid, rootEl, currentTheme(rootEl));
   let idx = 0;

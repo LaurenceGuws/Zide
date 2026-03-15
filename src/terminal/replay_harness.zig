@@ -915,7 +915,6 @@ fn applyBaselineGridRows(session: *terminal.TerminalSession, rows: []const []con
     }
 }
 
-
 fn applyMouseActions(session: *terminal.TerminalSession, actions: []const MouseAction) !void {
     for (actions) |action| {
         _ = try session.reportMouseEvent(.{
