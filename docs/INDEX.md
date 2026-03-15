@@ -59,9 +59,9 @@ project landing page.
 
 ## Reviews And Audits
 - `app_architecture/review/` — past review notes (scope + date in file).
-  - `app_architecture/review/FILE_LAYOUT_HOTSPOTS_REVIEW.md` — current structure smell review and reference-repo comparison.
-  - `app_architecture/review/REPO_STRUCTURE_REVIEW.md` — repo hygiene review for tests, tooling roots, and stale docs/tests.
-  - `app_architecture/review/SRC_APP_DOMAIN_MAP.md` — authoritative `src/app` ownership map for the ongoing folder cleanup.
+  - `app_architecture/review/FILE_LAYOUT_HOTSPOTS_REVIEW.md` — historical structure-smell review and reference-repo comparison.
+  - `app_architecture/review/REPO_STRUCTURE_REVIEW.md` — historical repo-hygiene review for tests, tooling roots, and stale docs/tests.
+  - `app_architecture/review/SRC_APP_DOMAIN_MAP.md` — historical `src/app` ownership/planning map used during folder cleanup.
   - `app_architecture/review/TERMINAL_CORE_ARCHITECTURE_REVIEW_2026-03-10.md` — Ghostty-informed review of remaining terminal-core architectural blockers.
   - `app_architecture/review/app_mode_layering_todo.yaml` — completed mode-layering extraction tracker retained as historical rollout record.
   - `app_architecture/review/app_mode_layering_validation.md` — mode-layering extraction validation matrix and gate bundle authority.
@@ -69,6 +69,7 @@ project landing page.
 
 ## Quick Ownership Rules
 
+- Use `docs/WORKFLOW.md` as the normative doc-placement policy.
 - `README.md` and the hosted docs explorer are customer-facing.
 - `docs/` is for active workflow, contributor/operator guidance, and top-level reference docs.
 - `app_architecture/` is for current designs, plans, and todo trackers.

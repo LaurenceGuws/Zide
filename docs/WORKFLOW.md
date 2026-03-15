@@ -34,6 +34,12 @@ repository.
 - `app_architecture/**.md` — current architecture, design, and research authority.
 - `app_architecture/review/**` — historical audits, investigations, and review evidence.
 
+Doc-placement authority:
+
+- This file is the normative doc-placement and doc-lifecycle policy.
+- `AGENTS.md` and `docs/INDEX.md` should summarize or point here, not restate
+  the full model independently.
+
 ## Documentation Rules
 
 - Put current task progress in the owning todo or architecture doc, not in `docs/AGENT_HANDOFF.md`.

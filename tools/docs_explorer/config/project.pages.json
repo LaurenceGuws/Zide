@@ -3,7 +3,7 @@
   "icon": "/Zide/assets/icon/color_icon.png",
   "repoBasePath": "/Zide/",
   "runtimeMode": "github-pages",
-  "defaultDoc": "README.md",
+  "defaultDoc": "docs/HOME.md",
   "theme": {
     "dark": {
       "accent": "#d47a45",

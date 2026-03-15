@@ -4,7 +4,7 @@
   "repoAbsolutePath": "/home/home/personal/zide",
   "repoBasePath": "../../",
   "runtimeMode": "local-dev",
-  "defaultDoc": "README.md",
+  "defaultDoc": "docs/HOME.md",
   "theme": {
     "dark": {
       "accent": "#d47a45",
