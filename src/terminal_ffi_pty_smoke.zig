@@ -16,7 +16,7 @@ pub fn main() !void {
     if (c_api.zide_terminal_start(handle, "/bin/sh") != 0) return error.StartFailed;
 
     const command =
-        "printf '\\033]0;ffi-pty-title\\007\\033]7;file://localhost/tmp/ffi-pty\\007ffi-pty\\n'; exit 7\n";
+        "printf '\\033]0;ffi-pty-title\\007\\033]7;file://localhost/tmp/ffi-pty\\007\\033[?1004h\\033[?2031hffi-pty\\n'; exit 7\n";
     if (c_api.zide_terminal_send_bytes(handle, command.ptr, command.len) != 0) return error.SendFailed;
 
     const deadline = std.time.milliTimestamp() + 4000;
@@ -25,11 +25,35 @@ pub fn main() !void {
     var saw_metadata = false;
     var saw_redraw = false;
     var saw_close_confirm = false;
+    var saw_focus_report = false;
+    var saw_color_scheme_report = false;
+
+    {
+        var focus_reported: u8 = 99;
+        if (c_api.zide_terminal_report_focus_changed(handle, 1, &focus_reported) != 0) return error.FocusReportFailed;
+        if (focus_reported != 0) return error.FocusReportUnexpectedlyEnabled;
+
+        var color_reported: u8 = 99;
+        if (c_api.zide_terminal_report_color_scheme_changed(handle, 1, &color_reported) != 0) return error.ColorSchemeReportFailed;
+        if (color_reported != 0) return error.ColorSchemeReportUnexpectedlyEnabled;
+    }
 
     while (std.time.milliTimestamp() < deadline) {
         if (c_api.zide_terminal_poll(handle) != 0) return error.PollFailed;
 
         if (try consumeTerminalPublicationOnceIfPending(handle, "ffi-pty")) saw_marker = true;
+
+        if (!saw_focus_report) {
+            var focus_reported: u8 = 0;
+            if (c_api.zide_terminal_report_focus_changed(handle, 1, &focus_reported) != 0) return error.FocusReportFailed;
+            saw_focus_report = focus_reported == 1;
+        }
+
+        if (!saw_color_scheme_report) {
+            var color_reported: u8 = 0;
+            if (c_api.zide_terminal_report_color_scheme_changed(handle, 1, &color_reported) != 0) return error.ColorSchemeReportFailed;
+            saw_color_scheme_report = color_reported == 1;
+        }
 
         {
             var metadata: c_api.ZideTerminalMetadata = .{};
@@ -77,7 +101,7 @@ pub fn main() !void {
             }
         }
 
-        if (saw_marker and saw_child_exit and saw_metadata and saw_redraw and saw_close_confirm) {
+        if (saw_marker and saw_child_exit and saw_metadata and saw_redraw and saw_close_confirm and saw_focus_report and saw_color_scheme_report) {
             var code: i32 = -1;
             var has_status: u8 = 0;
             if (c_api.zide_terminal_child_exit_status(handle, &code, &has_status) != 0) return error.ChildExitStatusFailed;
@@ -93,6 +117,8 @@ pub fn main() !void {
     if (!saw_child_exit) return error.MissingChildExit;
     if (!saw_metadata) return error.MissingMetadata;
     if (!saw_close_confirm) return error.MissingCloseConfirm;
+    if (!saw_focus_report) return error.MissingFocusReport;
+    if (!saw_color_scheme_report) return error.MissingColorSchemeReport;
 }
 
 fn consumeTerminalPublicationOnceIfPending(handle: ?*c_api.ZideTerminalHandle, needle: []const u8) !bool {
