@@ -305,6 +305,11 @@ Current performance note:
   - keep one authoritative latest-state surface
   - make hot scalars cheaper
   - do not turn the bridge into many tiny convenience getters
+- and the current ABI constraint is explicit:
+  - a simple append-only tail on `ZideTerminalMetadata` is not enough by
+    itself to remove title/cwd copy cost
+  - any real hot/cold split likely needs an explicit successor acquire shape,
+    not wishful thinking about struct-size growth alone
 
 The snapshot should include at minimum:
 - rows/cols

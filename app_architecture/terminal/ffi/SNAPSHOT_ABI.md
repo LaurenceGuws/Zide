@@ -333,3 +333,46 @@ So the next shape, if it happens, should still preserve:
 The question is not whether latest-state should fragment. The question is how to
 let hot scalars get cheaper while the host still sees one coherent latest-state
 surface.
+
+### Current ABI Constraint
+
+The current `ZideTerminalMetadata` layout already includes:
+
+- hot scalars:
+  - `scrollback_count`
+  - `scrollback_offset`
+  - `alive`
+  - `has_exit_code`
+  - `exit_code`
+- cold copied strings:
+  - `title_ptr/title_len`
+  - `cwd_ptr/cwd_len`
+
+That means a simple append-only tail on the existing struct is not enough, by
+itself, to remove current cold-string duplication cost.
+
+Why:
+
+- `metadata_acquire(...)` currently implies one full latest-state fill
+- title/cwd are already part of that baseline filled contract
+- adding more fields at the tail can extend the shape, but it cannot on its own
+  tell the backend "hot scalars only for this acquire"
+
+So the first credible evolution, if needed, is more likely one of:
+
+1. an append-only successor acquire shape with explicit options or flags for
+   string inclusion
+2. an append-only metadata-v2 surface that preserves one coherent latest-state
+   role while making cold-string export opt-in
+
+What should still be avoided:
+
+- separate title getter + cwd getter + lifecycle getter + scrollback getter as
+  the normal host loop
+- making hosts branch between several competing "real metadata" surfaces
+
+The important design constraint is:
+
+- one authoritative latest-state surface should remain obvious
+- cheaper hot-state reads should come from a controlled successor shape, not
+  from accidental getter proliferation
