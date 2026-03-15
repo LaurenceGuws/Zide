@@ -54,6 +54,19 @@ pub fn clearPublishedDamageIfGeneration(self: anytype, expected_generation: u64,
     return true;
 }
 
+pub fn currentGeneration(self: anytype) u64 {
+    return self.output_generation.load(.acquire);
+}
+
+pub fn publishedGeneration(self: anytype) u64 {
+    const idx = self.render_cache_index.load(.acquire);
+    return self.render_caches[idx].generation;
+}
+
+pub fn presentedGeneration(self: anytype) u64 {
+    return self.presented_generation.load(.acquire);
+}
+
 pub fn notePresentedGeneration(self: anytype, generation: u64) void {
     const log = app_logger.logger("terminal.generation_handoff");
     var current = self.presented_generation.load(.acquire);
@@ -88,13 +101,17 @@ pub fn acknowledgePresentedGeneration(self: anytype, generation: u64) bool {
                 generation,
                 @intFromBool(cleared),
                 @intFromBool(sync_updates_active),
-                self.output_generation.load(.acquire),
-                self.publishedGeneration(),
-                self.presented_generation.load(.acquire),
+                currentGeneration(self),
+                publishedGeneration(self),
+                presentedGeneration(self),
             },
         );
     }
     return cleared;
+}
+
+pub fn hasPublishedGenerationBacklog(self: anytype) bool {
+    return currentGeneration(self) != publishedGeneration(self);
 }
 
 fn renderCacheSyncUpdatesActiveForGeneration(self: anytype, generation: u64) bool {

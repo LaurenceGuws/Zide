@@ -87,10 +87,10 @@ Status note, 2026-03-14:
     not "we need to catch up by exporting more random API."
   - More specifically, the strongest remaining gap is no longer raw VT
     semantics living all over the root session facade. It is that
-    `session_runtime.zig`, `session_rendering.zig`, and
-    `session_rendering_retirement.zig` still carry a lot of thread/runtime and
-    publication/present assembly around `TerminalCore`, which keeps
-    `TerminalSession` heavier than the cleaner Ghostty-style engine center.
+    `session_runtime.zig`, `session_rendering.zig`, and the publication-state
+    seam still carry a lot of thread/runtime and publication/present assembly
+    around `TerminalCore`, which keeps `TerminalSession` heavier than the
+    cleaner Ghostty-style engine center.
 
 Purpose: define the exact ownership split for the next terminal-core redesign
 lane so code changes do not drift between "session cleanup", "FFI cleanup", and
@@ -345,8 +345,8 @@ The publication contract is now explicit and far stronger than the early
 rewrite period, but it is also the clearest remaining center-of-gravity gap in
 the current codebase.
 
-Today, `session_rendering.zig` and `session_rendering_retirement.zig` still own
-much of the choreography around:
+Today, `session_rendering.zig` and the publication-state seam still own much of
+the choreography around:
 
 - published vs acknowledged generation bookkeeping
 - render-cache handoff
@@ -791,8 +791,8 @@ Migration approach:
   `src/terminal/core/session_host_queries.zig`
 - publication/diff, selection projection, plan/refinement, selection-dirty
   expansion, and damage helpers are split across focused `view_cache_*` modules
-- presented-generation acknowledgement and damage retirement live under
-  `src/terminal/core/session_rendering_retirement.zig`
+- presented-generation acknowledgement and damage retirement now live under
+  `src/terminal/core/session_publication_state.zig`
 - replay-backed redraw coverage now includes narrow partial publication,
   dense clear+repaint loops, and live-bottom full-region scroll behavior
 - replay-backed redraw coverage now also includes a multi-row narrow rewrite

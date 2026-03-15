@@ -5,7 +5,7 @@ const snapshot_mod = @import("snapshot.zig");
 const selection_mod = @import("selection.zig");
 const view_cache = @import("view_cache.zig");
 const core_feed = @import("terminal_core_feed.zig");
-const retirement = @import("session_rendering_retirement.zig");
+const publication_state = @import("session_publication_state.zig");
 
 pub const RenderCache = render_cache_mod.RenderCache;
 pub const TerminalSnapshot = snapshot_mod.TerminalSnapshot;
@@ -99,8 +99,8 @@ pub fn capturePresentation(self: anytype, dst: *RenderCache) !PresentationCaptur
     defer self.unlock();
     const lock_acquired_ns = std.time.nanoTimestamp();
     const current_generation = self.output_generation.load(.acquire);
-    const published_generation = publishedGeneration(self);
-    const presented_generation = presentedGeneration(self);
+    const published_generation = publication_state.publishedGeneration(self);
+    const presented_generation = publication_state.presentedGeneration(self);
     const had_view_cache_pending = self.view_cache_pending.load(.acquire);
     var view_cache_ms: f64 = 0.0;
     if (had_view_cache_pending) {
@@ -161,7 +161,7 @@ pub fn setSyncUpdates(self: anytype, enabled: bool) void {
 pub fn setSyncUpdatesLocked(self: anytype, enabled: bool) void {
     if (!self.core.setSyncUpdates(enabled)) return;
     const cache = renderCache(self);
-    const presented_generation = presentedGeneration(self);
+    const presented_generation = publication_state.presentedGeneration(self);
     if (cache.generation == presented_generation and cache.dirty == .none) return;
     _ = self.output_generation.fetchAdd(1, .acq_rel);
     const offset: usize = self.core.scrollbackOffset();
@@ -169,32 +169,31 @@ pub fn setSyncUpdatesLocked(self: anytype, enabled: bool) void {
 }
 
 pub fn clearPublishedDamageIfGeneration(self: anytype, expected_generation: u64, clear_screen_dirty: bool) bool {
-    return retirement.clearPublishedDamageIfGeneration(self, expected_generation, clear_screen_dirty);
+    return publication_state.clearPublishedDamageIfGeneration(self, expected_generation, clear_screen_dirty);
 }
 
 pub fn currentGeneration(self: anytype) u64 {
-    return self.output_generation.load(.acquire);
+    return publication_state.currentGeneration(self);
 }
 
 pub fn publishedGeneration(self: anytype) u64 {
-    const idx = self.render_cache_index.load(.acquire);
-    return self.render_caches[idx].generation;
+    return publication_state.publishedGeneration(self);
 }
 
 pub fn presentedGeneration(self: anytype) u64 {
-    return self.presented_generation.load(.acquire);
+    return publication_state.presentedGeneration(self);
 }
 
 pub fn notePresentedGeneration(self: anytype, generation: u64) void {
-    retirement.notePresentedGeneration(self, generation);
+    publication_state.notePresentedGeneration(self, generation);
 }
 
 pub fn acknowledgePresentedGeneration(self: anytype, generation: u64) bool {
-    return retirement.acknowledgePresentedGeneration(self, generation);
+    return publication_state.acknowledgePresentedGeneration(self, generation);
 }
 
 pub fn hasPublishedGenerationBacklog(self: anytype) bool {
-    return currentGeneration(self) != publishedGeneration(self);
+    return publication_state.hasPublishedGenerationBacklog(self);
 }
 
 pub fn noteAltExitPending(self: anytype) void {
