@@ -24,6 +24,8 @@ This is a local contributor/operator tool, not a product feature.
 - `tools/docs_explorer/index.html`
 - `tools/docs_explorer/docs_explorer.py`
 - `tools/docs_explorer/README.md`
+- `tools/docs_explorer/config/project.json`
+- `tools/docs_explorer/config/project.pages.json`
 
 ## Ownership split
 
@@ -68,16 +70,19 @@ The explorer should not become a second documentation source.
 
 - the viewer currently uses browser-side fetch, so it should be opened through
   the local HTTP launcher rather than directly as `file://`
-- the doc index is currently embedded in the HTML rather than generated at
-  request time
+- the runtime is now a small static app with TypeScript source and generated
+  browser ESM output under `tools/docs_explorer/build/js/`
+- the doc index is currently JSON-driven (`config/docs-index.json`) rather than
+  generated at request time
 - YAML files may appear in navigation, but the primary rendering target is
   Markdown
+- `main` remains source-only for this tool; hosted GitHub Pages snapshots are a
+  release-branch concern
 
 ## Expected next steps
 
-- improve styling so the UI reads like a purposeful developer tool rather than
-  a generic rounded docs app
-- add app branding/icon integration
 - consider auto-generated doc indexing so the tree stays in sync without manual
   edits
 - consider persisted navigation state for expanded folders and last-opened doc
+- keep the hosted release/docs entrypoint aligned with the local tool so README
+  and release docs do not drift from the actual Pages surface

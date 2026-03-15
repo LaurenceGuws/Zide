@@ -1,7 +1,8 @@
 # Releasing Artifacts
 
-This repository should not commit generated release binaries (`releases/`, `dist/`).
-Publish them as GitHub Release assets instead.
+Release binaries belong in GitHub Release assets, not in the main repository
+history. Do not commit generated release binaries under `releases/` or `dist/`
+on `main`.
 
 ## Versioning
 
@@ -46,6 +47,8 @@ Publish them as GitHub Release assets instead.
   the release branch, not on `main`.
 - Tag the release from the release-branch commit that actually produced the
   published artifacts.
+- Keep release-branch-only publication conveniences there; do not back-propagate
+  built Pages payloads onto `main`.
 
 ## Publish to GitHub Release
 
@@ -108,7 +111,8 @@ gh release upload "$TAG" \
 
 ## Consumer Guidance
 
-- Host apps should pin an explicit release tag and verify checksums before loading binaries.
+- Host apps should pin an explicit release tag and verify checksums before
+  loading binaries.
 - Keep local path overrides for development, but use release assets for shared testing/distribution.
 
 ## Docs Explorer Pages Policy

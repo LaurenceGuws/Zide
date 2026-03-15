@@ -1,66 +1,138 @@
 # Zide
 
-A modern IDE for Zig development, built in Zig.
+A native IDE and terminal stack built in Zig, aimed at fast local workspaces,
+serious terminal quality, and resource-aware tooling.
 
 ![License](https://img.shields.io/badge/license-MIT-blue.svg)
 
-## About the App
+## Links
 
-Zide is an IDE built in Zig to the furthest extent possible that makes sense for our goals. The goal is a modern IDE built for revamped workspace and micro-service development. One practical driver: opening many microservices in a single workspace (e.g., 8 Java LSPs) can consume ~16GB RAM and slow everything down.
+- Documentation: <https://laurenceguws.github.io/Zide/tools/docs_explorer/?config=project.pages.json>
+- Releases: <https://github.com/LaurenceGuws/Zide/releases>
+- Issues: <https://github.com/LaurenceGuws/Zide/issues>
 
-We design every piece with embedded-style resource constraints in mind. That means aggressive caching, smart lifecycle management for tooling (e.g., spin up LSPs, cache results, hot-reload only edited blocks/references, then shut them down), and a strong focus on raw responsiveness and performance.
+## Demo
+
+[![Zide demo](assets/demo/zide-demo-2026-03-15-poster.jpg)](assets/demo/zide-demo-2026-03-15.mp4)
+
+Short local demo capture:
+
+- video: [`assets/demo/zide-demo-2026-03-15.mp4`](/home/home/personal/zide/assets/demo/zide-demo-2026-03-15.mp4)
+
+## What Zide Is
+
+Zide is being built for heavier real-world workspaces than the usual
+"single-project editor" baseline. The practical driver is simple: many-service
+workspaces can spawn many terminals, language servers, and background tooling,
+and the normal answer is to burn RAM and idle CPU. Zide is aiming for a tighter
+resource envelope without giving up native UX or terminal quality.
+
+Current emphasis:
+
+- Linux-native first
+- integrated terminal quality and compatibility
+- Zig-first implementation
+- architecture that can later support embedded and foreign hosts honestly
+
+## Current Status
+
+Zide is in active beta. The large VT/render rewrite has landed, and current
+work is focused on hardening, compatibility, and cleanup rather than broad new
+surface area.
+
+Current release outputs include:
+
+- terminal bundles
+- editor bundles
+- IDE bundles
+- terminal and editor FFI packages
+- hosted release and architecture docs
+
+Use the Releases page for published binaries.
 
 ## Quick Start
 
-```bash
-# Install system dependencies (see app_architecture/BOOTSTRAP.md for other distros)
-# Arch Linux:
-sudo pacman -S zig sdl3 freetype2 harfbuzz lua wayland wayland-protocols libxkbcommon mesa
+The hosted docs are the primary user-facing entrypoint:
 
-# Bootstrap and build
+- bootstrap and build notes:
+  <https://laurenceguws.github.io/Zide/tools/docs_explorer/?config=project.pages.json#doc=app_architecture/BOOTSTRAP.md>
+- dependency details:
+  <https://laurenceguws.github.io/Zide/tools/docs_explorer/?config=project.pages.json#doc=docs/DEPENDENCIES.md>
+- terminal compatibility:
+  <https://laurenceguws.github.io/Zide/tools/docs_explorer/?config=project.pages.json#doc=docs/terminal/compatibility.md>
+
+Local Linux example:
+
+```bash
+sudo pacman -S zig wayland wayland-protocols libxkbcommon mesa fontconfig
 ./scripts/bootstrap.sh
 zig build run
 ```
 
-## Features
+Important:
 
-- Native Wayland support (Hyprland, Sway, etc.)
-- Integrated terminal panel (PTY + VT core with scrollback; rendering polish ongoing)
-- Tree-sitter syntax highlighting (dynamic grammar packs)
-- Rope text buffer with undo/redo
-- Low CPU usage when idle (<1%)
-- Cross-platform roadmap (Linux first; macOS/Windows planned)
+- In normal Linux/macOS flow, SDL3, Lua, FreeType, HarfBuzz, and tree-sitter
+  are resolved through Zig package-managed dependencies.
+- You still need platform/system libraries for native execution.
+- For exact platform dependency details, prefer the hosted dependency docs over
+  cargo-culting old package lists from stale snippets.
 
-## Documentation
-
-See [app_architecture/BOOTSTRAP.md](app_architecture/BOOTSTRAP.md) for:
-- Full installation instructions
-- Architecture overview
-- Keyboard shortcuts
-- Configuration options
-
-Terminal compatibility and terminfo:
-- `docs/terminal/compatibility.md`
-- this is the current beta terminal support surface
-- Install the bundled terminal entry for best app detection:
+If you are testing the terminal seriously, install the bundled terminfo entry:
 
 ```bash
 mkdir -p ~/.terminfo
 tic -x -o ~/.terminfo terminfo/zide.terminfo
 ```
 
-Open a new terminal inside Zide and verify:
+Then launch a fresh shell inside Zide and verify:
 
 ```bash
 printf '%s\n' "$TERM"
 ```
 
-Expected value is `xterm-zide` (preferred), with `zide-256color` as an alternate identity when applicable.
+Expected identity is:
 
-UI renderer roadmap:
-- `app_architecture/ui/DEVELOPMENT_JOURNEY.md`
+- `xterm-kitty` when that terminfo is already installed and available
+- otherwise `xterm-zide`
+- then `zide-256color`
+- finally `xterm-256color`
 
-Local docs explorer:
+## Documentation
+
+Primary docs site:
+
+- <https://laurenceguws.github.io/Zide/tools/docs_explorer/?config=project.pages.json>
+
+Useful starting points:
+
+- getting started:
+  <https://laurenceguws.github.io/Zide/tools/docs_explorer/?config=project.pages.json#doc=app_architecture/BOOTSTRAP.md>
+- dependency policy:
+  <https://laurenceguws.github.io/Zide/tools/docs_explorer/?config=project.pages.json#doc=docs/DEPENDENCIES.md>
+- terminal compatibility:
+  <https://laurenceguws.github.io/Zide/tools/docs_explorer/?config=project.pages.json#doc=docs/terminal/compatibility.md>
+- current beta release notes:
+  <https://laurenceguws.github.io/Zide/tools/docs_explorer/?config=project.pages.json#doc=docs/releases/v0.1.0-beta.1.md>
+
+Repo-local contributor/operator doc map:
+
+- [`docs/INDEX.md`](/home/home/personal/zide/docs/INDEX.md)
+
+## Developer Notes
+
+Repository-local docs still own the detailed operator guidance:
+
+- bootstrap/build/run/test:
+  [`app_architecture/BOOTSTRAP.md`](/home/home/personal/zide/app_architecture/BOOTSTRAP.md)
+- dependency authority:
+  [`docs/DEPENDENCIES.md`](/home/home/personal/zide/docs/DEPENDENCIES.md)
+- release process:
+  [`RELEASING.md`](/home/home/personal/zide/RELEASING.md)
+- docs explorer local run instructions:
+  [`tools/docs_explorer/README.md`](/home/home/personal/zide/tools/docs_explorer/README.md)
+
+Local docs explorer workflow:
+
 ```bash
 cd /home/home/personal/zide
 npm run build:docs-explorer
@@ -68,69 +140,33 @@ npm run build:docs-explorer
 cd tools/docs_explorer
 python3 docs_explorer.py
 ```
-Then open the printed local URL to browse `docs/` and `app_architecture/`
-in a file-tree Markdown viewer with Mermaid support.
 
-Tree-sitter grammar packs:
-```bash
-zig build grammar-update -- --skip-git --continue-on-error --jobs 8
-```
-Overrides:
-- `~/.config/zide/syntax.lua` (user)
-- `.zide/syntax.lua` (project)
+## Features and Direction
 
-Git history dashboard (interactive HTML):
-```bash
-./scripts/git_history_dashboard.py generate --repo . --output /tmp/git-history-dashboard.html
-```
-Optional tuning:
-- `--since '24 months ago'` to focus on recent history
-- `--max-points 120` to reduce/increase snapshot density
-- `--top-sections 10` to track more top-level directories
+- native Wayland-first renderer and app shell
+- integrated terminal with PTY, VT core, scrollback, and redraw/present work
+- tree-sitter grammar pack support
+- rope-backed editor core with undo/redo
+- terminal and editor FFI surfaces
+- strong bias toward low idle cost and explicit runtime ownership
 
-Dynamic multi-repo dashboard (local web app):
-```bash
-./scripts/git_history_dashboard.py serve --port 8765
-```
-Then open `http://127.0.0.1:8765` and enter comma-separated repo paths.
+## Packaging and Dev Channels
 
-Dynamic filters:
-- Authors: comma-separated regex (matches `Name <email>`)
-- Include path regex: only matching files are counted
-- Exclude path regex: matching files are ignored
+Local Linux dev launcher channels:
 
-Additional graphs in dynamic mode:
-- Per-repo: top authors by churn/commits
-- Per-repo: weekday/hour commit activity heatmap
-- Cross-repo: top authors by churn
-- Per-repo: top files by touches and cumulative churn over time
-- Per-repo: time slider for top largest files (files rotate in/out by snapshot date)
-
-## Linux Dev Channels
-
-For local Linux testing, you can install two launcher channels:
-
-- `zide-stable` (release build + color icon)
-- `zide-test` (dev build + gray icon)
+- `zide-stable`
+- `zide-test`
 
 Commands:
 
 ```bash
 scripts/dev/deploy_linux_channel.sh stable
 scripts/dev/deploy_linux_channel.sh test
-
-# or both
 scripts/dev/deploy_linux_channels.sh
 ```
 
-This is a dev tool workflow (local installs under `~/.local`), not release packaging.
-
-## Dependencies
-
-- Zig package-managed in normal flow: SDL3, Lua, tree-sitter core runtime.
-- Zig package-managed in normal flow: FreeType/HarfBuzz (non-vcpkg paths).
-- Bundled third-party source: `stb_image` C source in-tree.
-- System/runtime package details: see `app_architecture/BOOTSTRAP.md` and `docs/DEPENDENCIES.md`.
+This is a local developer workflow under `~/.local`, not the published release
+packaging path.
 
 ## License
 

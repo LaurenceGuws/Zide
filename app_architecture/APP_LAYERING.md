@@ -5,6 +5,15 @@ Date: 2026-01-25
 Goal: keep Zide’s major components loosely coupled and independently testable while preserving
 the UI rendering stack defined in `app_architecture/ui/DEVELOPMENT_JOURNEY.md`.
 
+Status note, 2026-03-15:
+
+- This file remains the authority for current app/module boundary rules.
+- The mode-layer rollout itself is no longer an open invention lane; historical
+  extraction sequencing and validation records now live under
+  `app_architecture/review/app_mode_layering_*`.
+- Use this file for present-tense import and ownership rules, not for replaying
+  the old extraction narrative.
+
 ## Target Components
 1) **Text Engine (Zig)**
    - Pure text model + edit operations + undo/redo + syntax hooks.
@@ -77,7 +86,9 @@ Review/enforcement policy:
 - `zig build check-app-imports` now includes explicit mode-layer boundary checks for `src/app/modes/shared`, `backend`, and `ide`.
 
 Execution authority for this split is tracked in:
-- `app_architecture/review/app_mode_layering_todo.yaml`
+- current boundary rules: this file
+- historical rollout record: `app_architecture/review/app_mode_layering_todo.yaml`
+- historical validation record: `app_architecture/review/app_mode_layering_validation.md`
 
 Regression policy for this split:
 - Run compatibility gates after every extraction slice (unit + import checks + mode smokes + terminal replay).
