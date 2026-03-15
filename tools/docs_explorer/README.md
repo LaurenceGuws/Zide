@@ -12,7 +12,12 @@ Current entrypoints:
 - `docs_explorer.py`: lightweight local HTTP launcher
 - `index.html`: HTML shell
 - `styles/base.css`: stylesheet import root
-- `js/`: TypeScript source modules
+- `ts/`: TypeScript source modules
+  - `docs/`: document routing/rendering/view state
+  - `tree/`: tree rendering and tree state
+  - `theme/`: theme/runtime palette wiring
+  - `shell/`: app-shell bootstrap, DOM lookup, and icon wiring
+  - `shared/`: shared types/helpers/vendor declarations
 - `build/js/`: generated browser ESM output
 - `config/project.json`: project-specific metadata
 - `config/project.pages.json`: alternate hosted/pages metadata
@@ -46,8 +51,18 @@ http://127.0.0.1:8000/tools/docs_explorer/?config=project.pages.json
 Structure is intentionally small and framework-free so the tool can be reused
 across other repos later by swapping project config and doc-index JSON.
 
+Current shell rule:
+
+- the outer shell owns the atmospheric background field
+- panes own the main material layers
+- small wrappers and controls should prefer transparency, border, and hover
+  state before adding their own local fill
+- theme/config should drive the surface system through tokens rather than
+  scattered component-specific color formulas
+
 Notes:
 
+- `ts/` is the source tree.
 - `build/js/` is generated output and is intentionally not checked in.
 - The launcher expects `build/js/main.js` to exist and will tell you to run the
   build step if it is missing.

@@ -1,4 +1,4 @@
-import type { ProjectConfig } from "./types.js";
+import type { ProjectConfig } from "./shared/types.js";
 
 export async function fetchJson<T>(path: string): Promise<T> {
   const res = await fetch(path);

@@ -1,6 +1,6 @@
-import { escapeHtml } from "./utils.js";
-import { setViewerHtml } from "./state.js";
-import type { AppState } from "./types.js";
+import { escapeHtml } from "../shared/utils.js";
+import { setViewerHtml } from "../state.js";
+import type { AppState } from "../shared/types.js";
 
 export function setViewerLoading(state: AppState, path: string): void {
   setViewerHtml(state, `<p class="status">Loading ${escapeHtml(path)}...</p>`);

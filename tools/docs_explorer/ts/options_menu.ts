@@ -1,5 +1,5 @@
 import { setOptionsMenuOpen as setOptionsMenuState } from "./state.js";
-import type { AppState } from "./types.js";
+import type { AppState } from "./shared/types.js";
 
 export function installOptionsMenu(args: {
   state: AppState;

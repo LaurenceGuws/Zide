@@ -4,7 +4,7 @@
     "module": "ES2022",
     "moduleResolution": "Bundler",
     "lib": ["DOM", "ES2022"],
-    "rootDir": "./js",
+    "rootDir": "./ts",
     "outDir": "./build/js",
     "allowJs": true,
     "checkJs": false,
@@ -13,5 +13,5 @@
     "verbatimModuleSyntax": true,
     "skipLibCheck": true
   },
-  "include": ["js/**/*"]
+  "include": ["ts/**/*"]
 }

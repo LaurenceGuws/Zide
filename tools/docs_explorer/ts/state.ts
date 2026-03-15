@@ -1,4 +1,8 @@
-import type { AppState, DocumentStatus, ThemeName } from "./types.js";
+import type {
+  AppState,
+  DocumentStatus,
+  ThemeName,
+} from "./shared/types.js";
 
 const sidebarWidthStorageKey = "zide_docs_explorer.sidebar_width";
 const sidebarCollapsedStorageKey = "zide_docs_explorer.sidebar_collapsed";
