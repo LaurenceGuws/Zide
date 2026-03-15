@@ -35,7 +35,7 @@ flowchart LR
 - `app_architecture/ui/DEVELOPMENT_JOURNEY.md` (rendering stack + per-OS plan)
 - `docs/todo/editor/modularization.md` (layer split + migration steps)
 - `docs/todo/editor/treesitter.md` (tree-sitter query + highlight integration)
-- `app_architecture/editor/treesitter_dynamic_roadmap.md` (dynamic grammar packs: fetch/compile/load)
+- `docs/todo/editor/treesitter_dynamic_roadmap.md` (dynamic grammar packs: fetch/compile/load)
 
 ## Decisions
 

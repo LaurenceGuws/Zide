@@ -14,7 +14,7 @@
   "docs/todo/editor/widget.md",
   "docs/todo/editor/protocol.md",
   "app_architecture/editor/text_model_rope.md",
-  "app_architecture/editor/treesitter_dynamic_roadmap.md",
+  "docs/todo/editor/treesitter_dynamic_roadmap.md",
   "docs/todo/editor/treesitter.md",
   "docs/todo/file_layout.md",
   "docs/todo/repo_structure.md",
