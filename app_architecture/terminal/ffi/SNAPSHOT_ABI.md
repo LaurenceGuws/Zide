@@ -152,7 +152,7 @@ Important:
 - hosts may ignore damage and redraw from the full cell buffer
 
 Shared semantic authority now lives in:
-- `app_architecture/terminal/RENDER_PUBLICATION_CONTRACT.md`
+- `app_architecture/terminal/rendering/RENDER_PUBLICATION_CONTRACT.md`
 
 Snapshot `generation` remains publication truth only. It is intentionally kept
 separate from host acknowledgement/presentation semantics.
