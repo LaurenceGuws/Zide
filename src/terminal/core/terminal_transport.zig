@@ -65,10 +65,8 @@ pub const ExternalTransport = struct {
         return bytes.len;
     }
 
-    pub fn takeOutgoing(self: *ExternalTransport, allocator: std.mem.Allocator) ![]u8 {
-        const bytes = try allocator.dupe(u8, self.outgoing.items);
-        self.outgoing.clearRetainingCapacity();
-        return bytes;
+    pub fn takeOutgoing(self: *ExternalTransport) ![]u8 {
+        return try self.outgoing.toOwnedSlice(self.allocator);
     }
 };
 

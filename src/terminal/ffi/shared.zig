@@ -388,6 +388,29 @@ pub fn byteBufferFromSlice(allocator: std.mem.Allocator, value: []const u8, out_
     return .ok;
 }
 
+pub fn byteBufferFromOwnedSlice(allocator: std.mem.Allocator, value: []u8, out_buffer: *ByteBuffer) Status {
+    const log = app_logger.logger("terminal.ffi");
+    out_buffer.* = .{};
+    const owner = allocator.create(ByteOwner) catch |err| {
+        log.logf(.warning, "byte owner alloc failed len={d} err={s}", .{ value.len, @errorName(err) });
+        allocator.free(value);
+        return .out_of_memory;
+    };
+
+    owner.* = .{
+        .allocator = allocator,
+        .bytes = value,
+    };
+    out_buffer.* = .{
+        .abi_version = byte_buffer_abi_version,
+        .struct_size = @sizeOf(ByteBuffer),
+        .ptr = if (value.len == 0) null else value.ptr,
+        .len = value.len,
+        ._ctx = owner,
+    };
+    return .ok;
+}
+
 pub fn byteBufferFree(out_buffer: *ByteBuffer) void {
     const owner = byteOwner(out_buffer._ctx) orelse {
         out_buffer.* = .{};

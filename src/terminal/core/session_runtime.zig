@@ -185,8 +185,9 @@ pub fn lockPtyWriter(self: anytype) ?@import("terminal_session.zig").PtyWriteGua
 }
 
 pub fn takeExternalOutgoingBytes(self: anytype, allocator: std.mem.Allocator) !?[]u8 {
+    _ = allocator;
     if (self.external_transport) |*transport| {
-        return try transport.takeOutgoing(allocator);
+        return try transport.takeOutgoing();
     }
     return null;
 }

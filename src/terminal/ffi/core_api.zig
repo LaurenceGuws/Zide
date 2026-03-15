@@ -162,8 +162,7 @@ pub fn pendingInputAcquire(handle: ?*shared.ZideTerminalHandle, out_buffer: *sha
     const h = shared.fromOpaque(handle) orelse return .invalid_argument;
     const bytes = h.session.takeExternalOutgoingBytes(h.allocator) catch |err| return shared.mapError(err);
     const slice = bytes orelse return .invalid_argument;
-    defer h.allocator.free(slice);
-    return shared.byteBufferFromSlice(h.allocator, slice, out_buffer);
+    return shared.byteBufferFromOwnedSlice(h.allocator, slice, out_buffer);
 }
 
 pub fn pendingInputRelease(out_buffer: *shared.ByteBuffer) void {
