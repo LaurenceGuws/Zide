@@ -83,13 +83,6 @@ Progress:
 - PTY read thread now queues bytes; the main thread drains with a per-frame budget to avoid render starvation.
 - Drain budget scales up when backlog is large to keep cat/scrollback responsive.
 
-Research notes:
-- Alacritty (Unix) uses `openpty`, sets IUTF8 on the master, spawns with `setsid` + `TIOCSCTTY`, and polls for PTY + child exit.
-- Alacritty (Windows) uses ConPTY + `CreateProcessW` with pseudoconsole attributes.
-- foot uses `posix_openpt` + `grantpt` + `unlockpt`, and validates shells.
-- wezterm (Unix) splits read/write handles and uses wake pipes.
-- libtsm emphasizes edge‑triggered polling and read‑until‑EAGAIN.
-
 Decision:
 - Linux: `openpty` (master/slave) + fork/exec + `setsid` + `TIOCSCTTY`.
 - macOS: same, with login shell handling.
@@ -202,13 +195,6 @@ Why the redesign:
 - Current scrollback breaks on resize because it has no line wrap metadata.
 - Reference terminals (kitty/wezterm/alacritty/ghostty) model logical lines and reflow across width changes.
 
-Research notes:
-- Alacritty stores rows in a ring buffer with a movable zero index to make rotations O(1).
-- xterm keeps a fixed-size FIFO of saved lines and overwrites oldest entries as the buffer fills.
-- libtsm uses a power-of-two ring buffer and wraps with a start/used cursor.
-- wezterm rewraps by merging wrapped lines into logical lines, then splitting into new rows while remapping cursor.
-- alacritty reflows on column change and uses wrap flags to stitch lines together.
-
 ### Multi-row Cell Representation (Draft)
 
 Problem:
@@ -261,10 +247,6 @@ Why:
 - Left clamp prevents negative bearings from pushing icons off the viewport edge while still honoring font bearings.
 - Separating background and glyph passes avoids clipping overflowed icons inside the grid.
 
-Research notes:
-- kitty rounds ascent/baseline and cell metrics to integer pixels and computes cell height with ceil/floor to avoid subpixel jitter.
-- wezterm stores cell pixel sizes as integers in its glyph cache metrics and uses pixel dimensions for rendering decisions.
-
 ### Layer 6: Font + Shaping
 
 Progress:
@@ -308,11 +290,6 @@ Why:
 Notes:
 - Selection is cleared on terminal resize and when input resumes the live view to avoid stale indices.
 
-Research notes:
-- Ghostty tracks selections with pins into the screen/page list for durability across mutations.
-- foot keeps selection coordinates in absolute (scrollback) row space and extracts selection text via an extraction pipeline.
-- rio (Alacritty-derived) models multiple selection types (simple/block/semantic/lines) with anchors and side tracking.
-
 ### Layer 8: Correctness + Compatibility
 
 Progress:
@@ -342,10 +319,6 @@ Why:
 - Avoids emitting OSC 52 text while keeping clipboard ownership in the UI.
 - Allows hyperlink rendering without blocking VT progress.
 
-Research notes:
-- Alacritty saved-cursor fixtures exercise ESC 7/8 and ?1049 enter/exit behavior.
-- VTE scrolling-region notes show cursor movement/scrolling within margins.
-
 Known gaps (as of 2026-01-28):
 - Kitty graphics protocol is still partial (see IMG-01 in `docs/todo/terminal/protocol.md`).
 - Beta terminal compatibility surface and initial `zide` terminfo entry landed; broader terminfo parity sweep remains tracked under `TERM-01`.
@@ -374,11 +347,6 @@ Why:
 - Reusing a staging buffer reduces per-glyph churn; compaction avoids hard failures when atlas fills.
 - Metrics make pacing regressions visible without heavy profiling.
 - Column bounds reduce overdraw for row-local edits while keeping row-level dirtiness simple.
-
-Research notes:
-- Alacritty tracks per-line damage bounds per frame and merges them into renderer rectangles.
-- Ghostty marks per-row dirty flags, promoting to full redraw when global state changes.
-- libvterm damage tests emphasize scroll/move damage vs. cell damage merging.
 
 Planned improvements (2026-01-28):
 - Batch terminal draw calls into large vertex buffers (glyphs + backgrounds) to avoid per-cell GL draws.
@@ -416,3 +384,4 @@ Why:
 - Engine split authority: `app_architecture/terminal/VT_CORE_DESIGN.md`.
 - Present-path authority: `docs/todo/terminal/wayland_present.md`.
 - Historical architecture review: `docs/review/TERMINAL_CORE_ARCHITECTURE_REVIEW_2026-03-10.md`.
+- Reference-layer notes: `docs/research/terminal/TERMINAL_LAYER_REFERENCE_NOTES.md`.
