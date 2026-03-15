@@ -24,6 +24,7 @@ pub fn main() !void {
     var saw_child_exit = false;
     var saw_metadata = false;
     var saw_redraw = false;
+    var saw_close_confirm = false;
 
     while (std.time.milliTimestamp() < deadline) {
         if (c_api.zide_terminal_poll(handle) != 0) return error.PollFailed;
@@ -37,6 +38,25 @@ pub fn main() !void {
             saw_metadata =
                 std.mem.eql(u8, ptrBytes(metadata.title_ptr, metadata.title_len), "ffi-pty-title") and
                 std.mem.eql(u8, ptrBytes(metadata.cwd_ptr, metadata.cwd_len), "/tmp/ffi-pty");
+        }
+
+        {
+            var close_confirm: c_api.ZideTerminalCloseConfirmSignals = .{};
+            if (c_api.zide_terminal_close_confirm_signals(handle, &close_confirm) != 0) {
+                return error.CloseConfirmAcquireFailed;
+            }
+            if (close_confirm.abi_version != c_api.ZIDE_TERMINAL_CLOSE_CONFIRM_ABI_VERSION) {
+                return error.CloseConfirmAbiMismatch;
+            }
+            if (close_confirm.struct_size != @sizeOf(c_api.ZideTerminalCloseConfirmSignals)) {
+                return error.CloseConfirmStructSizeMismatch;
+            }
+            if (close_confirm.foreground_process != 0) return error.UnexpectedForegroundProcessCloseConfirm;
+            if (close_confirm.semantic_command != 0) return error.UnexpectedSemanticCommandCloseConfirm;
+            if (close_confirm.alt_screen != 0) return error.UnexpectedAltScreenCloseConfirm;
+            if (close_confirm.mouse_reporting != 0) return error.UnexpectedMouseReportingCloseConfirm;
+            if (close_confirm.any != 0) return error.UnexpectedAnyCloseConfirm;
+            saw_close_confirm = true;
         }
 
         {
@@ -57,7 +77,7 @@ pub fn main() !void {
             }
         }
 
-        if (saw_marker and saw_child_exit and saw_metadata and saw_redraw) {
+        if (saw_marker and saw_child_exit and saw_metadata and saw_redraw and saw_close_confirm) {
             var code: i32 = -1;
             var has_status: u8 = 0;
             if (c_api.zide_terminal_child_exit_status(handle, &code, &has_status) != 0) return error.ChildExitStatusFailed;
@@ -72,6 +92,7 @@ pub fn main() !void {
     if (!saw_redraw) return error.MissingRedrawReady;
     if (!saw_child_exit) return error.MissingChildExit;
     if (!saw_metadata) return error.MissingMetadata;
+    if (!saw_close_confirm) return error.MissingCloseConfirm;
 }
 
 fn consumeTerminalPublicationOnceIfPending(handle: ?*c_api.ZideTerminalHandle, needle: []const u8) !bool {

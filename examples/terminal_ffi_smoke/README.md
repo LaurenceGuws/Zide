@@ -95,6 +95,7 @@ Behavior:
 - polls until output appears or the child exits
 - requires `redraw_ready` on PTY-driven visible updates
 - resolves the same redraw-state -> snapshot -> `present_ack(...)` cycle as the dedicated and mixed host smokes
+- validates the same close-confirm latest-state getter shape that foreign hosts would use before destructive close actions
 - checks for a child-exit event separately from the base no-PTY ownership smoke
 
 This path is intentionally separate so PTY-hosting issues do not blur the baseline Python FFI contract.
