@@ -7,7 +7,7 @@ Goal
 Status (2026-01-29)
 - New focus (2026-03-07): UI-thread/backend decoupling and compute offload.
   - plan: `app_architecture/review/PERFORMANCE_REVIEW_1.md`
-  - task tracker: `app_architecture/ui/ui_widget_modularization_todo.md` (Phase 5)
+  - task tracker: `docs/todo/ui/widget_modularization.md` (Phase 5)
 - SDL3 window/input + OpenGL 3.3 renderer is now the active stack on Linux.
 - Raylib has been removed from the build path; PNG decoding is handled via stb_image.
 - Fixed texture UV orientation: CPU textures use top-left UVs; FBO blits flip Y at draw time.
@@ -25,8 +25,8 @@ Status (2026-01-29)
 - Kitty image/placement view lists are built and sorted on the parse thread; renderer reuses the cached lists per frame.
 - Selection highlight spans are cached alongside the view snapshot to avoid per-frame selection range scans.
 - Kitty image uploads are now queued and uploaded in a per-frame budget to avoid large render-thread spikes.
-- Renderer modularization + OS abstraction work is tracked in `app_architecture/ui/renderer_todo.md` (now boundary-focused, extraction complete).
-- UI widget modularization (splitting large widgets like TerminalWidget UI-side) is tracked in `app_architecture/ui/ui_widget_modularization_todo.md`.
+- Renderer modularization + OS abstraction work is tracked in `docs/todo/ui/renderer.md` (now boundary-focused, extraction complete).
+- UI widget modularization (splitting large widgets like TerminalWidget UI-side) is tracked in `docs/todo/ui/widget_modularization.md`.
 - SDL3 migration: SDL3-only build path; SDL2 fallback removed.
 - SDL3 terminal-only input now flows on Wayland when polling events on the main thread.
 - SDL3 input diagnostics log event counts, struct layout offsets, and text payload pointer addresses to validate event parsing.

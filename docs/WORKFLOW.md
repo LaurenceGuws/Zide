@@ -11,7 +11,7 @@ repository.
 ## Workflow
 
 1. Read `docs/AGENT_HANDOFF.md` for current focus and constraints.
-2. Read the owning TODO doc in `app_architecture/`.
+2. Read the owning TODO doc in `docs/todo/`.
 3. Read only the design docs needed for the task.
 4. Implement the change.
 5. Update the owning docs.
@@ -30,7 +30,7 @@ repository.
 - `docs/AGENT_HANDOFF.md` — high-level current focus, constraints, and entrypoints for a fresh session.
 - `docs/INDEX.md` — repo-local navigation map.
 - `README.md` — customer-facing overview and primary links.
-- `app_architecture/*todo*.md` and `*_TODO.md` surfaces — active task tracking and status.
+- `docs/todo/**` — active task tracking, implementation plans, and status.
 - `app_architecture/**.md` — current architecture, design, and research authority.
 - `app_architecture/review/**` — historical audits, investigations, and review evidence.
 
@@ -50,7 +50,7 @@ Doc-placement authority:
 
 ## Quick Placement Rules
 
-- Contributor/operator workflow right now: `docs/`
-- Current architecture or active queues: `app_architecture/`
+- Contributor/operator workflow and active work queues: `docs/`
+- Current architecture and design authority: `app_architecture/`
 - Historical review/investigation material: `app_architecture/review/`
 - Public/project-facing overview: `README.md` and the hosted docs explorer

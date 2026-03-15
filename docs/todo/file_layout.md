@@ -16,10 +16,10 @@ Clean up file and folder layout for ownership clarity, navigability, and removal
 
 - `app_architecture/review/archive/FILE_LAYOUT_HOTSPOTS_REVIEW.md`
 - `app_architecture/review/archive/SRC_APP_DOMAIN_MAP.md`
-- `app_architecture/terminal/MODULARIZATION_PLAN.md`
-- `app_architecture/ui/ui_widget_modularization_todo.md`
-- `app_architecture/editor/MODULARIZATION_PLAN.md`
-- `app_architecture/ui/renderer_todo.md`
+- `docs/todo/terminal/modularization.md`
+- `docs/todo/ui/widget_modularization.md`
+- `docs/todo/editor/modularization.md`
+- `docs/todo/ui/renderer.md`
 
 ## Validation
 
