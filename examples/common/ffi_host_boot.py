@@ -35,9 +35,11 @@ def poll_terminal_then_editor_once(terminal_step, editor_step) -> None:
 def consume_terminal_publication_once(
     terminal_lib,
     terminal_handle,
+    snapshot_request_cls,
     snapshot_cls,
     query_redraw_state,
     snapshot_consumer,
+    include_flags: int = 0,
 ) -> None:
     """Resolve one terminal publication cycle for a host-owned tick.
 
@@ -52,8 +54,13 @@ def consume_terminal_publication_once(
     if redraw_state.needs_redraw != 1:
         raise RuntimeError("terminal redraw_state did not report pending redraw")
 
+    snapshot_request = snapshot_request_cls()
+    snapshot_request.abi_version = terminal_lib.zide_terminal_snapshot_abi_version()
+    snapshot_request.struct_size = ctypes.sizeof(snapshot_request_cls)
+    snapshot_request.include_flags = include_flags
+
     snapshot = snapshot_cls()
-    if terminal_lib.zide_terminal_snapshot_acquire(terminal_handle, ctypes.byref(snapshot)) != STATUS_OK:
+    if terminal_lib.zide_terminal_snapshot_acquire(terminal_handle, ctypes.byref(snapshot_request), ctypes.byref(snapshot)) != STATUS_OK:
         raise RuntimeError("terminal snapshot failed")
     try:
         snapshot_consumer(snapshot)

@@ -57,8 +57,9 @@ test "ffi non-pty snapshot and event ownership smoke" {
     const vt = "\x1b]0;ffi-title\x07\x1b]52;c;ZmZpLWNsaXA=\x07";
     try std.testing.expectEqual(@as(c_int, 0), c_api.zide_terminal_feed_output(handle, vt.ptr, vt.len));
 
+    var snapshot_request = snapshotRequest(c_api.ZIDE_TERMINAL_SNAPSHOT_INCLUDE_TITLE);
     var snapshot: c_api.ZideTerminalSnapshot = .{};
-    try std.testing.expectEqual(@as(c_int, 0), c_api.zide_terminal_snapshot_acquire(handle, &snapshot));
+    try std.testing.expectEqual(@as(c_int, 0), c_api.zide_terminal_snapshot_acquire(handle, &snapshot_request, &snapshot));
     defer c_api.zide_terminal_snapshot_release(&snapshot);
 
     try std.testing.expectEqual(c_api.ZIDE_TERMINAL_SNAPSHOT_ABI_VERSION, snapshot.abi_version);
@@ -336,8 +337,9 @@ test "ffi viewport controls pin snapshot scrollback offset and follow live botto
         "DDDD\r\n";
     try std.testing.expectEqual(@as(c_int, 0), c_api.zide_terminal_feed_output(handle, lines.ptr, lines.len));
 
+    var live_request = snapshotRequest(0);
     var live_snapshot: c_api.ZideTerminalSnapshot = .{};
-    try std.testing.expectEqual(@as(c_int, 0), c_api.zide_terminal_snapshot_acquire(handle, &live_snapshot));
+    try std.testing.expectEqual(@as(c_int, 0), c_api.zide_terminal_snapshot_acquire(handle, &live_request, &live_snapshot));
     defer c_api.zide_terminal_snapshot_release(&live_snapshot);
     try expectSnapshotRowText(&live_snapshot, 0, "CCCC");
     try expectSnapshotRowText(&live_snapshot, 1, "DDDD");
@@ -364,8 +366,9 @@ test "ffi viewport controls pin snapshot scrollback offset and follow live botto
     try std.testing.expectEqual(@as(c_int, 0), c_api.zide_terminal_redraw_state(handle, &pinned_redraw));
     try std.testing.expectEqual(@as(u8, 1), pinned_redraw.needs_redraw);
 
+    var pinned_request_snapshot = snapshotRequest(0);
     var pinned_snapshot: c_api.ZideTerminalSnapshot = .{};
-    try std.testing.expectEqual(@as(c_int, 0), c_api.zide_terminal_snapshot_acquire(handle, &pinned_snapshot));
+    try std.testing.expectEqual(@as(c_int, 0), c_api.zide_terminal_snapshot_acquire(handle, &pinned_request_snapshot, &pinned_snapshot));
     defer c_api.zide_terminal_snapshot_release(&pinned_snapshot);
     try expectSnapshotRowText(&pinned_snapshot, 0, "BBBB");
     try expectSnapshotRowText(&pinned_snapshot, 1, "CCCC");
@@ -384,8 +387,9 @@ test "ffi viewport controls pin snapshot scrollback offset and follow live botto
     try std.testing.expectEqual(@as(c_int, 0), c_api.zide_terminal_redraw_state(handle, &restored_redraw));
     try std.testing.expectEqual(@as(u8, 1), restored_redraw.needs_redraw);
 
+    var restored_request_snapshot = snapshotRequest(0);
     var restored_snapshot: c_api.ZideTerminalSnapshot = .{};
-    try std.testing.expectEqual(@as(c_int, 0), c_api.zide_terminal_snapshot_acquire(handle, &restored_snapshot));
+    try std.testing.expectEqual(@as(c_int, 0), c_api.zide_terminal_snapshot_acquire(handle, &restored_request_snapshot, &restored_snapshot));
     defer c_api.zide_terminal_snapshot_release(&restored_snapshot);
     try expectSnapshotRowText(&restored_snapshot, 0, "CCCC");
     try expectSnapshotRowText(&restored_snapshot, 1, "DDDD");
@@ -429,8 +433,13 @@ test "ffi snapshot and event release zero exported structs" {
     try std.testing.expectEqual(@as(c_int, 0), c_api.zide_terminal_create(null, &handle));
     defer c_api.zide_terminal_destroy(handle);
 
+    var snapshot_request_no_strings = snapshotRequest(0);
     var snapshot: c_api.ZideTerminalSnapshot = .{};
-    try std.testing.expectEqual(@as(c_int, 0), c_api.zide_terminal_snapshot_acquire(handle, &snapshot));
+    try std.testing.expectEqual(@as(c_int, 0), c_api.zide_terminal_snapshot_acquire(handle, &snapshot_request_no_strings, &snapshot));
+    try std.testing.expectEqual(@as(?[*]const u8, null), snapshot.title_ptr);
+    try std.testing.expectEqual(@as(usize, 0), snapshot.title_len);
+    try std.testing.expectEqual(@as(?[*]const u8, null), snapshot.cwd_ptr);
+    try std.testing.expectEqual(@as(usize, 0), snapshot.cwd_len);
     c_api.zide_terminal_snapshot_release(&snapshot);
     try std.testing.expectEqual(@as(u32, 0), snapshot.abi_version);
     try std.testing.expectEqual(@as(u32, 0), snapshot.struct_size);
@@ -574,6 +583,14 @@ fn metadataRequest(include_flags: u32) c_api.ZideTerminalMetadataRequest {
         .struct_size = @sizeOf(c_api.ZideTerminalMetadataRequest),
         .include_flags = include_flags,
         .reserved0 = 0,
+    };
+}
+
+fn snapshotRequest(include_flags: u32) c_api.ZideTerminalSnapshotRequest {
+    return .{
+        .abi_version = c_api.ZIDE_TERMINAL_SNAPSHOT_ABI_VERSION,
+        .struct_size = @sizeOf(c_api.ZideTerminalSnapshotRequest),
+        .include_flags = include_flags,
     };
 }
 

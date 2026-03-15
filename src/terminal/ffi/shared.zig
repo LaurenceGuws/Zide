@@ -10,7 +10,7 @@ pub const Status = enum(c_int) {
     backend_error = 3,
 };
 
-pub const snapshot_abi_version: u32 = 1;
+pub const snapshot_abi_version: u32 = 2;
 pub const event_abi_version: u32 = 4;
 pub const scrollback_abi_version: u32 = 1;
 pub const renderer_metadata_abi_version: u32 = 1;
@@ -108,6 +108,18 @@ pub const Snapshot = extern struct {
     cwd_ptr: ?[*]const u8 = null,
     cwd_len: usize = 0,
     _ctx: ?*anyopaque = null,
+};
+
+pub const SnapshotRequest = extern struct {
+    abi_version: u32 = 0,
+    struct_size: u32 = 0,
+    include_flags: u32 = 0,
+    reserved0: u32 = 0,
+};
+
+pub const SnapshotIncludeFlags = enum(u32) {
+    title = 1 << 0,
+    cwd = 1 << 1,
 };
 
 pub const ScrollbackBuffer = extern struct {

@@ -20,6 +20,7 @@ pub const CreateConfig = shared.CreateConfig;
 pub const Color = shared.Color;
 pub const Cell = shared.Cell;
 pub const Snapshot = shared.Snapshot;
+pub const SnapshotRequest = shared.SnapshotRequest;
 pub const ScrollbackBuffer = shared.ScrollbackBuffer;
 pub const MetadataRequest = shared.MetadataRequest;
 pub const MetadataIncludeFlags = shared.MetadataIncludeFlags;
@@ -126,8 +127,8 @@ pub fn followLiveBottom(handle: ?*ZideTerminalHandle) Status {
     return host_api.followLiveBottom(handle);
 }
 
-pub fn snapshotAcquire(handle: ?*ZideTerminalHandle, out_snapshot: *Snapshot) Status {
-    return core_api.snapshotAcquire(handle, out_snapshot);
+pub fn snapshotAcquire(handle: ?*ZideTerminalHandle, request: ?*const SnapshotRequest, out_snapshot: *Snapshot) Status {
+    return core_api.snapshotAcquire(handle, request, out_snapshot);
 }
 
 pub fn snapshotRelease(snapshot: *Snapshot) void {

@@ -14,8 +14,14 @@ pub fn main() !void {
     const vt = "\x1b]0;ffi-title\x07\x1b]52;c;ZmZpLWNsaXA=\x07";
     if (c_api.zide_terminal_feed_output(handle, vt.ptr, vt.len) != 0) return error.FeedFailed;
 
+    const snapshot_request = c_api.ZideTerminalSnapshotRequest{
+        .abi_version = c_api.ZIDE_TERMINAL_SNAPSHOT_ABI_VERSION,
+        .struct_size = @sizeOf(c_api.ZideTerminalSnapshotRequest),
+        .include_flags = c_api.ZIDE_TERMINAL_SNAPSHOT_INCLUDE_TITLE,
+        .reserved0 = 0,
+    };
     var snapshot: c_api.ZideTerminalSnapshot = .{};
-    if (c_api.zide_terminal_snapshot_acquire(handle, &snapshot) != 0) return error.SnapshotAcquireFailed;
+    if (c_api.zide_terminal_snapshot_acquire(handle, &snapshot_request, &snapshot) != 0) return error.SnapshotAcquireFailed;
     defer c_api.zide_terminal_snapshot_release(&snapshot);
 
     if (snapshot.abi_version != c_api.ZIDE_TERMINAL_SNAPSHOT_ABI_VERSION) return error.UnexpectedAbiVersion;

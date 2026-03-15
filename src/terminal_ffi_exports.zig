@@ -92,8 +92,8 @@ pub export fn zide_terminal_follow_live_bottom(handle: ?*c_api.ZideTerminalHandl
     return c_api.zide_terminal_follow_live_bottom(handle);
 }
 
-pub export fn zide_terminal_snapshot_acquire(handle: ?*c_api.ZideTerminalHandle, out_snapshot: *c_api.ZideTerminalSnapshot) c_int {
-    return c_api.zide_terminal_snapshot_acquire(handle, out_snapshot);
+pub export fn zide_terminal_snapshot_acquire(handle: ?*c_api.ZideTerminalHandle, request: ?*const c_api.ZideTerminalSnapshotRequest, out_snapshot: *c_api.ZideTerminalSnapshot) c_int {
+    return c_api.zide_terminal_snapshot_acquire(handle, request, out_snapshot);
 }
 
 pub export fn zide_terminal_snapshot_release(snapshot: *c_api.ZideTerminalSnapshot) void {

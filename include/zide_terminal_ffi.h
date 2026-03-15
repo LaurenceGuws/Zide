@@ -28,7 +28,7 @@ typedef enum ZideTerminalEventKind {
 } ZideTerminalEventKind;
 
 enum {
-    ZIDE_TERMINAL_SNAPSHOT_ABI_VERSION = 1,
+    ZIDE_TERMINAL_SNAPSHOT_ABI_VERSION = 2,
     ZIDE_TERMINAL_EVENT_ABI_VERSION = 4,
     ZIDE_TERMINAL_SCROLLBACK_ABI_VERSION = 1,
     ZIDE_TERMINAL_RENDERER_METADATA_ABI_VERSION = 1,
@@ -37,6 +37,14 @@ enum {
     ZIDE_TERMINAL_STRING_ABI_VERSION = 1,
     ZIDE_TERMINAL_CLOSE_CONFIRM_ABI_VERSION = 1,
     ZIDE_TERMINAL_CLIPBOARD_ABI_VERSION = 1,
+};
+
+enum {
+    ZIDE_TERMINAL_SNAPSHOT_INCLUDE_TITLE = 1u << 0,
+    ZIDE_TERMINAL_SNAPSHOT_INCLUDE_CWD = 1u << 1,
+    ZIDE_TERMINAL_SNAPSHOT_INCLUDE_ALL_STRINGS =
+        ZIDE_TERMINAL_SNAPSHOT_INCLUDE_TITLE |
+        ZIDE_TERMINAL_SNAPSHOT_INCLUDE_CWD,
 };
 
 enum {
@@ -123,6 +131,13 @@ typedef struct ZideTerminalSnapshot {
     size_t cwd_len;
     void *_ctx;
 } ZideTerminalSnapshot;
+
+typedef struct ZideTerminalSnapshotRequest {
+    uint32_t abi_version;
+    uint32_t struct_size;
+    uint32_t include_flags;
+    uint32_t reserved0;
+} ZideTerminalSnapshotRequest;
 
 typedef struct ZideTerminalScrollbackBuffer {
     uint32_t abi_version;
@@ -259,7 +274,7 @@ int zide_terminal_report_focus_changed(ZideTerminalHandle *handle, uint8_t focus
 int zide_terminal_report_color_scheme_changed(ZideTerminalHandle *handle, uint8_t dark, uint8_t *out_reported);
 int zide_terminal_set_scrollback_offset(ZideTerminalHandle *handle, uint32_t offset_rows);
 int zide_terminal_follow_live_bottom(ZideTerminalHandle *handle);
-int zide_terminal_snapshot_acquire(ZideTerminalHandle *handle, ZideTerminalSnapshot *out_snapshot);
+int zide_terminal_snapshot_acquire(ZideTerminalHandle *handle, const ZideTerminalSnapshotRequest *request, ZideTerminalSnapshot *out_snapshot);
 void zide_terminal_snapshot_release(ZideTerminalSnapshot *snapshot);
 int zide_terminal_scrollback_acquire(
     ZideTerminalHandle *handle,

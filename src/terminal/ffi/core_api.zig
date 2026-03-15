@@ -169,9 +169,12 @@ pub fn pendingInputRelease(out_buffer: *shared.ByteBuffer) void {
     shared.byteBufferFree(out_buffer);
 }
 
-pub fn snapshotAcquire(handle: ?*shared.ZideTerminalHandle, out_snapshot: *shared.Snapshot) shared.Status {
+pub fn snapshotAcquire(handle: ?*shared.ZideTerminalHandle, request: ?*const shared.SnapshotRequest, out_snapshot: *shared.Snapshot) shared.Status {
     const log = app_logger.logger("terminal.ffi");
     const h = shared.fromOpaque(handle) orelse return .invalid_argument;
+    const req = request orelse return .invalid_argument;
+    if (req.abi_version != shared.snapshot_abi_version) return .invalid_argument;
+    if (req.struct_size != @sizeOf(shared.SnapshotRequest)) return .invalid_argument;
     const snapshot = h.session.snapshot();
     const allocator = h.allocator;
 
@@ -191,20 +194,31 @@ pub fn snapshotAcquire(handle: ?*shared.ZideTerminalHandle, out_snapshot: *share
         cells[i] = mapCell(cell);
     }
 
-    const metadata = h.session.copyMetadata(allocator, &h.scratch_title, &h.scratch_cwd) catch |err| {
-        log.logf(.warning, "snapshot metadata copy failed err={s}", .{@errorName(err)});
-        return .out_of_memory;
-    };
-    const title = allocator.dupe(u8, metadata.title) catch |err| {
-        log.logf(.warning, "snapshot title dup failed err={s}", .{@errorName(err)});
-        return .out_of_memory;
-    };
-    errdefer allocator.free(title);
-    const cwd = allocator.dupe(u8, metadata.cwd) catch |err| {
-        log.logf(.warning, "snapshot cwd dup failed err={s}", .{@errorName(err)});
-        return .out_of_memory;
-    };
-    errdefer allocator.free(cwd);
+    var title: []u8 = &.{};
+    errdefer if (title.len > 0) allocator.free(title);
+    var cwd: []u8 = &.{};
+    errdefer if (cwd.len > 0) allocator.free(cwd);
+
+    if ((req.include_flags & @intFromEnum(shared.SnapshotIncludeFlags.title)) != 0 or
+        (req.include_flags & @intFromEnum(shared.SnapshotIncludeFlags.cwd)) != 0)
+    {
+        const metadata = h.session.copyMetadata(allocator, &h.scratch_title, &h.scratch_cwd) catch |err| {
+            log.logf(.warning, "snapshot metadata copy failed err={s}", .{@errorName(err)});
+            return .out_of_memory;
+        };
+        if ((req.include_flags & @intFromEnum(shared.SnapshotIncludeFlags.title)) != 0) {
+            title = allocator.dupe(u8, metadata.title) catch |err| {
+                log.logf(.warning, "snapshot title dup failed err={s}", .{@errorName(err)});
+                return .out_of_memory;
+            };
+        }
+        if ((req.include_flags & @intFromEnum(shared.SnapshotIncludeFlags.cwd)) != 0) {
+            cwd = allocator.dupe(u8, metadata.cwd) catch |err| {
+                log.logf(.warning, "snapshot cwd dup failed err={s}", .{@errorName(err)});
+                return .out_of_memory;
+            };
+        }
+    }
 
     owner.* = .{
         .allocator = allocator,

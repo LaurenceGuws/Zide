@@ -186,7 +186,7 @@ Required operations for milestone 1:
 - `zide_terminal_redraw_state(handle, &state)`
 - `zide_terminal_close_confirm_signals(handle, &signals)`
 - `zide_terminal_needs_redraw(handle)`
-- `zide_terminal_snapshot_acquire(handle, out_snapshot)`
+- `zide_terminal_snapshot_acquire(handle, request, out_snapshot)`
 - `zide_terminal_snapshot_release(snapshot)`
 - `zide_terminal_scrollback_acquire(handle, start_row, max_rows, out_buffer)`
 - `zide_terminal_scrollback_release(out_buffer)`

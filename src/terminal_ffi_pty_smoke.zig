@@ -88,8 +88,9 @@ pub fn main() !void {
                 if (c_api.zide_terminal_redraw_state(handle, &pinned_redraw) != 0) return error.RedrawStateFailed;
                 if (pinned_redraw.needs_redraw != 1) return error.ViewportPinDidNotRedraw;
 
+                const pinned_snapshot_request = snapshotRequest(0);
                 var pinned_snapshot: c_api.ZideTerminalSnapshot = .{};
-                if (c_api.zide_terminal_snapshot_acquire(handle, &pinned_snapshot) != 0) return error.SnapshotAcquireFailed;
+                if (c_api.zide_terminal_snapshot_acquire(handle, &pinned_snapshot_request, &pinned_snapshot) != 0) return error.SnapshotAcquireFailed;
                 defer c_api.zide_terminal_snapshot_release(&pinned_snapshot);
 
                 if (c_api.zide_terminal_present_ack(handle, pinned_redraw.published_generation) != 0) return error.PresentAckFailed;
@@ -101,8 +102,9 @@ pub fn main() !void {
                 defer c_api.zide_terminal_metadata_release(&live_metadata);
                 if (live_metadata.scrollback_offset != 0) return error.ViewportLiveBottomOffsetMismatch;
 
+                const restored_snapshot_request = snapshotRequest(0);
                 var restored_snapshot: c_api.ZideTerminalSnapshot = .{};
-                if (c_api.zide_terminal_snapshot_acquire(handle, &restored_snapshot) != 0) return error.SnapshotAcquireFailed;
+                if (c_api.zide_terminal_snapshot_acquire(handle, &restored_snapshot_request, &restored_snapshot) != 0) return error.SnapshotAcquireFailed;
                 defer c_api.zide_terminal_snapshot_release(&restored_snapshot);
                 saw_viewport = true;
             }
@@ -171,8 +173,9 @@ fn consumeTerminalPublicationOnceIfPending(handle: ?*c_api.ZideTerminalHandle, n
     if (c_api.zide_terminal_redraw_state(handle, &redraw_state) != 0) return error.RedrawStateFailed;
     if (redraw_state.needs_redraw != 1) return false;
 
+    const snapshot_request = snapshotRequest(0);
     var snapshot: c_api.ZideTerminalSnapshot = .{};
-    if (c_api.zide_terminal_snapshot_acquire(handle, &snapshot) != 0) return error.SnapshotAcquireFailed;
+    if (c_api.zide_terminal_snapshot_acquire(handle, &snapshot_request, &snapshot) != 0) return error.SnapshotAcquireFailed;
     defer c_api.zide_terminal_snapshot_release(&snapshot);
     const found_marker = snapshotContains(&snapshot, needle);
 
@@ -224,6 +227,15 @@ fn metadataRequest(include_flags: u32) c_api.ZideTerminalMetadataRequest {
     return .{
         .abi_version = c_api.zide_terminal_metadata_abi_version(),
         .struct_size = @sizeOf(c_api.ZideTerminalMetadataRequest),
+        .include_flags = include_flags,
+        .reserved0 = 0,
+    };
+}
+
+fn snapshotRequest(include_flags: u32) c_api.ZideTerminalSnapshotRequest {
+    return .{
+        .abi_version = c_api.ZIDE_TERMINAL_SNAPSHOT_ABI_VERSION,
+        .struct_size = @sizeOf(c_api.ZideTerminalSnapshotRequest),
         .include_flags = include_flags,
         .reserved0 = 0,
     };

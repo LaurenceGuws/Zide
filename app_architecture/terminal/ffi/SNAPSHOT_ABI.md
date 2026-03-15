@@ -8,8 +8,8 @@ Status: milestone-1 baseline. This document describes the snapshot shape current
 
 Current maturity note:
 
-- milestone-1 ABI is unchanged
-- current full-copy snapshots remain the implemented baseline
+- milestone-1 still uses full-copy cells as the implemented baseline
+- snapshot acquire is now request-based for cold copied strings
 - the next likely performance/maturity step is not "make snapshots cleverer at
   any cost"
 - it is to separate hot latest-state scalars from cold copied strings more
@@ -25,12 +25,12 @@ Current maturity note:
 
 ## Milestone 1 decision
 
-Milestone 1 uses copied full snapshots.
+Milestone 1 uses copied full snapshots with request-based string inclusion.
 
 That means:
 - snapshot acquisition allocates bridge-owned memory
 - cell data is copied out of the internal terminal snapshot
-- title and cwd strings are copied into bridge-owned memory
+- title and cwd strings are copied into bridge-owned memory only when requested
 - the host must call `zide_terminal_snapshot_release()` exactly once per acquired snapshot
 
 This is slower than a zero-copy design, but it is much safer for the first bridge.
@@ -44,6 +44,7 @@ Current exported snapshot surface lives in:
 Primary structs:
 - `ZideTerminalCell`
 - `ZideTerminalSnapshot`
+- `ZideTerminalSnapshotRequest`
 
 Snapshot header:
 - `abi_version`
@@ -123,7 +124,7 @@ Notes:
 ## Ownership contract
 
 Acquisition:
-- host calls `zide_terminal_snapshot_acquire(handle, &snapshot)`
+- host calls `zide_terminal_snapshot_acquire(handle, &request, &snapshot)`
 - on success, the bridge owns all pointed-to memory until release
 - the returned header identifies the snapshot layout that was filled
 
@@ -265,8 +266,9 @@ review can stay narrow and explicit.
 
 Current behavior:
 
-- `snapshot_acquire(...)` copies the flat cell buffer and also duplicates title
-  and cwd every time
+- `snapshot_acquire(...)` copies the flat cell buffer every time
+- `snapshot_acquire(...)` duplicates title/cwd only when the request include
+  flags ask for them
 - `metadata_acquire(...)` duplicates title and cwd every time even when the
   host mainly needs hot scalar latest-state such as:
   - `scrollback_count`
@@ -449,7 +451,7 @@ Beta-stage release rule:
 - what still matters is not compatibility theater, but keeping the cut narrow,
   explicit, and easy for real hosts to adopt
 
-### Landed Request-Based Shape
+### Landed Request-Based Metadata Shape
 
 The landed metadata shape now looks like this conceptually:
 
@@ -578,3 +580,48 @@ It does not create:
 - per-field opt-in churn
 - another redraw gate
 - another event family
+
+### Landed Request-Based Snapshot Shape
+
+The landed snapshot shape now also uses a request:
+
+1. new acquire request struct
+   - `abi_version`
+   - `struct_size`
+   - `include_flags`
+2. snapshot acquire entrypoint
+   - `snapshot_acquire(handle, request, out_snapshot)`
+3. snapshot result
+   - preserves the current copied cell buffer
+   - preserves one owned-result release model
+   - includes title/cwd only when requested
+
+Suggested inclusion flags:
+
+- `ZIDE_TERMINAL_SNAPSHOT_INCLUDE_TITLE`
+- `ZIDE_TERMINAL_SNAPSHOT_INCLUDE_CWD`
+- `ZIDE_TERMINAL_SNAPSHOT_INCLUDE_ALL_STRINGS`
+
+Default intended host usage:
+
+- hot redraw-driven path:
+  - request no string flags
+- title/cwd-aware inspection path:
+  - request title/cwd only when the host actually wants them in the snapshot
+
+Expected semantics:
+
+- rows/cols/cells/cursor/damage/generation are always filled
+- `title_ptr/title_len` are only populated when `INCLUDE_TITLE` is requested
+- `cwd_ptr/cwd_len` are only populated when `INCLUDE_CWD` is requested
+- omitted strings must come back as:
+  - `ptr = null`
+  - `len = 0`
+- release remains unconditional and boring even when no strings were requested
+
+This keeps the snapshot cut narrow:
+
+- no per-row/per-cell micro-queries
+- no separate title/cwd snapshot getters
+- no redraw contract change
+- no second snapshot surface carried in parallel during beta

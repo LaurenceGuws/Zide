@@ -35,6 +35,9 @@ DAMAGE_POLICY_FULL_REDRAW_SAFE_DEFAULT = 1 << 1
 METADATA_INCLUDE_TITLE = 1 << 0
 METADATA_INCLUDE_CWD = 1 << 1
 METADATA_INCLUDE_ALL_STRINGS = METADATA_INCLUDE_TITLE | METADATA_INCLUDE_CWD
+SNAPSHOT_INCLUDE_TITLE = 1 << 0
+SNAPSHOT_INCLUDE_CWD = 1 << 1
+SNAPSHOT_INCLUDE_ALL_STRINGS = SNAPSHOT_INCLUDE_TITLE | SNAPSHOT_INCLUDE_CWD
 
 
 class ZideTerminalHandle(ctypes.Structure):
@@ -104,6 +107,15 @@ class Snapshot(ctypes.Structure):
         ("cwd_ptr", ctypes.POINTER(ctypes.c_uint8)),
         ("cwd_len", ctypes.c_size_t),
         ("_ctx", ctypes.c_void_p),
+    ]
+
+
+class SnapshotRequest(ctypes.Structure):
+    _fields_ = [
+        ("abi_version", ctypes.c_uint32),
+        ("struct_size", ctypes.c_uint32),
+        ("include_flags", ctypes.c_uint32),
+        ("reserved0", ctypes.c_uint32),
     ]
 
 
@@ -258,7 +270,7 @@ def load_library(path: Path):
     lib.zide_terminal_acknowledged_generation.restype = ctypes.c_int
     lib.zide_terminal_published_generation.argtypes = [HandlePtr, ctypes.POINTER(ctypes.c_uint64)]
     lib.zide_terminal_published_generation.restype = ctypes.c_int
-    lib.zide_terminal_snapshot_acquire.argtypes = [HandlePtr, ctypes.POINTER(Snapshot)]
+    lib.zide_terminal_snapshot_acquire.argtypes = [HandlePtr, ctypes.POINTER(SnapshotRequest), ctypes.POINTER(Snapshot)]
     lib.zide_terminal_snapshot_acquire.restype = ctypes.c_int
     lib.zide_terminal_snapshot_release.argtypes = [ctypes.POINTER(Snapshot)]
     lib.zide_terminal_snapshot_release.restype = None
@@ -429,7 +441,15 @@ def run_smoke(lib_path: Path) -> int:
                 }
             )
 
-        consume_terminal_publication_once(lib, handle, Snapshot, query_redraw_state, consume_snapshot)
+        consume_terminal_publication_once(
+            lib,
+            handle,
+            SnapshotRequest,
+            Snapshot,
+            query_redraw_state,
+            consume_snapshot,
+            include_flags=SNAPSHOT_INCLUDE_TITLE,
+        )
 
         print("ffi smoke ok")
         print(
@@ -533,7 +553,14 @@ def run_smoke(lib_path: Path) -> int:
                 lib, handle, MetadataRequest, Metadata, consume_pinned_metadata, METADATA_INCLUDE_ALL_STRINGS
             )
 
-        consume_terminal_publication_once(lib, handle, Snapshot, query_redraw_state, consume_pinned_snapshot)
+        consume_terminal_publication_once(
+            lib,
+            handle,
+            SnapshotRequest,
+            Snapshot,
+            query_redraw_state,
+            consume_pinned_snapshot,
+        )
 
         if lib.zide_terminal_follow_live_bottom(handle) != STATUS_OK:
             raise RuntimeError("follow_live_bottom failed")
@@ -548,7 +575,14 @@ def run_smoke(lib_path: Path) -> int:
                 lib, handle, MetadataRequest, Metadata, consume_restored_metadata, METADATA_INCLUDE_ALL_STRINGS
             )
 
-        consume_terminal_publication_once(lib, handle, Snapshot, query_redraw_state, consume_restored_snapshot)
+        consume_terminal_publication_once(
+            lib,
+            handle,
+            SnapshotRequest,
+            Snapshot,
+            query_redraw_state,
+            consume_restored_snapshot,
+        )
 
         print(
             f"viewport pinned_offset={viewport_state['pinned_offset']} "
@@ -695,7 +729,15 @@ def run_mock_service_smoke(lib_path: Path) -> int:
                 }
             )
 
-        consume_terminal_publication_once(lib, handle, Snapshot, query_redraw_state, consume_mock_snapshot)
+        consume_terminal_publication_once(
+            lib,
+            handle,
+            SnapshotRequest,
+            Snapshot,
+            query_redraw_state,
+            consume_mock_snapshot,
+            include_flags=SNAPSHOT_INCLUDE_ALL_STRINGS,
+        )
 
         if last_snapshot_state["title"] != "mock-title":
             raise RuntimeError(f"unexpected mock title: {last_snapshot_state['title']!r}")
@@ -748,10 +790,16 @@ def run_abi_mismatch_smoke(lib_path: Path) -> int:
         if lib.zide_terminal_resize(handle, 16, 4, 8, 16) != STATUS_OK:
             raise RuntimeError("resize failed")
 
+        snapshot_request = SnapshotRequest(
+            abi_version=lib.zide_terminal_snapshot_abi_version(),
+            struct_size=ctypes.sizeof(SnapshotRequest),
+            include_flags=SNAPSHOT_INCLUDE_ALL_STRINGS,
+            reserved0=0,
+        )
         snapshot = Snapshot()
         snapshot.abi_version = 999
         snapshot.struct_size = 1
-        status = lib.zide_terminal_snapshot_acquire(handle, ctypes.byref(snapshot))
+        status = lib.zide_terminal_snapshot_acquire(handle, ctypes.byref(snapshot_request), ctypes.byref(snapshot))
         if status != STATUS_OK:
             raise RuntimeError(f"snapshot_acquire failed: {status}")
         try:
