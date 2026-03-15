@@ -30,7 +30,8 @@ export function setDocumentError(state: AppState, repoBasePath: string, path: st
 }
 
 export function renderDocumentChrome(state: AppState, shell: AppShell): void {
-  shell.titleEl.textContent = state.document.title;
+  shell.titleEl.textContent = `Zide Docs Explorer - ${state.document.title}`;
   shell.subtitleEl.textContent = state.document.subtitle;
   shell.rawLinkEl.href = state.document.rawLink;
+  shell.sourceLinkEl.href = state.document.rawLink;
 }

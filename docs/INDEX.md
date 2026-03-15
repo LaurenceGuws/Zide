@@ -5,7 +5,7 @@ Repo-local docs map for contributors, operators, and agents.
 Customer-facing entrypoints live outside this index:
 
 - `README.md` — top-level product overview, docs link, and release discovery.
-- hosted docs explorer — `https://laurenceguws.github.io/Zide/tools/docs_explorer/?config=project.pages.json`
+- hosted docs explorer — `https://laurenceguws.github.io/Zide/tools/docs_explorer/`
 
 Use this file for repo workflow and doc ownership navigation, not as the public
 project landing page.

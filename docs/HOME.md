@@ -7,7 +7,7 @@ serious terminal quality, and resource-aware tooling.
 
 ## Links
 
-- [Documentation](https://laurenceguws.github.io/Zide/tools/docs_explorer/?config=project.pages.json)
+- [Documentation](https://laurenceguws.github.io/Zide/tools/docs_explorer/)
 - [Releases](https://github.com/LaurenceGuws/Zide/releases)
 - [Issues](https://github.com/LaurenceGuws/Zide/issues)
 
@@ -99,7 +99,7 @@ before falling back to Zide-owned terminfo.
 
 Primary docs site:
 
-- [Docs Explorer](https://laurenceguws.github.io/Zide/tools/docs_explorer/?config=project.pages.json)
+- [Docs Explorer](https://laurenceguws.github.io/Zide/tools/docs_explorer/)
 
 Useful starting points:
 

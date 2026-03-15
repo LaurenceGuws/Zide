@@ -1,12 +1,65 @@
 .pill {
   display: inline-flex;
   align-items: center;
+  justify-content: center;
   border: 1px solid var(--line);
   border-radius: 0;
-  background: #0d131a;
+  background: var(--panel-3);
+  min-height: 34px;
   padding: 4px 8px;
-  color: var(--muted);
+  color: var(--ink);
   font-size: 0.76rem;
+  text-decoration: none;
+}
+
+.icon-button {
+  min-width: 34px;
+  padding-left: 0;
+  padding-right: 0;
+}
+
+.icon-slot {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+}
+
+.icon-slot > svg {
+  width: 16px;
+  height: 16px;
+  display: block;
+  color: currentColor;
+}
+
+.icon-slot > svg [fill="currentColor"] {
+  fill: currentColor;
+}
+
+.icon-slot > svg [stroke="currentColor"] {
+  stroke: currentColor;
+}
+
+.source-link {
+  color: var(--ink);
+}
+
+.source-link,
+.options-toggle,
+.sidebar-toggle {
+  color: var(--ink);
+}
+
+.source-link:hover,
+.options-toggle:hover,
+.sidebar-toggle:hover {
+  background: var(--surface-hover);
+  border-color: var(--accent);
+  color: var(--accent-strong);
+}
+
+.source-link:hover {
   text-decoration: none;
 }
 
@@ -16,12 +69,6 @@
 
 .options-toggle {
   cursor: pointer;
-  min-width: 34px;
-  justify-content: center;
-  padding-left: 0;
-  padding-right: 0;
-  font-size: 1rem;
-  line-height: 1;
 }
 
 .options-menu {
@@ -34,39 +81,6 @@
   background: var(--panel-3);
   box-shadow: var(--shadow);
   z-index: 20;
-}
-
-.options-info {
-  padding: 6px 10px 8px;
-  border-bottom: 1px solid var(--line);
-  margin-bottom: 4px;
-}
-
-.options-info-label {
-  color: var(--muted);
-  font-size: 0.68rem;
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
-  margin-bottom: 4px;
-}
-
-.options-info-row {
-  display: flex;
-  justify-content: space-between;
-  gap: 12px;
-  font-size: 0.76rem;
-  line-height: 1.35;
-  color: var(--ink);
-}
-
-.options-info-key {
-  color: var(--muted);
-}
-
-.options-info-value {
-  text-align: right;
-  color: var(--ink);
-  word-break: break-word;
 }
 
 .options-item {
@@ -148,20 +162,8 @@
 }
 
 .sidebar-toggle {
-  display: inline-flex;
-  border: 1px solid var(--line);
-  background: #0d131a;
   color: var(--ink);
-  border-radius: 0;
-  padding: 4px 8px;
   cursor: pointer;
-  font: inherit;
-  line-height: 1.1;
-}
-
-.sidebar-toggle:hover {
-  border-color: var(--accent);
-  color: var(--accent-strong);
 }
 
 :root[data-theme="light"] .options-menu {

@@ -9,7 +9,6 @@ import { installSidebarControls, syncResponsiveSidebarState } from "./layout.js"
 import { configureMarked } from "./markdown.js";
 import { initMermaidForTheme } from "./mermaid.js";
 import { installOptionsMenu } from "./options_menu.js";
-import { renderRuntimeInfo } from "./runtime_info.js";
 import { createAppState, persistTheme, setTheme } from "./state.js";
 import { applyTheme } from "./theme.js";
 
@@ -19,8 +18,7 @@ export async function startApp(): Promise<void> {
   const state = createAppState();
   const shell = getAppShell();
 
-  initializeAppShell({ shell, project, state });
-  renderRuntimeInfo(shell, project);
+  await initializeAppShell({ shell, project, state });
   configureMarked(marked);
   initMermaidForTheme(mermaid, shell.rootEl, state.theme);
 

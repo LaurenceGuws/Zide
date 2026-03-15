@@ -5,13 +5,13 @@ serious terminal quality, and resource-aware tooling.
 
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 [![Release](https://img.shields.io/github/v/release/LaurenceGuws/Zide?include_prereleases&label=release)](https://github.com/LaurenceGuws/Zide/releases)
-[![Docs](https://img.shields.io/badge/docs-pages-d47a45)](https://laurenceguws.github.io/Zide/tools/docs_explorer/?config=project.pages.json)
+[![Docs](https://img.shields.io/badge/docs-pages-d47a45)](https://laurenceguws.github.io/Zide/tools/docs_explorer/)
 [![Zig](https://img.shields.io/badge/zig-0.15.2-f7a41d)](https://ziglang.org/download/)
 [![Status](https://img.shields.io/badge/status-beta-b44cff)](https://github.com/LaurenceGuws/Zide/releases)
 
 ## Links
 
-- [Documentation](https://laurenceguws.github.io/Zide/tools/docs_explorer/?config=project.pages.json)
+- [Documentation](https://laurenceguws.github.io/Zide/tools/docs_explorer/)
 - [Releases](https://github.com/LaurenceGuws/Zide/releases)
 - [Issues](https://github.com/LaurenceGuws/Zide/issues)
 
@@ -54,9 +54,9 @@ Use the Releases page for published binaries.
 
 The hosted docs are the primary user-facing entrypoint:
 
-- [Bootstrap and build notes](https://laurenceguws.github.io/Zide/tools/docs_explorer/?config=project.pages.json#doc=app_architecture/BOOTSTRAP.md)
-- [Dependency details](https://laurenceguws.github.io/Zide/tools/docs_explorer/?config=project.pages.json#doc=docs/DEPENDENCIES.md)
-- [Terminal compatibility](https://laurenceguws.github.io/Zide/tools/docs_explorer/?config=project.pages.json#doc=docs/terminal/compatibility.md)
+- [Bootstrap and build notes](https://laurenceguws.github.io/Zide/tools/docs_explorer/#doc=app_architecture/BOOTSTRAP.md)
+- [Dependency details](https://laurenceguws.github.io/Zide/tools/docs_explorer/#doc=docs/DEPENDENCIES.md)
+- [Terminal compatibility](https://laurenceguws.github.io/Zide/tools/docs_explorer/#doc=docs/terminal/compatibility.md)
 
 Local Linux example:
 
@@ -103,16 +103,16 @@ before falling back to Zide-owned terminfo.
 
 Primary docs site:
 
-- [Docs Explorer](https://laurenceguws.github.io/Zide/tools/docs_explorer/?config=project.pages.json)
+- [Docs Explorer](https://laurenceguws.github.io/Zide/tools/docs_explorer/)
 
-The hosted docs landing page is [docs/HOME.md](https://laurenceguws.github.io/Zide/tools/docs_explorer/?config=project.pages.json#doc=docs/HOME.md), not this GitHub README. This split is intentional so GitHub gets a conservative renderer-friendly front page while the hosted docs can use richer media and navigation.
+The hosted docs landing page is [docs/HOME.md](https://laurenceguws.github.io/Zide/tools/docs_explorer/#doc=docs/HOME.md), not this GitHub README. This split is intentional so GitHub gets a conservative renderer-friendly front page while the hosted docs can use richer media and navigation.
 
 Useful starting points:
 
-- [Getting started](https://laurenceguws.github.io/Zide/tools/docs_explorer/?config=project.pages.json#doc=app_architecture/BOOTSTRAP.md)
-- [Dependency policy](https://laurenceguws.github.io/Zide/tools/docs_explorer/?config=project.pages.json#doc=docs/DEPENDENCIES.md)
-- [Terminal compatibility](https://laurenceguws.github.io/Zide/tools/docs_explorer/?config=project.pages.json#doc=docs/terminal/compatibility.md)
-- [Current beta release notes](https://laurenceguws.github.io/Zide/tools/docs_explorer/?config=project.pages.json#doc=docs/releases/v0.1.0-beta.1.md)
+- [Getting started](https://laurenceguws.github.io/Zide/tools/docs_explorer/#doc=app_architecture/BOOTSTRAP.md)
+- [Dependency policy](https://laurenceguws.github.io/Zide/tools/docs_explorer/#doc=docs/DEPENDENCIES.md)
+- [Terminal compatibility](https://laurenceguws.github.io/Zide/tools/docs_explorer/#doc=docs/terminal/compatibility.md)
+- [Current beta release notes](https://laurenceguws.github.io/Zide/tools/docs_explorer/#doc=docs/releases/v0.1.0-beta.1.md)
 
 Repo-local contributor/operator doc map:
 
