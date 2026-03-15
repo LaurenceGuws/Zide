@@ -202,6 +202,8 @@ The next bridge-performance lane should stay narrow:
   - one request struct
   - one owned result
   - string inclusion flags only
+- because the bridge is still beta, do not preserve the first metadata surface
+  just for compatibility aesthetics if the replacement is clearly better
 - keep the public loop discipline explicit
 - avoid widening the bridge until snapshot/diff direction is better defined
 

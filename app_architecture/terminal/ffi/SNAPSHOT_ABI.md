@@ -445,6 +445,15 @@ Current non-goal:
 - first keep the design authority honest enough that the eventual ABI cut is
   narrow and reviewable
 
+Beta-stage release rule:
+
+- the bridge is still early beta and should not preserve the first metadata
+  acquire shape purely out of inertia
+- if Candidate A is clearly better, it is acceptable to replace the initial
+  shape directly rather than carry both forms indefinitely
+- what still matters is not compatibility theater, but keeping the cut narrow,
+  explicit, and easy for real hosts to adopt
+
 ### Candidate A Contract Sketch
 
 If Candidate A becomes real, the smallest credible version should look like
@@ -490,6 +499,13 @@ This keeps the design narrow:
 - one latest-state authority surface
 - one owned release model
 - one explicit opt-in for cold copied strings
+
+If this ships during the current beta phase, the preferred landing shape is:
+
+- replace the original metadata acquire path cleanly
+- update hosts to the new explicit request/result form
+- avoid carrying both the old and new forms unless the overlap is temporary and
+  actively being removed
 
 It does not create:
 
