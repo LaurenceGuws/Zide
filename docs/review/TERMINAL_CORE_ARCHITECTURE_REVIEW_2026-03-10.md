@@ -93,6 +93,19 @@ but the extraction direction is strong:
 
 ## Zide's Remaining Core Problems
 
+Status note after the recent `TerminalCore` and FFI cleanup wave:
+
+- This review is still directionally right, but some of the older wording now
+  overstates how much raw VT semantics still live on `TerminalSession`.
+- The stronger remaining gap today is more specifically runtime/publication
+  center-of-gravity around:
+  - `src/terminal/core/session_runtime.zig`
+  - `src/terminal/core/session_rendering.zig`
+  - `src/terminal/core/session_rendering_retirement.zig`
+- `TerminalSession` is still heavy, but increasingly as the assembly shell
+  around those lanes rather than as the place where the core semantics
+  themselves still primarily live.
+
 ### 1. `TerminalSession` is still the real kernel
 
 Primary file:
@@ -114,7 +127,10 @@ It still owns too much at once:
 - FFI-facing behavior
 
 Even after good extraction work, the architecture is still session-shaped, not
-terminal-engine-shaped.
+terminal-engine-shaped. The most important remaining reason is no longer
+"random VT behavior still lives in the root session type"; it is that runtime
+and publication ownership are still centered around the session side of the
+boundary.
 
 ### 2. The model layer is not authoritative enough
 
@@ -141,9 +157,10 @@ Relevant files:
 - `src/terminal/core/parser_hooks.zig`
 - `src/terminal/core/session_protocol.zig`
 
-The typed seam work materially improved quality, but the target is still mostly
-`TerminalSession`. That means protocol code still thinks in terms of session
-service surfaces instead of terminal engine capabilities.
+The typed seam work materially improved quality, but this is no longer as
+strong a hotspot as the original review implied. Recent work moved substantial
+parser/reset/selection/OSC ownership behind `TerminalCore`, so protocol-target
+cleanup is now more of a residue lane than the main structural gap.
 
 ### 4. FFI is still session-backed, not core-backed
 
@@ -174,8 +191,11 @@ Relevant files:
 - `src/terminal/io/pty_windows.zig`
 
 Desktop PTY ownership is well developed, but the architecture still assumes
-session-owned PTY as the center. That is weaker than a transport-agnostic core
-design where PTY is just one transport implementation.
+session-owned runtime assembly as the center. Transport itself is now more real
+than this older section implied; the stronger remaining issue is that
+`session_runtime.zig` still owns thread lifecycle, parse/read loop assembly,
+PTY/external switching, and child-exit truth assembly around that transport
+split.
 
 This matters directly for:
 
@@ -193,17 +213,21 @@ Relevant files:
 - `src/terminal/core/session_rendering.zig`
 
 The current publication pipeline works, but it still reads like session/cache
-choreography rather than a clean terminal snapshot contract consumed by renderers.
+choreography rather than a clean terminal snapshot contract consumed by
+renderers. This has become one of the strongest remaining architectural gaps:
+`session_rendering.zig` and `session_rendering_retirement.zig` still own
+published/presented generation bookkeeping, render-cache handoff, view-cache
+update sequencing, and sync-update publication behavior.
 
 ## Re-ranked Hotspots
 
 Ordered by architectural impact:
 
-1. `src/terminal/core/terminal_session.zig`
-2. FFI/session/core boundary in `src/terminal/ffi/*` and `src/terminal/core/terminal.zig`
-3. transport/PTY ownership in `src/terminal/core/session_runtime.zig` and `src/terminal/io/*`
-4. protocol execution target in `src/terminal/protocol/*` and `src/terminal/core/parser_hooks.zig`
-5. snapshot/render publication boundary in `src/terminal/core/{snapshot,render_cache,view_cache,session_rendering}.zig`
+1. runtime ownership in `src/terminal/core/session_runtime.zig`
+2. publication/present ownership in `src/terminal/core/{session_rendering,session_rendering_retirement,view_cache,render_cache}.zig`
+3. `src/terminal/core/terminal_session.zig` as the remaining assembly shell
+4. FFI/session/core boundary in `src/terminal/ffi/*` and `src/terminal/core/terminal.zig`
+5. protocol residue in `src/terminal/protocol/*` and `src/terminal/core/parser_hooks.zig`
 
 ## Target Architecture
 

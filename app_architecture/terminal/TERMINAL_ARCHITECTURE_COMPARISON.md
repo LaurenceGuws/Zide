@@ -59,6 +59,12 @@ flowchart LR
 
 - Zide already has a real `TerminalCore`, but `TerminalSession` is still the
   main runtime-facing owner.
+- The strongest remaining structural weight is now concentrated more narrowly
+  than that older sentence suggests:
+  - `session_runtime.zig` still carries much of the thread/runtime/transport
+    assembly
+  - `session_rendering.zig` and `session_rendering_retirement.zig` still carry
+    much of the publication/present choreography
 - The native renderer is custom and retains widget-local targets where they
   still pay off.
 - The renderer now also owns an authoritative scene target before the final
@@ -118,7 +124,8 @@ flowchart LR
     - redraw/publication generations
     - backend-owned viewport control
   - so the gap is not "Ghostty exposes more host ABI than Zide."
-  - the gap is that Ghostty's terminal/library center is structurally cleaner.
+  - the gap is that Ghostty's terminal/library center is structurally cleaner,
+    especially around runtime ownership and publication ownership.
 
 ## Foot
 
@@ -240,6 +247,10 @@ What is unusual is that it is trying to combine:
 - Less mature and less battle-tested than the references
 - Render/present path still carries active bug-hunt and diagnostic complexity
 - `TerminalCore` is not yet the fully dominant public center of the runtime
+- The remaining center-of-gravity gap is now more specifically:
+  - runtime/thread/transport assembly in `session_runtime.zig`
+  - publication/present choreography in `session_rendering.zig` and
+    `session_rendering_retirement.zig`
 - Remaining bridge work is now more about ABI maturity and verifier depth than
   about obvious missing host semantics
 - Snapshot/export cost is still heavier than ideal; the request-based metadata
