@@ -380,7 +380,10 @@ Dedicated PTY smoke flow (separate verifier):
 2. start a shell
 3. send `printf` or `echo`
 4. poll until output arrives
-5. assert output and child exit
+5. assert redraw/present acknowledgement behavior
+6. assert metadata latest-state behavior
+7. assert close-confirm getter shape
+8. assert output and child exit
 
 Current implementation split:
 - keep Python `ctypes` as the authoritative no-PTY ownership/lifetime host
