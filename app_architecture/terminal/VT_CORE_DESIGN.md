@@ -20,7 +20,9 @@ Status note, 2026-03-14:
   snapshot state, presentation-feedback structs, session init options,
   host-query structs, and remaining session-facing public type aliases now live
   in dedicated `src/terminal/core/session_*` modules instead of inline in
-  `terminal_session.zig`.
+  `terminal_session.zig`; the scrollback/viewport content wrapper now also
+  routes through `src/terminal/core/session_content_api.zig` instead of being
+  spelled out directly on the root facade.
 - Input encoding remains on the dedicated subsystem path: writer-agnostic
   encoder coverage exists at both the fake-writer level and the real
   PTY-backed `TerminalSession` writer boundary.

@@ -35,6 +35,7 @@ const session_presentation_feedback = @import("session_presentation_feedback.zig
 const session_rendering = @import("session_rendering.zig");
 const session_protocol = @import("session_protocol.zig");
 const session_config = @import("session_config.zig");
+const session_content_api = @import("session_content_api.zig");
 const session_runtime = @import("session_runtime.zig");
 const session_debug = @import("terminal_session_debug.zig");
 const session_public_types = @import("session_public_types.zig");
@@ -114,7 +115,24 @@ pub fn debugSetGridRow(self: *TerminalSession, row_index: usize, text: []const u
 
 /// Minimal terminal stub so the UI panel stays wired while backend is removed.
 pub const TerminalSession = struct {
+    const Self = @This();
+    const ContentAPI = session_content_api.API(Self, Cell, ScrollbackInfo, ScrollbackRange);
+
     pub const InitOptions = session_init_options.InitOptions;
+    pub const scrollbackInfo = ContentAPI.scrollbackInfo;
+    pub const copyScrollbackRange = ContentAPI.copyScrollbackRange;
+    pub const selectionPlainTextAlloc = ContentAPI.selectionPlainTextAlloc;
+    pub const scrollbackPlainTextAlloc = ContentAPI.scrollbackPlainTextAlloc;
+    pub const scrollbackAnsiTextAlloc = ContentAPI.scrollbackAnsiTextAlloc;
+    pub const setScrollOffset = ContentAPI.setScrollOffset;
+    pub const setScrollOffsetLocked = ContentAPI.setScrollOffsetLocked;
+    pub const resetToLiveBottomLocked = ContentAPI.resetToLiveBottomLocked;
+    pub const resetToLiveBottomForInputLocked = ContentAPI.resetToLiveBottomForInputLocked;
+    pub const setScrollOffsetFromNormalizedTrackLocked = ContentAPI.setScrollOffsetFromNormalizedTrackLocked;
+    pub const scrollSelectionDragLocked = ContentAPI.scrollSelectionDragLocked;
+    pub const scrollBy = ContentAPI.scrollBy;
+    pub const scrollByLocked = ContentAPI.scrollByLocked;
+    pub const scrollWheelLocked = ContentAPI.scrollWheelLocked;
 
     allocator: std.mem.Allocator,
     pty: ?Pty,
@@ -529,68 +547,6 @@ pub const TerminalSession = struct {
 
     pub fn getCursorPos(self: *TerminalSession) CursorPos {
         return session_protocol.getCursorPos(self);
-    }
-
-    pub fn scrollbackInfo(self: *TerminalSession) ScrollbackInfo {
-        return session_content.scrollbackInfo(self);
-    }
-
-    pub fn copyScrollbackRange(
-        self: *TerminalSession,
-        allocator: std.mem.Allocator,
-        start_row: usize,
-        max_rows: usize,
-        out: *std.ArrayList(Cell),
-    ) !ScrollbackRange {
-        return session_content.copyScrollbackRange(self, allocator, start_row, max_rows, out);
-    }
-
-    pub fn selectionPlainTextAlloc(self: *TerminalSession, allocator: std.mem.Allocator) !?[]u8 {
-        return session_content.selectionPlainTextAlloc(self, allocator);
-    }
-
-    pub fn scrollbackPlainTextAlloc(self: *TerminalSession, allocator: std.mem.Allocator) ![]u8 {
-        return session_content.scrollbackPlainTextAlloc(self, allocator);
-    }
-
-    pub fn scrollbackAnsiTextAlloc(self: *TerminalSession, allocator: std.mem.Allocator) ![]u8 {
-        return session_content.scrollbackAnsiTextAlloc(self, allocator);
-    }
-
-    pub fn setScrollOffset(self: *TerminalSession, offset: usize) void {
-        session_content.setScrollOffset(self, offset);
-    }
-
-    pub fn setScrollOffsetLocked(self: *TerminalSession, offset: usize) void {
-        session_content.setScrollOffsetLocked(self, offset);
-    }
-
-    pub fn resetToLiveBottomLocked(self: *TerminalSession) bool {
-        return session_content.resetToLiveBottomLocked(self);
-    }
-
-    pub fn resetToLiveBottomForInputLocked(self: *TerminalSession, saw_non_modifier_key_press: bool, saw_text_input: bool) bool {
-        return session_content.resetToLiveBottomForInputLocked(self, saw_non_modifier_key_press, saw_text_input);
-    }
-
-    pub fn setScrollOffsetFromNormalizedTrackLocked(self: *TerminalSession, track_ratio: f32) ?usize {
-        return session_content.setScrollOffsetFromNormalizedTrackLocked(self, track_ratio);
-    }
-
-    pub fn scrollSelectionDragLocked(self: *TerminalSession, toward_top: bool) bool {
-        return session_content.scrollSelectionDragLocked(self, toward_top);
-    }
-
-    pub fn scrollBy(self: *TerminalSession, delta: isize) void {
-        session_content.scrollBy(self, delta);
-    }
-
-    pub fn scrollByLocked(self: *TerminalSession, delta: isize) void {
-        session_content.scrollByLocked(self, delta);
-    }
-
-    pub fn scrollWheelLocked(self: *TerminalSession, wheel_steps: i32) bool {
-        return session_content.scrollWheelLocked(self, wheel_steps);
     }
 
     pub fn updateViewCacheForScroll(self: *TerminalSession) void {
