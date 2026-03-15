@@ -3,7 +3,11 @@
 A native IDE and terminal stack built in Zig, aimed at fast local workspaces,
 serious terminal quality, and resource-aware tooling.
 
-![License](https://img.shields.io/badge/license-MIT-blue.svg)
+[![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+[![Release](https://img.shields.io/github/v/release/LaurenceGuws/Zide?include_prereleases&label=release)](https://github.com/LaurenceGuws/Zide/releases)
+[![Docs](https://img.shields.io/badge/docs-pages-d47a45)](https://laurenceguws.github.io/Zide/tools/docs_explorer/?config=project.pages.json)
+[![Zig](https://img.shields.io/badge/zig-0.15.2-f7a41d)](https://ziglang.org/download/)
+[![Status](https://img.shields.io/badge/status-beta-b44cff)](https://github.com/LaurenceGuws/Zide/releases)
 
 ## Links
 
@@ -96,6 +100,8 @@ Primary docs site:
 
 - [Docs Explorer](https://laurenceguws.github.io/Zide/tools/docs_explorer/?config=project.pages.json)
 
+The hosted docs landing page is [docs/HOME.md](https://laurenceguws.github.io/Zide/tools/docs_explorer/?config=project.pages.json#doc=docs/HOME.md), not this GitHub README. This split is intentional so GitHub gets a conservative renderer-friendly front page while the hosted docs can use richer media and navigation.
+
 Useful starting points:
 
 - [Getting started](https://laurenceguws.github.io/Zide/tools/docs_explorer/?config=project.pages.json#doc=app_architecture/BOOTSTRAP.md)
@@ -105,20 +111,20 @@ Useful starting points:
 
 Repo-local contributor/operator doc map:
 
-- [`docs/INDEX.md`](/home/home/personal/zide/docs/INDEX.md)
+- [docs/INDEX.md](docs/INDEX.md)
 
 ## Developer Notes
 
 Repository-local docs still own the detailed operator guidance:
 
 - bootstrap/build/run/test:
-  [`app_architecture/BOOTSTRAP.md`](/home/home/personal/zide/app_architecture/BOOTSTRAP.md)
+  [app_architecture/BOOTSTRAP.md](app_architecture/BOOTSTRAP.md)
 - dependency authority:
-  [`docs/DEPENDENCIES.md`](/home/home/personal/zide/docs/DEPENDENCIES.md)
+  [docs/DEPENDENCIES.md](docs/DEPENDENCIES.md)
 - release process:
-  [`RELEASING.md`](/home/home/personal/zide/RELEASING.md)
+  [RELEASING.md](RELEASING.md)
 - docs explorer local run instructions:
-  [`tools/docs_explorer/README.md`](/home/home/personal/zide/tools/docs_explorer/README.md)
+  [tools/docs_explorer/README.md](tools/docs_explorer/README.md)
 
 Local docs explorer workflow:
 

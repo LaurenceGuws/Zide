@@ -1,5 +1,13 @@
 # Terminal Rain Rendering Investigation (2026-03-08)
 
+Status note, 2026-03-15:
+
+- This file is historical investigation evidence.
+- `rain` is currently deferred from the active terminal validation matrix.
+- Do not treat this file as the current focus authority; use
+  `docs/AGENT_HANDOFF.md` and the active terminal docs for present-tense
+  priorities.
+
 ## Scope
 
 Investigate why `ascii-rain-git` shows intermittent "standing still" drops in some layouts. Initial assumption was "240Hz-only", but updated reproduction indicates the stronger trigger is large single-tile Hyprland layouts (also reproducible on 60Hz at 4k).
@@ -10,7 +18,7 @@ This note documents:
 - the most likely fault surfaces
 - concrete next validation steps
 
-This doc is the detailed source of truth for the current focus item.
+This doc records one concluded investigation lane and its evidence.
 
 ## Reproduction Baseline
 

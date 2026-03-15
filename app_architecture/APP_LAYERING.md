@@ -30,9 +30,9 @@ Status note, 2026-03-15:
 6) **UI Shell**
    - Window lifecycle, global input dispatch, layout + docking + theme.
 
-## Mode Layer Refocus (2026-03)
+## Mode Layers
 
-To support focused binaries with minimal coupling, mode orchestration is being split into three layers:
+Focused binaries and full IDE composition currently rely on three mode layers:
 
 1) **Shared public mode layer** (`src/app/modes/shared/`)
    - Host-agnostic contracts, action DTOs, and lifecycle interfaces.
@@ -81,19 +81,13 @@ To support focused binaries with minimal coupling, mode orchestration is being s
   - direct `src/editor/*` ownership dependencies
   - direct UI renderer/widget ownership dependencies
 
-Review/enforcement policy:
-- These constraints are mandatory during refactor slices even when not yet fully tool-enforced.
-- `zig build check-app-imports` now includes explicit mode-layer boundary checks for `src/app/modes/shared`, `backend`, and `ide`.
+Enforcement:
+- `zig build check-app-imports` includes explicit mode-layer boundary checks for `src/app/modes/shared`, `backend`, and `ide`.
 
-Execution authority for this split is tracked in:
+Historical rollout and validation for this split live in:
 - current boundary rules: this file
 - historical rollout record: `app_architecture/review/app_mode_layering_todo.yaml`
 - historical validation record: `app_architecture/review/app_mode_layering_validation.md`
-
-Regression policy for this split:
-- Run compatibility gates after every extraction slice (unit + import checks + mode smokes + terminal replay).
-- Do not proceed to the next layer slice when current-layer gates fail.
-- Keep extraction-only semantics until compatibility matrix is stable.
 
 ## Current Anchors
 - **Editor modularization plan**: `app_architecture/editor/MODULARIZATION_PLAN.md`.
