@@ -89,3 +89,10 @@ export type AppShell = {
   highlightDarkThemeEl: HTMLLinkElement;
   highlightLightThemeEl: HTMLLinkElement;
 };
+
+export type DocController = {
+  install: () => void;
+  renderTree: () => void;
+  renderCurrentDoc: () => Promise<void>;
+  rerenderDiagramsForTheme: () => Promise<void>;
+};

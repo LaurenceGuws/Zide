@@ -5,7 +5,7 @@ import {
   renderTreeFromState,
   updateTreeExpandedPaths,
 } from "../tree/tree_state.js";
-import type { AppShell, AppState } from "../shared/types.js";
+import type { AppShell, AppState, DocController } from "../shared/types.js";
 import type {
   HighlightJsApi,
   MarkedApi,
@@ -27,7 +27,7 @@ export function createDocController(args: {
   mermaid: MermaidApi;
   hljs?: HighlightJsApi;
   rootEl: HTMLElement;
-}) {
+}): DocController {
   const {
     state,
     shell,
