@@ -244,6 +244,12 @@ Baseline rules:
   - a pinned bridge object whose release invalidates all interior pointers.
 - Event drains return owned flat arrays plus explicit free.
 - Copied string/text exports return owned buffers plus explicit free.
+- External-transport outbound input/report traffic is drained through:
+  - `zide_terminal_pending_input_acquire(...)`
+  - `zide_terminal_pending_input_release(...)`
+  and should be treated as the coarse batching seam for host-owned PTY or
+  byte-stream transports, not as a per-keystroke micro-call surface when the
+  host can flush a burst of local input/report work together.
 - All exported acquired/output buffer structs now carry inline:
   - `abi_version`
   - `struct_size`
@@ -266,6 +272,19 @@ Reason:
 - full snapshots are slower but much easier to reason about
 - they are good enough for a smoke host and initial foreign bindings
 - damage-aware transport can layer on later without blocking the contract
+
+Current performance note:
+
+- `snapshot_acquire(...)` is still the main medium-term FFI performance
+  pressure point because it allocates and copies a full flat cell buffer on
+  every acquire
+- that does not make the current redesign wrong, but it does mean hosts must
+  stay disciplined:
+  - call it only after `redraw_state(...)` says newer content is pending
+  - do not use it as a speculative polling surface
+  - keep debug/UI convenience work outside the redraw hot path
+- future snapshot/diff work should be judged first by host call count,
+  allocation pressure, and contract clarity, not by ABI cleverness alone
 
 The snapshot should include at minimum:
 - rows/cols
@@ -360,6 +379,11 @@ Current bridge judgment:
   - host color-scheme reporting
 - the next bridge work should therefore favor ABI maturation and verifier
   hardening over widening the public semantic surface casually
+- near-term hot-path rule:
+  - `pending_input` is now the intended batched outbound seam for external
+    transport hosts
+  - `snapshot_acquire(...)` remains the main medium-term performance review
+    lane
 
 ## External Host Peer Review
 
@@ -400,12 +424,23 @@ Bridge follow-up after that peer review:
   - color-scheme reports
   - other writer-based host-to-app sequences
 
-Current remaining question:
+Current external-host result:
 
-- the downstream Flutter host should now re-validate whether the previous
-  `missing_pty` focus/color-scheme asymmetry is fully closed when it consumes
-  the new pending-input bridge surface instead of bypassing outbound traffic at
-  the transport layer
+- the downstream Flutter host has now re-validated the Flutter-owned PTY path
+  against the new pending-input bridge surface
+- the previous `missing_pty` focus/color-scheme asymmetry is closed there:
+  - focus reporting now works after `?1004h`
+  - color-scheme reporting now works after `?2031h`
+- coarse pending-input batching was natural and stable; the host did not need
+  per-keystroke drain tricks or a second widget/runtime model
+
+Current remaining difference:
+
+- bridge-owned PTY still owns backend child exit-code truth directly
+- Flutter-owned PTY still treats deterministic shutdown primarily through
+  `metadata.alive`
+- that is currently a transport-lifecycle difference, not a redraw/input/
+  viewport contract mismatch
 
 Interpretation:
 

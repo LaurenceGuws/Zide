@@ -37,11 +37,16 @@ Current judgment:
     "shared engine contract" bar
 - External peer review from the downstream Flutter host is now also positive:
   the same widget/runtime layer survived swapping bridge-owned PTY vs
-  Flutter-owned PTY transport; the remaining known asymmetry is transport-side
-  focus/color-scheme reporting on the Flutter-owned PTY path.
+  Flutter-owned PTY transport, and the old transport-side focus/color-scheme
+  reporting asymmetry is now closed through the pending-input bridge path.
 - Follow-up now landed on `main`: external transport can drain pending outbound
   host-input/report bytes through the bridge, so encoded input and host reports
   no longer need to be PTY-writer-only semantics.
+- Hot-path guidance should now be treated as part of the contract:
+  - `redraw_state(...)` gates snapshot work
+  - `pending_input_acquire(...)` is the outbound batching seam for external
+    transport
+  - `metadata_acquire(...)` is latest-state, not a per-frame polling habit
 
 ## TODO
 
@@ -59,7 +64,7 @@ Current judgment:
 ### FFI-02 Snapshot And Diff ABI
 
 - [-] `FFI-02-01` Design an FFI-safe terminal snapshot layout.
-  Notes: baseline full-snapshot ABI is documented and implemented; copied scrollback and text exports exist; remaining work is around further ABI maturation, not first delivery.
+  Notes: baseline full-snapshot ABI is documented and implemented; copied scrollback and text exports exist; remaining work is around further ABI maturation, not first delivery. This is now also the main medium-term performance pressure point on the FFI boundary, because full snapshot acquire still allocates and copies the flat cell buffer on every acquire.
 - [x] `FFI-02-02` Specify ownership rules for exported snapshot buffers.
 - [ ] `FFI-02-03` Define the optional damage/diff extension after baseline full snapshot works.
 - [-] `FFI-02-04` Define the published-vs-acknowledged generation contract for foreign hosts.
@@ -93,7 +98,13 @@ Current judgment:
 - The next useful check is no longer "can a second host use the bridge at
   all?" It is "does the same host contract stay easy and stable when PTY
   ownership changes?"
-- The next downstream check should re-run the Flutter-owned PTY transport path
-  against the new pending-input drain so the old focus/color-scheme asymmetry
-  is either closed or narrowed precisely.
+- Current downstream answer: yes, for redraw/snapshot/present, viewport
+  control, command input, and focus/color-scheme reporting.
+- The remaining transport-local difference to classify is child-exit-status
+  truth on Flutter-owned PTY transport versus bridge-owned PTY transport.
+- The next upstream performance lane should stay narrow:
+  - keep `pending_input` as the coarse outbound batch seam
+  - keep hosts disciplined around redraw-driven snapshot usage
+  - review snapshot/diff evolution as the next major boundary-cost question,
+    not as an excuse to widen the surface casually
 - The bridge remains beta-level and should not be treated as frozen.
