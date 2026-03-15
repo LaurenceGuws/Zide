@@ -14,6 +14,33 @@ Status note, 2026-03-15:
 - Use this file for present-tense import and ownership rules, not for replaying
   the old extraction narrative.
 
+## Layer Map
+
+```mermaid
+flowchart LR
+    Shell["UI Shell\nwindow, input, layout, theme"] --> Core["Core App Logic\nworkspace, tooling, config, session ownership"]
+    Core --> Editor["Text Engine / Editor Backend"]
+    Core --> Terminal["Terminal Backend / VT Engine"]
+    Shell --> EditorWidget["UI Editor Widget"]
+    Shell --> TerminalWidget["UI Terminal Widget"]
+    EditorWidget --> Editor
+    TerminalWidget --> Terminal
+    Renderer["Renderer / platform surface"] --- Shell
+```
+
+## Mode Composition
+
+```mermaid
+flowchart TD
+    Shared["src/app/modes/shared\ncontracts, DTOs, lifecycle interfaces"]
+    Backend["src/app/modes/backend\nterminal/editor mode implementations"]
+    Ide["src/app/modes/ide\nfull IDE composition and policy"]
+
+    Shared --> Backend
+    Shared --> Ide
+    Backend --> Ide
+```
+
 ## Target Components
 1) **Text Engine (Zig)**
    - Pure text model + edit operations + undo/redo + syntax hooks.
@@ -86,7 +113,7 @@ Enforcement:
 
 Historical rollout and validation for this split live in:
 - current boundary rules: this file
-- historical rollout record: `app_architecture/review/app_mode_layering_todo.yaml`
+- historical rollout record: `app_architecture/review/app_mode_layering_todo.md`
 - historical validation record: `app_architecture/review/app_mode_layering_validation.md`
 
 ## Current Anchors

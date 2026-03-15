@@ -2,6 +2,12 @@
 
 Date: 2026-03-10
 
+Status note, 2026-03-15:
+
+- This file is a historical review snapshot from the file-layout cleanup lane.
+- Most of the originally identified layout work is now complete.
+- Use this file as evidence and rationale, not as the current active queue.
+
 Scope: repository structure smell review with focus on:
 - large general folders that should become focused subdirectories
 - large files that should be split into smaller/focused modules

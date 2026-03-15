@@ -2,9 +2,9 @@
   "title": "Zide Docs Explorer",
   "icon": "/Zide/assets/icon/color_icon.png",
   "repoBasePath": "/Zide/",
-  "sourceUrlBase": "https://github.com/LaurenceGuws/Zide/blob/release/v0.1.0-beta.1/",
+  "repoUrl": "https://github.com/LaurenceGuws/Zide",
   "runtimeMode": "github-pages",
-  "defaultDoc": "docs/HOME.md",
+  "defaultDoc": "README.md",
   "theme": {
     "dark": {
       "accent": "#d47a45",

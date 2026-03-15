@@ -165,6 +165,6 @@ zig build test
 
 - Current focus and active issues live in
   [`docs/AGENT_HANDOFF.md`](/home/home/personal/zide/docs/AGENT_HANDOFF.md)
-  and the relevant `app_architecture/**/_todo.yaml` files.
+  and the relevant `app_architecture/*todo*.md` files.
 - UI rendering journey:
   [`app_architecture/ui/DEVELOPMENT_JOURNEY.md`](/home/home/personal/zide/app_architecture/ui/DEVELOPMENT_JOURNEY.md)

@@ -282,4 +282,4 @@ toward it in behavior-preserving slices.
 
 That work is tracked in:
 
-- `app_architecture/terminal/vt_core_rearchitecture_todo.yaml`
+- `app_architecture/terminal/vt_core_rearchitecture_todo.md`
