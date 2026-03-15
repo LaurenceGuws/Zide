@@ -15,6 +15,21 @@ Continue the post-rewrite split that makes the terminal core the architectural c
 
 The main invention phase is over. Active work is bug hunting, compatibility hardening, and native/FFI convergence on top of the rewritten architecture. The renderer-owned scene path is now the live direction, and the remaining terminal core work is about finishing boundary cleanup and publication ownership rather than reopening the old architecture.
 
+## Priority Now
+
+Highest-value remaining items:
+
+- `VTCORE-01` shrink `TerminalSession` further toward a true host/runtime wrapper
+- `VTCORE-02` keep the FFI boundary aligned with the stronger native contract
+- `VTCORE-06` keep input encoding transport-agnostic as the host/runtime split finishes
+
+Supporting cleanup:
+
+- `VTCORE-03` transport is already real; remaining work is cleanup and contract tightening
+- `VTCORE-04` main protocol/core relocation is already real; remaining work is session-owned residue
+- `VTCORE-05` renderer/publication architecture is already live; remaining work is hardening and keeping the contract honest
+- `VTCORE-07` remains a guardrail, not a separate invention lane
+
 ## TODO
 
 - [x] `VTCORE-00` Define the terminal core boundary.
@@ -39,4 +54,3 @@ The main invention phase is over. Active work is bug hunting, compatibility hard
 - [ ] Continue post-rewrite compatibility hardening on real workloads.
 - [ ] Keep recent-input publication mitigation and scene-target ownership aligned with the current Wayland/present plan.
 - [ ] Avoid reintroducing session-centered or default-framebuffer-centered assumptions.
-

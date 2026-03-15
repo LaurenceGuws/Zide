@@ -4,6 +4,15 @@
 
 Make editor and terminal text rendering competitive with modern terminals: crisp small sizes, correct blending, stable metrics, and explicit editor/terminal font-stack differences.
 
+Status note, 2026-03-15:
+
+- Most foundational font-rendering work is landed.
+- The live queue is now narrower:
+  - LCD/subpixel evaluation as an opt-in quality experiment
+  - keeping terminal special-glyph quality moving through its dedicated queue
+- This is still relevant, but no longer the broad primary execution lane it was
+  earlier in the rewrite.
+
 ## Constraints
 
 - Introduce repeatable visual or metric harnesses before large rendering changes.
@@ -54,4 +63,3 @@ Make editor and terminal text rendering competitive with modern terminals: crisp
     - [ ] Snapshot history from `tools/font_sample_lcd_snapshot.sh`
 - [x] `FR-V-01` Smoke terminal mode and default run
 - [x] `FR-V-02` Regression-check the font sample capture path
-

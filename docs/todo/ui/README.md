@@ -12,10 +12,15 @@ Use it for:
 
 Current high-signal entrypoints:
 
-- `renderer.md` — renderer boundary and modularization queue
-- `widget_modularization.md` — widget extraction/execution queue
-- `font_rendering.md` — font-rendering execution work
 - `terminal_special_glyphs.md` — sprite/special-glyph quality lane
+- `font_rendering.md` — remaining text-rendering quality work
+
+Maintenance or supporting queues:
+
+- `renderer.md` — mostly-complete renderer modularization with a small remaining maintenance tail
+- `widget_modularization.md` — mostly-complete extraction queue with a few remaining boundary/verification items
+- `sdl3_migration.md` — effectively closed except for small cleanup residue
+- `terminal_ligatures.md` — focused future quality lane, not active baseline hardening
 
 Durable UI architecture and rendering direction live under
 `app_architecture/ui/`.

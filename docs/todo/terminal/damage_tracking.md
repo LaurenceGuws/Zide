@@ -2,6 +2,15 @@
 
 This file tracks active damage/dirty follow-up work for the terminal pipeline.
 
+Status note, 2026-03-15:
+
+- This is no longer a broad incident queue for the main redraw rewrite.
+- The highest-value native bugs that originally motivated this file have largely
+  been closed on the rewritten path (`nvim`, `btop`, Codex scrollback, Zig
+  progress redraw, focused input latency).
+- Treat this file as a narrow cleanup/follow-up queue for publication ownership
+  and replay authority, not as the primary terminal work queue.
+
 It used to live under `app_architecture/terminal/rendering/` while the redraw
 incident work was still actively reshaping ownership. It now lives under
 `docs/todo/terminal/` because it is an active queue with supporting notes, not
@@ -86,17 +95,15 @@ ownership.
 - These should remain deliberate publication events, not incidental renderer
   policy.
 
-## Queue
+## Remaining Queue
 
 - [x] Add replay harness fixtures for `gping` and a minimal `nvim` overlay
   example (`gping_redraw`, `nvim_overlay`).
 - [x] Add replay harness fixture for `vttest` wraparound mode test
   (`vttest_wraparound`).
-- [ ] Add explicit assertions/tests that no stale rows remain after
-  clear-and-redraw cycles.
-- [ ] Consider a frame-based damage tracker and integrate with terminal widget
-  partial redraw.
-- [ ] Collapse damage/publication ownership into a smaller set of explicit
-  contracts (model dirty, published cache, presented ack).
-- [ ] Move dirty acknowledgement out of renderer-facing widget code and behind
-  a terminal publication boundary.
+- [ ] Keep replay/manual authority current for real clear-and-redraw regressions
+  that survive on the rewritten path.
+- [ ] Continue collapsing damage/publication ownership into a smaller set of
+  explicit contracts (model dirty, published cache, presented ack).
+- [ ] Remove any remaining renderer-facing dirty-retirement assumptions that are
+  still broader than the current publication contract requires.
