@@ -108,14 +108,8 @@ pub fn setColumnMode132(self: anytype, enabled: bool) void {
 }
 
 pub fn setColumnMode132Locked(self: anytype, enabled: bool) void {
-    if (self.core.column_mode_132 == enabled) return;
-    self.core.column_mode_132 = enabled;
+    if (!self.core.setColumnMode132(enabled)) return;
     if (!enabled) return;
-    self.core.primary.clear();
-    self.core.alt.clear();
-    self.core.primary.setCursor(0, 0);
-    self.core.alt.setCursor(0, 0);
-    _ = self.core.clear_generation.fetchAdd(1, .acq_rel);
     view_cache.updateViewCacheNoLockTagged(self, self.output_generation.load(.acquire), self.core.scrollbackOffset(), "session_config_column_mode_132");
 }
 

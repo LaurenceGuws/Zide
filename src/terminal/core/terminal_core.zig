@@ -215,6 +215,18 @@ pub const TerminalCore = struct {
         return true;
     }
 
+    pub fn setColumnMode132(self: *TerminalCore, enabled: bool) bool {
+        if (self.column_mode_132 == enabled) return false;
+        self.column_mode_132 = enabled;
+        if (!enabled) return true;
+        self.primary.clear();
+        self.alt.clear();
+        self.primary.setCursor(0, 0);
+        self.alt.setCursor(0, 0);
+        _ = self.clear_generation.fetchAdd(1, .acq_rel);
+        return true;
+    }
+
     pub fn takeOscClipboardCopy(
         self: *TerminalCore,
         allocator: std.mem.Allocator,
