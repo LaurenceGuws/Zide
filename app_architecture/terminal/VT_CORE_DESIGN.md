@@ -59,7 +59,8 @@ Status note, 2026-03-14:
   route through `TerminalCore` instead of raw history selection mutation from
   the selection helper path; resize/reflow now also restores or clears
   selection through `TerminalCore` instead of mutating raw history-selection
-  internals directly.
+  internals directly; full reset now also lives on `TerminalCore` instead of
+  open-coded core-field mutation in `terminal_core_reset.zig`.
 - Input encoding remains on the dedicated subsystem path: writer-agnostic
   encoder coverage exists at both the fake-writer level and the real
   PTY-backed `TerminalSession` writer boundary.

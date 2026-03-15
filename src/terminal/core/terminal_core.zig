@@ -260,6 +260,18 @@ pub const TerminalCore = struct {
         self.history.selection.selection = selection;
     }
 
+    pub fn resetState(self: *TerminalCore, owner: anytype) void {
+        self.resetParserState();
+        self.clearSavedCharsetState();
+        self.primary.resetState();
+        self.alt.resetState();
+        self.current_hyperlink_id = 0;
+        self.primary.clear();
+        self.alt.clear();
+        kitty_mod.clearKittyImages(owner);
+        _ = self.clear_generation.fetchAdd(1, .acq_rel);
+    }
+
     pub fn semanticPromptActive(self: *const TerminalCore) bool {
         return self.semantic_prompt.input_active or self.semantic_prompt.output_active;
     }
