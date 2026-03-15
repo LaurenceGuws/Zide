@@ -44,7 +44,8 @@ Binary size tracking:
 - `zig build mode-size-report`
 - `zig build mode-size-check`
 - or `tools/report_mode_binary_sizes.sh` after `zig build`
-- Baseline snapshot file: `docs/review/archive/mode_binary_size_baseline.md`
+- Historical size snapshots are no longer kept as first-class docs; rely on the
+  reporting commands and release/build history instead.
 
 ## Manual interactive compatibility smokes (run when explicitly requested)
 

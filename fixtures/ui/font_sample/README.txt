@@ -62,6 +62,8 @@ Artifacts are written to:
   zig-cache/font_sample_lcd/
 
 Initial LCD sweep note (2026-02-17):
+- Archived report artifacts now live under
+  `docs/review/archive/ui/font_sample_lcd_snapshots/2026-02-17/`.
 - Captured sizes 12/14/16/20 with `tools/font_sample_capture_lcd.sh`.
 - All LCD captures differ from default fixture captures (expected for this experiment path).
 
