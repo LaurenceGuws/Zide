@@ -444,3 +444,56 @@ Current non-goal:
 - do not implement either candidate yet
 - first keep the design authority honest enough that the eventual ABI cut is
   narrow and reviewable
+
+### Candidate A Contract Sketch
+
+If Candidate A becomes real, the smallest credible version should look like
+this conceptually:
+
+1. new acquire request struct
+   - `abi_version`
+   - `struct_size`
+   - `include_flags`
+2. successor acquire entrypoint
+   - `metadata_acquire_v2(handle, request, out_metadata_v2)`
+3. successor metadata result
+   - preserves the current hot scalar fields
+   - preserves one owned-result release model
+   - includes title/cwd only when requested
+
+Suggested inclusion flags:
+
+- `ZIDE_TERMINAL_METADATA_INCLUDE_TITLE`
+- `ZIDE_TERMINAL_METADATA_INCLUDE_CWD`
+- `ZIDE_TERMINAL_METADATA_INCLUDE_ALL_STRINGS`
+
+Default intended host usage:
+
+- hot latest-state polling path:
+  - request no string flags
+- title/cwd refresh path:
+  - request title/cwd only when the host actually needs them
+- broad one-shot inspection/debug path:
+  - request all strings explicitly
+
+Guardrails:
+
+- no flags for tiny scalar subsets; hot scalars remain one coherent block
+- no flags that mutate redraw/publication semantics
+- no host expectation that `metadata_acquire_v2(...)` belongs in the render
+  loop
+- release semantics should stay exactly as boring as the current acquire/release
+  model
+
+This keeps the design narrow:
+
+- one latest-state authority surface
+- one owned release model
+- one explicit opt-in for cold copied strings
+
+It does not create:
+
+- separate title and cwd getter APIs
+- per-field opt-in churn
+- another redraw gate
+- another event family

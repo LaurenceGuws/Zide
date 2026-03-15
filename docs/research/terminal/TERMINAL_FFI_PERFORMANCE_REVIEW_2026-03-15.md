@@ -198,6 +198,10 @@ The next bridge-performance lane should stay narrow:
 - define the hot-scalar vs cold-string maturity direction more explicitly
 - compare one coherent successor acquire shape against one narrower getter-based
   alternative and reject the weaker one before coding
+- if the coherent successor shape wins, keep it coarse:
+  - one request struct
+  - one owned result
+  - string inclusion flags only
 - keep the public loop discipline explicit
 - avoid widening the bridge until snapshot/diff direction is better defined
 
