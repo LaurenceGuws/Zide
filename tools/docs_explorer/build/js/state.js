@@ -26,6 +26,7 @@ export function createAppState() {
         tree: {
             filter: "",
             activePath: null,
+            expandedPaths: [],
         },
         sidebar: {
             width: preferredSidebarWidth(),
@@ -75,6 +76,9 @@ export function setTreeFilter(state, filter) {
 }
 export function setTreeActivePath(state, activePath) {
     state.tree.activePath = activePath;
+}
+export function setTreeExpandedPaths(state, expandedPaths) {
+    state.tree.expandedPaths = expandedPaths;
 }
 export function setOptionsMenuOpen(state, open) {
     state.optionsMenu.open = open;

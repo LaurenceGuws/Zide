@@ -25,7 +25,8 @@ export function setDocumentError(state, repoBasePath, path) {
     });
 }
 export function renderDocumentChrome(state, shell) {
-    shell.titleEl.textContent = state.document.title;
+    shell.titleEl.textContent = `Zide Docs Explorer - ${state.document.title}`;
     shell.subtitleEl.textContent = state.document.subtitle;
     shell.rawLinkEl.href = state.document.rawLink;
+    shell.sourceLinkEl.href = state.document.rawLink;
 }
