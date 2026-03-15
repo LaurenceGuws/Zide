@@ -363,7 +363,7 @@ Current `d=` delete variant surface (from `deleteKittyByAction`, default `a`):
 - Unknown/unsupported selectors: now treated as invalid (`EINVAL` error reply subject to quiet-mode suppression).
 
 Files:
-- `app_architecture/terminal/PROTOCOL_ACCURACY_PROGRESS.md`
+- `app_architecture/terminal/protocol/ACCURACY_PROGRESS.md`
 
 Verification:
 - Source-audit only (mapped to current code in `src/terminal/kitty/graphics.zig`)
@@ -1570,8 +1570,8 @@ Implemented (increment 8 / `PA-05a` metadata contract definition):
   pipeline work (`PA-05b` / `PA-05c`).
 
 Files:
-- `app_architecture/terminal/KEYBOARD_ALTERNATE_METADATA_CONTRACT.md`
-- `app_architecture/terminal/PROTOCOL_ACCURACY_PROGRESS.md`
+- `app_architecture/terminal/protocol/KEYBOARD_ALTERNATE_METADATA_CONTRACT.md`
+- `app_architecture/terminal/protocol/ACCURACY_PROGRESS.md`
 
 Implemented (increment 9 / `PA-05b` type-only metadata threading to input boundary):
 - Added `types.KeyboardAlternateMetadata` as the runtime carrier for the `PA-05a` contract fields (all optional, no behavior impact yet).
@@ -1607,7 +1607,7 @@ Implemented (increment 10 / `PA-05b` UI/key-encoder call-site metadata threading
 Files:
 - `src/terminal/input/key_encoder.zig`
 - `src/ui/widgets/terminal_widget_input.zig`
-- `app_architecture/terminal/PROTOCOL_ACCURACY_PROGRESS.md`
+- `app_architecture/terminal/protocol/ACCURACY_PROGRESS.md`
 
 Verification:
 - `zig test src/terminal_input_encoding_tests.zig`
@@ -1758,7 +1758,7 @@ Investigated feasibility/limits (research note, 2026-02-23):
 - Recorded the likely next step for higher-fidelity inference: explicit scancode+modifier translation via SDL keyboard APIs (wrapper work in `src/platform/sdl_api.zig`) plus platform/IME validation.
 
 Files:
-- `app_architecture/terminal/KEYBOARD_ALTERNATE_METADATA_CONTRACT.md`
+- `app_architecture/terminal/protocol/KEYBOARD_ALTERNATE_METADATA_CONTRACT.md`
 
 Implemented (increment 1 / `PA-05c` synthetic non-US metadata fixtures at encoder boundary):
 - Extended the encoder replay fixture schema with optional `encoder.alternate_meta` so fixtures can inject synthetic `KeyboardAlternateMetadata` into char encoding tests.
@@ -2334,7 +2334,7 @@ Files:
 - `fixtures/terminal/dcs_decrqss_sgr_query_reply.vt`
 - `fixtures/terminal/dcs_decrqss_sgr_query_reply.json`
 - `fixtures/terminal/dcs_decrqss_sgr_query_reply.golden`
-- `app_architecture/terminal/PROTOCOL_ACCURACY_PROGRESS.md`
+- `app_architecture/terminal/protocol/ACCURACY_PROGRESS.md`
 
 Verification:
 - `zig test src/terminal_protocol_reply_tests.zig -lc`
@@ -2355,7 +2355,7 @@ Files:
 - `fixtures/terminal/dcs_decrqss_decstbm_query_reply.vt`
 - `fixtures/terminal/dcs_decrqss_decstbm_query_reply.json`
 - `fixtures/terminal/dcs_decrqss_decstbm_query_reply.golden`
-- `app_architecture/terminal/PROTOCOL_ACCURACY_PROGRESS.md`
+- `app_architecture/terminal/protocol/ACCURACY_PROGRESS.md`
 
 Verification:
 - `zig test src/terminal_protocol_reply_tests.zig -lc`
@@ -2377,7 +2377,7 @@ Files:
 - `fixtures/terminal/dcs_decrqss_decslrm_query_reply.vt`
 - `fixtures/terminal/dcs_decrqss_decslrm_query_reply.json`
 - `fixtures/terminal/dcs_decrqss_decslrm_query_reply.golden`
-- `app_architecture/terminal/PROTOCOL_ACCURACY_PROGRESS.md`
+- `app_architecture/terminal/protocol/ACCURACY_PROGRESS.md`
 
 Verification:
 - `zig test src/terminal_protocol_reply_tests.zig -lc`
@@ -3687,7 +3687,7 @@ Files:
 - `fixtures/terminal/csi_window_ops_deferred_modes_no_reply.vt`
 - `fixtures/terminal/csi_window_ops_deferred_modes_no_reply.json`
 - `fixtures/terminal/csi_window_ops_deferred_modes_no_reply.golden`
-- `app_architecture/terminal/PROTOCOL_ACCURACY_PROGRESS.md`
+- `app_architecture/terminal/protocol/ACCURACY_PROGRESS.md`
 
 Verification:
 - `zig build test-terminal-replay -- --fixture csi_window_ops_deferred_modes_no_reply --update-goldens`
@@ -3711,7 +3711,7 @@ Files:
 - `fixtures/terminal/csi_tab_ctc_legacy_variants_deferred_noop.vt`
 - `fixtures/terminal/csi_tab_ctc_legacy_variants_deferred_noop.json`
 - `fixtures/terminal/csi_tab_ctc_legacy_variants_deferred_noop.golden`
-- `app_architecture/terminal/PROTOCOL_ACCURACY_PROGRESS.md`
+- `app_architecture/terminal/protocol/ACCURACY_PROGRESS.md`
 
 Verification:
 - `zig build test-terminal-replay -- --fixture csi_tab_ctc_legacy_variants_deferred_noop --update-goldens`
@@ -3734,7 +3734,7 @@ Files:
 - `fixtures/terminal/decstr_hidden_screen_soft_state_preserve_query_reply.vt`
 - `fixtures/terminal/decstr_hidden_screen_soft_state_preserve_query_reply.json`
 - `fixtures/terminal/decstr_hidden_screen_soft_state_preserve_query_reply.golden`
-- `app_architecture/terminal/PROTOCOL_ACCURACY_PROGRESS.md`
+- `app_architecture/terminal/protocol/ACCURACY_PROGRESS.md`
 
 Verification:
 - `zig build test-terminal-replay -- --fixture decstr_hidden_screen_soft_state_preserve_query_reply --update-goldens`
@@ -3751,7 +3751,7 @@ Implemented (increment 21 / `PA-08h` promoted-gap closure gate):
 Files:
 - `fixtures/terminal/decslrm_decstbm_su_margin_band_only.golden`
 - `fixtures/terminal/decslrm_decstbm_sd_margin_band_only.golden`
-- `app_architecture/terminal/PROTOCOL_ACCURACY_PROGRESS.md`
+- `app_architecture/terminal/protocol/ACCURACY_PROGRESS.md`
 
 Verification:
 - `zig build test-terminal-replay -- --all`
@@ -3847,7 +3847,7 @@ Verification:
 - Expanded `PA-05` alternate-key replay coverage (`report_text`, `embed_text`, key-path no-op) and fixed `embed_text` formatting drift in encoder test helper.
 - Expanded `PA-05` disambiguate+report-all action-field coverage to non-cursor function keys (`Enter`/`Tab`/`Backspace`/`Escape`/`Ins`/`Del`/`PgUp`/`PgDn`) with replay fixtures.
 - Deferred full layout-aware `PA-05` alternate-key parity pending input-model metadata; tracked as explicit follow-on sub-items instead of expanding heuristics.
-- Defined `PA-05a` input metadata contract for layout-aware alternate-key parity in `app_architecture/terminal/KEYBOARD_ALTERNATE_METADATA_CONTRACT.md`.
+- Defined `PA-05a` input metadata contract for layout-aware alternate-key parity in `app_architecture/terminal/protocol/KEYBOARD_ALTERNATE_METADATA_CONTRACT.md`.
 - Advanced `PA-08` to `partial` by implementing promoted CSI private mode gap `?1004` focus reporting (parser mode toggles + focus event emission + PTY/replay coverage).
 - Advanced `PA-08e` with `CHT`/`CBT` tab movement support and replay fixture coverage (`2I` / `2Z` tab-stop traversal).
 - Advanced `PA-08e` `?1004` focus reporting with dual event sources (window + terminal-pane) and separate Lua toggles for each source.

@@ -208,7 +208,7 @@ Each topic below defines:
 
 After all report targets exist, create:
 
-`app_architecture/terminal/WAYLAND_PRESENT_TECHNICAL_WRITEUP.md`
+`app_architecture/terminal/present/WAYLAND_TECHNICAL_WRITEUP.md`
 
 That writeup should:
 

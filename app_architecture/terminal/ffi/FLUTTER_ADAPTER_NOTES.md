@@ -64,8 +64,8 @@ not:
 ## Required Shared Contract
 
 The Flutter adapter should inherit the same authority split documented in:
-- `app_architecture/terminal/RENDER_PUBLICATION_CONTRACT.md`
-- `app_architecture/terminal/FFI_BRIDGE_DESIGN.md`
+- `app_architecture/terminal/rendering/RENDER_PUBLICATION_CONTRACT.md`
+- `app_architecture/terminal/ffi/BRIDGE_DESIGN.md`
 
 Required semantics:
 - published generation is backend publication truth

@@ -220,7 +220,7 @@ Some data can remain snapshot-derived instead of event-driven. The event invento
 
 The shared redraw/publication/present authority now lives in:
 
-- `app_architecture/terminal/RENDER_PUBLICATION_CONTRACT.md`
+- `app_architecture/terminal/rendering/RENDER_PUBLICATION_CONTRACT.md`
 
 This bridge document should stay bridge-specific. The contract split is now:
 
