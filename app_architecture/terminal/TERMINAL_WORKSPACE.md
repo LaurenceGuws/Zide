@@ -6,6 +6,18 @@ Purpose: define the backend-owned tab/workspace layer for terminal-only mode and
 
 Status: initial contract and implementation baseline.
 
+## Workspace Ownership Map
+
+```mermaid
+flowchart LR
+    Workspace[TerminalWorkspace] --> Tabs[tab ids + ordering]
+    Workspace --> Sessions[owned TerminalSession objects]
+    Sessions --> Session[TerminalSession]
+    Session --> Core[Terminal core / PTY / protocol]
+    Workspace --> Sync[workspace sync projections]
+    Sync --> UI[tab bar / host consumers]
+```
+
 ## Why this layer exists
 
 `TerminalSession` is the VT/session primitive. It should stay focused on:
@@ -50,6 +62,20 @@ That orchestration now lives in `src/terminal/core/workspace.zig` as `TerminalWo
 - `setCellSizeAll()` + `resizeAll()` -> workspace-wide geometry propagation.
 - `pollForFrame(active_input_index, policy)` -> workspace-owned resource-aware polling across tabs; returns `PollFrameResult` so runtime can consume published-generation advancement without doing its own pre/post workspace reads, while runtime still owns which `PollPolicy` to apply for that frame.
 
+## Workspace Session Lifecycle
+
+```mermaid
+stateDiagram-v2
+    [*] --> Created
+    Created --> Active
+    Active --> Background
+    Background --> Active
+    Active --> Closing
+    Background --> Closing
+    Closing --> Closed
+    Closed --> [*]
+```
+
 ## Invariants
 
 - Active index is always valid when tabs exist.
@@ -74,6 +100,16 @@ That orchestration now lives in `src/terminal/core/workspace.zig` as `TerminalWo
   - close active tab
   - next/previous tab
   - activate tab by index (1-9)
+
+## Focus and Selection Relationships
+
+```mermaid
+flowchart TD
+    Workspace[Workspace] --> ActiveTab[active tab id]
+    ActiveTab --> ActiveSession[active TerminalSession]
+    ActiveSession --> Viewport[visible viewport / snapshot]
+    Viewport --> Consumer[widget or host consumer]
+```
 
 ## Follow-on for FFI
 
