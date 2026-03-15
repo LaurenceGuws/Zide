@@ -2,17 +2,26 @@ import { setDocumentState } from "../state.js";
 import { escapeHtml, repoRelative } from "../shared/utils.js";
 import type { AppShell, AppState } from "../shared/types.js";
 
-export function setDocumentLoading(
+function setDocumentStatus(
   state: AppState,
   repoBasePath: string,
   path: string,
+  status: AppState["document"]["status"],
 ): void {
   setDocumentState(state, {
     title: path,
     subtitle: "",
     rawLink: repoRelative(repoBasePath, path),
-    status: "loading",
+    status,
   });
+}
+
+export function setDocumentLoading(
+  state: AppState,
+  repoBasePath: string,
+  path: string,
+): void {
+  setDocumentStatus(state, repoBasePath, path, "loading");
 }
 
 export function setDocumentReady(
@@ -20,12 +29,7 @@ export function setDocumentReady(
   repoBasePath: string,
   path: string,
 ): void {
-  setDocumentState(state, {
-    title: path,
-    subtitle: "",
-    rawLink: repoRelative(repoBasePath, path),
-    status: "ready",
-  });
+  setDocumentStatus(state, repoBasePath, path, "ready");
 }
 
 export function setDocumentError(
@@ -33,12 +37,7 @@ export function setDocumentError(
   repoBasePath: string,
   path: string,
 ): void {
-  setDocumentState(state, {
-    title: path,
-    subtitle: "",
-    rawLink: repoRelative(repoBasePath, path),
-    status: "error",
-  });
+  setDocumentStatus(state, repoBasePath, path, "error");
 }
 
 export function renderDocumentChrome(

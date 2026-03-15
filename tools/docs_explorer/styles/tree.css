@@ -8,7 +8,7 @@
 
 #search {
   width: 100%;
-  border: 1px solid var(--line);
+  border: 1px solid var(--control-border-strong);
   background: var(--control-surface);
   color: var(--ink);
   border-radius: 0;
@@ -61,12 +61,12 @@
 }
 
 .tree-folder > summary:hover {
-  background: color-mix(in srgb, var(--surface-hover) 58%, transparent 42%);
+  background: var(--tree-row-hover);
   border-color: var(--surface-border);
 }
 
 .tree-folder[open] > summary {
-  background: color-mix(in srgb, var(--surface-hi) 52%, transparent 48%);
+  background: var(--tree-row-open);
   border-color: var(--surface-border);
 }
 
@@ -78,7 +78,7 @@
   height: 10px;
   flex: 0 0 10px;
   opacity: 0.82;
-  color: color-mix(in srgb, var(--ink) 72%, var(--muted) 28%);
+  color: var(--tree-caret);
   transition:
     transform 120ms ease,
     color 120ms ease,
@@ -99,7 +99,7 @@
   min-height: 14px;
   flex: 0 0 14px;
   opacity: 0.86;
-  color: color-mix(in srgb, var(--ink) 68%, var(--muted) 32%);
+  color: var(--tree-icon);
   transition:
     color 120ms ease,
     opacity 120ms ease;
@@ -110,7 +110,7 @@
 .tree-folder[open] > summary .folder-caret,
 .tree-folder[open] > summary .folder-icon {
   opacity: 1;
-  color: var(--active-link);
+  color: var(--tree-icon-active);
 }
 
 .tree-folder > summary:hover .folder-label,
@@ -187,16 +187,12 @@
 
 .tree a:hover {
   border-color: var(--surface-border);
-  background: color-mix(in srgb, var(--surface-hover) 58%, transparent 42%);
+  background: var(--tree-row-hover);
 }
 
 .tree a.active {
   border-color: var(--tree-active);
-  background: linear-gradient(
-    90deg,
-    var(--viewer-callout-surface) 0%,
-    transparent 100%
-  );
+  background: var(--tree-link-active-bg);
   color: var(--active-link);
   border-left-color: var(--tree-active);
 }
