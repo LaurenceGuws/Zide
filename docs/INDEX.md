@@ -20,6 +20,7 @@ project landing page.
   - `docs/todo/repo_structure.md` — non-product repo structure cleanup (tests, tools, stale docs/tests).
   - `docs/todo/file_layout.md` — file/folder layout cleanup queue (split large folders/files, collapse low-value micro-files).
   - `docs/todo/terminal/vt_core_rearchitecture.md` — next terminal-core redesign lane: VT core, FFI-first boundary, and transport separation.
+  - `docs/todo/terminal/damage_tracking.md` — damage/dirty tracking follow-up for redraw correctness and publication ownership.
   - `docs/todo/editor/treesitter_dynamic_roadmap.md` — dynamic grammar-pack rollout queue and execution order.
   - `docs/todo/ui/renderer.md` — renderer modularization + OS abstraction.
   - `docs/todo/ui/widget_modularization.md` — UI widget modularization (TerminalWidget/UI splits).
@@ -44,7 +45,6 @@ project landing page.
 - `app_architecture/terminal/ffi/EVENT_ABI.md` — exported event buffer layout, payload semantics, and ownership rules.
 - `app_architecture/terminal/ffi/SNAPSHOT_ABI.md` — exported snapshot layout and ownership rules.
 - `app_architecture/terminal/ffi/PTY_ABI.md` — PTY/session ownership model for the bridge.
-- `app_architecture/terminal/rendering/DAMAGE_TRACKING.md` — terminal damage/dirty tracking design notes and invariants.
 - `app_architecture/DECISIONS.md` — decision log.
 - `app_architecture/ENGINEERING.md` — engineering guidelines (ownership, threading, FFI).
 

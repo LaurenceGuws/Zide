@@ -29,7 +29,7 @@
   "docs/review/archive/app_mode_layering_validation.md",
   "docs/review/archive/memory/2026-01-15.md",
   "app_architecture/terminal/ALT_SCREEN_REDESIGN.md",
-  "app_architecture/terminal/rendering/DAMAGE_TRACKING.md",
+  "docs/todo/terminal/damage_tracking.md",
   "app_architecture/terminal/DESIGN.md",
   "app_architecture/terminal/FEATURE_INVENTORY.md",
   "app_architecture/terminal/ffi/BRIDGE_DESIGN.md",
