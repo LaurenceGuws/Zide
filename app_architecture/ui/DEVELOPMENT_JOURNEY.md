@@ -5,9 +5,10 @@ Goal
 - Treat reference repos as canonical. We only diverge when required by Zide's code or to exceed the reference quality.
 
 Status (2026-01-29)
-- New focus (2026-03-07): UI-thread/backend decoupling and compute offload.
-  - plan: `docs/review/PERFORMANCE_REVIEW_1.md`
-  - task tracker: `docs/todo/ui/widget_modularization.md` (Phase 5)
+- Current emphasis (2026-03-07): UI-thread/backend decoupling and compute
+  offload.
+  - performance review context: `docs/review/PERFORMANCE_REVIEW_1.md`
+  - active execution queue: `docs/todo/ui/widget_modularization.md` (Phase 5)
 - SDL3 window/input + OpenGL 3.3 renderer is now the active stack on Linux.
 - Raylib has been removed from the build path; PNG decoding is handled via stb_image.
 - Fixed texture UV orientation: CPU textures use top-left UVs; FBO blits flip Y at draw time.
@@ -25,12 +26,24 @@ Status (2026-01-29)
 - Kitty image/placement view lists are built and sorted on the parse thread; renderer reuses the cached lists per frame.
 - Selection highlight spans are cached alongside the view snapshot to avoid per-frame selection range scans.
 - Kitty image uploads are now queued and uploaded in a per-frame budget to avoid large render-thread spikes.
-- Renderer modularization + OS abstraction work is tracked in `docs/todo/ui/renderer.md` (now boundary-focused, extraction complete).
-- UI widget modularization (splitting large widgets like TerminalWidget UI-side) is tracked in `docs/todo/ui/widget_modularization.md`.
+- Renderer modularization + OS abstraction execution lives in
+  `docs/todo/ui/renderer.md` (now boundary-focused, extraction complete).
+- UI widget modularization (splitting large widgets like TerminalWidget
+  UI-side) lives in `docs/todo/ui/widget_modularization.md`.
 - SDL3 migration: SDL3-only build path; SDL2 fallback removed.
 - SDL3 terminal-only input now flows on Wayland when polling events on the main thread.
 - SDL3 input diagnostics log event counts, struct layout offsets, and text payload pointer addresses to validate event parsing.
-- Renderer cleanup continues: input constants, clipboard helpers, texture utilities, window event helpers, text input rect handling, timing helpers, input event helpers, SDL window/GL context init, input state helpers, mouse state helpers, window metrics helpers, input queue helpers, UI scale helpers, render target helpers, text draw helpers, GL resource helpers, draw batch helpers, target draw helpers, key state helpers, shape helpers, shape draw helpers, terminal glyph helpers, clipboard buffer helpers, terminal underline helpers, mouse button helpers, texture draw helpers, text composition helpers, window flag helpers, mouse wheel helpers, input logging helpers, window metrics state, and key queue helpers extracted into renderer/platform modules (see renderer_todo).
+- Recent renderer cleanup extracted input constants, clipboard helpers, texture
+  utilities, window event helpers, text input rect handling, timing helpers,
+  input event helpers, SDL window/GL context init, input state helpers, mouse
+  state helpers, window metrics helpers, input queue helpers, UI scale
+  helpers, render target helpers, text draw helpers, GL resource helpers, draw
+  batch helpers, target draw helpers, key state helpers, shape helpers, shape
+  draw helpers, terminal glyph helpers, clipboard buffer helpers, terminal
+  underline helpers, mouse button helpers, texture draw helpers, text
+  composition helpers, window flag helpers, mouse wheel helpers, input logging
+  helpers, window metrics state, and key queue helpers into renderer/platform
+  modules. See `docs/todo/ui/renderer.md` for the remaining queue.
 
 Canonical references (do not diverge without a documented reason)
 - kitty: OpenGL renderer, glyph atlas, render loop discipline.

@@ -28,7 +28,7 @@ flowchart LR
     Widget --> Renderer[Renderer]
 ```
 
-## Roadmap docs (source of truth)
+## Execution Queues
 
 - `docs/todo/editor/widget.md` (end-to-end widget + features)
 - `docs/todo/editor/protocol.md` (text engine + editing semantics)
@@ -37,7 +37,7 @@ flowchart LR
 - `docs/todo/editor/treesitter.md` (tree-sitter query + highlight integration)
 - `docs/todo/editor/treesitter_dynamic_roadmap.md` (dynamic grammar packs: fetch/compile/load)
 
-## Decisions
+## Decision Log
 
 2026-01-21
 - Adopt terminal-style workflow for editor work: add explicit todo lists with
@@ -52,6 +52,6 @@ flowchart LR
   `app_architecture/editor/text_model_rope.md`).
 
 2026-01-24
-- Focus shifted to tree-sitter highlight integration planning based on Neovim's
-  query/highlighter pipeline. Tasks tracked in
+- Tree-sitter highlight integration follows Neovim's query/highlighter
+  pipeline. Active execution lives in
   `docs/todo/editor/treesitter.md`.

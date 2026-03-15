@@ -68,4 +68,4 @@ Sources:
 - Legacy/octal supplemental ranges from this matrix: `not_started`
 
 Status source:
-- Execution plan and task states: `docs/todo/ui/terminal_special_glyphs.md`
+- Active execution queue: `docs/todo/ui/terminal_special_glyphs.md`
