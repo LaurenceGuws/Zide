@@ -3,15 +3,7 @@ const input_modes = @import("input_modes.zig");
 const view_cache = @import("view_cache.zig");
 
 pub fn setDefaultColorsLocked(self: anytype, fg: types.Color, bg: types.Color) void {
-    const old_attrs = self.core.primary.default_attrs;
-    var new_attrs = types.defaultCell().attrs;
-    new_attrs.fg = fg;
-    new_attrs.bg = bg;
-    new_attrs.underline_color = fg;
-
-    self.core.primary.updateDefaultColors(old_attrs, new_attrs);
-    self.core.alt.updateDefaultColors(old_attrs, new_attrs);
-    self.core.history.updateDefaultColors(old_attrs.fg, old_attrs.bg, new_attrs.fg, new_attrs.bg);
+    self.core.setDefaultColors(fg, bg);
     view_cache.updateViewCacheNoLockTagged(self, self.output_generation.load(.acquire), self.core.scrollbackOffset(), "session_config_default_colors");
 }
 
@@ -22,10 +14,7 @@ pub fn setDefaultColors(self: anytype, fg: types.Color, bg: types.Color) void {
 }
 
 fn setAnsiColorsLocked(self: anytype, colors: [16]types.Color) void {
-    for (0..16) |i| {
-        self.core.palette_default[i] = colors[i];
-        self.core.palette_current[i] = colors[i];
-    }
+    self.core.setAnsiColors(colors);
     view_cache.updateViewCacheNoLockTagged(self, self.output_generation.load(.acquire), self.core.scrollbackOffset(), "session_config_ansi_colors");
 }
 
@@ -36,9 +25,7 @@ pub fn setAnsiColors(self: anytype, colors: [16]types.Color) void {
 }
 
 fn remapAnsiColorsLocked(self: anytype, old_colors: [16]types.Color, new_colors: [16]types.Color) void {
-    self.core.primary.updateAnsiColors(old_colors, new_colors);
-    self.core.alt.updateAnsiColors(old_colors, new_colors);
-    self.core.history.updateAnsiColors(old_colors, new_colors);
+    self.core.remapAnsiColors(old_colors, new_colors);
     view_cache.updateViewCacheNoLockTagged(self, self.output_generation.load(.acquire), self.core.scrollbackOffset(), "session_config_remap_ansi");
 }
 

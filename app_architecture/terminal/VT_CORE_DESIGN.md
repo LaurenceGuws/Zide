@@ -40,7 +40,9 @@ Status note, 2026-03-14:
   access; config-driven view-cache publication paths now also consume
   `TerminalCore` scrollback accessors instead of reaching into history
   directly; column-mode reset/clear-generation behavior now also routes through
-  a core-owned mutator instead of session-side field choreography.
+  a core-owned mutator instead of session-side field choreography; default-color
+  and ANSI remap behavior now also route through core-owned mutators instead of
+  direct screen/history/palette mutation from `session_config`.
 - Input encoding remains on the dedicated subsystem path: writer-agnostic
   encoder coverage exists at both the fake-writer level and the real
   PTY-backed `TerminalSession` writer boundary.
