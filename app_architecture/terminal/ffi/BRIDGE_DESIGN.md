@@ -446,6 +446,9 @@ Current external-host result now includes lifecycle convergence too:
   through `zide_terminal_report_child_exit(...)`
 - metadata, `child_exit_status(...)`, and queued `child_exit` events now share
   the same authoritative lifecycle outcome across both transport modes
+- the downstream re-check against upstream `f9bb94a` was clean; no widget/runtime
+  fork was required and the change stayed transport-local plus a thin
+  FFI/runtime binding
 - the remaining differences are transport-lifecycle mechanics only:
   - who owns process startup
   - who owns stdout/stderr forwarding

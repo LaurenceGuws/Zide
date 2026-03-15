@@ -107,6 +107,9 @@ Current judgment:
 - Child-exit-status truth is now part of the shared external-host contract too;
   the remaining PTY ownership differences are transport-lifecycle mechanics,
   not terminal redraw/input/viewport or lifecycle-state asymmetry.
+- Latest downstream answer: the child-exit re-check against upstream `f9bb94a`
+  was clean and the Flutter-owned PTY path kept the same shared widget/runtime
+  layer with only transport-local changes.
 - The next upstream performance lane should stay narrow:
   - keep `pending_input` as the coarse outbound batch seam
   - keep hosts disciplined around redraw-driven snapshot usage
