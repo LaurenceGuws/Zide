@@ -48,7 +48,9 @@ Status note, 2026-03-14:
   direct screen/history/palette mutation from `session_config`; the remaining
   palette snapshot/reset and dynamic-color update helpers in `session_config`
   now also delegate through `TerminalCore` instead of raw palette/default-color
-  field choreography.
+  field choreography; save/restore cursor plus saved-charset state now also
+  live on `TerminalCore` instead of session-style helper choreography in
+  `state_reset.zig`.
 - Input encoding remains on the dedicated subsystem path: writer-agnostic
   encoder coverage exists at both the fake-writer level and the real
   PTY-backed `TerminalSession` writer boundary.

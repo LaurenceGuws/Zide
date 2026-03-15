@@ -249,6 +249,26 @@ pub const TerminalCore = struct {
         return true;
     }
 
+    pub fn saveCursorState(self: *TerminalCore) void {
+        self.activeScreen().saveCursor();
+        self.saved_charset = .{
+            .active = true,
+            .g0 = self.parser.g0_charset,
+            .g1 = self.parser.g1_charset,
+            .gl = self.parser.gl_charset,
+            .target = self.parser.charset_target,
+        };
+    }
+
+    pub fn restoreCursorState(self: *TerminalCore) void {
+        self.activeScreen().restoreCursor();
+        if (!self.saved_charset.active) return;
+        self.parser.g0_charset = self.saved_charset.g0;
+        self.parser.g1_charset = self.saved_charset.g1;
+        self.parser.gl_charset = self.saved_charset.gl;
+        self.parser.charset_target = self.saved_charset.target;
+    }
+
     pub fn setColumnMode132(self: *TerminalCore, enabled: bool) bool {
         if (self.column_mode_132 == enabled) return false;
         self.column_mode_132 = enabled;
