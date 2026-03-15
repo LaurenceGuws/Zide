@@ -16,9 +16,9 @@ Normal build flow now uses Zig package-managed dependencies for:
 - FreeType
 - HarfBuzz
 
-That means Linux and macOS no longer need the old full "install SDL3,
-FreeType, HarfBuzz, and Lua from the system package manager first" workflow in
-normal flow.
+That means Linux and macOS no longer use the old "install SDL3, Lua,
+FreeType, HarfBuzz, and tree-sitter from the system package manager first"
+workflow as the normal path.
 
 You still need platform/system libraries and native runtime support:
 
@@ -33,6 +33,9 @@ uses vcpkg. See [`docs/DEPENDENCIES.md`](/home/home/personal/zide/docs/DEPENDENC
 ## System Dependencies
 
 ### Linux
+
+Linux package-manager installation is now mostly about platform/runtime support,
+not primary app-library sourcing.
 
 Arch example:
 
@@ -90,6 +93,10 @@ Windows:
 
 Tree-sitter (runtime + Zig parser) and `stb_image` are vendored. Grammar packs
 are handled separately via `zig build grammar-update`.
+
+The main app-library stack is not vendored and not expected to come from the
+system package manager in normal Linux/macOS flow; it is pinned in the Zig
+package graph.
 
 ## Build
 
