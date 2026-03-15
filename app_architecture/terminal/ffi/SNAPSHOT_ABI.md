@@ -6,6 +6,16 @@ Purpose: define the first exported terminal snapshot contract for foreign hosts.
 
 Status: milestone-1 baseline. This document describes the snapshot shape currently implemented by `src/terminal/ffi/bridge.zig`.
 
+Current maturity note:
+
+- milestone-1 ABI is unchanged
+- current full-copy snapshots remain the implemented baseline
+- the next likely performance/maturity step is not "make snapshots cleverer at
+  any cost"
+- it is to separate hot latest-state scalars from cold copied strings more
+  deliberately, without forcing hosts to stitch terminal truth together from a
+  pile of tiny calls
+
 ## Goals
 
 - Give foreign hosts a simple, explicit, render-friendly snapshot.
@@ -247,3 +257,43 @@ After the baseline copy-based path is proven, consider:
 - kitty image metadata export if a real host needs it
 
 These are extensions, not prerequisites for the first bridge.
+
+## Current Maturity Direction
+
+The current bridge now has enough real-host validation that the next snapshot
+review can stay narrow and explicit.
+
+Current behavior:
+
+- `snapshot_acquire(...)` copies the flat cell buffer and also duplicates title
+  and cwd every time
+- `metadata_acquire(...)` duplicates title and cwd every time even when the
+  host mainly needs hot scalar latest-state such as:
+  - `scrollback_count`
+  - `scrollback_offset`
+  - `alive`
+  - `exit_code`
+
+What should not happen next:
+
+- do not add per-row or per-cell convenience queries
+- do not split latest-state into many tiny getters that force host-side truth
+  reconstruction
+- do not widen the snapshot ABI just because native can reach internal fields
+  more directly
+
+What the next ABI-maturity step should optimize for instead:
+
+1. keep `redraw_state(...) -> snapshot_acquire(...) -> present_ack(...)` as the
+   authoritative render loop
+2. keep `metadata_acquire(...)` as the authoritative latest-state summary
+3. reduce avoidable cold-string copy pressure where possible
+4. preserve one coherent latest-state surface instead of encouraging stitched
+   host usage
+
+So the live direction is:
+
+- hot scalars should become cheaper to read
+- cold copied strings should remain explicit and honest
+- the bridge should only change shape if that lowers host call count or
+  allocation pressure without weakening authority

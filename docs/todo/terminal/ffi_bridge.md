@@ -53,6 +53,7 @@ Current judgment:
   - `metadata_acquire(...)` is latest-state, not a per-frame polling habit
 - The current performance checkpoint for that lane now lives in:
   - `docs/research/terminal/TERMINAL_FFI_PERFORMANCE_REVIEW_2026-03-15.md`
+  - `app_architecture/terminal/ffi/SNAPSHOT_ABI.md`
 
 ## TODO
 
@@ -70,7 +71,7 @@ Current judgment:
 ### FFI-02 Snapshot And Diff ABI
 
 - [-] `FFI-02-01` Design an FFI-safe terminal snapshot layout.
-  Notes: baseline full-snapshot ABI is documented and implemented; copied scrollback and text exports exist; remaining work is around further ABI maturation, not first delivery. This is now also the main medium-term performance pressure point on the FFI boundary, because full snapshot acquire still allocates and copies the flat cell buffer on every acquire.
+  Notes: baseline full-snapshot ABI is documented and implemented; copied scrollback and text exports exist; remaining work is around further ABI maturation, not first delivery. This is now also the main medium-term performance pressure point on the FFI boundary, because full snapshot acquire still allocates and copies the flat cell buffer on every acquire. The next maturity step should stay narrow: clarify how to make hot scalar latest-state cheaper without exploding the bridge into stitched tiny getters or widening diff ABI prematurely.
 - [x] `FFI-02-02` Specify ownership rules for exported snapshot buffers.
 - [ ] `FFI-02-03` Define the optional damage/diff extension after baseline full snapshot works.
 - [-] `FFI-02-04` Define the published-vs-acknowledged generation contract for foreign hosts.

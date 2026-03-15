@@ -11,6 +11,9 @@ Current host-boundary performance checkpoint:
 - `docs/research/terminal/TERMINAL_FFI_PERFORMANCE_REVIEW_2026-03-15.md`
   records the current allocation/copy judgment for snapshot, metadata,
   redraw/present, and pending-input batching.
+- `app_architecture/terminal/ffi/SNAPSHOT_ABI.md` now also records the current
+  hot-scalar vs cold-string maturity direction for snapshot/metadata
+  evolution.
 
 ## Why this exists
 
@@ -291,9 +294,13 @@ Current performance note:
   - keep debug/UI convenience work outside the redraw hot path
 - future snapshot/diff work should be judged first by host call count,
   allocation pressure, and contract clarity, not by ABI cleverness alone
+- the next likely ABI-maturity step is not broad diff expansion by default; it
+  is to make hot scalar latest-state cheaper without forcing hosts to stitch
+  terminal truth from many tiny calls
 - the current hot-path rules and next-step constraints for that lane are
   recorded in:
   - `docs/research/terminal/TERMINAL_FFI_PERFORMANCE_REVIEW_2026-03-15.md`
+  - `app_architecture/terminal/ffi/SNAPSHOT_ABI.md`
 
 The snapshot should include at minimum:
 - rows/cols

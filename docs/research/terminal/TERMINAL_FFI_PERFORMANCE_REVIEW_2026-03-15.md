@@ -72,6 +72,8 @@ Implication:
   polling
 - any future split between hot scalars and cold strings should be treated as an
   ABI-maturity step, not an excuse to widen the public surface casually
+- the target should be "cheaper hot latest-state without stitched truth", not
+  "many small convenience getters"
 
 ### 3. Redraw/Present Contract Is Still The Right Host Loop
 
@@ -153,6 +155,7 @@ Implication:
 The next bridge-performance lane should stay narrow:
 
 - review snapshot transport shape
+- define the hot-scalar vs cold-string maturity direction more explicitly
 - keep the public loop discipline explicit
 - avoid widening the bridge until snapshot/diff direction is better defined
 
