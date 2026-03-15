@@ -10,6 +10,7 @@ Current maturity note:
 
 - milestone-1 still uses full-copy cells as the implemented baseline
 - snapshot acquire is now request-based for cold copied strings
+- metadata acquire is now also request-based for cold copied strings
 - the next likely performance/maturity step is not "make snapshots cleverer at
   any cost"
 - it is to separate hot latest-state scalars from cold copied strings more
@@ -34,6 +35,13 @@ That means:
 - the host must call `zide_terminal_snapshot_release()` exactly once per acquired snapshot
 
 This is slower than a zero-copy design, but it is much safer for the first bridge.
+
+Current hot-path reading:
+
+- `snapshot_acquire(...)` still always copies the flat cell buffer
+- `snapshot_acquire(...)` only copies title/cwd when requested
+- `metadata_acquire(...)` always fills hot scalar latest-state and only copies
+  title/cwd when requested
 
 ## Exported types
 
@@ -269,12 +277,13 @@ Current behavior:
 - `snapshot_acquire(...)` copies the flat cell buffer every time
 - `snapshot_acquire(...)` duplicates title/cwd only when the request include
   flags ask for them
-- `metadata_acquire(...)` duplicates title and cwd every time even when the
-  host mainly needs hot scalar latest-state such as:
+- `metadata_acquire(...)` always fills hot scalar latest-state such as:
   - `scrollback_count`
   - `scrollback_offset`
   - `alive`
   - `exit_code`
+- `metadata_acquire(...)` duplicates title/cwd only when the request include
+  flags ask for them
 
 What should not happen next:
 
@@ -378,9 +387,9 @@ The important design constraint is:
 - cheaper hot-state reads should come from a controlled successor shape, not
   from accidental getter proliferation
 
-### Candidate Successor Shapes
+### Historical Candidate Successor Shapes
 
-Before any ABI change, the current candidates should be judged explicitly.
+Before the request-based metadata cut landed, the two main candidates were:
 
 #### Candidate A: Metadata Acquire V2 With Inclusion Flags
 

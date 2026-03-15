@@ -76,6 +76,14 @@ boundary-cost risk is concentrated:
 4. `pending_input_acquire(...)` is now the correct outbound batching seam for
    external transport and its avoidable extra copy has already been removed.
 
+Downstream validation now supports that judgment too:
+
+- Flutty adopted the request-based metadata shape cleanly
+- Flutty adopted the request-based snapshot shape cleanly
+- viewport-pinned snapshots now change visible snapshot content correctly on
+  current `main`
+- no widget/runtime fork or host-side workaround was needed for those cuts
+
 ## Hot-Path Findings
 
 ### 1. Snapshot Acquire Is The Main Remaining Boundary Cost
@@ -220,6 +228,13 @@ This means:
 - no rushed diff ABI yet
 - no callback expansion
 - no convenience surfaces that make hosts chattier
+
+The implied execution order is:
+
+1. keep the current request-based metadata and snapshot shapes stable
+2. treat full copied snapshot cells as the main remaining boundary-cost target
+3. only widen the ABI again if a successor shape lowers cost without raising
+   host call count or weakening authority
 
 ## Current Conclusion
 

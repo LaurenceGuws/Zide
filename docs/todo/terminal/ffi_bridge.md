@@ -18,7 +18,17 @@ Define an embeddable terminal backend surface with stable FFI-oriented contracts
 
 ## Status
 
-The baseline bridge is real and product-shaped: design docs, event ABI, snapshot ABI, non-PTY smoke coverage, Python ctypes smoke, and a dedicated PTY-backed verifier all exist. The remaining work is on boundary cleanup and maturing the ABI without broadening scope into renderer export.
+The baseline bridge is real and product-shaped:
+
+- design docs exist
+- event ABI exists
+- snapshot ABI exists
+- non-PTY smoke coverage exists
+- Python `ctypes` smoke exists
+- a dedicated PTY-backed verifier exists
+
+The remaining work is on boundary cleanup and ABI maturity, not on widening the
+scope into renderer export.
 
 Current judgment:
 
@@ -39,13 +49,16 @@ Current judgment:
   the same widget/runtime layer survived swapping bridge-owned PTY vs
   Flutter-owned PTY transport, and the old transport-side focus/color-scheme
   reporting asymmetry is now closed through the pending-input bridge path.
-- Follow-up now landed on `main`: external transport can drain pending outbound
-  host-input/report bytes through the bridge, so encoded input and host reports
-  no longer need to be PTY-writer-only semantics.
-- Follow-up now also landed for lifecycle truth: external transport can report
-  child exit status back into the shared bridge contract, so `metadata`,
-  `child_exit_status(...)`, and queued `child_exit` events no longer require a
-  bridge-owned PTY to stay authoritative.
+- Follow-up now landed on `main`:
+  - external transport can drain pending outbound host-input/report bytes
+    through the bridge
+  - encoded input and host reports no longer need to be PTY-writer-only
+    semantics
+- Follow-up now also landed for lifecycle truth:
+  - external transport can report child exit status back into the shared
+    bridge contract
+  - `metadata`, `child_exit_status(...)`, and queued `child_exit` events no
+    longer require a bridge-owned PTY to stay authoritative
 - Hot-path guidance should now be treated as part of the contract:
   - `redraw_state(...)` gates snapshot work
   - `pending_input_acquire(...)` is the outbound batching seam for external
@@ -133,6 +146,10 @@ Current judgment:
   - viewport pinning now changes visible snapshot content on current `main`
   - no runtime/controller/widget fork was needed
   - no local workaround logic was required
+- Current outcome:
+  - no equally obvious missing host-facing semantic remains
+  - the stronger next lane is still ABI/perf maturity, especially snapshot
+    cell-buffer cost
 - The next upstream performance lane should stay narrow:
   - keep `pending_input` as the coarse outbound batch seam
   - keep hosts disciplined around redraw-driven snapshot usage
