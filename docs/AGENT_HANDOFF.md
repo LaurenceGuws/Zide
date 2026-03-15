@@ -7,7 +7,7 @@ not a progress log and should stay brief.
 
 - Primary active product lane: post-rewrite terminal cleanup/restructure on Linux native, with quality hardening continuing only where it changes architecture or closes real host-contract gaps.
 - Quality bar: native terminal behavior should land in the same band as `kitty` / `ghostty` for correctness, smoothness, compatibility, and steady-state cost.
-- Native GUI remains the proving ground for the engine contract. Keep native honest first, then bring the FFI/embedded path up to the same redraw/publication/present semantics.
+- Native GUI remains the proving ground and reference host for the engine contract. Keep native honest first, but do not let it become a privileged semantic path; FFI/embedded hosts should converge on the same redraw/publication/present and viewport/input contract.
 
 ### Current Direction
 

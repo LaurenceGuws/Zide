@@ -10,6 +10,8 @@ Continue the post-rewrite split that makes the terminal core the architectural c
 - Keep the terminal core renderer-agnostic.
 - Keep FFI aligned to the core boundary, not to desktop-only session structure.
 - Prefer clean ownership cuts over compatibility sludge.
+- Treat the native GUI as the reference host for the engine contract, not as a
+  privileged terminal path with different semantics from FFI.
 
 ## Current Direction
 
@@ -20,9 +22,9 @@ The main invention phase is over. The bug-hunting-heavy phase did the work it ne
 Highest-value remaining items, ranked against the current `libghostty-vt` comparison:
 
 1. `VTCORE-01` shrink `TerminalSession` further toward a true host/runtime wrapper
-   Why: this is still the biggest structural gap between Zide and a cleaner engine-first boundary like `libghostty-vt`.
+   Why: this is still the biggest structural gap between Zide and a cleaner engine-first boundary like `libghostty-vt`, and it is the main thing that keeps the native host from reading as "just the best reference host" instead of "the place where terminal ownership still lives."
 2. `VTCORE-02` keep the FFI boundary aligned with the stronger native contract
-   Why: embeddability is already real, so the remaining work is keeping the public engine boundary honest instead of letting native-only assumptions creep back in.
+   Why: embeddability is already real, so the remaining work is keeping the public engine boundary honest instead of letting native-only assumptions creep back in. Native should prove the contract, not define a different one.
 3. `VTCORE-06` keep input encoding transport-agnostic as the host/runtime split finishes
    Why: Ghostty’s encoder remains a strong reference for a peer subsystem that consumes terminal state without becoming session-owned glue.
 
@@ -39,8 +41,16 @@ Supporting cleanup:
   Notes: the concrete boundary and target types now live in `app_architecture/terminal/VT_CORE_DESIGN.md`.
 - [ ] `VTCORE-01` Separate VT core from host session/runtime.
   Notes: `TerminalCore`, `session_runtime`, debug helpers, render/query/runtime splits, and several root-session delegations are already landed; the remaining work is shrinking `TerminalSession` into a thinner host wrapper. Latest slices: input-mode snapshot state now lives in `src/terminal/core/session_input_snapshot.zig`, presentation-feedback structs now live in `src/terminal/core/session_presentation_feedback.zig`, session init options now live in `src/terminal/core/session_init_options.zig`, host-query structs now live in `src/terminal/core/session_host_types.zig`, the remaining session-facing public type aliases now live in `src/terminal/core/session_public_types.zig`, the scrollback/viewport content wrapper now lives behind `src/terminal/core/session_content_api.zig`, and the selection wrapper is now aliased directly from `src/terminal/core/session_selection.zig` instead of being hand-written inline on the root facade. This remains the top restructure item because `TerminalSession` is still the main center-of-gravity gap versus the cleaner `libghostty-vt` style engine boundary documented in `docs/review/TERMINAL_CORE_ARCHITECTURE_REVIEW_2026-03-10.md`.
+  Done when:
+  - `TerminalSession` reads primarily as host/runtime assembly plus narrow host conveniences, not as the place where terminal semantics still live.
+  - coherent public method clusters are either owned by `TerminalCore` or forwarded through focused `session_*` boundary modules instead of being hand-written across the root facade.
+  - native host code no longer relies on privileged deep-core access patterns that an equivalent FFI host cannot reach through the intended engine contract.
 - [ ] `VTCORE-02` Make FFI a first-class core interface.
   Notes: shared FFI state plus `host_api` and `core_api` splits are landed; remaining work is maturity and convergence, not proving the shape. Recent slices closed real host-facing gaps such as close-confirm signals and backend-owned viewport control.
+  Done when:
+  - the best host-facing terminal semantics reachable from native are also reachable through an explicit FFI/core contract, unless the difference is purely renderer-local.
+  - FFI no longer needs to approximate native-only ownership or reconstruct backend truth from side channels.
+  - new host-facing semantics are judged first by whether they belong to the shared engine contract, not by whether native can reach them internally.
 - [ ] `VTCORE-03` Introduce transport-agnostic host integration.
   Notes: transport contracts, writer/read boundaries, external transport, replay-harness use, no-PTY host support, and shared redraw/alive wake behavior are landed; remaining work is deeper cleanup rather than first transport abstraction.
 - [ ] `VTCORE-04` Move protocol execution onto core/model contracts.
@@ -50,6 +60,7 @@ Supporting cleanup:
 - [ ] `VTCORE-06` Keep input encoding as a peer subsystem.
   Notes: transport-agnostic writer-based encoding, fake-writer regression coverage, and PTY-backed `TerminalSession.sendText(...)` / `sendKey(...)` regressions through the real session writer boundary are in place; remaining work is keeping the subsystem decoupled as the rest of the split finishes.
 - [ ] `VTCORE-07` Preserve desktop Zide behavior while opening the embedding path.
+  Notes: this means preserving native quality while keeping native and FFI as peer hosts over the same engine truth, with native acting as the lowest-friction reference implementation rather than as a second semantic center.
 
 ## Active Focus Inside VTCORE-05
 

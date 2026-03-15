@@ -88,6 +88,32 @@ Turn Zide's terminal backend into a real embeddable VT engine with:
 Desktop PTY-backed Zide remains a supported host, but it must stop defining the
 architectural center.
 
+## Host Principle
+
+The native GUI is the reference host implementation for the engine contract.
+
+That means:
+
+- native should give the backend a near-zero-friction proving ground, with as
+  little externally controlled runtime/render behavior in the way as practical
+- native should be optimized to prove that the engine, publication pipeline,
+  input path, and presentation contract can compete with the best reference
+  terminals
+- native must not become a privileged semantic path that treats FFI as a
+  second-class interface
+- FFI and native should be two host forms over the same engine truth, with
+  native serving as the clearest high-performance reference implementation of
+  what a host needs to do well
+
+The architectural target is therefore not:
+
+- "desktop path first, embedded path later"
+
+It is:
+
+- "one strong engine contract, proven first in the native reference host, then
+  consumed honestly by FFI/embedded hosts"
+
 ## Target Types
 
 ```mermaid
@@ -110,6 +136,26 @@ flowchart LR
     classDef boundary fill:#2d3047,stroke:#99a8ff,color:#f4f7ff;
     classDef host fill:#443328,stroke:#ffb56b,color:#fff5ea;
 ```
+
+Host responsibilities should stay explicit and shared across native and FFI:
+
+- feed transport/output into the engine
+- send encoded input through the engine-owned input contract
+- consume snapshots/metadata/events/viewport state
+- participate in redraw/publication/present acknowledgement honestly
+
+The native host may be lower-friction and more directly controlled, but it
+should not rely on different terminal semantics or privileged hidden state.
+
+Operationally, this means:
+
+- if native reaches into core-owned behavior in a way that a high-quality FFI
+  host cannot, that is a boundary bug to remove, not a perk to preserve
+- every meaningful `TerminalSession` shrink should be evaluated against whether
+  it also clarifies the shared host contract
+- every meaningful host-facing FFI expansion should be checked against whether
+  native is still cheating through deeper session access instead of the same
+  engine truth
 
 ### 1. `TerminalCore`
 

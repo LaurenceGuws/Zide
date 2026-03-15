@@ -60,6 +60,9 @@ flowchart LR
   still pay off.
 - The renderer now also owns an authoritative scene target before the final
   present step.
+- The native path should be read as the reference host implementation for the
+  engine contract, not as a privileged terminal path that FFI is expected to
+  trail permanently.
 
 ## Zide Target Embedded Shape
 
@@ -81,6 +84,9 @@ flowchart LR
 - This is where Zide has a real architectural advantage over many terminals.
 - The host should not interpret terminal semantics itself.
 - The host should render engine-owned state and acknowledge presentation.
+- Native and FFI should converge toward this same host shape, with native being
+  the lowest-friction reference implementation rather than a special-case
+  semantic owner.
 
 ## Ghostty / libghostty-vt
 
