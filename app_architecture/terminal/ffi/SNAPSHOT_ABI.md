@@ -376,3 +376,71 @@ The important design constraint is:
 - one authoritative latest-state surface should remain obvious
 - cheaper hot-state reads should come from a controlled successor shape, not
   from accidental getter proliferation
+
+### Candidate Successor Shapes
+
+Before any ABI change, the current candidates should be judged explicitly.
+
+#### Candidate A: Metadata Acquire V2 With Inclusion Flags
+
+Shape:
+
+- keep the current `metadata_acquire(...)` role
+- add a successor acquire entrypoint that accepts explicit inclusion flags, for
+  example:
+  - hot scalars only
+  - include title
+  - include cwd
+- return one owned metadata result with the same latest-state authority role
+
+Why this is attractive:
+
+- keeps one coherent latest-state acquire surface
+- lets hosts pay for cold strings only when they actually need them
+- fits the current host guidance well:
+  - redraw-driven snapshot loop stays unchanged
+  - metadata remains the summary/state authority when needed
+
+Main risk:
+
+- this is not a free append-only struct tweak; it is a deliberate successor
+  acquire shape and therefore needs careful naming/ownership/docs
+
+#### Candidate B: Keep Current Metadata And Add Narrow Hot-State Getter
+
+Shape:
+
+- leave `metadata_acquire(...)` unchanged
+- add one separate hot-state getter for the scalar subset only
+
+Why it is tempting:
+
+- cheap to explain
+- likely smaller ABI delta
+
+Why it is weaker:
+
+- creates two competing latest-state paths too early
+- increases the risk that hosts start stitching lifecycle/scrollback/title/cwd
+  truth together conditionally
+- is much closer to the getter proliferation pattern we already want to avoid
+
+### Current Preference
+
+Current preferred direction:
+
+- Candidate A
+
+Reason:
+
+- it preserves one authoritative latest-state surface better
+- it aligns better with the reference bias from Ghostty/WezTerm/Kitty:
+  - explicit boundary
+  - narrow hot path
+  - no chatty convenience explosion
+
+Current non-goal:
+
+- do not implement either candidate yet
+- first keep the design authority honest enough that the eventual ABI cut is
+  narrow and reviewable

@@ -196,6 +196,8 @@ The next bridge-performance lane should stay narrow:
 
 - review snapshot transport shape
 - define the hot-scalar vs cold-string maturity direction more explicitly
+- compare one coherent successor acquire shape against one narrower getter-based
+  alternative and reject the weaker one before coding
 - keep the public loop discipline explicit
 - avoid widening the bridge until snapshot/diff direction is better defined
 
