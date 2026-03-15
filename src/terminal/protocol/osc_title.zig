@@ -3,27 +3,47 @@ const app_logger = @import("../../app_logger.zig");
 
 pub const SessionFacade = struct {
     allocator: std.mem.Allocator,
-    title_buffer: *std.ArrayList(u8),
-    title: *[]const u8,
+    ctx: *anyopaque,
+    clear_title_buffer_fn: *const fn (ctx: *anyopaque) void,
+    append_title_slice_fn: *const fn (ctx: *anyopaque, allocator: std.mem.Allocator, text: []const u8) anyerror!void,
+    publish_title_buffer_fn: *const fn (ctx: *anyopaque) void,
 
     pub fn from(session: anytype) SessionFacade {
+        const SessionPtr = @TypeOf(session);
         return .{
             .allocator = session.allocator,
-            .title_buffer = &session.core.title_buffer,
-            .title = &session.core.title,
+            .ctx = @ptrCast(session),
+            .clear_title_buffer_fn = struct {
+                fn call(ctx: *anyopaque) void {
+                    const s: SessionPtr = @ptrCast(@alignCast(ctx));
+                    s.core.clearTitleBuffer();
+                }
+            }.call,
+            .append_title_slice_fn = struct {
+                fn call(ctx: *anyopaque, allocator: std.mem.Allocator, text: []const u8) anyerror!void {
+                    const s: SessionPtr = @ptrCast(@alignCast(ctx));
+                    try s.core.appendTitleSlice(allocator, text);
+                }
+            }.call,
+            .publish_title_buffer_fn = struct {
+                fn call(ctx: *anyopaque) void {
+                    const s: SessionPtr = @ptrCast(@alignCast(ctx));
+                    s.core.publishTitleBuffer();
+                }
+            }.call,
         };
     }
 
     pub fn clearTitleBuffer(self: *const SessionFacade) void {
-        self.title_buffer.clearRetainingCapacity();
+        self.clear_title_buffer_fn(self.ctx);
     }
 
     pub fn appendTitleSlice(self: *const SessionFacade, text: []const u8) !void {
-        try self.title_buffer.appendSlice(self.allocator, text);
+        try self.append_title_slice_fn(self.ctx, self.allocator, text);
     }
 
     pub fn publishTitle(self: *const SessionFacade) void {
-        self.title.* = self.title_buffer.items;
+        self.publish_title_buffer_fn(self.ctx);
     }
 };
 

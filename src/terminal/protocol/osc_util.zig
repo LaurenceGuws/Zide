@@ -3,44 +3,91 @@ const app_logger = @import("../../app_logger.zig");
 
 pub const SessionFacade = struct {
     allocator: std.mem.Allocator,
-    cwd_buffer: *std.ArrayList(u8),
-    cwd: *[]const u8,
+    ctx: *anyopaque,
+    clear_cwd_buffer_fn: *const fn (ctx: *anyopaque) void,
+    append_cwd_byte_fn: *const fn (ctx: *anyopaque, allocator: std.mem.Allocator, b: u8) anyerror!void,
+    append_cwd_slice_fn: *const fn (ctx: *anyopaque, allocator: std.mem.Allocator, text: []const u8) anyerror!void,
+    publish_cwd_buffer_fn: *const fn (ctx: *anyopaque) void,
+    cwd_buffer_len_fn: *const fn (ctx: *anyopaque) usize,
+    truncate_cwd_buffer_fn: *const fn (ctx: *anyopaque, len: usize) void,
+    cwd_buffer_last_fn: *const fn (ctx: *anyopaque) ?u8,
 
     pub fn from(session: anytype) SessionFacade {
+        const SessionPtr = @TypeOf(session);
         return .{
             .allocator = session.allocator,
-            .cwd_buffer = &session.core.cwd_buffer,
-            .cwd = &session.core.cwd,
+            .ctx = @ptrCast(session),
+            .clear_cwd_buffer_fn = struct {
+                fn call(ctx: *anyopaque) void {
+                    const s: SessionPtr = @ptrCast(@alignCast(ctx));
+                    s.core.clearCwdBuffer();
+                }
+            }.call,
+            .append_cwd_byte_fn = struct {
+                fn call(ctx: *anyopaque, allocator: std.mem.Allocator, b: u8) anyerror!void {
+                    const s: SessionPtr = @ptrCast(@alignCast(ctx));
+                    try s.core.appendCwdByte(allocator, b);
+                }
+            }.call,
+            .append_cwd_slice_fn = struct {
+                fn call(ctx: *anyopaque, allocator: std.mem.Allocator, text: []const u8) anyerror!void {
+                    const s: SessionPtr = @ptrCast(@alignCast(ctx));
+                    try s.core.appendCwdSlice(allocator, text);
+                }
+            }.call,
+            .publish_cwd_buffer_fn = struct {
+                fn call(ctx: *anyopaque) void {
+                    const s: SessionPtr = @ptrCast(@alignCast(ctx));
+                    s.core.publishCwdBuffer();
+                }
+            }.call,
+            .cwd_buffer_len_fn = struct {
+                fn call(ctx: *anyopaque) usize {
+                    const s: SessionPtr = @ptrCast(@alignCast(ctx));
+                    return s.core.cwdBufferLen();
+                }
+            }.call,
+            .truncate_cwd_buffer_fn = struct {
+                fn call(ctx: *anyopaque, len: usize) void {
+                    const s: SessionPtr = @ptrCast(@alignCast(ctx));
+                    s.core.truncateCwdBuffer(len);
+                }
+            }.call,
+            .cwd_buffer_last_fn = struct {
+                fn call(ctx: *anyopaque) ?u8 {
+                    const s: SessionPtr = @ptrCast(@alignCast(ctx));
+                    return s.core.cwdBufferLast();
+                }
+            }.call,
         };
     }
 
     pub fn clearCwdBuffer(self: *const SessionFacade) void {
-        self.cwd_buffer.clearRetainingCapacity();
+        self.clear_cwd_buffer_fn(self.ctx);
     }
 
     pub fn appendCwdByte(self: *const SessionFacade, b: u8) !void {
-        try self.cwd_buffer.append(self.allocator, b);
+        try self.append_cwd_byte_fn(self.ctx, self.allocator, b);
     }
 
     pub fn appendCwdSlice(self: *const SessionFacade, text: []const u8) !void {
-        _ = try self.cwd_buffer.appendSlice(self.allocator, text);
+        try self.append_cwd_slice_fn(self.ctx, self.allocator, text);
     }
 
     pub fn setCwdFromBuffer(self: *const SessionFacade) void {
-        self.cwd.* = self.cwd_buffer.items;
+        self.publish_cwd_buffer_fn(self.ctx);
     }
 
     pub fn cwdBufferLen(self: *const SessionFacade) usize {
-        return self.cwd_buffer.items.len;
+        return self.cwd_buffer_len_fn(self.ctx);
     }
 
     pub fn truncateCwdBuffer(self: *const SessionFacade, len: usize) void {
-        self.cwd_buffer.items.len = len;
+        self.truncate_cwd_buffer_fn(self.ctx, len);
     }
 
     pub fn cwdBufferLast(self: *const SessionFacade) ?u8 {
-        if (self.cwd_buffer.items.len == 0) return null;
-        return self.cwd_buffer.items[self.cwd_buffer.items.len - 1];
+        return self.cwd_buffer_last_fn(self.ctx);
     }
 };
 

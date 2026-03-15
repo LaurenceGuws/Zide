@@ -84,13 +84,13 @@ pub const DecstrContext = struct {
             .clear_title_buffer_fn = struct {
                 fn call(ctx: *anyopaque) void {
                     const s: SessionPtr = @ptrCast(@alignCast(ctx));
-                    s.core.title_buffer.clearRetainingCapacity();
+                    s.core.clearTitleBuffer();
                 }
             }.call,
             .set_default_title_fn = struct {
                 fn call(ctx: *anyopaque) void {
                     const s: SessionPtr = @ptrCast(@alignCast(ctx));
-                    s.core.title = "Terminal";
+                    s.core.setDefaultTitle();
                 }
             }.call,
             .set_report_color_scheme_2031_fn = struct {

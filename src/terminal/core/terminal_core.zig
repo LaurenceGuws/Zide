@@ -294,6 +294,51 @@ pub const TerminalCore = struct {
         self.saved_charset = .{};
     }
 
+    pub fn clearTitleBuffer(self: *TerminalCore) void {
+        self.title_buffer.clearRetainingCapacity();
+    }
+
+    pub fn appendTitleSlice(self: *TerminalCore, allocator: std.mem.Allocator, text: []const u8) !void {
+        try self.title_buffer.appendSlice(allocator, text);
+    }
+
+    pub fn publishTitleBuffer(self: *TerminalCore) void {
+        self.title = self.title_buffer.items;
+    }
+
+    pub fn setDefaultTitle(self: *TerminalCore) void {
+        self.title = "Terminal";
+    }
+
+    pub fn clearCwdBuffer(self: *TerminalCore) void {
+        self.cwd_buffer.clearRetainingCapacity();
+    }
+
+    pub fn appendCwdByte(self: *TerminalCore, allocator: std.mem.Allocator, b: u8) !void {
+        try self.cwd_buffer.append(allocator, b);
+    }
+
+    pub fn appendCwdSlice(self: *TerminalCore, allocator: std.mem.Allocator, text: []const u8) !void {
+        _ = try self.cwd_buffer.appendSlice(allocator, text);
+    }
+
+    pub fn publishCwdBuffer(self: *TerminalCore) void {
+        self.cwd = self.cwd_buffer.items;
+    }
+
+    pub fn cwdBufferLen(self: *const TerminalCore) usize {
+        return self.cwd_buffer.items.len;
+    }
+
+    pub fn truncateCwdBuffer(self: *TerminalCore, len: usize) void {
+        self.cwd_buffer.items.len = len;
+    }
+
+    pub fn cwdBufferLast(self: *const TerminalCore) ?u8 {
+        if (self.cwd_buffer.items.len == 0) return null;
+        return self.cwd_buffer.items[self.cwd_buffer.items.len - 1];
+    }
+
     pub fn setColumnMode132(self: *TerminalCore, enabled: bool) bool {
         if (self.column_mode_132 == enabled) return false;
         self.column_mode_132 = enabled;

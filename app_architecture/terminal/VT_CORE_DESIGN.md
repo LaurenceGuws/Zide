@@ -52,7 +52,10 @@ Status note, 2026-03-14:
   live on `TerminalCore` instead of session-style helper choreography in
   `state_reset.zig`; parser control/reset state for SO/SI, ESC entry, parser
   reset, and saved-charset clearing now also route through `TerminalCore`
-  instead of direct parser-field mutation from control/reset helpers.
+  instead of direct parser-field mutation from control/reset helpers; OSC
+  title/cwd buffer clearing, append, and publish/default-title operations now
+  also route through `TerminalCore` instead of direct core-buffer mutation from
+  OSC protocol helpers.
 - Input encoding remains on the dedicated subsystem path: writer-agnostic
   encoder coverage exists at both the fake-writer level and the real
   PTY-backed `TerminalSession` writer boundary.
