@@ -179,5 +179,7 @@ Practical reading:
 - TERM selection logic in `src/terminal/io/pty_unix.zig`
 - protocol tracker:
   `app_architecture/terminal/protocol/ACCURACY_PROGRESS.md`
+- detailed protocol review/evidence:
+  `docs/review/TERMINAL_PROTOCOL_ACCURACY_REVIEW_2026-02-23.md`
 - terminal API notes:
   `app_architecture/terminal/TERMINAL_API.md`
