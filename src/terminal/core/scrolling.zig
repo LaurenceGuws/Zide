@@ -1,5 +1,4 @@
 const kitty_mod = @import("../kitty/graphics.zig");
-const app_logger = @import("../../app_logger.zig");
 
 pub fn scrollRegionUpWithOrigin(self: anytype, count: usize, origin: ?[]const u8) void {
     const screen = self.core.activeScreen();
@@ -14,15 +13,6 @@ pub fn scrollRegionUpWithOrigin(self: anytype, count: usize, origin: ?[]const u8
             pushScrollbackRow(self, screen.scroll_top + row);
         }
         kitty_mod.updateKittyPlacementsForScroll(self);
-        const scroll_log = app_logger.logger("terminal.scroll");
-        scroll_log.logf(.info, "scroll_region_up feeds_scrollback top={d} bottom={d} n={d} full_region={d} top_anchored={d} history={d}", .{
-            screen.scroll_top,
-            screen.scroll_bottom,
-            n,
-            @intFromBool(isFullScrollRegion(self)),
-            @intFromBool(isTopAnchoredFullWidthRegion(self)),
-            self.core.history.scrollbackCount(),
-        });
     }
     screen.scrollRegionUpByWithOrigin(n, blank_cell, origin);
     if (!regionFeedsScrollback(self)) {
@@ -77,8 +67,12 @@ fn isTopAnchoredFullWidthRegion(self: anytype) bool {
 }
 
 fn regionFeedsScrollback(self: anytype) bool {
-    if (self.core.sync_updates_active) return false;
-    return isFullScrollRegion(self) or isTopAnchoredFullWidthRegion(self);
+    const full_region = isFullScrollRegion(self);
+    const top_anchored = isTopAnchoredFullWidthRegion(self);
+    if (self.core.sync_updates_active) {
+        return top_anchored and !full_region;
+    }
+    return full_region or top_anchored;
 }
 
 fn pushScrollbackRow(self: anytype, row: usize) void {
