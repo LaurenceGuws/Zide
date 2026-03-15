@@ -159,6 +159,8 @@ Required operations for milestone 1:
 - `zide_terminal_send_text(handle, utf8_ptr, utf8_len)`
 - `zide_terminal_feed_output(handle, ptr, len)`
 - `zide_terminal_close_input(handle)`
+- `zide_terminal_pending_input_acquire(handle, out_buffer)`
+- `zide_terminal_pending_input_release(buffer)`
 - `zide_terminal_set_scrollback_offset(handle, offset_rows)`
 - `zide_terminal_follow_live_bottom(handle)`
 - `zide_terminal_send_key(handle, key_event)`
@@ -194,6 +196,7 @@ Required operations for milestone 1:
 - `zide_terminal_string_abi_version()`
 - `zide_terminal_close_confirm_abi_version()`
 - `zide_terminal_clipboard_abi_version()`
+- `zide_terminal_pending_input_abi_version()`
 - `zide_terminal_renderer_metadata_abi_version()`
 - `zide_terminal_renderer_metadata(codepoint, out_metadata)`
 - `zide_terminal_status_string(status)`
@@ -384,12 +387,25 @@ Current result:
   transport-local instead of forcing a second terminal semantics layer in the
   host UI
 
-Current known asymmetry:
+Bridge follow-up after that peer review:
 
-- focus/color-scheme reporting remains non-fatal but unreported on the
-  Flutter-owned PTY path
-- upstream behavior is currently `missing_pty`, and the downstream host did
-  not paper over that with fake host state
+- external transport now also exposes pending outbound host-input/report bytes
+  through:
+  - `zide_terminal_pending_input_acquire(...)`
+  - `zide_terminal_pending_input_release(...)`
+- this removes the previous PTY-only assumption for backend-generated outbound
+  input/report traffic such as:
+  - encoded key/text/mouse input
+  - focus reports
+  - color-scheme reports
+  - other writer-based host-to-app sequences
+
+Current remaining question:
+
+- the downstream Flutter host should now re-validate whether the previous
+  `missing_pty` focus/color-scheme asymmetry is fully closed when it consumes
+  the new pending-input bridge surface instead of bypassing outbound traffic at
+  the transport layer
 
 Interpretation:
 

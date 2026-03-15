@@ -129,3 +129,16 @@ It verifies:
 
 This is meant to model the first embedded/mobile/Flutter-style host shape more
 closely than the baseline one-shot smoke.
+
+External transport hosts now also have a bridge-owned outbound path for
+backend-generated input/report bytes:
+
+- `zide_terminal_pending_input_acquire(...)`
+- `zide_terminal_pending_input_release(...)`
+
+That is the intended companion to:
+
+- `zide_terminal_feed_output(...)`
+- `zide_terminal_close_input(...)`
+
+for hosts that own the PTY or byte-stream transport themselves.

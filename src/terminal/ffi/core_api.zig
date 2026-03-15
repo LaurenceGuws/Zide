@@ -158,6 +158,18 @@ pub fn closeInput(handle: ?*shared.ZideTerminalHandle) shared.Status {
     return shared.syncDerivedEvents(h);
 }
 
+pub fn pendingInputAcquire(handle: ?*shared.ZideTerminalHandle, out_buffer: *shared.ByteBuffer) shared.Status {
+    const h = shared.fromOpaque(handle) orelse return .invalid_argument;
+    const bytes = h.session.takeExternalOutgoingBytes(h.allocator) catch |err| return shared.mapError(err);
+    const slice = bytes orelse return .invalid_argument;
+    defer h.allocator.free(slice);
+    return shared.byteBufferFromSlice(h.allocator, slice, out_buffer);
+}
+
+pub fn pendingInputRelease(out_buffer: *shared.ByteBuffer) void {
+    shared.byteBufferFree(out_buffer);
+}
+
 pub fn snapshotAcquire(handle: ?*shared.ZideTerminalHandle, out_snapshot: *shared.Snapshot) shared.Status {
     const log = app_logger.logger("terminal.ffi");
     const h = shared.fromOpaque(handle) orelse return .invalid_argument;
@@ -505,6 +517,10 @@ pub fn closeConfirmAbiVersion() u32 {
 
 pub fn clipboardAbiVersion() u32 {
     return shared.clipboard_abi_version;
+}
+
+pub fn pendingInputAbiVersion() u32 {
+    return shared.byte_buffer_abi_version;
 }
 
 pub fn stringAbiVersion() u32 {

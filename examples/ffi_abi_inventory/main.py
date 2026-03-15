@@ -26,6 +26,7 @@ def run_inventory(terminal_lib_path: Path, editor_lib_path: Path) -> int:
         f"string={terminal_lib.zide_terminal_string_abi_version()} "
         f"close_confirm={terminal_lib.zide_terminal_close_confirm_abi_version()} "
         f"clipboard={terminal_lib.zide_terminal_clipboard_abi_version()} "
+        f"pending_input={terminal_lib.zide_terminal_pending_input_abi_version()} "
         f"renderer_metadata={terminal_lib.zide_terminal_renderer_metadata_abi_version()}"
     )
     print(f"editor string={editor_lib.zide_editor_string_abi_version()}")

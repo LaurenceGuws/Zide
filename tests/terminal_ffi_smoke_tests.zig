@@ -13,6 +13,7 @@ test "ffi non-pty snapshot and event ownership smoke" {
     try std.testing.expectEqual(c_api.ZIDE_TERMINAL_REDRAW_STATE_ABI_VERSION, c_api.zide_terminal_redraw_state_abi_version());
     try std.testing.expectEqual(c_api.ZIDE_TERMINAL_STRING_ABI_VERSION, c_api.zide_terminal_string_abi_version());
     try std.testing.expectEqual(c_api.ZIDE_TERMINAL_CLOSE_CONFIRM_ABI_VERSION, c_api.zide_terminal_close_confirm_abi_version());
+    try std.testing.expectEqual(c_api.ZIDE_TERMINAL_PENDING_INPUT_ABI_VERSION, c_api.zide_terminal_pending_input_abi_version());
 
     var rounded_box_meta: c_api.ZideTerminalRendererMetadata = .{};
     try std.testing.expectEqual(@as(c_int, 0), c_api.zide_terminal_renderer_metadata(0x256D, &rounded_box_meta));
@@ -168,6 +169,43 @@ test "ffi non-pty snapshot and event ownership smoke" {
     try std.testing.expectEqual(@as(c_int, 0), c_api.zide_terminal_clipboard_write(handle, &clipboard_empty));
     defer c_api.zide_terminal_string_free(&clipboard_empty);
     try std.testing.expectEqual(@as(usize, 0), clipboard_empty.len);
+}
+
+test "ffi external transport exposes outbound input bytes and host reports" {
+    try app_logger.setConsoleFilterString("none");
+    try app_logger.setFileFilterString("none");
+
+    var handle: ?*c_api.ZideTerminalHandle = null;
+    try std.testing.expectEqual(@as(c_int, 0), c_api.zide_terminal_create(null, &handle));
+    defer c_api.zide_terminal_destroy(handle);
+
+    var out: c_api.ZideTerminalByteBuffer = .{};
+    try std.testing.expectEqual(@as(c_int, 0), c_api.zide_terminal_pending_input_acquire(handle, &out));
+    defer c_api.zide_terminal_pending_input_release(&out);
+    try std.testing.expectEqual(c_api.ZIDE_TERMINAL_PENDING_INPUT_ABI_VERSION, out.abi_version);
+    try std.testing.expectEqual(@as(u32, @sizeOf(c_api.ZideTerminalByteBuffer)), out.struct_size);
+    try std.testing.expectEqual(@as(usize, 0), out.len);
+
+    const enable = "\x1b[?1004h\x1b[?2031h";
+    try std.testing.expectEqual(@as(c_int, 0), c_api.zide_terminal_feed_output(handle, enable.ptr, enable.len));
+
+    var reported: u8 = 0;
+    try std.testing.expectEqual(@as(c_int, 0), c_api.zide_terminal_send_text(handle, "ls".ptr, 2));
+    const enter = c_api.ZideTerminalKeyEvent{ .key = 13, .modifiers = 0 };
+    try std.testing.expectEqual(@as(c_int, 0), c_api.zide_terminal_send_key(handle, &enter));
+    try std.testing.expectEqual(@as(c_int, 0), c_api.zide_terminal_report_focus_changed(handle, 1, &reported));
+    try std.testing.expectEqual(@as(u8, 1), reported);
+    try std.testing.expectEqual(@as(c_int, 0), c_api.zide_terminal_report_color_scheme_changed(handle, 1, &reported));
+    try std.testing.expectEqual(@as(u8, 1), reported);
+
+    var outbound: c_api.ZideTerminalByteBuffer = .{};
+    try std.testing.expectEqual(@as(c_int, 0), c_api.zide_terminal_pending_input_acquire(handle, &outbound));
+    defer c_api.zide_terminal_pending_input_release(&outbound);
+    const bytes = ptrBytes(outbound.ptr, outbound.len);
+    try std.testing.expect(std.mem.indexOf(u8, bytes, "ls") != null);
+    try std.testing.expect(std.mem.indexOf(u8, bytes, "\r") != null);
+    try std.testing.expect(std.mem.indexOf(u8, bytes, "\x1b[I") != null);
+    try std.testing.expect(std.mem.indexOf(u8, bytes, "\x1b[?997;1n") != null);
 }
 
 test "ffi scrollback acquire exports copied rows" {

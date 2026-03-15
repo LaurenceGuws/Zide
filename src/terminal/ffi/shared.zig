@@ -19,6 +19,7 @@ pub const redraw_state_abi_version: u32 = 1;
 pub const string_abi_version: u32 = 1;
 pub const close_confirm_abi_version: u32 = 1;
 pub const clipboard_abi_version: u32 = 1;
+pub const byte_buffer_abi_version: u32 = 1;
 
 pub const EventKind = enum(c_int) {
     none = 0,
@@ -206,6 +207,14 @@ pub const StringBuffer = extern struct {
     _ctx: ?*anyopaque = null,
 };
 
+pub const ByteBuffer = extern struct {
+    abi_version: u32 = 0,
+    struct_size: u32 = 0,
+    ptr: ?[*]const u8 = null,
+    len: usize = 0,
+    _ctx: ?*anyopaque = null,
+};
+
 pub const PendingEvent = struct {
     kind: EventKind,
     data: []u8,
@@ -260,6 +269,11 @@ pub const StringOwner = struct {
     bytes: []u8,
 };
 
+pub const ByteOwner = struct {
+    allocator: std.mem.Allocator,
+    bytes: []u8,
+};
+
 pub fn ptrLen(ptr: ?[*]const u8, len: usize) ?[]const u8 {
     if (len == 0) return &[_]u8{};
     const base = ptr orelse return null;
@@ -296,6 +310,11 @@ pub fn scrollbackOwner(ctx: ?*anyopaque) ?*ScrollbackOwner {
 }
 
 pub fn stringOwner(ctx: ?*anyopaque) ?*StringOwner {
+    const value = ctx orelse return null;
+    return @ptrCast(@alignCast(value));
+}
+
+pub fn byteOwner(ctx: ?*anyopaque) ?*ByteOwner {
     const value = ctx orelse return null;
     return @ptrCast(@alignCast(value));
 }
@@ -338,6 +357,45 @@ pub fn stringFromSlice(allocator: std.mem.Allocator, value: []const u8, out_stri
         ._ctx = owner,
     };
     return .ok;
+}
+
+pub fn byteBufferFromSlice(allocator: std.mem.Allocator, value: []const u8, out_buffer: *ByteBuffer) Status {
+    const log = app_logger.logger("terminal.ffi");
+    out_buffer.* = .{};
+    const owner = allocator.create(ByteOwner) catch |err| {
+        log.logf(.warning, "byte owner alloc failed len={d} err={s}", .{ value.len, @errorName(err) });
+        return .out_of_memory;
+    };
+    errdefer allocator.destroy(owner);
+
+    const bytes = allocator.dupe(u8, value) catch |err| {
+        log.logf(.warning, "byte dup failed len={d} err={s}", .{ value.len, @errorName(err) });
+        return .out_of_memory;
+    };
+    errdefer allocator.free(bytes);
+
+    owner.* = .{
+        .allocator = allocator,
+        .bytes = bytes,
+    };
+    out_buffer.* = .{
+        .abi_version = byte_buffer_abi_version,
+        .struct_size = @sizeOf(ByteBuffer),
+        .ptr = if (bytes.len == 0) null else bytes.ptr,
+        .len = bytes.len,
+        ._ctx = owner,
+    };
+    return .ok;
+}
+
+pub fn byteBufferFree(out_buffer: *ByteBuffer) void {
+    const owner = byteOwner(out_buffer._ctx) orelse {
+        out_buffer.* = .{};
+        return;
+    };
+    owner.allocator.free(owner.bytes);
+    owner.allocator.destroy(owner);
+    out_buffer.* = .{};
 }
 
 pub fn stringFromOwnedSlice(allocator: std.mem.Allocator, value: []u8, out_string: *StringBuffer) Status {

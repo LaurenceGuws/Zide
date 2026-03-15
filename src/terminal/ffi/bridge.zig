@@ -24,6 +24,7 @@ pub const ScrollbackBuffer = shared.ScrollbackBuffer;
 pub const Metadata = shared.Metadata;
 pub const RedrawState = shared.RedrawState;
 pub const CloseConfirmSignals = shared.CloseConfirmSignals;
+pub const ByteBuffer = shared.ByteBuffer;
 pub const KeyEvent = shared.KeyEvent;
 pub const MouseEvent = shared.MouseEvent;
 pub const Event = shared.Event;
@@ -65,6 +66,14 @@ pub fn feedOutput(handle: ?*ZideTerminalHandle, bytes: ?[*]const u8, len: usize)
 
 pub fn closeInput(handle: ?*ZideTerminalHandle) Status {
     return core_api.closeInput(handle);
+}
+
+pub fn pendingInputAcquire(handle: ?*ZideTerminalHandle, out_buffer: *ByteBuffer) Status {
+    return core_api.pendingInputAcquire(handle, out_buffer);
+}
+
+pub fn pendingInputRelease(out_buffer: *ByteBuffer) void {
+    core_api.pendingInputRelease(out_buffer);
 }
 
 pub fn presentAck(handle: ?*ZideTerminalHandle, generation: u64) Status {
@@ -201,6 +210,10 @@ pub fn closeConfirmAbiVersion() u32 {
 
 pub fn clipboardAbiVersion() u32 {
     return core_api.clipboardAbiVersion();
+}
+
+pub fn pendingInputAbiVersion() u32 {
+    return core_api.pendingInputAbiVersion();
 }
 
 pub fn stringAbiVersion() u32 {

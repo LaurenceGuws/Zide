@@ -11,6 +11,7 @@ pub const ExternalTransport = struct {
     allocator: std.mem.Allocator,
     pending: std.ArrayList(u8),
     read_offset: usize,
+    outgoing: std.ArrayList(u8),
     alive: bool,
 
     pub fn init(allocator: std.mem.Allocator) ExternalTransport {
@@ -18,12 +19,14 @@ pub const ExternalTransport = struct {
             .allocator = allocator,
             .pending = .empty,
             .read_offset = 0,
+            .outgoing = .empty,
             .alive = true,
         };
     }
 
     pub fn deinit(self: *ExternalTransport) void {
         self.pending.deinit(self.allocator);
+        self.outgoing.deinit(self.allocator);
         self.* = undefined;
     }
 
@@ -56,6 +59,17 @@ pub const ExternalTransport = struct {
     pub fn hasData(self: *const ExternalTransport) bool {
         return self.pending.items.len > self.read_offset;
     }
+
+    pub fn write(self: *ExternalTransport, bytes: []const u8) !usize {
+        try self.outgoing.appendSlice(self.allocator, bytes);
+        return bytes.len;
+    }
+
+    pub fn takeOutgoing(self: *ExternalTransport, allocator: std.mem.Allocator) ![]u8 {
+        const bytes = try allocator.dupe(u8, self.outgoing.items);
+        self.outgoing.clearRetainingCapacity();
+        return bytes;
+    }
 };
 
 pub const Writer = struct {
@@ -71,8 +85,8 @@ pub const Writer = struct {
     send_text_fn: *const fn (ctx: *anyopaque, text: []const u8) anyerror!void,
 
     pub fn fromSession(session: anytype) ?Writer {
-        if (session.pty == null) return null;
         const SessionPtr = @TypeOf(session);
+        if (session.pty == null and session.external_transport == null) return null;
         session.pty_write_mutex.lock();
         return .{
             .ctx = @ptrCast(session),
@@ -80,49 +94,64 @@ pub const Writer = struct {
             .write_bytes_fn = struct {
                 fn call(ctx: *anyopaque, bytes: []const u8) anyerror!usize {
                     const s: SessionPtr = @ptrCast(@alignCast(ctx));
-                    return if (s.pty) |*pty| try pty.write(bytes) else 0;
+                    if (s.pty) |*pty| return try pty.write(bytes);
+                    if (s.external_transport) |*transport| return try transport.write(bytes);
+                    return 0;
                 }
             }.call,
             .send_key_action_fn = struct {
                 fn call(ctx: *anyopaque, key: types.Key, mod: types.Modifier, key_mode_flags: u32, action: input_mod.KeyAction) anyerror!bool {
                     const s: SessionPtr = @ptrCast(@alignCast(ctx));
-                    return if (s.pty) |*pty| try input_mod.sendKeyAction(pty, key, mod, key_mode_flags, action) else false;
+                    if (s.pty) |*pty| return try input_mod.sendKeyAction(pty, key, mod, key_mode_flags, action);
+                    if (s.external_transport) |*transport| return try input_mod.sendKeyAction(transport, key, mod, key_mode_flags, action);
+                    return false;
                 }
             }.call,
             .send_key_action_event_fn = struct {
                 fn call(ctx: *anyopaque, event: input_mod.KeyInputEvent) anyerror!bool {
                     const s: SessionPtr = @ptrCast(@alignCast(ctx));
-                    return if (s.pty) |*pty| try input_mod.sendKeyActionEvent(pty, event) else false;
+                    if (s.pty) |*pty| return try input_mod.sendKeyActionEvent(pty, event);
+                    if (s.external_transport) |*transport| return try input_mod.sendKeyActionEvent(transport, event);
+                    return false;
                 }
             }.call,
             .send_keypad_fn = struct {
                 fn call(ctx: *anyopaque, key: input_mod.KeypadKey, mod: types.Modifier, app_keypad: bool, key_mode_flags: u32) anyerror!bool {
                     const s: SessionPtr = @ptrCast(@alignCast(ctx));
-                    return if (s.pty) |*pty| try input_mod.sendKeypad(pty, key, mod, app_keypad, key_mode_flags) else false;
+                    if (s.pty) |*pty| return try input_mod.sendKeypad(pty, key, mod, app_keypad, key_mode_flags);
+                    if (s.external_transport) |*transport| return try input_mod.sendKeypad(transport, key, mod, app_keypad, key_mode_flags);
+                    return false;
                 }
             }.call,
             .send_char_action_fn = struct {
                 fn call(ctx: *anyopaque, char: u32, mod: types.Modifier, key_mode_flags: u32, action: input_mod.KeyAction) anyerror!bool {
                     const s: SessionPtr = @ptrCast(@alignCast(ctx));
-                    return if (s.pty) |*pty| try input_mod.sendCharAction(pty, char, mod, key_mode_flags, action) else false;
+                    if (s.pty) |*pty| return try input_mod.sendCharAction(pty, char, mod, key_mode_flags, action);
+                    if (s.external_transport) |*transport| return try input_mod.sendCharAction(transport, char, mod, key_mode_flags, action);
+                    return false;
                 }
             }.call,
             .send_char_action_event_fn = struct {
                 fn call(ctx: *anyopaque, event: input_mod.CharInputEvent) anyerror!bool {
                     const s: SessionPtr = @ptrCast(@alignCast(ctx));
-                    return if (s.pty) |*pty| try input_mod.sendCharActionEvent(pty, event) else false;
+                    if (s.pty) |*pty| return try input_mod.sendCharActionEvent(pty, event);
+                    if (s.external_transport) |*transport| return try input_mod.sendCharActionEvent(transport, event);
+                    return false;
                 }
             }.call,
             .report_mouse_event_fn = struct {
                 fn call(ctx: *anyopaque, input: *input_mod.InputState, event: types.MouseEvent, rows: u16, cols: u16) anyerror!bool {
                     const s: SessionPtr = @ptrCast(@alignCast(ctx));
-                    return if (s.pty) |*pty| try input.reportMouseEvent(pty, event, rows, cols) else false;
+                    if (s.pty) |*pty| return try input.reportMouseEvent(pty, event, rows, cols);
+                    if (s.external_transport) |*transport| return try input.reportMouseEvent(transport, event, rows, cols);
+                    return false;
                 }
             }.call,
             .send_text_fn = struct {
                 fn call(ctx: *anyopaque, text: []const u8) anyerror!void {
                     const s: SessionPtr = @ptrCast(@alignCast(ctx));
-                    if (s.pty) |*pty| try input_mod.sendText(pty, text);
+                    if (s.pty) |*pty| return try input_mod.sendText(pty, text);
+                    if (s.external_transport) |*transport| return try input_mod.sendText(transport, text);
                 }
             }.call,
         };

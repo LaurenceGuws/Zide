@@ -38,8 +38,10 @@ Current judgment:
 - External peer review from the downstream Flutter host is now also positive:
   the same widget/runtime layer survived swapping bridge-owned PTY vs
   Flutter-owned PTY transport; the remaining known asymmetry is transport-side
-  focus/color-scheme reporting on the Flutter-owned PTY path, which stays
-  non-fatal and explicit instead of being hidden with host-side guesswork.
+  focus/color-scheme reporting on the Flutter-owned PTY path.
+- Follow-up now landed on `main`: external transport can drain pending outbound
+  host-input/report bytes through the bridge, so encoded input and host reports
+  no longer need to be PTY-writer-only semantics.
 
 ## TODO
 
@@ -73,7 +75,7 @@ Current judgment:
 ### FFI-04 Export Surface And Smoke Host
 
 - [-] `FFI-04-01` Create the minimal exported bridge surface with opaque handles.
-  Notes: close-confirm state and clipboard-write payload now have explicit getters/ABI surfaces alongside metadata and redraw-state, and host-side focus/color-scheme reporting is now available over the bridge too, so foreign hosts no longer need native-only close-warning, event-only clipboard, or native-only host-input notification paths.
+  Notes: close-confirm state, clipboard-write payload, and pending outbound input/report bytes now have explicit getters/ABI surfaces alongside metadata and redraw-state, so foreign hosts no longer need native-only close-warning, event-only clipboard, or PTY-only host-input notification paths.
 - [x] `FFI-04-02` Add a standalone Python ctypes smoke host.
 - [x] `FFI-04-03` Add a non-interactive bridge smoke test.
 - [-] `FFI-04-04` Stabilize PTY-backed foreign-host start as a separate smoke slice.
@@ -91,4 +93,7 @@ Current judgment:
 - The next useful check is no longer "can a second host use the bridge at
   all?" It is "does the same host contract stay easy and stable when PTY
   ownership changes?"
+- The next downstream check should re-run the Flutter-owned PTY transport path
+  against the new pending-input drain so the old focus/color-scheme asymmetry
+  is either closed or narrowed precisely.
 - The bridge remains beta-level and should not be treated as frozen.

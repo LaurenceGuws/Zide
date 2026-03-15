@@ -36,6 +36,14 @@ pub export fn zide_terminal_close_input(handle: ?*c_api.ZideTerminalHandle) c_in
     return c_api.zide_terminal_close_input(handle);
 }
 
+pub export fn zide_terminal_pending_input_acquire(handle: ?*c_api.ZideTerminalHandle, out_buffer: *c_api.ZideTerminalByteBuffer) c_int {
+    return c_api.zide_terminal_pending_input_acquire(handle, out_buffer);
+}
+
+pub export fn zide_terminal_pending_input_release(out_buffer: *c_api.ZideTerminalByteBuffer) void {
+    c_api.zide_terminal_pending_input_release(out_buffer);
+}
+
 pub export fn zide_terminal_present_ack(handle: ?*c_api.ZideTerminalHandle, generation: u64) c_int {
     return c_api.zide_terminal_present_ack(handle, generation);
 }
@@ -162,6 +170,10 @@ pub export fn zide_terminal_close_confirm_abi_version() u32 {
 
 pub export fn zide_terminal_clipboard_abi_version() u32 {
     return c_api.zide_terminal_clipboard_abi_version();
+}
+
+pub export fn zide_terminal_pending_input_abi_version() u32 {
+    return c_api.zide_terminal_pending_input_abi_version();
 }
 
 pub export fn zide_terminal_renderer_metadata_abi_version() u32 {

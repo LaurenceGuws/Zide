@@ -184,6 +184,13 @@ pub fn lockPtyWriter(self: anytype) ?@import("terminal_session.zig").PtyWriteGua
     return terminal_transport.Writer.fromSession(self);
 }
 
+pub fn takeExternalOutgoingBytes(self: anytype, allocator: std.mem.Allocator) !?[]u8 {
+    if (self.external_transport) |*transport| {
+        return try transport.takeOutgoing(allocator);
+    }
+    return null;
+}
+
 pub fn writePtyBytes(self: anytype, bytes: []const u8) !void {
     var writer = lockPtyWriter(self) orelse return;
     defer writer.unlock();

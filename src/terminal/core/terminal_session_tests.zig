@@ -82,6 +82,20 @@ test "external transport close updates alive metadata" {
     try std.testing.expect(!metadata.alive);
 }
 
+test "external transport sendText queues outbound bytes" {
+    const allocator = std.testing.allocator;
+
+    var session = try TerminalSession.init(allocator, 2, 12);
+    defer session.deinit();
+    session.attachExternalTransport();
+
+    try session.sendText("abc");
+    const bytes = (try session.takeExternalOutgoingBytes(allocator)).?;
+    defer allocator.free(bytes);
+
+    try std.testing.expectEqualStrings("abc", bytes);
+}
+
 test "alt screen core helpers preserve cursor save restore behavior" {
     const allocator = std.testing.allocator;
 

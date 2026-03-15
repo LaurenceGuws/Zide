@@ -205,6 +205,14 @@ typedef struct ZideTerminalStringBuffer {
     void *_ctx;
 } ZideTerminalStringBuffer;
 
+typedef struct ZideTerminalByteBuffer {
+    uint32_t abi_version;
+    uint32_t struct_size;
+    const uint8_t *ptr;
+    size_t len;
+    void *_ctx;
+} ZideTerminalByteBuffer;
+
 typedef struct ZideTerminalRendererMetadata {
     uint32_t abi_version;
     uint32_t struct_size;
@@ -222,6 +230,8 @@ int zide_terminal_send_bytes(ZideTerminalHandle *handle, const uint8_t *bytes, s
 int zide_terminal_send_text(ZideTerminalHandle *handle, const uint8_t *text, size_t len);
 int zide_terminal_feed_output(ZideTerminalHandle *handle, const uint8_t *bytes, size_t len);
 int zide_terminal_close_input(ZideTerminalHandle *handle);
+int zide_terminal_pending_input_acquire(ZideTerminalHandle *handle, ZideTerminalByteBuffer *out_buffer);
+void zide_terminal_pending_input_release(ZideTerminalByteBuffer *out_buffer);
 int zide_terminal_present_ack(ZideTerminalHandle *handle, uint64_t generation);
 int zide_terminal_acknowledged_generation(ZideTerminalHandle *handle, uint64_t *out_generation);
 int zide_terminal_published_generation(ZideTerminalHandle *handle, uint64_t *out_generation);
@@ -261,6 +271,7 @@ uint32_t zide_terminal_redraw_state_abi_version(void);
 uint32_t zide_terminal_string_abi_version(void);
 uint32_t zide_terminal_close_confirm_abi_version(void);
 uint32_t zide_terminal_clipboard_abi_version(void);
+uint32_t zide_terminal_pending_input_abi_version(void);
 uint32_t zide_terminal_renderer_metadata_abi_version(void);
 int zide_terminal_renderer_metadata(uint32_t codepoint, ZideTerminalRendererMetadata *out_metadata);
 const char *zide_terminal_status_string(int status);

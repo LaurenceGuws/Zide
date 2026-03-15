@@ -10,6 +10,7 @@ pub const ZIDE_TERMINAL_REDRAW_STATE_ABI_VERSION = bridge.redraw_state_abi_versi
 pub const ZIDE_TERMINAL_STRING_ABI_VERSION = bridge.string_abi_version;
 pub const ZIDE_TERMINAL_CLOSE_CONFIRM_ABI_VERSION = bridge.close_confirm_abi_version;
 pub const ZIDE_TERMINAL_CLIPBOARD_ABI_VERSION = bridge.clipboard_abi_version;
+pub const ZIDE_TERMINAL_PENDING_INPUT_ABI_VERSION = bridge.byte_buffer_abi_version;
 pub const ZideTerminalCreateConfig = bridge.CreateConfig;
 pub const ZideTerminalColor = bridge.Color;
 pub const ZideTerminalCell = bridge.Cell;
@@ -23,6 +24,7 @@ pub const ZideTerminalMouseEvent = bridge.MouseEvent;
 pub const ZideTerminalEvent = bridge.Event;
 pub const ZideTerminalEventBuffer = bridge.EventBuffer;
 pub const ZideTerminalStringBuffer = bridge.StringBuffer;
+pub const ZideTerminalByteBuffer = bridge.ByteBuffer;
 pub const ZideTerminalRendererMetadata = bridge.RendererMetadata;
 pub const ZideTerminalStatus = bridge.Status;
 pub const ZideTerminalEventKind = bridge.EventKind;
@@ -63,6 +65,14 @@ pub fn zide_terminal_feed_output(handle: ?*ZideTerminalHandle, bytes: ?[*]const 
 
 pub fn zide_terminal_close_input(handle: ?*ZideTerminalHandle) c_int {
     return @intFromEnum(bridge.closeInput(handle));
+}
+
+pub fn zide_terminal_pending_input_acquire(handle: ?*ZideTerminalHandle, out_buffer: *ZideTerminalByteBuffer) c_int {
+    return @intFromEnum(bridge.pendingInputAcquire(handle, out_buffer));
+}
+
+pub fn zide_terminal_pending_input_release(out_buffer: *ZideTerminalByteBuffer) void {
+    bridge.pendingInputRelease(out_buffer);
 }
 
 pub fn zide_terminal_present_ack(handle: ?*ZideTerminalHandle, generation: u64) c_int {
@@ -203,6 +213,10 @@ pub fn zide_terminal_close_confirm_abi_version() u32 {
 
 pub fn zide_terminal_clipboard_abi_version() u32 {
     return bridge.clipboardAbiVersion();
+}
+
+pub fn zide_terminal_pending_input_abi_version() u32 {
+    return bridge.pendingInputAbiVersion();
 }
 
 pub fn zide_terminal_renderer_metadata_abi_version() u32 {
