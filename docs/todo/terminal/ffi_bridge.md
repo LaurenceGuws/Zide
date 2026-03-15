@@ -35,6 +35,11 @@ Current judgment:
   - PTY-backed verifier hardening
   - only then any advanced event-family expansion that survives the same
     "shared engine contract" bar
+- External peer review from the downstream Flutter host is now also positive:
+  the same widget/runtime layer survived swapping bridge-owned PTY vs
+  Flutter-owned PTY transport; the remaining known asymmetry is transport-side
+  focus/color-scheme reporting on the Flutter-owned PTY path, which stays
+  non-fatal and explicit instead of being hidden with host-side guesswork.
 
 ## TODO
 
@@ -83,4 +88,7 @@ Current judgment:
 
 - Advanced event families are still deferred.
 - PTY-backed foreign-host coverage is narrower than the baseline no-PTY authority path, but it is now a real maintained verifier rather than a missing smoke lane.
+- The next useful check is no longer "can a second host use the bridge at
+  all?" It is "does the same host contract stay easy and stable when PTY
+  ownership changes?"
 - The bridge remains beta-level and should not be treated as frozen.

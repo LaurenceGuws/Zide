@@ -358,6 +358,46 @@ Current bridge judgment:
 - the next bridge work should therefore favor ABI maturation and verifier
   hardening over widening the public semantic surface casually
 
+## External Host Peer Review
+
+The current bridge shape has now also been exercised by a downstream Flutter
+host (`flutty`) in two transport modes:
+
+- bridge-owned PTY/session via `zide_terminal_start(...)`
+- Flutter-owned PTY transport feeding bytes through `feed_output(...)` /
+  `close_input(...)`
+
+Current result:
+
+- the widget/runtime layer stayed shared across both PTY ownership modes for:
+  - redraw/publication/present acknowledgement
+  - snapshot consumption
+  - metadata consumption
+  - backend-owned viewport control
+  - command-text input
+- the code that differed was transport lifecycle only:
+  - startup
+  - stdout/stderr forwarding
+  - stdin ownership
+  - shutdown
+- this is the exact outcome the bridge wants: transport differences should stay
+  transport-local instead of forcing a second terminal semantics layer in the
+  host UI
+
+Current known asymmetry:
+
+- focus/color-scheme reporting remains non-fatal but unreported on the
+  Flutter-owned PTY path
+- upstream behavior is currently `missing_pty`, and the downstream host did
+  not paper over that with fake host state
+
+Interpretation:
+
+- the shared host contract is strong enough that PTY ownership can vary without
+  requiring a second widget/runtime model
+- remaining bridge work should continue to prefer verifier depth and contract
+  honesty over new public surface area
+
 Lifecycle/latest-state policy:
 
 - `zide_terminal_metadata_acquire(...)` is the preferred latest-state summary
