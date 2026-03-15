@@ -63,7 +63,8 @@ project landing page.
   - `app_architecture/review/PERFORMANCE_REVIEW_1.md` — historical UI/terminal performance audit that still contains useful ownership notes.
 
 Historical evidence remains under `app_architecture/review/`, but most files in
-that folder are no longer first-class navigation docs.
+that folder are no longer first-class navigation docs. Older completed rollout
+records are now grouped under `app_architecture/review/archive/`.
 
 ## Quick Ownership Rules
 
