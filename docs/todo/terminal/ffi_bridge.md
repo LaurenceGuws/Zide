@@ -172,6 +172,11 @@ Current judgment:
   - pinned-handle reuse only stays preferred if it keeps the same redraw-driven
     host loop shape and does not leak publication-retention complexity into the
     public contract
+- Current implementation caution:
+  - the existing publication path is still centered on one active render-cache
+    slot plus copy-based handoff, so pinned reuse must prove it only needs a
+    small bounded retained-generation extension rather than a heavier
+    publication store
 - Current execution rule for that lane:
   - do not widen the bridge first
   - keep the snapshot review focused on host call count, flat cell-buffer

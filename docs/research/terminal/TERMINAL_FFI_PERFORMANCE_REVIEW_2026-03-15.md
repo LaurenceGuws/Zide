@@ -284,6 +284,16 @@ Current execution rule for that preference:
   generation fences, or deep publication-retention policy leaking into the
   public contract
 
+Current implementation-oriented caution:
+
+- the current publication path is built around the active render-cache slot and
+  copy-based handoff, not a retained published-generation store
+- that means pinned reuse is still plausible, but it is not yet "obviously
+  cheap" in the existing ownership model
+- if the real code path needs more than a small bounded retained-generation
+  extension, the preference for pinned handles should be re-evaluated instead
+  of forced
+
 ## Current Conclusion
 
 The current redesign is performance-safe enough to continue building on.

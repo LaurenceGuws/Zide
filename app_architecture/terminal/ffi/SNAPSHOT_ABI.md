@@ -548,6 +548,35 @@ The expected backend implication is:
 - reject any design that turns one pin into unbounded retention or deep
   generation history
 
+Current code-reality note:
+
+- today publication is centered on the active render-cache slot selected by
+  `render_cache_index`
+- visible-state publication is refreshed by `view_cache.updateViewCacheNoLock`
+  into one of the session-owned render caches
+- `snapshot_acquire(...)` can read that published cache directly because it
+  immediately copies cells into FFI-owned memory
+- pinned reuse is harder because the current publication path does not yet
+  expose an obvious retained generation store; it exposes the currently
+  published cache plus copy-based handoff
+
+So the likely implementation consequence is:
+
+- pinned snapshots would probably need one additional retained publication slot
+  or another bounded generation-retention mechanism
+- if that requires more than a small bounded extension of the current
+  publication cache ownership model, the design stops looking "narrow"
+  quickly
+
+Current judgment after the code read:
+
+- pinned handles are still the preferred paper candidate
+- but they are no longer assumed to be a trivial follow-on from the current
+  render-cache structure
+- the next review must explicitly measure whether "one retained published
+  generation while pinned" is enough, or whether the real code wants something
+  heavier
+
 #### Why This Still Beats Diff On Paper
 
 Pinned snapshots still look better than diff export if they can preserve these
