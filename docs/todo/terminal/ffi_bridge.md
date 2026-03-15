@@ -164,6 +164,10 @@ Current judgment:
   - compare diff-oriented export against pinned-handle full-snapshot reuse as
     the next major boundary-cost question, not as an excuse to widen the
     surface casually
+- Current paper preference:
+  - pinned-handle full-snapshot reuse first
+  - diff export second unless a diff design can preserve one acquire, one
+    owned result, and one obvious visible-state authority
 - Current execution rule for that lane:
   - do not widen the bridge first
   - keep the snapshot review focused on host call count, flat cell-buffer

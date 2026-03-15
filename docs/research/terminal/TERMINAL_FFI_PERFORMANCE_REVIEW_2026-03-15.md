@@ -260,6 +260,13 @@ and reject anything that:
 - weakens the redraw-driven authority loop
 - makes hosts reconstruct truth from multiple partial surfaces
 
+Current paper preference:
+
+- pinned-handle full-snapshot reuse is the better-looking next candidate
+  today
+- diff export still has more downside risk around host complexity and stitched
+  truth unless it stays unusually disciplined
+
 ## Current Conclusion
 
 The current redesign is performance-safe enough to continue building on.

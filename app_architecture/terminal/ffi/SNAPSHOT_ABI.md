@@ -331,6 +331,99 @@ Both should be judged against the same rules:
 - no host-side truth stitching
 - no renderer-private assumptions leaking into the public bridge
 
+### Candidate Comparison: Diff Export vs Pinned Snapshot Handle
+
+#### Candidate A: Diff-Oriented Export
+
+Shape:
+
+- keep the current redraw gate
+- add a new exported shape that returns changed rows/spans or a similar delta
+  form instead of a full flat cell buffer on every acquire
+
+Strengths:
+
+- can reduce copied cell volume significantly when damage is small
+- matches the intuition behind the current backend damage work
+
+Main risks:
+
+- easy to turn into a chatty or multi-call host contract
+- easy to force hosts to keep more local reconstruction state
+- harder to keep one obvious authoritative visible-state surface
+- more likely to diverge between "fast path" and "full truth" semantics
+
+Host impact:
+
+- strongest risk is increased complexity in Flutter/Python/native host loops
+- especially dangerous if hosts need both:
+  - a diff stream for hot paint
+  - a separate full snapshot or metadata path for authoritative truth
+
+Judgment so far:
+
+- promising only if it stays one acquire, one owned result, and one obvious
+  visible-state authority
+- high risk of violating the current "no extra host chatter, no stitched
+  truth" rule if done casually
+
+#### Candidate B: Pinned Snapshot Handle
+
+Shape:
+
+- keep the redraw-driven loop
+- acquire a pinned snapshot handle over published state
+- release invalidates all interior pointers explicitly
+- host reads a full visible snapshot shape without paying a flat cell copy on
+  every acquire
+
+Strengths:
+
+- preserves the current full-snapshot mental model better
+- keeps one authoritative visible-state surface
+- lower risk of turning the host API into many narrow calls
+- aligns more naturally with the existing acquire/release ownership pattern
+
+Main risks:
+
+- lifetime and mutation rules must stay extremely explicit
+- backend publication/present sequencing must not let hosts observe unstable or
+  concurrently mutating memory
+- may increase pinning/retention pressure if hosts misuse the handle lifetime
+
+Host impact:
+
+- lower host-loop complexity than diff export if the acquire/release contract
+  stays boring
+- better fit for current Flutter/Python usage because the render loop remains
+  "one redraw gate, one acquire, one render, one ack"
+
+Judgment so far:
+
+- structurally closer to the current successful host contract
+- currently the safer-looking direction if the implementation can keep
+  lifetimes explicit and published-state pinning honest
+
+### Current Preference
+
+Current paper preference is:
+
+1. pinned snapshot handle first
+2. diff-oriented export second
+
+Reason:
+
+- it preserves the current authority model better
+- it is less likely to raise host call count
+- it is less likely to force hosts into local truth reconstruction
+
+What would change that preference:
+
+- strong evidence that pinned snapshots create unacceptable publication
+  lifetime pressure or lock/retention hazards
+- or a diff design that stays one acquire, one owned result, and one obvious
+  visible-state authority without bifurcating the host loop
+
 ### Smallest Credible Future Shape
 
 If the bridge evolves this lane, the first useful shape should be small and
