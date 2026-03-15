@@ -53,6 +53,25 @@ that are not reliable on the active Wayland/EGL stack. The current stack must
 be redesigned so correctness does not depend on default-framebuffer preservation
 semantics or ambiguous front/back behavior across swap.
 
+## Ownership Snapshot
+
+```mermaid
+flowchart LR
+    Core["terminal core publication"] --> Widget["widget-local retained targets"]
+    Widget --> Renderer["renderer-owned scene composition"]
+    Renderer --> Present["default-framebuffer present sink"]
+
+    Core -. no present ownership .-> Present
+    Widget -. no final presented-frame truth .-> Present
+```
+
+Desired reading:
+
+- terminal core owns publication truth
+- widgets own narrow retained upload/compose preparation
+- renderer owns final scene truth and present
+- default framebuffer is a sink, not retained state authority
+
 ## Design Goal
 
 Produce a renderer/presentation architecture for Zide's current SDL + OpenGL +
@@ -109,6 +128,13 @@ At a high level, the main options appear to be:
 
 The research phase should decide which of these is architecturally correct for
 Zide's constraints rather than assuming the answer up front.
+
+Current answer:
+
+- the research phase is complete
+- the chosen direction is the hybrid model
+- this brief remains useful as the short statement of the problem, bar, and
+  seam ownership target
 
 ## Required Deliverables
 

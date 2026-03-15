@@ -251,6 +251,16 @@ Zide should move to a hybrid architecture with:
 
 ### Ownership model
 
+```mermaid
+flowchart LR
+    Core["terminal core"] --> Widget["widget-local retained targets"]
+    Widget --> Renderer["renderer-owned scene target"]
+    Renderer --> Present["default framebuffer present"]
+
+    Core -. publication / damage truth only .-> Renderer
+    Widget -. upload planning, not present truth .-> Present
+```
+
 #### Terminal core
 
 Owns only:
@@ -303,6 +313,15 @@ The renderer becomes the authority on “what scene is being presented,” not j
 - the final step should be a simple present copy/draw
 - post-swap default-framebuffer contents must never be treated as retained
   scene truth
+
+### Decision Table
+
+| Area | Keep | Change |
+| --- | --- | --- |
+| terminal core | publication generations, render-cache truth, damage semantics | stop any dependence on present semantics |
+| widgets | retained local targets, partial/full upload planning | stop acting like final presented-frame authority |
+| renderer | frame graph, submission, diagnostics | become explicit owner of scene truth before present |
+| default framebuffer | final sink only | stop treating it as retained scene state |
 
 ### Fast-path rules
 

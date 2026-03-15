@@ -45,6 +45,27 @@ Shared lesson:
 - acknowledgement is explicit
 - wake and present are not the same contract
 
+## Contract At A Glance
+
+```mermaid
+flowchart LR
+    Mutate["backend mutation"] --> Publish["publish generation + damage"]
+    Publish --> Wake["wake hint"]
+    Publish --> State["published state"]
+    Wake --> Host["host loop"]
+    State --> Host
+    Host --> Draw["draw / present"]
+    Draw --> Ack["present_ack(generation)"]
+    Ack --> State
+```
+
+Interpretation:
+
+- publication truth is level-triggered state, not wake history
+- wake is only "go inspect state again"
+- acknowledgement is host feedback into the same contract, not a second
+  publication path
+
 ## Contract Goals
 
 1. One publication truth.
@@ -269,6 +290,15 @@ flowchart LR
         FDraw --> FAck["present_ack(generation)"]
     end
 ```
+
+The important equivalence is:
+
+- native has richer renderer internals
+- FFI has a thinner explicit ABI
+- both still participate in the same semantic loop:
+  - published state
+  - host consumption/presentation
+  - explicit acknowledgement
 
 ## Current Convergence Point
 
