@@ -43,7 +43,7 @@ pub fn snapshot(self: anytype) TerminalSnapshot {
         .cursor_visible = view.cursor_visible,
         .dirty = view.dirty,
         .damage = view.damage,
-        .scrollback_count = self.core.history.scrollbackCount(),
+        .scrollback_count = self.core.scrollbackCount(),
         .scrollback_offset = self.core.scrollbackOffset(),
         .selection = selection_mod.selectionState(self),
         .alt_active = alt_active,
@@ -159,13 +159,12 @@ pub fn setSyncUpdates(self: anytype, enabled: bool) void {
 }
 
 pub fn setSyncUpdatesLocked(self: anytype, enabled: bool) void {
-    if (self.core.syncUpdatesActive() == enabled) return;
-    self.core.sync_updates_active = enabled;
+    if (!self.core.setSyncUpdates(enabled)) return;
     const cache = renderCache(self);
     const presented_generation = presentedGeneration(self);
     if (cache.generation == presented_generation and cache.dirty == .none) return;
     _ = self.output_generation.fetchAdd(1, .acq_rel);
-    const offset: usize = self.core.history.scrollOffset();
+    const offset: usize = self.core.scrollbackOffset();
     view_cache.updateViewCacheNoLockTagged(self, self.output_generation.load(.acquire), offset, "set_sync_updates");
 }
 

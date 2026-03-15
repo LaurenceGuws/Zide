@@ -34,7 +34,10 @@ Status note, 2026-03-14:
   through core-owned accessors for title/cwd/scrollback offset/semantic prompt
   state instead of reading raw `self.core` fields directly; clipboard-related
   host semantics now also go through core-owned OSC/OSC5522 buffer helpers
-  instead of mutating raw core buffers from session helpers.
+  instead of mutating raw core buffers from session helpers; sync-update state
+  and scrollback count/offset rendering metadata now also route through
+  `TerminalCore` accessors/mutators instead of direct session-side field/history
+  access.
 - Input encoding remains on the dedicated subsystem path: writer-agnostic
   encoder coverage exists at both the fake-writer level and the real
   PTY-backed `TerminalSession` writer boundary.

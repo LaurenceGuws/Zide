@@ -197,12 +197,22 @@ pub const TerminalCore = struct {
         return if (self.active == .alt) 0 else self.history.scrollOffset();
     }
 
+    pub fn scrollbackCount(self: *const TerminalCore) usize {
+        return if (self.active == .alt) 0 else self.history.scrollbackCount();
+    }
+
     pub fn semanticPromptActive(self: *const TerminalCore) bool {
         return self.semantic_prompt.input_active or self.semantic_prompt.output_active;
     }
 
     pub fn syncUpdatesActive(self: *const TerminalCore) bool {
         return self.sync_updates_active;
+    }
+
+    pub fn setSyncUpdates(self: *TerminalCore, enabled: bool) bool {
+        if (self.sync_updates_active == enabled) return false;
+        self.sync_updates_active = enabled;
+        return true;
     }
 
     pub fn takeOscClipboardCopy(
