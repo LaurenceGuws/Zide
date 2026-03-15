@@ -30,10 +30,11 @@ Practical interpretation:
 - `zide-256color` and `zide` remain Zide-owned fallbacks.
 - `xterm-256color` is the final fallback when no richer entry is available.
 
-This is a compatibility strategy, not a product-identity claim. Zide is not
-trying to present itself as Kitty as a product; the runtime is currently
-preferring the broadest already-installed compatible terminfo entry before
-falling back to Zide-owned identities.
+Short version:
+
+- Zide prefers the broadest already-installed compatible terminfo first.
+- If that is not available, it falls back to Zide-owned entries.
+- This is a compatibility choice, not a product-identity claim.
 
 Bundled terminfo source:
 
@@ -164,6 +165,13 @@ Expected value is compatibility-driven:
 - otherwise `xterm-zide`
 - then `zide-256color`
 - finally `xterm-256color`
+
+Practical reading:
+
+- seeing `xterm-kitty` in Zide is not a failure by itself
+- it means the runtime picked the strongest already-installed compatible entry
+- if you want the Zide-owned identity to win, install the bundled terminfo and
+  use an environment where `xterm-kitty` is not already taking precedence
 
 ## Validation Sources
 

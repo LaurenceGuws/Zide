@@ -2,9 +2,42 @@
 
 Date: 2026-01-24
 
-Purpose: define stable API contracts for the terminal surface to prevent accidental behavior drift during modularization.
+Purpose: capture the terminal/session/workspace surface that still matters while
+the terminal core split continues to harden.
 
-Status: post-modularization. Treat behaviors as hypotheses unless verified by baseline fixtures.
+Status note, 2026-03-15:
+
+- This file is no longer the primary terminal architecture authority.
+- Use it as a boundary/contract reference, not as the leading source of truth
+  for terminal design direction.
+- Current design authority lives in:
+  - `app_architecture/terminal/VT_CORE_DESIGN.md`
+  - `app_architecture/terminal/DESIGN.md`
+  - `app_architecture/terminal/WAYLAND_PRESENT_IMPLEMENTATION_PLAN.md`
+- Any API row still marked `pending` or `to be verified` should be treated as
+  an open contract-hardening item, not as a guaranteed stable public contract.
+
+## Current Role
+
+This doc now serves three narrower purposes:
+
+1. identify the live `TerminalSession` / `TerminalWorkspace` surface area
+2. record boundary ownership rules during cleanup
+3. point at fixture-backed hardening gaps
+
+It should not grow into another dated modularization diary or duplicate the
+full engine split docs.
+
+## Terminal API Contract Boundary
+
+```mermaid
+flowchart LR
+    Host[app / host / UI] --> API[session + workspace API surface]
+    API --> Session[TerminalSession]
+    API --> Workspace[TerminalWorkspace]
+    Session --> Core[terminal core / transport]
+    Workspace --> Session
+```
 
 ## Contract Table
 
@@ -36,7 +69,25 @@ Notes:
 - Contracted behavior only after verified tests; do not assert guarantees early.
 - Implementation is now modularized across `src/terminal/core/*` helpers; API surface remains `TerminalSession`.
 
+Interpretation rule:
+
+- rows with explicit replay/unit coverage are stronger than rows still marked
+  `pending`
+- this table is a hardening checklist, not proof that every contract is already
+  production-stable
+
 Replay fixtures referenced above live under `fixtures/terminal` and are executed via `zig build test-terminal-replay`.
+
+## Publication State
+
+```mermaid
+stateDiagram-v2
+    [*] --> Current
+    Current --> Published
+    Published --> Presented
+    Presented --> Acknowledged
+    Acknowledged --> Current
+```
 
 ## Boundary Contract (2026-03-09)
 
@@ -80,6 +131,15 @@ important than the exact file layout.
 ## Workspace API Contract (tabs)
 
 `TerminalWorkspace` lives in `src/terminal/core/workspace.zig` and owns tab/session orchestration above `TerminalSession`.
+
+### Workspace API vs Session API
+
+```mermaid
+flowchart LR
+    WorkspaceAPI[workspace API\ncreate/close/activate/move/poll] --> Shared[shared read contract]
+    SessionAPI[session API\ninput/resize/snapshot/selection/query] --> Shared
+    Shared --> Host[host / app consumer]
+```
 
 | API | Inputs | Outputs | Lifetime | Allocations | Invariants | Tests |
 | --- | ------ | ------- | -------- | ----------- | ---------- | ----- |

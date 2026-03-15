@@ -50,6 +50,15 @@ sequenceDiagram
 - For structs with `init/deinit`, all allocations done in `init` must be released in `deinit`.
 - Any `errdefer` should clean up every resource allocated so far (FreeType, HarfBuzz, textures, buffers, etc.).
 
+```mermaid
+flowchart TD
+    Owned[owned return: create/alloc/dup] --> CallerOwns[caller owns]
+    CallerOwns --> FreePath[free / deinit / release]
+
+    Borrowed[borrowed return: get/view] --> OwnerRetains[owner retains lifetime]
+    OwnerRetains --> NoFree[caller must not free]
+```
+
 ## Containers
 
 - `ArrayList`/`HashMap` must be `deinit`'d in the owning struct's `deinit`.
@@ -67,6 +76,19 @@ sequenceDiagram
 - Long-running work should not hold locks; copy minimal data, drop the lock, then work.
 - Shutdown order: stop worker threads first, then free shared data, then destroy allocators.
 - Avoid cross-thread ownership unless it is explicit and documented.
+
+```mermaid
+sequenceDiagram
+    participant Caller
+    participant Mutex
+    participant Shared as Shared State
+    participant Work as Heavy Work
+
+    Caller->>Mutex: lock
+    Caller->>Shared: copy minimal state
+    Caller->>Mutex: unlock
+    Caller->>Work: do expensive work without lock
+```
 
 ## FFI and C libraries
 

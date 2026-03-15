@@ -54,18 +54,20 @@ project landing page.
 - `tools/docs_explorer/README.md` — run instructions for the local docs explorer.
 - `app_architecture/CONFIG.md` — Lua config subsystem: parser surface, merge rules, runtime consumers, and reload truth.
 - `app_architecture/config_todo.md` — config subsystem tracker: contract drift, reload gaps, validation, and binding semantics.
-- `docs/DEPENDENCIES.md` — dependency source policy and platform runtime requirements.
+<<<<<<< HEAD
+- `docs/DEPENDENCIES.md` — current dependency sourcing policy: Zig-managed app stack on Linux/macOS, platform-runtime requirements, and Windows `vcpkg` exception.
+=======
+- `docs/DEPENDENCIES.md` — current dependency sourcing policy: Zig-managed app stack on Linux/macOS, platform-runtime requirements, and Windows `vcpkg` exception.
+>>>>>>> main
 - `docs/terminal/compatibility.md` — current beta terminal support surface, TERM identity, and terminfo install instructions.
 
 ## Reviews And Audits
 - `app_architecture/review/` — past review notes (scope + date in file).
-  - `app_architecture/review/FILE_LAYOUT_HOTSPOTS_REVIEW.md` — historical structure-smell review and reference-repo comparison.
-  - `app_architecture/review/REPO_STRUCTURE_REVIEW.md` — historical repo-hygiene review for tests, tooling roots, and stale docs/tests.
-  - `app_architecture/review/SRC_APP_DOMAIN_MAP.md` — historical `src/app` ownership/planning map used during folder cleanup.
   - `app_architecture/review/TERMINAL_CORE_ARCHITECTURE_REVIEW_2026-03-10.md` — Ghostty-informed review of remaining terminal-core architectural blockers.
-  - `app_architecture/review/app_mode_layering_todo.md` — completed mode-layering extraction tracker retained as historical rollout record.
-  - `app_architecture/review/app_mode_layering_validation.md` — mode-layering extraction validation matrix and gate bundle authority.
-  - `app_architecture/review/mode_binary_size_baseline.md` — focused-binary size snapshot used by the mode extraction lane.
+  - `app_architecture/review/PERFORMANCE_REVIEW_1.md` — historical UI/terminal performance audit that still contains useful ownership notes.
+
+Historical evidence remains under `app_architecture/review/`, but most files in
+that folder are no longer first-class navigation docs.
 
 ## Quick Ownership Rules
 

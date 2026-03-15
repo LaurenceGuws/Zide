@@ -16,6 +16,22 @@ Modularize UI widgets into smaller, testable units while preserving behavior and
 - Renderer work is tracked in `app_architecture/ui/renderer_todo.md`.
 - SDL3 migration is tracked in `app_architecture/ui/sdl3_migration_todo.md`.
 
+```mermaid
+flowchart TB
+    Registry[src/ui/widgets.zig]
+    Registry --> TW[TerminalWidget facade]
+    Registry --> EW[EditorWidget facade]
+
+    TW --> TWDraw[terminal draw modules]
+    TW --> TWInput[terminal input modules]
+    TW --> TWHover[hover / link modules]
+    TW --> TWImages[kitty image cache/upload modules]
+
+    EW --> EWDraw[editor draw modules]
+    EW --> EWInput[editor input modules]
+    EW --> EWSearch[editor search/highlight modules]
+```
+
 ## TODO
 
 ### Phase 0 Baseline and Contracts
@@ -62,3 +78,15 @@ Modularize UI widgets into smaller, testable units while preserving behavior and
 - [x] `UI-PERF-07` Add frame-phase metrics for lock wait and poll budgets
 - [ ] `UI-PERF-08` Verification pass for latency under heavy terminal output and large editor files
 
+```mermaid
+flowchart LR
+    Model[Terminal session / workspace state]
+    Snapshot[Immutable view snapshot]
+    Widget[TerminalWidget draw/orchestration]
+    Ack[Dirty acknowledgement]
+    Renderer[Renderer submit]
+
+    Model --> Snapshot --> Widget --> Renderer
+    Snapshot -. generation / dirty handoff .-> Ack
+    Widget -. should not retire dirty state directly .-> Ack
+```
