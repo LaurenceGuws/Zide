@@ -64,6 +64,7 @@ project landing page.
 - `docs/reference/README.md` — reference-doc placement and role.
 - `docs/research/README.md` — research-doc placement and role.
 - `docs/research/terminal/README.md` — terminal research subtree entrypoint.
+- `docs/research/terminal/TERMINAL_LAYER_REFERENCE_NOTES.md` — per-layer reference-terminal notes behind the high-level terminal design doc.
 - `docs/reference/terminal_compatibility.md` — terminal compatibility, TERM identity, and terminfo install instructions.
 - `docs/reference/terminal_redraw_capture_workflow.md` — redraw capture and replay-authority workflow for real terminal repros.
 - `docs/reference/terminal_flutter_adapter_notes.md` — Flutter-style host adapter notes for the terminal bridge.
