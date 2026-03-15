@@ -10,6 +10,13 @@ Customer-facing entrypoints live outside this index:
 Use this file for repo workflow and doc ownership navigation, not as the public
 project landing page.
 
+Quick reading guide:
+
+- start with `docs/AGENT_HANDOFF.md` if you are joining an active work session
+- use `docs/todo/` for current execution queues
+- use `app_architecture/` for current technical authority
+- use `docs/reference/`, `docs/research/`, and `docs/review/` for supporting material
+
 ## Start Here
 - `docs/AGENT_HANDOFF.md` — current focus, constraints, and entrypoints.
 - `AGENTS.md` — workflow rules and constraints.
@@ -75,12 +82,11 @@ project landing page.
   - `docs/review/TERMINAL_CORE_ARCHITECTURE_REVIEW_2026-03-10.md` — Ghostty-informed review of remaining terminal-core architectural blockers.
   - `docs/review/PERFORMANCE_REVIEW_1.md` — historical UI/terminal performance audit that still contains useful ownership notes.
   - `docs/review/TERMINAL_PROTOCOL_ACCURACY_REVIEW_2026-02-23.md` — detailed protocol source-review evidence and implementation history behind the active parity tracker.
-
-Historical evidence remains under `docs/review/`, but most files in
-that folder are no longer first-class navigation docs. Older completed rollout
-records are now grouped under `docs/review/archive/`.
-
 - `docs/review/archive/terminal/README.md` — terminal rollout/archive subtree entrypoint.
+
+Historical evidence remains under `docs/review/`, but most files there are no
+longer first-class navigation docs. Older completed rollout records are grouped
+under `docs/review/archive/`.
 
 ## Quick Ownership Rules
 
