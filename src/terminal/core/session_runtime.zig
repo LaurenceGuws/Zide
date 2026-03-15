@@ -8,6 +8,7 @@ const terminal_core_mod = @import("terminal_core.zig");
 const input_mod = @import("../input/input.zig");
 const render_cache_mod = @import("render_cache.zig");
 const input_modes = @import("input_modes.zig");
+const session_lifecycle = @import("session_lifecycle.zig");
 
 const Pty = pty_mod.Pty;
 const TerminalCore = terminal_core_mod.TerminalCore;
@@ -101,15 +102,7 @@ pub fn closeExternalTransport(self: anytype) bool {
 }
 
 pub fn reportExternalChildExit(self: anytype, code: ?i32) bool {
-    if (self.external_transport == null) return false;
-    if (code) |value| {
-        self.child_exit_code.store(value, .release);
-        self.child_exited.store(true, .release);
-    } else {
-        self.child_exit_code.store(-1, .release);
-        self.child_exited.store(false, .release);
-    }
-    return true;
+    return session_lifecycle.reportExternalChildExit(self, code);
 }
 
 pub fn deinit(self: anytype) void {
@@ -143,29 +136,12 @@ pub fn setInputPressure(self: anytype, value: bool) void {
 }
 
 pub fn poll(self: anytype) !void {
-    maybeUpdateChildExit(self);
+    session_lifecycle.maybeUpdateChildExit(self);
     return pty_io.poll(self);
 }
 
 pub fn refreshChildExit(self: anytype) void {
-    maybeUpdateChildExit(self);
-}
-
-fn maybeUpdateChildExit(self: anytype) void {
-    if (self.child_exited.load(.acquire)) return;
-    if (terminal_transport.Transport.fromSession(self)) |transport| {
-        if (transport.pollExit() catch |err| blk: {
-            const log = app_logger.logger("terminal.pty");
-            log.logf(.warning, "pty pollExit failed err={s}", .{@errorName(err)});
-            break :blk null;
-        }) |code| {
-            self.child_exit_code.store(code, .release);
-            self.child_exited.store(true, .release);
-
-            const log = app_logger.logger("terminal.pty");
-            log.logf(.info, "pty child exited code={d}", .{code});
-        }
-    }
+    session_lifecycle.refreshChildExit(self);
 }
 
 pub fn hasData(self: anytype) bool {
