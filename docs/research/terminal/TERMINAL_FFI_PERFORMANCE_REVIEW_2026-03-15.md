@@ -339,6 +339,9 @@ Current narrow diff shape worth judging:
   granular diff
 - first-cut fallback should bias toward over-falling-back rather than shipping
   a fragile diff packet
+- viewport-shift optimization should not be part of the first diff success path
+- alt-screen and visible-history transitions should bias toward full refresh in
+  the first cut
 
 Current provisional winner:
 

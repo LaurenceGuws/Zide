@@ -201,6 +201,8 @@ Current judgment:
   - missing/stale base generation should force fallback, not best-effort diff
   - title/cwd should stay out of the first diff ABI entirely
   - replacement cells should be ordered linearly by row then span
+  - viewport-shift, alt-screen, and visible-history transitions should bias
+    toward fallback in the first cut
   - reject the lane if it starts requiring row-follow-up getters or a second
     authoritative visible-state path
 - Current decision rule:

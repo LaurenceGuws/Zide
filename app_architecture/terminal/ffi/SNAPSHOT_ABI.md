@@ -551,16 +551,69 @@ Current first-cut fallback triggers should be explicit:
 2. `base_generation !=` the backend's current acknowledged/published visible
    base expectation for the requesting host
 3. visible geometry changed
-4. alt-screen or visible-history transition makes granular diff less obvious
-   than a full replacement
-5. computed diff packaging would be larger than, or close enough to, a full
+4. alt-screen transition occurred
+5. visible-history generation or scrollback-offset transition makes the visible
+   base relationship non-trivial
+6. viewport-shift publication metadata would be required to describe the update
+   honestly
+7. computed diff packaging would be larger than, or close enough to, a full
    visible replacement that the complexity is not justified
-6. row-span overflow / damage shape would make the granular packet misleading
+8. row-span overflow / damage shape would make the granular packet misleading
    or too broad
 
 These triggers do not need to stay permanent forever, but the first diff cut
 should bias toward falling back too often rather than shipping a fragile diff
 packet that hosts cannot trust.
+
+#### Viewport-Shift Rule
+
+The current backend publication path already tracks:
+
+- `viewport_shift_rows`
+- `viewport_shift_exposed_only`
+
+That does not mean the first diff ABI should expose and rely on them.
+
+Current preferred first-cut rule:
+
+- if a transition depends on viewport-shift semantics to stay efficient or
+  correct, set `full_refresh_required = 1`
+- do not make hosts implement shift-aware patching in the first diff cut
+
+Why:
+
+- shift-aware diff is a second layer of contract complexity
+- it is easier to add later than to remove after hosts depend on it
+- the first diff ABI should prove row/span replacement first, not movement
+  semantics
+
+So:
+
+- viewport-shift metadata may stay in research vocabulary
+- but it should not be part of the first implementation's success path
+
+#### Alt-Screen And Visible-History Transition Rule
+
+Current preferred first-cut rule:
+
+- entering alt-screen: fallback
+- leaving alt-screen: fallback
+- transitions that change `visible_history_generation`: fallback
+- scrollback pin/follow-live transitions that invalidate the assumed visible
+  base: fallback
+
+Why:
+
+- these transitions are exactly where "one obvious visible-state story" is
+  easiest to lose
+- full refresh is cheap insurance against a first diff ABI that becomes
+  semantically subtle too early
+
+This means the first diff cut is deliberately narrower than the backend's
+internal publication logic:
+
+- normal same-mode visible-state updates may use granular diff
+- mode or viewport-identity transitions should bias toward full replacement
 
 #### String Policy
 
@@ -645,6 +698,8 @@ Do not implement diff export unless this stays true:
 7. title/cwd stay out of the first diff ABI entirely
 8. replacement cell ordering is fully deterministic from the packet alone
 9. no trusted base generation means explicit fallback, not best-effort diff
+10. viewport-shift and alt/history transitions may fall back instead of forcing
+    movement-aware diff semantics into the first cut
 
 #### Candidate B: Pinned Snapshot Handle
 
