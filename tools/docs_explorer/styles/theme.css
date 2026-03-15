@@ -37,8 +37,9 @@
   --pane-sidebar-surface: color-mix(in srgb, var(--panel-2) 62%, transparent 38%);
   --pane-resizer-surface: color-mix(in srgb, var(--panel-2) 56%, transparent 44%);
   --pane-content-surface: color-mix(in srgb, var(--panel) 60%, transparent 40%);
+  --header-control-surface: color-mix(in srgb, var(--shell-header-surface) 52%, transparent 48%);
   --control-surface: color-mix(in srgb, var(--panel) 18%, transparent 82%);
-  --menu-surface: color-mix(in srgb, var(--panel-3) 58%, transparent 42%);
+  --menu-surface: color-mix(in srgb, var(--panel-3) 88%, black 12%);
   --viewer-callout-surface: color-mix(in srgb, var(--accent-soft) 72%, transparent 28%);
   --viewer-raised-surface: color-mix(in srgb, var(--panel-2) 76%, black 24%);
 }
@@ -80,8 +81,9 @@
   --pane-sidebar-surface: color-mix(in srgb, var(--panel-3) 68%, transparent 32%);
   --pane-resizer-surface: color-mix(in srgb, var(--panel-3) 62%, transparent 38%);
   --pane-content-surface: color-mix(in srgb, var(--panel) 68%, transparent 32%);
+  --header-control-surface: color-mix(in srgb, var(--shell-header-surface) 58%, transparent 42%);
   --control-surface: color-mix(in srgb, var(--panel) 24%, transparent 76%);
-  --menu-surface: color-mix(in srgb, var(--panel-3) 64%, transparent 36%);
+  --menu-surface: color-mix(in srgb, var(--panel-3) 90%, white 10%);
   --viewer-callout-surface: color-mix(in srgb, var(--accent-soft) 68%, transparent 32%);
   --viewer-raised-surface: color-mix(in srgb, var(--panel) 84%, var(--panel-3) 16%);
 }

@@ -4,12 +4,12 @@
   }
 
   .app-head {
-    padding: 14px 16px 11px;
+    padding: 9px 14px 8px;
   }
 
   .app-head h1 {
-    font-size: 1.24rem;
-    letter-spacing: -0.026em;
+    font-size: 1.08rem;
+    letter-spacing: -0.02em;
   }
 
   .viewer {
@@ -23,12 +23,12 @@
   }
 
   .app-head {
-    padding: 13px 14px 10px;
+    padding: 8px 12px 7px;
   }
 
   .app-head h1 {
-    font-size: 1.12rem;
-    line-height: 1.12;
+    font-size: 1rem;
+    line-height: 1;
   }
 
   .viewer {
@@ -61,21 +61,17 @@
   }
 
   .app-head {
-    padding: 16px 16px 12px;
+    padding: 10px 12px 8px;
   }
 
   .content-title-row {
-    align-items: flex-start;
+    align-items: center;
   }
 
   .app-head h1 {
-    font-size: 1.16rem;
-    line-height: 1.1;
-    letter-spacing: -0.022em;
-  }
-
-  .doc-breadcrumb {
-    row-gap: 0.16rem;
+    font-size: 0.96rem;
+    line-height: 1;
+    letter-spacing: -0.018em;
   }
 
   .meta-row {
@@ -109,24 +105,18 @@
   }
 
   .content-title-row {
-    gap: 8px;
-    margin-bottom: 4px;
+    gap: 7px;
+    margin-bottom: 0;
   }
 
   .app-head h1 {
-    font-size: 1.03rem;
-    line-height: 1.14;
-    word-break: break-word;
+    font-size: 0.92rem;
+    line-height: 1;
   }
 
   .app-head p {
-    font-size: 0.85rem;
-    line-height: 1.35;
-  }
-
-  .doc-breadcrumb {
-    gap: 0.22rem;
-    font-size: 0.94em;
+    font-size: 0.78rem;
+    line-height: 1.2;
   }
 
   .meta-row {
@@ -195,15 +185,11 @@
   }
 
   .app-head h1 {
-    font-size: 0.96rem;
+    font-size: 0.88rem;
   }
 
   .app-head p {
-    font-size: 0.8rem;
-  }
-
-  .doc-breadcrumb {
-    font-size: 0.9em;
+    font-size: 0.74rem;
   }
 
   .folder-label,

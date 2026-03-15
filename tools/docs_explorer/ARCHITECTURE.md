@@ -22,9 +22,11 @@ requiring a frontend framework or backend service.
 - `styles/base.css`
   - stylesheet manifest/import root
 - `styles/theme.css`
-  - theme tokens and theme-level defaults
+  - theme tokens and derived shell/control/viewer surface formulas
 - `styles/shell.css`
-  - shell layout and outer chrome
+  - app-shell layout and outer chrome
+  - atmospheric background field
+  - app-level header above sidebar and content
 - `styles/tree.css`
   - sidebar search/tree styling
 - `styles/controls.css`
@@ -59,8 +61,6 @@ requiring a frontend framework or backend service.
 - `js/viewer_state.js`
   - viewer body render state transitions
   - loading/error/content HTML rendering from explicit state
-- `js/runtime_info.ts`
-  - small runtime/about metadata surface in the options menu
 - `js/tree.js`
   - tree rendering and active-node sync
 - `js/viewer.js`
@@ -75,7 +75,7 @@ requiring a frontend framework or backend service.
   - small shared helpers
 - `config/project.json`
   - project-specific title/icon/defaults
-  - project-specific palette overrides for light/dark theme identity
+  - project-specific light/dark palette overrides
   - explicit `repoBasePath` for hosted/local content fetches
 - `config/project.pages.json`
   - alternate hosted/pages config without mutating local defaults
@@ -117,33 +117,32 @@ It should not own:
 
 ## State Model Direction
 
-The app should converge toward one explicit state object instead of scattered
-DOM-driven updates.
+The app should keep converging toward one explicit state object instead of
+scattered DOM-driven updates.
 
-Recommended app state shape:
+Current app state shape is centered on:
 
-- `project`
-- `docs`
 - `current_doc`
 - `theme`
 - `sidebar.width`
 - `sidebar.collapsed`
 - `options_menu.open`
 - `search.query`
+- `document.title`
+- `document.subtitle`
+- `document.raw_link`
+- `viewer.html`
+- `tree.filter`
+- `tree.active_path`
+- `tree.expanded_paths`
 
-The first explicit state step is now in `js/state.js`, but transitions are
-still only partially centralized. The next goal is to make the remaining view
-updates flow through clearer state/controller seams instead of ad hoc event
-handlers.
+The next cleanup goal is not "add more features" but to keep reducing places
+where DOM structure or CSS-specific assumptions leak across module boundaries.
 
 Theme is now part of explicit app state rather than being owned only through
-DOM reads and local storage helpers.
-Document header/load state is now also moving into explicit app state instead
-of being mutated directly inside document-loading code.
-Tree filter/active state is moving the same way so the tree is no longer a
-special-case DOM island.
-Viewer body rendering is now moving the same way, reducing the amount of inline
-presentation logic in `viewer.js`.
+DOM reads and local storage helpers. Document chrome, tree state, and viewer
+body state now also flow through explicit controller/state seams instead of
+being mutated ad hoc inside the fetch/render path.
 
 Recommended pattern:
 
@@ -156,7 +155,7 @@ is enough.
 
 The current typing direction is:
 
-- the stable center has started moving to `.ts`
+- the browser app center is now on `.ts`
 - browser output is compiled into `build/js`
 - remaining `.js` modules can move over incrementally
 - no long-lived `checkJs` path
@@ -200,14 +199,33 @@ It also should not require CSS edits for simple project-level branding changes.
 Hosted/local path handling should be explicit in config rather than buried in
 hardcoded relative URL helpers.
 
+## Current Shell Model
+
+The current shell should follow one simple visual rule:
+
+- the outer shell owns atmosphere
+- panes own material layers
+- small wrappers and controls should prefer transparency, border, and hover
+  state before adding their own local fill
+
+That means:
+
+- avoid per-widget decorative backgrounds when a pane/token already exists
+- keep shell/control/viewer materials derived from theme tokens
+- do not let local one-off `color-mix(...)` values grow faster than the token
+  system
+
 ## Refactor Targets
 
 Current likely next candidates:
 
-- `styles/base.css`
-  - now just the stylesheet entrypoint/import manifest
+- `styles/theme.css`
+  - continue consolidating repeated surface formulas into named tokens
+- `js/view_state.ts`
+  - keep document chrome intentionally small and avoid letting app-shell
+    branding/navigation concerns turn back into document-specific chrome
 - `js/app.js`
-  - good current composition root; avoid letting it bloat back into a new
+  - keep it as composition root only; do not let it bloat back into a new
     monolith
 
 ## Non-goals
