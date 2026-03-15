@@ -3,6 +3,10 @@
 Local browser-based docs explorer for Zide's `docs/` and
 `app_architecture/` content.
 
+Hosted release/docs entrypoint:
+
+- <https://laurenceguws.github.io/Zide/tools/docs_explorer/?config=project.pages.json>
+
 Current entrypoints:
 
 - `docs_explorer.py`: lightweight local HTTP launcher
@@ -51,3 +55,5 @@ Notes:
 - If GitHub Pages is published for a release, built explorer assets may be
   committed on the release branch as part of the release ritual instead of on
   `main`.
+- Release-branch Pages publication should keep `.nojekyll` at the repo root so
+  GitHub serves the static explorer directly.

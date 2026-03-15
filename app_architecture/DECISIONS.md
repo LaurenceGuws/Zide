@@ -1,5 +1,16 @@
 # Decision Log
 
+Scope note, 2026-03-15:
+
+- This file is a lightweight historical/high-level decision log, not an
+  exhaustive architecture authority.
+- Current subsystem authority lives in the owning docs under
+  `app_architecture/terminal/`, `app_architecture/ui/`, and related active
+  plans/todos.
+- Review-era and investigation-specific material should live under
+  `app_architecture/review/` or subsystem research folders instead of being
+  appended here as transient session notes.
+
 ## 2026-01-15 — Compositor-aware mouse scaling on Wayland
 
 **Context**

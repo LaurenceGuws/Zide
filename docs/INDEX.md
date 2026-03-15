@@ -1,8 +1,16 @@
 # Docs Index
 
-Quick map of where to look for common needs.
+Repo-local docs map for contributors, operators, and agents.
 
-## Start here (current focus + workflow)
+Customer-facing entrypoints live outside this index:
+
+- `README.md` — top-level product overview, docs link, and release discovery.
+- hosted docs explorer — `https://laurenceguws.github.io/Zide/tools/docs_explorer/?config=project.pages.json`
+
+Use this file for repo workflow and doc ownership navigation, not as the public
+project landing page.
+
+## Start Here
 - `docs/AGENT_HANDOFF.md` — current focus, constraints, and entrypoints.
 - `AGENTS.md` — workflow rules and constraints.
 - `docs/WORKFLOW.md` — doc roles and update rules.
@@ -39,8 +47,8 @@ Quick map of where to look for common needs.
 - `app_architecture/DECISIONS.md` — decision log.
 - `app_architecture/ENGINEERING.md` — engineering guidelines (ownership, threading, FFI).
 
-## Setup + usage
-- `README.md` — user-facing overview.
+## Setup + Usage
+- `README.md` — customer-facing overview, links, and quick-start pointers.
 - `tests/README.md` — repo-wide test layout policy.
 - `app_architecture/BOOTSTRAP.md` — dependencies, bootstrap, build, run, test.
 - `tools/docs_explorer/README.md` — run instructions for the local docs explorer.
@@ -49,7 +57,7 @@ Quick map of where to look for common needs.
 - `docs/DEPENDENCIES.md` — native dependency setup (vcpkg + system packages).
 - `docs/terminal/compatibility.md` — current beta terminal support surface, TERM identity, and terminfo install instructions.
 
-## Reviews and audits
+## Reviews And Audits
 - `app_architecture/review/` — past review notes (scope + date in file).
   - `app_architecture/review/FILE_LAYOUT_HOTSPOTS_REVIEW.md` — current structure smell review and reference-repo comparison.
   - `app_architecture/review/REPO_STRUCTURE_REVIEW.md` — repo hygiene review for tests, tooling roots, and stale docs/tests.
@@ -59,7 +67,9 @@ Quick map of where to look for common needs.
   - `app_architecture/review/app_mode_layering_validation.md` — mode-layering extraction validation matrix and gate bundle authority.
   - `app_architecture/review/mode_binary_size_baseline.md` — focused-binary size snapshot used by the mode extraction lane.
 
-## Doc ownership quick rule
-- `docs/` — active workflow and top-level contributor/operator guidance.
-- `app_architecture/` — active designs, plans, and todo trackers.
-- `app_architecture/review/` — historical reviews, audits, and investigation records.
+## Quick Ownership Rules
+
+- `README.md` and the hosted docs explorer are customer-facing.
+- `docs/` is for active workflow, contributor/operator guidance, and top-level reference docs.
+- `app_architecture/` is for current designs, plans, and todo trackers.
+- `app_architecture/review/` is for historical reviews, audits, and investigation records.

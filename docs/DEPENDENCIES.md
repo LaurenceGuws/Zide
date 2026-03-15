@@ -1,188 +1,165 @@
 # Dependencies
 
-This doc explains how to install Zide's native dependencies per OS, with a focus on low-level reproducibility.
+This doc owns dependency source policy and platform dependency guidance.
 
-## Overview
-Zide depends on the following native libraries:
-- SDL3 (windowing/input)
-- FreeType (font rasterization)
-- HarfBuzz (text shaping)
-- Lua 5.4 (config scripting)
-- OpenGL (platform-specific)
+For bootstrap/build/run commands, use
+[`app_architecture/BOOTSTRAP.md`](/home/home/personal/zide/app_architecture/BOOTSTRAP.md).
 
-SDL3 is the default build target.
+## Current Dependency Source Policy
 
-## Dependency source policy
+Normal build flow now uses Zig package-managed dependencies for:
 
-Build now uses one stable dependency source policy in normal flow:
-- SDL3: Zig package
-- Lua: Zig package
-- tree-sitter core: Zig package
-- FreeType/HarfBuzz: Zig package on non-vcpkg paths
+- SDL3
+- Lua
+- tree-sitter core
+- FreeType
+- HarfBuzz
 
-Binary mode selector (compile-time target isolation):
-
-```bash
-# default: full IDE binary only
-zig build
-
-# terminal-only binary only
-zig build -Dmode=terminal
-
-# editor-only binary only
-zig build -Dmode=editor
-```
-
-Behavior:
-- `ide` (default): full IDE app graph (tests/tools/ffi steps available).
-- `terminal`: terminal app graph only (IDE-only graph planning is skipped).
-- `editor`: editor app graph only (IDE-only graph planning is skipped).
-- `zig build check-build-report-tools`: compile-checks core build report tools.
-- `zig build report-build-all`: runs core mode/bootstrap/policy/target reports in one step.
-
-Notes:
-- SDL3 and Lua are Zig package managed in normal flow (`castholm/SDL`, `ziglua` artifact `lua`).
-- Tree-sitter core runtime is Zig package managed in normal flow (`tree_sitter/tree-sitter`, artifact `tree-sitter`).
-- FreeType/HarfBuzz are now resolved through Zig package-managed deps on non-vcpkg paths.
-- Current text stack uses pinned Zig 0.15.2-compatible forks:
-  - FreeType: `LaurenceGuws/freetype-zig015` (`052a300780531e6ea0ffeafeec28c88eb1bf903a`)
-  - HarfBuzz: `LaurenceGuws/harfbuzz-zig015` (`68406a28eea39df8c074a38fefc64c5aa23201b7`)
+This is the stable default policy on non-vcpkg paths.
 
 Important:
-- Zig package-managed dependencies are still native C/C++ libraries.
-- The app still links `libc` and platform/system libraries (for example on Linux: `GL`, `fontconfig`, `m`, `pthread`, `dl`, `rt`, and `z` on the zig text-stack path).
-- So this migration reduces host package coupling and version drift, but it is not a pure-Zig runtime/linkage yet.
 
-## Terminal bundle runtime notes (Linux)
+- These are still native C/C++ libraries built and linked through Zig.
+- This reduces system package coupling, but does not make the runtime "pure
+  Zig" or free of platform/system linkage.
 
-`zig build bundle-terminal` ships a Zide-owned terminfo payload inside the bundle:
-- Compiles `terminfo/zide.terminfo` with `tic -x` into `terminal-bundle/terminfo`.
-- PTY chooses TERM in this order:
-  - `xterm-zide`
-  - `zide-256color`
-  - `zide`
-  - `xterm-256color`
+## Linux and macOS
 
-Launcher behavior:
-- By default, launcher does not force `TERMINFO`.
-- Preferred system install path for packaged runs is `/usr/share/terminfo` (installed by local package flow).
+On Linux and macOS, the old requirement to preinstall SDL3, Lua, FreeType,
+HarfBuzz, and tree-sitter from the system package manager is no longer the
+normal flow.
 
-Shell startup consistency for bundled launcher:
-- Launcher captures caller cwd into `ZIDE_LAUNCH_CWD`.
-- PTY child applies `chdir(ZIDE_LAUNCH_CWD)` and synchronizes `PWD`.
-- This avoids shell startup drift between direct binary (`./zig-out/bin/zide-terminal`) and installed bundle launcher paths.
+You still need platform/system support libraries.
 
-Lua implementation status (config parser backend):
-- The config parser backend is now fixed to native `ziglua`.
-- `-Dlua-impl` is no longer a supported build selector.
+### Linux
 
-## Recommended strategy
-- Linux/macOS: system packages for fast local dev.
-- Windows: vcpkg to pin and install native libs consistently.
+Current Linux-native expectations:
 
-This avoids vendoring large binaries early, while keeping Windows builds reproducible.
+- Zig
+- Wayland development/runtime stack
+- `libxkbcommon`
+- OpenGL / Mesa stack
+- `fontconfig`
 
-## Windows (vcpkg)
+Example package sets:
 
-Status note (March 6, 2026):
-- vcpkg path is now automatic and Windows-only in build logic.
-- Long-term direction is to deprecate/remove the vcpkg path once Windows dependency packaging is fully migrated to Zig-managed paths.
-- Until that migration is complete, Windows builds still require vcpkg.
+Arch:
+
+```bash
+sudo pacman -S zig wayland wayland-protocols libxkbcommon mesa fontconfig
+```
+
+Ubuntu/Debian:
+
+```bash
+sudo apt install zig libwayland-dev wayland-protocols libxkbcommon-dev libgl-dev libegl-dev libfontconfig-dev
+```
+
+Fedora:
+
+```bash
+sudo dnf install zig wayland-devel wayland-protocols-devel libxkbcommon-devel mesa-libGL-devel mesa-libEGL-devel fontconfig-devel
+```
+
+Why `fontconfig` still matters:
+
+- Zide still uses Linux `fontconfig` for system fallback font discovery.
+- The build links `fontconfig` on Linux-native paths.
+
+### macOS
+
+At minimum, install Zig:
+
+```bash
+brew install zig
+```
+
+If additional platform/toolchain setup becomes necessary, update this doc
+instead of reviving stale "install every library manually" advice in the
+README.
+
+## Windows
+
+Windows remains the exception. Current Windows-native flow still uses vcpkg for
+platform-native dependency management.
+
+### Required tools
+
+- Zig
+- Visual Studio Build Tools
+- vcpkg
 
 ### Install vcpkg
-1) Clone vcpkg:
-```
- git clone https://github.com/microsoft/vcpkg C:\dev\vcpkg-win
- cd C:\dev\vcpkg-win
- .\bootstrap-vcpkg.bat
-```
 
-Note: vcpkg relies on PowerShell (pwsh). If vcpkg fails with an error like
-"The cloud file provider is not running" for a path under
-`%USERPROFILE%\OneDrive\Documents\PowerShell\powershell.config.json`, either:
-- Start/sign-in to OneDrive (so the placeholder file becomes readable), or
-- Delete that `powershell.config.json` placeholder file.
-
-2) Install the required libraries (x64).
-
-Recommended (manifest mode, from the Zide repo root):
-```
- C:\path\to\vcpkg\vcpkg.exe install --triplet x64-windows
+```powershell
+git clone https://github.com/microsoft/vcpkg C:\dev\vcpkg-win
+cd C:\dev\vcpkg-win
+.\bootstrap-vcpkg.bat
 ```
 
-This writes dependencies into `./vcpkg_installed/x64-windows/`.
+### Install native libraries
 
-Classic mode (installs into `<VCPKG_ROOT>/installed/<triplet>/`) also works:
+Recommended manifest-mode install from the Zide repo root:
+
+```powershell
+C:\path\to\vcpkg\vcpkg.exe install --triplet x64-windows
 ```
- .\vcpkg.exe install sdl3 freetype harfbuzz lua --triplet x64-windows
+
+Classic mode also works:
+
+```powershell
+.\vcpkg.exe install sdl3 freetype harfbuzz lua --triplet x64-windows
 ```
 
 ### Configure build
-Export (or pass) vcpkg paths so `build.zig` can locate headers/libs.
 
 Recommended environment variables:
-- `VCPKG_ROOT` = path to vcpkg repo
-- `VCPKG_DEFAULT_TRIPLET` = `x64-windows`
+
+- `VCPKG_ROOT`
+- `VCPKG_DEFAULT_TRIPLET=x64-windows`
 
 Build:
-```
- zig build
+
+```powershell
+zig build
 ```
 
-On Windows, the build expects vcpkg-provided deps and will look in either:
-- `./vcpkg_installed/<triplet>/` (manifest mode), or
-- `<VCPKG_ROOT>/installed/<triplet>/` (classic mode)
+On Windows, the build looks in either:
 
-If `VCPKG_ROOT` and `VCPKG_DEFAULT_TRIPLET` are set, the build can locate classic-mode deps without extra flags.
+- `./vcpkg_installed/<triplet>/`
+- `<VCPKG_ROOT>/installed/<triplet>/`
 
-On Windows, use the MSVC target when using the `x64-windows` triplet:
-```
- zig build -Dvcpkg-triplet=x64-windows -Dtarget=x86_64-windows-msvc
-```
+Use the MSVC target with the `x64-windows` triplet:
 
-You can also pass paths explicitly:
-```
- zig build -Dvcpkg-root=C:\\path\\to\\vcpkg -Dvcpkg-triplet=x64-windows
+```powershell
+zig build -Dvcpkg-triplet=x64-windows -Dtarget=x86_64-windows-msvc
 ```
 
-Then build on Windows:
-```
- zig build
-```
+## Terminal Bundle Runtime Notes
 
-### Troubleshooting (Windows)
-- If `vcpkg` reports `Unable to find a valid Visual Studio instance`, install **Visual Studio Build Tools 2022** with the **Desktop development with C++** workload.
-- If installs fail with `permission denied` while writing `buildtrees`, use a buildtrees folder inside your user profile:
-```
- .\vcpkg.exe install sdl3 freetype harfbuzz lua --triplet x64-windows --x-buildtrees-root=C:\Users\Docker\vcpkg-buildtrees
-```
-- If an environment variable `VCPKG_ROOT` points at the VS install (`...\VC\vcpkg`), unset it or override with `-Dvcpkg-root=...` so Zig uses the intended vcpkg checkout.
+`zig build bundle-terminal` ships a Zide-owned terminfo payload.
 
-If cross-compiling from Linux, you still need Windows libraries on disk. vcpkg can build them, but you must also provide a Windows target toolchain.
+Current TERM selection order in the runtime is:
 
-## Linux
-Install the deps using your distro package manager:
-- SDL3 dev package
-- FreeType dev package
-- HarfBuzz dev package
-- Lua 5.4 dev package
-- OpenGL dev package
+- `xterm-kitty`
+- `xterm-zide`
+- `zide-256color`
+- `zide`
+- `xterm-256color`
 
-Examples (Ubuntu):
-```
- sudo apt install libsdl3-dev libfreetype6-dev libharfbuzz-dev liblua5.4-dev libgl1-mesa-dev
-```
+Launcher behavior:
 
-Examples (Arch):
-```
- sudo pacman -S sdl3 freetype2 harfbuzz lua mesa
-```
+- launcher does not force `TERMINFO` by default
+- packaged installs are expected to rely on installed terminfo paths
 
-## macOS
-Use Homebrew:
-```
- brew install sdl3 freetype harfbuzz lua
-```
+For the user-facing compatibility surface, use
+[`docs/terminal/compatibility.md`](/home/home/personal/zide/docs/terminal/compatibility.md).
 
 ## Notes
-- Use the same SDL3 version for headers and libraries to avoid ABI mismatches.
+
+- Current text stack uses pinned Zig 0.15.2-compatible forks for FreeType and
+  HarfBuzz.
+- Linux still links platform/system libraries such as `GL`, `fontconfig`, `m`,
+  `pthread`, `dl`, `rt`, and `z`.
+- Windows runtime packaging still includes native DLLs such as SDL3, FreeType,
+  HarfBuzz, and Lua from the Windows dependency path.

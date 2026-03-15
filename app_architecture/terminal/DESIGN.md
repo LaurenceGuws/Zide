@@ -2,7 +2,23 @@
 
 Date: 2026-01-19
 
-Purpose: this document tracks terminal architecture decisions and implementation progress. It is not a fixed plan. Each layer will be researched in the reference repos before implementation, and this file will be updated with concrete decisions as they are made.
+Status note, 2026-03-15:
+
+- The terminal rewrite is no longer at the "invent the first real design"
+  stage. `main` is now in post-rewrite hardening, compatibility work, and
+  cleanup.
+- This file remains the high-level terminal architecture baseline and a compact
+  decision summary by layer.
+- Detailed current authority for the engine split now lives in
+  `app_architecture/terminal/VT_CORE_DESIGN.md`.
+- Present-path ownership authority now lives in
+  `app_architecture/terminal/WAYLAND_PRESENT_IMPLEMENTATION_PLAN.md`.
+- Investigation-heavy or review-heavy material should live under
+  `app_architecture/review/` or `app_architecture/terminal/research/`, not grow
+  this file into another live debug log.
+
+Purpose: keep one compact high-level map of terminal architecture decisions and
+the current baseline by layer.
 
 ## Status Summary
 
@@ -356,8 +372,11 @@ Why:
 
 1) Keep the replay harness green and add fixtures when fixing regressions (`zig build test-terminal-replay -- --all`).
 2) Finish kitty graphics protocol completeness (IMG-01 plan).
-3) Improve cross-platform font fallback and rasterization quality (multi-font chain + LCD/grayscale).
+3) Keep converging native and FFI host contracts where it materially improves engine honesty without reopening settled rewrite seams.
 
 ## Related docs
 
 - Alt screen redesign proposal: `app_architecture/terminal/ALT_SCREEN_REDESIGN.md`.
+- Engine split authority: `app_architecture/terminal/VT_CORE_DESIGN.md`.
+- Present-path authority: `app_architecture/terminal/WAYLAND_PRESENT_IMPLEMENTATION_PLAN.md`.
+- Historical architecture review: `app_architecture/review/TERMINAL_CORE_ARCHITECTURE_REVIEW_2026-03-10.md`.

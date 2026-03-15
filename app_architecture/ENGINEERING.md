@@ -2,6 +2,16 @@
 
 Goal: keep memory and threading safe and boring. These rules are simple on purpose.
 
+Scope note, 2026-03-15:
+
+- This file is the cross-cutting engineering baseline for current code on
+  `main`.
+- Subsystem-specific ownership contracts should live in their owning docs
+  (for example terminal FFI acquire/release rules in
+  `app_architecture/terminal/FFI_*` docs) rather than being duplicated here.
+- Historical reviews and one-off investigations belong under
+  `app_architecture/review/`.
+
 ## Memory ownership (who allocates, who frees)
 
 - The function that allocates is responsible for documenting who frees.
