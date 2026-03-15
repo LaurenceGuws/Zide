@@ -41,19 +41,14 @@ Zide is in active beta. The large VT/render rewrite has landed, and current
 work is focused on hardening, compatibility, and cleanup rather than broad new
 surface area.
 
-Current release outputs include:
-
-- terminal bundles
-- editor bundles
-- IDE bundles
-- terminal and editor FFI packages
-- hosted release and architecture docs
-
-Use the Releases page for published binaries.
+Published outputs currently include terminal bundles, editor bundles, IDE
+bundles, terminal/editor FFI packages, and hosted release/architecture docs.
+Use the Releases page for binaries.
 
 ## Quick Start
 
-The hosted docs are the primary user-facing entrypoint:
+The hosted docs are the primary user-facing entrypoint. Start there for exact
+platform details and current architecture notes.
 
 - [Bootstrap and build notes](https://laurenceguws.github.io/Zide/tools/docs_explorer/#doc=app_architecture/BOOTSTRAP.md)
 - [Dependency details](https://laurenceguws.github.io/Zide/tools/docs_explorer/#doc=docs/DEPENDENCIES.md)
@@ -106,23 +101,20 @@ before falling back to Zide-owned terminfo.
 ## Documentation
 
 Primary docs site:
-
 - [Docs Explorer](https://laurenceguws.github.io/Zide/tools/docs_explorer/)
 
-Useful starting points:
+Good starting points:
 
 - [Getting started](https://laurenceguws.github.io/Zide/tools/docs_explorer/#doc=app_architecture/BOOTSTRAP.md)
 - [Dependency policy](https://laurenceguws.github.io/Zide/tools/docs_explorer/#doc=docs/DEPENDENCIES.md)
 - [Terminal compatibility](https://laurenceguws.github.io/Zide/tools/docs_explorer/#doc=docs/reference/terminal_compatibility.md)
 - [Current beta release notes](https://laurenceguws.github.io/Zide/tools/docs_explorer/#doc=docs/releases/v0.1.0-beta.1.md)
 
-Contributor/operator navigation:
-
-- [docs/INDEX.md](docs/INDEX.md)
+Contributor/operator navigation lives in [docs/INDEX.md](docs/INDEX.md).
 
 ## Developer Notes
 
-Repository-local docs still own the detailed operator guidance:
+Repository-local docs own the detailed operator guidance:
 
 - bootstrap/build/run/test:
   [app_architecture/BOOTSTRAP.md](app_architecture/BOOTSTRAP.md)
