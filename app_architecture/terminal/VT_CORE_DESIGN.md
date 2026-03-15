@@ -62,7 +62,10 @@ Status note, 2026-03-14:
   internals directly; full reset now also lives on `TerminalCore` instead of
   open-coded core-field mutation in `terminal_core_reset.zig`; child-exit truth
   polling/reporting now also lives behind `session_lifecycle.zig` instead of
-  being split between `session_runtime.zig` and host-query code.
+  being split between `session_runtime.zig` and host-query code; transport
+  open/attach/close, writer access, outgoing-drain, and resize-report
+  choreography now also lives behind `session_transport_runtime.zig` instead of
+  staying bundled inside `session_runtime.zig`.
 - Input encoding remains on the dedicated subsystem path: writer-agnostic
   encoder coverage exists at both the fake-writer level and the real
   PTY-backed `TerminalSession` writer boundary.
