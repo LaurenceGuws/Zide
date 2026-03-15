@@ -37,7 +37,10 @@ Status note, 2026-03-14:
   instead of mutating raw core buffers from session helpers; sync-update state
   and scrollback count/offset rendering metadata now also route through
   `TerminalCore` accessors/mutators instead of direct session-side field/history
-  access; config-driven view-cache publication paths now also consume
+  access; the backend-owned viewport/scrollback path now also routes through
+  `TerminalCore` scrollback accessors/mutators instead of raw history
+  choreography in `scrollback_view.zig`; config-driven view-cache publication
+  paths now also consume
   `TerminalCore` scrollback accessors instead of reaching into history
   directly; column-mode reset/clear-generation behavior now also routes through
   a core-owned mutator instead of session-side field choreography; default-color

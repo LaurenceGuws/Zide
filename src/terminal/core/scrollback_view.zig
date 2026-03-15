@@ -18,15 +18,12 @@ pub const ScrollbackInfo = struct {
 pub const default_wheel_lines_per_step: isize = 3;
 
 pub fn scrollbackCount(self: anytype) usize {
-    if (self.core.active == .alt) return 0;
-    self.core.history.ensureViewCache(self.core.primary.grid.cols, self.core.primary.defaultCell());
-    return self.core.history.scrollbackCount();
+    self.core.ensureScrollbackView(self.core.primary.grid.cols, self.core.primary.defaultCell());
+    return self.core.scrollbackCount();
 }
 
 pub fn scrollbackRow(self: anytype, index: usize) ?[]const Cell {
-    if (self.core.active == .alt) return null;
-    self.core.history.ensureViewCache(self.core.primary.grid.cols, self.core.primary.defaultCell());
-    return self.core.history.scrollbackRow(index);
+    return self.core.scrollbackRow(self.core.primary.grid.cols, self.core.primary.defaultCell(), index);
 }
 
 pub fn scrollbackInfo(self: anytype) ScrollbackInfo {
@@ -36,9 +33,9 @@ pub fn scrollbackInfo(self: anytype) ScrollbackInfo {
             .cols = self.core.primary.grid.cols,
         };
     }
-    self.core.history.ensureViewCache(self.core.primary.grid.cols, self.core.primary.defaultCell());
+    self.core.ensureScrollbackView(self.core.primary.grid.cols, self.core.primary.defaultCell());
     return .{
-        .total_rows = self.core.history.scrollbackCount(),
+        .total_rows = self.core.scrollbackCount(),
         .cols = self.core.primary.grid.cols,
     };
 }
@@ -66,7 +63,7 @@ pub fn copyScrollbackRange(
 
     var row_index: usize = 0;
     while (row_index < requested) : (row_index += 1) {
-        const row = self.core.history.scrollbackRow(start_row + row_index) orelse return error.InvalidArgument;
+        const row = self.core.scrollbackRow(cols, self.core.primary.defaultCell(), start_row + row_index) orelse return error.InvalidArgument;
         try out.appendSlice(allocator, row);
     }
 
@@ -89,24 +86,18 @@ pub fn setScrollOffset(self: anytype, offset: usize) void {
 }
 
 pub fn setScrollOffsetLocked(self: anytype, offset: usize) void {
-    if (self.core.active == .alt) {
-        self.core.history.scrollback_offset = 0;
-        return;
-    }
-    self.core.history.ensureViewCache(self.core.primary.grid.cols, self.core.primary.defaultCell());
     const before = self.core.history.scrollOffset();
-    self.core.history.setScrollOffset(self.core.primary.grid.rows, offset);
-    const after = self.core.history.scrollOffset();
+    const after = self.core.setScrollbackOffset(self.core.primary.grid.rows, self.core.primary.grid.cols, self.core.primary.defaultCell(), offset);
     if (after != before) {
         _ = self.output_generation.fetchAdd(1, .acq_rel);
     }
-    self.view_cache_request_offset.store(@intCast(self.core.history.scrollOffset()), .release);
+    self.view_cache_request_offset.store(@intCast(after), .release);
     self.view_cache_pending.store(true, .release);
     self.io_wait_cond.signal();
     self.updateViewCacheForScroll();
     const log = app_logger.logger("terminal.core");
-    const max_offset = self.core.history.maxScrollOffset(self.core.primary.grid.rows);
-    log.logf(.debug, "set scroll offset={d} max={d}", .{ self.core.history.scrollOffset(), max_offset });
+    const max_offset = self.core.maxScrollbackOffset(self.core.primary.grid.rows, self.core.primary.grid.cols, self.core.primary.defaultCell());
+    log.logf(.debug, "set scroll offset={d} max={d}", .{ after, max_offset });
 }
 
 pub fn resetToLiveBottomLocked(self: anytype) bool {
@@ -123,8 +114,7 @@ pub fn resetToLiveBottomForInputLocked(self: anytype, saw_non_modifier_key_press
 
 pub fn setScrollOffsetFromNormalizedTrackLocked(self: anytype, track_ratio: f32) ?usize {
     if (self.core.active == .alt) return null;
-    self.core.history.ensureViewCache(self.core.primary.grid.cols, self.core.primary.defaultCell());
-    const max_offset = self.core.history.maxScrollOffset(self.core.primary.grid.rows);
+    const max_offset = self.core.maxScrollbackOffset(self.core.primary.grid.rows, self.core.primary.grid.cols, self.core.primary.defaultCell());
     const clamped = std.math.clamp(track_ratio, 0.0, 1.0);
     const target_offset = @as(usize, @intFromFloat(@round(@as(f32, @floatFromInt(max_offset)) * (1.0 - clamped))));
     if (target_offset == self.core.history.scrollOffset()) return null;
@@ -156,18 +146,16 @@ pub fn scrollBy(self: anytype, delta: isize) void {
 pub fn scrollByLocked(self: anytype, delta: isize) void {
     if (self.core.active == .alt) return;
     if (delta == 0) return;
-    self.core.history.ensureViewCache(self.core.primary.grid.cols, self.core.primary.defaultCell());
     const before = self.core.history.scrollOffset();
-    self.core.history.scrollBy(self.core.primary.grid.rows, delta);
-    const after = self.core.history.scrollOffset();
+    const after = self.core.scrollScrollbackBy(self.core.primary.grid.rows, self.core.primary.grid.cols, self.core.primary.defaultCell(), delta);
     if (after != before) {
         _ = self.output_generation.fetchAdd(1, .acq_rel);
     }
-    self.view_cache_request_offset.store(@intCast(self.core.history.scrollOffset()), .release);
+    self.view_cache_request_offset.store(@intCast(after), .release);
     self.view_cache_pending.store(true, .release);
     self.io_wait_cond.signal();
     self.updateViewCacheForScroll();
     const log = app_logger.logger("terminal.core");
-    const max_offset = self.core.history.maxScrollOffset(self.core.primary.grid.rows);
-    log.logf(.debug, "scroll by delta={d} offset={d} max={d}", .{ delta, self.core.history.scrollOffset(), max_offset });
+    const max_offset = self.core.maxScrollbackOffset(self.core.primary.grid.rows, self.core.primary.grid.cols, self.core.primary.defaultCell());
+    log.logf(.debug, "scroll by delta={d} offset={d} max={d}", .{ delta, after, max_offset });
 }

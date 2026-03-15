@@ -201,6 +201,40 @@ pub const TerminalCore = struct {
         return if (self.active == .alt) 0 else self.history.scrollbackCount();
     }
 
+    pub fn ensureScrollbackView(self: *TerminalCore, cols: u16, default_cell: types.Cell) void {
+        if (self.active == .alt) return;
+        self.history.ensureViewCache(cols, default_cell);
+    }
+
+    pub fn scrollbackRow(self: *TerminalCore, cols: u16, default_cell: types.Cell, index: usize) ?[]const types.Cell {
+        if (self.active == .alt) return null;
+        self.history.ensureViewCache(cols, default_cell);
+        return self.history.scrollbackRow(index);
+    }
+
+    pub fn maxScrollbackOffset(self: *TerminalCore, rows: u16, cols: u16, default_cell: types.Cell) usize {
+        if (self.active == .alt) return 0;
+        self.history.ensureViewCache(cols, default_cell);
+        return self.history.maxScrollOffset(rows);
+    }
+
+    pub fn setScrollbackOffset(self: *TerminalCore, rows: u16, cols: u16, default_cell: types.Cell, offset: usize) usize {
+        if (self.active == .alt) {
+            self.history.scrollback_offset = 0;
+            return 0;
+        }
+        self.history.ensureViewCache(cols, default_cell);
+        self.history.setScrollOffset(rows, offset);
+        return self.history.scrollOffset();
+    }
+
+    pub fn scrollScrollbackBy(self: *TerminalCore, rows: u16, cols: u16, default_cell: types.Cell, delta: isize) usize {
+        if (self.active == .alt) return 0;
+        self.history.ensureViewCache(cols, default_cell);
+        self.history.scrollBy(rows, delta);
+        return self.history.scrollOffset();
+    }
+
     pub fn semanticPromptActive(self: *const TerminalCore) bool {
         return self.semantic_prompt.input_active or self.semantic_prompt.output_active;
     }
