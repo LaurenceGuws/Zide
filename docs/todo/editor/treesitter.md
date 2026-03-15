@@ -55,9 +55,9 @@ Tree-sitter integration for syntax highlighting and semantic metadata.
 
 - [x] `TS-07` Dynamic grammar loader
   - Parser `.so` loading, runtime query lookup, and bundled fallbacks are in place.
-  - See `app_architecture/editor/treesitter_dynamic_roadmap.md`.
+  - See `docs/todo/editor/treesitter_dynamic_roadmap.md`.
 
 - [x] `TS-08` Grammar pack install tooling
   - Packs install from `tools/grammar_packs/dist` into `~/.config/zide/grammars`.
-  - See `app_architecture/editor/treesitter_dynamic_roadmap.md`.
+  - See `docs/todo/editor/treesitter_dynamic_roadmap.md`.
 

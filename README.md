@@ -14,6 +14,7 @@ serious terminal quality, and resource-aware tooling.
 - [Documentation](https://laurenceguws.github.io/Zide/tools/docs_explorer/)
 - [Releases](https://github.com/LaurenceGuws/Zide/releases)
 - [Issues](https://github.com/LaurenceGuws/Zide/issues)
+- [Docs Index](docs/INDEX.md)
 
 ## Demo
 
@@ -115,7 +116,7 @@ Useful starting points:
 - [Terminal compatibility](https://laurenceguws.github.io/Zide/tools/docs_explorer/#doc=docs/reference/terminal_compatibility.md)
 - [Current beta release notes](https://laurenceguws.github.io/Zide/tools/docs_explorer/#doc=docs/releases/v0.1.0-beta.1.md)
 
-Repo-local contributor/operator doc map:
+Contributor/operator navigation:
 
 - [docs/INDEX.md](docs/INDEX.md)
 
