@@ -576,23 +576,27 @@ Judgment so far:
 
 ### Current Preference
 
-Current paper preference is:
+Current provisional preference is now:
 
-1. pinned snapshot handle first
-2. diff-oriented export second
+1. diff-oriented export first
+2. pinned snapshot handle second
 
 Reason:
 
-- it preserves the current authority model better
-- it is less likely to raise host call count
-- it is less likely to force hosts into local truth reconstruction
+- diff export already matches data the backend computes today
+- pinned snapshots now carry two separate implementation risks:
+  - retained-generation pressure
+  - per-generation FFI cell remap pressure
+- a disciplined diff packet can still preserve one acquire, one owned result,
+  and one authoritative visible-state story without asking the backend to grow
+  a retained published-generation store first
 
-What would change that preference:
+What would change that preference back:
 
-- strong evidence that pinned snapshots create unacceptable publication
-  lifetime pressure or lock/retention hazards
-- or a diff design that stays one acquire, one owned result, and one obvious
-  visible-state authority without bifurcating the host loop
+- a pinned design that proves one retained generation is enough
+- and avoids most per-generation cell remap cost in real code
+- or a diff design that cannot stay self-contained without creating a forked
+  "fast diff path" versus "real full snapshot truth" model
 
 ### Candidate B Contract Sketch: Pinned Snapshot Handle
 
@@ -740,12 +744,10 @@ So the likely implementation consequence is:
 
 Current judgment after the code read:
 
-- pinned handles are still the preferred paper candidate
-- but they are no longer assumed to be a trivial follow-on from the current
-  render-cache structure
-- the next review must explicitly measure whether "one retained published
-  generation while pinned" is enough, or whether the real code wants something
-  heavier
+- pinned handles remain viable
+- but they are no longer the leading candidate
+- the next review would have to prove that "one retained published generation
+  while pinned" is enough and still materially better than the diff path
 
 ### Smallest Retained-Generation Extension
 
@@ -834,35 +836,27 @@ Current judgment after the layout check:
 - pinned handles are still viable
 - but they no longer have an obvious cost advantage unless they avoid not only
   retention sprawl, but also most of the per-generation cell remap work
-- this weakens the preference enough that diff export must stay a live option,
-  not just a fallback on paper
+- that is enough to move them behind diff export provisionally
 
 ### Updated Preference
 
-The preference is now conditional rather than strong:
+Current head-to-head read now favors diff export provisionally:
 
-1. pinned snapshot handle first only if:
-   - one retained generation is enough
-   - and it avoids most per-generation cell remap pressure
-2. otherwise re-evaluate diff-oriented export as the more honest next step
-
-Current head-to-head read:
-
-- pinned snapshot handles are still better if they can stay truly narrow
-- diff export is now closer than before because the backend already maintains
-  strong damage/span/hash publication state
-- the likely winner is whichever can preserve:
+- diff export already fits the backend's publication data better
+- pinned snapshots require more structural change before they clearly reduce
+  total hot-path cost
+- both candidates can still lose if they violate the same three rules:
   - one acquire
   - one owned result
   - one obvious authoritative visible-state story
-  with less total copying/retention pressure in the real code
 
 Current tie-breaker to watch:
 
-- pinned wins if retained-generation and cell-remap cost both stay genuinely
-  bounded
-- diff wins if it can keep the above owned-result shape without pushing hosts
-  into a forked "fast diff path" versus "real full snapshot truth" model
+- diff keeps the lead if the diff packet can stay self-contained with an
+  explicit full-refresh fallback
+- pinned can retake the lead only if it proves both:
+  - one retained generation is enough
+  - per-generation cell remap pressure falls enough to matter
 
 #### Why This Still Beats Diff On Paper
 

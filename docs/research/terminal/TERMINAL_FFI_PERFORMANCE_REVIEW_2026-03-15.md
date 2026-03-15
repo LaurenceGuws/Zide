@@ -331,6 +331,13 @@ Current narrow diff shape worth judging:
   - coarse damage / viewport-shift metadata
 - release remains unconditional and boring
 
+Current provisional winner:
+
+- diff export now leads pinned handles on paper
+- not because pinned handles are impossible
+- but because diff already matches backend publication data while pinned still
+  has to justify retained-generation pressure and FFI cell-remap cost together
+
 ## Current Conclusion
 
 The current redesign is performance-safe enough to continue building on.

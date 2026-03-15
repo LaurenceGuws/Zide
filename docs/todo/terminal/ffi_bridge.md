@@ -164,10 +164,10 @@ Current judgment:
   - compare diff-oriented export against pinned-handle full-snapshot reuse as
     the next major boundary-cost question, not as an excuse to widen the
     surface casually
-- Current paper preference:
-  - pinned-handle full-snapshot reuse first
-  - diff export second unless a diff design can preserve one acquire, one
-    owned result, and one obvious visible-state authority
+- Current provisional preference:
+  - diff-oriented export first
+  - pinned-handle reuse second unless pinned proves a real cost win against
+    retained-generation and cell-remap pressure
 - Current design rule for the next snapshot lane:
   - pinned-handle reuse only stays preferred if it keeps the same redraw-driven
     host loop shape and does not leak publication-retention complexity into the
@@ -199,6 +199,9 @@ Current judgment:
     `full_refresh_required` fallback bit
   - reject the lane if it starts requiring row-follow-up getters or a second
     authoritative visible-state path
+- Current decision rule:
+  - diff stays ahead unless the pinned design proves a bounded retained
+    generation story and a meaningful reduction in per-generation remap cost
 - Current execution rule for that lane:
   - do not widen the bridge first
   - keep the snapshot review focused on host call count, flat cell-buffer
