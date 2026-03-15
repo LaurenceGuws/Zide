@@ -71,6 +71,13 @@ Status note, 2026-03-14:
   cuts, the next highest-value work is no longer "keep trimming session for its
   own sake." The stronger priority is keeping the public FFI/core contract in
   lockstep with the best semantics the native reference host can reach.
+- Important comparison nuance:
+  - Ghostty is still ahead on making the engine obviously be the engine.
+  - Zide is no longer obviously behind on host-facing terminal contract
+    richness; recent FFI work means Zide already exports a broader host-facing
+    surface than Ghostty's current public `libghostty-vt` umbrella.
+  - So the remaining gap is primarily center-of-gravity and ownership clarity,
+    not "we need to catch up by exporting more random API."
 
 Purpose: define the exact ownership split for the next terminal-core redesign
 lane so code changes do not drift between "session cleanup", "FFI cleanup", and

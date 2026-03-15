@@ -26,6 +26,9 @@ renderer path.
 Compared to the references:
 
 - `ghostty-vt` is cleaner today as a VT library boundary.
+- `ghostty-vt` is cleaner as an engine/library center, but its current public C
+  umbrella is still much narrower than Zide's current host-facing FFI
+  contract.
 - `foot` is the clearest native damage/commit/presentation reference.
 - `kitty` is the clearest "own the backend seam directly" reference.
 - `rio` / `wezterm` are the clearest references for explicit pre-present
@@ -106,6 +109,16 @@ flowchart LR
 - `Termio` is the runtime and transport shell around the VT layer.
 - This split is cleaner today than Zide's current `TerminalCore` /
   `TerminalSession` split.
+- Important nuance:
+  - Ghostty is still ahead on making the engine obviously be the engine.
+  - Zide is currently ahead on the explicit host-contract surface:
+    - snapshot
+    - metadata
+    - events
+    - redraw/publication generations
+    - backend-owned viewport control
+  - so the gap is not "Ghostty exposes more host ABI than Zide."
+  - the gap is that Ghostty's terminal/library center is structurally cleaner.
 
 ## Foot
 
@@ -214,6 +227,13 @@ What is unusual is that it is trying to combine:
 - Native and FFI host semantics are converging more honestly now; recent bridge
   work closed most of the obvious "native can do this, FFI cannot" gaps in the
   basic host contract
+- `TerminalCore` now owns materially more real engine behavior than it did in
+  the earlier review window:
+  - viewport/scrollback access
+  - palette/default-color mutation
+  - reset/save-state/parser control seams
+  - selection and reflow-selection restoration
+  - OSC title/cwd buffer semantics
 
 ### Zide weaknesses
 
@@ -222,6 +242,9 @@ What is unusual is that it is trying to combine:
 - `TerminalCore` is not yet the fully dominant public center of the runtime
 - Remaining bridge work is now more about ABI maturity and verifier depth than
   about obvious missing host semantics
+- Snapshot/export cost is still heavier than ideal; the request-based metadata
+  improvement landed, but full snapshot acquire remains the clearest remaining
+  FFI boundary-cost hotspot
 
 ## Flutter Embedding View
 
@@ -253,8 +276,14 @@ flowchart LR
 
 1. Zide is architecturally closer to `ghostty` / `foot` / `kitty` than to any
    framework-driven terminal app.
-2. `libghostty-vt` is still cleaner today as a reusable VT package.
-3. Zide's main unique advantage is the explicit host contract direction.
-4. If `TerminalCore` becomes the clear public engine center and the FFI
+2. `libghostty-vt` is still cleaner today as a reusable VT package and engine
+   center.
+3. Zide's main unique advantage is the explicit host contract direction; it is
+   already shipping a broader host-facing contract than Ghostty's current
+   public C umbrella.
+4. The comparison gap is therefore mostly structural:
+   - Ghostty: cleaner engine-first center
+   - Zide: richer host contract, but heavier runtime center
+5. If `TerminalCore` becomes the clear public engine center and the FFI
    contract keeps growing cleanly, Zide can become more embed-oriented than
    most native terminals without giving up the native renderer path.

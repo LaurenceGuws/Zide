@@ -25,7 +25,7 @@ The main invention phase is over. The bug-hunting-heavy phase did the work it ne
 Highest-value remaining items, ranked against the current `libghostty-vt` comparison:
 
 1. `VTCORE-02` keep the FFI boundary aligned with the stronger native contract
-   Why: embeddability is already real, so the remaining work is keeping the public engine boundary honest instead of letting native-only assumptions creep back in. Native should prove the contract, not define a different one.
+   Why: embeddability is already real, so the remaining work is keeping the public engine boundary honest instead of letting native-only assumptions creep back in. Native should prove the contract, not define a different one. Current nuance against `libghostty-vt`: Ghostty still wins on engine-centered cleanliness, but Zide is no longer obviously behind on host-facing contract richness.
 2. `VTCORE-01` shrink `TerminalSession` further toward a true host/runtime wrapper
    Why: this is still the biggest structural gap between Zide and a cleaner engine-first boundary like `libghostty-vt`, but the highest-yield seams have recently narrowed; the remaining cuts should only continue when they remove another real native-only ownership leak rather than mostly internal palette/config bookkeeping.
 3. `VTCORE-06` keep input encoding transport-agnostic as the host/runtime split finishes

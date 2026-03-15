@@ -38,6 +38,18 @@ The useful lesson from `libghostty-vt` is not "copy the current C ABI surface."
 The useful lesson is: make terminal emulation the product, and make PTY/UI/FFI
 consumers sit around it.
 
+Nuance after the recent FFI/core work:
+
+- Zide is no longer obviously behind on host-facing contract richness.
+- In some ways it is ahead of Ghostty's current public C umbrella:
+  - explicit snapshot export
+  - metadata latest-state export
+  - redraw/publication acknowledgement
+  - backend-owned viewport control
+  - external transport input/output seams
+- The remaining Ghostty advantage is still the more obvious engine-first center
+  of gravity, not a strictly broader public host ABI.
+
 ## What Ghostty Gets Right
 
 ### 1. The engine is obviously the engine
