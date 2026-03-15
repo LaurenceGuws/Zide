@@ -3,11 +3,11 @@
     grid-template-columns: minmax(220px, 244px) 8px minmax(0, 1fr);
   }
 
-  .content-head {
+  .app-head {
     padding: 14px 16px 11px;
   }
 
-  .content-head h1 {
+  .app-head h1 {
     font-size: 1.24rem;
     letter-spacing: -0.026em;
   }
@@ -22,11 +22,11 @@
     grid-template-columns: minmax(180px, 212px) 8px minmax(0, 1fr);
   }
 
-  .content-head {
+  .app-head {
     padding: 13px 14px 10px;
   }
 
-  .content-head h1 {
+  .app-head h1 {
     font-size: 1.12rem;
     line-height: 1.12;
   }
@@ -60,7 +60,7 @@
     padding: 18px 16px 24px;
   }
 
-  .content-head {
+  .app-head {
     padding: 16px 16px 12px;
   }
 
@@ -68,7 +68,7 @@
     align-items: flex-start;
   }
 
-  .content-head h1 {
+  .app-head h1 {
     font-size: 1.16rem;
     line-height: 1.1;
     letter-spacing: -0.022em;
@@ -98,13 +98,13 @@
     font-size: 0.88rem;
   }
 
-  .content-head {
+  .app-head {
     gap: 10px;
     align-items: stretch;
     padding: 12px 12px 10px;
   }
 
-  .content-head > div:first-child {
+  .app-head > div:first-child {
     min-width: 0;
   }
 
@@ -113,13 +113,13 @@
     margin-bottom: 4px;
   }
 
-  .content-head h1 {
+  .app-head h1 {
     font-size: 1.03rem;
     line-height: 1.14;
     word-break: break-word;
   }
 
-  .content-head p {
+  .app-head p {
     font-size: 0.85rem;
     line-height: 1.35;
   }
@@ -186,7 +186,7 @@
     max-height: calc(38dvh - 58px);
   }
 
-  .content-head {
+  .app-head {
     padding: 10px 10px 9px;
   }
 
@@ -194,11 +194,11 @@
     gap: 7px;
   }
 
-  .content-head h1 {
+  .app-head h1 {
     font-size: 0.96rem;
   }
 
-  .content-head p {
+  .app-head p {
     font-size: 0.8rem;
   }
 

@@ -1,12 +1,15 @@
 .search-wrap {
   padding: 8px 14px 6px;
   display: block;
+  background: transparent;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
 }
 
 #search {
   width: 100%;
   border: 1px solid var(--line);
-  background: #0b1016;
+  background: var(--control-surface);
   color: var(--ink);
   border-radius: 0;
   padding: 8px 10px;
@@ -58,12 +61,12 @@
 }
 
 .tree-folder > summary:hover {
-  background: var(--surface-hover);
+  background: color-mix(in srgb, var(--surface-hover) 58%, transparent 42%);
   border-color: var(--surface-border);
 }
 
 .tree-folder[open] > summary {
-  background: var(--surface-hi);
+  background: color-mix(in srgb, var(--surface-hi) 52%, transparent 48%);
   border-color: var(--surface-border);
 }
 
@@ -184,12 +187,16 @@
 
 .tree a:hover {
   border-color: var(--surface-border);
-  background: var(--surface-hover);
+  background: color-mix(in srgb, var(--surface-hover) 58%, transparent 42%);
 }
 
 .tree a.active {
   border-color: var(--tree-active);
-  background: linear-gradient(90deg, var(--accent-soft) 0%, transparent 100%);
+  background: linear-gradient(
+    90deg,
+    var(--viewer-callout-surface) 0%,
+    transparent 100%
+  );
   color: var(--active-link);
   border-left-color: var(--tree-active);
 }
@@ -206,10 +213,6 @@
   > .folder-dir-list
   + .folder-file-list {
   padding-top: 2px;
-}
-
-:root[data-theme="light"] #search {
-  background: #fdfaf4;
 }
 
 .folder-caret > svg,

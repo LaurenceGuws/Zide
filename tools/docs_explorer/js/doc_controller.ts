@@ -21,6 +21,7 @@ import type { HighlightJsApi, MarkedApi, MermaidApi } from "./vendor_types.js";
 export function createDocController(args: {
   state: AppState;
   shell: AppShell;
+  appIconPath: string;
   repoBasePath: string;
   repoAbsolutePath?: string;
   docs: string[];
@@ -36,6 +37,7 @@ export function createDocController(args: {
   const {
     state,
     shell,
+    appIconPath,
     repoBasePath,
     repoAbsolutePath,
     docs,
@@ -67,16 +69,16 @@ export function createDocController(args: {
       defaultDocPath,
       onLoading(nextState: AppState, path: string) {
         setDocumentLoading(nextState, repoBasePath, path);
-        renderDocumentChrome(nextState, shell, docs);
+        renderDocumentChrome(nextState, shell, appIconPath, docs);
       },
       onReady(nextState: AppState, path: string) {
         setDocumentReady(nextState, repoBasePath, path);
-        renderDocumentChrome(nextState, shell, docs);
+        renderDocumentChrome(nextState, shell, appIconPath, docs);
         renderHighlightedCode(hljs, viewerEl);
       },
       onError(nextState: AppState, path: string) {
         setDocumentError(nextState, repoBasePath, path);
-        renderDocumentChrome(nextState, shell, docs);
+        renderDocumentChrome(nextState, shell, appIconPath, docs);
       },
     });
   }

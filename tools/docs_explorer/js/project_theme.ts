@@ -10,6 +10,12 @@ const themeVarMap: Record<keyof ProjectPalette, string> = {
   accentSoft: "--accent-soft",
   accentStrong: "--accent-strong",
   activeLink: "--active-link",
+  code: "--code",
+  ink: "--ink",
+  line: "--line",
+  lineSoft: "--line-soft",
+  muted: "--muted",
+  treeActive: "--tree-active",
 };
 
 export function applyProjectTheme(
