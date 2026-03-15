@@ -48,7 +48,11 @@ Status note, 2026-03-14:
   PTY-backed `TerminalSession` writer boundary.
 - The main remaining gap versus a cleaner `libghostty-vt`-quality engine
   boundary is still structural: `TerminalSession` remains heavier than the
-  desired host wrapper around `TerminalCore`.
+  desired host wrapper around `TerminalCore`. But after the recent host-query,
+  clipboard, sync-update, column-mode, and palette/default-color ownership
+  cuts, the next highest-value work is no longer "keep trimming session for its
+  own sake." The stronger priority is keeping the public FFI/core contract in
+  lockstep with the best semantics the native reference host can reach.
 
 Purpose: define the exact ownership split for the next terminal-core redesign
 lane so code changes do not drift between "session cleanup", "FFI cleanup", and

@@ -21,10 +21,10 @@ The main invention phase is over. The bug-hunting-heavy phase did the work it ne
 
 Highest-value remaining items, ranked against the current `libghostty-vt` comparison:
 
-1. `VTCORE-01` shrink `TerminalSession` further toward a true host/runtime wrapper
-   Why: this is still the biggest structural gap between Zide and a cleaner engine-first boundary like `libghostty-vt`, and it is the main thing that keeps the native host from reading as "just the best reference host" instead of "the place where terminal ownership still lives."
-2. `VTCORE-02` keep the FFI boundary aligned with the stronger native contract
+1. `VTCORE-02` keep the FFI boundary aligned with the stronger native contract
    Why: embeddability is already real, so the remaining work is keeping the public engine boundary honest instead of letting native-only assumptions creep back in. Native should prove the contract, not define a different one.
+2. `VTCORE-01` shrink `TerminalSession` further toward a true host/runtime wrapper
+   Why: this is still the biggest structural gap between Zide and a cleaner engine-first boundary like `libghostty-vt`, but the highest-yield seams have recently narrowed; the remaining cuts should only continue when they remove another real native-only ownership leak rather than mostly internal palette/config bookkeeping.
 3. `VTCORE-06` keep input encoding transport-agnostic as the host/runtime split finishes
    Why: Ghostty’s encoder remains a strong reference for a peer subsystem that consumes terminal state without becoming session-owned glue.
 
@@ -45,6 +45,10 @@ Supporting cleanup:
   - `TerminalSession` reads primarily as host/runtime assembly plus narrow host conveniences, not as the place where terminal semantics still live.
   - coherent public method clusters are either owned by `TerminalCore` or forwarded through focused `session_*` boundary modules instead of being hand-written across the root facade.
   - native host code no longer relies on privileged deep-core access patterns that an equivalent FFI host cannot reach through the intended engine contract.
+  Current judgment:
+  - the highest-yield session/core seams have materially cooled after the recent host-query, clipboard, sync-update, column-mode, and palette/default-color cuts
+  - remaining `session_config` seams are increasingly internal core bookkeeping rather than host-contract asymmetries
+  - do not keep pushing this lane for symmetry alone; prefer `VTCORE-02` unless another native-only ownership leak is clearly identified
 - [ ] `VTCORE-02` Make FFI a first-class core interface.
   Notes: shared FFI state plus `host_api` and `core_api` splits are landed; remaining work is maturity and convergence, not proving the shape. Recent slices closed real host-facing gaps such as close-confirm signals and backend-owned viewport control.
   Done when:
