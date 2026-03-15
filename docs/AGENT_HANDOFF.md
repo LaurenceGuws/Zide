@@ -5,7 +5,7 @@ not a progress log and should stay brief.
 
 ### Current Focus
 
-- Primary active product lane: post-rewrite terminal quality hardening on Linux native.
+- Primary active product lane: post-rewrite terminal cleanup/restructure on Linux native, with quality hardening continuing only where it changes architecture or closes real host-contract gaps.
 - Quality bar: native terminal behavior should land in the same band as `kitty` / `ghostty` for correctness, smoothness, compatibility, and steady-state cost.
 - Native GUI remains the proving ground for the engine contract. Keep native honest first, then bring the FFI/embedded path up to the same redraw/publication/present semantics.
 
@@ -13,8 +13,8 @@ not a progress log and should stay brief.
 
 - The main VT/present rewrite is no longer the active invention lane on `main`.
 - Default work now should be:
-  - bug hunting on top of the rewritten VT/render seams
-  - compatibility fixes against real workloads
+  - cleanup/restructure on top of the rewritten VT/render seams
+  - boundary tightening against the engine-centered target
   - native/FFI contract convergence where it materially improves quality
 - Renderer architecture direction is already set:
   - narrow retained widget-local targets where they pay off
@@ -25,7 +25,8 @@ not a progress log and should stay brief.
 
 - The scene-owned composition path is active on `main`.
 - Rewrite-era present/debug baggage has been materially reduced from the live path.
-- Native compatibility has recently improved on real workloads including `nvim`, `btop`, Codex inline history, and Zig `std.Progress`.
+- The heaviest post-rewrite bug-hunting lane has cooled after recent fixes for `nvim`, `btop`, Codex inline history, Zig `std.Progress`, and focused input latency.
+- The main remaining engine gap is no longer random compatibility debt; it is that `TerminalSession` still carries more structural weight than a `libghostty-vt`-quality engine boundary would.
 - Current implementation authority lives in the terminal architecture docs and owning todos, not in stale investigation notes.
 
 ### Where To Look
@@ -35,6 +36,8 @@ not a progress log and should stay brief.
 - Terminal core architecture and active queue:
   - `app_architecture/terminal/VT_CORE_DESIGN.md`
   - `docs/todo/terminal/vt_core_rearchitecture.md`
+  - `app_architecture/terminal/TERMINAL_ARCHITECTURE_COMPARISON.md`
+  - `docs/review/TERMINAL_CORE_ARCHITECTURE_REVIEW_2026-03-10.md`
   - `docs/todo/terminal/modularization.md`
 - Repo workflow and doc ownership:
   - `AGENTS.md`

@@ -5,8 +5,8 @@ Date: 2026-03-10
 Status note, 2026-03-14:
 
 - The initial VT/render rewrite phase is no longer the main active lane.
-- The current phase is post-rewrite bug hunting, compatibility hardening, and
-  native/FFI convergence against the rewritten architecture.
+- The current phase is post-rewrite cleanup/restructure and native/FFI
+  convergence against the rewritten architecture.
 - Recently closed native compatibility bugs:
   - Codex inline resume history now feeds real primary scrollback on the
     rewritten path instead of collapsing to the visible pre-viewport band.
@@ -24,6 +24,9 @@ Status note, 2026-03-14:
 - Input encoding remains on the dedicated subsystem path: writer-agnostic
   encoder coverage exists at both the fake-writer level and the real
   PTY-backed `TerminalSession` writer boundary.
+- The main remaining gap versus a cleaner `libghostty-vt`-quality engine
+  boundary is still structural: `TerminalSession` remains heavier than the
+  desired host wrapper around `TerminalCore`.
 
 Purpose: define the exact ownership split for the next terminal-core redesign
 lane so code changes do not drift between "session cleanup", "FFI cleanup", and
