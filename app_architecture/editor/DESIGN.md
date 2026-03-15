@@ -18,6 +18,16 @@ Notepad++-level capability while keeping Zide's core fast and minimal.
 - Syntax highlight: `src/editor/syntax.zig`
 - View/render: `src/ui/widgets/editor_widget.zig`, `src/ui/renderer.zig`
 
+### Editor Architecture Map
+
+```mermaid
+flowchart LR
+    Rope[Rope Text Engine] --> EditorState[Editor State]
+    EditorState --> Highlight[Syntax / Highlight]
+    Highlight --> Widget[Editor Widget]
+    Widget --> Renderer[Renderer]
+```
+
 ## Roadmap docs (source of truth)
 
 - `app_architecture/editor/editor_widget_todo.md` (end-to-end widget + features)

@@ -4,6 +4,17 @@ Date: 2026-01-24
 
 Goal: split the editor into clear layers with stable APIs so we can grow features without ballooning `editor_widget.zig` or `renderer.zig`.
 
+Status note, 2026-03-15:
+
+- The large-file split is materially underway; this file should now be read as
+  current target structure plus remaining work, not as a running diary.
+- Detailed dated extraction history belongs in a compact historical appendix,
+  not in the main authority path.
+- Current editor architecture context also lives in:
+  - `app_architecture/editor/DESIGN.md`
+  - `app_architecture/editor/editor_widget_todo.md`
+  - `app_architecture/editor/protocol_todo.md`
+
 ## Scope
 - Editor widget + text engine + syntax + rendering pipeline (editor-side).
 - Preserve current behavior; start with extraction-only refactors.
@@ -73,6 +84,23 @@ Use `zig build check-editor-imports` to enforce these rules.
 8) Implement render cache + dirty redraw path (render texture + per-seg hashing).
 
 ## Progress
+
+Current landed shape:
+
+- selection, layout, scroll, cursor, and metrics helpers are extracted under
+  `src/editor/view/*`
+- major `editor.zig` responsibilities are being split into focused modules
+- major `syntax.zig` responsibilities are being split into focused modules
+
+Current remaining pressure points:
+
+- `editor.zig` still acts as too much of a universal owner/facade
+- `syntax.zig` still needs continued contraction toward a narrow root facade
+- renderer/editor-specific seams still need clearer ownership once widget-side
+  modularization settles
+
+## Historical extraction checkpoint (2026-03-10)
+
 - Completed step 1 (selection view extracted).
 - Completed step 2 (layout helpers extracted).
 - Completed step 3 (scrolling + visual-row mapping delegated to `src/editor/view/scroll.zig`).

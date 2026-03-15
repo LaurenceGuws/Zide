@@ -25,6 +25,20 @@ written to support a renderer that is competitive with modern terminals
 
 Zide should treat text rendering as a pipeline with clear boundaries:
 
+```mermaid
+flowchart LR
+    Text[UTF-8/UTF-32 text + style] --> Shape[HarfBuzz shaping]
+    Shape --> Raster[FreeType rasterization]
+    Raster --> Atlas[Coverage / Color atlases]
+    Atlas --> Render[Renderer text draw]
+    Render --> Offscreen[Linear offscreen composition]
+    Offscreen --> Present[sRGB window present]
+
+    Config[Lua font_rendering config] --> Shape
+    Config --> Raster
+    Config --> Render
+```
+
 1) Shaping (HarfBuzz)
 - Input: text (UTF-8/UTF-32), style (font face selection), direction/script,
   features.
@@ -108,6 +122,16 @@ Recommended fixture dimensions:
 
 The goal is to be able to make architectural changes (shaping, atlas,
 correction) with confidence.
+
+```mermaid
+flowchart TD
+    Change[Rendering change] --> Compare[tools/font_sample_compare.sh]
+    Compare -->|match| Keep[Keep existing fixtures]
+    Compare -->|mismatch| Review[Inspect mismatch outputs]
+    Review -->|unintentional| Fix[Fix regression]
+    Review -->|intentional + approved| Refresh[Refresh fixtures]
+    Refresh --> Recheck[Rerun compare]
+```
 
 ### Fixture Refresh Policy
 

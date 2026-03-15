@@ -3,6 +3,17 @@
 Date: 2026-01-19 (status updated 2026-01-28)
 Scope: UI layout/dock structure and redraw behavior, with a focus on responsiveness and CPU usage.
 
+Status note, 2026-03-15:
+
+- This file is historical review evidence, not current architecture authority.
+- It is still worth keeping surfaced because it captures the origin of the
+  current UI-thread/backend decoupling work and several still-relevant
+  ownership/perf observations.
+- Current implementation authority lives in:
+  - `app_architecture/ui/DEVELOPMENT_JOURNEY.md`
+  - `app_architecture/ui/ui_widget_modularization_todo.md`
+  - `app_architecture/ui/renderer_todo.md`
+
 ## Dock/Layout Structure (Current)
 - Layout is a fixed vertical stack plus side nav:
   - Options bar (top)

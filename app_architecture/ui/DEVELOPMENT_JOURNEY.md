@@ -53,11 +53,48 @@ Non-negotiable rules
 
 Architecture (modular, interface-driven)
 
+```mermaid
+flowchart LR
+    SDL[SDL3 Window + Input] --> Shell[src/app_shell.zig]
+    Shell --> App[App / frame orchestration]
+    App --> Widgets[src/ui/widgets/*]
+    Widgets --> RendererAPI[src/ui/renderer.zig]
+    RendererAPI --> Backend[Backend implementation]
+    Backend --> GPU[GL / Metal / GLES]
+    GPU --> Present[Window present]
+
+    App --> Text[Font + text services]
+    Text --> RendererAPI
+```
+
 UI layering + import guardrails
 - Layer boundaries are enforced by import checks; keep UI modularization within the widget layer.
 - Relevant doc: `app_architecture/APP_LAYERING.md` (widget boundaries + allowed import directions).
 - Enforcement: `zig build check-app-imports` (widgets + main/renderer boundary), plus `zig build check-input-imports` / `zig build check-editor-imports`.
 - Practical rule of thumb: keep `src/ui/widgets/*_widget.zig` as an orchestrator and push draw/input details into widget-local modules; do not introduce cross-widget imports.
+
+```mermaid
+flowchart TB
+    subgraph ParseThread[Terminal Parse Thread]
+        PTY[PTY bytes]
+        Parse[Parse + model updates]
+        Cache[Build view cache]
+        Images[Build kitty image lists]
+    end
+
+    subgraph UIThread[UI / Render Thread]
+        Poll[SDL poll events]
+        Update[Frame update]
+        Widget[Widget orchestration]
+        Draw[Draw submission]
+        Upload[Budgeted uploads]
+        Present[Present]
+    end
+
+    PTY --> Parse --> Cache --> Widget
+    Images --> Widget
+    Poll --> Update --> Widget --> Draw --> Upload --> Present
+```
 
 1) Windowing + input (SDL3)
 - SDL3 provides window creation, input, and platform glue.

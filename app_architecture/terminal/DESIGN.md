@@ -35,6 +35,17 @@ the current baseline by layer.
 - CSI params support up to 16 entries and `:` separators for SGR sequences.
 - Default colors are configurable per session; erase/blank fills use current attributes so TUI background colors persist.
 
+### Terminal Layer Map
+
+```mermaid
+flowchart LR
+    PTY[PTY / IO] --> Parser[VT Parser]
+    Parser --> Screen[Screen Model]
+    Screen --> Snapshot[Snapshot / View Cache]
+    Snapshot --> Widget[Terminal Widget]
+    Widget --> Renderer[Renderer]
+```
+
 ## Decisions & Progress by Layer
 
 ### Layer 0: UI Integration (Widget + Renderer)
@@ -124,6 +135,20 @@ Notes:
 - Scrollback is currently appended only on full-screen scroll (scroll region must be full height).
 - Scrollback view supports wheel + drag via the terminal widget; no selection/copy yet.
 
+#### Primary Screen vs Alt Screen vs Scrollback
+
+```mermaid
+flowchart TD
+    Primary[Primary Screen Grid] --> FullScroll[Full-screen scroll]
+    FullScroll --> Scrollback[Logical scrollback history]
+    Primary --> Viewport[Viewport offset / live bottom]
+
+    Alt[Alternate Screen Grid] --> AltRule[No scrollback]
+    Alt --> AltViewport[Live viewport only]
+
+    Scrollback --> Viewport
+```
+
 Planned redesign:
 - Replace the current row-only scrollback with a logical-line buffer that tracks wrap boundaries.
 - Reflow on column resize by merging wrapped rows into logical lines, then re-wrapping into the new width.
@@ -155,6 +180,17 @@ Scrollback redesign proposal (kitty/ghostty/wezterm inspired):
 Why this approach:
 - Mirrors the reflow model in wezterm (rewrap_lines) and alacritty (resize reflow) while keeping kitty-style line semantics.
 - Stable logical line ids make scrollback anchors, cursor, and selection durable across reflow.
+
+#### Logical Line Reflow
+
+```mermaid
+flowchart LR
+    Logical[Logical Lines + Wrap Metadata] --> Rewrap[Rewrap on column resize]
+    Rewrap --> Rows[Visible Rows]
+    Rows --> Viewport[Viewport pin / live-bottom restore]
+    Rewrap --> Cursor[Cursor remap]
+    Rewrap --> Selection[Selection remap]
+```
 
 Decision:
 - Grid model supports dirty‑row tracking and scrollback; treat it as the current baseline rather than a throwaway prototype.
