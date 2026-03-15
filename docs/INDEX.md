@@ -63,6 +63,7 @@ project landing page.
 ## Research + Reference
 - `docs/reference/README.md` — reference-doc placement and role.
 - `docs/research/README.md` — research-doc placement and role.
+- `docs/research/terminal/README.md` — terminal research subtree entrypoint.
 - `docs/reference/terminal_compatibility.md` — terminal compatibility, TERM identity, and terminfo install instructions.
 - `docs/reference/terminal_redraw_capture_workflow.md` — redraw capture and replay-authority workflow for real terminal repros.
 - `docs/reference/terminal_flutter_adapter_notes.md` — Flutter-style host adapter notes for the terminal bridge.
@@ -77,6 +78,8 @@ project landing page.
 Historical evidence remains under `docs/review/`, but most files in
 that folder are no longer first-class navigation docs. Older completed rollout
 records are now grouped under `docs/review/archive/`.
+
+- `docs/review/archive/terminal/README.md` — terminal rollout/archive subtree entrypoint.
 
 ## Quick Ownership Rules
 
