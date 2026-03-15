@@ -6,6 +6,12 @@ Purpose: define the first embeddable terminal backend surface for Zide.
 
 Status: milestone-1 baseline is implemented. This document now describes the active bridge shape and constraints.
 
+Current host-boundary performance checkpoint:
+
+- `docs/research/terminal/TERMINAL_FFI_PERFORMANCE_REVIEW_2026-03-15.md`
+  records the current allocation/copy judgment for snapshot, metadata,
+  redraw/present, and pending-input batching.
+
 ## Why this exists
 
 Zide already has a modular terminal backend:
@@ -285,6 +291,9 @@ Current performance note:
   - keep debug/UI convenience work outside the redraw hot path
 - future snapshot/diff work should be judged first by host call count,
   allocation pressure, and contract clarity, not by ABI cleverness alone
+- the current hot-path rules and next-step constraints for that lane are
+  recorded in:
+  - `docs/research/terminal/TERMINAL_FFI_PERFORMANCE_REVIEW_2026-03-15.md`
 
 The snapshot should include at minimum:
 - rows/cols

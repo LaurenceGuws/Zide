@@ -51,6 +51,8 @@ Current judgment:
   - `pending_input_acquire(...)` is the outbound batching seam for external
     transport
   - `metadata_acquire(...)` is latest-state, not a per-frame polling habit
+- The current performance checkpoint for that lane now lives in:
+  - `docs/research/terminal/TERMINAL_FFI_PERFORMANCE_REVIEW_2026-03-15.md`
 
 ## TODO
 
@@ -115,4 +117,8 @@ Current judgment:
   - keep hosts disciplined around redraw-driven snapshot usage
   - review snapshot/diff evolution as the next major boundary-cost question,
     not as an excuse to widen the surface casually
+- Current execution rule for that lane:
+  - do not widen the bridge first
+  - keep the snapshot review focused on host call count, allocation pressure,
+    and latest-state authority
 - The bridge remains beta-level and should not be treated as frozen.
