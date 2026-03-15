@@ -44,7 +44,7 @@ pub fn snapshot(self: anytype) TerminalSnapshot {
         .dirty = view.dirty,
         .damage = view.damage,
         .scrollback_count = self.core.history.scrollbackCount(),
-        .scrollback_offset = self.core.history.scrollOffset(),
+        .scrollback_offset = self.core.scrollbackOffset(),
         .selection = selection_mod.selectionState(self),
         .alt_active = alt_active,
         .screen_reverse = screen.screen_reverse,
@@ -149,7 +149,7 @@ pub fn capturePresentation(self: anytype, dst: *RenderCache) !PresentationCaptur
 }
 
 pub fn syncUpdatesActive(self: anytype) bool {
-    return self.core.sync_updates_active;
+    return self.core.syncUpdatesActive();
 }
 
 pub fn setSyncUpdates(self: anytype, enabled: bool) void {
@@ -159,7 +159,7 @@ pub fn setSyncUpdates(self: anytype, enabled: bool) void {
 }
 
 pub fn setSyncUpdatesLocked(self: anytype, enabled: bool) void {
-    if (self.core.sync_updates_active == enabled) return;
+    if (self.core.syncUpdatesActive() == enabled) return;
     self.core.sync_updates_active = enabled;
     const cache = renderCache(self);
     const presented_generation = presentedGeneration(self);

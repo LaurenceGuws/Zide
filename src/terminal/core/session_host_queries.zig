@@ -22,12 +22,12 @@ pub fn copyMetadata(
     defer self.unlock();
 
     const title = if (terminal_transport.Transport.fromSession(self)) |transport|
-        (transport.foregroundProcessLabel() orelse self.core.title)
+        (transport.foregroundProcessLabel() orelse self.core.titleText())
     else
-        self.core.title;
-    const cwd = self.core.cwd;
+        self.core.titleText();
+    const cwd = self.core.cwdText();
     const scrollback = scrollback_view.scrollbackInfo(self);
-    const scroll_offset: usize = if (self.core.active == .alt) 0 else self.core.history.scrollOffset();
+    const scroll_offset = self.core.scrollbackOffset();
     const alive = if (terminal_transport.Transport.fromSession(self)) |transport| transport.isAlive() else false;
     const exit_code = if (self.child_exited.load(.acquire))
         self.child_exit_code.load(.acquire)
@@ -51,8 +51,8 @@ pub fn closeConfirmSignals(self: anytype) CloseConfirmSignals {
     if (terminal_transport.Transport.fromSession(self)) |transport| {
         signals.foreground_process = transport.hasForegroundProcessOutsideShell();
     }
-    signals.semantic_command = self.core.semantic_prompt.input_active or self.core.semantic_prompt.output_active;
-    signals.alt_screen = self.core.active == .alt;
+    signals.semantic_command = self.core.semanticPromptActive();
+    signals.alt_screen = self.core.isAltActive();
     signals.mouse_reporting = self.mouseReportingEnabled();
     return signals;
 }

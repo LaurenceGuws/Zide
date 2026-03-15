@@ -30,7 +30,9 @@ Status note, 2026-03-14:
   `src/terminal/core/session_host_queries.zig` instead of being repeated in the
   root facade; the interaction/mode surface is now also aliased directly from
   `src/terminal/core/session_interaction.zig` instead of being re-declared in
-  `terminal_session.zig`.
+  `terminal_session.zig`; host metadata and close-confirm queries now also go
+  through core-owned accessors for title/cwd/scrollback offset/semantic prompt
+  state instead of reading raw `self.core` fields directly.
 - Input encoding remains on the dedicated subsystem path: writer-agnostic
   encoder coverage exists at both the fake-writer level and the real
   PTY-backed `TerminalSession` writer boundary.

@@ -184,4 +184,24 @@ pub const TerminalCore = struct {
     pub fn isAltActive(self: *const TerminalCore) bool {
         return self.active == .alt;
     }
+
+    pub fn titleText(self: *const TerminalCore) []const u8 {
+        return self.title;
+    }
+
+    pub fn cwdText(self: *const TerminalCore) []const u8 {
+        return self.cwd;
+    }
+
+    pub fn scrollbackOffset(self: *const TerminalCore) usize {
+        return if (self.active == .alt) 0 else self.history.scrollOffset();
+    }
+
+    pub fn semanticPromptActive(self: *const TerminalCore) bool {
+        return self.semantic_prompt.input_active or self.semantic_prompt.output_active;
+    }
+
+    pub fn syncUpdatesActive(self: *const TerminalCore) bool {
+        return self.sync_updates_active;
+    }
 };
