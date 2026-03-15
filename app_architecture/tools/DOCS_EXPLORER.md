@@ -8,7 +8,8 @@ Purpose: define the high-level ownership and scope for the local browser-based
 ## Why it exists
 
 Zide's docs surface has grown enough that opening Markdown files directly is no
-longer the best way to browse architecture, plans, and active todo trackers.
+longer the best way to browse architecture, reference docs, and active work
+queues.
 
 The docs explorer exists to provide:
 
