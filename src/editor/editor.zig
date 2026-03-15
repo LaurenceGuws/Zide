@@ -249,14 +249,30 @@ pub const Editor = struct {
     // Cursor movement
     // ─────────────────────────────────────────────────────────────────────────
 
-    pub fn moveCursorLeft(self: *Editor) void { Navigation.moveCursorLeft(self); }
-    pub fn moveCursorRight(self: *Editor) void { Navigation.moveCursorRight(self); }
-    pub fn moveCursorUp(self: *Editor) void { Navigation.moveCursorUp(self); }
-    pub fn moveCursorDown(self: *Editor) void { Navigation.moveCursorDown(self); }
-    pub fn moveCursorToLineStart(self: *Editor) void { Navigation.moveCursorToLineStart(self); }
-    pub fn moveCursorToLineEnd(self: *Editor) void { Navigation.moveCursorToLineEnd(self); }
-    pub fn moveCursorWordLeft(self: *Editor) void { Navigation.moveCursorWordLeft(self); }
-    pub fn moveCursorWordRight(self: *Editor) void { Navigation.moveCursorWordRight(self); }
+    pub fn moveCursorLeft(self: *Editor) void {
+        Navigation.moveCursorLeft(self);
+    }
+    pub fn moveCursorRight(self: *Editor) void {
+        Navigation.moveCursorRight(self);
+    }
+    pub fn moveCursorUp(self: *Editor) void {
+        Navigation.moveCursorUp(self);
+    }
+    pub fn moveCursorDown(self: *Editor) void {
+        Navigation.moveCursorDown(self);
+    }
+    pub fn moveCursorToLineStart(self: *Editor) void {
+        Navigation.moveCursorToLineStart(self);
+    }
+    pub fn moveCursorToLineEnd(self: *Editor) void {
+        Navigation.moveCursorToLineEnd(self);
+    }
+    pub fn moveCursorWordLeft(self: *Editor) void {
+        Navigation.moveCursorWordLeft(self);
+    }
+    pub fn moveCursorWordRight(self: *Editor) void {
+        Navigation.moveCursorWordRight(self);
+    }
 
     pub fn hasRectangularSelectionState(self: *Editor) bool {
         return SelectionState.hasRectangularSelectionState(self);
@@ -278,68 +294,180 @@ pub const Editor = struct {
         try SelectionState.extendSelectionSetWithHeads(self, target_heads);
     }
 
-    pub fn extendSelectionLeft(self: *Editor) void { Navigation.extendSelectionLeft(self); }
-    pub fn extendSelectionRight(self: *Editor) void { Navigation.extendSelectionRight(self); }
-    pub fn extendSelectionToLineStart(self: *Editor) void { Navigation.extendSelectionToLineStart(self); }
-    pub fn extendSelectionToLineEnd(self: *Editor) void { Navigation.extendSelectionToLineEnd(self); }
-    pub fn extendSelectionWordLeft(self: *Editor) void { Navigation.extendSelectionWordLeft(self); }
-    pub fn extendSelectionWordRight(self: *Editor) void { Navigation.extendSelectionWordRight(self); }
-    pub fn setCursor(self: *Editor, line: usize, col: usize) void { Navigation.setCursor(self, line, col); }
-    pub fn setCursorPreservePreferred(self: *Editor, line: usize, col: usize) void { Navigation.setCursorPreservePreferred(self, line, col); }
-    pub fn setCursorNoClear(self: *Editor, line: usize, col: usize) void { Navigation.setCursorNoClear(self, line, col); }
-    pub fn setCursorOffsetNoClear(self: *Editor, offset: usize) void { Navigation.setCursorOffsetNoClear(self, offset); }
+    pub fn extendSelectionLeft(self: *Editor) void {
+        Navigation.extendSelectionLeft(self);
+    }
+    pub fn extendSelectionRight(self: *Editor) void {
+        Navigation.extendSelectionRight(self);
+    }
+    pub fn extendSelectionToLineStart(self: *Editor) void {
+        Navigation.extendSelectionToLineStart(self);
+    }
+    pub fn extendSelectionToLineEnd(self: *Editor) void {
+        Navigation.extendSelectionToLineEnd(self);
+    }
+    pub fn extendSelectionWordLeft(self: *Editor) void {
+        Navigation.extendSelectionWordLeft(self);
+    }
+    pub fn extendSelectionWordRight(self: *Editor) void {
+        Navigation.extendSelectionWordRight(self);
+    }
+    pub fn setCursor(self: *Editor, line: usize, col: usize) void {
+        Navigation.setCursor(self, line, col);
+    }
+    pub fn setCursorPreservePreferred(self: *Editor, line: usize, col: usize) void {
+        Navigation.setCursorPreservePreferred(self, line, col);
+    }
+    pub fn setCursorNoClear(self: *Editor, line: usize, col: usize) void {
+        Navigation.setCursorNoClear(self, line, col);
+    }
+    pub fn setCursorOffsetNoClear(self: *Editor, offset: usize) void {
+        Navigation.setCursorOffsetNoClear(self, offset);
+    }
 
-    pub fn clearSelections(self: *Editor) void { SelectionState.clearSelections(self); }
-    pub fn primaryCaret(self: *Editor) CursorPos { return SelectionState.primaryCaret(self); }
-    pub fn auxiliaryCaretCount(self: *Editor) usize { return SelectionState.auxiliaryCaretCount(self); }
-    pub fn auxiliaryCaretAt(self: *Editor, index: usize) ?CursorPos { return SelectionState.auxiliaryCaretAt(self, index); }
-    fn storedSelectionFromSelection(sel: Selection) StoredSelection { return SelectionState.storedSelectionFromSelection(sel); }
-    pub fn selectionFromStored(self: *Editor, stored: StoredSelection) Selection { return SelectionState.selectionFromStored(self, stored); }
-    pub fn rectangularPasteLines(self: *Editor, text: []const u8) !?[][]const u8 { return try SelectionState.rectangularPasteLines(self, text); }
-    pub fn captureUndoSelectionState(self: *Editor) !u64 { return try SelectionState.captureUndoSelectionState(self); }
-    fn restoreUndoSelectionState(self: *Editor, state_id: u64) !bool { return try SelectionState.restoreUndoSelectionState(self, state_id); }
-    pub fn annotateLastUndoSelectionState(self: *Editor, before_id: u64, after_id: u64) void { SelectionState.annotateLastUndoSelectionState(self, before_id, after_id); }
-    pub fn beginTrackedUndoGroup(self: *Editor) !u64 { return try SelectionState.beginTrackedUndoGroup(self); }
-    pub fn endTrackedUndoGroup(self: *Editor) !void { try SelectionState.endTrackedUndoGroup(self); }
-    pub fn addSelection(self: *Editor, selection: Selection) !void { try SelectionState.addSelection(self, selection); }
-    pub fn selectionCount(self: *Editor) usize { return SelectionState.selectionCount(self); }
-    pub fn selectionAt(self: *Editor, index: usize) ?Selection { return SelectionState.selectionAt(self, index); }
-    pub fn normalizeSelections(self: *Editor) !void { try SelectionState.normalizeSelections(self); }
-    pub fn addRectSelection(self: *Editor, start: CursorPos, end: CursorPos) !void { try SelectionState.addRectSelection(self, start, end); }
-    pub fn expandRectSelection(self: *Editor, start_line: usize, end_line: usize, start_col: usize, end_col: usize) !void { try SelectionState.expandRectSelection(self, start_line, end_line, start_col, end_col); }
-    pub fn expandRectSelectionVisual(self: *Editor, start_line: usize, end_line: usize, start_col_vis: usize, end_col_vis: usize) !void { try SelectionState.expandRectSelectionVisual(self, start_line, end_line, start_col_vis, end_col_vis); }
-    pub fn expandRectSelectionVisualWithClusters(self: *Editor, start_line: usize, end_line: usize, start_col_vis: usize, end_col_vis: usize, provider: ?*const ClusterProvider) !void { try SelectionState.expandRectSelectionVisualWithClusters(self, start_line, end_line, start_col_vis, end_col_vis, provider); }
-    pub fn normalizeSelectionsDescending(self: *Editor) !void { try SelectionState.normalizeSelectionsDescending(self); }
-    pub fn duplicateNormalizedSelectionsDescending(self: *Editor) ![]Selection { return try SelectionState.duplicateNormalizedSelectionsDescending(self); }
-    pub fn addCaretUp(self: *Editor) !bool { return try SelectionState.addCaretUp(self); }
-    pub fn addCaretDown(self: *Editor) !bool { return try SelectionState.addCaretDown(self); }
-    pub fn addCaretVertical(self: *Editor, delta: i32) !bool { return try SelectionState.addCaretVertical(self, delta); }
-    pub fn cursorPosForOffset(self: *Editor, offset: usize) CursorPos { return SelectionState.cursorPosForOffset(self, offset); }
-    pub fn shiftCaretOffsets(self: *Editor, caret_offsets: *std.ArrayList(usize), delta: isize) void { _ = self; SelectionState.shiftCaretOffsets(caret_offsets, delta); }
-    pub fn hasOnlyCaretSelections(self: *Editor) bool { return SelectionState.hasOnlyCaretSelections(self); }
-    pub fn collectCaretOffsets(self: *Editor) !std.ArrayList(usize) { return try SelectionState.collectCaretOffsets(self); }
-    pub fn collectCaretOffsetsDescending(self: *Editor) !std.ArrayList(usize) { return try SelectionState.collectCaretOffsetsDescending(self); }
-    pub fn restoreCaretSelections(self: *Editor, caret_offsets: []const usize, primary_offset: usize) !void { try SelectionState.restoreCaretSelections(self, caret_offsets, primary_offset); }
-    pub fn restoreExtendedCaretSelections(self: *Editor, anchor_offsets: []const usize, target_offsets: []const usize) !void { try SelectionState.restoreExtendedCaretSelections(self, anchor_offsets, target_offsets); }
-    pub fn moveCaretSetHorizontal(self: *Editor, delta: isize) !void { try SelectionState.moveCaretSetHorizontal(self, delta); }
-    pub fn moveCaretSetToLineBoundary(self: *Editor, to_start: bool) !void { try SelectionState.moveCaretSetToLineBoundary(self, to_start); }
-    pub fn moveCaretSetByWord(self: *Editor, left: bool) !void { try SelectionState.moveCaretSetByWord(self, left); }
-    pub fn extendCaretSetToOffsets(self: *Editor, target_offsets: []const usize) !void { try SelectionState.extendCaretSetToOffsets(self, target_offsets); }
-    pub fn adjustPrimaryOffsetForReplacement(self: *Editor, primary_offset: *usize, start: usize, end: usize, replacement_len: usize) void { _ = self; SelectionState.adjustPrimaryOffsetForReplacement(primary_offset, start, end, replacement_len); }
-    pub fn applySelectionReplacementOps(self: *Editor, ops: []const SelectionReplacementOp, initial_primary_offset: usize) !void { try SelectionState.applySelectionReplacementOps(self, ops, initial_primary_offset); }
-    pub fn isWordByte(byte: u8) bool { return SelectionState.isWordByte(byte); }
-    pub fn byteAt(self: *Editor, offset: usize) ?u8 { return SelectionState.byteAt(self, offset); }
-    pub fn wordLeftOffset(self: *Editor, offset: usize) usize { return SelectionState.wordLeftOffset(self, offset); }
-    pub fn wordRightOffset(self: *Editor, offset: usize) usize { return SelectionState.wordRightOffset(self, offset); }
-    pub fn extendPrimarySelectionToOffset(self: *Editor, target_offset: usize) void { SelectionState.extendPrimarySelectionToOffset(self, target_offset); }
+    pub fn clearSelections(self: *Editor) void {
+        SelectionState.clearSelections(self);
+    }
+    pub fn primaryCaret(self: *Editor) CursorPos {
+        return SelectionState.primaryCaret(self);
+    }
+    pub fn auxiliaryCaretCount(self: *Editor) usize {
+        return SelectionState.auxiliaryCaretCount(self);
+    }
+    pub fn auxiliaryCaretAt(self: *Editor, index: usize) ?CursorPos {
+        return SelectionState.auxiliaryCaretAt(self, index);
+    }
+    fn storedSelectionFromSelection(sel: Selection) StoredSelection {
+        return SelectionState.storedSelectionFromSelection(sel);
+    }
+    pub fn selectionFromStored(self: *Editor, stored: StoredSelection) Selection {
+        return SelectionState.selectionFromStored(self, stored);
+    }
+    pub fn rectangularPasteLines(self: *Editor, text: []const u8) !?[][]const u8 {
+        return try SelectionState.rectangularPasteLines(self, text);
+    }
+    pub fn captureUndoSelectionState(self: *Editor) !u64 {
+        return try SelectionState.captureUndoSelectionState(self);
+    }
+    fn restoreUndoSelectionState(self: *Editor, state_id: u64) !bool {
+        return try SelectionState.restoreUndoSelectionState(self, state_id);
+    }
+    pub fn annotateLastUndoSelectionState(self: *Editor, before_id: u64, after_id: u64) void {
+        SelectionState.annotateLastUndoSelectionState(self, before_id, after_id);
+    }
+    pub fn beginTrackedUndoGroup(self: *Editor) !u64 {
+        return try SelectionState.beginTrackedUndoGroup(self);
+    }
+    pub fn endTrackedUndoGroup(self: *Editor) !void {
+        try SelectionState.endTrackedUndoGroup(self);
+    }
+    pub fn addSelection(self: *Editor, selection: Selection) !void {
+        try SelectionState.addSelection(self, selection);
+    }
+    pub fn selectionCount(self: *Editor) usize {
+        return SelectionState.selectionCount(self);
+    }
+    pub fn selectionAt(self: *Editor, index: usize) ?Selection {
+        return SelectionState.selectionAt(self, index);
+    }
+    pub fn normalizeSelections(self: *Editor) !void {
+        try SelectionState.normalizeSelections(self);
+    }
+    pub fn addRectSelection(self: *Editor, start: CursorPos, end: CursorPos) !void {
+        try SelectionState.addRectSelection(self, start, end);
+    }
+    pub fn expandRectSelection(self: *Editor, start_line: usize, end_line: usize, start_col: usize, end_col: usize) !void {
+        try SelectionState.expandRectSelection(self, start_line, end_line, start_col, end_col);
+    }
+    pub fn expandRectSelectionVisual(self: *Editor, start_line: usize, end_line: usize, start_col_vis: usize, end_col_vis: usize) !void {
+        try SelectionState.expandRectSelectionVisual(self, start_line, end_line, start_col_vis, end_col_vis);
+    }
+    pub fn expandRectSelectionVisualWithClusters(self: *Editor, start_line: usize, end_line: usize, start_col_vis: usize, end_col_vis: usize, provider: ?*const ClusterProvider) !void {
+        try SelectionState.expandRectSelectionVisualWithClusters(self, start_line, end_line, start_col_vis, end_col_vis, provider);
+    }
+    pub fn normalizeSelectionsDescending(self: *Editor) !void {
+        try SelectionState.normalizeSelectionsDescending(self);
+    }
+    pub fn duplicateNormalizedSelectionsDescending(self: *Editor) ![]Selection {
+        return try SelectionState.duplicateNormalizedSelectionsDescending(self);
+    }
+    pub fn addCaretUp(self: *Editor) !bool {
+        return try SelectionState.addCaretUp(self);
+    }
+    pub fn addCaretDown(self: *Editor) !bool {
+        return try SelectionState.addCaretDown(self);
+    }
+    pub fn addCaretVertical(self: *Editor, delta: i32) !bool {
+        return try SelectionState.addCaretVertical(self, delta);
+    }
+    pub fn cursorPosForOffset(self: *Editor, offset: usize) CursorPos {
+        return SelectionState.cursorPosForOffset(self, offset);
+    }
+    pub fn shiftCaretOffsets(self: *Editor, caret_offsets: *std.ArrayList(usize), delta: isize) void {
+        _ = self;
+        SelectionState.shiftCaretOffsets(caret_offsets, delta);
+    }
+    pub fn hasOnlyCaretSelections(self: *Editor) bool {
+        return SelectionState.hasOnlyCaretSelections(self);
+    }
+    pub fn collectCaretOffsets(self: *Editor) !std.ArrayList(usize) {
+        return try SelectionState.collectCaretOffsets(self);
+    }
+    pub fn collectCaretOffsetsDescending(self: *Editor) !std.ArrayList(usize) {
+        return try SelectionState.collectCaretOffsetsDescending(self);
+    }
+    pub fn restoreCaretSelections(self: *Editor, caret_offsets: []const usize, primary_offset: usize) !void {
+        try SelectionState.restoreCaretSelections(self, caret_offsets, primary_offset);
+    }
+    pub fn restoreExtendedCaretSelections(self: *Editor, anchor_offsets: []const usize, target_offsets: []const usize) !void {
+        try SelectionState.restoreExtendedCaretSelections(self, anchor_offsets, target_offsets);
+    }
+    pub fn moveCaretSetHorizontal(self: *Editor, delta: isize) !void {
+        try SelectionState.moveCaretSetHorizontal(self, delta);
+    }
+    pub fn moveCaretSetToLineBoundary(self: *Editor, to_start: bool) !void {
+        try SelectionState.moveCaretSetToLineBoundary(self, to_start);
+    }
+    pub fn moveCaretSetByWord(self: *Editor, left: bool) !void {
+        try SelectionState.moveCaretSetByWord(self, left);
+    }
+    pub fn extendCaretSetToOffsets(self: *Editor, target_offsets: []const usize) !void {
+        try SelectionState.extendCaretSetToOffsets(self, target_offsets);
+    }
+    pub fn adjustPrimaryOffsetForReplacement(self: *Editor, primary_offset: *usize, start: usize, end: usize, replacement_len: usize) void {
+        _ = self;
+        SelectionState.adjustPrimaryOffsetForReplacement(primary_offset, start, end, replacement_len);
+    }
+    pub fn applySelectionReplacementOps(self: *Editor, ops: []const SelectionReplacementOp, initial_primary_offset: usize) !void {
+        try SelectionState.applySelectionReplacementOps(self, ops, initial_primary_offset);
+    }
+    pub fn isWordByte(byte: u8) bool {
+        return SelectionState.isWordByte(byte);
+    }
+    pub fn byteAt(self: *Editor, offset: usize) ?u8 {
+        return SelectionState.byteAt(self, offset);
+    }
+    pub fn wordLeftOffset(self: *Editor, offset: usize) usize {
+        return SelectionState.wordLeftOffset(self, offset);
+    }
+    pub fn wordRightOffset(self: *Editor, offset: usize) usize {
+        return SelectionState.wordRightOffset(self, offset);
+    }
+    pub fn extendPrimarySelectionToOffset(self: *Editor, target_offset: usize) void {
+        SelectionState.extendPrimarySelectionToOffset(self, target_offset);
+    }
 
     fn byteIndexForVisualColumn(self: *Editor, line_text: []const u8, column: usize, clusters: ?[]const u32) usize {
         _ = self;
         return text_columns.byteIndexForVisualColumnWithClusters(line_text, column, clusters);
     }
 
-    pub fn updateCursorPosition(self: *Editor) void { Navigation.updateCursorPosition(self); }
-    pub fn updateCursorOffset(self: *Editor) void { Navigation.updateCursorOffset(self); }
+    pub fn updateCursorPosition(self: *Editor) void {
+        Navigation.updateCursorPosition(self);
+    }
+    pub fn updateCursorOffset(self: *Editor) void {
+        Navigation.updateCursorOffset(self);
+    }
 
     pub fn noteTextChangedBase(self: *Editor) void {
         self.modified = true;
@@ -347,7 +475,9 @@ pub const Editor = struct {
         self.change_tick +|= 1;
     }
 
-    pub fn pointForByte(self: *Editor, byte_offset: usize) c.TSPoint { return EditOps.pointForByte(self, byte_offset); }
+    pub fn pointForByte(self: *Editor, byte_offset: usize) c.TSPoint {
+        return EditOps.pointForByte(self, byte_offset);
+    }
     pub fn replaceByteRangeInternal(self: *Editor, start: usize, end: usize, replacement: []const u8, refresh_search: bool) !void {
         try EditOps.replaceByteRangeInternal(self, start, end, replacement, refresh_search);
     }
@@ -356,12 +486,24 @@ pub const Editor = struct {
     // Text editing
     // ─────────────────────────────────────────────────────────────────────────
 
-    pub fn insertChar(self: *Editor, char: u8) !void { try EditOps.insertChar(self, char); }
-    pub fn insertText(self: *Editor, text: []const u8) !void { try EditOps.insertText(self, text); }
-    pub fn insertNewline(self: *Editor) !void { try EditOps.insertNewline(self); }
-    pub fn deleteCharBackward(self: *Editor) !void { try EditOps.deleteCharBackward(self); }
-    pub fn deleteCharForward(self: *Editor) !void { try EditOps.deleteCharForward(self); }
-    pub fn deleteSelection(self: *Editor) !void { try EditOps.deleteSelection(self); }
+    pub fn insertChar(self: *Editor, char: u8) !void {
+        try EditOps.insertChar(self, char);
+    }
+    pub fn insertText(self: *Editor, text: []const u8) !void {
+        try EditOps.insertText(self, text);
+    }
+    pub fn insertNewline(self: *Editor) !void {
+        try EditOps.insertNewline(self);
+    }
+    pub fn deleteCharBackward(self: *Editor) !void {
+        try EditOps.deleteCharBackward(self);
+    }
+    pub fn deleteCharForward(self: *Editor) !void {
+        try EditOps.deleteCharForward(self);
+    }
+    pub fn deleteSelection(self: *Editor) !void {
+        try EditOps.deleteSelection(self);
+    }
 
     pub fn selectionTextAlloc(self: *Editor) !?[]u8 {
         var selections = std.ArrayList(Selection).empty;

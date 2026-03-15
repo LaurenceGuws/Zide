@@ -57,4 +57,3 @@ test "bootstrap can start empty" {
     try std.testing.expectEqual(@as(usize, 0), editor_snap.tabs.len);
     try std.testing.expectEqual(@as(usize, 0), terminal_snap.tabs.len);
 }
-

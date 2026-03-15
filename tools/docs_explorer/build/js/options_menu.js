@@ -8,7 +8,9 @@ export function installOptionsMenu(args) {
         const target = event.target;
         if (!(target instanceof Node))
             return;
-        if (!optionsMenuEl.hidden && !optionsMenuEl.contains(target) && !optionsToggleEl.contains(target)) {
+        if (!optionsMenuEl.hidden &&
+            !optionsMenuEl.contains(target) &&
+            !optionsToggleEl.contains(target)) {
             setOptionsMenuOpen(state, optionsToggleEl, optionsMenuEl, false);
         }
     });

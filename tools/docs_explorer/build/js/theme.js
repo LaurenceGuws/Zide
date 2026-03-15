@@ -39,7 +39,8 @@ export function syncThemeVariables(rootEl, theme) {
 }
 export function updateThemeToggle(toggleEl, theme) {
     toggleEl.setAttribute("aria-label", theme === "dark" ? "Switch to light theme" : "Switch to dark theme");
-    toggleEl.title = theme === "dark" ? "Switch to light theme" : "Switch to dark theme";
+    toggleEl.title =
+        theme === "dark" ? "Switch to light theme" : "Switch to dark theme";
     toggleEl.setAttribute("aria-pressed", theme === "light" ? "true" : "false");
 }
 export async function applyTheme(rootEl, toggleEl, theme, persistTheme, rerenderVisibleMermaid) {

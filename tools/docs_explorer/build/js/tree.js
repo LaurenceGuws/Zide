@@ -34,8 +34,11 @@ function buildTreeModel(paths) {
 }
 function renderTreeNode(node, activePath) {
     const dirEntries = Array.from(node.dirs.values()).sort((a, b) => a.name.localeCompare(b.name));
-    const fileEntries = node.files.slice().sort((a, b) => a.path.localeCompare(b.path));
-    const dirsHtml = dirEntries.map((dir) => {
+    const fileEntries = node.files
+        .slice()
+        .sort((a, b) => a.path.localeCompare(b.path));
+    const dirsHtml = dirEntries
+        .map((dir) => {
         const isActiveBranch = activePath.startsWith(`${dir.path}/`) || activePath === dir.path;
         const shouldOpen = isActiveBranch || expandedPathsGlobal.has(dir.path);
         return `
@@ -52,17 +55,24 @@ function renderTreeNode(node, activePath) {
         </details>
       </li>
     `;
-    }).join("");
-    const filesHtml = fileEntries.map((doc) => `
+    })
+        .join("");
+    const filesHtml = fileEntries
+        .map((doc) => `
     <li class="tree-item">
       <a class="doc-link" href="#doc=${encodeURIComponent(doc.path)}" data-doc-link="${escapeHtml(doc.path)}">
         <span class="doc-link-label">${escapeHtml(doc.label)}</span>
         <small class="doc-link-detail">${escapeHtml(doc.detail)}</small>
       </a>
     </li>
-  `).join("");
-    const dirList = dirsHtml ? `<ul class="folder-dir-list">${dirsHtml}</ul>` : "";
-    const fileList = filesHtml ? `<ul class="folder-file-list">${filesHtml}</ul>` : "";
+  `)
+        .join("");
+    const dirList = dirsHtml
+        ? `<ul class="folder-dir-list">${dirsHtml}</ul>`
+        : "";
+    const fileList = filesHtml
+        ? `<ul class="folder-file-list">${filesHtml}</ul>`
+        : "";
     return dirList + fileList;
 }
 let expandedPathsGlobal = new Set();
@@ -78,7 +88,9 @@ export function buildTree(treeEl, docs, activePath, filter = "", expandedPaths =
     expandedPathsGlobal = new Set(expandedPaths);
     const model = buildTreeModel(filtered);
     treeEl.innerHTML = `<ul class="tree-root">${renderTreeNode(model, activePath || "")}</ul>`;
-    treeEl.querySelectorAll(".tree-folder").forEach((folderEl) => {
+    treeEl
+        .querySelectorAll(".tree-folder")
+        .forEach((folderEl) => {
         const path = folderEl.dataset.folderPath;
         if (!path)
             return;

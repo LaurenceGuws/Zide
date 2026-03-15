@@ -2,8 +2,8 @@ import { rerenderVisibleMermaid } from "./mermaid.js";
 import { renderHighlightedCode } from "./highlight.js";
 import { currentDocFromHash } from "./utils.js";
 import { setCurrentDoc, setSearchQuery } from "./state.js";
-import { renderTreeFromState, updateTreeActivePath, updateTreeExpandedPaths, updateTreeFilter } from "./tree_state.js";
-import { renderDocumentChrome, setDocumentError, setDocumentLoading, setDocumentReady } from "./view_state.js";
+import { renderTreeFromState, updateTreeActivePath, updateTreeExpandedPaths, updateTreeFilter, } from "./tree_state.js";
+import { renderDocumentChrome, setDocumentError, setDocumentLoading, setDocumentReady, } from "./view_state.js";
 import { loadDoc } from "./viewer.js";
 export function createDocController(args) {
     const { state, shell, repoBasePath, repoAbsolutePath, docs, defaultDocPath, treeEl, viewerEl, searchEl, marked, mermaid, hljs, rootEl, } = args;
@@ -25,16 +25,16 @@ export function createDocController(args) {
             defaultDocPath,
             onLoading(nextState, path) {
                 setDocumentLoading(nextState, repoBasePath, path);
-                renderDocumentChrome(nextState, shell);
+                renderDocumentChrome(nextState, shell, docs);
             },
             onReady(nextState, path) {
                 setDocumentReady(nextState, repoBasePath, path);
-                renderDocumentChrome(nextState, shell);
+                renderDocumentChrome(nextState, shell, docs);
                 renderHighlightedCode(hljs, viewerEl);
             },
             onError(nextState, path) {
                 setDocumentError(nextState, repoBasePath, path);
-                renderDocumentChrome(nextState, shell);
+                renderDocumentChrome(nextState, shell, docs);
             },
         });
     }

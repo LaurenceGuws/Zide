@@ -71,11 +71,11 @@ pub const KittyState = struct {
         const log = app_logger.logger("terminal.kitty");
         if (rows > 0 and cols > 0) {
             self.images_view.resize(allocator, session_images.len) catch |err| {
-                                    log.logf(.warning, "kitty view resize failed field=images len={d} err={s}", .{ session_images.len, @errorName(err) });
+                log.logf(.warning, "kitty view resize failed field=images len={d} err={s}", .{ session_images.len, @errorName(err) });
                 return;
             };
             self.placements_view.resize(allocator, session_placements.len) catch |err| {
-                                    log.logf(.warning, "kitty view resize failed field=placements len={d} err={s}", .{ session_placements.len, @errorName(err) });
+                log.logf(.warning, "kitty view resize failed field=placements len={d} err={s}", .{ session_placements.len, @errorName(err) });
                 return;
             };
             std.mem.copyForwards(KittyImage, self.images_view.items, session_images);
@@ -101,7 +101,7 @@ pub const KittyState = struct {
             }
             if (!found) {
                 stale.append(allocator, entry.key_ptr.*) catch |err| {
-                                            log.logf(.warning, "kitty stale list append failed err={s}", .{@errorName(err)});
+                    log.logf(.warning, "kitty stale list append failed err={s}", .{@errorName(err)});
                     break;
                 };
             }
@@ -235,18 +235,18 @@ pub const KittyState = struct {
         const log = app_logger.logger("terminal.kitty");
         if (self.pending_uploads_set.contains(image_id)) return;
         _ = self.pending_uploads.append(allocator, image_id) catch |err| {
-                            log.logf(.warning, "kitty upload queue append failed id={d} err={s}", .{ image_id, @errorName(err) });
+            log.logf(.warning, "kitty upload queue append failed id={d} err={s}", .{ image_id, @errorName(err) });
             return;
         };
         self.pending_uploads_set.put(image_id, {}) catch |err| {
-                            log.logf(.warning, "kitty upload set insert failed id={d} err={s}", .{ image_id, @errorName(err) });
+            log.logf(.warning, "kitty upload set insert failed id={d} err={s}", .{ image_id, @errorName(err) });
         };
     }
 
     fn uploadTexture(self: *KittyState, renderer: anytype, image: KittyImage) bool {
         const texture = loadTexture(renderer, image) orelse {
             const log = app_logger.logger("terminal.kitty");
-                            log.logf(.info, "kitty texture load failed id={d} format={s} bytes={d}", .{ image.id, @tagName(image.format), image.data.len });
+            log.logf(.info, "kitty texture load failed id={d} format={s} bytes={d}", .{ image.id, @tagName(image.format), image.data.len });
             return false;
         };
         const stored = KittyTexture{
@@ -260,10 +260,10 @@ pub const KittyState = struct {
             if (stored.texture.id != 0) {
                 gl.DeleteTextures(1, &stored.texture.id);
             }
-                            log.logf(.warning, "kitty texture map insert failed id={d} err={s}", .{ image.id, @errorName(err) });
+            log.logf(.warning, "kitty texture map insert failed id={d} err={s}", .{ image.id, @errorName(err) });
             return false;
         };
-                    log.logf(.info, "kitty texture ok id={d} w={d} h={d}", .{ image.id, texture.width, texture.height });
+        log.logf(.info, "kitty texture ok id={d} w={d} h={d}", .{ image.id, texture.width, texture.height });
         return true;
     }
 
@@ -271,7 +271,7 @@ pub const KittyState = struct {
         switch (image.format) {
             .png => {
                 const log = app_logger.logger("terminal.kitty");
-                                    log.logf(.info, "kitty upload skipped: png needs decode id={d}", .{image.id});
+                log.logf(.info, "kitty upload skipped: png needs decode id={d}", .{image.id});
                 return null;
             },
             .rgb => {

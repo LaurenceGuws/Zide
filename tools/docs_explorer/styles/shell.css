@@ -1,11 +1,23 @@
-* { box-sizing: border-box; }
-html { scroll-behavior: smooth; }
+* {
+  box-sizing: border-box;
+}
+html {
+  scroll-behavior: smooth;
+}
 
 body {
   margin: 0;
   background:
-    radial-gradient(circle at top left, rgba(212, 122, 69, 0.12) 0, transparent 24%),
-    radial-gradient(circle at top right, rgba(71, 112, 166, 0.12) 0, transparent 20%),
+    radial-gradient(
+      circle at top left,
+      rgba(212, 122, 69, 0.12) 0,
+      transparent 24%
+    ),
+    radial-gradient(
+      circle at top right,
+      rgba(71, 112, 166, 0.12) 0,
+      transparent 20%
+    ),
     linear-gradient(180deg, #0c1015 0%, var(--bg) 100%);
   color: var(--ink);
   font: 15px/1.6 var(--font-ui);
@@ -17,10 +29,14 @@ body {
   gap: 0;
   width: 100%;
   min-height: 100vh;
-  background: linear-gradient(180deg, rgba(255,255,255,0.02) 0%, rgba(255,255,255,0) 100%), var(--panel);
+  background:
+    linear-gradient(
+      180deg,
+      rgba(255, 255, 255, 0.02) 0%,
+      rgba(255, 255, 255, 0) 100%
+    ),
+    var(--panel);
   box-shadow: var(--shadow);
-  border-left: 1px solid var(--line-soft);
-  border-right: 1px solid var(--line-soft);
 }
 
 .sidebar {
@@ -31,10 +47,13 @@ body {
   overflow: hidden;
   display: flex;
   flex-direction: column;
-  border-right: 1px solid var(--line);
   background:
-    linear-gradient(180deg, rgba(255,255,255,0.02) 0%, rgba(255,255,255,0) 100%),
-    var(--panel);
+    linear-gradient(
+      180deg,
+      rgba(255, 255, 255, 0.018) 0%,
+      rgba(255, 255, 255, 0) 100%
+    ),
+    var(--panel-2);
 }
 
 .sidebar-resizer {
@@ -42,7 +61,7 @@ body {
   width: 8px;
   min-width: 8px;
   cursor: col-resize;
-  background: transparent;
+  background: var(--panel-2);
 }
 
 .sidebar-resizer::before {
@@ -52,33 +71,69 @@ body {
   top: 0;
   bottom: 0;
   width: 1px;
-  background: var(--line);
+  background: transparent;
 }
 
 .sidebar-resizer:hover::before,
 .app[data-resizing="true"] .sidebar-resizer::before {
-  background: var(--accent);
+  background: color-mix(in srgb, var(--accent) 48%, transparent 52%);
 }
 
+.sidebar-head {
+  padding: 16px 18px 14px;
+  background: transparent;
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.brand-mark {
+  width: 30px;
+  height: 30px;
+  flex: 0 0 30px;
+  image-rendering: auto;
+  filter: drop-shadow(0 8px 20px rgba(0, 0, 0, 0.28));
+}
+
+.sidebar-head h1 {
+  margin: 0;
+  font-size: 1.02rem;
+  line-height: 1.08;
+  letter-spacing: -0.015em;
+}
 .content {
   min-width: 0;
-  overflow: hidden;
+  overflow: visible;
   background:
-    linear-gradient(180deg, rgba(255,255,255,0.015) 0%, rgba(255,255,255,0) 100%),
+    linear-gradient(
+      180deg,
+      rgba(255, 255, 255, 0.012) 0%,
+      rgba(255, 255, 255, 0) 100%
+    ),
     var(--panel);
 }
 
 .content-head {
+  position: sticky;
+  top: 0;
+  z-index: 20;
   display: flex;
   gap: 12px;
   align-items: end;
   justify-content: space-between;
   flex-wrap: wrap;
   padding: 16px 20px 12px;
-  border-bottom: 1px solid var(--line);
   background:
     linear-gradient(135deg, rgba(212, 122, 69, 0.08) 0%, transparent 54%),
-    linear-gradient(180deg, var(--panel-2) 0%, var(--panel) 100%);
+    linear-gradient(
+      180deg,
+      color-mix(in srgb, var(--panel-2) 92%, var(--bg) 8%) 0%,
+      var(--panel) 100%
+    );
+  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.03);
 }
 
 .content-title-row {
@@ -93,6 +148,38 @@ body {
   font-size: 1.22rem;
   line-height: 1.05;
   letter-spacing: -0.022em;
+}
+
+.doc-breadcrumb {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.32rem;
+}
+
+.doc-breadcrumb-part {
+  color: var(--muted);
+}
+
+.doc-breadcrumb-link {
+  color: var(--muted);
+  text-decoration: none;
+}
+
+.doc-breadcrumb-link:visited {
+  color: var(--muted);
+}
+
+.doc-breadcrumb-link:hover {
+  color: var(--active-link);
+}
+
+.doc-breadcrumb-sep {
+  color: color-mix(in srgb, var(--muted) 74%, transparent 26%);
+}
+
+.doc-breadcrumb-current {
+  color: var(--ink);
 }
 
 .content-head p {
@@ -112,5 +199,29 @@ body {
 :root[data-theme="light"] .app,
 :root[data-theme="light"] .sidebar,
 :root[data-theme="light"] .content {
-  background: linear-gradient(180deg, rgba(255,255,255,0.25) 0%, rgba(255,255,255,0) 100%), var(--panel);
+  background:
+    linear-gradient(
+      180deg,
+      rgba(255, 255, 255, 0.25) 0%,
+      rgba(255, 255, 255, 0) 100%
+    ),
+    var(--panel);
+}
+
+:root[data-theme="light"] .sidebar {
+  background:
+    linear-gradient(
+      180deg,
+      rgba(255, 255, 255, 0.35) 0%,
+      rgba(255, 255, 255, 0) 100%
+    ),
+    var(--panel-3);
+}
+
+:root[data-theme="light"] .sidebar-resizer {
+  background: var(--panel-3);
+}
+
+:root[data-theme="light"] .content-head {
+  box-shadow: 0 1px 0 rgba(24, 33, 38, 0.06);
 }

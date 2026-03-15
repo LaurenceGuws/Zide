@@ -1,4 +1,4 @@
-import { setTreeActivePath, setTreeExpandedPaths, setTreeFilter } from "./state.js";
+import { setTreeActivePath, setTreeExpandedPaths, setTreeFilter, } from "./state.js";
 import { buildTree } from "./tree.js";
 export function updateTreeFilter(state, filter) {
     setTreeFilter(state, filter);

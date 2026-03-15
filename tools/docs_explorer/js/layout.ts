@@ -6,20 +6,31 @@ import {
 } from "./state.js";
 import type { AppState } from "./types.js";
 
-export function applySidebarWidth(appEl: HTMLElement, state: AppState, width: number): void {
+export function applySidebarWidth(
+  appEl: HTMLElement,
+  state: AppState,
+  width: number,
+): void {
   const clamped = clampSidebarWidth(width);
   state.sidebar.width = clamped;
   appEl.style.setProperty("--sidebar-width", `${clamped}px`);
   persistSidebarWidth(clamped);
 }
 
-export function applySidebarCollapsed(appEl: HTMLElement, state: AppState, collapsed: boolean): void {
+export function applySidebarCollapsed(
+  appEl: HTMLElement,
+  state: AppState,
+  collapsed: boolean,
+): void {
   state.sidebar.collapsed = collapsed;
   appEl.dataset.sidebarCollapsed = collapsed ? "true" : "false";
   persistSidebarCollapsed(collapsed);
 }
 
-export function syncResponsiveSidebarState(appEl: HTMLElement, state: AppState): void {
+export function syncResponsiveSidebarState(
+  appEl: HTMLElement,
+  state: AppState,
+): void {
   if (window.innerWidth <= layoutDefaults.collapseBreakpoint) {
     applySidebarCollapsed(appEl, state, true);
     return;
@@ -36,7 +47,11 @@ export function installSidebarControls(args: {
   const { appEl, state, sidebarToggleEl, sidebarResizerEl } = args;
 
   sidebarToggleEl.addEventListener("click", () => {
-    applySidebarCollapsed(appEl, state, appEl.dataset.sidebarCollapsed !== "true");
+    applySidebarCollapsed(
+      appEl,
+      state,
+      appEl.dataset.sidebarCollapsed !== "true",
+    );
   });
 
   let resizeState: { startX: number; startWidth: number } | null = null;

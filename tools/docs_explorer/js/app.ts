@@ -1,11 +1,18 @@
 import { marked } from "https://cdn.jsdelivr.net/npm/marked/lib/marked.esm.js";
 import mermaid from "https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs";
 
-import { getAppShell, initializeAppShell, syncHighlightTheme } from "./app_shell.js";
+import {
+  getAppShell,
+  initializeAppShell,
+  syncHighlightTheme,
+} from "./app_shell.js";
 import { loadProjectConfig } from "./config.js";
 import { createDocController } from "./doc_controller.js";
 import { renderHighlightedCode } from "./highlight.js";
-import { installSidebarControls, syncResponsiveSidebarState } from "./layout.js";
+import {
+  installSidebarControls,
+  syncResponsiveSidebarState,
+} from "./layout.js";
 import { configureMarked } from "./markdown.js";
 import { initMermaidForTheme } from "./mermaid.js";
 import { installOptionsMenu } from "./options_menu.js";
@@ -39,7 +46,9 @@ export async function startApp(): Promise<void> {
   });
 
   docController.install();
-  window.addEventListener("resize", () => syncResponsiveSidebarState(shell.appEl, state));
+  window.addEventListener("resize", () =>
+    syncResponsiveSidebarState(shell.appEl, state),
+  );
   installOptionsMenu({
     state,
     optionsToggleEl: shell.optionsToggleEl,
@@ -60,10 +69,13 @@ export async function startApp(): Promise<void> {
         renderHighlightedCode(hljs, shell.viewerEl);
       };
 
-      shell.themeToggleEl.addEventListener("click", async (event: MouseEvent) => {
-        event.stopPropagation();
-        await handleThemeToggle();
-      });
+      shell.themeToggleEl.addEventListener(
+        "click",
+        async (event: MouseEvent) => {
+          event.stopPropagation();
+          await handleThemeToggle();
+        },
+      );
       shell.themeRowEl.addEventListener("click", async () => {
         await handleThemeToggle();
       });

@@ -13,11 +13,11 @@ pub const Selection = struct {
     start: CursorPos,
     end: CursorPos,
     is_rectangular: bool = false,
-    
+
     pub fn isEmpty(self: Selection) bool {
         return self.start.offset == self.end.offset;
     }
-    
+
     pub fn normalized(self: Selection) Selection {
         if (self.start.offset <= self.end.offset) {
             return self;

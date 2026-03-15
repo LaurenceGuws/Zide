@@ -63,7 +63,7 @@ fn getHyprlandScale(allocator: std.mem.Allocator) ?f32 {
     defer allocator.free(stdout);
 
     var parsed = std.json.parseFromSlice(std.json.Value, allocator, stdout, .{}) catch |err| {
-        log.warn("hyprland monitor parse failed: {s}", .{ @errorName(err) });
+        log.warn("hyprland monitor parse failed: {s}", .{@errorName(err)});
         return null;
     };
     defer parsed.deinit();
@@ -128,7 +128,7 @@ fn runCommand(allocator: std.mem.Allocator, argv: []const []const u8) ?[]u8 {
             return null;
         },
         else => {
-            log.warn("command terminated unexpectedly: {s}", .{ argv[0] });
+            log.warn("command terminated unexpectedly: {s}", .{argv[0]});
             allocator.free(result.stdout);
             return null;
         },

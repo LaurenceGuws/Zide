@@ -49,7 +49,7 @@ fn addEditorLineBaseOps(
 
     const num_str = std.fmt.bufPrint(num_buf, "{d: >4}", .{line_num + 1}) catch |err| {
         const log = app_logger.logger("editor.draw");
-                    log.logf(.warning, "line number format failed line={d} err={s}", .{ line_num, @errorName(err) });
+        log.logf(.warning, "line number format failed line={d} err={s}", .{ line_num, @errorName(err) });
         return false;
     };
     const pad = 4 * r.uiScaleFactor();
@@ -58,7 +58,6 @@ fn addEditorLineBaseOps(
     ok = ok and overlay_mod.addTextOpBg(list, x + pad, y, num_str, line_color, line_bg, false);
     return ok;
 }
-
 
 pub fn draw(
     widget: anytype,
@@ -91,7 +90,7 @@ pub fn draw(
             const range_end = if (end_line < total_lines) widget.editor.lineStart(end_line) else widget.editor.totalLen();
             const tokens_opt: ?[]HighlightToken = highlighter.highlightRange(range_start, range_end, widget.editor.allocator) catch |err| blk: {
                 const log = app_logger.logger("editor.draw");
-                                    log.logf(.warning, "highlight range failed start={d} end={d} err={s}", .{ range_start, range_end, @errorName(err) });
+                log.logf(.warning, "highlight range failed start={d} end={d} err={s}", .{ range_start, range_end, @errorName(err) });
                 break :blk null;
             };
             if (tokens_opt) |tokens| {
@@ -738,13 +737,13 @@ pub fn drawCached(
                                 seg_start_byte,
                                 seg_end_byte,
                                 seg_start_col,
-                            effective_tokens,
-                            base_bg,
-                            selection_bg,
-                            sel_bytes[0..sel_count],
-                            disable_programming_ligatures,
-                        );
-                    }
+                                effective_tokens,
+                                base_bg,
+                                selection_bg,
+                                sel_bytes[0..sel_count],
+                                disable_programming_ligatures,
+                            );
+                        }
 
                         if (is_current and seg == cursor_seg) {
                             const local_col = cursor_col_vis - seg_start_col;
@@ -774,7 +773,6 @@ pub fn drawCached(
         overlay_mod.drawEditorScrollbars(widget, r, draw_x, draw_y, width, height, visible_lines, total_lines, cols, input.mouse_pos, null);
     }
 }
-
 
 pub fn precomputeHighlightTokens(
     widget: anytype,

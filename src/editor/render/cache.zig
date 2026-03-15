@@ -159,7 +159,7 @@ pub const EditorRenderCache = struct {
             return true;
         }
         self.line_entries.put(key, .{ .hash = hash, .last_used = self.frame_id }) catch |err| {
-                            log.logf(.warning, "line cache insert failed line={d} seg={d} err={s}", .{ key.line_idx, key.seg_idx, @errorName(err) });
+            log.logf(.warning, "line cache insert failed line={d} seg={d} err={s}", .{ key.line_idx, key.seg_idx, @errorName(err) });
         };
         self.maybeEvictLineEntries();
         return true;
@@ -208,7 +208,7 @@ pub const EditorRenderCache = struct {
             .tokens = tokens,
             .last_used = self.frame_id,
         }) catch |err| {
-                            log.logf(.warning, "highlight cache insert failed line={d} err={s}", .{ line_idx, @errorName(err) });
+            log.logf(.warning, "highlight cache insert failed line={d} err={s}", .{ line_idx, @errorName(err) });
         };
         self.maybeEvictHighlightEntries();
         return tokens;
@@ -281,7 +281,7 @@ pub const EditorRenderCache = struct {
             .count = count,
             .last_used = self.frame_id,
         }) catch |err| {
-                            log.logf(.warning, "wrap cache insert failed line={d} cols={d} err={s}", .{ line_idx, cols, @errorName(err) });
+            log.logf(.warning, "wrap cache insert failed line={d} cols={d} err={s}", .{ line_idx, cols, @errorName(err) });
         };
         self.maybeEvictWrapEntries();
     }

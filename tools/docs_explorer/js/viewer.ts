@@ -2,7 +2,12 @@ import { renderMarkdown } from "./markdown.js";
 import { repoRelative } from "./utils.js";
 import { syncActiveLink } from "./tree.js";
 import { renderMermaidBlocks } from "./mermaid.js";
-import { renderViewer, setViewerContent, setViewerError, setViewerLoading } from "./viewer_state.js";
+import {
+  renderViewer,
+  setViewerContent,
+  setViewerError,
+  setViewerLoading,
+} from "./viewer_state.js";
 import type { AppState } from "./types.js";
 import type { MarkedApi, MermaidApi } from "./vendor_types.js";
 
@@ -47,7 +52,14 @@ export async function loadDoc(args: {
     const res = await fetch(repoRelative(repoBasePath, path));
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     const source = await res.text();
-    const html = renderMarkdown(marked, source, path, repoBasePath, docs, repoAbsolutePath);
+    const html = renderMarkdown(
+      marked,
+      source,
+      path,
+      repoBasePath,
+      docs,
+      repoAbsolutePath,
+    );
     setViewerContent(state, html);
     renderViewer(state, viewerEl);
     onReady(state, path);

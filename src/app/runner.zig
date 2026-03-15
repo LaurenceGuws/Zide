@@ -6,4 +6,3 @@ pub fn runWithGpa(comptime run_fn: fn (allocator: std.mem.Allocator) anyerror!vo
     const allocator = gpa.allocator();
     try run_fn(allocator);
 }
-

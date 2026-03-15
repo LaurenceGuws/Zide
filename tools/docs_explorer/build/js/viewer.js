@@ -2,7 +2,7 @@ import { renderMarkdown } from "./markdown.js";
 import { repoRelative } from "./utils.js";
 import { syncActiveLink } from "./tree.js";
 import { renderMermaidBlocks } from "./mermaid.js";
-import { renderViewer, setViewerContent, setViewerError, setViewerLoading } from "./viewer_state.js";
+import { renderViewer, setViewerContent, setViewerError, setViewerLoading, } from "./viewer_state.js";
 export async function loadDoc(args) {
     const { state, repoBasePath, repoAbsolutePath, path, marked, mermaid, rootEl, viewerEl, docs, onLoading, onReady, onError, } = args;
     if (!path)

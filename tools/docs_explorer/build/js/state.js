@@ -41,11 +41,15 @@ export function preferredTheme() {
     const stored = localStorage.getItem(themeStorageKey);
     if (stored === "light" || stored === "dark")
         return stored;
-    return window.matchMedia("(prefers-color-scheme: light)").matches ? "light" : "dark";
+    return window.matchMedia("(prefers-color-scheme: light)").matches
+        ? "light"
+        : "dark";
 }
 export function preferredSidebarWidth() {
     const stored = Number(localStorage.getItem(sidebarWidthStorageKey));
-    if (!Number.isNaN(stored) && stored >= layoutDefaults.minSidebarWidth && stored <= layoutDefaults.maxSidebarWidth) {
+    if (!Number.isNaN(stored) &&
+        stored >= layoutDefaults.minSidebarWidth &&
+        stored <= layoutDefaults.maxSidebarWidth) {
         return stored;
     }
     return layoutDefaults.defaultSidebarWidth;

@@ -1,5 +1,5 @@
 import { setDocumentState } from "./state.js";
-import { repoRelative } from "./utils.js";
+import { escapeHtml, repoRelative } from "./utils.js";
 export function setDocumentLoading(state, repoBasePath, path) {
     setDocumentState(state, {
         title: path,
@@ -24,8 +24,39 @@ export function setDocumentError(state, repoBasePath, path) {
         status: "error",
     });
 }
-export function renderDocumentChrome(state, shell) {
-    shell.titleEl.textContent = `Zide Docs Explorer - ${state.document.title}`;
+export function renderDocumentChrome(state, shell, docs = []) {
+    shell.titleEl.innerHTML = `Zide Docs Explorer - ${renderBreadcrumb(state.document.title, docs)}`;
     shell.subtitleEl.textContent = state.document.subtitle;
     shell.rawLinkEl.href = state.document.rawLink;
+}
+function renderBreadcrumb(path, docs) {
+    const parts = path.split("/").filter(Boolean);
+    if (parts.length === 0)
+        return escapeHtml(path);
+    return `<span class="doc-breadcrumb">${parts
+        .map((part, index) => {
+        const prefix = parts.slice(0, index + 1).join("/");
+        const label = escapeHtml(part);
+        if (index === parts.length - 1) {
+            return `<span class="doc-breadcrumb-current">${label}</span>`;
+        }
+        const target = resolveBreadcrumbTarget(prefix, docs);
+        if (!target) {
+            return `<span class="doc-breadcrumb-part">${label}</span>`;
+        }
+        return `<a class="doc-breadcrumb-link" href="#doc=${encodeURIComponent(target)}">${label}</a>`;
+    })
+        .join('<span class="doc-breadcrumb-sep" aria-hidden="true">/</span>')}</span>`;
+}
+function resolveBreadcrumbTarget(prefix, docs) {
+    if (prefix === "app_architecture" &&
+        docs.includes("app_architecture/APP_LAYERING.md")) {
+        return "app_architecture/APP_LAYERING.md";
+    }
+    const candidates = [
+        `${prefix}/README.md`,
+        `${prefix}/DESIGN.md`,
+        `${prefix}/INDEX.md`,
+    ];
+    return candidates.find((candidate) => docs.includes(candidate)) ?? null;
 }

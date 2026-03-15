@@ -45,4 +45,3 @@ test "terminal shortcut intent maps focus actions through typed routes" {
         else => return error.TestUnexpectedResult,
     }
 }
-
