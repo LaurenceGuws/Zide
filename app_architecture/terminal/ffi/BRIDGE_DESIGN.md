@@ -190,7 +190,7 @@ Required operations for milestone 1:
 - `zide_terminal_snapshot_release(snapshot)`
 - `zide_terminal_scrollback_acquire(handle, start_row, max_rows, out_buffer)`
 - `zide_terminal_scrollback_release(out_buffer)`
-- `zide_terminal_metadata_acquire(handle, out_metadata)`
+- `zide_terminal_metadata_acquire(handle, request, out_metadata)`
 - `zide_terminal_metadata_release(metadata)`
 - `zide_terminal_event_drain(handle, out_events)`
 - `zide_terminal_events_free(events)`
@@ -201,6 +201,7 @@ Required operations for milestone 1:
 - `zide_terminal_scrollback_ansi_text(handle, out_string)`
 - `zide_terminal_string_free(string)`
 - `zide_terminal_child_exit_status(handle, out_code, out_has_status)`
+- `zide_terminal_report_child_exit(handle, code, has_status)`
 - `zide_terminal_snapshot_abi_version()`
 - `zide_terminal_event_abi_version()`
 - `zide_terminal_scrollback_abi_version()`

@@ -51,6 +51,11 @@ Current judgment:
   - `pending_input_acquire(...)` is the outbound batching seam for external
     transport
   - `metadata_acquire(...)` is latest-state, not a per-frame polling habit
+- Current bridge audit result:
+  - no equally obvious missing host-facing semantic remains after the recent
+    viewport, pending-input, focus/color, child-exit, and request-based
+    metadata cuts
+  - the stronger next lane is ABI/perf maturity, not casual surface growth
 - The current performance checkpoint for that lane now lives in:
   - `docs/research/terminal/TERMINAL_FFI_PERFORMANCE_REVIEW_2026-03-15.md`
   - `app_architecture/terminal/ffi/SNAPSHOT_ABI.md`
