@@ -2,11 +2,7 @@ const std = @import("std");
 const hyperlink_table = @import("hyperlink_table.zig");
 
 pub fn takeOscClipboardCopyLocked(self: anytype, allocator: std.mem.Allocator, out: *std.ArrayList(u8)) !bool {
-    out.clearRetainingCapacity();
-    if (!self.core.osc_clipboard_pending) return false;
-    try out.appendSlice(allocator, self.core.osc_clipboard.items);
-    self.core.osc_clipboard_pending = false;
-    return true;
+    return self.core.takeOscClipboardCopy(allocator, out);
 }
 
 pub fn takeOscClipboardCopy(self: anytype, allocator: std.mem.Allocator, out: *std.ArrayList(u8)) !bool {

@@ -204,4 +204,47 @@ pub const TerminalCore = struct {
     pub fn syncUpdatesActive(self: *const TerminalCore) bool {
         return self.sync_updates_active;
     }
+
+    pub fn takeOscClipboardCopy(
+        self: *TerminalCore,
+        allocator: std.mem.Allocator,
+        out: *std.ArrayList(u8),
+    ) !bool {
+        out.clearRetainingCapacity();
+        if (!self.osc_clipboard_pending) return false;
+        try out.appendSlice(allocator, self.osc_clipboard.items);
+        self.osc_clipboard_pending = false;
+        return true;
+    }
+
+    pub fn setKittyOsc5522Clipboard(
+        self: *TerminalCore,
+        allocator: std.mem.Allocator,
+        clip: []const u8,
+        html: ?[]const u8,
+        uri_list: ?[]const u8,
+        png: ?[]const u8,
+    ) !void {
+        self.kitty_osc5522_clipboard_text.clearRetainingCapacity();
+        try self.kitty_osc5522_clipboard_text.ensureTotalCapacity(allocator, clip.len);
+        try self.kitty_osc5522_clipboard_text.appendSlice(allocator, clip);
+
+        self.kitty_osc5522_clipboard_html.clearRetainingCapacity();
+        if (html) |html_bytes| {
+            try self.kitty_osc5522_clipboard_html.ensureTotalCapacity(allocator, html_bytes.len);
+            try self.kitty_osc5522_clipboard_html.appendSlice(allocator, html_bytes);
+        }
+
+        self.kitty_osc5522_clipboard_uri_list.clearRetainingCapacity();
+        if (uri_list) |uri_bytes| {
+            try self.kitty_osc5522_clipboard_uri_list.ensureTotalCapacity(allocator, uri_bytes.len);
+            try self.kitty_osc5522_clipboard_uri_list.appendSlice(allocator, uri_bytes);
+        }
+
+        self.kitty_osc5522_clipboard_png.clearRetainingCapacity();
+        if (png) |png_bytes| {
+            try self.kitty_osc5522_clipboard_png.ensureTotalCapacity(allocator, png_bytes.len);
+            try self.kitty_osc5522_clipboard_png.appendSlice(allocator, png_bytes);
+        }
+    }
 };
