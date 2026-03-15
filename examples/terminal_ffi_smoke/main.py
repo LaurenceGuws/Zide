@@ -492,6 +492,49 @@ def run_smoke(lib_path: Path) -> int:
         finally:
             lib.zide_terminal_scrollback_release(ctypes.byref(scrollback))
 
+        viewport_state: dict[str, object] = {}
+
+        if lib.zide_terminal_set_scrollback_offset(handle, 1) != STATUS_OK:
+            raise RuntimeError("set_scrollback_offset failed")
+
+        def consume_pinned_snapshot(snapshot: Snapshot) -> None:
+            viewport_state["pinned_row0"] = render_first_row(snapshot)
+
+            def consume_pinned_metadata(metadata: Metadata) -> None:
+                viewport_state["pinned_offset"] = metadata.scrollback_offset
+
+            consume_terminal_metadata_once(lib, handle, Metadata, consume_pinned_metadata)
+
+        consume_terminal_publication_once(lib, handle, Snapshot, query_redraw_state, consume_pinned_snapshot)
+
+        if lib.zide_terminal_follow_live_bottom(handle) != STATUS_OK:
+            raise RuntimeError("follow_live_bottom failed")
+
+        def consume_restored_snapshot(snapshot: Snapshot) -> None:
+            viewport_state["restored_row0"] = render_first_row(snapshot)
+
+            def consume_restored_metadata(metadata: Metadata) -> None:
+                viewport_state["restored_offset"] = metadata.scrollback_offset
+
+            consume_terminal_metadata_once(lib, handle, Metadata, consume_restored_metadata)
+
+        consume_terminal_publication_once(lib, handle, Snapshot, query_redraw_state, consume_restored_snapshot)
+
+        print(
+            f"viewport pinned_offset={viewport_state['pinned_offset']} "
+            f"pinned_row0={viewport_state['pinned_row0']!r} "
+            f"restored_offset={viewport_state['restored_offset']} "
+            f"restored_row0={viewport_state['restored_row0']!r}"
+        )
+        if viewport_state["pinned_offset"] != 1:
+            raise RuntimeError("pinned viewport offset mismatch")
+        if viewport_state["restored_offset"] != 0:
+            raise RuntimeError("restored viewport offset mismatch")
+        if viewport_state["pinned_row0"] == snapshot_state["row0"]:
+            raise RuntimeError("pinned viewport did not change visible snapshot row")
+        if viewport_state["restored_row0"] != snapshot_state["row0"]:
+            raise RuntimeError("follow_live_bottom did not restore live viewport")
+
         def consume_events(events: EventBuffer) -> None:
             seen_title = False
             seen_clip = False
