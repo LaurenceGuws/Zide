@@ -66,6 +66,8 @@ Theme rule:
 - derived shell/control/viewer materials stay in `styles/theme.css`
 - if a visual change can be expressed by changing a derived token, prefer that
   over adding a new component-local background
+- the current config surface is intentionally capped there; do not expand it
+  into per-component styling knobs without a strong reuse reason
 
 Notes:
 

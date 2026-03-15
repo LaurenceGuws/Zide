@@ -20,7 +20,9 @@ requiring a frontend framework or backend service.
   - shell theme/bootstrap initialization
 - `ts/app.ts`
   - application composition root
-  - runtime wiring between state, shell, docs, layout, and options
+  - top-level runtime sequencing only
+- `ts/app_bootstrap.ts`
+  - startup assembly for shell, theme, controller, and docs runtime
 - `tsconfig.json`
   - minimal TypeScript compile config for docs explorer
   - emits browser ESM into `build/js`
@@ -249,6 +251,8 @@ The theme system should stay split into two layers:
 
 Projects should be able to change the base palette in config. They should not
 need to define their own per-component surface formulas.
+The current config surface is intentionally the stopping point unless a real
+cross-project reuse need appears.
 
 ## DOM Ownership Rule
 

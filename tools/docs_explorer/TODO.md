@@ -12,6 +12,9 @@
         when a named theme token would be clearer.
 - [ ] Audit dark/light drift through theme tokens first and component rules
       second.
+- [x] Keep project config limited to base palette overrides.
+      - Derived shell/control/viewer materials remain CSS-owned.
+      - Do not expand config into per-component styling knobs by default.
 - [ ] Keep the app header intentionally small and shell-level.
       - Avoid turning it back into a document breadcrumb/navigation bar.
 
