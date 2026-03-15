@@ -100,6 +100,21 @@ pub fn redrawState(handle: ?*shared.ZideTerminalHandle, out_state: *shared.Redra
     return .ok;
 }
 
+pub fn closeConfirmSignals(handle: ?*shared.ZideTerminalHandle, out_signals: *shared.CloseConfirmSignals) shared.Status {
+    const h = shared.fromOpaque(handle) orelse return .invalid_argument;
+    const signals = h.session.closeConfirmSignals();
+    out_signals.* = .{
+        .abi_version = shared.close_confirm_abi_version,
+        .struct_size = @sizeOf(shared.CloseConfirmSignals),
+        .foreground_process = @intFromBool(signals.foreground_process),
+        .semantic_command = @intFromBool(signals.semantic_command),
+        .alt_screen = @intFromBool(signals.alt_screen),
+        .mouse_reporting = @intFromBool(signals.mouse_reporting),
+        .any = @intFromBool(signals.any()),
+    };
+    return .ok;
+}
+
 pub fn needsRedraw(handle: ?*shared.ZideTerminalHandle) u8 {
     const h = shared.fromOpaque(handle) orelse return 0;
     const published_generation = h.session.snapshot().generation;
@@ -472,6 +487,10 @@ pub fn rendererMetadataAbiVersion() u32 {
 
 pub fn redrawStateAbiVersion() u32 {
     return shared.redraw_state_abi_version;
+}
+
+pub fn closeConfirmAbiVersion() u32 {
+    return shared.close_confirm_abi_version;
 }
 
 pub fn stringAbiVersion() u32 {

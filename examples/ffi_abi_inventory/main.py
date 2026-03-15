@@ -24,6 +24,7 @@ def run_inventory(terminal_lib_path: Path, editor_lib_path: Path) -> int:
         f"metadata={terminal_lib.zide_terminal_metadata_abi_version()} "
         f"redraw_state={terminal_lib.zide_terminal_redraw_state_abi_version()} "
         f"string={terminal_lib.zide_terminal_string_abi_version()} "
+        f"close_confirm={terminal_lib.zide_terminal_close_confirm_abi_version()} "
         f"renderer_metadata={terminal_lib.zide_terminal_renderer_metadata_abi_version()}"
     )
     print(f"editor string={editor_lib.zide_editor_string_abi_version()}")

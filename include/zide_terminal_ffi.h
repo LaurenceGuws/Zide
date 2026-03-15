@@ -35,6 +35,7 @@ enum {
     ZIDE_TERMINAL_METADATA_ABI_VERSION = 1,
     ZIDE_TERMINAL_REDRAW_STATE_ABI_VERSION = 1,
     ZIDE_TERMINAL_STRING_ABI_VERSION = 1,
+    ZIDE_TERMINAL_CLOSE_CONFIRM_ABI_VERSION = 1,
 };
 
 enum {
@@ -151,6 +152,17 @@ typedef struct ZideTerminalRedrawState {
     uint8_t _padding0[7];
 } ZideTerminalRedrawState;
 
+typedef struct ZideTerminalCloseConfirmSignals {
+    uint32_t abi_version;
+    uint32_t struct_size;
+    uint8_t foreground_process;
+    uint8_t semantic_command;
+    uint8_t alt_screen;
+    uint8_t mouse_reporting;
+    uint8_t any;
+    uint8_t _padding0[3];
+} ZideTerminalCloseConfirmSignals;
+
 typedef struct ZideTerminalKeyEvent {
     uint32_t key;
     uint8_t modifiers;
@@ -213,6 +225,7 @@ int zide_terminal_present_ack(ZideTerminalHandle *handle, uint64_t generation);
 int zide_terminal_acknowledged_generation(ZideTerminalHandle *handle, uint64_t *out_generation);
 int zide_terminal_published_generation(ZideTerminalHandle *handle, uint64_t *out_generation);
 int zide_terminal_redraw_state(ZideTerminalHandle *handle, ZideTerminalRedrawState *out_state);
+int zide_terminal_close_confirm_signals(ZideTerminalHandle *handle, ZideTerminalCloseConfirmSignals *out_signals);
 uint8_t zide_terminal_needs_redraw(ZideTerminalHandle *handle);
 int zide_terminal_send_key(ZideTerminalHandle *handle, const ZideTerminalKeyEvent *event);
 int zide_terminal_send_mouse(ZideTerminalHandle *handle, const ZideTerminalMouseEvent *event);
@@ -240,6 +253,7 @@ uint32_t zide_terminal_scrollback_abi_version(void);
 uint32_t zide_terminal_metadata_abi_version(void);
 uint32_t zide_terminal_redraw_state_abi_version(void);
 uint32_t zide_terminal_string_abi_version(void);
+uint32_t zide_terminal_close_confirm_abi_version(void);
 uint32_t zide_terminal_renderer_metadata_abi_version(void);
 int zide_terminal_renderer_metadata(uint32_t codepoint, ZideTerminalRendererMetadata *out_metadata);
 const char *zide_terminal_status_string(int status);

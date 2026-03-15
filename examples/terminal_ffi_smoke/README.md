@@ -26,9 +26,10 @@ If the bridge is painful to bind from Python, the ABI is probably too clever.
 4. resolve one terminal publication cycle through the shared Python host helper
 5. verify dimensions, cell count, title/cwd pointers, and initial row data
 6. query renderer metadata for representative glyphs (box/rounded, braille/graph, powerline) and validate damage-policy flags
-7. acquire a scrollback window and verify copied row content
-8. drain events and verify ownership/release paths
-9. destroy the session
+7. query close-confirm signals and validate the host-facing close-warning getter shape
+8. acquire a scrollback window and verify copied row content
+9. drain events and verify ownership/release paths
+10. destroy the session
 
 The shared publication helper performs the authoritative redraw/present steps:
 - query `zide_terminal_redraw_state(...)`

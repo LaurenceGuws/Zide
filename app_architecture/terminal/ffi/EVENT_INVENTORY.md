@@ -36,6 +36,7 @@ Milestone 1 default:
 | Scroll offset / scrollback size | snapshot | `snapshot-derived` | View/model state, not an event. |
 | Sync-update active | snapshot or getter | `snapshot-derived` | Render coordination state. |
 | Process alive | metadata/getter | `snapshot-derived` or direct getter | Prefer metadata as the authoritative latest-state summary; keep `is_alive` as a narrow convenience helper. |
+| Close-confirm signals | host/session close-warning state | direct getter | Latest-state host policy input; not a queued event family. |
 | Window title stack semantics | internal only | `out-of-scope` | Too implementation-specific for the first bridge. |
 | IME/preedit visuals | UI/widget state | `out-of-scope` | Not terminal-backend export work. |
 | Hovered link / mouse hover | widget state | `out-of-scope` | UI concern. |
@@ -68,12 +69,14 @@ Simple direct getters can reduce event volume:
 - `zide_terminal_acknowledged_generation`
 - `zide_terminal_redraw_state`
 - `zide_terminal_needs_redraw`
+- `zide_terminal_close_confirm_signals`
 
 These should complement event drains, not replace them.
 
 Reason:
 - hosts need both the latest state and the change boundary
 - `metadata_acquire(...)` is the preferred latest-state summary for lifecycle/title/cwd/scrollback state
+- `close_confirm_signals(...)` is the preferred latest-state summary for close-warning semantics
 - `is_alive(...)` and `child_exit_status(...)` remain focused helpers, not the primary lifecycle summary
 
 ## Notable open questions

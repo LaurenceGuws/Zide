@@ -17,6 +17,7 @@ pub const renderer_metadata_abi_version: u32 = 1;
 pub const metadata_abi_version: u32 = 1;
 pub const redraw_state_abi_version: u32 = 1;
 pub const string_abi_version: u32 = 1;
+pub const close_confirm_abi_version: u32 = 1;
 
 pub const EventKind = enum(c_int) {
     none = 0,
@@ -142,6 +143,17 @@ pub const RedrawState = extern struct {
     acknowledged_generation: u64 = 0,
     needs_redraw: u8 = 0,
     _padding0: [7]u8 = .{ 0, 0, 0, 0, 0, 0, 0 },
+};
+
+pub const CloseConfirmSignals = extern struct {
+    abi_version: u32 = 0,
+    struct_size: u32 = 0,
+    foreground_process: u8 = 0,
+    semantic_command: u8 = 0,
+    alt_screen: u8 = 0,
+    mouse_reporting: u8 = 0,
+    any: u8 = 0,
+    _padding0: [3]u8 = .{ 0, 0, 0 },
 };
 
 pub const KeyEvent = extern struct {

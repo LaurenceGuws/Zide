@@ -110,6 +110,7 @@ Required operations for milestone 1:
 - `zide_terminal_acknowledged_generation(handle, &generation)`
 - `zide_terminal_published_generation(handle, &generation)`
 - `zide_terminal_redraw_state(handle, &state)`
+- `zide_terminal_close_confirm_signals(handle, &signals)`
 - `zide_terminal_needs_redraw(handle)`
 - `zide_terminal_snapshot_acquire(handle, out_snapshot)`
 - `zide_terminal_snapshot_release(snapshot)`
@@ -131,6 +132,7 @@ Required operations for milestone 1:
 - `zide_terminal_metadata_abi_version()`
 - `zide_terminal_redraw_state_abi_version()`
 - `zide_terminal_string_abi_version()`
+- `zide_terminal_close_confirm_abi_version()`
 - `zide_terminal_renderer_metadata_abi_version()`
 - `zide_terminal_renderer_metadata(codepoint, out_metadata)`
 - `zide_terminal_status_string(status)`
@@ -267,6 +269,8 @@ Current bridge catch-up already landed:
 - `zide_terminal_published_generation(handle, &generation)`
 - `zide_terminal_redraw_state(handle, &state)`
 - `zide_terminal_redraw_state_abi_version()`
+- `zide_terminal_close_confirm_signals(handle, &signals)`
+- `zide_terminal_close_confirm_abi_version()`
 - `zide_terminal_needs_redraw(handle)`
 
 So the bridge now exposes the same basic host-facing semantics as the shared
@@ -285,6 +289,14 @@ Lifecycle/latest-state policy:
   remain focused convenience helpers
 - hosts should not reconstruct lifecycle truth from multiple narrow calls when
   `metadata_acquire(...)` already carries the same authoritative state
+
+Close-warning/latest-state policy:
+
+- `zide_terminal_close_confirm_signals(...)` is the preferred latest-state
+  summary for host-side close-warning decisions
+- hosts should not infer close-confirm truth indirectly from unrelated metadata
+  or event combinations when the direct getter already exposes the same
+  authoritative state
 
 History/export policy:
 
