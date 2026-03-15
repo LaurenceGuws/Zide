@@ -1,9 +1,10 @@
 {
   "title": "Zide Docs Explorer",
   "icon": "../../assets/icon/color_icon.png",
+  "repoAbsolutePath": "/home/home/personal/zide",
   "repoBasePath": "../../",
   "runtimeMode": "local-dev",
-  "defaultDoc": "app_architecture/terminal/TERMINAL_ARCHITECTURE_COMPARISON.md",
+  "defaultDoc": "README.md",
   "theme": {
     "dark": {
       "accent": "#d47a45",
@@ -29,6 +30,7 @@
     }
   },
   "docRoots": [
+    ".",
     "docs",
     "app_architecture"
   ],

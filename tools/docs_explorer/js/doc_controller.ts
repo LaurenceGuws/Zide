@@ -1,16 +1,18 @@
 import { rerenderVisibleMermaid } from "./mermaid.js";
+import { renderHighlightedCode } from "./highlight.js";
 import { currentDocFromHash } from "./utils.js";
 import { setCurrentDoc, setSearchQuery } from "./state.js";
 import { renderTreeFromState, updateTreeActivePath, updateTreeFilter } from "./tree_state.js";
 import { renderDocumentChrome, setDocumentError, setDocumentLoading, setDocumentReady } from "./view_state.js";
 import { loadDoc } from "./viewer.js";
 import type { AppShell, AppState } from "./types.js";
-import type { MarkedApi, MermaidApi } from "./vendor_types.js";
+import type { HighlightJsApi, MarkedApi, MermaidApi } from "./vendor_types.js";
 
 export function createDocController(args: {
   state: AppState;
   shell: AppShell;
   repoBasePath: string;
+  repoAbsolutePath?: string;
   docs: string[];
   defaultDocPath: string;
   treeEl: HTMLElement;
@@ -18,12 +20,14 @@ export function createDocController(args: {
   searchEl: HTMLInputElement;
   marked: MarkedApi;
   mermaid: MermaidApi;
+  hljs?: HighlightJsApi;
   rootEl: HTMLElement;
 }) {
   const {
     state,
     shell,
     repoBasePath,
+    repoAbsolutePath,
     docs,
     defaultDocPath,
     treeEl,
@@ -31,6 +35,7 @@ export function createDocController(args: {
     searchEl,
     marked,
     mermaid,
+    hljs,
     rootEl,
   } = args;
 
@@ -42,6 +47,7 @@ export function createDocController(args: {
     await loadDoc({
       state,
       repoBasePath,
+      repoAbsolutePath,
       path: state.currentDoc,
       marked,
       mermaid,
@@ -56,6 +62,7 @@ export function createDocController(args: {
       onReady(nextState: AppState, path: string) {
         setDocumentReady(nextState, repoBasePath, path);
         renderDocumentChrome(nextState, shell);
+        renderHighlightedCode(hljs, viewerEl);
       },
       onError(nextState: AppState, path: string) {
         setDocumentError(nextState, repoBasePath, path);
