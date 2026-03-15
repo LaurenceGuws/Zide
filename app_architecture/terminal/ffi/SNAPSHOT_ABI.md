@@ -507,6 +507,77 @@ If this ships during the current beta phase, the preferred landing shape is:
 - avoid carrying both the old and new forms unless the overlap is temporary and
   actively being removed
 
+### Candidate A Proposed ABI Sketch
+
+If the beta replacement happens, the narrowest proposed shape is:
+
+```c
+typedef struct ZideTerminalMetadataRequest {
+    uint32_t abi_version;
+    uint32_t struct_size;
+    uint32_t include_flags;
+    uint32_t reserved0;
+} ZideTerminalMetadataRequest;
+
+typedef struct ZideTerminalMetadataV2 {
+    uint32_t abi_version;
+    uint32_t struct_size;
+    uint32_t scrollback_count;
+    uint32_t scrollback_offset;
+    uint8_t alive;
+    uint8_t has_exit_code;
+    uint8_t _padding0[2];
+    int32_t exit_code;
+    const uint8_t *title_ptr;
+    size_t title_len;
+    const uint8_t *cwd_ptr;
+    size_t cwd_len;
+    void *_ctx;
+} ZideTerminalMetadataV2;
+
+int zide_terminal_metadata_acquire_v2(
+    ZideTerminalHandle *handle,
+    const ZideTerminalMetadataRequest *request,
+    ZideTerminalMetadataV2 *out_metadata);
+
+void zide_terminal_metadata_release_v2(ZideTerminalMetadataV2 *metadata);
+```
+
+Suggested flags:
+
+```c
+enum {
+    ZIDE_TERMINAL_METADATA_INCLUDE_TITLE = 1u << 0,
+    ZIDE_TERMINAL_METADATA_INCLUDE_CWD = 1u << 1,
+    ZIDE_TERMINAL_METADATA_INCLUDE_ALL_STRINGS =
+        ZIDE_TERMINAL_METADATA_INCLUDE_TITLE |
+        ZIDE_TERMINAL_METADATA_INCLUDE_CWD,
+};
+```
+
+Expected semantics:
+
+- hot scalar fields are always filled
+- `title_ptr/title_len` are only populated when `INCLUDE_TITLE` is requested
+- `cwd_ptr/cwd_len` are only populated when `INCLUDE_CWD` is requested
+- omitted strings must come back as:
+  - `ptr = null`
+  - `len = 0`
+- release remains unconditional and boring even when no strings were requested
+
+Why this sketch is intentionally conservative:
+
+- the result shape still looks familiar to current hosts
+- the request shape is coarse and stable
+- there is no per-field scalar flag soup
+- ownership stays acquire/release, not borrowed conditional pointers
+
+Replacement rule if adopted:
+
+- `metadata_acquire_v2(...)` becomes the only metadata acquire surface
+- the current `metadata_acquire(...)` should be removed in the same beta lane
+  or in a tightly-coupled follow-up, not kept indefinitely
+
 It does not create:
 
 - separate title and cwd getter APIs

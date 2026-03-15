@@ -204,6 +204,10 @@ The next bridge-performance lane should stay narrow:
   - string inclusion flags only
 - because the bridge is still beta, do not preserve the first metadata surface
   just for compatibility aesthetics if the replacement is clearly better
+- the current leading sketch is now explicit:
+  - scalar metadata always filled
+  - title/cwd behind inclusion flags
+  - unconditional acquire/release ownership
 - keep the public loop discipline explicit
 - avoid widening the bridge until snapshot/diff direction is better defined
 
