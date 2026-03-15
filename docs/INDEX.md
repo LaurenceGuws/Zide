@@ -17,6 +17,9 @@ project landing page.
 
 ## Task tracking (source of truth)
 - `docs/todo/README.md` — active work-queue policy and ownership split.
+  - `docs/todo/terminal/README.md` — terminal queue map and ownership split.
+  - `docs/todo/ui/README.md` — UI queue map and execution lanes.
+  - `docs/todo/editor/README.md` — editor queue map and execution lanes.
   - `docs/todo/repo_structure.md` — non-product repo structure cleanup (tests, tools, stale docs/tests).
   - `docs/todo/file_layout.md` — file/folder layout cleanup queue (split large folders/files, collapse low-value micro-files).
   - `docs/todo/terminal/vt_core_rearchitecture.md` — next terminal-core redesign lane: VT core, FFI-first boundary, and transport separation.
