@@ -76,7 +76,7 @@ Current judgment:
 ### FFI-02 Snapshot And Diff ABI
 
 - [-] `FFI-02-01` Design an FFI-safe terminal snapshot layout.
-  Notes: baseline full-snapshot ABI is documented and implemented; copied scrollback and text exports exist; remaining work is around further ABI maturation, not first delivery. This is now also the main medium-term performance pressure point on the FFI boundary, because full snapshot acquire still allocates and copies the flat cell buffer on every acquire. The first hot/cold metadata maturity step has now landed: `metadata_acquire(...)` is request-based, hot scalar fields are always filled, and title/cwd are opt-in through inclusion flags. That replacement was done as a clean beta cut instead of preserving the original no-request form. The remaining work is still to judge whether snapshot transport itself should evolve, not to reopen getter sprawl.
+  Notes: baseline full-snapshot ABI is documented and implemented; copied scrollback and text exports exist; remaining work is around further ABI maturation, not first delivery. This is now also the main medium-term performance pressure point on the FFI boundary, because full snapshot acquire still allocates and copies the flat cell buffer on every acquire. The first hot/cold maturity steps have now landed on both latest-state and snapshot ownership surfaces: `metadata_acquire(...)` is request-based, hot scalar fields are always filled, and title/cwd are opt-in through inclusion flags; `snapshot_acquire(...)` is now also request-based, with cells always copied but title/cwd opt-in through inclusion flags. Those replacements were done as clean beta cuts instead of preserving the original no-request forms. The remaining work is now to judge whether snapshot transport itself should evolve, not to reopen getter sprawl.
 - [x] `FFI-02-02` Specify ownership rules for exported snapshot buffers.
 - [ ] `FFI-02-03` Define the optional damage/diff extension after baseline full snapshot works.
 - [-] `FFI-02-04` Define the published-vs-acknowledged generation contract for foreign hosts.
@@ -133,6 +133,7 @@ Current judgment:
     not as an excuse to widen the surface casually
 - Current execution rule for that lane:
   - do not widen the bridge first
-  - keep the snapshot review focused on host call count, allocation pressure,
+  - keep the snapshot review focused on host call count, flat cell-buffer
+    allocation pressure,
     and latest-state authority
 - The bridge remains beta-level and should not be treated as frozen.

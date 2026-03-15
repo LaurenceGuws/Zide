@@ -68,8 +68,9 @@ The current bridge is good enough to keep building on, but the remaining
 boundary-cost risk is concentrated:
 
 1. `snapshot_acquire(...)` is still the dominant medium-term cost surface.
-2. `metadata_acquire(...)` is cheap semantically but still allocates and copies
-   cold strings every time.
+2. cold-string churn on the hot paths is materially narrower now:
+   - `metadata_acquire(...)` is request-based
+   - `snapshot_acquire(...)` is now also request-based for title/cwd
 3. redraw/publication/present is still the right host loop, but only if hosts
    treat `redraw_state(...)` as the gate and avoid speculative snapshot pulls.
 4. `pending_input_acquire(...)` is now the correct outbound batching seam for
@@ -83,8 +84,8 @@ Current shape in [core_api.zig](/home/home/personal/zide/src/terminal/ffi/core_a
 
 - allocates a `SnapshotOwner`
 - allocates a copied flat cell array
-- duplicates title
-- duplicates cwd
+- duplicates title only when requested
+- duplicates cwd only when requested
 
 This is acceptable for the current milestone because it is explicit and easy to
 bind, but it remains the biggest cost center on the host boundary.
@@ -99,7 +100,8 @@ Implication:
 ### 2. Metadata Acquire Must Stay Latest-State, Not Per-Frame Habit
 
 `metadata_acquire(...)` is structurally correct as the authoritative latest-state
-summary, but it still duplicates title/cwd on every acquire.
+summary, and it is now materially better for hot-path discipline because title
+and cwd are opt-in through the request shape.
 
 That is acceptable if hosts use it as intended:
 
@@ -110,8 +112,9 @@ Implication:
 
 - current docs should keep steering hosts away from high-frequency metadata
   polling
-- any future split between hot scalars and cold strings should be treated as an
-  ABI-maturity step, not an excuse to widen the public surface casually
+- any future split beyond the current request-based shape should still be
+  treated as an ABI-maturity step, not an excuse to widen the public surface
+  casually
 - the target should be "cheaper hot latest-state without stitched truth", not
   "many small convenience getters"
 
@@ -222,9 +225,9 @@ This means:
 
 The current redesign is performance-safe enough to continue building on.
 
-The main remaining boundary-cost pressure point is:
+The main remaining boundary-cost pressure point is now even more clearly:
 
-- `snapshot_acquire(...)`
+- `snapshot_acquire(...)` flat cell-buffer allocation/copy cost
 
 Everything else should be judged around that fact instead of broadening the
 bridge in unrelated directions.
