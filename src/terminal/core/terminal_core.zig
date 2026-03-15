@@ -252,6 +252,47 @@ pub const TerminalCore = struct {
         self.history.updateAnsiColors(old_colors, new_colors);
     }
 
+    pub fn snapshotAnsiColors(self: *const TerminalCore) [16]types.Color {
+        var colors: [16]types.Color = undefined;
+        for (0..16) |i| {
+            colors[i] = self.palette_current[i];
+        }
+        return colors;
+    }
+
+    pub fn setPaletteColor(self: *TerminalCore, idx: usize, color: types.Color) void {
+        if (idx >= self.palette_current.len) return;
+        self.palette_current[idx] = color;
+    }
+
+    pub fn resetPaletteColor(self: *TerminalCore, idx: usize) void {
+        if (idx >= self.palette_current.len) return;
+        self.palette_current[idx] = self.palette_default[idx];
+    }
+
+    pub fn resetAllPaletteColors(self: *TerminalCore) void {
+        self.palette_current = self.palette_default;
+    }
+
+    pub fn setDynamicColorCode(self: *TerminalCore, code: u8, color: ?types.Color) void {
+        switch (code) {
+            10 => {
+                const default_attrs = self.primary.default_attrs;
+                self.setDefaultColors(color orelse self.base_default_attrs.fg, default_attrs.bg);
+            },
+            11 => {
+                const default_attrs = self.primary.default_attrs;
+                self.setDefaultColors(default_attrs.fg, color orelse self.base_default_attrs.bg);
+            },
+            else => {
+                const idx = @as(usize, code - 10);
+                if (idx < self.dynamic_colors.len) {
+                    self.dynamic_colors[idx] = color;
+                }
+            },
+        }
+    }
+
     pub fn takeOscClipboardCopy(
         self: *TerminalCore,
         allocator: std.mem.Allocator,

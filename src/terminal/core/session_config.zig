@@ -36,44 +36,23 @@ pub fn remapAnsiColors(self: anytype, old_colors: [16]types.Color, new_colors: [
 }
 
 fn snapshotAnsiColorsLocked(self: anytype) [16]types.Color {
-    var colors: [16]types.Color = undefined;
-    for (0..16) |i| {
-        colors[i] = self.core.palette_current[i];
-    }
-    return colors;
+    return self.core.snapshotAnsiColors();
 }
 
 pub fn setPaletteColorLocked(self: anytype, idx: usize, color: types.Color) void {
-    if (idx >= self.core.palette_current.len) return;
-    self.core.palette_current[idx] = color;
+    self.core.setPaletteColor(idx, color);
 }
 
 pub fn resetPaletteColorLocked(self: anytype, idx: usize) void {
-    if (idx >= self.core.palette_current.len) return;
-    self.core.palette_current[idx] = self.core.palette_default[idx];
+    self.core.resetPaletteColor(idx);
 }
 
 pub fn resetAllPaletteColorsLocked(self: anytype) void {
-    self.core.palette_current = self.core.palette_default;
+    self.core.resetAllPaletteColors();
 }
 
 pub fn setDynamicColorCodeLocked(self: anytype, code: u8, color: ?types.Color) void {
-    switch (code) {
-        10 => {
-            const default_attrs = self.core.primary.default_attrs;
-            setDefaultColorsLocked(self, color orelse self.core.base_default_attrs.fg, default_attrs.bg);
-        },
-        11 => {
-            const default_attrs = self.core.primary.default_attrs;
-            setDefaultColorsLocked(self, default_attrs.fg, color orelse self.core.base_default_attrs.bg);
-        },
-        else => {
-            const idx = @as(usize, code - 10);
-            if (idx < self.core.dynamic_colors.len) {
-                self.core.dynamic_colors[idx] = color;
-            }
-        },
-    }
+    self.core.setDynamicColorCode(code, color);
 }
 
 pub fn applyThemePalette(self: anytype, fg: types.Color, bg: types.Color, ansi: ?[16]types.Color) void {
