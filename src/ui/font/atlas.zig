@@ -38,8 +38,7 @@ pub fn rasterizeGlyphKey(self: anytype, key: anytype, hb_x_advance: c_int, allow
 
     const render_mode: c.FT_Render_Mode = if (self.use_lcd and !want_color) c.FT_RENDER_MODE_LCD else c.FT_RENDER_MODE_NORMAL;
     if (c.FT_Render_Glyph(face.*.glyph, render_mode) != 0) {
-        if (self.use_lcd and c.FT_Render_Glyph(face.*.glyph, c.FT_RENDER_MODE_NORMAL) == 0) {
-        } else {
+        if (self.use_lcd and c.FT_Render_Glyph(face.*.glyph, c.FT_RENDER_MODE_NORMAL) == 0) {} else {
             return error.FtRenderFailed;
         }
     }

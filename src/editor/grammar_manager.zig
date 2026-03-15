@@ -122,7 +122,7 @@ pub const GrammarManager = struct {
         };
         errdefer handle.close();
 
-        const symbol = try allocZ(self.allocator, "tree_sitter_{s}", .{ language_name });
+        const symbol = try allocZ(self.allocator, "tree_sitter_{s}", .{language_name});
         defer self.allocator.free(symbol);
 
         const loader = handle.lookup(LanguageFn, symbol) orelse {

@@ -27,7 +27,7 @@ pub fn drawText(
     while (true) {
         const cp = nextCodepointLossy(text, &cp_idx) orelse break;
         _ = codepoints.append(allocator, cp) catch |err| blk: {
-                            log.logf(.warning, "text codepoint append failed cp={d} err={s}", .{ cp, @errorName(err) });
+            log.logf(.warning, "text codepoint append failed cp={d} err={s}", .{ cp, @errorName(err) });
             break :blk 0;
         };
     }

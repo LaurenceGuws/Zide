@@ -3,15 +3,16 @@ const std = @import("std");
 
 pub fn logTextInput(bytes: usize) void {
     const input_log = app_logger.logger("input.sdl");
-            input_log.logf(.info, "textinput bytes={d}", .{bytes});
+    input_log.logf(.info, "textinput bytes={d}", .{bytes});
 }
 
 pub fn logTextEditing(bytes: usize, cursor: i32, selection: i32) void {
     const ime_log = app_logger.logger("sdl.ime");
-            ime_log.logf(.info, 
-            "textediting bytes={d} cursor={d} selection={d}",
-            .{ bytes, cursor, selection },
-        );
+    ime_log.logf(
+        .info,
+        "textediting bytes={d} cursor={d} selection={d}",
+        .{ bytes, cursor, selection },
+    );
 }
 
 pub fn logTextInputRaw(bytes: []const u8) void {
@@ -37,7 +38,8 @@ pub fn logTextInputLayout(
     offset_text: usize,
 ) void {
     const log = app_logger.logger("input.sdl");
-    log.logf(.info, 
+    log.logf(
+        .info,
         "textinput layout size={d} event_size={d} type={d} reserved={d} timestamp={d} windowID={d} text={d}",
         .{ size, event_size, offset_type, offset_reserved, offset_timestamp, offset_window_id, offset_text },
     );
@@ -79,7 +81,8 @@ pub fn logTextEditingLayout(
     offset_selection_len: usize,
 ) void {
     const log = app_logger.logger("input.sdl");
-    log.logf(.info, 
+    log.logf(
+        .info,
         "textedit layout size={d} event_size={d} type={d} reserved={d} timestamp={d} windowID={d} text={d} start={d} length={d} cursor={d} selection_len={d}",
         .{ size, event_size, offset_type, offset_reserved, offset_timestamp, offset_window_id, offset_text, offset_start, offset_length, offset_cursor, offset_selection_len },
     );

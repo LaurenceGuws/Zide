@@ -142,7 +142,7 @@ pub const TerminalHistory = struct {
         if (self.view_cols == cols and self.view_generation == self.scrollback_generation) return;
 
         const log = app_logger.logger("terminal.scroll");
-                    log.logf(.info, "scroll cache rebuild cols={d} lines={d} gen={d}", .{ cols, self.scrollback.count(), self.scrollback_generation });
+        log.logf(.info, "scroll cache rebuild cols={d} lines={d} gen={d}", .{ cols, self.scrollback.count(), self.scrollback_generation });
 
         self.view_cache.clearRetainingCapacity();
         self.view_wraps.clearRetainingCapacity();
@@ -190,7 +190,7 @@ pub const TerminalHistory = struct {
         self.view_generation = self.scrollback_generation;
         self.view_row_count_generation = self.scrollback_generation;
 
-                    log.logf(.info, "scroll cache rows={d} cells={d}", .{ self.view_rows, self.view_cache.items.len });
+        log.logf(.info, "scroll cache rows={d} cells={d}", .{ self.view_rows, self.view_cache.items.len });
     }
 
     pub fn markScrollbackChanged(self: *TerminalHistory) void {
@@ -326,7 +326,7 @@ pub const TerminalHistory = struct {
         const start = index * cols;
         if (start + cols > self.view_cache.items.len) {
             const log = app_logger.logger("terminal.scroll");
-                            log.logf(.info, "scroll row miss index={d} start={d} cols={d} len={d}", .{ index, start, cols, self.view_cache.items.len });
+            log.logf(.info, "scroll row miss index={d} start={d} cols={d} len={d}", .{ index, start, cols, self.view_cache.items.len });
             return null;
         }
         return self.view_cache.items[start .. start + cols];

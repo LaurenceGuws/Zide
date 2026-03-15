@@ -55,7 +55,8 @@ pub const TextStore = struct {
                     .mapped_original = mapped_bytes,
                 };
                 const t_rope_end = std.time.nanoTimestamp();
-                log.logf(.info, 
+                log.logf(
+                    .info,
                     "initFromFile size={d} mmap_ms={d} rope_ms={d} total_ms={d} source=mmap",
                     .{
                         stat.size,
@@ -82,7 +83,8 @@ pub const TextStore = struct {
         };
         const t_rope_end = std.time.nanoTimestamp();
 
-        log.logf(.info, 
+        log.logf(
+            .info,
             "initFromFile size={d} read_ms={d} rope_ms={d} total_ms={d}",
             .{
                 stat.size,

@@ -31,4 +31,3 @@ pub const Diagnostics = struct {
         return .{};
     }
 };
-

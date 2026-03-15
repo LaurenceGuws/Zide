@@ -45,7 +45,7 @@ pub fn copyData(allocator: std.mem.Allocator, mime_type: [*:0]const u8) ?[]u8 {
     defer freeData(slice);
     if (slice.len == 0) {
         return allocator.dupe(u8, "") catch |err| {
-            log.logf(.warning, "clipboard data dup empty failed err={s}", .{ @errorName(err) });
+            log.logf(.warning, "clipboard data dup empty failed err={s}", .{@errorName(err)});
             return null;
         };
     }

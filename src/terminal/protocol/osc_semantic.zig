@@ -90,7 +90,7 @@ fn parseSemanticPromptWithState(state: *SessionState, text: []const u8) void {
             applySemanticPromptEndCommand(state, rest);
         },
         else => {
-                            log.logf(.debug, "osc 133: unknown kind={c}", .{kind});
+            log.logf(.debug, "osc 133: unknown kind={c}", .{kind});
         },
     }
 }
@@ -198,13 +198,13 @@ fn applySemanticPromptEndCommand(state: *SessionState, text: []const u8) void {
     if (text.len >= 2 and text[0] == ';') {
         const value = text[1..];
         state.semantic_prompt.exit_code = std.fmt.parseUnsigned(u8, value, 10) catch blk: {
-            log.logf(.debug, "osc semantic exit parse failed value={s}", .{ value });
+            log.logf(.debug, "osc semantic exit parse failed value={s}", .{value});
             break :blk null;
         };
         return;
     }
     state.semantic_prompt.exit_code = std.fmt.parseUnsigned(u8, text, 10) catch blk: {
-        log.logf(.debug, "osc semantic exit parse failed value={s}", .{ text });
+        log.logf(.debug, "osc semantic exit parse failed value={s}", .{text});
         break :blk null;
     };
 }

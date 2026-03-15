@@ -31,7 +31,6 @@ fn modeSnapshotFromContext(ctx: ModeCaptureContext) ModeSnapshot {
 const SgrContext = csi_style_reset.SgrContext;
 const DecstrContext = csi_style_reset.DecstrContext;
 
-
 pub const SimpleCsiContext = struct {
     ctx: *anyopaque,
     active_screen_fn: *const fn (ctx: *anyopaque) *screen_mod.Screen,
@@ -390,7 +389,6 @@ const QueryContext = csi_reply.QueryContext;
 const CursorReport = csi_reply.CursorReport;
 const ScreenQueryContext = csi_reply.ScreenQueryContext;
 
-
 pub const SessionFacade = struct {
     ctx: *anyopaque,
     handle_csi_fn: *const fn (ctx: *anyopaque, action: parser_csi.CsiAction) void,
@@ -558,8 +556,6 @@ pub fn writeDecrqmReplyWithWriter(writer: CsiWriter, private: bool, mode: i32, s
     };
     return true;
 }
-
-
 
 fn handleDsrQuery(query: QueryContext, writer: CsiWriter, screen: ScreenQueryContext, action: parser_csi.CsiAction, param_len: usize, params: [parser_csi.max_params]i32) void {
     csi_reply.handleDsrQuery(query, writer, screen, action, param_len, params);
