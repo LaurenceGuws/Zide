@@ -113,8 +113,8 @@ Enforcement:
 
 Historical rollout and validation for this split live in:
 - current boundary rules: this file
-- historical rollout record: `app_architecture/review/app_mode_layering_todo.md`
-- historical validation record: `app_architecture/review/app_mode_layering_validation.md`
+- historical rollout record: `app_architecture/review/archive/app_mode_layering_todo.md`
+- historical validation record: `app_architecture/review/archive/app_mode_layering_validation.md`
 
 ## Current Anchors
 - **Editor modularization plan**: `app_architecture/editor/MODULARIZATION_PLAN.md`.

@@ -75,6 +75,27 @@ architectural center.
 
 ## Target Types
 
+```mermaid
+flowchart LR
+    Host["Host wrapper / PTY session"] -- host signals, lifecycle --> Transport["TerminalTransport"]
+    Host -- key, mouse, text --> Encoder["TerminalInputEncoder"]
+    Encoder -- encoded input bytes --> Transport
+    Transport -- output bytes, resize --> Core["TerminalCore"]
+    Core -- snapshot + damage --> Snapshot["TerminalSnapshot"]
+    Snapshot --> Consumer["Renderer / FFI host / replay harness"]
+
+    Host:::host
+    Transport:::boundary
+    Encoder:::boundary
+    Core:::core
+    Snapshot:::core
+    Consumer:::host
+
+    classDef core fill:#1d3b31,stroke:#79c9a7,color:#ecfff6;
+    classDef boundary fill:#2d3047,stroke:#99a8ff,color:#f4f7ff;
+    classDef host fill:#443328,stroke:#ffb56b,color:#fff5ea;
+```
+
 ### 1. `TerminalCore`
 
 This becomes the engine-owned center.
@@ -164,6 +185,18 @@ Current conclusion relevant to this file:
   evidence
 
 ## Multi-Span Row Damage Direction
+
+```mermaid
+flowchart TD
+    Before["Current row-union model"] --> Union["2..5 + 10..18 => 2..18"]
+    After["Proposed row-span model"] --> SpanSet["row_dirty_spans[row] = [2..5, 10..18]"]
+    SpanSet --> Overflow{"overflow?"}
+    Overflow -- no --> Export["snapshotView() exports preserved spans"]
+    Overflow -- yes --> RowLocal["collapse only this row to one union span"]
+    Export --> Cache["view_cache / render_cache preserve row-local spans"]
+    RowLocal --> Cache
+    Cache --> Renderer["renderer partial planning consumes exact spans"]
+```
 
 The current backend damage model is too weak for the real-config ghosting lane.
 Today the terminal keeps only:
@@ -360,6 +393,26 @@ These must be explicit contracts:
 - resize core state
 
 ## Event Model
+
+```mermaid
+sequenceDiagram
+    participant Host
+    participant Encoder as TerminalInputEncoder
+    participant Transport as TerminalTransport
+    participant Core as TerminalCore
+    participant Snapshot as Snapshot publication
+
+    Host->>Encoder: key / mouse / text
+    Encoder->>Transport: encoded input bytes
+    Host->>Transport: host output bytes / resize
+    Transport->>Core: feed bytes + host signals
+    Core->>Core: mutate model, modes, metadata
+    Core->>Snapshot: publish snapshot + generation
+    Core-->>Host: wake + semantic events\n(bell/title/cwd/clipboard)
+    Transport-->>Host: runtime event\n(child exit)
+    Host->>Snapshot: acquire current snapshot
+    Host->>Core: present ack(generation)
+```
 
 The core should own a narrow event queue for host-visible state changes.
 

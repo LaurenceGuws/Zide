@@ -54,11 +54,7 @@ project landing page.
 - `tools/docs_explorer/README.md` — run instructions for the local docs explorer.
 - `app_architecture/CONFIG.md` — Lua config subsystem: parser surface, merge rules, runtime consumers, and reload truth.
 - `app_architecture/config_todo.md` — config subsystem tracker: contract drift, reload gaps, validation, and binding semantics.
-<<<<<<< HEAD
 - `docs/DEPENDENCIES.md` — current dependency sourcing policy: Zig-managed app stack on Linux/macOS, platform-runtime requirements, and Windows `vcpkg` exception.
-=======
-- `docs/DEPENDENCIES.md` — current dependency sourcing policy: Zig-managed app stack on Linux/macOS, platform-runtime requirements, and Windows `vcpkg` exception.
->>>>>>> main
 - `docs/terminal/compatibility.md` — current beta terminal support surface, TERM identity, and terminfo install instructions.
 
 ## Reviews And Audits
@@ -67,7 +63,8 @@ project landing page.
   - `app_architecture/review/PERFORMANCE_REVIEW_1.md` — historical UI/terminal performance audit that still contains useful ownership notes.
 
 Historical evidence remains under `app_architecture/review/`, but most files in
-that folder are no longer first-class navigation docs.
+that folder are no longer first-class navigation docs. Older completed rollout
+records are now grouped under `app_architecture/review/archive/`.
 
 ## Quick Ownership Rules
 
