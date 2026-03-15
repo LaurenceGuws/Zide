@@ -292,6 +292,35 @@ test "ffi viewport controls pin snapshot scrollback offset and follow live botto
     try expectSnapshotRowText(&restored_snapshot, 1, "DDDD");
 }
 
+test "ffi viewport control rejects pinned scrollback offset in alt screen" {
+    try app_logger.setConsoleFilterString("none");
+    try app_logger.setFileFilterString("none");
+
+    var handle: ?*c_api.ZideTerminalHandle = null;
+    const cfg = c_api.ZideTerminalCreateConfig{
+        .rows = 2,
+        .cols = 4,
+        .scrollback_rows = 128,
+        .cursor_shape = 0,
+        .cursor_blink = 1,
+    };
+    try std.testing.expectEqual(@as(c_int, 0), c_api.zide_terminal_create(&cfg, &handle));
+    defer c_api.zide_terminal_destroy(handle);
+
+    try std.testing.expectEqual(@as(c_int, 0), c_api.zide_terminal_resize(handle, 4, 2, 8, 16));
+    const enter_alt = "\x1b[?1049hABCD";
+    try std.testing.expectEqual(@as(c_int, 0), c_api.zide_terminal_feed_output(handle, enter_alt.ptr, enter_alt.len));
+
+    try std.testing.expectEqual(@as(c_int, 1), c_api.zide_terminal_set_scrollback_offset(handle, 1));
+
+    var metadata: c_api.ZideTerminalMetadata = .{};
+    try std.testing.expectEqual(@as(c_int, 0), c_api.zide_terminal_metadata_acquire(handle, &metadata));
+    defer c_api.zide_terminal_metadata_release(&metadata);
+    try std.testing.expectEqual(@as(u32, 0), metadata.scrollback_offset);
+
+    try std.testing.expectEqual(@as(c_int, 0), c_api.zide_terminal_follow_live_bottom(handle));
+}
+
 test "ffi snapshot and event release zero exported structs" {
     try app_logger.setConsoleFilterString("none");
     try app_logger.setFileFilterString("none");
