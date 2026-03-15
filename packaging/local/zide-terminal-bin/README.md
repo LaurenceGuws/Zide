@@ -15,6 +15,11 @@ What it does:
 - installs to `/opt/zide-terminal-bundle`
 - installs launcher symlink at `/usr/bin/zide-terminal`
 
+## Versioning note
+
+Arch packages cannot use hyphens in `pkgver`, so this package stores the
+upstream product version separately and uses an Arch-safe package version.
+
 ## Verify
 
 ```bash

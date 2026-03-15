@@ -22,8 +22,10 @@ makepkg -si
 
 ## Notes
 
-- `pkgver` is the plain product version.
-- GitHub release tags are `v${pkgver}`.
+- Arch `pkgver` cannot contain hyphens, so the package uses an Arch-safe
+  `pkgver` and keeps the upstream release version separately.
+- GitHub release tags are `v${_productver}`.
 - The corresponding release must contain:
-  - `zide-terminal-bundle-${pkgver}-linux-x86_64.tar.gz`
-- `sha256sums` is `SKIP` in this skeleton; replace with pinned checksum for release-grade packaging.
+  - `zide-terminal-bundle-${_productver}-linux-x86_64.tar.gz`
+- `sha256sums` is `SKIP` in this skeleton; replace with pinned checksum for
+  release-grade packaging.

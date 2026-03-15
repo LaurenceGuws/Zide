@@ -1,5 +1,6 @@
 pkgname=zide-terminal-bin
-pkgver=0.1.0-beta.1
+_productver=0.1.0-beta.1
+pkgver=0.1.0beta1
 pkgrel=1
 pkgdesc="Zide terminal-only binary bundle"
 arch=('x86_64')
@@ -10,7 +11,7 @@ provides=('zide-terminal')
 conflicts=('zide-terminal')
 
 source=(
-  "zide-terminal-bundle-${pkgver}-linux-x86_64.tar.gz::https://github.com/zide-dev/zide/releases/download/v${pkgver}/zide-terminal-bundle-${pkgver}-linux-x86_64.tar.gz"
+  "zide-terminal-bundle-${_productver}-linux-x86_64.tar.gz::https://github.com/zide-dev/zide/releases/download/v${_productver}/zide-terminal-bundle-${_productver}-linux-x86_64.tar.gz"
 )
 sha256sums=('SKIP')
 

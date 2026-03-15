@@ -1,5 +1,6 @@
 pkgname=zide-terminal-bin-local
-pkgver=0.1.0-beta.1
+_productver=0.1.0-beta.1
+pkgver=0.1.0beta1
 pkgrel=1
 pkgdesc="Local test package: Zide terminal-only ReleaseFast bundle"
 arch=('x86_64')
