@@ -15,18 +15,13 @@ pub fn handleControl(self: anytype, byte: u8) void {
             screen.carriageReturn();
         },
         0x0E => { // SO (Shift Out) -> G1
-            self.core.parser.gl_charset = self.core.parser.g1_charset;
+            self.core.shiftOutCharset();
         },
         0x0F => { // SI (Shift In) -> G0
-            self.core.parser.gl_charset = self.core.parser.g0_charset;
+            self.core.shiftInCharset();
         },
         0x1B => { // ESC
-            self.core.parser.esc_state = .esc;
-            self.core.parser.stream.reset();
-            self.core.parser.csi.reset();
-            self.core.parser.osc_state = .idle;
-            self.core.parser.apc_state = .idle;
-            self.core.parser.dcs_state = .idle;
+            self.core.enterEscapeState();
         },
         else => {},
     }

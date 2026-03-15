@@ -269,6 +269,31 @@ pub const TerminalCore = struct {
         self.parser.charset_target = self.saved_charset.target;
     }
 
+    pub fn shiftOutCharset(self: *TerminalCore) void {
+        self.parser.gl_charset = self.parser.g1_charset;
+    }
+
+    pub fn shiftInCharset(self: *TerminalCore) void {
+        self.parser.gl_charset = self.parser.g0_charset;
+    }
+
+    pub fn enterEscapeState(self: *TerminalCore) void {
+        self.parser.esc_state = .esc;
+        self.parser.stream.reset();
+        self.parser.csi.reset();
+        self.parser.osc_state = .idle;
+        self.parser.apc_state = .idle;
+        self.parser.dcs_state = .idle;
+    }
+
+    pub fn resetParserState(self: *TerminalCore) void {
+        self.parser.reset();
+    }
+
+    pub fn clearSavedCharsetState(self: *TerminalCore) void {
+        self.saved_charset = .{};
+    }
+
     pub fn setColumnMode132(self: *TerminalCore, enabled: bool) bool {
         if (self.column_mode_132 == enabled) return false;
         self.column_mode_132 = enabled;

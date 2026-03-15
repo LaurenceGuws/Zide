@@ -72,13 +72,13 @@ pub const DecstrContext = struct {
             .reset_parser_fn = struct {
                 fn call(ctx: *anyopaque) void {
                     const s: SessionPtr = @ptrCast(@alignCast(ctx));
-                    s.core.parser.reset();
+                    s.core.resetParserState();
                 }
             }.call,
             .reset_saved_charset_fn = struct {
                 fn call(ctx: *anyopaque) void {
                     const s: SessionPtr = @ptrCast(@alignCast(ctx));
-                    s.core.saved_charset = .{};
+                    s.core.clearSavedCharsetState();
                 }
             }.call,
             .clear_title_buffer_fn = struct {

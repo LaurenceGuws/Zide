@@ -1,8 +1,8 @@
 const kitty_mod = @import("../kitty/graphics.zig");
 
 pub fn resetStateCore(self: anytype) void {
-    self.core.parser.reset();
-    self.core.saved_charset = .{};
+    self.core.resetParserState();
+    self.core.clearSavedCharsetState();
     self.core.primary.resetState();
     self.core.alt.resetState();
     self.core.current_hyperlink_id = 0;
