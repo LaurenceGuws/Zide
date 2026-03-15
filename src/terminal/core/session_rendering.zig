@@ -3,10 +3,9 @@ const kitty_mod = @import("../kitty/graphics.zig");
 const render_cache_mod = @import("render_cache.zig");
 const snapshot_mod = @import("snapshot.zig");
 const selection_mod = @import("selection.zig");
-const view_cache = @import("view_cache.zig");
-const core_feed = @import("terminal_core_feed.zig");
 const publication_state = @import("session_publication_state.zig");
 const presentation_handoff = @import("session_presentation_handoff.zig");
+const publication_updates = @import("session_publication_updates.zig");
 
 pub const RenderCache = render_cache_mod.RenderCache;
 pub const TerminalSnapshot = snapshot_mod.TerminalSnapshot;
@@ -56,22 +55,20 @@ pub fn snapshot(self: anytype) TerminalSnapshot {
     };
 }
 
-pub fn publishFeedResultLocked(self: anytype, result: core_feed.FeedResult) void {
-    if (!result.parsed) return;
-    _ = self.output_generation.fetchAdd(1, .acq_rel);
-    view_cache.updateViewCacheNoLockTagged(self, self.output_generation.load(.acquire), result.scroll_offset, "publish_feed_result");
+pub fn publishFeedResultLocked(self: anytype, result: @import("terminal_core_feed.zig").FeedResult) void {
+    publication_updates.publishFeedResultLocked(self, result);
 }
 
 pub fn updateViewCacheNoLock(self: anytype, generation: u64, scroll_offset: usize) void {
-    view_cache.updateViewCacheNoLockTagged(self, generation, scroll_offset, "session_rendering_direct");
+    publication_updates.updateViewCacheNoLock(self, generation, scroll_offset);
 }
 
 pub fn updateViewCacheForScroll(self: anytype) void {
-    view_cache.updateViewCacheForScroll(self);
+    publication_updates.updateViewCacheForScroll(self);
 }
 
 pub fn updateViewCacheForScrollLocked(self: anytype) void {
-    view_cache.updateViewCacheForScrollLocked(self);
+    publication_updates.updateViewCacheForScrollLocked(self);
 }
 
 pub fn renderCache(self: anytype) *const RenderCache {
@@ -92,19 +89,11 @@ pub fn syncUpdatesActive(self: anytype) bool {
 }
 
 pub fn setSyncUpdates(self: anytype, enabled: bool) void {
-    self.lock();
-    defer self.unlock();
-    setSyncUpdatesLocked(self, enabled);
+    publication_updates.setSyncUpdates(self, enabled);
 }
 
 pub fn setSyncUpdatesLocked(self: anytype, enabled: bool) void {
-    if (!self.core.setSyncUpdates(enabled)) return;
-    const cache = renderCache(self);
-    const presented_generation = publication_state.presentedGeneration(self);
-    if (cache.generation == presented_generation and cache.dirty == .none) return;
-    _ = self.output_generation.fetchAdd(1, .acq_rel);
-    const offset: usize = self.core.scrollbackOffset();
-    view_cache.updateViewCacheNoLockTagged(self, self.output_generation.load(.acquire), offset, "set_sync_updates");
+    publication_updates.setSyncUpdatesLocked(self, enabled);
 }
 
 pub fn clearPublishedDamageIfGeneration(self: anytype, expected_generation: u64, clear_screen_dirty: bool) bool {
