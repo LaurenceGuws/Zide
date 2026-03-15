@@ -62,6 +62,7 @@ project landing page.
 - `docs/research/README.md` — research-doc placement and role.
 - `docs/reference/terminal_compatibility.md` — terminal compatibility, TERM identity, and terminfo install instructions.
 - `docs/reference/terminal_redraw_capture_workflow.md` — redraw capture and replay-authority workflow for real terminal repros.
+- `docs/reference/terminal_flutter_adapter_notes.md` — Flutter-style host adapter notes for the terminal bridge.
 - `docs/research/terminal/wayland_present/` — platform/present research and reference writeups for the Wayland present lane.
 
 ## Reviews And Audits
