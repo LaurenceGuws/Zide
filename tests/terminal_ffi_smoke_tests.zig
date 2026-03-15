@@ -216,6 +216,82 @@ test "ffi scrollback acquire exports copied rows" {
     try std.testing.expectEqual(@as(c_int, 1), c_api.zide_terminal_scrollback_acquire(handle, count + 1, 0, &invalid));
 }
 
+test "ffi viewport controls pin snapshot scrollback offset and follow live bottom" {
+    try app_logger.setConsoleFilterString("none");
+    try app_logger.setFileFilterString("none");
+
+    var handle: ?*c_api.ZideTerminalHandle = null;
+    const cfg = c_api.ZideTerminalCreateConfig{
+        .rows = 2,
+        .cols = 4,
+        .scrollback_rows = 128,
+        .cursor_shape = 0,
+        .cursor_blink = 1,
+    };
+    try std.testing.expectEqual(@as(c_int, 0), c_api.zide_terminal_create(&cfg, &handle));
+    defer c_api.zide_terminal_destroy(handle);
+
+    try std.testing.expectEqual(@as(c_int, 0), c_api.zide_terminal_resize(handle, 4, 2, 8, 16));
+
+    const lines =
+        "AAAA\r\n" ++
+        "BBBB\r\n" ++
+        "CCCC\r\n" ++
+        "DDDD\r\n";
+    try std.testing.expectEqual(@as(c_int, 0), c_api.zide_terminal_feed_output(handle, lines.ptr, lines.len));
+
+    var live_snapshot: c_api.ZideTerminalSnapshot = .{};
+    try std.testing.expectEqual(@as(c_int, 0), c_api.zide_terminal_snapshot_acquire(handle, &live_snapshot));
+    defer c_api.zide_terminal_snapshot_release(&live_snapshot);
+    try expectSnapshotRowText(&live_snapshot, 0, "CCCC");
+    try expectSnapshotRowText(&live_snapshot, 1, "DDDD");
+
+    var live_metadata: c_api.ZideTerminalMetadata = .{};
+    try std.testing.expectEqual(@as(c_int, 0), c_api.zide_terminal_metadata_acquire(handle, &live_metadata));
+    defer c_api.zide_terminal_metadata_release(&live_metadata);
+    try std.testing.expectEqual(@as(u32, 0), live_metadata.scrollback_offset);
+
+    var baseline_redraw: c_api.ZideTerminalRedrawState = .{};
+    try std.testing.expectEqual(@as(c_int, 0), c_api.zide_terminal_redraw_state(handle, &baseline_redraw));
+    try std.testing.expectEqual(@as(c_int, 0), c_api.zide_terminal_present_ack(handle, baseline_redraw.published_generation));
+
+    try std.testing.expectEqual(@as(c_int, 0), c_api.zide_terminal_set_scrollback_offset(handle, 1));
+
+    var pinned_metadata: c_api.ZideTerminalMetadata = .{};
+    try std.testing.expectEqual(@as(c_int, 0), c_api.zide_terminal_metadata_acquire(handle, &pinned_metadata));
+    defer c_api.zide_terminal_metadata_release(&pinned_metadata);
+    try std.testing.expectEqual(@as(u32, 1), pinned_metadata.scrollback_offset);
+
+    var pinned_redraw: c_api.ZideTerminalRedrawState = .{};
+    try std.testing.expectEqual(@as(c_int, 0), c_api.zide_terminal_redraw_state(handle, &pinned_redraw));
+    try std.testing.expectEqual(@as(u8, 1), pinned_redraw.needs_redraw);
+
+    var pinned_snapshot: c_api.ZideTerminalSnapshot = .{};
+    try std.testing.expectEqual(@as(c_int, 0), c_api.zide_terminal_snapshot_acquire(handle, &pinned_snapshot));
+    defer c_api.zide_terminal_snapshot_release(&pinned_snapshot);
+    try expectSnapshotRowText(&pinned_snapshot, 0, "BBBB");
+    try expectSnapshotRowText(&pinned_snapshot, 1, "CCCC");
+
+    try std.testing.expectEqual(@as(c_int, 0), c_api.zide_terminal_present_ack(handle, pinned_redraw.published_generation));
+
+    try std.testing.expectEqual(@as(c_int, 0), c_api.zide_terminal_follow_live_bottom(handle));
+
+    var restored_metadata: c_api.ZideTerminalMetadata = .{};
+    try std.testing.expectEqual(@as(c_int, 0), c_api.zide_terminal_metadata_acquire(handle, &restored_metadata));
+    defer c_api.zide_terminal_metadata_release(&restored_metadata);
+    try std.testing.expectEqual(@as(u32, 0), restored_metadata.scrollback_offset);
+
+    var restored_redraw: c_api.ZideTerminalRedrawState = .{};
+    try std.testing.expectEqual(@as(c_int, 0), c_api.zide_terminal_redraw_state(handle, &restored_redraw));
+    try std.testing.expectEqual(@as(u8, 1), restored_redraw.needs_redraw);
+
+    var restored_snapshot: c_api.ZideTerminalSnapshot = .{};
+    try std.testing.expectEqual(@as(c_int, 0), c_api.zide_terminal_snapshot_acquire(handle, &restored_snapshot));
+    defer c_api.zide_terminal_snapshot_release(&restored_snapshot);
+    try expectSnapshotRowText(&restored_snapshot, 0, "CCCC");
+    try expectSnapshotRowText(&restored_snapshot, 1, "DDDD");
+}
+
 test "ffi snapshot and event release zero exported structs" {
     try app_logger.setConsoleFilterString("none");
     try app_logger.setFileFilterString("none");
@@ -319,6 +395,27 @@ test "ffi child_exit event carries exit code and present flag" {
 fn ptrBytes(ptr: ?[*]const u8, len: usize) []const u8 {
     if (len == 0) return "";
     return (ptr orelse unreachable)[0..len];
+}
+
+fn expectSnapshotRowText(snapshot: *const c_api.ZideTerminalSnapshot, row: usize, expected: []const u8) !void {
+    var line: [256]u8 = [_]u8{0} ** 256;
+    var len: usize = 0;
+    const cols: usize = @intCast(snapshot.cols);
+    const start = row * cols;
+    const cells = snapshot.cells.?[0..snapshot.cell_count];
+    for (cells[start .. start + cols]) |cell| {
+        if (cell.width == 0) continue;
+        const cp = cell.codepoint;
+        const ch: u8 = if (cp == 0 or cp > 0x7f) ' ' else @intCast(cp);
+        if (len < line.len) {
+            line[len] = ch;
+            len += 1;
+        }
+    }
+    while (len > 0 and line[len - 1] == ' ') {
+        len -= 1;
+    }
+    try std.testing.expectEqualStrings(expected, line[0..len]);
 }
 
 fn scrollbackRowContains(scrollback: *const c_api.ZideTerminalScrollbackBuffer, row: usize, needle: []const u8) bool {
