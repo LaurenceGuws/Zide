@@ -8,6 +8,46 @@ native reference host and the downstream Flutter host.
 Purpose: record the current hot-path performance judgment for the terminal FFI
 contract before more surface hardens.
 
+## Reference Bias
+
+The relevant reference repos/docs reinforce the current direction:
+
+1. Ghostty
+   - Ghostty explicitly treats `libghostty` / `libghostty-vt` as an embeddable
+     terminal-library goal, separate from the standalone app surface.
+   - That strongly supports keeping engine truth and host boundary shape clean,
+     instead of letting the native app become the only efficient semantic path.
+   - Source:
+     - https://github.com/ghostty-org/ghostty
+
+2. WezTerm
+   - WezTerm distinguishes between a live pane handle and lighter snapshot-like
+     information for synchronous UI paths.
+   - That supports our bias that hot-path host/UI work should consume a narrow,
+     cheap authority surface rather than pull broad state repeatedly.
+   - Sources:
+     - https://wezterm.org/config/lua/pane/index.html
+     - https://wezterm.org/config/lua/PaneInformation.html
+     - https://wezterm.org/config/lua/pane/get_metadata.html
+
+3. Kitty
+   - Kitty continues to extend terminal behavior with targeted protocol
+     additions rather than turning the host/runtime contract into a chatty pile
+     of micro-surfaces.
+   - That supports being disciplined about new bridge exports: add narrow,
+     high-value semantics when needed, but avoid convenience growth that raises
+     call count or weakens authority.
+   - Source:
+     - https://sw.kovidgoyal.net/kitty/protocol-extensions/
+     - https://sw.kovidgoyal.net/kitty/unscroll/
+
+These references do not imply that Zide must copy any one implementation
+verbatim. They do reinforce three design biases:
+
+- keep the engine boundary explicit and hostable
+- keep hot-path state consumption narrow and cheap
+- prefer targeted extensions over chatty surface growth
+
 ## Scope
 
 This review is about the host boundary itself:

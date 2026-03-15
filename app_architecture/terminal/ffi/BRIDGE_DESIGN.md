@@ -14,6 +14,10 @@ Current host-boundary performance checkpoint:
 - `app_architecture/terminal/ffi/SNAPSHOT_ABI.md` now also records the current
   hot-scalar vs cold-string maturity direction for snapshot/metadata
   evolution.
+- that review now also captures the current reference bias from Ghostty,
+  WezTerm, and Kitty for this lane: explicit embeddable engine boundaries,
+  narrow hot-path state surfaces, and targeted extension growth instead of
+  chatty host contracts.
 
 ## Why this exists
 
