@@ -323,10 +323,13 @@ pub fn scrollbackRelease(scrollback: *shared.ScrollbackBuffer) void {
     scrollback.* = .{};
 }
 
-pub fn metadataAcquire(handle: ?*shared.ZideTerminalHandle, out_metadata: *shared.Metadata) shared.Status {
+pub fn metadataAcquire(handle: ?*shared.ZideTerminalHandle, request: ?*const shared.MetadataRequest, out_metadata: *shared.Metadata) shared.Status {
     const log = app_logger.logger("terminal.ffi");
     const h = shared.fromOpaque(handle) orelse return .invalid_argument;
+    const req = request orelse return .invalid_argument;
     out_metadata.* = .{};
+    if (req.abi_version != shared.metadata_abi_version) return .invalid_argument;
+    if (req.struct_size != @sizeOf(shared.MetadataRequest)) return .invalid_argument;
 
     const allocator = h.allocator;
     const owner = allocator.create(MetadataOwner) catch |err| {
@@ -339,15 +342,29 @@ pub fn metadataAcquire(handle: ?*shared.ZideTerminalHandle, out_metadata: *share
         log.logf(.warning, "metadata copy failed err={s}", .{@errorName(err)});
         return shared.mapError(err);
     };
-    const title = allocator.dupe(u8, metadata.title) catch |err| {
-        log.logf(.warning, "metadata title dup failed err={s}", .{@errorName(err)});
-        return .out_of_memory;
-    };
+    const include_title = (req.include_flags & @intFromEnum(shared.MetadataIncludeFlags.title)) != 0;
+    const include_cwd = (req.include_flags & @intFromEnum(shared.MetadataIncludeFlags.cwd)) != 0;
+    const title = if (include_title)
+        allocator.dupe(u8, metadata.title) catch |err| {
+            log.logf(.warning, "metadata title dup failed err={s}", .{@errorName(err)});
+            return .out_of_memory;
+        }
+    else
+        allocator.alloc(u8, 0) catch |err| {
+            log.logf(.warning, "metadata empty title alloc failed err={s}", .{@errorName(err)});
+            return .out_of_memory;
+        };
     errdefer allocator.free(title);
-    const cwd = allocator.dupe(u8, metadata.cwd) catch |err| {
-        log.logf(.warning, "metadata cwd dup failed err={s}", .{@errorName(err)});
-        return .out_of_memory;
-    };
+    const cwd = if (include_cwd)
+        allocator.dupe(u8, metadata.cwd) catch |err| {
+            log.logf(.warning, "metadata cwd dup failed err={s}", .{@errorName(err)});
+            return .out_of_memory;
+        }
+    else
+        allocator.alloc(u8, 0) catch |err| {
+            log.logf(.warning, "metadata empty cwd alloc failed err={s}", .{@errorName(err)});
+            return .out_of_memory;
+        };
     errdefer allocator.free(cwd);
 
     owner.* = .{

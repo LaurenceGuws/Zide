@@ -63,7 +63,7 @@ pub fn copyScrollbackRange(
 
     var row_index: usize = 0;
     while (row_index < requested) : (row_index += 1) {
-        const row = self.core.scrollbackRow(cols, self.core.primary.defaultCell(), start_row + row_index) orelse return error.InvalidArgument;
+        const row = self.core.scrollbackRow(@intCast(cols), self.core.primary.defaultCell(), start_row + row_index) orelse return error.InvalidArgument;
         try out.appendSlice(allocator, row);
     }
 

@@ -11,11 +11,15 @@ pub const ZIDE_TERMINAL_STRING_ABI_VERSION = bridge.string_abi_version;
 pub const ZIDE_TERMINAL_CLOSE_CONFIRM_ABI_VERSION = bridge.close_confirm_abi_version;
 pub const ZIDE_TERMINAL_CLIPBOARD_ABI_VERSION = bridge.clipboard_abi_version;
 pub const ZIDE_TERMINAL_PENDING_INPUT_ABI_VERSION = bridge.byte_buffer_abi_version;
+pub const ZIDE_TERMINAL_METADATA_INCLUDE_TITLE = @intFromEnum(bridge.MetadataIncludeFlags.title);
+pub const ZIDE_TERMINAL_METADATA_INCLUDE_CWD = @intFromEnum(bridge.MetadataIncludeFlags.cwd);
+pub const ZIDE_TERMINAL_METADATA_INCLUDE_ALL_STRINGS = ZIDE_TERMINAL_METADATA_INCLUDE_TITLE | ZIDE_TERMINAL_METADATA_INCLUDE_CWD;
 pub const ZideTerminalCreateConfig = bridge.CreateConfig;
 pub const ZideTerminalColor = bridge.Color;
 pub const ZideTerminalCell = bridge.Cell;
 pub const ZideTerminalSnapshot = bridge.Snapshot;
 pub const ZideTerminalScrollbackBuffer = bridge.ScrollbackBuffer;
+pub const ZideTerminalMetadataRequest = bridge.MetadataRequest;
 pub const ZideTerminalMetadata = bridge.Metadata;
 pub const ZideTerminalRedrawState = bridge.RedrawState;
 pub const ZideTerminalCloseConfirmSignals = bridge.CloseConfirmSignals;
@@ -139,8 +143,8 @@ pub fn zide_terminal_scrollback_release(scrollback: *ZideTerminalScrollbackBuffe
     bridge.scrollbackRelease(scrollback);
 }
 
-pub fn zide_terminal_metadata_acquire(handle: ?*ZideTerminalHandle, out_metadata: *ZideTerminalMetadata) c_int {
-    return @intFromEnum(bridge.metadataAcquire(handle, out_metadata));
+pub fn zide_terminal_metadata_acquire(handle: ?*ZideTerminalHandle, request: ?*const ZideTerminalMetadataRequest, out_metadata: *ZideTerminalMetadata) c_int {
+    return @intFromEnum(bridge.metadataAcquire(handle, request, out_metadata));
 }
 
 pub fn zide_terminal_metadata_release(metadata: *ZideTerminalMetadata) void {

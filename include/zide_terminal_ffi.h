@@ -32,11 +32,19 @@ enum {
     ZIDE_TERMINAL_EVENT_ABI_VERSION = 4,
     ZIDE_TERMINAL_SCROLLBACK_ABI_VERSION = 1,
     ZIDE_TERMINAL_RENDERER_METADATA_ABI_VERSION = 1,
-    ZIDE_TERMINAL_METADATA_ABI_VERSION = 1,
+    ZIDE_TERMINAL_METADATA_ABI_VERSION = 2,
     ZIDE_TERMINAL_REDRAW_STATE_ABI_VERSION = 1,
     ZIDE_TERMINAL_STRING_ABI_VERSION = 1,
     ZIDE_TERMINAL_CLOSE_CONFIRM_ABI_VERSION = 1,
     ZIDE_TERMINAL_CLIPBOARD_ABI_VERSION = 1,
+};
+
+enum {
+    ZIDE_TERMINAL_METADATA_INCLUDE_TITLE = 1u << 0,
+    ZIDE_TERMINAL_METADATA_INCLUDE_CWD = 1u << 1,
+    ZIDE_TERMINAL_METADATA_INCLUDE_ALL_STRINGS =
+        ZIDE_TERMINAL_METADATA_INCLUDE_TITLE |
+        ZIDE_TERMINAL_METADATA_INCLUDE_CWD,
 };
 
 enum {
@@ -143,6 +151,13 @@ typedef struct ZideTerminalMetadata {
     size_t cwd_len;
     void *_ctx;
 } ZideTerminalMetadata;
+
+typedef struct ZideTerminalMetadataRequest {
+    uint32_t abi_version;
+    uint32_t struct_size;
+    uint32_t include_flags;
+    uint32_t reserved0;
+} ZideTerminalMetadataRequest;
 
 typedef struct ZideTerminalRedrawState {
     uint32_t abi_version;
@@ -252,7 +267,7 @@ int zide_terminal_scrollback_acquire(
     uint32_t max_rows,
     ZideTerminalScrollbackBuffer *out_buffer);
 void zide_terminal_scrollback_release(ZideTerminalScrollbackBuffer *scrollback);
-int zide_terminal_metadata_acquire(ZideTerminalHandle *handle, ZideTerminalMetadata *out_metadata);
+int zide_terminal_metadata_acquire(ZideTerminalHandle *handle, const ZideTerminalMetadataRequest *request, ZideTerminalMetadata *out_metadata);
 void zide_terminal_metadata_release(ZideTerminalMetadata *metadata);
 int zide_terminal_event_drain(ZideTerminalHandle *handle, ZideTerminalEventBuffer *out_events);
 void zide_terminal_events_free(ZideTerminalEventBuffer *events);

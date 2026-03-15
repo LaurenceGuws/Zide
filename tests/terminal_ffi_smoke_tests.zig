@@ -108,7 +108,8 @@ test "ffi non-pty snapshot and event ownership smoke" {
     try std.testing.expectEqual(@as(u8, 0), close_confirm.any);
 
     var metadata: c_api.ZideTerminalMetadata = .{};
-    try std.testing.expectEqual(@as(c_int, 0), c_api.zide_terminal_metadata_acquire(handle, &metadata));
+    var metadata_request = metadataRequest(c_api.ZIDE_TERMINAL_METADATA_INCLUDE_ALL_STRINGS);
+    try std.testing.expectEqual(@as(c_int, 0), c_api.zide_terminal_metadata_acquire(handle, &metadata_request, &metadata));
     defer c_api.zide_terminal_metadata_release(&metadata);
     try std.testing.expectEqual(c_api.ZIDE_TERMINAL_METADATA_ABI_VERSION, metadata.abi_version);
     try std.testing.expectEqual(@as(u32, @sizeOf(c_api.ZideTerminalMetadata)), metadata.struct_size);
@@ -224,7 +225,8 @@ test "ffi external transport can report child exit status" {
     try std.testing.expectEqual(@as(c_int, 0), c_api.zide_terminal_report_child_exit(handle, 23, 1));
 
     var metadata: c_api.ZideTerminalMetadata = .{};
-    try std.testing.expectEqual(@as(c_int, 0), c_api.zide_terminal_metadata_acquire(handle, &metadata));
+    var metadata_request = metadataRequest(0);
+    try std.testing.expectEqual(@as(c_int, 0), c_api.zide_terminal_metadata_acquire(handle, &metadata_request, &metadata));
     defer c_api.zide_terminal_metadata_release(&metadata);
     try std.testing.expectEqual(@as(u8, 1), metadata.has_exit_code);
     try std.testing.expectEqual(@as(i32, 23), metadata.exit_code);
@@ -276,7 +278,8 @@ test "ffi scrollback acquire exports copied rows" {
     try std.testing.expectEqual(@as(c_int, 0), c_api.zide_terminal_feed_output(handle, lines.ptr, lines.len));
 
     var metadata: c_api.ZideTerminalMetadata = .{};
-    try std.testing.expectEqual(@as(c_int, 0), c_api.zide_terminal_metadata_acquire(handle, &metadata));
+    var metadata_request = metadataRequest(0);
+    try std.testing.expectEqual(@as(c_int, 0), c_api.zide_terminal_metadata_acquire(handle, &metadata_request, &metadata));
     defer c_api.zide_terminal_metadata_release(&metadata);
     const count = metadata.scrollback_count;
     try std.testing.expect(count > 0);
@@ -340,7 +343,8 @@ test "ffi viewport controls pin snapshot scrollback offset and follow live botto
     try expectSnapshotRowText(&live_snapshot, 1, "DDDD");
 
     var live_metadata: c_api.ZideTerminalMetadata = .{};
-    try std.testing.expectEqual(@as(c_int, 0), c_api.zide_terminal_metadata_acquire(handle, &live_metadata));
+    var live_request = metadataRequest(0);
+    try std.testing.expectEqual(@as(c_int, 0), c_api.zide_terminal_metadata_acquire(handle, &live_request, &live_metadata));
     defer c_api.zide_terminal_metadata_release(&live_metadata);
     try std.testing.expectEqual(@as(u32, 0), live_metadata.scrollback_offset);
 
@@ -351,7 +355,8 @@ test "ffi viewport controls pin snapshot scrollback offset and follow live botto
     try std.testing.expectEqual(@as(c_int, 0), c_api.zide_terminal_set_scrollback_offset(handle, 1));
 
     var pinned_metadata: c_api.ZideTerminalMetadata = .{};
-    try std.testing.expectEqual(@as(c_int, 0), c_api.zide_terminal_metadata_acquire(handle, &pinned_metadata));
+    var pinned_request = metadataRequest(0);
+    try std.testing.expectEqual(@as(c_int, 0), c_api.zide_terminal_metadata_acquire(handle, &pinned_request, &pinned_metadata));
     defer c_api.zide_terminal_metadata_release(&pinned_metadata);
     try std.testing.expectEqual(@as(u32, 1), pinned_metadata.scrollback_offset);
 
@@ -370,7 +375,8 @@ test "ffi viewport controls pin snapshot scrollback offset and follow live botto
     try std.testing.expectEqual(@as(c_int, 0), c_api.zide_terminal_follow_live_bottom(handle));
 
     var restored_metadata: c_api.ZideTerminalMetadata = .{};
-    try std.testing.expectEqual(@as(c_int, 0), c_api.zide_terminal_metadata_acquire(handle, &restored_metadata));
+    var restored_request = metadataRequest(0);
+    try std.testing.expectEqual(@as(c_int, 0), c_api.zide_terminal_metadata_acquire(handle, &restored_request, &restored_metadata));
     defer c_api.zide_terminal_metadata_release(&restored_metadata);
     try std.testing.expectEqual(@as(u32, 0), restored_metadata.scrollback_offset);
 
@@ -407,7 +413,8 @@ test "ffi viewport control rejects pinned scrollback offset in alt screen" {
     try std.testing.expectEqual(@as(c_int, 1), c_api.zide_terminal_set_scrollback_offset(handle, 1));
 
     var metadata: c_api.ZideTerminalMetadata = .{};
-    try std.testing.expectEqual(@as(c_int, 0), c_api.zide_terminal_metadata_acquire(handle, &metadata));
+    var metadata_request = metadataRequest(0);
+    try std.testing.expectEqual(@as(c_int, 0), c_api.zide_terminal_metadata_acquire(handle, &metadata_request, &metadata));
     defer c_api.zide_terminal_metadata_release(&metadata);
     try std.testing.expectEqual(@as(u32, 0), metadata.scrollback_offset);
 
@@ -559,6 +566,15 @@ test "ffi can report focus and color scheme changes over PTY when enabled by app
 fn ptrBytes(ptr: ?[*]const u8, len: usize) []const u8 {
     if (len == 0) return "";
     return (ptr orelse unreachable)[0..len];
+}
+
+fn metadataRequest(include_flags: u32) c_api.ZideTerminalMetadataRequest {
+    return .{
+        .abi_version = c_api.zide_terminal_metadata_abi_version(),
+        .struct_size = @sizeOf(c_api.ZideTerminalMetadataRequest),
+        .include_flags = include_flags,
+        .reserved0 = 0,
+    };
 }
 
 fn expectSnapshotRowText(snapshot: *const c_api.ZideTerminalSnapshot, row: usize, expected: []const u8) !void {

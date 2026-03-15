@@ -312,8 +312,8 @@ Current performance note:
 - and the current ABI constraint is explicit:
   - a simple append-only tail on `ZideTerminalMetadata` is not enough by
     itself to remove title/cwd copy cost
-  - any real hot/cold split likely needs an explicit successor acquire shape,
-    not wishful thinking about struct-size growth alone
+  - that lane has now landed as an explicit request-based metadata acquire
+    shape, not wishful thinking about struct-size growth alone
 
 The snapshot should include at minimum:
 - rows/cols

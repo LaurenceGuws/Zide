@@ -48,6 +48,9 @@ This keeps the dedicated terminal smoke aligned with the mixed terminal+editor h
 The baseline smoke now also uses `metadata_acquire(...)` as its single
 lifecycle/title/cwd summary instead of reconstructing that state from multiple
 focused getters.
+That metadata path is now request-based:
+- hot scalar latest-state is always filled
+- title/cwd are requested explicitly through metadata include flags
 
 This is intentionally a no-PTY smoke today.
 
@@ -73,7 +76,7 @@ ABI-shape regression scenario:
 Shared Python host boot helpers:
 - `examples/common/ffi_host_boot.py`
   - `consume_terminal_publication_once(...)` is the shared terminal publication primitive for both dedicated and mixed hosts
-  - `consume_terminal_metadata_once(...)` is the shared terminal latest-state metadata primitive for both dedicated and mixed hosts
+  - `consume_terminal_metadata_once(...)` is the shared terminal latest-state metadata primitive for both dedicated and mixed hosts, with explicit metadata request flags
   - `consume_terminal_events_once(...)` is the shared terminal event ownership primitive for Python hosts
 
 Host migration checklist:

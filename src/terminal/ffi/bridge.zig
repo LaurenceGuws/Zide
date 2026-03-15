@@ -21,6 +21,8 @@ pub const Color = shared.Color;
 pub const Cell = shared.Cell;
 pub const Snapshot = shared.Snapshot;
 pub const ScrollbackBuffer = shared.ScrollbackBuffer;
+pub const MetadataRequest = shared.MetadataRequest;
+pub const MetadataIncludeFlags = shared.MetadataIncludeFlags;
 pub const Metadata = shared.Metadata;
 pub const RedrawState = shared.RedrawState;
 pub const CloseConfirmSignals = shared.CloseConfirmSignals;
@@ -140,8 +142,8 @@ pub fn scrollbackRelease(scrollback: *ScrollbackBuffer) void {
     core_api.scrollbackRelease(scrollback);
 }
 
-pub fn metadataAcquire(handle: ?*ZideTerminalHandle, out_metadata: *Metadata) Status {
-    return core_api.metadataAcquire(handle, out_metadata);
+pub fn metadataAcquire(handle: ?*ZideTerminalHandle, request: ?*const MetadataRequest, out_metadata: *Metadata) Status {
+    return core_api.metadataAcquire(handle, request, out_metadata);
 }
 
 pub fn metadataRelease(metadata: *Metadata) void {

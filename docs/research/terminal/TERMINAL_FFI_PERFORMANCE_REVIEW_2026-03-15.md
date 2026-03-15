@@ -208,6 +208,7 @@ The next bridge-performance lane should stay narrow:
   - scalar metadata always filled
   - title/cwd behind inclusion flags
   - unconditional acquire/release ownership
+- that request-based replacement is now the active metadata shape on `main`
 - keep the public loop discipline explicit
 - avoid widening the bridge until snapshot/diff direction is better defined
 

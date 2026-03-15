@@ -32,6 +32,9 @@ GLYPH_CLASS_POWERLINE = 1 << 4
 GLYPH_CLASS_POWERLINE_ROUNDED = 1 << 5
 DAMAGE_POLICY_ADVISORY_BOUNDS = 1 << 0
 DAMAGE_POLICY_FULL_REDRAW_SAFE_DEFAULT = 1 << 1
+METADATA_INCLUDE_TITLE = 1 << 0
+METADATA_INCLUDE_CWD = 1 << 1
+METADATA_INCLUDE_ALL_STRINGS = METADATA_INCLUDE_TITLE | METADATA_INCLUDE_CWD
 
 
 class ZideTerminalHandle(ctypes.Structure):
@@ -133,6 +136,15 @@ class Metadata(ctypes.Structure):
         ("cwd_ptr", ctypes.POINTER(ctypes.c_uint8)),
         ("cwd_len", ctypes.c_size_t),
         ("_ctx", ctypes.c_void_p),
+    ]
+
+
+class MetadataRequest(ctypes.Structure):
+    _fields_ = [
+        ("abi_version", ctypes.c_uint32),
+        ("struct_size", ctypes.c_uint32),
+        ("include_flags", ctypes.c_uint32),
+        ("reserved0", ctypes.c_uint32),
     ]
 
 
@@ -259,7 +271,7 @@ def load_library(path: Path):
     lib.zide_terminal_scrollback_acquire.restype = ctypes.c_int
     lib.zide_terminal_scrollback_release.argtypes = [ctypes.POINTER(ScrollbackBuffer)]
     lib.zide_terminal_scrollback_release.restype = None
-    lib.zide_terminal_metadata_acquire.argtypes = [HandlePtr, ctypes.POINTER(Metadata)]
+    lib.zide_terminal_metadata_acquire.argtypes = [HandlePtr, ctypes.POINTER(MetadataRequest), ctypes.POINTER(Metadata)]
     lib.zide_terminal_metadata_acquire.restype = ctypes.c_int
     lib.zide_terminal_metadata_release.argtypes = [ctypes.POINTER(Metadata)]
     lib.zide_terminal_metadata_release.restype = None
@@ -401,7 +413,9 @@ def run_smoke(lib_path: Path) -> int:
                     }
                 )
 
-            consume_terminal_metadata_once(lib, handle, Metadata, consume_metadata)
+            consume_terminal_metadata_once(
+                lib, handle, MetadataRequest, Metadata, consume_metadata, METADATA_INCLUDE_ALL_STRINGS
+            )
 
             snapshot_state.update(
                 {
@@ -515,7 +529,9 @@ def run_smoke(lib_path: Path) -> int:
             def consume_pinned_metadata(metadata: Metadata) -> None:
                 viewport_state["pinned_offset"] = metadata.scrollback_offset
 
-            consume_terminal_metadata_once(lib, handle, Metadata, consume_pinned_metadata)
+            consume_terminal_metadata_once(
+                lib, handle, MetadataRequest, Metadata, consume_pinned_metadata, METADATA_INCLUDE_ALL_STRINGS
+            )
 
         consume_terminal_publication_once(lib, handle, Snapshot, query_redraw_state, consume_pinned_snapshot)
 
@@ -528,7 +544,9 @@ def run_smoke(lib_path: Path) -> int:
             def consume_restored_metadata(metadata: Metadata) -> None:
                 viewport_state["restored_offset"] = metadata.scrollback_offset
 
-            consume_terminal_metadata_once(lib, handle, Metadata, consume_restored_metadata)
+            consume_terminal_metadata_once(
+                lib, handle, MetadataRequest, Metadata, consume_restored_metadata, METADATA_INCLUDE_ALL_STRINGS
+            )
 
         consume_terminal_publication_once(lib, handle, Snapshot, query_redraw_state, consume_restored_snapshot)
 
@@ -664,7 +682,9 @@ def run_mock_service_smoke(lib_path: Path) -> int:
                     }
                 )
 
-            consume_terminal_metadata_once(lib, handle, Metadata, consume_mock_metadata)
+            consume_terminal_metadata_once(
+                lib, handle, MetadataRequest, Metadata, consume_mock_metadata, METADATA_INCLUDE_ALL_STRINGS
+            )
             last_snapshot_state.update(
                 {
                     "title": title,
@@ -759,9 +779,13 @@ def run_abi_mismatch_smoke(lib_path: Path) -> int:
             lib.zide_terminal_scrollback_release(ctypes.byref(scrollback))
 
         metadata = Metadata()
-        metadata.abi_version = 999
-        metadata.struct_size = 1
-        status = lib.zide_terminal_metadata_acquire(handle, ctypes.byref(metadata))
+        request = MetadataRequest(
+            abi_version=lib.zide_terminal_metadata_abi_version(),
+            struct_size=ctypes.sizeof(MetadataRequest),
+            include_flags=METADATA_INCLUDE_ALL_STRINGS,
+            reserved0=0,
+        )
+        status = lib.zide_terminal_metadata_acquire(handle, ctypes.byref(request), ctypes.byref(metadata))
         if status != STATUS_OK:
             raise RuntimeError(f"metadata_acquire failed: {status}")
         try:

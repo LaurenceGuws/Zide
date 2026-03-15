@@ -108,8 +108,8 @@ pub export fn zide_terminal_scrollback_release(scrollback: *c_api.ZideTerminalSc
     c_api.zide_terminal_scrollback_release(scrollback);
 }
 
-pub export fn zide_terminal_metadata_acquire(handle: ?*c_api.ZideTerminalHandle, out_metadata: *c_api.ZideTerminalMetadata) c_int {
-    return c_api.zide_terminal_metadata_acquire(handle, out_metadata);
+pub export fn zide_terminal_metadata_acquire(handle: ?*c_api.ZideTerminalHandle, request: ?*const c_api.ZideTerminalMetadataRequest, out_metadata: *c_api.ZideTerminalMetadata) c_int {
+    return c_api.zide_terminal_metadata_acquire(handle, request, out_metadata);
 }
 
 pub export fn zide_terminal_metadata_release(metadata: *c_api.ZideTerminalMetadata) void {

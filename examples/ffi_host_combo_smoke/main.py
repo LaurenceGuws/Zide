@@ -21,6 +21,8 @@ from examples.terminal_ffi_smoke.main import (
     HandlePtr as TerminalHandlePtr,
     EventBuffer,
     Metadata,
+    MetadataRequest,
+    METADATA_INCLUDE_ALL_STRINGS,
     Snapshot,
     load_library as load_terminal_library,
     query_redraw_state,
@@ -75,8 +77,10 @@ def run_combo(terminal_lib_path: Path, editor_lib_path: Path) -> int:
             consume_terminal_metadata_once(
                 terminal_lib,
                 terminal_handle,
+                MetadataRequest,
                 Metadata,
                 consume_metadata,
+                METADATA_INCLUDE_ALL_STRINGS,
             )
 
             def consume_events(events: EventBuffer) -> None:

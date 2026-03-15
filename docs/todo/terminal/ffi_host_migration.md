@@ -5,7 +5,7 @@
 - [x] Add terminal+editor combined smoke script (`examples/ffi_host_combo_smoke/main.py`) that runs: publish terminal content, confirm redraw truth, acquire snapshot, acknowledge presentation, then run editor work and clean shutdown.
 - [x] Extract shared terminal publication consumption helper (`consume_terminal_publication_once(...)`) so mixed hosts do not hand-roll redraw-state and present-ack sequencing.
 - [x] Move the standalone terminal smoke onto the same shared publication helper so dedicated and mixed hosts validate the same redraw/present contract.
-- [x] Extract shared terminal metadata consumption helper (`consume_terminal_metadata_once(...)`) so Python hosts do not duplicate metadata acquire/release ownership boilerplate.
+- [x] Extract shared terminal metadata consumption helper (`consume_terminal_metadata_once(...)`) so Python hosts do not duplicate metadata request/acquire/release ownership boilerplate.
 - [x] Extract shared terminal event consumption helper (`consume_terminal_events_once(...)`) so Python hosts do not duplicate `event_drain(...)` / `events_free(...)` ownership boilerplate.
 - [x] Tighten the mixed terminal+editor smoke so it validates authoritative terminal metadata state, not snapshot publication alone.
 - [x] Tighten the mixed terminal+editor smoke so it validates terminal event ownership as part of the same shared host tick.
@@ -22,7 +22,7 @@
 Cross-surface event pump contract:
 - `poll_terminal_then_editor_once(...)` is the minimal shared host tick for mixed terminal/editor embedders.
 - `consume_terminal_publication_once(...)` is the shared terminal-side publication step inside that tick.
-- `consume_terminal_metadata_once(...)` is the shared terminal-side latest-state metadata step for Python hosts.
+- `consume_terminal_metadata_once(...)` is the shared terminal-side latest-state metadata step for Python hosts and owns the explicit metadata request flags too.
 - `consume_terminal_events_once(...)` is the shared terminal-side event ownership step for Python hosts.
 - Terminal-side publication/drain work runs first.
 - Terminal-side redraw truth and presentation acknowledgement are resolved before editor-side work.

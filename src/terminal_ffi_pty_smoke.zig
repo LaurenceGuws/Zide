@@ -67,7 +67,8 @@ pub fn main() !void {
 
         {
             var metadata: c_api.ZideTerminalMetadata = .{};
-            if (c_api.zide_terminal_metadata_acquire(handle, &metadata) != 0) return error.MetadataAcquireFailed;
+            var metadata_request = metadataRequest(c_api.ZIDE_TERMINAL_METADATA_INCLUDE_ALL_STRINGS);
+            if (c_api.zide_terminal_metadata_acquire(handle, &metadata_request, &metadata) != 0) return error.MetadataAcquireFailed;
             defer c_api.zide_terminal_metadata_release(&metadata);
             saw_metadata =
                 std.mem.eql(u8, ptrBytes(metadata.title_ptr, metadata.title_len), "ffi-pty-title") and
@@ -78,7 +79,8 @@ pub fn main() !void {
                 if (c_api.zide_terminal_set_scrollback_offset(handle, target_offset) != 0) return error.ViewportPinFailed;
 
                 var pinned_metadata: c_api.ZideTerminalMetadata = .{};
-                if (c_api.zide_terminal_metadata_acquire(handle, &pinned_metadata) != 0) return error.MetadataAcquireFailed;
+                var pinned_request = metadataRequest(0);
+                if (c_api.zide_terminal_metadata_acquire(handle, &pinned_request, &pinned_metadata) != 0) return error.MetadataAcquireFailed;
                 defer c_api.zide_terminal_metadata_release(&pinned_metadata);
                 if (pinned_metadata.scrollback_offset != target_offset) return error.ViewportPinOffsetMismatch;
 
@@ -94,7 +96,8 @@ pub fn main() !void {
 
                 if (c_api.zide_terminal_follow_live_bottom(handle) != 0) return error.ViewportFollowLiveBottomFailed;
                 var live_metadata: c_api.ZideTerminalMetadata = .{};
-                if (c_api.zide_terminal_metadata_acquire(handle, &live_metadata) != 0) return error.MetadataAcquireFailed;
+                var live_request = metadataRequest(0);
+                if (c_api.zide_terminal_metadata_acquire(handle, &live_request, &live_metadata) != 0) return error.MetadataAcquireFailed;
                 defer c_api.zide_terminal_metadata_release(&live_metadata);
                 if (live_metadata.scrollback_offset != 0) return error.ViewportLiveBottomOffsetMismatch;
 
@@ -215,4 +218,13 @@ fn snapshotContains(snapshot: *const c_api.ZideTerminalSnapshot, needle: []const
 fn ptrBytes(ptr: ?[*]const u8, len: usize) []const u8 {
     if (len == 0) return "";
     return (ptr orelse unreachable)[0..len];
+}
+
+fn metadataRequest(include_flags: u32) c_api.ZideTerminalMetadataRequest {
+    return .{
+        .abi_version = c_api.zide_terminal_metadata_abi_version(),
+        .struct_size = @sizeOf(c_api.ZideTerminalMetadataRequest),
+        .include_flags = include_flags,
+        .reserved0 = 0,
+    };
 }

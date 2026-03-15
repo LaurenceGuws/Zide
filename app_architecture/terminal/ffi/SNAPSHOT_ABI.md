@@ -325,8 +325,7 @@ So the next shape, if it happens, should still preserve:
 1. one authoritative redraw gate:
    - `redraw_state(...)`
 2. one authoritative latest-state summary:
-   - `metadata_acquire(...)` or an append-only successor that keeps the same
-     role
+   - request-based `metadata_acquire(...)`
 3. one authoritative presentation acknowledgement:
    - `present_ack(...)`
 
@@ -358,12 +357,12 @@ Why:
 - adding more fields at the tail can extend the shape, but it cannot on its own
   tell the backend "hot scalars only for this acquire"
 
-So the first credible evolution, if needed, is more likely one of:
+So the first credible evolution, if needed, was more likely to be:
 
-1. an append-only successor acquire shape with explicit options or flags for
-   string inclusion
-2. an append-only metadata-v2 surface that preserves one coherent latest-state
-   role while making cold-string export opt-in
+1. a replacement acquire shape with explicit options or flags for string
+   inclusion
+2. not a simple append-only struct tail pretending to solve the cold-string
+   cost problem
 
 What should still be avoided:
 
@@ -425,11 +424,9 @@ Why it is weaker:
   truth together conditionally
 - is much closer to the getter proliferation pattern we already want to avoid
 
-### Current Preference
+### Current Result
 
-Current preferred direction:
-
-- Candidate A
+Candidate A won and is now the active shape on `main`.
 
 Reason:
 
@@ -441,9 +438,7 @@ Reason:
 
 Current non-goal:
 
-- do not implement either candidate yet
-- first keep the design authority honest enough that the eventual ABI cut is
-  narrow and reviewable
+- do not reopen Candidate B unless the shared-host contract changes materially
 
 Beta-stage release rule:
 
@@ -454,18 +449,17 @@ Beta-stage release rule:
 - what still matters is not compatibility theater, but keeping the cut narrow,
   explicit, and easy for real hosts to adopt
 
-### Candidate A Contract Sketch
+### Landed Request-Based Shape
 
-If Candidate A becomes real, the smallest credible version should look like
-this conceptually:
+The landed metadata shape now looks like this conceptually:
 
 1. new acquire request struct
    - `abi_version`
    - `struct_size`
    - `include_flags`
-2. successor acquire entrypoint
-   - `metadata_acquire_v2(handle, request, out_metadata_v2)`
-3. successor metadata result
+2. metadata acquire entrypoint
+   - `metadata_acquire(handle, request, out_metadata)`
+3. metadata result
    - preserves the current hot scalar fields
    - preserves one owned-result release model
    - includes title/cwd only when requested
@@ -489,7 +483,7 @@ Guardrails:
 
 - no flags for tiny scalar subsets; hot scalars remain one coherent block
 - no flags that mutate redraw/publication semantics
-- no host expectation that `metadata_acquire_v2(...)` belongs in the render
+- no host expectation that `metadata_acquire(...)` belongs in the render
   loop
 - release semantics should stay exactly as boring as the current acquire/release
   model
@@ -507,9 +501,9 @@ If this ships during the current beta phase, the preferred landing shape is:
 - avoid carrying both the old and new forms unless the overlap is temporary and
   actively being removed
 
-### Candidate A Proposed ABI Sketch
+### Landed ABI Sketch
 
-If the beta replacement happens, the narrowest proposed shape is:
+The landed shape is:
 
 ```c
 typedef struct ZideTerminalMetadataRequest {
@@ -519,7 +513,7 @@ typedef struct ZideTerminalMetadataRequest {
     uint32_t reserved0;
 } ZideTerminalMetadataRequest;
 
-typedef struct ZideTerminalMetadataV2 {
+typedef struct ZideTerminalMetadata {
     uint32_t abi_version;
     uint32_t struct_size;
     uint32_t scrollback_count;
@@ -535,12 +529,12 @@ typedef struct ZideTerminalMetadataV2 {
     void *_ctx;
 } ZideTerminalMetadataV2;
 
-int zide_terminal_metadata_acquire_v2(
+int zide_terminal_metadata_acquire(
     ZideTerminalHandle *handle,
     const ZideTerminalMetadataRequest *request,
-    ZideTerminalMetadataV2 *out_metadata);
+    ZideTerminalMetadata *out_metadata);
 
-void zide_terminal_metadata_release_v2(ZideTerminalMetadataV2 *metadata);
+void zide_terminal_metadata_release(ZideTerminalMetadata *metadata);
 ```
 
 Suggested flags:
@@ -572,11 +566,11 @@ Why this sketch is intentionally conservative:
 - there is no per-field scalar flag soup
 - ownership stays acquire/release, not borrowed conditional pointers
 
-Replacement rule if adopted:
+Current rule:
 
-- `metadata_acquire_v2(...)` becomes the only metadata acquire surface
-- the current `metadata_acquire(...)` should be removed in the same beta lane
-  or in a tightly-coupled follow-up, not kept indefinitely
+- request-based `metadata_acquire(...)` is now the only metadata latest-state
+  surface
+- the original no-request acquire form is gone
 
 It does not create:
 

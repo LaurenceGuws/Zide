@@ -72,8 +72,10 @@ def consume_terminal_publication_once(
 def consume_terminal_metadata_once(
     terminal_lib,
     terminal_handle,
+    metadata_request_cls,
     metadata_cls,
     metadata_consumer,
+    include_flags: int,
 ) -> None:
     """Resolve one metadata acquire/release cycle for host-owned latest state.
 
@@ -83,8 +85,13 @@ def consume_terminal_metadata_once(
     - always release before returning
     """
 
+    request = metadata_request_cls()
+    request.abi_version = terminal_lib.zide_terminal_metadata_abi_version()
+    request.struct_size = ctypes.sizeof(metadata_request_cls)
+    request.include_flags = include_flags
+
     metadata = metadata_cls()
-    if terminal_lib.zide_terminal_metadata_acquire(terminal_handle, ctypes.byref(metadata)) != STATUS_OK:
+    if terminal_lib.zide_terminal_metadata_acquire(terminal_handle, ctypes.byref(request), ctypes.byref(metadata)) != STATUS_OK:
         raise RuntimeError("terminal metadata_acquire failed")
     try:
         metadata_consumer(metadata)
