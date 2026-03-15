@@ -30,11 +30,11 @@ flowchart LR
 
 ## Roadmap docs (source of truth)
 
-- `app_architecture/editor/editor_widget_todo.md` (end-to-end widget + features)
-- `app_architecture/editor/protocol_todo.md` (text engine + editing semantics)
+- `docs/todo/editor/widget.md` (end-to-end widget + features)
+- `docs/todo/editor/protocol.md` (text engine + editing semantics)
 - `app_architecture/ui/DEVELOPMENT_JOURNEY.md` (rendering stack + per-OS plan)
-- `app_architecture/editor/MODULARIZATION_PLAN.md` (layer split + migration steps)
-- `app_architecture/editor/treesitter_todo.md` (tree-sitter query + highlight integration)
+- `docs/todo/editor/modularization.md` (layer split + migration steps)
+- `docs/todo/editor/treesitter.md` (tree-sitter query + highlight integration)
 - `app_architecture/editor/treesitter_dynamic_roadmap.md` (dynamic grammar packs: fetch/compile/load)
 
 ## Decisions
@@ -54,4 +54,4 @@ flowchart LR
 2026-01-24
 - Focus shifted to tree-sitter highlight integration planning based on Neovim's
   query/highlighter pipeline. Tasks tracked in
-  `app_architecture/editor/treesitter_todo.md`.
+  `docs/todo/editor/treesitter.md`.

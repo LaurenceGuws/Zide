@@ -29,11 +29,11 @@ Follow this workflow for every feature/task:
 ## Doc scope policy
 
 - `README.md` and the hosted docs explorer are **customer-facing**.
-- `docs/` is **contributor/operator-facing**: workflow, handoff, and repo navigation.
-- `app_architecture/` is **current technical authority**: designs, active plans, and todo trackers.
+- `docs/` is **contributor/operator-facing**: workflow, handoff, repo navigation, and active work queues.
+- `app_architecture/` is **current technical authority**: designs, boundaries, and technical reasoning.
 - `app_architecture/review/` is **historical evidence**: audits, investigations, and past reviews.
 - `docs/AGENT_HANDOFF.md` is **high-level only**: focus, constraints, and entrypoint pointers for a fresh session.
-- All task progress, checkpoints, and detailed changes live in the relevant TODO docs and `app_architecture/` docs.
+- All task progress, checkpoints, and detailed changes live in the relevant `docs/todo/` files and `app_architecture/` docs.
 - If research was done to create or update a TODO item, capture it in the relevant `app_architecture/` doc (not in handoff).
 - See `docs/WORKFLOW.md` for the normative doc-placement and docs-usage guide.
 

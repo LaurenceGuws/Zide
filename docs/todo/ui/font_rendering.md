@@ -20,8 +20,8 @@ Make editor and terminal text rendering competitive with modern terminals: crisp
 
 - Architecture: `app_architecture/ui/font_rendering_architecture.md`
 - Special glyph coverage: `app_architecture/ui/terminal_special_glyph_coverage.md`
-- Special glyph execution plan: `app_architecture/ui/terminal_special_glyph_todo.md`
-- Ligature track: `app_architecture/ui/terminal_ligatures_todo.md`
+- Special glyph execution plan: `docs/todo/ui/terminal_special_glyphs.md`
+- Ligature track: `docs/todo/ui/terminal_ligatures.md`
 - Zide code: `src/ui/terminal_font.zig`, `src/ui/renderer/gl_backend.zig`, `src/ui/renderer/font_manager.zig`, `src/ui/renderer/text_draw.zig`
 
 ## Validation Commands

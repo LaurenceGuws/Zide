@@ -16,16 +16,16 @@ project landing page.
 - `docs/WORKFLOW.md` — doc roles and update rules.
 
 ## Task tracking (source of truth)
-- `app_architecture/*todo*.md` — active task lists and status.
-  - `app_architecture/repo_structure_todo.md` — non-product repo structure cleanup (tests, tools, stale docs/tests).
-  - `app_architecture/file_layout_todo.md` — file/folder layout cleanup queue (split large folders/files, collapse low-value micro-files).
-  - `app_architecture/terminal/vt_core_rearchitecture_todo.md` — next terminal-core redesign lane: VT core, FFI-first boundary, and transport separation.
-  - `app_architecture/ui/renderer_todo.md` — renderer modularization + OS abstraction.
-  - `app_architecture/ui/ui_widget_modularization_todo.md` — UI widget modularization (TerminalWidget/UI splits).
-  - `app_architecture/ui/font_rendering_todo.md` — font rendering strategy + implementation plan (kitty/ghostty-tier goals).
-  - `app_architecture/ui/sdl3_migration_todo.md` — SDL3 migration tracker.
-  - `app_architecture/dependencies_todo.md` — Zig-managed dependency migration plan (SDL3/FreeType/HarfBuzz/Lua/tree-sitter).
-  - `app_architecture/terminal/terminal_tabs_todo.md` — terminal-only tab/workspace lifecycle plan for `--mode terminal` and FFI follow-on.
+- `docs/todo/README.md` — active work-queue policy and ownership split.
+  - `docs/todo/repo_structure.md` — non-product repo structure cleanup (tests, tools, stale docs/tests).
+  - `docs/todo/file_layout.md` — file/folder layout cleanup queue (split large folders/files, collapse low-value micro-files).
+  - `docs/todo/terminal/vt_core_rearchitecture.md` — next terminal-core redesign lane: VT core, FFI-first boundary, and transport separation.
+  - `docs/todo/ui/renderer.md` — renderer modularization + OS abstraction.
+  - `docs/todo/ui/widget_modularization.md` — UI widget modularization (TerminalWidget/UI splits).
+  - `docs/todo/ui/font_rendering.md` — font rendering strategy + implementation plan (kitty/ghostty-tier goals).
+  - `docs/todo/ui/sdl3_migration.md` — SDL3 migration tracker.
+  - `docs/todo/dependencies.md` — Zig-managed dependency migration plan (SDL3/FreeType/HarfBuzz/Lua/tree-sitter).
+  - `docs/todo/terminal/tabs.md` — terminal-only tab/workspace lifecycle plan for `--mode terminal` and FFI follow-on.
 
 ## Architecture + design
 - `app_architecture/ui/DEVELOPMENT_JOURNEY.md` — renderer plan and per-OS journey.
@@ -36,8 +36,8 @@ project landing page.
 - `app_architecture/terminal/DESIGN.md` — terminal architecture + decisions.
 - `app_architecture/terminal/TERMINAL_WORKSPACE.md` — backend tab/workspace ownership contract for terminal mode.
 - `app_architecture/terminal/VT_CORE_DESIGN.md` — exact target split for terminal core, transport, host session, snapshot, and FFI.
-- `app_architecture/terminal/ffi_bridge_todo.md` — terminal backend embeddability / FFI bridge plan.
-- `app_architecture/terminal/ffi_host_migration_todo.md` — combined terminal/editor FFI host migration follow-up checklist.
+- `docs/todo/terminal/ffi_bridge.md` — terminal backend embeddability / FFI bridge plan.
+- `docs/todo/terminal/ffi_host_migration.md` — combined terminal/editor FFI host migration follow-up checklist.
 - `app_architecture/terminal/FFI_BRIDGE_DESIGN.md` — terminal bridge shape, ownership model, and smoke-host plan.
 - `app_architecture/terminal/FFI_EVENT_INVENTORY.md` — host-facing terminal events and export classification.
 - `app_architecture/terminal/FFI_EVENT_ABI.md` — exported event buffer layout, payload semantics, and ownership rules.
@@ -53,7 +53,7 @@ project landing page.
 - `app_architecture/BOOTSTRAP.md` — dependencies, bootstrap, build, run, test.
 - `tools/docs_explorer/README.md` — run instructions for the local docs explorer.
 - `app_architecture/CONFIG.md` — Lua config subsystem: parser surface, merge rules, runtime consumers, and reload truth.
-- `app_architecture/config_todo.md` — config subsystem tracker: contract drift, reload gaps, validation, and binding semantics.
+- `docs/todo/config.md` — config subsystem tracker: contract drift, reload gaps, validation, and binding semantics.
 - `docs/DEPENDENCIES.md` — current dependency sourcing policy: Zig-managed app stack on Linux/macOS, platform-runtime requirements, and Windows `vcpkg` exception.
 - `docs/terminal/compatibility.md` — current beta terminal support surface, TERM identity, and terminfo install instructions.
 
@@ -70,6 +70,6 @@ records are now grouped under `app_architecture/review/archive/`.
 
 - Use `docs/WORKFLOW.md` as the normative doc-placement policy.
 - `README.md` and the hosted docs explorer are customer-facing.
-- `docs/` is for active workflow, contributor/operator guidance, and top-level reference docs.
-- `app_architecture/` is for current designs, plans, and todo trackers.
+- `docs/` is for active workflow, contributor/operator guidance, top-level reference docs, and active work queues.
+- `app_architecture/` is for current designs, boundaries, and technical authority.
 - `app_architecture/review/` is for historical reviews, audits, and investigation records.

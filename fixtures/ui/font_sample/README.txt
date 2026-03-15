@@ -146,7 +146,7 @@ Baseline flip handling:
   rendering/capture pipeline changes, refresh fixtures with:
   `tools/font_sample_compare.sh --update-fixtures --strict-header`
 - Only do this after the change is documented in
-  `app_architecture/ui/font_rendering_todo.md` and approved.
+  `docs/todo/ui/font_rendering.md` and approved.
 - After refresh, rerun:
   - `tools/font_sample_compare.sh --strict-header`
   - `tools/font_sample_validate_ppm.sh`

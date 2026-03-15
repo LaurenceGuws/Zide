@@ -53,7 +53,7 @@ Those files read like repository maintenance tools, not runtime product modules.
 The current doc surface is broad:
 
 - `docs/` for workflow/handoff/high-level operator docs
-- `app_architecture/` for active architecture docs, todos, reviews, migration records, and historical investigations
+- `app_architecture/` for active architecture docs, design authority, and technical research
 - fixture/evidence style outputs also exist outside docs, for example terminal replay `.json` files under `fixtures/terminal/`
 
 There is no explicit lifecycle rule for:
@@ -112,7 +112,7 @@ Adopt one repo tooling root:
 Adopt a three-way distinction:
 
 - `docs/` = active operator workflow and top-level contributor guidance
-- `app_architecture/` = active architecture specs, current plans, and current todos
+- `app_architecture/` = active architecture specs and technical authority
 - `app_architecture/review/` = historical reviews and investigation records
 
 Additionally:
@@ -124,7 +124,7 @@ Status:
 
 - doc lifecycle policy is now explicitly recorded in `docs/WORKFLOW.md` and summarized in `docs/INDEX.md`
 - the next cleanup slices should target obvious placement/naming outliers before broader stale-doc deletion
-- first cleanup slice landed: the old root-level `app_architecture/terminal_editor_ffi_host_migration_beta_todo.md` outlier was re-homed to `app_architecture/terminal/ffi_host_migration_todo.md`
+- first cleanup slice landed: the old root-level `app_architecture/terminal_editor_ffi_host_migration_beta_todo.md` outlier was re-homed to `docs/todo/terminal/ffi_host_migration.md`
 - second cleanup slice landed: mode-layering validation and binary-size baseline records were re-homed from `docs/` into `app_architecture/review/`
 - third cleanup slice landed: redundant `docs/AGENT_HOVER.md` was removed so there is one authoritative high-level handoff surface
 - fourth cleanup slice landed: stale `app_architecture/PLANNING.md` was removed because its remaining content already had clearer owners elsewhere

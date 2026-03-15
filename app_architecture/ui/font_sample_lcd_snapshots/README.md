@@ -62,4 +62,4 @@ Retention guidance:
 
 - Keep at least the latest 5 snapshot folders.
 - If snapshots accumulate, remove the oldest after preserving any milestone
-  snapshot referenced by `app_architecture/ui/font_rendering_todo.md`.
+  snapshot referenced by `docs/todo/ui/font_rendering.md`.

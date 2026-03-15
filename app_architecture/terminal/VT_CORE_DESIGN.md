@@ -24,7 +24,7 @@ lane so code changes do not drift between "session cleanup", "FFI cleanup", and
 This doc is the concrete follow-up to:
 
 - `app_architecture/review/TERMINAL_CORE_ARCHITECTURE_REVIEW_2026-03-10.md`
-- `app_architecture/terminal/vt_core_rearchitecture_todo.md`
+- `docs/todo/terminal/vt_core_rearchitecture.md`
 
 Authority note:
 
@@ -172,7 +172,7 @@ Current rule:
 - use this file for durable engine ownership and migration decisions
 - use `app_architecture/review/TERMINAL_CORE_ARCHITECTURE_REVIEW_2026-03-10.md`
   for the architecture review that led to this split
-- use `app_architecture/terminal/WAYLAND_PRESENT_IMPLEMENTATION_PLAN.md` for
+- use `docs/todo/terminal/wayland_present.md` for
   current present-path ownership and post-rewrite renderer/present status
 - use `app_architecture/terminal/research/wayland_present/` for issue-specific
   present research and evidence

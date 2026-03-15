@@ -13,7 +13,7 @@ Status note, 2026-03-15:
 - Current design authority lives in:
   - `app_architecture/terminal/VT_CORE_DESIGN.md`
   - `app_architecture/terminal/DESIGN.md`
-  - `app_architecture/terminal/WAYLAND_PRESENT_IMPLEMENTATION_PLAN.md`
+  - `docs/todo/terminal/wayland_present.md`
 - Any API row still marked `pending` or `to be verified` should be treated as
   an open contract-hardening item, not as a guaranteed stable public contract.
 
@@ -178,6 +178,6 @@ Use `zig build check-terminal-imports` to enforce these rules.
 | harness | any (test-only) |
 
 ## Fixture Scope (authoritative)
-- VT replay fixtures: see `app_architecture/terminal/MODULARIZATION_PLAN.md`
+- VT replay fixtures: see `docs/todo/terminal/modularization.md`
 - Harness API fixtures (selection)
 - Encoder unit tests (CSI-u)

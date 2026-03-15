@@ -13,8 +13,8 @@ Modularize UI widgets into smaller, testable units while preserving behavior and
 
 ## Context
 
-- Renderer work is tracked in `app_architecture/ui/renderer_todo.md`.
-- SDL3 migration is tracked in `app_architecture/ui/sdl3_migration_todo.md`.
+- Renderer work is tracked in `docs/todo/ui/renderer.md`.
+- SDL3 migration is tracked in `docs/todo/ui/sdl3_migration.md`.
 
 ```mermaid
 flowchart TB

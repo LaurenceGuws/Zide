@@ -12,8 +12,8 @@ Status note, 2026-03-15:
   not in the main authority path.
 - Current editor architecture context also lives in:
   - `app_architecture/editor/DESIGN.md`
-  - `app_architecture/editor/editor_widget_todo.md`
-  - `app_architecture/editor/protocol_todo.md`
+  - `docs/todo/editor/widget.md`
+  - `docs/todo/editor/protocol.md`
 
 ## Scope
 - Editor widget + text engine + syntax + rendering pipeline (editor-side).
@@ -26,7 +26,7 @@ Status note, 2026-03-15:
 - Behavior changes require a harness-backed baseline (now in place for editor render).
 
 ## Related Tracking
-- Tree-sitter integration tasks live in `app_architecture/editor/treesitter_todo.md`.
+- Tree-sitter integration tasks live in `docs/todo/editor/treesitter.md`.
 
 ## Target Layer Split
 1) UI Widget (input + draw orchestration)

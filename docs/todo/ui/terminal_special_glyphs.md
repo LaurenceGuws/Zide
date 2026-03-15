@@ -14,7 +14,7 @@ Build a high-quality terminal special-glyph pipeline for powerline, shades, box,
 ## Authority
 
 - Coverage matrix: `app_architecture/ui/terminal_special_glyph_coverage.md`
-- Parent rendering track: `app_architecture/ui/font_rendering_todo.md`
+- Parent rendering track: `docs/todo/ui/font_rendering.md`
 
 ## Acceptance Criteria
 
