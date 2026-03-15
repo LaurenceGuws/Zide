@@ -29,15 +29,15 @@ Quick reading guide:
   - `docs/todo/editor/README.md` — editor queue map and execution lanes.
   - `docs/todo/repo_structure.md` — non-product repo structure cleanup (tests, tools, stale docs/tests).
   - `docs/todo/file_layout.md` — file/folder layout cleanup queue (split large folders/files, collapse low-value micro-files).
-  - `docs/todo/terminal/vt_core_rearchitecture.md` — next terminal-core redesign lane: VT core, FFI-first boundary, and transport separation.
-  - `docs/todo/terminal/damage_tracking.md` — damage/dirty tracking follow-up for redraw correctness and publication ownership.
+  - `docs/todo/terminal/vt_core_rearchitecture.md` — highest-value remaining terminal-core structural work.
+  - `docs/todo/terminal/ffi_bridge.md` — terminal FFI/embedding contract maturation.
+  - `docs/todo/terminal/ffi_host_migration.md` — mixed terminal/editor host migration follow-up.
+  - `docs/todo/terminal/tabs.md` — terminal-only tab/workspace lifecycle follow-up.
+  - `docs/todo/terminal/wayland_present.md` — architectural authority for the landed present path.
   - `docs/todo/editor/treesitter_dynamic_roadmap.md` — dynamic grammar-pack rollout queue and execution order.
-  - `docs/todo/ui/renderer.md` — renderer modularization + OS abstraction.
-  - `docs/todo/ui/widget_modularization.md` — UI widget modularization (TerminalWidget/UI splits).
-  - `docs/todo/ui/font_rendering.md` — font rendering strategy + implementation plan (kitty/ghostty-tier goals).
-  - `docs/todo/ui/sdl3_migration.md` — SDL3 migration tracker.
+  - `docs/todo/ui/terminal_special_glyphs.md` — active terminal UI quality lane for special glyphs.
+  - `docs/todo/ui/font_rendering.md` — remaining text-rendering quality work.
   - `docs/todo/dependencies.md` — Zig-managed dependency migration plan (SDL3/FreeType/HarfBuzz/Lua/tree-sitter).
-  - `docs/todo/terminal/tabs.md` — terminal-only tab/workspace lifecycle plan for `--mode terminal` and FFI follow-on.
 
 ## Architecture + design
 - `app_architecture/ui/DEVELOPMENT_JOURNEY.md` — renderer plan and per-OS journey.
