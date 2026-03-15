@@ -23,9 +23,6 @@ Status note, 2026-03-14:
   and quality validation on top of this design.
 - `rain` remains explicitly out of the active validation matrix until future
   special-character / visual-polish work.
-- Current session bug focus is Codex CLI scrolling compatibility, which is
-  currently being treated as an app-compatibility investigation rather than a
-  generic native wheel-input failure.
 
 Authority note:
 
@@ -185,22 +182,17 @@ Rollback boundary:
 
 - renderer-local, no widget/publication ownership changes
 
-Current status:
+Current landed shape:
 
-- first slice landed in `src/ui/renderer.zig`
-- renderer now owns explicit scene-target state plus contract snapshotting for:
+- renderer owns explicit scene-target state plus contract snapshotting for:
   - logical size
   - drawable size
   - display index
   - render scale
-- those boundaries now invalidate/destroy stale scene-target state without
-  changing the active direct-default composition path yet
-- renderer-local visibility also exists now under `renderer.scene_target`,
-  logging only on invalidation, recreate failure, and ready transitions when
-  that tag is enabled
-- the next Phase 1 slice is now landed too: the scene target is created and
-  cleared on recreate during frame startup, then the renderer returns to the
-  default target so active composition semantics still do not change yet
+- those boundaries invalidate/destroy stale scene-target state without reviving
+  direct-default ownership
+- scene-target create/recreate/clear happens during frame startup while keeping
+  the renderer-owned target lifecycle explicit
 
 ### Phase 2: Route Final UI Composition Into the Scene Target
 
@@ -234,29 +226,16 @@ Rollback boundary:
 
 - renderer composition path only; terminal-core publication untouched
 
-Current status:
+Current landed shape:
 
-- first Phase 2 slice landed in `src/ui/renderer.zig`
-- `beginFrame()` now composes into the renderer-owned scene target when it is
-  available
-- `endFrame()` now performs one explicit scene-to-default draw before the
-  existing swap/probe path
+- `beginFrame()` composes into the renderer-owned scene target when available
+- `endFrame()` performs one explicit scene-to-default draw before swap
 - widget-local retained targets remain unchanged
-- follow-up fixes on that same Phase 2 path are now landed too:
-  - terminal/editor subpasses restore to the active main composition target
-    instead of blindly rebinding the default framebuffer
-  - the final scene-to-default draw overwrites rather than blends into the
-    default framebuffer
-  - special glyph sprite quads now use snapped edge-to-edge geometry
-  - shaded block glyphs (`░▒▓`) now render analytically as continuous
-    fractional-coverage fills instead of relying on the sprite-atlas path
-- current live result on this Phase 2 path:
-  - `nvim` scrolling/cursorline ghosting is gone in normal use
-  - the old `btop` shaded-block corruption is gone too
-  - fullscreen `rain` is no longer part of the active present-path validation
-    matrix; keep it deferred for future special-character / visual-polish work
-  - remaining validation should now stay on other TUI/special lanes and then
-    move to present-ack ownership, not back to direct-default main composition
+- terminal/editor subpasses restore to the active main composition target
+- the final scene-to-default draw overwrites rather than blends into the
+  default framebuffer
+- special glyph and shaded-block follow-up fixes are on the landed scene-target
+  path, not on a revived direct-default path
 
 ### Phase 3: Rebind Present Acknowledgement to Renderer Scene Truth
 
