@@ -235,6 +235,27 @@ pub const TerminalCore = struct {
         return self.history.scrollOffset();
     }
 
+    pub fn clearSelection(self: *TerminalCore) void {
+        self.history.clearSelection();
+    }
+
+    pub fn startSelection(self: *TerminalCore, row: usize, col: usize) void {
+        self.history.startSelection(row, col);
+    }
+
+    pub fn updateSelection(self: *TerminalCore, row: usize, col: usize) void {
+        self.history.updateSelection(row, col);
+    }
+
+    pub fn finishSelection(self: *TerminalCore) void {
+        self.history.finishSelection();
+    }
+
+    pub fn selectionState(self: *TerminalCore) ?types.TerminalSelection {
+        if (self.active == .alt) return null;
+        return self.history.selectionState();
+    }
+
     pub fn semanticPromptActive(self: *const TerminalCore) bool {
         return self.semantic_prompt.input_active or self.semantic_prompt.output_active;
     }
