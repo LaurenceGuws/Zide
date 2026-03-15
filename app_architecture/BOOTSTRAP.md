@@ -152,7 +152,7 @@ Current runtime TERM selection order is:
 - `xterm-256color`
 
 For the full compatibility surface, use
-[`docs/terminal/compatibility.md`](/home/home/personal/zide/docs/terminal/compatibility.md).
+[`docs/reference/terminal_compatibility.md`](/home/home/personal/zide/docs/reference/terminal_compatibility.md).
 
 ## Tree-sitter Grammar Packs
 

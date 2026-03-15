@@ -174,7 +174,7 @@ Launcher behavior:
 - packaged installs are expected to rely on installed terminfo paths
 
 For the user-facing compatibility surface, use
-[`docs/terminal/compatibility.md`](/home/home/personal/zide/docs/terminal/compatibility.md).
+[`docs/reference/terminal_compatibility.md`](/home/home/personal/zide/docs/reference/terminal_compatibility.md).
 
 ## Notes
 

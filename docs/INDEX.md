@@ -55,16 +55,22 @@ project landing page.
 - `app_architecture/CONFIG.md` — Lua config subsystem: parser surface, merge rules, runtime consumers, and reload truth.
 - `docs/todo/config.md` — config subsystem tracker: contract drift, reload gaps, validation, and binding semantics.
 - `docs/DEPENDENCIES.md` — current dependency sourcing policy: Zig-managed app stack on Linux/macOS, platform-runtime requirements, and Windows `vcpkg` exception.
-- `docs/terminal/compatibility.md` — current beta terminal support surface, TERM identity, and terminfo install instructions.
+- `docs/reference/terminal_compatibility.md` — current beta terminal support surface, TERM identity, and terminfo install instructions.
+
+## Research + Reference
+- `docs/reference/README.md` — reference-doc placement and role.
+- `docs/research/README.md` — research-doc placement and role.
+- `docs/reference/terminal_compatibility.md` — terminal compatibility, TERM identity, and terminfo install instructions.
+- `docs/research/terminal/wayland_present/` — platform/present research and reference writeups for the Wayland present lane.
 
 ## Reviews And Audits
-- `app_architecture/review/` — past review notes (scope + date in file).
-  - `app_architecture/review/TERMINAL_CORE_ARCHITECTURE_REVIEW_2026-03-10.md` — Ghostty-informed review of remaining terminal-core architectural blockers.
-  - `app_architecture/review/PERFORMANCE_REVIEW_1.md` — historical UI/terminal performance audit that still contains useful ownership notes.
+- `docs/review/` — past review notes (scope + date in file).
+  - `docs/review/TERMINAL_CORE_ARCHITECTURE_REVIEW_2026-03-10.md` — Ghostty-informed review of remaining terminal-core architectural blockers.
+  - `docs/review/PERFORMANCE_REVIEW_1.md` — historical UI/terminal performance audit that still contains useful ownership notes.
 
-Historical evidence remains under `app_architecture/review/`, but most files in
+Historical evidence remains under `docs/review/`, but most files in
 that folder are no longer first-class navigation docs. Older completed rollout
-records are now grouped under `app_architecture/review/archive/`.
+records are now grouped under `docs/review/archive/`.
 
 ## Quick Ownership Rules
 
@@ -72,4 +78,5 @@ records are now grouped under `app_architecture/review/archive/`.
 - `README.md` and the hosted docs explorer are customer-facing.
 - `docs/` is for active workflow, contributor/operator guidance, top-level reference docs, and active work queues.
 - `app_architecture/` is for current designs, boundaries, and technical authority.
-- `app_architecture/review/` is for historical reviews, audits, and investigation records.
+- `docs/research/` and `docs/reference/` are for exploratory and reference material that should not masquerade as current architecture authority.
+- `docs/review/` is for historical reviews, audits, and investigation records.

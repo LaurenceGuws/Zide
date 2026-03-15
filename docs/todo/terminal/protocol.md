@@ -31,5 +31,5 @@ As of 2026-01-19, the core protocol backlog is mostly closed: CSI parameter hand
 - [-] `IMG-01` Implement kitty graphics protocol parity.
   Notes: parser, transmit/display/delete, anchoring, layering, storage limits, basic replies, parented placements, and direct/file/temp/shm media are in place. Remaining work is full parity and deferred action families, not first support.
 - [-] `TERM-01` Complete the terminfo feature parity sweep.
-  Notes: `docs/terminal/compatibility.md`, `terminfo/zide.terminfo`, `xterm-zide` TERM selection, compiled-terminfo smoke, and replay-backed identity queries are in place. Further capability expansion still needs feature-by-feature audit.
+  Notes: `docs/reference/terminal_compatibility.md`, `terminfo/zide.terminfo`, `xterm-zide` TERM selection, compiled-terminfo smoke, and replay-backed identity queries are in place. Further capability expansion still needs feature-by-feature audit.
 

@@ -157,7 +157,7 @@ dependency-source policy.
 
 Use:
 
-- [`docs/terminal/compatibility.md`](/home/home/personal/zide/docs/terminal/compatibility.md)
+- [`docs/reference/terminal_compatibility.md`](/home/home/personal/zide/docs/reference/terminal_compatibility.md)
 - [`app_architecture/terminal/VT_CORE_DESIGN.md`](/home/home/personal/zide/app_architecture/terminal/VT_CORE_DESIGN.md)
 
 ## Remaining Work

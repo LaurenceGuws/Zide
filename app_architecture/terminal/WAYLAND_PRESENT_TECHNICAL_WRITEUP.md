@@ -10,7 +10,7 @@ This writeup is the bridge between:
 - the high-level brief in
   [WAYLAND_PRESENT_DESIGN_BRIEF.md](/home/home/personal/zide/app_architecture/terminal/WAYLAND_PRESENT_DESIGN_BRIEF.md)
 - the temporary topic reports under
-  [research/wayland_present](/home/home/personal/zide/app_architecture/terminal/research/wayland_present)
+  [research/wayland_present](/home/home/personal/zide/docs/research/terminal/wayland_present)
 - the implementation plan that will follow from this document
 
 ## Problem Summary
@@ -41,7 +41,7 @@ on preserved default-framebuffer state on Wayland?
 
 ### 1. SDL/Wayland present is not a thin `swap()` abstraction
 
-From [wp_01_sdl_wayland_egl_contract.md](/home/home/personal/zide/app_architecture/terminal/research/wayland_present/wp_01_sdl_wayland_egl_contract.md):
+From [wp_01_sdl_wayland_egl_contract.md](/home/home/personal/zide/docs/research/terminal/wayland_present/wp_01_sdl_wayland_egl_contract.md):
 
 - SDL's generic `SDL_GL_SwapWindow()` documentation is too coarse to be the
   real authority on Wayland.
@@ -58,7 +58,7 @@ Implication:
 
 ### 2. The EGL window-surface contract is destructive by default
 
-From [wp_02_mesa_egl_surface_semantics.md](/home/home/personal/zide/app_architecture/terminal/research/wayland_present/wp_02_mesa_egl_surface_semantics.md):
+From [wp_02_mesa_egl_surface_semantics.md](/home/home/personal/zide/docs/research/terminal/wayland_present/wp_02_mesa_egl_surface_semantics.md):
 
 - Mesa's generic EGL surface initialization treats window-surface swap as
   destructive unless preserved-swap support is explicitly advertised and used.
@@ -75,7 +75,7 @@ Implication:
 
 ### 3. The best native references do not trust vague default-buffer behavior
 
-From [wp_03_reference_terminal_architectures.md](/home/home/personal/zide/app_architecture/terminal/research/wayland_present/wp_03_reference_terminal_architectures.md):
+From [wp_03_reference_terminal_architectures.md](/home/home/personal/zide/docs/research/terminal/wayland_present/wp_03_reference_terminal_architectures.md):
 
 - Ghostty isolates framebuffer ownership explicitly.
 - Foot keeps authoritative buffer contents and explicit damage under its own
@@ -93,7 +93,7 @@ Implication:
 
 ### 4. Zide's current ownership is almost right, except at the final seam
 
-From [wp_04_zide_present_seam_ownership.md](/home/home/personal/zide/app_architecture/terminal/research/wayland_present/wp_04_zide_present_seam_ownership.md):
+From [wp_04_zide_present_seam_ownership.md](/home/home/personal/zide/docs/research/terminal/wayland_present/wp_04_zide_present_seam_ownership.md):
 
 - terminal core already owns publication truth
 - terminal widget already owns terminal-content consumption and texture-update
@@ -115,7 +115,7 @@ Implication:
 ### 5. Narrow damage should survive; only the final present boundary should
 become disposable
 
-From [wp_05_damage_upload_composition_strategy.md](/home/home/personal/zide/app_architecture/terminal/research/wayland_present/wp_05_damage_upload_composition_strategy.md):
+From [wp_05_damage_upload_composition_strategy.md](/home/home/personal/zide/docs/research/terminal/wayland_present/wp_05_damage_upload_composition_strategy.md):
 
 - Full redraw everywhere is not acceptable.
 - Current row/span-local terminal damage and partial uploads are valuable and
@@ -132,7 +132,7 @@ Implication:
 
 ### 6. Resize and display migration are first-class present concerns
 
-From [wp_06_resize_scale_display_migration.md](/home/home/personal/zide/app_architecture/terminal/research/wayland_present/wp_06_resize_scale_display_migration.md):
+From [wp_06_resize_scale_display_migration.md](/home/home/personal/zide/docs/research/terminal/wayland_present/wp_06_resize_scale_display_migration.md):
 
 - drawable pixels are already the right authority for actual render targets
 - Zide's current two-stage resize flow is structurally good:
@@ -148,7 +148,7 @@ Implication:
 
 ### 7. The diagnostic contract already points at the right future shape
 
-From [wp_07_observability_validation_contract.md](/home/home/personal/zide/app_architecture/terminal/research/wayland_present/wp_07_observability_validation_contract.md):
+From [wp_07_observability_validation_contract.md](/home/home/personal/zide/docs/research/terminal/wayland_present/wp_07_observability_validation_contract.md):
 
 - startup contract logs are cheap and decisive
 - suspicious-frame probes are useful when they are issue-scoped and

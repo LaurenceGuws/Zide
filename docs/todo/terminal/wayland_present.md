@@ -29,7 +29,7 @@ Authority note:
 - This file is the current architectural authority for the landed scene-owned
   present path.
 - Historical debug evidence and reference digging belong in
-  `app_architecture/terminal/research/wayland_present/` and relevant review
+  `docs/research/terminal/wayland_present/` and relevant review
   docs, not in this plan once they stop changing the ownership model.
 - Treat the phase notes below as the record of what landed and the remaining
   validation semantics, not as an open invitation to resurrect the removed
