@@ -22,6 +22,14 @@ Renderer modularization and OS abstraction boundaries, with Linux SDL3 plus Open
 - [x] Extraction phase complete
 - [x] `zig build` check passed on 2026-01-31
 
+Status note, 2026-03-15:
+
+- This is no longer a high-churn execution queue.
+- The major renderer-path architectural work has already moved into the
+  terminal present and post-rewrite bug-hunting lanes.
+- Treat this file as a narrow maintenance queue for renderer modularization,
+  not as the main renderer roadmap.
+
 ## Boundary Map
 
 ```mermaid

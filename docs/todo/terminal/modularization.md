@@ -2,6 +2,14 @@
 
 Date: 2026-01-24
 
+Status note, 2026-03-15:
+
+- This file is now mostly a historical extraction ledger plus safety rules.
+- The broad modularization lane is no longer the main terminal blocker.
+- Active structural work should default to
+  [vt_core_rearchitecture.md](/home/home/personal/zide/docs/todo/terminal/vt_core_rearchitecture.md),
+  not this file.
+
 Goal: split the terminal implementation into clear layers with a stable API surface, while preserving behavior and minimizing regressions.
 
 Current follow-up:

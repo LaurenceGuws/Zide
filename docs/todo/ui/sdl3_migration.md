@@ -10,6 +10,13 @@ Add the SDL3 path behind a switch, validate it, then keep SDL3 as the default an
 - Keep logging output identical where practical.
 - Treat shim work as extraction-only.
 
+Status note, 2026-03-15:
+
+- This lane is effectively closed.
+- SDL3 is the default/live path now.
+- The only remaining item here is cleanup of temporary logging residue if any is
+  still worth carrying.
+
 ## TODO
 
 - [x] `S0-01` Add SDL3 build path behind a switch
@@ -24,4 +31,3 @@ Add the SDL3 path behind a switch, validate it, then keep SDL3 as the default an
 - [x] `S4-02` Fix SDL3 text input pointer lifetime
 - [ ] `S4-03` Clean up temporary SDL3 input logging
 - [x] `S5-01` Drop the fallback build
-

@@ -4,6 +4,21 @@
 
 Build a best-in-class embedded terminal widget for Zide, Linux first.
 
+Status note, 2026-03-15:
+
+- This file is no longer an accurate primary execution queue.
+- Large parts of the original widget backlog are already landed, split, or
+  superseded by the newer terminal-core, present-path, and UI-specific todo
+  files.
+- Use this file as historical backlog/context only unless a task clearly still
+  belongs here.
+- Active follow-up should usually go to:
+  - `docs/todo/terminal/vt_core_rearchitecture.md`
+  - `docs/todo/terminal/wayland_present.md`
+  - `docs/todo/terminal/protocol.md`
+  - `docs/todo/ui/terminal_special_glyphs.md`
+  - `docs/todo/ui/renderer.md`
+
 ## Constraints
 
 - Keep the fast path strong for ASCII monospace workloads.

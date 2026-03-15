@@ -11,6 +11,14 @@ Modularize UI widgets into smaller, testable units while preserving behavior and
 - Preserve existing interaction and appearance.
 - Enforce existing import and layering checks.
 
+Status note, 2026-03-15:
+
+- This queue is mostly complete.
+- The remaining live items are boundary cleanup and verification, not broad
+  widget extraction anymore.
+- The most important remaining item here is still `UI-TB-03`, because it
+  overlaps with the terminal publication/present ownership cleanup.
+
 ## Context
 
 - Renderer work is tracked in `docs/todo/ui/renderer.md`.
