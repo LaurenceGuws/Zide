@@ -28,6 +28,10 @@ requiring a frontend framework or backend service.
   - emits browser ESM into `build/js`
 - `styles/base.css`
   - stylesheet manifest/import root
+- `design/README.md`
+  - focused design authority for explorer widget/system seams
+- `design/TREE_WIDGET.md`
+  - current tree connector/highlight direction
 - `styles/theme.css`
   - theme tokens and derived shell/control/viewer surface formulas
 - `styles/shell.css`
@@ -289,6 +293,9 @@ Everything else should prefer:
 
 Current likely next candidates:
 
+- `design/TREE_WIDGET.md`
+  - use this as the authority for the tree connector rewrite instead of letting
+    the implementation drift through CSS-only tweaks
 - `styles/theme.css`
   - keep the base-palette vs derived-material split obvious
 - `ts/docs/view_state.ts`

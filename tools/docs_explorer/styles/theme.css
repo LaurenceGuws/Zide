@@ -54,6 +54,8 @@
   --tree-icon: color-mix(in srgb, var(--ink) 68%, var(--muted) 32%);
   --tree-caret: color-mix(in srgb, var(--ink) 72%, var(--muted) 28%);
   --tree-icon-active: var(--active-link);
+  --tree-connector: color-mix(in srgb, var(--tree-guide) 88%, transparent 12%);
+  --tree-connector-active: var(--tree-active);
   --tree-link-active-bg: linear-gradient(
     90deg,
     var(--viewer-callout-surface) 0%,
@@ -115,6 +117,8 @@
   --tree-icon: color-mix(in srgb, var(--ink) 68%, var(--muted) 32%);
   --tree-caret: color-mix(in srgb, var(--ink) 72%, var(--muted) 28%);
   --tree-icon-active: var(--active-link);
+  --tree-connector: color-mix(in srgb, var(--tree-guide) 88%, transparent 12%);
+  --tree-connector-active: var(--tree-active);
   --tree-link-active-bg: linear-gradient(
     90deg,
     var(--viewer-callout-surface) 0%,

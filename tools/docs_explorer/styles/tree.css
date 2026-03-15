@@ -25,6 +25,8 @@
 .tree {
   overflow: auto;
   padding: 4px 8px 14px;
+  --tree-row-step: 31px;
+  --tree-row-mid: 24px;
 }
 
 .tree ul {
@@ -42,10 +44,15 @@
   margin: 1px 0;
 }
 
+.tree-item {
+  position: relative;
+}
+
 .tree-folder > summary {
   list-style: none;
   cursor: pointer;
   user-select: none;
+  position: relative;
   display: flex;
   align-items: center;
   gap: 6px;
@@ -128,9 +135,10 @@
 
 .folder-children {
   margin-left: 12px;
-  padding-left: 8px;
+  padding-left: 12px;
   border-left: 1px solid var(--tree-guide);
   margin-top: 2px;
+  position: relative;
 }
 
 .tree-folder[open] > .folder-children {
@@ -138,7 +146,18 @@
 }
 
 .tree-folder.active-branch > .folder-children {
-  border-left-color: var(--tree-active);
+  border-left-color: var(--tree-guide);
+}
+
+.tree-folder.active-branch > .folder-children::before {
+  content: "";
+  position: absolute;
+  left: -1px;
+  top: 0;
+  height: calc(
+    (var(--active-branch-index, 0) * var(--tree-row-step)) + var(--tree-row-mid)
+  );
+  border-left: 1px solid var(--tree-active);
 }
 
 .folder-dir-list,
@@ -174,6 +193,22 @@
   min-width: 0;
   overflow: hidden;
   border-left: 1px solid transparent;
+}
+
+.folder-children > .folder-dir-list > .tree-item::before,
+.folder-children > .folder-file-list > .tree-item::before {
+  content: "";
+  position: absolute;
+  left: -12px;
+  top: 16px;
+  width: 10px;
+  height: 1px;
+  background: var(--tree-connector);
+}
+
+.folder-children > .folder-dir-list > .tree-item.active-path-child::before,
+.folder-children > .folder-file-list > .tree-item.active-path-child::before {
+  background: var(--tree-connector-active);
 }
 
 .doc-link-label,

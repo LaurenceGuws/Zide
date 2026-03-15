@@ -11,6 +11,7 @@ Current entrypoints:
 
 - `docs_explorer.py`: lightweight local HTTP launcher
 - `index.html`: HTML shell
+- `design/`: focused explorer design docs for non-trivial widget/system seams
 - `styles/base.css`: stylesheet import root
 - `ts/`: TypeScript source modules
   - `docs/`: document routing/rendering/view state
@@ -83,3 +84,5 @@ Notes:
   `main`.
 - Release-branch Pages publication should keep `.nojekyll` at the repo root so
   GitHub serves the static explorer directly.
+- For design-heavy internal cleanup, use [design/README.md](/home/home/personal/zide/tools/docs_explorer/design/README.md)
+  the same way the main repo uses architecture docs.

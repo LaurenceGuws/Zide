@@ -2,6 +2,18 @@
 
 ## Current Priority
 
+### Tree widget cleanup
+
+- [ ] Replace the current active-branch connector approximation with true
+      row-owned tree geometry.
+      - Every row should own:
+        - vertical continuation
+        - horizontal elbow
+        - active-path highlight
+      - Do not keep extending the current container-height hack.
+      - Authority:
+        - [design/TREE_WIDGET.md](/home/home/personal/zide/tools/docs_explorer/design/TREE_WIDGET.md)
+
 ### Theme and shell cleanup
 
 - [~] Keep the shell theme system token-driven instead of letting component CSS
