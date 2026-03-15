@@ -29,6 +29,7 @@ const session_selection = @import("session_selection.zig");
 const session_input = @import("session_input.zig");
 const session_interaction = @import("session_interaction.zig");
 const session_input_snapshot = @import("session_input_snapshot.zig");
+const session_presentation_feedback = @import("session_presentation_feedback.zig");
 const session_rendering = @import("session_rendering.zig");
 const session_protocol = @import("session_protocol.zig");
 const session_config = @import("session_config.zig");
@@ -66,20 +67,8 @@ pub const ClickSelectionResult = session_selection.ClickSelectionResult;
 pub const SessionMetadata = session_host_queries.SessionMetadata;
 pub const PresentedRenderCache = session_rendering.PresentedRenderCache;
 pub const PresentationCapture = session_rendering.PresentationCapture;
-
-pub const AltExitPresentationInfo = struct {
-    draw_ms: f64,
-    rows: usize,
-    cols: usize,
-    history_len: usize,
-    scroll_offset: usize,
-};
-
-pub const PresentationFeedback = struct {
-    presented: ?PresentedRenderCache = null,
-    texture_updated: bool = false,
-    alt_exit_info: ?AltExitPresentationInfo = null,
-};
+pub const AltExitPresentationInfo = session_presentation_feedback.AltExitPresentationInfo;
+pub const PresentationFeedback = session_presentation_feedback.PresentationFeedback;
 
 pub const PtyWriteGuard = terminal_transport.Writer;
 pub const InputSnapshot = session_input_snapshot.InputSnapshot;
