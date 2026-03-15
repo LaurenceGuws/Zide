@@ -1,4 +1,5 @@
 :root {
+  /* Base palette */
   --font-ui: "IBM Plex Sans", "Segoe UI", sans-serif;
   --font-diagram: "IBM Plex Sans", "Segoe UI", sans-serif;
   --bg: #0d1117;
@@ -30,6 +31,8 @@
   --mermaid-cluster: #121922;
   --mermaid-cluster-border: #344153;
   --mermaid-label-bg: #11161d;
+
+  /* Derived shell/pane materials */
   --shell-atmo-accent: color-mix(in srgb, var(--accent) 34%, transparent 66%);
   --shell-atmo-cool: color-mix(in srgb, var(--panel-3) 24%, transparent 76%);
   --shell-atmo-depth: color-mix(in srgb, var(--bg) 78%, black 22%);
@@ -40,11 +43,14 @@
   --header-control-surface: color-mix(in srgb, var(--shell-header-surface) 52%, transparent 48%);
   --control-surface: color-mix(in srgb, var(--panel) 18%, transparent 82%);
   --menu-surface: color-mix(in srgb, var(--panel-3) 88%, black 12%);
+
+  /* Viewer-specific surfaces */
   --viewer-callout-surface: color-mix(in srgb, var(--accent-soft) 72%, transparent 28%);
   --viewer-raised-surface: color-mix(in srgb, var(--panel-2) 76%, black 24%);
 }
 
 :root[data-theme="light"] {
+  /* Base palette */
   --bg: #ece6da;
   --bg-2: #ddd6c8;
   --panel: #f6f1e6;
@@ -74,6 +80,8 @@
   --mermaid-cluster: #f6efe4;
   --mermaid-cluster-border: #c5b49b;
   --mermaid-label-bg: #f6f1e6;
+
+  /* Derived shell/pane materials */
   --shell-atmo-accent: color-mix(in srgb, var(--accent) 26%, transparent 74%);
   --shell-atmo-cool: color-mix(in srgb, var(--panel-3) 30%, transparent 70%);
   --shell-atmo-depth: color-mix(in srgb, var(--bg) 88%, white 12%);
@@ -84,6 +92,8 @@
   --header-control-surface: color-mix(in srgb, var(--shell-header-surface) 58%, transparent 42%);
   --control-surface: color-mix(in srgb, var(--panel) 24%, transparent 76%);
   --menu-surface: color-mix(in srgb, var(--panel-3) 90%, white 10%);
+
+  /* Viewer-specific surfaces */
   --viewer-callout-surface: color-mix(in srgb, var(--accent-soft) 68%, transparent 32%);
   --viewer-raised-surface: color-mix(in srgb, var(--panel) 84%, var(--panel-3) 16%);
 }

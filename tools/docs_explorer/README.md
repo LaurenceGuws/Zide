@@ -64,6 +64,8 @@ Notes:
 
 - `ts/` is the source tree.
 - `build/js/` is generated output and is intentionally not checked in.
+- The mapping is direct: files under `ts/` compile to browser ESM under
+  `build/js/`, preserving the same subtree layout.
 - The launcher expects `build/js/main.js` to exist and will tell you to run the
   build step if it is missing.
 - `main` stays source-only for this tool.

@@ -8,16 +8,14 @@ import {
 import { getAppShell } from "./shell/shell_dom.js";
 import { loadProjectConfig } from "./config.js";
 import { createDocController } from "./docs/doc_controller.js";
-import { renderHighlightedCode } from "./docs/highlight.js";
 import {
   installSidebarControls,
   syncResponsiveSidebarState,
 } from "./layout.js";
 import { configureMarked } from "./docs/markdown.js";
 import { initMermaidForTheme } from "./docs/mermaid.js";
-import { installOptionsMenu } from "./options_menu.js";
-import { createAppState, persistTheme, setTheme } from "./state.js";
-import { applyTheme } from "./theme/theme.js";
+import { createAppState } from "./state.js";
+import { installThemeControls } from "./theme/theme_controls.js";
 
 export async function startApp(): Promise<void> {
   const hljs = window.hljs;
@@ -50,37 +48,12 @@ export async function startApp(): Promise<void> {
   window.addEventListener("resize", () =>
     syncResponsiveSidebarState(shell.appEl, state),
   );
-  installOptionsMenu({
+  installThemeControls({
     state,
-    optionsToggleEl: shell.optionsToggleEl,
-    optionsMenuEl: shell.optionsMenuEl,
-    onThemeToggle(registerClose: () => void) {
-      const handleThemeToggle = async (): Promise<void> => {
-        const nextTheme = state.theme === "dark" ? "light" : "dark";
-        registerClose();
-        setTheme(state, nextTheme);
-        await applyTheme(
-          shell.rootEl,
-          shell.themeToggleEl,
-          state.theme,
-          persistTheme,
-          () => docController.rerenderDiagramsForTheme(),
-        );
-        syncHighlightTheme(shell, state.theme);
-        renderHighlightedCode(hljs, shell.viewerEl);
-      };
-
-      shell.themeToggleEl.addEventListener(
-        "click",
-        async (event: MouseEvent) => {
-          event.stopPropagation();
-          await handleThemeToggle();
-        },
-      );
-      shell.themeRowEl.addEventListener("click", async () => {
-        await handleThemeToggle();
-      });
-    },
+    shell,
+    docController,
+    hljs,
+    onThemeApplied: () => syncHighlightTheme(shell, state.theme),
   });
   installSidebarControls({
     appEl: shell.appEl,
