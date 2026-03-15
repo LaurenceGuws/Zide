@@ -62,10 +62,13 @@ This doc is the concrete follow-up to:
 
 - `docs/review/TERMINAL_CORE_ARCHITECTURE_REVIEW_2026-03-10.md`
 - `docs/todo/terminal/vt_core_rearchitecture.md`
+- `app_architecture/terminal/TERMINAL_SUBSYSTEM_LAYERS.md`
 
 Authority note:
 
 - This file is the active design authority for the engine/core split.
+- `app_architecture/terminal/TERMINAL_SUBSYSTEM_LAYERS.md` is the companion
+  authority for finer subsystem layering inside that split.
 - Replay-lane evidence, renderer bug forensics, and one-off compatibility
   investigations should live in `docs/review/` or
   `docs/research/terminal/` once they stop changing the engine
@@ -97,6 +100,21 @@ flowchart TD
     Flutter["Flutter / FFI host"] --> External
     Tests["Replay harness / tests"] --> Replay
 ```
+
+## Finer Layering
+
+Use `app_architecture/terminal/TERMINAL_SUBSYSTEM_LAYERS.md` when the question
+is not "where is the core boundary?" but "which subsystem layer should own this
+exact behavior?" That companion doc breaks the stack into:
+
+- host layer
+- input contract layer
+- transport layer
+- engine layer
+- publication layer
+- presentation layer
+
+and provides finer diagrams for native and FFI host flows.
 
 ## Main Goal
 

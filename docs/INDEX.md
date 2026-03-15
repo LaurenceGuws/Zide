@@ -48,6 +48,7 @@ Quick reading guide:
 - `app_architecture/terminal/DESIGN.md` — terminal architecture + decisions.
 - `app_architecture/terminal/TERMINAL_WORKSPACE.md` — backend tab/workspace ownership contract for terminal mode.
 - `app_architecture/terminal/VT_CORE_DESIGN.md` — exact target split for terminal core, transport, host session, snapshot, and FFI.
+- `app_architecture/terminal/TERMINAL_SUBSYSTEM_LAYERS.md` — finer subsystem-layer ownership map for host, transport, engine, publication, and presentation.
 - `docs/todo/terminal/ffi_bridge.md` — terminal backend embeddability / FFI bridge plan.
 - `docs/todo/terminal/ffi_host_migration.md` — combined terminal/editor FFI host migration follow-up checklist.
 - `app_architecture/terminal/ffi/BRIDGE_DESIGN.md` — terminal bridge shape, ownership model, and smoke-host plan.

@@ -12,6 +12,9 @@ Continue the post-rewrite split that makes the terminal core the architectural c
 - Prefer clean ownership cuts over compatibility sludge.
 - Treat the native GUI as the reference host for the engine contract, not as a
   privileged terminal path with different semantics from FFI.
+- Use `app_architecture/terminal/TERMINAL_SUBSYSTEM_LAYERS.md` when deciding
+  which subsystem layer should own a change; do not infer ownership only from
+  file placement or historical session structure.
 
 ## Current Direction
 

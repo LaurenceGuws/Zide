@@ -67,6 +67,61 @@ flowchart LR
 
 The bridge sits above the terminal backend and below host UI/render code.
 
+## Finer Host-Contract Layers
+
+Use `app_architecture/terminal/TERMINAL_SUBSYSTEM_LAYERS.md` for the global
+terminal layer map. This bridge doc narrows that same layering to the exported
+FFI host contract.
+
+```mermaid
+flowchart TD
+    Host["Foreign host<br/>Flutter / Python / C / Rust"]
+    Input["Host input + reports<br/>text / key / mouse / focus / color scheme / viewport"]
+    Bridge["FFI bridge<br/>opaque handles + ABI structs"]
+    Transport["PTY or external transport"]
+    Engine["TerminalCore"]
+    Publication["snapshot / metadata / events / redraw / viewport state"]
+    Present["present_ack / acknowledged generation"]
+
+    Host --> Input
+    Input --> Bridge
+    Bridge --> Transport
+    Transport --> Engine
+    Engine --> Publication
+    Publication --> Host
+    Host --> Present
+    Present --> Bridge
+```
+
+Bridge-specific ownership rule:
+
+- the bridge should expose shared engine semantics explicitly
+- the bridge should not leak renderer-private or widget-private assumptions
+- if the native reference host can express a host-facing semantic through the
+  intended engine contract, the FFI host should be able to express the same
+  semantic without reconstructing it from side channels
+
+### Bridge layer responsibilities
+
+1. Host layer
+   - owns runtime loop, UI, painting, and local platform integration
+   - consumes snapshot/metadata/events/redraw state
+   - reports external state honestly
+2. Input/reporting layer
+   - sends text, keys, mouse, resize, focus, color-scheme, and viewport
+     control into the backend
+   - should stay semantically aligned with the native reference host
+3. Bridge ABI layer
+   - owns opaque handles, ABI structs, paired frees, and status reporting
+   - must stay boring and bindable
+4. Transport/engine layer
+   - stays inside Zide
+   - owns byte movement, protocol execution, screen/history/model semantics
+5. Publication/present layer
+   - exports authoritative state
+   - keeps redraw/publication/present acknowledgement explicit instead of
+     implicit host guesswork
+
 Host responsibilities:
 - create/destroy session
 - start session / spawn child
@@ -278,6 +333,10 @@ Current bridge catch-up already landed:
 - `zide_terminal_close_confirm_signals(handle, &signals)`
 - `zide_terminal_close_confirm_abi_version()`
 - `zide_terminal_clipboard_write(handle, out_string)`
+- `zide_terminal_set_scrollback_offset(handle, offset_rows)`
+- `zide_terminal_follow_live_bottom(handle)`
+- `zide_terminal_report_focus_changed(handle, focused, &reported)`
+- `zide_terminal_report_color_scheme_changed(handle, dark, &reported)`
 - `zide_terminal_clipboard_abi_version()`
 - `zide_terminal_needs_redraw(handle)`
 

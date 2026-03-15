@@ -11,6 +11,10 @@ Define an embeddable terminal backend surface with stable FFI-oriented contracts
 - Export explicit ownership and paired free functions for owned buffers.
 - Keep the first bridge synchronous and narrow.
 - Do not treat the ABI as frozen before smoke-host coverage exists.
+- Use `app_architecture/terminal/ffi/BRIDGE_DESIGN.md` together with
+  `app_architecture/terminal/TERMINAL_SUBSYSTEM_LAYERS.md` when judging
+  whether a bridge change belongs to the shared host contract or to a
+  native-only/runtime-only layer.
 
 ## Status
 
