@@ -477,6 +477,13 @@ Current external-host result:
     - title/cwd moved from implicit always-present metadata reads
     - to explicit cached state
   - redraw, viewport, and lifecycle behavior did not regress
+- a later downstream re-check against upstream `4c2a953e` also confirmed the
+  viewport-pinning regression is closed:
+  - viewport pinning now changes acquired snapshot content on current `main`
+  - the request-based snapshot binding update was straightforward
+  - the redraw path naturally uses `include_flags = 0`
+  - no runtime/controller/widget fork was needed
+  - no local workaround logic was required
 
 Current external-host result now includes lifecycle convergence too:
 

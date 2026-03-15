@@ -126,6 +126,13 @@ Current judgment:
   - title/cwd cleanup moved to explicit cached state instead of assuming every
     metadata read carried strings
   - no redraw/viewport/lifecycle regressions were observed
+- Latest downstream snapshot answer: the request-based snapshot acquire cut was
+  also clean in Flutty after the upstream viewport fix in `4c2a953e`:
+  - binding update was straightforward
+  - render-path usage naturally stayed on `include_flags = 0`
+  - viewport pinning now changes visible snapshot content on current `main`
+  - no runtime/controller/widget fork was needed
+  - no local workaround logic was required
 - The next upstream performance lane should stay narrow:
   - keep `pending_input` as the coarse outbound batch seam
   - keep hosts disciplined around redraw-driven snapshot usage
