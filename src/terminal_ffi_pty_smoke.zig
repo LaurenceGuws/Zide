@@ -2,6 +2,7 @@ const std = @import("std");
 const builtin = @import("builtin");
 const app_logger = @import("app_logger.zig");
 const c_api = @import("terminal/ffi/c_api.zig");
+const terminal = @import("terminal/core/terminal.zig");
 
 pub fn main() !void {
     if (builtin.os.tag == .windows) return;
@@ -16,8 +17,14 @@ pub fn main() !void {
     if (c_api.zide_terminal_start(handle, "/bin/sh") != 0) return error.StartFailed;
 
     const command =
-        "printf '\\033]0;ffi-pty-title\\007\\033]7;file://localhost/tmp/ffi-pty\\007\\033[?1004h\\033[?2031hffi-pty\\n'; exit 7\n";
-    if (c_api.zide_terminal_send_bytes(handle, command.ptr, command.len) != 0) return error.SendFailed;
+        "printf '\\033]0;ffi-pty-title\\007\\033]7;file://localhost/tmp/ffi-pty\\007\\033[?1004h\\033[?2031hffi-pty\\n'; exit 7";
+    if (c_api.zide_terminal_send_text(handle, command.ptr, command.len) != 0) return error.SendTextFailed;
+
+    const enter_event = c_api.ZideTerminalKeyEvent{
+        .key = terminal.VTERM_KEY_ENTER,
+        .modifiers = terminal.VTERM_MOD_NONE,
+    };
+    if (c_api.zide_terminal_send_key(handle, &enter_event) != 0) return error.SendEnterFailed;
 
     const deadline = std.time.milliTimestamp() + 4000;
     var saw_marker = false;

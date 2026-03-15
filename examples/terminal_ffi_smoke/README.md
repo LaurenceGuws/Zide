@@ -98,7 +98,8 @@ The PTY-backed foreign-host smoke is kept separate from the Python `ctypes` host
 
 Behavior:
 - starts `/bin/sh` on Unix-like systems
-- sends a small command over the bridge
+- sends a small command over the bridge using `send_text(...)`
+- submits it with `send_key(... Enter ...)`
 - polls until output appears or the child exits
 - requires `redraw_ready` on PTY-driven visible updates
 - resolves the same redraw-state -> snapshot -> `present_ack(...)` cycle as the dedicated and mixed host smokes
