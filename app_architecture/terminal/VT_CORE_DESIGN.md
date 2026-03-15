@@ -392,6 +392,33 @@ These must be explicit contracts:
 - drain host-visible events
 - resize core state
 
+```mermaid
+flowchart LR
+    subgraph Engine["Engine-owned"]
+        Core["TerminalCore"]
+        Snapshot["TerminalSnapshot"]
+        Events["core-visible events"]
+    end
+
+    subgraph Boundary["Boundary peers"]
+        Transport["TerminalTransport"]
+        Encoder["TerminalInputEncoder"]
+    end
+
+    subgraph Host["Host/runtime-owned"]
+        Session["PtyTerminalSession / host wrapper"]
+        Renderer["Renderer / foreign host"]
+    end
+
+    Session --> Transport
+    Session --> Encoder
+    Transport --> Core
+    Core --> Snapshot
+    Core --> Events
+    Snapshot --> Renderer
+    Events --> Session
+```
+
 ## Event Model
 
 ```mermaid
@@ -484,6 +511,17 @@ they do not need.
   `TerminalSession` host-wrapper methods instead of raw transport assembly
 - at this point higher-level setup callers no longer need raw
   `terminal_transport.attach*/detach*` for normal session assembly paths
+
+```mermaid
+flowchart TD
+    Host["Foreign host / desktop host"] --> API["FFI / host API layer"]
+    API --> Transport["TerminalTransport"]
+    API --> Encoder["TerminalInputEncoder"]
+    Transport --> Core["TerminalCore"]
+    Core --> Snapshot["Snapshot + metadata + events"]
+    Snapshot --> API
+    API --> Host
+```
 
 The external-host lifecycle contract also moved forward:
 

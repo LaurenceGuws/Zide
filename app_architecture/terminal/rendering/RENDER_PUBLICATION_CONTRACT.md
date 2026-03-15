@@ -103,6 +103,18 @@ Native-only specialization of host responsibilities:
 
 It does not become publication truth.
 
+```mermaid
+flowchart LR
+    Core["Terminal core / backend"] -->|publish generation + damage| Published["Published snapshot truth"]
+    Published -->|wake hint| Host["Host / scheduler"]
+    Host -->|draw / present| Presented["Presented frame"]
+    Presented -->|ack generation| Ack["Acknowledged generation"]
+    Ack --> Core
+
+    Core -. no frame pacing .-> Host
+    Host -. no publication truth .-> Published
+```
+
 ## Shared State Model
 
 Every host path should be explainable in terms of these states:
@@ -204,6 +216,21 @@ That means the native path now distinguishes:
 - latest terminal presentation feedback flushed after submission
 
 This is the stronger host-side contract the FFI path is catching up to.
+
+```mermaid
+sequenceDiagram
+    participant Core as Terminal backend
+    participant Widget as Terminal widget
+    participant Renderer as Renderer
+    participant Host as Frame loop
+
+    Core->>Widget: published generation + damage
+    Widget->>Host: wake / redraw request
+    Host->>Renderer: begin frame
+    Renderer->>Renderer: compose authoritative scene
+    Renderer->>Host: submission result + sequence
+    Host->>Core: present acknowledgement after successful submission
+```
 
 ## FFI Mapping
 
