@@ -34,10 +34,16 @@ export function syncThemeVariables(
     "--panel",
     "--panel-2",
     "--panel-3",
+    "--ink",
+    "--muted",
+    "--line",
+    "--line-soft",
     "--accent",
     "--accent-soft",
     "--accent-strong",
     "--active-link",
+    "--code",
+    "--tree-active",
   ];
 
   for (const varName of varNames) {

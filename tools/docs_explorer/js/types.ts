@@ -6,11 +6,17 @@ export type ProjectPalette = {
   accentSoft?: string;
   accentStrong?: string;
   activeLink?: string;
+  code?: string;
+  ink?: string;
+  line?: string;
+  lineSoft?: string;
+  muted?: string;
   panel?: string;
   panel2?: string;
   panel3?: string;
   bg?: string;
   bg2?: string;
+  treeActive?: string;
 };
 
 export type ProjectThemeConfig = {

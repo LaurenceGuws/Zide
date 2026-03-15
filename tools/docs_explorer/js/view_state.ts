@@ -44,9 +44,13 @@ export function setDocumentError(
 export function renderDocumentChrome(
   state: AppState,
   shell: AppShell,
+  appIconPath: string,
   docs: string[] = [],
 ): void {
-  shell.titleEl.innerHTML = `Zide Docs Explorer - ${renderBreadcrumb(state.document.title, docs)}`;
+  shell.titleEl.innerHTML =
+    `<span class="app-wordmark"><img class="app-wordmark-mark" src="${escapeHtml(appIconPath)}" alt="" aria-hidden="true" />ide Docs Explorer</span>` +
+    `<span class="app-wordmark-sep" aria-hidden="true">-</span>` +
+    `${renderBreadcrumb(state.document.title, docs)}`;
   shell.subtitleEl.textContent = state.document.subtitle;
   shell.rawLinkEl.href = state.document.rawLink;
 }
