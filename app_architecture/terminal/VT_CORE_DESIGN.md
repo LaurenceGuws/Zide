@@ -4,113 +4,61 @@ Date: 2026-03-10
 
 Status note, 2026-03-14:
 
-- The initial VT/render rewrite phase is no longer the main active lane.
-- The current phase is post-rewrite cleanup/restructure and native/FFI
-  convergence against the rewritten architecture.
-- Recently closed native compatibility bugs:
+- Current phase:
+  - the initial VT/render rewrite phase is no longer the main active lane
+  - the active lane is now post-rewrite cleanup/restructure plus native/FFI
+    convergence
+- Recently closed native bugs:
   - Codex inline resume history now feeds real primary scrollback on the
-    rewritten path instead of collapsing to the visible pre-viewport band.
+    rewritten path instead of collapsing to the visible pre-viewport band
   - Zig `std.Progress` redraw now rewrites in place correctly because
     reverse-index (`ESC M`) dispatch no longer falls through a dead C1 control
-    path.
-  - Focused native input latency is back in the good pre-rewrite band because
+    path
+  - focused native input latency is back in the good pre-rewrite band because
     idle waiting now wakes on SDL events instead of sleeping blindly through
-    focused input windows.
-- Session-facade shrink work continues in small extraction-only cuts; input-mode
-  snapshot state, presentation-feedback structs, session init options,
-  host-query structs, and remaining session-facing public type aliases now live
-  in dedicated `src/terminal/core/session_*` modules instead of inline in
-  `terminal_session.zig`; the scrollback/viewport content wrapper now also
-  routes through `src/terminal/core/session_content_api.zig` instead of being
-  spelled out directly on the root facade, and the public selection wrapper is
-  now aliased directly from `src/terminal/core/session_selection.zig` rather
-  than being re-declared method-by-method in `terminal_session.zig`; the public
-  host/query surface is now also aliased directly from
-  `src/terminal/core/session_queries.zig` and
-  `src/terminal/core/session_host_queries.zig` instead of being repeated in the
-  root facade; the interaction/mode surface is now also aliased directly from
-  `src/terminal/core/session_interaction.zig` instead of being re-declared in
-  `terminal_session.zig`; host metadata and close-confirm queries now also go
-  through core-owned accessors for title/cwd/scrollback offset/semantic prompt
-  state instead of reading raw `self.core` fields directly; clipboard-related
-  host semantics now also go through core-owned OSC/OSC5522 buffer helpers
-  instead of mutating raw core buffers from session helpers; sync-update state
-  and scrollback count/offset rendering metadata now also route through
-  `TerminalCore` accessors/mutators instead of direct session-side field/history
-  access; the backend-owned viewport/scrollback path now also routes through
-  `TerminalCore` scrollback accessors/mutators instead of raw history
-  choreography in `scrollback_view.zig`; config-driven view-cache publication
-  paths now also consume
-  `TerminalCore` scrollback accessors instead of reaching into history
-  directly; column-mode reset/clear-generation behavior now also routes through
-  a core-owned mutator instead of session-side field choreography; default-color
-  and ANSI remap behavior now also route through core-owned mutators instead of
-  direct screen/history/palette mutation from `session_config`; the remaining
-  palette snapshot/reset and dynamic-color update helpers in `session_config`
-  now also delegate through `TerminalCore` instead of raw palette/default-color
-  field choreography; save/restore cursor plus saved-charset state now also
-  live on `TerminalCore` instead of session-style helper choreography in
-  `state_reset.zig`; parser control/reset state for SO/SI, ESC entry, parser
-  reset, and saved-charset clearing now also route through `TerminalCore`
-  instead of direct parser-field mutation from control/reset helpers; OSC
-  title/cwd buffer clearing, append, and publish/default-title operations now
-  also route through `TerminalCore` instead of direct core-buffer mutation from
-  OSC protocol helpers; selection state clear/start/update/finish/read now also
-  route through `TerminalCore` instead of raw history selection mutation from
-  the selection helper path; resize/reflow now also restores or clears
-  selection through `TerminalCore` instead of mutating raw history-selection
-  internals directly; full reset now also lives on `TerminalCore` instead of
-  open-coded core-field mutation in `terminal_core_reset.zig`; child-exit truth
-  polling/reporting now also lives behind `session_lifecycle.zig` instead of
-  being split between `session_runtime.zig` and host-query code; transport
-  open/attach/close, writer access, outgoing-drain, and resize-report
-  choreography now also lives behind `session_transport_runtime.zig` instead of
-  staying bundled inside `session_runtime.zig`; thread shutdown and queued-IO /
-  backlog observation now also lives behind `session_thread_runtime.zig`
-  instead of staying open-coded in `session_runtime.zig`.
-- Input encoding remains on the dedicated subsystem path: writer-agnostic
-  encoder coverage exists at both the fake-writer level and the real
-  PTY-backed `TerminalSession` writer boundary.
-- The main remaining gap versus a cleaner `libghostty-vt`-quality engine
-  boundary is still structural: `TerminalSession` remains heavier than the
-  desired host wrapper around `TerminalCore`. But after the recent host-query,
-  clipboard, sync-update, column-mode, and palette/default-color ownership
-  cuts, the next highest-value work is no longer "keep trimming session for its
-  own sake." The stronger priority is keeping the public FFI/core contract in
-  lockstep with the best semantics the native reference host can reach.
-- Important comparison nuance:
-  - Ghostty is still ahead on making the engine obviously be the engine.
-  - Zide is no longer obviously behind on host-facing terminal contract
-    richness; recent FFI work means Zide already exports a broader host-facing
-    surface than Ghostty's current public `libghostty-vt` umbrella.
-  - So the remaining gap is primarily center-of-gravity and ownership clarity,
-    not "we need to catch up by exporting more random API."
-- More specifically, the strongest remaining gap is no longer raw VT
-  semantics living all over the root session facade. It is that
-  `session_runtime.zig`, `session_rendering.zig`, the publication-state seam,
-  the publication-updates seam, and the presentation-handoff seam still
-  carry a lot of thread/runtime and publication/present assembly around
-  `TerminalCore`, which keeps `TerminalSession` heavier than the cleaner
-  Ghostty-style engine center.
-- That runtime/publication lane has also moved materially since the first
-  comparison writeup:
-  - lifecycle truth now lives behind `session_lifecycle.zig`
-  - transport attach/open/close and outgoing-drain logic now lives behind
-    `session_transport_runtime.zig`
-  - thread/runtime teardown now lives behind `session_thread_runtime.zig`
-  - publication generation state now lives behind
-    `session_publication_state.zig`
-  - presentation handoff now lives behind
-    `session_presentation_handoff.zig`
-  - publication update choreography now lives behind
-    `session_publication_updates.zig`
-  - PTY poll publication wake/update behavior now lives behind
-    `pty_poll_publication.zig`
-- After those cuts, `session_runtime.zig` and `session_rendering.zig` are
-  closer to orchestration shells than semantic owners. That means the next
-  strongest lane is no longer "keep extracting for symmetry"; it is likely the
-  FFI snapshot/export maturity lane unless another comparably coherent
-  engine-ownership seam appears.
+    focused input windows
+- Landed ownership cuts now include:
+  - session-facade cleanup
+    - input-mode snapshot state, presentation-feedback structs, init options,
+      host-query structs, and public type aliases now live in dedicated
+      `session_*` modules instead of inline in `terminal_session.zig`
+    - the content, selection, host-query, and interaction facades now alias
+      focused modules instead of being hand-redeclared on the root session
+  - engine ownership
+    - host metadata, close-confirm, clipboard, sync-update, viewport,
+      scrollback, column-mode reset, palette/default-color mutation, parser
+      control/reset, OSC title/cwd buffers, selection, resize/reflow
+      selection restoration, and full reset now route through `TerminalCore`
+      instead of direct session-side field or history mutation
+  - runtime/publication cleanup
+    - lifecycle truth now lives behind `session_lifecycle.zig`
+    - transport attach/open/close, writer access, outgoing drain, and resize
+      reporting now live behind `session_transport_runtime.zig`
+    - thread teardown and queued-IO/backlog observation now live behind
+      `session_thread_runtime.zig`
+    - publication generation state, publication updates, presentation handoff,
+      and PTY poll publication wake/update choreography now live behind
+      focused helper seams instead of one large session blob
+- Input encoding remains on the dedicated subsystem path:
+  - writer-agnostic encoder coverage exists at both the fake-writer level and
+    the real PTY-backed `TerminalSession` writer boundary
+- Current architectural read:
+  - Ghostty is still ahead on making the engine obviously be the engine
+  - Zide is no longer obviously behind on host-facing contract richness; the
+    public FFI surface is already broader than Ghostty's current public
+    `libghostty-vt` umbrella
+  - the main remaining gap is therefore center-of-gravity and ownership
+    clarity, not "export more API"
+- Current highest-value remaining gap:
+  - raw VT semantics are no longer scattered mainly across the root session
+    facade
+  - the stronger remaining weight is the runtime/publication shell around
+    `TerminalCore`, especially the orchestration still centered in
+    `session_runtime.zig` and `session_rendering.zig`
+  - after the recent extractions, those files are closer to orchestration
+    shells than semantic owners, so the next strongest lane is likely FFI
+    snapshot/export maturity unless another comparably coherent engine-ownership
+    seam appears
 
 Purpose: define the exact ownership split for the next terminal-core redesign
 lane so code changes do not drift between "session cleanup", "FFI cleanup", and
@@ -139,9 +87,10 @@ flowchart LR
     Host["Desktop host / FFI host / replay host"] --> Session["PtyTerminalSession or host wrapper"]
     Session --> Transport["TerminalTransport"]
     Session --> Core["TerminalCore"]
-    Transport --> Core
-    Core --> Snapshot["TerminalSnapshot / damage / metadata"]
-    Snapshot --> Renderer["Renderer or foreign host"]
+    Transport <--> Core
+    Core --> Publication["TerminalSnapshot / metadata / events"]
+    Publication --> Renderer["Renderer or foreign host"]
+    Renderer -. present ack / viewport / host reports .-> Session
 ```
 
 ## Host Variants
@@ -150,13 +99,30 @@ flowchart LR
 flowchart TD
     Core["TerminalCore"]
 
-    Pty["PTY transport"] --> Core
-    External["External byte-stream transport"] --> Core
+    Pty["PTY transport"] <--> Core
+    External["External byte-stream transport"] <--> Core
     Replay["Replay / fixture transport"] --> Core
 
     Desktop["Desktop runtime wrapper"] --> Pty
     Flutter["Flutter / FFI host"] --> External
     Tests["Replay harness / tests"] --> Replay
+```
+
+## Current Center-Of-Gravity Gap
+
+```mermaid
+flowchart LR
+    subgraph Desired["Desired center"]
+        DRuntime["thin runtime shell"] --> DCore["TerminalCore"]
+        DCore --> DPublication["thin publication shell"]
+    end
+
+    subgraph Current["Current center"]
+        CRuntime["session_runtime.zig + helpers"] --> CCore["TerminalCore"]
+        CCore --> CPublication["session_rendering.zig + publication helpers"]
+        CRuntime -. still heavier than ideal .-> CCore
+        CPublication -. still heavier than ideal .-> CCore
+    end
 ```
 
 ## Finer Layering
@@ -219,9 +185,10 @@ flowchart LR
     Host["Host wrapper / PTY session"] -- host signals, lifecycle --> Transport["TerminalTransport"]
     Host -- key, mouse, text --> Encoder["TerminalInputEncoder"]
     Encoder -- encoded input bytes --> Transport
-    Transport -- output bytes, resize --> Core["TerminalCore"]
-    Core -- snapshot + damage --> Snapshot["TerminalSnapshot"]
+    Transport <--> Core["TerminalCore"]
+    Core -- snapshot / metadata / events --> Snapshot["Publication surfaces"]
     Snapshot --> Consumer["Renderer / FFI host / replay harness"]
+    Consumer -. present ack / viewport / host reports .-> Host
 
     Host:::host
     Transport:::boundary

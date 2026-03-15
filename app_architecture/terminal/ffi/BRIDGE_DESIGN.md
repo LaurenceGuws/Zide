@@ -32,7 +32,8 @@ What has now landed as a productized host boundary:
 - explicit ownership model for foreign callers
 - standalone smoke consumers outside the Zide UI shell
 
-This bridge makes modularity real. If the backend cannot be hosted cleanly outside the current SDL widget stack, the boundary is not finished.
+This bridge makes modularity real. If the backend cannot be hosted cleanly
+outside the current SDL widget stack, the boundary is not finished.
 
 ## Goals
 
@@ -63,14 +64,17 @@ That means:
 - all returned owned buffers have explicit `free` functions
 - all inputs use flat structs or pointer+len pairs
 
-This matches the practical direction used by Ghostty's embedded runtime and is simpler to bind from Python, Dart, Swift, Rust, or C than a Zig-only package boundary.
+This matches the practical direction used by Ghostty's embedded runtime and is
+simpler to bind from Python, Dart, Swift, Rust, or C than a Zig-only package
+boundary.
 
 ## Layer boundary
 
 ```mermaid
 flowchart LR
     Host["Foreign host\n(Python / Dart / C / Rust)"] --> Bridge["C ABI bridge"]
-    Bridge --> Core["Terminal backend core"]
+    Bridge --> Transport["PTY or external transport"]
+    Transport <--> Core["Terminal backend core"]
     Core --> Snapshot["Snapshots / events / scrollback / metadata"]
     Snapshot --> Host
 
@@ -99,12 +103,30 @@ flowchart TD
     Host --> Input
     Input --> Bridge
     Bridge --> Transport
-    Transport --> Engine
+    Transport <--> Engine
     Engine --> Publication
     Publication --> Host
     Host --> Present
     Present --> Bridge
 ```
+
+## Hot Host Loop
+
+The intended hot path is narrow on purpose:
+
+```mermaid
+flowchart LR
+    Poll["poll / drive transport"] --> Redraw["redraw_state(...)"]
+    Redraw -->|pending| Snapshot["snapshot_acquire(request, ...)"]
+    Redraw -->|not pending| Idle["return to host loop"]
+    Snapshot --> Render["host render / present"]
+    Render --> Ack["present_ack(generation)"]
+    Ack --> Poll
+```
+
+This is the contract hosts should optimize around. Metadata, strings, and
+debug/UI convenience work should stay outside this loop unless the host
+actually needs them.
 
 Bridge-specific ownership rule:
 

@@ -78,8 +78,8 @@ flowchart LR
 ```mermaid
 flowchart LR
     Host[Native Host / Flutter Host / Other App] --> FFI[Zide FFI Bridge]
-    FFI --> Engine[Terminal Engine]
-    Engine --> Transport[PTY / SSH / External Byte Transport]
+    FFI --> Transport[PTY / SSH / External Byte Transport]
+    Transport <--> Engine[Terminal Engine]
     Engine --> Snapshot[Snapshot + Metadata + Events]
     Snapshot --> Host
     Host --> Input[Key / Mouse / Text / Resize / Viewport]
@@ -263,9 +263,10 @@ What is unusual is that it is trying to combine:
 flowchart LR
     Flutter[Flutter App Shell] --> Dart[Dart FFI Layer]
     Dart --> ZideFFI[Zide Terminal FFI]
-    ZideFFI --> Engine[Terminal Engine]
+    ZideFFI --> Transport[PTY / external transport]
+    Transport <--> Engine[Terminal Engine]
     Flutter --> Painter[Flutter Terminal Painter]
-    ZideFFI --> Snapshot[Snapshot / Metadata / Events]
+    Engine --> Snapshot[Snapshot / Metadata / Events]
     Snapshot --> Painter
     Flutter --> UX[Tabs / Settings / Command UI / Mobile UX]
     Flutter --> Input[Wheel / Touch / Key / IME]

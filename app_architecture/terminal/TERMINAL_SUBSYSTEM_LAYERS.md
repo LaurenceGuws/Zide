@@ -31,12 +31,12 @@ flowchart TD
     Presentation["Presentation Layer<br/>native scene path or foreign host ack"]
 
     Host --> Input
-    Host --> Presentation
+    Host <--> Presentation
     Input --> Transport
-    Transport --> Engine
+    Transport <--> Engine
     Engine --> Publication
     Publication --> Host
-    Presentation --> Publication
+    Presentation <--> Publication
 ```
 
 ## Ownership Rule
@@ -265,11 +265,12 @@ flowchart LR
     App["App shell"] --> Widget["Terminal widget"]
     Widget --> Session["TerminalSession"]
     Widget --> Renderer["Renderer scene path"]
-    Session --> Core["TerminalCore"]
     Session --> Input["Encoder + host reports"]
     Session --> Transport["PTY transport"]
-    Core --> Publication["snapshot / metadata / redraw"]
+    Transport <--> Core["TerminalCore"]
+    Core --> Publication["snapshot / metadata / redraw / viewport"]
     Publication --> Widget
+    Widget -. viewport / host reports .-> Session
     Renderer --> Ack["present ack / retirement"]
     Ack --> Session
 ```
@@ -288,7 +289,8 @@ flowchart LR
     Host["Flutter / foreign host"] --> Bridge["FFI bridge"]
     Host --> Input["host input + reports"]
     Input --> Bridge
-    Bridge --> Engine["Terminal engine"]
+    Bridge --> Transport["PTY or external transport"]
+    Transport <--> Engine["Terminal engine"]
     Engine --> State["snapshot / metadata / events / viewport"]
     State --> Host
     Host --> Ack["present ack"]
