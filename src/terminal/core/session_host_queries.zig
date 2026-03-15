@@ -1,26 +1,10 @@
 const std = @import("std");
 const scrollback_view = @import("scrollback_view.zig");
 const terminal_transport = @import("terminal_transport.zig");
+const session_host_types = @import("session_host_types.zig");
 
-pub const SessionMetadata = struct {
-    title: []const u8,
-    cwd: []const u8,
-    scrollback_count: usize,
-    scrollback_offset: usize,
-    alive: bool,
-    exit_code: ?i32,
-};
-
-pub const CloseConfirmSignals = struct {
-    foreground_process: bool = false,
-    semantic_command: bool = false,
-    alt_screen: bool = false,
-    mouse_reporting: bool = false,
-
-    pub fn any(self: CloseConfirmSignals) bool {
-        return self.foreground_process or self.semantic_command or self.alt_screen or self.mouse_reporting;
-    }
-};
+pub const SessionMetadata = session_host_types.SessionMetadata;
+pub const CloseConfirmSignals = session_host_types.CloseConfirmSignals;
 
 fn copyTextInto(allocator: std.mem.Allocator, out: *std.ArrayList(u8), text: []const u8) ![]const u8 {
     out.clearRetainingCapacity();
