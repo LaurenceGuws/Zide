@@ -2,7 +2,7 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  border: 1px solid color-mix(in srgb, var(--line) 52%, transparent 48%);
+  border: 1px solid var(--control-border);
   border-radius: 0;
   background: var(--header-control-surface);
   backdrop-filter: none;
@@ -144,7 +144,7 @@
   grid-template-columns: 1fr 1fr;
   align-items: center;
   min-width: 96px;
-  border: 1px solid var(--line);
+  border: 1px solid var(--control-border-strong);
   background: var(--header-control-surface);
   padding: 2px;
 }
@@ -181,7 +181,7 @@
 
 .sidebar-toggle {
   display: inline-flex;
-  border: 1px solid color-mix(in srgb, var(--line) 52%, transparent 48%);
+  border: 1px solid var(--control-border);
   background: var(--header-control-surface);
   color: var(--ink);
   border-radius: 0;

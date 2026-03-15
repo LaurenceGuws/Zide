@@ -11,6 +11,26 @@ import {
 import type { AppState } from "../shared/types.js";
 import type { MarkedApi, MermaidApi } from "../shared/vendor_types.js";
 
+function renderViewerLoading(state: AppState, viewerEl: HTMLElement, path: string): void {
+  setViewerLoading(state, path);
+  renderViewer(state, viewerEl);
+}
+
+function renderViewerContent(state: AppState, viewerEl: HTMLElement, html: string): void {
+  setViewerContent(state, html);
+  renderViewer(state, viewerEl);
+}
+
+function renderViewerFailure(
+  state: AppState,
+  viewerEl: HTMLElement,
+  path: string,
+  err: unknown,
+): void {
+  setViewerError(state, path, err);
+  renderViewer(state, viewerEl);
+}
+
 export async function loadDoc(args: {
   state: AppState;
   repoBasePath: string;
@@ -44,8 +64,7 @@ export async function loadDoc(args: {
   if (!path) return;
 
   onLoading(state, path);
-  setViewerLoading(state, path);
-  renderViewer(state, viewerEl);
+  renderViewerLoading(state, viewerEl, path);
   syncActiveLink(state.tree.activePath);
 
   try {
@@ -60,13 +79,11 @@ export async function loadDoc(args: {
       docs,
       repoAbsolutePath,
     );
-    setViewerContent(state, html);
-    renderViewer(state, viewerEl);
+    renderViewerContent(state, viewerEl, html);
     onReady(state, path);
     await renderMermaidBlocks(mermaid, rootEl, viewerEl);
   } catch (err) {
     onError(state, path);
-    setViewerError(state, path, err);
-    renderViewer(state, viewerEl);
+    renderViewerFailure(state, viewerEl, path, err);
   }
 }

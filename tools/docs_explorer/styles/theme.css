@@ -42,11 +42,23 @@
   --pane-content-surface: color-mix(in srgb, var(--panel) 60%, transparent 40%);
   --header-control-surface: color-mix(in srgb, var(--shell-header-surface) 52%, transparent 48%);
   --control-surface: color-mix(in srgb, var(--panel) 18%, transparent 82%);
+  --control-border: color-mix(in srgb, var(--line) 52%, transparent 48%);
+  --control-border-strong: var(--line);
   --menu-surface: color-mix(in srgb, var(--panel-3) 88%, black 12%);
 
   /* Viewer-specific surfaces */
   --viewer-callout-surface: color-mix(in srgb, var(--accent-soft) 72%, transparent 28%);
   --viewer-raised-surface: color-mix(in srgb, var(--panel-2) 76%, black 24%);
+  --tree-row-hover: color-mix(in srgb, var(--surface-hover) 58%, transparent 42%);
+  --tree-row-open: color-mix(in srgb, var(--surface-hi) 52%, transparent 48%);
+  --tree-icon: color-mix(in srgb, var(--ink) 68%, var(--muted) 32%);
+  --tree-caret: color-mix(in srgb, var(--ink) 72%, var(--muted) 28%);
+  --tree-icon-active: var(--active-link);
+  --tree-link-active-bg: linear-gradient(
+    90deg,
+    var(--viewer-callout-surface) 0%,
+    transparent 100%
+  );
 }
 
 :root[data-theme="light"] {
@@ -91,9 +103,21 @@
   --pane-content-surface: color-mix(in srgb, var(--panel) 68%, transparent 32%);
   --header-control-surface: color-mix(in srgb, var(--shell-header-surface) 58%, transparent 42%);
   --control-surface: color-mix(in srgb, var(--panel) 24%, transparent 76%);
+  --control-border: color-mix(in srgb, var(--line) 52%, transparent 48%);
+  --control-border-strong: var(--line);
   --menu-surface: color-mix(in srgb, var(--panel-3) 90%, white 10%);
 
   /* Viewer-specific surfaces */
   --viewer-callout-surface: color-mix(in srgb, var(--accent-soft) 68%, transparent 32%);
   --viewer-raised-surface: color-mix(in srgb, var(--panel) 84%, var(--panel-3) 16%);
+  --tree-row-hover: color-mix(in srgb, var(--surface-hover) 58%, transparent 42%);
+  --tree-row-open: color-mix(in srgb, var(--surface-hi) 52%, transparent 48%);
+  --tree-icon: color-mix(in srgb, var(--ink) 68%, var(--muted) 32%);
+  --tree-caret: color-mix(in srgb, var(--ink) 72%, var(--muted) 28%);
+  --tree-icon-active: var(--active-link);
+  --tree-link-active-bg: linear-gradient(
+    90deg,
+    var(--viewer-callout-surface) 0%,
+    transparent 100%
+  );
 }
