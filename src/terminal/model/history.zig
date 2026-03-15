@@ -346,7 +346,7 @@ pub const TerminalHistory = struct {
         return self.scrollback.capacityLines();
     }
 
-    pub fn scrollOffset(self: *TerminalHistory) usize {
+    pub fn scrollOffset(self: *const TerminalHistory) usize {
         return self.scrollback_offset;
     }
 

@@ -9,6 +9,7 @@ pub const ZIDE_TERMINAL_METADATA_ABI_VERSION = bridge.metadata_abi_version;
 pub const ZIDE_TERMINAL_REDRAW_STATE_ABI_VERSION = bridge.redraw_state_abi_version;
 pub const ZIDE_TERMINAL_STRING_ABI_VERSION = bridge.string_abi_version;
 pub const ZIDE_TERMINAL_CLOSE_CONFIRM_ABI_VERSION = bridge.close_confirm_abi_version;
+pub const ZIDE_TERMINAL_CLIPBOARD_ABI_VERSION = bridge.clipboard_abi_version;
 pub const ZideTerminalCreateConfig = bridge.CreateConfig;
 pub const ZideTerminalColor = bridge.Color;
 pub const ZideTerminalCell = bridge.Cell;
@@ -144,6 +145,10 @@ pub fn zide_terminal_selection_text(handle: ?*ZideTerminalHandle, out_string: *Z
     return @intFromEnum(bridge.selectionText(handle, out_string));
 }
 
+pub fn zide_terminal_clipboard_write(handle: ?*ZideTerminalHandle, out_string: *ZideTerminalStringBuffer) c_int {
+    return @intFromEnum(bridge.clipboardWrite(handle, out_string));
+}
+
 pub fn zide_terminal_scrollback_plain_text(handle: ?*ZideTerminalHandle, out_string: *ZideTerminalStringBuffer) c_int {
     return @intFromEnum(bridge.scrollbackPlainText(handle, out_string));
 }
@@ -186,6 +191,10 @@ pub fn zide_terminal_string_abi_version() u32 {
 
 pub fn zide_terminal_close_confirm_abi_version() u32 {
     return bridge.closeConfirmAbiVersion();
+}
+
+pub fn zide_terminal_clipboard_abi_version() u32 {
+    return bridge.clipboardAbiVersion();
 }
 
 pub fn zide_terminal_renderer_metadata_abi_version() u32 {

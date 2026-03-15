@@ -27,7 +27,7 @@ The baseline bridge is real and product-shaped: design docs, event ABI, snapshot
 
 - [ ] `FFI-01-01` Separate UI-only concerns from the `TerminalSession` contract.
 - [-] `FFI-01-02` Introduce the host-facing event/action inventory.
-  Notes: milestone-1 queue ABI is locked for title/cwd/clipboard_write/child_exit; redraw, liveness, and close-confirm semantics now live partly in direct bridge getters rather than only in the event stream.
+  Notes: milestone-1 queue ABI is locked for title/cwd/clipboard_write/child_exit; redraw, liveness, close-confirm, and clipboard payload semantics now live partly in direct bridge getters rather than only in the event stream.
 
 ### FFI-02 Snapshot And Diff ABI
 
@@ -48,7 +48,7 @@ The baseline bridge is real and product-shaped: design docs, event ABI, snapshot
 ### FFI-04 Export Surface And Smoke Host
 
 - [-] `FFI-04-01` Create the minimal exported bridge surface with opaque handles.
-  Notes: close-confirm state now has an explicit getter/ABI-typed struct alongside metadata and redraw-state, so foreign hosts no longer need a native-only close-warning contract.
+  Notes: close-confirm state and clipboard-write payload now have explicit getters/ABI surfaces alongside metadata and redraw-state, so foreign hosts no longer need native-only close-warning or event-only clipboard contracts.
 - [x] `FFI-04-02` Add a standalone Python ctypes smoke host.
 - [x] `FFI-04-03` Add a non-interactive bridge smoke test.
 - [-] `FFI-04-04` Stabilize PTY-backed foreign-host start as a separate smoke slice.

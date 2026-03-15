@@ -266,6 +266,8 @@ def load_library(path: Path):
     lib.zide_terminal_events_free.restype = None
     lib.zide_terminal_is_alive.argtypes = [HandlePtr]
     lib.zide_terminal_is_alive.restype = ctypes.c_uint8
+    lib.zide_terminal_clipboard_write.argtypes = [HandlePtr, ctypes.POINTER(StringBuffer)]
+    lib.zide_terminal_clipboard_write.restype = ctypes.c_int
     lib.zide_terminal_string_free.argtypes = [ctypes.POINTER(StringBuffer)]
     lib.zide_terminal_string_free.restype = None
     lib.zide_terminal_child_exit_status.argtypes = [HandlePtr, ctypes.POINTER(ctypes.c_int32), ctypes.POINTER(ctypes.c_uint8)]
@@ -284,6 +286,8 @@ def load_library(path: Path):
     lib.zide_terminal_string_abi_version.restype = ctypes.c_uint32
     lib.zide_terminal_close_confirm_abi_version.argtypes = []
     lib.zide_terminal_close_confirm_abi_version.restype = ctypes.c_uint32
+    lib.zide_terminal_clipboard_abi_version.argtypes = []
+    lib.zide_terminal_clipboard_abi_version.restype = ctypes.c_uint32
     lib.zide_terminal_renderer_metadata_abi_version.argtypes = []
     lib.zide_terminal_renderer_metadata_abi_version.restype = ctypes.c_uint32
     lib.zide_terminal_renderer_metadata.argtypes = [ctypes.c_uint32, ctypes.POINTER(RendererMetadata)]
@@ -415,6 +419,7 @@ def run_smoke(lib_path: Path) -> int:
             f"redraw_state_abi={lib.zide_terminal_redraw_state_abi_version()} "
             f"string_abi={lib.zide_terminal_string_abi_version()} "
             f"close_confirm_abi={lib.zide_terminal_close_confirm_abi_version()} "
+            f"clipboard_abi={lib.zide_terminal_clipboard_abi_version()} "
             f"renderer_meta_abi={lib.zide_terminal_renderer_metadata_abi_version()}"
         )
         print(f"status_ok={lib.zide_terminal_status_string(STATUS_OK).decode()} status_unknown={lib.zide_terminal_status_string(99).decode()}")
@@ -551,6 +556,30 @@ def run_smoke(lib_path: Path) -> int:
                 raise RuntimeError("missing clipboard_write event")
 
         consume_terminal_events_once(lib, handle, EventBuffer, consume_events)
+
+        clipboard_text = StringBuffer()
+        status = lib.zide_terminal_clipboard_write(handle, ctypes.byref(clipboard_text))
+        if status != STATUS_OK:
+            raise RuntimeError(f"clipboard_write getter failed: {status}")
+        try:
+            if clipboard_text.abi_version != lib.zide_terminal_string_abi_version():
+                raise RuntimeError("clipboard string abi mismatch")
+            if clipboard_text.struct_size != ctypes.sizeof(StringBuffer):
+                raise RuntimeError("clipboard string struct size mismatch")
+            if as_bytes(clipboard_text.ptr, clipboard_text.len) != b"ffi-clip":
+                raise RuntimeError("unexpected clipboard getter payload")
+        finally:
+            lib.zide_terminal_string_free(ctypes.byref(clipboard_text))
+
+        clipboard_empty = StringBuffer()
+        status = lib.zide_terminal_clipboard_write(handle, ctypes.byref(clipboard_empty))
+        if status != STATUS_OK:
+            raise RuntimeError(f"clipboard_write empty getter failed: {status}")
+        try:
+            if clipboard_empty.len != 0:
+                raise RuntimeError("clipboard getter did not clear after consume")
+        finally:
+            lib.zide_terminal_string_free(ctypes.byref(clipboard_empty))
         return 0
     finally:
         lib.zide_terminal_destroy(handle)

@@ -112,6 +112,10 @@ pub export fn zide_terminal_is_alive(handle: ?*c_api.ZideTerminalHandle) u8 {
     return c_api.zide_terminal_is_alive(handle);
 }
 
+pub export fn zide_terminal_clipboard_write(handle: ?*c_api.ZideTerminalHandle, out_string: *c_api.ZideTerminalStringBuffer) c_int {
+    return c_api.zide_terminal_clipboard_write(handle, out_string);
+}
+
 pub export fn zide_terminal_string_free(string: *c_api.ZideTerminalStringBuffer) void {
     c_api.zide_terminal_string_free(string);
 }
@@ -146,6 +150,10 @@ pub export fn zide_terminal_string_abi_version() u32 {
 
 pub export fn zide_terminal_close_confirm_abi_version() u32 {
     return c_api.zide_terminal_close_confirm_abi_version();
+}
+
+pub export fn zide_terminal_clipboard_abi_version() u32 {
+    return c_api.zide_terminal_clipboard_abi_version();
 }
 
 pub export fn zide_terminal_renderer_metadata_abi_version() u32 {

@@ -11,6 +11,7 @@ pub const metadata_abi_version = shared.metadata_abi_version;
 pub const redraw_state_abi_version = shared.redraw_state_abi_version;
 pub const string_abi_version = shared.string_abi_version;
 pub const close_confirm_abi_version = shared.close_confirm_abi_version;
+pub const clipboard_abi_version = shared.clipboard_abi_version;
 pub const EventKind = shared.EventKind;
 pub const GlyphClassFlags = shared.GlyphClassFlags;
 pub const DamagePolicyFlags = shared.DamagePolicyFlags;
@@ -146,6 +147,10 @@ pub fn selectionText(handle: ?*ZideTerminalHandle, out_string: *StringBuffer) St
     return core_api.selectionText(handle, out_string);
 }
 
+pub fn clipboardWrite(handle: ?*ZideTerminalHandle, out_string: *StringBuffer) Status {
+    return core_api.clipboardWrite(handle, out_string);
+}
+
 pub fn scrollbackPlainText(handle: ?*ZideTerminalHandle, out_string: *StringBuffer) Status {
     return core_api.scrollbackPlainText(handle, out_string);
 }
@@ -184,6 +189,10 @@ pub fn redrawStateAbiVersion() u32 {
 
 pub fn closeConfirmAbiVersion() u32 {
     return core_api.closeConfirmAbiVersion();
+}
+
+pub fn clipboardAbiVersion() u32 {
+    return core_api.clipboardAbiVersion();
 }
 
 pub fn stringAbiVersion() u32 {

@@ -18,6 +18,7 @@ pub const metadata_abi_version: u32 = 1;
 pub const redraw_state_abi_version: u32 = 1;
 pub const string_abi_version: u32 = 1;
 pub const close_confirm_abi_version: u32 = 1;
+pub const clipboard_abi_version: u32 = 1;
 
 pub const EventKind = enum(c_int) {
     none = 0,
@@ -221,6 +222,8 @@ pub const Handle = struct {
     scratch_title: std.ArrayList(u8),
     scratch_cwd: std.ArrayList(u8),
     scratch_clipboard: std.ArrayList(u8),
+    pending_clipboard_write: std.ArrayList(u8),
+    clipboard_write_pending: bool,
     scratch_scrollback_cells: std.ArrayList(types.Cell),
     last_generation: u64,
     last_acknowledged_generation: u64,
@@ -391,6 +394,9 @@ pub fn syncDerivedEvents(handle: *Handle) Status {
     if (handle.session.takeOscClipboardCopy(handle.allocator, &handle.scratch_clipboard) catch |err| return mapError(err)) {
         const clip = handle.scratch_clipboard.items;
         const payload = if (clip.len > 0 and clip[clip.len - 1] == 0) clip[0 .. clip.len - 1] else clip;
+        handle.pending_clipboard_write.clearRetainingCapacity();
+        handle.pending_clipboard_write.appendSlice(handle.allocator, payload) catch |err| return mapError(err);
+        handle.clipboard_write_pending = true;
         queueEvent(handle, .clipboard_write, payload, 0, 0) catch |err| return mapError(err);
     }
     if (handle.last_alive != metadata.alive) {

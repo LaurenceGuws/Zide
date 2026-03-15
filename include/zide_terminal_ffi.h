@@ -36,6 +36,7 @@ enum {
     ZIDE_TERMINAL_REDRAW_STATE_ABI_VERSION = 1,
     ZIDE_TERMINAL_STRING_ABI_VERSION = 1,
     ZIDE_TERMINAL_CLOSE_CONFIRM_ABI_VERSION = 1,
+    ZIDE_TERMINAL_CLIPBOARD_ABI_VERSION = 1,
 };
 
 enum {
@@ -245,6 +246,7 @@ int zide_terminal_event_drain(ZideTerminalHandle *handle, ZideTerminalEventBuffe
 void zide_terminal_events_free(ZideTerminalEventBuffer *events);
 uint8_t zide_terminal_is_alive(ZideTerminalHandle *handle);
 int zide_terminal_selection_text(ZideTerminalHandle *handle, ZideTerminalStringBuffer *out_string);
+int zide_terminal_clipboard_write(ZideTerminalHandle *handle, ZideTerminalStringBuffer *out_string);
 int zide_terminal_scrollback_plain_text(ZideTerminalHandle *handle, ZideTerminalStringBuffer *out_string);
 int zide_terminal_scrollback_ansi_text(ZideTerminalHandle *handle, ZideTerminalStringBuffer *out_string);
 void zide_terminal_string_free(ZideTerminalStringBuffer *string);
@@ -256,6 +258,7 @@ uint32_t zide_terminal_metadata_abi_version(void);
 uint32_t zide_terminal_redraw_state_abi_version(void);
 uint32_t zide_terminal_string_abi_version(void);
 uint32_t zide_terminal_close_confirm_abi_version(void);
+uint32_t zide_terminal_clipboard_abi_version(void);
 uint32_t zide_terminal_renderer_metadata_abi_version(void);
 int zide_terminal_renderer_metadata(uint32_t codepoint, ZideTerminalRendererMetadata *out_metadata);
 const char *zide_terminal_status_string(int status);

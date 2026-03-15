@@ -124,6 +124,7 @@ Required operations for milestone 1:
 - `zide_terminal_events_free(events)`
 - `zide_terminal_is_alive(handle)`
 - `zide_terminal_selection_text(handle, out_string)`
+- `zide_terminal_clipboard_write(handle, out_string)`
 - `zide_terminal_scrollback_plain_text(handle, out_string)`
 - `zide_terminal_scrollback_ansi_text(handle, out_string)`
 - `zide_terminal_string_free(string)`
@@ -135,6 +136,7 @@ Required operations for milestone 1:
 - `zide_terminal_redraw_state_abi_version()`
 - `zide_terminal_string_abi_version()`
 - `zide_terminal_close_confirm_abi_version()`
+- `zide_terminal_clipboard_abi_version()`
 - `zide_terminal_renderer_metadata_abi_version()`
 - `zide_terminal_renderer_metadata(codepoint, out_metadata)`
 - `zide_terminal_status_string(status)`
@@ -273,6 +275,8 @@ Current bridge catch-up already landed:
 - `zide_terminal_redraw_state_abi_version()`
 - `zide_terminal_close_confirm_signals(handle, &signals)`
 - `zide_terminal_close_confirm_abi_version()`
+- `zide_terminal_clipboard_write(handle, out_string)`
+- `zide_terminal_clipboard_abi_version()`
 - `zide_terminal_needs_redraw(handle)`
 
 So the bridge now exposes the same basic host-facing semantics as the shared
@@ -312,6 +316,15 @@ History/export policy:
   counts, row windows, or richer host-local rendering/inspection logic
 - hosts should prefer the text exports when they explicitly want copied text,
   not structured history state
+
+Clipboard/export policy:
+
+- queued `clipboard_write` events remain the change-boundary signal for hosts
+  that drain events
+- `zide_terminal_clipboard_write(...)` is the direct getter for the latest
+  pending clipboard-write payload
+- hosts should use the direct getter when they need the payload itself, instead
+  of treating the event stream as the only authoritative payload path
 
 Selection/export policy:
 

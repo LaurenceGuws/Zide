@@ -154,6 +154,20 @@ test "ffi non-pty snapshot and event ownership smoke" {
     try std.testing.expect(saw_redraw);
     try std.testing.expect(saw_title);
     try std.testing.expect(saw_clipboard);
+
+    try std.testing.expectEqual(c_api.ZIDE_TERMINAL_CLIPBOARD_ABI_VERSION, c_api.zide_terminal_clipboard_abi_version());
+
+    var clipboard_text: c_api.ZideTerminalStringBuffer = .{};
+    try std.testing.expectEqual(@as(c_int, 0), c_api.zide_terminal_clipboard_write(handle, &clipboard_text));
+    defer c_api.zide_terminal_string_free(&clipboard_text);
+    try std.testing.expectEqual(c_api.ZIDE_TERMINAL_STRING_ABI_VERSION, clipboard_text.abi_version);
+    try std.testing.expectEqual(@as(u32, @sizeOf(c_api.ZideTerminalStringBuffer)), clipboard_text.struct_size);
+    try std.testing.expectEqualStrings("ffi-clip", ptrBytes(clipboard_text.ptr, clipboard_text.len));
+
+    var clipboard_empty: c_api.ZideTerminalStringBuffer = .{};
+    try std.testing.expectEqual(@as(c_int, 0), c_api.zide_terminal_clipboard_write(handle, &clipboard_empty));
+    defer c_api.zide_terminal_string_free(&clipboard_empty);
+    try std.testing.expectEqual(@as(usize, 0), clipboard_empty.len);
 }
 
 test "ffi scrollback acquire exports copied rows" {

@@ -47,6 +47,8 @@ pub fn create(config: ?*const shared.CreateConfig, out_handle: *?*shared.ZideTer
         .scratch_title = .empty,
         .scratch_cwd = .empty,
         .scratch_clipboard = .empty,
+        .pending_clipboard_write = .empty,
+        .clipboard_write_pending = false,
         .scratch_scrollback_cells = .empty,
         .last_generation = 0,
         .last_acknowledged_generation = 0,
@@ -133,6 +135,7 @@ pub fn destroy(handle: ?*shared.ZideTerminalHandle) void {
     h.scratch_title.deinit(h.allocator);
     h.scratch_cwd.deinit(h.allocator);
     h.scratch_clipboard.deinit(h.allocator);
+    h.pending_clipboard_write.deinit(h.allocator);
     h.scratch_scrollback_cells.deinit(h.allocator);
     h.session.deinit();
     h.allocator.destroy(h);
@@ -443,6 +446,13 @@ pub fn selectionText(handle: ?*shared.ZideTerminalHandle, out_string: *shared.St
     return shared.stringFromOwnedSlice(h.allocator, text, out_string);
 }
 
+pub fn clipboardWrite(handle: ?*shared.ZideTerminalHandle, out_string: *shared.StringBuffer) shared.Status {
+    const h = shared.fromOpaque(handle) orelse return .invalid_argument;
+    if (!h.clipboard_write_pending) return shared.stringFromSlice(h.allocator, "", out_string);
+    h.clipboard_write_pending = false;
+    return shared.stringFromSlice(h.allocator, h.pending_clipboard_write.items, out_string);
+}
+
 pub fn scrollbackPlainText(handle: ?*shared.ZideTerminalHandle, out_string: *shared.StringBuffer) shared.Status {
     const h = shared.fromOpaque(handle) orelse return .invalid_argument;
     const text = h.session.scrollbackPlainTextAlloc(h.allocator) catch |err| {
@@ -491,6 +501,10 @@ pub fn redrawStateAbiVersion() u32 {
 
 pub fn closeConfirmAbiVersion() u32 {
     return shared.close_confirm_abi_version;
+}
+
+pub fn clipboardAbiVersion() u32 {
+    return shared.clipboard_abi_version;
 }
 
 pub fn stringAbiVersion() u32 {
