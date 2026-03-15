@@ -335,6 +335,10 @@ Current narrow diff shape worth judging:
   the latest-state authority for them
 - replacement cells should be ordered strictly by diff-row order and then
   span order so host application stays linear and deterministic
+- no trusted `base_generation` should force fallback instead of a best-effort
+  granular diff
+- first-cut fallback should bias toward over-falling-back rather than shipping
+  a fragile diff packet
 
 Current provisional winner:
 

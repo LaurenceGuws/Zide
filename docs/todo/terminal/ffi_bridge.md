@@ -198,6 +198,7 @@ Current judgment:
   - result carries changed rows/spans/replacement cells plus a
     `full_refresh_required` fallback bit
   - fallback must not require a second snapshot acquire
+  - missing/stale base generation should force fallback, not best-effort diff
   - title/cwd should stay out of the first diff ABI entirely
   - replacement cells should be ordered linearly by row then span
   - reject the lane if it starts requiring row-follow-up getters or a second

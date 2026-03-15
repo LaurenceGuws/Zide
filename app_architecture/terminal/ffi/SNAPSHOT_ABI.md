@@ -491,6 +491,32 @@ Intended semantics:
   - rows/spans/cells deterministically update the previously rendered visible
     state from `base_generation` to `generation`
 
+#### Base-Generation Admission Rule
+
+The first diff cut should not invent a vague "best effort" admission rule.
+
+Current preferred rule:
+
+- `base_generation == 0` means the host does not currently claim a reusable
+  visible base
+- in that case the backend may still return a diff result, but it must set:
+  - `full_refresh_required = 1`
+- hosts should normally establish initial visible truth through the existing
+  full snapshot path before relying on granular diff application
+
+Why this is better than trying to be clever:
+
+- it avoids hidden assumptions about host-local retained state
+- it keeps the diff contract honest when the backend cannot trust the host's
+  prior visible generation
+- it avoids a second admission handshake API
+
+So the first diff lane should treat these as equivalent triggers for fallback:
+
+- host provides no usable base generation
+- host provides a stale/unknown base generation
+- backend decides granular diff packaging is not worth it for this transition
+
 #### Full-Refresh Fallback Semantics
 
 `full_refresh_required` must stay boring and deterministic.
@@ -518,6 +544,23 @@ Backend rule:
 - fallback must not force the host to call back for "the real full snapshot"
 
 This is what keeps diff export from degenerating into a two-surface protocol.
+
+Current first-cut fallback triggers should be explicit:
+
+1. `base_generation == 0`
+2. `base_generation !=` the backend's current acknowledged/published visible
+   base expectation for the requesting host
+3. visible geometry changed
+4. alt-screen or visible-history transition makes granular diff less obvious
+   than a full replacement
+5. computed diff packaging would be larger than, or close enough to, a full
+   visible replacement that the complexity is not justified
+6. row-span overflow / damage shape would make the granular packet misleading
+   or too broad
+
+These triggers do not need to stay permanent forever, but the first diff cut
+should bias toward falling back too often rather than shipping a fragile diff
+packet that hosts cannot trust.
 
 #### String Policy
 
@@ -601,6 +644,7 @@ Do not implement diff export unless this stays true:
    worth it
 7. title/cwd stay out of the first diff ABI entirely
 8. replacement cell ordering is fully deterministic from the packet alone
+9. no trusted base generation means explicit fallback, not best-effort diff
 
 #### Candidate B: Pinned Snapshot Handle
 
