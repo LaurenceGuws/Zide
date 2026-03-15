@@ -4,7 +4,7 @@ import {
   persistSidebarCollapsed,
   persistSidebarWidth,
 } from "./state.js";
-import type { AppState } from "./types.js";
+import type { AppState } from "./shared/types.js";
 
 export function applySidebarWidth(
   appEl: HTMLElement,

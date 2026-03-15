@@ -19,7 +19,7 @@
 
 - [~] Introduce a dedicated app-state module instead of storing behavior across
       `main.js`, DOM attributes, and `localStorage` calls.
-      - `js/state.js` now owns the first persistence/default seams.
+      - `ts/state.ts` now owns the first persistence/default seams.
       - Remaining work: options/search/current-doc state transitions still need
         a cleaner shared model and less direct DOM orchestration.
 - [ ] Define a clear state shape for:
@@ -35,30 +35,39 @@
 - [ ] Centralize persistence reads/writes behind a small state/persistence seam.
 - [ ] Keep typing work sequenced after the module/state split.
       - First stabilize module boundaries and state ownership.
-      - Then move straight to real TypeScript.
-      - Lightweight JSDoc is allowed only as a temporary seam aid.
-      - Initial TS migration has started from the stable center.
+      - Then keep TypeScript aligned to those stable seams.
+      - Avoid using types to justify muddled ownership.
 
 ### Module refactor
 
-- [~] Split `js/main.js` into:
+- [~] Split the old `main.js` monolith into concern-owned modules.
       - app bootstrap
       - layout/sidebar controls
       - options/menu controls
       - state/config wiring
       - Current extraction landed:
-        - `js/app.js`
-        - `js/app_shell.js`
-        - `js/doc_controller.js`
-        - `js/config.js`
-        - `js/state.js`
-        - `js/tree_state.js`
-        - `js/view_state.js`
-        - `js/viewer_state.js`
-        - `js/layout.js`
-        - `js/options_menu.js`
+        - `ts/app.ts`
+        - `ts/shell/app_shell.ts`
+        - `ts/docs/doc_controller.ts`
+        - `ts/docs/doc_routing.ts`
+        - `ts/docs/doc_render_cycle.ts`
+        - `ts/config.ts`
+        - `ts/state.ts`
+        - `ts/tree/tree_state.ts`
+        - `ts/docs/view_state.ts`
+        - `ts/docs/viewer_state.ts`
+        - `ts/layout.ts`
+        - `ts/options_menu.ts`
       - Remaining work:
-        - give state transitions a cleaner module boundary
+        - keep `ts/docs/doc_controller.ts` as assembly only
+        - continue shrinking cross-module DOM assumptions
+- [x] Rename the source tree from `js/` to `ts/` and group modules by concern.
+      - `docs/`, `tree/`, `theme/`, `shell/`, and `shared/` now own the main
+        source seams.
+- [x] Split tree and shell internals so concern folders are structural, not
+      cosmetic.
+      - `ts/tree/` now separates model, markup, state, and DOM orchestration.
+      - `ts/shell/` now separates DOM lookup, icon injection, and shell boot.
 
 ### Config-driven identity
 

@@ -1,7 +1,7 @@
-import { currentTheme, themeVariables } from "./theme.js";
-import { escapeHtml } from "./utils.js";
-import type { ThemeName } from "./types.js";
-import type { MermaidApi } from "./vendor_types.js";
+import { currentTheme, themeVariables } from "../theme/theme.js";
+import { escapeHtml } from "../shared/utils.js";
+import type { ThemeName } from "../shared/types.js";
+import type { MermaidApi } from "../shared/vendor_types.js";
 
 export function initMermaidForTheme(
   mermaid: MermaidApi,

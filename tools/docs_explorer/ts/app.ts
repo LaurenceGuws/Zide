@@ -2,22 +2,22 @@ import { marked } from "https://cdn.jsdelivr.net/npm/marked/lib/marked.esm.js";
 import mermaid from "https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs";
 
 import {
-  getAppShell,
   initializeAppShell,
   syncHighlightTheme,
-} from "./app_shell.js";
+} from "./shell/app_shell.js";
+import { getAppShell } from "./shell/shell_dom.js";
 import { loadProjectConfig } from "./config.js";
-import { createDocController } from "./doc_controller.js";
-import { renderHighlightedCode } from "./highlight.js";
+import { createDocController } from "./docs/doc_controller.js";
+import { renderHighlightedCode } from "./docs/highlight.js";
 import {
   installSidebarControls,
   syncResponsiveSidebarState,
 } from "./layout.js";
-import { configureMarked } from "./markdown.js";
-import { initMermaidForTheme } from "./mermaid.js";
+import { configureMarked } from "./docs/markdown.js";
+import { initMermaidForTheme } from "./docs/mermaid.js";
 import { installOptionsMenu } from "./options_menu.js";
 import { createAppState, persistTheme, setTheme } from "./state.js";
-import { applyTheme } from "./theme.js";
+import { applyTheme } from "./theme/theme.js";
 
 export async function startApp(): Promise<void> {
   const hljs = window.hljs;

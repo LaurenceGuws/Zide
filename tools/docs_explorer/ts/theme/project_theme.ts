@@ -1,4 +1,4 @@
-import type { ProjectConfig, ProjectPalette, ThemeName } from "./types.js";
+import type { ProjectConfig, ProjectPalette, ThemeName } from "../shared/types.js";
 
 const themeVarMap: Record<keyof ProjectPalette, string> = {
   bg: "--bg",

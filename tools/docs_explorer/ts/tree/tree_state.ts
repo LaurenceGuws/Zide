@@ -2,9 +2,9 @@ import {
   setTreeActivePath,
   setTreeExpandedPaths,
   setTreeFilter,
-} from "./state.js";
+} from "../state.js";
 import { buildTree } from "./tree.js";
-import type { AppState } from "./types.js";
+import type { AppState } from "../shared/types.js";
 
 export function updateTreeFilter(state: AppState, filter: string): void {
   setTreeFilter(state, filter);

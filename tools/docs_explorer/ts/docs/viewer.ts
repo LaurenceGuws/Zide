@@ -1,6 +1,6 @@
 import { renderMarkdown } from "./markdown.js";
-import { repoRelative } from "./utils.js";
-import { syncActiveLink } from "./tree.js";
+import { repoRelative } from "../shared/utils.js";
+import { syncActiveLink } from "../tree/tree.js";
 import { renderMermaidBlocks } from "./mermaid.js";
 import {
   renderViewer,
@@ -8,8 +8,8 @@ import {
   setViewerError,
   setViewerLoading,
 } from "./viewer_state.js";
-import type { AppState } from "./types.js";
-import type { MarkedApi, MermaidApi } from "./vendor_types.js";
+import type { AppState } from "../shared/types.js";
+import type { MarkedApi, MermaidApi } from "../shared/vendor_types.js";
 
 export async function loadDoc(args: {
   state: AppState;

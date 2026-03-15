@@ -1,6 +1,6 @@
-import { setDocumentState } from "./state.js";
-import { escapeHtml, repoRelative } from "./utils.js";
-import type { AppShell, AppState } from "./types.js";
+import { setDocumentState } from "../state.js";
+import { escapeHtml, repoRelative } from "../shared/utils.js";
+import type { AppShell, AppState } from "../shared/types.js";
 
 export function setDocumentLoading(
   state: AppState,

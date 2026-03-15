@@ -1,4 +1,4 @@
-import type { MarkedApi } from "./vendor_types.js";
+import type { MarkedApi } from "../shared/vendor_types.js";
 
 export function configureMarked(marked: MarkedApi): void {
   marked.setOptions({

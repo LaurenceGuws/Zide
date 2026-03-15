@@ -1,4 +1,4 @@
-import type { ThemeName } from "./types.js";
+import type { ThemeName } from "../shared/types.js";
 
 export function currentTheme(rootEl: HTMLElement): ThemeName {
   return rootEl.dataset.theme === "light" ? "light" : "dark";

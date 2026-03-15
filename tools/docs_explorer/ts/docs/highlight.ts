@@ -1,4 +1,4 @@
-import type { HighlightJsApi } from "./vendor_types.js";
+import type { HighlightJsApi } from "../shared/vendor_types.js";
 
 const LANGUAGE_ALIASES: Record<string, string> = {
   sh: "bash",

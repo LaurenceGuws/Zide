@@ -9,11 +9,16 @@ requiring a frontend framework or backend service.
 
 - `index.html`
   - minimal shell and mount points only
-- `js/app_shell.js`
+- `ts/shell/shell_dom.ts`
   - DOM lookup
-  - shell branding/title/icon wiring
+  - required shell element contract
+- `ts/shell/shell_icons.ts`
+  - shell icon asset injection
+  - shared icon sizing normalization
+- `ts/shell/app_shell.ts`
+  - shell branding/title/source-link wiring
   - shell theme/bootstrap initialization
-- `js/app.js`
+- `ts/app.ts`
   - application composition root
   - runtime wiring between state, shell, docs, layout, and options
 - `tsconfig.json`
@@ -35,44 +40,59 @@ requiring a frontend framework or backend service.
   - rendered markdown content styling
 - `styles/responsive.css`
   - responsive and collapsed-sidebar rules
-- `js/main.js`
+- `ts/main.ts`
   - tiny entrypoint only
-- `js/config.js`
+- `ts/config.ts`
   - project/docs index loading
-- `js/state.js`
+- `ts/state.ts`
   - app-state defaults and persistence helpers
-- `js/types.js`
-  - shared JSDoc typedefs for state/config/shell contracts
-- `js/layout.js`
+- `ts/shared/types.ts`
+  - shared type contracts for state/config/shell/runtime seams
+- `ts/layout.ts`
   - sidebar width/collapse behavior
-- `js/options_menu.js`
+- `ts/options_menu.ts`
   - options popover behavior
-- `js/doc_controller.js`
-  - document loading
-  - hash/search wiring
+- `ts/docs/doc_controller.ts`
+  - small composition seam for docs routing + render lifecycle
   - document tree refresh
   - theme-triggered Mermaid rerender delegation
-- `js/view_state.js`
-  - document header/status state transitions
-  - document chrome rendering from explicit state
-- `js/tree_state.js`
+- `ts/docs/doc_routing.ts`
+  - hash/search wiring
+  - route/search events separated from document fetch/render lifecycle
+- `ts/docs/doc_render_cycle.ts`
+  - current-doc resolution
+  - document loading lifecycle wiring
+  - document chrome update callbacks
+  - highlight trigger on ready
+- `ts/docs/view_state.ts`
+  - document status state transitions
+  - small shell-header document chrome rendering from explicit state
+- `ts/tree/tree_state.ts`
   - tree filter/active-path state transitions
   - tree rendering from explicit state
-- `js/viewer_state.js`
+- `ts/tree/tree_model.ts`
+  - tree model creation from doc paths
+- `ts/tree/tree_markup.ts`
+  - tree HTML markup generation from the tree model
+- `ts/docs/viewer_state.ts`
   - viewer body render state transitions
   - loading/error/content HTML rendering from explicit state
-- `js/tree.js`
+- `ts/tree/tree.ts`
   - tree rendering and active-node sync
-- `js/viewer.js`
+- `ts/docs/viewer.ts`
   - document loading and viewer updates
-- `js/theme.js`
+- `ts/theme/theme.ts`
   - theme selection and persistence
-- `js/mermaid.js`
+- `ts/docs/mermaid.ts`
   - Mermaid initialization and rerendering
-- `js/markdown.js`
+- `ts/docs/markdown.ts`
   - Markdown renderer setup
-- `js/utils.js`
+- `ts/shared/utils.ts`
   - small shared helpers
+- `ts/shared/vendor_types.ts`
+  - typed browser-vendor seams
+- `ts/shared/external.d.ts`
+  - typed ESM/CDN module declarations
 - `config/project.json`
   - project-specific title/icon/defaults
   - project-specific light/dark palette overrides
@@ -155,35 +175,27 @@ is enough.
 
 The current typing direction is:
 
-- the browser app center is now on `.ts`
+- the browser app source lives under `ts/`
+- source is grouped by concern instead of one flat source directory
 - browser output is compiled into `build/js`
-- remaining `.js` modules can move over incrementally
-- no long-lived `checkJs` path
+- there is no long-lived `checkJs` path anymore
 
 ## Typing Direction
 
-Do not move to TypeScript before the large file splits and state-boundary work
-are done.
+The original caution about “architecture first, types second” still applies,
+but the core move to real TypeScript has now happened.
 
 Reason:
 
 - current risk is muddled ownership and mixed concerns, not lack of type syntax
-- moving to TypeScript too early would type temporary seams and then force those
-  types to be rewritten during the refactor
-- the cleaner order is:
-  - split large files
-  - define explicit runtime state ownership
-  - stabilize module contracts
-  - then move to real `.ts`
+- the value of `.ts` is now in keeping the new module seams explicit and harder
+  to erode
 
 Short rule:
 
 - architecture first
 - types second
-
-If the browser-side state model grows enough that contract drift becomes a real
-risk, TypeScript becomes much more attractive. Until then, keep the codebase
-light and focus on module/state shape first.
+- keep the type layer thin and aligned to stable seams
 
 ## Reuse Direction
 
@@ -221,12 +233,19 @@ Current likely next candidates:
 
 - `styles/theme.css`
   - continue consolidating repeated surface formulas into named tokens
-- `js/view_state.ts`
+- `ts/docs/view_state.ts`
   - keep document chrome intentionally small and avoid letting app-shell
     branding/navigation concerns turn back into document-specific chrome
-- `js/app.js`
+- `ts/docs/doc_controller.ts`
+  - keep it as composition/assembly only; do not let it become the integration
+    junk drawer again
+- `ts/app.ts`
   - keep it as composition root only; do not let it bloat back into a new
     monolith
+- `ts/tree/`
+  - keep model, markup, and DOM orchestration separate as the tree evolves
+- `ts/shell/`
+  - keep DOM lookup, icon loading, and bootstrap concerns separate
 
 ## Non-goals
 
