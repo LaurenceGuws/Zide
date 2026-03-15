@@ -3,7 +3,7 @@
   "icon": "/Zide/assets/icon/color_icon.png",
   "repoBasePath": "/Zide/",
   "runtimeMode": "github-pages",
-  "defaultDoc": "app_architecture/terminal/TERMINAL_ARCHITECTURE_COMPARISON.md",
+  "defaultDoc": "README.md",
   "theme": {
     "dark": {
       "accent": "#d47a45",
@@ -29,6 +29,7 @@
     }
   },
   "docRoots": [
+    ".",
     "docs",
     "app_architecture"
   ],

@@ -57,6 +57,13 @@
 .viewer pre code {
   background: transparent;
   padding: 0;
+  display: block;
+  font-size: 0.93rem;
+  line-height: 1.55;
+}
+
+.viewer pre code.hljs {
+  background: transparent;
 }
 
 .viewer blockquote {

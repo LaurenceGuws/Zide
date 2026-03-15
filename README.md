@@ -1,4 +1,4 @@
-# Zide
+<h1><img src="assets/icon/color_icon.png" alt="Z" width="56" />ide</h1>
 
 A native IDE and terminal stack built in Zig, aimed at fast local workspaces,
 serious terminal quality, and resource-aware tooling.
@@ -7,17 +7,13 @@ serious terminal quality, and resource-aware tooling.
 
 ## Links
 
-- Documentation: <https://laurenceguws.github.io/Zide/tools/docs_explorer/?config=project.pages.json>
-- Releases: <https://github.com/LaurenceGuws/Zide/releases>
-- Issues: <https://github.com/LaurenceGuws/Zide/issues>
+- [Documentation](https://laurenceguws.github.io/Zide/tools/docs_explorer/?config=project.pages.json)
+- [Releases](https://github.com/LaurenceGuws/Zide/releases)
+- [Issues](https://github.com/LaurenceGuws/Zide/issues)
 
 ## Demo
 
-[![Zide demo](assets/demo/zide-demo-2026-03-15-poster.jpg)](assets/demo/zide-demo-2026-03-15.mp4)
-
-Short local demo capture:
-
-- video: [`assets/demo/zide-demo-2026-03-15.mp4`](/home/home/personal/zide/assets/demo/zide-demo-2026-03-15.mp4)
+<video src="assets/demo/zide-demo-2026-03-15.mp4" poster="assets/demo/zide-demo-2026-03-15-poster.jpg" controls muted playsinline width="960"></video>
 
 ## What Zide Is
 
@@ -54,12 +50,9 @@ Use the Releases page for published binaries.
 
 The hosted docs are the primary user-facing entrypoint:
 
-- bootstrap and build notes:
-  <https://laurenceguws.github.io/Zide/tools/docs_explorer/?config=project.pages.json#doc=app_architecture/BOOTSTRAP.md>
-- dependency details:
-  <https://laurenceguws.github.io/Zide/tools/docs_explorer/?config=project.pages.json#doc=docs/DEPENDENCIES.md>
-- terminal compatibility:
-  <https://laurenceguws.github.io/Zide/tools/docs_explorer/?config=project.pages.json#doc=docs/terminal/compatibility.md>
+- [Bootstrap and build notes](https://laurenceguws.github.io/Zide/tools/docs_explorer/?config=project.pages.json#doc=app_architecture/BOOTSTRAP.md)
+- [Dependency details](https://laurenceguws.github.io/Zide/tools/docs_explorer/?config=project.pages.json#doc=docs/DEPENDENCIES.md)
+- [Terminal compatibility](https://laurenceguws.github.io/Zide/tools/docs_explorer/?config=project.pages.json#doc=docs/terminal/compatibility.md)
 
 Local Linux example:
 
@@ -101,18 +94,14 @@ Expected identity is:
 
 Primary docs site:
 
-- <https://laurenceguws.github.io/Zide/tools/docs_explorer/?config=project.pages.json>
+- [Docs Explorer](https://laurenceguws.github.io/Zide/tools/docs_explorer/?config=project.pages.json)
 
 Useful starting points:
 
-- getting started:
-  <https://laurenceguws.github.io/Zide/tools/docs_explorer/?config=project.pages.json#doc=app_architecture/BOOTSTRAP.md>
-- dependency policy:
-  <https://laurenceguws.github.io/Zide/tools/docs_explorer/?config=project.pages.json#doc=docs/DEPENDENCIES.md>
-- terminal compatibility:
-  <https://laurenceguws.github.io/Zide/tools/docs_explorer/?config=project.pages.json#doc=docs/terminal/compatibility.md>
-- current beta release notes:
-  <https://laurenceguws.github.io/Zide/tools/docs_explorer/?config=project.pages.json#doc=docs/releases/v0.1.0-beta.1.md>
+- [Getting started](https://laurenceguws.github.io/Zide/tools/docs_explorer/?config=project.pages.json#doc=app_architecture/BOOTSTRAP.md)
+- [Dependency policy](https://laurenceguws.github.io/Zide/tools/docs_explorer/?config=project.pages.json#doc=docs/DEPENDENCIES.md)
+- [Terminal compatibility](https://laurenceguws.github.io/Zide/tools/docs_explorer/?config=project.pages.json#doc=docs/terminal/compatibility.md)
+- [Current beta release notes](https://laurenceguws.github.io/Zide/tools/docs_explorer/?config=project.pages.json#doc=docs/releases/v0.1.0-beta.1.md)
 
 Repo-local contributor/operator doc map:
 
