@@ -10,9 +10,9 @@ const themeStorageKey = "zide_docs_explorer.theme";
 
 export const layoutDefaults = {
   collapseBreakpoint: 1100,
-  minSidebarWidth: 220,
-  maxSidebarWidth: 520,
-  defaultSidebarWidth: 300,
+  minSidebarWidth: 180,
+  maxSidebarWidth: 760,
+  defaultSidebarWidth: 320,
 } as const;
 
 export function createAppState(): AppState {

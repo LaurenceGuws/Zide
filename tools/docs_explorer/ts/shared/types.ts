@@ -33,6 +33,8 @@ export type ProjectConfig = {
   repoAbsolutePath?: string;
   repoBasePath: string;
   repoUrl?: string;
+  supportUrl?: string;
+  supportLabel?: string;
   runtimeMode?: string;
   defaultDoc: string;
   docRoots: string[];
@@ -79,6 +81,9 @@ export type AppShell = {
   rawLinkEl: HTMLAnchorElement;
   sourceLinkEl: HTMLAnchorElement;
   sourceLinkIconEl: HTMLElement;
+  supportLinkEl: HTMLAnchorElement;
+  supportLinkIconEl: HTMLElement;
+  supportLinkLabelEl: HTMLElement;
   searchEl: HTMLInputElement;
   optionsToggleEl: HTMLButtonElement;
   optionsToggleIconEl: HTMLElement;
