@@ -79,7 +79,6 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  position: relative;
   width: 10px;
   height: 10px;
   flex: 0 0 10px;
@@ -92,33 +91,7 @@
 }
 
 .tree-folder[open] > summary .folder-caret {
-  transform: none;
-}
-
-.tree-folder[open] > summary .folder-caret > svg {
-  opacity: 0;
-}
-
-.tree-folder[open] > summary .folder-caret::before,
-.tree-folder[open] > summary .folder-caret::after {
-  content: "";
-  position: absolute;
-  background: currentColor;
-  border-radius: 999px;
-}
-
-.tree-folder[open] > summary .folder-caret::before {
-  left: 3px;
-  top: 5px;
-  width: 1px;
-  height: 5px;
-}
-
-.tree-folder[open] > summary .folder-caret::after {
-  left: -2px;
-  top: 5px;
-  width: 6px;
-  height: 1px;
+  transform: rotate(90deg);
 }
 
 .folder-icon {
