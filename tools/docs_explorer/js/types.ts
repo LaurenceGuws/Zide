@@ -21,6 +21,7 @@ export type ProjectThemeConfig = {
 export type ProjectConfig = {
   title: string;
   icon: string;
+  repoAbsolutePath?: string;
   repoBasePath: string;
   runtimeMode?: string;
   defaultDoc: string;
@@ -76,4 +77,6 @@ export type AppShell = {
   appTitleEl: HTMLElement;
   brandMarkEl: HTMLImageElement;
   faviconEl: HTMLLinkElement;
+  highlightDarkThemeEl: HTMLLinkElement;
+  highlightLightThemeEl: HTMLLinkElement;
 };

@@ -27,6 +27,17 @@ Status note, 2026-03-14:
   currently being treated as an app-compatibility investigation rather than a
   generic native wheel-input failure.
 
+Authority note:
+
+- This file is the current architectural authority for the landed scene-owned
+  present path.
+- Historical debug evidence and reference digging belong in
+  `app_architecture/terminal/research/wayland_present/` and relevant review
+  docs, not in this plan once they stop changing the ownership model.
+- Treat the phase notes below as the record of what landed and the remaining
+  validation semantics, not as an open invitation to resurrect the removed
+  direct-default architecture.
+
 Shared redraw/publication/present semantic authority lives in:
 
 - `app_architecture/terminal/RENDER_PUBLICATION_CONTRACT.md`
