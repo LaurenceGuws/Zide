@@ -54,7 +54,7 @@ project landing page.
 - `tools/docs_explorer/README.md` — run instructions for the local docs explorer.
 - `app_architecture/CONFIG.md` — Lua config subsystem: parser surface, merge rules, runtime consumers, and reload truth.
 - `app_architecture/config_todo.md` — config subsystem tracker: contract drift, reload gaps, validation, and binding semantics.
-- `docs/DEPENDENCIES.md` — native dependency setup (vcpkg + system packages).
+- `docs/DEPENDENCIES.md` — dependency source policy and platform runtime requirements.
 - `docs/terminal/compatibility.md` — current beta terminal support surface, TERM identity, and terminfo install instructions.
 
 ## Reviews And Audits

@@ -1,13 +1,16 @@
 # Dependencies
 
-This doc owns dependency source policy and platform dependency guidance.
+This doc owns dependency sourcing policy and platform dependency guidance.
 
 For bootstrap/build/run commands, use
 [`app_architecture/BOOTSTRAP.md`](/home/home/personal/zide/app_architecture/BOOTSTRAP.md).
 
-## Current Dependency Source Policy
+## Current Model
 
-Normal build flow now uses Zig package-managed dependencies for:
+On normal Linux and macOS paths, Zide now resolves its main native library
+stack through the Zig package manager, not the host package manager.
+
+That default package-managed set is:
 
 - SDL3
 - Lua
@@ -15,25 +18,37 @@ Normal build flow now uses Zig package-managed dependencies for:
 - FreeType
 - HarfBuzz
 
-This is the stable default policy on non-vcpkg paths.
+These are still native C/C++ libraries. The change is about source/pinning and
+build integration, not about pretending the runtime is pure Zig.
 
-Important:
+The practical split is now:
 
-- These are still native C/C++ libraries built and linked through Zig.
-- This reduces system package coupling, but does not make the runtime "pure
-  Zig" or free of platform/system linkage.
+- Zig package manager owns the primary third-party app/library stack
+- the OS still provides platform/runtime linkage and system facilities
 
-## Linux and macOS
+So on Linux/macOS, manually sourcing SDL3, Lua, FreeType, HarfBuzz, and
+tree-sitter from the host package manager is no longer the normal path.
 
-On Linux and macOS, the old requirement to preinstall SDL3, Lua, FreeType,
-HarfBuzz, and tree-sitter from the system package manager is no longer the
-normal flow.
+## What The OS Still Provides
 
-You still need platform/system support libraries.
+Even with Zig-managed library sourcing, native platforms still provide:
 
-### Linux
+- graphics/window-system linkage
+- Wayland/XKB/platform runtime libraries
+- OpenGL/EGL/Mesa stack as applicable
+- `fontconfig` on Linux for fallback font discovery
 
-Current Linux-native expectations:
+So the right mental model is:
+
+- app/library dependencies: Zig-managed by default
+- platform/runtime dependencies: still system-managed
+
+## Linux
+
+Linux no longer needs the old full "install all app deps from system packages"
+workflow.
+
+Current Linux-native expectations are now:
 
 - Zig
 - Wayland development/runtime stack
@@ -61,12 +76,17 @@ Fedora:
 sudo dnf install zig wayland-devel wayland-protocols-devel libxkbcommon-devel mesa-libGL-devel mesa-libEGL-devel fontconfig-devel
 ```
 
-Why `fontconfig` still matters:
+Important Linux note:
 
-- Zide still uses Linux `fontconfig` for system fallback font discovery.
-- The build links `fontconfig` on Linux-native paths.
+- `fontconfig` still matters because Zide uses it for system fallback font
+  discovery.
+- The Linux-native build still links platform/system libraries such as `GL`,
+  `fontconfig`, `m`, `pthread`, `dl`, `rt`, and `z`.
 
-### macOS
+## macOS
+
+The same dependency-source policy applies on macOS: the main third-party app
+libraries are Zig-managed in normal flow.
 
 At minimum, install Zig:
 
@@ -74,14 +94,15 @@ At minimum, install Zig:
 brew install zig
 ```
 
-If additional platform/toolchain setup becomes necessary, update this doc
-instead of reviving stale "install every library manually" advice in the
-README.
+If extra macOS platform/toolchain requirements become necessary, update this
+doc instead of reviving stale "install every library manually" guidance.
 
 ## Windows
 
-Windows remains the exception. Current Windows-native flow still uses vcpkg for
-platform-native dependency management.
+Windows remains the exception.
+
+Current Windows-native flow still uses vcpkg for platform-native dependency
+management rather than the normal Linux/macOS Zig-managed path.
 
 ### Required tools
 
@@ -158,8 +179,6 @@ For the user-facing compatibility surface, use
 ## Notes
 
 - Current text stack uses pinned Zig 0.15.2-compatible forks for FreeType and
-  HarfBuzz.
-- Linux still links platform/system libraries such as `GL`, `fontconfig`, `m`,
-  `pthread`, `dl`, `rt`, and `z`.
+  HarfBuzz in the Zig package graph.
 - Windows runtime packaging still includes native DLLs such as SDL3, FreeType,
   HarfBuzz, and Lua from the Windows dependency path.
