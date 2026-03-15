@@ -158,6 +158,57 @@ pub const TerminalSession = struct {
     pub const closeConfirmSignals = session_host_queries.closeConfirmSignals;
     pub const shouldConfirmClose = session_host_queries.shouldConfirmClose;
     pub const isAlive = session_host_queries.isAlive;
+    pub const pasteSystemClipboard = session_interaction.pasteSystemClipboard;
+    pub const pasteSelectionClipboard = session_interaction.pasteSelectionClipboard;
+    pub const bracketedPasteEnabled = session_interaction.bracketedPasteEnabled;
+    pub const focusReportingEnabled = session_interaction.focusReportingEnabled;
+    pub const autoRepeatEnabled = session_interaction.autoRepeatEnabled;
+    pub const mouseAlternateScrollEnabled = session_interaction.mouseAlternateScrollEnabled;
+    pub const mouseModeX10Enabled = session_interaction.mouseModeX10Enabled;
+    pub const mouseModeButtonEnabled = session_interaction.mouseModeButtonEnabled;
+    pub const mouseModeAnyEnabled = session_interaction.mouseModeAnyEnabled;
+    pub const mouseModeSgrEnabled = session_interaction.mouseModeSgrEnabled;
+    pub const mouseModeSgrPixelsEnabled = session_interaction.mouseModeSgrPixelsEnabled;
+    pub const kittyPasteEvents5522Enabled = session_interaction.kittyPasteEvents5522Enabled;
+    pub const sendKittyPasteEvent5522 = session_interaction.sendKittyPasteEvent5522;
+    pub const sendKittyPasteEvent5522WithHtml = session_interaction.sendKittyPasteEvent5522WithHtml;
+    pub const sendKittyPasteEvent5522WithMime = session_interaction.sendKittyPasteEvent5522WithMime;
+    pub const sendKittyPasteEvent5522WithMimeRich = session_interaction.sendKittyPasteEvent5522WithMimeRich;
+    pub const mouseReportingEnabled = session_interaction.mouseReportingEnabled;
+    pub const getDamage = session_interaction.getDamage;
+    pub const keyModeFlagsValue = session_interaction.keyModeFlagsValue;
+    pub const keyModePush = session_interaction.keyModePush;
+    pub const keyModePushLocked = session_interaction.keyModePushLocked;
+    pub const keyModePop = session_interaction.keyModePop;
+    pub const keyModePopLocked = session_interaction.keyModePopLocked;
+    pub const keyModeModify = session_interaction.keyModeModify;
+    pub const keyModeModifyLocked = session_interaction.keyModeModifyLocked;
+    pub const keyModeQuery = session_interaction.keyModeQuery;
+    pub const keyModeQueryLocked = session_interaction.keyModeQueryLocked;
+    pub const setAppCursorKeys = session_interaction.setAppCursorKeys;
+    pub const setAppCursorKeysLocked = session_interaction.setAppCursorKeysLocked;
+    pub const setAutoRepeat = session_interaction.setAutoRepeat;
+    pub const setAutoRepeatLocked = session_interaction.setAutoRepeatLocked;
+    pub const setBracketedPaste = session_interaction.setBracketedPaste;
+    pub const setBracketedPasteLocked = session_interaction.setBracketedPasteLocked;
+    pub const setFocusReporting = session_interaction.setFocusReporting;
+    pub const setFocusReportingLocked = session_interaction.setFocusReportingLocked;
+    pub const setMouseAlternateScroll = session_interaction.setMouseAlternateScroll;
+    pub const setMouseAlternateScrollLocked = session_interaction.setMouseAlternateScrollLocked;
+    pub const setMouseModeX10 = session_interaction.setMouseModeX10;
+    pub const setMouseModeX10Locked = session_interaction.setMouseModeX10Locked;
+    pub const setMouseModeButton = session_interaction.setMouseModeButton;
+    pub const setMouseModeButtonLocked = session_interaction.setMouseModeButtonLocked;
+    pub const setMouseModeAny = session_interaction.setMouseModeAny;
+    pub const setMouseModeAnyLocked = session_interaction.setMouseModeAnyLocked;
+    pub const setMouseModeSgr = session_interaction.setMouseModeSgr;
+    pub const setMouseModeSgrLocked = session_interaction.setMouseModeSgrLocked;
+    pub const setMouseModeSgrPixels = session_interaction.setMouseModeSgrPixels;
+    pub const setMouseModeSgrPixelsLocked = session_interaction.setMouseModeSgrPixelsLocked;
+    pub const resetInputModes = session_interaction.resetInputModes;
+    pub const resetInputModesLocked = session_interaction.resetInputModesLocked;
+    pub const setKeypadMode = session_interaction.setKeypadMode;
+    pub const setKeypadModeLocked = session_interaction.setKeypadModeLocked;
 
     allocator: std.mem.Allocator,
     pty: ?Pty,
@@ -582,130 +633,6 @@ pub const TerminalSession = struct {
         session_rendering.updateViewCacheForScrollLocked(self);
     }
 
-    pub fn keyModeFlagsValue(self: *TerminalSession) u32 {
-        return session_interaction.keyModeFlagsValue(self);
-    }
-
-    pub fn keyModePush(self: *TerminalSession, flags: u32) void {
-        session_interaction.keyModePush(self, flags);
-    }
-
-    pub fn keyModePushLocked(self: *TerminalSession, flags: u32) void {
-        session_interaction.keyModePushLocked(self, flags);
-    }
-
-    pub fn keyModePop(self: *TerminalSession, count: usize) void {
-        session_interaction.keyModePop(self, count);
-    }
-
-    pub fn keyModePopLocked(self: *TerminalSession, count: usize) void {
-        session_interaction.keyModePopLocked(self, count);
-    }
-
-    pub fn keyModeModify(self: *TerminalSession, flags: u32, mode: u32) void {
-        session_interaction.keyModeModify(self, flags, mode);
-    }
-
-    pub fn keyModeModifyLocked(self: *TerminalSession, flags: u32, mode: u32) void {
-        session_interaction.keyModeModifyLocked(self, flags, mode);
-    }
-
-    pub fn keyModeQuery(self: *TerminalSession) void {
-        session_interaction.keyModeQuery(self);
-    }
-
-    pub fn keyModeQueryLocked(self: *TerminalSession) void {
-        session_interaction.keyModeQueryLocked(self);
-    }
-
-    pub fn setAppCursorKeys(self: *TerminalSession, enabled: bool) void {
-        session_interaction.setAppCursorKeys(self, enabled);
-    }
-
-    pub fn setAppCursorKeysLocked(self: *TerminalSession, enabled: bool) void {
-        session_interaction.setAppCursorKeysLocked(self, enabled);
-    }
-
-    pub fn setAutoRepeat(self: *TerminalSession, enabled: bool) void {
-        session_interaction.setAutoRepeat(self, enabled);
-    }
-
-    pub fn setAutoRepeatLocked(self: *TerminalSession, enabled: bool) void {
-        session_interaction.setAutoRepeatLocked(self, enabled);
-    }
-
-    pub fn setBracketedPaste(self: *TerminalSession, enabled: bool) void {
-        session_interaction.setBracketedPaste(self, enabled);
-    }
-
-    pub fn setBracketedPasteLocked(self: *TerminalSession, enabled: bool) void {
-        session_interaction.setBracketedPasteLocked(self, enabled);
-    }
-
-    pub fn setFocusReporting(self: *TerminalSession, enabled: bool) void {
-        session_interaction.setFocusReporting(self, enabled);
-    }
-
-    pub fn setFocusReportingLocked(self: *TerminalSession, enabled: bool) void {
-        session_interaction.setFocusReportingLocked(self, enabled);
-    }
-
-    pub fn setMouseAlternateScroll(self: *TerminalSession, enabled: bool) void {
-        session_interaction.setMouseAlternateScroll(self, enabled);
-    }
-
-    pub fn setMouseAlternateScrollLocked(self: *TerminalSession, enabled: bool) void {
-        session_interaction.setMouseAlternateScrollLocked(self, enabled);
-    }
-
-    pub fn setMouseModeX10(self: *TerminalSession, enabled: bool) void {
-        session_interaction.setMouseModeX10(self, enabled);
-    }
-
-    pub fn setMouseModeX10Locked(self: *TerminalSession, enabled: bool) void {
-        session_interaction.setMouseModeX10Locked(self, enabled);
-    }
-
-    pub fn setMouseModeButton(self: *TerminalSession, enabled: bool) void {
-        session_interaction.setMouseModeButton(self, enabled);
-    }
-
-    pub fn setMouseModeButtonLocked(self: *TerminalSession, enabled: bool) void {
-        session_interaction.setMouseModeButtonLocked(self, enabled);
-    }
-
-    pub fn setMouseModeAny(self: *TerminalSession, enabled: bool) void {
-        session_interaction.setMouseModeAny(self, enabled);
-    }
-
-    pub fn setMouseModeAnyLocked(self: *TerminalSession, enabled: bool) void {
-        session_interaction.setMouseModeAnyLocked(self, enabled);
-    }
-
-    pub fn setMouseModeSgr(self: *TerminalSession, enabled: bool) void {
-        session_interaction.setMouseModeSgr(self, enabled);
-    }
-
-    pub fn setMouseModeSgrLocked(self: *TerminalSession, enabled: bool) void {
-        session_interaction.setMouseModeSgrLocked(self, enabled);
-    }
-
-    pub fn setMouseModeSgrPixels(self: *TerminalSession, enabled: bool) void {
-        session_interaction.setMouseModeSgrPixels(self, enabled);
-    }
-
-    pub fn setMouseModeSgrPixelsLocked(self: *TerminalSession, enabled: bool) void {
-        session_interaction.setMouseModeSgrPixelsLocked(self, enabled);
-    }
-
-    pub fn resetInputModes(self: *TerminalSession) void {
-        session_interaction.resetInputModes(self);
-    }
-
-    pub fn resetInputModesLocked(self: *TerminalSession) void {
-        session_interaction.resetInputModesLocked(self);
-    }
-
     pub fn setCursorStyle(self: *TerminalSession, mode: i32) void {
         session_protocol.setCursorStyle(self, mode);
     }
@@ -716,14 +643,6 @@ pub const TerminalSession = struct {
 
     pub fn saveCursor(self: *TerminalSession) void {
         session_protocol.saveCursor(self);
-    }
-
-    pub fn setKeypadMode(self: *TerminalSession, enabled: bool) void {
-        session_interaction.setKeypadMode(self, enabled);
-    }
-
-    pub fn setKeypadModeLocked(self: *TerminalSession, enabled: bool) void {
-        session_interaction.setKeypadModeLocked(self, enabled);
     }
 
     pub fn restoreCursor(self: *TerminalSession) void {
@@ -766,26 +685,6 @@ pub const TerminalSession = struct {
         session_rendering.finishFramePresentation(self, feedback);
     }
 
-    pub fn pasteSystemClipboard(
-        self: *TerminalSession,
-        clip_opt: ?[]const u8,
-        html: ?[]const u8,
-        uri_list: ?[]const u8,
-        png: ?[]const u8,
-    ) !bool {
-        return session_interaction.pasteSystemClipboard(self, clip_opt, html, uri_list, png);
-    }
-
-    pub fn pasteSelectionClipboard(
-        self: *TerminalSession,
-        clip_opt: ?[]const u8,
-        html: ?[]const u8,
-        uri_list: ?[]const u8,
-        png: ?[]const u8,
-    ) !bool {
-        return session_interaction.pasteSelectionClipboard(self, clip_opt, html, uri_list, png);
-    }
-
     pub fn syncUpdatesActive(self: *const TerminalSession) bool {
         return session_rendering.syncUpdatesActive(self);
     }
@@ -802,82 +701,7 @@ pub const TerminalSession = struct {
         return session_rendering.clearPublishedDamageIfGeneration(self, expected_generation, clear_screen_dirty);
     }
 
-    pub fn bracketedPasteEnabled(self: *TerminalSession) bool {
-        return session_interaction.bracketedPasteEnabled(self);
-    }
-
-    pub fn focusReportingEnabled(self: *TerminalSession) bool {
-        return session_interaction.focusReportingEnabled(self);
-    }
-
-    pub fn autoRepeatEnabled(self: *TerminalSession) bool {
-        return session_interaction.autoRepeatEnabled(self);
-    }
-
-    pub fn mouseAlternateScrollEnabled(self: *TerminalSession) bool {
-        return session_interaction.mouseAlternateScrollEnabled(self);
-    }
-
-    pub fn mouseModeX10Enabled(self: *const TerminalSession) bool {
-        return session_interaction.mouseModeX10Enabled(self);
-    }
-
-    pub fn mouseModeButtonEnabled(self: *const TerminalSession) bool {
-        return session_interaction.mouseModeButtonEnabled(self);
-    }
-
-    pub fn mouseModeAnyEnabled(self: *const TerminalSession) bool {
-        return session_interaction.mouseModeAnyEnabled(self);
-    }
-
-    pub fn mouseModeSgrEnabled(self: *const TerminalSession) bool {
-        return session_interaction.mouseModeSgrEnabled(self);
-    }
-
-    pub fn mouseModeSgrPixelsEnabled(self: *const TerminalSession) bool {
-        return session_interaction.mouseModeSgrPixelsEnabled(self);
-    }
-
-    pub fn kittyPasteEvents5522Enabled(self: *TerminalSession) bool {
-        return session_interaction.kittyPasteEvents5522Enabled(self);
-    }
-
-    pub fn sendKittyPasteEvent5522(self: *TerminalSession, clip: []const u8) !bool {
-        return session_interaction.sendKittyPasteEvent5522(self, clip);
-    }
-
-    pub fn sendKittyPasteEvent5522WithHtml(self: *TerminalSession, clip: []const u8, html: ?[]const u8) !bool {
-        return session_interaction.sendKittyPasteEvent5522WithHtml(self, clip, html);
-    }
-
-    pub fn sendKittyPasteEvent5522WithMime(self: *TerminalSession, clip: []const u8, html: ?[]const u8, uri_list: ?[]const u8) !bool {
-        return session_interaction.sendKittyPasteEvent5522WithMime(self, clip, html, uri_list);
-    }
-
-    pub fn sendKittyPasteEvent5522WithMimeRich(
-        self: *TerminalSession,
-        clip: []const u8,
-        html: ?[]const u8,
-        uri_list: ?[]const u8,
-        png: ?[]const u8,
-    ) !bool {
-        return session_interaction.sendKittyPasteEvent5522WithMimeRich(self, clip, html, uri_list, png);
-    }
-
-    pub fn mouseReportingEnabled(self: *TerminalSession) bool {
-        return session_interaction.mouseReportingEnabled(self);
-    }
-
     pub const CloseConfirmSignals = session_host_types.CloseConfirmSignals;
-
-    pub fn getDamage(self: *TerminalSession) ?struct {
-        start_row: usize,
-        end_row: usize,
-        start_col: usize,
-        end_col: usize,
-    } {
-        return session_interaction.getDamage(self);
-    }
 };
 
 pub const Hyperlink = snapshot_mod.Hyperlink;

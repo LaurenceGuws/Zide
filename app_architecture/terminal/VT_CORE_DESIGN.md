@@ -28,7 +28,9 @@ Status note, 2026-03-14:
   host/query surface is now also aliased directly from
   `src/terminal/core/session_queries.zig` and
   `src/terminal/core/session_host_queries.zig` instead of being repeated in the
-  root facade.
+  root facade; the interaction/mode surface is now also aliased directly from
+  `src/terminal/core/session_interaction.zig` instead of being re-declared in
+  `terminal_session.zig`.
 - Input encoding remains on the dedicated subsystem path: writer-agnostic
   encoder coverage exists at both the fake-writer level and the real
   PTY-backed `TerminalSession` writer boundary.
