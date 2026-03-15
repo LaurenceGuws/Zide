@@ -104,6 +104,8 @@ Required operations for milestone 1:
 - `zide_terminal_send_text(handle, utf8_ptr, utf8_len)`
 - `zide_terminal_feed_output(handle, ptr, len)`
 - `zide_terminal_close_input(handle)`
+- `zide_terminal_set_scrollback_offset(handle, offset_rows)`
+- `zide_terminal_follow_live_bottom(handle)`
 - `zide_terminal_send_key(handle, key_event)`
 - `zide_terminal_send_mouse(handle, mouse_event)`
 - `zide_terminal_present_ack(handle, generation)`
@@ -410,6 +412,17 @@ Getter policy:
 - when metadata already carries the latest-state summary, hosts should prefer
   `zide_terminal_metadata_acquire(...)` over reconstructing that state from
   multiple narrow getters
+
+Viewport policy:
+- foreign hosts may pin the backend-owned viewport with
+  `zide_terminal_set_scrollback_offset(...)`
+- `zide_terminal_follow_live_bottom(...)` explicitly restores the live-bottom
+  viewport
+- `metadata_acquire(...)` carries the authoritative `scrollback_offset`
+- `snapshot_acquire(...)` reflects the currently selected viewport, not always
+  live bottom
+- alt-screen viewport scrolling is currently rejected via `invalid_argument`
+  for non-zero offsets; live-bottom restore remains a no-op-safe call
 
 ## Reference patterns
 

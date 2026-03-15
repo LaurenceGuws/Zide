@@ -37,6 +37,8 @@ The baseline bridge is real and product-shaped: design docs, event ABI, snapshot
 - [ ] `FFI-02-03` Define the optional damage/diff extension after baseline full snapshot works.
 - [-] `FFI-02-04` Define the published-vs-acknowledged generation contract for foreign hosts.
   Notes: `present_ack`, acknowledged/published generation getters, redraw state getters, and shared contract docs are in place; the remaining work is deciding what else belongs in direct getters versus queued events.
+- [x] `FFI-02-05` Expose host-controlled viewport scrolling over the bridge.
+  Notes: `set_scrollback_offset(...)` and `follow_live_bottom(...)` now let foreign hosts drive the backend-owned visible viewport directly; metadata and snapshots reflect the authoritative offset, and redraw/publication semantics stay unchanged.
 
 ### FFI-03 PTY And Host IO Seam
 

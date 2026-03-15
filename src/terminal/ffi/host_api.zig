@@ -75,6 +75,19 @@ pub fn sendMouse(handle: ?*shared.ZideTerminalHandle, event: ?*const shared.Mous
     return .ok;
 }
 
+pub fn setScrollbackOffset(handle: ?*shared.ZideTerminalHandle, offset_rows: u32) shared.Status {
+    const h = shared.fromOpaque(handle) orelse return .invalid_argument;
+    if (h.session.isAltActive() and offset_rows != 0) return .invalid_argument;
+    h.session.setScrollOffset(offset_rows);
+    return shared.syncDerivedEvents(h);
+}
+
+pub fn followLiveBottom(handle: ?*shared.ZideTerminalHandle) shared.Status {
+    const h = shared.fromOpaque(handle) orelse return .invalid_argument;
+    h.session.setScrollOffset(0);
+    return shared.syncDerivedEvents(h);
+}
+
 pub fn isAlive(handle: ?*shared.ZideTerminalHandle) u8 {
     const h = shared.fromOpaque(handle) orelse return 0;
     return @intFromBool(h.session.isAlive());

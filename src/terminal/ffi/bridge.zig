@@ -98,6 +98,14 @@ pub fn sendMouse(handle: ?*ZideTerminalHandle, event: ?*const MouseEvent) Status
     return host_api.sendMouse(handle, event);
 }
 
+pub fn setScrollbackOffset(handle: ?*ZideTerminalHandle, offset_rows: u32) Status {
+    return host_api.setScrollbackOffset(handle, offset_rows);
+}
+
+pub fn followLiveBottom(handle: ?*ZideTerminalHandle) Status {
+    return host_api.followLiveBottom(handle);
+}
+
 pub fn snapshotAcquire(handle: ?*ZideTerminalHandle, out_snapshot: *Snapshot) Status {
     return core_api.snapshotAcquire(handle, out_snapshot);
 }

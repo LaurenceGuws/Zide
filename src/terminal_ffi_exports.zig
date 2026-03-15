@@ -68,6 +68,14 @@ pub export fn zide_terminal_send_mouse(handle: ?*c_api.ZideTerminalHandle, event
     return c_api.zide_terminal_send_mouse(handle, event);
 }
 
+pub export fn zide_terminal_set_scrollback_offset(handle: ?*c_api.ZideTerminalHandle, offset_rows: u32) c_int {
+    return c_api.zide_terminal_set_scrollback_offset(handle, offset_rows);
+}
+
+pub export fn zide_terminal_follow_live_bottom(handle: ?*c_api.ZideTerminalHandle) c_int {
+    return c_api.zide_terminal_follow_live_bottom(handle);
+}
+
 pub export fn zide_terminal_snapshot_acquire(handle: ?*c_api.ZideTerminalHandle, out_snapshot: *c_api.ZideTerminalSnapshot) c_int {
     return c_api.zide_terminal_snapshot_acquire(handle, out_snapshot);
 }

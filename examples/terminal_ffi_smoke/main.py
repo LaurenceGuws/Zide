@@ -229,6 +229,10 @@ def load_library(path: Path):
     lib.zide_terminal_feed_output.restype = ctypes.c_int
     lib.zide_terminal_close_input.argtypes = [HandlePtr]
     lib.zide_terminal_close_input.restype = ctypes.c_int
+    lib.zide_terminal_set_scrollback_offset.argtypes = [HandlePtr, ctypes.c_uint32]
+    lib.zide_terminal_set_scrollback_offset.restype = ctypes.c_int
+    lib.zide_terminal_follow_live_bottom.argtypes = [HandlePtr]
+    lib.zide_terminal_follow_live_bottom.restype = ctypes.c_int
     lib.zide_terminal_present_ack.argtypes = [HandlePtr, ctypes.c_uint64]
     lib.zide_terminal_present_ack.restype = ctypes.c_int
     lib.zide_terminal_acknowledged_generation.argtypes = [HandlePtr, ctypes.POINTER(ctypes.c_uint64)]

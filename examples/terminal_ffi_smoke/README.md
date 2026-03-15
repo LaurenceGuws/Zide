@@ -37,6 +37,13 @@ The shared publication helper performs the authoritative redraw/present steps:
 - acknowledge the published generation with `present_ack(...)`
 - verify redraw state cools off after acknowledgement
 
+Hosts can also drive the backend-owned viewport directly:
+- `zide_terminal_set_scrollback_offset(handle, rows)`
+- `zide_terminal_follow_live_bottom(handle)`
+
+Those calls change the authoritative visible viewport used by
+`snapshot_acquire(...)` and reflected by `metadata_acquire(...)`.
+
 This keeps the dedicated terminal smoke aligned with the mixed terminal+editor host path.
 The baseline smoke now also uses `metadata_acquire(...)` as its single
 lifecycle/title/cwd summary instead of reconstructing that state from multiple
