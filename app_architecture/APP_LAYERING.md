@@ -131,6 +131,20 @@ Historical rollout and validation for this split live in:
 - **Main entry** should use `src/app_shell.zig` instead of importing `src/ui/renderer.zig` directly.
 - **Renderer** (`src/ui/renderer.zig`) must not import terminal core code.
 
+```mermaid
+flowchart TD
+    Main[main / app host] --> UIShell[UI shell]
+    UIShell --> Widgets[widgets]
+    UIShell --> Core[core app]
+    Core --> Editor[editor backend]
+    Core --> Terminal[terminal backend]
+    Main --> Modes[modes shared/backend/ide]
+
+    Widgets -. no direct editor<->terminal cross-imports .- Editor
+    Widgets -. no direct editor<->terminal cross-imports .- Terminal
+    Renderer[renderer] -. must not import .- Terminal
+```
+
 AppShell interface:
 - `src/app_shell.zig` exposes a narrow `Shell` surface (init/draw/input accessors).
 
@@ -227,6 +241,16 @@ UI shell:
 - Core app owns all long-lived state (sessions, caches, tools).
 - Widgets are ephemeral views; no persistent state beyond UI affordances (hover, drag, local cache).
 - App shell owns rendering resources; widgets must not retain renderer handles.
+
+```mermaid
+flowchart TD
+    AppShell[App shell] --> RenderResources[render resources]
+    Core[Core app] --> Sessions[sessions]
+    Core --> Caches[caches / tools / workspace state]
+    Widgets[widgets] --> UIState[hover / drag / local UI affordances]
+    Core --> Snapshots[immutable snapshots]
+    Snapshots --> Widgets
+```
 
 ## Event + Action Types (sketch)
 - `InputEvent` (key, mouse, scroll, text) from shell to core.

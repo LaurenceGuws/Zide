@@ -35,6 +35,14 @@ Zide loads config in this order:
 
 Later layers override earlier ones.
 
+```mermaid
+flowchart LR
+    Defaults[assets/config/init.lua] --> Merge[parse + merge]
+    User[User config] --> Merge
+    Project[./.zide.lua] --> Merge
+    Merge --> Resolved[resolved config]
+```
+
 ## Merge Rules
 
 - Scalar fields: later non-null value wins.
@@ -45,6 +53,14 @@ Later layers override earlier ones.
   - Non-matching defaults remain available.
 - `keybinds.no_defaults = true`: replace inherited bindings instead of filling gaps.
 
+```mermaid
+flowchart TD
+    Layers[Config layers] --> Scalars[Scalars: later non-null wins]
+    Layers --> Theme[Theme: field-by-field merge]
+    Layers --> Keys[Keybinds: merge by scope + key + exact mods]
+    Keys --> NoDefaults[keybinds.no_defaults=true replaces inherited bindings]
+```
+
 ## Status Labels
 
 This doc uses these status labels:
@@ -54,6 +70,21 @@ This doc uses these status labels:
 - `legacy`: accepted for compatibility or historical reasons; not the preferred public shape.
 
 ## Config Matrix
+
+```mermaid
+flowchart LR
+    Resolved[Resolved config] --> Main[src/main.zig]
+    Resolved --> Router[src/input/input_actions.zig]
+    Resolved --> Renderer[src/ui/renderer.zig]
+    Resolved --> Editor[src/ui/widgets/editor_widget*]
+    Resolved --> Terminal[src/ui/widgets/terminal_widget*]
+
+    Main --> ThemeApply[theme / font / reload application]
+    Router --> Keybinds[keybind routing]
+    Renderer --> TextCfg[font_rendering text pipeline]
+    Editor --> EditorOpts[wrap / theme / ligatures]
+    Terminal --> TerminalOpts[blink / focus / texture_shift / theme]
+```
 
 ### `log`
 
@@ -167,6 +198,19 @@ That means the current Lua surface is more expressive than the actual runtime be
 Current reload support is intentionally partial:
 - theme, keybinds, wrap, ligature settings, cursor/blink policy, texture-shift toggle, and focus reporting are re-applied.
 - font path/size changes are parsed, but effectively restart-only.
+
+```mermaid
+flowchart LR
+    Reload[Config reload] --> Reapply[re-applied now]
+    Reload --> ParsedOnly[parsed but not fully re-applied]
+
+    Reapply --> A[theme]
+    Reapply --> B[keybinds]
+    Reapply --> C[wrap / ligatures / cursor / focus / texture_shift / font_rendering]
+
+    ParsedOnly --> D[font path / size]
+    ParsedOnly --> E[future-session-only effects]
+```
 
 ### Validation behavior is improving, but not finished
 
