@@ -92,8 +92,17 @@ Current shape in [core_api.zig](/home/home/personal/zide/src/terminal/ffi/core_a
 
 - allocates a `SnapshotOwner`
 - allocates a copied flat cell array
+- maps directly from the published render cache into the exported FFI cell
+  buffer
 - duplicates title only when requested
 - duplicates cwd only when requested
+
+Recent improvement:
+
+- the earlier temporary published-`RenderCache` copy inside
+  `snapshot_acquire(...)` is now gone
+- the dominant remaining cost is the one explicit flat FFI cell-buffer copy,
+  not an extra intermediate full-snapshot copy plus the final export
 
 This is acceptable for the current milestone because it is explicit and easy to
 bind, but it remains the biggest cost center on the host boundary.

@@ -72,6 +72,11 @@ Current judgment:
 - The current performance checkpoint for that lane now lives in:
   - `docs/research/terminal/TERMINAL_FFI_PERFORMANCE_REVIEW_2026-03-15.md`
   - `app_architecture/terminal/ffi/SNAPSHOT_ABI.md`
+- One narrow maturity cut already landed there:
+  - `snapshot_acquire(...)` no longer performs an extra temporary published
+    render-cache copy before building the exported FFI cell buffer
+  - the remaining dominant snapshot cost is now the single explicit copied
+    flat cell buffer itself
 
 ## TODO
 

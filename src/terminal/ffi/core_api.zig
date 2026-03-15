@@ -2,6 +2,7 @@ const std = @import("std");
 const terminal = @import("../core/terminal.zig");
 const terminal_transport = @import("../core/terminal_transport.zig");
 const types = @import("../model/types.zig");
+const screen = @import("../model/screen.zig");
 const app_logger = @import("../../app_logger.zig");
 const shared = @import("shared.zig");
 
@@ -13,6 +14,46 @@ const EventOwner = shared.EventOwner;
 
 fn currentPublishedGeneration(handle: *shared.Handle) u64 {
     return handle.session.publishedGeneration();
+}
+
+const SnapshotExportState = struct {
+    rows: usize,
+    cols: usize,
+    generation: u64,
+    cursor: terminal.CursorPos,
+    cursor_style: types.CursorStyle,
+    cursor_visible: bool,
+    alt_active: bool,
+    screen_reverse: bool,
+    damage: screen.Damage,
+};
+
+fn copyPublishedSnapshotCells(handle: *shared.Handle, allocator: std.mem.Allocator, out_state: *SnapshotExportState) ![]shared.Cell {
+    handle.session.lock();
+    defer handle.session.unlock();
+
+    if (handle.session.view_cache_pending.load(.acquire)) {
+        handle.session.updateViewCacheForScrollLocked();
+    }
+
+    const cache = handle.session.renderCache();
+    const cells = try allocator.alloc(shared.Cell, cache.cells.items.len);
+    for (cache.cells.items, 0..) |cell, i| {
+        cells[i] = mapCell(cell);
+    }
+
+    out_state.* = .{
+        .rows = cache.rows,
+        .cols = cache.cols,
+        .generation = cache.generation,
+        .cursor = cache.cursor,
+        .cursor_style = cache.cursor_style,
+        .cursor_visible = cache.cursor_visible,
+        .alt_active = cache.alt_active,
+        .screen_reverse = cache.screen_reverse,
+        .damage = cache.damage,
+    };
+    return cells;
 }
 
 pub fn create(config: ?*const shared.CreateConfig, out_handle: *?*shared.ZideTerminalHandle) shared.Status {
@@ -181,28 +222,19 @@ pub fn snapshotAcquire(handle: ?*shared.ZideTerminalHandle, request: ?*const sha
     if (req.struct_size != @sizeOf(shared.SnapshotRequest)) return .invalid_argument;
     const allocator = h.allocator;
 
-    var cache = terminal.RenderCache.init();
-    defer cache.deinit(allocator);
-    const published = h.session.copyPublishedRenderCache(&cache) catch |err| {
-        log.logf(.warning, "snapshot published cache copy failed err={s}", .{@errorName(err)});
-        return shared.mapError(err);
-    };
-
     const owner = allocator.create(SnapshotOwner) catch |err| {
         log.logf(.warning, "snapshot owner alloc failed err={s}", .{@errorName(err)});
         return .out_of_memory;
     };
     errdefer allocator.destroy(owner);
 
-    const cell_count = cache.cells.items.len;
-    const cells = allocator.alloc(shared.Cell, cell_count) catch |err| {
-        log.logf(.warning, "snapshot cells alloc failed count={d} err={s}", .{ cell_count, @errorName(err) });
-        return .out_of_memory;
+    var state: SnapshotExportState = undefined;
+    const cells = copyPublishedSnapshotCells(h, allocator, &state) catch |err| {
+        log.logf(.warning, "snapshot cell export failed err={s}", .{@errorName(err)});
+        return shared.mapError(err);
     };
     errdefer allocator.free(cells);
-    for (cache.cells.items, 0..) |cell, i| {
-        cells[i] = mapCell(cell);
-    }
+    const cell_count = cells.len;
 
     var title: []u8 = &.{};
     errdefer if (title.len > 0) allocator.free(title);
@@ -240,27 +272,27 @@ pub fn snapshotAcquire(handle: ?*shared.ZideTerminalHandle, request: ?*const sha
     out_snapshot.* = .{
         .abi_version = shared.snapshot_abi_version,
         .struct_size = @sizeOf(shared.Snapshot),
-        .rows = @intCast(cache.rows),
-        .cols = @intCast(cache.cols),
-        .generation = published.generation,
+        .rows = @intCast(state.rows),
+        .cols = @intCast(state.cols),
+        .generation = state.generation,
         .cell_count = cell_count,
         .cells = if (cell_count == 0) null else cells.ptr,
-        .cursor_row = @intCast(cache.cursor.row),
-        .cursor_col = @intCast(cache.cursor.col),
-        .cursor_visible = @intFromBool(cache.cursor_visible),
-        .cursor_shape = switch (cache.cursor_style.shape) {
+        .cursor_row = @intCast(state.cursor.row),
+        .cursor_col = @intCast(state.cursor.col),
+        .cursor_visible = @intFromBool(state.cursor_visible),
+        .cursor_shape = switch (state.cursor_style.shape) {
             .block => 0,
             .underline => 1,
             .bar => 2,
         },
-        .cursor_blink = @intFromBool(cache.cursor_style.blink),
-        .alt_active = @intFromBool(cache.alt_active),
-        .screen_reverse = @intFromBool(cache.screen_reverse),
-        .has_damage = @intFromBool(cache.damage.start_row <= cache.damage.end_row and cache.damage.start_col <= cache.damage.end_col),
-        .damage_start_row = @intCast(cache.damage.start_row),
-        .damage_end_row = @intCast(cache.damage.end_row),
-        .damage_start_col = @intCast(cache.damage.start_col),
-        .damage_end_col = @intCast(cache.damage.end_col),
+        .cursor_blink = @intFromBool(state.cursor_style.blink),
+        .alt_active = @intFromBool(state.alt_active),
+        .screen_reverse = @intFromBool(state.screen_reverse),
+        .has_damage = @intFromBool(state.damage.start_row <= state.damage.end_row and state.damage.start_col <= state.damage.end_col),
+        .damage_start_row = @intCast(state.damage.start_row),
+        .damage_end_row = @intCast(state.damage.end_row),
+        .damage_start_col = @intCast(state.damage.start_col),
+        .damage_end_col = @intCast(state.damage.end_col),
         .title_ptr = if (title.len == 0) null else title.ptr,
         .title_len = title.len,
         .cwd_ptr = if (cwd.len == 0) null else cwd.ptr,
