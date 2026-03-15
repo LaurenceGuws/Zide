@@ -35,7 +35,7 @@ Supporting cleanup:
 - [x] `VTCORE-00` Define the terminal core boundary.
   Notes: the concrete boundary and target types now live in `app_architecture/terminal/VT_CORE_DESIGN.md`.
 - [ ] `VTCORE-01` Separate VT core from host session/runtime.
-  Notes: `TerminalCore`, `session_runtime`, debug helpers, render/query/runtime splits, and several root-session delegations are already landed; the remaining work is shrinking `TerminalSession` into a thinner host wrapper. Latest slices: input-mode snapshot state now lives in `src/terminal/core/session_input_snapshot.zig`, and presentation-feedback structs now live in `src/terminal/core/session_presentation_feedback.zig` instead of being defined inline in `terminal_session.zig`.
+  Notes: `TerminalCore`, `session_runtime`, debug helpers, render/query/runtime splits, and several root-session delegations are already landed; the remaining work is shrinking `TerminalSession` into a thinner host wrapper. Latest slices: input-mode snapshot state now lives in `src/terminal/core/session_input_snapshot.zig`, presentation-feedback structs now live in `src/terminal/core/session_presentation_feedback.zig`, and session init options now live in `src/terminal/core/session_init_options.zig` instead of being defined inline in `terminal_session.zig`.
 - [ ] `VTCORE-02` Make FFI a first-class core interface.
   Notes: shared FFI state plus `host_api` and `core_api` splits are landed; remaining work is maturity and convergence, not proving the shape.
 - [ ] `VTCORE-03` Introduce transport-agnostic host integration.

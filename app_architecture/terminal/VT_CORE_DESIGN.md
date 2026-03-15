@@ -17,8 +17,8 @@ Status note, 2026-03-14:
     idle waiting now wakes on SDL events instead of sleeping blindly through
     focused input windows.
 - Session-facade shrink work continues in small extraction-only cuts; input-mode
-  snapshot state and presentation-feedback structs now live in dedicated
-  `src/terminal/core/session_*` modules instead of inline in
+  snapshot state, presentation-feedback structs, and session init options now
+  live in dedicated `src/terminal/core/session_*` modules instead of inline in
   `terminal_session.zig`.
 
 Purpose: define the exact ownership split for the next terminal-core redesign

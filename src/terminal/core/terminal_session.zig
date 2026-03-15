@@ -28,6 +28,7 @@ const session_content = @import("session_content.zig");
 const session_selection = @import("session_selection.zig");
 const session_input = @import("session_input.zig");
 const session_interaction = @import("session_interaction.zig");
+const session_init_options = @import("session_init_options.zig");
 const session_input_snapshot = @import("session_input_snapshot.zig");
 const session_presentation_feedback = @import("session_presentation_feedback.zig");
 const session_rendering = @import("session_rendering.zig");
@@ -111,6 +112,8 @@ pub fn debugSetGridRow(self: *TerminalSession, row_index: usize, text: []const u
 
 /// Minimal terminal stub so the UI panel stays wired while backend is removed.
 pub const TerminalSession = struct {
+    pub const InitOptions = session_init_options.InitOptions;
+
     allocator: std.mem.Allocator,
     pty: ?Pty,
     external_transport: ?terminal_transport.ExternalTransport,
@@ -157,11 +160,6 @@ pub const TerminalSession = struct {
     view_cache_request_offset: std.atomic.Value(u64),
     child_exited: std.atomic.Value(bool),
     child_exit_code: std.atomic.Value(i32),
-
-    pub const InitOptions = struct {
-        scrollback_rows: ?usize = null,
-        cursor_style: ?types.CursorStyle = null,
-    };
 
     pub fn init(allocator: std.mem.Allocator, rows: u16, cols: u16) !*TerminalSession {
         return initWithOptions(allocator, rows, cols, .{});
