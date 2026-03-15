@@ -28,9 +28,20 @@ const SnapshotExportState = struct {
     damage: screen.Damage,
 };
 
-fn copyPublishedSnapshotCells(handle: *shared.Handle, allocator: std.mem.Allocator, out_state: *SnapshotExportState) ![]shared.Cell {
+const SnapshotExport = struct {
+    cells: []shared.Cell,
+    title: []u8,
+    cwd: []u8,
+};
+
+fn copyPublishedSnapshotExport(
+    handle: *shared.Handle,
+    allocator: std.mem.Allocator,
+    include_flags: u32,
+    out_state: *SnapshotExportState,
+) !SnapshotExport {
     handle.session.lock();
-    defer handle.session.unlock();
+    errdefer handle.session.unlock();
 
     if (handle.session.view_cache_pending.load(.acquire)) {
         handle.session.updateViewCacheForScrollLocked();
@@ -38,8 +49,25 @@ fn copyPublishedSnapshotCells(handle: *shared.Handle, allocator: std.mem.Allocat
 
     const cache = handle.session.renderCache();
     const cells = try allocator.alloc(shared.Cell, cache.cells.items.len);
+    errdefer allocator.free(cells);
     for (cache.cells.items, 0..) |cell, i| {
         cells[i] = mapCell(cell);
+    }
+
+    var title: []u8 = &.{};
+    errdefer if (title.len > 0) allocator.free(title);
+    var cwd: []u8 = &.{};
+    errdefer if (cwd.len > 0) allocator.free(cwd);
+
+    if ((include_flags & @intFromEnum(shared.SnapshotIncludeFlags.title)) != 0) {
+        const title_text = if (terminal_transport.Transport.fromSession(handle.session)) |transport|
+            (transport.foregroundProcessLabel() orelse handle.session.core.titleText())
+        else
+            handle.session.core.titleText();
+        title = try allocator.dupe(u8, title_text);
+    }
+    if ((include_flags & @intFromEnum(shared.SnapshotIncludeFlags.cwd)) != 0) {
+        cwd = try allocator.dupe(u8, handle.session.core.cwdText());
     }
 
     out_state.* = .{
@@ -53,7 +81,12 @@ fn copyPublishedSnapshotCells(handle: *shared.Handle, allocator: std.mem.Allocat
         .screen_reverse = cache.screen_reverse,
         .damage = cache.damage,
     };
-    return cells;
+    handle.session.unlock();
+    return .{
+        .cells = cells,
+        .title = title,
+        .cwd = cwd,
+    };
 }
 
 pub fn create(config: ?*const shared.CreateConfig, out_handle: *?*shared.ZideTerminalHandle) shared.Status {
@@ -229,44 +262,20 @@ pub fn snapshotAcquire(handle: ?*shared.ZideTerminalHandle, request: ?*const sha
     errdefer allocator.destroy(owner);
 
     var state: SnapshotExportState = undefined;
-    const cells = copyPublishedSnapshotCells(h, allocator, &state) catch |err| {
-        log.logf(.warning, "snapshot cell export failed err={s}", .{@errorName(err)});
+    const exported = copyPublishedSnapshotExport(h, allocator, req.include_flags, &state) catch |err| {
+        log.logf(.warning, "snapshot export failed err={s}", .{@errorName(err)});
         return shared.mapError(err);
     };
-    errdefer allocator.free(cells);
-    const cell_count = cells.len;
-
-    var title: []u8 = &.{};
-    errdefer if (title.len > 0) allocator.free(title);
-    var cwd: []u8 = &.{};
-    errdefer if (cwd.len > 0) allocator.free(cwd);
-
-    if ((req.include_flags & @intFromEnum(shared.SnapshotIncludeFlags.title)) != 0 or
-        (req.include_flags & @intFromEnum(shared.SnapshotIncludeFlags.cwd)) != 0)
-    {
-        const metadata = h.session.copyMetadata(allocator, &h.scratch_title, &h.scratch_cwd) catch |err| {
-            log.logf(.warning, "snapshot metadata copy failed err={s}", .{@errorName(err)});
-            return .out_of_memory;
-        };
-        if ((req.include_flags & @intFromEnum(shared.SnapshotIncludeFlags.title)) != 0) {
-            title = allocator.dupe(u8, metadata.title) catch |err| {
-                log.logf(.warning, "snapshot title dup failed err={s}", .{@errorName(err)});
-                return .out_of_memory;
-            };
-        }
-        if ((req.include_flags & @intFromEnum(shared.SnapshotIncludeFlags.cwd)) != 0) {
-            cwd = allocator.dupe(u8, metadata.cwd) catch |err| {
-                log.logf(.warning, "snapshot cwd dup failed err={s}", .{@errorName(err)});
-                return .out_of_memory;
-            };
-        }
-    }
+    errdefer allocator.free(exported.cells);
+    errdefer allocator.free(exported.title);
+    errdefer allocator.free(exported.cwd);
+    const cell_count = exported.cells.len;
 
     owner.* = .{
         .allocator = allocator,
-        .cells = cells,
-        .title = title,
-        .cwd = cwd,
+        .cells = exported.cells,
+        .title = exported.title,
+        .cwd = exported.cwd,
     };
 
     out_snapshot.* = .{
@@ -276,7 +285,7 @@ pub fn snapshotAcquire(handle: ?*shared.ZideTerminalHandle, request: ?*const sha
         .cols = @intCast(state.cols),
         .generation = state.generation,
         .cell_count = cell_count,
-        .cells = if (cell_count == 0) null else cells.ptr,
+        .cells = if (cell_count == 0) null else exported.cells.ptr,
         .cursor_row = @intCast(state.cursor.row),
         .cursor_col = @intCast(state.cursor.col),
         .cursor_visible = @intFromBool(state.cursor_visible),
@@ -293,10 +302,10 @@ pub fn snapshotAcquire(handle: ?*shared.ZideTerminalHandle, request: ?*const sha
         .damage_end_row = @intCast(state.damage.end_row),
         .damage_start_col = @intCast(state.damage.start_col),
         .damage_end_col = @intCast(state.damage.end_col),
-        .title_ptr = if (title.len == 0) null else title.ptr,
-        .title_len = title.len,
-        .cwd_ptr = if (cwd.len == 0) null else cwd.ptr,
-        .cwd_len = cwd.len,
+        .title_ptr = if (exported.title.len == 0) null else exported.title.ptr,
+        .title_len = exported.title.len,
+        .cwd_ptr = if (exported.cwd.len == 0) null else exported.cwd.ptr,
+        .cwd_len = exported.cwd.len,
         ._ctx = owner,
     };
     return .ok;
