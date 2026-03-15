@@ -435,6 +435,48 @@ test "ffi child_exit event carries exit code and present flag" {
     try std.testing.expectEqual(@as(i32, 7), code);
 }
 
+test "ffi can report focus and color scheme changes over PTY when enabled by app" {
+    if (@import("builtin").os.tag == .windows) return;
+
+    try app_logger.setConsoleFilterString("none");
+    try app_logger.setFileFilterString("none");
+
+    var handle: ?*c_api.ZideTerminalHandle = null;
+    try std.testing.expectEqual(@as(c_int, 0), c_api.zide_terminal_create(null, &handle));
+    defer c_api.zide_terminal_destroy(handle);
+    try std.testing.expectEqual(@as(c_int, 0), c_api.zide_terminal_resize(handle, 40, 8, 8, 16));
+    try std.testing.expectEqual(@as(c_int, 0), c_api.zide_terminal_start(handle, "/bin/sh"));
+
+    var reported: u8 = 99;
+    try std.testing.expectEqual(@as(c_int, 0), c_api.zide_terminal_report_focus_changed(handle, 1, &reported));
+    try std.testing.expectEqual(@as(u8, 0), reported);
+    try std.testing.expectEqual(@as(c_int, 0), c_api.zide_terminal_report_color_scheme_changed(handle, 1, &reported));
+    try std.testing.expectEqual(@as(u8, 0), reported);
+
+    const enable_modes = "printf '\\033[?1004h\\033[?2031h'\n";
+    try std.testing.expectEqual(@as(c_int, 0), c_api.zide_terminal_send_bytes(handle, enable_modes.ptr, enable_modes.len));
+
+    const deadline = std.time.milliTimestamp() + 4000;
+    var enabled = false;
+    while (std.time.milliTimestamp() < deadline) {
+        try std.testing.expectEqual(@as(c_int, 0), c_api.zide_terminal_poll(handle));
+
+        var focus_sent: u8 = 0;
+        try std.testing.expectEqual(@as(c_int, 0), c_api.zide_terminal_report_focus_changed(handle, 1, &focus_sent));
+        var color_sent: u8 = 0;
+        try std.testing.expectEqual(@as(c_int, 0), c_api.zide_terminal_report_color_scheme_changed(handle, 1, &color_sent));
+
+        if (focus_sent == 1 and color_sent == 1) {
+            enabled = true;
+            break;
+        }
+
+        std.Thread.sleep(20 * std.time.ns_per_ms);
+    }
+
+    try std.testing.expect(enabled);
+}
+
 fn ptrBytes(ptr: ?[*]const u8, len: usize) []const u8 {
     if (len == 0) return "";
     return (ptr orelse unreachable)[0..len];

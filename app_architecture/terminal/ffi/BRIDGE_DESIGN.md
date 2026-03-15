@@ -108,6 +108,8 @@ Required operations for milestone 1:
 - `zide_terminal_follow_live_bottom(handle)`
 - `zide_terminal_send_key(handle, key_event)`
 - `zide_terminal_send_mouse(handle, mouse_event)`
+- `zide_terminal_report_focus_changed(handle, focused, &reported)`
+- `zide_terminal_report_color_scheme_changed(handle, dark, &reported)`
 - `zide_terminal_present_ack(handle, generation)`
 - `zide_terminal_acknowledged_generation(handle, &generation)`
 - `zide_terminal_published_generation(handle, &generation)`

@@ -75,6 +75,20 @@ pub fn sendMouse(handle: ?*shared.ZideTerminalHandle, event: ?*const shared.Mous
     return .ok;
 }
 
+pub fn reportFocusChanged(handle: ?*shared.ZideTerminalHandle, focused: u8, out_reported: *u8) shared.Status {
+    const h = shared.fromOpaque(handle) orelse return .invalid_argument;
+    const reported = h.session.reportFocusChanged(focused != 0) catch |err| return shared.mapError(err);
+    out_reported.* = @intFromBool(reported);
+    return .ok;
+}
+
+pub fn reportColorSchemeChanged(handle: ?*shared.ZideTerminalHandle, dark: u8, out_reported: *u8) shared.Status {
+    const h = shared.fromOpaque(handle) orelse return .invalid_argument;
+    const reported = h.session.reportColorSchemeChanged(dark != 0) catch |err| return shared.mapError(err);
+    out_reported.* = @intFromBool(reported);
+    return .ok;
+}
+
 pub fn setScrollbackOffset(handle: ?*shared.ZideTerminalHandle, offset_rows: u32) shared.Status {
     const h = shared.fromOpaque(handle) orelse return .invalid_argument;
     if (h.session.isAltActive() and offset_rows != 0) return .invalid_argument;

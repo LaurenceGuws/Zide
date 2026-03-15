@@ -316,7 +316,7 @@ pub const TerminalHistory = struct {
         }
     }
 
-    pub fn scrollbackCount(self: *TerminalHistory) usize {
+    pub fn scrollbackCount(self: *const TerminalHistory) usize {
         return self.view_rows;
     }
 

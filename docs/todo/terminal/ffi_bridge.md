@@ -48,7 +48,7 @@ The baseline bridge is real and product-shaped: design docs, event ABI, snapshot
 ### FFI-04 Export Surface And Smoke Host
 
 - [-] `FFI-04-01` Create the minimal exported bridge surface with opaque handles.
-  Notes: close-confirm state and clipboard-write payload now have explicit getters/ABI surfaces alongside metadata and redraw-state, so foreign hosts no longer need native-only close-warning or event-only clipboard contracts.
+  Notes: close-confirm state and clipboard-write payload now have explicit getters/ABI surfaces alongside metadata and redraw-state, and host-side focus/color-scheme reporting is now available over the bridge too, so foreign hosts no longer need native-only close-warning, event-only clipboard, or native-only host-input notification paths.
 - [x] `FFI-04-02` Add a standalone Python ctypes smoke host.
 - [x] `FFI-04-03` Add a non-interactive bridge smoke test.
 - [-] `FFI-04-04` Stabilize PTY-backed foreign-host start as a separate smoke slice.

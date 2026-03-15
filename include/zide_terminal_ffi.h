@@ -230,6 +230,8 @@ int zide_terminal_close_confirm_signals(ZideTerminalHandle *handle, ZideTerminal
 uint8_t zide_terminal_needs_redraw(ZideTerminalHandle *handle);
 int zide_terminal_send_key(ZideTerminalHandle *handle, const ZideTerminalKeyEvent *event);
 int zide_terminal_send_mouse(ZideTerminalHandle *handle, const ZideTerminalMouseEvent *event);
+int zide_terminal_report_focus_changed(ZideTerminalHandle *handle, uint8_t focused, uint8_t *out_reported);
+int zide_terminal_report_color_scheme_changed(ZideTerminalHandle *handle, uint8_t dark, uint8_t *out_reported);
 int zide_terminal_set_scrollback_offset(ZideTerminalHandle *handle, uint32_t offset_rows);
 int zide_terminal_follow_live_bottom(ZideTerminalHandle *handle);
 int zide_terminal_snapshot_acquire(ZideTerminalHandle *handle, ZideTerminalSnapshot *out_snapshot);

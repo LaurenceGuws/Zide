@@ -97,6 +97,14 @@ pub fn zide_terminal_send_mouse(handle: ?*ZideTerminalHandle, event: ?*const Zid
     return @intFromEnum(bridge.sendMouse(handle, event));
 }
 
+pub fn zide_terminal_report_focus_changed(handle: ?*ZideTerminalHandle, focused: u8, out_reported: *u8) c_int {
+    return @intFromEnum(bridge.reportFocusChanged(handle, focused, out_reported));
+}
+
+pub fn zide_terminal_report_color_scheme_changed(handle: ?*ZideTerminalHandle, dark: u8, out_reported: *u8) c_int {
+    return @intFromEnum(bridge.reportColorSchemeChanged(handle, dark, out_reported));
+}
+
 pub fn zide_terminal_set_scrollback_offset(handle: ?*ZideTerminalHandle, offset_rows: u32) c_int {
     return @intFromEnum(bridge.setScrollbackOffset(handle, offset_rows));
 }

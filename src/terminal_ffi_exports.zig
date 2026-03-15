@@ -68,6 +68,14 @@ pub export fn zide_terminal_send_mouse(handle: ?*c_api.ZideTerminalHandle, event
     return c_api.zide_terminal_send_mouse(handle, event);
 }
 
+pub export fn zide_terminal_report_focus_changed(handle: ?*c_api.ZideTerminalHandle, focused: u8, out_reported: *u8) c_int {
+    return c_api.zide_terminal_report_focus_changed(handle, focused, out_reported);
+}
+
+pub export fn zide_terminal_report_color_scheme_changed(handle: ?*c_api.ZideTerminalHandle, dark: u8, out_reported: *u8) c_int {
+    return c_api.zide_terminal_report_color_scheme_changed(handle, dark, out_reported);
+}
+
 pub export fn zide_terminal_set_scrollback_offset(handle: ?*c_api.ZideTerminalHandle, offset_rows: u32) c_int {
     return c_api.zide_terminal_set_scrollback_offset(handle, offset_rows);
 }
