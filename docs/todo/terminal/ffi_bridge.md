@@ -14,7 +14,7 @@ Define an embeddable terminal backend surface with stable FFI-oriented contracts
 
 ## Status
 
-The baseline bridge is real and product-shaped: design docs, event ABI, snapshot ABI, non-PTY smoke coverage, and Python ctypes smoke all exist. The remaining work is on boundary cleanup, PTY-backed host stabilization, and maturing the ABI without broadening scope into renderer export.
+The baseline bridge is real and product-shaped: design docs, event ABI, snapshot ABI, non-PTY smoke coverage, Python ctypes smoke, and a dedicated PTY-backed verifier all exist. The remaining work is on boundary cleanup and maturing the ABI without broadening scope into renderer export.
 
 ## TODO
 
@@ -50,7 +50,7 @@ The baseline bridge is real and product-shaped: design docs, event ABI, snapshot
 - [x] `FFI-04-02` Add a standalone Python ctypes smoke host.
 - [x] `FFI-04-03` Add a non-interactive bridge smoke test.
 - [-] `FFI-04-04` Stabilize PTY-backed foreign-host start as a separate smoke slice.
-  Notes: keep the no-PTY smoke authoritative for ownership/lifetime; PTY-backed startup remains a narrower stabilization track. Current PTY smoke now validates redraw/present, metadata, child-exit, and close-confirm getter shape on the bridge-owned shell path.
+  Notes: keep the no-PTY smoke authoritative for ownership/lifetime; PTY-backed startup remains a narrower stabilization track rather than an absent one. Current PTY smoke validates redraw/present, metadata, child-exit, and close-confirm getter shape on the bridge-owned shell path.
 
 ### FFI-05 Host Adapters And Future Productization
 
@@ -60,5 +60,5 @@ The baseline bridge is real and product-shaped: design docs, event ABI, snapshot
 ## Current Gaps
 
 - Advanced event families are still deferred.
-- PTY-backed foreign-host smoke still trails the baseline no-PTY path.
+- PTY-backed foreign-host coverage is narrower than the baseline no-PTY authority path, but it is now a real maintained verifier rather than a missing smoke lane.
 - The bridge remains beta-level and should not be treated as frozen.
