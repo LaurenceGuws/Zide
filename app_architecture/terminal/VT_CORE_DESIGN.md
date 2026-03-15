@@ -65,7 +65,9 @@ Status note, 2026-03-14:
   being split between `session_runtime.zig` and host-query code; transport
   open/attach/close, writer access, outgoing-drain, and resize-report
   choreography now also lives behind `session_transport_runtime.zig` instead of
-  staying bundled inside `session_runtime.zig`.
+  staying bundled inside `session_runtime.zig`; thread shutdown and queued-IO /
+  backlog observation now also lives behind `session_thread_runtime.zig`
+  instead of staying open-coded in `session_runtime.zig`.
 - Input encoding remains on the dedicated subsystem path: writer-agnostic
   encoder coverage exists at both the fake-writer level and the real
   PTY-backed `TerminalSession` writer boundary.

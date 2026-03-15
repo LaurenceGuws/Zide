@@ -9,6 +9,7 @@ const render_cache_mod = @import("render_cache.zig");
 const input_modes = @import("input_modes.zig");
 const session_lifecycle = @import("session_lifecycle.zig");
 const session_transport_runtime = @import("session_transport_runtime.zig");
+const session_thread_runtime = @import("session_thread_runtime.zig");
 
 const Pty = pty_mod.Pty;
 const TerminalCore = terminal_core_mod.TerminalCore;
@@ -106,25 +107,7 @@ pub fn reportExternalChildExit(self: anytype, code: ?i32) bool {
 }
 
 pub fn deinit(self: anytype) void {
-    if (self.read_thread) |thread| {
-        self.read_thread_running.store(false, .release);
-        thread.join();
-        self.read_thread = null;
-    }
-    if (self.parse_thread) |thread| {
-        self.parse_thread_running.store(false, .release);
-        self.io_wait_cond.signal();
-        thread.join();
-        self.parse_thread = null;
-    }
-    if (terminal_transport.Transport.fromSession(self)) |transport| {
-        transport.deinit();
-    }
-    self.render_caches[0].deinit(self.allocator);
-    self.render_caches[1].deinit(self.allocator);
-    self.io_buffer.deinit(self.allocator);
-    self.core.deinit(self);
-    self.allocator.destroy(self);
+    session_thread_runtime.deinit(self);
 }
 
 pub fn startNoThreads(self: anytype, shell: ?[:0]const u8) !void {
@@ -145,27 +128,11 @@ pub fn refreshChildExit(self: anytype) void {
 }
 
 pub fn hasData(self: anytype) bool {
-    if (self.read_thread != null) {
-        if (self.parse_thread != null) {
-            return self.output_pending.load(.acquire);
-        }
-        if (self.output_pending.load(.acquire)) return true;
-        var pending = false;
-        self.io_mutex.lock();
-        if (self.io_buffer.items.len > self.io_read_offset) {
-            pending = true;
-        }
-        self.io_mutex.unlock();
-        return pending;
-    }
-    if (terminal_transport.Transport.fromSession(self)) |transport| {
-        return transport.hasData();
-    }
-    return false;
+    return session_thread_runtime.hasData(self);
 }
 
 pub fn pollBacklogHint(self: anytype) bool {
-    return hasData(self) or @import("session_rendering.zig").hasPublishedGenerationBacklog(self);
+    return session_thread_runtime.pollBacklogHint(self);
 }
 
 pub fn lockPtyWriter(self: anytype) ?@import("terminal_session.zig").PtyWriteGuard {
