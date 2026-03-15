@@ -70,6 +70,9 @@ Important:
 
 - In normal Linux/macOS flow, SDL3, Lua, FreeType, HarfBuzz, and tree-sitter
   are resolved through Zig package-managed dependencies.
+- Linux package-manager setup is now mostly for platform/runtime libraries such
+  as Wayland, Mesa/OpenGL, `libxkbcommon`, and `fontconfig`, not for sourcing
+  the primary app library stack.
 - You still need platform/system libraries for native execution.
 - For exact platform dependency details, prefer the hosted dependency docs over
   cargo-culting old package lists from stale snippets.
