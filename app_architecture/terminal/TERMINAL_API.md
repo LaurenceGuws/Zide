@@ -28,6 +28,17 @@ This doc now serves three narrower purposes:
 It should not grow into another dated modularization diary or duplicate the
 full engine split docs.
 
+## Terminal API Contract Boundary
+
+```mermaid
+flowchart LR
+    Host[app / host / UI] --> API[session + workspace API surface]
+    API --> Session[TerminalSession]
+    API --> Workspace[TerminalWorkspace]
+    Session --> Core[terminal core / transport]
+    Workspace --> Session
+```
+
 ## Contract Table
 
 | API | Inputs | Outputs | Lifetime | Allocations | Invariants | Tests |
@@ -66,6 +77,17 @@ Interpretation rule:
   production-stable
 
 Replay fixtures referenced above live under `fixtures/terminal` and are executed via `zig build test-terminal-replay`.
+
+## Publication State
+
+```mermaid
+stateDiagram-v2
+    [*] --> Current
+    Current --> Published
+    Published --> Presented
+    Presented --> Acknowledged
+    Acknowledged --> Current
+```
 
 ## Boundary Contract (2026-03-09)
 
@@ -109,6 +131,15 @@ important than the exact file layout.
 ## Workspace API Contract (tabs)
 
 `TerminalWorkspace` lives in `src/terminal/core/workspace.zig` and owns tab/session orchestration above `TerminalSession`.
+
+### Workspace API vs Session API
+
+```mermaid
+flowchart LR
+    WorkspaceAPI[workspace API\ncreate/close/activate/move/poll] --> Shared[shared read contract]
+    SessionAPI[session API\ninput/resize/snapshot/selection/query] --> Shared
+    Shared --> Host[host / app consumer]
+```
 
 | API | Inputs | Outputs | Lifetime | Allocations | Invariants | Tests |
 | --- | ------ | ------- | -------- | ----------- | ---------- | ----- |
