@@ -144,6 +144,17 @@ Reason:
 
 Callbacks may be added later for a subset of events once ownership and threading are already proven.
 
+```mermaid
+flowchart TD
+    Create["create / start"] --> Drive["poll / feed_output / resize / send_input"]
+    Drive --> Snapshot["snapshot_acquire / metadata_acquire / scrollback_acquire"]
+    Drive --> Events["event_drain"]
+    Snapshot --> Ack["present_ack / acknowledged_generation"]
+    Events --> Ack
+    Ack --> Drive
+    Drive --> Destroy["destroy"]
+```
+
 ## Ownership rules
 
 ```mermaid
@@ -198,6 +209,22 @@ The snapshot should include at minimum:
 - title/cwd metadata if available
 - selection metadata only if it is part of the core backend contract
 - kitty image/placement metadata only if already representable without renderer leakage
+
+```mermaid
+flowchart LR
+    Core["Terminal backend core"] --> Snap["Flat snapshot export"]
+    Core --> Meta["Metadata export"]
+    Core --> Events["Event drain"]
+    Core --> Scroll["Scrollback/text export"]
+
+    Snap --> Host["Foreign host UI/runtime"]
+    Meta --> Host
+    Events --> Host
+    Scroll --> Host
+
+    Host --> Ack["present_ack(generation)"]
+    Ack --> Core
+```
 
 ## Event model direction
 
