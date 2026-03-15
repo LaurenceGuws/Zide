@@ -15,6 +15,7 @@ export function createAppState() {
             title: "Docs Explorer",
             subtitle: "",
             rawLink: "#",
+            sourceLink: "#",
             status: "idle",
         },
         viewer: {

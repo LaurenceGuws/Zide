@@ -22,6 +22,7 @@ export async function startApp() {
         state,
         shell,
         repoBasePath: project.repoBasePath,
+        sourceUrlBase: project.sourceUrlBase,
         repoAbsolutePath: project.repoAbsolutePath,
         docs,
         defaultDocPath: project.defaultDoc,
