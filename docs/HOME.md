@@ -1,4 +1,4 @@
-<h1><img src="assets/icon/color_icon.png" alt="Z" width="44" align="absmiddle" />ide</h1>
+<h1><img src="assets/icon/color_icon.png" alt="Z" style="width: 0.92em; height: 0.92em;" align="absmiddle" />ide</h1>
 
 A native IDE and terminal stack built in Zig, aimed at fast local workspaces,
 serious terminal quality, and resource-aware tooling.
@@ -13,7 +13,7 @@ serious terminal quality, and resource-aware tooling.
 
 ## Demo
 
-[![Zide demo](assets/demo/zide-demo-2026-03-15-poster.jpg)](assets/demo/zide-demo-2026-03-15.mp4)
+<video src="assets/demo/zide-demo-2026-03-15.mp4" poster="assets/demo/zide-demo-2026-03-15-poster.jpg" controls muted playsinline width="960"></video>
 
 ## What Zide Is
 
@@ -50,9 +50,9 @@ Use the Releases page for published binaries.
 
 The hosted docs are the primary user-facing entrypoint:
 
-- [Bootstrap and build notes](https://laurenceguws.github.io/Zide/tools/docs_explorer/?config=project.pages.json#doc=app_architecture/BOOTSTRAP.md)
-- [Dependency details](https://laurenceguws.github.io/Zide/tools/docs_explorer/?config=project.pages.json#doc=docs/DEPENDENCIES.md)
-- [Terminal compatibility](https://laurenceguws.github.io/Zide/tools/docs_explorer/?config=project.pages.json#doc=docs/terminal/compatibility.md)
+- [Bootstrap and build notes](#doc=app_architecture/BOOTSTRAP.md)
+- [Dependency details](#doc=docs/DEPENDENCIES.md)
+- [Terminal compatibility](#doc=docs/terminal/compatibility.md)
 
 Local Linux example:
 
@@ -98,27 +98,27 @@ Primary docs site:
 
 Useful starting points:
 
-- [Getting started](https://laurenceguws.github.io/Zide/tools/docs_explorer/?config=project.pages.json#doc=app_architecture/BOOTSTRAP.md)
-- [Dependency policy](https://laurenceguws.github.io/Zide/tools/docs_explorer/?config=project.pages.json#doc=docs/DEPENDENCIES.md)
-- [Terminal compatibility](https://laurenceguws.github.io/Zide/tools/docs_explorer/?config=project.pages.json#doc=docs/terminal/compatibility.md)
-- [Current beta release notes](https://laurenceguws.github.io/Zide/tools/docs_explorer/?config=project.pages.json#doc=docs/releases/v0.1.0-beta.1.md)
+- [Getting started](#doc=app_architecture/BOOTSTRAP.md)
+- [Dependency policy](#doc=docs/DEPENDENCIES.md)
+- [Terminal compatibility](#doc=docs/terminal/compatibility.md)
+- [Current beta release notes](#doc=docs/releases/v0.1.0-beta.1.md)
 
 Repo-local contributor/operator doc map:
 
-- [`docs/INDEX.md`](/home/home/personal/zide/docs/INDEX.md)
+- [docs/INDEX.md](#doc=docs/INDEX.md)
 
 ## Developer Notes
 
 Repository-local docs still own the detailed operator guidance:
 
 - bootstrap/build/run/test:
-  [`app_architecture/BOOTSTRAP.md`](/home/home/personal/zide/app_architecture/BOOTSTRAP.md)
+  [app_architecture/BOOTSTRAP.md](#doc=app_architecture/BOOTSTRAP.md)
 - dependency authority:
-  [`docs/DEPENDENCIES.md`](/home/home/personal/zide/docs/DEPENDENCIES.md)
+  [docs/DEPENDENCIES.md](#doc=docs/DEPENDENCIES.md)
 - release process:
-  [`RELEASING.md`](/home/home/personal/zide/RELEASING.md)
+  [RELEASING.md](#doc=RELEASING.md)
 - docs explorer local run instructions:
-  [`tools/docs_explorer/README.md`](/home/home/personal/zide/tools/docs_explorer/README.md)
+  [tools/docs_explorer/README.md](#doc=tools/docs_explorer/README.md)
 
 Local docs explorer workflow:
 
