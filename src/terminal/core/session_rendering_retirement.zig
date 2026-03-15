@@ -103,5 +103,5 @@ fn renderCacheSyncUpdatesActiveForGeneration(self: anytype, generation: u64) boo
             return self.render_caches[i].sync_updates_active;
         }
     }
-    return self.core.sync_updates_active;
+    return self.core.syncUpdatesActive();
 }

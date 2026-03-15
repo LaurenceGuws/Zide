@@ -37,7 +37,9 @@ Status note, 2026-03-14:
   instead of mutating raw core buffers from session helpers; sync-update state
   and scrollback count/offset rendering metadata now also route through
   `TerminalCore` accessors/mutators instead of direct session-side field/history
-  access.
+  access; config-driven view-cache publication paths now also consume
+  `TerminalCore` scrollback accessors instead of reaching into history
+  directly.
 - Input encoding remains on the dedicated subsystem path: writer-agnostic
   encoder coverage exists at both the fake-writer level and the real
   PTY-backed `TerminalSession` writer boundary.
