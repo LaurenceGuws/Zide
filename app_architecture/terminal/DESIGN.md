@@ -12,9 +12,9 @@ Status note, 2026-03-15:
 - Detailed current authority for the engine split now lives in
   `app_architecture/terminal/VT_CORE_DESIGN.md`.
 - Present-path ownership authority now lives in
-  `app_architecture/terminal/WAYLAND_PRESENT_IMPLEMENTATION_PLAN.md`.
+  `docs/todo/terminal/wayland_present.md`.
 - Investigation-heavy or review-heavy material should live under
-  `app_architecture/review/` or `app_architecture/terminal/research/`, not grow
+  `docs/review/` or `docs/research/terminal/`, not grow
   this file into another live debug log.
 
 Purpose: keep one compact high-level map of terminal architecture decisions and
@@ -347,7 +347,7 @@ Research notes:
 - VTE scrolling-region notes show cursor movement/scrolling within margins.
 
 Known gaps (as of 2026-01-28):
-- Kitty graphics protocol is still partial (see IMG-01 in `app_architecture/terminal/protocol_todo.md`).
+- Kitty graphics protocol is still partial (see IMG-01 in `docs/todo/terminal/protocol.md`).
 - Beta terminal compatibility surface and initial `zide` terminfo entry landed; broader terminfo parity sweep remains tracked under `TERM-01`.
 - Replay harness + fixtures exist and gate refactors (see Layer 10; run `zig build test-terminal-replay -- --all`).
 - Cross-platform font fallback: macOS is still TODO; Windows has a DirectWrite-based resolver.
@@ -414,5 +414,5 @@ Why:
 
 - Alt screen redesign proposal: `app_architecture/terminal/ALT_SCREEN_REDESIGN.md`.
 - Engine split authority: `app_architecture/terminal/VT_CORE_DESIGN.md`.
-- Present-path authority: `app_architecture/terminal/WAYLAND_PRESENT_IMPLEMENTATION_PLAN.md`.
-- Historical architecture review: `app_architecture/review/TERMINAL_CORE_ARCHITECTURE_REVIEW_2026-03-10.md`.
+- Present-path authority: `docs/todo/terminal/wayland_present.md`.
+- Historical architecture review: `docs/review/TERMINAL_CORE_ARCHITECTURE_REVIEW_2026-03-10.md`.

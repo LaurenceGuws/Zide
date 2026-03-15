@@ -59,7 +59,7 @@ Build a best-in-class embedded terminal widget for Zide, Linux first.
 - [x] `P4-02` Glyph atlas with GPU texture and LRU eviction.
 - [x] `P4-03` Glyph cache and instance buffer.
 - [ ] `P4-04` Box drawing and special glyph fast path.
-  Notes: the original task is superseded by the dedicated UI plan in `app_architecture/ui/terminal_special_glyph_todo.md`.
+  Notes: the original task is superseded by the dedicated UI plan in `docs/todo/ui/terminal_special_glyphs.md`.
 
 ### Phase 5 Font And Shaping
 

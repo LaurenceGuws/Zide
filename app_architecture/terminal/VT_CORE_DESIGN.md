@@ -23,15 +23,15 @@ lane so code changes do not drift between "session cleanup", "FFI cleanup", and
 
 This doc is the concrete follow-up to:
 
-- `app_architecture/review/TERMINAL_CORE_ARCHITECTURE_REVIEW_2026-03-10.md`
-- `app_architecture/terminal/vt_core_rearchitecture_todo.md`
+- `docs/review/TERMINAL_CORE_ARCHITECTURE_REVIEW_2026-03-10.md`
+- `docs/todo/terminal/vt_core_rearchitecture.md`
 
 Authority note:
 
 - This file is the active design authority for the engine/core split.
 - Replay-lane evidence, renderer bug forensics, and one-off compatibility
-  investigations should live in `app_architecture/review/` or
-  `app_architecture/terminal/research/` once they stop changing the engine
+  investigations should live in `docs/review/` or
+  `docs/research/terminal/` once they stop changing the engine
   ownership model directly.
 
 ## Target Boundary Diagram
@@ -170,11 +170,11 @@ parts of this split no longer belongs in the active core-authority narrative.
 Current rule:
 
 - use this file for durable engine ownership and migration decisions
-- use `app_architecture/review/TERMINAL_CORE_ARCHITECTURE_REVIEW_2026-03-10.md`
+- use `docs/review/TERMINAL_CORE_ARCHITECTURE_REVIEW_2026-03-10.md`
   for the architecture review that led to this split
-- use `app_architecture/terminal/WAYLAND_PRESENT_IMPLEMENTATION_PLAN.md` for
+- use `docs/todo/terminal/wayland_present.md` for
   current present-path ownership and post-rewrite renderer/present status
-- use `app_architecture/terminal/research/wayland_present/` for issue-specific
+- use `docs/research/terminal/wayland_present/` for issue-specific
   present research and evidence
 
 Current conclusion relevant to this file:

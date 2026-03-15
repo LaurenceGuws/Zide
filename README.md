@@ -56,7 +56,7 @@ The hosted docs are the primary user-facing entrypoint:
 
 - [Bootstrap and build notes](https://laurenceguws.github.io/Zide/tools/docs_explorer/#doc=app_architecture/BOOTSTRAP.md)
 - [Dependency details](https://laurenceguws.github.io/Zide/tools/docs_explorer/#doc=docs/DEPENDENCIES.md)
-- [Terminal compatibility](https://laurenceguws.github.io/Zide/tools/docs_explorer/#doc=docs/terminal/compatibility.md)
+- [Terminal compatibility](https://laurenceguws.github.io/Zide/tools/docs_explorer/#doc=docs/reference/terminal_compatibility.md)
 
 Local Linux example:
 
@@ -112,7 +112,7 @@ Useful starting points:
 
 - [Getting started](https://laurenceguws.github.io/Zide/tools/docs_explorer/#doc=app_architecture/BOOTSTRAP.md)
 - [Dependency policy](https://laurenceguws.github.io/Zide/tools/docs_explorer/#doc=docs/DEPENDENCIES.md)
-- [Terminal compatibility](https://laurenceguws.github.io/Zide/tools/docs_explorer/#doc=docs/terminal/compatibility.md)
+- [Terminal compatibility](https://laurenceguws.github.io/Zide/tools/docs_explorer/#doc=docs/reference/terminal_compatibility.md)
 - [Current beta release notes](https://laurenceguws.github.io/Zide/tools/docs_explorer/#doc=docs/releases/v0.1.0-beta.1.md)
 
 Repo-local contributor/operator doc map:

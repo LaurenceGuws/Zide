@@ -10,7 +10,7 @@ Scope note, 2026-03-15:
   (for example terminal FFI acquire/release rules in
   `app_architecture/terminal/FFI_*` docs) rather than being duplicated here.
 - Historical reviews and one-off investigations belong under
-  `app_architecture/review/`.
+  `docs/review/`.
 
 ## Ownership Flow
 

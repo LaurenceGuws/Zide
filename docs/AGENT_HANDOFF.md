@@ -31,11 +31,11 @@ not a progress log and should stay brief.
 ### Where To Look
 
 - Present implementation authority:
-  - `app_architecture/terminal/WAYLAND_PRESENT_IMPLEMENTATION_PLAN.md`
+  - `docs/todo/terminal/wayland_present.md`
 - Terminal core architecture and active queue:
   - `app_architecture/terminal/VT_CORE_DESIGN.md`
-  - `app_architecture/terminal/vt_core_rearchitecture_todo.md`
-  - `app_architecture/terminal/MODULARIZATION_PLAN.md`
+  - `docs/todo/terminal/vt_core_rearchitecture.md`
+  - `docs/todo/terminal/modularization.md`
 - Repo workflow and doc ownership:
   - `AGENTS.md`
   - `docs/WORKFLOW.md`
@@ -44,7 +44,7 @@ not a progress log and should stay brief.
 ### Constraints
 
 - Keep this file high-level only.
-- Detailed progress belongs in the owning todo files and `app_architecture/` docs.
+- Detailed progress belongs in the owning files under `docs/todo/` and the relevant `app_architecture/` authority docs.
 - `main` is the default branch unless isolation materially reduces risk.
 - `.zide.lua` logging is agent-owned and should stay minimal and bug-scoped.
 - No CI; validation is local build/test plus manual verification.

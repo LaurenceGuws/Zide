@@ -10,7 +10,7 @@ Status note, 2026-03-15:
 - This file remains the authority for current app/module boundary rules.
 - The mode-layer rollout itself is no longer an open invention lane; historical
   extraction sequencing and validation records now live under
-  `app_architecture/review/app_mode_layering_*`.
+  `docs/review/app_mode_layering_*`.
 - Use this file for present-tense import and ownership rules, not for replaying
   the old extraction narrative.
 
@@ -113,12 +113,12 @@ Enforcement:
 
 Historical rollout and validation for this split live in:
 - current boundary rules: this file
-- historical rollout record: `app_architecture/review/archive/app_mode_layering_todo.md`
-- historical validation record: `app_architecture/review/archive/app_mode_layering_validation.md`
+- historical rollout record: `docs/review/archive/app_mode_layering_todo.md`
+- historical validation record: `docs/review/archive/app_mode_layering_validation.md`
 
 ## Current Anchors
-- **Editor modularization plan**: `app_architecture/editor/MODULARIZATION_PLAN.md`.
-- **Terminal modularization plan**: `app_architecture/terminal/MODULARIZATION_PLAN.md`.
+- **Editor modularization plan**: `docs/todo/editor/modularization.md`.
+- **Terminal modularization plan**: `docs/todo/terminal/modularization.md`.
 - **Terminal API + layering rules**: `app_architecture/terminal/TERMINAL_API.md`.
 
 ## Layer Boundaries (import rules)

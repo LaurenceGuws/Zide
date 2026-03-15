@@ -23,7 +23,7 @@ Build a Linux-first editor widget and text engine with large-file performance, d
 ## TODO
 
 - [x] `ED-00` Editor modularization plan
-  - Plan captured in `app_architecture/editor/MODULARIZATION_PLAN.md`.
+  - Plan captured in `docs/todo/editor/modularization.md`.
 
 - [ ] `ED-01` Text model upgrade for large files
   - Audit and rope decision are complete.

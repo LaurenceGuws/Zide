@@ -11,8 +11,8 @@ Status note, 2026-03-15:
   ownership/perf observations.
 - Current implementation authority lives in:
   - `app_architecture/ui/DEVELOPMENT_JOURNEY.md`
-  - `app_architecture/ui/ui_widget_modularization_todo.md`
-  - `app_architecture/ui/renderer_todo.md`
+  - `docs/todo/ui/widget_modularization.md`
+  - `docs/todo/ui/renderer.md`
 
 ## Dock/Layout Structure (Current)
 - Layout is a fixed vertical stack plus side nav:
