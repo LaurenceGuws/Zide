@@ -16,6 +16,39 @@ import type {
   MermaidApi,
 } from "../shared/vendor_types.js";
 
+function syncCurrentDocSelection(
+  state: AppState,
+  docs: string[],
+  defaultDocPath: string,
+  renderTree: () => void,
+): void {
+  const currentPath = currentDocFromHash(docs, defaultDocPath);
+  setCurrentDoc(state, currentPath);
+  updateTreeActivePath(state, currentPath);
+  renderTree();
+}
+
+function renderDocumentLifecycleChrome(args: {
+  state: AppState;
+  shell: AppShell;
+  appIconPath: string;
+  repoBasePath: string;
+  path: string;
+  status: AppState["document"]["status"];
+}): void {
+  const { state, shell, appIconPath, repoBasePath, path, status } = args;
+
+  if (status === "loading") {
+    setDocumentLoading(state, repoBasePath, path);
+  } else if (status === "ready") {
+    setDocumentReady(state, repoBasePath, path);
+  } else {
+    setDocumentError(state, repoBasePath, path);
+  }
+
+  renderDocumentChrome(state, shell, appIconPath);
+}
+
 export async function renderCurrentDocCycle(args: {
   state: AppState;
   shell: AppShell;
@@ -47,10 +80,7 @@ export async function renderCurrentDocCycle(args: {
     renderTree,
   } = args;
 
-  const currentPath = currentDocFromHash(docs, defaultDocPath);
-  setCurrentDoc(state, currentPath);
-  updateTreeActivePath(state, currentPath);
-  renderTree();
+  syncCurrentDocSelection(state, docs, defaultDocPath, renderTree);
 
   await loadDoc({
     state,
@@ -64,17 +94,35 @@ export async function renderCurrentDocCycle(args: {
     docs,
     defaultDocPath,
     onLoading(nextState: AppState, path: string) {
-      setDocumentLoading(nextState, repoBasePath, path);
-      renderDocumentChrome(nextState, shell, appIconPath);
+      renderDocumentLifecycleChrome({
+        state: nextState,
+        shell,
+        appIconPath,
+        repoBasePath,
+        path,
+        status: "loading",
+      });
     },
     onReady(nextState: AppState, path: string) {
-      setDocumentReady(nextState, repoBasePath, path);
-      renderDocumentChrome(nextState, shell, appIconPath);
+      renderDocumentLifecycleChrome({
+        state: nextState,
+        shell,
+        appIconPath,
+        repoBasePath,
+        path,
+        status: "ready",
+      });
       renderHighlightedCode(hljs, viewerEl);
     },
     onError(nextState: AppState, path: string) {
-      setDocumentError(nextState, repoBasePath, path);
-      renderDocumentChrome(nextState, shell, appIconPath);
+      renderDocumentLifecycleChrome({
+        state: nextState,
+        shell,
+        appIconPath,
+        repoBasePath,
+        path,
+        status: "error",
+      });
     },
   });
 }

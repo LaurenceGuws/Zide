@@ -254,6 +254,14 @@ need to define their own per-component surface formulas.
 The current config surface is intentionally the stopping point unless a real
 cross-project reuse need appears.
 
+Token usage rule:
+
+- if a component needs a new repeated surface or interaction color, add or
+  refine a named token in `styles/theme.css` first
+- only keep a component-local formula when it is truly one-off and unlikely to
+  be shared
+- prefer reducing formulas in component CSS over growing them
+
 ## DOM Ownership Rule
 
 Keep raw DOM ownership narrow.

@@ -1,11 +1,18 @@
 export async function injectShellIcons(args: {
   sourceLinkIconEl: HTMLElement;
+  supportLinkIconEl: HTMLElement;
   optionsToggleIconEl: HTMLElement;
   sidebarToggleIconEl: HTMLElement;
 }): Promise<void> {
-  const { sourceLinkIconEl, optionsToggleIconEl, sidebarToggleIconEl } = args;
+  const {
+    sourceLinkIconEl,
+    supportLinkIconEl,
+    optionsToggleIconEl,
+    sidebarToggleIconEl,
+  } = args;
   await Promise.all([
     injectSvg(sourceLinkIconEl, "./assets/icons/github.svg"),
+    injectSvg(supportLinkIconEl, "./assets/icons/kofi.svg"),
     injectSvg(optionsToggleIconEl, "./assets/icons/ellipsis.svg"),
     injectSvg(sidebarToggleIconEl, "./assets/icons/sidebar.svg"),
   ]);

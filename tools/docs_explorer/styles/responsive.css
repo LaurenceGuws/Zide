@@ -1,6 +1,9 @@
 @media (max-width: 1240px) {
   .app {
-    grid-template-columns: minmax(220px, 244px) 8px minmax(0, 1fr);
+    grid-template-columns:
+      clamp(200px, var(--sidebar-width, 320px), 380px)
+      8px
+      minmax(0, 1fr);
   }
 
   .app-head {
@@ -19,7 +22,10 @@
 
 @media (max-width: 920px) {
   .app {
-    grid-template-columns: minmax(180px, 212px) 8px minmax(0, 1fr);
+    grid-template-columns:
+      clamp(180px, var(--sidebar-width, 320px), 320px)
+      8px
+      minmax(0, 1fr);
   }
 
   .app-head {

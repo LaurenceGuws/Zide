@@ -13,8 +13,16 @@ export async function initializeAppShell(args: {
   document.title = project.title;
   shell.faviconEl.href = project.icon;
   shell.sourceLinkEl.href = project.repoUrl ?? "#";
+  if (project.supportUrl) {
+    shell.supportLinkEl.href = project.supportUrl;
+    shell.supportLinkLabelEl.textContent = project.supportLabel ?? "Support";
+    shell.supportLinkEl.hidden = false;
+  } else {
+    shell.supportLinkEl.hidden = true;
+  }
   await injectShellIcons({
     sourceLinkIconEl: shell.sourceLinkIconEl,
+    supportLinkIconEl: shell.supportLinkIconEl,
     optionsToggleIconEl: shell.optionsToggleIconEl,
     sidebarToggleIconEl: shell.sidebarToggleIconEl,
   });
