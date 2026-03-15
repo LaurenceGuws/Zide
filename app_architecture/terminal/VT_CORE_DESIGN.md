@@ -17,9 +17,10 @@ Status note, 2026-03-14:
     idle waiting now wakes on SDL events instead of sleeping blindly through
     focused input windows.
 - Session-facade shrink work continues in small extraction-only cuts; input-mode
-  snapshot state, presentation-feedback structs, session init options, and
-  host-query structs now live in dedicated `src/terminal/core/session_*`
-  modules instead of inline in `terminal_session.zig`.
+  snapshot state, presentation-feedback structs, session init options,
+  host-query structs, and remaining session-facing public type aliases now live
+  in dedicated `src/terminal/core/session_*` modules instead of inline in
+  `terminal_session.zig`.
 - Input encoding remains on the dedicated subsystem path: writer-agnostic
   encoder coverage exists at both the fake-writer level and the real
   PTY-backed `TerminalSession` writer boundary.
