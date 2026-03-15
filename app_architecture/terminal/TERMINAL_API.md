@@ -79,6 +79,12 @@ Interpretation rule:
 
 Replay fixtures referenced above live under `fixtures/terminal` and are executed via `zig build test-terminal-replay`.
 
+Reading rule:
+
+- prefer the newer engine/publication authority docs for architectural intent
+- use this file when the question is "what is the current surface and how hard
+  is it actually tested?"
+
 ## Publication State
 
 ```mermaid
@@ -92,8 +98,8 @@ stateDiagram-v2
 
 ## Boundary Contract (2026-03-09)
 
-This is the current intended ownership split for the next cleanup phase. It is more
-important than the exact file layout.
+This is the current intended ownership split for the next cleanup phase. It is
+more important than the exact file layout.
 
 | Concern | Owner | Must Not Own |
 | --- | --- | --- |
@@ -110,10 +116,10 @@ important than the exact file layout.
 ### Immediate Cleanup Rules
 
 1. `TerminalSession` should trend toward an orchestrator, not a universal owner.
-2. Widgets should consume published terminal state and emit intents; they should not
-   participate in backend dirty-ack lifecycle.
-3. Protocol modules should mutate terminal state through an explicit facade or narrow
-   contract, not broad implicit `anytype self` assumptions.
+2. Widgets should consume published terminal state and emit intents; they
+   should not participate in backend dirty-ack lifecycle.
+3. Protocol modules should mutate terminal state through an explicit facade or
+   narrow contract, not broad implicit `anytype self` assumptions.
 4. Input-mode publication must become harder to forget than the current
    branch-by-branch `updateInputSnapshot()` pattern.
 5. Scheduler state should be instance-owned, not file-global.

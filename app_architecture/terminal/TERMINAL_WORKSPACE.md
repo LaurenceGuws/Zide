@@ -6,6 +6,12 @@ Purpose: define the backend-owned tab/workspace layer for terminal-only mode and
 
 Status: initial contract and implementation baseline.
 
+Current role:
+
+- workspace is the tab/session orchestration layer above `TerminalSession`
+- it is not terminal-core authority by itself
+- use this doc for tab/workspace ownership and host-facing workspace semantics
+
 ## Workspace Ownership Map
 
 ```mermaid
@@ -13,7 +19,8 @@ flowchart LR
     Workspace[TerminalWorkspace] --> Tabs[tab ids + ordering]
     Workspace --> Sessions[owned TerminalSession objects]
     Sessions --> Session[TerminalSession]
-    Session --> Core[Terminal core / PTY / protocol]
+    Session --> Runtime[session runtime / publication shell]
+    Runtime <--> Core[Terminal core / PTY / protocol]
     Workspace --> Sync[workspace sync projections]
     Sync --> UI[tab bar / host consumers]
 ```
@@ -107,7 +114,7 @@ stateDiagram-v2
 flowchart TD
     Workspace[Workspace] --> ActiveTab[active tab id]
     ActiveTab --> ActiveSession[active TerminalSession]
-    ActiveSession --> Viewport[visible viewport / snapshot]
+    ActiveSession --> Viewport[visible viewport / snapshot / metadata]
     Viewport --> Consumer[widget or host consumer]
 ```
 

@@ -25,28 +25,32 @@ the current baseline by layer.
 
 ## Status Summary
 
-- Terminal backend stub replaced by a working PTY + minimal VT pipeline.
-- Shell output renders with basic cursor movement, erase ops, and SGR (16/256/truecolor).
-- Scrollback ring buffer captures full‑screen scrolls and is exposed via a scrollbar + offset, plus a scrollback indicator.
-- Scrollback view cache is refreshed on wheel/scrollbar changes to keep visible rows in sync.
-- Alternate screen uses per-screen state (grid, cursor, scroll region, key mode stack, attrs); alt disables scrollback/selection and fully dirties on switch.
-- OSC parsing handles title (OSC 0/2), hyperlinks (OSC 8), clipboard write (OSC 52), and default fg/bg set + query (OSC 10/11). Queries for OSC 12/19 are answered.
-- Keyboard input supports CSI u/kitty protocol flags with per-screen stacks and modifier-aware encoding.
-- Legacy modifier combos now include full letter/number/punctuation mapping; macOS Command is reserved for app shortcuts.
-- Dirty-row tracking and render-texture caching are live; full VT coverage still missing.
-- Dirty tracking is still fragile in full-screen TUI apps (e.g., apps that clear and redraw without alt screen). We need a stronger damage/invalidations model.
-- CSI params support up to 16 entries and `:` separators for SGR sequences.
-- Default colors are configurable per session; erase/blank fills use current attributes so TUI background colors persist.
+- working PTY + minimal VT pipeline replaced the old stub
+- shell output renders with basic cursor movement, erase ops, and SGR
+  (16/256/truecolor)
+- scrollback, viewport offset, and scrollback indicator are live
+- alternate screen uses per-screen state and correctly disables
+  scrollback/selection
+- OSC title, hyperlink, clipboard write, and default-color query/set paths are
+  live
+- keyboard input supports CSI u / kitty protocol flags plus wider legacy
+  modifier coverage
+- dirty-row tracking and render-texture caching are live, but damage quality is
+  still weaker than the current bar for full-screen TUIs
+- default colors are configurable per session and erase/blank fills use current
+  attributes
 
 ### Terminal Layer Map
 
 ```mermaid
 flowchart LR
-    PTY[PTY / IO] --> Parser[VT Parser]
-    Parser --> Screen[Screen Model]
+    Host["Native host / widget"] --> PTY[PTY / IO]
+    PTY <--> Parser[VT Parser]
+    Parser --> Screen[Screen + Scrollback]
     Screen --> Snapshot[Snapshot / View Cache]
     Snapshot --> Widget[Terminal Widget]
     Widget --> Renderer[Renderer]
+    Renderer -. present feedback / input intents .-> Host
 ```
 
 ## Decisions & Progress by Layer
@@ -143,7 +147,14 @@ flowchart TD
     Alt --> AltViewport[Live viewport only]
 
     Scrollback --> Viewport
+    Viewport -. follow live / pin history .-> Primary
 ```
+
+Current reading:
+
+- primary screen plus scrollback define the scrollable viewport path
+- alt screen stays live-only and does not participate in scrollback
+- viewport control is part of backend state, not widget-local truth
 
 Planned redesign:
 - Replace the current row-only scrollback with a logical-line buffer that tracks wrap boundaries.
@@ -187,6 +198,8 @@ flowchart LR
     Rewrap --> Cursor[Cursor remap]
     Rewrap --> Selection[Selection remap]
 ```
+
+This remains a direction note, not the current implementation claim.
 
 Decision:
 - Grid model supports dirty‑row tracking and scrollback; treat it as the current baseline rather than a throwaway prototype.
