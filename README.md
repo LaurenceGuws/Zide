@@ -1,4 +1,4 @@
-<h1><img src="assets/icon/color_icon.png" alt="Z" width="56" />ide</h1>
+<h1><img src="assets/icon/color_icon.png" alt="Z" style="width: 0.92em; height: 0.92em; vertical-align: -0.12em;" />ide</h1>
 
 A native IDE and terminal stack built in Zig, aimed at fast local workspaces,
 serious terminal quality, and resource-aware tooling.
@@ -13,7 +13,9 @@ serious terminal quality, and resource-aware tooling.
 
 ## Demo
 
-<video src="assets/demo/zide-demo-2026-03-15.mp4" poster="assets/demo/zide-demo-2026-03-15-poster.jpg" controls muted playsinline width="960"></video>
+<video poster="assets/demo/zide-demo-2026-03-15-poster.jpg" controls muted playsinline width="960">
+  <source src="assets/demo/zide-demo-2026-03-15.mp4" type="video/mp4" />
+</video>
 
 ## What Zide Is
 
