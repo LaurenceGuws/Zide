@@ -3,7 +3,7 @@
 ## Purpose
 
 Turn the present-path redesign decision from
-[WAYLAND_PRESENT_TECHNICAL_WRITEUP.md](/home/home/personal/zide/app_architecture/terminal/WAYLAND_PRESENT_TECHNICAL_WRITEUP.md)
+[WAYLAND_PRESENT_TECHNICAL_WRITEUP.md](/home/home/personal/zide/app_architecture/terminal/present/WAYLAND_TECHNICAL_WRITEUP.md)
 into an execution plan with:
 
 - explicit phase boundaries
@@ -37,7 +37,7 @@ Authority note:
 
 Shared redraw/publication/present semantic authority lives in:
 
-- `app_architecture/terminal/RENDER_PUBLICATION_CONTRACT.md`
+- `app_architecture/terminal/rendering/RENDER_PUBLICATION_CONTRACT.md`
 
 ## Design Summary
 

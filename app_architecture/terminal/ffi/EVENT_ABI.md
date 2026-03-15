@@ -157,7 +157,7 @@ Notes:
 - current milestone-1 meaning is only: a newer snapshot generation exists
 - this is a wake signal for snapshot pull, not a presentation contract
 - shared semantic authority now lives in:
-  - `app_architecture/terminal/RENDER_PUBLICATION_CONTRACT.md`
+  - `app_architecture/terminal/rendering/RENDER_PUBLICATION_CONTRACT.md`
 - this event remains intentionally separate from present acknowledgement
 
 Update:

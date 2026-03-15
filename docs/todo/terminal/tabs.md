@@ -16,9 +16,9 @@ Make `--mode terminal` viable for daily developer use with backend-owned tab man
 
 - `app_architecture/terminal/TERMINAL_WORKSPACE.md`
 - `app_architecture/terminal/TERMINAL_API.md`
-- `app_architecture/terminal/FFI_BRIDGE_DESIGN.md`
-- `app_architecture/terminal/FFI_EVENT_INVENTORY.md`
-- `app_architecture/terminal/FFI_EVENT_ABI.md`
+- `app_architecture/terminal/ffi/BRIDGE_DESIGN.md`
+- `app_architecture/terminal/ffi/EVENT_INVENTORY.md`
+- `app_architecture/terminal/ffi/EVENT_ABI.md`
 - `docs/todo/terminal/ffi_bridge.md`
 
 ## Status

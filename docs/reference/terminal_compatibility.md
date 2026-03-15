@@ -178,6 +178,6 @@ Practical reading:
 - replay fixtures under `fixtures/terminal/`
 - TERM selection logic in `src/terminal/io/pty_unix.zig`
 - protocol tracker:
-  `app_architecture/terminal/PROTOCOL_ACCURACY_PROGRESS.md`
+  `app_architecture/terminal/protocol/ACCURACY_PROGRESS.md`
 - terminal API notes:
   `app_architecture/terminal/TERMINAL_API.md`

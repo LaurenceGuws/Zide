@@ -4,7 +4,7 @@ Date: 2026-02-27
 
 Purpose: enumerate terminal backend events and classify how they should cross the future FFI bridge.
 
-Status: baseline inventory aligned to the shipped milestone-1 ABI in `app_architecture/terminal/FFI_EVENT_ABI.md`.
+Status: baseline inventory aligned to the shipped milestone-1 ABI in `app_architecture/terminal/ffi/EVENT_ABI.md`.
 
 ## Classification rules
 

@@ -8,7 +8,7 @@ document for Zide's renderer/presentation redesign.
 This writeup is the bridge between:
 
 - the high-level brief in
-  [WAYLAND_PRESENT_DESIGN_BRIEF.md](/home/home/personal/zide/app_architecture/terminal/WAYLAND_PRESENT_DESIGN_BRIEF.md)
+  [WAYLAND_PRESENT_DESIGN_BRIEF.md](/home/home/personal/zide/app_architecture/terminal/present/WAYLAND_DESIGN_BRIEF.md)
 - the temporary topic reports under
   [research/wayland_present](/home/home/personal/zide/docs/research/terminal/wayland_present)
 - the implementation plan that will follow from this document
