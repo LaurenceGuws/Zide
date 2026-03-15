@@ -8,6 +8,7 @@ const shared = @import("shared.zig");
 
 const Handle = shared.Handle;
 const SnapshotOwner = shared.SnapshotOwner;
+const SnapshotDiffOwner = shared.SnapshotDiffOwner;
 const MetadataOwner = shared.MetadataOwner;
 const ScrollbackOwner = shared.ScrollbackOwner;
 const EventOwner = shared.EventOwner;
@@ -323,6 +324,75 @@ pub fn snapshotRelease(snapshot: *shared.Snapshot) void {
     snapshot.* = .{};
 }
 
+pub fn snapshotDiffAcquire(handle: ?*shared.ZideTerminalHandle, request: ?*const shared.SnapshotDiffRequest, out_diff: *shared.SnapshotDiff) shared.Status {
+    const log = app_logger.logger("terminal.ffi");
+    const h = shared.fromOpaque(handle) orelse return .invalid_argument;
+    const req = request orelse return .invalid_argument;
+    out_diff.* = .{};
+    if (req.abi_version != shared.snapshot_diff_abi_version) return .invalid_argument;
+    if (req.struct_size != @sizeOf(shared.SnapshotDiffRequest)) return .invalid_argument;
+
+    const allocator = h.allocator;
+    const owner = allocator.create(SnapshotDiffOwner) catch |err| {
+        log.logf(.warning, "snapshot diff owner alloc failed err={s}", .{@errorName(err)});
+        return .out_of_memory;
+    };
+    errdefer allocator.destroy(owner);
+
+    var state: SnapshotExportState = undefined;
+    const exported = copyPublishedSnapshotExport(h, allocator, 0, &state) catch |err| {
+        log.logf(.warning, "snapshot diff export failed err={s}", .{@errorName(err)});
+        return shared.mapError(err);
+    };
+    errdefer allocator.free(exported.cells);
+
+    owner.* = .{
+        .allocator = allocator,
+        .rows = &.{},
+        .spans = &.{},
+        .cells = exported.cells,
+    };
+
+    out_diff.* = .{
+        .abi_version = shared.snapshot_diff_abi_version,
+        .struct_size = @sizeOf(shared.SnapshotDiff),
+        .generation = state.generation,
+        .base_generation = req.base_generation,
+        .rows = @intCast(state.rows),
+        .cols = @intCast(state.cols),
+        .full_refresh_required = 1,
+        .alt_active = @intFromBool(state.alt_active),
+        .screen_reverse = @intFromBool(state.screen_reverse),
+        .has_damage = @intFromBool(state.damage.start_row <= state.damage.end_row and state.damage.start_col <= state.damage.end_col),
+        .damage_start_row = @intCast(state.damage.start_row),
+        .damage_end_row = @intCast(state.damage.end_row),
+        .damage_start_col = @intCast(state.damage.start_col),
+        .damage_end_col = @intCast(state.damage.end_col),
+        .viewport_shift_rows = 0,
+        .viewport_shift_exposed_only = 0,
+        .rows_ptr = null,
+        .row_count = 0,
+        .spans_ptr = null,
+        .span_count = 0,
+        .cells_ptr = if (exported.cells.len == 0) null else exported.cells.ptr,
+        .cell_count = exported.cells.len,
+        ._ctx = owner,
+    };
+    return .ok;
+}
+
+pub fn snapshotDiffRelease(diff: *shared.SnapshotDiff) void {
+    const owner = shared.snapshotDiffOwner(diff._ctx) orelse {
+        diff.* = .{};
+        return;
+    };
+    owner.allocator.free(owner.rows);
+    owner.allocator.free(owner.spans);
+    owner.allocator.free(owner.cells);
+    owner.allocator.destroy(owner);
+    diff.* = .{};
+}
+
 pub fn scrollbackAcquire(handle: ?*shared.ZideTerminalHandle, start_row: u32, max_rows: u32, out_buffer: *shared.ScrollbackBuffer) shared.Status {
     const log = app_logger.logger("terminal.ffi");
     const h = shared.fromOpaque(handle) orelse return .invalid_argument;
@@ -574,6 +644,10 @@ pub fn stringFree(string: *shared.StringBuffer) void {
 
 pub fn snapshotAbiVersion() u32 {
     return shared.snapshot_abi_version;
+}
+
+pub fn snapshotDiffAbiVersion() u32 {
+    return shared.snapshot_diff_abi_version;
 }
 
 pub fn eventAbiVersion() u32 {

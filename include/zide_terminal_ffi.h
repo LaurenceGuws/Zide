@@ -29,6 +29,7 @@ typedef enum ZideTerminalEventKind {
 
 enum {
     ZIDE_TERMINAL_SNAPSHOT_ABI_VERSION = 2,
+    ZIDE_TERMINAL_SNAPSHOT_DIFF_ABI_VERSION = 1,
     ZIDE_TERMINAL_EVENT_ABI_VERSION = 4,
     ZIDE_TERMINAL_SCROLLBACK_ABI_VERSION = 1,
     ZIDE_TERMINAL_RENDERER_METADATA_ABI_VERSION = 1,
@@ -131,6 +132,56 @@ typedef struct ZideTerminalSnapshot {
     size_t cwd_len;
     void *_ctx;
 } ZideTerminalSnapshot;
+
+typedef struct ZideTerminalSnapshotDiffRequest {
+    uint32_t abi_version;
+    uint32_t struct_size;
+    uint64_t base_generation;
+    uint32_t reserved0;
+    uint32_t reserved1;
+} ZideTerminalSnapshotDiffRequest;
+
+typedef struct ZideTerminalSnapshotDiffRow {
+    uint32_t row;
+    uint16_t span_count;
+    uint8_t span_overflow;
+    uint8_t reserved0;
+    uint32_t first_span_index;
+    uint32_t first_cell_index;
+    uint32_t cell_count;
+} ZideTerminalSnapshotDiffRow;
+
+typedef struct ZideTerminalSnapshotDiffSpan {
+    uint16_t start_col;
+    uint16_t end_col;
+} ZideTerminalSnapshotDiffSpan;
+
+typedef struct ZideTerminalSnapshotDiff {
+    uint32_t abi_version;
+    uint32_t struct_size;
+    uint64_t generation;
+    uint64_t base_generation;
+    uint32_t rows;
+    uint32_t cols;
+    uint8_t full_refresh_required;
+    uint8_t alt_active;
+    uint8_t screen_reverse;
+    uint8_t has_damage;
+    uint32_t damage_start_row;
+    uint32_t damage_end_row;
+    uint32_t damage_start_col;
+    uint32_t damage_end_col;
+    int32_t viewport_shift_rows;
+    uint8_t viewport_shift_exposed_only;
+    uint8_t reserved1[3];
+    const struct ZideTerminalSnapshotDiffRow *rows_ptr;
+    size_t row_count;
+    const struct ZideTerminalSnapshotDiffSpan *spans_ptr;
+    size_t span_count;
+    const ZideTerminalCell *cells_ptr;
+    size_t cell_count;
+    void *_ctx;
+} ZideTerminalSnapshotDiff;
 
 typedef struct ZideTerminalSnapshotRequest {
     uint32_t abi_version;
@@ -276,6 +327,8 @@ int zide_terminal_set_scrollback_offset(ZideTerminalHandle *handle, uint32_t off
 int zide_terminal_follow_live_bottom(ZideTerminalHandle *handle);
 int zide_terminal_snapshot_acquire(ZideTerminalHandle *handle, const ZideTerminalSnapshotRequest *request, ZideTerminalSnapshot *out_snapshot);
 void zide_terminal_snapshot_release(ZideTerminalSnapshot *snapshot);
+int zide_terminal_snapshot_diff_acquire(ZideTerminalHandle *handle, const ZideTerminalSnapshotDiffRequest *request, ZideTerminalSnapshotDiff *out_diff);
+void zide_terminal_snapshot_diff_release(ZideTerminalSnapshotDiff *diff);
 int zide_terminal_scrollback_acquire(
     ZideTerminalHandle *handle,
     uint32_t start_row,
@@ -295,6 +348,7 @@ void zide_terminal_string_free(ZideTerminalStringBuffer *string);
 int zide_terminal_child_exit_status(ZideTerminalHandle *handle, int32_t *out_code, uint8_t *out_has_status);
 int zide_terminal_report_child_exit(ZideTerminalHandle *handle, int32_t code, uint8_t has_status);
 uint32_t zide_terminal_snapshot_abi_version(void);
+uint32_t zide_terminal_snapshot_diff_abi_version(void);
 uint32_t zide_terminal_event_abi_version(void);
 uint32_t zide_terminal_scrollback_abi_version(void);
 uint32_t zide_terminal_metadata_abi_version(void);

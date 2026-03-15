@@ -11,6 +11,7 @@ pub const Status = enum(c_int) {
 };
 
 pub const snapshot_abi_version: u32 = 2;
+pub const snapshot_diff_abi_version: u32 = 1;
 pub const event_abi_version: u32 = 4;
 pub const scrollback_abi_version: u32 = 1;
 pub const renderer_metadata_abi_version: u32 = 1;
@@ -107,6 +108,56 @@ pub const Snapshot = extern struct {
     title_len: usize = 0,
     cwd_ptr: ?[*]const u8 = null,
     cwd_len: usize = 0,
+    _ctx: ?*anyopaque = null,
+};
+
+pub const SnapshotDiffRequest = extern struct {
+    abi_version: u32 = 0,
+    struct_size: u32 = 0,
+    base_generation: u64 = 0,
+    reserved0: u32 = 0,
+    reserved1: u32 = 0,
+};
+
+pub const SnapshotDiffRow = extern struct {
+    row: u32 = 0,
+    span_count: u16 = 0,
+    span_overflow: u8 = 0,
+    reserved0: u8 = 0,
+    first_span_index: u32 = 0,
+    first_cell_index: u32 = 0,
+    cell_count: u32 = 0,
+};
+
+pub const SnapshotDiffSpan = extern struct {
+    start_col: u16 = 0,
+    end_col: u16 = 0,
+};
+
+pub const SnapshotDiff = extern struct {
+    abi_version: u32 = 0,
+    struct_size: u32 = 0,
+    generation: u64 = 0,
+    base_generation: u64 = 0,
+    rows: u32 = 0,
+    cols: u32 = 0,
+    full_refresh_required: u8 = 0,
+    alt_active: u8 = 0,
+    screen_reverse: u8 = 0,
+    has_damage: u8 = 0,
+    damage_start_row: u32 = 0,
+    damage_end_row: u32 = 0,
+    damage_start_col: u32 = 0,
+    damage_end_col: u32 = 0,
+    viewport_shift_rows: i32 = 0,
+    viewport_shift_exposed_only: u8 = 0,
+    reserved1: [3]u8 = .{ 0, 0, 0 },
+    rows_ptr: ?[*]const SnapshotDiffRow = null,
+    row_count: usize = 0,
+    spans_ptr: ?[*]const SnapshotDiffSpan = null,
+    span_count: usize = 0,
+    cells_ptr: ?[*]const Cell = null,
+    cell_count: usize = 0,
     _ctx: ?*anyopaque = null,
 };
 
@@ -271,6 +322,13 @@ pub const SnapshotOwner = struct {
     cwd: []u8,
 };
 
+pub const SnapshotDiffOwner = struct {
+    allocator: std.mem.Allocator,
+    rows: []SnapshotDiffRow,
+    spans: []SnapshotDiffSpan,
+    cells: []Cell,
+};
+
 pub const MetadataOwner = struct {
     allocator: std.mem.Allocator,
     title: []u8,
@@ -314,6 +372,11 @@ pub fn toOpaque(handle: *Handle) *ZideTerminalHandle {
 }
 
 pub fn snapshotOwner(ctx: ?*anyopaque) ?*SnapshotOwner {
+    const value = ctx orelse return null;
+    return @ptrCast(@alignCast(value));
+}
+
+pub fn snapshotDiffOwner(ctx: ?*anyopaque) ?*SnapshotDiffOwner {
     const value = ctx orelse return null;
     return @ptrCast(@alignCast(value));
 }

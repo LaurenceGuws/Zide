@@ -2,6 +2,7 @@ const bridge = @import("bridge.zig");
 
 pub const ZideTerminalHandle = bridge.ZideTerminalHandle;
 pub const ZIDE_TERMINAL_SNAPSHOT_ABI_VERSION = bridge.snapshot_abi_version;
+pub const ZIDE_TERMINAL_SNAPSHOT_DIFF_ABI_VERSION = bridge.snapshot_diff_abi_version;
 pub const ZIDE_TERMINAL_EVENT_ABI_VERSION = bridge.event_abi_version;
 pub const ZIDE_TERMINAL_SCROLLBACK_ABI_VERSION = bridge.scrollback_abi_version;
 pub const ZIDE_TERMINAL_RENDERER_METADATA_ABI_VERSION = bridge.renderer_metadata_abi_version;
@@ -21,6 +22,10 @@ pub const ZideTerminalCreateConfig = bridge.CreateConfig;
 pub const ZideTerminalColor = bridge.Color;
 pub const ZideTerminalCell = bridge.Cell;
 pub const ZideTerminalSnapshot = bridge.Snapshot;
+pub const ZideTerminalSnapshotDiff = bridge.SnapshotDiff;
+pub const ZideTerminalSnapshotDiffRequest = bridge.SnapshotDiffRequest;
+pub const ZideTerminalSnapshotDiffRow = bridge.SnapshotDiffRow;
+pub const ZideTerminalSnapshotDiffSpan = bridge.SnapshotDiffSpan;
 pub const ZideTerminalSnapshotRequest = bridge.SnapshotRequest;
 pub const ZideTerminalScrollbackBuffer = bridge.ScrollbackBuffer;
 pub const ZideTerminalMetadataRequest = bridge.MetadataRequest;
@@ -139,6 +144,14 @@ pub fn zide_terminal_snapshot_release(snapshot: *ZideTerminalSnapshot) void {
     bridge.snapshotRelease(snapshot);
 }
 
+pub fn zide_terminal_snapshot_diff_acquire(handle: ?*ZideTerminalHandle, request: ?*const ZideTerminalSnapshotDiffRequest, out_diff: *ZideTerminalSnapshotDiff) c_int {
+    return @intFromEnum(bridge.snapshotDiffAcquire(handle, request, out_diff));
+}
+
+pub fn zide_terminal_snapshot_diff_release(diff: *ZideTerminalSnapshotDiff) void {
+    bridge.snapshotDiffRelease(diff);
+}
+
 pub fn zide_terminal_scrollback_acquire(handle: ?*ZideTerminalHandle, start_row: u32, max_rows: u32, out_buffer: *ZideTerminalScrollbackBuffer) c_int {
     return @intFromEnum(bridge.scrollbackAcquire(handle, start_row, max_rows, out_buffer));
 }
@@ -197,6 +210,10 @@ pub fn zide_terminal_report_child_exit(handle: ?*ZideTerminalHandle, code: i32, 
 
 pub fn zide_terminal_snapshot_abi_version() u32 {
     return bridge.snapshotAbiVersion();
+}
+
+pub fn zide_terminal_snapshot_diff_abi_version() u32 {
+    return bridge.snapshotDiffAbiVersion();
 }
 
 pub fn zide_terminal_event_abi_version() u32 {

@@ -4,6 +4,7 @@ const core_api = @import("core_api.zig");
 
 pub const Status = shared.Status;
 pub const snapshot_abi_version = shared.snapshot_abi_version;
+pub const snapshot_diff_abi_version = shared.snapshot_diff_abi_version;
 pub const event_abi_version = shared.event_abi_version;
 pub const scrollback_abi_version = shared.scrollback_abi_version;
 pub const renderer_metadata_abi_version = shared.renderer_metadata_abi_version;
@@ -20,6 +21,10 @@ pub const CreateConfig = shared.CreateConfig;
 pub const Color = shared.Color;
 pub const Cell = shared.Cell;
 pub const Snapshot = shared.Snapshot;
+pub const SnapshotDiff = shared.SnapshotDiff;
+pub const SnapshotDiffRequest = shared.SnapshotDiffRequest;
+pub const SnapshotDiffRow = shared.SnapshotDiffRow;
+pub const SnapshotDiffSpan = shared.SnapshotDiffSpan;
 pub const SnapshotRequest = shared.SnapshotRequest;
 pub const ScrollbackBuffer = shared.ScrollbackBuffer;
 pub const MetadataRequest = shared.MetadataRequest;
@@ -135,6 +140,14 @@ pub fn snapshotRelease(snapshot: *Snapshot) void {
     core_api.snapshotRelease(snapshot);
 }
 
+pub fn snapshotDiffAcquire(handle: ?*ZideTerminalHandle, request: ?*const SnapshotDiffRequest, out_diff: *SnapshotDiff) Status {
+    return core_api.snapshotDiffAcquire(handle, request, out_diff);
+}
+
+pub fn snapshotDiffRelease(diff: *SnapshotDiff) void {
+    core_api.snapshotDiffRelease(diff);
+}
+
 pub fn scrollbackAcquire(handle: ?*ZideTerminalHandle, start_row: u32, max_rows: u32, out_buffer: *ScrollbackBuffer) Status {
     return core_api.scrollbackAcquire(handle, start_row, max_rows, out_buffer);
 }
@@ -193,6 +206,10 @@ pub fn reportChildExit(handle: ?*ZideTerminalHandle, code: i32, has_status: u8) 
 
 pub fn snapshotAbiVersion() u32 {
     return core_api.snapshotAbiVersion();
+}
+
+pub fn snapshotDiffAbiVersion() u32 {
+    return core_api.snapshotDiffAbiVersion();
 }
 
 pub fn eventAbiVersion() u32 {

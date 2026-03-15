@@ -6,6 +6,7 @@ test "ffi non-pty snapshot and event ownership smoke" {
     try app_logger.setConsoleFilterString("none");
     try app_logger.setFileFilterString("none");
     try std.testing.expectEqual(c_api.ZIDE_TERMINAL_SNAPSHOT_ABI_VERSION, c_api.zide_terminal_snapshot_abi_version());
+    try std.testing.expectEqual(c_api.ZIDE_TERMINAL_SNAPSHOT_DIFF_ABI_VERSION, c_api.zide_terminal_snapshot_diff_abi_version());
     try std.testing.expectEqual(c_api.ZIDE_TERMINAL_EVENT_ABI_VERSION, c_api.zide_terminal_event_abi_version());
     try std.testing.expectEqual(c_api.ZIDE_TERMINAL_SCROLLBACK_ABI_VERSION, c_api.zide_terminal_scrollback_abi_version());
     try std.testing.expectEqual(c_api.ZIDE_TERMINAL_RENDERER_METADATA_ABI_VERSION, c_api.zide_terminal_renderer_metadata_abi_version());
@@ -97,6 +98,24 @@ test "ffi non-pty snapshot and event ownership smoke" {
     try std.testing.expectEqual(snapshot.generation, redraw_state.acknowledged_generation);
     try std.testing.expectEqual(@as(u8, 0), redraw_state.needs_redraw);
     try std.testing.expectEqual(@as(c_int, 1), c_api.zide_terminal_present_ack(handle, snapshot.generation + 1));
+
+    var diff_request = snapshotDiffRequest(0);
+    var diff: c_api.ZideTerminalSnapshotDiff = .{};
+    try std.testing.expectEqual(@as(c_int, 0), c_api.zide_terminal_snapshot_diff_acquire(handle, &diff_request, &diff));
+    defer c_api.zide_terminal_snapshot_diff_release(&diff);
+    try std.testing.expectEqual(c_api.ZIDE_TERMINAL_SNAPSHOT_DIFF_ABI_VERSION, diff.abi_version);
+    try std.testing.expectEqual(@as(u32, @sizeOf(c_api.ZideTerminalSnapshotDiff)), diff.struct_size);
+    try std.testing.expectEqual(snapshot.generation, diff.generation);
+    try std.testing.expectEqual(@as(u64, 0), diff.base_generation);
+    try std.testing.expectEqual(@as(u8, 1), diff.full_refresh_required);
+    try std.testing.expectEqual(snapshot.rows, diff.rows);
+    try std.testing.expectEqual(snapshot.cols, diff.cols);
+    try std.testing.expectEqual(@as(usize, 0), diff.row_count);
+    try std.testing.expectEqual(@as(usize, 0), diff.span_count);
+    try std.testing.expect(diff.rows_ptr == null);
+    try std.testing.expect(diff.spans_ptr == null);
+    try std.testing.expectEqual(snapshot.cell_count, diff.cell_count);
+    try std.testing.expect(diff.cells_ptr != null);
 
     var close_confirm: c_api.ZideTerminalCloseConfirmSignals = .{};
     try std.testing.expectEqual(@as(c_int, 0), c_api.zide_terminal_close_confirm_signals(handle, &close_confirm));
@@ -657,6 +676,16 @@ fn snapshotRequest(include_flags: u32) c_api.ZideTerminalSnapshotRequest {
         .abi_version = c_api.ZIDE_TERMINAL_SNAPSHOT_ABI_VERSION,
         .struct_size = @sizeOf(c_api.ZideTerminalSnapshotRequest),
         .include_flags = include_flags,
+    };
+}
+
+fn snapshotDiffRequest(base_generation: u64) c_api.ZideTerminalSnapshotDiffRequest {
+    return .{
+        .abi_version = c_api.ZIDE_TERMINAL_SNAPSHOT_DIFF_ABI_VERSION,
+        .struct_size = @sizeOf(c_api.ZideTerminalSnapshotDiffRequest),
+        .base_generation = base_generation,
+        .reserved0 = 0,
+        .reserved1 = 0,
     };
 }
 

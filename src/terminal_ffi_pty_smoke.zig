@@ -95,6 +95,15 @@ pub fn main() !void {
                 if (c_api.zide_terminal_redraw_state(handle, &pinned_redraw) != 0) return error.RedrawStateFailed;
                 if (pinned_redraw.needs_redraw != 1) return error.ViewportPinDidNotRedraw;
 
+                var diff_request = snapshotDiffRequest(0);
+                var diff: c_api.ZideTerminalSnapshotDiff = .{};
+                if (c_api.zide_terminal_snapshot_diff_acquire(handle, &diff_request, &diff) != 0) return error.SnapshotDiffAcquireFailed;
+                defer c_api.zide_terminal_snapshot_diff_release(&diff);
+                if (diff.abi_version != c_api.ZIDE_TERMINAL_SNAPSHOT_DIFF_ABI_VERSION) return error.SnapshotDiffAbiMismatch;
+                if (diff.struct_size != @sizeOf(c_api.ZideTerminalSnapshotDiff)) return error.SnapshotDiffStructSizeMismatch;
+                if (diff.full_refresh_required != 1) return error.SnapshotDiffExpectedFullRefresh;
+                if (diff.row_count != 0 or diff.span_count != 0) return error.SnapshotDiffUnexpectedGranularPayload;
+
                 const pinned_snapshot_request = snapshotRequest(0);
                 var pinned_snapshot: c_api.ZideTerminalSnapshot = .{};
                 if (c_api.zide_terminal_snapshot_acquire(handle, &pinned_snapshot_request, &pinned_snapshot) != 0) return error.SnapshotAcquireFailed;
@@ -268,5 +277,15 @@ fn snapshotRequest(include_flags: u32) c_api.ZideTerminalSnapshotRequest {
         .struct_size = @sizeOf(c_api.ZideTerminalSnapshotRequest),
         .include_flags = include_flags,
         .reserved0 = 0,
+    };
+}
+
+fn snapshotDiffRequest(base_generation: u64) c_api.ZideTerminalSnapshotDiffRequest {
+    return .{
+        .abi_version = c_api.ZIDE_TERMINAL_SNAPSHOT_DIFF_ABI_VERSION,
+        .struct_size = @sizeOf(c_api.ZideTerminalSnapshotDiffRequest),
+        .base_generation = base_generation,
+        .reserved0 = 0,
+        .reserved1 = 0,
     };
 }
