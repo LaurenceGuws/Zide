@@ -20,5 +20,6 @@ Ownership split:
 
 - `docs/todo/` — active work queues and implementation plans
 - `app_architecture/` — current architecture, boundaries, and technical design
-- `app_architecture/review/` — historical audits, investigations, and archived
-  rollout evidence
+- `docs/reference/` — contributor/operator-facing technical reference
+- `docs/research/` — exploratory writeups and reference comparisons
+- `docs/review/` — historical audits, investigations, and archived rollout evidence

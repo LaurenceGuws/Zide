@@ -6,7 +6,7 @@ Goal
 
 Status (2026-01-29)
 - New focus (2026-03-07): UI-thread/backend decoupling and compute offload.
-  - plan: `app_architecture/review/PERFORMANCE_REVIEW_1.md`
+  - plan: `docs/review/PERFORMANCE_REVIEW_1.md`
   - task tracker: `docs/todo/ui/widget_modularization.md` (Phase 5)
 - SDL3 window/input + OpenGL 3.3 renderer is now the active stack on Linux.
 - Raylib has been removed from the build path; PNG decoding is handled via stb_image.

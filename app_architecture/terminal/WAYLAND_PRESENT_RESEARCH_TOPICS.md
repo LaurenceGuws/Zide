@@ -3,7 +3,7 @@
 ## Purpose
 
 Operational research ledger for the Wayland present redesign. Each topic should
-result in a temporary report under `app_architecture/terminal/research/wayland_present/`.
+result in a temporary report under `docs/research/terminal/wayland_present/`.
 
 After all topic reports exist, their findings should be consolidated into a
 single technical writeup and then into an implementation plan.
@@ -12,7 +12,7 @@ single technical writeup and then into an implementation plan.
 
 Temporary report root:
 
-`app_architecture/terminal/research/wayland_present/`
+`docs/research/terminal/wayland_present/`
 
 ## Topic Format
 
@@ -45,11 +45,11 @@ Each topic below defines:
   - `reference_repos/backends/sdl/src/video/wayland/SDL_waylandwindow.c`
   - `reference_repos/sdlwiki_md/SDL3/*EGL*.md`
 - Report target:
-  - `app_architecture/terminal/research/wayland_present/wp_01_sdl_wayland_egl_contract.md`
+  - `docs/research/terminal/wayland_present/wp_01_sdl_wayland_egl_contract.md`
 - Status:
   - completed
 - Notes:
-  - report landed at `app_architecture/terminal/research/wayland_present/wp_01_sdl_wayland_egl_contract.md`
+  - report landed at `docs/research/terminal/wayland_present/wp_01_sdl_wayland_egl_contract.md`
 
 ### WP-02 Mesa EGL/Wayland Surface Semantics
 
@@ -70,11 +70,11 @@ Each topic below defines:
   - `reference_repos/rendering/mesa/src/egl/main/eglcontext.c`
   - `reference_repos/rendering/khronos_refpages_md/EGL/*.md`
 - Report target:
-  - `app_architecture/terminal/research/wayland_present/wp_02_mesa_egl_surface_semantics.md`
+  - `docs/research/terminal/wayland_present/wp_02_mesa_egl_surface_semantics.md`
 - Status:
   - completed
 - Notes:
-  - report landed at `app_architecture/terminal/research/wayland_present/wp_02_mesa_egl_surface_semantics.md`
+  - report landed at `docs/research/terminal/wayland_present/wp_02_mesa_egl_surface_semantics.md`
 
 ### WP-03 Reference Terminal Presentation Architectures
 
@@ -95,11 +95,11 @@ Each topic below defines:
   - `reference_repos/terminals/wezterm`
   - `reference_repos/terminals/rio`
 - Report target:
-  - `app_architecture/terminal/research/wayland_present/wp_03_reference_terminal_architectures.md`
+  - `docs/research/terminal/wayland_present/wp_03_reference_terminal_architectures.md`
 - Status:
   - completed
 - Notes:
-  - report landed at `app_architecture/terminal/research/wayland_present/wp_03_reference_terminal_architectures.md`
+  - report landed at `docs/research/terminal/wayland_present/wp_03_reference_terminal_architectures.md`
 
 ### WP-04 Zide Present Seam Ownership
 
@@ -121,11 +121,11 @@ Each topic below defines:
   - `src/ui/renderer.zig`
   - `app_architecture/terminal/VT_CORE_DESIGN.md`
 - Report target:
-  - `app_architecture/terminal/research/wayland_present/wp_04_zide_present_seam_ownership.md`
+  - `docs/research/terminal/wayland_present/wp_04_zide_present_seam_ownership.md`
 - Status:
   - completed
 - Notes:
-  - report landed at `app_architecture/terminal/research/wayland_present/wp_04_zide_present_seam_ownership.md`
+  - report landed at `docs/research/terminal/wayland_present/wp_04_zide_present_seam_ownership.md`
 
 ### WP-05 Damage, Upload, and Composition Strategy
 
@@ -148,11 +148,11 @@ Each topic below defines:
   - `src/ui/widgets/terminal_widget_draw_texture.zig`
   - `src/ui/renderer.zig`
 - Report target:
-  - `app_architecture/terminal/research/wayland_present/wp_05_damage_upload_composition_strategy.md`
+  - `docs/research/terminal/wayland_present/wp_05_damage_upload_composition_strategy.md`
 - Status:
   - completed
 - Notes:
-  - report landed at `app_architecture/terminal/research/wayland_present/wp_05_damage_upload_composition_strategy.md`
+  - report landed at `docs/research/terminal/wayland_present/wp_05_damage_upload_composition_strategy.md`
 
 ### WP-06 Resize, Scale, and Display Migration Semantics
 
@@ -173,11 +173,11 @@ Each topic below defines:
   - `src/ui/renderer.zig`
   - `docs/AGENT_HANDOFF.md`
 - Report target:
-  - `app_architecture/terminal/research/wayland_present/wp_06_resize_scale_display_migration.md`
+  - `docs/research/terminal/wayland_present/wp_06_resize_scale_display_migration.md`
 - Status:
   - completed
 - Notes:
-  - report landed at `app_architecture/terminal/research/wayland_present/wp_06_resize_scale_display_migration.md`
+  - report landed at `docs/research/terminal/wayland_present/wp_06_resize_scale_display_migration.md`
 
 ### WP-07 Observability and Validation Contract
 
@@ -198,11 +198,11 @@ Each topic below defines:
   - `src/ui/renderer/window_init.zig`
   - `docs/AGENT_HANDOFF.md`
 - Report target:
-  - `app_architecture/terminal/research/wayland_present/wp_07_observability_validation_contract.md`
+  - `docs/research/terminal/wayland_present/wp_07_observability_validation_contract.md`
 - Status:
   - completed
 - Notes:
-  - report landed at `app_architecture/terminal/research/wayland_present/wp_07_observability_validation_contract.md`
+  - report landed at `docs/research/terminal/wayland_present/wp_07_observability_validation_contract.md`
 
 ## Consolidation Output
 

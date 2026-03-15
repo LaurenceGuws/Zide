@@ -31,8 +31,10 @@ repository.
 - `docs/INDEX.md` — repo-local navigation map.
 - `README.md` — customer-facing overview and primary links.
 - `docs/todo/**` — active task tracking, implementation plans, and status.
-- `app_architecture/**.md` — current architecture, design, and research authority.
-- `app_architecture/review/**` — historical audits, investigations, and review evidence.
+- `app_architecture/**.md` — current architecture and design authority.
+- `docs/reference/**` — contributor/operator-facing technical reference.
+- `docs/research/**` — exploratory research and technical writeups.
+- `docs/review/**` — historical audits, investigations, and review evidence.
 
 Doc-placement authority:
 
@@ -45,12 +47,14 @@ Doc-placement authority:
 - Put current task progress in the owning todo or architecture doc, not in `docs/AGENT_HANDOFF.md`.
 - If a doc contradicts code, fix the doc or remove the stale claim.
 - Prefer one clear authority per topic.
-- If a topic is historical rather than current, move it under `app_architecture/review/` or point to it from a current doc instead of duplicating it.
+- If a topic is historical rather than current, move it under `docs/review/` or point to it from a current doc instead of duplicating it.
+- If a topic is exploratory or reference-heavy rather than authoritative, place it under `docs/research/` or `docs/reference/`.
 - Update the smallest doc that actually owns the information.
 
 ## Quick Placement Rules
 
 - Contributor/operator workflow and active work queues: `docs/`
 - Current architecture and design authority: `app_architecture/`
-- Historical review/investigation material: `app_architecture/review/`
+- Research and technical reference: `docs/research/` and `docs/reference/`
+- Historical review/investigation material: `docs/review/`
 - Public/project-facing overview: `README.md` and the hosted docs explorer

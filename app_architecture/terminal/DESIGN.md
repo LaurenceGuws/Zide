@@ -14,7 +14,7 @@ Status note, 2026-03-15:
 - Present-path ownership authority now lives in
   `docs/todo/terminal/wayland_present.md`.
 - Investigation-heavy or review-heavy material should live under
-  `app_architecture/review/` or `app_architecture/terminal/research/`, not grow
+  `docs/review/` or `docs/research/terminal/`, not grow
   this file into another live debug log.
 
 Purpose: keep one compact high-level map of terminal architecture decisions and
@@ -415,4 +415,4 @@ Why:
 - Alt screen redesign proposal: `app_architecture/terminal/ALT_SCREEN_REDESIGN.md`.
 - Engine split authority: `app_architecture/terminal/VT_CORE_DESIGN.md`.
 - Present-path authority: `docs/todo/terminal/wayland_present.md`.
-- Historical architecture review: `app_architecture/review/TERMINAL_CORE_ARCHITECTURE_REVIEW_2026-03-10.md`.
+- Historical architecture review: `docs/review/TERMINAL_CORE_ARCHITECTURE_REVIEW_2026-03-10.md`.

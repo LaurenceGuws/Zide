@@ -8,7 +8,7 @@ Current follow-up:
 
 - The extraction/modularization lane is no longer the main blocker by itself.
 - The next terminal architecture lane is tracked in `docs/todo/terminal/vt_core_rearchitecture.md`.
-- See `app_architecture/review/TERMINAL_CORE_ARCHITECTURE_REVIEW_2026-03-10.md` for the Ghostty-informed re-rank of remaining architectural blockers.
+- See `docs/review/TERMINAL_CORE_ARCHITECTURE_REVIEW_2026-03-10.md` for the Ghostty-informed re-rank of remaining architectural blockers.
 
 ## Scope
 - Terminal core + protocol handling + screen model + snapshot API.
