@@ -119,3 +119,10 @@ pub fn childExitStatus(handle: ?*shared.ZideTerminalHandle, out_code: *i32, out_
     }
     return .ok;
 }
+
+pub fn reportChildExit(handle: ?*shared.ZideTerminalHandle, code: i32, has_status: u8) shared.Status {
+    const h = shared.fromOpaque(handle) orelse return .invalid_argument;
+    const status = if (has_status != 0) @as(?i32, code) else null;
+    if (!h.session.reportExternalChildExit(status)) return .invalid_argument;
+    return shared.syncDerivedEvents(h);
+}

@@ -263,6 +263,7 @@ int zide_terminal_scrollback_plain_text(ZideTerminalHandle *handle, ZideTerminal
 int zide_terminal_scrollback_ansi_text(ZideTerminalHandle *handle, ZideTerminalStringBuffer *out_string);
 void zide_terminal_string_free(ZideTerminalStringBuffer *string);
 int zide_terminal_child_exit_status(ZideTerminalHandle *handle, int32_t *out_code, uint8_t *out_has_status);
+int zide_terminal_report_child_exit(ZideTerminalHandle *handle, int32_t code, uint8_t has_status);
 uint32_t zide_terminal_snapshot_abi_version(void);
 uint32_t zide_terminal_event_abi_version(void);
 uint32_t zide_terminal_scrollback_abi_version(void);

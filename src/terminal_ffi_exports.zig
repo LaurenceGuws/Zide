@@ -140,6 +140,10 @@ pub export fn zide_terminal_child_exit_status(handle: ?*c_api.ZideTerminalHandle
     return c_api.zide_terminal_child_exit_status(handle, out_code, out_has_status);
 }
 
+pub export fn zide_terminal_report_child_exit(handle: ?*c_api.ZideTerminalHandle, code: i32, has_status: u8) c_int {
+    return c_api.zide_terminal_report_child_exit(handle, code, has_status);
+}
+
 pub export fn zide_terminal_snapshot_abi_version() u32 {
     return c_api.zide_terminal_snapshot_abi_version();
 }

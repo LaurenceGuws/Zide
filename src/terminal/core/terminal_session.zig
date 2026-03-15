@@ -358,6 +358,10 @@ pub const TerminalSession = struct {
         return session_runtime.closeExternalTransport(self);
     }
 
+    pub fn reportExternalChildExit(self: *TerminalSession, code: ?i32) bool {
+        return session_runtime.reportExternalChildExit(self, code);
+    }
+
     pub fn takeExternalOutgoingBytes(self: *TerminalSession, allocator: std.mem.Allocator) !?[]u8 {
         return try session_runtime.takeExternalOutgoingBytes(self, allocator);
     }

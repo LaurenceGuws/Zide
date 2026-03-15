@@ -183,6 +183,10 @@ pub fn zide_terminal_child_exit_status(handle: ?*ZideTerminalHandle, out_code: *
     return @intFromEnum(bridge.childExitStatus(handle, out_code, out_has_status));
 }
 
+pub fn zide_terminal_report_child_exit(handle: ?*ZideTerminalHandle, code: i32, has_status: u8) c_int {
+    return @intFromEnum(bridge.reportChildExit(handle, code, has_status));
+}
+
 pub fn zide_terminal_snapshot_abi_version() u32 {
     return bridge.snapshotAbiVersion();
 }

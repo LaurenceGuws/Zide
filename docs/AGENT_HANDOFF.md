@@ -27,7 +27,7 @@ not a progress log and should stay brief.
 - Rewrite-era present/debug baggage has been materially reduced from the live path.
 - The heaviest post-rewrite bug-hunting lane has cooled after recent fixes for `nvim`, `btop`, Codex inline history, Zig `std.Progress`, and focused input latency.
 - The main remaining engine gap is no longer random compatibility debt; it is that `TerminalSession` still carries more structural weight than a `libghostty-vt`-quality engine boundary would.
-- The terminal FFI contract has now also survived an external peer-review host check in Flutty: the same widget/runtime layer works across bridge-owned PTY and Flutter-owned PTY transport, pending outbound input/report bytes now keep focus/color-scheme reporting aligned across both modes, and the remaining known difference is transport-lifecycle child-exit truth rather than redraw/input/viewport semantics.
+- The terminal FFI contract has now also survived an external peer-review host check in Flutty: the same widget/runtime layer works across bridge-owned PTY and Flutter-owned PTY transport, pending outbound input/report bytes keep focus/color-scheme reporting aligned across both modes, and external child-exit reporting now keeps lifecycle truth aligned too. The remaining differences are transport-lifecycle mechanics, not terminal-semantics gaps.
 - Current implementation authority lives in the terminal architecture docs and owning todos, not in stale investigation notes.
 
 ### Where To Look

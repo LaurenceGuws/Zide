@@ -42,6 +42,10 @@ Current judgment:
 - Follow-up now landed on `main`: external transport can drain pending outbound
   host-input/report bytes through the bridge, so encoded input and host reports
   no longer need to be PTY-writer-only semantics.
+- Follow-up now also landed for lifecycle truth: external transport can report
+  child exit status back into the shared bridge contract, so `metadata`,
+  `child_exit_status(...)`, and queued `child_exit` events no longer require a
+  bridge-owned PTY to stay authoritative.
 - Hot-path guidance should now be treated as part of the contract:
   - `redraw_state(...)` gates snapshot work
   - `pending_input_acquire(...)` is the outbound batching seam for external
@@ -100,8 +104,9 @@ Current judgment:
   ownership changes?"
 - Current downstream answer: yes, for redraw/snapshot/present, viewport
   control, command input, and focus/color-scheme reporting.
-- The remaining transport-local difference to classify is child-exit-status
-  truth on Flutter-owned PTY transport versus bridge-owned PTY transport.
+- Child-exit-status truth is now part of the shared external-host contract too;
+  the remaining PTY ownership differences are transport-lifecycle mechanics,
+  not terminal redraw/input/viewport or lifecycle-state asymmetry.
 - The next upstream performance lane should stay narrow:
   - keep `pending_input` as the coarse outbound batch seam
   - keep hosts disciplined around redraw-driven snapshot usage

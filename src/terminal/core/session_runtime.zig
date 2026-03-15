@@ -100,6 +100,18 @@ pub fn closeExternalTransport(self: anytype) bool {
     return terminal_transport.closeExternalTransport(self);
 }
 
+pub fn reportExternalChildExit(self: anytype, code: ?i32) bool {
+    if (self.external_transport == null) return false;
+    if (code) |value| {
+        self.child_exit_code.store(value, .release);
+        self.child_exited.store(true, .release);
+    } else {
+        self.child_exit_code.store(-1, .release);
+        self.child_exited.store(false, .release);
+    }
+    return true;
+}
+
 pub fn deinit(self: anytype) void {
     if (self.read_thread) |thread| {
         self.read_thread_running.store(false, .release);

@@ -20,6 +20,7 @@ from examples.common.ffi_host_boot import (  # noqa: E402
 
 STATUS_OK = 0
 EVENT_TITLE_CHANGED = 1
+EVENT_CHILD_EXIT = 4
 EVENT_ALIVE_CHANGED = 5
 EVENT_REDRAW_READY = 6
 EVENT_CLIPBOARD_WRITE = 3
@@ -229,6 +230,8 @@ def load_library(path: Path):
     lib.zide_terminal_feed_output.restype = ctypes.c_int
     lib.zide_terminal_close_input.argtypes = [HandlePtr]
     lib.zide_terminal_close_input.restype = ctypes.c_int
+    lib.zide_terminal_report_child_exit.argtypes = [HandlePtr, ctypes.c_int32, ctypes.c_uint8]
+    lib.zide_terminal_report_child_exit.restype = ctypes.c_int
     lib.zide_terminal_report_focus_changed.argtypes = [HandlePtr, ctypes.c_uint8, ctypes.POINTER(ctypes.c_uint8)]
     lib.zide_terminal_report_focus_changed.restype = ctypes.c_int
     lib.zide_terminal_report_color_scheme_changed.argtypes = [HandlePtr, ctypes.c_uint8, ctypes.POINTER(ctypes.c_uint8)]
@@ -605,6 +608,7 @@ def run_mock_service_smoke(lib_path: Path) -> int:
         saw_title = False
         saw_clipboard = False
         saw_alive_closed = False
+        saw_child_exit = False
         redraw_events = 0
         last_snapshot_state: dict[str, object] = {}
 
@@ -627,15 +631,19 @@ def run_mock_service_smoke(lib_path: Path) -> int:
 
             consume_terminal_events_once(lib, handle, EventBuffer, consume_chunk_events)
 
+        if lib.zide_terminal_report_child_exit(handle, 17, 1) != STATUS_OK:
+            raise RuntimeError("report_child_exit(mock) failed")
         if lib.zide_terminal_close_input(handle) != STATUS_OK:
             raise RuntimeError("close_input(mock) failed")
 
         def consume_close_input_events(events: EventBuffer) -> None:
-            nonlocal saw_alive_closed
+            nonlocal saw_alive_closed, saw_child_exit
             for i in range(events.count):
                 event = events.events[i]
                 if event.kind == EVENT_ALIVE_CHANGED and event.int0 == 0:
                     saw_alive_closed = True
+                if event.kind == EVENT_CHILD_EXIT and event.int0 == 17 and event.int1 == 1:
+                    saw_child_exit = True
 
         consume_terminal_events_once(lib, handle, EventBuffer, consume_close_input_events)
 
@@ -651,6 +659,8 @@ def run_mock_service_smoke(lib_path: Path) -> int:
                     {
                         "scrollback_count": metadata.scrollback_count,
                         "alive": metadata.alive,
+                        "has_exit": metadata.has_exit_code,
+                        "exit_code": metadata.exit_code,
                     }
                 )
 
@@ -679,11 +689,16 @@ def run_mock_service_smoke(lib_path: Path) -> int:
             raise RuntimeError(f"unexpected mock scrollback_count: {last_snapshot_state['scrollback_count']}")
         if last_snapshot_state["alive"] != 0:
             raise RuntimeError(f"unexpected mock alive after close_input: {last_snapshot_state['alive']}")
+        if last_snapshot_state["has_exit"] != 1 or last_snapshot_state["exit_code"] != 17:
+            raise RuntimeError(
+                f"unexpected mock exit status: ({last_snapshot_state['has_exit']},{last_snapshot_state['exit_code']})"
+            )
         print("terminal ffi mock service ok")
         print(
             f"title={last_snapshot_state['title']!r} cwd={last_snapshot_state['cwd']!r} "
             f"row0={last_snapshot_state['row0']!r} row2={last_snapshot_state['row2']!r} "
-            f"scrollback_count={last_snapshot_state['scrollback_count']} alive={last_snapshot_state['alive']}"
+            f"scrollback_count={last_snapshot_state['scrollback_count']} alive={last_snapshot_state['alive']} "
+            f"exit_status=({last_snapshot_state['has_exit']},{last_snapshot_state['exit_code']})"
         )
 
         if not saw_title:
@@ -692,6 +707,8 @@ def run_mock_service_smoke(lib_path: Path) -> int:
             raise RuntimeError("missing mock clipboard_write event")
         if not saw_alive_closed:
             raise RuntimeError("missing mock alive_changed event after close_input")
+        if not saw_child_exit:
+            raise RuntimeError("missing mock child_exit event after report_child_exit")
         if redraw_events == 0:
             raise RuntimeError("missing mock redraw_ready event")
         return 0

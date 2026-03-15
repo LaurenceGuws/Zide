@@ -184,6 +184,10 @@ pub fn childExitStatus(handle: ?*ZideTerminalHandle, out_code: *i32, out_has_sta
     return host_api.childExitStatus(handle, out_code, out_has_status);
 }
 
+pub fn reportChildExit(handle: ?*ZideTerminalHandle, code: i32, has_status: u8) Status {
+    return host_api.reportChildExit(handle, code, has_status);
+}
+
 pub fn snapshotAbiVersion() u32 {
     return core_api.snapshotAbiVersion();
 }

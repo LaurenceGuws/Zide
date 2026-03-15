@@ -122,8 +122,10 @@ It verifies:
 - the same shared metadata/event ownership helpers used by the Python host path
 - title/cwd updates
 - clipboard-write events
+- explicit external child-exit reporting through `report_child_exit(...)`
 - explicit external-input close through `close_input`
 - `alive_changed` event delivery after close
+- `child_exit` event delivery after explicit exit-status reporting
 - final snapshot content
 - scrollback content after streamed line output
 

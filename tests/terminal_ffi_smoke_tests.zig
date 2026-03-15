@@ -208,6 +208,47 @@ test "ffi external transport exposes outbound input bytes and host reports" {
     try std.testing.expect(std.mem.indexOf(u8, bytes, "\x1b[?997;1n") != null);
 }
 
+test "ffi external transport can report child exit status" {
+    try app_logger.setConsoleFilterString("none");
+    try app_logger.setFileFilterString("none");
+
+    var handle: ?*c_api.ZideTerminalHandle = null;
+    try std.testing.expectEqual(@as(c_int, 0), c_api.zide_terminal_create(null, &handle));
+    defer c_api.zide_terminal_destroy(handle);
+
+    var code: i32 = -1;
+    var has_status: u8 = 99;
+    try std.testing.expectEqual(@as(c_int, 0), c_api.zide_terminal_child_exit_status(handle, &code, &has_status));
+    try std.testing.expectEqual(@as(u8, 0), has_status);
+
+    try std.testing.expectEqual(@as(c_int, 0), c_api.zide_terminal_report_child_exit(handle, 23, 1));
+
+    var metadata: c_api.ZideTerminalMetadata = .{};
+    try std.testing.expectEqual(@as(c_int, 0), c_api.zide_terminal_metadata_acquire(handle, &metadata));
+    defer c_api.zide_terminal_metadata_release(&metadata);
+    try std.testing.expectEqual(@as(u8, 1), metadata.has_exit_code);
+    try std.testing.expectEqual(@as(i32, 23), metadata.exit_code);
+
+    var events: c_api.ZideTerminalEventBuffer = .{};
+    try std.testing.expectEqual(@as(c_int, 0), c_api.zide_terminal_event_drain(handle, &events));
+    defer c_api.zide_terminal_events_free(&events);
+
+    var saw_child_exit = false;
+    if (events.events) |event_ptr| {
+        for (event_ptr[0..events.count]) |event| {
+            if (event.kind != @intFromEnum(c_api.ZideTerminalEventKind.child_exit)) continue;
+            try std.testing.expectEqual(@as(i32, 23), event.int0);
+            try std.testing.expectEqual(@as(i32, 1), event.int1);
+            saw_child_exit = true;
+        }
+    }
+    try std.testing.expect(saw_child_exit);
+
+    try std.testing.expectEqual(@as(c_int, 0), c_api.zide_terminal_child_exit_status(handle, &code, &has_status));
+    try std.testing.expectEqual(@as(u8, 1), has_status);
+    try std.testing.expectEqual(@as(i32, 23), code);
+}
+
 test "ffi scrollback acquire exports copied rows" {
     try app_logger.setConsoleFilterString("none");
     try app_logger.setFileFilterString("none");

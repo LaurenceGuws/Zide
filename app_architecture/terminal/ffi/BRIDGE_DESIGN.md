@@ -359,6 +359,7 @@ Current bridge catch-up already landed:
 - `zide_terminal_follow_live_bottom(handle)`
 - `zide_terminal_report_focus_changed(handle, focused, &reported)`
 - `zide_terminal_report_color_scheme_changed(handle, dark, &reported)`
+- `zide_terminal_report_child_exit(handle, code, has_status)`
 - `zide_terminal_clipboard_abi_version()`
 - `zide_terminal_needs_redraw(handle)`
 
@@ -377,6 +378,7 @@ Current bridge judgment:
   - clipboard payload access
   - host focus reporting
   - host color-scheme reporting
+  - external child-exit reporting
 - the next bridge work should therefore favor ABI maturation and verifier
   hardening over widening the public semantic surface casually
 - near-term hot-path rule:
@@ -423,6 +425,9 @@ Bridge follow-up after that peer review:
   - focus reports
   - color-scheme reports
   - other writer-based host-to-app sequences
+- external hosts can now also report transport-owned child exit status back
+  into the shared lifecycle contract through:
+  - `zide_terminal_report_child_exit(handle, code, has_status)`
 
 Current external-host result:
 
@@ -434,18 +439,25 @@ Current external-host result:
 - coarse pending-input batching was natural and stable; the host did not need
   per-keystroke drain tricks or a second widget/runtime model
 
-Current remaining difference:
+Current external-host result now includes lifecycle convergence too:
 
-- bridge-owned PTY still owns backend child exit-code truth directly
-- Flutter-owned PTY still treats deterministic shutdown primarily through
-  `metadata.alive`
-- that is currently a transport-lifecycle difference, not a redraw/input/
-  viewport contract mismatch
+- bridge-owned PTY still owns child exit truth directly at the transport layer
+- Flutter-owned PTY can now report transport-owned child exit truth back
+  through `zide_terminal_report_child_exit(...)`
+- metadata, `child_exit_status(...)`, and queued `child_exit` events now share
+  the same authoritative lifecycle outcome across both transport modes
+- the remaining differences are transport-lifecycle mechanics only:
+  - who owns process startup
+  - who owns stdout/stderr forwarding
+  - who owns stdin writes
+  - who observes raw process termination first
 
 Interpretation:
 
 - the shared host contract is strong enough that PTY ownership can vary without
   requiring a second widget/runtime model
+- child-exit truth is now also part of that shared contract rather than a
+  bridge-owned PTY privilege
 - remaining bridge work should continue to prefer verifier depth and contract
   honesty over new public surface area
 
