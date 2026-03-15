@@ -22,7 +22,9 @@ Status note, 2026-03-14:
   in dedicated `src/terminal/core/session_*` modules instead of inline in
   `terminal_session.zig`; the scrollback/viewport content wrapper now also
   routes through `src/terminal/core/session_content_api.zig` instead of being
-  spelled out directly on the root facade.
+  spelled out directly on the root facade, and the public selection wrapper is
+  now aliased directly from `src/terminal/core/session_selection.zig` rather
+  than being re-declared method-by-method in `terminal_session.zig`.
 - Input encoding remains on the dedicated subsystem path: writer-agnostic
   encoder coverage exists at both the fake-writer level and the real
   PTY-backed `TerminalSession` writer boundary.
