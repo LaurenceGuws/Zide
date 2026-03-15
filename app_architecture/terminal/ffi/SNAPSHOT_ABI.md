@@ -413,6 +413,130 @@ Current code-oriented judgment:
   backend already computes rich publication damage information
 - its main risk is contract complexity, not backend data availability
 
+#### Smallest Credible Diff Shape
+
+The smallest plausible diff result should look more like a coarse publication
+packet than a row-query protocol.
+
+Conceptually:
+
+```c
+typedef struct ZideTerminalSnapshotDiffRequest {
+    uint32_t abi_version;
+    uint32_t struct_size;
+    uint64_t base_generation;
+    uint32_t include_flags;
+    uint32_t reserved0;
+} ZideTerminalSnapshotDiffRequest;
+
+typedef struct ZideTerminalSnapshotDiffRow {
+    uint32_t row;
+    uint16_t span_count;
+    uint8_t span_overflow;
+    uint8_t reserved0;
+    uint32_t first_span_index;
+    uint32_t first_cell_index;
+    uint32_t cell_count;
+} ZideTerminalSnapshotDiffRow;
+
+typedef struct ZideTerminalSnapshotDiffSpan {
+    uint16_t start_col;
+    uint16_t end_col;
+} ZideTerminalSnapshotDiffSpan;
+
+typedef struct ZideTerminalSnapshotDiff {
+    uint32_t abi_version;
+    uint32_t struct_size;
+    uint64_t generation;
+    uint64_t base_generation;
+    uint32_t rows;
+    uint32_t cols;
+    uint8_t full_refresh_required;
+    uint8_t alt_active;
+    uint8_t screen_reverse;
+    uint8_t has_damage;
+    uint32_t damage_start_row;
+    uint32_t damage_end_row;
+    uint32_t damage_start_col;
+    uint32_t damage_end_col;
+    int32_t viewport_shift_rows;
+    uint8_t viewport_shift_exposed_only;
+    uint8_t reserved1[3];
+    const ZideTerminalSnapshotDiffRow *rows_ptr;
+    size_t row_count;
+    const ZideTerminalSnapshotDiffSpan *spans_ptr;
+    size_t span_count;
+    const ZideTerminalCell *cells_ptr;
+    size_t cell_count;
+    const uint8_t *title_ptr;
+    size_t title_len;
+    const uint8_t *cwd_ptr;
+    size_t cwd_len;
+    void *_ctx;
+} ZideTerminalSnapshotDiff;
+
+int zide_terminal_snapshot_diff_acquire(
+    ZideTerminalHandle *handle,
+    const ZideTerminalSnapshotDiffRequest *request,
+    ZideTerminalSnapshotDiff *out_diff);
+
+void zide_terminal_snapshot_diff_release(ZideTerminalSnapshotDiff *diff);
+```
+
+Intended semantics:
+
+- `base_generation` is the visible generation the host believes it has already
+  rendered
+- success always returns one owned diff result
+- `full_refresh_required = 1` means:
+  - ignore row/span delta application
+  - treat `cells_ptr` as a full visible replacement for `generation`
+- `full_refresh_required = 0` means:
+  - rows/spans/cells deterministically update the previously rendered visible
+    state from `base_generation` to `generation`
+
+Important constraint:
+
+- the host still gets one acquire and one release
+- it does not ask follow-up questions per row
+- the diff result itself must be sufficient to update visible truth or to say
+  "fallback to full visible refresh now"
+
+#### Why This Shape Is Narrow Enough To Judge
+
+This shape tries to spend complexity inside one owned result instead of across
+many calls:
+
+- rows identify which visible rows changed
+- spans describe the changed regions inside those rows
+- cells provide the replacement visible cells in row/span order
+- coarse damage and viewport-shift metadata stay alongside the same result
+- the full-refresh fallback bit avoids pretending diff can represent every
+  generation cheaply
+
+That keeps the host loop conceptually stable:
+
+1. `poll(...)`
+2. `redraw_state(...)`
+3. one diff acquire
+4. either:
+   - apply diff to local visible state
+   - or replace visible state from the fallback full refresh payload
+5. `present_ack(...)`
+6. release diff result
+
+#### Main Review Gate For Diff
+
+Do not implement diff export unless this stays true:
+
+1. one acquire
+2. one owned result
+3. one release
+4. no row-follow-up getters
+5. no second authoritative visible-state path outside the diff result itself
+6. full-refresh fallback remains explicit and boring when the diff path is not
+   worth it
+
 #### Candidate B: Pinned Snapshot Handle
 
 Shape:
@@ -732,6 +856,13 @@ Current head-to-head read:
   - one owned result
   - one obvious authoritative visible-state story
   with less total copying/retention pressure in the real code
+
+Current tie-breaker to watch:
+
+- pinned wins if retained-generation and cell-remap cost both stay genuinely
+  bounded
+- diff wins if it can keep the above owned-result shape without pushing hosts
+  into a forked "fast diff path" versus "real full snapshot truth" model
 
 #### Why This Still Beats Diff On Paper
 

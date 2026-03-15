@@ -320,6 +320,17 @@ Matching diff-oriented reality check:
   whether it can stay one acquire, one owned result, and one authoritative
   visible-state story without turning hosts chatty or state-stitching heavy
 
+Current narrow diff shape worth judging:
+
+- request includes `base_generation`
+- result includes:
+  - one new generation
+  - one explicit `full_refresh_required` fallback bit
+  - changed rows/spans
+  - replacement cells
+  - coarse damage / viewport-shift metadata
+- release remains unconditional and boring
+
 ## Current Conclusion
 
 The current redesign is performance-safe enough to continue building on.

@@ -193,6 +193,12 @@ Current judgment:
     question is no longer "can we compute diffs?"
   - it is "can diff export stay one acquire, one owned result, and one
     authoritative visible-state story without making hosts reconstruct truth?"
+- Current narrow diff candidate:
+  - request carries `base_generation`
+  - result carries changed rows/spans/replacement cells plus a
+    `full_refresh_required` fallback bit
+  - reject the lane if it starts requiring row-follow-up getters or a second
+    authoritative visible-state path
 - Current execution rule for that lane:
   - do not widen the bridge first
   - keep the snapshot review focused on host call count, flat cell-buffer
