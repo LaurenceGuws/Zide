@@ -3,6 +3,7 @@
   "icon": "../../assets/icon/color_icon.png",
   "repoAbsolutePath": "/home/home/personal/zide",
   "repoBasePath": "../../",
+  "sourceUrlBase": "https://github.com/LaurenceGuws/Zide/blob/main/",
   "runtimeMode": "local-dev",
   "defaultDoc": "docs/HOME.md",
   "theme": {
