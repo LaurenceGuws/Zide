@@ -10,11 +10,6 @@ export function repoRelative(basePath: string, path: string): string {
   return `${basePath}${path}`;
 }
 
-export function repoSourceUrl(basePath: string | undefined, path: string): string {
-  if (!basePath) return "#";
-  return `${basePath}${path}`;
-}
-
 export function currentDocFromHash(docs: string[], defaultDocPath: string): string {
   const hash = new URLSearchParams(location.hash.replace(/^#/, ""));
   const doc = hash.get("doc");

@@ -105,8 +105,6 @@ Primary docs site:
 
 - [Docs Explorer](https://laurenceguws.github.io/Zide/tools/docs_explorer/)
 
-The hosted docs landing page is [docs/HOME.md](https://laurenceguws.github.io/Zide/tools/docs_explorer/#doc=docs/HOME.md), not this GitHub README. This split is intentional so GitHub gets a conservative renderer-friendly front page while the hosted docs can use richer media and navigation.
-
 Useful starting points:
 
 - [Getting started](https://laurenceguws.github.io/Zide/tools/docs_explorer/#doc=app_architecture/BOOTSTRAP.md)

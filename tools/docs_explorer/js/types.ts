@@ -23,7 +23,7 @@ export type ProjectConfig = {
   icon: string;
   repoAbsolutePath?: string;
   repoBasePath: string;
-  sourceUrlBase?: string;
+  repoUrl?: string;
   runtimeMode?: string;
   defaultDoc: string;
   docRoots: string[];
@@ -38,7 +38,6 @@ export type AppState = {
     title: string;
     subtitle: string;
     rawLink: string;
-    sourceLink: string;
     status: DocumentStatus;
   };
   viewer: {

@@ -11,7 +11,7 @@ repository.
 ## Workflow
 
 1. Read `docs/AGENT_HANDOFF.md` for current focus and constraints.
-2. Read the owning todo in `app_architecture/**/_todo.yaml`.
+2. Read the owning TODO doc in `app_architecture/`.
 3. Read only the design docs needed for the task.
 4. Implement the change.
 5. Update the owning docs.
@@ -30,7 +30,7 @@ repository.
 - `docs/AGENT_HANDOFF.md` — high-level current focus, constraints, and entrypoints for a fresh session.
 - `docs/INDEX.md` — repo-local navigation map.
 - `README.md` — customer-facing overview and primary links.
-- `app_architecture/*_todo.yaml` — active task tracking and status.
+- `app_architecture/*todo*.md` and `*_TODO.md` surfaces — active task tracking and status.
 - `app_architecture/**.md` — current architecture, design, and research authority.
 - `app_architecture/review/**` — historical audits, investigations, and review evidence.
 

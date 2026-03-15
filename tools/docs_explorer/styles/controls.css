@@ -10,6 +10,30 @@
   color: var(--ink);
   font-size: 0.76rem;
   text-decoration: none;
+  min-height: 34px;
+  line-height: 1;
+  box-sizing: border-box;
+}
+
+.icon-button {
+  min-width: 34px;
+  height: 34px;
+  padding: 0;
+}
+
+.icon-slot {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  flex: 0 0 16px;
+}
+
+.icon-slot > svg {
+  display: block;
+  width: 16px;
+  height: 16px;
 }
 
 .icon-button {
@@ -65,10 +89,19 @@
 
 .options-wrap {
   position: relative;
+  display: inline-flex;
+  align-items: stretch;
 }
 
 .options-toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   cursor: pointer;
+  font-size: 1rem;
+  appearance: none;
+  -webkit-appearance: none;
+  align-self: stretch;
 }
 
 .options-menu {
@@ -164,6 +197,7 @@
 .sidebar-toggle {
   color: var(--ink);
   cursor: pointer;
+  font: inherit;
 }
 
 :root[data-theme="light"] .options-menu {

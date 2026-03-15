@@ -30,6 +30,7 @@ export async function initializeAppShell(args) {
     const { shell, project, state } = args;
     document.title = project.title;
     shell.faviconEl.href = project.icon;
+    shell.sourceLinkEl.href = project.repoUrl ?? "#";
     await Promise.all([
         injectSvg(shell.sourceLinkIconEl, "./assets/icons/github.svg"),
         injectSvg(shell.optionsToggleIconEl, "./assets/icons/ellipsis.svg"),

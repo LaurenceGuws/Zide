@@ -20,11 +20,11 @@ Notepad++-level capability while keeping Zide's core fast and minimal.
 
 ## Roadmap docs (source of truth)
 
-- `app_architecture/editor/editor_widget_todo.yaml` (end-to-end widget + features)
-- `app_architecture/editor/protocol_todo.yaml` (text engine + editing semantics)
+- `app_architecture/editor/editor_widget_todo.md` (end-to-end widget + features)
+- `app_architecture/editor/protocol_todo.md` (text engine + editing semantics)
 - `app_architecture/ui/DEVELOPMENT_JOURNEY.md` (rendering stack + per-OS plan)
 - `app_architecture/editor/MODULARIZATION_PLAN.md` (layer split + migration steps)
-- `app_architecture/editor/treesitter_todo.yaml` (tree-sitter query + highlight integration)
+- `app_architecture/editor/treesitter_todo.md` (tree-sitter query + highlight integration)
 - `app_architecture/editor/treesitter_dynamic_roadmap.md` (dynamic grammar packs: fetch/compile/load)
 
 ## Decisions
@@ -44,4 +44,4 @@ Notepad++-level capability while keeping Zide's core fast and minimal.
 2026-01-24
 - Focus shifted to tree-sitter highlight integration planning based on Neovim's
   query/highlighter pipeline. Tasks tracked in
-  `app_architecture/editor/treesitter_todo.yaml`.
+  `app_architecture/editor/treesitter_todo.md`.

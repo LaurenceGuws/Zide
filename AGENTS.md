@@ -33,8 +33,8 @@ Follow this workflow for every feature/task:
 - `app_architecture/` is **current technical authority**: designs, active plans, and todo trackers.
 - `app_architecture/review/` is **historical evidence**: audits, investigations, and past reviews.
 - `docs/AGENT_HANDOFF.md` is **high-level only**: focus, constraints, and entrypoint pointers for a fresh session.
-- All task progress, checkpoints, and detailed changes live in the relevant todo files and `app_architecture/` docs.
-- If research was done to create or update a todo item, capture it in the relevant `app_architecture/` doc (not in handoff).
+- All task progress, checkpoints, and detailed changes live in the relevant TODO docs and `app_architecture/` docs.
+- If research was done to create or update a TODO item, capture it in the relevant `app_architecture/` doc (not in handoff).
 - See `docs/WORKFLOW.md` for the normative doc-placement and docs-usage guide.
 
 ## CI policy

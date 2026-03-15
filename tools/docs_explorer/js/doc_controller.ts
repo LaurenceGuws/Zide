@@ -12,7 +12,6 @@ export function createDocController(args: {
   state: AppState;
   shell: AppShell;
   repoBasePath: string;
-  sourceUrlBase?: string;
   repoAbsolutePath?: string;
   docs: string[];
   defaultDocPath: string;
@@ -28,7 +27,6 @@ export function createDocController(args: {
     state,
     shell,
     repoBasePath,
-    sourceUrlBase,
     repoAbsolutePath,
     docs,
     defaultDocPath,
@@ -58,16 +56,16 @@ export function createDocController(args: {
       docs,
       defaultDocPath,
       onLoading(nextState: AppState, path: string) {
-        setDocumentLoading(nextState, repoBasePath, sourceUrlBase, path);
+        setDocumentLoading(nextState, repoBasePath, path);
         renderDocumentChrome(nextState, shell);
       },
       onReady(nextState: AppState, path: string) {
-        setDocumentReady(nextState, repoBasePath, sourceUrlBase, path);
+        setDocumentReady(nextState, repoBasePath, path);
         renderDocumentChrome(nextState, shell);
         renderHighlightedCode(hljs, viewerEl);
       },
       onError(nextState: AppState, path: string) {
-        setDocumentError(nextState, repoBasePath, sourceUrlBase, path);
+        setDocumentError(nextState, repoBasePath, path);
         renderDocumentChrome(nextState, shell);
       },
     });

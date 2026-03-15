@@ -8,11 +8,6 @@ export function escapeHtml(text) {
 export function repoRelative(basePath, path) {
     return `${basePath}${path}`;
 }
-export function repoSourceUrl(basePath, path) {
-    if (!basePath)
-        return "#";
-    return `${basePath}${path}`;
-}
 export function currentDocFromHash(docs, defaultDocPath) {
     const hash = new URLSearchParams(location.hash.replace(/^#/, ""));
     const doc = hash.get("doc");
