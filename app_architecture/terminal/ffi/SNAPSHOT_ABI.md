@@ -39,6 +39,8 @@ This is slower than a zero-copy design, but it is much safer for the first bridg
 Current hot-path reading:
 
 - `snapshot_acquire(...)` still always copies the flat cell buffer
+- `snapshot_acquire(...)` reads the published render cache and optional
+  title/cwd in one locked pass
 - `snapshot_acquire(...)` only copies title/cwd when requested
 - `metadata_acquire(...)` always fills hot scalar latest-state and only copies
   title/cwd when requested
@@ -275,6 +277,9 @@ review can stay narrow and explicit.
 Current behavior:
 
 - `snapshot_acquire(...)` copies the flat cell buffer every time
+- `snapshot_acquire(...)` now avoids both:
+  - the old temporary published-`RenderCache` copy
+  - the old snapshot-title/cwd bounce through `copyMetadata(...)`
 - `snapshot_acquire(...)` duplicates title/cwd only when the request include
   flags ask for them
 - `metadata_acquire(...)` always fills hot scalar latest-state such as:
@@ -308,6 +313,23 @@ So the live direction is:
 - cold copied strings should remain explicit and honest
 - the bridge should only change shape if that lowers host call count or
   allocation pressure without weakening authority
+
+### Next Snapshot Cost Decision
+
+After the recent cleanup cuts, the next real snapshot-cost question is no
+longer about cold strings. It is about the copied cell buffer itself.
+
+The two leading directions worth comparing are:
+
+1. diff-oriented export
+2. pinned-handle full-snapshot reuse
+
+Both should be judged against the same rules:
+
+- no extra hot-path host chatter
+- no weakening of the redraw-driven acquire/ack loop
+- no host-side truth stitching
+- no renderer-private assumptions leaking into the public bridge
 
 ### Smallest Credible Future Shape
 

@@ -75,6 +75,9 @@ Current judgment:
 - One narrow maturity cut already landed there:
   - `snapshot_acquire(...)` no longer performs an extra temporary published
     render-cache copy before building the exported FFI cell buffer
+  - `snapshot_acquire(...)` also no longer routes optional title/cwd export
+    through `copyMetadata(...)`; snapshot export now gathers published cells
+    and requested strings in one locked pass
   - the remaining dominant snapshot cost is now the single explicit copied
     flat cell buffer itself
 
@@ -158,8 +161,9 @@ Current judgment:
 - The next upstream performance lane should stay narrow:
   - keep `pending_input` as the coarse outbound batch seam
   - keep hosts disciplined around redraw-driven snapshot usage
-  - review snapshot/diff evolution as the next major boundary-cost question,
-    not as an excuse to widen the surface casually
+  - compare diff-oriented export against pinned-handle full-snapshot reuse as
+    the next major boundary-cost question, not as an excuse to widen the
+    surface casually
 - Current execution rule for that lane:
   - do not widen the bridge first
   - keep the snapshot review focused on host call count, flat cell-buffer

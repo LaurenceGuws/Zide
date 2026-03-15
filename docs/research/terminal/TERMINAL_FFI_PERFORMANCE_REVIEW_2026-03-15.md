@@ -94,15 +94,19 @@ Current shape in [core_api.zig](/home/home/personal/zide/src/terminal/ffi/core_a
 - allocates a copied flat cell array
 - maps directly from the published render cache into the exported FFI cell
   buffer
-- duplicates title only when requested
-- duplicates cwd only when requested
+- copies title only when requested
+- copies cwd only when requested
 
 Recent improvement:
 
 - the earlier temporary published-`RenderCache` copy inside
   `snapshot_acquire(...)` is now gone
+- snapshot export now also gathers optional title/cwd in the same locked pass
+  as the published render-cache read instead of bouncing through
+  `copyMetadata(...)`
 - the dominant remaining cost is the one explicit flat FFI cell-buffer copy,
-  not an extra intermediate full-snapshot copy plus the final export
+  not extra intermediate snapshot or metadata-copy passes before the final
+  export
 
 This is acceptable for the current milestone because it is explicit and easy to
 bind, but it remains the biggest cost center on the host boundary.
@@ -244,6 +248,17 @@ The implied execution order is:
 2. treat full copied snapshot cells as the main remaining boundary-cost target
 3. only widen the ABI again if a successor shape lowers cost without raising
    host call count or weakening authority
+
+The next comparison should therefore stay narrow:
+
+- diff-oriented export
+- pinned-handle full-snapshot reuse
+
+and reject anything that:
+
+- increases hot-path host call count
+- weakens the redraw-driven authority loop
+- makes hosts reconstruct truth from multiple partial surfaces
 
 ## Current Conclusion
 
