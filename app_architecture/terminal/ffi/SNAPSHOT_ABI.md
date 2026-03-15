@@ -424,6 +424,165 @@ What would change that preference:
 - or a diff design that stays one acquire, one owned result, and one obvious
   visible-state authority without bifurcating the host loop
 
+### Candidate B Contract Sketch: Pinned Snapshot Handle
+
+If the bridge takes the pinned-snapshot route, the smallest credible shape
+should still preserve the current host loop:
+
+1. `poll(...)`
+2. `redraw_state(...)`
+3. acquire visible snapshot state once
+4. render
+5. `present_ack(...)`
+6. release any pinned snapshot handle
+
+The point is not to invent a second render loop. The point is to stop paying
+the flat visible-cell copy when a host can safely read the already-published
+visible snapshot.
+
+#### Intended Shape
+
+Conceptually:
+
+```c
+typedef struct ZideTerminalPinnedSnapshotRequest {
+    uint32_t abi_version;
+    uint32_t struct_size;
+    uint32_t include_flags;
+    uint32_t reserved0;
+} ZideTerminalPinnedSnapshotRequest;
+
+typedef struct ZideTerminalPinnedSnapshot {
+    uint32_t abi_version;
+    uint32_t struct_size;
+    uint32_t generation;
+    uint32_t rows;
+    uint32_t cols;
+    uint32_t cell_count;
+    const ZideTerminalCell *cells;
+    uint32_t cursor_row;
+    uint32_t cursor_col;
+    uint8_t cursor_visible;
+    uint8_t cursor_shape;
+    uint8_t cursor_blink;
+    uint8_t alt_active;
+    uint8_t screen_reverse;
+    uint8_t has_damage;
+    uint32_t damage_start_row;
+    uint32_t damage_end_row;
+    uint32_t damage_start_col;
+    uint32_t damage_end_col;
+    const uint8_t *title_ptr;
+    size_t title_len;
+    const uint8_t *cwd_ptr;
+    size_t cwd_len;
+    void *_ctx;
+} ZideTerminalPinnedSnapshot;
+
+int zide_terminal_snapshot_pin(
+    ZideTerminalHandle *handle,
+    const ZideTerminalPinnedSnapshotRequest *request,
+    ZideTerminalPinnedSnapshot *out_snapshot);
+
+void zide_terminal_snapshot_unpin(ZideTerminalPinnedSnapshot *snapshot);
+```
+
+Notes:
+
+- request flags should stay the same coarse string-inclusion model used by the
+  copied snapshot surface
+- `cells` should point at a publication-owned visible snapshot, not live screen
+  state
+- this should be a sibling replacement candidate for `snapshot_acquire(...)`,
+  not an excuse to keep adding parallel snapshot families forever
+
+#### Lifetime Rules
+
+Pinned snapshot safety has to be stricter than the current copied snapshot
+surface.
+
+Required rules:
+
+- pin always binds to one already-published visible generation
+- the host must not retain any pointer from the pinned snapshot after unpin
+- a pinned snapshot must not expose mutable or in-progress publication state
+- publication of a newer generation must not invalidate a still-pinned older
+  snapshot until unpin
+- title/cwd, when requested, must obey the same lifetime as the pinned
+  snapshot handle itself
+
+Host-visible rule:
+
+- `generation` remains the published generation being rendered
+- `present_ack(...)` still acknowledges that generation
+- `snapshot_unpin(...)` releases read ownership of the published visible data
+
+This means `present_ack(...)` and `snapshot_unpin(...)` are different:
+
+- `present_ack(...)` is presentation contract truth
+- `snapshot_unpin(...)` is memory/lifetime release
+
+They may happen in either order, but hosts should normally:
+
+1. render from the pinned snapshot
+2. `present_ack(generation)`
+3. `snapshot_unpin(...)`
+
+That keeps the current loop boring and explicit.
+
+#### Publication Interaction
+
+For this shape to stay credible, publication ownership must remain simple:
+
+- publication still produces one authoritative visible snapshot per generation
+- redraw still means "a newer published generation exists than the one the host
+  has acknowledged"
+- pinning a published generation must not require the host to hold the session
+  lock while reading cells
+- backend publication may need small retention pressure, but not host-visible
+  staging complexity
+
+The expected backend implication is:
+
+- keep a bounded publication-owned snapshot/cache generation alive while pinned
+- reject any design that turns one pin into unbounded retention or deep
+  generation history
+
+#### Why This Still Beats Diff On Paper
+
+Pinned snapshots still look better than diff export if they can preserve these
+properties:
+
+- one redraw gate
+- one visible-state acquire
+- one obvious authoritative visible surface
+- no host-side reconstruction of terminal truth
+
+If the only way to make pinned snapshots work is to expose several competing
+snapshot buffers, complicated generation fences, or host-managed retention
+policy, that advantage disappears quickly.
+
+#### Review Gate
+
+Do not implement this shape unless the paper contract can still answer "yes" to
+all of these:
+
+1. Can a Flutter host keep the same redraw-driven loop shape?
+2. Can a Python smoke host consume the surface without tricky lifetime glue?
+3. Can the bridge avoid turning publication into multi-generation retention
+   sprawl?
+4. Does one pin still correspond to one obvious authoritative visible
+   generation?
+5. Is host call count still effectively:
+   - `poll`
+   - `redraw_state`
+   - one snapshot acquire/pin
+   - `present_ack`
+   - one snapshot release/unpin
+
+If any of those answers turns into "only with extra helper chatter," this
+candidate should lose its current preference.
+
 ### Smallest Credible Future Shape
 
 If the bridge evolves this lane, the first useful shape should be small and

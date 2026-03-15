@@ -267,6 +267,23 @@ Current paper preference:
 - diff export still has more downside risk around host complexity and stitched
   truth unless it stays unusually disciplined
 
+Current execution rule for that preference:
+
+- do not treat "pinned" as permission to add a second render loop
+- the candidate only stays attractive if hosts can keep the same hot loop:
+  - `poll`
+  - `redraw_state`
+  - one visible acquire/pin
+  - render
+  - `present_ack`
+  - one release/unpin
+- `present_ack(...)` and snapshot release must stay distinct responsibilities:
+  - presentation acknowledgement
+  - memory/lifetime release
+- reject the pinned direction if it requires extra helper chatter, host-managed
+  generation fences, or deep publication-retention policy leaking into the
+  public contract
+
 ## Current Conclusion
 
 The current redesign is performance-safe enough to continue building on.

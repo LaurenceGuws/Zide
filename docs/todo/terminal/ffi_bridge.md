@@ -168,6 +168,10 @@ Current judgment:
   - pinned-handle full-snapshot reuse first
   - diff export second unless a diff design can preserve one acquire, one
     owned result, and one obvious visible-state authority
+- Current design rule for the next snapshot lane:
+  - pinned-handle reuse only stays preferred if it keeps the same redraw-driven
+    host loop shape and does not leak publication-retention complexity into the
+    public contract
 - Current execution rule for that lane:
   - do not widen the bridge first
   - keep the snapshot review focused on host call count, flat cell-buffer
