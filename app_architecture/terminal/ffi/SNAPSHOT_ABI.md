@@ -297,3 +297,39 @@ So the live direction is:
 - cold copied strings should remain explicit and honest
 - the bridge should only change shape if that lowers host call count or
   allocation pressure without weakening authority
+
+### Smallest Credible Future Shape
+
+If the bridge evolves this lane, the first useful shape should be small and
+authority-preserving.
+
+Good direction:
+
+- keep `ZideTerminalMetadata` as the one authoritative latest-state summary
+- introduce an append-only way to separate:
+  - hot scalar latest-state
+  - cold copied strings
+- let hosts read hot latest-state without forcing title/cwd duplication every
+  time
+
+Bad direction:
+
+- replacing `metadata_acquire(...)` with many tiny getters
+- making hosts reconstruct lifecycle/title/cwd/scrollback truth from separate
+  calls
+- mutating the host render loop so snapshot pulls become the only way to read
+  lifecycle or scrollback scalar state
+
+So the next shape, if it happens, should still preserve:
+
+1. one authoritative redraw gate:
+   - `redraw_state(...)`
+2. one authoritative latest-state summary:
+   - `metadata_acquire(...)` or an append-only successor that keeps the same
+     role
+3. one authoritative presentation acknowledgement:
+   - `present_ack(...)`
+
+The question is not whether latest-state should fragment. The question is how to
+let hot scalars get cheaper while the host still sees one coherent latest-state
+surface.

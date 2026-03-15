@@ -301,6 +301,10 @@ Current performance note:
   recorded in:
   - `docs/research/terminal/TERMINAL_FFI_PERFORMANCE_REVIEW_2026-03-15.md`
   - `app_architecture/terminal/ffi/SNAPSHOT_ABI.md`
+- the smallest credible future-shape question is now explicit too:
+  - keep one authoritative latest-state surface
+  - make hot scalars cheaper
+  - do not turn the bridge into many tiny convenience getters
 
 The snapshot should include at minimum:
 - rows/cols
