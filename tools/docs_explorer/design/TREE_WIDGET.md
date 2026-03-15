@@ -30,6 +30,8 @@ What is still weak:
 - connector geometry is still partly container-owned instead of row-owned
 - active-path highlighting still depends on branch-height approximation
 - elbows and vertical stems are not yet derived from a single row model
+- open-folder handoff is easy to regress if it adds a second continuation layer
+  outside the row-owned connector path
 
 ## Desired Geometry Model
 
@@ -48,6 +50,8 @@ That means the long-term design should avoid:
 - one full-height active rail per open container
 - pseudo-elements that try to stop at a guessed child index
 - separate geometry rules for folders vs files
+- summary-level or container-level open-folder continuation patches that
+  duplicate the row-owned connector path
 
 ## Ownership
 
@@ -77,5 +81,13 @@ Design ownership is split like this:
 
 The next implementation step should replace the current active-stem
 approximation with true row-owned connector segments.
+
+The next open-folder iteration should be designed first and keep one connector
+grammar:
+
+1. folder/file rows own elbows and stems
+2. open state may change the elbow glyph/shape
+3. open state must not add a second active continuation layer on `summary` or
+   on `.folder-children`
 
 Track that work in [../TODO.md](/home/home/personal/zide/tools/docs_explorer/TODO.md).

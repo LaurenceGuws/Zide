@@ -13,6 +13,10 @@
       - Do not keep extending the current container-height hack.
       - Authority:
         - [design/TREE_WIDGET.md](/home/home/personal/zide/tools/docs_explorer/design/TREE_WIDGET.md)
+- [ ] Redesign the open-folder joint before changing CSS again.
+      - Closed `>` state stays as-is.
+      - Open state must use the same row-owned connector grammar.
+      - Do not add `summary` or `.folder-children` continuation patches.
 
 ### Theme and shell cleanup
 
