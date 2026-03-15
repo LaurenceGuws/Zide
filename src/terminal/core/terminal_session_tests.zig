@@ -19,6 +19,25 @@ fn expectSnapshotRow(snapshot: session_mod.TerminalSnapshot, row: usize, expecte
     }
 }
 
+fn snapshotContainsAscii(snapshot: session_mod.TerminalSnapshot, needle: []const u8) bool {
+    var row: usize = 0;
+    while (row < snapshot.rows) : (row += 1) {
+        const cells = snapshot.rowSlice(row);
+        var line: [512]u8 = [_]u8{0} ** 512;
+        var len: usize = 0;
+        for (cells) |cell| {
+            const cp = cell.codepoint;
+            const ch: u8 = if (cp == 0 or cp > 0x7f) ' ' else @intCast(cp);
+            if (len < line.len) {
+                line[len] = ch;
+                len += 1;
+            }
+        }
+        if (std.mem.indexOf(u8, line[0..len], needle) != null) return true;
+    }
+    return false;
+}
+
 test "external transport poll updates screen and metadata" {
     const allocator = std.testing.allocator;
 
@@ -157,6 +176,39 @@ test "pty-backed session sendText writes through session writer boundary" {
     }
 
     try expectSnapshotRow(session.snapshot(), 0, "abc     ");
+}
+
+test "pty-backed session sendKey enter writes through session writer boundary" {
+    if (builtin.target.os.tag == .windows) return;
+
+    const allocator = std.testing.allocator;
+
+    var session = try TerminalSession.init(allocator, 4, 16);
+    defer session.deinit();
+
+    var pty = Pty.init(
+        allocator,
+        .{ .rows = 4, .cols = 16, .cell_width = 8, .cell_height = 16 },
+        "/bin/sh",
+    ) catch |err| switch (err) {
+        error.OpenPtyFailed => return,
+        else => return err,
+    };
+    session.attachPtyTransport(pty);
+
+    try session.sendText("printf hi; exit");
+    try session.sendKey(session_mod.VTERM_KEY_ENTER, session_mod.VTERM_MOD_NONE);
+
+    const start_ms = std.time.milliTimestamp();
+    while (std.time.milliTimestamp() - start_ms < 4000) {
+        try session.poll();
+        const snapshot = session.snapshot();
+        if (snapshotContainsAscii(snapshot, "hi")) return;
+        if (!session.isAlive()) break;
+        std.Thread.sleep(10 * std.time.ns_per_ms);
+    }
+
+    try std.testing.expect(snapshotContainsAscii(session.snapshot(), "hi"));
 }
 
 test "top-anchored partial scroll region retires rows into scrollback" {
