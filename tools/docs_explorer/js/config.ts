@@ -9,7 +9,13 @@ export async function fetchJson<T>(path: string): Promise<T> {
 export function selectedProjectConfigPath(): string {
   const params = new URLSearchParams(location.search);
   const selected = params.get("config");
-  if (!selected) return "./config/project.json";
+  if (!selected) {
+    const isGithubPages = location.hostname.endsWith("github.io");
+    const isProjectSitePath = location.pathname.startsWith("/Zide/");
+    return isGithubPages || isProjectSitePath
+      ? "./config/project.pages.json"
+      : "./config/project.json";
+  }
 
   const safe = selected.replace(/[^a-zA-Z0-9._-]/g, "");
   return `./config/${safe}`;
