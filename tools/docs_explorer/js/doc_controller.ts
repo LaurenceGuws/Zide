@@ -69,16 +69,16 @@ export function createDocController(args: {
       defaultDocPath,
       onLoading(nextState: AppState, path: string) {
         setDocumentLoading(nextState, repoBasePath, path);
-        renderDocumentChrome(nextState, shell, appIconPath, docs);
+        renderDocumentChrome(nextState, shell, appIconPath);
       },
       onReady(nextState: AppState, path: string) {
         setDocumentReady(nextState, repoBasePath, path);
-        renderDocumentChrome(nextState, shell, appIconPath, docs);
+        renderDocumentChrome(nextState, shell, appIconPath);
         renderHighlightedCode(hljs, viewerEl);
       },
       onError(nextState: AppState, path: string) {
         setDocumentError(nextState, repoBasePath, path);
-        renderDocumentChrome(nextState, shell, appIconPath, docs);
+        renderDocumentChrome(nextState, shell, appIconPath);
       },
     });
   }

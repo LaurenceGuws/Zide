@@ -2,6 +2,19 @@
 
 ## Current Priority
 
+### Theme and shell cleanup
+
+- [~] Keep the shell theme system token-driven instead of letting component CSS
+      grow local one-off surfaces.
+      - Outer shell/header/pane/control/viewer materials now derive much more
+        cleanly from `theme.css`.
+      - Remaining work: continue removing component-local background formulas
+        when a named theme token would be clearer.
+- [ ] Audit dark/light drift through theme tokens first and component rules
+      second.
+- [ ] Keep the app header intentionally small and shell-level.
+      - Avoid turning it back into a document breadcrumb/navigation bar.
+
 ### State foundation
 
 - [~] Introduce a dedicated app-state module instead of storing behavior across
@@ -52,9 +65,11 @@
 - [~] Move project identity into config instead of code/CSS edits.
       - Title/icon/default doc already live in `config/project.json`.
       - Brand-level light/dark palette overrides now live there too.
+      - More shell/control/viewer surface behavior now derives from those base
+        palette tokens.
       - Repo fetch base path now lives there too.
-      - Remaining work: decide whether typography and more shell accents belong
-        in config or should stay in CSS defaults.
+      - Remaining work: decide how far config should go beyond palette/base
+        tokens without turning the tool into a per-project styling DSL.
 - [x] Split `styles/base.css` by concern.
       - `base.css` is now the import root.
       - `theme.css`, `shell.css`, `tree.css`, `controls.css`,
@@ -72,9 +87,10 @@
 - [ ] Keyboard escape to close options menu.
 - [ ] Persist expanded tree folders.
 - [ ] Better iconography for controls.
-- [x] Add a tiny runtime/about surface in the options menu.
 - [ ] Auto-generate `config/docs-index.json`.
 - [x] Add support for multiple project configs.
+- [ ] Add a short local style-guide note for shell materials so future UI work
+      does not reintroduce per-widget background drift.
 
 ## Deliberately Deferred
 
