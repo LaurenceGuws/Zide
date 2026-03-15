@@ -24,7 +24,11 @@ Status note, 2026-03-14:
   routes through `src/terminal/core/session_content_api.zig` instead of being
   spelled out directly on the root facade, and the public selection wrapper is
   now aliased directly from `src/terminal/core/session_selection.zig` rather
-  than being re-declared method-by-method in `terminal_session.zig`.
+  than being re-declared method-by-method in `terminal_session.zig`; the public
+  host/query surface is now also aliased directly from
+  `src/terminal/core/session_queries.zig` and
+  `src/terminal/core/session_host_queries.zig` instead of being repeated in the
+  root facade.
 - Input encoding remains on the dedicated subsystem path: writer-agnostic
   encoder coverage exists at both the fake-writer level and the real
   PTY-backed `TerminalSession` writer boundary.

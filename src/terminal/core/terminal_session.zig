@@ -151,6 +151,13 @@ pub const TerminalSession = struct {
     pub const beginClickSelectionLocked = session_selection.beginClickSelectionLocked;
     pub const extendGestureSelectionLocked = session_selection.extendGestureSelectionLocked;
     pub const selectOrUpdateCellInRowLocked = session_selection.selectOrUpdateCellInRowLocked;
+    pub const takeOscClipboardCopy = session_queries.takeOscClipboardCopy;
+    pub const tryTakeOscClipboardCopy = session_queries.tryTakeOscClipboardCopy;
+    pub const copyHyperlinkUri = session_queries.copyHyperlinkUri;
+    pub const copyMetadata = session_host_queries.copyMetadata;
+    pub const closeConfirmSignals = session_host_queries.closeConfirmSignals;
+    pub const shouldConfirmClose = session_host_queries.shouldConfirmClose;
+    pub const isAlive = session_host_queries.isAlive;
 
     allocator: std.mem.Allocator,
     pty: ?Pty,
@@ -791,27 +798,6 @@ pub const TerminalSession = struct {
         session_rendering.setSyncUpdatesLocked(self, enabled);
     }
 
-    pub fn takeOscClipboardCopy(self: *TerminalSession, allocator: std.mem.Allocator, out: *std.ArrayList(u8)) !bool {
-        return session_queries.takeOscClipboardCopy(self, allocator, out);
-    }
-
-    pub fn tryTakeOscClipboardCopy(self: *TerminalSession, allocator: std.mem.Allocator, out: *std.ArrayList(u8)) !bool {
-        return session_queries.tryTakeOscClipboardCopy(self, allocator, out);
-    }
-
-    pub fn copyHyperlinkUri(self: *TerminalSession, allocator: std.mem.Allocator, link_id: u32, out: *std.ArrayList(u8)) !?[]const u8 {
-        return session_queries.copyHyperlinkUri(self, allocator, link_id, out);
-    }
-
-    pub fn copyMetadata(
-        self: *TerminalSession,
-        allocator: std.mem.Allocator,
-        title_out: *std.ArrayList(u8),
-        cwd_out: *std.ArrayList(u8),
-    ) !SessionMetadata {
-        return session_host_queries.copyMetadata(self, allocator, title_out, cwd_out);
-    }
-
     pub fn clearPublishedDamageIfGeneration(self: *TerminalSession, expected_generation: u64, clear_screen_dirty: bool) bool {
         return session_rendering.clearPublishedDamageIfGeneration(self, expected_generation, clear_screen_dirty);
     }
@@ -883,18 +869,6 @@ pub const TerminalSession = struct {
     }
 
     pub const CloseConfirmSignals = session_host_types.CloseConfirmSignals;
-
-    pub fn closeConfirmSignals(self: *TerminalSession) CloseConfirmSignals {
-        return session_host_queries.closeConfirmSignals(self);
-    }
-
-    pub fn shouldConfirmClose(self: *TerminalSession) bool {
-        return session_host_queries.shouldConfirmClose(self);
-    }
-
-    pub fn isAlive(self: *TerminalSession) bool {
-        return session_host_queries.isAlive(self);
-    }
 
     pub fn getDamage(self: *TerminalSession) ?struct {
         start_row: usize,
