@@ -14,33 +14,35 @@ function renderTreeNode(
     .slice()
     .sort((a, b) => a.path.localeCompare(b.path));
 
+  const activeDirIndex = dirEntries.findIndex(
+    (child) => activePath === child.path || activePath.startsWith(`${child.path}/`),
+  );
+  const activeFileIndex = fileEntries.findIndex((child) => activePath === child.path);
+  const activeChildIndex =
+    activeDirIndex >= 0
+      ? activeDirIndex
+      : activeFileIndex >= 0
+        ? dirEntries.length + activeFileIndex
+        : -1;
+
   const dirsHtml = dirEntries
     .map((dir, dirIndex) => {
       const isActiveBranch =
         activePath.startsWith(`${dir.path}/`) || activePath === dir.path;
       const shouldOpen = isActiveBranch || expandedPaths.has(dir.path);
-      const activeDirIndex = dirEntries.findIndex(
-        (child) =>
-          activePath === child.path || activePath.startsWith(`${child.path}/`),
-      );
-      const activeFileIndex = fileEntries.findIndex(
-        (child) => activePath === child.path,
-      );
-      const activeChildIndex =
-        activeDirIndex >= 0
-          ? activeDirIndex
-          : activeFileIndex >= 0
-            ? dirEntries.length + activeFileIndex
-            : -1;
-      const activeBranchStyle =
-        isActiveBranch && activeChildIndex >= 0
-          ? ` style="--active-branch-index:${activeChildIndex};"`
-          : "";
-      const activeChildClass =
-        activeDirIndex === dirIndex ? " active-path-child" : "";
+      const rowIndex = dirIndex;
+      const rowClasses = [
+        "tree-item",
+        activeChildIndex >= 0 && rowIndex <= activeChildIndex
+          ? "active-stem"
+          : "",
+        activeDirIndex === dirIndex ? "active-path-child" : "",
+      ]
+        .filter(Boolean)
+        .join(" ");
       return `
-      <li class="tree-item${activeChildClass}">
-        <details class="tree-folder ${isActiveBranch ? "active-branch" : ""}" data-folder-path="${escapeHtml(dir.path)}" ${shouldOpen ? "open" : ""}${activeBranchStyle}>
+      <li class="${rowClasses}">
+        <details class="tree-folder ${isActiveBranch ? "active-branch" : ""}" data-folder-path="${escapeHtml(dir.path)}" ${shouldOpen ? "open" : ""}>
           <summary>
             <span class="folder-caret" aria-hidden="true">${treeCaretIcon()}</span>
             <span class="folder-icon" aria-hidden="true">${treeFolderIcon(shouldOpen)}</span>
@@ -56,16 +58,26 @@ function renderTreeNode(
     .join("");
 
   const filesHtml = fileEntries
-    .map(
-      (doc) => `
-    <li class="tree-item${activePath === doc.path ? " active-path-child" : ""}">
+    .map((doc, fileIndex) => {
+      const rowIndex = dirEntries.length + fileIndex;
+      const rowClasses = [
+        "tree-item",
+        activeChildIndex >= 0 && rowIndex <= activeChildIndex
+          ? "active-stem"
+          : "",
+        activePath === doc.path ? "active-path-child" : "",
+      ]
+        .filter(Boolean)
+        .join(" ");
+      return `
+    <li class="${rowClasses}">
       <a class="doc-link" href="#doc=${encodeURIComponent(doc.path)}" data-doc-link="${escapeHtml(doc.path)}">
         <span class="doc-link-label">${escapeHtml(doc.label)}</span>
         <small class="doc-link-detail">${escapeHtml(doc.detail)}</small>
       </a>
     </li>
-  `,
-    )
+  `;
+    })
     .join("");
 
   const dirList = dirsHtml
