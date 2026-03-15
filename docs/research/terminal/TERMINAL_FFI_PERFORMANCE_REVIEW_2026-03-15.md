@@ -294,6 +294,13 @@ Current implementation-oriented caution:
   extension, the preference for pinned handles should be re-evaluated instead
   of forced
 
+Current narrowest plausible implementation story:
+
+- keep the current double-buffered publication flip path
+- allow at most one extra retained published generation while pinned
+- treat anything heavier than that as a sign that pinned reuse may no longer be
+  the right next step
+
 ## Current Conclusion
 
 The current redesign is performance-safe enough to continue building on.

@@ -577,6 +577,61 @@ Current judgment after the code read:
   generation while pinned" is enough, or whether the real code wants something
   heavier
 
+### Smallest Retained-Generation Extension
+
+The most plausible narrow implementation shape now looks like this:
+
+1. keep the current two render caches as the active publication flip path
+2. add at most one extra retained published snapshot/cache slot for pinning
+3. only populate that retained slot when a host actually pins a generation that
+   would otherwise be overwritten by the next publication flip
+4. free that retained slot as soon as the last pin on that generation is
+   released
+
+Why this is the smallest believable extension:
+
+- `view_cache.updateViewCacheNoLockTagged(...)` already publishes by writing
+  into the inactive render cache and then flipping `render_cache_index`
+- that means the active published view is cheap to read, but the previously
+  published generation is not guaranteed to survive another publication flip
+- one bounded retained slot would let the bridge preserve a still-pinned
+  visible generation without pretending it has a general publication history
+
+What this design should not become:
+
+- a ring of many retained published generations
+- host-visible generation-retention policy
+- several pin classes or pin-time filtering options
+- a second visible-state authority separate from the current published view
+
+The resulting backend rule would be:
+
+- zero pins: existing publication path unchanged
+- one pinned old generation: retain one extra published snapshot/cache until
+  unpin
+- anything beyond that should be treated as evidence that the design is no
+  longer narrow enough
+
+### Practical Review Questions
+
+Before implementation, the next code-oriented review should answer:
+
+1. Can one retained slot actually cover the worst legal host ordering?
+   Example:
+   - host pins generation `N`
+   - backend publishes `N+1`
+   - host has not unpinned `N` yet
+2. Can the retained slot be filled without copying more total data than the
+   current exported full-snapshot copy path would have?
+3. Does alt-screen or viewport-pinned publication need any different retention
+   treatment, or can it use the same retained visible-cache rule?
+4. Can the bridge reject or serialize multiple simultaneous pins cleanly if
+   needed, instead of silently growing retention complexity?
+
+If the answers trend toward "needs more than one retained slot" or "still
+copies almost as much as the current full export path," the pinned direction
+should lose priority quickly.
+
 #### Why This Still Beats Diff On Paper
 
 Pinned snapshots still look better than diff export if they can preserve these

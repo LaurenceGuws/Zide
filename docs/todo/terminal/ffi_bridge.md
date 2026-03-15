@@ -177,6 +177,11 @@ Current judgment:
     slot plus copy-based handoff, so pinned reuse must prove it only needs a
     small bounded retained-generation extension rather than a heavier
     publication store
+- Current narrowest plausible follow-on:
+  - keep the current double-buffered publication flip path
+  - allow at most one extra retained published generation while pinned
+  - re-evaluate the preference immediately if real implementation pressure asks
+    for more than that
 - Current execution rule for that lane:
   - do not widen the bridge first
   - keep the snapshot review focused on host call count, flat cell-buffer
