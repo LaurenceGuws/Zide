@@ -87,12 +87,17 @@ Then launch a fresh shell inside Zide and verify:
 printf '%s\n' "$TERM"
 ```
 
-Expected identity is:
+Expected TERM selection is compatibility-first:
 
-- `xterm-kitty` when that terminfo is already installed and available
-- otherwise `xterm-zide`
+- if `xterm-kitty` terminfo is already installed, Zide currently prefers it for
+  broad app compatibility
+- otherwise Zide uses `xterm-zide`
 - then `zide-256color`
 - finally `xterm-256color`
+
+That does not mean Zide is trying to identify as Kitty as a product. It means
+the PTY path currently prefers the broadest already-installed compatible entry
+before falling back to Zide-owned terminfo.
 
 ## Documentation
 

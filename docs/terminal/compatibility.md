@@ -30,6 +30,11 @@ Practical interpretation:
 - `zide-256color` and `zide` remain Zide-owned fallbacks.
 - `xterm-256color` is the final fallback when no richer entry is available.
 
+This is a compatibility strategy, not a product-identity claim. Zide is not
+trying to present itself as Kitty as a product; the runtime is currently
+preferring the broadest already-installed compatible terminfo entry before
+falling back to Zide-owned identities.
+
 Bundled terminfo source:
 
 - `terminfo/zide.terminfo`
@@ -41,8 +46,8 @@ mkdir -p ~/.terminfo
 tic -x -o ~/.terminfo terminfo/zide.terminfo
 ```
 
-After installation, a fresh shell inside Zide should at least be able to use
-`xterm-zide` if `xterm-kitty` is not already available.
+After installation, a fresh shell inside Zide should be able to use
+`xterm-zide` on systems where `xterm-kitty` is not already installed.
 
 For packaged installs that place terminfo under `/usr/share/terminfo`,
 `TERMINFO` is typically unset by design.
@@ -153,7 +158,7 @@ Then start a fresh shell inside Zide and check:
 printf '%s\n' "$TERM"
 ```
 
-Expected value is:
+Expected value is compatibility-driven:
 
 - `xterm-kitty` when that terminfo is already available
 - otherwise `xterm-zide`

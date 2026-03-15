@@ -214,38 +214,16 @@ The current before-state is now also locked in a backend unit test at
 from `2..5` plus `10..18` down to one union span `2..18`. That is the exact
 behavior the future multi-span row model is meant to replace.
 
-The first migration checkpoint after that is now landed too:
+Current state:
 
 - `TerminalGrid` owns fixed-cap per-row span storage
 - `snapshotView()` exports that span truth
 - `view_cache` / `render_cache` preserve it end-to-end
-- the old `dirty_cols_start/end` union fields still exist only as compatibility
-  mirrors for now
-
-The next backend publication checkpoint is now landed too:
-
-- projected diff preserves multiple same-row spans instead of collapsing back to
-  one `rowDiffSpan(...)`
-- row-hash refinement preserves/discovers multiple row-local spans and rebuilds
-  the old union bounds only as compatibility mirrors
-- selection-dirty expansion and partial-damage widening now keep the new
-  per-row span truth in sync instead of mutating only `dirty_cols_start/end`
-
-The next renderer checkpoint is now landed too:
-
-- partial-plan construction in `terminal_widget_draw_texture.zig` now prefers
-  backend row spans directly
-- the old `dirty_cols_start/end` union bounds remain only as fallback when span
-  truth is absent
-- partial background/glyph draw loops now also iterate those per-row spans
-  directly instead of redrawing one union box per row
-- that means backend-authored multi-span damage now survives all the way into
-  the live partial draw path instead of being forced back through a one-span
-  row box at the renderer seam
-
-That means the next implementation step can move from storage/export into
-damage/publication consumption without guessing whether the backend is already
-losing span truth before the renderer sees it.
+- projected diff, row-hash refinement, and selection-dirty expansion preserve
+  multi-span row truth instead of collapsing back to one `rowDiffSpan(...)`
+- renderer partial-plan construction and partial draw loops consume backend row
+  spans directly
+- old `dirty_cols_start/end` union fields remain compatibility mirrors only
 
 ### 3. `PtyTerminalSession`
 
@@ -406,68 +384,22 @@ exported from one shared library:
 That keeps Flutter and mobile consumers from depending on PTY/session semantics
 they do not need.
 
-### 2026-03-10 first internal split
-
-The first code cut for that FFI direction is now landed:
+### Current FFI and transport state
 
 - shared terminal FFI ABI types, handle state, event/string helpers, and
   glyph-class metadata helpers live in `src/terminal/ffi/shared.zig`
 - PTY-host/runtime-facing operations live in `src/terminal/ffi/host_api.zig`
 - core-facing snapshot/scrollback/metadata/event/text-export operations live in
   `src/terminal/ffi/core_api.zig`
-- `src/terminal/ffi/bridge.zig` is now a thin facade over `core_api` +
-  `host_api`
-
-The exported C ABI is unchanged in this slice. The gain is internal ownership:
-host/runtime operations are no longer mixed inline with snapshot/scrollback/
-metadata/event export logic in one large bridge implementation.
-
-### 2026-03-10 no-PTY transport-backed FFI feed path
-
-The first non-PTY transport shape is now also landed internally:
-
-- `src/terminal/core/terminal_transport.zig` now has an in-memory external
+- `src/terminal/ffi/bridge.zig` is a thin facade over `core_api` + `host_api`
+- `src/terminal/core/terminal_transport.zig` has an in-memory external
   transport implementation alongside the PTY-backed transport facade
 - FFI-created terminal sessions attach that external transport by default
-- `zide_terminal_feed_output(...)` now enqueues bytes into that transport and
-  runs the normal session poll path, instead of bypassing backend transport
-
-### 2026-03-11 first render-publication behavior change
-
-`VTCORE-05` is no longer prep-only.
-
-The first real publication behavior change is now landed:
-
-- live-bottom full-region scroll publication can use viewport-shift exposure
-  instead of widening damage to the whole viewport
-- the replay contract for that case is now harness-owned rather than relying on
-  mixed baseline VT input plus direct scroll actions
-- row-hash refinement is also skipped for scroll-shift publication, so that
-  row-position hashing does not undo a valid exposed-row shift plan
-
-This matters because it is the first backend publication optimization locked by
-replay authority instead of only by unit tests or visual anecdotes.
-  ownership through a direct parser-only shortcut
-
-This keeps the no-PTY host path closer to the future embed/mobile shape while
-preserving the existing exported FFI API.
-
-That path is now also core-tested:
-
-- terminal session tests cover external transport enqueue/poll
-- metadata/aliveness are asserted through the same core session surface used by
-  other hosts
-- external transport now has an explicit "closed" state instead of only
-  "attached vs detached"
-
-It is also no longer FFI-only:
-
-- the replay harness now uses external transport for normal non-reply fixtures
-- PTY attachment remains only for the reply-capture subset that genuinely needs
-  a writable transport sink
-- higher-level callers now go through `TerminalSession` host-wrapper methods for
-  external transport attach/enqueue/close instead of reaching into
-  `terminal_transport` directly for that path
+- `zide_terminal_feed_output(...)` enqueues bytes into that transport and runs
+  the normal session poll path instead of bypassing backend transport
+- external transport is core-tested and no longer FFI-only: the replay harness
+  uses it for normal non-reply fixtures, while PTY attachment remains only for
+  the reply-capture subset that genuinely needs a writable transport sink
 - reply-capture PTY attachment in the replay harness now also goes through
   `TerminalSession` host-wrapper methods instead of raw transport assembly
 - at this point higher-level setup callers no longer need raw
@@ -550,94 +482,24 @@ Migration approach:
 5. move FFI to target the core boundary first
 6. keep PTY-backed desktop behavior working through the wrapper
 
-## Progress
-
-### 2026-03-10 first code cut
-
-The first `VTCORE-01` extraction is now landed internally:
+## Current Internal State
 
 - `src/terminal/core/terminal_core.zig` owns the engine-centered terminal state
-- `TerminalSession` now wraps `core: TerminalCore`
-- PTY/runtime/thread/render-publication ownership stays in `TerminalSession` for now
-
-This first cut moved these owners under `TerminalCore` without changing behavior:
-
-- primary/alt screens and active-screen state
-- history/scrollback
-- parser state
-- OSC title/cwd/clipboard/hyperlink state
-- semantic prompt and user vars
-- kitty image state
-- palette/default-color state
-- saved charset and clear-generation state
-
-This is intentionally not the end-state. Protocol execution and FFI still route
-through `TerminalSession`, but they now do so against a real internal core owner
-instead of one flat session struct.
-
-Session construction also moved one step toward host-wrapper ownership:
-
-- `src/terminal/core/session_runtime.zig` now owns the `TerminalSession`
-  allocation + runtime-state assembly path
-- `terminal_session.zig` now delegates `initWithOptions(...)` to that runtime
-  owner instead of constructing the whole session inline
-- replay/test-only debug helpers now also live in
-  `src/terminal/core/terminal_session_debug.zig`, so that non-runtime surface is
-  no longer embedded directly in the root session file
-- dead root-session local helper residue has also started disappearing: unused
-  screen-mode/hash/inactive-screen helpers are gone, and the remaining
-  test-facing view-cache shim now delegates through
-  `src/terminal/core/session_rendering.zig`
-- the remaining scroll-refresh and OSC clipboard copy wrappers also now
-  delegate through `src/terminal/core/session_rendering.zig` and
-  `src/terminal/core/session_queries.zig`, instead of carrying that
-  orchestration inline in `terminal_session.zig`
-- backlog hinting now also routes through `src/terminal/core/session_runtime.zig`
-  instead of `session_rendering.zig`, so render/publication ownership no longer
-  depends on transport ingress state
-- host-facing metadata, liveness, and close-confirm signal queries now also
-  live under `src/terminal/core/session_host_queries.zig`, leaving
-  `session_queries.zig` focused on terminal-data query surfaces such as OSC
-  clipboard and hyperlink export
-- workspace/runtime input-pressure hinting now also routes through
-  `src/terminal/core/session_runtime.zig` instead of staying inline in the root
-  session facade
-- the first explicit `view_cache` split is now landed too: pure publication/diff
-  helpers live under `src/terminal/core/view_cache_publication.zig`, so
-  `view_cache.zig` is beginning to separate projection from publication
-  planning without changing behavior
-- selection projection now also lives under
-  `src/terminal/core/view_cache_selection.zig`, so `view_cache.zig` is no
-  longer carrying both selection projection and publication/diff helpers inline
-- viewport-shift and full-vs-partial publication planning now also lives under
-  `src/terminal/core/view_cache_plan.zig`, so `view_cache.zig` is losing more
-  publication-policy ownership instead of keeping it mixed with projection
-- row-hash refinement now also lives under
-  `src/terminal/core/view_cache_refinement.zig`, making that optional
-  publication-narrowing step explicit instead of leaving it embedded in the
-  base view-cache update path
-- selection-change dirty expansion now also lives under
-  `src/terminal/core/view_cache_selection_dirty.zig`, so selection-driven
-  damage widening is no longer embedded in the base `view_cache` update path
-- base dirty/damage assignment and partial-damage widening now also lives under
-  `src/terminal/core/view_cache_damage.zig`, so `view_cache.zig` is closer
-  again to projection/orchestration than publication policy
-- presented-generation acknowledgement and damage retirement now also lives
-  under `src/terminal/core/session_rendering_retirement.zig`, so
-  `session_rendering.zig` no longer mixes capture/feedback with retirement
-  policy inline
-- replay-backed redraw-contract coverage has now started too: the replay
-  harness supports a presented baseline phase plus explicit damage assertions,
-  and the first fixtures lock narrow partial publication for gutter rewrites
-  and indent-guide rewrites instead of leaving those redraw shapes covered only
-  by unit tests
-- replay-backed redraw coverage now also includes dense clear+repaint loops,
-  locking the current contract that `ED 2` plus a full visible repaint stays on
-  the partial path with full-width viewport damage after a presented baseline
-- replay-backed redraw coverage now also includes live-bottom full-region
-  scroll, locking the current contract that viewport-shift publication still
-  carries widened full-viewport damage bounds while separately tracking
-  `viewport_shift_rows`
+- `TerminalSession` wraps `core: TerminalCore`
+- PTY/runtime/thread/render-publication ownership still lives in
+  `TerminalSession` for now
+- session construction and host/runtime assembly route through
+  `src/terminal/core/session_runtime.zig`
+- replay/test-only debug helpers live in
+  `src/terminal/core/terminal_session_debug.zig`
+- host-facing metadata, liveness, and close-confirm queries live under
+  `src/terminal/core/session_host_queries.zig`
+- publication/diff, selection projection, plan/refinement, selection-dirty
+  expansion, and damage helpers are split across focused `view_cache_*` modules
+- presented-generation acknowledgement and damage retirement live under
+  `src/terminal/core/session_rendering_retirement.zig`
+- replay-backed redraw coverage now includes narrow partial publication,
+  dense clear+repaint loops, and live-bottom full-region scroll behavior
 - replay-backed redraw coverage now also includes a multi-row narrow rewrite
   case that currently widens to full-row damage across the viewport, which is
   exactly the kind of over-broad invalidation we want the later publication
@@ -773,9 +635,9 @@ Parser byte feed is now split one step further:
 This makes the remaining session-owned part of parser feed explicit: it is not
 parsing anymore, it is lock and publication choreography.
 
-### 2026-03-10 first transport contract
+### `TerminalTransport`
 
-The first internal `TerminalTransport` contract is now landed in
+The internal `TerminalTransport` contract lives in
 `src/terminal/core/terminal_transport.zig`.
 
 Current scope:
