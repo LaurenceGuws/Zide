@@ -87,6 +87,21 @@ Editor
   gutter overlays.
 - Font stack may differ from terminal.
 
+```mermaid
+flowchart TD
+    Shared["Shared primitives\nHarfBuzz shaping + FreeType raster + atlas/cache"] --> Terminal["Terminal path"]
+    Shared --> Editor["Editor path"]
+
+    Terminal --> T1["monospace cell metrics"]
+    T1 --> T2["run shaping mapped back onto cells"]
+    T2 --> T3["per-cell bg + linear correction"]
+    T3 --> T4["high-throughput grid draw"]
+
+    Editor --> E1["shaped runs + richer fallback"]
+    E1 --> E2["selection/highlight/gutter background awareness"]
+    E2 --> E3["document-oriented text draw"]
+```
+
 ## Configuration Surface (Lua)
 
 All appearance-affecting knobs should be in `assets/config/init.lua`:
