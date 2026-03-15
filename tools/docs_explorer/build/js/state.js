@@ -3,9 +3,9 @@ const sidebarCollapsedStorageKey = "zide_docs_explorer.sidebar_collapsed";
 const themeStorageKey = "zide_docs_explorer.theme";
 export const layoutDefaults = {
     collapseBreakpoint: 1100,
-    minSidebarWidth: 220,
-    maxSidebarWidth: 520,
-    defaultSidebarWidth: 300,
+    minSidebarWidth: 180,
+    maxSidebarWidth: 760,
+    defaultSidebarWidth: 320,
 };
 export function createAppState() {
     return {
@@ -22,6 +22,12 @@ export function createAppState() {
         },
         search: {
             query: "",
+        },
+        textSearch: {
+            query: "",
+            open: false,
+            status: "idle",
+            selectedIndex: -1,
         },
         tree: {
             filter: "",
@@ -74,6 +80,9 @@ export function setCurrentDoc(state, path) {
 }
 export function setSearchQuery(state, query) {
     state.search.query = query;
+}
+export function setTextSearchState(state, nextSearch) {
+    state.textSearch = nextSearch;
 }
 export function setTreeFilter(state, filter) {
     state.tree.filter = filter;
