@@ -495,6 +495,58 @@ Intended semantics:
   - rows/spans/cells deterministically update the previously rendered visible
     state from `base_generation` to `generation`
 
+#### Full-Refresh Fallback Semantics
+
+`full_refresh_required` must stay boring and deterministic.
+
+Meaning:
+
+- the backend is explicitly saying:
+  - "do not trust row/span delta application for this generation"
+  - "replace the host's visible state outright for `generation`"
+
+Host rule:
+
+1. if `full_refresh_required = 1`, ignore diff-row/span application entirely
+2. treat `cells_ptr` as a full visible replacement payload
+3. replace local visible state for `generation`
+4. `present_ack(generation)`
+5. release the diff result
+
+Backend rule:
+
+- fallback is allowed whenever the backend decides diff packaging would be
+  larger, more complex, or less authoritative than a full visible replacement
+- fallback must not require a second acquire
+- fallback must not require a second result type
+- fallback must not force the host to call back for "the real full snapshot"
+
+This is what keeps diff export from degenerating into a two-surface protocol.
+
+#### String Policy
+
+Current preferred rule:
+
+- keep title/cwd out of the diff hot path by default
+- if the diff shape carries `include_flags`, they should be treated as cold
+  debug/inspection escape hatches only
+- the normal redraw-driven diff loop should use `include_flags = 0`
+- lifecycle/title/cwd latest-state should remain owned by
+  `metadata_acquire(...)`, not by the diff path
+
+Why:
+
+- title/cwd are not part of visible cell-delta authority
+- including them in normal diff usage would muddy the hot path again
+- we already have a cleaner latest-state surface for that information
+
+So the current bias is:
+
+- diff result may keep optional string fields for symmetry/debug utility
+- but hosts should not treat them as part of normal diff rendering
+- and removing them entirely from a first diff cut would also be acceptable if
+  that keeps the contract tighter
+
 Important constraint:
 
 - the host still gets one acquire and one release
@@ -536,6 +588,7 @@ Do not implement diff export unless this stays true:
 5. no second authoritative visible-state path outside the diff result itself
 6. full-refresh fallback remains explicit and boring when the diff path is not
    worth it
+7. title/cwd do not become accidental hot-path state through diff usage
 
 #### Candidate B: Pinned Snapshot Handle
 

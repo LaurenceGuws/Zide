@@ -330,6 +330,9 @@ Current narrow diff shape worth judging:
   - replacement cells
   - coarse damage / viewport-shift metadata
 - release remains unconditional and boring
+- full-refresh fallback must still complete in one acquire/result/release cycle
+- title/cwd should stay out of normal diff hot-path usage; metadata remains the
+  latest-state authority for them
 
 Current provisional winner:
 

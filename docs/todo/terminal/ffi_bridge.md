@@ -197,6 +197,8 @@ Current judgment:
   - request carries `base_generation`
   - result carries changed rows/spans/replacement cells plus a
     `full_refresh_required` fallback bit
+  - fallback must not require a second snapshot acquire
+  - title/cwd should stay out of normal diff hot-path usage
   - reject the lane if it starts requiring row-follow-up getters or a second
     authoritative visible-state path
 - Current decision rule:
