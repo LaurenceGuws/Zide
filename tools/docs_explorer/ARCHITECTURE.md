@@ -95,7 +95,7 @@ requiring a frontend framework or backend service.
   - typed ESM/CDN module declarations
 - `config/project.json`
   - project-specific title/icon/defaults
-  - project-specific light/dark palette overrides
+  - project-specific light/dark base-palette overrides
   - explicit `repoBasePath` for hosted/local content fetches
 - `config/project.pages.json`
   - alternate hosted/pages config without mutating local defaults
@@ -227,12 +227,58 @@ That means:
 - do not let local one-off `color-mix(...)` values grow faster than the token
   system
 
+## Theme Ownership Rule
+
+The theme system should stay split into two layers:
+
+- config-owned base palette tokens
+  - `bg`, `bg2`
+  - `panel`, `panel2`, `panel3`
+  - `ink`, `muted`
+  - `line`, `lineSoft`
+  - `accent`, `accentSoft`, `accentStrong`
+  - `activeLink`
+  - `code`
+  - `treeActive`
+- CSS-owned derived material tokens
+  - shell atmosphere
+  - pane materials
+  - header/control surfaces
+  - menu surfaces
+  - viewer raised/callout surfaces
+
+Projects should be able to change the base palette in config. They should not
+need to define their own per-component surface formulas.
+
+## DOM Ownership Rule
+
+Keep raw DOM ownership narrow.
+
+Allowed direct DOM ownership seams:
+
+- `ts/shell/shell_dom.ts`
+  - required element lookup only
+- `ts/shell/shell_icons.ts`
+  - icon injection only
+- `ts/tree/tree.ts`
+  - tree HTML mount plus folder toggle listeners
+- `ts/docs/viewer.ts`
+  - viewer mount/fetch lifecycle
+- `ts/options_menu.ts`
+  - popup interaction wiring
+
+Everything else should prefer:
+
+- explicit state transitions
+- small render helpers
+- passing shell/state/controller contracts instead of querying DOM ad hoc
+
 ## Refactor Targets
 
 Current likely next candidates:
 
 - `styles/theme.css`
-  - continue consolidating repeated surface formulas into named tokens
+  - keep the base-palette vs derived-material split obvious
 - `ts/docs/view_state.ts`
   - keep document chrome intentionally small and avoid letting app-shell
     branding/navigation concerns turn back into document-specific chrome

@@ -1,6 +1,9 @@
 export type ThemeName = "dark" | "light";
 export type DocumentStatus = "idle" | "loading" | "ready" | "error";
 
+// Only base palette tokens belong in project config. Derived shell/control/viewer
+// materials remain CSS-owned so the tool keeps one design system instead of a
+// per-project styling DSL.
 export type ProjectPalette = {
   accent?: string;
   accentSoft?: string;
