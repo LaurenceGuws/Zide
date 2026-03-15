@@ -1,5 +1,7 @@
 import type { ProjectConfig, ProjectPalette, ThemeName } from "../shared/types.js";
 
+// Config overrides only the stable base palette. Derived surface/material tokens
+// stay in CSS so dark/light behavior remains coherent across components.
 const themeVarMap: Record<keyof ProjectPalette, string> = {
   bg: "--bg",
   bg2: "--bg-2",

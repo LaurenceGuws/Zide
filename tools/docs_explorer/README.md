@@ -60,6 +60,13 @@ Current shell rule:
 - theme/config should drive the surface system through tokens rather than
   scattered component-specific color formulas
 
+Theme rule:
+
+- project config may override the base palette only
+- derived shell/control/viewer materials stay in `styles/theme.css`
+- if a visual change can be expressed by changing a derived token, prefer that
+  over adding a new component-local background
+
 Notes:
 
 - `ts/` is the source tree.
