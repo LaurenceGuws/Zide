@@ -1,6 +1,13 @@
 .viewer {
+  width: 100%;
+  min-width: 0;
   padding: 18px 24px 30px;
   min-height: 70vh;
+}
+
+.viewer > * {
+  max-width: 100%;
+  min-width: 0;
 }
 
 .callout {
@@ -33,6 +40,8 @@
 .viewer p,
 .viewer li {
   max-width: 84ch;
+  overflow-wrap: normal;
+  word-break: normal;
 }
 
 .viewer a {
