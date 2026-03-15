@@ -331,8 +331,10 @@ Current narrow diff shape worth judging:
   - coarse damage / viewport-shift metadata
 - release remains unconditional and boring
 - full-refresh fallback must still complete in one acquire/result/release cycle
-- title/cwd should stay out of normal diff hot-path usage; metadata remains the
-  latest-state authority for them
+- title/cwd should stay out of the first diff ABI entirely; metadata remains
+  the latest-state authority for them
+- replacement cells should be ordered strictly by diff-row order and then
+  span order so host application stays linear and deterministic
 
 Current provisional winner:
 
