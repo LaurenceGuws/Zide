@@ -12,12 +12,6 @@
 <body>
   <div class="app">
     <aside class="sidebar">
-      <div class="sidebar-head">
-        <div class="brand">
-          <img id="brand-mark" class="brand-mark" src="../../assets/icon/color_icon.png" alt="Zide logo">
-          <h1 id="app-title">Zide Docs Explorer</h1>
-        </div>
-      </div>
       <div class="search-wrap">
         <input id="search" type="search" placeholder="Filter docs...">
       </div>
@@ -30,16 +24,22 @@
       <div class="content-head">
         <div>
           <div class="content-title-row">
-            <button id="sidebar-toggle" class="sidebar-toggle" type="button" aria-label="Toggle navigation" title="Toggle navigation">☰</button>
-            <h1 id="doc-title">Docs Explorer</h1>
+            <button id="sidebar-toggle" class="pill icon-button sidebar-toggle" type="button" aria-label="Toggle navigation" title="Toggle navigation">
+              <span id="sidebar-toggle-icon" class="icon-slot" aria-hidden="true"></span>
+            </button>
+            <h1 id="doc-title">Zide Docs Explorer - Docs Explorer</h1>
           </div>
           <p id="doc-subtitle">Select a document from the left. Serve this folder with <code>python3 docs_explorer.py</code> for local file loading.</p>
         </div>
         <div class="meta-row">
+          <a id="source-link" class="pill icon-button source-link" href="#" target="_blank" rel="noopener noreferrer" aria-label="Open source on GitHub" title="Open source on GitHub">
+            <span id="source-link-icon" class="icon-slot" aria-hidden="true"></span>
+          </a>
           <div class="options-wrap">
-            <button id="options-toggle" class="pill options-toggle" type="button" aria-label="Open options" aria-expanded="false" aria-controls="options-menu">⋯</button>
+            <button id="options-toggle" class="pill icon-button options-toggle" type="button" aria-label="Open options" aria-expanded="false" aria-controls="options-menu">
+              <span id="options-toggle-icon" class="icon-slot" aria-hidden="true"></span>
+            </button>
             <div id="options-menu" class="options-menu" hidden>
-              <div id="options-info" class="options-info"></div>
               <div id="theme-row" class="options-item options-theme-row">
                 <span class="options-label">Theme</span>
                 <button id="theme-toggle" class="theme-switch" type="button" aria-label="Toggle theme">

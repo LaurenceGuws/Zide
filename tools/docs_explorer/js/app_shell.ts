@@ -12,29 +12,32 @@ export function getAppShell(): AppShell {
     titleEl: requiredElement("#doc-title"),
     subtitleEl: requiredElement("#doc-subtitle"),
     rawLinkEl: requiredElement("#raw-link"),
+    sourceLinkEl: requiredElement("#source-link"),
+    sourceLinkIconEl: requiredElement("#source-link-icon"),
     searchEl: requiredElement("#search"),
     optionsToggleEl: requiredElement("#options-toggle"),
+    optionsToggleIconEl: requiredElement("#options-toggle-icon"),
     optionsMenuEl: requiredElement("#options-menu"),
-    optionsInfoEl: requiredElement("#options-info"),
     themeRowEl: requiredElement("#theme-row"),
     themeToggleEl: requiredElement("#theme-toggle"),
     sidebarToggleEl: requiredElement("#sidebar-toggle"),
+    sidebarToggleIconEl: requiredElement("#sidebar-toggle-icon"),
     sidebarResizerEl: requiredElement("#sidebar-resizer"),
-    appTitleEl: requiredElement("#app-title"),
-    brandMarkEl: requiredElement("#brand-mark"),
     faviconEl: requiredElement("#favicon"),
     highlightDarkThemeEl: requiredElement("#hljs-dark-theme"),
     highlightLightThemeEl: requiredElement("#hljs-light-theme"),
   };
 }
 
-export function initializeAppShell(args: { shell: AppShell; project: ProjectConfig; state: AppState }): void {
+export async function initializeAppShell(args: { shell: AppShell; project: ProjectConfig; state: AppState }): Promise<void> {
   const { shell, project, state } = args;
   document.title = project.title;
-  applyBrandWordmark(shell, project);
-  shell.brandMarkEl.src = project.icon;
-  shell.brandMarkEl.alt = "Z";
   shell.faviconEl.href = project.icon;
+  await Promise.all([
+    injectSvg(shell.sourceLinkIconEl, "./assets/icons/github.svg"),
+    injectSvg(shell.optionsToggleIconEl, "./assets/icons/ellipsis.svg"),
+    injectSvg(shell.sidebarToggleIconEl, "./assets/icons/sidebar.svg"),
+  ]);
 
   applyProjectTheme(shell.rootEl, project);
   shell.rootEl.dataset.theme = state.theme;
@@ -51,14 +54,20 @@ export function syncHighlightTheme(shell: AppShell, theme: AppState["theme"]): v
   shell.highlightLightThemeEl.disabled = isDark;
 }
 
-function applyBrandWordmark(shell: AppShell, project: ProjectConfig): void {
-  const title = project.title;
-  if (!title.startsWith("Z")) {
-    shell.appTitleEl.textContent = title;
-    return;
+async function injectSvg(target: HTMLElement, path: string): Promise<void> {
+  const response = await fetch(path);
+  if (!response.ok) {
+    throw new Error(`HTTP ${response.status} for ${path}`);
   }
-
-  shell.appTitleEl.textContent = title.slice(1);
+  const svg = await response.text();
+  target.innerHTML = svg;
+  const svgEl = target.querySelector("svg");
+  if (svgEl) {
+    svgEl.setAttribute("width", "16");
+    svgEl.setAttribute("height", "16");
+    svgEl.setAttribute("preserveAspectRatio", "xMidYMid meet");
+    svgEl.setAttribute("focusable", "false");
+  }
 }
 
 function requiredElement<T extends Element>(selector: string): T {
