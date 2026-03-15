@@ -1,12 +1,15 @@
 const std = @import("std");
+const builtin = @import("builtin");
 const types = @import("../model/types.zig");
 const session_mod = @import("terminal_session.zig");
 const terminal_transport = @import("terminal_transport.zig");
+const pty_mod = @import("../io/pty.zig");
 
 const TerminalSession = session_mod.TerminalSession;
 const Cell = session_mod.Cell;
 const Color = session_mod.Color;
 const Dirty = session_mod.Dirty;
+const Pty = pty_mod.Pty;
 
 fn expectSnapshotRow(snapshot: session_mod.TerminalSnapshot, row: usize, expected: []const u8) !void {
     const cells = snapshot.rowSlice(row);
@@ -117,6 +120,43 @@ test "full-region scroll publishes partial cache damage at live bottom" {
     try std.testing.expectEqual(@as(usize, 0), cache.damage.start_col);
     try std.testing.expectEqual(@as(usize, 3), cache.damage.end_col);
     try std.testing.expectEqual(@as(usize, 1), session.scrollbackInfo().total_rows);
+}
+
+test "pty-backed session sendText writes through session writer boundary" {
+    if (builtin.target.os.tag == .windows) return;
+
+    const allocator = std.testing.allocator;
+
+    var session = try TerminalSession.init(allocator, 2, 8);
+    defer session.deinit();
+
+    var pty = Pty.init(
+        allocator,
+        .{ .rows = 2, .cols = 8, .cell_width = 8, .cell_height = 16 },
+        "/bin/cat",
+    ) catch |err| switch (err) {
+        error.OpenPtyFailed => return,
+        else => return err,
+    };
+    session.attachPtyTransport(pty);
+
+    try session.sendText("abc");
+
+    const start_ms = std.time.milliTimestamp();
+    while (std.time.milliTimestamp() - start_ms < 3000) {
+        try session.poll();
+        const snapshot = session.snapshot();
+        if (snapshot.rowSlice(0).len >= 3 and
+            snapshot.rowSlice(0)[0].codepoint == 'a' and
+            snapshot.rowSlice(0)[1].codepoint == 'b' and
+            snapshot.rowSlice(0)[2].codepoint == 'c')
+        {
+            return;
+        }
+        std.Thread.sleep(10 * std.time.ns_per_ms);
+    }
+
+    try expectSnapshotRow(session.snapshot(), 0, "abc     ");
 }
 
 test "top-anchored partial scroll region retires rows into scrollback" {

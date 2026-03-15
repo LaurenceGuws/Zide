@@ -45,7 +45,7 @@ Supporting cleanup:
 - [ ] `VTCORE-05` Simplify snapshot and render publication.
   Notes: publication planning has been heavily split and hardened, replay authority is broad, multi-span row damage now survives through backend and renderer planning, the scene-owned presentation path is live, and present-ack ownership moved later in submission. The active work is now narrower: keep the new publication/present contract honest, continue redraw/perf hardening, and avoid reopening old default-framebuffer assumptions.
 - [ ] `VTCORE-06` Keep input encoding as a peer subsystem.
-  Notes: transport-agnostic writer-based encoding and fake-writer regression coverage are in place; remaining work is keeping the subsystem decoupled as the rest of the split finishes.
+  Notes: transport-agnostic writer-based encoding, fake-writer regression coverage, and a PTY-backed `TerminalSession.sendText(...)` regression through the real session writer boundary are in place; remaining work is keeping the subsystem decoupled as the rest of the split finishes.
 - [ ] `VTCORE-07` Preserve desktop Zide behavior while opening the embedding path.
 
 ## Active Focus Inside VTCORE-05

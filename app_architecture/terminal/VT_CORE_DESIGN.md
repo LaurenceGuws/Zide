@@ -20,6 +20,9 @@ Status note, 2026-03-14:
   snapshot state, presentation-feedback structs, and session init options now
   live in dedicated `src/terminal/core/session_*` modules instead of inline in
   `terminal_session.zig`.
+- Input encoding remains on the dedicated subsystem path: writer-agnostic
+  encoder coverage exists at both the fake-writer level and the real
+  PTY-backed `TerminalSession` writer boundary.
 
 Purpose: define the exact ownership split for the next terminal-core redesign
 lane so code changes do not drift between "session cleanup", "FFI cleanup", and
