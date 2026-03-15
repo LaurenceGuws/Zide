@@ -135,12 +135,13 @@ body {
   gap: 8px;
   margin-bottom: 0;
   min-width: 0;
+  flex-wrap: nowrap;
 }
 
 .app-head h1 {
   margin: 0;
   min-width: 0;
-  flex: 1 1 auto;
+  flex: 0 1 auto;
   display: flex;
   align-items: center;
   gap: 0;
@@ -178,6 +179,8 @@ body {
   gap: 6px;
   flex-wrap: wrap;
   align-items: center;
+  justify-content: flex-end;
+  flex: 1 1 320px;
 }
 
 :root[data-theme="light"] .app-head {

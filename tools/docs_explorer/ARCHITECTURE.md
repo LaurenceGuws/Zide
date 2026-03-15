@@ -50,6 +50,10 @@ requiring a frontend framework or backend service.
   - tiny entrypoint only
 - `ts/config.ts`
   - project/docs index loading
+- `ts/search/doc_search.ts`
+  - ripgrep-backed header search
+  - streaming NDJSON client
+  - modal rendering and keyboard navigation
 - `ts/state.ts`
   - app-state defaults and persistence helpers
 - `ts/shared/types.ts`
@@ -109,6 +113,7 @@ requiring a frontend framework or backend service.
   - project-specific doc list
 - `docs_explorer.py`
   - local launcher
+  - local ripgrep search endpoint
 
 ## Runtime Ownership
 
@@ -132,6 +137,7 @@ The launcher is support infrastructure only.
 It should own:
 
 - local HTTP serving
+- local ripgrep search endpoint
 - optional future helper commands
 
 It should not own:
@@ -140,6 +146,13 @@ It should not own:
 - routing
 - navigation decisions
 - rendering decisions
+
+The browser app still owns the search UX:
+
+- query state
+- modal state
+- result rendering
+- result selection/navigation
 
 ## State Model Direction
 
@@ -154,6 +167,10 @@ Current app state shape is centered on:
 - `sidebar.collapsed`
 - `options_menu.open`
 - `search.query`
+- `text_search.query`
+- `text_search.open`
+- `text_search.status`
+- `text_search.selected_index`
 - `document.title`
 - `document.subtitle`
 - `document.raw_link`

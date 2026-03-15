@@ -7,6 +7,7 @@ import {
   installSidebarControls,
   syncResponsiveSidebarState,
 } from "./layout.js";
+import { installDocSearch } from "./search/doc_search.js";
 import { syncHighlightTheme } from "./shell/app_shell.js";
 import { installThemeControls } from "./theme/theme_controls.js";
 
@@ -37,6 +38,12 @@ export async function startApp(): Promise<void> {
     state,
     sidebarToggleEl: shell.sidebarToggleEl,
     sidebarResizerEl: shell.sidebarResizerEl,
+  });
+  installDocSearch({
+    state,
+    shell,
+    docs,
+    enabled: project.runtimeMode === "local-dev",
   });
 
   docController.renderTree();

@@ -38,10 +38,25 @@
               <span
                 id="sidebar-toggle-icon"
                 class="icon-slot"
-                aria-hidden="true"
-              ></span>
+              aria-hidden="true"
+            ></span>
             </button>
             <h1 id="doc-title">Zide Docs Explorer - Docs Explorer</h1>
+            <a
+              id="support-link"
+              class="pill support-link"
+              href="#"
+              target="_blank"
+              rel="noopener noreferrer"
+              hidden
+            >
+              <span
+                id="support-link-icon"
+                class="icon-slot"
+                aria-hidden="true"
+              ></span>
+              <span id="support-link-label">Support development</span>
+            </a>
           </div>
           <p id="doc-subtitle">
             Select a document from the left. Serve this folder with
@@ -49,21 +64,29 @@
           </p>
         </div>
         <div class="meta-row">
-          <a
-            id="support-link"
-            class="pill support-link"
-            href="#"
-            target="_blank"
-            rel="noopener noreferrer"
-            hidden
-          >
-            <span
-              id="support-link-icon"
-              class="icon-slot"
-              aria-hidden="true"
-            ></span>
-            <span id="support-link-label">Support development</span>
-          </a>
+          <div class="header-search-wrap">
+            <input
+              id="global-search"
+              class="header-search-input"
+              type="search"
+              placeholder="rg docs..."
+              autocomplete="off"
+              spellcheck="false"
+            />
+            <div id="global-search-modal" class="search-modal" hidden>
+              <div class="search-modal-head">
+                <div id="global-search-status" class="search-modal-status">
+                  Type to search across docs.
+                </div>
+              </div>
+              <div
+                id="global-search-results"
+                class="search-results"
+                role="listbox"
+                aria-label="Search results"
+              ></div>
+            </div>
+          </div>
           <a
             id="source-link"
             class="pill icon-button source-link"

@@ -2,10 +2,17 @@ import { escapeHtml } from "../shared/utils.js";
 import { treeCaretIcon, treeFolderIcon } from "./tree_icons.js";
 import type { TreeNode } from "./tree_model.js";
 
+function getInnermostActiveFolderPath(activePath: string): string {
+  const lastSlash = activePath.lastIndexOf("/");
+  if (lastSlash <= 0) return "";
+  return activePath.slice(0, lastSlash);
+}
+
 function renderTreeNode(
   node: TreeNode,
   activePath: string,
   expandedPaths: ReadonlySet<string>,
+  innermostActiveFolderPath: string,
 ): string {
   const dirEntries = Array.from(node.dirs.values()).sort((a, b) =>
     a.name.localeCompare(b.name),
@@ -30,6 +37,7 @@ function renderTreeNode(
       const isActiveBranch =
         activePath.startsWith(`${dir.path}/`) || activePath === dir.path;
       const shouldOpen = isActiveBranch || expandedPaths.has(dir.path);
+      const isInnermostActiveFolder = dir.path === innermostActiveFolderPath;
       const rowIndex = dirIndex;
       const rowClasses = [
         "tree-item",
@@ -43,14 +51,14 @@ function renderTreeNode(
         .join(" ");
       return `
       <li class="${rowClasses}">
-        <details class="tree-folder ${isActiveBranch ? "active-branch" : ""}" data-folder-path="${escapeHtml(dir.path)}" ${shouldOpen ? "open" : ""}>
+        <details class="tree-folder ${isActiveBranch ? "active-branch" : ""} ${isInnermostActiveFolder ? "active-leaf-folder" : ""}" data-folder-path="${escapeHtml(dir.path)}" ${shouldOpen ? "open" : ""}>
           <summary>
             <span class="folder-caret" aria-hidden="true">${treeCaretIcon()}</span>
             <span class="folder-icon" aria-hidden="true">${treeFolderIcon(shouldOpen)}</span>
             <span class="folder-label">${escapeHtml(dir.name)}</span>
           </summary>
           <div class="folder-children">
-            ${renderTreeNode(dir, activePath, expandedPaths)}
+            ${renderTreeNode(dir, activePath, expandedPaths, innermostActiveFolderPath)}
           </div>
         </details>
       </li>
@@ -95,5 +103,6 @@ export function renderTreeMarkup(
   activePath: string,
   expandedPaths: ReadonlySet<string>,
 ): string {
-  return `<ul class="tree-root">${renderTreeNode(model, activePath, expandedPaths)}</ul>`;
+  const innermostActiveFolderPath = getInnermostActiveFolderPath(activePath);
+  return `<ul class="tree-root">${renderTreeNode(model, activePath, expandedPaths, innermostActiveFolderPath)}</ul>`;
 }

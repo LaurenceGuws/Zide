@@ -1,7 +1,7 @@
 @media (max-width: 1240px) {
   .app {
     grid-template-columns:
-      clamp(200px, var(--sidebar-width, 320px), 380px)
+      clamp(180px, var(--sidebar-width, 320px), 520px)
       8px
       minmax(0, 1fr);
   }
@@ -23,7 +23,7 @@
 @media (max-width: 920px) {
   .app {
     grid-template-columns:
-      clamp(180px, var(--sidebar-width, 320px), 320px)
+      clamp(160px, var(--sidebar-width, 320px), 440px)
       8px
       minmax(0, 1fr);
   }
@@ -35,6 +35,52 @@
   .app-head h1 {
     font-size: 1rem;
     line-height: 1;
+  }
+
+  .app-wordmark-mark {
+    width: 34px;
+    height: 34px;
+    flex-basis: 34px;
+  }
+
+  .meta-row {
+    flex: 1 1 260px;
+    gap: 5px;
+  }
+
+  .header-search-wrap {
+    min-width: 180px;
+    flex: 1 1 220px;
+  }
+
+  .header-search-input {
+    height: 32px;
+    min-height: 32px;
+    padding: 6px 9px;
+    font-size: 0.9rem;
+  }
+
+  .pill,
+  .icon-button {
+    min-height: 32px;
+    min-width: 32px;
+  }
+
+  .icon-button {
+    height: 32px;
+  }
+
+  .support-link {
+    padding: 3px 8px;
+    min-height: 32px;
+    font-size: 0.7rem;
+  }
+
+  .support-link-label {
+    max-width: 7ch;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
 
   .viewer {
@@ -67,26 +113,65 @@
   }
 
   .app-head {
-    padding: 10px 12px 8px;
+    gap: 8px;
+    padding: 9px 12px 8px;
   }
 
   .content-title-row {
     align-items: center;
+    gap: 6px;
   }
 
   .app-head h1 {
-    font-size: 0.96rem;
+    font-size: 0.94rem;
     line-height: 1;
     letter-spacing: -0.018em;
   }
 
+  .app-wordmark-mark {
+    width: 32px;
+    height: 32px;
+    flex-basis: 32px;
+  }
+
+  .support-link {
+    padding: 4px 8px;
+    font-size: 0.72rem;
+  }
+
+  .support-link .icon-slot {
+    width: 14px;
+    height: 14px;
+    flex-basis: 14px;
+  }
+
   .meta-row {
     width: 100%;
-    justify-content: flex-end;
+    justify-content: stretch;
+    gap: 5px;
+  }
+
+  .header-search-wrap {
+    min-width: min(280px, 100%);
+    flex: 1 1 280px;
+  }
+
+  .support-link-label {
+    max-width: 5ch;
   }
 }
 
 @media (max-width: 600px) {
+  .header-search-wrap {
+    min-width: 100%;
+    flex-basis: 100%;
+  }
+
+  .search-modal {
+    width: calc(100vw - 24px);
+    max-height: 62vh;
+  }
+
   .search-wrap {
     padding: 10px 12px 6px;
   }
@@ -101,9 +186,9 @@
   }
 
   .app-head {
-    gap: 10px;
+    gap: 8px;
     align-items: stretch;
-    padding: 12px 12px 10px;
+    padding: 10px 12px 9px;
   }
 
   .app-head > div:first-child {
@@ -111,12 +196,13 @@
   }
 
   .content-title-row {
-    gap: 7px;
+    gap: 6px;
     margin-bottom: 0;
+    flex-wrap: wrap;
   }
 
   .app-head h1 {
-    font-size: 0.92rem;
+    font-size: 0.88rem;
     line-height: 1;
   }
 
@@ -126,13 +212,38 @@
   }
 
   .meta-row {
-    justify-content: flex-start;
+    justify-content: stretch;
   }
 
   .pill,
   .icon-button {
-    min-height: 36px;
-    min-width: 36px;
+    min-height: 32px;
+    min-width: 32px;
+  }
+
+  .icon-button {
+    height: 32px;
+  }
+
+  .support-link {
+    order: 2;
+    padding: 3px 8px;
+    min-height: 32px;
+    font-size: 0.7rem;
+  }
+
+  .support-link-label {
+    max-width: 12ch;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .header-search-input {
+    height: 32px;
+    min-height: 32px;
+    padding: 6px 9px;
+    font-size: 0.92rem;
   }
 
   .options-menu {
@@ -183,19 +294,29 @@
   }
 
   .app-head {
-    padding: 10px 10px 9px;
+    padding: 9px 10px 8px;
   }
 
   .content-title-row {
-    gap: 7px;
+    gap: 5px;
   }
 
   .app-head h1 {
-    font-size: 0.88rem;
+    font-size: 0.84rem;
   }
 
   .app-head p {
     font-size: 0.74rem;
+  }
+
+  .app-wordmark-mark {
+    width: 28px;
+    height: 28px;
+    flex-basis: 28px;
+  }
+
+  .support-link {
+    padding-inline: 7px;
   }
 
   .folder-label,

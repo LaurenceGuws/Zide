@@ -59,6 +59,8 @@
   padding: 5px 7px;
   color: var(--ink);
   border: 1px solid transparent;
+  border-left-color: color-mix(in srgb, var(--line) 18%, transparent 82%);
+  border-bottom-color: color-mix(in srgb, var(--line) 18%, transparent 82%);
   background: transparent;
   font-size: 0.84rem;
 }
@@ -69,10 +71,22 @@
 
 .tree-folder > summary:hover {
   background: var(--tree-row-hover);
+  border-left-color: color-mix(in srgb, var(--line) 26%, transparent 74%);
+  border-bottom-color: color-mix(in srgb, var(--line) 26%, transparent 74%);
 }
 
-.tree-folder[open] > summary {
+.tree-folder.active-leaf-folder[open] > summary {
   background: var(--tree-row-open);
+  border-left-color: color-mix(
+    in srgb,
+    var(--tree-connector-active) 34%,
+    transparent 66%
+  );
+  border-bottom-color: color-mix(
+    in srgb,
+    var(--tree-connector-active) 34%,
+    transparent 66%
+  );
 }
 
 .folder-caret {
@@ -119,7 +133,7 @@
 }
 
 .tree-folder > summary:hover .folder-label,
-.tree-folder[open] > summary .folder-label {
+.tree-folder.active-leaf-folder[open] > summary .folder-label {
   color: var(--ink);
 }
 
@@ -169,6 +183,8 @@
   text-decoration: none;
   border-radius: 0;
   border: 1px solid transparent;
+  border-left-color: color-mix(in srgb, var(--line) 18%, transparent 82%);
+  border-bottom-color: color-mix(in srgb, var(--line) 18%, transparent 82%);
   background: transparent;
   font-size: 0.82rem;
   line-height: 1.28;
@@ -238,11 +254,25 @@
 
 .tree a:hover {
   background: var(--tree-row-hover);
+  border-left-color: color-mix(in srgb, var(--line) 26%, transparent 74%);
+  border-bottom-color: color-mix(in srgb, var(--line) 26%, transparent 74%);
 }
 
 .tree a.active {
   background: var(--tree-link-active-bg);
   color: var(--active-link);
+  border-left-color: color-mix(
+    in srgb,
+    var(--tree-connector-active) 34%,
+    transparent 66%
+  );
+  border-bottom-color: color-mix(
+    in srgb,
+    var(--tree-connector-active) 34%,
+    transparent 66%
+  );
+  border-right-color: transparent;
+  border-top-color: transparent;
 }
 
 .tree small {

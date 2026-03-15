@@ -1,6 +1,7 @@
 import type {
   AppState,
   DocumentStatus,
+  SearchStatus,
   ThemeName,
 } from "./shared/types.js";
 
@@ -30,6 +31,12 @@ export function createAppState(): AppState {
     },
     search: {
       query: "",
+    },
+    textSearch: {
+      query: "",
+      open: false,
+      status: "idle",
+      selectedIndex: -1,
     },
     tree: {
       filter: "",
@@ -98,6 +105,18 @@ export function setCurrentDoc(state: AppState, path: string | null): void {
 
 export function setSearchQuery(state: AppState, query: string): void {
   state.search.query = query;
+}
+
+export function setTextSearchState(
+  state: AppState,
+  nextSearch: {
+    query: string;
+    open: boolean;
+    status: SearchStatus;
+    selectedIndex: number;
+  },
+): void {
+  state.textSearch = nextSearch;
 }
 
 export function setTreeFilter(state: AppState, filter: string): void {

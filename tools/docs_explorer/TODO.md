@@ -18,6 +18,17 @@
       - Open state must use the same row-owned connector grammar.
       - Do not add `summary` or `.folder-children` continuation patches.
 
+### Full-text search
+
+- [x] Add a separate ripgrep-backed header search instead of overloading the
+      sidebar tree filter.
+      - Sidebar input remains path/tree filtering only.
+      - Header search now streams local `rg` hits into a modal result list.
+- [ ] Polish search-hit navigation so focusing a result in the rendered viewer
+      is more exact than first-match term highlighting.
+- [ ] Decide what the hosted/pages story should be for full-text search.
+      - Current behavior is local-dev only via `docs_explorer.py`.
+
 ### Theme and shell cleanup
 
 - [~] Keep the shell theme system token-driven instead of letting component CSS

@@ -1,5 +1,5 @@
 import { renderMarkdown } from "./markdown.js";
-import { repoRelative } from "../shared/utils.js";
+import { currentFindFromHash, repoRelative } from "../shared/utils.js";
 import { syncActiveLink } from "../tree/tree.js";
 import { renderMermaidBlocks } from "./mermaid.js";
 import {
@@ -29,6 +29,35 @@ function renderViewerFailure(
 ): void {
   setViewerError(state, path, err);
   renderViewer(state, viewerEl);
+}
+
+function focusSearchHit(viewerEl: HTMLElement, term: string): void {
+  const query = term.trim();
+  if (!query) return;
+
+  const walker = document.createTreeWalker(viewerEl, NodeFilter.SHOW_TEXT);
+  const lowerQuery = query.toLowerCase();
+  while (walker.nextNode()) {
+    const node = walker.currentNode;
+    if (!(node instanceof Text)) continue;
+    const value = node.textContent ?? "";
+    const index = value.toLowerCase().indexOf(lowerQuery);
+    if (index < 0) continue;
+    const range = document.createRange();
+    range.setStart(node, index);
+    range.setEnd(node, index + query.length);
+    const mark = document.createElement("mark");
+    mark.className = "viewer-search-hit";
+    try {
+      range.surroundContents(mark);
+    } catch {
+      mark.textContent = value.slice(index, index + query.length);
+      range.deleteContents();
+      range.insertNode(mark);
+    }
+    mark.scrollIntoView({ block: "center", behavior: "smooth" });
+    return;
+  }
 }
 
 export async function loadDoc(args: {
@@ -82,6 +111,7 @@ export async function loadDoc(args: {
     renderViewerContent(state, viewerEl, html);
     onReady(state, path);
     await renderMermaidBlocks(mermaid, rootEl, viewerEl);
+    focusSearchHit(viewerEl, currentFindFromHash());
   } catch (err) {
     onError(state, path);
     renderViewerFailure(state, viewerEl, path, err);

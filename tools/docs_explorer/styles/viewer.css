@@ -105,3 +105,9 @@
   overflow-x: auto;
   margin: 18px 0 22px;
 }
+
+.viewer-search-hit {
+  background: color-mix(in srgb, var(--accent-soft) 84%, transparent 16%);
+  color: var(--active-link);
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--accent) 28%, transparent 72%);
+}

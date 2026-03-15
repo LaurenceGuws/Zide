@@ -1,5 +1,11 @@
 export type ThemeName = "dark" | "light";
 export type DocumentStatus = "idle" | "loading" | "ready" | "error";
+export type SearchStatus =
+  | "idle"
+  | "loading"
+  | "ready"
+  | "error"
+  | "unavailable";
 
 // Only base palette tokens belong in project config. Derived shell/control/viewer
 // materials remain CSS-owned so the tool keeps one design system instead of a
@@ -57,6 +63,12 @@ export type AppState = {
   search: {
     query: string;
   };
+  textSearch: {
+    query: string;
+    open: boolean;
+    status: SearchStatus;
+    selectedIndex: number;
+  };
   tree: {
     filter: string;
     activePath: string | null;
@@ -85,6 +97,10 @@ export type AppShell = {
   supportLinkIconEl: HTMLElement;
   supportLinkLabelEl: HTMLElement;
   searchEl: HTMLInputElement;
+  globalSearchEl: HTMLInputElement;
+  globalSearchModalEl: HTMLElement;
+  globalSearchResultsEl: HTMLElement;
+  globalSearchStatusEl: HTMLElement;
   optionsToggleEl: HTMLButtonElement;
   optionsToggleIconEl: HTMLElement;
   optionsMenuEl: HTMLElement;
@@ -103,4 +119,14 @@ export type DocController = {
   renderTree: () => void;
   renderCurrentDoc: () => Promise<void>;
   rerenderDiagramsForTheme: () => Promise<void>;
+};
+
+export type SearchHit = {
+  path: string;
+  line: number;
+  column: number;
+  preview: string;
+  matchText: string;
+  start: number;
+  end: number;
 };

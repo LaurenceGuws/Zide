@@ -15,6 +15,7 @@ Current entrypoints:
 - `styles/base.css`: stylesheet import root
 - `ts/`: TypeScript source modules
   - `docs/`: document routing/rendering/view state
+  - `search/`: ripgrep-backed header search modal
   - `tree/`: tree rendering and tree state
   - `theme/`: theme/runtime palette wiring
   - `shell/`: app-shell bootstrap, DOM lookup, and icon wiring
@@ -86,3 +87,6 @@ Notes:
   GitHub serves the static explorer directly.
 - For design-heavy internal cleanup, use [design/README.md](/home/home/personal/zide/tools/docs_explorer/design/README.md)
   the same way the main repo uses architecture docs.
+- The sidebar input remains a tree/path filter only.
+- The header search is a separate ripgrep-backed full-text search and currently
+  only works in `local-dev` mode via `docs_explorer.py`.
