@@ -17,7 +17,9 @@ pub fn main() !void {
     if (c_api.zide_terminal_start(handle, "/bin/sh") != 0) return error.StartFailed;
 
     const command =
-        "printf '\\033]0;ffi-pty-title\\007\\033]7;file://localhost/tmp/ffi-pty\\007\\033[?1004h\\033[?2031hffi-pty\\n'; exit 7";
+        "printf '\\033]0;ffi-pty-title\\007\\033]7;file://localhost/tmp/ffi-pty\\007\\033[?1004h\\033[?2031h'; " ++
+        "i=0; while [ \"$i\" -lt 16 ]; do printf 'hist-%02d\\n' \"$i\"; i=$((i+1)); done; " ++
+        "printf 'ffi-pty\\n'; exit 7";
     if (c_api.zide_terminal_send_text(handle, command.ptr, command.len) != 0) return error.SendTextFailed;
 
     const enter_event = c_api.ZideTerminalKeyEvent{
@@ -34,6 +36,7 @@ pub fn main() !void {
     var saw_close_confirm = false;
     var saw_focus_report = false;
     var saw_color_scheme_report = false;
+    var saw_viewport = false;
 
     {
         var focus_reported: u8 = 99;
@@ -69,6 +72,37 @@ pub fn main() !void {
             saw_metadata =
                 std.mem.eql(u8, ptrBytes(metadata.title_ptr, metadata.title_len), "ffi-pty-title") and
                 std.mem.eql(u8, ptrBytes(metadata.cwd_ptr, metadata.cwd_len), "/tmp/ffi-pty");
+
+            if (!saw_viewport and saw_marker and metadata.scrollback_count > 1) {
+                const target_offset: u32 = @intCast(@min(@as(usize, metadata.scrollback_count), @as(usize, 3)));
+                if (c_api.zide_terminal_set_scrollback_offset(handle, target_offset) != 0) return error.ViewportPinFailed;
+
+                var pinned_metadata: c_api.ZideTerminalMetadata = .{};
+                if (c_api.zide_terminal_metadata_acquire(handle, &pinned_metadata) != 0) return error.MetadataAcquireFailed;
+                defer c_api.zide_terminal_metadata_release(&pinned_metadata);
+                if (pinned_metadata.scrollback_offset != target_offset) return error.ViewportPinOffsetMismatch;
+
+                var pinned_redraw: c_api.ZideTerminalRedrawState = .{};
+                if (c_api.zide_terminal_redraw_state(handle, &pinned_redraw) != 0) return error.RedrawStateFailed;
+                if (pinned_redraw.needs_redraw != 1) return error.ViewportPinDidNotRedraw;
+
+                var pinned_snapshot: c_api.ZideTerminalSnapshot = .{};
+                if (c_api.zide_terminal_snapshot_acquire(handle, &pinned_snapshot) != 0) return error.SnapshotAcquireFailed;
+                defer c_api.zide_terminal_snapshot_release(&pinned_snapshot);
+
+                if (c_api.zide_terminal_present_ack(handle, pinned_redraw.published_generation) != 0) return error.PresentAckFailed;
+
+                if (c_api.zide_terminal_follow_live_bottom(handle) != 0) return error.ViewportFollowLiveBottomFailed;
+                var live_metadata: c_api.ZideTerminalMetadata = .{};
+                if (c_api.zide_terminal_metadata_acquire(handle, &live_metadata) != 0) return error.MetadataAcquireFailed;
+                defer c_api.zide_terminal_metadata_release(&live_metadata);
+                if (live_metadata.scrollback_offset != 0) return error.ViewportLiveBottomOffsetMismatch;
+
+                var restored_snapshot: c_api.ZideTerminalSnapshot = .{};
+                if (c_api.zide_terminal_snapshot_acquire(handle, &restored_snapshot) != 0) return error.SnapshotAcquireFailed;
+                defer c_api.zide_terminal_snapshot_release(&restored_snapshot);
+                saw_viewport = true;
+            }
         }
 
         {
@@ -108,7 +142,7 @@ pub fn main() !void {
             }
         }
 
-        if (saw_marker and saw_child_exit and saw_metadata and saw_redraw and saw_close_confirm and saw_focus_report and saw_color_scheme_report) {
+        if (saw_marker and saw_child_exit and saw_metadata and saw_redraw and saw_close_confirm and saw_focus_report and saw_color_scheme_report and saw_viewport) {
             var code: i32 = -1;
             var has_status: u8 = 0;
             if (c_api.zide_terminal_child_exit_status(handle, &code, &has_status) != 0) return error.ChildExitStatusFailed;
@@ -126,6 +160,7 @@ pub fn main() !void {
     if (!saw_close_confirm) return error.MissingCloseConfirm;
     if (!saw_focus_report) return error.MissingFocusReport;
     if (!saw_color_scheme_report) return error.MissingColorSchemeReport;
+    if (!saw_viewport) return error.MissingViewportValidation;
 }
 
 fn consumeTerminalPublicationOnceIfPending(handle: ?*c_api.ZideTerminalHandle, needle: []const u8) !bool {
