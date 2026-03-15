@@ -632,6 +632,50 @@ If the answers trend toward "needs more than one retained slot" or "still
 copies almost as much as the current full export path," the pinned direction
 should lose priority quickly.
 
+### Cell Layout Reality
+
+There is one more non-trivial pressure point in the current code:
+
+- published render caches store internal `types.Cell`
+- the public FFI snapshot surface exports `shared.Cell`
+- current snapshot export bridges that difference explicitly through
+  `mapCell(...)`
+
+That means a pinned design only avoids the current hot-path cost if one of
+these becomes true:
+
+1. the bridge exposes pinned internal cells directly, which is a much riskier
+   ABI coupling and not the current preference
+2. the backend maintains a retained FFI-shaped cell buffer per published
+   generation, which still requires one full visible-cell mapping pass per
+   generation
+
+Current implication:
+
+- if disciplined hosts only acquire one visible snapshot per published
+  generation, a retained FFI-shaped pinned snapshot may not beat the current
+  full-copy baseline by much
+- it would mainly help if hosts reread the same generation multiple times or
+  if it enables some future reuse strategy that is still narrower than a diff
+  export
+
+Current judgment after the layout check:
+
+- pinned handles are still viable
+- but they no longer have an obvious cost advantage unless they avoid not only
+  retention sprawl, but also most of the per-generation cell remap work
+- this weakens the preference enough that diff export must stay a live option,
+  not just a fallback on paper
+
+### Updated Preference
+
+The preference is now conditional rather than strong:
+
+1. pinned snapshot handle first only if:
+   - one retained generation is enough
+   - and it avoids most per-generation cell remap pressure
+2. otherwise re-evaluate diff-oriented export as the more honest next step
+
 #### Why This Still Beats Diff On Paper
 
 Pinned snapshots still look better than diff export if they can preserve these

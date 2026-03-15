@@ -301,6 +301,15 @@ Current narrowest plausible implementation story:
 - treat anything heavier than that as a sign that pinned reuse may no longer be
   the right next step
 
+Current cost-reality caution:
+
+- the exported snapshot cell layout is not the same as the internal published
+  render-cache cell layout
+- so pinned reuse may still require one full visible-cell remap into an
+  FFI-shaped buffer per published generation
+- if disciplined hosts already acquire once per generation, that weakens the
+  benefit of pinned reuse enough that diff export must remain a real contender
+
 ## Current Conclusion
 
 The current redesign is performance-safe enough to continue building on.

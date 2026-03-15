@@ -182,6 +182,12 @@ Current judgment:
   - allow at most one extra retained published generation while pinned
   - re-evaluate the preference immediately if real implementation pressure asks
     for more than that
+- Current cost caution:
+  - because exported FFI cells are not the same layout as internal published
+    cache cells, pinned reuse may still require one full visible-cell remap per
+    published generation
+  - if so, pinned handles only stay attractive when they still beat the current
+    baseline on real host behavior, not just on paper
 - Current execution rule for that lane:
   - do not widen the bridge first
   - keep the snapshot review focused on host call count, flat cell-buffer
