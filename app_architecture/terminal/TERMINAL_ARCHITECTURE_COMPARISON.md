@@ -211,12 +211,17 @@ What is unusual is that it is trying to combine:
 - Explicit redraw/publication/presentation concepts
 - Real path toward embedded hosts such as Flutter
 - Strong potential for low memory and scalable many-session workloads
+- Native and FFI host semantics are converging more honestly now; recent bridge
+  work closed most of the obvious "native can do this, FFI cannot" gaps in the
+  basic host contract
 
 ### Zide weaknesses
 
 - Less mature and less battle-tested than the references
 - Render/present path still carries active bug-hunt and diagnostic complexity
 - `TerminalCore` is not yet the fully dominant public center of the runtime
+- Remaining bridge work is now more about ABI maturity and verifier depth than
+  about obvious missing host semantics
 
 ## Flutter Embedding View
 

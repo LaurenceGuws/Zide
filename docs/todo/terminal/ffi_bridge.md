@@ -16,6 +16,22 @@ Define an embeddable terminal backend surface with stable FFI-oriented contracts
 
 The baseline bridge is real and product-shaped: design docs, event ABI, snapshot ABI, non-PTY smoke coverage, Python ctypes smoke, and a dedicated PTY-backed verifier all exist. The remaining work is on boundary cleanup and maturing the ABI without broadening scope into renderer export.
 
+Current judgment:
+
+- The highest-value native/FFI host-contract asymmetries have materially narrowed.
+- Recent cuts closed the strongest remaining gaps in:
+  - close-confirm state
+  - backend-owned viewport control
+  - clipboard payload access
+  - host focus reporting
+  - host color-scheme reporting
+- Do not widen the bridge opportunistically from here.
+- The strongest remaining bridge work is now:
+  - snapshot/diff ABI maturation
+  - PTY-backed verifier hardening
+  - only then any advanced event-family expansion that survives the same
+    "shared engine contract" bar
+
 ## TODO
 
 ### FFI-00 Contract And Scope Lock

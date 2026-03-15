@@ -284,6 +284,21 @@ Current bridge catch-up already landed:
 So the bridge now exposes the same basic host-facing semantics as the shared
 contract without leaking native renderer details.
 
+Current bridge judgment:
+
+- the strongest host-facing semantic mismatches between native and FFI have now
+  been materially reduced
+- the bridge already covers:
+  - redraw/publication acknowledgement
+  - lifecycle/latest-state metadata
+  - close-confirm latest-state
+  - backend-owned viewport control
+  - clipboard payload access
+  - host focus reporting
+  - host color-scheme reporting
+- the next bridge work should therefore favor ABI maturation and verifier
+  hardening over widening the public semantic surface casually
+
 Lifecycle/latest-state policy:
 
 - `zide_terminal_metadata_acquire(...)` is the preferred latest-state summary
