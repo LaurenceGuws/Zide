@@ -367,6 +367,52 @@ Judgment so far:
 - high risk of violating the current "no extra host chatter, no stitched
   truth" rule if done casually
 
+#### Candidate A Code-Reality Note
+
+The current publication path already carries much of the raw material a diff
+export would want:
+
+- per-row dirty flags
+- per-row dirty spans
+- dirty column unions
+- coarse damage bounds
+- viewport shift hints
+- visible-history-generation tracking
+- row hashes for refinement
+
+That means diff export is not blocked by an absence of backend change data.
+
+What it is blocked by is contract shape:
+
+- today the host consumes one authoritative visible snapshot
+- a diff export becomes dangerous if it turns that into:
+  - "sometimes read diffs"
+  - "sometimes reacquire full truth"
+  - "sometimes stitch local retained state yourself"
+
+So the promising narrow version of diff export would have to look like:
+
+- one acquire
+- one owned diff result
+- one generation
+- enough data to deterministically update the previously rendered visible
+  state
+- an explicit fallback bit that says "this generation must be treated as a full
+  visible refresh"
+
+The unpromising version would look like:
+
+- per-row follow-up calls
+- row getters keyed by damage ranges
+- separate calls for shift metadata, dirty spans, and replacement cells
+- host-maintained truth that is more authoritative than the bridge result
+
+Current code-oriented judgment:
+
+- diff export now looks more plausible than it did on paper alone, because the
+  backend already computes rich publication damage information
+- its main risk is contract complexity, not backend data availability
+
 #### Candidate B: Pinned Snapshot Handle
 
 Shape:
@@ -675,6 +721,17 @@ The preference is now conditional rather than strong:
    - one retained generation is enough
    - and it avoids most per-generation cell remap pressure
 2. otherwise re-evaluate diff-oriented export as the more honest next step
+
+Current head-to-head read:
+
+- pinned snapshot handles are still better if they can stay truly narrow
+- diff export is now closer than before because the backend already maintains
+  strong damage/span/hash publication state
+- the likely winner is whichever can preserve:
+  - one acquire
+  - one owned result
+  - one obvious authoritative visible-state story
+  with less total copying/retention pressure in the real code
 
 #### Why This Still Beats Diff On Paper
 

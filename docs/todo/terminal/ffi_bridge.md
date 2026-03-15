@@ -188,6 +188,11 @@ Current judgment:
     published generation
   - if so, pinned handles only stay attractive when they still beat the current
     baseline on real host behavior, not just on paper
+- Matching diff caution:
+  - backend diff ingredients already exist in the publication path, so the main
+    question is no longer "can we compute diffs?"
+  - it is "can diff export stay one acquire, one owned result, and one
+    authoritative visible-state story without making hosts reconstruct truth?"
 - Current execution rule for that lane:
   - do not widen the bridge first
   - keep the snapshot review focused on host call count, flat cell-buffer

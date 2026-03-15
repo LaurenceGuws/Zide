@@ -310,6 +310,16 @@ Current cost-reality caution:
 - if disciplined hosts already acquire once per generation, that weakens the
   benefit of pinned reuse enough that diff export must remain a real contender
 
+Matching diff-oriented reality check:
+
+- the backend already computes rich publication-side dirty data:
+  row dirtiness, spans, column unions, damage bounds, viewport shifts, and row
+  hashes
+- so diff export is no longer the "hard to compute" option
+- its risk is now almost entirely contract-side:
+  whether it can stay one acquire, one owned result, and one authoritative
+  visible-state story without turning hosts chatty or state-stitching heavy
+
 ## Current Conclusion
 
 The current redesign is performance-safe enough to continue building on.
