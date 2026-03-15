@@ -467,6 +467,15 @@ Current external-host result:
   - color-scheme reporting now works after `?2031h`
 - coarse pending-input batching was natural and stable; the host did not need
   per-keystroke drain tricks or a second widget/runtime model
+- a later downstream re-check against the request-based metadata ABI replacement
+  was also clean:
+  - the binding update was straightforward once the signature change was traced
+  - `include_flags = 0` felt natural for hot scalar reads
+  - the shared runtime/controller layer stayed the same
+  - the only real host cleanup was healthy:
+    - title/cwd moved from implicit always-present metadata reads
+    - to explicit cached state
+  - redraw, viewport, and lifecycle behavior did not regress
 
 Current external-host result now includes lifecycle convergence too:
 

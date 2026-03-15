@@ -113,6 +113,14 @@ Current judgment:
 - Latest downstream answer: the child-exit re-check against upstream `f9bb94a`
   was clean and the Flutter-owned PTY path kept the same shared widget/runtime
   layer with only transport-local changes.
+- Latest downstream metadata answer: the request-based metadata acquire cut was
+  also clean in Flutty:
+  - binding update was straightforward
+  - `include_flags = 0` felt natural for hot scalar reads
+  - shared runtime/controller layer stayed the same
+  - title/cwd cleanup moved to explicit cached state instead of assuming every
+    metadata read carried strings
+  - no redraw/viewport/lifecycle regressions were observed
 - The next upstream performance lane should stay narrow:
   - keep `pending_input` as the coarse outbound batch seam
   - keep hosts disciplined around redraw-driven snapshot usage
