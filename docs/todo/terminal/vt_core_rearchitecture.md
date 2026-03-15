@@ -51,7 +51,10 @@ Supporting cleanup:
   Current judgment:
   - the highest-yield session/core seams have materially cooled after the recent host-query, clipboard, sync-update, column-mode, and palette/default-color cuts
   - remaining `session_config` seams are increasingly internal core bookkeeping rather than host-contract asymmetries
-  - the stronger remaining center-of-gravity issue is no longer mostly raw VT semantics living on the root facade; it is that `session_runtime.zig`, `session_rendering.zig`, the publication-state seam, the publication-updates seam, and the presentation-handoff seam still carry a lot of runtime/publication assembly around `TerminalCore`
+  - the stronger remaining center-of-gravity issue is no longer mostly raw VT semantics living on the root facade; it is that runtime/publication assembly still exists around `TerminalCore`
+  - recent runtime/publication cuts materially improved that situation: lifecycle truth now lives behind `session_lifecycle.zig`, transport runtime helpers now live behind `session_transport_runtime.zig`, thread/runtime teardown now lives behind `session_thread_runtime.zig`, publication generation state now lives behind `session_publication_state.zig`, presentation handoff now lives behind `session_presentation_handoff.zig`, publication update choreography now lives behind `session_publication_updates.zig`, and PTY poll publication wake/update logic now lives behind `pty_poll_publication.zig`
+  - after those cuts, `session_runtime.zig` reads more like orchestration, `session_rendering.zig` reads more like a coordination shell, and `pty_io.zig` reads more like parse-throughput plus transport polling policy
+  - that means this lane should pause again unless another comparably coherent runtime/publication ownership cut appears
   - do not keep pushing this lane for symmetry alone; prefer `VTCORE-02` unless another native-only ownership leak is clearly identified
 - [ ] `VTCORE-02` Make FFI a first-class core interface.
   Notes: shared FFI state plus `host_api` and `core_api` splits are landed; remaining work is maturity and convergence, not proving the shape. Recent slices closed real host-facing gaps such as close-confirm signals and backend-owned viewport control.
@@ -81,7 +84,8 @@ Supporting cleanup:
 
 - The engine-center gap versus `libghostty-vt` is smaller than the older docs implied.
 - The remaining structural gap is now more specifically runtime/publication center-of-gravity:
-  - `session_runtime.zig` still owns thread lifecycle, parse/read loop assembly, PTY/external transport switching, and child-exit truth assembly, though `pty_io.zig` publication wake/update choreography is now partially split behind `pty_poll_publication.zig`.
-  - `session_rendering.zig`, the publication-state seam, the publication-updates seam, and the presentation-handoff seam still own published/presented generation bookkeeping, render-cache handoff, view-cache update choreography, sync-update publication behavior, and presentation capture/feedback.
+  - `session_runtime.zig` is now much closer to a narrow orchestration shell after lifecycle, transport, and thread-helper extraction.
+  - `session_rendering.zig` is now much closer to a coordination shell after publication-state, publication-updates, and presentation-handoff extraction.
+  - `pty_io.zig` is now closer to parse-throughput plus transport polling after PTY poll publication wake/update logic moved behind `pty_poll_publication.zig`.
   - `terminal_session.zig` is still large, but increasingly as the assembly shell around those runtime/publication lanes rather than as the place where raw VT semantics live.
-- That means the next strongest comparison lane against Ghostty is not "trim more facade methods for symmetry"; it is "keep moving runtime/publication ownership toward a clearer engine-centered contract."
+- That means the next strongest comparison lane against Ghostty is no longer "trim more facade methods for symmetry," and it may no longer be "keep extracting runtime/publication shards" either unless another coherent seam appears. The stronger next lane is likely FFI snapshot/export maturity plus any remaining engine-centered ownership cuts that materially reduce privileged orchestration around `TerminalCore`.

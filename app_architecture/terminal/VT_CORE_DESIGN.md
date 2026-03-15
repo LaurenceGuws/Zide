@@ -85,13 +85,32 @@ Status note, 2026-03-14:
     surface than Ghostty's current public `libghostty-vt` umbrella.
   - So the remaining gap is primarily center-of-gravity and ownership clarity,
     not "we need to catch up by exporting more random API."
-  - More specifically, the strongest remaining gap is no longer raw VT
-    semantics living all over the root session facade. It is that
-    `session_runtime.zig`, `session_rendering.zig`, the publication-state seam,
-    the publication-updates seam, and the presentation-handoff seam still
-    carry a lot of thread/runtime and publication/present assembly around
-    `TerminalCore`, which keeps `TerminalSession` heavier than the cleaner
-    Ghostty-style engine center.
+- More specifically, the strongest remaining gap is no longer raw VT
+  semantics living all over the root session facade. It is that
+  `session_runtime.zig`, `session_rendering.zig`, the publication-state seam,
+  the publication-updates seam, and the presentation-handoff seam still
+  carry a lot of thread/runtime and publication/present assembly around
+  `TerminalCore`, which keeps `TerminalSession` heavier than the cleaner
+  Ghostty-style engine center.
+- That runtime/publication lane has also moved materially since the first
+  comparison writeup:
+  - lifecycle truth now lives behind `session_lifecycle.zig`
+  - transport attach/open/close and outgoing-drain logic now lives behind
+    `session_transport_runtime.zig`
+  - thread/runtime teardown now lives behind `session_thread_runtime.zig`
+  - publication generation state now lives behind
+    `session_publication_state.zig`
+  - presentation handoff now lives behind
+    `session_presentation_handoff.zig`
+  - publication update choreography now lives behind
+    `session_publication_updates.zig`
+  - PTY poll publication wake/update behavior now lives behind
+    `pty_poll_publication.zig`
+- After those cuts, `session_runtime.zig` and `session_rendering.zig` are
+  closer to orchestration shells than semantic owners. That means the next
+  strongest lane is no longer "keep extracting for symmetry"; it is likely the
+  FFI snapshot/export maturity lane unless another comparably coherent
+  engine-ownership seam appears.
 
 Purpose: define the exact ownership split for the next terminal-core redesign
 lane so code changes do not drift between "session cleanup", "FFI cleanup", and
