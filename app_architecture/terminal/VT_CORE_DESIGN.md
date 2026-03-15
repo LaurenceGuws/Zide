@@ -800,6 +800,9 @@ Migration approach:
   `src/terminal/core/session_publication_updates.zig`
 - presentation capture/copy/feedback handoff now lives under
   `src/terminal/core/session_presentation_handoff.zig`
+- PTY/external poll publication wake/update choreography now partially lives
+  under `src/terminal/core/pty_poll_publication.zig` instead of staying fully
+  mixed into `pty_io.zig`
 - replay-backed redraw coverage now includes narrow partial publication,
   dense clear+repaint loops, and live-bottom full-region scroll behavior
 - replay-backed redraw coverage now also includes a multi-row narrow rewrite

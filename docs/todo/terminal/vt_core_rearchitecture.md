@@ -81,7 +81,7 @@ Supporting cleanup:
 
 - The engine-center gap versus `libghostty-vt` is smaller than the older docs implied.
 - The remaining structural gap is now more specifically runtime/publication center-of-gravity:
-  - `session_runtime.zig` still owns thread lifecycle, parse/read loop assembly, PTY/external transport switching, and child-exit truth assembly.
+  - `session_runtime.zig` still owns thread lifecycle, parse/read loop assembly, PTY/external transport switching, and child-exit truth assembly, though `pty_io.zig` publication wake/update choreography is now partially split behind `pty_poll_publication.zig`.
   - `session_rendering.zig`, the publication-state seam, the publication-updates seam, and the presentation-handoff seam still own published/presented generation bookkeeping, render-cache handoff, view-cache update choreography, sync-update publication behavior, and presentation capture/feedback.
   - `terminal_session.zig` is still large, but increasingly as the assembly shell around those runtime/publication lanes rather than as the place where raw VT semantics live.
 - That means the next strongest comparison lane against Ghostty is not "trim more facade methods for symmetry"; it is "keep moving runtime/publication ownership toward a clearer engine-centered contract."
