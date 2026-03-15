@@ -6,6 +6,12 @@ Goal: make the alternate screen implementation reliable by modeling it like refe
 
 Status: Implemented (2026-01-18). Per-screen state is now owned by a `Screen` struct; alt/primary are independent with full damage on switches.
 
+Current role:
+
+- historical design record for the alt-screen cleanup that already landed
+- useful when auditing why the current per-screen split exists
+- not the primary live authority for the engine boundary today
+
 ## Problem Summary (current code)
 
 - Alt screen is implemented by swapping `TerminalGrid` and some per-screen fields, but other state is shared.
@@ -93,3 +99,8 @@ Rules:
 - `nvim`, `btop`, `lazygit`, `htop`: no ghosting or line duplication after redraws.
 - Enter/exit alt screen: cursor save/restore works (`?1049`).
 - No scrollback pollution while in alt.
+
+Related current authority:
+
+- engine boundary: `app_architecture/terminal/VT_CORE_DESIGN.md`
+- present/publication semantics: `app_architecture/terminal/rendering/RENDER_PUBLICATION_CONTRACT.md`

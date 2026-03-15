@@ -10,6 +10,14 @@ Source of truth: protocol and input handler switches in:
 
 This is a snapshot of currently implemented behavior, not a spec or compliance claim.
 
+Reading rule:
+
+- treat this as a code-derived inventory, not architecture authority
+- use it to answer "what appears implemented right now?"
+- use `docs/todo/terminal/protocol.md` for follow-up queueing and
+  `app_architecture/terminal/DESIGN.md` / `VT_CORE_DESIGN.md` for ownership
+  reasoning
+
 ## CSI (Control Sequence Introducer)
 
 Cursor + positioning:
@@ -110,6 +118,15 @@ Key input:
 Mouse reporting:
 - X10 and SGR mouse reporting
 - Button, motion, and wheel events
+
+## Interpretive Notes
+
+- listed support means there is explicit handling in the current switches
+- unlisted behavior should be treated as absent or unverified, not implicitly
+  supported
+- this file does not claim full parity with any reference terminal
+- extension support should still be judged against real behavior and tests, not
+  inventory presence alone
 
 ## Kitty Parity Notes (Code-Based)
 
