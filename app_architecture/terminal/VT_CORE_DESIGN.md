@@ -608,6 +608,9 @@ Migration approach:
   `TerminalSession` for now
 - session construction and host/runtime assembly route through
   `src/terminal/core/session_runtime.zig`
+- input-mode snapshot state now also lives in
+  `src/terminal/core/session_input_snapshot.zig` instead of being defined
+  inline in `terminal_session.zig`
 - replay/test-only debug helpers live in
   `src/terminal/core/terminal_session_debug.zig`
 - host-facing metadata, liveness, and close-confirm queries live under
