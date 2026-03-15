@@ -25,6 +25,7 @@ const terminal_core_mod = @import("terminal_core.zig");
 const session_host_queries = @import("session_host_queries.zig");
 const session_queries = @import("session_queries.zig");
 const session_content = @import("session_content.zig");
+const session_host_types = @import("session_host_types.zig");
 const session_selection = @import("session_selection.zig");
 const session_input = @import("session_input.zig");
 const session_interaction = @import("session_interaction.zig");
@@ -65,7 +66,7 @@ pub const ScrollbackInfo = session_content.ScrollbackInfo;
 pub const ScrollbackRange = session_content.ScrollbackRange;
 pub const SelectionGesture = session_selection.SelectionGesture;
 pub const ClickSelectionResult = session_selection.ClickSelectionResult;
-pub const SessionMetadata = session_host_queries.SessionMetadata;
+pub const SessionMetadata = session_host_types.SessionMetadata;
 pub const PresentedRenderCache = session_rendering.PresentedRenderCache;
 pub const PresentationCapture = session_rendering.PresentationCapture;
 pub const AltExitPresentationInfo = session_presentation_feedback.AltExitPresentationInfo;
@@ -1002,7 +1003,7 @@ pub const TerminalSession = struct {
         return session_interaction.mouseReportingEnabled(self);
     }
 
-    pub const CloseConfirmSignals = session_host_queries.CloseConfirmSignals;
+    pub const CloseConfirmSignals = session_host_types.CloseConfirmSignals;
 
     pub fn closeConfirmSignals(self: *TerminalSession) CloseConfirmSignals {
         return session_host_queries.closeConfirmSignals(self);
