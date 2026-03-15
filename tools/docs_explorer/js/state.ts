@@ -30,6 +30,7 @@ export function createAppState(): AppState {
     tree: {
       filter: "",
       activePath: null,
+      expandedPaths: [],
     },
     sidebar: {
       width: preferredSidebarWidth(),
@@ -89,6 +90,10 @@ export function setTreeFilter(state: AppState, filter: string): void {
 
 export function setTreeActivePath(state: AppState, activePath: string | null): void {
   state.tree.activePath = activePath;
+}
+
+export function setTreeExpandedPaths(state: AppState, expandedPaths: string[]): void {
+  state.tree.expandedPaths = expandedPaths;
 }
 
 export function setOptionsMenuOpen(state: AppState, open: boolean): void {

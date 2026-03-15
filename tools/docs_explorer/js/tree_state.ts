@@ -1,4 +1,4 @@
-import { setTreeActivePath, setTreeFilter } from "./state.js";
+import { setTreeActivePath, setTreeExpandedPaths, setTreeFilter } from "./state.js";
 import { buildTree } from "./tree.js";
 import type { AppState } from "./types.js";
 
@@ -10,6 +10,15 @@ export function updateTreeActivePath(state: AppState, activePath: string | null)
   setTreeActivePath(state, activePath);
 }
 
-export function renderTreeFromState(state: AppState, treeEl: HTMLElement, docs: string[]): void {
-  buildTree(treeEl, docs, state.tree.activePath, state.tree.filter);
+export function updateTreeExpandedPaths(state: AppState, expandedPaths: string[]): void {
+  setTreeExpandedPaths(state, expandedPaths);
+}
+
+export function renderTreeFromState(
+  state: AppState,
+  treeEl: HTMLElement,
+  docs: string[],
+  onExpandedPathsChange: (expandedPaths: string[]) => void,
+): void {
+  buildTree(treeEl, docs, state.tree.activePath, state.tree.filter, state.tree.expandedPaths, onExpandedPathsChange);
 }

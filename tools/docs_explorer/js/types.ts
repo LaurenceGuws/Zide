@@ -48,6 +48,7 @@ export type AppState = {
   tree: {
     filter: string;
     activePath: string | null;
+    expandedPaths: string[];
   };
   sidebar: {
     width: number;

@@ -2,7 +2,7 @@ import { rerenderVisibleMermaid } from "./mermaid.js";
 import { renderHighlightedCode } from "./highlight.js";
 import { currentDocFromHash } from "./utils.js";
 import { setCurrentDoc, setSearchQuery } from "./state.js";
-import { renderTreeFromState, updateTreeActivePath, updateTreeFilter } from "./tree_state.js";
+import { renderTreeFromState, updateTreeActivePath, updateTreeExpandedPaths, updateTreeFilter } from "./tree_state.js";
 import { renderDocumentChrome, setDocumentError, setDocumentLoading, setDocumentReady } from "./view_state.js";
 import { loadDoc } from "./viewer.js";
 import type { AppShell, AppState } from "./types.js";
@@ -72,7 +72,9 @@ export function createDocController(args: {
   }
 
   function renderTree(): void {
-    renderTreeFromState(state, treeEl, docs);
+    renderTreeFromState(state, treeEl, docs, (expandedPaths) => {
+      updateTreeExpandedPaths(state, expandedPaths);
+    });
   }
 
   function applySearchQuery(query: string): void {

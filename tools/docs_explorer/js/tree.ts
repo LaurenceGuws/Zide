@@ -1,4 +1,5 @@
 import { escapeHtml } from "./utils.js";
+import { treeCaretIcon, treeFolderIcon } from "./tree_icons.js";
 
 type TreeFile = {
   path: string;
@@ -52,12 +53,14 @@ function renderTreeNode(node: TreeNode, activePath: string): string {
   const fileEntries = node.files.slice().sort((a, b) => a.path.localeCompare(b.path));
 
   const dirsHtml = dirEntries.map((dir) => {
-    const shouldOpen = activePath.startsWith(`${dir.path}/`) || activePath === dir.path;
+    const isActiveBranch = activePath.startsWith(`${dir.path}/`) || activePath === dir.path;
+    const shouldOpen = isActiveBranch || expandedPathsGlobal.has(dir.path);
     return `
       <li class="tree-item">
-        <details class="tree-folder" ${shouldOpen ? "open" : ""}>
+        <details class="tree-folder ${isActiveBranch ? "active-branch" : ""}" data-folder-path="${escapeHtml(dir.path)}" ${shouldOpen ? "open" : ""}>
           <summary>
-            <span class="folder-caret">▸</span>
+            <span class="folder-caret" aria-hidden="true">${treeCaretIcon()}</span>
+            <span class="folder-icon" aria-hidden="true">${treeFolderIcon(shouldOpen)}</span>
             <span class="folder-label">${escapeHtml(dir.name)}</span>
           </summary>
           <div class="folder-children">
@@ -82,6 +85,8 @@ function renderTreeNode(node: TreeNode, activePath: string): string {
   return dirList + fileList;
 }
 
+let expandedPathsGlobal = new Set<string>();
+
 export function syncActiveLink(activePath: string | null): void {
   const active = activePath || "";
   document.querySelectorAll<HTMLElement>("[data-doc-link]").forEach((el) => {
@@ -89,10 +94,33 @@ export function syncActiveLink(activePath: string | null): void {
   });
 }
 
-export function buildTree(treeEl: HTMLElement, docs: string[], activePath: string | null, filter = ""): void {
+export function buildTree(
+  treeEl: HTMLElement,
+  docs: string[],
+  activePath: string | null,
+  filter = "",
+  expandedPaths: string[] = [],
+  onExpandedPathsChange?: (expandedPaths: string[]) => void,
+): void {
   const q = filter.trim().toLowerCase();
   const filtered = docs.filter((path) => q === "" || path.toLowerCase().includes(q));
+  expandedPathsGlobal = new Set(expandedPaths);
   const model = buildTreeModel(filtered);
   treeEl.innerHTML = `<ul class="tree-root">${renderTreeNode(model, activePath || "")}</ul>`;
+  treeEl.querySelectorAll<HTMLDetailsElement>(".tree-folder").forEach((folderEl) => {
+    const path = folderEl.dataset.folderPath;
+    if (!path) return;
+    folderEl.addEventListener("toggle", () => {
+      const nextExpanded = new Set(expandedPathsGlobal);
+      if (folderEl.open) nextExpanded.add(path);
+      else nextExpanded.delete(path);
+      expandedPathsGlobal = nextExpanded;
+      const iconEl = folderEl.querySelector<HTMLElement>(".folder-icon");
+      if (iconEl) {
+        iconEl.innerHTML = treeFolderIcon(folderEl.open);
+      }
+      onExpandedPathsChange?.(Array.from(nextExpanded).sort());
+    });
+  });
   syncActiveLink(activePath);
 }

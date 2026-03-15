@@ -59,7 +59,15 @@ async function injectSvg(target: HTMLElement, path: string): Promise<void> {
   if (!response.ok) {
     throw new Error(`HTTP ${response.status} for ${path}`);
   }
-  target.innerHTML = await response.text();
+  const svg = await response.text();
+  target.innerHTML = svg;
+  const svgEl = target.querySelector("svg");
+  if (svgEl) {
+    svgEl.setAttribute("width", "16");
+    svgEl.setAttribute("height", "16");
+    svgEl.setAttribute("preserveAspectRatio", "xMidYMid meet");
+    svgEl.setAttribute("focusable", "false");
+  }
 }
 
 function requiredElement<T extends Element>(selector: string): T {
