@@ -57,7 +57,9 @@ Status note, 2026-03-14:
   also route through `TerminalCore` instead of direct core-buffer mutation from
   OSC protocol helpers; selection state clear/start/update/finish/read now also
   route through `TerminalCore` instead of raw history selection mutation from
-  the selection helper path.
+  the selection helper path; resize/reflow now also restores or clears
+  selection through `TerminalCore` instead of mutating raw history-selection
+  internals directly.
 - Input encoding remains on the dedicated subsystem path: writer-agnostic
   encoder coverage exists at both the fake-writer level and the real
   PTY-backed `TerminalSession` writer boundary.

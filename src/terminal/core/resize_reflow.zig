@@ -39,7 +39,7 @@ fn resizeLocked(self: anytype, rows: u16, cols: u16) !void {
     const old_total_lines: usize = old_history_len + @as(usize, old_rows);
     const old_scroll_offset: usize = self.core.history.scrollOffset();
     const old_cursor = self.core.primary.cursorPos();
-    const old_selection = self.core.history.selectionState();
+    const old_selection = self.core.selectionState();
 
     if (cols != old_cols and cols > 0 and old_cols > 0) {
         try reflowResizePrimary(self, rows, cols, old_rows, old_cols, old_total_lines, old_scroll_offset, old_cursor, old_selection);
@@ -389,21 +389,23 @@ fn reflowResizePrimary(
                 if (start_global.row >= drop_rows and end_global.row >= drop_rows) {
                     const new_start_row = start_global.row - drop_rows;
                     const new_end_row = end_global.row - drop_rows;
-                    self.core.history.selection.selection.active = selection.active;
-                    self.core.history.selection.selection.selecting = selection.selecting;
-                    self.core.history.selection.selection.start = .{ .row = new_start_row, .col = start_global.col };
-                    self.core.history.selection.selection.end = .{ .row = new_end_row, .col = end_global.col };
+                    self.core.setSelectionState(.{
+                        .active = selection.active,
+                        .selecting = selection.selecting,
+                        .start = .{ .row = new_start_row, .col = start_global.col },
+                        .end = .{ .row = new_end_row, .col = end_global.col },
+                    });
                 } else {
-                    self.core.history.clearSelection();
+                    self.core.clearSelection();
                 }
             } else {
-                self.core.history.clearSelection();
+                self.core.clearSelection();
             }
         } else {
-            self.core.history.clearSelection();
+            self.core.clearSelection();
         }
     } else {
-        self.core.history.clearSelection();
+        self.core.clearSelection();
     }
 
     if (cursor_global_row < row_map.items.len) {

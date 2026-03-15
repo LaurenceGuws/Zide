@@ -256,6 +256,10 @@ pub const TerminalCore = struct {
         return self.history.selectionState();
     }
 
+    pub fn setSelectionState(self: *TerminalCore, selection: types.TerminalSelection) void {
+        self.history.selection.selection = selection;
+    }
+
     pub fn semanticPromptActive(self: *const TerminalCore) bool {
         return self.semantic_prompt.input_active or self.semantic_prompt.output_active;
     }
