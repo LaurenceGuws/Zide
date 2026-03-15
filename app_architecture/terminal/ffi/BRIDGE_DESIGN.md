@@ -618,8 +618,10 @@ Dedicated PTY smoke flow (separate verifier):
 4. poll until output arrives
 5. assert redraw/present acknowledgement behavior
 6. assert metadata latest-state behavior
-7. assert close-confirm getter shape
-8. assert output and child exit
+7. pin scrollback viewport and assert visible snapshot content actually changes
+8. follow live bottom and assert visible snapshot content restores
+9. assert close-confirm getter shape
+10. assert output and child exit
 
 Current implementation split:
 - keep Python `ctypes` as the authoritative no-PTY ownership/lifetime host

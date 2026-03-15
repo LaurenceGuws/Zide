@@ -76,6 +76,13 @@ pub fn main() !void {
 
             if (!saw_viewport and saw_marker and metadata.scrollback_count > 1) {
                 const target_offset: u32 = @intCast(@min(@as(usize, metadata.scrollback_count), @as(usize, 3)));
+                const live_snapshot_request = snapshotRequest(0);
+                var live_snapshot: c_api.ZideTerminalSnapshot = .{};
+                if (c_api.zide_terminal_snapshot_acquire(handle, &live_snapshot_request, &live_snapshot) != 0) return error.SnapshotAcquireFailed;
+                defer c_api.zide_terminal_snapshot_release(&live_snapshot);
+                var live_row0 = try snapshotRowText(&live_snapshot, 0);
+                defer live_row0.deinit(std.heap.page_allocator);
+
                 if (c_api.zide_terminal_set_scrollback_offset(handle, target_offset) != 0) return error.ViewportPinFailed;
 
                 var pinned_metadata: c_api.ZideTerminalMetadata = .{};
@@ -92,6 +99,9 @@ pub fn main() !void {
                 var pinned_snapshot: c_api.ZideTerminalSnapshot = .{};
                 if (c_api.zide_terminal_snapshot_acquire(handle, &pinned_snapshot_request, &pinned_snapshot) != 0) return error.SnapshotAcquireFailed;
                 defer c_api.zide_terminal_snapshot_release(&pinned_snapshot);
+                var pinned_row0 = try snapshotRowText(&pinned_snapshot, 0);
+                defer pinned_row0.deinit(std.heap.page_allocator);
+                if (std.mem.eql(u8, pinned_row0.items, live_row0.items)) return error.ViewportPinnedSnapshotDidNotMove;
 
                 if (c_api.zide_terminal_present_ack(handle, pinned_redraw.published_generation) != 0) return error.PresentAckFailed;
 
@@ -106,6 +116,9 @@ pub fn main() !void {
                 var restored_snapshot: c_api.ZideTerminalSnapshot = .{};
                 if (c_api.zide_terminal_snapshot_acquire(handle, &restored_snapshot_request, &restored_snapshot) != 0) return error.SnapshotAcquireFailed;
                 defer c_api.zide_terminal_snapshot_release(&restored_snapshot);
+                var restored_row0 = try snapshotRowText(&restored_snapshot, 0);
+                defer restored_row0.deinit(std.heap.page_allocator);
+                if (!std.mem.eql(u8, restored_row0.items, live_row0.items)) return error.ViewportLiveBottomDidNotRestore;
                 saw_viewport = true;
             }
         }
@@ -216,6 +229,23 @@ fn snapshotContains(snapshot: *const c_api.ZideTerminalSnapshot, needle: []const
         if (std.mem.indexOf(u8, line.items, needle) != null) return true;
     }
     return false;
+}
+
+fn snapshotRowText(snapshot: *const c_api.ZideTerminalSnapshot, row: usize) !std.ArrayList(u8) {
+    var line = std.ArrayList(u8).empty;
+    errdefer line.deinit(std.heap.page_allocator);
+    if (snapshot.cells == null) return line;
+    const cells = snapshot.cells.?[0..snapshot.cell_count];
+    const cols: usize = @intCast(snapshot.cols);
+    var col: usize = 0;
+    while (col < cols) : (col += 1) {
+        const idx = row * cols + col;
+        const cell = cells[idx];
+        if (cell.width == 0) continue;
+        const cp = cell.codepoint;
+        try line.append(std.heap.page_allocator, if (cp == 0 or cp > 0x7f) ' ' else @intCast(cp));
+    }
+    return line;
 }
 
 fn ptrBytes(ptr: ?[*]const u8, len: usize) []const u8 {

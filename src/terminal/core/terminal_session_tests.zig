@@ -1039,6 +1039,26 @@ test "scrollback offset change advances published generation" {
     try std.testing.expect(cache.generation != baseline_generation);
 }
 
+test "session snapshot reflects pinned scrollback viewport" {
+    const allocator = std.testing.allocator;
+
+    var session = try TerminalSession.init(allocator, 2, 4);
+    defer session.deinit();
+    session.attachExternalTransport();
+
+    session.feedOutputBytes("AAAA\r\nBBBB\r\nCCCC\r\nDDDD\r\n");
+
+    const live_snapshot = session.snapshot();
+    try expectSnapshotRow(live_snapshot, 0, "CCCC");
+    try expectSnapshotRow(live_snapshot, 1, "DDDD");
+
+    session.setScrollOffset(1);
+
+    const pinned_snapshot = session.snapshot();
+    try expectSnapshotRow(pinned_snapshot, 0, "BBBB");
+    try expectSnapshotRow(pinned_snapshot, 1, "CCCC");
+}
+
 test "acknowledgePresentedGeneration does not retire newer scrollback view publication" {
     const allocator = std.testing.allocator;
 

@@ -24,9 +24,39 @@ pub const PresentationCapture = struct {
 };
 
 pub fn snapshot(self: anytype) TerminalSnapshot {
+    const alt_active = self.isAltActive();
+    const scrollback_offset = self.core.scrollbackOffset();
+    if (!alt_active and scrollback_offset != 0) {
+        const cache = self.renderCache();
+        return .{
+            .rows = cache.rows,
+            .cols = cache.cols,
+            .cells = cache.cells.items,
+            .dirty_rows = cache.dirty_rows.items,
+            .row_dirty_span_counts = cache.row_dirty_span_counts.items,
+            .row_dirty_span_overflow = cache.row_dirty_span_overflow.items,
+            .row_dirty_spans = cache.row_dirty_spans.items,
+            .dirty_cols_start = cache.dirty_cols_start.items,
+            .dirty_cols_end = cache.dirty_cols_end.items,
+            .cursor = cache.cursor,
+            .cursor_style = cache.cursor_style,
+            .cursor_visible = cache.cursor_visible,
+            .dirty = cache.dirty,
+            .damage = cache.damage,
+            .scrollback_count = self.core.scrollbackCount(),
+            .scrollback_offset = scrollback_offset,
+            .selection = selection_mod.selectionState(self),
+            .alt_active = alt_active,
+            .screen_reverse = cache.screen_reverse,
+            .generation = self.output_generation.load(.acquire),
+            .kitty_images = cache.kitty_images.items,
+            .kitty_placements = cache.kitty_placements.items,
+            .kitty_generation = cache.kitty_generation,
+        };
+    }
+
     const screen = self.activeScreenConst();
     const view = screen.snapshotView();
-    const alt_active = self.isAltActive();
     const kitty = kitty_mod.kittyStateConst(self);
     return .{
         .rows = view.rows,
@@ -44,7 +74,7 @@ pub fn snapshot(self: anytype) TerminalSnapshot {
         .dirty = view.dirty,
         .damage = view.damage,
         .scrollback_count = self.core.scrollbackCount(),
-        .scrollback_offset = self.core.scrollbackOffset(),
+        .scrollback_offset = scrollback_offset,
         .selection = selection_mod.selectionState(self),
         .alt_active = alt_active,
         .screen_reverse = screen.screen_reverse,

@@ -487,7 +487,7 @@ pub fn syncStringEvent(handle: *Handle, kind: EventKind, last: *std.ArrayList(u8
 }
 
 pub fn syncDerivedEvents(handle: *Handle) Status {
-    const generation = handle.session.snapshot().generation;
+    const generation = handle.session.publishedGeneration();
     if (handle.last_generation != generation) {
         queueEvent(handle, .redraw_ready, &[_]u8{}, 0, 0) catch |err| return mapError(err);
         handle.last_generation = generation;

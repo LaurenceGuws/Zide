@@ -395,6 +395,72 @@ test "ffi viewport controls pin snapshot scrollback offset and follow live botto
     try expectSnapshotRowText(&restored_snapshot, 1, "DDDD");
 }
 
+test "ffi viewport controls change visible snapshot on larger history" {
+    try app_logger.setConsoleFilterString("none");
+    try app_logger.setFileFilterString("none");
+
+    var handle: ?*c_api.ZideTerminalHandle = null;
+    const cfg = c_api.ZideTerminalCreateConfig{
+        .rows = 12,
+        .cols = 60,
+        .scrollback_rows = 256,
+        .cursor_shape = 0,
+        .cursor_blink = 1,
+    };
+    try std.testing.expectEqual(@as(c_int, 0), c_api.zide_terminal_create(&cfg, &handle));
+    defer c_api.zide_terminal_destroy(handle);
+
+    try std.testing.expectEqual(@as(c_int, 0), c_api.zide_terminal_resize(handle, 60, 12, 8, 16));
+
+    var title_request = snapshotRequest(c_api.ZIDE_TERMINAL_SNAPSHOT_INCLUDE_TITLE);
+    const vt = "\x1b]0;ffi-title\x07";
+    try std.testing.expectEqual(@as(c_int, 0), c_api.zide_terminal_feed_output(handle, vt.ptr, vt.len));
+
+    var i: usize = 0;
+    while (i < 20) : (i += 1) {
+        var line_buf: [16]u8 = undefined;
+        const line = try std.fmt.bufPrint(&line_buf, "hist-{d:0>2}\r\n", .{i});
+        try std.testing.expectEqual(@as(c_int, 0), c_api.zide_terminal_feed_output(handle, line.ptr, line.len));
+    }
+
+    var live_snapshot: c_api.ZideTerminalSnapshot = .{};
+    try std.testing.expectEqual(@as(c_int, 0), c_api.zide_terminal_snapshot_acquire(handle, &title_request, &live_snapshot));
+    defer c_api.zide_terminal_snapshot_release(&live_snapshot);
+    const live_row0 = try snapshotRowText(std.testing.allocator, &live_snapshot, 0);
+    defer std.testing.allocator.free(live_row0);
+    try std.testing.expectEqualStrings("hist-09", live_row0);
+    try std.testing.expectEqualStrings("ffi-title", ptrBytes(live_snapshot.title_ptr, live_snapshot.title_len));
+
+    var baseline_redraw: c_api.ZideTerminalRedrawState = .{};
+    try std.testing.expectEqual(@as(c_int, 0), c_api.zide_terminal_redraw_state(handle, &baseline_redraw));
+    try std.testing.expectEqual(@as(c_int, 0), c_api.zide_terminal_present_ack(handle, baseline_redraw.published_generation));
+
+    try std.testing.expectEqual(@as(c_int, 0), c_api.zide_terminal_set_scrollback_offset(handle, 1));
+
+    var pinned_metadata: c_api.ZideTerminalMetadata = .{};
+    var pinned_metadata_request = metadataRequest(0);
+    try std.testing.expectEqual(@as(c_int, 0), c_api.zide_terminal_metadata_acquire(handle, &pinned_metadata_request, &pinned_metadata));
+    defer c_api.zide_terminal_metadata_release(&pinned_metadata);
+    try std.testing.expectEqual(@as(u32, 1), pinned_metadata.scrollback_offset);
+
+    var pinned_snapshot_request = snapshotRequest(0);
+    var pinned_snapshot: c_api.ZideTerminalSnapshot = .{};
+    try std.testing.expectEqual(@as(c_int, 0), c_api.zide_terminal_snapshot_acquire(handle, &pinned_snapshot_request, &pinned_snapshot));
+    defer c_api.zide_terminal_snapshot_release(&pinned_snapshot);
+    const pinned_row0 = try snapshotRowText(std.testing.allocator, &pinned_snapshot, 0);
+    defer std.testing.allocator.free(pinned_row0);
+    try std.testing.expect(!std.mem.eql(u8, live_row0, pinned_row0));
+
+    try std.testing.expectEqual(@as(c_int, 0), c_api.zide_terminal_follow_live_bottom(handle));
+    var restored_snapshot_request = snapshotRequest(0);
+    var restored_snapshot: c_api.ZideTerminalSnapshot = .{};
+    try std.testing.expectEqual(@as(c_int, 0), c_api.zide_terminal_snapshot_acquire(handle, &restored_snapshot_request, &restored_snapshot));
+    defer c_api.zide_terminal_snapshot_release(&restored_snapshot);
+    const restored_row0 = try snapshotRowText(std.testing.allocator, &restored_snapshot, 0);
+    defer std.testing.allocator.free(restored_row0);
+    try std.testing.expectEqualStrings(live_row0, restored_row0);
+}
+
 test "ffi viewport control rejects pinned scrollback offset in alt screen" {
     try app_logger.setConsoleFilterString("none");
     try app_logger.setFileFilterString("none");
@@ -592,6 +658,25 @@ fn snapshotRequest(include_flags: u32) c_api.ZideTerminalSnapshotRequest {
         .struct_size = @sizeOf(c_api.ZideTerminalSnapshotRequest),
         .include_flags = include_flags,
     };
+}
+
+fn snapshotRowText(allocator: std.mem.Allocator, snapshot: *const c_api.ZideTerminalSnapshot, row: usize) ![]u8 {
+    var line = std.ArrayList(u8).empty;
+    defer line.deinit(allocator);
+
+    const cols: usize = @intCast(snapshot.cols);
+    var col: usize = 0;
+    while (col < cols) : (col += 1) {
+        const idx = row * cols + col;
+        const cell = snapshot.cells.?[idx];
+        if (cell.width == 0) continue;
+        const cp = cell.codepoint;
+        try line.append(allocator, if (cp == 0 or cp > 0x7f) ' ' else @intCast(cp));
+    }
+    while (line.items.len > 0 and line.items[line.items.len - 1] == ' ') {
+        _ = line.pop();
+    }
+    return line.toOwnedSlice(allocator);
 }
 
 fn expectSnapshotRowText(snapshot: *const c_api.ZideTerminalSnapshot, row: usize, expected: []const u8) !void {

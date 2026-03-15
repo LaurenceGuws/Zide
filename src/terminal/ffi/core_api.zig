@@ -11,6 +11,10 @@ const MetadataOwner = shared.MetadataOwner;
 const ScrollbackOwner = shared.ScrollbackOwner;
 const EventOwner = shared.EventOwner;
 
+fn currentPublishedGeneration(handle: *shared.Handle) u64 {
+    return handle.session.publishedGeneration();
+}
+
 pub fn create(config: ?*const shared.CreateConfig, out_handle: *?*shared.ZideTerminalHandle) shared.Status {
     const log = app_logger.logger("terminal.ffi");
     out_handle.* = null;
@@ -56,7 +60,7 @@ pub fn create(config: ?*const shared.CreateConfig, out_handle: *?*shared.ZideTer
         .exit_delivered = false,
     };
     session.attachExternalTransport();
-    handle.last_generation = session.snapshot().generation;
+    handle.last_generation = session.publishedGeneration();
     const initial_metadata = session.copyMetadata(allocator, &handle.last_title, &handle.last_cwd) catch |err| {
         log.logf(.warning, "create metadata copy failed err={s}", .{@errorName(err)});
         return .out_of_memory;
@@ -69,7 +73,7 @@ pub fn create(config: ?*const shared.CreateConfig, out_handle: *?*shared.ZideTer
 
 pub fn presentAck(handle: ?*shared.ZideTerminalHandle, generation: u64) shared.Status {
     const h = shared.fromOpaque(handle) orelse return .invalid_argument;
-    const published_generation = h.session.snapshot().generation;
+    const published_generation = currentPublishedGeneration(h);
     if (generation > published_generation) return .invalid_argument;
     if (generation < h.last_acknowledged_generation) return .invalid_argument;
     h.last_acknowledged_generation = generation;
@@ -84,13 +88,13 @@ pub fn acknowledgedGeneration(handle: ?*shared.ZideTerminalHandle, out_generatio
 
 pub fn publishedGeneration(handle: ?*shared.ZideTerminalHandle, out_generation: *u64) shared.Status {
     const h = shared.fromOpaque(handle) orelse return .invalid_argument;
-    out_generation.* = h.session.snapshot().generation;
+    out_generation.* = currentPublishedGeneration(h);
     return .ok;
 }
 
 pub fn redrawState(handle: ?*shared.ZideTerminalHandle, out_state: *shared.RedrawState) shared.Status {
     const h = shared.fromOpaque(handle) orelse return .invalid_argument;
-    const published_generation = h.session.snapshot().generation;
+    const published_generation = currentPublishedGeneration(h);
     const acknowledged_generation = h.last_acknowledged_generation;
     out_state.* = .{
         .abi_version = shared.redraw_state_abi_version,
@@ -119,7 +123,7 @@ pub fn closeConfirmSignals(handle: ?*shared.ZideTerminalHandle, out_signals: *sh
 
 pub fn needsRedraw(handle: ?*shared.ZideTerminalHandle) u8 {
     const h = shared.fromOpaque(handle) orelse return 0;
-    const published_generation = h.session.snapshot().generation;
+    const published_generation = currentPublishedGeneration(h);
     return @intFromBool(published_generation != h.last_acknowledged_generation);
 }
 
@@ -175,8 +179,14 @@ pub fn snapshotAcquire(handle: ?*shared.ZideTerminalHandle, request: ?*const sha
     const req = request orelse return .invalid_argument;
     if (req.abi_version != shared.snapshot_abi_version) return .invalid_argument;
     if (req.struct_size != @sizeOf(shared.SnapshotRequest)) return .invalid_argument;
-    const snapshot = h.session.snapshot();
     const allocator = h.allocator;
+
+    var cache = terminal.RenderCache.init();
+    defer cache.deinit(allocator);
+    const published = h.session.copyPublishedRenderCache(&cache) catch |err| {
+        log.logf(.warning, "snapshot published cache copy failed err={s}", .{@errorName(err)});
+        return shared.mapError(err);
+    };
 
     const owner = allocator.create(SnapshotOwner) catch |err| {
         log.logf(.warning, "snapshot owner alloc failed err={s}", .{@errorName(err)});
@@ -184,13 +194,13 @@ pub fn snapshotAcquire(handle: ?*shared.ZideTerminalHandle, request: ?*const sha
     };
     errdefer allocator.destroy(owner);
 
-    const cell_count = snapshot.cells.len;
+    const cell_count = cache.cells.items.len;
     const cells = allocator.alloc(shared.Cell, cell_count) catch |err| {
         log.logf(.warning, "snapshot cells alloc failed count={d} err={s}", .{ cell_count, @errorName(err) });
         return .out_of_memory;
     };
     errdefer allocator.free(cells);
-    for (snapshot.cells, 0..) |cell, i| {
+    for (cache.cells.items, 0..) |cell, i| {
         cells[i] = mapCell(cell);
     }
 
@@ -230,27 +240,27 @@ pub fn snapshotAcquire(handle: ?*shared.ZideTerminalHandle, request: ?*const sha
     out_snapshot.* = .{
         .abi_version = shared.snapshot_abi_version,
         .struct_size = @sizeOf(shared.Snapshot),
-        .rows = @intCast(snapshot.rows),
-        .cols = @intCast(snapshot.cols),
-        .generation = snapshot.generation,
+        .rows = @intCast(cache.rows),
+        .cols = @intCast(cache.cols),
+        .generation = published.generation,
         .cell_count = cell_count,
         .cells = if (cell_count == 0) null else cells.ptr,
-        .cursor_row = @intCast(snapshot.cursor.row),
-        .cursor_col = @intCast(snapshot.cursor.col),
-        .cursor_visible = @intFromBool(snapshot.cursor_visible),
-        .cursor_shape = switch (snapshot.cursor_style.shape) {
+        .cursor_row = @intCast(cache.cursor.row),
+        .cursor_col = @intCast(cache.cursor.col),
+        .cursor_visible = @intFromBool(cache.cursor_visible),
+        .cursor_shape = switch (cache.cursor_style.shape) {
             .block => 0,
             .underline => 1,
             .bar => 2,
         },
-        .cursor_blink = @intFromBool(snapshot.cursor_style.blink),
-        .alt_active = @intFromBool(snapshot.alt_active),
-        .screen_reverse = @intFromBool(snapshot.screen_reverse),
-        .has_damage = @intFromBool(snapshot.damage.start_row <= snapshot.damage.end_row and snapshot.damage.start_col <= snapshot.damage.end_col),
-        .damage_start_row = @intCast(snapshot.damage.start_row),
-        .damage_end_row = @intCast(snapshot.damage.end_row),
-        .damage_start_col = @intCast(snapshot.damage.start_col),
-        .damage_end_col = @intCast(snapshot.damage.end_col),
+        .cursor_blink = @intFromBool(cache.cursor_style.blink),
+        .alt_active = @intFromBool(cache.alt_active),
+        .screen_reverse = @intFromBool(cache.screen_reverse),
+        .has_damage = @intFromBool(cache.damage.start_row <= cache.damage.end_row and cache.damage.start_col <= cache.damage.end_col),
+        .damage_start_row = @intCast(cache.damage.start_row),
+        .damage_end_row = @intCast(cache.damage.end_row),
+        .damage_start_col = @intCast(cache.damage.start_col),
+        .damage_end_col = @intCast(cache.damage.end_col),
         .title_ptr = if (title.len == 0) null else title.ptr,
         .title_len = title.len,
         .cwd_ptr = if (cwd.len == 0) null else cwd.ptr,

@@ -94,7 +94,7 @@ pub fn setScrollOffsetLocked(self: anytype, offset: usize) void {
     self.view_cache_request_offset.store(@intCast(after), .release);
     self.view_cache_pending.store(true, .release);
     self.io_wait_cond.signal();
-    self.updateViewCacheForScroll();
+    self.updateViewCacheForScrollLocked();
     const log = app_logger.logger("terminal.core");
     const max_offset = self.core.maxScrollbackOffset(self.core.primary.grid.rows, self.core.primary.grid.cols, self.core.primary.defaultCell());
     log.logf(.debug, "set scroll offset={d} max={d}", .{ after, max_offset });
@@ -154,7 +154,7 @@ pub fn scrollByLocked(self: anytype, delta: isize) void {
     self.view_cache_request_offset.store(@intCast(after), .release);
     self.view_cache_pending.store(true, .release);
     self.io_wait_cond.signal();
-    self.updateViewCacheForScroll();
+    self.updateViewCacheForScrollLocked();
     const log = app_logger.logger("terminal.core");
     const max_offset = self.core.maxScrollbackOffset(self.core.primary.grid.rows, self.core.primary.grid.cols, self.core.primary.defaultCell());
     log.logf(.debug, "scroll by delta={d} offset={d} max={d}", .{ delta, after, max_offset });
