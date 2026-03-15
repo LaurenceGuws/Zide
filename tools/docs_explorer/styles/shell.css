@@ -106,6 +106,7 @@ body {
 }
 
 .content {
+  width: 100%;
   min-width: 0;
   overflow: visible;
   background:
@@ -137,15 +138,23 @@ body {
   box-shadow: 0 1px 0 rgba(255, 255, 255, 0.03);
 }
 
+.content-head > div:first-child {
+  min-width: 0;
+  flex: 1 1 auto;
+}
+
 .content-title-row {
   display: flex;
   align-items: center;
   gap: 10px;
   margin-bottom: 2px;
+  min-width: 0;
 }
 
 .content-head h1 {
   margin: 0;
+  min-width: 0;
+  flex: 1 1 auto;
   font-size: 1.45rem;
   line-height: 1.05;
   letter-spacing: -0.03em;
@@ -156,15 +165,19 @@ body {
   flex-wrap: wrap;
   align-items: center;
   gap: 0.32rem;
+  min-width: 0;
+  max-width: 100%;
 }
 
 .doc-breadcrumb-part {
   color: var(--muted);
+  overflow-wrap: anywhere;
 }
 
 .doc-breadcrumb-link {
   color: var(--muted);
   text-decoration: none;
+  overflow-wrap: anywhere;
 }
 
 .doc-breadcrumb-link:visited {
@@ -181,6 +194,7 @@ body {
 
 .doc-breadcrumb-current {
   color: var(--ink);
+  overflow-wrap: anywhere;
 }
 
 .content-head p {
