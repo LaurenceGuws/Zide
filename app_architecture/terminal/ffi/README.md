@@ -7,4 +7,4 @@ This folder groups terminal bridge and ABI authority docs.
 - `EVENT_ABI.md` — exported event buffer layout and payload semantics
 - `SNAPSHOT_ABI.md` — exported snapshot layout and ownership rules
 - `PTY_ABI.md` — PTY/session ownership model for the bridge
-- `FLUTTER_ADAPTER_NOTES.md` — host-adapter notes for Flutter-style consumers
+- [`/home/home/personal/zide/docs/reference/terminal_flutter_adapter_notes.md`](/home/home/personal/zide/docs/reference/terminal_flutter_adapter_notes.md) — host-adapter notes for Flutter-style consumers
