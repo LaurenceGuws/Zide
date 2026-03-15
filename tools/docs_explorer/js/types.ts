@@ -1,5 +1,11 @@
 export type ThemeName = "dark" | "light";
 export type DocumentStatus = "idle" | "loading" | "ready" | "error";
+export type SearchStatus =
+  | "idle"
+  | "loading"
+  | "ready"
+  | "error"
+  | "unavailable";
 
 export type ProjectPalette = {
   accent?: string;
@@ -46,6 +52,12 @@ export type AppState = {
   search: {
     query: string;
   };
+  textSearch: {
+    query: string;
+    open: boolean;
+    status: SearchStatus;
+    selectedIndex: number;
+  };
   tree: {
     filter: string;
     activePath: string | null;
@@ -71,6 +83,10 @@ export type AppShell = {
   sourceLinkEl: HTMLAnchorElement;
   sourceLinkIconEl: HTMLElement;
   searchEl: HTMLInputElement;
+  globalSearchEl: HTMLInputElement;
+  globalSearchModalEl: HTMLElement;
+  globalSearchResultsEl: HTMLElement;
+  globalSearchStatusEl: HTMLElement;
   optionsToggleEl: HTMLButtonElement;
   optionsToggleIconEl: HTMLElement;
   optionsMenuEl: HTMLElement;
@@ -83,3 +99,23 @@ export type AppShell = {
   highlightDarkThemeEl: HTMLLinkElement;
   highlightLightThemeEl: HTMLLinkElement;
 };
+<<<<<<< HEAD:tools/docs_explorer/js/types.ts
+=======
+
+export type DocController = {
+  install: () => void;
+  renderTree: () => void;
+  renderCurrentDoc: () => Promise<void>;
+  rerenderDiagramsForTheme: () => Promise<void>;
+};
+
+export type SearchHit = {
+  path: string;
+  line: number;
+  column: number;
+  preview: string;
+  matchText: string;
+  start: number;
+  end: number;
+};
+>>>>>>> cba2f82 (Add docs explorer ripgrep search):tools/docs_explorer/ts/shared/types.ts

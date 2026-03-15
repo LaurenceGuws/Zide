@@ -4,6 +4,8 @@
   "repoAbsolutePath": "/home/home/personal/zide",
   "repoBasePath": "../../",
   "repoUrl": "https://github.com/LaurenceGuws/Zide",
+  "supportUrl": "https://ko-fi.com/laurencegouws",
+  "supportLabel": "Support development",
   "runtimeMode": "local-dev",
   "defaultDoc": "README.md",
   "theme": {

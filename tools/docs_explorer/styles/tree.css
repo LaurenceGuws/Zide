@@ -1,12 +1,15 @@
 .search-wrap {
   padding: 8px 14px 6px;
   display: block;
+  background: transparent;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
 }
 
 #search {
   width: 100%;
-  border: 1px solid var(--line);
-  background: #0b1016;
+  border: 1px solid var(--control-border-strong);
+  background: var(--control-surface);
   color: var(--ink);
   border-radius: 0;
   padding: 8px 10px;
@@ -22,6 +25,8 @@
 .tree {
   overflow: auto;
   padding: 4px 8px 14px;
+  --tree-elbow-top: 16px;
+  --tree-branch-lane-x: 12px;
 }
 
 .tree ul {
@@ -36,19 +41,26 @@
 
 .tree-item,
 .tree-folder {
-  margin: 1px 0;
+  margin: 0;
+}
+
+.tree-item {
+  position: relative;
 }
 
 .tree-folder > summary {
   list-style: none;
   cursor: pointer;
   user-select: none;
+  position: relative;
   display: flex;
   align-items: center;
   gap: 6px;
   padding: 5px 7px;
   color: var(--ink);
   border: 1px solid transparent;
+  border-left-color: color-mix(in srgb, var(--line) 18%, transparent 82%);
+  border-bottom-color: color-mix(in srgb, var(--line) 18%, transparent 82%);
   background: transparent;
   font-size: 0.84rem;
 }
@@ -58,13 +70,23 @@
 }
 
 .tree-folder > summary:hover {
-  background: var(--surface-hover);
-  border-color: var(--surface-border);
+  background: var(--tree-row-hover);
+  border-left-color: color-mix(in srgb, var(--line) 26%, transparent 74%);
+  border-bottom-color: color-mix(in srgb, var(--line) 26%, transparent 74%);
 }
 
-.tree-folder[open] > summary {
-  background: var(--surface-hi);
-  border-color: var(--surface-border);
+.tree-folder.active-leaf-folder[open] > summary {
+  background: var(--tree-row-open);
+  border-left-color: color-mix(
+    in srgb,
+    var(--tree-connector-active) 34%,
+    transparent 66%
+  );
+  border-bottom-color: color-mix(
+    in srgb,
+    var(--tree-connector-active) 34%,
+    transparent 66%
+  );
 }
 
 .folder-caret {
@@ -75,7 +97,7 @@
   height: 10px;
   flex: 0 0 10px;
   opacity: 0.82;
-  color: color-mix(in srgb, var(--ink) 72%, var(--muted) 28%);
+  color: var(--tree-caret);
   transition:
     transform 120ms ease,
     color 120ms ease,
@@ -96,7 +118,7 @@
   min-height: 14px;
   flex: 0 0 14px;
   opacity: 0.86;
-  color: color-mix(in srgb, var(--ink) 68%, var(--muted) 32%);
+  color: var(--tree-icon);
   transition:
     color 120ms ease,
     opacity 120ms ease;
@@ -107,11 +129,11 @@
 .tree-folder[open] > summary .folder-caret,
 .tree-folder[open] > summary .folder-icon {
   opacity: 1;
-  color: var(--active-link);
+  color: var(--tree-icon-active);
 }
 
 .tree-folder > summary:hover .folder-label,
-.tree-folder[open] > summary .folder-label {
+.tree-folder.active-leaf-folder[open] > summary .folder-label {
   color: var(--ink);
 }
 
@@ -125,17 +147,18 @@
 
 .folder-children {
   margin-left: 12px;
-  padding-left: 8px;
-  border-left: 1px solid var(--tree-guide);
-  margin-top: 2px;
+  padding-left: 12px;
+  border-left: 1px solid transparent;
+  margin-top: 0;
+  position: relative;
 }
 
 .tree-folder[open] > .folder-children {
-  border-left-color: var(--tree-guide);
+  border-left-color: transparent;
 }
 
 .tree-folder.active-branch > .folder-children {
-  border-left-color: var(--tree-active);
+  border-left-color: transparent;
 }
 
 .folder-dir-list,
@@ -146,11 +169,11 @@
 }
 
 .folder-file-list {
-  margin-top: 3px;
+  margin-top: 0;
 }
 
 .folder-file-list .tree-item:first-child {
-  margin-top: 2px;
+  margin-top: 0;
 }
 
 .tree a {
@@ -160,6 +183,8 @@
   text-decoration: none;
   border-radius: 0;
   border: 1px solid transparent;
+  border-left-color: color-mix(in srgb, var(--line) 18%, transparent 82%);
+  border-bottom-color: color-mix(in srgb, var(--line) 18%, transparent 82%);
   background: transparent;
   font-size: 0.82rem;
   line-height: 1.28;
@@ -173,6 +198,51 @@
   border-left: 1px solid transparent;
 }
 
+.folder-children > .folder-dir-list > .tree-item::before,
+.folder-children > .folder-file-list > .tree-item::before {
+  content: "";
+  position: absolute;
+  left: -11px;
+  top: var(--tree-elbow-top);
+  width: 9px;
+  height: 1px;
+  background: transparent;
+}
+
+.folder-children > .folder-dir-list > .tree-item.open-folder-row::after,
+.folder-children > .folder-file-list > .tree-item.open-folder-row::after {
+  content: "";
+  position: absolute;
+  left: calc(var(--tree-branch-lane-x) * -1);
+  top: var(--tree-elbow-top);
+  bottom: 0;
+  width: 1px;
+  background: var(--tree-caret);
+  opacity: 0.82;
+}
+
+.folder-children > .folder-dir-list > .tree-item.active-stem::after,
+.folder-children > .folder-file-list > .tree-item.active-stem::after {
+  content: "";
+  position: absolute;
+  left: calc(var(--tree-branch-lane-x) * -1);
+  top: 0;
+  bottom: 0;
+  width: 1px;
+  background: var(--tree-connector-active);
+}
+
+.folder-children > .folder-dir-list > .tree-item.active-path-child::after,
+.folder-children > .folder-file-list > .tree-item.active-path-child::after {
+  bottom: auto;
+  height: calc(var(--tree-elbow-top) + 1px);
+}
+
+.folder-children > .folder-dir-list > .tree-item.active-path-child::before,
+.folder-children > .folder-file-list > .tree-item.active-path-child::before {
+  background: var(--tree-connector-active);
+}
+
 .doc-link-label,
 .doc-link-detail {
   display: block;
@@ -183,15 +253,26 @@
 }
 
 .tree a:hover {
-  border-color: var(--surface-border);
-  background: var(--surface-hover);
+  background: var(--tree-row-hover);
+  border-left-color: color-mix(in srgb, var(--line) 26%, transparent 74%);
+  border-bottom-color: color-mix(in srgb, var(--line) 26%, transparent 74%);
 }
 
 .tree a.active {
-  border-color: var(--tree-active);
-  background: linear-gradient(90deg, var(--accent-soft) 0%, transparent 100%);
+  background: var(--tree-link-active-bg);
   color: var(--active-link);
-  border-left-color: var(--tree-active);
+  border-left-color: color-mix(
+    in srgb,
+    var(--tree-connector-active) 34%,
+    transparent 66%
+  );
+  border-bottom-color: color-mix(
+    in srgb,
+    var(--tree-connector-active) 34%,
+    transparent 66%
+  );
+  border-right-color: transparent;
+  border-top-color: transparent;
 }
 
 .tree small {
@@ -205,11 +286,7 @@
   + .folder-children
   > .folder-dir-list
   + .folder-file-list {
-  padding-top: 2px;
-}
-
-:root[data-theme="light"] #search {
-  background: #fdfaf4;
+  padding-top: 0;
 }
 
 .folder-caret > svg,

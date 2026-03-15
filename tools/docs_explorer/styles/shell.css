@@ -7,20 +7,46 @@ html {
 
 body {
   margin: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font: 15px/1.6 var(--font-ui);
+}
+
+.app-shell {
+  min-height: 100vh;
   background:
     radial-gradient(
       circle at top left,
-      rgba(212, 122, 69, 0.12) 0,
-      transparent 24%
+      var(--shell-atmo-accent) 0,
+      transparent 28%
     ),
     radial-gradient(
       circle at top right,
-      rgba(71, 112, 166, 0.12) 0,
-      transparent 20%
+      var(--shell-atmo-cool) 0,
+      transparent 24%
     ),
-    linear-gradient(180deg, #0c1015 0%, var(--bg) 100%);
-  color: var(--ink);
-  font: 15px/1.6 var(--font-ui);
+    linear-gradient(180deg, var(--shell-atmo-depth) 0%, var(--bg) 100%);
+}
+
+.app-head {
+  position: sticky;
+  top: 0;
+  z-index: 30;
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  padding: 10px 16px 8px;
+  background: var(--shell-header-surface);
+  backdrop-filter: blur(28px) saturate(138%);
+  -webkit-backdrop-filter: blur(28px) saturate(138%);
+  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.03);
+}
+
+.app-head > div:first-child {
+  min-width: 0;
+  flex: 1 1 auto;
 }
 
 .app {
@@ -28,14 +54,7 @@ body {
   grid-template-columns: var(--sidebar-width, 300px) 8px minmax(0, 1fr);
   gap: 0;
   width: 100%;
-  min-height: 100vh;
-  background:
-    linear-gradient(
-      180deg,
-      rgba(255, 255, 255, 0.02) 0%,
-      rgba(255, 255, 255, 0) 100%
-    ),
-    var(--panel);
+  min-height: calc(100vh - 58px);
   box-shadow: var(--shadow);
 }
 
@@ -47,13 +66,9 @@ body {
   overflow: hidden;
   display: flex;
   flex-direction: column;
-  background:
-    linear-gradient(
-      180deg,
-      rgba(255, 255, 255, 0.018) 0%,
-      rgba(255, 255, 255, 0) 100%
-    ),
-    var(--panel-2);
+  background: var(--pane-sidebar-surface);
+  backdrop-filter: blur(22px) saturate(132%);
+  -webkit-backdrop-filter: blur(22px) saturate(132%);
 }
 
 .sidebar-resizer {
@@ -61,7 +76,7 @@ body {
   width: 8px;
   min-width: 8px;
   cursor: col-resize;
-  background: var(--panel-2);
+  background: var(--pane-resizer-surface);
 }
 
 .sidebar-resizer::before {
@@ -104,103 +119,58 @@ body {
   line-height: 1.08;
   letter-spacing: -0.015em;
 }
+
 .content {
   width: 100%;
   min-width: 0;
   overflow: visible;
-  background:
-    linear-gradient(
-      180deg,
-      rgba(255, 255, 255, 0.012) 0%,
-      rgba(255, 255, 255, 0) 100%
-    ),
-    var(--panel);
-}
-
-.content-head {
-  position: sticky;
-  top: 0;
-  z-index: 20;
-  display: flex;
-  gap: 12px;
-  align-items: end;
-  justify-content: space-between;
-  flex-wrap: wrap;
-  padding: 16px 20px 12px;
-  background:
-    linear-gradient(135deg, rgba(212, 122, 69, 0.08) 0%, transparent 54%),
-    linear-gradient(
-      180deg,
-      color-mix(in srgb, var(--panel-2) 92%, var(--bg) 8%) 0%,
-      var(--panel) 100%
-    );
-  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.03);
-}
-
-.content-head > div:first-child {
-  min-width: 0;
-  flex: 1 1 auto;
+  background: var(--pane-content-surface);
+  backdrop-filter: blur(24px) saturate(128%);
+  -webkit-backdrop-filter: blur(24px) saturate(128%);
 }
 
 .content-title-row {
   display: flex;
   align-items: center;
-  gap: 10px;
-  margin-bottom: 2px;
+  gap: 8px;
+  margin-bottom: 0;
   min-width: 0;
+  flex-wrap: nowrap;
 }
 
-.content-head h1 {
+.app-head h1 {
   margin: 0;
   min-width: 0;
-  flex: 1 1 auto;
-  font-size: 1.45rem;
-  line-height: 1.05;
-  letter-spacing: -0.03em;
-}
-
-.doc-breadcrumb {
-  display: inline-flex;
-  flex-wrap: wrap;
+  flex: 0 1 auto;
+  display: flex;
   align-items: center;
-  gap: 0.32rem;
-  min-width: 0;
-  max-width: 100%;
+  gap: 0;
+  font-size: 1.2rem;
+  line-height: 1;
+  letter-spacing: -0.024em;
 }
 
-.doc-breadcrumb-part {
-  color: var(--muted);
-  overflow-wrap: anywhere;
-}
-
-.doc-breadcrumb-link {
-  color: var(--muted);
-  text-decoration: none;
-  overflow-wrap: anywhere;
-}
-
-.doc-breadcrumb-link:visited {
-  color: var(--muted);
-}
-
-.doc-breadcrumb-link:hover {
-  color: var(--active-link);
-}
-
-.doc-breadcrumb-sep {
-  color: color-mix(in srgb, var(--muted) 74%, transparent 26%);
-}
-
-.doc-breadcrumb-current {
+.app-wordmark {
+  display: inline-flex;
+  align-items: center;
+  gap: 0;
   color: var(--ink);
-  overflow-wrap: anywhere;
+  white-space: nowrap;
+  line-height: 1;
 }
 
-.content-head p {
+.app-wordmark-mark {
+  width: 38px;
+  height: 38px;
+  flex: 0 0 38px;
+  align-self: center;
+}
+
+.app-head p {
   margin: 0;
   color: var(--ink);
-  font-size: 0.95rem;
-  line-height: 1.3;
+  font-size: 0.84rem;
+  line-height: 1.2;
   opacity: 0.88;
 }
 
@@ -208,34 +178,11 @@ body {
   display: flex;
   gap: 6px;
   flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  flex: 1 1 320px;
 }
 
-:root[data-theme="light"] .app,
-:root[data-theme="light"] .sidebar,
-:root[data-theme="light"] .content {
-  background:
-    linear-gradient(
-      180deg,
-      rgba(255, 255, 255, 0.25) 0%,
-      rgba(255, 255, 255, 0) 100%
-    ),
-    var(--panel);
-}
-
-:root[data-theme="light"] .sidebar {
-  background:
-    linear-gradient(
-      180deg,
-      rgba(255, 255, 255, 0.35) 0%,
-      rgba(255, 255, 255, 0) 100%
-    ),
-    var(--panel-3);
-}
-
-:root[data-theme="light"] .sidebar-resizer {
-  background: var(--panel-3);
-}
-
-:root[data-theme="light"] .content-head {
+:root[data-theme="light"] .app-head {
   box-shadow: 0 1px 0 rgba(24, 33, 38, 0.06);
 }

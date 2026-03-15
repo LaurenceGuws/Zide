@@ -9,22 +9,35 @@ requiring a frontend framework or backend service.
 
 - `index.html`
   - minimal shell and mount points only
-- `js/app_shell.js`
+- `ts/shell/shell_dom.ts`
   - DOM lookup
-  - shell branding/title/icon wiring
+  - required shell element contract
+- `ts/shell/shell_icons.ts`
+  - shell icon asset injection
+  - shared icon sizing normalization
+- `ts/shell/app_shell.ts`
+  - shell branding/title/source-link wiring
   - shell theme/bootstrap initialization
-- `js/app.js`
+- `ts/app.ts`
   - application composition root
-  - runtime wiring between state, shell, docs, layout, and options
+  - top-level runtime sequencing only
+- `ts/app_bootstrap.ts`
+  - startup assembly for shell, theme, controller, and docs runtime
 - `tsconfig.json`
   - minimal TypeScript compile config for docs explorer
   - emits browser ESM into `build/js`
 - `styles/base.css`
   - stylesheet manifest/import root
+- `design/README.md`
+  - focused design authority for explorer widget/system seams
+- `design/TREE_WIDGET.md`
+  - current tree connector/highlight direction
 - `styles/theme.css`
-  - theme tokens and theme-level defaults
+  - theme tokens and derived shell/control/viewer surface formulas
 - `styles/shell.css`
-  - shell layout and outer chrome
+  - app-shell layout and outer chrome
+  - atmospheric background field
+  - app-level header above sidebar and content
 - `styles/tree.css`
   - sidebar search/tree styling
 - `styles/controls.css`
@@ -33,49 +46,66 @@ requiring a frontend framework or backend service.
   - rendered markdown content styling
 - `styles/responsive.css`
   - responsive and collapsed-sidebar rules
-- `js/main.js`
+- `ts/main.ts`
   - tiny entrypoint only
-- `js/config.js`
+- `ts/config.ts`
   - project/docs index loading
-- `js/state.js`
+- `ts/search/doc_search.ts`
+  - ripgrep-backed header search
+  - streaming NDJSON client
+  - modal rendering and keyboard navigation
+- `ts/state.ts`
   - app-state defaults and persistence helpers
-- `js/types.js`
-  - shared JSDoc typedefs for state/config/shell contracts
-- `js/layout.js`
+- `ts/shared/types.ts`
+  - shared type contracts for state/config/shell/runtime seams
+- `ts/layout.ts`
   - sidebar width/collapse behavior
-- `js/options_menu.js`
+- `ts/options_menu.ts`
   - options popover behavior
-- `js/doc_controller.js`
-  - document loading
-  - hash/search wiring
+- `ts/docs/doc_controller.ts`
+  - small composition seam for docs routing + render lifecycle
   - document tree refresh
   - theme-triggered Mermaid rerender delegation
-- `js/view_state.js`
-  - document header/status state transitions
-  - document chrome rendering from explicit state
-- `js/tree_state.js`
+- `ts/docs/doc_routing.ts`
+  - hash/search wiring
+  - route/search events separated from document fetch/render lifecycle
+- `ts/docs/doc_render_cycle.ts`
+  - current-doc resolution
+  - document loading lifecycle wiring
+  - document chrome update callbacks
+  - highlight trigger on ready
+- `ts/docs/view_state.ts`
+  - document status state transitions
+  - small shell-header document chrome rendering from explicit state
+- `ts/tree/tree_state.ts`
   - tree filter/active-path state transitions
   - tree rendering from explicit state
-- `js/viewer_state.js`
+- `ts/tree/tree_model.ts`
+  - tree model creation from doc paths
+- `ts/tree/tree_markup.ts`
+  - tree HTML markup generation from the tree model
+- `ts/docs/viewer_state.ts`
   - viewer body render state transitions
   - loading/error/content HTML rendering from explicit state
-- `js/runtime_info.ts`
-  - small runtime/about metadata surface in the options menu
-- `js/tree.js`
+- `ts/tree/tree.ts`
   - tree rendering and active-node sync
-- `js/viewer.js`
+- `ts/docs/viewer.ts`
   - document loading and viewer updates
-- `js/theme.js`
+- `ts/theme/theme.ts`
   - theme selection and persistence
-- `js/mermaid.js`
+- `ts/docs/mermaid.ts`
   - Mermaid initialization and rerendering
-- `js/markdown.js`
+- `ts/docs/markdown.ts`
   - Markdown renderer setup
-- `js/utils.js`
+- `ts/shared/utils.ts`
   - small shared helpers
+- `ts/shared/vendor_types.ts`
+  - typed browser-vendor seams
+- `ts/shared/external.d.ts`
+  - typed ESM/CDN module declarations
 - `config/project.json`
   - project-specific title/icon/defaults
-  - project-specific palette overrides for light/dark theme identity
+  - project-specific light/dark base-palette overrides
   - explicit `repoBasePath` for hosted/local content fetches
 - `config/project.pages.json`
   - alternate hosted/pages config without mutating local defaults
@@ -83,6 +113,7 @@ requiring a frontend framework or backend service.
   - project-specific doc list
 - `docs_explorer.py`
   - local launcher
+  - local ripgrep search endpoint
 
 ## Runtime Ownership
 
@@ -106,6 +137,7 @@ The launcher is support infrastructure only.
 It should own:
 
 - local HTTP serving
+- local ripgrep search endpoint
 - optional future helper commands
 
 It should not own:
@@ -115,35 +147,45 @@ It should not own:
 - navigation decisions
 - rendering decisions
 
+The browser app still owns the search UX:
+
+- query state
+- modal state
+- result rendering
+- result selection/navigation
+
 ## State Model Direction
 
-The app should converge toward one explicit state object instead of scattered
-DOM-driven updates.
+The app should keep converging toward one explicit state object instead of
+scattered DOM-driven updates.
 
-Recommended app state shape:
+Current app state shape is centered on:
 
-- `project`
-- `docs`
 - `current_doc`
 - `theme`
 - `sidebar.width`
 - `sidebar.collapsed`
 - `options_menu.open`
 - `search.query`
+- `text_search.query`
+- `text_search.open`
+- `text_search.status`
+- `text_search.selected_index`
+- `document.title`
+- `document.subtitle`
+- `document.raw_link`
+- `viewer.html`
+- `tree.filter`
+- `tree.active_path`
+- `tree.expanded_paths`
 
-The first explicit state step is now in `js/state.js`, but transitions are
-still only partially centralized. The next goal is to make the remaining view
-updates flow through clearer state/controller seams instead of ad hoc event
-handlers.
+The next cleanup goal is not "add more features" but to keep reducing places
+where DOM structure or CSS-specific assumptions leak across module boundaries.
 
 Theme is now part of explicit app state rather than being owned only through
-DOM reads and local storage helpers.
-Document header/load state is now also moving into explicit app state instead
-of being mutated directly inside document-loading code.
-Tree filter/active state is moving the same way so the tree is no longer a
-special-case DOM island.
-Viewer body rendering is now moving the same way, reducing the amount of inline
-presentation logic in `viewer.js`.
+DOM reads and local storage helpers. Document chrome, tree state, and viewer
+body state now also flow through explicit controller/state seams instead of
+being mutated ad hoc inside the fetch/render path.
 
 Recommended pattern:
 
@@ -156,35 +198,27 @@ is enough.
 
 The current typing direction is:
 
-- the stable center has started moving to `.ts`
+- the browser app source lives under `ts/`
+- source is grouped by concern instead of one flat source directory
 - browser output is compiled into `build/js`
-- remaining `.js` modules can move over incrementally
-- no long-lived `checkJs` path
+- there is no long-lived `checkJs` path anymore
 
 ## Typing Direction
 
-Do not move to TypeScript before the large file splits and state-boundary work
-are done.
+The original caution about “architecture first, types second” still applies,
+but the core move to real TypeScript has now happened.
 
 Reason:
 
 - current risk is muddled ownership and mixed concerns, not lack of type syntax
-- moving to TypeScript too early would type temporary seams and then force those
-  types to be rewritten during the refactor
-- the cleaner order is:
-  - split large files
-  - define explicit runtime state ownership
-  - stabilize module contracts
-  - then move to real `.ts`
+- the value of `.ts` is now in keeping the new module seams explicit and harder
+  to erode
 
 Short rule:
 
 - architecture first
 - types second
-
-If the browser-side state model grows enough that contract drift becomes a real
-risk, TypeScript becomes much more attractive. Until then, keep the codebase
-light and focus on module/state shape first.
+- keep the type layer thin and aligned to stable seams
 
 ## Reuse Direction
 
@@ -200,15 +234,100 @@ It also should not require CSS edits for simple project-level branding changes.
 Hosted/local path handling should be explicit in config rather than buried in
 hardcoded relative URL helpers.
 
+## Current Shell Model
+
+The current shell should follow one simple visual rule:
+
+- the outer shell owns atmosphere
+- panes own material layers
+- small wrappers and controls should prefer transparency, border, and hover
+  state before adding their own local fill
+
+That means:
+
+- avoid per-widget decorative backgrounds when a pane/token already exists
+- keep shell/control/viewer materials derived from theme tokens
+- do not let local one-off `color-mix(...)` values grow faster than the token
+  system
+
+## Theme Ownership Rule
+
+The theme system should stay split into two layers:
+
+- config-owned base palette tokens
+  - `bg`, `bg2`
+  - `panel`, `panel2`, `panel3`
+  - `ink`, `muted`
+  - `line`, `lineSoft`
+  - `accent`, `accentSoft`, `accentStrong`
+  - `activeLink`
+  - `code`
+  - `treeActive`
+- CSS-owned derived material tokens
+  - shell atmosphere
+  - pane materials
+  - header/control surfaces
+  - menu surfaces
+  - viewer raised/callout surfaces
+
+Projects should be able to change the base palette in config. They should not
+need to define their own per-component surface formulas.
+The current config surface is intentionally the stopping point unless a real
+cross-project reuse need appears.
+
+Token usage rule:
+
+- if a component needs a new repeated surface or interaction color, add or
+  refine a named token in `styles/theme.css` first
+- only keep a component-local formula when it is truly one-off and unlikely to
+  be shared
+- prefer reducing formulas in component CSS over growing them
+
+## DOM Ownership Rule
+
+Keep raw DOM ownership narrow.
+
+Allowed direct DOM ownership seams:
+
+- `ts/shell/shell_dom.ts`
+  - required element lookup only
+- `ts/shell/shell_icons.ts`
+  - icon injection only
+- `ts/tree/tree.ts`
+  - tree HTML mount plus folder toggle listeners
+- `ts/docs/viewer.ts`
+  - viewer mount/fetch lifecycle
+- `ts/options_menu.ts`
+  - popup interaction wiring
+
+Everything else should prefer:
+
+- explicit state transitions
+- small render helpers
+- passing shell/state/controller contracts instead of querying DOM ad hoc
+
 ## Refactor Targets
 
 Current likely next candidates:
 
-- `styles/base.css`
-  - now just the stylesheet entrypoint/import manifest
-- `js/app.js`
-  - good current composition root; avoid letting it bloat back into a new
+- `design/TREE_WIDGET.md`
+  - use this as the authority for the tree connector rewrite instead of letting
+    the implementation drift through CSS-only tweaks
+- `styles/theme.css`
+  - keep the base-palette vs derived-material split obvious
+- `ts/docs/view_state.ts`
+  - keep document chrome intentionally small and avoid letting app-shell
+    branding/navigation concerns turn back into document-specific chrome
+- `ts/docs/doc_controller.ts`
+  - keep it as composition/assembly only; do not let it become the integration
+    junk drawer again
+- `ts/app.ts`
+  - keep it as composition root only; do not let it bloat back into a new
     monolith
+- `ts/tree/`
+  - keep model, markup, and DOM orchestration separate as the tree evolves
+- `ts/shell/`
+  - keep DOM lookup, icon loading, and bootstrap concerns separate
 
 ## Non-goals
 

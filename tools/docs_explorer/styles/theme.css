@@ -1,4 +1,5 @@
 :root {
+  /* Base palette */
   --font-ui: "IBM Plex Sans", "Segoe UI", sans-serif;
   --font-diagram: "IBM Plex Sans", "Segoe UI", sans-serif;
   --bg: #0d1117;
@@ -30,9 +31,40 @@
   --mermaid-cluster: #121922;
   --mermaid-cluster-border: #344153;
   --mermaid-label-bg: #11161d;
+
+  /* Derived shell/pane materials */
+  --shell-atmo-accent: color-mix(in srgb, var(--accent) 34%, transparent 66%);
+  --shell-atmo-cool: color-mix(in srgb, var(--panel-3) 24%, transparent 76%);
+  --shell-atmo-depth: color-mix(in srgb, var(--bg) 78%, black 22%);
+  --shell-header-surface: color-mix(in srgb, var(--panel) 52%, transparent 48%);
+  --pane-sidebar-surface: color-mix(in srgb, var(--panel-2) 62%, transparent 38%);
+  --pane-resizer-surface: color-mix(in srgb, var(--panel-2) 56%, transparent 44%);
+  --pane-content-surface: color-mix(in srgb, var(--panel) 38%, transparent 62%);
+  --header-control-surface: color-mix(in srgb, var(--shell-header-surface) 52%, transparent 48%);
+  --control-surface: color-mix(in srgb, var(--panel) 18%, transparent 82%);
+  --control-border: color-mix(in srgb, var(--line) 52%, transparent 48%);
+  --control-border-strong: var(--line);
+  --menu-surface: color-mix(in srgb, var(--panel-3) 88%, black 12%);
+
+  /* Viewer-specific surfaces */
+  --viewer-callout-surface: color-mix(in srgb, var(--accent-soft) 72%, transparent 28%);
+  --viewer-raised-surface: color-mix(in srgb, var(--panel-2) 76%, black 24%);
+  --tree-row-hover: color-mix(in srgb, var(--surface-hover) 58%, transparent 42%);
+  --tree-row-open: color-mix(in srgb, var(--surface-hi) 52%, transparent 48%);
+  --tree-icon: color-mix(in srgb, var(--ink) 68%, var(--muted) 32%);
+  --tree-caret: color-mix(in srgb, var(--ink) 72%, var(--muted) 28%);
+  --tree-icon-active: var(--active-link);
+  --tree-connector: color-mix(in srgb, var(--tree-guide) 88%, transparent 12%);
+  --tree-connector-active: var(--tree-active);
+  --tree-link-active-bg: linear-gradient(
+    90deg,
+    var(--viewer-callout-surface) 0%,
+    transparent 100%
+  );
 }
 
 :root[data-theme="light"] {
+  /* Base palette */
   --bg: #ece6da;
   --bg-2: #ddd6c8;
   --panel: #f6f1e6;
@@ -46,7 +78,7 @@
   --accent-soft: rgba(166, 83, 42, 0.12);
   --accent-strong: #8d401d;
   --code: #ebe3d5;
-  --shadow: 0 20px 55px rgba(41, 28, 18, 0.1);
+  --shadow: 0 24px 68px rgba(41, 28, 18, 0.14);
   --surface-hi: rgba(255, 255, 255, 0.6);
   --surface-hover: rgba(255, 255, 255, 0.72);
   --surface-border: rgba(24, 33, 38, 0.08);
@@ -62,4 +94,34 @@
   --mermaid-cluster: #f6efe4;
   --mermaid-cluster-border: #c5b49b;
   --mermaid-label-bg: #f6f1e6;
+
+  /* Derived shell/pane materials */
+  --shell-atmo-accent: color-mix(in srgb, var(--accent) 26%, transparent 74%);
+  --shell-atmo-cool: color-mix(in srgb, var(--panel-3) 30%, transparent 70%);
+  --shell-atmo-depth: color-mix(in srgb, var(--bg) 88%, white 12%);
+  --shell-header-surface: color-mix(in srgb, var(--panel) 78%, transparent 22%);
+  --pane-sidebar-surface: color-mix(in srgb, var(--panel-3) 82%, transparent 18%);
+  --pane-resizer-surface: color-mix(in srgb, var(--panel-3) 74%, transparent 26%);
+  --pane-content-surface: color-mix(in srgb, var(--panel) 58%, transparent 42%);
+  --header-control-surface: color-mix(in srgb, var(--shell-header-surface) 58%, transparent 42%);
+  --control-surface: color-mix(in srgb, var(--panel) 24%, transparent 76%);
+  --control-border: color-mix(in srgb, var(--line) 52%, transparent 48%);
+  --control-border-strong: var(--line);
+  --menu-surface: color-mix(in srgb, var(--panel-3) 90%, white 10%);
+
+  /* Viewer-specific surfaces */
+  --viewer-callout-surface: color-mix(in srgb, var(--accent-soft) 68%, transparent 32%);
+  --viewer-raised-surface: color-mix(in srgb, var(--panel) 84%, var(--panel-3) 16%);
+  --tree-row-hover: color-mix(in srgb, var(--surface-hover) 58%, transparent 42%);
+  --tree-row-open: color-mix(in srgb, var(--surface-hi) 52%, transparent 48%);
+  --tree-icon: color-mix(in srgb, var(--ink) 68%, var(--muted) 32%);
+  --tree-caret: color-mix(in srgb, var(--ink) 72%, var(--muted) 28%);
+  --tree-icon-active: var(--active-link);
+  --tree-connector: color-mix(in srgb, var(--tree-guide) 88%, transparent 12%);
+  --tree-connector-active: var(--tree-active);
+  --tree-link-active-bg: linear-gradient(
+    90deg,
+    var(--viewer-callout-surface) 0%,
+    transparent 100%
+  );
 }

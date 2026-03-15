@@ -24,117 +24,157 @@
     <link rel="stylesheet" href="./styles/base.css" />
   </head>
   <body>
-    <div class="app">
-      <aside class="sidebar">
-        <div class="search-wrap">
-          <input id="search" type="search" placeholder="Filter docs..." />
-        </div>
-        <div id="tree" class="tree"></div>
-      </aside>
-
-      <div
-        id="sidebar-resizer"
-        class="sidebar-resizer"
-        aria-hidden="true"
-      ></div>
-
-      <section class="content">
-        <div class="content-head">
-          <div>
-            <div class="content-title-row">
-              <button
-                id="sidebar-toggle"
-                class="pill icon-button sidebar-toggle"
-                type="button"
-                aria-label="Toggle navigation"
-                title="Toggle navigation"
-              >
-                <span
-                  id="sidebar-toggle-icon"
-                  class="icon-slot"
-                  aria-hidden="true"
-                ></span>
-              </button>
-              <h1 id="doc-title">Zide Docs Explorer - Docs Explorer</h1>
-            </div>
-            <p id="doc-subtitle">
-              Select a document from the left. Serve this folder with
-              <code>python3 docs_explorer.py</code> for local file loading.
-            </p>
-          </div>
-          <div class="meta-row">
+    <div class="app-shell">
+      <header class="app-head">
+        <div>
+          <div class="content-title-row">
+            <button
+              id="sidebar-toggle"
+              class="pill icon-button sidebar-toggle"
+              type="button"
+              aria-label="Toggle navigation"
+              title="Toggle navigation"
+            >
+              <span
+                id="sidebar-toggle-icon"
+                class="icon-slot"
+              aria-hidden="true"
+            ></span>
+            </button>
+            <h1 id="doc-title">Zide Docs Explorer - Docs Explorer</h1>
             <a
-              id="source-link"
-              class="pill icon-button source-link"
+              id="support-link"
+              class="pill support-link"
               href="#"
               target="_blank"
               rel="noopener noreferrer"
-              aria-label="Open source on GitHub"
-              title="Open source on GitHub"
+              hidden
             >
               <span
-                id="source-link-icon"
+                id="support-link-icon"
                 class="icon-slot"
                 aria-hidden="true"
               ></span>
+              <span id="support-link-label">Support development</span>
             </a>
-            <div class="options-wrap">
-              <button
-                id="options-toggle"
-                class="pill icon-button options-toggle"
-                type="button"
-                aria-label="Open options"
-                aria-expanded="false"
-                aria-controls="options-menu"
-              >
-                <span
-                  id="options-toggle-icon"
-                  class="icon-slot"
-                  aria-hidden="true"
-                ></span>
-              </button>
-              <div id="options-menu" class="options-menu" hidden>
-                <div id="theme-row" class="options-item options-theme-row">
-                  <span class="options-label">Theme</span>
-                  <button
-                    id="theme-toggle"
-                    class="theme-switch"
-                    type="button"
-                    aria-label="Toggle theme"
-                  >
-                    <span class="theme-switch-track">
-                      <span class="theme-switch-option theme-switch-option-dark"
-                        >Dark</span
-                      >
-                      <span
-                        class="theme-switch-option theme-switch-option-light"
-                        >Light</span
-                      >
-                      <span class="theme-switch-thumb"></span>
-                    </span>
-                  </button>
+          </div>
+          <p id="doc-subtitle">
+            Select a document from the left. Serve this folder with
+            <code>python3 docs_explorer.py</code> for local file loading.
+          </p>
+        </div>
+        <div class="meta-row">
+          <div class="header-search-wrap">
+            <input
+              id="global-search"
+              class="header-search-input"
+              type="search"
+              placeholder="rg docs..."
+              autocomplete="off"
+              spellcheck="false"
+            />
+            <div id="global-search-modal" class="search-modal" hidden>
+              <div class="search-modal-head">
+                <div id="global-search-status" class="search-modal-status">
+                  Type to search across docs.
                 </div>
-                <a
-                  class="options-item"
-                  id="raw-link"
-                  href="#"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  >Open Raw</a
-                >
               </div>
+              <div
+                id="global-search-results"
+                class="search-results"
+                role="listbox"
+                aria-label="Search results"
+              ></div>
+            </div>
+          </div>
+          <a
+            id="source-link"
+            class="pill icon-button source-link"
+            href="#"
+            target="_blank"
+            rel="noopener noreferrer"
+            aria-label="Open source on GitHub"
+            title="Open source on GitHub"
+          >
+            <span
+              id="source-link-icon"
+              class="icon-slot"
+              aria-hidden="true"
+            ></span>
+          </a>
+          <div class="options-wrap">
+            <button
+              id="options-toggle"
+              class="pill icon-button options-toggle"
+              type="button"
+              aria-label="Open options"
+              aria-expanded="false"
+              aria-controls="options-menu"
+            >
+              <span
+                id="options-toggle-icon"
+                class="icon-slot"
+                aria-hidden="true"
+              ></span>
+            </button>
+            <div id="options-menu" class="options-menu" hidden>
+              <div id="theme-row" class="options-item options-theme-row">
+                <span class="options-label">Theme</span>
+                <button
+                  id="theme-toggle"
+                  class="theme-switch"
+                  type="button"
+                  aria-label="Toggle theme"
+                >
+                  <span class="theme-switch-track">
+                    <span class="theme-switch-option theme-switch-option-dark"
+                      >Dark</span
+                    >
+                    <span class="theme-switch-option theme-switch-option-light"
+                      >Light</span
+                    >
+                    <span class="theme-switch-thumb"></span>
+                  </span>
+                </button>
+              </div>
+              <a
+                class="options-item"
+                id="raw-link"
+                href="#"
+                target="_blank"
+                rel="noopener noreferrer"
+                >Open Raw</a
+              >
             </div>
           </div>
         </div>
-        <div class="viewer" id="viewer">
-          <div class="callout">
-            This page acts as a lightweight local docs wiki. It fetches
-            repository Markdown and renders it in-place, including Mermaid
-            diagrams.
+      </header>
+
+      <div class="app">
+        <aside class="sidebar">
+          <div class="search-wrap">
+            <input id="search" type="search" placeholder="Filter docs..." />
           </div>
-          <p>Select a doc from the left to begin.</p>
-        </div>
-      </section>
+          <div id="tree" class="tree"></div>
+        </aside>
+
+        <div
+          id="sidebar-resizer"
+          class="sidebar-resizer"
+          aria-hidden="true"
+        ></div>
+
+        <section class="content">
+          <div class="viewer" id="viewer">
+            <div class="callout">
+              This page acts as a lightweight local docs wiki. It fetches
+              repository Markdown and renders it in-place, including Mermaid
+              diagrams.
+            </div>
+            <p>Select a doc from the left to begin.</p>
+          </div>
+        </section>
+      </div>
     </div>
 
     <script src="https://cdn.jsdelivr.net/gh/highlightjs/cdn-release@11.11.1/build/highlight.min.js"></script>

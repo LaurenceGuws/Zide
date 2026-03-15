@@ -1,4 +1,13 @@
+<<<<<<< HEAD:tools/docs_explorer/js/state.ts
 import type { AppState, DocumentStatus, ThemeName } from "./types.js";
+=======
+import type {
+  AppState,
+  DocumentStatus,
+  SearchStatus,
+  ThemeName,
+} from "./shared/types.js";
+>>>>>>> cba2f82 (Add docs explorer ripgrep search):tools/docs_explorer/ts/state.ts
 
 const sidebarWidthStorageKey = "zide_docs_explorer.sidebar_width";
 const sidebarCollapsedStorageKey = "zide_docs_explorer.sidebar_collapsed";
@@ -26,6 +35,12 @@ export function createAppState(): AppState {
     },
     search: {
       query: "",
+    },
+    textSearch: {
+      query: "",
+      open: false,
+      status: "idle",
+      selectedIndex: -1,
     },
     tree: {
       filter: "",
@@ -94,6 +109,18 @@ export function setCurrentDoc(state: AppState, path: string | null): void {
 
 export function setSearchQuery(state: AppState, query: string): void {
   state.search.query = query;
+}
+
+export function setTextSearchState(
+  state: AppState,
+  nextSearch: {
+    query: string;
+    open: boolean;
+    status: SearchStatus;
+    selectedIndex: number;
+  },
+): void {
+  state.textSearch = nextSearch;
 }
 
 export function setTreeFilter(state: AppState, filter: string): void {
