@@ -5,7 +5,7 @@ Local browser-based docs explorer for Zide's `docs/` and
 
 Hosted release/docs entrypoint:
 
-- <https://laurenceguws.github.io/Zide/tools/docs_explorer/?config=project.pages.json>
+- <https://laurenceguws.github.io/Zide/tools/docs_explorer/>
 
 Current entrypoints:
 

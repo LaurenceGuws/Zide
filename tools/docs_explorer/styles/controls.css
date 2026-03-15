@@ -1,6 +1,7 @@
 .pill {
   display: inline-flex;
   align-items: center;
+  justify-content: center;
   border: 1px solid var(--line);
   border-radius: 0;
   background: #0d131a;
@@ -8,20 +9,47 @@
   color: var(--muted);
   font-size: 0.76rem;
   text-decoration: none;
+  min-height: 34px;
+  line-height: 1;
+  box-sizing: border-box;
+}
+
+.icon-button {
+  min-width: 34px;
+  height: 34px;
+  padding: 0;
+}
+
+.icon-slot {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  flex: 0 0 16px;
+}
+
+.icon-slot > svg {
+  display: block;
+  width: 16px;
+  height: 16px;
 }
 
 .options-wrap {
   position: relative;
+  display: inline-flex;
+  align-items: stretch;
 }
 
 .options-toggle {
-  cursor: pointer;
-  min-width: 34px;
+  display: inline-flex;
+  align-items: center;
   justify-content: center;
-  padding-left: 0;
-  padding-right: 0;
+  cursor: pointer;
   font-size: 1rem;
-  line-height: 1;
+  appearance: none;
+  -webkit-appearance: none;
+  align-self: stretch;
 }
 
 .options-menu {
@@ -153,10 +181,8 @@
   background: #0d131a;
   color: var(--ink);
   border-radius: 0;
-  padding: 4px 8px;
   cursor: pointer;
   font: inherit;
-  line-height: 1.1;
 }
 
 .sidebar-toggle:hover {

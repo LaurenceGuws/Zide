@@ -130,7 +130,7 @@
 }
 
 .tree-folder.active-branch > .folder-children {
-  border-left-color: color-mix(in srgb, var(--accent-strong) 72%, var(--tree-guide) 28%);
+  border-left-color: var(--tree-active);
 }
 
 .folder-dir-list,
@@ -183,10 +183,10 @@
 }
 
 .tree a.active {
-  border-color: rgba(212, 122, 69, 0.3);
+  border-color: var(--tree-active);
   background: linear-gradient(90deg, var(--accent-soft) 0%, transparent 100%);
   color: var(--active-link);
-  border-left-color: rgba(212, 122, 69, 0.55);
+  border-left-color: var(--tree-active);
 }
 
 .tree small {

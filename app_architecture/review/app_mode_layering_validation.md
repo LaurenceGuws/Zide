@@ -1,5 +1,12 @@
 # App Mode Layering Validation Matrix
 
+Status note, 2026-03-15:
+
+- This file is retained as historical validation evidence for the completed
+  mode-layer extraction lane.
+- It is no longer a live gate bundle for current architecture work.
+- Use `app_architecture/APP_LAYERING.md` for present-tense boundary rules.
+
 This document is the compatibility authority for the app mode layering extraction.
 
 ## Baseline compatibility goals

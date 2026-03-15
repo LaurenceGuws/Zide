@@ -19,7 +19,6 @@ export function createAppState(): AppState {
       title: "Docs Explorer",
       subtitle: "",
       rawLink: "#",
-      sourceLink: "#",
       status: "idle",
     },
     viewer: {
@@ -107,7 +106,7 @@ export function setTheme(state: AppState, theme: ThemeName): void {
 
 export function setDocumentState(
   state: AppState,
-  nextDocument: { title: string; subtitle: string; rawLink: string; sourceLink: string; status: DocumentStatus },
+  nextDocument: { title: string; subtitle: string; rawLink: string; status: DocumentStatus },
 ): void {
   state.document = nextDocument;
 }

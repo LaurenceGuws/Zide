@@ -20,7 +20,7 @@ Defaults reference:
 - `assets/config/init.lua`
 
 Tracker:
-- `app_architecture/config_todo.yaml`
+- `app_architecture/config_todo.md`
 
 ## File Load Order
 
@@ -206,7 +206,7 @@ This reflects the current runtime truth and mirrors the conservative direction u
 Any config-surface change should update all of:
 - `assets/config/init.lua`
 - `app_architecture/CONFIG.md`
-- `app_architecture/config_todo.yaml` when it changes status/coverage
+- `app_architecture/config_todo.md` when it changes status/coverage
 
 For runtime behavior changes, also verify:
 - startup application path in `src/main.zig`

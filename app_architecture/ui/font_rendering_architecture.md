@@ -116,7 +116,7 @@ correction) with confidence.
   and documented.
 - Only refresh fixtures when all of these are true:
   - the rendering behavior change is intentional (not incidental);
-  - the change is described in `app_architecture/ui/font_rendering_todo.yaml`;
+  - the change is described in `app_architecture/ui/font_rendering_todo.md`;
   - reviewer/user approval has been given for the visual baseline shift.
 - Refresh workflow:
   - run `tools/font_sample_compare.sh` and inspect mismatch outputs in

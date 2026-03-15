@@ -34,7 +34,7 @@ not a progress log and should stay brief.
   - `app_architecture/terminal/WAYLAND_PRESENT_IMPLEMENTATION_PLAN.md`
 - Terminal core architecture and active queue:
   - `app_architecture/terminal/VT_CORE_DESIGN.md`
-  - `app_architecture/terminal/vt_core_rearchitecture_todo.yaml`
+  - `app_architecture/terminal/vt_core_rearchitecture_todo.md`
   - `app_architecture/terminal/MODULARIZATION_PLAN.md`
 - Repo workflow and doc ownership:
   - `AGENTS.md`

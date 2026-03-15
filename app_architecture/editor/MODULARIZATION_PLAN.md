@@ -15,7 +15,7 @@ Goal: split the editor into clear layers with stable APIs so we can grow feature
 - Behavior changes require a harness-backed baseline (now in place for editor render).
 
 ## Related Tracking
-- Tree-sitter integration tasks live in `app_architecture/editor/treesitter_todo.yaml`.
+- Tree-sitter integration tasks live in `app_architecture/editor/treesitter_todo.md`.
 
 ## Target Layer Split
 1) UI Widget (input + draw orchestration)

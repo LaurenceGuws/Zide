@@ -24,7 +24,7 @@ lane so code changes do not drift between "session cleanup", "FFI cleanup", and
 This doc is the concrete follow-up to:
 
 - `app_architecture/review/TERMINAL_CORE_ARCHITECTURE_REVIEW_2026-03-10.md`
-- `app_architecture/terminal/vt_core_rearchitecture_todo.yaml`
+- `app_architecture/terminal/vt_core_rearchitecture_todo.md`
 
 Authority note:
 
@@ -33,6 +33,33 @@ Authority note:
   investigations should live in `app_architecture/review/` or
   `app_architecture/terminal/research/` once they stop changing the engine
   ownership model directly.
+
+## Target Boundary Diagram
+
+```mermaid
+flowchart LR
+    Host["Desktop host / FFI host / replay host"] --> Session["PtyTerminalSession or host wrapper"]
+    Session --> Transport["TerminalTransport"]
+    Session --> Core["TerminalCore"]
+    Transport --> Core
+    Core --> Snapshot["TerminalSnapshot / damage / metadata"]
+    Snapshot --> Renderer["Renderer or foreign host"]
+```
+
+## Host Variants
+
+```mermaid
+flowchart TD
+    Core["TerminalCore"]
+
+    Pty["PTY transport"] --> Core
+    External["External byte-stream transport"] --> Core
+    Replay["Replay / fixture transport"] --> Core
+
+    Desktop["Desktop runtime wrapper"] --> Pty
+    Flutter["Flutter / FFI host"] --> External
+    Tests["Replay harness / tests"] --> Replay
+```
 
 ## Main Goal
 

@@ -2,9 +2,19 @@
 
 Date: 2026-03-10
 
+Status note, 2026-03-15:
+
+- This file is a historical planning map from the `src/app` folder cleanup lane.
+- Use it as review evidence and migration context, not as the current authority
+  for `src/app` ownership.
+- Current layering and doc-placement authority now live in:
+  - `app_architecture/APP_LAYERING.md`
+  - `docs/WORKFLOW.md`
+
 Purpose: define the stable ownership map for `src/app` before moving files.
 
-This is the authority for `FL-APP-01`. File moves should follow this map instead of preserving the current suffix-driven flat layout.
+This was the authority for `FL-APP-01` during the folder cleanup lane. Keep it
+as historical context for why the final subtree split landed the way it did.
 
 ## Why `src/app` Needs A Domain Map
 

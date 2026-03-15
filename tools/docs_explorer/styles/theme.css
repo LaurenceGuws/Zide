@@ -19,6 +19,7 @@
   --surface-hover: rgba(255,255,255,0.03);
   --surface-border: rgba(255,255,255,0.04);
   --tree-guide: rgba(255,255,255,0.06);
+  --tree-active: rgba(212, 122, 69, 0.55);
   --active-link: #ffd8c2;
   --mermaid-primary: #1e2733;
   --mermaid-primary-text: #d7e0ea;
@@ -50,6 +51,7 @@
   --surface-hover: rgba(255,255,255,0.72);
   --surface-border: rgba(24,33,38,0.08);
   --tree-guide: rgba(24,33,38,0.12);
+  --tree-active: rgba(166, 83, 42, 0.55);
   --active-link: #4c2413;
   --mermaid-primary: #e7d7c5;
   --mermaid-primary-text: #182126;

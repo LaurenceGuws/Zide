@@ -12,6 +12,36 @@ Scope note, 2026-03-15:
 - Historical reviews and one-off investigations belong under
   `app_architecture/review/`.
 
+## Ownership Flow
+
+```mermaid
+flowchart LR
+    Init["init / create / alloc"] --> Owner["owning struct or caller"]
+    Owner --> Borrow["borrowed views / snapshots"]
+    Owner --> Container["owned containers"]
+    Owner --> Thread["explicit cross-thread handoff"]
+    Owner --> Deinit["deinit / free / release"]
+
+    Borrow -->|must not outlive owner| Deinit
+    Container --> Deinit
+    Thread -->|join before free| Deinit
+```
+
+## Shutdown Order
+
+```mermaid
+sequenceDiagram
+    participant App as App Owner
+    participant Worker as Worker Threads
+    participant Shared as Shared State
+    participant Alloc as Allocators
+
+    App->>Worker: signal stop
+    Worker-->>App: join / exit
+    App->>Shared: free shared state
+    App->>Alloc: destroy allocators
+```
+
 ## Memory ownership (who allocates, who frees)
 
 - The function that allocates is responsible for documenting who frees.
