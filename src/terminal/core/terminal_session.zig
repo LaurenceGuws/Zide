@@ -37,6 +37,7 @@ const session_protocol = @import("session_protocol.zig");
 const session_config = @import("session_config.zig");
 const session_runtime = @import("session_runtime.zig");
 const session_debug = @import("terminal_session_debug.zig");
+const session_public_types = @import("session_public_types.zig");
 const osc_kitty_clipboard = @import("../protocol/osc_kitty_clipboard.zig");
 const terminal_transport = @import("terminal_transport.zig");
 const Pty = pty_mod.Pty;
@@ -54,26 +55,26 @@ const TerminalCoreType = terminal_core_mod.TerminalCore;
 const ActiveScreen = terminal_core_mod.ActiveScreen;
 pub const TerminalCore = terminal_core_mod.TerminalCore;
 
-pub const KittyImageFormat = snapshot_mod.KittyImageFormat;
-pub const KittyImage = snapshot_mod.KittyImage;
-pub const KittyPlacement = snapshot_mod.KittyPlacement;
+pub const KittyImageFormat = session_public_types.KittyImageFormat;
+pub const KittyImage = session_public_types.KittyImage;
+pub const KittyPlacement = session_public_types.KittyPlacement;
 
-pub const RenderCache = @import("render_cache.zig").RenderCache;
+pub const RenderCache = session_public_types.RenderCache;
 
-pub const TerminalSnapshot = snapshot_mod.TerminalSnapshot;
-pub const DebugSnapshot = snapshot_mod.DebugSnapshot;
-pub const ScrollbackInfo = session_content.ScrollbackInfo;
-pub const ScrollbackRange = session_content.ScrollbackRange;
-pub const SelectionGesture = session_selection.SelectionGesture;
-pub const ClickSelectionResult = session_selection.ClickSelectionResult;
-pub const SessionMetadata = session_host_types.SessionMetadata;
-pub const PresentedRenderCache = session_rendering.PresentedRenderCache;
-pub const PresentationCapture = session_rendering.PresentationCapture;
-pub const AltExitPresentationInfo = session_presentation_feedback.AltExitPresentationInfo;
-pub const PresentationFeedback = session_presentation_feedback.PresentationFeedback;
+pub const TerminalSnapshot = session_public_types.TerminalSnapshot;
+pub const DebugSnapshot = session_public_types.DebugSnapshot;
+pub const ScrollbackInfo = session_public_types.ScrollbackInfo;
+pub const ScrollbackRange = session_public_types.ScrollbackRange;
+pub const SelectionGesture = session_public_types.SelectionGesture;
+pub const ClickSelectionResult = session_public_types.ClickSelectionResult;
+pub const SessionMetadata = session_public_types.SessionMetadata;
+pub const PresentedRenderCache = session_public_types.PresentedRenderCache;
+pub const PresentationCapture = session_public_types.PresentationCapture;
+pub const AltExitPresentationInfo = session_public_types.AltExitPresentationInfo;
+pub const PresentationFeedback = session_public_types.PresentationFeedback;
 
-pub const PtyWriteGuard = terminal_transport.Writer;
-pub const InputSnapshot = session_input_snapshot.InputSnapshot;
+pub const PtyWriteGuard = session_public_types.PtyWriteGuard;
+pub const InputSnapshot = session_public_types.InputSnapshot;
 
 pub fn debugSnapshot(self: *TerminalSession) DebugSnapshot {
     return session_debug.debugSnapshot(self);
@@ -130,7 +131,7 @@ pub const TerminalSession = struct {
     grapheme_cluster_shaping_2027: bool,
     color_scheme_dark: bool,
     kitty_paste_events_5522: bool,
-    input: input_mod.InputState,
+    input: session_public_types.InputState,
     input_snapshot: InputSnapshot,
     pty_write_mutex: std.Thread.Mutex,
     cell_width: u16,
