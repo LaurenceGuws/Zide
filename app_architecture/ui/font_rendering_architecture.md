@@ -155,7 +155,8 @@ flowchart TD
   and documented.
 - Only refresh fixtures when all of these are true:
   - the rendering behavior change is intentional (not incidental);
-  - the change is described in `docs/todo/ui/font_rendering.md`;
+  - the current execution queue in `docs/todo/ui/font_rendering.md` describes
+    the change;
   - reviewer/user approval has been given for the visual baseline shift.
 - Refresh workflow:
   - run `tools/font_sample_compare.sh` and inspect mismatch outputs in
