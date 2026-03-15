@@ -125,6 +125,26 @@ Every host path should be explainable in terms of these states:
 - host may coalesce wakes
 - host must still consult published/acknowledged state
 
+```mermaid
+stateDiagram-v2
+    [*] --> ModelDirty
+    ModelDirty --> Published: backend publishes generation N
+    Published --> WakeHint: wake/redraw_ready emitted
+    WakeHint --> Published: host coalesces or ignores wake
+    Published --> Acknowledged: host presents/consumes generation N and acks it
+    Acknowledged --> ModelDirty: later backend mutation
+
+    note right of Published
+      authoritative publication truth
+      damage/full-redraw reason lives here
+    end note
+
+    note right of Acknowledged
+      monotonic host feedback only
+      not a second publication truth
+    end note
+```
+
 ## Required Shared Semantics
 
 ### A. Published generation is authoritative
@@ -207,6 +227,21 @@ Current FFI meaning:
 
 This keeps the FFI bridge aligned with native semantics without exporting
 native renderer details.
+
+```mermaid
+flowchart LR
+    subgraph Native["Native path"]
+        NPub["backend publishes generation"] --> NWake["wake / schedule draw"]
+        NWake --> NDraw["renderer composes and submits scene"]
+        NDraw --> NAck["terminal feedback flush after successful submission"]
+    end
+
+    subgraph FFI["FFI path"]
+        FPub["published_generation"] --> FWake["redraw_ready / host wake"]
+        FWake --> FDraw["host fetches snapshot and draws"]
+        FDraw --> FAck["present_ack(generation)"]
+    end
+```
 
 ## Current Convergence Point
 
