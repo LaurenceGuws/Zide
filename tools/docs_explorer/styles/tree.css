@@ -68,12 +68,10 @@
 
 .tree-folder > summary:hover {
   background: var(--tree-row-hover);
-  border-color: var(--surface-border);
 }
 
 .tree-folder[open] > summary {
   background: var(--tree-row-open);
-  border-color: var(--surface-border);
 }
 
 .folder-caret {
@@ -135,17 +133,17 @@
 .folder-children {
   margin-left: 12px;
   padding-left: 12px;
-  border-left: 1px solid var(--tree-guide);
+  border-left: 1px solid transparent;
   margin-top: 2px;
   position: relative;
 }
 
 .tree-folder[open] > .folder-children {
-  border-left-color: var(--tree-guide);
+  border-left-color: transparent;
 }
 
 .tree-folder.active-branch > .folder-children {
-  border-left-color: var(--tree-guide);
+  border-left-color: transparent;
 }
 
 .folder-dir-list,
@@ -191,7 +189,7 @@
   top: var(--tree-elbow-top);
   width: 9px;
   height: 1px;
-  background: var(--tree-connector);
+  background: transparent;
 }
 
 .folder-children > .folder-dir-list > .tree-item.active-stem::after,
@@ -226,15 +224,12 @@
 }
 
 .tree a:hover {
-  border-color: var(--surface-border);
   background: var(--tree-row-hover);
 }
 
 .tree a.active {
-  border-color: var(--tree-active);
   background: var(--tree-link-active-bg);
   color: var(--active-link);
-  border-left-color: var(--tree-active);
 }
 
 .tree small {
