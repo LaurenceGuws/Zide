@@ -12,7 +12,7 @@ Use it for:
 Current high-signal entrypoints:
 
 - `vt_core_rearchitecture.md` — engine/core split and transport-first redesign
-- `wayland_present.md` — present-path execution authority and validation
+- `wayland_present.md` — present-path execution queue and validation lane
 - `ffi_bridge.md` — embeddable terminal bridge plan
 - `ffi_host_migration.md` — host migration follow-up
 - `tabs.md` — backend workspace / tab follow-up for terminal mode and future FFI

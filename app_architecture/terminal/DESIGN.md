@@ -11,8 +11,11 @@ Status note, 2026-03-15:
   decision summary by layer.
 - Detailed current authority for the engine split now lives in
   `app_architecture/terminal/VT_CORE_DESIGN.md`.
-- Present-path ownership authority now lives in
-  `docs/todo/terminal/wayland_present.md`.
+- Present-path design authority now lives in:
+  - `app_architecture/terminal/present/WAYLAND_DESIGN_BRIEF.md`
+  - `app_architecture/terminal/present/WAYLAND_TECHNICAL_WRITEUP.md`
+- Present-path execution planning lives in:
+  - `docs/todo/terminal/wayland_present.md`
 - Investigation-heavy or review-heavy material should live under
   `docs/review/` or `docs/research/terminal/`, not grow
   this file into another live debug log.
@@ -382,6 +385,9 @@ Why:
 
 - Alt screen redesign proposal: `app_architecture/terminal/ALT_SCREEN_REDESIGN.md`.
 - Engine split authority: `app_architecture/terminal/VT_CORE_DESIGN.md`.
-- Present-path authority: `docs/todo/terminal/wayland_present.md`.
+- Present-path authority:
+  - `app_architecture/terminal/present/WAYLAND_DESIGN_BRIEF.md`
+  - `app_architecture/terminal/present/WAYLAND_TECHNICAL_WRITEUP.md`
+- Present-path execution queue: `docs/todo/terminal/wayland_present.md`.
 - Historical architecture review: `docs/review/TERMINAL_CORE_ARCHITECTURE_REVIEW_2026-03-10.md`.
 - Reference-layer notes: `docs/research/terminal/TERMINAL_LAYER_REFERENCE_NOTES.md`.

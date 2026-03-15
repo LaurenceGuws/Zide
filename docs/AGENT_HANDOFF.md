@@ -35,6 +35,9 @@ not a progress log and should stay brief.
 ### Where To Look
 
 - Present implementation authority:
+  - `app_architecture/terminal/present/WAYLAND_DESIGN_BRIEF.md`
+  - `app_architecture/terminal/present/WAYLAND_TECHNICAL_WRITEUP.md`
+- Present execution queue:
   - `docs/todo/terminal/wayland_present.md`
 - Terminal core architecture and active queue:
   - `app_architecture/terminal/VT_CORE_DESIGN.md`

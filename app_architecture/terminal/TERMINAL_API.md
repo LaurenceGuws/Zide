@@ -13,7 +13,7 @@ Status note, 2026-03-15:
 - Current design authority lives in:
   - `app_architecture/terminal/VT_CORE_DESIGN.md`
   - `app_architecture/terminal/DESIGN.md`
-  - `docs/todo/terminal/wayland_present.md`
+  - `app_architecture/terminal/present/WAYLAND_TECHNICAL_WRITEUP.md`
 - Any API row still marked `pending` or `to be verified` should be treated as
   an open contract-hardening item, not as a guaranteed stable public contract.
 
@@ -35,7 +35,8 @@ flowchart LR
     Host[app / host / UI] --> API[session + workspace API surface]
     API --> Session[TerminalSession]
     API --> Workspace[TerminalWorkspace]
-    Session --> Core[terminal core / transport]
+    Session --> Runtime[session runtime / publication shell]
+    Runtime <--> Core[terminal core / transport]
     Workspace --> Session
 ```
 

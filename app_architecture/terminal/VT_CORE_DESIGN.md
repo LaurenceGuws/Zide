@@ -311,8 +311,10 @@ Current rule:
 - use this file for durable engine ownership and migration decisions
 - use `docs/review/TERMINAL_CORE_ARCHITECTURE_REVIEW_2026-03-10.md`
   for the architecture review that led to this split
-- use `docs/todo/terminal/wayland_present.md` for
-  current present-path ownership and post-rewrite renderer/present status
+- use `app_architecture/terminal/present/WAYLAND_TECHNICAL_WRITEUP.md` and
+  `app_architecture/terminal/present/WAYLAND_DESIGN_BRIEF.md` for current
+  present-path ownership and landed renderer/present design authority
+- use `docs/todo/terminal/wayland_present.md` for the present execution queue
 - use `docs/research/terminal/wayland_present/` for issue-specific
   present research and evidence
 

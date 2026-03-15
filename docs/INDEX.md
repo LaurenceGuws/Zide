@@ -33,7 +33,7 @@ Quick reading guide:
   - `docs/todo/terminal/ffi_bridge.md` — terminal FFI/embedding contract maturation.
   - `docs/todo/terminal/ffi_host_migration.md` — mixed terminal/editor host migration follow-up.
   - `docs/todo/terminal/tabs.md` — terminal-only tab/workspace lifecycle follow-up.
-  - `docs/todo/terminal/wayland_present.md` — architectural authority for the landed present path.
+  - `docs/todo/terminal/wayland_present.md` — present-path execution queue and validation lane.
   - `docs/todo/editor/treesitter_dynamic_roadmap.md` — dynamic grammar-pack rollout queue and execution order.
   - `docs/todo/ui/terminal_special_glyphs.md` — active terminal UI quality lane for special glyphs.
   - `docs/todo/ui/font_rendering.md` — remaining text-rendering quality work.
@@ -49,6 +49,8 @@ Quick reading guide:
 - `app_architecture/terminal/TERMINAL_WORKSPACE.md` — backend tab/workspace ownership contract for terminal mode.
 - `app_architecture/terminal/VT_CORE_DESIGN.md` — exact target split for terminal core, transport, host session, snapshot, and FFI.
 - `app_architecture/terminal/TERMINAL_SUBSYSTEM_LAYERS.md` — finer subsystem-layer ownership map for host, transport, engine, publication, and presentation.
+- `app_architecture/terminal/present/WAYLAND_DESIGN_BRIEF.md` — high-level present-path design target.
+- `app_architecture/terminal/present/WAYLAND_TECHNICAL_WRITEUP.md` — present-path ownership and architecture authority.
 - `docs/todo/terminal/ffi_bridge.md` — terminal backend embeddability / FFI bridge plan.
 - `docs/todo/terminal/ffi_host_migration.md` — combined terminal/editor FFI host migration follow-up checklist.
 - `app_architecture/terminal/ffi/BRIDGE_DESIGN.md` — terminal bridge shape, ownership model, and smoke-host plan.
