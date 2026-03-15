@@ -12,6 +12,7 @@ test "ffi non-pty snapshot and event ownership smoke" {
     try std.testing.expectEqual(c_api.ZIDE_TERMINAL_METADATA_ABI_VERSION, c_api.zide_terminal_metadata_abi_version());
     try std.testing.expectEqual(c_api.ZIDE_TERMINAL_REDRAW_STATE_ABI_VERSION, c_api.zide_terminal_redraw_state_abi_version());
     try std.testing.expectEqual(c_api.ZIDE_TERMINAL_STRING_ABI_VERSION, c_api.zide_terminal_string_abi_version());
+    try std.testing.expectEqual(c_api.ZIDE_TERMINAL_CLOSE_CONFIRM_ABI_VERSION, c_api.zide_terminal_close_confirm_abi_version());
 
     var rounded_box_meta: c_api.ZideTerminalRendererMetadata = .{};
     try std.testing.expectEqual(@as(c_int, 0), c_api.zide_terminal_renderer_metadata(0x256D, &rounded_box_meta));
@@ -94,6 +95,16 @@ test "ffi non-pty snapshot and event ownership smoke" {
     try std.testing.expectEqual(snapshot.generation, redraw_state.acknowledged_generation);
     try std.testing.expectEqual(@as(u8, 0), redraw_state.needs_redraw);
     try std.testing.expectEqual(@as(c_int, 1), c_api.zide_terminal_present_ack(handle, snapshot.generation + 1));
+
+    var close_confirm: c_api.ZideTerminalCloseConfirmSignals = .{};
+    try std.testing.expectEqual(@as(c_int, 0), c_api.zide_terminal_close_confirm_signals(handle, &close_confirm));
+    try std.testing.expectEqual(c_api.ZIDE_TERMINAL_CLOSE_CONFIRM_ABI_VERSION, close_confirm.abi_version);
+    try std.testing.expectEqual(@as(u32, @sizeOf(c_api.ZideTerminalCloseConfirmSignals)), close_confirm.struct_size);
+    try std.testing.expectEqual(@as(u8, 0), close_confirm.foreground_process);
+    try std.testing.expectEqual(@as(u8, 0), close_confirm.semantic_command);
+    try std.testing.expectEqual(@as(u8, 0), close_confirm.alt_screen);
+    try std.testing.expectEqual(@as(u8, 0), close_confirm.mouse_reporting);
+    try std.testing.expectEqual(@as(u8, 0), close_confirm.any);
 
     var metadata: c_api.ZideTerminalMetadata = .{};
     try std.testing.expectEqual(@as(c_int, 0), c_api.zide_terminal_metadata_acquire(handle, &metadata));

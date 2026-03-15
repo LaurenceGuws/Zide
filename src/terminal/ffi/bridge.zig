@@ -10,6 +10,7 @@ pub const renderer_metadata_abi_version = shared.renderer_metadata_abi_version;
 pub const metadata_abi_version = shared.metadata_abi_version;
 pub const redraw_state_abi_version = shared.redraw_state_abi_version;
 pub const string_abi_version = shared.string_abi_version;
+pub const close_confirm_abi_version = shared.close_confirm_abi_version;
 pub const EventKind = shared.EventKind;
 pub const GlyphClassFlags = shared.GlyphClassFlags;
 pub const DamagePolicyFlags = shared.DamagePolicyFlags;
@@ -21,6 +22,7 @@ pub const Snapshot = shared.Snapshot;
 pub const ScrollbackBuffer = shared.ScrollbackBuffer;
 pub const Metadata = shared.Metadata;
 pub const RedrawState = shared.RedrawState;
+pub const CloseConfirmSignals = shared.CloseConfirmSignals;
 pub const KeyEvent = shared.KeyEvent;
 pub const MouseEvent = shared.MouseEvent;
 pub const Event = shared.Event;
@@ -78,6 +80,10 @@ pub fn publishedGeneration(handle: ?*ZideTerminalHandle, out_generation: *u64) S
 
 pub fn redrawState(handle: ?*ZideTerminalHandle, out_state: *RedrawState) Status {
     return core_api.redrawState(handle, out_state);
+}
+
+pub fn closeConfirmSignals(handle: ?*ZideTerminalHandle, out_signals: *CloseConfirmSignals) Status {
+    return core_api.closeConfirmSignals(handle, out_signals);
 }
 
 pub fn needsRedraw(handle: ?*ZideTerminalHandle) u8 {
@@ -166,6 +172,10 @@ pub fn rendererMetadataAbiVersion() u32 {
 
 pub fn redrawStateAbiVersion() u32 {
     return core_api.redrawStateAbiVersion();
+}
+
+pub fn closeConfirmAbiVersion() u32 {
+    return core_api.closeConfirmAbiVersion();
 }
 
 pub fn stringAbiVersion() u32 {

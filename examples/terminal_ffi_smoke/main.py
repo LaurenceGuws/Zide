@@ -146,6 +146,19 @@ class RedrawState(ctypes.Structure):
     ]
 
 
+class CloseConfirmSignals(ctypes.Structure):
+    _fields_ = [
+        ("abi_version", ctypes.c_uint32),
+        ("struct_size", ctypes.c_uint32),
+        ("foreground_process", ctypes.c_uint8),
+        ("semantic_command", ctypes.c_uint8),
+        ("alt_screen", ctypes.c_uint8),
+        ("mouse_reporting", ctypes.c_uint8),
+        ("any", ctypes.c_uint8),
+        ("_padding0", ctypes.c_uint8 * 3),
+    ]
+
+
 class Event(ctypes.Structure):
     _fields_ = [
         ("kind", ctypes.c_int),
@@ -241,6 +254,8 @@ def load_library(path: Path):
     lib.zide_terminal_metadata_release.restype = None
     lib.zide_terminal_redraw_state.argtypes = [HandlePtr, ctypes.POINTER(RedrawState)]
     lib.zide_terminal_redraw_state.restype = ctypes.c_int
+    lib.zide_terminal_close_confirm_signals.argtypes = [HandlePtr, ctypes.POINTER(CloseConfirmSignals)]
+    lib.zide_terminal_close_confirm_signals.restype = ctypes.c_int
     lib.zide_terminal_event_drain.argtypes = [HandlePtr, ctypes.POINTER(EventBuffer)]
     lib.zide_terminal_event_drain.restype = ctypes.c_int
     lib.zide_terminal_events_free.argtypes = [ctypes.POINTER(EventBuffer)]
@@ -263,6 +278,8 @@ def load_library(path: Path):
     lib.zide_terminal_redraw_state_abi_version.restype = ctypes.c_uint32
     lib.zide_terminal_string_abi_version.argtypes = []
     lib.zide_terminal_string_abi_version.restype = ctypes.c_uint32
+    lib.zide_terminal_close_confirm_abi_version.argtypes = []
+    lib.zide_terminal_close_confirm_abi_version.restype = ctypes.c_uint32
     lib.zide_terminal_renderer_metadata_abi_version.argtypes = []
     lib.zide_terminal_renderer_metadata_abi_version.restype = ctypes.c_uint32
     lib.zide_terminal_renderer_metadata.argtypes = [ctypes.c_uint32, ctypes.POINTER(RendererMetadata)]
@@ -343,6 +360,13 @@ def run_smoke(lib_path: Path) -> int:
             raise RuntimeError(f"feed_output(history) failed: {status}")
 
         snapshot_state: dict[str, object] = {}
+        close_confirm = CloseConfirmSignals()
+        if lib.zide_terminal_close_confirm_signals(handle, ctypes.byref(close_confirm)) != STATUS_OK:
+            raise RuntimeError("close_confirm_signals failed")
+        if close_confirm.abi_version != lib.zide_terminal_close_confirm_abi_version():
+            raise RuntimeError("close_confirm abi mismatch")
+        if close_confirm.struct_size != ctypes.sizeof(CloseConfirmSignals):
+            raise RuntimeError("close_confirm struct size mismatch")
 
         def consume_snapshot(snapshot: Snapshot) -> None:
             title = as_bytes(snapshot.title_ptr, snapshot.title_len).decode("utf-8", errors="replace")
@@ -386,6 +410,7 @@ def run_smoke(lib_path: Path) -> int:
             f"metadata_abi={lib.zide_terminal_metadata_abi_version()} "
             f"redraw_state_abi={lib.zide_terminal_redraw_state_abi_version()} "
             f"string_abi={lib.zide_terminal_string_abi_version()} "
+            f"close_confirm_abi={lib.zide_terminal_close_confirm_abi_version()} "
             f"renderer_meta_abi={lib.zide_terminal_renderer_metadata_abi_version()}"
         )
         print(f"status_ok={lib.zide_terminal_status_string(STATUS_OK).decode()} status_unknown={lib.zide_terminal_status_string(99).decode()}")
@@ -395,6 +420,14 @@ def run_smoke(lib_path: Path) -> int:
             f"title_getter={snapshot_state['title_getter']!r} "
             f"cwd_getter={snapshot_state['cwd_getter']!r} "
             f"exit_status=({snapshot_state['has_exit']},{snapshot_state['exit_code']})"
+        )
+        print(
+            f"close_confirm=("
+            f"{close_confirm.foreground_process},"
+            f"{close_confirm.semantic_command},"
+            f"{close_confirm.alt_screen},"
+            f"{close_confirm.mouse_reporting},"
+            f"{close_confirm.any})"
         )
         print(f"row0={snapshot_state['row0']!r}")
         if snapshot_state["rows"] != 12 or snapshot_state["cols"] != 60:

@@ -52,6 +52,10 @@ pub export fn zide_terminal_redraw_state(handle: ?*c_api.ZideTerminalHandle, out
     return c_api.zide_terminal_redraw_state(handle, out_state);
 }
 
+pub export fn zide_terminal_close_confirm_signals(handle: ?*c_api.ZideTerminalHandle, out_signals: *c_api.ZideTerminalCloseConfirmSignals) c_int {
+    return c_api.zide_terminal_close_confirm_signals(handle, out_signals);
+}
+
 pub export fn zide_terminal_needs_redraw(handle: ?*c_api.ZideTerminalHandle) u8 {
     return c_api.zide_terminal_needs_redraw(handle);
 }
@@ -130,6 +134,10 @@ pub export fn zide_terminal_redraw_state_abi_version() u32 {
 
 pub export fn zide_terminal_string_abi_version() u32 {
     return c_api.zide_terminal_string_abi_version();
+}
+
+pub export fn zide_terminal_close_confirm_abi_version() u32 {
+    return c_api.zide_terminal_close_confirm_abi_version();
 }
 
 pub export fn zide_terminal_renderer_metadata_abi_version() u32 {
