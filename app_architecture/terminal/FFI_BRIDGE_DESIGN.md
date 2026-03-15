@@ -54,6 +54,17 @@ This matches the practical direction used by Ghostty's embedded runtime and is s
 
 ## Layer boundary
 
+```mermaid
+flowchart LR
+    Host["Foreign host\n(Python / Dart / C / Rust)"] --> Bridge["C ABI bridge"]
+    Bridge --> Core["Terminal backend core"]
+    Core --> Snapshot["Snapshots / events / scrollback / metadata"]
+    Snapshot --> Host
+
+    Host -. no SDL/widgets/textures .-> Bridge
+    Bridge -. explicit free functions .-> Host
+```
+
 The bridge sits above the terminal backend and below host UI/render code.
 
 Host responsibilities:
@@ -134,6 +145,20 @@ Reason:
 Callbacks may be added later for a subset of events once ownership and threading are already proven.
 
 ## Ownership rules
+
+```mermaid
+flowchart TD
+    Handle["opaque handle"] -->|owned by host| Destroy["zide_terminal_destroy"]
+    Snapshot["snapshot acquire"] --> Release1["snapshot release"]
+    Events["event drain"] --> Release2["events free"]
+    String["text/string export"] --> Release3["string free"]
+    Metadata["metadata acquire"] --> Release4["metadata release"]
+
+    Borrowed["forbidden: implicit borrowed next-frame pointers"]:::bad
+    Callbacks["forbidden: callbacks while bridge locks are held"]:::bad
+
+    classDef bad fill:#4a2222,stroke:#ff8c8c,color:#fff3f3;
+```
 
 Baseline rules:
 - Opaque session handles are owned by the host and freed with `destroy`.
