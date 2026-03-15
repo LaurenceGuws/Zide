@@ -33,6 +33,7 @@ function renderTreeNode(
       const rowIndex = dirIndex;
       const rowClasses = [
         "tree-item",
+        shouldOpen ? "open-folder-row" : "",
         activeChildIndex >= 0 && rowIndex <= activeChildIndex
           ? "active-stem"
           : "",

@@ -26,6 +26,7 @@
   overflow: auto;
   padding: 4px 8px 14px;
   --tree-elbow-top: 16px;
+  --tree-branch-lane-x: 12px;
 }
 
 .tree ul {
@@ -78,6 +79,7 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  position: relative;
   width: 10px;
   height: 10px;
   flex: 0 0 10px;
@@ -90,7 +92,33 @@
 }
 
 .tree-folder[open] > summary .folder-caret {
-  transform: rotate(90deg);
+  transform: none;
+}
+
+.tree-folder[open] > summary .folder-caret > svg {
+  opacity: 0;
+}
+
+.tree-folder[open] > summary .folder-caret::before,
+.tree-folder[open] > summary .folder-caret::after {
+  content: "";
+  position: absolute;
+  background: currentColor;
+  border-radius: 999px;
+}
+
+.tree-folder[open] > summary .folder-caret::before {
+  left: 3px;
+  top: 5px;
+  width: 1px;
+  height: 5px;
+}
+
+.tree-folder[open] > summary .folder-caret::after {
+  left: -2px;
+  top: 5px;
+  width: 6px;
+  height: 1px;
 }
 
 .folder-icon {
@@ -134,7 +162,7 @@
   margin-left: 12px;
   padding-left: 12px;
   border-left: 1px solid transparent;
-  margin-top: 2px;
+  margin-top: 0;
   position: relative;
 }
 
@@ -192,11 +220,23 @@
   background: transparent;
 }
 
+.folder-children > .folder-dir-list > .tree-item.open-folder-row::after,
+.folder-children > .folder-file-list > .tree-item.open-folder-row::after {
+  content: "";
+  position: absolute;
+  left: calc(var(--tree-branch-lane-x) * -1);
+  top: var(--tree-elbow-top);
+  bottom: 0;
+  width: 1px;
+  background: var(--tree-caret);
+  opacity: 0.82;
+}
+
 .folder-children > .folder-dir-list > .tree-item.active-stem::after,
 .folder-children > .folder-file-list > .tree-item.active-stem::after {
   content: "";
   position: absolute;
-  left: -12px;
+  left: calc(var(--tree-branch-lane-x) * -1);
   top: 0;
   bottom: 0;
   width: 1px;
