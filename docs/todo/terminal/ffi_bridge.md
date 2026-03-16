@@ -117,7 +117,7 @@ Current judgment:
 - [x] `FFI-04-02` Add a standalone Python ctypes smoke host.
 - [x] `FFI-04-03` Add a non-interactive bridge smoke test.
 - [-] `FFI-04-04` Stabilize PTY-backed foreign-host start as a separate smoke slice.
-  Notes: keep the no-PTY smoke authoritative for ownership/lifetime; PTY-backed startup remains a narrower stabilization track rather than an absent one. Current PTY smoke validates bridge-owned shell startup, `send_text(...)` + `send_key(Enter)` input delivery, one backend-owned viewport pin/follow-live cycle with visible snapshot content actually changing and then restoring, redraw/present, metadata, child-exit, close-confirm getter shape, and host focus/color-scheme reporting on the bridge-owned shell path.
+  Notes: keep the no-PTY smoke authoritative for ownership/lifetime; PTY-backed startup remains a narrower stabilization track rather than an absent one. Current PTY smoke validates bridge-owned shell startup, `send_text(...)` + `send_key(Enter)` input delivery, one backend-owned viewport pin/follow-live cycle with visible snapshot content actually changing and then restoring, redraw/present, metadata, child-exit, close-confirm getter shape, host focus/color-scheme reporting on the bridge-owned shell path, and the conservative snapshot-diff startup rule that a freshly started PTY may still require full-refresh fallback until the initial full-dirty baseline has been presented and retired.
 
 ### FFI-05 Host Adapters And Future Productization
 
