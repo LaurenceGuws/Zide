@@ -4,7 +4,7 @@ set -euo pipefail
 ROOT_DIR="$(cd "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT_DIR"
 
-VERSION="${VERSION:-$(sed -n 's/.*\\.version = \"\\([^\"]*\\)\".*/\\1/p' build.zig.zon | head -n1)}"
+VERSION="${VERSION:-$(sed -n 's/.*\.version = "\([^"]*\)".*/\1/p' build.zig.zon | head -n1)}"
 if [[ -z "$VERSION" ]]; then
   echo "failed to derive VERSION from build.zig.zon" >&2
   exit 1
