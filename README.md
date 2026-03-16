@@ -41,6 +41,19 @@ Zide is in active beta. The large VT/render rewrite has landed, and current
 work is focused on hardening, compatibility, and cleanup rather than broad new
 surface area.
 
+Terminal-wise, the current checkpoint is stronger than the older beta wording
+implies:
+
+- Linux native is now running on the rewritten VT/render architecture as the
+  reference host path.
+- The embeddable terminal FFI surface is no longer just a sketch:
+  metadata, snapshot, viewport control, pending input, child-exit reporting,
+  and the first conservative snapshot-diff lane are all real and regression
+  backed.
+- That host contract has also now been exercised against a second real host
+  in Flutty, with the shared runtime/widget model holding across bridge-owned
+  PTY and Flutter-owned PTY transport.
+
 Published outputs currently include terminal bundles, editor bundles, IDE
 bundles, terminal/editor FFI packages, and hosted release/architecture docs.
 Use the Releases page for binaries.
@@ -108,6 +121,8 @@ Good starting points:
 - [Getting started](https://laurenceguws.github.io/Zide/tools/docs_explorer/#doc=app_architecture/BOOTSTRAP.md)
 - [Dependency policy](https://laurenceguws.github.io/Zide/tools/docs_explorer/#doc=docs/DEPENDENCIES.md)
 - [Terminal compatibility](https://laurenceguws.github.io/Zide/tools/docs_explorer/#doc=docs/reference/terminal_compatibility.md)
+- [Terminal architecture comparison](https://laurenceguws.github.io/Zide/tools/docs_explorer/#doc=app_architecture/terminal/TERMINAL_ARCHITECTURE_COMPARISON.md)
+- [Terminal FFI bridge design](https://laurenceguws.github.io/Zide/tools/docs_explorer/#doc=app_architecture/terminal/ffi/BRIDGE_DESIGN.md)
 - [Current beta release notes](https://laurenceguws.github.io/Zide/tools/docs_explorer/#doc=docs/releases/v0.1.0-beta.1.md)
 
 Contributor/operator navigation lives in [docs/INDEX.md](docs/INDEX.md).
@@ -139,6 +154,8 @@ python3 docs_explorer.py
 
 - native Wayland-first renderer and app shell
 - integrated terminal with PTY, VT core, scrollback, and redraw/present work
+- embeddable terminal host contract with explicit snapshot/metadata/redraw and
+  viewport ownership
 - tree-sitter grammar pack support
 - rope-backed editor core with undo/redo
 - terminal and editor FFI surfaces

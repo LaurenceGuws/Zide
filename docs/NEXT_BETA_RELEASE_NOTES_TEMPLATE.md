@@ -3,36 +3,38 @@
 Use this as the starting point for the next prerelease notes.
 
 The first paragraph should read like a technical checkpoint, not a changelog.
-This release is the first public checkpoint of the rewritten VT/render path, so
-the notes should explain that architecture first and then name the most
-important compatibility wins.
+The next release is no longer "the first rewrite beta." The rewrite is already
+landed. The notes should describe the current checkpoint honestly:
+
+- terminal cleanup/restructure after the rewrite
+- stronger native/FFI host-contract convergence
+- narrower remaining gap against `ghostty` / `libghostty-vt`
+- concrete compatibility and latency wins that changed the live product story
 
 ## Title
 
-`<tag> - First VT/Render Rewrite Beta`
+`<tag> - Terminal Cleanup And Host-Contract Beta`
 
 ## Summary
 
-`<tag>` is the first public beta built on Zide's rewritten VT/render path.
-This is the checkpoint where the terminal stopped treating the default
-framebuffer as the normal composition surface and moved to a renderer-owned
-scene target with explicit renderer-owned present acknowledgement. The result is
-a much cleaner terminal presentation path on Linux native, plus a round of
-post-rewrite bug hunting that closed several real compatibility and latency
-gaps.
+`<tag>` is a post-rewrite terminal checkpoint built on Zide's new VT/render
+path rather than the old terminal stack. The renderer-owned scene/present path
+is now the baseline, the terminal host contract is materially tighter on both
+native and FFI, and the most important recent work has been cleanup,
+convergence, and real compatibility/hardening wins rather than more rewrite
+churn.
 
 ## Technical Breakdown
 
-### Renderer / Present Path
+### Native Path
 
-- Main terminal composition now happens in a renderer-owned scene target.
-- The default framebuffer is now just the final present sink or a degraded
-  fallback, not the normal architectural path.
-- Terminal present retirement no longer hangs directly off widget-local draw
-  completion; it is tied to renderer-owned successful submission.
-- The old rewrite war-room probe matrix has been pruned back so the live
-  runtime reflects the intended architecture instead of the investigation
-  scaffolding.
+- Main terminal composition happens in a renderer-owned scene target.
+- The default framebuffer is now only the final present sink or degraded
+  fallback.
+- Present acknowledgement is explicit and no longer piggybacks on blurrier
+  widget-local completion assumptions.
+- Native should be described as the reference host for the engine contract,
+  not as a privileged semantic path that embedded hosts cannot match.
 
 ### Hardening Wins
 
@@ -49,32 +51,41 @@ gaps.
 
 ### FFI / Host Contract
 
-- The FFI host contract has been tightened to match the stronger native redraw /
-  publication / present ownership model.
-- Hosts now have explicit publication truth, acknowledgement truth, and redraw
-  truth instead of relying on blurrier wake/event semantics alone.
-- This keeps the native GUI as the proving ground while making the eventual
-  embedded / Flutter host path more honest.
+- The FFI host contract is now a real embeddable terminal surface, not just an
+  aspirational bridge.
+- Request-based metadata and snapshot acquisition now keep hot scalar reads
+  cheaper while leaving strings explicit.
+- Backend-owned viewport control, pending outbound input, child-exit reporting,
+  and the first conservative snapshot-diff lane are now part of the live
+  contract.
+- Flutty has already exercised that contract as a second real host:
+  the shared runtime/widget model held, the cursor-preservation workaround is
+  gone, and the settled-baseline diff path now behaves coherently after the
+  upstream `present_ack(...)` retirement fix.
 
 ## Current Quality Bar
 
 This beta should be described honestly:
 
-- Zide is now much closer to a clean production-oriented architecture than it
-  was before the rewrite.
-- It is a real terminal with credible production aspirations, not a toy shell
-  wrapper.
-- It is still a beta and should not be framed as full parity with `kitty` or
-  `ghostty` yet.
-- The current project phase is post-rewrite bug hunting and hardening on top of
-  the rewritten path.
+- Zide now has a more serious terminal architecture and host contract than the
+  older release notes implied.
+- It is still a beta and should not be framed as final parity with `kitty` or
+  `ghostty`.
+- Ghostty is still ahead on engine-centered cleanliness, and that should be
+  stated plainly.
+- Zide is now unusually strong on explicit host-contract richness and
+  native/FFI convergence for a project at this stage.
+- The current phase is post-rewrite cleanup/restructure plus disciplined
+  hardening, not open-ended rewrite invention.
 
 ## Keep Out Of The Notes
 
 - Do not dump a long commit inventory.
+- Do not frame this as if the rewrite itself just landed yesterday.
 - Do not emphasize old war-room env toggles, removed probes, or internal debug
   cleanup unless it materially changes the live runtime story.
 - Do not claim final reference-terminal parity.
+- Do not undersell the FFI lane now that a second real host has exercised it.
 
 ## Release Checklist
 
@@ -84,4 +95,6 @@ This beta should be described honestly:
   - release tag: `v0.x.y[-beta.n]`
 - Confirm the release asset list matches what was published.
 - Mention only the highest-value compatibility wins from that checkpoint.
+- Mention the strongest host-contract checkpoint only if it changed user-facing
+  confidence for embedded/foreign hosts.
 - Keep the final notes short enough to scan quickly.
