@@ -134,6 +134,8 @@ Recent downstream diff-ABI re-check in Flutty confirmed:
 - one-acquire fallback remained natural
 - cursor state now comes directly from `ZideTerminalSnapshotDiff`, so the old
   trusted-base cursor preservation workaround is gone
+- the settled-baseline granular non-repro is gone after the upstream
+  `present_ack(...)` fix
 - immediate PTY startup churn still stays outside the granular-diff guarantee
   on purpose
 
