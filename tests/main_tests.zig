@@ -7,8 +7,11 @@ const app_search_panel_state = @import("../src/app/search/search_panel_state.zig
 const app_shell = @import("../src/app_shell.zig");
 const app_state_mod = @import("../src/app/app_state.zig");
 const app_tab_action_apply_runtime = @import("../src/app/tabs/tab_action_apply_runtime.zig");
+const app_terminal_tab_bar_sync_runtime = @import("../src/app/terminal/terminal_tab_bar_sync_runtime.zig");
+const app_terminal_tab_navigation_runtime = @import("../src/app/terminal/terminal_tab_navigation_runtime.zig");
 const app_terminal_close_confirm_decision_runtime = @import("../src/app/terminal/terminal_close_confirm_decision_runtime.zig");
 const app_terminal_runtime_intents = @import("../src/app/terminal/terminal_runtime_intents.zig");
+const app_terminal_session_bootstrap = @import("../src/app/terminal/terminal_session_bootstrap.zig");
 const app_theme_utils = @import("../src/app/theme_utils.zig");
 const editor_mod = @import("../src/editor/editor.zig");
 const grammar_manager_mod = @import("../src/editor/grammar_manager.zig");
@@ -399,6 +402,8 @@ fn initTestAppStateForTerminalTabRouting(allocator: std.mem.Allocator) !AppState
     app.metrics = Metrics.init();
     app.needs_redraw = false;
     app.tab_bar = widgets.TabBar.init(allocator);
+    app.terminals = .empty;
+    app.terminal_widgets = .empty;
     app.editor_mode_adapter = try app_modes.backend.bootstrap.initEditorMode(allocator, .{
         .seed_editor_tab = false,
         .seed_terminal_tab = false,
@@ -412,6 +417,13 @@ fn initTestAppStateForTerminalTabRouting(allocator: std.mem.Allocator) !AppState
 }
 
 fn deinitTestAppStateForTerminalTabRouting(app: *AppState, allocator: std.mem.Allocator) void {
+    if (app.terminal_workspace) |*workspace| {
+        workspace.deinit();
+        app.terminal_workspace = null;
+    }
+    for (app.terminal_widgets.items) |*widget| widget.deinit();
+    app.terminal_widgets.deinit(allocator);
+    app.terminals.deinit(allocator);
     app.tab_bar.deinit();
     app.editor_mode_adapter.deinit(allocator);
     app.terminal_mode_adapter.deinit(allocator);
@@ -513,6 +525,85 @@ test "terminal activate intent routing emits only when tab id exists" {
             }
         }.call,
     ));
+}
+
+test "terminal workspace drag reorder updates cycle order after sync" {
+    const allocator = std.testing.allocator;
+    var app = try initTestAppStateForTerminalTabRouting(allocator);
+    defer deinitTestAppStateForTerminalTabRouting(&app, allocator);
+
+    app.terminal_workspace = terminal_mod.TerminalWorkspace.init(allocator, .{});
+    var workspace = &app.terminal_workspace.?;
+
+    const t1 = try workspace.createTab(24, 80);
+    const t2 = try workspace.createTab(24, 80);
+    const t3 = try workspace.createTab(24, 80);
+    try std.testing.expectEqual(t3, workspace.activeTabId().?);
+
+    try app_terminal_tab_bar_sync_runtime.syncIfWorkspace(&app);
+    try std.testing.expectEqual(@as(usize, 3), app.tab_bar.tabs.items.len);
+
+    const moved = app.tab_bar.tabs.orderedRemove(0);
+    try app.tab_bar.tabs.insert(allocator, 1, moved);
+    app.tab_bar.active_index = app.tab_bar.indexOfTerminalTabId(t3) orelse unreachable;
+
+    try std.testing.expect(app_terminal_tab_navigation_runtime.moveByVisualIndex(
+        app.app_mode,
+        &app.terminal_workspace,
+        &app.tab_bar,
+        1,
+    ));
+    try app_terminal_tab_bar_sync_runtime.syncIfWorkspace(&app);
+
+    try std.testing.expectEqual(t2, workspace.tabIdAt(0).?);
+    try std.testing.expectEqual(t1, workspace.tabIdAt(1).?);
+    try std.testing.expectEqual(t3, workspace.tabIdAt(2).?);
+    try std.testing.expectEqual(t3, workspace.activeTabId().?);
+
+    try std.testing.expect(app_terminal_tab_navigation_runtime.cycle(&app, false));
+    try std.testing.expectEqual(t1, workspace.activeTabId().?);
+}
+
+test "terminal workspace reorder keeps widget session aligned with active tab" {
+    const allocator = std.testing.allocator;
+    var app = try initTestAppStateForTerminalTabRouting(allocator);
+    defer deinitTestAppStateForTerminalTabRouting(&app, allocator);
+
+    app.terminal_workspace = terminal_mod.TerminalWorkspace.init(allocator, .{});
+    var workspace = &app.terminal_workspace.?;
+
+    const created_1 = try workspace.createTabWithSession(24, 80);
+    const created_2 = try workspace.createTabWithSession(24, 80);
+    const created_3 = try workspace.createTabWithSession(24, 80);
+
+    try app.terminal_widgets.append(allocator, app_terminal_session_bootstrap.initWidget(created_1.session, .kitty, true, false));
+    try app.terminal_widgets.append(allocator, app_terminal_session_bootstrap.initWidget(created_2.session, .kitty, true, false));
+    try app.terminal_widgets.append(allocator, app_terminal_session_bootstrap.initWidget(created_3.session, .kitty, true, false));
+
+    try app_terminal_tab_bar_sync_runtime.syncIfWorkspace(&app);
+
+    const moved = app.tab_bar.tabs.orderedRemove(0);
+    try app.tab_bar.tabs.insert(allocator, 1, moved);
+    app.tab_bar.active_index = app.tab_bar.indexOfTerminalTabId(created_3.id) orelse unreachable;
+
+    try std.testing.expect(app_terminal_tab_navigation_runtime.moveByVisualIndex(
+        app.app_mode,
+        &app.terminal_workspace,
+        &app.tab_bar,
+        1,
+    ));
+    try std.testing.expect(app_terminal_tab_navigation_runtime.moveWidgetByIndex(&app, 0, 1));
+    try app_terminal_tab_bar_sync_runtime.syncIfWorkspace(&app);
+
+    try std.testing.expect(workspace.activateTab(created_2.id));
+    const active_widget_1 = app_terminal_tab_navigation_runtime.focusByIndex(&app, 0);
+    try std.testing.expect(active_widget_1);
+    try std.testing.expectEqual(@intFromPtr(created_2.session), @intFromPtr(app.terminal_widgets.items[0].session));
+
+    try std.testing.expect(workspace.activateTab(created_1.id));
+    const active_widget_2 = app_terminal_tab_navigation_runtime.focusByIndex(&app, 1);
+    try std.testing.expect(active_widget_2);
+    try std.testing.expectEqual(@intFromPtr(created_1.session), @intFromPtr(app.terminal_widgets.items[1].session));
 }
 
 test "requestCancelTerminalCloseFromModal clears pending tab and marks redraw" {

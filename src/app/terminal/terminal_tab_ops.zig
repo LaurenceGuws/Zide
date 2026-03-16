@@ -40,3 +40,17 @@ pub fn cycle(
     }
     return false;
 }
+
+pub fn moveByVisualIndex(
+    app_mode: AppMode,
+    terminal_workspace: *?TerminalWorkspace,
+    tab_bar: *TabBar,
+    to_index: usize,
+) bool {
+    if (!app_modes.ide.shouldUseTerminalWorkspace(app_mode)) return false;
+    if (terminal_workspace.*) |*workspace| {
+        const tab_id = tab_bar.terminalTabIdAtVisual(to_index) orelse return false;
+        return workspace.moveTab(tab_id, to_index);
+    }
+    return false;
+}

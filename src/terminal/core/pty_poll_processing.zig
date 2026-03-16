@@ -43,7 +43,7 @@ pub fn processBufferedPtyOutput(self: anytype, input_pressure: bool) PtyPollResu
     var had_data = false;
     var temp: [4096]u8 = undefined;
     var parse_lock_hold_ns: i128 = 0;
-    var publish_lock_hold_ns: i128 = 0;
+    const publish_lock_hold_ns: i128 = 0;
 
     while (processed < max_bytes_per_poll and std.time.milliTimestamp() - start_ms < max_ms) {
         var chunk_len: usize = 0;
@@ -95,7 +95,7 @@ pub fn processExternalTransportOutput(self: anytype, transport: anytype, input_p
     var had_data = false;
     var processed: usize = 0;
     var parse_lock_hold_ns: i128 = 0;
-    var publish_lock_hold_ns: i128 = 0;
+    const publish_lock_hold_ns: i128 = 0;
     const max_bytes_per_poll: usize = 256 * 1024;
     const start_ms = std.time.milliTimestamp();
     const io_log = app_logger.logger("terminal.io");

@@ -43,7 +43,7 @@ Lower-layer ownership is in the right place: the backend workspace exists and te
 - [x] `TABS-02-01` Render and drive terminal tabs in `--mode terminal`.
   Notes: shared terminal target invalidates on tab switch; theme reload remaps default colors correctly; single-tab bar visibility is config-gated; tab-count transitions force immediate grid resize.
 - [x] `TABS-02-02` Add terminal tab actions and default keybinds.
-  Notes: includes new/close/next/previous/index activation and `Ctrl+Shift+Left/Right` aliases.
+  Notes: includes new/close/next/previous/index activation and `Ctrl+Shift+Left/Right` aliases. Terminal tab drag reorder now also reorders the backend workspace before resync, so keyboard cycling follows the new visual order instead of stale pre-drag ordering.
 - [x] `TABS-02-03` Handle tab-close edge cases for live processes.
   Notes: close-confirm modal is core-driven; keyboard and mouse confirmation work; last-tab close requests app shutdown in terminal-only mode.
 
@@ -58,4 +58,3 @@ Lower-layer ownership is in the right place: the backend workspace exists and te
 
 - [ ] `TABS-04-01` Define a terminal-only manual battle-test matrix for long-running tab workflows.
 - [ ] `TABS-04-02` Add replay/regression signals for workspace and tab lifecycle.
-

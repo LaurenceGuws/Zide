@@ -203,6 +203,25 @@ pub fn handle(state: anytype, input_batch: *shared_types.input.InputBatch) !void
                                             .apply_terminal_action = struct {
                                                 fn call(hook_raw: *anyopaque, action: app_modes.shared.actions.TabAction) !void {
                                                     const hook_state: *State = @ptrCast(@alignCast(hook_raw));
+                                                    switch (action) {
+                                                        .move => |mv| {
+                                                            if (app_terminal_tab_navigation_runtime.moveByVisualIndex(
+                                                                hook_state.app_mode,
+                                                                &hook_state.terminal_workspace,
+                                                                &hook_state.tab_bar,
+                                                                mv.to_index,
+                                                            )) {
+                                                                _ = app_terminal_tab_navigation_runtime.moveWidgetByIndex(
+                                                                    hook_state,
+                                                                    mv.from_index,
+                                                                    mv.to_index,
+                                                                );
+                                                                try app_terminal_tab_bar_sync_runtime.syncIfWorkspace(hook_state);
+                                                                return;
+                                                            }
+                                                        },
+                                                        else => {},
+                                                    }
                                                     try app_tab_action_apply_runtime.applyTerminalAndSync(hook_state, action);
                                                 }
                                             }.call,
