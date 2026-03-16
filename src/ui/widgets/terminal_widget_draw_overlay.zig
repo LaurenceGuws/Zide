@@ -130,17 +130,15 @@ pub fn drawOverlays(
     view_cells: []const Cell,
     rows: usize,
     cols: usize,
-    scroll_offset: usize,
-    total_lines: usize,
-    max_scroll_offset: usize,
     screen_reverse: bool,
     hover_link_id: u32,
     draw_cursor: bool,
     cursor: CursorPos,
     cursor_style: @TypeOf(RenderCache.init().cursor_style),
 ) void {
+    _ = width;
+    _ = height;
     const r = shell.rendererPtr();
-    const show_scrollbar = !cache.alt_active and !cache.mouse_reporting_active and total_lines > rows;
     const composing_len: usize = if (input.composing_active and input.composing_text.len > 0) blk: {
         var count: usize = 0;
         var count_iter = std.unicode.Utf8Iterator{ .bytes = input.composing_text, .i = 0 };
@@ -278,43 +276,5 @@ pub fn drawOverlays(
                 r.drawRect(cell_x_i, cell_y_i + cell_h_i - 2, underline_w, 2, r.theme.selection);
             }
         }
-    }
-
-    if (show_scrollbar and height > 0 and width > 0) {
-        const scrollbar_base_w: f32 = common.scrollbarWidth(r.uiScaleFactor());
-        const scrollbar_hover_w: f32 = common.scrollbarHoverWidth(r.uiScaleFactor());
-        const scrollbar_w: f32 = common.lerp(scrollbar_base_w, scrollbar_hover_w, self.scrollbar_hover_anim);
-        const scrollbar_x = x + width - scrollbar_w;
-        const scrollbar_y = y;
-        const scrollbar_h = height;
-        const min_thumb_h: f32 = 18;
-        const ratio = common.scrollbarTrackRatio(max_scroll_offset, scroll_offset);
-        const thumb = common.computeScrollbarThumb(scrollbar_y, scrollbar_h, rows, total_lines, min_thumb_h, ratio);
-        const show_track = self.scrollbar_drag_active or self.scrollbar_hover_anim > 0.05;
-        if (show_track) {
-            r.drawRect(@intFromFloat(scrollbar_x), @intFromFloat(scrollbar_y), @intFromFloat(scrollbar_w), @intFromFloat(scrollbar_h), r.theme.line_number_bg);
-        }
-        const thumb_inset = if (show_track) @max(1.0, scrollbar_w * 0.25) else 0;
-        const thumb_w = @max(1.0, scrollbar_w - thumb_inset * 2);
-        r.drawRect(@intFromFloat(scrollbar_x + thumb_inset), @intFromFloat(thumb.thumb_y), @intFromFloat(thumb_w), @intFromFloat(thumb.thumb_h), r.theme.selection);
-    }
-
-    if (scroll_offset > 0 and width > 0 and height > 0) {
-        const scrollbar_base_w: f32 = common.scrollbarWidth(r.uiScaleFactor());
-        const scrollbar_hover_w: f32 = common.scrollbarHoverWidth(r.uiScaleFactor());
-        const scrollbar_w: f32 = common.lerp(scrollbar_base_w, scrollbar_hover_w, self.scrollbar_hover_anim);
-        var label_buf: [48]u8 = undefined;
-        const label = std.fmt.bufPrint(&label_buf, "SCROLLBACK {d}", .{scroll_offset}) catch "SCROLLBACK";
-        const padding_x: f32 = 6;
-        const padding_y: f32 = 3;
-        const text_w = @as(f32, @floatFromInt(label.len)) * r.char_width;
-        const box_w = text_w + padding_x * 2;
-        const box_h = r.char_height + padding_y * 2;
-        const desired_x = x + width - scrollbar_w - box_w - 6;
-        const box_x = @max(x + 4, desired_x);
-        const box_y = y + 6;
-        const bg = Color{ .r = r.theme.line_number_bg.r, .g = r.theme.line_number_bg.g, .b = r.theme.line_number_bg.b, .a = 220 };
-        r.drawRect(@intFromFloat(box_x), @intFromFloat(box_y), @intFromFloat(box_w), @intFromFloat(box_h), bg);
-        r.drawText(label, box_x + padding_x, box_y + padding_y, r.theme.foreground);
     }
 }

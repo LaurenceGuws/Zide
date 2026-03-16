@@ -86,8 +86,6 @@ fn handleEvent(
                 };
             }
             if (sdl_api.isFocusLostEvent(event.type)) {
-                sdl_api.stopTextInput(self.window);
-                sdl_api.setEventEnabled(sdl_api.EVENT_MOUSE_MOTION, false);
                 self.window_focused = false;
                 self.focus_queue.append(self.allocator, false) catch |err| {
                     window_log.logf(.warning, "focus queue append failed focused=0 err={s}", .{@errorName(err)});
@@ -159,11 +157,9 @@ fn handleEvent(
                     self.mouse_press_pos_valid[idx] = true;
                 }
             }
-            sdl_api.setEventEnabled(sdl_api.EVENT_MOUSE_MOTION, true);
         },
         sdl_api.EVENT_MOUSE_BUTTON_UP => {
             platform_input_events.handleMouseButtonUp(event, self.mouse_down[0..], self.mouse_released[0..]);
-            if (!self.anyMouseButtonsDown()) sdl_api.setEventEnabled(sdl_api.EVENT_MOUSE_MOTION, false);
         },
         sdl_api.EVENT_MOUSE_WHEEL => input_state.addMouseWheel(state.mouse_wheel_delta, platform_input_events.wheelDelta(event)),
         else => {
@@ -178,8 +174,6 @@ fn handleEvent(
                     };
                 }
                 if (sdl_api.isFocusLostEvent(event.type)) {
-                    sdl_api.stopTextInput(self.window);
-                    sdl_api.setEventEnabled(sdl_api.EVENT_MOUSE_MOTION, false);
                     self.window_focused = false;
                     self.focus_queue.append(self.allocator, false) catch |err| {
                         window_log.logf(.warning, "focus queue append failed focused=0 err={s}", .{@errorName(err)});

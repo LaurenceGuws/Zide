@@ -38,6 +38,14 @@ Supporting cleanup:
 - `VTCORE-05` renderer/publication architecture is already live; remaining work is hardening and keeping the contract honest
 - `VTCORE-07` remains a guardrail, not a separate invention lane
 
+Focused follow-up lane:
+
+- `widget_boundary_split.md`
+  Why: recent dogfood fixes proved that viewport chrome and hover/scrollbar
+  behavior were still mixed across widget/content/runtime layers. The next
+  cleanup is to keep shrinking widget/runtime policy and host conveniences
+  toward a cleaner engine/host/chrome split without widening FFI casually.
+
 ## TODO
 
 - [x] `VTCORE-00` Define the terminal core boundary.

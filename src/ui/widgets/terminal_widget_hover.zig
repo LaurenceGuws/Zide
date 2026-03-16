@@ -38,16 +38,17 @@ pub fn updateHoverStateVisible(
     cols: usize,
     view_cells: []const Cell,
     input_batch: *shared_types.input.InputBatch,
+    window_focused: bool,
 ) void {
     const mouse = input_batch.mouse_pos;
-    const ctrl = input_batch.mods.ctrl;
+    const ctrl = window_focused and input_batch.mods.ctrl;
     const scrollbar_w: f32 = common.scrollbarWidth(ui_scale);
     const scrollbar_x = x + width - scrollbar_w;
     var hover_row: isize = -1;
     var hover_col: isize = -1;
     var hover_link_id: u32 = 0;
     if (rows > 0 and cols > 0) {
-        const in_terminal = common.pointInRect(mouse.x, mouse.y, x, y, width, height);
+        const in_terminal = window_focused and common.pointInRect(mouse.x, mouse.y, x, y, width, height);
         const in_cells = in_terminal and mouse.x < scrollbar_x;
         if (in_cells and cell_width > 0 and cell_height > 0) {
             const base_x = @as(f32, @floatFromInt(@as(i32, @intFromFloat(std.math.round(x)))));

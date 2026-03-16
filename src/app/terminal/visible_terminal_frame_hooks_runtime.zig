@@ -3,6 +3,7 @@ const app_logger = @import("../../app_logger.zig");
 const app_bootstrap = @import("../bootstrap.zig");
 const app_modes = @import("../modes/mod.zig");
 const app_poll_visible_terminal_sessions_runtime = @import("poll_visible_terminal_sessions_runtime.zig");
+const app_terminal_scrollbar_runtime = @import("terminal_scrollbar_runtime.zig");
 const app_terminal_widget_input_hook_runtime = @import("terminal_widget_input_hook_runtime.zig");
 const app_visible_terminal_frame = @import("visible_terminal_frame.zig");
 const app_shell = @import("../../app_shell.zig");
@@ -52,6 +53,9 @@ pub fn handle(
     terminal_close_modal_active: bool,
     now: f64,
     allocator: std.mem.Allocator,
+    terminal_scrollbar_dragging: *bool,
+    terminal_scrollbar_grab_offset: *f32,
+    terminal_scrollbar_hovered: *bool,
     ctx: *anyopaque,
     hooks: Hooks,
 ) !void {
@@ -61,6 +65,9 @@ pub fn handle(
         terminal_workspace: @TypeOf(terminal_workspace),
         terminals: @TypeOf(terminals),
         allocator: std.mem.Allocator,
+        terminal_scrollbar_dragging: *bool,
+        terminal_scrollbar_grab_offset: *f32,
+        terminal_scrollbar_hovered: *bool,
         user_ctx: *anyopaque,
         hooks: Hooks,
     }{
@@ -69,6 +76,9 @@ pub fn handle(
         .terminal_workspace = terminal_workspace,
         .terminals = terminals,
         .allocator = allocator,
+        .terminal_scrollbar_dragging = terminal_scrollbar_dragging,
+        .terminal_scrollbar_grab_offset = terminal_scrollbar_grab_offset,
+        .terminal_scrollbar_hovered = terminal_scrollbar_hovered,
         .user_ctx = ctx,
         .hooks = hooks,
     };
@@ -155,6 +165,36 @@ pub fn handle(
                             .note_input = route.hooks.note_input,
                         },
                     );
+                }
+            }.call,
+            .handle_terminal_scrollbar_input = struct {
+                fn call(
+                    route_raw: *anyopaque,
+                    term_widget: *TerminalWidget,
+                    term_shell: *Shell,
+                    term_x: f32,
+                    term_y_draw: f32,
+                    term_width: f32,
+                    term_draw_height: f32,
+                    term_input_batch: *input_types.InputBatch,
+                    term_now: f64,
+                ) bool {
+                    const route = @as(*@TypeOf(runtime_state), @ptrCast(@alignCast(route_raw)));
+                    const result = app_terminal_scrollbar_runtime.handleInput(
+                        term_widget,
+                        term_shell,
+                        term_x,
+                        term_y_draw,
+                        term_width,
+                        term_draw_height,
+                        term_input_batch,
+                        route.terminal_scrollbar_dragging,
+                        route.terminal_scrollbar_grab_offset,
+                        route.terminal_scrollbar_hovered,
+                    );
+                    if (result.needs_redraw) route.hooks.mark_redraw(route.user_ctx);
+                    if (result.note_input) route.hooks.note_input(route.user_ctx, term_now);
+                    return result.blocking;
                 }
             }.call,
         },

@@ -1,5 +1,6 @@
 const shared_types = @import("../types/mod.zig");
 const app_shell = @import("../app_shell.zig");
+const common = @import("../ui/widgets/common.zig");
 
 const layout_types = shared_types.layout;
 const input_types = shared_types.input;
@@ -60,6 +61,16 @@ pub fn handle(
             if (now - last_mouse_redraw_time.* >= interval) {
                 out.needs_redraw = true;
                 last_mouse_redraw_time.* = now;
+            }
+        } else {
+            const right_edge_dist = term.x + term.width - mouse.x;
+            const near_terminal_edge = right_edge_dist <= common.scrollbarProximityRange(1.0) and right_edge_dist >= -common.scrollbarHitMargin(1.0);
+            if (near_terminal_edge) {
+                const interval: f64 = 1.0 / 60.0;
+                if (now - last_mouse_redraw_time.* >= interval) {
+                    out.needs_redraw = true;
+                    last_mouse_redraw_time.* = now;
+                }
             }
         }
     }

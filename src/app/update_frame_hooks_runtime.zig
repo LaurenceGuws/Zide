@@ -292,6 +292,9 @@ pub fn handle(state: anytype, input_batch: *shared_types.input.InputBatch) !void
                                             frame_terminal_close_modal_active,
                                             at,
                                             inner_state.allocator,
+                                            &inner_state.terminal_scrollbar_dragging,
+                                            &inner_state.terminal_scrollbar_grab_offset,
+                                            &inner_state.terminal_scrollbar_hovered,
                                             inner_raw,
                                             .{
                                                 .open_file = struct {
@@ -358,6 +361,9 @@ pub fn handle(state: anytype, input_batch: *shared_types.input.InputBatch) !void
                                                 .editor_drag_start = &inner_state.editor_drag_start,
                                                 .editor_drag_rect = &inner_state.editor_drag_rect,
                                             },
+                                            &inner_state.terminal_scrollbar_dragging,
+                                            &inner_state.terminal_scrollbar_grab_offset,
+                                            &inner_state.terminal_scrollbar_hovered,
                                             inner_state.show_terminal,
                                             &inner_state.terminal_workspace,
                                             inner_state.terminals.items,

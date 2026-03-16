@@ -86,7 +86,8 @@ pub const StatusBar = struct {
         const text_x: f32 = 8 * scale;
         const mouse = self.last_mouse;
         const pressed = self.mouse_down_left;
-        const mode_hover = mouse.x >= 0 and mouse.x <= mode_width and mouse.y >= y and mouse.y <= y + self.height;
+        const window_focused = shell.windowFocused();
+        const mode_hover = window_focused and mouse.x >= 0 and mouse.x <= mode_width and mouse.y >= y and mouse.y <= y + self.height;
         const mode_bg_final = if (mode_hover and pressed) theme.ui_pressed else if (mode_hover) theme.ui_hover else mode_bg;
         shell.drawRect(0, @intFromFloat(y), @intFromFloat(mode_width), @intFromFloat(self.height), mode_bg_final);
         shell.drawTextOnBg(mode, text_x, text_y, if (mode_hover) theme.ui_text else theme.background, mode_bg_final);
@@ -151,7 +152,7 @@ pub const StatusBar = struct {
         if (file_path) |path| {
             const available = pos_start - 16 * scale - x;
             const result = common.drawTruncatedTextOnBg(shell, path, x, text_y, theme.ui_text, bar_bg, available);
-            const in_path = mouse.x >= x and mouse.x <= x + result.drawn_width and
+            const in_path = window_focused and mouse.x >= x and mouse.x <= x + result.drawn_width and
                 mouse.y >= y and mouse.y <= y + self.height;
             if (result.truncated and in_path) {
                 common.drawTooltip(shell, path, mouse.x, mouse.y);
@@ -168,7 +169,7 @@ pub const StatusBar = struct {
             }
         }
 
-        const pos_hover = mouse.x >= pos_start and mouse.x <= pos_start + pos_width and mouse.y >= y and mouse.y <= y + self.height;
+        const pos_hover = window_focused and mouse.x >= pos_start and mouse.x <= pos_start + pos_width and mouse.y >= y and mouse.y <= y + self.height;
         if (pos_hover) {
             const bg = if (pressed) theme.ui_pressed else theme.ui_hover;
             shell.drawRect(@intFromFloat(pos_start - 4 * scale), @intFromFloat(y + 2 * scale), @intFromFloat(pos_width + 8 * scale), @intFromFloat(self.height - 4 * scale), bg);

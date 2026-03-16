@@ -30,22 +30,6 @@ pub fn handleInput(
     const in_terminal = common.pointInRect(mouse.x, mouse.y, x, y, width, height);
     var handled = false;
     const scale = shell.uiScaleFactor();
-    const scrollbar_base_w: f32 = common.scrollbarWidth(scale);
-    const scrollbar_hover_w: f32 = common.scrollbarHoverWidth(scale);
-    const scrollbar_hit_margin: f32 = common.scrollbarHitMargin(scale);
-    const scrollbar_proximity: f32 = common.scrollbarProximityRange(scale);
-    const in_scroll_y = mouse.y >= y and mouse.y <= y + height;
-    const dist_from_right = (x + width) - mouse.x;
-    const proximity_raw: f32 = if (in_scroll_y and dist_from_right <= scrollbar_proximity and dist_from_right >= -scrollbar_hit_margin)
-        (1.0 - std.math.clamp(dist_from_right / scrollbar_proximity, 0.0, 1.0))
-    else
-        0.0;
-    const proximity_t = common.smoothstep01(proximity_raw);
-    const scrollbar_w: f32 = common.lerp(scrollbar_base_w, scrollbar_hover_w, if (self.scrollbar_drag_active) 1.0 else proximity_t);
-    const scrollbar_x = x + width - scrollbar_w;
-    const scrollbar_y = y;
-    const scrollbar_h = height;
-
     const cache = &self.draw_cache;
     const view_cells = cache.cells.items;
     const history_len = cache.history_len;
@@ -55,17 +39,7 @@ pub fn handleInput(
     const scroll_offset = cache.scroll_offset;
     const end_line = total_lines - scroll_offset;
     const start_line = if (end_line > rows) end_line - rows else 0;
-    const max_scroll_offset = if (total_lines > rows) total_lines - rows else 0;
     const has_visible_grid = rows > 0 and cols > 0 and view_cells.len >= rows * cols;
-    const show_scrollbar = !cache.alt_active and !self.session.mouseReportingEnabled() and total_lines > rows;
-    const mouse_on_scrollbar = show_scrollbar and common.pointInRect(
-        mouse.x,
-        mouse.y,
-        scrollbar_x - scrollbar_hit_margin,
-        scrollbar_y,
-        scrollbar_w + scrollbar_hit_margin,
-        scrollbar_h,
-    );
     const r = shell.rendererPtr();
     const hit_cell_w = @as(f32, @floatFromInt(@max(1, @as(i32, @intFromFloat(std.math.round(r.terminal_cell_width))))));
     const hit_cell_h = @as(f32, @floatFromInt(@max(1, @as(i32, @intFromFloat(std.math.round(r.terminal_cell_height))))));
@@ -84,6 +58,7 @@ pub fn handleInput(
         cols,
         view_cells,
         input_batch,
+        shell.windowFocused(),
     );
 
     const ctrl = input_batch.mods.ctrl;
@@ -170,14 +145,11 @@ pub fn handleInput(
                 self,
                 .{
                     .in_terminal = in_terminal,
-                    .mouse_on_scrollbar = mouse_on_scrollbar,
                     .mouse = mouse,
                     .x = x,
                     .y = y,
                     .width = width,
                     .height = height,
-                    .scrollbar_y = scrollbar_y,
-                    .scrollbar_h = scrollbar_h,
                     .hit_base_x = hit_base_x,
                     .hit_base_y = hit_base_y,
                     .hit_cell_w = hit_cell_w,
@@ -188,7 +160,6 @@ pub fn handleInput(
                     .history_len = history_len,
                     .start_line = start_line,
                     .scroll_offset = scroll_offset,
-                    .max_scroll_offset = max_scroll_offset,
                     .has_visible_grid = has_visible_grid,
                     .cache_selection_active = cache.selection_active,
                     .mod = mod,

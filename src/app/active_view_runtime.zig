@@ -43,6 +43,9 @@ pub fn handle(
     editor_highlight_budget: ?usize,
     editor_width_budget: ?usize,
     editor_input_state: app_editor_frame_hooks_runtime.InputState,
+    terminal_scrollbar_dragging: *bool,
+    terminal_scrollbar_grab_offset: *f32,
+    terminal_scrollbar_hovered: *bool,
     show_terminal: bool,
     terminal_workspace: anytype,
     terminals: anytype,
@@ -102,11 +105,17 @@ pub fn handle(
         metrics: @TypeOf(metrics),
         user_ctx: *anyopaque,
         user_hooks: Hooks,
+        terminal_scrollbar_dragging: *bool,
+        terminal_scrollbar_grab_offset: *f32,
+        terminal_scrollbar_hovered: *bool,
     }{
         .needs_redraw = needs_redraw,
         .metrics = metrics,
         .user_ctx = ctx,
         .user_hooks = hooks,
+        .terminal_scrollbar_dragging = terminal_scrollbar_dragging,
+        .terminal_scrollbar_grab_offset = terminal_scrollbar_grab_offset,
+        .terminal_scrollbar_hovered = terminal_scrollbar_hovered,
     };
 
     try app_visible_terminal_frame_hooks_runtime.handle(
@@ -125,6 +134,9 @@ pub fn handle(
         terminal_close_modal_active,
         now,
         terminal_allocator,
+        terminal_scrollbar_dragging,
+        terminal_scrollbar_grab_offset,
+        terminal_scrollbar_hovered,
         @ptrCast(&runtime_state),
         .{
             .open_file = struct {

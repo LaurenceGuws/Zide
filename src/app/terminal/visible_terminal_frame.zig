@@ -33,6 +33,17 @@ fn hasPassiveMouseMoveOnly(input_batch: *input_types.InputBatch, in_terminal_rec
 
 pub const Hooks = struct {
     poll_visible_sessions: *const fn (*anyopaque, *input_types.InputBatch) anyerror!void,
+    handle_terminal_scrollbar_input: *const fn (
+        *anyopaque,
+        *widgets.TerminalWidget,
+        *app_shell.Shell,
+        f32,
+        f32,
+        f32,
+        f32,
+        *input_types.InputBatch,
+        f64,
+    ) bool,
     handle_terminal_widget_input: *const fn (
         *anyopaque,
         *widgets.TerminalWidget,
@@ -97,11 +108,19 @@ pub fn handle(
             mouse.y >= term_y_draw and
             mouse.y <= term_y_draw + term_draw_height;
         const passive_move_only = hasPassiveMouseMoveOnly(input_batch, in_terminal_rect);
-        const mouse_reporting = term_widget.session.mouseReportingEnabled();
-        const ctrl_link_intent = input_batch.mods.ctrl and passive_move_only;
-        const skip_widget_input = passive_move_only and !mouse_reporting and !ctrl_link_intent;
-
-        if (!skip_widget_input) {
+        _ = passive_move_only;
+        const scrollbar_blocking = hooks.handle_terminal_scrollbar_input(
+            ctx,
+            term_widget,
+            shell,
+            term_x,
+            term_y_draw,
+            layout.terminal.width,
+            term_draw_height,
+            input_batch,
+            now,
+        );
+        if (!scrollbar_blocking) {
             try hooks.handle_terminal_widget_input(
                 ctx,
                 term_widget,

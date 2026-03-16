@@ -50,6 +50,7 @@ pub const SideNav = struct {
         const pressed = self.mouse_down_left;
         const hover_pad_x: f32 = 8 * scale;
         const hover_pad_y: f32 = 8 * scale;
+        const window_focused = shell.windowFocused();
 
         const icon_x_pad: f32 = self.width * 0.30;
         const icon_text_offset: f32 = 1 * scale;
@@ -60,7 +61,7 @@ pub const SideNav = struct {
             const by = icon_y - hover_pad_y;
             const bw = icon_size + hover_pad_x * 2;
             const bh = icon_size + hover_pad_y * 2;
-            const hovered = mouse.x >= bx and mouse.x <= bx + bw and mouse.y >= by and mouse.y <= by + bh;
+            const hovered = window_focused and mouse.x >= bx and mouse.x <= bx + bw and mouse.y >= by and mouse.y <= by + bh;
 
             if (hovered or item.active) {
                 const bg = if (pressed and hovered) theme.ui_pressed else theme.ui_hover;
@@ -96,7 +97,7 @@ pub const SideNav = struct {
             const by = bottom_y - hover_pad_y;
             const bw = icon_size + hover_pad_x * 2;
             const bh = icon_size + hover_pad_y * 2;
-            const hovered = mouse.x >= bx and mouse.x <= bx + bw and mouse.y >= by and mouse.y <= by + bh;
+            const hovered = window_focused and mouse.x >= bx and mouse.x <= bx + bw and mouse.y >= by and mouse.y <= by + bh;
 
             if (hovered or item.active) {
                 const bg = if (pressed and hovered) theme.ui_pressed else theme.ui_hover;

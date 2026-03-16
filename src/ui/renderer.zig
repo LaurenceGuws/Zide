@@ -570,10 +570,6 @@ pub const Renderer = struct {
         try renderer.initGlResources();
         try renderer.initFonts(font_size);
 
-        // Mouse position is sampled directly each frame via SDL_GetMouseState;
-        // we do not consume SDL mouse-motion events.
-        sdl_api.setEventEnabled(sdl_api.EVENT_MOUSE_MOTION, false);
-
         sdl_api.startTextInput(window);
         try renderer.initInputThread();
 

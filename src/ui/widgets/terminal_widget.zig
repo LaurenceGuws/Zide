@@ -66,13 +66,17 @@ pub const TerminalWidget = struct {
     last_focus_reported: ?bool = null,
     ui_focused: bool = true,
     ui_window_focused: bool = true,
-    scrollbar_hover_anim: f32 = 0,
-    scrollbar_anim_last_time: f64 = 0,
-    scrollbar_drag_active: bool = false,
-    scrollbar_grab_offset: f32 = 0,
     selection_gesture: terminal_mod.SelectionGesture = .{},
     selection_press_origin: ?shared_types.input.MousePos = null,
     selection_drag_active: bool = false,
+
+    pub const ScrollbarModel = struct {
+        allowed: bool,
+        visible: bool,
+        rows: usize,
+        total_lines: usize,
+        scroll_offset: usize,
+    };
 
     pub fn init(session: *TerminalSession, blink_style: BlinkStyle) TerminalWidget {
         return .{
@@ -105,10 +109,6 @@ pub const TerminalWidget = struct {
             .last_focus_reported = null,
             .ui_focused = true,
             .ui_window_focused = true,
-            .scrollbar_hover_anim = 0,
-            .scrollbar_anim_last_time = 0,
-            .scrollbar_drag_active = false,
-            .scrollbar_grab_offset = 0,
             .selection_gesture = .{},
             .selection_press_origin = null,
             .selection_drag_active = false,
@@ -146,6 +146,9 @@ pub const TerminalWidget = struct {
     pub fn setUiFocused(self: *TerminalWidget, focused: bool) void {
         if (self.ui_focused == focused) return;
         self.ui_focused = focused;
+        if (!focused) {
+            self.hover = .{};
+        }
         const log = app_logger.logger("terminal.cursor");
         log.logf(.info, "ui_focus changed focused={d}", .{@intFromBool(focused)});
     }
@@ -306,6 +309,18 @@ pub const TerminalWidget = struct {
         defer if (uri_list) |buf| self.session.allocator.free(buf);
         defer if (png) |buf| self.session.allocator.free(buf);
         return self.session.pasteSystemClipboard(clip_opt, html, uri_list, png) catch false;
+    }
+
+    pub fn scrollbarModel(self: *const TerminalWidget) ScrollbarModel {
+        const cache = &self.draw_cache;
+        const allowed = !cache.alt_active and !self.session.mouseReportingEnabled() and cache.rows > 0 and cache.total_lines > cache.rows;
+        return .{
+            .allowed = allowed,
+            .visible = allowed,
+            .rows = cache.rows,
+            .total_lines = cache.total_lines,
+            .scroll_offset = cache.scroll_offset,
+        };
     }
 
     pub fn draw(

@@ -3,18 +3,14 @@ const std = @import("std");
 const terminal_mod = @import("../../terminal/core/terminal.zig");
 const app_logger = @import("../../app_logger.zig");
 const shared_types = @import("../../types/mod.zig");
-const common = @import("common.zig");
 
 pub const PointerParams = struct {
     in_terminal: bool,
-    mouse_on_scrollbar: bool,
     mouse: shared_types.input.MousePos,
     x: f32,
     y: f32,
     width: f32,
     height: f32,
-    scrollbar_y: f32,
-    scrollbar_h: f32,
     hit_base_x: f32,
     hit_base_y: f32,
     hit_cell_w: f32,
@@ -25,7 +21,6 @@ pub const PointerParams = struct {
     history_len: usize,
     start_line: usize,
     scroll_offset: usize,
-    max_scroll_offset: usize,
     has_visible_grid: bool,
     cache_selection_active: bool,
     mod: terminal_mod.Modifier,
@@ -50,8 +45,7 @@ pub fn handlePointerInput(
 ) !PointerResult {
     const scroll_log = app_logger.logger("terminal.scroll");
     var result = PointerResult{};
-    const suppress_selection_for_scrollbar = params.mouse_on_scrollbar or self.scrollbar_drag_active;
-    if (!params.in_terminal and !self.scrollbar_drag_active and !saw_non_modifier_key_press and !saw_text_input) {
+    if (!params.in_terminal and !saw_non_modifier_key_press and !saw_text_input) {
         return result;
     }
 
@@ -64,33 +58,6 @@ pub fn handlePointerInput(
         live_scroll_offset = 0;
     }
 
-    if (params.in_terminal and params.mouse_on_scrollbar and input_batch.mousePressed(.left)) {
-        self.scrollbar_drag_active = true;
-        const min_thumb_h: f32 = 18;
-        const ratio = common.scrollbarTrackRatio(params.max_scroll_offset, live_scroll_offset);
-        const thumb = common.computeScrollbarThumb(params.scrollbar_y, params.scrollbar_h, params.rows, params.total_lines, min_thumb_h, ratio);
-        self.scrollbar_grab_offset = params.mouse.y - thumb.thumb_y;
-        scroll_log.logf(.info, "scrollbar press offset={d}", .{live_scroll_offset});
-        result.handled = true;
-    }
-
-    if (self.scrollbar_drag_active) {
-        if (input_batch.mouseDown(.left)) {
-            const min_thumb_h: f32 = 18;
-            const thumb = common.computeScrollbarThumb(params.scrollbar_y, params.scrollbar_h, params.rows, params.total_lines, min_thumb_h, 0.0);
-            const available = thumb.available;
-            const clamped_mouse = @min(@max(params.mouse.y - self.scrollbar_grab_offset, params.scrollbar_y), params.scrollbar_y + available);
-            const ratio = if (available > 0) (clamped_mouse - params.scrollbar_y) / available else 0;
-            if (self.session.setScrollOffsetFromNormalizedTrackLocked(ratio)) |new_offset| {
-                live_scroll_offset = new_offset;
-                scroll_log.logf(.info, "scrollbar drag offset={d} ratio={d:.3}", .{ live_scroll_offset, ratio });
-                result.handled = true;
-            }
-        } else {
-            self.scrollbar_drag_active = false;
-        }
-    }
-
     if (params.in_terminal and input_batch.mousePressed(.left) and selection_active) {
         if (self.session.clearSelectionIfActiveLocked()) {
             selection_active = false;
@@ -98,7 +65,7 @@ pub fn handlePointerInput(
         }
     }
 
-    if (params.has_visible_grid and params.in_terminal and !suppress_selection_for_scrollbar) {
+    if (params.has_visible_grid and params.in_terminal) {
         if (input_batch.mousePressed(.left)) {
             const press_mouse = input_batch.mousePressPos(.left) orelse params.mouse;
             const col = @as(usize, @intFromFloat((press_mouse.x - params.hit_base_x) / params.hit_cell_w));
@@ -207,8 +174,6 @@ pub fn handlePointerInput(
 }
 
 pub fn resetLeftDragState(self: anytype) void {
-    self.scrollbar_drag_active = false;
-    self.scrollbar_grab_offset = 0;
     self.selection_gesture = .{};
     self.selection_press_origin = null;
     self.selection_drag_active = false;

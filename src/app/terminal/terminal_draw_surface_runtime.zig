@@ -1,5 +1,6 @@
 const app_modes = @import("../modes/mod.zig");
 const app_terminal_active_widget = @import("terminal_active_widget.zig");
+const app_terminal_scrollbar_runtime = @import("terminal_scrollbar_runtime.zig");
 const app_terminal_surface_gate = @import("terminal_surface_gate.zig");
 const shared_types = @import("../../types/mod.zig");
 
@@ -37,6 +38,16 @@ pub fn draw(state: anytype, shell: anytype, layout: layout_types.WidgetLayout) v
         if (layout.terminal.width > 0 and term_height > 0) {
             shell.endClip();
         }
+        app_terminal_scrollbar_runtime.draw(
+            term_widget,
+            shell,
+            layout.terminal.x,
+            term_y + term_offset_y,
+            layout.terminal.width,
+            term_height,
+            state.last_input.mouse_pos,
+            state.terminal_scrollbar_dragging,
+        );
         state.pending_terminal_presentation_feedback = .{
             .session = term_widget.session,
             .feedback = draw_outcome,

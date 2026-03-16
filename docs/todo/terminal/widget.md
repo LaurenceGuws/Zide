@@ -97,6 +97,23 @@ Status note, 2026-03-15:
     call the normal live-bottom reset logic meant for real terminal input.
   - Current fix keeps suppressed `Ctrl+Shift+C/V` out of that live-reset input
     classification while preserving normal paste/live-follow behavior.
+  - 2026-03-16 SDL/window-focus follow-up: terminal scrollbar hover/drag state
+    now clears on window focus loss, and hover-only UI surfaces are gated by
+    window focus so stale mouse position does not keep edge hover effects active
+    while the window is unfocused.
+  - 2026-03-16 scrollbar cleanup follow-up: terminal scrollbar hover target,
+    hit-testing, and draw geometry now share one helper so hover acquisition,
+    drag hitboxes, and rendered width/thumb placement stay in sync.
+  - 2026-03-16 scrollbar ownership follow-up: terminal scrollbar drawing and
+    the `SCROLLBACK N` badge were terminal-content chrome smells. The current
+    direction is to keep terminal responsible for viewport truth only and move
+    scrollbar UI into shared app chrome/runtime ownership.
+  - 2026-03-17 scrollbar motion follow-up: terminal scrollbar chrome now keeps
+    a fixed full-width thumb/track and animates by sliding inward from the
+    terminal edge as hover focus increases, rather than by widening in place.
+  - 2026-03-17 scrollbar visibility follow-up: the scrollbar no longer hides at
+    live bottom. If scrollback exists and terminal mode allows chrome, it stays
+    available, matching the simpler host-chrome rule and Ghostty-style behavior.
 
 ### Phase 7 Correctness And Compatibility
 

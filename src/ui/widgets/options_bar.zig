@@ -27,6 +27,7 @@ pub const OptionsBar = struct {
         const y: f32 = (self.height - shell.charHeight()) / 2;
         const mouse = self.last_mouse;
         const pressed = self.mouse_down_left;
+        const window_focused = shell.windowFocused();
         for (labels) |label| {
             const text_w = @as(f32, @floatFromInt(label.len)) * shell.charWidth();
             const pad_x: f32 = 6 * scale;
@@ -35,7 +36,7 @@ pub const OptionsBar = struct {
             const by = y - pad_y;
             const bw = text_w + pad_x * 2;
             const bh = shell.charHeight() + pad_y * 2;
-            const hovered = mouse.x >= bx and mouse.x <= bx + bw and mouse.y >= by and mouse.y <= by + bh;
+            const hovered = window_focused and mouse.x >= bx and mouse.x <= bx + bw and mouse.y >= by and mouse.y <= by + bh;
             if (hovered) {
                 const bg = if (pressed) theme.ui_pressed else theme.ui_hover;
                 shell.drawRect(@intFromFloat(bx), @intFromFloat(by), @intFromFloat(bw), @intFromFloat(bh), bg);

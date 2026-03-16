@@ -23,19 +23,19 @@ pub const ScrollbarThumb = struct {
 };
 
 pub fn scrollbarWidth(ui_scale: f32) f32 {
-    return @max(@as(f32, 3), 3 * ui_scale);
+    return @max(@as(f32, 6), 6 * ui_scale);
 }
 
 pub fn scrollbarHoverWidth(ui_scale: f32) f32 {
-    return @max(@as(f32, 6), 8 * ui_scale);
+    return @max(@as(f32, 12), 16 * ui_scale);
 }
 
 pub fn scrollbarHitMargin(ui_scale: f32) f32 {
-    return @max(@as(f32, 3), 4 * ui_scale);
+    return @max(@as(f32, 6), 8 * ui_scale);
 }
 
 pub fn scrollbarProximityRange(ui_scale: f32) f32 {
-    return @max(@as(f32, 16), 22 * ui_scale);
+    return @max(@as(f32, 24), 32 * ui_scale);
 }
 
 pub fn smoothstep01(t: f32) f32 {

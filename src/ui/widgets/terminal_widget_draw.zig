@@ -5,7 +5,6 @@ const render_cache_mod = @import("../../terminal/core/render_cache.zig");
 const app_logger = @import("../../app_logger.zig");
 const shared_types = @import("../../types/mod.zig");
 const time_utils = @import("../renderer/time_utils.zig");
-const common = @import("common.zig");
 const terminal_font_mod = @import("../terminal_font.zig");
 const draw_grid = @import("terminal_widget_draw_grid.zig");
 const draw_overlay = @import("terminal_widget_draw_overlay.zig");
@@ -215,7 +214,6 @@ pub fn drawPrepared(
     const total_lines = cache.total_lines;
     const scroll_offset = cache.scroll_offset;
     const viewport_shift_rows = cache.viewport_shift_rows;
-    const max_scroll_offset = if (total_lines > rows) total_lines - rows else 0;
     const end_line = total_lines - scroll_offset;
     const start_line = if (end_line > rows) end_line - rows else 0;
     var draw_cursor = scroll_offset == 0 and cache.cursor_visible;
@@ -290,32 +288,6 @@ pub fn drawPrepared(
     const base_x = @as(f32, @floatFromInt(@as(i32, @intFromFloat(std.math.round(x)))));
     const base_y = @as(f32, @floatFromInt(@as(i32, @intFromFloat(std.math.round(y)))));
 
-    const scale = shell.uiScaleFactor();
-    const scrollbar_hit_margin: f32 = common.scrollbarHitMargin(scale);
-    const scrollbar_proximity: f32 = common.scrollbarProximityRange(scale);
-    const mouse = input.mouse_pos;
-    const in_scroll_y = mouse.y >= y and mouse.y <= y + height;
-    const dist_from_right = (x + width) - mouse.x;
-    const proximity_raw: f32 = if (in_scroll_y and dist_from_right <= scrollbar_proximity and dist_from_right >= -scrollbar_hit_margin)
-        (1.0 - std.math.clamp(dist_from_right / scrollbar_proximity, 0.0, 1.0))
-    else
-        0.0;
-    const show_scrollbar = !cache.alt_active and !cache.mouse_reporting_active and total_lines > rows;
-    const proximity_t = common.smoothstep01(proximity_raw);
-    const hover_target: f32 = if (show_scrollbar)
-        (if (self.scrollbar_drag_active) 1.0 else proximity_t)
-    else
-        0.0;
-    const anim_dt: f32 = blk: {
-        if (self.scrollbar_anim_last_time <= 0) {
-            self.scrollbar_anim_last_time = blink_time;
-            break :blk 0;
-        }
-        const dt = std.math.clamp(blink_time - self.scrollbar_anim_last_time, 0.0, 0.1);
-        self.scrollbar_anim_last_time = blink_time;
-        break :blk @floatCast(dt);
-    };
-    self.scrollbar_hover_anim = common.expApproach(self.scrollbar_hover_anim, hover_target, anim_dt, 18.0);
     self.hover.dirty = false;
     const hover_link_id = hover_mod.hoverLinkId(&self.hover);
 
@@ -857,9 +829,6 @@ pub fn drawPrepared(
         view_cells,
         rows,
         cols,
-        scroll_offset,
-        total_lines,
-        max_scroll_offset,
         screen_reverse,
         hover_link_id,
         draw_cursor,

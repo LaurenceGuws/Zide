@@ -128,6 +128,7 @@ pub const TabBar = struct {
 
         var tooltip: ?Tooltip = null;
         const mouse = self.last_mouse;
+        const window_focused = shell.windowFocused();
         const count = self.tabs.items.len;
         const spacing_total = if (count > 1) self.tab_spacing * @as(f32, @floatFromInt(count - 1)) else 0;
         const available_for_tabs = @max(0, width - spacing_total);
@@ -205,7 +206,7 @@ pub const TabBar = struct {
                 if (is_active) theme.ui_text else theme.ui_text_inactive,
                 title_max,
             );
-            const in_tab = mouse.x >= cursor_x and mouse.x <= cursor_x + tab_w and
+            const in_tab = window_focused and mouse.x >= cursor_x and mouse.x <= cursor_x + tab_w and
                 mouse.y >= y and mouse.y <= y + self.height;
             if (result.truncated and in_tab) {
                 tooltip = .{ .text = tab.title, .x = mouse.x, .y = mouse.y };
