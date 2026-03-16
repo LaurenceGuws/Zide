@@ -783,6 +783,7 @@ pub fn metadataAcquire(handle: ?*shared.ZideTerminalHandle, request: ?*const sha
     };
     const include_title = (req.include_flags & @intFromEnum(shared.MetadataIncludeFlags.title)) != 0;
     const include_cwd = (req.include_flags & @intFromEnum(shared.MetadataIncludeFlags.cwd)) != 0;
+    const include_activity = (req.include_flags & @intFromEnum(shared.MetadataIncludeFlags.activity)) != 0;
     const title = if (include_title)
         allocator.dupe(u8, metadata.title) catch |err| {
             log.logf(.warning, "metadata title dup failed err={s}", .{@errorName(err)});
@@ -805,11 +806,24 @@ pub fn metadataAcquire(handle: ?*shared.ZideTerminalHandle, request: ?*const sha
             return .out_of_memory;
         };
     errdefer allocator.free(cwd);
+    const activity = h.session.currentActivityMetadata();
+    const foreground_process_label = if (include_activity)
+        allocator.dupe(u8, activity.foreground_process_label) catch |err| {
+            log.logf(.warning, "metadata foreground-process-label dup failed err={s}", .{@errorName(err)});
+            return .out_of_memory;
+        }
+    else
+        allocator.alloc(u8, 0) catch |err| {
+            log.logf(.warning, "metadata empty foreground-process-label alloc failed err={s}", .{@errorName(err)});
+            return .out_of_memory;
+        };
+    errdefer allocator.free(foreground_process_label);
 
     owner.* = .{
         .allocator = allocator,
         .title = title,
         .cwd = cwd,
+        .foreground_process_label = foreground_process_label,
     };
     out_metadata.* = .{
         .abi_version = shared.metadata_abi_version,
@@ -818,11 +832,20 @@ pub fn metadataAcquire(handle: ?*shared.ZideTerminalHandle, request: ?*const sha
         .scrollback_offset = std.math.cast(u32, metadata.scrollback_offset) orelse std.math.maxInt(u32),
         .alive = @intFromBool(metadata.alive),
         .has_exit_code = @intFromBool(metadata.exit_code != null),
+        .foreground_process_present = @intFromBool(activity.foreground_process_present),
+        .semantic_prompt_active = @intFromBool(activity.semantic_prompt_active),
         .exit_code = metadata.exit_code orelse 0,
+        .semantic_input_active = @intFromBool(activity.semantic_input_active),
+        .semantic_output_active = @intFromBool(activity.semantic_output_active),
+        .semantic_prompt_kind = @intFromEnum(activity.semantic_prompt_kind),
+        .semantic_prompt_exit_code_known = @intFromBool(activity.semantic_prompt_exit_code != null),
+        .semantic_prompt_exit_code = activity.semantic_prompt_exit_code orelse 0,
         .title_ptr = if (title.len == 0) null else title.ptr,
         .title_len = title.len,
         .cwd_ptr = if (cwd.len == 0) null else cwd.ptr,
         .cwd_len = cwd.len,
+        .foreground_process_label_ptr = if (foreground_process_label.len == 0) null else foreground_process_label.ptr,
+        .foreground_process_label_len = foreground_process_label.len,
         ._ctx = owner,
     };
     return .ok;
@@ -835,6 +858,7 @@ pub fn metadataRelease(metadata: *shared.Metadata) void {
     };
     owner.allocator.free(owner.title);
     owner.allocator.free(owner.cwd);
+    owner.allocator.free(owner.foreground_process_label);
     owner.allocator.destroy(owner);
     metadata.* = .{};
 }

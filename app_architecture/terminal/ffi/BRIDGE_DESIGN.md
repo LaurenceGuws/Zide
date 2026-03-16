@@ -155,6 +155,16 @@ Bridge-specific ownership rule:
 - if the native reference host can express a host-facing semantic through the
   intended engine contract, the FFI host should be able to express the same
   semantic without reconstructing it from side channels
+- richer host integration is allowed when it stays in that category of shared
+  engine semantics; it should not be rejected merely because Ghostty exposes a
+  smaller host-visible state surface today
+
+Additional rule for future host-semantic expansion:
+
+- prefer structured semantic facts such as activity, progress, task, prompt, or
+  attention state
+- reject direct presentation hints such as tab labels, badge colors, icons,
+  spinners, or other widget/chrome instructions
 
 ### Bridge layer responsibilities
 

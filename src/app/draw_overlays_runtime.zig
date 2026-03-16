@@ -12,7 +12,7 @@ pub const Hooks = struct {
 
 pub fn draw(state: anytype, shell: anytype, layout: layout_types.WidgetLayout, ctx: *anyopaque, hooks: Hooks) void {
     if (app_modes.ide.shouldShowTerminalCloseConfirmModal(state.app_mode, hooks.terminal_close_confirm_active(ctx))) {
-        app_terminal_close_confirm_draw.draw(shell, layout, state.app_theme);
+        app_terminal_close_confirm_draw.draw(state, shell, layout, state.app_theme);
     }
     app_config_reload_notice.draw(
         shell,

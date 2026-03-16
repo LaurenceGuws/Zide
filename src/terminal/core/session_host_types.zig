@@ -1,3 +1,16 @@
+const semantic_prompt_mod = @import("semantic_prompt.zig");
+
+pub const ActivityMetadata = struct {
+    running: bool,
+    foreground_process_present: bool,
+    foreground_process_label: []const u8,
+    semantic_prompt_active: bool,
+    semantic_input_active: bool,
+    semantic_output_active: bool,
+    semantic_prompt_kind: semantic_prompt_mod.SemanticPromptKind,
+    semantic_prompt_exit_code: ?u8,
+};
+
 pub const SessionMetadata = struct {
     title: []const u8,
     cwd: []const u8,

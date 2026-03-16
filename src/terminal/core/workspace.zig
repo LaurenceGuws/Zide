@@ -41,6 +41,12 @@ pub const TabTarget = struct {
 };
 
 pub const TerminalWorkspace = struct {
+    pub const CloseConfirmContext = struct {
+        foreground_process_present: bool = false,
+        foreground_process_label: []const u8 = "",
+        semantic_command_active: bool = false,
+    };
+
     pub const ActiveFrameState = struct {
         has_data: bool = false,
         session_ptr: usize = 0,
@@ -185,6 +191,19 @@ pub const TerminalWorkspace = struct {
             return .{
                 .index = idx,
                 .id = tab.id,
+            };
+        }
+        return null;
+    }
+
+    pub fn closeConfirmContextForTabId(self: *const TerminalWorkspace, tab_id: TabId) ?CloseConfirmContext {
+        for (self.tabs.items) |tab| {
+            if (tab.id != tab_id) continue;
+            const activity = tab.session.currentActivityMetadata();
+            return .{
+                .foreground_process_present = activity.foreground_process_present,
+                .foreground_process_label = activity.foreground_process_label,
+                .semantic_command_active = activity.semantic_input_active or activity.semantic_output_active,
             };
         }
         return null;

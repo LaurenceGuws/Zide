@@ -138,9 +138,27 @@ test "ffi non-pty snapshot and event ownership smoke" {
     defer c_api.zide_terminal_metadata_release(&metadata);
     try std.testing.expectEqual(c_api.ZIDE_TERMINAL_METADATA_ABI_VERSION, metadata.abi_version);
     try std.testing.expectEqual(@as(u32, @sizeOf(c_api.ZideTerminalMetadata)), metadata.struct_size);
+    try std.testing.expectEqual(@as(u8, 0), metadata.foreground_process_present);
+    try std.testing.expectEqual(@as(u8, 0), metadata.semantic_prompt_active);
+    try std.testing.expectEqual(@as(u8, 0), metadata.semantic_input_active);
+    try std.testing.expectEqual(@as(u8, 0), metadata.semantic_output_active);
+    try std.testing.expectEqual(@as(u8, 0), metadata.semantic_prompt_kind);
+    try std.testing.expectEqual(@as(u8, 0), metadata.semantic_prompt_exit_code_known);
+    try std.testing.expectEqual(@as(u8, 0), metadata.semantic_prompt_exit_code);
     try std.testing.expectEqualStrings("ffi-title", ptrBytes(metadata.title_ptr, metadata.title_len));
     try std.testing.expectEqual(@as(usize, 0), metadata.cwd_len);
+    try std.testing.expectEqual(@as(usize, 0), metadata.foreground_process_label_len);
     try std.testing.expectEqual(@as(u32, 0), metadata.scrollback_count);
+
+    var metadata_activity: c_api.ZideTerminalMetadata = .{};
+    var metadata_activity_request = metadataRequest(c_api.ZIDE_TERMINAL_METADATA_INCLUDE_ACTIVITY);
+    try std.testing.expectEqual(@as(c_int, 0), c_api.zide_terminal_metadata_acquire(handle, &metadata_activity_request, &metadata_activity));
+    defer c_api.zide_terminal_metadata_release(&metadata_activity);
+    try std.testing.expectEqual(@as(usize, 0), metadata_activity.title_len);
+    try std.testing.expectEqual(@as(usize, 0), metadata_activity.cwd_len);
+    try std.testing.expectEqual(@as(usize, 0), metadata_activity.foreground_process_label_len);
+    try std.testing.expectEqual(@as(u8, 0), metadata_activity.foreground_process_present);
+    try std.testing.expectEqual(@as(u8, 0), metadata_activity.semantic_prompt_active);
 
     var title_text: c_api.ZideTerminalStringBuffer = .{};
     try std.testing.expectEqual(@as(c_int, 0), c_api.zide_terminal_scrollback_plain_text(handle, &title_text));
@@ -759,6 +777,96 @@ test "ffi child_exit event carries exit code and present flag" {
     try std.testing.expectEqual(@as(c_int, 0), c_api.zide_terminal_child_exit_status(handle, &code, &has_status));
     try std.testing.expectEqual(@as(u8, 1), has_status);
     try std.testing.expectEqual(@as(i32, 7), code);
+}
+
+test "ffi PTY metadata exposes foreground process and semantic prompt activity" {
+    if (@import("builtin").os.tag == .windows) return;
+
+    try app_logger.setConsoleFilterString("none");
+    try app_logger.setFileFilterString("none");
+
+    var handle: ?*c_api.ZideTerminalHandle = null;
+    try std.testing.expectEqual(@as(c_int, 0), c_api.zide_terminal_create(null, &handle));
+    defer c_api.zide_terminal_destroy(handle);
+    try std.testing.expectEqual(@as(c_int, 0), c_api.zide_terminal_resize(handle, 80, 12, 8, 16));
+    try std.testing.expectEqual(@as(c_int, 0), c_api.zide_terminal_start(handle, "/bin/sh"));
+
+    const metadata_flags =
+        c_api.ZIDE_TERMINAL_METADATA_INCLUDE_TITLE |
+        c_api.ZIDE_TERMINAL_METADATA_INCLUDE_ACTIVITY;
+
+    {
+        const command = "sleep 2\n";
+        try std.testing.expectEqual(@as(c_int, 0), c_api.zide_terminal_send_bytes(handle, command.ptr, command.len));
+
+        const deadline = std.time.milliTimestamp() + 3000;
+        var saw_foreground = false;
+        while (std.time.milliTimestamp() < deadline) {
+            try std.testing.expectEqual(@as(c_int, 0), c_api.zide_terminal_poll(handle));
+
+            var metadata: c_api.ZideTerminalMetadata = .{};
+            var request = metadataRequest(metadata_flags);
+            try std.testing.expectEqual(@as(c_int, 0), c_api.zide_terminal_metadata_acquire(handle, &request, &metadata));
+            defer c_api.zide_terminal_metadata_release(&metadata);
+
+            if (metadata.foreground_process_present == 1) {
+                saw_foreground = true;
+                if (@import("builtin").os.tag == .linux) {
+                    try std.testing.expect(metadata.foreground_process_label_len > 0);
+                }
+                break;
+            }
+
+            std.Thread.sleep(20 * std.time.ns_per_ms);
+        }
+        try std.testing.expect(saw_foreground);
+    }
+
+    {
+        const cancel = "\x03";
+        try std.testing.expectEqual(@as(c_int, 0), c_api.zide_terminal_send_bytes(handle, cancel.ptr, cancel.len));
+
+        const deadline = std.time.milliTimestamp() + 3000;
+        while (std.time.milliTimestamp() < deadline) {
+            try std.testing.expectEqual(@as(c_int, 0), c_api.zide_terminal_poll(handle));
+
+            var metadata: c_api.ZideTerminalMetadata = .{};
+            var request = metadataRequest(metadata_flags);
+            try std.testing.expectEqual(@as(c_int, 0), c_api.zide_terminal_metadata_acquire(handle, &request, &metadata));
+            defer c_api.zide_terminal_metadata_release(&metadata);
+
+            if (metadata.foreground_process_present == 0) break;
+            std.Thread.sleep(20 * std.time.ns_per_ms);
+        }
+    }
+
+    {
+        const command = "printf '\\033]133;A\\a\\033]133;C;3\\a'\n";
+        try std.testing.expectEqual(@as(c_int, 0), c_api.zide_terminal_send_bytes(handle, command.ptr, command.len));
+
+        const deadline = std.time.milliTimestamp() + 3000;
+        var saw_semantic = false;
+        while (std.time.milliTimestamp() < deadline) {
+            try std.testing.expectEqual(@as(c_int, 0), c_api.zide_terminal_poll(handle));
+
+            var metadata: c_api.ZideTerminalMetadata = .{};
+            var request = metadataRequest(c_api.ZIDE_TERMINAL_METADATA_INCLUDE_ACTIVITY);
+            try std.testing.expectEqual(@as(c_int, 0), c_api.zide_terminal_metadata_acquire(handle, &request, &metadata));
+            defer c_api.zide_terminal_metadata_release(&metadata);
+
+            if (metadata.semantic_prompt_active == 1) {
+                saw_semantic = true;
+                try std.testing.expectEqual(@as(u8, 0), metadata.semantic_input_active);
+                try std.testing.expectEqual(@as(u8, 1), metadata.semantic_output_active);
+                try std.testing.expectEqual(@as(u8, 1), metadata.semantic_prompt_exit_code_known);
+                try std.testing.expectEqual(@as(u8, 3), metadata.semantic_prompt_exit_code);
+                break;
+            }
+
+            std.Thread.sleep(20 * std.time.ns_per_ms);
+        }
+        try std.testing.expect(saw_semantic);
+    }
 }
 
 test "ffi can report focus and color scheme changes over PTY when enabled by app" {

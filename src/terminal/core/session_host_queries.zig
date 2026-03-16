@@ -5,6 +5,7 @@ const session_host_types = @import("session_host_types.zig");
 const session_lifecycle = @import("session_lifecycle.zig");
 
 pub const SessionMetadata = session_host_types.SessionMetadata;
+pub const ActivityMetadata = session_host_types.ActivityMetadata;
 pub const CloseConfirmSignals = session_host_types.CloseConfirmSignals;
 
 fn copyTextInto(allocator: std.mem.Allocator, out: *std.ArrayList(u8), text: []const u8) ![]const u8 {
@@ -46,13 +47,57 @@ pub fn closeConfirmSignals(self: anytype) CloseConfirmSignals {
     var signals = CloseConfirmSignals{};
     if (!isAlive(self)) return signals;
 
-    if (terminal_transport.Transport.fromSession(self)) |transport| {
-        signals.foreground_process = transport.hasForegroundProcessOutsideShell();
-    }
-    signals.semantic_command = self.core.semanticPromptActive();
+    const activity = currentActivityMetadata(self);
+    signals.foreground_process = activity.foreground_process_present;
+    signals.semantic_command = activity.semantic_input_active or activity.semantic_output_active;
     signals.alt_screen = self.core.isAltActive();
     signals.mouse_reporting = self.mouseReportingEnabled();
     return signals;
+}
+
+pub fn currentActivityMetadata(self: anytype) ActivityMetadata {
+    const alive = if (terminal_transport.Transport.fromSession(self)) |transport| transport.isAlive() else false;
+    const foreground_process_present = if (terminal_transport.Transport.fromSession(self)) |transport|
+        transport.hasForegroundProcessOutsideShell()
+    else
+        false;
+    const foreground_process_label = if (terminal_transport.Transport.fromSession(self)) |transport|
+        transport.foregroundProcessLabel() orelse ""
+    else
+        "";
+    const semantic_prompt = self.core.semantic_prompt;
+    return .{
+        .running = alive,
+        .foreground_process_present = foreground_process_present,
+        .foreground_process_label = foreground_process_label,
+        .semantic_prompt_active = semantic_prompt.prompt_active or semantic_prompt.input_active or semantic_prompt.output_active,
+        .semantic_input_active = semantic_prompt.input_active,
+        .semantic_output_active = semantic_prompt.output_active,
+        .semantic_prompt_kind = semantic_prompt.kind,
+        .semantic_prompt_exit_code = semantic_prompt.exit_code,
+    };
+}
+
+pub fn copyActivityMetadata(
+    self: anytype,
+    allocator: std.mem.Allocator,
+    foreground_process_label_out: *std.ArrayList(u8),
+) !ActivityMetadata {
+    self.lock();
+    defer self.unlock();
+
+    const current = currentActivityMetadata(self);
+    const foreground_process_label = try copyTextInto(allocator, foreground_process_label_out, current.foreground_process_label);
+    return .{
+        .running = current.running,
+        .foreground_process_present = current.foreground_process_present,
+        .foreground_process_label = foreground_process_label,
+        .semantic_prompt_active = current.semantic_prompt_active,
+        .semantic_input_active = current.semantic_input_active,
+        .semantic_output_active = current.semantic_output_active,
+        .semantic_prompt_kind = current.semantic_prompt_kind,
+        .semantic_prompt_exit_code = current.semantic_prompt_exit_code,
+    };
 }
 
 pub fn shouldConfirmClose(self: anytype) bool {

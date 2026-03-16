@@ -287,8 +287,17 @@ Current behavior:
   - `scrollback_offset`
   - `alive`
   - `exit_code`
+- `foreground_process_present`
+- `semantic_prompt_active`
+- `semantic_input_active`
+- `semantic_output_active`
+- `semantic_prompt_kind`
+- `semantic_prompt_exit_code_known`
+- `semantic_prompt_exit_code`
 - `metadata_acquire(...)` duplicates title/cwd only when the request include
   flags ask for them
+- `metadata_acquire(...)` duplicates `foreground_process_label` only when the
+  request include flags ask for activity/task semantics
 
 What should not happen next:
 
@@ -1296,14 +1305,23 @@ typedef struct ZideTerminalMetadata {
     uint32_t scrollback_offset;
     uint8_t alive;
     uint8_t has_exit_code;
-    uint8_t _padding0[2];
+    uint8_t foreground_process_present;
+    uint8_t semantic_prompt_active;
     int32_t exit_code;
+    uint8_t semantic_input_active;
+    uint8_t semantic_output_active;
+    uint8_t semantic_prompt_kind;
+    uint8_t semantic_prompt_exit_code_known;
+    uint8_t semantic_prompt_exit_code;
+    uint8_t _padding1[3];
     const uint8_t *title_ptr;
     size_t title_len;
     const uint8_t *cwd_ptr;
     size_t cwd_len;
+    const uint8_t *foreground_process_label_ptr;
+    size_t foreground_process_label_len;
     void *_ctx;
-} ZideTerminalMetadataV2;
+} ZideTerminalMetadataV3;
 
 int zide_terminal_metadata_acquire(
     ZideTerminalHandle *handle,
@@ -1319,9 +1337,11 @@ Suggested flags:
 enum {
     ZIDE_TERMINAL_METADATA_INCLUDE_TITLE = 1u << 0,
     ZIDE_TERMINAL_METADATA_INCLUDE_CWD = 1u << 1,
+    ZIDE_TERMINAL_METADATA_INCLUDE_ACTIVITY = 1u << 2,
     ZIDE_TERMINAL_METADATA_INCLUDE_ALL_STRINGS =
         ZIDE_TERMINAL_METADATA_INCLUDE_TITLE |
-        ZIDE_TERMINAL_METADATA_INCLUDE_CWD,
+        ZIDE_TERMINAL_METADATA_INCLUDE_CWD |
+        ZIDE_TERMINAL_METADATA_INCLUDE_ACTIVITY,
 };
 ```
 
@@ -1330,6 +1350,8 @@ Expected semantics:
 - hot scalar fields are always filled
 - `title_ptr/title_len` are only populated when `INCLUDE_TITLE` is requested
 - `cwd_ptr/cwd_len` are only populated when `INCLUDE_CWD` is requested
+- `foreground_process_label_ptr/len` are only populated when
+  `INCLUDE_ACTIVITY` is requested
 - omitted strings must come back as:
   - `ptr = null`
   - `len = 0`

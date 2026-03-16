@@ -29,6 +29,7 @@ pub const TerminalSession = terminal_mod.TerminalSession;
 pub const TerminalWorkspace = terminal_mod.TerminalWorkspace;
 pub const TerminalTabId = terminal_mod.TerminalTabId;
 pub const TerminalPresentationFeedback = terminal_mod.PresentationFeedback;
+pub const TerminalCloseConfirmContext = terminal_mod.TerminalWorkspace.CloseConfirmContext;
 
 pub const PendingTerminalPresentationFeedback = struct {
     session: *TerminalSession,

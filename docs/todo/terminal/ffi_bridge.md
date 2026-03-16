@@ -69,6 +69,10 @@ Current judgment:
     viewport, pending-input, focus/color, child-exit, and request-based
     metadata cuts
   - the stronger next lane is ABI/perf maturity, not casual surface growth
+  - separate from that, richer future host/backend integration is now tracked
+    explicitly in `docs/todo/terminal/ffi_host_semantics.md`; that lane is
+    about structured host semantics such as progress/activity/task state, not
+    widget-facing presentation hints
 - The current performance checkpoint for that lane now lives in:
   - `docs/research/terminal/TERMINAL_FFI_PERFORMANCE_REVIEW_2026-03-15.md`
   - `app_architecture/terminal/ffi/SNAPSHOT_ABI.md`
@@ -123,6 +127,26 @@ Current judgment:
 
 - [x] `FFI-05-01` Document Flutter adapter design constraints.
 - [x] `FFI-05-02` Evaluate daemon or multiplexer mode as a follow-on, not a prerequisite.
+- [ ] `FFI-05-03` Define enriched host semantics without turning the bridge
+  into a UI API.
+  Notes: see `docs/todo/terminal/ffi_host_semantics.md`. The goal is richer
+  host/backend integration than Ghostty currently exports, while still exposing
+  structured backend facts rather than tab-chip/badge/chrome instructions.
+  Current first-cut bias: activity/task semantics are a better first packet
+  than determinate progress, because the backend already owns title/cwd,
+  alive/exit, foreground-process presence/label, and semantic-prompt activity,
+  while progress values are still only implicit in terminal text patterns.
+  Current API-shape bias: extend `metadata_acquire(...)` via include flags and
+  ABI bump before introducing a sibling `activity_metadata_acquire(...)`.
+  Current ABI bias: flatten the first semantic-prompt/activity fields into the
+  metadata struct, add `INCLUDE_ACTIVITY` for optional foreground-process-label
+  copying, and keep events out of the first authoritative activity/task cut.
+  Implementation slice in progress:
+  - metadata ABI bumped to v3
+  - `metadata_acquire(...)` now carries flattened activity/task scalars
+  - `INCLUDE_ACTIVITY` gates optional foreground-process-label copying
+  - next required follow-up is host verifier coverage for the new metadata
+    fields before treating the cut as settled
 
 ## Current Gaps
 

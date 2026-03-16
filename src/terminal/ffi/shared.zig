@@ -15,7 +15,7 @@ pub const snapshot_diff_abi_version: u32 = 2;
 pub const event_abi_version: u32 = 4;
 pub const scrollback_abi_version: u32 = 1;
 pub const renderer_metadata_abi_version: u32 = 1;
-pub const metadata_abi_version: u32 = 2;
+pub const metadata_abi_version: u32 = 3;
 pub const redraw_state_abi_version: u32 = 1;
 pub const string_abi_version: u32 = 1;
 pub const close_confirm_abi_version: u32 = 1;
@@ -197,12 +197,21 @@ pub const Metadata = extern struct {
     scrollback_offset: u32 = 0,
     alive: u8 = 0,
     has_exit_code: u8 = 0,
-    _padding0: [2]u8 = .{ 0, 0 },
+    foreground_process_present: u8 = 0,
+    semantic_prompt_active: u8 = 0,
     exit_code: i32 = 0,
+    semantic_input_active: u8 = 0,
+    semantic_output_active: u8 = 0,
+    semantic_prompt_kind: u8 = 0,
+    semantic_prompt_exit_code_known: u8 = 0,
+    semantic_prompt_exit_code: u8 = 0,
+    _padding1: [3]u8 = .{ 0, 0, 0 },
     title_ptr: ?[*]const u8 = null,
     title_len: usize = 0,
     cwd_ptr: ?[*]const u8 = null,
     cwd_len: usize = 0,
+    foreground_process_label_ptr: ?[*]const u8 = null,
+    foreground_process_label_len: usize = 0,
     _ctx: ?*anyopaque = null,
 };
 
@@ -216,6 +225,7 @@ pub const MetadataRequest = extern struct {
 pub const MetadataIncludeFlags = enum(u32) {
     title = 1 << 0,
     cwd = 1 << 1,
+    activity = 1 << 2,
 };
 
 pub const RedrawState = extern struct {
@@ -338,6 +348,7 @@ pub const MetadataOwner = struct {
     allocator: std.mem.Allocator,
     title: []u8,
     cwd: []u8,
+    foreground_process_label: []u8,
 };
 
 pub const ScrollbackOwner = struct {
