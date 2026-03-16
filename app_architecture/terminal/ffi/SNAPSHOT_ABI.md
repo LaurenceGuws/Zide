@@ -705,6 +705,9 @@ Do not implement diff export unless this stays true:
 12. if a newer visible-state update is still chained to an unretired full-dirty
     publication, full-refresh fallback remains correct even when the latest row
     rewrite itself looks granular in isolation
+13. this matches the current `libghostty-vt` architectural bias: keep runtime
+    churn and dirty-state transitions engine-local first, and keep the public
+    host contract centered on settled visible-state output
 
 #### Candidate B: Pinned Snapshot Handle
 

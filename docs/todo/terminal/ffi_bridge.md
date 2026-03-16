@@ -207,6 +207,8 @@ Current judgment:
     the startup full-dirty baseline has actually been presented and retired
   - if a newer update is still chained to an unretired full-dirty publication,
     full-refresh fallback is still the correct result
+  - Ghostty bias: keep startup/runtime churn on the engine/runtime side rather
+    than widening the foreign-host diff contract to describe it
   - reject the lane if it starts requiring row-follow-up getters or a second
     authoritative visible-state path
 - Current decision rule:

@@ -115,6 +115,19 @@ flowchart LR
 - `Termio` is the runtime and transport shell around the VT layer.
 - This split is cleaner today than Zide's current `TerminalCore` /
   `TerminalSession` split.
+- Current local reference bias from
+  [`reference_repos/terminals/ghostty`](reference_repos/terminals/ghostty):
+  - [`include/ghostty/vt.h`](/home/home/personal/zide/reference_repos/terminals/ghostty/include/ghostty/vt.h)
+    stays intentionally narrow and does not try to expose runtime/presentation
+    churn as public contract
+  - [`src/terminal/Terminal.zig`](/home/home/personal/zide/reference_repos/terminals/ghostty/src/terminal/Terminal.zig)
+    keeps scrollback, modes, parser-owned semantics, and terminal state centered
+    in the engine object
+  - [`src/terminal/Screen.zig`](/home/home/personal/zide/reference_repos/terminals/ghostty/src/terminal/Screen.zig)
+    keeps dirty/selection/screen mutation state local to the engine-side screen
+    model
+  - [`src/input/key_encode.zig`](/home/home/personal/zide/reference_repos/terminals/ghostty/src/input/key_encode.zig)
+    is a peer subsystem derived from terminal state, not UI-owned glue
 - Important nuance:
   - Ghostty is still ahead on making the engine obviously be the engine.
   - Zide is currently ahead on the explicit host-contract surface:
@@ -126,6 +139,11 @@ flowchart LR
   - so the gap is not "Ghostty exposes more host ABI than Zide."
   - the gap is that Ghostty's terminal/library center is structurally cleaner,
     especially around runtime ownership and publication ownership.
+  - for Zide's current diff/publication lane, that means:
+    - keep the foreign-host contract centered on settled visible state
+    - avoid widening the public ABI just to encode startup/runtime churn
+    - prefer explicit full-refresh fallback when a case is still dominated by
+      unretired full-dirty publication state
 
 ## Foot
 
