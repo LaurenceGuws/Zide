@@ -291,6 +291,80 @@ test "ffi snapshot diff exports granular packet for safe same-mode update" {
     try std.testing.expectEqual(@as(u32, 'Z'), diff_cells[3].codepoint);
 }
 
+test "ffi snapshot diff falls back for stale base and transition cases" {
+    try app_logger.setConsoleFilterString("none");
+    try app_logger.setFileFilterString("none");
+
+    var handle: ?*c_api.ZideTerminalHandle = null;
+    const cfg = c_api.ZideTerminalCreateConfig{
+        .rows = 2,
+        .cols = 4,
+        .scrollback_rows = 64,
+        .cursor_shape = 0,
+        .cursor_blink = 1,
+    };
+    try std.testing.expectEqual(@as(c_int, 0), c_api.zide_terminal_create(&cfg, &handle));
+    defer c_api.zide_terminal_destroy(handle);
+
+    try std.testing.expectEqual(@as(c_int, 0), c_api.zide_terminal_resize(handle, 4, 2, 8, 16));
+    try std.testing.expectEqual(@as(c_int, 0), c_api.zide_terminal_feed_output(handle, "AAAA\r\nBBBB\r\n".ptr, "AAAA\r\nBBBB\r\n".len));
+
+    var snapshot: c_api.ZideTerminalSnapshot = .{};
+    var snapshot_request = snapshotRequest(0);
+    try std.testing.expectEqual(@as(c_int, 0), c_api.zide_terminal_snapshot_acquire(handle, &snapshot_request, &snapshot));
+    const base_generation = snapshot.generation;
+    c_api.zide_terminal_snapshot_release(&snapshot);
+    try std.testing.expectEqual(@as(c_int, 0), c_api.zide_terminal_present_ack(handle, base_generation));
+
+    try std.testing.expectEqual(@as(c_int, 0), c_api.zide_terminal_feed_output(handle, "\r\nCCCC".ptr, "\r\nCCCC".len));
+
+    {
+        var stale_request = snapshotDiffRequest(base_generation - 1);
+        var stale_diff: c_api.ZideTerminalSnapshotDiff = .{};
+        try std.testing.expectEqual(@as(c_int, 0), c_api.zide_terminal_snapshot_diff_acquire(handle, &stale_request, &stale_diff));
+        defer c_api.zide_terminal_snapshot_diff_release(&stale_diff);
+        try std.testing.expectEqual(@as(u8, 1), stale_diff.full_refresh_required);
+        try std.testing.expectEqual(@as(usize, 0), stale_diff.row_count);
+        try std.testing.expectEqual(@as(usize, 0), stale_diff.span_count);
+    }
+
+    {
+        var live_redraw: c_api.ZideTerminalRedrawState = .{};
+        try std.testing.expectEqual(@as(c_int, 0), c_api.zide_terminal_redraw_state(handle, &live_redraw));
+        try std.testing.expectEqual(@as(c_int, 0), c_api.zide_terminal_present_ack(handle, live_redraw.published_generation));
+
+        try std.testing.expectEqual(@as(c_int, 0), c_api.zide_terminal_feed_output(handle, "DDDD\r\nEEEE\r\n".ptr, "DDDD\r\nEEEE\r\n".len));
+        try std.testing.expectEqual(@as(c_int, 0), c_api.zide_terminal_set_scrollback_offset(handle, 1));
+
+        var history_request = snapshotDiffRequest(live_redraw.published_generation);
+        var history_diff: c_api.ZideTerminalSnapshotDiff = .{};
+        try std.testing.expectEqual(@as(c_int, 0), c_api.zide_terminal_snapshot_diff_acquire(handle, &history_request, &history_diff));
+        defer c_api.zide_terminal_snapshot_diff_release(&history_diff);
+        try std.testing.expectEqual(@as(u8, 1), history_diff.full_refresh_required);
+        try std.testing.expectEqual(@as(usize, 0), history_diff.row_count);
+        try std.testing.expectEqual(@as(usize, 0), history_diff.span_count);
+        try std.testing.expectEqual(@as(c_int, 0), c_api.zide_terminal_follow_live_bottom(handle));
+    }
+
+    {
+        var redraw: c_api.ZideTerminalRedrawState = .{};
+        try std.testing.expectEqual(@as(c_int, 0), c_api.zide_terminal_redraw_state(handle, &redraw));
+        try std.testing.expectEqual(@as(c_int, 0), c_api.zide_terminal_present_ack(handle, redraw.published_generation));
+
+        const enter_alt = "\x1b[?1049hABCD";
+        try std.testing.expectEqual(@as(c_int, 0), c_api.zide_terminal_feed_output(handle, enter_alt.ptr, enter_alt.len));
+
+        var alt_request = snapshotDiffRequest(redraw.published_generation);
+        var alt_diff: c_api.ZideTerminalSnapshotDiff = .{};
+        try std.testing.expectEqual(@as(c_int, 0), c_api.zide_terminal_snapshot_diff_acquire(handle, &alt_request, &alt_diff));
+        defer c_api.zide_terminal_snapshot_diff_release(&alt_diff);
+        try std.testing.expectEqual(@as(u8, 1), alt_diff.full_refresh_required);
+        try std.testing.expectEqual(@as(u8, 1), alt_diff.alt_active);
+        try std.testing.expectEqual(@as(usize, 0), alt_diff.row_count);
+        try std.testing.expectEqual(@as(usize, 0), alt_diff.span_count);
+    }
+}
+
 test "ffi external transport can report child exit status" {
     try app_logger.setConsoleFilterString("none");
     try app_logger.setFileFilterString("none");
