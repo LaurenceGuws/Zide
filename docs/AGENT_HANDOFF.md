@@ -31,6 +31,7 @@ not a progress log and should stay brief.
 - The latest Flutty re-check on `main` also confirmed the request-based metadata acquire cut was easy to adopt: hot scalar metadata reads now use explicit include flags cleanly, title/cwd became explicit cached host state instead of implicit always-present metadata payload, and redraw/viewport/lifecycle behavior did not regress.
 - A later Flutty re-check against upstream `4c2a953e` confirmed the viewport-pinning regression is closed on current `main`: request-based snapshot adoption stayed straightforward, the redraw path naturally uses `include_flags = 0`, pinned viewport changes now affect acquired snapshot content, and no widget/runtime fork or local workaround logic was needed.
 - The latest Flutty diff re-check confirmed the new cursor fields closed the last obvious packet self-sufficiency gap: downstream removed its cursor-preservation workaround and now applies cursor truth directly from `ZideTerminalSnapshotDiff`. The remaining open diff issue is settled-baseline granular non-repro, not fallback or packet ownership.
+- The settled-baseline diff non-repro has now been traced to an upstream bridge bug: FFI `present_ack(...)` was advancing only the handle-local acknowledged generation and not retiring session/publication state. That is now fixed, and the PTY verifier covers both unretired-startup fallback and acked-settled granular diff behavior locally.
 - Current implementation authority lives in the terminal architecture docs and owning todos, not in stale investigation notes.
 
 ### Where To Look

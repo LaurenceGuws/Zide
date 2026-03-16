@@ -218,8 +218,14 @@ Current judgment:
   - diff-applied frames now use cursor truth directly from
     `ZideTerminalSnapshotDiff`
   - one-acquire fallback still feels natural downstream
-  - the remaining open diff question is the settled-baseline granular
-    non-repro, not packet self-sufficiency
+  - the old settled-baseline granular non-repro turned out to be an upstream
+    `present_ack(...)` ownership bug, not a downstream integration problem
+- Latest upstream fix/checkpoint:
+  - `present_ack(...)` now retires session publication state as well as the
+    handle-local acknowledged generation
+  - PTY smoke now proves both:
+    - unretired startup baseline => `full_refresh_required = 1`
+    - acked settled baseline => granular row/span diff is allowed
 - Current decision rule:
   - diff stays ahead unless the pinned design proves a bounded retained
     generation story and a meaningful reduction in per-generation remap cost

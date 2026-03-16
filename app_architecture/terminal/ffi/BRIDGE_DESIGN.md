@@ -137,6 +137,15 @@ Recent downstream diff-ABI re-check in Flutty confirmed:
 - immediate PTY startup churn still stays outside the granular-diff guarantee
   on purpose
 
+Latest upstream-local follow-up tightened one important ownership rule:
+- FFI `present_ack(...)` must retire the underlying session/publication state,
+  not just advance a handle-local acknowledged-generation counter
+- without that, the bridge can report a trusted base generation while the
+  backend still treats the publication lineage as unretired dirty state
+- the PTY verifier now covers both sides explicitly:
+  - unacked startup baseline => full-refresh fallback remains correct
+  - acked settled baseline => granular diff is allowed and locally proven
+
 Bridge-specific ownership rule:
 
 - the bridge should expose shared engine semantics explicitly

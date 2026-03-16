@@ -175,6 +175,7 @@ pub fn main() !void {
             if (c_api.zide_terminal_child_exit_status(handle, &code, &has_status) != 0) return error.ChildExitStatusFailed;
             if (has_status != 1 or code != 7) return error.UnexpectedChildExitStatus;
             try validatePtyStartupSnapshotDiffFallback();
+            try validatePtySettledSnapshotDiffGranular();
             return;
         }
 
@@ -245,9 +246,6 @@ fn validatePtyStartupSnapshotDiffFallback() !void {
 
         if (base_generation == null and std.mem.startsWith(u8, row0.items, "ABCDEFGH")) {
             base_generation = snapshot.generation;
-            if (c_api.zide_terminal_present_ack(handle, redraw_state.published_generation) != 0) {
-                return error.PresentAckFailed;
-            }
             continue;
         }
 
@@ -265,12 +263,123 @@ fn validatePtyStartupSnapshotDiffFallback() !void {
             return;
         }
 
+        if (base_generation != null) {
+            std.Thread.sleep(20 * std.time.ns_per_ms);
+            continue;
+        }
+
         if (c_api.zide_terminal_present_ack(handle, redraw_state.published_generation) != 0) {
             return error.PresentAckFailed;
         }
     }
 
     return error.MissingSnapshotDiffStartupFallbackValidation;
+}
+
+fn validatePtySettledSnapshotDiffGranular() !void {
+    const script_path = "/tmp/zide-terminal-ffi-pty-diff-settled.sh";
+    const script_contents =
+        "#!/bin/sh\n" ++
+        "stty -echo\n" ++
+        "IFS= read -r _\n" ++
+        "printf '\\rABCDEFGH'\n" ++
+        "IFS= read -r _\n" ++
+        "printf '\\rWXYZ'\n" ++
+        "sleep 0.2\n";
+    {
+        const file = try std.fs.createFileAbsolute(script_path, .{ .truncate = true });
+        defer file.close();
+        try file.writeAll(script_contents);
+    }
+    {
+        const result = try std.process.Child.run(.{
+            .allocator = std.heap.page_allocator,
+            .argv = &.{ "chmod", "+x", script_path },
+        });
+        defer std.heap.page_allocator.free(result.stdout);
+        defer std.heap.page_allocator.free(result.stderr);
+        if (result.term.Exited != 0) return error.ChmodFailed;
+    }
+
+    var handle: ?*c_api.ZideTerminalHandle = null;
+    if (c_api.zide_terminal_create(null, &handle) != 0) return error.CreateFailed;
+    defer c_api.zide_terminal_destroy(handle);
+
+    if (c_api.zide_terminal_resize(handle, 9, 1, 8, 16) != 0) return error.ResizeFailed;
+    if (c_api.zide_terminal_start(handle, script_path) != 0) return error.StartFailed;
+
+    const enter_event = c_api.ZideTerminalKeyEvent{
+        .key = terminal.VTERM_KEY_ENTER,
+        .modifiers = terminal.VTERM_MOD_NONE,
+    };
+    if (c_api.zide_terminal_send_text(handle, "go".ptr, 2) != 0) return error.SendTextFailed;
+    if (c_api.zide_terminal_send_key(handle, &enter_event) != 0) return error.SendEnterFailed;
+
+    const deadline = std.time.milliTimestamp() + 4000;
+    var base_generation: ?u64 = null;
+
+    while (std.time.milliTimestamp() < deadline) {
+        if (c_api.zide_terminal_poll(handle) != 0) return error.PollFailed;
+
+        var redraw_state: c_api.ZideTerminalRedrawState = .{};
+        if (c_api.zide_terminal_redraw_state(handle, &redraw_state) != 0) return error.RedrawStateFailed;
+        if (redraw_state.needs_redraw != 1) {
+            std.Thread.sleep(20 * std.time.ns_per_ms);
+            continue;
+        }
+
+        const request = snapshotRequest(0);
+        var snapshot: c_api.ZideTerminalSnapshot = .{};
+        if (c_api.zide_terminal_snapshot_acquire(handle, &request, &snapshot) != 0) return error.SnapshotAcquireFailed;
+        defer c_api.zide_terminal_snapshot_release(&snapshot);
+
+        var row0 = try snapshotRowText(&snapshot, 0);
+        defer row0.deinit(std.heap.page_allocator);
+
+        if (base_generation == null and std.mem.startsWith(u8, row0.items, "ABCDEFGH")) {
+            base_generation = snapshot.generation;
+            if (c_api.zide_terminal_present_ack(handle, redraw_state.published_generation) != 0) {
+                return error.PresentAckFailed;
+            }
+            if (c_api.zide_terminal_send_text(handle, "go".ptr, 2) != 0) return error.SendTextFailed;
+            if (c_api.zide_terminal_send_key(handle, &enter_event) != 0) return error.SendEnterFailed;
+            continue;
+        }
+
+        if (base_generation != null and std.mem.startsWith(u8, row0.items, "WXYZEFGH")) {
+            var diff_request = snapshotDiffRequest(base_generation.?);
+            var diff: c_api.ZideTerminalSnapshotDiff = .{};
+            if (c_api.zide_terminal_snapshot_diff_acquire(handle, &diff_request, &diff) != 0) {
+                return error.SnapshotDiffAcquireFailed;
+            }
+            defer c_api.zide_terminal_snapshot_diff_release(&diff);
+
+            if (diff.full_refresh_required != 0) return error.SnapshotDiffExpectedGranularPayload;
+            if (diff.row_count != 1 or diff.span_count != 1 or diff.cell_count != 4) {
+                return error.SnapshotDiffUnexpectedGranularPayload;
+            }
+            if (diff.rows_ptr == null or diff.spans_ptr == null or diff.cells_ptr == null) {
+                return error.SnapshotDiffMissingGranularPayload;
+            }
+            const row = diff.rows_ptr.?[0];
+            const span = diff.spans_ptr.?[0];
+            if (row.row != 0 or row.first_span_index != 0 or row.first_cell_index != 0 or row.cell_count != 4) {
+                return error.SnapshotDiffUnexpectedGranularPayload;
+            }
+            if (span.start_col != 0 or span.end_col != 3) return error.SnapshotDiffUnexpectedGranularPayload;
+            const diff_cells = diff.cells_ptr.?[0..diff.cell_count];
+            if (diff_cells[0].codepoint != 'W' or diff_cells[1].codepoint != 'X' or diff_cells[2].codepoint != 'Y' or diff_cells[3].codepoint != 'Z') {
+                return error.SnapshotDiffUnexpectedGranularPayload;
+            }
+            return;
+        }
+
+        if (c_api.zide_terminal_present_ack(handle, redraw_state.published_generation) != 0) {
+            return error.PresentAckFailed;
+        }
+    }
+
+    return error.MissingSnapshotDiffGranularValidation;
 }
 
 fn consumeTerminalPublicationOnceIfPending(handle: ?*c_api.ZideTerminalHandle, needle: []const u8) !bool {
