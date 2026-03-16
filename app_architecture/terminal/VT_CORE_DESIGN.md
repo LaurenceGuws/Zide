@@ -791,6 +791,9 @@ Migration approach:
 - PTY/external poll publication wake/update choreography now partially lives
   under `src/terminal/core/pty_poll_publication.zig` instead of staying fully
   mixed into `pty_io.zig`
+- PTY-threaded buffered parse polling and external-transport parse polling now
+  live under `src/terminal/core/pty_poll_processing.zig` instead of staying
+  open-coded in `pty_io.zig`
 - replay-backed redraw coverage now includes narrow partial publication,
   dense clear+repaint loops, and live-bottom full-region scroll behavior
 - replay-backed redraw coverage now also includes a multi-row narrow rewrite
