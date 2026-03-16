@@ -29,7 +29,7 @@ typedef enum ZideTerminalEventKind {
 
 enum {
     ZIDE_TERMINAL_SNAPSHOT_ABI_VERSION = 2,
-    ZIDE_TERMINAL_SNAPSHOT_DIFF_ABI_VERSION = 1,
+    ZIDE_TERMINAL_SNAPSHOT_DIFF_ABI_VERSION = 2,
     ZIDE_TERMINAL_EVENT_ABI_VERSION = 4,
     ZIDE_TERMINAL_SCROLLBACK_ABI_VERSION = 1,
     ZIDE_TERMINAL_RENDERER_METADATA_ABI_VERSION = 1,
@@ -163,7 +163,12 @@ typedef struct ZideTerminalSnapshotDiff {
     uint64_t base_generation;
     uint32_t rows;
     uint32_t cols;
+    uint32_t cursor_row;
+    uint32_t cursor_col;
     uint8_t full_refresh_required;
+    uint8_t cursor_visible;
+    uint8_t cursor_shape;
+    uint8_t cursor_blink;
     uint8_t alt_active;
     uint8_t screen_reverse;
     uint8_t has_damage;

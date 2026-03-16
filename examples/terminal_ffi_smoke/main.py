@@ -156,7 +156,12 @@ class SnapshotDiff(ctypes.Structure):
         ("base_generation", ctypes.c_uint64),
         ("rows", ctypes.c_uint32),
         ("cols", ctypes.c_uint32),
+        ("cursor_row", ctypes.c_uint32),
+        ("cursor_col", ctypes.c_uint32),
         ("full_refresh_required", ctypes.c_uint8),
+        ("cursor_visible", ctypes.c_uint8),
+        ("cursor_shape", ctypes.c_uint8),
+        ("cursor_blink", ctypes.c_uint8),
         ("alt_active", ctypes.c_uint8),
         ("screen_reverse", ctypes.c_uint8),
         ("has_damage", ctypes.c_uint8),
@@ -610,6 +615,10 @@ def run_smoke(lib_path: Path) -> int:
             try:
                 if granular.full_refresh_required != 0:
                     raise RuntimeError("granular diff unexpectedly requested full refresh")
+                if granular.cursor_row != 0 or granular.cursor_col != 4:
+                    raise RuntimeError("granular diff cursor position mismatch")
+                if granular.cursor_visible != 1 or granular.cursor_shape != 0 or granular.cursor_blink != 1:
+                    raise RuntimeError("granular diff cursor state mismatch")
                 if granular.row_count != 1 or granular.span_count != 1 or granular.cell_count != 4:
                     raise RuntimeError("granular diff payload shape mismatch")
                 if not granular.rows_ptr or not granular.spans_ptr or not granular.cells_ptr:
@@ -632,6 +641,10 @@ def run_smoke(lib_path: Path) -> int:
             try:
                 if fallback.full_refresh_required != 1:
                     raise RuntimeError("fallback diff did not request full refresh")
+                if fallback.cursor_row != 0 or fallback.cursor_col != 4:
+                    raise RuntimeError("fallback diff cursor position mismatch")
+                if fallback.cursor_visible != 1 or fallback.cursor_shape != 0 or fallback.cursor_blink != 1:
+                    raise RuntimeError("fallback diff cursor state mismatch")
                 if fallback.row_count != 0 or fallback.span_count != 0 or fallback.cell_count != 4:
                     raise RuntimeError("fallback diff payload shape mismatch")
             finally:

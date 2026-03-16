@@ -201,6 +201,8 @@ Current judgment:
   - missing/stale base generation should force fallback, not best-effort diff
   - title/cwd should stay out of the first diff ABI entirely
   - replacement cells should be ordered linearly by row then span
+  - cursor state should travel in the diff packet itself so hosts do not need
+    base-frame cursor preservation workarounds
   - viewport-shift, alt-screen, and visible-history transitions should bias
     toward fallback in the first cut
   - freshly started PTY/session output may stay on full-refresh fallback until

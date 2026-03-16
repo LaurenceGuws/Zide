@@ -11,7 +11,7 @@ pub const Status = enum(c_int) {
 };
 
 pub const snapshot_abi_version: u32 = 2;
-pub const snapshot_diff_abi_version: u32 = 1;
+pub const snapshot_diff_abi_version: u32 = 2;
 pub const event_abi_version: u32 = 4;
 pub const scrollback_abi_version: u32 = 1;
 pub const renderer_metadata_abi_version: u32 = 1;
@@ -141,7 +141,12 @@ pub const SnapshotDiff = extern struct {
     base_generation: u64 = 0,
     rows: u32 = 0,
     cols: u32 = 0,
+    cursor_row: u32 = 0,
+    cursor_col: u32 = 0,
     full_refresh_required: u8 = 0,
+    cursor_visible: u8 = 0,
+    cursor_shape: u8 = 0,
+    cursor_blink: u8 = 0,
     alt_active: u8 = 0,
     screen_reverse: u8 = 0,
     has_damage: u8 = 0,

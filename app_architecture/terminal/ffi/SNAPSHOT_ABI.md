@@ -451,7 +451,12 @@ typedef struct ZideTerminalSnapshotDiff {
     uint64_t base_generation;
     uint32_t rows;
     uint32_t cols;
+    uint32_t cursor_row;
+    uint32_t cursor_col;
     uint8_t full_refresh_required;
+    uint8_t cursor_visible;
+    uint8_t cursor_shape;
+    uint8_t cursor_blink;
     uint8_t alt_active;
     uint8_t screen_reverse;
     uint8_t has_damage;
@@ -490,6 +495,10 @@ Intended semantics:
 - `full_refresh_required = 0` means:
   - rows/spans/cells deterministically update the previously rendered visible
     state from `base_generation` to `generation`
+- cursor state is always carried in the diff result itself
+  - hosts must not preserve cursor from the trusted base frame when applying
+    diff packets
+  - this keeps the packet self-sufficient for visible-state application
 
 #### Base-Generation Admission Rule
 

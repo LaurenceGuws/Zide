@@ -110,6 +110,11 @@ test "ffi non-pty snapshot and event ownership smoke" {
     try std.testing.expectEqual(@as(u8, 1), diff.full_refresh_required);
     try std.testing.expectEqual(snapshot.rows, diff.rows);
     try std.testing.expectEqual(snapshot.cols, diff.cols);
+    try std.testing.expectEqual(snapshot.cursor_row, diff.cursor_row);
+    try std.testing.expectEqual(snapshot.cursor_col, diff.cursor_col);
+    try std.testing.expectEqual(snapshot.cursor_visible, diff.cursor_visible);
+    try std.testing.expectEqual(snapshot.cursor_shape, diff.cursor_shape);
+    try std.testing.expectEqual(snapshot.cursor_blink, diff.cursor_blink);
     try std.testing.expectEqual(@as(usize, 0), diff.row_count);
     try std.testing.expectEqual(@as(usize, 0), diff.span_count);
     try std.testing.expect(diff.rows_ptr == null);
@@ -265,6 +270,11 @@ test "ffi snapshot diff exports granular packet for safe same-mode update" {
     try std.testing.expect(diff.generation > base_generation);
     try std.testing.expectEqual(@as(u32, 1), diff.rows);
     try std.testing.expectEqual(@as(u32, 4), diff.cols);
+    try std.testing.expectEqual(@as(u32, 0), diff.cursor_row);
+    try std.testing.expectEqual(@as(u32, 4), diff.cursor_col);
+    try std.testing.expectEqual(@as(u8, 1), diff.cursor_visible);
+    try std.testing.expectEqual(@as(u8, 0), diff.cursor_shape);
+    try std.testing.expectEqual(@as(u8, 1), diff.cursor_blink);
     try std.testing.expectEqual(@as(usize, 1), diff.row_count);
     try std.testing.expectEqual(@as(usize, 1), diff.span_count);
     try std.testing.expectEqual(@as(usize, 4), diff.cell_count);
