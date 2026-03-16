@@ -229,6 +229,68 @@ test "ffi external transport exposes outbound input bytes and host reports" {
     try std.testing.expect(std.mem.indexOf(u8, bytes, "\x1b[?997;1n") != null);
 }
 
+test "ffi snapshot diff exports granular packet for safe same-mode update" {
+    try app_logger.setConsoleFilterString("none");
+    try app_logger.setFileFilterString("none");
+
+    var handle: ?*c_api.ZideTerminalHandle = null;
+    const cfg = c_api.ZideTerminalCreateConfig{
+        .rows = 1,
+        .cols = 4,
+        .scrollback_rows = 32,
+        .cursor_shape = 0,
+        .cursor_blink = 1,
+    };
+    try std.testing.expectEqual(@as(c_int, 0), c_api.zide_terminal_create(&cfg, &handle));
+    defer c_api.zide_terminal_destroy(handle);
+
+    try std.testing.expectEqual(@as(c_int, 0), c_api.zide_terminal_resize(handle, 4, 1, 8, 16));
+    try std.testing.expectEqual(@as(c_int, 0), c_api.zide_terminal_feed_output(handle, "ABCD".ptr, 4));
+
+    var snapshot_request = snapshotRequest(0);
+    var snapshot: c_api.ZideTerminalSnapshot = .{};
+    try std.testing.expectEqual(@as(c_int, 0), c_api.zide_terminal_snapshot_acquire(handle, &snapshot_request, &snapshot));
+    const base_generation = snapshot.generation;
+    c_api.zide_terminal_snapshot_release(&snapshot);
+
+    try std.testing.expectEqual(@as(c_int, 0), c_api.zide_terminal_present_ack(handle, base_generation));
+    try std.testing.expectEqual(@as(c_int, 0), c_api.zide_terminal_feed_output(handle, "\rWXYZ".ptr, 5));
+
+    var diff_request = snapshotDiffRequest(base_generation);
+    var diff: c_api.ZideTerminalSnapshotDiff = .{};
+    try std.testing.expectEqual(@as(c_int, 0), c_api.zide_terminal_snapshot_diff_acquire(handle, &diff_request, &diff));
+    defer c_api.zide_terminal_snapshot_diff_release(&diff);
+
+    try std.testing.expectEqual(@as(u8, 0), diff.full_refresh_required);
+    try std.testing.expect(diff.generation > base_generation);
+    try std.testing.expectEqual(@as(u32, 1), diff.rows);
+    try std.testing.expectEqual(@as(u32, 4), diff.cols);
+    try std.testing.expectEqual(@as(usize, 1), diff.row_count);
+    try std.testing.expectEqual(@as(usize, 1), diff.span_count);
+    try std.testing.expectEqual(@as(usize, 4), diff.cell_count);
+    try std.testing.expect(diff.rows_ptr != null);
+    try std.testing.expect(diff.spans_ptr != null);
+    try std.testing.expect(diff.cells_ptr != null);
+
+    const row = diff.rows_ptr.?[0];
+    try std.testing.expectEqual(@as(u32, 0), row.row);
+    try std.testing.expectEqual(@as(u16, 1), row.span_count);
+    try std.testing.expectEqual(@as(u8, 0), row.span_overflow);
+    try std.testing.expectEqual(@as(u32, 0), row.first_span_index);
+    try std.testing.expectEqual(@as(u32, 0), row.first_cell_index);
+    try std.testing.expectEqual(@as(u32, 4), row.cell_count);
+
+    const span = diff.spans_ptr.?[0];
+    try std.testing.expectEqual(@as(u16, 0), span.start_col);
+    try std.testing.expectEqual(@as(u16, 3), span.end_col);
+
+    const diff_cells = diff.cells_ptr.?[0..diff.cell_count];
+    try std.testing.expectEqual(@as(u32, 'W'), diff_cells[0].codepoint);
+    try std.testing.expectEqual(@as(u32, 'X'), diff_cells[1].codepoint);
+    try std.testing.expectEqual(@as(u32, 'Y'), diff_cells[2].codepoint);
+    try std.testing.expectEqual(@as(u32, 'Z'), diff_cells[3].codepoint);
+}
+
 test "ffi external transport can report child exit status" {
     try app_logger.setConsoleFilterString("none");
     try app_logger.setFileFilterString("none");

@@ -35,6 +35,19 @@ const SnapshotExport = struct {
     cwd: []u8,
 };
 
+const SnapshotDiffExportState = struct {
+    generation: u64,
+    base_generation: u64,
+    rows: usize,
+    cols: usize,
+    alt_active: bool,
+    screen_reverse: bool,
+    damage: screen.Damage,
+    viewport_shift_rows: i32,
+    viewport_shift_exposed_only: bool,
+    full_refresh_required: bool,
+};
+
 fn copyPublishedSnapshotExport(
     handle: *shared.Handle,
     allocator: std.mem.Allocator,
@@ -87,6 +100,209 @@ fn copyPublishedSnapshotExport(
         .cells = cells,
         .title = title,
         .cwd = cwd,
+    };
+}
+
+fn renderCacheForGenerationLocked(session: *terminal.TerminalSession, generation: u64) ?*const @import("../core/render_cache.zig").RenderCache {
+    inline for (0..2) |i| {
+        const cache = &session.render_caches[i];
+        if (cache.generation == generation) return cache;
+    }
+    return null;
+}
+
+fn copyGranularSnapshotDiffExport(
+    handle: *shared.Handle,
+    allocator: std.mem.Allocator,
+    base_generation: u64,
+    out_state: *SnapshotDiffExportState,
+) !?SnapshotDiffOwner {
+    handle.session.lock();
+    defer handle.session.unlock();
+
+    if (handle.session.view_cache_pending.load(.acquire)) {
+        handle.session.updateViewCacheForScrollLocked();
+    }
+
+    const current = handle.session.renderCache();
+    const previous = renderCacheForGenerationLocked(handle.session, base_generation) orelse {
+        out_state.* = .{
+            .generation = current.generation,
+            .base_generation = base_generation,
+            .rows = current.rows,
+            .cols = current.cols,
+            .alt_active = current.alt_active,
+            .screen_reverse = current.screen_reverse,
+            .damage = current.damage,
+            .viewport_shift_rows = current.viewport_shift_rows,
+            .viewport_shift_exposed_only = current.viewport_shift_exposed_only,
+            .full_refresh_required = true,
+        };
+        return null;
+    };
+
+    const should_fallback =
+        base_generation == 0 or
+        base_generation != handle.last_acknowledged_generation or
+        current.generation == base_generation or
+        current.rows != previous.rows or
+        current.cols != previous.cols or
+        current.alt_active != previous.alt_active or
+        current.visible_history_generation != previous.visible_history_generation or
+        current.scroll_offset != previous.scroll_offset or
+        current.viewport_shift_rows != 0 or
+        current.dirty == .full;
+
+    if (should_fallback) {
+        out_state.* = .{
+            .generation = current.generation,
+            .base_generation = base_generation,
+            .rows = current.rows,
+            .cols = current.cols,
+            .alt_active = current.alt_active,
+            .screen_reverse = current.screen_reverse,
+            .damage = current.damage,
+            .viewport_shift_rows = current.viewport_shift_rows,
+            .viewport_shift_exposed_only = current.viewport_shift_exposed_only,
+            .full_refresh_required = true,
+        };
+        return null;
+    }
+
+    var row_count: usize = 0;
+    var span_count: usize = 0;
+    var cell_count: usize = 0;
+    for (current.dirty_rows.items, 0..) |dirty, row_idx| {
+        if (!dirty) continue;
+        if (current.row_dirty_span_overflow.items[row_idx]) {
+            out_state.* = .{
+                .generation = current.generation,
+                .base_generation = base_generation,
+                .rows = current.rows,
+                .cols = current.cols,
+                .alt_active = current.alt_active,
+                .screen_reverse = current.screen_reverse,
+                .damage = current.damage,
+                .viewport_shift_rows = current.viewport_shift_rows,
+                .viewport_shift_exposed_only = current.viewport_shift_exposed_only,
+                .full_refresh_required = true,
+            };
+            return null;
+        }
+        row_count += 1;
+        const row_span_count = current.row_dirty_span_counts.items[row_idx];
+        span_count += row_span_count;
+        var span_idx: usize = 0;
+        while (span_idx < row_span_count) : (span_idx += 1) {
+            const span = current.row_dirty_spans.items[row_idx][span_idx];
+            cell_count += @as(usize, span.end - span.start) + 1;
+        }
+    }
+
+    if (cell_count == 0) {
+        const empty_rows = try allocator.alloc(shared.SnapshotDiffRow, 0);
+        errdefer allocator.free(empty_rows);
+        const empty_spans = try allocator.alloc(shared.SnapshotDiffSpan, 0);
+        errdefer allocator.free(empty_spans);
+        const empty_cells = try allocator.alloc(shared.Cell, 0);
+        errdefer allocator.free(empty_cells);
+        out_state.* = .{
+            .generation = current.generation,
+            .base_generation = base_generation,
+            .rows = current.rows,
+            .cols = current.cols,
+            .alt_active = current.alt_active,
+            .screen_reverse = current.screen_reverse,
+            .damage = current.damage,
+            .viewport_shift_rows = 0,
+            .viewport_shift_exposed_only = false,
+            .full_refresh_required = false,
+        };
+        return .{
+            .allocator = allocator,
+            .rows = empty_rows,
+            .spans = empty_spans,
+            .cells = empty_cells,
+        };
+    }
+
+    if (cell_count >= current.cells.items.len) {
+        out_state.* = .{
+            .generation = current.generation,
+            .base_generation = base_generation,
+            .rows = current.rows,
+            .cols = current.cols,
+            .alt_active = current.alt_active,
+            .screen_reverse = current.screen_reverse,
+            .damage = current.damage,
+            .viewport_shift_rows = current.viewport_shift_rows,
+            .viewport_shift_exposed_only = current.viewport_shift_exposed_only,
+            .full_refresh_required = true,
+        };
+        return null;
+    }
+
+    const rows = try allocator.alloc(shared.SnapshotDiffRow, row_count);
+    errdefer allocator.free(rows);
+    const spans = try allocator.alloc(shared.SnapshotDiffSpan, span_count);
+    errdefer allocator.free(spans);
+    const cells = try allocator.alloc(shared.Cell, cell_count);
+    errdefer allocator.free(cells);
+
+    var out_row_idx: usize = 0;
+    var out_span_idx: usize = 0;
+    var out_cell_idx: usize = 0;
+    for (current.dirty_rows.items, 0..) |dirty, row_idx| {
+        if (!dirty) continue;
+        const row_span_count = current.row_dirty_span_counts.items[row_idx];
+        const row_first_span = out_span_idx;
+        const row_first_cell = out_cell_idx;
+        var row_cell_count: usize = 0;
+        var span_idx: usize = 0;
+        while (span_idx < row_span_count) : (span_idx += 1) {
+            const span = current.row_dirty_spans.items[row_idx][span_idx];
+            spans[out_span_idx] = .{
+                .start_col = span.start,
+                .end_col = span.end,
+            };
+            out_span_idx += 1;
+            var col: usize = span.start;
+            while (col <= span.end) : (col += 1) {
+                const idx = row_idx * current.cols + col;
+                cells[out_cell_idx] = mapCell(current.cells.items[idx]);
+                out_cell_idx += 1;
+                row_cell_count += 1;
+            }
+        }
+        rows[out_row_idx] = .{
+            .row = @intCast(row_idx),
+            .span_count = row_span_count,
+            .span_overflow = 0,
+            .reserved0 = 0,
+            .first_span_index = @intCast(row_first_span),
+            .first_cell_index = @intCast(row_first_cell),
+            .cell_count = @intCast(row_cell_count),
+        };
+        out_row_idx += 1;
+    }
+
+    out_state.* = .{
+        .generation = current.generation,
+        .base_generation = base_generation,
+        .rows = current.rows,
+        .cols = current.cols,
+        .alt_active = current.alt_active,
+        .screen_reverse = current.screen_reverse,
+        .damage = current.damage,
+        .viewport_shift_rows = 0,
+        .viewport_shift_exposed_only = false,
+        .full_refresh_required = false,
+    };
+    return .{
+        .allocator = allocator,
+        .rows = rows,
+        .spans = spans,
+        .cells = cells,
     };
 }
 
@@ -339,43 +555,91 @@ pub fn snapshotDiffAcquire(handle: ?*shared.ZideTerminalHandle, request: ?*const
     };
     errdefer allocator.destroy(owner);
 
-    var state: SnapshotExportState = undefined;
-    const exported = copyPublishedSnapshotExport(h, allocator, 0, &state) catch |err| {
-        log.logf(.warning, "snapshot diff export failed err={s}", .{@errorName(err)});
+    var state: SnapshotDiffExportState = undefined;
+    const granular = copyGranularSnapshotDiffExport(h, allocator, req.base_generation, &state) catch |err| {
+        log.logf(.warning, "snapshot diff granular export failed err={s}", .{@errorName(err)});
         return shared.mapError(err);
     };
-    errdefer allocator.free(exported.cells);
+
+    if (granular) |exported| {
+        owner.* = exported;
+        out_diff.* = .{
+            .abi_version = shared.snapshot_diff_abi_version,
+            .struct_size = @sizeOf(shared.SnapshotDiff),
+            .generation = state.generation,
+            .base_generation = state.base_generation,
+            .rows = @intCast(state.rows),
+            .cols = @intCast(state.cols),
+            .full_refresh_required = 0,
+            .alt_active = @intFromBool(state.alt_active),
+            .screen_reverse = @intFromBool(state.screen_reverse),
+            .has_damage = @intFromBool(state.damage.start_row <= state.damage.end_row and state.damage.start_col <= state.damage.end_col),
+            .damage_start_row = @intCast(state.damage.start_row),
+            .damage_end_row = @intCast(state.damage.end_row),
+            .damage_start_col = @intCast(state.damage.start_col),
+            .damage_end_col = @intCast(state.damage.end_col),
+            .viewport_shift_rows = 0,
+            .viewport_shift_exposed_only = 0,
+            .rows_ptr = if (exported.rows.len == 0) null else exported.rows.ptr,
+            .row_count = exported.rows.len,
+            .spans_ptr = if (exported.spans.len == 0) null else exported.spans.ptr,
+            .span_count = exported.spans.len,
+            .cells_ptr = if (exported.cells.len == 0) null else exported.cells.ptr,
+            .cell_count = exported.cells.len,
+            ._ctx = owner,
+        };
+        return .ok;
+    }
+
+    var snapshot_state: SnapshotExportState = undefined;
+    const fallback = copyPublishedSnapshotExport(h, allocator, 0, &snapshot_state) catch |err| {
+        log.logf(.warning, "snapshot diff fallback export failed err={s}", .{@errorName(err)});
+        return shared.mapError(err);
+    };
+    errdefer allocator.free(fallback.cells);
+    const empty_rows = allocator.alloc(shared.SnapshotDiffRow, 0) catch |err| {
+        log.logf(.warning, "snapshot diff empty rows alloc failed err={s}", .{@errorName(err)});
+        allocator.free(fallback.cells);
+        return .out_of_memory;
+    };
+    errdefer allocator.free(empty_rows);
+    const empty_spans = allocator.alloc(shared.SnapshotDiffSpan, 0) catch |err| {
+        log.logf(.warning, "snapshot diff empty spans alloc failed err={s}", .{@errorName(err)});
+        allocator.free(fallback.cells);
+        allocator.free(empty_rows);
+        return .out_of_memory;
+    };
+    errdefer allocator.free(empty_spans);
 
     owner.* = .{
         .allocator = allocator,
-        .rows = &.{},
-        .spans = &.{},
-        .cells = exported.cells,
+        .rows = empty_rows,
+        .spans = empty_spans,
+        .cells = fallback.cells,
     };
-
     out_diff.* = .{
         .abi_version = shared.snapshot_diff_abi_version,
         .struct_size = @sizeOf(shared.SnapshotDiff),
-        .generation = state.generation,
+        .generation = snapshot_state.generation,
         .base_generation = req.base_generation,
-        .rows = @intCast(state.rows),
-        .cols = @intCast(state.cols),
+        .rows = @intCast(snapshot_state.rows),
+        .cols = @intCast(snapshot_state.cols),
         .full_refresh_required = 1,
-        .alt_active = @intFromBool(state.alt_active),
-        .screen_reverse = @intFromBool(state.screen_reverse),
-        .has_damage = @intFromBool(state.damage.start_row <= state.damage.end_row and state.damage.start_col <= state.damage.end_col),
-        .damage_start_row = @intCast(state.damage.start_row),
-        .damage_end_row = @intCast(state.damage.end_row),
-        .damage_start_col = @intCast(state.damage.start_col),
-        .damage_end_col = @intCast(state.damage.end_col),
+        .alt_active = @intFromBool(snapshot_state.alt_active),
+        .screen_reverse = @intFromBool(snapshot_state.screen_reverse),
+        .has_damage = @intFromBool(snapshot_state.damage.start_row <= snapshot_state.damage.end_row and snapshot_state.damage.start_col <= snapshot_state.damage.end_col),
+        .damage_start_row = @intCast(snapshot_state.damage.start_row),
+        .damage_end_row = @intCast(snapshot_state.damage.end_row),
+        .damage_start_col = @intCast(snapshot_state.damage.start_col),
+        .damage_end_col = @intCast(snapshot_state.damage.end_col),
         .viewport_shift_rows = 0,
         .viewport_shift_exposed_only = 0,
         .rows_ptr = null,
         .row_count = 0,
         .spans_ptr = null,
         .span_count = 0,
-        .cells_ptr = if (exported.cells.len == 0) null else exported.cells.ptr,
-        .cell_count = exported.cells.len,
+        .cells_ptr = if (fallback.cells.len == 0) null else fallback.cells.ptr,
+        .cell_count = fallback.cells.len,
         ._ctx = owner,
     };
     return .ok;
