@@ -89,6 +89,14 @@ Status note, 2026-03-15:
 - [ ] `P6-01` Key encoding, with later kitty keyboard protocol support.
 - [ ] `P6-02` Mouse reporting for X10, VT200, and SGR.
 - [ ] `P6-03` Selection and copy/paste integration.
+  Notes:
+  - 2026-03-16 dogfood fix: `Ctrl+Shift+C` while viewing scrollback no longer
+    snaps the viewport back to the live cursor.
+  - Root cause: the keyboard pre-scan classified suppressed terminal clipboard
+    shortcuts as ordinary non-modifier input, which let the pointer/input path
+    call the normal live-bottom reset logic meant for real terminal input.
+  - Current fix keeps suppressed `Ctrl+Shift+C/V` out of that live-reset input
+    classification while preserving normal paste/live-follow behavior.
 
 ### Phase 7 Correctness And Compatibility
 

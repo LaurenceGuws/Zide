@@ -101,6 +101,29 @@ ownership.
   example (`gping_redraw`, `nvim_overlay`).
 - [x] Add replay harness fixture for `vttest` wraparound mode test
   (`vttest_wraparound`).
+- [ ] Defer the intermittent Codex completion-tail / live-resize corruption bug
+  until repro authority is stable.
+  Notes:
+  - Dogfood report, 2026-03-16:
+    - intermittent corruption near the final Codex assistant summary dump
+    - partial-row / half-cell-looking scrollback updates that clear on the next
+      input wake
+    - resize while Codex is actively streaming can corrupt bottom scrollback
+      styling and, in the worst case observed by the user, appear to clear the
+      visible scrollback
+  - Codex reference check confirms the final assistant tail is flushed through a
+    distinct completion path rather than the normal newline-gated incremental
+    path (`reference_repos/terminals/codex/.../streaming/controller.rs`,
+    `.../chatwidget.rs`).
+  - Current Zide reduced-log captures did not reproduce the visual failure.
+    The most suspicious handoff lines observed so far can also be explained by
+    legitimate clean publications that retire screen dirty without a texture
+    redraw, so there is not yet evidence for a safe structural fix.
+  - Resume only when we have one of:
+    - a reliable manual repro
+    - a deterministic capture/log slice that actually shows the bad frame
+    - a replay-style minimized stream that reproduces the corruption without
+      timing-sensitive logging
 - [ ] Keep replay/manual authority current for real clear-and-redraw regressions
   that survive on the rewritten path.
 - [ ] Continue collapsing damage/publication ownership into a smaller set of

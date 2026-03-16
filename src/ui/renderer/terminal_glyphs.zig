@@ -42,6 +42,41 @@ fn powerlineModeForCodepoint(codepoint: u32) ?PowerlineMode {
     };
 }
 
+pub fn hasAnalyticBoxGlyphCoverage(codepoint: u32) bool {
+    return switch (codepoint) {
+        0x2500,
+        0x2501,
+        0x2502,
+        0x2503,
+        0x256d,
+        0x256e,
+        0x256f,
+        0x2570,
+        0x250c,
+        0x2510,
+        0x2514,
+        0x2518,
+        0x2574,
+        0x2575,
+        0x2576,
+        0x2577,
+        0x251c,
+        0x2524,
+        0x252c,
+        0x2534,
+        0x253c,
+        0x2580,
+        0x2584,
+        0x2588,
+        0xE0B0,
+        0xE0B1,
+        0xE0B2,
+        0xE0B3,
+        => true,
+        else => false,
+    };
+}
+
 pub fn specialVariantForCodepoint(codepoint: u32) ?types.SpecialGlyphVariant {
     if (codepoint == 0xE0B1 or codepoint == 0xE0B3 or
         codepoint == 0xE0B4 or codepoint == 0xE0B5 or
@@ -52,21 +87,11 @@ pub fn specialVariantForCodepoint(codepoint: u32) ?types.SpecialGlyphVariant {
     if (codepoint == 0x2591 or codepoint == 0x2592 or codepoint == 0x2593) {
         return .shade;
     }
-    if (codepoint >= 0x2500 and codepoint <= 0x259F) {
+    if (hasAnalyticBoxGlyphCoverage(codepoint)) {
         return .box;
     }
     if (codepoint >= 0x2800 and codepoint <= 0x28FF) {
         return .braille;
-    }
-    if (codepoint >= 0xF5D0 and codepoint <= 0xF60D) {
-        return .branch;
-    }
-    if ((codepoint >= 0x1CD00 and codepoint <= 0x1CDE5) or
-        (codepoint >= 0x1FB00 and codepoint <= 0x1FBAF) or
-        codepoint == 0x1FBE6 or
-        codepoint == 0x1FBE7)
-    {
-        return .legacy;
     }
     return null;
 }
@@ -837,4 +862,11 @@ test "shade glyph coverage exists and increases by density" {
     try std.testing.expect(light_sum > 0);
     try std.testing.expect(light_sum < medium_sum);
     try std.testing.expect(medium_sum < dark_sum);
+}
+
+test "special variant routing only claims implemented box coverage" {
+    try std.testing.expectEqual(types.SpecialGlyphVariant.box, specialVariantForCodepoint(0x2500).?);
+    try std.testing.expectEqual(@as(?types.SpecialGlyphVariant, null), specialVariantForCodepoint(0x2550));
+    try std.testing.expectEqual(@as(?types.SpecialGlyphVariant, null), specialVariantForCodepoint(0xF5D0));
+    try std.testing.expectEqual(@as(?types.SpecialGlyphVariant, null), specialVariantForCodepoint(0x1FB00));
 }

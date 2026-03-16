@@ -39,7 +39,10 @@ pub fn handleKeyboardInput(
         for (input_batch.events.items) |event| {
             switch (event) {
                 .key => |key_event| {
-                    if (key_event.pressed and !isModifierKey(key_event.key)) {
+                    if (key_event.pressed and
+                        !isModifierKey(key_event.key) and
+                        !isSuppressedTerminalShortcut(suppress_shortcuts, key_event))
+                    {
                         result.saw_non_modifier_key_press = true;
                         break;
                     }
@@ -217,10 +220,61 @@ fn isModifierKey(key: shared_types.input.Key) bool {
     };
 }
 
+fn isSuppressedTerminalShortcut(
+    suppress_shortcuts: bool,
+    key_event: shared_types.input.KeyEvent,
+) bool {
+    if (!suppress_shortcuts or !key_event.mods.ctrl or !key_event.mods.shift) return false;
+    if (key_event.mods.alt or key_event.mods.altgr or key_event.mods.super) return false;
+    return key_event.key == .c or key_event.key == .v;
+}
+
 fn clearLiveState(widget: anytype) void {
     widget.session.lock();
     defer widget.session.unlock();
     _ = widget.session.resetToLiveBottomLocked();
+}
+
+test "suppressed terminal clipboard shortcuts do not count as live-reset input" {
+    const shared = @import("../../types/mod.zig");
+
+    try std.testing.expect(isSuppressedTerminalShortcut(
+        true,
+        .{
+            .key = .c,
+            .pressed = true,
+            .repeated = false,
+            .mods = .{ .ctrl = true, .shift = true },
+        },
+    ));
+    try std.testing.expect(isSuppressedTerminalShortcut(
+        true,
+        .{
+            .key = .v,
+            .pressed = true,
+            .repeated = false,
+            .mods = .{ .ctrl = true, .shift = true },
+        },
+    ));
+    try std.testing.expect(!isSuppressedTerminalShortcut(
+        false,
+        .{
+            .key = .c,
+            .pressed = true,
+            .repeated = false,
+            .mods = .{ .ctrl = true, .shift = true },
+        },
+    ));
+    try std.testing.expect(!isSuppressedTerminalShortcut(
+        true,
+        .{
+            .key = .c,
+            .pressed = true,
+            .repeated = false,
+            .mods = .{ .ctrl = true, .shift = true, .alt = true },
+        },
+    ));
+    _ = shared;
 }
 
 fn keyModFromEvent(key_event: shared_types.input.KeyEvent) terminal_mod.Modifier {

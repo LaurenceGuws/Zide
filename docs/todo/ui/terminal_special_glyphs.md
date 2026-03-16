@@ -54,16 +54,35 @@ Build a high-quality terminal special-glyph pipeline for powerline, shades, box,
 
 - [ ] `TSG-3-01` Move `░▒▓` to sprite masks with density-consistent patterns
 - [ ] `TSG-3-02` Migrate core box and block ranges incrementally
+  Notes:
+  - 2026-03-16 dogfood bug from `lazydocker`: some box-drawing characters were
+    disappearing entirely, leaving visible gaps in borders.
+  - Root cause: `specialVariantForCodepoint()` was routing the whole
+    `U+2500..U+259F` block through the special-glyph path even though Zide only
+    has analytic coverage for a small subset today. Unsupported codepoints could
+    miss both sprite creation and analytic fallback and disappear instead of
+    falling back to font rendering.
+  - Immediate fix landed in code: only currently implemented analytic box
+    codepoints are claimed by the special-glyph router; the rest now fall back
+    to normal font rendering until the real box/block migration exists.
+  - This is a deliberate postponement of incomplete special routing, not a
+    scope cut. Full `U+2500..U+259F` special-path parity is still in scope for
+    this track; unsupported codepoints were returned to safe font fallback so
+    they render correctly while the broader migration remains pending.
 
 ### TSG-4 Extended Symbol Parity
 
 - [ ] `TSG-4-01` Braille parity pass
 - [ ] `TSG-4-02` Branch drawing parity pass
 - [ ] `TSG-4-03` Legacy computing and octants parity pass
+  Notes:
+  - The current router no longer claims branch/legacy ranges speculatively.
+    That rollback is intentional until real sprite/analytic coverage exists.
+  - These ranges remain in scope for parity work; they were postponed out of
+    the fast path to preserve correctness and fallback rendering.
 
 ### TSG-5 Verification and Hardening
 
 - [ ] `TSG-5-01` Automate special-glyph visual snapshots
 - [ ] `TSG-5-02` Stress-test resize and zoom cache safety
 - [ ] `TSG-5-03` Document final architecture and maintenance rules
-

@@ -376,36 +376,7 @@ fn addTerminalGlyphRect(ctx: *anyopaque, x: i32, y: i32, w: i32, h: i32, color: 
 }
 
 fn isTerminalBoxGlyph(codepoint: u32) bool {
-    return switch (codepoint) {
-        0x2500,
-        0x2501,
-        0x2502,
-        0x2503,
-        0x256d,
-        0x256e,
-        0x256f,
-        0x2570,
-        0x250c,
-        0x2510,
-        0x2514,
-        0x2518,
-        0x2574,
-        0x2575,
-        0x2576,
-        0x2577,
-        0x251c,
-        0x2524,
-        0x252c,
-        0x2534,
-        0x253c,
-        0x2580,
-        0x2584,
-        0x2588,
-        0xE0B1,
-        0xE0B3,
-        => true,
-        else => false,
-    };
+    return terminal_glyphs.hasAnalyticBoxGlyphCoverage(codepoint);
 }
 
 fn spanCanBypassShaping(
