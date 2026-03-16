@@ -702,6 +702,9 @@ Do not implement diff export unless this stays true:
     movement-aware diff semantics into the first cut
 11. freshly started PTY/session output may stay on full-refresh fallback until
     the startup full-dirty baseline has actually been presented and retired
+12. if a newer visible-state update is still chained to an unretired full-dirty
+    publication, full-refresh fallback remains correct even when the latest row
+    rewrite itself looks granular in isolation
 
 #### Candidate B: Pinned Snapshot Handle
 

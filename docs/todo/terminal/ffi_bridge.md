@@ -205,6 +205,8 @@ Current judgment:
     toward fallback in the first cut
   - freshly started PTY/session output may stay on full-refresh fallback until
     the startup full-dirty baseline has actually been presented and retired
+  - if a newer update is still chained to an unretired full-dirty publication,
+    full-refresh fallback is still the correct result
   - reject the lane if it starts requiring row-follow-up getters or a second
     authoritative visible-state path
 - Current decision rule:
