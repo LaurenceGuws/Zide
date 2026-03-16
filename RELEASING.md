@@ -50,6 +50,22 @@ on `main`.
 - Keep release-branch-only publication conveniences there; do not back-propagate
   built Pages payloads onto `main`.
 
+## Release Sequence
+
+Follow this order for a semver prerelease:
+
+1. Bump the canonical product version in [`build.zig.zon`](build.zig.zon).
+2. Draft or update the matching release-notes file under `docs/releases/`.
+3. Update public entrypoints that should point at the new checkpoint:
+   - `README.md`
+   - `docs/INDEX.md`
+   - any customer-facing architecture summary used as a release landing page
+4. Cut the release branch from the exact `main` commit to publish.
+5. Build release artifacts into `releases/<tag>/...` on that release branch.
+6. Publish GitHub Release assets from the release-branch snapshot.
+7. If needed, publish a docs-explorer Pages snapshot from the release branch,
+   not from `main`.
+
 ## Publish to GitHub Release
 
 Example with GitHub CLI:
