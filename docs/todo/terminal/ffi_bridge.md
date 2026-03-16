@@ -213,6 +213,13 @@ Current judgment:
     than widening the foreign-host diff contract to describe it
   - reject the lane if it starts requiring row-follow-up getters or a second
     authoritative visible-state path
+- Latest downstream check:
+  - Flutty removed its cursor-preservation workaround after `0ce557e2`
+  - diff-applied frames now use cursor truth directly from
+    `ZideTerminalSnapshotDiff`
+  - one-acquire fallback still feels natural downstream
+  - the remaining open diff question is the settled-baseline granular
+    non-repro, not packet self-sufficiency
 - Current decision rule:
   - diff stays ahead unless the pinned design proves a bounded retained
     generation story and a meaningful reduction in per-generation remap cost

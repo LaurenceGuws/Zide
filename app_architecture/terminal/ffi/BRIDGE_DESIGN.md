@@ -128,6 +128,15 @@ This is the contract hosts should optimize around. Metadata, strings, and
 debug/UI convenience work should stay outside this loop unless the host
 actually needs them.
 
+Recent downstream diff-ABI re-check in Flutty confirmed:
+- binding updates stayed straightforward
+- the shared runtime/controller/widget layer stayed shared
+- one-acquire fallback remained natural
+- cursor state now comes directly from `ZideTerminalSnapshotDiff`, so the old
+  trusted-base cursor preservation workaround is gone
+- immediate PTY startup churn still stays outside the granular-diff guarantee
+  on purpose
+
 Bridge-specific ownership rule:
 
 - the bridge should expose shared engine semantics explicitly
