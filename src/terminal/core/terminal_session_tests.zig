@@ -1119,6 +1119,54 @@ test "acknowledgePresentedGeneration does not retire newer normal publication" {
     try std.testing.expectEqual(@as(usize, 0), session.renderCache().damage.end_col);
 }
 
+test "retired startup baseline allows first in-place overwrite to publish partial damage" {
+    const allocator = std.testing.allocator;
+
+    var session = try TerminalSession.init(allocator, 1, 9);
+    defer session.deinit();
+
+    const base = session.primary.defaultCell();
+    session.primary.clearDirty();
+    session.alt.clearDirty();
+
+    var col: usize = 0;
+    while (col < 8) : (col += 1) {
+        var cell = base;
+        cell.codepoint = @as(u32, 'A') + @as(u32, @intCast(col));
+        session.primary.grid.cells.items[col] = cell;
+    }
+    session.primary.grid.cells.items[8] = base;
+    session.primary.grid.markDirtyRange(0, 0, 0, 7);
+
+    _ = session.output_generation.fetchAdd(1, .acq_rel);
+    session.updateViewCacheNoLock(session.output_generation.load(.acquire), session.history.scrollOffset());
+    const baseline_generation = session.renderCache().generation;
+    try std.testing.expectEqual(Dirty.partial, session.renderCache().dirty);
+    try std.testing.expect(session.acknowledgePresentedGeneration(baseline_generation));
+    try std.testing.expectEqual(Dirty.none, session.primary.grid.dirty);
+
+    var overwrite_col: usize = 0;
+    while (overwrite_col < 4) : (overwrite_col += 1) {
+        var cell = session.primary.grid.cells.items[overwrite_col];
+        cell.codepoint = @as(u32, 'W') + @as(u32, @intCast(overwrite_col));
+        session.primary.grid.cells.items[overwrite_col] = cell;
+    }
+    session.primary.grid.markDirtyRange(0, 0, 0, 3);
+
+    _ = session.output_generation.fetchAdd(1, .acq_rel);
+    session.updateViewCacheNoLock(session.output_generation.load(.acquire), session.history.scrollOffset());
+
+    const cache = session.renderCache();
+    try std.testing.expectEqual(Dirty.partial, cache.dirty);
+    try std.testing.expectEqual(@as(usize, 0), cache.damage.start_row);
+    try std.testing.expectEqual(@as(usize, 0), cache.damage.end_row);
+    try std.testing.expectEqual(@as(usize, 0), cache.damage.start_col);
+    try std.testing.expectEqual(@as(usize, 3), cache.damage.end_col);
+    try std.testing.expect(cache.row_dirty_span_counts.items[0] >= 1);
+    try std.testing.expectEqual(@as(u16, 0), cache.row_dirty_spans.items[0][0].start);
+    try std.testing.expectEqual(@as(u16, 3), cache.row_dirty_spans.items[0][0].end);
+}
+
 test "clean publication does not overwrite unpresented dirty publication" {
     const allocator = std.testing.allocator;
 

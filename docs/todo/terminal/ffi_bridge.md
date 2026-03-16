@@ -203,6 +203,8 @@ Current judgment:
   - replacement cells should be ordered linearly by row then span
   - viewport-shift, alt-screen, and visible-history transitions should bias
     toward fallback in the first cut
+  - freshly started PTY/session output may stay on full-refresh fallback until
+    the startup full-dirty baseline has actually been presented and retired
   - reject the lane if it starts requiring row-follow-up getters or a second
     authoritative visible-state path
 - Current decision rule:

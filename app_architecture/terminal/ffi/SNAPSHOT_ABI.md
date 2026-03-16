@@ -700,6 +700,8 @@ Do not implement diff export unless this stays true:
 9. no trusted base generation means explicit fallback, not best-effort diff
 10. viewport-shift and alt/history transitions may fall back instead of forcing
     movement-aware diff semantics into the first cut
+11. freshly started PTY/session output may stay on full-refresh fallback until
+    the startup full-dirty baseline has actually been presented and retired
 
 #### Candidate B: Pinned Snapshot Handle
 
