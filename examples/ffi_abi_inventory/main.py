@@ -19,6 +19,7 @@ def run_inventory(terminal_lib_path: Path, editor_lib_path: Path) -> int:
     print(
         "terminal "
         f"snapshot={terminal_lib.zide_terminal_snapshot_abi_version()} "
+        f"snapshot_diff={terminal_lib.zide_terminal_snapshot_diff_abi_version()} "
         f"event={terminal_lib.zide_terminal_event_abi_version()} "
         f"scrollback={terminal_lib.zide_terminal_scrollback_abi_version()} "
         f"metadata={terminal_lib.zide_terminal_metadata_abi_version()} "

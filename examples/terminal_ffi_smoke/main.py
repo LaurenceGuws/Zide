@@ -119,6 +119,64 @@ class SnapshotRequest(ctypes.Structure):
     ]
 
 
+class SnapshotDiffRequest(ctypes.Structure):
+    _fields_ = [
+        ("abi_version", ctypes.c_uint32),
+        ("struct_size", ctypes.c_uint32),
+        ("base_generation", ctypes.c_uint64),
+        ("reserved0", ctypes.c_uint32),
+        ("reserved1", ctypes.c_uint32),
+    ]
+
+
+class SnapshotDiffRow(ctypes.Structure):
+    _fields_ = [
+        ("row", ctypes.c_uint32),
+        ("span_count", ctypes.c_uint16),
+        ("span_overflow", ctypes.c_uint8),
+        ("reserved0", ctypes.c_uint8),
+        ("first_span_index", ctypes.c_uint32),
+        ("first_cell_index", ctypes.c_uint32),
+        ("cell_count", ctypes.c_uint32),
+    ]
+
+
+class SnapshotDiffSpan(ctypes.Structure):
+    _fields_ = [
+        ("start_col", ctypes.c_uint16),
+        ("end_col", ctypes.c_uint16),
+    ]
+
+
+class SnapshotDiff(ctypes.Structure):
+    _fields_ = [
+        ("abi_version", ctypes.c_uint32),
+        ("struct_size", ctypes.c_uint32),
+        ("generation", ctypes.c_uint64),
+        ("base_generation", ctypes.c_uint64),
+        ("rows", ctypes.c_uint32),
+        ("cols", ctypes.c_uint32),
+        ("full_refresh_required", ctypes.c_uint8),
+        ("alt_active", ctypes.c_uint8),
+        ("screen_reverse", ctypes.c_uint8),
+        ("has_damage", ctypes.c_uint8),
+        ("damage_start_row", ctypes.c_uint32),
+        ("damage_end_row", ctypes.c_uint32),
+        ("damage_start_col", ctypes.c_uint32),
+        ("damage_end_col", ctypes.c_uint32),
+        ("viewport_shift_rows", ctypes.c_int32),
+        ("viewport_shift_exposed_only", ctypes.c_uint8),
+        ("reserved1", ctypes.c_uint8 * 3),
+        ("rows_ptr", ctypes.POINTER(SnapshotDiffRow)),
+        ("row_count", ctypes.c_size_t),
+        ("spans_ptr", ctypes.POINTER(SnapshotDiffSpan)),
+        ("span_count", ctypes.c_size_t),
+        ("cells_ptr", ctypes.POINTER(Cell)),
+        ("cell_count", ctypes.c_size_t),
+        ("_ctx", ctypes.c_void_p),
+    ]
+
+
 class ScrollbackBuffer(ctypes.Structure):
     _fields_ = [
         ("abi_version", ctypes.c_uint32),
@@ -274,6 +332,10 @@ def load_library(path: Path):
     lib.zide_terminal_snapshot_acquire.restype = ctypes.c_int
     lib.zide_terminal_snapshot_release.argtypes = [ctypes.POINTER(Snapshot)]
     lib.zide_terminal_snapshot_release.restype = None
+    lib.zide_terminal_snapshot_diff_acquire.argtypes = [HandlePtr, ctypes.POINTER(SnapshotDiffRequest), ctypes.POINTER(SnapshotDiff)]
+    lib.zide_terminal_snapshot_diff_acquire.restype = ctypes.c_int
+    lib.zide_terminal_snapshot_diff_release.argtypes = [ctypes.POINTER(SnapshotDiff)]
+    lib.zide_terminal_snapshot_diff_release.restype = None
     lib.zide_terminal_scrollback_acquire.argtypes = [
         HandlePtr,
         ctypes.c_uint32,
@@ -305,6 +367,8 @@ def load_library(path: Path):
     lib.zide_terminal_child_exit_status.restype = ctypes.c_int
     lib.zide_terminal_snapshot_abi_version.argtypes = []
     lib.zide_terminal_snapshot_abi_version.restype = ctypes.c_uint32
+    lib.zide_terminal_snapshot_diff_abi_version.argtypes = []
+    lib.zide_terminal_snapshot_diff_abi_version.restype = ctypes.c_uint32
     lib.zide_terminal_event_abi_version.argtypes = []
     lib.zide_terminal_event_abi_version.restype = ctypes.c_uint32
     lib.zide_terminal_scrollback_abi_version.argtypes = []
@@ -372,6 +436,16 @@ def render_scrollback_row(scrollback: ScrollbackBuffer, row: int) -> str:
         cp = int(cell.codepoint)
         chars.append(" " if cp == 0 else chr(cp))
     return "".join(chars).rstrip()
+
+
+def diff_request(lib, base_generation: int) -> SnapshotDiffRequest:
+    return SnapshotDiffRequest(
+        abi_version=lib.zide_terminal_snapshot_diff_abi_version(),
+        struct_size=ctypes.sizeof(SnapshotDiffRequest),
+        base_generation=base_generation,
+        reserved0=0,
+        reserved1=0,
+    )
 
 
 def run_smoke(lib_path: Path) -> int:
@@ -454,6 +528,7 @@ def run_smoke(lib_path: Path) -> int:
         print("ffi smoke ok")
         print(
             f"snapshot_abi={lib.zide_terminal_snapshot_abi_version()} "
+            f"snapshot_diff_abi={lib.zide_terminal_snapshot_diff_abi_version()} "
             f"event_abi={lib.zide_terminal_event_abi_version()} "
             f"scrollback_abi={lib.zide_terminal_scrollback_abi_version()} "
             f"metadata_abi={lib.zide_terminal_metadata_abi_version()} "
@@ -488,6 +563,83 @@ def run_smoke(lib_path: Path) -> int:
             raise RuntimeError(f"unexpected title: {snapshot_state['title']!r}")
         if snapshot_state["title_getter"] != snapshot_state["title"] or snapshot_state["cwd_getter"] != snapshot_state["cwd"]:
             raise RuntimeError("getter mismatch")
+
+        base_cfg = CreateConfig(rows=1, cols=4, scrollback_rows=32, cursor_shape=0, cursor_blink=1)
+        diff_handle = HandlePtr()
+        status = lib.zide_terminal_create(ctypes.byref(base_cfg), ctypes.byref(diff_handle))
+        if status != STATUS_OK:
+            raise RuntimeError(f"diff create failed: {status}")
+        try:
+            status = lib.zide_terminal_resize(diff_handle, 4, 1, 8, 16)
+            if status != STATUS_OK:
+                raise RuntimeError(f"diff resize failed: {status}")
+
+            seed = b"ABCD"
+            seed_buf = (ctypes.c_uint8 * len(seed)).from_buffer_copy(seed)
+            status = lib.zide_terminal_feed_output(diff_handle, seed_buf, len(seed))
+            if status != STATUS_OK:
+                raise RuntimeError(f"diff seed failed: {status}")
+
+            seed_req = SnapshotRequest(
+                abi_version=lib.zide_terminal_snapshot_abi_version(),
+                struct_size=ctypes.sizeof(SnapshotRequest),
+                include_flags=0,
+                reserved0=0,
+            )
+            seed_snapshot = Snapshot()
+            if lib.zide_terminal_snapshot_acquire(diff_handle, ctypes.byref(seed_req), ctypes.byref(seed_snapshot)) != STATUS_OK:
+                raise RuntimeError("diff seed snapshot failed")
+            try:
+                base_generation = int(seed_snapshot.generation)
+            finally:
+                lib.zide_terminal_snapshot_release(ctypes.byref(seed_snapshot))
+
+            if lib.zide_terminal_present_ack(diff_handle, base_generation) != STATUS_OK:
+                raise RuntimeError("diff base present_ack failed")
+
+            update = b"\rWXYZ"
+            update_buf = (ctypes.c_uint8 * len(update)).from_buffer_copy(update)
+            status = lib.zide_terminal_feed_output(diff_handle, update_buf, len(update))
+            if status != STATUS_OK:
+                raise RuntimeError(f"diff update failed: {status}")
+
+            granular = SnapshotDiff()
+            granular_req = diff_request(lib, base_generation)
+            if lib.zide_terminal_snapshot_diff_acquire(diff_handle, ctypes.byref(granular_req), ctypes.byref(granular)) != STATUS_OK:
+                raise RuntimeError("granular diff acquire failed")
+            try:
+                if granular.full_refresh_required != 0:
+                    raise RuntimeError("granular diff unexpectedly requested full refresh")
+                if granular.row_count != 1 or granular.span_count != 1 or granular.cell_count != 4:
+                    raise RuntimeError("granular diff payload shape mismatch")
+                if not granular.rows_ptr or not granular.spans_ptr or not granular.cells_ptr:
+                    raise RuntimeError("granular diff payload pointers missing")
+                row = granular.rows_ptr[0]
+                span = granular.spans_ptr[0]
+                if row.row != 0 or row.first_span_index != 0 or row.first_cell_index != 0 or row.cell_count != 4:
+                    raise RuntimeError("granular diff row metadata mismatch")
+                if span.start_col != 0 or span.end_col != 3:
+                    raise RuntimeError("granular diff span metadata mismatch")
+                if "".join(chr(granular.cells_ptr[i].codepoint) for i in range(4)) != "WXYZ":
+                    raise RuntimeError("granular diff replacement cells mismatch")
+            finally:
+                lib.zide_terminal_snapshot_diff_release(ctypes.byref(granular))
+
+            fallback = SnapshotDiff()
+            fallback_req = diff_request(lib, base_generation - 1)
+            if lib.zide_terminal_snapshot_diff_acquire(diff_handle, ctypes.byref(fallback_req), ctypes.byref(fallback)) != STATUS_OK:
+                raise RuntimeError("fallback diff acquire failed")
+            try:
+                if fallback.full_refresh_required != 1:
+                    raise RuntimeError("fallback diff did not request full refresh")
+                if fallback.row_count != 0 or fallback.span_count != 0 or fallback.cell_count != 4:
+                    raise RuntimeError("fallback diff payload shape mismatch")
+            finally:
+                lib.zide_terminal_snapshot_diff_release(ctypes.byref(fallback))
+        finally:
+            lib.zide_terminal_destroy(diff_handle)
+
+        print("snapshot_diff granular=ok fallback=ok")
 
         rounded_box_meta = RendererMetadata()
         if lib.zide_terminal_renderer_metadata(0x256D, ctypes.byref(rounded_box_meta)) != STATUS_OK:
