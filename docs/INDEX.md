@@ -49,6 +49,7 @@ Quick reading guide:
 - `app_architecture/terminal/TERMINAL_WORKSPACE.md` — backend tab/workspace ownership contract for terminal mode.
 - `app_architecture/terminal/VT_CORE_DESIGN.md` — exact target split for terminal core, transport, host session, snapshot, and FFI.
 - `app_architecture/terminal/TERMINAL_SUBSYSTEM_LAYERS.md` — finer subsystem-layer ownership map for host, transport, engine, publication, and presentation.
+- `app_architecture/terminal/TERMINAL_BETA_CHECKPOINT.md` — high-level terminal checkpoint orientation for the current beta.
 - `app_architecture/terminal/present/WAYLAND_DESIGN_BRIEF.md` — high-level present-path design target.
 - `app_architecture/terminal/present/WAYLAND_TECHNICAL_WRITEUP.md` — present-path ownership and architecture authority.
 - `docs/todo/terminal/ffi_bridge.md` — terminal backend embeddability / FFI bridge plan.
@@ -63,6 +64,7 @@ Quick reading guide:
 
 ## Setup + Usage
 - `README.md` — customer-facing overview, links, and quick-start pointers.
+- `docs/releases/v0.1.0-beta.2.md` — current terminal beta release notes.
 - `tests/README.md` — repo-wide test layout policy.
 - `app_architecture/BOOTSTRAP.md` — dependencies, bootstrap, build, run, test.
 - `tools/docs_explorer/README.md` — run instructions for the local docs explorer.
