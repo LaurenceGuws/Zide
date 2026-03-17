@@ -229,7 +229,7 @@ pub fn appendHighlightedLineSegmentOps(list: *EditorDrawList, r: anytype, line_t
     return ok;
 }
 
-pub fn drawHighlightedLineSegment(r: anytype, line_text: []const u8, y: f32, text_x: f32, line_start: usize, seg_start: usize, seg_end: usize, seg_start_vis: usize, tokens: []HighlightToken, base_bg: anytype, selection_bg: anytype, sel_ranges: []const ByteRange, disable_programming_ligatures: bool) void {
+pub fn drawHighlightedLineSegment(r: anytype, line_text: []const u8, y: f32, text_x: f32, line_start: usize, seg_start: usize, seg_end: usize, seg_start_vis: usize, tokens: []const HighlightToken, base_bg: anytype, selection_bg: anytype, sel_ranges: []const ByteRange, disable_programming_ligatures: bool) void {
     if (seg_start >= seg_end or line_text.len == 0) return;
     var cursor = seg_start;
     for (tokens) |token| {

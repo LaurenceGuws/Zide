@@ -24,6 +24,8 @@ Status note, 2026-03-15:
 - Small, reviewable diffs.
 - No behavior changes during extraction-only refactors.
 - Behavior changes require a harness-backed baseline (now in place for editor render).
+- Validation for editor slices should include `zig build test`,
+  `zig build check-editor-imports`, and `zig build -Doptimize=ReleaseFast`.
 
 ## Related Tracking
 - Tree-sitter integration tasks live in `docs/todo/editor/treesitter.md`.
@@ -98,6 +100,46 @@ Current remaining pressure points:
 - `syntax.zig` still needs continued contraction toward a narrow root facade
 - renderer/editor-specific seams still need clearer ownership once widget-side
   modularization settles
+
+Boundary checkpoint, 2026-03-17:
+
+- editor cursor, gutter, and current-line chrome now render from editor-owned
+  draw helpers rather than `Renderer` editor-specific methods
+- `src/ui/renderer.zig` remains on generic primitives for editor paths; editor
+  chrome assembly lives on the editor/widget side
+- wrapped-line traversal and visual cursor-move bridging now live in
+  `src/editor/view/runtime.zig`; `EditorWidget` provides line/cluster access but
+  no longer owns those traversal rules directly
+- visible segment iteration now has an editor-owned helper in
+  `src/editor/render/traversal.zig`; the immediate draw path already uses it and
+  the cached draw path is the next rebase target
+- shared segment paint helpers now live in `src/editor/render/segment_paint.zig`
+  and have first-cut seam tests in the owning render modules
+- shared gutter/text-origin/visible-line geometry now lives in
+  `src/editor/view/chrome_geometry.zig` and is consumed by widget draw/input
+- shared scrollbar metrics/geometry now also route through
+  `src/editor/view/chrome_geometry.zig` so widget draw/input use one authority
+- draw and precompute paths now build an editor-owned frame surface in
+  `src/editor/view/frame.zig` so cached/immediate rendering stop reading most
+  live editor state directly from widget code
+- hit-testing and scrollbar input now also read through that frame/view surface
+  for cursor/scroll/line geometry state instead of reaching into raw editor
+  state ad hoc
+- horizontal cursor-visibility and horizontal scroll target derivation now also
+  route through `src/editor/view/runtime.zig` / `src/editor/view/cursor.zig`
+  instead of duplicating line-width/cluster work inside `EditorWidget`
+- hit-testing, immediate draw, and cached precompute now share a runtime-backed
+  line acquisition path for text/clusters/width instead of open-coding buffer
+  reads and cluster loading in each widget path
+- immediate and cached draw now also share an editor-owned visible-frame /
+  per-line prep seam in `src/editor/render/visible_prep.zig` so visible-range
+  state assembly is less ad hoc inside widget draw code
+- highlight-range acquisition and cached-vs-fallback token selection now also
+  route through that `visible_prep.zig` seam instead of living inline in widget
+  draw paths
+- the next strictness pass should keep shrinking the remaining widget-owned
+  editor state reads so the widget becomes orchestration over narrower editor
+  view/render facades
 
 ## Historical extraction checkpoint (2026-03-10)
 

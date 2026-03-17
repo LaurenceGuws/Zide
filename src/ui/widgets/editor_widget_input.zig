@@ -1,5 +1,6 @@
 const app_shell = @import("../../app_shell.zig");
 const scroll_mod = @import("../../editor/view/scroll.zig");
+const chrome_geometry_mod = @import("../../editor/view/chrome_geometry.zig");
 const app_logger = @import("../../app_logger.zig");
 const shared_types = @import("../../types/mod.zig");
 const common = @import("common.zig");
@@ -103,12 +104,14 @@ pub fn handleInput(widget: anytype, shell: *Shell, height: f32, input_batch: *sh
         const delta = @as(i32, @intFromFloat(-wheel * 3));
         if (shift and !widget.wrap_enabled) {
             widget.scrollHorizontal(shell, delta);
+            const view = widget.frameView();
             handled = true;
-            app_logger.logger("editor.input").logf(.info, "hscroll delta={d} scroll_col={d}", .{ delta, widget.editor.scroll_col });
+            app_logger.logger("editor.input").logf(.info, "hscroll delta={d} scroll_col={d}", .{ delta, view.scroll_col });
         } else {
             widget.scrollVisual(shell, delta);
+            const view = widget.frameView();
             handled = true;
-            app_logger.logger("editor.input").logf(.info, "scroll delta={d} new_line={d} row_offset={d}", .{ delta, widget.editor.scroll_line, widget.editor.scroll_row_offset });
+            app_logger.logger("editor.input").logf(.info, "scroll delta={d} new_line={d} row_offset={d}", .{ delta, view.scroll_line, view.scroll_row_offset });
         }
     }
 
@@ -127,17 +130,21 @@ pub fn handleHorizontalScrollbarInput(
     grab_offset: *f32,
     input_batch: *shared_types.input.InputBatch,
 ) bool {
+    const view = widget.frameView();
     if (widget.wrap_enabled) return false;
     if (width <= 0 or height <= 0) return false;
     const cols = widget.viewportColumns(shell);
     if (cols == 0) return false;
-    const visible_lines = @as(usize, @intFromFloat(height / shell.charHeight()));
-    if (visible_lines == 0) return false;
+    const metrics = chrome_geometry_mod.scrollbarMetrics(
+        height,
+        shell.charHeight(),
+        view.maxLineWidthCached(),
+        view.lineCount(),
+    );
+    if (metrics.visible_lines == 0) return false;
+    if (metrics.max_line_width <= cols) return false;
 
-    const max_visible_width = widget.editor.maxLineWidthCached();
-    if (max_visible_width <= cols) return false;
-
-    const h = scrollbar_mod.computeHorizontal(
+    const h = chrome_geometry_mod.horizontalScrollbarGeometry(
         shell.uiScaleFactor(),
         widget.gutter_width,
         x,
@@ -145,15 +152,13 @@ pub fn handleHorizontalScrollbarInput(
         width,
         height,
         mouse,
-        max_visible_width,
+        metrics,
         cols,
-        widget.editor.lineCount(),
-        visible_lines,
-        widget.editor.scroll_col,
+        view.scroll_col,
         dragging.*,
     );
     if (!h.visible) return false;
-    if (widget.editor.scroll_col > h.max_scroll) {
+    if (view.scroll_col > h.max_scroll) {
         widget.editor.scroll_col = h.max_scroll;
     }
 
@@ -202,27 +207,31 @@ pub fn handleVerticalScrollbarInput(
     grab_offset: *f32,
     input_batch: *shared_types.input.InputBatch,
 ) bool {
+    const view = widget.frameView();
     if (widget.wrap_enabled) return false;
     if (width <= 0 or height <= 0) return false;
-    const visible_lines = @as(usize, @intFromFloat(height / shell.charHeight()));
-    if (visible_lines == 0) return false;
-    const total_lines = widget.editor.lineCount();
-    if (total_lines <= visible_lines) return false;
+    const metrics = chrome_geometry_mod.scrollbarMetrics(
+        height,
+        shell.charHeight(),
+        view.maxLineWidthCached(),
+        view.lineCount(),
+    );
+    if (metrics.visible_lines == 0) return false;
+    if (metrics.total_lines <= metrics.visible_lines) return false;
 
-    const v = scrollbar_mod.computeVertical(
+    const v = chrome_geometry_mod.verticalScrollbarGeometry(
         shell.uiScaleFactor(),
         x,
         y,
         width,
         height,
         mouse,
-        visible_lines,
-        total_lines,
-        widget.editor.scroll_line,
+        metrics,
+        view.scroll_line,
         dragging.*,
     );
     if (!v.visible) return false;
-    if (widget.editor.scroll_line > v.max_scroll) {
+    if (view.scroll_line > v.max_scroll) {
         widget.editor.scroll_line = v.max_scroll;
     }
 

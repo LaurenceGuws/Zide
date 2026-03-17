@@ -5,6 +5,7 @@ Notepad++-level capability while keeping Zide's core fast and minimal.
 
 ## Principles
 
+- Basic everyday editor usability comes before optimization passes: common file flows, shortcuts, mouse interactions, editor chrome, config, and CLI behavior should feel solid before we spend cycles reducing redraw or steady-state cost further.
 - Fast edits on large files (avoid O(n) in hot paths).
 - Correct Unicode and grapheme handling for cursor movement and selection.
 - Low-latency rendering with caching and damage tracking.
@@ -38,6 +39,16 @@ flowchart LR
 - `docs/todo/editor/treesitter_dynamic_roadmap.md` (dynamic grammar packs: fetch/compile/load)
 
 ## Decision Log
+
+2026-03-17
+- Editor priority is now explicitly split into two phases:
+  - first, reach a clean Notepad-grade baseline for common app/editor behavior
+    including basic editor chrome, file/open/save flows, common shortcuts,
+    expected mouse/selection interactions, and friendly Lua config / CLI entry
+    points
+  - second, perform optimization and reference-repo comparison work once that
+    baseline is implemented cleanly through the shared IDE/editor host layer
+    rather than duplicated editor-only glue
 
 2026-01-21
 - Adopt terminal-style workflow for editor work: add explicit todo lists with

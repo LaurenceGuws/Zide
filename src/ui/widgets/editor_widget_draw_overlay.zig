@@ -1,6 +1,7 @@
 const std = @import("std");
 const syntax_mod = @import("../../editor/syntax.zig");
 const selection_mod = @import("../../editor/view/selection.zig");
+const chrome_geometry_mod = @import("../../editor/view/chrome_geometry.zig");
 const draw_list_mod = @import("../../editor/render/draw_list.zig");
 const app_logger = @import("../../app_logger.zig");
 const scrollbar_mod = @import("editor_scrollbar.zig");
@@ -63,8 +64,19 @@ pub fn addCursorOp(list: *EditorDrawList, x: f32, y: f32, h: f32, color: anytype
     return true;
 }
 
+pub fn drawLineCursor(r: anytype, x: f32, y: f32, h: f32, color: anytype) void {
+    const scale = r.uiScaleFactor();
+    const edge_inset: i32 = @max(0, @as(i32, @intFromFloat(std.math.floor(scale * 0.5))));
+    const stroke: i32 = @max(1, @as(i32, @intFromFloat(std.math.round(scale))));
+    const x_i: i32 = @as(i32, @intFromFloat(x)) + edge_inset;
+    const cursor_h_i: i32 = @as(i32, @intFromFloat(h));
+    const h_i: i32 = @max(1, cursor_h_i - edge_inset * 2);
+    const y_i: i32 = @as(i32, @intFromFloat(y)) + @divFloor(@max(0, cursor_h_i - h_i), 2);
+    r.drawRect(x_i, y_i, stroke, h_i, color);
+}
+
 pub fn drawExtraCarets(
-    widget: anytype,
+    view: anytype,
     r: anytype,
     line_idx: usize,
     line_text: []const u8,
@@ -75,10 +87,10 @@ pub fn drawExtraCarets(
     seg_y: f32,
     text_start_x: f32,
 ) void {
-    for (widget.editor.selections.items) |sel| {
+    for (view.selections) |sel| {
         const caret = sel.normalized();
         if (!caret.isEmpty()) continue;
-        if (caret.start.offset == widget.editor.cursor.offset) continue;
+        if (caret.start.offset == view.cursor.offset) continue;
         if (caret.start.line != line_idx) continue;
         const caret_col = selection_mod.visualColumnForByteIndex(line_text, caret.start.col, cluster_slice);
         const in_segment = if (seg_start_col == seg_end_col)
@@ -90,13 +102,13 @@ pub fn drawExtraCarets(
         if (!in_segment) continue;
         const local_col = caret_col - seg_start_col;
         const cursor_x = text_start_x + @as(f32, @floatFromInt(local_col)) * r.char_width;
-        r.drawCursor(cursor_x, seg_y, .line);
+        drawLineCursor(r, cursor_x, seg_y, r.char_height, r.theme.cursor);
     }
 }
 
 pub fn addExtraCaretOps(
     list: *EditorDrawList,
-    widget: anytype,
+    view: anytype,
     r: anytype,
     line_idx: usize,
     line_text: []const u8,
@@ -108,10 +120,10 @@ pub fn addExtraCaretOps(
     text_start_x: f32,
 ) bool {
     var ok = true;
-    for (widget.editor.selections.items) |sel| {
+    for (view.selections) |sel| {
         const caret = sel.normalized();
         if (!caret.isEmpty()) continue;
-        if (caret.start.offset == widget.editor.cursor.offset) continue;
+        if (caret.start.offset == view.cursor.offset) continue;
         if (caret.start.line != line_idx) continue;
         const caret_col = selection_mod.visualColumnForByteIndex(line_text, caret.start.col, cluster_slice);
         const in_segment = if (seg_start_col == seg_end_col)
@@ -126,29 +138,6 @@ pub fn addExtraCaretOps(
         ok = ok and addCursorOp(list, cursor_x, seg_y, r.char_height, r.theme.cursor);
     }
     return ok;
-}
-
-pub fn selectionStateHash(editor: anytype) u64 {
-    var h: u64 = 1469598103934665603;
-    h ^= @as(u64, editor.cursor.offset);
-    h *%= 1099511628211;
-    if (editor.selection) |sel| {
-        h ^= @as(u64, sel.start.offset);
-        h *%= 1099511628211;
-        h ^= @as(u64, sel.end.offset);
-        h *%= 1099511628211;
-    }
-    h ^= @as(u64, editor.selections.items.len);
-    h *%= 1099511628211;
-    for (editor.selections.items) |sel| {
-        h ^= @as(u64, sel.start.offset);
-        h *%= 1099511628211;
-        h ^= @as(u64, sel.end.offset);
-        h *%= 1099511628211;
-    }
-    h ^= editor.search_epoch;
-    h *%= 1099511628211;
-    return h;
 }
 
 const RowBand = struct {
@@ -365,6 +354,10 @@ fn accumulateNeighborEdgeState(state: *NeighborEdgeState, sel_start: usize, sel_
 }
 
 fn lineNeighborEdgeState(editor: anytype, line_idx: usize, sel_start: usize, sel_end: usize) NeighborEdgeState {
+    const EditorType = switch (@typeInfo(@TypeOf(editor))) {
+        .pointer => |ptr| ptr.child,
+        else => @TypeOf(editor),
+    };
     var state: NeighborEdgeState = .{};
     const mergeSelection = struct {
         fn apply(state_local: *NeighborEdgeState, line_idx_local: usize, sel_start_local: usize, sel_end_local: usize, selection: anytype) void {
@@ -378,7 +371,11 @@ fn lineNeighborEdgeState(editor: anytype, line_idx: usize, sel_start: usize, sel
     }.apply;
 
     if (editor.selection) |sel| mergeSelection(&state, line_idx, sel_start, sel_end, sel);
-    for (editor.selections.items) |sel| mergeSelection(&state, line_idx, sel_start, sel_end, sel);
+    const selections = if (@hasField(EditorType, "selections") and @hasField(@TypeOf(editor.selections), "items"))
+        editor.selections.items
+    else
+        editor.selections;
+    for (selections) |sel| mergeSelection(&state, line_idx, sel_start, sel_end, sel);
     return state;
 }
 
@@ -476,69 +473,63 @@ pub fn flushDrawList(list: *EditorDrawList, r: anytype) void {
             },
             .cursor => |cursor| {
                 const color = unpackColor(ColorType, cursor.color);
-                const scale = r.uiScaleFactor();
-                const edge_inset: i32 = @max(0, @as(i32, @intFromFloat(std.math.floor(scale * 0.5))));
-                const stroke: i32 = @max(1, @as(i32, @intFromFloat(std.math.round(scale))));
-                const x_i: i32 = @as(i32, @intFromFloat(cursor.x)) + edge_inset;
-                const cursor_h_i: i32 = @as(i32, @intFromFloat(cursor.h));
-                const h_i: i32 = @max(1, cursor_h_i - edge_inset * 2);
-                const y_i: i32 = @as(i32, @intFromFloat(cursor.y)) + @divFloor(@max(0, cursor_h_i - h_i), 2);
-                r.drawRect(x_i, y_i, stroke, h_i, color);
+                drawLineCursor(r, cursor.x, cursor.y, cursor.h, color);
             },
         }
     }
 }
 
 pub fn drawEditorScrollbars(
-    widget: anytype,
+    view: anytype,
+    gutter_width: f32,
     r: anytype,
     x: f32,
     y: f32,
     width: f32,
     height: f32,
-    visible_lines: usize,
+    _: usize,
     total_lines: usize,
     cols: usize,
     mouse: anytype,
     list: ?*EditorDrawList,
 ) void {
     const scale = r.uiScaleFactor();
-    const max_line_width = widget.editor.maxLineWidthCached();
+    const metrics = chrome_geometry_mod.scrollbarMetrics(
+        height,
+        r.char_height,
+        view.maxLineWidthCached(),
+        total_lines,
+    );
 
-    const h = scrollbar_mod.computeHorizontal(
+    const h = chrome_geometry_mod.horizontalScrollbarGeometry(
         scale,
-        widget.gutter_width,
+        gutter_width,
         x,
         y,
         width,
         height,
         mouse,
-        max_line_width,
+        metrics,
         cols,
-        total_lines,
-        visible_lines,
-        widget.editor.scroll_col,
+        view.scroll_col,
         false,
     );
     if (h.visible) {
-        if (widget.editor.scroll_col != h.effective_scroll_col) widget.editor.scroll_col = h.effective_scroll_col;
         drawHorizontalScrollbar(r, h, list);
     }
 
-    const v = scrollbar_mod.computeVertical(
+    const v = chrome_geometry_mod.verticalScrollbarGeometry(
         scale,
         x,
         y,
         width,
         height,
         mouse,
-        visible_lines,
-        total_lines,
-        widget.editor.scroll_line,
+        metrics,
+        view.scroll_line,
         false,
     );
     if (v.visible) {
-        if (widget.editor.scroll_line != v.effective_scroll_line) widget.editor.scroll_line = v.effective_scroll_line;
         drawVerticalScrollbar(r, v, list);
     }
 }

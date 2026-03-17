@@ -4,6 +4,7 @@ const editor_mod = @import("../editor.zig");
 const types = @import("../types.zig");
 const layout_mod = @import("layout.zig");
 const selection_mod = @import("selection.zig");
+const metrics_mod = @import("metrics.zig");
 
 const Editor = editor_mod.Editor;
 
@@ -29,7 +30,7 @@ pub const LineProvider = struct {
     freeClusters: *const fn (ctx: *anyopaque, owned: []const u32) void,
 };
 
-const LineData = struct {
+pub const LineData = struct {
     text: []const u8,
     clusters: ?[]const u32,
     width: usize,
@@ -245,6 +246,55 @@ pub fn moveCaretSetVisual(
     return true;
 }
 
+pub fn cursorHorizontalScrollTarget(
+    editor: *Editor,
+    cols: usize,
+    provider: *const LineProvider,
+    scratch: *LineScratch,
+) ?usize {
+    if (cols == 0) return null;
+    const line_idx = editor.cursor.line;
+    if (line_idx >= editor.lineCount()) return null;
+
+    var line = lineData(editor, provider, line_idx, scratch);
+    defer releaseLineData(provider, &line);
+
+    const col_vis = selection_mod.visualColumnForByteIndex(line.text, editor.cursor.col, line.clusters);
+    const max_scroll = metrics_mod.maxScrollForLine(line.width, cols);
+    var scroll_col = editor.scroll_col;
+    if (col_vis < scroll_col) {
+        scroll_col = col_vis;
+    } else if (col_vis >= scroll_col + cols) {
+        scroll_col = col_vis - (cols - 1);
+    }
+    if (scroll_col > max_scroll) scroll_col = max_scroll;
+    return scroll_col;
+}
+
+pub fn horizontalScrollTarget(
+    editor: *Editor,
+    line_idx: usize,
+    cols: usize,
+    delta_cols: i32,
+    provider: *const LineProvider,
+    scratch: *LineScratch,
+) ?usize {
+    if (delta_cols == 0 or cols == 0) return null;
+    if (line_idx >= editor.lineCount()) return null;
+
+    var line = lineData(editor, provider, line_idx, scratch);
+    defer releaseLineData(provider, &line);
+
+    const max_scroll = metrics_mod.maxScrollForLine(line.width, cols);
+    const current = editor.scroll_col;
+    return if (delta_cols > 0)
+        @min(current + @as(usize, @intCast(delta_cols)), max_scroll)
+    else blk: {
+        const delta_abs: usize = @intCast(-delta_cols);
+        break :blk if (current > delta_abs) current - delta_abs else 0;
+    };
+}
+
 pub fn extendSelectionVisual(
     editor: *Editor,
     delta: i32,
@@ -395,7 +445,7 @@ fn moveVisualFromPos(
     return .{ .line = target_line, .col = target_col_byte, .offset = line_start + target_col_byte };
 }
 
-fn lineData(
+pub fn lineData(
     editor: *Editor,
     provider: *const LineProvider,
     line_idx: usize,
@@ -415,7 +465,7 @@ fn lineData(
     };
 }
 
-fn releaseLineData(provider: *const LineProvider, data: *LineData) void {
+pub fn releaseLineData(provider: *const LineProvider, data: *LineData) void {
     if (data.owned_text) |owned| {
         provider.freeLineText(provider.ctx, owned);
     }

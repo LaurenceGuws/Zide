@@ -2,6 +2,7 @@ const std = @import("std");
 const syntax_mod = @import("../../editor/syntax.zig");
 const layout_mod = @import("../../editor/view/layout.zig");
 const metrics_mod = @import("../../editor/view/metrics.zig");
+const runtime_mod = @import("../../editor/view/runtime.zig");
 const cache_mod = @import("../../editor/render/cache.zig");
 
 const HighlightToken = syntax_mod.HighlightToken;
@@ -102,127 +103,95 @@ pub fn buildLargeFileFallbackTokens(line_text: []const u8, line_start: usize, ou
 }
 
 pub fn precomputeHighlightTokens(widget: anytype, cache: *cache_mod.EditorRenderCache, shell: anytype, height: f32, budget_lines: usize) void {
+    const view = widget.frameView();
     const r = shell.rendererPtr();
     if (budget_lines == 0) return;
     if (height <= 0) return;
-    if (widget.editor.highlighter == null) return;
-    const total_lines = widget.editor.lineCount();
+    if (view.highlighter == null) return;
+    const total_lines = view.lineCount();
     if (total_lines == 0) return;
     const visible_lines = @as(usize, @intFromFloat(height / r.char_height));
     if (visible_lines == 0) return;
 
-    const start_line = widget.editor.scroll_line;
+    const start_line = view.scroll_line;
     const end_line = @min(start_line + visible_lines + 1, total_lines);
-    cache.beginHighlightWork(start_line, end_line, widget.editor.highlight_epoch);
+    cache.beginHighlightWork(start_line, end_line, view.highlight_epoch);
 
-    var line_buf: [4096]u8 = undefined;
     var remaining = budget_lines;
     while (remaining > 0) : (remaining -= 1) {
         const next_line = cache.nextHighlightWorkLine() orelse break;
-        const line_len = widget.editor.lineLen(next_line);
-        var line_alloc: ?[]u8 = null;
-        const line_text = if (line_len <= line_buf.len)
-            line_buf[0..widget.editor.getLine(next_line, &line_buf)]
-        else blk: {
-            const owned = widget.editor.getLineAlloc(next_line) catch break :blk &[_]u8{};
-            line_alloc = owned;
-            break :blk owned;
-        };
-        defer if (line_alloc) |owned| widget.editor.allocator.free(owned);
+        var line_buf: [4096]u8 = undefined;
+        var scratch = runtime_mod.LineScratch{ .buf = line_buf[0..] };
+        var line_data = widget.lineData(shell, next_line, &scratch);
+        defer widget.releaseLineData(&line_data);
+        const line_len = line_data.len;
+        const line_text = line_data.text;
 
-        const line_start = widget.editor.lineStart(next_line);
+        const line_start = view.lineStart(next_line);
         const line_end = line_start + line_len;
         const line_text_hash = hashLine(line_text);
         _ = cache.highlightTokens(
-            widget.editor.highlighter,
+            view.highlighter,
             next_line,
             line_start,
             line_end,
             line_text_hash,
-            widget.editor.highlight_epoch,
+            view.highlight_epoch,
         );
     }
 }
 
 pub fn precomputeLineWidths(widget: anytype, cache: *cache_mod.EditorRenderCache, shell: anytype, height: f32, budget_lines: usize) void {
+    const view = widget.frameView();
     const r = shell.rendererPtr();
     if (budget_lines == 0) return;
     if (height <= 0) return;
-    const total_lines = widget.editor.lineCount();
+    const total_lines = view.lineCount();
     if (total_lines == 0) return;
     const visible_lines = @as(usize, @intFromFloat(height / r.char_height));
     if (visible_lines == 0) return;
 
-    const start_line = widget.editor.scroll_line;
+    const start_line = view.scroll_line;
     const end_line = @min(start_line + visible_lines + 1, total_lines);
-    cache.beginLineWidthWork(start_line, end_line, widget.editor.change_tick);
+    cache.beginLineWidthWork(start_line, end_line, view.change_tick);
 
-    var line_buf: [4096]u8 = undefined;
     var remaining = budget_lines;
     while (remaining > 0) : (remaining -= 1) {
         const next_line = cache.nextLineWidthWorkLine() orelse break;
-        const line_len = widget.editor.lineLen(next_line);
-        var line_alloc: ?[]u8 = null;
-        const line_text = if (line_len <= line_buf.len)
-            line_buf[0..widget.editor.getLine(next_line, &line_buf)]
-        else blk: {
-            const owned = widget.editor.getLineAlloc(next_line) catch break :blk &[_]u8{};
-            line_alloc = owned;
-            break :blk owned;
-        };
-        defer if (line_alloc) |owned| widget.editor.allocator.free(owned);
-
-        var cluster_slice: ?[]const u32 = null;
-        var cluster_owned = false;
-        widget.clusterOffsets(shell, next_line, line_text, &cluster_slice, &cluster_owned);
-        defer if (cluster_owned) {
-            if (cluster_slice) |clusters| widget.editor.allocator.free(clusters);
-        };
-
-        _ = widget.editor.lineWidthCached(next_line, line_text, cluster_slice);
+        var line_buf: [4096]u8 = undefined;
+        var scratch = runtime_mod.LineScratch{ .buf = line_buf[0..] };
+        var line_data = widget.lineData(shell, next_line, &scratch);
+        defer widget.releaseLineData(&line_data);
+        _ = line_data.width;
     }
 }
 
 pub fn precomputeWrapCounts(widget: anytype, cache: *cache_mod.EditorRenderCache, shell: anytype, height: f32, budget_lines: usize) void {
+    const view = widget.frameView();
     const r = shell.rendererPtr();
-    if (!widget.wrap_enabled) return;
+    if (!view.wrap_enabled) return;
     if (budget_lines == 0) return;
     if (height <= 0) return;
-    const total_lines = widget.editor.lineCount();
+    const total_lines = view.lineCount();
     if (total_lines == 0) return;
     const visible_lines = @as(usize, @intFromFloat(height / r.char_height));
     if (visible_lines == 0) return;
 
     const cols = widget.viewportColumns(shell);
     if (cols == 0) return;
-    const start_line = widget.editor.scroll_line;
+    const start_line = view.scroll_line;
     const end_line = @min(start_line + visible_lines + 1, total_lines);
-    cache.beginWrapWork(start_line, end_line, cols, widget.editor.change_tick);
+    cache.beginWrapWork(start_line, end_line, cols, view.change_tick);
 
-    var line_buf: [4096]u8 = undefined;
     var remaining = budget_lines;
     while (remaining > 0) : (remaining -= 1) {
         const next_line = cache.nextWrapWorkLine() orelse break;
-        const line_len = widget.editor.lineLen(next_line);
-        var line_alloc: ?[]u8 = null;
-        const line_text = if (line_len <= line_buf.len)
-            line_buf[0..widget.editor.getLine(next_line, &line_buf)]
-        else blk: {
-            const owned = widget.editor.getLineAlloc(next_line) catch break :blk &[_]u8{};
-            line_alloc = owned;
-            break :blk owned;
-        };
-        defer if (line_alloc) |owned| widget.editor.allocator.free(owned);
+        var line_buf: [4096]u8 = undefined;
+        var scratch = runtime_mod.LineScratch{ .buf = line_buf[0..] };
+        var line_data = widget.lineData(shell, next_line, &scratch);
+        defer widget.releaseLineData(&line_data);
 
-        var cluster_slice: ?[]const u32 = null;
-        var cluster_owned = false;
-        widget.clusterOffsets(shell, next_line, line_text, &cluster_slice, &cluster_owned);
-        defer if (cluster_owned) {
-            if (cluster_slice) |clusters| widget.editor.allocator.free(clusters);
-        };
-
-        const width_cached = widget.editor.lineWidthCached(next_line, line_text, cluster_slice);
-        const line_width = metrics_mod.lineWidthForDisplay(line_len, width_cached, false);
+        const line_width = metrics_mod.lineWidthForDisplay(line_data.len, line_data.width, false);
         const count = layout_mod.visualLineCountForWidth(cols, line_width);
         cache.setWrapLineCount(next_line, cols, line_width, count);
     }
@@ -279,4 +248,66 @@ pub fn hashSegment(
         h *%= 1099511628211;
     }
     return h;
+}
+
+test "buildLargeFileFallbackTokens classifies comment string and number spans deterministically" {
+    var tokens: [8]HighlightToken = undefined;
+
+    const string_count = buildLargeFileFallbackTokens("const x = \"abc\"", 100, &tokens);
+    try std.testing.expectEqual(@as(usize, 1), string_count);
+    try std.testing.expectEqual(.string, tokens[0].kind);
+    try std.testing.expectEqual(@as(usize, 110), tokens[0].start);
+    try std.testing.expectEqual(@as(usize, 115), tokens[0].end);
+
+    const number_count = buildLargeFileFallbackTokens("value = 123_45", 200, &tokens);
+    try std.testing.expectEqual(@as(usize, 1), number_count);
+    try std.testing.expectEqual(.number, tokens[0].kind);
+    try std.testing.expectEqual(@as(usize, 208), tokens[0].start);
+    try std.testing.expectEqual(@as(usize, 214), tokens[0].end);
+
+    const comment_count = buildLargeFileFallbackTokens("name // trailing", 300, &tokens);
+    try std.testing.expectEqual(@as(usize, 1), comment_count);
+    try std.testing.expectEqual(.comment, tokens[0].kind);
+    try std.testing.expectEqual(@as(usize, 305), tokens[0].start);
+    try std.testing.expectEqual(@as(usize, 316), tokens[0].end);
+}
+
+test "hashSegment changes for cursor current-line and selection state" {
+    const line_text = "abcdef";
+    const tokens = [_]HighlightToken{
+        .{
+            .start = 0,
+            .end = 6,
+            .kind = .string,
+            .priority = 0,
+            .conceal = null,
+            .url = null,
+            .conceal_lines = false,
+        },
+    };
+    const selections = [_]struct { start_col: usize, end_col: usize }{
+        .{ .start_col = 1, .end_col = 3 },
+    };
+
+    const base = hashSegment(line_text, 0, 6, selections[0..0], 0, 6, &tokens, 0, false, false, 0, 0);
+    const current_line = hashSegment(line_text, 0, 6, selections[0..0], 0, 6, &tokens, 0, true, false, 0, 0);
+    const with_cursor = hashSegment(line_text, 0, 6, selections[0..0], 0, 6, &tokens, 0, true, true, 2, 0);
+    const with_selection = hashSegment(line_text, 0, 6, selections[0..], 0, 6, &tokens, 0, false, false, 0, 0);
+
+    try std.testing.expect(base != current_line);
+    try std.testing.expect(current_line != with_cursor);
+    try std.testing.expect(base != with_selection);
+}
+
+test "hashSegment ignores selection outside visible segment" {
+    const line_text = "abcdef";
+    const tokens = [_]HighlightToken{};
+    const offscreen = [_]struct { start_col: usize, end_col: usize }{
+        .{ .start_col = 8, .end_col = 10 },
+    };
+
+    const base = hashSegment(line_text, 0, 6, offscreen[0..0], 0, 6, &tokens, 0, false, false, 0, 0);
+    const with_offscreen_selection = hashSegment(line_text, 0, 6, offscreen[0..], 0, 6, &tokens, 0, false, false, 0, 0);
+
+    try std.testing.expectEqual(base, with_offscreen_selection);
 }

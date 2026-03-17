@@ -5,17 +5,20 @@ not a progress log and should stay brief.
 
 ### Current Focus
 
-- Primary active product lane: post-rewrite terminal cleanup/restructure on Linux native, with quality hardening continuing only where it changes architecture or closes real host-contract gaps.
-- Quality bar: native terminal behavior should land in the same band as `kitty` / `ghostty` for correctness, smoothness, compatibility, and steady-state cost.
-- Native GUI remains the proving ground and reference host for the engine contract. Keep native honest first, but do not let it become a privileged semantic path; FFI/embedded hosts should converge on the same redraw/publication/present and viewport/input contract.
+- Primary active product lane: editor/IDE-layer quality work on Linux native for a while, with terminal work paused except for concrete regressions or contract follow-ups that already have clear authority.
+- Within the editor lane, current product priority is basic Notepad-grade usability and editor-only chrome: common shortcuts, expected mouse/selection behavior, file/open/save flows, friendly Lua config, and editor CLI behavior should land before optimization-focused work.
+- Terminal quality bar remains: native terminal behavior should stay in the same band as `kitty` / `ghostty` for correctness, smoothness, compatibility, and steady-state cost.
+- Native GUI remains the proving ground and reference host for both editor and terminal contracts. Keep native honest first, but do not let it become a privileged semantic path over FFI/embedded hosts.
 
 ### Current Direction
 
 - The main VT/present rewrite is no longer the active invention lane on `main`.
 - Default work now should be:
-  - cleanup/restructure on top of the rewritten VT/render seams
-  - boundary tightening against the engine-centered target
-  - native/FFI contract convergence where it materially improves quality
+  - editor app-level feature work and UX completion first
+  - editor/widget bug fixing and quality passes
+  - editor modularization/boundary cleanup only where it materially supports the feature lane or keeps the implementation clean
+  - selective terminal follow-up only for already-open, high-confidence issues
+- Avoid optimization-led editor work until the common editor feature/config/CLI baseline is in place.
 - Renderer architecture direction is already set:
   - narrow retained widget-local targets where they pay off
   - renderer-owned authoritative scene target
@@ -26,6 +29,7 @@ not a progress log and should stay brief.
 - The scene-owned composition path is active on `main`.
 - Rewrite-era present/debug baggage has been materially reduced from the live path.
 - The heaviest post-rewrite bug-hunting lane has cooled after recent fixes for `nvim`, `btop`, Codex inline history, Zig `std.Progress`, and focused input latency.
+- The remaining Codex completion-tail terminal bug stays explicitly deferred; short re-checks against a candidate pacing/present seam change were encouraging, but not strong enough to close it.
 - The main remaining engine gap is no longer random compatibility debt; it is that `TerminalSession` still carries more structural weight than a `libghostty-vt`-quality engine boundary would.
 - The terminal FFI contract has now also survived an external peer-review host check in Flutty: the same widget/runtime layer works across bridge-owned PTY and Flutter-owned PTY transport, pending outbound input/report bytes keep focus/color-scheme reporting aligned across both modes, and a follow-up re-check confirmed external child-exit reporting keeps lifecycle truth aligned too. The remaining differences are transport-lifecycle mechanics, not terminal-semantics gaps.
 - The latest Flutty re-check on `main` also confirmed the request-based metadata acquire cut was easy to adopt: hot scalar metadata reads now use explicit include flags cleanly, title/cwd became explicit cached host state instead of implicit always-present metadata payload, and redraw/viewport/lifecycle behavior did not regress.
@@ -35,6 +39,9 @@ not a progress log and should stay brief.
 
 ### Where To Look
 
+- Editor implementation authority:
+  - `app_architecture/editor/DESIGN.md`
+  - `docs/todo/editor/README.md`
 - Present implementation authority:
   - `app_architecture/terminal/present/WAYLAND_DESIGN_BRIEF.md`
   - `app_architecture/terminal/present/WAYLAND_TECHNICAL_WRITEUP.md`

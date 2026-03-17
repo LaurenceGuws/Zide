@@ -1,6 +1,5 @@
 const std = @import("std");
 const compositor = @import("../platform/compositor.zig");
-const editor_render = @import("../editor/render/renderer_ops.zig");
 const iface = @import("renderer/interface.zig");
 const terminal_font_mod = @import("terminal_font.zig");
 const TerminalFont = terminal_font_mod.TerminalFont;
@@ -1228,35 +1227,6 @@ pub const Renderer = struct {
 
     pub fn endClip(_: *Renderer) void {
         gl.Disable(gl.c.GL_SCISSOR_TEST);
-    }
-
-    pub fn drawEditorLine(
-        self: *Renderer,
-        line_num: usize,
-        text: []const u8,
-        y: f32,
-        x: f32,
-        gutter_width: f32,
-        content_width: f32,
-        is_current: bool,
-    ) void {
-        editor_render.drawEditorLine(self, line_num, text, y, x, gutter_width, content_width, is_current);
-    }
-
-    pub fn drawEditorLineBase(
-        self: *Renderer,
-        line_num: usize,
-        y: f32,
-        x: f32,
-        gutter_width: f32,
-        content_width: f32,
-        is_current: bool,
-    ) void {
-        editor_render.drawEditorLineBase(self, line_num, y, x, gutter_width, content_width, is_current);
-    }
-
-    pub fn drawCursor(self: *Renderer, x: f32, y: f32, mode: enum { block, line, underline }) void {
-        editor_render.drawCursor(self, x, y, mode);
     }
 
     pub fn drawTerminalCell(

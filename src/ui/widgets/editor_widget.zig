@@ -4,10 +4,10 @@ const app_shell = @import("../../app_shell.zig");
 const shared_types = @import("../../types/mod.zig");
 const editor_mod = @import("../../editor/editor.zig");
 const selection_mod = @import("../../editor/view/selection.zig");
-const layout_mod = @import("../../editor/view/layout.zig");
-const scroll_mod = @import("../../editor/view/scroll.zig");
-const cursor_mod = @import("../../editor/view/cursor.zig");
+const chrome_geometry_mod = @import("../../editor/view/chrome_geometry.zig");
+const frame_view_mod = @import("../../editor/view/frame.zig");
 const metrics_mod = @import("../../editor/view/metrics.zig");
+const runtime_mod = @import("../../editor/view/runtime.zig");
 const render_cache_mod = @import("../../editor/render/cache.zig");
 const input_mod = @import("editor_widget_input.zig");
 const draw_mod = @import("editor_widget_draw.zig");
@@ -18,20 +18,11 @@ const hb = @import("../terminal_font.zig").c;
 const Shell = app_shell.Shell;
 const Editor = editor_mod.Editor;
 const EditorRenderCache = render_cache_mod.EditorRenderCache;
-const LineScratch = cursor_mod.LineScratch;
-const LineSlice = cursor_mod.LineSlice;
-const ClusterSlice = cursor_mod.ClusterSlice;
-const LineProvider = cursor_mod.LineProvider;
-
-const VisualLinesCtx = struct {
-    widget: *EditorWidget,
-    r: *Shell,
-};
-
-fn visualLinesForLineWithContext(ctx: *anyopaque, line_idx: usize, cols: usize) usize {
-    const payload: *VisualLinesCtx = @ptrCast(@alignCast(ctx));
-    return payload.widget.visualLinesForLine(payload.r, line_idx, cols);
-}
+const LineScratch = runtime_mod.LineScratch;
+const LineSlice = runtime_mod.LineSlice;
+const ClusterSlice = runtime_mod.ClusterSlice;
+const EditorViewRuntime = runtime_mod.EditorViewRuntime;
+const EditorFrameView = frame_view_mod.EditorFrameView;
 
 const CursorLineCtx = struct {
     widget: *EditorWidget,
@@ -124,6 +115,22 @@ pub const EditorWidget = struct {
         draw_mod.drawCached(self, shell, cache, x, y, width, height, frame_id, input);
     }
 
+    pub fn frameView(self: *EditorWidget) EditorFrameView {
+        return EditorFrameView.init(self.editor, self.wrap_enabled);
+    }
+
+    fn initViewRuntime(self: *EditorWidget, ctx: *CursorLineCtx) EditorViewRuntime {
+        return .{
+            .editor = self.editor,
+            .wrap_enabled = self.wrap_enabled,
+            .ctx = ctx,
+            .getLineText = cursorLineText,
+            .getClusters = cursorClusters,
+            .freeLineText = cursorFreeLineText,
+            .freeClusters = cursorFreeClusters,
+        };
+    }
+
     pub fn viewportColumns(self: *EditorWidget, shell: *Shell) usize {
         const r = shell.rendererPtr();
         return metrics_mod.viewportColumns(r.width, self.gutter_width, r.char_width);
@@ -143,35 +150,17 @@ pub const EditorWidget = struct {
         out_owned.* = result.owned;
     }
 
-    fn visualLinesForLine(self: *EditorWidget, shell: *Shell, line_idx: usize, cols: usize) usize {
-        const r = shell.rendererPtr();
-        if (!self.wrap_enabled) return 1;
-        var line_buf: [4096]u8 = undefined;
-        const line_len = self.editor.lineLen(line_idx);
-        var line_alloc: ?[]u8 = null;
-        const line_text = if (line_len <= line_buf.len)
-            line_buf[0..self.editor.getLine(line_idx, &line_buf)]
-        else blk: {
-            const owned = self.editor.getLineAlloc(line_idx) catch break :blk &[_]u8{};
-            line_alloc = owned;
-            break :blk owned;
-        };
-        defer if (line_alloc) |owned| self.editor.allocator.free(owned);
+    pub fn lineData(self: *EditorWidget, shell: *Shell, line_idx: usize, scratch: *LineScratch) runtime_mod.LineData {
+        var ctx = CursorLineCtx{ .widget = self, .r = shell };
+        const runtime = self.initViewRuntime(&ctx);
+        return runtime.lineData(line_idx, scratch);
+    }
 
-        const cluster_result = getClusterOffsets(
-            self.cluster_cache,
-            self.editor.allocator,
-            r.terminal_font.hb_font,
-            line_idx,
-            line_text,
-        );
-        defer if (cluster_result.owned) {
-            if (cluster_result.slice) |clusters| self.editor.allocator.free(clusters);
-        };
-
-        const width_cached = self.editor.lineWidthCached(line_idx, line_text, cluster_result.slice);
-        const line_width = if (line_len == 0) 1 else width_cached;
-        return layout_mod.visualLineCountForWidth(cols, line_width);
+    pub fn releaseLineData(self: *EditorWidget, data: *runtime_mod.LineData) void {
+        if (data.owned_text) |owned| self.editor.allocator.free(owned);
+        if (data.owned_clusters) {
+            if (data.clusters) |clusters| self.editor.allocator.free(clusters);
+        }
     }
 
     pub fn handleMouseClick(
@@ -199,9 +188,11 @@ pub const EditorWidget = struct {
         clamp: bool,
     ) ?types.CursorPos {
         const r = shell.rendererPtr();
-        self.gutter_width = 50 * r.uiScaleFactor();
+        const view = self.frameView();
+        const frame_metrics = chrome_geometry_mod.frameMetrics(x, height, r.uiScaleFactor(), r.char_height);
+        self.gutter_width = frame_metrics.gutter_width;
         if (width <= 0 or height <= 0) return null;
-        if (self.editor.lineCount() == 0) return null;
+        if (view.lineCount() == 0) return null;
         var local_x = mouse_x;
         var local_y = mouse_y;
         if (clamp) {
@@ -214,48 +205,19 @@ pub const EditorWidget = struct {
         const line_offset = @as(usize, @intFromFloat((local_y - y) / r.char_height));
         const line = self.lineForVisualRow(shell, line_offset) orelse return null;
 
-        const text_start_x = x + self.gutter_width + 8 * r.uiScaleFactor();
+        const text_start_x = frame_metrics.text_start_x;
         var col: usize = 0;
         if (local_x > text_start_x) {
             col = @as(usize, @intFromFloat((local_x - text_start_x) / r.char_width));
         }
-        const line_len = self.editor.lineLen(line.line_idx);
-        var byte_col = col;
         var line_buf: [4096]u8 = undefined;
-        if (line_len <= line_buf.len) {
-            const len = self.editor.getLine(line.line_idx, &line_buf);
-            const line_text = line_buf[0..len];
-            const cluster_result = getClusterOffsets(
-                self.cluster_cache,
-                self.editor.allocator,
-                r.terminal_font.hb_font,
-                line.line_idx,
-                line_text,
-            );
-            defer if (cluster_result.owned) {
-                if (cluster_result.slice) |clusters| self.editor.allocator.free(clusters);
-            };
-            const seg_start_col = line.seg_idx * line.cols + (if (self.wrap_enabled) 0 else self.editor.scroll_col);
-            byte_col = selection_mod.byteIndexForVisualColumn(line_text, seg_start_col + col, cluster_result.slice);
-        } else {
-            if (self.editor.getLineAlloc(line.line_idx)) |owned| {
-                defer self.editor.allocator.free(owned);
-                const cluster_result = getClusterOffsets(
-                    self.cluster_cache,
-                    self.editor.allocator,
-                    r.terminal_font.hb_font,
-                    line.line_idx,
-                    owned,
-                );
-                defer if (cluster_result.owned) {
-                    if (cluster_result.slice) |clusters| self.editor.allocator.free(clusters);
-                };
-                const seg_start_col = line.seg_idx * line.cols + (if (self.wrap_enabled) 0 else self.editor.scroll_col);
-                byte_col = selection_mod.byteIndexForVisualColumn(owned, seg_start_col + col, cluster_result.slice);
-            } else |_| {}
-        }
-        const clamped_col = @min(byte_col, line_len);
-        const line_start = self.editor.lineStart(line.line_idx);
+        var scratch = LineScratch{ .buf = line_buf[0..] };
+        var line_data = self.lineData(shell, line.line_idx, &scratch);
+        defer self.releaseLineData(&line_data);
+        const seg_start_col = line.seg_idx * line.cols + (if (self.wrap_enabled) 0 else view.scroll_col);
+        const byte_col = selection_mod.byteIndexForVisualColumn(line_data.text, seg_start_col + col, line_data.clusters);
+        const clamped_col = @min(byte_col, line_data.len);
+        const line_start = view.lineStart(line.line_idx);
         return .{
             .line = line.line_idx,
             .col = clamped_col,
@@ -263,19 +225,13 @@ pub const EditorWidget = struct {
         };
     }
 
-    const VisualLinePos = scroll_mod.VisualLinePos;
+    const VisualLinePos = runtime_mod.VisualLinePos;
 
     fn lineForVisualRow(self: *EditorWidget, shell: *Shell, visual_row: usize) ?VisualLinePos {
         const cols = self.viewportColumns(shell);
-        var ctx = VisualLinesCtx{ .widget = self, .r = shell };
-        return scroll_mod.lineForVisualRow(
-            self.editor,
-            visual_row,
-            cols,
-            self.wrap_enabled,
-            &ctx,
-            visualLinesForLineWithContext,
-        );
+        var ctx = CursorLineCtx{ .widget = self, .r = shell };
+        const runtime = self.initViewRuntime(&ctx);
+        return runtime.lineForVisualRow(visual_row, cols);
     }
 
     /// Handle input, returns true if any input was processed
@@ -332,8 +288,10 @@ pub const EditorWidget = struct {
 
         const cols = self.viewportColumns(shell);
         if (cols == 0) return;
-        const cursor_seg = self.cursorSegmentForLine(shell, self.editor.cursor.line, cols) orelse return;
-        const offset = self.cursorRowOffset(shell, self.editor.cursor.line, cursor_seg, cols);
+        var ctx = CursorLineCtx{ .widget = self, .r = shell };
+        const runtime = self.initViewRuntime(&ctx);
+        const cursor_seg = runtime.cursorSegmentForLine(self.editor.cursor.line, cols) orelse return;
+        const offset = runtime.cursorRowOffset(self.editor.cursor.line, cursor_seg, cols);
         if (offset < 0) {
             self.editor.scroll_line = self.editor.cursor.line;
             self.editor.scroll_row_offset = cursor_seg;
@@ -345,147 +303,41 @@ pub const EditorWidget = struct {
         }
     }
 
-    fn cursorSegmentForLine(self: *EditorWidget, shell: *Shell, line_idx: usize, cols: usize) ?usize {
-        var scratch_buf: [4096]u8 = undefined;
-        var scratch = LineScratch{ .buf = scratch_buf[0..] };
-        var ctx = CursorLineCtx{ .widget = self, .r = shell };
-        const provider = LineProvider{
-            .ctx = &ctx,
-            .getLineText = cursorLineText,
-            .getClusters = cursorClusters,
-            .freeLineText = cursorFreeLineText,
-            .freeClusters = cursorFreeClusters,
-        };
-        return cursor_mod.cursorSegmentForLine(self.editor, line_idx, cols, &provider, &scratch);
-    }
-
     fn ensureCursorVisibleHorizontal(self: *EditorWidget, shell: *Shell) void {
-        const r = shell.rendererPtr();
         const cols = self.viewportColumns(shell);
         if (cols == 0) return;
-        const line_idx = self.editor.cursor.line;
-        if (line_idx >= self.editor.lineCount()) return;
-        var line_buf: [4096]u8 = undefined;
-        const line_len = self.editor.lineLen(line_idx);
-        var line_alloc: ?[]u8 = null;
-        const line_text = if (line_len <= line_buf.len)
-            line_buf[0..self.editor.getLine(line_idx, &line_buf)]
-        else blk: {
-            const owned = self.editor.getLineAlloc(line_idx) catch break :blk &[_]u8{};
-            line_alloc = owned;
-            break :blk owned;
-        };
-        defer if (line_alloc) |owned| self.editor.allocator.free(owned);
-
-        const cluster_result = getClusterOffsets(
-            self.cluster_cache,
-            self.editor.allocator,
-            r.terminal_font.hb_font,
-            line_idx,
-            line_text,
-        );
-        defer if (cluster_result.owned) {
-            if (cluster_result.slice) |clusters| self.editor.allocator.free(clusters);
-        };
-
-        const col_vis = selection_mod.visualColumnForByteIndex(line_text, self.editor.cursor.col, cluster_result.slice);
-        const width_cached = self.editor.lineWidthCached(line_idx, line_text, cluster_result.slice);
-        const line_width = if (line_len == 0) 1 else width_cached;
-        const max_scroll = metrics_mod.maxScrollForLine(line_width, cols);
-        var scroll_col = self.editor.scroll_col;
-        if (col_vis < scroll_col) {
-            scroll_col = col_vis;
-        } else if (col_vis >= scroll_col + cols) {
-            scroll_col = col_vis - (cols - 1);
+        var ctx = CursorLineCtx{ .widget = self, .r = shell };
+        const runtime = self.initViewRuntime(&ctx);
+        if (runtime.cursorHorizontalScrollTarget(cols)) |scroll_col| {
+            self.editor.scroll_col = scroll_col;
         }
-        if (scroll_col > max_scroll) scroll_col = max_scroll;
-        self.editor.scroll_col = scroll_col;
     }
 
     pub fn scrollHorizontal(self: *EditorWidget, shell: *Shell, delta_cols: i32) void {
         if (delta_cols == 0) return;
-        const r = shell.rendererPtr();
         const cols = self.viewportColumns(shell);
         if (cols == 0) return;
         const line_idx = self.editor.cursor.line;
-        if (line_idx >= self.editor.lineCount()) return;
-        var line_buf: [4096]u8 = undefined;
-        const line_len = self.editor.lineLen(line_idx);
-        var line_alloc: ?[]u8 = null;
-        const line_text = if (line_len <= line_buf.len)
-            line_buf[0..self.editor.getLine(line_idx, &line_buf)]
-        else blk: {
-            const owned = self.editor.getLineAlloc(line_idx) catch break :blk &[_]u8{};
-            line_alloc = owned;
-            break :blk owned;
-        };
-        defer if (line_alloc) |owned| self.editor.allocator.free(owned);
-
-        const cluster_result = getClusterOffsets(
-            self.cluster_cache,
-            self.editor.allocator,
-            r.terminal_font.hb_font,
-            line_idx,
-            line_text,
-        );
-        defer if (cluster_result.owned) {
-            if (cluster_result.slice) |clusters| self.editor.allocator.free(clusters);
-        };
-
-        const width_cached = self.editor.lineWidthCached(line_idx, line_text, cluster_result.slice);
-        const line_width = if (line_len == 0) 1 else width_cached;
-        const max_scroll = metrics_mod.maxScrollForLine(line_width, cols);
-        const current = self.editor.scroll_col;
-        const next = if (delta_cols > 0)
-            @min(current + @as(usize, @intCast(delta_cols)), max_scroll)
-        else blk: {
-            const delta_abs: usize = @intCast(-delta_cols);
-            break :blk if (current > delta_abs) current - delta_abs else 0;
-        };
-        self.editor.scroll_col = next;
-    }
-
-    fn cursorRowOffset(self: *EditorWidget, shell: *Shell, cursor_line: usize, cursor_seg: usize, cols: usize) i32 {
-        var ctx = VisualLinesCtx{ .widget = self, .r = shell };
-        return scroll_mod.cursorRowOffset(
-            self.editor,
-            cursor_line,
-            cursor_seg,
-            cols,
-            &ctx,
-            visualLinesForLineWithContext,
-        );
+        var ctx = CursorLineCtx{ .widget = self, .r = shell };
+        const runtime = self.initViewRuntime(&ctx);
+        if (runtime.horizontalScrollTarget(line_idx, cols, delta_cols)) |next| {
+            self.editor.scroll_col = next;
+        }
     }
 
     pub fn scrollVisual(self: *EditorWidget, shell: *Shell, delta_rows: i32) void {
         const cols = self.viewportColumns(shell);
-        var ctx = VisualLinesCtx{ .widget = self, .r = shell };
-        scroll_mod.scrollVisual(
-            self.editor,
-            delta_rows,
-            cols,
-            self.wrap_enabled,
-            &ctx,
-            visualLinesForLineWithContext,
-        );
+        var ctx = CursorLineCtx{ .widget = self, .r = shell };
+        const runtime = self.initViewRuntime(&ctx);
+        runtime.scrollVisual(delta_rows, cols);
     }
 
     pub fn moveCursorVisual(self: *EditorWidget, shell: *Shell, delta: i32) bool {
         const log = app_logger.logger("editor.widget");
         const cols = self.viewportColumns(shell);
         var ctx = CursorLineCtx{ .widget = self, .r = shell };
-        const provider = LineProvider{
-            .ctx = &ctx,
-            .getLineText = cursorLineText,
-            .getClusters = cursorClusters,
-            .freeLineText = cursorFreeLineText,
-            .freeClusters = cursorFreeClusters,
-        };
-        var buf_a: [4096]u8 = undefined;
-        var buf_b: [4096]u8 = undefined;
-        var scratch_a = LineScratch{ .buf = buf_a[0..] };
-        var scratch_b = LineScratch{ .buf = buf_b[0..] };
-        return cursor_mod.moveCaretSetVisual(self.editor, delta, cols, self.wrap_enabled, &provider, &scratch_a, &scratch_b) catch |err| blk: {
+        const runtime = self.initViewRuntime(&ctx);
+        return runtime.moveCursorVisual(delta, cols) catch |err| blk: {
             log.logf(.warning, "moveCursorVisual failed err={s}", .{@errorName(err)});
             break :blk false;
         };
@@ -494,18 +346,8 @@ pub const EditorWidget = struct {
     pub fn extendSelectionVisual(self: *EditorWidget, shell: *Shell, delta: i32) bool {
         const cols = self.viewportColumns(shell);
         var ctx = CursorLineCtx{ .widget = self, .r = shell };
-        const provider = LineProvider{
-            .ctx = &ctx,
-            .getLineText = cursorLineText,
-            .getClusters = cursorClusters,
-            .freeLineText = cursorFreeLineText,
-            .freeClusters = cursorFreeClusters,
-        };
-        var buf_a: [4096]u8 = undefined;
-        var buf_b: [4096]u8 = undefined;
-        var scratch_a = LineScratch{ .buf = buf_a[0..] };
-        var scratch_b = LineScratch{ .buf = buf_b[0..] };
-        return cursor_mod.extendSelectionVisual(self.editor, delta, cols, self.wrap_enabled, &provider, &scratch_a, &scratch_b);
+        const runtime = self.initViewRuntime(&ctx);
+        return runtime.extendSelectionVisual(delta, cols);
     }
 };
 
