@@ -8,16 +8,16 @@
   (#match? @number "^[0-9]+$"))
 
 ("text" @comment
-  (#any-of? @comment "TRACE" "DEBUG"))
+  (#match? @comment "^[Tt][Rr][Aa][Cc][Ee]$|^[Dd][Ee][Bb][Uu][Gg]$"))
 
 ("text" @type
-  (#any-of? @type "INFO"))
+  (#match? @type "^[Ii][Nn][Ff][Oo]$"))
 
 ("text" @keyword.control
-  (#any-of? @keyword.control "WARN" "WARNING"))
+  (#match? @keyword.control "^[Ww][Aa][Rr][Nn]$|^[Ww][Aa][Rr][Nn][Ii][Nn][Gg]$"))
 
 ("text" @error
-  (#any-of? @error "ERROR" "FATAL" "CRITICAL" "PANIC"))
+  (#match? @error "^[Ee][Rr][Rr][Oo][Rr]$|^[Ff][Aa][Tt][Aa][Ll]$|^[Cc][Rr][Ii][Tt][Ii][Cc][Aa][Ll]$|^[Pp][Aa][Nn][Ii][Cc]$"))
 
 ("text" @string
   (#match? @string "^0x[0-9A-Fa-f]+$"))
