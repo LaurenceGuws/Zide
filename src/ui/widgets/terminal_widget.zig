@@ -8,6 +8,7 @@ const shared_types = @import("../../types/mod.zig");
 const open_mod = @import("terminal_widget_open.zig");
 const hover_mod = @import("terminal_widget_hover.zig");
 const kitty_mod = @import("terminal_widget_kitty.zig");
+const paste_mod = @import("terminal_widget_paste.zig");
 const draw_mod = @import("terminal_widget_draw.zig");
 const input_mod = @import("terminal_widget_input.zig");
 const render_cache_mod = @import("../../terminal/core/render_cache.zig");
@@ -308,7 +309,7 @@ pub const TerminalWidget = struct {
         defer if (html) |buf| self.session.allocator.free(buf);
         defer if (uri_list) |buf| self.session.allocator.free(buf);
         defer if (png) |buf| self.session.allocator.free(buf);
-        return self.session.pasteSystemClipboard(clip_opt, html, uri_list, png) catch false;
+        return paste_mod.pasteSystemClipboard(self, clip_opt, html, uri_list, png);
     }
 
     pub fn scrollbarModel(self: *const TerminalWidget) ScrollbarModel {

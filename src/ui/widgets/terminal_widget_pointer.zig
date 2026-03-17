@@ -3,6 +3,7 @@ const std = @import("std");
 const terminal_mod = @import("../../terminal/core/terminal.zig");
 const app_logger = @import("../../app_logger.zig");
 const shared_types = @import("../../types/mod.zig");
+const paste_mod = @import("terminal_widget_paste.zig");
 
 pub const PointerParams = struct {
     in_terminal: bool,
@@ -152,7 +153,7 @@ pub fn handlePointerInput(
     }
 
     if (params.in_terminal and input_batch.mousePressed(.middle)) {
-        if (try self.session.pasteSelectionClipboard(clip_opt, html, uri_list, png)) {
+        if (paste_mod.pasteSelectionClipboard(self, clip_opt, html, uri_list, png)) {
             result.handled = true;
         }
     }
