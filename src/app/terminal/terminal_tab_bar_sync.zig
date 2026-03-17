@@ -20,24 +20,56 @@ fn terminalTabBaseLabel(title: []const u8, cwd: []const u8) []const u8 {
     return "Terminal";
 }
 
+fn compactCwdLabel(cwd: []const u8) []const u8 {
+    if (cwd.len == 0) return "";
+    if (std.mem.eql(u8, cwd, "/")) return "/";
+    const trimmed = std.mem.trimRight(u8, cwd, "/");
+    if (trimmed.len == 0) return "";
+    if (std.mem.lastIndexOfScalar(u8, trimmed, '/')) |slash| {
+        if (slash + 1 < trimmed.len) return trimmed[slash + 1 ..];
+    }
+    return trimmed;
+}
+
+fn appendProgressPrefix(
+    allocator: std.mem.Allocator,
+    scratch: *std.ArrayList(u8),
+    entry: terminal_mod.TerminalTabSyncEntry,
+) !void {
+    switch (entry.progress_state) {
+        .set => if (entry.progress_value) |value| try scratch.writer(allocator).print("{d}% ", .{value}),
+        .@"error" => if (entry.progress_value) |value| try scratch.writer(allocator).print("!{d}% ", .{value}) else try scratch.appendSlice(allocator, "! "),
+        .pause => if (entry.progress_value) |value| try scratch.writer(allocator).print("||{d}% ", .{value}) else try scratch.appendSlice(allocator, "|| "),
+        .indeterminate => try scratch.appendSlice(allocator, "... "),
+        .none => {},
+    }
+}
+
 fn terminalTabLabel(
     allocator: std.mem.Allocator,
     scratch: *std.ArrayList(u8),
     raw_title: []const u8,
+    foreground_process_command: []const u8,
     foreground_process_label: []const u8,
     cwd: []const u8,
     entry: terminal_mod.TerminalTabSyncEntry,
 ) ![]const u8 {
-    const title = if (foreground_process_label.len > 0) foreground_process_label else raw_title;
+    const title = if (foreground_process_command.len > 0)
+        foreground_process_command
+    else if (foreground_process_label.len > 0)
+        foreground_process_label
+    else
+        raw_title;
     const base = terminalTabBaseLabel(title, cwd);
-    if (entry.progress_state == .set or entry.progress_state == .@"error" or entry.progress_state == .pause) {
-        if (entry.progress_value) |value| {
-            scratch.clearRetainingCapacity();
-            try scratch.writer(allocator).print("{d}% {s}", .{ value, base });
-            return scratch.items;
-        }
+    const cwd_label = compactCwdLabel(cwd);
+    scratch.clearRetainingCapacity();
+    try appendProgressPrefix(allocator, scratch, entry);
+    try scratch.appendSlice(allocator, base);
+    if (cwd_label.len > 0 and !std.mem.eql(u8, cwd_label, base) and std.mem.indexOf(u8, base, cwd_label) == null) {
+        try scratch.appendSlice(allocator, " · ");
+        try scratch.appendSlice(allocator, cwd_label);
     }
-    return base;
+    return scratch.items;
 }
 
 fn hasTabId(entries: []const terminal_mod.TerminalTabSyncEntry, tab_id: u64) bool {
@@ -93,6 +125,7 @@ pub fn syncFromWorkspace(
                 tab_bar.allocator,
                 &label_buf,
                 entry.title(sync_state.strings),
+                entry.foregroundProcessCommand(sync_state.strings),
                 entry.foregroundProcessLabel(sync_state.strings),
                 entry.cwd(sync_state.strings),
                 entry,
@@ -125,6 +158,7 @@ test "terminal tab label prefixes determinate progress" {
         &scratch,
         "zig build",
         "",
+        "",
         "/tmp/work",
         .{
             .id = 1,
@@ -132,6 +166,8 @@ test "terminal tab label prefixes determinate progress" {
             .title_len = 0,
             .foreground_process_label_offset = 0,
             .foreground_process_label_len = 0,
+            .foreground_process_command_offset = 0,
+            .foreground_process_command_len = 0,
             .cwd_offset = 0,
             .cwd_len = 0,
             .alive = true,
@@ -142,4 +178,35 @@ test "terminal tab label prefixes determinate progress" {
     );
 
     try std.testing.expectEqualStrings("42% zig build", label);
+}
+
+test "terminal tab label prefers rich command summary and cwd context" {
+    var scratch = std.ArrayList(u8).empty;
+    defer scratch.deinit(std.testing.allocator);
+
+    const label = try terminalTabLabel(
+        std.testing.allocator,
+        &scratch,
+        "Terminal",
+        "codex resume --search ...",
+        "codex",
+        "/home/home/personal/zide",
+        .{
+            .id = 1,
+            .title_offset = 0,
+            .title_len = 0,
+            .foreground_process_label_offset = 0,
+            .foreground_process_label_len = 0,
+            .foreground_process_command_offset = 0,
+            .foreground_process_command_len = 0,
+            .cwd_offset = 0,
+            .cwd_len = 0,
+            .alive = true,
+            .exit_code = null,
+            .progress_state = .none,
+            .progress_value = null,
+        },
+    );
+
+    try std.testing.expectEqualStrings("codex resume --search ... · zide", label);
 }

@@ -28,6 +28,7 @@ pub const ActivityMetadata = struct {
     running: bool,
     foreground_process_present: bool,
     foreground_process_label: []const u8,
+    foreground_process_command: []const u8 = "",
     semantic_prompt_active: bool,
     semantic_input_active: bool,
     semantic_output_active: bool,

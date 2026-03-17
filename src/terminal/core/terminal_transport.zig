@@ -202,6 +202,7 @@ pub const Transport = struct {
     deinit_fn: *const fn (ctx: *anyopaque) void,
     is_alive_fn: *const fn (ctx: *anyopaque) bool,
     foreground_process_label_fn: *const fn (ctx: *anyopaque) ?[]const u8,
+    foreground_process_command_label_fn: *const fn (ctx: *anyopaque) ?[]const u8,
     has_foreground_process_outside_shell_fn: *const fn (ctx: *anyopaque) bool,
 
     pub fn fromSession(session: anytype) ?Transport {
@@ -259,6 +260,12 @@ pub const Transport = struct {
                         return if (s.pty) |*pty| pty.foregroundProcessLabel() else null;
                     }
                 }.call,
+                .foreground_process_command_label_fn = struct {
+                    fn call(ctx: *anyopaque) ?[]const u8 {
+                        const s: SessionPtr = @ptrCast(@alignCast(ctx));
+                        return if (s.pty) |*pty| pty.foregroundProcessCommandLabel() else null;
+                    }
+                }.call,
                 .has_foreground_process_outside_shell_fn = struct {
                     fn call(ctx: *anyopaque) bool {
                         const s: SessionPtr = @ptrCast(@alignCast(ctx));
@@ -314,6 +321,11 @@ pub const Transport = struct {
                         return null;
                     }
                 }.call,
+                .foreground_process_command_label_fn = struct {
+                    fn call(_: *anyopaque) ?[]const u8 {
+                        return null;
+                    }
+                }.call,
                 .has_foreground_process_outside_shell_fn = struct {
                     fn call(_: *anyopaque) bool {
                         return false;
@@ -351,6 +363,9 @@ pub const Transport = struct {
     }
     pub fn foregroundProcessLabel(self: *const Transport) ?[]const u8 {
         return self.foreground_process_label_fn(self.ctx);
+    }
+    pub fn foregroundProcessCommandLabel(self: *const Transport) ?[]const u8 {
+        return self.foreground_process_command_label_fn(self.ctx);
     }
     pub fn hasForegroundProcessOutsideShell(self: *const Transport) bool {
         return self.has_foreground_process_outside_shell_fn(self.ctx);

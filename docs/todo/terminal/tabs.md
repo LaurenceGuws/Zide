@@ -46,6 +46,11 @@ Lower-layer ownership is in the right place: the backend workspace exists and te
   Notes: includes new/close/next/previous/index activation and `Ctrl+Shift+Left/Right` aliases. Terminal tab drag reorder now also reorders the backend workspace before resync, so keyboard cycling follows the new visual order instead of stale pre-drag ordering.
 - [x] `TABS-02-03` Handle tab-close edge cases for live processes.
   Notes: close-confirm modal is core-driven; keyboard and mouse confirmation work; last-tab close requests app shutdown in terminal-only mode.
+  Follow-up (2026-03-17): native terminal tab chips now prefer a richer
+  foreground command summary when available, so tabs can surface labels such as
+  `codex resume --search ...` or `zig build test` instead of only the short
+  process basename. Presentation stays host-owned in the tab sync layer; the
+  backend only exports raw process label plus compact command summary facts.
 
 ### TABS-03 FFI Extension For Workspace/Tabs
 

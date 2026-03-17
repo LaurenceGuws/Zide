@@ -34,6 +34,10 @@ pub const Pty = struct {
         return null;
     }
 
+    pub fn foregroundProcessCommandLabel(_: *Pty) ?[]const u8 {
+        return null;
+    }
+
     pub fn hasData(_: *Pty) bool {
         return false;
     }

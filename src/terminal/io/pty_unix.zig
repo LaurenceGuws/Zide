@@ -21,6 +21,8 @@ pub const Pty = struct {
     cached_fg_pgrp: c.pid_t,
     cached_fg_name_len: usize,
     cached_fg_name: [128]u8,
+    cached_fg_command_len: usize,
+    cached_fg_command: [256]u8,
 
     pub fn init(_: std.mem.Allocator, size: PtySize, shell: ?[:0]const u8) !Pty {
         var master_fd: c_int = -1;
@@ -56,6 +58,8 @@ pub const Pty = struct {
             .cached_fg_pgrp = 0,
             .cached_fg_name_len = 0,
             .cached_fg_name = [_]u8{0} ** 128,
+            .cached_fg_command_len = 0,
+            .cached_fg_command = [_]u8{0} ** 256,
         };
     }
 
@@ -163,6 +167,7 @@ pub const Pty = struct {
         if (foreground_pgrp <= 0 or foreground_pgrp == shell_pgrp) {
             self.cached_fg_pgrp = 0;
             self.cached_fg_name_len = 0;
+            self.cached_fg_command_len = 0;
             return null;
         }
         if (foreground_pgrp == self.cached_fg_pgrp and self.cached_fg_name_len > 0) {
@@ -178,6 +183,30 @@ pub const Pty = struct {
         self.cached_fg_pgrp = foreground_pgrp;
         self.cached_fg_name_len = 0;
         return null;
+    }
+
+    pub fn foregroundProcessCommandLabel(self: *Pty) ?[]const u8 {
+        if (builtin.os.tag != .linux) return null;
+        const shell_pid = self.child_pid orelse return null;
+        const shell_pgrp = c.getpgid(shell_pid);
+        if (shell_pgrp <= 0) return null;
+        const foreground_pgrp = c.tcgetpgrp(@intCast(self.master_fd));
+        if (foreground_pgrp <= 0 or foreground_pgrp == shell_pgrp) {
+            self.cached_fg_pgrp = 0;
+            self.cached_fg_command_len = 0;
+            return null;
+        }
+        if (foreground_pgrp == self.cached_fg_pgrp and self.cached_fg_command_len > 0) {
+            return self.cached_fg_command[0..self.cached_fg_command_len];
+        }
+        if (readForegroundProcessSummary(foreground_pgrp, &self.cached_fg_command)) |command_len| {
+            self.cached_fg_pgrp = foreground_pgrp;
+            self.cached_fg_command_len = command_len;
+            return self.cached_fg_command[0..command_len];
+        }
+        self.cached_fg_pgrp = foreground_pgrp;
+        self.cached_fg_command_len = 0;
+        return foregroundProcessLabel(self);
     }
 
     pub fn hasData(self: *Pty) bool {
@@ -283,6 +312,125 @@ fn copyProcessLabel(label: []const u8, out_buf: *[128]u8) ?usize {
     const len = @min(src.len, out_buf.len);
     std.mem.copyForwards(u8, out_buf[0..len], src[0..len]);
     return len;
+}
+
+fn readForegroundProcessSummary(pgrp: c.pid_t, out_buf: *[256]u8) ?usize {
+    const log = app_logger.logger("terminal.io");
+    var cmdline_path_buf: [64]u8 = undefined;
+    const cmdline_path = std.fmt.bufPrint(&cmdline_path_buf, "/proc/{d}/cmdline", .{pgrp}) catch |err| {
+        log.logf(.debug, "foreground summary path format failed pgrp={d}: {s}", .{ pgrp, @errorName(err) });
+        return null;
+    };
+    if (std.fs.openFileAbsolute(cmdline_path, .{ .mode = .read_only })) |cmdline_file| {
+        defer cmdline_file.close();
+        var cmdline_buf: [2048]u8 = undefined;
+        const n_cmd = cmdline_file.readAll(&cmdline_buf) catch |err| blk: {
+            log.logf(.debug, "foreground summary read failed pgrp={d}: {s}", .{ pgrp, @errorName(err) });
+            break :blk 0;
+        };
+        if (n_cmd > 0) {
+            if (summarizeCmdline(cmdline_buf[0..n_cmd], out_buf[0..])) |len| return len;
+        }
+    } else |_| {}
+    return null;
+}
+
+fn summarizeCmdline(cmdline: []const u8, out_buf: []u8) ?usize {
+    var argv: [8][]const u8 = undefined;
+    var argc: usize = 0;
+    var cursor: usize = 0;
+    while (cursor < cmdline.len and argc < argv.len) {
+        const remaining = cmdline[cursor..];
+        const end_rel = std.mem.indexOfScalar(u8, remaining, 0) orelse remaining.len;
+        const token = remaining[0..end_rel];
+        if (token.len > 0) {
+            argv[argc] = token;
+            argc += 1;
+        }
+        cursor += end_rel + 1;
+    }
+    if (argc == 0) return null;
+
+    var start_index: usize = 0;
+    while (start_index + 1 < argc) {
+        const base = std.fs.path.basename(argv[start_index]);
+        if (isWrapperProcess(base) and !std.mem.startsWith(u8, argv[start_index + 1], "-")) {
+            start_index += 1;
+            continue;
+        }
+        break;
+    }
+
+    var out_len: usize = 0;
+    var emitted: usize = 0;
+    var i = start_index;
+    while (i < argc and emitted < 3) : (i += 1) {
+        const token = summarizeArgToken(argv[i], emitted == 0 and start_index > 0);
+        if (token.len == 0) continue;
+        const required = token.len + (if (out_len > 0) @as(usize, 1) else @as(usize, 0));
+        if (out_len + required > out_buf.len) break;
+        if (out_len > 0) {
+            out_buf[out_len] = ' ';
+            out_len += 1;
+        }
+        std.mem.copyForwards(u8, out_buf[out_len .. out_len + token.len], token);
+        out_len += token.len;
+        emitted += 1;
+    }
+    if (out_len == 0) return null;
+    if (i < argc and out_len + 4 <= out_buf.len) {
+        std.mem.copyForwards(u8, out_buf[out_len .. out_len + 4], " ...");
+        out_len += 4;
+    }
+    return out_len;
+}
+
+fn isWrapperProcess(name: []const u8) bool {
+    return std.mem.eql(u8, name, "node") or
+        std.mem.eql(u8, name, "nodejs") or
+        std.mem.eql(u8, name, "python") or
+        std.mem.startsWith(u8, name, "python3") or
+        std.mem.eql(u8, name, "bash") or
+        std.mem.eql(u8, name, "sh") or
+        std.mem.eql(u8, name, "zsh") or
+        std.mem.eql(u8, name, "fish") or
+        std.mem.eql(u8, name, "bun") or
+        std.mem.eql(u8, name, "deno");
+}
+
+fn summarizeArgToken(token: []const u8, strip_script_ext: bool) []const u8 {
+    if (token.len == 0) return "";
+    var display = if (std.mem.indexOfScalar(u8, token, '/')) |_| std.fs.path.basename(token) else token;
+    if (strip_script_ext) {
+        if (std.mem.lastIndexOfScalar(u8, display, '.')) |dot| {
+            const ext = display[dot..];
+            if (std.mem.eql(u8, ext, ".js") or std.mem.eql(u8, ext, ".mjs") or std.mem.eql(u8, ext, ".cjs") or std.mem.eql(u8, ext, ".py")) {
+                display = display[0..dot];
+            }
+        }
+    }
+    return display;
+}
+
+test "summarize cmdline keeps useful leading command tokens" {
+    var buf: [256]u8 = undefined;
+    const len = summarizeCmdline("codex\x00resume\x00--search\x00--dangerously-bypass-approvals\x00", buf[0..]).?;
+    try std.testing.expectEqualStrings("codex resume --search ...", buf[0..len]);
+}
+
+test "summarize cmdline prefers wrapped script name for node and python" {
+    var buf: [256]u8 = undefined;
+    const node_len = summarizeCmdline("/usr/bin/node\x00/tmp/server.js\x00--watch\x00", buf[0..]).?;
+    try std.testing.expectEqualStrings("server --watch", buf[0..node_len]);
+
+    const py_len = summarizeCmdline("/usr/bin/python3\x00/work/manage.py\x00runserver\x00", buf[0..]).?;
+    try std.testing.expectEqualStrings("manage.py runserver", buf[0..py_len]);
+}
+
+test "summarize cmdline skips env-style wrapper chains" {
+    var buf: [256]u8 = undefined;
+    const len = summarizeCmdline("/usr/bin/env\x00node\x00/opt/codex/codex.js\x00resume\x00", buf[0..]).?;
+    try std.testing.expectEqualStrings("codex resume", buf[0..len]);
 }
 
 fn waitStatusExited(status: u32) bool {

@@ -62,11 +62,16 @@ pub fn currentActivityMetadata(self: anytype) ActivityMetadata {
         transport.foregroundProcessLabel() orelse ""
     else
         "";
+    const foreground_process_command = if (terminal_transport.Transport.fromSession(self)) |transport|
+        transport.foregroundProcessCommandLabel() orelse foreground_process_label
+    else
+        "";
     const semantic_prompt = self.core.semantic_prompt;
     return .{
         .running = alive,
         .foreground_process_present = foreground_process_present,
         .foreground_process_label = foreground_process_label,
+        .foreground_process_command = foreground_process_command,
         .semantic_prompt_active = semantic_prompt.prompt_active or semantic_prompt.input_active or semantic_prompt.output_active,
         .semantic_input_active = semantic_prompt.input_active,
         .semantic_output_active = semantic_prompt.output_active,
@@ -83,16 +88,19 @@ pub fn copyActivityMetadata(
     self: anytype,
     allocator: std.mem.Allocator,
     foreground_process_label_out: *std.ArrayList(u8),
+    foreground_process_command_out: *std.ArrayList(u8),
 ) !ActivityMetadata {
     self.lock();
     defer self.unlock();
 
     const current = currentActivityMetadata(self);
     const foreground_process_label = try copyTextInto(allocator, foreground_process_label_out, current.foreground_process_label);
+    const foreground_process_command = try copyTextInto(allocator, foreground_process_command_out, current.foreground_process_command);
     return .{
         .running = current.running,
         .foreground_process_present = current.foreground_process_present,
         .foreground_process_label = foreground_process_label,
+        .foreground_process_command = foreground_process_command,
         .semantic_prompt_active = current.semantic_prompt_active,
         .semantic_input_active = current.semantic_input_active,
         .semantic_output_active = current.semantic_output_active,

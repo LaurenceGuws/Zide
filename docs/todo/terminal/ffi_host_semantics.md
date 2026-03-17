@@ -61,6 +61,7 @@ The rule should be:
   - task completion worth surfacing
 - Host metadata enrichment
   - stronger foreground-process labels
+  - compact foreground command summaries
   - cwd/title/task label separation where justified
 
 ## Non-Goals
@@ -95,6 +96,7 @@ Initial audit, 2026-03-17:
   - mouse-reporting state
   - foreground-process presence outside the shell
   - Linux-only foreground-process label from the PTY layer
+  - Linux-only compact foreground command summary from the PTY layer
   - semantic prompt state:
     - prompt/input/output activity
     - prompt kind
@@ -132,6 +134,10 @@ Explicitly deferred until a real backend source of truth exists:
 - progress text labels
 - host badge/chip styling
 - notification/toast decisions
+- FFI export of the richer foreground command summary
+  - native currently consumes it for terminal tab-chip presentation, but the
+    shared bridge should only grow when this field is justified for non-native
+    hosts too
 
 ## Classification Notes
 
