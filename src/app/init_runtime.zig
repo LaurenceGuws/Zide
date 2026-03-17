@@ -168,6 +168,14 @@ fn initWithMode(
         shell.rendererPtr().terminalRecentInputFullPublicationEnabled(),
         shell.rendererPtr().terminalRecentInputFullPublicationWindowMs(),
     });
+    app_log.logStdout(.info, "manual highlight probe TRACE", .{});
+    app_log.logStdout(.info, "manual highlight probe DEBUG", .{});
+    app_log.logStdout(.info, "manual highlight probe INFO", .{});
+    app_log.logStdout(.info, "manual highlight probe WARN", .{});
+    app_log.logStdout(.info, "manual highlight probe ERROR", .{});
+    app_log.logStdout(.info, "manual highlight probe FATAL", .{});
+    app_log.logStdout(.info, "manual highlight probe CRITICAL", .{});
+    app_log.logStdout(.info, "manual highlight probe PANIC", .{});
     const metrics_log = app_logger.logger("terminal.metrics");
     const input_latency_log = app_logger.logger("input.latency");
     const perf_log = app_logger.logger("editor.perf");
