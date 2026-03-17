@@ -76,15 +76,45 @@ pub const TerminalFramePacingState = struct {
 pub const SearchPanelState = struct {
     active: bool,
     query: std.ArrayList(u8),
+    select_all: bool,
 
     pub fn init(_: std.mem.Allocator) SearchPanelState {
         return .{
             .active = false,
             .query = std.ArrayList(u8).empty,
+            .select_all = false,
         };
     }
 
     pub fn deinit(self: *SearchPanelState, allocator: std.mem.Allocator) void {
+        self.query.deinit(allocator);
+    }
+};
+
+pub const PathPromptKind = enum {
+    open_file,
+    save_as,
+    replace,
+};
+
+pub const PathPromptState = struct {
+    active: bool,
+    kind: ?PathPromptKind,
+    query: std.ArrayList(u8),
+    select_all: bool,
+    error_text: ?[]const u8,
+
+    pub fn init() PathPromptState {
+        return .{
+            .active = false,
+            .kind = null,
+            .query = std.ArrayList(u8).empty,
+            .select_all = false,
+            .error_text = null,
+        };
+    }
+
+    pub fn deinit(self: *PathPromptState, allocator: std.mem.Allocator) void {
         self.query.deinit(allocator);
     }
 };

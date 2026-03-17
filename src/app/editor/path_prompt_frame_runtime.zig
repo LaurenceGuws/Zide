@@ -91,6 +91,7 @@ pub fn handle(
                         hooks.open_file(ctx, prompt.query.items) catch |err| {
                             log.logf(.warning, "open prompt submit failed path=\"{s}\" err={s}", .{ prompt.query.items, @errorName(err) });
                             submit_succeeded = false;
+                            prompt.error_text = "open failed";
                         };
                     },
                     .save_as => {
@@ -98,6 +99,7 @@ pub fn handle(
                         editor.saveAs(prompt.query.items) catch |err| {
                             log.logf(.warning, "save-as prompt submit failed path=\"{s}\" err={s}", .{ prompt.query.items, @errorName(err) });
                             submit_succeeded = false;
+                            prompt.error_text = "save failed";
                         };
                     },
                     .replace => {
@@ -108,12 +110,15 @@ pub fn handle(
                         _ = editor.replaceActiveSearchMatch(prompt.query.items) catch |err| {
                             log.logf(.warning, "replace prompt submit failed err={s}", .{@errorName(err)});
                             submit_succeeded = false;
+                            prompt.error_text = "replace failed";
                         };
                     },
                 }
                 if (submit_succeeded) {
                     app_prompt_state.close(prompt);
                     out.clear_editor_cluster_cache = true;
+                } else {
+                    prompt.select_all = true;
                 }
             }
         },
@@ -124,6 +129,7 @@ pub fn handle(
             } else {
                 popQueryScalar(&prompt.query);
             }
+            prompt.error_text = null;
             handled = true;
             query_changed = true;
         },
@@ -131,11 +137,13 @@ pub fn handle(
     }
 
     if (try app_text_field_input.handleShortcuts(allocator, shell, &prompt.query, &prompt.select_all, input_batch)) {
+        prompt.error_text = null;
         handled = true;
         query_changed = true;
     }
 
     if (try appendTextEvents(allocator, &prompt.query, &prompt.select_all, input_batch)) {
+        prompt.error_text = null;
         handled = true;
         query_changed = true;
     }
