@@ -1,3 +1,4 @@
+const std = @import("std");
 const terminal_transport = @import("terminal_transport.zig");
 
 pub fn deinit(self: anytype) void {
@@ -15,16 +16,10 @@ pub fn deinit(self: anytype) void {
 pub fn hasData(self: anytype) bool {
     if (self.read_thread != null) {
         if (self.parse_thread != null) {
-            return self.output_pending.load(.acquire);
+            return self.output_pending.load(.acquire) or hasUnreadBufferedIo(self);
         }
         if (self.output_pending.load(.acquire)) return true;
-        var pending = false;
-        self.io_mutex.lock();
-        if (self.io_buffer.items.len > self.io_read_offset) {
-            pending = true;
-        }
-        self.io_mutex.unlock();
-        return pending;
+        return hasUnreadBufferedIo(self);
     }
     if (terminal_transport.Transport.fromSession(self)) |transport| {
         return transport.hasData();
@@ -34,6 +29,16 @@ pub fn hasData(self: anytype) bool {
 
 pub fn pollBacklogHint(self: anytype) bool {
     return hasData(self) or @import("session_rendering.zig").hasPublishedGenerationBacklog(self);
+}
+
+fn hasUnreadBufferedIo(self: anytype) bool {
+    var pending = false;
+    self.io_mutex.lock();
+    if (self.io_buffer.items.len > self.io_read_offset) {
+        pending = true;
+    }
+    self.io_mutex.unlock();
+    return pending;
 }
 
 fn stopThreads(self: anytype) void {
@@ -48,4 +53,24 @@ fn stopThreads(self: anytype) void {
         thread.join();
         self.parse_thread = null;
     }
+}
+
+test "hasData stays true for threaded session while unread parse buffer remains" {
+    const session_runtime = @import("session_runtime.zig");
+
+    const allocator = std.testing.allocator;
+    const session = try session_runtime.init(allocator, 24, 80, .{});
+    defer {
+        session.read_thread = null;
+        session.parse_thread = null;
+        session.deinit();
+    }
+
+    session.read_thread = std.mem.zeroes(std.Thread);
+    session.parse_thread = std.mem.zeroes(std.Thread);
+    session.output_pending.store(false, .release);
+    try session.io_buffer.appendSlice(session.allocator, "queued");
+    session.io_read_offset = 0;
+
+    try std.testing.expect(hasData(session));
 }

@@ -128,6 +128,18 @@ Status note, 2026-03-15:
 - [ ] `P8-01` Dirty-line tracking and partial redraw.
 - [ ] `P8-02` Texture upload batching and atlas compaction.
 - [ ] `P8-03` Frame pacing and latency tracking.
+  Notes:
+  - 2026-03-17 blocked-input follow-up: threaded PTY sessions were treating
+    `output_pending` as the only active-pressure signal once a parse thread was
+    enabled. That let `hasData()` fall false after `poll()` cleared
+    `output_pending` but before the parse thread republished, even while unread
+    PTY bytes were still queued in `io_buffer`.
+  - Root cause: the frame/sleep path could therefore enter idle backoff during
+    bursty TUI output or held-key navigation, which matches the observed
+    “pause, then catch-up” feel.
+  - Current fix keeps `hasData()` true for threaded sessions whenever unread
+    buffered IO remains, so scheduler pressure tracks queued parse work instead
+    of only already-published batches.
 - [ ] `P8-04` SIMD UTF-8 and batch parsing.
 - [x] `P8-05` Batch terminal draw calls for glyphs and backgrounds.
 - [x] `P8-06` Honor dirty column bounds in partial redraw.
