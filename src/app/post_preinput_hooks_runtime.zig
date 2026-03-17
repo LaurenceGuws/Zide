@@ -14,6 +14,7 @@ const app_terminal_tabs_runtime = @import("terminal/terminal_tabs_runtime.zig");
 const app_terminal_resize = @import("terminal/terminal_resize.zig");
 const app_terminal_grid = @import("terminal/terminal_grid.zig");
 const app_pointer_activity_frame = @import("pointer_activity_frame.zig");
+const app_terminal_scrollbar_runtime = @import("terminal/terminal_scrollbar_runtime.zig");
 const app_terminal_split_resize_frame = @import("terminal/terminal_split_resize_frame.zig");
 const app_shell = @import("../app_shell.zig");
 const shared_types = @import("../types/mod.zig");
@@ -185,12 +186,32 @@ pub fn handle(state: anytype, shell: *Shell, batch: *input_types.InputBatch, now
                     at: f64,
                 ) void {
                     const inner_state: *State = @ptrCast(@alignCast(inner_raw));
+                    var terminal_passive_hover_interest = false;
+                    if (app_terminal_active_widget.resolveActive(
+                        inner_state.app_mode,
+                        &inner_state.terminal_workspace,
+                        inner_state.terminals.items.len,
+                        inner_state.terminal_widgets.items,
+                    )) |term_widget| {
+                        const term = layout.terminal;
+                        terminal_passive_hover_interest = app_terminal_scrollbar_runtime.wantsPassiveHoverWake(
+                            term_widget,
+                            inner_state.shell,
+                            term.x,
+                            term.y,
+                            term.width,
+                            term.height,
+                            mouse,
+                            inner_state.terminal_scrollbar_dragging,
+                        );
+                    }
                     const result = app_pointer_activity_frame.handle(
                         inner_state.show_terminal,
                         frame_input_batch,
                         layout,
                         mouse,
                         at,
+                        terminal_passive_hover_interest,
                         &inner_state.last_mouse_pos,
                         &inner_state.last_mouse_redraw_time,
                         &inner_state.last_ctrl_down,

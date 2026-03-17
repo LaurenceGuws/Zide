@@ -16,6 +16,35 @@ pub const Result = struct {
     note_input: bool = false,
 };
 
+pub fn wantsPassiveHoverWake(
+    widget: *const TerminalWidget,
+    shell: *Shell,
+    x: f32,
+    y: f32,
+    width: f32,
+    height: f32,
+    mouse: MousePos,
+    dragging: bool,
+) bool {
+    const model = widget.scrollbarModel();
+    const chrome_visible = model.visible or dragging;
+    if (!chrome_visible or !shell.windowFocused()) return false;
+    const geometry = terminal_scrollbar_mod.computeVerticalHoverTarget(
+        shell.uiScaleFactor(),
+        x,
+        y,
+        width,
+        height,
+        mouse,
+        model.rows,
+        model.total_lines,
+        model.scroll_offset,
+        dragging,
+        chrome_visible,
+    );
+    return geometry.visible and geometry.focus_t > 0.01;
+}
+
 pub fn handleInput(
     widget: *TerminalWidget,
     shell: *Shell,
@@ -45,7 +74,7 @@ pub fn handleInput(
         dragging.*,
         chrome_visible and focused,
     );
-    const hovering = geometry.visible and geometry.focus_t > 0.01;
+    const hovering = wantsPassiveHoverWake(widget, shell, x, y, width, height, input_batch.mouse_pos, dragging.*);
     if (hovered.* != hovering) {
         hovered.* = hovering;
         out.needs_redraw = true;
