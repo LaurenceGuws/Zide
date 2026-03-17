@@ -6,6 +6,7 @@ const app_tab_bar_width = @import("tabs/tab_bar_width.zig");
 const app_terminal_theme_apply = @import("terminal/terminal_theme_apply.zig");
 const app_theme_utils = @import("theme_utils.zig");
 const config_mod = @import("../config/lua_config.zig");
+const manual_highlights_mod = @import("../editor/manual_highlights.zig");
 const term_types = @import("../terminal/model/types.zig");
 const app_types = @import("app_state_types.zig");
 
@@ -43,6 +44,8 @@ pub fn handle(state: anytype, ctx: *anyopaque, hooks: Hooks) !void {
     const log = app_logger.logger("config.reload");
     var config = try config_mod.loadConfig(state.allocator);
     defer config_mod.freeConfig(state.allocator, &config);
+
+    try manual_highlights_mod.applyConfig(state.allocator, &config);
 
     app_logger.resetConfig();
     if (config.log_file_filter) |filter| {

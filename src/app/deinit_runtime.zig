@@ -1,4 +1,5 @@
 const app_logger = @import("../app_logger.zig");
+const manual_highlights_mod = @import("../editor/manual_highlights.zig");
 const mode_build = @import("mode_build.zig");
 
 pub fn handle(state: anytype) void {
@@ -42,12 +43,14 @@ pub fn handle(state: anytype) void {
     }
     state.terminal_mode_adapter.deinit(state.allocator);
     state.search_panel.query.deinit(state.allocator);
+    state.path_prompt.deinit(state.allocator);
     if (state.perf_file_path) |path| {
         state.allocator.free(path);
     }
     if (state.terminal_default_start_location) |path| {
         state.allocator.free(path);
     }
+    manual_highlights_mod.reset();
     app_logger.deinit();
     state.allocator.destroy(state);
 }

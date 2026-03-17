@@ -11,6 +11,8 @@ const app_logger = @import("../app_logger.zig");
 
 pub const LuaConfigError = iface.LuaConfigError;
 pub const Config = iface.Config;
+const EditorManualHighlightFallback = iface.EditorManualHighlightFallback;
+const EditorManualHighlightRule = iface.EditorManualHighlightRule;
 const ThemeConfig = iface.ThemeConfig;
 
 fn replaceOwnedString(allocator: std.mem.Allocator, slot: *?[]u8, value: ?[]u8) void {
@@ -39,6 +41,94 @@ fn parseFilterValueOwned(allocator: std.mem.Allocator, lua: *zlua.Lua, idx: i32)
         }
     }
     return try out.toOwnedSlice(allocator);
+}
+
+fn parseManualHighlightSpec(
+    allocator: std.mem.Allocator,
+    lua: *zlua.Lua,
+    table_index: i32,
+) !?struct {
+    parser: []u8,
+    builtin: ?[]u8,
+    query_path: ?[]u8,
+} {
+    var parser: ?[]u8 = null;
+    var builtin: ?[]u8 = null;
+    var query_path: ?[]u8 = null;
+    errdefer {
+        if (parser) |value| allocator.free(value);
+        if (builtin) |value| allocator.free(value);
+        if (query_path) |value| allocator.free(value);
+    }
+
+    _ = lua.getField(table_index, "parser");
+    if (lua.isString(-1)) {
+        if (lua.toString(-1)) |v| parser = try allocator.dupe(u8, v) else |_| {}
+    }
+    lua.pop(1);
+    if (parser == null) {
+        _ = lua.getField(table_index, "language");
+        if (lua.isString(-1)) {
+            if (lua.toString(-1)) |v| parser = try allocator.dupe(u8, v) else |_| {}
+        }
+        lua.pop(1);
+    }
+
+    _ = lua.getField(table_index, "builtin");
+    if (lua.isString(-1)) {
+        if (lua.toString(-1)) |v| builtin = try allocator.dupe(u8, v) else |_| {}
+    }
+    lua.pop(1);
+
+    _ = lua.getField(table_index, "query_path");
+    if (lua.isString(-1)) {
+        if (lua.toString(-1)) |v| query_path = try allocator.dupe(u8, v) else |_| {}
+    }
+    lua.pop(1);
+
+    if (parser == null) return null;
+    return .{
+        .parser = parser.?,
+        .builtin = builtin,
+        .query_path = query_path,
+    };
+}
+
+fn parseManualHighlightRules(allocator: std.mem.Allocator, lua: *zlua.Lua, table_index: i32) ![]EditorManualHighlightRule {
+    var rules = std.ArrayList(EditorManualHighlightRule).empty;
+    errdefer {
+        for (rules.items) |*rule| {
+            allocator.free(rule.extension);
+            allocator.free(rule.parser);
+            if (rule.builtin) |builtin| allocator.free(builtin);
+            if (rule.query_path) |query_path| allocator.free(query_path);
+        }
+        rules.deinit(allocator);
+    }
+
+    lua.pushNil();
+    while (lua.next(table_index)) {
+        defer lua.pop(1);
+        if (!lua.isString(-2) or !lua.isTable(-1)) continue;
+        const extension = if (lua.toString(-2)) |v| v else |_| continue;
+        const spec = try parseManualHighlightSpec(allocator, lua, lua.absIndex(-1)) orelse continue;
+        try rules.append(allocator, .{
+            .extension = try allocator.dupe(u8, extension),
+            .parser = spec.parser,
+            .builtin = spec.builtin,
+            .query_path = spec.query_path,
+        });
+    }
+    return try rules.toOwnedSlice(allocator);
+}
+
+fn parseManualHighlightFallback(allocator: std.mem.Allocator, lua: *zlua.Lua, table_index: i32) !?EditorManualHighlightFallback {
+    const spec = try parseManualHighlightSpec(allocator, lua, table_index) orelse return null;
+    return .{
+        .parser = spec.parser,
+        .builtin = spec.builtin,
+        .query_path = spec.query_path,
+    };
 }
 
 fn parseNativeScalarOverlay(allocator: std.mem.Allocator, lua: *zlua.Lua, table_index: i32) !Config {
@@ -284,6 +374,23 @@ fn parseNativeScalarOverlay(allocator: std.mem.Allocator, lua: *zlua.Lua, table_
         _ = lua.getField(editor_idx, "selection_overlay");
         lua_runtime_parse.parseSelectionOverlayTable(lua, -1, &out, .editor);
         lua.pop(1);
+
+        _ = lua.getField(editor_idx, "highlights");
+        if (lua.isTable(-1)) {
+            const highlights_idx = lua.absIndex(-1);
+            _ = lua.getField(highlights_idx, "extensions");
+            if (lua.isTable(-1)) {
+                out.editor_manual_highlight_rules = try parseManualHighlightRules(allocator, lua, lua.absIndex(-1));
+            }
+            lua.pop(1);
+
+            _ = lua.getField(highlights_idx, "unsupported");
+            if (lua.isTable(-1)) {
+                out.editor_manual_highlight_unsupported = try parseManualHighlightFallback(allocator, lua, lua.absIndex(-1));
+            }
+            lua.pop(1);
+        }
+        lua.pop(1);
     }
     lua.pop(1);
 
@@ -502,4 +609,37 @@ test "parseConfigFromLuaState parses per-tag log level overrides" {
     try std.testing.expectEqual(app_logger.Level.warning, app_logger.logger("terminal.env").file_level);
     try std.testing.expectEqual(app_logger.Level.info, app_logger.logger("terminal.ui.lifecycle").console_level);
     try std.testing.expectEqual(app_logger.Level.@"error", app_logger.logger("terminal.ui.redraw").console_level);
+}
+
+test "parseConfigFromLuaState parses editor manual highlight overrides" {
+    const allocator = std.testing.allocator;
+    const lua = try zlua.Lua.init(allocator);
+    defer lua.deinit();
+    lua.openLibs();
+
+    try lua.loadString(
+        \\return {
+        \\    editor = {
+        \\        highlights = {
+        \\            extensions = {
+        \\                log = { parser = "comment", builtin = "log_levels" },
+        \\            },
+        \\            unsupported = { language = "comment", query_path = "queries/custom/plain.scm" },
+        \\        },
+        \\    },
+        \\}
+    );
+    try lua.protectedCall(.{ .args = 0, .results = 1 });
+
+    var config = try parseConfigFromLuaState(allocator, @ptrCast(lua));
+    defer lua_shared.freeConfig(allocator, &config);
+
+    try std.testing.expect(config.editor_manual_highlight_rules != null);
+    try std.testing.expectEqual(@as(usize, 1), config.editor_manual_highlight_rules.?.len);
+    try std.testing.expectEqualStrings("log", config.editor_manual_highlight_rules.?[0].extension);
+    try std.testing.expectEqualStrings("comment", config.editor_manual_highlight_rules.?[0].parser);
+    try std.testing.expectEqualStrings("log_levels", config.editor_manual_highlight_rules.?[0].builtin.?);
+    try std.testing.expect(config.editor_manual_highlight_unsupported != null);
+    try std.testing.expectEqualStrings("comment", config.editor_manual_highlight_unsupported.?.parser);
+    try std.testing.expectEqualStrings("queries/custom/plain.scm", config.editor_manual_highlight_unsupported.?.query_path.?);
 }

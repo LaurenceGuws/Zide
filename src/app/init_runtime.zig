@@ -11,6 +11,7 @@ const app_shell = @import("../app_shell.zig");
 const app_logger = @import("../app_logger.zig");
 const config_mod = @import("../config/lua_config.zig");
 const grammar_manager_mod = @import("../editor/grammar_manager.zig");
+const manual_highlights_mod = @import("../editor/manual_highlights.zig");
 const editor_render_cache_mod = @import("../editor/render/cache.zig");
 const terminal_mod = @import("../terminal/core/terminal.zig");
 const metrics_mod = @import("../terminal/model/metrics.zig");
@@ -71,6 +72,8 @@ fn initWithMode(
         break :blk config_mod.emptyConfig();
     };
     defer config_mod.freeConfig(allocator, &config);
+
+    try manual_highlights_mod.applyConfig(allocator, &config);
 
     app_logger.resetConfig();
     if (config.log_file_filter) |filter| {
@@ -328,7 +331,9 @@ fn initWithMode(
         .search_panel = .{
             .active = false,
             .query = std.ArrayList(u8).empty,
+            .select_all = false,
         },
+        .path_prompt = .init(),
         .terminal_close_confirm_tab = null,
         .terminal_window_close_pending = false,
     };

@@ -1,4 +1,5 @@
 const std = @import("std");
+const manual_highlights_mod = @import("manual_highlights.zig");
 const syntax_mod = @import("syntax.zig");
 const ts_api = @import("treesitter_api.zig");
 const syntax_registry_mod = @import("syntax_registry.zig");
@@ -136,7 +137,9 @@ pub fn SearchHighlightOps(comptime Editor: type) type {
                 );
                 return;
             }
-            if (syntax_registry_mod.SyntaxRegistry.resolveLanguage(path) == null) {
+            const lang = syntax_registry_mod.SyntaxRegistry.resolveLanguage(path);
+            const manual_override = manual_highlights_mod.resolve(path, lang);
+            if (lang == null and manual_override == null) {
                 if (self.highlighter) |h| {
                     h.destroy();
                     self.highlighter = null;
@@ -157,7 +160,9 @@ pub fn SearchHighlightOps(comptime Editor: type) type {
             log.logf(.info, "highlight init check path=\"{s}\"", .{path orelse ""});
             self.highlight_pending = false;
             const lang = syntax_registry_mod.SyntaxRegistry.resolveLanguage(path);
-            if (lang == null) {
+            const manual_override = manual_highlights_mod.resolve(path, lang);
+            const effective_lang = if (manual_override) |spec| spec.parser else lang;
+            if (effective_lang == null) {
                 if (self.highlighter) |h| {
                     h.destroy();
                     self.highlighter = null;
@@ -171,18 +176,18 @@ pub fn SearchHighlightOps(comptime Editor: type) type {
             if (self.highlighter == null) {
                 const t_start = std.time.nanoTimestamp();
                 log.logf(.info, "highlight init start", .{});
-                const grammar = try self.grammar_manager.getOrLoad(lang.?) orelse blk: {
-                    log.logf(.info, "highlight missing grammar lang={s}", .{lang.?});
+                const grammar = try self.grammar_manager.getOrLoad(effective_lang.?) orelse blk: {
+                    log.logf(.info, "highlight missing grammar lang={s}", .{effective_lang.?});
                     if (shouldAutoBootstrapGrammars()) {
                         _ = self.tryAutoBootstrapGrammars();
                         switch (grammarAutoBootstrapState()) {
                             .running => return,
                             .succeeded => {
-                                if (try self.grammar_manager.getOrLoad(lang.?)) |loaded| {
-                                    log.logf(.info, "highlight grammar loaded after bootstrap lang={s}", .{lang.?});
+                                if (try self.grammar_manager.getOrLoad(effective_lang.?)) |loaded| {
+                                    log.logf(.info, "highlight grammar loaded after bootstrap lang={s}", .{effective_lang.?});
                                     break :blk loaded;
                                 }
-                                log.logf(.info, "highlight grammar still missing after bootstrap lang={s}", .{lang.?});
+                                log.logf(.info, "highlight grammar still missing after bootstrap lang={s}", .{effective_lang.?});
                                 self.emitMissingGrammarNotice(true, true, false);
                             },
                             .failed => self.emitMissingGrammarNotice(true, true, false),
@@ -193,12 +198,16 @@ pub fn SearchHighlightOps(comptime Editor: type) type {
                     }
                     return;
                 };
+                var query_paths = grammar.query_paths;
+                if (manual_override) |spec| {
+                    if (spec.query_path) |query_path| query_paths.highlights = @constCast(query_path);
+                }
                 self.highlighter = syntax_mod.createHighlighterForLanguage(
                     self.allocator,
                     self.buffer,
-                    lang.?,
+                    effective_lang.?,
                     grammar.ts_language,
-                    grammar.query_paths,
+                    query_paths,
                     self.grammar_manager,
                 ) catch |err| {
                     log.logf(.info, "highlight init failed err={any}", .{err});

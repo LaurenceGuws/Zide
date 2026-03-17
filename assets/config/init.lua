@@ -273,6 +273,20 @@ return {
 			-- highlight_budget = 120,
 			-- width_budget = 120,
 		},
+		-- Manual highlight overrides for plain-text-ish files or local custom rules.
+		-- `extensions` keys are file extensions without the dot.
+		-- `parser`/`language` is the tree-sitter grammar to use.
+		-- `builtin` points at a shipped preset in `assets/queries/manual/*.scm`.
+		-- `query_path` can point at your own `.scm` file instead.
+		--
+		-- No generic `.txt` fallback is enabled by default yet. The first shipped
+		-- preset is `.log`, routed through the `comment` grammar.
+		highlights = {
+			extensions = {
+				log = { parser = "comment", builtin = "log_levels" },
+			},
+			-- unsupported = { parser = "comment", builtin = "log_levels" },
+		},
 		-- Optional per-editor selection overlay override.
 		-- selection_overlay = {
 		--     smooth = true,

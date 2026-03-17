@@ -94,6 +94,19 @@ pub const ThemeConfig = struct {
     ansi_colors: [16]?Color = .{null} ** 16,
 };
 
+pub const EditorManualHighlightRule = struct {
+    extension: []u8,
+    parser: []u8,
+    builtin: ?[]u8 = null,
+    query_path: ?[]u8 = null,
+};
+
+pub const EditorManualHighlightFallback = struct {
+    parser: []u8,
+    builtin: ?[]u8 = null,
+    query_path: ?[]u8 = null,
+};
+
 pub const Config = struct {
     log_file_filter: ?[]u8,
     log_console_filter: ?[]u8,
@@ -106,6 +119,8 @@ pub const Config = struct {
     editor_large_jump_rows: ?usize,
     editor_highlight_budget: ?usize,
     editor_width_budget: ?usize,
+    editor_manual_highlight_rules: ?[]EditorManualHighlightRule,
+    editor_manual_highlight_unsupported: ?EditorManualHighlightFallback,
     selection_overlay_smooth: ?bool,
     selection_overlay_corner_px: ?f32,
     selection_overlay_pad_px: ?f32,

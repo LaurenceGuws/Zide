@@ -12,6 +12,7 @@ to be small and testable, and to reuse the existing `tools/grammar_packs` workfl
 - Runtime loader + syntax registry are implemented (`src/editor/grammar_manager.zig`, `src/editor/syntax_registry.zig`).
 - `zig build grammar-update` installs packs into `~/.config/zide/grammars`.
 - Tree-sitter runtime is vendored in `vendor/tree-sitter/`; Zig language is built-in.
+- Manual shipped query presets now also exist for plain-text-ish editor cases via `assets/queries/manual/*.scm`, with Lua-configurable editor highlight overrides layered on top.
 
 ## Target Runtime Layout
 Default cache dir (Linux):

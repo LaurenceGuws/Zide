@@ -3,8 +3,52 @@ const iface = @import("./lua_config_iface.zig");
 const input_actions = @import("../input/input_actions.zig");
 
 pub const Config = iface.Config;
+const EditorManualHighlightFallback = iface.EditorManualHighlightFallback;
+const EditorManualHighlightRule = iface.EditorManualHighlightRule;
 pub const Theme = iface.Theme;
 pub const ThemeConfig = iface.ThemeConfig;
+
+fn freeManualHighlightRule(allocator: std.mem.Allocator, rule: *EditorManualHighlightRule) void {
+    allocator.free(rule.extension);
+    allocator.free(rule.parser);
+    if (rule.builtin) |builtin| allocator.free(builtin);
+    if (rule.query_path) |query_path| allocator.free(query_path);
+    rule.* = undefined;
+}
+
+fn freeManualHighlightFallback(allocator: std.mem.Allocator, fallback: *EditorManualHighlightFallback) void {
+    allocator.free(fallback.parser);
+    if (fallback.builtin) |builtin| allocator.free(builtin);
+    if (fallback.query_path) |query_path| allocator.free(query_path);
+    fallback.* = undefined;
+}
+
+fn dupManualHighlightRules(allocator: std.mem.Allocator, rules: []const EditorManualHighlightRule) ![]EditorManualHighlightRule {
+    var out = try allocator.alloc(EditorManualHighlightRule, rules.len);
+    errdefer allocator.free(out);
+    var loaded: usize = 0;
+    errdefer {
+        for (out[0..loaded]) |*rule| freeManualHighlightRule(allocator, rule);
+    }
+    for (rules, 0..) |rule, i| {
+        out[i] = .{
+            .extension = try allocator.dupe(u8, rule.extension),
+            .parser = try allocator.dupe(u8, rule.parser),
+            .builtin = if (rule.builtin) |builtin| try allocator.dupe(u8, builtin) else null,
+            .query_path = if (rule.query_path) |query_path| try allocator.dupe(u8, query_path) else null,
+        };
+        loaded += 1;
+    }
+    return out;
+}
+
+fn dupManualHighlightFallback(allocator: std.mem.Allocator, fallback: EditorManualHighlightFallback) !EditorManualHighlightFallback {
+    return .{
+        .parser = try allocator.dupe(u8, fallback.parser),
+        .builtin = if (fallback.builtin) |builtin| try allocator.dupe(u8, builtin) else null,
+        .query_path = if (fallback.query_path) |query_path| try allocator.dupe(u8, query_path) else null,
+    };
+}
 
 pub fn fileExists(path: []const u8) bool {
     if (std.fs.cwd().openFile(path, .{})) |file| {
@@ -71,6 +115,8 @@ pub fn emptyConfig() Config {
         .editor_large_jump_rows = null,
         .editor_highlight_budget = null,
         .editor_width_budget = null,
+        .editor_manual_highlight_rules = null,
+        .editor_manual_highlight_unsupported = null,
         .selection_overlay_smooth = null,
         .selection_overlay_corner_px = null,
         .selection_overlay_pad_px = null,
@@ -140,6 +186,15 @@ pub fn freeConfig(allocator: std.mem.Allocator, config: *Config) void {
     if (config.app_font_path) |path| {
         allocator.free(path);
         config.app_font_path = null;
+    }
+    if (config.editor_manual_highlight_rules) |rules| {
+        for (rules) |*rule| freeManualHighlightRule(allocator, rule);
+        allocator.free(rules);
+        config.editor_manual_highlight_rules = null;
+    }
+    if (config.editor_manual_highlight_unsupported) |*fallback| {
+        freeManualHighlightFallback(allocator, fallback);
+        config.editor_manual_highlight_unsupported = null;
     }
     if (config.editor_font_path) |path| {
         allocator.free(path);
@@ -292,6 +347,21 @@ pub fn mergeConfig(allocator: std.mem.Allocator, base: *Config, overlay: Config)
     if (overlay.editor_large_jump_rows != null) base.editor_large_jump_rows = overlay.editor_large_jump_rows;
     if (overlay.editor_highlight_budget != null) base.editor_highlight_budget = overlay.editor_highlight_budget;
     if (overlay.editor_width_budget != null) base.editor_width_budget = overlay.editor_width_budget;
+    if (overlay.editor_manual_highlight_rules) |rules| {
+        if (dupManualHighlightRules(allocator, rules)) |dup| {
+            if (base.editor_manual_highlight_rules) |old| {
+                for (old) |*rule| freeManualHighlightRule(allocator, rule);
+                allocator.free(old);
+            }
+            base.editor_manual_highlight_rules = dup;
+        } else |_| {}
+    }
+    if (overlay.editor_manual_highlight_unsupported) |fallback| {
+        if (dupManualHighlightFallback(allocator, fallback)) |dup| {
+            if (base.editor_manual_highlight_unsupported) |*old| freeManualHighlightFallback(allocator, old);
+            base.editor_manual_highlight_unsupported = dup;
+        } else |_| {}
+    }
     if (overlay.selection_overlay_smooth != null) base.selection_overlay_smooth = overlay.selection_overlay_smooth;
     if (overlay.selection_overlay_corner_px != null) base.selection_overlay_corner_px = overlay.selection_overlay_corner_px;
     if (overlay.selection_overlay_pad_px != null) base.selection_overlay_pad_px = overlay.selection_overlay_pad_px;
