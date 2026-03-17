@@ -29,6 +29,9 @@ notice should stay plain for now
 request_id=42197 duration_ms=17 status=ok
 hex_id=0xDEADBEEF
 user=alice session=9021 retry=3
+latency=12.5 path=/var/log/app/current.log scope=service/api
+flags=true null_value=null quoted="hello-world" single='quoted-value' tick=`cmd`
+brackets=[ok] tuple=(7,8) map={key=value} arrows=> ::
 
 2026-03-17T21:51:03Z service/api INFO request completed
 2026-03-17T21:51:04Z service/db WARN slow query rows=391
