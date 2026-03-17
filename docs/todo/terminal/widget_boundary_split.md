@@ -11,6 +11,10 @@ Continue the cleanup that separates:
 The goal is to stop treating `TerminalWidget` and `TerminalSession` as mixed
 owners of terminal semantics, host policy, and viewport chrome.
 
+Review aid:
+
+- `app_architecture/terminal/BOUNDARY_SMELL_CHECKLIST.md`
+
 ## Why Now
 
 Recent terminal dogfooding closed a cluster of scrollbar/focus/hover bugs by

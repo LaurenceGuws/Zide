@@ -104,3 +104,26 @@ sequenceDiagram
 - No "owned" data is stored as borrowed references.
 - Locks are not held across blocking I/O or callbacks.
 - Thread shutdown joins before shared memory is freed.
+
+## Boundary smell checklist (quick)
+
+Use this when code looks reasonable locally but has a history of creating
+cross-layer architectural drift.
+
+- Ask "is this engine truth, bridge convenience, or host presentation?"
+  If the answer is "a little of each", that is usually the smell.
+- Reject convenience helpers in core/session code when they package host policy
+  rather than terminal facts.
+- Reject duplicated geometry/pacing/hover rules when one runtime owner already
+  exists for that behavior.
+- Prefer exporting one structured fact over exporting one pre-formatted string.
+- Prefer host-side presentation composition over backend-side title/chip/badge
+  formatting.
+- Treat "just one more helper" with suspicion when it crosses from:
+  - engine fact -> host policy
+  - bridge convenience -> engine API
+  - app chrome -> widget/content behavior
+- If a feature needs the same rule in more than one layer, stop and create one
+  authority rather than copying the heuristic.
+- If a helper would be awkward or unjustified for an FFI host, it is probably
+  in the wrong layer on native too.

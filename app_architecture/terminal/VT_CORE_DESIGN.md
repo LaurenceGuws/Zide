@@ -69,6 +69,7 @@ This doc is the concrete follow-up to:
 - `docs/review/TERMINAL_CORE_ARCHITECTURE_REVIEW_2026-03-10.md`
 - `docs/todo/terminal/vt_core_rearchitecture.md`
 - `app_architecture/terminal/TERMINAL_SUBSYSTEM_LAYERS.md`
+- `app_architecture/terminal/BOUNDARY_SMELL_CHECKLIST.md`
 
 Authority note:
 
