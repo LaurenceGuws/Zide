@@ -64,7 +64,7 @@ Quick reading guide:
 
 ## Setup + Usage
 - `README.md` — customer-facing overview, links, and quick-start pointers.
-- `docs/releases/v0.1.0-beta.2.md` — current terminal beta release notes.
+- `docs/releases/v0.1.0-beta.3.md` — current terminal beta release notes.
 - `tests/README.md` — repo-wide test layout policy.
 - `app_architecture/BOOTSTRAP.md` — dependencies, bootstrap, build, run, test.
 - `tools/docs_explorer/README.md` — run instructions for the local docs explorer.

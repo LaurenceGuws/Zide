@@ -26,7 +26,7 @@ post-rewrite terminal beta checkpoint.
 - [Terminal architecture comparison](TERMINAL_ARCHITECTURE_COMPARISON.md)
 - [Terminal FFI bridge design](ffi/BRIDGE_DESIGN.md)
 - [Terminal snapshot ABI](ffi/SNAPSHOT_ABI.md)
-- [Latest terminal release notes](../releases/v0.1.0-beta.2.md)
+- [Latest terminal release notes](../releases/v0.1.0-beta.3.md)
 
 ## Why this checkpoint exists
 

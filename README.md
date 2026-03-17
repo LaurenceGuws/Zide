@@ -124,7 +124,7 @@ Good starting points:
 - [Terminal beta checkpoint summary](https://laurenceguws.github.io/Zide/tools/docs_explorer/#doc=app_architecture/terminal/TERMINAL_BETA_CHECKPOINT.md)
 - [Terminal architecture comparison](https://laurenceguws.github.io/Zide/tools/docs_explorer/#doc=app_architecture/terminal/TERMINAL_ARCHITECTURE_COMPARISON.md)
 - [Terminal FFI bridge design](https://laurenceguws.github.io/Zide/tools/docs_explorer/#doc=app_architecture/terminal/ffi/BRIDGE_DESIGN.md)
-- [Current beta release notes](https://laurenceguws.github.io/Zide/tools/docs_explorer/#doc=docs/releases/v0.1.0-beta.2.md)
+- [Current beta release notes](https://laurenceguws.github.io/Zide/tools/docs_explorer/#doc=docs/releases/v0.1.0-beta.3.md)
 
 Contributor/operator navigation lives in [docs/INDEX.md](docs/INDEX.md).
 
