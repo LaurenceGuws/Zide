@@ -177,6 +177,16 @@ Additional progress:
 - native terminal tab sync explicitly receives foreground-process label through
   workspace sync state and chooses whether to surface it
 - title substitution is no longer hidden inside backend metadata copying
+- focused widget scan result:
+  - remaining terminal widget responsibilities now mostly read as legitimate
+    host/widget glue:
+    - focus-report routing
+    - OSC clipboard handoff to the host clipboard
+    - ctrl-open path resolution using raw cwd metadata
+    - hover/open/input glue
+  - no equally obvious backend-owned native policy seam remains in the current
+    widget files
+  - this lane should pause unless a new concrete ownership smell appears
 
 ### Deferred But Explicit
 
