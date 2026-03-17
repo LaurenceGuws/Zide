@@ -71,7 +71,7 @@ pub fn observe(state: anytype, now: f64) Snapshot {
         pacing.last_generation_change_time = now;
     }
 
-    const redraw_pending = published_generation != pacing.last_drawn_generation;
+    const redraw_pending = published_generation != frame_state.presented_generation;
     const parse_backlog = current_generation != published_generation;
     return .{
         .session_ptr = frame_state.session_ptr,
@@ -161,7 +161,7 @@ pub fn logFramePacing(state: anytype, now: f64, snapshot: Snapshot, drew: bool, 
     if (!log.enabled_file and !log.enabled_console) return;
 
     const pacing = &state.terminal_frame_pacing;
-    const published_delta = snapshot.published_generation -| pacing.last_drawn_generation;
+    const published_delta = snapshot.published_generation -| snapshot.presented_generation;
     const current_delta = snapshot.current_generation -| snapshot.published_generation;
     const draw_gap_ms = if (pacing.last_draw_time > 0) (now - pacing.last_draw_time) * 1000.0 else 0.0;
 
@@ -177,7 +177,7 @@ pub fn logFramePacing(state: anytype, now: f64, snapshot: Snapshot, drew: bool, 
             @intFromBool(snapshot.parse_backlog),
             @intFromBool(snapshot.output_pressure),
             pacing.idle_frames,
-            pacing.last_drawn_generation,
+            snapshot.presented_generation,
             snapshot.published_generation,
             snapshot.current_generation,
             published_delta,
@@ -386,4 +386,34 @@ test "default sleep policy stays hot briefly after generation advancement" {
 
     state.terminal_frame_pacing.last_generation_change_time = 9.0;
     try std.testing.expectEqual(default_sleep_policy.short_idle_sleep_s, sleepDurationWithPolicy(default_sleep_policy, &state, 10.0, .{}));
+}
+
+test "observe keeps redraw pending until published generation is presented" {
+    const Workspace = struct {
+        fn activeFrameState(_: *@This()) struct {
+            has_data: bool,
+            session_ptr: usize,
+            current_generation: u64,
+            published_generation: u64,
+            presented_generation: u64,
+        } {
+            return .{
+                .has_data = false,
+                .session_ptr = 0x1234,
+                .current_generation = 14,
+                .published_generation = 13,
+                .presented_generation = 12,
+            };
+        }
+    };
+    const State = struct {
+        terminal_frame_pacing: @import("../app_state_types.zig").TerminalFramePacingState = .{},
+        terminal_workspace: ?Workspace = Workspace{},
+    };
+
+    var state = State{};
+    const snapshot = observe(&state, 10.0);
+    try std.testing.expect(snapshot.redraw_pending);
+    try std.testing.expectEqual(@as(u64, 12), snapshot.presented_generation);
+    try std.testing.expectEqual(@as(u64, 13), snapshot.published_generation);
 }

@@ -101,8 +101,8 @@ ownership.
   example (`gping_redraw`, `nvim_overlay`).
 - [x] Add replay harness fixture for `vttest` wraparound mode test
   (`vttest_wraparound`).
-- [ ] Defer the intermittent Codex completion-tail corruption bug until repro
-  authority is stable.
+- [ ] Defer the intermittent Codex completion-tail corruption bug again until
+  repro authority is stable.
   Notes:
   - Dogfood report, 2026-03-16:
     - intermittent corruption near the final Codex assistant summary dump
@@ -146,6 +146,15 @@ ownership.
       and not as a generic Codex parser/protocol bug
     - avoid escalating logging in the hot path unless we have no alternative,
       because instrumentation itself is now known to distort the repro
+  - Latest status, 2026-03-17:
+    - a pacing/present seam change on `main` now keeps redraw pressure keyed to
+      `published_generation != presented_generation` instead of “we drew once”
+    - short live re-checks against Codex did not reproduce the bug after that
+      change
+    - keep this issue deferred for now anyway; that is not enough authority to
+      declare it fixed
+    - only close it after longer normal dogfooding or a more decisive repro
+      disappearance across the original trigger lane
   - Resume only when we have one of:
     - a reliable manual repro
     - a deterministic capture/log slice that actually shows the bad frame

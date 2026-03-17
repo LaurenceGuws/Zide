@@ -34,7 +34,6 @@ pub fn handle(
         const draw_end = app_shell.getTime();
         draw_ms = (draw_end - draw_start) * 1000.0;
         const terminal_draw_metrics = app_terminal_frame_pacing_runtime.consumeDrawMetrics(state);
-        state.terminal_frame_pacing.last_drawn_generation = terminal_snapshot.published_generation;
         state.metrics.recordDraw(draw_start, draw_end);
         if (state.perf_mode and state.perf_frames_done > 0) {
             const draw_ms_perf = (draw_end - draw_start) * 1000.0;

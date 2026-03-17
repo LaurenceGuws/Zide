@@ -74,6 +74,9 @@ Reason:
 - newer low-noise proof tests now also cover bottom-edge in-place
   `full/empty/full/empty` footer rewrites and still preserve blank separator
   row damage correctly
+- a newer pacing/present seam change reduced redraw retirement optimism and
+  short live re-checks did not reproduce the bug afterward, but that is still
+  not enough authority to call it fixed
 - the best current local hypothesis is therefore a cadence-sensitive
   UI/present invalidation issue around the completion-tail flush, not a generic
   Codex parsing bug or proven scrollback corruption
