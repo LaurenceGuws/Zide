@@ -45,7 +45,9 @@ pub fn handle(
     editor_wrap: bool,
     editor_large_jump_rows: usize,
     search_panel_active: *bool,
+    search_panel_select_all: *bool,
     search_panel_query: *std.ArrayList(u8),
+    path_prompt: anytype,
     ctx: *anyopaque,
     hooks: Hooks,
 ) !app_update_prelude_frame_runtime.PreInputResult {
@@ -99,7 +101,7 @@ pub fn handle(
     }
 
     if (comptime mode_build.focused_mode != .terminal) {
-        if (focus == .editor and editors.len > 0) {
+        if (focus == .editor and editors.len > 0 and !search_panel_active.* and !path_prompt.active) {
             const app_editor_shortcuts_frame = @import("editor/editor_shortcuts_frame.zig");
             const action_layout = hooks.compute_layout(ctx, @floatFromInt(r.width), @floatFromInt(r.height));
             const editor_idx = @min(active_tab, editors.len - 1);
@@ -114,7 +116,9 @@ pub fn handle(
                 editor_wrap,
                 editor_large_jump_rows,
                 search_panel_active,
+                search_panel_select_all,
                 search_panel_query,
+                path_prompt,
             );
             if (editor_shortcut_result.needs_redraw) hooks.mark_redraw(ctx);
             if (editor_shortcut_result.handled) handled_shortcut = true;
