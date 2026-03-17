@@ -145,6 +145,16 @@ pub const TerminalWorkspace = struct {
         return self.tabs.items[self.activeIndex()].session;
     }
 
+    fn sessionNeedsCloseConfirm(session: *TerminalSession) bool {
+        if (!session.isAlive()) return false;
+        const activity = session.currentActivityMetadata();
+        return activity.foreground_process_present or
+            activity.semantic_input_active or
+            activity.semantic_output_active or
+            session.core.isAltActive() or
+            session.mouseReportingEnabled();
+    }
+
     pub fn copyActiveSessionCwd(
         self: *TerminalWorkspace,
         allocator: std.mem.Allocator,
@@ -162,7 +172,7 @@ pub const TerminalWorkspace = struct {
 
     pub fn activeSessionShouldConfirmClose(self: *const TerminalWorkspace) bool {
         if (self.tabs.items.len == 0) return false;
-        return self.tabs.items[self.activeIndex()].session.shouldConfirmClose();
+        return sessionNeedsCloseConfirm(self.tabs.items[self.activeIndex()].session);
     }
 
     pub fn activeSessionAlive(self: *const TerminalWorkspace) bool {
@@ -189,7 +199,7 @@ pub const TerminalWorkspace = struct {
 
     pub fn firstConfirmCloseTab(self: *const TerminalWorkspace) ?TabTarget {
         for (self.tabs.items, 0..) |tab, idx| {
-            if (!tab.session.shouldConfirmClose()) continue;
+            if (!sessionNeedsCloseConfirm(tab.session)) continue;
             return .{
                 .index = idx,
                 .id = tab.id,

@@ -70,3 +70,112 @@ boundary cut.
   content rendering/input internals.
 - `TerminalSession` reads more like a narrow engine/host seam and less like a
   container for desktop-only behavior.
+
+## Audit Notes
+
+`WBS-01` initial audit, 2026-03-17:
+
+### Engine Ownership
+
+- `src/terminal/core/session_interaction.zig`
+  - bracketed-paste mode detection
+  - focus-reporting, auto-repeat, and mouse-reporting mode state
+  - OSC 5522 protocol emission itself
+- `src/terminal/core/session_host_queries.zig`
+  - raw activity summary
+  - raw close-confirm ingredients:
+    - alt-screen
+    - mouse-reporting
+    - foreground process presence
+    - semantic command activity
+- `src/terminal/core/terminal_core.zig`
+  - title, cwd, semantic prompt, progress, and scrollback truth
+
+These are terminal-derived facts or protocol semantics. They should stay in the
+engine/backend contract.
+
+### Bridge Ownership
+
+- `src/terminal/ffi/shared.zig`
+  - event synthesis for:
+    - `title_changed`
+    - `cwd_changed`
+    - `clipboard_write`
+    - `child_exit`
+    - `alive_changed`
+  - cached last-seen host-facing metadata for FFI event generation
+
+This is host-integration glue, but it belongs to the bridge layer rather than
+to native widget/runtime code or terminal core.
+
+### Native Host / App Ownership
+
+- `src/terminal/core/session_interaction.zig`
+  - `pasteSystemClipboard(...)`
+    - resets scrollback to live bottom before paste
+    - decides fallback order between OSC 5522 rich paste and plain text
+    - filters bytes during bracketed paste for host safety policy
+  - `pasteSelectionClipboard(...)`
+    - same host-facing paste policy shape, minus the scrollback reset
+- `src/terminal/core/session_host_queries.zig`
+  - `copyMetadata(...)` currently substitutes title with foreground process
+    label when present
+  - `closeConfirmSignals(...)` packages host-facing confirmation policy into a
+    convenience struct
+
+These are the main remaining "native path convenience in backend clothing"
+seams. They are useful, but they are not pure engine truth.
+
+### Current Judgment
+
+The ripest next split is still paste ownership.
+
+Why:
+
+- it is the clearest place where host behavior and protocol behavior are mixed
+- it affects native UX directly
+- it can be split without widening FFI
+- it should let `TerminalSession` stop owning desktop-flavored paste policy
+
+Recommended order:
+
+1. `WBS-03` split paste into:
+   - engine protocol helpers:
+     - bracketed framing
+     - OSC 5522 emission
+   - native host policy:
+     - viewport-follow behavior
+     - fallback ordering
+     - byte filtering / safety decisions
+2. `WBS-04` revisit metadata/title substitution and close-confirm convenience
+   after paste is cleanly split
+
+Current progress:
+
+- `WBS-03` first cut landed:
+  - native widget code now owns paste policy in
+    `src/ui/widgets/terminal_widget_paste.zig`
+  - backend/session no longer exposes "paste the system clipboard for me"
+    helpers
+  - engine still owns bracketed-paste mode and OSC 5522 protocol emission
+- `WBS-04` first cut landed:
+  - native close-confirm routing in `src/terminal/core/workspace.zig` now
+    derives directly from activity + alt-screen + mouse-reporting truth
+  - native path no longer depends on `session.shouldConfirmClose()`
+
+Remaining highest-value seam:
+
+- `src/terminal/core/session_host_queries.zig`
+  - `copyMetadata(...)` still performs foreground-process title substitution
+  - that is still host-facing presentation convenience hiding inside backend
+    metadata
+  - native should eventually consume raw title plus activity metadata instead
+    of relying on substituted metadata title
+
+### Deferred But Explicit
+
+- FFI progress exposure is intentionally not part of this native boundary lane.
+- Native progress chrome now consumes backend truth cleanly enough for this
+  phase.
+- Bridge progress should come later as a separate semantic-family cut, not as a
+  side effect of widget/session cleanup.
