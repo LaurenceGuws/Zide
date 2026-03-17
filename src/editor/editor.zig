@@ -59,6 +59,7 @@ pub const Editor = struct {
     search_matches: std.ArrayList(SearchMatch),
     search_active: ?usize,
     search_mode: SearchMode,
+    search_refresh_on_text_change: bool,
     search_epoch: u64,
     search_worker: ?std.Thread,
     search_worker_running: bool,
@@ -109,6 +110,7 @@ pub const Editor = struct {
             .search_matches = .empty,
             .search_active = null,
             .search_mode = .literal,
+            .search_refresh_on_text_change = false,
             .search_epoch = 0,
             .search_worker = null,
             .search_worker_running = false,
@@ -748,6 +750,10 @@ pub const Editor = struct {
 
     pub fn setSearchQuery(self: *Editor, query: ?[]const u8) !void {
         try SearchHighlight.setSearchQuery(self, query);
+    }
+
+    pub fn setSearchRefreshOnTextChange(self: *Editor, enabled: bool) void {
+        self.search_refresh_on_text_change = enabled;
     }
 
     pub fn setSearchQueryRegex(self: *Editor, query: ?[]const u8) !void {

@@ -60,7 +60,7 @@ pub fn SearchHighlightOps(comptime Editor: type) type {
 
         pub fn noteTextChanged(self: *Editor) void {
             self.noteTextChangedBase();
-            if (self.search_query != null) {
+            if (self.search_query != null and self.search_refresh_on_text_change) {
                 self.recomputeSearchMatches() catch |err| {
                     const log = app_logger.logger("editor.search");
                     log.logf(.warning, "recompute search matches on text change failed: {s}", .{@errorName(err)});

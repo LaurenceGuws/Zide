@@ -24,12 +24,13 @@ pub fn applyCommand(
     command: app_search_panel_input.SearchPanelCommand,
     editor: *Editor,
     panel_active: *bool,
+    panel_select_all: *bool,
     query: *std.ArrayList(u8),
 ) CommandApplyResult {
     var out: CommandApplyResult = .{};
     switch (command) {
         .close => {
-            app_search_panel_state.closePanel(panel_active);
+            app_search_panel_state.closePanel(panel_active, panel_select_all, editor);
             out.handled = true;
         },
         .next => {
@@ -41,7 +42,12 @@ pub fn applyCommand(
             out.handled = true;
         },
         .backspace => {
-            app_search_panel_state.popQueryScalar(query);
+            if (panel_select_all.*) {
+                query.clearRetainingCapacity();
+                panel_select_all.* = false;
+            } else {
+                app_search_panel_state.popQueryScalar(query);
+            }
             out.query_changed = true;
             out.handled = true;
         },

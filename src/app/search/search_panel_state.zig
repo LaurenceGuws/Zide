@@ -6,6 +6,7 @@ const Editor = editor_mod.Editor;
 pub fn openPanel(
     allocator: std.mem.Allocator,
     active: *bool,
+    select_all: *bool,
     query: *std.ArrayList(u8),
     editor: *Editor,
 ) !void {
@@ -14,10 +15,14 @@ pub fn openPanel(
     if (editor.searchQuery()) |existing_query| {
         try query.appendSlice(allocator, existing_query);
     }
+    select_all.* = query.items.len > 0;
+    editor.setSearchRefreshOnTextChange(true);
 }
 
-pub fn closePanel(active: *bool) void {
+pub fn closePanel(active: *bool, select_all: *bool, editor: *Editor) void {
     active.* = false;
+    select_all.* = false;
+    editor.setSearchRefreshOnTextChange(false);
 }
 
 pub fn syncEditorSearchQuery(editor: *Editor, query: *const std.ArrayList(u8)) !void {
