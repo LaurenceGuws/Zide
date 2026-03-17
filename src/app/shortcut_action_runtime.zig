@@ -16,7 +16,9 @@ pub const Result = struct {
 
 pub const Hooks = struct {
     new_editor: *const fn (*anyopaque) anyerror!void,
+    open_file_prompt: *const fn (*anyopaque) anyerror!void,
     new_terminal: *const fn (*anyopaque) anyerror!void,
+    quit_app: *const fn (*anyopaque) void,
     handle_terminal_shortcut_intent: *const fn (*anyopaque, app_modes.ide.TerminalShortcutIntent, f64) anyerror!bool,
 };
 
@@ -36,6 +38,15 @@ pub fn handle(
         .new_editor => {
             if (app_modes.ide.canCreateEditorFromShortcut(app_mode)) {
                 try hooks.new_editor(ctx);
+                out.handled = true;
+                out.needs_redraw = true;
+                out.note_input = true;
+                return out;
+            }
+        },
+        .open_file => {
+            if (app_modes.ide.supportsEditorSurface(app_mode)) {
+                try hooks.open_file_prompt(ctx);
                 out.handled = true;
                 out.needs_redraw = true;
                 out.note_input = true;
@@ -129,6 +140,12 @@ pub fn handle(
                 out.note_input = true;
                 return out;
             }
+        },
+        .quit_app => {
+            hooks.quit_app(ctx);
+            out.handled = true;
+            out.note_input = true;
+            return out;
         },
         else => {},
     }

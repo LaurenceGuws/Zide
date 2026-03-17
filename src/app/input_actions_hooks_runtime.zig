@@ -11,6 +11,7 @@ const app_tab_action_apply_runtime = @import("tabs/tab_action_apply_runtime.zig"
 const app_terminal_close_active_runtime = @import("terminal/terminal_close_active_runtime.zig");
 const app_terminal_close_confirm_active_runtime = @import("terminal/terminal_close_confirm_active_runtime.zig");
 const app_terminal_tab_bar_sync_runtime = @import("terminal/terminal_tab_bar_sync_runtime.zig");
+const app_path_prompt_state = @import("editor/path_prompt_state.zig");
 const app_shell = @import("../app_shell.zig");
 const input_actions = @import("../input/input_actions.zig");
 
@@ -48,6 +49,23 @@ pub fn handle(state: anytype, frame_shell: *Shell, now: f64) !bool {
                                 fn call(hook_raw: *anyopaque) !void {
                                     const hook_state: *State = @ptrCast(@alignCast(hook_raw));
                                     try hook_state.newTerminal();
+                                }
+                            }.call,
+                            .open_file_prompt = struct {
+                                fn call(hook_raw: *anyopaque) !void {
+                                    const hook_state: *State = @ptrCast(@alignCast(hook_raw));
+                                    const active_editor = if (hook_state.editors.items.len > 0)
+                                        hook_state.editors.items[@min(hook_state.active_tab, hook_state.editors.items.len - 1)]
+                                    else
+                                        null;
+                                    hook_state.search_panel.active = false;
+                                    try app_path_prompt_state.openForOpen(&hook_state.path_prompt, hook_state.allocator, active_editor);
+                                }
+                            }.call,
+                            .quit_app = struct {
+                                fn call(hook_raw: *anyopaque) void {
+                                    const hook_state: *State = @ptrCast(@alignCast(hook_raw));
+                                    hook_state.shell.requestClose();
                                 }
                             }.call,
                             .handle_terminal_shortcut_intent = struct {

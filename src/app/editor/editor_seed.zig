@@ -4,15 +4,15 @@ const Editor = editor_mod.Editor;
 
 pub fn seedDefaultWelcomeBuffer(editor: *Editor) !void {
     try editor.insertText(
-        \\// Welcome to Zide - A Zig IDE
+        \\// Welcome to Zide Editor
         \\//
-        \\// Keyboard shortcuts:
+        \\// Text-only editor shortcuts:
         \\//   Ctrl+N  - New file
         \\//   Ctrl+O  - Open file
         \\//   Ctrl+S  - Save file
+        \\//   Ctrl+F  - Find
         \\//   Ctrl+Z  - Undo
         \\//   Ctrl+Y  - Redo
-        \\//   Ctrl+`  - Toggle terminal
         \\//   Ctrl+Q  - Quit
         \\//
         \\// Start typing to begin editing...

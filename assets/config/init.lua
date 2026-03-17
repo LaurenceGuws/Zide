@@ -389,6 +389,8 @@ return {
 		global = {
 			-- Config hot reload.
 			{ key = "n", mods = { "ctrl" }, action = "new_editor" },
+			{ key = "o", mods = { "ctrl" }, action = "open_file" },
+			{ key = "q", mods = { "ctrl" }, action = "quit_app" },
 			{ key = "equal", mods = { "ctrl" }, action = "zoom_in", ["repeat"] = true },
 			{ key = "kp_add", mods = { "ctrl" }, action = "zoom_in", ["repeat"] = true },
 			{ key = "minus", mods = { "ctrl" }, action = "zoom_out", ["repeat"] = true },
