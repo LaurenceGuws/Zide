@@ -68,6 +68,12 @@ Reason:
   path
 - current logging narrowed the suspicious area but did not yield a stable repro
 - the bug appears timing-sensitive enough that instrumentation perturbs it
+- added visibility is itself part of the problem: once logging/instrumentation
+  is increased enough to watch the handoff closely, the repro tends to stop
+  triggering
+- the best current local hypothesis is therefore a cadence-sensitive
+  publication/present issue around the completion-tail flush, not a generic
+  Codex parsing bug
 
 Owning references:
 
@@ -103,13 +109,15 @@ Original symptom:
 
 Disposition:
 
-- `deferred`
+- `superseded`
 
 Reason:
 
-- this remained coupled to the same timing-sensitive Codex redraw lane as
-  `TDF-02`
-- no stable repro or minimized replay input exists yet
+- later user re-check on current `main` did not reproduce the bug, including
+  GUI zoom plus Hyprland forcing a tiled half-monitor resize while Codex was
+  actively streaming
+- keep the historical note, but do not treat this as an active open issue
+  unless it reproduces again
 
 Owning references:
 
@@ -243,13 +251,12 @@ Owning references:
 From the original note:
 
 - fixed: `7`
-- deferred: `2`
-- superseded: `1`
+- deferred: `1`
+- superseded: `2`
 
 The remaining open dogfood work from this first-day note is therefore:
 
 1. `TDF-02` Codex final-summary dirty tracking corruption
-2. `TDF-04` Codex resize-while-streaming corruption
 
 Everything else in the raw note is either fixed or no longer a separate
 follow-up after larger architectural cuts landed.
