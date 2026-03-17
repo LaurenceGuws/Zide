@@ -113,6 +113,14 @@ pub fn handle(
                             prompt.error_text = "replace failed";
                         };
                     },
+                    .replace_all => {
+                        const editor = activeEditor(editors, active_tab) orelse return out;
+                        _ = editor.replaceAllSearchMatches(prompt.query.items) catch |err| {
+                            log.logf(.warning, "replace-all prompt submit failed err={s}", .{@errorName(err)});
+                            submit_succeeded = false;
+                            prompt.error_text = "replace all failed";
+                        };
+                    },
                 }
                 if (submit_succeeded) {
                     app_prompt_state.close(prompt);

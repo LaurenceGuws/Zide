@@ -13,6 +13,7 @@ pub const OptionsBar = struct {
         save_as,
         find,
         replace,
+        replace_all,
     };
 
     const MenuKind = enum {
@@ -67,6 +68,7 @@ pub const OptionsBar = struct {
     const edit_items = [_]MenuItem{
         .{ .label = "Find", .action = .find },
         .{ .label = "Replace", .action = .replace },
+        .{ .label = "Replace All", .action = .replace_all },
     };
 
     pub fn updateInput(self: *OptionsBar, input: shared_types.input.InputSnapshot) void {

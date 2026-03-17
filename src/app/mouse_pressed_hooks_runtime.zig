@@ -6,6 +6,8 @@ const app_terminal_tabs_runtime = @import("terminal/terminal_tabs_runtime.zig");
 const app_mode_adapter_sync_runtime = @import("mode_adapter_sync_runtime.zig");
 const app_tab_action_apply_runtime = @import("tabs/tab_action_apply_runtime.zig");
 const app_editor_intent_route = @import("editor/editor_intent_route.zig");
+const app_path_prompt_state = @import("editor/path_prompt_state.zig");
+const app_search_panel_state = @import("search/search_panel_state.zig");
 const app_terminal_intent_route_runtime = @import("terminal/terminal_intent_route_runtime.zig");
 const app_mouse_debug_log = @import("mouse_debug_log.zig");
 const app_shell = @import("../app_shell.zig");
@@ -28,6 +30,82 @@ pub fn handle(
 ) !void {
     _ = frame_shell;
     const State = @TypeOf(state.*);
+    if (frame_input_batch.mousePressed(input_types.MouseButton.left)) {
+        if (state.options_bar.handleClick(state.shell, frame_layout.window.width, frame_mouse)) |action| {
+            const active_editor = if (state.editors.items.len > 0)
+                state.editors.items[@min(state.active_tab, state.editors.items.len - 1)]
+            else
+                null;
+            switch (action) {
+                .new_file => try state.newEditor(),
+                .open_file => {
+                    state.search_panel.active = false;
+                    try app_path_prompt_state.openForOpen(&state.path_prompt, state.allocator, active_editor);
+                },
+                .save => {
+                    if (active_editor) |editor| {
+                        if (editor.file_path != null) {
+                            try editor.save();
+                        } else {
+                            state.search_panel.active = false;
+                            try app_path_prompt_state.openForSaveAs(&state.path_prompt, state.allocator, editor);
+                        }
+                    }
+                },
+                .save_as => {
+                    state.search_panel.active = false;
+                    try app_path_prompt_state.openForSaveAs(&state.path_prompt, state.allocator, active_editor);
+                },
+                .find => {
+                    if (active_editor) |editor| {
+                        app_path_prompt_state.close(&state.path_prompt);
+                        try app_search_panel_state.openPanel(
+                            state.allocator,
+                            &state.search_panel.active,
+                            &state.search_panel.select_all,
+                            &state.search_panel.query,
+                            editor,
+                        );
+                    }
+                },
+                .replace => {
+                    if (active_editor) |editor| {
+                        if (editor.searchQuery() != null) {
+                            try app_path_prompt_state.openForReplace(&state.path_prompt, state.allocator);
+                        } else {
+                            app_path_prompt_state.close(&state.path_prompt);
+                            try app_search_panel_state.openPanel(
+                                state.allocator,
+                                &state.search_panel.active,
+                                &state.search_panel.select_all,
+                                &state.search_panel.query,
+                                editor,
+                            );
+                        }
+                    }
+                },
+                .replace_all => {
+                    if (active_editor) |editor| {
+                        if (editor.searchQuery() != null) {
+                            try app_path_prompt_state.openForReplaceAll(&state.path_prompt, state.allocator);
+                        } else {
+                            app_path_prompt_state.close(&state.path_prompt);
+                            try app_search_panel_state.openPanel(
+                                state.allocator,
+                                &state.search_panel.active,
+                                &state.search_panel.select_all,
+                                &state.search_panel.query,
+                                editor,
+                            );
+                        }
+                    }
+                },
+            }
+            state.needs_redraw = true;
+            state.metrics.noteInput(now);
+            return;
+        }
+    }
     try app_mouse_pressed_frame.handle(
         state.app_mode,
         frame_input_batch,

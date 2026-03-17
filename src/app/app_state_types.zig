@@ -95,6 +95,7 @@ pub const PathPromptKind = enum {
     open_file,
     save_as,
     replace,
+    replace_all,
 };
 
 pub const PathPromptState = struct {

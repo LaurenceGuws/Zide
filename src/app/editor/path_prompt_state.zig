@@ -38,11 +38,16 @@ pub fn openForReplace(state: *State, allocator: std.mem.Allocator) !void {
     try open(state, allocator, .replace, "");
 }
 
+pub fn openForReplaceAll(state: *State, allocator: std.mem.Allocator) !void {
+    try open(state, allocator, .replace_all, "");
+}
+
 pub fn label(kind: Kind) []const u8 {
     return switch (kind) {
         .open_file => "Open",
         .save_as => "Save As",
         .replace => "Replace",
+        .replace_all => "Replace All",
     };
 }
 
@@ -51,5 +56,6 @@ pub fn placeholder(kind: Kind) []const u8 {
         .open_file => "enter path and press Enter",
         .save_as => "enter destination path and press Enter",
         .replace => "enter replacement and press Enter",
+        .replace_all => "enter replacement and press Enter",
     };
 }
