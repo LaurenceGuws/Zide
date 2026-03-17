@@ -1,5 +1,6 @@
 const std = @import("std");
 const terminal = @import("../core/terminal.zig");
+const session_lifecycle = @import("../core/session_lifecycle.zig");
 const types = @import("../model/types.zig");
 const app_logger = @import("../../app_logger.zig");
 
@@ -565,15 +566,40 @@ pub fn syncStringEvent(handle: *Handle, kind: EventKind, last: *std.ArrayList(u8
     try last.appendSlice(handle.allocator, current);
 }
 
+const DerivedEventState = struct {
+    title: []const u8,
+    cwd: []const u8,
+    alive: bool,
+    exit_code: ?i32,
+};
+
+fn copyTextInto(allocator: std.mem.Allocator, out: *std.ArrayList(u8), text: []const u8) ![]const u8 {
+    out.clearRetainingCapacity();
+    try out.appendSlice(allocator, text);
+    return out.items;
+}
+
+fn currentDerivedEventState(handle: *Handle) !DerivedEventState {
+    handle.session.lock();
+    defer handle.session.unlock();
+
+    return .{
+        .title = try copyTextInto(handle.allocator, &handle.scratch_title, handle.session.core.titleText()),
+        .cwd = try copyTextInto(handle.allocator, &handle.scratch_cwd, handle.session.core.cwdText()),
+        .alive = handle.session.isAlive(),
+        .exit_code = session_lifecycle.childExitCode(handle.session),
+    };
+}
+
 pub fn syncDerivedEvents(handle: *Handle) Status {
     const generation = handle.session.publishedGeneration();
     if (handle.last_generation != generation) {
         queueEvent(handle, .redraw_ready, &[_]u8{}, 0, 0) catch |err| return mapError(err);
         handle.last_generation = generation;
     }
-    const metadata = handle.session.copyMetadata(handle.allocator, &handle.scratch_title, &handle.scratch_cwd) catch |err| return mapError(err);
-    syncStringEvent(handle, .title_changed, &handle.last_title, metadata.title) catch |err| return mapError(err);
-    syncStringEvent(handle, .cwd_changed, &handle.last_cwd, metadata.cwd) catch |err| return mapError(err);
+    const state = currentDerivedEventState(handle) catch |err| return mapError(err);
+    syncStringEvent(handle, .title_changed, &handle.last_title, state.title) catch |err| return mapError(err);
+    syncStringEvent(handle, .cwd_changed, &handle.last_cwd, state.cwd) catch |err| return mapError(err);
 
     if (handle.session.takeOscClipboardCopy(handle.allocator, &handle.scratch_clipboard) catch |err| return mapError(err)) {
         const clip = handle.scratch_clipboard.items;
@@ -583,12 +609,12 @@ pub fn syncDerivedEvents(handle: *Handle) Status {
         handle.clipboard_write_pending = true;
         queueEvent(handle, .clipboard_write, payload, 0, 0) catch |err| return mapError(err);
     }
-    if (handle.last_alive != metadata.alive) {
-        queueEvent(handle, .alive_changed, &[_]u8{}, @intFromBool(metadata.alive), 0) catch |err| return mapError(err);
-        handle.last_alive = metadata.alive;
+    if (handle.last_alive != state.alive) {
+        queueEvent(handle, .alive_changed, &[_]u8{}, @intFromBool(state.alive), 0) catch |err| return mapError(err);
+        handle.last_alive = state.alive;
     }
     if (!handle.exit_delivered) {
-        if (metadata.exit_code) |code| {
+        if (state.exit_code) |code| {
             queueEvent(handle, .child_exit, &[_]u8{}, code, 1) catch |err| return mapError(err);
             handle.exit_delivered = true;
         }

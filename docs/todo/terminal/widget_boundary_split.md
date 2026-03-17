@@ -171,6 +171,11 @@ Current progress:
     `session_host_queries.zig` or `TerminalSession`
   - bridge/FFI now assembles close-confirm convenience directly from raw
     activity + alt-screen + mouse-reporting truth
+- bridge event-sync follow-up landed:
+  - `ffi/shared.zig` no longer routes derived event synthesis through the broad
+    `SessionMetadata` bundle
+  - title/cwd and lifecycle events now read only the raw fields they actually
+    need, keeping bridge convenience narrower and more explicit
 
 Remaining highest-value seam:
 
