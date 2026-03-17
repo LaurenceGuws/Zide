@@ -6,7 +6,6 @@ const session_lifecycle = @import("session_lifecycle.zig");
 
 pub const SessionMetadata = session_host_types.SessionMetadata;
 pub const ActivityMetadata = session_host_types.ActivityMetadata;
-pub const CloseConfirmSignals = session_host_types.CloseConfirmSignals;
 
 fn copyTextInto(allocator: std.mem.Allocator, out: *std.ArrayList(u8), text: []const u8) ![]const u8 {
     out.clearRetainingCapacity();
@@ -38,18 +37,6 @@ pub fn copyMetadata(
         .alive = alive,
         .exit_code = exit_code,
     };
-}
-
-pub fn closeConfirmSignals(self: anytype) CloseConfirmSignals {
-    var signals = CloseConfirmSignals{};
-    if (!isAlive(self)) return signals;
-
-    const activity = currentActivityMetadata(self);
-    signals.foreground_process = activity.foreground_process_present;
-    signals.semantic_command = activity.semantic_input_active or activity.semantic_output_active;
-    signals.alt_screen = self.core.isAltActive();
-    signals.mouse_reporting = self.mouseReportingEnabled();
-    return signals;
 }
 
 pub fn currentActivityMetadata(self: anytype) ActivityMetadata {
@@ -108,10 +95,6 @@ pub fn copyActivityMetadata(
         .semantic_prompt_exit_code = current.semantic_prompt_exit_code,
         .progress = current.progress,
     };
-}
-
-pub fn shouldConfirmClose(self: anytype) bool {
-    return closeConfirmSignals(self).any();
 }
 
 pub fn isAlive(self: anytype) bool {

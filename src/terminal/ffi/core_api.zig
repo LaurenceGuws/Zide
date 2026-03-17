@@ -13,6 +13,28 @@ const MetadataOwner = shared.MetadataOwner;
 const ScrollbackOwner = shared.ScrollbackOwner;
 const EventOwner = shared.EventOwner;
 
+fn currentCloseConfirmSignals(handle: *shared.Handle) shared.CloseConfirmSignals {
+    const activity = handle.session.currentActivityMetadata();
+    const foreground_process = @intFromBool(activity.foreground_process_present);
+    const semantic_command = @intFromBool(activity.semantic_input_active or activity.semantic_output_active);
+    const alt_screen = @intFromBool(handle.session.core.isAltActive());
+    const mouse_reporting = @intFromBool(handle.session.mouseReportingEnabled());
+    return .{
+        .abi_version = shared.close_confirm_abi_version,
+        .struct_size = @sizeOf(shared.CloseConfirmSignals),
+        .foreground_process = foreground_process,
+        .semantic_command = semantic_command,
+        .alt_screen = alt_screen,
+        .mouse_reporting = mouse_reporting,
+        .any = @intFromBool(
+            foreground_process != 0 or
+                semantic_command != 0 or
+                alt_screen != 0 or
+                mouse_reporting != 0,
+        ),
+    };
+}
+
 fn currentPublishedGeneration(handle: *shared.Handle) u64 {
     return handle.session.publishedGeneration();
 }
@@ -421,16 +443,7 @@ pub fn redrawState(handle: ?*shared.ZideTerminalHandle, out_state: *shared.Redra
 
 pub fn closeConfirmSignals(handle: ?*shared.ZideTerminalHandle, out_signals: *shared.CloseConfirmSignals) shared.Status {
     const h = shared.fromOpaque(handle) orelse return .invalid_argument;
-    const signals = h.session.closeConfirmSignals();
-    out_signals.* = .{
-        .abi_version = shared.close_confirm_abi_version,
-        .struct_size = @sizeOf(shared.CloseConfirmSignals),
-        .foreground_process = @intFromBool(signals.foreground_process),
-        .semantic_command = @intFromBool(signals.semantic_command),
-        .alt_screen = @intFromBool(signals.alt_screen),
-        .mouse_reporting = @intFromBool(signals.mouse_reporting),
-        .any = @intFromBool(signals.any()),
-    };
+    out_signals.* = currentCloseConfirmSignals(h);
     return .ok;
 }
 

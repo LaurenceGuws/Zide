@@ -166,14 +166,19 @@ Current progress:
   - native close-confirm routing in `src/terminal/core/workspace.zig` now
     derives directly from activity + alt-screen + mouse-reporting truth
   - native path no longer depends on `session.shouldConfirmClose()`
+- `WBS-04` follow-up cut landed:
+  - `closeConfirmSignals(...)` / `shouldConfirmClose()` no longer live in
+    `session_host_queries.zig` or `TerminalSession`
+  - bridge/FFI now assembles close-confirm convenience directly from raw
+    activity + alt-screen + mouse-reporting truth
 
 Remaining highest-value seam:
 
 - bridge-side and host-side convenience should now be judged separately:
   - native tab policy already consumes raw title plus activity explicitly
-  - bridge/FFI still has convenience packaging such as `closeConfirmSignals(...)`
-    and title/cwd event synthesis, which is acceptable as bridge ownership but
-    should not leak back into engine/session semantics
+  - bridge/FFI still has convenience packaging such as title/cwd event
+    synthesis, which is acceptable as bridge ownership but should not leak back
+    into engine/session semantics
 
 Additional progress:
 
