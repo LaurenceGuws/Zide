@@ -14,6 +14,8 @@ What it does:
 - creates a bundle with bundled libs + terminfo
 - installs to `/opt/zide-terminal-bundle`
 - installs launcher symlink at `/usr/bin/zide-terminal`
+- installs a desktop entry as `zide-terminal.desktop`
+- installs an app icon as `zide-terminal`
 
 ## Versioning note
 
@@ -25,6 +27,10 @@ upstream product version separately and uses an Arch-safe package version.
 ```bash
 zide-terminal
 ```
+
+Or launch `Zide Terminal` from your desktop launcher. This launcher points at the
+packaged `/usr/bin/zide-terminal` path, so it matches the local dogfood package
+instead of older ad hoc binaries under `~/.local/bin`.
 
 ## Remove
 

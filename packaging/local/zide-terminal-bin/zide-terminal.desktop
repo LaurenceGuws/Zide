@@ -1,0 +1,9 @@
+[Desktop Entry]
+Type=Application
+Name=Zide Terminal
+Exec=/usr/bin/zide-terminal
+Icon=zide-terminal
+Terminal=false
+Categories=Development;IDE;TerminalEmulator;
+StartupWMClass=zide-terminal
+StartupNotify=true

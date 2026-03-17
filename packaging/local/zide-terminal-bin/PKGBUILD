@@ -23,6 +23,9 @@ build() {
 }
 
 package() {
+  local repo_root
+  repo_root="$(cd "${startdir}/../../.." && pwd)"
+
   install -d "${pkgdir}/opt/zide-terminal-bundle"
   cp -a "${srcdir}/zide-terminal-bundle/." "${pkgdir}/opt/zide-terminal-bundle/"
 
@@ -40,4 +43,10 @@ package() {
 
   install -d "${pkgdir}/usr/bin"
   ln -s /opt/zide-terminal-bundle/zide-terminal "${pkgdir}/usr/bin/zide-terminal"
+
+  install -d "${pkgdir}/usr/share/applications"
+  install -m 0644 "${startdir}/zide-terminal.desktop" "${pkgdir}/usr/share/applications/zide-terminal.desktop"
+
+  install -d "${pkgdir}/usr/share/icons/hicolor/256x256/apps"
+  install -m 0644 "${repo_root}/assets/icon/color_icon.png" "${pkgdir}/usr/share/icons/hicolor/256x256/apps/zide-terminal.png"
 }
