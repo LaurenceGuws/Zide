@@ -15,6 +15,7 @@ pub fn open(state: anytype, path: []const u8) !void {
     const filename = std.fs.path.basename(path);
     try state.tab_bar.addTab(filename, .editor);
     state.active_tab = state.tab_bar.tabs.items.len - 1;
+    state.tab_bar.active_index = state.active_tab;
     state.active_kind = .editor;
     try app_mode_adapter_sync_runtime.sync(state);
 }
@@ -29,6 +30,7 @@ pub fn openAt(state: anytype, path: []const u8, line_1: usize, col_1: ?usize) !v
     const filename = std.fs.path.basename(path);
     try state.tab_bar.addTab(filename, .editor);
     state.active_tab = state.tab_bar.tabs.items.len - 1;
+    state.tab_bar.active_index = state.active_tab;
     state.active_kind = .editor;
     try app_mode_adapter_sync_runtime.sync(state);
 

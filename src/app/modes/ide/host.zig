@@ -104,6 +104,7 @@ pub fn mouseClickRoute(app_mode: app_bootstrap.AppMode) MouseClickRoute {
     return switch (mode_build.effectiveMode(app_mode)) {
         .ide => .ide,
         .terminal => .terminal,
+        .editor => .ide,
         else => .editor,
     };
 }

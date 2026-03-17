@@ -11,6 +11,7 @@ pub fn handle(state: anytype) !void {
     try state.editors.append(state.allocator, editor);
     try state.tab_bar.addTab("untitled", .editor);
     state.active_tab = state.tab_bar.tabs.items.len - 1;
+    state.tab_bar.active_index = state.active_tab;
     state.active_kind = .editor;
     try app_mode_adapter_sync_runtime.sync(state);
 }
