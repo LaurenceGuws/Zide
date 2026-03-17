@@ -36,6 +36,7 @@ fn dupManualHighlightRules(allocator: std.mem.Allocator, rules: []const EditorMa
             .parser = try allocator.dupe(u8, rule.parser),
             .builtin = if (rule.builtin) |builtin| try allocator.dupe(u8, builtin) else null,
             .query_path = if (rule.query_path) |query_path| try allocator.dupe(u8, query_path) else null,
+            .mode = rule.mode,
         };
         loaded += 1;
     }
@@ -47,6 +48,7 @@ fn dupManualHighlightFallback(allocator: std.mem.Allocator, fallback: EditorManu
         .parser = try allocator.dupe(u8, fallback.parser),
         .builtin = if (fallback.builtin) |builtin| try allocator.dupe(u8, builtin) else null,
         .query_path = if (fallback.query_path) |query_path| try allocator.dupe(u8, query_path) else null,
+        .mode = fallback.mode,
     };
 }
 

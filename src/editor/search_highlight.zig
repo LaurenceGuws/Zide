@@ -200,7 +200,16 @@ pub fn SearchHighlightOps(comptime Editor: type) type {
                 };
                 var query_paths = grammar.query_paths;
                 if (manual_override) |spec| {
-                    if (spec.query_path) |query_path| query_paths.highlights = @constCast(query_path);
+                    if (spec.query_path) |query_path| {
+                        if (spec.mode == .replace) {
+                            query_paths.highlights = @constCast(query_path);
+                            query_paths.highlights_overlay = null;
+                            query_paths.highlights_overlay_mode = .replace;
+                        } else {
+                            query_paths.highlights_overlay = query_path;
+                            query_paths.highlights_overlay_mode = spec.mode;
+                        }
+                    }
                 }
                 self.highlighter = syntax_mod.createHighlighterForLanguage(
                     self.allocator,

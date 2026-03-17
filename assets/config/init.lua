@@ -278,14 +278,18 @@ return {
 		-- `parser`/`language` is the tree-sitter grammar to use.
 		-- `builtin` points at a shipped preset in `assets/queries/manual/*.scm`.
 		-- `query_path` can point at your own `.scm` file instead.
+		-- `mode` controls how the manual query combines with grammar defaults:
+		--   "append"  (default) = default query first, manual query after
+		--   "prepend"           = manual query first, default query after
+		--   "replace"           = manual query only
 		--
 		-- No generic `.txt` fallback is enabled by default yet. The first shipped
 		-- preset is `.log`, routed through the `comment` grammar.
 		highlights = {
 			extensions = {
-				log = { parser = "comment", builtin = "log_levels" },
+				log = { parser = "comment", builtin = "log_levels", mode = "append" },
 			},
-			-- unsupported = { parser = "comment", builtin = "log_levels" },
+			-- unsupported = { parser = "comment", builtin = "log_levels", mode = "append" },
 		},
 		-- Optional per-editor selection overlay override.
 		-- selection_overlay = {

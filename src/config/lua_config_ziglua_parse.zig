@@ -12,6 +12,7 @@ const app_logger = @import("../app_logger.zig");
 pub const LuaConfigError = iface.LuaConfigError;
 pub const Config = iface.Config;
 const EditorManualHighlightFallback = iface.EditorManualHighlightFallback;
+const EditorManualHighlightMode = iface.EditorManualHighlightMode;
 const EditorManualHighlightRule = iface.EditorManualHighlightRule;
 const ThemeConfig = iface.ThemeConfig;
 
@@ -51,10 +52,12 @@ fn parseManualHighlightSpec(
     parser: []u8,
     builtin: ?[]u8,
     query_path: ?[]u8,
+    mode: EditorManualHighlightMode,
 } {
     var parser: ?[]u8 = null;
     var builtin: ?[]u8 = null;
     var query_path: ?[]u8 = null;
+    var mode: EditorManualHighlightMode = .append;
     errdefer {
         if (parser) |value| allocator.free(value);
         if (builtin) |value| allocator.free(value);
@@ -86,11 +89,26 @@ fn parseManualHighlightSpec(
     }
     lua.pop(1);
 
+    _ = lua.getField(table_index, "mode");
+    if (lua.isString(-1)) {
+        if (lua.toString(-1)) |v| {
+            if (std.mem.eql(u8, v, "replace")) {
+                mode = .replace;
+            } else if (std.mem.eql(u8, v, "prepend")) {
+                mode = .prepend;
+            } else if (std.mem.eql(u8, v, "append")) {
+                mode = .append;
+            }
+        } else |_| {}
+    }
+    lua.pop(1);
+
     if (parser == null) return null;
     return .{
         .parser = parser.?,
         .builtin = builtin,
         .query_path = query_path,
+        .mode = mode,
     };
 }
 
@@ -117,6 +135,7 @@ fn parseManualHighlightRules(allocator: std.mem.Allocator, lua: *zlua.Lua, table
             .parser = spec.parser,
             .builtin = spec.builtin,
             .query_path = spec.query_path,
+            .mode = spec.mode,
         });
     }
     return try rules.toOwnedSlice(allocator);
@@ -128,6 +147,7 @@ fn parseManualHighlightFallback(allocator: std.mem.Allocator, lua: *zlua.Lua, ta
         .parser = spec.parser,
         .builtin = spec.builtin,
         .query_path = spec.query_path,
+        .mode = spec.mode,
     };
 }
 
@@ -622,9 +642,9 @@ test "parseConfigFromLuaState parses editor manual highlight overrides" {
         \\    editor = {
         \\        highlights = {
         \\            extensions = {
-        \\                log = { parser = "comment", builtin = "log_levels" },
+        \\                log = { parser = "comment", builtin = "log_levels", mode = "prepend" },
         \\            },
-        \\            unsupported = { language = "comment", query_path = "queries/custom/plain.scm" },
+        \\            unsupported = { language = "comment", query_path = "queries/custom/plain.scm", mode = "replace" },
         \\        },
         \\    },
         \\}
@@ -639,7 +659,9 @@ test "parseConfigFromLuaState parses editor manual highlight overrides" {
     try std.testing.expectEqualStrings("log", config.editor_manual_highlight_rules.?[0].extension);
     try std.testing.expectEqualStrings("comment", config.editor_manual_highlight_rules.?[0].parser);
     try std.testing.expectEqualStrings("log_levels", config.editor_manual_highlight_rules.?[0].builtin.?);
+    try std.testing.expectEqual(EditorManualHighlightMode.prepend, config.editor_manual_highlight_rules.?[0].mode);
     try std.testing.expect(config.editor_manual_highlight_unsupported != null);
     try std.testing.expectEqualStrings("comment", config.editor_manual_highlight_unsupported.?.parser);
     try std.testing.expectEqualStrings("queries/custom/plain.scm", config.editor_manual_highlight_unsupported.?.query_path.?);
+    try std.testing.expectEqual(EditorManualHighlightMode.replace, config.editor_manual_highlight_unsupported.?.mode);
 }

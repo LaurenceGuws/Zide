@@ -460,6 +460,8 @@ pub fn SyntaxRuntime(
                     language_name,
                     grammar.ts_language,
                     grammar.query_paths.highlights,
+                    null,
+                    .replace,
                 ) orelse {
                     c.ts_query_cursor_delete(cursor);
                     c.ts_parser_delete(parser);
@@ -511,6 +513,8 @@ pub fn SyntaxRuntime(
                 language_name,
                 language,
                 query_paths.highlights,
+                query_paths.highlights_overlay,
+                query_paths.highlights_overlay_mode,
             ) orelse return error.InitFailed;
 
             const self = try allocator.create(SyntaxHighlighter);

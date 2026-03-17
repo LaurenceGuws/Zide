@@ -16,6 +16,9 @@ pub const GlyphOverflowPolicy = iface.GlyphOverflowPolicy;
 pub const TerminalBlinkStyle = iface.TerminalBlinkStyle;
 pub const TerminalDisableLigaturesStrategy = iface.TerminalDisableLigaturesStrategy;
 pub const TerminalNewTabStartLocationMode = iface.TerminalNewTabStartLocationMode;
+pub const EditorManualHighlightMode = iface.EditorManualHighlightMode;
+pub const EditorManualHighlightRule = iface.EditorManualHighlightRule;
+pub const EditorManualHighlightFallback = iface.EditorManualHighlightFallback;
 pub const TabBarWidthMode = iface.TabBarWidthMode;
 pub const ThemeConfig = iface.ThemeConfig;
 

@@ -4,6 +4,7 @@ const ts_api = @import("treesitter_api.zig");
 const app_logger = @import("../app_logger.zig");
 
 const c = ts_api.c_api;
+pub const QueryMergeMode = @import("manual_highlights.zig").QueryMergeMode;
 
 pub const QueryPaths = grammar_manager_mod.QueryPaths;
 
@@ -44,18 +45,22 @@ pub fn QueryInfra(comptime HighlightToken: type, comptime TokenKind: type) type 
                 query_name: []const u8,
                 language: *const c.TSLanguage,
                 query_path: ?[]const u8,
+                overlay_query_path: ?[]const u8,
+                overlay_mode: QueryMergeMode,
             ) !?*QueryBundle {
-                const key = try std.fmt.allocPrint(self.allocator, "{s}:{s}:{s}", .{
+                const key = try std.fmt.allocPrint(self.allocator, "{s}:{s}:{s}:{s}:{s}", .{
                     language_name,
                     query_name,
                     query_path orelse "",
+                    overlay_query_path orelse "",
+                    @tagName(overlay_mode),
                 });
                 if (self.map.get(key)) |bundle| {
                     self.allocator.free(key);
                     return bundle;
                 }
 
-                const query_text = try loadQueryText(self.allocator, language_name, query_name, query_path) orelse {
+                const query_text = try loadQueryText(self.allocator, language_name, query_name, query_path, overlay_query_path, overlay_mode) orelse {
                     self.allocator.free(key);
                     return null;
                 };
@@ -200,7 +205,7 @@ pub fn QueryInfra(comptime HighlightToken: type, comptime TokenKind: type) type 
                     return bundle;
                 }
 
-                const query_text = try loadQueryText(self.allocator, language_name, "injections", query_path) orelse {
+                const query_text = try loadQueryText(self.allocator, language_name, "injections", query_path, null, .replace) orelse {
                     self.allocator.free(key);
                     return null;
                 };
@@ -268,8 +273,10 @@ pub fn QueryInfra(comptime HighlightToken: type, comptime TokenKind: type) type 
             language_name: []const u8,
             language: *const c.TSLanguage,
             query_path: ?[]const u8,
+            overlay_query_path: ?[]const u8,
+            overlay_mode: QueryMergeMode,
         ) !?*QueryBundle {
-            return global_query_cache.getOrLoad(language_name, "highlights", language, query_path);
+            return global_query_cache.getOrLoad(language_name, "highlights", language, query_path, overlay_query_path, overlay_mode);
         }
 
         pub fn loadInjectionQuery(
@@ -283,6 +290,34 @@ pub fn QueryInfra(comptime HighlightToken: type, comptime TokenKind: type) type 
 }
 
 fn loadQueryText(
+    allocator: std.mem.Allocator,
+    language_name: []const u8,
+    query_name: []const u8,
+    query_path: ?[]const u8,
+    overlay_query_path: ?[]const u8,
+    overlay_mode: QueryMergeMode,
+) !?[]u8 {
+    const base = try loadBaseQueryText(allocator, language_name, query_name, query_path);
+    errdefer if (base) |data| allocator.free(data);
+    const overlay = try loadOverlayQueryText(allocator, overlay_query_path);
+    errdefer if (overlay) |data| allocator.free(data);
+
+    if (overlay == null) return base;
+    if (overlay_mode == .replace) {
+        if (base) |data| allocator.free(data);
+        return overlay;
+    }
+    if (base == null) return overlay;
+
+    const first = if (overlay_mode == .prepend) overlay.? else base.?;
+    const second = if (overlay_mode == .prepend) base.? else overlay.?;
+    const merged = try std.fmt.allocPrint(allocator, "{s}\n{s}", .{ first, second });
+    allocator.free(base.?);
+    allocator.free(overlay.?);
+    return merged;
+}
+
+fn loadBaseQueryText(
     allocator: std.mem.Allocator,
     language_name: []const u8,
     query_name: []const u8,
@@ -334,6 +369,20 @@ fn loadQueryText(
         return data;
     }
 
+    return null;
+}
+
+fn loadOverlayQueryText(allocator: std.mem.Allocator, overlay_query_path: ?[]const u8) !?[]u8 {
+    const path = overlay_query_path orelse return null;
+    if (try readFileAbsoluteIfExists(allocator, path)) |data| {
+        if (data.len == 0) {
+            allocator.free(data);
+            return null;
+        }
+        const log = app_logger.logger("editor.highlight");
+        log.logf(.info, "query overlay path={s} bytes={d}", .{ path, data.len });
+        return data;
+    }
     return null;
 }
 

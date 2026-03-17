@@ -4,6 +4,7 @@ const app_logger = @import("../app_logger.zig");
 
 const ts_api = @import("treesitter_api.zig");
 const c = ts_api.c_api;
+const QueryMergeMode = @import("manual_highlights.zig").QueryMergeMode;
 
 pub const TSLanguage = ts_api.TSLanguage;
 
@@ -11,6 +12,8 @@ const LanguageFn = *const fn () callconv(.c) *const c.TSLanguage;
 
 pub const QueryPaths = struct {
     highlights: ?[]u8 = null,
+    highlights_overlay: ?[]const u8 = null,
+    highlights_overlay_mode: QueryMergeMode = .replace,
     injections: ?[]u8 = null,
     locals: ?[]u8 = null,
     tags: ?[]u8 = null,

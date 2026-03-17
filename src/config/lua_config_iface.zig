@@ -99,12 +99,20 @@ pub const EditorManualHighlightRule = struct {
     parser: []u8,
     builtin: ?[]u8 = null,
     query_path: ?[]u8 = null,
+    mode: EditorManualHighlightMode = .append,
 };
 
 pub const EditorManualHighlightFallback = struct {
     parser: []u8,
     builtin: ?[]u8 = null,
     query_path: ?[]u8 = null,
+    mode: EditorManualHighlightMode = .append,
+};
+
+pub const EditorManualHighlightMode = enum {
+    replace,
+    append,
+    prepend,
 };
 
 pub const Config = struct {

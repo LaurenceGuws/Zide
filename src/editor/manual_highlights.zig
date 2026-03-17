@@ -1,21 +1,26 @@
 const std = @import("std");
 const config_mod = @import("../config/lua_config.zig");
 
+pub const QueryMergeMode = config_mod.EditorManualHighlightMode;
+
 pub const Resolved = struct {
     parser: []const u8,
     query_path: ?[]const u8,
+    mode: QueryMergeMode,
 };
 
 const Rule = struct {
     extension: []u8,
     parser: []u8,
     query_path: ?[]u8,
+    mode: QueryMergeMode,
 };
 
 const BuiltinRule = struct {
     extension: []const u8,
     parser: []const u8,
     query_path: []const u8,
+    mode: QueryMergeMode,
 };
 
 const builtin_rules = [_]BuiltinRule{
@@ -23,6 +28,7 @@ const builtin_rules = [_]BuiltinRule{
         .extension = "log",
         .parser = "comment",
         .query_path = "assets/queries/manual/log_levels.scm",
+        .mode = .append,
     },
 };
 
@@ -44,6 +50,7 @@ pub fn applyConfig(allocator: std.mem.Allocator, config: *const config_mod.Confi
                 .extension = try arena_alloc.dupe(u8, rule.extension),
                 .parser = try arena_alloc.dupe(u8, rule.parser),
                 .query_path = try resolveQueryPath(arena_alloc, rule.builtin, rule.query_path),
+                .mode = rule.mode,
             };
         }
     } else {
@@ -54,6 +61,7 @@ pub fn applyConfig(allocator: std.mem.Allocator, config: *const config_mod.Confi
         unsupported = .{
             .parser = try arena_alloc.dupe(u8, fallback.parser),
             .query_path = try resolveQueryPath(arena_alloc, fallback.builtin, fallback.query_path),
+            .mode = fallback.mode,
         };
     } else {
         unsupported = null;
@@ -77,6 +85,7 @@ pub fn resolve(path: ?[]const u8, default_language: ?[]const u8) ?Resolved {
             return .{
                 .parser = rule.parser,
                 .query_path = rule.query_path,
+                .mode = rule.mode,
             };
         }
     }
@@ -86,6 +95,7 @@ pub fn resolve(path: ?[]const u8, default_language: ?[]const u8) ?Resolved {
             return .{
                 .parser = rule.parser,
                 .query_path = rule.query_path,
+                .mode = rule.mode,
             };
         }
     }
@@ -111,6 +121,7 @@ test "built-in log override resolves to comment parser" {
     const resolved = resolve("server.log", null).?;
     try std.testing.expectEqualStrings("comment", resolved.parser);
     try std.testing.expectEqualStrings("assets/queries/manual/log_levels.scm", resolved.query_path.?);
+    try std.testing.expectEqual(QueryMergeMode.append, resolved.mode);
 }
 
 test "unsupported fallback applies only when language is unresolved" {
@@ -127,5 +138,6 @@ test "unsupported fallback applies only when language is unresolved" {
     const unsupported_resolved = resolve("notes.unknown", null).?;
     try std.testing.expectEqualStrings("comment", unsupported_resolved.parser);
     try std.testing.expectEqualStrings("assets/queries/manual/log_levels.scm", unsupported_resolved.query_path.?);
+    try std.testing.expectEqual(QueryMergeMode.append, unsupported_resolved.mode);
     try std.testing.expect(resolve("notes.unknown", "zig") == null);
 }
