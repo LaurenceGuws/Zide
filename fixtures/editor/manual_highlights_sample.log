@@ -1,0 +1,47 @@
+2026-03-17 21:51:03 INFO app.core startup complete pid=1842
+2026-03-17 21:51:03 DEBUG app.config loaded path=/home/home/personal/zide/.zide.lua
+2026-03-17 21:51:03 WARN editor.cache width precompute skipped reason=budget
+2026-03-17 21:51:03 ERROR editor.file open failed path=/root/private.txt
+2026-03-17 21:51:03 FATAL app.core unrecoverable fault code=91
+2026-03-17 21:51:03 CRITICAL storage.sync write barrier lost txn=4021
+2026-03-17 21:51:03 PANIC runtime abort requested by operator
+
+[INFO] shell ready
+[DEBUG] route cache warmed
+[WARN] line width fallback used
+[ERROR] parser missed expected token
+[FATAL] renderer lost device
+[CRITICAL] task supervisor restart budget exhausted
+[PANIC] emergency shutdown path entered
+
+Info mixed-case status line
+Debug mixed-case status line
+Warn mixed-case status line
+Warning spelled-out warning line
+Error mixed-case status line
+Fatal mixed-case status line
+Critical mixed-case status line
+Panic mixed-case status line
+
+trace should stay plain for now
+notice should stay plain for now
+
+request_id=42197 duration_ms=17 status=ok
+hex_id=0xDEADBEEF
+user=alice session=9021 retry=3
+
+2026-03-17T21:51:03Z service/api INFO request completed
+2026-03-17T21:51:04Z service/db WARN slow query rows=391
+2026-03-17T21:51:05Z service/auth ERROR token validation failed
+
+INFO: colon format
+DEBUG: colon format
+WARN: colon format
+ERROR: colon format
+FATAL: colon format
+CRITICAL: colon format
+PANIC: colon format
+
+---- separator ----
+startup ok
+system healthy
