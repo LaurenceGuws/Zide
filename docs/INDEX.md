@@ -85,6 +85,7 @@ Quick reading guide:
 
 ## Reviews And Audits
 - `docs/review/` — past review notes (scope + date in file).
+  - `docs/review/TERMINAL_DOGFOOD_REVIEW_2026-03-17.md` — structured record of the first major native terminal dogfood pass, issue ids, and final dispositions.
   - `docs/review/TERMINAL_CORE_ARCHITECTURE_REVIEW_2026-03-10.md` — Ghostty-informed review of remaining terminal-core architectural blockers.
   - `docs/review/PERFORMANCE_REVIEW_1.md` — historical UI/terminal performance audit that still contains useful ownership notes.
   - `docs/review/TERMINAL_PROTOCOL_ACCURACY_REVIEW_2026-02-23.md` — detailed protocol source-review evidence and implementation history behind the active parity tracker.

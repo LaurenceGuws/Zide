@@ -37,33 +37,39 @@ boundary cut.
 - Do not move terminal semantics out of the engine just to make the widget
   smaller.
 
-## Current Boundary Smells
+## Current Checkpoint
 
-- `src/terminal/core/session_interaction.zig`
-  - backend-owned clipboard paste policy still includes host behavior such as
-    scrollback reset, bracketed-paste framing, OSC 5522 preference, and input
-    byte filtering.
-- `src/terminal/core/session_host_queries.zig`
-  - mixes engine-derived metadata with host-facing presentation convenience such
-    as foreground-process title substitution and close-confirm signal assembly.
-- `src/terminal/ffi/shared.zig`
-  - bridge event synthesis is correct as bridge ownership, but should remain a
-    bridge concern rather than dragging host policy back into core/session code.
-- `src/ui/widgets/terminal_widget*.zig`
-  - widget code should keep shrinking toward input mapping + content rendering
-    glue, not host policy or viewport chrome ownership.
+The high-value native-path boundary smells that motivated this lane are now
+closed on `main`:
+
+- native paste policy no longer lives in backend/session code
+- native close-confirm routing no longer depends on session-side host policy
+- title substitution no longer hides inside backend metadata copying
+- bridge close-confirm packaging no longer lives in terminal-core/session code
+- bridge derived-event sync no longer treats broad metadata as a hot-loop grab
+  bag
+- passive scrollbar wake no longer duplicates chrome-owned hover geometry
+
+What remains is lower-severity and should be judged case by case:
+
+- bridge-local convenience is still acceptable when it stays bridge-local
+- native presentation policy is still acceptable when it stays clearly
+  host-side
+- widget code should keep shrinking toward input mapping + content rendering
+  glue, but no equally obvious backend-owned native seam remains in the current
+  widget files
 
 ## TODO
 
-- [ ] `WBS-01` Audit terminal host-policy helpers and classify each as engine,
+- [x] `WBS-01` Audit terminal host-policy helpers and classify each as engine,
   bridge, or app/widget ownership.
-- [ ] `WBS-02` Move remaining viewport chrome ownership out of terminal widget
+- [x] `WBS-02` Move remaining viewport chrome ownership out of terminal widget
   code where it is still mixed with content behavior.
-- [ ] `WBS-03` Revisit clipboard paste ownership and decide the correct split
+- [x] `WBS-03` Revisit clipboard paste ownership and decide the correct split
   between terminal protocol semantics and host paste policy.
-- [ ] `WBS-04` Trim `TerminalSession` host conveniences that are really host
+- [x] `WBS-04` Trim `TerminalSession` host conveniences that are really host
   policy rather than engine truth.
-- [ ] `WBS-05` Re-check the FFI surface after each cut and only add fields when
+- [x] `WBS-05` Re-check the FFI surface after each cut and only add fields when
   the host cannot derive required behavior from existing engine state.
 
 ## Done When
@@ -74,6 +80,13 @@ boundary cut.
   content rendering/input internals.
 - `TerminalSession` reads more like a narrow engine/host seam and less like a
   container for desktop-only behavior.
+
+Status, 2026-03-17:
+
+- This lane is at a good stopping point.
+- The original high-value cuts are done.
+- Further work here should be driven by a fresh concrete smell, not by
+  checklist completion pressure.
 
 ## Audit Notes
 
@@ -177,13 +190,15 @@ Current progress:
   - title/cwd and lifecycle events now read only the raw fields they actually
     need, keeping bridge convenience narrower and more explicit
 
-Remaining highest-value seam:
+Remaining judgment:
 
 - bridge-side and host-side convenience should now be judged separately:
   - native tab policy already consumes raw title plus activity explicitly
   - bridge/FFI still has convenience packaging such as title/cwd event
     synthesis, which is acceptable as bridge ownership but should not leak back
     into engine/session semantics
+  - no current follow-up here is mandatory without a new concrete regression or
+    cross-layer ownership smell
 
 Additional progress:
 

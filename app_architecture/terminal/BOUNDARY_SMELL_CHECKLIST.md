@@ -102,21 +102,26 @@ Preferred shape:
 - Is this helper attractive because it is correct, or because it avoids making
   a proper seam explicit?
 
-## Current High-Risk Hotspots
+## Current Watchpoints
 
-- `src/terminal/core/session_host_queries.zig`
-  - acceptable for raw activity facts
-  - risky for host-policy convenience packaging
 - `src/app/terminal/terminal_tab_bar_sync.zig`
   - acceptable for native presentation
-  - risky if it becomes the default dumping ground for every new host-visible
-    terminal state
-- `src/app/pointer_activity_frame.zig`
-  - risky if passive wake heuristics duplicate runtime-owned chrome behavior
+  - keep it behind a small local display model
+  - do not let it become the default dumping ground for every new
+    host-visible terminal state
 - `src/terminal/ffi/shared.zig`
   - acceptable for bridge-local event synthesis
-  - risky if it leans on broad metadata convenience instead of explicit bridge
-    state needs
+  - keep bridge loops explicit about the exact state they read
+- `src/ui/widgets/terminal_widget*.zig`
+  - acceptable for input/render glue
+  - risky if viewport chrome or host policy starts migrating back in
+
+Status note, 2026-03-17:
+
+- the earlier high-risk seams that motivated this checklist were cleaned up on
+  `main`
+- use this checklist as a guardrail for new work, not as pressure to keep
+  cutting once the obvious ownership problems are gone
 
 ## Use With
 
