@@ -137,6 +137,9 @@ ownership.
     - blank exposed rows are not dropped by live-bottom shift publication
     - unpresented visible-history updates with `full/empty/full/empty` row
       shape still stay conservative
+    - bottom-edge in-place footer rewrites with a `full/empty/full/empty`
+      shape still keep blank separator rows dirty and visible in the published
+      cache
   - Current judgment:
     - treat this as a cadence-sensitive UI/present invalidation bug around the
       completion-tail partial publish, not as confirmed scrollback corruption

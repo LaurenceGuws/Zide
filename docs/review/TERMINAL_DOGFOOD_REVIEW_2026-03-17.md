@@ -71,6 +71,9 @@ Reason:
 - added visibility is itself part of the problem: once logging/instrumentation
   is increased enough to watch the handoff closely, the repro tends to stop
   triggering
+- newer low-noise proof tests now also cover bottom-edge in-place
+  `full/empty/full/empty` footer rewrites and still preserve blank separator
+  row damage correctly
 - the best current local hypothesis is therefore a cadence-sensitive
   UI/present invalidation issue around the completion-tail flush, not a generic
   Codex parsing bug or proven scrollback corruption

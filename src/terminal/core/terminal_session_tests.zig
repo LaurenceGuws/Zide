@@ -346,6 +346,47 @@ test "zig progress redraw invalidates cleared tail rows" {
     try std.testing.expectEqual(@as(usize, 19), cache.damage.end_col);
 }
 
+test "bottom-edge in-place redraw keeps blank separator rows dirty" {
+    const allocator = std.testing.allocator;
+
+    var session = try TerminalSession.init(allocator, 68, 24);
+    defer session.deinit();
+
+    debugSetCursor(&session, 67, 0);
+
+    session.feedOutputBytes("\x1b[?2026h");
+    try std.testing.expect(session.syncUpdatesActive());
+
+    session.feedOutputBytes("\x1b[Jfirst row\nsecond row\nthird row\nfourth row\r\x1bM\x1bM\x1bM\x1bM");
+
+    _ = session.output_generation.fetchAdd(1, .acq_rel);
+    session.updateViewCacheNoLock(session.output_generation.load(.acquire), session.history.scrollOffset());
+
+    session.primary.clearDirty();
+    session.alt.clearDirty();
+    try std.testing.expect(session.acknowledgePresentedGeneration(session.renderCache().generation));
+
+    session.feedOutputBytes("\x1b[Jfull line\n\nnext header\n\n\r\x1bM\x1bM\x1bM\x1bM");
+
+    const snapshot = session.snapshot();
+    try std.testing.expectEqual(@as(usize, 0), snapshot.scrollback_count);
+    try expectSnapshotRow(snapshot, 64, "full line               ");
+    try expectSnapshotRow(snapshot, 65, "                        ");
+    try expectSnapshotRow(snapshot, 66, "next header             ");
+    try expectSnapshotRow(snapshot, 67, "                        ");
+
+    const cache = session.renderCache();
+    try std.testing.expectEqual(Dirty.partial, cache.dirty);
+    try std.testing.expectEqual(@as(usize, 64), cache.damage.start_row);
+    try std.testing.expectEqual(@as(usize, 67), cache.damage.end_row);
+    try std.testing.expectEqual(@as(usize, 0), cache.damage.start_col);
+    try std.testing.expectEqual(@as(usize, 23), cache.damage.end_col);
+    try std.testing.expect(cache.dirty_rows.items[64]);
+    try std.testing.expect(cache.dirty_rows.items[65]);
+    try std.testing.expect(cache.dirty_rows.items[66]);
+    try std.testing.expect(cache.dirty_rows.items[67]);
+}
+
 test "synchronized zig progress redraw does not retire intermediate scrollback" {
     const allocator = std.testing.allocator;
 
