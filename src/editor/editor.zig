@@ -71,6 +71,7 @@ pub const Editor = struct {
     highlight_epoch: u64,
     file_path: ?[]const u8,
     modified: bool,
+    saved_content_hash: u64,
     tab_width: usize,
     grammar_manager: *grammar_manager_mod.GrammarManager,
     undo_selection_states: std.ArrayList(UndoSelectionState),
@@ -120,6 +121,7 @@ pub const Editor = struct {
             .highlight_epoch = 0,
             .file_path = null,
             .modified = false,
+            .saved_content_hash = contentHash(buffer),
             .tab_width = 4,
             .grammar_manager = grammar_manager,
             .undo_selection_states = .empty,
@@ -179,6 +181,7 @@ pub const Editor = struct {
         self.scroll_row_offset = 0;
         self.invalidateLineWidthCache();
         self.modified = false;
+        self.saved_content_hash = contentHash(self.buffer);
         self.highlight_dirty_start_line = null;
         self.highlight_dirty_end_line = null;
         self.highlight_disabled_for_large_file = self.buffer.totalLen() >= highlighter_large_file_threshold_bytes;
@@ -192,6 +195,7 @@ pub const Editor = struct {
             log.logf(.info, "save path=\"{s}\"", .{path});
             try self.buffer.saveToFile(path);
             self.modified = false;
+            self.saved_content_hash = contentHash(self.buffer);
         }
     }
 
@@ -204,6 +208,7 @@ pub const Editor = struct {
         }
         self.file_path = try self.allocator.dupe(u8, path);
         self.modified = false;
+        self.saved_content_hash = contentHash(self.buffer);
         self.highlight_disabled_for_large_file = self.buffer.totalLen() >= highlighter_large_file_threshold_bytes;
         if (!self.highlight_disabled_for_large_file) {
             try self.tryInitHighlighter(path);
@@ -606,6 +611,7 @@ pub const Editor = struct {
             }
             self.invalidateLineWidthCache();
             self.change_tick +|= 1;
+            self.modified = contentHash(self.buffer) != self.saved_content_hash;
             if (self.search_query != null) {
                 const log = app_logger.logger("editor.core");
                 self.recomputeSearchMatches() catch |err| {
@@ -651,6 +657,7 @@ pub const Editor = struct {
             }
             self.invalidateLineWidthCache();
             self.change_tick +|= 1;
+            self.modified = contentHash(self.buffer) != self.saved_content_hash;
             if (self.search_query != null) {
                 const log = app_logger.logger("editor.core");
                 self.recomputeSearchMatches() catch |err| {
@@ -847,5 +854,21 @@ pub const Editor = struct {
 
     pub fn applyPendingSearchResult(self: *Editor) void {
         SearchHighlight.applyPendingSearchResult(self);
+    }
+
+    fn contentHash(buffer: *TextStore) u64 {
+        var hasher = std.hash.Wyhash.init(0);
+        const total = buffer.totalLen();
+        var offset: usize = 0;
+        var scratch: [4096]u8 = undefined;
+        while (offset < total) {
+            const chunk_len = @min(scratch.len, total - offset);
+            const read = buffer.readRange(offset, scratch[0..chunk_len]);
+            if (read == 0) break;
+            hasher.update(scratch[0..read]);
+            offset += read;
+        }
+        hasher.update(std.mem.asBytes(&total));
+        return hasher.final();
     }
 };
