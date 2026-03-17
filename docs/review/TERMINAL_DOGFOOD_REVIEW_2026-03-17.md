@@ -72,8 +72,8 @@ Reason:
   is increased enough to watch the handoff closely, the repro tends to stop
   triggering
 - the best current local hypothesis is therefore a cadence-sensitive
-  publication/present issue around the completion-tail flush, not a generic
-  Codex parsing bug
+  UI/present invalidation issue around the completion-tail flush, not a generic
+  Codex parsing bug or proven scrollback corruption
 
 Owning references:
 

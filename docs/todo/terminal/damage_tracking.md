@@ -106,8 +106,8 @@ ownership.
   Notes:
   - Dogfood report, 2026-03-16:
     - intermittent corruption near the final Codex assistant summary dump
-    - partial-row / half-cell-looking scrollback updates that clear on the next
-      input wake
+    - partial-row / half-cell-looking UI defects that clear on the next input
+      wake
     - the bug is unusually hard to catch in action because added visibility
       itself suppresses the repro: once we increase runtime logging or similar
       instrumentation, the corruption tends to stop triggering
@@ -125,13 +125,22 @@ ownership.
       - `reference_repos/terminals/codex/codex-rs/tui_app_server/src/streaming/controller.rs`
       - `reference_repos/terminals/codex/codex-rs/tui_app_server/src/chatwidget.rs`
       - `reference_repos/terminals/codex/codex-rs/tui_app_server/src/markdown_stream.rs`
-  - Current Zide reduced-log captures did not reproduce the visual failure.
-    The most suspicious handoff lines observed so far can also be explained by
-    legitimate clean publications that retire screen dirty without a texture
-    redraw, so there is not yet evidence for a safe structural fix.
+  - Current Zide reduced-log captures still have one useful clue:
+    - the interesting completion-tail burst is not a visible-history / scroll
+      shift case
+    - current capture near the end of the run shows two clean advances followed
+      by one bottom-of-viewport 2-row partial publish (`1537 -> 1540`) with
+      `visible_history_changed=0` and `shift_rows=0`
+    - that pushes suspicion away from scrollback corruption and toward a
+      renderer/present consumption issue for an in-place partial update
+  - Low-noise regression tests now rule out the easy backend theories:
+    - blank exposed rows are not dropped by live-bottom shift publication
+    - unpresented visible-history updates with `full/empty/full/empty` row
+      shape still stay conservative
   - Current judgment:
-    - treat this as a cadence-sensitive publication/present bug, not as a
-      confirmed Codex parser/protocol bug
+    - treat this as a cadence-sensitive UI/present invalidation bug around the
+      completion-tail partial publish, not as confirmed scrollback corruption
+      and not as a generic Codex parser/protocol bug
     - avoid escalating logging in the hot path unless we have no alternative,
       because instrumentation itself is now known to distort the repro
   - Resume only when we have one of:
