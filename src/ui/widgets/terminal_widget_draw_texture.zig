@@ -738,6 +738,57 @@ test "buildBasePartialPlan prefers multi-span row truth over union mirror" {
     try std.testing.expectEqual(@as(u16, 18), partial_spans_out[1][1].end);
 }
 
+test "buildBasePartialPlan keeps blank shift-exposed row in partial plan" {
+    var partial_rows = [_]bool{false} ** 4;
+    var partial_span_counts_out = [_]u8{0} ** 4;
+    var partial_spans_out = [_][screen_mod.max_row_dirty_spans]screen_mod.RowDirtySpan{
+        [_]screen_mod.RowDirtySpan{.{ .start = 4, .end = 0 }} ** screen_mod.max_row_dirty_spans,
+        [_]screen_mod.RowDirtySpan{.{ .start = 4, .end = 0 }} ** screen_mod.max_row_dirty_spans,
+        [_]screen_mod.RowDirtySpan{.{ .start = 4, .end = 0 }} ** screen_mod.max_row_dirty_spans,
+        [_]screen_mod.RowDirtySpan{.{ .start = 4, .end = 0 }} ** screen_mod.max_row_dirty_spans,
+    };
+    var partial_cols_start = [_]u16{4} ** 4;
+    var partial_cols_end = [_]u16{0} ** 4;
+    const clean_rows = [_]bool{false} ** 4;
+    const clean_span_counts = [_]u8{0} ** 4;
+    const clean_spans = [_][screen_mod.max_row_dirty_spans]screen_mod.RowDirtySpan{
+        [_]screen_mod.RowDirtySpan{.{ .start = 4, .end = 0 }} ** screen_mod.max_row_dirty_spans,
+        [_]screen_mod.RowDirtySpan{.{ .start = 4, .end = 0 }} ** screen_mod.max_row_dirty_spans,
+        [_]screen_mod.RowDirtySpan{.{ .start = 4, .end = 0 }} ** screen_mod.max_row_dirty_spans,
+        [_]screen_mod.RowDirtySpan{.{ .start = 4, .end = 0 }} ** screen_mod.max_row_dirty_spans,
+    };
+    const clean_cols_start = [_]u16{4} ** 4;
+    const clean_cols_end = [_]u16{0} ** 4;
+
+    buildBasePartialPlan(
+        &partial_rows,
+        &partial_span_counts_out,
+        &partial_spans_out,
+        &partial_cols_start,
+        &partial_cols_end,
+        &clean_rows,
+        &clean_span_counts,
+        &clean_spans,
+        &clean_cols_start,
+        &clean_cols_end,
+        4,
+        4,
+        1,
+        1,
+        false,
+    );
+
+    try std.testing.expect(!partial_rows[0]);
+    try std.testing.expect(!partial_rows[1]);
+    try std.testing.expect(!partial_rows[2]);
+    try std.testing.expect(partial_rows[3]);
+    try std.testing.expectEqual(@as(u8, 1), partial_span_counts_out[3]);
+    try std.testing.expectEqual(@as(u16, 0), partial_spans_out[3][0].start);
+    try std.testing.expectEqual(@as(u16, 3), partial_spans_out[3][0].end);
+    try std.testing.expectEqual(@as(u16, 0), partial_cols_start[3]);
+    try std.testing.expectEqual(@as(u16, 3), partial_cols_end[3]);
+}
+
 test "buildPartialPlan keeps nvim-style gutter and body spans disjoint on one row" {
     var cache = RenderCache.init();
     defer cache.deinit(std.testing.allocator);

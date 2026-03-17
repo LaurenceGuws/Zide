@@ -714,6 +714,57 @@ test "row hash refinement does not skip unpresented top rows" {
     try std.testing.expect(cache.dirty_rows.items[0]);
 }
 
+test "live-bottom history growth keeps blank exposed row dirty" {
+    const allocator = std.testing.allocator;
+
+    var session = try TerminalSession.init(allocator, 3, 4);
+    defer session.deinit();
+
+    const base = session.primary.defaultCell();
+
+    // Start with a blank bottom row so the newly exposed row after scroll is
+    // also blank. If the shift path incorrectly narrows blank exposed rows
+    // against the previously presented cache, bottom-row damage would vanish.
+    var col: usize = 0;
+    while (col < 4) : (col += 1) {
+        var cell_a = base;
+        cell_a.codepoint = 'A';
+        session.primary.grid.cells.items[col] = cell_a;
+
+        var cell_b = base;
+        cell_b.codepoint = 'B';
+        session.primary.grid.cells.items[4 + col] = cell_b;
+
+        session.primary.grid.cells.items[8 + col] = base;
+    }
+    session.primary.setCursor(2, 0);
+
+    _ = session.output_generation.fetchAdd(1, .acq_rel);
+    session.updateViewCacheNoLock(session.output_generation.load(.acquire), session.history.scrollOffset());
+
+    session.primary.clearDirty();
+    session.alt.clearDirty();
+    try std.testing.expect(session.acknowledgePresentedGeneration(session.renderCache().generation));
+
+    session.scrollUp();
+    _ = session.output_generation.fetchAdd(1, .acq_rel);
+    session.updateViewCacheNoLock(session.output_generation.load(.acquire), session.history.scrollOffset());
+
+    const cache = session.renderCache();
+    try std.testing.expectEqual(Dirty.partial, cache.dirty);
+    try std.testing.expectEqual(@as(i32, 1), cache.viewport_shift_rows);
+    try std.testing.expect(cache.viewport_shift_exposed_only);
+    try std.testing.expect(cache.dirty_rows.items[2]);
+    try std.testing.expectEqual(@as(usize, 2), cache.damage.start_row);
+    try std.testing.expectEqual(@as(usize, 2), cache.damage.end_row);
+    try std.testing.expectEqual(@as(usize, 0), cache.damage.start_col);
+    try std.testing.expectEqual(@as(usize, 3), cache.damage.end_col);
+    try std.testing.expectEqual(@as(u32, 0), cache.cells.items[8].codepoint);
+    try std.testing.expectEqual(@as(u32, 0), cache.cells.items[9].codepoint);
+    try std.testing.expectEqual(@as(u32, 0), cache.cells.items[10].codepoint);
+    try std.testing.expectEqual(@as(u32, 0), cache.cells.items[11].codepoint);
+}
+
 test "row hash refinement does not suppress newly dirty rows against unpresented cache" {
     const allocator = std.testing.allocator;
 
@@ -1576,6 +1627,65 @@ test "visible history change stays conservative against unpresented base" {
     try std.testing.expectEqual(@as(usize, 3), cache.damage.end_col);
     try std.testing.expect(cache.dirty_rows.items[0]);
     try std.testing.expect(cache.dirty_rows.items[1]);
+}
+
+test "visible history change with blank separator rows stays conservative against unpresented base" {
+    const allocator = std.testing.allocator;
+
+    var session = try TerminalSession.init(allocator, 4, 4);
+    defer session.deinit();
+
+    const base = session.primary.defaultCell();
+    var row_a = [_]Cell{ base, base, base, base };
+    var row_b = [_]Cell{ base, base, base, base };
+    var row_c = [_]Cell{ base, base, base, base };
+    var row_d = [_]Cell{ base, base, base, base };
+    for (&row_a, 0..) |*cell, col| cell.codepoint = @as(u32, 'A') + @as(u32, @intCast(col));
+    for (&row_b, 0..) |*cell, col| cell.codepoint = @as(u32, 'E') + @as(u32, @intCast(col));
+    for (&row_c, 0..) |*cell, col| cell.codepoint = @as(u32, 'I') + @as(u32, @intCast(col));
+    for (&row_d, 0..) |*cell, col| cell.codepoint = @as(u32, 'M') + @as(u32, @intCast(col));
+
+    session.history.pushRow(&row_a, false, base);
+    session.history.pushRow(&row_b, false, base);
+    session.history.pushRow(&row_c, false, base);
+    session.history.pushRow(&row_d, false, base);
+    session.history.ensureViewCache(session.primary.grid.cols, base);
+    session.history.setScrollOffset(session.primary.grid.rows, 4);
+
+    _ = session.output_generation.fetchAdd(1, .acq_rel);
+    session.updateViewCacheNoLock(session.output_generation.load(.acquire), session.history.scrollOffset());
+    session.notePresentedGeneration(session.renderCache().generation);
+
+    session.primary.clearDirty();
+    session.alt.clearDirty();
+    try std.testing.expect(session.acknowledgePresentedGeneration(session.renderCache().generation));
+
+    const first_update = session.history.scrollback.lineByIndexMut(0).?;
+    first_update.cells[0].codepoint = 'Z';
+    session.history.markScrollbackChanged();
+    session.updateViewCacheNoLock(session.output_generation.load(.acquire), session.history.scrollOffset());
+
+    const second_row = session.history.scrollback.lineByIndexMut(1).?;
+    for (second_row.cells[0..4]) |*cell| cell.* = base;
+    const fourth_row = session.history.scrollback.lineByIndexMut(3).?;
+    for (fourth_row.cells[0..4]) |*cell| cell.* = base;
+    session.history.markScrollbackChanged();
+    session.updateViewCacheNoLock(session.output_generation.load(.acquire), session.history.scrollOffset());
+
+    const cache = session.renderCache();
+    try std.testing.expectEqual(Dirty.partial, cache.dirty);
+    try std.testing.expectEqual(@as(usize, 0), cache.damage.start_row);
+    try std.testing.expectEqual(@as(usize, 3), cache.damage.end_row);
+    try std.testing.expectEqual(@as(usize, 0), cache.damage.start_col);
+    try std.testing.expectEqual(@as(usize, 3), cache.damage.end_col);
+    try std.testing.expect(cache.dirty_rows.items[0]);
+    try std.testing.expect(cache.dirty_rows.items[1]);
+    try std.testing.expect(cache.dirty_rows.items[2]);
+    try std.testing.expect(cache.dirty_rows.items[3]);
+    try std.testing.expectEqual(@as(u32, 'Z'), cache.cells.items[0].codepoint);
+    try std.testing.expectEqual(@as(u32, 0), cache.cells.items[4].codepoint);
+    try std.testing.expectEqual(@as(u32, 'I'), cache.cells.items[8].codepoint);
+    try std.testing.expectEqual(@as(u32, 0), cache.cells.items[12].codepoint);
 }
 
 test "debug scrollback helpers preserve visible-history baseline shape" {
