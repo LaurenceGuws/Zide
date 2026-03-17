@@ -69,6 +69,9 @@ pub fn handle(
 ) !Result {
     var out: Result = .{};
     if (!prompt.active or prompt.kind == null) return out;
+    out.consumed_input = true;
+    out.needs_redraw = true;
+    out.note_input = true;
 
     var handled = false;
     var query_changed = false;
@@ -137,10 +140,9 @@ pub fn handle(
         query_changed = true;
     }
 
-    if (handled or query_changed) {
-        out.consumed_input = true;
-        out.needs_redraw = true;
-        out.note_input = true;
+    if (!handled and !query_changed) {
+        out.needs_redraw = false;
+        out.note_input = false;
     }
     return out;
 }
