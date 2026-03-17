@@ -143,27 +143,21 @@ pub fn handle(
                     }
                 }
             }.call,
-            .precompute_editor_visible_caches = struct {
-                fn call(
-                    route_raw: *anyopaque,
-                    widget: *widgets.EditorWidget,
-                    editor_shell: *app_shell.Shell,
-                    editor_layout: layout_types.WidgetLayout,
-                ) void {
-                    const route = @as(*@TypeOf(runtime_state), @ptrCast(@alignCast(route_raw)));
-                    app_editor_visible_caches_runtime.precompute(
-                        widget,
-                        editor_shell,
-                        editor_layout,
-                        route.editor_render_cache,
-                        route.editor_highlight_budget,
-                        route.editor_width_budget,
-                    );
-                }
-            }.call,
         },
     );
     if (runtime_state.needs_redraw) out.needs_redraw = true;
     if (runtime_state.note_input) out.note_input = true;
+    if (out.needs_redraw) {
+        const editor_idx = @min(active_tab, editors.len - 1);
+        var widget = widgets.EditorWidget.initWithCache(editors[editor_idx], editor_cluster_cache, editor_wrap);
+        app_editor_visible_caches_runtime.precompute(
+            &widget,
+            shell,
+            layout,
+            editor_render_cache,
+            editor_highlight_budget,
+            editor_width_budget,
+        );
+    }
     return out;
 }

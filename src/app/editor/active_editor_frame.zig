@@ -39,12 +39,6 @@ pub const Hooks = struct {
         bool,
         f64,
     ) void,
-    precompute_editor_visible_caches: *const fn (
-        *anyopaque,
-        *EditorWidget,
-        *app_shell.Shell,
-        layout_types.WidgetLayout,
-    ) void,
 };
 
 pub fn handle(
@@ -105,7 +99,6 @@ pub fn handle(
         scrollbar_blocking,
         now,
     );
-    hooks.precompute_editor_visible_caches(ctx, &widget, shell, layout);
 
     return out;
 }
