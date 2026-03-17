@@ -11,12 +11,20 @@ const WorkerCtx = struct {
     tasks: []const Task,
     out_dir: []const u8,
     missing_only: bool,
+    continue_on_error: bool,
     next_index: std.atomic.Value(usize),
     first_error: ?anyerror,
     err_mutex: std.Thread.Mutex,
+    failure_count: usize,
 };
 
-pub fn fetchGrammars(allocator: std.mem.Allocator, scripts_root: []const u8, jobs: usize, missing_only: bool) !void {
+pub fn fetchGrammars(
+    allocator: std.mem.Allocator,
+    scripts_root: []const u8,
+    jobs: usize,
+    missing_only: bool,
+    continue_on_error: bool,
+) !void {
     const grammar_root = try std.fs.path.join(allocator, &.{ scripts_root, ".." });
     defer allocator.free(grammar_root);
     const work_dir = try std.fs.path.join(allocator, &.{ grammar_root, "work" });
@@ -56,9 +64,11 @@ pub fn fetchGrammars(allocator: std.mem.Allocator, scripts_root: []const u8, job
         .tasks = tasks.items,
         .out_dir = out_dir,
         .missing_only = missing_only,
+        .continue_on_error = continue_on_error,
         .next_index = std.atomic.Value(usize).init(0),
         .first_error = null,
         .err_mutex = .{},
+        .failure_count = 0,
     };
 
     var threads = try allocator.alloc(std.Thread, worker_count);
@@ -73,7 +83,13 @@ pub fn fetchGrammars(allocator: std.mem.Allocator, scripts_root: []const u8, job
     }
     for (threads[1..]) |thread| thread.join();
 
-    if (ctx.first_error) |err| return err;
+    if (ctx.first_error) |err| {
+        if (continue_on_error) {
+            std.debug.print("grammar fetch completed with {d} git failure(s)\n", .{ctx.failure_count});
+        } else {
+            return err;
+        }
+    }
 }
 
 fn workerMain(ctx: *WorkerCtx) void {
@@ -84,10 +100,12 @@ fn workerMain(ctx: *WorkerCtx) void {
         fetchOne(ctx.allocator, ctx.out_dir, task, ctx.missing_only) catch |err| {
             ctx.err_mutex.lock();
             defer ctx.err_mutex.unlock();
+            ctx.failure_count += 1;
+            std.debug.print("[{s}] git fetch failed: {s}\n", .{ task.lang, @errorName(err) });
             if (ctx.first_error == null) {
                 ctx.first_error = err;
             }
-            return;
+            if (!ctx.continue_on_error) return;
         };
     }
 }

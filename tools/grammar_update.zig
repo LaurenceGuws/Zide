@@ -138,7 +138,7 @@ fn runBuildScripts(
     }
     if (!mode.skip_fetch) {
         const git_jobs = try parseJobs(jobs);
-        try grammar_fetch.fetchGrammars(allocator, scripts_root, git_jobs, mode.git_missing_only);
+        try grammar_fetch.fetchGrammars(allocator, scripts_root, git_jobs, mode.git_missing_only, mode.continue_on_error);
     }
 
     var env_map = try std.process.getEnvMap(allocator);
