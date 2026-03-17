@@ -75,19 +75,28 @@ pub fn handlePointerInput(
             const clamped_row = @min(row, params.rows - 1);
             const global_row = params.start_line + clamped_row;
             if (global_row < params.history_len + params.rows) {
-                const row_cells = view_cells[clamped_row * params.cols .. (clamped_row + 1) * params.cols];
-                const click_result = self.session.beginClickSelectionLocked(
-                    row_cells,
-                    global_row,
-                    clamped_col,
-                    input_batch.mouseClicks(.left),
-                );
                 self.selection_press_origin = press_mouse;
                 self.selection_drag_active = false;
-                self.selection_gesture = click_result.gesture;
-                if (click_result.started) {
-                    selection_active = true;
-                    result.handled = true;
+                if (input_batch.mouseClicks(.left) >= 2) {
+                    const row_cells = view_cells[clamped_row * params.cols .. (clamped_row + 1) * params.cols];
+                    const click_result = self.session.beginClickSelectionLocked(
+                        row_cells,
+                        global_row,
+                        clamped_col,
+                        input_batch.mouseClicks(.left),
+                    );
+                    self.selection_gesture = click_result.gesture;
+                    if (click_result.started) {
+                        selection_active = true;
+                        result.handled = true;
+                    }
+                } else {
+                    self.selection_gesture = .{
+                        .mode = .none,
+                        .row = global_row,
+                        .col_start = clamped_col,
+                        .col_end = clamped_col,
+                    };
                 }
             }
         }
@@ -126,10 +135,26 @@ pub fn handlePointerInput(
             const clamped_row = @min(row, params.rows - 1);
             const global_row = params.start_line + clamped_row;
             if (global_row < params.history_len + params.rows) {
-                const row_cells = view_cells[clamped_row * params.cols .. (clamped_row + 1) * params.cols];
-                if (self.session.selectOrUpdateCellInRowLocked(row_cells, global_row, clamped_col)) {
-                    selection_active = true;
-                    result.handled = true;
+                if (!selection_active) {
+                    const anchor = terminal_mod.SelectionPos{
+                        .row = self.selection_gesture.row,
+                        .col = self.selection_gesture.col_start,
+                    };
+                    const target = terminal_mod.SelectionPos{
+                        .row = global_row,
+                        .col = clamped_col,
+                    };
+                    if (anchor.row != target.row or anchor.col != target.col) {
+                        self.session.selectRangeLocked(anchor, target, false);
+                        selection_active = true;
+                        result.handled = true;
+                    }
+                } else {
+                    const row_cells = view_cells[clamped_row * params.cols .. (clamped_row + 1) * params.cols];
+                    if (self.session.selectOrUpdateCellInRowLocked(row_cells, global_row, clamped_col)) {
+                        selection_active = true;
+                        result.handled = true;
+                    }
                 }
             }
 
