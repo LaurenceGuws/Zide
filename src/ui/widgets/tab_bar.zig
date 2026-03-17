@@ -107,6 +107,11 @@ pub const TabBar = struct {
         self.tabs.items[index].title = owned_title;
     }
 
+    pub fn setTabModified(self: *TabBar, index: usize, modified: bool) void {
+        if (index >= self.tabs.items.len) return;
+        self.tabs.items[index].modified = modified;
+    }
+
     pub fn updateInput(self: *TabBar, input: shared_types.input.InputSnapshot) void {
         self.last_mouse = input.mouse_pos;
     }

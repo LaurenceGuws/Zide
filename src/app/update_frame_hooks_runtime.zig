@@ -1,4 +1,5 @@
 const app_config_reload_notice_state = @import("config_reload_notice_state.zig");
+const app_editor_tab_bar_sync_runtime = @import("editor/editor_tab_bar_sync_runtime.zig");
 const app_input_actions_hooks_runtime = @import("input_actions_hooks_runtime.zig");
 const app_mouse_pressed_hooks_runtime = @import("mouse_pressed_hooks_runtime.zig");
 const app_modes = @import("modes/mod.zig");
@@ -61,6 +62,7 @@ pub fn handle(state: anytype, input_batch: *shared_types.input.InputBatch) !void
                                     inner_state.tab_bar.updateInput(inner_state.last_input);
                                     inner_state.side_nav.updateInput(inner_state.last_input);
                                     inner_state.status_bar.updateInput(inner_state.last_input);
+                                    try app_editor_tab_bar_sync_runtime.sync(&inner_state.tab_bar, inner_state.editors.items);
                                     try app_terminal_tab_bar_sync_runtime.syncIfWorkspace(inner_state);
                                 }
                             }.inner,
@@ -333,7 +335,9 @@ pub fn handle(state: anytype, input_batch: *shared_types.input.InputBatch) !void
                                         const app_active_view_hooks_runtime = @import("active_view_hooks_runtime.zig");
                                         try app_active_view_hooks_runtime.handle(
                                             inner_state.allocator,
+                                            &inner_state.path_prompt,
                                             &inner_state.search_panel.active,
+                                            &inner_state.search_panel.select_all,
                                             &inner_state.search_panel.query,
                                             inner_state.editors.items,
                                             inner_state.active_tab,
