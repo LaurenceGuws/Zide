@@ -106,15 +106,15 @@ Initial audit, 2026-03-17:
   - close-confirm signals
   - scrollback viewport metadata
 - Present in native behavior/tests but not yet a structured host semantic:
-  - Zig/std.Progress redraw patterns
-  - build output that visually implies determinate or indeterminate progress
   - command/task activity inferred from terminal text alone
 
 Current judgment:
 
 - The backend already has enough truth for a first richer host-semantic lane
   around activity/task state.
-- The backend does not yet have a structured progress model.
+- The backend now also has a structured progress model from OSC `9;4`
+  (ConEmu/Windows Terminal/Ghostty-compatible progress reporting), but it is
+  currently only consumed by native host chrome.
 - A first enriched contract should probably start with activity/task semantics
   before attempting determinate progress values.
 
@@ -129,7 +129,6 @@ Likely first candidate packet:
 
 Explicitly deferred until a real backend source of truth exists:
 
-- percentage progress
 - progress text labels
 - host badge/chip styling
 - notification/toast decisions
@@ -185,8 +184,10 @@ Current rule from this pass:
   - this supports exposing progress/activity as state, not as UI instructions
 - Zide today
   - has structured activity-adjacent facts
-  - does not yet have structured progress state
-  - therefore activity/task semantics should come first
+  - now also has structured progress state from OSC `9;4`
+  - native terminal tabs/chrome already consume that progress as host policy
+  - FFI still needs a deliberate progress packet rather than reusing native UI
+    assumptions
 - Windows Terminal
   - official source is open at `microsoft/terminal`
   - official docs also describe explicit OSC `9;4` progress support
@@ -246,6 +247,25 @@ Deliberate omissions from the first packet:
 - no attention/bell state yet
 - no UI-facing status strings
 - no host-specific presentation hints
+
+## Progress Follow-Up
+
+Progress is no longer blocked on backend truth.
+
+What landed on 2026-03-17:
+
+- backend-owned structured progress state from OSC `9;4`
+- shared native host summary now carries that progress state
+- native terminal tab chips can surface determinate progress as `$NUM%`
+- native terminal chrome now draws an active-session progress bar under the
+  terminal tab strip
+
+What is still intentionally pending:
+
+- FFI metadata/event exposure for progress
+- any progress text label field
+- host-facing animation policy for indeterminate progress
+- platform-specific notification/taskbar integration
 
 ## Transport Proposal
 

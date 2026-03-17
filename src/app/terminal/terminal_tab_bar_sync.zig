@@ -2,7 +2,7 @@ const std = @import("std");
 const terminal_mod = @import("../../terminal/core/terminal.zig");
 const widgets = @import("../../ui/widgets.zig");
 
-fn terminalTabLabel(title: []const u8, cwd: []const u8) []const u8 {
+fn terminalTabBaseLabel(title: []const u8, cwd: []const u8) []const u8 {
     if (title.len > 0 and !std.mem.eql(u8, title, "Terminal")) return title;
 
     if (cwd.len > 0) {
@@ -18,6 +18,24 @@ fn terminalTabLabel(title: []const u8, cwd: []const u8) []const u8 {
     }
     if (title.len > 0) return title;
     return "Terminal";
+}
+
+fn terminalTabLabel(
+    allocator: std.mem.Allocator,
+    scratch: *std.ArrayList(u8),
+    title: []const u8,
+    cwd: []const u8,
+    entry: terminal_mod.TerminalTabSyncEntry,
+) ![]const u8 {
+    const base = terminalTabBaseLabel(title, cwd);
+    if (entry.progress_state == .set or entry.progress_state == .@"error" or entry.progress_state == .pause) {
+        if (entry.progress_value) |value| {
+            scratch.clearRetainingCapacity();
+            try scratch.writer(allocator).print("{d}% {s}", .{ value, base });
+            return scratch.items;
+        }
+    }
+    return base;
 }
 
 fn hasTabId(entries: []const terminal_mod.TerminalTabSyncEntry, tab_id: u64) bool {
@@ -36,6 +54,8 @@ pub fn syncFromWorkspace(
         defer entry_buf.deinit(tab_bar.allocator);
         var string_buf = std.ArrayList(u8).empty;
         defer string_buf.deinit(tab_bar.allocator);
+        var label_buf = std.ArrayList(u8).empty;
+        defer label_buf.deinit(tab_bar.allocator);
         const sync_state = try workspace.copyTabSyncState(tab_bar.allocator, &entry_buf, &string_buf);
 
         var has_non_terminal = false;
@@ -67,7 +87,13 @@ pub fn syncFromWorkspace(
 
         // Add missing tabs and refresh titles while preserving current visual order.
         for (sync_state.tabs) |entry| {
-            const title = terminalTabLabel(entry.title(sync_state.strings), entry.cwd(sync_state.strings));
+            const title = try terminalTabLabel(
+                tab_bar.allocator,
+                &label_buf,
+                entry.title(sync_state.strings),
+                entry.cwd(sync_state.strings),
+                entry,
+            );
             const tab_id = entry.id;
             if (tab_bar.indexOfTerminalTabId(tab_id)) |bar_idx| {
                 try tab_bar.setTabTitle(bar_idx, title);
@@ -85,4 +111,29 @@ pub fn syncFromWorkspace(
     } else {
         tab_bar.clearTabs();
     }
+}
+
+test "terminal tab label prefixes determinate progress" {
+    var scratch = std.ArrayList(u8).empty;
+    defer scratch.deinit(std.testing.allocator);
+
+    const label = try terminalTabLabel(
+        std.testing.allocator,
+        &scratch,
+        "zig build",
+        "/tmp/work",
+        .{
+            .id = 1,
+            .title_offset = 0,
+            .title_len = 0,
+            .cwd_offset = 0,
+            .cwd_len = 0,
+            .alive = true,
+            .exit_code = null,
+            .progress_state = .set,
+            .progress_value = 42,
+        },
+    );
+
+    try std.testing.expectEqualStrings("42% zig build", label);
 }

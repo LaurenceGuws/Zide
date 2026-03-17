@@ -6,12 +6,14 @@ const snapshot_mod = @import("snapshot.zig");
 const types = @import("../model/types.zig");
 const kitty_mod = @import("../kitty/graphics.zig");
 const semantic_prompt_mod = @import("semantic_prompt.zig");
+const session_host_types = @import("session_host_types.zig");
 const palette_mod = @import("../protocol/palette.zig");
 
 const Screen = screen_mod.Screen;
 const Charset = parser_mod.Charset;
 const CharsetTarget = parser_mod.CharsetTarget;
 const SemanticPromptState = semantic_prompt_mod.SemanticPromptState;
+const ProgressState = session_host_types.ProgressState;
 const Hyperlink = snapshot_mod.Hyperlink;
 
 const dynamic_color_count: usize = 10;
@@ -59,6 +61,8 @@ pub const TerminalCore = struct {
     semantic_prompt_aid: std.ArrayList(u8),
     semantic_cmdline: std.ArrayList(u8),
     semantic_cmdline_valid: bool,
+    progress_state: ProgressState,
+    progress_value: ?u8,
     user_vars: std.StringHashMap([]u8),
     kitty_primary: kitty_mod.KittyState,
     kitty_alt: kitty_mod.KittyState,
@@ -107,6 +111,8 @@ pub const TerminalCore = struct {
             .semantic_prompt_aid = .empty,
             .semantic_cmdline = .empty,
             .semantic_cmdline_valid = false,
+            .progress_state = .none,
+            .progress_value = null,
             .user_vars = std.StringHashMap([]u8).init(allocator),
             .kitty_primary = .{
                 .images = .empty,
@@ -345,6 +351,16 @@ pub const TerminalCore = struct {
 
     pub fn setDefaultTitle(self: *TerminalCore) void {
         self.title = "Terminal";
+    }
+
+    pub fn setProgress(self: *TerminalCore, state: ProgressState, value: ?u8) void {
+        self.progress_state = state;
+        self.progress_value = value;
+    }
+
+    pub fn clearProgress(self: *TerminalCore) void {
+        self.progress_state = .none;
+        self.progress_value = null;
     }
 
     pub fn clearCwdBuffer(self: *TerminalCore) void {

@@ -1,5 +1,6 @@
 const app_modes = @import("../modes/mod.zig");
 const app_terminal_active_widget = @import("terminal_active_widget.zig");
+const app_terminal_progress_runtime = @import("terminal_progress_runtime.zig");
 const app_terminal_scrollbar_runtime = @import("terminal_scrollbar_runtime.zig");
 const app_terminal_surface_gate = @import("terminal_surface_gate.zig");
 const shared_types = @import("../../types/mod.zig");
@@ -37,6 +38,16 @@ pub fn draw(state: anytype, shell: anytype, layout: layout_types.WidgetLayout) v
         const draw_outcome = term_widget.draw(shell, layout.terminal.x, term_y + term_offset_y, layout.terminal.width, term_height, state.last_input);
         if (layout.terminal.width > 0 and term_height > 0) {
             shell.endClip();
+        }
+        const activity = term_widget.session.currentActivityMetadata();
+        if (activity.progress.active()) {
+            app_terminal_progress_runtime.drawActiveTabProgress(
+                shell,
+                layout.terminal.x,
+                term_y,
+                layout.terminal.width,
+                activity,
+            );
         }
         app_terminal_scrollbar_runtime.draw(
             term_widget,

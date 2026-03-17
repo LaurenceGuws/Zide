@@ -472,6 +472,28 @@ test "real zig redraw chunk rewrites in place at bottom edge" {
     try expectSnapshotRow(snapshot, 67, "   q  Target.powerpc.all_features                                                ");
 }
 
+test "osc 9;4 progress reports update structured host progress state" {
+    const allocator = std.testing.allocator;
+
+    var session = try TerminalSession.init(allocator, 4, 20);
+    defer session.deinit();
+
+    session.feedOutputBytes("\x1b]9;4;1;42\x07");
+    var activity = session.currentActivityMetadata();
+    try std.testing.expectEqual(session_mod.ProgressState.set, activity.progress.state);
+    try std.testing.expectEqual(@as(?u8, 42), activity.progress.value);
+
+    session.feedOutputBytes("\x1b]9;4;3\x07");
+    activity = session.currentActivityMetadata();
+    try std.testing.expectEqual(session_mod.ProgressState.indeterminate, activity.progress.state);
+    try std.testing.expectEqual(@as(?u8, null), activity.progress.value);
+
+    session.feedOutputBytes("\x1b]9;4;0\x07");
+    activity = session.currentActivityMetadata();
+    try std.testing.expectEqual(session_mod.ProgressState.none, activity.progress.state);
+    try std.testing.expectEqual(@as(?u8, null), activity.progress.value);
+}
+
 test "repeat guide chunks do not grow scrollback unexpectedly" {
     const allocator = std.testing.allocator;
 

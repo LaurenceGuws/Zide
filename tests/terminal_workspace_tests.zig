@@ -45,12 +45,15 @@ test "terminal workspace tab sync state is session-derived" {
     const created = try workspace.createTabWithSession(24, 80);
     const session = created.session;
     terminal.debugFeedBytes(session, "\x1b]2;build-shell\x07");
+    terminal.debugFeedBytes(session, "\x1b]9;4;1;42\x07");
 
     const sync_state = try workspace.copyTabSyncState(std.testing.allocator, &entry_buf, &string_buf);
     try std.testing.expectEqual(@as(usize, 1), sync_state.tabs.len);
     try std.testing.expectEqual(created.id, sync_state.active_tab_id.?);
     try std.testing.expectEqual(created.id, sync_state.tabs[0].id);
     try std.testing.expectEqualStrings("build-shell", sync_state.tabs[0].title(sync_state.strings));
+    try std.testing.expectEqual(terminal.ProgressState.set, sync_state.tabs[0].progress_state);
+    try std.testing.expectEqual(@as(?u8, 42), sync_state.tabs[0].progress_value);
 }
 
 test "terminal workspace first confirm close tab returns first matching tab" {

@@ -19,6 +19,8 @@ pub const TabSyncEntry = struct {
     cwd_len: usize,
     alive: bool,
     exit_code: ?i32,
+    progress_state: session_mod.ProgressState = .none,
+    progress_value: ?u8 = null,
 
     pub fn title(self: TabSyncEntry, strings: []const u8) []const u8 {
         return strings[self.title_offset .. self.title_offset + self.title_len];
@@ -225,6 +227,7 @@ pub const TerminalWorkspace = struct {
 
         for (self.tabs.items) |tab| {
             const metadata = try tab.session.copyMetadata(allocator, &title_buf, &cwd_buf);
+            const activity = tab.session.currentActivityMetadata();
 
             const title_offset = strings_out.items.len;
             try strings_out.appendSlice(allocator, metadata.title);
@@ -239,6 +242,8 @@ pub const TerminalWorkspace = struct {
                 .cwd_len = metadata.cwd.len,
                 .alive = metadata.alive,
                 .exit_code = metadata.exit_code,
+                .progress_state = activity.progress.state,
+                .progress_value = activity.progress.value,
             });
         }
 

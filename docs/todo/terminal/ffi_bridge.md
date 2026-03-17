@@ -135,7 +135,7 @@ Current judgment:
   Current first-cut bias: activity/task semantics are a better first packet
   than determinate progress, because the backend already owns title/cwd,
   alive/exit, foreground-process presence/label, and semantic-prompt activity,
-  while progress values are still only implicit in terminal text patterns.
+  while progress values were still only implicit in terminal text patterns.
   Current API-shape bias: extend `metadata_acquire(...)` via include flags and
   ABI bump before introducing a sibling `activity_metadata_acquire(...)`.
   Current ABI bias: flatten the first semantic-prompt/activity fields into the
@@ -147,6 +147,12 @@ Current judgment:
   - `INCLUDE_ACTIVITY` gates optional foreground-process-label copying
   - next required follow-up is host verifier coverage for the new metadata
     fields before treating the cut as settled
+  Follow-up after that cut:
+  - backend now also owns structured OSC `9;4` progress state
+  - native host chrome consumes it for terminal tab chips and a progress bar
+    under the terminal tab strip
+  - the bridge is intentionally not widened for progress yet; that remains a
+    deliberate next semantic-family cut rather than a native-only shortcut
 
 ## Current Gaps
 

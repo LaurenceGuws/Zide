@@ -5,6 +5,7 @@ const osc_clipboard = @import("osc_clipboard.zig");
 const osc_kitty_clipboard = @import("osc_kitty_clipboard.zig");
 const osc_cwd = @import("osc_cwd.zig");
 const osc_hyperlink = @import("osc_hyperlink.zig");
+const osc_progress = @import("osc_progress.zig");
 const osc_title = @import("osc_title.zig");
 const parser_mod = @import("../parser/parser.zig");
 const app_logger = @import("../../app_logger.zig");
@@ -19,6 +20,7 @@ pub const SessionFacade = struct {
     clipboard: osc_clipboard.SessionFacade,
     kitty_clipboard: osc_kitty_clipboard.SessionFacade,
     semantic: osc_semantic.SessionFacade,
+    progress: osc_progress.SessionFacade,
 
     pub fn from(session: anytype) SessionFacade {
         return .{
@@ -29,6 +31,7 @@ pub const SessionFacade = struct {
             .clipboard = osc_clipboard.SessionFacade.from(session),
             .kitty_clipboard = osc_kitty_clipboard.SessionFacade.from(session),
             .semantic = osc_semantic.SessionFacade.from(session),
+            .progress = osc_progress.SessionFacade.from(session),
         };
     }
 
@@ -75,6 +78,10 @@ pub const SessionFacade = struct {
     pub fn parseUserVar(self: *const SessionFacade, text: []const u8) void {
         osc_semantic.parseUserVar(self.semantic, text);
     }
+
+    pub fn parseProgress(self: *const SessionFacade, text: []const u8) void {
+        osc_progress.parseProgress(self.progress, text);
+    }
 };
 
 pub fn parseOsc(session: SessionFacade, payload: []const u8, terminator: OscTerminator) void {
@@ -113,6 +120,9 @@ pub fn parseOsc(session: SessionFacade, payload: []const u8, terminator: OscTerm
         },
         7 => {
             session.parseCwd(text);
+        },
+        9 => {
+            session.parseProgress(text);
         },
         52 => {
             session.parseClipboard(text, terminator);

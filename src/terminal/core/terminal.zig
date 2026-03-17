@@ -29,6 +29,9 @@ pub const TerminalWorkspace = workspace_mod.TerminalWorkspace;
 pub const TerminalTabId = workspace_mod.TabId;
 pub const TerminalTabSyncEntry = workspace_mod.TabSyncEntry;
 pub const TerminalTabSyncState = workspace_mod.TabSyncState;
+pub const ActivityMetadata = session_mod.ActivityMetadata;
+pub const ProgressMetadata = session_mod.ProgressMetadata;
+pub const ProgressState = session_mod.ProgressState;
 
 pub const Hyperlink = session_mod.Hyperlink;
 

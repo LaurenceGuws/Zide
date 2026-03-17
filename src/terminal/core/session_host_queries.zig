@@ -75,6 +75,10 @@ pub fn currentActivityMetadata(self: anytype) ActivityMetadata {
         .semantic_output_active = semantic_prompt.output_active,
         .semantic_prompt_kind = semantic_prompt.kind,
         .semantic_prompt_exit_code = semantic_prompt.exit_code,
+        .progress = .{
+            .state = self.core.progress_state,
+            .value = self.core.progress_value,
+        },
     };
 }
 
@@ -97,6 +101,7 @@ pub fn copyActivityMetadata(
         .semantic_output_active = current.semantic_output_active,
         .semantic_prompt_kind = current.semantic_prompt_kind,
         .semantic_prompt_exit_code = current.semantic_prompt_exit_code,
+        .progress = current.progress,
     };
 }
 

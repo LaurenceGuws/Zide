@@ -1,5 +1,29 @@
 const semantic_prompt_mod = @import("semantic_prompt.zig");
 
+pub const ProgressState = enum(u8) {
+    none,
+    set,
+    @"error",
+    indeterminate,
+    pause,
+};
+
+pub const ProgressMetadata = struct {
+    state: ProgressState = .none,
+    value: ?u8 = null,
+
+    pub fn active(self: ProgressMetadata) bool {
+        return self.state != .none;
+    }
+
+    pub fn determinate(self: ProgressMetadata) bool {
+        return switch (self.state) {
+            .set, .@"error", .pause => self.value != null,
+            else => false,
+        };
+    }
+};
+
 pub const ActivityMetadata = struct {
     running: bool,
     foreground_process_present: bool,
@@ -9,6 +33,7 @@ pub const ActivityMetadata = struct {
     semantic_output_active: bool,
     semantic_prompt_kind: semantic_prompt_mod.SemanticPromptKind,
     semantic_prompt_exit_code: ?u8,
+    progress: ProgressMetadata = .{},
 };
 
 pub const SessionMetadata = struct {
