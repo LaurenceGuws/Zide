@@ -23,10 +23,12 @@ fn terminalTabBaseLabel(title: []const u8, cwd: []const u8) []const u8 {
 fn terminalTabLabel(
     allocator: std.mem.Allocator,
     scratch: *std.ArrayList(u8),
-    title: []const u8,
+    raw_title: []const u8,
+    foreground_process_label: []const u8,
     cwd: []const u8,
     entry: terminal_mod.TerminalTabSyncEntry,
 ) ![]const u8 {
+    const title = if (foreground_process_label.len > 0) foreground_process_label else raw_title;
     const base = terminalTabBaseLabel(title, cwd);
     if (entry.progress_state == .set or entry.progress_state == .@"error" or entry.progress_state == .pause) {
         if (entry.progress_value) |value| {
@@ -91,6 +93,7 @@ pub fn syncFromWorkspace(
                 tab_bar.allocator,
                 &label_buf,
                 entry.title(sync_state.strings),
+                entry.foregroundProcessLabel(sync_state.strings),
                 entry.cwd(sync_state.strings),
                 entry,
             );
@@ -121,11 +124,14 @@ test "terminal tab label prefixes determinate progress" {
         std.testing.allocator,
         &scratch,
         "zig build",
+        "",
         "/tmp/work",
         .{
             .id = 1,
             .title_offset = 0,
             .title_len = 0,
+            .foreground_process_label_offset = 0,
+            .foreground_process_label_len = 0,
             .cwd_offset = 0,
             .cwd_len = 0,
             .alive = true,

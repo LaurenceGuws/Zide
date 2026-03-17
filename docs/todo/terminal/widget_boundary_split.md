@@ -165,12 +165,18 @@ Current progress:
 
 Remaining highest-value seam:
 
-- `src/terminal/core/session_host_queries.zig`
-  - `copyMetadata(...)` still performs foreground-process title substitution
-  - that is still host-facing presentation convenience hiding inside backend
-    metadata
-  - native should eventually consume raw title plus activity metadata instead
-    of relying on substituted metadata title
+- bridge-side and host-side convenience should now be judged separately:
+  - native tab policy already consumes raw title plus activity explicitly
+  - bridge/FFI still has convenience packaging such as `closeConfirmSignals(...)`
+    and title/cwd event synthesis, which is acceptable as bridge ownership but
+    should not leak back into engine/session semantics
+
+Additional progress:
+
+- metadata title is now raw engine truth again
+- native terminal tab sync explicitly receives foreground-process label through
+  workspace sync state and chooses whether to surface it
+- title substitution is no longer hidden inside backend metadata copying
 
 ### Deferred But Explicit
 

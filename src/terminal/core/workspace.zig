@@ -15,6 +15,8 @@ pub const TabSyncEntry = struct {
     id: TabId,
     title_offset: usize,
     title_len: usize,
+    foreground_process_label_offset: usize,
+    foreground_process_label_len: usize,
     cwd_offset: usize,
     cwd_len: usize,
     alive: bool,
@@ -28,6 +30,10 @@ pub const TabSyncEntry = struct {
 
     pub fn cwd(self: TabSyncEntry, strings: []const u8) []const u8 {
         return strings[self.cwd_offset .. self.cwd_offset + self.cwd_len];
+    }
+
+    pub fn foregroundProcessLabel(self: TabSyncEntry, strings: []const u8) []const u8 {
+        return strings[self.foreground_process_label_offset .. self.foreground_process_label_offset + self.foreground_process_label_len];
     }
 };
 
@@ -241,6 +247,8 @@ pub const TerminalWorkspace = struct {
 
             const title_offset = strings_out.items.len;
             try strings_out.appendSlice(allocator, metadata.title);
+            const foreground_process_label_offset = strings_out.items.len;
+            try strings_out.appendSlice(allocator, activity.foreground_process_label);
             const cwd_offset = strings_out.items.len;
             try strings_out.appendSlice(allocator, metadata.cwd);
 
@@ -248,6 +256,8 @@ pub const TerminalWorkspace = struct {
                 .id = tab.id,
                 .title_offset = title_offset,
                 .title_len = metadata.title.len,
+                .foreground_process_label_offset = foreground_process_label_offset,
+                .foreground_process_label_len = activity.foreground_process_label.len,
                 .cwd_offset = cwd_offset,
                 .cwd_len = metadata.cwd.len,
                 .alive = metadata.alive,

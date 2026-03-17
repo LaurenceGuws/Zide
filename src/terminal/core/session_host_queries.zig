@@ -23,10 +23,7 @@ pub fn copyMetadata(
     self.lock();
     defer self.unlock();
 
-    const title = if (terminal_transport.Transport.fromSession(self)) |transport|
-        (transport.foregroundProcessLabel() orelse self.core.titleText())
-    else
-        self.core.titleText();
+    const title = self.core.titleText();
     const cwd = self.core.cwdText();
     const scrollback = scrollback_view.scrollbackInfo(self);
     const scroll_offset = self.core.scrollbackOffset();
