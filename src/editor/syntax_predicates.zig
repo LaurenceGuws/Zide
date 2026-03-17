@@ -701,19 +701,44 @@ fn simpleRegexMatchHere(pattern: []const u8, text: []const u8, anchored_end: boo
 const SimpleRegexToken = struct {
     byte: u8,
     any: bool,
+    class: ?[]const u8,
+    class_negated: bool,
     next_index: usize,
     quantifier: u8,
 };
 
 fn simpleRegexNextToken(pattern: []const u8) SimpleRegexToken {
-    if (pattern.len == 0) return .{ .byte = 0, .any = false, .next_index = 0, .quantifier = 0 };
+    if (pattern.len == 0) return .{ .byte = 0, .any = false, .class = null, .class_negated = false, .next_index = 0, .quantifier = 0 };
     var idx: usize = 0;
     var byte = pattern[0];
     var any = false;
-    if (byte == '\\' and pattern.len > 1) {
+    var class: ?[]const u8 = null;
+    var class_negated = false;
+    if (byte == '[') {
+        idx = 1;
+        if (idx < pattern.len and pattern[idx] == '^') {
+            class_negated = true;
+            idx += 1;
+        }
+        const class_start = idx;
+        while (idx < pattern.len) : (idx += 1) {
+            if (pattern[idx] == '\\' and idx + 1 < pattern.len) {
+                idx += 1;
+                continue;
+            }
+            if (pattern[idx] == ']') break;
+        }
+        if (idx < pattern.len and pattern[idx] == ']') {
+            class = pattern[class_start..idx];
+            idx += 1;
+        } else {
+            idx = 1;
+        }
+    }
+    if (class == null and byte == '\\' and pattern.len > 1) {
         byte = pattern[1];
         idx = 2;
-    } else {
+    } else if (class == null) {
         idx = 1;
         if (byte == '.') any = true;
     }
@@ -728,13 +753,46 @@ fn simpleRegexNextToken(pattern: []const u8) SimpleRegexToken {
     return .{
         .byte = byte,
         .any = any,
+        .class = class,
+        .class_negated = class_negated,
         .next_index = idx,
         .quantifier = quantifier,
     };
 }
 
 fn simpleRegexTokenMatch(token: SimpleRegexToken, value: u8) bool {
-    return token.any or token.byte == value;
+    if (token.any) return true;
+    if (token.class) |class| {
+        const matched = simpleRegexClassMatch(class, value);
+        return if (token.class_negated) !matched else matched;
+    }
+    return token.byte == value;
+}
+
+fn simpleRegexClassMatch(class: []const u8, value: u8) bool {
+    var i: usize = 0;
+    while (i < class.len) {
+        var start = class[i];
+        if (start == '\\' and i + 1 < class.len) {
+            i += 1;
+            start = class[i];
+        }
+        if (i + 2 < class.len and class[i + 1] == '-') {
+            var finish = class[i + 2];
+            if (finish == '\\' and i + 3 < class.len) {
+                finish = class[i + 3];
+                if (value >= start and value <= finish) return true;
+                i += 4;
+                continue;
+            }
+            if (value >= start and value <= finish) return true;
+            i += 3;
+            continue;
+        }
+        if (start == value) return true;
+        i += 1;
+    }
+    return false;
 }
 
 fn simpleRegexMatchStar(
@@ -774,4 +832,13 @@ fn simpleRegexMatchQuestion(
     if (text.len == 0) return false;
     if (!simpleRegexTokenMatch(token, text[0])) return false;
     return simpleRegexMatchHere(rest, text[1..], anchored_end);
+}
+
+test "simple regex match supports character classes and ranges" {
+    try std.testing.expect(simpleRegexMatch("^[0-9][0-9]*$", "42197"));
+    try std.testing.expect(simpleRegexMatch("^0x[0-9A-Fa-f][0-9A-Fa-f]*$", "0xDEADBEEF"));
+    try std.testing.expect(simpleRegexMatch("^.*_id$", "request_id"));
+    try std.testing.expect(simpleRegexMatch("^.*_ms$", "duration_ms"));
+    try std.testing.expect(!simpleRegexMatch("^[0-9][0-9]*$", "INFO"));
+    try std.testing.expect(!simpleRegexMatch("^0x[0-9A-Fa-f][0-9A-Fa-f]*$", "0xZZ"));
 }
