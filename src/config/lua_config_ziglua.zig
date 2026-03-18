@@ -30,7 +30,22 @@ fn loadConfigFromFileZiglua(allocator: std.mem.Allocator, path: []const u8) LuaC
         else => lua.loadFile(zpath, .binary_text) catch return LuaConfigError.LuaLoadFailed,
     }
     lua.protectedCall(.{ .args = 0, .results = 1 }) catch return LuaConfigError.LuaRunFailed;
-    return ziglua_parse.parseConfigFromLuaState(allocator, @ptrCast(lua));
+    var parsed = try ziglua_parse.parseConfigFromLuaState(allocator, @ptrCast(lua));
+    errdefer lua_shared.freeConfig(allocator, &parsed);
+
+    if (parsed.editor_imported_theme_name) |theme_name| {
+        const theme_path = std.fmt.allocPrint(allocator, "assets/themes/{s}.lua", .{theme_name}) catch return LuaConfigError.OutOfMemory;
+        defer allocator.free(theme_path);
+        if (!lua_shared.fileExists(theme_path)) return LuaConfigError.InvalidConfig;
+
+        var imported = try loadConfigFromFileZiglua(allocator, theme_path);
+        defer lua_shared.freeConfig(allocator, &imported);
+        lua_shared.mergeConfig(allocator, &imported, parsed);
+        lua_shared.freeConfig(allocator, &parsed);
+        return imported;
+    }
+
+    return parsed;
 }
 
 pub fn loadConfig(allocator: std.mem.Allocator) LuaConfigError!Config {

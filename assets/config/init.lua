@@ -268,6 +268,10 @@ return {
 		-- font_features = "-calt,-liga"
 		-- font_features = { "+calt", "-liga" }
 		-- font_features = "+calt",
+		-- Load a shipped imported editor theme artifact by name.
+		-- The imported theme is merged first, then the rest of this config file
+		-- can override it normally.
+		-- imported_theme = "tokyonight-night",
 		-- Render work budgets (lines per frame). Set to 0 to disable precompute.
 		render = {
 			-- highlight_budget = 120,
@@ -283,13 +287,13 @@ return {
 		--   "prepend"           = manual query first, default query after
 		--   "replace"           = manual query only
 		--
-		-- No generic `.txt` fallback is enabled by default yet. The first shipped
-		-- preset is `.log`, routed through the `comment` grammar.
+		-- Shipped defaults currently route unsupported / plain-text-ish buffers
+		-- through the `comment` grammar with the richer `log_levels` preset
+		-- layered on top. That covers untitled buffers, `.txt`, `.log`, and
+		-- other unmapped extensions until a real grammar mapping exists.
 		highlights = {
-			extensions = {
-				log = { parser = "comment", builtin = "log_levels", mode = "append" },
-			},
-			-- unsupported = { parser = "comment", builtin = "log_levels", mode = "append" },
+			extensions = {},
+			unsupported = { parser = "comment", builtin = "log_levels", mode = "append" },
 		},
 		-- Optional per-editor selection overlay override.
 		-- selection_overlay = {

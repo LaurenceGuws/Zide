@@ -6,6 +6,8 @@ const app_logger = @import("../app_logger.zig");
 
 pub const Color = renderer.Color;
 pub const Theme = renderer.Theme;
+pub const EditorTextStyleFlags = renderer.EditorTextStyleFlags;
+pub const editor_syntax_style_slots = renderer.editor_syntax_style_slots;
 
 pub const LuaConfigError = error{
     LuaInitFailed,
@@ -91,6 +93,8 @@ pub const ThemeConfig = struct {
     keyword_control: ?Color = null,
     function_method: ?Color = null,
     type_builtin: ?Color = null,
+    syntax_style_flags: [editor_syntax_style_slots]EditorTextStyleFlags = .{EditorTextStyleFlags{}} ** editor_syntax_style_slots,
+    syntax_special_colors: [editor_syntax_style_slots]?Color = .{null} ** editor_syntax_style_slots,
     ansi_colors: [16]?Color = .{null} ** 16,
 };
 
@@ -124,6 +128,7 @@ pub const Config = struct {
     log_console_level_overrides: ?[]u8 = null,
     sdl_log_level: ?c_int,
     editor_wrap: ?bool,
+    editor_imported_theme_name: ?[]u8,
     editor_large_jump_rows: ?usize,
     editor_highlight_budget: ?usize,
     editor_width_budget: ?usize,

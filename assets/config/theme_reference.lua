@@ -159,6 +159,7 @@ return {
 
 	-- Editor theme supports palette/syntax + nvim-style groups/captures/links.
 	editor = {
+		imported_theme = "tokyonight-night",
 		theme = {
 			palette = {
 				background = "#222436",
@@ -196,11 +197,12 @@ return {
 			-- nvim-style named groups:
 			groups = {
 				Normal = "#c8d3f5",
-				Comment = "#636da6",
+				Comment = { fg = "#636da6", italic = true },
 				Keyword = "#c099ff",
-				["Function"] = { fg = "#82aaff" },
+				["Function"] = { fg = "#82aaff", bold = true },
 				Visual = { bg = "#2d3f76" },
 				CursorLine = { bg = "#2f334d" },
+				DiagnosticUnderlineError = { sp = "#ff757f", undercurl = true },
 				LineNr = "#545c7e",
 				Statement = { link = "Keyword" },
 			},

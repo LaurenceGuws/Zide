@@ -333,6 +333,12 @@ fn parseNativeScalarOverlay(allocator: std.mem.Allocator, lua: *zlua.Lua, table_
         if (lua.isBoolean(-1)) out.editor_wrap = lua.toBoolean(-1);
         lua.pop(1);
 
+        _ = lua.getField(editor_idx, "imported_theme");
+        if (lua.isString(-1)) {
+            if (lua.toString(-1)) |v| out.editor_imported_theme_name = try allocator.dupe(u8, v) else |_| {}
+        }
+        lua.pop(1);
+
         _ = lua.getField(editor_idx, "large_cursor_jump_rows");
         if (lua.isNumber(-1)) {
             if (lua.toInteger(-1)) |v| {

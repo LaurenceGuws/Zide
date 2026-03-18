@@ -120,6 +120,30 @@ flowchart LR
 Reload behavior: app/editor/terminal themes are re-resolved from a canonical shell base theme on each config reload, then per-domain overlays are applied. This avoids drift from repeated incremental overlay application. Terminal theme reload remaps existing terminal cells/scrollback that were using prior default fg/bg and ANSI palette colors so open tabs repaint immediately after theme swaps.
 Theme import helper: `assets/config/theme_import.lua` provides `from_kitty(path)`, `from_ghostty(path)`, and `merge(...)` to map external terminal themes into Zide's Lua theme shape, including kitty tab keys (`tab_bar_background`, `active_tab_background`, `active_tab_foreground`, `inactive_tab_background`, `inactive_tab_foreground`, `active_border_color`) into terminal UI palette fields. Runtime terminal tab-bar theme adaptation now enforces a strong minimum text/background contrast for active tab labels, so imported low-contrast active-tab foregrounds remain readable.
 
+Editor-theme import direction: the current shared theme schema is already broad
+enough to serve as the import target for external IDE/editor themes too. The
+preferred target shape is:
+- shared `theme.palette` fields where semantics genuinely overlap
+- `editor.theme.syntax` for coarse token buckets
+- `editor.theme.groups` for named highlight groups
+- `editor.theme.captures` for Treesitter-style capture overrides
+- `editor.theme.links` for explicit group/capture link chains
+
+This is intentionally broader than terminal palette import. Future Neovim or
+VS Code theme importers should target this same shared/editor schema rather
+than introducing a separate importer-specific theme model.
+
+Current limitation: editor theme import now preserves Neovim-style highlight
+metadata in config/theme parsing for the main editor syntax buckets, including
+`italic`, `bold`, `underline`, `undercurl`, `strikethrough`, `reverse`,
+`nocombine`, and special underline color (`sp`). The editor draw path now
+consumes the low-cost decoration subset (`underline`, `strikethrough`, `sp`,
+and a basic `undercurl` approximation), and now also applies a simple bold
+overdraw approximation. It still does not render richer style semantics such
+as `italic`, `reverse`, or `nocombine`. The remaining gap for
+"proper" Neovim theme translation is therefore richer runtime style
+rendering, not schema preservation.
+
 ### `app`
 
 | Lua path | Meaning | Runtime consumer | Status | Notes |
@@ -132,6 +156,7 @@ Theme import helper: `assets/config/theme_import.lua` provides `from_kitty(path)
 |---|---|---|---|---|
 | `editor.font.path` / `editor.font.size` | Editor font override | `src/main.zig` -> renderer font setup | `partial` | Same shared-font caveat as `app.font`. |
 | `editor.wrap` | Soft wrap | `src/main.zig`, editor widget/layout/input | `reloadable` | Defaults to `false`. |
+| `editor.imported_theme` | Load a shipped imported editor theme artifact by name | config load path -> theme merge | `reloadable` | Current artifacts live under `assets/themes/<name>.lua`. Imported theme config is merged first, then the rest of the same config file can override it. |
 | `editor.tab_bar.width_mode` | IDE/editor tab bar width policy | `src/main.zig` + `src/ui/widgets/tab_bar.zig` | `reloadable` | `fixed`, `dynamic`, `label_length`. |
 | `editor.disable_ligatures` | Editor ligature strategy | `src/main.zig` -> renderer/editor draw | `reloadable` | Current values: `never`, `cursor`, `always`. |
 | `editor.font_features` | Editor OpenType features | `src/main.zig` -> renderer/editor draw | `reloadable` | Falls back to terminal font features when unset. |

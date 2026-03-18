@@ -23,13 +23,12 @@ const BuiltinRule = struct {
     mode: QueryMergeMode,
 };
 
-const builtin_rules = [_]BuiltinRule{
-    .{
-        .extension = "log",
-        .parser = "comment",
-        .query_path = "assets/queries/manual/log_levels.scm",
-        .mode = .append,
-    },
+const builtin_rules = [_]BuiltinRule{};
+
+const builtin_unsupported = Resolved{
+    .parser = "comment",
+    .query_path = "assets/queries/manual/log_levels.scm",
+    .mode = .append,
 };
 
 var arena: ?std.heap.ArenaAllocator = null;
@@ -78,7 +77,7 @@ pub fn reset() void {
 }
 
 pub fn resolve(path: ?[]const u8, default_language: ?[]const u8) ?Resolved {
-    const ext = extensionName(path) orelse return if (default_language == null) unsupported else null;
+    const ext = extensionName(path) orelse return if (default_language == null) (unsupported orelse builtin_unsupported) else null;
 
     for (rules) |rule| {
         if (std.ascii.eqlIgnoreCase(rule.extension, ext)) {
@@ -100,7 +99,7 @@ pub fn resolve(path: ?[]const u8, default_language: ?[]const u8) ?Resolved {
         }
     }
 
-    if (default_language == null) return unsupported;
+    if (default_language == null) return unsupported orelse builtin_unsupported;
     return null;
 }
 
@@ -117,8 +116,22 @@ fn resolveQueryPath(allocator: std.mem.Allocator, builtin: ?[]const u8, explicit
     return null;
 }
 
-test "built-in log override resolves to comment parser" {
+test "built-in unsupported fallback resolves to comment parser for log files" {
     const resolved = resolve("server.log", null).?;
+    try std.testing.expectEqualStrings("comment", resolved.parser);
+    try std.testing.expectEqualStrings("assets/queries/manual/log_levels.scm", resolved.query_path.?);
+    try std.testing.expectEqual(QueryMergeMode.append, resolved.mode);
+}
+
+test "built-in unsupported fallback resolves to comment parser for txt files" {
+    const resolved = resolve("notes.txt", null).?;
+    try std.testing.expectEqualStrings("comment", resolved.parser);
+    try std.testing.expectEqualStrings("assets/queries/manual/log_levels.scm", resolved.query_path.?);
+    try std.testing.expectEqual(QueryMergeMode.append, resolved.mode);
+}
+
+test "built-in unsupported fallback resolves for untitled buffers" {
+    const resolved = resolve(null, null).?;
     try std.testing.expectEqualStrings("comment", resolved.parser);
     try std.testing.expectEqualStrings("assets/queries/manual/log_levels.scm", resolved.query_path.?);
     try std.testing.expectEqual(QueryMergeMode.append, resolved.mode);

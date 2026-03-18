@@ -71,6 +71,8 @@ pub const EMOJI_TEXT_FALLBACK_PATH = iface.EMOJI_TEXT_FALLBACK_PATH;
 pub const Color = iface.Color;
 pub const MousePos = iface.MousePos;
 pub const Theme = iface.Theme;
+pub const EditorTextStyleFlags = iface.EditorTextStyleFlags;
+pub const editor_syntax_style_slots = iface.editor_syntax_style_slots;
 
 pub const FrameSubmission = struct {
     succeeded: bool,

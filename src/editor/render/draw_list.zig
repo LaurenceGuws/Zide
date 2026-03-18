@@ -37,6 +37,7 @@ pub const TextOp = struct {
     color: u32,
     bg_color: u32,
     disable_programming_ligatures: bool,
+    bold: bool = false,
 };
 
 pub const RectOp = struct {

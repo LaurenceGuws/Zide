@@ -56,6 +56,19 @@ pub const MousePos = struct {
     y: f32,
 };
 
+pub const editor_syntax_style_slots = 32;
+
+pub const EditorTextStyleFlags = packed struct(u8) {
+    bold: bool = false,
+    italic: bool = false,
+    underline: bool = false,
+    undercurl: bool = false,
+    strikethrough: bool = false,
+    reverse: bool = false,
+    nocombine: bool = false,
+    _padding: u1 = 0,
+};
+
 pub const Theme = struct {
     background: Color = Color.bg,
     foreground: Color = Color.fg,
@@ -99,6 +112,8 @@ pub const Theme = struct {
     keyword_control: Color = Color.orange,
     function_method: Color = Color{ .r = 136, .g = 192, .b = 208 },
     type_builtin: Color = Color.yellow,
+    syntax_style_flags: [editor_syntax_style_slots]EditorTextStyleFlags = .{EditorTextStyleFlags{}} ** editor_syntax_style_slots,
+    syntax_special_colors: [editor_syntax_style_slots]?Color = .{null} ** editor_syntax_style_slots,
 
     // Optional override for terminal ANSI colors 0-15
     ansi_colors: ?[16]Color = null,

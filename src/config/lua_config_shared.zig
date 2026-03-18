@@ -5,6 +5,7 @@ const input_actions = @import("../input/input_actions.zig");
 pub const Config = iface.Config;
 const EditorManualHighlightFallback = iface.EditorManualHighlightFallback;
 const EditorManualHighlightRule = iface.EditorManualHighlightRule;
+const editor_syntax_style_slots = iface.editor_syntax_style_slots;
 pub const Theme = iface.Theme;
 pub const ThemeConfig = iface.ThemeConfig;
 
@@ -114,6 +115,7 @@ pub fn emptyConfig() Config {
         .log_console_level_overrides = null,
         .sdl_log_level = null,
         .editor_wrap = null,
+        .editor_imported_theme_name = null,
         .editor_large_jump_rows = null,
         .editor_highlight_budget = null,
         .editor_width_budget = null,
@@ -176,6 +178,10 @@ pub fn freeConfig(allocator: std.mem.Allocator, config: *Config) void {
     if (config.log_console_filter) |filter| {
         allocator.free(filter);
         config.log_console_filter = null;
+    }
+    if (config.editor_imported_theme_name) |name| {
+        allocator.free(name);
+        config.editor_imported_theme_name = null;
     }
     if (config.log_file_level_overrides) |overrides| {
         allocator.free(overrides);
@@ -276,6 +282,12 @@ fn mergeThemeConfig(base: *ThemeConfig, overlay: ThemeConfig) void {
     if (overlay.keyword_control) |color| base.keyword_control = color;
     if (overlay.function_method) |color| base.function_method = color;
     if (overlay.type_builtin) |color| base.type_builtin = color;
+    for (0..editor_syntax_style_slots) |i| {
+        if (@as(u8, @bitCast(overlay.syntax_style_flags[i])) != 0) {
+            base.syntax_style_flags[i] = overlay.syntax_style_flags[i];
+        }
+        if (overlay.syntax_special_colors[i]) |color| base.syntax_special_colors[i] = color;
+    }
     for (0..16) |i| {
         if (overlay.ansi_colors[i]) |color| base.ansi_colors[i] = color;
     }
@@ -346,6 +358,10 @@ pub fn mergeConfig(allocator: std.mem.Allocator, base: *Config, overlay: Config)
     }
     if (overlay.sdl_log_level) |level| base.sdl_log_level = level;
     if (overlay.editor_wrap != null) base.editor_wrap = overlay.editor_wrap;
+    if (overlay.editor_imported_theme_name) |name| {
+        if (base.editor_imported_theme_name) |old| allocator.free(old);
+        base.editor_imported_theme_name = allocator.dupe(u8, name) catch base.editor_imported_theme_name;
+    }
     if (overlay.editor_large_jump_rows != null) base.editor_large_jump_rows = overlay.editor_large_jump_rows;
     if (overlay.editor_highlight_budget != null) base.editor_highlight_budget = overlay.editor_highlight_budget;
     if (overlay.editor_width_budget != null) base.editor_width_budget = overlay.editor_width_budget;
@@ -504,6 +520,12 @@ pub fn applyThemeConfig(theme: *Theme, overlay: ThemeConfig) void {
     if (overlay.keyword_control) |color| theme.keyword_control = color;
     if (overlay.function_method) |color| theme.function_method = color;
     if (overlay.type_builtin) |color| theme.type_builtin = color;
+    for (0..editor_syntax_style_slots) |i| {
+        if (@as(u8, @bitCast(overlay.syntax_style_flags[i])) != 0) {
+            theme.syntax_style_flags[i] = overlay.syntax_style_flags[i];
+        }
+        if (overlay.syntax_special_colors[i]) |color| theme.syntax_special_colors[i] = color;
+    }
     if (theme.ansi_colors) |*colors| {
         for (0..16) |i| {
             if (overlay.ansi_colors[i]) |color| colors[i] = color;

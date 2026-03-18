@@ -3,12 +3,14 @@ const syntax_mod = @import("../../editor/syntax.zig");
 const selection_mod = @import("../../editor/view/selection.zig");
 const draw_list_mod = @import("../../editor/render/draw_list.zig");
 const overlay_mod = @import("editor_widget_draw_overlay.zig");
+const renderer_mod = @import("../renderer.zig");
 
 const HighlightToken = syntax_mod.HighlightToken;
 const TokenKind = syntax_mod.TokenKind;
 const SelectionRange = selection_mod.SelectionRange;
 const EditorDrawList = draw_list_mod.EditorDrawList;
 const ByteRange = overlay_mod.ByteRange;
+const EditorTextStyleFlags = renderer_mod.EditorTextStyleFlags;
 
 pub fn xForByteOffset(
     r: anytype,
@@ -172,6 +174,109 @@ fn selectionOverlapBg(slice_start: usize, slice_end: usize, base_bg: anytype, se
     return base_bg;
 }
 
+fn tokenStyleInfo(r: anytype, kind: TokenKind) struct {
+    flags: EditorTextStyleFlags,
+    underline_color: ?@TypeOf(r.theme.foreground),
+} {
+    const idx = @intFromEnum(kind);
+    if (idx >= r.theme.syntax_style_flags.len) {
+        return .{ .flags = .{}, .underline_color = null };
+    }
+    return .{
+        .flags = r.theme.syntax_style_flags[idx],
+        .underline_color = r.theme.syntax_special_colors[idx],
+    };
+}
+
+fn drawTextDecorations(r: anytype, x: f32, y: f32, width: f32, color: anytype, flags: EditorTextStyleFlags) void {
+    if (width <= 0 or (!flags.underline and !flags.undercurl and !flags.strikethrough)) return;
+    const scale = r.uiScaleFactor();
+    const thickness = @max(1, @as(i32, @intFromFloat(std.math.round(@max(scale, 1.0)))));
+    const x_i = @as(i32, @intFromFloat(std.math.round(x)));
+    const y_i = @as(i32, @intFromFloat(std.math.round(y)));
+    const w_i = @max(1, @as(i32, @intFromFloat(std.math.round(width))));
+    const h_i = @max(1, @as(i32, @intFromFloat(std.math.round(r.char_height))));
+    if (flags.undercurl) {
+        const baseline_y = y_i + h_i - thickness - 1;
+        drawUndercurl(r, x_i, baseline_y, w_i, thickness, color);
+    } else if (flags.underline) {
+        r.drawRect(x_i, y_i + h_i - thickness, w_i, thickness, color);
+    }
+    if (flags.strikethrough) {
+        r.drawRect(x_i, y_i + @divFloor(h_i, 2), w_i, thickness, color);
+    }
+}
+
+fn drawStyledTextOnBg(r: anytype, text: []const u8, x: f32, y: f32, fg: anytype, bg: anytype, flags: EditorTextStyleFlags, disable_programming_ligatures: bool) void {
+    r.drawTextMonospaceOnBgPolicy(text, x, y, fg, bg, disable_programming_ligatures);
+    if (flags.bold) r.drawTextMonospaceOnBgPolicy(text, x + 1.0, y, fg, bg, disable_programming_ligatures);
+}
+
+fn addTextDecorationOps(list: *EditorDrawList, r: anytype, x: f32, y: f32, width: f32, color: anytype, flags: EditorTextStyleFlags) bool {
+    if (width <= 0 or (!flags.underline and !flags.undercurl and !flags.strikethrough)) return true;
+    const thickness = @max(1.0, std.math.round(@max(r.uiScaleFactor(), 1.0)));
+    var ok = true;
+    if (flags.undercurl) {
+        ok = ok and addUndercurlOps(list, x, y + r.char_height - thickness - 1.0, width, thickness, color);
+    } else if (flags.underline) {
+        ok = ok and overlay_mod.addRectOp(list, x, y + r.char_height - thickness, width, thickness, color);
+    }
+    if (flags.strikethrough) {
+        ok = ok and overlay_mod.addRectOp(list, x, y + std.math.floor(r.char_height * 0.5), width, thickness, color);
+    }
+    return ok;
+}
+
+fn drawUndercurl(r: anytype, x_i: i32, baseline_y: i32, width_i: i32, thickness: i32, color: anytype) void {
+    if (width_i <= 0) return;
+    const amplitude = @max(1, thickness);
+    const step = @max(2, thickness * 2);
+    var pos: i32 = 0;
+    while (pos < width_i) : (pos += step) {
+        const seg_w = @min(step, width_i - pos);
+        if (seg_w <= 0) break;
+        const half = @max(1, @divFloor(seg_w, 2));
+        r.drawRect(x_i + pos, baseline_y, half, thickness, color);
+        const tail_w = seg_w - half;
+        if (tail_w > 0) {
+            r.drawRect(x_i + pos + half, baseline_y + amplitude, tail_w, thickness, color);
+        }
+    }
+}
+
+fn addUndercurlOps(list: *EditorDrawList, x: f32, baseline_y: f32, width: f32, thickness: f32, color: anytype) bool {
+    if (width <= 0) return true;
+    const thickness_px = @max(1.0, thickness);
+    const amplitude = thickness_px;
+    const step = @max(2.0, thickness_px * 2.0);
+    var ok = true;
+    var pos: f32 = 0.0;
+    while (pos < width) : (pos += step) {
+        const seg_w = @min(step, width - pos);
+        if (seg_w <= 0) break;
+        const half = @max(1.0, std.math.floor(seg_w * 0.5));
+        ok = ok and overlay_mod.addRectOp(list, x + pos, baseline_y, half, thickness_px, color);
+        const tail_w = seg_w - half;
+        if (tail_w > 0) {
+            ok = ok and overlay_mod.addRectOp(list, x + pos + half, baseline_y + amplitude, tail_w, thickness_px, color);
+        }
+    }
+    return ok;
+}
+
+fn addStyledTextOpBg(list: *EditorDrawList, x: f32, y: f32, text: []const u8, fg: anytype, bg: anytype, flags: EditorTextStyleFlags, disable_programming_ligatures: bool) bool {
+    list.add(.{ .text = .{
+        .x = x,
+        .y = y,
+        .text = text,
+        .color = overlay_mod.packColor(fg),
+        .bg_color = overlay_mod.packColor(bg),
+        .disable_programming_ligatures = disable_programming_ligatures,
+        .bold = flags.bold,
+    } }) catch return false;
+    return true;
+}
+
 pub fn drawTextSliceWithSelectionBg(r: anytype, text_start_x: f32, y: f32, line_text: []const u8, seg_start_byte: usize, seg_start_vis: usize, slice_start: usize, slice_end: usize, fg: anytype, base_bg: anytype, selection_bg: anytype, sel_ranges: []const ByteRange, disable_programming_ligatures: bool) void {
     if (slice_end <= slice_start) return;
     var cursor = slice_start;
@@ -212,14 +317,21 @@ pub fn appendHighlightedLineSegmentOps(list: *EditorDrawList, r: anytype, line_t
         const conceal_text: ?[]const u8 = if (token.conceal != null or token.conceal_lines) token.conceal orelse "" else null;
         var color = colorForToken(r, token.kind);
         if (token.url != null) color = r.theme.link;
+        const style = tokenStyleInfo(r, token.kind);
+        const decoration_color = style.underline_color orelse color;
         if (conceal_text) |ctext| {
             if (ctext.len > 0) {
                 const bg = selectionOverlapBg(start, end, base_bg, selection_bg, sel_ranges);
                 const x = xForByteOffset(r, line_text, seg_start, seg_start_vis, start, text_x);
-                ok = ok and overlay_mod.addTextOpBg(list, x, y, ctext, color, bg, disable_programming_ligatures);
+                ok = ok and addStyledTextOpBg(list, x, y, ctext, color, bg, style.flags, disable_programming_ligatures);
+                ok = ok and addTextDecorationOps(list, r, x, y, @as(f32, @floatFromInt(ctext.len)) * r.char_width, decoration_color, style.flags);
             }
         } else {
-            ok = ok and addTextSliceOpsWithSelectionBg(list, r, text_x, y, line_text, seg_start_byte, seg_start_vis, start, end, color, base_bg, selection_bg, sel_ranges, disable_programming_ligatures);
+            const start_x = xForByteOffset(r, line_text, seg_start, seg_start_vis, start, text_x);
+            const end_x = xForByteOffset(r, line_text, seg_start, seg_start_vis, end, text_x);
+            const bg = selectionOverlapBg(start, end, base_bg, selection_bg, sel_ranges);
+            ok = ok and addStyledTextOpBg(list, start_x, y, line_text[start..end], color, bg, style.flags, disable_programming_ligatures);
+            ok = ok and addTextDecorationOps(list, r, start_x, y, end_x - start_x, decoration_color, style.flags);
         }
         if (end > cursor) cursor = end;
     }
@@ -243,13 +355,19 @@ pub fn drawHighlightedLineSegment(r: anytype, line_text: []const u8, y: f32, tex
         const conceal_text: ?[]const u8 = if (token.conceal != null or token.conceal_lines) token.conceal orelse "" else null;
         var color = colorForToken(r, token.kind);
         if (token.url != null) color = r.theme.link;
+        const style = tokenStyleInfo(r, token.kind);
+        const decoration_color = style.underline_color orelse color;
         if (conceal_text) |text| {
             if (text.len > 0) {
                 const bg = selectionOverlapBg(start, end, base_bg, selection_bg, sel_ranges);
-                r.drawTextMonospaceOnBgPolicy(text, x, y, color, bg, disable_programming_ligatures);
+                drawStyledTextOnBg(r, text, x, y, color, bg, style.flags, disable_programming_ligatures);
+                drawTextDecorations(r, x, y, @as(f32, @floatFromInt(text.len)) * r.char_width, decoration_color, style.flags);
             }
         } else {
-            drawTextSliceWithSelectionBg(r, text_x, y, line_text, seg_start, seg_start_vis, start, end, color, base_bg, selection_bg, sel_ranges, disable_programming_ligatures);
+            const bg = selectionOverlapBg(start, end, base_bg, selection_bg, sel_ranges);
+            drawStyledTextOnBg(r, line_text[start..end], x, y, color, bg, style.flags, disable_programming_ligatures);
+            const end_x = xForByteOffset(r, line_text, seg_start, seg_start_vis, end, text_x);
+            drawTextDecorations(r, x, y, end_x - x, decoration_color, style.flags);
         }
         if (end > cursor) cursor = end;
     }
