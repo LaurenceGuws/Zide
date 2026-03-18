@@ -30,6 +30,7 @@ pub fn handle(
     search_panel_query: *std.ArrayList(u8),
     editors: anytype,
     active_tab: usize,
+    tab_bar: anytype,
     app_mode: app_bootstrap.AppMode,
     active_kind: ActiveMode,
     editor_cluster_cache: *EditorClusterCache,
@@ -69,6 +70,7 @@ pub fn handle(
         path_prompt,
         editors,
         active_tab,
+        tab_bar,
         input_batch,
         ctx,
         .{
@@ -90,6 +92,7 @@ pub fn handle(
             search_panel_query,
             editors,
             active_tab,
+            tab_bar,
             input_batch,
         );
         if (search_panel_result.clear_editor_cluster_cache) editor_cluster_cache.clear();
@@ -103,6 +106,7 @@ pub fn handle(
         active_kind,
         editors,
         active_tab,
+        tab_bar,
         editor_cluster_cache,
         editor_wrap,
         shell,

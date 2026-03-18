@@ -1,4 +1,5 @@
 const app_active_editor_frame = @import("active_editor_frame.zig");
+const app_active_editor_runtime = @import("active_editor_runtime.zig");
 const app_bootstrap = @import("../bootstrap.zig");
 const app_modes = @import("../modes/mod.zig");
 const app_editor_input_runtime = @import("editor_input_runtime.zig");
@@ -31,6 +32,7 @@ pub fn handle(
     active_kind: ActiveMode,
     editors: []*Editor,
     active_tab: usize,
+    tab_bar: anytype,
     editor_cluster_cache: *EditorClusterCache,
     editor_wrap: bool,
     shell: *app_shell.Shell,
@@ -67,6 +69,7 @@ pub fn handle(
         active_kind,
         editors,
         active_tab,
+        tab_bar,
         editor_cluster_cache,
         editor_wrap,
         shell,
@@ -148,8 +151,8 @@ pub fn handle(
     if (runtime_state.needs_redraw) out.needs_redraw = true;
     if (runtime_state.note_input) out.note_input = true;
     if (out.needs_redraw) {
-        const editor_idx = @min(active_tab, editors.len - 1);
-        var widget = widgets.EditorWidget.initWithCache(editors[editor_idx], editor_cluster_cache, editor_wrap);
+        const editor = app_active_editor_runtime.fromVisualIndex(tab_bar, editors, active_tab) orelse return out;
+        var widget = widgets.EditorWidget.initWithCache(editor, editor_cluster_cache, editor_wrap);
         app_editor_visible_caches_runtime.precompute(
             &widget,
             shell,

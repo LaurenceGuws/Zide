@@ -1,4 +1,5 @@
 const std = @import("std");
+const app_active_editor_runtime = @import("../editor/active_editor_runtime.zig");
 const app_search_panel_input = @import("search_panel_input.zig");
 const app_search_panel_runtime = @import("search_panel_runtime.zig");
 const app_search_panel_state = @import("search_panel_state.zig");
@@ -23,12 +24,13 @@ pub fn handle(
     search_panel_query: *std.ArrayList(u8),
     editors: anytype,
     active_tab: usize,
+    tab_bar: anytype,
     input_batch: *input_types.InputBatch,
 ) !Result {
     var out: Result = .{};
     if (!search_panel_active.* or editors.len == 0) return out;
 
-    const editor = editors[@min(active_tab, editors.len - 1)];
+    const editor = app_active_editor_runtime.fromVisualIndex(tab_bar, editors, active_tab) orelse return out;
     var handled = false;
     var query_changed = false;
 

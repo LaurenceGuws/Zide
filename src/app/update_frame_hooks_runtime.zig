@@ -341,6 +341,7 @@ pub fn handle(state: anytype, input_batch: *shared_types.input.InputBatch) !void
                                             &inner_state.search_panel.query,
                                             inner_state.editors.items,
                                             inner_state.active_tab,
+                                            &inner_state.tab_bar,
                                             inner_state.app_mode,
                                             inner_state.active_kind,
                                             &inner_state.editor_cluster_cache,

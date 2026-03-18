@@ -1,4 +1,5 @@
 const app_bootstrap = @import("../bootstrap.zig");
+const app_active_editor_runtime = @import("active_editor_runtime.zig");
 const app_modes = @import("../modes/mod.zig");
 const app_shell = @import("../../app_shell.zig");
 const editor_mod = @import("../../editor/editor.zig");
@@ -46,6 +47,7 @@ pub fn handle(
     active_kind: ActiveMode,
     editors: []*Editor,
     active_tab: usize,
+    tab_bar: anytype,
     editor_cluster_cache: *EditorClusterCache,
     editor_wrap: bool,
     shell: *app_shell.Shell,
@@ -64,8 +66,8 @@ pub fn handle(
     var out: Result = .{};
     if (!app_modes.ide.supportsEditorSurface(app_mode) or active_kind != .editor or editors.len == 0) return out;
 
-    const editor_idx = @min(active_tab, editors.len - 1);
-    var widget = EditorWidget.initWithCache(editors[editor_idx], editor_cluster_cache, editor_wrap);
+    const editor = app_active_editor_runtime.fromVisualIndex(tab_bar, editors, active_tab) orelse return out;
+    var widget = EditorWidget.initWithCache(editor, editor_cluster_cache, editor_wrap);
 
     if (!search_panel_consumed_input and try widget.handleInput(shell, layout.editor.height, input_batch)) {
         out.needs_redraw = true;

@@ -1,4 +1,5 @@
 const std = @import("std");
+const app_active_editor_runtime = @import("active_editor_runtime.zig");
 const app_logger = @import("../../app_logger.zig");
 const app_prompt_state = @import("path_prompt_state.zig");
 const app_shell = @import("../../app_shell.zig");
@@ -10,6 +11,10 @@ const Editor = editor_mod.Editor;
 const PathPromptState = app_prompt_state.State;
 const PathPromptKind = app_prompt_state.Kind;
 const Shell = app_shell.Shell;
+const GoToLocation = struct {
+    line_1: usize,
+    col_1: ?usize,
+};
 
 pub const Result = struct {
     consumed_input: bool = false,
@@ -52,9 +57,8 @@ fn popQueryScalar(query: *std.ArrayList(u8)) void {
     query.items.len = idx;
 }
 
-fn activeEditor(editors: []*Editor, active_tab: usize) ?*Editor {
-    if (editors.len == 0) return null;
-    return editors[@min(active_tab, editors.len - 1)];
+fn activeEditor(tab_bar: anytype, editors: []*Editor, active_tab: usize) ?*Editor {
+    return app_active_editor_runtime.fromVisualIndex(tab_bar, editors, active_tab);
 }
 
 fn parsePositivePart(part: []const u8) !usize {
@@ -63,7 +67,7 @@ fn parsePositivePart(part: []const u8) !usize {
     return std.fmt.parseUnsigned(usize, trimmed, 10);
 }
 
-fn parseGoToLocation(query: []const u8) !struct { line_1: usize, col_1: ?usize } {
+fn parseGoToLocation(query: []const u8) !GoToLocation {
     const trimmed = std.mem.trim(u8, query, " \t");
     if (trimmed.len == 0) return error.InvalidLocation;
 
@@ -85,6 +89,7 @@ pub fn handle(
     prompt: *PathPromptState,
     editors: []*Editor,
     active_tab: usize,
+    tab_bar: anytype,
     input_batch: *shared_types.input.InputBatch,
     ctx: *anyopaque,
     hooks: Hooks,
@@ -117,7 +122,7 @@ pub fn handle(
                         };
                     },
                     .save_as => {
-                        const editor = activeEditor(editors, active_tab) orelse return out;
+                        const editor = activeEditor(tab_bar, editors, active_tab) orelse return out;
                         editor.saveAs(prompt.query.items) catch |err| {
                             log.logf(.warning, "save-as prompt submit failed path=\"{s}\" err={s}", .{ prompt.query.items, @errorName(err) });
                             submit_succeeded = false;
@@ -125,8 +130,8 @@ pub fn handle(
                         };
                     },
                     .go_to_line => {
-                        const editor = activeEditor(editors, active_tab) orelse return out;
-                        const maybe_location: ?struct { line_1: usize, col_1: ?usize } = parseGoToLocation(prompt.query.items) catch |err| blk: {
+                        const editor = activeEditor(tab_bar, editors, active_tab) orelse return out;
+                        const maybe_location: ?GoToLocation = parseGoToLocation(prompt.query.items) catch |err| blk: {
                             log.logf(.warning, "go-to-line prompt parse failed query=\"{s}\" err={s}", .{ prompt.query.items, @errorName(err) });
                             submit_succeeded = false;
                             prompt.error_text = "invalid location";
@@ -142,7 +147,7 @@ pub fn handle(
                         }
                     },
                     .replace => {
-                        const editor = activeEditor(editors, active_tab) orelse return out;
+                        const editor = activeEditor(tab_bar, editors, active_tab) orelse return out;
                         if (editor.searchActiveMatch() == null) {
                             _ = editor.focusSearchActiveMatch();
                         }
@@ -153,7 +158,7 @@ pub fn handle(
                         };
                     },
                     .replace_all => {
-                        const editor = activeEditor(editors, active_tab) orelse return out;
+                        const editor = activeEditor(tab_bar, editors, active_tab) orelse return out;
                         _ = editor.replaceAllSearchMatches(prompt.query.items) catch |err| {
                             log.logf(.warning, "replace-all prompt submit failed err={s}", .{@errorName(err)});
                             submit_succeeded = false;
