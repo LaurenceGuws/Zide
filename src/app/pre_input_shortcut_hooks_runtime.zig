@@ -40,6 +40,7 @@ pub fn handle(
         state.allocator,
         state.editors.items,
         state.active_tab,
+        &state.tab_bar,
         &state.editor_cluster_cache,
         state.editor_wrap,
         state.editor_large_jump_rows,

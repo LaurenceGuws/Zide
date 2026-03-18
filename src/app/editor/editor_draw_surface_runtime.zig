@@ -1,4 +1,5 @@
 const app_editor_display_prepare = @import("editor_display_prepare.zig");
+const app_active_editor_runtime = @import("active_editor_runtime.zig");
 const app_modes = @import("../modes/mod.zig");
 const shared_types = @import("../../types/mod.zig");
 const widgets = @import("../../ui/widgets.zig");
@@ -10,8 +11,7 @@ pub fn draw(state: anytype, shell: anytype, layout: layout_types.WidgetLayout) v
     if (!app_modes.ide.supportsEditorSurface(state.app_mode) or state.editors.items.len == 0) return;
 
     shell.setTheme(state.editor_theme);
-    const editor_idx = @min(state.active_tab, state.editors.items.len - 1);
-    const editor = state.editors.items[editor_idx];
+    const editor = app_active_editor_runtime.fromState(state) orelse return;
     app_editor_display_prepare.prepare(editor, &state.editor_render_cache);
     var widget = EditorWidget.initWithCache(editor, &state.editor_cluster_cache, state.editor_wrap);
     widget.drawCached(

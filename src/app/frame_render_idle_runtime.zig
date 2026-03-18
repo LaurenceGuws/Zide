@@ -1,4 +1,5 @@
 const app_shell = @import("../app_shell.zig");
+const app_active_editor_runtime = @import("editor/active_editor_runtime.zig");
 const app_terminal_frame_pacing_runtime = @import("terminal/terminal_frame_pacing_runtime.zig");
 const shared_types = @import("../types/mod.zig");
 
@@ -37,9 +38,7 @@ pub fn handle(
         state.metrics.recordDraw(draw_start, draw_end);
         if (state.perf_mode and state.perf_frames_done > 0) {
             const draw_ms_perf = (draw_end - draw_start) * 1000.0;
-            const editor_idx = if (state.editors.items.len > 0) @min(state.active_tab, state.editors.items.len - 1) else 0;
-            if (state.editors.items.len > 0) {
-                const editor = state.editors.items[editor_idx];
+            if (app_active_editor_runtime.fromState(state)) |editor| {
                 state.perf_logger.logf(
                     .info,
                     "frame={d} draw_ms={d:.2} scroll_line={d} scroll_row_offset={d} scroll_col={d}",

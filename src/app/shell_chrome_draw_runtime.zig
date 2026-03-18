@@ -1,4 +1,5 @@
 const app_modes = @import("modes/mod.zig");
+const app_active_editor_runtime = @import("editor/active_editor_runtime.zig");
 const mode_build = @import("mode_build.zig");
 const app_path_prompt_state = @import("editor/path_prompt_state.zig");
 const widgets_common = @import("../ui/widgets/common.zig");
@@ -20,8 +21,7 @@ pub fn draw(state: anytype, shell: anytype, layout: layout_types.WidgetLayout, t
     if (comptime mode_build.focused_mode != .terminal) {
         if (app_modes.ide.supportsEditorSurface(state.app_mode) and state.editors.items.len > 0 and layout.status_bar.height > 0) {
             shell.setTheme(state.app_theme);
-            const editor_idx = @min(state.active_tab, state.editors.items.len - 1);
-            const editor = state.editors.items[editor_idx];
+            const editor = app_active_editor_runtime.fromState(state) orelse return;
             state.status_bar.draw(
                 shell,
                 layout.window.width,

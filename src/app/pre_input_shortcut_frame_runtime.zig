@@ -5,6 +5,7 @@ const app_terminal_shortcut_suppress = @import("terminal/terminal_shortcut_suppr
 const app_terminal_surface_gate = @import("terminal/terminal_surface_gate.zig");
 const app_terminal_clipboard_shortcuts_frame = @import("terminal/terminal_clipboard_shortcuts_frame.zig");
 const app_update_prelude_frame_runtime = @import("update_prelude_frame_runtime.zig");
+const app_active_editor_runtime = @import("editor/active_editor_runtime.zig");
 const app_shell = @import("../app_shell.zig");
 const app_bootstrap = @import("bootstrap.zig");
 const app_modes = @import("modes/mod.zig");
@@ -41,6 +42,7 @@ pub fn handle(
     allocator: std.mem.Allocator,
     editors: anytype,
     active_tab: usize,
+    tab_bar: anytype,
     editor_cluster_cache: anytype,
     editor_wrap: bool,
     editor_large_jump_rows: usize,
@@ -104,8 +106,12 @@ pub fn handle(
         if (focus == .editor and editors.len > 0 and !search_panel_active.* and !path_prompt.active) {
             const app_editor_shortcuts_frame = @import("editor/editor_shortcuts_frame.zig");
             const action_layout = hooks.compute_layout(ctx, @floatFromInt(r.width), @floatFromInt(r.height));
-            const editor_idx = @min(active_tab, editors.len - 1);
-            const editor = editors[editor_idx];
+            const editor = app_active_editor_runtime.fromVisualIndex(tab_bar, editors, active_tab) orelse return .{
+                .suppress_terminal_shortcuts = suppress_terminal_shortcuts,
+                .terminal_close_modal_active = terminal_close_modal_active,
+                .handled_shortcut = handled_shortcut,
+                .consumed = false,
+            };
             const editor_shortcut_result = try app_editor_shortcuts_frame.handle(
                 actions,
                 allocator,

@@ -6,6 +6,7 @@ const app_terminal_tabs_runtime = @import("terminal/terminal_tabs_runtime.zig");
 const app_mode_adapter_sync_runtime = @import("mode_adapter_sync_runtime.zig");
 const app_tab_action_apply_runtime = @import("tabs/tab_action_apply_runtime.zig");
 const app_editor_intent_route = @import("editor/editor_intent_route.zig");
+const app_active_editor_runtime = @import("editor/active_editor_runtime.zig");
 const app_path_prompt_state = @import("editor/path_prompt_state.zig");
 const app_search_panel_state = @import("search/search_panel_state.zig");
 const app_terminal_intent_route_runtime = @import("terminal/terminal_intent_route_runtime.zig");
@@ -33,10 +34,7 @@ pub fn handle(
     const State = @TypeOf(state.*);
     if (frame_input_batch.mousePressed(input_types.MouseButton.left)) {
         if (state.options_bar.handleClick(state.shell, frame_layout.window.width, frame_mouse)) |action| {
-            const active_editor = if (state.editors.items.len > 0)
-                state.editors.items[@min(state.active_tab, state.editors.items.len - 1)]
-            else
-                null;
+            const active_editor = app_active_editor_runtime.fromState(state);
             switch (action) {
                 .new_file => try state.newEditor(),
                 .open_file => {
