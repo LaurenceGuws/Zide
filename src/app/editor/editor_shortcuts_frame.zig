@@ -68,6 +68,11 @@ pub fn handle(
                 out.needs_redraw = true;
                 out.handled = true;
             },
+            .delete_line => {
+                try editor.deleteCurrentLine();
+                out.needs_redraw = true;
+                out.handled = true;
+            },
             .go_to_line => {
                 search_panel_active.* = false;
                 try app_path_prompt_state.openForGoToLine(path_prompt, allocator, editor);

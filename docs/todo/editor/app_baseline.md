@@ -96,6 +96,8 @@ This queue does not own:
     - Added a standard `Ctrl+A` editor shortcut for select-all through the
       normal editor action path instead of special-casing selection in input
       handling.
+    - Added `Ctrl+Shift+K` delete-line through a real editor-core line delete
+      operation instead of faking it through cursor-only behavior.
     - Added a runtime-backed `Ctrl+W` close-editor shortcut for clean editor
       tabs, with last-editor fallback to a fresh untitled buffer instead of
       leaving the host in an empty editor state.

@@ -526,6 +526,42 @@ pub const Editor = struct {
         try EditOps.deleteSelection(self);
     }
 
+    pub fn deleteCurrentLine(self: *Editor) !void {
+        self.preferred_visual_col = null;
+
+        const line_count = self.buffer.lineCount();
+        if (line_count == 0) return;
+
+        const before_id = try self.captureUndoSelectionState();
+        const line_idx = @min(self.cursor.line, line_count - 1);
+        const line_start = self.buffer.lineStart(line_idx);
+        const line_len = self.buffer.lineLen(line_idx);
+
+        var delete_start = line_start;
+        var delete_end = line_start + line_len;
+
+        if (line_count > 1) {
+            if (line_idx + 1 < line_count) {
+                delete_end = self.buffer.lineStart(line_idx + 1);
+            } else if (delete_start > 0) {
+                delete_start -= 1;
+            }
+        }
+
+        if (delete_end <= delete_start) return;
+
+        const start_point = self.pointForByte(delete_start);
+        const end_point = self.pointForByte(delete_end);
+        try self.buffer.deleteRange(delete_start, delete_end - delete_start);
+        self.applyHighlightEdit(delete_start, delete_end, delete_start, start_point, end_point);
+        self.setCursorOffsetNoClear(@min(delete_start, self.buffer.totalLen()));
+        self.selection = null;
+        self.clearSelections();
+        self.noteTextChanged();
+        const after_id = try self.captureUndoSelectionState();
+        self.annotateLastUndoSelectionState(before_id, after_id);
+    }
+
     pub fn selectionTextAlloc(self: *Editor) !?[]u8 {
         var selections = std.ArrayList(Selection).empty;
         defer selections.deinit(self.allocator);
@@ -892,3 +928,23 @@ pub const Editor = struct {
         return hasher.final();
     }
 };
+
+test "deleteCurrentLine removes middle line and keeps cursor on following line" {
+    var grammar_manager = grammar_manager_mod.GrammarManager.init(std.testing.allocator);
+    defer grammar_manager.deinit();
+
+    const buffer = try text_store.TextStore.init(std.testing.allocator, "alpha\nbeta\ngamma");
+    var editor = try Editor.initWithStore(std.testing.allocator, buffer, &grammar_manager);
+    defer editor.deinit();
+
+    editor.setCursor(1, 2);
+    try editor.deleteCurrentLine();
+
+    const snapshot = try @import("snapshot.zig").capture(std.testing.allocator, editor);
+    defer std.testing.allocator.free(snapshot);
+
+    try std.testing.expectEqualStrings("alpha\ngamma", snapshot);
+    try std.testing.expectEqual(@as(usize, 1), editor.cursor.line);
+    try std.testing.expectEqual(@as(usize, 0), editor.cursor.col);
+    try std.testing.expect(editor.modified);
+}

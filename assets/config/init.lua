@@ -434,6 +434,7 @@ return {
 			{ key = "c", mods = { "ctrl" }, action = "copy" },
 			{ key = "x", mods = { "ctrl" }, action = "cut" },
 			{ key = "v", mods = { "ctrl" }, action = "paste" },
+			{ key = "k", mods = { "ctrl", "shift" }, action = "delete_line" },
 			{ key = "left", mods = { "ctrl" }, action = "editor_move_word_left", ["repeat"] = true },
 			{ key = "right", mods = { "ctrl" }, action = "editor_move_word_right", ["repeat"] = true },
 			{ key = "up", mods = { "ctrl" }, action = "editor_move_large_up", ["repeat"] = true },

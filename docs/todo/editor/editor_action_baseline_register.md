@@ -59,7 +59,7 @@ The bindings shown here are reference examples, not hardcoded key policy.
 - [x] `Ctrl+Y` Redo
 - [x] `Ctrl+A` Select all
 - [ ] `Ctrl+D` Duplicate current line / selection to next match depending on mode
-- [ ] `Ctrl+Shift+K` Delete line
+- [x] `Ctrl+Shift+K` Delete line
 - [ ] `Alt+Up` Move line up
 - [ ] `Alt+Down` Move line down
 - [ ] `Shift+Alt+Up` Copy line up
@@ -262,7 +262,7 @@ bindings should stay Lua-driven.
 - [x] `Ctrl+C` Copy line when selection is empty via normal copy baseline support
 - [ ] `Alt+Up` / `Alt+Down` Move line up/down
 - [ ] `Shift+Alt+Down` / `Shift+Alt+Up` Copy line down/up
-- [ ] `Ctrl+Shift+K` Delete line
+- [x] `Ctrl+Shift+K` Delete line
 - [ ] `Ctrl+Enter` Insert line below
 - [ ] `Ctrl+Shift+Enter` Insert line above
 - [ ] `Ctrl+Shift+\\` Jump to matching bracket
