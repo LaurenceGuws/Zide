@@ -81,6 +81,8 @@ Quick reading guide:
 ## Research + Reference
 - `docs/reference/README.md` — reference-doc placement and role.
 - `docs/research/README.md` — research-doc placement and role.
+- `docs/research/editor/README.md` — editor research subtree entrypoint.
+- `docs/research/editor/EDITOR_REFERENCE_COMPARISON_2026-03-18.md` — first focused editor reference comparison by concern.
 - `docs/research/terminal/README.md` — terminal research subtree entrypoint.
 - `docs/research/terminal/TERMINAL_LAYER_REFERENCE_NOTES.md` — per-layer reference-terminal notes behind the high-level terminal design doc.
 - `docs/research/terminal/TERMINAL_FFI_PERFORMANCE_REVIEW_2026-03-15.md` — current terminal FFI hot-path performance review and snapshot-boundary constraints.

@@ -144,10 +144,43 @@ Do not leave the work only in commit history or chat context.
   - Record the exact first workload set for large-file open/edit/scroll/search
     pressure.
   - Keep it local and reproducible.
+  - Initial local matrix:
+    - `S1` large-file open:
+      - open representative files around `1 MiB`, `8 MiB`, and `32 MiB`
+      - record open latency, first-paint latency, and immediate scroll
+        correctness
+    - `S2` edit burst near file start/middle/end:
+      - repeated insert/delete, duplicate-line, delete-line, indent/outdent
+      - verify undo/redo correctness and post-edit render stability
+    - `S3` scroll pressure:
+      - sustained page-up/page-down and mouse-wheel scroll on long files
+      - verify cursor visibility, viewport correctness, and redraw smoothness
+    - `S4` search/highlight churn:
+      - repeated search query changes while editing
+      - verify active-match movement, match counts, and redraw coherence
+    - `S5` mixed host routing:
+      - editor + terminal tabs interleaved
+      - verify shortcuts, prompt routing, and active-editor correctness
 
 - [ ] `ED-STRESS-03` Map Zide against the current reference set by concern
   - Record which reference repos matter for which editor questions.
   - Avoid vague "compare to everything" framing.
+  - Initial focused comparison set:
+    - `helix`:
+      - text-core/editor-core split
+      - rope/transaction/edit semantics
+      - indent/search/syntax core modules
+    - `neovim`:
+      - resolved theming richness
+      - query/highlight behavior
+      - editor/runtime authority separation
+    - `zed`:
+      - editor/IDE host layering
+      - multi-buffer/workspace structure
+      - render/perf instrumentation practices
+    - `lapce`:
+      - proxy/editor split and background work separation
+      - rope-backed editor core in a GUI/editor host
 
 - [ ] `ED-STRESS-04` Start with core text + render pipeline checks
   - Prefer the first end-to-end checks that exercise text model, editor state,
