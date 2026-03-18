@@ -239,6 +239,17 @@ pub const EditorRenderCache = struct {
         self.clearLineWidthWork();
         self.clearWrapEntries();
         self.clearWrapWork();
+        self.last_cols = 0;
+        self.last_wrap = false;
+        self.last_width = 0;
+        self.last_height = 0;
+        self.last_change_tick = 0;
+        self.last_highlight_epoch = 0;
+        self.last_scroll_line = 0;
+        self.last_scroll_row_offset = 0;
+        self.last_scroll_col = 0;
+        self.last_selection_hash = 0;
+        self.last_scroll_hash = 0;
     }
 
     fn clearLineEntries(self: *EditorRenderCache) void {
@@ -504,4 +515,16 @@ test "sortTokens uses stable highlight ordering" {
     try std.testing.expectEqualStrings("https://a.dev", owned[1].url.?);
     try std.testing.expectEqualStrings("https://zide.dev", owned[2].url.?);
     try std.testing.expectEqualStrings("*", owned[3].conceal.?);
+}
+
+test "clear invalidates cached frame fingerprint so next beginFrame forces full redraw" {
+    var cache = EditorRenderCache.init(std.testing.allocator, 16);
+    defer cache.deinit();
+
+    try std.testing.expect(cache.beginFrame(1, 80, false, 800, 600, 11, 7, 3, 0, 0, 19));
+    try std.testing.expect(!cache.beginFrame(2, 80, false, 800, 600, 11, 7, 3, 0, 0, 19));
+
+    cache.clear();
+
+    try std.testing.expect(cache.beginFrame(3, 80, false, 800, 600, 11, 7, 3, 0, 0, 19));
 }
