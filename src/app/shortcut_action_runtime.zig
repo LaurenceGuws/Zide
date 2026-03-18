@@ -18,6 +18,7 @@ pub const Hooks = struct {
     new_editor: *const fn (*anyopaque) anyerror!void,
     open_file_prompt: *const fn (*anyopaque) anyerror!void,
     close_active_editor: *const fn (*anyopaque) anyerror!bool,
+    cycle_documents: *const fn (*anyopaque, bool) anyerror!bool,
     new_terminal: *const fn (*anyopaque) anyerror!void,
     quit_app: *const fn (*anyopaque) void,
     cycle_imported_theme_prev: *const fn (*anyopaque) anyerror!void,
@@ -58,6 +59,14 @@ pub fn handle(
         },
         .close_editor => {
             if (app_modes.ide.supportsEditorSurface(app_mode) and try hooks.close_active_editor(ctx)) {
+                out.handled = true;
+                out.needs_redraw = true;
+                out.note_input = true;
+                return out;
+            }
+        },
+        .next_document, .prev_document => {
+            if (app_modes.ide.supportsEditorSurface(app_mode) and try hooks.cycle_documents(ctx, kind == .next_document)) {
                 out.handled = true;
                 out.needs_redraw = true;
                 out.note_input = true;

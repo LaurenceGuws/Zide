@@ -99,6 +99,9 @@ This queue does not own:
     - Added a runtime-backed `Ctrl+W` close-editor shortcut for clean editor
       tabs, with last-editor fallback to a fresh untitled buffer instead of
       leaving the host in an empty editor state.
+    - Added runtime-backed `Ctrl+Tab` and `Ctrl+Shift+Tab` document cycling for
+      editor focus using the shared mixed-tab host state instead of editor-only
+      index math.
 
 - [ ] `ED-APP-05` Friendly Lua config for editor usage
   - Make common editor behavior easy to configure with sane defaults.

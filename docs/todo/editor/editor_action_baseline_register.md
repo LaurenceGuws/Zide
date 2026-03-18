@@ -44,8 +44,8 @@ The bindings shown here are reference examples, not hardcoded key policy.
 - [x] `Ctrl+S` Save file
 - [x] `Ctrl+Shift+S` Save As
 - [x] `Ctrl+W` Close current document
-- [ ] `Ctrl+Tab` Next document
-- [ ] `Ctrl+Shift+Tab` Previous document
+- [x] `Ctrl+Tab` Next document
+- [x] `Ctrl+Shift+Tab` Previous document
 - [ ] `Ctrl+PgUp` Next document
 - [ ] `Ctrl+PgDn` Previous document
 - [ ] `Ctrl+1..9` Focus document by tab index
@@ -124,6 +124,8 @@ behavior?" not "must this exact key combo be hardcoded?"
 - [ ] `Ctrl+PgUp` Next document
 - [ ] `Ctrl+PgDn` Previous document
 - [x] `Ctrl+W` Close current document
+- [x] `Ctrl+Tab` Next document
+- [x] `Ctrl+Shift+Tab` Previous document
 
 ## Edit
 
@@ -230,10 +232,10 @@ behavior?" not "must this exact key combo be hardcoded?"
 These are the highest-signal follow-ups from this register for Zide's current
 Notepad-grade lane:
 
-1. document cycling shortcuts
-2. duplicate/delete/move line operations
-3. indent/outdent for selected full lines
-4. go-to-line
+1. duplicate/delete/move line operations
+2. indent/outdent for selected full lines
+3. go-to-line
+4. tab-index and page-style document navigation
 5. simple destructive-flow guards for dirty buffers
 
 ## VS Code Reference Register
@@ -285,7 +287,7 @@ bindings should stay Lua-driven.
 - [-] `Ctrl+P` Go to file
 - [-] `Ctrl+Shift+O` Go to symbol
 - [-] Problems/error navigation shortcuts
-- [ ] `Ctrl+Shift+Tab` editor history / previous document style navigation
+- [x] `Ctrl+Shift+Tab` editor history / previous document style navigation
 - [-] `Alt+Left` / `Alt+Right` go back/forward
 
 ### Search and Replace
@@ -321,8 +323,8 @@ bindings should stay Lua-driven.
 - [x] `Ctrl+F4` / `Ctrl+W` Close editor
 - [-] Explorer/workspace folder management
 - [-] Split editor and editor groups
-- [ ] `Ctrl+Tab` next editor
-- [ ] `Ctrl+Shift+Tab` previous editor
+- [x] `Ctrl+Tab` next editor
+- [x] `Ctrl+Shift+Tab` previous editor
 
 ### File Management
 

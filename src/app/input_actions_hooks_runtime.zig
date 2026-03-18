@@ -8,6 +8,7 @@ const app_terminal_tab_intents = @import("terminal/terminal_tab_intents.zig");
 const app_terminal_tab_navigation_runtime = @import("terminal/terminal_tab_navigation_runtime.zig");
 const app_terminal_intent_route_runtime = @import("terminal/terminal_intent_route_runtime.zig");
 const app_tab_action_apply_runtime = @import("tabs/tab_action_apply_runtime.zig");
+const app_cycle_active_tab_runtime = @import("tabs/cycle_active_tab_runtime.zig");
 const app_imported_theme_runtime = @import("editor/imported_theme_runtime.zig");
 const app_close_active_editor_runtime = @import("editor/close_active_editor_runtime.zig");
 const app_terminal_close_active_runtime = @import("terminal/terminal_close_active_runtime.zig");
@@ -68,6 +69,12 @@ pub fn handle(state: anytype, frame_shell: *Shell, now: f64) !bool {
                                 fn call(hook_raw: *anyopaque) !bool {
                                     const hook_state: *State = @ptrCast(@alignCast(hook_raw));
                                     return try app_close_active_editor_runtime.closeActive(hook_state);
+                                }
+                            }.call,
+                            .cycle_documents = struct {
+                                fn call(hook_raw: *anyopaque, next: bool) !bool {
+                                    const hook_state: *State = @ptrCast(@alignCast(hook_raw));
+                                    return try app_cycle_active_tab_runtime.cycle(hook_state, next);
                                 }
                             }.call,
                             .quit_app = struct {
