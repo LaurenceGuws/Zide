@@ -87,6 +87,9 @@ This queue does not own:
 - [ ] `ED-APP-04` Common shortcuts and interactions
   - Fill the standard editing shortcut set before optimization-led work.
   - Cover common mouse/selection behavior and familiar movement rules.
+  - Progress:
+    - Added a direct `Ctrl+Shift+S` editor shortcut for `Save As` through the
+      same shared path-prompt flow used by menu and mouse action routing.
 
 - [ ] `ED-APP-05` Friendly Lua config for editor usage
   - Make common editor behavior easy to configure with sane defaults.

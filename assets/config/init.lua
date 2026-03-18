@@ -423,6 +423,7 @@ return {
 		},
 		editor = {
 			{ key = "s", mods = { "ctrl" }, action = "save" },
+			{ key = "s", mods = { "ctrl", "shift" }, action = "save_as" },
 			{ key = "z", mods = { "ctrl" }, action = "undo", ["repeat"] = true },
 			{ key = "y", mods = { "ctrl" }, action = "redo", ["repeat"] = true },
 			{ key = "c", mods = { "ctrl" }, action = "copy" },

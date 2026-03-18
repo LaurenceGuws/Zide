@@ -80,6 +80,12 @@ pub fn handle(
                 out.needs_redraw = true;
                 out.handled = true;
             },
+            .save_as => {
+                search_panel_active.* = false;
+                try app_path_prompt_state.openForSaveAs(path_prompt, allocator, editor);
+                out.needs_redraw = true;
+                out.handled = true;
+            },
             .undo => {
                 _ = try editor.undo();
                 out.needs_redraw = true;
