@@ -67,17 +67,35 @@ Why:
 - useful for highlight/search/render churn checks
 - already lives under the repo fixture policy
 
+### H3. Long-line and Unicode real fixture
+
+Use:
+
+- `fixtures/editor/stress/unicode_longline_sample.txt`
+
+Current size:
+
+- about `8.7 KiB`
+
+Why:
+
+- pressures long-row handling rather than large-file size
+- exercises UTF-8, combining marks, emoji, CJK, RTL text, tabs, and long
+  path/URL shapes in one stable repo-owned file
+
 ### M1. Native interactive editor pass
 
-Use the same syntax-heavy fixture for the first manual run:
+Use both repo-owned real fixtures for the first manual run:
 
 - `fixtures/editor/stress/large_highlight_sample.zig`
+- `fixtures/editor/stress/unicode_longline_sample.txt`
 
 Why:
 
 - keeps the first interactive pass aligned with the first real-file headless
-  workload
-- avoids mixing many workload variables before the ritual itself is stable
+  workloads
+- covers both syntax-heavy large-file behavior and long-line/Unicode behavior
+  without external files
 
 ## Build And Run Mode
 
@@ -149,10 +167,27 @@ zig build -Doptimize=ReleaseFast perf-editor-headless -- \
   --seed 682034097421
 ```
 
-### 3. Native interactive pass
+### 3. Long-line and Unicode real-file headless pass
+
+```sh
+zig build -Doptimize=ReleaseFast perf-editor-headless -- \
+  --scenario all \
+  --file fixtures/editor/stress/unicode_longline_sample.txt \
+  --queries 10000 \
+  --frames 240 \
+  --visible-lines 80 \
+  --stride-lines 3 \
+  --seed 682034097421
+```
+
+### 4. Native interactive pass
 
 ```sh
 ./zig-out/bin/zide-editor fixtures/editor/stress/large_highlight_sample.zig
+```
+
+```sh
+./zig-out/bin/zide-editor fixtures/editor/stress/unicode_longline_sample.txt
 ```
 
 During the interactive pass, check:
@@ -162,6 +197,8 @@ During the interactive pass, check:
 - `Ctrl+F` search prompt responsiveness while changing the query
 - `Ctrl+D`, `Ctrl+Shift+K`, `Tab`, and `Shift+Tab` behavior near the start,
   middle, and end of the file
+- cursor movement and selection correctness around combining marks, emoji, CJK,
+  RTL text, and tab-heavy long rows
 - redraw correctness after repeated edits and scrolls
 
 ## What To Record
@@ -221,14 +258,19 @@ Minimum structure:
 - synthetic `8 MiB`
 - synthetic `32 MiB`
 - `fixtures/editor/stress/large_highlight_sample.zig`
+- `fixtures/editor/stress/unicode_longline_sample.txt`
 
 Treat it as a repeatable local gate for the current first-pass ritual, not as a
 final benchmark authority.
 
-### 2. Start with one real syntax-heavy fixture before broadening
+### 2. Start with a small fixed real-fixture set before broadening
 
-The first pass should stabilize the ritual on one real file before adding more
-languages or long-line/Unicode-specific fixtures.
+The current ritual intentionally uses just two real files:
+
+- one syntax-heavy larger fixture
+- one long-line and Unicode-heavy fixture
+
+Do not broaden beyond that until the interactive pass produces a concrete need.
 
 ### 3. Manual stress is still required
 

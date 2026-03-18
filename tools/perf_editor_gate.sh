@@ -22,6 +22,7 @@ synthetic_sizes_mb=(
 
 real_fixtures=(
   "fixtures/editor/stress/large_highlight_sample.zig"
+  "fixtures/editor/stress/unicode_longline_sample.txt"
 )
 
 float_gt() {

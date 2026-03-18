@@ -148,17 +148,17 @@ Do not leave the work only in commit history or chat context.
       metrics at `1 MiB`, `8 MiB`, and `32 MiB`
     - use `fixtures/editor/stress/large_highlight_sample.zig` as the first
       syntax-heavy real file workload
-    - use `zig build -Dmode=editor -Doptimize=ReleaseFast` plus the same
-      fixture for manual open/edit/scroll/search verification
+    - use `fixtures/editor/stress/unicode_longline_sample.txt` as the first
+      long-line and Unicode real file workload
+    - use `zig build -Dmode=editor -Doptimize=ReleaseFast` plus those same
+      fixtures for manual open/edit/scroll/search verification
   - Recording ritual is now explicit:
     - build mode
     - exact commands
     - fixed seed/query/frame parameters
     - result doc location
-  - Current caution:
-    - `tools/perf_editor_gate.sh` references older synthetic fixture names that
-      are not currently the stress authority; refresh that gate only after the
-      first manual/headless ritual is exercised and trusted
+  - Supporting local gate now aligned:
+    - `tools/perf_editor_gate.sh`
 
 - [ ] `ED-STRESS-03` Map Zide against the current reference set by concern
   - Record which reference repos matter for which editor questions.

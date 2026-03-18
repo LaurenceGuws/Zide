@@ -10,6 +10,7 @@ This pass is intentionally narrow:
 
 - headless synthetic size sweep
 - headless syntax-heavy real-file pass
+- headless long-line and Unicode real-file pass
 - native release build validation
 
 The fully interactive native run is still pending manual observation.
@@ -82,6 +83,19 @@ zig build -Doptimize=ReleaseFast perf-editor-headless -- \
   --seed 682034097421
 ```
 
+Long-line and Unicode fixture:
+
+```sh
+zig build -Doptimize=ReleaseFast perf-editor-headless -- \
+  --scenario all \
+  --file fixtures/editor/stress/unicode_longline_sample.txt \
+  --queries 10000 \
+  --frames 240 \
+  --visible-lines 80 \
+  --stride-lines 3 \
+  --seed 682034097421
+```
+
 Native editor build validation:
 
 ```sh
@@ -103,6 +117,7 @@ zig build -Dmode=editor -Doptimize=ReleaseFast
 | Workload | Size bytes | Open ms | Random line-start ns/op | Sequential line-start ns/op | Viewport ms/frame | Editor scroll ms/frame |
 | --- | ---: | ---: | ---: | ---: | ---: | ---: |
 | `large_highlight_sample.zig` | 3,145,763 | 1.547 | 363.2 | 285.8 | 0.0046 | 0.0048 |
+| `unicode_longline_sample.txt` | 8,710 | 0.093 | 16.4 | 5.1 | 0.0001 | 0.0019 |
 
 ## Raw Perf Output
 
@@ -150,6 +165,17 @@ PERF viewport frames=240 visible_lines=80 total_ms=1.094 ms_per_frame=0.0046 byt
 PERF editor_scroll frames=240 visible_lines=80 total_ms=1.156 ms_per_frame=0.0048 bytes_read=1429337 checksum=226613888
 ```
 
+### `unicode_longline_sample.txt`
+
+```text
+PERF meta path="fixtures/editor/stress/unicode_longline_sample.txt" size_bytes=8710 scenario=all queries=10000 frames=240 visible_lines=80 stride_lines=3
+PERF open open_ms=0.093 total_len=8710 line_count=33 rss_before_kb=1752 rss_after_open_kb=1852 rss_after_close_kb=1820
+PERF line_start_random queries=10000 total_ms=0.164 ns_per_op=16.4 checksum=44479241
+PERF line_start_sequential queries=10000 total_ms=0.051 ns_per_op=5.1 checksum=43643211
+PERF viewport frames=240 visible_lines=80 total_ms=0.020 ms_per_frame=0.0001 bytes_read=50411 checksum=3192838
+PERF editor_scroll frames=240 visible_lines=80 total_ms=0.449 ms_per_frame=0.0019 bytes_read=2079600 checksum=36399840
+```
+
 ## Interactive Observations
 
 This pass did not include direct interactive runtime observations.
@@ -165,6 +191,7 @@ Manual interactive checks still required:
 - first-open stall feel on the real widget/runtime path
 - redraw correctness during search churn
 - edit-to-render coherence after repeated line operations
+- cursor and selection behavior on long rows with Unicode-heavy content
 - mixed host-routing behavior during active edits
 
 ## Immediate Architectural Implications
@@ -199,17 +226,18 @@ That shifts the next highest-value investigation toward:
 
 - real widget/runtime interaction cost
 - redraw/cache behavior under edit/search churn
+- long-line and Unicode cursor/selection correctness
 - render-path clarity in the architecture docs
 
 ## Next Concrete Actions
 
 1. Run the pending native interactive pass from the ritual and capture factual
-   observations for first paint, scroll, search churn, and edit-to-render
-   coherence.
+   observations for first paint, scroll, search churn, edit-to-render
+   coherence, and long-line/Unicode cursor behavior.
 2. Update `tools/perf_editor_gate.sh` to use the current stress authority once
    the ritual is trusted enough to freeze those workloads.
    - Completed after this first pass:
      - the gate now mirrors synthetic `1/8/32 MiB` plus
-       `large_highlight_sample.zig`
+       `large_highlight_sample.zig` and `unicode_longline_sample.txt`
 3. Add one focused render/cache research note if the interactive pass reveals a
    mismatch between headless cost and on-screen behavior.
