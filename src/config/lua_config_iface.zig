@@ -184,6 +184,9 @@ pub const Config = struct {
 
 pub const LoadConfigFn = fn (allocator: std.mem.Allocator) LuaConfigError!Config;
 pub const LoadConfigFileFn = fn (allocator: std.mem.Allocator, path: []const u8) LuaConfigError!Config;
+pub const LoadNamedEditorImportedThemeFn = fn (allocator: std.mem.Allocator, name: []const u8) LuaConfigError!Config;
+pub const LoadConfigWithImportedThemeOverrideFn = fn (allocator: std.mem.Allocator, name: []const u8) LuaConfigError!Config;
+pub const LoadAvailableEditorImportedThemesFn = fn (allocator: std.mem.Allocator) LuaConfigError![][]u8;
 pub const EmptyConfigFn = fn () Config;
 pub const FreeConfigFn = fn (allocator: std.mem.Allocator, config: *Config) void;
 pub const ApplyThemeConfigFn = fn (theme: *Theme, overlay: ThemeConfig) void;

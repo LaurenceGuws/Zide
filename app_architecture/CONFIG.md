@@ -133,6 +133,20 @@ This is intentionally broader than terminal palette import. Future Neovim or
 VS Code theme importers should target this same shared/editor schema rather
 than introducing a separate importer-specific theme model.
 
+Deferred theme-surface split: this shared schema should not be read as a claim
+that app chrome, editor buffer, and terminal presentation must remain one flat
+runtime theme forever. The intended direction is:
+- app chrome theme surface
+- editor/buffer theme surface
+- terminal theme surface
+
+For now, editor-theme work should stay focused on making the editor/buffer
+surface honest and complete. Shared widgets that appear in multiple modes
+should eventually consume resolved style tokens supplied by the owning host
+instead of reaching into one implicit global bucket. That cross-surface/widget
+split is deferred until the editor theme surface is stable enough to act as a
+real authority.
+
 Current limitation: editor theme import now preserves Neovim-style highlight
 metadata in config/theme parsing for the main editor syntax buckets, including
 `italic`, `bold`, `underline`, `undercurl`, `strikethrough`, `reverse`,

@@ -5,6 +5,23 @@
 Use real Neovim theme/cache artifacts to pressure-test and mature Zide's editor
 theme schema.
 
+Current status:
+
+- theme-family expansion is paused for now
+- current work should focus on cleanup, contract tightening, and preparing for
+  future LSP-overlay integration
+- do not add more theme breadth unless it is needed to answer a concrete
+  contract/runtime question
+
+Primary direction has now changed:
+
+- source-level theme parsing is no longer the intended end-state architecture
+- the long-term import path should come from Neovim's resolved highlight state,
+  not from every theme author's internal source representation
+- the existing source-parser lane remains useful as schema/runtime pressure-test
+  work and as temporary manual-fixture generation, but not as the final
+  universal import strategy
+
 This queue owns:
 
 - importing editor themes from external sources beyond terminal palette files
@@ -27,6 +44,18 @@ This queue does not own:
 - A conversion lane gives us repeatable editor-theme fixtures instead of
   abstract schema debates.
 - This should improve both editor theming quality and config ergonomics.
+- Theme preview and imported-theme selection need to obey the same merged-config
+  semantics as the rest of the config subsystem; previewing a theme must not
+  silently drop local editor/app overrides.
+- Imported theme registration must have one runtime authority. Theme families
+  are growing too quickly for separate hardcoded name lists in tools, Lua, and
+  Zig to stay coherent.
+- The important long-term target is not "parse every theme repo source file"
+  but "match the richness of Neovim's resolved theming output" across groups,
+  Treesitter captures, links, and style metadata.
+- Neovim theme source code is too implementation-specific to serve as a clean
+  long-term import contract; the correct authority layer is the resolved
+  highlight graph after Neovim has applied colorscheme logic.
 
 ## Constraints
 
@@ -38,251 +67,218 @@ This queue does not own:
 - Evolve the schema only when a mismatch is real and recurring across themes.
 - Reuse the existing import/tooling style where possible instead of inventing a
   separate theme stack.
+- Do not mistake "resolved highlight richness" for "support every source-level
+  theme implementation style". Those are different problems.
+- Prefer normalized exported key/value theme state over source-parser growth
+  whenever both could solve the same requirement.
+
+## Architecture Pivot
+
+The source-parser lane clarified the wrong abstraction:
+
+- good outcome:
+  - Zide now carries richer editor theme state well enough to render real
+    Neovim-style groups, captures, links, and styles
+  - imported-theme preview and config layering are materially healthier
+- wrong assumption:
+  - recursively supporting "all themes" by parsing theme source files is not a
+    clean architecture target
+  - theme source representations are too diverse and theme-author-specific
+
+So the next architecture should be:
+
+- Neovim resolves the theme
+- a headless exporter captures the resolved highlight state
+- Zide ingests that normalized exported state
+
+That means the real import contract should be a resolved theme spec with:
+
+- metadata:
+  - colorscheme name
+  - flavour/style/background
+  - export profile/context
+- `groups`
+- `captures`
+- `links`
+- style flags
+- color values:
+  - `fg`
+  - `bg`
+  - `sp`
+
+The current source-parser tooling should now be treated as:
+
+- schema pressure-test work
+- fixture generation
+- exploration aid for exporter requirements
+
+Not as:
+
+- the final universal theme-import architecture
+
+## Deferred Boundary
+
+This queue is currently focused on editor/buffer theme quality and import
+coverage, not a full IDE-wide theme split.
+
+Direction is agreed, but deferred:
+
+- Zide should eventually distinguish:
+  - app chrome theme
+  - editor/buffer theme
+  - terminal theme
+- Shared widgets should not implicitly read one global theme bucket forever.
+- Shared widgets like `tab_bar` should eventually accept resolved style surfaces
+  from the owning host/mode instead of assuming one flat theme source.
+
+What this means right now:
+
+- keep improving the editor/buffer theme surface and Neovim import quality
+- do not let editor-theme work silently redefine the main IDE chrome model
+- only borrow editor theme values into chrome intentionally
+- defer the actual shared-widget and cross-surface split until the editor theme
+  surface is stable enough to serve as a real authority
+
+Likely first proving cut later:
+
+- `tab_bar` should become a shared widget that accepts caller-provided theme
+  tokens from editor, terminal, or app-chrome hosts instead of hardcoding one
+  global theme assumption
 
 ## Initial Worklist
 
-- [ ] `ED-THEME-01` Audit local Neovim theme/cache sources
-  - Identify the actual theme/cache artifacts available locally.
-  - Choose 2-3 representative themes with different highlight styles.
-  - Record which artifact shape is the best importer input source.
-  - Progress:
-    - Local Neovim persistence currently records the active theme in
-      `~/.local/share/nvim/theme.lua`; current value is `ayu`.
-    - Local lazy-installed theme sources are available under
-      `~/.local/share/nvim/lazy/` and already include good first-pass targets:
-      `neovim-ayu`, `tokyonight.nvim`, `kanagawa-dragon`, `catppuccin`,
-      `onedark.nvim`, `onedarkpro.nvim`, `rose-pine`, and others.
-    - The cleanest importer inputs are theme-native Lua group/palette sources,
-      not generated cache dumps:
-      - Tokyo Night:
-        - `~/.local/share/nvim/lazy/tokyonight.nvim/colors/tokyonight-*.lua`
-        - `~/.local/share/nvim/lazy/tokyonight.nvim/lua/tokyonight/groups/*.lua`
-      - Kanagawa:
-        - `~/.local/share/nvim/lazy/kanagawa-dragon/lua/kanagawa/colors.lua`
-        - `~/.local/share/nvim/lazy/kanagawa-dragon/lua/kanagawa/highlights/*.lua`
-      - Catppuccin:
-        - `~/.local/share/nvim/lazy/catppuccin/lua/catppuccin/palettes/*.lua`
-        - `~/.local/share/nvim/lazy/catppuccin/lua/catppuccin/groups/*.lua`
-      - Ayu:
-        - `~/.local/share/nvim/lazy/neovim-ayu/lua/ayu/colors.lua`
-        - `~/.local/share/nvim/lazy/neovim-ayu/colors/ayu-*.lua`
-    - First shortlist for import pressure:
-      - `tokyonight-night`
-        - Best first implementation target.
-        - Clean Lua palette/group structure.
-        - Already aligned with Zide defaults, so mismatches will be easy to see.
-      - `ayu`
-        - Worth importing early because it is the currently persisted local
-          theme and should reflect real user workflow, not just a synthetic test
-          theme.
-      - `kanagawa-dragon`
-        - Good higher-complexity target because it has explicit editor,
-          Treesitter, syntax, and plugin highlight layers.
-      - `catppuccin-mocha`
-        - Good follow-up stress target because it separates palettes, editor
-          groups, Treesitter groups, semantic tokens, and multiple flavour
-          variants.
-    - Recommendation:
-      - Use `tokyonight-night` for `ED-THEME-03`.
-      - Keep `ayu` and `kanagawa-dragon` as the next two pressure-test imports.
+- [ ] `ED-THEME-NEW-01` Define the resolved-theme export contract
+  - Write the normalized key/value spec Zide actually wants from Neovim after
+    colorscheme resolution.
+  - Keep it focused on:
+    - editor UI groups
+    - classic syntax groups
+    - Treesitter captures
+    - links
+    - style flags
+    - `fg` / `bg` / `sp`
+  - Record explicit export context:
+    - colorscheme/flavour/background
+    - loaded parser/filetype scope
+    - plugin/runtime scope if included
+  - Current state:
+    - authority:
+      - `app_architecture/editor/RESOLVED_THEME_EXPORT_CONTRACT.md`
+    - deferred LSP boundary/example:
+      - `app_architecture/editor/LSP_THEME_OVERLAY_BOUNDARY.md`
+    - current import-authority candidate:
+      - `aggregate`
+    - current result:
+      - base contract is viable for `groups`, `captures`, `links`, and the
+        core color/style keys
+      - `@lsp.*` stays out of the base artifact contract
 
-- [ ] `ED-THEME-02` Define importer target against current Zide schema
-  - Map Neovim palette, highlight groups, Treesitter captures, and links into
-    Zide's current theme model.
-  - Explicitly note what is lossless, lossy, or unsupported.
-  - Keep the first cut narrow and reviewable.
-  - Progress:
-    - Zide already has one shared theme schema, not separate terminal/editor
-      models:
-      - global/app/editor/terminal all share `theme.palette`
-      - editor additionally supports `theme.syntax`, named `groups`,
-        tree-sitter `captures`, and explicit `links`
-    - Current authority for that shape is:
-      - `assets/config/theme_reference.lua`
-      - `app_architecture/CONFIG.md`
-      - `src/config/lua_config_theme_parse.zig`
-    - Import target for Neovim-derived editor themes should therefore be:
-      - shared palette fields where the concept overlaps
-      - editor `syntax` for common token buckets
-      - editor `groups` for named Neovim highlight groups
-      - editor `captures` for Treesitter capture mappings
-      - editor `links` for group/capture link chains
-    - First-pass mapping policy:
-      - `Normal`, `NormalFloat`, `StatusLine`, `TabLine*`, `LineNr`,
-        `CursorLine`, `Visual`, `Search`, `IncSearch`, `ErrorMsg`,
-        `WarningMsg`, `Diagnostic*`:
-        - map into shared/app/editor palette where Zide already has a true
-          semantic slot
-        - keep the original named group in `editor.theme.groups` as authority
-          for anything more specific
-      - classic syntax groups like `Comment`, `String`, `Keyword`, `Number`,
-        `Function`, `Identifier`, `Type`, `Operator`, `Constant`, `Special`,
-        `PreProc`, `Delimiter`, `Label`, `Error`:
-        - map into `editor.theme.syntax` when the bucket exists
-        - also preserve the original group name in `editor.theme.groups`
-      - Treesitter captures like `@comment`, `@keyword.control`,
-        `@function.method`, `@string.special.url`, `@markup.link.url`:
-        - map into `editor.theme.captures`
-      - explicit Neovim highlight links:
-        - preserve as `editor.theme.links`
-    - First-pass loss model:
-      - Lossless enough:
-        - foreground/background colors
-        - direct group colors
-        - Treesitter capture colors
-        - group/capture links
-      - Partially supported / lossy:
-        - bold / italic / underline / undercurl / strikethrough
-        - blend / nocombine / reverse / standout
-        - special underline colors (`sp`)
-        - semantic-token-only distinctions when Zide lacks a stable bucket
-      - Out of scope for the first cut:
-        - plugin-specific highlight ecosystems
-        - statusline/bufferline-specific component theme exports
-        - terminal palette extras that are already better served by the
-          existing Kitty/Ghostty import path
-    - Cross-IDE direction:
-      - This importer should stay shaped like a general IDE theme ingest path,
-        not a Neovim-only one-off.
-      - If we keep the importer target centered on shared palette + editor
-        groups/captures/links, later importers for VS Code or other IDEs can
-        reuse the same target model.
+- [ ] `ED-THEME-NEW-02` Build a headless Neovim exporter prototype
+  - Load a colorscheme in headless Neovim.
+  - Export the resolved highlight graph instead of parsing source files.
+  - Prove the exporter can emit one normalized artifact for a live theme.
+  - Current state:
+    - prototype:
+      - `tools/nvim_resolved_theme_export.lua`
+      - `tools/editor_theme_resolved_baseline.sh`
+    - current preset workflow:
+      - `nvim --headless "+lua dofile('tools/nvim_resolved_theme_export.lua')"`
+      - `-- --colorscheme tokyonight-night --profile treesitter --preset zide-core`
+      - or:
+        `tools/editor_theme_resolved_baseline.sh tokyonight-night`
+      - baseline helper also cleans older legacy `*-resolved` registry/file
+        clutter for the same colorscheme when it can
+    - current artifact shape:
+      - top-level `metadata`, `base`, `contexts`, `aggregate`
+    - current preset:
+      - `zide-core`
+    - current caveats:
+      - preset coverage is still repo-local
+      - `treesitter_error` is best-effort per context
+      - no active semantic-token/LSP export lane is part of base work
+      - raw `aggregate` still includes substantial plugin/runtime group noise
 
-- [ ] `ED-THEME-03` Land one end-to-end Neovim theme import
-  - Convert one real theme from the local cache.
-  - Produce a Zide theme artifact that can be loaded without extra glue.
-  - Use it to identify the first concrete schema gaps.
-  - Progress:
-    - Landed the first concrete converted theme artifact:
-      - `assets/themes/tokyonight-night.lua`
-    - Landed the second concrete converted theme artifact:
-      - `assets/themes/ayu.lua`
-    - Landed the third concrete converted theme artifact:
-      - `assets/themes/kanagawa-dragon.lua`
-    - Added a shared imported-theme loader:
-      - `assets/themes/init.lua`
-      - local config can now switch imported themes by name instead of editing
-        raw `dofile(...)` paths
-    - Local project config is now pointed at imported theme name
-      `kanagawa-dragon` for the next schema-pressure pass.
-    - This first cut intentionally targets the existing shared Zide schema:
-      - shared `theme.palette`
-      - shared `theme.syntax`
-      - `editor.theme.palette`
-      - `editor.theme.syntax`
-      - `editor.theme.groups`
-      - `editor.theme.captures`
-      - `editor.theme.links`
-    - Source authority for this first import:
-      - `~/.local/share/nvim/lazy/tokyonight.nvim/extras/lua/tokyonight_night.lua`
-      - `~/.local/share/nvim/lazy/tokyonight.nvim/lua/tokyonight/groups/*.lua`
-    - First-cut limitations:
-      - style metadata is now preserved through config/theme loading for the
-        main syntax buckets, but rendering still does not consume it yet
-      - only a representative subset of groups/captures is imported, not the
-        full Tokyo Night surface
-      - this is enough to validate the artifact shape and the schema fit before
-        building a proper importer
+- [ ] `ED-THEME-NEW-03` Compare exported resolved state against Zide schema
+  - Use the exported artifact as the actual authority.
+  - Record what still maps cleanly, what is lossy, and what Zide still lacks.
+  - Prefer schema fixes only for recurring resolved-state mismatches.
+  - Current state:
+    - comparison tool:
+      - `tools/nvim_resolved_theme_compare.py`
+    - useful modes:
+      - full report
+      - `--exclude-lsp`
+      - `--summary`
+    - current signals:
+      - with LSP included, the current preset reaches `21/21` coarse syntax
+        slots on `tokyonight-night`
+      - with `--exclude-lsp`, the same export drops to `18/21`
+      - recurring base-only weak spots in the current sample set are
+        `escape`, `function_method`, and `type_builtin`
+      - recurring unsupported style signal is currently `underdouble`
 
-- [ ] `ED-THEME-04` Tighten schema and importer heuristics
-  - Fix recurring issues in groups, capture links, semantic aliases, and palette
-    fallback.
-  - Document the schema changes in the owning architecture docs.
-  - Progress:
-    - After importing `tokyonight-night`, `ayu`, and `kanagawa-dragon`, the
-      recurring schema gaps are now concrete instead of theoretical.
-    - Cleanly supported today:
-      - fg/bg color mapping
-      - palette overlap for editor/app/UI surfaces
-      - named group colors
-      - Treesitter capture colors
-      - explicit group/capture link chains
-    - Recurrently lossy across all three imported themes:
-      - `italic`
-      - `bold`
-      - `underline`
-      - `undercurl`
-      - `strikethrough`
-      - special underline color via `sp`
-      - `reverse`
-      - `nocombine`
-    - Practical conclusion:
-      - the first schema-tightening cut should preserve editor highlight style
-        metadata through config/theme parsing and merging
-      - the first runtime cut should consume the low-cost decoration subset:
-        underline / strikethrough / special underline color
-      - the next runtime cut should render a basic undercurl approximation
-      - the next runtime cut after that should render italic via synthetic
-        glyph slant at raster/cache time instead of a fake paint-layer trick
-      - after that, the next gap is the remaining Neovim semantics
-    - Current importer policy should therefore remain:
-      - keep landing real Neovim theme artifacts
-      - record style loss honestly
-      - do not invent fake color-only substitutes for style semantics that
-        should instead be modeled properly
-    - Current artifact tightening progress:
-      - `tokyonight-night`, `ayu`, and `kanagawa-dragon` now carry a
-        representative first-pass subset of real style metadata instead of
-        remaining almost entirely color-only.
-      - That subset currently includes:
-        - italic comments / keywords where the source theme uses them
-        - bold statement or boolean groups where the source theme uses them
-        - diagnostic undercurl groups with `sp` colors
-        - a small markdown style subset for Tokyo Night captures
-      - This is still intentionally selective:
-        - base/editor/high-signal groups first
-        - no plugin-noise bulk import yet
-        - enough to make the runtime/style pipeline honest under manual checks
+- [ ] `ED-THEME-NEW-06` Bridge resolved export into Zide overlay shape
+  - Add a narrow adapter from resolved export JSON into the existing Zide
+    `editor.theme.groups/captures/links` Lua overlay shape.
+  - Keep base ingestion scoped to non-LSP names.
+  - Current state:
+    - adapter path now exists in:
+      - `tools/editor_theme_import.py --resolved-export <artifact.json>`
+    - current behavior:
+      - reads `aggregate`
+      - renders the existing overlay Lua shape
+      - drops `@lsp.*` names from base ingestion
+      - default prune policy is:
+        `--resolved-prune editor-surface`
+      - `--register` writes the generated overlay into
+        `assets/themes/init.lua` so runtime imported-theme discovery stays on
+        the existing Lua registry authority
+      - baseline helper:
+        `tools/editor_theme_resolved_baseline.sh <colorscheme>`
+      - explicit cleanup:
+        `python3 tools/editor_theme_import.py --remove-generated <resolved-name>`
+    - current caveat:
+      - pruning is still heuristic and should remain explicit
+      - `editor-surface` is the current default and recommended reviewable
+        bridge mode
 
-- [ ] `ED-THEME-05` Build a small converted-theme library
-  - Keep a compact set of imported editor themes for manual regression checks.
-  - Use this set as an editor-theme health check when evolving theming logic.
-  - Progress:
-    - Added [fixtures/editor/theme_style_fixture.md](/home/home/personal/zide/fixtures/editor/theme_style_fixture.md)
-      as the stable manual visual target for imported style semantics.
-    - Use it with the imported themes to check:
-      - italic
-      - bold
-      - underline / undercurl-adjacent decoration
-      - strikethrough
-      - links
-      - mixed markdown and code spans
-    - Added a small built-in preview surface for the shipped imported themes:
-      - `View -> Next Imported Theme`
-      - `View -> Previous Imported Theme`
-      - `Ctrl+Alt+]` / `Ctrl+Alt+[`
-      - this cycles `ayu`, `kanagawa-dragon`, and `tokyonight-night`
-      - it is intentionally transient session state, not a config-file rewrite
-      - the status bar now also shows the active imported theme name during the
-        session
+- [ ] `ED-THEME-NEW-05` Cleanup and consolidation pass
+  - Keep theme breadth paused until the editor/LSP integration lane is ready.
+  - Clean docs so the current authority is obvious:
+    - resolved-theme base contract
+    - LSP overlay boundary/example contract
+    - exporter prototype
+    - comparison workflow
+    - deferred LSP overlay policy
+  - Clean tooling so maintenance workflows are clearer than exploration
+    workflows.
+  - Avoid adding new supported themes unless they are needed to validate a
+    concrete unresolved runtime/style question.
 
-## Current Implementation Context
+- [ ] `ED-THEME-NEW-04` Reframe the current source-parser tooling
+  - Keep `tools/editor_theme_import.py` as:
+    - schema pressure-test tooling
+    - manual fixture generation
+    - generic intake/audit research
+  - Stop treating it as the main path to "full Neovim theme support".
 
-- Existing shared palette import helper:
-  - `assets/config/theme_import.lua`
-- Current default config/theme authority:
-  - `assets/config/init.lua`
+## Archived Context
+
+Older source-parser expansion work, generated-overlay history, and broad
+theme-family intake notes are now historical context rather than active queue
+authority.
+
+Keep using them only as supporting reference when needed:
+
+- source-parser research/tooling:
+  - `tools/editor_theme_import.py`
+- current resolved-theme base authority:
+  - `app_architecture/editor/RESOLVED_THEME_EXPORT_CONTRACT.md`
+- deferred LSP overlay/example boundary:
+  - `app_architecture/editor/LSP_THEME_OVERLAY_BOUNDARY.md`
+- current editor theme/config authority:
+  - `app_architecture/CONFIG.md`
   - `assets/config/theme_reference.lua`
-- Config/schema wiring:
-  - `src/config/lua_config_iface.zig`
-  - `src/config/lua_config_ziglua_parse.zig`
-  - `src/config/lua_config_shared.zig`
-- Editor highlight/theme consumers:
-  - `src/editor/search_highlight.zig`
-  - `src/editor/syntax.zig`
 
-## Expected Outputs
-
-- one importer path for Neovim-derived editor themes
-- one or more converted theme artifacts usable by Zide
-- explicit notes on schema pressure and required follow-up changes
-
-## Notes
-
-- This is a schema health exercise, not just a theme-conversion convenience
-  task.
-- Keep terminal palette import and editor theme import aligned where the shared
-  model genuinely overlaps, but do not force terminal-shaped constraints onto
-  editor semantics.
-- Current highest-value schema gap for "proper Neovim import" is editor style
-  metadata, not more palette work.
+Do not treat the old source-parser breadth work as the current architecture
+target.

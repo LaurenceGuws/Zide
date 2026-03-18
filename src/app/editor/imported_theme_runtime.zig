@@ -4,28 +4,24 @@ const app_terminal_theme_apply = @import("../terminal/terminal_theme_apply.zig")
 const app_theme_utils = @import("../theme_utils.zig");
 const config_mod = @import("../../config/lua_config.zig");
 
-const imported_themes = [_][]const u8{
-    "ayu",
-    "kanagawa-dragon",
-    "tokyonight-night",
-};
+fn freeThemeNames(allocator: std.mem.Allocator, names: [][]u8) void {
+    for (names) |name| allocator.free(name);
+    allocator.free(names);
+}
 
-fn findThemeIndex(name: ?[]const u8) usize {
+fn findThemeIndex(names: []const []const u8, name: ?[]const u8) usize {
     if (name) |value| {
-        for (imported_themes, 0..) |theme_name, idx| {
+        for (names, 0..) |theme_name, idx| {
             if (std.mem.eql(u8, theme_name, value)) return idx;
         }
     }
-    return imported_themes.len - 1;
+    return if (names.len == 0) 0 else names.len - 1;
 }
 
-fn applyThemeByIndex(state: anytype, idx: usize) !void {
+fn applyThemeByIndex(state: anytype, names: []const []const u8, idx: usize) !void {
     const log = app_logger.logger("editor.imported_theme");
-    const next_name = imported_themes[idx];
-    const theme_path = try std.fmt.allocPrint(state.allocator, "assets/themes/{s}.lua", .{next_name});
-    defer state.allocator.free(theme_path);
-
-    var config = try config_mod.loadConfigFile(state.allocator, theme_path);
+    const next_name = names[idx];
+    var config = try config_mod.loadConfigWithImportedThemeOverride(state.allocator, next_name);
     defer config_mod.freeConfig(state.allocator, &config);
 
     const resolved = app_theme_utils.resolveConfigThemes(state.shell_base_theme, &config);
@@ -59,13 +55,21 @@ fn applyThemeByIndex(state: anytype, idx: usize) !void {
 }
 
 pub fn cycleNext(state: anytype) !void {
-    const current_idx = findThemeIndex(state.editor_imported_theme_name);
+    const imported_themes = try config_mod.loadAvailableEditorImportedThemes(state.allocator);
+    defer freeThemeNames(state.allocator, imported_themes);
+    if (imported_themes.len == 0) return;
+
+    const current_idx = findThemeIndex(imported_themes, state.editor_imported_theme_name);
     const next_idx = (current_idx + 1) % imported_themes.len;
-    try applyThemeByIndex(state, next_idx);
+    try applyThemeByIndex(state, imported_themes, next_idx);
 }
 
 pub fn cyclePrev(state: anytype) !void {
-    const current_idx = findThemeIndex(state.editor_imported_theme_name);
+    const imported_themes = try config_mod.loadAvailableEditorImportedThemes(state.allocator);
+    defer freeThemeNames(state.allocator, imported_themes);
+    if (imported_themes.len == 0) return;
+
+    const current_idx = findThemeIndex(imported_themes, state.editor_imported_theme_name);
     const prev_idx = if (current_idx == 0) imported_themes.len - 1 else current_idx - 1;
-    try applyThemeByIndex(state, prev_idx);
+    try applyThemeByIndex(state, imported_themes, prev_idx);
 }

@@ -37,6 +37,9 @@ flowchart LR
 - `docs/todo/editor/modularization.md` (layer split + migration steps)
 - `docs/todo/editor/treesitter.md` (tree-sitter query + highlight integration)
 - `docs/todo/editor/treesitter_dynamic_roadmap.md` (dynamic grammar packs: fetch/compile/load)
+- `docs/todo/editor/theme_import.md` (resolved-theme export/import queue)
+- `app_architecture/editor/RESOLVED_THEME_EXPORT_CONTRACT.md` (resolved Neovim theme artifact contract)
+- `app_architecture/editor/LSP_THEME_OVERLAY_BOUNDARY.md` (deferred LSP/semantic-token theme overlay boundary)
 
 ## Decision Log
 
