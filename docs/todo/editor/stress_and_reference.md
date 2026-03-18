@@ -190,6 +190,8 @@ Do not leave the work only in commit history or chat context.
     - `docs/research/editor/EDITOR_STRESS_RESULTS_2026-03-18.md`
   - Remaining gap for this item:
     - native interactive observations on the real widget/runtime/render path
+  - Supporting local gate now aligned:
+    - `tools/perf_editor_gate.sh`
 
 - [ ] `ED-STRESS-05` Write findings back into architecture docs
   - If stress work reveals an unclear subsystem seam, capture the corrected

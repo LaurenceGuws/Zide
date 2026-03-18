@@ -213,13 +213,17 @@ Minimum structure:
 
 ## Current Cautions
 
-### 1. `perf_editor_gate.sh` is not yet the authority
+### 1. `perf_editor_gate.sh` now mirrors the first-pass workload set
 
-`tools/perf_editor_gate.sh` currently references fixture names that do not match
-the current repo fixture set.
+`tools/perf_editor_gate.sh` now runs:
 
-Do not treat that gate as the first stress ritual authority until it is updated
-to the workload set above.
+- synthetic `1 MiB`
+- synthetic `8 MiB`
+- synthetic `32 MiB`
+- `fixtures/editor/stress/large_highlight_sample.zig`
+
+Treat it as a repeatable local gate for the current first-pass ritual, not as a
+final benchmark authority.
 
 ### 2. Start with one real syntax-heavy fixture before broadening
 

@@ -208,5 +208,8 @@ That shifts the next highest-value investigation toward:
    coherence.
 2. Update `tools/perf_editor_gate.sh` to use the current stress authority once
    the ritual is trusted enough to freeze those workloads.
+   - Completed after this first pass:
+     - the gate now mirrors synthetic `1/8/32 MiB` plus
+       `large_highlight_sample.zig`
 3. Add one focused render/cache research note if the interactive pass reveals a
    mismatch between headless cost and on-screen behavior.
