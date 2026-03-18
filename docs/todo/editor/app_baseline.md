@@ -62,12 +62,27 @@ This queue does not own:
   - Make `new`, `open`, `save`, and `save as` work cleanly through the shared
     editor/session host path.
   - Ensure dirty-state handling is surfaced clearly enough for basic usage.
+  - Progress:
+    - Opening a file now reuses an already-open editor tab for the same file
+      instead of spawning duplicates.
+    - Opening a file into the initial clean untitled editor now replaces that
+      buffer instead of creating a second editor tab.
+    - `Open...` and `Save As...` prompts now seed sensible paths for untitled
+      editors based on the current working directory.
+    - Remaining work on this item: unsaved-changes guards and any explicit
+      close/discard surface for dirty editors.
 
 - [ ] `ED-APP-03` Editor CLI behavior
   - Audit and improve editor-only CLI file opening behavior.
   - Make direct file-open flows obvious and forgiving.
   - Decide how multiple file arguments should map onto the current tab/session
     model.
+  - Progress:
+    - Startup now opens the first non-mode positional CLI file argument
+      directly in editor/IDE mode instead of always booting into the seeded
+      welcome buffer.
+    - Remaining work on this item: multi-file CLI policy and any line/column
+      CLI syntax if we decide to support it.
 
 - [ ] `ED-APP-04` Common shortcuts and interactions
   - Fill the standard editing shortcut set before optimization-led work.
