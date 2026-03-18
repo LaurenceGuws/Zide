@@ -10,6 +10,7 @@ const app_path_prompt_state = @import("editor/path_prompt_state.zig");
 const app_search_panel_state = @import("search/search_panel_state.zig");
 const app_terminal_intent_route_runtime = @import("terminal/terminal_intent_route_runtime.zig");
 const app_mouse_debug_log = @import("mouse_debug_log.zig");
+const app_imported_theme_runtime = @import("editor/imported_theme_runtime.zig");
 const app_shell = @import("../app_shell.zig");
 const shared_types = @import("../types/mod.zig");
 const widgets = @import("../ui/widgets.zig");
@@ -100,6 +101,8 @@ pub fn handle(
                         }
                     }
                 },
+                .cycle_imported_theme_prev => try app_imported_theme_runtime.cyclePrev(state),
+                .cycle_imported_theme => try app_imported_theme_runtime.cycleNext(state),
             }
             state.needs_redraw = true;
             state.metrics.noteInput(now);

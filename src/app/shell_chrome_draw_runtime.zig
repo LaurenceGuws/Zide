@@ -27,6 +27,7 @@ pub fn draw(state: anytype, shell: anytype, layout: layout_types.WidgetLayout, t
                 layout.window.width,
                 layout.status_bar.y,
                 state.mode,
+                state.editor_imported_theme_name,
                 editor.file_path,
                 editor.cursor.line,
                 editor.cursor.col,

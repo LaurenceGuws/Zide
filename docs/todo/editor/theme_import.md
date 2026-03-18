@@ -220,10 +220,41 @@ This queue does not own:
       - record style loss honestly
       - do not invent fake color-only substitutes for style semantics that
         should instead be modeled properly
+    - Current artifact tightening progress:
+      - `tokyonight-night`, `ayu`, and `kanagawa-dragon` now carry a
+        representative first-pass subset of real style metadata instead of
+        remaining almost entirely color-only.
+      - That subset currently includes:
+        - italic comments / keywords where the source theme uses them
+        - bold statement or boolean groups where the source theme uses them
+        - diagnostic undercurl groups with `sp` colors
+        - a small markdown style subset for Tokyo Night captures
+      - This is still intentionally selective:
+        - base/editor/high-signal groups first
+        - no plugin-noise bulk import yet
+        - enough to make the runtime/style pipeline honest under manual checks
 
 - [ ] `ED-THEME-05` Build a small converted-theme library
   - Keep a compact set of imported editor themes for manual regression checks.
   - Use this set as an editor-theme health check when evolving theming logic.
+  - Progress:
+    - Added [fixtures/editor/theme_style_fixture.md](/home/home/personal/zide/fixtures/editor/theme_style_fixture.md)
+      as the stable manual visual target for imported style semantics.
+    - Use it with the imported themes to check:
+      - italic
+      - bold
+      - underline / undercurl-adjacent decoration
+      - strikethrough
+      - links
+      - mixed markdown and code spans
+    - Added a small built-in preview surface for the shipped imported themes:
+      - `View -> Next Imported Theme`
+      - `View -> Previous Imported Theme`
+      - `Ctrl+Alt+]` / `Ctrl+Alt+[`
+      - this cycles `ayu`, `kanagawa-dragon`, and `tokyonight-night`
+      - it is intentionally transient session state, not a config-file rewrite
+      - the status bar now also shows the active imported theme name during the
+        session
 
 ## Current Implementation Context
 

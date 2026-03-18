@@ -256,6 +256,7 @@ fn initWithMode(
         .editor_theme = editor_theme,
         .terminal_theme = terminal_theme,
         .shell_base_theme = shell_base_theme,
+        .editor_imported_theme_name = if (config.editor_imported_theme_name) |name| try allocator.dupe(u8, name) else null,
         .active_tab = 0,
         .active_kind = app_modes.ide.initialActiveMode(app_mode),
         .mode = "NORMAL",

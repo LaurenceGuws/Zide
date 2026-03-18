@@ -71,6 +71,10 @@ pub fn loadConfig(allocator: std.mem.Allocator) LuaConfigError!Config {
     return config;
 }
 
+pub fn loadConfigFile(allocator: std.mem.Allocator, path: []const u8) LuaConfigError!Config {
+    return loadConfigFromFileZiglua(allocator, path);
+}
+
 pub fn emptyConfig() Config {
     return lua_shared.emptyConfig();
 }

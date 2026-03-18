@@ -27,6 +27,7 @@ pub const AppState = struct {
     editor_theme: t.Theme,
     terminal_theme: t.Theme,
     shell_base_theme: t.Theme,
+    editor_imported_theme_name: ?[]u8,
 
     active_tab: usize,
     active_kind: t.ActiveMode,

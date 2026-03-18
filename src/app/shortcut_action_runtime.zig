@@ -19,6 +19,8 @@ pub const Hooks = struct {
     open_file_prompt: *const fn (*anyopaque) anyerror!void,
     new_terminal: *const fn (*anyopaque) anyerror!void,
     quit_app: *const fn (*anyopaque) void,
+    cycle_imported_theme_prev: *const fn (*anyopaque) anyerror!void,
+    cycle_imported_theme_next: *const fn (*anyopaque) anyerror!void,
     handle_terminal_shortcut_intent: *const fn (*anyopaque, app_modes.ide.TerminalShortcutIntent, f64) anyerror!bool,
 };
 
@@ -146,6 +148,24 @@ pub fn handle(
             out.handled = true;
             out.note_input = true;
             return out;
+        },
+        .editor_cycle_imported_theme_prev => {
+            if (app_modes.ide.supportsEditorSurface(app_mode)) {
+                try hooks.cycle_imported_theme_prev(ctx);
+                out.handled = true;
+                out.needs_redraw = true;
+                out.note_input = true;
+                return out;
+            }
+        },
+        .editor_cycle_imported_theme_next => {
+            if (app_modes.ide.supportsEditorSurface(app_mode)) {
+                try hooks.cycle_imported_theme_next(ctx);
+                out.handled = true;
+                out.needs_redraw = true;
+                out.note_input = true;
+                return out;
+            }
         },
         else => {},
     }

@@ -62,6 +62,8 @@ pub const ActionKind = enum {
     editor_search_open,
     editor_search_next,
     editor_search_prev,
+    editor_cycle_imported_theme_prev,
+    editor_cycle_imported_theme_next,
 };
 
 pub const InputAction = struct {
@@ -216,6 +218,8 @@ fn actionName(kind: ActionKind) []const u8 {
         .editor_search_open => "editor_search_open",
         .editor_search_next => "editor_search_next",
         .editor_search_prev => "editor_search_prev",
+        .editor_cycle_imported_theme_prev => "editor_cycle_imported_theme_prev",
+        .editor_cycle_imported_theme_next => "editor_cycle_imported_theme_next",
     };
 }
 

@@ -96,6 +96,7 @@ pub const StatusBar = struct {
         width: f32,
         y: f32,
         mode: []const u8,
+        imported_theme_name: ?[]const u8,
         file_path: ?[]const u8,
         line: usize,
         col: usize,
@@ -117,7 +118,15 @@ pub const StatusBar = struct {
             return;
         };
         const pos_width = @as(f32, @floatFromInt(pos_str.len)) * shell.charWidth();
+        var theme_buf: [96]u8 = undefined;
+        const theme_label = if (imported_theme_name) |name|
+            std.fmt.bufPrint(&theme_buf, "Theme {s}", .{name}) catch null
+        else
+            null;
+        const theme_width = if (theme_label) |label| @as(f32, @floatFromInt(label.len)) * shell.charWidth() else 0;
+        const theme_gap = if (theme_label != null) 20 * scale else 0;
         const pos_start = width - pos_width - 16 * scale;
+        const theme_start = pos_start - theme_gap - theme_width;
 
         // Mode indicator
         const mode_bg = if (std.mem.eql(u8, mode, "INSERT"))
@@ -271,7 +280,7 @@ pub const StatusBar = struct {
 
         // File path
         if (file_path) |path| {
-            const available = pos_start - 16 * scale - x;
+            const available = (if (theme_label != null) theme_start else pos_start) - 16 * scale - x;
             const result = common.drawTruncatedTextOnBg(shell, path, x, text_y, theme.ui_text, bar_bg, available);
             const in_path = window_focused and mouse.x >= x and mouse.x <= x + result.drawn_width and
                 mouse.y >= y and mouse.y <= y + self.height;
@@ -285,9 +294,18 @@ pub const StatusBar = struct {
         if (modified) {
             const indicator = "[+]";
             const indicator_width = @as(f32, @floatFromInt(indicator.len)) * shell.charWidth();
-            if (x + indicator_width <= pos_start - 8 * scale) {
+            if (x + indicator_width <= (if (theme_label != null) theme_start else pos_start) - 8 * scale) {
                 shell.drawTextOnBg(indicator, x, text_y, theme.ui_modified, bar_bg);
             }
+        }
+
+        if (theme_label) |label| {
+            const theme_hover = window_focused and mouse.x >= theme_start and mouse.x <= theme_start + theme_width and mouse.y >= y and mouse.y <= y + self.height;
+            if (theme_hover) {
+                const bg = if (pressed) theme.ui_pressed else theme.ui_hover;
+                shell.drawRect(@intFromFloat(theme_start - 4 * scale), @intFromFloat(y + 2 * scale), @intFromFloat(theme_width + 8 * scale), @intFromFloat(self.height - 4 * scale), bg);
+            }
+            shell.drawTextOnBg(label, theme_start, text_y, if (theme_hover) theme.ui_text else theme.ui_text_inactive, bar_bg);
         }
 
         const pos_hover = window_focused and mouse.x >= pos_start and mouse.x <= pos_start + pos_width and mouse.y >= y and mouse.y <= y + self.height;

@@ -50,6 +50,9 @@ pub fn handle(state: anytype) void {
     if (state.terminal_default_start_location) |path| {
         state.allocator.free(path);
     }
+    if (state.editor_imported_theme_name) |name| {
+        state.allocator.free(name);
+    }
     manual_highlights_mod.reset();
     app_logger.deinit();
     state.allocator.destroy(state);

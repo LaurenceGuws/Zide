@@ -14,11 +14,14 @@ pub const OptionsBar = struct {
         find,
         replace,
         replace_all,
+        cycle_imported_theme_prev,
+        cycle_imported_theme,
     };
 
     const MenuKind = enum {
         file,
         edit,
+        view,
     };
 
     const MenuLabel = struct {
@@ -51,7 +54,7 @@ pub const OptionsBar = struct {
         .{ .title = "File", .menu = .file },
         .{ .title = "Edit", .menu = .edit },
         .{ .title = "Selection", .menu = null },
-        .{ .title = "View", .menu = null },
+        .{ .title = "View", .menu = .view },
         .{ .title = "Go", .menu = null },
         .{ .title = "Run", .menu = null },
         .{ .title = "Terminal", .menu = null },
@@ -69,6 +72,11 @@ pub const OptionsBar = struct {
         .{ .label = "Find", .action = .find },
         .{ .label = "Replace", .action = .replace },
         .{ .label = "Replace All", .action = .replace_all },
+    };
+
+    const view_items = [_]MenuItem{
+        .{ .label = "Previous Imported Theme", .action = .cycle_imported_theme_prev },
+        .{ .label = "Next Imported Theme", .action = .cycle_imported_theme },
     };
 
     pub fn updateInput(self: *OptionsBar, input: shared_types.input.InputSnapshot) void {
@@ -130,6 +138,7 @@ pub const OptionsBar = struct {
         return switch (menu) {
             .file => &file_items,
             .edit => &edit_items,
+            .view => &view_items,
         };
     }
 

@@ -445,6 +445,8 @@ return {
 			{ key = "f", mods = { "ctrl" }, action = "editor_search_open" },
 			{ key = "f3", mods = {}, action = "editor_search_next" },
 			{ key = "f3", mods = { "shift" }, action = "editor_search_prev" },
+			{ key = "left_bracket", mods = { "ctrl", "alt" }, action = "editor_cycle_imported_theme_prev" },
+			{ key = "right_bracket", mods = { "ctrl", "alt" }, action = "editor_cycle_imported_theme_next" },
 			{ key = "up", mods = { "shift", "alt" }, action = "editor_add_caret_up" },
 			{ key = "down", mods = { "shift", "alt" }, action = "editor_add_caret_down" },
 		},

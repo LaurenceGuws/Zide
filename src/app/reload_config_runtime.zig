@@ -77,6 +77,13 @@ pub fn handle(state: anytype, ctx: *anyopaque, hooks: Hooks) !void {
     if (config.sdl_log_level) |level| {
         app_shell.setSdlLogLevel(level);
     }
+    if (state.editor_imported_theme_name) |old| {
+        state.allocator.free(old);
+        state.editor_imported_theme_name = null;
+    }
+    if (config.editor_imported_theme_name) |name| {
+        state.editor_imported_theme_name = try state.allocator.dupe(u8, name);
+    }
     {
         const resolved_themes = app_theme_utils.resolveConfigThemes(state.shell_base_theme, &config);
         const app_theme_changed = !std.meta.eql(state.app_theme, resolved_themes.app);
