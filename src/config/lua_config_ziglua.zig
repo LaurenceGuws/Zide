@@ -39,7 +39,7 @@ fn loadConfigFromFileZiglua(allocator: std.mem.Allocator, path: []const u8) LuaC
         if (!lua_shared.fileExists(theme_path)) return LuaConfigError.InvalidConfig;
 
         var imported = try loadConfigFromFileZiglua(allocator, theme_path);
-        defer lua_shared.freeConfig(allocator, &imported);
+        errdefer lua_shared.freeConfig(allocator, &imported);
         lua_shared.mergeConfig(allocator, &imported, parsed);
         lua_shared.freeConfig(allocator, &parsed);
         return imported;

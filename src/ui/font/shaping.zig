@@ -19,9 +19,10 @@ pub fn drawGlyph(
     cell_height: f32,
     followed_by_space: bool,
     color: Rgba,
+    italic: bool,
 ) void {
     if (codepoint == 0) return;
-    const glyph = getGlyphForCodepoint(self, codepoint) catch |err| {
+    const glyph = getGlyphForCodepoint(self, codepoint, italic) catch |err| {
         app_logger.logger("terminal.glyph").logf(.debug, "drawGlyph getGlyphForCodepoint failed cp=U+{X} err={s}", .{ codepoint, @errorName(err) });
         return;
     };
@@ -93,10 +94,11 @@ pub fn drawGrapheme(
     cell_height: f32,
     followed_by_space: bool,
     color: Rgba,
+    italic: bool,
 ) void {
     if (base == 0) return;
     if (combining.len == 0) {
-        drawGlyph(self, draw, base, x, y, cell_width, cell_height, followed_by_space, color);
+        drawGlyph(self, draw, base, x, y, cell_width, cell_height, followed_by_space, color, italic);
         return;
     }
 
@@ -130,7 +132,7 @@ pub fn drawGrapheme(
     var pen_x: f32 = 0;
     var i: usize = 0;
     while (i < length) : (i += 1) {
-        const glyph = self.getGlyphById(face, infos[i].codepoint, choice.want_color, positions[i].x_advance) catch continue;
+        const glyph = self.getGlyphById(face, infos[i].codepoint, choice.want_color, italic, positions[i].x_advance) catch continue;
         const gx_off = (@as(f32, @floatFromInt(positions[i].x_offset)) / 64.0) * inv_scale;
         const gy_off = (@as(f32, @floatFromInt(positions[i].y_offset)) / 64.0) * inv_scale;
         const origin_x = x + pen_x + gx_off;
@@ -173,13 +175,13 @@ pub fn drawGrapheme(
     }
 }
 
-pub fn glyphAdvance(self: anytype, codepoint: u32) GlyphError!f32 {
-    const glyph = try getGlyphForCodepoint(self, codepoint);
+pub fn glyphAdvance(self: anytype, codepoint: u32, italic: bool) GlyphError!f32 {
+    const glyph = try getGlyphForCodepoint(self, codepoint, italic);
     const render_scale = if (self.render_scale > 0.0) self.render_scale else 1.0;
     return glyph.advance / render_scale;
 }
 
-pub fn getGlyphForCodepoint(self: anytype, codepoint: u32) GlyphError!*Glyph {
+pub fn getGlyphForCodepoint(self: anytype, codepoint: u32, italic: bool) GlyphError!*Glyph {
     if (codepoint == 0) return error.FtLoadFailed;
 
     const choice = self.pickFontForCodepoint(codepoint);
@@ -194,7 +196,7 @@ pub fn getGlyphForCodepoint(self: anytype, codepoint: u32) GlyphError!*Glyph {
     const positions = c.hb_buffer_get_glyph_positions(buffer, &length);
     if (length == 0) return error.HbShapeFailed;
 
-    return self.getGlyphById(choice.face, infos[0].codepoint, choice.want_color, positions[0].x_advance);
+    return self.getGlyphById(choice.face, infos[0].codepoint, choice.want_color, italic, positions[0].x_advance);
 }
 
 fn snapToDevicePixel(value: f32, render_scale: f32) f32 {

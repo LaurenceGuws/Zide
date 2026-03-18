@@ -284,7 +284,7 @@ pub const FontSampleView = struct {
     ) void {
         const draw_ctx = terminal_font_mod.DrawContext{ .ctx = r, .drawTexture = drawTextureThunk };
         const scale = if (r.render_scale > 0.0) r.render_scale else 1.0;
-        text_draw.drawText(allocator, font, draw_ctx.ctx, draw_ctx.drawTexture, text, x, y, font.cell_width / scale, font.line_height / scale, color.toRgba(), true);
+        text_draw.drawText(allocator, font, draw_ctx.ctx, draw_ctx.drawTexture, text, x, y, font.cell_width / scale, font.line_height / scale, color.toRgba(), true, false);
     }
 
     fn drawTextWithFontZoom(
@@ -301,7 +301,7 @@ pub const FontSampleView = struct {
         const scale = if (r.render_scale > 0.0) r.render_scale else 1.0;
         const cell_w = (font.cell_width / scale) * zoom;
         const cell_h = (font.line_height / scale) * zoom;
-        text_draw.drawText(allocator, font, draw_ctx.ctx, draw_ctx.drawTexture, text, x, y, cell_w, cell_h, color.toRgba(), true);
+        text_draw.drawText(allocator, font, draw_ctx.ctx, draw_ctx.drawTexture, text, x, y, cell_w, cell_h, color.toRgba(), true, false);
     }
 
     fn baselineStressHeight(line_h: f32) f32 {

@@ -446,7 +446,7 @@ fn drawShapedGlyph(
     followed_by_space: bool,
     color: Rgba,
 ) void {
-    const glyph = font.getGlyphById(face, glyph_id, want_color, hb_pos.x_advance) catch |err| {
+    const glyph = font.getGlyphById(face, glyph_id, want_color, false, hb_pos.x_advance) catch |err| {
         const log = app_logger.logger("terminal.draw");
         log.logf(.warning, "shaped glyph lookup failed cp=U+{X} glyph_id={d} err={s}", .{ base_codepoint, glyph_id, @errorName(err) });
         return;
@@ -529,7 +529,7 @@ fn drawDirectGlyphById(
     stats: ?*GlyphDrawStats,
 ) void {
     const glyph_lookup_start = app_shell.getTime();
-    const glyph = font.getGlyphById(face, glyph_id, want_color, 0) catch |err| {
+    const glyph = font.getGlyphById(face, glyph_id, want_color, false, 0) catch |err| {
         const log = app_logger.logger("terminal.draw");
         log.logf(.warning, "direct glyph lookup failed cp=U+{X} glyph_id={d} err={s}", .{ base_codepoint, glyph_id, @errorName(err) });
         return;

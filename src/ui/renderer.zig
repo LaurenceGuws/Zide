@@ -1184,12 +1184,20 @@ pub const Renderer = struct {
         text_runtime.drawTextMonospacePolicy(self, text, x, y, color, disable_programming_ligatures);
     }
 
+    pub fn drawTextMonospaceStyledPolicy(self: *Renderer, text: []const u8, x: f32, y: f32, color: Color, disable_programming_ligatures: bool, italic: bool) void {
+        text_runtime.drawTextMonospaceStyledPolicy(self, text, x, y, color, disable_programming_ligatures, italic);
+    }
+
     pub fn drawTextMonospaceOnBg(self: *Renderer, text: []const u8, x: f32, y: f32, color: Color, bg: Color) void {
         text_runtime.drawTextMonospaceOnBg(self, text, x, y, color, bg);
     }
 
     pub fn drawTextMonospaceOnBgPolicy(self: *Renderer, text: []const u8, x: f32, y: f32, color: Color, bg: Color, disable_programming_ligatures: bool) void {
         text_runtime.drawTextMonospaceOnBgPolicy(self, text, x, y, color, bg, disable_programming_ligatures);
+    }
+
+    pub fn drawTextMonospaceOnBgStyledPolicy(self: *Renderer, text: []const u8, x: f32, y: f32, color: Color, bg: Color, disable_programming_ligatures: bool, italic: bool) void {
+        text_runtime.drawTextMonospaceOnBgStyledPolicy(self, text, x, y, color, bg, disable_programming_ligatures, italic);
     }
 
     pub fn drawTextOnBg(self: *Renderer, text: []const u8, x: f32, y: f32, color: Color, bg: Color) void {

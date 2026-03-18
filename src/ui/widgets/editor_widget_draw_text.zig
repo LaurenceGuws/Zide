@@ -208,8 +208,8 @@ fn drawTextDecorations(r: anytype, x: f32, y: f32, width: f32, color: anytype, f
 }
 
 fn drawStyledTextOnBg(r: anytype, text: []const u8, x: f32, y: f32, fg: anytype, bg: anytype, flags: EditorTextStyleFlags, disable_programming_ligatures: bool) void {
-    r.drawTextMonospaceOnBgPolicy(text, x, y, fg, bg, disable_programming_ligatures);
-    if (flags.bold) r.drawTextMonospaceOnBgPolicy(text, x + 1.0, y, fg, bg, disable_programming_ligatures);
+    r.drawTextMonospaceOnBgStyledPolicy(text, x, y, fg, bg, disable_programming_ligatures, flags.italic);
+    if (flags.bold) r.drawTextMonospaceOnBgStyledPolicy(text, x + 1.0, y, fg, bg, disable_programming_ligatures, flags.italic);
 }
 
 fn addTextDecorationOps(list: *EditorDrawList, r: anytype, x: f32, y: f32, width: f32, color: anytype, flags: EditorTextStyleFlags) bool {
@@ -273,6 +273,7 @@ fn addStyledTextOpBg(list: *EditorDrawList, x: f32, y: f32, text: []const u8, fg
         .bg_color = overlay_mod.packColor(bg),
         .disable_programming_ligatures = disable_programming_ligatures,
         .bold = flags.bold,
+        .italic = flags.italic,
     } }) catch return false;
     return true;
 }

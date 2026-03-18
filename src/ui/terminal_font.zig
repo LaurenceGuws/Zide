@@ -362,6 +362,7 @@ const GlyphKey = struct {
     face: c.FT_Face,
     glyph_id: u32,
     want_color: bool,
+    italic: bool = false,
 };
 
 pub const TerminalFont = struct {
@@ -753,8 +754,8 @@ pub const TerminalFont = struct {
         return self.glyphs.getPtr(key).?;
     }
 
-    pub fn getGlyphById(self: *TerminalFont, face: c.FT_Face, glyph_id: u32, want_color: bool, hb_x_advance: c_int) GlyphError!*Glyph {
-        const key = GlyphKey{ .face = face, .glyph_id = glyph_id, .want_color = want_color };
+    pub fn getGlyphById(self: *TerminalFont, face: c.FT_Face, glyph_id: u32, want_color: bool, italic: bool, hb_x_advance: c_int) GlyphError!*Glyph {
+        const key = GlyphKey{ .face = face, .glyph_id = glyph_id, .want_color = want_color, .italic = italic };
         return self.getGlyphByKey(key, hb_x_advance);
     }
 
@@ -870,8 +871,8 @@ pub const TerminalFont = struct {
         return font_special_glyphs.getOrCreateSpecialGlyphSpriteWithStatus(self, codepoint, cell_w_px, cell_h_px, raster_w_px, raster_h_px, variant);
     }
 
-    pub fn drawGlyph(self: *TerminalFont, draw: DrawContext, codepoint: u32, x: f32, y: f32, cell_width: f32, cell_height: f32, followed_by_space: bool, color: Rgba) void {
-        font_shaping.drawGlyph(self, draw, codepoint, x, y, cell_width, cell_height, followed_by_space, color);
+    pub fn drawGlyph(self: *TerminalFont, draw: DrawContext, codepoint: u32, x: f32, y: f32, cell_width: f32, cell_height: f32, followed_by_space: bool, color: Rgba, italic: bool) void {
+        font_shaping.drawGlyph(self, draw, codepoint, x, y, cell_width, cell_height, followed_by_space, color, italic);
     }
 
     pub fn drawGrapheme(
@@ -885,16 +886,17 @@ pub const TerminalFont = struct {
         cell_height: f32,
         followed_by_space: bool,
         color: Rgba,
+        italic: bool,
     ) void {
-        font_shaping.drawGrapheme(self, draw, base, combining, x, y, cell_width, cell_height, followed_by_space, color);
+        font_shaping.drawGrapheme(self, draw, base, combining, x, y, cell_width, cell_height, followed_by_space, color, italic);
     }
 
-    pub fn glyphAdvance(self: *TerminalFont, codepoint: u32) GlyphError!f32 {
-        return font_shaping.glyphAdvance(self, codepoint);
+    pub fn glyphAdvance(self: *TerminalFont, codepoint: u32, italic: bool) GlyphError!f32 {
+        return font_shaping.glyphAdvance(self, codepoint, italic);
     }
 
-    fn getGlyphForCodepoint(self: *TerminalFont, codepoint: u32) GlyphError!*Glyph {
-        return font_shaping.getGlyphForCodepoint(self, codepoint);
+    fn getGlyphForCodepoint(self: *TerminalFont, codepoint: u32, italic: bool) GlyphError!*Glyph {
+        return font_shaping.getGlyphForCodepoint(self, codepoint, italic);
     }
 
     fn hasGlyph(face: c.FT_Face, codepoint: u32) bool {

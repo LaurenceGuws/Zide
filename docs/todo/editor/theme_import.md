@@ -212,8 +212,9 @@ This queue does not own:
       - the first runtime cut should consume the low-cost decoration subset:
         underline / strikethrough / special underline color
       - the next runtime cut should render a basic undercurl approximation
-      - after that, the next gap is richer renderer consumption for italic and
-        the remaining Neovim semantics
+      - the next runtime cut after that should render italic via synthetic
+        glyph slant at raster/cache time instead of a fake paint-layer trick
+      - after that, the next gap is the remaining Neovim semantics
     - Current importer policy should therefore remain:
       - keep landing real Neovim theme artifacts
       - record style loss honestly

@@ -25,6 +25,23 @@ pub fn setAtlasFilterPoint(self: anytype) void {
 pub fn rasterizeGlyphKey(self: anytype, key: anytype, hb_x_advance: c_int, allow_compact: bool) GlyphError!void {
     var face = key.face;
     const want_color = key.want_color;
+    const synthetic_italic = key.italic and !want_color;
+    var transform_applied = false;
+    if (synthetic_italic) {
+        const shear = std.math.lossyCast(c.FT_Fixed, 0.22 * 65536.0);
+        var matrix = c.FT_Matrix{
+            .xx = 1 << 16,
+            .xy = shear,
+            .yx = 0,
+            .yy = 1 << 16,
+        };
+        var delta = c.FT_Vector{ .x = 0, .y = 0 };
+        c.FT_Set_Transform(face, &matrix, &delta);
+        transform_applied = true;
+    }
+    defer if (transform_applied) {
+        c.FT_Set_Transform(face, null, null);
+    };
 
     const load_flags: c_int = self.ftLoadFlags(want_color);
     if (c.FT_Load_Glyph(face, key.glyph_id, load_flags) != 0) {

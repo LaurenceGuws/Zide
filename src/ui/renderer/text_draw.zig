@@ -17,6 +17,7 @@ pub fn drawText(
     cell_h: f32,
     color: types.Rgba,
     monospace: bool,
+    italic: bool,
 ) void {
     const log = app_logger.logger("renderer.text");
     if (text.len == 0) return;
@@ -54,12 +55,12 @@ pub fn drawText(
         }
         const next = if (idx + 1 < codepoints.items.len) codepoints.items[idx + 1] else 0;
         const followed_by_space = next == ' ';
-        font.drawGlyph(draw, cp, cursor_x, y, cell_w, cell_h, followed_by_space, color);
+        font.drawGlyph(draw, cp, cursor_x, y, cell_w, cell_h, followed_by_space, color, italic);
         if (monospace) {
             visual_col += 1;
             cursor_x += cell_w;
         } else {
-            const adv = font.glyphAdvance(cp) catch cell_w;
+            const adv = font.glyphAdvance(cp, italic) catch cell_w;
             cursor_x += if (adv > 0) adv else cell_w;
         }
     }
@@ -75,7 +76,7 @@ pub fn measureTextWidth(font: *TerminalFont, text: []const u8, fallback_cell_w: 
             width += fallback_cell_w * 4.0;
             continue;
         }
-        const adv = font.glyphAdvance(cp) catch fallback_cell_w;
+        const adv = font.glyphAdvance(cp, false) catch fallback_cell_w;
         width += if (adv > 0) adv else fallback_cell_w;
     }
     return width;

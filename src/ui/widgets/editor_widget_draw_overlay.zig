@@ -466,11 +466,11 @@ pub fn flushDrawList(list: *EditorDrawList, r: anytype) void {
                 const fg = unpackColor(ColorType, text.color);
                 const bg = unpackColor(ColorType, text.bg_color);
                 if (bg.a != 0) {
-                    r.drawTextMonospaceOnBgPolicy(text.text, text.x, text.y, fg, bg, text.disable_programming_ligatures);
-                    if (text.bold) r.drawTextMonospaceOnBgPolicy(text.text, text.x + 1.0, text.y, fg, bg, text.disable_programming_ligatures);
+                    r.drawTextMonospaceOnBgStyledPolicy(text.text, text.x, text.y, fg, bg, text.disable_programming_ligatures, text.italic);
+                    if (text.bold) r.drawTextMonospaceOnBgStyledPolicy(text.text, text.x + 1.0, text.y, fg, bg, text.disable_programming_ligatures, text.italic);
                 } else {
-                    r.drawTextMonospacePolicy(text.text, text.x, text.y, fg, text.disable_programming_ligatures);
-                    if (text.bold) r.drawTextMonospacePolicy(text.text, text.x + 1.0, text.y, fg, text.disable_programming_ligatures);
+                    r.drawTextMonospaceStyledPolicy(text.text, text.x, text.y, fg, text.disable_programming_ligatures, text.italic);
+                    if (text.bold) r.drawTextMonospaceStyledPolicy(text.text, text.x + 1.0, text.y, fg, text.disable_programming_ligatures, text.italic);
                 }
             },
             .cursor => |cursor| {

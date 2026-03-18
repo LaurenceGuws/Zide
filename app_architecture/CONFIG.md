@@ -138,9 +138,10 @@ metadata in config/theme parsing for the main editor syntax buckets, including
 `italic`, `bold`, `underline`, `undercurl`, `strikethrough`, `reverse`,
 `nocombine`, and special underline color (`sp`). The editor draw path now
 consumes the low-cost decoration subset (`underline`, `strikethrough`, `sp`,
-and a basic `undercurl` approximation), and now also applies a simple bold
-overdraw approximation. It still does not render richer style semantics such
-as `italic`, `reverse`, or `nocombine`. The remaining gap for
+and a basic `undercurl` approximation), applies a simple bold overdraw
+approximation, and now renders `italic` via a synthetic glyph-slant cache
+variant in the font raster path. It still does not render richer style
+semantics such as `reverse` or `nocombine`. The remaining gap for
 "proper" Neovim theme translation is therefore richer runtime style
 rendering, not schema preservation.
 
