@@ -17,6 +17,7 @@ pub const Result = struct {
 pub const Hooks = struct {
     new_editor: *const fn (*anyopaque) anyerror!void,
     open_file_prompt: *const fn (*anyopaque) anyerror!void,
+    close_active_editor: *const fn (*anyopaque) anyerror!bool,
     new_terminal: *const fn (*anyopaque) anyerror!void,
     quit_app: *const fn (*anyopaque) void,
     cycle_imported_theme_prev: *const fn (*anyopaque) anyerror!void,
@@ -49,6 +50,14 @@ pub fn handle(
         .open_file => {
             if (app_modes.ide.supportsEditorSurface(app_mode)) {
                 try hooks.open_file_prompt(ctx);
+                out.handled = true;
+                out.needs_redraw = true;
+                out.note_input = true;
+                return out;
+            }
+        },
+        .close_editor => {
+            if (app_modes.ide.supportsEditorSurface(app_mode) and try hooks.close_active_editor(ctx)) {
                 out.handled = true;
                 out.needs_redraw = true;
                 out.note_input = true;

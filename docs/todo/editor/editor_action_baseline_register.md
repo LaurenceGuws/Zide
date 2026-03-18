@@ -43,7 +43,7 @@ The bindings shown here are reference examples, not hardcoded key policy.
 - [x] `Ctrl+N` New file
 - [x] `Ctrl+S` Save file
 - [x] `Ctrl+Shift+S` Save As
-- [ ] `Ctrl+W` Close current document
+- [x] `Ctrl+W` Close current document
 - [ ] `Ctrl+Tab` Next document
 - [ ] `Ctrl+Shift+Tab` Previous document
 - [ ] `Ctrl+PgUp` Next document
@@ -123,7 +123,7 @@ behavior?" not "must this exact key combo be hardcoded?"
 - [ ] `Ctrl+1..9` Focus document by tab index
 - [ ] `Ctrl+PgUp` Next document
 - [ ] `Ctrl+PgDn` Previous document
-- [ ] `Ctrl+W` Close current document
+- [x] `Ctrl+W` Close current document
 
 ## Edit
 
@@ -230,7 +230,7 @@ behavior?" not "must this exact key combo be hardcoded?"
 These are the highest-signal follow-ups from this register for Zide's current
 Notepad-grade lane:
 
-1. document cycling and close shortcuts
+1. document cycling shortcuts
 2. duplicate/delete/move line operations
 3. indent/outdent for selected full lines
 4. go-to-line
@@ -318,7 +318,7 @@ bindings should stay Lua-driven.
 
 ### Editor Management
 
-- [ ] `Ctrl+F4` / `Ctrl+W` Close editor
+- [x] `Ctrl+F4` / `Ctrl+W` Close editor
 - [-] Explorer/workspace folder management
 - [-] Split editor and editor groups
 - [ ] `Ctrl+Tab` next editor
@@ -331,7 +331,7 @@ bindings should stay Lua-driven.
 - [x] `Ctrl+S` Save
 - [x] `Ctrl+Shift+S` Save As
 - [ ] `Ctrl+K S` Save all
-- [ ] `Ctrl+F4` Close
+- [x] `Ctrl+F4` Close
 - [-] Close all / reopen closed / copy path / reveal file / open in new window
 
 ### Display
