@@ -186,6 +186,10 @@ Do not leave the work only in commit history or chat context.
   - First concrete pass should follow the ritual in
     `docs/research/editor/EDITOR_STRESS_RITUAL_2026-03-18.md` before adding
     broader comparison noise.
+  - Headless first-pass results now live in:
+    - `docs/research/editor/EDITOR_STRESS_RESULTS_2026-03-18.md`
+  - Remaining gap for this item:
+    - native interactive observations on the real widget/runtime/render path
 
 - [ ] `ED-STRESS-05` Write findings back into architecture docs
   - If stress work reveals an unclear subsystem seam, capture the corrected

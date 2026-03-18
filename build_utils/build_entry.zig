@@ -29,6 +29,7 @@ pub fn build(b: *std.Build) void {
         boot.treesitter,
         boot.app_link_ctx,
         boot.build_options,
+        boot.zlua_module,
         main_mode_run_steps,
     );
 }

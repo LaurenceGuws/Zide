@@ -8,6 +8,7 @@ const step_utils = @import("step_utils.zig");
 const step_reports = @import("step_reports.zig");
 
 const AppLinkContext = app_types.AppLinkContext;
+const addAppExecutable = target_factory.addAppExecutable;
 const addTreeSitterIncludes = target_config.addTreeSitterIncludes;
 const addVendorAndStb = target_config.addVendorAndStb;
 const linkFfiPlatform = target_config.linkFfiPlatform;
@@ -125,6 +126,7 @@ pub fn planIdeExtendedBuildGraph(
     treesitter: ?*std.Build.Step.Compile,
     app_link_ctx: AppLinkContext,
     build_options: *std.Build.Step.Options,
+    zlua_module: *std.Build.Module,
     main_mode_run_steps: MainModeRunSteps,
 ) void {
     // FFI artifacts
@@ -243,10 +245,12 @@ pub fn planIdeExtendedBuildGraph(
     terminal_replay_all.run.addArg("--all");
     const terminal_replay_all_step = terminal_replay_all.step;
 
-    const editor_perf_headless = addLibcExecutable(
+    const editor_perf_headless = addAppExecutable(
         b,
         target,
         optimize,
+        build_options,
+        zlua_module,
         "editor-perf-headless",
         "src/editor_perf_main.zig",
     );
