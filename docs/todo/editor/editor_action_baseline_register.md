@@ -66,8 +66,8 @@ The bindings shown here are reference examples, not hardcoded key policy.
 - [ ] `Shift+Alt+Down` Copy line down
 - [ ] `Ctrl+Enter` Insert line below
 - [ ] `Ctrl+Shift+Enter` Insert line above
-- [ ] `Tab` indent selected full lines
-- [ ] `Shift+Tab` outdent selected full lines
+- [x] `Tab` indent selected full lines
+- [x] `Shift+Tab` outdent selected full lines
 - [ ] `Ctrl+Backspace` Delete to start of word
 - [ ] `Ctrl+Delete` Delete to end of word
 - [ ] `Ctrl+Shift+Backspace` Delete to start of line

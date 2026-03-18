@@ -596,6 +596,105 @@ pub const Editor = struct {
         self.annotateLastUndoSelectionState(before_id, after_id);
     }
 
+    fn selectedLineRange(self: *Editor) struct { start: usize, end: usize } {
+        if (self.selection) |sel| {
+            const norm = sel.normalized();
+            return .{
+                .start = norm.start.line,
+                .end = norm.end.line,
+            };
+        }
+        return .{ .start = self.cursor.line, .end = self.cursor.line };
+    }
+
+    fn leadingOutdentWidth(self: *Editor, line_idx: usize) !usize {
+        const line = try self.getLineAlloc(line_idx);
+        defer self.allocator.free(line);
+        if (line.len == 0) return 0;
+        if (line[0] == '\t') return 1;
+
+        var width: usize = 0;
+        while (width < line.len and width < self.tab_width and line[width] == ' ') : (width += 1) {}
+        return width;
+    }
+
+    fn shiftPrimarySelectionAfterLineTransform(
+        self: *Editor,
+        start_line: usize,
+        end_line: usize,
+        delta_cols: i32,
+    ) void {
+        if (self.selection) |sel| {
+            var next = sel;
+            if (next.start.line >= start_line and next.start.line <= end_line) {
+                next.start.col = if (delta_cols >= 0)
+                    next.start.col + @as(usize, @intCast(delta_cols))
+                else
+                    next.start.col -| @as(usize, @intCast(-delta_cols));
+            }
+            if (next.end.line >= start_line and next.end.line <= end_line) {
+                next.end.col = if (delta_cols >= 0)
+                    next.end.col + @as(usize, @intCast(delta_cols))
+                else
+                    next.end.col -| @as(usize, @intCast(-delta_cols));
+            }
+            next.start.offset = self.lineStart(next.start.line) + @min(next.start.col, self.lineLen(next.start.line));
+            next.end.offset = self.lineStart(next.end.line) + @min(next.end.col, self.lineLen(next.end.line));
+            self.selection = next;
+        }
+    }
+
+    pub fn indentSelectedLines(self: *Editor) !void {
+        self.preferred_visual_col = null;
+        const range = self.selectedLineRange();
+        const before_id = try self.captureUndoSelectionState();
+
+        var line_idx = range.end + 1;
+        while (line_idx > range.start) {
+            line_idx -= 1;
+            const insert_offset = self.lineStart(line_idx);
+            const insert_point = self.pointForByte(insert_offset);
+            try self.buffer.insertBytes(insert_offset, "\t");
+            self.applyHighlightEdit(insert_offset, insert_offset, insert_offset + 1, insert_point, insert_point);
+        }
+
+        self.setCursorNoClear(self.cursor.line, self.cursor.col + 1);
+        self.shiftPrimarySelectionAfterLineTransform(range.start, range.end, 1);
+        self.noteTextChanged();
+        const after_id = try self.captureUndoSelectionState();
+        self.annotateLastUndoSelectionState(before_id, after_id);
+    }
+
+    pub fn outdentSelectedLines(self: *Editor) !void {
+        self.preferred_visual_col = null;
+        const range = self.selectedLineRange();
+        const before_id = try self.captureUndoSelectionState();
+
+        var max_removed: usize = 0;
+        var line_idx = range.end + 1;
+        while (line_idx > range.start) {
+            line_idx -= 1;
+            const remove_len = try self.leadingOutdentWidth(line_idx);
+            if (remove_len == 0) continue;
+            if (remove_len > max_removed) max_removed = remove_len;
+            const delete_start = self.lineStart(line_idx);
+            const delete_end = delete_start + remove_len;
+            const start_point = self.pointForByte(delete_start);
+            const end_point = self.pointForByte(delete_end);
+            try self.buffer.deleteRange(delete_start, remove_len);
+            self.applyHighlightEdit(delete_start, delete_end, delete_start, start_point, end_point);
+        }
+
+        if (max_removed > 0) {
+            self.setCursorNoClear(self.cursor.line, self.cursor.col -| max_removed);
+            self.shiftPrimarySelectionAfterLineTransform(range.start, range.end, -@as(i32, @intCast(max_removed)));
+            self.noteTextChanged();
+        }
+
+        const after_id = try self.captureUndoSelectionState();
+        self.annotateLastUndoSelectionState(before_id, after_id);
+    }
+
     pub fn selectionTextAlloc(self: *Editor) !?[]u8 {
         var selections = std.ArrayList(Selection).empty;
         defer selections.deinit(self.allocator);
@@ -1001,4 +1100,44 @@ test "duplicateCurrentLine duplicates middle line and keeps cursor on duplicate"
     try std.testing.expectEqual(@as(usize, 2), editor.cursor.line);
     try std.testing.expectEqual(@as(usize, 2), editor.cursor.col);
     try std.testing.expect(editor.modified);
+}
+
+test "indentSelectedLines indents current line when no selection" {
+    var grammar_manager = grammar_manager_mod.GrammarManager.init(std.testing.allocator);
+    defer grammar_manager.deinit();
+
+    const buffer = try text_store.TextStore.init(std.testing.allocator, "alpha\nbeta");
+    var editor = try Editor.initWithStore(std.testing.allocator, buffer, &grammar_manager);
+    defer editor.deinit();
+
+    editor.setCursor(1, 2);
+    try editor.indentSelectedLines();
+
+    const snapshot = try @import("snapshot.zig").capture(std.testing.allocator, editor);
+    defer std.testing.allocator.free(snapshot);
+
+    try std.testing.expectEqualStrings("alpha\n\tbeta", snapshot);
+    try std.testing.expectEqual(@as(usize, 1), editor.cursor.line);
+    try std.testing.expectEqual(@as(usize, 3), editor.cursor.col);
+}
+
+test "outdentSelectedLines removes leading tab from selected lines" {
+    var grammar_manager = grammar_manager_mod.GrammarManager.init(std.testing.allocator);
+    defer grammar_manager.deinit();
+
+    const buffer = try text_store.TextStore.init(std.testing.allocator, "\tone\n\ttwo\nthree");
+    var editor = try Editor.initWithStore(std.testing.allocator, buffer, &grammar_manager);
+    defer editor.deinit();
+
+    editor.selection = .{
+        .start = .{ .line = 0, .col = 0, .offset = 0 },
+        .end = .{ .line = 1, .col = 1, .offset = 6 },
+    };
+    editor.setCursorNoClear(1, 1);
+    try editor.outdentSelectedLines();
+
+    const snapshot = try @import("snapshot.zig").capture(std.testing.allocator, editor);
+    defer std.testing.allocator.free(snapshot);
+
+    try std.testing.expectEqualStrings("one\ntwo\nthree", snapshot);
 }

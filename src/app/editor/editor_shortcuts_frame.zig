@@ -78,6 +78,16 @@ pub fn handle(
                 out.needs_redraw = true;
                 out.handled = true;
             },
+            .indent_lines => {
+                try editor.indentSelectedLines();
+                out.needs_redraw = true;
+                out.handled = true;
+            },
+            .outdent_lines => {
+                try editor.outdentSelectedLines();
+                out.needs_redraw = true;
+                out.handled = true;
+            },
             .go_to_line => {
                 search_panel_active.* = false;
                 try app_path_prompt_state.openForGoToLine(path_prompt, allocator, editor);
