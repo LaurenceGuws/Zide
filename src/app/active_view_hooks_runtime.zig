@@ -14,7 +14,9 @@ const ActiveMode = app_modes.ide.ActiveMode;
 
 pub fn handle(
     allocator: std.mem.Allocator,
+    path_prompt: anytype,
     search_panel_active: *bool,
+    search_panel_select_all: *bool,
     search_panel_query: *std.ArrayList(u8),
     editors: anytype,
     active_tab: usize,
@@ -53,7 +55,9 @@ pub fn handle(
     const State = @TypeOf(state);
     try app_active_view_runtime.handle(
         allocator,
+        path_prompt,
         search_panel_active,
+        search_panel_select_all,
         search_panel_query,
         editors,
         active_tab,

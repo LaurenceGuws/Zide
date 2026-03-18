@@ -18,6 +18,8 @@ Current priority order:
 
 Current high-signal entrypoints:
 
+- `app_baseline.md` — Notepad-grade editor chrome, file flow, shortcuts, config, and CLI queue
+- `theme_import.md` — Neovim/editor theme import and schema-pressure queue
 - `widget.md` — editor widget/features queue
 - `protocol.md` — text-engine and editing semantics queue
 - `modularization.md` — editor modularization and boundary cleanup

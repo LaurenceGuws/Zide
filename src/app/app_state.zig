@@ -6,6 +6,7 @@ pub const AppMode = t.AppMode;
 
 pub const AppState = struct {
     pub const SearchPanelState = t.SearchPanelState;
+    pub const PathPromptState = t.PathPromptState;
     pub const TerminalCloseModalLayout = t.TerminalCloseModalLayout;
 
     allocator: std.mem.Allocator,
@@ -99,6 +100,7 @@ pub const AppState = struct {
     font_sample_close_pending: bool,
     font_sample_screenshot_path: ?[]const u8,
     search_panel: SearchPanelState,
+    path_prompt: PathPromptState,
     terminal_close_confirm_tab: ?t.TerminalTabId,
     terminal_window_close_pending: bool,
 

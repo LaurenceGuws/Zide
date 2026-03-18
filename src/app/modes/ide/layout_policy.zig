@@ -38,14 +38,15 @@ pub fn computeLayoutForMode(
             };
         },
         .editor => {
+            const editor_height = @max(0, height - options_bar_height - tab_bar_height - status_bar_height);
             return .{
                 .window = .{ .x = 0, .y = 0, .width = width, .height = height },
-                .options_bar = .{ .x = 0, .y = 0, .width = 0, .height = 0 },
-                .tab_bar = .{ .x = 0, .y = 0, .width = 0, .height = 0 },
+                .options_bar = .{ .x = 0, .y = 0, .width = width, .height = options_bar_height },
+                .tab_bar = .{ .x = 0, .y = options_bar_height, .width = width, .height = tab_bar_height },
                 .side_nav = .{ .x = 0, .y = 0, .width = 0, .height = 0 },
-                .editor = .{ .x = 0, .y = 0, .width = width, .height = height },
+                .editor = .{ .x = 0, .y = options_bar_height + tab_bar_height, .width = width, .height = editor_height },
                 .terminal = .{ .x = 0, .y = 0, .width = 0, .height = 0 },
-                .status_bar = .{ .x = 0, .y = 0, .width = 0, .height = 0 },
+                .status_bar = .{ .x = 0, .y = height - status_bar_height, .width = width, .height = status_bar_height },
             };
         },
         .font_sample => {

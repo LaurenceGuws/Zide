@@ -23,6 +23,9 @@ Build a Linux-first editor widget and text engine with large-file performance, d
 
 ## TODO
 
+- Primary execution queue for current app-level editor behavior now lives in
+  `app_baseline.md`.
+
 - [ ] `ED-UI-00` Notepad-grade app/editor baseline
   - Make the editor usable as a simple everyday app instead of only exposing the initial text buffer.
   - Land basic editor chrome entrypoints for new/open/save/save as/find/replace and basic status surfacing.

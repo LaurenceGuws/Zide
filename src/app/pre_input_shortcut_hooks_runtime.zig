@@ -44,7 +44,9 @@ pub fn handle(
         state.editor_wrap,
         state.editor_large_jump_rows,
         &state.search_panel.active,
+        &state.search_panel.select_all,
         &state.search_panel.query,
+        &state.path_prompt,
         @ptrCast(state),
         .{
             .reload_config = struct {

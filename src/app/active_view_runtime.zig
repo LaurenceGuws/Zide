@@ -1,6 +1,7 @@
 const std = @import("std");
 const app_bootstrap = @import("bootstrap.zig");
 const app_modes = @import("modes/mod.zig");
+const app_path_prompt_frame_runtime = @import("editor/path_prompt_frame_runtime.zig");
 const app_search_panel_frame_runtime = @import("search/search_panel_frame_runtime.zig");
 const app_editor_frame_hooks_runtime = @import("editor/editor_frame_hooks_runtime.zig");
 const app_visible_terminal_frame_hooks_runtime = @import("terminal/visible_terminal_frame_hooks_runtime.zig");
@@ -23,7 +24,9 @@ pub const Hooks = struct {
 
 pub fn handle(
     allocator: std.mem.Allocator,
+    path_prompt: anytype,
     search_panel_active: *bool,
+    search_panel_select_all: *bool,
     search_panel_query: *std.ArrayList(u8),
     editors: anytype,
     active_tab: usize,
@@ -60,18 +63,40 @@ pub fn handle(
     ctx: *anyopaque,
     hooks: Hooks,
 ) !void {
-    const search_panel_result = try app_search_panel_frame_runtime.handle(
+    const path_prompt_result = try app_path_prompt_frame_runtime.handle(
         allocator,
-        search_panel_active,
-        search_panel_query,
+        shell,
+        path_prompt,
         editors,
         active_tab,
         input_batch,
+        ctx,
+        .{
+            .open_file = hooks.open_file,
+        },
     );
-    if (search_panel_result.clear_editor_cluster_cache) editor_cluster_cache.clear();
-    if (search_panel_result.needs_redraw) needs_redraw.* = true;
-    if (search_panel_result.note_input) metrics.noteInput(now);
-    const search_panel_consumed_input = search_panel_result.consumed_input;
+    if (path_prompt_result.clear_editor_cluster_cache) editor_cluster_cache.clear();
+    if (path_prompt_result.needs_redraw) needs_redraw.* = true;
+    if (path_prompt_result.note_input) metrics.noteInput(now);
+    const path_prompt_consumed_input = path_prompt_result.consumed_input;
+
+    var search_panel_consumed_input = false;
+    if (!path_prompt_consumed_input) {
+        const search_panel_result = try app_search_panel_frame_runtime.handle(
+            allocator,
+            shell,
+            search_panel_active,
+            search_panel_select_all,
+            search_panel_query,
+            editors,
+            active_tab,
+            input_batch,
+        );
+        if (search_panel_result.clear_editor_cluster_cache) editor_cluster_cache.clear();
+        if (search_panel_result.needs_redraw) needs_redraw.* = true;
+        if (search_panel_result.note_input) metrics.noteInput(now);
+        search_panel_consumed_input = search_panel_result.consumed_input;
+    }
 
     const editor_frame_result = try app_editor_frame_hooks_runtime.handle(
         app_mode,
@@ -84,7 +109,7 @@ pub fn handle(
         layout,
         mouse,
         input_batch,
-        search_panel_consumed_input,
+        path_prompt_consumed_input or search_panel_consumed_input,
         perf_mode,
         perf_frames_done.*,
         perf_frames_total,
@@ -129,7 +154,7 @@ pub fn handle(
         shell,
         layout,
         input_batch,
-        search_panel_consumed_input,
+        path_prompt_consumed_input or search_panel_consumed_input,
         suppress_terminal_shortcuts,
         terminal_close_modal_active,
         now,

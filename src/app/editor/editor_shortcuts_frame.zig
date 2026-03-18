@@ -1,5 +1,6 @@
 const std = @import("std");
 const app_editor_actions = @import("editor_actions.zig");
+const app_path_prompt_state = @import("path_prompt_state.zig");
 const app_search_panel_state = @import("../search/search_panel_state.zig");
 const app_shell = @import("../../app_shell.zig");
 const editor_mod = @import("../../editor/editor.zig");
@@ -27,7 +28,9 @@ pub fn handle(
     editor_wrap: bool,
     editor_large_jump_rows: usize,
     search_panel_active: *bool,
+    search_panel_select_all: *bool,
     search_panel_query: *std.ArrayList(u8),
+    path_prompt: *app_path_prompt_state.State,
 ) !Result {
     var editor_widget = EditorWidget.initWithCache(editor, editor_cluster_cache, editor_wrap);
     var out: Result = .{};
@@ -68,7 +71,12 @@ pub fn handle(
                 }
             },
             .save => {
-                try editor.save();
+                if (editor.file_path) |_| {
+                    try editor.save();
+                } else {
+                    search_panel_active.* = false;
+                    try app_path_prompt_state.openForSaveAs(path_prompt, allocator, editor);
+                }
                 out.needs_redraw = true;
                 out.handled = true;
             },
@@ -158,9 +166,11 @@ pub fn handle(
                 try app_search_panel_state.openPanel(
                     allocator,
                     search_panel_active,
+                    search_panel_select_all,
                     search_panel_query,
                     editor,
                 );
+                app_path_prompt_state.close(path_prompt);
                 out.needs_redraw = true;
                 out.handled = true;
             },
