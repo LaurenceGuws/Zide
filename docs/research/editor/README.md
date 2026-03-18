@@ -15,3 +15,8 @@ Current authority lives in:
 - `app_architecture/editor/DESIGN.md`
 - `app_architecture/editor/FFI_DESIGN.md`
 - `docs/todo/editor/stress_and_reference.md`
+
+Current editor research entrypoints:
+
+- `EDITOR_REFERENCE_COMPARISON_2026-03-18.md`
+- `EDITOR_STRESS_RITUAL_2026-03-18.md`
