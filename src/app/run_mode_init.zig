@@ -14,6 +14,7 @@ pub fn initialize(
     app_mode: app_bootstrap.AppMode,
     perf_mode: bool,
     perf_file_path: ?[]u8,
+    startup_file_path: ?[]u8,
     ctx: *anyopaque,
     hooks: Hooks,
 ) !void {
@@ -31,6 +32,11 @@ pub fn initialize(
 
     if (perf_mode and perf_file_path != null) {
         try hooks.open_file(ctx, perf_file_path.?);
+        return;
+    }
+
+    if (startup_file_path != null) {
+        try hooks.open_file(ctx, startup_file_path.?);
         return;
     }
 

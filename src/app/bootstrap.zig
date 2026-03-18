@@ -38,6 +38,33 @@ pub fn parseAppMode(allocator: std.mem.Allocator) AppMode {
     return .ide;
 }
 
+pub fn parseStartupFilePath(allocator: std.mem.Allocator) ?[]u8 {
+    if (comptime mode_build.focused_mode == .terminal) return null;
+
+    const args = std.process.argsAlloc(allocator) catch return null;
+    defer std.process.argsFree(allocator, args);
+
+    var i: usize = 1;
+    while (i < args.len) : (i += 1) {
+        const arg = args[i];
+        if (std.mem.eql(u8, arg, "--terminal") or std.mem.eql(u8, arg, "terminal") or
+            std.mem.eql(u8, arg, "--editor") or std.mem.eql(u8, arg, "editor") or
+            std.mem.eql(u8, arg, "--ide") or std.mem.eql(u8, arg, "ide"))
+        {
+            continue;
+        }
+        if (std.mem.startsWith(u8, arg, "--mode=")) continue;
+        if (std.mem.eql(u8, arg, "--mode")) {
+            if (i + 1 < args.len) i += 1;
+            continue;
+        }
+        if (std.mem.startsWith(u8, arg, "-")) continue;
+        return allocator.dupe(u8, arg) catch null;
+    }
+
+    return null;
+}
+
 pub fn modeFromArg(value: []const u8) ?AppMode {
     if (std.mem.eql(u8, value, "terminal")) return .terminal;
     if (std.mem.eql(u8, value, "editor")) return .editor;
@@ -75,4 +102,12 @@ pub fn envSlice(env_key: [:0]const u8) ?[]const u8 {
     const slice = std.mem.sliceTo(raw, 0);
     if (slice.len == 0) return null;
     return slice;
+}
+
+test "modeFromArg maps supported values" {
+    try std.testing.expectEqual(@as(?AppMode, .terminal), modeFromArg("terminal"));
+    try std.testing.expectEqual(@as(?AppMode, .editor), modeFromArg("editor"));
+    try std.testing.expectEqual(@as(?AppMode, .ide), modeFromArg("ide"));
+    try std.testing.expectEqual(@as(?AppMode, .font_sample), modeFromArg("font-sample"));
+    try std.testing.expectEqual(@as(?AppMode, null), modeFromArg("wat"));
 }
