@@ -27,6 +27,9 @@ Quick reading guide:
   - `docs/todo/terminal/README.md` — terminal queue map and ownership split.
   - `docs/todo/ui/README.md` — UI queue map and execution lanes.
   - `docs/todo/editor/README.md` — editor queue map and execution lanes.
+  - `docs/todo/editor/app_baseline.md` — current editor-first execution lane for Notepad-grade behavior, shortcuts, file flow, config, and CLI.
+  - `docs/todo/editor/editor_action_baseline_register.md` — practical editor action baseline checklist while bindings stay Lua-owned.
+  - `docs/todo/editor/stress_and_reference.md` — editor stress-testing and cross-reference comparison queue.
   - `docs/todo/repo_structure.md` — non-product repo structure cleanup (tests, tools, stale docs/tests).
   - `docs/todo/file_layout.md` — file/folder layout cleanup queue (split large folders/files, collapse low-value micro-files).
   - `docs/todo/terminal/vt_core_rearchitecture.md` — highest-value remaining terminal-core structural work.
@@ -45,6 +48,9 @@ Quick reading guide:
 - `app_architecture/DEPENDENCIES.md` — dependency packaging architecture notes and migration constraints.
 - `app_architecture/tools/DOCS_EXPLORER.md` — local docs-explorer scope, ownership, and constraints.
 - `app_architecture/editor/DESIGN.md` — editor architecture + references.
+- `app_architecture/editor/FFI_DESIGN.md` — editor FFI boundary, ABI shape, and ownership rules.
+- `app_architecture/editor/RESOLVED_THEME_EXPORT_CONTRACT.md` — resolved editor-theme artifact contract for the current Neovim import lane.
+- `app_architecture/editor/LSP_THEME_OVERLAY_BOUNDARY.md` — deferred LSP/semantic-token overlay boundary for editor theming.
 - `app_architecture/terminal/DESIGN.md` — terminal architecture + decisions.
 - `app_architecture/terminal/TERMINAL_WORKSPACE.md` — backend tab/workspace ownership contract for terminal mode.
 - `app_architecture/terminal/VT_CORE_DESIGN.md` — exact target split for terminal core, transport, host session, snapshot, and FFI.
