@@ -58,7 +58,7 @@ The bindings shown here are reference examples, not hardcoded key policy.
 - [x] `Ctrl+Z` Undo
 - [x] `Ctrl+Y` Redo
 - [x] `Ctrl+A` Select all
-- [ ] `Ctrl+D` Duplicate current line / selection to next match depending on mode
+- [x] `Ctrl+D` Duplicate current line / selection to next match depending on mode
 - [x] `Ctrl+Shift+K` Delete line
 - [ ] `Alt+Up` Move line up
 - [ ] `Alt+Down` Move line down

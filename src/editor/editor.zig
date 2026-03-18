@@ -562,6 +562,40 @@ pub const Editor = struct {
         self.annotateLastUndoSelectionState(before_id, after_id);
     }
 
+    pub fn duplicateCurrentLine(self: *Editor) !void {
+        self.preferred_visual_col = null;
+
+        const line_count = self.buffer.lineCount();
+        if (line_count == 0) return;
+
+        const before_id = try self.captureUndoSelectionState();
+        const line_idx = @min(self.cursor.line, line_count - 1);
+        const line_start = self.buffer.lineStart(line_idx);
+        const line_len = self.buffer.lineLen(line_idx);
+        const line_text = try self.buffer.readRangeAlloc(line_start, line_len);
+        defer self.allocator.free(line_text);
+
+        const insert_offset = if (line_idx + 1 < line_count) self.buffer.lineStart(line_idx + 1) else self.buffer.totalLen();
+        const insert_text = if (line_idx + 1 < line_count)
+            try std.fmt.allocPrint(self.allocator, "{s}\n", .{line_text})
+        else
+            try std.fmt.allocPrint(self.allocator, "\n{s}", .{line_text});
+        defer self.allocator.free(insert_text);
+
+        const insert_point = self.pointForByte(insert_offset);
+        try self.buffer.insertBytes(insert_offset, insert_text);
+        self.applyHighlightEdit(insert_offset, insert_offset, insert_offset + insert_text.len, insert_point, insert_point);
+
+        const target_line = @min(line_idx + 1, self.buffer.lineCount() - 1);
+        const target_col = @min(self.cursor.col, self.buffer.lineLen(target_line));
+        self.setCursor(target_line, target_col);
+        self.selection = null;
+        self.clearSelections();
+        self.noteTextChanged();
+        const after_id = try self.captureUndoSelectionState();
+        self.annotateLastUndoSelectionState(before_id, after_id);
+    }
+
     pub fn selectionTextAlloc(self: *Editor) !?[]u8 {
         var selections = std.ArrayList(Selection).empty;
         defer selections.deinit(self.allocator);
@@ -946,5 +980,25 @@ test "deleteCurrentLine removes middle line and keeps cursor on following line" 
     try std.testing.expectEqualStrings("alpha\ngamma", snapshot);
     try std.testing.expectEqual(@as(usize, 1), editor.cursor.line);
     try std.testing.expectEqual(@as(usize, 0), editor.cursor.col);
+    try std.testing.expect(editor.modified);
+}
+
+test "duplicateCurrentLine duplicates middle line and keeps cursor on duplicate" {
+    var grammar_manager = grammar_manager_mod.GrammarManager.init(std.testing.allocator);
+    defer grammar_manager.deinit();
+
+    const buffer = try text_store.TextStore.init(std.testing.allocator, "alpha\nbeta\ngamma");
+    var editor = try Editor.initWithStore(std.testing.allocator, buffer, &grammar_manager);
+    defer editor.deinit();
+
+    editor.setCursor(1, 2);
+    try editor.duplicateCurrentLine();
+
+    const snapshot = try @import("snapshot.zig").capture(std.testing.allocator, editor);
+    defer std.testing.allocator.free(snapshot);
+
+    try std.testing.expectEqualStrings("alpha\nbeta\nbeta\ngamma", snapshot);
+    try std.testing.expectEqual(@as(usize, 2), editor.cursor.line);
+    try std.testing.expectEqual(@as(usize, 2), editor.cursor.col);
     try std.testing.expect(editor.modified);
 }

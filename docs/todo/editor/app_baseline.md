@@ -98,6 +98,9 @@ This queue does not own:
       handling.
     - Added `Ctrl+Shift+K` delete-line through a real editor-core line delete
       operation instead of faking it through cursor-only behavior.
+    - Added `Ctrl+D` duplicate-line through a real editor-core line operation,
+      keeping the action/binding split intact so Lua can remap it later if we
+      want different defaults.
     - Added a runtime-backed `Ctrl+W` close-editor shortcut for clean editor
       tabs, with last-editor fallback to a fresh untitled buffer instead of
       leaving the host in an empty editor state.
