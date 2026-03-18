@@ -57,6 +57,28 @@ fn activeEditor(editors: []*Editor, active_tab: usize) ?*Editor {
     return editors[@min(active_tab, editors.len - 1)];
 }
 
+fn parsePositivePart(part: []const u8) !usize {
+    const trimmed = std.mem.trim(u8, part, " \t");
+    if (trimmed.len == 0) return error.InvalidLocation;
+    return std.fmt.parseUnsigned(usize, trimmed, 10);
+}
+
+fn parseGoToLocation(query: []const u8) !struct { line_1: usize, col_1: ?usize } {
+    const trimmed = std.mem.trim(u8, query, " \t");
+    if (trimmed.len == 0) return error.InvalidLocation;
+
+    if (std.mem.indexOfAny(u8, trimmed, ":,")) |sep| {
+        const line_1 = try parsePositivePart(trimmed[0..sep]);
+        const col_1 = try parsePositivePart(trimmed[sep + 1 ..]);
+        if (line_1 == 0 or col_1 == 0) return error.InvalidLocation;
+        return .{ .line_1 = line_1, .col_1 = col_1 };
+    }
+
+    const line_1 = try parsePositivePart(trimmed);
+    if (line_1 == 0) return error.InvalidLocation;
+    return .{ .line_1 = line_1, .col_1 = null };
+}
+
 pub fn handle(
     allocator: std.mem.Allocator,
     shell: *Shell,
@@ -101,6 +123,23 @@ pub fn handle(
                             submit_succeeded = false;
                             prompt.error_text = "save failed";
                         };
+                    },
+                    .go_to_line => {
+                        const editor = activeEditor(editors, active_tab) orelse return out;
+                        const maybe_location: ?struct { line_1: usize, col_1: ?usize } = parseGoToLocation(prompt.query.items) catch |err| blk: {
+                            log.logf(.warning, "go-to-line prompt parse failed query=\"{s}\" err={s}", .{ prompt.query.items, @errorName(err) });
+                            submit_succeeded = false;
+                            prompt.error_text = "invalid location";
+                            break :blk null;
+                        };
+                        if (maybe_location) |location| {
+                            const line0 = if (location.line_1 > 0) location.line_1 - 1 else 0;
+                            const clamped_line = @min(line0, editor.lineCount() -| 1);
+                            const line_len = editor.lineLen(clamped_line);
+                            const col0 = if (location.col_1) |col_1| if (col_1 > 0) col_1 - 1 else 0 else 0;
+                            const clamped_col = @min(col0, line_len);
+                            editor.setCursor(clamped_line, clamped_col);
+                        }
                     },
                     .replace => {
                         const editor = activeEditor(editors, active_tab) orelse return out;
@@ -161,4 +200,18 @@ pub fn handle(
         out.note_input = false;
     }
     return out;
+}
+
+test "parseGoToLocation accepts line and line:column forms" {
+    const only_line = try parseGoToLocation("42");
+    try std.testing.expectEqual(@as(usize, 42), only_line.line_1);
+    try std.testing.expectEqual(@as(?usize, null), only_line.col_1);
+
+    const with_col = try parseGoToLocation("42:7");
+    try std.testing.expectEqual(@as(usize, 42), with_col.line_1);
+    try std.testing.expectEqual(@as(?usize, 7), with_col.col_1);
+
+    const with_comma = try parseGoToLocation("42,7");
+    try std.testing.expectEqual(@as(usize, 42), with_comma.line_1);
+    try std.testing.expectEqual(@as(?usize, 7), with_comma.col_1);
 }

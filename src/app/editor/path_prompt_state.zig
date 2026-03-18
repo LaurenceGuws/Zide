@@ -55,6 +55,15 @@ pub fn openForSaveAs(state: *State, allocator: std.mem.Allocator, editor: ?*Edit
     try open(state, allocator, .save_as, initial_value);
 }
 
+pub fn openForGoToLine(state: *State, allocator: std.mem.Allocator, editor: ?*Editor) !void {
+    const initial_value = if (editor) |active_editor|
+        try std.fmt.allocPrint(allocator, "{d}", .{active_editor.cursor.line + 1})
+    else
+        try allocator.dupe(u8, "1");
+    defer allocator.free(initial_value);
+    try open(state, allocator, .go_to_line, initial_value);
+}
+
 pub fn openForReplace(state: *State, allocator: std.mem.Allocator) !void {
     try open(state, allocator, .replace, "");
 }
@@ -67,6 +76,7 @@ pub fn label(kind: Kind) []const u8 {
     return switch (kind) {
         .open_file => "Open",
         .save_as => "Save As",
+        .go_to_line => "Go To Line",
         .replace => "Replace",
         .replace_all => "Replace All",
     };
@@ -76,6 +86,7 @@ pub fn placeholder(kind: Kind) []const u8 {
     return switch (kind) {
         .open_file => "enter path and press Enter",
         .save_as => "enter destination path and press Enter",
+        .go_to_line => "enter line or line:column and press Enter",
         .replace => "enter replacement and press Enter",
         .replace_all => "enter replacement and press Enter",
     };

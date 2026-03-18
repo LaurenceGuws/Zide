@@ -79,7 +79,7 @@ The bindings shown here are reference examples, not hardcoded key policy.
 - [x] `Ctrl+H` Replace
 - [x] `F3` Find next
 - [x] `Shift+F3` Find previous
-- [ ] `Ctrl+G` Go to line
+- [x] `Ctrl+G` Go to line
 - [ ] `Ctrl+Shift+\\` Jump to matching bracket
 - [ ] `Home` Go to beginning of line
 - [ ] `End` Go to end of line
@@ -151,7 +151,7 @@ behavior?" not "must this exact key combo be hardcoded?"
 - [ ] `Ctrl+L` Delete current line
 - [ ] `Ctrl+I` Split lines
 - [ ] `Ctrl+J` Join lines
-- [ ] `Ctrl+G` Go to line
+- [x] `Ctrl+G` Go to line
 - [ ] `Ctrl+Q` Single-line comment
 - [ ] `Ctrl+Shift+Q` Single-line uncomment
 - [ ] `Ctrl+K` Toggle single-line comment
@@ -234,7 +234,7 @@ Notepad-grade lane:
 
 1. duplicate/delete/move line operations
 2. indent/outdent for selected full lines
-3. go-to-line
+3. line operations and insert-line behaviors
 4. tab-index and page-style document navigation
 5. simple destructive-flow guards for dirty buffers
 
@@ -283,7 +283,7 @@ bindings should stay Lua-driven.
 ### Navigation
 
 - [-] `Ctrl+T` Show all symbols
-- [ ] `Ctrl+G` Go to line
+- [x] `Ctrl+G` Go to line
 - [-] `Ctrl+P` Go to file
 - [-] `Ctrl+Shift+O` Go to symbol
 - [-] Problems/error navigation shortcuts

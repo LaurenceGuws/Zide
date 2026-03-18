@@ -102,6 +102,9 @@ This queue does not own:
     - Added runtime-backed `Ctrl+Tab` and `Ctrl+Shift+Tab` document cycling for
       editor focus using the shared mixed-tab host state instead of editor-only
       index math.
+    - Added `Ctrl+G` go-to-line through the shared status-bar prompt surface,
+      including `line` and `line:column` input parsing instead of a special
+      case dialog.
 
 - [ ] `ED-APP-05` Friendly Lua config for editor usage
   - Make common editor behavior easy to configure with sane defaults.

@@ -426,6 +426,7 @@ return {
 			{ key = "tab", mods = { "ctrl" }, action = "next_document" },
 			{ key = "tab", mods = { "ctrl", "shift" }, action = "prev_document" },
 			{ key = "w", mods = { "ctrl" }, action = "close_editor" },
+			{ key = "g", mods = { "ctrl" }, action = "go_to_line" },
 			{ key = "s", mods = { "ctrl" }, action = "save" },
 			{ key = "s", mods = { "ctrl", "shift" }, action = "save_as" },
 			{ key = "z", mods = { "ctrl" }, action = "undo", ["repeat"] = true },

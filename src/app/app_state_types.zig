@@ -94,6 +94,7 @@ pub const SearchPanelState = struct {
 pub const PathPromptKind = enum {
     open_file,
     save_as,
+    go_to_line,
     replace,
     replace_all,
 };
