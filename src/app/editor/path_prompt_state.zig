@@ -7,6 +7,13 @@ pub const State = app_types.PathPromptState;
 
 const Editor = editor_mod.Editor;
 
+fn cwdInitialPath(allocator: std.mem.Allocator, suffix: []const u8) ![]u8 {
+    const cwd = try std.process.getCwdAlloc(allocator);
+    defer allocator.free(cwd);
+    if (suffix.len == 0) return allocator.dupe(u8, cwd);
+    return std.fs.path.join(allocator, &.{ cwd, suffix });
+}
+
 pub fn open(state: *State, allocator: std.mem.Allocator, kind: Kind, initial_value: []const u8) !void {
     state.active = true;
     state.kind = kind;
@@ -25,12 +32,26 @@ pub fn close(state: *State) void {
 }
 
 pub fn openForOpen(state: *State, allocator: std.mem.Allocator, editor: ?*Editor) !void {
-    const initial_value = if (editor) |active_editor| active_editor.file_path orelse "" else "";
+    const initial_value = if (editor) |active_editor|
+        if (active_editor.file_path) |path|
+            try allocator.dupe(u8, path)
+        else
+            try cwdInitialPath(allocator, "")
+    else
+        try cwdInitialPath(allocator, "");
+    defer allocator.free(initial_value);
     try open(state, allocator, .open_file, initial_value);
 }
 
 pub fn openForSaveAs(state: *State, allocator: std.mem.Allocator, editor: ?*Editor) !void {
-    const initial_value = if (editor) |active_editor| active_editor.file_path orelse "" else "";
+    const initial_value = if (editor) |active_editor|
+        if (active_editor.file_path) |path|
+            try allocator.dupe(u8, path)
+        else
+            try cwdInitialPath(allocator, "untitled")
+    else
+        try cwdInitialPath(allocator, "untitled");
+    defer allocator.free(initial_value);
     try open(state, allocator, .save_as, initial_value);
 }
 
@@ -58,4 +79,23 @@ pub fn placeholder(kind: Kind) []const u8 {
         .replace => "enter replacement and press Enter",
         .replace_all => "enter replacement and press Enter",
     };
+}
+
+test "openForSaveAs seeds cwd untitled path when editor has no file path" {
+    var state: State = .{
+        .active = false,
+        .kind = null,
+        .query = .empty,
+        .select_all = false,
+        .error_text = null,
+    };
+    defer state.query.deinit(std.testing.allocator);
+
+    try openForSaveAs(&state, std.testing.allocator, null);
+
+    try std.testing.expect(state.active);
+    try std.testing.expectEqual(Kind.save_as, state.kind.?);
+    try std.testing.expect(state.query.items.len > 0);
+    try std.testing.expect(std.mem.endsWith(u8, state.query.items, "untitled"));
+    try std.testing.expect(state.select_all);
 }
