@@ -19,6 +19,7 @@ const TerminalWidget = widgets.TerminalWidget;
 pub const Hooks = struct {
     open_file: *const fn (*anyopaque, []const u8) anyerror!void,
     open_file_at: *const fn (*anyopaque, []const u8, usize, ?usize) anyerror!void,
+    force_close_active_editor: *const fn (*anyopaque) anyerror!bool,
     sync_terminal_tab_bar: *const fn (*anyopaque) anyerror!void,
 };
 
@@ -75,6 +76,7 @@ pub fn handle(
         ctx,
         .{
             .open_file = hooks.open_file,
+            .force_close_active_editor = hooks.force_close_active_editor,
         },
     );
     if (path_prompt_result.clear_editor_cluster_cache) editor_cluster_cache.clear();

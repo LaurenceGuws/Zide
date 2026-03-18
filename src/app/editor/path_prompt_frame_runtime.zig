@@ -25,6 +25,7 @@ pub const Result = struct {
 
 pub const Hooks = struct {
     open_file: *const fn (ctx: *anyopaque, path: []const u8) anyerror!void,
+    force_close_active_editor: *const fn (ctx: *anyopaque) anyerror!bool,
 };
 
 const Command = enum {
@@ -164,6 +165,21 @@ pub fn handle(
                             submit_succeeded = false;
                             prompt.error_text = "replace all failed";
                         };
+                    },
+                    .confirm_close_dirty => {
+                        const trimmed = std.mem.trim(u8, prompt.query.items, " \t");
+                        if (!std.mem.eql(u8, trimmed, "discard")) {
+                            submit_succeeded = false;
+                            prompt.error_text = "type discard";
+                        } else if (!(hooks.force_close_active_editor(ctx) catch |err| blk: {
+                            log.logf(.warning, "dirty-close prompt submit failed err={s}", .{@errorName(err)});
+                            submit_succeeded = false;
+                            prompt.error_text = "close failed";
+                            break :blk false;
+                        })) {
+                            submit_succeeded = false;
+                            prompt.error_text = "close failed";
+                        }
                     },
                 }
                 if (submit_succeeded) {

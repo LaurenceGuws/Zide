@@ -97,6 +97,7 @@ pub const PathPromptKind = enum {
     go_to_line,
     replace,
     replace_all,
+    confirm_close_dirty,
 };
 
 pub const PathPromptState = struct {

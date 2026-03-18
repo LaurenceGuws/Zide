@@ -72,6 +72,11 @@ pub fn openForReplaceAll(state: *State, allocator: std.mem.Allocator) !void {
     try open(state, allocator, .replace_all, "");
 }
 
+pub fn openForConfirmDirtyClose(state: *State, allocator: std.mem.Allocator) !void {
+    try open(state, allocator, .confirm_close_dirty, "");
+    state.select_all = false;
+}
+
 pub fn label(kind: Kind) []const u8 {
     return switch (kind) {
         .open_file => "Open",
@@ -79,6 +84,7 @@ pub fn label(kind: Kind) []const u8 {
         .go_to_line => "Go To Line",
         .replace => "Replace",
         .replace_all => "Replace All",
+        .confirm_close_dirty => "Discard Changes",
     };
 }
 
@@ -89,6 +95,7 @@ pub fn placeholder(kind: Kind) []const u8 {
         .go_to_line => "enter line or line:column and press Enter",
         .replace => "enter replacement and press Enter",
         .replace_all => "enter replacement and press Enter",
+        .confirm_close_dirty => "type discard and press Enter",
     };
 }
 
@@ -109,4 +116,22 @@ test "openForSaveAs seeds cwd untitled path when editor has no file path" {
     try std.testing.expect(state.query.items.len > 0);
     try std.testing.expect(std.mem.endsWith(u8, state.query.items, "untitled"));
     try std.testing.expect(state.select_all);
+}
+
+test "openForConfirmDirtyClose starts empty and active" {
+    var state: State = .{
+        .active = false,
+        .kind = null,
+        .query = .empty,
+        .select_all = false,
+        .error_text = null,
+    };
+    defer state.query.deinit(std.testing.allocator);
+
+    try openForConfirmDirtyClose(&state, std.testing.allocator);
+
+    try std.testing.expect(state.active);
+    try std.testing.expectEqual(Kind.confirm_close_dirty, state.kind.?);
+    try std.testing.expectEqual(@as(usize, 0), state.query.items.len);
+    try std.testing.expect(!state.select_all);
 }

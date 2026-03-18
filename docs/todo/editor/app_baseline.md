@@ -99,6 +99,9 @@ This queue does not own:
     - Added a runtime-backed `Ctrl+W` close-editor shortcut for clean editor
       tabs, with last-editor fallback to a fresh untitled buffer instead of
       leaving the host in an empty editor state.
+    - Dirty close now routes through the same shared status-bar prompt surface
+      and requires explicit discard confirmation instead of silently refusing
+      or immediately dropping changes.
     - Added runtime-backed `Ctrl+Tab` and `Ctrl+Shift+Tab` document cycling for
       editor focus using the shared mixed-tab host state instead of editor-only
       index math.

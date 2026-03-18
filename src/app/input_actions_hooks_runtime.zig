@@ -66,6 +66,12 @@ pub fn handle(state: anytype, frame_shell: *Shell, now: f64) !bool {
                             .close_active_editor = struct {
                                 fn call(hook_raw: *anyopaque) !bool {
                                     const hook_state: *State = @ptrCast(@alignCast(hook_raw));
+                                    const active_editor = app_close_active_editor_runtime.activeEditor(hook_state) orelse return false;
+                                    if (active_editor.modified) {
+                                        hook_state.search_panel.active = false;
+                                        try app_path_prompt_state.openForConfirmDirtyClose(&hook_state.path_prompt, hook_state.allocator);
+                                        return true;
+                                    }
                                     return try app_close_active_editor_runtime.closeActive(hook_state);
                                 }
                             }.call,

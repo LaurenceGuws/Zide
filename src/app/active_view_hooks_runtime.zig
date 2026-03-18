@@ -107,6 +107,13 @@ pub fn handle(
                     try s.openFileAt(path, line_1, col_1);
                 }
             }.call,
+            .force_close_active_editor = struct {
+                fn call(raw: *anyopaque) !bool {
+                    const s: State = @ptrCast(@alignCast(raw));
+                    const app_close_active_editor_runtime = @import("editor/close_active_editor_runtime.zig");
+                    return try app_close_active_editor_runtime.forceCloseActive(s);
+                }
+            }.call,
             .sync_terminal_tab_bar = struct {
                 fn call(raw: *anyopaque) !void {
                     const s: State = @ptrCast(@alignCast(raw));
