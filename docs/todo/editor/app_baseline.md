@@ -115,3 +115,6 @@ This queue does not own:
 - `modularization.md` remains the boundary-cleanup authority when structural
   cleanup is needed to keep this work neat.
 - This queue is the authority for the next feature-oriented editor lane.
+- `editor_action_baseline_register.md` is the practical action/behavior
+  checklist for deciding what belongs in the current Notepad-grade baseline
+  while actual bindings stay Lua-driven.
