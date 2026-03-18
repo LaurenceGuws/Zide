@@ -422,6 +422,7 @@ return {
 			{ key = "f5", mods = { "ctrl", "shift" }, action = "reload_config" },
 		},
 		editor = {
+			{ key = "a", mods = { "ctrl" }, action = "select_all" },
 			{ key = "s", mods = { "ctrl" }, action = "save" },
 			{ key = "s", mods = { "ctrl", "shift" }, action = "save_as" },
 			{ key = "z", mods = { "ctrl" }, action = "undo", ["repeat"] = true },

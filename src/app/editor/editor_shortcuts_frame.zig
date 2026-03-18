@@ -63,6 +63,11 @@ pub fn handle(
                     out.handled = true;
                 }
             },
+            .select_all => {
+                editor.selectAll();
+                out.needs_redraw = true;
+                out.handled = true;
+            },
             .paste => {
                 if (shell.getClipboardText()) |clip| {
                     try editor.insertText(clip);

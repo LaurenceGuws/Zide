@@ -93,6 +93,9 @@ This queue does not own:
     - Added a direct `Ctrl+H` editor shortcut for replace, reusing the same
       shared search/prompt routing as the options bar instead of creating a
       separate keyboard-only path.
+    - Added a standard `Ctrl+A` editor shortcut for select-all through the
+      normal editor action path instead of special-casing selection in input
+      handling.
 
 - [ ] `ED-APP-05` Friendly Lua config for editor usage
   - Make common editor behavior easy to configure with sane defaults.

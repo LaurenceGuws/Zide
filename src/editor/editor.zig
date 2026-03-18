@@ -319,6 +319,20 @@ pub const Editor = struct {
     pub fn extendSelectionWordRight(self: *Editor) void {
         Navigation.extendSelectionWordRight(self);
     }
+    pub fn selectAll(self: *Editor) void {
+        self.preferred_visual_col = null;
+        self.clearSelections();
+        if (self.buffer.totalLen() == 0) {
+            self.cursor = .{ .line = 0, .col = 0, .offset = 0 };
+            self.selection = null;
+            return;
+        }
+        self.cursor = self.cursorPosForOffset(self.buffer.totalLen());
+        self.selection = .{
+            .start = .{ .line = 0, .col = 0, .offset = 0 },
+            .end = self.cursor,
+        };
+    }
     pub fn setCursor(self: *Editor, line: usize, col: usize) void {
         Navigation.setCursor(self, line, col);
     }

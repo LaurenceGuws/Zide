@@ -29,6 +29,7 @@ pub const ActionKind = enum {
     undo,
     redo,
     cut,
+    select_all,
     reload_config,
     terminal_scrollback_pager,
     terminal_new_tab,
@@ -187,6 +188,7 @@ fn actionName(kind: ActionKind) []const u8 {
         .undo => "undo",
         .redo => "redo",
         .cut => "cut",
+        .select_all => "select_all",
         .reload_config => "reload_config",
         .terminal_scrollback_pager => "terminal_scrollback_pager",
         .terminal_new_tab => "terminal_new_tab",
@@ -354,6 +356,35 @@ test "input router routes editor search actions by scope and modifiers" {
     router.route(&batch, .editor);
     try std.testing.expectEqual(@as(usize, 1), router.actionsSlice().len);
     try std.testing.expectEqual(ActionKind.editor_search_prev, router.actionsSlice()[0].kind);
+}
+
+test "input router routes ctrl+a to select all in editor scope" {
+    const allocator = std.testing.allocator;
+    var router = InputRouter.init(allocator);
+    defer router.deinit();
+
+    var batch = shared_types.input.InputBatch.init(allocator);
+    defer batch.deinit();
+
+    router.setBindings(&.{
+        .{
+            .scope = .editor,
+            .key = .a,
+            .mods = .{ .ctrl = true },
+            .action = .select_all,
+            .repeat = false,
+        },
+    });
+
+    try batch.append(.{ .key = .{
+        .key = .a,
+        .mods = .{ .ctrl = true },
+        .pressed = true,
+        .repeated = false,
+    } });
+    router.route(&batch, .editor);
+    try std.testing.expectEqual(@as(usize, 1), router.actionsSlice().len);
+    try std.testing.expectEqual(ActionKind.select_all, router.actionsSlice()[0].kind);
 }
 
 test "input router routes editor movement actions by scope and modifiers" {
