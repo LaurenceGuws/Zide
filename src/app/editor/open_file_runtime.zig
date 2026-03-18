@@ -31,11 +31,26 @@ fn activateEditorOrdinal(state: anytype, editor_ordinal: usize) !void {
     try app_mode_adapter_sync_runtime.sync(state);
 }
 
+fn findReusableUntitledEditorOrdinal(editors: []*Editor) ?usize {
+    if (editors.len != 1) return null;
+    const editor = editors[0];
+    if (editor.file_path != null) return null;
+    if (editor.modified) return null;
+    return 0;
+}
+
 pub fn open(state: anytype, path: []const u8) !void {
     const normalized_path = try std.fs.cwd().realpathAlloc(state.allocator, path);
     defer state.allocator.free(normalized_path);
 
     if (findOpenEditorOrdinal(state.editors.items, normalized_path)) |editor_ordinal| {
+        try activateEditorOrdinal(state, editor_ordinal);
+        return;
+    }
+
+    if (findReusableUntitledEditorOrdinal(state.editors.items)) |editor_ordinal| {
+        const editor = state.editors.items[editor_ordinal];
+        try editor.openFile(normalized_path);
         try activateEditorOrdinal(state, editor_ordinal);
         return;
     }
@@ -60,6 +75,20 @@ pub fn openAt(state: anytype, path: []const u8, line_1: usize, col_1: ?usize) !v
 
     if (findOpenEditorOrdinal(state.editors.items, normalized_path)) |editor_ordinal| {
         const editor = state.editors.items[editor_ordinal];
+        try activateEditorOrdinal(state, editor_ordinal);
+
+        const line0 = if (line_1 > 0) line_1 - 1 else 0;
+        const col0 = if (col_1) |c1| (if (c1 > 0) c1 - 1 else 0) else 0;
+        const clamped_line = @min(line0, editor.lineCount() -| 1);
+        const line_len = editor.lineLen(clamped_line);
+        const clamped_col = @min(col0, line_len);
+        editor.setCursor(clamped_line, clamped_col);
+        return;
+    }
+
+    if (findReusableUntitledEditorOrdinal(state.editors.items)) |editor_ordinal| {
+        const editor = state.editors.items[editor_ordinal];
+        try editor.openFile(normalized_path);
         try activateEditorOrdinal(state, editor_ordinal);
 
         const line0 = if (line_1 > 0) line_1 - 1 else 0;
@@ -106,4 +135,28 @@ test "tabBarIndexForEditorOrdinal skips terminal tabs" {
     try std.testing.expectEqual(@as(?usize, 0), tabBarIndexForEditorOrdinal(&tab_bar, 0));
     try std.testing.expectEqual(@as(?usize, 2), tabBarIndexForEditorOrdinal(&tab_bar, 1));
     try std.testing.expectEqual(@as(?usize, null), tabBarIndexForEditorOrdinal(&tab_bar, 2));
+}
+
+test "findReusableUntitledEditorOrdinal only reuses a sole clean untitled editor" {
+    const grammar_manager_mod = @import("../../editor/grammar_manager.zig");
+
+    var grammar_manager = try grammar_manager_mod.GrammarManager.init(std.testing.allocator);
+    defer grammar_manager.deinit();
+
+    const editor = try Editor.init(std.testing.allocator, &grammar_manager);
+    defer editor.deinit();
+
+    const single = [_]*Editor{editor};
+    try std.testing.expectEqual(@as(?usize, 0), findReusableUntitledEditorOrdinal(&single));
+
+    editor.modified = true;
+    try std.testing.expectEqual(@as(?usize, null), findReusableUntitledEditorOrdinal(&single));
+    editor.modified = false;
+
+    editor.file_path = try std.testing.allocator.dupe(u8, "/tmp/example.txt");
+    defer {
+        std.testing.allocator.free(editor.file_path.?);
+        editor.file_path = null;
+    }
+    try std.testing.expectEqual(@as(?usize, null), findReusableUntitledEditorOrdinal(&single));
 }
