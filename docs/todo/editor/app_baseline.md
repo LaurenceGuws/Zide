@@ -90,6 +90,9 @@ This queue does not own:
   - Progress:
     - Added a direct `Ctrl+Shift+S` editor shortcut for `Save As` through the
       same shared path-prompt flow used by menu and mouse action routing.
+    - Added a direct `Ctrl+H` editor shortcut for replace, reusing the same
+      shared search/prompt routing as the options bar instead of creating a
+      separate keyboard-only path.
 
 - [ ] `ED-APP-05` Friendly Lua config for editor usage
   - Make common editor behavior easy to configure with sane defaults.

@@ -180,6 +180,23 @@ pub fn handle(
                 out.needs_redraw = true;
                 out.handled = true;
             },
+            .editor_replace_open => {
+                if (editor.searchQuery() != null) {
+                    search_panel_active.* = false;
+                    try app_path_prompt_state.openForReplace(path_prompt, allocator);
+                } else {
+                    try app_search_panel_state.openPanel(
+                        allocator,
+                        search_panel_active,
+                        search_panel_select_all,
+                        search_panel_query,
+                        editor,
+                    );
+                    app_path_prompt_state.close(path_prompt);
+                }
+                out.needs_redraw = true;
+                out.handled = true;
+            },
             .editor_search_next => {
                 if (editor.activateNextSearchMatch()) {
                     out.needs_redraw = true;

@@ -444,6 +444,7 @@ return {
 			{ key = "up", mods = { "ctrl", "shift" }, action = "editor_extend_large_up", ["repeat"] = true },
 			{ key = "down", mods = { "ctrl", "shift" }, action = "editor_extend_large_down", ["repeat"] = true },
 			{ key = "f", mods = { "ctrl" }, action = "editor_search_open" },
+			{ key = "h", mods = { "ctrl" }, action = "editor_replace_open" },
 			{ key = "f3", mods = {}, action = "editor_search_next" },
 			{ key = "f3", mods = { "shift" }, action = "editor_search_prev" },
 			{ key = "left_bracket", mods = { "ctrl", "alt" }, action = "editor_cycle_imported_theme_prev" },

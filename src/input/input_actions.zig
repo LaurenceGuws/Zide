@@ -61,6 +61,7 @@ pub const ActionKind = enum {
     editor_extend_large_up,
     editor_extend_large_down,
     editor_search_open,
+    editor_replace_open,
     editor_search_next,
     editor_search_prev,
     editor_cycle_imported_theme_prev,
@@ -218,6 +219,7 @@ fn actionName(kind: ActionKind) []const u8 {
         .editor_extend_large_up => "editor_extend_large_up",
         .editor_extend_large_down => "editor_extend_large_down",
         .editor_search_open => "editor_search_open",
+        .editor_replace_open => "editor_replace_open",
         .editor_search_next => "editor_search_next",
         .editor_search_prev => "editor_search_prev",
         .editor_cycle_imported_theme_prev => "editor_cycle_imported_theme_prev",
@@ -296,6 +298,13 @@ test "input router routes editor search actions by scope and modifiers" {
         },
         .{
             .scope = .editor,
+            .key = .h,
+            .mods = .{ .ctrl = true },
+            .action = .editor_replace_open,
+            .repeat = false,
+        },
+        .{
+            .scope = .editor,
             .key = .f3,
             .mods = .{ .shift = true },
             .action = .editor_search_prev,
@@ -323,6 +332,17 @@ test "input router routes editor search actions by scope and modifiers" {
     router.route(&batch, .editor);
     try std.testing.expectEqual(@as(usize, 1), router.actionsSlice().len);
     try std.testing.expectEqual(ActionKind.editor_search_next, router.actionsSlice()[0].kind);
+
+    batch.clear();
+    try batch.append(.{ .key = .{
+        .key = .h,
+        .mods = .{ .ctrl = true },
+        .pressed = true,
+        .repeated = false,
+    } });
+    router.route(&batch, .editor);
+    try std.testing.expectEqual(@as(usize, 1), router.actionsSlice().len);
+    try std.testing.expectEqual(ActionKind.editor_replace_open, router.actionsSlice()[0].kind);
 
     batch.clear();
     try batch.append(.{ .key = .{
