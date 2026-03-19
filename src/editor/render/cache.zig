@@ -26,14 +26,6 @@ pub const EditorRenderCache = struct {
     last_selection_hash: u64,
     last_scroll_hash: u64,
     frame_id: u64,
-    highlight_work_start: usize,
-    highlight_work_end: usize,
-    highlight_work_next: usize,
-    highlight_work_epoch: u64,
-    highlight_work_active: bool,
-    highlight_work_completed_start: usize,
-    highlight_work_completed_end: usize,
-    highlight_work_completed_epoch: u64,
     line_width_work_start: usize,
     line_width_work_end: usize,
     line_width_work_next: usize,
@@ -69,14 +61,6 @@ pub const EditorRenderCache = struct {
             .last_selection_hash = 0,
             .last_scroll_hash = 0,
             .frame_id = 0,
-            .highlight_work_start = 0,
-            .highlight_work_end = 0,
-            .highlight_work_next = 0,
-            .highlight_work_epoch = 0,
-            .highlight_work_active = false,
-            .highlight_work_completed_start = 0,
-            .highlight_work_completed_end = 0,
-            .highlight_work_completed_epoch = 0,
             .line_width_work_start = 0,
             .line_width_work_end = 0,
             .line_width_work_next = 0,
@@ -125,7 +109,6 @@ pub const EditorRenderCache = struct {
         }
         if (highlight_dirty) {
             self.clearHighlightEntries();
-            self.clearHighlightWork();
         }
         if (cols != self.last_cols or wrap_enabled != self.last_wrap or change_tick != self.last_change_tick) {
             self.clearWrapEntries();
@@ -156,7 +139,6 @@ pub const EditorRenderCache = struct {
                 _ = self.highlight_entries.remove(line);
             }
         }
-        self.clearHighlightWork();
     }
 
     pub fn segmentDirty(self: *EditorRenderCache, key: LineKey, hash: u64) bool {
@@ -286,7 +268,6 @@ pub const EditorRenderCache = struct {
     pub fn clear(self: *EditorRenderCache) void {
         self.clearLineEntries();
         self.clearHighlightEntries();
-        self.clearHighlightWork();
         self.clearLineWidthWork();
         self.clearWrapEntries();
         self.clearWrapWork();
@@ -346,75 +327,6 @@ pub const EditorRenderCache = struct {
             log.logf(.warning, "wrap cache insert failed line={d} cols={d} err={s}", .{ line_idx, cols, @errorName(err) });
         };
         self.maybeEvictWrapEntries();
-    }
-
-    pub fn beginHighlightWork(self: *EditorRenderCache, start_line: usize, end_line: usize, epoch: u64) void {
-        if (end_line <= start_line) {
-            self.highlight_work_active = false;
-            return;
-        }
-        const completed_same_range = !self.highlight_work_active and
-            start_line == self.highlight_work_completed_start and
-            end_line == self.highlight_work_completed_end and
-            epoch == self.highlight_work_completed_epoch;
-        if (completed_same_range) return;
-        const range_changed = !self.highlight_work_active or start_line != self.highlight_work_start or end_line != self.highlight_work_end or epoch != self.highlight_work_epoch;
-        if (range_changed) {
-            self.highlight_work_start = start_line;
-            self.highlight_work_end = end_line;
-            self.highlight_work_next = start_line;
-            self.highlight_work_epoch = epoch;
-            self.highlight_work_active = true;
-        }
-    }
-
-    pub fn nextHighlightWorkLine(self: *EditorRenderCache) ?usize {
-        if (!self.highlight_work_active) return null;
-        if (self.highlight_work_next >= self.highlight_work_end) {
-            self.highlight_work_active = false;
-            return null;
-        }
-        const line = self.highlight_work_next;
-        self.highlight_work_next += 1;
-        return line;
-    }
-
-    pub const HighlightWorkBatch = struct {
-        start_line: usize,
-        end_line: usize,
-    };
-
-    pub fn takeHighlightWorkBatch(self: *EditorRenderCache, max_lines: usize) ?HighlightWorkBatch {
-        if (!self.highlight_work_active or max_lines == 0) return null;
-        if (self.highlight_work_next >= self.highlight_work_end) {
-            self.highlight_work_active = false;
-            return null;
-        }
-        const start_line = self.highlight_work_next;
-        const end_line = @min(self.highlight_work_end, start_line + max_lines);
-        self.highlight_work_next = end_line;
-        if (self.highlight_work_next >= self.highlight_work_end) {
-            self.highlight_work_active = false;
-            self.highlight_work_completed_start = self.highlight_work_start;
-            self.highlight_work_completed_end = self.highlight_work_end;
-            self.highlight_work_completed_epoch = self.highlight_work_epoch;
-        }
-        return .{ .start_line = start_line, .end_line = end_line };
-    }
-
-    pub fn hasPendingHighlightWork(self: *const EditorRenderCache) bool {
-        return self.highlight_work_active;
-    }
-
-    fn clearHighlightWork(self: *EditorRenderCache) void {
-        self.highlight_work_active = false;
-        self.highlight_work_start = 0;
-        self.highlight_work_end = 0;
-        self.highlight_work_next = 0;
-        self.highlight_work_epoch = 0;
-        self.highlight_work_completed_start = 0;
-        self.highlight_work_completed_end = 0;
-        self.highlight_work_completed_epoch = 0;
     }
 
     pub fn beginLineWidthWork(self: *EditorRenderCache, start_line: usize, end_line: usize, change_tick: u64) void {

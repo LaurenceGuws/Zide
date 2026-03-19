@@ -180,12 +180,18 @@ Current checkpoint assessment:
 - handoff edge identified: yes, search worker synchronization toward
   `EditorRuntime`
 
-This means the main open decision is not "is Phase 1 real?" but:
+Decision:
 
-- do we finish the search worker synchronization seam as a late `Phase 1`
-  cleanup
-- or do we freeze the checkpoint and treat that seam as the first explicit
-  `Phase 2` extraction
+- freeze the `Phase 1` checkpoint here
+- treat search worker synchronization as the first explicit `Phase 2`
+  extraction target
+
+Rationale:
+
+- the dominant document/view write surfaces are already narrowed
+- the remaining raw seam is runtime synchronization, not storage ownership
+- continuing to abstract mutex/condition/worker lifecycle under `Phase 1`
+  would blur the runtime boundary we are trying to expose in `Phase 2`
 
 ### Stop condition
 
@@ -215,6 +221,41 @@ Remove runtime ownership from render cache/app frame seams.
 - highlight work no longer scheduled by render cache
 - search/highlight owned by one runtime seam
 - runtime completion can request redraw without user input
+- the first runtime-owned seam is extracted from the existing search worker
+  synchronization path rather than starting with another foreground highlight
+  patch
+
+### Current status
+
+Phase 2 has now started in code:
+
+- the existing search worker synchronization state is no longer spread as raw
+  search fields on `DocumentCore`
+- search worker lifecycle/request/result/generation state now lives under a
+  named runtime-oriented sub-structure in editor code
+- lock/signal/request/result coordination is being routed through explicit
+  helper verbs instead of repeated nested runtime-field access
+- pending search publication now drives redraw from the editor frame hook
+  rather than waiting passively for unrelated input
+- pending search publication is now applied from the frame-hook lane instead of
+  being hidden inside display-prepare work
+- highlight scheduling state in render cache is now grouped behind a named
+  state block as preparation for the next ownership move
+- render cache no longer owns highlight scheduling state; editor-owned state now
+  drives visible highlight work progression
+- visible highlight publication now explicitly requests redraw from the
+  frame-hook lane when a batch publishes tokens, even if no further highlight
+  work remains queued
+- visible highlight scheduling and startup warmup state now live under one
+  named editor-owned runtime block, reducing the next execution move to a
+  single seam instead of loose field migration
+- visible highlight request/result mailbox state now exists on that runtime
+  block, so the next threading move can shift execution ownership without
+  redesigning publication shape again
+- visible highlight cache publication now happens from the frame/runtime lane
+  by applying the mailbox result, rather than directly inside widget precompute
+- the current cut is structural and behavior-preserving; it does not yet claim
+  full `EditorRuntime` ownership, but it makes that ownership line explicit
 
 ### Validation
 

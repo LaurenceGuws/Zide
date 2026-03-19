@@ -301,8 +301,10 @@ stack issue, not an isolated highlight bug:
         (mutex/condition/lifecycle)
     - remaining view-state work is now narrow edge cleanup rather than broad
       write-surface extraction
-    - the next cut is behavioral: replace direct `editor.doc.*` and
-      `editor.view.*` mutation with explicit state APIs
+    - checkpoint decision:
+      - freeze `Phase 1` here
+      - treat search worker synchronization as the first explicit `Phase 2`
+        extraction target
 
 - [ ] `ED-STRESS-09` Define the editor runtime publication seam
   - Current authority:
@@ -311,6 +313,30 @@ stack issue, not an isolated highlight bug:
     - search and highlight are owned by `EditorRuntime`
     - render cache stops owning highlight queue/progress state
     - runtime completion can wake/redraw without unrelated input
+  - First implementation target:
+    - extract the existing search worker synchronization seam into explicit
+      runtime-owned state before tackling visible highlight runtime ownership
+  - Current progress:
+    - the first structural cut is in code:
+      - search worker lifecycle/request/result/generation state is being moved
+        under a named runtime-oriented sub-structure
+      - lock/signal/request/result coordination is being routed through
+        explicit helper verbs
+      - pending search results now drive redraw from the editor frame hook
+      - pending search result application is now initiated from the frame hook
+        instead of being hidden in display prepare
+      - highlight scheduling ownership has moved off render cache and onto
+        editor-owned state
+      - visible highlight publication now also drives redraw from the frame
+        hook when a batch publishes tokens
+      - visible highlight scheduling and startup warmup state now live under a
+        named editor-owned runtime block
+      - visible highlight now also has runtime request/result mailbox state,
+        though execution is still synchronous
+      - visible highlight cache publication now happens from the
+        editor frame/runtime lane instead of widget precompute
+      - this is still behavior-preserving and does not yet claim full runtime
+        ownership
 
 - [ ] `ED-STRESS-10` Define immutable display publication
   - Current authority:

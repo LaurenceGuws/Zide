@@ -14,7 +14,6 @@ pub fn prepare(
     const perf_log = app_logger.logger("editor.perf");
     const t_start = std.time.nanoTimestamp();
     editor.advanceStartupDeferrals(frame_id);
-    editor.applyPendingSearchWork();
     const total_lines = editor.lineCount();
     var invalidated = false;
     if (editor.takeHighlightDirtyRange()) |range| {

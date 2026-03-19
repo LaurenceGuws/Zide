@@ -34,6 +34,52 @@ pub const Editor = struct {
     const UndoSelectionState = editor_selection_state.UndoSelectionState;
     const SelectionReplacementOp = editor_selection_state.SelectionReplacementOp;
 
+    pub const SearchRuntimeState = struct {
+        worker: ?std.Thread,
+        worker_running: bool,
+        mutex: std.Thread.Mutex,
+        cond: std.Thread.Condition,
+        generation: u64,
+        request: ?SearchWorkRequest,
+        result: ?SearchWorkResult,
+    };
+
+    pub const HighlightWorkState = struct {
+        start: usize,
+        end: usize,
+        next: usize,
+        epoch: u64,
+        active: bool,
+        completed_start: usize,
+        completed_end: usize,
+        completed_epoch: u64,
+    };
+
+    pub const VisibleHighlightWorkRequest = struct {
+        start_line: usize,
+        end_line: usize,
+        epoch: u64,
+    };
+
+    pub const VisibleHighlightLineResult = struct {
+        line_idx: usize,
+        line_start: usize,
+        line_text_hash: u64,
+        tokens: []syntax_mod.HighlightToken,
+    };
+
+    pub const VisibleHighlightWorkResult = struct {
+        request: VisibleHighlightWorkRequest,
+        lines: []VisibleHighlightLineResult,
+    };
+
+    pub const VisibleHighlightRuntimeState = struct {
+        work: HighlightWorkState,
+        startup_warmup_active: bool,
+        request: ?VisibleHighlightWorkRequest,
+        result: ?VisibleHighlightWorkResult,
+    };
+
     pub const DocumentCore = struct {
         buffer: *TextStore,
         highlighter: ?*syntax_mod.SyntaxHighlighter,
@@ -47,13 +93,7 @@ pub const Editor = struct {
         search_mode: SearchMode,
         search_refresh_on_text_change: bool,
         search_epoch: u64,
-        search_worker: ?std.Thread,
-        search_worker_running: bool,
-        search_mutex: std.Thread.Mutex,
-        search_cond: std.Thread.Condition,
-        search_generation: u64,
-        search_request: ?SearchWorkRequest,
-        search_result: ?SearchWorkResult,
+        search_runtime: SearchRuntimeState,
         change_tick: u64,
         highlight_epoch: u64,
         file_path: ?[]const u8,
@@ -122,11 +162,11 @@ pub const Editor = struct {
     line_width_cache: std.AutoHashMap(usize, usize),
     cluster_offset_cache: std.AutoHashMap(usize, ClusterOffsetEntry),
     max_line_width_cache: usize,
+    visible_highlight_runtime: VisibleHighlightRuntimeState,
     highlight_defer_frames: u8,
     visible_cache_precompute_defer_frames: u8,
     cluster_offsets_defer_frames: u8,
     startup_defer_last_frame_id: u64,
-    startup_visible_warmup_active: bool,
     tab_width: usize,
 
     const ClusterOffsetEntry = struct {
@@ -226,6 +266,7 @@ pub const Editor = struct {
 
     pub fn bumpHighlightEpoch(self: *Editor) void {
         self.doc.highlight_epoch +|= 1;
+        self.clearVisibleHighlightWork();
     }
 
     pub fn bumpChangeTick(self: *Editor) void {
@@ -270,63 +311,216 @@ pub const Editor = struct {
     }
 
     pub fn bumpSearchGeneration(self: *Editor) u64 {
-        self.doc.search_generation +|= 1;
-        return self.doc.search_generation;
+        self.doc.search_runtime.generation +|= 1;
+        return self.doc.search_runtime.generation;
     }
 
     pub fn isSearchWorkerRunning(self: *const Editor) bool {
-        return self.doc.search_worker_running;
+        return self.doc.search_runtime.worker_running;
     }
 
     pub fn setSearchWorkerRunning(self: *Editor, running: bool) void {
-        self.doc.search_worker_running = running;
+        self.doc.search_runtime.worker_running = running;
     }
 
     pub fn setSearchWorker(self: *Editor, worker: ?std.Thread) void {
-        self.doc.search_worker = worker;
+        self.doc.search_runtime.worker = worker;
     }
 
     pub fn takeSearchWorker(self: *Editor) ?std.Thread {
-        const worker = self.doc.search_worker;
-        self.doc.search_worker = null;
+        const worker = self.doc.search_runtime.worker;
+        self.doc.search_runtime.worker = null;
         return worker;
     }
 
     pub fn clearPendingSearchRequest(self: *Editor) void {
-        if (self.doc.search_request) |pending| {
+        if (self.doc.search_runtime.request) |pending| {
             c_allocator.free(pending.query);
             c_allocator.free(pending.content);
-            self.doc.search_request = null;
+            self.doc.search_runtime.request = null;
         }
     }
 
     pub fn replaceSearchRequest(self: *Editor, request: SearchWorkRequest) void {
         self.clearPendingSearchRequest();
-        self.doc.search_request = request;
+        self.doc.search_runtime.request = request;
     }
 
     pub fn takeSearchRequest(self: *Editor) ?SearchWorkRequest {
-        const request = self.doc.search_request;
-        self.doc.search_request = null;
+        const request = self.doc.search_runtime.request;
+        self.doc.search_runtime.request = null;
         return request;
     }
 
     pub fn clearPendingSearchResult(self: *Editor) void {
-        if (self.doc.search_result) |result| {
+        if (self.doc.search_runtime.result) |result| {
             c_allocator.free(result.matches);
-            self.doc.search_result = null;
+            self.doc.search_runtime.result = null;
         }
     }
 
     pub fn replaceSearchResult(self: *Editor, result: SearchWorkResult) void {
         self.clearPendingSearchResult();
-        self.doc.search_result = result;
+        self.doc.search_runtime.result = result;
     }
 
     pub fn takeSearchResult(self: *Editor) ?SearchWorkResult {
-        const result = self.doc.search_result;
-        self.doc.search_result = null;
+        const result = self.doc.search_runtime.result;
+        self.doc.search_runtime.result = null;
         return result;
+    }
+
+    pub fn lockSearchRuntime(self: *Editor) void {
+        self.doc.search_runtime.mutex.lock();
+    }
+
+    pub fn unlockSearchRuntime(self: *Editor) void {
+        self.doc.search_runtime.mutex.unlock();
+    }
+
+    pub fn waitSearchRuntime(self: *Editor) void {
+        self.doc.search_runtime.cond.wait(&self.doc.search_runtime.mutex);
+    }
+
+    pub fn signalSearchRuntime(self: *Editor) void {
+        self.doc.search_runtime.cond.signal();
+    }
+
+    pub fn hasPendingSearchRequest(self: *const Editor) bool {
+        return self.doc.search_runtime.request != null;
+    }
+
+    pub fn currentSearchGeneration(self: *const Editor) u64 {
+        return self.doc.search_runtime.generation;
+    }
+
+    pub fn hasPendingSearchResult(self: *const Editor) bool {
+        return self.doc.search_runtime.result != null;
+    }
+
+    pub const HighlightWorkBatch = struct {
+        start_line: usize,
+        end_line: usize,
+    };
+
+    pub fn beginVisibleHighlightWork(self: *Editor, start_line: usize, end_line: usize, epoch: u64) void {
+        if (end_line <= start_line) {
+            self.visible_highlight_runtime.work.active = false;
+            return;
+        }
+        const completed_same_range = !self.visible_highlight_runtime.work.active and
+            start_line == self.visible_highlight_runtime.work.completed_start and
+            end_line == self.visible_highlight_runtime.work.completed_end and
+            epoch == self.visible_highlight_runtime.work.completed_epoch;
+        if (completed_same_range) return;
+        const range_changed = !self.visible_highlight_runtime.work.active or
+            start_line != self.visible_highlight_runtime.work.start or
+            end_line != self.visible_highlight_runtime.work.end or
+            epoch != self.visible_highlight_runtime.work.epoch;
+        if (range_changed) {
+            self.visible_highlight_runtime.work.start = start_line;
+            self.visible_highlight_runtime.work.end = end_line;
+            self.visible_highlight_runtime.work.next = start_line;
+            self.visible_highlight_runtime.work.epoch = epoch;
+            self.visible_highlight_runtime.work.active = true;
+        }
+    }
+
+    pub fn takeVisibleHighlightWorkBatch(self: *Editor, max_lines: usize) ?HighlightWorkBatch {
+        if (!self.visible_highlight_runtime.work.active or max_lines == 0) return null;
+        if (self.visible_highlight_runtime.work.next >= self.visible_highlight_runtime.work.end) {
+            self.visible_highlight_runtime.work.active = false;
+            return null;
+        }
+        const start_line = self.visible_highlight_runtime.work.next;
+        const end_line = @min(self.visible_highlight_runtime.work.end, start_line + max_lines);
+        self.visible_highlight_runtime.work.next = end_line;
+        if (self.visible_highlight_runtime.work.next >= self.visible_highlight_runtime.work.end) {
+            self.visible_highlight_runtime.work.active = false;
+            self.visible_highlight_runtime.work.completed_start = self.visible_highlight_runtime.work.start;
+            self.visible_highlight_runtime.work.completed_end = self.visible_highlight_runtime.work.end;
+            self.visible_highlight_runtime.work.completed_epoch = self.visible_highlight_runtime.work.epoch;
+        }
+        return .{ .start_line = start_line, .end_line = end_line };
+    }
+
+    pub fn hasPendingVisibleHighlightWork(self: *const Editor) bool {
+        return self.visible_highlight_runtime.work.active;
+    }
+
+    pub fn replaceVisibleHighlightRequest(self: *Editor, request: VisibleHighlightWorkRequest) void {
+        self.visible_highlight_runtime.request = request;
+    }
+
+    pub fn takeVisibleHighlightRequest(self: *Editor) ?VisibleHighlightWorkRequest {
+        const request = self.visible_highlight_runtime.request;
+        self.visible_highlight_runtime.request = null;
+        return request;
+    }
+
+    pub fn clearVisibleHighlightRequest(self: *Editor) void {
+        self.visible_highlight_runtime.request = null;
+    }
+
+    pub fn replaceVisibleHighlightResult(self: *Editor, result: VisibleHighlightWorkResult) void {
+        if (self.visible_highlight_runtime.result) |*existing| {
+            self.deinitVisibleHighlightResult(existing);
+        }
+        self.visible_highlight_runtime.result = result;
+    }
+
+    pub fn takeVisibleHighlightResult(self: *Editor) ?VisibleHighlightWorkResult {
+        const result = self.visible_highlight_runtime.result;
+        self.visible_highlight_runtime.result = null;
+        return result;
+    }
+
+    pub fn hasPendingVisibleHighlightResult(self: *const Editor) bool {
+        return self.visible_highlight_runtime.result != null;
+    }
+
+    pub fn applyPendingVisibleHighlightResult(self: *Editor, cache: anytype) bool {
+        const owned_result = self.takeVisibleHighlightResult() orelse return false;
+        var result = owned_result;
+        defer self.deinitVisibleHighlightResult(&result);
+
+        for (result.lines) |line| {
+            cache.storeHighlightTokens(
+                line.line_idx,
+                line.line_start,
+                line.line_text_hash,
+                result.request.epoch,
+                line.tokens,
+            );
+        }
+        return result.lines.len > 0;
+    }
+
+    pub fn clearVisibleHighlightResult(self: *Editor) void {
+        if (self.visible_highlight_runtime.result) |*result| {
+            self.deinitVisibleHighlightResult(result);
+        }
+        self.visible_highlight_runtime.result = null;
+    }
+
+    pub fn deinitVisibleHighlightResult(self: *Editor, result: *VisibleHighlightWorkResult) void {
+        for (result.lines) |line| {
+            self.allocator.free(line.tokens);
+        }
+        self.allocator.free(result.lines);
+    }
+
+    pub fn clearVisibleHighlightWork(self: *Editor) void {
+        self.visible_highlight_runtime.work.active = false;
+        self.visible_highlight_runtime.work.start = 0;
+        self.visible_highlight_runtime.work.end = 0;
+        self.visible_highlight_runtime.work.next = 0;
+        self.visible_highlight_runtime.work.epoch = 0;
+        self.visible_highlight_runtime.work.completed_start = 0;
+        self.visible_highlight_runtime.work.completed_end = 0;
+        self.visible_highlight_runtime.work.completed_epoch = 0;
+        self.clearVisibleHighlightRequest();
+        self.clearVisibleHighlightResult();
     }
 
     pub fn init(allocator: std.mem.Allocator, grammar_manager: *grammar_manager_mod.GrammarManager) !*Editor {
@@ -355,13 +549,15 @@ pub const Editor = struct {
                 .search_mode = .literal,
                 .search_refresh_on_text_change = false,
                 .search_epoch = 0,
-                .search_worker = null,
-                .search_worker_running = false,
-                .search_mutex = .{},
-                .search_cond = .{},
-                .search_generation = 0,
-                .search_request = null,
-                .search_result = null,
+                .search_runtime = .{
+                    .worker = null,
+                    .worker_running = false,
+                    .mutex = .{},
+                    .cond = .{},
+                    .generation = 0,
+                    .request = null,
+                    .result = null,
+                },
                 .change_tick = 0,
                 .highlight_epoch = 0,
                 .file_path = null,
@@ -383,11 +579,25 @@ pub const Editor = struct {
             .line_width_cache = std.AutoHashMap(usize, usize).init(allocator),
             .cluster_offset_cache = std.AutoHashMap(usize, ClusterOffsetEntry).init(allocator),
             .max_line_width_cache = 0,
+            .visible_highlight_runtime = .{
+                .work = .{
+                    .start = 0,
+                    .end = 0,
+                    .next = 0,
+                    .epoch = 0,
+                    .active = false,
+                    .completed_start = 0,
+                    .completed_end = 0,
+                    .completed_epoch = 0,
+                },
+                .startup_warmup_active = false,
+                .request = null,
+                .result = null,
+            },
             .highlight_defer_frames = 0,
             .visible_cache_precompute_defer_frames = 0,
             .cluster_offsets_defer_frames = 0,
             .startup_defer_last_frame_id = 0,
-            .startup_visible_warmup_active = false,
             .tab_width = 4,
         };
         return editor;
@@ -446,7 +656,7 @@ pub const Editor = struct {
         self.visible_cache_precompute_defer_frames = 2;
         self.cluster_offsets_defer_frames = 4;
         self.startup_defer_last_frame_id = 0;
-        self.startup_visible_warmup_active = true;
+        self.visible_highlight_runtime.startup_warmup_active = true;
 
         self.scheduleHighlighter(path);
         const elapsed_us = @as(i64, @intCast(@divTrunc(std.time.nanoTimestamp() - t_start, 1000)));
@@ -486,7 +696,7 @@ pub const Editor = struct {
         self.visible_cache_precompute_defer_frames = 0;
         self.cluster_offsets_defer_frames = 0;
         self.startup_defer_last_frame_id = 0;
-        self.startup_visible_warmup_active = false;
+        self.visible_highlight_runtime.startup_warmup_active = false;
         if (!self.doc.highlight_disabled_for_large_file) {
             try self.tryInitHighlighter(path);
         } else {
@@ -1243,8 +1453,8 @@ pub const Editor = struct {
         SearchHighlight.ensureHighlighter(self);
     }
 
-    pub fn applyPendingSearchWork(self: *Editor) void {
-        SearchHighlight.applyPendingSearchWork(self);
+    pub fn applyPendingSearchWork(self: *Editor) bool {
+        return SearchHighlight.applyPendingSearchWork(self);
     }
 
     pub fn shouldDeferVisibleCachePrecompute(self: *Editor) bool {
@@ -1264,11 +1474,11 @@ pub const Editor = struct {
     }
 
     pub fn shouldThrottleStartupHighlightWarmup(self: *const Editor) bool {
-        return self.startup_visible_warmup_active;
+        return self.visible_highlight_runtime.startup_warmup_active;
     }
 
     pub fn completeStartupVisibleWarmup(self: *Editor) void {
-        self.startup_visible_warmup_active = false;
+        self.visible_highlight_runtime.startup_warmup_active = false;
     }
 
     pub fn setSearchQuery(self: *Editor, query: ?[]const u8) !void {
@@ -1377,8 +1587,8 @@ pub const Editor = struct {
         return SearchHighlight.pickSearchActiveIndex(self, preferred_offset);
     }
 
-    pub fn applyPendingSearchResult(self: *Editor) void {
-        SearchHighlight.applyPendingSearchResult(self);
+    pub fn applyPendingSearchResult(self: *Editor) bool {
+        return SearchHighlight.applyPendingSearchResult(self);
     }
 
     fn contentHash(buffer: *TextStore) u64 {

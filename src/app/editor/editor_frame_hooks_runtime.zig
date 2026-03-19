@@ -152,12 +152,22 @@ pub fn handle(
     if (runtime_state.needs_redraw) out.needs_redraw = true;
     if (runtime_state.note_input) out.note_input = true;
     const editor = app_active_editor_runtime.fromVisualIndex(tab_bar, editors, active_tab) orelse return out;
+    if (editor.applyPendingSearchWork()) {
+        out.needs_redraw = true;
+    }
+    const should_drive_search_publication = editor.hasPendingSearchResult();
     const should_drive_visible_warmup =
         editor.shouldThrottleStartupHighlightWarmup() or
-        editor_render_cache.hasPendingHighlightWork();
+        editor.hasPendingVisibleHighlightWork();
+    if (should_drive_search_publication) {
+        out.needs_redraw = true;
+    }
+    if (editor.hasPendingVisibleHighlightResult()) {
+        out.needs_redraw = true;
+    }
     if (out.needs_redraw or should_drive_visible_warmup) {
         var widget = widgets.EditorWidget.initWithCache(editor, editor_cluster_cache, editor_wrap);
-        app_editor_visible_caches_runtime.precompute(
+        const computed_visible_highlights = app_editor_visible_caches_runtime.precompute(
             &widget,
             shell,
             layout,
@@ -166,7 +176,13 @@ pub fn handle(
             editor_width_budget,
             frame_id,
         );
-        if (editor.shouldThrottleStartupHighlightWarmup() or editor_render_cache.hasPendingHighlightWork()) {
+        if (computed_visible_highlights) {
+            out.needs_redraw = true;
+        }
+        if (editor.applyPendingVisibleHighlightResult(editor_render_cache)) {
+            out.needs_redraw = true;
+        }
+        if (editor.shouldThrottleStartupHighlightWarmup() or editor.hasPendingVisibleHighlightWork()) {
             out.needs_redraw = true;
         }
     }

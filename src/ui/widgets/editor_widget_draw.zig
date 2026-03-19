@@ -578,8 +578,8 @@ pub fn precomputeHighlightTokens(
     shell: anytype,
     height: f32,
     budget_lines: usize,
-) void {
-    cache_helpers.precomputeHighlightTokens(widget, cache, shell, height, budget_lines);
+) bool {
+    return cache_helpers.precomputeHighlightTokens(widget, cache, shell, height, budget_lines);
 }
 
 pub fn precomputeLineWidths(

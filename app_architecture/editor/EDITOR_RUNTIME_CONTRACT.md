@@ -21,6 +21,45 @@ It exists because the current code is split across two incompatible models:
 
 The redesign direction is to unify those into one editor-owned runtime seam.
 
+Current execution decision:
+
+- `Phase 1` is frozen after the document/view checkpoint
+- the existing search worker synchronization seam is the first explicit
+  extraction target for `Phase 2`
+- that means search is no longer treated as "already solved"; it is the
+  bootstrap lane for real `EditorRuntime` ownership
+
+Current implementation progress:
+
+- search synchronization state has begun moving under a named runtime-oriented
+  sub-structure in editor code
+- the current cut is deliberately structural first: isolate worker/request/
+  result ownership before changing wake/publication semantics
+- lock/signal/request/result operations are now being routed through explicit
+  editor/runtime helper verbs instead of open-coded nested field access
+- pending search results now explicitly request redraw driving from the editor
+  frame hook instead of depending solely on unrelated input/redraw traffic
+- pending search result application is now initiated from the editor frame hook
+  rather than being hidden inside display-prepare work
+- highlight scheduling state in render cache has started being isolated behind a
+  named state block so the next ownership move can be structural instead of a
+  diffuse field sweep
+- highlight scheduling ownership has now moved off render cache and onto
+  editor-owned state; render cache remains a token/cache publication surface,
+  not the queue owner
+- visible highlight publication now also requests redraw from the frame hook
+  when a batch publishes tokens, even if that batch drains the queue on the
+  same frame
+- visible highlight scheduling and startup-warmup throttling now live together
+  under a named editor-owned runtime state block instead of as loose editor
+  fields
+- visible highlight now also has explicit request/result mailbox state on that
+  runtime block; execution is still synchronous for now, but publication no
+  longer depends on a frame-path-only shape
+- visible highlight cache publication is now applied from the editor
+  frame/runtime lane rather than being performed directly inside widget
+  precompute
+
 ## Current Problem
 
 Today:

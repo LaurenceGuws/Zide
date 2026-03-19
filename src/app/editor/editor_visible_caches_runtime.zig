@@ -19,9 +19,9 @@ pub fn precompute(
     editor_highlight_budget: ?usize,
     editor_width_budget: ?usize,
     frame_id: u64,
-) void {
+) bool {
     const perf_log = app_logger.logger("editor.perf");
-    if (editor_layout.editor.width <= 0 or editor_layout.editor.height <= 0) return;
+    if (editor_layout.editor.width <= 0 or editor_layout.editor.height <= 0) return false;
     widget.editor.advanceStartupDeferrals(frame_id);
     if (widget.editor.shouldDeferVisibleCachePrecompute()) {
         perf_log.logf(
@@ -29,7 +29,7 @@ pub fn precompute(
             "visible_cache_precompute frame={d} skipped=true defer_precompute={d} defer_clusters={d}",
             .{ frame_id, widget.editor.visible_cache_precompute_defer_frames, widget.editor.cluster_offsets_defer_frames },
         );
-        return;
+        return false;
     }
     const t_start = std.time.nanoTimestamp();
     app_editor_display_prepare.prepare(widget.editor, editor_render_cache, frame_id);
@@ -41,8 +41,8 @@ pub fn precompute(
     else
         configured_highlight_budget;
     const t_highlight_start = std.time.nanoTimestamp();
-    editor_draw.precomputeHighlightTokens(widget, editor_render_cache, editor_shell, editor_layout.editor.height, highlight_budget);
-    if (widget.editor.shouldThrottleStartupHighlightWarmup() and !editor_render_cache.hasPendingHighlightWork()) {
+    const highlight_published = editor_draw.precomputeHighlightTokens(widget, editor_render_cache, editor_shell, editor_layout.editor.height, highlight_budget);
+    if (widget.editor.shouldThrottleStartupHighlightWarmup() and !widget.editor.hasPendingVisibleHighlightWork()) {
         widget.editor.completeStartupVisibleWarmup();
     }
     const width_budget = editor_width_budget orelse highlight_budget;
@@ -59,4 +59,5 @@ pub fn precompute(
         "visible_cache_precompute frame={d} skipped=false visible_lines={d} highlight_budget={d} width_budget={d} highlight_us={d} width_us={d} wrap_us={d} time_us={d}",
         .{ frame_id, visible_lines, highlight_budget, width_budget, highlight_elapsed_us, width_elapsed_us, wrap_elapsed_us, elapsed_us },
     );
+    return highlight_published;
 }

@@ -283,8 +283,8 @@ pub fn SearchHighlightOps(comptime Editor: type) type {
             };
         }
 
-        pub fn applyPendingSearchWork(self: *Editor) void {
-            self.applyPendingSearchResult();
+        pub fn applyPendingSearchWork(self: *Editor) bool {
+            return self.applyPendingSearchResult();
         }
 
         pub fn setSearchQuery(self: *Editor, query: ?[]const u8) !void {
@@ -512,9 +512,9 @@ pub fn SearchHighlightOps(comptime Editor: type) type {
             content: []u8,
         ) ?u64 {
             self.ensureSearchWorker();
-            self.doc.search_mutex.lock();
-            defer self.doc.search_mutex.unlock();
-            if (!self.doc.search_worker_running) return null;
+            self.lockSearchRuntime();
+            defer self.unlockSearchRuntime();
+            if (!self.isSearchWorkerRunning()) return null;
 
             const generation = self.bumpSearchGeneration();
             self.replaceSearchRequest(.{
@@ -524,68 +524,68 @@ pub fn SearchHighlightOps(comptime Editor: type) type {
                 .query = query,
                 .content = content,
             });
-            self.doc.search_cond.signal();
+            self.signalSearchRuntime();
             return generation;
         }
 
         pub fn ensureSearchWorker(self: *Editor) void {
-            self.doc.search_mutex.lock();
+            self.lockSearchRuntime();
             if (self.isSearchWorkerRunning()) {
-                self.doc.search_mutex.unlock();
+                self.unlockSearchRuntime();
                 return;
             }
             self.setSearchWorkerRunning(true);
-            self.doc.search_mutex.unlock();
+            self.unlockSearchRuntime();
 
             const worker = std.Thread.spawn(.{}, searchWorkerMain, .{self}) catch |err| {
                 const log = app_logger.logger("editor.search");
                 log.logf(.warning, "search worker spawn failed err={s}", .{@errorName(err)});
-                self.doc.search_mutex.lock();
+                self.lockSearchRuntime();
                 self.setSearchWorkerRunning(false);
-                self.doc.search_mutex.unlock();
+                self.unlockSearchRuntime();
                 return;
             };
             self.setSearchWorker(worker);
         }
 
         pub fn stopSearchWorker(self: *Editor) void {
-            self.doc.search_mutex.lock();
+            self.lockSearchRuntime();
             self.setSearchWorkerRunning(false);
             self.clearPendingSearchRequest();
-            self.doc.search_cond.signal();
-            self.doc.search_mutex.unlock();
+            self.signalSearchRuntime();
+            self.unlockSearchRuntime();
 
             if (self.takeSearchWorker()) |thread| {
                 thread.join();
             }
 
-            self.doc.search_mutex.lock();
-            defer self.doc.search_mutex.unlock();
+            self.lockSearchRuntime();
+            defer self.unlockSearchRuntime();
             self.clearPendingSearchResult();
         }
 
         pub fn cancelPendingSearchWork(self: *Editor) void {
-            self.doc.search_mutex.lock();
-            defer self.doc.search_mutex.unlock();
+            self.lockSearchRuntime();
+            defer self.unlockSearchRuntime();
             _ = self.bumpSearchGeneration();
             self.clearPendingSearchRequest();
             self.clearPendingSearchResult();
         }
 
-        pub fn applyPendingSearchResult(self: *Editor) void {
-            self.doc.search_mutex.lock();
+        pub fn applyPendingSearchResult(self: *Editor) bool {
+            self.lockSearchRuntime();
             const result_opt = self.takeSearchResult();
             if (result_opt == null) {
-                self.doc.search_mutex.unlock();
-                return;
+                self.unlockSearchRuntime();
+                return false;
             }
             const result = result_opt.?;
-            const latest_generation = self.doc.search_generation;
-            self.doc.search_mutex.unlock();
+            const latest_generation = self.currentSearchGeneration();
+            self.unlockSearchRuntime();
 
             defer c_allocator.free(result.matches);
             if (result.generation != latest_generation) {
-                return;
+                return false;
             }
 
             self.replaceSearchMatches(result.matches) catch |err| {
@@ -593,26 +593,27 @@ pub fn SearchHighlightOps(comptime Editor: type) type {
                 log.logf(.warning, "apply search result append failed err={s}", .{@errorName(err)});
                 self.setSearchActive(null);
                 self.bumpSearchEpoch();
-                return;
+                return false;
             };
             self.setSearchActive(self.pickSearchActiveIndex(result.preferred_offset));
             self.bumpSearchEpoch();
             const total = self.doc.buffer.totalLen();
             if (total > 0) self.noteHighlightDirtyRange(0, total - 1);
+            return true;
         }
 
         fn searchWorkerMain(self: *Editor) void {
             while (true) {
-                self.doc.search_mutex.lock();
-                while (self.isSearchWorkerRunning() and self.doc.search_request == null) {
-                    self.doc.search_cond.wait(&self.doc.search_mutex);
+                self.lockSearchRuntime();
+                while (self.isSearchWorkerRunning() and !self.hasPendingSearchRequest()) {
+                    self.waitSearchRuntime();
                 }
                 if (!self.isSearchWorkerRunning()) {
-                    self.doc.search_mutex.unlock();
+                    self.unlockSearchRuntime();
                     return;
                 }
                 const request = self.takeSearchRequest().?;
-                self.doc.search_mutex.unlock();
+                self.unlockSearchRuntime();
 
                 const matches = computeSearchMatchesAlloc(c_allocator, request.mode, request.query, request.content) catch |err| {
                     const log = app_logger.logger("editor.search");
@@ -624,14 +625,14 @@ pub fn SearchHighlightOps(comptime Editor: type) type {
                 c_allocator.free(request.query);
                 c_allocator.free(request.content);
 
-                self.doc.search_mutex.lock();
+                self.lockSearchRuntime();
                 if (!self.isSearchWorkerRunning()) {
-                    self.doc.search_mutex.unlock();
+                    self.unlockSearchRuntime();
                     c_allocator.free(matches);
                     return;
                 }
-                if (request.generation != self.doc.search_generation) {
-                    self.doc.search_mutex.unlock();
+                if (request.generation != self.currentSearchGeneration()) {
+                    self.unlockSearchRuntime();
                     c_allocator.free(matches);
                     continue;
                 }
@@ -640,7 +641,7 @@ pub fn SearchHighlightOps(comptime Editor: type) type {
                     .preferred_offset = request.preferred_offset,
                     .matches = matches,
                 });
-                self.doc.search_mutex.unlock();
+                self.unlockSearchRuntime();
             }
         }
 

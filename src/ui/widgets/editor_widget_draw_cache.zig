@@ -104,25 +104,31 @@ pub fn buildLargeFileFallbackTokens(line_text: []const u8, line_start: usize, ou
     return count;
 }
 
-pub fn precomputeHighlightTokens(widget: anytype, cache: *cache_mod.EditorRenderCache, shell: anytype, height: f32, budget_lines: usize) void {
+pub fn precomputeHighlightTokens(widget: anytype, cache: *cache_mod.EditorRenderCache, shell: anytype, height: f32, budget_lines: usize) bool {
     const perf_log = app_logger.logger("editor.perf");
+    _ = cache;
     const view = widget.frameView();
     const r = shell.rendererPtr();
-    if (budget_lines == 0) return;
-    if (height <= 0) return;
-    if (view.highlighter == null) return;
+    if (budget_lines == 0) return false;
+    if (height <= 0) return false;
+    if (view.highlighter == null) return false;
     const total_lines = view.lineCount();
-    if (total_lines == 0) return;
+    if (total_lines == 0) return false;
     const visible_lines = @as(usize, @intFromFloat(height / r.char_height));
-    if (visible_lines == 0) return;
+    if (visible_lines == 0) return false;
 
     const start_line = view.scroll_line;
     const end_line = @min(start_line + visible_lines + 1, total_lines);
-    cache.beginHighlightWork(start_line, end_line, view.highlight_epoch);
-    const batch = cache.takeHighlightWorkBatch(budget_lines) orelse {
+    widget.editor.beginVisibleHighlightWork(start_line, end_line, view.highlight_epoch);
+    const batch = widget.editor.takeVisibleHighlightWorkBatch(budget_lines) orelse {
         perf_log.logf(.info, "visible_precompute_highlight lines=0 budget={d} time_us=0", .{budget_lines});
-        return;
+        return false;
     };
+    widget.editor.replaceVisibleHighlightRequest(.{
+        .start_line = batch.start_line,
+        .end_line = batch.end_line,
+        .epoch = view.highlight_epoch,
+    });
 
     const t_start = std.time.nanoTimestamp();
     var lines_done: usize = 0;
@@ -147,6 +153,8 @@ pub fn precomputeHighlightTokens(widget: anytype, cache: *cache_mod.EditorRender
     }
     defer if (allocated) widget.editor.allocator.free(tokens);
     if (tokens.len > 0 or batch.start_line < batch.end_line) {
+        var line_results = std.ArrayList(Editor.VisibleHighlightLineResult).empty;
+        defer line_results.deinit(widget.editor.allocator);
         var token_idx: usize = 0;
         var line_idx = batch.start_line;
         while (line_idx < batch.end_line) : (line_idx += 1) {
@@ -162,18 +170,44 @@ pub fn precomputeHighlightTokens(widget: anytype, cache: *cache_mod.EditorRender
                 line_token_end += 1;
             }
             const line_text_hash = hashLine(line_storage.text);
-            cache.storeHighlightTokens(
-                line_idx,
-                line_start,
-                line_text_hash,
-                view.highlight_epoch,
-                tokens[token_idx..line_token_end],
-            );
+            const line_tokens = widget.editor.allocator.dupe(HighlightToken, tokens[token_idx..line_token_end]) catch |err| {
+                const log = app_logger.logger("editor.draw");
+                log.logf(.warning, "visible highlight line token dup failed line={d} err={s}", .{ line_idx, @errorName(err) });
+                continue;
+            };
+            line_results.append(widget.editor.allocator, .{
+                .line_idx = line_idx,
+                .line_start = line_start,
+                .line_text_hash = line_text_hash,
+                .tokens = line_tokens,
+            }) catch |err| {
+                const log = app_logger.logger("editor.draw");
+                widget.editor.allocator.free(line_tokens);
+                log.logf(.warning, "visible highlight result append failed line={d} err={s}", .{ line_idx, @errorName(err) });
+                continue;
+            };
             lines_done += 1;
         }
+        const owned_lines = line_results.toOwnedSlice(widget.editor.allocator) catch |err| {
+            const log = app_logger.logger("editor.draw");
+            for (line_results.items) |line| {
+                widget.editor.allocator.free(line.tokens);
+            }
+            log.logf(.warning, "visible highlight result ownership failed err={s}", .{@errorName(err)});
+            return false;
+        };
+        widget.editor.replaceVisibleHighlightResult(.{
+            .request = widget.editor.takeVisibleHighlightRequest() orelse .{
+                .start_line = batch.start_line,
+                .end_line = batch.end_line,
+                .epoch = view.highlight_epoch,
+            },
+            .lines = owned_lines,
+        });
     }
     const elapsed_us = @as(i64, @intCast(@divTrunc(std.time.nanoTimestamp() - t_start, 1000)));
     perf_log.logf(.info, "visible_precompute_highlight lines={d} budget={d} time_us={d}", .{ lines_done, budget_lines, elapsed_us });
+    return lines_done > 0;
 }
 
 pub fn precomputeLineWidths(widget: anytype, cache: *cache_mod.EditorRenderCache, shell: anytype, height: f32, budget_lines: usize) void {
