@@ -76,6 +76,10 @@ pub const Editor = struct {
     pub const VisibleHighlightRuntimeState = struct {
         work: HighlightWorkState,
         startup_warmup_active: bool,
+        worker: ?std.Thread,
+        worker_running: bool,
+        mutex: std.Thread.Mutex,
+        cond: std.Thread.Condition,
         request: ?VisibleHighlightWorkRequest,
         result: ?VisibleHighlightWorkResult,
         needs_redraw: bool,
@@ -485,6 +489,44 @@ pub const Editor = struct {
         return self.visible_highlight_runtime.needs_redraw;
     }
 
+    pub fn lockVisibleHighlightRuntime(self: *Editor) void {
+        self.visible_highlight_runtime.mutex.lock();
+    }
+
+    pub fn unlockVisibleHighlightRuntime(self: *Editor) void {
+        self.visible_highlight_runtime.mutex.unlock();
+    }
+
+    pub fn waitVisibleHighlightRuntime(self: *Editor) void {
+        self.visible_highlight_runtime.cond.wait(&self.visible_highlight_runtime.mutex);
+    }
+
+    pub fn signalVisibleHighlightRuntime(self: *Editor) void {
+        self.visible_highlight_runtime.cond.signal();
+    }
+
+    pub fn isVisibleHighlightWorkerRunning(self: *const Editor) bool {
+        return self.visible_highlight_runtime.worker_running;
+    }
+
+    pub fn setVisibleHighlightWorkerRunning(self: *Editor, running: bool) void {
+        self.visible_highlight_runtime.worker_running = running;
+    }
+
+    pub fn setVisibleHighlightWorker(self: *Editor, worker: std.Thread) void {
+        self.visible_highlight_runtime.worker = worker;
+    }
+
+    pub fn takeVisibleHighlightWorker(self: *Editor) ?std.Thread {
+        const worker = self.visible_highlight_runtime.worker;
+        self.visible_highlight_runtime.worker = null;
+        return worker;
+    }
+
+    pub fn hasPendingVisibleHighlightRequest(self: *const Editor) bool {
+        return self.visible_highlight_runtime.request != null;
+    }
+
     pub fn applyPendingVisibleHighlightResult(self: *Editor, cache: anytype) bool {
         const owned_result = self.takeVisibleHighlightResult() orelse return false;
         var result = owned_result;
@@ -682,6 +724,10 @@ pub const Editor = struct {
                     .completed_epoch = 0,
                 },
                 .startup_warmup_active = false,
+                .worker = null,
+                .worker_running = false,
+                .mutex = .{},
+                .cond = .{},
                 .request = null,
                 .result = null,
                 .needs_redraw = false,

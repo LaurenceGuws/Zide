@@ -342,6 +342,8 @@ stack issue, not an isolated highlight bug:
         app/runtime precompute path
       - visible highlight execution logic is now editor-owned rather than
         widget-owned
+      - visible highlight runtime now carries worker/lifecycle/sync state
+        parallel to the search seam
       - this is still behavior-preserving and does not yet claim full runtime
         ownership
 

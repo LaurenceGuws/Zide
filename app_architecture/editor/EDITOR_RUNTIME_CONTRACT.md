@@ -71,6 +71,9 @@ Current implementation progress:
 - visible highlight execution logic itself now lives on `Editor` rather than in
   widget helper code; the remaining step is to move that editor-owned execution
   onto a worker/task lane
+- visible highlight runtime state now also carries worker/lifecycle/sync fields
+  parallel to the search runtime seam, so the next move can attach execution to
+  an already-owned runtime lane
 
 ## Current Problem
 
