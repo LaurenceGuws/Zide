@@ -104,32 +104,36 @@ pub fn buildLargeFileFallbackTokens(line_text: []const u8, line_start: usize, ou
     return count;
 }
 
-pub fn precomputeHighlightTokens(widget: anytype, cache: *cache_mod.EditorRenderCache, shell: anytype, height: f32, budget_lines: usize) bool {
+fn scheduleVisibleHighlightRequest(widget: anytype, shell: anytype, height: f32, budget_lines: usize) ?Editor.HighlightWorkBatch {
     const perf_log = app_logger.logger("editor.perf");
-    _ = cache;
     const view = widget.frameView();
     const r = shell.rendererPtr();
-    if (budget_lines == 0) return false;
-    if (height <= 0) return false;
-    if (view.highlighter == null) return false;
+    if (budget_lines == 0) return null;
+    if (height <= 0) return null;
+    if (view.highlighter == null) return null;
     const total_lines = view.lineCount();
-    if (total_lines == 0) return false;
+    if (total_lines == 0) return null;
     const visible_lines = @as(usize, @intFromFloat(height / r.char_height));
-    if (visible_lines == 0) return false;
+    if (visible_lines == 0) return null;
 
     const start_line = view.scroll_line;
     const end_line = @min(start_line + visible_lines + 1, total_lines);
     widget.editor.beginVisibleHighlightWork(start_line, end_line, view.highlight_epoch);
     const batch = widget.editor.takeVisibleHighlightWorkBatch(budget_lines) orelse {
         perf_log.logf(.info, "visible_precompute_highlight lines=0 budget={d} time_us=0", .{budget_lines});
-        return false;
+        return null;
     };
     widget.editor.replaceVisibleHighlightRequest(.{
         .start_line = batch.start_line,
         .end_line = batch.end_line,
         .epoch = view.highlight_epoch,
     });
+    return batch;
+}
 
+fn executePendingVisibleHighlightRequest(widget: anytype, batch: Editor.HighlightWorkBatch) bool {
+    const perf_log = app_logger.logger("editor.perf");
+    const view = widget.frameView();
     const t_start = std.time.nanoTimestamp();
     var lines_done: usize = 0;
     var tokens: []HighlightToken = &[_]HighlightToken{};
@@ -206,8 +210,14 @@ pub fn precomputeHighlightTokens(widget: anytype, cache: *cache_mod.EditorRender
         });
     }
     const elapsed_us = @as(i64, @intCast(@divTrunc(std.time.nanoTimestamp() - t_start, 1000)));
-    perf_log.logf(.info, "visible_precompute_highlight lines={d} budget={d} time_us={d}", .{ lines_done, budget_lines, elapsed_us });
+    perf_log.logf(.info, "visible_precompute_highlight lines={d} budget={d} time_us={d}", .{ lines_done, batch.end_line - batch.start_line, elapsed_us });
     return lines_done > 0;
+}
+
+pub fn precomputeHighlightTokens(widget: anytype, cache: *cache_mod.EditorRenderCache, shell: anytype, height: f32, budget_lines: usize) bool {
+    _ = cache;
+    const batch = scheduleVisibleHighlightRequest(widget, shell, height, budget_lines) orelse return false;
+    return executePendingVisibleHighlightRequest(widget, batch);
 }
 
 pub fn precomputeLineWidths(widget: anytype, cache: *cache_mod.EditorRenderCache, shell: anytype, height: f32, budget_lines: usize) void {

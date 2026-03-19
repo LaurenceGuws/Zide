@@ -257,6 +257,9 @@ Phase 2 has now started in code:
 - visible highlight runtime completion now exposes an explicit redraw signal,
   which keeps wake semantics on the runtime block instead of in frame-path
   inference logic
+- visible highlight scheduling and execution are now distinct code phases,
+  shrinking the remaining threading move to “change execution lane” instead of
+  “untangle execution from scheduling and publication”
 - the current cut is structural and behavior-preserving; it does not yet claim
   full `EditorRuntime` ownership, but it makes that ownership line explicit
 

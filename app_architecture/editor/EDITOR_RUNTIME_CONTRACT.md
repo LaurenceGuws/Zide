@@ -62,6 +62,9 @@ Current implementation progress:
 - visible highlight completion now also has an explicit runtime redraw signal
   rather than relying on the frame path to infer publication from mailbox
   presence
+- visible highlight scheduling and execution are now distinct phases in code,
+  even though execution is still foreground; that removes the last direct
+  schedule-and-execute knot ahead of the worker move
 
 ## Current Problem
 
