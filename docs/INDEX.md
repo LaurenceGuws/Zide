@@ -76,7 +76,7 @@ Quick reading guide:
 - `tools/docs_explorer/README.md` — run instructions for the local docs explorer.
 - `app_architecture/CONFIG.md` — Lua config subsystem: parser surface, merge rules, runtime consumers, and reload truth.
 - `docs/todo/config.md` — config subsystem tracker: contract drift, reload gaps, validation, and binding semantics.
-- `docs/DEPENDENCIES.md` — current dependency sourcing policy: Zig-managed app stack on Linux/macOS, platform-runtime requirements, and Windows `vcpkg` exception.
+- `docs/DEPENDENCIES.md` — current dependency sourcing policy: Zig-managed app stack across platforms and platform-runtime requirements.
 
 ## Research + Reference
 - `docs/reference/README.md` — reference-doc placement and role.

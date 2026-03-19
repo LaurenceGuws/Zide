@@ -26,6 +26,20 @@ Status note, 2026-03-19:
 - The queue now needs a Windows-specific fixture/review lane instead of more
   blind tuning.
 
+Status note, 2026-03-20:
+
+- The main Windows fractional-DPI bug was the wrong scale split: content scale
+  and raster scale were both effectively flowing through `render_scale`.
+- After correcting the Windows `ui_scale` / `render_scale` contract and
+  landing the follow-up glyph geometry fixes, editor and terminal text at 125%
+  are now user-accepted on the current Windows validation machine.
+- JetBrainsMono and IosevkaTerm both now render cleanly enough on that
+  corrected path that font choice is no longer hiding a shared renderer bug.
+- The remaining work is narrower:
+  - fixture/review authority across the broader DPI matrix
+  - reference-app comparison
+  - startup font-init churn cleanup
+
 ## Constraints
 
 - Introduce repeatable visual or metric harnesses before large rendering changes.
@@ -55,6 +69,9 @@ Status note, 2026-03-19:
 
 - Always: `zig build`, `zig build test`, `zig build check-app-imports`, `zig build check-input-imports`, `zig build check-editor-imports`
 - Smoke: `zig build run -- --mode terminal`, `zig build run`
+- Cross-platform regression after Windows DPI/rendering work:
+  - Linux: `zig build`, `zig build -Dmode=editor`, `zig build -Dmode=terminal`
+  - Linux visual fixture: `zig build run -- --mode font-sample`
 
 ## TODO
 
@@ -80,7 +97,7 @@ Status note, 2026-03-19:
     - repeatable sample text
     - cropped comparison captures or equivalent deterministic sample mode
     - brief review notes in the owning Windows queue
-- [ ] `FR-4-03` Finish the fractional-DPI geometry contract
+- [x] `FR-4-03` Finish the fractional-DPI geometry contract
   - The current likely remaining seam is destination quad sizing / baseline
     stability / atlas sampling interaction, not hinting policy alone.
   - Current prerequisite seam:
@@ -140,6 +157,11 @@ Status note, 2026-03-19:
       did not materially improve the remaining uneven stroke weight
     - current focus stays on metric/geometry behavior rather than more hinting
       churn
+  - Validated state, 2026-03-20:
+    - on the current Windows machine, `125%` editor and terminal rendering are
+      now user-accepted for both JetBrainsMono and IosevkaTerm
+    - broader regression authority still belongs to `FR-4-02`, native
+      reference-app comparison, and startup cleanup
   - Do not flip filtering/hinting settings casually without preserving a
     repeatable comparison.
 - [ ] `FR-5-01` Evaluate LCD and subpixel AA as an opt-in experiment
@@ -157,3 +179,10 @@ Status note, 2026-03-19:
     - [ ] Snapshot history from `tools/font_sample_lcd_snapshot.sh`
 - [x] `FR-V-01` Smoke terminal mode and default run
 - [x] `FR-V-02` Regression-check the font sample capture path
+
+Startup cleanup note, 2026-03-20:
+
+- renderer bootstrap now seeds initial font path, size, hinting/autohint, and
+  text correction from loaded config before the first `initFonts(...)` pass
+- `.zide.lua` is back on the quiet checked-in baseline after the Windows
+  investigation

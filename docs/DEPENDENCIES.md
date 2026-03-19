@@ -7,8 +7,8 @@ For bootstrap/build/run commands, use
 
 ## Current Model
 
-On normal Linux and macOS paths, Zide now resolves its main native library
-stack through the Zig package manager, not the host package manager.
+On normal Linux, macOS, and Windows paths, Zide now resolves its main native
+library stack through the Zig package manager, not the host package manager.
 
 That default package-managed set is:
 
@@ -99,45 +99,14 @@ doc instead of reviving stale "install every library manually" guidance.
 
 ## Windows
 
-Windows remains the exception.
-
-Current Windows-native flow still uses vcpkg for platform-native dependency
-management rather than the normal Linux/macOS Zig-managed path.
+Windows now uses the same Zig package-managed dependency path as Linux and
+macOS by default.
 
 ### Required tools
 
 - Zig
-- Visual Studio Build Tools
-- vcpkg
-
-### Install vcpkg
-
-```powershell
-git clone https://github.com/microsoft/vcpkg C:\dev\vcpkg-win
-cd C:\dev\vcpkg-win
-.\bootstrap-vcpkg.bat
-```
-
-### Install native libraries
-
-Recommended manifest-mode install from the Zide repo root:
-
-```powershell
-C:\path\to\vcpkg\vcpkg.exe install --triplet x64-windows
-```
-
-Classic mode also works:
-
-```powershell
-.\vcpkg.exe install sdl3 freetype harfbuzz lua --triplet x64-windows
-```
 
 ### Configure build
-
-Recommended environment variables:
-
-- `VCPKG_ROOT`
-- `VCPKG_DEFAULT_TRIPLET=x64-windows`
 
 Build:
 
@@ -145,16 +114,7 @@ Build:
 zig build
 ```
 
-On Windows, the build looks in either:
-
-- `./vcpkg_installed/<triplet>/`
-- `<VCPKG_ROOT>/installed/<triplet>/`
-
-Use the MSVC target with the `x64-windows` triplet:
-
-```powershell
-zig build -Dvcpkg-triplet=x64-windows -Dtarget=x86_64-windows-msvc
-```
+Current default Windows native target is `x86_64-windows-msvc`.
 
 ## Terminal Bundle Runtime Notes
 
@@ -180,5 +140,4 @@ For the user-facing compatibility surface, use
 
 - Current text stack uses pinned Zig 0.15.2-compatible forks for FreeType and
   HarfBuzz in the Zig package graph.
-- Windows runtime packaging still includes native DLLs such as SDL3, FreeType,
-  HarfBuzz, and Lua from the Windows dependency path.
+- Windows uses the Zig-managed package path for runtime artifacts too.

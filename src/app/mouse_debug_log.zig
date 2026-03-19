@@ -4,9 +4,9 @@ const app_shell = @import("../app_shell.zig");
 pub fn log(shell: *app_shell.Shell, enabled: bool) void {
     if (!enabled) return;
     const r = shell.rendererPtr();
+    const display = shell.getDisplayMetrics();
     const raw = r.getMousePosRaw();
     const scaled = r.getMousePos();
-    const dpi = r.getDpiScale();
     const screen = r.getScreenSize();
     const render = r.getRenderSize();
     const monitor = r.getMonitorSize();
@@ -16,14 +16,17 @@ pub fn log(shell: *app_shell.Shell, enabled: bool) void {
     const via_render = r.getMousePosScaled(scale_render);
 
     std.debug.print(
-        "mouse click raw({d:.1},{d:.1}) scaled({d:.1},{d:.1}) dpi({d:.2},{d:.2}) scr({d:.0}x{d:.0}) ren({d:.0}x{d:.0}) mon({d:.0}x{d:.0}) via_screen({d:.1},{d:.1}) via_render({d:.1},{d:.1}) scale({d:.2})\n",
+        "mouse click raw({d:.1},{d:.1}) scaled({d:.1},{d:.1}) dpi({d:.2},{d:.2}) display_scale({d:.2}) pixel_density({d:.2}) render_scale({d:.2}) scr({d:.0}x{d:.0}) ren({d:.0}x{d:.0}) mon({d:.0}x{d:.0}) via_screen({d:.1},{d:.1}) via_render({d:.1},{d:.1}) scale({d:.2})\n",
         .{
             raw.x,
             raw.y,
             scaled.x,
             scaled.y,
-            dpi.x,
-            dpi.y,
+            display.dpi.x,
+            display.dpi.y,
+            display.display_scale,
+            display.pixel_density,
+            display.render_scale,
             screen.x,
             screen.y,
             render.x,

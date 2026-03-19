@@ -1,5 +1,4 @@
 const app_config_reload_notice_state = @import("config_reload_notice_state.zig");
-const app_editor_tab_bar_sync_runtime = @import("editor/editor_tab_bar_sync_runtime.zig");
 const app_input_actions_hooks_runtime = @import("input_actions_hooks_runtime.zig");
 const app_mouse_pressed_hooks_runtime = @import("mouse_pressed_hooks_runtime.zig");
 const app_modes = @import("modes/mod.zig");
@@ -20,6 +19,10 @@ const app_update_prelude_frame_runtime = @import("update_prelude_frame_runtime.z
 const app_shell = @import("../app_shell.zig");
 const input_actions = @import("../input/input_actions.zig");
 const shared_types = @import("../types/mod.zig");
+
+const app_editor_tab_bar_sync_runtime = if (mode_build.focused_mode == .terminal) struct {
+    pub fn sync(_: anytype, _: anytype) !void {}
+} else @import("editor/editor_tab_bar_sync_runtime.zig");
 
 const Shell = app_shell.Shell;
 const layout_types = shared_types.layout;

@@ -5,16 +5,60 @@ const app_mouse_pressed_routing_runtime = @import("mouse_pressed_routing_runtime
 const app_terminal_tabs_runtime = @import("terminal/terminal_tabs_runtime.zig");
 const app_mode_adapter_sync_runtime = @import("mode_adapter_sync_runtime.zig");
 const app_tab_action_apply_runtime = @import("tabs/tab_action_apply_runtime.zig");
-const app_editor_intent_route = @import("editor/editor_intent_route.zig");
-const app_active_editor_runtime = @import("editor/active_editor_runtime.zig");
-const app_path_prompt_state = @import("editor/path_prompt_state.zig");
-const app_search_panel_state = @import("search/search_panel_state.zig");
 const app_terminal_intent_route_runtime = @import("terminal/terminal_intent_route_runtime.zig");
 const app_mouse_debug_log = @import("mouse_debug_log.zig");
-const app_imported_theme_runtime = @import("editor/imported_theme_runtime.zig");
 const app_shell = @import("../app_shell.zig");
 const shared_types = @import("../types/mod.zig");
 const widgets = @import("../ui/widgets.zig");
+const mode_build = @import("mode_build.zig");
+
+const app_editor_intent_route = if (mode_build.focused_mode == .terminal) struct {
+    pub fn routeActivateByIndexAndSync(_: usize, _: *anyopaque, _: anytype) !void {
+        return error.UnsupportedMode;
+    }
+} else @import("editor/editor_intent_route.zig");
+
+const app_active_editor_runtime = if (mode_build.focused_mode == .terminal) struct {
+    pub fn fromState(_: anytype) ?*anyopaque {
+        return null;
+    }
+} else @import("editor/active_editor_runtime.zig");
+
+const app_path_prompt_state = if (mode_build.focused_mode == .terminal) struct {
+    pub fn openForOpen(_: anytype, _: anytype, _: anytype) !void {
+        return error.UnsupportedMode;
+    }
+
+    pub fn openForSaveAs(_: anytype, _: anytype, _: anytype) !void {
+        return error.UnsupportedMode;
+    }
+
+    pub fn openForReplace(_: anytype, _: anytype) !void {
+        return error.UnsupportedMode;
+    }
+
+    pub fn openForReplaceAll(_: anytype, _: anytype) !void {
+        return error.UnsupportedMode;
+    }
+
+    pub fn close(_: anytype) void {}
+} else @import("editor/path_prompt_state.zig");
+
+const app_search_panel_state = if (mode_build.focused_mode == .terminal) struct {
+    pub fn openPanel(_: anytype, _: anytype, _: anytype, _: anytype, _: anytype) !void {
+        return error.UnsupportedMode;
+    }
+} else @import("search/search_panel_state.zig");
+
+const app_imported_theme_runtime = if (mode_build.focused_mode == .terminal) struct {
+    pub fn cyclePrev(_: anytype) !void {
+        return error.UnsupportedMode;
+    }
+
+    pub fn cycleNext(_: anytype) !void {
+        return error.UnsupportedMode;
+    }
+} else @import("editor/imported_theme_runtime.zig");
 
 const layout_types = shared_types.layout;
 const input_types = shared_types.input;
@@ -32,46 +76,32 @@ pub fn handle(
 ) !void {
     _ = frame_shell;
     const State = @TypeOf(state.*);
-    if (frame_input_batch.mousePressed(input_types.MouseButton.left)) {
-        if (state.options_bar.handleClick(state.shell, frame_layout.window.width, frame_mouse)) |action| {
-            const active_editor = app_active_editor_runtime.fromState(state);
-            switch (action) {
-                .new_file => try state.newEditor(),
-                .open_file => {
-                    state.search_panel.active = false;
-                    try app_path_prompt_state.openForOpen(&state.path_prompt, state.allocator, active_editor);
-                },
-                .save => {
-                    if (active_editor) |editor| {
-                        if (editor.documentCore().filePath() != null) {
-                            try editor.save();
-                        } else {
-                            state.search_panel.active = false;
-                            try app_path_prompt_state.openForSaveAs(&state.path_prompt, state.allocator, editor);
+    if (comptime mode_build.focused_mode != .terminal) {
+        if (frame_input_batch.mousePressed(input_types.MouseButton.left)) {
+            if (state.options_bar.handleClick(state.shell, frame_layout.window.width, frame_mouse)) |action| {
+                const active_editor = app_active_editor_runtime.fromState(state);
+                switch (action) {
+                    .new_file => try state.newEditor(),
+                    .open_file => {
+                        state.search_panel.active = false;
+                        try app_path_prompt_state.openForOpen(&state.path_prompt, state.allocator, active_editor);
+                    },
+                    .save => {
+                        if (active_editor) |editor| {
+                            if (editor.documentCore().filePath() != null) {
+                                try editor.save();
+                            } else {
+                                state.search_panel.active = false;
+                                try app_path_prompt_state.openForSaveAs(&state.path_prompt, state.allocator, editor);
+                            }
                         }
-                    }
-                },
-                .save_as => {
-                    state.search_panel.active = false;
-                    try app_path_prompt_state.openForSaveAs(&state.path_prompt, state.allocator, active_editor);
-                },
-                .find => {
-                    if (active_editor) |editor| {
-                        app_path_prompt_state.close(&state.path_prompt);
-                        try app_search_panel_state.openPanel(
-                            state.allocator,
-                            &state.search_panel.active,
-                            &state.search_panel.select_all,
-                            &state.search_panel.query,
-                            editor,
-                        );
-                    }
-                },
-                .replace => {
-                    if (active_editor) |editor| {
-                        if (editor.searchQuery() != null) {
-                            try app_path_prompt_state.openForReplace(&state.path_prompt, state.allocator);
-                        } else {
+                    },
+                    .save_as => {
+                        state.search_panel.active = false;
+                        try app_path_prompt_state.openForSaveAs(&state.path_prompt, state.allocator, active_editor);
+                    },
+                    .find => {
+                        if (active_editor) |editor| {
                             app_path_prompt_state.close(&state.path_prompt);
                             try app_search_panel_state.openPanel(
                                 state.allocator,
@@ -81,30 +111,46 @@ pub fn handle(
                                 editor,
                             );
                         }
-                    }
-                },
-                .replace_all => {
-                    if (active_editor) |editor| {
-                        if (editor.searchQuery() != null) {
-                            try app_path_prompt_state.openForReplaceAll(&state.path_prompt, state.allocator);
-                        } else {
-                            app_path_prompt_state.close(&state.path_prompt);
-                            try app_search_panel_state.openPanel(
-                                state.allocator,
-                                &state.search_panel.active,
-                                &state.search_panel.select_all,
-                                &state.search_panel.query,
-                                editor,
-                            );
+                    },
+                    .replace => {
+                        if (active_editor) |editor| {
+                            if (editor.searchQuery() != null) {
+                                try app_path_prompt_state.openForReplace(&state.path_prompt, state.allocator);
+                            } else {
+                                app_path_prompt_state.close(&state.path_prompt);
+                                try app_search_panel_state.openPanel(
+                                    state.allocator,
+                                    &state.search_panel.active,
+                                    &state.search_panel.select_all,
+                                    &state.search_panel.query,
+                                    editor,
+                                );
+                            }
                         }
-                    }
-                },
-                .cycle_imported_theme_prev => try app_imported_theme_runtime.cyclePrev(state),
-                .cycle_imported_theme => try app_imported_theme_runtime.cycleNext(state),
+                    },
+                    .replace_all => {
+                        if (active_editor) |editor| {
+                            if (editor.searchQuery() != null) {
+                                try app_path_prompt_state.openForReplaceAll(&state.path_prompt, state.allocator);
+                            } else {
+                                app_path_prompt_state.close(&state.path_prompt);
+                                try app_search_panel_state.openPanel(
+                                    state.allocator,
+                                    &state.search_panel.active,
+                                    &state.search_panel.select_all,
+                                    &state.search_panel.query,
+                                    editor,
+                                );
+                            }
+                        }
+                    },
+                    .cycle_imported_theme_prev => try app_imported_theme_runtime.cyclePrev(state),
+                    .cycle_imported_theme => try app_imported_theme_runtime.cycleNext(state),
+                }
+                state.needs_redraw = true;
+                state.metrics.noteInput(now);
+                return;
             }
-            state.needs_redraw = true;
-            state.metrics.noteInput(now);
-            return;
         }
     }
     try app_mouse_pressed_frame.handle(

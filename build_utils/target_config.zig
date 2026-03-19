@@ -41,17 +41,17 @@ fn linkTextStack(
     } else {
         step.linkSystemLibrary("harfbuzz");
     }
-    step.linkSystemLibrary(if (target_os == .windows) "zlib" else "z");
+    if (freetype_lib == null or harfbuzz_lib == null) {
+        step.linkSystemLibrary(if (target_os == .windows) "zlib" else "z");
+    }
 }
 
 fn addTextStackIncludes(
     step: *std.Build.Step.Compile,
-    use_vcpkg: bool,
     target_os: std.Target.Os.Tag,
     freetype_lib: ?*std.Build.Step.Compile,
     harfbuzz_lib: ?*std.Build.Step.Compile,
 ) void {
-    if (use_vcpkg) return;
     if (freetype_lib) |lib| {
         step.addIncludePath(lib.getEmittedIncludeTree());
     } else {
@@ -104,10 +104,6 @@ pub fn configureSdlTestTarget(
     ctx: app_types.AppLinkContext,
     profile: target_profile.LinkProfile,
 ) void {
-    if (ctx.use_vcpkg) {
-        step.addLibraryPath(.{ .cwd_relative = ctx.vcpkg_lib.? });
-        step.addIncludePath(.{ .cwd_relative = ctx.vcpkg_include.? });
-    }
     linkSdl3(step, ctx.sdl_lib);
     if (profile.include_text_stack) linkTextStack(step, ctx.target_os, ctx.freetype_lib, ctx.harfbuzz_lib);
     if (profile.include_lua and ctx.lua_lib != null) linkLua(step, ctx.lua_lib);
@@ -119,13 +115,11 @@ pub fn configureSdlTestTarget(
     if (profile.include_treesitter) step.linkLibrary(requireTreeSitter(ctx));
     addVendorAndStb(step);
     if (profile.include_treesitter) addTreeSitterIncludes(step, requireTreeSitter(ctx));
-    if (!ctx.use_vcpkg) {
-        if (profile.include_text_stack) {
-            addTextStackIncludes(step, ctx.use_vcpkg, ctx.target_os, ctx.freetype_lib, ctx.harfbuzz_lib);
-        }
-        if (profile.include_lua and ctx.lua_lib != null) {
-            addLuaIncludes(step, ctx.lua_lib);
-        }
+    if (profile.include_text_stack) {
+        addTextStackIncludes(step, ctx.target_os, ctx.freetype_lib, ctx.harfbuzz_lib);
+    }
+    if (profile.include_lua and ctx.lua_lib != null) {
+        addLuaIncludes(step, ctx.lua_lib);
     }
 }
 
@@ -139,10 +133,6 @@ pub fn configureAppExecutable(
         @panic("dependency policy violation: zide-terminal must not link tree-sitter");
     }
     if (profile.include_treesitter) exe.linkLibrary(requireTreeSitter(ctx));
-    if (ctx.use_vcpkg) {
-        exe.addLibraryPath(.{ .cwd_relative = ctx.vcpkg_lib.? });
-        exe.addIncludePath(.{ .cwd_relative = ctx.vcpkg_include.? });
-    }
     if (profile.include_text_stack) {
         linkTextStack(exe, ctx.target_os, ctx.freetype_lib, ctx.harfbuzz_lib);
     }
@@ -155,13 +145,11 @@ pub fn configureAppExecutable(
     }
     addVendorAndStb(exe);
     if (profile.include_treesitter) addTreeSitterIncludes(exe, requireTreeSitter(ctx));
-    if (!ctx.use_vcpkg) {
-        if (profile.include_text_stack) {
-            addTextStackIncludes(exe, ctx.use_vcpkg, ctx.target_os, ctx.freetype_lib, ctx.harfbuzz_lib);
-        }
-        if (profile.include_lua and ctx.lua_lib != null) {
-            addLuaIncludes(exe, ctx.lua_lib);
-        }
+    if (profile.include_text_stack) {
+        addTextStackIncludes(exe, ctx.target_os, ctx.freetype_lib, ctx.harfbuzz_lib);
+    }
+    if (profile.include_lua and ctx.lua_lib != null) {
+        addLuaIncludes(exe, ctx.lua_lib);
     }
     linkCommonPlatformGraphics(exe, ctx.target_os);
 }

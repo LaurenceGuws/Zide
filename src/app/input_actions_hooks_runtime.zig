@@ -1,3 +1,4 @@
+const std = @import("std");
 const app_logger = @import("../app_logger.zig");
 const app_modes = @import("modes/mod.zig");
 const app_input_actions_frame_runtime = @import("input_actions_frame_runtime.zig");
@@ -8,18 +9,68 @@ const app_terminal_tab_intents = @import("terminal/terminal_tab_intents.zig");
 const app_terminal_tab_navigation_runtime = @import("terminal/terminal_tab_navigation_runtime.zig");
 const app_terminal_intent_route_runtime = @import("terminal/terminal_intent_route_runtime.zig");
 const app_tab_action_apply_runtime = @import("tabs/tab_action_apply_runtime.zig");
-const app_cycle_active_tab_runtime = @import("tabs/cycle_active_tab_runtime.zig");
-const app_imported_theme_runtime = @import("editor/imported_theme_runtime.zig");
-const app_close_active_editor_runtime = @import("editor/close_active_editor_runtime.zig");
-const app_active_editor_runtime = @import("editor/active_editor_runtime.zig");
 const app_terminal_close_active_runtime = @import("terminal/terminal_close_active_runtime.zig");
 const app_terminal_close_confirm_active_runtime = @import("terminal/terminal_close_confirm_active_runtime.zig");
 const app_terminal_tab_bar_sync_runtime = @import("terminal/terminal_tab_bar_sync_runtime.zig");
-const app_path_prompt_state = @import("editor/path_prompt_state.zig");
 const app_shell = @import("../app_shell.zig");
 const input_actions = @import("../input/input_actions.zig");
+const mode_build = @import("mode_build.zig");
+
+const app_cycle_active_tab_runtime = if (mode_build.focused_mode == .terminal) struct {
+    pub fn cycle(_: anytype, _: bool) !bool {
+        return error.UnsupportedMode;
+    }
+} else @import("tabs/cycle_active_tab_runtime.zig");
+
+const app_active_editor_runtime = if (mode_build.focused_mode == .terminal) struct {
+    pub fn fromState(_: anytype) ?EditorStub {
+        return null;
+    }
+} else @import("editor/active_editor_runtime.zig");
+
+const app_close_active_editor_runtime = if (mode_build.focused_mode == .terminal) struct {
+    pub fn activeEditor(_: anytype) ?EditorStub {
+        return null;
+    }
+
+    pub fn closeActive(_: anytype) !bool {
+        return error.UnsupportedMode;
+    }
+} else @import("editor/close_active_editor_runtime.zig");
+
+const app_imported_theme_runtime = if (mode_build.focused_mode == .terminal) struct {
+    pub fn cyclePrev(_: anytype) !void {
+        return error.UnsupportedMode;
+    }
+
+    pub fn cycleNext(_: anytype) !void {
+        return error.UnsupportedMode;
+    }
+} else @import("editor/imported_theme_runtime.zig");
+
+const app_path_prompt_state = if (mode_build.focused_mode == .terminal) struct {
+    pub fn openForOpen(_: anytype, _: std.mem.Allocator, _: anytype) !void {
+        return error.UnsupportedMode;
+    }
+
+    pub fn openForConfirmDirtyClose(_: anytype, _: std.mem.Allocator) !void {
+        return error.UnsupportedMode;
+    }
+} else @import("editor/path_prompt_state.zig");
 
 const Shell = app_shell.Shell;
+
+const EditorStub = struct {
+    pub const DocCoreStub = struct {
+        pub fn isModified(_: DocCoreStub) bool {
+            return false;
+        }
+    };
+
+    pub fn documentCore(_: EditorStub) DocCoreStub {
+        return .{};
+    }
+};
 
 pub fn handle(state: anytype, frame_shell: *Shell, now: f64) !bool {
     _ = frame_shell;

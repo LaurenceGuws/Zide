@@ -79,6 +79,14 @@ The current execution order is:
     - Windows content scale should enlarge layout through `ui_scale`
     - this avoids rasterizing text at a content-inflated size and then
       effectively resampling it back into a 1x backbuffer on Windows
+  - Current validated state, 2026-03-20:
+    - on the current Windows machine, `125%` editor and terminal text are now
+      user-accepted after the scale split fix
+    - JetBrainsMono and IosevkaTerm both look correct enough on the corrected
+      path that the shared Windows renderer bug is no longer blocking product
+      work
+    - the broader `100/125/150/175/200/250/300%` matrix still remains open
+      under `WF-04` / `W3A-01`
   - Required checks:
     - window DPI acquisition path is explicit
     - `WM_DPICHANGED`/SDL display-scale changes rebuild fonts and layout predictably
@@ -156,7 +164,7 @@ The current execution order is:
     - `reference_repos/backends/sdl/src/render/SDL_render.c`
   - Keep `.zide.lua` logging minimal and bug-scoped
   - Maintain a repeatable retest script and comparison text/sample workflow
-- [ ] `W3A-02` Finish the fractional-DPI glyph placement contract
+- [x] `W3A-02` Finish the fractional-DPI glyph placement contract
   - Keep the no-per-glyph-snap fix that removed dropped-stroke artifacts
   - Audit destination-quad sizing, baseline stability, and atlas sampling together
   - Preferred implementation order:
@@ -174,12 +182,22 @@ The current execution order is:
     - baseline/cell metric consistency
     - destination quad extent quantization
     - atlas UV/sampling cleanup only after geometry is stable
+  - Validated state, 2026-03-20:
+    - current Windows `125%` editor and terminal rendering are user-accepted
+      after the corrected scale split and geometry passes
+    - remaining work moves to fixture authority, native reference comparison,
+      and startup churn cleanup rather than core glyph placement triage
 - [ ] `W3A-03` Verify editor text against Windows-native expectations
   - Compare against reference apps at the same font/size/DPI
   - Explicitly decide whether grayscale-only is good enough or whether an opt-in LCD/subpixel path is needed on Windows
 - [ ] `W3A-04` Stabilize metric rebuild behavior
   - Current logs show metric transitions during startup/rebuild
   - The queue should end with one predictable font-init/rebuild contract, not multiple implicit phases
+  - Cleanup landed, 2026-03-20:
+    - startup now seeds renderer font path, size, and font-render settings from
+      loaded config before the first font init
+    - this removes the old "boot JetBrains, then switch to configured face"
+      churn from normal startup
 
 ### Phase 4 Process Signals
 

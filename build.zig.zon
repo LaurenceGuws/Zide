@@ -22,8 +22,8 @@
             .hash = "freetype-0.0.0-AAAAAH9JcwAvHKzJWBn5sVj335g2wMZnrfZ3qcFXBWPC",
         },
         .harfbuzz = .{
-            .url = "git+https://github.com/LaurenceGuws/harfbuzz-zig015#68406a28eea39df8c074a38fefc64c5aa23201b7",
-            .hash = "harfbuzz-0.0.0-AAAAAAdegQDrj2lmaK3ZGsmsHSjQRijAro8AGirCOv_1",
+            .url = "git+https://github.com/LaurenceGuws/harfbuzz-zig015#06d9b0b56325bdf6dc9a91c0fced9cfb009d0651",
+            .hash = "harfbuzz-0.0.0-ERN4LV5egQBVq-15YyV9WaZeRJBbMjbU5LJCKGK8KtET",
         },
     },
 

@@ -1,7 +1,6 @@
 const std = @import("std");
 const builtin = @import("builtin");
 const app_types = @import("app_types.zig");
-const vcpkg_paths = @import("vcpkg_paths.zig");
 const dependency_resolver = @import("dependency_resolver.zig");
 const mode_specs = @import("mode_specs.zig");
 const target_profile = @import("target_profile.zig");
@@ -15,8 +14,6 @@ pub const BuildBootstrap = struct {
     build_mode: mode_specs.BuildMode,
     target_os: std.Target.Os.Tag,
     build_options: *std.Build.Step.Options,
-    use_vcpkg: bool,
-    vcpkg_bin: ?[]const u8,
     treesitter: ?*std.Build.Step.Compile,
     zlua_module: *std.Build.Module,
     app_link_ctx: AppLinkContext,
@@ -57,30 +54,16 @@ pub fn initBuildBootstrap(b: *std.Build) BuildBootstrap {
     }
 
     const build_options = b.addOptions();
-    const use_vcpkg = (target_os == .windows);
     build_options.addOption([]const u8, "renderer_backend", renderer_backend);
     build_options.addOption([]const u8, "build_mode", build_mode_raw);
     build_options.addOption([]const u8, "target_arch", @tagName(target.result.cpu.arch));
     build_options.addOption([]const u8, "target_os", @tagName(target_os));
     build_options.addOption([]const u8, "target_abi", @tagName(target.result.abi));
     build_options.addOption([]const u8, "optimize_mode", @tagName(optimize));
-    build_options.addOption(bool, "use_vcpkg", use_vcpkg);
-    const vcpkg_root_opt = b.option([]const u8, "vcpkg-root", "Path to vcpkg root") orelse std.process.getEnvVarOwned(b.allocator, "VCPKG_ROOT") catch null;
-    const vcpkg_triplet_opt = b.option([]const u8, "vcpkg-triplet", "vcpkg triplet (e.g. x64-windows)") orelse std.process.getEnvVarOwned(b.allocator, "VCPKG_DEFAULT_TRIPLET") catch null;
-
-    const resolved_vcpkg_paths = vcpkg_paths.resolveVcpkgPaths(
-        b,
-        target,
-        target_os,
-        vcpkg_root_opt,
-        vcpkg_triplet_opt,
-    );
-
     const deps = dependency_resolver.resolveDependencies(
         b,
         target,
         optimize,
-        use_vcpkg,
         build_mode != .terminal,
     );
     if (build_mode == .terminal and deps.treesitter != null) {
@@ -134,9 +117,6 @@ pub fn initBuildBootstrap(b: *std.Build) BuildBootstrap {
 
     const app_link_ctx = AppLinkContext{
         .target_os = target_os,
-        .use_vcpkg = use_vcpkg,
-        .vcpkg_lib = resolved_vcpkg_paths.lib,
-        .vcpkg_include = resolved_vcpkg_paths.include,
         .treesitter = deps.treesitter,
         .sdl_lib = deps.sdl_lib,
         .lua_lib = deps.lua_lib,
@@ -150,8 +130,6 @@ pub fn initBuildBootstrap(b: *std.Build) BuildBootstrap {
         .build_mode = build_mode,
         .target_os = target_os,
         .build_options = build_options,
-        .use_vcpkg = use_vcpkg,
-        .vcpkg_bin = resolved_vcpkg_paths.bin,
         .treesitter = deps.treesitter,
         .zlua_module = deps.zlua_module,
         .app_link_ctx = app_link_ctx,

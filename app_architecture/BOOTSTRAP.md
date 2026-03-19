@@ -27,8 +27,8 @@ You still need platform/system libraries and native runtime support:
 - Wayland/XKB/system graphics libs on Linux
 - `fontconfig` on Linux for system fallback font discovery
 
-Windows remains the exception: the current Windows-native dependency flow still
-uses vcpkg. See [`docs/DEPENDENCIES.md`](../docs/DEPENDENCIES.md) for the exact Windows path.
+Windows now follows the same Zig package-managed dependency path by default.
+See [`docs/DEPENDENCIES.md`](../docs/DEPENDENCIES.md) for the exact Windows path.
 
 ## System Dependencies
 
@@ -71,10 +71,8 @@ If local toolchain or platform runtime requirements drift, defer to
 Install:
 
 - [Zig](https://ziglang.org/download/)
-- Visual Studio Build Tools
-- vcpkg-based native dependencies
 
-Use the Windows/vcpkg section in
+Use the Windows section in
 [`docs/DEPENDENCIES.md`](../docs/DEPENDENCIES.md) as the detailed authority.
 
 ## Bootstrap

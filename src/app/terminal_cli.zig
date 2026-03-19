@@ -2,6 +2,11 @@ const std = @import("std");
 const c = @cImport({
     @cInclude("stdlib.h");
 });
+const builtin = @import("builtin");
+
+const win32 = if (builtin.os.tag == .windows) struct {
+    pub extern "kernel32" fn SetEnvironmentVariableA(lpName: [*:0]const u8, lpValue: ?[*:0]const u8) callconv(.winapi) i32;
+} else struct {};
 
 pub const Config = struct {
     cwd: ?[]u8 = null,
@@ -21,8 +26,9 @@ pub const Config = struct {
 };
 
 pub fn parseArgs(allocator: std.mem.Allocator) !Config {
-    var args = std.process.args();
-    _ = args.next();
+    const argv = try std.process.argsAlloc(allocator);
+    defer std.process.argsFree(allocator, argv);
+    var args = SliceArgsIterator([]const u8){ .items = argv[1..] };
     return parseIterator(allocator, &args);
 }
 
@@ -157,9 +163,17 @@ fn applyEnvOverride(allocator: std.mem.Allocator, name: []const u8, value: ?[]co
     if (value) |slice| {
         const z_value = try allocator.dupeZ(u8, slice);
         defer allocator.free(z_value);
-        _ = c.setenv(z_name.ptr, z_value.ptr, 1);
+        if (builtin.os.tag == .windows) {
+            _ = win32.SetEnvironmentVariableA(z_name.ptr, z_value.ptr);
+        } else {
+            _ = c.setenv(z_name.ptr, z_value.ptr, 1);
+        }
     } else {
-        _ = c.unsetenv(z_name.ptr);
+        if (builtin.os.tag == .windows) {
+            _ = win32.SetEnvironmentVariableA(z_name.ptr, null);
+        } else {
+            _ = c.unsetenv(z_name.ptr);
+        }
     }
 }
 

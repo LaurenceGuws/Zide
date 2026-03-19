@@ -60,4 +60,4 @@ flowchart TD
 
 - [ ] Only extract when a renderer block exceeds one responsibility or crosses platform and renderer boundaries.
 - [ ] Add focused tests once replay harness authority exists.
-- [ ] Revisit Windows smoke-build dependencies when the `vcpkg` environment is ready.
+- [ ] Revisit Windows smoke-build dependencies now that the native Zig-managed Windows path is the default.

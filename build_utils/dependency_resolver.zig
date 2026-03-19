@@ -18,7 +18,6 @@ pub fn resolveDependencies(
     b: *std.Build,
     target: std.Build.ResolvedTarget,
     optimize: std.builtin.OptimizeMode,
-    use_vcpkg: bool,
     need_treesitter: bool,
 ) BuildDependencies {
     const tree_sitter_dep = if (need_treesitter)
@@ -45,29 +44,23 @@ pub fn resolveDependencies(
     const zlua_module = zlua_dep.module("zlua");
     const lua_lib: ?*std.Build.Step.Compile = null;
 
-    const freetype_dep = if (!use_vcpkg)
-        b.dependency("freetype", .{
-            .target = target,
-            .optimize = optimize,
-            .use_system_zlib = true,
-            .enable_brotli = false,
-        })
-    else
-        null;
+    const freetype_dep = b.dependency("freetype", .{
+        .target = target,
+        .optimize = optimize,
+        .use_system_zlib = target.result.os.tag != .windows,
+        .enable_brotli = false,
+    });
 
-    const harfbuzz_dep = if (!use_vcpkg)
-        b.dependency("harfbuzz", .{
-            .target = target,
-            .optimize = optimize,
-            .enable_freetype = true,
-            .freetype_use_system_zlib = true,
-            .freetype_enable_brotli = false,
-        })
-    else
-        null;
+    const harfbuzz_dep = b.dependency("harfbuzz", .{
+        .target = target,
+        .optimize = optimize,
+        .enable_freetype = true,
+        .freetype_use_system_zlib = target.result.os.tag != .windows,
+        .freetype_enable_brotli = false,
+    });
 
-    const freetype_lib: ?*std.Build.Step.Compile = if (freetype_dep) |dep| dep.artifact("freetype") else null;
-    const harfbuzz_lib: ?*std.Build.Step.Compile = if (harfbuzz_dep) |dep| dep.artifact("harfbuzz") else null;
+    const freetype_lib: ?*std.Build.Step.Compile = freetype_dep.artifact("freetype");
+    const harfbuzz_lib: ?*std.Build.Step.Compile = harfbuzz_dep.artifact("harfbuzz");
     if (freetype_lib) |lib| configureWindowsLinker(lib, target);
     if (harfbuzz_lib) |lib| configureWindowsLinker(lib, target);
 

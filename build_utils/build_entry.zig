@@ -16,9 +16,6 @@ pub fn build(b: *std.Build) void {
         boot.app_link_ctx,
         boot.build_mode,
         b.args,
-        boot.target_os,
-        boot.use_vcpkg,
-        boot.vcpkg_bin,
     ) orelse return;
 
     ide_graph.planIdeExtendedBuildGraph(

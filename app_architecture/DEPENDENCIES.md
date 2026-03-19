@@ -14,8 +14,8 @@ Zide now treats dependency sourcing in two layers:
 1. App/library dependencies
 2. Platform/runtime dependencies
 
-The app/library layer is Zig package-managed by default on normal Linux/macOS
-paths.
+The app/library layer is Zig package-managed by default on Linux, macOS, and
+Windows.
 
 That package-managed set currently includes:
 
@@ -55,9 +55,8 @@ Current pinned package graph in `build.zig.zon` includes:
 
 Important nuance:
 
-- FreeType and HarfBuzz are package-managed on non-vcpkg paths now.
-- Windows remains the explicit exception and keeps `vcpkg` as the native
-  dependency path.
+- FreeType and HarfBuzz are package-managed on the default path across all
+  supported platforms now.
 
 ## Build Policy
 
@@ -70,8 +69,8 @@ Current important rules:
 - tree-sitter core is package-managed.
 - `zide-terminal` is intentionally detached from tree-sitter linkage.
 - main/editor/ide and editor-facing test/FFI targets still link tree-sitter.
-- FreeType and HarfBuzz are linked through the pinned package path on
-  non-vcpkg builds.
+- FreeType and HarfBuzz are linked through the pinned package path across the
+  supported native targets.
 
 Build hygiene guardrail:
 
@@ -95,17 +94,18 @@ They still rely on platform/system libraries for:
 
 ### Windows
 
-Windows remains intentionally separate:
+Windows now uses the same Zig package-managed dependency path by default.
 
-- native dependency path is `vcpkg`
-- runtime packaging still includes native DLL payloads from that path
+Current native Windows target policy:
 
-This is not accidental drift. It is the current explicit platform policy.
+- default native Windows target is `x86_64-windows-msvc`
+- the packaged app/library stack comes from the Zig dependency graph
+- runtime packaging no longer depends on a separate `vcpkg` policy surface
 
 ## Text Stack
 
-The text stack is no longer a system-first architecture on normal Linux/macOS
-paths.
+The text stack is no longer a system-first architecture on the normal native
+build path.
 
 Current state:
 
