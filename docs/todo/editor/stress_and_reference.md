@@ -362,6 +362,9 @@ stack issue, not an isolated highlight bug:
         next-batch scheduling chain together in the same frame for the main
         visible range, with only the final tail leaving one layout-only frame
         after the last publish
+      - wrap-work completion now remembers completed visible ranges, removing
+        the long `run_highlight=false` layout-only storm that used to continue
+        after visible highlight work had effectively finished
       - visible precompute now follows a worker schedule contract instead of
         the old inline-publish contract
       - remaining runtime issue is frame-lane churn: while worker execution is

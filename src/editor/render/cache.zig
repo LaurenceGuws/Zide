@@ -40,6 +40,10 @@ pub const EditorRenderCache = struct {
     wrap_work_tick: u64,
     wrap_work_cols: usize,
     wrap_work_active: bool,
+    wrap_work_completed_start: usize,
+    wrap_work_completed_end: usize,
+    wrap_work_completed_tick: u64,
+    wrap_work_completed_cols: usize,
 
     pub fn init(allocator: std.mem.Allocator, max_entries: usize) EditorRenderCache {
         return .{
@@ -75,6 +79,10 @@ pub const EditorRenderCache = struct {
             .wrap_work_tick = 0,
             .wrap_work_cols = 0,
             .wrap_work_active = false,
+            .wrap_work_completed_start = 0,
+            .wrap_work_completed_end = 0,
+            .wrap_work_completed_tick = 0,
+            .wrap_work_completed_cols = 0,
         };
     }
 
@@ -385,6 +393,12 @@ pub const EditorRenderCache = struct {
             self.wrap_work_active = false;
             return;
         }
+        const completed_same_range = !self.wrap_work_active and
+            start_line == self.wrap_work_completed_start and
+            end_line == self.wrap_work_completed_end and
+            cols == self.wrap_work_completed_cols and
+            change_tick == self.wrap_work_completed_tick;
+        if (completed_same_range) return;
         const range_changed = !self.wrap_work_active or start_line != self.wrap_work_start or end_line != self.wrap_work_end or cols != self.wrap_work_cols or change_tick != self.wrap_work_tick;
         if (range_changed) {
             self.wrap_work_start = start_line;
@@ -400,10 +414,21 @@ pub const EditorRenderCache = struct {
         if (!self.wrap_work_active) return null;
         if (self.wrap_work_next >= self.wrap_work_end) {
             self.wrap_work_active = false;
+            self.wrap_work_completed_start = self.wrap_work_start;
+            self.wrap_work_completed_end = self.wrap_work_end;
+            self.wrap_work_completed_tick = self.wrap_work_tick;
+            self.wrap_work_completed_cols = self.wrap_work_cols;
             return null;
         }
         const line = self.wrap_work_next;
         self.wrap_work_next += 1;
+        if (self.wrap_work_next >= self.wrap_work_end) {
+            self.wrap_work_active = false;
+            self.wrap_work_completed_start = self.wrap_work_start;
+            self.wrap_work_completed_end = self.wrap_work_end;
+            self.wrap_work_completed_tick = self.wrap_work_tick;
+            self.wrap_work_completed_cols = self.wrap_work_cols;
+        }
         return line;
     }
 
@@ -467,6 +492,10 @@ pub const EditorRenderCache = struct {
         self.wrap_work_next = 0;
         self.wrap_work_tick = 0;
         self.wrap_work_cols = 0;
+        self.wrap_work_completed_start = 0;
+        self.wrap_work_completed_end = 0;
+        self.wrap_work_completed_tick = 0;
+        self.wrap_work_completed_cols = 0;
     }
 };
 

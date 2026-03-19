@@ -95,6 +95,9 @@ Current implementation progress:
 - frame/runtime publication now happens early enough that the next visible
   highlight batch can usually be scheduled in the same frame, tightening the
   worker cadence without reintroducing inline execution
+- layout-side cache work now also needs the same completed-range discipline as
+  highlight and line-width work; wrap-work completion tracking removed the
+  long layout-only tail that was still muddying visible-highlight runtime logs
 
 ## Current Problem
 
