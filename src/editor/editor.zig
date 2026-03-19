@@ -78,6 +78,7 @@ pub const Editor = struct {
         startup_warmup_active: bool,
         request: ?VisibleHighlightWorkRequest,
         result: ?VisibleHighlightWorkResult,
+        needs_redraw: bool,
     };
 
     pub const DocumentCore = struct {
@@ -467,6 +468,7 @@ pub const Editor = struct {
             self.deinitVisibleHighlightResult(existing);
         }
         self.visible_highlight_runtime.result = result;
+        self.visible_highlight_runtime.needs_redraw = true;
     }
 
     pub fn takeVisibleHighlightResult(self: *Editor) ?VisibleHighlightWorkResult {
@@ -477,6 +479,10 @@ pub const Editor = struct {
 
     pub fn hasPendingVisibleHighlightResult(self: *const Editor) bool {
         return self.visible_highlight_runtime.result != null;
+    }
+
+    pub fn visibleHighlightNeedsRedraw(self: *const Editor) bool {
+        return self.visible_highlight_runtime.needs_redraw;
     }
 
     pub fn applyPendingVisibleHighlightResult(self: *Editor, cache: anytype) bool {
@@ -493,6 +499,7 @@ pub const Editor = struct {
                 line.tokens,
             );
         }
+        self.visible_highlight_runtime.needs_redraw = false;
         return result.lines.len > 0;
     }
 
@@ -501,6 +508,7 @@ pub const Editor = struct {
             self.deinitVisibleHighlightResult(result);
         }
         self.visible_highlight_runtime.result = null;
+        self.visible_highlight_runtime.needs_redraw = false;
     }
 
     pub fn deinitVisibleHighlightResult(self: *Editor, result: *VisibleHighlightWorkResult) void {
@@ -593,6 +601,7 @@ pub const Editor = struct {
                 .startup_warmup_active = false,
                 .request = null,
                 .result = null,
+                .needs_redraw = false,
             },
             .highlight_defer_frames = 0,
             .visible_cache_precompute_defer_frames = 0,

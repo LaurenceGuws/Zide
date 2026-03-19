@@ -335,6 +335,7 @@ stack issue, not an isolated highlight bug:
         though execution is still synchronous
       - visible highlight cache publication now happens from the
         editor frame/runtime lane instead of widget precompute
+      - visible highlight completion now has an explicit runtime redraw signal
       - this is still behavior-preserving and does not yet claim full runtime
         ownership
 

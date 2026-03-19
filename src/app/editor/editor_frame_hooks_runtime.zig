@@ -162,7 +162,7 @@ pub fn handle(
     if (should_drive_search_publication) {
         out.needs_redraw = true;
     }
-    if (editor.hasPendingVisibleHighlightResult()) {
+    if (editor.visibleHighlightNeedsRedraw()) {
         out.needs_redraw = true;
     }
     if (out.needs_redraw or should_drive_visible_warmup) {

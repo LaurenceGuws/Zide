@@ -59,6 +59,9 @@ Current implementation progress:
 - visible highlight cache publication is now applied from the editor
   frame/runtime lane rather than being performed directly inside widget
   precompute
+- visible highlight completion now also has an explicit runtime redraw signal
+  rather than relying on the frame path to infer publication from mailbox
+  presence
 
 ## Current Problem
 
