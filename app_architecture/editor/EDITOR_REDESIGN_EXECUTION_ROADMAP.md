@@ -263,6 +263,8 @@ Phase 2 has now started in code:
 - visible highlight execution is now called explicitly from the app/runtime
   precompute path, so the next move can replace that execution lane without
   changing the widget-facing schedule surface again
+- visible highlight execution logic is now editor-owned rather than
+  widget-owned, narrowing the remaining move to a pure lane swap
 - the current cut is structural and behavior-preserving; it does not yet claim
   full `EditorRuntime` ownership, but it makes that ownership line explicit
 

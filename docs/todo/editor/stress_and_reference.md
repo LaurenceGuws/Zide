@@ -340,6 +340,8 @@ stack issue, not an isolated highlight bug:
         code, though execution is still synchronous
       - visible highlight execution is now called explicitly from the
         app/runtime precompute path
+      - visible highlight execution logic is now editor-owned rather than
+        widget-owned
       - this is still behavior-preserving and does not yet claim full runtime
         ownership
 

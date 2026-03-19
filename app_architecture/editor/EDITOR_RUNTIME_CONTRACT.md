@@ -68,6 +68,9 @@ Current implementation progress:
 - visible highlight execution is now invoked explicitly from the app/runtime
   precompute path rather than being hidden inside the widget precompute
   entrypoint
+- visible highlight execution logic itself now lives on `Editor` rather than in
+  widget helper code; the remaining step is to move that editor-owned execution
+  onto a worker/task lane
 
 ## Current Problem
 

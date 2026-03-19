@@ -503,6 +503,89 @@ pub const Editor = struct {
         return result.lines.len > 0;
     }
 
+    pub fn executePendingVisibleHighlightRequest(self: *Editor) bool {
+        const perf_log = app_logger.logger("editor.perf");
+        const request = self.takeVisibleHighlightRequest() orelse {
+            perf_log.logf(.info, "visible_precompute_highlight lines=0 budget=0 time_us=0", .{});
+            return false;
+        };
+        const highlighter = self.doc.highlighter orelse {
+            perf_log.logf(.info, "visible_precompute_highlight lines=0 budget=0 time_us=0", .{});
+            return false;
+        };
+
+        const t_start = std.time.nanoTimestamp();
+        const range_start = self.lineStart(request.start_line);
+        const range_end = if (request.end_line < self.lineCount()) self.lineStart(request.end_line) else self.totalLen();
+        var tokens = highlighter.highlightRange(range_start, range_end, self.allocator) catch |err| blk: {
+            const log = app_logger.logger("editor.draw");
+            log.logf(.warning, "visible precompute highlight range failed start={d} end={d} err={s}", .{ range_start, range_end, @errorName(err) });
+            break :blk &[_]syntax_mod.HighlightToken{};
+        };
+        const allocated = tokens.ptr != (&[_]syntax_mod.HighlightToken{}).ptr;
+        defer if (allocated) self.allocator.free(tokens);
+        if (tokens.len > 1) {
+            std.sort.heap(syntax_mod.HighlightToken, @constCast(tokens), {}, struct {
+                fn lessThan(_: void, a: syntax_mod.HighlightToken, b: syntax_mod.HighlightToken) bool {
+                    return syntax_mod.highlightTokenLessThanStable(a, b);
+                }
+            }.lessThan);
+        }
+
+        var lines_done: usize = 0;
+        var line_results = std.ArrayList(VisibleHighlightLineResult).empty;
+        defer line_results.deinit(self.allocator);
+        var token_idx: usize = 0;
+        var line_idx = request.start_line;
+        while (line_idx < request.end_line) : (line_idx += 1) {
+            const line_text = self.getLineAlloc(line_idx) catch |err| {
+                const log = app_logger.logger("editor.draw");
+                log.logf(.warning, "visible highlight line load failed line={d} err={s}", .{ line_idx, @errorName(err) });
+                continue;
+            };
+            defer self.allocator.free(line_text);
+            const line_start = self.lineStart(line_idx);
+            const line_end = line_start + line_text.len;
+            while (token_idx < tokens.len and tokens[token_idx].end <= line_start) {
+                token_idx += 1;
+            }
+            var line_token_end = token_idx;
+            while (line_token_end < tokens.len and tokens[line_token_end].start < line_end) {
+                line_token_end += 1;
+            }
+            const line_tokens = self.allocator.dupe(syntax_mod.HighlightToken, tokens[token_idx..line_token_end]) catch |err| {
+                const log = app_logger.logger("editor.draw");
+                log.logf(.warning, "visible highlight line token dup failed line={d} err={s}", .{ line_idx, @errorName(err) });
+                continue;
+            };
+            line_results.append(self.allocator, .{
+                .line_idx = line_idx,
+                .line_start = line_start,
+                .line_text_hash = hashLine(line_text),
+                .tokens = line_tokens,
+            }) catch |err| {
+                const log = app_logger.logger("editor.draw");
+                self.allocator.free(line_tokens);
+                log.logf(.warning, "visible highlight result append failed line={d} err={s}", .{ line_idx, @errorName(err) });
+                continue;
+            };
+            lines_done += 1;
+        }
+        const owned_lines = line_results.toOwnedSlice(self.allocator) catch |err| {
+            const log = app_logger.logger("editor.draw");
+            for (line_results.items) |line| self.allocator.free(line.tokens);
+            log.logf(.warning, "visible highlight result ownership failed err={s}", .{@errorName(err)});
+            return false;
+        };
+        self.replaceVisibleHighlightResult(.{
+            .request = request,
+            .lines = owned_lines,
+        });
+        const elapsed_us = @as(i64, @intCast(@divTrunc(std.time.nanoTimestamp() - t_start, 1000)));
+        perf_log.logf(.info, "visible_precompute_highlight lines={d} budget={d} time_us={d}", .{ lines_done, request.end_line - request.start_line, elapsed_us });
+        return lines_done > 0;
+    }
+
     pub fn clearVisibleHighlightResult(self: *Editor) void {
         if (self.visible_highlight_runtime.result) |*result| {
             self.deinitVisibleHighlightResult(result);
