@@ -2,9 +2,9 @@
 
 This doc owns practical bootstrap, build, run, and test guidance.
 
-For dependency source policy, use [`docs/DEPENDENCIES.md`](/home/home/personal/zide/docs/DEPENDENCIES.md) as the authority.
+For dependency source policy, use [`docs/DEPENDENCIES.md`](../docs/DEPENDENCIES.md) as the authority.
 For customer-facing product overview and hosted docs links, use
-[`README.md`](/home/home/personal/zide/README.md).
+[`README.md`](../README.md).
 
 ## Current Dependency Model
 
@@ -28,7 +28,7 @@ You still need platform/system libraries and native runtime support:
 - `fontconfig` on Linux for system fallback font discovery
 
 Windows remains the exception: the current Windows-native dependency flow still
-uses vcpkg. See [`docs/DEPENDENCIES.md`](/home/home/personal/zide/docs/DEPENDENCIES.md) for the exact Windows path.
+uses vcpkg. See [`docs/DEPENDENCIES.md`](../docs/DEPENDENCIES.md) for the exact Windows path.
 
 ## System Dependencies
 
@@ -64,7 +64,7 @@ brew install zig
 ```
 
 If local toolchain or platform runtime requirements drift, defer to
-[`docs/DEPENDENCIES.md`](/home/home/personal/zide/docs/DEPENDENCIES.md) rather than copying stale package lists forward here.
+[`docs/DEPENDENCIES.md`](../docs/DEPENDENCIES.md) rather than copying stale package lists forward here.
 
 ### Windows
 
@@ -75,7 +75,7 @@ Install:
 - vcpkg-based native dependencies
 
 Use the Windows/vcpkg section in
-[`docs/DEPENDENCIES.md`](/home/home/personal/zide/docs/DEPENDENCIES.md) as the detailed authority.
+[`docs/DEPENDENCIES.md`](../docs/DEPENDENCIES.md) as the detailed authority.
 
 ## Bootstrap
 
@@ -152,7 +152,7 @@ Current runtime TERM selection order is:
 - `xterm-256color`
 
 For the full compatibility surface, use
-[`docs/reference/terminal_compatibility.md`](/home/home/personal/zide/docs/reference/terminal_compatibility.md).
+[`docs/reference/terminal_compatibility.md`](../docs/reference/terminal_compatibility.md).
 
 ## Tree-sitter Grammar Packs
 
@@ -171,7 +171,7 @@ zig build test
 ## Notes
 
 - Current focus and active issues live in
-  [`docs/AGENT_HANDOFF.md`](/home/home/personal/zide/docs/AGENT_HANDOFF.md)
+  [`docs/AGENT_HANDOFF.md`](../docs/AGENT_HANDOFF.md)
   and the relevant `docs/todo/` files.
 - UI rendering journey:
-  [`app_architecture/ui/DEVELOPMENT_JOURNEY.md`](/home/home/personal/zide/app_architecture/ui/DEVELOPMENT_JOURNEY.md)
+  [`app_architecture/ui/DEVELOPMENT_JOURNEY.md`](ui/DEVELOPMENT_JOURNEY.md)

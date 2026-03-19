@@ -14,16 +14,16 @@ This topic covers:
 
 Primary local references:
 
-- [.zide.lua](/home/home/personal/zide/.zide.lua)
-- [renderer.zig](/home/home/personal/zide/src/ui/renderer.zig)
-- [window_init.zig](/home/home/personal/zide/src/ui/renderer/window_init.zig)
-- [AGENT_HANDOFF.md](/home/home/personal/zide/docs/AGENT_HANDOFF.md)
+- [.zide.lua](../../../../.zide.lua)
+- [renderer.zig](../../../../src/ui/renderer.zig)
+- [window_init.zig](../../../../src/ui/renderer/window_init.zig)
+- [AGENT_HANDOFF.md](../../../AGENT_HANDOFF.md)
 
 ## Current Useful Signals
 
 1. Startup contract logging is already high-value and low-perturbation.
 
-   [window_init.zig](/home/home/personal/zide/src/ui/renderer/window_init.zig)
+   [window_init.zig](../../../../src/ui/renderer/window_init.zig)
    now logs:
 
    - realized SDL GL attrs
@@ -36,14 +36,14 @@ Primary local references:
 
 2. The best live present probe is suspicion-driven, not per-frame.
 
-   [renderer.zig](/home/home/personal/zide/src/ui/renderer.zig) only emits the
+   [renderer.zig](../../../../src/ui/renderer.zig) only emits the
    expensive `terminal.ui.target_sample` cut when it detects a present-side
    mismatch. That is the right pattern: always-armed registration, but
    conditional emission.
 
 3. Silent baseline capture in the widget is the correct compromise.
 
-   [terminal_widget_draw.zig](/home/home/personal/zide/src/ui/widgets/terminal_widget_draw.zig)
+   [terminal_widget_draw.zig](../../../../src/ui/widgets/terminal_widget_draw.zig)
    still keeps `bg/glyph/window/final` baseline state for probes even when it
    no longer writes every intermediate log line every frame. That preserves
    diagnostic power without flooding the hot path.

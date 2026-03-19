@@ -1,8 +1,7 @@
 {
   "title": "zbar Docs Explorer",
-  "icon": "./__repo?root=%2Fhome%2Fhome%2Fpersonal%2Fzbar&path=assets%2Ficon%2Fzbar-icon.png",
+  "icon": "../../../../zbar/assets/icon/zbar-icon.png",
   "brandWordmarkText": "bar",
-  "repoAbsolutePath": "/home/home/personal/zbar",
   "repoBasePath": "../../../../zbar/",
   "repoUrl": "https://github.com/LaurenceGuws/zbar",
   "runtimeMode": "local-dev",

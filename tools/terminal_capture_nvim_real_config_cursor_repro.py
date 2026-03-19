@@ -15,13 +15,15 @@ import sys
 import tempfile
 from pathlib import Path
 
+REPO_ROOT = Path(__file__).resolve().parent.parent
+
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--name", default="redraw_nvim_real_config_cursor_step_probe")
     parser.add_argument("--rows", type=int, default=16)
     parser.add_argument("--cols", type=int, default=100)
-    parser.add_argument("--cwd", default="/home/home/personal/zide")
+    parser.add_argument("--cwd", default=str(REPO_ROOT))
     parser.add_argument("--target-file", default="src/app_logger.zig")
     parser.add_argument(
         "--nvim-command",

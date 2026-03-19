@@ -10,7 +10,7 @@ Track protocol support/accuracy findings from the review as discrete, traceable 
 
 This file is the active protocol parity tracker.
 
-Use [TERMINAL_PROTOCOL_ACCURACY_REVIEW_2026-02-23.md](/home/home/personal/zide/docs/review/TERMINAL_PROTOCOL_ACCURACY_REVIEW_2026-02-23.md)
+Use [TERMINAL_PROTOCOL_ACCURACY_REVIEW_2026-02-23.md](../../../docs/review/TERMINAL_PROTOCOL_ACCURACY_REVIEW_2026-02-23.md)
 for the detailed source-review evidence, implementation increments, and dated
 change history that used to live inline here.
 
@@ -113,4 +113,4 @@ Unsupported-reporting correction rule (applies to work already landed):
 
 Detailed findings, implementation increments, and dated protocol parity history
 now live in
-[TERMINAL_PROTOCOL_ACCURACY_REVIEW_2026-02-23.md](/home/home/personal/zide/docs/review/TERMINAL_PROTOCOL_ACCURACY_REVIEW_2026-02-23.md).
+[TERMINAL_PROTOCOL_ACCURACY_REVIEW_2026-02-23.md](../../../docs/review/TERMINAL_PROTOCOL_ACCURACY_REVIEW_2026-02-23.md).

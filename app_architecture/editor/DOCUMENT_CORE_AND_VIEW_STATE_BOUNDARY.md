@@ -40,7 +40,7 @@ Today `Editor` owns all of the following in one mutable object:
 - undo-selection restoration side table
 
 This violates the intended editor layering in
- [DESIGN.md](/home/home/personal/zide/app_architecture/editor/DESIGN.md).
+ [DESIGN.md](DESIGN.md).
 
 ## Decision
 

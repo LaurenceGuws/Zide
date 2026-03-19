@@ -88,7 +88,7 @@ Downstream validation now supports that judgment too:
 
 ### 1. Snapshot Acquire Is The Main Remaining Boundary Cost
 
-Current shape in [core_api.zig](/home/home/personal/zide/src/terminal/ffi/core_api.zig):
+Current shape in [core_api.zig](../../../src/terminal/ffi/core_api.zig):
 
 - allocates a `SnapshotOwner`
 - allocates a copied flat cell array

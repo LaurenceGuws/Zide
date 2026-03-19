@@ -17,9 +17,9 @@ Current transition rule:
 
 Current intentional `src/` exceptions:
 
-- [terminal_session_tests.zig](/home/home/personal/zide/src/terminal/core/terminal_session_tests.zig)
+- [terminal_session_tests.zig](../src/terminal/core/terminal_session_tests.zig)
   - stays source-adjacent because it is tightly coupled to `TerminalSession` ownership and regression locality matters more than one fewer file in `tests/`
-- [editor_ffi_smoke_tests.zig](/home/home/personal/zide/src/editor_ffi_smoke_tests.zig)
+- [editor_ffi_smoke_tests.zig](../src/editor_ffi_smoke_tests.zig)
   - stays under `src/` because it is a dedicated standalone FFI smoke root consumed directly by the build graph, not a generic aggregate/integration entrypoint
 
 This policy is intended to eliminate ambiguity, not to ban source-adjacent tests.

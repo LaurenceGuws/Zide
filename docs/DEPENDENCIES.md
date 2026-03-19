@@ -3,7 +3,7 @@
 This doc owns dependency sourcing policy and platform dependency guidance.
 
 For bootstrap/build/run commands, use
-[`app_architecture/BOOTSTRAP.md`](/home/home/personal/zide/app_architecture/BOOTSTRAP.md).
+[`app_architecture/BOOTSTRAP.md`](../app_architecture/BOOTSTRAP.md).
 
 ## Current Model
 
@@ -174,7 +174,7 @@ Launcher behavior:
 - packaged installs are expected to rely on installed terminfo paths
 
 For the user-facing compatibility surface, use
-[`docs/reference/terminal_compatibility.md`](/home/home/personal/zide/docs/reference/terminal_compatibility.md).
+[`docs/reference/terminal_compatibility.md`](reference/terminal_compatibility.md).
 
 ## Notes
 

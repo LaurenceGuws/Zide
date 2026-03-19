@@ -3,7 +3,7 @@
 ## Purpose
 
 Turn the present-path redesign decision from
-[WAYLAND_PRESENT_TECHNICAL_WRITEUP.md](/home/home/personal/zide/app_architecture/terminal/present/WAYLAND_TECHNICAL_WRITEUP.md)
+[WAYLAND_PRESENT_TECHNICAL_WRITEUP.md](../../../app_architecture/terminal/present/WAYLAND_TECHNICAL_WRITEUP.md)
 into an execution plan with:
 
 - explicit phase boundaries
@@ -32,7 +32,7 @@ Authority note:
   `docs/research/terminal/wayland_present/` and relevant review
   docs, not in this plan once they stop changing the ownership model.
 - Landed rollout notes now live in
-  [WAYLAND_PRESENT_ROLLOUT_2026-03.md](/home/home/personal/zide/docs/review/archive/terminal/WAYLAND_PRESENT_ROLLOUT_2026-03.md),
+  [WAYLAND_PRESENT_ROLLOUT_2026-03.md](../../review/archive/terminal/WAYLAND_PRESENT_ROLLOUT_2026-03.md),
   not inline in this plan.
 
 Shared redraw/publication/present semantic authority lives in:
@@ -324,7 +324,7 @@ Mitigation:
 
 Phase-by-phase landed-shape notes and the first implementation slice now live
 in
-[WAYLAND_PRESENT_ROLLOUT_2026-03.md](/home/home/personal/zide/docs/review/archive/terminal/WAYLAND_PRESENT_ROLLOUT_2026-03.md).
+[WAYLAND_PRESENT_ROLLOUT_2026-03.md](../../review/archive/terminal/WAYLAND_PRESENT_ROLLOUT_2026-03.md).
 
 ## Exit Criteria
 

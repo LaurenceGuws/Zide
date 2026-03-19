@@ -23,7 +23,7 @@ What is already true:
 - folders/files are rendered from a tree model, not from ad hoc DOM mutation
 - active path and expanded paths are explicit state
 - connector and hover colors are token-driven through
-  [theme.css](/home/home/personal/zide/tools/docs_explorer/styles/theme.css)
+  [theme.css](../styles/theme.css)
 
 What is still weak:
 
@@ -57,15 +57,15 @@ That means the long-term design should avoid:
 
 Design ownership is split like this:
 
-- [tree_model.ts](/home/home/personal/zide/tools/docs_explorer/ts/tree/tree_model.ts)
+- [tree_model.ts](../ts/tree/tree_model.ts)
   - structural tree model from document paths
-- [tree_markup.ts](/home/home/personal/zide/tools/docs_explorer/ts/tree/tree_markup.ts)
+- [tree_markup.ts](../ts/tree/tree_markup.ts)
   - row semantics and row/path classes
-- [tree.ts](/home/home/personal/zide/tools/docs_explorer/ts/tree/tree.ts)
+- [tree.ts](../ts/tree/tree.ts)
   - DOM mount and toggle wiring
-- [tree.css](/home/home/personal/zide/tools/docs_explorer/styles/tree.css)
+- [tree.css](../styles/tree.css)
   - row geometry and connector visuals
-- [theme.css](/home/home/personal/zide/tools/docs_explorer/styles/theme.css)
+- [theme.css](../styles/theme.css)
   - connector and active-path tokens
 
 ## Invariants
@@ -90,4 +90,4 @@ grammar:
 3. open state must not add a second active continuation layer on `summary` or
    on `.folder-children`
 
-Track that work in [../TODO.md](/home/home/personal/zide/tools/docs_explorer/TODO.md).
+Track that work in [../TODO.md](../TODO.md).

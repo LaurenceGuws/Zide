@@ -10,10 +10,10 @@ The current constraints are:
 
 - Zide already has detailed terminal texture planning for partial vs full
   updates, row-local spans, and viewport-shift handling in
-  [terminal_widget_draw_texture.zig](/home/home/personal/zide/src/ui/widgets/terminal_widget_draw_texture.zig).
+  [terminal_widget_draw_texture.zig](../../../../src/ui/widgets/terminal_widget_draw_texture.zig).
 - The surviving live bug is not in VT publication or pre-swap composition; it
   appears across swap/present on the default framebuffer path in
-  [renderer.zig](/home/home/personal/zide/src/ui/renderer.zig).
+  [renderer.zig](../../../../src/ui/renderer.zig).
 - The active EGL contract is destructive-swap, so the design cannot rely on
   default-framebuffer preservation semantics.
 
@@ -103,7 +103,7 @@ Zide's current texture planner already supports:
 - full-vs-partial choice
 - shift-aware partial plans
 
-in [terminal_widget_draw_texture.zig](/home/home/personal/zide/src/ui/widgets/terminal_widget_draw_texture.zig).
+in [terminal_widget_draw_texture.zig](../../../../src/ui/widgets/terminal_widget_draw_texture.zig).
 
 If the redesign throws that away and replaces it with “full terminal upload plus
 full scene repaint every frame,” it will regress the embedded/native goal.
@@ -120,14 +120,14 @@ The renderer should not reinterpret VT/widget dirtiness heuristics into present
 ownership. Ghostty is a good contrast here: it keeps coarse `false/partial/full`
 dirty state and row-local dirty markers inside render-state ownership rather
 than treating present as the source of truth
-([render.zig](/home/home/personal/zide/reference_repos/terminals/ghostty/src/terminal/render.zig)).
+([render.zig](../../../../reference_repos/terminals/ghostty/src/terminal/render.zig)).
 
 ### Risk: adopting the existing offscreen experiment as the design
 
 Zide's current `compose_main_to_offscreen` experiment already proved it is not
 yet authoritative. It introduced its own broken lane. The design should borrow
 the ownership direction, not the current implementation shape in
-[renderer.zig](/home/home/personal/zide/src/ui/renderer.zig).
+[renderer.zig](../../../../src/ui/renderer.zig).
 
 ## Reliability Constraints
 
@@ -152,11 +152,11 @@ Kitty's `indirect_output` state is a useful signal here:
 - `texture_id`
 - `framebuffer_id`
 
-in [state.h](/home/home/personal/zide/reference_repos/terminals/kitty/kitty/state.h),
+in [state.h](../../../../reference_repos/terminals/kitty/kitty/state.h),
 with lifecycle in
-[state.c](/home/home/personal/zide/reference_repos/terminals/kitty/kitty/state.c)
+[state.c](../../../../reference_repos/terminals/kitty/kitty/state.c)
 and output binding in
-[gl.c](/home/home/personal/zide/reference_repos/terminals/kitty/kitty/gl.c).
+[gl.c](../../../../reference_repos/terminals/kitty/kitty/gl.c).
 The main takeaway is explicit output-target ownership, not Kitty-specific GL
 details.
 
@@ -168,7 +168,7 @@ Foot is useful here even though it is not using the same GPU path. It:
 - applies current damage narrowly
 - submits explicit dirty rectangles with `wl_surface_damage_buffer()`
 
-in [render.c](/home/home/personal/zide/reference_repos/terminals/foot/render.c).
+in [render.c](../../../../reference_repos/terminals/foot/render.c).
 
 The Zide equivalent is:
 
@@ -180,7 +180,7 @@ The Zide equivalent is:
 Ghostty's coarse `Dirty.false / partial / full` split is a good reminder that
 full invalidation should be explicit and rare, not an accidental side effect of
 presentation uncertainty
-([render.zig](/home/home/personal/zide/reference_repos/terminals/ghostty/src/terminal/render.zig)).
+([render.zig](../../../../reference_repos/terminals/ghostty/src/terminal/render.zig)).
 
 ## Recommendation Criteria
 

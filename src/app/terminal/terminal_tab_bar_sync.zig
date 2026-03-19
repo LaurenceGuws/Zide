@@ -193,7 +193,7 @@ test "terminal tab label prefers rich command summary and cwd context" {
             .raw_title = "Terminal",
             .foreground_process_command = "codex resume --search ...",
             .foreground_process_label = "codex",
-            .cwd = "/home/home/personal/zide",
+            .cwd = "/workspace/zide",
             .progress_state = .none,
             .progress_value = null,
         },

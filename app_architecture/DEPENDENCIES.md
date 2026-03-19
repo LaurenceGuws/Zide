@@ -3,9 +3,9 @@
 This doc owns the current dependency architecture for Zide.
 
 For user/operator setup guidance, use
-[`docs/DEPENDENCIES.md`](/home/home/personal/zide/docs/DEPENDENCIES.md).
+[`docs/DEPENDENCIES.md`](../docs/DEPENDENCIES.md).
 For bootstrap/build/run commands, use
-[`app_architecture/BOOTSTRAP.md`](/home/home/personal/zide/app_architecture/BOOTSTRAP.md).
+[`app_architecture/BOOTSTRAP.md`](BOOTSTRAP.md).
 
 ## Current Model
 
@@ -157,8 +157,8 @@ dependency-source policy.
 
 Use:
 
-- [`docs/reference/terminal_compatibility.md`](/home/home/personal/zide/docs/reference/terminal_compatibility.md)
-- [`app_architecture/terminal/VT_CORE_DESIGN.md`](/home/home/personal/zide/app_architecture/terminal/VT_CORE_DESIGN.md)
+- [`docs/reference/terminal_compatibility.md`](../docs/reference/terminal_compatibility.md)
+- [`app_architecture/terminal/VT_CORE_DESIGN.md`](terminal/VT_CORE_DESIGN.md)
 
 ## Remaining Work
 

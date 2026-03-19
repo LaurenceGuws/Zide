@@ -21,9 +21,9 @@ renderer architecture by itself. Those belong to later topics.
    The public SDL doc still describes `SDL_GL_SwapWindow()` in the usual
    double-buffer terms, but the Wayland backend overrides the behavior with its
    own frame-callback-driven swap control. See
-   [SDL_GL_SwapWindow.md](/home/home/personal/zide/reference_repos/sdlwiki_md/SDL3/SDL_GL_SwapWindow.md)
+   [SDL_GL_SwapWindow.md](../../../../reference_repos/sdlwiki_md/SDL3/SDL_GL_SwapWindow.md)
    and
-   [SDL_waylandopengles.c](/home/home/personal/zide/reference_repos/backends/sdl/src/video/wayland/SDL_waylandopengles.c).
+   [SDL_waylandopengles.c](../../../../reference_repos/backends/sdl/src/video/wayland/SDL_waylandopengles.c).
 
 2. On Wayland, SDL intentionally forces EGL swap interval to zero and manages
    pacing itself.
@@ -33,7 +33,7 @@ renderer architecture by itself. Those belong to later topics.
    explicit: SDL avoids blocking inside EGL because Wayland compositors can
    stall forever waiting for frame callbacks.
    See
-   [SDL_waylandopengles.c](/home/home/personal/zide/reference_repos/backends/sdl/src/video/wayland/SDL_waylandopengles.c).
+   [SDL_waylandopengles.c](../../../../reference_repos/backends/sdl/src/video/wayland/SDL_waylandopengles.c).
 
 3. SDL's Wayland backend makes swap order depend on its own `double_buffer`
    mode, not just on the app's requested GL attributes.
@@ -48,7 +48,7 @@ renderer architecture by itself. Those belong to later topics.
    This is SDL-owned behavior above EGL itself, and it means "swap semantics"
    on this backend are partly SDL scheduling semantics.
    See
-   [SDL_waylandopengles.c](/home/home/personal/zide/reference_repos/backends/sdl/src/video/wayland/SDL_waylandopengles.c).
+   [SDL_waylandopengles.c](../../../../reference_repos/backends/sdl/src/video/wayland/SDL_waylandopengles.c).
 
 4. SDL explicitly skips swaps when the Wayland shell surface is not in a shown
    or waiting-for-frame state.
@@ -58,7 +58,7 @@ renderer architecture by itself. Those belong to later topics.
    means Zide cannot assume "call swap, therefore a presentation attempt
    happened" on Wayland.
    See
-   [SDL_waylandopengles.c](/home/home/personal/zide/reference_repos/backends/sdl/src/video/wayland/SDL_waylandopengles.c).
+   [SDL_waylandopengles.c](../../../../reference_repos/backends/sdl/src/video/wayland/SDL_waylandopengles.c).
 
 5. SDL uses Wayland frame callbacks as part of its presentation contract and
    includes a timeout escape hatch.
@@ -69,9 +69,9 @@ renderer architecture by itself. Those belong to later topics.
    That is an SDL-specific liveness contract, not an app-level rendering
    contract.
    See
-   [SDL_waylandopengles.c](/home/home/personal/zide/reference_repos/backends/sdl/src/video/wayland/SDL_waylandopengles.c)
+   [SDL_waylandopengles.c](../../../../reference_repos/backends/sdl/src/video/wayland/SDL_waylandopengles.c)
    and the frame-ready path in
-   [SDL_waylandwindow.c](/home/home/personal/zide/reference_repos/backends/sdl/src/video/wayland/SDL_waylandwindow.c).
+   [SDL_waylandwindow.c](../../../../reference_repos/backends/sdl/src/video/wayland/SDL_waylandwindow.c).
 
 6. Window-surface ownership is dynamic on Wayland and not all native objects
    persist across show/hide cycles.
@@ -81,7 +81,7 @@ renderer architecture by itself. Those belong to later topics.
    `SDL_GetWindowProperties()` is therefore a live-inspection API, not a
    one-time bootstrap API.
    See
-   [SDL_GetWindowProperties.md](/home/home/personal/zide/reference_repos/sdlwiki_md/SDL3/SDL_GetWindowProperties.md).
+   [SDL_GetWindowProperties.md](../../../../reference_repos/sdlwiki_md/SDL3/SDL_GetWindowProperties.md).
 
 7. SDL exposes enough EGL state directly for runtime contract inspection.
 
@@ -90,10 +90,10 @@ renderer architecture by itself. Those belong to later topics.
    that means the actual EGL surface/config contract can be logged and verified
    at runtime without leaving SDL.
    See:
-   [SDL_EGL_GetCurrentDisplay.md](/home/home/personal/zide/reference_repos/sdlwiki_md/SDL3/SDL_EGL_GetCurrentDisplay.md),
-   [SDL_EGL_GetCurrentConfig.md](/home/home/personal/zide/reference_repos/sdlwiki_md/SDL3/SDL_EGL_GetCurrentConfig.md),
+   [SDL_EGL_GetCurrentDisplay.md](../../../../reference_repos/sdlwiki_md/SDL3/SDL_EGL_GetCurrentDisplay.md),
+   [SDL_EGL_GetCurrentConfig.md](../../../../reference_repos/sdlwiki_md/SDL3/SDL_EGL_GetCurrentConfig.md),
    and
-   [SDL_EGL_GetWindowSurface.md](/home/home/personal/zide/reference_repos/sdlwiki_md/SDL3/SDL_EGL_GetWindowSurface.md).
+   [SDL_EGL_GetWindowSurface.md](../../../../reference_repos/sdlwiki_md/SDL3/SDL_EGL_GetWindowSurface.md).
 
 8. SDL owns EGL window-surface creation/destruction, and Wayland window resize
    goes through `wl_egl_window_resize()`.
@@ -103,8 +103,8 @@ renderer architecture by itself. Those belong to later topics.
    created/destroyed in the Wayland window code and resized with
    `wl_egl_window_resize(...)`.
    See
-   [SDL_egl.c](/home/home/personal/zide/reference_repos/backends/sdl/src/video/SDL_egl.c),
-   [SDL_waylandwindow.c](/home/home/personal/zide/reference_repos/backends/sdl/src/video/wayland/SDL_waylandwindow.c).
+   [SDL_egl.c](../../../../reference_repos/backends/sdl/src/video/SDL_egl.c),
+   [SDL_waylandwindow.c](../../../../reference_repos/backends/sdl/src/video/wayland/SDL_waylandwindow.c).
 
 ## Implications For Zide
 

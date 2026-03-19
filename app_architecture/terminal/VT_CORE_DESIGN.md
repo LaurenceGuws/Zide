@@ -879,7 +879,7 @@ Migration approach:
 ## Historical Extraction Progress
 
 The detailed 2026-03-10 extraction checkpoints now live in
-[VT_CORE_SPLIT_PROGRESS_2026-03-10.md](/home/home/personal/zide/docs/review/archive/terminal/VT_CORE_SPLIT_PROGRESS_2026-03-10.md).
+[VT_CORE_SPLIT_PROGRESS_2026-03-10.md](../../docs/review/archive/terminal/VT_CORE_SPLIT_PROGRESS_2026-03-10.md).
 
 ## Immediate Naming Direction
 

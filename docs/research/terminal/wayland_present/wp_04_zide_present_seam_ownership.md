@@ -10,13 +10,13 @@ already fixed.
 
 Primary local refs:
 
-- [VT_CORE_DESIGN.md](/home/home/personal/zide/app_architecture/terminal/VT_CORE_DESIGN.md)
-- [terminal_widget.zig](/home/home/personal/zide/src/ui/widgets/terminal_widget.zig)
-- [terminal_widget_draw.zig](/home/home/personal/zide/src/ui/widgets/terminal_widget_draw.zig)
-- [terminal_widget_draw_texture.zig](/home/home/personal/zide/src/ui/widgets/terminal_widget_draw_texture.zig)
-- [renderer.zig](/home/home/personal/zide/src/ui/renderer.zig)
-- [session_rendering.zig](/home/home/personal/zide/src/terminal/core/session_rendering.zig)
-- [session_rendering_retirement.zig](/home/home/personal/zide/src/terminal/core/session_rendering_retirement.zig)
+- [VT_CORE_DESIGN.md](../../../../app_architecture/terminal/VT_CORE_DESIGN.md)
+- [terminal_widget.zig](../../../../src/ui/widgets/terminal_widget.zig)
+- [terminal_widget_draw.zig](../../../../src/ui/widgets/terminal_widget_draw.zig)
+- [terminal_widget_draw_texture.zig](../../../../src/ui/widgets/terminal_widget_draw_texture.zig)
+- [renderer.zig](../../../../src/ui/renderer.zig)
+- [session_rendering.zig](../../../../src/terminal/core/session_rendering.zig)
+- [session_rendering_retirement.zig](../../../../src/terminal/core/session_rendering_retirement.zig)
 
 ## Current Ownership Map
 
@@ -27,13 +27,13 @@ The terminal core owns publication truth:
 - `capturePresentation()` locks the session, refreshes pending scroll/view cache
   state if needed, copies the active `RenderCache`, and returns the captured
   presented generation in
-  [session_rendering.zig](/home/home/personal/zide/src/terminal/core/session_rendering.zig).
+  [session_rendering.zig](../../../../src/terminal/core/session_rendering.zig).
 - `publishedGeneration()`, `presentedGeneration()`,
   `notePresentedGeneration()`, and `acknowledgePresentedGeneration()` define the
   publication/presentation lifecycle surface in
-  [session_rendering.zig](/home/home/personal/zide/src/terminal/core/session_rendering.zig)
+  [session_rendering.zig](../../../../src/terminal/core/session_rendering.zig)
   and
-  [session_rendering_retirement.zig](/home/home/personal/zide/src/terminal/core/session_rendering_retirement.zig).
+  [session_rendering_retirement.zig](../../../../src/terminal/core/session_rendering_retirement.zig).
 - `view_cache` owns active render-cache publication and dirty/damage semantics
   below that seam.
 
@@ -43,11 +43,11 @@ The widget owns terminal-content consumption and upload planning:
 
 - `TerminalWidget.draw()` captures the published render cache into
   `self.draw_cache` via
-  [terminal_widget.zig](/home/home/personal/zide/src/ui/widgets/terminal_widget.zig).
-- [terminal_widget_draw.zig](/home/home/personal/zide/src/ui/widgets/terminal_widget_draw.zig)
+  [terminal_widget.zig](../../../../src/ui/widgets/terminal_widget.zig).
+- [terminal_widget_draw.zig](../../../../src/ui/widgets/terminal_widget_draw.zig)
   owns texture-update orchestration, terminal-local draw state, probe
   registration, and terminal composition into the current renderer target.
-- [terminal_widget_draw_texture.zig](/home/home/personal/zide/src/ui/widgets/terminal_widget_draw_texture.zig)
+- [terminal_widget_draw_texture.zig](../../../../src/ui/widgets/terminal_widget_draw_texture.zig)
   owns the rules for turning cache dirty state into full vs partial texture
   update plans.
 
@@ -56,7 +56,7 @@ The widget owns terminal-content consumption and upload planning:
 The renderer owns frame and swap execution:
 
 - `beginFrame()` and `endFrame()` in
-  [renderer.zig](/home/home/personal/zide/src/ui/renderer.zig) own target
+  [renderer.zig](../../../../src/ui/renderer.zig) own target
   binding, swap timing, swap-edge fallbacks, and suspicious-frame capture.
 - The renderer owns `SDL_GL_SwapWindow`, but not terminal publication truth.
 - The renderer currently also owns the optional whole-frame offscreen compose
@@ -68,9 +68,9 @@ Presentation acknowledgement currently flows back through widget draw outcome:
 
 - `terminal_widget_draw.zig` returns `PresentationFeedback` as `DrawOutcome`.
 - `TerminalWidget.finishFramePresentation()` forwards that to the session in
-  [terminal_widget.zig](/home/home/personal/zide/src/ui/widgets/terminal_widget.zig).
+  [terminal_widget.zig](../../../../src/ui/widgets/terminal_widget.zig).
 - `completePresentationFeedback()` in
-  [session_rendering.zig](/home/home/personal/zide/src/terminal/core/session_rendering.zig)
+  [session_rendering.zig](../../../../src/terminal/core/session_rendering.zig)
   decides whether to retire published damage.
 
 ## Proven Correct Seams
@@ -95,7 +95,7 @@ good enough to reach the pre-swap render target correctly for this lane.
 
 ### Terminal widget is still an overloaded handoff layer
 
-[terminal_widget_draw.zig](/home/home/personal/zide/src/ui/widgets/terminal_widget_draw.zig)
+[terminal_widget_draw.zig](../../../../src/ui/widgets/terminal_widget_draw.zig)
 still mixes:
 
 - generation comparison

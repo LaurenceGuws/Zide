@@ -28,10 +28,10 @@ Current entrypoints:
 Run:
 
 ```bash
-cd /home/home/personal/zide
+cd "$(git rev-parse --show-toplevel)"
 npm run build:docs-explorer
 
-cd /home/home/personal/zide/tools/docs_explorer
+cd tools/docs_explorer
 python3 docs_explorer.py
 ```
 
@@ -40,7 +40,7 @@ Then open the printed URL.
 Alternate config:
 
 ```bash
-cd /home/home/personal/zide/tools/docs_explorer
+cd tools/docs_explorer
 python3 docs_explorer.py 8000 project.pages.json
 ```
 
@@ -85,7 +85,7 @@ Notes:
   `main`.
 - Release-branch Pages publication should keep `.nojekyll` at the repo root so
   GitHub serves the static explorer directly.
-- For design-heavy internal cleanup, use [design/README.md](/home/home/personal/zide/tools/docs_explorer/design/README.md)
+- For design-heavy internal cleanup, use [design/README.md](design/README.md)
   the same way the main repo uses architecture docs.
 - The sidebar input remains a tree/path filter only.
 - The header search is a separate ripgrep-backed full-text search and currently

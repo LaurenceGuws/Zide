@@ -144,7 +144,7 @@ Repository-local docs own the detailed operator guidance:
 Local docs explorer workflow:
 
 ```bash
-cd /home/home/personal/zide
+cd "$(git rev-parse --show-toplevel)"
 npm run build:docs-explorer
 
 cd tools/docs_explorer

@@ -200,10 +200,10 @@ This is better than mixing everything into one `.vt` stream because:
 
 Use:
 
-- [terminal_make_redraw_fixture.py](/home/home/personal/zide/tools/terminal_make_redraw_fixture.py)
-- [terminal_capture_pty.py](/home/home/personal/zide/tools/terminal_capture_pty.py)
-- [terminal_capture_redraw_fixture.py](/home/home/personal/zide/tools/terminal_capture_redraw_fixture.py)
-- [terminal_capture_nvim_real_config_cursor_repro.py](/home/home/personal/zide/tools/terminal_capture_nvim_real_config_cursor_repro.py)
+- [terminal_make_redraw_fixture.py](../../tools/terminal_make_redraw_fixture.py)
+- [terminal_capture_pty.py](../../tools/terminal_capture_pty.py)
+- [terminal_capture_redraw_fixture.py](../../tools/terminal_capture_redraw_fixture.py)
+- [terminal_capture_nvim_real_config_cursor_repro.py](../../tools/terminal_capture_nvim_real_config_cursor_repro.py)
 
 Capture raw PTY output first:
 

@@ -170,7 +170,7 @@ def main() -> int:
     if not built_entry.exists():
         print("docs explorer build output is missing.")
         print("run:")
-        print("  cd /home/home/personal/zide")
+        print('  cd "$(git rev-parse --show-toplevel)"')
         print("  npm run build:docs-explorer")
         return 1
 
