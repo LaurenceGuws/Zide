@@ -98,6 +98,10 @@ Current implementation progress:
 - layout-side cache work now also needs the same completed-range discipline as
   highlight and line-width work; wrap-work completion tracking removed the
   long layout-only tail that was still muddying visible-highlight runtime logs
+- frame-hook visible precompute is now keyed to actual pending layout work for
+  the current visible range instead of the generic visible-highlight
+  `in_flight` signal, which removes the empty layout-only churn that used to
+  continue while the worker was computing with no width/wrap work left
 
 ## Current Problem
 

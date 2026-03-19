@@ -365,11 +365,13 @@ stack issue, not an isolated highlight bug:
       - wrap-work completion now remembers completed visible ranges, removing
         the long `run_highlight=false` layout-only storm that used to continue
         after visible highlight work had effectively finished
+      - frame-hook visible precompute now asks the render cache whether
+        width/wrap work is still pending for the current visible range instead
+        of treating highlight-worker `in_flight` as a layout signal; the local
+        Unicode repro no longer shows the empty layout-only churn that used to
+        continue while the worker computed `28-32`
       - visible precompute now follows a worker schedule contract instead of
         the old inline-publish contract
-      - remaining runtime issue is frame-lane churn: while worker execution is
-        stable, `visible_cache_precompute` still re-enters too often between
-        worker publications
       - next cleanup target is to inventory and remove remaining startup
         warmup/tree-sitter-specific workaround logic that now muddies the
         runtime signal

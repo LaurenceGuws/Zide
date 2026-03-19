@@ -181,10 +181,15 @@ pub fn handle(
         visible_lines > 0 and
         can_schedule_visible_work and
         editor.shouldThrottleVisibleHighlightRange(start_line, end_line, view.highlight_epoch);
+    const needs_layout_precompute = app_editor_visible_caches_runtime.needsLayoutPrecompute(
+        &widget,
+        shell,
+        layout,
+        editor_render_cache,
+    );
     const should_run_visible_precompute =
-        out.needs_redraw or
-        published_visible_highlights or
-        should_schedule_visible_work;
+        should_schedule_visible_work or
+        needs_layout_precompute;
     if (should_run_visible_precompute) {
         const scheduled_visible_highlights = app_editor_visible_caches_runtime.precompute(
             &widget,

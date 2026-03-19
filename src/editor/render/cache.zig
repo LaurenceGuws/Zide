@@ -377,6 +377,18 @@ pub const EditorRenderCache = struct {
         return line;
     }
 
+    pub fn lineWidthWorkNeeded(self: *const EditorRenderCache, start_line: usize, end_line: usize, change_tick: u64) bool {
+        if (end_line <= start_line) return false;
+        if (self.line_width_work_active) {
+            return start_line == self.line_width_work_start and
+                end_line == self.line_width_work_end and
+                change_tick == self.line_width_work_tick;
+        }
+        return !(start_line == self.line_width_work_completed_start and
+            end_line == self.line_width_work_completed_end and
+            change_tick == self.line_width_work_completed_tick);
+    }
+
     fn clearLineWidthWork(self: *EditorRenderCache) void {
         self.line_width_work_active = false;
         self.line_width_work_start = 0;
@@ -430,6 +442,20 @@ pub const EditorRenderCache = struct {
             self.wrap_work_completed_cols = self.wrap_work_cols;
         }
         return line;
+    }
+
+    pub fn wrapWorkNeeded(self: *const EditorRenderCache, start_line: usize, end_line: usize, cols: usize, change_tick: u64) bool {
+        if (end_line <= start_line) return false;
+        if (self.wrap_work_active) {
+            return start_line == self.wrap_work_start and
+                end_line == self.wrap_work_end and
+                cols == self.wrap_work_cols and
+                change_tick == self.wrap_work_tick;
+        }
+        return !(start_line == self.wrap_work_completed_start and
+            end_line == self.wrap_work_completed_end and
+            cols == self.wrap_work_completed_cols and
+            change_tick == self.wrap_work_completed_tick);
     }
 
     fn clearWrapEntries(self: *EditorRenderCache) void {

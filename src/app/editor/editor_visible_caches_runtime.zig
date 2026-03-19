@@ -81,6 +81,27 @@ fn runLayoutPrecompute(
     };
 }
 
+pub fn needsLayoutPrecompute(
+    widget: *EditorWidget,
+    editor_shell: *Shell,
+    editor_layout: layout_types.WidgetLayout,
+    editor_render_cache: anytype,
+) bool {
+    if (editor_layout.editor.width <= 0 or editor_layout.editor.height <= 0) return false;
+    const view = widget.frameView();
+    const visible_budget = visibleLineBudget(editor_shell, editor_layout);
+    if (visible_budget == 0) return false;
+    const total_lines = view.lineCount();
+    if (total_lines == 0) return false;
+    const start_line = view.scroll_line;
+    const end_line = @min(start_line + visible_budget, total_lines);
+    if (editor_render_cache.lineWidthWorkNeeded(start_line, end_line, view.change_tick)) return true;
+    if (!view.wrap_enabled) return false;
+    const cols = widget.viewportColumns(editor_shell);
+    if (cols == 0) return false;
+    return editor_render_cache.wrapWorkNeeded(start_line, end_line, cols, view.change_tick);
+}
+
 pub fn precompute(
     widget: *EditorWidget,
     editor_shell: *Shell,
