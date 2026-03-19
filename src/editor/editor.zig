@@ -547,6 +547,12 @@ pub const Editor = struct {
                 line.tokens,
             );
         }
+        const perf_log = app_logger.logger("editor.perf");
+        perf_log.logf(
+            .info,
+            "visible_highlight_publish lines={d} start_line={d} end_line={d}",
+            .{ result.lines.len, result.request.start_line, result.request.end_line },
+        );
         self.visible_highlight_runtime.needs_redraw = false;
         return result.lines.len > 0;
     }
@@ -636,6 +642,11 @@ pub const Editor = struct {
             perf_log.logf(.info, "visible_precompute_highlight lines=0 budget=0 time_us=0", .{});
             return false;
         };
+        perf_log.logf(
+            .info,
+            "visible_highlight_execute_inline start_line={d} end_line={d}",
+            .{ request.start_line, request.end_line },
+        );
         const result = self.computeVisibleHighlightRequest(request) orelse return false;
         self.replaceVisibleHighlightResult(result);
         return result.lines.len > 0;
@@ -659,6 +670,8 @@ pub const Editor = struct {
             return;
         };
         self.setVisibleHighlightWorker(worker);
+        const perf_log = app_logger.logger("editor.perf");
+        perf_log.logf(.info, "visible_highlight_worker started=true", .{});
     }
 
     fn stopVisibleHighlightWorker(self: *Editor) void {
@@ -675,6 +688,8 @@ pub const Editor = struct {
         self.lockVisibleHighlightRuntime();
         defer self.unlockVisibleHighlightRuntime();
         self.clearVisibleHighlightResult();
+        const perf_log = app_logger.logger("editor.perf");
+        perf_log.logf(.info, "visible_highlight_worker started=false", .{});
     }
 
     fn visibleHighlightWorkerMain(self: *Editor) void {
@@ -689,6 +704,12 @@ pub const Editor = struct {
             }
             const request = self.takeVisibleHighlightRequest().?;
             self.unlockVisibleHighlightRuntime();
+            const perf_log = app_logger.logger("editor.perf");
+            perf_log.logf(
+                .info,
+                "visible_highlight_worker_compute start_line={d} end_line={d}",
+                .{ request.start_line, request.end_line },
+            );
 
             var result = self.computeVisibleHighlightRequest(request) orelse continue;
 
@@ -698,6 +719,11 @@ pub const Editor = struct {
                 self.deinitVisibleHighlightResult(&result);
                 return;
             }
+            perf_log.logf(
+                .info,
+                "visible_highlight_worker_ready lines={d} start_line={d} end_line={d}",
+                .{ result.lines.len, result.request.start_line, result.request.end_line },
+            );
             self.replaceVisibleHighlightResult(result);
             self.unlockVisibleHighlightRuntime();
         }
