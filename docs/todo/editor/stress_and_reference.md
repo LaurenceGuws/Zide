@@ -344,6 +344,8 @@ stack issue, not an isolated highlight bug:
         widget-owned
       - visible highlight runtime now carries worker/lifecycle/sync state
         parallel to the search seam
+      - visible highlight precompute now schedules worker execution instead of
+        running highlight inline
       - this is still behavior-preserving and does not yet claim full runtime
         ownership
 

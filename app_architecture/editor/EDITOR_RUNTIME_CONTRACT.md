@@ -74,6 +74,9 @@ Current implementation progress:
 - visible highlight runtime state now also carries worker/lifecycle/sync fields
   parallel to the search runtime seam, so the next move can attach execution to
   an already-owned runtime lane
+- visible highlight scheduling now feeds the worker seam instead of executing
+  inline on the precompute path; execution is no longer performed directly from
+  the app/runtime precompute call site
 
 ## Current Problem
 

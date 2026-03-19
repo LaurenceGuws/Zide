@@ -41,8 +41,12 @@ pub fn precompute(
     else
         configured_highlight_budget;
     const t_highlight_start = std.time.nanoTimestamp();
-    _ = editor_draw.precomputeHighlightTokens(widget, editor_render_cache, editor_shell, editor_layout.editor.height, highlight_budget);
-    const highlight_published = widget.editor.executePendingVisibleHighlightRequest();
+    const highlight_scheduled = editor_draw.precomputeHighlightTokens(widget, editor_render_cache, editor_shell, editor_layout.editor.height, highlight_budget);
+    if (highlight_scheduled and widget.editor.hasPendingVisibleHighlightRequest()) {
+        widget.editor.ensureVisibleHighlightWorker();
+        widget.editor.signalVisibleHighlightRuntime();
+    }
+    const highlight_published = false;
     if (widget.editor.shouldThrottleStartupHighlightWarmup() and !widget.editor.hasPendingVisibleHighlightWork()) {
         widget.editor.completeStartupVisibleWarmup();
     }

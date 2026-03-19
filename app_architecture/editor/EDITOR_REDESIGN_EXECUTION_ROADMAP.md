@@ -267,6 +267,8 @@ Phase 2 has now started in code:
   widget-owned, narrowing the remaining move to a pure lane swap
 - visible highlight runtime now carries worker/lifecycle/sync state parallel to
   the search seam, reducing the next step to attaching execution to that lane
+- visible highlight precompute now schedules worker execution instead of
+  running highlight execution inline, so the lane swap has begun in code
 - the current cut is structural and behavior-preserving; it does not yet claim
   full `EditorRuntime` ownership, but it makes that ownership line explicit
 

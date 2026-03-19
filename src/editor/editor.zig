@@ -545,15 +545,11 @@ pub const Editor = struct {
         return result.lines.len > 0;
     }
 
-    pub fn executePendingVisibleHighlightRequest(self: *Editor) bool {
+    fn computeVisibleHighlightRequest(self: *Editor, request: VisibleHighlightWorkRequest) ?VisibleHighlightWorkResult {
         const perf_log = app_logger.logger("editor.perf");
-        const request = self.takeVisibleHighlightRequest() orelse {
-            perf_log.logf(.info, "visible_precompute_highlight lines=0 budget=0 time_us=0", .{});
-            return false;
-        };
         const highlighter = self.doc.highlighter orelse {
             perf_log.logf(.info, "visible_precompute_highlight lines=0 budget=0 time_us=0", .{});
-            return false;
+            return null;
         };
 
         const t_start = std.time.nanoTimestamp();
@@ -617,15 +613,88 @@ pub const Editor = struct {
             const log = app_logger.logger("editor.draw");
             for (line_results.items) |line| self.allocator.free(line.tokens);
             log.logf(.warning, "visible highlight result ownership failed err={s}", .{@errorName(err)});
-            return false;
+            return null;
         };
-        self.replaceVisibleHighlightResult(.{
+        const result: VisibleHighlightWorkResult = .{
             .request = request,
             .lines = owned_lines,
-        });
+        };
         const elapsed_us = @as(i64, @intCast(@divTrunc(std.time.nanoTimestamp() - t_start, 1000)));
         perf_log.logf(.info, "visible_precompute_highlight lines={d} budget={d} time_us={d}", .{ lines_done, request.end_line - request.start_line, elapsed_us });
-        return lines_done > 0;
+        return result;
+    }
+
+    pub fn executePendingVisibleHighlightRequest(self: *Editor) bool {
+        const perf_log = app_logger.logger("editor.perf");
+        const request = self.takeVisibleHighlightRequest() orelse {
+            perf_log.logf(.info, "visible_precompute_highlight lines=0 budget=0 time_us=0", .{});
+            return false;
+        };
+        const result = self.computeVisibleHighlightRequest(request) orelse return false;
+        self.replaceVisibleHighlightResult(result);
+        return result.lines.len > 0;
+    }
+
+    pub fn ensureVisibleHighlightWorker(self: *Editor) void {
+        self.lockVisibleHighlightRuntime();
+        if (self.isVisibleHighlightWorkerRunning()) {
+            self.unlockVisibleHighlightRuntime();
+            return;
+        }
+        self.setVisibleHighlightWorkerRunning(true);
+        self.unlockVisibleHighlightRuntime();
+
+        const worker = std.Thread.spawn(.{}, visibleHighlightWorkerMain, .{self}) catch |err| {
+            const log = app_logger.logger("editor.highlight");
+            log.logf(.warning, "visible highlight worker spawn failed err={s}", .{@errorName(err)});
+            self.lockVisibleHighlightRuntime();
+            self.setVisibleHighlightWorkerRunning(false);
+            self.unlockVisibleHighlightRuntime();
+            return;
+        };
+        self.setVisibleHighlightWorker(worker);
+    }
+
+    fn stopVisibleHighlightWorker(self: *Editor) void {
+        self.lockVisibleHighlightRuntime();
+        self.setVisibleHighlightWorkerRunning(false);
+        self.clearVisibleHighlightRequest();
+        self.signalVisibleHighlightRuntime();
+        self.unlockVisibleHighlightRuntime();
+
+        if (self.takeVisibleHighlightWorker()) |thread| {
+            thread.join();
+        }
+
+        self.lockVisibleHighlightRuntime();
+        defer self.unlockVisibleHighlightRuntime();
+        self.clearVisibleHighlightResult();
+    }
+
+    fn visibleHighlightWorkerMain(self: *Editor) void {
+        while (true) {
+            self.lockVisibleHighlightRuntime();
+            while (self.isVisibleHighlightWorkerRunning() and !self.hasPendingVisibleHighlightRequest()) {
+                self.waitVisibleHighlightRuntime();
+            }
+            if (!self.isVisibleHighlightWorkerRunning()) {
+                self.unlockVisibleHighlightRuntime();
+                return;
+            }
+            const request = self.takeVisibleHighlightRequest().?;
+            self.unlockVisibleHighlightRuntime();
+
+            var result = self.computeVisibleHighlightRequest(request) orelse continue;
+
+            self.lockVisibleHighlightRuntime();
+            if (!self.isVisibleHighlightWorkerRunning()) {
+                self.unlockVisibleHighlightRuntime();
+                self.deinitVisibleHighlightResult(&result);
+                return;
+            }
+            self.replaceVisibleHighlightResult(result);
+            self.unlockVisibleHighlightRuntime();
+        }
     }
 
     pub fn clearVisibleHighlightResult(self: *Editor) void {
@@ -742,6 +811,7 @@ pub const Editor = struct {
     }
 
     pub fn deinit(self: *Editor) void {
+        self.stopVisibleHighlightWorker();
         self.stopSearchWorker();
         if (self.doc.highlighter) |h| {
             h.destroy();
