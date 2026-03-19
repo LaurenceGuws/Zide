@@ -346,6 +346,8 @@ stack issue, not an isolated highlight bug:
         parallel to the search seam
       - visible highlight precompute now schedules worker execution instead of
         running highlight inline
+      - warmup completion/redraw checks now follow in-flight visible highlight
+        runtime work rather than only the old queue-active bit
       - this is still behavior-preserving and does not yet claim full runtime
         ownership
 

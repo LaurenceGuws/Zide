@@ -47,7 +47,7 @@ pub fn precompute(
         widget.editor.signalVisibleHighlightRuntime();
     }
     const highlight_published = false;
-    if (widget.editor.shouldThrottleStartupHighlightWarmup() and !widget.editor.hasPendingVisibleHighlightWork()) {
+    if (widget.editor.shouldThrottleStartupHighlightWarmup() and !widget.editor.visibleHighlightWorkInFlight()) {
         widget.editor.completeStartupVisibleWarmup();
     }
     const width_budget = editor_width_budget orelse highlight_budget;

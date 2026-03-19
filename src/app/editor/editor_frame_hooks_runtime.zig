@@ -158,7 +158,7 @@ pub fn handle(
     const should_drive_search_publication = editor.hasPendingSearchResult();
     const should_drive_visible_warmup =
         editor.shouldThrottleStartupHighlightWarmup() or
-        editor.hasPendingVisibleHighlightWork();
+        editor.visibleHighlightWorkInFlight();
     if (should_drive_search_publication) {
         out.needs_redraw = true;
     }
@@ -182,7 +182,7 @@ pub fn handle(
         if (editor.applyPendingVisibleHighlightResult(editor_render_cache)) {
             out.needs_redraw = true;
         }
-        if (editor.shouldThrottleStartupHighlightWarmup() or editor.hasPendingVisibleHighlightWork()) {
+        if (editor.shouldThrottleStartupHighlightWarmup() or editor.visibleHighlightWorkInFlight()) {
             out.needs_redraw = true;
         }
     }

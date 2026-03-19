@@ -77,6 +77,9 @@ Current implementation progress:
 - visible highlight scheduling now feeds the worker seam instead of executing
   inline on the precompute path; execution is no longer performed directly from
   the app/runtime precompute call site
+- startup warmup completion and redraw driving now follow in-flight visible
+  highlight runtime work, request, and result state rather than only the old
+  queue-active bit
 
 ## Current Problem
 

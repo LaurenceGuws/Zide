@@ -269,6 +269,8 @@ Phase 2 has now started in code:
   the search seam, reducing the next step to attaching execution to that lane
 - visible highlight precompute now schedules worker execution instead of
   running highlight execution inline, so the lane swap has begun in code
+- warmup completion/redraw checks now reason from in-flight visible highlight
+  runtime work rather than the old inline queue assumption
 - the current cut is structural and behavior-preserving; it does not yet claim
   full `EditorRuntime` ownership, but it makes that ownership line explicit
 

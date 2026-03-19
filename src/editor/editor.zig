@@ -527,6 +527,12 @@ pub const Editor = struct {
         return self.visible_highlight_runtime.request != null;
     }
 
+    pub fn visibleHighlightWorkInFlight(self: *const Editor) bool {
+        return self.hasPendingVisibleHighlightWork() or
+            self.hasPendingVisibleHighlightRequest() or
+            self.hasPendingVisibleHighlightResult();
+    }
+
     pub fn applyPendingVisibleHighlightResult(self: *Editor, cache: anytype) bool {
         const owned_result = self.takeVisibleHighlightResult() orelse return false;
         var result = owned_result;
