@@ -10,7 +10,8 @@ Parser and merge logic:
 - `src/config/lua_config.zig`
 
 Runtime application:
-- `src/main.zig`
+- `src/app/init_runtime.zig`
+- `src/app/reload_config_runtime.zig`
 - `src/ui/renderer.zig`
 - `src/ui/widgets/editor_widget*.zig`
 - `src/ui/widgets/terminal_widget*.zig`
@@ -43,6 +44,41 @@ flowchart LR
     Merge --> Resolved[resolved config]
 ```
 
+## Startup Application Phases
+
+Config startup should follow these phases strictly:
+
+1. Load and merge config layers into one resolved config.
+2. Apply pre-window/bootstrap-safe settings.
+   - logger filters / levels
+   - SDL log level
+3. Derive renderer init options from the resolved config and create the shell.
+   - initial font path / size
+   - initial font-rendering policy
+   - initial text-rendering controls
+   - initial platform/UI scale should come from the renderer's platform metrics,
+     not from a later corrective rebuild
+4. Apply startup-time mutable settings that are allowed to happen after shell
+   creation but before first frame.
+   - ligature strategy / feature lists
+   - selection overlay style
+   - terminal texture-shift / present-policy toggles
+   - resolved app/editor/terminal themes
+5. Construct app/editor/terminal state from the same resolved config.
+6. After startup, config reload may only reapply fields that are explicitly
+   classified as `reloadable`; restart-only fields must stay restart-only and
+   log that truth clearly.
+
+2026-03-20 audit result:
+
+- the main startup-churn bug was renderer font bootstrap: startup used to build
+  the hardcoded default face first and then rebuild to the configured face
+  immediately after init
+- that path is now fixed: renderer startup is seeded from resolved config
+- no other startup-applied config path currently shows the same "boot wrong
+  state, then visibly repair it" behavior; the remaining post-init settings are
+  runtime-mutables applied before first real frame or explicitly restart-only
+
 ## Merge Rules
 
 - Scalar fields: later non-null value wins.
@@ -73,13 +109,15 @@ This doc uses these status labels:
 
 ```mermaid
 flowchart LR
-    Resolved[Resolved config] --> Main[src/main.zig]
+    Resolved[Resolved config] --> Startup[src/app/init_runtime.zig]
+    Resolved[Resolved config] --> Reload[src/app/reload_config_runtime.zig]
     Resolved --> Router[src/input/input_actions.zig]
     Resolved --> Renderer[src/ui/renderer.zig]
     Resolved --> Editor[src/ui/widgets/editor_widget*]
     Resolved --> Terminal[src/ui/widgets/terminal_widget*]
 
-    Main --> ThemeApply[theme / font / reload application]
+    Startup --> ThemeApply[theme / font startup application]
+    Reload --> ReloadApply[reloadable config re-application]
     Router --> Keybinds[keybind routing]
     Renderer --> TextCfg[font_rendering text pipeline]
     Editor --> EditorOpts[wrap / theme / ligatures]
@@ -163,13 +201,13 @@ rendering, not schema preservation.
 
 | Lua path | Meaning | Runtime consumer | Status | Notes |
 |---|---|---|---|---|
-| `app.font.path` / `app.font.size` | Base font choice | `src/main.zig` -> renderer font setup | `partial` | Parsed separately, but current runtime collapses app/editor/terminal font choice to one effective font. |
+| `app.font.path` / `app.font.size` | Base font choice | `src/app/init_runtime.zig`, `src/app/reload_config_runtime.zig` -> renderer font setup | `partial` | Runtime reloads the shared effective font stack, but app/editor/terminal font choice still collapses to one effective font. |
 
 ### `editor`
 
 | Lua path | Meaning | Runtime consumer | Status | Notes |
 |---|---|---|---|---|
-| `editor.font.path` / `editor.font.size` | Editor font override | `src/main.zig` -> renderer font setup | `partial` | Same shared-font caveat as `app.font`. |
+| `editor.font.path` / `editor.font.size` | Editor font override | `src/app/init_runtime.zig`, `src/app/reload_config_runtime.zig` -> renderer font setup | `partial` | Same shared-font caveat as `app.font`; runtime reload updates the shared effective font choice immediately. |
 | `editor.wrap` | Soft wrap | `src/main.zig`, editor widget/layout/input | `reloadable` | Defaults to `false`. |
 | `editor.imported_theme` | Load a shipped imported editor theme artifact by name | config load path -> theme merge | `reloadable` | Current artifacts live under `assets/themes/<name>.lua`. Imported theme config is merged first, then the rest of the same config file can override it. |
 | `editor.tab_bar.width_mode` | IDE/editor tab bar width policy | `src/main.zig` + `src/ui/widgets/tab_bar.zig` | `reloadable` | `fixed`, `dynamic`, `label_length`. |
@@ -182,7 +220,7 @@ rendering, not schema preservation.
 
 | Lua path | Meaning | Runtime consumer | Status | Notes |
 |---|---|---|---|---|
-| `terminal.font.path` / `terminal.font.size` | Terminal font override | `src/main.zig` -> renderer font setup | `partial` | Same shared-font caveat as `app.font`. |
+| `terminal.font.path` / `terminal.font.size` | Terminal font override | `src/app/init_runtime.zig`, `src/app/reload_config_runtime.zig` -> renderer font setup | `partial` | Same shared-font caveat as `app.font`; runtime reload updates the shared effective font choice immediately. |
 | `terminal.disable_ligatures` | Terminal ligature strategy | `src/main.zig` -> renderer/terminal draw | `reloadable` | Current values: `never`, `cursor`, `always`. |
 | `terminal.font_features` | Terminal OpenType features | `src/main.zig` -> renderer/terminal draw | `reloadable` | |
 | `terminal.blink` | Cursor blink policy | `src/main.zig` -> terminal widget | `reloadable` | Preferred values: `kitty`, `off`. Boolean shorthand also accepted. |
@@ -237,7 +275,8 @@ That means the current Lua surface is more expressive than the actual runtime be
 
 Current reload support is intentionally partial:
 - theme, keybinds, wrap, ligature settings, cursor/blink policy, texture-shift toggle, and focus reporting are re-applied.
-- font path/size changes are parsed, but effectively restart-only.
+- shared effective font path/size and `font_rendering.*` changes are re-applied immediately.
+- some session-init settings still only affect new sessions.
 
 ```mermaid
 flowchart LR
@@ -246,10 +285,9 @@ flowchart LR
 
     Reapply --> A[theme]
     Reapply --> B[keybinds]
-    Reapply --> C[wrap / ligatures / cursor / focus / texture_shift / font_rendering]
+    Reapply --> C[wrap / ligatures / cursor / focus / texture_shift / font path / font_rendering]
 
-    ParsedOnly --> D[font path / size]
-    ParsedOnly --> E[future-session-only effects]
+    ParsedOnly --> D[future-session-only effects]
 ```
 
 ### Validation behavior is improving, but not finished
@@ -293,9 +331,15 @@ Any config-surface change should update all of:
 - `docs/todo/config.md` when it changes status/coverage
 
 For runtime behavior changes, also verify:
-- startup application path in `src/main.zig`
-- reload behavior in `reloadConfig()`
+- startup application path in `src/app/init_runtime.zig`
+- reload behavior in `src/app/reload_config_runtime.zig`
 - any affected input/editor/terminal/widget path
 
 Dedicated subsystem test target:
 - `zig build test-config`
+  - root: `src/config_tests.zig`
+
+Manual reload spot check for shared font changes:
+- edit `app.font`, `editor.font`, or `terminal.font` in `./.zide.lua` or the user config
+- trigger `reload_config` (default binding: `Ctrl+Shift+F5`)
+- verify editor and terminal redraw immediately with the new shared effective font choice

@@ -190,6 +190,7 @@ pub fn planIdeExtendedBuildGraph(
         optimize,
         "src/main.zig",
         build_options,
+        zlua_module,
         app_link_ctx,
         target_profile.test_unit,
     );
@@ -201,6 +202,7 @@ pub fn planIdeExtendedBuildGraph(
         optimize,
         "tests/tests_main.zig",
         build_options,
+        zlua_module,
         app_link_ctx,
         target_profile.test_editor,
     );
@@ -210,8 +212,9 @@ pub fn planIdeExtendedBuildGraph(
         b,
         target,
         optimize,
-        "tests/config_tests.zig",
-        null,
+        "src/config_tests.zig",
+        build_options,
+        zlua_module,
         app_link_ctx,
         target_profile.test_config,
     );
@@ -281,6 +284,7 @@ pub fn planIdeExtendedBuildGraph(
             optimize,
             spec.root_source_file,
             null,
+            zlua_module,
             app_link_ctx,
             spec.profile,
         );

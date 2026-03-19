@@ -21,5 +21,7 @@ Current intentional `src/` exceptions:
   - stays source-adjacent because it is tightly coupled to `TerminalSession` ownership and regression locality matters more than one fewer file in `tests/`
 - [editor_ffi_smoke_tests.zig](../src/editor_ffi_smoke_tests.zig)
   - stays under `src/` because it is a dedicated standalone FFI smoke root consumed directly by the build graph, not a generic aggregate/integration entrypoint
+- [config_tests.zig](../src/config_tests.zig)
+  - stays source-adjacent because the config subsystem has its own dedicated build target and Zig 0.15 module-path rules make a `tests/` root artificially brittle for direct config/runtime imports
 
 This policy is intended to eliminate ambiguity, not to ban source-adjacent tests.

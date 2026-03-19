@@ -75,6 +75,7 @@ pub fn addSdlConfiguredTest(
     optimize: std.builtin.OptimizeMode,
     root_source_file: []const u8,
     build_options: ?*std.Build.Step.Options,
+    zlua_module: ?*std.Build.Module,
     ctx: app_types.AppLinkContext,
     profile: target_profile.LinkProfile,
 ) *std.Build.Step.Compile {
@@ -89,6 +90,9 @@ pub fn addSdlConfiguredTest(
     configureWindowsLinker(test_target);
     if (build_options) |opts| {
         test_target.root_module.addOptions("build_options", opts);
+    }
+    if (zlua_module) |module| {
+        test_target.root_module.addImport("zlua", module);
     }
     target_config.configureSdlTestTarget(
         test_target,

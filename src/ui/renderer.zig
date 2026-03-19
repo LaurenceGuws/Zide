@@ -293,6 +293,15 @@ fn logSceneTargetState(
 }
 
 pub const Renderer = struct {
+    pub const InitOptions = struct {
+        base_font_size: f32 = 16.0,
+        font_path: ?[]const u8 = null,
+        font_rendering: FontRenderingOptions = .{},
+        text_gamma: f32 = 1.0,
+        text_contrast: f32 = 1.0,
+        text_linear_correction: bool = true,
+    };
+
     pub const ScaledFontMetrics = struct {
         ascent: f32,
         descent: f32,
@@ -445,7 +454,7 @@ pub const Renderer = struct {
         return @as(f32, @floatFromInt(@as(i32, @intFromFloat(std.math.round(value * scale))))) / scale;
     }
 
-    pub fn init(allocator: std.mem.Allocator, width: i32, height: i32, title: [*:0]const u8) !*Renderer {
+    pub fn init(allocator: std.mem.Allocator, width: i32, height: i32, title: [*:0]const u8, init_options: InitOptions) !*Renderer {
         try window_init.initSdl();
         errdefer sdl.SDL_Quit();
 
@@ -463,12 +472,25 @@ pub const Renderer = struct {
         errdefer allocator.destroy(renderer);
 
         const display_metrics = platform_window.collectDisplayMetrics(window);
-
-        const base_font_size: f32 = 16.0;
-        const ui_scale: f32 = 1.0;
+        var wayland_scale = scale_utils.WaylandScaleState{
+            .cache = null,
+            .last_update = -1000.0,
+        };
+        const ui_scale = scale_utils.queryUiScale(allocator, display_metrics.dpi, 0.0, &wayland_scale);
+        const base_font_size = if (init_options.base_font_size > 0.0) init_options.base_font_size else 16.0;
         const font_size = base_font_size * ui_scale;
         const render_scale = display_metrics.render_scale;
         const terminal_shape_buffer = hb.hb_buffer_create() orelse return error.OutOfMemory;
+        var font_path_owned: ?[]u8 = null;
+        var font_path: [*:0]const u8 = FONT_PATH;
+        if (init_options.font_path) |raw| {
+            const owned = try allocator.alloc(u8, raw.len + 1);
+            std.mem.copyForwards(u8, owned[0..raw.len], raw);
+            owned[raw.len] = 0;
+            font_path_owned = owned;
+            font_path = @ptrCast(owned.ptr);
+        }
+        errdefer if (font_path_owned) |owned| allocator.free(owned);
 
         renderer.* = .{
             .allocator = allocator,
@@ -495,9 +517,9 @@ pub const Renderer = struct {
             .uniform_linear_correction = -1,
             .dst_linear_active = false,
             .white_texture = .{ .id = 0, .width = 0, .height = 0 },
-            .text_gamma = 1.0,
-            .text_contrast = 1.0,
-            .text_linear_correction = true,
+            .text_gamma = init_options.text_gamma,
+            .text_contrast = init_options.text_contrast,
+            .text_linear_correction = init_options.text_linear_correction,
             .editor_selection_overlay_style = .{},
             .terminal_selection_overlay_style = .{},
             .terminal_texture_shift_enabled = true,
@@ -537,10 +559,10 @@ pub const Renderer = struct {
             .editor_disable_ligatures = .never,
             .editor_font_features_raw = null,
             .editor_font_features = .{},
-            .font_rendering = .{},
+            .font_rendering = init_options.font_rendering,
             .font_cache = std.AutoHashMap(u32, *TerminalFont).init(allocator),
-            .font_path = FONT_PATH,
-            .font_path_owned = null,
+            .font_path = font_path,
+            .font_path_owned = font_path_owned,
             .terminal_target = null,
             .terminal_scroll_target = null,
             .editor_target = null,
@@ -553,8 +575,8 @@ pub const Renderer = struct {
             .ui_scale = ui_scale,
             .last_zoom_request_time = 0.0,
             .last_zoom_apply_time = 0.0,
-            .wayland_scale_cache = null,
-            .wayland_scale_last_update = -1000.0,
+            .wayland_scale_cache = wayland_scale.cache,
+            .wayland_scale_last_update = wayland_scale.last_update,
             .key_down = [_]bool{false} ** key_repeat_key_count,
             .key_pressed = [_]bool{false} ** key_repeat_key_count,
             .key_repeated = [_]bool{false} ** key_repeat_key_count,

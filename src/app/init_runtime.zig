@@ -1,6 +1,7 @@
 const std = @import("std");
 const app_bootstrap = @import("bootstrap.zig");
 const build_options = @import("build_options");
+const mode_build = @import("mode_build.zig");
 const app_font_rendering = @import("font_rendering.zig");
 const app_theme_utils = @import("theme_utils.zig");
 const app_ui_layout_runtime = @import("ui_layout_runtime.zig");
@@ -10,9 +11,7 @@ const app_types = @import("app_state_types.zig");
 const app_shell = @import("../app_shell.zig");
 const app_logger = @import("../app_logger.zig");
 const config_mod = @import("../config/lua_config.zig");
-const grammar_manager_mod = @import("../editor/grammar_manager.zig");
 const manual_highlights_mod = @import("../editor/manual_highlights.zig");
-const editor_render_cache_mod = @import("../editor/render/cache.zig");
 const terminal_mod = @import("../terminal/core/terminal.zig");
 const metrics_mod = @import("../terminal/model/metrics.zig");
 const term_types = @import("../terminal/model/types.zig");
@@ -20,6 +19,14 @@ const shared_types = @import("../types/mod.zig");
 const widgets = @import("../ui/widgets.zig");
 const font_sample_view_mod = @import("../ui/font_sample_view.zig");
 const input_actions = @import("../input/input_actions.zig");
+
+const grammar_manager_mod = if (mode_build.focused_mode == .terminal) struct {
+    pub const GrammarManager = app_types.GrammarManager;
+} else @import("../editor/grammar_manager.zig");
+
+const editor_render_cache_mod = if (mode_build.focused_mode == .terminal) struct {
+    pub const EditorRenderCache = app_types.EditorRenderCache;
+} else @import("../editor/render/cache.zig");
 
 const TerminalWorkspace = terminal_mod.TerminalWorkspace;
 const Metrics = metrics_mod.Metrics;
@@ -110,9 +117,12 @@ fn initWithMode(
 
     const window_width = app_bootstrap.parseEnvI32("ZIDE_WINDOW_WIDTH", 1280);
     const window_height = app_bootstrap.parseEnvI32("ZIDE_WINDOW_HEIGHT", 720);
-    const shell = try app_shell.Shell.init(allocator, window_width, window_height, "Zide - Zig IDE");
+    const renderer_init = app_font_rendering.buildRendererInitOptions(&config);
+    const shell = try app_shell.Shell.init(allocator, window_width, window_height, "Zide - Zig IDE", renderer_init);
     errdefer shell.deinit(allocator);
 
+    // Startup now seeds renderer font/render state from the loaded config, so
+    // this post-init apply should be uniform-only and rebuild-free.
     try app_font_rendering.applyRendererFontRenderingConfig(shell, &config, false);
     shell.rendererPtr().setTerminalLigatureConfig(
         if (config.terminal_disable_ligatures) |v| switch (v) {
@@ -145,18 +155,6 @@ fn initWithMode(
         config.terminal_selection_overlay_corner_px orelse config.selection_overlay_corner_px,
         config.terminal_selection_overlay_pad_px orelse config.selection_overlay_pad_px,
     );
-    if (config.app_font_path != null or config.app_font_size != null or
-        config.editor_font_path != null or config.editor_font_size != null or
-        config.terminal_font_path != null or config.terminal_font_size != null)
-    {
-        const font_path = config.terminal_font_path orelse config.editor_font_path orelse config.app_font_path;
-        const font_size = config.terminal_font_size orelse config.editor_font_size orelse config.app_font_size;
-        if (font_path != null or font_size != null) {
-            shell.rendererPtr().setFontConfig(font_path, font_size) catch |err| {
-                std.debug.print("font config apply error: {any}\n", .{err});
-            };
-        }
-    }
     if (config.app_theme != null or config.editor_theme != null or config.terminal_theme != null or config.theme != null) {
         // Wait, we need to defer theme initialization to AppState so let's do it right before AppState init
     }

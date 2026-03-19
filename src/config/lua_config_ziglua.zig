@@ -173,7 +173,7 @@ pub fn applyThemeConfig(theme: *iface.Theme, overlay: ThemeConfig) void {
 
 test "loadConfigWithImportedThemeOverride preserves project overrides while switching imported theme" {
     const allocator = std.testing.allocator;
-    const original_cwd = try std.fs.cwd().openDir(".", .{});
+    var original_cwd = try std.fs.cwd().openDir(".", .{});
     defer original_cwd.close();
     defer original_cwd.setAsCwd() catch unreachable;
 
@@ -274,7 +274,7 @@ test "loadConfigWithImportedThemeOverride preserves project overrides while swit
 
 test "loadAvailableEditorImportedThemes reads the Lua registry as the single authority" {
     const allocator = std.testing.allocator;
-    const original_cwd = try std.fs.cwd().openDir(".", .{});
+    var original_cwd = try std.fs.cwd().openDir(".", .{});
     defer original_cwd.close();
     defer original_cwd.setAsCwd() catch unreachable;
 

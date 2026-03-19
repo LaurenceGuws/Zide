@@ -39,7 +39,12 @@ Implemented today:
 Current caveats:
 
 - Per-domain font config still collapses to one effective runtime font choice.
-- Some startup-applied settings still need clearer reload truth.
+- Startup/load-order truth now has a stricter documented contract, but reload
+  truth for some startup-applied settings still needs fuller field-by-field
+  authority.
+- Broad test-harness coverage still lags the stricter runtime truth; `test-config`
+  now covers the config lane directly, but the wider `tests/` tree still needs
+  Zig 0.15 cleanup.
 - Legacy aliases still exist without a fully documented policy.
 - AltGr correctness was resolved, but broader binding coverage is still incomplete.
 
@@ -56,6 +61,12 @@ Current caveats:
 - [x] `CFG-02-01` Decide whether app, editor, and terminal fonts are truly separate
   Current documented truth is shared-font precedence: `terminal > editor > app`.
 - [ ] `CFG-02-02` Make reload behavior explicit for every startup-applied field
+- [x] `CFG-02-02B` Make shared effective font path/size reloadable
+  Config reload now reapplies the resolved shared font choice (`terminal > editor > app`) at runtime instead of logging restart-only.
+- [x] `CFG-02-02A` Define strict startup application phases
+  `app_architecture/CONFIG.md` now owns the bootstrap phases:
+  load/merge -> pre-window settings -> renderer init options -> startup mutables
+  -> app state construction -> reload-only for explicit reloadables.
 - [x] `CFG-02-03` Reapply `font_rendering` settings on config reload or mark them restart-only
   Reload now reapplies text and font-rendering options and refreshes terminal sizing.
 
@@ -78,6 +89,7 @@ Current caveats:
 
 - [ ] `CFG-05-01` Add config field-matrix tests for parser shape and merge behavior
   Partial: `src/config_tests.zig` and `zig build test-config` now provide an initial authority.
+  The dedicated config root is source-adjacent on purpose so Zig 0.15 module-path rules do not break the config validation lane.
 - [ ] `CFG-05-02` Add reload authority for every field classified as reloadable
 - [ ] `CFG-05-03` Keep defaults and docs synchronized as part of every config change
   Partial: the policy exists; the remaining work is enforcement.

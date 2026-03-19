@@ -123,13 +123,14 @@ pub const isWindowResized = r.isWindowResized;
 pub const getScreenWidth = r.getScreenWidth;
 pub const getScreenHeight = r.getScreenHeight;
 pub const WindowMetrics = window.WindowMetrics;
+pub const RendererInitOptions = r.Renderer.InitOptions;
 pub const TextComposition = input.TextComposition;
 
 pub const Shell = struct {
     renderer: *r.Renderer,
 
-    pub fn init(allocator: std.mem.Allocator, initial_width: i32, initial_height: i32, title: [*:0]const u8) !*Shell {
-        const renderer = try r.Renderer.init(allocator, initial_width, initial_height, title);
+    pub fn init(allocator: std.mem.Allocator, initial_width: i32, initial_height: i32, title: [*:0]const u8, init_options: RendererInitOptions) !*Shell {
+        const renderer = try r.Renderer.init(allocator, initial_width, initial_height, title, init_options);
         errdefer renderer.deinit();
         const shell = try allocator.create(Shell);
         shell.* = .{ .renderer = renderer };
@@ -360,6 +361,10 @@ pub const Shell = struct {
 
     pub fn getDpiScale(self: *Shell) MousePos {
         return self.renderer.getDpiScale();
+    }
+
+    pub fn getDisplayMetrics(self: *Shell) window.DisplayMetrics {
+        return self.renderer.getDisplayMetrics();
     }
 
     pub fn getScreenSize(self: *Shell) MousePos {

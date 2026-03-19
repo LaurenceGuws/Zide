@@ -12,6 +12,7 @@ local function file_exists(path)
 end
 
 local home = os.getenv("HOME") or ""
+local is_windows = package.config:sub(1, 1) == "\\"
 local theme_import_ok, theme_import = pcall(dofile, "assets/config/theme_import.lua")
 local kitty_theme = nil
 
@@ -196,15 +197,17 @@ return {
 
 	-- Font rendering configuration.
 	-- These settings affect rasterization/shaping and text blending quality.
-	-- Changes can be reloaded; font path/size changes are still restart-oriented.
+	-- Changes can be reloaded at runtime. Font path/size changes rebuild the
+	-- current shared effective font stack using precedence:
+	-- terminal.font > editor.font > app.font.
 	font_rendering = {
 		-- Rasterization
 		-- lcd: enable subpixel (LCD) rendering path. Not final; use cautiously.
 		lcd = false,
 		-- hinting: "default", "none", "light", "normal"
-		hinting = "default",
+		hinting = is_windows and "light" or "default",
 		-- autohint: force FreeType autohinter
-		autohint = false,
+		autohint = is_windows,
 		-- glyph_overflow: "when_followed_by_space" (default), "never", "always"
 		glyph_overflow = "when_followed_by_space",
 
@@ -301,8 +304,8 @@ return {
 		--     corner_px = 1.0,
 		--     pad_px = 1.0,
 		-- },
-		-- Optional override. Current runtime still resolves one shared effective font
-		-- stack using precedence: terminal.font > editor.font > app.font.
+		-- Optional override. Runtime reloads the shared effective font stack
+		-- using precedence: terminal.font > editor.font > app.font.
 		-- font = { path = "/usr/share/fonts/...", size = 16 },
 	},
 
@@ -320,8 +323,8 @@ return {
 		-- },
 		theme = kitty_theme,
 
-		-- Optional override. Current runtime still resolves one shared effective font
-		-- stack using precedence: terminal.font > editor.font > app.font.
+		-- Optional override. Runtime reloads the shared effective font stack
+		-- using precedence: terminal.font > editor.font > app.font.
 		-- font = { path = "/usr/share/fonts/...", size = 16 },
 
 		-- Ligature strategy (kitty-style semantics):

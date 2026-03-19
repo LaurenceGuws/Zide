@@ -159,7 +159,7 @@ pub fn fontForSize(renderer: anytype, size: f32) ?*TerminalFont {
     };
     font_ptr.* = TerminalFont.init(
         renderer.allocator,
-        iface.FONT_PATH,
+        renderer.font_path,
         @as(f32, @floatFromInt(key)) * renderer.render_scale,
         iface.SYMBOLS_FALLBACK_PATH,
         iface.UNICODE_SYMBOLS2_PATH,

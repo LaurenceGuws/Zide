@@ -123,14 +123,22 @@ pub fn handle(state: anytype, ctx: *anyopaque, hooks: Hooks) !void {
         state.input_router.setBindings(binds);
     }
 
-    if (config.font_lcd != null or config.font_hinting != null or config.font_autohint != null or
-        config.font_glyph_overflow != null or config.text_gamma != null or
-        config.text_contrast != null or config.text_linear_correction != null)
     {
-        try app_font_rendering.applyRendererFontRenderingConfig(state.shell, &config, true);
-        try hooks.refresh_terminal_sizing(ctx);
-        state.needs_redraw = true;
-        log.logStdout(.info, "reload font_rendering applied", .{});
+        const font_reload = try app_font_rendering.applyRendererReloadConfig(state.shell, &config);
+        if (font_reload.rebuilt_fonts) {
+            state.editor_render_cache.clear();
+            state.editor_cluster_cache.clear();
+            try hooks.refresh_terminal_sizing(ctx);
+            state.needs_redraw = true;
+            log.logStdout(.info, "reload font renderer path/size/rendering changed choice={any} rendering={any} text={any}", .{
+                font_reload.font_choice_changed,
+                font_reload.font_rendering_changed,
+                font_reload.text_rendering_changed,
+            });
+        } else if (font_reload.text_rendering_changed) {
+            state.needs_redraw = true;
+            log.logStdout(.info, "reload font renderer text controls changed", .{});
+        }
     }
 
     if (config.terminal_blink_style) |blink_style| {
@@ -283,13 +291,6 @@ pub fn handle(state: anytype, ctx: *anyopaque, hooks: Hooks) !void {
             state.terminal_focus_report_window_events,
             state.terminal_focus_report_pane_events,
         });
-    }
-
-    if (config.app_font_path != null or config.app_font_size != null or
-        config.editor_font_path != null or config.editor_font_size != null or
-        config.terminal_font_path != null or config.terminal_font_size != null)
-    {
-        log.logStdout(.info, "reload note: font changes require restart", .{});
     }
 
     log.logStdout(.info, "config reloaded", .{});
