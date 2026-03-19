@@ -102,6 +102,10 @@ Current implementation progress:
   the current visible range instead of the generic visible-highlight
   `in_flight` signal, which removes the empty layout-only churn that used to
   continue while the worker was computing with no width/wrap work left
+- draw preparation no longer synthesizes heuristic large-file fallback tokens
+  when the real highlighter is absent; visible highlight output now reflects
+  actual runtime/highlighter truth instead of a tree-sitter limitation
+  workaround leaking into the render path
 
 ## Current Problem
 

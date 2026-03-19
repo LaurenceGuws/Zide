@@ -370,11 +370,14 @@ stack issue, not an isolated highlight bug:
         of treating highlight-worker `in_flight` as a layout signal; the local
         Unicode repro no longer shows the empty layout-only churn that used to
         continue while the worker computed `28-32`
+      - draw preparation no longer fabricates heuristic large-file fallback
+        tokens when the real highlighter is absent, so visible highlight output
+        and logs now reflect actual runtime/highlighter truth instead of a
+        tree-sitter limitation workaround in the render path
       - visible precompute now follows a worker schedule contract instead of
         the old inline-publish contract
-      - next cleanup target is to inventory and remove remaining startup
-        warmup/tree-sitter-specific workaround logic that now muddies the
-        runtime signal
+      - next cleanup target is to keep deleting remaining startup-era control
+        branches that still muddy the runtime signal
       - this is still behavior-preserving and does not yet claim full runtime
         ownership
 

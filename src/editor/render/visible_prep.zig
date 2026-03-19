@@ -4,7 +4,6 @@ const selection_mod = @import("../view/selection.zig");
 const chrome_geometry_mod = @import("../view/chrome_geometry.zig");
 const metrics_mod = @import("../view/metrics.zig");
 const runtime_mod = @import("../view/runtime.zig");
-const cache_helpers = @import("../../ui/widgets/editor_widget_draw_cache.zig");
 const cache_mod = @import("cache.zig");
 const app_logger = @import("../../app_logger.zig");
 const text_mod = @import("../../ui/widgets/editor_widget_draw_text.zig");
@@ -69,6 +68,7 @@ pub fn prepareLine(
     scratch: *runtime_mod.LineScratch,
     fallback_tokens_buf: []HighlightToken,
 ) PreparedLine {
+    _ = fallback_tokens_buf;
     const line_data = widget.lineData(shell, line_idx, scratch);
     const line_start = view.lineStart(line_idx);
     const line_end = line_start + line_data.len;
@@ -83,12 +83,6 @@ pub fn prepareLine(
             line_token_end += 1;
         }
         tokens = @constCast(highlight_tokens[token_idx.*..line_token_end]);
-    }
-
-    var effective_tokens = tokens;
-    if (tokens.len == 0 and cache_helpers.shouldUseLargeFileFallback(view)) {
-        const fallback_count = cache_helpers.buildLargeFileFallbackTokens(line_data.text, line_start, fallback_tokens_buf);
-        effective_tokens = fallback_tokens_buf[0..fallback_count];
     }
 
     var ranges: [8]SelectionRange = undefined;
@@ -108,7 +102,7 @@ pub fn prepareLine(
         .owned_text = line_data.owned_text,
         .owned_clusters = line_data.owned_clusters,
         .line_width = line_width,
-        .effective_tokens = effective_tokens,
+        .effective_tokens = tokens,
         .selection_ranges = ranges,
         .selection_count = range_count,
     };
@@ -143,6 +137,7 @@ pub fn prepareCachedLineTokens(
     line_text_hash: u64,
     fallback_tokens_buf: []HighlightToken,
 ) void {
+    _ = fallback_tokens_buf;
     const tokens = cache.tryHighlightTokens(
         prepared.line_idx,
         prepared.line_start,
@@ -151,11 +146,6 @@ pub fn prepareCachedLineTokens(
     );
     if (tokens.len > 0) {
         prepared.effective_tokens = tokens;
-        return;
-    }
-    if (prepared.effective_tokens.len == 0 and cache_helpers.shouldUseLargeFileFallback(view)) {
-        const fallback_count = cache_helpers.buildLargeFileFallbackTokens(prepared.line_text, prepared.line_start, fallback_tokens_buf);
-        prepared.effective_tokens = fallback_tokens_buf[0..fallback_count];
     }
 }
 

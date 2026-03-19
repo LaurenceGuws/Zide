@@ -8,8 +8,6 @@ const app_logger = @import("../../app_logger.zig");
 
 const Editor = editor_mod.Editor;
 const HighlightToken = syntax_mod.HighlightToken;
-const TokenKind = syntax_mod.TokenKind;
-const large_file_fallback_threshold_bytes: usize = Editor.highlighter_large_file_threshold_bytes;
 
 pub fn hashLine(text: []const u8) u64 {
     var h: u64 = 1469598103934665603;
@@ -18,90 +16,6 @@ pub fn hashLine(text: []const u8) u64 {
         h *%= 1099511628211;
     }
     return h;
-}
-
-pub fn shouldUseLargeFileFallback(editor: anytype) bool {
-    if (editor.highlighter != null) return false;
-    if (editor.totalLen() < large_file_fallback_threshold_bytes) return false;
-    return true;
-}
-
-fn isIdentStart(ch: u8) bool {
-    return (ch >= 'a' and ch <= 'z') or (ch >= 'A' and ch <= 'Z') or ch == '_';
-}
-
-fn isIdentContinue(ch: u8) bool {
-    return isIdentStart(ch) or (ch >= '0' and ch <= '9');
-}
-
-fn isDigit(ch: u8) bool {
-    return ch >= '0' and ch <= '9';
-}
-
-pub fn buildLargeFileFallbackTokens(line_text: []const u8, line_start: usize, out: []HighlightToken) usize {
-    var count: usize = 0;
-    var i: usize = 0;
-    while (i < line_text.len and count < out.len) {
-        const ch = line_text[i];
-        if ((ch == '/' and i + 1 < line_text.len and line_text[i + 1] == '/') or ch == '#') {
-            out[count] = .{
-                .start = line_start + i,
-                .end = line_start + line_text.len,
-                .kind = .comment,
-                .priority = 0,
-                .conceal = null,
-                .url = null,
-                .conceal_lines = false,
-            };
-            count += 1;
-            break;
-        }
-        if (ch == '"') {
-            var j = i + 1;
-            while (j < line_text.len) : (j += 1) {
-                if (line_text[j] == '"' and line_text[j - 1] != '\\') {
-                    j += 1;
-                    break;
-                }
-            }
-            out[count] = .{
-                .start = line_start + i,
-                .end = line_start + @min(j, line_text.len),
-                .kind = .string,
-                .priority = 0,
-                .conceal = null,
-                .url = null,
-                .conceal_lines = false,
-            };
-            count += 1;
-            i = @min(j, line_text.len);
-            continue;
-        }
-        if (isDigit(ch)) {
-            var j = i + 1;
-            while (j < line_text.len and (isDigit(line_text[j]) or line_text[j] == '_')) : (j += 1) {}
-            out[count] = .{
-                .start = line_start + i,
-                .end = line_start + j,
-                .kind = .number,
-                .priority = 0,
-                .conceal = null,
-                .url = null,
-                .conceal_lines = false,
-            };
-            count += 1;
-            i = j;
-            continue;
-        }
-        if (isIdentStart(ch)) {
-            var j = i + 1;
-            while (j < line_text.len and isIdentContinue(line_text[j])) : (j += 1) {}
-            i = j;
-            continue;
-        }
-        i += 1;
-    }
-    return count;
 }
 
 fn scheduleVisibleHighlightRequest(widget: anytype, shell: anytype, height: f32, budget_lines: usize) ?Editor.HighlightWorkBatch {
@@ -273,28 +187,6 @@ pub fn hashSegment(
         h *%= 1099511628211;
     }
     return h;
-}
-
-test "buildLargeFileFallbackTokens classifies comment string and number spans deterministically" {
-    var tokens: [8]HighlightToken = undefined;
-
-    const string_count = buildLargeFileFallbackTokens("const x = \"abc\"", 100, &tokens);
-    try std.testing.expectEqual(@as(usize, 1), string_count);
-    try std.testing.expectEqual(.string, tokens[0].kind);
-    try std.testing.expectEqual(@as(usize, 110), tokens[0].start);
-    try std.testing.expectEqual(@as(usize, 115), tokens[0].end);
-
-    const number_count = buildLargeFileFallbackTokens("value = 123_45", 200, &tokens);
-    try std.testing.expectEqual(@as(usize, 1), number_count);
-    try std.testing.expectEqual(.number, tokens[0].kind);
-    try std.testing.expectEqual(@as(usize, 208), tokens[0].start);
-    try std.testing.expectEqual(@as(usize, 214), tokens[0].end);
-
-    const comment_count = buildLargeFileFallbackTokens("name // trailing", 300, &tokens);
-    try std.testing.expectEqual(@as(usize, 1), comment_count);
-    try std.testing.expectEqual(.comment, tokens[0].kind);
-    try std.testing.expectEqual(@as(usize, 305), tokens[0].start);
-    try std.testing.expectEqual(@as(usize, 316), tokens[0].end);
 }
 
 test "hashSegment changes for cursor current-line and selection state" {
