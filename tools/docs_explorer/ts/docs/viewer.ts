@@ -1,5 +1,5 @@
 import { renderMarkdown } from "./markdown.js";
-import { currentFindFromHash, repoRelative } from "../shared/utils.js";
+import { currentFindFromHash, docFetchPath } from "../shared/utils.js";
 import { syncActiveLink } from "../tree/tree.js";
 import { renderMermaidBlocks } from "./mermaid.js";
 import {
@@ -97,7 +97,7 @@ export async function loadDoc(args: {
   syncActiveLink(state.tree.activePath);
 
   try {
-    const res = await fetch(repoRelative(repoBasePath, path));
+    const res = await fetch(docFetchPath(repoBasePath, repoAbsolutePath, path));
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     const source = await res.text();
     const html = renderMarkdown(

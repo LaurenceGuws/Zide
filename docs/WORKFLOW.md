@@ -30,8 +30,8 @@ repository.
 - `docs/AGENT_HANDOFF.md` — high-level current focus, constraints, and entrypoints for a fresh session.
 - `docs/INDEX.md` — repo-local navigation map.
 - `README.md` — customer-facing overview and primary links.
-- `docs/todo/**` — active task tracking, implementation plans, and status.
-- `app_architecture/**.md` — current architecture and design authority.
+- `docs/todo/**` — active execution queues and implementation tracking that are not themselves architecture authority.
+- `app_architecture/**.md` — current architecture/design authority plus architecture communication such as design plans, status checkpoints, diagrams, and release/design notes.
 - `docs/reference/**` — contributor/operator-facing technical reference.
 - `docs/research/**` — exploratory research and technical writeups.
 - `docs/review/**` — historical audits, investigations, and review evidence.
@@ -47,6 +47,9 @@ Doc-placement authority:
 - Put current task progress in the owning todo or architecture doc, not in `docs/AGENT_HANDOFF.md`.
 - If a doc contradicts code, fix the doc or remove the stale claim.
 - Prefer one clear authority per topic.
+- If a doc defines the intended subsystem shape, boundary, contract, or design target, it belongs in `app_architecture/`.
+- If a doc is architecture-adjacent communication such as a redesign plan, checkpoint, status note, diagram set, or release/design summary, it belongs in `app_architecture/`.
+- If a doc is workflow, operator guidance, reference, research, review, or a non-authoritative execution queue, it belongs in `docs/`.
 - If a topic is historical rather than current, move it under `docs/review/` or point to it from a current doc instead of duplicating it.
 - If a topic is exploratory or reference-heavy rather than authoritative, place it under `docs/research/` or `docs/reference/`.
 - Update the smallest doc that actually owns the information.
@@ -54,7 +57,7 @@ Doc-placement authority:
 ## Quick Placement Rules
 
 - Contributor/operator workflow and active work queues: `docs/`
-- Current architecture and design authority: `app_architecture/`
+- Current architecture/design authority, diagrams, redesign plans, and architecture status communication: `app_architecture/`
 - Research and technical reference: `docs/research/` and `docs/reference/`
 - Historical review/investigation material: `docs/review/`
 - Public/project-facing overview: `README.md` and the hosted docs explorer

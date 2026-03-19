@@ -15,10 +15,11 @@ const TextStore = text_store.TextStore;
 const CursorPos = types.CursorPos;
 const Selection = types.Selection;
 const c = ts_api.c_api;
+const c_allocator = std.heap.c_allocator;
 
 /// High-level editor state wrapping a text buffer
 pub const Editor = struct {
-    pub const highlighter_large_file_threshold_bytes: usize = 8 * 1024 * 1024;
+    pub const highlighter_large_file_threshold_bytes: usize = 2 * 1024 * 1024;
     const SearchHighlight = editor_search_highlight.SearchHighlightOps(@This());
     const SelectionState = editor_selection_state.SelectionStateOps(@This());
     const Navigation = editor_navigation.NavigationOps(@This());
@@ -33,6 +34,79 @@ pub const Editor = struct {
     const UndoSelectionState = editor_selection_state.UndoSelectionState;
     const SelectionReplacementOp = editor_selection_state.SelectionReplacementOp;
 
+    pub const DocumentCore = struct {
+        buffer: *TextStore,
+        highlighter: ?*syntax_mod.SyntaxHighlighter,
+        highlight_dirty_start_line: ?usize,
+        highlight_dirty_end_line: ?usize,
+        highlight_pending: bool,
+        highlight_disabled_for_large_file: bool,
+        search_query: ?[]u8,
+        search_matches: std.ArrayList(SearchMatch),
+        search_active: ?usize,
+        search_mode: SearchMode,
+        search_refresh_on_text_change: bool,
+        search_epoch: u64,
+        search_worker: ?std.Thread,
+        search_worker_running: bool,
+        search_mutex: std.Thread.Mutex,
+        search_cond: std.Thread.Condition,
+        search_generation: u64,
+        search_request: ?SearchWorkRequest,
+        search_result: ?SearchWorkResult,
+        change_tick: u64,
+        highlight_epoch: u64,
+        file_path: ?[]const u8,
+        modified: bool,
+        saved_content_hash: u64,
+        grammar_manager: *grammar_manager_mod.GrammarManager,
+        undo_selection_states: std.ArrayList(UndoSelectionState),
+        next_undo_selection_state_id: u64,
+
+        pub fn filePath(self: DocumentCore) ?[]const u8 {
+            return self.file_path;
+        }
+
+        pub fn isModified(self: DocumentCore) bool {
+            return self.modified;
+        }
+
+        pub fn textStore(self: DocumentCore) *TextStore {
+            return self.buffer;
+        }
+
+        pub fn changeTick(self: DocumentCore) u64 {
+            return self.change_tick;
+        }
+
+        pub fn highlightEpoch(self: DocumentCore) u64 {
+            return self.highlight_epoch;
+        }
+    };
+
+    pub const EditorViewState = struct {
+        preferred_visual_col: ?usize,
+        scroll_line: usize,
+        scroll_col: usize,
+        scroll_row_offset: usize,
+
+        pub fn scrollLine(self: EditorViewState) usize {
+            return self.scroll_line;
+        }
+
+        pub fn scrollCol(self: EditorViewState) usize {
+            return self.scroll_col;
+        }
+
+        pub fn scrollRowOffset(self: EditorViewState) usize {
+            return self.scroll_row_offset;
+        }
+
+        pub fn preferredVisualCol(self: EditorViewState) ?usize {
+            return self.preferred_visual_col;
+        }
+    };
+
     pub const SearchMatch = editor_search_highlight.SearchMatch;
     pub const SearchMode = editor_search_highlight.SearchMode;
     const SearchWorkRequest = editor_search_highlight.SearchWorkRequest;
@@ -40,43 +114,220 @@ pub const Editor = struct {
     pub const HighlightDirtyRange = editor_search_highlight.HighlightDirtyRange;
 
     allocator: std.mem.Allocator,
-    buffer: *TextStore,
+    doc: DocumentCore,
     cursor: CursorPos,
-    preferred_visual_col: ?usize,
     selection: ?Selection,
     selections: std.ArrayList(Selection),
-    scroll_line: usize,
-    scroll_col: usize,
-    scroll_row_offset: usize,
+    view: EditorViewState,
     line_width_cache: std.AutoHashMap(usize, usize),
+    cluster_offset_cache: std.AutoHashMap(usize, ClusterOffsetEntry),
     max_line_width_cache: usize,
-    highlighter: ?*syntax_mod.SyntaxHighlighter,
-    highlight_dirty_start_line: ?usize,
-    highlight_dirty_end_line: ?usize,
-    highlight_pending: bool,
-    highlight_disabled_for_large_file: bool,
-    search_query: ?[]u8,
-    search_matches: std.ArrayList(SearchMatch),
-    search_active: ?usize,
-    search_mode: SearchMode,
-    search_refresh_on_text_change: bool,
-    search_epoch: u64,
-    search_worker: ?std.Thread,
-    search_worker_running: bool,
-    search_mutex: std.Thread.Mutex,
-    search_cond: std.Thread.Condition,
-    search_generation: u64,
-    search_request: ?SearchWorkRequest,
-    search_result: ?SearchWorkResult,
-    change_tick: u64,
-    highlight_epoch: u64,
-    file_path: ?[]const u8,
-    modified: bool,
-    saved_content_hash: u64,
+    highlight_defer_frames: u8,
+    visible_cache_precompute_defer_frames: u8,
+    cluster_offsets_defer_frames: u8,
+    startup_defer_last_frame_id: u64,
+    startup_visible_warmup_active: bool,
     tab_width: usize,
-    grammar_manager: *grammar_manager_mod.GrammarManager,
-    undo_selection_states: std.ArrayList(UndoSelectionState),
-    next_undo_selection_state_id: u64,
+
+    const ClusterOffsetEntry = struct {
+        text_hash: u64,
+        offsets: []u32,
+    };
+
+    pub fn documentCore(self: *Editor) DocumentCore {
+        return self.doc;
+    }
+
+    pub fn documentCoreMut(self: *Editor) *DocumentCore {
+        return &self.doc;
+    }
+
+    pub fn viewState(self: *Editor) EditorViewState {
+        return self.view;
+    }
+
+    pub fn viewStateMut(self: *Editor) *EditorViewState {
+        return &self.view;
+    }
+
+    pub fn clearPreferredVisualCol(self: *Editor) void {
+        self.view.preferred_visual_col = null;
+    }
+
+    pub fn setPreferredVisualCol(self: *Editor, col: ?usize) void {
+        self.view.preferred_visual_col = col;
+    }
+
+    pub fn resetScrollState(self: *Editor) void {
+        self.view.scroll_line = 0;
+        self.view.scroll_col = 0;
+        self.view.scroll_row_offset = 0;
+    }
+
+    pub fn setScrollLine(self: *Editor, line: usize) void {
+        self.view.scroll_line = line;
+    }
+
+    pub fn setScrollCol(self: *Editor, col: usize) void {
+        self.view.scroll_col = col;
+    }
+
+    pub fn setScrollRowOffset(self: *Editor, row_offset: usize) void {
+        self.view.scroll_row_offset = row_offset;
+    }
+
+    pub fn setVerticalScroll(self: *Editor, line: usize, row_offset: usize) void {
+        self.view.scroll_line = line;
+        self.view.scroll_row_offset = row_offset;
+    }
+
+    pub fn clearHighlighter(self: *Editor) void {
+        if (self.doc.highlighter) |h| {
+            h.destroy();
+            self.doc.highlighter = null;
+        }
+    }
+
+    pub fn setFilePath(self: *Editor, path: ?[]const u8) !void {
+        if (self.doc.file_path) |old_path| {
+            self.allocator.free(old_path);
+            self.doc.file_path = null;
+        }
+        if (path) |value| {
+            self.doc.file_path = try self.allocator.dupe(u8, value);
+        }
+    }
+
+    pub fn markSaved(self: *Editor) void {
+        self.doc.modified = false;
+        self.doc.saved_content_hash = contentHash(self.doc.buffer);
+    }
+
+    pub fn setModified(self: *Editor, modified: bool) void {
+        self.doc.modified = modified;
+    }
+
+    pub fn recomputeModifiedFromContent(self: *Editor) void {
+        self.doc.modified = contentHash(self.doc.buffer) != self.doc.saved_content_hash;
+    }
+
+    pub fn clearHighlightDirtyRange(self: *Editor) void {
+        self.doc.highlight_dirty_start_line = null;
+        self.doc.highlight_dirty_end_line = null;
+    }
+
+    pub fn setHighlightDisabledForLargeFile(self: *Editor) void {
+        self.doc.highlight_disabled_for_large_file = self.doc.buffer.totalLen() >= highlighter_large_file_threshold_bytes;
+    }
+
+    pub fn setHighlightPending(self: *Editor, pending: bool) void {
+        self.doc.highlight_pending = pending;
+    }
+
+    pub fn bumpHighlightEpoch(self: *Editor) void {
+        self.doc.highlight_epoch +|= 1;
+    }
+
+    pub fn bumpChangeTick(self: *Editor) void {
+        self.doc.change_tick +|= 1;
+    }
+
+    pub fn setSearchRefreshOnTextChange(self: *Editor, enabled: bool) void {
+        self.doc.search_refresh_on_text_change = enabled;
+    }
+
+    pub fn setSearchMode(self: *Editor, mode: SearchMode) void {
+        self.doc.search_mode = mode;
+    }
+
+    pub fn clearSearchQuery(self: *Editor) void {
+        if (self.doc.search_query) |prev| {
+            self.allocator.free(prev);
+            self.doc.search_query = null;
+        }
+    }
+
+    pub fn setSearchQueryOwned(self: *Editor, query: []const u8) !void {
+        self.clearSearchQuery();
+        self.doc.search_query = try self.allocator.dupe(u8, query);
+    }
+
+    pub fn clearSearchMatches(self: *Editor) void {
+        self.doc.search_matches.clearRetainingCapacity();
+    }
+
+    pub fn replaceSearchMatches(self: *Editor, matches: []const SearchMatch) !void {
+        self.clearSearchMatches();
+        try self.doc.search_matches.appendSlice(self.allocator, matches);
+    }
+
+    pub fn setSearchActive(self: *Editor, active: ?usize) void {
+        self.doc.search_active = active;
+    }
+
+    pub fn bumpSearchEpoch(self: *Editor) void {
+        self.doc.search_epoch +|= 1;
+    }
+
+    pub fn bumpSearchGeneration(self: *Editor) u64 {
+        self.doc.search_generation +|= 1;
+        return self.doc.search_generation;
+    }
+
+    pub fn isSearchWorkerRunning(self: *const Editor) bool {
+        return self.doc.search_worker_running;
+    }
+
+    pub fn setSearchWorkerRunning(self: *Editor, running: bool) void {
+        self.doc.search_worker_running = running;
+    }
+
+    pub fn setSearchWorker(self: *Editor, worker: ?std.Thread) void {
+        self.doc.search_worker = worker;
+    }
+
+    pub fn takeSearchWorker(self: *Editor) ?std.Thread {
+        const worker = self.doc.search_worker;
+        self.doc.search_worker = null;
+        return worker;
+    }
+
+    pub fn clearPendingSearchRequest(self: *Editor) void {
+        if (self.doc.search_request) |pending| {
+            c_allocator.free(pending.query);
+            c_allocator.free(pending.content);
+            self.doc.search_request = null;
+        }
+    }
+
+    pub fn replaceSearchRequest(self: *Editor, request: SearchWorkRequest) void {
+        self.clearPendingSearchRequest();
+        self.doc.search_request = request;
+    }
+
+    pub fn takeSearchRequest(self: *Editor) ?SearchWorkRequest {
+        const request = self.doc.search_request;
+        self.doc.search_request = null;
+        return request;
+    }
+
+    pub fn clearPendingSearchResult(self: *Editor) void {
+        if (self.doc.search_result) |result| {
+            c_allocator.free(result.matches);
+            self.doc.search_result = null;
+        }
+    }
+
+    pub fn replaceSearchResult(self: *Editor, result: SearchWorkResult) void {
+        self.clearPendingSearchResult();
+        self.doc.search_result = result;
+    }
+
+    pub fn takeSearchResult(self: *Editor) ?SearchWorkResult {
+        const result = self.doc.search_result;
+        self.doc.search_result = null;
+        return result;
+    }
 
     pub fn init(allocator: std.mem.Allocator, grammar_manager: *grammar_manager_mod.GrammarManager) !*Editor {
         const buffer = try text_store.TextStore.init(allocator, "");
@@ -91,137 +342,202 @@ pub const Editor = struct {
         const editor = try allocator.create(Editor);
         editor.* = .{
             .allocator = allocator,
-            .buffer = buffer,
+            .doc = .{
+                .buffer = buffer,
+                .highlighter = null,
+                .highlight_dirty_start_line = null,
+                .highlight_dirty_end_line = null,
+                .highlight_pending = false,
+                .highlight_disabled_for_large_file = buffer.totalLen() >= highlighter_large_file_threshold_bytes,
+                .search_query = null,
+                .search_matches = .empty,
+                .search_active = null,
+                .search_mode = .literal,
+                .search_refresh_on_text_change = false,
+                .search_epoch = 0,
+                .search_worker = null,
+                .search_worker_running = false,
+                .search_mutex = .{},
+                .search_cond = .{},
+                .search_generation = 0,
+                .search_request = null,
+                .search_result = null,
+                .change_tick = 0,
+                .highlight_epoch = 0,
+                .file_path = null,
+                .modified = false,
+                .saved_content_hash = contentHash(buffer),
+                .grammar_manager = grammar_manager,
+                .undo_selection_states = .empty,
+                .next_undo_selection_state_id = 1,
+            },
             .cursor = .{ .line = 0, .col = 0, .offset = 0 },
-            .preferred_visual_col = null,
+            .view = .{
+                .preferred_visual_col = null,
+                .scroll_line = 0,
+                .scroll_col = 0,
+                .scroll_row_offset = 0,
+            },
             .selection = null,
             .selections = .empty,
-            .scroll_line = 0,
-            .scroll_col = 0,
-            .scroll_row_offset = 0,
             .line_width_cache = std.AutoHashMap(usize, usize).init(allocator),
+            .cluster_offset_cache = std.AutoHashMap(usize, ClusterOffsetEntry).init(allocator),
             .max_line_width_cache = 0,
-            .highlighter = null,
-            .highlight_dirty_start_line = null,
-            .highlight_dirty_end_line = null,
-            .highlight_pending = false,
-            .highlight_disabled_for_large_file = buffer.totalLen() >= highlighter_large_file_threshold_bytes,
-            .search_query = null,
-            .search_matches = .empty,
-            .search_active = null,
-            .search_mode = .literal,
-            .search_refresh_on_text_change = false,
-            .search_epoch = 0,
-            .search_worker = null,
-            .search_worker_running = false,
-            .search_mutex = .{},
-            .search_cond = .{},
-            .search_generation = 0,
-            .search_request = null,
-            .search_result = null,
-            .change_tick = 0,
-            .highlight_epoch = 0,
-            .file_path = null,
-            .modified = false,
-            .saved_content_hash = contentHash(buffer),
+            .highlight_defer_frames = 0,
+            .visible_cache_precompute_defer_frames = 0,
+            .cluster_offsets_defer_frames = 0,
+            .startup_defer_last_frame_id = 0,
+            .startup_visible_warmup_active = false,
             .tab_width = 4,
-            .grammar_manager = grammar_manager,
-            .undo_selection_states = .empty,
-            .next_undo_selection_state_id = 1,
         };
         return editor;
     }
 
     pub fn deinit(self: *Editor) void {
         self.stopSearchWorker();
-        if (self.highlighter) |h| {
+        if (self.doc.highlighter) |h| {
             h.destroy();
         }
-        if (self.file_path) |path| {
+        if (self.doc.file_path) |path| {
             self.allocator.free(path);
         }
-        if (self.search_query) |query| {
+        if (self.doc.search_query) |query| {
             self.allocator.free(query);
         }
-        self.search_matches.deinit(self.allocator);
-        for (self.undo_selection_states.items) |state| {
+        self.doc.search_matches.deinit(self.allocator);
+        for (self.doc.undo_selection_states.items) |state| {
             self.allocator.free(state.selections);
         }
-        self.undo_selection_states.deinit(self.allocator);
+        self.doc.undo_selection_states.deinit(self.allocator);
         self.selections.deinit(self.allocator);
+        self.clearClusterOffsetCache();
+        self.cluster_offset_cache.deinit();
         self.line_width_cache.deinit();
-        self.buffer.deinit();
+        self.doc.buffer.deinit();
         self.allocator.destroy(self);
     }
 
     pub fn openFile(self: *Editor, path: []const u8) !void {
         const log = app_logger.logger("editor.core");
+        const perf_log = app_logger.logger("editor.perf");
+        const t_start = std.time.nanoTimestamp();
         log.logf(.info, "openFile path=\"{s}\"", .{path});
         // Clean up old state
-        if (self.highlighter) |h| {
-            h.destroy();
-            self.highlighter = null;
-        }
-        self.buffer.deinit();
+        self.clearHighlighter();
+        self.doc.buffer.deinit();
 
         // Create new buffer from file
-        self.buffer = try text_store.TextStore.initFromFile(self.allocator, path);
+        self.doc.buffer = try text_store.TextStore.initFromFile(self.allocator, path);
 
         // Store path
-        if (self.file_path) |old_path| {
-            self.allocator.free(old_path);
-        }
-        self.file_path = try self.allocator.dupe(u8, path);
+        try self.setFilePath(path);
 
         // Reset state
         self.cursor = .{ .line = 0, .col = 0, .offset = 0 };
-        self.preferred_visual_col = null;
+        self.clearPreferredVisualCol();
         self.selection = null;
         self.clearSelections();
-        self.scroll_line = 0;
-        self.scroll_col = 0;
-        self.scroll_row_offset = 0;
+        self.resetScrollState();
         self.invalidateLineWidthCache();
-        self.modified = false;
-        self.saved_content_hash = contentHash(self.buffer);
-        self.highlight_dirty_start_line = null;
-        self.highlight_dirty_end_line = null;
-        self.highlight_disabled_for_large_file = self.buffer.totalLen() >= highlighter_large_file_threshold_bytes;
+        self.markSaved();
+        self.clearHighlightDirtyRange();
+        self.setHighlightDisabledForLargeFile();
+        self.highlight_defer_frames = if (self.doc.highlight_disabled_for_large_file) 0 else 2;
+        self.visible_cache_precompute_defer_frames = 2;
+        self.cluster_offsets_defer_frames = 4;
+        self.startup_defer_last_frame_id = 0;
+        self.startup_visible_warmup_active = true;
 
         self.scheduleHighlighter(path);
+        const elapsed_us = @as(i64, @intCast(@divTrunc(std.time.nanoTimestamp() - t_start, 1000)));
+        perf_log.logf(
+            .info,
+            "startup openFile path=\"{s}\" bytes={d} lines={d} highlight_disabled={any} defer_highlight={d} defer_precompute={d} defer_clusters={d} time_us={d}",
+            .{
+                path,
+                self.doc.buffer.totalLen(),
+                self.doc.buffer.lineCount(),
+                self.doc.highlight_disabled_for_large_file,
+                self.highlight_defer_frames,
+                self.visible_cache_precompute_defer_frames,
+                self.cluster_offsets_defer_frames,
+                elapsed_us,
+            },
+        );
     }
 
     pub fn save(self: *Editor) !void {
-        if (self.file_path) |path| {
+        if (self.doc.file_path) |path| {
             const log = app_logger.logger("editor.core");
             log.logf(.info, "save path=\"{s}\"", .{path});
-            try self.buffer.saveToFile(path);
-            self.modified = false;
-            self.saved_content_hash = contentHash(self.buffer);
+            try self.doc.buffer.saveToFile(path);
+            self.markSaved();
         }
     }
 
     pub fn saveAs(self: *Editor, path: []const u8) !void {
         const log = app_logger.logger("editor.core");
         log.logf(.info, "saveAs path=\"{s}\"", .{path});
-        try self.buffer.saveToFile(path);
-        if (self.file_path) |old_path| {
-            self.allocator.free(old_path);
-        }
-        self.file_path = try self.allocator.dupe(u8, path);
-        self.modified = false;
-        self.saved_content_hash = contentHash(self.buffer);
-        self.highlight_disabled_for_large_file = self.buffer.totalLen() >= highlighter_large_file_threshold_bytes;
-        if (!self.highlight_disabled_for_large_file) {
+        try self.doc.buffer.saveToFile(path);
+        try self.setFilePath(path);
+        self.markSaved();
+        self.setHighlightDisabledForLargeFile();
+        self.highlight_defer_frames = 0;
+        self.visible_cache_precompute_defer_frames = 0;
+        self.cluster_offsets_defer_frames = 0;
+        self.startup_defer_last_frame_id = 0;
+        self.startup_visible_warmup_active = false;
+        if (!self.doc.highlight_disabled_for_large_file) {
             try self.tryInitHighlighter(path);
         } else {
-            self.highlight_pending = false;
+            self.setHighlightPending(false);
         }
     }
 
     pub fn invalidateLineWidthCache(self: *Editor) void {
         self.line_width_cache.clearRetainingCapacity();
+        self.clearClusterOffsetCache();
         self.max_line_width_cache = 0;
+    }
+
+    pub fn cachedClusterOffsets(self: *Editor, line_idx: usize, line_text: []const u8) ?[]const u32 {
+        if (!hasNonAscii(line_text)) return null;
+        const text_hash = hashLine(line_text);
+        if (self.cluster_offset_cache.getPtr(line_idx)) |entry| {
+            if (entry.text_hash == text_hash) return entry.offsets;
+            self.allocator.free(entry.offsets);
+            _ = self.cluster_offset_cache.remove(line_idx);
+        }
+        return null;
+    }
+
+    pub fn cacheClusterOffsets(self: *Editor, line_idx: usize, line_text: []const u8, offsets: []u32) ?[]const u32 {
+        if (!hasNonAscii(line_text)) {
+            self.allocator.free(offsets);
+            return null;
+        }
+        const text_hash = hashLine(line_text);
+        if (self.cluster_offset_cache.getPtr(line_idx)) |entry| {
+            self.allocator.free(entry.offsets);
+            entry.* = .{ .text_hash = text_hash, .offsets = offsets };
+            return entry.offsets;
+        }
+        self.cluster_offset_cache.put(line_idx, .{
+            .text_hash = text_hash,
+            .offsets = offsets,
+        }) catch {
+            self.allocator.free(offsets);
+            return null;
+        };
+        return self.cluster_offset_cache.get(line_idx).?.offsets;
+    }
+
+    pub fn clearClusterOffsetCache(self: *Editor) void {
+        var it = self.cluster_offset_cache.iterator();
+        while (it.next()) |entry| {
+            self.allocator.free(entry.value_ptr.offsets);
+        }
+        self.cluster_offset_cache.clearRetainingCapacity();
     }
 
     pub fn lineWidthCached(self: *Editor, line_idx: usize, line_text: []const u8, cluster_offsets: ?[]const u32) usize {
@@ -320,14 +636,14 @@ pub const Editor = struct {
         Navigation.extendSelectionWordRight(self);
     }
     pub fn selectAll(self: *Editor) void {
-        self.preferred_visual_col = null;
+        self.clearPreferredVisualCol();
         self.clearSelections();
-        if (self.buffer.totalLen() == 0) {
+        if (self.doc.buffer.totalLen() == 0) {
             self.cursor = .{ .line = 0, .col = 0, .offset = 0 };
             self.selection = null;
             return;
         }
-        self.cursor = self.cursorPosForOffset(self.buffer.totalLen());
+        self.cursor = self.cursorPosForOffset(self.doc.buffer.totalLen());
         self.selection = .{
             .start = .{ .line = 0, .col = 0, .offset = 0 },
             .end = self.cursor,
@@ -491,9 +807,9 @@ pub const Editor = struct {
     }
 
     pub fn noteTextChangedBase(self: *Editor) void {
-        self.modified = true;
+        self.setModified(true);
         self.invalidateLineWidthCache();
-        self.change_tick +|= 1;
+        self.bumpChangeTick();
     }
 
     pub fn pointForByte(self: *Editor, byte_offset: usize) c.TSPoint {
@@ -527,22 +843,22 @@ pub const Editor = struct {
     }
 
     pub fn deleteCurrentLine(self: *Editor) !void {
-        self.preferred_visual_col = null;
+        self.clearPreferredVisualCol();
 
-        const line_count = self.buffer.lineCount();
+        const line_count = self.doc.buffer.lineCount();
         if (line_count == 0) return;
 
         const before_id = try self.captureUndoSelectionState();
         const line_idx = @min(self.cursor.line, line_count - 1);
-        const line_start = self.buffer.lineStart(line_idx);
-        const line_len = self.buffer.lineLen(line_idx);
+        const line_start = self.doc.buffer.lineStart(line_idx);
+        const line_len = self.doc.buffer.lineLen(line_idx);
 
         var delete_start = line_start;
         var delete_end = line_start + line_len;
 
         if (line_count > 1) {
             if (line_idx + 1 < line_count) {
-                delete_end = self.buffer.lineStart(line_idx + 1);
+                delete_end = self.doc.buffer.lineStart(line_idx + 1);
             } else if (delete_start > 0) {
                 delete_start -= 1;
             }
@@ -552,9 +868,9 @@ pub const Editor = struct {
 
         const start_point = self.pointForByte(delete_start);
         const end_point = self.pointForByte(delete_end);
-        try self.buffer.deleteRange(delete_start, delete_end - delete_start);
+        try self.doc.buffer.deleteRange(delete_start, delete_end - delete_start);
         self.applyHighlightEdit(delete_start, delete_end, delete_start, start_point, end_point);
-        self.setCursorOffsetNoClear(@min(delete_start, self.buffer.totalLen()));
+        self.setCursorOffsetNoClear(@min(delete_start, self.doc.buffer.totalLen()));
         self.selection = null;
         self.clearSelections();
         self.noteTextChanged();
@@ -563,19 +879,19 @@ pub const Editor = struct {
     }
 
     pub fn duplicateCurrentLine(self: *Editor) !void {
-        self.preferred_visual_col = null;
+        self.clearPreferredVisualCol();
 
-        const line_count = self.buffer.lineCount();
+        const line_count = self.doc.buffer.lineCount();
         if (line_count == 0) return;
 
         const before_id = try self.captureUndoSelectionState();
         const line_idx = @min(self.cursor.line, line_count - 1);
-        const line_start = self.buffer.lineStart(line_idx);
-        const line_len = self.buffer.lineLen(line_idx);
-        const line_text = try self.buffer.readRangeAlloc(line_start, line_len);
+        const line_start = self.doc.buffer.lineStart(line_idx);
+        const line_len = self.doc.buffer.lineLen(line_idx);
+        const line_text = try self.doc.buffer.readRangeAlloc(line_start, line_len);
         defer self.allocator.free(line_text);
 
-        const insert_offset = if (line_idx + 1 < line_count) self.buffer.lineStart(line_idx + 1) else self.buffer.totalLen();
+        const insert_offset = if (line_idx + 1 < line_count) self.doc.buffer.lineStart(line_idx + 1) else self.doc.buffer.totalLen();
         const insert_text = if (line_idx + 1 < line_count)
             try std.fmt.allocPrint(self.allocator, "{s}\n", .{line_text})
         else
@@ -583,11 +899,11 @@ pub const Editor = struct {
         defer self.allocator.free(insert_text);
 
         const insert_point = self.pointForByte(insert_offset);
-        try self.buffer.insertBytes(insert_offset, insert_text);
+        try self.doc.buffer.insertBytes(insert_offset, insert_text);
         self.applyHighlightEdit(insert_offset, insert_offset, insert_offset + insert_text.len, insert_point, insert_point);
 
-        const target_line = @min(line_idx + 1, self.buffer.lineCount() - 1);
-        const target_col = @min(self.cursor.col, self.buffer.lineLen(target_line));
+        const target_line = @min(line_idx + 1, self.doc.buffer.lineCount() - 1);
+        const target_col = @min(self.cursor.col, self.doc.buffer.lineLen(target_line));
         self.setCursor(target_line, target_col);
         self.selection = null;
         self.clearSelections();
@@ -645,7 +961,7 @@ pub const Editor = struct {
     }
 
     pub fn indentSelectedLines(self: *Editor) !void {
-        self.preferred_visual_col = null;
+        self.clearPreferredVisualCol();
         const range = self.selectedLineRange();
         const before_id = try self.captureUndoSelectionState();
 
@@ -654,7 +970,7 @@ pub const Editor = struct {
             line_idx -= 1;
             const insert_offset = self.lineStart(line_idx);
             const insert_point = self.pointForByte(insert_offset);
-            try self.buffer.insertBytes(insert_offset, "\t");
+            try self.doc.buffer.insertBytes(insert_offset, "\t");
             self.applyHighlightEdit(insert_offset, insert_offset, insert_offset + 1, insert_point, insert_point);
         }
 
@@ -666,7 +982,7 @@ pub const Editor = struct {
     }
 
     pub fn outdentSelectedLines(self: *Editor) !void {
-        self.preferred_visual_col = null;
+        self.clearPreferredVisualCol();
         const range = self.selectedLineRange();
         const before_id = try self.captureUndoSelectionState();
 
@@ -681,7 +997,7 @@ pub const Editor = struct {
             const delete_end = delete_start + remove_len;
             const start_point = self.pointForByte(delete_start);
             const end_point = self.pointForByte(delete_end);
-            try self.buffer.deleteRange(delete_start, remove_len);
+            try self.doc.buffer.deleteRange(delete_start, remove_len);
             self.applyHighlightEdit(delete_start, delete_end, delete_start, start_point, end_point);
         }
 
@@ -737,7 +1053,7 @@ pub const Editor = struct {
             const norm = sel.normalized();
             const len = norm.end.offset - norm.start.offset;
             if (len == 0) continue;
-            const chunk = try self.buffer.readRangeAlloc(norm.start.offset, len);
+            const chunk = try self.doc.buffer.readRangeAlloc(norm.start.offset, len);
             defer self.allocator.free(chunk);
             if (emitted_any) {
                 try out.append(self.allocator, '\n');
@@ -762,8 +1078,8 @@ pub const Editor = struct {
     }
 
     pub fn undo(self: *Editor) !bool {
-        self.preferred_visual_col = null;
-        const result = try self.buffer.undoWithCursor();
+        self.clearPreferredVisualCol();
+        const result = try self.doc.buffer.undoWithCursor();
         if (result.changed) {
             const log = app_logger.logger("editor.core");
             log.logf(.info, "undo ok", .{});
@@ -771,33 +1087,33 @@ pub const Editor = struct {
         if (result.changed) {
             if (result.state) |state_id| {
                 if (!(try self.restoreUndoSelectionState(state_id)) and result.cursor != null) {
-                    const clamped = @min(result.cursor.?, self.buffer.totalLen());
+                    const clamped = @min(result.cursor.?, self.doc.buffer.totalLen());
                     self.setCursorOffsetNoClear(clamped);
                     self.selection = null;
                     self.clearSelections();
                 }
             } else if (result.cursor) |cursor_offset| {
-                const clamped = @min(cursor_offset, self.buffer.totalLen());
+                const clamped = @min(cursor_offset, self.doc.buffer.totalLen());
                 self.setCursorOffsetNoClear(clamped);
                 self.selection = null;
                 self.clearSelections();
             } else {
-                if (self.cursor.offset > self.buffer.totalLen()) {
-                    self.cursor.offset = self.buffer.totalLen();
+                if (self.cursor.offset > self.doc.buffer.totalLen()) {
+                    self.cursor.offset = self.doc.buffer.totalLen();
                 }
                 self.updateCursorPosition();
                 self.selection = null;
                 self.clearSelections();
             }
-            if (self.highlighter) |h| {
+            if (self.doc.highlighter) |h| {
                 _ = h.reparseFull();
-                self.noteHighlightDirtyRange(0, self.buffer.totalLen());
-                self.highlight_epoch +|= 1;
+                self.noteHighlightDirtyRange(0, self.doc.buffer.totalLen());
+                self.bumpHighlightEpoch();
             }
             self.invalidateLineWidthCache();
-            self.change_tick +|= 1;
-            self.modified = contentHash(self.buffer) != self.saved_content_hash;
-            if (self.search_query != null) {
+            self.bumpChangeTick();
+            self.recomputeModifiedFromContent();
+            if (self.doc.search_query != null) {
                 const log = app_logger.logger("editor.core");
                 self.recomputeSearchMatches() catch |err| {
                     log.logf(.warning, "recompute search matches after undo failed: {s}", .{@errorName(err)});
@@ -808,8 +1124,8 @@ pub const Editor = struct {
     }
 
     pub fn redo(self: *Editor) !bool {
-        self.preferred_visual_col = null;
-        const result = try self.buffer.redoWithCursor();
+        self.clearPreferredVisualCol();
+        const result = try self.doc.buffer.redoWithCursor();
         if (result.changed) {
             const log = app_logger.logger("editor.core");
             log.logf(.info, "redo ok", .{});
@@ -817,33 +1133,33 @@ pub const Editor = struct {
         if (result.changed) {
             if (result.state) |state_id| {
                 if (!(try self.restoreUndoSelectionState(state_id)) and result.cursor != null) {
-                    const clamped = @min(result.cursor.?, self.buffer.totalLen());
+                    const clamped = @min(result.cursor.?, self.doc.buffer.totalLen());
                     self.setCursorOffsetNoClear(clamped);
                     self.selection = null;
                     self.clearSelections();
                 }
             } else if (result.cursor) |cursor_offset| {
-                const clamped = @min(cursor_offset, self.buffer.totalLen());
+                const clamped = @min(cursor_offset, self.doc.buffer.totalLen());
                 self.setCursorOffsetNoClear(clamped);
                 self.selection = null;
                 self.clearSelections();
             } else {
-                if (self.cursor.offset > self.buffer.totalLen()) {
-                    self.cursor.offset = self.buffer.totalLen();
+                if (self.cursor.offset > self.doc.buffer.totalLen()) {
+                    self.cursor.offset = self.doc.buffer.totalLen();
                 }
                 self.updateCursorPosition();
                 self.selection = null;
                 self.clearSelections();
             }
-            if (self.highlighter) |h| {
+            if (self.doc.highlighter) |h| {
                 _ = h.reparseFull();
-                self.noteHighlightDirtyRange(0, self.buffer.totalLen());
-                self.highlight_epoch +|= 1;
+                self.noteHighlightDirtyRange(0, self.doc.buffer.totalLen());
+                self.bumpHighlightEpoch();
             }
             self.invalidateLineWidthCache();
-            self.change_tick +|= 1;
-            self.modified = contentHash(self.buffer) != self.saved_content_hash;
-            if (self.search_query != null) {
+            self.bumpChangeTick();
+            self.recomputeModifiedFromContent();
+            if (self.doc.search_query != null) {
                 const log = app_logger.logger("editor.core");
                 self.recomputeSearchMatches() catch |err| {
                     log.logf(.warning, "recompute search matches after redo failed: {s}", .{@errorName(err)});
@@ -858,30 +1174,30 @@ pub const Editor = struct {
     // ─────────────────────────────────────────────────────────────────────────
 
     pub fn lineCount(self: *Editor) usize {
-        return self.buffer.lineCount();
+        return self.doc.buffer.lineCount();
     }
 
     pub fn totalLen(self: *Editor) usize {
-        return self.buffer.totalLen();
+        return self.doc.buffer.totalLen();
     }
 
     pub fn getLine(self: *Editor, line_index: usize, out: []u8) usize {
-        return self.buffer.readLine(line_index, out);
+        return self.doc.buffer.readLine(line_index, out);
     }
 
     pub fn lineLen(self: *Editor, line_index: usize) usize {
-        return self.buffer.lineLen(line_index);
+        return self.doc.buffer.lineLen(line_index);
     }
 
     pub fn lineStart(self: *Editor, line_index: usize) usize {
-        return self.buffer.lineStart(line_index);
+        return self.doc.buffer.lineStart(line_index);
     }
 
     pub fn getLineAlloc(self: *Editor, line_index: usize) ![]u8 {
-        const len = self.buffer.lineLen(line_index);
+        const len = self.doc.buffer.lineLen(line_index);
         if (len == 0) return try self.allocator.alloc(u8, 0);
         const out = try self.allocator.alloc(u8, len);
-        const read = self.buffer.readLine(line_index, out);
+        const read = self.doc.buffer.readLine(line_index, out);
         if (read < len) {
             return self.allocator.realloc(out, read);
         }
@@ -931,12 +1247,32 @@ pub const Editor = struct {
         SearchHighlight.applyPendingSearchWork(self);
     }
 
-    pub fn setSearchQuery(self: *Editor, query: ?[]const u8) !void {
-        try SearchHighlight.setSearchQuery(self, query);
+    pub fn shouldDeferVisibleCachePrecompute(self: *Editor) bool {
+        return self.visible_cache_precompute_defer_frames > 0;
     }
 
-    pub fn setSearchRefreshOnTextChange(self: *Editor, enabled: bool) void {
-        self.search_refresh_on_text_change = enabled;
+    pub fn advanceStartupDeferrals(self: *Editor, frame_id: u64) void {
+        if (self.startup_defer_last_frame_id == frame_id) return;
+        self.startup_defer_last_frame_id = frame_id;
+        if (self.highlight_defer_frames > 0) self.highlight_defer_frames -= 1;
+        if (self.visible_cache_precompute_defer_frames > 0) self.visible_cache_precompute_defer_frames -= 1;
+        if (self.cluster_offsets_defer_frames > 0) self.cluster_offsets_defer_frames -= 1;
+    }
+
+    pub fn shouldDeferClusterOffsets(self: *Editor) bool {
+        return self.cluster_offsets_defer_frames > 0;
+    }
+
+    pub fn shouldThrottleStartupHighlightWarmup(self: *const Editor) bool {
+        return self.startup_visible_warmup_active;
+    }
+
+    pub fn completeStartupVisibleWarmup(self: *Editor) void {
+        self.startup_visible_warmup_active = false;
+    }
+
+    pub fn setSearchQuery(self: *Editor, query: ?[]const u8) !void {
+        try SearchHighlight.setSearchQuery(self, query);
     }
 
     pub fn setSearchQueryRegex(self: *Editor, query: ?[]const u8) !void {
@@ -1059,6 +1395,22 @@ pub const Editor = struct {
         }
         hasher.update(std.mem.asBytes(&total));
         return hasher.final();
+    }
+
+    fn hashLine(text: []const u8) u64 {
+        var h: u64 = 1469598103934665603;
+        for (text) |byte| {
+            h ^= byte;
+            h *%= 1099511628211;
+        }
+        return h;
+    }
+
+    fn hasNonAscii(text: []const u8) bool {
+        for (text) |byte| {
+            if (byte & 0x80 != 0) return true;
+        }
+        return false;
     }
 };
 

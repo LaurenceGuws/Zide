@@ -35,6 +35,7 @@ export async function bootstrapAppRuntime(args: {
     state,
     shell,
     appIconPath: project.icon,
+    appWordmarkText: project.brandWordmarkText ?? "ide",
     repoBasePath: project.repoBasePath,
     repoAbsolutePath: project.repoAbsolutePath,
     docs,

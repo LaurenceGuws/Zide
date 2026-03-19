@@ -20,7 +20,7 @@ pub fn updateHorizontalScrollFromMouse(
 ) void {
     const clamped_x = @min(@max(mouse_x - grab_offset, track_x), track_x + available);
     const ratio = if (available > 0) (clamped_x - track_x) / available else 0;
-    editor.scroll_col = @as(usize, @intFromFloat(@round(@as(f32, @floatFromInt(max_scroll)) * ratio)));
+    editor.setScrollCol(@as(usize, @intFromFloat(@round(@as(f32, @floatFromInt(max_scroll)) * ratio))));
 }
 
 pub fn updateVerticalScrollFromMouse(
@@ -33,8 +33,7 @@ pub fn updateVerticalScrollFromMouse(
 ) void {
     const clamped_y = @min(@max(mouse_y - grab_offset, track_y), track_y + available);
     const ratio = if (available > 0) (clamped_y - track_y) / available else 0;
-    editor.scroll_line = @as(usize, @intFromFloat(@round(@as(f32, @floatFromInt(max_scroll)) * ratio)));
-    editor.scroll_row_offset = 0;
+    editor.setVerticalScroll(@as(usize, @intFromFloat(@round(@as(f32, @floatFromInt(max_scroll)) * ratio))), 0);
 }
 
 pub fn cursorRowOffset(
@@ -45,8 +44,8 @@ pub fn cursorRowOffset(
     ctx: *anyopaque,
     visualLinesForLine: VisualLinesFn,
 ) i32 {
-    const scroll_line = editor.scroll_line;
-    const scroll_seg = editor.scroll_row_offset;
+    const scroll_line = editor.view.scroll_line;
+    const scroll_seg = editor.view.scroll_row_offset;
     if (cursor_line == scroll_line) {
         return @as(i32, @intCast(cursor_seg)) - @as(i32, @intCast(scroll_seg));
     }
@@ -89,13 +88,13 @@ pub fn lineForVisualRow(
     if (line_count == 0) return null;
     if (cols == 0) return null;
     if (!wrap_enabled) {
-        const line = editor.scroll_line + visual_row;
+        const line = editor.view.scroll_line + visual_row;
         if (line >= line_count) return null;
         return .{ .line_idx = line, .seg_idx = 0, .cols = cols };
     }
 
-    var line = editor.scroll_line;
-    var seg = editor.scroll_row_offset;
+    var line = editor.view.scroll_line;
+    var seg = editor.view.scroll_row_offset;
     if (line >= line_count) {
         line = line_count - 1;
         seg = 0;
@@ -129,17 +128,17 @@ pub fn scrollVisual(
     if (cols == 0) return;
     if (!wrap_enabled) {
         if (delta_rows > 0) {
-            editor.scroll_line = @min(editor.scroll_line + @as(usize, @intCast(delta_rows)), line_count - 1);
+            editor.setScrollLine(@min(editor.view.scroll_line + @as(usize, @intCast(delta_rows)), line_count - 1));
         } else {
             const delta_abs: usize = @intCast(-delta_rows);
-            editor.scroll_line = if (editor.scroll_line > delta_abs) editor.scroll_line - delta_abs else 0;
+            editor.setScrollLine(if (editor.view.scroll_line > delta_abs) editor.view.scroll_line - delta_abs else 0);
         }
-        editor.scroll_row_offset = 0;
+        editor.setScrollRowOffset(0);
         return;
     }
 
-    var line = editor.scroll_line;
-    var seg = editor.scroll_row_offset;
+    var line = editor.view.scroll_line;
+    var seg = editor.view.scroll_row_offset;
     if (line >= line_count) {
         line = line_count - 1;
         seg = 0;
@@ -186,6 +185,5 @@ pub fn scrollVisual(
         }
     }
 
-    editor.scroll_line = line;
-    editor.scroll_row_offset = seg;
+    editor.setVerticalScroll(line, seg);
 }

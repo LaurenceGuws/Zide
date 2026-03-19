@@ -44,6 +44,7 @@ pub fn handle(
     perf_frames_done: u64,
     perf_frames_total: u64,
     perf_scroll_delta: i32,
+    frame_id: u64,
     now: f64,
     editor_render_cache: anytype,
     editor_highlight_budget: ?usize,
@@ -150,8 +151,11 @@ pub fn handle(
     );
     if (runtime_state.needs_redraw) out.needs_redraw = true;
     if (runtime_state.note_input) out.note_input = true;
-    if (out.needs_redraw) {
-        const editor = app_active_editor_runtime.fromVisualIndex(tab_bar, editors, active_tab) orelse return out;
+    const editor = app_active_editor_runtime.fromVisualIndex(tab_bar, editors, active_tab) orelse return out;
+    const should_drive_visible_warmup =
+        editor.shouldThrottleStartupHighlightWarmup() or
+        editor_render_cache.hasPendingHighlightWork();
+    if (out.needs_redraw or should_drive_visible_warmup) {
         var widget = widgets.EditorWidget.initWithCache(editor, editor_cluster_cache, editor_wrap);
         app_editor_visible_caches_runtime.precompute(
             &widget,
@@ -160,7 +164,11 @@ pub fn handle(
             editor_render_cache,
             editor_highlight_budget,
             editor_width_budget,
+            frame_id,
         );
+        if (editor.shouldThrottleStartupHighlightWarmup() or editor_render_cache.hasPendingHighlightWork()) {
+            out.needs_redraw = true;
+        }
     }
     return out;
 }

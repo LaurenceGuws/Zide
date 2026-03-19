@@ -31,7 +31,7 @@ pub fn NavigationOps(comptime Editor: type) type {
             if (self.cursor.offset == 0) return;
             self.cursor.offset -= 1;
             self.updateCursorPosition();
-            self.preferred_visual_col = null;
+            self.clearPreferredVisualCol();
             self.selection = null;
             self.clearSelections();
         }
@@ -61,11 +61,11 @@ pub fn NavigationOps(comptime Editor: type) type {
                 self.selection = null;
                 return;
             }
-            const total = self.buffer.totalLen();
+            const total = self.doc.buffer.totalLen();
             if (self.cursor.offset >= total) return;
             self.cursor.offset += 1;
             self.updateCursorPosition();
-            self.preferred_visual_col = null;
+            self.clearPreferredVisualCol();
             self.selection = null;
             self.clearSelections();
         }
@@ -96,7 +96,7 @@ pub fn NavigationOps(comptime Editor: type) type {
             const line_len = self.buffer.lineLen(self.cursor.line);
             self.cursor.col = @min(target_col, line_len);
             self.updateCursorOffset();
-            self.preferred_visual_col = null;
+            self.clearPreferredVisualCol();
             self.selection = null;
             self.clearSelections();
         }
@@ -128,7 +128,7 @@ pub fn NavigationOps(comptime Editor: type) type {
             const line_len = self.buffer.lineLen(self.cursor.line);
             self.cursor.col = @min(target_col, line_len);
             self.updateCursorOffset();
-            self.preferred_visual_col = null;
+            self.clearPreferredVisualCol();
             self.selection = null;
             self.clearSelections();
         }
@@ -143,7 +143,7 @@ pub fn NavigationOps(comptime Editor: type) type {
             }
             self.cursor.col = 0;
             self.updateCursorOffset();
-            self.preferred_visual_col = null;
+            self.clearPreferredVisualCol();
             self.selection = null;
             self.clearSelections();
         }
@@ -156,10 +156,10 @@ pub fn NavigationOps(comptime Editor: type) type {
                 };
                 return;
             }
-            const line_len = self.buffer.lineLen(self.cursor.line);
+            const line_len = self.doc.buffer.lineLen(self.cursor.line);
             self.cursor.col = line_len;
             self.updateCursorOffset();
-            self.preferred_visual_col = null;
+            self.clearPreferredVisualCol();
             self.selection = null;
             self.clearSelections();
         }
@@ -225,7 +225,7 @@ pub fn NavigationOps(comptime Editor: type) type {
                     log.logf(.warning, "collect selection anchors/heads (right) failed: {s}", .{@errorName(err)});
                     return;
                 };
-                const total = self.buffer.totalLen();
+                const total = self.doc.buffer.totalLen();
                 for (target_heads.items) |*offset| {
                     if (offset.* < total) offset.* += 1;
                 }
@@ -234,7 +234,7 @@ pub fn NavigationOps(comptime Editor: type) type {
                 };
                 return;
             }
-            const total = self.buffer.totalLen();
+            const total = self.doc.buffer.totalLen();
             self.extendPrimarySelectionToOffset(if (self.cursor.offset < total) self.cursor.offset + 1 else total);
         }
 
@@ -251,14 +251,14 @@ pub fn NavigationOps(comptime Editor: type) type {
                 };
                 for (target_heads.items) |*offset| {
                     const caret = self.cursorPosForOffset(offset.*);
-                    offset.* = self.buffer.lineStart(caret.line);
+                    offset.* = self.doc.buffer.lineStart(caret.line);
                 }
                 self.restoreExtendedCaretSelections(anchors.items, target_heads.items) catch |err| {
                     log.logf(.warning, "restore extended carets (line-start) failed: {s}", .{@errorName(err)});
                 };
                 return;
             }
-            self.extendPrimarySelectionToOffset(self.buffer.lineStart(self.cursor.line));
+            self.extendPrimarySelectionToOffset(self.doc.buffer.lineStart(self.cursor.line));
         }
 
         pub fn extendSelectionToLineEnd(self: *Editor) void {
@@ -274,14 +274,14 @@ pub fn NavigationOps(comptime Editor: type) type {
                 };
                 for (target_heads.items) |*offset| {
                     const caret = self.cursorPosForOffset(offset.*);
-                    offset.* = self.buffer.lineStart(caret.line) + self.buffer.lineLen(caret.line);
+                    offset.* = self.doc.buffer.lineStart(caret.line) + self.doc.buffer.lineLen(caret.line);
                 }
                 self.restoreExtendedCaretSelections(anchors.items, target_heads.items) catch |err| {
                     log.logf(.warning, "restore extended carets (line-end) failed: {s}", .{@errorName(err)});
                 };
                 return;
             }
-            self.extendPrimarySelectionToOffset(self.buffer.lineStart(self.cursor.line) + self.buffer.lineLen(self.cursor.line));
+            self.extendPrimarySelectionToOffset(self.doc.buffer.lineStart(self.cursor.line) + self.doc.buffer.lineLen(self.cursor.line));
         }
 
         pub fn extendSelectionWordLeft(self: *Editor) void {
@@ -332,7 +332,7 @@ pub fn NavigationOps(comptime Editor: type) type {
             self.cursor.line = line;
             self.cursor.col = col;
             self.updateCursorOffset();
-            self.preferred_visual_col = null;
+            self.clearPreferredVisualCol();
             self.selection = null;
             self.clearSelections();
         }
@@ -349,23 +349,23 @@ pub fn NavigationOps(comptime Editor: type) type {
             self.cursor.line = line;
             self.cursor.col = col;
             self.updateCursorOffset();
-            self.preferred_visual_col = null;
+            self.clearPreferredVisualCol();
         }
 
         pub fn setCursorOffsetNoClear(self: *Editor, offset: usize) void {
             self.cursor.offset = offset;
             self.updateCursorPosition();
-            self.preferred_visual_col = null;
+            self.clearPreferredVisualCol();
         }
 
         pub fn updateCursorPosition(self: *Editor) void {
-            self.cursor.line = self.buffer.lineIndexForOffset(self.cursor.offset);
-            const line_start = self.buffer.lineStart(self.cursor.line);
+            self.cursor.line = self.doc.buffer.lineIndexForOffset(self.cursor.offset);
+            const line_start = self.doc.buffer.lineStart(self.cursor.line);
             self.cursor.col = self.cursor.offset - line_start;
         }
 
         pub fn updateCursorOffset(self: *Editor) void {
-            const line_start = self.buffer.lineStart(self.cursor.line);
+            const line_start = self.doc.buffer.lineStart(self.cursor.line);
             self.cursor.offset = line_start + self.cursor.col;
         }
     };

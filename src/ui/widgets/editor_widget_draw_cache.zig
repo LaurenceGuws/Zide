@@ -1,13 +1,15 @@
 const std = @import("std");
+const editor_mod = @import("../../editor/editor.zig");
 const syntax_mod = @import("../../editor/syntax.zig");
 const layout_mod = @import("../../editor/view/layout.zig");
 const metrics_mod = @import("../../editor/view/metrics.zig");
-const runtime_mod = @import("../../editor/view/runtime.zig");
 const cache_mod = @import("../../editor/render/cache.zig");
+const app_logger = @import("../../app_logger.zig");
 
+const Editor = editor_mod.Editor;
 const HighlightToken = syntax_mod.HighlightToken;
 const TokenKind = syntax_mod.TokenKind;
-const large_file_fallback_threshold_bytes: usize = 8 * 1024 * 1024;
+const large_file_fallback_threshold_bytes: usize = Editor.highlighter_large_file_threshold_bytes;
 
 pub fn hashLine(text: []const u8) u64 {
     var h: u64 = 1469598103934665603;
@@ -103,6 +105,7 @@ pub fn buildLargeFileFallbackTokens(line_text: []const u8, line_start: usize, ou
 }
 
 pub fn precomputeHighlightTokens(widget: anytype, cache: *cache_mod.EditorRenderCache, shell: anytype, height: f32, budget_lines: usize) void {
+    const perf_log = app_logger.logger("editor.perf");
     const view = widget.frameView();
     const r = shell.rendererPtr();
     if (budget_lines == 0) return;
@@ -116,32 +119,65 @@ pub fn precomputeHighlightTokens(widget: anytype, cache: *cache_mod.EditorRender
     const start_line = view.scroll_line;
     const end_line = @min(start_line + visible_lines + 1, total_lines);
     cache.beginHighlightWork(start_line, end_line, view.highlight_epoch);
+    const batch = cache.takeHighlightWorkBatch(budget_lines) orelse {
+        perf_log.logf(.info, "visible_precompute_highlight lines=0 budget={d} time_us=0", .{budget_lines});
+        return;
+    };
 
-    var remaining = budget_lines;
-    while (remaining > 0) : (remaining -= 1) {
-        const next_line = cache.nextHighlightWorkLine() orelse break;
-        var line_buf: [4096]u8 = undefined;
-        var scratch = runtime_mod.LineScratch{ .buf = line_buf[0..] };
-        var line_data = widget.lineData(shell, next_line, &scratch);
-        defer widget.releaseLineData(&line_data);
-        const line_len = line_data.len;
-        const line_text = line_data.text;
-
-        const line_start = view.lineStart(next_line);
-        const line_end = line_start + line_len;
-        const line_text_hash = hashLine(line_text);
-        _ = cache.highlightTokens(
-            view.highlighter,
-            next_line,
-            line_start,
-            line_end,
-            line_text_hash,
-            view.highlight_epoch,
-        );
+    const t_start = std.time.nanoTimestamp();
+    var lines_done: usize = 0;
+    var tokens: []HighlightToken = &[_]HighlightToken{};
+    var allocated = false;
+    if (view.highlighter) |highlighter| {
+        const range_start = view.lineStart(batch.start_line);
+        const range_end = if (batch.end_line < view.lineCount()) view.lineStart(batch.end_line) else view.totalLen();
+        tokens = highlighter.highlightRange(range_start, range_end, widget.editor.allocator) catch |err| blk: {
+            const log = app_logger.logger("editor.draw");
+            log.logf(.warning, "visible precompute highlight range failed start={d} end={d} err={s}", .{ range_start, range_end, @errorName(err) });
+            break :blk &[_]HighlightToken{};
+        };
+        allocated = true;
+        if (tokens.len > 1) {
+            std.sort.heap(HighlightToken, tokens, {}, struct {
+                fn lessThan(_: void, a: HighlightToken, b: HighlightToken) bool {
+                    return syntax_mod.highlightTokenLessThanStable(a, b);
+                }
+            }.lessThan);
+        }
     }
+    defer if (allocated) widget.editor.allocator.free(tokens);
+    if (tokens.len > 0 or batch.start_line < batch.end_line) {
+        var token_idx: usize = 0;
+        var line_idx = batch.start_line;
+        while (line_idx < batch.end_line) : (line_idx += 1) {
+            var line_storage = loadLineText(widget, line_idx);
+            defer line_storage.deinit(widget.editor.allocator);
+            const line_start = view.lineStart(line_idx);
+            const line_end = line_start + line_storage.text.len;
+            while (token_idx < tokens.len and tokens[token_idx].end <= line_start) {
+                token_idx += 1;
+            }
+            var line_token_end = token_idx;
+            while (line_token_end < tokens.len and tokens[line_token_end].start < line_end) {
+                line_token_end += 1;
+            }
+            const line_text_hash = hashLine(line_storage.text);
+            cache.storeHighlightTokens(
+                line_idx,
+                line_start,
+                line_text_hash,
+                view.highlight_epoch,
+                tokens[token_idx..line_token_end],
+            );
+            lines_done += 1;
+        }
+    }
+    const elapsed_us = @as(i64, @intCast(@divTrunc(std.time.nanoTimestamp() - t_start, 1000)));
+    perf_log.logf(.info, "visible_precompute_highlight lines={d} budget={d} time_us={d}", .{ lines_done, budget_lines, elapsed_us });
 }
 
 pub fn precomputeLineWidths(widget: anytype, cache: *cache_mod.EditorRenderCache, shell: anytype, height: f32, budget_lines: usize) void {
+    const perf_log = app_logger.logger("editor.perf");
     const view = widget.frameView();
     const r = shell.rendererPtr();
     if (budget_lines == 0) return;
@@ -155,18 +191,22 @@ pub fn precomputeLineWidths(widget: anytype, cache: *cache_mod.EditorRenderCache
     const end_line = @min(start_line + visible_lines + 1, total_lines);
     cache.beginLineWidthWork(start_line, end_line, view.change_tick);
 
+    const t_start = std.time.nanoTimestamp();
+    var lines_done: usize = 0;
     var remaining = budget_lines;
     while (remaining > 0) : (remaining -= 1) {
         const next_line = cache.nextLineWidthWorkLine() orelse break;
-        var line_buf: [4096]u8 = undefined;
-        var scratch = runtime_mod.LineScratch{ .buf = line_buf[0..] };
-        var line_data = widget.lineData(shell, next_line, &scratch);
-        defer widget.releaseLineData(&line_data);
-        _ = line_data.width;
+        var line_storage = loadLineText(widget, next_line);
+        defer line_storage.deinit(widget.editor.allocator);
+        _ = widget.editor.lineWidthCached(next_line, line_storage.text, null);
+        lines_done += 1;
     }
+    const elapsed_us = @as(i64, @intCast(@divTrunc(std.time.nanoTimestamp() - t_start, 1000)));
+    perf_log.logf(.info, "visible_precompute_width lines={d} budget={d} time_us={d}", .{ lines_done, budget_lines, elapsed_us });
 }
 
 pub fn precomputeWrapCounts(widget: anytype, cache: *cache_mod.EditorRenderCache, shell: anytype, height: f32, budget_lines: usize) void {
+    const perf_log = app_logger.logger("editor.perf");
     const view = widget.frameView();
     const r = shell.rendererPtr();
     if (!view.wrap_enabled) return;
@@ -183,18 +223,42 @@ pub fn precomputeWrapCounts(widget: anytype, cache: *cache_mod.EditorRenderCache
     const end_line = @min(start_line + visible_lines + 1, total_lines);
     cache.beginWrapWork(start_line, end_line, cols, view.change_tick);
 
+    const t_start = std.time.nanoTimestamp();
+    var lines_done: usize = 0;
     var remaining = budget_lines;
     while (remaining > 0) : (remaining -= 1) {
         const next_line = cache.nextWrapWorkLine() orelse break;
-        var line_buf: [4096]u8 = undefined;
-        var scratch = runtime_mod.LineScratch{ .buf = line_buf[0..] };
-        var line_data = widget.lineData(shell, next_line, &scratch);
-        defer widget.releaseLineData(&line_data);
-
-        const line_width = metrics_mod.lineWidthForDisplay(line_data.len, line_data.width, false);
+        var line_storage = loadLineText(widget, next_line);
+        defer line_storage.deinit(widget.editor.allocator);
+        const width_cached = widget.editor.lineWidthCached(next_line, line_storage.text, null);
+        const line_width = metrics_mod.lineWidthForDisplay(line_storage.text.len, width_cached, false);
         const count = layout_mod.visualLineCountForWidth(cols, line_width);
         cache.setWrapLineCount(next_line, cols, line_width, count);
+        lines_done += 1;
     }
+    const elapsed_us = @as(i64, @intCast(@divTrunc(std.time.nanoTimestamp() - t_start, 1000)));
+    perf_log.logf(.info, "visible_precompute_wrap lines={d} budget={d} cols={d} time_us={d}", .{ lines_done, budget_lines, cols, elapsed_us });
+}
+
+const LineStorage = struct {
+    text: []const u8,
+    owned: ?[]u8,
+
+    fn deinit(self: *LineStorage, allocator: std.mem.Allocator) void {
+        if (self.owned) |owned| allocator.free(owned);
+    }
+};
+
+fn loadLineText(widget: anytype, line_idx: usize) LineStorage {
+    var line_buf: [4096]u8 = undefined;
+    const line_len = widget.editor.lineLen(line_idx);
+    if (line_len <= line_buf.len) {
+        const len = widget.editor.getLine(line_idx, line_buf[0..]);
+        const owned = widget.editor.allocator.dupe(u8, line_buf[0..len]) catch return .{ .text = &[_]u8{}, .owned = null };
+        return .{ .text = owned, .owned = owned };
+    }
+    const owned = widget.editor.getLineAlloc(line_idx) catch return .{ .text = &[_]u8{}, .owned = null };
+    return .{ .text = owned, .owned = owned };
 }
 
 pub fn hashSegment(

@@ -143,11 +143,9 @@ pub fn prepareCachedLineTokens(
     line_text_hash: u64,
     fallback_tokens_buf: []HighlightToken,
 ) void {
-    const tokens = cache.highlightTokens(
-        view.highlighter,
+    const tokens = cache.tryHighlightTokens(
         prepared.line_idx,
         prepared.line_start,
-        prepared.line_end,
         line_text_hash,
         view.highlight_epoch,
     );

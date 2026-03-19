@@ -16,6 +16,7 @@ export function createDocController(args: {
   state: AppState;
   shell: AppShell;
   appIconPath: string;
+  appWordmarkText: string;
   repoBasePath: string;
   repoAbsolutePath?: string;
   docs: string[];
@@ -32,6 +33,7 @@ export function createDocController(args: {
     state,
     shell,
     appIconPath,
+    appWordmarkText,
     repoBasePath,
     repoAbsolutePath,
     docs,
@@ -50,6 +52,7 @@ export function createDocController(args: {
       state,
       shell,
       appIconPath,
+      appWordmarkText,
       repoBasePath,
       repoAbsolutePath,
       docs,

@@ -18,6 +18,14 @@ It does not own:
 
 Those live under `docs/todo/editor/`, `docs/research/`, and `docs/review/`.
 
+Current redesign planning authority for the next architecture cut:
+
+- `app_architecture/editor/EDITOR_STACK_REDESIGN_PLAN.md`
+- `app_architecture/editor/DOCUMENT_CORE_AND_VIEW_STATE_BOUNDARY.md`
+- `app_architecture/editor/EDITOR_RUNTIME_CONTRACT.md`
+- `app_architecture/editor/EDITOR_DISPLAY_SNAPSHOT_CONTRACT.md`
+- `app_architecture/editor/EDITOR_REDESIGN_EXECUTION_ROADMAP.md`
+
 ## Product Direction
 
 The editor is a first-class subsystem, not a thin widget.
@@ -53,6 +61,8 @@ The chosen direction is a layered editor subsystem:
   widget-local shortcuts or ad hoc host logic
 - preserve a reusable editor core that can serve native UI directly and support
   external hosts through a separate FFI boundary
+- continue the current redesign by finishing the split between document core,
+  editor runtime, display engine, widget adapter, and downstream renderer
 
 What does not change in this design:
 
@@ -187,6 +197,9 @@ Rule:
 
 - editing behavior should exist here as a real editor action/operation before it
   is exposed by app shortcuts or FFI.
+- the current redesign direction is to split document truth from view/scroll
+  state explicitly; see
+  `app_architecture/editor/DOCUMENT_CORE_AND_VIEW_STATE_BOUNDARY.md`.
 
 ### 3. Syntax and search/highlight runtime
 
@@ -219,6 +232,12 @@ Rule:
 
 - highlight/search truth lives in editor state and syntax/search runtime, not in
   widget-local caches.
+- visible highlight generation must not run as expensive foreground work inside
+  widget/frame precompute. If visible warmup needs incremental execution, that
+  work belongs to an editor-owned runtime lane that publishes results back to
+  render preparation.
+- background work must publish through an editor-owned runtime contract rather
+  than through app/frame polling or render-cache-owned queue state.
 
 ### 4. View, geometry, and render preparation
 
@@ -233,6 +252,8 @@ Responsibilities:
 - cursor/selection geometry
 - editor chrome geometry
 - retained-cache state for editor rendering
+- editor-owned display metrics such as line widths and grapheme-cluster offsets
+  that both warmup and draw paths reuse
 - segment/paint preparation
 
 Non-responsibilities:
@@ -245,6 +266,12 @@ Rule:
 
 - this layer may derive visible/editor-frame state from editor truth, but should
   not invent new editor semantics.
+- durable display-metric caches belong here rather than inside widget-local
+  frame caches.
+- render preparation may request highlight/display work, but it must not own the
+  long-running execution lane for expensive syntax generation.
+- draw-facing publication should flow through immutable display snapshots rather
+  than live editor backpointers or widget callback fetches.
 
 ### 5. Widget/UI integration
 
@@ -260,12 +287,14 @@ Responsibilities:
 - rendering invocation
 - scrollbar and viewport interaction
 - mapping shell/input coordinates into editor operations
+- consuming editor-owned display metrics for cursor mapping and drawing
 
 Non-responsibilities:
 
 - app-level file flow
 - tab management
 - action binding policy
+- ownership of durable shaping or display-metric cache state
 
 Rule:
 

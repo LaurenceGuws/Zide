@@ -2,10 +2,11 @@
 from http.server import ThreadingHTTPServer, SimpleHTTPRequestHandler
 from pathlib import Path
 import json
+import mimetypes
 import os
 import subprocess
 import sys
-from urllib.parse import urlparse
+from urllib.parse import parse_qs, unquote, urlparse
 
 
 class DocsExplorerHandler(SimpleHTTPRequestHandler):
@@ -17,6 +18,13 @@ class DocsExplorerHandler(SimpleHTTPRequestHandler):
             self.send_error(404, "File not found")
             return
         self.handle_search()
+
+    def do_GET(self) -> None:
+        parsed = urlparse(self.path)
+        if parsed.path == "/tools/docs_explorer/__repo":
+            self.handle_repo_file(parsed)
+            return
+        super().do_GET()
 
     def handle_search(self) -> None:
         length = int(self.headers.get("Content-Length", "0"))
@@ -123,6 +131,35 @@ class DocsExplorerHandler(SimpleHTTPRequestHandler):
             error = {"error": stderr_text}
             self.wfile.write((json.dumps(error) + "\n").encode("utf-8"))
             self.wfile.flush()
+
+    def handle_repo_file(self, parsed) -> None:
+        query = parse_qs(parsed.query, keep_blank_values=False)
+        root_raw = query.get("root", [None])[0]
+        path_raw = query.get("path", [None])[0]
+        if not root_raw or not path_raw:
+            self.send_error(400, "Missing root or path")
+            return
+
+        try:
+            repo_root = Path(unquote(root_raw)).resolve()
+            candidate = (repo_root / unquote(path_raw)).resolve()
+            candidate.relative_to(repo_root)
+        except Exception:
+            self.send_error(400, "Invalid path")
+            return
+
+        if not candidate.is_file():
+            self.send_error(404, "File not found")
+            return
+
+        content_type = mimetypes.guess_type(str(candidate))[0] or "application/octet-stream"
+        data = candidate.read_bytes()
+        self.send_response(200)
+        self.send_header("Content-Type", f"{content_type}; charset=utf-8" if content_type.startswith("text/") else content_type)
+        self.send_header("Content-Length", str(len(data)))
+        self.send_header("Cache-Control", "no-store")
+        self.end_headers()
+        self.wfile.write(data)
 
 
 def main() -> int:

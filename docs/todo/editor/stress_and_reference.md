@@ -132,6 +132,57 @@ Every serious comparison/stress pass should produce at least one of:
 
 Do not leave the work only in commit history or chat context.
 
+## Current Architectural Finding
+
+The first interactive Unicode startup probe exposed a boundary bug, not just a
+slow code path:
+
+- visible-cache warmup was routed through widget `lineData`
+- widget `lineData` implicitly owned grapheme-cluster cache lifetime
+- that made render-prep and widget hit-testing share expensive Unicode shaping
+  through the wrong seam
+
+Direction locked from this finding:
+
+- durable display metrics such as line widths and grapheme-cluster offsets must
+  be editor/render-owned state
+- widget code should consume those metrics for hit-testing and drawing, but it
+  should not own the cache lifetime
+- future perf work in this area should deepen that editor/render display-metric
+  lane instead of adding more startup deferral logic
+
+The follow-up threading probe exposed the next boundary issue:
+
+- repeated visible highlight rework was fixable with better cache/work
+  ownership
+- but even the corrected incremental path still produced highlight on the
+  foreground frame lane
+- the user-visible result was streaming highlight during startup/navigation
+  convergence, which is not an acceptable final behavior
+
+Direction locked from this finding:
+
+- visible highlight generation must move out of widget/frame precompute
+- the next lane is a dedicated editor-runtime highlight worker or equivalent
+  editor-owned execution seam
+- frame hooks should request work and consume completed results, not execute the
+  expensive highlight query directly
+
+The broader architecture review also confirmed that this is part of a larger
+stack issue, not an isolated highlight bug:
+
+- text/document ownership, view state, runtime work, display caches, widget
+  input, app routing, and renderer publication are still not cleanly layered
+- the next serious editor work needs to be planned as an end-to-end subsystem
+  redesign from text engine through SDL/native presentation
+- redesign planning authority now lives in:
+  - `app_architecture/editor/EDITOR_STACK_REDESIGN_PLAN.md`
+  - `app_architecture/editor/DOCUMENT_CORE_AND_VIEW_STATE_BOUNDARY.md`
+  - `app_architecture/editor/EDITOR_RUNTIME_CONTRACT.md`
+  - `app_architecture/editor/EDITOR_DISPLAY_SNAPSHOT_CONTRACT.md`
+  - `app_architecture/RENDERER_SCENE_PUBLICATION_CONTRACT.md`
+  - `app_architecture/editor/EDITOR_REDESIGN_EXECUTION_ROADMAP.md`
+
 ## Initial Worklist
 
 - [ ] `ED-STRESS-01` Capture the end-to-end editor pipeline in docs
@@ -179,6 +230,8 @@ Do not leave the work only in commit history or chat context.
     - `lapce`:
       - proxy/editor split and background work separation
       - rope-backed editor core in a GUI/editor host
+  - Focused threading/runtime comparison now captured in:
+    - `docs/research/editor/EDITOR_THREADING_COMPARISON_2026-03-19.md`
 
 - [ ] `ED-STRESS-04` Start with core text + render pipeline checks
   - Prefer the first end-to-end checks that exercise text model, editor state,
@@ -196,3 +249,96 @@ Do not leave the work only in commit history or chat context.
 - [ ] `ED-STRESS-05` Write findings back into architecture docs
   - If stress work reveals an unclear subsystem seam, capture the corrected
     understanding in `app_architecture/editor/`.
+
+- [ ] `ED-STRESS-06` Replace foreground visible highlight warmup with editor-runtime work
+  - Current authority from the comparison:
+    - `docs/research/editor/EDITOR_THREADING_COMPARISON_2026-03-19.md`
+  - Required outcome:
+    - widget/frame precompute no longer calls expensive highlight generation
+    - highlight work is owned by a persistent editor-runtime seam
+    - UI thread only requests work, applies completed results, and redraws
+
+- [ ] `ED-STRESS-07` Plan the full editor stack redesign
+  - Current authority:
+    - `app_architecture/editor/EDITOR_STACK_REDESIGN_PLAN.md`
+  - Required outputs:
+    - explicit layer split from text buffer to SDL/present
+    - explicit execution lanes and publication seams
+    - phased cut plan for core/runtime/display/widget/renderer boundaries
+
+- [ ] `ED-STRESS-08` Split document truth from view state
+  - Current authority:
+    - `app_architecture/editor/DOCUMENT_CORE_AND_VIEW_STATE_BOUNDARY.md`
+  - Required outcome:
+    - `DocumentCore` owns document truth and file/runtime identity
+    - `EditorViewState` owns viewport-local state
+    - direct widget mutation of mixed document/view fields starts disappearing
+  - Current progress:
+    - `Editor` now has real `DocumentCore` / `EditorViewState` backing storage
+    - file/dirty/document/runtime consumers were swept onto document-owned
+      state across app/editor/widget call sites
+    - scroll/preferred-column consumers were swept onto view-owned state across
+      cursor/scroll/widget/navigation paths
+    - `zig build test` is green after the storage move
+    - `zig build -Dmode=editor -Doptimize=ReleaseFast` is green after the
+      storage move
+    - the first view-state API extraction is started:
+      - preferred-visual-column clears now route through explicit editor
+        methods in the main navigation/edit/selection paths
+      - the first scroll writes now route through explicit editor setters in
+        widget and view-scroll paths
+      - the FFI bridge now routes its reset/edit entrypoints through
+        document/view-aware editor surfaces instead of old mixed editor fields
+    - the first document-state API extraction is started:
+      - file/saved/modified/highlight-pending/highlight-epoch/change-tick now
+        have explicit editor helpers
+      - the highlight/search lane has started moving onto those helpers instead
+        of raw `doc.*` writes
+      - remaining raw document mutation is now concentrated mostly in the
+        search worker/request/result seam
+      - search result publication now routes through explicit editor helpers;
+        the main remaining search-side raw seam is worker synchronization
+        (mutex/condition/lifecycle)
+    - remaining view-state work is now narrow edge cleanup rather than broad
+      write-surface extraction
+    - the next cut is behavioral: replace direct `editor.doc.*` and
+      `editor.view.*` mutation with explicit state APIs
+
+- [ ] `ED-STRESS-09` Define the editor runtime publication seam
+  - Current authority:
+    - `app_architecture/editor/EDITOR_RUNTIME_CONTRACT.md`
+  - Required outcome:
+    - search and highlight are owned by `EditorRuntime`
+    - render cache stops owning highlight queue/progress state
+    - runtime completion can wake/redraw without unrelated input
+
+- [ ] `ED-STRESS-10` Define immutable display publication
+  - Current authority:
+    - `app_architecture/editor/EDITOR_DISPLAY_SNAPSHOT_CONTRACT.md`
+  - Required outcome:
+    - draw consumes immutable published display state
+    - `EditorFrameView` stops being a live backpointer façade
+    - widget callback fetches for visible line/cluster truth start disappearing
+
+- [ ] `ED-STRESS-11` Converge editor and terminal on one renderer publication model
+  - Current authority:
+    - `app_architecture/RENDERER_SCENE_PUBLICATION_CONTRACT.md`
+  - Required outcome:
+    - renderer scene target stays authoritative
+    - editor and terminal publish render-facing state into one host draw model
+    - renderer stops accreting long-term product-specific target APIs
+
+- [ ] `ED-STRESS-12` Execute the redesign in phased cuts
+  - Current authority:
+    - `app_architecture/editor/EDITOR_REDESIGN_EXECUTION_ROADMAP.md`
+  - Required outcome:
+    - redesign proceeds through reviewable phases with explicit gates
+    - replay/perf/manual validation stays attached to each phase
+    - the first implementation cut is `DocumentCore` + `EditorViewState`
+  - Current checkpoint:
+    - `Phase 1` storage split is real
+    - dominant document/view write surfaces are now API-driven
+    - remaining raw document seam is search worker synchronization
+    - remaining raw view work is narrow edge cleanup
+    - next decision is whether search worker synchronization closes `Phase 1`
+      or opens `Phase 2`

@@ -25,8 +25,8 @@ export async function loadProjectConfig(): Promise<{
   project: ProjectConfig;
   docs: string[];
 }> {
-  return Promise.all([
-    fetchJson<ProjectConfig>(selectedProjectConfigPath()),
-    fetchJson<string[]>("./config/docs-index.json"),
-  ]).then(([project, docs]) => ({ project, docs }));
+  const project = await fetchJson<ProjectConfig>(selectedProjectConfigPath());
+  const docsIndexPath = project.docsIndexPath ?? "./config/docs-index.json";
+  const docs = await fetchJson<string[]>(docsIndexPath);
+  return { project, docs };
 }

@@ -17,7 +17,7 @@ fn tabBarIndexForEditorOrdinal(tab_bar: anytype, editor_ordinal: usize) ?usize {
 
 fn findOpenEditorOrdinal(editors: []*Editor, normalized_path: []const u8) ?usize {
     for (editors, 0..) |editor, idx| {
-        const path = editor.file_path orelse continue;
+        const path = editor.documentCore().filePath() orelse continue;
         if (std.mem.eql(u8, path, normalized_path)) return idx;
     }
     return null;
@@ -34,8 +34,9 @@ fn activateEditorOrdinal(state: anytype, editor_ordinal: usize) !void {
 fn findReusableUntitledEditorOrdinal(editors: []*Editor) ?usize {
     if (editors.len != 1) return null;
     const editor = editors[0];
-    if (editor.file_path != null) return null;
-    if (editor.modified) return null;
+    const doc = editor.documentCore();
+    if (doc.filePath() != null) return null;
+    if (doc.isModified()) return null;
     return 0;
 }
 

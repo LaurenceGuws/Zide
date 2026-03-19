@@ -25,5 +25,5 @@ pub fn seedDefaultWelcomeBuffer(editor: *Editor) !void {
         \\
     );
     editor.cursor = .{ .line = 0, .col = 0, .offset = 0 };
-    editor.modified = false;
+    editor.markSaved();
 }

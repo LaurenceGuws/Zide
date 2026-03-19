@@ -67,7 +67,7 @@ fn closeResolvedActive(state: anytype, editor: *Editor) !bool {
 
 pub fn closeActive(state: anytype) !bool {
     const editor = activeEditor(state) orelse return false;
-    if (editor.modified) return false;
+    if (editor.documentCore().isModified()) return false;
     return closeResolvedActive(state, editor);
 }
 

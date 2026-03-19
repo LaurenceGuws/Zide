@@ -102,7 +102,7 @@ pub fn handle(
                 }
             },
             .save => {
-                if (editor.file_path) |_| {
+                if (editor.documentCore().filePath()) |_| {
                     try editor.save();
                 } else {
                     search_panel_active.* = false;

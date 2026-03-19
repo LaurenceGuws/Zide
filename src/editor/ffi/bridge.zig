@@ -87,19 +87,17 @@ pub fn setText(handle: ?*ZideEditorHandle, bytes: ?[*]const u8, len: usize) Stat
 
     const total = editor.totalLen();
     if (total > 0) {
-        editor.buffer.deleteRange(0, total) catch |err| return mapError(err);
+        editor.documentCoreMut().buffer.deleteRange(0, total) catch |err| return mapError(err);
     }
     if (slice.len > 0) {
-        editor.buffer.insertBytes(0, slice) catch |err| return mapError(err);
+        editor.documentCoreMut().buffer.insertBytes(0, slice) catch |err| return mapError(err);
     }
     editor.setCursor(0, 0);
     editor.selection = null;
     editor.clearSelections();
-    editor.scroll_line = 0;
-    editor.scroll_col = 0;
-    editor.scroll_row_offset = 0;
+    editor.resetScrollState();
     editor.invalidateLineWidthCache();
-    editor.modified = false;
+    editor.documentCoreMut().modified = false;
     return .ok;
 }
 
@@ -124,20 +122,20 @@ pub fn replaceRange(
     const total = editor.totalLen();
     if (end > total) return .invalid_argument;
 
-    editor.buffer.beginUndoGroup();
+    editor.documentCoreMut().buffer.beginUndoGroup();
     if (end > start) {
-        editor.buffer.deleteRange(start, end - start) catch |err| return mapError(err);
+        editor.documentCoreMut().buffer.deleteRange(start, end - start) catch |err| return mapError(err);
     }
     if (replacement.len > 0) {
-        editor.buffer.insertBytes(start, replacement) catch |err| return mapError(err);
+        editor.documentCoreMut().buffer.insertBytes(start, replacement) catch |err| return mapError(err);
     }
-    editor.buffer.endUndoGroup() catch |err| return mapError(err);
+    editor.documentCoreMut().buffer.endUndoGroup() catch |err| return mapError(err);
 
     editor.setCursorOffsetNoClear(start + replacement.len);
     editor.selection = null;
     editor.clearSelections();
     editor.invalidateLineWidthCache();
-    editor.modified = true;
+    editor.documentCoreMut().modified = true;
     return .ok;
 }
 
@@ -147,13 +145,13 @@ pub fn deleteRange(handle: ?*ZideEditorHandle, start: usize, end: usize) Status 
 
 pub fn beginUndoGroup(handle: ?*ZideEditorHandle) Status {
     const h = fromOpaque(handle) orelse return .invalid_argument;
-    h.editor.buffer.beginUndoGroup();
+    h.editor.documentCoreMut().buffer.beginUndoGroup();
     return .ok;
 }
 
 pub fn endUndoGroup(handle: ?*ZideEditorHandle) Status {
     const h = fromOpaque(handle) orelse return .invalid_argument;
-    h.editor.buffer.endUndoGroup() catch |err| return mapError(err);
+    h.editor.documentCoreMut().buffer.endUndoGroup() catch |err| return mapError(err);
     return .ok;
 }
 
@@ -162,7 +160,7 @@ pub fn textAlloc(handle: ?*ZideEditorHandle, out_string: *StringBuffer) Status {
     out_string.* = .{};
     const h = fromOpaque(handle) orelse return .invalid_argument;
     const total = h.editor.totalLen();
-    const bytes = h.editor.buffer.readRangeAlloc(0, total) catch |err| return mapError(err);
+    const bytes = h.editor.documentCore().buffer.readRangeAlloc(0, total) catch |err| return mapError(err);
     const owner = h.allocator.create(StringOwner) catch |err| {
         log.logf(.warning, "textAlloc owner alloc failed bytes={d} err={s}", .{ bytes.len, @errorName(err) });
         h.allocator.free(bytes);
@@ -390,8 +388,8 @@ fn ptrLenTyped(comptime T: type, ptr: ?[*]const T, len: usize) ?[]const T {
 fn cursorPosForOffset(editor: *editor_mod.Editor, offset: usize) editor_types.CursorPos {
     const total = editor.totalLen();
     const clamped = @min(offset, total);
-    const line = editor.buffer.lineIndexForOffset(clamped);
-    const line_start = editor.buffer.lineStart(line);
+    const line = editor.documentCore().buffer.lineIndexForOffset(clamped);
+    const line_start = editor.documentCore().buffer.lineStart(line);
     return .{
         .line = line,
         .col = clamped - line_start,

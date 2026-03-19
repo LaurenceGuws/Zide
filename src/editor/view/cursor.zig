@@ -81,9 +81,9 @@ pub fn moveCursorVisual(
         defer releaseLineData(provider, &cur);
 
         const cur_vis_col = selection_mod.visualColumnForByteIndex(cur.text, cur_col_byte, cur.clusters);
-        const preferred_vis_col = editor.preferred_visual_col orelse cur_vis_col;
-        if (editor.preferred_visual_col == null) {
-            editor.preferred_visual_col = preferred_vis_col;
+        const preferred_vis_col = editor.view.preferred_visual_col orelse cur_vis_col;
+        if (editor.view.preferred_visual_col == null) {
+            editor.setPreferredVisualCol(preferred_vis_col);
         }
 
         const target_line: usize = if (delta < 0) blk: {
@@ -118,9 +118,9 @@ pub fn moveCursorVisual(
     defer releaseLineData(provider, &cur);
 
     const cur_vis_col = selection_mod.visualColumnForByteIndex(cur.text, cur_col_byte, cur.clusters);
-    const preferred_vis_col = editor.preferred_visual_col orelse cur_vis_col;
-    if (editor.preferred_visual_col == null) {
-        editor.preferred_visual_col = preferred_vis_col;
+    const preferred_vis_col = editor.view.preferred_visual_col orelse cur_vis_col;
+    if (editor.view.preferred_visual_col == null) {
+        editor.setPreferredVisualCol(preferred_vis_col);
     }
     const cur_visual_lines = layout_mod.visualLineCountForWidth(cols, cur.width);
     const cur_seg = if (cur_visual_lines == 0) 0 else @min(cur_vis_col / cols, cur_visual_lines - 1);
@@ -208,8 +208,8 @@ pub fn moveCaretSetVisual(
     var changed = false;
     for (caret_offsets.items) |*offset| {
         const current: types.CursorPos = .{
-            .line = editor.buffer.lineIndexForOffset(offset.*),
-            .col = offset.* - editor.buffer.lineStart(editor.buffer.lineIndexForOffset(offset.*)),
+            .line = editor.doc.buffer.lineIndexForOffset(offset.*),
+            .col = offset.* - editor.doc.buffer.lineStart(editor.doc.buffer.lineIndexForOffset(offset.*)),
             .offset = offset.*,
         };
         if (moveVisualFromPos(editor, current, delta, cols, wrap_enabled, provider, scratch_a, scratch_b)) |target| {
@@ -220,12 +220,12 @@ pub fn moveCaretSetVisual(
 
     if (!changed) return false;
 
-    editor.preferred_visual_col = null;
+    editor.clearPreferredVisualCol();
     editor.selection = null;
     editor.clearSelections();
     for (caret_offsets.items) |offset| {
-        const line = editor.buffer.lineIndexForOffset(offset);
-        const line_start = editor.buffer.lineStart(line);
+        const line = editor.doc.buffer.lineIndexForOffset(offset);
+        const line_start = editor.doc.buffer.lineStart(line);
         const caret = types.CursorPos{
             .line = line,
             .col = offset - line_start,
@@ -261,7 +261,7 @@ pub fn cursorHorizontalScrollTarget(
 
     const col_vis = selection_mod.visualColumnForByteIndex(line.text, editor.cursor.col, line.clusters);
     const max_scroll = metrics_mod.maxScrollForLine(line.width, cols);
-    var scroll_col = editor.scroll_col;
+    var scroll_col = editor.view.scroll_col;
     if (col_vis < scroll_col) {
         scroll_col = col_vis;
     } else if (col_vis >= scroll_col + cols) {
@@ -286,7 +286,7 @@ pub fn horizontalScrollTarget(
     defer releaseLineData(provider, &line);
 
     const max_scroll = metrics_mod.maxScrollForLine(line.width, cols);
-    const current = editor.scroll_col;
+    const current = editor.view.scroll_col;
     return if (delta_cols > 0)
         @min(current + @as(usize, @intCast(delta_cols)), max_scroll)
     else blk: {
@@ -319,10 +319,10 @@ pub fn extendSelectionVisual(
         defer target_offsets.deinit(editor.allocator);
         var changed = false;
         for (head_offsets.items) |offset| {
-            const line = editor.buffer.lineIndexForOffset(offset);
+            const line = editor.doc.buffer.lineIndexForOffset(offset);
             const current: types.CursorPos = .{
                 .line = line,
-                .col = offset - editor.buffer.lineStart(line),
+                .col = offset - editor.doc.buffer.lineStart(line),
                 .offset = offset,
             };
             const target = moveVisualFromPos(editor, current, delta, cols, wrap_enabled, provider, scratch_a, scratch_b) orelse current;
@@ -344,7 +344,7 @@ pub fn extendSelectionVisual(
     const current = editor.cursor;
     const target = moveVisualFromPos(editor, current, delta, cols, wrap_enabled, provider, scratch_a, scratch_b) orelse return false;
 
-    editor.preferred_visual_col = null;
+    editor.clearPreferredVisualCol();
     editor.clearSelections();
     editor.cursor = target;
     if (anchor.offset == target.offset) {

@@ -32,27 +32,30 @@ function renderDocumentLifecycleChrome(args: {
   state: AppState;
   shell: AppShell;
   appIconPath: string;
+  appWordmarkText: string;
   repoBasePath: string;
+  repoAbsolutePath?: string;
   path: string;
   status: AppState["document"]["status"];
 }): void {
-  const { state, shell, appIconPath, repoBasePath, path, status } = args;
+  const { state, shell, appIconPath, appWordmarkText, repoBasePath, repoAbsolutePath, path, status } = args;
 
   if (status === "loading") {
-    setDocumentLoading(state, repoBasePath, path);
+    setDocumentLoading(state, repoBasePath, repoAbsolutePath, path);
   } else if (status === "ready") {
-    setDocumentReady(state, repoBasePath, path);
+    setDocumentReady(state, repoBasePath, repoAbsolutePath, path);
   } else {
-    setDocumentError(state, repoBasePath, path);
+    setDocumentError(state, repoBasePath, repoAbsolutePath, path);
   }
 
-  renderDocumentChrome(state, shell, appIconPath);
+  renderDocumentChrome(state, shell, appIconPath, appWordmarkText);
 }
 
 export async function renderCurrentDocCycle(args: {
   state: AppState;
   shell: AppShell;
   appIconPath: string;
+  appWordmarkText: string;
   repoBasePath: string;
   repoAbsolutePath?: string;
   docs: string[];
@@ -68,6 +71,7 @@ export async function renderCurrentDocCycle(args: {
     state,
     shell,
     appIconPath,
+    appWordmarkText,
     repoBasePath,
     repoAbsolutePath,
     docs,
@@ -98,7 +102,9 @@ export async function renderCurrentDocCycle(args: {
         state: nextState,
         shell,
         appIconPath,
+        appWordmarkText,
         repoBasePath,
+        repoAbsolutePath,
         path,
         status: "loading",
       });
@@ -108,7 +114,9 @@ export async function renderCurrentDocCycle(args: {
         state: nextState,
         shell,
         appIconPath,
+        appWordmarkText,
         repoBasePath,
+        repoAbsolutePath,
         path,
         status: "ready",
       });
@@ -119,7 +127,9 @@ export async function renderCurrentDocCycle(args: {
         state: nextState,
         shell,
         appIconPath,
+        appWordmarkText,
         repoBasePath,
+        repoAbsolutePath,
         path,
         status: "error",
       });

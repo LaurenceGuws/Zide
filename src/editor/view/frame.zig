@@ -24,19 +24,21 @@ pub const EditorFrameView = struct {
     search_active_match: ?Editor.SearchMatch,
 
     pub fn init(editor: *Editor, wrap_enabled: bool) EditorFrameView {
+        const view = editor.viewState();
+        const doc = editor.documentCore();
         return .{
             .editor = editor,
             .wrap_enabled = wrap_enabled,
             .cursor = editor.cursor,
             .selection = editor.selection,
             .selections = editor.selections.items,
-            .scroll_line = editor.scroll_line,
-            .scroll_row_offset = editor.scroll_row_offset,
-            .scroll_col = editor.scroll_col,
-            .change_tick = editor.change_tick,
-            .highlight_epoch = editor.highlight_epoch,
-            .search_epoch = editor.search_epoch,
-            .highlighter = editor.highlighter,
+            .scroll_line = view.scroll_line,
+            .scroll_row_offset = view.scroll_row_offset,
+            .scroll_col = view.scroll_col,
+            .change_tick = doc.change_tick,
+            .highlight_epoch = doc.highlight_epoch,
+            .search_epoch = doc.search_epoch,
+            .highlighter = doc.highlighter,
             .search_matches = editor.searchMatches(),
             .search_active_match = editor.searchActiveMatch(),
         };

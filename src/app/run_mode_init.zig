@@ -1,6 +1,5 @@
 const app_bootstrap = @import("bootstrap.zig");
 const app_modes = @import("modes/mod.zig");
-
 pub const Hooks = struct {
     terminal_tab_count: *const fn (*anyopaque) usize,
     new_terminal: *const fn (*anyopaque) anyerror!void,

@@ -1,3 +1,4 @@
+import { docFetchPath } from "../shared/utils.js";
 import type { MarkedApi } from "../shared/vendor_types.js";
 
 export function configureMarked(marked: MarkedApi): void {
@@ -79,7 +80,10 @@ function rewriteMediaUrls(
         ) {
           el.setAttribute(attribute, asDocHash(relative));
         } else {
-          el.setAttribute(attribute, `${repoBasePath}${relative}`);
+          el.setAttribute(
+            attribute,
+            docFetchPath(repoBasePath, repoAbsolutePath, relative),
+          );
         }
         return;
       }
@@ -92,7 +96,10 @@ function rewriteMediaUrls(
       ) {
         el.setAttribute(attribute, asDocHash(resolved));
       } else {
-        el.setAttribute(attribute, `${repoBasePath}${resolved}`);
+        el.setAttribute(
+          attribute,
+          docFetchPath(repoBasePath, repoAbsolutePath, resolved),
+        );
       }
     });
   }

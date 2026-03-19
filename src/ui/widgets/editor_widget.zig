@@ -144,8 +144,13 @@ pub const EditorWidget = struct {
         out_slice: *?[]const u32,
         out_owned: *bool,
     ) void {
+        if (self.editor.shouldDeferClusterOffsets()) {
+            out_slice.* = null;
+            out_owned.* = false;
+            return;
+        }
         const r = shell.rendererPtr();
-        const result = getClusterOffsets(self.cluster_cache, self.editor.allocator, r.terminal_font.hb_font, line_idx, line_text);
+        const result = getClusterOffsets(self.cluster_cache, self.editor, self.editor.allocator, r.terminal_font.hb_font, line_idx, line_text);
         out_slice.* = result.slice;
         out_owned.* = result.owned;
     }
@@ -274,15 +279,16 @@ pub const EditorWidget = struct {
         const line_count = self.editor.lineCount();
         if (line_count == 0) return;
         const visible_lines = @max(@as(usize, 1), @as(usize, @intFromFloat(height / r.char_height)));
+        const view = self.editor.viewState();
 
         if (!self.wrap_enabled) {
-            if (self.editor.cursor.line < self.editor.scroll_line) {
-                self.editor.scroll_line = self.editor.cursor.line;
-            } else if (self.editor.cursor.line >= self.editor.scroll_line + visible_lines) {
-                self.editor.scroll_line = self.editor.cursor.line - (visible_lines - 1);
+            if (self.editor.cursor.line < view.scroll_line) {
+                self.editor.setScrollLine(self.editor.cursor.line);
+            } else if (self.editor.cursor.line >= view.scroll_line + visible_lines) {
+                self.editor.setScrollLine(self.editor.cursor.line - (visible_lines - 1));
             }
             self.ensureCursorVisibleHorizontal(shell);
-            self.editor.scroll_row_offset = 0;
+            self.editor.setScrollRowOffset(0);
             return;
         }
 
@@ -293,8 +299,7 @@ pub const EditorWidget = struct {
         const cursor_seg = runtime.cursorSegmentForLine(self.editor.cursor.line, cols) orelse return;
         const offset = runtime.cursorRowOffset(self.editor.cursor.line, cursor_seg, cols);
         if (offset < 0) {
-            self.editor.scroll_line = self.editor.cursor.line;
-            self.editor.scroll_row_offset = cursor_seg;
+            self.editor.setVerticalScroll(self.editor.cursor.line, cursor_seg);
             return;
         }
         if (offset >= @as(i32, @intCast(visible_lines))) {
@@ -309,7 +314,7 @@ pub const EditorWidget = struct {
         var ctx = CursorLineCtx{ .widget = self, .r = shell };
         const runtime = self.initViewRuntime(&ctx);
         if (runtime.cursorHorizontalScrollTarget(cols)) |scroll_col| {
-            self.editor.scroll_col = scroll_col;
+            self.editor.setScrollCol(scroll_col);
         }
     }
 
@@ -321,7 +326,7 @@ pub const EditorWidget = struct {
         var ctx = CursorLineCtx{ .widget = self, .r = shell };
         const runtime = self.initViewRuntime(&ctx);
         if (runtime.horizontalScrollTarget(line_idx, cols, delta_cols)) |next| {
-            self.editor.scroll_col = next;
+            self.editor.setScrollCol(next);
         }
     }
 
@@ -353,54 +358,46 @@ pub const EditorWidget = struct {
 
 pub const ClusterCache = struct {
     allocator: std.mem.Allocator,
-    frame_id: u64,
-    entries: std.AutoHashMap(usize, []u32),
 
     pub fn init(allocator: std.mem.Allocator) ClusterCache {
         return .{
             .allocator = allocator,
-            .frame_id = 0,
-            .entries = std.AutoHashMap(usize, []u32).init(allocator),
         };
     }
 
     pub fn deinit(self: *ClusterCache) void {
-        self.clear();
-        self.entries.deinit();
+        _ = self;
     }
 
     pub fn beginFrame(self: *ClusterCache, frame_id: u64) void {
-        if (self.frame_id == frame_id) return;
-        self.clear();
-        self.frame_id = frame_id;
+        _ = self;
+        _ = frame_id;
     }
 
     pub fn clear(self: *ClusterCache) void {
-        var it = self.entries.iterator();
-        while (it.next()) |entry| {
-            self.allocator.free(entry.value_ptr.*);
-        }
-        self.entries.clearRetainingCapacity();
+        _ = self;
     }
 
     pub fn getOrCompute(
         self: *ClusterCache,
+        editor: *Editor,
         line_idx: usize,
         hb_font: *hb.hb_font_t,
         text: []const u8,
     ) ?[]const u32 {
+        _ = self;
         const log = app_logger.logger("editor.widget");
+        const perf_log = app_logger.logger("editor.perf");
         if (!hasNonAscii(text)) return null;
-        if (self.entries.get(line_idx)) |cached| return cached;
-        const clusters = graphemeClusterOffsets(self.allocator, hb_font, text) catch |err| {
+        if (editor.cachedClusterOffsets(line_idx, text)) |cached| return cached;
+        const t_start = std.time.nanoTimestamp();
+        const clusters = graphemeClusterOffsets(editor.allocator, hb_font, text) catch |err| {
             log.logf(.warning, "cluster compute failed line={d} err={s}", .{ line_idx, @errorName(err) });
             return null;
         };
-        self.entries.put(line_idx, clusters) catch {
-            self.allocator.free(clusters);
-            return null;
-        };
-        return clusters;
+        const elapsed_us = @as(i64, @intCast(@divTrunc(std.time.nanoTimestamp() - t_start, 1000)));
+        perf_log.logf(.info, "cluster_compute cache=true line={d} bytes={d} clusters={d} time_us={d}", .{ line_idx, text.len, clusters.len, elapsed_us });
+        return editor.cacheClusterOffsets(line_idx, text, clusters);
     }
 };
 
@@ -411,21 +408,28 @@ const ClusterResult = struct {
 
 fn getClusterOffsets(
     cache: ?*ClusterCache,
+    editor: *Editor,
     allocator: std.mem.Allocator,
     hb_font: *hb.hb_font_t,
     line_idx: usize,
     text: []const u8,
 ) ClusterResult {
     const log = app_logger.logger("editor.widget");
+    const perf_log = app_logger.logger("editor.perf");
     if (cache) |cluster_cache| {
-        const slice = cluster_cache.getOrCompute(line_idx, hb_font, text);
+        const slice = cluster_cache.getOrCompute(editor, line_idx, hb_font, text);
         return .{ .slice = slice, .owned = false };
     }
     if (!hasNonAscii(text)) return .{ .slice = null, .owned = false };
+    const t_start = std.time.nanoTimestamp();
     const slice = graphemeClusterOffsets(allocator, hb_font, text) catch |err| blk: {
         log.logf(.warning, "cluster offsets compute failed line={d} err={s}", .{ line_idx, @errorName(err) });
         break :blk null;
     };
+    if (slice) |clusters| {
+        const elapsed_us = @as(i64, @intCast(@divTrunc(std.time.nanoTimestamp() - t_start, 1000)));
+        perf_log.logf(.info, "cluster_compute cache=false line={d} bytes={d} clusters={d} time_us={d}", .{ line_idx, text.len, clusters.len, elapsed_us });
+    }
     return .{ .slice = slice, .owned = slice != null };
 }
 

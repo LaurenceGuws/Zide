@@ -33,7 +33,7 @@ pub fn close(state: *State) void {
 
 pub fn openForOpen(state: *State, allocator: std.mem.Allocator, editor: ?*Editor) !void {
     const initial_value = if (editor) |active_editor|
-        if (active_editor.file_path) |path|
+        if (active_editor.documentCore().filePath()) |path|
             try allocator.dupe(u8, path)
         else
             try cwdInitialPath(allocator, "")
@@ -45,7 +45,7 @@ pub fn openForOpen(state: *State, allocator: std.mem.Allocator, editor: ?*Editor
 
 pub fn openForSaveAs(state: *State, allocator: std.mem.Allocator, editor: ?*Editor) !void {
     const initial_value = if (editor) |active_editor|
-        if (active_editor.file_path) |path|
+        if (active_editor.documentCore().filePath()) |path|
             try allocator.dupe(u8, path)
         else
             try cwdInitialPath(allocator, "untitled")

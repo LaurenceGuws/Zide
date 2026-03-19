@@ -43,7 +43,7 @@ pub fn handle(
                 },
                 .save => {
                     if (active_editor) |editor| {
-                        if (editor.file_path != null) {
+                        if (editor.documentCore().filePath() != null) {
                             try editor.save();
                         } else {
                             state.search_panel.active = false;

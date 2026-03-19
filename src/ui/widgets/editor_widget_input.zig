@@ -159,7 +159,7 @@ pub fn handleHorizontalScrollbarInput(
     );
     if (!h.visible) return false;
     if (view.scroll_col > h.max_scroll) {
-        widget.editor.scroll_col = h.max_scroll;
+        widget.editor.setScrollCol(h.max_scroll);
     }
 
     const over_track = common.pointInRect(mouse.x, mouse.y, h.track_x, h.track_y - h.hit_margin, h.track_w, h.track_h + h.hit_margin);
@@ -232,7 +232,7 @@ pub fn handleVerticalScrollbarInput(
     );
     if (!v.visible) return false;
     if (view.scroll_line > v.max_scroll) {
-        widget.editor.scroll_line = v.max_scroll;
+        widget.editor.setScrollLine(v.max_scroll);
     }
 
     const over_track = common.pointInRect(mouse.x, mouse.y, v.scrollbar_x - v.hit_margin, v.scrollbar_y, v.scrollbar_w + v.hit_margin, v.scrollbar_h);

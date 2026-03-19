@@ -39,10 +39,11 @@ pub fn handle(
         if (state.perf_mode and state.perf_frames_done > 0) {
             const draw_ms_perf = (draw_end - draw_start) * 1000.0;
             if (app_active_editor_runtime.fromState(state)) |editor| {
+                const view = editor.viewState();
                 state.perf_logger.logf(
                     .info,
                     "frame={d} draw_ms={d:.2} scroll_line={d} scroll_row_offset={d} scroll_col={d}",
-                    .{ state.perf_frames_done, draw_ms_perf, editor.scroll_line, editor.scroll_row_offset, editor.scroll_col },
+                    .{ state.perf_frames_done, draw_ms_perf, view.scroll_line, view.scroll_row_offset, view.scroll_col },
                 );
             } else {
                 state.perf_logger.logf(.info, "frame={d} draw_ms={d:.2}", .{ state.perf_frames_done, draw_ms_perf });

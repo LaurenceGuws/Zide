@@ -22,16 +22,17 @@ pub fn draw(state: anytype, shell: anytype, layout: layout_types.WidgetLayout, t
         if (app_modes.ide.supportsEditorSurface(state.app_mode) and state.editors.items.len > 0 and layout.status_bar.height > 0) {
             shell.setTheme(state.app_theme);
             const editor = app_active_editor_runtime.fromState(state) orelse return;
+            const doc = editor.documentCore();
             state.status_bar.draw(
                 shell,
                 layout.window.width,
                 layout.status_bar.y,
                 state.mode,
                 state.editor_imported_theme_name,
-                editor.file_path,
+                doc.filePath(),
                 editor.cursor.line,
                 editor.cursor.col,
-                editor.modified,
+                doc.isModified(),
                 if (state.path_prompt.active and state.path_prompt.kind != null)
                     .{
                         .active = true,

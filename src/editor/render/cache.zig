@@ -31,11 +31,17 @@ pub const EditorRenderCache = struct {
     highlight_work_next: usize,
     highlight_work_epoch: u64,
     highlight_work_active: bool,
+    highlight_work_completed_start: usize,
+    highlight_work_completed_end: usize,
+    highlight_work_completed_epoch: u64,
     line_width_work_start: usize,
     line_width_work_end: usize,
     line_width_work_next: usize,
     line_width_work_tick: u64,
     line_width_work_active: bool,
+    line_width_work_completed_start: usize,
+    line_width_work_completed_end: usize,
+    line_width_work_completed_tick: u64,
     wrap_work_start: usize,
     wrap_work_end: usize,
     wrap_work_next: usize,
@@ -68,11 +74,17 @@ pub const EditorRenderCache = struct {
             .highlight_work_next = 0,
             .highlight_work_epoch = 0,
             .highlight_work_active = false,
+            .highlight_work_completed_start = 0,
+            .highlight_work_completed_end = 0,
+            .highlight_work_completed_epoch = 0,
             .line_width_work_start = 0,
             .line_width_work_end = 0,
             .line_width_work_next = 0,
             .line_width_work_tick = 0,
             .line_width_work_active = false,
+            .line_width_work_completed_start = 0,
+            .line_width_work_completed_end = 0,
+            .line_width_work_completed_tick = 0,
             .wrap_work_start = 0,
             .wrap_work_end = 0,
             .wrap_work_next = 0,
@@ -232,6 +244,45 @@ pub const EditorRenderCache = struct {
         return &[_]HighlightToken{};
     }
 
+    pub fn storeHighlightTokens(
+        self: *EditorRenderCache,
+        line_idx: usize,
+        line_start: usize,
+        line_text_hash: u64,
+        highlight_epoch: u64,
+        tokens: []const HighlightToken,
+    ) void {
+        const log = app_logger.logger("editor.render.cache");
+        const owned = self.allocator.dupe(HighlightToken, tokens) catch |err| {
+            log.logf(.warning, "highlight cache batch dup failed line={d} err={s}", .{ line_idx, @errorName(err) });
+            return;
+        };
+        if (owned.len > 1) sortTokens(owned);
+        if (self.highlight_entries.getPtr(line_idx)) |entry| {
+            self.allocator.free(entry.tokens);
+            entry.* = .{
+                .text_hash = line_text_hash,
+                .line_start = line_start,
+                .epoch = highlight_epoch,
+                .tokens = owned,
+                .last_used = self.frame_id,
+            };
+            return;
+        }
+        self.highlight_entries.put(line_idx, .{
+            .text_hash = line_text_hash,
+            .line_start = line_start,
+            .epoch = highlight_epoch,
+            .tokens = owned,
+            .last_used = self.frame_id,
+        }) catch |err| {
+            self.allocator.free(owned);
+            log.logf(.warning, "highlight cache batch insert failed line={d} err={s}", .{ line_idx, @errorName(err) });
+            return;
+        };
+        self.maybeEvictHighlightEntries();
+    }
+
     pub fn clear(self: *EditorRenderCache) void {
         self.clearLineEntries();
         self.clearHighlightEntries();
@@ -302,6 +353,11 @@ pub const EditorRenderCache = struct {
             self.highlight_work_active = false;
             return;
         }
+        const completed_same_range = !self.highlight_work_active and
+            start_line == self.highlight_work_completed_start and
+            end_line == self.highlight_work_completed_end and
+            epoch == self.highlight_work_completed_epoch;
+        if (completed_same_range) return;
         const range_changed = !self.highlight_work_active or start_line != self.highlight_work_start or end_line != self.highlight_work_end or epoch != self.highlight_work_epoch;
         if (range_changed) {
             self.highlight_work_start = start_line;
@@ -323,12 +379,42 @@ pub const EditorRenderCache = struct {
         return line;
     }
 
+    pub const HighlightWorkBatch = struct {
+        start_line: usize,
+        end_line: usize,
+    };
+
+    pub fn takeHighlightWorkBatch(self: *EditorRenderCache, max_lines: usize) ?HighlightWorkBatch {
+        if (!self.highlight_work_active or max_lines == 0) return null;
+        if (self.highlight_work_next >= self.highlight_work_end) {
+            self.highlight_work_active = false;
+            return null;
+        }
+        const start_line = self.highlight_work_next;
+        const end_line = @min(self.highlight_work_end, start_line + max_lines);
+        self.highlight_work_next = end_line;
+        if (self.highlight_work_next >= self.highlight_work_end) {
+            self.highlight_work_active = false;
+            self.highlight_work_completed_start = self.highlight_work_start;
+            self.highlight_work_completed_end = self.highlight_work_end;
+            self.highlight_work_completed_epoch = self.highlight_work_epoch;
+        }
+        return .{ .start_line = start_line, .end_line = end_line };
+    }
+
+    pub fn hasPendingHighlightWork(self: *const EditorRenderCache) bool {
+        return self.highlight_work_active;
+    }
+
     fn clearHighlightWork(self: *EditorRenderCache) void {
         self.highlight_work_active = false;
         self.highlight_work_start = 0;
         self.highlight_work_end = 0;
         self.highlight_work_next = 0;
         self.highlight_work_epoch = 0;
+        self.highlight_work_completed_start = 0;
+        self.highlight_work_completed_end = 0;
+        self.highlight_work_completed_epoch = 0;
     }
 
     pub fn beginLineWidthWork(self: *EditorRenderCache, start_line: usize, end_line: usize, change_tick: u64) void {
@@ -336,6 +422,11 @@ pub const EditorRenderCache = struct {
             self.line_width_work_active = false;
             return;
         }
+        const completed_same_range = !self.line_width_work_active and
+            start_line == self.line_width_work_completed_start and
+            end_line == self.line_width_work_completed_end and
+            change_tick == self.line_width_work_completed_tick;
+        if (completed_same_range) return;
         const range_changed = !self.line_width_work_active or start_line != self.line_width_work_start or end_line != self.line_width_work_end or change_tick != self.line_width_work_tick;
         if (range_changed) {
             self.line_width_work_start = start_line;
@@ -350,10 +441,19 @@ pub const EditorRenderCache = struct {
         if (!self.line_width_work_active) return null;
         if (self.line_width_work_next >= self.line_width_work_end) {
             self.line_width_work_active = false;
+            self.line_width_work_completed_start = self.line_width_work_start;
+            self.line_width_work_completed_end = self.line_width_work_end;
+            self.line_width_work_completed_tick = self.line_width_work_tick;
             return null;
         }
         const line = self.line_width_work_next;
         self.line_width_work_next += 1;
+        if (self.line_width_work_next >= self.line_width_work_end) {
+            self.line_width_work_active = false;
+            self.line_width_work_completed_start = self.line_width_work_start;
+            self.line_width_work_completed_end = self.line_width_work_end;
+            self.line_width_work_completed_tick = self.line_width_work_tick;
+        }
         return line;
     }
 
@@ -363,6 +463,9 @@ pub const EditorRenderCache = struct {
         self.line_width_work_end = 0;
         self.line_width_work_next = 0;
         self.line_width_work_tick = 0;
+        self.line_width_work_completed_start = 0;
+        self.line_width_work_completed_end = 0;
+        self.line_width_work_completed_tick = 0;
     }
 
     pub fn beginWrapWork(self: *EditorRenderCache, start_line: usize, end_line: usize, cols: usize, change_tick: u64) void {

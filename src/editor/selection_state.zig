@@ -112,7 +112,7 @@ pub fn SelectionStateOps(comptime Editor: type) type {
         }
 
         pub fn selectionFromStored(self: *Editor, stored: StoredSelection) Selection {
-            const total = self.buffer.totalLen();
+            const total = self.doc.buffer.totalLen();
             const start = self.cursorPosForOffset(@min(stored.start_offset, total));
             const end = self.cursorPosForOffset(@min(stored.end_offset, total));
             return .{
@@ -166,15 +166,15 @@ pub fn SelectionStateOps(comptime Editor: type) type {
         }
 
         pub fn captureUndoSelectionState(self: *Editor) !u64 {
-            const id = self.next_undo_selection_state_id;
-            self.next_undo_selection_state_id +|= 1;
+            const id = self.doc.next_undo_selection_state_id;
+            self.doc.next_undo_selection_state_id +|= 1;
 
             var extra = try self.allocator.alloc(StoredSelection, self.selections.items.len);
             for (self.selections.items, 0..) |sel, idx| {
                 extra[idx] = storedSelectionFromSelection(sel);
             }
 
-            try self.undo_selection_states.append(self.allocator, .{
+            try self.doc.undo_selection_states.append(self.allocator, .{
                 .id = id,
                 .cursor_offset = self.cursor.offset,
                 .selection = if (self.selection) |sel| storedSelectionFromSelection(sel) else null,
@@ -184,11 +184,11 @@ pub fn SelectionStateOps(comptime Editor: type) type {
         }
 
         pub fn restoreUndoSelectionState(self: *Editor, state_id: u64) !bool {
-            for (self.undo_selection_states.items) |state| {
+            for (self.doc.undo_selection_states.items) |state| {
                 if (state.id != state_id) continue;
-                const total = self.buffer.totalLen();
+                const total = self.doc.buffer.totalLen();
                 self.cursor = self.cursorPosForOffset(@min(state.cursor_offset, total));
-                self.preferred_visual_col = null;
+                self.clearPreferredVisualCol();
                 self.selection = if (state.selection) |sel| self.selectionFromStored(sel) else null;
                 self.clearSelections();
                 for (state.selections) |sel| {
@@ -200,20 +200,20 @@ pub fn SelectionStateOps(comptime Editor: type) type {
         }
 
         pub fn annotateLastUndoSelectionState(self: *Editor, before_id: u64, after_id: u64) void {
-            self.buffer.annotateLastUndoState(before_id, after_id);
+            self.doc.buffer.annotateLastUndoState(before_id, after_id);
         }
 
         pub fn beginTrackedUndoGroup(self: *Editor) !u64 {
             const before_id = try self.captureUndoSelectionState();
-            self.buffer.beginUndoGroup();
-            self.buffer.annotateCurrentUndoGroupBefore(before_id);
+            self.doc.buffer.beginUndoGroup();
+            self.doc.buffer.annotateCurrentUndoGroupBefore(before_id);
             return before_id;
         }
 
         pub fn endTrackedUndoGroup(self: *Editor) !void {
             const after_id = try self.captureUndoSelectionState();
-            try self.buffer.endUndoGroup();
-            self.buffer.annotateClosedUndoGroupAfter(after_id);
+            try self.doc.buffer.endUndoGroup();
+            self.doc.buffer.annotateClosedUndoGroupAfter(after_id);
         }
 
         pub fn addSelection(self: *Editor, selection: Selection) !void {
@@ -269,8 +269,8 @@ pub fn SelectionStateOps(comptime Editor: type) type {
             if (start_line > end_line) return;
             var line = start_line;
             while (line <= end_line) : (line += 1) {
-                const line_start = self.buffer.lineStart(line);
-                const line_len = self.buffer.lineLen(line);
+                const line_start = self.doc.buffer.lineStart(line);
+                const line_len = self.doc.buffer.lineLen(line);
                 const start_clamped = @min(start_col, line_len);
                 const end_clamped = @min(end_col, line_len);
                 const start = CursorPos{ .line = line, .col = start_clamped, .offset = line_start + start_clamped };
@@ -353,11 +353,11 @@ pub fn SelectionStateOps(comptime Editor: type) type {
                     if (caret.line == 0) continue;
                     break :blk caret.line - 1;
                 } else blk: {
-                    if (caret.line + 1 >= self.buffer.lineCount()) continue;
+                    if (caret.line + 1 >= self.doc.buffer.lineCount()) continue;
                     break :blk caret.line + 1;
                 };
-                const target_col = @min(caret.col, self.buffer.lineLen(target_line));
-                const target_offset = self.buffer.lineStart(target_line) + target_col;
+                const target_col = @min(caret.col, self.doc.buffer.lineLen(target_line));
+                const target_offset = self.doc.buffer.lineStart(target_line) + target_col;
                 if (target_offset == self.cursor.offset) continue;
                 if (std.mem.indexOfScalar(usize, caret_offsets.items, target_offset) != null) continue;
                 try self.selections.append(self.allocator, .{
@@ -375,8 +375,8 @@ pub fn SelectionStateOps(comptime Editor: type) type {
         }
 
         pub fn cursorPosForOffset(self: *Editor, offset: usize) CursorPos {
-            const line = self.buffer.lineIndexForOffset(offset);
-            const line_start = self.buffer.lineStart(line);
+            const line = self.doc.buffer.lineIndexForOffset(offset);
+            const line_start = self.doc.buffer.lineStart(line);
             return .{
                 .line = line,
                 .col = offset - line_start,
@@ -448,7 +448,7 @@ pub fn SelectionStateOps(comptime Editor: type) type {
             std.debug.assert(anchor_offsets.len == target_offsets.len);
             std.debug.assert(anchor_offsets.len > 0);
 
-            self.preferred_visual_col = null;
+            self.clearPreferredVisualCol();
             self.clearSelections();
 
             const primary_anchor = self.cursorPosForOffset(anchor_offsets[0]);
@@ -475,7 +475,7 @@ pub fn SelectionStateOps(comptime Editor: type) type {
             defer caret_offsets.deinit(self.allocator);
             const primary_offset = caret_offsets.items[0];
 
-            const total = self.buffer.totalLen();
+            const total = self.doc.buffer.totalLen();
             for (caret_offsets.items) |*offset| {
                 if (delta < 0) {
                     if (offset.* > 0) offset.* -= 1;
@@ -484,7 +484,7 @@ pub fn SelectionStateOps(comptime Editor: type) type {
                 }
             }
 
-            self.preferred_visual_col = null;
+            self.clearPreferredVisualCol();
             self.selection = null;
             try self.restoreCaretSelections(caret_offsets.items, if (delta < 0) if (primary_offset > 0) primary_offset - 1 else 0 else @min(primary_offset + 1, total));
         }
@@ -497,14 +497,14 @@ pub fn SelectionStateOps(comptime Editor: type) type {
             for (caret_offsets.items) |*offset| {
                 const caret = self.cursorPosForOffset(offset.*);
                 if (to_start) {
-                    offset.* = self.buffer.lineStart(caret.line);
+                    offset.* = self.doc.buffer.lineStart(caret.line);
                 } else {
-                    offset.* = self.buffer.lineStart(caret.line) + self.buffer.lineLen(caret.line);
+                    offset.* = self.doc.buffer.lineStart(caret.line) + self.doc.buffer.lineLen(caret.line);
                 }
                 if (offset == &caret_offsets.items[0]) primary_offset = offset.*;
             }
 
-            self.preferred_visual_col = null;
+            self.clearPreferredVisualCol();
             self.selection = null;
             try self.restoreCaretSelections(caret_offsets.items, primary_offset);
         }
@@ -517,7 +517,7 @@ pub fn SelectionStateOps(comptime Editor: type) type {
                 offset.* = if (left) self.wordLeftOffset(offset.*) else self.wordRightOffset(offset.*);
             }
 
-            self.preferred_visual_col = null;
+            self.clearPreferredVisualCol();
             self.selection = null;
             try self.restoreCaretSelections(caret_offsets.items, caret_offsets.items[0]);
         }
@@ -552,13 +552,13 @@ pub fn SelectionStateOps(comptime Editor: type) type {
                 if (delete_len > 0) {
                     const start_point = self.pointForByte(op.start);
                     const end_point = self.pointForByte(op.end);
-                    try self.buffer.deleteRange(op.start, delete_len);
+                    try self.doc.buffer.deleteRange(op.start, delete_len);
                     self.applyHighlightEdit(op.start, op.end, op.start, start_point, end_point);
                     changed = true;
                 }
                 if (op.replacement.len > 0) {
                     const insert_point = self.pointForByte(op.start);
-                    try self.buffer.insertBytes(op.start, op.replacement);
+                    try self.doc.buffer.insertBytes(op.start, op.replacement);
                     self.applyHighlightEdit(op.start, op.start, op.start + op.replacement.len, insert_point, insert_point);
                     changed = true;
                 }
@@ -577,9 +577,9 @@ pub fn SelectionStateOps(comptime Editor: type) type {
         }
 
         pub fn byteAt(self: *Editor, offset: usize) ?u8 {
-            if (offset >= self.buffer.totalLen()) return null;
+            if (offset >= self.doc.buffer.totalLen()) return null;
             var buf: [1]u8 = undefined;
-            return if (self.buffer.readRange(offset, &buf) == 1) buf[0] else null;
+            return if (self.doc.buffer.readRange(offset, &buf) == 1) buf[0] else null;
         }
 
         pub fn wordLeftOffset(self: *Editor, offset: usize) usize {
@@ -598,7 +598,7 @@ pub fn SelectionStateOps(comptime Editor: type) type {
         }
 
         pub fn wordRightOffset(self: *Editor, offset: usize) usize {
-            const total = self.buffer.totalLen();
+            const total = self.doc.buffer.totalLen();
             var idx = offset;
             while (idx < total) : (idx += 1) {
                 const byte = self.byteAt(idx) orelse break;
@@ -615,7 +615,7 @@ pub fn SelectionStateOps(comptime Editor: type) type {
             const anchor = if (self.selection) |sel| sel.normalized().start else self.cursor;
             const target = self.cursorPosForOffset(target_offset);
             self.cursor = target;
-            self.preferred_visual_col = null;
+            self.clearPreferredVisualCol();
             self.clearSelections();
             if (anchor.offset == target.offset) {
                 self.selection = null;

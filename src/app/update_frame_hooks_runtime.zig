@@ -333,9 +333,9 @@ pub fn handle(state: anytype, input_batch: *shared_types.input.InputBatch) !void
                                         );
                                     } else {
                                         const app_active_view_hooks_runtime = @import("active_view_hooks_runtime.zig");
-                                        try app_active_view_hooks_runtime.handle(
-                                            inner_state.allocator,
-                                            &inner_state.path_prompt,
+        try app_active_view_hooks_runtime.handle(
+            inner_state.allocator,
+            &inner_state.path_prompt,
                                             &inner_state.search_panel.active,
                                             &inner_state.search_panel.select_all,
                                             &inner_state.search_panel.query,
@@ -350,13 +350,14 @@ pub fn handle(state: anytype, input_batch: *shared_types.input.InputBatch) !void
                                             layout,
                                             mouse,
                                             frame_input_batch,
-                                            inner_state.perf_mode,
-                                            &inner_state.perf_frames_done,
-                                            inner_state.perf_frames_total,
-                                            inner_state.perf_scroll_delta,
-                                            &inner_state.editor_render_cache,
-                                            inner_state.editor_highlight_budget,
-                                            inner_state.editor_width_budget,
+            inner_state.perf_mode,
+            &inner_state.perf_frames_done,
+            inner_state.perf_frames_total,
+            inner_state.perf_scroll_delta,
+            inner_state.frame_id,
+            &inner_state.editor_render_cache,
+            inner_state.editor_highlight_budget,
+            inner_state.editor_width_budget,
                                             .{
                                                 .editor_hscroll_dragging = &inner_state.editor_hscroll_dragging,
                                                 .editor_hscroll_grab_offset = &inner_state.editor_hscroll_grab_offset,

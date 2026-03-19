@@ -36,8 +36,10 @@ export type ProjectThemeConfig = {
 export type ProjectConfig = {
   title: string;
   icon: string;
+  brandWordmarkText?: string;
   repoAbsolutePath?: string;
   repoBasePath: string;
+  docsIndexPath?: string;
   repoUrl?: string;
   supportUrl?: string;
   supportLabel?: string;

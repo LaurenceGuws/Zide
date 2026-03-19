@@ -51,17 +51,16 @@ pub const HighlightDirtyRange = struct {
 pub fn SearchHighlightOps(comptime Editor: type) type {
     return struct {
         pub fn takeHighlightDirtyRange(self: *Editor) ?HighlightDirtyRange {
-            if (self.highlight_dirty_start_line == null) return null;
-            const start = self.highlight_dirty_start_line.?;
-            const end = self.highlight_dirty_end_line orelse (start + 1);
-            self.highlight_dirty_start_line = null;
-            self.highlight_dirty_end_line = null;
+            if (self.doc.highlight_dirty_start_line == null) return null;
+            const start = self.doc.highlight_dirty_start_line.?;
+            const end = self.doc.highlight_dirty_end_line orelse (start + 1);
+            self.clearHighlightDirtyRange();
             return .{ .start_line = start, .end_line = end };
         }
 
         pub fn noteTextChanged(self: *Editor) void {
             self.noteTextChangedBase();
-            if (self.search_query != null and self.search_refresh_on_text_change) {
+            if (self.doc.search_query != null and self.doc.search_refresh_on_text_change) {
                 self.recomputeSearchMatches() catch |err| {
                     const log = app_logger.logger("editor.search");
                     log.logf(.warning, "recompute search matches on text change failed: {s}", .{@errorName(err)});
@@ -74,12 +73,12 @@ pub fn SearchHighlightOps(comptime Editor: type) type {
         }
 
         pub fn noteHighlightDirtyRange(self: *Editor, start_byte: usize, end_byte: usize) void {
-            const start_line = self.buffer.lineIndexForOffset(start_byte);
-            const end_line = self.buffer.lineIndexForOffset(end_byte) + 1;
-            const start = self.highlight_dirty_start_line orelse start_line;
-            const end = self.highlight_dirty_end_line orelse end_line;
-            self.highlight_dirty_start_line = @min(start, start_line);
-            self.highlight_dirty_end_line = @max(end, end_line);
+            const start_line = self.doc.buffer.lineIndexForOffset(start_byte);
+            const end_line = self.doc.buffer.lineIndexForOffset(end_byte) + 1;
+            const start = self.doc.highlight_dirty_start_line orelse start_line;
+            const end = self.doc.highlight_dirty_end_line orelse end_line;
+            self.doc.highlight_dirty_start_line = @min(start, start_line);
+            self.doc.highlight_dirty_end_line = @max(end, end_line);
         }
 
         pub fn applyHighlightEdit(
@@ -90,8 +89,8 @@ pub fn SearchHighlightOps(comptime Editor: type) type {
             start_point: c.TSPoint,
             old_end_point: c.TSPoint,
         ) void {
-            if (self.highlighter == null) return;
-            const h = self.highlighter.?;
+            if (self.doc.highlighter == null) return;
+            const h = self.doc.highlighter.?;
             const new_end_point = self.pointForByte(new_end_byte);
             const ranges = h.applyEdit(
                 start_byte,
@@ -103,7 +102,7 @@ pub fn SearchHighlightOps(comptime Editor: type) type {
                 self.allocator,
             ) catch {
                 _ = h.reparseFull();
-                self.noteHighlightDirtyRange(0, self.buffer.totalLen());
+                self.noteHighlightDirtyRange(0, self.doc.buffer.totalLen());
                 return;
             };
             defer self.allocator.free(ranges);
@@ -121,69 +120,66 @@ pub fn SearchHighlightOps(comptime Editor: type) type {
 
         pub fn scheduleHighlighter(self: *Editor, path: ?[]const u8) void {
             const log = app_logger.logger("editor.highlight");
-            if (self.highlight_disabled_for_large_file) {
-                if (self.highlighter) |h| {
+            if (self.doc.highlight_disabled_for_large_file) {
+                if (self.doc.highlighter) |h| {
                     h.destroy();
-                    self.highlighter = null;
+                    self.clearHighlighter();
                 }
-                self.highlight_epoch +|= 1;
-                self.highlight_dirty_start_line = null;
-                self.highlight_dirty_end_line = null;
-                self.highlight_pending = false;
+                self.bumpHighlightEpoch();
+                self.clearHighlightDirtyRange();
+                self.setHighlightPending(false);
                 log.logf(
                     .info,
                     "highlight skipped large_file bytes={d} threshold={d} path=\"{s}\"",
-                    .{ self.buffer.totalLen(), Editor.highlighter_large_file_threshold_bytes, path orelse "" },
+                    .{ self.doc.buffer.totalLen(), Editor.highlighter_large_file_threshold_bytes, path orelse "" },
                 );
                 return;
             }
             const lang = syntax_registry_mod.SyntaxRegistry.resolveLanguage(path);
             const manual_override = manual_highlights_mod.resolve(path, lang);
             if (lang == null and manual_override == null) {
-                if (self.highlighter) |h| {
+                if (self.doc.highlighter) |h| {
                     h.destroy();
-                    self.highlighter = null;
+                    self.clearHighlighter();
                 }
-                self.highlight_epoch +|= 1;
-                self.highlight_dirty_start_line = null;
-                self.highlight_dirty_end_line = null;
-                self.highlight_pending = false;
+                self.bumpHighlightEpoch();
+                self.clearHighlightDirtyRange();
+                self.setHighlightPending(false);
                 log.logf(.info, "highlight disabled path=\"{s}\"", .{path orelse ""});
                 return;
             }
-            self.highlight_pending = true;
+            self.setHighlightPending(true);
             log.logf(.info, "highlight scheduled path=\"{s}\"", .{path orelse ""});
         }
 
         pub fn tryInitHighlighter(self: *Editor, path: ?[]const u8) !void {
             const log = app_logger.logger("editor.highlight");
             log.logf(.info, "highlight init check path=\"{s}\"", .{path orelse ""});
-            self.highlight_pending = false;
+            self.setHighlightPending(false);
             const lang = syntax_registry_mod.SyntaxRegistry.resolveLanguage(path);
             const manual_override = manual_highlights_mod.resolve(path, lang);
             const effective_lang = if (manual_override) |spec| spec.parser else lang;
             if (effective_lang == null) {
-                if (self.highlighter) |h| {
+                if (self.doc.highlighter) |h| {
                     h.destroy();
-                    self.highlighter = null;
+                    self.clearHighlighter();
                 }
-                self.highlight_epoch +|= 1;
-                self.highlight_dirty_start_line = null;
-                self.highlight_dirty_end_line = null;
+                self.bumpHighlightEpoch();
+                self.clearHighlightDirtyRange();
                 log.logf(.info, "highlight disabled path=\"{s}\"", .{path orelse ""});
                 return;
             }
-            if (self.highlighter == null) {
+            if (self.doc.highlighter == null) {
                 const t_start = std.time.nanoTimestamp();
                 log.logf(.info, "highlight init start", .{});
-                const grammar = try self.grammar_manager.getOrLoad(effective_lang.?) orelse blk: {
+                const grammar = try self.doc.grammar_manager.getOrLoad(effective_lang.?) orelse blk: {
                     log.logf(.info, "highlight missing grammar lang={s}", .{effective_lang.?});
                     if (shouldAutoBootstrapGrammars()) {
                         _ = self.tryAutoBootstrapGrammars();
                         switch (grammarAutoBootstrapState()) {
                             .running => return,
                             .succeeded => {
-                                if (try self.grammar_manager.getOrLoad(effective_lang.?)) |loaded| {
+                                if (try self.doc.grammar_manager.getOrLoad(effective_lang.?)) |loaded| {
                                     log.logf(.info, "highlight grammar loaded after bootstrap lang={s}", .{effective_lang.?});
                                     break :blk loaded;
                                 }
@@ -211,19 +207,19 @@ pub fn SearchHighlightOps(comptime Editor: type) type {
                         }
                     }
                 }
-                self.highlighter = syntax_mod.createHighlighterForLanguage(
+                self.doc.highlighter = syntax_mod.createHighlighterForLanguage(
                     self.allocator,
-                    self.buffer,
+                    self.doc.buffer,
                     effective_lang.?,
                     grammar.ts_language,
                     query_paths,
-                    self.grammar_manager,
+                    self.doc.grammar_manager,
                 ) catch |err| {
                     log.logf(.info, "highlight init failed err={any}", .{err});
                     return err;
                 };
-                self.highlight_epoch +|= 1;
-                self.noteHighlightDirtyRange(0, self.buffer.totalLen());
+                self.bumpHighlightEpoch();
+                self.noteHighlightDirtyRange(0, self.doc.buffer.totalLen());
                 const elapsed_ns = std.time.nanoTimestamp() - t_start;
                 log.logf(
                     .info,
@@ -278,9 +274,10 @@ pub fn SearchHighlightOps(comptime Editor: type) type {
         }
 
         pub fn ensureHighlighter(self: *Editor) void {
-            if (self.highlight_disabled_for_large_file) return;
-            if (!self.highlight_pending) return;
-            self.tryInitHighlighter(self.file_path) catch |err| {
+            if (self.doc.highlight_disabled_for_large_file) return;
+            if (!self.doc.highlight_pending) return;
+            if (self.highlight_defer_frames > 0) return;
+            self.tryInitHighlighter(self.doc.file_path) catch |err| {
                 const log = app_logger.logger("editor.highlight");
                 log.logf(.warning, "ensure highlighter init failed: {s}", .{@errorName(err)});
             };
@@ -291,17 +288,13 @@ pub fn SearchHighlightOps(comptime Editor: type) type {
         }
 
         pub fn setSearchQuery(self: *Editor, query: ?[]const u8) !void {
-            self.search_mode = .literal;
-            if (self.search_query) |prev| {
-                self.allocator.free(prev);
-                self.search_query = null;
-            }
+            self.setSearchMode(.literal);
             if (query) |value| {
                 if (value.len == 0) {
                     self.clearSearchState();
                     return;
                 }
-                self.search_query = try self.allocator.dupe(u8, value);
+                try self.setSearchQueryOwned(value);
             } else {
                 self.clearSearchState();
                 return;
@@ -310,17 +303,13 @@ pub fn SearchHighlightOps(comptime Editor: type) type {
         }
 
         pub fn setSearchQueryRegex(self: *Editor, query: ?[]const u8) !void {
-            self.search_mode = .regex;
-            if (self.search_query) |prev| {
-                self.allocator.free(prev);
-                self.search_query = null;
-            }
+            self.setSearchMode(.regex);
             if (query) |value| {
                 if (value.len == 0) {
                     self.clearSearchState();
                     return;
                 }
-                self.search_query = try self.allocator.dupe(u8, value);
+                try self.setSearchQueryOwned(value);
             } else {
                 self.clearSearchState();
                 return;
@@ -329,22 +318,22 @@ pub fn SearchHighlightOps(comptime Editor: type) type {
         }
 
         pub fn searchMatches(self: *const Editor) []const SearchMatch {
-            return self.search_matches.items;
+            return self.doc.search_matches.items;
         }
 
         pub fn searchQuery(self: *const Editor) ?[]const u8 {
-            return self.search_query;
+            return self.doc.search_query;
         }
 
         pub fn searchActiveMatch(self: *const Editor) ?SearchMatch {
-            const idx = self.search_active orelse return null;
-            if (idx >= self.search_matches.items.len) return null;
-            return self.search_matches.items[idx];
+            const idx = self.doc.search_active orelse return null;
+            if (idx >= self.doc.search_matches.items.len) return null;
+            return self.doc.search_matches.items[idx];
         }
 
         pub fn searchActiveIndex(self: *const Editor) ?usize {
-            const idx = self.search_active orelse return null;
-            if (idx >= self.search_matches.items.len) return null;
+            const idx = self.doc.search_active orelse return null;
+            if (idx >= self.doc.search_matches.items.len) return null;
             return idx;
         }
 
@@ -355,31 +344,31 @@ pub fn SearchHighlightOps(comptime Editor: type) type {
         }
 
         pub fn activateNextSearchMatch(self: *Editor) bool {
-            if (self.search_matches.items.len == 0) return false;
-            const next = if (self.search_active) |idx|
-                (idx + 1) % self.search_matches.items.len
+            if (self.doc.search_matches.items.len == 0) return false;
+            const next = if (self.doc.search_active) |idx|
+                (idx + 1) % self.doc.search_matches.items.len
             else
                 0;
-            self.search_active = next;
+            self.setSearchActive(next);
             self.jumpToSearchActive();
             return true;
         }
 
         pub fn activatePrevSearchMatch(self: *Editor) bool {
-            if (self.search_matches.items.len == 0) return false;
-            const prev = if (self.search_active) |idx|
-                if (idx == 0) self.search_matches.items.len - 1 else idx - 1
+            if (self.doc.search_matches.items.len == 0) return false;
+            const prev = if (self.doc.search_active) |idx|
+                if (idx == 0) self.doc.search_matches.items.len - 1 else idx - 1
             else
-                self.search_matches.items.len - 1;
-            self.search_active = prev;
+                self.doc.search_matches.items.len - 1;
+            self.setSearchActive(prev);
             self.jumpToSearchActive();
             return true;
         }
 
         pub fn replaceActiveSearchMatch(self: *Editor, replacement: []const u8) !bool {
-            const active_idx = self.search_active orelse return false;
-            if (active_idx >= self.search_matches.items.len) return false;
-            const active = self.search_matches.items[active_idx];
+            const active_idx = self.doc.search_active orelse return false;
+            if (active_idx >= self.doc.search_matches.items.len) return false;
+            const active = self.doc.search_matches.items[active_idx];
 
             _ = try self.beginTrackedUndoGroup();
             errdefer self.endTrackedUndoGroup() catch |err| {
@@ -388,8 +377,8 @@ pub fn SearchHighlightOps(comptime Editor: type) type {
             };
             try self.replaceByteRangeInternal(active.start, active.end, replacement, false);
             try self.recomputeSearchMatchesSync();
-            self.search_active = self.findSearchMatchAtOrAfter(active.start + replacement.len);
-            if (self.search_active != null) {
+            self.setSearchActive(self.findSearchMatchAtOrAfter(active.start + replacement.len));
+            if (self.doc.search_active != null) {
                 self.jumpToSearchActive();
             }
             try self.endTrackedUndoGroup();
@@ -397,9 +386,9 @@ pub fn SearchHighlightOps(comptime Editor: type) type {
         }
 
         pub fn replaceAllSearchMatches(self: *Editor, replacement: []const u8) !usize {
-            if (self.search_matches.items.len == 0) return 0;
+            if (self.doc.search_matches.items.len == 0) return 0;
 
-            const matches = try self.allocator.dupe(SearchMatch, self.search_matches.items);
+            const matches = try self.allocator.dupe(SearchMatch, self.doc.search_matches.items);
             defer self.allocator.free(matches);
 
             _ = try self.beginTrackedUndoGroup();
@@ -426,7 +415,7 @@ pub fn SearchHighlightOps(comptime Editor: type) type {
         }
 
         pub fn findSearchMatchAtOrAfter(self: *const Editor, offset: usize) ?usize {
-            for (self.search_matches.items, 0..) |match, idx| {
+            for (self.doc.search_matches.items, 0..) |match, idx| {
                 if (match.start >= offset) return idx;
             }
             return null;
@@ -434,9 +423,9 @@ pub fn SearchHighlightOps(comptime Editor: type) type {
 
         pub fn clearSearchState(self: *Editor) void {
             self.cancelPendingSearchWork();
-            self.search_matches.clearRetainingCapacity();
-            self.search_active = null;
-            self.search_epoch +|= 1;
+            self.clearSearchMatches();
+            self.setSearchActive(null);
+            self.bumpSearchEpoch();
         }
 
         pub fn recomputeSearchMatches(self: *Editor) !void {
@@ -445,7 +434,7 @@ pub fn SearchHighlightOps(comptime Editor: type) type {
         }
 
         pub fn recomputeSearchMatchesPrefer(self: *Editor, preferred_offset: usize) !void {
-            const query = self.search_query orelse {
+            const query = self.doc.search_query orelse {
                 self.clearSearchState();
                 return;
             };
@@ -454,15 +443,15 @@ pub fn SearchHighlightOps(comptime Editor: type) type {
                 return;
             }
 
-            const total = self.buffer.totalLen();
-            const content_owned = try self.buffer.readRangeAlloc(0, total);
+            const total = self.doc.buffer.totalLen();
+            const content_owned = try self.doc.buffer.readRangeAlloc(0, total);
             defer self.allocator.free(content_owned);
             const query_copy = try c_allocator.dupe(u8, query);
             errdefer c_allocator.free(query_copy);
             const content_copy = try c_allocator.dupe(u8, content_owned);
             errdefer c_allocator.free(content_copy);
 
-            const generation_opt = self.queueSearchRequest(preferred_offset, self.search_mode, query_copy, content_copy);
+            const generation_opt = self.queueSearchRequest(preferred_offset, self.doc.search_mode, query_copy, content_copy);
             if (generation_opt == null) {
                 c_allocator.free(query_copy);
                 c_allocator.free(content_copy);
@@ -471,9 +460,9 @@ pub fn SearchHighlightOps(comptime Editor: type) type {
             }
             const generation = generation_opt.?;
 
-            self.search_matches.clearRetainingCapacity();
-            self.search_active = null;
-            self.search_epoch +|= 1;
+            self.clearSearchMatches();
+            self.setSearchActive(null);
+            self.bumpSearchEpoch();
             if (total > 0) self.noteHighlightDirtyRange(0, total - 1);
 
             const log = app_logger.logger("editor.search");
@@ -481,7 +470,7 @@ pub fn SearchHighlightOps(comptime Editor: type) type {
                 generation,
                 query.len,
                 content_owned.len,
-                @tagName(self.search_mode),
+                @tagName(self.doc.search_mode),
             });
         }
 
@@ -491,27 +480,27 @@ pub fn SearchHighlightOps(comptime Editor: type) type {
         }
 
         pub fn recomputeSearchMatchesSyncPrefer(self: *Editor, preferred_offset: usize) !void {
-            self.search_matches.clearRetainingCapacity();
-            const query = self.search_query orelse {
-                self.search_active = null;
-                self.search_epoch +|= 1;
+            self.clearSearchMatches();
+            const query = self.doc.search_query orelse {
+                self.setSearchActive(null);
+                self.bumpSearchEpoch();
                 return;
             };
             if (query.len == 0) {
-                self.search_active = null;
-                self.search_epoch +|= 1;
+                self.setSearchActive(null);
+                self.bumpSearchEpoch();
                 return;
             }
 
-            const total = self.buffer.totalLen();
-            const content = try self.buffer.readRangeAlloc(0, total);
+            const total = self.doc.buffer.totalLen();
+            const content = try self.doc.buffer.readRangeAlloc(0, total);
             defer self.allocator.free(content);
 
-            const matches = try computeSearchMatchesAlloc(self.allocator, self.search_mode, query, content);
+            const matches = try computeSearchMatchesAlloc(self.allocator, self.doc.search_mode, query, content);
             defer self.allocator.free(matches);
-            try self.search_matches.appendSlice(self.allocator, matches);
-            self.search_active = self.pickSearchActiveIndex(preferred_offset);
-            self.search_epoch +|= 1;
+            try self.replaceSearchMatches(matches);
+            self.setSearchActive(self.pickSearchActiveIndex(preferred_offset));
+            self.bumpSearchEpoch();
             if (total > 0) self.noteHighlightDirtyRange(0, total - 1);
         }
 
@@ -523,130 +512,107 @@ pub fn SearchHighlightOps(comptime Editor: type) type {
             content: []u8,
         ) ?u64 {
             self.ensureSearchWorker();
-            self.search_mutex.lock();
-            defer self.search_mutex.unlock();
-            if (!self.search_worker_running) return null;
+            self.doc.search_mutex.lock();
+            defer self.doc.search_mutex.unlock();
+            if (!self.doc.search_worker_running) return null;
 
-            self.search_generation +|= 1;
-            const generation = self.search_generation;
-            if (self.search_request) |pending| {
-                c_allocator.free(pending.query);
-                c_allocator.free(pending.content);
-            }
-            self.search_request = .{
+            const generation = self.bumpSearchGeneration();
+            self.replaceSearchRequest(.{
                 .generation = generation,
                 .preferred_offset = preferred_offset,
                 .mode = mode,
                 .query = query,
                 .content = content,
-            };
-            self.search_cond.signal();
+            });
+            self.doc.search_cond.signal();
             return generation;
         }
 
         pub fn ensureSearchWorker(self: *Editor) void {
-            self.search_mutex.lock();
-            if (self.search_worker_running) {
-                self.search_mutex.unlock();
+            self.doc.search_mutex.lock();
+            if (self.isSearchWorkerRunning()) {
+                self.doc.search_mutex.unlock();
                 return;
             }
-            self.search_worker_running = true;
-            self.search_mutex.unlock();
+            self.setSearchWorkerRunning(true);
+            self.doc.search_mutex.unlock();
 
             const worker = std.Thread.spawn(.{}, searchWorkerMain, .{self}) catch |err| {
                 const log = app_logger.logger("editor.search");
                 log.logf(.warning, "search worker spawn failed err={s}", .{@errorName(err)});
-                self.search_mutex.lock();
-                self.search_worker_running = false;
-                self.search_mutex.unlock();
+                self.doc.search_mutex.lock();
+                self.setSearchWorkerRunning(false);
+                self.doc.search_mutex.unlock();
                 return;
             };
-            self.search_worker = worker;
+            self.setSearchWorker(worker);
         }
 
         pub fn stopSearchWorker(self: *Editor) void {
-            self.search_mutex.lock();
-            self.search_worker_running = false;
-            if (self.search_request) |pending| {
-                c_allocator.free(pending.query);
-                c_allocator.free(pending.content);
-                self.search_request = null;
-            }
-            self.search_cond.signal();
-            self.search_mutex.unlock();
+            self.doc.search_mutex.lock();
+            self.setSearchWorkerRunning(false);
+            self.clearPendingSearchRequest();
+            self.doc.search_cond.signal();
+            self.doc.search_mutex.unlock();
 
-            if (self.search_worker) |thread| {
+            if (self.takeSearchWorker()) |thread| {
                 thread.join();
-                self.search_worker = null;
             }
 
-            self.search_mutex.lock();
-            defer self.search_mutex.unlock();
-            if (self.search_result) |result| {
-                c_allocator.free(result.matches);
-                self.search_result = null;
-            }
+            self.doc.search_mutex.lock();
+            defer self.doc.search_mutex.unlock();
+            self.clearPendingSearchResult();
         }
 
         pub fn cancelPendingSearchWork(self: *Editor) void {
-            self.search_mutex.lock();
-            defer self.search_mutex.unlock();
-            self.search_generation +|= 1;
-            if (self.search_request) |pending| {
-                c_allocator.free(pending.query);
-                c_allocator.free(pending.content);
-                self.search_request = null;
-            }
-            if (self.search_result) |result| {
-                c_allocator.free(result.matches);
-                self.search_result = null;
-            }
+            self.doc.search_mutex.lock();
+            defer self.doc.search_mutex.unlock();
+            _ = self.bumpSearchGeneration();
+            self.clearPendingSearchRequest();
+            self.clearPendingSearchResult();
         }
 
         pub fn applyPendingSearchResult(self: *Editor) void {
-            self.search_mutex.lock();
-            const result_opt = self.search_result;
+            self.doc.search_mutex.lock();
+            const result_opt = self.takeSearchResult();
             if (result_opt == null) {
-                self.search_mutex.unlock();
+                self.doc.search_mutex.unlock();
                 return;
             }
             const result = result_opt.?;
-            self.search_result = null;
-            const latest_generation = self.search_generation;
-            self.search_mutex.unlock();
+            const latest_generation = self.doc.search_generation;
+            self.doc.search_mutex.unlock();
 
             defer c_allocator.free(result.matches);
             if (result.generation != latest_generation) {
                 return;
             }
 
-            self.search_matches.clearRetainingCapacity();
-            self.search_matches.appendSlice(self.allocator, result.matches) catch |err| {
+            self.replaceSearchMatches(result.matches) catch |err| {
                 const log = app_logger.logger("editor.search");
                 log.logf(.warning, "apply search result append failed err={s}", .{@errorName(err)});
-                self.search_active = null;
-                self.search_epoch +|= 1;
+                self.setSearchActive(null);
+                self.bumpSearchEpoch();
                 return;
             };
-            self.search_active = self.pickSearchActiveIndex(result.preferred_offset);
-            self.search_epoch +|= 1;
-            const total = self.buffer.totalLen();
+            self.setSearchActive(self.pickSearchActiveIndex(result.preferred_offset));
+            self.bumpSearchEpoch();
+            const total = self.doc.buffer.totalLen();
             if (total > 0) self.noteHighlightDirtyRange(0, total - 1);
         }
 
         fn searchWorkerMain(self: *Editor) void {
             while (true) {
-                self.search_mutex.lock();
-                while (self.search_worker_running and self.search_request == null) {
-                    self.search_cond.wait(&self.search_mutex);
+                self.doc.search_mutex.lock();
+                while (self.isSearchWorkerRunning() and self.doc.search_request == null) {
+                    self.doc.search_cond.wait(&self.doc.search_mutex);
                 }
-                if (!self.search_worker_running) {
-                    self.search_mutex.unlock();
+                if (!self.isSearchWorkerRunning()) {
+                    self.doc.search_mutex.unlock();
                     return;
                 }
-                const request = self.search_request.?;
-                self.search_request = null;
-                self.search_mutex.unlock();
+                const request = self.takeSearchRequest().?;
+                self.doc.search_mutex.unlock();
 
                 const matches = computeSearchMatchesAlloc(c_allocator, request.mode, request.query, request.content) catch |err| {
                     const log = app_logger.logger("editor.search");
@@ -658,32 +624,29 @@ pub fn SearchHighlightOps(comptime Editor: type) type {
                 c_allocator.free(request.query);
                 c_allocator.free(request.content);
 
-                self.search_mutex.lock();
-                if (!self.search_worker_running) {
-                    self.search_mutex.unlock();
+                self.doc.search_mutex.lock();
+                if (!self.isSearchWorkerRunning()) {
+                    self.doc.search_mutex.unlock();
                     c_allocator.free(matches);
                     return;
                 }
-                if (request.generation != self.search_generation) {
-                    self.search_mutex.unlock();
+                if (request.generation != self.doc.search_generation) {
+                    self.doc.search_mutex.unlock();
                     c_allocator.free(matches);
                     continue;
                 }
-                if (self.search_result) |old| {
-                    c_allocator.free(old.matches);
-                }
-                self.search_result = .{
+                self.replaceSearchResult(.{
                     .generation = request.generation,
                     .preferred_offset = request.preferred_offset,
                     .matches = matches,
-                };
-                self.search_mutex.unlock();
+                });
+                self.doc.search_mutex.unlock();
             }
         }
 
         pub fn pickSearchActiveIndex(self: *const Editor, preferred_offset: usize) ?usize {
-            if (self.search_matches.items.len == 0) return null;
-            for (self.search_matches.items, 0..) |match, idx| {
+            if (self.doc.search_matches.items.len == 0) return null;
+            for (self.doc.search_matches.items, 0..) |match, idx| {
                 if (match.start >= preferred_offset) return idx;
             }
             return 0;
