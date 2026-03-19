@@ -162,9 +162,12 @@ pub fn handle(
     if (editor.visibleHighlightNeedsRedraw()) {
         out.needs_redraw = true;
     }
+    const should_schedule_visible_work =
+        editor.hasPendingVisibleHighlightWork() and
+        !editor.visibleHighlightComputeInFlight() and
+        !editor.hasPendingVisibleHighlightRequest();
     const should_run_visible_precompute =
-        out.needs_redraw or
-        editor.hasPendingVisibleHighlightWork() or
+        should_schedule_visible_work or
         editor.hasPendingVisibleHighlightResult();
     if (should_run_visible_precompute) {
         var widget = widgets.EditorWidget.initWithCache(editor, editor_cluster_cache, editor_wrap);
