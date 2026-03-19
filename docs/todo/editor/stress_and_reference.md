@@ -350,8 +350,14 @@ stack issue, not an isolated highlight bug:
         runtime work rather than only the old queue-active bit
       - local Unicode repro now shows ordered worker progression through the
         visible range (`0-4`, `4-8`, ... `32-33`) with matching publish events
+      - visible highlight request/result/compute-in-flight mailbox access is
+        now guarded behind the runtime mutex, fixing the first real worker-path
+        race/segfault in the local Unicode repro
       - visible precompute now follows a worker schedule contract instead of
         the old inline-publish contract
+      - remaining runtime issue is frame-lane churn: while worker execution is
+        stable, `visible_cache_precompute` still re-enters too often between
+        worker publications
       - this is still behavior-preserving and does not yet claim full runtime
         ownership
 

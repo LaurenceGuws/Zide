@@ -83,6 +83,12 @@ Current implementation progress:
 - visible cache precompute now has a worker-oriented contract: schedule work on
   the runtime lane, then let frame/runtime publication apply completed results;
   it no longer pretends to inline-publish highlight output itself
+- visible highlight request/result state is now guarded by the runtime mutex,
+  which fixes the first real worker-path race discovered under the Unicode
+  startup repro
+- the next runtime weakness is no longer correctness but cadence: the frame
+  path still re-enters visible precompute too often while the worker is already
+  busy, so follow-up work should target frame churn rather than mailbox safety
 
 ## Current Problem
 
