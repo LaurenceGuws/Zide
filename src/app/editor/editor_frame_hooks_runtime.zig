@@ -167,7 +167,7 @@ pub fn handle(
     }
     if (out.needs_redraw or should_drive_visible_warmup) {
         var widget = widgets.EditorWidget.initWithCache(editor, editor_cluster_cache, editor_wrap);
-        const computed_visible_highlights = app_editor_visible_caches_runtime.precompute(
+        const scheduled_visible_highlights = app_editor_visible_caches_runtime.precompute(
             &widget,
             shell,
             layout,
@@ -176,7 +176,7 @@ pub fn handle(
             editor_width_budget,
             frame_id,
         );
-        if (computed_visible_highlights) {
+        if (scheduled_visible_highlights) {
             out.needs_redraw = true;
         }
         if (editor.applyPendingVisibleHighlightResult(editor_render_cache)) {

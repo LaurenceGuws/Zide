@@ -46,7 +46,6 @@ pub fn precompute(
         widget.editor.ensureVisibleHighlightWorker();
         widget.editor.signalVisibleHighlightRuntime();
     }
-    const highlight_published = false;
     if (widget.editor.shouldThrottleStartupHighlightWarmup() and !widget.editor.visibleHighlightWorkInFlight()) {
         widget.editor.completeStartupVisibleWarmup();
     }
@@ -64,5 +63,5 @@ pub fn precompute(
         "visible_cache_precompute frame={d} skipped=false visible_lines={d} highlight_budget={d} width_budget={d} highlight_us={d} width_us={d} wrap_us={d} time_us={d}",
         .{ frame_id, visible_lines, highlight_budget, width_budget, highlight_elapsed_us, width_elapsed_us, wrap_elapsed_us, elapsed_us },
     );
-    return highlight_published;
+    return highlight_scheduled;
 }

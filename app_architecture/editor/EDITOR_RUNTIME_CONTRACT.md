@@ -80,6 +80,9 @@ Current implementation progress:
 - startup warmup completion and redraw driving now follow in-flight visible
   highlight runtime work, request, and result state rather than only the old
   queue-active bit
+- visible cache precompute now has a worker-oriented contract: schedule work on
+  the runtime lane, then let frame/runtime publication apply completed results;
+  it no longer pretends to inline-publish highlight output itself
 
 ## Current Problem
 

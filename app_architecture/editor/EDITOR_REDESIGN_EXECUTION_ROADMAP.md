@@ -271,6 +271,9 @@ Phase 2 has now started in code:
   running highlight execution inline, so the lane swap has begun in code
 - warmup completion/redraw checks now reason from in-flight visible highlight
   runtime work rather than the old inline queue assumption
+- visible precompute now exposes a worker-oriented schedule contract instead of
+  an inline-publish contract, which removes one more inline-era assumption from
+  the frame path
 - the current cut is structural and behavior-preserving; it does not yet claim
   full `EditorRuntime` ownership, but it makes that ownership line explicit
 
