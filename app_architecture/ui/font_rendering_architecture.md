@@ -102,6 +102,81 @@ flowchart TD
     E2 --> E3["document-oriented text draw"]
 ```
 
+## Windows DPI Contract
+
+Current Windows scale ownership is:
+
+- `platform.display_metrics`
+  - authoritative per-window snapshot from SDL
+  - owns:
+    - logical window size
+    - drawable size
+    - display index
+    - DPI scale
+    - SDL display scale
+    - pixel density
+    - derived render scale
+  - current implementation:
+    - `src/platform/display_metrics.zig`
+    - consumed by `src/platform/window_metrics.zig`,
+      `src/ui/renderer.zig`, and `src/ui/renderer/font_runtime.zig`
+- `render_scale`
+  - actual raster/backbuffer scale
+  - on Windows this should follow SDL window pixel density / drawable ratio,
+    not content scale
+  - used to choose raster size and device-pixel alignment behavior
+- `ui_scale`
+  - app/layout scale
+  - on Windows this now includes native SDL display/content scale before any
+    optional `ZIDE_UI_SCALE` override
+
+That means the corrected Windows path now splits the two responsibilities:
+
+- content/display scale enlarges layout/UI size
+- pixel density controls raster size and device-pixel alignment
+
+Current implications:
+
+- SDL display-scale changes should trigger font rebuilds and target invalidation
+- if fractional-DPI bugs remain on Windows they are therefore more likely to be
+  caused by:
+  - glyph origin snapping
+  - quad sizing
+  - atlas UV/sampling rules
+  - baseline/metric rebuild instability
+- they are less likely to be caused by the top-level DPI/content-scale split
+  itself
+
+This is an implementation truth, not a claim that the contract is already ideal.
+If the current model proves insufficient, change it deliberately and document
+the new ownership split here before spreading ad hoc fixes through the
+renderer.
+
+Current architectural direction:
+
+- keep OS/backend truth acquisition inside `platform.display_metrics`
+- let renderer/font code consume that snapshot instead of independently reading
+  SDL/window state
+- keep text quality policy separate from OS truth acquisition
+- renderer should also own a shared logical scaled-font metric snapshot
+  (`cell_width`, `cell_height`, `baseline_from_top`) for the active font set,
+  so text/terminal draw paths do not each reinterpret raw FreeType/HarfBuzz
+  font fields independently
+
+Current reference priority for runtime scaling work:
+
+- `alacritty`
+  - runtime scale-factor changes should intentionally update effective font
+    size/layout state
+- `wezterm`
+  - render metrics should be an explicit, pixel-rounded set that keeps
+    cell-size, descender, baseline, and underline positions coherent
+- SDL renderer scale math
+  - destination geometry should be scaled/rounded consistently from one view
+    contract, not through ad hoc per-call adjustments
+- Windows DPI/DirectWrite docs
+  - define platform expectations, not the full renderer implementation
+
 ## Configuration Surface (Lua)
 
 All appearance-affecting knobs should be in `assets/config/init.lua`:

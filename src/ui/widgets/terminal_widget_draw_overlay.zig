@@ -150,8 +150,8 @@ pub fn drawOverlays(
         const selection_rows = cache.selection_rows.items;
         if (selection_rows.len == rows) {
             const selection_color = softSelectionColor(r.theme.selection);
-            const cell_w_i: i32 = @intFromFloat(std.math.round(r.terminal_cell_width));
-            const cell_h_i: i32 = @intFromFloat(std.math.round(r.terminal_cell_height));
+            const cell_w_i: i32 = @intFromFloat(std.math.round(r.terminal_metrics.cell_width));
+            const cell_h_i: i32 = @intFromFloat(std.math.round(r.terminal_metrics.cell_height));
             const base_x_i: i32 = @intFromFloat(std.math.round(x));
             const base_y_i: i32 = @intFromFloat(std.math.round(y));
 
@@ -199,8 +199,8 @@ pub fn drawOverlays(
         if (row_cells.len != 0) {
             const cell = row_cells[cursor.col];
             const cell_width_units = @as(usize, @max(@as(u8, 1), cell.width));
-            const cell_w_i: i32 = @intFromFloat(std.math.round(r.terminal_cell_width));
-            const cell_h_i: i32 = @intFromFloat(std.math.round(r.terminal_cell_height));
+            const cell_w_i: i32 = @intFromFloat(std.math.round(r.terminal_metrics.cell_width));
+            const cell_h_i: i32 = @intFromFloat(std.math.round(r.terminal_metrics.cell_height));
             const base_x_i: i32 = @intFromFloat(std.math.round(x));
             const base_y_i: i32 = @intFromFloat(std.math.round(y));
             const cell_x_i = base_x_i + @as(i32, @intCast(cursor.col)) * cell_w_i;

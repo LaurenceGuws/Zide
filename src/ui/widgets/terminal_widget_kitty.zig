@@ -134,8 +134,8 @@ pub const KittyState = struct {
         cols: usize,
     ) void {
         const r = shell.rendererPtr();
-        const cell_w: f32 = r.terminal_cell_width;
-        const cell_h: f32 = r.terminal_cell_height;
+        const cell_w: f32 = r.terminal_metrics.cell_width;
+        const cell_h: f32 = r.terminal_metrics.cell_height;
         const start_line_i: i32 = @intCast(start_line);
         const rows_i: i32 = @intCast(rows);
         const cols_i: i32 = @intCast(cols);

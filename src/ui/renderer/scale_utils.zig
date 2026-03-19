@@ -1,3 +1,4 @@
+const builtin = @import("builtin");
 const iface = @import("interface.zig");
 const std = @import("std");
 
@@ -13,10 +14,14 @@ pub fn queryUiScale(
     wayland: *WaylandScaleState,
 ) f32 {
     _ = allocator;
-    _ = dpi;
     _ = now;
     _ = wayland;
     var scale: f32 = 1.0;
+
+    if (builtin.os.tag == .windows) {
+        const native_scale = if (dpi.x > 0.0) dpi.x else if (dpi.y > 0.0) dpi.y else 1.0;
+        if (native_scale > 0.0) scale *= native_scale;
+    }
 
     if (std.c.getenv("ZIDE_UI_SCALE")) |raw| {
         const s = std.mem.trim(u8, std.mem.span(raw), " \t\r\n");

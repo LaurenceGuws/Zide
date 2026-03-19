@@ -20,7 +20,39 @@ fn snapInt(value: f32) i32 {
 
 fn snapToDevicePixel(value: f32, render_scale: f32) f32 {
     const scale = if (render_scale > 0.0) render_scale else 1.0;
+    if (!std.math.approxEqAbs(f32, scale, std.math.round(scale), 0.0001)) {
+        return value;
+    }
     return @as(f32, @floatFromInt(@as(i32, @intFromFloat(std.math.round(value * scale))))) / scale;
+}
+
+fn snapVerticalDevicePixel(value: f32, render_scale: f32) f32 {
+    const scale = if (render_scale > 0.0) render_scale else 1.0;
+    return @as(f32, @floatFromInt(@as(i32, @intFromFloat(std.math.round(value * scale))))) / scale;
+}
+
+const QuantizedAxis = struct {
+    origin: f32,
+    size: f32,
+};
+
+fn quantizeHorizontalAxis(origin: f32, size: f32, render_scale: f32) QuantizedAxis {
+    const scale = if (render_scale > 0.0) render_scale else 1.0;
+    const snapped_origin = snapToDevicePixel(origin, render_scale);
+    const snapped_end = snapToDevicePixel(origin + size, render_scale);
+    return .{
+        .origin = snapped_origin,
+        .size = @max(1.0 / scale, snapped_end - snapped_origin),
+    };
+}
+
+fn quantizeVerticalAxis(origin: f32, size: f32, render_scale: f32) QuantizedAxis {
+    const scale = if (render_scale > 0.0) render_scale else 1.0;
+    const snapped_origin = snapVerticalDevicePixel(origin, render_scale);
+    return .{
+        .origin = snapped_origin,
+        .size = @max(1.0 / scale, size),
+    };
 }
 
 const TextOrigin = struct {
@@ -31,7 +63,7 @@ const TextOrigin = struct {
 fn snapTextOrigin(self: *Renderer, x: f32, y: f32) TextOrigin {
     return .{
         .x = snapToDevicePixel(x, self.render_scale),
-        .y = snapToDevicePixel(y, self.render_scale),
+        .y = snapVerticalDevicePixel(y, self.render_scale),
     };
 }
 
@@ -39,7 +71,7 @@ pub fn drawText(self: *Renderer, text: []const u8, x: f32, y: f32, color: Color)
     const prev = self.text_bg_rgba;
     defer self.text_bg_rgba = prev;
     self.text_bg_rgba = .{ .r = 0, .g = 0, .b = 0, .a = 0 };
-    drawTextWithFont(self, &self.terminal_font, self.terminal_cell_width, self.terminal_cell_height, text, x, y, color, false);
+    drawTextWithFont(self, &self.terminal_font, self.terminal_metrics, text, x, y, color, false);
 }
 
 pub fn drawTextMonospace(self: *Renderer, text: []const u8, x: f32, y: f32, color: Color) void {
@@ -50,7 +82,7 @@ pub fn drawTextMonospacePolicy(self: *Renderer, text: []const u8, x: f32, y: f32
     const prev = self.text_bg_rgba;
     defer self.text_bg_rgba = prev;
     self.text_bg_rgba = .{ .r = 0, .g = 0, .b = 0, .a = 0 };
-    drawTextWithFontMonospace(self, &self.terminal_font, self.terminal_cell_width, self.terminal_cell_height, text, x, y, color, disable_programming_ligatures, false);
+    drawTextWithFontMonospace(self, &self.terminal_font, self.terminal_metrics, text, x, y, color, disable_programming_ligatures, false);
 }
 
 pub fn drawTextMonospaceOnBg(self: *Renderer, text: []const u8, x: f32, y: f32, color: Color, bg: Color) void {
@@ -63,14 +95,14 @@ pub fn drawTextMonospaceOnBgPolicy(self: *Renderer, text: []const u8, x: f32, y:
     var bg_rgba = bg.toRgba();
     bg_rgba.a = 255;
     self.text_bg_rgba = bg_rgba;
-    drawTextWithFontMonospace(self, &self.terminal_font, self.terminal_cell_width, self.terminal_cell_height, text, x, y, color, disable_programming_ligatures, false);
+    drawTextWithFontMonospace(self, &self.terminal_font, self.terminal_metrics, text, x, y, color, disable_programming_ligatures, false);
 }
 
 pub fn drawTextMonospaceStyledPolicy(self: *Renderer, text: []const u8, x: f32, y: f32, color: Color, disable_programming_ligatures: bool, italic: bool) void {
     const prev = self.text_bg_rgba;
     defer self.text_bg_rgba = prev;
     self.text_bg_rgba = .{ .r = 0, .g = 0, .b = 0, .a = 0 };
-    drawTextWithFontMonospace(self, &self.terminal_font, self.terminal_cell_width, self.terminal_cell_height, text, x, y, color, disable_programming_ligatures, italic);
+    drawTextWithFontMonospace(self, &self.terminal_font, self.terminal_metrics, text, x, y, color, disable_programming_ligatures, italic);
 }
 
 pub fn drawTextMonospaceOnBgStyledPolicy(self: *Renderer, text: []const u8, x: f32, y: f32, color: Color, bg: Color, disable_programming_ligatures: bool, italic: bool) void {
@@ -79,7 +111,7 @@ pub fn drawTextMonospaceOnBgStyledPolicy(self: *Renderer, text: []const u8, x: f
     var bg_rgba = bg.toRgba();
     bg_rgba.a = 255;
     self.text_bg_rgba = bg_rgba;
-    drawTextWithFontMonospace(self, &self.terminal_font, self.terminal_cell_width, self.terminal_cell_height, text, x, y, color, disable_programming_ligatures, italic);
+    drawTextWithFontMonospace(self, &self.terminal_font, self.terminal_metrics, text, x, y, color, disable_programming_ligatures, italic);
 }
 
 pub fn drawTextOnBg(self: *Renderer, text: []const u8, x: f32, y: f32, color: Color, bg: Color) void {
@@ -88,7 +120,7 @@ pub fn drawTextOnBg(self: *Renderer, text: []const u8, x: f32, y: f32, color: Co
     var bg_rgba = bg.toRgba();
     bg_rgba.a = 255;
     self.text_bg_rgba = bg_rgba;
-    drawTextWithFont(self, &self.terminal_font, self.terminal_cell_width, self.terminal_cell_height, text, x, y, color, false);
+    drawTextWithFont(self, &self.terminal_font, self.terminal_metrics, text, x, y, color, false);
 }
 
 pub fn drawTextSized(self: *Renderer, text: []const u8, x: f32, y: f32, size: f32, color: Color) void {
@@ -100,14 +132,21 @@ pub fn drawTextSized(self: *Renderer, text: []const u8, x: f32, y: f32, size: f3
         return;
     };
     const scale = if (self.render_scale > 0.0) self.render_scale else 1.0;
-    drawTextWithFont(self, font, font.cell_width / scale, font.line_height / scale, text, x, y, color, false);
+    drawTextWithFont(self, font, .{
+        .ascent = font.ascent / scale,
+        .descent = font.descent / scale,
+        .line_height = font.line_height / scale,
+        .cell_width = font.cell_width / scale,
+        .cell_height = font.line_height / scale,
+        .baseline_from_top = font.baseline_from_top / scale,
+    }, text, x, y, color, false);
 }
 
 pub fn drawIconText(self: *Renderer, text: []const u8, x: f32, y: f32, color: Color) void {
     const prev = self.text_bg_rgba;
     defer self.text_bg_rgba = prev;
     self.text_bg_rgba = .{ .r = 0, .g = 0, .b = 0, .a = 0 };
-    drawTextWithFont(self, &self.icon_font, self.icon_char_width, self.icon_char_height, text, x, y, color, false);
+    drawTextWithFont(self, &self.icon_font, self.icon_metrics, text, x, y, color, false);
 }
 
 pub fn measureIconTextWidth(self: *Renderer, text: []const u8) f32 {
@@ -225,18 +264,18 @@ fn drawTerminalBoxGlyphBatched(self: *Renderer, codepoint: u32, x: f32, y: f32, 
     return terminal_glyphs.drawBoxGlyphBatched(addTerminalGlyphRectThunk, self, codepoint, x, y, w, h, color);
 }
 
-fn drawTextWithFont(self: *Renderer, font: *TerminalFont, cell_w: f32, cell_h: f32, text: []const u8, x: f32, y: f32, color: Color, italic: bool) void {
+fn drawTextWithFont(self: *Renderer, font: *TerminalFont, metrics: Renderer.ScaledFontMetrics, text: []const u8, x: f32, y: f32, color: Color, italic: bool) void {
     const origin = snapTextOrigin(self, x, y);
-    text_draw.drawText(self.allocator, font, self, drawTextureThunk, text, origin.x, origin.y, cell_w, cell_h, color.toRgba(), false, italic);
+    text_draw.drawText(self.allocator, font, self, drawTextureThunk, text, origin.x, origin.y, metrics.cell_width, metrics.cell_height, color.toRgba(), false, italic);
 }
 
-fn drawTextWithFontMonospace(self: *Renderer, font: *TerminalFont, cell_w: f32, cell_h: f32, text: []const u8, x: f32, y: f32, color: Color, disable_programming_ligatures: bool, italic: bool) void {
+fn drawTextWithFontMonospace(self: *Renderer, font: *TerminalFont, metrics: Renderer.ScaledFontMetrics, text: []const u8, x: f32, y: f32, color: Color, disable_programming_ligatures: bool, italic: bool) void {
     const origin = snapTextOrigin(self, x, y);
-    if (drawTextWithFontMonospaceShaped(self, font, cell_w, cell_h, text, origin.x, origin.y, color.toRgba(), disable_programming_ligatures, italic)) return;
-    text_draw.drawText(self.allocator, font, self, drawTextureThunk, text, origin.x, origin.y, cell_w, cell_h, color.toRgba(), true, italic);
+    if (drawTextWithFontMonospaceShaped(self, font, metrics, text, origin.x, origin.y, color.toRgba(), disable_programming_ligatures, italic)) return;
+    text_draw.drawText(self.allocator, font, self, drawTextureThunk, text, origin.x, origin.y, metrics.cell_width, metrics.cell_height, color.toRgba(), true, italic);
 }
 
-fn drawTextWithFontMonospaceShaped(self: *Renderer, font: *TerminalFont, cell_w: f32, cell_h: f32, text: []const u8, x: f32, y: f32, color: types.Rgba, disable_programming_ligatures: bool, italic: bool) bool {
+fn drawTextWithFontMonospaceShaped(self: *Renderer, font: *TerminalFont, metrics: Renderer.ScaledFontMetrics, text: []const u8, x: f32, y: f32, color: types.Rgba, disable_programming_ligatures: bool, italic: bool) bool {
     const log = app_logger.logger("renderer.text");
     if (text.len == 0) return true;
     if (!textLikelyNeedsShaping(text)) {
@@ -298,11 +337,11 @@ fn drawTextWithFontMonospaceShaped(self: *Renderer, font: *TerminalFont, cell_w:
         const infos = hb.hb_buffer_get_glyph_infos(buffer, &length);
         const positions = hb.hb_buffer_get_glyph_positions(buffer, &length);
         if (length == 0) {
-            var fallback_x = x + @as(f32, @floatFromInt(span_start)) * cell_w;
+            var fallback_x = x + @as(f32, @floatFromInt(span_start)) * metrics.cell_width;
             var j = span_start;
             while (j < span_end) : (j += 1) {
-                font.drawGlyph(.{ .ctx = self, .drawTexture = drawTextureThunk }, codepoints.items[j], fallback_x, y, cell_w, cell_h, false, color, italic);
-                fallback_x += cell_w;
+                font.drawGlyph(.{ .ctx = self, .drawTexture = drawTextureThunk }, codepoints.items[j], fallback_x, y, metrics.cell_width, metrics.cell_height, false, color, italic);
+                fallback_x += metrics.cell_width;
             }
             span_start = span_end;
             continue;
@@ -339,17 +378,19 @@ fn drawTextWithFontMonospaceShaped(self: *Renderer, font: *TerminalFont, cell_w:
             }
             const pen_rel = pen_before - self.terminal_shape_first_pen.items[cluster];
             const glyph = font.getGlyphById(start_choice.face, infos[gi].codepoint, start_choice.want_color, italic, positions[gi].x_advance) catch continue;
-            const cell_x = x + @as(f32, @floatFromInt(span_start + cluster)) * cell_w;
-            const baseline = y + font.baseline_from_top * inv_scale;
+            const cell_x = x + @as(f32, @floatFromInt(span_start + cluster)) * metrics.cell_width;
+            const baseline = y + metrics.baseline_from_top;
             const gx_off = (@as(f32, @floatFromInt(positions[gi].x_offset)) / 64.0) * inv_scale;
             const gy_off = (@as(f32, @floatFromInt(positions[gi].y_offset)) / 64.0) * inv_scale;
             const draw_x = cell_x + pen_rel + gx_off + @as(f32, @floatFromInt(glyph.bearing_x)) * inv_scale;
             const draw_y = (baseline - @as(f32, @floatFromInt(glyph.bearing_y)) * inv_scale) - gy_off;
+            const axis_x = quantizeHorizontalAxis(draw_x, @as(f32, @floatFromInt(glyph.width)) * inv_scale, render_scale);
+            const axis_y = quantizeVerticalAxis(draw_y, @as(f32, @floatFromInt(glyph.height)) * inv_scale, render_scale);
             const dest: types.Rect = .{
-                .x = snapToDevicePixel(draw_x, render_scale),
-                .y = snapToDevicePixel(draw_y, render_scale),
-                .width = @as(f32, @floatFromInt(glyph.width)) * inv_scale,
-                .height = @as(f32, @floatFromInt(glyph.height)) * inv_scale,
+                .x = axis_x.origin,
+                .y = axis_y.origin,
+                .width = axis_x.size,
+                .height = axis_y.size,
             };
             const draw_color = if (glyph.is_color) types.Rgba{ .r = 255, .g = 255, .b = 255, .a = 255 } else color;
             if (glyph.is_color) {

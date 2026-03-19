@@ -110,12 +110,12 @@ pub fn collectShapeFeatures(self: anytype, domain: anytype, disable_programming_
 }
 
 pub fn queryUiScale(self: anytype) f32 {
-    const dpi = self.getDpiScale();
+    const metrics = platform_window.collectDisplayMetrics(self.window);
     var wayland = scale_utils.WaylandScaleState{
         .cache = self.wayland_scale_cache,
         .last_update = self.wayland_scale_last_update,
     };
-    const scale = scale_utils.queryUiScale(self.allocator, dpi, renderer_root.getTime(), &wayland);
+    const scale = scale_utils.queryUiScale(self.allocator, metrics.dpi, renderer_root.getTime(), &wayland);
     self.wayland_scale_cache = wayland.cache;
     self.wayland_scale_last_update = wayland.last_update;
     return scale;
@@ -141,8 +141,15 @@ pub fn resetUserZoomTarget(self: anytype, now: f64) bool {
 }
 
 pub fn refreshUiScale(self: anytype) !bool {
-    const next = queryUiScale(self);
-    const next_render = platform_window.getRenderScale(self.window);
+    const metrics = platform_window.collectDisplayMetrics(self.window);
+    var wayland = scale_utils.WaylandScaleState{
+        .cache = self.wayland_scale_cache,
+        .last_update = self.wayland_scale_last_update,
+    };
+    const next = scale_utils.queryUiScale(self.allocator, metrics.dpi, renderer_root.getTime(), &wayland);
+    self.wayland_scale_cache = wayland.cache;
+    self.wayland_scale_last_update = wayland.last_update;
+    const next_render = metrics.render_scale;
     const scale_changed = !std.math.approxEqAbs(f32, next, self.ui_scale, 0.0001);
     const render_changed = !std.math.approxEqAbs(f32, next_render, self.render_scale, 0.0001);
     if (!scale_changed and !render_changed) return false;

@@ -5,6 +5,7 @@ const window_metrics = @import("window_metrics.zig");
 const sdl = gl.c;
 
 pub const WindowMetrics = window_metrics.WindowMetrics;
+pub const DisplayMetrics = window_metrics.DisplayMetrics;
 
 pub fn getWindowSize(window: *sdl.SDL_Window) window_metrics.WindowSize {
     return window_metrics.getWindowSize(window);
@@ -20,6 +21,10 @@ pub fn getDpiScale(window: *sdl.SDL_Window) iface.MousePos {
 
 pub fn getRenderScale(window: *sdl.SDL_Window) f32 {
     return window_metrics.getRenderScale(window);
+}
+
+pub fn collectDisplayMetrics(window: *sdl.SDL_Window) DisplayMetrics {
+    return window_metrics.collectDisplayMetrics(window);
 }
 
 pub fn getScreenSize(window: *sdl.SDL_Window) iface.MousePos {

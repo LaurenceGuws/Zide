@@ -33,32 +33,28 @@ pub fn drawGlyph(
     const glyph_w = @as(f32, @floatFromInt(glyph.width)) * inv_scale;
     const glyph_h = @as(f32, @floatFromInt(glyph.height)) * inv_scale;
     const is_symbol_glyph = isSymbolGlyph(codepoint);
-    const aspect = if (cell_height > 0) glyph_w / cell_height else 0.0;
-    const is_square_or_wide = aspect >= 0.7;
-    const allow_width_overflow = if (is_symbol_glyph) true else if (is_square_or_wide) switch (self.overflow_policy) {
-        .never => false,
-        .always => true,
-        .when_followed_by_space => followed_by_space,
-    } else false;
-
-    const overflow_eps: f32 = 0.25;
-    const should_fit = (!allow_width_overflow) and is_square_or_wide;
-    const overflow_scale = if (should_fit and glyph_w > cell_width + overflow_eps and glyph_w > 0) cell_width / glyph_w else 1.0;
-    const scaled_w = glyph_w * overflow_scale;
-    const scaled_h = glyph_h * overflow_scale;
+    _ = cell_width;
+    _ = cell_height;
+    _ = followed_by_space;
+    const allow_width_overflow = is_symbol_glyph;
+    const overflow_scale_x: f32 = 1.0;
+    const scaled_w = glyph_w * overflow_scale_x;
+    const scaled_h = glyph_h;
 
     const bearing = @as(f32, @floatFromInt(glyph.bearing_x)) * inv_scale;
     const bearing_y = @as(f32, @floatFromInt(glyph.bearing_y)) * inv_scale;
     const draw_color = if (glyph.is_color) Rgba{ .r = 255, .g = 255, .b = 255, .a = 255 } else color;
 
     if (is_symbol_glyph) {
-        const draw_x = @max(x, x + bearing * overflow_scale);
-        const draw_y = baseline - bearing_y * overflow_scale;
+        const draw_x = @max(x, x + bearing * overflow_scale_x);
+        const draw_y = baseline - bearing_y;
+        const axis_x = quantizeHorizontalAxis(draw_x, scaled_w, render_scale);
+        const axis_y = quantizeVerticalAxis(draw_y, scaled_h, render_scale);
         const dest = Rect{
-            .x = snapToDevicePixel(draw_x, render_scale),
-            .y = snapToDevicePixel(draw_y, render_scale),
-            .width = scaled_w,
-            .height = scaled_h,
+            .x = axis_x.origin,
+            .y = axis_y.origin,
+            .width = axis_x.size,
+            .height = axis_y.size,
         };
         if (glyph.is_color) {
             draw.drawTexture(draw.ctx, self.color_texture, glyph.rect, dest, draw_color, .rgba);
@@ -68,13 +64,15 @@ pub fn drawGlyph(
         return;
     }
 
-    const draw_x = if (allow_width_overflow) x + bearing * overflow_scale else @max(x, x + bearing * overflow_scale);
-    const draw_y = baseline - bearing_y * overflow_scale;
+    const draw_x = if (allow_width_overflow) x + bearing * overflow_scale_x else @max(x, x + bearing * overflow_scale_x);
+    const draw_y = baseline - bearing_y;
+    const axis_x = quantizeHorizontalAxis(draw_x, scaled_w, render_scale);
+    const axis_y = quantizeVerticalAxis(draw_y, scaled_h, render_scale);
     const dest = Rect{
-        .x = snapToDevicePixel(draw_x, render_scale),
-        .y = snapToDevicePixel(draw_y, render_scale),
-        .width = scaled_w,
-        .height = scaled_h,
+        .x = axis_x.origin,
+        .y = axis_y.origin,
+        .width = axis_x.size,
+        .height = axis_y.size,
     };
     if (glyph.is_color) {
         draw.drawTexture(draw.ctx, self.color_texture, glyph.rect, dest, draw_color, .rgba);
@@ -142,26 +140,20 @@ pub fn drawGrapheme(
         const bearing_x = @as(f32, @floatFromInt(glyph.bearing_x)) * inv_scale;
         const bearing_y = @as(f32, @floatFromInt(glyph.bearing_y)) * inv_scale;
 
-        const aspect = if (cell_height > 0) glyph_w / cell_height else 0.0;
-        const is_square_or_wide = aspect >= 0.7;
-        const allow_width_overflow = if (is_symbol_glyph) true else if (is_square_or_wide) switch (self.overflow_policy) {
-            .never => false,
-            .always => true,
-            .when_followed_by_space => followed_by_space,
-        } else false;
-        const overflow_eps: f32 = 0.25;
-        const should_fit = (!allow_width_overflow) and is_square_or_wide;
-        const overflow_scale = if (should_fit and glyph_w > cell_width + overflow_eps and glyph_w > 0) cell_width / glyph_w else 1.0;
-        const scaled_w = glyph_w * overflow_scale;
-        const scaled_h = glyph_h * overflow_scale;
+        const allow_width_overflow = is_symbol_glyph;
+        const overflow_scale_x: f32 = 1.0;
+        const scaled_w = glyph_w * overflow_scale_x;
+        const scaled_h = glyph_h;
 
-        const draw_x = if (allow_width_overflow) origin_x + bearing_x * overflow_scale else @max(x, origin_x + bearing_x * overflow_scale);
-        const draw_y = (baseline - bearing_y * overflow_scale) - gy_off;
+        const draw_x = if (allow_width_overflow) origin_x + bearing_x * overflow_scale_x else @max(x, origin_x + bearing_x * overflow_scale_x);
+        const draw_y = (baseline - bearing_y) - gy_off;
+        const axis_x = quantizeHorizontalAxis(draw_x, scaled_w, render_scale);
+        const axis_y = quantizeVerticalAxis(draw_y, scaled_h, render_scale);
         const dest = Rect{
-            .x = snapToDevicePixel(draw_x, render_scale),
-            .y = snapToDevicePixel(draw_y, render_scale),
-            .width = scaled_w,
-            .height = scaled_h,
+            .x = axis_x.origin,
+            .y = axis_y.origin,
+            .width = axis_x.size,
+            .height = axis_y.size,
         };
 
         const draw_color = if (glyph.is_color) Rgba{ .r = 255, .g = 255, .b = 255, .a = 255 } else color;
@@ -201,7 +193,39 @@ pub fn getGlyphForCodepoint(self: anytype, codepoint: u32, italic: bool) GlyphEr
 
 fn snapToDevicePixel(value: f32, render_scale: f32) f32 {
     const scale = if (render_scale > 0.0) render_scale else 1.0;
+    if (!std.math.approxEqAbs(f32, scale, std.math.round(scale), 0.0001)) {
+        return value;
+    }
     return @as(f32, @floatFromInt(@as(i32, @intFromFloat(std.math.round(value * scale))))) / scale;
+}
+
+fn snapVerticalDevicePixel(value: f32, render_scale: f32) f32 {
+    const scale = if (render_scale > 0.0) render_scale else 1.0;
+    return @as(f32, @floatFromInt(@as(i32, @intFromFloat(std.math.round(value * scale))))) / scale;
+}
+
+const QuantizedAxis = struct {
+    origin: f32,
+    size: f32,
+};
+
+fn quantizeHorizontalAxis(origin: f32, size: f32, render_scale: f32) QuantizedAxis {
+    const scale = if (render_scale > 0.0) render_scale else 1.0;
+    const snapped_origin = snapToDevicePixel(origin, render_scale);
+    const snapped_end = snapToDevicePixel(origin + size, render_scale);
+    return .{
+        .origin = snapped_origin,
+        .size = @max(1.0 / scale, snapped_end - snapped_origin),
+    };
+}
+
+fn quantizeVerticalAxis(origin: f32, size: f32, render_scale: f32) QuantizedAxis {
+    const scale = if (render_scale > 0.0) render_scale else 1.0;
+    const snapped_origin = snapVerticalDevicePixel(origin, render_scale);
+    return .{
+        .origin = snapped_origin,
+        .size = @max(1.0 / scale, size),
+    };
 }
 
 fn isSymbolGlyph(codepoint: u32) bool {

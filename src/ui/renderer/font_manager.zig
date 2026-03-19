@@ -5,8 +5,22 @@ const TerminalFont = terminal_font_mod.TerminalFont;
 const iface = @import("interface.zig");
 
 pub fn initFonts(renderer: anytype, size: f32) !void {
+    const log = app_logger.logger("renderer.font");
     const render_scale = if (renderer.render_scale > 0.0) renderer.render_scale else 1.0;
     const raster_size = size * render_scale;
+    log.logf(
+        .info,
+        "initFonts path={s} base={d:.2} render_scale={d:.3} raster={d:.2} hinting={s} autohint={d} lcd={d}",
+        .{
+            renderer.font_path,
+            size,
+            render_scale,
+            raster_size,
+            @tagName(renderer.font_rendering.hinting),
+            @intFromBool(renderer.font_rendering.autohint),
+            @intFromBool(renderer.font_rendering.lcd),
+        },
+    );
     renderer.terminal_font = try TerminalFont.init(
         renderer.allocator,
         renderer.font_path,
@@ -24,10 +38,18 @@ pub fn initFonts(renderer: anytype, size: f32) !void {
     renderer.terminal_font.setAtlasFilterPoint();
     // Keep logical cell metrics in render-scale units so zoom changes do not
     // oscillate spacing due to extra whole-pixel quantization in layout space.
-    renderer.terminal_cell_width = renderer.terminal_font.cell_width / render_scale;
-    renderer.terminal_cell_height = renderer.terminal_font.line_height / render_scale;
-    renderer.char_width = renderer.terminal_cell_width;
-    renderer.char_height = renderer.terminal_cell_height;
+    renderer.terminal_metrics = .{
+        .ascent = renderer.terminal_font.ascent / render_scale,
+        .descent = renderer.terminal_font.descent / render_scale,
+        .line_height = renderer.terminal_font.line_height / render_scale,
+        .cell_width = renderer.terminal_font.cell_width / render_scale,
+        .cell_height = renderer.terminal_font.line_height / render_scale,
+        .baseline_from_top = renderer.terminal_font.baseline_from_top / render_scale,
+    };
+    renderer.terminal_cell_width = renderer.terminal_metrics.cell_width;
+    renderer.terminal_cell_height = renderer.terminal_metrics.cell_height;
+    renderer.char_width = renderer.terminal_metrics.cell_width;
+    renderer.char_height = renderer.terminal_metrics.cell_height;
 
     renderer.icon_font = try TerminalFont.init(
         renderer.allocator,
@@ -45,8 +67,36 @@ pub fn initFonts(renderer: anytype, size: f32) !void {
     renderer.icon_font.render_scale = render_scale;
     renderer.icon_font.setAtlasFilterPoint();
     renderer.icon_font_size = size * 2.0;
-    renderer.icon_char_width = renderer.icon_font.cell_width / render_scale;
-    renderer.icon_char_height = renderer.icon_font.line_height / render_scale;
+    renderer.icon_metrics = .{
+        .ascent = renderer.icon_font.ascent / render_scale,
+        .descent = renderer.icon_font.descent / render_scale,
+        .line_height = renderer.icon_font.line_height / render_scale,
+        .cell_width = renderer.icon_font.cell_width / render_scale,
+        .cell_height = renderer.icon_font.line_height / render_scale,
+        .baseline_from_top = renderer.icon_font.baseline_from_top / render_scale,
+    };
+    renderer.icon_char_width = renderer.icon_metrics.cell_width;
+    renderer.icon_char_height = renderer.icon_metrics.cell_height;
+    log.logf(
+        .info,
+        "metrics editor_font={d:.2} line={d:.2} asc={d:.2} desc={d:.2} cell={d:.2}x{d:.2} baseline={d:.2} icon_font={d:.2} icon_line={d:.2} icon_asc={d:.2} icon_desc={d:.2} icon_cell={d:.2}x{d:.2} icon_baseline={d:.2}",
+        .{
+            renderer.font_size,
+            renderer.terminal_metrics.line_height,
+            renderer.terminal_metrics.ascent,
+            renderer.terminal_metrics.descent,
+            renderer.terminal_metrics.cell_width,
+            renderer.terminal_metrics.cell_height,
+            renderer.terminal_metrics.baseline_from_top,
+            renderer.icon_font_size,
+            renderer.icon_metrics.line_height,
+            renderer.icon_metrics.ascent,
+            renderer.icon_metrics.descent,
+            renderer.icon_metrics.cell_width,
+            renderer.icon_metrics.cell_height,
+            renderer.icon_metrics.baseline_from_top,
+        },
+    );
 }
 
 pub fn loadFont(renderer: anytype, path: [*:0]const u8, size: f32) void {

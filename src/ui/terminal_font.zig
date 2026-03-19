@@ -439,7 +439,8 @@ pub const TerminalFont = struct {
         var ft_face: c.FT_Face = null;
         if (c.FT_New_Face(ft_library, path, 0, &ft_face) != 0) return error.FtFaceFailed;
         errdefer _ = c.FT_Done_Face(ft_face);
-        if (c.FT_Set_Pixel_Sizes(ft_face, 0, @intFromFloat(size)) != 0) return error.FtSizeFailed;
+        const primary_size_px: c_uint = @intFromFloat(@max(1.0, std.math.round(size)));
+        if (c.FT_Set_Pixel_Sizes(ft_face, 0, primary_size_px) != 0) return error.FtSizeFailed;
 
         const hb_font = c.hb_ft_font_create(ft_face, null) orelse return error.HbInitFailed;
         errdefer c.hb_font_destroy(hb_font);
@@ -467,7 +468,8 @@ pub const TerminalFont = struct {
                     var fb_face: c.FT_Face = null;
                     const new_face_err = c.FT_New_Face(library, path_c, 0, &fb_face);
                     if (new_face_err == 0) {
-                        const size_err = c.FT_Set_Pixel_Sizes(fb_face, 0, @intFromFloat(size_px));
+                        const fallback_size_px: c_uint = @intFromFloat(@max(1.0, std.math.round(size_px)));
+                        const size_err = c.FT_Set_Pixel_Sizes(fb_face, 0, fallback_size_px);
                         if (size_err != 0 and allow_fixed_size and fb_face.*.num_fixed_sizes > 0) {
                             var best_idx: c_int = 0;
                             var best_delta: u32 = std.math.maxInt(u32);
@@ -615,7 +617,7 @@ pub const TerminalFont = struct {
         if (cell_width <= 0) {
             cell_width = size * 0.6;
         }
-        const cell_width_px = @as(f32, @floatFromInt(@as(i32, @intFromFloat(std.math.round(cell_width)))));
+        const cell_width_px = @as(f32, @floatFromInt(@as(i32, @intFromFloat(std.math.ceil(cell_width)))));
 
         const ascent_px_rounded = @as(f32, @floatFromInt(@as(i32, @intFromFloat(std.math.ceil(ascent_raw)))));
         const descent_px = @as(f32, @floatFromInt(@as(i32, @intFromFloat(std.math.ceil(descent_raw)))));

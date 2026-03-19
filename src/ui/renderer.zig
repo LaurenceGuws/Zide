@@ -245,6 +245,17 @@ const SceneTargetContract = struct {
     render_scale: f32 = 1.0,
 };
 
+fn sceneTargetContractFromDisplayMetrics(metrics: platform_window.DisplayMetrics) SceneTargetContract {
+    return .{
+        .logical_width = metrics.window_w,
+        .logical_height = metrics.window_h,
+        .drawable_width = metrics.drawable_w,
+        .drawable_height = metrics.drawable_h,
+        .display_index = metrics.display_index,
+        .render_scale = metrics.render_scale,
+    };
+}
+
 const SceneTargetState = struct {
     target: ?RenderTarget = null,
     contract: SceneTargetContract = .{},
@@ -282,6 +293,15 @@ fn logSceneTargetState(
 }
 
 pub const Renderer = struct {
+    pub const ScaledFontMetrics = struct {
+        ascent: f32,
+        descent: f32,
+        line_height: f32,
+        cell_width: f32,
+        cell_height: f32,
+        baseline_from_top: f32,
+    };
+
     pub const SelectionOverlayStyle = struct {
         smooth_enabled: bool = true,
         corner_px: ?f32 = null,
@@ -335,8 +355,10 @@ pub const Renderer = struct {
     icon_font_size: f32,
     icon_char_width: f32,
     icon_char_height: f32,
+    icon_metrics: ScaledFontMetrics,
     terminal_cell_width: f32,
     terminal_cell_height: f32,
+    terminal_metrics: ScaledFontMetrics,
     terminal_font: TerminalFont,
     terminal_disable_ligatures: TerminalDisableLigaturesStrategy,
     terminal_font_features_raw: ?[]u8,
@@ -440,27 +462,26 @@ pub const Renderer = struct {
         var renderer = try allocator.create(Renderer);
         errdefer allocator.destroy(renderer);
 
-        const drawable = platform_window.getDrawableSize(window);
-        const window_size = platform_window.getWindowSize(window);
+        const display_metrics = platform_window.collectDisplayMetrics(window);
 
         const base_font_size: f32 = 16.0;
         const ui_scale: f32 = 1.0;
         const font_size = base_font_size * ui_scale;
-        const render_scale = platform_window.getRenderScale(window);
+        const render_scale = display_metrics.render_scale;
         const terminal_shape_buffer = hb.hb_buffer_create() orelse return error.OutOfMemory;
 
         renderer.* = .{
             .allocator = allocator,
             .window = window,
             .gl_context = gl_context,
-            .width = window_size.w,
-            .height = window_size.h,
-            .render_width = drawable.w,
-            .render_height = drawable.h,
-            .target_width = drawable.w,
-            .target_height = drawable.h,
-            .target_pixel_width = drawable.w,
-            .target_pixel_height = drawable.h,
+            .width = display_metrics.window_w,
+            .height = display_metrics.window_h,
+            .render_width = display_metrics.drawable_w,
+            .render_height = display_metrics.drawable_h,
+            .target_width = display_metrics.drawable_w,
+            .target_height = display_metrics.drawable_h,
+            .target_pixel_width = display_metrics.drawable_w,
+            .target_pixel_height = display_metrics.drawable_h,
             .shader_program = 0,
             .vao = 0,
             .vbo = 0,
@@ -491,8 +512,24 @@ pub const Renderer = struct {
             .icon_font_size = font_size * 2.0,
             .icon_char_width = font_size * 1.2,
             .icon_char_height = font_size * 1.2,
+            .icon_metrics = .{
+                .ascent = font_size,
+                .descent = font_size * 0.2,
+                .line_height = font_size * 1.2,
+                .cell_width = font_size * 1.2,
+                .cell_height = font_size * 1.2,
+                .baseline_from_top = font_size,
+            },
             .terminal_cell_width = font_size * 0.6,
             .terminal_cell_height = font_size * 1.2,
+            .terminal_metrics = .{
+                .ascent = font_size,
+                .descent = font_size * 0.2,
+                .line_height = font_size * 1.2,
+                .cell_width = font_size * 0.6,
+                .cell_height = font_size * 1.2,
+                .baseline_from_top = font_size,
+            },
             .terminal_font = undefined,
             .terminal_disable_ligatures = .never,
             .terminal_font_features_raw = null,
@@ -860,25 +897,17 @@ pub const Renderer = struct {
     }
 
     fn refreshWindowSizes(window: *sdl.SDL_Window) WindowSizes {
-        const window_size = platform_window.getWindowSize(window);
-        const drawable = platform_window.getDrawableSize(window);
+        const display_metrics = platform_window.collectDisplayMetrics(window);
         return .{
-            .width = window_size.w,
-            .height = window_size.h,
-            .render_width = drawable.w,
-            .render_height = drawable.h,
+            .width = display_metrics.window_w,
+            .height = display_metrics.window_h,
+            .render_width = display_metrics.drawable_w,
+            .render_height = display_metrics.drawable_h,
         };
     }
 
     fn sceneTargetContractSnapshot(self: *const Renderer) SceneTargetContract {
-        return .{
-            .logical_width = self.width,
-            .logical_height = self.height,
-            .drawable_width = self.render_width,
-            .drawable_height = self.render_height,
-            .display_index = sdl_api.getWindowDisplayIndex(self.window),
-            .render_scale = platform_window.getRenderScale(self.window),
-        };
+        return sceneTargetContractFromDisplayMetrics(platform_window.collectDisplayMetrics(self.window));
     }
 
     fn refreshSceneTargetContract(self: *Renderer) void {
@@ -1400,6 +1429,10 @@ pub const Renderer = struct {
         return platform_window.getDpiScale(self.window);
     }
 
+    pub fn getDisplayMetrics(self: *Renderer) platform_window.DisplayMetrics {
+        return platform_window.collectDisplayMetrics(self.window);
+    }
+
     pub fn getScreenSize(self: *Renderer) MousePos {
         return platform_window.getScreenSize(self.window);
     }
@@ -1409,14 +1442,14 @@ pub const Renderer = struct {
     }
 
     pub const WindowMetrics = platform_window.WindowMetrics;
+    pub const DisplayMetrics = platform_window.DisplayMetrics;
 
     pub fn refreshWindowMetrics(self: *Renderer, reason: []const u8) WindowMetrics {
-        const window_size = platform_window.getWindowSize(self.window);
-        const drawable = platform_window.getDrawableSize(self.window);
-        self.width = window_size.w;
-        self.height = window_size.h;
-        self.render_width = drawable.w;
-        self.render_height = drawable.h;
+        const display_metrics = platform_window.collectDisplayMetrics(self.window);
+        self.width = display_metrics.window_w;
+        self.height = display_metrics.window_h;
+        self.render_width = display_metrics.drawable_w;
+        self.render_height = display_metrics.drawable_h;
         self.updateMouseScale();
         return platform_window.collectWindowMetrics(self.window, reason);
     }

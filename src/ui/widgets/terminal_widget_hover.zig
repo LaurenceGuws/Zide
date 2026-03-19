@@ -92,8 +92,8 @@ pub fn drawHoverUnderlineOverlay(
     if (hover_link_id == 0) return;
     if (view_cells.len < rows * cols) return;
 
-    const cell_w_i: i32 = @intFromFloat(std.math.round(r.terminal_cell_width));
-    const cell_h_i: i32 = @intFromFloat(std.math.round(r.terminal_cell_height));
+    const cell_w_i: i32 = @intFromFloat(std.math.round(r.terminal_metrics.cell_width));
+    const cell_h_i: i32 = @intFromFloat(std.math.round(r.terminal_metrics.cell_height));
     const base_x_i: i32 = @intFromFloat(std.math.round(base_x));
     const base_y_i: i32 = @intFromFloat(std.math.round(base_y));
     const underline_color = r.theme.link;

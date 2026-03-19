@@ -303,8 +303,8 @@ pub fn drawPrepared(
     const texture_phase_start = app_shell.getTime();
     const texture_ready_before_draw = self.terminal_texture_ready;
     if (rows > 0 and cols > 0) {
-        cell_w_i = @intFromFloat(std.math.round(r.terminal_cell_width));
-        cell_h_i = @intFromFloat(std.math.round(r.terminal_cell_height));
+        cell_w_i = @intFromFloat(std.math.round(r.terminal_metrics.cell_width));
+        cell_h_i = @intFromFloat(std.math.round(r.terminal_metrics.cell_height));
         const cell_metrics_changed = cell_w_i != self.last_cell_w_i or cell_h_i != self.last_cell_h_i;
         const render_scale_changed = r.render_scale != self.last_render_scale;
         const padding_x_i: i32 = @max(2, @divTrunc(cell_w_i, 2));
@@ -781,7 +781,7 @@ pub fn drawPrepared(
             const base_x_i: i32 = @intFromFloat(std.math.round(base_x));
             const base_y_i: i32 = @intFromFloat(std.math.round(base_y));
             const clip_w_i: i32 = @min(@as(i32, @intFromFloat(std.math.round(width))), cell_w_i * @as(i32, @intCast(cols)));
-            const clip_h_i: i32 = @min(@as(i32, @intFromFloat(std.math.round(height))), @as(i32, @intFromFloat(std.math.round(r.terminal_cell_height))) * @as(i32, @intCast(rows)));
+            const clip_h_i: i32 = @min(@as(i32, @intFromFloat(std.math.round(height))), @as(i32, @intFromFloat(std.math.round(r.terminal_metrics.cell_height))) * @as(i32, @intCast(rows)));
             r.beginClip(
                 base_x_i,
                 base_y_i,

@@ -96,6 +96,30 @@ pub fn snapToDevicePixel(value: f32, render_scale: f32) f32 {
     return @as(f32, @floatFromInt(@as(i32, @intFromFloat(std.math.round(value * scale))))) / scale;
 }
 
+const QuantizedAxis = struct {
+    origin: f32,
+    size: f32,
+};
+
+fn quantizeHorizontalAxis(origin: f32, size: f32, render_scale: f32) QuantizedAxis {
+    const scale = if (render_scale > 0.0) render_scale else 1.0;
+    const snapped_origin = snapToDevicePixel(origin, render_scale);
+    const snapped_end = snapToDevicePixel(origin + size, render_scale);
+    return .{
+        .origin = snapped_origin,
+        .size = @max(1.0 / scale, snapped_end - snapped_origin),
+    };
+}
+
+fn quantizeVerticalAxis(origin: f32, size: f32, render_scale: f32) QuantizedAxis {
+    const scale = if (render_scale > 0.0) render_scale else 1.0;
+    const snapped_origin = snapToDevicePixel(origin, render_scale);
+    return .{
+        .origin = snapped_origin,
+        .size = @max(1.0 / scale, size),
+    };
+}
+
 fn rowSlice(cells: []const Cell, cols_count: usize, row: usize) []const Cell {
     const row_start = row * cols_count;
     if (row_start + cols_count > cells.len) return cells[0..0];
@@ -208,8 +232,8 @@ pub fn drawRowBackgrounds(
     screen_reverse_mode: bool,
 ) void {
     const rr = renderer.rendererPtr();
-    const cell_w_i: i32 = @intFromFloat(std.math.round(rr.terminal_cell_width));
-    const cell_h_i: i32 = @intFromFloat(std.math.round(rr.terminal_cell_height));
+    const cell_w_i: i32 = @intFromFloat(std.math.round(rr.terminal_metrics.cell_width));
+    const cell_h_i: i32 = @intFromFloat(std.math.round(rr.terminal_metrics.cell_height));
     const base_x_i: i32 = @intFromFloat(std.math.round(base_x_local));
     const base_y_i: i32 = @intFromFloat(std.math.round(base_y_local));
 
@@ -441,6 +465,7 @@ fn drawShapedGlyph(
     pen_x_rel: f32,
     x: f32,
     y: f32,
+    baseline_from_top: f32,
     cell_width: f32,
     cell_height: f32,
     followed_by_space: bool,
@@ -453,7 +478,7 @@ fn drawShapedGlyph(
     };
     const render_scale = if (font.render_scale > 0.0) font.render_scale else 1.0;
     const inv_scale = 1.0 / render_scale;
-    const baseline = y + font.baseline_from_top * inv_scale;
+    const baseline = y + baseline_from_top;
     const gx_off = (@as(f32, @floatFromInt(hb_pos.x_offset)) / 64.0) * inv_scale;
     const gy_off = (@as(f32, @floatFromInt(hb_pos.y_offset)) / 64.0) * inv_scale;
     const origin_x = x + pen_x_rel + gx_off;
@@ -468,39 +493,35 @@ fn drawShapedGlyph(
         (base_codepoint >= 0x2700 and base_codepoint <= 0x27BF) or
         (base_codepoint >= 0x2600 and base_codepoint <= 0x26FF);
     const is_powerline_thin = base_codepoint == 0xE0B1 or base_codepoint == 0xE0B3;
-    const aspect = if (cell_height > 0) glyph_w / cell_height else 0.0;
-    const is_square_or_wide = aspect >= 0.7;
-    const allow_width_overflow = if (is_symbol_glyph) true else if (is_square_or_wide) switch (font.overflow_policy) {
-        .never => false,
-        .always => true,
-        .when_followed_by_space => followed_by_space,
-    } else false;
-    const overflow_eps: f32 = 0.25;
-    const should_fit = (!allow_width_overflow) and is_square_or_wide;
-    const overflow_scale = if (should_fit and glyph_w > cell_width + overflow_eps and glyph_w > 0) cell_width / glyph_w else 1.0;
-    const scaled_w = glyph_w * overflow_scale;
-    const scaled_h = glyph_h * overflow_scale;
-    const draw_x = if (allow_width_overflow) origin_x + bearing_x * overflow_scale else @max(x, origin_x + bearing_x * overflow_scale);
-    const draw_y = (baseline - bearing_y * overflow_scale) - gy_off;
-    const snapped_x = snapToDevicePixel(draw_x, render_scale);
-    const snapped_y = snapToDevicePixel(draw_y, render_scale);
+    _ = cell_height;
+    _ = followed_by_space;
+    const allow_width_overflow = is_symbol_glyph;
+    const overflow_scale_x: f32 = 1.0;
+    const scaled_w = glyph_w * overflow_scale_x;
+    const scaled_h = glyph_h;
+    const draw_x = if (allow_width_overflow) origin_x + bearing_x * overflow_scale_x else @max(x, origin_x + bearing_x * overflow_scale_x);
+    const draw_y = (baseline - bearing_y) - gy_off;
+    const axis_x = quantizeHorizontalAxis(draw_x, scaled_w, render_scale);
+    const axis_y = quantizeVerticalAxis(draw_y, scaled_h, render_scale);
+    const snapped_x = axis_x.origin;
+    const snapped_y = axis_y.origin;
 
     if (jitterDebugEnabled()) {
-        const did_fit_scale = @abs(overflow_scale - 1.0) > 0.001;
+        const did_fit_scale = @abs(overflow_scale_x - 1.0) > 0.001;
         const has_y_offset = hb_pos.y_offset != 0;
         const y_snap_error = draw_y - snapped_y;
         const large_y_snap = @abs(y_snap_error) >= 0.45;
         if (did_fit_scale or has_y_offset or large_y_snap) {
             const jitter_log = app_logger.logger("terminal.font.jitter");
-            jitter_log.logf(.info, "cp=U+{X:0>4} gid={d} x={d:.2} y={d:.2} cell_w={d:.2} glyph_w={d:.2} bearing_y={d:.2} y_off_26_6={d} draw_y={d:.3} snap_y={d:.3} snap_err={d:.3} scale={d:.4} fit={d} square_or_wide={d}", .{ base_codepoint, glyph_id, x, y, cell_width, glyph_w, bearing_y, hb_pos.y_offset, draw_y, snapped_y, y_snap_error, overflow_scale, @intFromBool(did_fit_scale), @intFromBool(is_square_or_wide) });
+            jitter_log.logf(.info, "cp=U+{X:0>4} gid={d} x={d:.2} y={d:.2} cell_w={d:.2} glyph_w={d:.2} bearing_y={d:.2} y_off_26_6={d} draw_y={d:.3} snap_y={d:.3} snap_err={d:.3} scale_x={d:.4} fit={d}", .{ base_codepoint, glyph_id, x, y, cell_width, glyph_w, bearing_y, hb_pos.y_offset, draw_y, snapped_y, y_snap_error, overflow_scale_x, @intFromBool(did_fit_scale) });
         }
     }
 
     const dest = if (is_powerline_thin) blk: {
         const cell_left = snapToDevicePixel(x, render_scale);
         const cell_right = snapToDevicePixel(x + cell_width, render_scale);
-        break :blk terminal_font_mod.Rect{ .x = cell_left, .y = snapped_y, .width = @max(inv_scale, cell_right - cell_left), .height = scaled_h };
-    } else terminal_font_mod.Rect{ .x = snapped_x, .y = snapped_y, .width = scaled_w, .height = scaled_h };
+        break :blk terminal_font_mod.Rect{ .x = cell_left, .y = snapped_y, .width = @max(inv_scale, cell_right - cell_left), .height = axis_y.size };
+    } else terminal_font_mod.Rect{ .x = snapped_x, .y = snapped_y, .width = axis_x.size, .height = axis_y.size };
 
     const draw_color = if (glyph.is_color) Rgba{ .r = 255, .g = 255, .b = 255, .a = 255 } else color;
     if (glyph.is_color) {
@@ -544,11 +565,13 @@ fn drawDirectGlyphById(
     const dest = if (simple_ascii) blk: {
         const draw_x = @max(x, x + bearing_x);
         const draw_y = baseline - bearing_y;
+        const axis_x = quantizeHorizontalAxis(draw_x, glyph_w, render_scale);
+        const axis_y = quantizeVerticalAxis(draw_y, glyph_h, render_scale);
         break :blk terminal_font_mod.Rect{
-            .x = snapToDevicePixel(draw_x, render_scale),
-            .y = snapToDevicePixel(draw_y, render_scale),
-            .width = glyph_w,
-            .height = glyph_h,
+            .x = axis_x.origin,
+            .y = axis_y.origin,
+            .width = axis_x.size,
+            .height = axis_y.size,
         };
     } else blk: {
         const is_symbol_glyph = (base_codepoint >= 0xE000 and base_codepoint <= 0xF8FF) or
@@ -556,34 +579,30 @@ fn drawDirectGlyphById(
             (base_codepoint >= 0x100000 and base_codepoint <= 0x10FFFD) or
             (base_codepoint >= 0x2700 and base_codepoint <= 0x27BF) or
             (base_codepoint >= 0x2600 and base_codepoint <= 0x26FF);
-        const aspect = if (cell_height > 0) glyph_w / cell_height else 0.0;
-        const is_square_or_wide = aspect >= 0.7;
-        const allow_width_overflow = if (is_symbol_glyph) true else if (is_square_or_wide) switch (font.overflow_policy) {
-            .never => false,
-            .always => true,
-            .when_followed_by_space => followed_by_space,
-        } else false;
-        const overflow_eps: f32 = 0.25;
-        const should_fit = (!allow_width_overflow) and is_square_or_wide;
-        const overflow_scale = if (should_fit and glyph_w > cell_width + overflow_eps and glyph_w > 0) cell_width / glyph_w else 1.0;
-        const scaled_w = glyph_w * overflow_scale;
-        const scaled_h = glyph_h * overflow_scale;
-        const draw_x = if (allow_width_overflow) x + bearing_x * overflow_scale else @max(x, x + bearing_x * overflow_scale);
-        const draw_y = baseline - bearing_y * overflow_scale;
+        _ = cell_height;
+        _ = followed_by_space;
+        const allow_width_overflow = is_symbol_glyph;
+        const overflow_scale_x: f32 = 1.0;
+        const scaled_w = glyph_w * overflow_scale_x;
+        const scaled_h = glyph_h;
+        const draw_x = if (allow_width_overflow) x + bearing_x * overflow_scale_x else @max(x, x + bearing_x * overflow_scale_x);
+        const draw_y = baseline - bearing_y;
+        const axis_x = quantizeHorizontalAxis(draw_x, scaled_w, render_scale);
+        const axis_y = quantizeVerticalAxis(draw_y, scaled_h, render_scale);
         break :blk if (base_codepoint == 0xE0B1 or base_codepoint == 0xE0B3) blk2: {
             const cell_left = snapToDevicePixel(x, render_scale);
             const cell_right = snapToDevicePixel(x + cell_width, render_scale);
             break :blk2 terminal_font_mod.Rect{
                 .x = cell_left,
-                .y = snapToDevicePixel(draw_y, render_scale),
+                .y = axis_y.origin,
                 .width = @max(inv_scale, cell_right - cell_left),
-                .height = scaled_h,
+                .height = axis_y.size,
             };
         } else terminal_font_mod.Rect{
-            .x = snapToDevicePixel(draw_x, render_scale),
-            .y = snapToDevicePixel(draw_y, render_scale),
-            .width = scaled_w,
-            .height = scaled_h,
+            .x = axis_x.origin,
+            .y = axis_y.origin,
+            .width = axis_x.size,
+            .height = axis_y.size,
         };
     };
     const draw_color = if (glyph.is_color) Rgba{ .r = 255, .g = 255, .b = 255, .a = 255 } else color;
@@ -726,8 +745,8 @@ pub fn drawRowGlyphs(
     _ = padding_x_i;
     const BlinkStyleT = @TypeOf(blink_style_mode);
     const rr = renderer.rendererPtr();
-    const cell_w_i: i32 = @intFromFloat(std.math.round(rr.terminal_cell_width));
-    const cell_h_i: i32 = @intFromFloat(std.math.round(rr.terminal_cell_height));
+    const cell_w_i: i32 = @intFromFloat(std.math.round(rr.terminal_metrics.cell_width));
+    const cell_h_i: i32 = @intFromFloat(std.math.round(rr.terminal_metrics.cell_height));
     const base_x_i: i32 = @intFromFloat(std.math.round(base_x_local));
     const base_y_i: i32 = @intFromFloat(std.math.round(base_y_local));
     const row_cells = rowSlice(snapshot_cells, cols_count, row_idx);
@@ -801,7 +820,7 @@ pub fn drawRowGlyphs(
         if (shape_features_len == 0 and span_can_bypass and spanCanBypassShaping(row_cells, span_start_col, span_end_excl)) {
             const direct_render_scale = if (rr.terminal_font.render_scale > 0.0) rr.terminal_font.render_scale else 1.0;
             const direct_inv_scale = 1.0 / direct_render_scale;
-            const row_baseline = @as(f32, @floatFromInt(base_y_i + @as(i32, @intCast(row_idx)) * cell_h_i)) + rr.terminal_font.baseline_from_top * direct_inv_scale;
+            const row_baseline = @as(f32, @floatFromInt(base_y_i + @as(i32, @intCast(row_idx)) * cell_h_i)) + rr.terminal_metrics.baseline_from_top;
             var direct_col = span_start_col;
             while (direct_col < span_end_excl and direct_col < row_cells.len) : (direct_col += 1) {
                 const cell = row_cells[direct_col];
@@ -1142,7 +1161,7 @@ pub fn drawRowGlyphs(
             }
 
             const text_submit_start = app_shell.getTime();
-            drawShapedGlyph(&rr.terminal_font, draw_ctx, span_choice.face, span_choice.want_color, cell.codepoint, infos[i].codepoint, positions[i], pen_rel, cell_x, cell_y, cell_w, cell_h, followed_by_space, fg_draw.toRgba());
+            drawShapedGlyph(&rr.terminal_font, draw_ctx, span_choice.face, span_choice.want_color, cell.codepoint, infos[i].codepoint, positions[i], pen_rel, cell_x, cell_y, rr.terminal_metrics.baseline_from_top, cell_w, cell_h, followed_by_space, fg_draw.toRgba());
             if (stats) |s| {
                 s.shaped_glyphs += 1;
                 s.shaped_text_glyphs += 1;
