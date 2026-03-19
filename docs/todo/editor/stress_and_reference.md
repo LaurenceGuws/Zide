@@ -374,6 +374,10 @@ stack issue, not an isolated highlight bug:
         tokens when the real highlighter is absent, so visible highlight output
         and logs now reflect actual runtime/highlighter truth instead of a
         tree-sitter limitation workaround in the render path
+      - visible highlight startup no longer trickles through the viewport `4`
+        lines at a time; with worker execution off the UI lane, the local
+        Unicode repro now schedules the full visible range in one batch
+        (`start_line=0 end_line=33`, `highlight_budget=64`)
       - visible precompute now follows a worker schedule contract instead of
         the old inline-publish contract
       - next cleanup target is to keep deleting remaining startup-era control

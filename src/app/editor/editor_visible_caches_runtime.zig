@@ -9,7 +9,6 @@ const std = @import("std");
 const layout_types = shared_types.layout;
 const Shell = app_shell.Shell;
 const EditorWidget = widgets.EditorWidget;
-const startup_highlight_lines_per_frame: usize = 4;
 
 fn visibleLineBudget(editor_shell: *Shell, editor_layout: layout_types.WidgetLayout) usize {
     const visible_lines = @as(usize, @intFromFloat(editor_layout.editor.height / editor_shell.charHeight()));
@@ -17,14 +16,8 @@ fn visibleLineBudget(editor_shell: *Shell, editor_layout: layout_types.WidgetLay
 }
 
 fn highlightBudget(widget: *EditorWidget, editor_shell: *Shell, editor_layout: layout_types.WidgetLayout, editor_highlight_budget: ?usize) usize {
-    const view = widget.frameView();
-    const start_line = view.scroll_line;
-    const end_line = @min(start_line + visibleLineBudget(editor_shell, editor_layout), view.lineCount());
-    const configured_highlight_budget = editor_highlight_budget orelse visibleLineBudget(editor_shell, editor_layout);
-    return if (widget.editor.shouldThrottleVisibleHighlightRange(start_line, end_line, view.highlight_epoch))
-        @min(configured_highlight_budget, startup_highlight_lines_per_frame)
-    else
-        configured_highlight_budget;
+    _ = widget;
+    return editor_highlight_budget orelse visibleLineBudget(editor_shell, editor_layout);
 }
 
 fn runHighlightPrecompute(

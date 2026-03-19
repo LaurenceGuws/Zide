@@ -106,6 +106,10 @@ Current implementation progress:
   when the real highlighter is absent; visible highlight output now reflects
   actual runtime/highlighter truth instead of a tree-sitter limitation
   workaround leaking into the render path
+- visible highlight startup pacing no longer clamps worker batches to `4`
+  lines; once highlight execution moved off the foreground lane, visible
+  startup work returned to normal visible-range budgeting instead of stepping
+  through the viewport four lines at a time
 
 ## Current Problem
 
