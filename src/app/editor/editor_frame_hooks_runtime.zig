@@ -156,16 +156,17 @@ pub fn handle(
         out.needs_redraw = true;
     }
     const should_drive_search_publication = editor.hasPendingSearchResult();
-    const should_drive_visible_warmup =
-        editor.shouldThrottleStartupHighlightWarmup() or
-        editor.visibleHighlightWorkInFlight();
     if (should_drive_search_publication) {
         out.needs_redraw = true;
     }
     if (editor.visibleHighlightNeedsRedraw()) {
         out.needs_redraw = true;
     }
-    if (out.needs_redraw or should_drive_visible_warmup) {
+    const should_run_visible_precompute =
+        out.needs_redraw or
+        editor.hasPendingVisibleHighlightWork() or
+        editor.hasPendingVisibleHighlightResult();
+    if (should_run_visible_precompute) {
         var widget = widgets.EditorWidget.initWithCache(editor, editor_cluster_cache, editor_wrap);
         const scheduled_visible_highlights = app_editor_visible_caches_runtime.precompute(
             &widget,

@@ -80,6 +80,7 @@ pub const Editor = struct {
         worker_running: bool,
         mutex: std.Thread.Mutex,
         cond: std.Thread.Condition,
+        compute_in_flight: bool,
         request: ?VisibleHighlightWorkRequest,
         result: ?VisibleHighlightWorkResult,
         needs_redraw: bool,
@@ -453,21 +454,37 @@ pub const Editor = struct {
         return self.visible_highlight_runtime.work.active;
     }
 
+    pub fn canScheduleVisibleHighlightRequest(self: *Editor) bool {
+        self.lockVisibleHighlightRuntime();
+        defer self.unlockVisibleHighlightRuntime();
+        return !self.visible_highlight_runtime.compute_in_flight and
+            self.visible_highlight_runtime.request == null and
+            self.visible_highlight_runtime.result == null;
+    }
+
     pub fn replaceVisibleHighlightRequest(self: *Editor, request: VisibleHighlightWorkRequest) void {
+        self.lockVisibleHighlightRuntime();
+        defer self.unlockVisibleHighlightRuntime();
         self.visible_highlight_runtime.request = request;
     }
 
     pub fn takeVisibleHighlightRequest(self: *Editor) ?VisibleHighlightWorkRequest {
+        self.lockVisibleHighlightRuntime();
+        defer self.unlockVisibleHighlightRuntime();
         const request = self.visible_highlight_runtime.request;
         self.visible_highlight_runtime.request = null;
         return request;
     }
 
     pub fn clearVisibleHighlightRequest(self: *Editor) void {
+        self.lockVisibleHighlightRuntime();
+        defer self.unlockVisibleHighlightRuntime();
         self.visible_highlight_runtime.request = null;
     }
 
     pub fn replaceVisibleHighlightResult(self: *Editor, result: VisibleHighlightWorkResult) void {
+        self.lockVisibleHighlightRuntime();
+        defer self.unlockVisibleHighlightRuntime();
         if (self.visible_highlight_runtime.result) |*existing| {
             self.deinitVisibleHighlightResult(existing);
         }
@@ -476,16 +493,22 @@ pub const Editor = struct {
     }
 
     pub fn takeVisibleHighlightResult(self: *Editor) ?VisibleHighlightWorkResult {
+        self.lockVisibleHighlightRuntime();
+        defer self.unlockVisibleHighlightRuntime();
         const result = self.visible_highlight_runtime.result;
         self.visible_highlight_runtime.result = null;
         return result;
     }
 
-    pub fn hasPendingVisibleHighlightResult(self: *const Editor) bool {
+    pub fn hasPendingVisibleHighlightResult(self: *Editor) bool {
+        self.visible_highlight_runtime.mutex.lock();
+        defer self.visible_highlight_runtime.mutex.unlock();
         return self.visible_highlight_runtime.result != null;
     }
 
-    pub fn visibleHighlightNeedsRedraw(self: *const Editor) bool {
+    pub fn visibleHighlightNeedsRedraw(self: *Editor) bool {
+        self.visible_highlight_runtime.mutex.lock();
+        defer self.visible_highlight_runtime.mutex.unlock();
         return self.visible_highlight_runtime.needs_redraw;
     }
 
@@ -523,18 +546,34 @@ pub const Editor = struct {
         return worker;
     }
 
-    pub fn hasPendingVisibleHighlightRequest(self: *const Editor) bool {
+    pub fn hasPendingVisibleHighlightRequest(self: *Editor) bool {
+        self.visible_highlight_runtime.mutex.lock();
+        defer self.visible_highlight_runtime.mutex.unlock();
         return self.visible_highlight_runtime.request != null;
     }
 
-    pub fn visibleHighlightWorkInFlight(self: *const Editor) bool {
+    pub fn visibleHighlightWorkInFlight(self: *Editor) bool {
         return self.hasPendingVisibleHighlightWork() or
+            self.visibleHighlightComputeInFlight() or
             self.hasPendingVisibleHighlightRequest() or
             self.hasPendingVisibleHighlightResult();
     }
 
+    pub fn visibleHighlightComputeInFlight(self: *Editor) bool {
+        self.visible_highlight_runtime.mutex.lock();
+        defer self.visible_highlight_runtime.mutex.unlock();
+        return self.visible_highlight_runtime.compute_in_flight;
+    }
+
     pub fn applyPendingVisibleHighlightResult(self: *Editor, cache: anytype) bool {
-        const owned_result = self.takeVisibleHighlightResult() orelse return false;
+        self.lockVisibleHighlightRuntime();
+        const owned_result = self.visible_highlight_runtime.result orelse {
+            self.unlockVisibleHighlightRuntime();
+            return false;
+        };
+        self.visible_highlight_runtime.result = null;
+        self.visible_highlight_runtime.needs_redraw = false;
+        self.unlockVisibleHighlightRuntime();
         var result = owned_result;
         defer self.deinitVisibleHighlightResult(&result);
 
@@ -553,7 +592,6 @@ pub const Editor = struct {
             "visible_highlight_publish lines={d} start_line={d} end_line={d}",
             .{ result.lines.len, result.request.start_line, result.request.end_line },
         );
-        self.visible_highlight_runtime.needs_redraw = false;
         return result.lines.len > 0;
     }
 
@@ -642,12 +680,23 @@ pub const Editor = struct {
             perf_log.logf(.info, "visible_precompute_highlight lines=0 budget=0 time_us=0", .{});
             return false;
         };
+        self.lockVisibleHighlightRuntime();
+        self.visible_highlight_runtime.compute_in_flight = true;
+        self.unlockVisibleHighlightRuntime();
         perf_log.logf(
             .info,
             "visible_highlight_execute_inline start_line={d} end_line={d}",
             .{ request.start_line, request.end_line },
         );
-        const result = self.computeVisibleHighlightRequest(request) orelse return false;
+        const result = self.computeVisibleHighlightRequest(request) orelse {
+            self.lockVisibleHighlightRuntime();
+            self.visible_highlight_runtime.compute_in_flight = false;
+            self.unlockVisibleHighlightRuntime();
+            return false;
+        };
+        self.lockVisibleHighlightRuntime();
+        self.visible_highlight_runtime.compute_in_flight = false;
+        self.unlockVisibleHighlightRuntime();
         self.replaceVisibleHighlightResult(result);
         return result.lines.len > 0;
     }
@@ -677,7 +726,8 @@ pub const Editor = struct {
     fn stopVisibleHighlightWorker(self: *Editor) void {
         self.lockVisibleHighlightRuntime();
         self.setVisibleHighlightWorkerRunning(false);
-        self.clearVisibleHighlightRequest();
+        self.visible_highlight_runtime.compute_in_flight = false;
+        self.visible_highlight_runtime.request = null;
         self.signalVisibleHighlightRuntime();
         self.unlockVisibleHighlightRuntime();
 
@@ -686,8 +736,8 @@ pub const Editor = struct {
         }
 
         self.lockVisibleHighlightRuntime();
-        defer self.unlockVisibleHighlightRuntime();
         self.clearVisibleHighlightResult();
+        self.unlockVisibleHighlightRuntime();
         const perf_log = app_logger.logger("editor.perf");
         perf_log.logf(.info, "visible_highlight_worker started=false", .{});
     }
@@ -695,14 +745,16 @@ pub const Editor = struct {
     fn visibleHighlightWorkerMain(self: *Editor) void {
         while (true) {
             self.lockVisibleHighlightRuntime();
-            while (self.isVisibleHighlightWorkerRunning() and !self.hasPendingVisibleHighlightRequest()) {
+            while (self.visible_highlight_runtime.worker_running and self.visible_highlight_runtime.request == null) {
                 self.waitVisibleHighlightRuntime();
             }
-            if (!self.isVisibleHighlightWorkerRunning()) {
+            if (!self.visible_highlight_runtime.worker_running) {
                 self.unlockVisibleHighlightRuntime();
                 return;
             }
-            const request = self.takeVisibleHighlightRequest().?;
+            const request = self.visible_highlight_runtime.request.?;
+            self.visible_highlight_runtime.request = null;
+            self.visible_highlight_runtime.compute_in_flight = true;
             self.unlockVisibleHighlightRuntime();
             const perf_log = app_logger.logger("editor.perf");
             perf_log.logf(
@@ -714,7 +766,8 @@ pub const Editor = struct {
             var result = self.computeVisibleHighlightRequest(request) orelse continue;
 
             self.lockVisibleHighlightRuntime();
-            if (!self.isVisibleHighlightWorkerRunning()) {
+            self.visible_highlight_runtime.compute_in_flight = false;
+            if (!self.visible_highlight_runtime.worker_running) {
                 self.unlockVisibleHighlightRuntime();
                 self.deinitVisibleHighlightResult(&result);
                 return;
@@ -724,7 +777,11 @@ pub const Editor = struct {
                 "visible_highlight_worker_ready lines={d} start_line={d} end_line={d}",
                 .{ result.lines.len, result.request.start_line, result.request.end_line },
             );
-            self.replaceVisibleHighlightResult(result);
+            if (self.visible_highlight_runtime.result) |*existing| {
+                self.deinitVisibleHighlightResult(existing);
+            }
+            self.visible_highlight_runtime.result = result;
+            self.visible_highlight_runtime.needs_redraw = true;
             self.unlockVisibleHighlightRuntime();
         }
     }
@@ -829,6 +886,7 @@ pub const Editor = struct {
                 .worker_running = false,
                 .mutex = .{},
                 .cond = .{},
+                .compute_in_flight = false,
                 .request = null,
                 .result = null,
                 .needs_redraw = false,

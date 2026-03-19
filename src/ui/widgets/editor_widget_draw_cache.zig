@@ -111,8 +111,7 @@ fn scheduleVisibleHighlightRequest(widget: anytype, shell: anytype, height: f32,
     if (budget_lines == 0) return null;
     if (height <= 0) return null;
     if (view.highlighter == null) return null;
-    if (widget.editor.hasPendingVisibleHighlightRequest()) return null;
-    if (widget.editor.hasPendingVisibleHighlightResult()) return null;
+    if (!widget.editor.canScheduleVisibleHighlightRequest()) return null;
     const total_lines = view.lineCount();
     if (total_lines == 0) return null;
     const visible_lines = @as(usize, @intFromFloat(height / r.char_height));
