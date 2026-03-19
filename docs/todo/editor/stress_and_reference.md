@@ -348,6 +348,8 @@ stack issue, not an isolated highlight bug:
         running highlight inline
       - warmup completion/redraw checks now follow in-flight visible highlight
         runtime work rather than only the old queue-active bit
+      - local Unicode repro now shows ordered worker progression through the
+        visible range (`0-4`, `4-8`, ... `32-33`) with matching publish events
       - this is still behavior-preserving and does not yet claim full runtime
         ownership
 
