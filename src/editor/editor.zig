@@ -75,7 +75,6 @@ pub const Editor = struct {
 
     pub const VisibleHighlightRuntimeState = struct {
         work: HighlightWorkState,
-        startup_warmup_active: bool,
         worker: ?std.Thread,
         worker_running: bool,
         mutex: std.Thread.Mutex,
@@ -881,7 +880,6 @@ pub const Editor = struct {
                     .completed_end = 0,
                     .completed_epoch = 0,
                 },
-                .startup_warmup_active = false,
                 .worker = null,
                 .worker_running = false,
                 .mutex = .{},
@@ -954,8 +952,6 @@ pub const Editor = struct {
         self.visible_cache_precompute_defer_frames = 2;
         self.cluster_offsets_defer_frames = 4;
         self.startup_defer_last_frame_id = 0;
-        self.visible_highlight_runtime.startup_warmup_active = true;
-
         self.scheduleHighlighter(path);
         const elapsed_us = @as(i64, @intCast(@divTrunc(std.time.nanoTimestamp() - t_start, 1000)));
         perf_log.logf(
@@ -994,7 +990,6 @@ pub const Editor = struct {
         self.visible_cache_precompute_defer_frames = 0;
         self.cluster_offsets_defer_frames = 0;
         self.startup_defer_last_frame_id = 0;
-        self.visible_highlight_runtime.startup_warmup_active = false;
         if (!self.doc.highlight_disabled_for_large_file) {
             try self.tryInitHighlighter(path);
         } else {
@@ -1771,12 +1766,15 @@ pub const Editor = struct {
         return self.cluster_offsets_defer_frames > 0;
     }
 
-    pub fn shouldThrottleStartupHighlightWarmup(self: *const Editor) bool {
-        return self.visible_highlight_runtime.startup_warmup_active;
+    pub fn isVisibleHighlightRangeComplete(self: *const Editor, start_line: usize, end_line: usize, epoch: u64) bool {
+        return !self.visible_highlight_runtime.work.active and
+            start_line == self.visible_highlight_runtime.work.completed_start and
+            end_line == self.visible_highlight_runtime.work.completed_end and
+            epoch == self.visible_highlight_runtime.work.completed_epoch;
     }
 
-    pub fn completeStartupVisibleWarmup(self: *Editor) void {
-        self.visible_highlight_runtime.startup_warmup_active = false;
+    pub fn shouldThrottleVisibleHighlightRange(self: *const Editor, start_line: usize, end_line: usize, epoch: u64) bool {
+        return !self.isVisibleHighlightRangeComplete(start_line, end_line, epoch);
     }
 
     pub fn setSearchQuery(self: *Editor, query: ?[]const u8) !void {

@@ -329,8 +329,9 @@ stack issue, not an isolated highlight bug:
         editor-owned state
       - visible highlight publication now also drives redraw from the frame
         hook when a batch publishes tokens
-      - visible highlight scheduling and startup warmup state now live under a
-        named editor-owned runtime block
+      - visible highlight scheduling now lives under a named editor-owned
+        runtime block keyed by visible-range work state rather than a separate
+        startup-only control flag
       - visible highlight now also has runtime request/result mailbox state,
         though execution is still synchronous
       - visible highlight cache publication now happens from the
@@ -346,18 +347,29 @@ stack issue, not an isolated highlight bug:
         parallel to the search seam
       - visible highlight precompute now schedules worker execution instead of
         running highlight inline
-      - warmup completion/redraw checks now follow in-flight visible highlight
-        runtime work rather than only the old queue-active bit
+      - visible highlight throttling is now derived from visible-range
+        completion and in-flight runtime state rather than a standalone startup
+        warmup flag
       - local Unicode repro now shows ordered worker progression through the
         visible range (`0-4`, `4-8`, ... `32-33`) with matching publish events
       - visible highlight request/result/compute-in-flight mailbox access is
         now guarded behind the runtime mutex, fixing the first real worker-path
         race/segfault in the local Unicode repro
+      - visible cache precompute logging now distinguishes highlight-running
+        frames from layout-only frames so worker/runtime cleanup can be judged
+        against honest telemetry instead of mixed-path noise
+      - current Unicode repro shows stable worker progression and a clear
+        two-step cadence in the frame path: layout/publication frames
+        (`run_highlight=false`) interleave with actual scheduling frames
+        (`run_highlight=true`)
       - visible precompute now follows a worker schedule contract instead of
         the old inline-publish contract
       - remaining runtime issue is frame-lane churn: while worker execution is
         stable, `visible_cache_precompute` still re-enters too often between
         worker publications
+      - next cleanup target is to inventory and remove remaining startup
+        warmup/tree-sitter-specific workaround logic that now muddies the
+        runtime signal
       - this is still behavior-preserving and does not yet claim full runtime
         ownership
 

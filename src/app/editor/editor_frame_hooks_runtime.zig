@@ -159,18 +159,30 @@ pub fn handle(
     if (should_drive_search_publication) {
         out.needs_redraw = true;
     }
+    var widget = widgets.EditorWidget.initWithCache(editor, editor_cluster_cache, editor_wrap);
+    const view = widget.frameView();
+    const visible_lines = if (layout.editor.height > 0 and shell.charHeight() > 0)
+        @as(usize, @intFromFloat(layout.editor.height / shell.charHeight())) + 1
+    else
+        0;
+    const start_line = view.scroll_line;
+    const end_line = @min(start_line + visible_lines, view.lineCount());
     if (editor.visibleHighlightNeedsRedraw()) {
         out.needs_redraw = true;
     }
-    const should_schedule_visible_work =
-        editor.hasPendingVisibleHighlightWork() and
+    const can_schedule_visible_work =
         !editor.visibleHighlightComputeInFlight() and
-        !editor.hasPendingVisibleHighlightRequest();
+        !editor.hasPendingVisibleHighlightRequest() and
+        !editor.hasPendingVisibleHighlightResult();
+    const should_schedule_visible_work =
+        visible_lines > 0 and
+        can_schedule_visible_work and
+        editor.shouldThrottleVisibleHighlightRange(start_line, end_line, view.highlight_epoch);
     const should_run_visible_precompute =
+        out.needs_redraw or
         should_schedule_visible_work or
         editor.hasPendingVisibleHighlightResult();
     if (should_run_visible_precompute) {
-        var widget = widgets.EditorWidget.initWithCache(editor, editor_cluster_cache, editor_wrap);
         const scheduled_visible_highlights = app_editor_visible_caches_runtime.precompute(
             &widget,
             shell,
@@ -179,6 +191,7 @@ pub fn handle(
             editor_highlight_budget,
             editor_width_budget,
             frame_id,
+            should_schedule_visible_work,
         );
         if (scheduled_visible_highlights) {
             out.needs_redraw = true;
@@ -186,7 +199,7 @@ pub fn handle(
         if (editor.applyPendingVisibleHighlightResult(editor_render_cache)) {
             out.needs_redraw = true;
         }
-        if (editor.shouldThrottleStartupHighlightWarmup() or editor.visibleHighlightWorkInFlight()) {
+        if (editor.visibleHighlightWorkInFlight()) {
             out.needs_redraw = true;
         }
     }

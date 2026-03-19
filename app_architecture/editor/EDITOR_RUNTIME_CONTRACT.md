@@ -77,9 +77,9 @@ Current implementation progress:
 - visible highlight scheduling now feeds the worker seam instead of executing
   inline on the precompute path; execution is no longer performed directly from
   the app/runtime precompute call site
-- startup warmup completion and redraw driving now follow in-flight visible
-  highlight runtime work, request, and result state rather than only the old
-  queue-active bit
+- startup-specific highlight throttling no longer relies on a standalone warmup
+  flag; visible highlight pacing is now derived from visible-range completion
+  plus in-flight runtime request/compute/result state
 - visible cache precompute now has a worker-oriented contract: schedule work on
   the runtime lane, then let frame/runtime publication apply completed results;
   it no longer pretends to inline-publish highlight output itself
@@ -89,6 +89,9 @@ Current implementation progress:
 - the next runtime weakness is no longer correctness but cadence: the frame
   path still re-enters visible precompute too often while the worker is already
   busy, so follow-up work should target frame churn rather than mailbox safety
+- visible cache precompute logging now distinguishes highlight-running frames
+  from layout/publication-only frames via `run_highlight`, which makes the
+  remaining cadence work measurable without mixed-path noise
 
 ## Current Problem
 
