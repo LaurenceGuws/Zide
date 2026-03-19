@@ -260,6 +260,9 @@ Phase 2 has now started in code:
 - visible highlight scheduling and execution are now distinct code phases,
   shrinking the remaining threading move to “change execution lane” instead of
   “untangle execution from scheduling and publication”
+- visible highlight execution is now called explicitly from the app/runtime
+  precompute path, so the next move can replace that execution lane without
+  changing the widget-facing schedule surface again
 - the current cut is structural and behavior-preserving; it does not yet claim
   full `EditorRuntime` ownership, but it makes that ownership line explicit
 

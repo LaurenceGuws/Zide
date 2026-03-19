@@ -131,9 +131,17 @@ fn scheduleVisibleHighlightRequest(widget: anytype, shell: anytype, height: f32,
     return batch;
 }
 
-fn executePendingVisibleHighlightRequest(widget: anytype, batch: Editor.HighlightWorkBatch) bool {
+pub fn executePendingVisibleHighlightRequest(widget: anytype) bool {
     const perf_log = app_logger.logger("editor.perf");
     const view = widget.frameView();
+    const request = widget.editor.takeVisibleHighlightRequest() orelse {
+        perf_log.logf(.info, "visible_precompute_highlight lines=0 budget=0 time_us=0", .{});
+        return false;
+    };
+    const batch: Editor.HighlightWorkBatch = .{
+        .start_line = request.start_line,
+        .end_line = request.end_line,
+    };
     const t_start = std.time.nanoTimestamp();
     var lines_done: usize = 0;
     var tokens: []HighlightToken = &[_]HighlightToken{};
@@ -201,11 +209,7 @@ fn executePendingVisibleHighlightRequest(widget: anytype, batch: Editor.Highligh
             return false;
         };
         widget.editor.replaceVisibleHighlightResult(.{
-            .request = widget.editor.takeVisibleHighlightRequest() orelse .{
-                .start_line = batch.start_line,
-                .end_line = batch.end_line,
-                .epoch = view.highlight_epoch,
-            },
+            .request = request,
             .lines = owned_lines,
         });
     }
@@ -216,8 +220,7 @@ fn executePendingVisibleHighlightRequest(widget: anytype, batch: Editor.Highligh
 
 pub fn precomputeHighlightTokens(widget: anytype, cache: *cache_mod.EditorRenderCache, shell: anytype, height: f32, budget_lines: usize) bool {
     _ = cache;
-    const batch = scheduleVisibleHighlightRequest(widget, shell, height, budget_lines) orelse return false;
-    return executePendingVisibleHighlightRequest(widget, batch);
+    return scheduleVisibleHighlightRequest(widget, shell, height, budget_lines) != null;
 }
 
 pub fn precomputeLineWidths(widget: anytype, cache: *cache_mod.EditorRenderCache, shell: anytype, height: f32, budget_lines: usize) void {

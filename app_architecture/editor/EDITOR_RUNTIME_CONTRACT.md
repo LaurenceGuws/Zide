@@ -65,6 +65,9 @@ Current implementation progress:
 - visible highlight scheduling and execution are now distinct phases in code,
   even though execution is still foreground; that removes the last direct
   schedule-and-execute knot ahead of the worker move
+- visible highlight execution is now invoked explicitly from the app/runtime
+  precompute path rather than being hidden inside the widget precompute
+  entrypoint
 
 ## Current Problem
 

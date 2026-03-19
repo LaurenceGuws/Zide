@@ -4,6 +4,7 @@ const shared_types = @import("../../types/mod.zig");
 const app_shell = @import("../../app_shell.zig");
 const widgets = @import("../../ui/widgets.zig");
 const editor_draw = @import("../../ui/widgets/editor_widget_draw.zig");
+const editor_draw_cache = @import("../../ui/widgets/editor_widget_draw_cache.zig");
 const std = @import("std");
 
 const layout_types = shared_types.layout;
@@ -41,7 +42,8 @@ pub fn precompute(
     else
         configured_highlight_budget;
     const t_highlight_start = std.time.nanoTimestamp();
-    const highlight_published = editor_draw.precomputeHighlightTokens(widget, editor_render_cache, editor_shell, editor_layout.editor.height, highlight_budget);
+    _ = editor_draw.precomputeHighlightTokens(widget, editor_render_cache, editor_shell, editor_layout.editor.height, highlight_budget);
+    const highlight_published = editor_draw_cache.executePendingVisibleHighlightRequest(widget);
     if (widget.editor.shouldThrottleStartupHighlightWarmup() and !widget.editor.hasPendingVisibleHighlightWork()) {
         widget.editor.completeStartupVisibleWarmup();
     }

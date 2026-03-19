@@ -338,6 +338,8 @@ stack issue, not an isolated highlight bug:
       - visible highlight completion now has an explicit runtime redraw signal
       - visible highlight scheduling and execution are now separate phases in
         code, though execution is still synchronous
+      - visible highlight execution is now called explicitly from the
+        app/runtime precompute path
       - this is still behavior-preserving and does not yet claim full runtime
         ownership
 
