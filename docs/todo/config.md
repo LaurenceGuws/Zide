@@ -38,7 +38,6 @@ Implemented today:
 
 Current caveats:
 
-- Per-domain font config still collapses to one effective runtime font choice.
 - Startup/load-order truth now has a stricter documented contract, but reload
   truth for some startup-applied settings still needs fuller field-by-field
   authority.
@@ -59,10 +58,10 @@ Current caveats:
 ### CFG-02 Runtime Truth Alignment
 
 - [x] `CFG-02-01` Decide whether app, editor, and terminal fonts are truly separate
-  Current documented truth is shared-font precedence: `terminal > editor > app`.
+  Runtime now treats app chrome, editor text, and terminal text as separate font owners with field-by-field fallback to `app.font`.
 - [ ] `CFG-02-02` Make reload behavior explicit for every startup-applied field
-- [x] `CFG-02-02B` Make shared effective font path/size reloadable
-  Config reload now reapplies the resolved shared font choice (`terminal > editor > app`) at runtime instead of logging restart-only.
+- [x] `CFG-02-02B` Make per-domain font path/size reloadable
+  Config reload now reapplies `app.font`, `editor.font`, and `terminal.font` independently at runtime instead of collapsing them to one shared effective stack.
 - [x] `CFG-02-02A` Define strict startup application phases
   `app_architecture/CONFIG.md` now owns the bootstrap phases:
   load/merge -> pre-window settings -> renderer init options -> startup mutables

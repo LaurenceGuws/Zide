@@ -147,6 +147,18 @@ Current implications:
 - they are less likely to be caused by the top-level DPI/content-scale split
   itself
 
+Current validation status, 2026-03-20:
+
+- the corrected Windows scale split is now good enough that `125%` editor and
+  terminal rendering are user-accepted on the active Windows validation
+  machine
+- the next Windows text work should focus on regression authority and startup
+  cleanup, not reopening the core scale-ownership question without new
+  evidence
+- renderer startup should be seeded from loaded config before the first
+  `initFonts(...)` pass so font path/size/render-policy truth is stable from
+  the beginning, not corrected via immediate post-init rebuilds
+
 This is an implementation truth, not a claim that the contract is already ideal.
 If the current model proves insufficient, change it deliberately and document
 the new ownership split here before spreading ad hoc fixes through the
@@ -158,10 +170,10 @@ Current architectural direction:
 - let renderer/font code consume that snapshot instead of independently reading
   SDL/window state
 - keep text quality policy separate from OS truth acquisition
-- renderer should also own a shared logical scaled-font metric snapshot
-  (`cell_width`, `cell_height`, `baseline_from_top`) for the active font set,
-  so text/terminal draw paths do not each reinterpret raw FreeType/HarfBuzz
-  font fields independently
+- renderer should also own per-domain logical scaled-font metric snapshots for
+  app chrome, editor text, and terminal text (`cell_width`, `cell_height`,
+  `baseline_from_top`) so draw paths do not each reinterpret raw
+  FreeType/HarfBuzz font fields independently
 
 Current reference priority for runtime scaling work:
 

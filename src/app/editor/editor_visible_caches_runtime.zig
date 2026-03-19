@@ -11,7 +11,7 @@ const Shell = app_shell.Shell;
 const EditorWidget = widgets.EditorWidget;
 
 fn visibleLineBudget(editor_shell: *Shell, editor_layout: layout_types.WidgetLayout) usize {
-    const visible_lines = @as(usize, @intFromFloat(editor_layout.editor.height / editor_shell.charHeight()));
+    const visible_lines = @as(usize, @intFromFloat(editor_layout.editor.height / editor_shell.editorCharHeight()));
     return if (visible_lines > 0) visible_lines + 1 else 0;
 }
 
@@ -57,7 +57,7 @@ fn runLayoutPrecompute(
             .wrap_elapsed_us = 0,
         };
     }
-    const visible_lines = @as(usize, @intFromFloat(editor_layout.editor.height / editor_shell.charHeight()));
+    const visible_lines = @as(usize, @intFromFloat(editor_layout.editor.height / editor_shell.editorCharHeight()));
     const default_budget = if (visible_lines > 0) visible_lines + 1 else 0;
     const width_budget = editor_width_budget orelse default_budget;
     const t_width_start = std.time.nanoTimestamp();

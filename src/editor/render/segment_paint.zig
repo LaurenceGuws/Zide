@@ -24,8 +24,8 @@ pub fn addEditorLineBaseOps(
     var ok = true;
 
     if (is_current) {
-        ok = ok and overlay_mod.addRectOp(list, x + gutter_width, y, content_width - gutter_width, r.char_height, r.theme.current_line);
-        ok = ok and overlay_mod.addRectOp(list, x, y, gutter_width, r.char_height, r.theme.current_line);
+        ok = ok and overlay_mod.addRectOp(list, x + gutter_width, y, content_width - gutter_width, r.editor_char_height, r.theme.current_line);
+        ok = ok and overlay_mod.addRectOp(list, x, y, gutter_width, r.editor_char_height, r.theme.current_line);
     }
 
     const num_str = std.fmt.bufPrint(num_buf, "{d: >4}", .{line_num + 1}) catch return false;
@@ -57,8 +57,8 @@ pub fn drawSelectionOverlays(
         const sel_start = @max(range.start_col, seg_start_col);
         const sel_end = @min(range.end_col, seg_end_col);
         if (sel_end <= sel_start) continue;
-        const sel_x = text_start_x + @as(f32, @floatFromInt(sel_start - seg_start_col)) * r.char_width;
-        const sel_w = @as(f32, @floatFromInt(sel_end - sel_start)) * r.char_width;
+        const sel_x = text_start_x + @as(f32, @floatFromInt(sel_start - seg_start_col)) * r.editor_char_width;
+        const sel_w = @as(f32, @floatFromInt(sel_end - sel_start)) * r.editor_char_width;
         const corner_mask = overlay_mod.selectionCornerMaskForSegment(view, line_idx, cols, line_width, seg_idx, total_visual_lines, seg_start_col, seg_end_col, range);
         overlay_mod.drawSoftSelectionRect(r, sel_x, sel_band.y_f, sel_w, sel_band.h_f, selection_color, corner_mask);
     }
@@ -87,8 +87,8 @@ pub fn addSelectionOverlayOps(
         const sel_start = @max(range.start_col, seg_start_col);
         const sel_end = @min(range.end_col, seg_end_col);
         if (sel_end <= sel_start) continue;
-        const sel_x = text_start_x + @as(f32, @floatFromInt(sel_start - seg_start_col)) * r.char_width;
-        const sel_w = @as(f32, @floatFromInt(sel_end - sel_start)) * r.char_width;
+        const sel_x = text_start_x + @as(f32, @floatFromInt(sel_start - seg_start_col)) * r.editor_char_width;
+        const sel_w = @as(f32, @floatFromInt(sel_end - sel_start)) * r.editor_char_width;
         const corner_mask = overlay_mod.selectionCornerMaskForSegment(view, line_idx, cols, line_width, seg_idx, total_visual_lines, seg_start_col, seg_end_col, range);
         ok = ok and overlay_mod.addSoftSelectionRectOp(list, r, sel_x, sel_band.y_f, sel_w, sel_band.h_f, selection_color, corner_mask);
     }

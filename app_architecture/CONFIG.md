@@ -201,13 +201,13 @@ rendering, not schema preservation.
 
 | Lua path | Meaning | Runtime consumer | Status | Notes |
 |---|---|---|---|---|
-| `app.font.path` / `app.font.size` | Base font choice | `src/app/init_runtime.zig`, `src/app/reload_config_runtime.zig` -> renderer font setup | `partial` | Runtime reloads the shared effective font stack, but app/editor/terminal font choice still collapses to one effective font. |
+| `app.font.path` / `app.font.size` | Base app/UI font choice | `src/app/init_runtime.zig`, `src/app/reload_config_runtime.zig` -> renderer font setup | `reloadable` | Drives app chrome and default fallback for editor/terminal when their own font block is unset. |
 
 ### `editor`
 
 | Lua path | Meaning | Runtime consumer | Status | Notes |
 |---|---|---|---|---|
-| `editor.font.path` / `editor.font.size` | Editor font override | `src/app/init_runtime.zig`, `src/app/reload_config_runtime.zig` -> renderer font setup | `partial` | Same shared-font caveat as `app.font`; runtime reload updates the shared effective font choice immediately. |
+| `editor.font.path` / `editor.font.size` | Editor font override | `src/app/init_runtime.zig`, `src/app/reload_config_runtime.zig` -> renderer font setup | `reloadable` | Drives editor text/layout directly; falls back field-by-field to `app.font` when unset. |
 | `editor.wrap` | Soft wrap | `src/main.zig`, editor widget/layout/input | `reloadable` | Defaults to `false`. |
 | `editor.imported_theme` | Load a shipped imported editor theme artifact by name | config load path -> theme merge | `reloadable` | Current artifacts live under `assets/themes/<name>.lua`. Imported theme config is merged first, then the rest of the same config file can override it. |
 | `editor.tab_bar.width_mode` | IDE/editor tab bar width policy | `src/main.zig` + `src/ui/widgets/tab_bar.zig` | `reloadable` | `fixed`, `dynamic`, `label_length`. |
@@ -220,7 +220,7 @@ rendering, not schema preservation.
 
 | Lua path | Meaning | Runtime consumer | Status | Notes |
 |---|---|---|---|---|
-| `terminal.font.path` / `terminal.font.size` | Terminal font override | `src/app/init_runtime.zig`, `src/app/reload_config_runtime.zig` -> renderer font setup | `partial` | Same shared-font caveat as `app.font`; runtime reload updates the shared effective font choice immediately. |
+| `terminal.font.path` / `terminal.font.size` | Terminal font override | `src/app/init_runtime.zig`, `src/app/reload_config_runtime.zig` -> renderer font setup | `reloadable` | Drives terminal cell metrics directly; falls back field-by-field to `app.font` when unset. |
 | `terminal.disable_ligatures` | Terminal ligature strategy | `src/main.zig` -> renderer/terminal draw | `reloadable` | Current values: `never`, `cursor`, `always`. |
 | `terminal.font_features` | Terminal OpenType features | `src/main.zig` -> renderer/terminal draw | `reloadable` | |
 | `terminal.blink` | Cursor blink policy | `src/main.zig` -> terminal widget | `reloadable` | Preferred values: `kitty`, `off`. Boolean shorthand also accepted. |
@@ -261,21 +261,11 @@ rendering, not schema preservation.
 
 ## Known Mismatches
 
-### Shared-font reality vs per-domain config shape
-
-The parser stores separate `app.font`, `editor.font`, and `terminal.font`, but runtime currently chooses one effective font stack with precedence:
-
-1. `terminal.font`
-2. `editor.font`
-3. `app.font`
-
-That means the current Lua surface is more expressive than the actual runtime behavior. This is a real subsystem gap, not just a docs issue.
-
 ### Hot reload is not full reload
 
 Current reload support is intentionally partial:
 - theme, keybinds, wrap, ligature settings, cursor/blink policy, texture-shift toggle, and focus reporting are re-applied.
-- shared effective font path/size and `font_rendering.*` changes are re-applied immediately.
+- per-domain app/editor/terminal font path/size and `font_rendering.*` changes are re-applied immediately.
 - some session-init settings still only affect new sessions.
 
 ```mermaid
@@ -285,7 +275,7 @@ flowchart LR
 
     Reapply --> A[theme]
     Reapply --> B[keybinds]
-    Reapply --> C[wrap / ligatures / cursor / focus / texture_shift / font path / font_rendering]
+    Reapply --> C[wrap / ligatures / cursor / focus / texture_shift / per-domain fonts / font_rendering]
 
     ParsedOnly --> D[future-session-only effects]
 ```
@@ -319,9 +309,9 @@ For current config examples and docs, prefer:
 - string values for `terminal.blink` (`kitty`, `off`), not boolean shorthand
 - partial override configs that rely on merge-by-default keybind behavior
 - `app.font` as the base public font knob
-- `editor.font` / `terminal.font` only when an override is intentionally taking precedence over the shared runtime font choice
+- `editor.font` / `terminal.font` when editor or terminal should intentionally diverge from app chrome font choice
 
-This reflects the current runtime truth and mirrors the conservative direction used by reference terminals: do not advertise separate font stacks until runtime ownership, rebuild behavior, and docs are all real.
+This reflects the current runtime truth: app chrome, editor text, and terminal text now have distinct runtime font ownership while still sharing one reload/scale contract.
 
 ## Testing And Maintenance Rules
 
@@ -339,7 +329,7 @@ Dedicated subsystem test target:
 - `zig build test-config`
   - root: `src/config_tests.zig`
 
-Manual reload spot check for shared font changes:
+Manual reload spot check for per-domain font changes:
 - edit `app.font`, `editor.font`, or `terminal.font` in `./.zide.lua` or the user config
 - trigger `reload_config` (default binding: `Ctrl+Shift+F5`)
-- verify editor and terminal redraw immediately with the new shared effective font choice
+- verify app chrome, editor, and terminal redraw immediately with the intended font changes

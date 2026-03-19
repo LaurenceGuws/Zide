@@ -24,9 +24,22 @@ if theme_import_ok and type(theme_import) == "table" and type(theme_import.from_
 	end
 end
 
-local app_font_path = "assets/fonts/JetBrainsMonoNerdFont-Regular.ttf"
-if file_exists("assets/fonts/IosevkaTermNerdFont-Regular.ttf") then
-	app_font_path = "assets/fonts/IosevkaTermNerdFont-Regular.ttf"
+local jetbrains_font_path = "assets/fonts/JetBrainsMonoNerdFont-Regular.ttf"
+local iosevka_font_path = "assets/fonts/IosevkaTermNerdFont-Regular.ttf"
+
+local app_font_path = jetbrains_font_path
+if file_exists(iosevka_font_path) then
+	app_font_path = iosevka_font_path
+end
+
+local editor_font_path = app_font_path
+if file_exists(iosevka_font_path) then
+	editor_font_path = jetbrains_font_path
+end
+
+local terminal_font_path = app_font_path
+if file_exists(iosevka_font_path) then
+	terminal_font_path = jetbrains_font_path
 end
 
 return {
@@ -182,8 +195,8 @@ return {
 	-- },
 
 	-- App shell configuration.
-	-- Current runtime uses one effective font stack across app/editor/terminal.
-	-- If multiple font blocks are set, precedence is: terminal.font > editor.font > app.font.
+	-- app.font drives app/UI chrome and is the fallback for editor/terminal when
+	-- their own font block is unset.
 	app = {
 		-- App-specific theme override (affects UI chrome: tabs, status bar, side nav).
 		-- theme = {
@@ -198,8 +211,7 @@ return {
 	-- Font rendering configuration.
 	-- These settings affect rasterization/shaping and text blending quality.
 	-- Changes can be reloaded at runtime. Font path/size changes rebuild the
-	-- current shared effective font stack using precedence:
-	-- terminal.font > editor.font > app.font.
+	-- app, editor, and terminal font stacks immediately.
 	font_rendering = {
 		-- Rasterization
 		-- lcd: enable subpixel (LCD) rendering path. Not final; use cautiously.
@@ -304,9 +316,13 @@ return {
 		--     corner_px = 1.0,
 		--     pad_px = 1.0,
 		-- },
-		-- Optional override. Runtime reloads the shared effective font stack
-		-- using precedence: terminal.font > editor.font > app.font.
-		-- font = { path = "/usr/share/fonts/...", size = 16 },
+		-- Optional override. Runtime reloads the editor font stack immediately.
+		-- Comment out the editor_font_path switch block above to compare directly
+		-- against app.font or another explicit test font.
+		font = {
+			path = editor_font_path,
+			size = 16,
+		},
 	},
 
 	-- Terminal configuration.
@@ -323,9 +339,13 @@ return {
 		-- },
 		theme = kitty_theme,
 
-		-- Optional override. Runtime reloads the shared effective font stack
-		-- using precedence: terminal.font > editor.font > app.font.
-		-- font = { path = "/usr/share/fonts/...", size = 16 },
+		-- Optional override. Runtime reloads the terminal font stack immediately.
+		-- Comment out the terminal_font_path switch block above to compare
+		-- directly against app.font or another explicit test font.
+		font = {
+			path = terminal_font_path,
+			size = 16,
+		},
 
 		-- Ligature strategy (kitty-style semantics):
 		--   "never"  = never disable ligatures (default)

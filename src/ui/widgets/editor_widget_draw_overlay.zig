@@ -101,8 +101,8 @@ pub fn drawExtraCarets(
             caret_col >= seg_start_col and caret_col < seg_end_col;
         if (!in_segment) continue;
         const local_col = caret_col - seg_start_col;
-        const cursor_x = text_start_x + @as(f32, @floatFromInt(local_col)) * r.char_width;
-        drawLineCursor(r, cursor_x, seg_y, r.char_height, r.theme.cursor);
+        const cursor_x = text_start_x + @as(f32, @floatFromInt(local_col)) * r.editor_char_width;
+        drawLineCursor(r, cursor_x, seg_y, r.editor_char_height, r.theme.cursor);
     }
 }
 
@@ -134,8 +134,8 @@ pub fn addExtraCaretOps(
             caret_col >= seg_start_col and caret_col < seg_end_col;
         if (!in_segment) continue;
         const local_col = caret_col - seg_start_col;
-        const cursor_x = text_start_x + @as(f32, @floatFromInt(local_col)) * r.char_width;
-        ok = ok and addCursorOp(list, cursor_x, seg_y, r.char_height, r.theme.cursor);
+        const cursor_x = text_start_x + @as(f32, @floatFromInt(local_col)) * r.editor_char_width;
+        ok = ok and addCursorOp(list, cursor_x, seg_y, r.editor_char_height, r.theme.cursor);
     }
     return ok;
 }
@@ -498,7 +498,7 @@ pub fn drawEditorScrollbars(
     const scale = r.uiScaleFactor();
     const metrics = chrome_geometry_mod.scrollbarMetrics(
         height,
-        r.char_height,
+        r.editor_char_height,
         view.maxLineWidthCached(),
         total_lines,
     );

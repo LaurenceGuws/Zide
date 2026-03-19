@@ -51,7 +51,7 @@ pub fn xForByteOffset(
         vis += 1;
         idx += seq_len;
     }
-    return text_x + @as(f32, @floatFromInt(vis - seg_start_vis)) * r.char_width;
+    return text_x + @as(f32, @floatFromInt(vis - seg_start_vis)) * r.editor_char_width;
 }
 
 pub fn buildSelectionByteRanges(line_text: []const u8, cluster_slice: ?[]const u32, seg_start_col: usize, seg_end_col: usize, seg_start_byte: usize, seg_end_byte: usize, ranges: []const SelectionRange, out: *[8]ByteRange) usize {
@@ -195,7 +195,7 @@ fn drawTextDecorations(r: anytype, x: f32, y: f32, width: f32, color: anytype, f
     const x_i = @as(i32, @intFromFloat(std.math.round(x)));
     const y_i = @as(i32, @intFromFloat(std.math.round(y)));
     const w_i = @max(1, @as(i32, @intFromFloat(std.math.round(width))));
-    const h_i = @max(1, @as(i32, @intFromFloat(std.math.round(r.char_height))));
+    const h_i = @max(1, @as(i32, @intFromFloat(std.math.round(r.editor_char_height))));
     if (flags.undercurl) {
         const baseline_y = y_i + h_i - thickness - 1;
         drawUndercurl(r, x_i, baseline_y, w_i, thickness, color);
@@ -217,12 +217,12 @@ fn addTextDecorationOps(list: *EditorDrawList, r: anytype, x: f32, y: f32, width
     const thickness = @max(1.0, std.math.round(@max(r.uiScaleFactor(), 1.0)));
     var ok = true;
     if (flags.undercurl) {
-        ok = ok and addUndercurlOps(list, x, y + r.char_height - thickness - 1.0, width, thickness, color);
+        ok = ok and addUndercurlOps(list, x, y + r.editor_char_height - thickness - 1.0, width, thickness, color);
     } else if (flags.underline) {
-        ok = ok and overlay_mod.addRectOp(list, x, y + r.char_height - thickness, width, thickness, color);
+        ok = ok and overlay_mod.addRectOp(list, x, y + r.editor_char_height - thickness, width, thickness, color);
     }
     if (flags.strikethrough) {
-        ok = ok and overlay_mod.addRectOp(list, x, y + std.math.floor(r.char_height * 0.5), width, thickness, color);
+        ok = ok and overlay_mod.addRectOp(list, x, y + std.math.floor(r.editor_char_height * 0.5), width, thickness, color);
     }
     return ok;
 }
@@ -325,7 +325,7 @@ pub fn appendHighlightedLineSegmentOps(list: *EditorDrawList, r: anytype, line_t
                 const bg = selectionOverlapBg(start, end, base_bg, selection_bg, sel_ranges);
                 const x = xForByteOffset(r, line_text, seg_start, seg_start_vis, start, text_x);
                 ok = ok and addStyledTextOpBg(list, x, y, ctext, color, bg, style.flags, disable_programming_ligatures);
-                ok = ok and addTextDecorationOps(list, r, x, y, @as(f32, @floatFromInt(ctext.len)) * r.char_width, decoration_color, style.flags);
+                ok = ok and addTextDecorationOps(list, r, x, y, @as(f32, @floatFromInt(ctext.len)) * r.editor_char_width, decoration_color, style.flags);
             }
         } else {
             const start_x = xForByteOffset(r, line_text, seg_start, seg_start_vis, start, text_x);
@@ -362,7 +362,7 @@ pub fn drawHighlightedLineSegment(r: anytype, line_text: []const u8, y: f32, tex
             if (text.len > 0) {
                 const bg = selectionOverlapBg(start, end, base_bg, selection_bg, sel_ranges);
                 drawStyledTextOnBg(r, text, x, y, color, bg, style.flags, disable_programming_ligatures);
-                drawTextDecorations(r, x, y, @as(f32, @floatFromInt(text.len)) * r.char_width, decoration_color, style.flags);
+                drawTextDecorations(r, x, y, @as(f32, @floatFromInt(text.len)) * r.editor_char_width, decoration_color, style.flags);
             }
         } else {
             const bg = selectionOverlapBg(start, end, base_bg, selection_bg, sel_ranges);

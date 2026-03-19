@@ -92,8 +92,8 @@ pub fn draw(
                 const cols_local = ctx.cols;
                 const cursor_draw_x_local = ctx.cursor_draw_x;
                 const cursor_draw_y_local = ctx.cursor_draw_y;
-                const seg_y = y_local + @as(f32, @floatFromInt(seg_info.visual_row)) * r_local.char_height;
-                const seg_band = overlay_mod.rowBandForRow(y_local, seg_info.visual_row, r_local.char_height);
+                const seg_y = y_local + @as(f32, @floatFromInt(seg_info.visual_row)) * r_local.editor_char_height;
+                const seg_band = overlay_mod.rowBandForRow(y_local, seg_info.visual_row, r_local.editor_char_height);
                 const disable_programming_ligatures = switch (r_local.editor_disable_ligatures) {
                     .never => false,
                     .always => true,
@@ -170,7 +170,7 @@ pub fn draw(
 
                 if (seg_info.is_current and seg_info.seg_idx == seg_info.cursor_seg) {
                     const local_col = seg_info.cursor_col_vis - seg_info.seg_start_col;
-                    cursor_draw_x_local.* = text_start_x_local + @as(f32, @floatFromInt(local_col)) * r_local.char_width;
+                    cursor_draw_x_local.* = text_start_x_local + @as(f32, @floatFromInt(local_col)) * r_local.editor_char_width;
                     cursor_draw_y_local.* = seg_y;
                 }
                 overlay_mod.drawExtraCarets(view_local, r_local, seg_info.line_idx, line_text_local, cluster_slice_local, seg_info.seg_start_col, seg_info.seg_end_col, seg_info.line_width, seg_y, text_start_x_local);
@@ -199,30 +199,30 @@ pub fn draw(
 
     // Draw cursor
     if (cursor_draw_x != null and cursor_draw_y != null) {
-        overlay_mod.drawLineCursor(r, cursor_draw_x.?, cursor_draw_y.?, r.char_height, r.theme.cursor);
+        overlay_mod.drawLineCursor(r, cursor_draw_x.?, cursor_draw_y.?, r.editor_char_height, r.theme.cursor);
         if (input.composing_active and input.composing_text.len > 0) {
             const comp_x = cursor_draw_x.?;
             const comp_y = cursor_draw_y.?;
             r.drawTextMonospaceOnBg(input.composing_text, comp_x, comp_y, r.theme.foreground, r.theme.current_line);
             r.drawRect(
                 @intFromFloat(comp_x),
-                @intFromFloat(comp_y + r.char_height - 2),
-                @intFromFloat(@as(f32, @floatFromInt(input.composing_text.len)) * r.char_width),
+                @intFromFloat(comp_y + r.editor_char_height - 2),
+                @intFromFloat(@as(f32, @floatFromInt(input.composing_text.len)) * r.editor_char_width),
                 2,
                 r.theme.selection,
             );
             shell.setTextInputRect(
                 @intFromFloat(comp_x),
                 @intFromFloat(comp_y),
-                @intFromFloat(@as(f32, @floatFromInt(@max(@as(usize, 1), input.composing_text.len))) * r.char_width),
-                @intFromFloat(r.char_height),
+                @intFromFloat(@as(f32, @floatFromInt(@max(@as(usize, 1), input.composing_text.len))) * r.editor_char_width),
+                @intFromFloat(r.editor_char_height),
             );
         } else {
             shell.setTextInputRect(
                 @intFromFloat(cursor_draw_x.?),
                 @intFromFloat(cursor_draw_y.?),
-                @intFromFloat(r.char_width),
-                @intFromFloat(r.char_height),
+                @intFromFloat(r.editor_char_width),
+                @intFromFloat(r.editor_char_height),
             );
         }
     }
@@ -324,8 +324,8 @@ pub fn drawCached(
                 const line_width_local = ctx.line_width;
                 const any_dirty_local = ctx.any_dirty;
 
-                const seg_y = origin_y_local + @as(f32, @floatFromInt(seg_info.visual_row)) * r_local.char_height;
-                const seg_band = overlay_mod.rowBandForRow(origin_y_local, seg_info.visual_row, r_local.char_height);
+                const seg_y = origin_y_local + @as(f32, @floatFromInt(seg_info.visual_row)) * r_local.editor_char_height;
+                const seg_band = overlay_mod.rowBandForRow(origin_y_local, seg_info.visual_row, r_local.editor_char_height);
                 const disable_programming_ligatures = switch (r_local.editor_disable_ligatures) {
                     .never => false,
                     .always => true,
@@ -385,8 +385,8 @@ pub fn drawCached(
                         const sel_start = @max(range.start_col, seg_info.seg_start_col);
                         const sel_end = @min(range.end_col, seg_info.seg_end_col);
                         if (sel_end <= sel_start) continue;
-                        const sel_x = text_start_x + @as(f32, @floatFromInt(sel_start - seg_info.seg_start_col)) * r_local.char_width;
-                        const sel_w = @as(f32, @floatFromInt(sel_end - sel_start)) * r_local.char_width;
+                        const sel_x = text_start_x + @as(f32, @floatFromInt(sel_start - seg_info.seg_start_col)) * r_local.editor_char_width;
+                        const sel_w = @as(f32, @floatFromInt(sel_end - sel_start)) * r_local.editor_char_width;
                         const corner_mask = overlay_mod.selectionCornerMaskForSegment(view_local, seg_info.line_idx, cols_local, line_width_local, seg_info.seg_idx, seg_info.total_visual_lines, seg_info.seg_start_col, seg_info.seg_end_col, range);
                         list_ok = list_ok and overlay_mod.addSoftSelectionRectOp(draw_list_local, r_local, sel_x, sel_band.y_f, sel_w, sel_band.h_f, selection_color, corner_mask);
                     }
@@ -461,8 +461,8 @@ pub fn drawCached(
 
                 if (seg_info.is_current and seg_info.seg_idx == seg_info.cursor_seg) {
                     const local_col = seg_info.cursor_col_vis - seg_info.seg_start_col;
-                    const cursor_draw_x = text_start_x + @as(f32, @floatFromInt(local_col)) * r_local.char_width;
-                    list_ok = list_ok and overlay_mod.addCursorOp(draw_list_local, cursor_draw_x, seg_y, r_local.char_height, r_local.theme.cursor);
+                    const cursor_draw_x = text_start_x + @as(f32, @floatFromInt(local_col)) * r_local.editor_char_width;
+                    list_ok = list_ok and overlay_mod.addCursorOp(draw_list_local, cursor_draw_x, seg_y, r_local.editor_char_height, r_local.theme.cursor);
                 }
                 list_ok = list_ok and overlay_mod.addExtraCaretOps(
                     draw_list_local,
@@ -529,8 +529,8 @@ pub fn drawCached(
 
                 if (seg_info.is_current and seg_info.seg_idx == seg_info.cursor_seg) {
                     const local_col = seg_info.cursor_col_vis - seg_info.seg_start_col;
-                    const cursor_draw_x = text_start_x + @as(f32, @floatFromInt(local_col)) * r_local.char_width;
-                    overlay_mod.drawLineCursor(r_local, cursor_draw_x, seg_y, r_local.char_height, r_local.theme.cursor);
+                    const cursor_draw_x = text_start_x + @as(f32, @floatFromInt(local_col)) * r_local.editor_char_width;
+                    overlay_mod.drawLineCursor(r_local, cursor_draw_x, seg_y, r_local.editor_char_height, r_local.theme.cursor);
                 }
                 overlay_mod.drawExtraCarets(view_local, r_local, seg_info.line_idx, line_text_local, cluster_slice_local, seg_info.seg_start_col, seg_info.seg_end_col, line_width_local, seg_y, text_start_x);
             }

@@ -137,7 +137,7 @@ pub fn handleHorizontalScrollbarInput(
     if (cols == 0) return false;
     const metrics = chrome_geometry_mod.scrollbarMetrics(
         height,
-        shell.charHeight(),
+        shell.editorCharHeight(),
         view.maxLineWidthCached(),
         view.lineCount(),
     );
@@ -212,7 +212,7 @@ pub fn handleVerticalScrollbarInput(
     if (width <= 0 or height <= 0) return false;
     const metrics = chrome_geometry_mod.scrollbarMetrics(
         height,
-        shell.charHeight(),
+        shell.editorCharHeight(),
         view.maxLineWidthCached(),
         view.lineCount(),
     );

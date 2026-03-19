@@ -44,7 +44,7 @@ pub const PreparedLine = struct {
 
 pub fn prepareFrame(widget: anytype, shell: anytype, x: f32, height: f32) FramePrep {
     const r = shell.rendererPtr();
-    const metrics = chrome_geometry_mod.frameMetrics(x, height, r.uiScaleFactor(), r.char_height);
+    const metrics = chrome_geometry_mod.frameMetrics(x, height, r.uiScaleFactor(), r.editor_char_height);
     const view = widget.frameView();
     return .{
         .gutter_width = metrics.gutter_width,

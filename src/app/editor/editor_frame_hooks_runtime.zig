@@ -161,8 +161,8 @@ pub fn handle(
     }
     var widget = widgets.EditorWidget.initWithCache(editor, editor_cluster_cache, editor_wrap);
     const view = widget.frameView();
-    const visible_lines = if (layout.editor.height > 0 and shell.charHeight() > 0)
-        @as(usize, @intFromFloat(layout.editor.height / shell.charHeight())) + 1
+    const visible_lines = if (layout.editor.height > 0 and shell.editorCharHeight() > 0)
+        @as(usize, @intFromFloat(layout.editor.height / shell.editorCharHeight())) + 1
     else
         0;
     const start_line = view.scroll_line;

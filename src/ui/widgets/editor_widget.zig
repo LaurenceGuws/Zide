@@ -133,7 +133,7 @@ pub const EditorWidget = struct {
 
     pub fn viewportColumns(self: *EditorWidget, shell: *Shell) usize {
         const r = shell.rendererPtr();
-        return metrics_mod.viewportColumns(r.width, self.gutter_width, r.char_width);
+        return metrics_mod.viewportColumns(r.width, self.gutter_width, r.editor_char_width);
     }
 
     pub fn clusterOffsets(
@@ -150,7 +150,7 @@ pub const EditorWidget = struct {
             return;
         }
         const r = shell.rendererPtr();
-        const result = getClusterOffsets(self.cluster_cache, self.editor, self.editor.allocator, r.terminal_font.hb_font, line_idx, line_text);
+        const result = getClusterOffsets(self.cluster_cache, self.editor, self.editor.allocator, r.editor_font.hb_font, line_idx, line_text);
         out_slice.* = result.slice;
         out_owned.* = result.owned;
     }
@@ -194,7 +194,7 @@ pub const EditorWidget = struct {
     ) ?types.CursorPos {
         const r = shell.rendererPtr();
         const view = self.frameView();
-        const frame_metrics = chrome_geometry_mod.frameMetrics(x, height, r.uiScaleFactor(), r.char_height);
+        const frame_metrics = chrome_geometry_mod.frameMetrics(x, height, r.uiScaleFactor(), r.editor_char_height);
         self.gutter_width = frame_metrics.gutter_width;
         if (width <= 0 or height <= 0) return null;
         if (view.lineCount() == 0) return null;
@@ -207,13 +207,13 @@ pub const EditorWidget = struct {
             if (mouse_x < x or mouse_x > x + width) return null;
             if (mouse_y < y or mouse_y > y + height) return null;
         }
-        const line_offset = @as(usize, @intFromFloat((local_y - y) / r.char_height));
+        const line_offset = @as(usize, @intFromFloat((local_y - y) / r.editor_char_height));
         const line = self.lineForVisualRow(shell, line_offset) orelse return null;
 
         const text_start_x = frame_metrics.text_start_x;
         var col: usize = 0;
         if (local_x > text_start_x) {
-            col = @as(usize, @intFromFloat((local_x - text_start_x) / r.char_width));
+            col = @as(usize, @intFromFloat((local_x - text_start_x) / r.editor_char_width));
         }
         var line_buf: [4096]u8 = undefined;
         var scratch = LineScratch{ .buf = line_buf[0..] };
@@ -278,7 +278,7 @@ pub const EditorWidget = struct {
         const r = shell.rendererPtr();
         const line_count = self.editor.lineCount();
         if (line_count == 0) return;
-        const visible_lines = @max(@as(usize, 1), @as(usize, @intFromFloat(height / r.char_height)));
+        const visible_lines = @max(@as(usize, 1), @as(usize, @intFromFloat(height / r.editor_char_height)));
         const view = self.editor.viewState();
 
         if (!self.wrap_enabled) {

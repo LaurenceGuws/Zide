@@ -28,7 +28,7 @@ fn scheduleVisibleHighlightRequest(widget: anytype, shell: anytype, height: f32,
     if (!widget.editor.canScheduleVisibleHighlightRequest()) return null;
     const total_lines = view.lineCount();
     if (total_lines == 0) return null;
-    const visible_lines = @as(usize, @intFromFloat(height / r.char_height));
+    const visible_lines = @as(usize, @intFromFloat(height / r.editor_char_height));
     if (visible_lines == 0) return null;
 
     const start_line = view.scroll_line;
@@ -59,7 +59,7 @@ pub fn precomputeLineWidths(widget: anytype, cache: *cache_mod.EditorRenderCache
     if (height <= 0) return;
     const total_lines = view.lineCount();
     if (total_lines == 0) return;
-    const visible_lines = @as(usize, @intFromFloat(height / r.char_height));
+    const visible_lines = @as(usize, @intFromFloat(height / r.editor_char_height));
     if (visible_lines == 0) return;
 
     const start_line = view.scroll_line;
@@ -89,7 +89,7 @@ pub fn precomputeWrapCounts(widget: anytype, cache: *cache_mod.EditorRenderCache
     if (height <= 0) return;
     const total_lines = view.lineCount();
     if (total_lines == 0) return;
-    const visible_lines = @as(usize, @intFromFloat(height / r.char_height));
+    const visible_lines = @as(usize, @intFromFloat(height / r.editor_char_height));
     if (visible_lines == 0) return;
 
     const cols = widget.viewportColumns(shell);

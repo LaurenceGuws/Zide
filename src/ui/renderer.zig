@@ -294,8 +294,12 @@ fn logSceneTargetState(
 
 pub const Renderer = struct {
     pub const InitOptions = struct {
-        base_font_size: f32 = 16.0,
-        font_path: ?[]const u8 = null,
+        app_font_size: f32 = 16.0,
+        app_font_path: ?[]const u8 = null,
+        editor_font_size: ?f32 = null,
+        editor_font_path: ?[]const u8 = null,
+        terminal_font_size: ?f32 = null,
+        terminal_font_path: ?[]const u8 = null,
         font_rendering: FontRenderingOptions = .{},
         text_gamma: f32 = 1.0,
         text_contrast: f32 = 1.0,
@@ -360,15 +364,31 @@ pub const Renderer = struct {
     base_font_size: f32,
     char_width: f32,
     char_height: f32,
+    app_font: TerminalFont,
+    app_metrics: ScaledFontMetrics,
+    editor_font_size: f32,
+    editor_base_font_size: f32,
+    editor_char_width: f32,
+    editor_char_height: f32,
+    editor_metrics: ScaledFontMetrics,
+    editor_font: TerminalFont,
     icon_font: TerminalFont,
     icon_font_size: f32,
     icon_char_width: f32,
     icon_char_height: f32,
     icon_metrics: ScaledFontMetrics,
+    app_font_path: [*:0]const u8,
+    app_font_path_owned: ?[]u8,
+    editor_font_path: [*:0]const u8,
+    editor_font_path_owned: ?[]u8,
     terminal_cell_width: f32,
     terminal_cell_height: f32,
+    terminal_font_size: f32,
+    terminal_base_font_size: f32,
     terminal_metrics: ScaledFontMetrics,
     terminal_font: TerminalFont,
+    terminal_font_path: [*:0]const u8,
+    terminal_font_path_owned: ?[]u8,
     terminal_disable_ligatures: TerminalDisableLigaturesStrategy,
     terminal_font_features_raw: ?[]u8,
     terminal_font_features: std.ArrayListUnmanaged(hb.hb_feature_t),
@@ -377,8 +397,6 @@ pub const Renderer = struct {
     editor_font_features: std.ArrayListUnmanaged(hb.hb_feature_t),
     font_rendering: FontRenderingOptions,
     font_cache: std.AutoHashMap(u32, *TerminalFont),
-    font_path: [*:0]const u8,
-    font_path_owned: ?[]u8,
 
     terminal_target: ?RenderTarget,
     terminal_scroll_target: ?RenderTarget,
@@ -454,6 +472,21 @@ pub const Renderer = struct {
         return @as(f32, @floatFromInt(@as(i32, @intFromFloat(std.math.round(value * scale))))) / scale;
     }
 
+    const OwnedFontPath = struct {
+        path: [*:0]const u8,
+        owned: ?[]u8,
+    };
+
+    fn dupFontPath(allocator: std.mem.Allocator, raw_opt: ?[]const u8) !OwnedFontPath {
+        if (raw_opt) |raw| {
+            const owned = try allocator.alloc(u8, raw.len + 1);
+            std.mem.copyForwards(u8, owned[0..raw.len], raw);
+            owned[raw.len] = 0;
+            return .{ .path = @ptrCast(owned.ptr), .owned = owned };
+        }
+        return .{ .path = FONT_PATH, .owned = null };
+    }
+
     pub fn init(allocator: std.mem.Allocator, width: i32, height: i32, title: [*:0]const u8, init_options: InitOptions) !*Renderer {
         try window_init.initSdl();
         errdefer sdl.SDL_Quit();
@@ -477,20 +510,20 @@ pub const Renderer = struct {
             .last_update = -1000.0,
         };
         const ui_scale = scale_utils.queryUiScale(allocator, display_metrics.dpi, 0.0, &wayland_scale);
-        const base_font_size = if (init_options.base_font_size > 0.0) init_options.base_font_size else 16.0;
+        const base_font_size = if (init_options.app_font_size > 0.0) init_options.app_font_size else 16.0;
+        const editor_base_font_size = if (init_options.editor_font_size) |value| if (value > 0.0) value else base_font_size else base_font_size;
+        const terminal_base_font_size = if (init_options.terminal_font_size) |value| if (value > 0.0) value else base_font_size else base_font_size;
         const font_size = base_font_size * ui_scale;
+        const editor_font_size = editor_base_font_size * ui_scale;
+        const terminal_font_size = terminal_base_font_size * ui_scale;
         const render_scale = display_metrics.render_scale;
         const terminal_shape_buffer = hb.hb_buffer_create() orelse return error.OutOfMemory;
-        var font_path_owned: ?[]u8 = null;
-        var font_path: [*:0]const u8 = FONT_PATH;
-        if (init_options.font_path) |raw| {
-            const owned = try allocator.alloc(u8, raw.len + 1);
-            std.mem.copyForwards(u8, owned[0..raw.len], raw);
-            owned[raw.len] = 0;
-            font_path_owned = owned;
-            font_path = @ptrCast(owned.ptr);
-        }
-        errdefer if (font_path_owned) |owned| allocator.free(owned);
+        const app_font_path = try dupFontPath(allocator, init_options.app_font_path);
+        errdefer if (app_font_path.owned) |owned| allocator.free(owned);
+        const editor_font_path = try dupFontPath(allocator, init_options.editor_font_path orelse init_options.app_font_path);
+        errdefer if (editor_font_path.owned) |owned| allocator.free(owned);
+        const terminal_font_path = try dupFontPath(allocator, init_options.terminal_font_path orelse init_options.app_font_path);
+        errdefer if (terminal_font_path.owned) |owned| allocator.free(owned);
 
         renderer.* = .{
             .allocator = allocator,
@@ -530,6 +563,28 @@ pub const Renderer = struct {
             .base_font_size = base_font_size,
             .char_width = font_size * 0.6,
             .char_height = font_size * 1.2,
+            .app_font = undefined,
+            .app_metrics = .{
+                .ascent = font_size,
+                .descent = font_size * 0.2,
+                .line_height = font_size * 1.2,
+                .cell_width = font_size * 0.6,
+                .cell_height = font_size * 1.2,
+                .baseline_from_top = font_size,
+            },
+            .editor_font_size = editor_font_size,
+            .editor_base_font_size = editor_base_font_size,
+            .editor_char_width = editor_font_size * 0.6,
+            .editor_char_height = editor_font_size * 1.2,
+            .editor_metrics = .{
+                .ascent = editor_font_size,
+                .descent = editor_font_size * 0.2,
+                .line_height = editor_font_size * 1.2,
+                .cell_width = editor_font_size * 0.6,
+                .cell_height = editor_font_size * 1.2,
+                .baseline_from_top = editor_font_size,
+            },
+            .editor_font = undefined,
             .icon_font = undefined,
             .icon_font_size = font_size * 2.0,
             .icon_char_width = font_size * 1.2,
@@ -542,17 +597,25 @@ pub const Renderer = struct {
                 .cell_height = font_size * 1.2,
                 .baseline_from_top = font_size,
             },
-            .terminal_cell_width = font_size * 0.6,
-            .terminal_cell_height = font_size * 1.2,
+            .app_font_path = app_font_path.path,
+            .app_font_path_owned = app_font_path.owned,
+            .editor_font_path = editor_font_path.path,
+            .editor_font_path_owned = editor_font_path.owned,
+            .terminal_cell_width = terminal_font_size * 0.6,
+            .terminal_cell_height = terminal_font_size * 1.2,
+            .terminal_font_size = terminal_font_size,
+            .terminal_base_font_size = terminal_base_font_size,
             .terminal_metrics = .{
-                .ascent = font_size,
-                .descent = font_size * 0.2,
-                .line_height = font_size * 1.2,
-                .cell_width = font_size * 0.6,
-                .cell_height = font_size * 1.2,
-                .baseline_from_top = font_size,
+                .ascent = terminal_font_size,
+                .descent = terminal_font_size * 0.2,
+                .line_height = terminal_font_size * 1.2,
+                .cell_width = terminal_font_size * 0.6,
+                .cell_height = terminal_font_size * 1.2,
+                .baseline_from_top = terminal_font_size,
             },
             .terminal_font = undefined,
+            .terminal_font_path = terminal_font_path.path,
+            .terminal_font_path_owned = terminal_font_path.owned,
             .terminal_disable_ligatures = .never,
             .terminal_font_features_raw = null,
             .terminal_font_features = .{},
@@ -561,8 +624,6 @@ pub const Renderer = struct {
             .editor_font_features = .{},
             .font_rendering = init_options.font_rendering,
             .font_cache = std.AutoHashMap(u32, *TerminalFont).init(allocator),
-            .font_path = font_path,
-            .font_path_owned = font_path_owned,
             .terminal_target = null,
             .terminal_scroll_target = null,
             .editor_target = null,
@@ -628,7 +689,7 @@ pub const Renderer = struct {
         }
 
         try renderer.initGlResources();
-        try renderer.initFonts(font_size);
+        try renderer.initFonts();
 
         sdl_api.startTextInput(window);
         try renderer.initInputThread();
@@ -655,6 +716,8 @@ pub const Renderer = struct {
         }
         self.font_cache.deinit();
 
+        self.app_font.deinit();
+        self.editor_font.deinit();
         self.terminal_font.deinit();
         self.icon_font.deinit();
         if (self.terminal_font_features_raw) |owned| {
@@ -667,9 +730,17 @@ pub const Renderer = struct {
             self.editor_font_features_raw = null;
         }
         self.editor_font_features.deinit(self.allocator);
-        if (self.font_path_owned) |owned| {
+        if (self.app_font_path_owned) |owned| {
             self.allocator.free(owned);
-            self.font_path_owned = null;
+            self.app_font_path_owned = null;
+        }
+        if (self.editor_font_path_owned) |owned| {
+            self.allocator.free(owned);
+            self.editor_font_path_owned = null;
+        }
+        if (self.terminal_font_path_owned) |owned| {
+            self.allocator.free(owned);
+            self.terminal_font_path_owned = null;
         }
 
         self.key_queue.deinit(self.allocator);
@@ -714,16 +785,16 @@ pub const Renderer = struct {
         try gl_backend.initGlResources(self);
     }
 
-    fn initFonts(self: *Renderer, size: f32) !void {
-        try font_manager.initFonts(self, size);
+    fn initFonts(self: *Renderer) !void {
+        try font_manager.initFonts(self);
     }
 
     pub fn loadFont(self: *Renderer, path: [*:0]const u8, size: f32) void {
         font_manager.loadFont(self, path, size);
     }
 
-    pub fn setFontConfig(self: *Renderer, path: ?[]const u8, size: ?f32) !void {
-        try font_manager.setFontConfig(self, path, size);
+    pub fn setFontConfig(self: *Renderer, app_path: ?[]const u8, app_size: ?f32, editor_path: ?[]const u8, editor_size: ?f32, terminal_path: ?[]const u8, terminal_size: ?f32) !void {
+        try font_manager.setFontConfig(self, app_path, app_size, editor_path, editor_size, terminal_path, terminal_size);
     }
 
     pub fn setFontRenderingOptions(self: *Renderer, opts: FontRenderingOptions) void {
@@ -858,6 +929,14 @@ pub const Renderer = struct {
 
     pub fn baseFontSize(self: *const Renderer) f32 {
         return self.base_font_size;
+    }
+
+    pub fn editorBaseFontSize(self: *const Renderer) f32 {
+        return self.editor_base_font_size;
+    }
+
+    pub fn terminalBaseFontSize(self: *const Renderer) f32 {
+        return self.terminal_base_font_size;
     }
 
     pub fn renderScaleFactor(self: *const Renderer) f32 {

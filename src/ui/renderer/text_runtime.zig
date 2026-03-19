@@ -71,7 +71,7 @@ pub fn drawText(self: *Renderer, text: []const u8, x: f32, y: f32, color: Color)
     const prev = self.text_bg_rgba;
     defer self.text_bg_rgba = prev;
     self.text_bg_rgba = .{ .r = 0, .g = 0, .b = 0, .a = 0 };
-    drawTextWithFont(self, &self.terminal_font, self.terminal_metrics, text, x, y, color, false);
+    drawTextWithFont(self, &self.app_font, self.app_metrics, text, x, y, color, false);
 }
 
 pub fn drawTextMonospace(self: *Renderer, text: []const u8, x: f32, y: f32, color: Color) void {
@@ -82,7 +82,7 @@ pub fn drawTextMonospacePolicy(self: *Renderer, text: []const u8, x: f32, y: f32
     const prev = self.text_bg_rgba;
     defer self.text_bg_rgba = prev;
     self.text_bg_rgba = .{ .r = 0, .g = 0, .b = 0, .a = 0 };
-    drawTextWithFontMonospace(self, &self.terminal_font, self.terminal_metrics, text, x, y, color, disable_programming_ligatures, false);
+    drawTextWithFontMonospace(self, &self.editor_font, self.editor_metrics, text, x, y, color, disable_programming_ligatures, false);
 }
 
 pub fn drawTextMonospaceOnBg(self: *Renderer, text: []const u8, x: f32, y: f32, color: Color, bg: Color) void {
@@ -95,14 +95,14 @@ pub fn drawTextMonospaceOnBgPolicy(self: *Renderer, text: []const u8, x: f32, y:
     var bg_rgba = bg.toRgba();
     bg_rgba.a = 255;
     self.text_bg_rgba = bg_rgba;
-    drawTextWithFontMonospace(self, &self.terminal_font, self.terminal_metrics, text, x, y, color, disable_programming_ligatures, false);
+    drawTextWithFontMonospace(self, &self.editor_font, self.editor_metrics, text, x, y, color, disable_programming_ligatures, false);
 }
 
 pub fn drawTextMonospaceStyledPolicy(self: *Renderer, text: []const u8, x: f32, y: f32, color: Color, disable_programming_ligatures: bool, italic: bool) void {
     const prev = self.text_bg_rgba;
     defer self.text_bg_rgba = prev;
     self.text_bg_rgba = .{ .r = 0, .g = 0, .b = 0, .a = 0 };
-    drawTextWithFontMonospace(self, &self.terminal_font, self.terminal_metrics, text, x, y, color, disable_programming_ligatures, italic);
+    drawTextWithFontMonospace(self, &self.editor_font, self.editor_metrics, text, x, y, color, disable_programming_ligatures, italic);
 }
 
 pub fn drawTextMonospaceOnBgStyledPolicy(self: *Renderer, text: []const u8, x: f32, y: f32, color: Color, bg: Color, disable_programming_ligatures: bool, italic: bool) void {
@@ -111,7 +111,7 @@ pub fn drawTextMonospaceOnBgStyledPolicy(self: *Renderer, text: []const u8, x: f
     var bg_rgba = bg.toRgba();
     bg_rgba.a = 255;
     self.text_bg_rgba = bg_rgba;
-    drawTextWithFontMonospace(self, &self.terminal_font, self.terminal_metrics, text, x, y, color, disable_programming_ligatures, italic);
+    drawTextWithFontMonospace(self, &self.editor_font, self.editor_metrics, text, x, y, color, disable_programming_ligatures, italic);
 }
 
 pub fn drawTextOnBg(self: *Renderer, text: []const u8, x: f32, y: f32, color: Color, bg: Color) void {
@@ -120,7 +120,7 @@ pub fn drawTextOnBg(self: *Renderer, text: []const u8, x: f32, y: f32, color: Co
     var bg_rgba = bg.toRgba();
     bg_rgba.a = 255;
     self.text_bg_rgba = bg_rgba;
-    drawTextWithFont(self, &self.terminal_font, self.terminal_metrics, text, x, y, color, false);
+    drawTextWithFont(self, &self.app_font, self.app_metrics, text, x, y, color, false);
 }
 
 pub fn drawTextSized(self: *Renderer, text: []const u8, x: f32, y: f32, size: f32, color: Color) void {

@@ -207,6 +207,14 @@ pub const Shell = struct {
         return self.renderer.char_height;
     }
 
+    pub fn editorCharWidth(self: *Shell) f32 {
+        return self.renderer.editor_char_width;
+    }
+
+    pub fn editorCharHeight(self: *Shell) f32 {
+        return self.renderer.editor_char_height;
+    }
+
     pub fn iconCharHeight(self: *Shell) f32 {
         return self.renderer.icon_char_height;
     }
