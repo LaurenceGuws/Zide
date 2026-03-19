@@ -27,6 +27,7 @@ fn requireTreeSitter(ctx: app_types.AppLinkContext) *std.Build.Step.Compile {
 
 fn linkTextStack(
     step: *std.Build.Step.Compile,
+    target_os: std.Target.Os.Tag,
     freetype_lib: ?*std.Build.Step.Compile,
     harfbuzz_lib: ?*std.Build.Step.Compile,
 ) void {
@@ -40,7 +41,7 @@ fn linkTextStack(
     } else {
         step.linkSystemLibrary("harfbuzz");
     }
-    step.linkSystemLibrary("z");
+    step.linkSystemLibrary(if (target_os == .windows) "zlib" else "z");
 }
 
 fn addTextStackIncludes(
@@ -108,8 +109,8 @@ pub fn configureSdlTestTarget(
         step.addIncludePath(.{ .cwd_relative = ctx.vcpkg_include.? });
     }
     linkSdl3(step, ctx.sdl_lib);
-    if (profile.include_text_stack) linkTextStack(step, ctx.freetype_lib, ctx.harfbuzz_lib);
-    if (profile.include_lua) linkLua(step, ctx.lua_lib);
+    if (profile.include_text_stack) linkTextStack(step, ctx.target_os, ctx.freetype_lib, ctx.harfbuzz_lib);
+    if (profile.include_lua and ctx.lua_lib != null) linkLua(step, ctx.lua_lib);
     if (profile.include_fontconfig and ctx.target_os == .linux) {
         step.linkSystemLibrary("fontconfig");
     }
@@ -122,7 +123,7 @@ pub fn configureSdlTestTarget(
         if (profile.include_text_stack) {
             addTextStackIncludes(step, ctx.use_vcpkg, ctx.target_os, ctx.freetype_lib, ctx.harfbuzz_lib);
         }
-        if (profile.include_lua) {
+        if (profile.include_lua and ctx.lua_lib != null) {
             addLuaIncludes(step, ctx.lua_lib);
         }
     }
@@ -143,9 +144,9 @@ pub fn configureAppExecutable(
         exe.addIncludePath(.{ .cwd_relative = ctx.vcpkg_include.? });
     }
     if (profile.include_text_stack) {
-        linkTextStack(exe, ctx.freetype_lib, ctx.harfbuzz_lib);
+        linkTextStack(exe, ctx.target_os, ctx.freetype_lib, ctx.harfbuzz_lib);
     }
-    if (profile.include_lua) {
+    if (profile.include_lua and ctx.lua_lib != null) {
         linkLua(exe, ctx.lua_lib);
     }
     linkSdl3(exe, ctx.sdl_lib);
@@ -158,7 +159,7 @@ pub fn configureAppExecutable(
         if (profile.include_text_stack) {
             addTextStackIncludes(exe, ctx.use_vcpkg, ctx.target_os, ctx.freetype_lib, ctx.harfbuzz_lib);
         }
-        if (profile.include_lua) {
+        if (profile.include_lua and ctx.lua_lib != null) {
             addLuaIncludes(exe, ctx.lua_lib);
         }
     }

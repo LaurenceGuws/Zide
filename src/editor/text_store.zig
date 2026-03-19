@@ -99,8 +99,10 @@ pub const TextStore = struct {
 
     pub fn deinit(self: *TextStore) void {
         self.rope.deinit();
-        if (self.mapped_original) |mapped| {
-            std.posix.munmap(mapped);
+        if (builtin.os.tag != .windows) {
+            if (self.mapped_original) |mapped| {
+                std.posix.munmap(mapped);
+            }
         }
         self.allocator.destroy(self);
     }

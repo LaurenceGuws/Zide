@@ -10,6 +10,22 @@ const Shell = app_shell.Shell;
 const TerminalSession = terminal_mod.TerminalSession;
 const TerminalWidget = widgets.TerminalWidget;
 
+const win32 = if (@import("builtin").os.tag == .windows) struct {
+    pub extern "kernel32" fn SetEnvironmentVariableA(lpName: [*:0]const u8, lpValue: ?[*:0]const u8) callconv(.winapi) i32;
+} else struct {};
+
+fn setLaunchCwdEnv(value: ?[*:0]const u8) void {
+    if (@import("builtin").os.tag == .windows) {
+        _ = win32.SetEnvironmentVariableA("ZIDE_LAUNCH_CWD", value);
+    } else {
+        if (value) |v| {
+            _ = c.setenv("ZIDE_LAUNCH_CWD", v, 1);
+        } else {
+            _ = c.unsetenv("ZIDE_LAUNCH_CWD");
+        }
+    }
+}
+
 pub fn startSessionWithShellCellSize(term: *TerminalSession, shell: *Shell, launch_cwd: ?[]const u8) !void {
     term.setCellSize(
         @intFromFloat(shell.terminalCellWidth()),
@@ -26,18 +42,18 @@ pub fn startSessionWithShellCellSize(term: *TerminalSession, shell: *Shell, laun
     defer if (previous_launch_cwd) |value| term.allocator.free(value);
     defer {
         if (previous_launch_cwd) |value| {
-            _ = c.setenv("ZIDE_LAUNCH_CWD", value.ptr, 1);
+            setLaunchCwdEnv(value.ptr);
         } else {
-            _ = c.unsetenv("ZIDE_LAUNCH_CWD");
+            setLaunchCwdEnv(null);
         }
     }
 
     if (launch_cwd) |cwd| {
         const z_cwd = try term.allocator.dupeZ(u8, cwd);
         defer term.allocator.free(z_cwd);
-        _ = c.setenv("ZIDE_LAUNCH_CWD", z_cwd.ptr, 1);
+        setLaunchCwdEnv(z_cwd.ptr);
     } else {
-        _ = c.unsetenv("ZIDE_LAUNCH_CWD");
+        setLaunchCwdEnv(null);
     }
 
     try term.start(if (shell_override) |value| value else null);

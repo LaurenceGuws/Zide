@@ -1,5 +1,9 @@
 const std = @import("std");
 
+fn configureWindowsLinker(step: *std.Build.Step.Compile) void {
+    _ = step;
+}
+
 pub fn addReportBuildAllStep(
     b: *std.Build,
     deps: []const *std.Build.Step,
@@ -25,6 +29,7 @@ pub fn addReportBuildProfilesStep(
             .optimize = optimize,
         }),
     });
+    configureWindowsLinker(exe);
     exe.root_module.addAnonymousImport("target_profile", .{
         .root_source_file = b.path("build_utils/target_profile.zig"),
         .target = target,
@@ -53,6 +58,7 @@ pub fn addReportBuildModeStep(
             .optimize = optimize,
         }),
     });
+    configureWindowsLinker(exe);
     exe.root_module.addOptions("build_options", build_options);
     const run = b.addRunArtifact(exe);
     const step = b.step(
@@ -77,6 +83,7 @@ pub fn addReportBuildBootstrapStep(
             .optimize = optimize,
         }),
     });
+    configureWindowsLinker(exe);
     exe.root_module.addOptions("build_options", build_options);
     const run = b.addRunArtifact(exe);
     const step = b.step(
@@ -101,6 +108,7 @@ pub fn addReportBuildFocusedPolicyStep(
             .optimize = optimize,
         }),
     });
+    configureWindowsLinker(exe);
     exe.root_module.addOptions("build_options", build_options);
     const run = b.addRunArtifact(exe);
     const step = b.step(
@@ -125,6 +133,7 @@ pub fn addReportBuildTargetStep(
             .optimize = optimize,
         }),
     });
+    configureWindowsLinker(exe);
     exe.root_module.addOptions("build_options", build_options);
     const run = b.addRunArtifact(exe);
     const step = b.step(
@@ -154,6 +163,7 @@ pub fn addCheckBuildReportToolsStep(
             .optimize = optimize,
         }),
     });
+    configureWindowsLinker(mode_report);
     mode_report.root_module.addOptions("build_options", build_options);
     step.dependOn(&mode_report.step);
 
@@ -165,6 +175,7 @@ pub fn addCheckBuildReportToolsStep(
             .optimize = optimize,
         }),
     });
+    configureWindowsLinker(bootstrap_report);
     bootstrap_report.root_module.addOptions("build_options", build_options);
     step.dependOn(&bootstrap_report.step);
 
@@ -176,6 +187,7 @@ pub fn addCheckBuildReportToolsStep(
             .optimize = optimize,
         }),
     });
+    configureWindowsLinker(focused_policy);
     focused_policy.root_module.addOptions("build_options", build_options);
     step.dependOn(&focused_policy.step);
 
@@ -187,6 +199,7 @@ pub fn addCheckBuildReportToolsStep(
             .optimize = optimize,
         }),
     });
+    configureWindowsLinker(target_report);
     target_report.root_module.addOptions("build_options", build_options);
     step.dependOn(&target_report.step);
 

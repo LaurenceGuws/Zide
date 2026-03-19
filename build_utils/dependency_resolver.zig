@@ -1,10 +1,15 @@
 const std = @import("std");
 
+fn configureWindowsLinker(step: *std.Build.Step.Compile, target: std.Build.ResolvedTarget) void {
+    _ = step;
+    _ = target;
+}
+
 pub const BuildDependencies = struct {
     treesitter: ?*std.Build.Step.Compile,
     sdl_lib: *std.Build.Step.Compile,
     zlua_module: *std.Build.Module,
-    lua_lib: *std.Build.Step.Compile,
+    lua_lib: ?*std.Build.Step.Compile,
     freetype_lib: ?*std.Build.Step.Compile,
     harfbuzz_lib: ?*std.Build.Step.Compile,
 };
@@ -24,19 +29,21 @@ pub fn resolveDependencies(
     else
         null;
     const treesitter = if (tree_sitter_dep) |dep| dep.artifact("tree-sitter") else null;
+    if (treesitter) |lib| configureWindowsLinker(lib, target);
 
     const sdl_dep = b.dependency("sdl", .{
         .target = target,
         .optimize = optimize,
     });
     const sdl_lib = sdl_dep.artifact("SDL3");
+    configureWindowsLinker(sdl_lib, target);
 
     const zlua_dep = b.dependency("zlua", .{
         .target = target,
         .optimize = optimize,
     });
     const zlua_module = zlua_dep.module("zlua");
-    const lua_lib = zlua_dep.artifact("lua");
+    const lua_lib: ?*std.Build.Step.Compile = null;
 
     const freetype_dep = if (!use_vcpkg)
         b.dependency("freetype", .{
@@ -61,6 +68,8 @@ pub fn resolveDependencies(
 
     const freetype_lib: ?*std.Build.Step.Compile = if (freetype_dep) |dep| dep.artifact("freetype") else null;
     const harfbuzz_lib: ?*std.Build.Step.Compile = if (harfbuzz_dep) |dep| dep.artifact("harfbuzz") else null;
+    if (freetype_lib) |lib| configureWindowsLinker(lib, target);
+    if (harfbuzz_lib) |lib| configureWindowsLinker(lib, target);
 
     return .{
         .treesitter = treesitter,

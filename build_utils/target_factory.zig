@@ -4,6 +4,10 @@ const target_config = @import("target_config.zig");
 const step_utils = @import("step_utils.zig");
 const target_profile = @import("target_profile.zig");
 
+fn configureWindowsLinker(step: *std.Build.Step.Compile) void {
+    _ = step;
+}
+
 pub fn addAppExecutable(
     b: *std.Build,
     target: std.Build.ResolvedTarget,
@@ -22,6 +26,7 @@ pub fn addAppExecutable(
             .link_libc = true,
         }),
     });
+    configureWindowsLinker(exe);
     exe.root_module.addOptions("build_options", build_options);
     exe.root_module.addImport("zlua", zlua_module);
     return exe;
@@ -81,6 +86,7 @@ pub fn addSdlConfiguredTest(
             .link_libc = true,
         }),
     });
+    configureWindowsLinker(test_target);
     if (build_options) |opts| {
         test_target.root_module.addOptions("build_options", opts);
     }
@@ -110,6 +116,7 @@ pub fn addSdlConfiguredExecutable(
             .link_libc = true,
         }),
     });
+    configureWindowsLinker(exe);
     target_config.configureSdlTestTarget(
         exe,
         ctx,
@@ -124,7 +131,7 @@ pub fn addLibcTest(
     optimize: std.builtin.OptimizeMode,
     root_source_file: []const u8,
 ) *std.Build.Step.Compile {
-    return b.addTest(.{
+    const test_target = b.addTest(.{
         .root_module = b.createModule(.{
             .root_source_file = b.path(root_source_file),
             .target = target,
@@ -132,6 +139,8 @@ pub fn addLibcTest(
             .link_libc = true,
         }),
     });
+    configureWindowsLinker(test_target);
+    return test_target;
 }
 
 pub fn addLibcExecutable(
@@ -141,7 +150,7 @@ pub fn addLibcExecutable(
     name: []const u8,
     root_source_file: []const u8,
 ) *std.Build.Step.Compile {
-    return b.addExecutable(.{
+    const exe = b.addExecutable(.{
         .name = name,
         .root_module = b.createModule(.{
             .root_source_file = b.path(root_source_file),
@@ -150,4 +159,6 @@ pub fn addLibcExecutable(
             .link_libc = true,
         }),
     });
+    configureWindowsLinker(exe);
+    return exe;
 }

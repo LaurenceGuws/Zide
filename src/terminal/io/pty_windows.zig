@@ -492,7 +492,7 @@ pub const Pty = struct {
     pub fn waitForData(self: *Pty, timeout_ms: i32) bool {
         if (self.hasData()) return true;
         if (timeout_ms <= 0) return false;
-        std.time.sleep(@as(u64, @intCast(timeout_ms)) * std.time.ns_per_ms);
+        std.Thread.sleep(@as(u64, @intCast(timeout_ms)) * std.time.ns_per_ms);
         return self.hasData();
     }
 

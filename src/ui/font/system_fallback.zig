@@ -6,7 +6,6 @@ const terminal_font = @import("../terminal_font.zig");
 const c = terminal_font.c;
 const FacePair = terminal_font.FacePair;
 const fc = terminal_font.fc;
-const windows_com_initialized = terminal_font.windows_com_initialized;
 const windows_dwrite = terminal_font.windows_dwrite;
 
 pub fn systemFallback(self: anytype, codepoint: u32) ?FacePair {
@@ -285,10 +284,10 @@ fn windowsSystemFallback(self: anytype, codepoint: u32) ?FacePair {
 }
 
 fn ensureWindowsComInit() bool {
-    if (windows_com_initialized.load(.acquire)) return true;
+    if (terminal_font.windows_com_initialized.load(.acquire)) return true;
     const hr = windows_dwrite.CoInitializeEx(null, windows_dwrite.COINIT_MULTITHREADED);
     if (hr >= 0 or hr == windows_dwrite.RPC_E_CHANGED_MODE) {
-        windows_com_initialized.store(true, .release);
+        terminal_font.windows_com_initialized.store(true, .release);
         return true;
     }
     return false;

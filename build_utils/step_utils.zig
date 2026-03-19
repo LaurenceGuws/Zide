@@ -1,5 +1,9 @@
 const std = @import("std");
 
+fn configureWindowsLinker(step: *std.Build.Step.Compile) void {
+    _ = step;
+}
+
 pub fn addRunStepForArtifact(
     b: *std.Build,
     install_step: *std.Build.Step,
@@ -80,6 +84,7 @@ pub fn addCheckExecutableStep(
             .optimize = optimize,
         }),
     });
+    configureWindowsLinker(exe);
     const run = b.addRunArtifact(exe);
     const step = b.step(step_name, description);
     step.dependOn(&run.step);
