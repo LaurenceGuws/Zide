@@ -92,6 +92,9 @@ Current implementation progress:
 - visible cache precompute logging now distinguishes highlight-running frames
   from layout/publication-only frames via `run_highlight`, which makes the
   remaining cadence work measurable without mixed-path noise
+- frame/runtime publication now happens early enough that the next visible
+  highlight batch can usually be scheduled in the same frame, tightening the
+  worker cadence without reintroducing inline execution
 
 ## Current Problem
 

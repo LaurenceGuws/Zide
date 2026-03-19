@@ -170,18 +170,21 @@ pub fn handle(
     if (editor.visibleHighlightNeedsRedraw()) {
         out.needs_redraw = true;
     }
+    const published_visible_highlights = editor.applyPendingVisibleHighlightResult(editor_render_cache);
+    if (published_visible_highlights) {
+        out.needs_redraw = true;
+    }
     const can_schedule_visible_work =
         !editor.visibleHighlightComputeInFlight() and
-        !editor.hasPendingVisibleHighlightRequest() and
-        !editor.hasPendingVisibleHighlightResult();
+        !editor.hasPendingVisibleHighlightRequest();
     const should_schedule_visible_work =
         visible_lines > 0 and
         can_schedule_visible_work and
         editor.shouldThrottleVisibleHighlightRange(start_line, end_line, view.highlight_epoch);
     const should_run_visible_precompute =
         out.needs_redraw or
-        should_schedule_visible_work or
-        editor.hasPendingVisibleHighlightResult();
+        published_visible_highlights or
+        should_schedule_visible_work;
     if (should_run_visible_precompute) {
         const scheduled_visible_highlights = app_editor_visible_caches_runtime.precompute(
             &widget,
@@ -194,9 +197,6 @@ pub fn handle(
             should_schedule_visible_work,
         );
         if (scheduled_visible_highlights) {
-            out.needs_redraw = true;
-        }
-        if (editor.applyPendingVisibleHighlightResult(editor_render_cache)) {
             out.needs_redraw = true;
         }
         if (editor.visibleHighlightWorkInFlight()) {

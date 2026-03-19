@@ -358,10 +358,10 @@ stack issue, not an isolated highlight bug:
       - visible cache precompute logging now distinguishes highlight-running
         frames from layout-only frames so worker/runtime cleanup can be judged
         against honest telemetry instead of mixed-path noise
-      - current Unicode repro shows stable worker progression and a clear
-        two-step cadence in the frame path: layout/publication frames
-        (`run_highlight=false`) interleave with actual scheduling frames
-        (`run_highlight=true`)
+      - current Unicode repro now shows tighter worker cadence: publication and
+        next-batch scheduling chain together in the same frame for the main
+        visible range, with only the final tail leaving one layout-only frame
+        after the last publish
       - visible precompute now follows a worker schedule contract instead of
         the old inline-publish contract
       - remaining runtime issue is frame-lane churn: while worker execution is
