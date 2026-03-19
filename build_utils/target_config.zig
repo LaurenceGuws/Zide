@@ -41,7 +41,9 @@ fn linkTextStack(
     } else {
         step.linkSystemLibrary("harfbuzz");
     }
-    if (freetype_lib == null or harfbuzz_lib == null) {
+    if (target_os != .windows) {
+        step.linkSystemLibrary("z");
+    } else if (freetype_lib == null or harfbuzz_lib == null) {
         step.linkSystemLibrary(if (target_os == .windows) "zlib" else "z");
     }
 }
