@@ -8,6 +8,8 @@ comptime {
 }
 
 pub const zide_focused_mode = focused_entry_runtime.AppMode.terminal;
+pub const zide_app_identity_name: [*:0]const u8 = "Zide Terminal";
+pub const zide_app_identity_id: [*:0]const u8 = "LaurenceGuws.Zide.Terminal";
 
 pub fn main() !void {
     try runner.runWithGpa(struct {

@@ -72,6 +72,20 @@ Native launch expectation:
 should all be built as Windows GUI-subsystem executables so Start Menu or shell
 launch does not create a companion console host window.
 
+Current Windows identity policy:
+
+- each launcher embeds real PE resources:
+  - icon
+  - file/product version
+  - file description/original filename metadata
+- each launcher sets an explicit Windows AppUserModelID at runtime
+- default identity set:
+  - `LaurenceGuws.Zide`
+  - `LaurenceGuws.Zide.Editor`
+  - `LaurenceGuws.Zide.Terminal`
+- SDL app name/app id defaults should match those launcher identities unless
+  explicitly overridden for debugging
+
 Current launcher expectation:
 
 - `zide.exe`, `zide-editor.exe`, and `zide-terminal.exe` all accept terminal
@@ -104,6 +118,11 @@ Current shortcut policy:
 - installed shortcuts are clean by default and rely on shared terminal config
 - if explicit launcher overrides are requested, all three Start Menu shortcuts
   should carry the same terminal args so IDE/editor terminals match
+- installed Start Menu shortcuts should also carry the matching
+  `AppUserModelID` for:
+  - `LaurenceGuws.Zide`
+  - `LaurenceGuws.Zide.Editor`
+  - `LaurenceGuws.Zide.Terminal`
 - Windows PTY launch must pass the resolved terminal cwd into
   `CreateProcessW(..., lpCurrentDirectory=...)` so installed launches do not
   fall back to `%LOCALAPPDATA%\\Programs\\Zide\\current`

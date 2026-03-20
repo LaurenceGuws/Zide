@@ -36,10 +36,10 @@ The current execution order is:
 - [x] Build produces a runnable `zig-out/bin/zide.exe` on Windows through the native Zig package-managed path.
 - [x] Windows native dependency policy matches Linux/macOS at the app/library layer.
 - [x] Windows ConPTY can spawn `cmd.exe` and pass a smoke test.
-- [ ] Editor text at fractional DPI is visually stable and competitive with native Windows apps.
-- [ ] Manual smoke coverage exists for editor-only, terminal-only, and default app mode on Windows.
-- [ ] Windows runtime/distribution flow is documented against the actual supported target policy.
-- [ ] Normal GUI launches on Windows do not create an attached console host window.
+- [x] Editor text at fractional DPI is visually stable and competitive enough for current Windows product work.
+- [x] Manual smoke coverage exists for editor-only, terminal-only, and default app mode on Windows.
+- [x] Windows runtime/distribution flow is documented against the actual supported target policy.
+- [x] Normal GUI launches on Windows do not create an attached console host window.
 
 ## Windows First-Class Fundamentals
 
@@ -117,6 +117,10 @@ The current execution order is:
     - text quality at 100/125/150/175/200/250/300%
     - resize/DPI move behavior
     - terminal spawn/input/exit
+  - 2026-03-20 local signoff:
+    - current Windows dev box manual coverage is accepted by the user for
+      IDE/editor/terminal launch, shell spawn/input/exit, and the active DPI
+      matrix exercised during the fractional-scaling fix lane
 
 - [ ] `WF-05` Do not start installer work until runtime quality is acceptable
   - Packaging/install docs should wait until:
@@ -212,6 +216,10 @@ The current execution order is:
 ### Phase 6 Quality of Life
 
 - [x] `W6-01` Add native Windows file dialogs
+- [x] `W6-02` Establish native Windows launcher identity
+  - real PE resource metadata is now embedded per launcher
+  - runtime AppUserModelID is now explicit per launcher
+  - SDL app name/app id defaults now follow the owning launcher identity
 
 ### Phase 7 Policy Cleanup
 
@@ -236,3 +244,57 @@ The current execution order is:
   - installer may still stamp explicit `--shell` / `--cwd` args when requested
   - Windows ConPTY launch now also passes the resolved cwd to
     `CreateProcessW`, so installed terminals do not open in the install root
+
+### Phase 9 Terminal-Only Native Chrome
+
+- [ ] `W9-01` Define the terminal-only Windows chrome contract before coding
+  - Scope:
+    - terminal-only mode should support two chrome policies:
+      - `native`: ordinary Windows frame/titlebar
+      - `integrated`: Zide terminal tab strip and drag region integrated into
+        one top titlebar band
+    - the first implementation target is Windows
+    - IDE/editor modes stay on the current non-integrated path until
+      terminal-only behavior is proven
+  - Non-goals for the first cut:
+    - no editor/IDE titlebar merge
+    - no cross-platform generic custom-chrome project
+    - no hidden coupling to the existing terminal tab width setting
+
+- [ ] `W9-02` Add a real config contract for terminal-only chrome mode
+  - Intended direction:
+    - `terminal.window_chrome.mode = "native" | "integrated"`
+  - Required interaction rules:
+    - `native` preserves the current content-row terminal tab bar behavior
+    - `integrated` is a compact titlebar-tab presentation and must not use the
+      current wide/fill behavior that consumes the whole row like content chrome
+    - if `terminal.tab_bar.width_mode` remains user-visible, runtime must
+      reject/normalize incompatible values under integrated mode or expose a
+      separate compact integrated-width policy
+
+- [ ] `W9-03` Establish the Windows titlebar/hit-test seam for terminal-only mode
+  - Required capabilities:
+    - draggable caption region
+    - native resize borders/corners
+    - minimize/maximize/close behavior
+    - correct maximized padding/insets
+  - The config surface should stay platform-capable; only the first runtime
+    implementation is Windows-specific
+
+- [ ] `W9-04` Merge terminal tabs into the titlebar band without preserving the old full-width tab-row assumption
+  - Current blocker:
+    - terminal-only layout still reserves a normal full-width tab row at `y=0`
+    - terminal defaults still prefer `terminal.tab_bar.width_mode = "dynamic"`
+    - that is incompatible with a Windows Terminal-like integrated titlebar
+      where tabs should read as compact chrome rather than stretched content
+      chips
+  - First-cut acceptance:
+    - integrated mode uses compact tab chips
+    - terminal content begins directly below the merged titlebar band
+    - tab drag/reorder/close behavior remains correct
+
+- [ ] `W9-05` Add manual signoff for both native and integrated terminal-only chrome
+  - Required manual checks:
+    - native mode launch, drag, maximize, resize, and tab behavior
+    - integrated mode launch, drag, maximize, resize, tab reorder, and close
+    - switching config between `native` and `integrated`

@@ -160,7 +160,8 @@ function Set-Shortcut {
         [string]$TargetPath,
         [string]$WorkingDirectory,
         [string]$IconPath,
-        [string]$Arguments
+        [string]$Arguments,
+        [string]$AppUserModelId
     )
 
     $shell = New-Object -ComObject WScript.Shell
@@ -172,6 +173,9 @@ function Set-Shortcut {
         $shortcut.IconLocation = $IconPath
     }
     $shortcut.Save()
+    if ($AppUserModelId) {
+        Set-ShortcutAppUserModelId -ShortcutPath $ShortcutPath -AppUserModelId $AppUserModelId
+    }
 }
 
 function Quote-ShortcutArgument {
@@ -193,6 +197,129 @@ function Build-LaunchArguments {
         $parts += "--cwd $(Quote-ShortcutArgument $LaunchCwd)"
     }
     return ($parts -join " ")
+}
+
+function Initialize-ShortcutAppUserModelInterop {
+    if ("Zide.ShortcutPropertyStore" -as [type]) {
+        return
+    }
+
+    Add-Type -TypeDefinition @"
+using System;
+using System.Runtime.InteropServices;
+
+namespace Zide {
+    [ComImport, Guid("00021401-0000-0000-C000-000000000046")]
+    public class ShellLink {}
+
+    [ComImport, InterfaceType(ComInterfaceType.InterfaceIsIUnknown), Guid("886D8EEB-8CF2-4446-8D02-CDBA1DBDCF99")]
+    public interface IPropertyStore {
+        uint GetCount(out uint cProps);
+        uint GetAt(uint iProp, out PROPERTYKEY pkey);
+        uint GetValue(ref PROPERTYKEY key, out PROPVARIANT pv);
+        uint SetValue(ref PROPERTYKEY key, ref PROPVARIANT pv);
+        uint Commit();
+    }
+
+    [ComImport, InterfaceType(ComInterfaceType.InterfaceIsIUnknown), Guid("0000010b-0000-0000-C000-000000000046")]
+    public interface IPersistFile {
+        void GetClassID(out Guid pClassID);
+        void IsDirty();
+        void Load([MarshalAs(UnmanagedType.LPWStr)] string pszFileName, uint dwMode);
+        void Save([MarshalAs(UnmanagedType.LPWStr)] string pszFileName, bool fRemember);
+        void SaveCompleted([MarshalAs(UnmanagedType.LPWStr)] string pszFileName);
+        void GetCurFile([MarshalAs(UnmanagedType.LPWStr)] out string ppszFileName);
+    }
+
+    [StructLayout(LayoutKind.Sequential, Pack = 4)]
+    public struct PROPERTYKEY {
+        public Guid fmtid;
+        public uint pid;
+
+        public PROPERTYKEY(Guid fmtid, uint pid) {
+            this.fmtid = fmtid;
+            this.pid = pid;
+        }
+    }
+
+    [StructLayout(LayoutKind.Sequential)]
+    public struct PROPVARIANT {
+        public ushort vt;
+        public ushort wReserved1;
+        public ushort wReserved2;
+        public ushort wReserved3;
+        public IntPtr pwszVal;
+        public int extra;
+
+        public static PROPVARIANT FromString(string value) {
+            var pv = new PROPVARIANT();
+            pv.vt = 31; // VT_LPWSTR
+            pv.pwszVal = Marshal.StringToCoTaskMemUni(value);
+            return pv;
+        }
+    }
+
+    public static class ShortcutPropertyStore {
+        private static readonly PROPERTYKEY AppUserModelIdKey =
+            new PROPERTYKEY(new Guid("9F4C2855-9F79-4B39-A8D0-E1D42DE1D5F3"), 5);
+
+        [DllImport("ole32.dll")]
+        private static extern int PropVariantClear(ref PROPVARIANT pvar);
+
+        public static void SetAppUserModelId(string shortcutPath, string appUserModelId) {
+            var persist = (IPersistFile)(new ShellLink());
+            persist.Load(shortcutPath, 2);
+            var store = (IPropertyStore)persist;
+            var value = PROPVARIANT.FromString(appUserModelId);
+            var key = AppUserModelIdKey;
+            try {
+                int hr = unchecked((int)store.SetValue(ref key, ref value));
+                if (hr != 0) Marshal.ThrowExceptionForHR(hr);
+                hr = unchecked((int)store.Commit());
+                if (hr != 0) Marshal.ThrowExceptionForHR(hr);
+                persist.Save(shortcutPath, true);
+            } finally {
+                PropVariantClear(ref value);
+            }
+        }
+
+        public static string GetAppUserModelId(string shortcutPath) {
+            var persist = (IPersistFile)(new ShellLink());
+            persist.Load(shortcutPath, 0);
+            var store = (IPropertyStore)persist;
+            var key = AppUserModelIdKey;
+            var value = new PROPVARIANT();
+            int hr = unchecked((int)store.GetValue(ref key, out value));
+            if (hr != 0) Marshal.ThrowExceptionForHR(hr);
+            try {
+                if (value.vt == 31 && value.pwszVal != IntPtr.Zero) {
+                    return Marshal.PtrToStringUni(value.pwszVal);
+                }
+                return null;
+            } finally {
+                PropVariantClear(ref value);
+            }
+        }
+    }
+}
+"@
+}
+
+function Set-ShortcutAppUserModelId {
+    param(
+        [string]$ShortcutPath,
+        [string]$AppUserModelId
+    )
+
+    Initialize-ShortcutAppUserModelInterop
+    [Zide.ShortcutPropertyStore]::SetAppUserModelId($ShortcutPath, $AppUserModelId)
+}
+
+function Get-ShortcutAppUserModelId {
+    param([string]$ShortcutPath)
+
+    Initialize-ShortcutAppUserModelInterop
+    return [Zide.ShortcutPropertyStore]::GetAppUserModelId($ShortcutPath)
 }
 
 if (-not $Version) {
@@ -293,9 +420,9 @@ try {
 
     if (-not $NoStartMenu) {
         New-Directory $startMenuDir
-        Set-Shortcut -ShortcutPath (Join-Path $startMenuDir "Zide.lnk") -TargetPath (Join-Path $currentRoot "zide.exe") -WorkingDirectory $currentRoot -IconPath $appIconIco -Arguments $shortcutArguments
-        Set-Shortcut -ShortcutPath (Join-Path $startMenuDir "Zide Editor.lnk") -TargetPath (Join-Path $currentRoot "zide-editor.exe") -WorkingDirectory $currentRoot -IconPath $appIconIco -Arguments $shortcutArguments
-        Set-Shortcut -ShortcutPath (Join-Path $startMenuDir "Zide Terminal.lnk") -TargetPath (Join-Path $currentRoot "zide-terminal.exe") -WorkingDirectory $currentRoot -IconPath $terminalIconIco -Arguments $shortcutArguments
+        Set-Shortcut -ShortcutPath (Join-Path $startMenuDir "Zide.lnk") -TargetPath (Join-Path $currentRoot "zide.exe") -WorkingDirectory $currentRoot -IconPath $appIconIco -Arguments $shortcutArguments -AppUserModelId "LaurenceGuws.Zide"
+        Set-Shortcut -ShortcutPath (Join-Path $startMenuDir "Zide Editor.lnk") -TargetPath (Join-Path $currentRoot "zide-editor.exe") -WorkingDirectory $currentRoot -IconPath $appIconIco -Arguments $shortcutArguments -AppUserModelId "LaurenceGuws.Zide.Editor"
+        Set-Shortcut -ShortcutPath (Join-Path $startMenuDir "Zide Terminal.lnk") -TargetPath (Join-Path $currentRoot "zide-terminal.exe") -WorkingDirectory $currentRoot -IconPath $terminalIconIco -Arguments $shortcutArguments -AppUserModelId "LaurenceGuws.Zide.Terminal"
     }
 
     if (-not $NoUninstallRegistration) {

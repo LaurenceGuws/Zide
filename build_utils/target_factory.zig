@@ -3,6 +3,7 @@ const app_types = @import("app_types.zig");
 const target_config = @import("target_config.zig");
 const step_utils = @import("step_utils.zig");
 const target_profile = @import("target_profile.zig");
+const windows_identity = @import("windows_identity.zig");
 
 fn configureWindowsLinker(step: *std.Build.Step.Compile) void {
     _ = step;
@@ -33,6 +34,7 @@ pub fn addAppExecutable(
         }),
     });
     configureWindowsLinker(exe);
+    windows_identity.configureExecutableResources(b, exe, target, name);
     exe.root_module.addOptions("build_options", build_options);
     exe.root_module.addImport("zlua", zlua_module);
     return exe;

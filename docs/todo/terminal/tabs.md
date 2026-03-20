@@ -52,6 +52,27 @@ Lower-layer ownership is in the right place: the backend workspace exists and te
   process basename. Presentation stays host-owned in the tab sync layer; the
   backend only exports raw process label plus compact command summary facts.
 
+### TABS-02A Terminal-Only Native Chrome Projection
+
+- [ ] `TABS-02A-01` Separate terminal tab ownership from terminal tab chrome policy
+  - The backend workspace remains the source of truth for tabs.
+  - Terminal-only presentation may now have more than one chrome projection:
+    - ordinary content-row tab bar
+    - integrated titlebar tab strip
+  - First implementation target:
+    - Windows native chrome integration
+
+- [ ] `TABS-02A-02` Stop assuming terminal tabs may always consume the full available row
+  - Current default `terminal.tab_bar.width_mode = "dynamic"` fits the
+    standalone content-row bar, but not an integrated titlebar strip.
+  - Integrated chrome must use compact tab presentation and should not stretch
+    tabs to fill the full bar like content chrome.
+
+- [ ] `TABS-02A-03` Keep tab drag/reorder/close semantics stable across both chrome projections
+  - The projection may change.
+  - Backend tab ids, active-tab behavior, close-confirm policy, and reorder
+    semantics must not change with the chrome mode.
+
 ### TABS-03 FFI Extension For Workspace/Tabs
 
 - [ ] `TABS-03-01` Extend the FFI design docs with the workspace and tab-id model.
