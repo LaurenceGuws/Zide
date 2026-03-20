@@ -17,6 +17,10 @@ fn mapTerminalNewTabStartLocationMode(mode: ?config_mod.TerminalNewTabStartLocat
     };
 }
 
+fn mapTerminalWindowChromeMode(mode: ?config_mod.TerminalWindowChromeMode) app_types.TerminalWindowChromeMode {
+    return mode orelse .native;
+}
+
 fn resolveTerminalDefaultStartLocation(
     allocator: std.mem.Allocator,
     configured: ?[]const u8,
@@ -287,6 +291,12 @@ pub fn handle(state: anytype, ctx: *anyopaque, hooks: Hooks) !void {
         log.logStdout(.info, "reload terminal.start_location default={s} new_tab={s}", .{
             state.terminal_default_start_location orelse "<unset>",
             @tagName(state.terminal_new_tab_start_location),
+        });
+    }
+    if (config.terminal_window_chrome_mode != null) {
+        state.terminal_window_chrome_mode = mapTerminalWindowChromeMode(config.terminal_window_chrome_mode);
+        log.logStdout(.info, "reload terminal.window_chrome.mode={s}", .{
+            @tagName(state.terminal_window_chrome_mode),
         });
     }
     if (config.terminal_tab_bar_show_single_tab != null) {

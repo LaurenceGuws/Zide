@@ -46,6 +46,11 @@ pub const TerminalNewTabStartLocationMode = enum {
     default,
 };
 
+pub const TerminalWindowChromeMode = enum {
+    native,
+    integrated,
+};
+
 pub const TabBarWidthMode = enum {
     fixed,
     dynamic,
@@ -157,6 +162,7 @@ pub const Config = struct {
     terminal_shell_path: ?[]u8,
     terminal_default_start_location: ?[]u8,
     terminal_new_tab_start_location: ?TerminalNewTabStartLocationMode,
+    terminal_window_chrome_mode: ?TerminalWindowChromeMode,
     terminal_scrollback_rows: ?usize,
     terminal_cursor_shape: ?term_types.CursorShape,
     terminal_cursor_blink: ?bool,

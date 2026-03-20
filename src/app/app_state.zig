@@ -41,6 +41,7 @@ pub const AppState = struct {
     terminal_shell_path: ?[]u8,
     terminal_default_start_location: ?[]u8,
     terminal_new_tab_start_location: t.TerminalNewTabStartLocationMode,
+    terminal_window_chrome_mode: t.TerminalWindowChromeMode,
     editor_tab_bar_width_mode: t.TabBar.WidthMode,
     terminal_tab_bar_show_single_tab: bool,
     terminal_tab_bar_width_mode: t.TabBar.WidthMode,

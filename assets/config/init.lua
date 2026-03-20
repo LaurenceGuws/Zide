@@ -412,6 +412,14 @@ return {
 			default = terminal_default_start_location,
 			new_tab = "current",
 		},
+		-- Terminal-only window chrome policy.
+		-- mode:
+		--   "native"      ordinary platform frame/titlebar (default)
+		--   "integrated"  integrated titlebar/tab strip contract
+		-- First native implementation target for "integrated" is Windows.
+		window_chrome = {
+			mode = "native",
+		},
 		-- Tab bar visibility in --mode terminal:
 		-- false: hide tab bar until there are 2+ tabs (default)
 		-- true: always show tab bar, even with a single tab

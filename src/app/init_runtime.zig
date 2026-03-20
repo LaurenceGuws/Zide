@@ -40,6 +40,10 @@ fn mapTerminalNewTabStartLocationMode(mode: ?config_mod.TerminalNewTabStartLocat
     };
 }
 
+fn mapTerminalWindowChromeMode(mode: ?config_mod.TerminalWindowChromeMode) app_types.TerminalWindowChromeMode {
+    return mode orelse .native;
+}
+
 fn resolveTerminalDefaultStartLocation(
     allocator: std.mem.Allocator,
     configured: ?[]const u8,
@@ -285,6 +289,7 @@ fn initWithMode(
         .terminal_shell_path = terminal_shell_path,
         .terminal_default_start_location = terminal_default_start_location,
         .terminal_new_tab_start_location = mapTerminalNewTabStartLocationMode(config.terminal_new_tab_start_location),
+        .terminal_window_chrome_mode = mapTerminalWindowChromeMode(config.terminal_window_chrome_mode),
         .editor_tab_bar_width_mode = app_tab_bar_width.mapMode(config.editor_tab_bar_width_mode),
         .terminal_tab_bar_show_single_tab = config.terminal_tab_bar_show_single_tab orelse false,
         .terminal_tab_bar_width_mode = app_tab_bar_width.mapMode(config.terminal_tab_bar_width_mode),

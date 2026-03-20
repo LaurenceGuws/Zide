@@ -80,6 +80,7 @@ pub const InputRouter = input_actions.InputRouter;
 pub const EditorMode = app_modes.backend.EditorMode;
 pub const TerminalMode = app_modes.backend.TerminalMode;
 pub const FontSampleView = font_sample_view_mod.FontSampleView;
+pub const TerminalWindowChromeMode = @import("../config/lua_config.zig").TerminalWindowChromeMode;
 pub const TerminalNewTabStartLocationMode = enum {
     current,
     default,

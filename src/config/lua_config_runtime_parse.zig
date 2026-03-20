@@ -8,6 +8,7 @@ const CursorShape = std.meta.Child(@TypeOf((@as(Config, undefined)).terminal_cur
 const TerminalBlinkStyle = std.meta.Child(@TypeOf((@as(Config, undefined)).terminal_blink_style));
 const LigatureStrategy = std.meta.Child(@TypeOf((@as(Config, undefined)).terminal_disable_ligatures));
 const TerminalNewTabStartLocationMode = std.meta.Child(@TypeOf((@as(Config, undefined)).terminal_new_tab_start_location));
+const TerminalWindowChromeMode = std.meta.Child(@TypeOf((@as(Config, undefined)).terminal_window_chrome_mode));
 const terminal_scrollback_default: usize = 1000;
 const terminal_scrollback_min: usize = 100;
 const terminal_scrollback_max: usize = 100000;
@@ -49,6 +50,12 @@ pub fn parseLigatureStrategyFromString(value: []const u8) ?LigatureStrategy {
 pub fn parseTerminalNewTabStartLocationModeFromString(value: []const u8) ?TerminalNewTabStartLocationMode {
     if (std.mem.eql(u8, value, "current")) return .current;
     if (std.mem.eql(u8, value, "default")) return .default;
+    return null;
+}
+
+pub fn parseTerminalWindowChromeModeFromString(value: []const u8) ?TerminalWindowChromeMode {
+    if (std.mem.eql(u8, value, "native")) return .native;
+    if (std.mem.eql(u8, value, "integrated")) return .integrated;
     return null;
 }
 

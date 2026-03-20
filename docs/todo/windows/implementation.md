@@ -211,7 +211,7 @@ The current execution order is:
 ### Phase 5 Tooling
 
 - [x] `W5-01` Make bootstrap and grammar-pack flows work on Windows
-  Grammar update can use `bash` when available; bootstrap also has a PowerShell path.
+  Grammar update now has a native PowerShell + Python path; bootstrap also has a PowerShell path.
 
 ### Phase 6 Quality of Life
 
@@ -247,7 +247,7 @@ The current execution order is:
 
 ### Phase 9 Terminal-Only Native Chrome
 
-- [ ] `W9-01` Define the terminal-only Windows chrome contract before coding
+- [x] `W9-01` Define the terminal-only Windows chrome contract before coding
   - Scope:
     - terminal-only mode should support two chrome policies:
       - `native`: ordinary Windows frame/titlebar
@@ -261,7 +261,7 @@ The current execution order is:
     - no cross-platform generic custom-chrome project
     - no hidden coupling to the existing terminal tab width setting
 
-- [ ] `W9-02` Add a real config contract for terminal-only chrome mode
+- [x] `W9-02` Add a real config contract for terminal-only chrome mode
   - Intended direction:
     - `terminal.window_chrome.mode = "native" | "integrated"`
   - Required interaction rules:
@@ -271,6 +271,10 @@ The current execution order is:
     - if `terminal.tab_bar.width_mode` remains user-visible, runtime must
       reject/normalize incompatible values under integrated mode or expose a
       separate compact integrated-width policy
+  - Current state:
+    - the config surface now exists in Lua defaults, parser, init, and reload
+    - the current cut is intentionally no-behavior-change; the first runtime
+      consumer is the upcoming Windows titlebar/hit-test implementation
 
 - [ ] `W9-03` Establish the Windows titlebar/hit-test seam for terminal-only mode
   - Required capabilities:

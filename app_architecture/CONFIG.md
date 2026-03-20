@@ -222,6 +222,7 @@ rendering, not schema preservation.
 |---|---|---|---|---|
 | `terminal.font.path` / `terminal.font.size` | Terminal font override | `src/app/init_runtime.zig`, `src/app/reload_config_runtime.zig` -> renderer font setup | `reloadable` | Drives terminal cell metrics directly; falls back field-by-field to `app.font` when unset. |
 | `terminal.shell.path` | Shared PTY shell/program path | `src/app/init_runtime.zig`, `src/app/reload_config_runtime.zig`, `src/app/new_terminal_runtime.zig` | `partial` | Applies immediately to future terminal sessions in IDE/editor/terminal modes; existing PTYs keep their current child process. CLI/launcher `--shell` still overrides it. |
+| `terminal.window_chrome.mode` | Terminal-only window chrome policy | `src/app/init_runtime.zig`, `src/app/reload_config_runtime.zig` | `partial` | Accepted values: `native`, `integrated`. Current cut is config/runtime-owned only; first visible native implementation target is Windows terminal-only mode. |
 | `terminal.disable_ligatures` | Terminal ligature strategy | `src/main.zig` -> renderer/terminal draw | `reloadable` | Current values: `never`, `cursor`, `always`. |
 | `terminal.font_features` | Terminal OpenType features | `src/main.zig` -> renderer/terminal draw | `reloadable` | |
 | `terminal.blink` | Cursor blink policy | `src/main.zig` -> terminal widget | `reloadable` | Preferred values: `kitty`, `off`. Boolean shorthand also accepted. |

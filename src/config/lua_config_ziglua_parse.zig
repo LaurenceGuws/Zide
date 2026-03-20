@@ -567,6 +567,21 @@ fn parseNativeScalarOverlay(allocator: std.mem.Allocator, lua: *zlua.Lua, table_
         }
         lua.pop(1);
 
+        _ = lua.getField(terminal_idx, "window_chrome");
+        if (lua.isTable(-1)) {
+            const window_chrome_idx = lua.absIndex(-1);
+            _ = lua.getField(window_chrome_idx, "mode");
+            if (lua.isString(-1)) {
+                if (lua.toString(-1)) |v| {
+                    if (lua_runtime_parse.parseTerminalWindowChromeModeFromString(v)) |mode| {
+                        out.terminal_window_chrome_mode = mode;
+                    }
+                } else |_| {}
+            }
+            lua.pop(1);
+        }
+        lua.pop(1);
+
         _ = lua.getField(terminal_idx, "selection_overlay");
         lua_runtime_parse.parseSelectionOverlayTable(lua, -1, &out, .terminal);
         lua.pop(1);
@@ -711,4 +726,27 @@ test "parseConfigFromLuaState parses terminal shell path" {
 
     try std.testing.expect(config.terminal_shell_path != null);
     try std.testing.expectEqualStrings("C:/Program Files/PowerShell/7/pwsh.exe", config.terminal_shell_path.?);
+}
+
+test "parseConfigFromLuaState parses terminal window chrome mode" {
+    const allocator = std.testing.allocator;
+    const lua = try zlua.Lua.init(allocator);
+    defer lua.deinit();
+    lua.openLibs();
+
+    try lua.loadString(
+        \\return {
+        \\    terminal = {
+        \\        window_chrome = {
+        \\            mode = "integrated",
+        \\        },
+        \\    },
+        \\}
+    );
+    try lua.protectedCall(.{ .args = 0, .results = 1 });
+
+    var config = try parseConfigFromLuaState(allocator, @ptrCast(lua));
+    defer lua_shared.freeConfig(allocator, &config);
+
+    try std.testing.expectEqual(@as(?iface.TerminalWindowChromeMode, .integrated), config.terminal_window_chrome_mode);
 }

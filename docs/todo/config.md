@@ -61,7 +61,7 @@ Current caveats:
 - [x] `CFG-02-01` Decide whether app, editor, and terminal fonts are truly separate
   Runtime now treats app chrome, editor text, and terminal text as separate font owners with field-by-field fallback to `app.font`.
 - [ ] `CFG-02-02` Make reload behavior explicit for every startup-applied field
-- [ ] `CFG-02-02D` Add an explicit terminal-only window chrome config surface
+- [x] `CFG-02-02D` Add an explicit terminal-only window chrome config surface
   - Intended direction:
     - `terminal.window_chrome.mode = "native" | "integrated"`
   - This must be documented with explicit interaction rules against
@@ -69,6 +69,10 @@ Current caveats:
     full-width dynamic tab behavior.
   - The config surface should not be Windows-only; Windows is just the first
     native implementation target.
+  - Current state:
+    - parser, defaults, init, and reload now own the field
+    - current cut is intentionally no-behavior-change; native chrome consumers
+      land in the next window-integration steps
 - [x] `CFG-02-02C` Add a shared terminal shell config surface
   `terminal.shell.path` is now parser/runtime-owned and applies to future PTY sessions across IDE/editor/terminal modes; explicit launcher/CLI `--shell` still overrides it.
 - [x] `CFG-02-02B` Make per-domain font path/size reloadable
