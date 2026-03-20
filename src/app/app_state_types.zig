@@ -2,6 +2,7 @@ const std = @import("std");
 const app_bootstrap = @import("bootstrap.zig");
 const mode_build = @import("mode_build.zig");
 const app_modes = @import("modes/mod.zig");
+const terminal_shell_icon_runtime = @import("terminal/terminal_shell_icon_runtime.zig");
 const editor_types = @import("../editor/types.zig");
 const app_logger = @import("../app_logger.zig");
 const terminal_mod = @import("../terminal/core/terminal.zig");
@@ -81,6 +82,8 @@ pub const EditorMode = app_modes.backend.EditorMode;
 pub const TerminalMode = app_modes.backend.TerminalMode;
 pub const FontSampleView = font_sample_view_mod.FontSampleView;
 pub const TerminalWindowChromeMode = @import("../config/lua_config.zig").TerminalWindowChromeMode;
+pub const TerminalShellIconMapping = @import("../config/lua_config.zig").TerminalShellIconMapping;
+pub const TerminalShellIconCache = terminal_shell_icon_runtime.ShellIconCache;
 pub const TerminalNewTabStartLocationMode = enum {
     current,
     default,

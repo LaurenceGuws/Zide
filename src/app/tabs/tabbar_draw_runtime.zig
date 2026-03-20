@@ -42,10 +42,22 @@ pub fn draw(state: anytype, shell: anytype, layout: layout_types.WidgetLayout, c
             );
             if (chrome.enabled) {
                 drawIntegratedBackground(shell, chrome.band, tab_theme.ui_bar_bg);
-                tab_tooltip = state.tab_bar.draw(shell, chrome.band.x, chrome.band.y, chrome.tab_strip_width);
+                tab_tooltip = state.tab_bar.drawWithIconProvider(
+                    shell,
+                    chrome.band.x,
+                    chrome.band.y,
+                    chrome.tab_strip_width,
+                    state.terminal_shell_icon_cache.iconProvider(),
+                );
                 drawIntegratedButtons(state, shell, chrome);
             } else {
-                tab_tooltip = state.tab_bar.draw(shell, layout.tab_bar.x, layout.tab_bar.y, layout.tab_bar.width);
+                tab_tooltip = state.tab_bar.drawWithIconProvider(
+                    shell,
+                    layout.tab_bar.x,
+                    layout.tab_bar.y,
+                    layout.tab_bar.width,
+                    state.terminal_shell_icon_cache.iconProvider(),
+                );
             }
         }
     }

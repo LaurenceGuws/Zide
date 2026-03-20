@@ -51,6 +51,11 @@ pub const TerminalWindowChromeMode = enum {
     integrated,
 };
 
+pub const TerminalShellIconMapping = struct {
+    shell: []u8,
+    icon_path: []u8,
+};
+
 pub const TabBarWidthMode = enum {
     fixed,
     dynamic,
@@ -175,6 +180,8 @@ pub const Config = struct {
     terminal_tab_bar_width_mode: ?TabBarWidthMode,
     terminal_focus_report_window: ?bool,
     terminal_focus_report_pane: ?bool,
+    terminal_tab_bar_show_shell_icon: ?bool,
+    terminal_tab_bar_shell_icons: ?[]TerminalShellIconMapping,
     font_lcd: ?bool,
     font_hinting: ?FontHinting,
     font_autohint: ?bool,

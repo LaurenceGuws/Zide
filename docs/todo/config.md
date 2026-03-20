@@ -36,6 +36,7 @@ Implemented today:
 - Editor and terminal ligature settings
 - Terminal cursor, blink, focus-reporting, and scrollback options
 - Shared terminal shell path and start-location defaults
+- Optional terminal tab shell-icon PNG mapping
 - Keybind routing with default-fill merge behavior
 
 Current caveats:
@@ -114,4 +115,3 @@ Current caveats:
 - [ ] `CFG-05-02` Add reload authority for every field classified as reloadable
 - [ ] `CFG-05-03` Keep defaults and docs synchronized as part of every config change
   Partial: the policy exists; the remaining work is enforcement.
-

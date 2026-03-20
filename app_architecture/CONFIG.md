@@ -236,6 +236,8 @@ rendering, not schema preservation.
 | `terminal.focus_reporting.window` | Window-focus CSI `?1004` gating | `src/main.zig` -> terminal widget | `reloadable` | |
 | `terminal.focus_reporting.pane` | Pane-focus CSI `?1004` gating | `src/main.zig` -> terminal widget | `reloadable` | |
 | `terminal.focus_reporting = true/false` | Shorthand for both focus sources | `src/config/lua_config.zig` | `reloadable` | Convenience form. |
+| `terminal.tab_bar.show_shell_icon` | Toggle per-shell tab image prefixes | `src/app/terminal/terminal_tab_bar_sync.zig`, `src/app/tabs/tabbar_draw_runtime.zig` | `reloadable` | `true` enables config-mapped PNG icons ahead of terminal tab labels. |
+| `terminal.tab_bar.shell_icons` | Shell path/basename/stem -> PNG path map | `src/config/lua_config.zig`, `src/app/terminal/terminal_shell_icon_runtime.zig` | `reloadable` | Runtime matches exact shell path first, then basename, then basename stem. PNG paths are config-owned; no built-in shell icon map exists yet. |
 
 ### `font_rendering`
 

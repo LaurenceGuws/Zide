@@ -51,6 +51,12 @@ Lower-layer ownership is in the right place: the backend workspace exists and te
   `codex resume --search ...` or `zig build test` instead of only the short
   process basename. Presentation stays host-owned in the tab sync layer; the
   backend only exports raw process label plus compact command summary facts.
+  Follow-up (2026-03-20): terminal tabs may now also project an optional
+  config-owned shell PNG ahead of the label. The shell identity is captured per
+  session at launch time, resolved to a PNG path through
+  `terminal.tab_bar.shell_icons`, and then drawn from a small runtime texture
+  cache. This stays presentation-owned; the backend exports shell identity, not
+  icon assets.
 
 ### TABS-02A Terminal-Only Native Chrome Projection
 

@@ -1,4 +1,6 @@
 const std = @import("std");
+const config_mod = @import("../../config/lua_config.zig");
+const app_terminal_shell_icon_runtime = @import("terminal_shell_icon_runtime.zig");
 const terminal_mod = @import("../../terminal/core/terminal.zig");
 const widgets = @import("../../ui/widgets.zig");
 
@@ -7,6 +9,7 @@ const TerminalTabLabelModel = struct {
     foreground_process_command: []const u8,
     foreground_process_label: []const u8,
     cwd: []const u8,
+    shell_path: []const u8,
     progress_state: terminal_mod.ProgressState,
     progress_value: ?u8,
 };
@@ -60,6 +63,7 @@ fn terminalTabLabelModel(entry: terminal_mod.TerminalTabSyncEntry, strings: []co
         .foreground_process_command = entry.foregroundProcessCommand(strings),
         .foreground_process_label = entry.foregroundProcessLabel(strings),
         .cwd = entry.cwd(strings),
+        .shell_path = entry.shellPath(strings),
         .progress_state = entry.progress_state,
         .progress_value = entry.progress_value,
     };
@@ -98,6 +102,8 @@ fn hasTabId(entries: []const terminal_mod.TerminalTabSyncEntry, tab_id: u64) boo
 pub fn syncFromWorkspace(
     tab_bar: *widgets.TabBar,
     terminal_workspace: *?terminal_mod.TerminalWorkspace,
+    show_shell_icon: bool,
+    shell_icons: ?[]const config_mod.TerminalShellIconMapping,
 ) !void {
     if (terminal_workspace.*) |*workspace| {
         var entry_buf = std.ArrayList(terminal_mod.TerminalTabSyncEntry).empty;
@@ -143,11 +149,18 @@ pub fn syncFromWorkspace(
                 &label_buf,
                 label_model,
             );
+            const icon_path = app_terminal_shell_icon_runtime.resolveIconPath(
+                show_shell_icon,
+                shell_icons,
+                label_model.shell_path,
+            );
             const tab_id = entry.id;
             if (tab_bar.indexOfTerminalTabId(tab_id)) |bar_idx| {
                 try tab_bar.setTabTitle(bar_idx, title);
+                try tab_bar.setTabIconPath(bar_idx, icon_path);
             } else {
                 try tab_bar.addTerminalTab(title, tab_id);
+                try tab_bar.setTabIconPath(tab_bar.tabs.items.len - 1, icon_path);
             }
         }
 

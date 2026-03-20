@@ -3,6 +3,7 @@ const app_logger = @import("../app_logger.zig");
 const app_shell = @import("../app_shell.zig");
 const app_font_rendering = @import("font_rendering.zig");
 const app_tab_bar_width = @import("tabs/tab_bar_width.zig");
+const app_terminal_shell_icon_runtime = @import("terminal/terminal_shell_icon_runtime.zig");
 const app_terminal_theme_apply = @import("terminal/terminal_theme_apply.zig");
 const app_theme_utils = @import("theme_utils.zig");
 const config_mod = @import("../config/lua_config.zig");
@@ -50,6 +51,20 @@ fn resolveTerminalShellPath(
     const raw = configured orelse return null;
     if (raw.len == 0) return null;
     return try allocator.dupe(u8, raw);
+}
+
+fn shellIconMappingsEqual(
+    a: ?[]const app_types.TerminalShellIconMapping,
+    b: ?[]const app_types.TerminalShellIconMapping,
+) bool {
+    const a_slice = a orelse return b == null;
+    const b_slice = b orelse return false;
+    if (a_slice.len != b_slice.len) return false;
+    for (a_slice, b_slice) |lhs, rhs| {
+        if (!std.mem.eql(u8, lhs.shell, rhs.shell)) return false;
+        if (!std.mem.eql(u8, lhs.icon_path, rhs.icon_path)) return false;
+    }
+    return true;
 }
 
 pub const Hooks = struct {
@@ -307,6 +322,28 @@ pub fn handle(state: anytype, ctx: *anyopaque, hooks: Hooks) !void {
         log.logStdout(.info, "reload terminal.tab_bar.show_single_tab={any}", .{
             state.terminal_tab_bar_show_single_tab,
         });
+    }
+    {
+        const next_show_shell_icon = config.terminal_tab_bar_show_shell_icon orelse state.terminal_tab_bar_show_shell_icon;
+        const next_shell_icons = try app_terminal_shell_icon_runtime.dupMappings(
+            state.allocator,
+            config.terminal_tab_bar_shell_icons,
+        );
+        const changed = next_show_shell_icon != state.terminal_tab_bar_show_shell_icon or
+            !shellIconMappingsEqual(state.terminal_tab_bar_shell_icons, next_shell_icons);
+        if (changed) {
+            state.terminal_tab_bar_show_shell_icon = next_show_shell_icon;
+            app_terminal_shell_icon_runtime.freeMappings(state.allocator, state.terminal_tab_bar_shell_icons);
+            state.terminal_tab_bar_shell_icons = next_shell_icons;
+            state.tab_bar.clearTabIcons();
+            state.terminal_shell_icon_cache.clear(state.shell.rendererPtr());
+            state.needs_redraw = true;
+            log.logStdout(.info, "reload terminal.tab_bar.show_shell_icon={any}", .{
+                state.terminal_tab_bar_show_shell_icon,
+            });
+        } else {
+            app_terminal_shell_icon_runtime.freeMappings(state.allocator, next_shell_icons);
+        }
     }
     if (config.editor_tab_bar_width_mode != null) {
         state.editor_tab_bar_width_mode = app_tab_bar_width.mapMode(config.editor_tab_bar_width_mode);

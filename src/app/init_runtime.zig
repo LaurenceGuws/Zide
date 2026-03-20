@@ -4,6 +4,7 @@ const build_options = @import("build_options");
 const mode_build = @import("mode_build.zig");
 const app_font_rendering = @import("font_rendering.zig");
 const app_theme_utils = @import("theme_utils.zig");
+const app_terminal_shell_icon_runtime = @import("terminal/terminal_shell_icon_runtime.zig");
 const app_ui_layout_runtime = @import("ui_layout_runtime.zig");
 const app_tab_bar_width = @import("tabs/tab_bar_width.zig");
 const app_modes = @import("modes/mod.zig");
@@ -249,6 +250,11 @@ fn initWithMode(
         config.terminal_shell_path,
     );
     errdefer if (terminal_shell_path) |path| allocator.free(path);
+    const terminal_tab_bar_shell_icons = try app_terminal_shell_icon_runtime.dupMappings(
+        allocator,
+        config.terminal_tab_bar_shell_icons,
+    );
+    errdefer app_terminal_shell_icon_runtime.freeMappings(allocator, terminal_tab_bar_shell_icons);
     const bootstrap_opts = app_modes.backend.bootstrap.BootstrapOptions{
         .seed_editor_tab = false,
         .seed_terminal_tab = false,
@@ -291,6 +297,9 @@ fn initWithMode(
         .terminal_new_tab_start_location = mapTerminalNewTabStartLocationMode(config.terminal_new_tab_start_location),
         .terminal_window_chrome_mode = mapTerminalWindowChromeMode(config.terminal_window_chrome_mode),
         .pressed_terminal_window_button = null,
+        .terminal_tab_bar_show_shell_icon = config.terminal_tab_bar_show_shell_icon orelse false,
+        .terminal_tab_bar_shell_icons = terminal_tab_bar_shell_icons,
+        .terminal_shell_icon_cache = app_terminal_shell_icon_runtime.ShellIconCache.init(allocator),
         .editor_tab_bar_width_mode = app_tab_bar_width.mapMode(config.editor_tab_bar_width_mode),
         .terminal_tab_bar_show_single_tab = config.terminal_tab_bar_show_single_tab orelse false,
         .terminal_tab_bar_width_mode = app_tab_bar_width.mapMode(config.terminal_tab_bar_width_mode),

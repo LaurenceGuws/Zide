@@ -257,6 +257,7 @@ pub const TerminalSession = struct {
     view_cache_request_offset: std.atomic.Value(u64),
     child_exited: std.atomic.Value(bool),
     child_exit_code: std.atomic.Value(i32),
+    launch_shell_path: ?[]u8,
 
     pub fn init(allocator: std.mem.Allocator, rows: u16, cols: u16) !*TerminalSession {
         return initWithOptions(allocator, rows, cols, .{});
@@ -345,6 +346,20 @@ pub const TerminalSession = struct {
 
     pub fn startNoThreads(self: *TerminalSession, shell: ?[:0]const u8) !void {
         try session_runtime.startNoThreads(self, shell);
+    }
+
+    pub fn setLaunchShellPath(self: *TerminalSession, shell_path: ?[]const u8) !void {
+        if (self.launch_shell_path) |old| {
+            self.allocator.free(old);
+            self.launch_shell_path = null;
+        }
+        if (shell_path) |path| {
+            self.launch_shell_path = try self.allocator.dupe(u8, path);
+        }
+    }
+
+    pub fn launchShellPath(self: *const TerminalSession) []const u8 {
+        return self.launch_shell_path orelse "";
     }
 
     pub fn attachExternalTransport(self: *TerminalSession) void {

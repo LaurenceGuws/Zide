@@ -432,9 +432,23 @@ return {
 		--   "label_length" label-aware widths normalized to fill bar
 		-- Note: integrated terminal chrome normalizes to a compact internal width
 		-- policy instead of stretching tabs across the whole titleband.
+		-- show_shell_icon:
+		--   false  no per-shell image prefix (default)
+		--   true   show a PNG icon when terminal.tab_bar.shell_icons has a match
+		-- shell_icons:
+		--   Lua table mapping shell path / basename / basename stem to a PNG path.
+		--   Examples:
+		--     ["C:/Program Files/PowerShell/7/pwsh.exe"] = "C:/Icons/pwsh.png"
+		--     ["pwsh.exe"] = "C:/Icons/pwsh.png"
+		--     bash = "assets/icon/bash.png"
 		tab_bar = {
 			show_single_tab = false,
+			show_shell_icon = false,
 			width_mode = "dynamic",
+			-- shell_icons = {
+			--     ["pwsh.exe"] = "C:/Icons/pwsh.png",
+			--     bash = "assets/icon/bash.png",
+			-- },
 		},
 		-- Cursor configuration.
 		-- Valid shapes: "block", "underline", "bar". Blink is boolean.

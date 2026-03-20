@@ -14,6 +14,7 @@ pub const Config = iface.Config;
 const EditorManualHighlightFallback = iface.EditorManualHighlightFallback;
 const EditorManualHighlightMode = iface.EditorManualHighlightMode;
 const EditorManualHighlightRule = iface.EditorManualHighlightRule;
+const TerminalShellIconMapping = iface.TerminalShellIconMapping;
 const ThemeConfig = iface.ThemeConfig;
 
 fn replaceOwnedString(allocator: std.mem.Allocator, slot: *?[]u8, value: ?[]u8) void {
@@ -149,6 +150,36 @@ fn parseManualHighlightFallback(allocator: std.mem.Allocator, lua: *zlua.Lua, ta
         .query_path = spec.query_path,
         .mode = spec.mode,
     };
+}
+
+fn parseTerminalShellIconMappings(
+    allocator: std.mem.Allocator,
+    lua: *zlua.Lua,
+    table_index: i32,
+) ![]TerminalShellIconMapping {
+    var mappings = std.ArrayList(TerminalShellIconMapping).empty;
+    errdefer {
+        for (mappings.items) |*mapping| {
+            allocator.free(mapping.shell);
+            allocator.free(mapping.icon_path);
+        }
+        mappings.deinit(allocator);
+    }
+
+    lua.pushNil();
+    while (lua.next(table_index)) {
+        defer lua.pop(1);
+        if (!lua.isString(-2) or !lua.isString(-1)) continue;
+        const shell = if (lua.toString(-2)) |value| value else |_| continue;
+        const icon_path = if (lua.toString(-1)) |value| value else |_| continue;
+        if (shell.len == 0 or icon_path.len == 0) continue;
+        try mappings.append(allocator, .{
+            .shell = try allocator.dupe(u8, shell),
+            .icon_path = try allocator.dupe(u8, icon_path),
+        });
+    }
+
+    return try mappings.toOwnedSlice(allocator);
 }
 
 fn parseNativeScalarOverlay(allocator: std.mem.Allocator, lua: *zlua.Lua, table_index: i32) !Config {
@@ -516,6 +547,9 @@ fn parseNativeScalarOverlay(allocator: std.mem.Allocator, lua: *zlua.Lua, table_
             _ = lua.getField(tab_idx, "show_single_tab");
             if (lua.isBoolean(-1)) out.terminal_tab_bar_show_single_tab = lua.toBoolean(-1);
             lua.pop(1);
+            _ = lua.getField(tab_idx, "show_shell_icon");
+            if (lua.isBoolean(-1)) out.terminal_tab_bar_show_shell_icon = lua.toBoolean(-1);
+            lua.pop(1);
             _ = lua.getField(tab_idx, "width_mode");
             if (lua.isString(-1)) {
                 if (lua.toString(-1)) |v| {
@@ -523,6 +557,11 @@ fn parseNativeScalarOverlay(allocator: std.mem.Allocator, lua: *zlua.Lua, table_
                         out.terminal_tab_bar_width_mode = mode;
                     }
                 } else |_| {}
+            }
+            lua.pop(1);
+            _ = lua.getField(tab_idx, "shell_icons");
+            if (lua.isTable(-1)) {
+                out.terminal_tab_bar_shell_icons = try parseTerminalShellIconMappings(allocator, lua, lua.absIndex(-1));
             }
             lua.pop(1);
         }
@@ -749,4 +788,46 @@ test "parseConfigFromLuaState parses terminal window chrome mode" {
     defer lua_shared.freeConfig(allocator, &config);
 
     try std.testing.expectEqual(@as(?iface.TerminalWindowChromeMode, .integrated), config.terminal_window_chrome_mode);
+}
+
+test "parseConfigFromLuaState parses terminal shell icon mappings" {
+    const allocator = std.testing.allocator;
+    const lua = try zlua.Lua.init(allocator);
+    defer lua.deinit();
+    lua.openLibs();
+
+    try lua.loadString(
+        \\return {
+        \\    terminal = {
+        \\        tab_bar = {
+        \\            show_shell_icon = true,
+        \\            shell_icons = {
+        \\                ["pwsh.exe"] = "assets/icon/pwsh.png",
+        \\                bash = "assets/icon/bash.png",
+        \\            },
+        \\        },
+        \\    },
+        \\}
+    );
+    try lua.protectedCall(.{ .args = 0, .results = 1 });
+
+    var config = try parseConfigFromLuaState(allocator, @ptrCast(lua));
+    defer lua_shared.freeConfig(allocator, &config);
+
+    try std.testing.expectEqual(@as(?bool, true), config.terminal_tab_bar_show_shell_icon);
+    try std.testing.expect(config.terminal_tab_bar_shell_icons != null);
+    try std.testing.expectEqual(@as(usize, 2), config.terminal_tab_bar_shell_icons.?.len);
+    var saw_pwsh = false;
+    var saw_bash = false;
+    for (config.terminal_tab_bar_shell_icons.?) |mapping| {
+        if (std.mem.eql(u8, mapping.shell, "pwsh.exe")) {
+            saw_pwsh = true;
+            try std.testing.expectEqualStrings("assets/icon/pwsh.png", mapping.icon_path);
+        } else if (std.mem.eql(u8, mapping.shell, "bash")) {
+            saw_bash = true;
+            try std.testing.expectEqualStrings("assets/icon/bash.png", mapping.icon_path);
+        }
+    }
+    try std.testing.expect(saw_pwsh);
+    try std.testing.expect(saw_bash);
 }

@@ -5,6 +5,7 @@ const input_actions = @import("../input/input_actions.zig");
 pub const Config = iface.Config;
 const EditorManualHighlightFallback = iface.EditorManualHighlightFallback;
 const EditorManualHighlightRule = iface.EditorManualHighlightRule;
+const TerminalShellIconMapping = iface.TerminalShellIconMapping;
 const editor_syntax_style_slots = iface.editor_syntax_style_slots;
 pub const Theme = iface.Theme;
 pub const ThemeConfig = iface.ThemeConfig;
@@ -51,6 +52,35 @@ fn dupManualHighlightFallback(allocator: std.mem.Allocator, fallback: EditorManu
         .query_path = if (fallback.query_path) |query_path| try allocator.dupe(u8, query_path) else null,
         .mode = fallback.mode,
     };
+}
+
+fn freeTerminalShellIconMappings(allocator: std.mem.Allocator, mappings: []TerminalShellIconMapping) void {
+    for (mappings) |*mapping| {
+        allocator.free(mapping.shell);
+        allocator.free(mapping.icon_path);
+        mapping.* = undefined;
+    }
+    allocator.free(mappings);
+}
+
+fn dupTerminalShellIconMappings(allocator: std.mem.Allocator, mappings: []const TerminalShellIconMapping) ![]TerminalShellIconMapping {
+    var out = try allocator.alloc(TerminalShellIconMapping, mappings.len);
+    errdefer allocator.free(out);
+    var loaded: usize = 0;
+    errdefer {
+        for (out[0..loaded]) |*mapping| {
+            allocator.free(mapping.shell);
+            allocator.free(mapping.icon_path);
+        }
+    }
+    for (mappings, 0..) |mapping, i| {
+        out[i] = .{
+            .shell = try allocator.dupe(u8, mapping.shell),
+            .icon_path = try allocator.dupe(u8, mapping.icon_path),
+        };
+        loaded += 1;
+    }
+    return out;
 }
 
 pub fn fileExists(path: []const u8) bool {
@@ -156,6 +186,8 @@ pub fn emptyConfig() Config {
         .terminal_tab_bar_width_mode = null,
         .terminal_focus_report_window = null,
         .terminal_focus_report_pane = null,
+        .terminal_tab_bar_show_shell_icon = null,
+        .terminal_tab_bar_shell_icons = null,
         .font_lcd = null,
         .font_hinting = null,
         .font_autohint = null,
@@ -232,12 +264,17 @@ pub fn freeConfig(allocator: std.mem.Allocator, config: *Config) void {
     }
     config.terminal_new_tab_start_location = null;
     config.terminal_window_chrome_mode = null;
+    if (config.terminal_tab_bar_shell_icons) |mappings| {
+        freeTerminalShellIconMappings(allocator, mappings);
+        config.terminal_tab_bar_shell_icons = null;
+    }
     if (config.keybinds) |binds| {
         allocator.free(binds);
         config.keybinds = null;
     }
 
     config.keybinds_no_defaults = null;
+    config.terminal_tab_bar_show_shell_icon = null;
 
     config.font_lcd = null;
     config.font_hinting = null;
@@ -444,6 +481,13 @@ pub fn mergeConfig(allocator: std.mem.Allocator, base: *Config, overlay: Config)
     if (overlay.terminal_tab_bar_width_mode != null) base.terminal_tab_bar_width_mode = overlay.terminal_tab_bar_width_mode;
     if (overlay.terminal_focus_report_window != null) base.terminal_focus_report_window = overlay.terminal_focus_report_window;
     if (overlay.terminal_focus_report_pane != null) base.terminal_focus_report_pane = overlay.terminal_focus_report_pane;
+    if (overlay.terminal_tab_bar_show_shell_icon != null) base.terminal_tab_bar_show_shell_icon = overlay.terminal_tab_bar_show_shell_icon;
+    if (overlay.terminal_tab_bar_shell_icons) |mappings| {
+        if (dupTerminalShellIconMappings(allocator, mappings)) |dup| {
+            if (base.terminal_tab_bar_shell_icons) |old| freeTerminalShellIconMappings(allocator, old);
+            base.terminal_tab_bar_shell_icons = dup;
+        } else |_| {}
+    }
     if (overlay.font_lcd != null) base.font_lcd = overlay.font_lcd;
     if (overlay.font_hinting != null) base.font_hinting = overlay.font_hinting;
     if (overlay.font_autohint != null) base.font_autohint = overlay.font_autohint;

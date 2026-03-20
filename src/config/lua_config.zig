@@ -21,6 +21,7 @@ pub const TerminalBlinkStyle = iface.TerminalBlinkStyle;
 pub const TerminalDisableLigaturesStrategy = iface.TerminalDisableLigaturesStrategy;
 pub const TerminalNewTabStartLocationMode = iface.TerminalNewTabStartLocationMode;
 pub const TerminalWindowChromeMode = iface.TerminalWindowChromeMode;
+pub const TerminalShellIconMapping = iface.TerminalShellIconMapping;
 pub const EditorManualHighlightMode = iface.EditorManualHighlightMode;
 pub const EditorManualHighlightRule = iface.EditorManualHighlightRule;
 pub const EditorManualHighlightFallback = iface.EditorManualHighlightFallback;

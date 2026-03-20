@@ -21,6 +21,8 @@ pub const TabSyncEntry = struct {
     foreground_process_command_len: usize,
     cwd_offset: usize,
     cwd_len: usize,
+    shell_path_offset: usize,
+    shell_path_len: usize,
     alive: bool,
     exit_code: ?i32,
     progress_state: session_mod.ProgressState = .none,
@@ -40,6 +42,10 @@ pub const TabSyncEntry = struct {
 
     pub fn foregroundProcessCommand(self: TabSyncEntry, strings: []const u8) []const u8 {
         return strings[self.foreground_process_command_offset .. self.foreground_process_command_offset + self.foreground_process_command_len];
+    }
+
+    pub fn shellPath(self: TabSyncEntry, strings: []const u8) []const u8 {
+        return strings[self.shell_path_offset .. self.shell_path_offset + self.shell_path_len];
     }
 };
 
@@ -259,6 +265,9 @@ pub const TerminalWorkspace = struct {
             try strings_out.appendSlice(allocator, activity.foreground_process_command);
             const cwd_offset = strings_out.items.len;
             try strings_out.appendSlice(allocator, metadata.cwd);
+            const shell_path = tab.session.launchShellPath();
+            const shell_path_offset = strings_out.items.len;
+            try strings_out.appendSlice(allocator, shell_path);
 
             try entries_out.append(allocator, .{
                 .id = tab.id,
@@ -270,6 +279,8 @@ pub const TerminalWorkspace = struct {
                 .foreground_process_command_len = activity.foreground_process_command.len,
                 .cwd_offset = cwd_offset,
                 .cwd_len = metadata.cwd.len,
+                .shell_path_offset = shell_path_offset,
+                .shell_path_len = shell_path.len,
                 .alive = metadata.alive,
                 .exit_code = metadata.exit_code,
                 .progress_state = activity.progress.state,

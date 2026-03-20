@@ -33,6 +33,27 @@ fn setLaunchCwdEnv(value: ?[*:0]const u8) void {
     }
 }
 
+fn resolveLaunchShellPathOwned(
+    allocator: std.mem.Allocator,
+    configured_shell_path: ?[]const u8,
+    env_shell_override: ?[]const u8,
+) !?[]u8 {
+    if (env_shell_override) |value| {
+        if (value.len > 0) return try allocator.dupe(u8, value);
+    }
+    if (configured_shell_path) |value| {
+        if (value.len > 0) return try allocator.dupe(u8, value);
+    }
+    if (@import("builtin").os.tag == .windows) {
+        return try allocator.dupe(u8, "cmd.exe");
+    }
+    if (std.c.getenv("SHELL")) |value| {
+        const shell = std.mem.sliceTo(value, 0);
+        if (shell.len > 0) return try allocator.dupe(u8, shell);
+    }
+    return null;
+}
+
 pub fn startSessionWithShellCellSize(
     term: *TerminalSession,
     shell: *Shell,
@@ -65,6 +86,10 @@ pub fn startSessionWithShellCellSize(
             setLaunchCwdEnv(null);
         }
     }
+
+    const launch_shell_path = try resolveLaunchShellPathOwned(term.allocator, configured_shell_path, env_shell_override);
+    defer if (launch_shell_path) |value| term.allocator.free(value);
+    try term.setLaunchShellPath(launch_shell_path);
 
     if (launch_cwd) |cwd| {
         const z_cwd = try term.allocator.dupeZ(u8, cwd);
