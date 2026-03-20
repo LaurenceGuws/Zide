@@ -158,6 +158,7 @@ pub fn planIdeExtendedBuildGraph(
             .link_libc = true,
         }),
     });
+    editor_ffi.root_module.addImport("zlua", zlua_module);
     editor_ffi.linkLibrary(treesitter.?);
     addVendorAndStb(editor_ffi);
     addTreeSitterIncludes(editor_ffi, treesitter.?);
@@ -316,6 +317,7 @@ pub fn planIdeExtendedBuildGraph(
         optimize,
         "src/editor_ffi_smoke_tests.zig",
     );
+    editor_ffi_tests.root_module.addImport("zlua", zlua_module);
     editor_ffi_tests.linkLibrary(treesitter.?);
     addVendorAndStb(editor_ffi_tests);
     addTreeSitterIncludes(editor_ffi_tests, treesitter.?);
