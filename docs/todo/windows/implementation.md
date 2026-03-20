@@ -5,6 +5,11 @@
 Track the work required to make Windows a first-class native platform, not just
 "it builds here sometimes".
 
+For window chrome and titlebar work, shared shell-service vs product-policy
+ownership now follows:
+
+- `app_architecture/windows/CHROME_POLICY.md`
+
 The current execution order is:
 
 1. native build/run truth
@@ -322,3 +327,41 @@ The current execution order is:
       system menu
     - `Alt+Space` should open the native window system menu in integrated mode
     - switching config between `native` and `integrated`
+  - 2026-03-20 local signoff:
+    - current Win11 terminal-only integrated chrome is user-accepted for drag,
+      resize, maximize/restore, minimize, compact tabs, pressed-state caption
+      buttons, double-click maximize, right-click system menu, and `Alt+Space`
+    - the remaining native-feel gap is Win11 Snap Layout hover on the maximize
+      button, which stays a separate follow-up instead of blocking the accepted
+      integrated chrome baseline
+
+- [ ] `W9-06` Add Win11 Snap Layout hover to integrated terminal chrome without regressing stable behavior
+  - Goal:
+    - hovering the integrated maximize button should show the Win11 Snap Layout
+      flyout like a native titlebar maximize button
+  - Reference note:
+    - `docs/research/terminal/WINDOWS_NATIVE_CHROME_REFERENCE_CROSSCHECK_2026-03-20.md`
+    - `app_architecture/windows/CHROME_POLICY.md`
+  - Current stable state:
+    - maximize click is app-owned and correct
+    - drag, double-click maximize, right-click system menu, and `Alt+Space`
+      are stable and should not regress
+    - Snap Layout hover is currently absent on the stable path
+  - Failed spike, 2026-03-20:
+    - a narrow top-level `HTMAXBUTTON` handoff produced unstable behavior:
+      maximize click could show an odd native artifact and stop restoring
+      cleanly
+    - a follow-up child-sink experiment also failed:
+      custom sink `CreateWindowExW(...)` calls repeatedly failed against the
+      SDL parent HWND with `err=0`, while a plain `STATIC` child probe on the
+      same parent succeeded
+    - the per-sync attach/detach version was not a viable seam and was backed
+      out entirely
+  - Next direction:
+    - take a cleaner Windows-Terminal-like pass with a persistent drag/input
+      sink created once and resized with titleband geometry changes, not
+      reattached every sync
+    - keep maximize click/right-click/drag behavior stable while Snap hover is
+      reintroduced
+    - if that requires replacing the current maximize-hover seam directly, do
+      that instead of adding more parallel fallback paths

@@ -11,6 +11,9 @@ Use it for:
 Current major subtree:
 
 - `wayland_present/` — Wayland/present research and reference comparisons
+- `WINDOWS_NATIVE_CHROME_REFERENCE_CROSSCHECK_2026-03-20.md` — Windows-native
+  terminal/titlebar reference comparison across Windows Terminal, WezTerm,
+  Ghostty, and secondary Electron-class examples
 
 Do not treat this folder as current architecture authority. Durable terminal
 design ownership lives under `app_architecture/terminal/`.
