@@ -269,7 +269,7 @@ fn initWithMode(
     state.* = .{
         .allocator = allocator,
         .shell = shell,
-        .options_bar = .{},
+        .top_bar = .{},
         .tab_bar = widgets.TabBar.init(allocator),
         .side_nav = .{},
         .status_bar = .{},

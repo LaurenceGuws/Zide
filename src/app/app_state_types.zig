@@ -70,7 +70,7 @@ pub const Shell = app_shell.Shell;
 pub const FrameSubmission = app_shell.FrameSubmission;
 
 pub const TabBar = widgets.TabBar;
-pub const OptionsBar = widgets.OptionsBar;
+pub const SharedTopBar = widgets.SharedTopBar;
 pub const SideNav = widgets.SideNav;
 pub const StatusBar = widgets.StatusBar;
 pub const TerminalWidget = widgets.TerminalWidget;

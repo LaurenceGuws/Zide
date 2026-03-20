@@ -1,7 +1,9 @@
 const mode_build = @import("../app/mode_build.zig");
 
 pub const TabBar = @import("widgets/tab_bar.zig").TabBar;
-pub const OptionsBar = @import("widgets/options_bar.zig").OptionsBar;
+pub const SharedTopBar = @import("widgets/shared_top_bar.zig").SharedTopBar;
+pub const SharedTopBarModel = @import("widgets/shared_top_bar_model.zig").SharedTopBarModel;
+pub const shared_top_bar_model = @import("widgets/shared_top_bar_model.zig");
 pub const SideNav = @import("widgets/side_nav.zig").SideNav;
 pub const StatusBar = @import("widgets/status_bar.zig").StatusBar;
 pub const TerminalWidget = @import("widgets/terminal_widget.zig").TerminalWidget;

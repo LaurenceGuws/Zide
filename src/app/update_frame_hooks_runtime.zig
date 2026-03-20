@@ -62,7 +62,7 @@ pub fn handle(state: anytype, input_batch: *shared_types.input.InputBatch) !void
                             .handle_widget_input_frame = struct {
                                 fn inner(inner_raw: *anyopaque) !void {
                                     const inner_state: *State = @ptrCast(@alignCast(inner_raw));
-                                    inner_state.options_bar.updateInput(inner_state.last_input);
+                                    inner_state.top_bar.updateInput(inner_state.last_input);
                                     inner_state.tab_bar.updateInput(inner_state.last_input);
                                     inner_state.side_nav.updateInput(inner_state.last_input);
                                     inner_state.status_bar.updateInput(inner_state.last_input);

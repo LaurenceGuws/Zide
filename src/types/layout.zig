@@ -7,7 +7,7 @@ pub const Rect = struct {
 
 pub const WidgetLayout = struct {
     window: Rect,
-    options_bar: Rect,
+    top_bar: Rect,
     tab_bar: Rect,
     side_nav: Rect,
     editor: Rect,

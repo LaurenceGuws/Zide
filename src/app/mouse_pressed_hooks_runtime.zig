@@ -3,6 +3,7 @@ const app_bootstrap = @import("bootstrap.zig");
 const app_modes = @import("modes/mod.zig");
 const app_mouse_pressed_frame = @import("mouse_pressed_frame.zig");
 const app_mouse_pressed_routing_runtime = @import("mouse_pressed_routing_runtime.zig");
+const app_top_bar_frame_runtime = @import("top_bar_frame_runtime.zig");
 const app_terminal_window_chrome_runtime = @import("terminal/window_chrome_runtime.zig");
 const app_mode_adapter_sync_runtime = @import("mode_adapter_sync_runtime.zig");
 const app_tab_action_apply_runtime = @import("tabs/tab_action_apply_runtime.zig");
@@ -18,48 +19,6 @@ const app_editor_intent_route = if (mode_build.focused_mode == .terminal) struct
         return error.UnsupportedMode;
     }
 } else @import("editor/editor_intent_route.zig");
-
-const app_active_editor_runtime = if (mode_build.focused_mode == .terminal) struct {
-    pub fn fromState(_: anytype) ?*anyopaque {
-        return null;
-    }
-} else @import("editor/active_editor_runtime.zig");
-
-const app_path_prompt_state = if (mode_build.focused_mode == .terminal) struct {
-    pub fn openForOpen(_: anytype, _: anytype, _: anytype) !void {
-        return error.UnsupportedMode;
-    }
-
-    pub fn openForSaveAs(_: anytype, _: anytype, _: anytype) !void {
-        return error.UnsupportedMode;
-    }
-
-    pub fn openForReplace(_: anytype, _: anytype) !void {
-        return error.UnsupportedMode;
-    }
-
-    pub fn openForReplaceAll(_: anytype, _: anytype) !void {
-        return error.UnsupportedMode;
-    }
-
-    pub fn close(_: anytype) void {}
-} else @import("editor/path_prompt_state.zig");
-
-const app_search_panel_state = if (mode_build.focused_mode == .terminal) struct {
-    pub fn openPanel(_: anytype, _: anytype, _: anytype, _: anytype, _: anytype) !void {
-        return error.UnsupportedMode;
-    }
-} else @import("search/search_panel_state.zig");
-
-const app_imported_theme_runtime = if (mode_build.focused_mode == .terminal) struct {
-    pub fn cyclePrev(_: anytype) !void {
-        return error.UnsupportedMode;
-    }
-
-    pub fn cycleNext(_: anytype) !void {
-        return error.UnsupportedMode;
-    }
-} else @import("editor/imported_theme_runtime.zig");
 
 const layout_types = shared_types.layout;
 const input_types = shared_types.input;
@@ -138,80 +97,8 @@ pub fn handle(
         }
     }
     if (comptime mode_build.focused_mode != .terminal) {
-        if (frame_input_batch.mousePressed(input_types.MouseButton.left)) {
-            if (state.options_bar.handleClick(state.shell, frame_layout.window.width, frame_mouse)) |action| {
-                const active_editor = app_active_editor_runtime.fromState(state);
-                switch (action) {
-                    .new_file => try state.newEditor(),
-                    .open_file => {
-                        state.search_panel.active = false;
-                        try app_path_prompt_state.openForOpen(&state.path_prompt, state.allocator, active_editor);
-                    },
-                    .save => {
-                        if (active_editor) |editor| {
-                            if (editor.documentCore().filePath() != null) {
-                                try editor.save();
-                            } else {
-                                state.search_panel.active = false;
-                                try app_path_prompt_state.openForSaveAs(&state.path_prompt, state.allocator, editor);
-                            }
-                        }
-                    },
-                    .save_as => {
-                        state.search_panel.active = false;
-                        try app_path_prompt_state.openForSaveAs(&state.path_prompt, state.allocator, active_editor);
-                    },
-                    .find => {
-                        if (active_editor) |editor| {
-                            app_path_prompt_state.close(&state.path_prompt);
-                            try app_search_panel_state.openPanel(
-                                state.allocator,
-                                &state.search_panel.active,
-                                &state.search_panel.select_all,
-                                &state.search_panel.query,
-                                editor,
-                            );
-                        }
-                    },
-                    .replace => {
-                        if (active_editor) |editor| {
-                            if (editor.searchQuery() != null) {
-                                try app_path_prompt_state.openForReplace(&state.path_prompt, state.allocator);
-                            } else {
-                                app_path_prompt_state.close(&state.path_prompt);
-                                try app_search_panel_state.openPanel(
-                                    state.allocator,
-                                    &state.search_panel.active,
-                                    &state.search_panel.select_all,
-                                    &state.search_panel.query,
-                                    editor,
-                                );
-                            }
-                        }
-                    },
-                    .replace_all => {
-                        if (active_editor) |editor| {
-                            if (editor.searchQuery() != null) {
-                                try app_path_prompt_state.openForReplaceAll(&state.path_prompt, state.allocator);
-                            } else {
-                                app_path_prompt_state.close(&state.path_prompt);
-                                try app_search_panel_state.openPanel(
-                                    state.allocator,
-                                    &state.search_panel.active,
-                                    &state.search_panel.select_all,
-                                    &state.search_panel.query,
-                                    editor,
-                                );
-                            }
-                        }
-                    },
-                    .cycle_imported_theme_prev => try app_imported_theme_runtime.cyclePrev(state),
-                    .cycle_imported_theme => try app_imported_theme_runtime.cycleNext(state),
-                }
-                state.needs_redraw = true;
-                state.metrics.noteInput(now);
-                return;
-            }
+        if (frame_layout.top_bar.height > 0 and frame_input_batch.mousePressed(input_types.MouseButton.left)) {
+            if (try app_top_bar_frame_runtime.handleLeftClick(state, frame_layout, frame_mouse, now)) return;
         }
     }
     try app_mouse_pressed_frame.handle(
@@ -234,7 +121,6 @@ pub fn handle(
                     const route_state: *State = @ptrCast(@alignCast(route_raw));
                     const result = try app_mouse_pressed_routing_runtime.handleIde(
                         &route_state.tab_bar,
-                        route_state.options_bar.height,
                         layout,
                         mouse,
                         frame_term_y,

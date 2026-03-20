@@ -10,7 +10,7 @@ pub const Hooks = struct {
 };
 
 pub fn applyUiScale(state: anytype, scale: f32, ctx: *anyopaque, hooks: Hooks) void {
-    state.options_bar.height = 26 * scale;
+    state.top_bar.height = 26 * scale;
     state.tab_bar.height = 24 * scale;
     state.tab_bar.tab_width = 150 * scale;
     state.tab_bar.tab_spacing = @max(1, scale);
@@ -24,7 +24,7 @@ pub fn computeLayout(state: anytype, width: f32, height: f32) layout_types.Widge
         state.app_mode,
         width,
         height,
-        state.options_bar.height,
+        state.top_bar.height,
         state.tab_bar.height,
         state.side_nav.width,
         state.status_bar.height,

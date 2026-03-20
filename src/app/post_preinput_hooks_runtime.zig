@@ -253,7 +253,7 @@ pub fn handle(state: anytype, shell: *Shell, batch: *input_types.InputBatch, now
                         frame_input_batch,
                         layout,
                         height,
-                        inner_state.options_bar.height,
+                        inner_state.top_bar.height,
                         inner_state.tab_bar.height,
                         inner_state.status_bar.height,
                         &inner_state.resizing_terminal,

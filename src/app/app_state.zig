@@ -11,7 +11,7 @@ pub const AppState = struct {
 
     allocator: std.mem.Allocator,
     shell: *t.Shell,
-    options_bar: t.OptionsBar,
+    top_bar: t.SharedTopBar,
     tab_bar: t.TabBar,
     side_nav: t.SideNav,
     status_bar: t.StatusBar,

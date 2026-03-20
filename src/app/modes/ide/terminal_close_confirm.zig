@@ -133,7 +133,7 @@ test "terminal close confirm decision consumes in-card click and cancels outside
 test "terminal close confirm modal layout stays within window and buttons are inside card" {
     const layout: shared_types.layout.WidgetLayout = .{
         .window = .{ .x = 0, .y = 0, .width = 800, .height = 600 },
-        .options_bar = .{ .x = 0, .y = 0, .width = 0, .height = 0 },
+        .top_bar = .{ .x = 0, .y = 0, .width = 0, .height = 0 },
         .tab_bar = .{ .x = 0, .y = 0, .width = 0, .height = 0 },
         .side_nav = .{ .x = 0, .y = 0, .width = 0, .height = 0 },
         .editor = .{ .x = 0, .y = 0, .width = 0, .height = 0 },

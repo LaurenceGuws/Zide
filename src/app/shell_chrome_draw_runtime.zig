@@ -1,4 +1,5 @@
 const app_modes = @import("modes/mod.zig");
+const app_top_bar_frame_runtime = @import("top_bar_frame_runtime.zig");
 const app_active_editor_runtime = @import("editor/active_editor_runtime.zig");
 const mode_build = @import("mode_build.zig");
 const app_path_prompt_state = @import("editor/path_prompt_state.zig");
@@ -8,10 +9,7 @@ const shared_types = @import("../types/mod.zig");
 const layout_types = shared_types.layout;
 
 pub fn draw(state: anytype, shell: anytype, layout: layout_types.WidgetLayout, tab_tooltip: ?widgets_common.Tooltip) void {
-    if (app_modes.ide.supportsEditorSurface(state.app_mode) and layout.options_bar.height > 0) {
-        shell.setTheme(state.app_theme);
-        state.options_bar.draw(shell, layout.window.width);
-    }
+    app_top_bar_frame_runtime.draw(state, shell, layout);
 
     if (app_modes.ide.canToggleTerminal(state.app_mode)) {
         shell.setTheme(state.app_theme);

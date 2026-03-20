@@ -21,7 +21,6 @@ pub const IdeHooks = struct {
 
 pub fn handleIde(
     tab_bar: *TabBar,
-    options_bar_height: f32,
     layout: layout_types.WidgetLayout,
     mouse: input_types.MousePos,
     term_y: f32,
@@ -32,9 +31,8 @@ pub fn handleIde(
     hooks: IdeHooks,
 ) !Result {
     var out: Result = .{};
-    const tab_bar_y = options_bar_height;
-    _ = tab_bar.beginDrag(mouse.x, mouse.y, layout.side_nav.width, tab_bar_y, layout.tab_bar.width);
-    if (tab_bar.handleClick(mouse.x, mouse.y, layout.side_nav.width, tab_bar_y, layout.tab_bar.width)) {
+    _ = tab_bar.beginDrag(mouse.x, mouse.y, layout.tab_bar.x, layout.tab_bar.y, layout.tab_bar.width);
+    if (tab_bar.handleClick(mouse.x, mouse.y, layout.tab_bar.x, layout.tab_bar.y, layout.tab_bar.width)) {
         active_tab.* = tab_bar.active_index;
         try hooks.route_editor_activate_by_index(ctx, active_tab.*);
         out.needs_redraw = true;

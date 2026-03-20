@@ -43,9 +43,12 @@ This queue does not own:
     operations obvious and available without relying on the initial buffer.
   - Reuse shared IDE/editor host routing where possible.
   - Progress:
-    - Landed the first shared-host slice: `OptionsBar` now exposes real `File`
-      and `Edit` actions for `New`, `Open`, `Save`, `Save As`, and `Find`
-      instead of static labels.
+    - Landed the first shared top-bar slice: the shared top bar now exposes
+      real `File` and `Edit` actions for `New`, `Open`, `Save`, `Save As`, and
+      `Find` instead of static labels.
+    - The shared top bar is now split into model, geometry, and widget layers,
+      and top-bar action dispatch now lives in a dedicated runtime seam instead
+      of inside mouse input handling.
     - Added a shared status-bar path prompt for `Open` and `Save As` so
       editor-only mode can open/save beyond the initial buffer without
       inventing a separate editor-only dialog stack.
