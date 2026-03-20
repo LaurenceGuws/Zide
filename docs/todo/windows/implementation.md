@@ -342,6 +342,7 @@ The current execution order is:
   - Reference note:
     - `docs/research/terminal/WINDOWS_NATIVE_CHROME_REFERENCE_CROSSCHECK_2026-03-20.md`
     - `app_architecture/windows/CHROME_POLICY.md`
+    - `app_architecture/windows/SNAP_LAYOUT_INTEROP.md`
   - Current stable state:
     - maximize click is app-owned and correct
     - drag, double-click maximize, right-click system menu, and `Alt+Space`
