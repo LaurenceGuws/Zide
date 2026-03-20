@@ -33,6 +33,7 @@ pub fn handle(
         focus,
         at,
         state.app_mode,
+        state.terminal_window_chrome_mode,
         state.show_terminal,
         &state.terminal_workspace,
         state.terminals.items,

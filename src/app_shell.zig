@@ -205,6 +205,10 @@ pub const Shell = struct {
         return self.renderer.minimizeWindow();
     }
 
+    pub fn showWindowSystemMenu(self: *Shell, x: i32, y: i32) bool {
+        return self.renderer.showWindowSystemMenu(x, y);
+    }
+
     pub fn toggleMaximizeWindow(self: *Shell) bool {
         return self.renderer.toggleMaximizeWindow();
     }

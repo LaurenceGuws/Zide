@@ -1,3 +1,4 @@
+const std = @import("std");
 const app_bootstrap = @import("bootstrap.zig");
 const app_modes = @import("modes/mod.zig");
 const app_mouse_pressed_frame = @import("mouse_pressed_frame.zig");
@@ -78,8 +79,9 @@ pub fn handle(
     const State = @TypeOf(state.*);
     const left_pressed = frame_input_batch.mousePressed(input_types.MouseButton.left);
     const left_released = frame_input_batch.mouseReleased(input_types.MouseButton.left);
+    const right_pressed = frame_input_batch.mousePressed(input_types.MouseButton.right);
 
-    if (left_pressed or left_released or state.pressed_terminal_window_button != null) {
+    if (left_pressed or left_released or right_pressed or state.pressed_terminal_window_button != null) {
         const chrome = app_terminal_window_chrome_runtime.computeGeometry(
             state.shell,
             &state.tab_bar,
@@ -91,7 +93,25 @@ pub fn handle(
             state.pressed_terminal_window_button = null;
         } else {
             const hovered_button = app_terminal_window_chrome_runtime.buttonAt(chrome, frame_mouse.x, frame_mouse.y);
+            if (right_pressed and hovered_button == null and app_terminal_window_chrome_runtime.captionDragAt(chrome, frame_mouse.x, frame_mouse.y)) {
+                _ = state.shell.showWindowSystemMenu(
+                    @intFromFloat(std.math.round(frame_mouse.x)),
+                    @intFromFloat(std.math.round(frame_mouse.y)),
+                );
+                state.metrics.noteInput(now);
+                return;
+            }
             if (left_pressed) {
+                if (hovered_button == null and
+                    frame_input_batch.mouseClicks(input_types.MouseButton.left) >= 2 and
+                    app_terminal_window_chrome_runtime.captionDragAt(chrome, frame_mouse.x, frame_mouse.y))
+                {
+                    _ = state.shell.toggleMaximizeWindow();
+                    state.pressed_terminal_window_button = null;
+                    state.needs_redraw = true;
+                    state.metrics.noteInput(now);
+                    return;
+                }
                 if (hovered_button) |button| {
                     state.pressed_terminal_window_button = button;
                     state.needs_redraw = true;

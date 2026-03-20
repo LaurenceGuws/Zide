@@ -1579,6 +1579,11 @@ pub const WindowChromeContract = window_chrome_runtime.WindowChromeContract;
         return sdl_api.minimizeWindow(self.window);
     }
 
+    pub fn showWindowSystemMenu(self: *Renderer, x: i32, y: i32) bool {
+        if (builtin.target.os.tag != .windows) return false;
+        return sdl_api.showWindowSystemMenu(self.window, x, y);
+    }
+
     pub fn toggleMaximizeWindow(self: *Renderer) bool {
         if (builtin.target.os.tag != .windows) return false;
         return if (self.windowIsMaximized())

@@ -43,7 +43,7 @@ pub fn draw(state: anytype, shell: anytype, layout: layout_types.WidgetLayout, c
             if (chrome.enabled) {
                 drawIntegratedBackground(shell, chrome.band, tab_theme.ui_bar_bg);
                 tab_tooltip = state.tab_bar.draw(shell, chrome.band.x, chrome.band.y, chrome.tab_strip_width);
-                drawIntegratedButtons(shell, chrome);
+                drawIntegratedButtons(state, shell, chrome);
             } else {
                 tab_tooltip = state.tab_bar.draw(shell, layout.tab_bar.x, layout.tab_bar.y, layout.tab_bar.width);
             }
@@ -63,21 +63,35 @@ fn drawIntegratedBackground(shell: anytype, band: layout_types.Rect, color: Colo
     );
 }
 
-fn drawIntegratedButtons(shell: anytype, chrome: app_terminal_window_chrome_runtime.Geometry) void {
+fn drawIntegratedButtons(state: anytype, shell: anytype, chrome: app_terminal_window_chrome_runtime.Geometry) void {
     const mouse = shell.getMousePos();
     const focused = shell.windowFocused();
-    drawCaptionButton(shell, chrome.minimize_rect, focused and widgets_common.pointInRect(mouse.x, mouse.y, chrome.minimize_rect.x, chrome.minimize_rect.y, chrome.minimize_rect.width, chrome.minimize_rect.height), .minimize);
-    drawCaptionButton(shell, chrome.maximize_rect, focused and widgets_common.pointInRect(mouse.x, mouse.y, chrome.maximize_rect.x, chrome.maximize_rect.y, chrome.maximize_rect.width, chrome.maximize_rect.height), .maximize_restore);
-    drawCaptionButton(shell, chrome.close_rect, focused and widgets_common.pointInRect(mouse.x, mouse.y, chrome.close_rect.x, chrome.close_rect.y, chrome.close_rect.width, chrome.close_rect.height), .close);
+    const pressed_button = state.pressed_terminal_window_button;
+    const minimize_hovered = focused and widgets_common.pointInRect(mouse.x, mouse.y, chrome.minimize_rect.x, chrome.minimize_rect.y, chrome.minimize_rect.width, chrome.minimize_rect.height);
+    const maximize_hovered = focused and widgets_common.pointInRect(mouse.x, mouse.y, chrome.maximize_rect.x, chrome.maximize_rect.y, chrome.maximize_rect.width, chrome.maximize_rect.height);
+    const close_hovered = focused and widgets_common.pointInRect(mouse.x, mouse.y, chrome.close_rect.x, chrome.close_rect.y, chrome.close_rect.width, chrome.close_rect.height);
+    drawCaptionButton(shell, chrome.minimize_rect, minimize_hovered, pressed_button == .minimize and minimize_hovered, .minimize);
+    drawCaptionButton(shell, chrome.maximize_rect, maximize_hovered, pressed_button == .maximize_restore and maximize_hovered, .maximize_restore);
+    drawCaptionButton(shell, chrome.close_rect, close_hovered, pressed_button == .close and close_hovered, .close);
 }
 
-fn drawCaptionButton(shell: anytype, rect: layout_types.Rect, hovered: bool, kind: app_terminal_window_chrome_runtime.CaptionButton) void {
+fn drawCaptionButton(shell: anytype, rect: layout_types.Rect, hovered: bool, pressed: bool, kind: app_terminal_window_chrome_runtime.CaptionButton) void {
     const theme = shell.theme();
     const bg = switch (kind) {
-        .close => if (hovered) Color{ .r = 232, .g = 69, .b = 64, .a = 255 } else theme.ui_bar_bg,
-        else => if (hovered) theme.ui_hover else theme.ui_bar_bg,
+        .close => if (pressed)
+            Color{ .r = 196, .g = 52, .b = 49, .a = 255 }
+        else if (hovered)
+            Color{ .r = 232, .g = 69, .b = 64, .a = 255 }
+        else
+            theme.ui_bar_bg,
+        else => if (pressed)
+            theme.ui_pressed
+        else if (hovered)
+            theme.ui_hover
+        else
+            theme.ui_bar_bg,
     };
-    const fg = if (kind == .close and hovered)
+    const fg = if (kind == .close and (hovered or pressed))
         Color{ .r = 255, .g = 255, .b = 255, .a = 255 }
     else
         theme.ui_window_control_fg;

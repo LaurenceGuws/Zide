@@ -115,6 +115,11 @@ pub fn buttonAt(geometry: Geometry, x: f32, y: f32) ?CaptionButton {
     return null;
 }
 
+pub fn captionDragAt(geometry: Geometry, x: f32, y: f32) bool {
+    if (!geometry.enabled) return false;
+    return pointInRect(x, y, geometry.caption_rect);
+}
+
 pub fn windowChromeContract(geometry: Geometry) app_shell.WindowChromeContract {
     if (!geometry.enabled) return .{};
     return .{

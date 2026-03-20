@@ -4,6 +4,7 @@ const app_terminal_close_confirm_input = @import("terminal/terminal_close_confir
 const app_terminal_shortcut_suppress = @import("terminal/terminal_shortcut_suppress.zig");
 const app_terminal_surface_gate = @import("terminal/terminal_surface_gate.zig");
 const app_terminal_clipboard_shortcuts_frame = @import("terminal/terminal_clipboard_shortcuts_frame.zig");
+const app_terminal_window_chrome_runtime = @import("terminal/window_chrome_runtime.zig");
 const app_update_prelude_frame_runtime = @import("update_prelude_frame_runtime.zig");
 const app_active_editor_runtime = @import("editor/active_editor_runtime.zig");
 const app_shell = @import("../app_shell.zig");
@@ -35,6 +36,7 @@ pub fn handle(
     focus: input_actions.FocusKind,
     at: f64,
     app_mode: app_bootstrap.AppMode,
+    terminal_window_chrome_mode: anytype,
     show_terminal: bool,
     terminal_workspace: *?terminal_mod.TerminalWorkspace,
     terminals: []*terminal_mod.TerminalSession,
@@ -64,6 +66,36 @@ pub fn handle(
     );
 
     const live_layout = hooks.compute_layout(ctx, @floatFromInt(r.width), @floatFromInt(r.height));
+    if (app_terminal_window_chrome_runtime.isIntegratedActive(app_mode, terminal_window_chrome_mode) and
+        frame_input_batch.keyPressed(.space) and
+        frame_input_batch.mods.alt and
+        !frame_input_batch.mods.ctrl and
+        !frame_input_batch.mods.super and
+        !frame_input_batch.mods.altgr)
+    {
+        const chrome = app_terminal_window_chrome_runtime.computeGeometry(
+            frame_shell,
+            tab_bar,
+            live_layout.tab_bar,
+            app_mode,
+            terminal_window_chrome_mode,
+        );
+        if (chrome.enabled) {
+            const scale = frame_shell.uiScaleFactor();
+            _ = frame_shell.showWindowSystemMenu(
+                @intFromFloat(std.math.round(chrome.band.x + (8.0 * scale))),
+                @intFromFloat(std.math.round(chrome.band.y + chrome.band.height)),
+            );
+            hooks.note_input(ctx, at);
+            return .{
+                .suppress_terminal_shortcuts = false,
+                .terminal_close_modal_active = hooks.reconcile_terminal_close_modal_active(ctx),
+                .handled_shortcut = true,
+                .consumed = true,
+            };
+        }
+    }
+
     if (hooks.reconcile_terminal_close_modal_active(ctx)) {
         if (try app_terminal_close_confirm_input.handleInput(
             actions,

@@ -315,4 +315,10 @@ The current execution order is:
     - integrated mode launch, drag, maximize, resize, tab reorder, and close
     - integrated caption buttons should arm on mouse-down and execute on
       mouse-up over the same button
+    - integrated caption buttons should show pressed feedback only while the
+      armed button remains under the pointer
+    - double-click on empty integrated drag band should toggle maximize/restore
+    - right-click on empty integrated drag band should open the native window
+      system menu
+    - `Alt+Space` should open the native window system menu in integrated mode
     - switching config between `native` and `integrated`
