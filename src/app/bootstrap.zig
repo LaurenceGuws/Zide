@@ -58,11 +58,32 @@ pub fn parseStartupFilePath(allocator: std.mem.Allocator) ?[]u8 {
             if (i + 1 < args.len) i += 1;
             continue;
         }
+        if (isLaunchOverrideFlagWithValue(arg)) {
+            if (i + 1 < args.len) i += 1;
+            continue;
+        }
+        if (isLaunchOverrideInlineFlag(arg) or std.mem.eql(u8, arg, "--close-on-child-exit")) continue;
         if (std.mem.startsWith(u8, arg, "-")) continue;
         return allocator.dupe(u8, arg) catch null;
     }
 
     return null;
+}
+
+fn isLaunchOverrideFlagWithValue(arg: []const u8) bool {
+    return std.mem.eql(u8, arg, "--rows") or
+        std.mem.eql(u8, arg, "--cols") or
+        std.mem.eql(u8, arg, "--cwd") or
+        std.mem.eql(u8, arg, "--shell") or
+        std.mem.eql(u8, arg, "--command");
+}
+
+fn isLaunchOverrideInlineFlag(arg: []const u8) bool {
+    return std.mem.startsWith(u8, arg, "--rows=") or
+        std.mem.startsWith(u8, arg, "--cols=") or
+        std.mem.startsWith(u8, arg, "--cwd=") or
+        std.mem.startsWith(u8, arg, "--shell=") or
+        std.mem.startsWith(u8, arg, "--command=");
 }
 
 pub fn modeFromArg(value: []const u8) ?AppMode {
@@ -110,4 +131,14 @@ test "modeFromArg maps supported values" {
     try std.testing.expectEqual(@as(?AppMode, .ide), modeFromArg("ide"));
     try std.testing.expectEqual(@as(?AppMode, .font_sample), modeFromArg("font-sample"));
     try std.testing.expectEqual(@as(?AppMode, null), modeFromArg("wat"));
+}
+
+test "launch override helpers recognize supported flags" {
+    try std.testing.expect(isLaunchOverrideFlagWithValue("--cwd"));
+    try std.testing.expect(isLaunchOverrideFlagWithValue("--shell"));
+    try std.testing.expect(isLaunchOverrideFlagWithValue("--command"));
+    try std.testing.expect(isLaunchOverrideInlineFlag("--shell=C:\\Program Files\\PowerShell\\7\\pwsh.exe"));
+    try std.testing.expect(isLaunchOverrideInlineFlag("--cwd=C:\\Users\\lggou"));
+    try std.testing.expect(!isLaunchOverrideFlagWithValue("README.md"));
+    try std.testing.expect(!isLaunchOverrideInlineFlag("--mode=editor"));
 }

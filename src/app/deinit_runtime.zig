@@ -53,6 +53,9 @@ pub fn handle(state: anytype) void {
     if (state.terminal_default_start_location) |path| {
         state.allocator.free(path);
     }
+    if (state.terminal_shell_path) |path| {
+        state.allocator.free(path);
+    }
     if (state.editor_imported_theme_name) |name| {
         state.allocator.free(name);
     }

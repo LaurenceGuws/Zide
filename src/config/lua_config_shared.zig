@@ -141,6 +141,7 @@ pub fn emptyConfig() Config {
         .terminal_blink_style = null,
         .terminal_disable_ligatures = null,
         .terminal_font_features = null,
+        .terminal_shell_path = null,
         .terminal_default_start_location = null,
         .terminal_new_tab_start_location = null,
         .terminal_scrollback_rows = null,
@@ -219,6 +220,10 @@ pub fn freeConfig(allocator: std.mem.Allocator, config: *Config) void {
     if (config.terminal_font_features) |features| {
         allocator.free(features);
         config.terminal_font_features = null;
+    }
+    if (config.terminal_shell_path) |path| {
+        allocator.free(path);
+        config.terminal_shell_path = null;
     }
     if (config.terminal_default_start_location) |path| {
         allocator.free(path);
@@ -414,6 +419,10 @@ pub fn mergeConfig(allocator: std.mem.Allocator, base: *Config, overlay: Config)
     if (overlay.terminal_font_features) |features| {
         if (base.terminal_font_features) |old| allocator.free(old);
         base.terminal_font_features = allocator.dupe(u8, features) catch base.terminal_font_features;
+    }
+    if (overlay.terminal_shell_path) |path| {
+        if (base.terminal_shell_path) |old| allocator.free(old);
+        base.terminal_shell_path = allocator.dupe(u8, path) catch base.terminal_shell_path;
     }
     if (overlay.terminal_default_start_location) |path| {
         if (base.terminal_default_start_location) |old| allocator.free(old);

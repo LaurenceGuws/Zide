@@ -44,7 +44,11 @@ fn resolveTerminalDefaultStartLocation(
     allocator: std.mem.Allocator,
     configured: ?[]const u8,
 ) !?[]u8 {
-    const home = if (std.c.getenv("HOME")) |value| std.mem.sliceTo(value, 0) else null;
+    const home = blk: {
+        if (std.c.getenv("HOME")) |value| break :blk std.mem.sliceTo(value, 0);
+        if (std.c.getenv("USERPROFILE")) |value| break :blk std.mem.sliceTo(value, 0);
+        break :blk null;
+    };
     const raw = configured orelse home orelse return null;
     if (raw.len == 0) return null;
 
@@ -55,6 +59,15 @@ fn resolveTerminalDefaultStartLocation(
         }
     }
 
+    return try allocator.dupe(u8, raw);
+}
+
+fn resolveTerminalShellPath(
+    allocator: std.mem.Allocator,
+    configured: ?[]const u8,
+) !?[]u8 {
+    const raw = configured orelse return null;
+    if (raw.len == 0) return null;
     return try allocator.dupe(u8, raw);
 }
 
@@ -227,6 +240,11 @@ fn initWithMode(
         config.terminal_default_start_location,
     );
     errdefer if (terminal_default_start_location) |path| allocator.free(path);
+    const terminal_shell_path = try resolveTerminalShellPath(
+        allocator,
+        config.terminal_shell_path,
+    );
+    errdefer if (terminal_shell_path) |path| allocator.free(path);
     const bootstrap_opts = app_modes.backend.bootstrap.BootstrapOptions{
         .seed_editor_tab = false,
         .seed_terminal_tab = false,
@@ -264,6 +282,7 @@ fn initWithMode(
         .terminal_blink_style = terminal_blink_style,
         .terminal_cursor_style = terminal_cursor_style,
         .terminal_scrollback_rows = config.terminal_scrollback_rows,
+        .terminal_shell_path = terminal_shell_path,
         .terminal_default_start_location = terminal_default_start_location,
         .terminal_new_tab_start_location = mapTerminalNewTabStartLocationMode(config.terminal_new_tab_start_location),
         .editor_tab_bar_width_mode = app_tab_bar_width.mapMode(config.editor_tab_bar_width_mode),

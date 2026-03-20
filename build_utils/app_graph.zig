@@ -8,6 +8,7 @@ const step_utils = @import("step_utils.zig");
 
 const AppLinkContext = app_types.AppLinkContext;
 const addAppExecutable = target_factory.addAppExecutable;
+const configureWindowsGuiSubsystem = target_factory.configureWindowsGuiSubsystem;
 const configureAppExecutable = target_config.configureAppExecutable;
 const addMainModeRunSteps = step_utils.addMainModeRunSteps;
 const addFocusedModeExecutable = target_factory.addFocusedModeExecutable;
@@ -31,6 +32,7 @@ pub fn planIdePrimaryAppGraph(
         "zide",
         "src/main.zig",
     );
+    configureWindowsGuiSubsystem(exe, target);
     configureAppExecutable(exe, app_link_ctx, "zide", target_profile.app_main);
     b.installArtifact(exe);
     return addMainModeRunSteps(b, b.getInstallStep(), exe, passthrough_args);

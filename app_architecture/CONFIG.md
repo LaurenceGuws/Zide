@@ -221,6 +221,7 @@ rendering, not schema preservation.
 | Lua path | Meaning | Runtime consumer | Status | Notes |
 |---|---|---|---|---|
 | `terminal.font.path` / `terminal.font.size` | Terminal font override | `src/app/init_runtime.zig`, `src/app/reload_config_runtime.zig` -> renderer font setup | `reloadable` | Drives terminal cell metrics directly; falls back field-by-field to `app.font` when unset. |
+| `terminal.shell.path` | Shared PTY shell/program path | `src/app/init_runtime.zig`, `src/app/reload_config_runtime.zig`, `src/app/new_terminal_runtime.zig` | `partial` | Applies immediately to future terminal sessions in IDE/editor/terminal modes; existing PTYs keep their current child process. CLI/launcher `--shell` still overrides it. |
 | `terminal.disable_ligatures` | Terminal ligature strategy | `src/main.zig` -> renderer/terminal draw | `reloadable` | Current values: `never`, `cursor`, `always`. |
 | `terminal.font_features` | Terminal OpenType features | `src/main.zig` -> renderer/terminal draw | `reloadable` | |
 | `terminal.blink` | Cursor blink policy | `src/main.zig` -> terminal widget | `reloadable` | Preferred values: `kitty`, `off`. Boolean shorthand also accepted. |
@@ -333,3 +334,8 @@ Manual reload spot check for per-domain font changes:
 - edit `app.font`, `editor.font`, or `terminal.font` in `./.zide.lua` or the user config
 - trigger `reload_config` (default binding: `Ctrl+Shift+F5`)
 - verify app chrome, editor, and terminal redraw immediately with the intended font changes
+
+Manual reload spot check for terminal shell changes:
+- edit `terminal.shell.path` in `./.zide.lua` or the user config
+- trigger `reload_config` (default binding: `Ctrl+Shift+F5`)
+- open a new terminal tab/session and verify the new PTY uses the updated shell path

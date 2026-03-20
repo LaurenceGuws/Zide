@@ -180,6 +180,13 @@ pub const Pty = struct {
     const WAIT_TIMEOUT: win32.DWORD = 258;
     const STILL_ACTIVE: win32.DWORD = 259;
 
+    fn getEnvVarOwned(allocator: std.mem.Allocator, name: []const u8) !?[]u8 {
+        return std.process.getEnvVarOwned(allocator, name) catch |err| switch (err) {
+            error.EnvironmentVariableNotFound => null,
+            else => return err,
+        };
+    }
+
     pub fn init(allocator: std.mem.Allocator, size: PtySize, shell: ?[:0]const u8) !Pty {
         var pty = Pty{
             .hpc = null,
@@ -336,6 +343,8 @@ pub const Pty = struct {
 
         var cmd_line_owned: ?[:0]u16 = null;
         defer if (cmd_line_owned) |buf| allocator.free(buf);
+        var launch_cwd_owned: ?[:0]u16 = null;
+        defer if (launch_cwd_owned) |buf| allocator.free(buf);
 
         var cmd_line_ptr: win32.LPWSTR = @ptrCast(&default_cmd_line);
         if (shell) |raw_shell| {
@@ -354,6 +363,19 @@ pub const Pty = struct {
             cmd_line_ptr = @ptrCast(cmd_line_owned.?.ptr);
         }
 
+        const launch_cwd_utf8 = try getEnvVarOwned(allocator, "ZIDE_LAUNCH_CWD");
+        defer if (launch_cwd_utf8) |buf| allocator.free(buf);
+
+        const current_directory_ptr = blk: {
+            if (launch_cwd_utf8) |cwd_utf8| {
+                if (cwd_utf8.len > 0) {
+                    launch_cwd_owned = try utf8ToUtf16LeZAlloc(allocator, cwd_utf8);
+                    break :blk @as(?win32.LPCWSTR, launch_cwd_owned.?.ptr);
+                }
+            }
+            break :blk null;
+        };
+
         if (win32.CreateProcessW(
             null,
             cmd_line_ptr,
@@ -362,7 +384,7 @@ pub const Pty = struct {
             0,
             win32.EXTENDED_STARTUPINFO_PRESENT,
             null,
-            null,
+            current_directory_ptr,
             &startup_info,
             &proc_info,
         ) == 0) {

@@ -34,6 +34,7 @@ Implemented today:
 - Editor wrap and render budgets
 - Editor and terminal ligature settings
 - Terminal cursor, blink, focus-reporting, and scrollback options
+- Shared terminal shell path and start-location defaults
 - Keybind routing with default-fill merge behavior
 
 Current caveats:
@@ -60,6 +61,8 @@ Current caveats:
 - [x] `CFG-02-01` Decide whether app, editor, and terminal fonts are truly separate
   Runtime now treats app chrome, editor text, and terminal text as separate font owners with field-by-field fallback to `app.font`.
 - [ ] `CFG-02-02` Make reload behavior explicit for every startup-applied field
+- [x] `CFG-02-02C` Add a shared terminal shell config surface
+  `terminal.shell.path` is now parser/runtime-owned and applies to future PTY sessions across IDE/editor/terminal modes; explicit launcher/CLI `--shell` still overrides it.
 - [x] `CFG-02-02B` Make per-domain font path/size reloadable
   Config reload now reapplies `app.font`, `editor.font`, and `terminal.font` independently at runtime instead of collapsing them to one shared effective stack.
 - [x] `CFG-02-02A` Define strict startup application phases

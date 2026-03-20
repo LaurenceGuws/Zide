@@ -4,6 +4,7 @@ const mode_build = @import("mode_build.zig");
 const app_runner = @import("runner.zig");
 const app_signals = @import("signals.zig");
 const app_state_mod = @import("app_state.zig");
+const terminal_cli = @import("terminal_cli.zig");
 
 pub const AppMode = app_state_mod.AppMode;
 const AppState = app_state_mod.AppState;
@@ -17,6 +18,7 @@ pub fn runWithMode(allocator: std.mem.Allocator, app_mode: AppMode) !void {
 }
 
 pub fn runFromArgs(allocator: std.mem.Allocator) !void {
+    try terminal_cli.applyKnownOverridesFromProcessArgs(allocator);
     const app_mode = app_bootstrap.parseAppMode(allocator);
     try runWithMode(allocator, app_mode);
 }

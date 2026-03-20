@@ -21,7 +21,11 @@ fn resolveTerminalDefaultStartLocation(
     allocator: std.mem.Allocator,
     configured: ?[]const u8,
 ) !?[]u8 {
-    const home = if (std.c.getenv("HOME")) |value| std.mem.sliceTo(value, 0) else null;
+    const home = blk: {
+        if (std.c.getenv("HOME")) |value| break :blk std.mem.sliceTo(value, 0);
+        if (std.c.getenv("USERPROFILE")) |value| break :blk std.mem.sliceTo(value, 0);
+        break :blk null;
+    };
     const raw = configured orelse home orelse return null;
     if (raw.len == 0) return null;
 
@@ -32,6 +36,15 @@ fn resolveTerminalDefaultStartLocation(
         }
     }
 
+    return try allocator.dupe(u8, raw);
+}
+
+fn resolveTerminalShellPath(
+    allocator: std.mem.Allocator,
+    configured: ?[]const u8,
+) !?[]u8 {
+    const raw = configured orelse return null;
+    if (raw.len == 0) return null;
     return try allocator.dupe(u8, raw);
 }
 
@@ -247,6 +260,19 @@ pub fn handle(state: anytype, ctx: *anyopaque, hooks: Hooks) !void {
     if (config.terminal_scrollback_rows != null) {
         state.terminal_scrollback_rows = config.terminal_scrollback_rows;
         log.logStdout(.info, "reload note: terminal scrollback cap applies to new sessions", .{});
+    }
+    {
+        const next_shell_path = try resolveTerminalShellPath(
+            state.allocator,
+            config.terminal_shell_path,
+        );
+        if (state.terminal_shell_path) |old| {
+            state.allocator.free(old);
+        }
+        state.terminal_shell_path = next_shell_path;
+        log.logStdout(.info, "reload terminal.shell.path={s}", .{
+            state.terminal_shell_path orelse "<default>",
+        });
     }
     {
         const next_default_start_location = try resolveTerminalDefaultStartLocation(

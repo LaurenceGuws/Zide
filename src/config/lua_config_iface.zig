@@ -154,6 +154,7 @@ pub const Config = struct {
     terminal_blink_style: ?TerminalBlinkStyle,
     terminal_disable_ligatures: ?TerminalDisableLigaturesStrategy,
     terminal_font_features: ?[]u8,
+    terminal_shell_path: ?[]u8,
     terminal_default_start_location: ?[]u8,
     terminal_new_tab_start_location: ?TerminalNewTabStartLocationMode,
     terminal_scrollback_rows: ?usize,

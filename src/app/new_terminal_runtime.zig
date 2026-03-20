@@ -21,11 +21,19 @@ const LaunchCwd = struct {
     }
 };
 
+fn getEnvVarOwned(allocator: std.mem.Allocator, name: []const u8) !?[]u8 {
+    return std.process.getEnvVarOwned(allocator, name) catch |err| switch (err) {
+        error.EnvironmentVariableNotFound => null,
+        else => return err,
+    };
+}
+
 fn launchCwdFromEnvOverride(state: anytype) !LaunchCwd {
-    const cwd_c = std.c.getenv("ZIDE_LAUNCH_CWD") orelse return .{};
-    const cwd = std.mem.sliceTo(cwd_c, 0);
-    if (cwd.len == 0) return .{};
-    const owned = try state.allocator.dupe(u8, cwd);
+    const owned = (try getEnvVarOwned(state.allocator, "ZIDE_LAUNCH_CWD")) orelse return .{};
+    if (owned.len == 0) {
+        state.allocator.free(owned);
+        return .{};
+    }
     return .{
         .value = owned,
         .owned = owned,
@@ -93,7 +101,7 @@ pub fn handle(state: anytype) !void {
             const created = try workspace.createTabWithSession(rows, cols);
             const term = created.session;
             app_terminal_theme_apply.setSessionPalette(term, theme);
-            try app_terminal_session_bootstrap.startSessionWithShellCellSize(term, shell, launch_cwd.value);
+            try app_terminal_session_bootstrap.startSessionWithShellCellSize(term, shell, launch_cwd.value, state.terminal_shell_path);
             const widget = app_terminal_session_bootstrap.initWidget(
                 term,
                 state.terminal_blink_style,
@@ -125,7 +133,7 @@ pub fn handle(state: anytype) !void {
     app_terminal_theme_apply.setSessionPalette(term, theme);
     var launch_cwd = try fallbackDefaultStartLocation(state);
     defer launch_cwd.deinit(state.allocator);
-    try app_terminal_session_bootstrap.startSessionWithShellCellSize(term, shell, launch_cwd.value);
+    try app_terminal_session_bootstrap.startSessionWithShellCellSize(term, shell, launch_cwd.value, state.terminal_shell_path);
     try state.terminals.append(state.allocator, term);
     const widget = app_terminal_session_bootstrap.initWidget(
         term,

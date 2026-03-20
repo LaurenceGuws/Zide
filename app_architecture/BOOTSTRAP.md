@@ -74,6 +74,8 @@ Install:
 
 Use the Windows section in
 [`docs/DEPENDENCIES.md`](../docs/DEPENDENCIES.md) as the detailed authority.
+For release-install layout and the first per-user installer path, use
+[`app_architecture/windows/INSTALLATION.md`](windows/INSTALLATION.md).
 
 ## Bootstrap
 

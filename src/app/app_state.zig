@@ -38,6 +38,7 @@ pub const AppState = struct {
     terminal_blink_style: t.TerminalWidget.BlinkStyle,
     terminal_cursor_style: ?t.CursorStyle,
     terminal_scrollback_rows: ?usize,
+    terminal_shell_path: ?[]u8,
     terminal_default_start_location: ?[]u8,
     terminal_new_tab_start_location: t.TerminalNewTabStartLocationMode,
     editor_tab_bar_width_mode: t.TabBar.WidthMode,

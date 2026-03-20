@@ -437,6 +437,23 @@ fn parseNativeScalarOverlay(allocator: std.mem.Allocator, lua: *zlua.Lua, table_
             lua_runtime_parse.parseLigatureStrategyFromString,
         );
 
+        _ = lua.getField(terminal_idx, "shell");
+        if (lua.isString(-1)) {
+            if (lua.toString(-1)) |v| {
+                replaceOwnedString(allocator, &out.terminal_shell_path, try allocator.dupe(u8, v));
+            } else |_| {}
+        } else if (lua.isTable(-1)) {
+            const shell_idx = lua.absIndex(-1);
+            _ = lua.getField(shell_idx, "path");
+            if (lua.isString(-1)) {
+                if (lua.toString(-1)) |v| {
+                    replaceOwnedString(allocator, &out.terminal_shell_path, try allocator.dupe(u8, v));
+                } else |_| {}
+            }
+            lua.pop(1);
+        }
+        lua.pop(1);
+
         _ = lua.getField(terminal_idx, "blink");
         if (lua.isBoolean(-1)) {
             out.terminal_blink_style = if (lua.toBoolean(-1)) .kitty else .off;
@@ -670,4 +687,28 @@ test "parseConfigFromLuaState parses editor manual highlight overrides" {
     try std.testing.expectEqualStrings("comment", config.editor_manual_highlight_unsupported.?.parser);
     try std.testing.expectEqualStrings("queries/custom/plain.scm", config.editor_manual_highlight_unsupported.?.query_path.?);
     try std.testing.expectEqual(EditorManualHighlightMode.replace, config.editor_manual_highlight_unsupported.?.mode);
+}
+
+test "parseConfigFromLuaState parses terminal shell path" {
+    const allocator = std.testing.allocator;
+    const lua = try zlua.Lua.init(allocator);
+    defer lua.deinit();
+    lua.openLibs();
+
+    try lua.loadString(
+        \\return {
+        \\    terminal = {
+        \\        shell = {
+        \\            path = "C:/Program Files/PowerShell/7/pwsh.exe",
+        \\        },
+        \\    },
+        \\}
+    );
+    try lua.protectedCall(.{ .args = 0, .results = 1 });
+
+    var config = try parseConfigFromLuaState(allocator, @ptrCast(lua));
+    defer lua_shared.freeConfig(allocator, &config);
+
+    try std.testing.expect(config.terminal_shell_path != null);
+    try std.testing.expectEqualStrings("C:/Program Files/PowerShell/7/pwsh.exe", config.terminal_shell_path.?);
 }

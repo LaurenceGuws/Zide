@@ -8,6 +8,12 @@ fn configureWindowsLinker(step: *std.Build.Step.Compile) void {
     _ = step;
 }
 
+pub fn configureWindowsGuiSubsystem(step: *std.Build.Step.Compile, target: std.Build.ResolvedTarget) void {
+    if (target.result.os.tag == .windows) {
+        step.subsystem = .Windows;
+    }
+}
+
 pub fn addAppExecutable(
     b: *std.Build,
     target: std.Build.ResolvedTarget,
@@ -55,6 +61,7 @@ pub fn addFocusedModeExecutable(
         name,
         root_source_file,
     );
+    configureWindowsGuiSubsystem(exe, target);
     target_config.configureAppExecutable(exe, ctx, name, profile);
     b.installArtifact(exe);
     _ = step_utils.addRunStepForArtifact(

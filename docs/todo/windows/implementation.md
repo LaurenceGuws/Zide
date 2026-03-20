@@ -39,6 +39,7 @@ The current execution order is:
 - [ ] Editor text at fractional DPI is visually stable and competitive with native Windows apps.
 - [ ] Manual smoke coverage exists for editor-only, terminal-only, and default app mode on Windows.
 - [ ] Windows runtime/distribution flow is documented against the actual supported target policy.
+- [ ] Normal GUI launches on Windows do not create an attached console host window.
 
 ## Windows First-Class Fundamentals
 
@@ -219,11 +220,19 @@ The current execution order is:
 
 ### Phase 8 Install/Distribution
 
-- [ ] `W8-01` Document the supported Windows runtime layout
+- [x] `W8-01` Document the supported Windows runtime layout
   - binary shape
   - required runtime files
   - expected launch location/policy assumptions
-- [ ] `W8-02` Choose the first distribution method only after quality sign-off
-  - zip-only portable app
-  - PowerShell installer
+- [x] `W8-02` Choose the first distribution method only after quality sign-off
+  - chosen first path: per-user PowerShell installer
+  - release zips remain the published artifact format
   - installer/package manager work later
+- [x] `W8-03` Make Start Menu launchers carry native Windows shell defaults
+  - installed launchers now accept terminal override args safely across IDE,
+    editor, and terminal entrypoints
+  - shared terminal shell/cwd policy is now owned by config rather than forced
+    by installer defaults
+  - installer may still stamp explicit `--shell` / `--cwd` args when requested
+  - Windows ConPTY launch now also passes the resolved cwd to
+    `CreateProcessW`, so installed terminals do not open in the install root
