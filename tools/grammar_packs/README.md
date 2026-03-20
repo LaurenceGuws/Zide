@@ -28,6 +28,11 @@ The app uses:
 zig build grammar-update -- --skip-git --continue-on-error --jobs 8
 ```
 
+Current local behavior:
+- on Windows, `grammar-update` runs through PowerShell and Python 3
+- on Windows, the default local target is `windows/x86_64`
+- explicit `--targets` / `--skip-targets` still override that default
+
 This writes:
 - `tools/grammar_packs/dist/manifest.json`
 - `assets/syntax/generated.lua` (extension + basename → grammar map)

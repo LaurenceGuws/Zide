@@ -146,6 +146,8 @@ fn runBuildScripts(
     try env_map.put("ZIDE_GRAMMAR_CONTINUE", if (mode.continue_on_error) "1" else "0");
     if (targets) |value| {
         try env_map.put("ZIDE_GRAMMAR_TARGETS", value);
+    } else if (builtin.os.tag == .windows) {
+        try env_map.put("ZIDE_GRAMMAR_TARGETS", "windows/x86_64");
     }
     if (skip_targets) |value| {
         try env_map.put("ZIDE_GRAMMAR_SKIP_TARGETS", value);
@@ -170,13 +172,17 @@ fn runScript(
     name: []const u8,
     env_map: ?*std.process.EnvMap,
 ) !void {
-    const script_path = try std.fs.path.join(allocator, &.{ scripts_root, name });
+    const script_name = if (builtin.os.tag == .windows)
+        try std.fmt.allocPrint(allocator, "{s}.ps1", .{std.fs.path.stem(name)})
+    else
+        try allocator.dupe(u8, name);
+    defer allocator.free(script_name);
+
+    const script_path = try std.fs.path.join(allocator, &.{ scripts_root, script_name });
     defer allocator.free(script_path);
 
-    // On Windows, shell scripts aren't directly executable. Prefer running via
-    // `bash` (Git Bash / MSYS2 / WSL bash on PATH).
     var child = if (builtin.os.tag == .windows)
-        std.process.Child.init(&.{ "bash", name }, allocator)
+        std.process.Child.init(&.{ "pwsh", "-NoProfile", "-ExecutionPolicy", "Bypass", "-File", script_name }, allocator)
     else
         std.process.Child.init(&.{script_path}, allocator);
     child.cwd = scripts_root;
@@ -187,11 +193,28 @@ fn runScript(
     }
     const result = child.spawnAndWait() catch |err| {
         if (builtin.os.tag == .windows and err == error.FileNotFound) {
-            std.debug.print(
-                "grammar-update: bash not found on PATH. On Windows, install Git Bash (recommended) or MSYS2/WSL, then re-run.\n",
-                .{},
-            );
-            return error.BashMissing;
+            var fallback = std.process.Child.init(&.{ "powershell", "-NoProfile", "-ExecutionPolicy", "Bypass", "-File", script_name }, allocator);
+            fallback.cwd = scripts_root;
+            fallback.stdout_behavior = .Inherit;
+            fallback.stderr_behavior = .Inherit;
+            if (env_map) |map| {
+                fallback.env_map = map;
+            }
+            const fallback_result = fallback.spawnAndWait() catch |fallback_err| {
+                if (fallback_err == error.FileNotFound) {
+                    std.debug.print(
+                        "grammar-update: pwsh/powershell not found on PATH. On Windows, install PowerShell and Python 3, then re-run.\n",
+                        .{},
+                    );
+                    return error.BashMissing;
+                }
+                return fallback_err;
+            };
+            switch (fallback_result) {
+                .Exited => |code| if (code != 0) return error.ScriptFailed,
+                else => return error.ScriptFailed,
+            }
+            return;
         }
         return err;
     };

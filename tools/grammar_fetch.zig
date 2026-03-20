@@ -41,7 +41,7 @@ pub fn fetchGrammars(
 
     const parser_bytes = std.fs.cwd().readFileAlloc(allocator, parsers_path, std.math.maxInt(usize)) catch |err| switch (err) {
         error.FileNotFound => {
-            std.debug.print("Missing work/parsers.lua. Run scripts/sync_from_nvim.sh first.\n", .{});
+            std.debug.print("Missing work/parsers.lua. Run the sync_from_nvim grammar-pack step first.\n", .{});
             return err;
         },
         else => return err,

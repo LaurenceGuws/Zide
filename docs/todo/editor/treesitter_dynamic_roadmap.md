@@ -56,7 +56,7 @@ Defaults + overrides:
 ### Step 2: Pack Fetch/Install (local) — done
 CLI command in place:
 - `zig build grammar-update`
-- runs `tools/grammar_packs/scripts/sync_from_nvim.sh`, `fetch_grammars.sh`, `build_all.sh`
+- runs `sync_from_nvim`, `fetch_grammars`, and `build_all` through the current platform entrypoint (`.sh` / `.ps1`)
 - installs `tools/grammar_packs/dist/` into `~/.config/zide/grammars`
 - writes per-pack `manifest.json` next to the `.so` + query files
 - supports `--skip-git` and `--continue-on-error` for best-effort builds

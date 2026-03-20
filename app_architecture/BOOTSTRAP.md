@@ -160,7 +160,8 @@ For the full compatibility surface, use
 zig build grammar-update -- --skip-git --continue-on-error --jobs 8
 ```
 
-On Windows, `grammar-update` runs via `bash` (Git Bash or MSYS2 recommended).
+On Windows, `grammar-update` now uses PowerShell and Python 3 by default; Git
+Bash is no longer required for the normal local path.
 
 ## Test
 

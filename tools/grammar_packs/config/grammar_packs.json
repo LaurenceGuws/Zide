@@ -6,6 +6,7 @@
   "targets": [
     {"os": "linux", "arch": "x86_64"},
     {"os": "linux", "arch": "aarch64"},
+    {"os": "windows", "arch": "x86_64"},
     {"os": "android", "arch": "aarch64"},
     {"os": "android", "arch": "armv7"},
     {"os": "android", "arch": "x86_64"}
