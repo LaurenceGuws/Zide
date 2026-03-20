@@ -32,6 +32,7 @@ const input_runtime = @import("renderer/input_runtime.zig");
 const font_runtime = @import("renderer/font_runtime.zig");
 const text_runtime = @import("renderer/text_runtime.zig");
 const window_chrome_runtime = @import("renderer/window_chrome_runtime.zig");
+const windows_snap_layout_sink = @import("../platform/windows_snap_layout_sink.zig");
 const glyph_cache = @import("glyph_cache.zig");
 const platform_window = @import("../platform/window.zig");
 const platform_input_events = @import("../platform/input_events.zig");
@@ -409,6 +410,7 @@ pub const WindowChromeContract = window_chrome_runtime.WindowChromeContract;
     scene_target: SceneTargetState,
     window_chrome: WindowChromeContract,
     window_chrome_applied_mode: WindowChromeMode,
+    window_snap_sink: windows_snap_layout_sink.Sink,
 
     theme: Theme,
     mouse_scale: MousePos,
@@ -637,6 +639,7 @@ pub const WindowChromeContract = window_chrome_runtime.WindowChromeContract;
             .scene_target = .{},
             .window_chrome = .{},
             .window_chrome_applied_mode = .native,
+            .window_snap_sink = .{},
             .theme = .{},
             .mouse_scale = .{ .x = 1.0, .y = 1.0 },
             .render_scale = render_scale,
@@ -778,6 +781,7 @@ pub const WindowChromeContract = window_chrome_runtime.WindowChromeContract;
         });
 
         sdl_api.stopTextInput(self.window);
+        self.window_snap_sink.deinit();
         sdl_api.glDeleteContext(self.gl_context);
         sdl.SDL_DestroyWindow(self.window);
         sdl.SDL_Quit();
@@ -1551,27 +1555,30 @@ pub const WindowChromeContract = window_chrome_runtime.WindowChromeContract;
         self.window_chrome = if (builtin.target.os.tag == .windows) contract else .{};
         if (builtin.target.os.tag != .windows) return;
 
-        if (self.window_chrome_applied_mode == self.window_chrome.mode) return;
-        self.window_chrome_applied_mode = self.window_chrome.mode;
-
         const integrated = self.window_chrome.mode == .terminal_integrated;
-        if (!sdl_api.setWindowBordered(self.window, !integrated)) {
-            app_logger.logger("sdl.window").logStdout(.warning, "SDL_SetWindowBordered failed integrated={d} err={s}", .{
-                @intFromBool(integrated),
-                sdl_api.getError(),
-            });
+        if (self.window_chrome_applied_mode != self.window_chrome.mode) {
+            self.window_chrome_applied_mode = self.window_chrome.mode;
+
+            if (!sdl_api.setWindowBordered(self.window, !integrated)) {
+                app_logger.logger("sdl.window").logStdout(.warning, "SDL_SetWindowBordered failed integrated={d} err={s}", .{
+                    @intFromBool(integrated),
+                    sdl_api.getError(),
+                });
+            }
+            if (!sdl_api.setWindowHitTest(
+                self.window,
+                if (integrated) windowHitTestCallback else null,
+                if (integrated) @ptrCast(self) else null,
+            )) {
+                app_logger.logger("sdl.window").logStdout(.warning, "SDL_SetWindowHitTest failed integrated={d} err={s}", .{
+                    @intFromBool(integrated),
+                    sdl_api.getError(),
+                });
+            }
+            _ = sdl_api.syncWindow(self.window);
         }
-        if (!sdl_api.setWindowHitTest(
-            self.window,
-            if (integrated) windowHitTestCallback else null,
-            if (integrated) @ptrCast(self) else null,
-        )) {
-            app_logger.logger("sdl.window").logStdout(.warning, "SDL_SetWindowHitTest failed integrated={d} err={s}", .{
-                @intFromBool(integrated),
-                sdl_api.getError(),
-            });
-        }
-        _ = sdl_api.syncWindow(self.window);
+
+        self.window_snap_sink.sync(self.window, self.window_chrome, self.windowIsMaximized());
     }
 
     pub fn minimizeWindow(self: *Renderer) bool {
@@ -1594,6 +1601,38 @@ pub const WindowChromeContract = window_chrome_runtime.WindowChromeContract;
 
     pub fn windowIsMaximized(self: *Renderer) bool {
         return (sdl_api.getWindowFlags(self.window) & sdl.SDL_WINDOW_MAXIMIZED) != 0;
+    }
+
+    pub fn integratedWindowChromeSinkActive(self: *const Renderer) bool {
+        return self.window_snap_sink.active();
+    }
+
+    pub fn integratedWindowChromeMinimizeHovered(self: *const Renderer) bool {
+        return self.window_snap_sink.minimizeHovered();
+    }
+
+    pub fn integratedWindowChromeMaximizeHovered(self: *const Renderer) bool {
+        return self.window_snap_sink.maximizeHovered();
+    }
+
+    pub fn integratedWindowChromeCloseHovered(self: *const Renderer) bool {
+        return self.window_snap_sink.closeHovered();
+    }
+
+    pub fn integratedWindowChromeMinimizePressed(self: *const Renderer) bool {
+        return self.window_snap_sink.minimizePressed();
+    }
+
+    pub fn integratedWindowChromeMaximizePressed(self: *const Renderer) bool {
+        return self.window_snap_sink.maximizePressed();
+    }
+
+    pub fn integratedWindowChromeClosePressed(self: *const Renderer) bool {
+        return self.window_snap_sink.closePressed();
+    }
+
+    pub fn integratedWindowChromeSinkOwnsChrome(self: *const Renderer) bool {
+        return self.window_snap_sink.ownsChrome();
     }
 
     fn windowHitTestCallback(_: ?*sdl.SDL_Window, area: [*c]const sdl.SDL_Point, data: ?*anyopaque) callconv(.c) sdl_api.HitTestResult {

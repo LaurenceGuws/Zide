@@ -344,10 +344,14 @@ The current execution order is:
     - `app_architecture/windows/CHROME_POLICY.md`
     - `app_architecture/windows/SNAP_LAYOUT_INTEROP.md`
   - Current stable state:
-    - maximize click is app-owned and correct
-    - drag, double-click maximize, right-click system menu, and `Alt+Space`
-      are stable and should not regress
-    - Snap Layout hover is currently absent on the stable path
+    - current local Win11 build now shows the Snap Layout popup reliably from a
+      persistent titleband sink without regressing maximize click, drag,
+      right-click system menu, double-click maximize, or `Alt+Space`
+    - the remaining defect is anchor quality: the popup still occasionally
+      appears from the left side before settling into the correct maximize
+      position
+    - this defect is accepted as deferred follow-up and does not block the
+      integrated terminal chrome baseline
   - Failed spike, 2026-03-20:
     - a narrow top-level `HTMAXBUTTON` handoff produced unstable behavior:
       maximize click could show an odd native artifact and stop restoring
@@ -358,11 +362,14 @@ The current execution order is:
       same parent succeeded
     - the per-sync attach/detach version was not a viable seam and was backed
       out entirely
+  - Current implementation finding, 2026-03-20:
+    - on this SDL/Win32 host, layered child sinks are not viable for this seam
+    - `CreateWindowExW(...)` with layered child styles failed, while an
+      ordinary custom child sink succeeded once the sink was created as a
+      transparent plain child
+    - the full caption/button-strip sink is now the active ownership model
   - Next direction:
-    - take a cleaner Windows-Terminal-like pass with a persistent drag/input
-      sink created once and resized with titleband geometry changes, not
-      reattached every sync
-    - keep maximize click/right-click/drag behavior stable while Snap hover is
-      reintroduced
-    - if that requires replacing the current maximize-hover seam directly, do
-      that instead of adding more parallel fallback paths
+    - keep the persistent titleband sink as the owning seam
+    - when this lane is resumed, focus on the remaining anchor-position defect
+      instead of reintroducing old top-level or transient fallback paths
+    - do not split caption ownership between app input and Win32 input again

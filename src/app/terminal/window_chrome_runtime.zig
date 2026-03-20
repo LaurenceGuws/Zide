@@ -122,9 +122,19 @@ pub fn captionDragAt(geometry: Geometry, x: f32, y: f32) bool {
 
 pub fn windowChromeContract(geometry: Geometry) app_shell.WindowChromeContract {
     if (!geometry.enabled) return .{};
+    const sink_rect = Rect{
+        .x = geometry.caption_rect.x,
+        .y = geometry.band.y,
+        .width = @max(0.0, (geometry.close_rect.x + geometry.close_rect.width) - geometry.caption_rect.x),
+        .height = geometry.band.height,
+    };
     return .{
         .mode = .terminal_integrated,
         .caption_rect = geometry.caption_rect,
+        .sink_rect = sink_rect,
+        .minimize_rect = geometry.minimize_rect,
+        .maximize_rect = geometry.maximize_rect,
+        .close_rect = geometry.close_rect,
         .resize_border_px = geometry.resize_border_px,
     };
 }

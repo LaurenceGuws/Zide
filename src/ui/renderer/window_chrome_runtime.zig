@@ -12,6 +12,10 @@ pub const WindowChromeMode = enum {
 pub const WindowChromeContract = struct {
     mode: WindowChromeMode = .native,
     caption_rect: Rect = .{ .x = 0, .y = 0, .width = 0, .height = 0 },
+    sink_rect: Rect = .{ .x = 0, .y = 0, .width = 0, .height = 0 },
+    minimize_rect: Rect = .{ .x = 0, .y = 0, .width = 0, .height = 0 },
+    maximize_rect: Rect = .{ .x = 0, .y = 0, .width = 0, .height = 0 },
+    close_rect: Rect = .{ .x = 0, .y = 0, .width = 0, .height = 0 },
     resize_border_px: f32 = 8.0,
 };
 

@@ -79,12 +79,34 @@ fn drawIntegratedButtons(state: anytype, shell: anytype, chrome: app_terminal_wi
     const mouse = shell.getMousePos();
     const focused = shell.windowFocused();
     const pressed_button = state.pressed_terminal_window_button;
-    const minimize_hovered = focused and widgets_common.pointInRect(mouse.x, mouse.y, chrome.minimize_rect.x, chrome.minimize_rect.y, chrome.minimize_rect.width, chrome.minimize_rect.height);
-    const maximize_hovered = focused and widgets_common.pointInRect(mouse.x, mouse.y, chrome.maximize_rect.x, chrome.maximize_rect.y, chrome.maximize_rect.width, chrome.maximize_rect.height);
-    const close_hovered = focused and widgets_common.pointInRect(mouse.x, mouse.y, chrome.close_rect.x, chrome.close_rect.y, chrome.close_rect.width, chrome.close_rect.height);
-    drawCaptionButton(shell, chrome.minimize_rect, minimize_hovered, pressed_button == .minimize and minimize_hovered, .minimize);
-    drawCaptionButton(shell, chrome.maximize_rect, maximize_hovered, pressed_button == .maximize_restore and maximize_hovered, .maximize_restore);
-    drawCaptionButton(shell, chrome.close_rect, close_hovered, pressed_button == .close and close_hovered, .close);
+    const native_sink_active = shell.integratedWindowChromeSinkActive();
+    const minimize_hovered = if (native_sink_active)
+        shell.integratedWindowChromeMinimizeHovered()
+    else
+        focused and widgets_common.pointInRect(mouse.x, mouse.y, chrome.minimize_rect.x, chrome.minimize_rect.y, chrome.minimize_rect.width, chrome.minimize_rect.height);
+    const maximize_hovered = if (native_sink_active)
+        shell.integratedWindowChromeMaximizeHovered()
+    else
+        focused and widgets_common.pointInRect(mouse.x, mouse.y, chrome.maximize_rect.x, chrome.maximize_rect.y, chrome.maximize_rect.width, chrome.maximize_rect.height);
+    const close_hovered = if (native_sink_active)
+        shell.integratedWindowChromeCloseHovered()
+    else
+        focused and widgets_common.pointInRect(mouse.x, mouse.y, chrome.close_rect.x, chrome.close_rect.y, chrome.close_rect.width, chrome.close_rect.height);
+    const minimize_pressed = if (native_sink_active)
+        shell.integratedWindowChromeMinimizePressed() and minimize_hovered
+    else
+        pressed_button == .minimize and minimize_hovered;
+    const maximize_pressed = if (native_sink_active)
+        shell.integratedWindowChromeMaximizePressed() and maximize_hovered
+    else
+        pressed_button == .maximize_restore and maximize_hovered;
+    const close_pressed = if (native_sink_active)
+        shell.integratedWindowChromeClosePressed() and close_hovered
+    else
+        pressed_button == .close and close_hovered;
+    drawCaptionButton(shell, chrome.minimize_rect, minimize_hovered, minimize_pressed, .minimize);
+    drawCaptionButton(shell, chrome.maximize_rect, maximize_hovered, maximize_pressed, .maximize_restore);
+    drawCaptionButton(shell, chrome.close_rect, close_hovered, close_pressed, .close);
 }
 
 fn drawCaptionButton(shell: anytype, rect: layout_types.Rect, hovered: bool, pressed: bool, kind: app_terminal_window_chrome_runtime.CaptionButton) void {

@@ -257,6 +257,12 @@ pub fn getPointerProperty(props: PropertiesId, name: [*:0]const u8) ?*anyopaque 
     return c.SDL_GetPointerProperty(props, name, null);
 }
 
+pub fn getWindowWin32Hwnd(window: *c.SDL_Window) ?*anyopaque {
+    if (builtin.target.os.tag != .windows) return null;
+    const props = getWindowProperties(window) orelse return null;
+    return getPointerProperty(props, c.SDL_PROP_WINDOW_WIN32_HWND_POINTER);
+}
+
 pub fn glCreateContext(window: *c.SDL_Window) ?c.SDL_GLContext {
     return c.SDL_GL_CreateContext(window);
 }

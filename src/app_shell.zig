@@ -217,6 +217,38 @@ pub const Shell = struct {
         return self.renderer.windowIsMaximized();
     }
 
+    pub fn integratedWindowChromeSinkActive(self: *Shell) bool {
+        return self.renderer.integratedWindowChromeSinkActive();
+    }
+
+    pub fn integratedWindowChromeMinimizeHovered(self: *Shell) bool {
+        return self.renderer.integratedWindowChromeMinimizeHovered();
+    }
+
+    pub fn integratedWindowChromeMaximizeHovered(self: *Shell) bool {
+        return self.renderer.integratedWindowChromeMaximizeHovered();
+    }
+
+    pub fn integratedWindowChromeCloseHovered(self: *Shell) bool {
+        return self.renderer.integratedWindowChromeCloseHovered();
+    }
+
+    pub fn integratedWindowChromeMinimizePressed(self: *Shell) bool {
+        return self.renderer.integratedWindowChromeMinimizePressed();
+    }
+
+    pub fn integratedWindowChromeMaximizePressed(self: *Shell) bool {
+        return self.renderer.integratedWindowChromeMaximizePressed();
+    }
+
+    pub fn integratedWindowChromeClosePressed(self: *Shell) bool {
+        return self.renderer.integratedWindowChromeClosePressed();
+    }
+
+    pub fn integratedWindowChromeSinkOwnsChrome(self: *Shell) bool {
+        return self.renderer.integratedWindowChromeSinkOwnsChrome();
+    }
+
     pub fn setTextInputRect(self: *Shell, x: i32, y: i32, w: i32, h: i32) void {
         self.renderer.setTextInputRect(x, y, w, h);
     }

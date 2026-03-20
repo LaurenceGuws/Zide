@@ -89,7 +89,7 @@ pub fn handle(
             state.app_mode,
             state.terminal_window_chrome_mode,
         );
-        if (!chrome.enabled) {
+        if (!chrome.enabled or state.shell.integratedWindowChromeSinkOwnsChrome()) {
             state.pressed_terminal_window_button = null;
         } else {
             const hovered_button = app_terminal_window_chrome_runtime.buttonAt(chrome, frame_mouse.x, frame_mouse.y);

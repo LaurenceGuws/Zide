@@ -26,12 +26,19 @@ Zide's current accepted Win11 terminal integrated chrome already supports:
 
 What is still missing is native Win11 Snap Layout hover on the maximize button.
 
-The stable baseline today is:
+The current implementation baseline is:
 
-- maximize click is app-owned and correct
-- the maximize hover Snap flyout is absent
+- a persistent native child sink now owns the integrated terminal
+  caption/button strip
+- Win11 Snap Layout hover now appears from that sink on the local Win11 test
+  box
+- maximize click, drag, double-click maximize, right-click system menu, and
+  `Alt+Space` stayed stable on that path
+- one defect remains: the Snap flyout can still occasionally first appear from
+  the left side before settling into the correct maximize anchor
 
-This is acceptable as a baseline, but it is not the final native-feel target.
+This is acceptable as the current checkpoint, but it is not the final
+native-feel target.
 
 ## What Failed
 
@@ -48,6 +55,12 @@ Observed failures:
   failed `CreateWindowExW(...)` against the SDL parent HWND
 - a plain `STATIC` child probe on the same parent succeeded, so the failure was
   in our sink design and lifecycle, not in child windows on SDL generally
+- later host-specific diagnosis narrowed that further:
+  - layered child sinks on this SDL/Win32 host fail creation
+  - a transparent plain child sink succeeds
+  - so the persistent sink seam stays correct, but the exact child-window style
+    contract must follow the host instead of copying Windows Terminal flags
+    blindly
 
 Conclusion:
 
@@ -127,43 +140,38 @@ But the native child HWND and its message handling are shell-service concerns.
 
 ### Covered Region
 
-The first cut should cover only the integrated titleband region needed for:
+The active cut now covers the integrated caption/button strip and owns:
 
 - drag caption area
-- maximize button hover for Snap flyout
+- minimize/maximize/close hit regions
+- maximize hover for Snap flyout
 
-It does not need to replace every caption path immediately.
-
-The stable accepted behavior should remain app-owned until the sink proves it
-can own more without regressions.
+This replaced the earlier split ownership path because the split seam kept
+causing drift between app-side and Win32-side button state.
 
 ## Message Ownership Strategy
 
 ### Sink-owned
 
-The sink should own:
+The sink owns:
 
-- `WM_NCHITTEST` for its covered titleband region
+- `WM_NCHITTEST` for the covered titleband/caption-button region
 - native maximize hover anchor path
 - non-client hover/leave tracking for the covered maximize zone
+- caption button hover/press/release state
 
 ### Forward-to-parent
 
-For plain drag-caption behavior, the sink should forward the appropriate
-caption/non-client messages to the parent when the pointer is in drag space.
+For plain drag-caption behavior and non-client right-click/double-click
+messages, the sink forwards the appropriate caption/non-client messages to the
+parent.
 
-### Still app-owned in first cut
+### Current note
 
-The first persistent-sink pass should keep these stable paths app-owned unless
-the sink design proves it can take them cleanly:
+The remaining defect is not “ownership missing”.
 
-- maximize click execution
-- minimize click
-- close click
-- right-click system menu
-- double-click maximize
-
-That preserves the accepted baseline while Snap hover is added back.
+The remaining defect is anchor quality under the current otherwise-correct sink
+seam.
 
 ## Geometry Contract
 
@@ -194,14 +202,14 @@ Do not make the sink recalculate layout policy from UI state ad hoc.
 - multiple competing maximize-hover implementations
 - product-specific Windows hacks copied separately into IDE/editor/terminal code
 
-## Suggested Rollout
+## Current Rollout State
 
-1. Introduce a persistent sink type in the Windows shell/platform layer.
-2. Feed it only integrated-terminal geometry and activation state.
-3. Restore Snap hover through that sink.
-4. Verify maximize click, drag, double-click, right-click, and `Alt+Space`
-   still match the current accepted behavior.
-5. Only then decide whether more caption paths should migrate into the sink.
+1. A persistent sink type exists in the Windows shell/platform layer.
+2. It is fed integrated-terminal geometry and activation state.
+3. Snap hover is restored through that sink.
+4. Maximize click, drag, double-click, right-click, and `Alt+Space` stayed
+   accepted on the local Win11 machine.
+5. The remaining work is anchor-position correctness, not ownership expansion.
 
 ## Exit Criteria
 
@@ -213,6 +221,11 @@ Do not make the sink recalculate layout policy from UI state ad hoc.
 - restore from maximized still works correctly
 - drag/double-click/right-click/system-menu behavior remains accepted
 - no extra runtime fallback path remains from the failed spike
+
+Current checkpoint:
+
+- popup presence is effectively solved
+- popup anchor correctness is still open
 
 ## Relationship To Future IDE/Editor Work
 
