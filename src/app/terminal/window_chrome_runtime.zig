@@ -4,6 +4,7 @@ const app_shell = @import("../../app_shell.zig");
 const app_terminal_tabs_runtime = @import("terminal_tabs_runtime.zig");
 const app_modes = @import("../modes/mod.zig");
 const app_types = @import("../app_state_types.zig");
+const window_caption_buttons_runtime = @import("../window_caption_buttons_runtime.zig");
 const shared_types = @import("../../types/mod.zig");
 const widgets = @import("../../ui/widgets.zig");
 
@@ -12,7 +13,7 @@ const Shell = app_shell.Shell;
 const TabBar = widgets.TabBar;
 const TerminalWorkspace = @import("../../terminal/core/terminal.zig").TerminalWorkspace;
 
-pub const CaptionButton = app_types.TerminalWindowCaptionButton;
+pub const CaptionButton = app_types.WindowCaptionButton;
 
 pub const Geometry = struct {
     enabled: bool,
@@ -20,6 +21,7 @@ pub const Geometry = struct {
     tab_strip_width: f32,
     tabs_used_width: f32,
     caption_rect: Rect,
+    sink_rect: Rect,
     minimize_rect: Rect,
     maximize_rect: Rect,
     close_rect: Rect,
@@ -57,6 +59,7 @@ pub fn computeGeometry(
             .tab_strip_width = band.width,
             .tabs_used_width = band.width,
             .caption_rect = .{ .x = 0, .y = 0, .width = 0, .height = 0 },
+            .sink_rect = .{ .x = 0, .y = 0, .width = 0, .height = 0 },
             .minimize_rect = .{ .x = 0, .y = 0, .width = 0, .height = 0 },
             .maximize_rect = .{ .x = 0, .y = 0, .width = 0, .height = 0 },
             .close_rect = .{ .x = 0, .y = 0, .width = 0, .height = 0 },
@@ -64,81 +67,36 @@ pub fn computeGeometry(
         };
     }
 
-    const scale = shell.uiScaleFactor();
-    const button_width = @max(46.0 * scale, band.height * 1.35);
-    const button_total_width = button_width * 3.0;
-    const drag_min_width = @max(56.0 * scale, band.height * 1.5);
-    const tab_strip_width = @max(0.0, band.width - button_total_width - drag_min_width);
-    const tabs_used_width = @min(tab_strip_width, tab_bar.contentWidth(tab_strip_width, shell.charWidth(), scale));
-    const buttons_x = band.x + band.width - button_total_width;
-    const caption_x = band.x + tabs_used_width;
-    const caption_width = @max(0.0, buttons_x - caption_x);
+    const rects = window_caption_buttons_runtime.computeRects(shell, band, tab_bar.contentWidth(band.width, shell.charWidth(), shell.uiScaleFactor()));
+    const tab_strip_width = @max(0.0, rects.minimize_rect.x - band.x);
+    const tabs_used_width = @min(tab_strip_width, tab_bar.contentWidth(tab_strip_width, shell.charWidth(), shell.uiScaleFactor()));
+    const adjusted_rects = window_caption_buttons_runtime.computeRects(shell, band, tabs_used_width);
 
     return .{
         .enabled = true,
         .band = band,
         .tab_strip_width = tab_strip_width,
         .tabs_used_width = tabs_used_width,
-        .caption_rect = .{
-            .x = caption_x,
-            .y = band.y,
-            .width = caption_width,
-            .height = band.height,
-        },
-        .minimize_rect = .{
-            .x = buttons_x,
-            .y = band.y,
-            .width = button_width,
-            .height = band.height,
-        },
-        .maximize_rect = .{
-            .x = buttons_x + button_width,
-            .y = band.y,
-            .width = button_width,
-            .height = band.height,
-        },
-        .close_rect = .{
-            .x = buttons_x + (button_width * 2.0),
-            .y = band.y,
-            .width = button_width,
-            .height = band.height,
-        },
-        .resize_border_px = @max(6.0, 8.0 * scale),
+        .caption_rect = adjusted_rects.caption_rect,
+        .sink_rect = adjusted_rects.sink_rect,
+        .minimize_rect = adjusted_rects.minimize_rect,
+        .maximize_rect = adjusted_rects.maximize_rect,
+        .close_rect = adjusted_rects.close_rect,
+        .resize_border_px = adjusted_rects.resize_border_px,
     };
 }
 
 pub fn buttonAt(geometry: Geometry, x: f32, y: f32) ?CaptionButton {
     if (!geometry.enabled) return null;
-    if (pointInRect(x, y, geometry.minimize_rect)) return .minimize;
-    if (pointInRect(x, y, geometry.maximize_rect)) return .maximize_restore;
-    if (pointInRect(x, y, geometry.close_rect)) return .close;
-    return null;
+    return window_caption_buttons_runtime.buttonAt(geometry, x, y);
 }
 
 pub fn captionDragAt(geometry: Geometry, x: f32, y: f32) bool {
     if (!geometry.enabled) return false;
-    return pointInRect(x, y, geometry.caption_rect);
+    return window_caption_buttons_runtime.captionDragAt(geometry, x, y);
 }
 
 pub fn windowChromeContract(geometry: Geometry) app_shell.WindowChromeContract {
     if (!geometry.enabled) return .{};
-    const sink_rect = Rect{
-        .x = geometry.caption_rect.x,
-        .y = geometry.band.y,
-        .width = @max(0.0, (geometry.close_rect.x + geometry.close_rect.width) - geometry.caption_rect.x),
-        .height = geometry.band.height,
-    };
-    return .{
-        .mode = .terminal_integrated,
-        .caption_rect = geometry.caption_rect,
-        .sink_rect = sink_rect,
-        .minimize_rect = geometry.minimize_rect,
-        .maximize_rect = geometry.maximize_rect,
-        .close_rect = geometry.close_rect,
-        .resize_border_px = geometry.resize_border_px,
-    };
-}
-
-fn pointInRect(x: f32, y: f32, rect: Rect) bool {
-    return x >= rect.x and x <= rect.x + rect.width and y >= rect.y and y <= rect.y + rect.height;
+    return window_caption_buttons_runtime.windowChromeContract(.terminal_integrated, geometry);
 }

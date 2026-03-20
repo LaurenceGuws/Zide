@@ -49,6 +49,9 @@ This queue does not own:
     - The shared top bar is now split into model, geometry, and widget layers,
       and top-bar action dispatch now lives in a dedicated runtime seam instead
       of inside mouse input handling.
+    - On Windows, editor and IDE now also reuse that same shared top bar as the
+      left side of one app-owned titleband instead of growing a second
+      editor-only chrome surface.
     - Added a shared status-bar path prompt for `Open` and `Save As` so
       editor-only mode can open/save beyond the initial buffer without
       inventing a separate editor-only dialog stack.

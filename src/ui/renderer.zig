@@ -1555,7 +1555,7 @@ pub const WindowChromeContract = window_chrome_runtime.WindowChromeContract;
         self.window_chrome = if (builtin.target.os.tag == .windows) contract else .{};
         if (builtin.target.os.tag != .windows) return;
 
-        const integrated = self.window_chrome.mode == .terminal_integrated;
+        const integrated = self.window_chrome.mode != .native;
         if (self.window_chrome_applied_mode != self.window_chrome.mode) {
             self.window_chrome_applied_mode = self.window_chrome.mode;
 

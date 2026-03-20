@@ -89,7 +89,7 @@ pub const TerminalNewTabStartLocationMode = enum {
     default,
 };
 
-pub const TerminalWindowCaptionButton = enum {
+pub const WindowCaptionButton = enum {
     minimize,
     maximize_restore,
     close,

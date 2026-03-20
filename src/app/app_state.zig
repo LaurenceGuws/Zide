@@ -42,7 +42,7 @@ pub const AppState = struct {
     terminal_default_start_location: ?[]u8,
     terminal_new_tab_start_location: t.TerminalNewTabStartLocationMode,
     terminal_window_chrome_mode: t.TerminalWindowChromeMode,
-    pressed_terminal_window_button: ?t.TerminalWindowCaptionButton,
+    pressed_window_caption_button: ?t.WindowCaptionButton,
     terminal_tab_bar_show_shell_icon: bool,
     terminal_tab_bar_shell_icons: ?[]t.TerminalShellIconMapping,
     terminal_shell_icon_cache: t.TerminalShellIconCache,

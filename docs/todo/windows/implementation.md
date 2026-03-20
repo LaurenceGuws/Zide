@@ -373,3 +373,46 @@ The current execution order is:
     - when this lane is resumed, focus on the remaining anchor-position defect
       instead of reintroducing old top-level or transient fallback paths
     - do not split caption ownership between app input and Win32 input again
+
+### Phase 10 Editor And IDE Shared Windows Titleband
+
+- [x] `W10-01` Replace the mixed editor/IDE top-edge experiments with one shared top bar
+  - The old editor/IDE Windows lane drifted into a structurally bad split:
+    - shared app menus on the left
+    - attempted native-owned caption buttons on the right
+    - product-specific fallback logic around that seam
+  - That path is now explicitly dropped.
+  - Current accepted direction:
+    - one shared `top_bar` widget for editor and IDE
+    - one app-owned Windows titleband
+    - shared caption-button shell services under it
+    - no native/app mixed ownership inside the same band
+
+- [x] `W10-02` Refactor the shared editor/IDE top bar into a real decoupled widget seam
+  - Current state:
+    - `SharedTopBar` is now split into:
+      - model
+      - geometry
+      - widget state/draw/input
+    - host draw/click wiring now lives in dedicated top-bar runtime files
+    - the old `options_bar` seam is gone
+
+- [x] `W10-03` Move editor/IDE onto the shared Windows-owned titleband contract
+  - Current state:
+    - editor and IDE now use the same app-owned Windows titleband path
+    - the shared top bar remains the left-side content authority
+    - shared caption button geometry/draw/input is reused instead of terminal-
+      specific duplication
+    - renderer/window chrome mode now supports a separate editor/IDE top-bar
+      integrated mode instead of pretending terminal-only chrome can be reused
+  - Required manual checks:
+    - editor launch
+    - IDE launch
+    - one top band only
+    - shared top bar on the left
+    - caption buttons on the right
+    - drag
+    - double-click maximize
+    - right-click system menu
+    - `Alt+Space`
+    - resize borders/corners

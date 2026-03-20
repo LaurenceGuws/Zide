@@ -71,8 +71,7 @@ Examples:
 
 - terminal-only `native` vs `integrated` window chrome
 - whether terminal tabs live in the titleband
-- whether IDE/editor keep a native frame and move a compact action set into the
-  titlebar
+- whether IDE/editor keep a native frame or use a shared app-owned titleband
 - which actions appear in a titleband region
 
 These belong in product policy/config/composition, not in the low-level Windows
@@ -95,13 +94,16 @@ consumes shared shell services.
 
 ### Editor
 
-Editor should not inherit terminal integrated chrome.
+Editor should not inherit terminal tab-titleband chrome.
 
 Preferred direction:
 
-- keep a normal native-framed window
-- later move a compact set of editor actions into a titlebar command region
-- do not turn editor into a second terminal-style custom titleband system
+- reuse the shared top-bar widget as the left-side titleband content
+- use one app-owned titleband on Windows with app-owned caption buttons on the
+  right
+- do not mix app-owned left chrome with native-owned right chrome in one band
+- do not fork a second editor-only caption-button stack away from shared shell
+  services
 
 ### IDE
 
@@ -111,7 +113,7 @@ services for the other products.
 Preferred direction:
 
 - reuse shared shell services
-- reuse the editor/IDE titlebar command-hosting capability later
+- reuse the same shared editor/IDE titleband surface as editor
 - do not make IDE a privileged infrastructure owner for terminal or editor
 
 ## Architectural Rule For Follow-Up Work
@@ -139,8 +141,9 @@ Bad examples:
    the accepted path.
 3. The next Snap attempt may replace the current maximize-hover seam directly if
    that yields a cleaner Windows-native design.
-4. Future IDE/editor titlebar work should use a separate command-hosting policy
-   lane, not terminal integrated chrome reuse.
+4. Future IDE/editor titleband work should reuse the shared top-bar widget and
+   shared caption-button shell services instead of building a mixed native/app
+   split band.
 
 ## Reference Split
 
@@ -160,7 +163,7 @@ There should be one Windows shell-service layer and multiple product chrome
 policies on top of it.
 
 Terminal integrated chrome is one such policy.
-Future IDE/editor titlebar actions are another.
+Editor/IDE shared titleband chrome is another.
 
 What we should not build is three unrelated custom titlebar systems plus a pile
 of fallback paths for each.

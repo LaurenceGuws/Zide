@@ -260,7 +260,7 @@ const WindowsSink = struct {
     }
 
     pub fn sync(self: *WindowsSink, window: *sdl_api.c.SDL_Window, contract: window_chrome_runtime.WindowChromeContract, maximized: bool) void {
-        if (contract.mode != .terminal_integrated or contract.sink_rect.width <= 0 or contract.sink_rect.height <= 0 or contract.minimize_rect.width <= 0 or contract.maximize_rect.width <= 0 or contract.close_rect.width <= 0) {
+        if (contract.mode == .native or contract.sink_rect.width <= 0 or contract.sink_rect.height <= 0 or contract.minimize_rect.width <= 0 or contract.maximize_rect.width <= 0 or contract.close_rect.width <= 0) {
             self.owns_chrome = false;
             self.hovered_button = .none;
             self.pressed_button = .none;

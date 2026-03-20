@@ -7,6 +7,7 @@ const Rect = shared_types.layout.Rect;
 pub const WindowChromeMode = enum {
     native,
     terminal_integrated,
+    top_bar_integrated,
 };
 
 pub const WindowChromeContract = struct {

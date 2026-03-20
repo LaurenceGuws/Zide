@@ -4,6 +4,7 @@ const app_modes = @import("modes/mod.zig");
 const app_mouse_pressed_frame = @import("mouse_pressed_frame.zig");
 const app_mouse_pressed_routing_runtime = @import("mouse_pressed_routing_runtime.zig");
 const app_top_bar_frame_runtime = @import("top_bar_frame_runtime.zig");
+const app_top_bar_window_chrome_runtime = @import("top_bar_window_chrome_runtime.zig");
 const app_terminal_window_chrome_runtime = @import("terminal/window_chrome_runtime.zig");
 const app_mode_adapter_sync_runtime = @import("mode_adapter_sync_runtime.zig");
 const app_tab_action_apply_runtime = @import("tabs/tab_action_apply_runtime.zig");
@@ -40,60 +41,26 @@ pub fn handle(
     const left_released = frame_input_batch.mouseReleased(input_types.MouseButton.left);
     const right_pressed = frame_input_batch.mousePressed(input_types.MouseButton.right);
 
-    if (left_pressed or left_released or right_pressed or state.pressed_terminal_window_button != null) {
-        const chrome = app_terminal_window_chrome_runtime.computeGeometry(
-            state.shell,
-            &state.tab_bar,
-            frame_layout.tab_bar,
-            state.app_mode,
-            state.terminal_window_chrome_mode,
-        );
-        if (!chrome.enabled or state.shell.integratedWindowChromeSinkOwnsChrome()) {
-            state.pressed_terminal_window_button = null;
+    if (left_pressed or left_released or right_pressed or state.pressed_window_caption_button != null) {
+        if (app_terminal_window_chrome_runtime.isIntegratedActive(state.app_mode, state.terminal_window_chrome_mode)) {
+            const chrome = app_terminal_window_chrome_runtime.computeGeometry(
+                state.shell,
+                &state.tab_bar,
+                frame_layout.tab_bar,
+                state.app_mode,
+                state.terminal_window_chrome_mode,
+            );
+            if (try handleWindowChromeButtons(state, chrome, frame_mouse, frame_input_batch, now, app_terminal_window_chrome_runtime.buttonAt, app_terminal_window_chrome_runtime.captionDragAt)) return;
+        } else if (app_top_bar_window_chrome_runtime.isIntegratedActive(state.app_mode)) {
+            const chrome = app_top_bar_window_chrome_runtime.computeGeometry(
+                state.shell,
+                &state.top_bar,
+                frame_layout.top_bar,
+                state.app_mode,
+            );
+            if (try handleWindowChromeButtons(state, chrome, frame_mouse, frame_input_batch, now, app_top_bar_window_chrome_runtime.buttonAt, app_top_bar_window_chrome_runtime.captionDragAt)) return;
         } else {
-            const hovered_button = app_terminal_window_chrome_runtime.buttonAt(chrome, frame_mouse.x, frame_mouse.y);
-            if (right_pressed and hovered_button == null and app_terminal_window_chrome_runtime.captionDragAt(chrome, frame_mouse.x, frame_mouse.y)) {
-                _ = state.shell.showWindowSystemMenu(
-                    @intFromFloat(std.math.round(frame_mouse.x)),
-                    @intFromFloat(std.math.round(frame_mouse.y)),
-                );
-                state.metrics.noteInput(now);
-                return;
-            }
-            if (left_pressed) {
-                if (hovered_button == null and
-                    frame_input_batch.mouseClicks(input_types.MouseButton.left) >= 2 and
-                    app_terminal_window_chrome_runtime.captionDragAt(chrome, frame_mouse.x, frame_mouse.y))
-                {
-                    _ = state.shell.toggleMaximizeWindow();
-                    state.pressed_terminal_window_button = null;
-                    state.needs_redraw = true;
-                    state.metrics.noteInput(now);
-                    return;
-                }
-                if (hovered_button) |button| {
-                    state.pressed_terminal_window_button = button;
-                    state.needs_redraw = true;
-                    state.metrics.noteInput(now);
-                    return;
-                }
-                state.pressed_terminal_window_button = null;
-            }
-            if (left_released) {
-                if (state.pressed_terminal_window_button) |pressed_button| {
-                    if (hovered_button == pressed_button) {
-                        switch (pressed_button) {
-                            .minimize => _ = state.shell.minimizeWindow(),
-                            .maximize_restore => _ = state.shell.toggleMaximizeWindow(),
-                            .close => state.shell.requestClose(),
-                        }
-                    }
-                    state.pressed_terminal_window_button = null;
-                    state.needs_redraw = true;
-                    state.metrics.noteInput(now);
-                    return;
-                }
-            }
+            state.pressed_window_caption_button = null;
         }
     }
     if (comptime mode_build.focused_mode != .terminal) {
@@ -211,4 +178,67 @@ pub fn handle(
     );
     _ = app_bootstrap;
     _ = TabBar;
+}
+
+fn handleWindowChromeButtons(
+    state: anytype,
+    chrome: anytype,
+    frame_mouse: input_types.MousePos,
+    frame_input_batch: *input_types.InputBatch,
+    now: f64,
+    comptime buttonAtFn: anytype,
+    comptime captionDragAtFn: anytype,
+) !bool {
+    if (!chrome.enabled or state.shell.integratedWindowChromeSinkOwnsChrome()) {
+        state.pressed_window_caption_button = null;
+        return false;
+    }
+
+    const left_pressed = frame_input_batch.mousePressed(input_types.MouseButton.left);
+    const left_released = frame_input_batch.mouseReleased(input_types.MouseButton.left);
+    const right_pressed = frame_input_batch.mousePressed(input_types.MouseButton.right);
+    const hovered_button = buttonAtFn(chrome, frame_mouse.x, frame_mouse.y);
+    if (right_pressed and hovered_button == null and captionDragAtFn(chrome, frame_mouse.x, frame_mouse.y)) {
+        _ = state.shell.showWindowSystemMenu(
+            @intFromFloat(std.math.round(frame_mouse.x)),
+            @intFromFloat(std.math.round(frame_mouse.y)),
+        );
+        state.metrics.noteInput(now);
+        return true;
+    }
+    if (left_pressed) {
+        if (hovered_button == null and
+            frame_input_batch.mouseClicks(input_types.MouseButton.left) >= 2 and
+            captionDragAtFn(chrome, frame_mouse.x, frame_mouse.y))
+        {
+            _ = state.shell.toggleMaximizeWindow();
+            state.pressed_window_caption_button = null;
+            state.needs_redraw = true;
+            state.metrics.noteInput(now);
+            return true;
+        }
+        if (hovered_button) |button| {
+            state.pressed_window_caption_button = button;
+            state.needs_redraw = true;
+            state.metrics.noteInput(now);
+            return true;
+        }
+        state.pressed_window_caption_button = null;
+    }
+    if (left_released) {
+        if (state.pressed_window_caption_button) |pressed_button| {
+            if (hovered_button == pressed_button) {
+                switch (pressed_button) {
+                    .minimize => _ = state.shell.minimizeWindow(),
+                    .maximize_restore => _ = state.shell.toggleMaximizeWindow(),
+                    .close => state.shell.requestClose(),
+                }
+            }
+            state.pressed_window_caption_button = null;
+            state.needs_redraw = true;
+            state.metrics.noteInput(now);
+            return true;
+        }
+    }
+    return false;
 }

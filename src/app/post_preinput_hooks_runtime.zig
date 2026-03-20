@@ -14,6 +14,7 @@ const app_terminal_tabs_runtime = @import("terminal/terminal_tabs_runtime.zig");
 const app_terminal_resize = @import("terminal/terminal_resize.zig");
 const app_terminal_grid = @import("terminal/terminal_grid.zig");
 const app_terminal_window_chrome_runtime = @import("terminal/window_chrome_runtime.zig");
+const app_top_bar_window_chrome_runtime = @import("top_bar_window_chrome_runtime.zig");
 const app_pointer_activity_frame = @import("pointer_activity_frame.zig");
 const app_terminal_scrollbar_runtime = @import("terminal/terminal_scrollbar_runtime.zig");
 const app_terminal_split_resize_frame = @import("terminal/terminal_split_resize_frame.zig");
@@ -112,14 +113,26 @@ pub fn handle(state: anytype, shell: *Shell, batch: *input_types.InputBatch, now
             .sync_window_chrome = struct {
                 fn inner(inner_raw: *anyopaque, frame_shell: *Shell, layout: layout_types.WidgetLayout) void {
                     const inner_state: *State = @ptrCast(@alignCast(inner_raw));
-                    const geometry = app_terminal_window_chrome_runtime.computeGeometry(
-                        frame_shell,
-                        &inner_state.tab_bar,
-                        layout.tab_bar,
-                        inner_state.app_mode,
-                        inner_state.terminal_window_chrome_mode,
-                    );
-                    frame_shell.setWindowChrome(app_terminal_window_chrome_runtime.windowChromeContract(geometry));
+                    if (app_terminal_window_chrome_runtime.isIntegratedActive(inner_state.app_mode, inner_state.terminal_window_chrome_mode)) {
+                        const geometry = app_terminal_window_chrome_runtime.computeGeometry(
+                            frame_shell,
+                            &inner_state.tab_bar,
+                            layout.tab_bar,
+                            inner_state.app_mode,
+                            inner_state.terminal_window_chrome_mode,
+                        );
+                        frame_shell.setWindowChrome(app_terminal_window_chrome_runtime.windowChromeContract(geometry));
+                    } else if (app_top_bar_window_chrome_runtime.isIntegratedActive(inner_state.app_mode)) {
+                        const geometry = app_top_bar_window_chrome_runtime.computeGeometry(
+                            frame_shell,
+                            &inner_state.top_bar,
+                            layout.top_bar,
+                            inner_state.app_mode,
+                        );
+                        frame_shell.setWindowChrome(app_top_bar_window_chrome_runtime.windowChromeContract(geometry));
+                    } else {
+                        frame_shell.setWindowChrome(.{});
+                    }
                 }
             }.inner,
             .handle_cursor_blink_arming = struct {
