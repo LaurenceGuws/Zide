@@ -276,7 +276,7 @@ The current execution order is:
     - the current cut is intentionally no-behavior-change; the first runtime
       consumer is the upcoming Windows titlebar/hit-test implementation
 
-- [ ] `W9-03` Establish the Windows titlebar/hit-test seam for terminal-only mode
+- [x] `W9-03` Establish the Windows titlebar/hit-test seam for terminal-only mode
   - Required capabilities:
     - draggable caption region
     - native resize borders/corners
@@ -284,8 +284,14 @@ The current execution order is:
     - correct maximized padding/insets
   - The config surface should stay platform-capable; only the first runtime
     implementation is Windows-specific
+  - Current state:
+    - Windows terminal-only integrated mode now uses a borderless SDL window
+      with explicit hit-test routing for resize edges, caption drag, and
+      caption buttons
+    - native mode keeps the ordinary framed path
+    - IDE/editor remain on the non-integrated path
 
-- [ ] `W9-04` Merge terminal tabs into the titlebar band without preserving the old full-width tab-row assumption
+- [x] `W9-04` Merge terminal tabs into the titlebar band without preserving the old full-width tab-row assumption
   - Current blocker:
     - terminal-only layout still reserves a normal full-width tab row at `y=0`
     - terminal defaults still prefer `terminal.tab_bar.width_mode = "dynamic"`
@@ -296,9 +302,17 @@ The current execution order is:
     - integrated mode uses compact tab chips
     - terminal content begins directly below the merged titlebar band
     - tab drag/reorder/close behavior remains correct
+  - Current state:
+    - integrated mode now draws the terminal titleband as one combined strip
+      with compact tabs on the left and caption buttons on the right
+    - terminal drag/reorder/click routing uses the compact integrated width
+      instead of the old full-width row assumption
+    - ordinary content-row behavior remains unchanged in `native` mode
 
 - [ ] `W9-05` Add manual signoff for both native and integrated terminal-only chrome
   - Required manual checks:
     - native mode launch, drag, maximize, resize, and tab behavior
     - integrated mode launch, drag, maximize, resize, tab reorder, and close
+    - integrated caption buttons should arm on mouse-down and execute on
+      mouse-up over the same button
     - switching config between `native` and `integrated`

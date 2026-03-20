@@ -13,6 +13,7 @@ pub const TabBar = struct {
         fixed,
         dynamic,
         label_length,
+        compact_label_length,
     };
 
     allocator: std.mem.Allocator,
@@ -149,7 +150,7 @@ pub const TabBar = struct {
         var cursor_x: f32 = x;
         for (self.tabs.items, 0..) |tab, i| {
             var tab_w = self.tabWidthForIndex(i, count, available_for_tabs, natural_sum, self.last_char_width, self.last_ui_scale);
-            if (i + 1 == count and self.width_mode != .fixed) {
+            if (i + 1 == count and (self.width_mode == .dynamic or self.width_mode == .label_length)) {
                 tab_w = @max(0, x + width - cursor_x);
             }
             const is_active = i == self.active_index;
@@ -321,6 +322,33 @@ pub const TabBar = struct {
         return self.drag_active;
     }
 
+    pub fn contentWidth(self: *const TabBar, max_width: f32, char_width: f32, ui_scale: f32) f32 {
+        const count = self.tabs.items.len;
+        if (count == 0 or max_width <= 0) return 0;
+
+        const spacing_total = if (count > 1) self.tab_spacing * @as(f32, @floatFromInt(count - 1)) else 0;
+        const available_for_tabs = @max(0, max_width - spacing_total);
+        if (available_for_tabs <= 0) return 0;
+
+        var natural_sum: f32 = 0;
+        if (self.width_mode == .label_length or self.width_mode == .compact_label_length) {
+            for (self.tabs.items) |tab| {
+                natural_sum += self.naturalTabWidth(tab, char_width, ui_scale);
+            }
+            if (natural_sum <= 0) natural_sum = @as(f32, @floatFromInt(@max(@as(usize, 1), count)));
+        }
+
+        var used: f32 = 0;
+        for (self.tabs.items, 0..) |_, i| {
+            var tab_w = self.tabWidthForIndex(i, count, available_for_tabs, natural_sum, char_width, ui_scale);
+            if (i + 1 == count and (self.width_mode == .dynamic or self.width_mode == .label_length)) {
+                tab_w = @max(0, available_for_tabs - used);
+            }
+            used += tab_w;
+        }
+        return @min(max_width, used + spacing_total);
+    }
+
     fn moveTabVisual(self: *TabBar, from_index: usize, to_index: usize) void {
         const log = app_logger.logger("ui.tab_bar");
         if (from_index >= self.tabs.items.len or to_index >= self.tabs.items.len) return;
@@ -360,7 +388,7 @@ pub const TabBar = struct {
         var cursor_x = bar_x;
         for (0..count) |i| {
             var tab_w = self.tabWidthForIndex(i, count, available_for_tabs, natural_sum, self.last_char_width, self.last_ui_scale);
-            if (i + 1 == count and self.width_mode != .fixed) {
+            if (i + 1 == count and (self.width_mode == .dynamic or self.width_mode == .label_length)) {
                 tab_w = @max(0, bar_x + bar_width - cursor_x);
             }
             if (x >= cursor_x and x <= cursor_x + tab_w) return i;
@@ -385,6 +413,13 @@ pub const TabBar = struct {
             .label_length => blk: {
                 const natural = self.naturalTabWidth(self.tabs.items[index], char_width, ui_scale);
                 break :blk if (natural_sum > 0) (available_for_tabs * (natural / natural_sum)) else (available_for_tabs / @as(f32, @floatFromInt(count)));
+            },
+            .compact_label_length => blk: {
+                const natural = self.naturalTabWidth(self.tabs.items[index], char_width, ui_scale);
+                if (natural_sum > available_for_tabs and natural_sum > 0) {
+                    break :blk available_for_tabs * (natural / natural_sum);
+                }
+                break :blk natural;
             },
         };
     }

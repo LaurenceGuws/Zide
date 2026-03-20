@@ -295,6 +295,8 @@ pub fn handle(state: anytype, ctx: *anyopaque, hooks: Hooks) !void {
     }
     if (config.terminal_window_chrome_mode != null) {
         state.terminal_window_chrome_mode = mapTerminalWindowChromeMode(config.terminal_window_chrome_mode);
+        state.pressed_terminal_window_button = null;
+        state.needs_redraw = true;
         log.logStdout(.info, "reload terminal.window_chrome.mode={s}", .{
             @tagName(state.terminal_window_chrome_mode),
         });

@@ -125,6 +125,8 @@ pub const getScreenHeight = r.getScreenHeight;
 pub const WindowMetrics = window.WindowMetrics;
 pub const RendererInitOptions = r.Renderer.InitOptions;
 pub const TextComposition = input.TextComposition;
+pub const WindowChromeMode = r.Renderer.WindowChromeMode;
+pub const WindowChromeContract = r.Renderer.WindowChromeContract;
 
 pub const Shell = struct {
     renderer: *r.Renderer,
@@ -193,6 +195,22 @@ pub const Shell = struct {
 
     pub fn refreshWindowMetrics(self: *Shell, reason: []const u8) WindowMetrics {
         return self.renderer.refreshWindowMetrics(reason);
+    }
+
+    pub fn setWindowChrome(self: *Shell, contract: WindowChromeContract) void {
+        self.renderer.setWindowChrome(contract);
+    }
+
+    pub fn minimizeWindow(self: *Shell) bool {
+        return self.renderer.minimizeWindow();
+    }
+
+    pub fn toggleMaximizeWindow(self: *Shell) bool {
+        return self.renderer.toggleMaximizeWindow();
+    }
+
+    pub fn windowIsMaximized(self: *Shell) bool {
+        return self.renderer.windowIsMaximized();
     }
 
     pub fn setTextInputRect(self: *Shell, x: i32, y: i32, w: i32, h: i32) void {

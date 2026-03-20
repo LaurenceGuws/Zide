@@ -290,6 +290,7 @@ fn initWithMode(
         .terminal_default_start_location = terminal_default_start_location,
         .terminal_new_tab_start_location = mapTerminalNewTabStartLocationMode(config.terminal_new_tab_start_location),
         .terminal_window_chrome_mode = mapTerminalWindowChromeMode(config.terminal_window_chrome_mode),
+        .pressed_terminal_window_button = null,
         .editor_tab_bar_width_mode = app_tab_bar_width.mapMode(config.editor_tab_bar_width_mode),
         .terminal_tab_bar_show_single_tab = config.terminal_tab_bar_show_single_tab orelse false,
         .terminal_tab_bar_width_mode = app_tab_bar_width.mapMode(config.terminal_tab_bar_width_mode),
@@ -379,6 +380,7 @@ fn initWithMode(
                     app_tab_bar_width.applyForMode(
                         &cb_state.tab_bar,
                         cb_state.app_mode,
+                        cb_state.terminal_window_chrome_mode,
                         cb_state.editor_tab_bar_width_mode,
                         cb_state.terminal_tab_bar_width_mode,
                     );
@@ -389,6 +391,7 @@ fn initWithMode(
     app_tab_bar_width.applyForMode(
         &state.tab_bar,
         state.app_mode,
+        state.terminal_window_chrome_mode,
         state.editor_tab_bar_width_mode,
         state.terminal_tab_bar_width_mode,
     );

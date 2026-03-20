@@ -54,7 +54,7 @@ Lower-layer ownership is in the right place: the backend workspace exists and te
 
 ### TABS-02A Terminal-Only Native Chrome Projection
 
-- [ ] `TABS-02A-01` Separate terminal tab ownership from terminal tab chrome policy
+- [x] `TABS-02A-01` Separate terminal tab ownership from terminal tab chrome policy
   - The backend workspace remains the source of truth for tabs.
   - Terminal-only presentation may now have more than one chrome projection:
     - ordinary content-row tab bar
@@ -62,16 +62,23 @@ Lower-layer ownership is in the right place: the backend workspace exists and te
   - First implementation target:
     - Windows native chrome integration
 
-- [ ] `TABS-02A-02` Stop assuming terminal tabs may always consume the full available row
+- [x] `TABS-02A-02` Stop assuming terminal tabs may always consume the full available row
   - Current default `terminal.tab_bar.width_mode = "dynamic"` fits the
     standalone content-row bar, but not an integrated titlebar strip.
   - Integrated chrome must use compact tab presentation and should not stretch
     tabs to fill the full bar like content chrome.
+  - Current state:
+    - integrated terminal chrome now uses a compact internal width policy
+      instead of the ordinary full-width fill behavior
 
-- [ ] `TABS-02A-03` Keep tab drag/reorder/close semantics stable across both chrome projections
+- [x] `TABS-02A-03` Keep tab drag/reorder/close semantics stable across both chrome projections
   - The projection may change.
   - Backend tab ids, active-tab behavior, close-confirm policy, and reorder
     semantics must not change with the chrome mode.
+  - Current state:
+    - integrated-titleband hit testing, click routing, drag/reorder width, and
+      close behavior now use the compact strip geometry without changing
+      backend workspace ownership
 
 ### TABS-03 FFI Extension For Workspace/Tabs
 

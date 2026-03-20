@@ -1,4 +1,6 @@
+const app_bootstrap = @import("bootstrap.zig");
 const app_modes = @import("modes/mod.zig");
+const app_terminal_window_chrome_runtime = @import("terminal/window_chrome_runtime.zig");
 const shared_types = @import("../types/mod.zig");
 const widgets = @import("../ui/widgets.zig");
 
@@ -72,15 +74,26 @@ pub const TerminalHooks = struct {
 
 pub fn handleTerminal(
     tab_bar: *TabBar,
+    shell: anytype,
     layout: layout_types.WidgetLayout,
     mouse: input_types.MousePos,
     terminal_bar_visible: bool,
+    app_mode: app_bootstrap.AppMode,
+    terminal_window_chrome_mode: anytype,
     active_kind: *ActiveMode,
     ctx: *anyopaque,
     hooks: TerminalHooks,
 ) !Result {
+    const chrome = app_terminal_window_chrome_runtime.computeGeometry(
+        shell,
+        tab_bar,
+        layout.tab_bar,
+        app_mode,
+        terminal_window_chrome_mode,
+    );
+    const tab_bar_width = if (chrome.enabled) chrome.tab_strip_width else layout.tab_bar.width;
     if (terminal_bar_visible) {
-        _ = tab_bar.beginDrag(mouse.x, mouse.y, layout.tab_bar.x, layout.tab_bar.y, layout.tab_bar.width);
+        _ = tab_bar.beginDrag(mouse.x, mouse.y, layout.tab_bar.x, layout.tab_bar.y, tab_bar_width);
     }
     if (active_kind.* != .terminal) {
         active_kind.* = .terminal;

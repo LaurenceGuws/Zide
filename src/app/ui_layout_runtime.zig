@@ -1,5 +1,6 @@
 const app_modes = @import("modes/mod.zig");
 const app_terminal_tabs_runtime = @import("terminal/terminal_tabs_runtime.zig");
+const app_terminal_window_chrome_runtime = @import("terminal/window_chrome_runtime.zig");
 const shared_types = @import("../types/mod.zig");
 
 const layout_types = shared_types.layout;
@@ -29,8 +30,9 @@ pub fn computeLayout(state: anytype, width: f32, height: f32) layout_types.Widge
         state.status_bar.height,
         state.terminal_height,
         state.show_terminal,
-        app_terminal_tabs_runtime.barVisible(
+        app_terminal_window_chrome_runtime.barVisible(
             state.app_mode,
+            state.terminal_window_chrome_mode,
             state.terminal_tab_bar_show_single_tab,
             state.terminal_workspace,
             state.terminals.items.len,

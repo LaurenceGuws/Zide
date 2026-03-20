@@ -77,6 +77,7 @@ pub fn handle(
                                     app_tab_bar_width.applyForMode(
                                         &inner_state.tab_bar,
                                         inner_state.app_mode,
+                                        inner_state.terminal_window_chrome_mode,
                                         inner_state.editor_tab_bar_width_mode,
                                         inner_state.terminal_tab_bar_width_mode,
                                     );

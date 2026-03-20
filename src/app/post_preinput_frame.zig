@@ -18,6 +18,7 @@ pub const Hooks = struct {
     refresh_terminal_sizing: *const fn (*anyopaque) anyerror!void,
     handle_window_resize_event: *const fn (*anyopaque, *Shell, f64) anyerror!void,
     compute_layout: *const fn (*anyopaque, f32, f32) layout_types.WidgetLayout,
+    sync_window_chrome: *const fn (*anyopaque, *Shell, layout_types.WidgetLayout) void,
     handle_cursor_blink_arming: *const fn (*anyopaque, f64) void,
     handle_deferred_terminal_resize: *const fn (*anyopaque, *Shell, layout_types.WidgetLayout, f64) anyerror!void,
     handle_pointer_activity: *const fn (
@@ -59,6 +60,7 @@ pub fn handle(
     const width = @as(f32, @floatFromInt(shell.width()));
     const height = @as(f32, @floatFromInt(shell.height()));
     const layout = hooks.compute_layout(ctx, width, height);
+    hooks.sync_window_chrome(ctx, shell, layout);
 
     hooks.handle_cursor_blink_arming(ctx, now);
     try hooks.handle_deferred_terminal_resize(ctx, shell, layout, now);

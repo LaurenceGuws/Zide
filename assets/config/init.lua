@@ -114,6 +114,7 @@ return {
 	        ui_modified = "#ffc777",
 	        ui_text = "#c8d3f5",
 	        ui_text_inactive = "#828bb8",
+	        ui_window_control_fg = "#c8d3f5",
 	        color0 = "#1b1d2b",
 	        color1 = "#ff757f",
 	        color2 = "#c3e88d",
@@ -172,6 +173,7 @@ return {
 	-- 		ui_modified = "#8c6c3e",
 	-- 		ui_text = "#1f2335",
 	-- 		ui_text_inactive = "#4c5a91",
+	-- 		ui_window_control_fg = "#1f2335",
 	-- 		color0 = "#b4b5b9",
 	-- 		color1 = "#f52a65",
 	-- 		color2 = "#587539",
@@ -416,17 +418,20 @@ return {
 		-- mode:
 		--   "native"      ordinary platform frame/titlebar (default)
 		--   "integrated"  integrated titlebar/tab strip contract
-		-- First native implementation target for "integrated" is Windows.
+		-- Current first native implementation is Windows terminal-only mode.
 		window_chrome = {
 			mode = "native",
 		},
 		-- Tab bar visibility in --mode terminal:
 		-- false: hide tab bar until there are 2+ tabs (default)
-		-- true: always show tab bar, even with a single tab
+		-- true: always show the ordinary content-row tab bar, even with a single tab
+		-- Note: integrated terminal chrome keeps the titleband visible either way.
 		-- width_mode options:
 		--   "fixed"        fixed chip width
 		--   "dynamic"      equal split across available width
 		--   "label_length" label-aware widths normalized to fill bar
+		-- Note: integrated terminal chrome normalizes to a compact internal width
+		-- policy instead of stretching tabs across the whole titleband.
 		tab_bar = {
 			show_single_tab = false,
 			width_mode = "dynamic",

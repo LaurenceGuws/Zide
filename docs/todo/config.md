@@ -29,6 +29,7 @@ Implemented today:
 
 - Logging filters and SDL log level
 - Theme palette and syntax colors
+- Optional hardened window-control foreground token for integrated chrome
 - Per-domain theme overrides
 - Font rendering controls
 - Editor wrap and render budgets
@@ -71,8 +72,14 @@ Current caveats:
     native implementation target.
   - Current state:
     - parser, defaults, init, and reload now own the field
-    - current cut is intentionally no-behavior-change; native chrome consumers
-      land in the next window-integration steps
+    - Windows terminal-only runtime now consumes it
+    - `native` keeps the ordinary framed content-row terminal tab bar
+    - `integrated` enables a borderless titleband contract with compact tabs,
+      caption buttons, and hit-test routing
+    - integrated mode keeps the titleband visible even when
+      `terminal.tab_bar.show_single_tab = false`
+    - integrated mode normalizes `terminal.tab_bar.width_mode` to a compact
+      internal policy instead of reusing full-width fill behavior
 - [x] `CFG-02-02C` Add a shared terminal shell config surface
   `terminal.shell.path` is now parser/runtime-owned and applies to future PTY sessions across IDE/editor/terminal modes; explicit launcher/CLI `--shell` still overrides it.
 - [x] `CFG-02-02B` Make per-domain font path/size reloadable

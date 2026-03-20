@@ -268,6 +268,7 @@ fn mergeThemeConfig(base: *ThemeConfig, overlay: ThemeConfig) void {
     if (overlay.ui_modified) |color| base.ui_modified = color;
     if (overlay.ui_text) |color| base.ui_text = color;
     if (overlay.ui_text_inactive) |color| base.ui_text_inactive = color;
+    if (overlay.ui_window_control_fg) |color| base.ui_window_control_fg = color;
     if (overlay.comment_color) |color| base.comment_color = color;
     if (overlay.string) |color| base.string = color;
     if (overlay.keyword) |color| base.keyword = color;
@@ -511,6 +512,7 @@ pub fn applyThemeConfig(theme: *Theme, overlay: ThemeConfig) void {
     if (overlay.ui_modified) |color| theme.ui_modified = color;
     if (overlay.ui_text) |color| theme.ui_text = color;
     if (overlay.ui_text_inactive) |color| theme.ui_text_inactive = color;
+    if (overlay.ui_window_control_fg) |color| theme.ui_window_control_fg = color;
     if (overlay.comment_color) |color| theme.comment_color = color;
     if (overlay.string) |color| theme.string = color;
     if (overlay.keyword) |color| theme.keyword = color;

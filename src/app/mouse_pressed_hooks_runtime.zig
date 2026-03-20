@@ -2,7 +2,7 @@ const app_bootstrap = @import("bootstrap.zig");
 const app_modes = @import("modes/mod.zig");
 const app_mouse_pressed_frame = @import("mouse_pressed_frame.zig");
 const app_mouse_pressed_routing_runtime = @import("mouse_pressed_routing_runtime.zig");
-const app_terminal_tabs_runtime = @import("terminal/terminal_tabs_runtime.zig");
+const app_terminal_window_chrome_runtime = @import("terminal/window_chrome_runtime.zig");
 const app_mode_adapter_sync_runtime = @import("mode_adapter_sync_runtime.zig");
 const app_tab_action_apply_runtime = @import("tabs/tab_action_apply_runtime.zig");
 const app_terminal_intent_route_runtime = @import("terminal/terminal_intent_route_runtime.zig");
@@ -76,6 +76,47 @@ pub fn handle(
 ) !void {
     _ = frame_shell;
     const State = @TypeOf(state.*);
+    const left_pressed = frame_input_batch.mousePressed(input_types.MouseButton.left);
+    const left_released = frame_input_batch.mouseReleased(input_types.MouseButton.left);
+
+    if (left_pressed or left_released or state.pressed_terminal_window_button != null) {
+        const chrome = app_terminal_window_chrome_runtime.computeGeometry(
+            state.shell,
+            &state.tab_bar,
+            frame_layout.tab_bar,
+            state.app_mode,
+            state.terminal_window_chrome_mode,
+        );
+        if (!chrome.enabled) {
+            state.pressed_terminal_window_button = null;
+        } else {
+            const hovered_button = app_terminal_window_chrome_runtime.buttonAt(chrome, frame_mouse.x, frame_mouse.y);
+            if (left_pressed) {
+                if (hovered_button) |button| {
+                    state.pressed_terminal_window_button = button;
+                    state.needs_redraw = true;
+                    state.metrics.noteInput(now);
+                    return;
+                }
+                state.pressed_terminal_window_button = null;
+            }
+            if (left_released) {
+                if (state.pressed_terminal_window_button) |pressed_button| {
+                    if (hovered_button == pressed_button) {
+                        switch (pressed_button) {
+                            .minimize => _ = state.shell.minimizeWindow(),
+                            .maximize_restore => _ = state.shell.toggleMaximizeWindow(),
+                            .close => state.shell.requestClose(),
+                        }
+                    }
+                    state.pressed_terminal_window_button = null;
+                    state.needs_redraw = true;
+                    state.metrics.noteInput(now);
+                    return;
+                }
+            }
+        }
+    }
     if (comptime mode_build.focused_mode != .terminal) {
         if (frame_input_batch.mousePressed(input_types.MouseButton.left)) {
             if (state.options_bar.handleClick(state.shell, frame_layout.window.width, frame_mouse)) |action| {
@@ -214,14 +255,18 @@ pub fn handle(
                     const route_state: *State = @ptrCast(@alignCast(route_raw));
                     _ = try app_mouse_pressed_routing_runtime.handleTerminal(
                         &route_state.tab_bar,
+                        route_state.shell,
                         layout,
                         mouse,
-                        app_terminal_tabs_runtime.barVisible(
+                        app_terminal_window_chrome_runtime.barVisible(
                             route_state.app_mode,
+                            route_state.terminal_window_chrome_mode,
                             route_state.terminal_tab_bar_show_single_tab,
                             route_state.terminal_workspace,
                             route_state.terminals.items.len,
                         ),
+                        route_state.app_mode,
+                        route_state.terminal_window_chrome_mode,
                         &route_state.active_kind,
                         @ptrCast(route_state),
                         .{

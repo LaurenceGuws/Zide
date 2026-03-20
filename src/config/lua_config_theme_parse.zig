@@ -118,6 +118,7 @@ fn parseThemePaletteTableNative(lua: *zlua.Lua, idx: i32, theme: *ThemeConfig) v
     parseColorField(lua, idx, "ui_modified", &theme.ui_modified);
     parseColorField(lua, idx, "ui_text", &theme.ui_text);
     parseColorField(lua, idx, "ui_text_inactive", &theme.ui_text_inactive);
+    parseColorField(lua, idx, "ui_window_control_fg", &theme.ui_window_control_fg);
     parseColorField(lua, idx, "color0", &theme.ansi_colors[0]);
     parseColorField(lua, idx, "color1", &theme.ansi_colors[1]);
     parseColorField(lua, idx, "color2", &theme.ansi_colors[2]);

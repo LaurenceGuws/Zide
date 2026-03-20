@@ -13,6 +13,7 @@ const app_deferred_terminal_resize_frame = @import("terminal/deferred_terminal_r
 const app_terminal_tabs_runtime = @import("terminal/terminal_tabs_runtime.zig");
 const app_terminal_resize = @import("terminal/terminal_resize.zig");
 const app_terminal_grid = @import("terminal/terminal_grid.zig");
+const app_terminal_window_chrome_runtime = @import("terminal/window_chrome_runtime.zig");
 const app_pointer_activity_frame = @import("pointer_activity_frame.zig");
 const app_terminal_scrollbar_runtime = @import("terminal/terminal_scrollbar_runtime.zig");
 const app_terminal_split_resize_frame = @import("terminal/terminal_split_resize_frame.zig");
@@ -45,6 +46,7 @@ pub fn handle(state: anytype, shell: *Shell, batch: *input_types.InputBatch, now
                                     app_tab_bar_width.applyForMode(
                                         &cb_state.tab_bar,
                                         cb_state.app_mode,
+                                        cb_state.terminal_window_chrome_mode,
                                         cb_state.editor_tab_bar_width_mode,
                                         cb_state.terminal_tab_bar_width_mode,
                                     );
@@ -89,6 +91,7 @@ pub fn handle(state: anytype, shell: *Shell, batch: *input_types.InputBatch, now
                                         app_tab_bar_width.applyForMode(
                                             &cb_state.tab_bar,
                                             cb_state.app_mode,
+                                            cb_state.terminal_window_chrome_mode,
                                             cb_state.editor_tab_bar_width_mode,
                                             cb_state.terminal_tab_bar_width_mode,
                                         );
@@ -104,6 +107,19 @@ pub fn handle(state: anytype, shell: *Shell, batch: *input_types.InputBatch, now
                 fn inner(inner_raw: *anyopaque, width: f32, height: f32) layout_types.WidgetLayout {
                     const inner_state: *State = @ptrCast(@alignCast(inner_raw));
                     return app_ui_layout_runtime.computeLayout(inner_state, width, height);
+                }
+            }.inner,
+            .sync_window_chrome = struct {
+                fn inner(inner_raw: *anyopaque, frame_shell: *Shell, layout: layout_types.WidgetLayout) void {
+                    const inner_state: *State = @ptrCast(@alignCast(inner_raw));
+                    const geometry = app_terminal_window_chrome_runtime.computeGeometry(
+                        frame_shell,
+                        &inner_state.tab_bar,
+                        layout.tab_bar,
+                        inner_state.app_mode,
+                        inner_state.terminal_window_chrome_mode,
+                    );
+                    frame_shell.setWindowChrome(app_terminal_window_chrome_runtime.windowChromeContract(geometry));
                 }
             }.inner,
             .handle_cursor_blink_arming = struct {

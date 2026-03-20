@@ -77,6 +77,7 @@ pub const ThemeConfig = struct {
     ui_modified: ?Color = null,
     ui_text: ?Color = null,
     ui_text_inactive: ?Color = null,
+    ui_window_control_fg: ?Color = null,
     comment_color: ?Color = null,
     string: ?Color = null,
     keyword: ?Color = null,

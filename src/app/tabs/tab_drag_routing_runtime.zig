@@ -1,4 +1,6 @@
 const app_modes = @import("../modes/mod.zig");
+const app_bootstrap = @import("../bootstrap.zig");
+const app_terminal_window_chrome_runtime = @import("../terminal/window_chrome_runtime.zig");
 const shared_types = @import("../../types/mod.zig");
 const widgets = @import("../../ui/widgets.zig");
 
@@ -19,21 +21,32 @@ pub const TerminalHooks = struct {
 
 pub fn handleTerminal(
     tab_bar: *TabBar,
+    shell: anytype,
     input_batch: *input_types.InputBatch,
     layout: layout_types.WidgetLayout,
     mouse: input_types.MousePos,
     terminal_bar_visible: bool,
+    app_mode: app_bootstrap.AppMode,
+    terminal_window_chrome_mode: anytype,
     ctx: *anyopaque,
     hooks: TerminalHooks,
 ) !Result {
     var out: Result = .{};
+    const chrome = app_terminal_window_chrome_runtime.computeGeometry(
+        shell,
+        tab_bar,
+        layout.tab_bar,
+        app_mode,
+        terminal_window_chrome_mode,
+    );
+    const tab_bar_width = if (chrome.enabled) chrome.tab_strip_width else layout.tab_bar.width;
     const drag_frame = app_modes.ide.processTabDragFrame(
         tab_bar,
         input_batch,
         mouse,
         layout.tab_bar.x,
         layout.tab_bar.y,
-        layout.tab_bar.width,
+        tab_bar_width,
         terminal_bar_visible,
     );
     if (drag_frame.updated) {
@@ -46,7 +59,7 @@ pub fn handleTerminal(
             try hooks.apply_terminal_action(ctx, intent);
         }
         if (release_plan.handle_click) {
-            if (tab_bar.handleClick(mouse.x, mouse.y, layout.tab_bar.x, layout.tab_bar.y, layout.tab_bar.width)) {
+            if (tab_bar.handleClick(mouse.x, mouse.y, layout.tab_bar.x, layout.tab_bar.y, tab_bar_width)) {
                 try hooks.route_activate_by_tab_id(ctx, tab_bar.terminalTabIdAtVisual(tab_bar.active_index));
                 if (hooks.focus_terminal_tab_index(ctx, tab_bar.active_index)) {
                     out.needs_redraw = true;

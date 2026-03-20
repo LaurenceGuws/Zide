@@ -169,6 +169,16 @@ pub const EglDisplay = c.SDL_EGLDisplay;
 pub const EglConfig = c.SDL_EGLConfig;
 pub const EglSurface = c.SDL_EGLSurface;
 pub const FunctionPointer = c.SDL_FunctionPointer;
+pub const WindowFlags = c.SDL_WindowFlags;
+pub const HitTestResult = c.SDL_HitTestResult;
+pub const HitTest = c.SDL_HitTest;
+
+pub const WindowBorderSize = struct {
+    top: i32,
+    left: i32,
+    bottom: i32,
+    right: i32,
+};
 
 pub fn glSetAttribute(attr: GlAttr, value: c_int) bool {
     return c.SDL_GL_SetAttribute(attr, value);
@@ -185,6 +195,52 @@ pub fn createWindow(title: [*:0]const u8, width: c_int, height: c_int) ?*c.SDL_W
     const base_flags: c_uint = @intCast(c.SDL_WINDOW_OPENGL | c.SDL_WINDOW_RESIZABLE);
     const flags: c_uint = base_flags | high_dpi;
     return c.SDL_CreateWindow(title, width, height, flags);
+}
+
+pub fn getWindowFlags(window: *c.SDL_Window) WindowFlags {
+    return c.SDL_GetWindowFlags(window);
+}
+
+pub fn setWindowBordered(window: *c.SDL_Window, bordered: bool) bool {
+    return c.SDL_SetWindowBordered(window, bordered);
+}
+
+pub fn getWindowBordersSize(window: *c.SDL_Window) ?WindowBorderSize {
+    var top: c_int = 0;
+    var left: c_int = 0;
+    var bottom: c_int = 0;
+    var right: c_int = 0;
+    if (!c.SDL_GetWindowBordersSize(window, &top, &left, &bottom, &right)) return null;
+    return .{
+        .top = @intCast(top),
+        .left = @intCast(left),
+        .bottom = @intCast(bottom),
+        .right = @intCast(right),
+    };
+}
+
+pub fn setWindowHitTest(window: *c.SDL_Window, callback: HitTest, callback_data: ?*anyopaque) bool {
+    return c.SDL_SetWindowHitTest(window, callback, callback_data);
+}
+
+pub fn minimizeWindow(window: *c.SDL_Window) bool {
+    return c.SDL_MinimizeWindow(window);
+}
+
+pub fn maximizeWindow(window: *c.SDL_Window) bool {
+    return c.SDL_MaximizeWindow(window);
+}
+
+pub fn restoreWindow(window: *c.SDL_Window) bool {
+    return c.SDL_RestoreWindow(window);
+}
+
+pub fn syncWindow(window: *c.SDL_Window) bool {
+    return c.SDL_SyncWindow(window);
+}
+
+pub fn showWindowSystemMenu(window: *c.SDL_Window, x: i32, y: i32) bool {
+    return c.SDL_ShowWindowSystemMenu(window, @intCast(x), @intCast(y));
 }
 
 pub fn destroyWindow(window: *c.SDL_Window) void {

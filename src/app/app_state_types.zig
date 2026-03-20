@@ -86,6 +86,12 @@ pub const TerminalNewTabStartLocationMode = enum {
     default,
 };
 
+pub const TerminalWindowCaptionButton = enum {
+    minimize,
+    maximize_restore,
+    close,
+};
+
 pub const TerminalFramePacingState = struct {
     last_draw_seq: u64 = 0,
     last_poll_seq: u64 = 0,
