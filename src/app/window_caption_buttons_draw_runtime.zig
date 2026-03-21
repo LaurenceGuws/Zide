@@ -11,15 +11,15 @@ pub fn drawButtons(shell: anytype, rects: anytype, pressed_button: ?CaptionButto
     const focused = shell.windowFocused();
     const native_sink_active = shell.integratedWindowChromeSinkActive();
     const minimize_hovered = if (native_sink_active)
-        shell.integratedWindowChromeMinimizeHovered()
+        focused and shell.integratedWindowChromeMinimizeHovered()
     else
         focused and widgets_common.pointInRect(mouse.x, mouse.y, rects.minimize_rect.x, rects.minimize_rect.y, rects.minimize_rect.width, rects.minimize_rect.height);
     const maximize_hovered = if (native_sink_active)
-        shell.integratedWindowChromeMaximizeHovered()
+        focused and shell.integratedWindowChromeMaximizeHovered()
     else
         focused and widgets_common.pointInRect(mouse.x, mouse.y, rects.maximize_rect.x, rects.maximize_rect.y, rects.maximize_rect.width, rects.maximize_rect.height);
     const close_hovered = if (native_sink_active)
-        shell.integratedWindowChromeCloseHovered()
+        focused and shell.integratedWindowChromeCloseHovered()
     else
         focused and widgets_common.pointInRect(mouse.x, mouse.y, rects.close_rect.x, rects.close_rect.y, rects.close_rect.width, rects.close_rect.height);
     const minimize_pressed = if (native_sink_active)

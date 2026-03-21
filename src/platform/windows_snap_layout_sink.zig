@@ -232,15 +232,15 @@ const WindowsSink = struct {
     }
 
     pub fn minimizeHovered(self: *const WindowsSink) bool {
-        return self.hovered_button == .minimize;
+        return buttonFromHit(self.currentHit()) == .minimize;
     }
 
     pub fn maximizeHovered(self: *const WindowsSink) bool {
-        return self.hovered_button == .maximize_restore;
+        return buttonFromHit(self.currentHit()) == .maximize_restore;
     }
 
     pub fn closeHovered(self: *const WindowsSink) bool {
-        return self.hovered_button == .close;
+        return buttonFromHit(self.currentHit()) == .close;
     }
 
     pub fn minimizePressed(self: *const WindowsSink) bool {
@@ -344,6 +344,7 @@ const WindowsSink = struct {
         const h = @max(1, snapInt(contract.sink_rect.height));
         _ = SetWindowPos(self.child_hwnd, null, x, y, w, h, SWP_NOACTIVATE | SWP_NOZORDER | SWP_SHOWWINDOW);
         self.owns_chrome = true;
+        self.setHoveredButton(buttonFromHit(self.currentHit()), "sync");
     }
 
     fn hideChild(self: *WindowsSink) void {
@@ -394,24 +395,36 @@ const WindowsSink = struct {
         }
     }
 
-    fn currentHit(self: *WindowsSink) LRESULT {
-        const hwnd = self.child_hwnd orelse return HTTRANSPARENT;
+    fn currentHit(self: *const WindowsSink) LRESULT {
         var cursor: POINT = undefined;
         if (GetCursorPos(&cursor) == 0) return HTTRANSPARENT;
-        return self.hitRegionAtScreenPoint(hwnd, cursor.x, cursor.y);
+        return self.hitRegionAtScreenPoint(cursor.x, cursor.y);
     }
 
-    fn hitRegionAtScreenPoint(self: *WindowsSink, hwnd: HWND, screen_x: i32, screen_y: i32) LRESULT {
-        var rect: RECT = undefined;
-        if (GetWindowRect(hwnd, &rect) == 0) return HTTRANSPARENT;
-        const local_x = @as(f32, @floatFromInt(screen_x - rect.left));
-        const local_y = @as(f32, @floatFromInt(screen_y - rect.top));
+    fn setHoveredButton(self: *WindowsSink, button: HoverButton, _: []const u8) void {
+        self.hovered_button = button;
+    }
+
+    fn hitRegionAtScreenPoint(self: *const WindowsSink, screen_x: i32, screen_y: i32) LRESULT {
+        const local = self.screenToLocal(screen_x, screen_y) orelse return HTTRANSPARENT;
+        const local_x = local.x;
+        const local_y = local.y;
         if (pointInRect(local_x, local_y, self.close_local_rect)) return HTCLOSE;
         if (pointInRect(local_x, local_y, self.maximize_local_rect)) return HTMAXBUTTON;
         if (pointInRect(local_x, local_y, self.minimize_local_rect)) return HTMINBUTTON;
         if (!self.parent_maximized and local_y < self.resize_border_px) return HTTOP;
         if (pointInRect(local_x, local_y, self.caption_local_rect)) return HTCAPTION;
         return HTTRANSPARENT;
+    }
+
+    fn screenToLocal(self: *const WindowsSink, screen_x: i32, screen_y: i32) ?struct { x: f32, y: f32 } {
+        const parent = self.parent_hwnd orelse return null;
+        var rect: RECT = undefined;
+        if (GetWindowRect(parent, &rect) == 0) return null;
+        return .{
+            .x = @as(f32, @floatFromInt(screen_x - rect.left)) - self.visible_rect.x,
+            .y = @as(f32, @floatFromInt(screen_y - rect.top)) - self.visible_rect.y,
+        };
     }
 
     fn beginTracking(self: *WindowsSink, nonclient: bool) void {
@@ -481,27 +494,27 @@ const WindowsSink = struct {
             WM_NCHITTEST => {
                 const screen_x = @as(i32, @intCast(@as(i16, @truncate(lparam & 0xffff))));
                 const screen_y = @as(i32, @intCast(@as(i16, @truncate((lparam >> 16) & 0xffff))));
-                return self.hitRegionAtScreenPoint(hwnd, screen_x, screen_y);
+                return self.hitRegionAtScreenPoint(screen_x, screen_y);
             },
             WM_NCMOUSEMOVE => {
                 const hit = @as(LRESULT, @intCast(wparam));
                 switch (hit) {
                     HTTOP, HTCAPTION => {
-                        self.hovered_button = .none;
+                        self.setHoveredButton(.none, "ncmove-caption");
                         const parent = self.parent_hwnd orelse return 0;
                         return SendMessageW(parent, msg, wparam, lparam);
                     },
                     HTMINBUTTON, HTMAXBUTTON, HTCLOSE => {
-                        self.hovered_button = buttonFromHit(hit);
+                        self.setHoveredButton(buttonFromHit(hit), "ncmove-button");
                         self.beginTracking(true);
                     },
-                    else => self.hovered_button = .none,
+                    else => self.setHoveredButton(.none, "ncmove-other"),
                 }
                 return 0;
             },
             WM_MOUSEMOVE => {
                 const hit = self.currentHit();
-                self.hovered_button = buttonFromHit(hit);
+                self.setHoveredButton(buttonFromHit(hit), "mousemove");
                 if (hit == HTMINBUTTON or hit == HTMAXBUTTON or hit == HTCLOSE) {
                     self.beginTracking(false);
                 }
@@ -509,7 +522,7 @@ const WindowsSink = struct {
             },
             WM_NCMOUSELEAVE, WM_MOUSELEAVE => {
                 self.tracking_mouse = false;
-                self.hovered_button = .none;
+                self.setHoveredButton(.none, "leave");
                 return 0;
             },
             WM_NCLBUTTONDOWN => {
@@ -520,7 +533,7 @@ const WindowsSink = struct {
                         return SendMessageW(parent, msg, wparam, lparam);
                     },
                     HTMINBUTTON, HTMAXBUTTON, HTCLOSE => {
-                        self.hovered_button = buttonFromHit(hit);
+                        self.setHoveredButton(buttonFromHit(hit), "buttondown");
                         self.pressed_button = buttonFromHit(hit);
                         _ = SetCapture(hwnd);
                         return 0;
@@ -536,7 +549,7 @@ const WindowsSink = struct {
                         return SendMessageW(parent, msg, wparam, lparam);
                     },
                     HTMINBUTTON, HTMAXBUTTON, HTCLOSE => {
-                        self.hovered_button = buttonFromHit(hit);
+                        self.setHoveredButton(buttonFromHit(hit), "dblclk");
                         self.pressed_button = buttonFromHit(hit);
                         return 0;
                     },
@@ -552,7 +565,7 @@ const WindowsSink = struct {
                     switch (hit) {
                         HTTOP, HTCAPTION => {
                             self.pressed_button = .none;
-                            self.hovered_button = .none;
+                            self.setHoveredButton(.none, "buttonup-caption");
                             const parent = self.parent_hwnd orelse return 0;
                             return SendMessageW(parent, WM_NCLBUTTONUP, @intCast(hit), lparam);
                         },
@@ -562,7 +575,7 @@ const WindowsSink = struct {
                 const pressed = self.pressed_button;
                 self.pressed_button = .none;
                 _ = ReleaseCapture();
-                self.hovered_button = buttonFromHit(hit);
+                self.setHoveredButton(buttonFromHit(hit), "buttonup");
                 if (pressed != .none and pressed == buttonFromHit(hit)) {
                     self.invokeButton(pressed);
                 }
@@ -583,7 +596,7 @@ const WindowsSink = struct {
                 if (self.child_hwnd == hwnd) {
                     self.child_hwnd = null;
                 }
-                self.hovered_button = .none;
+                self.setHoveredButton(.none, "destroy");
                 self.pressed_button = .none;
                 self.tracking_mouse = false;
                 _ = SetWindowLongPtrW(hwnd, GWLP_USERDATA, 0);

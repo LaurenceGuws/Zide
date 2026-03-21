@@ -297,6 +297,7 @@ fn initWithMode(
         .terminal_new_tab_start_location = mapTerminalNewTabStartLocationMode(config.terminal_new_tab_start_location),
         .terminal_window_chrome_mode = mapTerminalWindowChromeMode(config.terminal_window_chrome_mode),
         .pressed_window_caption_button = null,
+        .hovered_window_caption_button = null,
         .terminal_tab_bar_show_shell_icon = config.terminal_tab_bar_show_shell_icon orelse false,
         .terminal_tab_bar_shell_icons = terminal_tab_bar_shell_icons,
         .terminal_shell_icon_cache = app_terminal_shell_icon_runtime.ShellIconCache.init(allocator),

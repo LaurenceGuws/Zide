@@ -20,10 +20,28 @@ const app_terminal_scrollbar_runtime = @import("terminal/terminal_scrollbar_runt
 const app_terminal_split_resize_frame = @import("terminal/terminal_split_resize_frame.zig");
 const app_shell = @import("../app_shell.zig");
 const shared_types = @import("../types/mod.zig");
+const app_state_types = @import("app_state_types.zig");
 
 const Shell = app_shell.Shell;
 const input_types = shared_types.input;
 const layout_types = shared_types.layout;
+const WindowCaptionButton = app_state_types.WindowCaptionButton;
+
+fn currentHoveredCaptionButton(shell: *Shell) ?WindowCaptionButton {
+    if (!shell.integratedWindowChromeSinkActive()) return null;
+    if (shell.integratedWindowChromeCloseHovered()) return .close;
+    if (shell.integratedWindowChromeMaximizeHovered()) return .maximize_restore;
+    if (shell.integratedWindowChromeMinimizeHovered()) return .minimize;
+    return null;
+}
+
+fn currentPressedCaptionButton(shell: *Shell) ?WindowCaptionButton {
+    if (!shell.integratedWindowChromeSinkActive()) return null;
+    if (shell.integratedWindowChromeClosePressed()) return .close;
+    if (shell.integratedWindowChromeMaximizePressed()) return .maximize_restore;
+    if (shell.integratedWindowChromeMinimizePressed()) return .minimize;
+    return null;
+}
 
 pub fn handle(state: anytype, shell: *Shell, batch: *input_types.InputBatch, now: f64) !app_update_driver.Frame {
     const State = @TypeOf(state.*);
@@ -247,6 +265,16 @@ pub fn handle(state: anytype, shell: *Shell, batch: *input_types.InputBatch, now
                     );
                     if (result.needs_redraw) inner_state.needs_redraw = true;
                     if (result.note_input) inner_state.metrics.noteInput(at);
+
+                    const hovered_button = currentHoveredCaptionButton(inner_state.shell);
+                    if (inner_state.hovered_window_caption_button != hovered_button) {
+                        inner_state.hovered_window_caption_button = hovered_button;
+                        inner_state.needs_redraw = true;
+                    }
+                    const pressed_button = currentPressedCaptionButton(inner_state.shell);
+                    if (inner_state.pressed_window_caption_button == null and pressed_button != null) {
+                        inner_state.needs_redraw = true;
+                    }
                 }
             }.inner,
             .handle_terminal_split_resize = struct {
