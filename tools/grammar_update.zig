@@ -228,6 +228,8 @@ fn installFromDist(allocator: std.mem.Allocator, dist_root: []const u8, cache_ro
     const manifest_path = try std.fs.path.join(allocator, &.{ dist_root, "manifest.json" });
     defer allocator.free(manifest_path);
 
+    try ensureDistManifest(allocator, dist_root, manifest_path);
+
     const manifest_file = if (std.fs.path.isAbsolute(manifest_path))
         try std.fs.openFileAbsolute(manifest_path, .{})
     else
@@ -276,6 +278,171 @@ fn installFromDist(allocator: std.mem.Allocator, dist_root: []const u8, cache_ro
 
     try writeRootManifest(allocator, dist_root, cache_root);
     try writePackManifests(allocator, cache_root, parsed.value.version, &grouped);
+}
+
+fn ensureDistManifest(allocator: std.mem.Allocator, dist_root: []const u8, manifest_path: []const u8) !void {
+    if (fileExists(manifest_path)) return;
+
+    const version = try distVersionFromConfig(allocator, dist_root);
+    defer allocator.free(version);
+
+    var artifacts = std.ArrayList(Artifact).empty;
+    defer {
+        for (artifacts.items) |artifact| {
+            allocator.free(artifact.path);
+            allocator.free(artifact.sha256);
+        }
+        artifacts.deinit(allocator);
+    }
+
+    try collectDistArtifacts(allocator, dist_root, &artifacts);
+    std.mem.sort(Artifact, artifacts.items, {}, lessThanArtifactPath);
+    try writeManifestFile(allocator, manifest_path, version, artifacts.items);
+}
+
+fn distVersionFromConfig(allocator: std.mem.Allocator, dist_root: []const u8) ![]u8 {
+    const config_path = try std.fs.path.join(allocator, &.{ dist_root, "..", "config", "grammar_packs.json" });
+    defer allocator.free(config_path);
+
+    const config_file = if (std.fs.path.isAbsolute(config_path))
+        try std.fs.openFileAbsolute(config_path, .{})
+    else
+        try std.fs.cwd().openFile(config_path, .{});
+    defer config_file.close();
+
+    const config_bytes = try config_file.readToEndAlloc(allocator, std.math.maxInt(usize));
+    defer allocator.free(config_bytes);
+
+    const Config = struct {
+        version: []const u8,
+    };
+
+    const parsed = try std.json.parseFromSlice(Config, allocator, config_bytes, .{
+        .ignore_unknown_fields = true,
+    });
+    defer parsed.deinit();
+    return allocator.dupe(u8, parsed.value.version);
+}
+
+fn collectDistArtifacts(
+    allocator: std.mem.Allocator,
+    dist_root: []const u8,
+    artifacts: *std.ArrayList(Artifact),
+) !void {
+    var dir = if (std.fs.path.isAbsolute(dist_root))
+        try std.fs.openDirAbsolute(dist_root, .{ .iterate = true })
+    else
+        try std.fs.cwd().openDir(dist_root, .{ .iterate = true });
+    defer dir.close();
+
+    var walker = try dir.walk(allocator);
+    defer walker.deinit();
+
+    while (try walker.next()) |entry| {
+        if (entry.kind != .file) continue;
+        if (!isManifestArtifact(entry.basename)) continue;
+
+        const full_path = try std.fs.path.join(allocator, &.{ dist_root, entry.path });
+        defer allocator.free(full_path);
+
+        const sha256 = try sha256FileHex(allocator, full_path);
+        errdefer allocator.free(sha256);
+
+        const rel_path = try normalizeToPosixOwned(allocator, entry.path);
+        errdefer allocator.free(rel_path);
+
+        const file = if (std.fs.path.isAbsolute(full_path))
+            try std.fs.openFileAbsolute(full_path, .{})
+        else
+            try std.fs.cwd().openFile(full_path, .{});
+        defer file.close();
+        const stat = try file.stat();
+
+        try artifacts.append(allocator, .{
+            .path = rel_path,
+            .sha256 = sha256,
+            .size = stat.size,
+        });
+    }
+}
+
+fn lessThanArtifactPath(_: void, a: Artifact, b: Artifact) bool {
+    return std.mem.lessThan(u8, a.path, b.path);
+}
+
+fn isManifestArtifact(name: []const u8) bool {
+    return std.mem.endsWith(u8, name, ".dll") or
+        std.mem.endsWith(u8, name, ".so") or
+        std.mem.endsWith(u8, name, ".dylib") or
+        std.mem.endsWith(u8, name, ".scm");
+}
+
+fn normalizeToPosixOwned(allocator: std.mem.Allocator, path: []const u8) ![]u8 {
+    const owned = try allocator.dupe(u8, path);
+    if (std.fs.path.sep != '/') {
+        std.mem.replaceScalar(u8, owned, '\\', '/');
+    }
+    return owned;
+}
+
+fn sha256FileHex(allocator: std.mem.Allocator, path: []const u8) ![]u8 {
+    const file = if (std.fs.path.isAbsolute(path))
+        try std.fs.openFileAbsolute(path, .{})
+    else
+        try std.fs.cwd().openFile(path, .{});
+    defer file.close();
+
+    var hasher = std.crypto.hash.sha2.Sha256.init(.{});
+    var buf: [64 * 1024]u8 = undefined;
+    while (true) {
+        const read = try file.read(&buf);
+        if (read == 0) break;
+        hasher.update(buf[0..read]);
+    }
+
+    var digest: [32]u8 = undefined;
+    hasher.final(&digest);
+
+    const out = try allocator.alloc(u8, digest.len * 2);
+    const alphabet = "0123456789abcdef";
+    for (digest, 0..) |byte, idx| {
+        out[idx * 2] = alphabet[byte >> 4];
+        out[idx * 2 + 1] = alphabet[byte & 0x0f];
+    }
+    return out;
+}
+
+fn writeManifestFile(
+    allocator: std.mem.Allocator,
+    manifest_path: []const u8,
+    version: []const u8,
+    artifacts: []const Artifact,
+) !void {
+    var out = std.ArrayList(u8).empty;
+    defer out.deinit(allocator);
+    var writer = out.writer(allocator);
+    try writer.print("{{\n  \"version\": \"{s}\",\n  \"artifacts\": [\n", .{version});
+    for (artifacts, 0..) |artifact, idx| {
+        if (idx != 0) try writer.writeAll(",\n");
+        try writer.print(
+            "    {{\"path\": \"{s}\", \"sha256\": \"{s}\", \"size\": {d}}}",
+            .{ artifact.path, artifact.sha256, artifact.size },
+        );
+    }
+    try writer.writeAll("\n  ]\n}\n");
+
+    const parent = std.fs.path.dirname(manifest_path) orelse return error.InvalidPath;
+    try std.fs.cwd().makePath(parent);
+
+    if (std.fs.path.isAbsolute(manifest_path)) {
+        const file = try std.fs.createFileAbsolute(manifest_path, .{ .truncate = true });
+        defer file.close();
+        try file.writeAll(out.items);
+    } else {
+        const file = try std.fs.cwd().createFile(manifest_path, .{ .truncate = true });
+        defer file.close();
+        try file.writeAll(out.items);
+    }
 }
 
 fn writeRootManifest(allocator: std.mem.Allocator, dist_root: []const u8, cache_root: []const u8) !void {
@@ -336,6 +503,16 @@ fn copyFile(src_path: []const u8, dest_path: []const u8) !void {
         return std.fs.copyFileAbsolute(src_path, dest_path, .{});
     }
     return std.fs.cwd().copyFile(src_path, std.fs.cwd(), dest_path, .{});
+}
+
+fn fileExists(path: []const u8) bool {
+    const file = if (std.fs.path.isAbsolute(path))
+        std.fs.openFileAbsolute(path, .{})
+    else
+        std.fs.cwd().openFile(path, .{});
+    const handle = file catch return false;
+    handle.close();
+    return true;
 }
 
 fn defaultCacheRoot(allocator: std.mem.Allocator) ![]u8 {
