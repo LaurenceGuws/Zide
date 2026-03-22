@@ -7,7 +7,7 @@ const ide_graph = @import("ide_graph.zig");
 pub fn build(b: *std.Build) void {
     const boot = bootstrap_graph.initBuildBootstrap(b);
 
-    const main_mode_run_steps: step_utils.MainModeRunSteps = app_graph.planAppModeGraphAndInstallRuntime(
+    _ = app_graph.planAppModeGraphAndInstallRuntime(
         b,
         boot.target,
         boot.optimize,
@@ -27,6 +27,5 @@ pub fn build(b: *std.Build) void {
         boot.app_link_ctx,
         boot.build_options,
         boot.zlua_module,
-        main_mode_run_steps,
     );
 }

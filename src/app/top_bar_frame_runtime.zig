@@ -17,7 +17,7 @@ pub fn draw(state: anytype, shell: anytype, layout: layout_types.WidgetLayout) v
     state.top_bar.draw(shell, layout.top_bar, app_top_bar_model_runtime.forMode(state.app_mode));
     const chrome = app_top_bar_window_chrome_runtime.computeGeometry(shell, &state.top_bar, layout.top_bar, state.app_mode);
     if (chrome.enabled) {
-        app_window_caption_buttons_draw_runtime.drawButtons(shell, chrome, state.pressed_window_caption_button);
+        app_window_caption_buttons_draw_runtime.drawButtons(shell, chrome, state.pressed_window_caption_button, shell.theme().ui_panel_bg);
     }
 }
 

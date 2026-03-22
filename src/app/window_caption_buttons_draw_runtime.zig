@@ -6,7 +6,7 @@ const window_caption_buttons_runtime = @import("window_caption_buttons_runtime.z
 const Color = app_shell.Color;
 const CaptionButton = window_caption_buttons_runtime.CaptionButton;
 
-pub fn drawButtons(shell: anytype, rects: anytype, pressed_button: ?CaptionButton) void {
+pub fn drawButtons(shell: anytype, rects: anytype, pressed_button: ?CaptionButton, base_bg: Color) void {
     const mouse = shell.getMousePos();
     const focused = shell.windowFocused();
     const native_sink_active = shell.integratedWindowChromeSinkActive();
@@ -34,12 +34,12 @@ pub fn drawButtons(shell: anytype, rects: anytype, pressed_button: ?CaptionButto
         shell.integratedWindowChromeClosePressed() and close_hovered
     else
         pressed_button == .close and close_hovered;
-    drawCaptionButton(shell, rects.minimize_rect, minimize_hovered, minimize_pressed, .minimize);
-    drawCaptionButton(shell, rects.maximize_rect, maximize_hovered, maximize_pressed, .maximize_restore);
-    drawCaptionButton(shell, rects.close_rect, close_hovered, close_pressed, .close);
+    drawCaptionButton(shell, rects.minimize_rect, minimize_hovered, minimize_pressed, .minimize, base_bg);
+    drawCaptionButton(shell, rects.maximize_rect, maximize_hovered, maximize_pressed, .maximize_restore, base_bg);
+    drawCaptionButton(shell, rects.close_rect, close_hovered, close_pressed, .close, base_bg);
 }
 
-fn drawCaptionButton(shell: anytype, rect: anytype, hovered: bool, pressed: bool, kind: CaptionButton) void {
+fn drawCaptionButton(shell: anytype, rect: anytype, hovered: bool, pressed: bool, kind: CaptionButton, base_bg: Color) void {
     const theme = shell.theme();
     const bg = switch (kind) {
         .close => if (pressed)
@@ -47,13 +47,13 @@ fn drawCaptionButton(shell: anytype, rect: anytype, hovered: bool, pressed: bool
         else if (hovered)
             Color{ .r = 232, .g = 69, .b = 64, .a = 255 }
         else
-            theme.ui_bar_bg,
+            base_bg,
         else => if (pressed)
             theme.ui_pressed
         else if (hovered)
             theme.ui_hover
         else
-            theme.ui_bar_bg,
+            base_bg,
     };
     const fg = if (kind == .close and (hovered or pressed))
         Color{ .r = 255, .g = 255, .b = 255, .a = 255 }

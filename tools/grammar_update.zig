@@ -116,7 +116,7 @@ fn printUsage() void {
         \\  --skip-targets <list> Comma list of targets (os/arch) to skip
         \\  --jobs <n>        Parallel jobs for git fetch + grammar pack builds
         \\  --dist <path>     Override dist directory (default tools/grammar_packs/dist)
-        \\  --cache-root <path> Override cache root (default ~/.config/zide/grammars)
+        \\  --cache-root <path> Override cache root (default %LOCALAPPDATA%/Zide/grammars on Windows, ~/.config/zide/grammars otherwise)
         \\  --help            Show this help
         \\
     , .{});
@@ -339,6 +339,16 @@ fn copyFile(src_path: []const u8, dest_path: []const u8) !void {
 }
 
 fn defaultCacheRoot(allocator: std.mem.Allocator) ![]u8 {
+    if (builtin.os.tag == .windows) {
+        if (std.c.getenv("LOCALAPPDATA")) |local_appdata| {
+            const base = std.mem.sliceTo(local_appdata, 0);
+            return std.fs.path.join(allocator, &.{ base, "Zide", "grammars" });
+        }
+        if (std.c.getenv("APPDATA")) |appdata| {
+            const base = std.mem.sliceTo(appdata, 0);
+            return std.fs.path.join(allocator, &.{ base, "Zide", "grammars" });
+        }
+    }
     if (std.c.getenv("XDG_CONFIG_HOME")) |xdg| {
         const base = std.mem.sliceTo(xdg, 0);
         return std.fs.path.join(allocator, &.{ base, "zide", "grammars" });

@@ -10,14 +10,15 @@ to be small and testable, and to reuse the existing `tools/grammar_packs` workfl
 ## Current State (2026-01-28)
 - Grammar pack tooling builds multi-query packs (highlights/injections/locals/tags/textobjects/indents).
 - Runtime loader + syntax registry are implemented (`src/editor/grammar_manager.zig`, `src/editor/syntax_registry.zig`).
-- `zig build grammar-update` installs packs into `~/.config/zide/grammars`.
+- `zig build grammar-update` installs packs into `%LOCALAPPDATA%/Zide/grammars` on Windows and `~/.config/zide/grammars` elsewhere.
 - Tree-sitter runtime is vendored in `vendor/tree-sitter/`; Zig language is built-in.
 - Manual shipped query presets now also exist for plain-text-ish editor cases via `assets/queries/manual/*.scm`, with Lua-configurable editor highlight overrides layered on top.
 
 ## Target Runtime Layout
 Default cache dir (Linux):
 ```
-~/.config/zide/grammars/<lang>/<version>/
+Windows: %LOCALAPPDATA%/Zide/grammars/<lang>/<version>/
+Elsewhere: ~/.config/zide/grammars/<lang>/<version>/
   - <lang>_<version>_<os>_<arch>.so
   - <lang>_<version>_highlights.scm
   - <lang>_<version>_injections.scm
@@ -57,7 +58,7 @@ Defaults + overrides:
 CLI command in place:
 - `zig build grammar-update`
 - runs `sync_from_nvim`, `fetch_grammars`, and `build_all` through the current platform entrypoint (`.sh` / `.ps1`)
-- installs `tools/grammar_packs/dist/` into `~/.config/zide/grammars`
+- installs `tools/grammar_packs/dist/` into `%LOCALAPPDATA%/Zide/grammars` on Windows and `~/.config/zide/grammars` elsewhere
 - writes per-pack `manifest.json` next to the `.so` + query files
 - supports `--skip-git` and `--continue-on-error` for best-effort builds
 - supports `--targets` / `--skip-targets` to limit os/arch combos

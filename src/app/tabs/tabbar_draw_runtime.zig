@@ -77,5 +77,5 @@ fn drawIntegratedBackground(shell: anytype, band: layout_types.Rect, color: Colo
 }
 
 fn drawIntegratedButtons(state: anytype, shell: anytype, chrome: app_terminal_window_chrome_runtime.Geometry) void {
-    app_window_caption_buttons_draw_runtime.drawButtons(shell, chrome, state.pressed_window_caption_button);
+    app_window_caption_buttons_draw_runtime.drawButtons(shell, chrome, state.pressed_window_caption_button, shell.theme().ui_bar_bg);
 }

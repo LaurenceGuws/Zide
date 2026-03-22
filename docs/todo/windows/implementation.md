@@ -117,7 +117,7 @@ The current execution order is:
     - `zig build`
     - `zig build -Dmode=editor`
     - `zig build -Dmode=terminal`
-    - `scripts/windows/re-test.ps1` should remain the repeatable local
+    - `zig build gui-smokes-manual` should remain the OS-agnostic manual
       build-and-launch smoke harness for editor, IDE, and terminal together
   - Required manual checks:
     - window launch
@@ -175,7 +175,7 @@ The current execution order is:
     - `reference_repos/terminals/alacritty/alacritty/src/`
     - `reference_repos/backends/sdl/src/render/SDL_render.c`
   - Keep `.zide.lua` logging minimal and bug-scoped
-  - Maintain a repeatable retest script and comparison text/sample workflow
+  - Maintain a repeatable GUI smoke workflow and comparison text/sample workflow
 - [x] `W3A-02` Finish the fractional-DPI glyph placement contract
   - Keep the no-per-glyph-snap fix that removed dropped-stroke artifacts
   - Audit destination-quad sizing, baseline stability, and atlas sampling together
