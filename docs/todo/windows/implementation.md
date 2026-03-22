@@ -48,11 +48,21 @@ The current execution order is:
 
 ## Windows First-Class Fundamentals
 
-- [ ] `WF-01` Lock the supported native Windows policy and stop drifting around it
+- [x] `WF-01` Lock the supported native Windows policy and stop drifting around it
   - Current intended policy:
     - native Windows target: `x86_64-windows-msvc`
     - app/library dependencies: Zig package-managed
     - no `vcpkg` fallback path
+  - Closed state, 2026-03-22:
+    - `docs/DEPENDENCIES.md`, `app_architecture/DEPENDENCIES.md`,
+      `app_architecture/BOOTSTRAP.md`, and
+      `app_architecture/windows/INSTALLATION.md` now agree on the live Windows
+      path:
+      - `x86_64-windows-msvc`
+      - Zig package-managed app/library dependencies
+      - Windows-native `%APPDATA%` / `%LOCALAPPDATA%` config/state layout
+      - `%LOCALAPPDATA%\\Zide\\grammars` as the default grammar-pack cache root
+      - `zig build gui-smokes-manual` as the shared manual GUI smoke path
   - Exit criteria:
     - `build.zig`, `docs/DEPENDENCIES.md`, `app_architecture/DEPENDENCIES.md`, and bootstrap docs all say the same thing
     - no stale helper scripts or reports imply cache-path or `vcpkg` workarounds are still required
@@ -251,6 +261,17 @@ The current execution order is:
   - installer may still stamp explicit `--shell` / `--cwd` args when requested
   - Windows ConPTY launch now also passes the resolved cwd to
     `CreateProcessW`, so installed terminals do not open in the install root
+- [x] `W8-04` Add first native shell-integration verbs through the per-user installer
+  - current installer now registers per-user Explorer verbs by default:
+    - `Open in Zide`
+    - `Open in Zide Editor`
+    - `Open Zide Terminal here`
+  - `Install-Zide.ps1 -NoShellIntegration` opts out
+  - scope is intentionally limited to the current launch contract:
+    - file verbs for IDE/editor
+    - directory/background terminal-here verbs
+    - no folder/workspace-open verb yet for IDE/editor until that becomes a
+      first-class cross-platform contract
 
 ### Phase 9 Terminal-Only Native Chrome
 
@@ -316,7 +337,7 @@ The current execution order is:
       instead of the old full-width row assumption
     - ordinary content-row behavior remains unchanged in `native` mode
 
-- [ ] `W9-05` Add manual signoff for both native and integrated terminal-only chrome
+- [x] `W9-05` Add manual signoff for both native and integrated terminal-only chrome
   - Required manual checks:
     - native mode launch, drag, maximize, resize, and tab behavior
     - integrated mode launch, drag, maximize, resize, tab reorder, and close
@@ -333,9 +354,12 @@ The current execution order is:
     - current Win11 terminal-only integrated chrome is user-accepted for drag,
       resize, maximize/restore, minimize, compact tabs, pressed-state caption
       buttons, double-click maximize, right-click system menu, and `Alt+Space`
-    - the remaining native-feel gap is Win11 Snap Layout hover on the maximize
-      button, which stays a separate follow-up instead of blocking the accepted
-      integrated chrome baseline
+    - Win11 Snap Layout hover on the maximize button remained a separate
+      follow-up at that point
+  - Closed state, 2026-03-22:
+    - `W9-06` is now closed on the same local Win11 baseline
+    - native and integrated terminal-only chrome are both now locally accepted
+      as one complete manual signoff lane
 
 - [x] `W9-06` Add Win11 Snap Layout hover to integrated terminal chrome without regressing stable behavior
     - Goal:

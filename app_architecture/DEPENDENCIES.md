@@ -101,6 +101,11 @@ Current native Windows target policy:
 - default native Windows target is `x86_64-windows-msvc`
 - the packaged app/library stack comes from the Zig dependency graph
 - runtime packaging no longer depends on a separate `vcpkg` policy surface
+- grammar/runtime cache state belongs under Windows-native user paths:
+  - `%APPDATA%\\Zide\\` for config
+  - `%LOCALAPPDATA%\\Zide\\` for state and caches
+- manual GUI smoke coverage uses the shared build step:
+  - `zig build gui-smokes-manual`
 
 ## Text Stack
 

@@ -12,7 +12,8 @@ param(
     [string]$LaunchCwd,
     [switch]$SkipHashVerification,
     [switch]$NoStartMenu,
-    [switch]$NoUninstallRegistration
+    [switch]$NoUninstallRegistration,
+    [switch]$NoShellIntegration
 )
 
 $ErrorActionPreference = "Stop"
@@ -178,9 +179,114 @@ function Set-Shortcut {
     }
 }
 
+function Set-AppPathRegistration {
+    param(
+        [string]$ExecutableName,
+        [string]$ExecutablePath,
+        [string]$WorkingDirectory
+    )
+
+    $appPathsRoot = "HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\App Paths"
+    $keyPath = Join-Path $appPathsRoot $ExecutableName
+    New-Item -Path $keyPath -Force | Out-Null
+    Set-ItemProperty -Path $keyPath -Name "(default)" -Value $ExecutablePath
+    Set-ItemProperty -Path $keyPath -Name "Path" -Value $WorkingDirectory
+}
+
+function Set-ShellVerbRegistration {
+    param(
+        [string]$RegistryPath,
+        [string]$Label,
+        [string]$Command,
+        [string]$IconPath
+    )
+
+    & reg.exe add $RegistryPath /ve /d $Label /f | Out-Null
+    if ($LASTEXITCODE -ne 0) {
+        throw "failed to register shell verb label at $RegistryPath"
+    }
+
+    if ($IconPath) {
+        & reg.exe add $RegistryPath /v Icon /d $IconPath /f | Out-Null
+        if ($LASTEXITCODE -ne 0) {
+            throw "failed to register shell verb icon at $RegistryPath"
+        }
+    }
+
+    & reg.exe add ($RegistryPath + "\command") /ve /d $Command /f | Out-Null
+    if ($LASTEXITCODE -ne 0) {
+        throw "failed to register shell verb command at $RegistryPath"
+    }
+}
+
 function Quote-ShortcutArgument {
     param([string]$Value)
     return '"' + $Value.Replace('"', '\"') + '"'
+}
+
+function Build-ExecutableCommand {
+    param(
+        [string]$ExecutablePath,
+        [string[]]$Arguments
+    )
+
+    $parts = @((Quote-ShortcutArgument $ExecutablePath))
+    foreach ($arg in $Arguments) {
+        if ($null -eq $arg -or $arg.Length -eq 0) {
+            continue
+        }
+        $parts += $arg
+    }
+    return ($parts -join " ")
+}
+
+function Register-ShellIntegration {
+    param(
+        [string]$CurrentRoot,
+        [string]$ShellPath,
+        [string]$AppIconPath,
+        [string]$TerminalIconPath
+    )
+
+    $zideExe = Join-Path $CurrentRoot "zide.exe"
+    $zideEditorExe = Join-Path $CurrentRoot "zide-editor.exe"
+    $zideTerminalExe = Join-Path $CurrentRoot "zide-terminal.exe"
+
+    Set-ShellVerbRegistration `
+        -RegistryPath "HKCU\Software\Classes\*\shell\Zide.Open" `
+        -Label "Open in Zide" `
+        -Command (Build-ExecutableCommand -ExecutablePath $zideExe -Arguments @('"%1"')) `
+        -IconPath $AppIconPath
+
+    Set-ShellVerbRegistration `
+        -RegistryPath "HKCU\Software\Classes\*\shell\Zide.Editor" `
+        -Label "Open in Zide Editor" `
+        -Command (Build-ExecutableCommand -ExecutablePath $zideEditorExe -Arguments @('"%1"')) `
+        -IconPath $AppIconPath
+
+    $terminalArgs = @()
+    if ($ShellPath) {
+        $terminalArgs += "--shell $(Quote-ShortcutArgument $ShellPath)"
+    }
+    $terminalArgs += '--cwd "%1"'
+
+    Set-ShellVerbRegistration `
+        -RegistryPath "HKCU\Software\Classes\Directory\shell\Zide.TerminalHere" `
+        -Label "Open Zide Terminal here" `
+        -Command (Build-ExecutableCommand -ExecutablePath $zideTerminalExe -Arguments $terminalArgs) `
+        -IconPath $TerminalIconPath
+
+    $backgroundArgs = @()
+    if ($ShellPath) {
+        $backgroundArgs += "--shell $(Quote-ShortcutArgument $ShellPath)"
+    }
+    $backgroundArgs += '--cwd "%V"'
+
+    Set-ShellVerbRegistration `
+        -RegistryPath "HKCU\Software\Classes\Directory\Background\shell\Zide.TerminalHere" `
+        -Label "Open Zide Terminal here" `
+        -Command (Build-ExecutableCommand -ExecutablePath $zideTerminalExe -Arguments $backgroundArgs) `
+        -IconPath $TerminalIconPath
 }
 
 function Build-LaunchArguments {
@@ -425,6 +531,13 @@ try {
         Set-Shortcut -ShortcutPath (Join-Path $startMenuDir "Zide Terminal.lnk") -TargetPath (Join-Path $currentRoot "zide-terminal.exe") -WorkingDirectory $currentRoot -IconPath $terminalIconIco -Arguments $shortcutArguments -AppUserModelId "LaurenceGuws.Zide.Terminal"
     }
 
+    Set-AppPathRegistration -ExecutableName "zide.exe" -ExecutablePath (Join-Path $currentRoot "zide.exe") -WorkingDirectory $currentRoot
+    Set-AppPathRegistration -ExecutableName "zide-editor.exe" -ExecutablePath (Join-Path $currentRoot "zide-editor.exe") -WorkingDirectory $currentRoot
+    Set-AppPathRegistration -ExecutableName "zide-terminal.exe" -ExecutablePath (Join-Path $currentRoot "zide-terminal.exe") -WorkingDirectory $currentRoot
+    if (-not $NoShellIntegration) {
+        Register-ShellIntegration -CurrentRoot $currentRoot -ShellPath $ShellPath -AppIconPath $appIconIco -TerminalIconPath $terminalIconIco
+    }
+
     if (-not $NoUninstallRegistration) {
         $registryKey = "HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\Zide"
         $uninstallScript = Join-Path $InstallRoot "Uninstall-Zide.ps1"
@@ -453,6 +566,8 @@ try {
         Set-ItemProperty -Path $registryKey -Name "Publisher" -Value "Laurence"
         Set-ItemProperty -Path $registryKey -Name "InstallLocation" -Value $versionRoot
         Set-ItemProperty -Path $registryKey -Name "DisplayIcon" -Value $displayIcon
+        Set-ItemProperty -Path $registryKey -Name "InstallDate" -Value ([DateTime]::UtcNow.ToString("yyyyMMdd"))
+        Set-ItemProperty -Path $registryKey -Name "URLInfoAbout" -Value "https://github.com/LaurenceGuws/Zide"
         Set-ItemProperty -Path $registryKey -Name "UninstallString" -Value ("powershell.exe " + $uninstallArgs)
         Set-ItemProperty -Path $registryKey -Name "QuietUninstallString" -Value ("powershell.exe " + $uninstallArgs)
         Set-ItemProperty -Path $registryKey -Name "NoModify" -Value 1 -Type DWord
@@ -472,6 +587,11 @@ try {
     }
     if (-not $NoStartMenu) {
         Write-Host "Start Menu: $startMenuDir"
+    }
+    if (-not $NoShellIntegration) {
+        Write-Host "Shell integration: enabled"
+    } else {
+        Write-Host "Shell integration: skipped"
     }
 } finally {
     Remove-IfExists $tempRoot

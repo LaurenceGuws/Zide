@@ -71,6 +71,8 @@ If local toolchain or platform runtime requirements drift, defer to
 Install:
 
 - [Zig](https://ziglang.org/download/)
+- [PowerShell](https://learn.microsoft.com/powershell/) on `PATH`
+- [Python 3](https://www.python.org/downloads/) for `zig build grammar-update`
 
 Use the Windows section in
 [`docs/DEPENDENCIES.md`](../docs/DEPENDENCIES.md) as the detailed authority.
@@ -111,6 +113,12 @@ Mode-focused builds:
 ```bash
 zig build -Dmode=terminal
 zig build -Dmode=editor
+```
+
+Manual multi-GUI smoke on all platforms:
+
+```bash
+zig build gui-smokes-manual
 ```
 
 Useful build reports:
@@ -162,6 +170,8 @@ zig build grammar-update -- --skip-git --continue-on-error --jobs 8
 
 On Windows, `grammar-update` now uses PowerShell and Python 3 by default; Git
 Bash is no longer required for the normal local path.
+Installed grammar packs live under `%LOCALAPPDATA%\\Zide\\grammars` on Windows
+by default.
 
 ## Test
 

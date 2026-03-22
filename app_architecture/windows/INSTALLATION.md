@@ -35,6 +35,10 @@ User-local state, logs, caches:
 
 - `%LOCALAPPDATA%\\Zide\\`
 
+Current grammar-pack cache root:
+
+- `%LOCALAPPDATA%\\Zide\\grammars\\`
+
 Start Menu shortcuts:
 
 - `%APPDATA%\\Microsoft\\Windows\\Start Menu\\Programs\\Zide\\`
@@ -50,6 +54,12 @@ Shortcut launch defaults:
 Uninstall registration:
 
 - `HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\Zide`
+
+App Paths registration:
+
+- `HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\App Paths\\zide.exe`
+- `HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\App Paths\\zide-editor.exe`
+- `HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\App Paths\\zide-terminal.exe`
 
 ## Installed File Shape
 
@@ -127,6 +137,29 @@ Current shortcut policy:
   `CreateProcessW(..., lpCurrentDirectory=...)` so installed launches do not
   fall back to `%LOCALAPPDATA%\\Programs\\Zide\\current`
 
+Current native shell-path policy:
+
+- installer registers all three launchers under per-user `App Paths`
+- this gives Windows a standard executable lookup surface without mutating the
+  user's `PATH`
+- uninstall removes those `App Paths` entries again
+
+Current shell integration policy:
+
+- installer also registers per-user Explorer context-menu verbs by default
+- `Install-Zide.ps1 -NoShellIntegration` opts out
+- current supported verbs intentionally match the live app launch contract:
+  - `Open in Zide` for files
+  - `Open in Zide Editor` for files
+  - `Open Zide Terminal here` for directories and directory backgrounds
+- folder/workspace verbs for `zide.exe` / `zide-editor.exe` stay deferred until
+  workspace-folder opening is a first-class cross-platform app contract
+- current implementation is the classic Explorer verb path, so on Windows 11
+  these entries appear under `Show more options`
+- top-level Windows 11 context-menu placement is a separate future lane that
+  would need the newer COM / `IExplorerCommand` integration model rather than
+  plain registry verbs
+
 ## First Distribution Method
 
 Current first-class Windows install path:
@@ -168,6 +201,8 @@ Uninstall removes:
 - current-version install directory
 - current junction when it points to that version
 - uninstall registry entry
+- per-user `App Paths` registrations
+- per-user Explorer shell verbs
 
 Uninstall keeps by default:
 
