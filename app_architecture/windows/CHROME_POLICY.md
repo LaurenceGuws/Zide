@@ -44,6 +44,7 @@ Examples:
 - caption hit-testing
 - drag and resize semantics
 - DWM/custom frame integration
+- Win11 dark-frame and system-backdrop policy application
 - AppUserModelID and launcher identity
 - installer/runtime layout
 - future Snap Layout / Mica / dark-frame integration
@@ -144,6 +145,9 @@ Bad examples:
 4. Future IDE/editor titleband work should reuse the shared top-bar widget and
    shared caption-button shell services instead of building a mixed native/app
    split band.
+5. Win11 frame/material attributes should be applied once through a shared shell
+   service keyed off product chrome mode and focus state, not re-implemented
+   per product.
 
 ## Reference Split
 

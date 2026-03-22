@@ -25,7 +25,8 @@ pub fn draw(state: anytype, shell: anytype, layout: layout_types.WidgetLayout, c
     } else if (app_modes.ide.useTerminalTabBarWidthMode(state.app_mode)) {
         hooks.apply_current_tab_bar_width_mode(ctx);
         const tab_theme = app_theme_utils.terminalTabBarTheme(state.terminal_theme, state.shell_base_theme);
-        shell.setTheme(tab_theme);
+        const chrome_theme = app_theme_utils.windowChromeTheme(tab_theme, shell.windowFocused());
+        shell.setTheme(chrome_theme);
         if (app_terminal_window_chrome_runtime.barVisible(
             state.app_mode,
             state.terminal_window_chrome_mode,
@@ -41,7 +42,7 @@ pub fn draw(state: anytype, shell: anytype, layout: layout_types.WidgetLayout, c
                 state.terminal_window_chrome_mode,
             );
             if (chrome.enabled) {
-                drawIntegratedBackground(shell, chrome.band, tab_theme.ui_bar_bg);
+                drawIntegratedBackground(shell, chrome.band, chrome_theme.ui_bar_bg);
                 tab_tooltip = state.tab_bar.drawWithIconProvider(
                     shell,
                     chrome.band.x,

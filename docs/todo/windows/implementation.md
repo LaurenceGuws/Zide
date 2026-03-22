@@ -117,6 +117,8 @@ The current execution order is:
     - `zig build`
     - `zig build -Dmode=editor`
     - `zig build -Dmode=terminal`
+    - `scripts/windows/re-test.ps1` should remain the repeatable local
+      build-and-launch smoke harness for editor, IDE, and terminal together
   - Required manual checks:
     - window launch
     - text quality at 100/125/150/175/200/250/300%
@@ -416,3 +418,27 @@ The current execution order is:
     - right-click system menu
     - `Alt+Space`
     - resize borders/corners
+
+- [x] `W10-04` Add shared Win11 frame/material policy application
+  - Current state:
+    - a shared Windows frame-material runtime now applies DWM dark-frame and
+      system-backdrop policy from `WindowChromeMode`
+    - terminal integrated chrome uses a tabbed backdrop policy
+    - editor/IDE shared titleband uses a Mica backdrop policy
+    - plain native mode currently keeps dark-frame only with no forced backdrop
+  - Notes:
+    - this is a shared shell-service application seam, not a new per-product
+      custom frame path
+    - config/backdrop user policy can come later if needed; this slice just
+      establishes the shared runtime and product defaults
+
+- [x] `W10-05` Add shared active/inactive frame polish
+  - Current state:
+    - the shared Windows frame-material runtime now also applies a subtle
+      focus-aware border color and an explicit Win11 rounded-corner preference
+    - terminal/editor/IDE all consume this through the same shell-service path
+      rather than product-specific titlebar code
+  - Notes:
+    - this is intentionally subtle polish, not a new user-facing config lane
+    - if backdrop/config policy expands later, focus-state frame polish should
+      remain owned by the same shared runtime

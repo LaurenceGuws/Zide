@@ -71,6 +71,41 @@ pub fn terminalTabBarTheme(terminal_theme: app_shell.Theme, shell_base_theme: ap
     return theme;
 }
 
+pub fn windowChromeTheme(base_theme: app_shell.Theme, focused: bool) app_shell.Theme {
+    if (focused) return base_theme;
+
+    var theme = base_theme;
+    theme.ui_bar_bg = mixColor(base_theme.ui_bar_bg, base_theme.background, 0.30);
+    theme.ui_panel_bg = mixColor(base_theme.ui_panel_bg, base_theme.background, 0.35);
+    theme.ui_border = mixColor(base_theme.ui_border, base_theme.background, 0.45);
+    theme.ui_hover = mixColor(base_theme.ui_hover, theme.ui_bar_bg, 0.40);
+    theme.ui_pressed = mixColor(base_theme.ui_pressed, theme.ui_bar_bg, 0.35);
+    theme.ui_text = mixColor(base_theme.ui_text_inactive, base_theme.ui_text, 0.35);
+    theme.ui_window_control_fg = ensureContrastPair(
+        mixColor(base_theme.ui_window_control_fg, base_theme.ui_text_inactive, 0.55),
+        theme.ui_bar_bg,
+        theme.ui_hover,
+        min_window_control_contrast,
+    );
+    return theme;
+}
+
+fn mixColor(a: app_shell.Color, b: app_shell.Color, t: f32) app_shell.Color {
+    const clamped_t = std.math.clamp(t, 0.0, 1.0);
+    const inv_t = 1.0 - clamped_t;
+    return .{
+        .r = mixChannel(a.r, b.r, inv_t, clamped_t),
+        .g = mixChannel(a.g, b.g, inv_t, clamped_t),
+        .b = mixChannel(a.b, b.b, inv_t, clamped_t),
+        .a = a.a,
+    };
+}
+
+fn mixChannel(a: u8, b: u8, inv_t: f32, t: f32) u8 {
+    const mixed = (@as(f32, @floatFromInt(a)) * inv_t) + (@as(f32, @floatFromInt(b)) * t);
+    return @intFromFloat(std.math.round(mixed));
+}
+
 fn ensureContrast(text: app_shell.Color, bg: app_shell.Color, min_ratio: f64) app_shell.Color {
     if (contrastRatio(text, bg) >= min_ratio) return text;
     return highContrastTextCandidate(bg, text.a);

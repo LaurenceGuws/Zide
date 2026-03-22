@@ -33,6 +33,7 @@ const font_runtime = @import("renderer/font_runtime.zig");
 const text_runtime = @import("renderer/text_runtime.zig");
 const window_chrome_runtime = @import("renderer/window_chrome_runtime.zig");
 const windows_snap_layout_sink = @import("../platform/windows_snap_layout_sink.zig");
+const windows_frame_material = @import("../platform/windows_frame_material.zig");
 const glyph_cache = @import("glyph_cache.zig");
 const platform_window = @import("../platform/window.zig");
 const platform_input_events = @import("../platform/input_events.zig");
@@ -318,14 +319,14 @@ pub const Renderer = struct {
         baseline_from_top: f32,
     };
 
-pub const SelectionOverlayStyle = struct {
-    smooth_enabled: bool = true,
-    corner_px: ?f32 = null,
-    pad_px: ?f32 = null,
-};
+    pub const SelectionOverlayStyle = struct {
+        smooth_enabled: bool = true,
+        corner_px: ?f32 = null,
+        pad_px: ?f32 = null,
+    };
 
-pub const WindowChromeMode = window_chrome_runtime.WindowChromeMode;
-pub const WindowChromeContract = window_chrome_runtime.WindowChromeContract;
+    pub const WindowChromeMode = window_chrome_runtime.WindowChromeMode;
+    pub const WindowChromeContract = window_chrome_runtime.WindowChromeContract;
 
     allocator: std.mem.Allocator,
     window: *sdl.SDL_Window,
@@ -410,6 +411,7 @@ pub const WindowChromeContract = window_chrome_runtime.WindowChromeContract;
     scene_target: SceneTargetState,
     window_chrome: WindowChromeContract,
     window_chrome_applied_mode: WindowChromeMode,
+    window_frame_material_applied: windows_frame_material.Policy,
     window_snap_sink: windows_snap_layout_sink.Sink,
 
     theme: Theme,
@@ -639,6 +641,7 @@ pub const WindowChromeContract = window_chrome_runtime.WindowChromeContract;
             .scene_target = .{},
             .window_chrome = .{},
             .window_chrome_applied_mode = .native,
+            .window_frame_material_applied = .{},
             .window_snap_sink = .{},
             .theme = .{},
             .mouse_scale = .{ .x = 1.0, .y = 1.0 },
@@ -1554,6 +1557,12 @@ pub const WindowChromeContract = window_chrome_runtime.WindowChromeContract;
     pub fn setWindowChrome(self: *Renderer, contract: WindowChromeContract) void {
         self.window_chrome = if (builtin.target.os.tag == .windows) contract else .{};
         if (builtin.target.os.tag != .windows) return;
+
+        const material_policy = windows_frame_material.policyForChromeMode(self.window_chrome.mode, self.window_focused);
+        if (!std.meta.eql(self.window_frame_material_applied, material_policy)) {
+            windows_frame_material.apply(self.window, material_policy);
+            self.window_frame_material_applied = material_policy;
+        }
 
         const integrated = self.window_chrome.mode != .native;
         if (self.window_chrome_applied_mode != self.window_chrome.mode) {
