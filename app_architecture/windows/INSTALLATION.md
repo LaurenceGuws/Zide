@@ -146,8 +146,8 @@ Current native shell-path policy:
 
 Current shell integration policy:
 
-- installer also registers per-user Explorer context-menu verbs by default
-- `Install-Zide.ps1 -NoShellIntegration` opts out
+- installer registers per-user Explorer context-menu verbs as part of the
+  standard Windows install path
 - current supported verbs intentionally match the live app launch contract:
   - `Open in Zide` for files
   - `Open in Zide Editor` for files
@@ -203,18 +203,20 @@ Current installer supports:
     installed metadata and install root, not from the repo checkout
   - self-signed local/dev registration expects elevation so the signing cert can
     be trusted in the machine certificate stores
+  - explorer-command triage also has a second dev-only mode:
+    - `Register-ZidePackageIdentity.ps1 -PackageMode Full`
+    - this builds a self-contained MSIX from the installed payload instead of
+      using `-ExternalLocation`
 
 Current installer UX policy:
 
-- shell integration is default-on
-- `-NoShellIntegration` is the explicit opt-out
-- package identity is explicit opt-in:
-  - `-RegisterPackageIdentity`
+- shell integration and package identity are the one supported Windows install
+  path
 - installer output should state:
   - whether Start Menu registration is enabled
   - whether Add/Remove Programs registration is enabled
-  - whether shell integration is enabled
-  - whether package identity registration is enabled
+  - that shell integration is enabled
+  - that package identity registration is enabled
   - that classic Explorer verbs appear under `Show more options` on Windows 11
 
 Example local install:
@@ -223,16 +225,10 @@ Example local install:
 powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\windows\Install-Zide.ps1 -ReleaseDistDir .\dist
 ```
 
-Example local install without Explorer verbs:
+Example local install:
 
 ```powershell
-powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\windows\Install-Zide.ps1 -ReleaseDistDir .\dist -NoShellIntegration
-```
-
-Example local install with package identity registration:
-
-```powershell
-powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\windows\Install-Zide.ps1 -ReleaseDistDir .\dist -RegisterPackageIdentity
+powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\windows\Install-Zide.ps1 -ReleaseDistDir .\dist
 ```
 
 ## Uninstall Behavior

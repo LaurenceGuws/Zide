@@ -266,13 +266,12 @@ The current execution order is:
     - `Open in Zide`
     - `Open in Zide Editor`
     - `Open Zide Terminal here`
-  - `Install-Zide.ps1 -NoShellIntegration` opts out
   - scope is intentionally limited to the current launch contract:
     - file verbs for IDE/editor
     - directory/background terminal-here verbs
     - no folder/workspace-open verb yet for IDE/editor until that becomes a
       first-class cross-platform contract
-- [ ] `W8-05` Add package identity to the Windows install story without changing runtime layout
+- [x] `W8-05` Add package identity to the Windows install story without changing runtime layout
   - This is the shared prerequisite for the next Windows-native shell lanes.
   - Scope:
     - external-location identity package path
@@ -280,7 +279,7 @@ The current execution order is:
     - no runtime-layout fork away from the current installer contract
   - Authority:
     - `app_architecture/windows/NATIVE_SHELL_INTEGRATION.md`
-  - Progress:
+  - Closed state, 2026-03-23:
     - launcher binaries now embed matching `msix` desktop application manifests
       for package-identity association
     - installed builds now carry package-identity metadata under:
@@ -290,12 +289,16 @@ The current execution order is:
       - `scripts/windows/Unregister-ZidePackageIdentity.ps1`
     - registration now builds the external-location identity package from the
       installed metadata and install root instead of requiring a repo checkout
-    - installer now exposes package identity as an explicit advanced opt-in:
-      - `Install-Zide.ps1 -RegisterPackageIdentity`
+    - installer now treats package identity plus shell integration as the one
+      supported Windows install path instead of an optional advanced branch
     - local/dev registration currently requires elevation when it must trust the
       self-signed package certificate at machine scope
-    - remaining work is to decide whether this becomes an installer-owned
-      default path or stays an explicit advanced Windows integration step
+    - local validation now includes:
+      - elevated `Get-AppxPackage LaurenceGuws.Zide`
+      - installer/uninstall registration from the installed payload
+    - runtime layout remains the same:
+      - `%LOCALAPPDATA%\Programs\Zide\<version>`
+      - optional package identity layered on top
 
 - [ ] `W8-06` Add top-level Win11 Explorer context-menu integration
   - Goal:
@@ -306,6 +309,41 @@ The current execution order is:
       extension of the current registry-verb installer path
   - Authority:
     - `app_architecture/windows/NATIVE_SHELL_INTEGRATION.md`
+    - `app_architecture/windows/EXPLORER_COMMAND_INTEGRATION.md`
+  - Progress:
+    - first narrow packaged cut now exists:
+      - one in-proc COM DLL:
+        - `zide-shell-ext.dll`
+      - one verb:
+        - `Open Zide Terminal here`
+      - item types:
+        - `Directory`
+        - `Directory\Background`
+    - the package-identity manifest generator now emits:
+      - `windows.comServer`
+      - `windows.fileExplorerContextMenus`
+    - validated findings, 2026-03-23:
+      - external-location package identity is not sufficient on the current
+        Win11 machine:
+        - package registration succeeds
+        - classic verbs still work
+        - Explorer does not instantiate the packaged command at menu-build time
+      - full-package registration from the installed payload does work:
+        - `Register-ZidePackageIdentity.ps1 -PackageMode Full`
+        - top-level `Open Zide Terminal here` appears
+        - packaged command activation succeeds through
+          `IApplicationActivationManager`
+      - follow-up fixes landed on that path:
+        - full-package payload copy instead of metadata-only packaging
+        - packaged terminal launch by AUMID:
+          - `LaurenceGuws.Zide_1gfq4x6kk79tm!ZideTerminal`
+        - installed asset/config resolution for packaged launch
+      - current conclusion:
+        - top-level Win11 Explorer integration is a real full-package lane, not
+          an external-location package-identity lane
+    - remaining work:
+      - clean installer UX around the full-package Explorer path
+      - expand beyond the first terminal-here verb when the lane is stable
 
 - [ ] `W8-07` Add Zide Terminal to the Windows default terminal chooser
   - Goal:

@@ -71,11 +71,36 @@ fn writeLogLine(file: std.fs.File, prefix: []const u8, msg: []const u8) !void {
     try file.writeAll("\n");
 }
 
+fn openLogFile(path: []const u8) !std.fs.File {
+    var file = try std.fs.cwd().createFile(path, .{ .truncate = false, .read = false });
+    try file.seekFromEnd(0);
+    return file;
+}
+
+fn openWindowsFallbackLogFile() !std.fs.File {
+    const local_appdata = std.c.getenv("LOCALAPPDATA") orelse return error.FileNotFound;
+    const base = std.mem.sliceTo(local_appdata, 0);
+    const dir_path = try std.fs.path.join(std.heap.c_allocator, &.{ base, "Zide" });
+    defer std.heap.c_allocator.free(dir_path);
+
+    std.fs.cwd().makePath(dir_path) catch |err| switch (err) {
+        error.PathAlreadyExists => {},
+        else => return err,
+    };
+
+    const file_path = try std.fs.path.join(std.heap.c_allocator, &.{ dir_path, "zide.log" });
+    defer std.heap.c_allocator.free(file_path);
+    return openLogFile(file_path);
+}
+
 pub fn init() !void {
     if (log_file != null) return;
-    var file = try std.fs.cwd().createFile("zide.log", .{ .truncate = false, .read = false });
-    try file.seekFromEnd(0);
-    log_file = file;
+    log_file = openLogFile("zide.log") catch |err| blk: {
+        if (builtin.target.os.tag == .windows and err == error.AccessDenied) {
+            break :blk try openWindowsFallbackLogFile();
+        }
+        return err;
+    };
     if (log_start_ns == 0) log_start_ns = std.time.nanoTimestamp();
 }
 

@@ -8,6 +8,7 @@ per-user installer and classic shell verbs.
 Use this document with:
 
 - `app_architecture/windows/INSTALLATION.md`
+- `app_architecture/windows/EXPLORER_COMMAND_INTEGRATION.md`
 - `docs/todo/windows/implementation.md`
 
 ## Current Baseline
@@ -80,6 +81,15 @@ Implication for Zide:
   separate COM/package integration project
 - do not keep stretching the installer-only registry lane in hopes that it will
   become top-level Win11 integration
+- current first cut is intentionally narrow:
+  - one packaged `IExplorerCommand`
+  - one top-level verb:
+    - `Open Zide Terminal here`
+  - item types:
+    - `Directory`
+    - `Directory\Background`
+  - authority:
+    - `app_architecture/windows/EXPLORER_COMMAND_INTEGRATION.md`
 
 ### 3. Default terminal registration
 
@@ -140,12 +150,30 @@ Current Zide implementation state:
   - `scripts/windows/Register-ZidePackageIdentity.ps1`
   - `scripts/windows/Unregister-ZidePackageIdentity.ps1`
 - the main installer can now invoke that registration path explicitly through:
-  - `Install-Zide.ps1 -RegisterPackageIdentity`
+  - `Install-Zide.ps1`
 - local/dev registration currently follows the Microsoft self-signed test path:
   - self-signed cert subject must match the package `Publisher`
   - package install trust must be added at machine scope
   - that means the dev registration script expects elevation when it must trust
     its own self-signed cert
+- current installer policy is now opinionated:
+  - shell integration and package identity are the one supported Windows
+    install path
+  - this avoids an install matrix where classic-only and packaged-native paths
+    drift independently
+
+Current `W8-06` finding:
+
+- external-location identity is enough for package registration and packaged
+  COM registration
+- it is not enough, on the current Win11 machine, to make Explorer instantiate
+  the packaged top-level command
+- a self-contained full MSIX from the installed payload does instantiate the
+  Explorer command and surface the top-level `Open Zide Terminal here` entry
+- current architectural conclusion:
+  - external-location identity is the right package-identity prerequisite
+  - top-level Win11 Explorer commands themselves want the full-package lane on
+    this machine
 
 For Zide, this means:
 

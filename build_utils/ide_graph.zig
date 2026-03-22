@@ -24,6 +24,34 @@ const addSystemCommandStep = step_utils.addSystemCommandStep;
 const addReportBuildProfilesStep = step_reports.addReportBuildProfilesStep;
 const addGateStep = step_utils.addGateStep;
 
+fn addWindowsShellExtension(
+    b: *std.Build,
+    target: std.Build.ResolvedTarget,
+    optimize: std.builtin.OptimizeMode,
+) ?*std.Build.Step {
+    if (target.result.os.tag != .windows) return null;
+
+    const dll = b.addLibrary(.{
+        .name = "zide-shell-ext",
+        .linkage = .dynamic,
+        .root_module = b.createModule(.{
+            .target = target,
+            .optimize = optimize,
+            .link_libc = true,
+        }),
+    });
+    dll.addCSourceFile(.{
+        .file = .{ .cwd_relative = "src/platform/windows_shell_extension/open_zide_terminal_here.cpp" },
+        .flags = &.{ "-std=c++17", "-Wno-unused-command-line-argument" },
+    });
+    dll.linkSystemLibrary("ole32");
+    dll.linkSystemLibrary("shell32");
+    dll.linkSystemLibrary("shlwapi");
+    dll.linkSystemLibrary("user32");
+    const install = b.addInstallArtifact(dll, .{});
+    return &install.step;
+}
+
 fn addModeGateAndBundleSteps(
     b: *std.Build,
     target_os: std.Target.Os.Tag,
@@ -135,6 +163,8 @@ pub fn planIdeExtendedBuildGraph(
     build_options: *std.Build.Step.Options,
     zlua_module: *std.Build.Module,
 ) void {
+    const windows_shell_extension_install = addWindowsShellExtension(b, target, optimize);
+
     // FFI artifacts
     const terminal_ffi = b.addLibrary(.{
         .name = "zide-terminal-ffi",
@@ -454,6 +484,10 @@ pub fn planIdeExtendedBuildGraph(
     gui_smokes_manual_run.run.addArg(b.getInstallPath(.bin, "zide-editor"));
     gui_smokes_manual_run.run.addArg(b.getInstallPath(.bin, "zide"));
     gui_smokes_manual_run.run.addArg(b.getInstallPath(.bin, "zide-terminal"));
+
+    if (windows_shell_extension_install) |step| {
+        b.getInstallStep().dependOn(step);
+    }
 
     addModeGateAndBundleSteps(
         b,

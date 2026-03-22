@@ -43,10 +43,6 @@ pub fn configureExecutableResources(
         \\<?xml version="1.0" encoding="utf-8"?>
         \\<assembly manifestVersion="1.0" xmlns="urn:schemas-microsoft-com:asm.v1">
         \\  <assemblyIdentity version="{s}" name="{s}"/>
-        \\  <msix xmlns="urn:schemas-microsoft-com:msix.v1"
-        \\        publisher="{s}"
-        \\        packageName="{s}"
-        \\        applicationId="{s}"/>
         \\</assembly>
         \\
     , .{
@@ -56,10 +52,7 @@ pub fn configureExecutableResources(
             version.patch,
             version.build,
         }),
-        contract.package_identity.name,
-        contract.package_identity.publisher,
-        contract.package_identity.name,
-        identity.package_application_id,
+        identity.internal_name,
     });
     _ = write_files.add("app.manifest", app_manifest_source);
     const rc_source = b.fmt(

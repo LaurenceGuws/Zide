@@ -142,6 +142,10 @@ pub fn windowEventData2(event: *const c.SDL_Event) i32 {
     return @intCast(event.window.data2);
 }
 
+pub fn windowEventId(event: *const c.SDL_Event) u32 {
+    return event.window.windowID;
+}
+
 pub fn setHint(name: [*:0]const u8, value: [*:0]const u8) void {
     _ = c.SDL_SetHint(name, value);
 }
@@ -251,6 +255,10 @@ pub fn getWindowProperties(window: *c.SDL_Window) ?PropertiesId {
     const props = c.SDL_GetWindowProperties(window);
     if (props == 0) return null;
     return props;
+}
+
+pub fn getWindowId(window: *c.SDL_Window) u32 {
+    return c.SDL_GetWindowID(window);
 }
 
 pub fn getPointerProperty(props: PropertiesId, name: [*:0]const u8) ?*anyopaque {

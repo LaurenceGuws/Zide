@@ -9,6 +9,13 @@ pub const PackageIdentity = struct {
     max_version_tested: []const u8,
 };
 
+pub const ShellExtensionIdentity = struct {
+    clsid: []const u8,
+    dll_name: []const u8,
+    verb_id: []const u8,
+    title: []const u8,
+};
+
 pub const ArtifactIdentity = struct {
     display_name: []const u8,
     app_id: []const u8,
@@ -28,6 +35,13 @@ pub const package_identity: PackageIdentity = .{
     .display_name = "Zide",
     .min_version = "10.0.19041.0",
     .max_version_tested = "10.0.26100.0",
+};
+
+pub const shell_extension: ShellExtensionIdentity = .{
+    .clsid = "4C5D89A5-4E56-48E0-AE5A-8F4A5C6D1972",
+    .dll_name = "zide-shell-ext.dll",
+    .verb_id = "OpenZideTerminalHere",
+    .title = "Open Zide Terminal here",
 };
 
 pub fn identityForArtifact(name: []const u8) ArtifactIdentity {

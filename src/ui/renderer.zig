@@ -490,14 +490,41 @@ pub const Renderer = struct {
         owned: ?[]u8,
     };
 
-    fn dupFontPath(allocator: std.mem.Allocator, raw_opt: ?[]const u8) !OwnedFontPath {
-        if (raw_opt) |raw| {
+    fn resolveFontPath(allocator: std.mem.Allocator, raw: []const u8) !OwnedFontPath {
+        if (std.fs.path.isAbsolute(raw)) {
             const owned = try allocator.alloc(u8, raw.len + 1);
             std.mem.copyForwards(u8, owned[0..raw.len], raw);
             owned[raw.len] = 0;
             return .{ .path = @ptrCast(owned.ptr), .owned = owned };
         }
-        return .{ .path = FONT_PATH, .owned = null };
+
+        if (std.fs.cwd().openFile(raw, .{})) |file| {
+            file.close();
+            const owned = try allocator.alloc(u8, raw.len + 1);
+            std.mem.copyForwards(u8, owned[0..raw.len], raw);
+            owned[raw.len] = 0;
+            return .{ .path = @ptrCast(owned.ptr), .owned = owned };
+        } else |_| {}
+
+        const exe_dir = std.fs.selfExeDirPathAlloc(allocator) catch null;
+        defer if (exe_dir) |dir| allocator.free(dir);
+
+        if (exe_dir) |dir| {
+            const joined = try std.fs.path.join(allocator, &.{ dir, raw });
+            return .{ .path = @ptrCast(joined.ptr), .owned = joined };
+        }
+
+        const owned = try allocator.alloc(u8, raw.len + 1);
+        std.mem.copyForwards(u8, owned[0..raw.len], raw);
+        owned[raw.len] = 0;
+        return .{ .path = @ptrCast(owned.ptr), .owned = owned };
+    }
+
+    fn dupFontPath(allocator: std.mem.Allocator, raw_opt: ?[]const u8) !OwnedFontPath {
+        if (raw_opt) |raw| {
+            return try resolveFontPath(allocator, raw);
+        }
+        return try resolveFontPath(allocator, std.mem.span(FONT_PATH));
     }
 
     pub fn init(allocator: std.mem.Allocator, width: i32, height: i32, title: [*:0]const u8, init_options: InitOptions) !*Renderer {
@@ -1591,7 +1618,7 @@ pub const Renderer = struct {
             _ = sdl_api.syncWindow(self.window);
         }
 
-        self.window_integrated_frame.sync(self.window, self.window_chrome.mode, self.windowIsMaximized());
+        self.window_integrated_frame.sync(self.window, self.window_chrome.mode, self.windowIsMaximized(), self.windowIsFullscreen());
         self.window_snap_sink.sync(self.window, self.window_chrome, self.windowIsMaximized());
     }
 
@@ -1615,6 +1642,10 @@ pub const Renderer = struct {
 
     pub fn windowIsMaximized(self: *Renderer) bool {
         return (sdl_api.getWindowFlags(self.window) & sdl.SDL_WINDOW_MAXIMIZED) != 0;
+    }
+
+    pub fn windowIsFullscreen(self: *Renderer) bool {
+        return (sdl_api.getWindowFlags(self.window) & sdl.SDL_WINDOW_FULLSCREEN) != 0;
     }
 
     pub fn integratedWindowChromeSinkActive(self: *const Renderer) bool {

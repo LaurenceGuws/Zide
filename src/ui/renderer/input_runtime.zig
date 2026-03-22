@@ -73,9 +73,13 @@ fn handleEvent(
     sdl3_textinput_layout_logged: *bool,
     sdl3_textediting_layout_logged: *bool,
 ) void {
+    const main_window_id = sdl_api.getWindowId(self.window);
     switch (event.type) {
-        sdl_api.EVENT_QUIT => self.should_close_flag = true,
+        sdl_api.EVENT_QUIT => {
+            self.should_close_flag = true;
+        },
         sdl_api.EVENT_WINDOW => {
+            if (sdl_api.windowEventId(event) != main_window_id) return;
             handleWindowEvent(event.type, &self.should_close_flag, &self.window_resized_flag);
             if (sdl_api.isFocusGainedEvent(event.type)) {
                 sdl_api.startTextInput(self.window);
@@ -164,6 +168,7 @@ fn handleEvent(
         sdl_api.EVENT_MOUSE_WHEEL => input_state.addMouseWheel(state.mouse_wheel_delta, platform_input_events.wheelDelta(event)),
         else => {
             if (sdl_api.isWindowEventType(event.type)) {
+                if (sdl_api.windowEventId(event) != main_window_id) return;
                 handleWindowEvent(event.type, &self.should_close_flag, &self.window_resized_flag);
                 if (sdl_api.isFocusGainedEvent(event.type)) {
                     sdl_api.startTextInput(self.window);

@@ -99,6 +99,7 @@ fn initWithMode(
     defer config_mod.freeConfig(allocator, &config);
 
     try manual_highlights_mod.applyConfig(allocator, &config);
+    errdefer manual_highlights_mod.reset();
 
     app_logger.resetConfig();
     if (config.log_file_filter) |filter| {

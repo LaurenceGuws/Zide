@@ -1,11 +1,12 @@
+const std = @import("std");
 const app_modes = @import("modes/mod.zig");
 const app_bootstrap = @import("bootstrap.zig");
+const mode_build = @import("mode_build.zig");
 const app_run_loop_driver = @import("run_loop_driver.zig");
 const app_shell = @import("../app_shell.zig");
 const app_signals = @import("signals.zig");
 const app_terminal_tab_navigation_runtime = @import("terminal/terminal_tab_navigation_runtime.zig");
 const input_builder = @import("../input/input_builder.zig");
-const std = @import("std");
 
 pub fn prepare(state: anytype) !?app_run_loop_driver.FrameSetup {
     return try prepareWithMode(state, null);
@@ -42,7 +43,9 @@ fn prepareWithMode(
         return null;
     }
 
-    if (state.shell.shouldClose()) return null;
+    if (state.shell.shouldClose()) {
+        return null;
+    }
     if (app_signals.requested()) {
         state.shell.requestClose();
         return null;

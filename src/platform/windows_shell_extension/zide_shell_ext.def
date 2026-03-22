@@ -1,0 +1,4 @@
+LIBRARY "zide-shell-ext"
+EXPORTS
+    DllCanUnloadNow
+    DllGetClassObject

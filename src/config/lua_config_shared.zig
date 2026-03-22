@@ -92,6 +92,22 @@ pub fn fileExists(path: []const u8) bool {
     }
 }
 
+pub fn findInstalledAssetPath(allocator: std.mem.Allocator, relative_path: []const u8) !?[]u8 {
+    if (fileExists(relative_path)) {
+        return try allocator.dupe(u8, relative_path);
+    }
+
+    const exe_dir = std.fs.selfExeDirPathAlloc(allocator) catch return null;
+    defer allocator.free(exe_dir);
+
+    const candidate = try std.fs.path.join(allocator, &.{ exe_dir, relative_path });
+    if (!fileExists(candidate)) {
+        allocator.free(candidate);
+        return null;
+    }
+    return candidate;
+}
+
 pub fn findUserConfigPath(allocator: std.mem.Allocator) iface.LuaConfigError!?[]u8 {
     switch (@import("builtin").target.os.tag) {
         .windows => {

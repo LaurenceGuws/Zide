@@ -38,6 +38,9 @@ foreach ($bundle in $bundles) {
     $extract = Join-Path $workRoot ([IO.Path]::GetFileNameWithoutExtension($bundle.Name))
     Expand-Archive -LiteralPath (Join-Path $srcDist $bundle.Name) -DestinationPath $extract -Force
     Copy-Item -LiteralPath $bundle.BuildExe -Destination (Join-Path $extract $bundle.Exe) -Force
+    if ($bundle.Exe -eq "zide.exe") {
+        Copy-Item -LiteralPath (Join-Path $RepoRoot "zig-out\bin\zide-shell-ext.dll") -Destination (Join-Path $extract "zide-shell-ext.dll") -Force
+    }
     Compress-Archive -Path (Join-Path $extract "*") -DestinationPath (Join-Path $outDist $bundle.Name) -Force
 }
 

@@ -276,10 +276,12 @@ fn extractTokenAtCol(allocator: std.mem.Allocator, row_cells: []const Cell, col:
             };
         }
     }
-    var token = out.toOwnedSlice(allocator) catch {
+    const owned_token = out.toOwnedSlice(allocator) catch {
         log.logf(.warning, "extractTokenAtCol failed materializing token", .{});
         return null;
     };
+    defer allocator.free(owned_token);
+    var token = owned_token;
 
     // Trim common punctuation around terminal paths.
     while (token.len > 0) {

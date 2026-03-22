@@ -12,9 +12,7 @@ param(
     [string]$LaunchCwd,
     [switch]$SkipHashVerification,
     [switch]$NoStartMenu,
-    [switch]$NoUninstallRegistration,
-    [switch]$NoShellIntegration,
-    [switch]$RegisterPackageIdentity
+    [switch]$NoUninstallRegistration
 )
 
 $ErrorActionPreference = "Stop"
@@ -27,8 +25,6 @@ function Write-InstallPlan {
         [string]$ConfigRoot,
         [string]$StateRoot,
         [string]$StartMenuDir,
-        [bool]$ShellIntegrationEnabled,
-        [bool]$PackageIdentityEnabled,
         [bool]$StartMenuEnabled,
         [bool]$UninstallRegistrationEnabled,
         [string]$ShellPath,
@@ -56,21 +52,13 @@ function Write-InstallPlan {
     } else {
         Write-Host "Add/Remove Programs: skipped (-NoUninstallRegistration)"
     }
-    if ($ShellIntegrationEnabled) {
-        Write-Host "Shell integration: enabled"
-        Write-Host "  File verbs: Open in Zide, Open in Zide Editor"
-        Write-Host "  Folder verbs: Open Zide Terminal here"
-        Write-Host "  Windows 11 note: classic verbs appear under Show more options"
-    } else {
-        Write-Host "Shell integration: skipped (-NoShellIntegration)"
-    }
-    if ($PackageIdentityEnabled) {
-        Write-Host "Package identity: requested"
-        Write-Host "  Advanced Windows integration path"
-        Write-Host "  Self-signed local/dev registration requires an elevated PowerShell session"
-    } else {
-        Write-Host "Package identity: skipped (use -RegisterPackageIdentity)"
-    }
+    Write-Host "Shell integration: enabled"
+    Write-Host "  File verbs: Open in Zide, Open in Zide Editor"
+    Write-Host "  Folder terminal integration: packaged top-level path only"
+    Write-Host "  Windows 11 note: file verbs still appear under Show more options"
+    Write-Host "Package identity: enabled"
+    Write-Host "  Standard Windows integration path"
+    Write-Host "  Self-signed local/dev registration requires an elevated PowerShell session"
     if ($ShellPath) {
         Write-Host "Terminal shell override: $ShellPath"
     }
@@ -326,29 +314,6 @@ function Register-ShellIntegration {
         -Command (Build-ExecutableCommand -ExecutablePath $zideEditorExe -Arguments @('"%1"')) `
         -IconPath $AppIconPath
 
-    $terminalArgs = @()
-    if ($ShellPath) {
-        $terminalArgs += "--shell $(Quote-ShortcutArgument $ShellPath)"
-    }
-    $terminalArgs += '--cwd "%1"'
-
-    Set-ShellVerbRegistration `
-        -RegistryPath "HKCU\Software\Classes\Directory\shell\Zide.TerminalHere" `
-        -Label "Open Zide Terminal here" `
-        -Command (Build-ExecutableCommand -ExecutablePath $zideTerminalExe -Arguments $terminalArgs) `
-        -IconPath $TerminalIconPath
-
-    $backgroundArgs = @()
-    if ($ShellPath) {
-        $backgroundArgs += "--shell $(Quote-ShortcutArgument $ShellPath)"
-    }
-    $backgroundArgs += '--cwd "%V"'
-
-    Set-ShellVerbRegistration `
-        -RegistryPath "HKCU\Software\Classes\Directory\Background\shell\Zide.TerminalHere" `
-        -Label "Open Zide Terminal here" `
-        -Command (Build-ExecutableCommand -ExecutablePath $zideTerminalExe -Arguments $backgroundArgs) `
-        -IconPath $TerminalIconPath
 }
 
 function Build-LaunchArguments {
@@ -432,6 +397,12 @@ function Write-PackageIdentityMetadata {
                 icon_png_path = "assets\icon\zide_terminal_taskbar.png"
             }
         )
+        shell_extension = [ordered]@{
+            clsid = "4C5D89A5-4E56-48E0-AE5A-8F4A5C6D1972"
+            dll_name = "zide-shell-ext.dll"
+            verb_id = "OpenZideTerminalHere"
+            title = "Open Zide Terminal here"
+        }
     }
 
     $payload | ConvertTo-Json -Depth 6 | Set-Content -LiteralPath $MetadataPath -Encoding utf8
@@ -592,8 +563,6 @@ Write-InstallPlan `
     -ConfigRoot $ConfigRoot `
     -StateRoot $StateRoot `
     -StartMenuDir $startMenuDir `
-    -ShellIntegrationEnabled (-not $NoShellIntegration) `
-    -PackageIdentityEnabled $RegisterPackageIdentity `
     -StartMenuEnabled (-not $NoStartMenu) `
     -UninstallRegistrationEnabled (-not $NoUninstallRegistration) `
     -ShellPath $ShellPath `
@@ -686,15 +655,11 @@ try {
     Set-AppPathRegistration -ExecutableName "zide.exe" -ExecutablePath (Join-Path $currentRoot "zide.exe") -WorkingDirectory $currentRoot
     Set-AppPathRegistration -ExecutableName "zide-editor.exe" -ExecutablePath (Join-Path $currentRoot "zide-editor.exe") -WorkingDirectory $currentRoot
     Set-AppPathRegistration -ExecutableName "zide-terminal.exe" -ExecutablePath (Join-Path $currentRoot "zide-terminal.exe") -WorkingDirectory $currentRoot
-    if (-not $NoShellIntegration) {
-        Register-ShellIntegration -CurrentRoot $currentRoot -ShellPath $ShellPath -AppIconPath $appIconIco -TerminalIconPath $terminalIconIco
-    }
-    if ($RegisterPackageIdentity) {
-        Write-Host "Registering package identity..."
-        & powershell.exe -NoProfile -ExecutionPolicy Bypass -File (Join-Path $InstallRoot "Register-ZidePackageIdentity.ps1") -InstallDir $currentRoot
-        if ($LASTEXITCODE -ne 0) {
-            throw "package identity registration failed"
-        }
+    Register-ShellIntegration -CurrentRoot $currentRoot -ShellPath $ShellPath -AppIconPath $appIconIco -TerminalIconPath $terminalIconIco
+    Write-Host "Registering package identity..."
+    & powershell.exe -NoProfile -ExecutionPolicy Bypass -File (Join-Path $InstallRoot "Register-ZidePackageIdentity.ps1") -InstallDir $currentRoot
+    if ($LASTEXITCODE -ne 0) {
+        throw "package identity registration failed"
     }
 
     if (-not $NoUninstallRegistration) {
@@ -738,19 +703,11 @@ try {
     Write-Host "Current link: $currentRoot"
     Write-Host "Config root: $ConfigRoot"
     Write-Host "State root: $StateRoot"
-    if (-not $NoShellIntegration) {
-        Write-Host "Explorer verbs:"
-        Write-Host "  Open in Zide"
-        Write-Host "  Open in Zide Editor"
-        Write-Host "  Open Zide Terminal here"
-    } else {
-        Write-Host "Explorer verbs: disabled"
-    }
-    if ($RegisterPackageIdentity) {
-        Write-Host "Package identity: registered"
-    } else {
-        Write-Host "Package identity: not registered"
-    }
+    Write-Host "Explorer verbs:"
+    Write-Host "  Open in Zide"
+    Write-Host "  Open in Zide Editor"
+    Write-Host "  Open Zide Terminal here (packaged top-level path)"
+    Write-Host "Package identity: registered"
 } finally {
     Remove-IfExists $tempRoot
 }

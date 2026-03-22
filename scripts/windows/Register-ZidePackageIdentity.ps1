@@ -2,6 +2,8 @@ param(
     [string]$InstallDir = (Join-Path $env:LOCALAPPDATA "Programs\\Zide\\current"),
     [string]$OutputRoot = (Join-Path $env:LOCALAPPDATA "Zide\\package-identity"),
     [string]$CertSubject = "CN=Laurence",
+    [ValidateSet("External", "Full")]
+    [string]$PackageMode = "External",
     [string]$MakeAppxPath,
     [string]$SignToolPath,
     [string]$MetadataPath
@@ -84,33 +86,76 @@ function Get-IdentityMetadata {
     return Get-Content -LiteralPath $JsonPath -Raw | ConvertFrom-Json
 }
 
+function Copy-InstallPayloadToLayout {
+    param(
+        [string]$SourceDir,
+        [string]$DestinationDir
+    )
+
+    Get-ChildItem -LiteralPath $SourceDir -Force | ForEach-Object {
+        Copy-Item -LiteralPath $_.FullName -Destination $DestinationDir -Recurse -Force
+    }
+}
+
 function Write-AppxManifest {
     param(
         [string]$ManifestPath,
-        $Identity
+        $Identity,
+        [bool]$AllowExternalContent
     )
 
     $applications = foreach ($application in $Identity.applications) {
+        $applicationExtensions = ""
+        if (($Identity.PSObject.Properties.Name -contains "shell_extension") -and ($application.package_application_id -eq "ZideTerminal")) {
+            $applicationExtensions = @"
+      <Extensions>
+        <com:Extension Category="windows.comServer">
+          <com:ComServer>
+            <com:SurrogateServer DisplayName="Zide">
+              <com:Class Id="$($Identity.shell_extension.clsid)" Path="$($Identity.shell_extension.dll_name)" ThreadingModel="STA"/>
+            </com:SurrogateServer>
+          </com:ComServer>
+        </com:Extension>
+        <desktop4:Extension Category="windows.fileExplorerContextMenus">
+          <desktop4:FileExplorerContextMenus>
+            <desktop5:ItemType Type="Directory">
+              <desktop5:Verb Id="$($Identity.shell_extension.verb_id)" Clsid="$($Identity.shell_extension.clsid)"/>
+            </desktop5:ItemType>
+            <desktop5:ItemType Type="Directory\Background">
+              <desktop5:Verb Id="$($Identity.shell_extension.verb_id)" Clsid="$($Identity.shell_extension.clsid)"/>
+            </desktop5:ItemType>
+            <desktop5:ItemType Type="*">
+              <desktop5:Verb Id="$($Identity.shell_extension.verb_id)" Clsid="$($Identity.shell_extension.clsid)"/>
+            </desktop5:ItemType>
+          </desktop4:FileExplorerContextMenus>
+        </desktop4:Extension>
+      </Extensions>
+"@
+        }
 @"
     <Application Id="$($application.package_application_id)" Executable="$($application.executable)" uap10:TrustLevel="mediumIL" uap10:RuntimeBehavior="win32App">
       <uap:VisualElements AppListEntry="none" DisplayName="$($application.display_name)" Description="$($application.package_description)" BackgroundColor="transparent" Square150x150Logo="$($application.icon_png_path)" Square44x44Logo="$($application.icon_png_path)"/>
+$applicationExtensions
     </Application>
 "@
     }
 
     $manifest = @"
 <?xml version="1.0" encoding="utf-8"?>
-<Package IgnorableNamespaces="uap uap10 rescap"
+<Package IgnorableNamespaces="uap uap10 rescap com desktop4 desktop5"
   xmlns="http://schemas.microsoft.com/appx/manifest/foundation/windows10"
   xmlns:uap="http://schemas.microsoft.com/appx/manifest/uap/windows10"
   xmlns:uap10="http://schemas.microsoft.com/appx/manifest/uap/windows10/10"
-  xmlns:rescap="http://schemas.microsoft.com/appx/manifest/foundation/windows10/restrictedcapabilities">
+  xmlns:rescap="http://schemas.microsoft.com/appx/manifest/foundation/windows10/restrictedcapabilities"
+  xmlns:com="http://schemas.microsoft.com/appx/manifest/com/windows10"
+  xmlns:desktop4="http://schemas.microsoft.com/appx/manifest/desktop/windows10/4"
+  xmlns:desktop5="http://schemas.microsoft.com/appx/manifest/desktop/windows10/5">
   <Identity Name="$($Identity.package_name)" Publisher="$($Identity.publisher)" Version="$($Identity.package_version)" ProcessorArchitecture="neutral"/>
   <Properties>
     <DisplayName>$($Identity.display_name)</DisplayName>
     <PublisherDisplayName>$($Identity.publisher_display_name)</PublisherDisplayName>
     <Logo>assets\icon\color_icon.png</Logo>
-    <uap10:AllowExternalContent>true</uap10:AllowExternalContent>
+    <uap10:AllowExternalContent>$($AllowExternalContent.ToString().ToLowerInvariant())</uap10:AllowExternalContent>
   </Properties>
   <Resources>
     <Resource Language="en-us"/>
@@ -135,7 +180,7 @@ $resolvedInstallDir = (Resolve-Path -LiteralPath $InstallDir).ProviderPath
 $makeAppx = Resolve-LatestSdkTool -ToolName "makeappx.exe"
 $signTool = Resolve-LatestSdkTool -ToolName "signtool.exe"
 
-$layoutDir = Join-Path $OutputRoot "layout"
+$layoutDir = Join-Path $OutputRoot ("layout-" + [System.Guid]::NewGuid().ToString("N"))
 $packagePath = Join-Path $OutputRoot "zide-identity.msix"
 if (-not $MetadataPath) {
     $MetadataPath = Join-Path $resolvedInstallDir "support\\windows-package-identity.json"
@@ -143,14 +188,20 @@ if (-not $MetadataPath) {
 $identityJson = (Resolve-Path -LiteralPath $MetadataPath).ProviderPath
 
 New-Item -ItemType Directory -Force -Path $OutputRoot | Out-Null
-if (Test-Path -LiteralPath $layoutDir) {
-    Remove-Item -LiteralPath $layoutDir -Recurse -Force
-}
-
 $identity = Get-IdentityMetadata -JsonPath $identityJson
 New-Item -ItemType Directory -Force -Path $layoutDir | Out-Null
+
+if ($PackageMode -eq "Full") {
+    Copy-InstallPayloadToLayout -SourceDir $resolvedInstallDir -DestinationDir $layoutDir
+    foreach ($requiredPath in @("zide-terminal.exe", "zide-shell-ext.dll", "assets\\icon\\color_icon.png")) {
+        if (-not (Test-Path -LiteralPath (Join-Path $layoutDir $requiredPath))) {
+            throw "full package layout is missing required payload: $requiredPath"
+        }
+    }
+}
+
 Copy-Item -LiteralPath $identityJson -Destination (Join-Path $layoutDir "identity.json") -Force
-Write-AppxManifest -ManifestPath (Join-Path $layoutDir "AppxManifest.xml") -Identity $identity
+Write-AppxManifest -ManifestPath (Join-Path $layoutDir "AppxManifest.xml") -Identity $identity -AllowExternalContent:($PackageMode -eq "External")
 
 $existing = Get-AppxPackage $identity.package_name -ErrorAction SilentlyContinue
 if ($existing) {
@@ -174,10 +225,26 @@ if ($LASTEXITCODE -ne 0) {
     throw "SignTool failed"
 }
 
-Add-AppxPackage -Path $packagePath -ExternalLocation $resolvedInstallDir
+if ($PackageMode -eq "External") {
+    Add-AppxPackage -Path $packagePath -ExternalLocation $resolvedInstallDir
+} else {
+    Add-AppxPackage -Path $packagePath
+}
 
 $registered = Get-AppxPackage $identity.package_name -ErrorAction Stop
 Write-Host "Registered package identity: $($identity.package_name)"
 Write-Host "Package family: $($registered.PackageFamilyName)"
-Write-Host "External location: $resolvedInstallDir"
+if ($PackageMode -eq "External") {
+    Write-Host "External location: $resolvedInstallDir"
+} else {
+    Write-Host "Package mode: full"
+}
 Write-Host "Package path: $packagePath"
+
+try {
+    if (Test-Path -LiteralPath $layoutDir) {
+        Remove-Item -LiteralPath $layoutDir -Recurse -Force
+    }
+} catch {
+    Write-Warning "left package layout behind at $layoutDir"
+}

@@ -44,6 +44,9 @@ const WindowsIntegratedFrame = struct {
     const WM_NCCALCSIZE: UINT = 0x0083;
     const GWL_STYLE: i32 = -16;
     const GWL_EXSTYLE: i32 = -20;
+    const WS_MAXIMIZE: DWORD = 0x01000000;
+    const SM_CYSIZEFRAME: i32 = 33;
+    const SM_CXPADDEDBORDER: i32 = 92;
     const SWP_NOMOVE: UINT = 0x0002;
     const SWP_NOSIZE: UINT = 0x0001;
     const SWP_NOZORDER: UINT = 0x0004;
@@ -56,6 +59,8 @@ const WindowsIntegratedFrame = struct {
     extern "comctl32" fn DefSubclassProc(hWnd: HWND, uMsg: UINT, wParam: WPARAM, lParam: LPARAM) callconv(.winapi) LRESULT;
     extern "user32" fn GetWindowLongW(hWnd: HWND, nIndex: i32) callconv(.winapi) LONG;
     extern "user32" fn GetDpiForWindow(hWnd: HWND) callconv(.winapi) UINT;
+    extern "user32" fn GetSystemMetricsForDpi(nIndex: i32, dpi: UINT) callconv(.winapi) i32;
+    extern "user32" fn IsZoomed(hWnd: HWND) callconv(.winapi) BOOL;
     extern "user32" fn AdjustWindowRectExForDpi(lpRect: *RECT, dwStyle: DWORD, bMenu: BOOL, dwExStyle: DWORD, dpi: UINT) callconv(.winapi) BOOL;
     extern "user32" fn SetWindowPos(hWnd: HWND, hWndInsertAfter: HWND, X: i32, Y: i32, cx: i32, cy: i32, uFlags: UINT) callconv(.winapi) BOOL;
     extern "dwmapi" fn DwmExtendFrameIntoClientArea(hwnd: HWND, pMarInset: *const MARGINS) callconv(.winapi) HRESULT;
@@ -64,13 +69,14 @@ const WindowsIntegratedFrame = struct {
     installed: bool = false,
     mode: window_chrome_runtime.WindowChromeMode = .native,
     maximized: bool = false,
+    fullscreen: bool = false,
     applied_top_margin: i32 = -1,
 
     pub fn deinit(self: *WindowsIntegratedFrame) void {
         self.uninstall();
     }
 
-    pub fn sync(self: *WindowsIntegratedFrame, window: *sdl_api.c.SDL_Window, mode: window_chrome_runtime.WindowChromeMode, maximized: bool) void {
+    pub fn sync(self: *WindowsIntegratedFrame, window: *sdl_api.c.SDL_Window, mode: window_chrome_runtime.WindowChromeMode, maximized: bool, fullscreen: bool) void {
         if (mode == .native) {
             self.uninstall();
             return;
@@ -88,8 +94,16 @@ const WindowsIntegratedFrame = struct {
             self.install(hwnd);
         }
         self.mode = mode;
-        self.maximized = maximized;
+        self.maximized = self.querySyncMaximized(hwnd, maximized);
+        self.fullscreen = fullscreen;
         self.updateFrameMargins();
+        app_logger.logger("windows.chrome").logf(.info, "integrated_frame sync hwnd=0x{x} mode={s} maximized={d} fullscreen={d} top_margin={d}", .{
+            pointerValue(hwnd),
+            @tagName(mode),
+            @intFromBool(self.maximized),
+            @intFromBool(fullscreen),
+            self.applied_top_margin,
+        });
     }
 
     fn install(self: *WindowsIntegratedFrame, hwnd: HWND) void {
@@ -126,7 +140,7 @@ const WindowsIntegratedFrame = struct {
 
     fn computeTopMargin(self: *const WindowsIntegratedFrame) i32 {
         const hwnd = self.hwnd orelse return 0;
-        if (self.maximized) return 0;
+        if (self.maximized or self.fullscreen) return 0;
 
         var frame = RECT{ .left = 0, .top = 0, .right = 0, .bottom = 0 };
         const style = @as(DWORD, @bitCast(GetWindowLongW(hwnd, GWL_STYLE)));
@@ -136,6 +150,12 @@ const WindowsIntegratedFrame = struct {
             return 1;
         }
         return @max(1, -frame.top);
+    }
+
+    fn getResizeHandleHeight(self: *const WindowsIntegratedFrame) i32 {
+        const hwnd = self.hwnd orelse return 0;
+        const dpi = GetDpiForWindow(hwnd);
+        return @max(0, GetSystemMetricsForDpi(SM_CXPADDEDBORDER, dpi) + GetSystemMetricsForDpi(SM_CYSIZEFRAME, dpi));
     }
 
     fn applyTopMargin(self: *WindowsIntegratedFrame, top_margin: i32) void {
@@ -151,6 +171,17 @@ const WindowsIntegratedFrame = struct {
         self.applied_top_margin = top_margin;
     }
 
+    fn querySyncMaximized(_: *const WindowsIntegratedFrame, hwnd: HWND, sdl_maximized: bool) bool {
+        if (hwnd == null) return sdl_maximized;
+        return IsZoomed(hwnd) != 0;
+    }
+
+    fn queryNcCalcMaximized(_: *const WindowsIntegratedFrame, hwnd: HWND, sdl_maximized: bool) bool {
+        if (hwnd == null) return sdl_maximized;
+        const style = @as(DWORD, @bitCast(GetWindowLongW(hwnd, GWL_STYLE)));
+        return (style & WS_MAXIMIZE) != 0;
+    }
+
     fn subclassProc(hwnd: HWND, msg: UINT, wparam: WPARAM, lparam: LPARAM, _: UINT_PTR, ref_data: DWORD_PTR) callconv(.winapi) LRESULT {
         const self: *WindowsIntegratedFrame = @ptrFromInt(ref_data);
         switch (msg) {
@@ -160,7 +191,33 @@ const WindowsIntegratedFrame = struct {
                     const original_top = params.rgrc[0].top;
                     const ret = DefSubclassProc(hwnd, msg, wparam, lparam);
                     if (ret != 0) return ret;
+
+                    const live_maximized = self.queryNcCalcMaximized(hwnd, self.maximized);
                     params.rgrc[0].top = original_top;
+
+                    if (live_maximized and !self.fullscreen) {
+                        const resize_handle_height = self.getResizeHandleHeight();
+                        params.rgrc[0].top += resize_handle_height;
+                        app_logger.logger("windows.chrome").logf(.info, "integrated_frame nccalc hwnd=0x{x} mode={s} maximized={d} fullscreen={d} restored_top={d} resize_handle={d} final_top={d}", .{
+                            pointerValue(hwnd),
+                            @tagName(self.mode),
+                            @intFromBool(live_maximized),
+                            @intFromBool(self.fullscreen),
+                            original_top,
+                            resize_handle_height,
+                            params.rgrc[0].top,
+                        });
+                        return 0;
+                    }
+
+                    app_logger.logger("windows.chrome").logf(.info, "integrated_frame nccalc hwnd=0x{x} mode={s} maximized={d} fullscreen={d} restored_top={d} final_top={d}", .{
+                        pointerValue(hwnd),
+                        @tagName(self.mode),
+                        @intFromBool(live_maximized),
+                        @intFromBool(self.fullscreen),
+                        original_top,
+                        params.rgrc[0].top,
+                    });
                     return 0;
                 }
             },

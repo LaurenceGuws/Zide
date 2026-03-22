@@ -31,47 +31,66 @@ const builtin_unsupported = Resolved{
     .mode = .append,
 };
 
-var arena: ?std.heap.ArenaAllocator = null;
+var allocator_instance: ?std.mem.Allocator = null;
 var rules: []Rule = &.{};
 var unsupported: ?Resolved = null;
 
 pub fn applyConfig(allocator: std.mem.Allocator, config: *const config_mod.Config) !void {
     reset();
 
-    var new_arena = std.heap.ArenaAllocator.init(allocator);
-    errdefer new_arena.deinit();
-    const arena_alloc = new_arena.allocator();
+    allocator_instance = allocator;
 
     if (config.editor_manual_highlight_rules) |configured| {
-        rules = try arena_alloc.alloc(Rule, configured.len);
-        for (configured, 0..) |rule, i| {
+        rules = try allocator.alloc(Rule, configured.len);
+        var i: usize = 0;
+        errdefer {
+            while (i > 0) : (i -= 1) {
+                freeRule(rules[i - 1]);
+            }
+            allocator.free(rules);
+            rules = &.{};
+        }
+        for (configured, 0..) |rule, idx| {
+            i = idx;
             rules[i] = .{
-                .extension = try arena_alloc.dupe(u8, rule.extension),
-                .parser = try arena_alloc.dupe(u8, rule.parser),
-                .query_path = try resolveQueryPath(arena_alloc, rule.builtin, rule.query_path),
+                .extension = try allocator.dupe(u8, rule.extension),
+                .parser = try allocator.dupe(u8, rule.parser),
+                .query_path = try resolveQueryPath(allocator, rule.builtin, rule.query_path),
                 .mode = rule.mode,
             };
+            i += 1;
         }
     } else {
         rules = &.{};
     }
 
     if (config.editor_manual_highlight_unsupported) |fallback| {
+        const parser = try allocator.dupe(u8, fallback.parser);
+        errdefer allocator.free(parser);
+        const query_path = try resolveQueryPath(allocator, fallback.builtin, fallback.query_path);
+        errdefer if (query_path) |path| allocator.free(path);
         unsupported = .{
-            .parser = try arena_alloc.dupe(u8, fallback.parser),
-            .query_path = try resolveQueryPath(arena_alloc, fallback.builtin, fallback.query_path),
+            .parser = parser,
+            .query_path = query_path,
             .mode = fallback.mode,
         };
     } else {
         unsupported = null;
     }
-
-    arena = new_arena;
 }
 
 pub fn reset() void {
-    if (arena) |*owned| owned.deinit();
-    arena = null;
+    if (allocator_instance) |allocator| {
+        for (rules) |rule| {
+            freeRuleWithAllocator(allocator, rule);
+        }
+        if (rules.len != 0) allocator.free(rules);
+        if (unsupported) |value| {
+            allocator.free(value.parser);
+            if (value.query_path) |path| allocator.free(path);
+        }
+    }
+    allocator_instance = null;
     rules = &.{};
     unsupported = null;
 }
@@ -114,6 +133,18 @@ fn resolveQueryPath(allocator: std.mem.Allocator, builtin: ?[]const u8, explicit
     if (explicit_path) |path| return try allocator.dupe(u8, path);
     if (builtin) |name| return try std.fmt.allocPrint(allocator, "assets/queries/manual/{s}.scm", .{name});
     return null;
+}
+
+fn freeRule(rule: Rule) void {
+    if (allocator_instance) |allocator| {
+        freeRuleWithAllocator(allocator, rule);
+    }
+}
+
+fn freeRuleWithAllocator(allocator: std.mem.Allocator, rule: Rule) void {
+    allocator.free(rule.extension);
+    allocator.free(rule.parser);
+    if (rule.query_path) |path| allocator.free(path);
 }
 
 test "built-in unsupported fallback resolves to comment parser for log files" {
