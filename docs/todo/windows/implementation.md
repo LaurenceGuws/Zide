@@ -438,6 +438,9 @@ The current execution order is:
       focus-aware border color and an explicit Win11 rounded-corner preference
     - terminal/editor/IDE all consume this through the same shell-service path
       rather than product-specific titlebar code
+    - terminal integrated chrome now keeps the titleband background stable on
+      focus loss instead of blending it against the active tab accent, so its
+      unfocused behavior reads like the shared editor/IDE chrome lane
   - Notes:
     - this is intentionally subtle polish, not a new user-facing config lane
     - if backdrop/config policy expands later, focus-state frame polish should

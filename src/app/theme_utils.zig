@@ -90,6 +90,24 @@ pub fn windowChromeTheme(base_theme: app_shell.Theme, focused: bool) app_shell.T
     return theme;
 }
 
+pub fn terminalWindowChromeTheme(terminal_theme: app_shell.Theme, shell_base_theme: app_shell.Theme, focused: bool) app_shell.Theme {
+    const tab_theme = terminalTabBarTheme(terminal_theme, shell_base_theme);
+    if (focused) return tab_theme;
+
+    var theme = tab_theme;
+    theme.ui_border = mixColor(tab_theme.ui_border, tab_theme.ui_bar_bg, 0.45);
+    theme.ui_hover = mixColor(tab_theme.ui_hover, tab_theme.ui_bar_bg, 0.40);
+    theme.ui_pressed = mixColor(tab_theme.ui_pressed, tab_theme.ui_bar_bg, 0.35);
+    theme.ui_text = mixColor(tab_theme.ui_text_inactive, tab_theme.ui_text, 0.35);
+    theme.ui_window_control_fg = ensureContrastPair(
+        mixColor(tab_theme.ui_window_control_fg, tab_theme.ui_text_inactive, 0.55),
+        theme.ui_bar_bg,
+        theme.ui_hover,
+        min_window_control_contrast,
+    );
+    return theme;
+}
+
 fn mixColor(a: app_shell.Color, b: app_shell.Color, t: f32) app_shell.Color {
     const clamped_t = std.math.clamp(t, 0.0, 1.0);
     const inv_t = 1.0 - clamped_t;

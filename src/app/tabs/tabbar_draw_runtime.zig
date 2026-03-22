@@ -24,8 +24,7 @@ pub fn draw(state: anytype, shell: anytype, layout: layout_types.WidgetLayout, c
         }
     } else if (app_modes.ide.useTerminalTabBarWidthMode(state.app_mode)) {
         hooks.apply_current_tab_bar_width_mode(ctx);
-        const tab_theme = app_theme_utils.terminalTabBarTheme(state.terminal_theme, state.shell_base_theme);
-        const chrome_theme = app_theme_utils.windowChromeTheme(tab_theme, shell.windowFocused());
+        const chrome_theme = app_theme_utils.terminalWindowChromeTheme(state.terminal_theme, state.shell_base_theme, shell.windowFocused());
         shell.setTheme(chrome_theme);
         if (app_terminal_window_chrome_runtime.barVisible(
             state.app_mode,
