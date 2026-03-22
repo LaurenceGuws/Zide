@@ -3,11 +3,11 @@ set -euo pipefail
 
 usage() {
     cat <<'EOF'
-Usage: tools/mode_gates.sh <fast|full|manual-smokes>
+Usage: tools/mode_gates.sh <fast|full|gui-smokes>
 
   fast           Run non-interactive fast MODE gates (no terminal replay)
   full           Run full non-interactive MODE gates (includes terminal replay --all)
-  manual-smokes  Run interactive mode smokes (manual verification flow)
+  gui-smokes     Run interactive GUI smokes (manual verification flow)
 EOF
 }
 
@@ -23,8 +23,8 @@ fast)
 full)
     exec zig build mode-gates
     ;;
-manual-smokes)
-    exec zig build mode-smokes-manual
+gui-smokes)
+    exec zig build gui-smokes-manual
     ;;
 *)
     usage

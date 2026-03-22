@@ -121,6 +121,9 @@ This queue does not own:
     - Added `Ctrl+G` go-to-line through the shared status-bar prompt surface,
       including `line` and `line:column` input parsing instead of a special
       case dialog.
+    - Fixed literal tab rendering in editor buffers so visual drawing now
+      expands tab input to spaces at the widget boundary instead of drawing a
+      control placeholder glyph that broke row width/layout.
 
 - [ ] `ED-APP-05` Friendly Lua config for editor usage
   - Make common editor behavior easy to configure with sane defaults.
