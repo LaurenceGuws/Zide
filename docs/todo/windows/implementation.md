@@ -337,23 +337,66 @@ The current execution order is:
       button, which stays a separate follow-up instead of blocking the accepted
       integrated chrome baseline
 
-- [ ] `W9-06` Add Win11 Snap Layout hover to integrated terminal chrome without regressing stable behavior
-  - Goal:
-    - hovering the integrated maximize button should show the Win11 Snap Layout
-      flyout like a native titlebar maximize button
+- [x] `W9-06` Add Win11 Snap Layout hover to integrated terminal chrome without regressing stable behavior
+    - Goal:
+      - hovering the integrated maximize button should show the Win11 Snap Layout
+        flyout like a native titlebar maximize button
   - Reference note:
     - `docs/research/terminal/WINDOWS_NATIVE_CHROME_REFERENCE_CROSSCHECK_2026-03-20.md`
     - `app_architecture/windows/CHROME_POLICY.md`
     - `app_architecture/windows/SNAP_LAYOUT_INTEROP.md`
-  - Current stable state:
-    - current local Win11 build now shows the Snap Layout popup reliably from a
-      persistent titleband sink without regressing maximize click, drag,
-      right-click system menu, double-click maximize, or `Alt+Space`
-    - the remaining defect is anchor quality: the popup still occasionally
-      appears from the left side before settling into the correct maximize
-      position
-    - this defect is accepted as deferred follow-up and does not block the
-      integrated terminal chrome baseline
+    - Closed state, 2026-03-22:
+      - current local Win11 build now shows the Snap Layout popup reliably
+        without regressing maximize click, drag, right-click system menu,
+        double-click maximize, or `Alt+Space`
+      - the previously open top-left popup birth/teleport defect is closed on
+        the local accepted baseline
+    - Current probe findings, 2026-03-22:
+      - this is not terminal-only; the same random maximize-hover defect is
+        user-observed across terminal, editor, and IDE, in both windowed and
+        maximized states
+      - our side is already correct on bad repros:
+        - stable maximize screen rect
+        - stable `WM_NCHITTEST -> HTMAXBUTTON`
+        - stable `WM_SETCURSOR -> HTMAXBUTTON`
+        - stable `WM_NCMOUSEMOVE -> HTMAXBUTTON`
+      - the bad first placement is in Explorer/XAML popup birth order:
+        - `explorer.exe`
+        - `Xaml_WindowedPopupClass` (`PopupHost`)
+        - `XamlExplorerHostIslandWindow`
+        - `Windows.UI.Composition.DesktopWindowContentBridge`
+      - bad repro sequence now captured:
+        - popup host created at `(0,0,0,0)`
+        - first real popup rect near top-left
+        - then teleports to the correct maximize-anchor region
+      - this points away from more small hit-test tweaks and toward a deeper
+        top-level frame/host alignment change if the defect is to be removed
+      - current focused hypothesis, 2026-03-22:
+        - SDL's Win32 borderless-windowed host is the likely remaining delta
+        - SDL uses a hybrid `WS_POPUP | WS_CAPTION | WS_SYSMENU | ...` style
+          plus a zero-sized `WM_NCCALCSIZE` borderless path
+        - Windows Terminal instead owns `WM_NCCALCSIZE` / frame margins at the
+          top level
+        - completed experiment:
+          - force `SDL_BORDERLESS_WINDOWED_STYLE=0` across the integrated
+            window lanes
+          - observe changed top-level style, but no meaningful improvement
+          - bad repro still creates `PopupHost` at `(0,0,0,0)` and then near
+            top-left before correct relocation
+        - conclusion:
+          - a simple SDL borderless-style toggle is not enough
+          - the remaining lane is a deeper top-level non-client/frame ownership
+            change if this defect is to be removed
+      - final effective cut, 2026-03-22:
+        - shared parent-HWND subclass for integrated windows
+        - top-level `WM_NCCALCSIZE` ownership
+        - explicit `DwmExtendFrameIntoClientArea(...)` top margins
+        - child sink kept for maximize hover/button input
+      - closing local retest, 2026-03-22:
+        - user reran editor and terminal
+        - first 10 maximize-hover probes on each were all good
+        - no top-left popup birth defect was observed in that run
+        - follow-up user approval closed the item
   - Failed spike, 2026-03-20:
     - a narrow top-level `HTMAXBUTTON` handoff produced unstable behavior:
       maximize click could show an odd native artifact and stop restoring
@@ -370,11 +413,11 @@ The current execution order is:
       ordinary custom child sink succeeded once the sink was created as a
       transparent plain child
     - the full caption/button-strip sink is now the active ownership model
-  - Next direction:
-    - keep the persistent titleband sink as the owning seam
-    - when this lane is resumed, focus on the remaining anchor-position defect
-      instead of reintroducing old top-level or transient fallback paths
-    - do not split caption ownership between app input and Win32 input again
+  - Closure note:
+    - keep the persistent titleband sink plus shared parent-HWND frame owner as
+      the accepted seam
+    - do not reintroduce the old transient probes, SDL style-toggle
+      experiments, or split caption ownership if this lane is revisited later
 
 ### Phase 10 Editor And IDE Shared Windows Titleband
 

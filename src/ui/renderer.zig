@@ -34,6 +34,7 @@ const text_runtime = @import("renderer/text_runtime.zig");
 const window_chrome_runtime = @import("renderer/window_chrome_runtime.zig");
 const windows_snap_layout_sink = @import("../platform/windows_snap_layout_sink.zig");
 const windows_frame_material = @import("../platform/windows_frame_material.zig");
+const windows_integrated_frame = @import("../platform/windows_integrated_frame.zig");
 const glyph_cache = @import("glyph_cache.zig");
 const platform_window = @import("../platform/window.zig");
 const platform_input_events = @import("../platform/input_events.zig");
@@ -412,6 +413,7 @@ pub const Renderer = struct {
     window_chrome: WindowChromeContract,
     window_chrome_applied_mode: WindowChromeMode,
     window_frame_material_applied: windows_frame_material.Policy,
+    window_integrated_frame: windows_integrated_frame.FrameOwner,
     window_snap_sink: windows_snap_layout_sink.Sink,
 
     theme: Theme,
@@ -642,6 +644,7 @@ pub const Renderer = struct {
             .window_chrome = .{},
             .window_chrome_applied_mode = .native,
             .window_frame_material_applied = .{},
+            .window_integrated_frame = .{},
             .window_snap_sink = .{},
             .theme = .{},
             .mouse_scale = .{ .x = 1.0, .y = 1.0 },
@@ -784,6 +787,7 @@ pub const Renderer = struct {
         });
 
         sdl_api.stopTextInput(self.window);
+        self.window_integrated_frame.deinit();
         self.window_snap_sink.deinit();
         sdl_api.glDeleteContext(self.gl_context);
         sdl.SDL_DestroyWindow(self.window);
@@ -1587,6 +1591,7 @@ pub const Renderer = struct {
             _ = sdl_api.syncWindow(self.window);
         }
 
+        self.window_integrated_frame.sync(self.window, self.window_chrome.mode, self.windowIsMaximized());
         self.window_snap_sink.sync(self.window, self.window_chrome, self.windowIsMaximized());
     }
 

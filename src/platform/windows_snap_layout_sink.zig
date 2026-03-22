@@ -53,7 +53,6 @@ const WindowsSink = struct {
     const WNDPROC = *const fn (HWND, UINT, WPARAM, LPARAM) callconv(.winapi) LRESULT;
     const ATOM = u16;
     const DWORD_PTR = usize;
-
     const RECT = extern struct {
         left: i32,
         top: i32,
@@ -154,7 +153,6 @@ const WindowsSink = struct {
     const CS_VREDRAW: UINT = 0x0001;
     const CS_DBLCLKS: UINT = 0x0008;
     const IDC_ARROW_ORDINAL: usize = 32512;
-
     extern "kernel32" fn GetLastError() callconv(.winapi) DWORD;
     extern "kernel32" fn GetModuleHandleW(lpModuleName: ?[*:0]const u16) callconv(.winapi) HINSTANCE;
     extern "user32" fn LoadCursorW(hInstance: HINSTANCE, lpCursorName: ?[*:0]const u16) callconv(.winapi) ?*anyopaque;
