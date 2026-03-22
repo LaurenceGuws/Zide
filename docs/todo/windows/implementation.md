@@ -272,6 +272,56 @@ The current execution order is:
     - directory/background terminal-here verbs
     - no folder/workspace-open verb yet for IDE/editor until that becomes a
       first-class cross-platform contract
+- [ ] `W8-05` Add package identity to the Windows install story without changing runtime layout
+  - This is the shared prerequisite for the next Windows-native shell lanes.
+  - Scope:
+    - external-location identity package path
+    - installer registration/unregistration story
+    - no runtime-layout fork away from the current installer contract
+  - Authority:
+    - `app_architecture/windows/NATIVE_SHELL_INTEGRATION.md`
+  - Progress:
+    - launcher binaries now embed matching `msix` desktop application manifests
+      for package-identity association
+    - installed builds now carry package-identity metadata under:
+      - `support/windows-package-identity.json`
+    - local/dev identity registration now lives in:
+      - `scripts/windows/Register-ZidePackageIdentity.ps1`
+      - `scripts/windows/Unregister-ZidePackageIdentity.ps1`
+    - registration now builds the external-location identity package from the
+      installed metadata and install root instead of requiring a repo checkout
+    - installer now exposes package identity as an explicit advanced opt-in:
+      - `Install-Zide.ps1 -RegisterPackageIdentity`
+    - local/dev registration currently requires elevation when it must trust the
+      self-signed package certificate at machine scope
+    - remaining work is to decide whether this becomes an installer-owned
+      default path or stays an explicit advanced Windows integration step
+
+- [ ] `W8-06` Add top-level Win11 Explorer context-menu integration
+  - Goal:
+    - top-level Explorer entries on Windows 11 instead of only `Show more options`
+  - Current conclusion:
+    - classic shell verbs are not enough
+    - treat this as an `IExplorerCommand` / package-identity lane, not an
+      extension of the current registry-verb installer path
+  - Authority:
+    - `app_architecture/windows/NATIVE_SHELL_INTEGRATION.md`
+
+- [ ] `W8-07` Add Zide Terminal to the Windows default terminal chooser
+  - Goal:
+    - have `Zide Terminal` participate in the same delegated console/terminal
+      contract Windows Terminal uses
+  - Current conclusion:
+    - this is a separate lane from Explorer verbs
+    - expected ingredients include:
+      - `HKCU\Console\%%Startup`
+      - `DelegationConsole`
+      - `DelegationTerminal`
+      - COM
+      - App Extensions
+      - package identity
+  - Authority:
+    - `app_architecture/windows/NATIVE_SHELL_INTEGRATION.md`
 
 ### Phase 9 Terminal-Only Native Chrome
 

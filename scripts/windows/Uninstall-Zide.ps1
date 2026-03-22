@@ -42,6 +42,15 @@ function Remove-ShellVerbRegistration {
     }
 }
 
+function Remove-PackageIdentityRegistration {
+    param([string]$PackageName)
+
+    $existing = Get-AppxPackage $PackageName -ErrorAction SilentlyContinue
+    if ($existing) {
+        $existing | Remove-AppxPackage
+    }
+}
+
 function Start-DeferredProgramsRootCleanup {
     param([string]$Root)
 
@@ -106,6 +115,7 @@ Remove-ShellVerbRegistration -RegistryPath "HKCU\Software\Classes\*\shell\Zide.O
 Remove-ShellVerbRegistration -RegistryPath "HKCU\Software\Classes\*\shell\Zide.Editor"
 Remove-ShellVerbRegistration -RegistryPath "HKCU\Software\Classes\Directory\shell\Zide.TerminalHere"
 Remove-ShellVerbRegistration -RegistryPath "HKCU\Software\Classes\Directory\Background\shell\Zide.TerminalHere"
+Remove-PackageIdentityRegistration -PackageName "LaurenceGuws.Zide"
 
 if ($RemoveUserData) {
     Remove-IfExists $StateRoot

@@ -47,6 +47,7 @@ Quick reading guide:
 - `app_architecture/APP_LAYERING.md` — module boundaries and import rules.
 - `app_architecture/DEPENDENCIES.md` — dependency packaging architecture notes and migration constraints.
 - `app_architecture/windows/INSTALLATION.md` — supported Windows install layout and first installer path.
+- `app_architecture/windows/NATIVE_SHELL_INTEGRATION.md` — authority for advanced Windows shell integration beyond classic installer verbs.
 - `app_architecture/windows/CHROME_POLICY.md` — Windows shell-service vs product-chrome ownership split.
 - `app_architecture/windows/SNAP_LAYOUT_INTEROP.md` — persistent sink design for Win11 Snap Layout hover in integrated terminal chrome.
 - `app_architecture/tools/DOCS_EXPLORER.md` — local docs-explorer scope, ownership, and constraints.

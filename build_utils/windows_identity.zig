@@ -1,4 +1,5 @@
 const std = @import("std");
+const contract = @import("../tools/windows_identity_contract.zig");
 
 pub const AppIdentity = struct {
     display_name: []const u8,
@@ -8,6 +9,7 @@ pub const AppIdentity = struct {
     file_description: []const u8,
     product_name: []const u8 = "Zide",
     icon_png_path: []const u8,
+    package_application_id: []const u8,
 };
 
 const VersionInfo = struct {
@@ -37,6 +39,29 @@ pub fn configureExecutableResources(
 
     const write_files = b.addWriteFiles();
     _ = write_files.add("app.ico", icon_ico);
+    const app_manifest_source = b.fmt(
+        \\<?xml version="1.0" encoding="utf-8"?>
+        \\<assembly manifestVersion="1.0" xmlns="urn:schemas-microsoft-com:asm.v1">
+        \\  <assemblyIdentity version="{s}" name="{s}"/>
+        \\  <msix xmlns="urn:schemas-microsoft-com:msix.v1"
+        \\        publisher="{s}"
+        \\        packageName="{s}"
+        \\        applicationId="{s}"/>
+        \\</assembly>
+        \\
+    , .{
+        b.fmt("{d}.{d}.{d}.{d}", .{
+            version.major,
+            version.minor,
+            version.patch,
+            version.build,
+        }),
+        contract.package_identity.name,
+        contract.package_identity.publisher,
+        contract.package_identity.name,
+        identity.package_application_id,
+    });
+    _ = write_files.add("app.manifest", app_manifest_source);
     const rc_source = b.fmt(
         \\1 VERSIONINFO
         \\FILEVERSION {d},{d},{d},{d}
@@ -67,6 +92,7 @@ pub fn configureExecutableResources(
         \\END
         \\
         \\APP_ICON ICON "app.ico"
+        \\1 24 "app.manifest"
         \\
     , .{
         version.major,
@@ -89,43 +115,16 @@ pub fn configureExecutableResources(
 }
 
 pub fn identityForArtifact(name: []const u8) AppIdentity {
-    if (std.mem.eql(u8, name, "zide-terminal")) {
-        return .{
-            .display_name = "Zide Terminal",
-            .app_id = "LaurenceGuws.Zide.Terminal",
-            .internal_name = "zide-terminal",
-            .original_filename = "zide-terminal.exe",
-            .file_description = "Zide Terminal",
-            .icon_png_path = "assets/icon/zide_terminal_taskbar.png",
-        };
-    }
-    if (std.mem.eql(u8, name, "zide-editor")) {
-        return .{
-            .display_name = "Zide Editor",
-            .app_id = "LaurenceGuws.Zide.Editor",
-            .internal_name = "zide-editor",
-            .original_filename = "zide-editor.exe",
-            .file_description = "Zide Editor",
-            .icon_png_path = "assets/icon/color_icon.png",
-        };
-    }
-    if (std.mem.eql(u8, name, "zide-ide")) {
-        return .{
-            .display_name = "Zide",
-            .app_id = "LaurenceGuws.Zide",
-            .internal_name = "zide-ide",
-            .original_filename = "zide-ide.exe",
-            .file_description = "Zide IDE",
-            .icon_png_path = "assets/icon/color_icon.png",
-        };
-    }
+    const base = contract.identityForArtifact(name);
     return .{
-        .display_name = "Zide",
-        .app_id = "LaurenceGuws.Zide",
-        .internal_name = "zide",
-        .original_filename = "zide.exe",
-        .file_description = "Zide",
-        .icon_png_path = "assets/icon/color_icon.png",
+        .display_name = base.display_name,
+        .app_id = base.app_id,
+        .internal_name = base.internal_name,
+        .original_filename = base.original_filename,
+        .file_description = base.file_description,
+        .product_name = base.product_name,
+        .icon_png_path = std.mem.replaceOwned(u8, std.heap.page_allocator, base.icon_png_path, "\\", "/") catch @panic("failed to normalize icon path"),
+        .package_application_id = base.package_application_id,
     };
 }
 

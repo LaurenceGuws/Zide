@@ -159,6 +159,8 @@ Current shell integration policy:
 - top-level Windows 11 context-menu placement is a separate future lane that
   would need the newer COM / `IExplorerCommand` integration model rather than
   plain registry verbs
+- deeper Windows-native integration authority lives in:
+  - `app_architecture/windows/NATIVE_SHELL_INTEGRATION.md`
 
 ## First Distribution Method
 
@@ -192,6 +194,46 @@ Current installer supports:
 
 - release download install
 - local dist-dir install for validation/dev
+- package-identity registration via:
+  - `scripts/windows/Register-ZidePackageIdentity.ps1`
+  - `scripts/windows/Unregister-ZidePackageIdentity.ps1`
+  - package-identity metadata is now written into the installed app under:
+    - `%LOCALAPPDATA%\Programs\Zide\<version>\support\windows-package-identity.json`
+  - registration now builds the external-location identity package from the
+    installed metadata and install root, not from the repo checkout
+  - self-signed local/dev registration expects elevation so the signing cert can
+    be trusted in the machine certificate stores
+
+Current installer UX policy:
+
+- shell integration is default-on
+- `-NoShellIntegration` is the explicit opt-out
+- package identity is explicit opt-in:
+  - `-RegisterPackageIdentity`
+- installer output should state:
+  - whether Start Menu registration is enabled
+  - whether Add/Remove Programs registration is enabled
+  - whether shell integration is enabled
+  - whether package identity registration is enabled
+  - that classic Explorer verbs appear under `Show more options` on Windows 11
+
+Example local install:
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\windows\Install-Zide.ps1 -ReleaseDistDir .\dist
+```
+
+Example local install without Explorer verbs:
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\windows\Install-Zide.ps1 -ReleaseDistDir .\dist -NoShellIntegration
+```
+
+Example local install with package identity registration:
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\windows\Install-Zide.ps1 -ReleaseDistDir .\dist -RegisterPackageIdentity
+```
 
 ## Uninstall Behavior
 
