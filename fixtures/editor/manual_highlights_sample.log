@@ -1,7 +1,7 @@
 2026-03-17 21:51:03 INFO app.core startup complete pid=1842
-2026-03-17 21:51:03 DEBUG app.config loaded path=/home/home/personal/zide/.zide.lua
+2026-03-17 21:51:03 DEBUG app.config loaded path=/workspace/project/.zide.lua
 2026-03-17 21:51:03 WARN editor.cache width precompute skipped reason=budget
-2026-03-17 21:51:03 ERROR editor.file open failed path=/root/private.txt
+2026-03-17 21:51:03 ERROR editor.file open failed path=/workspace/private.txt
 2026-03-17 21:51:03 FATAL app.core unrecoverable fault code=91
 2026-03-17 21:51:03 CRITICAL storage.sync write barrier lost txn=4021
 2026-03-17 21:51:03 PANIC runtime abort requested by operator
