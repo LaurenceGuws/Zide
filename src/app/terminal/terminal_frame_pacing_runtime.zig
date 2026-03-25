@@ -44,6 +44,7 @@ pub const PollMetrics = struct {
 };
 
 pub const PollCounters = struct {
+    epoch: u64,
     frames: u64,
     active_polled: u64,
     background_polled: u64,
@@ -139,6 +140,7 @@ pub fn pollCounters(state: anytype) ?PollCounters {
     if (state.terminal_workspace) |*workspace| {
         const counters = workspace.pollRuntimeCounters();
         return .{
+            .epoch = counters.epoch,
             .frames = counters.frames,
             .active_polled = counters.active_polled,
             .background_polled = counters.background_polled,
@@ -258,7 +260,7 @@ pub fn logInputLatency(state: anytype, poll_ms: f64, build_ms: f64, update_ms: f
     if (poll_metrics != null and draw_metrics != null and poll_counters != null) {
         state.input_latency_logger.logf(
             .info,
-            "poll_ms={d:.2} build_ms={d:.2} update_ms={d:.2} draw_ms={d:.2} term_draw_lock_ms={d:.2} term_draw_cache_copy_ms={d:.2} term_draw_texture_ms={d:.2} term_draw_overlay_ms={d:.2} term_draw_render_ms={d:.2} term_poll_tabs={d} term_poll_total={d} term_poll_active={d}/{d} term_poll_bg={d}/{d} term_poll_bg_inspected={d} term_poll_budget_tabs={d} term_poll_hints={d}/{d}/{d} term_poll_frames={d} term_poll_totals={d}/{d} term_poll_budget_totals={d}/{d} term_poll_hint_totals={d}/{d}/{d}",
+            "poll_ms={d:.2} build_ms={d:.2} update_ms={d:.2} draw_ms={d:.2} term_draw_lock_ms={d:.2} term_draw_cache_copy_ms={d:.2} term_draw_texture_ms={d:.2} term_draw_overlay_ms={d:.2} term_draw_render_ms={d:.2} term_poll_tabs={d} term_poll_total={d} term_poll_active={d}/{d} term_poll_bg={d}/{d} term_poll_bg_inspected={d} term_poll_budget_tabs={d} term_poll_hints={d}/{d}/{d} term_poll_epoch={d} term_poll_frames={d} term_poll_totals={d}/{d} term_poll_budget_totals={d}/{d} term_poll_hint_totals={d}/{d}/{d}",
             .{
                 poll_ms,
                 build_ms,
@@ -280,6 +282,7 @@ pub fn logInputLatency(state: anytype, poll_ms: f64, build_ms: f64, update_ms: f
                 @intFromBool(poll_metrics.?.budget_exhausted_hint),
                 @intFromBool(poll_metrics.?.active_spillover_hint),
                 @intFromBool(poll_metrics.?.background_backlog_hint),
+                poll_counters.?.epoch,
                 poll_counters.?.frames,
                 poll_counters.?.active_polled,
                 poll_counters.?.background_polled,
@@ -315,7 +318,7 @@ pub fn logInputLatency(state: anytype, poll_ms: f64, build_ms: f64, update_ms: f
     if (poll_metrics != null and poll_counters != null) {
         state.input_latency_logger.logf(
             .info,
-            "poll_ms={d:.2} build_ms={d:.2} update_ms={d:.2} draw_ms={d:.2} term_poll_tabs={d} term_poll_total={d} term_poll_active={d}/{d} term_poll_bg={d}/{d} term_poll_bg_inspected={d} term_poll_budget_tabs={d} term_poll_hints={d}/{d}/{d} term_poll_frames={d} term_poll_totals={d}/{d} term_poll_budget_totals={d}/{d} term_poll_hint_totals={d}/{d}/{d}",
+            "poll_ms={d:.2} build_ms={d:.2} update_ms={d:.2} draw_ms={d:.2} term_poll_tabs={d} term_poll_total={d} term_poll_active={d}/{d} term_poll_bg={d}/{d} term_poll_bg_inspected={d} term_poll_budget_tabs={d} term_poll_hints={d}/{d}/{d} term_poll_epoch={d} term_poll_frames={d} term_poll_totals={d}/{d} term_poll_budget_totals={d}/{d} term_poll_hint_totals={d}/{d}/{d}",
             .{
                 poll_ms,
                 build_ms,
@@ -332,6 +335,7 @@ pub fn logInputLatency(state: anytype, poll_ms: f64, build_ms: f64, update_ms: f
                 @intFromBool(poll_metrics.?.budget_exhausted_hint),
                 @intFromBool(poll_metrics.?.active_spillover_hint),
                 @intFromBool(poll_metrics.?.background_backlog_hint),
+                poll_counters.?.epoch,
                 poll_counters.?.frames,
                 poll_counters.?.active_polled,
                 poll_counters.?.background_polled,

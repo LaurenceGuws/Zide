@@ -110,6 +110,7 @@ pub const TerminalWorkspace = struct {
     };
 
     pub const PollRuntimeCounters = struct {
+        epoch: u64 = 0,
         frames: u64 = 0,
         active_polled: u64 = 0,
         background_polled: u64 = 0,
@@ -343,29 +344,28 @@ pub const TerminalWorkspace = struct {
 
     pub fn activateIndex(self: *TerminalWorkspace, index: usize) bool {
         if (index >= self.tabs.items.len) return false;
+        if (self.activeIndex() == index) return false;
         self.active_index = index;
+        self.resetPollRuntimeCounters();
         return true;
     }
 
     pub fn activateTab(self: *TerminalWorkspace, tab_id: TabId) bool {
         const idx = self.indexOfTabId(tab_id) orelse return false;
-        self.active_index = idx;
-        return true;
+        return self.activateIndex(idx);
     }
 
     pub fn activateNext(self: *TerminalWorkspace) bool {
         const count = self.tabs.items.len;
         if (count <= 1) return false;
-        self.active_index = (self.activeIndex() + 1) % count;
-        return true;
+        return self.activateIndex((self.activeIndex() + 1) % count);
     }
 
     pub fn activatePrev(self: *TerminalWorkspace) bool {
         const count = self.tabs.items.len;
         if (count <= 1) return false;
         const idx = self.activeIndex();
-        self.active_index = if (idx == 0) count - 1 else idx - 1;
-        return true;
+        return self.activateIndex(if (idx == 0) count - 1 else idx - 1);
     }
 
     pub fn closeTab(self: *TerminalWorkspace, tab_id: TabId) bool {
@@ -425,6 +425,12 @@ pub const TerminalWorkspace = struct {
 
     pub fn pollRuntimeCounters(self: *const TerminalWorkspace) PollRuntimeCounters {
         return self.poll_runtime_counters;
+    }
+
+    fn resetPollRuntimeCounters(self: *TerminalWorkspace) void {
+        self.poll_runtime_counters = .{
+            .epoch = self.poll_runtime_counters.epoch + 1,
+        };
     }
 
     fn indexOfTabId(self: *const TerminalWorkspace, tab_id: TabId) ?usize {
