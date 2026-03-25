@@ -1,0 +1,15 @@
+[
+  "README.md",
+  "RELEASING.md",
+  "app_architecture/APP_LAYERING.md",
+  "app_architecture/BOOTSTRAP.md",
+  "app_architecture/CONFIG.md",
+  "app_architecture/DEPENDENCIES.md",
+  "app_architecture/ENGINEERING.md",
+  "app_architecture/INPUT.md",
+  "app_architecture/tools/DOCS_EXPLORER.md",
+  "docs/AGENT_HANDOFF.md",
+  "docs/DEPENDENCIES.md",
+  "docs/INDEX.md",
+  "docs/WORKFLOW.md"
+]

@@ -144,11 +144,7 @@ Repository-local docs own the detailed operator guidance:
 Local docs explorer workflow:
 
 ```bash
-cd "$(git rev-parse --show-toplevel)"
-npm run build:docs-explorer
-
-cd tools/docs_explorer
-python3 docs_explorer.py
+./scripts/open_docs_browser.sh
 ```
 
 ## Features and Direction
