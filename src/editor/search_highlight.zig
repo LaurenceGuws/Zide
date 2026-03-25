@@ -4,6 +4,7 @@ const syntax_mod = @import("syntax.zig");
 const ts_api = @import("treesitter_api.zig");
 const syntax_registry_mod = @import("syntax_registry.zig");
 const app_logger = @import("../app_logger.zig");
+const runtime_policy = @import("../app/runtime_policy.zig");
 
 const c = ts_api.c_api;
 const c_allocator = std.heap.c_allocator;
@@ -120,6 +121,7 @@ pub fn SearchHighlightOps(comptime Editor: type) type {
 
         pub fn scheduleHighlighter(self: *Editor, path: ?[]const u8) void {
             const log = app_logger.logger("editor.highlight");
+            const intent = runtime_policy.editorBackgroundIntent();
             if (self.doc.highlight_disabled_for_large_file) {
                 if (self.doc.highlighter) |h| {
                     h.destroy();
@@ -130,8 +132,14 @@ pub fn SearchHighlightOps(comptime Editor: type) type {
                 self.setHighlightPending(false);
                 log.logf(
                     .info,
-                    "highlight skipped large_file bytes={d} threshold={d} path=\"{s}\"",
-                    .{ self.doc.buffer.totalLen(), Editor.highlighter_large_file_threshold_bytes, path orelse "" },
+                    "highlight skipped large_file lifecycle={s} work_class={s} bytes={d} threshold={d} path=\"{s}\"",
+                    .{
+                        runtime_policy.lifecycleLabel(intent.lifecycle),
+                        runtime_policy.workClassLabel(intent.work_class),
+                        self.doc.buffer.totalLen(),
+                        Editor.highlighter_large_file_threshold_bytes,
+                        path orelse "",
+                    },
                 );
                 return;
             }
@@ -145,14 +153,24 @@ pub fn SearchHighlightOps(comptime Editor: type) type {
                 self.bumpHighlightEpoch();
                 self.clearHighlightDirtyRange();
                 self.setHighlightPending(false);
-                log.logf(.info, "highlight disabled path=\"{s}\"", .{path orelse ""});
+                log.logf(
+                    .info,
+                    "highlight disabled lifecycle={s} work_class={s} path=\"{s}\"",
+                    .{
+                        runtime_policy.lifecycleLabel(intent.lifecycle),
+                        runtime_policy.workClassLabel(intent.work_class),
+                        path orelse "",
+                    },
+                );
                 return;
             }
             self.setHighlightPending(true);
             log.logf(
                 .info,
-                "highlight scheduled path=\"{s}\" lang={s} manual_parser={s} manual_mode={s}",
+                "highlight scheduled lifecycle={s} work_class={s} path=\"{s}\" lang={s} manual_parser={s} manual_mode={s}",
                 .{
+                    runtime_policy.lifecycleLabel(intent.lifecycle),
+                    runtime_policy.workClassLabel(intent.work_class),
                     path orelse "",
                     lang orelse "(none)",
                     if (manual_override) |spec| spec.parser else "(none)",
@@ -453,6 +471,8 @@ pub fn SearchHighlightOps(comptime Editor: type) type {
         }
 
         pub fn recomputeSearchMatchesPrefer(self: *Editor, preferred_offset: usize) !void {
+            const schedule_intent = runtime_policy.editorInteractiveIntent();
+            const worker_intent = runtime_policy.editorBackgroundIntent();
             const query = self.doc.search_query orelse {
                 self.clearSearchState();
                 return;
@@ -474,6 +494,18 @@ pub fn SearchHighlightOps(comptime Editor: type) type {
             if (generation_opt == null) {
                 c_allocator.free(query_copy);
                 c_allocator.free(content_copy);
+                const log = app_logger.logger("editor.search");
+                log.logf(
+                    .debug,
+                    "search sync fallback lifecycle={s} work_class={s} query_len={d} content_len={d} mode={s}",
+                    .{
+                        runtime_policy.lifecycleLabel(schedule_intent.lifecycle),
+                        runtime_policy.workClassLabel(schedule_intent.work_class),
+                        query.len,
+                        content_owned.len,
+                        @tagName(self.doc.search_mode),
+                    },
+                );
                 try self.recomputeSearchMatchesSyncPrefer(preferred_offset);
                 return;
             }
@@ -485,12 +517,20 @@ pub fn SearchHighlightOps(comptime Editor: type) type {
             if (total > 0) self.noteHighlightDirtyRange(0, total - 1);
 
             const log = app_logger.logger("editor.search");
-            log.logf(.debug, "search scheduled generation={d} query_len={d} content_len={d} mode={s}", .{
-                generation,
-                query.len,
-                content_owned.len,
-                @tagName(self.doc.search_mode),
-            });
+            log.logf(
+                .debug,
+                "search scheduled generation={d} schedule_lifecycle={s} schedule_work_class={s} worker_lifecycle={s} worker_work_class={s} query_len={d} content_len={d} mode={s}",
+                .{
+                    generation,
+                    runtime_policy.lifecycleLabel(schedule_intent.lifecycle),
+                    runtime_policy.workClassLabel(schedule_intent.work_class),
+                    runtime_policy.lifecycleLabel(worker_intent.lifecycle),
+                    runtime_policy.workClassLabel(worker_intent.work_class),
+                    query.len,
+                    content_owned.len,
+                    @tagName(self.doc.search_mode),
+                },
+            );
         }
 
         pub fn recomputeSearchMatchesSync(self: *Editor) !void {
@@ -651,6 +691,16 @@ pub fn SearchHighlightOps(comptime Editor: type) type {
                     return;
                 }
                 if (request.generation != self.currentSearchGeneration()) {
+                    const log = app_logger.logger("editor.search");
+                    log.logf(
+                        .debug,
+                        "search worker dropped stale generation={d} lifecycle={s} work_class={s}",
+                        .{
+                            request.generation,
+                            runtime_policy.lifecycleLabel(runtime_policy.editorBackgroundIntent().lifecycle),
+                            runtime_policy.workClassLabel(runtime_policy.editorBackgroundIntent().work_class),
+                        },
+                    );
                     self.unlockSearchRuntime();
                     c_allocator.free(matches);
                     continue;

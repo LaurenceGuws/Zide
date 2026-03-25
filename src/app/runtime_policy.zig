@@ -96,6 +96,24 @@ pub fn terminalWorkspaceIntents(tab_count: usize, user_input_active: bool) Termi
     };
 }
 
+pub fn editorInteractiveIntent() RuntimeIntent {
+    return .{
+        .runtime = .editor,
+        .lifecycle = .focused_visible,
+        .work_class = .interactive,
+        .user_input_active = true,
+    };
+}
+
+pub fn editorBackgroundIntent() RuntimeIntent {
+    return .{
+        .runtime = .editor,
+        .lifecycle = .focused_visible,
+        .work_class = .background,
+        .user_input_active = false,
+    };
+}
+
 pub fn terminalBackgroundTabBudget(base_budget: usize, intent: RuntimeIntent) usize {
     return switch (intent.lifecycle) {
         .focused_visible => base_budget,
@@ -164,6 +182,19 @@ test "terminal workspace intents stay background when no tabs exist" {
     try std.testing.expectEqual(LifecycleTier.hidden_warm, intents.active.lifecycle);
     try std.testing.expectEqual(WorkClass.background, intents.active.work_class);
     try std.testing.expect(!intents.active.user_input_active);
+}
+
+test "editor intents distinguish interactive and background work classes" {
+    const interactive = editorInteractiveIntent();
+    const background = editorBackgroundIntent();
+    try std.testing.expectEqual(RuntimeKind.editor, interactive.runtime);
+    try std.testing.expectEqual(LifecycleTier.focused_visible, interactive.lifecycle);
+    try std.testing.expectEqual(WorkClass.interactive, interactive.work_class);
+    try std.testing.expect(interactive.user_input_active);
+    try std.testing.expectEqual(RuntimeKind.editor, background.runtime);
+    try std.testing.expectEqual(LifecycleTier.focused_visible, background.lifecycle);
+    try std.testing.expectEqual(WorkClass.background, background.work_class);
+    try std.testing.expect(!background.user_input_active);
 }
 
 test "hidden warm background budget is capped harder than visible tiers" {
