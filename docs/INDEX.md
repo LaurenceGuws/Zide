@@ -55,6 +55,7 @@ Quick reading guide:
 - `app_architecture/windows/CHROME_POLICY.md` — Windows shell-service vs product-chrome ownership split.
 - `app_architecture/windows/SNAP_LAYOUT_INTEROP.md` — persistent sink design for Win11 Snap Layout hover in integrated terminal chrome.
 - `app_architecture/tools/DOCS_EXPLORER.md` — local docs-explorer scope, ownership, and constraints.
+- `app_architecture/tools/PERFORMANCE_TOOLING.md` — first-class performance CLI, capture-artifact, and viewer split.
 - `app_architecture/editor/DESIGN.md` — editor architecture + references.
 - `app_architecture/editor/FFI_DESIGN.md` — editor FFI boundary, ABI shape, and ownership rules.
 - `app_architecture/editor/RESOLVED_THEME_EXPORT_CONTRACT.md` — resolved editor-theme artifact contract for the current Neovim import lane.

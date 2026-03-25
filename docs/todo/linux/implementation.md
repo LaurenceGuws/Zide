@@ -218,6 +218,8 @@ owning subsystem queues.
       - `zide-editor-bundle-0.1.0-beta.4-linux-x86_64.tar.gz`
       - `zide-terminal-bundle-0.1.0-beta.4-linux-x86_64.tar.gz`
       - `zide-editor-ffi-0.1.0-beta.4-linux-x86_64.tar.gz`
+      - `zide-terminal-ffi-0.1.0-beta.4-linux-x86_64.tar.gz`
+      - `SHA256SUMS-linux-x86_64.txt`
   - 2026-03-26 resource-measurement checkpoint:
     - added `tools/linux_resource_monitor.py` as the supported local Linux
       process sampler for CPU, RSS, virtual memory, threads, fds, IO, context
@@ -225,8 +227,12 @@ owning subsystem queues.
     - added `docs/reference/linux_resource_profiling.md` to define the
       operator workflow and the boundary between host-resource measurement and
       Zide-owned subsystem counters
-      - `zide-terminal-ffi-0.1.0-beta.4-linux-x86_64.tar.gz`
-      - `SHA256SUMS-linux-x86_64.txt`
+    - added `app_architecture/tools/PERFORMANCE_TOOLING.md` to define the
+      first-class tooling direction:
+      - CLI remains canonical
+      - capture artifacts become the contract
+      - future internal viewer should be a TypeScript client of those artifacts
+        rather than a second telemetry system
     - Linux `install-local` now installs the full launcher family per channel:
       - `zide[-stable|-dev]`
       - `zide-editor[-stable|-dev]`
