@@ -213,7 +213,10 @@ fn logEglSurfaceContract(window: *sdl.SDL_Window) void {
 
 fn linuxWindowIconPath() []const u8 {
     const app_id = windows_app_identity.appId();
-    if (std.mem.eql(u8, app_id, "LaurenceGuws.Zide.Terminal")) {
+    if (std.mem.eql(u8, app_id, "LaurenceGuws.Zide.Terminal") or
+        std.mem.indexOf(u8, app_id, "zide-terminal") != null or
+        std.mem.indexOf(u8, app_id, "Zide.Terminal") != null)
+    {
         return "assets/icon/zide_terminal_taskbar.png";
     }
     return "assets/icon/color_icon.png";

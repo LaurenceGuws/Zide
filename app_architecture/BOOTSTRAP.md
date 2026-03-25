@@ -121,6 +121,19 @@ Manual multi-GUI smoke on all platforms:
 zig build gui-smokes-manual
 ```
 
+Linux local desktop install surfaces:
+
+```bash
+scripts/dev/deploy_linux_channel.sh dev
+scripts/dev/deploy_linux_channel.sh stable
+```
+
+Linux local staged release:
+
+```bash
+scripts/linux/Stage-CurrentLinuxDist.sh
+```
+
 Useful build reports:
 
 - `zig build report-build-mode`

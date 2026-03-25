@@ -10,12 +10,12 @@ Usage:
 
 Installs both local Linux dev channels:
   - zide-stable (ReleaseFast)
-  - zide-test (debug/dev)
+  - zide-dev (debug/dev)
 EOF
   exit 0
 fi
 
 "$root/scripts/dev/deploy_linux_channel.sh" stable "$@"
-"$root/scripts/dev/deploy_linux_channel.sh" test "$@"
+"$root/scripts/dev/deploy_linux_channel.sh" dev "$@"
 
-echo "Done: installed both channels (stable + test)."
+echo "Done: installed both channels (stable + dev)."

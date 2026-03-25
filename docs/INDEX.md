@@ -45,6 +45,8 @@ Quick reading guide:
 
 ## Architecture + design
 - `app_architecture/ui/DEVELOPMENT_JOURNEY.md` — renderer plan and per-OS journey.
+- `app_architecture/linux/INSTALLATION.md` — Linux local install and staged-release authority.
+- `app_architecture/TOOLING_INSTALL_SURFACES.md` — cross-OS tooling intent model for smoke, local install, and staged release.
 - `app_architecture/APP_LAYERING.md` — module boundaries and import rules.
 - `app_architecture/DEPENDENCIES.md` — dependency packaging architecture notes and migration constraints.
 - `app_architecture/windows/INSTALLATION.md` — supported Windows install layout and first installer path.
