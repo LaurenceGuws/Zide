@@ -1,5 +1,6 @@
 const std = @import("std");
 const app_logger = @import("../../app_logger.zig");
+const runtime_policy = @import("../runtime_policy.zig");
 const terminal_widget_draw = @import("../../ui/widgets/terminal_widget_draw.zig");
 
 const TerminalDrawLatencyMetrics = terminal_widget_draw.FrameLatencyMetrics;
@@ -144,13 +145,19 @@ pub fn generationRecentlyAdvancedWithPolicy(policy: SleepPolicy, state: anytype,
 pub fn sleepDurationWithPolicy(policy: SleepPolicy, state: anytype, now: f64, snapshot: Snapshot) f64 {
     const pacing = &state.terminal_frame_pacing;
     const generation_recently_advanced = generationRecentlyAdvancedWithPolicy(policy, state, now);
+    const intent = runtime_policy.terminalVisibleIntent(snapshot.output_pressure or snapshot.redraw_pending or generation_recently_advanced);
+    const sleep_lifecycle = runtime_policy.terminalSleepLifecycle(
+        pacing.idle_frames,
+        policy.short_idle_frame_limit,
+        policy.medium_idle_frame_limit,
+    );
     return if (snapshot.redraw_pending or snapshot.output_pressure or generation_recently_advanced)
         policy.active_sleep_s
     else if (now < policy.startup_window_s)
         policy.startup_sleep_s
-    else if (pacing.idle_frames < policy.short_idle_frame_limit)
+    else if (intent.isLatencySensitive() or sleep_lifecycle == .focused_visible)
         policy.short_idle_sleep_s
-    else if (pacing.idle_frames < policy.medium_idle_frame_limit)
+    else if (sleep_lifecycle == .visible_inactive)
         policy.medium_idle_sleep_s
     else
         policy.deep_idle_sleep_s;

@@ -1,5 +1,6 @@
 const std = @import("std");
 const app_logger = @import("../../app_logger.zig");
+const runtime_policy = @import("../../app/runtime_policy.zig");
 
 pub fn pollBudgeted(self: anytype, input_active_index: ?usize, policy: anytype) !bool {
     const count = self.tabs.items.len;
@@ -123,6 +124,14 @@ pub fn pollForFrame(self: anytype, input_active_index: ?usize, policy: anytype) 
     const wake_log = app_logger.logger("terminal.wake");
     const count = self.tabs.items.len;
     const active_idx = normalizeIndex(input_active_index, count);
+    const active_lifecycle = if (active_idx != null)
+        runtime_policy.LifecycleTier.focused_visible
+    else
+        runtime_policy.LifecycleTier.hidden_warm;
+    const background_lifecycle = if (count > 1)
+        runtime_policy.LifecycleTier.hidden_warm
+    else
+        runtime_policy.LifecycleTier.focused_visible;
     const session_ptr = if (active_idx) |idx|
         @intFromPtr(self.tabs.items[idx].session)
     else
@@ -164,12 +173,14 @@ pub fn pollForFrame(self: anytype, input_active_index: ?usize, policy: anytype) 
     if (wake_log.enabled_file or wake_log.enabled_console) {
         wake_log.logf(
             .info,
-            "stage=workspace_poll sid={x} tabs={d} active_idx={d} has_input={d} any_polled={d} active_has_data={d}->{d} cur={d}->{d} published_changed={d} pub={d}->{d} presented={d}->{d}",
+            "stage=workspace_poll sid={x} tabs={d} active_idx={d} has_input={d} active_lifecycle={s} background_lifecycle={s} any_polled={d} active_has_data={d}->{d} cur={d}->{d} published_changed={d} pub={d}->{d} presented={d}->{d}",
             .{
                 session_ptr,
                 count,
                 if (active_idx) |idx| idx else std.math.maxInt(usize),
                 @intFromBool(policy.has_input),
+                runtime_policy.lifecycleLabel(active_lifecycle),
+                runtime_policy.lifecycleLabel(background_lifecycle),
                 @intFromBool(any_polled),
                 @intFromBool(active_has_data_pre),
                 @intFromBool(active_has_data_post),

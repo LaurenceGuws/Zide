@@ -41,6 +41,13 @@ pub const RuntimeIntent = struct {
     lifecycle: LifecycleTier,
     work_class: WorkClass,
     user_input_active: bool = false,
+
+    pub fn isLatencySensitive(self: RuntimeIntent) bool {
+        return switch (self.work_class) {
+            .frame_critical, .interactive => true,
+            .background, .deferred => false,
+        };
+    }
 };
 
 pub fn terminalVisibleIntent(user_input_active: bool) RuntimeIntent {
@@ -50,6 +57,15 @@ pub fn terminalVisibleIntent(user_input_active: bool) RuntimeIntent {
         .work_class = if (user_input_active) .interactive else .background,
         .user_input_active = user_input_active,
     };
+}
+
+pub fn terminalSleepLifecycle(idle_frames: u32, short_idle_frame_limit: u32, medium_idle_frame_limit: u32) LifecycleTier {
+    return if (idle_frames < short_idle_frame_limit)
+        .focused_visible
+    else if (idle_frames < medium_idle_frame_limit)
+        .visible_inactive
+    else
+        .hidden_warm;
 }
 
 pub fn lifecycleLabel(tier: LifecycleTier) []const u8 {
@@ -86,4 +102,20 @@ test "terminal visible intent uses interactive class under input pressure" {
     try std.testing.expectEqual(RuntimeKind.terminal_session, intent.runtime);
     try std.testing.expectEqual(LifecycleTier.focused_visible, intent.lifecycle);
     try std.testing.expectEqual(WorkClass.interactive, intent.work_class);
+    try std.testing.expect(intent.isLatencySensitive());
+}
+
+test "terminal sleep lifecycle cools through focused visible, visible inactive, and hidden warm" {
+    try std.testing.expectEqual(
+        LifecycleTier.focused_visible,
+        terminalSleepLifecycle(0, 10, 60),
+    );
+    try std.testing.expectEqual(
+        LifecycleTier.visible_inactive,
+        terminalSleepLifecycle(10, 10, 60),
+    );
+    try std.testing.expectEqual(
+        LifecycleTier.hidden_warm,
+        terminalSleepLifecycle(60, 10, 60),
+    );
 }
