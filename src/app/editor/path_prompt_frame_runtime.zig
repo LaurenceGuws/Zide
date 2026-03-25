@@ -10,6 +10,7 @@ const editor_mod = @import("../../editor/editor.zig");
 const Editor = editor_mod.Editor;
 const PathPromptState = app_prompt_state.State;
 const PathPromptKind = app_prompt_state.Kind;
+const PathPromptPendingAction = app_prompt_state.PendingAction;
 const Shell = app_shell.Shell;
 const GoToLocation = struct {
     line_1: usize,
@@ -171,14 +172,20 @@ pub fn handle(
                         if (!std.mem.eql(u8, trimmed, "discard")) {
                             submit_succeeded = false;
                             prompt.error_text = "type discard";
-                        } else if (!(hooks.force_close_active_editor(ctx) catch |err| blk: {
-                            log.logf(.warning, "dirty-close prompt submit failed err={s}", .{@errorName(err)});
-                            submit_succeeded = false;
-                            prompt.error_text = "close failed";
-                            break :blk false;
-                        })) {
-                            submit_succeeded = false;
-                            prompt.error_text = "close failed";
+                        } else {
+                            switch (prompt.pending_action orelse .close_active_editor) {
+                                .close_active_editor => {
+                                    if (!(hooks.force_close_active_editor(ctx) catch |err| blk: {
+                                        log.logf(.warning, "dirty-close prompt close failed err={s}", .{@errorName(err)});
+                                        submit_succeeded = false;
+                                        prompt.error_text = "close failed";
+                                        break :blk false;
+                                    })) {
+                                        submit_succeeded = false;
+                                        prompt.error_text = "close failed";
+                                    }
+                                },
+                            }
                         }
                     },
                 }

@@ -134,9 +134,14 @@ pub const PathPromptKind = enum {
     confirm_close_dirty,
 };
 
+pub const PathPromptPendingAction = enum {
+    close_active_editor,
+};
+
 pub const PathPromptState = struct {
     active: bool,
     kind: ?PathPromptKind,
+    pending_action: ?PathPromptPendingAction,
     query: std.ArrayList(u8),
     select_all: bool,
     error_text: ?[]const u8,
@@ -145,6 +150,7 @@ pub const PathPromptState = struct {
         return .{
             .active = false,
             .kind = null,
+            .pending_action = null,
             .query = std.ArrayList(u8).empty,
             .select_all = false,
             .error_text = null,

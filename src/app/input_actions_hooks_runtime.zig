@@ -120,7 +120,11 @@ pub fn handle(state: anytype, frame_shell: *Shell, now: f64) !bool {
                                     const active_editor = app_close_active_editor_runtime.activeEditor(hook_state) orelse return false;
                                     if (active_editor.documentCore().isModified()) {
                                         hook_state.search_panel.active = false;
-                                        try app_path_prompt_state.openForConfirmDirtyClose(&hook_state.path_prompt, hook_state.allocator);
+                                        try app_path_prompt_state.openForConfirmDirtyClose(
+                                            &hook_state.path_prompt,
+                                            hook_state.allocator,
+                                            .close_active_editor,
+                                        );
                                         return true;
                                     }
                                     return try app_close_active_editor_runtime.closeActive(hook_state);

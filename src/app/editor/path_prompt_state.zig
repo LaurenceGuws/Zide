@@ -3,6 +3,7 @@ const app_types = @import("../app_state_types.zig");
 const editor_mod = @import("../../editor/editor.zig");
 
 pub const Kind = app_types.PathPromptKind;
+pub const PendingAction = app_types.PathPromptPendingAction;
 pub const State = app_types.PathPromptState;
 
 const Editor = editor_mod.Editor;
@@ -17,6 +18,7 @@ fn cwdInitialPath(allocator: std.mem.Allocator, suffix: []const u8) ![]u8 {
 pub fn open(state: *State, allocator: std.mem.Allocator, kind: Kind, initial_value: []const u8) !void {
     state.active = true;
     state.kind = kind;
+    state.pending_action = null;
     state.query.clearRetainingCapacity();
     try state.query.appendSlice(allocator, initial_value);
     state.select_all = initial_value.len > 0;
@@ -26,6 +28,7 @@ pub fn open(state: *State, allocator: std.mem.Allocator, kind: Kind, initial_val
 pub fn close(state: *State) void {
     state.active = false;
     state.kind = null;
+    state.pending_action = null;
     state.query.clearRetainingCapacity();
     state.select_all = false;
     state.error_text = null;
@@ -72,8 +75,9 @@ pub fn openForReplaceAll(state: *State, allocator: std.mem.Allocator) !void {
     try open(state, allocator, .replace_all, "");
 }
 
-pub fn openForConfirmDirtyClose(state: *State, allocator: std.mem.Allocator) !void {
+pub fn openForConfirmDirtyClose(state: *State, allocator: std.mem.Allocator, pending_action: PendingAction) !void {
     try open(state, allocator, .confirm_close_dirty, "");
+    state.pending_action = pending_action;
     state.select_all = false;
 }
 
@@ -128,10 +132,11 @@ test "openForConfirmDirtyClose starts empty and active" {
     };
     defer state.query.deinit(std.testing.allocator);
 
-    try openForConfirmDirtyClose(&state, std.testing.allocator);
+    try openForConfirmDirtyClose(&state, std.testing.allocator, .close_active_editor);
 
     try std.testing.expect(state.active);
     try std.testing.expectEqual(Kind.confirm_close_dirty, state.kind.?);
+    try std.testing.expectEqual(PendingAction.close_active_editor, state.pending_action.?);
     try std.testing.expectEqual(@as(usize, 0), state.query.items.len);
     try std.testing.expect(!state.select_all);
 }
