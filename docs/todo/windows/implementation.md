@@ -5,6 +5,16 @@
 Track the work required to make Windows a first-class native platform, not just
 "it builds here sometimes".
 
+Out of scope for the first stable Windows release:
+
+- Windows default terminal integration
+- other advanced Windows shell projects beyond the packaged Explorer command
+  lane
+
+Active advanced Windows shell scope that is still in bounds:
+
+- packaged top-level Explorer commands for files, folders, and terminal-here
+
 For window chrome and titlebar work, shared shell-service vs product-policy
 ownership now follows:
 
@@ -322,44 +332,31 @@ The current execution order is:
     - the package-identity manifest generator now emits:
       - `windows.comServer`
       - `windows.fileExplorerContextMenus`
-    - validated findings, 2026-03-23:
-      - external-location package identity is not sufficient on the current
-        Win11 machine:
-        - package registration succeeds
-        - classic verbs still work
-        - Explorer does not instantiate the packaged command at menu-build time
-      - full-package registration from the installed payload does work:
-        - `Register-ZidePackageIdentity.ps1 -PackageMode Full`
-        - top-level `Open Zide Terminal here` appears
-        - packaged command activation succeeds through
-          `IApplicationActivationManager`
-      - follow-up fixes landed on that path:
-        - full-package payload copy instead of metadata-only packaging
-        - packaged terminal launch by AUMID:
-          - `LaurenceGuws.Zide_1gfq4x6kk79tm!ZideTerminal`
-        - installed asset/config resolution for packaged launch
-      - current conclusion:
-        - top-level Win11 Explorer integration is a real full-package lane, not
-          an external-location package-identity lane
-    - remaining work:
-      - clean installer UX around the full-package Explorer path
-      - expand beyond the first terminal-here verb when the lane is stable
+    - validated findings:
+      - external-location identity is not sufficient on the current Win11
+        machine for reliable top-level Explorer command activation
+      - full-package registration from the installed payload is the supported
+        lane
+      - packaged command activation succeeds through
+        `IApplicationActivationManager`
+    - current implementation state, 2026-03-25:
+      - installer now removes legacy classic shell verbs during install
+      - installer registers package identity in `Full` mode by default
+      - packaged shell extension now follows the product menu shape:
+        - files -> top-level `Zide` submenu
+        - folders -> top-level `Zide` submenu
+        - folder background -> direct `Open Zide Terminal here`
 
-- [ ] `W8-07` Add Zide Terminal to the Windows default terminal chooser
-  - Goal:
-    - have `Zide Terminal` participate in the same delegated console/terminal
-      contract Windows Terminal uses
-  - Current conclusion:
-    - this is a separate lane from Explorer verbs
-    - expected ingredients include:
-      - `HKCU\Console\%%Startup`
-      - `DelegationConsole`
-      - `DelegationTerminal`
-      - COM
-      - App Extensions
-      - package identity
+- [ ] `W8-07` Stabilize the packaged Explorer command surface
+  - Current focus:
+    - confirm file submenu appears consistently for filesystem-backed files
+    - confirm folder submenu and folder-background direct command remain visible
+    - decide whether multi-select should stay hidden or gain a product contract
+    - keep the install/docs/test story deterministic around the packaged path
+  - Keep this lane packaged and `IExplorerCommand`-owned.
+  - Do not mix it back together with deferred Windows default terminal work.
   - Authority:
-    - `app_architecture/windows/NATIVE_SHELL_INTEGRATION.md`
+    - `app_architecture/windows/EXPLORER_COMMAND_INTEGRATION.md`
 
 ### Phase 9 Terminal-Only Native Chrome
 

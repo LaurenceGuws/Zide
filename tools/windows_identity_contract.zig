@@ -11,9 +11,9 @@ pub const PackageIdentity = struct {
 
 pub const ShellExtensionIdentity = struct {
     clsid: []const u8,
-    dll_name: []const u8,
     verb_id: []const u8,
     title: []const u8,
+    item_types: []const []const u8,
 };
 
 pub const ArtifactIdentity = struct {
@@ -37,11 +37,27 @@ pub const package_identity: PackageIdentity = .{
     .max_version_tested = "10.0.26100.0",
 };
 
-pub const shell_extension: ShellExtensionIdentity = .{
-    .clsid = "4C5D89A5-4E56-48E0-AE5A-8F4A5C6D1972",
-    .dll_name = "zide-shell-ext.dll",
-    .verb_id = "OpenZideTerminalHere",
-    .title = "Open Zide Terminal here",
+pub const shell_extension_dll_name = "zide-shell-ext.dll";
+
+pub const shell_extensions = [_]ShellExtensionIdentity{
+    .{
+        .clsid = "7A4A9F94-7A56-4B72-9D3A-0E4F1A0E6E11",
+        .verb_id = "ZideFileMenu",
+        .title = "Zide",
+        .item_types = &.{"*"},
+    },
+    .{
+        .clsid = "7D8E995A-2D37-48D8-AB12-4F03C6362D85",
+        .verb_id = "ZideFolderMenu",
+        .title = "Zide",
+        .item_types = &.{"Directory"},
+    },
+    .{
+        .clsid = "4C5D89A5-4E56-48E0-AE5A-8F4A5C6D1972",
+        .verb_id = "ZideBackgroundTerminal",
+        .title = "Open Zide Terminal here",
+        .item_types = &.{"Directory\\Background"},
+    },
 };
 
 pub fn identityForArtifact(name: []const u8) ArtifactIdentity {

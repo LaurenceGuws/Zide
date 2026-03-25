@@ -52,12 +52,11 @@ function Write-InstallPlan {
     } else {
         Write-Host "Add/Remove Programs: skipped (-NoUninstallRegistration)"
     }
-    Write-Host "Shell integration: enabled"
-    Write-Host "  File verbs: Open in Zide, Open in Zide Editor"
-    Write-Host "  Folder terminal integration: packaged top-level path only"
-    Write-Host "  Windows 11 note: file verbs still appear under Show more options"
+    Write-Host "Win11 Explorer integration: enabled"
+    Write-Host "  File/folder surface: top-level Zide submenu"
+    Write-Host "  Background surface: direct Open Zide Terminal here"
     Write-Host "Package identity: enabled"
-    Write-Host "  Standard Windows integration path"
+    Write-Host "  Package mode: Full"
     Write-Host "  Self-signed local/dev registration requires an elevated PowerShell session"
     if ($ShellPath) {
         Write-Host "Terminal shell override: $ShellPath"
@@ -104,7 +103,21 @@ function New-Directory {
 function Remove-IfExists {
     param([string]$Path)
     if (Test-Path -LiteralPath $Path) {
-        Remove-Item -LiteralPath $Path -Recurse -Force
+        try {
+            Remove-Item -LiteralPath $Path -Recurse -Force
+        } catch {
+            throw "failed to remove $Path; close any running Zide windows/processes that may still be using the current install and retry"
+        }
+    }
+}
+
+function Assert-ZideProcessesNotRunning {
+    $running = Get-Process -ErrorAction SilentlyContinue | Where-Object {
+        $_.ProcessName -in @("zide", "zide-editor", "zide-terminal")
+    }
+    if ($running) {
+        $names = ($running | ForEach-Object { $_.ProcessName } | Sort-Object -Unique) -join ", "
+        throw "running Zide processes detected ($names); close them before installing or re-registering package identity"
     }
 }
 
@@ -114,6 +127,24 @@ function Get-ResolvedPathOrNull {
         return $null
     }
     return (Resolve-Path -LiteralPath $Path).ProviderPath
+}
+
+function Get-Sha256Hex {
+    param([string]$Path)
+
+    $stream = [System.IO.File]::OpenRead($Path)
+    try {
+        $sha256 = [System.Security.Cryptography.SHA256]::Create()
+        try {
+            $hashBytes = $sha256.ComputeHash($stream)
+        } finally {
+            $sha256.Dispose()
+        }
+    } finally {
+        $stream.Dispose()
+    }
+
+    return ([System.BitConverter]::ToString($hashBytes)).Replace("-", "").ToLowerInvariant()
 }
 
 function Read-Sha256File {
@@ -136,7 +167,7 @@ function Assert-ExpectedHash {
     if (-not $ExpectedHashes.ContainsKey($name)) {
         throw "missing hash entry for $name"
     }
-    $actual = (Get-FileHash -LiteralPath $FilePath -Algorithm SHA256).Hash.ToLowerInvariant()
+    $actual = Get-Sha256Hex -Path $FilePath
     if ($actual -ne $ExpectedHashes[$name]) {
         throw "SHA256 mismatch for $name"
     }
@@ -243,77 +274,27 @@ function Set-AppPathRegistration {
     Set-ItemProperty -Path $keyPath -Name "Path" -Value $WorkingDirectory
 }
 
-function Set-ShellVerbRegistration {
-    param(
-        [string]$RegistryPath,
-        [string]$Label,
-        [string]$Command,
-        [string]$IconPath
-    )
-
-    & reg.exe add $RegistryPath /ve /d $Label /f | Out-Null
-    if ($LASTEXITCODE -ne 0) {
-        throw "failed to register shell verb label at $RegistryPath"
-    }
-
-    if ($IconPath) {
-        & reg.exe add $RegistryPath /v Icon /d $IconPath /f | Out-Null
-        if ($LASTEXITCODE -ne 0) {
-            throw "failed to register shell verb icon at $RegistryPath"
-        }
-    }
-
-    & reg.exe add ($RegistryPath + "\command") /ve /d $Command /f | Out-Null
-    if ($LASTEXITCODE -ne 0) {
-        throw "failed to register shell verb command at $RegistryPath"
-    }
-}
-
 function Quote-ShortcutArgument {
     param([string]$Value)
     return '"' + $Value.Replace('"', '\"') + '"'
 }
 
-function Build-ExecutableCommand {
-    param(
-        [string]$ExecutablePath,
-        [string[]]$Arguments
-    )
+function Remove-ShellVerbRegistration {
+    param([string]$RegistryPath)
 
-    $parts = @((Quote-ShortcutArgument $ExecutablePath))
-    foreach ($arg in $Arguments) {
-        if ($null -eq $arg -or $arg.Length -eq 0) {
-            continue
-        }
-        $parts += $arg
+    $providerPath = "Registry::$RegistryPath"
+    if (Test-Path -LiteralPath $providerPath) {
+        Remove-Item -LiteralPath $providerPath -Recurse -Force
     }
-    return ($parts -join " ")
 }
 
-function Register-ShellIntegration {
-    param(
-        [string]$CurrentRoot,
-        [string]$ShellPath,
-        [string]$AppIconPath,
-        [string]$TerminalIconPath
-    )
-
-    $zideExe = Join-Path $CurrentRoot "zide.exe"
-    $zideEditorExe = Join-Path $CurrentRoot "zide-editor.exe"
-    $zideTerminalExe = Join-Path $CurrentRoot "zide-terminal.exe"
-
-    Set-ShellVerbRegistration `
-        -RegistryPath "HKCU\Software\Classes\*\shell\Zide.Open" `
-        -Label "Open in Zide" `
-        -Command (Build-ExecutableCommand -ExecutablePath $zideExe -Arguments @('"%1"')) `
-        -IconPath $AppIconPath
-
-    Set-ShellVerbRegistration `
-        -RegistryPath "HKCU\Software\Classes\*\shell\Zide.Editor" `
-        -Label "Open in Zide Editor" `
-        -Command (Build-ExecutableCommand -ExecutablePath $zideEditorExe -Arguments @('"%1"')) `
-        -IconPath $AppIconPath
-
+function Remove-LegacyShellIntegration {
+    Remove-ShellVerbRegistration -RegistryPath "HKCU\Software\Classes\*\shell\Zide.Open"
+    Remove-ShellVerbRegistration -RegistryPath "HKCU\Software\Classes\*\shell\Zide.Editor"
+    Remove-ShellVerbRegistration -RegistryPath "HKCU\Software\Classes\Directory\shell\Zide.Terminal"
+    Remove-ShellVerbRegistration -RegistryPath "HKCU\Software\Classes\Directory\Background\shell\Zide.Terminal"
+    Remove-ShellVerbRegistration -RegistryPath "HKCU\Software\Classes\Directory\shell\Zide.TerminalHere"
+    Remove-ShellVerbRegistration -RegistryPath "HKCU\Software\Classes\Directory\Background\shell\Zide.TerminalHere"
 }
 
 function Build-LaunchArguments {
@@ -397,12 +378,27 @@ function Write-PackageIdentityMetadata {
                 icon_png_path = "assets\icon\zide_terminal_taskbar.png"
             }
         )
-        shell_extension = [ordered]@{
-            clsid = "4C5D89A5-4E56-48E0-AE5A-8F4A5C6D1972"
-            dll_name = "zide-shell-ext.dll"
-            verb_id = "OpenZideTerminalHere"
-            title = "Open Zide Terminal here"
-        }
+        shell_extension_dll_name = "zide-shell-ext.dll"
+        shell_extensions = @(
+            [ordered]@{
+                clsid = "7A4A9F94-7A56-4B72-9D3A-0E4F1A0E6E11"
+                verb_id = "ZideFileMenu"
+                title = "Zide"
+                item_types = @("*")
+            },
+            [ordered]@{
+                clsid = "7D8E995A-2D37-48D8-AB12-4F03C6362D85"
+                verb_id = "ZideFolderMenu"
+                title = "Zide"
+                item_types = @("Directory")
+            },
+            [ordered]@{
+                clsid = "4C5D89A5-4E56-48E0-AE5A-8F4A5C6D1972"
+                verb_id = "ZideBackgroundTerminal"
+                title = "Open Zide Terminal here"
+                item_types = @("Directory\Background")
+            }
+        )
     }
 
     $payload | ConvertTo-Json -Depth 6 | Set-Content -LiteralPath $MetadataPath -Encoding utf8
@@ -570,6 +566,7 @@ Write-InstallPlan `
     -ReleaseDistDir $ReleaseDistDir
 
 try {
+    Assert-ZideProcessesNotRunning
     New-Directory $downloadsDir
     New-Directory $extractRoot
 
@@ -655,9 +652,9 @@ try {
     Set-AppPathRegistration -ExecutableName "zide.exe" -ExecutablePath (Join-Path $currentRoot "zide.exe") -WorkingDirectory $currentRoot
     Set-AppPathRegistration -ExecutableName "zide-editor.exe" -ExecutablePath (Join-Path $currentRoot "zide-editor.exe") -WorkingDirectory $currentRoot
     Set-AppPathRegistration -ExecutableName "zide-terminal.exe" -ExecutablePath (Join-Path $currentRoot "zide-terminal.exe") -WorkingDirectory $currentRoot
-    Register-ShellIntegration -CurrentRoot $currentRoot -ShellPath $ShellPath -AppIconPath $appIconIco -TerminalIconPath $terminalIconIco
+    Remove-LegacyShellIntegration
     Write-Host "Registering package identity..."
-    & powershell.exe -NoProfile -ExecutionPolicy Bypass -File (Join-Path $InstallRoot "Register-ZidePackageIdentity.ps1") -InstallDir $currentRoot
+    & powershell.exe -NoProfile -ExecutionPolicy Bypass -File (Join-Path $InstallRoot "Register-ZidePackageIdentity.ps1") -InstallDir $currentRoot -PackageMode Full
     if ($LASTEXITCODE -ne 0) {
         throw "package identity registration failed"
     }
@@ -703,11 +700,11 @@ try {
     Write-Host "Current link: $currentRoot"
     Write-Host "Config root: $ConfigRoot"
     Write-Host "State root: $StateRoot"
-    Write-Host "Explorer verbs:"
-    Write-Host "  Open in Zide"
-    Write-Host "  Open in Zide Editor"
-    Write-Host "  Open Zide Terminal here (packaged top-level path)"
-    Write-Host "Package identity: registered"
+    Write-Host "Win11 Explorer commands:"
+    Write-Host "  Files: Zide -> Open in Zide, Open in Zide Editor"
+    Write-Host "  Folders: Zide -> Open in Zide, Open Zide Terminal here"
+    Write-Host "  Folder background: Open Zide Terminal here"
+    Write-Host "Package identity: registered (Full)"
 } finally {
     Remove-IfExists $tempRoot
 }

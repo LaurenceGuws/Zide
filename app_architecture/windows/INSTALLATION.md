@@ -146,19 +146,25 @@ Current native shell-path policy:
 
 Current shell integration policy:
 
-- installer registers per-user Explorer context-menu verbs as part of the
-  standard Windows install path
-- current supported verbs intentionally match the live app launch contract:
-  - `Open in Zide` for files
-  - `Open in Zide Editor` for files
-  - `Open Zide Terminal here` for directories and directory backgrounds
-- folder/workspace verbs for `zide.exe` / `zide-editor.exe` stay deferred until
-  workspace-folder opening is a first-class cross-platform app contract
-- current implementation is the classic Explorer verb path, so on Windows 11
-  these entries appear under `Show more options`
-- top-level Windows 11 context-menu placement is a separate future lane that
-  would need the newer COM / `IExplorerCommand` integration model rather than
-  plain registry verbs
+- installer removes legacy classic Explorer verbs and registers the packaged
+  Win11 Explorer command path instead
+- current supported Win11 menu shape intentionally follows:
+  - files:
+    - top-level `Zide`
+    - submenu:
+      - `Open in Zide`
+      - `Open in Zide Editor`
+  - folders:
+    - top-level `Zide`
+    - submenu:
+      - `Open in Zide`
+      - `Open Zide Terminal here`
+  - directory background:
+    - direct `Open Zide Terminal here`
+- current implementation is the packaged `IExplorerCommand` path backed by
+  package identity and a full local package registration
+- the old classic `HKCU\Software\Classes\...` verb path is no longer a
+  supported product surface; installs now clean it up to avoid mixed menus
 - deeper Windows-native integration authority lives in:
   - `app_architecture/windows/NATIVE_SHELL_INTEGRATION.md`
 
@@ -199,25 +205,26 @@ Current installer supports:
   - `scripts/windows/Unregister-ZidePackageIdentity.ps1`
   - package-identity metadata is now written into the installed app under:
     - `%LOCALAPPDATA%\Programs\Zide\<version>\support\windows-package-identity.json`
-  - registration now builds the external-location identity package from the
-    installed metadata and install root, not from the repo checkout
+  - registration now builds the Explorer package from the installed metadata
+    and install root, not from the repo checkout
   - self-signed local/dev registration expects elevation so the signing cert can
     be trusted in the machine certificate stores
-  - explorer-command triage also has a second dev-only mode:
+  - the supported installer path now uses:
     - `Register-ZidePackageIdentity.ps1 -PackageMode Full`
-    - this builds a self-contained MSIX from the installed payload instead of
-      using `-ExternalLocation`
+  - `External` remains a troubleshooting-only comparison mode, not the supported
+    install story for Win11 Explorer commands
 
 Current installer UX policy:
 
-- shell integration and package identity are the one supported Windows install
-  path
+- package identity and packaged Win11 Explorer integration are the one supported
+  Windows install path
 - installer output should state:
   - whether Start Menu registration is enabled
   - whether Add/Remove Programs registration is enabled
-  - that shell integration is enabled
+  - that Win11 Explorer integration is enabled
   - that package identity registration is enabled
-  - that classic Explorer verbs appear under `Show more options` on Windows 11
+  - that package mode is `Full`
+  - which packaged Explorer commands are expected after install
 
 Example local install:
 
@@ -225,10 +232,10 @@ Example local install:
 powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\windows\Install-Zide.ps1 -ReleaseDistDir .\dist
 ```
 
-Example local install:
+Example local package registration comparison:
 
 ```powershell
-powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\windows\Install-Zide.ps1 -ReleaseDistDir .\dist
+powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\windows\Register-ZidePackageIdentity.ps1 -InstallDir $env:LOCALAPPDATA\Programs\Zide\current -PackageMode External
 ```
 
 ## Uninstall Behavior
@@ -240,7 +247,7 @@ Uninstall removes:
 - current junction when it points to that version
 - uninstall registry entry
 - per-user `App Paths` registrations
-- per-user Explorer shell verbs
+- packaged Explorer integration and any leftover legacy shell verbs
 
 Uninstall keeps by default:
 

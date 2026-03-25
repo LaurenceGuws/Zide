@@ -3,13 +3,39 @@ param(
     [string]$OutputRoot = (Join-Path $env:LOCALAPPDATA "Zide\\package-identity"),
     [string]$CertSubject = "CN=Laurence",
     [ValidateSet("External", "Full")]
-    [string]$PackageMode = "External",
+    [string]$PackageMode = "Full",
     [string]$MakeAppxPath,
     [string]$SignToolPath,
     [string]$MetadataPath
 )
 
 $ErrorActionPreference = "Stop"
+
+function Assert-ZideProcessesNotRunning {
+    $running = Get-Process -ErrorAction SilentlyContinue | Where-Object {
+        $_.ProcessName -in @("zide", "zide-editor", "zide-terminal")
+    }
+    if ($running) {
+        $names = ($running | ForEach-Object { $_.ProcessName } | Sort-Object -Unique) -join ", "
+        throw "running Zide processes detected ($names); close them before registering package identity"
+    }
+}
+
+function Get-FriendlyDeploymentHint {
+    param([Guid]$ActivityId)
+
+    try {
+        $events = Get-AppPackageLog -ActivityID $ActivityId -ErrorAction Stop
+    } catch {
+        return $null
+    }
+
+    if ($events | Where-Object { $_.Message -like "*PackagesInUseClosed*" -or $_.Message -like "*Failed to initialize PLM*" }) {
+        return "package deployment was blocked because Zide or a related packaged process was still in use; close all Zide windows/processes and retry"
+    }
+
+    return $null
+}
 
 function Resolve-LatestSdkTool {
     param([string]$ToolName)
@@ -30,11 +56,20 @@ function Resolve-LatestSdkTool {
 function Get-OrCreateCodeSigningCert {
     param([string]$Subject)
 
-    $existing = Get-ChildItem Cert:\CurrentUser\My | Where-Object { $_.Subject -eq $Subject } |
-        Sort-Object NotAfter -Descending |
-        Select-Object -First 1
-    if ($existing) {
-        return $existing
+    $store = [System.Security.Cryptography.X509Certificates.X509Store]::new(
+        [System.Security.Cryptography.X509Certificates.StoreName]::My,
+        [System.Security.Cryptography.X509Certificates.StoreLocation]::CurrentUser)
+    $store.Open([System.Security.Cryptography.X509Certificates.OpenFlags]::ReadWrite)
+    try {
+        $existing = $store.Certificates |
+            Where-Object { $_.Subject -eq $Subject } |
+            Sort-Object NotAfter -Descending |
+            Select-Object -First 1
+        if ($existing) {
+            return $existing
+        }
+    } finally {
+        $store.Close()
     }
 
     return New-SelfSignedCertificate `
@@ -62,21 +97,37 @@ function Ensure-CertTrusted {
     $tempCer = Join-Path ([System.IO.Path]::GetTempPath()) ("zide-identity-" + [System.Guid]::NewGuid().ToString("N") + ".cer")
     try {
         Export-Certificate -Cert $Cert -FilePath $tempCer | Out-Null
-        $trustedPeople = Get-ChildItem Cert:\LocalMachine\TrustedPeople | Where-Object { $_.Thumbprint -eq $Cert.Thumbprint } |
-            Select-Object -First 1
-        if (-not $trustedPeople) {
-            Import-Certificate -FilePath $tempCer -CertStoreLocation "Cert:\LocalMachine\TrustedPeople" | Out-Null
-        }
-
-        $trustedRoot = Get-ChildItem Cert:\LocalMachine\Root | Where-Object { $_.Thumbprint -eq $Cert.Thumbprint } |
-            Select-Object -First 1
-        if (-not $trustedRoot) {
-            Import-Certificate -FilePath $tempCer -CertStoreLocation "Cert:\LocalMachine\Root" | Out-Null
-        }
+        Add-CertToStoreIfMissing -CertPath $tempCer -StoreName TrustedPeople
+        Add-CertToStoreIfMissing -CertPath $tempCer -StoreName Root
     } finally {
         if (Test-Path -LiteralPath $tempCer) {
             Remove-Item -LiteralPath $tempCer -Force
         }
+    }
+}
+
+function Add-CertToStoreIfMissing {
+    param(
+        [string]$CertPath,
+        [ValidateSet("TrustedPeople", "Root")]
+        [string]$StoreName
+    )
+
+    $cert = [System.Security.Cryptography.X509Certificates.X509Certificate2]::new($CertPath)
+    $store = [System.Security.Cryptography.X509Certificates.X509Store]::new(
+        [System.Security.Cryptography.X509Certificates.StoreName]::$StoreName,
+        [System.Security.Cryptography.X509Certificates.StoreLocation]::LocalMachine)
+    $store.Open([System.Security.Cryptography.X509Certificates.OpenFlags]::ReadWrite)
+    try {
+        $existing = $store.Certificates |
+            Where-Object { $_.Thumbprint -eq $cert.Thumbprint } |
+            Select-Object -First 1
+        if (-not $existing) {
+            $store.Add($cert)
+        }
+    } finally {
+        $store.Close()
+        $cert.Dispose()
     }
 }
 
@@ -106,27 +157,35 @@ function Write-AppxManifest {
 
     $applications = foreach ($application in $Identity.applications) {
         $applicationExtensions = ""
-        if (($Identity.PSObject.Properties.Name -contains "shell_extension") -and ($application.package_application_id -eq "ZideTerminal")) {
+        if (($Identity.PSObject.Properties.Name -contains "shell_extensions") -and ($application.package_application_id -eq "ZideTerminal")) {
+            $comClasses = foreach ($shellExtension in $Identity.shell_extensions) {
+@"
+              <com:Class Id="$($shellExtension.clsid)" Path="$($Identity.shell_extension_dll_name)" ThreadingModel="STA"/>
+"@
+            }
+
+            $contextMenus = foreach ($shellExtension in $Identity.shell_extensions) {
+                foreach ($itemType in $shellExtension.item_types) {
+@"
+            <desktop5:ItemType Type="$itemType">
+              <desktop5:Verb Id="$($shellExtension.verb_id)" Clsid="$($shellExtension.clsid)"/>
+            </desktop5:ItemType>
+"@
+                }
+            }
+
             $applicationExtensions = @"
       <Extensions>
         <com:Extension Category="windows.comServer">
           <com:ComServer>
             <com:SurrogateServer DisplayName="Zide">
-              <com:Class Id="$($Identity.shell_extension.clsid)" Path="$($Identity.shell_extension.dll_name)" ThreadingModel="STA"/>
+$(($comClasses -join "`n"))
             </com:SurrogateServer>
           </com:ComServer>
         </com:Extension>
         <desktop4:Extension Category="windows.fileExplorerContextMenus">
           <desktop4:FileExplorerContextMenus>
-            <desktop5:ItemType Type="Directory">
-              <desktop5:Verb Id="$($Identity.shell_extension.verb_id)" Clsid="$($Identity.shell_extension.clsid)"/>
-            </desktop5:ItemType>
-            <desktop5:ItemType Type="Directory\Background">
-              <desktop5:Verb Id="$($Identity.shell_extension.verb_id)" Clsid="$($Identity.shell_extension.clsid)"/>
-            </desktop5:ItemType>
-            <desktop5:ItemType Type="*">
-              <desktop5:Verb Id="$($Identity.shell_extension.verb_id)" Clsid="$($Identity.shell_extension.clsid)"/>
-            </desktop5:ItemType>
+$(($contextMenus -join "`n"))
           </desktop4:FileExplorerContextMenus>
         </desktop4:Extension>
       </Extensions>
@@ -177,6 +236,7 @@ $($applications -join "`n")
 }
 
 $resolvedInstallDir = (Resolve-Path -LiteralPath $InstallDir).ProviderPath
+Assert-ZideProcessesNotRunning
 $makeAppx = Resolve-LatestSdkTool -ToolName "makeappx.exe"
 $signTool = Resolve-LatestSdkTool -ToolName "signtool.exe"
 
@@ -193,7 +253,14 @@ New-Item -ItemType Directory -Force -Path $layoutDir | Out-Null
 
 if ($PackageMode -eq "Full") {
     Copy-InstallPayloadToLayout -SourceDir $resolvedInstallDir -DestinationDir $layoutDir
-    foreach ($requiredPath in @("zide-terminal.exe", "zide-shell-ext.dll", "assets\\icon\\color_icon.png")) {
+    foreach ($requiredPath in @(
+        "zide.exe",
+        "zide-editor.exe",
+        "zide-terminal.exe",
+        "zide-shell-ext.dll",
+        "assets\\icon\\color_icon.png",
+        "assets\\icon\\zide_terminal_taskbar.png"
+    )) {
         if (-not (Test-Path -LiteralPath (Join-Path $layoutDir $requiredPath))) {
             throw "full package layout is missing required payload: $requiredPath"
         }
@@ -225,10 +292,23 @@ if ($LASTEXITCODE -ne 0) {
     throw "SignTool failed"
 }
 
-if ($PackageMode -eq "External") {
-    Add-AppxPackage -Path $packagePath -ExternalLocation $resolvedInstallDir
-} else {
-    Add-AppxPackage -Path $packagePath
+try {
+    if ($PackageMode -eq "External") {
+        Add-AppxPackage -Path $packagePath -ExternalLocation $resolvedInstallDir -ErrorAction Stop
+    } else {
+        Add-AppxPackage -Path $packagePath -ErrorAction Stop
+    }
+} catch {
+    $activityId = [Guid]::Empty
+    if ($_.Exception -and $_.Exception.Message -match "\[ActivityId\]\s+([0-9a-fA-F\-]+)") {
+        $activityId = [Guid]$matches[1]
+    }
+
+    $hint = if ($activityId -ne [Guid]::Empty) { Get-FriendlyDeploymentHint -ActivityId $activityId } else { $null }
+    if ($hint) {
+        throw "$($_.Exception.Message)`nHint: $hint"
+    }
+    throw
 }
 
 $registered = Get-AppxPackage $identity.package_name -ErrorAction Stop

@@ -1,9 +1,9 @@
 # Windows Explorer Command Integration
 
-Date: 2026-03-22
+Date: 2026-03-25
 
-Purpose: define the first packaged `IExplorerCommand` cut for top-level Windows
-11 Explorer integration.
+Purpose: define the packaged `IExplorerCommand` lane for top-level Windows 11
+Explorer integration.
 
 Use this with:
 
@@ -25,32 +25,22 @@ This lane is:
 It is not an extension of the classic `HKCU\Software\Classes\...` registry verb
 path.
 
-## First Cut
+## Current Command Set
 
-The first command is intentionally narrow:
+Current supported packaged commands:
 
-- `Open Zide Terminal here`
-
-Scope:
-
-- Explorer item type: `Directory`
-- Explorer item type: `Directory\Background`
-- launch target: `zide-terminal.exe --cwd <selected path>`
-
-Non-goals for the first cut:
-
-- no top-level file verbs yet for:
-  - `Open in Zide`
-  - `Open in Zide Editor`
-- no multi-command submenu
-- no folder/workspace-open IDE verb yet
-
-Why this cut first:
-
-- it matches the Windows Terminal reference shape closely
-- it is the highest-value command for top-level Explorer presence
-- it avoids forcing an IDE/editor workspace-open contract before that contract
-  is product-ready cross-platform
+- files:
+  - top-level `Zide`
+  - submenu:
+    - `Open in Zide`
+    - `Open in Zide Editor`
+- folders:
+  - top-level `Zide`
+  - submenu:
+    - `Open in Zide`
+    - `Open Zide Terminal here`
+- folder background:
+  - direct `Open Zide Terminal here`
 
 ## Reference Shape
 
@@ -68,25 +58,29 @@ Reference files:
 - `reference_repos/terminals/windows_terminal/src/cascadia/ShellExtension/dllmain.cpp`
 - `reference_repos/terminals/windows_terminal/src/cascadia/CascadiaPackage/Package.appxmanifest`
 
-The current Zide cut follows that same high-level model:
+The current Zide lane follows that same high-level model:
 
 - in-proc COM DLL
-- packaged by the external-location identity package
-- one verb bound to directory and directory-background item types
+- packaged through full local package registration from the installed payload
+- separate top-level COM classes for:
+  - file submenu
+  - folder submenu
+  - direct folder-background terminal command
 
 ## Current Zide Implementation State
 
-Current first-cut artifact:
+Current artifact:
 
 - `zide-shell-ext.dll`
 
-Current COM class:
+Current top-level COM classes:
 
-- CLSID: `4C5D89A5-4E56-48E0-AE5A-8F4A5C6D1972`
-
-Current first-cut verb:
-
-- `OpenZideTerminalHere`
+- `ZideFileMenu`
+  - CLSID: `7A4A9F94-7A56-4B72-9D3A-0E4F1A0E6E11`
+- `ZideFolderMenu`
+  - CLSID: `7D8E995A-2D37-48D8-AB12-4F03C6362D85`
+- `ZideBackgroundTerminal`
+  - CLSID: `4C5D89A5-4E56-48E0-AE5A-8F4A5C6D1972`
 
 Current build/runtime wiring:
 
@@ -96,9 +90,10 @@ Current build/runtime wiring:
 - package-identity registration generates:
   - `windows.comServer`
   - `windows.fileExplorerContextMenus`
-- current item types:
-  - `Directory`
-  - `Directory\Background`
+- installer uses full package registration by default for the supported Win11
+  Explorer path
+- installs also remove stale legacy classic shell verbs so the packaged command
+  surface is not mixed with old `Show more options` entries
 
 ## Architecture Notes
 
@@ -118,15 +113,17 @@ It should not:
 - reimplement installer policy
 - become a dumping ground for product command routing
 
-If future verbs are added, they should be separate clearly scoped commands, not
-one monolithic shell-extension object with product logic embedded in it.
+The intended UX rule is:
+
+- if multiple relevant launchers exist, show top-level `Zide` with a submenu
+- if only one relevant launcher exists, show the direct command instead
 
 ## Validation Lane
 
 The shell-extension lane is only meaningful when tested through the packaged
 identity path.
 
-Minimum validation for this first cut:
+Minimum validation for the supported lane:
 
 1. install the current local Windows dist
 2. register package identity with:
@@ -134,43 +131,34 @@ Minimum validation for this first cut:
 3. confirm package manifest contains:
    - `windows.comServer`
    - `windows.fileExplorerContextMenus`
-4. right-click a directory in Windows 11 and verify the top-level menu entry
-5. right-click a folder background and verify the top-level menu entry
-6. invoke the command and confirm `zide-terminal.exe` opens in the selected cwd
+4. right-click a file in Windows 11 and verify:
+   - top-level `Zide`
+   - submenu:
+     - `Open in Zide`
+     - `Open in Zide Editor`
+5. right-click a directory in Windows 11 and verify:
+   - top-level `Zide`
+   - submenu:
+     - `Open in Zide`
+     - `Open Zide Terminal here`
+6. right-click a folder background and verify:
+   - direct `Open Zide Terminal here`
+7. invoke the commands and confirm:
+   - file -> correct launcher opens the selected file
+   - folder -> `zide.exe` starts with that folder as startup cwd
+   - terminal-here -> `zide-terminal.exe` opens in the selected cwd
 
 ## Current Result
 
-Current local Win11 result:
+Current local findings:
 
-- external-location package identity registers successfully
-- packaged COM registration exists
-- classic verbs still work
-- Explorer does not instantiate the packaged `IExplorerCommand` DLL from the
-  external-location install model
-- a self-contained full MSIX from the installed payload does work:
-  - `Register-ZidePackageIdentity.ps1 -PackageMode Full`
-  - top-level `Open Zide Terminal here` appears
-  - the packaged command activates `ZideTerminal` by AUMID through
-    `IApplicationActivationManager`
-
-That is the key architectural boundary for this lane:
-
-- external-location identity is a prerequisite
-- top-level Win11 Explorer commands want the full-package lane on the current
-  machine
-
-Follow-up fixes already required on that path:
-
-- full-package payload copy instead of metadata-only packing
-- packaged terminal launch via:
+- external-location identity is not sufficient on the current Win11 machine for
+  reliable top-level Explorer command activation
+- full package registration from the installed payload is the supported lane
+- packaged launch uses AUMIDs directly:
+  - `LaurenceGuws.Zide_1gfq4x6kk79tm!Zide`
+  - `LaurenceGuws.Zide_1gfq4x6kk79tm!ZideEditor`
   - `LaurenceGuws.Zide_1gfq4x6kk79tm!ZideTerminal`
-- installed config/assets resolving relative to the packaged executable
-
-## Next Likely Expansions
-
-After the first command is stable:
-
-1. top-level `Open in Zide Editor` for files
-2. top-level `Open in Zide` once IDE/workspace open semantics are first-class
-3. only after Explorer integration is stable, take the heavier default-terminal
-   lane
+- folder launch uses the narrow startup contract:
+  - `zide.exe --folder <path>`
+- multi-select stays hidden for now; it does not have a product contract yet

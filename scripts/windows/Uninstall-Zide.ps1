@@ -36,9 +36,9 @@ function Remove-AppPathRegistration {
 function Remove-ShellVerbRegistration {
     param([string]$RegistryPath)
 
-    & reg.exe delete $RegistryPath /f | Out-Null
-    if ($LASTEXITCODE -ne 0 -and $LASTEXITCODE -ne 1) {
-        throw "failed to remove shell verb registration at $RegistryPath"
+    $providerPath = "Registry::$RegistryPath"
+    if (Test-Path -LiteralPath $providerPath) {
+        Remove-Item -LiteralPath $providerPath -Recurse -Force
     }
 }
 
@@ -113,6 +113,8 @@ Remove-AppPathRegistration -ExecutableName "zide-terminal.exe"
 
 Remove-ShellVerbRegistration -RegistryPath "HKCU\Software\Classes\*\shell\Zide.Open"
 Remove-ShellVerbRegistration -RegistryPath "HKCU\Software\Classes\*\shell\Zide.Editor"
+Remove-ShellVerbRegistration -RegistryPath "HKCU\Software\Classes\Directory\shell\Zide.Terminal"
+Remove-ShellVerbRegistration -RegistryPath "HKCU\Software\Classes\Directory\Background\shell\Zide.Terminal"
 Remove-ShellVerbRegistration -RegistryPath "HKCU\Software\Classes\Directory\shell\Zide.TerminalHere"
 Remove-ShellVerbRegistration -RegistryPath "HKCU\Software\Classes\Directory\Background\shell\Zide.TerminalHere"
 Remove-PackageIdentityRegistration -PackageName "LaurenceGuws.Zide"

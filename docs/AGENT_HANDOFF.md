@@ -9,6 +9,10 @@ not a progress log and should stay brief.
 - Within the editor lane, current product priority is basic Notepad-grade usability and editor-only chrome: common shortcuts, expected mouse/selection behavior, file/open/save flows, friendly Lua config, and editor CLI behavior should land before optimization-focused work.
 - Terminal quality bar remains: native terminal behavior should stay in the same band as `kitty` / `ghostty` for correctness, smoothness, compatibility, and steady-state cost.
 - Native GUI remains the proving ground and reference host for both editor and terminal contracts. Keep native honest first, but do not let it become a privileged semantic path over FFI/embedded hosts.
+- Windows shell scope is split intentionally:
+  - packaged top-level Windows 11 Explorer integration remains in scope
+  - legacy classic Explorer verbs are not the supported product surface
+  - Windows default terminal integration is deferred indefinitely
 
 ### Current Direction
 
@@ -18,6 +22,7 @@ not a progress log and should stay brief.
   - editor/widget bug fixing and quality passes
   - editor modularization/boundary cleanup only where it materially supports the feature lane or keeps the implementation clean
   - selective terminal follow-up only for already-open, high-confidence issues
+  - selective Windows shell follow-up only for the packaged Explorer command lane
 - Avoid optimization-led editor work until the common editor feature/config/CLI baseline is in place.
 - Renderer architecture direction is already set:
   - narrow retained widget-local targets where they pay off
@@ -36,6 +41,12 @@ not a progress log and should stay brief.
 - A later Flutty re-check against upstream `4c2a953e` confirmed the viewport-pinning regression is closed on current `main`: request-based snapshot adoption stayed straightforward, the redraw path naturally uses `include_flags = 0`, pinned viewport changes now affect acquired snapshot content, and no widget/runtime fork or local workaround logic was needed.
 - The latest Flutty diff re-checks now close the first diff cut end-to-end: downstream removed the old cursor-preservation workaround, settled-baseline granular diff works after the upstream `present_ack(...)` retirement fix, one-acquire fallback remains clean, and startup PTY churn still stays outside the granular guarantee on purpose.
 - Current implementation authority lives in the terminal architecture docs and owning todos, not in stale investigation notes.
+- Current Windows shell follow-up should focus on the packaged Explorer commands:
+  - `Open in Zide` for files
+  - `Open in Zide Editor` for files
+  - `Open in Zide` for folders
+  - `Open Zide Terminal here` for folders/background
+  - keep Windows default terminal integration deferred
 
 ### Where To Look
 
@@ -57,6 +68,9 @@ not a progress log and should stay brief.
   - `AGENTS.md`
   - `docs/WORKFLOW.md`
   - `docs/INDEX.md`
+ - Active Windows shell docs:
+   - `app_architecture/windows/EXPLORER_COMMAND_INTEGRATION.md`
+   - `docs/todo/windows/implementation.md`
 
 ### Constraints
 
