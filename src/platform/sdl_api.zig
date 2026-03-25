@@ -251,6 +251,26 @@ pub fn destroyWindow(window: *c.SDL_Window) void {
     c.SDL_DestroyWindow(window);
 }
 
+pub fn createSurfaceFromRgba(width: i32, height: i32, pixels: []u8) ?*c.SDL_Surface {
+    if (width <= 0 or height <= 0) return null;
+    const pitch = width * 4;
+    return c.SDL_CreateSurfaceFrom(
+        @intCast(width),
+        @intCast(height),
+        c.SDL_PIXELFORMAT_RGBA32,
+        pixels.ptr,
+        @intCast(pitch),
+    );
+}
+
+pub fn destroySurface(surface: *c.SDL_Surface) void {
+    c.SDL_DestroySurface(surface);
+}
+
+pub fn setWindowIcon(window: *c.SDL_Window, icon: *c.SDL_Surface) bool {
+    return c.SDL_SetWindowIcon(window, icon);
+}
+
 pub fn getWindowProperties(window: *c.SDL_Window) ?PropertiesId {
     const props = c.SDL_GetWindowProperties(window);
     if (props == 0) return null;

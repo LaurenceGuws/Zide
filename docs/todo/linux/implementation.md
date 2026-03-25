@@ -130,6 +130,20 @@ owning subsystem queues.
     - shell/terminal-here defaults where applicable
     - file dialog behavior on Linux
     - desktop-environment expectations that affect normal editor use
+  - 2026-03-25 KDE finding:
+    - after the launcher-title fix, KDE now shows distinct window labels for
+      IDE/editor/terminal, but all three still fall back to the generic
+      Wayland/default icon.
+    - A Linux runtime icon path has now been added at SDL window creation time
+      using the existing bundled PNG assets:
+      - IDE/editor: `assets/icon/color_icon.png`
+      - terminal: `assets/icon/zide_terminal_taskbar.png`
+    - Important scope note:
+      - SDL’s own Wayland guidance implies runtime window-icon calls may still
+        be secondary to desktop-file metadata on some setups.
+      - If KDE still shows the generic icon after this runtime fix, the next
+        step is not more renderer work; it is Linux install-layout / desktop
+        entry integration for the focused launchers.
 
 ## Working Rules
 
@@ -161,3 +175,6 @@ owning subsystem queues.
 - Open Linux-specific product gap:
   - no native Linux file dialog path exists yet; Linux file flow still depends
     on the shared status-bar/path-prompt surface
+- In progress:
+  - KDE/Wayland launcher icon validation after adding runtime SDL window-icon
+    setup for the focused launchers
