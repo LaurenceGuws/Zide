@@ -9,7 +9,6 @@
     "test": "tests"
   },
   "scripts": {
-    "build:docs-explorer": "./node_modules/.bin/tsc -p tools/docs_explorer/tsconfig.json",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "repository": {
@@ -23,8 +22,5 @@
   "bugs": {
     "url": "https://github.com/LaurenceGuws/Zide/issues"
   },
-  "homepage": "https://github.com/LaurenceGuws/Zide#readme",
-  "devDependencies": {
-    "typescript": "^5.9.3"
-  }
+  "homepage": "https://github.com/LaurenceGuws/Zide#readme"
 }

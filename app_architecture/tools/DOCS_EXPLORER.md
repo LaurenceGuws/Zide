@@ -23,8 +23,8 @@ This is a local contributor/operator tool, not a product feature.
 ## Current location
 
 - standalone repo: <https://github.com/LaurenceGuws/docs-explorer>
-- Zide keeps project-specific docs-explorer config and integration points until
-  the extraction is fully completed
+- Zide keeps project-specific docs-explorer config and a small launcher script
+  in-repo
 
 ## Ownership split
 

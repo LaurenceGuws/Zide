@@ -63,9 +63,9 @@ Use the Releases page for binaries.
 The hosted docs are the primary user-facing entrypoint. Start there for exact
 platform details and current architecture notes.
 
-- [Bootstrap and build notes](https://laurenceguws.github.io/Zide/tools/docs_explorer/#doc=app_architecture/BOOTSTRAP.md)
-- [Dependency details](https://laurenceguws.github.io/Zide/tools/docs_explorer/#doc=docs/DEPENDENCIES.md)
-- [Terminal compatibility](https://laurenceguws.github.io/Zide/tools/docs_explorer/#doc=docs/reference/terminal_compatibility.md)
+- [Bootstrap and build notes](app_architecture/BOOTSTRAP.md)
+- [Dependency details](docs/DEPENDENCIES.md)
+- [Terminal compatibility](docs/reference/terminal_compatibility.md)
 
 Local Linux example:
 
@@ -113,18 +113,19 @@ before falling back to Zide-owned terminfo.
 
 ## Documentation
 
-Primary docs site:
-- [Docs Explorer](https://laurenceguws.github.io/Zide/tools/docs_explorer/)
+Primary docs entrypoints:
+- [Docs Index](docs/INDEX.md)
+- [Docs Explorer Repo](https://github.com/LaurenceGuws/docs-explorer)
 
 Good starting points:
 
-- [Getting started](https://laurenceguws.github.io/Zide/tools/docs_explorer/#doc=app_architecture/BOOTSTRAP.md)
-- [Dependency policy](https://laurenceguws.github.io/Zide/tools/docs_explorer/#doc=docs/DEPENDENCIES.md)
-- [Terminal compatibility](https://laurenceguws.github.io/Zide/tools/docs_explorer/#doc=docs/reference/terminal_compatibility.md)
-- [Terminal beta checkpoint summary](https://laurenceguws.github.io/Zide/tools/docs_explorer/#doc=app_architecture/terminal/TERMINAL_BETA_CHECKPOINT.md)
-- [Terminal architecture comparison](https://laurenceguws.github.io/Zide/tools/docs_explorer/#doc=app_architecture/terminal/TERMINAL_ARCHITECTURE_COMPARISON.md)
-- [Terminal FFI bridge design](https://laurenceguws.github.io/Zide/tools/docs_explorer/#doc=app_architecture/terminal/ffi/BRIDGE_DESIGN.md)
-- [Current beta release notes](https://laurenceguws.github.io/Zide/tools/docs_explorer/#doc=docs/releases/v0.1.0-beta.4.md)
+- [Getting started](app_architecture/BOOTSTRAP.md)
+- [Dependency policy](docs/DEPENDENCIES.md)
+- [Terminal compatibility](docs/reference/terminal_compatibility.md)
+- [Terminal beta checkpoint summary](app_architecture/terminal/TERMINAL_BETA_CHECKPOINT.md)
+- [Terminal architecture comparison](app_architecture/terminal/TERMINAL_ARCHITECTURE_COMPARISON.md)
+- [Terminal FFI bridge design](app_architecture/terminal/ffi/BRIDGE_DESIGN.md)
+- [Current beta release notes](docs/releases/v0.1.0-beta.4.md)
 
 Contributor/operator navigation lives in [docs/INDEX.md](docs/INDEX.md).
 
