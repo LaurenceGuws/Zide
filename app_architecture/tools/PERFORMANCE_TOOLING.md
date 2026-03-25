@@ -12,6 +12,17 @@ This is the authority for:
 - host-resource vs subsystem-attribution boundaries
 - future internal performance viewer split
 
+It is paired with:
+
+- `app_architecture/RUNTIME_ISOLATION_AND_RESOURCE_MANAGEMENT.md`
+  - for runtime classes
+  - lifecycle and budget semantics
+  - the architectural reason subsystem counters and resource limits exist
+- `app_architecture/tools/STRUCTURED_LOGGING.md`
+  - for machine-readable event output
+  - for grouped sink routing
+  - for the logger/viewer/capture seam
+
 It is not the authority for:
 
 - terminal scheduler policy
@@ -36,6 +47,14 @@ Important rule:
 - the graphical tool is a client of the same capture artifacts
 
 The viewer must not become a second telemetry system.
+
+Important alignment rule:
+
+- this document and `app_architecture/RUNTIME_ISOLATION_AND_RESOURCE_MANAGEMENT.md`
+  must describe the same measurement model
+- runtime/resource docs define what the system is trying to measure
+- performance-tooling docs define how that measurement is captured, stored, and
+  explored
 
 ## Tooling Split
 
@@ -173,6 +192,14 @@ Optional files:
 - `notes.txt`
   - manual context
 
+Preferred source for `subsystem_events.jsonl` over time:
+
+- structured logger output and stable machine fields
+
+Transitional source while structured logging is incomplete:
+
+- normalized parsing of selected current text logs
+
 ## Data Model Direction
 
 ### Host-resource samples
@@ -198,6 +225,13 @@ Examples:
 - editor search/highlight runtime counters
 - frame pacing / redraw counters
 - future renderer counters
+
+These subsystem signals should follow the runtime/resource architecture:
+
+- counters should be runtime-owned
+- counters should use stable lifecycle/work-class vocabulary where available
+- counters must stay meaningful if a runtime later moves from direct execution
+  to threaded or process-backed execution
 
 ### Derived summaries
 
@@ -246,6 +280,13 @@ The viewer should feel like an internal operator instrument, not a dashboard toy
 2. define the stable run-folder artifact contract
 3. normalize current subsystem counters into machine-readable event output
 4. only then build the local TypeScript viewer on top of those artifacts
+
+This sequence intentionally matches the runtime/resource-management direction:
+
+- measure first
+- stabilize contracts second
+- improve scheduling/resource policy with honest evidence
+- only then invest in richer visualization
 
 ## Non-Goals
 

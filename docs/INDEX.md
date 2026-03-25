@@ -48,6 +48,7 @@ Quick reading guide:
 - `app_architecture/linux/INSTALLATION.md` — Linux local install and staged-release authority.
 - `app_architecture/TOOLING_INSTALL_SURFACES.md` — cross-OS tooling intent model for smoke, local install, and staged release.
 - `app_architecture/APP_LAYERING.md` — module boundaries and import rules.
+- `app_architecture/RUNTIME_ISOLATION_AND_RESOURCE_MANAGEMENT.md` — runtime classes, lifecycle tiers, resource-budget policy, and measurement requirements.
 - `app_architecture/DEPENDENCIES.md` — dependency packaging architecture notes and migration constraints.
 - `app_architecture/windows/INSTALLATION.md` — supported Windows install layout and first installer path.
 - `app_architecture/windows/NATIVE_SHELL_INTEGRATION.md` — deferred-scope note for advanced Windows shell integration beyond the active packaged Explorer lane.
@@ -55,7 +56,8 @@ Quick reading guide:
 - `app_architecture/windows/CHROME_POLICY.md` — Windows shell-service vs product-chrome ownership split.
 - `app_architecture/windows/SNAP_LAYOUT_INTEROP.md` — persistent sink design for Win11 Snap Layout hover in integrated terminal chrome.
 - `app_architecture/tools/DOCS_EXPLORER.md` — local docs-explorer scope, ownership, and constraints.
-- `app_architecture/tools/PERFORMANCE_TOOLING.md` — first-class performance CLI, capture-artifact, and viewer split.
+- `app_architecture/tools/PERFORMANCE_TOOLING.md` — first-class performance CLI, capture-artifact, and viewer split aligned with runtime/resource-management architecture.
+- `app_architecture/tools/STRUCTURED_LOGGING.md` — structured event logging, grouped sink routing, and the logger/tooling seam.
 - `app_architecture/editor/DESIGN.md` — editor architecture + references.
 - `app_architecture/editor/FFI_DESIGN.md` — editor FFI boundary, ABI shape, and ownership rules.
 - `app_architecture/editor/RESOLVED_THEME_EXPORT_CONTRACT.md` — resolved editor-theme artifact contract for the current Neovim import lane.

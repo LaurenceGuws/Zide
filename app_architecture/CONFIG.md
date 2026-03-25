@@ -320,6 +320,15 @@ This reflects the current runtime truth: app chrome, editor text, and terminal t
 
 ## Testing And Maintenance Rules
 
+Logging/config direction note:
+
+- logging remains Lua-configurable and agent-owned through `./.zide.lua`
+- future structured logging and grouped sink routing must stay aligned with:
+  - `app_architecture/tools/STRUCTURED_LOGGING.md`
+  - `app_architecture/tools/PERFORMANCE_TOOLING.md`
+- config syntax may grow, but it should continue to control one logger system
+  rather than separate human/debug and machine/perf logging stacks
+
 Any config-surface change should update all of:
 - `assets/config/init.lua`
 - `app_architecture/CONFIG.md`

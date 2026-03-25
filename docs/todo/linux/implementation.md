@@ -233,6 +233,11 @@ owning subsystem queues.
       - capture artifacts become the contract
       - future internal viewer should be a TypeScript client of those artifacts
         rather than a second telemetry system
+    - added `app_architecture/tools/STRUCTURED_LOGGING.md` to define the next
+      logger/tooling seam:
+      - one logger system
+      - optional text vs JSONL output modes
+      - grouped tag-family sinks for machine capture and easy grepping
     - Linux `install-local` now installs the full launcher family per channel:
       - `zide[-stable|-dev]`
       - `zide-editor[-stable|-dev]`

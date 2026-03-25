@@ -13,6 +13,17 @@ This document is the architecture authority for:
 - resource-budget policy
 - transport strategy for direct, threaded, and process-backed isolation
 
+It is paired with:
+
+- `app_architecture/tools/PERFORMANCE_TOOLING.md`
+  - for first-class CLI/viewer/tooling ownership
+  - for capture-artifact shape
+  - for operator-facing measurement workflow
+- `app_architecture/tools/STRUCTURED_LOGGING.md`
+  - for machine-readable event-line direction
+  - for grouped sink routing
+  - for the structured seam between runtime counters and tooling
+
 It is not the authority for:
 
 - renderer scene publication details
@@ -118,6 +129,12 @@ Current practical model:
 - subsystem attribution comes from Zide-owned counters and logs
 - performance conclusions should correlate both over the same workload window
 
+Measurement/tooling ownership note:
+
+- this document defines what must be measurable and why
+- `app_architecture/tools/PERFORMANCE_TOOLING.md` defines how the CLI, capture
+  artifacts, and future viewer should expose that measurement surface
+
 ## Runtime Classes
 
 Zide should treat the following as distinct runtime classes:
@@ -206,6 +223,13 @@ Subsystem runtime logic must not depend on whether the transport is:
 - direct in-process call
 - worker thread queue
 - process-backed IPC
+
+The same transport-agnostic rule should also shape observability:
+
+- runtime-owned counters and events must remain usable regardless of whether
+  the runtime is direct, threaded, or process-backed later
+- performance tooling should consume stable runtime-facing signals rather than
+  transport-specific implementation accidents
 
 ## Transport Strategy
 
