@@ -276,4 +276,12 @@ fn recordPollMetrics(self: anytype, metrics: @TypeOf(self.last_poll_metrics)) vo
     self.poll_metrics_seq +%= 1;
     self.last_poll_metrics = metrics;
     self.last_poll_metrics.seq = self.poll_metrics_seq;
+    self.poll_runtime_counters.frames +%= 1;
+    self.poll_runtime_counters.active_polled +%= @intCast(self.last_poll_metrics.active_polled);
+    self.poll_runtime_counters.background_polled +%= @intCast(self.last_poll_metrics.background_polled);
+    self.poll_runtime_counters.active_budget +%= @intCast(self.last_poll_metrics.active_budget);
+    self.poll_runtime_counters.background_budget +%= @intCast(self.last_poll_metrics.background_budget);
+    if (self.last_poll_metrics.budget_exhausted_hint) self.poll_runtime_counters.budget_exhausted_frames +%= 1;
+    if (self.last_poll_metrics.active_spillover_hint) self.poll_runtime_counters.active_spillover_frames +%= 1;
+    if (self.last_poll_metrics.background_backlog_hint) self.poll_runtime_counters.background_backlog_frames +%= 1;
 }

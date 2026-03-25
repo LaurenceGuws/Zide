@@ -109,6 +109,17 @@ pub const TerminalWorkspace = struct {
         background_backlog_hint: bool = false,
     };
 
+    pub const PollRuntimeCounters = struct {
+        frames: u64 = 0,
+        active_polled: u64 = 0,
+        background_polled: u64 = 0,
+        active_budget: u64 = 0,
+        background_budget: u64 = 0,
+        budget_exhausted_frames: u64 = 0,
+        active_spillover_frames: u64 = 0,
+        background_backlog_frames: u64 = 0,
+    };
+
     allocator: std.mem.Allocator,
     init_options: TerminalSession.InitOptions,
     tabs: std.ArrayList(Tab),
@@ -118,6 +129,7 @@ pub const TerminalWorkspace = struct {
     input_pressure_index: ?usize,
     poll_metrics_seq: u64,
     last_poll_metrics: PollFrameMetrics,
+    poll_runtime_counters: PollRuntimeCounters,
 
     pub fn init(allocator: std.mem.Allocator, init_options: TerminalSession.InitOptions) TerminalWorkspace {
         return .{
@@ -130,6 +142,7 @@ pub const TerminalWorkspace = struct {
             .input_pressure_index = null,
             .poll_metrics_seq = 0,
             .last_poll_metrics = .{},
+            .poll_runtime_counters = .{},
         };
     }
 
@@ -408,6 +421,10 @@ pub const TerminalWorkspace = struct {
 
     pub fn lastPollFrameMetrics(self: *const TerminalWorkspace) PollFrameMetrics {
         return self.last_poll_metrics;
+    }
+
+    pub fn pollRuntimeCounters(self: *const TerminalWorkspace) PollRuntimeCounters {
+        return self.poll_runtime_counters;
     }
 
     fn indexOfTabId(self: *const TerminalWorkspace, tab_id: TabId) ?usize {

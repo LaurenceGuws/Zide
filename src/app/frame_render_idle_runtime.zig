@@ -69,6 +69,7 @@ pub fn handle(
             if (total_ms >= 1.0) {
                 app_terminal_frame_pacing_runtime.logInputLatency(state, poll_ms, build_ms, update_ms, draw_ms, .{
                     .poll = app_terminal_frame_pacing_runtime.consumePollMetrics(state),
+                    .poll_counters = app_terminal_frame_pacing_runtime.pollCounters(state),
                     .draw = terminal_draw_metrics,
                 });
             }
@@ -86,6 +87,7 @@ pub fn handle(
         if (total_ms >= 1.0) {
             app_terminal_frame_pacing_runtime.logInputLatency(state, poll_ms, build_ms, update_ms, 0.0, .{
                 .poll = app_terminal_frame_pacing_runtime.consumePollMetrics(state),
+                .poll_counters = app_terminal_frame_pacing_runtime.pollCounters(state),
                 .draw = null,
             });
         }

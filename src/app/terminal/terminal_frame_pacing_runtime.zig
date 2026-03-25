@@ -43,8 +43,20 @@ pub const PollMetrics = struct {
     background_backlog_hint: bool,
 };
 
+pub const PollCounters = struct {
+    frames: u64,
+    active_polled: u64,
+    background_polled: u64,
+    active_budget: u64,
+    background_budget: u64,
+    budget_exhausted_frames: u64,
+    active_spillover_frames: u64,
+    background_backlog_frames: u64,
+};
+
 pub const LatencyContext = struct {
     poll: ?PollMetrics = null,
+    poll_counters: ?PollCounters = null,
     draw: ?TerminalDrawLatencyMetrics = null,
 };
 
@@ -114,6 +126,27 @@ pub fn consumePollMetrics(state: anytype) ?PollMetrics {
             .budget_exhausted_hint = metrics.budget_exhausted_hint,
             .active_spillover_hint = metrics.active_spillover_hint,
             .background_backlog_hint = metrics.background_backlog_hint,
+        };
+    }
+
+    return null;
+}
+
+pub fn pollCounters(state: anytype) ?PollCounters {
+    const State = @TypeOf(state.*);
+    if (!@hasField(State, "terminal_workspace")) return null;
+
+    if (state.terminal_workspace) |*workspace| {
+        const counters = workspace.pollRuntimeCounters();
+        return .{
+            .frames = counters.frames,
+            .active_polled = counters.active_polled,
+            .background_polled = counters.background_polled,
+            .active_budget = counters.active_budget,
+            .background_budget = counters.background_budget,
+            .budget_exhausted_frames = counters.budget_exhausted_frames,
+            .active_spillover_frames = counters.active_spillover_frames,
+            .background_backlog_frames = counters.background_backlog_frames,
         };
     }
 
@@ -220,11 +253,12 @@ pub fn logFramePacing(state: anytype, now: f64, snapshot: Snapshot, drew: bool, 
 pub fn logInputLatency(state: anytype, poll_ms: f64, build_ms: f64, update_ms: f64, draw_ms: f64, term_ctx: LatencyContext) void {
     const poll_metrics = term_ctx.poll;
     const draw_metrics = term_ctx.draw;
+    const poll_counters = term_ctx.poll_counters;
 
-    if (poll_metrics != null and draw_metrics != null) {
+    if (poll_metrics != null and draw_metrics != null and poll_counters != null) {
         state.input_latency_logger.logf(
             .info,
-            "poll_ms={d:.2} build_ms={d:.2} update_ms={d:.2} draw_ms={d:.2} term_draw_lock_ms={d:.2} term_draw_cache_copy_ms={d:.2} term_draw_texture_ms={d:.2} term_draw_overlay_ms={d:.2} term_draw_render_ms={d:.2} term_poll_tabs={d} term_poll_total={d} term_poll_active={d}/{d} term_poll_bg={d}/{d} term_poll_bg_inspected={d} term_poll_budget_tabs={d} term_poll_hints={d}/{d}/{d}",
+            "poll_ms={d:.2} build_ms={d:.2} update_ms={d:.2} draw_ms={d:.2} term_draw_lock_ms={d:.2} term_draw_cache_copy_ms={d:.2} term_draw_texture_ms={d:.2} term_draw_overlay_ms={d:.2} term_draw_render_ms={d:.2} term_poll_tabs={d} term_poll_total={d} term_poll_active={d}/{d} term_poll_bg={d}/{d} term_poll_bg_inspected={d} term_poll_budget_tabs={d} term_poll_hints={d}/{d}/{d} term_poll_frames={d} term_poll_totals={d}/{d} term_poll_budget_totals={d}/{d} term_poll_hint_totals={d}/{d}/{d}",
             .{
                 poll_ms,
                 build_ms,
@@ -246,6 +280,14 @@ pub fn logInputLatency(state: anytype, poll_ms: f64, build_ms: f64, update_ms: f
                 @intFromBool(poll_metrics.?.budget_exhausted_hint),
                 @intFromBool(poll_metrics.?.active_spillover_hint),
                 @intFromBool(poll_metrics.?.background_backlog_hint),
+                poll_counters.?.frames,
+                poll_counters.?.active_polled,
+                poll_counters.?.background_polled,
+                poll_counters.?.active_budget,
+                poll_counters.?.background_budget,
+                poll_counters.?.budget_exhausted_frames,
+                poll_counters.?.active_spillover_frames,
+                poll_counters.?.background_backlog_frames,
             },
         );
         return;
@@ -270,10 +312,10 @@ pub fn logInputLatency(state: anytype, poll_ms: f64, build_ms: f64, update_ms: f
         return;
     }
 
-    if (poll_metrics != null) {
+    if (poll_metrics != null and poll_counters != null) {
         state.input_latency_logger.logf(
             .info,
-            "poll_ms={d:.2} build_ms={d:.2} update_ms={d:.2} draw_ms={d:.2} term_poll_tabs={d} term_poll_total={d} term_poll_active={d}/{d} term_poll_bg={d}/{d} term_poll_bg_inspected={d} term_poll_budget_tabs={d} term_poll_hints={d}/{d}/{d}",
+            "poll_ms={d:.2} build_ms={d:.2} update_ms={d:.2} draw_ms={d:.2} term_poll_tabs={d} term_poll_total={d} term_poll_active={d}/{d} term_poll_bg={d}/{d} term_poll_bg_inspected={d} term_poll_budget_tabs={d} term_poll_hints={d}/{d}/{d} term_poll_frames={d} term_poll_totals={d}/{d} term_poll_budget_totals={d}/{d} term_poll_hint_totals={d}/{d}/{d}",
             .{
                 poll_ms,
                 build_ms,
@@ -290,6 +332,14 @@ pub fn logInputLatency(state: anytype, poll_ms: f64, build_ms: f64, update_ms: f
                 @intFromBool(poll_metrics.?.budget_exhausted_hint),
                 @intFromBool(poll_metrics.?.active_spillover_hint),
                 @intFromBool(poll_metrics.?.background_backlog_hint),
+                poll_counters.?.frames,
+                poll_counters.?.active_polled,
+                poll_counters.?.background_polled,
+                poll_counters.?.active_budget,
+                poll_counters.?.background_budget,
+                poll_counters.?.budget_exhausted_frames,
+                poll_counters.?.active_spillover_frames,
+                poll_counters.?.background_backlog_frames,
             },
         );
         return;
