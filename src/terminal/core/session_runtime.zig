@@ -73,6 +73,7 @@ pub fn init(allocator: std.mem.Allocator, rows: u16, cols: u16, options: anytype
         .view_cache_request_offset = std.atomic.Value(u64).init(0),
         .child_exited = std.atomic.Value(bool).init(false),
         .child_exit_code = std.atomic.Value(i32).init(-1),
+        .launch_shell_path = null,
     };
     input_modes.publishSnapshot(session);
     return session;

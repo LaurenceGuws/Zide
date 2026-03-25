@@ -43,9 +43,15 @@ This queue does not own:
     operations obvious and available without relying on the initial buffer.
   - Reuse shared IDE/editor host routing where possible.
   - Progress:
-    - Landed the first shared-host slice: `OptionsBar` now exposes real `File`
-      and `Edit` actions for `New`, `Open`, `Save`, `Save As`, and `Find`
-      instead of static labels.
+    - Landed the first shared top-bar slice: the shared top bar now exposes
+      real `File` and `Edit` actions for `New`, `Open`, `Save`, `Save As`, and
+      `Find` instead of static labels.
+    - The shared top bar is now split into model, geometry, and widget layers,
+      and top-bar action dispatch now lives in a dedicated runtime seam instead
+      of inside mouse input handling.
+    - On Windows, editor and IDE now also reuse that same shared top bar as the
+      left side of one app-owned titleband instead of growing a second
+      editor-only chrome surface.
     - Added a shared status-bar path prompt for `Open` and `Save As` so
       editor-only mode can open/save beyond the initial buffer without
       inventing a separate editor-only dialog stack.
@@ -115,6 +121,9 @@ This queue does not own:
     - Added `Ctrl+G` go-to-line through the shared status-bar prompt surface,
       including `line` and `line:column` input parsing instead of a special
       case dialog.
+    - Fixed literal tab rendering in editor buffers so visual drawing now
+      expands tab input to spaces at the widget boundary instead of drawing a
+      control placeholder glyph that broke row width/layout.
 
 - [ ] `ED-APP-05` Friendly Lua config for editor usage
   - Make common editor behavior easy to configure with sane defaults.

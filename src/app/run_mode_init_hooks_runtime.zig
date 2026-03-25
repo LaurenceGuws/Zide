@@ -29,7 +29,7 @@ fn handleWithMode(
         app_mode,
         state.perf_mode,
         state.perf_file_path,
-        state.startup_file_path,
+        state.startup_file_paths,
         @ptrCast(&runtime_state),
         .{
             .terminal_tab_count = struct {

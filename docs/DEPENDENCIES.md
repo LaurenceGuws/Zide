@@ -105,6 +105,8 @@ macOS by default.
 ### Required tools
 
 - Zig
+- PowerShell
+- Python 3 for `zig build grammar-update`
 
 ### Configure build
 
@@ -115,6 +117,17 @@ zig build
 ```
 
 Current default Windows native target is `x86_64-windows-msvc`.
+
+Current supported Windows-native policy:
+
+- app/library dependencies come from the Zig package graph
+- there is no live `vcpkg` fallback path
+- grammar packs install under `%LOCALAPPDATA%\\Zide\\grammars` by default
+- interactive multi-GUI smoke flow uses:
+  - `zig build gui-smokes-manual`
+
+For the supported Windows runtime/install layout, use
+[`app_architecture/windows/INSTALLATION.md`](../app_architecture/windows/INSTALLATION.md).
 
 ## Terminal Bundle Runtime Notes
 

@@ -1,6 +1,7 @@
 const app_shell = @import("../app_shell.zig");
 const app_active_editor_runtime = @import("editor/active_editor_runtime.zig");
 const app_terminal_frame_pacing_runtime = @import("terminal/terminal_frame_pacing_runtime.zig");
+const app_modes = @import("modes/mod.zig");
 const shared_types = @import("../types/mod.zig");
 const mode_build = @import("mode_build.zig");
 
@@ -90,7 +91,10 @@ pub fn handle(
         }
     }
 
-    const sleep_ms = app_terminal_frame_pacing_runtime.sleepDuration(state, now, terminal_snapshot);
+    var sleep_ms = app_terminal_frame_pacing_runtime.sleepDuration(state, now, terminal_snapshot);
+    if (app_modes.ide.supportsEditorSurface(state.app_mode) and state.shell.integratedWindowChromeSinkActive()) {
+        sleep_ms = @min(sleep_ms, 1.0 / 60.0);
+    }
     app_terminal_frame_pacing_runtime.logFramePacing(state, now, terminal_snapshot, false, 0.0, sleep_ms);
     if (state.shell.windowFocused()) {
         app_shell.waitForWakeOrTimeout(sleep_ms);

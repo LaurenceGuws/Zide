@@ -89,6 +89,7 @@ pub const Theme = struct {
     ui_modified: Color = Color.orange,
     ui_text: Color = Color.fg,
     ui_text_inactive: Color = Color.comment,
+    ui_window_control_fg: Color = Color.fg,
 
     // Syntax colors
     comment_color: Color = Color.comment,

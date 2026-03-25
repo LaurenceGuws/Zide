@@ -14,17 +14,18 @@ pub const FontHinting = iface.FontHinting;
 pub const GlyphOverflowPolicy = iface.GlyphOverflowPolicy;
 pub const TerminalBlinkStyle = iface.TerminalBlinkStyle;
 pub const TerminalDisableLigaturesStrategy = iface.TerminalDisableLigaturesStrategy;
+pub const TerminalWindowChromeMode = iface.TerminalWindowChromeMode;
 pub const TabBarWidthMode = iface.TabBarWidthMode;
 pub const ThemeConfig = iface.ThemeConfig;
 
 fn resolveNamedImportedThemePath(allocator: std.mem.Allocator, name: []const u8) LuaConfigError![]u8 {
     const direct = std.fmt.allocPrint(allocator, "assets/themes/{s}.lua", .{name}) catch return LuaConfigError.OutOfMemory;
-    if (lua_shared.fileExists(direct)) return direct;
-    allocator.free(direct);
+    defer allocator.free(direct);
+    if (try lua_shared.findInstalledAssetPath(allocator, direct)) |path| return path;
 
     const generated = std.fmt.allocPrint(allocator, "assets/themes/generated/{s}.overlay.lua", .{name}) catch return LuaConfigError.OutOfMemory;
-    if (lua_shared.fileExists(generated)) return generated;
-    allocator.free(generated);
+    defer allocator.free(generated);
+    if (try lua_shared.findInstalledAssetPath(allocator, generated)) |path| return path;
 
     return LuaConfigError.InvalidConfig;
 }
@@ -34,7 +35,13 @@ fn loadConfigFromFileZiglua(allocator: std.mem.Allocator, path: []const u8, impo
     defer lua.deinit();
     lua.openLibs();
 
-    const zpath = allocator.dupeZ(u8, path) catch return LuaConfigError.OutOfMemory;
+    const resolved_path = if (std.mem.startsWith(u8, path, "assets/"))
+        (try lua_shared.findInstalledAssetPath(allocator, path)) orelse return LuaConfigError.InvalidConfig
+    else
+        try allocator.dupe(u8, path);
+    defer allocator.free(resolved_path);
+
+    const zpath = allocator.dupeZ(u8, resolved_path) catch return LuaConfigError.OutOfMemory;
     defer allocator.free(zpath);
 
     switch (zlua.lang) {
@@ -75,12 +82,13 @@ fn loadConfigWithImportedThemeOverrideInternal(allocator: std.mem.Allocator, imp
     defer if (user_config_path) |path| allocator.free(path);
     const has_project_config = lua_shared.fileExists(".zide.lua");
 
-    if (lua_shared.fileExists("assets/config/init.lua")) {
+    if (try lua_shared.findInstalledAssetPath(allocator, "assets/config/init.lua")) |init_path| {
+        defer allocator.free(init_path);
         const init_override = if (imported_theme_override != null and user_config_path == null and !has_project_config)
             imported_theme_override
         else
             null;
-        config = try loadConfigFromFileZiglua(allocator, "assets/config/init.lua", init_override);
+        config = try loadConfigFromFileZiglua(allocator, init_path, init_override);
     }
 
     if (user_config_path) |path| {
@@ -121,7 +129,10 @@ pub fn loadAvailableEditorImportedThemes(allocator: std.mem.Allocator) LuaConfig
     defer lua.deinit();
     lua.openLibs();
 
-    const zpath = allocator.dupeZ(u8, "assets/themes/init.lua") catch return LuaConfigError.OutOfMemory;
+    const init_path = (try lua_shared.findInstalledAssetPath(allocator, "assets/themes/init.lua")) orelse return LuaConfigError.InvalidConfig;
+    defer allocator.free(init_path);
+
+    const zpath = allocator.dupeZ(u8, init_path) catch return LuaConfigError.OutOfMemory;
     defer allocator.free(zpath);
 
     switch (zlua.lang) {

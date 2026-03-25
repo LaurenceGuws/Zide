@@ -1,5 +1,6 @@
 const gl = @import("gl.zig");
 const sdl_api = @import("../../platform/sdl_api.zig");
+const windows_app_identity = @import("../../platform/windows_app_identity.zig");
 const app_logger = @import("../../app_logger.zig");
 const std = @import("std");
 
@@ -209,16 +210,20 @@ fn logEglSurfaceContract(window: *sdl.SDL_Window) void {
 }
 
 pub fn initSdl() !void {
+    windows_app_identity.applyCurrentProcess();
+
     if (std.c.getenv("SDL_APP_NAME")) |name| {
         sdl_api.setHint("SDL_APP_NAME", name);
         sdl_api.setHint("SDL_AUDIO_DEVICE_APP_NAME", name);
     } else {
-        sdl_api.setHint("SDL_APP_NAME", "Zide");
-        sdl_api.setHint("SDL_AUDIO_DEVICE_APP_NAME", "Zide");
+        sdl_api.setHint("SDL_APP_NAME", windows_app_identity.displayNameZ());
+        sdl_api.setHint("SDL_AUDIO_DEVICE_APP_NAME", windows_app_identity.displayNameZ());
     }
 
-    if (std.c.getenv("SDL_APP_ID") == null) {
-        sdl_api.setHint("SDL_APP_ID", "com.zide.ide");
+    if (std.c.getenv("SDL_APP_ID")) |app_id| {
+        sdl_api.setHint("SDL_APP_ID", app_id);
+    } else {
+        sdl_api.setHint("SDL_APP_ID", windows_app_identity.appIdZ());
     }
     if (!sdl_api.init(sdl_api.defaultInitFlags())) {
         return error.SdlInitFailed;

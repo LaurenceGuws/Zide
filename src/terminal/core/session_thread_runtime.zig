@@ -6,6 +6,10 @@ pub fn deinit(self: anytype) void {
     if (terminal_transport.Transport.fromSession(self)) |transport| {
         transport.deinit();
     }
+    if (self.launch_shell_path) |path| {
+        self.allocator.free(path);
+        self.launch_shell_path = null;
+    }
     self.render_caches[0].deinit(self.allocator);
     self.render_caches[1].deinit(self.allocator);
     self.io_buffer.deinit(self.allocator);

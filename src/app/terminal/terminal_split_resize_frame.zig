@@ -17,7 +17,7 @@ pub fn handle(
     input_batch: *input_types.InputBatch,
     layout: layout_types.WidgetLayout,
     height: f32,
-    options_bar_height: f32,
+    top_bar_height: f32,
     tab_bar_height: f32,
     status_bar_height: f32,
     resizing_terminal: *bool,
@@ -33,7 +33,7 @@ pub fn handle(
     const separator_y = layout.terminal.y;
     const hit_zone: f32 = 6;
     const over_separator = mouse.y >= separator_y - hit_zone and mouse.y <= separator_y + hit_zone;
-    const max_terminal_h = @max(0, height - options_bar_height - tab_bar_height - status_bar_height);
+    const max_terminal_h = @max(0, height - top_bar_height - tab_bar_height - status_bar_height);
 
     if (!resizing_terminal.* and mouse_down and over_separator) {
         resizing_terminal.* = true;

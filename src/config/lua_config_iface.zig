@@ -46,6 +46,16 @@ pub const TerminalNewTabStartLocationMode = enum {
     default,
 };
 
+pub const TerminalWindowChromeMode = enum {
+    native,
+    integrated,
+};
+
+pub const TerminalShellIconMapping = struct {
+    shell: []u8,
+    icon_path: []u8,
+};
+
 pub const TabBarWidthMode = enum {
     fixed,
     dynamic,
@@ -72,6 +82,7 @@ pub const ThemeConfig = struct {
     ui_modified: ?Color = null,
     ui_text: ?Color = null,
     ui_text_inactive: ?Color = null,
+    ui_window_control_fg: ?Color = null,
     comment_color: ?Color = null,
     string: ?Color = null,
     keyword: ?Color = null,
@@ -154,8 +165,10 @@ pub const Config = struct {
     terminal_blink_style: ?TerminalBlinkStyle,
     terminal_disable_ligatures: ?TerminalDisableLigaturesStrategy,
     terminal_font_features: ?[]u8,
+    terminal_shell_path: ?[]u8,
     terminal_default_start_location: ?[]u8,
     terminal_new_tab_start_location: ?TerminalNewTabStartLocationMode,
+    terminal_window_chrome_mode: ?TerminalWindowChromeMode,
     terminal_scrollback_rows: ?usize,
     terminal_cursor_shape: ?term_types.CursorShape,
     terminal_cursor_blink: ?bool,
@@ -167,6 +180,8 @@ pub const Config = struct {
     terminal_tab_bar_width_mode: ?TabBarWidthMode,
     terminal_focus_report_window: ?bool,
     terminal_focus_report_pane: ?bool,
+    terminal_tab_bar_show_shell_icon: ?bool,
+    terminal_tab_bar_shell_icons: ?[]TerminalShellIconMapping,
     font_lcd: ?bool,
     font_hinting: ?FontHinting,
     font_autohint: ?bool,

@@ -10,4 +10,10 @@ Use it for:
 - platform/API behavior writeups
 - exploratory design investigations
 
+Current subtrees:
+
+- `editor/` — editor reference comparisons and stress-writeups
+- `terminal/` — terminal and platform/present research
+- `windows/` — Win11 shell/context-menu research and validation notes
+
 Current technical authority still belongs in `app_architecture/`.

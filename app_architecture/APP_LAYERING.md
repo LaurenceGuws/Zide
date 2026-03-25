@@ -147,6 +147,10 @@ flowchart TD
 
 AppShell interface:
 - `src/app_shell.zig` exposes a narrow `Shell` surface (init/draw/input accessors).
+- Windows-native window chrome, titlebar integration, and launcher identity are
+  shell/platform capabilities. Product-specific titlebar behavior should follow
+  `app_architecture/windows/CHROME_POLICY.md` rather than being owned directly
+  by IDE/editor/terminal backend code.
 
 Enforcement:
 - `zig build check-app-imports` (widget cross-imports + main/renderer boundary guard).

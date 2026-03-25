@@ -139,6 +139,12 @@ fn loadMaps() *MapTable {
 }
 
 fn configSyntaxPath(allocator: std.mem.Allocator) ?[]u8 {
+    if (@import("builtin").target.os.tag == .windows) {
+        if (std.c.getenv("APPDATA")) |appdata| {
+            const base = std.mem.sliceTo(appdata, 0);
+            return std.fs.path.join(allocator, &.{ base, "Zide", "syntax.lua" }) catch null;
+        }
+    }
     if (std.c.getenv("XDG_CONFIG_HOME")) |xdg| {
         const base = std.mem.sliceTo(xdg, 0);
         return std.fs.path.join(allocator, &.{ base, "zide", "syntax.lua" }) catch null;
@@ -151,10 +157,13 @@ fn configSyntaxPath(allocator: std.mem.Allocator) ?[]u8 {
 }
 
 fn loadLuaMap(allocator: std.mem.Allocator, path: []const u8) !void {
-    const file = if (std.fs.path.isAbsolute(path))
-        std.fs.openFileAbsolute(path, .{})
+    const resolved_path = try resolveMapPath(allocator, path);
+    defer if (resolved_path.ptr != path.ptr) allocator.free(resolved_path);
+
+    const file = if (std.fs.path.isAbsolute(resolved_path))
+        std.fs.openFileAbsolute(resolved_path, .{})
     else
-        std.fs.cwd().openFile(path, .{});
+        std.fs.cwd().openFile(resolved_path, .{});
     const handle = file catch |err| switch (err) {
         error.FileNotFound => return,
         else => return err,
@@ -220,6 +229,35 @@ fn loadLuaMap(allocator: std.mem.Allocator, path: []const u8) !void {
     }
 }
 
+fn resolveMapPath(allocator: std.mem.Allocator, path: []const u8) ![]const u8 {
+    if (std.fs.path.isAbsolute(path) or fileExists(path)) return path;
+
+    const exe_dir = std.fs.selfExeDirPathAlloc(allocator) catch return path;
+    defer allocator.free(exe_dir);
+
+    return resolveMapPathWithBase(allocator, path, exe_dir);
+}
+
+fn resolveMapPathWithBase(allocator: std.mem.Allocator, path: []const u8, base_dir: []const u8) ![]const u8 {
+    const candidate = try std.fs.path.join(allocator, &.{ base_dir, path });
+    errdefer allocator.free(candidate);
+    if (!fileExists(candidate)) {
+        allocator.free(candidate);
+        return path;
+    }
+    return candidate;
+}
+
+fn fileExists(path: []const u8) bool {
+    const file = if (std.fs.path.isAbsolute(path))
+        std.fs.openFileAbsolute(path, .{})
+    else
+        std.fs.cwd().openFile(path, .{});
+    const handle = file catch return false;
+    handle.close();
+    return true;
+}
+
 const Pair = struct {
     key: []const u8,
     value: []const u8,
@@ -255,4 +293,38 @@ test "globMatch handles basic wildcards" {
     try std.testing.expect(globMatch("templates/*.yaml", "templates/values.yaml"));
     try std.testing.expect(globMatch("templates/_*.tpl", "templates/_helpers.tpl"));
     try std.testing.expect(!globMatch("templates/*.yaml", "templates/values.yml"));
+}
+
+test "resolveMapPathWithBase falls back to install layout when cwd lacks syntax assets" {
+    var tmp = std.testing.tmpDir(.{});
+    defer tmp.cleanup();
+
+    try tmp.dir.makePath("install/assets/syntax");
+    try tmp.dir.makePath("cwd");
+
+    {
+        const file = try tmp.dir.createFile("install/assets/syntax/generated.lua", .{});
+        file.close();
+    }
+
+    const root_path = try tmp.dir.realpathAlloc(std.testing.allocator, ".");
+    defer std.testing.allocator.free(root_path);
+
+    const install_path = try std.fs.path.join(std.testing.allocator, &.{ root_path, "install" });
+    defer std.testing.allocator.free(install_path);
+
+    const cwd_path = try std.fs.path.join(std.testing.allocator, &.{ root_path, "cwd" });
+    defer std.testing.allocator.free(cwd_path);
+
+    const previous_cwd = try std.process.getCwdAlloc(std.testing.allocator);
+    defer std.testing.allocator.free(previous_cwd);
+    try std.posix.chdir(cwd_path);
+    defer std.posix.chdir(previous_cwd) catch {};
+
+    const resolved = try resolveMapPathWithBase(std.testing.allocator, "assets/syntax/generated.lua", install_path);
+    defer if (resolved.ptr != "assets/syntax/generated.lua".ptr) std.testing.allocator.free(resolved);
+
+    const expected = try std.fs.path.join(std.testing.allocator, &.{ install_path, "assets/syntax/generated.lua" });
+    defer std.testing.allocator.free(expected);
+    try std.testing.expectEqualStrings(expected, resolved);
 }

@@ -31,6 +31,10 @@ const screenshot = @import("renderer/screenshot.zig");
 const input_runtime = @import("renderer/input_runtime.zig");
 const font_runtime = @import("renderer/font_runtime.zig");
 const text_runtime = @import("renderer/text_runtime.zig");
+const window_chrome_runtime = @import("renderer/window_chrome_runtime.zig");
+const windows_snap_layout_sink = @import("../platform/windows_snap_layout_sink.zig");
+const windows_frame_material = @import("../platform/windows_frame_material.zig");
+const windows_integrated_frame = @import("../platform/windows_integrated_frame.zig");
 const glyph_cache = @import("glyph_cache.zig");
 const platform_window = @import("../platform/window.zig");
 const platform_input_events = @import("../platform/input_events.zig");
@@ -41,6 +45,7 @@ const sdl_api = @import("../platform/sdl_api.zig");
 const sdl_input = @import("renderer/sdl_input.zig");
 const types = @import("renderer/types.zig");
 const app_logger = @import("../app_logger.zig");
+const builtin = @import("builtin");
 
 const sdl = gl.c;
 const TextPress = platform_input_events.TextPress;
@@ -321,6 +326,9 @@ pub const Renderer = struct {
         pad_px: ?f32 = null,
     };
 
+    pub const WindowChromeMode = window_chrome_runtime.WindowChromeMode;
+    pub const WindowChromeContract = window_chrome_runtime.WindowChromeContract;
+
     allocator: std.mem.Allocator,
     window: *sdl.SDL_Window,
     gl_context: sdl.SDL_GLContext,
@@ -402,6 +410,11 @@ pub const Renderer = struct {
     terminal_scroll_target: ?RenderTarget,
     editor_target: ?RenderTarget,
     scene_target: SceneTargetState,
+    window_chrome: WindowChromeContract,
+    window_chrome_applied_mode: WindowChromeMode,
+    window_frame_material_applied: windows_frame_material.Policy,
+    window_integrated_frame: windows_integrated_frame.FrameOwner,
+    window_snap_sink: windows_snap_layout_sink.Sink,
 
     theme: Theme,
     mouse_scale: MousePos,
@@ -477,14 +490,41 @@ pub const Renderer = struct {
         owned: ?[]u8,
     };
 
-    fn dupFontPath(allocator: std.mem.Allocator, raw_opt: ?[]const u8) !OwnedFontPath {
-        if (raw_opt) |raw| {
+    fn resolveFontPath(allocator: std.mem.Allocator, raw: []const u8) !OwnedFontPath {
+        if (std.fs.path.isAbsolute(raw)) {
             const owned = try allocator.alloc(u8, raw.len + 1);
             std.mem.copyForwards(u8, owned[0..raw.len], raw);
             owned[raw.len] = 0;
             return .{ .path = @ptrCast(owned.ptr), .owned = owned };
         }
-        return .{ .path = FONT_PATH, .owned = null };
+
+        if (std.fs.cwd().openFile(raw, .{})) |file| {
+            file.close();
+            const owned = try allocator.alloc(u8, raw.len + 1);
+            std.mem.copyForwards(u8, owned[0..raw.len], raw);
+            owned[raw.len] = 0;
+            return .{ .path = @ptrCast(owned.ptr), .owned = owned };
+        } else |_| {}
+
+        const exe_dir = std.fs.selfExeDirPathAlloc(allocator) catch null;
+        defer if (exe_dir) |dir| allocator.free(dir);
+
+        if (exe_dir) |dir| {
+            const joined = try std.fs.path.join(allocator, &.{ dir, raw });
+            return .{ .path = @ptrCast(joined.ptr), .owned = joined };
+        }
+
+        const owned = try allocator.alloc(u8, raw.len + 1);
+        std.mem.copyForwards(u8, owned[0..raw.len], raw);
+        owned[raw.len] = 0;
+        return .{ .path = @ptrCast(owned.ptr), .owned = owned };
+    }
+
+    fn dupFontPath(allocator: std.mem.Allocator, raw_opt: ?[]const u8) !OwnedFontPath {
+        if (raw_opt) |raw| {
+            return try resolveFontPath(allocator, raw);
+        }
+        return try resolveFontPath(allocator, std.mem.span(FONT_PATH));
     }
 
     pub fn init(allocator: std.mem.Allocator, width: i32, height: i32, title: [*:0]const u8, init_options: InitOptions) !*Renderer {
@@ -628,6 +668,11 @@ pub const Renderer = struct {
             .terminal_scroll_target = null,
             .editor_target = null,
             .scene_target = .{},
+            .window_chrome = .{},
+            .window_chrome_applied_mode = .native,
+            .window_frame_material_applied = .{},
+            .window_integrated_frame = .{},
+            .window_snap_sink = .{},
             .theme = .{},
             .mouse_scale = .{ .x = 1.0, .y = 1.0 },
             .render_scale = render_scale,
@@ -769,6 +814,8 @@ pub const Renderer = struct {
         });
 
         sdl_api.stopTextInput(self.window);
+        self.window_integrated_frame.deinit();
+        self.window_snap_sink.deinit();
         sdl_api.glDeleteContext(self.gl_context);
         sdl.SDL_DestroyWindow(self.window);
         sdl.SDL_Quit();
@@ -1350,10 +1397,6 @@ pub const Renderer = struct {
         text_runtime.drawChar(self, char, x, y, color);
     }
 
-    pub fn drawLine(self: *Renderer, x1: i32, y1: i32, x2: i32, y2: i32, color: Color) void {
-        shape_draw.drawLine(drawRectThunk, self, x1, y1, x2, y2, color);
-    }
-
     pub fn beginClip(self: *Renderer, x: i32, y: i32, w: i32, h: i32) void {
         gl.Enable(gl.c.GL_SCISSOR_TEST);
         const scale_x = @as(f32, @floatFromInt(self.target_pixel_width)) / @as(f32, @floatFromInt(self.target_width));
@@ -1540,6 +1583,114 @@ pub const Renderer = struct {
 
     pub fn getMonitorSize(self: *Renderer) MousePos {
         return platform_window.getMonitorSize(self.window);
+    }
+
+    pub fn setWindowChrome(self: *Renderer, contract: WindowChromeContract) void {
+        self.window_chrome = if (builtin.target.os.tag == .windows) contract else .{};
+        if (builtin.target.os.tag != .windows) return;
+
+        const material_policy = windows_frame_material.policyForChromeMode(self.window_chrome.mode, self.window_focused);
+        if (!std.meta.eql(self.window_frame_material_applied, material_policy)) {
+            windows_frame_material.apply(self.window, material_policy);
+            self.window_frame_material_applied = material_policy;
+        }
+
+        const integrated = self.window_chrome.mode != .native;
+        if (self.window_chrome_applied_mode != self.window_chrome.mode) {
+            self.window_chrome_applied_mode = self.window_chrome.mode;
+
+            if (!sdl_api.setWindowBordered(self.window, !integrated)) {
+                app_logger.logger("sdl.window").logStdout(.warning, "SDL_SetWindowBordered failed integrated={d} err={s}", .{
+                    @intFromBool(integrated),
+                    sdl_api.getError(),
+                });
+            }
+            if (!sdl_api.setWindowHitTest(
+                self.window,
+                if (integrated) windowHitTestCallback else null,
+                if (integrated) @ptrCast(self) else null,
+            )) {
+                app_logger.logger("sdl.window").logStdout(.warning, "SDL_SetWindowHitTest failed integrated={d} err={s}", .{
+                    @intFromBool(integrated),
+                    sdl_api.getError(),
+                });
+            }
+            _ = sdl_api.syncWindow(self.window);
+        }
+
+        self.window_integrated_frame.sync(self.window, self.window_chrome.mode, self.windowIsMaximized(), self.windowIsFullscreen());
+        self.window_snap_sink.sync(self.window, self.window_chrome, self.windowIsMaximized());
+    }
+
+    pub fn minimizeWindow(self: *Renderer) bool {
+        if (builtin.target.os.tag != .windows) return false;
+        return sdl_api.minimizeWindow(self.window);
+    }
+
+    pub fn showWindowSystemMenu(self: *Renderer, x: i32, y: i32) bool {
+        if (builtin.target.os.tag != .windows) return false;
+        return sdl_api.showWindowSystemMenu(self.window, x, y);
+    }
+
+    pub fn toggleMaximizeWindow(self: *Renderer) bool {
+        if (builtin.target.os.tag != .windows) return false;
+        return if (self.windowIsMaximized())
+            sdl_api.restoreWindow(self.window)
+        else
+            sdl_api.maximizeWindow(self.window);
+    }
+
+    pub fn windowIsMaximized(self: *Renderer) bool {
+        return (sdl_api.getWindowFlags(self.window) & sdl.SDL_WINDOW_MAXIMIZED) != 0;
+    }
+
+    pub fn windowIsFullscreen(self: *Renderer) bool {
+        return (sdl_api.getWindowFlags(self.window) & sdl.SDL_WINDOW_FULLSCREEN) != 0;
+    }
+
+    pub fn integratedWindowChromeSinkActive(self: *const Renderer) bool {
+        return self.window_snap_sink.active();
+    }
+
+    pub fn integratedWindowChromeMinimizeHovered(self: *const Renderer) bool {
+        return self.window_snap_sink.minimizeHovered();
+    }
+
+    pub fn integratedWindowChromeMaximizeHovered(self: *const Renderer) bool {
+        return self.window_snap_sink.maximizeHovered();
+    }
+
+    pub fn integratedWindowChromeCloseHovered(self: *const Renderer) bool {
+        return self.window_snap_sink.closeHovered();
+    }
+
+    pub fn integratedWindowChromeMinimizePressed(self: *const Renderer) bool {
+        return self.window_snap_sink.minimizePressed();
+    }
+
+    pub fn integratedWindowChromeMaximizePressed(self: *const Renderer) bool {
+        return self.window_snap_sink.maximizePressed();
+    }
+
+    pub fn integratedWindowChromeClosePressed(self: *const Renderer) bool {
+        return self.window_snap_sink.closePressed();
+    }
+
+    pub fn integratedWindowChromeSinkOwnsChrome(self: *const Renderer) bool {
+        return self.window_snap_sink.ownsChrome();
+    }
+
+    fn windowHitTestCallback(_: ?*sdl.SDL_Window, area: [*c]const sdl.SDL_Point, data: ?*anyopaque) callconv(.c) sdl_api.HitTestResult {
+        const raw = data orelse return sdl.SDL_HITTEST_NORMAL;
+        const self: *Renderer = @ptrCast(@alignCast(raw));
+        return window_chrome_runtime.hitTest(
+            self.window_chrome,
+            self.width,
+            self.height,
+            self.windowIsMaximized(),
+            @floatFromInt(area.*.x),
+            @floatFromInt(area.*.y),
+        );
     }
 
     pub const WindowMetrics = platform_window.WindowMetrics;

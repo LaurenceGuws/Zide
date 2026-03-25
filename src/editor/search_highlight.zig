@@ -149,7 +149,16 @@ pub fn SearchHighlightOps(comptime Editor: type) type {
                 return;
             }
             self.setHighlightPending(true);
-            log.logf(.info, "highlight scheduled path=\"{s}\"", .{path orelse ""});
+            log.logf(
+                .info,
+                "highlight scheduled path=\"{s}\" lang={s} manual_parser={s} manual_mode={s}",
+                .{
+                    path orelse "",
+                    lang orelse "(none)",
+                    if (manual_override) |spec| spec.parser else "(none)",
+                    if (manual_override) |spec| @tagName(spec.mode) else "(none)",
+                },
+            );
         }
 
         pub fn tryInitHighlighter(self: *Editor, path: ?[]const u8) !void {
@@ -159,6 +168,16 @@ pub fn SearchHighlightOps(comptime Editor: type) type {
             const lang = syntax_registry_mod.SyntaxRegistry.resolveLanguage(path);
             const manual_override = manual_highlights_mod.resolve(path, lang);
             const effective_lang = if (manual_override) |spec| spec.parser else lang;
+            log.logf(
+                .info,
+                "highlight language decision path=\"{s}\" lang={s} manual_parser={s} effective_lang={s}",
+                .{
+                    path orelse "",
+                    lang orelse "(none)",
+                    if (manual_override) |spec| spec.parser else "(none)",
+                    effective_lang orelse "(none)",
+                },
+            );
             if (effective_lang == null) {
                 if (self.doc.highlighter) |h| {
                     h.destroy();

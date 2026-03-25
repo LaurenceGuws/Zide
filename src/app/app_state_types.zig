@@ -2,6 +2,7 @@ const std = @import("std");
 const app_bootstrap = @import("bootstrap.zig");
 const mode_build = @import("mode_build.zig");
 const app_modes = @import("modes/mod.zig");
+const terminal_shell_icon_runtime = @import("terminal/terminal_shell_icon_runtime.zig");
 const editor_types = @import("../editor/types.zig");
 const app_logger = @import("../app_logger.zig");
 const terminal_mod = @import("../terminal/core/terminal.zig");
@@ -69,7 +70,7 @@ pub const Shell = app_shell.Shell;
 pub const FrameSubmission = app_shell.FrameSubmission;
 
 pub const TabBar = widgets.TabBar;
-pub const OptionsBar = widgets.OptionsBar;
+pub const SharedTopBar = widgets.SharedTopBar;
 pub const SideNav = widgets.SideNav;
 pub const StatusBar = widgets.StatusBar;
 pub const TerminalWidget = widgets.TerminalWidget;
@@ -80,9 +81,18 @@ pub const InputRouter = input_actions.InputRouter;
 pub const EditorMode = app_modes.backend.EditorMode;
 pub const TerminalMode = app_modes.backend.TerminalMode;
 pub const FontSampleView = font_sample_view_mod.FontSampleView;
+pub const TerminalWindowChromeMode = @import("../config/lua_config.zig").TerminalWindowChromeMode;
+pub const TerminalShellIconMapping = @import("../config/lua_config.zig").TerminalShellIconMapping;
+pub const TerminalShellIconCache = terminal_shell_icon_runtime.ShellIconCache;
 pub const TerminalNewTabStartLocationMode = enum {
     current,
     default,
+};
+
+pub const WindowCaptionButton = enum {
+    minimize,
+    maximize_restore,
+    close,
 };
 
 pub const TerminalFramePacingState = struct {
@@ -124,9 +134,14 @@ pub const PathPromptKind = enum {
     confirm_close_dirty,
 };
 
+pub const PathPromptPendingAction = enum {
+    close_active_editor,
+};
+
 pub const PathPromptState = struct {
     active: bool,
     kind: ?PathPromptKind,
+    pending_action: ?PathPromptPendingAction,
     query: std.ArrayList(u8),
     select_all: bool,
     error_text: ?[]const u8,
@@ -135,6 +150,7 @@ pub const PathPromptState = struct {
         return .{
             .active = false,
             .kind = null,
+            .pending_action = null,
             .query = std.ArrayList(u8).empty,
             .select_all = false,
             .error_text = null,

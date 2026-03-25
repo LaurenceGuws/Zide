@@ -46,6 +46,11 @@ Quick reading guide:
 - `app_architecture/ui/DEVELOPMENT_JOURNEY.md` — renderer plan and per-OS journey.
 - `app_architecture/APP_LAYERING.md` — module boundaries and import rules.
 - `app_architecture/DEPENDENCIES.md` — dependency packaging architecture notes and migration constraints.
+- `app_architecture/windows/INSTALLATION.md` — supported Windows install layout and first installer path.
+- `app_architecture/windows/NATIVE_SHELL_INTEGRATION.md` — deferred-scope note for advanced Windows shell integration beyond the active packaged Explorer lane.
+- `app_architecture/windows/EXPLORER_COMMAND_INTEGRATION.md` — active packaged `IExplorerCommand` lane for top-level Win11 Explorer integration.
+- `app_architecture/windows/CHROME_POLICY.md` — Windows shell-service vs product-chrome ownership split.
+- `app_architecture/windows/SNAP_LAYOUT_INTEROP.md` — persistent sink design for Win11 Snap Layout hover in integrated terminal chrome.
 - `app_architecture/tools/DOCS_EXPLORER.md` — local docs-explorer scope, ownership, and constraints.
 - `app_architecture/editor/DESIGN.md` — editor architecture + references.
 - `app_architecture/editor/FFI_DESIGN.md` — editor FFI boundary, ABI shape, and ownership rules.
@@ -82,14 +87,19 @@ Quick reading guide:
 - `docs/reference/README.md` — reference-doc placement and role.
 - `docs/research/README.md` — research-doc placement and role.
 - `docs/research/editor/README.md` — editor research subtree entrypoint.
+- `docs/research/windows/README.md` — Windows shell/context-menu research subtree entrypoint.
 - `docs/research/editor/EDITOR_REFERENCE_COMPARISON_2026-03-18.md` — first focused editor reference comparison by concern.
 - `docs/research/editor/EDITOR_STRESS_RITUAL_2026-03-18.md` — first repeatable local editor stress workload and recording ritual.
 - `docs/research/terminal/README.md` — terminal research subtree entrypoint.
+- `docs/research/windows/WIN11_EXPLORER_COMMAND_REFERENCE_2026-03-25.md` — packaged Win11 Explorer command reference shape and Zide alignment.
+- `docs/research/windows/WIN11_EXPLORER_COMMAND_MULTISELECT_2026-03-25.md` — local evidence and option framing for Win11 Explorer multi-select behavior.
+- `docs/research/windows/WIN11_EXPLORER_COMMAND_VALIDATION_2026-03-25.md` — current packaged Win11 Explorer validation ritual and open verification questions.
 - `docs/research/terminal/TERMINAL_LAYER_REFERENCE_NOTES.md` — per-layer reference-terminal notes behind the high-level terminal design doc.
 - `docs/research/terminal/TERMINAL_FFI_PERFORMANCE_REVIEW_2026-03-15.md` — current terminal FFI hot-path performance review and snapshot-boundary constraints.
 - `docs/reference/terminal_compatibility.md` — terminal compatibility, TERM identity, and terminfo install instructions.
 - `docs/reference/terminal_redraw_capture_workflow.md` — redraw capture and replay-authority workflow for real terminal repros.
 - `docs/reference/terminal_flutter_adapter_notes.md` — Flutter-style host adapter notes for the terminal bridge.
+- `docs/reference/windows_win11_shell_validation.md` — repeatable local build/install/manual-check ritual for packaged Win11 Explorer integration.
 - `docs/research/terminal/wayland_present/` — platform/present research and reference writeups for the Wayland present lane.
 
 ## Reviews And Audits
@@ -112,3 +122,9 @@ under `docs/review/archive/`.
 - `app_architecture/` is for current designs, boundaries, and technical authority.
 - `docs/research/` and `docs/reference/` are for exploratory and reference material that should not masquerade as current architecture authority.
 - `docs/review/` is for historical reviews, audits, and investigation records.
+
+## Current Windows Scope Note
+
+- First stable Windows shell scope is the packaged Win11 Explorer command lane.
+- Legacy classic Explorer verbs are not the supported product surface.
+- Windows default terminal integration is deferred indefinitely.

@@ -4,6 +4,7 @@ const build_options = @import("build_options");
 const mode_build = @import("mode_build.zig");
 const app_font_rendering = @import("font_rendering.zig");
 const app_theme_utils = @import("theme_utils.zig");
+const app_terminal_shell_icon_runtime = @import("terminal/terminal_shell_icon_runtime.zig");
 const app_ui_layout_runtime = @import("ui_layout_runtime.zig");
 const app_tab_bar_width = @import("tabs/tab_bar_width.zig");
 const app_modes = @import("modes/mod.zig");
@@ -40,11 +41,19 @@ fn mapTerminalNewTabStartLocationMode(mode: ?config_mod.TerminalNewTabStartLocat
     };
 }
 
+fn mapTerminalWindowChromeMode(mode: ?config_mod.TerminalWindowChromeMode) app_types.TerminalWindowChromeMode {
+    return mode orelse .native;
+}
+
 fn resolveTerminalDefaultStartLocation(
     allocator: std.mem.Allocator,
     configured: ?[]const u8,
 ) !?[]u8 {
-    const home = if (std.c.getenv("HOME")) |value| std.mem.sliceTo(value, 0) else null;
+    const home = blk: {
+        if (std.c.getenv("HOME")) |value| break :blk std.mem.sliceTo(value, 0);
+        if (std.c.getenv("USERPROFILE")) |value| break :blk std.mem.sliceTo(value, 0);
+        break :blk null;
+    };
     const raw = configured orelse home orelse return null;
     if (raw.len == 0) return null;
 
@@ -55,6 +64,15 @@ fn resolveTerminalDefaultStartLocation(
         }
     }
 
+    return try allocator.dupe(u8, raw);
+}
+
+fn resolveTerminalShellPath(
+    allocator: std.mem.Allocator,
+    configured: ?[]const u8,
+) !?[]u8 {
+    const raw = configured orelse return null;
+    if (raw.len == 0) return null;
     return try allocator.dupe(u8, raw);
 }
 
@@ -81,6 +99,7 @@ fn initWithMode(
     defer config_mod.freeConfig(allocator, &config);
 
     try manual_highlights_mod.applyConfig(allocator, &config);
+    errdefer manual_highlights_mod.reset();
 
     app_logger.resetConfig();
     if (config.log_file_filter) |filter| {
@@ -174,7 +193,7 @@ fn initWithMode(
         try allocator.dupe(u8, std.mem.sliceTo(raw, 0))
     else
         null;
-    const startup_file_path = app_bootstrap.parseStartupFilePath(allocator);
+    const startup_file_paths = app_bootstrap.parseStartupFilePaths(allocator);
     const perf_mode = perf_file_path != null;
     const perf_frames_total: u64 = if (perf_mode)
         app_bootstrap.parseEnvU64("ZIDE_EDITOR_PERF_FRAMES", 240)
@@ -227,6 +246,16 @@ fn initWithMode(
         config.terminal_default_start_location,
     );
     errdefer if (terminal_default_start_location) |path| allocator.free(path);
+    const terminal_shell_path = try resolveTerminalShellPath(
+        allocator,
+        config.terminal_shell_path,
+    );
+    errdefer if (terminal_shell_path) |path| allocator.free(path);
+    const terminal_tab_bar_shell_icons = try app_terminal_shell_icon_runtime.dupMappings(
+        allocator,
+        config.terminal_tab_bar_shell_icons,
+    );
+    errdefer app_terminal_shell_icon_runtime.freeMappings(allocator, terminal_tab_bar_shell_icons);
     const bootstrap_opts = app_modes.backend.bootstrap.BootstrapOptions{
         .seed_editor_tab = false,
         .seed_terminal_tab = false,
@@ -241,7 +270,7 @@ fn initWithMode(
     state.* = .{
         .allocator = allocator,
         .shell = shell,
-        .options_bar = .{},
+        .top_bar = .{},
         .tab_bar = widgets.TabBar.init(allocator),
         .side_nav = .{},
         .status_bar = .{},
@@ -264,8 +293,15 @@ fn initWithMode(
         .terminal_blink_style = terminal_blink_style,
         .terminal_cursor_style = terminal_cursor_style,
         .terminal_scrollback_rows = config.terminal_scrollback_rows,
+        .terminal_shell_path = terminal_shell_path,
         .terminal_default_start_location = terminal_default_start_location,
         .terminal_new_tab_start_location = mapTerminalNewTabStartLocationMode(config.terminal_new_tab_start_location),
+        .terminal_window_chrome_mode = mapTerminalWindowChromeMode(config.terminal_window_chrome_mode),
+        .pressed_window_caption_button = null,
+        .hovered_window_caption_button = null,
+        .terminal_tab_bar_show_shell_icon = config.terminal_tab_bar_show_shell_icon orelse false,
+        .terminal_tab_bar_shell_icons = terminal_tab_bar_shell_icons,
+        .terminal_shell_icon_cache = app_terminal_shell_icon_runtime.ShellIconCache.init(allocator),
         .editor_tab_bar_width_mode = app_tab_bar_width.mapMode(config.editor_tab_bar_width_mode),
         .terminal_tab_bar_show_single_tab = config.terminal_tab_bar_show_single_tab orelse false,
         .terminal_tab_bar_width_mode = app_tab_bar_width.mapMode(config.terminal_tab_bar_width_mode),
@@ -315,7 +351,7 @@ fn initWithMode(
         .perf_frames_done = 0,
         .perf_scroll_delta = perf_scroll_delta,
         .perf_file_path = perf_file_path,
-        .startup_file_path = startup_file_path,
+        .startup_file_paths = startup_file_paths,
         .perf_logger = perf_log,
         .last_input = shared_types.input.InputSnapshot.init(.{ .x = 0, .y = 0 }, .{}),
         .app_mode = app_mode,
@@ -355,6 +391,7 @@ fn initWithMode(
                     app_tab_bar_width.applyForMode(
                         &cb_state.tab_bar,
                         cb_state.app_mode,
+                        cb_state.terminal_window_chrome_mode,
                         cb_state.editor_tab_bar_width_mode,
                         cb_state.terminal_tab_bar_width_mode,
                     );
@@ -365,6 +402,7 @@ fn initWithMode(
     app_tab_bar_width.applyForMode(
         &state.tab_bar,
         state.app_mode,
+        state.terminal_window_chrome_mode,
         state.editor_tab_bar_width_mode,
         state.terminal_tab_bar_width_mode,
     );

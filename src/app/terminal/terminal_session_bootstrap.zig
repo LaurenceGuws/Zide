@@ -14,6 +14,13 @@ const win32 = if (@import("builtin").os.tag == .windows) struct {
     pub extern "kernel32" fn SetEnvironmentVariableA(lpName: [*:0]const u8, lpValue: ?[*:0]const u8) callconv(.winapi) i32;
 } else struct {};
 
+fn getEnvVarOwned(allocator: std.mem.Allocator, name: []const u8) !?[]u8 {
+    return std.process.getEnvVarOwned(allocator, name) catch |err| switch (err) {
+        error.EnvironmentVariableNotFound => null,
+        else => return err,
+    };
+}
+
 fn setLaunchCwdEnv(value: ?[*:0]const u8) void {
     if (@import("builtin").os.tag == .windows) {
         _ = win32.SetEnvironmentVariableA("ZIDE_LAUNCH_CWD", value);
@@ -26,27 +33,63 @@ fn setLaunchCwdEnv(value: ?[*:0]const u8) void {
     }
 }
 
-pub fn startSessionWithShellCellSize(term: *TerminalSession, shell: *Shell, launch_cwd: ?[]const u8) !void {
+fn resolveLaunchShellPathOwned(
+    allocator: std.mem.Allocator,
+    configured_shell_path: ?[]const u8,
+    env_shell_override: ?[]const u8,
+) !?[]u8 {
+    if (env_shell_override) |value| {
+        if (value.len > 0) return try allocator.dupe(u8, value);
+    }
+    if (configured_shell_path) |value| {
+        if (value.len > 0) return try allocator.dupe(u8, value);
+    }
+    if (@import("builtin").os.tag == .windows) {
+        return try allocator.dupe(u8, "cmd.exe");
+    }
+    if (std.c.getenv("SHELL")) |value| {
+        const shell = std.mem.sliceTo(value, 0);
+        if (shell.len > 0) return try allocator.dupe(u8, shell);
+    }
+    return null;
+}
+
+pub fn startSessionWithShellCellSize(
+    term: *TerminalSession,
+    shell: *Shell,
+    launch_cwd: ?[]const u8,
+    configured_shell_path: ?[]const u8,
+) !void {
     term.setCellSize(
         @intFromFloat(shell.terminalCellWidth()),
         @intFromFloat(shell.terminalCellHeight()),
     );
-    const shell_override = if (std.c.getenv("ZIDE_TERMINAL_SHELL")) |value|
-        std.mem.sliceTo(value, 0)
+    const env_shell_override = try getEnvVarOwned(term.allocator, "ZIDE_TERMINAL_SHELL");
+    defer if (env_shell_override) |value| term.allocator.free(value);
+    const shell_override = env_shell_override orelse configured_shell_path;
+    const shell_override_z = if (shell_override) |value|
+        try term.allocator.dupeZ(u8, value)
     else
         null;
-    const previous_launch_cwd = if (std.c.getenv("ZIDE_LAUNCH_CWD")) |value|
-        try term.allocator.dupeZ(u8, std.mem.sliceTo(value, 0))
-    else
-        null;
+    defer if (shell_override_z) |value| term.allocator.free(value);
+    const previous_launch_cwd = try getEnvVarOwned(term.allocator, "ZIDE_LAUNCH_CWD");
     defer if (previous_launch_cwd) |value| term.allocator.free(value);
     defer {
         if (previous_launch_cwd) |value| {
-            setLaunchCwdEnv(value.ptr);
+            if (term.allocator.dupeZ(u8, value)) |z_value| {
+                defer term.allocator.free(z_value);
+                setLaunchCwdEnv(z_value.ptr);
+            } else |_| {
+                setLaunchCwdEnv(null);
+            }
         } else {
             setLaunchCwdEnv(null);
         }
     }
+
+    const launch_shell_path = try resolveLaunchShellPathOwned(term.allocator, configured_shell_path, env_shell_override);
+    defer if (launch_shell_path) |value| term.allocator.free(value);
+    try term.setLaunchShellPath(launch_shell_path);
 
     if (launch_cwd) |cwd| {
         const z_cwd = try term.allocator.dupeZ(u8, cwd);
@@ -56,7 +99,10 @@ pub fn startSessionWithShellCellSize(term: *TerminalSession, shell: *Shell, laun
         setLaunchCwdEnv(null);
     }
 
-    try term.start(if (shell_override) |value| value else null);
+    try term.start(if (shell_override_z) |value|
+        value
+    else
+        null);
 }
 
 pub fn initWidget(

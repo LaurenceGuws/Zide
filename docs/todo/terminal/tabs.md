@@ -51,6 +51,40 @@ Lower-layer ownership is in the right place: the backend workspace exists and te
   `codex resume --search ...` or `zig build test` instead of only the short
   process basename. Presentation stays host-owned in the tab sync layer; the
   backend only exports raw process label plus compact command summary facts.
+  Follow-up (2026-03-20): terminal tabs may now also project an optional
+  config-owned shell PNG ahead of the label. The shell identity is captured per
+  session at launch time, resolved to a PNG path through
+  `terminal.tab_bar.shell_icons`, and then drawn from a small runtime texture
+  cache. This stays presentation-owned; the backend exports shell identity, not
+  icon assets.
+
+### TABS-02A Terminal-Only Native Chrome Projection
+
+- [x] `TABS-02A-01` Separate terminal tab ownership from terminal tab chrome policy
+  - The backend workspace remains the source of truth for tabs.
+  - Terminal-only presentation may now have more than one chrome projection:
+    - ordinary content-row tab bar
+    - integrated titlebar tab strip
+  - First implementation target:
+    - Windows native chrome integration
+
+- [x] `TABS-02A-02` Stop assuming terminal tabs may always consume the full available row
+  - Current default `terminal.tab_bar.width_mode = "dynamic"` fits the
+    standalone content-row bar, but not an integrated titlebar strip.
+  - Integrated chrome must use compact tab presentation and should not stretch
+    tabs to fill the full bar like content chrome.
+  - Current state:
+    - integrated terminal chrome now uses a compact internal width policy
+      instead of the ordinary full-width fill behavior
+
+- [x] `TABS-02A-03` Keep tab drag/reorder/close semantics stable across both chrome projections
+  - The projection may change.
+  - Backend tab ids, active-tab behavior, close-confirm policy, and reorder
+    semantics must not change with the chrome mode.
+  - Current state:
+    - integrated-titleband hit testing, click routing, drag/reorder width, and
+      close behavior now use the compact strip geometry without changing
+      backend workspace ownership
 
 ### TABS-03 FFI Extension For Workspace/Tabs
 

@@ -29,10 +29,54 @@ pub fn parseArgs(allocator: std.mem.Allocator) !Config {
     const argv = try std.process.argsAlloc(allocator);
     defer std.process.argsFree(allocator, argv);
     var args = SliceArgsIterator([]const u8){ .items = argv[1..] };
-    return parseIterator(allocator, &args);
+    return parseIterator(allocator, &args, true);
 }
 
-fn parseIterator(allocator: std.mem.Allocator, args: anytype) !Config {
+pub fn applyKnownOverridesFromProcessArgs(allocator: std.mem.Allocator) !void {
+    const argv = try std.process.argsAlloc(allocator);
+    defer std.process.argsFree(allocator, argv);
+    var args = SliceArgsIterator([]const u8){ .items = argv[1..] };
+    var config = try parseIterator(allocator, &args, false);
+    defer config.deinit(allocator);
+    try applyEnv(&config, allocator);
+}
+
+pub fn parseLaunchCwdsFromProcessArgs(allocator: std.mem.Allocator) !?[][]u8 {
+    const argv = try std.process.argsAlloc(allocator);
+    defer std.process.argsFree(allocator, argv);
+
+    var values = std.ArrayList([]u8).empty;
+    defer {
+        if (values.capacity > 0) {
+            for (values.items) |value| allocator.free(value);
+            values.deinit(allocator);
+        }
+    }
+
+    var i: usize = 1;
+    while (i < argv.len) : (i += 1) {
+        const arg = argv[i];
+        if (std.mem.eql(u8, arg, "--cwd")) {
+            if (i + 1 >= argv.len) return error.MissingCwd;
+            i += 1;
+            const owned = try allocator.dupe(u8, argv[i]);
+            errdefer allocator.free(owned);
+            try values.append(allocator, owned);
+            continue;
+        }
+        if (std.mem.startsWith(u8, arg, "--cwd=")) {
+            const owned = try allocator.dupe(u8, arg["--cwd=".len..]);
+            errdefer allocator.free(owned);
+            try values.append(allocator, owned);
+            continue;
+        }
+    }
+
+    if (values.items.len == 0) return null;
+    return try values.toOwnedSlice(allocator);
+}
+
+fn parseIterator(allocator: std.mem.Allocator, args: anytype, strict_unknown: bool) !Config {
     var config: Config = .{};
     while (args.next()) |arg| {
         if (std.mem.eql(u8, arg, "--help") or std.mem.eql(u8, arg, "-h")) {
@@ -88,7 +132,9 @@ fn parseIterator(allocator: std.mem.Allocator, args: anytype) !Config {
             config.command = try allocator.dupe(u8, arg["--command=".len..]);
             continue;
         }
-        return error.UnknownArgument;
+        if (strict_unknown) {
+            return error.UnknownArgument;
+        }
     }
     return config;
 }
@@ -190,7 +236,7 @@ test "parse terminal cli args" {
         "--close-on-child-exit",
     };
     var args = SliceArgsIterator([]const u8){ .items = &argv };
-    var config = try parseIterator(std.testing.allocator, &args);
+    var config = try parseIterator(std.testing.allocator, &args, true);
     defer config.deinit(std.testing.allocator);
     try std.testing.expectEqual(@as(?u16, 40), config.rows);
     try std.testing.expectEqual(@as(?u16, 120), config.cols);
@@ -198,4 +244,21 @@ test "parse terminal cli args" {
     try std.testing.expectEqualStrings("/bin/zsh", config.shell.?);
     try std.testing.expectEqualStrings("nvim -u NONE test.zig", config.command.?);
     try std.testing.expect(config.close_on_child_exit);
+}
+
+test "parse known launch overrides ignores unrelated args" {
+    const argv = [_][]const u8{
+        "--mode",
+        "editor",
+        "--cwd",
+        "C:\\Users\\lggou",
+        "README.md",
+        "--shell=C:\\Program Files\\PowerShell\\7\\pwsh.exe",
+    };
+    var args = SliceArgsIterator([]const u8){ .items = &argv };
+    var config = try parseIterator(std.testing.allocator, &args, false);
+    defer config.deinit(std.testing.allocator);
+    try std.testing.expectEqualStrings("C:\\Users\\lggou", config.cwd.?);
+    try std.testing.expectEqualStrings("C:\\Program Files\\PowerShell\\7\\pwsh.exe", config.shell.?);
+    try std.testing.expect(config.command == null);
 }

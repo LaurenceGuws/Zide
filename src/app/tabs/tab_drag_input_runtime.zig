@@ -1,5 +1,7 @@
 const app_bootstrap = @import("../bootstrap.zig");
 const app_modes = @import("../modes/mod.zig");
+const app_shell = @import("../../app_shell.zig");
+const app_types = @import("../app_state_types.zig");
 const app_tab_drag_frame = @import("tab_drag_frame.zig");
 const app_tab_drag_routing_runtime = @import("tab_drag_routing_runtime.zig");
 const shared_types = @import("../../types/mod.zig");
@@ -7,6 +9,7 @@ const widgets = @import("../../ui/widgets.zig");
 
 const input_types = shared_types.input;
 const layout_types = shared_types.layout;
+const Shell = app_shell.Shell;
 const TabBar = widgets.TabBar;
 
 pub const Hooks = struct {
@@ -19,9 +22,12 @@ pub const Hooks = struct {
 };
 
 const RuntimeCtx = struct {
+    app_mode: app_bootstrap.AppMode,
     tab_bar: *TabBar,
     terminal_tab_bar_visible: bool,
+    terminal_window_chrome_mode: app_types.TerminalWindowChromeMode,
     active_tab: *usize,
+    shell: *Shell,
     user_ctx: *anyopaque,
     hooks: Hooks,
 };
@@ -30,7 +36,9 @@ pub fn handle(
     app_mode: app_bootstrap.AppMode,
     tab_bar: *TabBar,
     terminal_tab_bar_visible: bool,
+    terminal_window_chrome_mode: app_types.TerminalWindowChromeMode,
     active_tab: *usize,
+    shell: *Shell,
     input_batch: *input_types.InputBatch,
     layout: layout_types.WidgetLayout,
     mouse: input_types.MousePos,
@@ -39,9 +47,12 @@ pub fn handle(
     hooks: Hooks,
 ) !void {
     var runtime_ctx: RuntimeCtx = .{
+        .app_mode = app_mode,
         .tab_bar = tab_bar,
         .terminal_tab_bar_visible = terminal_tab_bar_visible,
+        .terminal_window_chrome_mode = terminal_window_chrome_mode,
         .active_tab = active_tab,
+        .shell = shell,
         .user_ctx = ctx,
         .hooks = hooks,
     };
@@ -64,10 +75,13 @@ pub fn handle(
                     const route: *RuntimeCtx = @ptrCast(@alignCast(raw));
                     const result = try app_tab_drag_routing_runtime.handleTerminal(
                         route.tab_bar,
+                        route.shell,
                         drag_input_batch,
                         drag_layout,
                         drag_mouse,
                         route.terminal_tab_bar_visible,
+                        route.app_mode,
+                        route.terminal_window_chrome_mode,
                         route.user_ctx,
                         .{
                             .apply_terminal_action = route.hooks.apply_terminal_action,

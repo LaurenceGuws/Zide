@@ -13,6 +13,7 @@ pub const TabBar = struct {
         fixed,
         dynamic,
         label_length,
+        compact_label_length,
     };
 
     allocator: std.mem.Allocator,
@@ -35,8 +36,14 @@ pub const TabBar = struct {
         kind: Kind,
         modified: bool,
         terminal_tab_id: ?u64 = null,
+        icon_path: ?[]u8 = null,
 
         pub const Kind = enum { editor, terminal };
+    };
+
+    pub const IconProvider = struct {
+        ctx: *anyopaque,
+        draw: *const fn (ctx: *anyopaque, shell: *Shell, icon_path: []const u8, x: f32, y: f32, size: f32) bool,
     };
 
     pub fn init(allocator: std.mem.Allocator) TabBar {
@@ -61,6 +68,7 @@ pub const TabBar = struct {
     pub fn deinit(self: *TabBar) void {
         for (self.tabs.items) |tab| {
             self.allocator.free(tab.title);
+            if (tab.icon_path) |icon_path| self.allocator.free(icon_path);
         }
         self.tabs.deinit(self.allocator);
     }
@@ -68,6 +76,7 @@ pub const TabBar = struct {
     pub fn clearTabs(self: *TabBar) void {
         for (self.tabs.items) |tab| {
             self.allocator.free(tab.title);
+            if (tab.icon_path) |icon_path| self.allocator.free(icon_path);
         }
         self.tabs.clearRetainingCapacity();
         self.active_index = 0;
@@ -85,6 +94,7 @@ pub const TabBar = struct {
             .kind = kind,
             .modified = false,
             .terminal_tab_id = null,
+            .icon_path = null,
         });
     }
 
@@ -96,6 +106,7 @@ pub const TabBar = struct {
             .kind = .terminal,
             .modified = false,
             .terminal_tab_id = terminal_tab_id,
+            .icon_path = null,
         });
     }
 
@@ -112,6 +123,31 @@ pub const TabBar = struct {
         self.tabs.items[index].modified = modified;
     }
 
+    pub fn setTabIconPath(self: *TabBar, index: usize, icon_path: ?[]const u8) !void {
+        if (index >= self.tabs.items.len) return;
+        if (icon_path) |path| {
+            if (self.tabs.items[index].icon_path) |existing| {
+                if (std.mem.eql(u8, existing, path)) return;
+                self.allocator.free(existing);
+            }
+            self.tabs.items[index].icon_path = try self.allocator.dupe(u8, path);
+        } else {
+            if (self.tabs.items[index].icon_path) |existing| {
+                self.allocator.free(existing);
+            }
+            self.tabs.items[index].icon_path = null;
+        }
+    }
+
+    pub fn clearTabIcons(self: *TabBar) void {
+        for (self.tabs.items) |*tab| {
+            if (tab.icon_path) |icon_path| {
+                self.allocator.free(icon_path);
+                tab.icon_path = null;
+            }
+        }
+    }
+
     pub fn updateInput(self: *TabBar, input: shared_types.input.InputSnapshot) void {
         self.last_mouse = input.mouse_pos;
     }
@@ -121,6 +157,10 @@ pub const TabBar = struct {
     }
 
     pub fn draw(self: *TabBar, shell: *Shell, x: f32, y: f32, width: f32) ?Tooltip {
+        return self.drawWithIconProvider(shell, x, y, width, null);
+    }
+
+    pub fn drawWithIconProvider(self: *TabBar, shell: *Shell, x: f32, y: f32, width: f32, icon_provider: ?IconProvider) ?Tooltip {
         const theme = shell.theme();
         self.last_char_width = shell.charWidth();
         self.last_ui_scale = shell.uiScaleFactor();
@@ -149,7 +189,7 @@ pub const TabBar = struct {
         var cursor_x: f32 = x;
         for (self.tabs.items, 0..) |tab, i| {
             var tab_w = self.tabWidthForIndex(i, count, available_for_tabs, natural_sum, self.last_char_width, self.last_ui_scale);
-            if (i + 1 == count and self.width_mode != .fixed) {
+            if (i + 1 == count and (self.width_mode == .dynamic or self.width_mode == .label_length)) {
                 tab_w = @max(0, x + width - cursor_x);
             }
             const is_active = i == self.active_index;
@@ -193,8 +233,20 @@ pub const TabBar = struct {
             }
 
             // Tab title
-            const title_x = cursor_x + 8 * shell.uiScaleFactor();
+            var title_x = cursor_x + 8 * shell.uiScaleFactor();
             const title_y = tab_y + (tab_h - shell.charHeight()) / 2;
+            const icon_reserved = self.tabIconAdvance(tab, shell.uiScaleFactor());
+
+            if (icon_provider) |provider| {
+                if (tab.icon_path) |icon_path| {
+                    const icon_size = self.tabIconSize(shell.uiScaleFactor());
+                    const icon_y = tab_y + (tab_h - icon_size) * 0.5;
+                    _ = provider.draw(provider.ctx, shell, icon_path, title_x, icon_y, icon_size);
+                    title_x += icon_reserved;
+                }
+            } else if (icon_reserved > 0) {
+                title_x += icon_reserved;
+            }
 
             // Modified indicator
             if (tab.modified) {
@@ -202,7 +254,7 @@ pub const TabBar = struct {
             }
 
             const prefix_width: f32 = if (tab.modified) shell.charWidth() * 2 else 0;
-            const title_max = tab_w - 16 * shell.uiScaleFactor() - prefix_width;
+            const title_max = @max(0, tab_w - 16 * shell.uiScaleFactor() - prefix_width - icon_reserved);
             const result = common.drawTruncatedText(
                 shell,
                 tab.title,
@@ -251,6 +303,7 @@ pub const TabBar = struct {
         if (index >= self.tabs.items.len) return;
         const removed = self.tabs.orderedRemove(index);
         self.allocator.free(removed.title);
+        if (removed.icon_path) |icon_path| self.allocator.free(icon_path);
         if (self.tabs.items.len == 0) {
             self.active_index = 0;
             self.drag_active = false;
@@ -321,6 +374,33 @@ pub const TabBar = struct {
         return self.drag_active;
     }
 
+    pub fn contentWidth(self: *const TabBar, max_width: f32, char_width: f32, ui_scale: f32) f32 {
+        const count = self.tabs.items.len;
+        if (count == 0 or max_width <= 0) return 0;
+
+        const spacing_total = if (count > 1) self.tab_spacing * @as(f32, @floatFromInt(count - 1)) else 0;
+        const available_for_tabs = @max(0, max_width - spacing_total);
+        if (available_for_tabs <= 0) return 0;
+
+        var natural_sum: f32 = 0;
+        if (self.width_mode == .label_length or self.width_mode == .compact_label_length) {
+            for (self.tabs.items) |tab| {
+                natural_sum += self.naturalTabWidth(tab, char_width, ui_scale);
+            }
+            if (natural_sum <= 0) natural_sum = @as(f32, @floatFromInt(@max(@as(usize, 1), count)));
+        }
+
+        var used: f32 = 0;
+        for (self.tabs.items, 0..) |_, i| {
+            var tab_w = self.tabWidthForIndex(i, count, available_for_tabs, natural_sum, char_width, ui_scale);
+            if (i + 1 == count and (self.width_mode == .dynamic or self.width_mode == .label_length)) {
+                tab_w = @max(0, available_for_tabs - used);
+            }
+            used += tab_w;
+        }
+        return @min(max_width, used + spacing_total);
+    }
+
     fn moveTabVisual(self: *TabBar, from_index: usize, to_index: usize) void {
         const log = app_logger.logger("ui.tab_bar");
         if (from_index >= self.tabs.items.len or to_index >= self.tabs.items.len) return;
@@ -360,7 +440,7 @@ pub const TabBar = struct {
         var cursor_x = bar_x;
         for (0..count) |i| {
             var tab_w = self.tabWidthForIndex(i, count, available_for_tabs, natural_sum, self.last_char_width, self.last_ui_scale);
-            if (i + 1 == count and self.width_mode != .fixed) {
+            if (i + 1 == count and (self.width_mode == .dynamic or self.width_mode == .label_length)) {
                 tab_w = @max(0, bar_x + bar_width - cursor_x);
             }
             if (x >= cursor_x and x <= cursor_x + tab_w) return i;
@@ -386,14 +466,31 @@ pub const TabBar = struct {
                 const natural = self.naturalTabWidth(self.tabs.items[index], char_width, ui_scale);
                 break :blk if (natural_sum > 0) (available_for_tabs * (natural / natural_sum)) else (available_for_tabs / @as(f32, @floatFromInt(count)));
             },
+            .compact_label_length => blk: {
+                const natural = self.naturalTabWidth(self.tabs.items[index], char_width, ui_scale);
+                if (natural_sum > available_for_tabs and natural_sum > 0) {
+                    break :blk available_for_tabs * (natural / natural_sum);
+                }
+                break :blk natural;
+            },
         };
     }
 
     fn naturalTabWidth(self: *const TabBar, tab: Tab, char_width: f32, ui_scale: f32) f32 {
-        _ = self;
         const text_w = @as(f32, @floatFromInt(tab.title.len)) * char_width;
         const mod_w = if (tab.modified) char_width * 2 else 0;
         const padding = 16 * ui_scale;
-        return @max(48 * ui_scale, text_w + mod_w + padding);
+        return @max(48 * ui_scale, text_w + mod_w + padding + self.tabIconAdvance(tab, ui_scale));
+    }
+
+    fn tabIconSize(self: *const TabBar, ui_scale: f32) f32 {
+        _ = self;
+        return @max(12 * ui_scale, 16 * ui_scale);
+    }
+
+    fn tabIconAdvance(self: *const TabBar, tab: Tab, ui_scale: f32) f32 {
+        if (tab.icon_path == null) return 0;
+        const gap = 6 * ui_scale;
+        return self.tabIconSize(ui_scale) + gap;
     }
 };

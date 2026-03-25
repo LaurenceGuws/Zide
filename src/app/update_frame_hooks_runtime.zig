@@ -12,6 +12,7 @@ const app_terminal_close_confirm_active_runtime = @import("terminal/terminal_clo
 const app_terminal_intent_route_runtime = @import("terminal/terminal_intent_route_runtime.zig");
 const app_terminal_tab_navigation_runtime = @import("terminal/terminal_tab_navigation_runtime.zig");
 const app_terminal_tabs_runtime = @import("terminal/terminal_tabs_runtime.zig");
+const app_terminal_window_chrome_runtime = @import("terminal/window_chrome_runtime.zig");
 const app_visible_terminal_frame_hooks_runtime = @import("terminal/visible_terminal_frame_hooks_runtime.zig");
 const app_interactive_frame = @import("interactive_frame.zig");
 const app_update_driver = @import("update_driver.zig");
@@ -61,7 +62,7 @@ pub fn handle(state: anytype, input_batch: *shared_types.input.InputBatch) !void
                             .handle_widget_input_frame = struct {
                                 fn inner(inner_raw: *anyopaque) !void {
                                     const inner_state: *State = @ptrCast(@alignCast(inner_raw));
-                                    inner_state.options_bar.updateInput(inner_state.last_input);
+                                    inner_state.top_bar.updateInput(inner_state.last_input);
                                     inner_state.tab_bar.updateInput(inner_state.last_input);
                                     inner_state.side_nav.updateInput(inner_state.last_input);
                                     inner_state.status_bar.updateInput(inner_state.last_input);
@@ -192,13 +193,16 @@ pub fn handle(state: anytype, input_batch: *shared_types.input.InputBatch) !void
                                     try app_tab_drag_input_runtime.handle(
                                         inner_state.app_mode,
                                         &inner_state.tab_bar,
-                                        app_terminal_tabs_runtime.barVisible(
+                                        app_terminal_window_chrome_runtime.barVisible(
                                             inner_state.app_mode,
+                                            inner_state.terminal_window_chrome_mode,
                                             inner_state.terminal_tab_bar_show_single_tab,
                                             inner_state.terminal_workspace,
                                             inner_state.terminals.items.len,
                                         ),
+                                        inner_state.terminal_window_chrome_mode,
                                         &inner_state.active_tab,
+                                        inner_state.shell,
                                         frame_input_batch,
                                         layout,
                                         mouse,

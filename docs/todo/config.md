@@ -29,11 +29,14 @@ Implemented today:
 
 - Logging filters and SDL log level
 - Theme palette and syntax colors
+- Optional hardened window-control foreground token for integrated chrome
 - Per-domain theme overrides
 - Font rendering controls
 - Editor wrap and render budgets
 - Editor and terminal ligature settings
 - Terminal cursor, blink, focus-reporting, and scrollback options
+- Shared terminal shell path and start-location defaults
+- Optional terminal tab shell-icon PNG mapping
 - Keybind routing with default-fill merge behavior
 
 Current caveats:
@@ -60,6 +63,26 @@ Current caveats:
 - [x] `CFG-02-01` Decide whether app, editor, and terminal fonts are truly separate
   Runtime now treats app chrome, editor text, and terminal text as separate font owners with field-by-field fallback to `app.font`.
 - [ ] `CFG-02-02` Make reload behavior explicit for every startup-applied field
+- [x] `CFG-02-02D` Add an explicit terminal-only window chrome config surface
+  - Intended direction:
+    - `terminal.window_chrome.mode = "native" | "integrated"`
+  - This must be documented with explicit interaction rules against
+    `terminal.tab_bar.*`; integrated chrome cannot silently inherit the current
+    full-width dynamic tab behavior.
+  - The config surface should not be Windows-only; Windows is just the first
+    native implementation target.
+  - Current state:
+    - parser, defaults, init, and reload now own the field
+    - Windows terminal-only runtime now consumes it
+    - `native` keeps the ordinary framed content-row terminal tab bar
+    - `integrated` enables a borderless titleband contract with compact tabs,
+      caption buttons, and hit-test routing
+    - integrated mode keeps the titleband visible even when
+      `terminal.tab_bar.show_single_tab = false`
+    - integrated mode normalizes `terminal.tab_bar.width_mode` to a compact
+      internal policy instead of reusing full-width fill behavior
+- [x] `CFG-02-02C` Add a shared terminal shell config surface
+  `terminal.shell.path` is now parser/runtime-owned and applies to future PTY sessions across IDE/editor/terminal modes; explicit launcher/CLI `--shell` still overrides it.
 - [x] `CFG-02-02B` Make per-domain font path/size reloadable
   Config reload now reapplies `app.font`, `editor.font`, and `terminal.font` independently at runtime instead of collapsing them to one shared effective stack.
 - [x] `CFG-02-02A` Define strict startup application phases
@@ -92,4 +115,3 @@ Current caveats:
 - [ ] `CFG-05-02` Add reload authority for every field classified as reloadable
 - [ ] `CFG-05-03` Keep defaults and docs synchronized as part of every config change
   Partial: the policy exists; the remaining work is enforcement.
-

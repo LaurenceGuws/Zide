@@ -3,6 +3,7 @@ const app_shell = @import("../app_shell.zig");
 const config_mod = @import("../config/lua_config.zig");
 
 const min_active_tab_text_contrast: f64 = 7.0;
+const min_window_control_contrast: f64 = 4.5;
 
 pub const ResolvedThemes = struct {
     app: app_shell.Theme,
@@ -54,9 +55,73 @@ pub fn terminalTabBarTheme(terminal_theme: app_shell.Theme, shell_base_theme: ap
         theme.ui_accent = fallback_active_tab_bg;
     }
 
+    const window_control_candidate = if (std.meta.eql(theme.ui_window_control_fg, base.ui_window_control_fg))
+        theme.ui_text
+    else
+        theme.ui_window_control_fg;
+    theme.ui_window_control_fg = ensureContrastPair(
+        window_control_candidate,
+        theme.ui_bar_bg,
+        theme.ui_hover,
+        min_window_control_contrast,
+    );
+
     theme.background = theme.ui_accent;
     theme.ui_text = ensureContrast(theme.ui_text, theme.background, min_active_tab_text_contrast);
     return theme;
+}
+
+pub fn windowChromeTheme(base_theme: app_shell.Theme, focused: bool) app_shell.Theme {
+    if (focused) return base_theme;
+
+    var theme = base_theme;
+    theme.ui_bar_bg = mixColor(base_theme.ui_bar_bg, base_theme.background, 0.30);
+    theme.ui_panel_bg = mixColor(base_theme.ui_panel_bg, base_theme.background, 0.35);
+    theme.ui_border = mixColor(base_theme.ui_border, base_theme.background, 0.45);
+    theme.ui_hover = mixColor(base_theme.ui_hover, theme.ui_bar_bg, 0.40);
+    theme.ui_pressed = mixColor(base_theme.ui_pressed, theme.ui_bar_bg, 0.35);
+    theme.ui_text = mixColor(base_theme.ui_text_inactive, base_theme.ui_text, 0.35);
+    theme.ui_window_control_fg = ensureContrastPair(
+        mixColor(base_theme.ui_window_control_fg, base_theme.ui_text_inactive, 0.55),
+        theme.ui_bar_bg,
+        theme.ui_hover,
+        min_window_control_contrast,
+    );
+    return theme;
+}
+
+pub fn terminalWindowChromeTheme(terminal_theme: app_shell.Theme, shell_base_theme: app_shell.Theme, focused: bool) app_shell.Theme {
+    const tab_theme = terminalTabBarTheme(terminal_theme, shell_base_theme);
+    if (focused) return tab_theme;
+
+    var theme = tab_theme;
+    theme.ui_border = mixColor(tab_theme.ui_border, tab_theme.ui_bar_bg, 0.45);
+    theme.ui_hover = mixColor(tab_theme.ui_hover, tab_theme.ui_bar_bg, 0.40);
+    theme.ui_pressed = mixColor(tab_theme.ui_pressed, tab_theme.ui_bar_bg, 0.35);
+    theme.ui_text = mixColor(tab_theme.ui_text_inactive, tab_theme.ui_text, 0.35);
+    theme.ui_window_control_fg = ensureContrastPair(
+        mixColor(tab_theme.ui_window_control_fg, tab_theme.ui_text_inactive, 0.55),
+        theme.ui_bar_bg,
+        theme.ui_hover,
+        min_window_control_contrast,
+    );
+    return theme;
+}
+
+fn mixColor(a: app_shell.Color, b: app_shell.Color, t: f32) app_shell.Color {
+    const clamped_t = std.math.clamp(t, 0.0, 1.0);
+    const inv_t = 1.0 - clamped_t;
+    return .{
+        .r = mixChannel(a.r, b.r, inv_t, clamped_t),
+        .g = mixChannel(a.g, b.g, inv_t, clamped_t),
+        .b = mixChannel(a.b, b.b, inv_t, clamped_t),
+        .a = a.a,
+    };
+}
+
+fn mixChannel(a: u8, b: u8, inv_t: f32, t: f32) u8 {
+    const mixed = (@as(f32, @floatFromInt(a)) * inv_t) + (@as(f32, @floatFromInt(b)) * t);
+    return @intFromFloat(std.math.round(mixed));
 }
 
 fn ensureContrast(text: app_shell.Color, bg: app_shell.Color, min_ratio: f64) app_shell.Color {
@@ -68,6 +133,20 @@ fn highContrastTextCandidate(bg: app_shell.Color, alpha: u8) app_shell.Color {
     const black = app_shell.Color{ .r = 0, .g = 0, .b = 0, .a = alpha };
     const white = app_shell.Color{ .r = 255, .g = 255, .b = 255, .a = alpha };
     if (contrastRatio(black, bg) >= contrastRatio(white, bg)) return black;
+    return white;
+}
+
+fn ensureContrastPair(text: app_shell.Color, bg_a: app_shell.Color, bg_b: app_shell.Color, min_ratio: f64) app_shell.Color {
+    if (contrastRatio(text, bg_a) >= min_ratio and contrastRatio(text, bg_b) >= min_ratio) return text;
+    return highContrastTextCandidatePair(bg_a, bg_b, text.a);
+}
+
+fn highContrastTextCandidatePair(bg_a: app_shell.Color, bg_b: app_shell.Color, alpha: u8) app_shell.Color {
+    const black = app_shell.Color{ .r = 0, .g = 0, .b = 0, .a = alpha };
+    const white = app_shell.Color{ .r = 255, .g = 255, .b = 255, .a = alpha };
+    const black_score = @min(contrastRatio(black, bg_a), contrastRatio(black, bg_b));
+    const white_score = @min(contrastRatio(white, bg_a), contrastRatio(white, bg_b));
+    if (black_score >= white_score) return black;
     return white;
 }
 
@@ -143,4 +222,17 @@ test "terminal tab bar theme preserves explicit tab text when contrast is alread
 
     try std.testing.expectEqualDeep(terminal.ui_text, out.ui_text);
     try std.testing.expectEqualDeep(terminal.ui_text_inactive, out.ui_text_inactive);
+}
+
+test "terminal tab bar theme hardens window control contrast against bar and hover backgrounds" {
+    const base = app_shell.Theme{};
+    var terminal = app_shell.Theme{};
+    terminal.ui_bar_bg = .{ .r = 236, .g = 236, .b = 236 };
+    terminal.ui_hover = .{ .r = 220, .g = 224, .b = 236 };
+    terminal.ui_window_control_fg = .{ .r = 214, .g = 218, .b = 228 };
+
+    const out = terminalTabBarTheme(terminal, base);
+
+    try std.testing.expect(contrastRatio(out.ui_window_control_fg, out.ui_bar_bg) >= min_window_control_contrast);
+    try std.testing.expect(contrastRatio(out.ui_window_control_fg, out.ui_hover) >= min_window_control_contrast);
 }

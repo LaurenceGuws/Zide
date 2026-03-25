@@ -1,5 +1,6 @@
 const std = @import("std");
 const syntax_mod = @import("../../editor/syntax.zig");
+const text_columns_mod = @import("../../editor/text_columns.zig");
 const selection_mod = @import("../../editor/view/selection.zig");
 const draw_list_mod = @import("../../editor/render/draw_list.zig");
 const overlay_mod = @import("editor_widget_draw_overlay.zig");
@@ -11,30 +12,23 @@ const SelectionRange = selection_mod.SelectionRange;
 const EditorDrawList = draw_list_mod.EditorDrawList;
 const ByteRange = overlay_mod.ByteRange;
 const EditorTextStyleFlags = renderer_mod.EditorTextStyleFlags;
+const tab_spaces = "    ";
 
-pub fn xForByteOffset(
-    r: anytype,
+fn visualColumnAtByteOffset(
     line_text: []const u8,
     seg_start_byte: usize,
     seg_start_vis: usize,
     byte_index: usize,
-    text_x: f32,
-) f32 {
+) usize {
     const target = @min(byte_index, line_text.len);
-    if (target <= seg_start_byte) return text_x;
+    if (target <= seg_start_byte) return seg_start_vis;
 
     var idx = seg_start_byte;
     var vis = seg_start_vis;
     while (idx < target) {
         const first = line_text[idx];
-        if (first == '\t') {
-            const tab_width: usize = 4;
-            vis += tab_width - (vis % tab_width);
-            idx += 1;
-            continue;
-        }
         if (first < 0x80) {
-            vis += 1;
+            vis += text_columns_mod.cellWidthForCodepoint(first, vis);
             idx += 1;
             continue;
         }
@@ -48,9 +42,225 @@ pub fn xForByteOffset(
             idx += 1;
             continue;
         }
-        vis += 1;
+        const cp = std.unicode.utf8Decode(line_text[idx .. idx + seq_len]) catch 0xFFFD;
+        vis += text_columns_mod.cellWidthForCodepoint(cp, vis);
         idx += seq_len;
     }
+    return vis;
+}
+
+fn nextUtf8Len(text: []const u8, idx: usize) usize {
+    if (idx >= text.len) return 0;
+    const first = text[idx];
+    if (first < 0x80) return 1;
+    const seq_len = std.unicode.utf8ByteSequenceLength(first) catch return 1;
+    if (idx + seq_len > text.len) return 1;
+    return seq_len;
+}
+
+fn drawExpandedTextSliceOnBg(
+    r: anytype,
+    text_start_x: f32,
+    y: f32,
+    line_text: []const u8,
+    seg_start_byte: usize,
+    seg_start_vis: usize,
+    slice_start: usize,
+    slice_end: usize,
+    fg: anytype,
+    bg: anytype,
+    disable_programming_ligatures: bool,
+) void {
+    if (slice_end <= slice_start) return;
+    if (std.mem.indexOfScalar(u8, line_text[slice_start..slice_end], '\t') == null) {
+        const x = xForByteOffset(r, line_text, seg_start_byte, seg_start_vis, slice_start, text_start_x);
+        r.drawTextMonospaceOnBgPolicy(line_text[slice_start..slice_end], x, y, fg, bg, disable_programming_ligatures);
+        return;
+    }
+
+    var cursor = slice_start;
+    var run_start = slice_start;
+    var vis = visualColumnAtByteOffset(line_text, seg_start_byte, seg_start_vis, slice_start);
+    var run_x = text_start_x + @as(f32, @floatFromInt(vis - seg_start_vis)) * r.editor_char_width;
+    while (cursor < slice_end) {
+        if (line_text[cursor] == '\t') {
+            if (cursor > run_start) {
+                r.drawTextMonospaceOnBgPolicy(line_text[run_start..cursor], run_x, y, fg, bg, disable_programming_ligatures);
+            }
+            const width = text_columns_mod.cellWidthForCodepoint('\t', vis);
+            r.drawTextMonospaceOnBgPolicy(tab_spaces[0..width], run_x, y, fg, bg, disable_programming_ligatures);
+            vis += width;
+            run_x += @as(f32, @floatFromInt(width)) * r.editor_char_width;
+            cursor += 1;
+            run_start = cursor;
+            continue;
+        }
+        const seq_len = nextUtf8Len(line_text, cursor);
+        const cp = std.unicode.utf8Decode(line_text[cursor .. cursor + seq_len]) catch 0xFFFD;
+        vis += text_columns_mod.cellWidthForCodepoint(cp, vis);
+        cursor += seq_len;
+    }
+    if (run_start < slice_end) {
+        r.drawTextMonospaceOnBgPolicy(line_text[run_start..slice_end], run_x, y, fg, bg, disable_programming_ligatures);
+    }
+}
+
+fn addExpandedTextSliceOpBg(
+    list: *EditorDrawList,
+    r: anytype,
+    text_start_x: f32,
+    y: f32,
+    line_text: []const u8,
+    seg_start_byte: usize,
+    seg_start_vis: usize,
+    slice_start: usize,
+    slice_end: usize,
+    fg: anytype,
+    bg: anytype,
+    disable_programming_ligatures: bool,
+) bool {
+    if (slice_end <= slice_start) return true;
+    if (std.mem.indexOfScalar(u8, line_text[slice_start..slice_end], '\t') == null) {
+        const x = xForByteOffset(r, line_text, seg_start_byte, seg_start_vis, slice_start, text_start_x);
+        return overlay_mod.addTextOpBg(list, x, y, line_text[slice_start..slice_end], fg, bg, disable_programming_ligatures);
+    }
+
+    var ok = true;
+    var cursor = slice_start;
+    var run_start = slice_start;
+    var vis = visualColumnAtByteOffset(line_text, seg_start_byte, seg_start_vis, slice_start);
+    var run_x = text_start_x + @as(f32, @floatFromInt(vis - seg_start_vis)) * r.editor_char_width;
+    while (cursor < slice_end) {
+        if (line_text[cursor] == '\t') {
+            if (cursor > run_start) {
+                ok = ok and overlay_mod.addTextOpBg(list, run_x, y, line_text[run_start..cursor], fg, bg, disable_programming_ligatures);
+            }
+            const width = text_columns_mod.cellWidthForCodepoint('\t', vis);
+            ok = ok and overlay_mod.addTextOpBg(list, run_x, y, tab_spaces[0..width], fg, bg, disable_programming_ligatures);
+            vis += width;
+            run_x += @as(f32, @floatFromInt(width)) * r.editor_char_width;
+            cursor += 1;
+            run_start = cursor;
+            continue;
+        }
+        const seq_len = nextUtf8Len(line_text, cursor);
+        const cp = std.unicode.utf8Decode(line_text[cursor .. cursor + seq_len]) catch 0xFFFD;
+        vis += text_columns_mod.cellWidthForCodepoint(cp, vis);
+        cursor += seq_len;
+    }
+    if (run_start < slice_end) {
+        ok = ok and overlay_mod.addTextOpBg(list, run_x, y, line_text[run_start..slice_end], fg, bg, disable_programming_ligatures);
+    }
+    return ok;
+}
+
+fn drawExpandedStyledTextOnBg(
+    r: anytype,
+    text_start_x: f32,
+    y: f32,
+    line_text: []const u8,
+    seg_start_byte: usize,
+    seg_start_vis: usize,
+    slice_start: usize,
+    slice_end: usize,
+    fg: anytype,
+    bg: anytype,
+    flags: EditorTextStyleFlags,
+    disable_programming_ligatures: bool,
+) void {
+    if (slice_end <= slice_start) return;
+    if (std.mem.indexOfScalar(u8, line_text[slice_start..slice_end], '\t') == null) {
+        const x = xForByteOffset(r, line_text, seg_start_byte, seg_start_vis, slice_start, text_start_x);
+        drawStyledTextOnBg(r, line_text[slice_start..slice_end], x, y, fg, bg, flags, disable_programming_ligatures);
+        return;
+    }
+
+    var cursor = slice_start;
+    var run_start = slice_start;
+    var vis = visualColumnAtByteOffset(line_text, seg_start_byte, seg_start_vis, slice_start);
+    var run_x = text_start_x + @as(f32, @floatFromInt(vis - seg_start_vis)) * r.editor_char_width;
+    while (cursor < slice_end) {
+        if (line_text[cursor] == '\t') {
+            if (cursor > run_start) {
+                drawStyledTextOnBg(r, line_text[run_start..cursor], run_x, y, fg, bg, flags, disable_programming_ligatures);
+            }
+            const width = text_columns_mod.cellWidthForCodepoint('\t', vis);
+            drawStyledTextOnBg(r, tab_spaces[0..width], run_x, y, fg, bg, flags, disable_programming_ligatures);
+            vis += width;
+            run_x += @as(f32, @floatFromInt(width)) * r.editor_char_width;
+            cursor += 1;
+            run_start = cursor;
+            continue;
+        }
+        const seq_len = nextUtf8Len(line_text, cursor);
+        const cp = std.unicode.utf8Decode(line_text[cursor .. cursor + seq_len]) catch 0xFFFD;
+        vis += text_columns_mod.cellWidthForCodepoint(cp, vis);
+        cursor += seq_len;
+    }
+    if (run_start < slice_end) {
+        drawStyledTextOnBg(r, line_text[run_start..slice_end], run_x, y, fg, bg, flags, disable_programming_ligatures);
+    }
+}
+
+fn addExpandedStyledTextOpBg(
+    list: *EditorDrawList,
+    r: anytype,
+    text_start_x: f32,
+    y: f32,
+    line_text: []const u8,
+    seg_start_byte: usize,
+    seg_start_vis: usize,
+    slice_start: usize,
+    slice_end: usize,
+    fg: anytype,
+    bg: anytype,
+    flags: EditorTextStyleFlags,
+    disable_programming_ligatures: bool,
+) bool {
+    if (slice_end <= slice_start) return true;
+    if (std.mem.indexOfScalar(u8, line_text[slice_start..slice_end], '\t') == null) {
+        const x = xForByteOffset(r, line_text, seg_start_byte, seg_start_vis, slice_start, text_start_x);
+        return addStyledTextOpBg(list, x, y, line_text[slice_start..slice_end], fg, bg, flags, disable_programming_ligatures);
+    }
+
+    var ok = true;
+    var cursor = slice_start;
+    var run_start = slice_start;
+    var vis = visualColumnAtByteOffset(line_text, seg_start_byte, seg_start_vis, slice_start);
+    var run_x = text_start_x + @as(f32, @floatFromInt(vis - seg_start_vis)) * r.editor_char_width;
+    while (cursor < slice_end) {
+        if (line_text[cursor] == '\t') {
+            if (cursor > run_start) {
+                ok = ok and addStyledTextOpBg(list, run_x, y, line_text[run_start..cursor], fg, bg, flags, disable_programming_ligatures);
+            }
+            const width = text_columns_mod.cellWidthForCodepoint('\t', vis);
+            ok = ok and addStyledTextOpBg(list, run_x, y, tab_spaces[0..width], fg, bg, flags, disable_programming_ligatures);
+            vis += width;
+            run_x += @as(f32, @floatFromInt(width)) * r.editor_char_width;
+            cursor += 1;
+            run_start = cursor;
+            continue;
+        }
+        const seq_len = nextUtf8Len(line_text, cursor);
+        const cp = std.unicode.utf8Decode(line_text[cursor .. cursor + seq_len]) catch 0xFFFD;
+        vis += text_columns_mod.cellWidthForCodepoint(cp, vis);
+        cursor += seq_len;
+    }
+    if (run_start < slice_end) {
+        ok = ok and addStyledTextOpBg(list, run_x, y, line_text[run_start..slice_end], fg, bg, flags, disable_programming_ligatures);
+    }
+    return ok;
+}
+
+pub fn xForByteOffset(
+    r: anytype,
+    line_text: []const u8,
+    seg_start_byte: usize,
+    seg_start_vis: usize,
+    byte_index: usize,
+    text_x: f32,
+) f32 {
+    const vis = visualColumnAtByteOffset(line_text, seg_start_byte, seg_start_vis, byte_index);
     return text_x + @as(f32, @floatFromInt(vis - seg_start_vis)) * r.editor_char_width;
 }
 
@@ -146,21 +356,18 @@ pub fn addTextSliceOpsWithSelectionBg(list: *EditorDrawList, r: anytype, text_st
         if (sr.end <= cursor) continue;
         if (sr.start >= slice_end) break;
         if (sr.start > cursor) {
-            const x = xForByteOffset(r, line_text, seg_start_byte, seg_start_vis, cursor, text_start_x);
-            ok = ok and overlay_mod.addTextOpBg(list, x, y, line_text[cursor..@min(sr.start, slice_end)], fg, base_bg, disable_programming_ligatures);
+            ok = ok and addExpandedTextSliceOpBg(list, r, text_start_x, y, line_text, seg_start_byte, seg_start_vis, cursor, @min(sr.start, slice_end), fg, base_bg, disable_programming_ligatures);
         }
         const b0 = @max(cursor, sr.start);
         const b1 = @min(slice_end, sr.end);
         if (b1 > b0) {
-            const x = xForByteOffset(r, line_text, seg_start_byte, seg_start_vis, b0, text_start_x);
-            ok = ok and overlay_mod.addTextOpBg(list, x, y, line_text[b0..b1], fg, selection_bg, disable_programming_ligatures);
+            ok = ok and addExpandedTextSliceOpBg(list, r, text_start_x, y, line_text, seg_start_byte, seg_start_vis, b0, b1, fg, selection_bg, disable_programming_ligatures);
             cursor = b1;
         }
         if (cursor >= slice_end) break;
     }
     if (cursor < slice_end) {
-        const x = xForByteOffset(r, line_text, seg_start_byte, seg_start_vis, cursor, text_start_x);
-        ok = ok and overlay_mod.addTextOpBg(list, x, y, line_text[cursor..slice_end], fg, base_bg, disable_programming_ligatures);
+        ok = ok and addExpandedTextSliceOpBg(list, r, text_start_x, y, line_text, seg_start_byte, seg_start_vis, cursor, slice_end, fg, base_bg, disable_programming_ligatures);
     }
     return ok;
 }
@@ -285,21 +492,18 @@ pub fn drawTextSliceWithSelectionBg(r: anytype, text_start_x: f32, y: f32, line_
         if (sr.end <= cursor) continue;
         if (sr.start >= slice_end) break;
         if (sr.start > cursor) {
-            const x = xForByteOffset(r, line_text, seg_start_byte, seg_start_vis, cursor, text_start_x);
-            r.drawTextMonospaceOnBgPolicy(line_text[cursor..@min(sr.start, slice_end)], x, y, fg, base_bg, disable_programming_ligatures);
+            drawExpandedTextSliceOnBg(r, text_start_x, y, line_text, seg_start_byte, seg_start_vis, cursor, @min(sr.start, slice_end), fg, base_bg, disable_programming_ligatures);
         }
         const b0 = @max(cursor, sr.start);
         const b1 = @min(slice_end, sr.end);
         if (b1 > b0) {
-            const x = xForByteOffset(r, line_text, seg_start_byte, seg_start_vis, b0, text_start_x);
-            r.drawTextMonospaceOnBgPolicy(line_text[b0..b1], x, y, fg, selection_bg, disable_programming_ligatures);
+            drawExpandedTextSliceOnBg(r, text_start_x, y, line_text, seg_start_byte, seg_start_vis, b0, b1, fg, selection_bg, disable_programming_ligatures);
             cursor = b1;
         }
         if (cursor >= slice_end) break;
     }
     if (cursor < slice_end) {
-        const x = xForByteOffset(r, line_text, seg_start_byte, seg_start_vis, cursor, text_start_x);
-        r.drawTextMonospaceOnBgPolicy(line_text[cursor..slice_end], x, y, fg, base_bg, disable_programming_ligatures);
+        drawExpandedTextSliceOnBg(r, text_start_x, y, line_text, seg_start_byte, seg_start_vis, cursor, slice_end, fg, base_bg, disable_programming_ligatures);
     }
 }
 
@@ -331,7 +535,7 @@ pub fn appendHighlightedLineSegmentOps(list: *EditorDrawList, r: anytype, line_t
             const start_x = xForByteOffset(r, line_text, seg_start, seg_start_vis, start, text_x);
             const end_x = xForByteOffset(r, line_text, seg_start, seg_start_vis, end, text_x);
             const bg = selectionOverlapBg(start, end, base_bg, selection_bg, sel_ranges);
-            ok = ok and addStyledTextOpBg(list, start_x, y, line_text[start..end], color, bg, style.flags, disable_programming_ligatures);
+            ok = ok and addExpandedStyledTextOpBg(list, r, text_x, y, line_text, seg_start, seg_start_vis, start, end, color, bg, style.flags, disable_programming_ligatures);
             ok = ok and addTextDecorationOps(list, r, start_x, y, end_x - start_x, decoration_color, style.flags);
         }
         if (end > cursor) cursor = end;
@@ -366,7 +570,7 @@ pub fn drawHighlightedLineSegment(r: anytype, line_text: []const u8, y: f32, tex
             }
         } else {
             const bg = selectionOverlapBg(start, end, base_bg, selection_bg, sel_ranges);
-            drawStyledTextOnBg(r, line_text[start..end], x, y, color, bg, style.flags, disable_programming_ligatures);
+            drawExpandedStyledTextOnBg(r, text_x, y, line_text, seg_start, seg_start_vis, start, end, color, bg, style.flags, disable_programming_ligatures);
             const end_x = xForByteOffset(r, line_text, seg_start, seg_start_vis, end, text_x);
             drawTextDecorations(r, x, y, end_x - x, decoration_color, style.flags);
         }

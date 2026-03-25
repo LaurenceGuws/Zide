@@ -33,6 +33,7 @@ pub fn handle(
         focus,
         at,
         state.app_mode,
+        state.terminal_window_chrome_mode,
         state.show_terminal,
         &state.terminal_workspace,
         state.terminals.items,
@@ -40,6 +41,7 @@ pub fn handle(
         state.allocator,
         state.editors.items,
         state.active_tab,
+        &state.top_bar,
         &state.tab_bar,
         &state.editor_cluster_cache,
         state.editor_wrap,
@@ -77,6 +79,7 @@ pub fn handle(
                                     app_tab_bar_width.applyForMode(
                                         &inner_state.tab_bar,
                                         inner_state.app_mode,
+                                        inner_state.terminal_window_chrome_mode,
                                         inner_state.editor_tab_bar_width_mode,
                                         inner_state.terminal_tab_bar_width_mode,
                                     );

@@ -360,7 +360,7 @@ fn loadBaseQueryText(
         }
     }
 
-    if (try readFileJoinedIfExists(allocator, &.{ "assets", rel_path })) |data| {
+    if (try readInstalledAssetFileIfExists(allocator, rel_path)) |data| {
         if (data.len == 0) {
             allocator.free(data);
             return null;
@@ -387,6 +387,12 @@ fn loadOverlayQueryText(allocator: std.mem.Allocator, overlay_query_path: ?[]con
 }
 
 fn configQueryPath(allocator: std.mem.Allocator, rel_path: []const u8) !?[]u8 {
+    if (@import("builtin").target.os.tag == .windows) {
+        if (std.c.getenv("APPDATA")) |appdata| {
+            const base = std.mem.sliceTo(appdata, 0);
+            return @as(?[]u8, try std.fs.path.join(allocator, &.{ base, "Zide", rel_path }));
+        }
+    }
     if (std.c.getenv("XDG_CONFIG_HOME")) |xdg| {
         const base = std.mem.sliceTo(xdg, 0);
         return @as(?[]u8, try std.fs.path.join(allocator, &.{ base, "zide", rel_path }));
@@ -411,6 +417,17 @@ fn readFileJoinedIfExists(allocator: std.mem.Allocator, parts: []const []const u
     const path = try std.fs.path.join(allocator, parts);
     defer allocator.free(path);
     return readFileIfExists(allocator, path);
+}
+
+fn readInstalledAssetFileIfExists(allocator: std.mem.Allocator, rel_path: []const u8) !?[]u8 {
+    if (try readFileJoinedIfExists(allocator, &.{ "assets", rel_path })) |data| return data;
+
+    const exe_dir = std.fs.selfExeDirPathAlloc(allocator) catch return null;
+    defer allocator.free(exe_dir);
+
+    const path = try std.fs.path.join(allocator, &.{ exe_dir, "assets", rel_path });
+    defer allocator.free(path);
+    return readFileAbsoluteIfExists(allocator, path);
 }
 
 fn readFileAbsoluteIfExists(allocator: std.mem.Allocator, path: []const u8) !?[]u8 {

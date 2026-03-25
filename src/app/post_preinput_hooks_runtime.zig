@@ -13,15 +13,35 @@ const app_deferred_terminal_resize_frame = @import("terminal/deferred_terminal_r
 const app_terminal_tabs_runtime = @import("terminal/terminal_tabs_runtime.zig");
 const app_terminal_resize = @import("terminal/terminal_resize.zig");
 const app_terminal_grid = @import("terminal/terminal_grid.zig");
+const app_terminal_window_chrome_runtime = @import("terminal/window_chrome_runtime.zig");
+const app_top_bar_window_chrome_runtime = @import("top_bar_window_chrome_runtime.zig");
 const app_pointer_activity_frame = @import("pointer_activity_frame.zig");
 const app_terminal_scrollbar_runtime = @import("terminal/terminal_scrollbar_runtime.zig");
 const app_terminal_split_resize_frame = @import("terminal/terminal_split_resize_frame.zig");
 const app_shell = @import("../app_shell.zig");
 const shared_types = @import("../types/mod.zig");
+const app_state_types = @import("app_state_types.zig");
 
 const Shell = app_shell.Shell;
 const input_types = shared_types.input;
 const layout_types = shared_types.layout;
+const WindowCaptionButton = app_state_types.WindowCaptionButton;
+
+fn currentHoveredCaptionButton(shell: *Shell) ?WindowCaptionButton {
+    if (!shell.integratedWindowChromeSinkActive()) return null;
+    if (shell.integratedWindowChromeCloseHovered()) return .close;
+    if (shell.integratedWindowChromeMaximizeHovered()) return .maximize_restore;
+    if (shell.integratedWindowChromeMinimizeHovered()) return .minimize;
+    return null;
+}
+
+fn currentPressedCaptionButton(shell: *Shell) ?WindowCaptionButton {
+    if (!shell.integratedWindowChromeSinkActive()) return null;
+    if (shell.integratedWindowChromeClosePressed()) return .close;
+    if (shell.integratedWindowChromeMaximizePressed()) return .maximize_restore;
+    if (shell.integratedWindowChromeMinimizePressed()) return .minimize;
+    return null;
+}
 
 pub fn handle(state: anytype, shell: *Shell, batch: *input_types.InputBatch, now: f64) !app_update_driver.Frame {
     const State = @TypeOf(state.*);
@@ -45,6 +65,7 @@ pub fn handle(state: anytype, shell: *Shell, batch: *input_types.InputBatch, now
                                     app_tab_bar_width.applyForMode(
                                         &cb_state.tab_bar,
                                         cb_state.app_mode,
+                                        cb_state.terminal_window_chrome_mode,
                                         cb_state.editor_tab_bar_width_mode,
                                         cb_state.terminal_tab_bar_width_mode,
                                     );
@@ -89,6 +110,7 @@ pub fn handle(state: anytype, shell: *Shell, batch: *input_types.InputBatch, now
                                         app_tab_bar_width.applyForMode(
                                             &cb_state.tab_bar,
                                             cb_state.app_mode,
+                                            cb_state.terminal_window_chrome_mode,
                                             cb_state.editor_tab_bar_width_mode,
                                             cb_state.terminal_tab_bar_width_mode,
                                         );
@@ -104,6 +126,31 @@ pub fn handle(state: anytype, shell: *Shell, batch: *input_types.InputBatch, now
                 fn inner(inner_raw: *anyopaque, width: f32, height: f32) layout_types.WidgetLayout {
                     const inner_state: *State = @ptrCast(@alignCast(inner_raw));
                     return app_ui_layout_runtime.computeLayout(inner_state, width, height);
+                }
+            }.inner,
+            .sync_window_chrome = struct {
+                fn inner(inner_raw: *anyopaque, frame_shell: *Shell, layout: layout_types.WidgetLayout) void {
+                    const inner_state: *State = @ptrCast(@alignCast(inner_raw));
+                    if (app_terminal_window_chrome_runtime.isIntegratedActive(inner_state.app_mode, inner_state.terminal_window_chrome_mode)) {
+                        const geometry = app_terminal_window_chrome_runtime.computeGeometry(
+                            frame_shell,
+                            &inner_state.tab_bar,
+                            layout.tab_bar,
+                            inner_state.app_mode,
+                            inner_state.terminal_window_chrome_mode,
+                        );
+                        frame_shell.setWindowChrome(app_terminal_window_chrome_runtime.windowChromeContract(geometry));
+                    } else if (app_top_bar_window_chrome_runtime.isIntegratedActive(inner_state.app_mode)) {
+                        const geometry = app_top_bar_window_chrome_runtime.computeGeometry(
+                            frame_shell,
+                            &inner_state.top_bar,
+                            layout.top_bar,
+                            inner_state.app_mode,
+                        );
+                        frame_shell.setWindowChrome(app_top_bar_window_chrome_runtime.windowChromeContract(geometry));
+                    } else {
+                        frame_shell.setWindowChrome(.{});
+                    }
                 }
             }.inner,
             .handle_cursor_blink_arming = struct {
@@ -218,6 +265,16 @@ pub fn handle(state: anytype, shell: *Shell, batch: *input_types.InputBatch, now
                     );
                     if (result.needs_redraw) inner_state.needs_redraw = true;
                     if (result.note_input) inner_state.metrics.noteInput(at);
+
+                    const hovered_button = currentHoveredCaptionButton(inner_state.shell);
+                    if (inner_state.hovered_window_caption_button != hovered_button) {
+                        inner_state.hovered_window_caption_button = hovered_button;
+                        inner_state.needs_redraw = true;
+                    }
+                    const pressed_button = currentPressedCaptionButton(inner_state.shell);
+                    if (inner_state.pressed_window_caption_button == null and pressed_button != null) {
+                        inner_state.needs_redraw = true;
+                    }
                 }
             }.inner,
             .handle_terminal_split_resize = struct {
@@ -237,7 +294,7 @@ pub fn handle(state: anytype, shell: *Shell, batch: *input_types.InputBatch, now
                         frame_input_batch,
                         layout,
                         height,
-                        inner_state.options_bar.height,
+                        inner_state.top_bar.height,
                         inner_state.tab_bar.height,
                         inner_state.status_bar.height,
                         &inner_state.resizing_terminal,

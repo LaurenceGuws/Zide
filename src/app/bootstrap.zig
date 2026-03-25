@@ -39,10 +39,28 @@ pub fn parseAppMode(allocator: std.mem.Allocator) AppMode {
 }
 
 pub fn parseStartupFilePath(allocator: std.mem.Allocator) ?[]u8 {
+    const paths = parseStartupFilePaths(allocator) orelse return null;
+    defer {
+        var i: usize = 0;
+        while (i < paths.len) : (i += 1) allocator.free(paths[i]);
+        allocator.free(paths);
+    }
+    return allocator.dupe(u8, paths[0]) catch null;
+}
+
+pub fn parseStartupFilePaths(allocator: std.mem.Allocator) ?[][]u8 {
     if (comptime mode_build.focused_mode == .terminal) return null;
 
     const args = std.process.argsAlloc(allocator) catch return null;
     defer std.process.argsFree(allocator, args);
+
+    var paths = std.ArrayList([]u8).empty;
+    defer {
+        if (paths.capacity > 0) {
+            for (paths.items) |path| allocator.free(path);
+            paths.deinit(allocator);
+        }
+    }
 
     var i: usize = 1;
     while (i < args.len) : (i += 1) {
@@ -58,11 +76,72 @@ pub fn parseStartupFilePath(allocator: std.mem.Allocator) ?[]u8 {
             if (i + 1 < args.len) i += 1;
             continue;
         }
+        if (isStartupDirectoryFlagWithValue(arg)) {
+            if (i + 1 < args.len) i += 1;
+            continue;
+        }
+        if (isStartupDirectoryInlineFlag(arg)) continue;
+        if (isLaunchOverrideFlagWithValue(arg)) {
+            if (i + 1 < args.len) i += 1;
+            continue;
+        }
+        if (isLaunchOverrideInlineFlag(arg) or std.mem.eql(u8, arg, "--close-on-child-exit")) continue;
         if (std.mem.startsWith(u8, arg, "-")) continue;
-        return allocator.dupe(u8, arg) catch null;
+        const owned = allocator.dupe(u8, arg) catch return null;
+        paths.append(allocator, owned) catch {
+            allocator.free(owned);
+            return null;
+        };
+    }
+
+    if (paths.items.len == 0) return null;
+    const owned = paths.toOwnedSlice(allocator) catch return null;
+    return owned;
+}
+
+pub fn parseStartupDirectoryPath(allocator: std.mem.Allocator) ?[]u8 {
+    if (comptime mode_build.focused_mode == .terminal) return null;
+
+    const args = std.process.argsAlloc(allocator) catch return null;
+    defer std.process.argsFree(allocator, args);
+
+    var i: usize = 1;
+    while (i < args.len) : (i += 1) {
+        const arg = args[i];
+        if (std.mem.eql(u8, arg, "--folder")) {
+            if (i + 1 >= args.len) return null;
+            return allocator.dupe(u8, args[i + 1]) catch null;
+        }
+        if (std.mem.startsWith(u8, arg, "--folder=")) {
+            return allocator.dupe(u8, arg["--folder=".len..]) catch null;
+        }
     }
 
     return null;
+}
+
+fn isStartupDirectoryFlagWithValue(arg: []const u8) bool {
+    return std.mem.eql(u8, arg, "--folder");
+}
+
+fn isStartupDirectoryInlineFlag(arg: []const u8) bool {
+    return std.mem.startsWith(u8, arg, "--folder=");
+}
+
+fn isLaunchOverrideFlagWithValue(arg: []const u8) bool {
+    return std.mem.eql(u8, arg, "--rows") or
+        std.mem.eql(u8, arg, "--cols") or
+        std.mem.eql(u8, arg, "--cwd") or
+        std.mem.eql(u8, arg, "--shell") or
+        std.mem.eql(u8, arg, "--command");
+}
+
+fn isLaunchOverrideInlineFlag(arg: []const u8) bool {
+    return std.mem.startsWith(u8, arg, "--rows=") or
+        std.mem.startsWith(u8, arg, "--cols=") or
+        std.mem.startsWith(u8, arg, "--cwd=") or
+        std.mem.startsWith(u8, arg, "--shell=") or
+        std.mem.startsWith(u8, arg, "--command=");
 }
 
 pub fn modeFromArg(value: []const u8) ?AppMode {
@@ -110,4 +189,23 @@ test "modeFromArg maps supported values" {
     try std.testing.expectEqual(@as(?AppMode, .ide), modeFromArg("ide"));
     try std.testing.expectEqual(@as(?AppMode, .font_sample), modeFromArg("font-sample"));
     try std.testing.expectEqual(@as(?AppMode, null), modeFromArg("wat"));
+}
+
+test "launch override helpers recognize supported flags" {
+    try std.testing.expect(isLaunchOverrideFlagWithValue("--cwd"));
+    try std.testing.expect(isLaunchOverrideFlagWithValue("--shell"));
+    try std.testing.expect(isLaunchOverrideFlagWithValue("--command"));
+    try std.testing.expect(isLaunchOverrideInlineFlag("--shell=C:\\Program Files\\PowerShell\\7\\pwsh.exe"));
+    try std.testing.expect(isLaunchOverrideInlineFlag("--cwd=C:\\Users\\lggou"));
+    try std.testing.expect(isStartupDirectoryFlagWithValue("--folder"));
+    try std.testing.expect(isStartupDirectoryInlineFlag("--folder=C:\\Users\\lggou\\repo"));
+    try std.testing.expect(!isLaunchOverrideFlagWithValue("README.md"));
+    try std.testing.expect(!isLaunchOverrideInlineFlag("--mode=editor"));
+}
+
+test "startup directory helpers recognize folder flags" {
+    try std.testing.expect(isStartupDirectoryFlagWithValue("--folder"));
+    try std.testing.expect(isStartupDirectoryInlineFlag("--folder=C:\\repo"));
+    try std.testing.expect(!isStartupDirectoryFlagWithValue("--cwd"));
+    try std.testing.expect(!isStartupDirectoryInlineFlag("README.md"));
 }

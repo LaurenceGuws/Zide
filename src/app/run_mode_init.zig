@@ -13,7 +13,7 @@ pub fn initialize(
     app_mode: app_bootstrap.AppMode,
     perf_mode: bool,
     perf_file_path: ?[]u8,
-    startup_file_path: ?[]u8,
+    startup_file_paths: ?[][]u8,
     ctx: *anyopaque,
     hooks: Hooks,
 ) !void {
@@ -34,8 +34,10 @@ pub fn initialize(
         return;
     }
 
-    if (startup_file_path != null) {
-        try hooks.open_file(ctx, startup_file_path.?);
+    if (startup_file_paths) |paths| {
+        for (paths) |path| {
+            try hooks.open_file(ctx, path);
+        }
         return;
     }
 

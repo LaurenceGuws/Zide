@@ -125,6 +125,8 @@ pub const getScreenHeight = r.getScreenHeight;
 pub const WindowMetrics = window.WindowMetrics;
 pub const RendererInitOptions = r.Renderer.InitOptions;
 pub const TextComposition = input.TextComposition;
+pub const WindowChromeMode = r.Renderer.WindowChromeMode;
+pub const WindowChromeContract = r.Renderer.WindowChromeContract;
 
 pub const Shell = struct {
     renderer: *r.Renderer,
@@ -193,6 +195,58 @@ pub const Shell = struct {
 
     pub fn refreshWindowMetrics(self: *Shell, reason: []const u8) WindowMetrics {
         return self.renderer.refreshWindowMetrics(reason);
+    }
+
+    pub fn setWindowChrome(self: *Shell, contract: WindowChromeContract) void {
+        self.renderer.setWindowChrome(contract);
+    }
+
+    pub fn minimizeWindow(self: *Shell) bool {
+        return self.renderer.minimizeWindow();
+    }
+
+    pub fn showWindowSystemMenu(self: *Shell, x: i32, y: i32) bool {
+        return self.renderer.showWindowSystemMenu(x, y);
+    }
+
+    pub fn toggleMaximizeWindow(self: *Shell) bool {
+        return self.renderer.toggleMaximizeWindow();
+    }
+
+    pub fn windowIsMaximized(self: *Shell) bool {
+        return self.renderer.windowIsMaximized();
+    }
+
+    pub fn integratedWindowChromeSinkActive(self: *Shell) bool {
+        return self.renderer.integratedWindowChromeSinkActive();
+    }
+
+    pub fn integratedWindowChromeMinimizeHovered(self: *Shell) bool {
+        return self.renderer.integratedWindowChromeMinimizeHovered();
+    }
+
+    pub fn integratedWindowChromeMaximizeHovered(self: *Shell) bool {
+        return self.renderer.integratedWindowChromeMaximizeHovered();
+    }
+
+    pub fn integratedWindowChromeCloseHovered(self: *Shell) bool {
+        return self.renderer.integratedWindowChromeCloseHovered();
+    }
+
+    pub fn integratedWindowChromeMinimizePressed(self: *Shell) bool {
+        return self.renderer.integratedWindowChromeMinimizePressed();
+    }
+
+    pub fn integratedWindowChromeMaximizePressed(self: *Shell) bool {
+        return self.renderer.integratedWindowChromeMaximizePressed();
+    }
+
+    pub fn integratedWindowChromeClosePressed(self: *Shell) bool {
+        return self.renderer.integratedWindowChromeClosePressed();
+    }
+
+    pub fn integratedWindowChromeSinkOwnsChrome(self: *Shell) bool {
+        return self.renderer.integratedWindowChromeSinkOwnsChrome();
     }
 
     pub fn setTextInputRect(self: *Shell, x: i32, y: i32, w: i32, h: i32) void {

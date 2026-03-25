@@ -5,6 +5,7 @@ const input_actions = @import("../input/input_actions.zig");
 pub const Config = iface.Config;
 const EditorManualHighlightFallback = iface.EditorManualHighlightFallback;
 const EditorManualHighlightRule = iface.EditorManualHighlightRule;
+const TerminalShellIconMapping = iface.TerminalShellIconMapping;
 const editor_syntax_style_slots = iface.editor_syntax_style_slots;
 pub const Theme = iface.Theme;
 pub const ThemeConfig = iface.ThemeConfig;
@@ -53,6 +54,35 @@ fn dupManualHighlightFallback(allocator: std.mem.Allocator, fallback: EditorManu
     };
 }
 
+fn freeTerminalShellIconMappings(allocator: std.mem.Allocator, mappings: []TerminalShellIconMapping) void {
+    for (mappings) |*mapping| {
+        allocator.free(mapping.shell);
+        allocator.free(mapping.icon_path);
+        mapping.* = undefined;
+    }
+    allocator.free(mappings);
+}
+
+fn dupTerminalShellIconMappings(allocator: std.mem.Allocator, mappings: []const TerminalShellIconMapping) ![]TerminalShellIconMapping {
+    var out = try allocator.alloc(TerminalShellIconMapping, mappings.len);
+    errdefer allocator.free(out);
+    var loaded: usize = 0;
+    errdefer {
+        for (out[0..loaded]) |*mapping| {
+            allocator.free(mapping.shell);
+            allocator.free(mapping.icon_path);
+        }
+    }
+    for (mappings, 0..) |mapping, i| {
+        out[i] = .{
+            .shell = try allocator.dupe(u8, mapping.shell),
+            .icon_path = try allocator.dupe(u8, mapping.icon_path),
+        };
+        loaded += 1;
+    }
+    return out;
+}
+
 pub fn fileExists(path: []const u8) bool {
     if (std.fs.cwd().openFile(path, .{})) |file| {
         file.close();
@@ -60,6 +90,22 @@ pub fn fileExists(path: []const u8) bool {
     } else |_| {
         return false;
     }
+}
+
+pub fn findInstalledAssetPath(allocator: std.mem.Allocator, relative_path: []const u8) !?[]u8 {
+    if (fileExists(relative_path)) {
+        return try allocator.dupe(u8, relative_path);
+    }
+
+    const exe_dir = std.fs.selfExeDirPathAlloc(allocator) catch return null;
+    defer allocator.free(exe_dir);
+
+    const candidate = try std.fs.path.join(allocator, &.{ exe_dir, relative_path });
+    if (!fileExists(candidate)) {
+        allocator.free(candidate);
+        return null;
+    }
+    return candidate;
 }
 
 pub fn findUserConfigPath(allocator: std.mem.Allocator) iface.LuaConfigError!?[]u8 {
@@ -141,8 +187,10 @@ pub fn emptyConfig() Config {
         .terminal_blink_style = null,
         .terminal_disable_ligatures = null,
         .terminal_font_features = null,
+        .terminal_shell_path = null,
         .terminal_default_start_location = null,
         .terminal_new_tab_start_location = null,
+        .terminal_window_chrome_mode = null,
         .terminal_scrollback_rows = null,
         .terminal_cursor_shape = null,
         .terminal_cursor_blink = null,
@@ -154,6 +202,8 @@ pub fn emptyConfig() Config {
         .terminal_tab_bar_width_mode = null,
         .terminal_focus_report_window = null,
         .terminal_focus_report_pane = null,
+        .terminal_tab_bar_show_shell_icon = null,
+        .terminal_tab_bar_shell_icons = null,
         .font_lcd = null,
         .font_hinting = null,
         .font_autohint = null,
@@ -220,17 +270,27 @@ pub fn freeConfig(allocator: std.mem.Allocator, config: *Config) void {
         allocator.free(features);
         config.terminal_font_features = null;
     }
+    if (config.terminal_shell_path) |path| {
+        allocator.free(path);
+        config.terminal_shell_path = null;
+    }
     if (config.terminal_default_start_location) |path| {
         allocator.free(path);
         config.terminal_default_start_location = null;
     }
     config.terminal_new_tab_start_location = null;
+    config.terminal_window_chrome_mode = null;
+    if (config.terminal_tab_bar_shell_icons) |mappings| {
+        freeTerminalShellIconMappings(allocator, mappings);
+        config.terminal_tab_bar_shell_icons = null;
+    }
     if (config.keybinds) |binds| {
         allocator.free(binds);
         config.keybinds = null;
     }
 
     config.keybinds_no_defaults = null;
+    config.terminal_tab_bar_show_shell_icon = null;
 
     config.font_lcd = null;
     config.font_hinting = null;
@@ -261,6 +321,7 @@ fn mergeThemeConfig(base: *ThemeConfig, overlay: ThemeConfig) void {
     if (overlay.ui_modified) |color| base.ui_modified = color;
     if (overlay.ui_text) |color| base.ui_text = color;
     if (overlay.ui_text_inactive) |color| base.ui_text_inactive = color;
+    if (overlay.ui_window_control_fg) |color| base.ui_window_control_fg = color;
     if (overlay.comment_color) |color| base.comment_color = color;
     if (overlay.string) |color| base.string = color;
     if (overlay.keyword) |color| base.keyword = color;
@@ -415,11 +476,16 @@ pub fn mergeConfig(allocator: std.mem.Allocator, base: *Config, overlay: Config)
         if (base.terminal_font_features) |old| allocator.free(old);
         base.terminal_font_features = allocator.dupe(u8, features) catch base.terminal_font_features;
     }
+    if (overlay.terminal_shell_path) |path| {
+        if (base.terminal_shell_path) |old| allocator.free(old);
+        base.terminal_shell_path = allocator.dupe(u8, path) catch base.terminal_shell_path;
+    }
     if (overlay.terminal_default_start_location) |path| {
         if (base.terminal_default_start_location) |old| allocator.free(old);
         base.terminal_default_start_location = allocator.dupe(u8, path) catch base.terminal_default_start_location;
     }
     if (overlay.terminal_new_tab_start_location != null) base.terminal_new_tab_start_location = overlay.terminal_new_tab_start_location;
+    if (overlay.terminal_window_chrome_mode != null) base.terminal_window_chrome_mode = overlay.terminal_window_chrome_mode;
     if (overlay.terminal_scrollback_rows != null) base.terminal_scrollback_rows = overlay.terminal_scrollback_rows;
     if (overlay.terminal_cursor_shape != null) base.terminal_cursor_shape = overlay.terminal_cursor_shape;
     if (overlay.terminal_cursor_blink != null) base.terminal_cursor_blink = overlay.terminal_cursor_blink;
@@ -431,6 +497,13 @@ pub fn mergeConfig(allocator: std.mem.Allocator, base: *Config, overlay: Config)
     if (overlay.terminal_tab_bar_width_mode != null) base.terminal_tab_bar_width_mode = overlay.terminal_tab_bar_width_mode;
     if (overlay.terminal_focus_report_window != null) base.terminal_focus_report_window = overlay.terminal_focus_report_window;
     if (overlay.terminal_focus_report_pane != null) base.terminal_focus_report_pane = overlay.terminal_focus_report_pane;
+    if (overlay.terminal_tab_bar_show_shell_icon != null) base.terminal_tab_bar_show_shell_icon = overlay.terminal_tab_bar_show_shell_icon;
+    if (overlay.terminal_tab_bar_shell_icons) |mappings| {
+        if (dupTerminalShellIconMappings(allocator, mappings)) |dup| {
+            if (base.terminal_tab_bar_shell_icons) |old| freeTerminalShellIconMappings(allocator, old);
+            base.terminal_tab_bar_shell_icons = dup;
+        } else |_| {}
+    }
     if (overlay.font_lcd != null) base.font_lcd = overlay.font_lcd;
     if (overlay.font_hinting != null) base.font_hinting = overlay.font_hinting;
     if (overlay.font_autohint != null) base.font_autohint = overlay.font_autohint;
@@ -499,6 +572,7 @@ pub fn applyThemeConfig(theme: *Theme, overlay: ThemeConfig) void {
     if (overlay.ui_modified) |color| theme.ui_modified = color;
     if (overlay.ui_text) |color| theme.ui_text = color;
     if (overlay.ui_text_inactive) |color| theme.ui_text_inactive = color;
+    if (overlay.ui_window_control_fg) |color| theme.ui_window_control_fg = color;
     if (overlay.comment_color) |color| theme.comment_color = color;
     if (overlay.string) |color| theme.string = color;
     if (overlay.keyword) |color| theme.keyword = color;

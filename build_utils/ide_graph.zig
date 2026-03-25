@@ -14,6 +14,8 @@ const addVendorAndStb = target_config.addVendorAndStb;
 const linkFfiPlatform = target_config.linkFfiPlatform;
 const addSdlConfiguredTest = target_factory.addSdlConfiguredTest;
 const addSdlConfiguredExecutable = target_factory.addSdlConfiguredExecutable;
+const configureWindowsGuiSubsystem = target_factory.configureWindowsGuiSubsystem;
+const configureAppExecutable = target_config.configureAppExecutable;
 const addRunArtifactStep = step_utils.addRunArtifactStep;
 const addLibcTest = target_factory.addLibcTest;
 const addLibcExecutable = target_factory.addLibcExecutable;
@@ -21,7 +23,34 @@ const addCheckExecutableStep = step_utils.addCheckExecutableStep;
 const addSystemCommandStep = step_utils.addSystemCommandStep;
 const addReportBuildProfilesStep = step_reports.addReportBuildProfilesStep;
 const addGateStep = step_utils.addGateStep;
-const MainModeRunSteps = step_utils.MainModeRunSteps;
+
+fn addWindowsShellExtension(
+    b: *std.Build,
+    target: std.Build.ResolvedTarget,
+    optimize: std.builtin.OptimizeMode,
+) ?*std.Build.Step {
+    if (target.result.os.tag != .windows) return null;
+
+    const dll = b.addLibrary(.{
+        .name = "zide-shell-ext",
+        .linkage = .dynamic,
+        .root_module = b.createModule(.{
+            .target = target,
+            .optimize = optimize,
+            .link_libc = true,
+        }),
+    });
+    dll.addCSourceFile(.{
+        .file = .{ .cwd_relative = "src/platform/windows_shell_extension/open_zide_terminal_here.cpp" },
+        .flags = &.{ "-std=c++17", "-Wno-unused-command-line-argument" },
+    });
+    dll.linkSystemLibrary("ole32");
+    dll.linkSystemLibrary("shell32");
+    dll.linkSystemLibrary("shlwapi");
+    dll.linkSystemLibrary("user32");
+    const install = b.addInstallArtifact(dll, .{});
+    return &install.step;
+}
 
 fn addModeGateAndBundleSteps(
     b: *std.Build,
@@ -35,7 +64,7 @@ fn addModeGateAndBundleSteps(
     build_dep_policy_step: *std.Build.Step,
     build_profile_report_step: *std.Build.Step,
     terminal_replay_all_step: *std.Build.Step,
-    main_mode_run_steps: MainModeRunSteps,
+    gui_smokes_manual_step: *std.Build.Step,
 ) void {
     // Mode utility + packaging steps
     _ = addSystemCommandStep(
@@ -107,13 +136,19 @@ fn addModeGateAndBundleSteps(
 
     _ = addGateStep(
         b,
-        "mode-smokes-manual",
-        "Run interactive MODE smokes (manual)",
+        "gui-smokes-manual-gates",
+        "Run GUI smoke prerequisites",
         &.{
-            main_mode_run_steps.run,
-            main_mode_run_steps.terminal,
-            main_mode_run_steps.editor,
-            main_mode_run_steps.ide,
+            install_step,
+        },
+    );
+
+    _ = addGateStep(
+        b,
+        "gui-smokes-manual",
+        "Run interactive GUI smokes (manual)",
+        &.{
+            gui_smokes_manual_step,
         },
     );
 }
@@ -127,8 +162,9 @@ pub fn planIdeExtendedBuildGraph(
     app_link_ctx: AppLinkContext,
     build_options: *std.Build.Step.Options,
     zlua_module: *std.Build.Module,
-    main_mode_run_steps: MainModeRunSteps,
 ) void {
+    const windows_shell_extension_install = addWindowsShellExtension(b, target, optimize);
+
     // FFI artifacts
     const terminal_ffi = b.addLibrary(.{
         .name = "zide-terminal-ffi",
@@ -403,6 +439,56 @@ pub fn planIdeExtendedBuildGraph(
     );
 
     // Aggregate mode gates
+    const focused_terminal = addAppExecutable(
+        b,
+        target,
+        optimize,
+        build_options,
+        zlua_module,
+        "zide-terminal",
+        "src/entry_terminal.zig",
+    );
+    configureWindowsGuiSubsystem(focused_terminal, target);
+    configureAppExecutable(focused_terminal, app_link_ctx, "zide-terminal", target_profile.app_terminal);
+    const install_focused_terminal = b.addInstallArtifact(focused_terminal, .{});
+
+    const focused_editor = addAppExecutable(
+        b,
+        target,
+        optimize,
+        build_options,
+        zlua_module,
+        "zide-editor",
+        "src/entry_editor.zig",
+    );
+    configureWindowsGuiSubsystem(focused_editor, target);
+    configureAppExecutable(focused_editor, app_link_ctx, "zide-editor", target_profile.app_editor);
+    const install_focused_editor = b.addInstallArtifact(focused_editor, .{});
+
+    const gui_smokes_manual = addLibcExecutable(
+        b,
+        target,
+        optimize,
+        "gui-smokes-manual",
+        "tools/gui_smokes_manual.zig",
+    );
+    const gui_smokes_manual_run = addRunArtifactStep(
+        b,
+        gui_smokes_manual,
+        "run-gui-smokes-manual-launcher",
+        "Launch editor, IDE, and terminal GUI smokes",
+    );
+    gui_smokes_manual_run.run.step.dependOn(&install_focused_editor.step);
+    gui_smokes_manual_run.run.step.dependOn(&install_focused_terminal.step);
+    gui_smokes_manual_run.run.step.dependOn(b.getInstallStep());
+    gui_smokes_manual_run.run.addArg(b.getInstallPath(.bin, "zide-editor"));
+    gui_smokes_manual_run.run.addArg(b.getInstallPath(.bin, "zide"));
+    gui_smokes_manual_run.run.addArg(b.getInstallPath(.bin, "zide-terminal"));
+
+    if (windows_shell_extension_install) |step| {
+        b.getInstallStep().dependOn(step);
+    }
+
     addModeGateAndBundleSteps(
         b,
         target_os,
@@ -415,7 +501,7 @@ pub fn planIdeExtendedBuildGraph(
         build_dep_policy_step,
         build_profile_report_step,
         terminal_replay_all_step,
-        main_mode_run_steps,
+        gui_smokes_manual_run.step,
     );
 
     // Developer tooling

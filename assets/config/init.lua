@@ -11,8 +11,9 @@ local function file_exists(path)
 	return false
 end
 
-local home = os.getenv("HOME") or ""
 local is_windows = package.config:sub(1, 1) == "\\"
+local home = os.getenv("HOME") or ""
+local userprofile = os.getenv("USERPROFILE") or home
 local theme_import_ok, theme_import = pcall(dofile, "assets/config/theme_import.lua")
 local kitty_theme = nil
 
@@ -40,6 +41,19 @@ end
 local terminal_font_path = app_font_path
 if file_exists(iosevka_font_path) then
 	terminal_font_path = jetbrains_font_path
+end
+
+local terminal_shell_path = nil
+if is_windows then
+	local pwsh7_path = "C:/Program Files/PowerShell/7/pwsh.exe"
+	if file_exists(pwsh7_path) then
+		terminal_shell_path = pwsh7_path
+	end
+end
+
+local terminal_default_start_location = home
+if is_windows then
+	terminal_default_start_location = userprofile
 end
 
 return {
@@ -100,6 +114,7 @@ return {
 	        ui_modified = "#ffc777",
 	        ui_text = "#c8d3f5",
 	        ui_text_inactive = "#828bb8",
+	        ui_window_control_fg = "#c8d3f5",
 	        color0 = "#1b1d2b",
 	        color1 = "#ff757f",
 	        color2 = "#c3e88d",
@@ -158,6 +173,7 @@ return {
 	-- 		ui_modified = "#8c6c3e",
 	-- 		ui_text = "#1f2335",
 	-- 		ui_text_inactive = "#4c5a91",
+	-- 		ui_window_control_fg = "#1f2335",
 	-- 		color0 = "#b4b5b9",
 	-- 		color1 = "#f52a65",
 	-- 		color2 = "#587539",
@@ -384,25 +400,55 @@ return {
 		},
 		-- Scrollback line cap (min 100, max 100000). Invalid values warn and fall back to 1000.
 		scrollback = 10000,
+		-- Shared terminal shell policy across terminal-only mode and terminals
+		-- created from IDE/editor surfaces.
+		shell = {
+			path = terminal_shell_path,
+		},
 		-- Terminal start-location policy.
 		-- default: directory used for first terminal startup and as fallback.
 		-- new_tab:
 		--   "current" -> inherit active tab cwd when available (default)
 		--   "default" -> always start tabs at start_location.default
 		start_location = {
-			default = os.getenv("HOME"),
+			default = terminal_default_start_location,
 			new_tab = "current",
+		},
+		-- Terminal-only window chrome policy.
+		-- mode:
+		--   "native"      ordinary platform frame/titlebar (default)
+		--   "integrated"  integrated titlebar/tab strip contract
+		-- Current first native implementation is Windows terminal-only mode.
+		window_chrome = {
+			mode = "native",
 		},
 		-- Tab bar visibility in --mode terminal:
 		-- false: hide tab bar until there are 2+ tabs (default)
-		-- true: always show tab bar, even with a single tab
+		-- true: always show the ordinary content-row tab bar, even with a single tab
+		-- Note: integrated terminal chrome keeps the titleband visible either way.
 		-- width_mode options:
 		--   "fixed"        fixed chip width
 		--   "dynamic"      equal split across available width
 		--   "label_length" label-aware widths normalized to fill bar
+		-- Note: integrated terminal chrome normalizes to a compact internal width
+		-- policy instead of stretching tabs across the whole titleband.
+		-- show_shell_icon:
+		--   false  no per-shell image prefix (default)
+		--   true   show a PNG icon when terminal.tab_bar.shell_icons has a match
+		-- shell_icons:
+		--   Lua table mapping shell path / basename / basename stem to a PNG path.
+		--   Examples:
+		--     ["C:/Program Files/PowerShell/7/pwsh.exe"] = "C:/Icons/pwsh.png"
+		--     ["pwsh.exe"] = "C:/Icons/pwsh.png"
+		--     bash = "assets/icon/bash.png"
 		tab_bar = {
 			show_single_tab = false,
+			show_shell_icon = false,
 			width_mode = "dynamic",
+			-- shell_icons = {
+			--     ["pwsh.exe"] = "C:/Icons/pwsh.png",
+			--     bash = "assets/icon/bash.png",
+			-- },
 		},
 		-- Cursor configuration.
 		-- Valid shapes: "block", "underline", "bar". Blink is boolean.

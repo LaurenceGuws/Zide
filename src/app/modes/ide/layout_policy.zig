@@ -13,7 +13,7 @@ pub fn computeLayoutForMode(
     app_mode: app_bootstrap.AppMode,
     width: f32,
     height: f32,
-    options_bar_height: f32,
+    top_bar_height: f32,
     tab_bar_height: f32,
     side_nav_width: f32,
     status_bar_height: f32,
@@ -29,7 +29,7 @@ pub fn computeLayoutForMode(
             const mode_terminal_h = if (show_terminal) @max(0, height - mode_tab_bar_h) else 0;
             return .{
                 .window = .{ .x = 0, .y = 0, .width = width, .height = height },
-                .options_bar = .{ .x = 0, .y = 0, .width = 0, .height = 0 },
+                .top_bar = .{ .x = 0, .y = 0, .width = 0, .height = 0 },
                 .tab_bar = .{ .x = 0, .y = 0, .width = width, .height = mode_tab_bar_h },
                 .side_nav = .{ .x = 0, .y = 0, .width = 0, .height = 0 },
                 .editor = .{ .x = 0, .y = 0, .width = 0, .height = 0 },
@@ -38,13 +38,13 @@ pub fn computeLayoutForMode(
             };
         },
         .editor => {
-            const editor_height = @max(0, height - options_bar_height - tab_bar_height - status_bar_height);
+            const editor_height = @max(0, height - top_bar_height - tab_bar_height - status_bar_height);
             return .{
                 .window = .{ .x = 0, .y = 0, .width = width, .height = height },
-                .options_bar = .{ .x = 0, .y = 0, .width = width, .height = options_bar_height },
-                .tab_bar = .{ .x = 0, .y = options_bar_height, .width = width, .height = tab_bar_height },
+                .top_bar = .{ .x = 0, .y = 0, .width = width, .height = top_bar_height },
+                .tab_bar = .{ .x = 0, .y = top_bar_height, .width = width, .height = tab_bar_height },
                 .side_nav = .{ .x = 0, .y = 0, .width = 0, .height = 0 },
-                .editor = .{ .x = 0, .y = options_bar_height + tab_bar_height, .width = width, .height = editor_height },
+                .editor = .{ .x = 0, .y = top_bar_height + tab_bar_height, .width = width, .height = editor_height },
                 .terminal = .{ .x = 0, .y = 0, .width = 0, .height = 0 },
                 .status_bar = .{ .x = 0, .y = height - status_bar_height, .width = width, .height = status_bar_height },
             };
@@ -52,7 +52,7 @@ pub fn computeLayoutForMode(
         .font_sample => {
             return .{
                 .window = .{ .x = 0, .y = 0, .width = width, .height = height },
-                .options_bar = .{ .x = 0, .y = 0, .width = 0, .height = 0 },
+                .top_bar = .{ .x = 0, .y = 0, .width = 0, .height = 0 },
                 .tab_bar = .{ .x = 0, .y = 0, .width = 0, .height = 0 },
                 .side_nav = .{ .x = 0, .y = 0, .width = 0, .height = 0 },
                 .editor = .{ .x = 0, .y = 0, .width = width, .height = height },
@@ -63,17 +63,17 @@ pub fn computeLayoutForMode(
         .ide => {},
     }
 
-    const max_terminal_h = @max(0, height - options_bar_height - tab_bar_height - status_bar_height);
+    const max_terminal_h = @max(0, height - top_bar_height - tab_bar_height - status_bar_height);
     const effective_terminal_h = if (show_terminal) @min(terminal_height, max_terminal_h) else 0;
-    const editor_height = @max(0, height - options_bar_height - tab_bar_height - status_bar_height - effective_terminal_h);
+    const editor_height = @max(0, height - top_bar_height - tab_bar_height - status_bar_height - effective_terminal_h);
     const editor_width = @max(0, width - side_nav_width);
 
     return .{
         .window = .{ .x = 0, .y = 0, .width = width, .height = height },
-        .options_bar = .{ .x = 0, .y = 0, .width = width, .height = options_bar_height },
-        .tab_bar = .{ .x = side_nav_width, .y = options_bar_height, .width = editor_width, .height = tab_bar_height },
-        .side_nav = .{ .x = 0, .y = options_bar_height, .width = side_nav_width, .height = height - status_bar_height - options_bar_height },
-        .editor = .{ .x = side_nav_width, .y = options_bar_height + tab_bar_height, .width = editor_width, .height = editor_height },
+        .top_bar = .{ .x = 0, .y = 0, .width = width, .height = top_bar_height },
+        .tab_bar = .{ .x = side_nav_width, .y = top_bar_height, .width = editor_width, .height = tab_bar_height },
+        .side_nav = .{ .x = 0, .y = top_bar_height, .width = side_nav_width, .height = height - status_bar_height - top_bar_height },
+        .editor = .{ .x = side_nav_width, .y = top_bar_height + tab_bar_height, .width = editor_width, .height = editor_height },
         .terminal = .{ .x = side_nav_width, .y = height - status_bar_height - effective_terminal_h, .width = editor_width, .height = effective_terminal_h },
         .status_bar = .{ .x = 0, .y = height - status_bar_height, .width = width, .height = status_bar_height },
     };
@@ -113,7 +113,7 @@ pub fn configReloadNoticeY(
         return layout.tab_bar.y + layout.tab_bar.height + margin;
     }
     if (mode == .ide) {
-        return layout.options_bar.y + layout.options_bar.height + margin;
+        return layout.top_bar.y + layout.top_bar.height + margin;
     }
     return margin;
 }
