@@ -235,7 +235,11 @@ fn resolveMapPath(allocator: std.mem.Allocator, path: []const u8) ![]const u8 {
     const exe_dir = std.fs.selfExeDirPathAlloc(allocator) catch return path;
     defer allocator.free(exe_dir);
 
-    const candidate = try std.fs.path.join(allocator, &.{ exe_dir, path });
+    return resolveMapPathWithBase(allocator, path, exe_dir);
+}
+
+fn resolveMapPathWithBase(allocator: std.mem.Allocator, path: []const u8, base_dir: []const u8) ![]const u8 {
+    const candidate = try std.fs.path.join(allocator, &.{ base_dir, path });
     errdefer allocator.free(candidate);
     if (!fileExists(candidate)) {
         allocator.free(candidate);
@@ -289,4 +293,38 @@ test "globMatch handles basic wildcards" {
     try std.testing.expect(globMatch("templates/*.yaml", "templates/values.yaml"));
     try std.testing.expect(globMatch("templates/_*.tpl", "templates/_helpers.tpl"));
     try std.testing.expect(!globMatch("templates/*.yaml", "templates/values.yml"));
+}
+
+test "resolveMapPathWithBase falls back to install layout when cwd lacks syntax assets" {
+    var tmp = std.testing.tmpDir(.{});
+    defer tmp.cleanup();
+
+    try tmp.dir.makePath("install/assets/syntax");
+    try tmp.dir.makePath("cwd");
+
+    {
+        const file = try tmp.dir.createFile("install/assets/syntax/generated.lua", .{});
+        file.close();
+    }
+
+    const root_path = try tmp.dir.realpathAlloc(std.testing.allocator, ".");
+    defer std.testing.allocator.free(root_path);
+
+    const install_path = try std.fs.path.join(std.testing.allocator, &.{ root_path, "install" });
+    defer std.testing.allocator.free(install_path);
+
+    const cwd_path = try std.fs.path.join(std.testing.allocator, &.{ root_path, "cwd" });
+    defer std.testing.allocator.free(cwd_path);
+
+    const previous_cwd = try std.process.getCwdAlloc(std.testing.allocator);
+    defer std.testing.allocator.free(previous_cwd);
+    try std.posix.chdir(cwd_path);
+    defer std.posix.chdir(previous_cwd) catch {};
+
+    const resolved = try resolveMapPathWithBase(std.testing.allocator, "assets/syntax/generated.lua", install_path);
+    defer if (resolved.ptr != "assets/syntax/generated.lua".ptr) std.testing.allocator.free(resolved);
+
+    const expected = try std.fs.path.join(std.testing.allocator, &.{ install_path, "assets/syntax/generated.lua" });
+    defer std.testing.allocator.free(expected);
+    try std.testing.expectEqualStrings(expected, resolved);
 }
