@@ -122,7 +122,9 @@ pub fn SearchHighlightOps(comptime Editor: type) type {
         pub fn scheduleHighlighter(self: *Editor, path: ?[]const u8) void {
             const log = app_logger.logger("editor.highlight");
             const intent = runtime_policy.editorBackgroundIntent();
+            self.resetHighlightRuntimeCounters();
             if (self.doc.highlight_disabled_for_large_file) {
+                self.recordHighlightSkippedLargeFile();
                 if (self.doc.highlighter) |h| {
                     h.destroy();
                     self.clearHighlighter();
@@ -146,6 +148,7 @@ pub fn SearchHighlightOps(comptime Editor: type) type {
             const lang = syntax_registry_mod.SyntaxRegistry.resolveLanguage(path);
             const manual_override = manual_highlights_mod.resolve(path, lang);
             if (lang == null and manual_override == null) {
+                self.recordHighlightDisabledNoLanguage();
                 if (self.doc.highlighter) |h| {
                     h.destroy();
                     self.clearHighlighter();
@@ -165,6 +168,7 @@ pub fn SearchHighlightOps(comptime Editor: type) type {
                 return;
             }
             self.setHighlightPending(true);
+            self.recordHighlightScheduled();
             log.logf(
                 .info,
                 "highlight scheduled lifecycle={s} work_class={s} path=\"{s}\" lang={s} manual_parser={s} manual_mode={s}",
@@ -183,6 +187,7 @@ pub fn SearchHighlightOps(comptime Editor: type) type {
             const log = app_logger.logger("editor.highlight");
             log.logf(.info, "highlight init check path=\"{s}\"", .{path orelse ""});
             self.setHighlightPending(false);
+            self.recordHighlightInitAttempt();
             const lang = syntax_registry_mod.SyntaxRegistry.resolveLanguage(path);
             const manual_override = manual_highlights_mod.resolve(path, lang);
             const effective_lang = if (manual_override) |spec| spec.parser else lang;
@@ -252,9 +257,11 @@ pub fn SearchHighlightOps(comptime Editor: type) type {
                     query_paths,
                     self.doc.grammar_manager,
                 ) catch |err| {
+                    self.recordHighlightInitFailure();
                     log.logf(.info, "highlight init failed err={any}", .{err});
                     return err;
                 };
+                self.recordHighlightInitSuccess();
                 self.bumpHighlightEpoch();
                 self.noteHighlightDirtyRange(0, self.doc.buffer.totalLen());
                 const elapsed_ns = std.time.nanoTimestamp() - t_start;
@@ -459,6 +466,7 @@ pub fn SearchHighlightOps(comptime Editor: type) type {
         }
 
         pub fn clearSearchState(self: *Editor) void {
+            self.resetSearchRuntimeCounters();
             self.cancelPendingSearchWork();
             self.clearSearchMatches();
             self.setSearchActive(null);
@@ -492,6 +500,7 @@ pub fn SearchHighlightOps(comptime Editor: type) type {
 
             const generation_opt = self.queueSearchRequest(preferred_offset, self.doc.search_mode, query_copy, content_copy);
             if (generation_opt == null) {
+                self.recordSearchSyncFallback();
                 c_allocator.free(query_copy);
                 c_allocator.free(content_copy);
                 const log = app_logger.logger("editor.search");
@@ -510,6 +519,7 @@ pub fn SearchHighlightOps(comptime Editor: type) type {
                 return;
             }
             const generation = generation_opt.?;
+            self.recordSearchScheduledAsync();
 
             self.clearSearchMatches();
             self.setSearchActive(null);
@@ -597,6 +607,7 @@ pub fn SearchHighlightOps(comptime Editor: type) type {
             self.unlockSearchRuntime();
 
             const worker = std.Thread.spawn(.{}, searchWorkerMain, .{self}) catch |err| {
+                self.recordSearchWorkerSpawnFailure();
                 const log = app_logger.logger("editor.search");
                 log.logf(.warning, "search worker spawn failed err={s}", .{@errorName(err)});
                 self.lockSearchRuntime();
@@ -604,6 +615,7 @@ pub fn SearchHighlightOps(comptime Editor: type) type {
                 self.unlockSearchRuntime();
                 return;
             };
+            self.recordSearchWorkerSpawn();
             self.setSearchWorker(worker);
         }
 
@@ -644,6 +656,7 @@ pub fn SearchHighlightOps(comptime Editor: type) type {
 
             defer c_allocator.free(result.matches);
             if (result.generation != latest_generation) {
+                self.recordSearchStaleResultDropped();
                 return false;
             }
 
@@ -654,6 +667,7 @@ pub fn SearchHighlightOps(comptime Editor: type) type {
                 self.bumpSearchEpoch();
                 return false;
             };
+            self.recordSearchResultApplied();
             self.setSearchActive(self.pickSearchActiveIndex(result.preferred_offset));
             self.bumpSearchEpoch();
             const total = self.doc.buffer.totalLen();
@@ -691,6 +705,7 @@ pub fn SearchHighlightOps(comptime Editor: type) type {
                     return;
                 }
                 if (request.generation != self.currentSearchGeneration()) {
+                    self.recordSearchStaleResultDropped();
                     const log = app_logger.logger("editor.search");
                     log.logf(
                         .debug,

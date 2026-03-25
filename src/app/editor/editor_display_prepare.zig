@@ -23,9 +23,11 @@ pub fn prepare(
     }
     editor.ensureHighlighter();
     const elapsed_us = @as(i64, @intCast(@divTrunc(std.time.nanoTimestamp() - t_start, 1000)));
+    const search_counters = editor.searchRuntimeCounters();
+    const highlight_counters = editor.highlightRuntimeCounters();
     perf_log.logf(
         .info,
-        "display_prepare frame={d} invalidated={any} highlight_pending={any} defer_highlight={d} defer_precompute={d} defer_clusters={d} time_us={d}",
+        "display_prepare frame={d} invalidated={any} highlight_pending={any} defer_highlight={d} defer_precompute={d} defer_clusters={d} time_us={d} search_epoch={d} search_async={d} search_sync_fallbacks={d} search_results={d} search_stale={d} search_worker_spawns={d}/{d} highlight_epoch={d} highlight_scheduled={d} highlight_skipped_large={d} highlight_disabled={d} highlight_init={d}/{d}/{d}",
         .{
             frame_id,
             invalidated,
@@ -34,6 +36,20 @@ pub fn prepare(
             editor.visible_cache_precompute_defer_frames,
             editor.cluster_offsets_defer_frames,
             elapsed_us,
+            search_counters.epoch,
+            search_counters.scheduled_async,
+            search_counters.sync_fallbacks,
+            search_counters.results_applied,
+            search_counters.stale_results_dropped,
+            search_counters.worker_spawns,
+            search_counters.worker_spawn_failures,
+            highlight_counters.epoch,
+            highlight_counters.scheduled,
+            highlight_counters.skipped_large_file,
+            highlight_counters.disabled_no_language,
+            highlight_counters.init_attempts,
+            highlight_counters.init_successes,
+            highlight_counters.init_failures,
         },
     );
 }

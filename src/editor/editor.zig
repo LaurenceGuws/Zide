@@ -44,6 +44,26 @@ pub const Editor = struct {
         result: ?SearchWorkResult,
     };
 
+    pub const SearchRuntimeCounters = struct {
+        epoch: u64 = 0,
+        scheduled_async: u64 = 0,
+        sync_fallbacks: u64 = 0,
+        results_applied: u64 = 0,
+        stale_results_dropped: u64 = 0,
+        worker_spawns: u64 = 0,
+        worker_spawn_failures: u64 = 0,
+    };
+
+    pub const HighlightRuntimeCounters = struct {
+        epoch: u64 = 0,
+        scheduled: u64 = 0,
+        skipped_large_file: u64 = 0,
+        disabled_no_language: u64 = 0,
+        init_attempts: u64 = 0,
+        init_successes: u64 = 0,
+        init_failures: u64 = 0,
+    };
+
     pub const HighlightWorkState = struct {
         start: usize,
         end: usize,
@@ -168,6 +188,8 @@ pub const Editor = struct {
     cluster_offset_cache: std.AutoHashMap(usize, ClusterOffsetEntry),
     max_line_width_cache: usize,
     visible_highlight_runtime: VisibleHighlightRuntimeState,
+    search_runtime_counters: SearchRuntimeCounters,
+    highlight_runtime_counters: HighlightRuntimeCounters,
     highlight_defer_frames: u8,
     visible_cache_precompute_defer_frames: u8,
     cluster_offsets_defer_frames: u8,
@@ -267,6 +289,74 @@ pub const Editor = struct {
 
     pub fn setHighlightPending(self: *Editor, pending: bool) void {
         self.doc.highlight_pending = pending;
+    }
+
+    pub fn searchRuntimeCounters(self: *const Editor) SearchRuntimeCounters {
+        return self.search_runtime_counters;
+    }
+
+    pub fn highlightRuntimeCounters(self: *const Editor) HighlightRuntimeCounters {
+        return self.highlight_runtime_counters;
+    }
+
+    pub fn recordSearchScheduledAsync(self: *Editor) void {
+        self.search_runtime_counters.scheduled_async +%= 1;
+    }
+
+    pub fn recordSearchSyncFallback(self: *Editor) void {
+        self.search_runtime_counters.sync_fallbacks +%= 1;
+    }
+
+    pub fn recordSearchResultApplied(self: *Editor) void {
+        self.search_runtime_counters.results_applied +%= 1;
+    }
+
+    pub fn recordSearchStaleResultDropped(self: *Editor) void {
+        self.search_runtime_counters.stale_results_dropped +%= 1;
+    }
+
+    pub fn recordSearchWorkerSpawn(self: *Editor) void {
+        self.search_runtime_counters.worker_spawns +%= 1;
+    }
+
+    pub fn recordSearchWorkerSpawnFailure(self: *Editor) void {
+        self.search_runtime_counters.worker_spawn_failures +%= 1;
+    }
+
+    pub fn recordHighlightScheduled(self: *Editor) void {
+        self.highlight_runtime_counters.scheduled +%= 1;
+    }
+
+    pub fn recordHighlightSkippedLargeFile(self: *Editor) void {
+        self.highlight_runtime_counters.skipped_large_file +%= 1;
+    }
+
+    pub fn recordHighlightDisabledNoLanguage(self: *Editor) void {
+        self.highlight_runtime_counters.disabled_no_language +%= 1;
+    }
+
+    pub fn recordHighlightInitAttempt(self: *Editor) void {
+        self.highlight_runtime_counters.init_attempts +%= 1;
+    }
+
+    pub fn recordHighlightInitSuccess(self: *Editor) void {
+        self.highlight_runtime_counters.init_successes +%= 1;
+    }
+
+    pub fn recordHighlightInitFailure(self: *Editor) void {
+        self.highlight_runtime_counters.init_failures +%= 1;
+    }
+
+    pub fn resetSearchRuntimeCounters(self: *Editor) void {
+        self.search_runtime_counters = .{
+            .epoch = self.search_runtime_counters.epoch + 1,
+        };
+    }
+
+    pub fn resetHighlightRuntimeCounters(self: *Editor) void {
+        self.highlight_runtime_counters = .{
+            .epoch = self.highlight_runtime_counters.epoch + 1,
+        };
     }
 
     pub fn bumpHighlightEpoch(self: *Editor) void {
@@ -889,6 +979,8 @@ pub const Editor = struct {
                 .result = null,
                 .needs_redraw = false,
             },
+            .search_runtime_counters = .{},
+            .highlight_runtime_counters = .{},
             .highlight_defer_frames = 0,
             .visible_cache_precompute_defer_frames = 0,
             .cluster_offsets_defer_frames = 0,
