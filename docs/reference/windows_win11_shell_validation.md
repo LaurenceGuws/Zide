@@ -96,6 +96,15 @@ Expected shell-extension verb ids:
 6. mixed file + folder selection:
    - expect no Zide command
 
+7. non-filesystem or virtual shell surfaces:
+   - test examples:
+     - `This PC`
+     - `Quick access` / `Home`
+     - library views
+     - search result surfaces that are not normal filesystem folder views
+   - expect no Zide command when Explorer cannot provide a stable filesystem
+     path target
+
 ## If Behavior Looks Stale
 
 1. restart Explorer:
@@ -120,6 +129,10 @@ Useful signals:
   - hidden
 - `GetState title=... state=0`
   - enabled
+- `InspectSelection unsupported non-filesystem item`
+  - selection came from a virtual/non-filesystem shell item, so Zide should hide
+- `InspectSelection background location is not filesystem-backed`
+  - background surface did not resolve to a normal filesystem folder
 
 ## Current Known Reality
 
@@ -127,3 +140,5 @@ Useful signals:
   submenu even though only one child command remains visible.
 - Treat the actual Explorer presentation as product truth unless the packaged
   manifest or shell-extension evidence proves otherwise.
+- Zide intentionally hides on non-filesystem shell items because the launch
+  contract is defined only for stable filesystem-backed files and directories.

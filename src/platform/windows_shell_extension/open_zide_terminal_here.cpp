@@ -284,6 +284,9 @@ namespace
 
                     if ((attributes & SFGAO_FILESYSTEM) == 0)
                     {
+                        // Keep packaged verbs off library/search/virtual items that
+                        // cannot produce a stable filesystem launch target.
+                        AppendShellLog(L"InspectSelection unsupported non-filesystem item index=%lu", index);
                         item->Release();
                         snapshot->kind = SelectionKind::Unsupported;
                         return S_OK;
@@ -369,6 +372,7 @@ namespace
             location->Release();
             if (FAILED(pathHr))
             {
+                AppendShellLog(L"InspectSelection background location is not filesystem-backed hr=0x%08X", pathHr);
                 return pathHr;
             }
 

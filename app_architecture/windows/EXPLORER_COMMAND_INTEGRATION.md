@@ -136,6 +136,8 @@ The intended UX rule is:
 - packaged `Directory` commands may still be grouped under `Zide` by Win11 even
   when only one child remains visible for the active selection
 - hide mixed file+folder selections instead of guessing
+- hide non-filesystem shell items rather than inventing launch targets for
+  libraries, search surfaces, or other virtual locations
 
 ## Validation Lane
 
