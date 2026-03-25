@@ -82,6 +82,8 @@ Quick reading guide:
 - `tests/README.md` — repo-wide test layout policy.
 - `app_architecture/BOOTSTRAP.md` — dependencies, bootstrap, build, run, test.
 - docs explorer repo — `https://github.com/LaurenceGuws/docs-explorer`
+- `scripts/open_docs_browser.sh` — local standalone docs-explorer launcher for this repo.
+- `tools/docs_browser/` — Zide-owned explorer config and docs index.
 - `app_architecture/CONFIG.md` — Lua config subsystem: parser surface, merge rules, runtime consumers, and reload truth.
 - `docs/todo/config.md` — config subsystem tracker: contract drift, reload gaps, validation, and binding semantics.
 - `docs/DEPENDENCIES.md` — current dependency sourcing policy: Zig-managed app stack across platforms and platform-runtime requirements.

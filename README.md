@@ -148,6 +148,8 @@ Local docs explorer workflow:
 ./scripts/open_docs_browser.sh
 ```
 
+Project-owned docs browser config lives under `tools/docs_browser/`.
+
 ## Features and Direction
 
 - native Wayland-first renderer and app shell
