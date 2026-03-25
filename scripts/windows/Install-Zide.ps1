@@ -54,7 +54,7 @@ function Write-InstallPlan {
     }
     Write-Host "Win11 Explorer integration: enabled"
     Write-Host "  File/folder surface: top-level Zide submenu"
-    Write-Host "  Background surface: direct Open Zide Terminal here"
+    Write-Host "  Background surface: top-level Zide submenu"
     Write-Host "Package identity: enabled"
     Write-Host "  Package mode: Full"
     Write-Host "  Self-signed local/dev registration requires an elevated PowerShell session"
@@ -393,10 +393,16 @@ function Write-PackageIdentityMetadata {
                 item_types = @("Directory")
             },
             [ordered]@{
-                clsid = "4C5D89A5-4E56-48E0-AE5A-8F4A5C6D1972"
-                verb_id = "ZideBackgroundTerminal"
-                title = "Open Zide Terminal here"
+                clsid = "63FDDD2D-D152-47DA-A9A0-9D6D724DC7F9"
+                verb_id = "ZideBackgroundMenu"
+                title = "Zide"
                 item_types = @("Directory\Background")
+            },
+            [ordered]@{
+                clsid = "4C5D89A5-4E56-48E0-AE5A-8F4A5C6D1972"
+                verb_id = "ZideMultiFolderTerminal"
+                title = "Open Zide Terminal here"
+                item_types = @("Directory")
             }
         )
     }
@@ -703,7 +709,8 @@ try {
     Write-Host "Win11 Explorer commands:"
     Write-Host "  Files: Zide -> Open in Zide, Open in Zide Editor"
     Write-Host "  Folders: Zide -> Open in Zide, Open Zide Terminal here"
-    Write-Host "  Folder background: Open Zide Terminal here"
+    Write-Host "  Multiple folders: Zide -> Open Zide Terminal here"
+    Write-Host "  Folder background: Zide -> Open in Zide, Open Zide Terminal here"
     Write-Host "Package identity: registered (Full)"
 } finally {
     Remove-IfExists $tempRoot

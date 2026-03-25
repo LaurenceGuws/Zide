@@ -193,7 +193,7 @@ fn initWithMode(
         try allocator.dupe(u8, std.mem.sliceTo(raw, 0))
     else
         null;
-    const startup_file_path = app_bootstrap.parseStartupFilePath(allocator);
+    const startup_file_paths = app_bootstrap.parseStartupFilePaths(allocator);
     const perf_mode = perf_file_path != null;
     const perf_frames_total: u64 = if (perf_mode)
         app_bootstrap.parseEnvU64("ZIDE_EDITOR_PERF_FRAMES", 240)
@@ -351,7 +351,7 @@ fn initWithMode(
         .perf_frames_done = 0,
         .perf_scroll_delta = perf_scroll_delta,
         .perf_file_path = perf_file_path,
-        .startup_file_path = startup_file_path,
+        .startup_file_paths = startup_file_paths,
         .perf_logger = perf_log,
         .last_input = shared_types.input.InputSnapshot.init(.{ .x = 0, .y = 0 }, .{}),
         .app_mode = app_mode,

@@ -51,8 +51,11 @@ pub fn handle(state: anytype) void {
     if (state.perf_file_path) |path| {
         state.allocator.free(path);
     }
-    if (state.startup_file_path) |path| {
-        state.allocator.free(path);
+    if (state.startup_file_paths) |paths| {
+        for (paths) |path| {
+            state.allocator.free(path);
+        }
+        state.allocator.free(paths);
     }
     if (state.terminal_default_start_location) |path| {
         state.allocator.free(path);

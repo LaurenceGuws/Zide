@@ -272,15 +272,9 @@ The current execution order is:
   - Windows ConPTY launch now also passes the resolved cwd to
     `CreateProcessW`, so installed terminals do not open in the install root
 - [x] `W8-04` Add first native shell-integration verbs through the per-user installer
-  - current installer now registers per-user Explorer verbs by default:
-    - `Open in Zide`
-    - `Open in Zide Editor`
-    - `Open Zide Terminal here`
-  - scope is intentionally limited to the current launch contract:
-    - file verbs for IDE/editor
-    - directory/background terminal-here verbs
-    - no folder/workspace-open verb yet for IDE/editor until that becomes a
-      first-class cross-platform contract
+  - superseded by the packaged Win11 Explorer command lane in `W8-06`
+  - installer now removes these legacy per-user verbs instead of treating them
+    as a supported product surface
 - [x] `W8-05` Add package identity to the Windows install story without changing runtime layout
   - This is the shared prerequisite for the next Windows-native shell lanes.
   - Scope:
@@ -321,14 +315,14 @@ The current execution order is:
     - `app_architecture/windows/NATIVE_SHELL_INTEGRATION.md`
     - `app_architecture/windows/EXPLORER_COMMAND_INTEGRATION.md`
   - Progress:
-    - first narrow packaged cut now exists:
+    - current packaged cut uses:
       - one in-proc COM DLL:
         - `zide-shell-ext.dll`
-      - one verb:
-        - `Open Zide Terminal here`
-      - item types:
-        - `Directory`
-        - `Directory\Background`
+      - four top-level Explorer commands:
+        - `ZideFileMenu`
+        - `ZideFolderMenu`
+        - `ZideBackgroundMenu`
+        - `ZideMultiFolderTerminal`
     - the package-identity manifest generator now emits:
       - `windows.comServer`
       - `windows.fileExplorerContextMenus`
@@ -345,13 +339,19 @@ The current execution order is:
       - packaged shell extension now follows the product menu shape:
         - files -> top-level `Zide` submenu
         - folders -> top-level `Zide` submenu
-        - folder background -> direct `Open Zide Terminal here`
+        - multiple folders -> top-level `Zide` submenu with terminal only
+        - folder background -> top-level `Zide` submenu
+        - mixed file+folder selection -> hidden
 
 - [ ] `W8-07` Stabilize the packaged Explorer command surface
   - Current focus:
     - confirm file submenu appears consistently for filesystem-backed files
-    - confirm folder submenu and folder-background direct command remain visible
-    - decide whether multi-select should stay hidden or gain a product contract
+    - confirm folder submenu, multi-folder terminal-only submenu, and
+      folder-background submenu remain visible
+    - validate the new multi-select contract:
+      - multiple files -> `Zide` submenu for IDE/editor
+      - multiple folders -> `Zide` submenu with terminal only
+      - mixed files+folders -> hidden
     - keep the install/docs/test story deterministic around the packaged path
   - Keep this lane packaged and `IExplorerCommand`-owned.
   - Do not mix it back together with deferred Windows default terminal work.

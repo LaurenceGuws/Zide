@@ -41,6 +41,41 @@ pub fn applyKnownOverridesFromProcessArgs(allocator: std.mem.Allocator) !void {
     try applyEnv(&config, allocator);
 }
 
+pub fn parseLaunchCwdsFromProcessArgs(allocator: std.mem.Allocator) !?[][]u8 {
+    const argv = try std.process.argsAlloc(allocator);
+    defer std.process.argsFree(allocator, argv);
+
+    var values = std.ArrayList([]u8).empty;
+    defer {
+        if (values.capacity > 0) {
+            for (values.items) |value| allocator.free(value);
+            values.deinit(allocator);
+        }
+    }
+
+    var i: usize = 1;
+    while (i < argv.len) : (i += 1) {
+        const arg = argv[i];
+        if (std.mem.eql(u8, arg, "--cwd")) {
+            if (i + 1 >= argv.len) return error.MissingCwd;
+            i += 1;
+            const owned = try allocator.dupe(u8, argv[i]);
+            errdefer allocator.free(owned);
+            try values.append(allocator, owned);
+            continue;
+        }
+        if (std.mem.startsWith(u8, arg, "--cwd=")) {
+            const owned = try allocator.dupe(u8, arg["--cwd=".len..]);
+            errdefer allocator.free(owned);
+            try values.append(allocator, owned);
+            continue;
+        }
+    }
+
+    if (values.items.len == 0) return null;
+    return try values.toOwnedSlice(allocator);
+}
+
 fn parseIterator(allocator: std.mem.Allocator, args: anytype, strict_unknown: bool) !Config {
     var config: Config = .{};
     while (args.next()) |arg| {

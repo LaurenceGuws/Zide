@@ -159,8 +159,17 @@ Current shell integration policy:
     - submenu:
       - `Open in Zide`
       - `Open Zide Terminal here`
+  - multiple folders:
+    - top-level `Zide`
+    - submenu:
+      - `Open Zide Terminal here`
   - directory background:
-    - direct `Open Zide Terminal here`
+    - top-level `Zide`
+    - submenu:
+      - `Open in Zide`
+      - `Open Zide Terminal here`
+  - mixed file+folder selection:
+    - hidden
 - current implementation is the packaged `IExplorerCommand` path backed by
   package identity and a full local package registration
 - the old classic `HKCU\Software\Classes\...` verb path is no longer a

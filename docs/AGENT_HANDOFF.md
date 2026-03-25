@@ -45,7 +45,8 @@ not a progress log and should stay brief.
   - `Open in Zide` for files
   - `Open in Zide Editor` for files
   - `Open in Zide` for folders
-  - `Open Zide Terminal here` for folders/background
+  - `Open Zide Terminal here` for folders/background and multi-folder terminal launch under the `Zide` submenu
+  - mixed file+folder selections should stay hidden
   - keep Windows default terminal integration deferred
 
 ### Where To Look

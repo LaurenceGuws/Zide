@@ -53,10 +53,16 @@ pub const shell_extensions = [_]ShellExtensionIdentity{
         .item_types = &.{"Directory"},
     },
     .{
-        .clsid = "4C5D89A5-4E56-48E0-AE5A-8F4A5C6D1972",
-        .verb_id = "ZideBackgroundTerminal",
-        .title = "Open Zide Terminal here",
+        .clsid = "63FDDD2D-D152-47DA-A9A0-9D6D724DC7F9",
+        .verb_id = "ZideBackgroundMenu",
+        .title = "Zide",
         .item_types = &.{"Directory\\Background"},
+    },
+    .{
+        .clsid = "4C5D89A5-4E56-48E0-AE5A-8F4A5C6D1972",
+        .verb_id = "ZideMultiFolderTerminal",
+        .title = "Open Zide Terminal here",
+        .item_types = &.{"Directory"},
     },
 };
 

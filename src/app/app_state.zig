@@ -97,7 +97,7 @@ pub const AppState = struct {
     perf_frames_done: u64,
     perf_scroll_delta: i32,
     perf_file_path: ?[]u8,
-    startup_file_path: ?[]u8,
+    startup_file_paths: ?[][]u8,
     perf_logger: t.Logger,
     last_input: t.InputSnapshot,
     app_mode: AppMode,

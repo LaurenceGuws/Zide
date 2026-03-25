@@ -5,6 +5,7 @@
 #include <shlwapi.h>
 #include <strsafe.h>
 #include <stdio.h>
+#include <string>
 
 #pragma comment(lib, "ole32.lib")
 #pragma comment(lib, "shell32.lib")
@@ -27,13 +28,33 @@ namespace
         TerminalCwd,
     };
 
+    enum class SelectionKind
+    {
+        None,
+        Files,
+        SingleFolder,
+        MultiFolder,
+        Background,
+        Mixed,
+        Unsupported,
+    };
+
+    struct SelectionSnapshot
+    {
+        SelectionKind kind;
+        std::wstring primaryPath;
+    };
+
     struct CommandSpec
     {
         const CLSID* clsid;
         const wchar_t* title;
         const wchar_t* icon_relative_path;
         CommandTargetKind target_kind;
-        bool allow_background;
+        bool visible_on_files;
+        bool visible_on_single_folder;
+        bool visible_on_multi_folder;
+        bool visible_on_background;
         const wchar_t* packaged_aumid;
         const wchar_t* fallback_exe_name;
         CommandLaunchArgs launch_args;
@@ -45,8 +66,12 @@ namespace
         { 0x7a4a9f94, 0x7a56, 0x4b72, { 0x9d, 0x3a, 0x0e, 0x4f, 0x1a, 0x0e, 0x6e, 0x11 } };
     const CLSID CLSID_ZideFolderMenu =
         { 0x7d8e995a, 0x2d37, 0x48d8, { 0xab, 0x12, 0x4f, 0x03, 0xc6, 0x36, 0x2d, 0x85 } };
+    const CLSID CLSID_ZideBackgroundMenu =
+        { 0x63fddd2d, 0xd152, 0x47da, { 0xa9, 0xa0, 0x9d, 0x6d, 0x72, 0x4d, 0xc7, 0xf9 } };
     const CLSID CLSID_OpenZideTerminalHere =
         { 0x4c5d89a5, 0x4e56, 0x48e0, { 0xae, 0x5a, 0x8f, 0x4a, 0x5c, 0x6d, 0x19, 0x72 } };
+    const CLSID CLSID_OpenZideTerminalHereNested =
+        { 0xe4f9586e, 0x48d2, 0x4ec6, { 0x9f, 0x12, 0x6b, 0xdc, 0x89, 0x7a, 0x12, 0xd4 } };
     const CLSID CLSID_OpenInZideFile =
         { 0xf8d79d0d, 0x7d4f, 0x4b53, { 0xbb, 0x41, 0x38, 0xc8, 0xd2, 0xd4, 0xca, 0x73 } };
     const CLSID CLSID_OpenInZideEditorFile =
@@ -192,6 +217,285 @@ namespace
         return item->GetDisplayName(SIGDN_FILESYSPATH, path);
     }
 
+    HRESULT AppendPathArgument(std::wstring* arguments, const wchar_t* prefix, const wchar_t* path)
+    {
+        if (!arguments || !path)
+        {
+            return E_INVALIDARG;
+        }
+
+        if (!arguments->empty())
+        {
+            arguments->append(L" ");
+        }
+        if (prefix)
+        {
+            arguments->append(prefix);
+        }
+        arguments->append(L"\"");
+        arguments->append(path);
+        arguments->append(L"\"");
+        return S_OK;
+    }
+
+    HRESULT InspectSelection(IShellItemArray* items, IUnknown* site, bool allowBackground, SelectionSnapshot* snapshot)
+    {
+        if (!snapshot)
+        {
+            return E_POINTER;
+        }
+
+        snapshot->kind = SelectionKind::None;
+        snapshot->primaryPath.clear();
+
+        if (items)
+        {
+            DWORD count = 0;
+            auto hr = items->GetCount(&count);
+            if (FAILED(hr))
+            {
+                return hr;
+            }
+            if (count == 0)
+            {
+                items = nullptr;
+            }
+            else
+            {
+                bool sawFile = false;
+                bool sawFolder = false;
+
+                for (DWORD index = 0; index < count; index += 1)
+                {
+                    IShellItem* item = nullptr;
+                    hr = items->GetItemAt(index, &item);
+                    if (FAILED(hr))
+                    {
+                        return hr;
+                    }
+
+                    SFGAOF attributes = 0;
+                    hr = item->GetAttributes(SFGAO_FILESYSTEM | SFGAO_FOLDER, &attributes);
+                    if (FAILED(hr))
+                    {
+                        item->Release();
+                        return hr;
+                    }
+
+                    if ((attributes & SFGAO_FILESYSTEM) == 0)
+                    {
+                        item->Release();
+                        snapshot->kind = SelectionKind::Unsupported;
+                        return S_OK;
+                    }
+
+                    PWSTR path = nullptr;
+                    hr = GetPathFromItem(item, &path);
+                    if (FAILED(hr))
+                    {
+                        item->Release();
+                        return hr;
+                    }
+
+                    if (index == 0)
+                    {
+                        snapshot->primaryPath.assign(path);
+                    }
+
+                    const bool isFolder = (attributes & SFGAO_FOLDER) != 0;
+                    if (isFolder)
+                    {
+                        sawFolder = true;
+                    }
+                    else
+                    {
+                        sawFile = true;
+                    }
+
+                    CoTaskMemFree(path);
+                    item->Release();
+                }
+
+                if (sawFile && sawFolder)
+                {
+                    snapshot->kind = SelectionKind::Mixed;
+                    snapshot->primaryPath.clear();
+                    return S_OK;
+                }
+
+                if (sawFolder)
+                {
+                    snapshot->kind = count == 1 ? SelectionKind::SingleFolder : SelectionKind::MultiFolder;
+                    return S_OK;
+                }
+
+                snapshot->kind = SelectionKind::Files;
+                return S_OK;
+            }
+        }
+
+        if (allowBackground && site)
+        {
+            IShellItem* location = nullptr;
+            const auto hr = [&]() -> HRESULT
+            {
+                IServiceProvider* serviceProvider = nullptr;
+                auto innerHr = site->QueryInterface(IID_PPV_ARGS(&serviceProvider));
+                if (FAILED(innerHr))
+                {
+                    return innerHr;
+                }
+
+                IFolderView* folderView = nullptr;
+                innerHr = serviceProvider->QueryService(SID_SFolderView, IID_PPV_ARGS(&folderView));
+                serviceProvider->Release();
+                if (FAILED(innerHr))
+                {
+                    return innerHr;
+                }
+
+                innerHr = folderView->GetFolder(IID_PPV_ARGS(&location));
+                folderView->Release();
+                return innerHr;
+            }();
+
+            if (FAILED(hr) || !location)
+            {
+                return FAILED(hr) ? hr : E_FAIL;
+            }
+
+            PWSTR path = nullptr;
+            auto pathHr = GetPathFromItem(location, &path);
+            location->Release();
+            if (FAILED(pathHr))
+            {
+                return pathHr;
+            }
+
+            snapshot->kind = SelectionKind::Background;
+            snapshot->primaryPath.assign(path);
+            CoTaskMemFree(path);
+            return S_OK;
+        }
+
+        snapshot->kind = SelectionKind::None;
+        return S_OK;
+    }
+
+    HRESULT BuildLaunchArguments(
+        const CommandSpec& spec,
+        IShellItemArray* items,
+        const SelectionSnapshot& snapshot,
+        std::wstring* arguments)
+    {
+        if (!arguments)
+        {
+            return E_POINTER;
+        }
+        arguments->clear();
+
+        switch (spec.launch_args)
+        {
+        case CommandLaunchArgs::PositionalPath:
+        {
+            if (snapshot.kind != SelectionKind::Files)
+            {
+                return E_FAIL;
+            }
+
+            DWORD count = 0;
+            auto hr = items ? items->GetCount(&count) : E_FAIL;
+            if (FAILED(hr))
+            {
+                return hr;
+            }
+
+            for (DWORD index = 0; index < count; index += 1)
+            {
+                IShellItem* item = nullptr;
+                hr = items->GetItemAt(index, &item);
+                if (FAILED(hr))
+                {
+                    return hr;
+                }
+
+                PWSTR path = nullptr;
+                hr = GetPathFromItem(item, &path);
+                item->Release();
+                if (FAILED(hr))
+                {
+                    return hr;
+                }
+
+                hr = AppendPathArgument(arguments, nullptr, path);
+                CoTaskMemFree(path);
+                if (FAILED(hr))
+                {
+                    return hr;
+                }
+            }
+            return S_OK;
+        }
+
+        case CommandLaunchArgs::FolderFlag:
+            if (snapshot.kind != SelectionKind::SingleFolder && snapshot.kind != SelectionKind::Background)
+            {
+                return E_FAIL;
+            }
+            return AppendPathArgument(arguments, L"--folder ", snapshot.primaryPath.c_str());
+
+        case CommandLaunchArgs::TerminalCwd:
+            if (snapshot.kind == SelectionKind::SingleFolder || snapshot.kind == SelectionKind::Background)
+            {
+                return AppendPathArgument(arguments, L"--cwd ", snapshot.primaryPath.c_str());
+            }
+
+            if (snapshot.kind != SelectionKind::MultiFolder)
+            {
+                return E_FAIL;
+            }
+
+            {
+                DWORD count = 0;
+                auto hr = items ? items->GetCount(&count) : E_FAIL;
+                if (FAILED(hr))
+                {
+                    return hr;
+                }
+
+                for (DWORD index = 0; index < count; index += 1)
+                {
+                    IShellItem* item = nullptr;
+                    hr = items->GetItemAt(index, &item);
+                    if (FAILED(hr))
+                    {
+                        return hr;
+                    }
+
+                    PWSTR path = nullptr;
+                    hr = GetPathFromItem(item, &path);
+                    item->Release();
+                    if (FAILED(hr))
+                    {
+                        return hr;
+                    }
+
+                    hr = AppendPathArgument(arguments, L"--cwd ", path);
+                    CoTaskMemFree(path);
+                    if (FAILED(hr))
+                    {
+                        return hr;
+                    }
+                }
+            }
+            return S_OK;
+
+        case CommandLaunchArgs::None:
+        default:
+            return E_FAIL;
+        }
+    }
+
     HRESULT GetWorkingDirectory(const wchar_t* targetPath, CommandTargetKind targetKind, wchar_t* buffer, size_t bufferCount)
     {
         if (!targetPath || !buffer || bufferCount == 0)
@@ -218,53 +522,25 @@ namespace
         return S_OK;
     }
 
-    HRESULT BuildLaunchArguments(const CommandSpec& spec, const wchar_t* targetPath, wchar_t* buffer, size_t bufferCount)
+    HRESULT LaunchPackagedApplication(const CommandSpec& spec, const std::wstring& arguments)
     {
-        if (!targetPath || !buffer || bufferCount == 0)
-        {
-            return E_INVALIDARG;
-        }
-
-        switch (spec.launch_args)
-        {
-        case CommandLaunchArgs::PositionalPath:
-            return StringCchPrintfW(buffer, bufferCount, L"\"%s\"", targetPath);
-        case CommandLaunchArgs::FolderFlag:
-            return StringCchPrintfW(buffer, bufferCount, L"--folder \"%s\"", targetPath);
-        case CommandLaunchArgs::TerminalCwd:
-            return StringCchPrintfW(buffer, bufferCount, L"--cwd \"%s\"", targetPath);
-        case CommandLaunchArgs::None:
-        default:
-            return E_FAIL;
-        }
-    }
-
-    HRESULT LaunchPackagedApplication(const CommandSpec& spec, const wchar_t* targetPath)
-    {
-        wchar_t arguments[2048];
-        auto hr = BuildLaunchArguments(spec, targetPath, arguments, ARRAYSIZE(arguments));
-        if (FAILED(hr))
-        {
-            return hr;
-        }
-
         IApplicationActivationManager* activationManager = nullptr;
-        hr = CoCreateInstance(CLSID_ApplicationActivationManager, nullptr, CLSCTX_INPROC_SERVER, IID_PPV_ARGS(&activationManager));
+        auto hr = CoCreateInstance(CLSID_ApplicationActivationManager, nullptr, CLSCTX_INPROC_SERVER, IID_PPV_ARGS(&activationManager));
         if (FAILED(hr))
         {
             return hr;
         }
 
         DWORD processId = 0;
-        hr = activationManager->ActivateApplication(spec.packaged_aumid, arguments, AO_NONE, &processId);
+        hr = activationManager->ActivateApplication(spec.packaged_aumid, arguments.c_str(), AO_NONE, &processId);
         activationManager->Release();
         AppendShellLog(L"LaunchPackagedApplication title=%s aumid=%s hr=0x%08X pid=%lu", spec.title, spec.packaged_aumid, hr, processId);
         return hr;
     }
 
-    HRESULT LaunchFallbackProcess(const CommandSpec& spec, const wchar_t* targetPath)
+    HRESULT LaunchFallbackProcess(const CommandSpec& spec, const std::wstring& arguments, const wchar_t* workingDirectory)
     {
-        const auto packagedHr = LaunchPackagedApplication(spec, targetPath);
+        const auto packagedHr = LaunchPackagedApplication(spec, arguments);
         if (SUCCEEDED(packagedHr))
         {
             return S_OK;
@@ -290,22 +566,8 @@ namespace
             return hr;
         }
 
-        wchar_t launchArgs[2048];
-        hr = BuildLaunchArguments(spec, targetPath, launchArgs, ARRAYSIZE(launchArgs));
-        if (FAILED(hr))
-        {
-            return hr;
-        }
-
         wchar_t commandLine[2304];
-        hr = StringCchPrintfW(commandLine, ARRAYSIZE(commandLine), L"\"%s\" %s", exePath, launchArgs);
-        if (FAILED(hr))
-        {
-            return hr;
-        }
-
-        wchar_t workingDirectory[MAX_PATH];
-        hr = GetWorkingDirectory(targetPath, spec.target_kind, workingDirectory, ARRAYSIZE(workingDirectory));
+        hr = StringCchPrintfW(commandLine, ARRAYSIZE(commandLine), L"\"%s\" %s", exePath, arguments.c_str());
         if (FAILED(hr))
         {
             return hr;
@@ -338,34 +600,6 @@ namespace
         CloseHandle(processInfo.hProcess);
         AppendShellLog(L"LaunchFallbackProcess title=%s CreateProcessW ok", spec.title);
         return S_OK;
-    }
-
-    HRESULT ItemMatchesCommandTarget(IShellItem* item, const CommandSpec& spec)
-    {
-        if (!item)
-        {
-            return E_POINTER;
-        }
-
-        SFGAOF attributes = 0;
-        const auto hr = item->GetAttributes(SFGAO_FILESYSTEM | SFGAO_FOLDER, &attributes);
-        if (FAILED(hr))
-        {
-            return hr;
-        }
-
-        if ((attributes & SFGAO_FILESYSTEM) == 0)
-        {
-            return S_FALSE;
-        }
-
-        const bool isDirectory = (attributes & SFGAO_FOLDER) != 0;
-        if (spec.target_kind == CommandTargetKind::Directory)
-        {
-            return isDirectory ? S_OK : S_FALSE;
-        }
-
-        return isDirectory ? S_FALSE : S_OK;
     }
 
     class ExplorerCommand;
@@ -611,23 +845,37 @@ namespace
                 return E_POINTER;
             }
 
-            IShellItem* item = nullptr;
-            const auto hr = GetBestLocation(items, &item);
-            if (FAILED(hr) || !item)
+            SelectionSnapshot snapshot{};
+            const auto hr = InspectSelection(items, _site, _spec.visible_on_background, &snapshot);
+            if (FAILED(hr))
             {
-                AppendShellLog(L"GetState title=%s hidden resolve hr=0x%08X item=%p", _spec.title, hr, item);
+                AppendShellLog(L"GetState title=%s hidden inspect hr=0x%08X", _spec.title, hr);
                 *cmdState = ECS_HIDDEN;
-                if (item)
-                {
-                    item->Release();
-                }
                 return S_OK;
             }
 
-            const auto matchHr = ItemMatchesCommandTarget(item, _spec);
-            item->Release();
-            *cmdState = matchHr == S_OK ? ECS_ENABLED : ECS_HIDDEN;
-            AppendShellLog(L"GetState title=%s state=%d matchHr=0x%08X", _spec.title, *cmdState, matchHr);
+            bool visible = false;
+            switch (snapshot.kind)
+            {
+            case SelectionKind::Files:
+                visible = _spec.visible_on_files;
+                break;
+            case SelectionKind::SingleFolder:
+                visible = _spec.visible_on_single_folder;
+                break;
+            case SelectionKind::MultiFolder:
+                visible = _spec.visible_on_multi_folder;
+                break;
+            case SelectionKind::Background:
+                visible = _spec.visible_on_background;
+                break;
+            default:
+                visible = false;
+                break;
+            }
+
+            *cmdState = visible ? ECS_ENABLED : ECS_HIDDEN;
+            AppendShellLog(L"GetState title=%s state=%d selection=%d", _spec.title, *cmdState, static_cast<int>(snapshot.kind));
             return S_OK;
         }
 
@@ -639,38 +887,58 @@ namespace
                 return E_NOTIMPL;
             }
 
-            IShellItem* item = nullptr;
-            auto hr = GetBestLocation(items, &item);
-            if (FAILED(hr) || !item)
-            {
-                AppendShellLog(L"Invoke title=%s failed to resolve location hr=0x%08X item=%p", _spec.title, hr, item);
-                if (item)
-                {
-                    item->Release();
-                }
-                return hr;
-            }
-
-            hr = ItemMatchesCommandTarget(item, _spec);
-            if (hr != S_OK)
-            {
-                item->Release();
-                AppendShellLog(L"Invoke title=%s target mismatch hr=0x%08X", _spec.title, hr);
-                return hr == S_FALSE ? E_FAIL : hr;
-            }
-
-            PWSTR targetPath = nullptr;
-            hr = GetPathFromItem(item, &targetPath);
-            item->Release();
+            SelectionSnapshot snapshot{};
+            auto hr = InspectSelection(items, _site, _spec.visible_on_background, &snapshot);
             if (FAILED(hr))
             {
-                AppendShellLog(L"Invoke title=%s failed to resolve path hr=0x%08X", _spec.title, hr);
+                AppendShellLog(L"Invoke title=%s failed to inspect selection hr=0x%08X", _spec.title, hr);
                 return hr;
             }
 
-            AppendShellLog(L"Invoke title=%s path=%s", _spec.title, targetPath);
-            hr = LaunchFallbackProcess(_spec, targetPath);
-            CoTaskMemFree(targetPath);
+            bool visible = false;
+            switch (snapshot.kind)
+            {
+            case SelectionKind::Files:
+                visible = _spec.visible_on_files;
+                break;
+            case SelectionKind::SingleFolder:
+                visible = _spec.visible_on_single_folder;
+                break;
+            case SelectionKind::MultiFolder:
+                visible = _spec.visible_on_multi_folder;
+                break;
+            case SelectionKind::Background:
+                visible = _spec.visible_on_background;
+                break;
+            default:
+                visible = false;
+                break;
+            }
+
+            if (!visible)
+            {
+                AppendShellLog(L"Invoke title=%s hidden for selection=%d", _spec.title, static_cast<int>(snapshot.kind));
+                return E_FAIL;
+            }
+
+            std::wstring arguments;
+            hr = BuildLaunchArguments(_spec, items, snapshot, &arguments);
+            if (FAILED(hr))
+            {
+                AppendShellLog(L"Invoke title=%s failed to build arguments hr=0x%08X", _spec.title, hr);
+                return hr;
+            }
+
+            wchar_t workingDirectory[MAX_PATH];
+            hr = GetWorkingDirectory(snapshot.primaryPath.c_str(), _spec.target_kind, workingDirectory, ARRAYSIZE(workingDirectory));
+            if (FAILED(hr))
+            {
+                AppendShellLog(L"Invoke title=%s failed to resolve working directory hr=0x%08X", _spec.title, hr);
+                return hr;
+            }
+
+            AppendShellLog(L"Invoke title=%s args=%s", _spec.title, arguments.c_str());
+            hr = LaunchFallbackProcess(_spec, arguments, workingDirectory);
             if (FAILED(hr))
             {
                 AppendShellLog(L"Invoke title=%s launch failed hr=0x%08X", _spec.title, hr);
@@ -775,87 +1043,35 @@ namespace
             return _site->QueryInterface(riid, site);
         }
 
-    private:
-        HRESULT GetLocationFromSite(IShellItem** location) const
-        {
-            if (!location)
-            {
-                return E_POINTER;
-            }
-            *location = nullptr;
-
-            if (!_spec.allow_background)
-            {
-                return S_FALSE;
-            }
-
-            if (!_site)
-            {
-                AppendShellLog(L"GetLocationFromSite title=%s no site", _spec.title);
-                return S_FALSE;
-            }
-
-            IServiceProvider* serviceProvider = nullptr;
-            auto hr = _site->QueryInterface(IID_PPV_ARGS(&serviceProvider));
-            if (FAILED(hr))
-            {
-                AppendShellLog(L"GetLocationFromSite title=%s QI IServiceProvider failed hr=0x%08X", _spec.title, hr);
-                return hr;
-            }
-
-            IFolderView* folderView = nullptr;
-            hr = serviceProvider->QueryService(SID_SFolderView, IID_PPV_ARGS(&folderView));
-            serviceProvider->Release();
-            if (FAILED(hr))
-            {
-                AppendShellLog(L"GetLocationFromSite title=%s QueryService SID_SFolderView failed hr=0x%08X", _spec.title, hr);
-                return hr;
-            }
-
-            hr = folderView->GetFolder(IID_PPV_ARGS(location));
-            folderView->Release();
-            AppendShellLog(L"GetLocationFromSite title=%s GetFolder hr=0x%08X location=%p", _spec.title, hr, location ? *location : nullptr);
-            return hr;
-        }
-
-        HRESULT GetBestLocation(IShellItemArray* items, IShellItem** location) const
-        {
-            if (!location)
-            {
-                return E_POINTER;
-            }
-            *location = nullptr;
-
-            if (items)
-            {
-                DWORD count = 0;
-                const auto countHr = items->GetCount(&count);
-                if (SUCCEEDED(countHr) && count > 0)
-                {
-                    if (count != 1)
-                    {
-                        AppendShellLog(L"GetBestLocation title=%s hiding multi-select count=%lu", _spec.title, count);
-                        return HRESULT_FROM_WIN32(ERROR_NOT_SUPPORTED);
-                    }
-                    AppendShellLog(L"GetBestLocation title=%s using selection count=%lu", _spec.title, count);
-                    return items->GetItemAt(0, location);
-                }
-            }
-
-            AppendShellLog(L"GetBestLocation title=%s falling back to site", _spec.title);
-            return GetLocationFromSite(location);
-        }
-
         long _refCount;
         IUnknown* _site;
         const CommandSpec& _spec;
     };
 
-    const CommandSpec kOpenZideTerminalHere = {
+    const CommandSpec kOpenZideTerminalHereDirect = {
         &CLSID_OpenZideTerminalHere,
         L"Open Zide Terminal here",
         L"icons\\zide-terminal.ico",
         CommandTargetKind::Directory,
+        false,
+        false,
+        true,
+        false,
+        ZIDE_TERMINAL_AUMID,
+        L"zide-terminal.exe",
+        CommandLaunchArgs::TerminalCwd,
+        nullptr,
+        0,
+    };
+
+    const CommandSpec kOpenZideTerminalHereFolderChild = {
+        &CLSID_OpenZideTerminalHereNested,
+        L"Open Zide Terminal here",
+        L"icons\\zide-terminal.ico",
+        CommandTargetKind::Directory,
+        false,
+        true,
+        false,
         true,
         ZIDE_TERMINAL_AUMID,
         L"zide-terminal.exe",
@@ -869,6 +1085,9 @@ namespace
         L"Open in Zide",
         L"icons\\zide.ico",
         CommandTargetKind::File,
+        true,
+        false,
+        false,
         false,
         ZIDE_AUMID,
         L"zide.exe",
@@ -882,6 +1101,9 @@ namespace
         L"Open in Zide Editor",
         L"icons\\zide.ico",
         CommandTargetKind::File,
+        true,
+        false,
+        false,
         false,
         ZIDE_EDITOR_AUMID,
         L"zide-editor.exe",
@@ -896,6 +1118,9 @@ namespace
         L"icons\\zide.ico",
         CommandTargetKind::Directory,
         false,
+        true,
+        false,
+        true,
         ZIDE_AUMID,
         L"zide.exe",
         CommandLaunchArgs::FolderFlag,
@@ -910,7 +1135,7 @@ namespace
 
     const CommandSpec* const kFolderMenuChildren[] = {
         &kOpenInZideFolder,
-        &kOpenZideTerminalHere,
+        &kOpenZideTerminalHereFolderChild,
     };
 
     const CommandSpec kZideFileMenu = {
@@ -918,6 +1143,9 @@ namespace
         L"Zide",
         L"icons\\zide.ico",
         CommandTargetKind::File,
+        true,
+        false,
+        false,
         false,
         nullptr,
         nullptr,
@@ -932,6 +1160,25 @@ namespace
         L"icons\\zide.ico",
         CommandTargetKind::Directory,
         false,
+        true,
+        false,
+        false,
+        nullptr,
+        nullptr,
+        CommandLaunchArgs::None,
+        kFolderMenuChildren,
+        ARRAYSIZE(kFolderMenuChildren),
+    };
+
+    const CommandSpec kZideBackgroundMenu = {
+        &CLSID_ZideBackgroundMenu,
+        L"Zide",
+        L"icons\\zide.ico",
+        CommandTargetKind::Directory,
+        false,
+        false,
+        false,
+        true,
         nullptr,
         nullptr,
         CommandLaunchArgs::None,
@@ -942,7 +1189,8 @@ namespace
     const CommandSpec* const kComVisibleCommands[] = {
         &kZideFileMenu,
         &kZideFolderMenu,
-        &kOpenZideTerminalHere,
+        &kZideBackgroundMenu,
+        &kOpenZideTerminalHereDirect,
     };
 
     HRESULT ResolveCommandSpec(REFCLSID clsid, const CommandSpec** spec)
