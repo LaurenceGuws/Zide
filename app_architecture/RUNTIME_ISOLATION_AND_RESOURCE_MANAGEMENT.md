@@ -88,6 +88,36 @@ This aligns with:
 - `app_architecture/RENDERER_SCENE_PUBLICATION_CONTRACT.md`
 - `app_architecture/ENGINEERING.md`
 
+## Measurement Surfaces
+
+Resource-management work must be measured through two distinct surfaces:
+
+1. host resource usage
+   - process CPU
+   - RSS / virtual memory
+   - thread and file-descriptor growth
+   - process IO and context-switch behavior
+   - optional GPU/process metrics where platform tooling can provide them
+
+2. subsystem activity
+   - runtime-owned counters
+   - scheduler budgets and spillover/backlog signals
+   - frame/pacing logs
+   - subsystem-specific work counters
+
+These surfaces must not be conflated.
+
+Important rule:
+
+- Zide should not claim direct per-subsystem CPU or GPU percentages unless a
+  real sampler exists for that boundary.
+
+Current practical model:
+
+- host resources come from external OS/GPU tooling
+- subsystem attribution comes from Zide-owned counters and logs
+- performance conclusions should correlate both over the same workload window
+
 ## Runtime Classes
 
 Zide should treat the following as distinct runtime classes:

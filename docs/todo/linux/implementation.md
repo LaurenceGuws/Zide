@@ -197,7 +197,7 @@ owning subsystem queues.
 - Open Linux-specific product gap:
   - no native Linux file dialog path exists yet; Linux file flow still depends
     on the shared status-bar/path-prompt surface
-- In progress:
+  - In progress:
   - KDE/Wayland launcher icon validation after adding runtime SDL window-icon
     setup for the focused launchers
   - tool/install-surface standardization research; current Linux local install
@@ -218,6 +218,13 @@ owning subsystem queues.
       - `zide-editor-bundle-0.1.0-beta.4-linux-x86_64.tar.gz`
       - `zide-terminal-bundle-0.1.0-beta.4-linux-x86_64.tar.gz`
       - `zide-editor-ffi-0.1.0-beta.4-linux-x86_64.tar.gz`
+  - 2026-03-26 resource-measurement checkpoint:
+    - added `tools/linux_resource_monitor.py` as the supported local Linux
+      process sampler for CPU, RSS, virtual memory, threads, fds, IO, context
+      switches, and optional NVIDIA per-process graphics metrics
+    - added `docs/reference/linux_resource_profiling.md` to define the
+      operator workflow and the boundary between host-resource measurement and
+      Zide-owned subsystem counters
       - `zide-terminal-ffi-0.1.0-beta.4-linux-x86_64.tar.gz`
       - `SHA256SUMS-linux-x86_64.txt`
     - Linux `install-local` now installs the full launcher family per channel:
