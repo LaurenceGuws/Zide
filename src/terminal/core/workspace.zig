@@ -1,6 +1,7 @@
 const std = @import("std");
 const session_mod = @import("terminal_session.zig");
 const app_logger = @import("../../app_logger.zig");
+const runtime_policy = @import("../../app/runtime_policy.zig");
 const polling = @import("workspace_polling.zig");
 
 pub const TerminalSession = session_mod.TerminalSession;
@@ -91,6 +92,10 @@ pub const TerminalWorkspace = struct {
         seq: u64 = 0,
         tab_count: usize = 0,
         active_index: usize = 0,
+        active_lifecycle: runtime_policy.LifecycleTier = .hidden_warm,
+        background_lifecycle: runtime_policy.LifecycleTier = .hidden_warm,
+        active_work_class: runtime_policy.WorkClass = .background,
+        background_work_class: runtime_policy.WorkClass = .background,
         active_budget: usize = 0,
         active_polled: usize = 0,
         background_budget: usize = 0,

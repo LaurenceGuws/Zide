@@ -4,6 +4,16 @@ const runtime_policy = @import("../../app/runtime_policy.zig");
 
 pub fn pollBudgeted(self: anytype, input_active_index: ?usize, policy: anytype) !bool {
     const count = self.tabs.items.len;
+    const active_lifecycle = runtime_policy.LifecycleTier.focused_visible;
+    const background_lifecycle = if (count > 1)
+        runtime_policy.LifecycleTier.hidden_warm
+    else
+        runtime_policy.LifecycleTier.focused_visible;
+    const active_work_class = if (policy.has_input)
+        runtime_policy.WorkClass.interactive
+    else
+        runtime_policy.WorkClass.background;
+    const background_work_class = runtime_policy.WorkClass.background;
     if (count == 0) {
         clearInputPressure(self);
         self.background_poll_cursor = 0;
@@ -19,6 +29,10 @@ pub fn pollBudgeted(self: anytype, input_active_index: ?usize, policy: anytype) 
         recordPollMetrics(self, .{
             .tab_count = count,
             .active_index = active_idx,
+            .active_lifecycle = active_lifecycle,
+            .background_lifecycle = background_lifecycle,
+            .active_work_class = active_work_class,
+            .background_work_class = background_work_class,
             .budget_tabs = 0,
             .background_backlog_hint = count > 1,
         });
@@ -50,6 +64,10 @@ pub fn pollBudgeted(self: anytype, input_active_index: ?usize, policy: anytype) 
         recordPollMetrics(self, .{
             .tab_count = count,
             .active_index = active_idx,
+            .active_lifecycle = active_lifecycle,
+            .background_lifecycle = background_lifecycle,
+            .active_work_class = active_work_class,
+            .background_work_class = background_work_class,
             .active_budget = active_polls,
             .active_polled = active_polled_success,
             .background_budget = background_budget_used,
@@ -73,6 +91,10 @@ pub fn pollBudgeted(self: anytype, input_active_index: ?usize, policy: anytype) 
         recordPollMetrics(self, .{
             .tab_count = count,
             .active_index = active_idx,
+            .active_lifecycle = active_lifecycle,
+            .background_lifecycle = background_lifecycle,
+            .active_work_class = active_work_class,
+            .background_work_class = background_work_class,
             .active_budget = active_polls,
             .active_polled = active_polled_success,
             .background_budget = background_budget_used,
@@ -106,6 +128,10 @@ pub fn pollBudgeted(self: anytype, input_active_index: ?usize, policy: anytype) 
     recordPollMetrics(self, .{
         .tab_count = count,
         .active_index = active_idx,
+        .active_lifecycle = active_lifecycle,
+        .background_lifecycle = background_lifecycle,
+        .active_work_class = active_work_class,
+        .background_work_class = background_work_class,
         .active_budget = active_polls,
         .active_polled = active_polled_success,
         .background_budget = background_budget_used,
@@ -132,6 +158,11 @@ pub fn pollForFrame(self: anytype, input_active_index: ?usize, policy: anytype) 
         runtime_policy.LifecycleTier.hidden_warm
     else
         runtime_policy.LifecycleTier.focused_visible;
+    const active_work_class = if (policy.has_input)
+        runtime_policy.WorkClass.interactive
+    else
+        runtime_policy.WorkClass.background;
+    const background_work_class = runtime_policy.WorkClass.background;
     const session_ptr = if (active_idx) |idx|
         @intFromPtr(self.tabs.items[idx].session)
     else
@@ -173,7 +204,7 @@ pub fn pollForFrame(self: anytype, input_active_index: ?usize, policy: anytype) 
     if (wake_log.enabled_file or wake_log.enabled_console) {
         wake_log.logf(
             .info,
-            "stage=workspace_poll sid={x} tabs={d} active_idx={d} has_input={d} active_lifecycle={s} background_lifecycle={s} any_polled={d} active_has_data={d}->{d} cur={d}->{d} published_changed={d} pub={d}->{d} presented={d}->{d}",
+            "stage=workspace_poll sid={x} tabs={d} active_idx={d} has_input={d} active_lifecycle={s} background_lifecycle={s} active_work_class={s} background_work_class={s} any_polled={d} active_has_data={d}->{d} cur={d}->{d} published_changed={d} pub={d}->{d} presented={d}->{d}",
             .{
                 session_ptr,
                 count,
@@ -181,6 +212,8 @@ pub fn pollForFrame(self: anytype, input_active_index: ?usize, policy: anytype) 
                 @intFromBool(policy.has_input),
                 runtime_policy.lifecycleLabel(active_lifecycle),
                 runtime_policy.lifecycleLabel(background_lifecycle),
+                runtime_policy.workClassLabel(active_work_class),
+                runtime_policy.workClassLabel(background_work_class),
                 @intFromBool(any_polled),
                 @intFromBool(active_has_data_pre),
                 @intFromBool(active_has_data_post),
