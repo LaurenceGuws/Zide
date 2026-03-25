@@ -10,7 +10,8 @@ not a progress log and should stay brief.
 - Terminal quality bar remains: native terminal behavior should stay in the same band as `kitty` / `ghostty` for correctness, smoothness, compatibility, and steady-state cost.
 - Native GUI remains the proving ground and reference host for both editor and terminal contracts. Keep native honest first, but do not let it become a privileged semantic path over FFI/embedded hosts.
 - Windows shell scope is split intentionally:
-  - packaged top-level Windows 11 Explorer integration remains in scope
+  - packaged top-level Windows 11 Explorer integration is the supported surface
+    and only needs follow-up for concrete regressions
   - legacy classic Explorer verbs are not the supported product surface
   - Windows default terminal integration is deferred indefinitely
 
@@ -42,11 +43,7 @@ not a progress log and should stay brief.
 - The latest Flutty diff re-checks now close the first diff cut end-to-end: downstream removed the old cursor-preservation workaround, settled-baseline granular diff works after the upstream `present_ack(...)` retirement fix, one-acquire fallback remains clean, and startup PTY churn still stays outside the granular guarantee on purpose.
 - Current implementation authority lives in the terminal architecture docs and owning todos, not in stale investigation notes.
 - Current Windows shell follow-up should focus on the packaged Explorer commands:
-  - `Open in Zide` for files
-  - `Open in Zide Editor` for files
-  - `Open in Zide` for folders
-  - `Open Zide Terminal here` for folders/background and multi-folder terminal launch under the `Zide` submenu
-  - mixed file+folder selections should stay hidden
+  - only reopen this lane for concrete packaged Explorer regressions
   - keep Windows default terminal integration deferred
 
 ### Where To Look

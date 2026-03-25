@@ -304,7 +304,7 @@ The current execution order is:
       - `%LOCALAPPDATA%\Programs\Zide\<version>`
       - optional package identity layered on top
 
-- [ ] `W8-06` Add top-level Win11 Explorer context-menu integration
+- [x] `W8-06` Add top-level Win11 Explorer context-menu integration
   - Goal:
     - top-level Explorer entries on Windows 11 instead of only `Show more options`
   - Current conclusion:
@@ -341,21 +341,27 @@ The current execution order is:
         - multiple folders -> top-level `Zide` submenu with terminal only
         - folder background -> top-level `Zide` submenu
         - mixed file+folder selection -> hidden
-
-- [ ] `W8-07` Stabilize the packaged Explorer command surface
-  - Current focus:
-    - confirm file submenu appears consistently for filesystem-backed files
-    - confirm folder submenu, multi-folder terminal-only submenu, and
-      folder-background submenu remain visible
-    - validate the new multi-select contract:
-      - multiple files -> `Zide` submenu for IDE/editor
-      - multiple folders -> `Zide` submenu with terminal only
-      - mixed files+folders -> hidden
-    - keep the install/docs/test story deterministic around the packaged path
-    - keep the validation ritual centralized in:
+  - Closed state, 2026-03-25:
+    - the packaged Win11 Explorer lane is now the supported Windows shell
+      surface
+    - the old classic verb path is cleanup-only and no longer part of the
+      product contract
+    - detailed command shape and validation now live in:
+      - `app_architecture/windows/EXPLORER_COMMAND_INTEGRATION.md`
       - `docs/reference/windows_win11_shell_validation.md`
+
+- [x] `W8-07` Stabilize the packaged Explorer command surface
+  - Closed state, 2026-03-25:
+    - file, folder, multi-folder, and folder-background packaged menus are now
+      aligned with the product contract and local validation baseline
+    - Desktop/library-style extra app-grouping from the old separate
+      multi-folder `Directory` verb was removed by keeping multi-folder terminal
+      launch under `ZideFolderMenu`
+    - package-identity registration, installer output, command metadata, and
+      validation ritual now all describe the same packaged-only story
   - Keep this lane packaged and `IExplorerCommand`-owned.
-  - Do not mix it back together with deferred Windows default terminal work.
+  - Reopen this lane only for concrete packaged Explorer regressions, not as a
+    standing active queue.
   - Authority:
     - `app_architecture/windows/EXPLORER_COMMAND_INTEGRATION.md`
 
