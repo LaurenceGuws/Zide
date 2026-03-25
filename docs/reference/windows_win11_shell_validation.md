@@ -63,7 +63,6 @@ Expected shell-extension verb ids:
 - `ZideFileMenu`
 - `ZideFolderMenu`
 - `ZideBackgroundMenu`
-- `ZideMultiFolderTerminal`
 
 ## Explorer Manual Checks
 

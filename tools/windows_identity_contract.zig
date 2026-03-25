@@ -58,12 +58,6 @@ pub const shell_extensions = [_]ShellExtensionIdentity{
         .title = "Zide",
         .item_types = &.{"Directory\\Background"},
     },
-    .{
-        .clsid = "4C5D89A5-4E56-48E0-AE5A-8F4A5C6D1972",
-        .verb_id = "ZideMultiFolderTerminal",
-        .title = "Open Zide Terminal here",
-        .item_types = &.{"Directory"},
-    },
 };
 
 pub fn identityForArtifact(name: []const u8) ArtifactIdentity {

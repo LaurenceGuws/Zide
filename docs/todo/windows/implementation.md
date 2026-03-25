@@ -318,11 +318,10 @@ The current execution order is:
     - current packaged cut uses:
       - one in-proc COM DLL:
         - `zide-shell-ext.dll`
-      - four top-level Explorer commands:
+      - three top-level Explorer commands:
         - `ZideFileMenu`
         - `ZideFolderMenu`
         - `ZideBackgroundMenu`
-        - `ZideMultiFolderTerminal`
     - the package-identity manifest generator now emits:
       - `windows.comServer`
       - `windows.fileExplorerContextMenus`

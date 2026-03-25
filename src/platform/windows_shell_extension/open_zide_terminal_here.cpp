@@ -1052,22 +1052,6 @@ namespace
         const CommandSpec& _spec;
     };
 
-    const CommandSpec kOpenZideTerminalHereDirect = {
-        &CLSID_OpenZideTerminalHere,
-        L"Open Zide Terminal here",
-        L"icons\\zide-terminal.ico",
-        CommandTargetKind::Directory,
-        false,
-        false,
-        true,
-        false,
-        ZIDE_TERMINAL_AUMID,
-        L"zide-terminal.exe",
-        CommandLaunchArgs::TerminalCwd,
-        nullptr,
-        0,
-    };
-
     const CommandSpec kOpenZideTerminalHereFolderChild = {
         &CLSID_OpenZideTerminalHereNested,
         L"Open Zide Terminal here",
@@ -1075,7 +1059,7 @@ namespace
         CommandTargetKind::Directory,
         false,
         true,
-        false,
+        true,
         true,
         ZIDE_TERMINAL_AUMID,
         L"zide-terminal.exe",
@@ -1165,7 +1149,7 @@ namespace
         CommandTargetKind::Directory,
         false,
         true,
-        false,
+        true,
         false,
         nullptr,
         nullptr,
@@ -1194,7 +1178,6 @@ namespace
         &kZideFileMenu,
         &kZideFolderMenu,
         &kZideBackgroundMenu,
-        &kOpenZideTerminalHereDirect,
     };
 
     HRESULT ResolveCommandSpec(REFCLSID clsid, const CommandSpec** spec)

@@ -397,12 +397,6 @@ function Write-PackageIdentityMetadata {
                 verb_id = "ZideBackgroundMenu"
                 title = "Zide"
                 item_types = @("Directory\Background")
-            },
-            [ordered]@{
-                clsid = "4C5D89A5-4E56-48E0-AE5A-8F4A5C6D1972"
-                verb_id = "ZideMultiFolderTerminal"
-                title = "Open Zide Terminal here"
-                item_types = @("Directory")
             }
         )
     }

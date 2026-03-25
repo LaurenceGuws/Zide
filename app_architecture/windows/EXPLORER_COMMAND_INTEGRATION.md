@@ -81,7 +81,6 @@ The current Zide lane follows that same high-level model:
   - file submenu
   - folder submenu
   - folder-background submenu
-  - direct multi-folder terminal command
 
 ## Current Zide Implementation State
 
@@ -97,8 +96,6 @@ Current top-level COM classes:
   - CLSID: `7D8E995A-2D37-48D8-AB12-4F03C6362D85`
 - `ZideBackgroundMenu`
   - CLSID: `63FDDD2D-D152-47DA-A9A0-9D6D724DC7F9`
-- `ZideMultiFolderTerminal`
-  - CLSID: `4C5D89A5-4E56-48E0-AE5A-8F4A5C6D1972`
 
 Current build/runtime wiring:
 
@@ -200,3 +197,6 @@ Current local findings:
   - multiple files -> `Zide` submenu for IDE/editor
   - multiple folders -> `Zide` submenu with terminal only
   - mixed files+folders -> hidden
+- packaged registration now keeps multi-folder under `ZideFolderMenu` instead
+  of a separate `Directory` verb, to avoid extra app-grouping layers on
+  Desktop-like shell surfaces
