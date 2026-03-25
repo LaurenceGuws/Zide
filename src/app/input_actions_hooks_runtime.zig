@@ -53,7 +53,7 @@ const app_path_prompt_state = if (mode_build.focused_mode == .terminal) struct {
         return error.UnsupportedMode;
     }
 
-    pub fn openForConfirmDirtyClose(_: anytype, _: std.mem.Allocator) !void {
+    pub fn openForConfirmDirtyClose(_: anytype, _: std.mem.Allocator, _: anytype) !void {
         return error.UnsupportedMode;
     }
 } else @import("editor/path_prompt_state.zig");

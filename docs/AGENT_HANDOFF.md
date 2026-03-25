@@ -5,8 +5,9 @@ not a progress log and should stay brief.
 
 ### Current Focus
 
-- Primary active product lane: editor/IDE-layer quality work on Linux native for a while, with terminal work paused except for concrete regressions or contract follow-ups that already have clear authority.
-- Within the editor lane, current product priority is basic Notepad-grade usability and editor-only chrome: common shortcuts, expected mouse/selection behavior, file/open/save flows, friendly Lua config, and editor CLI behavior should land before optimization-focused work.
+- Primary active product lane: Linux native catch-up after the recent Win11 integration and UI-improvement sprint, with terminal work paused except for concrete regressions or contract follow-ups that already have clear authority.
+- Linux catch-up should focus first on restoring parity and polish in the shared Linux native host: editor/IDE behavior, renderer/input quality, Linux platform integration, and any regressions or missing affordances that were deprioritized during the Windows lane.
+- Within the editor lane, current product priority remains basic Notepad-grade usability and editor-only chrome: common shortcuts, expected mouse/selection behavior, file/open/save flows, friendly Lua config, and editor CLI behavior should land before optimization-focused work.
 - Terminal quality bar remains: native terminal behavior should stay in the same band as `kitty` / `ghostty` for correctness, smoothness, compatibility, and steady-state cost.
 - Native GUI remains the proving ground and reference host for both editor and terminal contracts. Keep native honest first, but do not let it become a privileged semantic path over FFI/embedded hosts.
 - Windows shell scope is split intentionally:
@@ -19,7 +20,9 @@ not a progress log and should stay brief.
 
 - The main VT/present rewrite is no longer the active invention lane on `main`.
 - Default work now should be:
+  - Linux native catch-up first, with one owning queue for parity gaps, regressions, and polish follow-up after the Windows week
   - editor app-level feature work and UX completion first
+  - Linux renderer/input/platform follow-up where Windows integration work or recent UI changes left Linux behind
   - editor/widget bug fixing and quality passes
   - editor modularization/boundary cleanup only where it materially supports the feature lane or keeps the implementation clean
   - selective terminal follow-up only for already-open, high-confidence issues
@@ -34,6 +37,7 @@ not a progress log and should stay brief.
 
 - The scene-owned composition path is active on `main`.
 - Rewrite-era present/debug baggage has been materially reduced from the live path.
+- Recent git history closed a concentrated Win11 packaged-shell and UI-polish lane on `main`; the immediate follow-up is to bring Linux native behavior and product quality back up to the same bar before reopening broader platform work.
 - The heaviest post-rewrite bug-hunting lane has cooled after recent fixes for `nvim`, `btop`, Codex inline history, Zig `std.Progress`, and focused input latency.
 - The remaining Codex completion-tail terminal bug stays explicitly deferred; short re-checks against a candidate pacing/present seam change were encouraging, but not strong enough to close it.
 - The main remaining engine gap is no longer random compatibility debt; it is that `TerminalSession` still carries more structural weight than a `libghostty-vt`-quality engine boundary would.
@@ -48,6 +52,8 @@ not a progress log and should stay brief.
 
 ### Where To Look
 
+- Linux native catch-up queue:
+  - `docs/todo/linux/implementation.md`
 - Editor implementation authority:
   - `app_architecture/editor/DESIGN.md`
   - `docs/todo/editor/README.md`

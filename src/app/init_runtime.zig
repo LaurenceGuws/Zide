@@ -76,6 +76,15 @@ fn resolveTerminalShellPath(
     return try allocator.dupe(u8, raw);
 }
 
+fn windowTitleForMode(app_mode: app_bootstrap.AppMode) [*:0]const u8 {
+    return switch (app_mode) {
+        .ide => "Zide - Zig IDE",
+        .editor => "Zide Editor",
+        .terminal => "Zide Terminal",
+        .font_sample => "Zide Font Sample",
+    };
+}
+
 pub fn init(comptime AppStateT: type, allocator: std.mem.Allocator, app_mode: app_bootstrap.AppMode) !*AppStateT {
     return try initWithMode(AppStateT, allocator, null, app_mode);
 }
@@ -137,7 +146,13 @@ fn initWithMode(
     const window_width = app_bootstrap.parseEnvI32("ZIDE_WINDOW_WIDTH", 1280);
     const window_height = app_bootstrap.parseEnvI32("ZIDE_WINDOW_HEIGHT", 720);
     const renderer_init = app_font_rendering.buildRendererInitOptions(&config);
-    const shell = try app_shell.Shell.init(allocator, window_width, window_height, "Zide - Zig IDE", renderer_init);
+    const shell = try app_shell.Shell.init(
+        allocator,
+        window_width,
+        window_height,
+        windowTitleForMode(app_mode),
+        renderer_init,
+    );
     errdefer shell.deinit(allocator);
 
     // Startup now seeds renderer font/render state from the loaded config, so

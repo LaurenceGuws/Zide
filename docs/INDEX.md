@@ -24,6 +24,7 @@ Quick reading guide:
 
 ## Task tracking (source of truth)
 - `docs/todo/README.md` — active work-queue policy and ownership split.
+  - `docs/todo/linux/implementation.md` — temporary Linux-native catch-up queue after the Win11 integration sprint.
   - `docs/todo/terminal/README.md` — terminal queue map and ownership split.
   - `docs/todo/ui/README.md` — UI queue map and execution lanes.
   - `docs/todo/editor/README.md` — editor queue map and execution lanes.
@@ -122,6 +123,15 @@ under `docs/review/archive/`.
 - `app_architecture/` is for current designs, boundaries, and technical authority.
 - `docs/research/` and `docs/reference/` are for exploratory and reference material that should not masquerade as current architecture authority.
 - `docs/review/` is for historical reviews, audits, and investigation records.
+
+## Current Linux Scope Note
+
+- Immediate shared-platform focus is Linux native catch-up after the recent
+  Win11 integration sprint.
+- Use `docs/todo/linux/implementation.md` as the coordination point for Linux
+  parity gaps, regressions, and polish follow-up.
+- Push durable subsystem ownership back into the relevant editor/UI/terminal or
+  architecture docs once a Linux issue is understood.
 
 ## Current Windows Scope Note
 
