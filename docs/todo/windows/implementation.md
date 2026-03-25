@@ -353,6 +353,8 @@ The current execution order is:
       - multiple folders -> `Zide` submenu with terminal only
       - mixed files+folders -> hidden
     - keep the install/docs/test story deterministic around the packaged path
+    - keep the validation ritual centralized in:
+      - `docs/reference/windows_win11_shell_validation.md`
   - Keep this lane packaged and `IExplorerCommand`-owned.
   - Do not mix it back together with deferred Windows default terminal work.
   - Authority:

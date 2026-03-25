@@ -9,6 +9,7 @@ Use this with:
 
 - `app_architecture/windows/NATIVE_SHELL_INTEGRATION.md`
 - `app_architecture/windows/INSTALLATION.md`
+- `docs/reference/windows_win11_shell_validation.md`
 - `docs/todo/windows/implementation.md`
 
 ## Goal
@@ -175,6 +176,10 @@ Minimum validation for the supported lane:
    - multi-folder terminal -> `zide-terminal.exe` opens one terminal window with one tab per selected folder via repeated `--cwd`
    - terminal-here -> `zide-terminal.exe` opens in the selected cwd
 9. verify mixed file+folder selection shows no Zide command
+
+For the repeatable local operator checklist, use:
+
+- `docs/reference/windows_win11_shell_validation.md`
 
 ## Current Result
 

@@ -234,6 +234,8 @@ Current installer UX policy:
   - that package identity registration is enabled
   - that package mode is `Full`
   - which packaged Explorer commands are expected after install
+- the repeatable post-install validation ritual lives in:
+  - `docs/reference/windows_win11_shell_validation.md`
 
 Example local install:
 
