@@ -5,7 +5,7 @@ repository.
 
 ## Audience
 
-- `README.md` and the hosted docs explorer are customer-facing.
+- `README.md` and the docs explorer repo are customer-facing.
 - This file is contributor/operator/agent-facing.
 
 ## Workflow
@@ -60,4 +60,4 @@ Doc-placement authority:
 - Current architecture/design authority, diagrams, redesign plans, and architecture status communication: `app_architecture/`
 - Research and technical reference: `docs/research/` and `docs/reference/`
 - Historical review/investigation material: `docs/review/`
-- Public/project-facing overview: `README.md` and the hosted docs explorer
+- Public/project-facing overview: `README.md` and the docs explorer repo

@@ -5,13 +5,13 @@ serious terminal quality, and resource-aware tooling.
 
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 [![Release](https://img.shields.io/github/v/release/LaurenceGuws/Zide?include_prereleases&label=release)](https://github.com/LaurenceGuws/Zide/releases)
-[![Docs](https://img.shields.io/badge/docs-pages-d47a45)](https://laurenceguws.github.io/Zide/tools/docs_explorer/)
+[![Docs Tool](https://img.shields.io/badge/docs--tool-repo-d47a45)](https://github.com/LaurenceGuws/docs-explorer)
 [![Zig](https://img.shields.io/badge/zig-0.15.2-f7a41d)](https://ziglang.org/download/)
 [![Status](https://img.shields.io/badge/status-beta-b44cff)](https://github.com/LaurenceGuws/Zide/releases)
 
 ## Links
 
-- [Documentation](https://laurenceguws.github.io/Zide/tools/docs_explorer/)
+- [Docs Explorer Repo](https://github.com/LaurenceGuws/docs-explorer)
 - [Releases](https://github.com/LaurenceGuws/Zide/releases)
 - [Issues](https://github.com/LaurenceGuws/Zide/issues)
 - [Docs Index](docs/INDEX.md)
@@ -138,8 +138,8 @@ Repository-local docs own the detailed operator guidance:
   [docs/DEPENDENCIES.md](docs/DEPENDENCIES.md)
 - release process:
   [RELEASING.md](RELEASING.md)
-- docs explorer local run instructions:
-  [tools/docs_explorer/README.md](tools/docs_explorer/README.md)
+- docs explorer repository:
+  <https://github.com/LaurenceGuws/docs-explorer>
 
 Local docs explorer workflow:
 
@@ -167,14 +167,15 @@ python3 docs_explorer.py
 Local Linux dev launcher channels:
 
 - `zide-stable`
-- `zide-test`
+- `zide-dev`
 
 Commands:
 
 ```bash
-scripts/dev/deploy_linux_channel.sh stable
-scripts/dev/deploy_linux_channel.sh test
-scripts/dev/deploy_linux_channels.sh
+scripts/linux/install-local/deploy_channel.sh stable
+scripts/linux/install-local/deploy_channel.sh dev
+scripts/linux/install-local/deploy_channels.sh
+scripts/linux/install-local/sync_channel.sh dev
 ```
 
 This is a local developer workflow under `~/.local`, not the published release

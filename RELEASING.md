@@ -136,13 +136,9 @@ gh release upload "$TAG" \
 
 ## Docs Explorer Pages Policy
 
-- `main` stays source-only for `tools/docs_explorer`; do not commit generated
-  `build/js/` assets there.
-- If a release needs a GitHub Pages snapshot of the docs explorer, publish it
-  from the release branch.
-- Release-branch ritual for docs explorer Pages:
-  - run `npm run build:docs-explorer`
-  - verify `tools/docs_explorer/config/project.pages.json`
-  - ensure `.nojekyll` exists at the repo root on the release branch
-  - commit the built explorer assets on the release branch if needed for Pages
-  - point GitHub Pages at that release branch snapshot
+- The docs explorer now lives in the standalone repo:
+  <https://github.com/LaurenceGuws/docs-explorer>
+- Do not treat `zide` release-branch workflow as the ownership surface for the
+  docs explorer runtime anymore.
+- If Zide release docs need explorer-side updates, make them in the standalone
+  docs-explorer repo and follow that repo's publication ritual.

@@ -5,7 +5,7 @@ Repo-local docs map for contributors, operators, and agents.
 Customer-facing entrypoints live outside this index:
 
 - `README.md` — top-level product overview, docs link, and release discovery.
-- hosted docs explorer — `https://laurenceguws.github.io/Zide/tools/docs_explorer/`
+- docs explorer repo — `https://github.com/LaurenceGuws/docs-explorer`
 
 Use this file for repo workflow and doc ownership navigation, not as the public
 project landing page.
@@ -81,7 +81,7 @@ Quick reading guide:
 - `docs/releases/v0.1.0-beta.4.md` — current beta checkpoint release notes.
 - `tests/README.md` — repo-wide test layout policy.
 - `app_architecture/BOOTSTRAP.md` — dependencies, bootstrap, build, run, test.
-- `tools/docs_explorer/README.md` — run instructions for the local docs explorer.
+- docs explorer repo — `https://github.com/LaurenceGuws/docs-explorer`
 - `app_architecture/CONFIG.md` — Lua config subsystem: parser surface, merge rules, runtime consumers, and reload truth.
 - `docs/todo/config.md` — config subsystem tracker: contract drift, reload gaps, validation, and binding semantics.
 - `docs/DEPENDENCIES.md` — current dependency sourcing policy: Zig-managed app stack across platforms and platform-runtime requirements.
@@ -120,7 +120,7 @@ under `docs/review/archive/`.
 ## Quick Ownership Rules
 
 - Use `docs/WORKFLOW.md` as the normative doc-placement policy.
-- `README.md` and the hosted docs explorer are customer-facing.
+- `README.md` and the docs explorer repo are customer-facing.
 - `docs/` is for active workflow, contributor/operator guidance, top-level reference docs, and active work queues.
 - `app_architecture/` is for current designs, boundaries, and technical authority.
 - `docs/research/` and `docs/reference/` are for exploratory and reference material that should not masquerade as current architecture authority.

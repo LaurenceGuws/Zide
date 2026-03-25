@@ -28,7 +28,7 @@ Follow this workflow for every feature/task:
 
 ## Doc scope policy
 
-- `README.md` and the hosted docs explorer are **customer-facing**.
+- `README.md` and the docs explorer repo are **customer-facing**.
 - `docs/` is **contributor/operator-facing**: workflow, handoff, repo navigation, active work queues, reference, research, and review material.
 - `app_architecture/` is **current technical authority**: designs, boundaries, and technical reasoning.
 - `docs/review/` is **historical evidence**: audits, investigations, and past reviews.

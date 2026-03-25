@@ -4,7 +4,7 @@ Local browser-based docs explorer for repo Markdown content.
 
 Hosted release/docs entrypoint:
 
-- <https://laurenceguws.github.io/Zide/tools/docs_explorer/>
+- <https://github.com/LaurenceGuws/docs-explorer>
 
 Current entrypoints:
 
