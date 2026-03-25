@@ -82,7 +82,8 @@ pub const TerminalWorkspace = struct {
     };
 
     pub const PollPolicy = struct {
-        has_input: bool,
+        active_intent: runtime_policy.RuntimeIntent,
+        background_intent: runtime_policy.RuntimeIntent,
         max_tabs_per_frame: usize,
         max_background_tabs_per_frame: usize,
         max_active_polls_per_frame: usize,

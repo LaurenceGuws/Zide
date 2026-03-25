@@ -4,16 +4,8 @@ const runtime_policy = @import("../../app/runtime_policy.zig");
 
 pub fn pollBudgeted(self: anytype, input_active_index: ?usize, policy: anytype) !bool {
     const count = self.tabs.items.len;
-    const active_lifecycle = runtime_policy.LifecycleTier.focused_visible;
-    const background_lifecycle = if (count > 1)
-        runtime_policy.LifecycleTier.hidden_warm
-    else
-        runtime_policy.LifecycleTier.focused_visible;
-    const active_work_class = if (policy.has_input)
-        runtime_policy.WorkClass.interactive
-    else
-        runtime_policy.WorkClass.background;
-    const background_work_class = runtime_policy.WorkClass.background;
+    const active_intent = policy.active_intent;
+    const background_intent = policy.background_intent;
     if (count == 0) {
         clearInputPressure(self);
         self.background_poll_cursor = 0;
@@ -22,17 +14,17 @@ pub fn pollBudgeted(self: anytype, input_active_index: ?usize, policy: anytype) 
     }
 
     normalizePollCursor(self);
-    updateInputPressure(self, input_active_index, policy.has_input);
+    updateInputPressure(self, input_active_index, policy.active_intent.user_input_active);
 
     const active_idx = normalizeIndex(input_active_index, count) orelse self.activeIndex();
     if (policy.max_tabs_per_frame == 0) {
         recordPollMetrics(self, .{
             .tab_count = count,
             .active_index = active_idx,
-            .active_lifecycle = active_lifecycle,
-            .background_lifecycle = background_lifecycle,
-            .active_work_class = active_work_class,
-            .background_work_class = background_work_class,
+            .active_lifecycle = active_intent.lifecycle,
+            .background_lifecycle = background_intent.lifecycle,
+            .active_work_class = active_intent.work_class,
+            .background_work_class = background_intent.work_class,
             .budget_tabs = 0,
             .background_backlog_hint = count > 1,
         });
@@ -64,10 +56,10 @@ pub fn pollBudgeted(self: anytype, input_active_index: ?usize, policy: anytype) 
         recordPollMetrics(self, .{
             .tab_count = count,
             .active_index = active_idx,
-            .active_lifecycle = active_lifecycle,
-            .background_lifecycle = background_lifecycle,
-            .active_work_class = active_work_class,
-            .background_work_class = background_work_class,
+            .active_lifecycle = active_intent.lifecycle,
+            .background_lifecycle = background_intent.lifecycle,
+            .active_work_class = active_intent.work_class,
+            .background_work_class = background_intent.work_class,
             .active_budget = active_polls,
             .active_polled = active_polled_success,
             .background_budget = background_budget_used,
@@ -91,10 +83,10 @@ pub fn pollBudgeted(self: anytype, input_active_index: ?usize, policy: anytype) 
         recordPollMetrics(self, .{
             .tab_count = count,
             .active_index = active_idx,
-            .active_lifecycle = active_lifecycle,
-            .background_lifecycle = background_lifecycle,
-            .active_work_class = active_work_class,
-            .background_work_class = background_work_class,
+            .active_lifecycle = active_intent.lifecycle,
+            .background_lifecycle = background_intent.lifecycle,
+            .active_work_class = active_intent.work_class,
+            .background_work_class = background_intent.work_class,
             .active_budget = active_polls,
             .active_polled = active_polled_success,
             .background_budget = background_budget_used,
@@ -128,10 +120,10 @@ pub fn pollBudgeted(self: anytype, input_active_index: ?usize, policy: anytype) 
     recordPollMetrics(self, .{
         .tab_count = count,
         .active_index = active_idx,
-        .active_lifecycle = active_lifecycle,
-        .background_lifecycle = background_lifecycle,
-        .active_work_class = active_work_class,
-        .background_work_class = background_work_class,
+        .active_lifecycle = active_intent.lifecycle,
+        .background_lifecycle = background_intent.lifecycle,
+        .active_work_class = active_intent.work_class,
+        .background_work_class = background_intent.work_class,
         .active_budget = active_polls,
         .active_polled = active_polled_success,
         .background_budget = background_budget_used,
@@ -150,19 +142,6 @@ pub fn pollForFrame(self: anytype, input_active_index: ?usize, policy: anytype) 
     const wake_log = app_logger.logger("terminal.wake");
     const count = self.tabs.items.len;
     const active_idx = normalizeIndex(input_active_index, count);
-    const active_lifecycle = if (active_idx != null)
-        runtime_policy.LifecycleTier.focused_visible
-    else
-        runtime_policy.LifecycleTier.hidden_warm;
-    const background_lifecycle = if (count > 1)
-        runtime_policy.LifecycleTier.hidden_warm
-    else
-        runtime_policy.LifecycleTier.focused_visible;
-    const active_work_class = if (policy.has_input)
-        runtime_policy.WorkClass.interactive
-    else
-        runtime_policy.WorkClass.background;
-    const background_work_class = runtime_policy.WorkClass.background;
     const session_ptr = if (active_idx) |idx|
         @intFromPtr(self.tabs.items[idx].session)
     else
@@ -209,11 +188,11 @@ pub fn pollForFrame(self: anytype, input_active_index: ?usize, policy: anytype) 
                 session_ptr,
                 count,
                 if (active_idx) |idx| idx else std.math.maxInt(usize),
-                @intFromBool(policy.has_input),
-                runtime_policy.lifecycleLabel(active_lifecycle),
-                runtime_policy.lifecycleLabel(background_lifecycle),
-                runtime_policy.workClassLabel(active_work_class),
-                runtime_policy.workClassLabel(background_work_class),
+                @intFromBool(policy.active_intent.user_input_active),
+                runtime_policy.lifecycleLabel(policy.active_intent.lifecycle),
+                runtime_policy.lifecycleLabel(policy.background_intent.lifecycle),
+                runtime_policy.workClassLabel(policy.active_intent.work_class),
+                runtime_policy.workClassLabel(policy.background_intent.work_class),
                 @intFromBool(any_polled),
                 @intFromBool(active_has_data_pre),
                 @intFromBool(active_has_data_post),

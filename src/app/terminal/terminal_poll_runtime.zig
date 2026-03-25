@@ -39,18 +39,30 @@ pub fn inputPressure(input_has_events: bool, terminal_input_activity: bool) bool
 }
 
 fn pollPolicy(comptime Policy: type, has_input: bool) Policy {
-    const intent = runtime_policy.terminalVisibleIntent(has_input);
-    const profile = default_poll_profiles.select(intent);
+    return pollPolicyForTabCount(Policy, 1, has_input);
+}
+
+fn pollPolicyForTabCount(comptime Policy: type, tab_count: usize, has_input: bool) Policy {
+    const intents = runtime_policy.terminalWorkspaceIntents(tab_count, has_input);
+    const profile = default_poll_profiles.select(intents.active);
+    const background_budget = runtime_policy.terminalBackgroundTabBudget(
+        profile.max_background_tabs_per_frame,
+        intents.background,
+    );
     return .{
-        .has_input = has_input,
+        .active_intent = intents.active,
+        .background_intent = intents.background,
         .max_tabs_per_frame = profile.max_tabs_per_frame,
-        .max_background_tabs_per_frame = profile.max_background_tabs_per_frame,
+        .max_background_tabs_per_frame = background_budget,
         .max_active_polls_per_frame = profile.max_active_polls_per_frame,
     };
 }
 
 pub fn pollWorkspace(workspace: anytype, input_active_index: ?usize, has_input: bool) !bool {
-    const result = try workspace.pollForFrame(input_active_index, pollPolicy(@TypeOf(workspace.*).PollPolicy, has_input));
+    const result = try workspace.pollForFrame(
+        input_active_index,
+        pollPolicyForTabCount(@TypeOf(workspace.*).PollPolicy, workspace.tabCount(), has_input),
+    );
     return result.active_published_changed;
 }
 
@@ -93,4 +105,20 @@ test "default poll profiles select interactive and idle budgets explicitly" {
     try std.testing.expectEqual(@as(usize, 6), idle.max_tabs_per_frame);
     try std.testing.expectEqual(@as(usize, 3), idle.max_background_tabs_per_frame);
     try std.testing.expectEqual(@as(usize, 4), idle.max_active_polls_per_frame);
+}
+
+test "workspace poll policy carries shared active and background intents" {
+    const policy = pollPolicyForTabCount(struct {
+        active_intent: runtime_policy.RuntimeIntent,
+        background_intent: runtime_policy.RuntimeIntent,
+        max_tabs_per_frame: usize,
+        max_background_tabs_per_frame: usize,
+        max_active_polls_per_frame: usize,
+    }, 3, true);
+
+    try std.testing.expectEqual(runtime_policy.LifecycleTier.focused_visible, policy.active_intent.lifecycle);
+    try std.testing.expectEqual(runtime_policy.WorkClass.interactive, policy.active_intent.work_class);
+    try std.testing.expectEqual(runtime_policy.LifecycleTier.hidden_warm, policy.background_intent.lifecycle);
+    try std.testing.expectEqual(runtime_policy.WorkClass.background, policy.background_intent.work_class);
+    try std.testing.expectEqual(@as(usize, 1), policy.max_background_tabs_per_frame);
 }

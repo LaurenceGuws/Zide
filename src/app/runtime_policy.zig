@@ -50,12 +50,58 @@ pub const RuntimeIntent = struct {
     }
 };
 
+pub const TerminalWorkspaceIntents = struct {
+    active: RuntimeIntent,
+    background: RuntimeIntent,
+};
+
 pub fn terminalVisibleIntent(user_input_active: bool) RuntimeIntent {
     return .{
         .runtime = .terminal_session,
         .lifecycle = .focused_visible,
         .work_class = if (user_input_active) .interactive else .background,
         .user_input_active = user_input_active,
+    };
+}
+
+pub fn terminalBackgroundIntent(tab_count: usize) RuntimeIntent {
+    return .{
+        .runtime = .terminal_session,
+        .lifecycle = if (tab_count > 1) .hidden_warm else .focused_visible,
+        .work_class = .background,
+        .user_input_active = false,
+    };
+}
+
+pub fn terminalWorkspaceIntents(tab_count: usize, user_input_active: bool) TerminalWorkspaceIntents {
+    if (tab_count == 0) {
+        return .{
+            .active = .{
+                .runtime = .terminal_session,
+                .lifecycle = .hidden_warm,
+                .work_class = .background,
+                .user_input_active = false,
+            },
+            .background = .{
+                .runtime = .terminal_session,
+                .lifecycle = .hidden_warm,
+                .work_class = .background,
+                .user_input_active = false,
+            },
+        };
+    }
+    return .{
+        .active = terminalVisibleIntent(user_input_active),
+        .background = terminalBackgroundIntent(tab_count),
+    };
+}
+
+pub fn terminalBackgroundTabBudget(base_budget: usize, intent: RuntimeIntent) usize {
+    return switch (intent.lifecycle) {
+        .focused_visible => base_budget,
+        .visible_inactive => @min(base_budget, @as(usize, 2)),
+        .hidden_warm => @min(base_budget, @as(usize, 1)),
+        .paused, .evicted => 0,
     };
 }
 
@@ -103,6 +149,39 @@ test "terminal visible intent uses interactive class under input pressure" {
     try std.testing.expectEqual(LifecycleTier.focused_visible, intent.lifecycle);
     try std.testing.expectEqual(WorkClass.interactive, intent.work_class);
     try std.testing.expect(intent.isLatencySensitive());
+}
+
+test "terminal workspace intents cool background tabs while keeping active input-sensitive" {
+    const intents = terminalWorkspaceIntents(3, true);
+    try std.testing.expectEqual(LifecycleTier.focused_visible, intents.active.lifecycle);
+    try std.testing.expectEqual(WorkClass.interactive, intents.active.work_class);
+    try std.testing.expectEqual(LifecycleTier.hidden_warm, intents.background.lifecycle);
+    try std.testing.expectEqual(WorkClass.background, intents.background.work_class);
+}
+
+test "terminal workspace intents stay background when no tabs exist" {
+    const intents = terminalWorkspaceIntents(0, true);
+    try std.testing.expectEqual(LifecycleTier.hidden_warm, intents.active.lifecycle);
+    try std.testing.expectEqual(WorkClass.background, intents.active.work_class);
+    try std.testing.expect(!intents.active.user_input_active);
+}
+
+test "hidden warm background budget is capped harder than visible tiers" {
+    try std.testing.expectEqual(@as(usize, 4), terminalBackgroundTabBudget(4, .{
+        .runtime = .terminal_session,
+        .lifecycle = .focused_visible,
+        .work_class = .background,
+    }));
+    try std.testing.expectEqual(@as(usize, 2), terminalBackgroundTabBudget(4, .{
+        .runtime = .terminal_session,
+        .lifecycle = .visible_inactive,
+        .work_class = .background,
+    }));
+    try std.testing.expectEqual(@as(usize, 1), terminalBackgroundTabBudget(4, .{
+        .runtime = .terminal_session,
+        .lifecycle = .hidden_warm,
+        .work_class = .background,
+    }));
 }
 
 test "terminal sleep lifecycle cools through focused visible, visible inactive, and hidden warm" {
