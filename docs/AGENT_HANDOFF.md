@@ -56,6 +56,7 @@ not a progress log and should stay brief.
   - `docs/todo/linux/implementation.md`
 - Editor implementation authority:
   - `app_architecture/editor/DESIGN.md`
+  - `app_architecture/RUNTIME_ISOLATION_AND_RESOURCE_MANAGEMENT.md`
   - `docs/todo/editor/README.md`
 - Present implementation authority:
   - `app_architecture/terminal/present/WAYLAND_DESIGN_BRIEF.md`

@@ -13,6 +13,8 @@ Status note, 2026-03-15:
   `docs/review/app_mode_layering_*`.
 - Use this file for present-tense import and ownership rules, not for replaying
   the old extraction narrative.
+- Cross-subsystem runtime scheduling, lifecycle, and resource policy now live
+  in `app_architecture/RUNTIME_ISOLATION_AND_RESOURCE_MANAGEMENT.md`.
 
 ## Layer Map
 

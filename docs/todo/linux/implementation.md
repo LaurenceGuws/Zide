@@ -102,17 +102,33 @@ owning subsystem queues.
   - Move durable editor work back into `docs/todo/editor/app_baseline.md` once
     the Linux-specific gap is understood.
   - 2026-03-25 code audit:
-    - Linux still uses the status-bar/path-prompt file flow rather than a
-      native file dialog path.
+    - Linux still uses the shared status-bar/path-prompt file flow rather than
+      a native file dialog path.
     - Current code truth:
       - `src/platform/file_dialog.zig` returns `null` for all non-Windows
         platforms, so there is no Linux-native dialog implementation today.
       - `src/app/editor/path_prompt_state.zig` seeds Linux `Open`/`Save As`
         prompts from the current working directory, which is the active
         fallback surface for Linux file flow.
-    - This is an explicit Linux UX gap, not a surprise runtime bug. Decide
-      whether Linux catch-up should keep the prompt flow for now or prioritize
-      a native Linux dialog/portal lane.
+    - Direction change:
+      - do not prioritize Linux portal/native dialog integration as the next
+        catch-up step
+      - current preferred path is to mature the shared status-bar surface into
+        a mode host and make file flow a real `path` mode with fuzzy
+        completion
+      - current editor-focused status content should become explicit passive
+        `editor` mode instead of behaving like default bar content
+    - 2026-03-25 implementation checkpoint:
+      - the first status-bar mode-host cut is now in code
+      - current implementation uses an explicit passive/active status-bar UI
+        model even though visible behavior is intentionally unchanged so far
+      - next step is to move current path entry behind a real active `path`
+        mode implementation rather than continuing with ad hoc prompt framing
+    - Cross-cutting performance/resource direction now lives in:
+      - `app_architecture/RUNTIME_ISOLATION_AND_RESOURCE_MANAGEMENT.md`
+    - Priority change:
+      - status-bar mode implementation is intentionally deferred for now while
+        runtime/resource-management foundation work starts
 
 - [ ] `LNX-02` Audit Linux renderer/input/window behavior after recent UI work
   - Focus:
@@ -202,3 +218,32 @@ owning subsystem queues.
       - `zide[-stable|-dev]`
       - `zide-editor[-stable|-dev]`
       - `zide-terminal[-stable|-dev]`
+    - Linux `install-local` now also has symmetric channel-family removal:
+      - `scripts/linux/install-local/remove_channel.sh <stable|dev>`
+      - `scripts/linux/install-local/remove_channels.sh`
+    - Linux `install-local` now has explicit in-place sync entrypoints:
+      - `scripts/linux/install-local/sync_channel.sh <stable|dev>`
+      - `scripts/linux/install-local/sync_channels.sh`
+    - install/remove scripts now refresh desktop, icon, and KDE cache indexes
+      after mutating launcher metadata
+    - canonical Linux `install-local` entrypoints now live under
+      `scripts/linux/install-local/`, with legacy `scripts/dev/*` paths kept as
+      thin compatibility wrappers for now
+    - first desktop-entry maturity pass now adds richer metadata on Linux local
+      launchers:
+      - `GenericName`
+      - `Comment`
+      - `TryExec`
+      - `Keywords`
+      - sibling actions across the launcher family:
+        - IDE: `Open Editor`, `Open Terminal`
+        - editor: `Open IDE`, `Open Terminal`
+        - terminal: `Open IDE`, `Open Editor`
+    - first code adoption of runtime/resource-management architecture:
+      - `src/app/runtime_policy.zig` now defines shared runtime vocabulary for:
+        - runtime kind
+        - lifecycle tier
+        - work class
+        - runtime intent
+      - terminal poll-profile selection now routes through that shared runtime
+        intent model instead of a raw `has_input` boolean

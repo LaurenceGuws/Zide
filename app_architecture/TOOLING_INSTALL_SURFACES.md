@@ -75,6 +75,7 @@ Shared expectations:
 - owned install roots / launch surfaces
 - launcher identity, icons, and OS-native metadata are part of the contract
 - uninstall/update/replace behavior should be deliberate, not incidental
+- install and remove entrypoints should be symmetric for each owned channel
 
 Supported channel vocabulary:
 
@@ -116,6 +117,15 @@ Target direction:
   - unify current local desktop install scripts under one channel contract:
     - `dev`
     - `stable`
+  - canonical local entrypoints now live under:
+    - `scripts/linux/install-local/deploy_channel.sh <stable|dev>`
+    - `scripts/linux/install-local/deploy_channels.sh`
+    - `scripts/linux/install-local/remove_channel.sh <stable|dev>`
+    - `scripts/linux/install-local/remove_channels.sh`
+    - `scripts/linux/install-local/sync_channel.sh <stable|dev>`
+    - `scripts/linux/install-local/sync_channels.sh`
+  - legacy `scripts/dev/*linux*` paths should remain thin compatibility
+    wrappers only until the repo fully stops referencing them
 - `stage-release`
   - current local stage script is now:
     - `scripts/linux/Stage-CurrentLinuxDist.sh`

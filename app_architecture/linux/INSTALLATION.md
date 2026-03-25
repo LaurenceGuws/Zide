@@ -25,8 +25,12 @@ Current Linux entrypoints:
 - smoke:
   - `zig build gui-smokes-manual`
 - install-local:
-  - `scripts/dev/deploy_linux_channel.sh <stable|dev>`
-  - `scripts/dev/deploy_linux_channels.sh`
+  - `scripts/linux/install-local/deploy_channel.sh <stable|dev>`
+  - `scripts/linux/install-local/deploy_channels.sh`
+  - `scripts/linux/install-local/remove_channel.sh <stable|dev>`
+  - `scripts/linux/install-local/remove_channels.sh`
+  - `scripts/linux/install-local/sync_channel.sh <stable|dev>`
+  - `scripts/linux/install-local/sync_channels.sh`
 - stage-release:
   - `scripts/linux/Stage-CurrentLinuxDist.sh`
 
@@ -78,8 +82,27 @@ Current desktop-entry behavior:
 - local desktop entries point `Path=` at the repo root today
 - local installs now expose first-class IDE/editor/terminal desktop launchers
   per channel instead of only one `zide` launcher
+- local desktop entries should look like real desktop apps, not only minimal
+  launch stubs:
+  - `Version=1.0`
+  - `GenericName`
+  - `Comment`
+  - `TryExec`
+  - `Keywords`
 - icon and WM class behavior are part of the install-local contract, not a
   renderer-only concern
+- install-local ownership now includes explicit remove/replace behavior for the
+  full launcher family per channel, not only one-way installs
+- local install/remove scripts should refresh desktop, icon, and KDE cache
+  indexes after mutating launcher metadata
+- `sync_channel.sh` is the preferred operator path for updating an existing
+  local channel install in place
+- launcher-family desktop entries may advertise convenience actions for sibling
+  modes so each launcher can pivot into the others without a second menu search
+- current first pass exposes:
+  - IDE: `Open Editor`, `Open Terminal`
+  - editor: `Open IDE`, `Open Terminal`
+  - terminal: `Open IDE`, `Open Editor`
 
 ## Local Stage-Release Layout
 
@@ -123,8 +146,26 @@ Current bundle behavior:
 
 - Wayland desktop icon/grouping behavior may still require stronger desktop
   metadata ownership than repo-local smoke launches prove.
-- Linux install/uninstall/update tooling is not yet as formal as the Windows
-  installer path.
+- Linux install-local still lives under `scripts/dev/` instead of the final
+  compatibility wrapper paths are still under `scripts/dev/`; canonical Linux
+  install-local entrypoints now live under `scripts/linux/install-local/`.
+
+## KDE Notes
+
+- KDE/Wayland can keep stale launcher identity or icon state after metadata
+  changes even when the files on disk are already correct.
+- The install-local scripts now refresh:
+  - desktop database
+  - icon cache
+  - KDE 6 sycoca cache
+- If a stale entry still remains after a sync, the next checks are:
+  - remove obsolete local desktop entries from `~/.local/share/applications/`
+  - remove obsolete local icons from
+    `~/.local/share/icons/hicolor/512x512/apps/`
+  - restart Plasma shell or log out/in
+- System-wide stale entries under `/usr/share/applications/` are outside the
+  local install-local contract and should be removed by uninstalling the owning
+  package rather than by changing repo-local scripts.
 
 ## Direction
 

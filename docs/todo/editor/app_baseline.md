@@ -52,16 +52,32 @@ This queue does not own:
     - On Windows, editor and IDE now also reuse that same shared top bar as the
       left side of one app-owned titleband instead of growing a second
       editor-only chrome surface.
-    - Added a shared status-bar path prompt for `Open` and `Save As` so
-      editor-only mode can open/save beyond the initial buffer without
-      inventing a separate editor-only dialog stack.
+    - Added a shared status-bar path prompt for `Open` and `Save As` as an
+      initial host surface so editor-only mode can open/save beyond the
+      initial buffer without inventing a separate editor-only dialog stack.
     - `Ctrl+S` on an untitled buffer now routes into the same shared `Save As`
       prompt instead of silently doing nothing.
     - `Replace` now also routes through the same shared host prompt surface and
       reuses the editor's existing search state instead of adding a second
       search/replace stack.
+    - Direction change:
+      - the current shared prompt surface should evolve into a shared
+        status-bar mode host, not remain a cramped one-off prompt strip
+      - current editor-focused status content should become explicit passive
+        `editor` mode instead of acting like the default bar baseline
+      - file open/save-as should move toward an explicit `path` mode with fuzzy
+        completion rather than toward Linux portal-first dialog integration
+    - 2026-03-25 implementation checkpoint:
+      - the status-bar widget API now has an explicit mode-host UI shape:
+        passive mode + editor passive payload + active mode union
+      - draw routing now constructs explicit passive `editor` mode and active
+        `path` / `search` UI variants instead of passing nullable prompt/search
+        fields directly into the widget
+      - this was an ownership cut only; visible status-bar behavior should stay
+        unchanged until the next `path` mode implementation step
     - Remaining work on this item: cleaner menu/action routing, replace-all UX,
-      and follow-up polish on the basic chrome surface.
+      status-bar mode-host conversion, and follow-up polish on the basic chrome
+      surface.
 
 - [ ] `ED-APP-02` File lifecycle and untitled flow
   - Support a clear untitled-buffer baseline for editor mode.
@@ -75,8 +91,12 @@ This queue does not own:
       buffer instead of creating a second editor tab.
     - `Open...` and `Save As...` prompts now seed sensible paths for untitled
       editors based on the current working directory.
-    - Remaining work on this item: unsaved-changes guards and any explicit
-      close/discard surface for dirty editors.
+    - Direction change:
+      - keep file flow on the shared internal status-bar surface
+      - do not prioritize Linux portal/native dialog work as the primary path
+      - make `path` the first explicit active status-bar mode target
+    - Remaining work on this item: unsaved-changes guards, any explicit
+      close/discard surface for dirty editors, and `path` mode implementation.
 
 - [ ] `ED-APP-03` Editor CLI behavior
   - Audit and improve editor-only CLI file opening behavior.
@@ -124,6 +144,10 @@ This queue does not own:
     - Fixed literal tab rendering in editor buffers so visual drawing now
       expands tab input to spaces at the widget boundary instead of drawing a
       control placeholder glyph that broke row width/layout.
+    - Direction change:
+      - status-bar interactions should become mode-scoped rather than
+        continuing to accumulate ad hoc prompt overlays on top of editor status
+        content
 
 - [ ] `ED-APP-05` Friendly Lua config for editor usage
   - Make common editor behavior easy to configure with sane defaults.
@@ -137,6 +161,8 @@ This queue does not own:
 - `src/config/lua_config_iface.zig`
 - `src/config/lua_config_ziglua_parse.zig`
 - `assets/config/init.lua`
+- `src/ui/widgets/status_bar.zig`
+- `src/app/editor/path_prompt_state.zig`
 
 ## Notes
 
@@ -146,3 +172,5 @@ This queue does not own:
 - `editor_action_baseline_register.md` is the practical action/behavior
   checklist for deciding what belongs in the current Notepad-grade baseline
   while actual bindings stay Lua-driven.
+- Status-bar mode-host direction is owned by
+  `app_architecture/editor/STATUS_BAR_MODE_HOST.md`.

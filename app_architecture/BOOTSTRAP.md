@@ -124,8 +124,9 @@ zig build gui-smokes-manual
 Linux local desktop install surfaces:
 
 ```bash
-scripts/dev/deploy_linux_channel.sh dev
-scripts/dev/deploy_linux_channel.sh stable
+scripts/linux/install-local/deploy_channel.sh dev
+scripts/linux/install-local/deploy_channel.sh stable
+scripts/linux/install-local/sync_channel.sh dev
 ```
 
 Linux local staged release:

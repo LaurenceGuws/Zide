@@ -9,6 +9,25 @@ const Color = app_shell.Color;
 
 /// Status bar at the bottom
 pub const StatusBar = struct {
+    pub const PassiveMode = enum {
+        editor,
+        terminal,
+    };
+
+    pub const ActiveMode = union(enum) {
+        path: PromptUi,
+        search: SearchUi,
+    };
+
+    pub const EditorModeUi = struct {
+        mode: []const u8,
+        imported_theme_name: ?[]const u8,
+        file_path: ?[]const u8,
+        line: usize,
+        col: usize,
+        modified: bool,
+    };
+
     pub const SearchUi = struct {
         active: bool,
         query: []const u8,
@@ -95,14 +114,9 @@ pub const StatusBar = struct {
         shell: *Shell,
         width: f32,
         y: f32,
-        mode: []const u8,
-        imported_theme_name: ?[]const u8,
-        file_path: ?[]const u8,
-        line: usize,
-        col: usize,
-        modified: bool,
-        prompt: ?PromptUi,
-        search: ?SearchUi,
+        passive_mode: PassiveMode,
+        editor_ui: EditorModeUi,
+        active_mode: ?ActiveMode,
     ) void {
         const theme = shell.theme();
         const scale = shell.uiScaleFactor();
@@ -112,14 +126,14 @@ pub const StatusBar = struct {
 
         // Line/column (reserve space on right)
         var pos_buf: [32]u8 = undefined;
-        const pos_str = std.fmt.bufPrint(&pos_buf, "Ln {d}, Col {d}", .{ line + 1, col + 1 }) catch |err| {
+        const pos_str = std.fmt.bufPrint(&pos_buf, "Ln {d}, Col {d}", .{ editor_ui.line + 1, editor_ui.col + 1 }) catch |err| {
             const log = app_logger.logger("ui.status-bar");
             log.logf(.warning, "status bar cursor position format failed err={s}", .{@errorName(err)});
             return;
         };
         const pos_width = @as(f32, @floatFromInt(pos_str.len)) * shell.charWidth();
         var theme_buf: [96]u8 = undefined;
-        const theme_label = if (imported_theme_name) |name|
+        const theme_label = if (editor_ui.imported_theme_name) |name|
             std.fmt.bufPrint(&theme_buf, "Theme {s}", .{name}) catch null
         else
             null;
@@ -129,9 +143,13 @@ pub const StatusBar = struct {
         const theme_start = pos_start - theme_gap - theme_width;
 
         // Mode indicator
-        const mode_bg = if (std.mem.eql(u8, mode, "INSERT"))
+        const mode_text = switch (passive_mode) {
+            .editor => editor_ui.mode,
+            .terminal => "TERMINAL",
+        };
+        const mode_bg = if (std.mem.eql(u8, mode_text, "INSERT"))
             theme.string
-        else if (std.mem.eql(u8, mode, "VISUAL"))
+        else if (std.mem.eql(u8, mode_text, "VISUAL"))
             theme.keyword
         else
             theme.function;
@@ -145,141 +163,144 @@ pub const StatusBar = struct {
         const mode_hover = window_focused and mouse.x >= 0 and mouse.x <= mode_width and mouse.y >= y and mouse.y <= y + self.height;
         const mode_bg_final = if (mode_hover and pressed) theme.ui_pressed else if (mode_hover) theme.ui_hover else mode_bg;
         shell.drawRect(0, @intFromFloat(y), @intFromFloat(mode_width), @intFromFloat(self.height), mode_bg_final);
-        shell.drawTextOnBg(mode, text_x, text_y, if (mode_hover) theme.ui_text else theme.background, mode_bg_final);
+        shell.drawTextOnBg(mode_text, text_x, text_y, if (mode_hover) theme.ui_text else theme.background, mode_bg_final);
 
-        // Prompt/search field sits between mode and file path when active.
+        // Active mode field sits between mode and file path when active.
         var x: f32 = 88 * scale;
-        if (prompt) |prompt_ui| {
-            const palette = searchFieldPalette(theme);
-            const label = prompt_ui.label;
-            const box_x = x;
-            const label_w = @as(f32, @floatFromInt(label.len)) * shell.charWidth();
-            const box_w = @min(@max(@as(f32, 280 * scale), width * 0.34), @max(@as(f32, 0), pos_start - x - 24 * scale));
-            if (box_w > 64 * scale) {
-                const label_x = box_x;
-                shell.drawTextOnBg(label, label_x, text_y, palette.muted, bar_bg);
-                shell.drawTextOnBg(":", label_x + label_w, text_y, palette.muted, bar_bg);
+        if (active_mode) |active| switch (active) {
+            .path => |prompt_ui| {
+                const palette = searchFieldPalette(theme);
+                const label = prompt_ui.label;
+                const box_x = x;
+                const label_w = @as(f32, @floatFromInt(label.len)) * shell.charWidth();
+                const box_w = @min(@max(@as(f32, 280 * scale), width * 0.34), @max(@as(f32, 0), pos_start - x - 24 * scale));
+                if (box_w > 64 * scale) {
+                    const label_x = box_x;
+                    shell.drawTextOnBg(label, label_x, text_y, palette.muted, bar_bg);
+                    shell.drawTextOnBg(":", label_x + label_w, text_y, palette.muted, bar_bg);
 
-                const query_x = label_x + label_w + 2 * shell.charWidth();
-                const query_available = @max(@as(f32, 0), box_w - (query_x - box_x) - 12 * scale);
-                const query_text = if (prompt_ui.value.len > 0) prompt_ui.value else prompt_ui.placeholder;
-                const query_color = if (prompt_ui.value.len > 0) palette.text else palette.muted;
-                const result = drawFieldText(
-                    shell,
-                    text_y,
-                    y,
-                    self.height,
-                    query_x,
-                    query_available,
-                    query_text,
-                    query_color,
-                    bar_bg,
-                    palette.selection_bg,
-                    palette.selection_text,
-                    prompt_ui.select_all and prompt_ui.value.len > 0,
-                );
-                const underline_y = y + self.height - 4 * scale;
-                shell.drawRect(
-                    @intFromFloat(query_x),
-                    @intFromFloat(underline_y),
-                    @intFromFloat(@max(@as(f32, 1), query_available)),
-                    @intFromFloat(@max(@as(f32, 1), scale)),
-                    palette.underline,
-                );
-                if (prompt_ui.active) {
-                    shell.setTextInputRect(
-                        @intFromFloat(query_x),
-                        @intFromFloat(y),
-                        @intFromFloat(@max(@as(f32, 1), query_available)),
-                        @intFromFloat(self.height),
+                    const query_x = label_x + label_w + 2 * shell.charWidth();
+                    const query_available = @max(@as(f32, 0), box_w - (query_x - box_x) - 12 * scale);
+                    const query_text = if (prompt_ui.value.len > 0) prompt_ui.value else prompt_ui.placeholder;
+                    const query_color = if (prompt_ui.value.len > 0) palette.text else palette.muted;
+                    const result = drawFieldText(
+                        shell,
+                        text_y,
+                        y,
+                        self.height,
+                        query_x,
+                        query_available,
+                        query_text,
+                        query_color,
+                        bar_bg,
+                        palette.selection_bg,
+                        palette.selection_text,
+                        prompt_ui.select_all and prompt_ui.value.len > 0,
                     );
-                    const caret_x = @min(query_x + result.drawn_width + shell.charWidth() * 0.1, query_x + query_available - 2 * scale);
+                    const underline_y = y + self.height - 4 * scale;
                     shell.drawRect(
-                        @intFromFloat(caret_x),
-                        @intFromFloat(y + 3 * scale),
-                        @intFromFloat(@max(@as(f32, 1), 2 * scale)),
-                        @intFromFloat(@max(@as(f32, 1), self.height - 6 * scale)),
-                        palette.caret,
+                        @intFromFloat(query_x),
+                        @intFromFloat(underline_y),
+                        @intFromFloat(@max(@as(f32, 1), query_available)),
+                        @intFromFloat(@max(@as(f32, 1), scale)),
+                        palette.underline,
                     );
-                }
-                x = box_x + box_w + 16 * scale;
-                if (prompt_ui.error_text) |error_text| {
-                    const error_x = box_x + box_w + 8 * scale;
-                    const available = @max(@as(f32, 0), pos_start - error_x - 8 * scale);
-                    if (available > shell.charWidth() * 6) {
-                        _ = common.drawTruncatedTextOnBg(shell, error_text, error_x, text_y, theme.ui_modified, bar_bg, available);
+                    if (prompt_ui.active) {
+                        shell.setTextInputRect(
+                            @intFromFloat(query_x),
+                            @intFromFloat(y),
+                            @intFromFloat(@max(@as(f32, 1), query_available)),
+                            @intFromFloat(self.height),
+                        );
+                        const caret_x = @min(query_x + result.drawn_width + shell.charWidth() * 0.1, query_x + query_available - 2 * scale);
+                        shell.drawRect(
+                            @intFromFloat(caret_x),
+                            @intFromFloat(y + 3 * scale),
+                            @intFromFloat(@max(@as(f32, 1), 2 * scale)),
+                            @intFromFloat(@max(@as(f32, 1), self.height - 6 * scale)),
+                            palette.caret,
+                        );
+                    }
+                    x = box_x + box_w + 16 * scale;
+                    if (prompt_ui.error_text) |error_text| {
+                        const error_x = box_x + box_w + 8 * scale;
+                        const available = @max(@as(f32, 0), pos_start - error_x - 8 * scale);
+                        if (available > shell.charWidth() * 6) {
+                            _ = common.drawTruncatedTextOnBg(shell, error_text, error_x, text_y, theme.ui_modified, bar_bg, available);
+                        }
                     }
                 }
-            }
-        } else if (search) |search_ui| {
-            const palette = searchFieldPalette(theme);
-            const label = "Find";
-            const box_x = x;
-            const label_w = @as(f32, @floatFromInt(label.len)) * shell.charWidth();
+            },
+            .search => |search_ui| {
+                const palette = searchFieldPalette(theme);
+                const label = "Find";
+                const box_x = x;
+                const label_w = @as(f32, @floatFromInt(label.len)) * shell.charWidth();
 
-            var meta_buf: [32]u8 = undefined;
-            const meta = if (search_ui.match_count == 0)
-                std.fmt.bufPrint(&meta_buf, "0 hits", .{}) catch ""
-            else if (search_ui.active_index) |idx|
-                std.fmt.bufPrint(&meta_buf, "{d}/{d}", .{ idx + 1, search_ui.match_count }) catch ""
-            else
-                std.fmt.bufPrint(&meta_buf, "{d} hits", .{search_ui.match_count}) catch "";
-            const meta_w = @as(f32, @floatFromInt(meta.len)) * shell.charWidth();
-            const box_w = @min(@max(@as(f32, 220 * scale), width * 0.28), @max(@as(f32, 0), pos_start - x - 24 * scale));
-            if (box_w > 64 * scale) {
-                const label_x = box_x;
-                shell.drawTextOnBg(label, label_x, text_y, palette.muted, bar_bg);
-                shell.drawTextOnBg(":", label_x + label_w, text_y, palette.muted, bar_bg);
+                var meta_buf: [32]u8 = undefined;
+                const meta = if (search_ui.match_count == 0)
+                    std.fmt.bufPrint(&meta_buf, "0 hits", .{}) catch ""
+                else if (search_ui.active_index) |idx|
+                    std.fmt.bufPrint(&meta_buf, "{d}/{d}", .{ idx + 1, search_ui.match_count }) catch ""
+                else
+                    std.fmt.bufPrint(&meta_buf, "{d} hits", .{search_ui.match_count}) catch "";
+                const meta_w = @as(f32, @floatFromInt(meta.len)) * shell.charWidth();
+                const box_w = @min(@max(@as(f32, 220 * scale), width * 0.28), @max(@as(f32, 0), pos_start - x - 24 * scale));
+                if (box_w > 64 * scale) {
+                    const label_x = box_x;
+                    shell.drawTextOnBg(label, label_x, text_y, palette.muted, bar_bg);
+                    shell.drawTextOnBg(":", label_x + label_w, text_y, palette.muted, bar_bg);
 
-                const query_x = label_x + label_w + 2 * shell.charWidth();
-                const query_available = @max(@as(f32, 0), box_w - (query_x - box_x) - meta_w - 12 * scale);
-                const query_text = if (search_ui.query.len > 0) search_ui.query else "type to search";
-                const query_color = if (search_ui.query.len > 0) palette.text else palette.muted;
-                const result = drawFieldText(
-                    shell,
-                    text_y,
-                    y,
-                    self.height,
-                    query_x,
-                    query_available,
-                    query_text,
-                    query_color,
-                    bar_bg,
-                    palette.selection_bg,
-                    palette.selection_text,
-                    search_ui.select_all and search_ui.query.len > 0,
-                );
-                const underline_y = y + self.height - 4 * scale;
-                shell.drawRect(
-                    @intFromFloat(query_x),
-                    @intFromFloat(underline_y),
-                    @intFromFloat(@max(@as(f32, 1), query_available)),
-                    @intFromFloat(@max(@as(f32, 1), scale)),
-                    palette.underline,
-                );
-                if (search_ui.active) {
-                    shell.setTextInputRect(
-                        @intFromFloat(query_x),
-                        @intFromFloat(y),
-                        @intFromFloat(@max(@as(f32, 1), query_available)),
-                        @intFromFloat(self.height),
+                    const query_x = label_x + label_w + 2 * shell.charWidth();
+                    const query_available = @max(@as(f32, 0), box_w - (query_x - box_x) - meta_w - 12 * scale);
+                    const query_text = if (search_ui.query.len > 0) search_ui.query else "type to search";
+                    const query_color = if (search_ui.query.len > 0) palette.text else palette.muted;
+                    const result = drawFieldText(
+                        shell,
+                        text_y,
+                        y,
+                        self.height,
+                        query_x,
+                        query_available,
+                        query_text,
+                        query_color,
+                        bar_bg,
+                        palette.selection_bg,
+                        palette.selection_text,
+                        search_ui.select_all and search_ui.query.len > 0,
                     );
-                    const caret_x = @min(query_x + result.drawn_width + shell.charWidth() * 0.1, query_x + query_available - 2 * scale);
+                    const underline_y = y + self.height - 4 * scale;
                     shell.drawRect(
-                        @intFromFloat(caret_x),
-                        @intFromFloat(y + 3 * scale),
-                        @intFromFloat(@max(@as(f32, 1), 2 * scale)),
-                        @intFromFloat(@max(@as(f32, 1), self.height - 6 * scale)),
-                        palette.caret,
+                        @intFromFloat(query_x),
+                        @intFromFloat(underline_y),
+                        @intFromFloat(@max(@as(f32, 1), query_available)),
+                        @intFromFloat(@max(@as(f32, 1), scale)),
+                        palette.underline,
                     );
+                    if (search_ui.active) {
+                        shell.setTextInputRect(
+                            @intFromFloat(query_x),
+                            @intFromFloat(y),
+                            @intFromFloat(@max(@as(f32, 1), query_available)),
+                            @intFromFloat(self.height),
+                        );
+                        const caret_x = @min(query_x + result.drawn_width + shell.charWidth() * 0.1, query_x + query_available - 2 * scale);
+                        shell.drawRect(
+                            @intFromFloat(caret_x),
+                            @intFromFloat(y + 3 * scale),
+                            @intFromFloat(@max(@as(f32, 1), 2 * scale)),
+                            @intFromFloat(@max(@as(f32, 1), self.height - 6 * scale)),
+                            palette.caret,
+                        );
+                    }
+                    shell.drawTextOnBg(meta, box_x + box_w - meta_w, text_y, palette.muted, bar_bg);
+                    x = box_x + box_w + 16 * scale;
                 }
-                shell.drawTextOnBg(meta, box_x + box_w - meta_w, text_y, palette.muted, bar_bg);
-                x = box_x + box_w + 16 * scale;
-            }
-        }
+            },
+        };
 
         // File path
-        if (file_path) |path| {
+        if (editor_ui.file_path) |path| {
             const available = (if (theme_label != null) theme_start else pos_start) - 16 * scale - x;
             const result = common.drawTruncatedTextOnBg(shell, path, x, text_y, theme.ui_text, bar_bg, available);
             const in_path = window_focused and mouse.x >= x and mouse.x <= x + result.drawn_width and
@@ -291,7 +312,7 @@ pub const StatusBar = struct {
         }
 
         // Modified indicator
-        if (modified) {
+        if (editor_ui.modified) {
             const indicator = "[+]";
             const indicator_width = @as(f32, @floatFromInt(indicator.len)) * shell.charWidth();
             if (x + indicator_width <= (if (theme_label != null) theme_start else pos_start) - 8 * scale) {

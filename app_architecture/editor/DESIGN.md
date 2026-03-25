@@ -20,11 +20,13 @@ Those live under `docs/todo/editor/`, `docs/research/`, and `docs/review/`.
 
 Current redesign planning authority for the next architecture cut:
 
+- `app_architecture/RUNTIME_ISOLATION_AND_RESOURCE_MANAGEMENT.md`
 - `app_architecture/editor/EDITOR_STACK_REDESIGN_PLAN.md`
 - `app_architecture/editor/DOCUMENT_CORE_AND_VIEW_STATE_BOUNDARY.md`
 - `app_architecture/editor/EDITOR_RUNTIME_CONTRACT.md`
 - `app_architecture/editor/EDITOR_DISPLAY_SNAPSHOT_CONTRACT.md`
 - `app_architecture/editor/EDITOR_REDESIGN_EXECUTION_ROADMAP.md`
+- `app_architecture/editor/STATUS_BAR_MODE_HOST.md`
 
 ## Product Direction
 
@@ -37,6 +39,9 @@ Its current product direction is:
 - second, continue deeper editor quality work: richer editing semantics,
   tree-sitter/query richness, stronger reference parity, and later performance
   tightening
+- for file flow and prompt-style interactions, prefer the shared status-bar
+  mode-host direction when the product interaction is better served by an
+  internal keyboard-first surface than by OS-native dialog dependence
 
 That means current baseline work should land through the real subsystem seams,
 not through one-off widget-local hacks.

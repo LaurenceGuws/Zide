@@ -1,5 +1,6 @@
 const std = @import("std");
 const app_logger = @import("../../app_logger.zig");
+const runtime_policy = @import("../runtime_policy.zig");
 
 pub const PollProfile = struct {
     max_tabs_per_frame: usize,
@@ -11,8 +12,11 @@ pub const PollProfiles = struct {
     interactive: PollProfile,
     idle: PollProfile,
 
-    pub fn select(self: PollProfiles, has_input: bool) PollProfile {
-        return if (has_input) self.interactive else self.idle;
+    pub fn select(self: PollProfiles, intent: runtime_policy.RuntimeIntent) PollProfile {
+        return switch (intent.work_class) {
+            .frame_critical, .interactive => self.interactive,
+            .background, .deferred => self.idle,
+        };
     }
 };
 
@@ -35,7 +39,8 @@ pub fn inputPressure(input_has_events: bool, terminal_input_activity: bool) bool
 }
 
 fn pollPolicy(comptime Policy: type, has_input: bool) Policy {
-    const profile = default_poll_profiles.select(has_input);
+    const intent = runtime_policy.terminalVisibleIntent(has_input);
+    const profile = default_poll_profiles.select(intent);
     return .{
         .has_input = has_input,
         .max_tabs_per_frame = profile.max_tabs_per_frame,
@@ -79,12 +84,12 @@ pub fn pollSingleSession(term: anytype, has_input: bool) !bool {
 }
 
 test "default poll profiles select interactive and idle budgets explicitly" {
-    const interactive = default_poll_profiles.select(true);
+    const interactive = default_poll_profiles.select(runtime_policy.terminalVisibleIntent(true));
     try std.testing.expectEqual(@as(usize, 3), interactive.max_tabs_per_frame);
     try std.testing.expectEqual(@as(usize, 1), interactive.max_background_tabs_per_frame);
     try std.testing.expectEqual(@as(usize, 2), interactive.max_active_polls_per_frame);
 
-    const idle = default_poll_profiles.select(false);
+    const idle = default_poll_profiles.select(runtime_policy.terminalVisibleIntent(false));
     try std.testing.expectEqual(@as(usize, 6), idle.max_tabs_per_frame);
     try std.testing.expectEqual(@as(usize, 3), idle.max_background_tabs_per_frame);
     try std.testing.expectEqual(@as(usize, 4), idle.max_active_polls_per_frame);

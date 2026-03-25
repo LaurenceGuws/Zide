@@ -25,31 +25,32 @@ pub fn draw(state: anytype, shell: anytype, layout: layout_types.WidgetLayout, t
                 shell,
                 layout.window.width,
                 layout.status_bar.y,
-                state.mode,
-                state.editor_imported_theme_name,
-                doc.filePath(),
-                editor.cursor.line,
-                editor.cursor.col,
-                doc.isModified(),
+                .editor,
+                .{
+                    .mode = state.mode,
+                    .imported_theme_name = state.editor_imported_theme_name,
+                    .file_path = doc.filePath(),
+                    .line = editor.cursor.line,
+                    .col = editor.cursor.col,
+                    .modified = doc.isModified(),
+                },
                 if (state.path_prompt.active and state.path_prompt.kind != null)
-                    .{
+                    .{ .path = .{
                         .active = true,
                         .label = app_path_prompt_state.label(state.path_prompt.kind.?),
                         .value = state.path_prompt.query.items,
                         .select_all = state.path_prompt.select_all,
                         .placeholder = app_path_prompt_state.placeholder(state.path_prompt.kind.?),
                         .error_text = state.path_prompt.error_text,
-                    }
-                else
-                    null,
-                if (state.search_panel.active)
-                    .{
+                    } }
+                else if (state.search_panel.active)
+                    .{ .search = .{
                         .active = true,
                         .query = state.search_panel.query.items,
                         .select_all = state.search_panel.select_all,
                         .match_count = editor.searchMatches().len,
                         .active_index = editor.searchActiveIndex(),
-                    }
+                    } }
                 else
                     null,
             );
