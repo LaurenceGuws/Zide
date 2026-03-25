@@ -229,7 +229,7 @@ To reuse this tool across repos:
 - move doc-index generation into a small optional helper
 - support multiple project config variants when runtime pathing differs
 
-The generic app should not know about Zide-specific architecture concepts.
+The generic app should not know about repo-specific architecture concepts.
 It also should not require CSS edits for simple project-level branding changes.
 Hosted/local path handling should be explicit in config rather than buried in
 hardcoded relative URL helpers.

@@ -10,9 +10,7 @@ export function selectedProjectConfigPath(): string {
   const params = new URLSearchParams(location.search);
   const selected = params.get("config");
   if (!selected) {
-    const isGithubPages = location.hostname.endsWith("github.io");
-    const isProjectSitePath = location.pathname.startsWith("/Zide/");
-    return isGithubPages || isProjectSitePath
+    return location.hostname.endsWith("github.io")
       ? "./config/project.pages.json"
       : "./config/project.json";
   }

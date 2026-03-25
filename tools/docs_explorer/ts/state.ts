@@ -5,9 +5,9 @@ import type {
   ThemeName,
 } from "./shared/types.js";
 
-const sidebarWidthStorageKey = "zide_docs_explorer.sidebar_width";
-const sidebarCollapsedStorageKey = "zide_docs_explorer.sidebar_collapsed";
-const themeStorageKey = "zide_docs_explorer.theme";
+const sidebarWidthStorageKey = "docs_explorer.sidebar_width";
+const sidebarCollapsedStorageKey = "docs_explorer.sidebar_collapsed";
+const themeStorageKey = "docs_explorer.theme";
 
 export const layoutDefaults = {
   collapseBreakpoint: 1100,

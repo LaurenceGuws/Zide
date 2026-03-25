@@ -1,7 +1,6 @@
 # Docs Explorer
 
-Local browser-based docs explorer for Zide's `docs/` and
-`app_architecture/` content.
+Local browser-based docs explorer for repo Markdown content.
 
 Hosted release/docs entrypoint:
 
@@ -51,7 +50,7 @@ http://127.0.0.1:8000/tools/docs_explorer/?config=project.pages.json
 ```
 
 Structure is intentionally small and framework-free so the tool can be reused
-across other repos later by swapping project config and doc-index JSON.
+across other repos by swapping project config and doc-index JSON.
 
 Current shell rule:
 
