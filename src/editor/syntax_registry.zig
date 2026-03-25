@@ -139,6 +139,12 @@ fn loadMaps() *MapTable {
 }
 
 fn configSyntaxPath(allocator: std.mem.Allocator) ?[]u8 {
+    if (@import("builtin").target.os.tag == .windows) {
+        if (std.c.getenv("APPDATA")) |appdata| {
+            const base = std.mem.sliceTo(appdata, 0);
+            return std.fs.path.join(allocator, &.{ base, "Zide", "syntax.lua" }) catch null;
+        }
+    }
     if (std.c.getenv("XDG_CONFIG_HOME")) |xdg| {
         const base = std.mem.sliceTo(xdg, 0);
         return std.fs.path.join(allocator, &.{ base, "zide", "syntax.lua" }) catch null;
@@ -151,10 +157,13 @@ fn configSyntaxPath(allocator: std.mem.Allocator) ?[]u8 {
 }
 
 fn loadLuaMap(allocator: std.mem.Allocator, path: []const u8) !void {
-    const file = if (std.fs.path.isAbsolute(path))
-        std.fs.openFileAbsolute(path, .{})
+    const resolved_path = try resolveMapPath(allocator, path);
+    defer if (resolved_path.ptr != path.ptr) allocator.free(resolved_path);
+
+    const file = if (std.fs.path.isAbsolute(resolved_path))
+        std.fs.openFileAbsolute(resolved_path, .{})
     else
-        std.fs.cwd().openFile(path, .{});
+        std.fs.cwd().openFile(resolved_path, .{});
     const handle = file catch |err| switch (err) {
         error.FileNotFound => return,
         else => return err,
@@ -218,6 +227,31 @@ fn loadLuaMap(allocator: std.mem.Allocator, path: []const u8) !void {
         }
         map_tables.globs = combined;
     }
+}
+
+fn resolveMapPath(allocator: std.mem.Allocator, path: []const u8) ![]const u8 {
+    if (std.fs.path.isAbsolute(path) or fileExists(path)) return path;
+
+    const exe_dir = std.fs.selfExeDirPathAlloc(allocator) catch return path;
+    defer allocator.free(exe_dir);
+
+    const candidate = try std.fs.path.join(allocator, &.{ exe_dir, path });
+    errdefer allocator.free(candidate);
+    if (!fileExists(candidate)) {
+        allocator.free(candidate);
+        return path;
+    }
+    return candidate;
+}
+
+fn fileExists(path: []const u8) bool {
+    const file = if (std.fs.path.isAbsolute(path))
+        std.fs.openFileAbsolute(path, .{})
+    else
+        std.fs.cwd().openFile(path, .{});
+    const handle = file catch return false;
+    handle.close();
+    return true;
 }
 
 const Pair = struct {
