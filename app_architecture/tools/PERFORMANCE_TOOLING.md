@@ -321,3 +321,26 @@ Current runner note:
 - `tools/linux_perf_run.py` can now temporarily wire grouped perf logging into
   `./.zide.lua` for launched Zide workloads so host samples and subsystem
   events land in the same run folder without manual logger setup
+- perf tag selection for that temporary wiring should be treated as named
+  capture presets, not hidden runner policy
+
+Current preset contract:
+
+- `core`
+  - `terminal.frame`
+  - `input.latency`
+  - `terminal.wake`
+  - `editor.perf`
+- `terminal`
+  - `terminal.frame`
+  - `input.latency`
+  - `terminal.wake`
+- `editor`
+  - `editor.perf`
+  - `input.latency`
+
+Direction rule:
+
+- new capture workflows should prefer `--perf-preset <name>`
+- ad hoc `--perf-tag` additions are allowed, but presets are the authority for
+  the common capture shapes

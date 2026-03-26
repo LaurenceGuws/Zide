@@ -17,12 +17,24 @@ from typing import Any, Dict, List, Optional
 
 TOOL_VERSION = "0.1"
 DEFAULT_RUNS_DIR = Path("perf_runs")
-DEFAULT_PERF_TAGS = [
-    "terminal.frame",
-    "input.latency",
-    "terminal.wake",
-    "editor.perf",
-]
+PERF_PRESETS: Dict[str, List[str]] = {
+    "core": [
+        "terminal.frame",
+        "input.latency",
+        "terminal.wake",
+        "editor.perf",
+    ],
+    "terminal": [
+        "terminal.frame",
+        "input.latency",
+        "terminal.wake",
+    ],
+    "editor": [
+        "editor.perf",
+        "input.latency",
+    ],
+}
+DEFAULT_PERF_PRESET = "core"
 
 
 def parse_args(argv: Optional[List[str]] = None) -> argparse.Namespace:
@@ -84,7 +96,13 @@ def parse_args(argv: Optional[List[str]] = None) -> argparse.Namespace:
         "--perf-tag",
         action="append",
         default=[],
-        help="Perf tag to capture when --capture-zide-perf is enabled; repeat as needed.",
+        help="Extra perf tag to capture when --capture-zide-perf is enabled; repeat as needed.",
+    )
+    parser.add_argument(
+        "--perf-preset",
+        choices=sorted(PERF_PRESETS.keys()),
+        default=DEFAULT_PERF_PRESET,
+        help="Named perf logging preset to use for --capture-zide-perf.",
     )
     args = parser.parse_args(raw_argv)
     args.launch = launch_cmd
@@ -219,7 +237,17 @@ def lua_quote(value: str) -> str:
 
 
 def resolved_perf_tags(args: argparse.Namespace) -> List[str]:
-    return args.perf_tag or list(DEFAULT_PERF_TAGS)
+    tags: List[str] = []
+    seen = set()
+    for tag in PERF_PRESETS[args.perf_preset]:
+        if tag not in seen:
+            tags.append(tag)
+            seen.add(tag)
+    for tag in args.perf_tag:
+        if tag not in seen:
+            tags.append(tag)
+            seen.add(tag)
+    return tags
 
 
 def count_jsonl_records(path: Path) -> int:
@@ -334,6 +362,7 @@ def main() -> int:
         "zide_perf_capture": {
             "enabled": args.capture_zide_perf,
             "project_root": str(args.zide_project_root.resolve()) if args.capture_zide_perf else None,
+            "preset": args.perf_preset if args.capture_zide_perf else None,
             "tags": auto_perf_tags,
         },
         "artifacts": {

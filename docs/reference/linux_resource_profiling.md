@@ -88,6 +88,7 @@ Let the runner temporarily wire Zide perf sinks itself:
 python3 tools/linux_perf_run.py \
   --label zide_terminal_btop \
   --capture-zide-perf \
+  --perf-preset terminal \
   --launch -- ./zig-out/bin/zide-terminal --shell /bin/zsh --command btop
 ```
 
@@ -96,11 +97,21 @@ Notes:
 - `--capture-zide-perf` is launch-only right now
 - it temporarily rewrites `./.zide.lua` in the chosen project root
 - it restores the prior `./.zide.lua` contents on exit
-- default captured tags are:
-  - `terminal.frame`
-  - `input.latency`
-  - `terminal.wake`
-  - `editor.perf`
+- preset-driven capture is preferred over ad hoc tag lists
+- current presets:
+  - `core`
+    - `terminal.frame`
+    - `input.latency`
+    - `terminal.wake`
+    - `editor.perf`
+  - `terminal`
+    - `terminal.frame`
+    - `input.latency`
+    - `terminal.wake`
+  - `editor`
+    - `editor.perf`
+    - `input.latency`
+- `--perf-tag` can still add extra tags on top of a preset
 
 Monitor an existing Zide PID:
 
