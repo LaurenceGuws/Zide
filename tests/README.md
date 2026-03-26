@@ -4,6 +4,8 @@ Repo-wide test layout policy:
 
 - `fixtures/` holds replay inputs, goldens, captured evidence, and stable test assets.
 - `tests/` holds integration suites, aggregate test entrypoints, and multi-module test roots.
+- `tests/checks/` holds repo policy and import-layer checks.
+- `tests/ffi_smokes/` holds external-host FFI smoke harnesses and ABI inventory helpers.
 - product-adjacent tests under `src/` are allowed only when locality materially improves comprehension of a tightly coupled subsystem.
 
 Current transition rule:
