@@ -79,18 +79,14 @@ pub fn pollSingleSession(term: anytype, has_input: bool) !bool {
     const pubgen_post = term.publishedGeneration();
     const published_changed = pubgen_post != pubgen_pre;
     if (wake_log.enabled_file or wake_log.enabled_console) {
-        wake_log.logf(
-            .info,
-            "stage=single_poll has_input={d} had_data={d} polled={d} published_changed={d} pub={d}->{d}",
-            .{
-                @intFromBool(has_input),
-                @intFromBool(had_data),
-                @intFromBool(polled),
-                @intFromBool(published_changed),
-                pubgen_pre,
-                pubgen_post,
-            },
-        );
+        wake_log.logFields(.info, "single_poll", &.{
+            .{ .key = "has_input", .value = .{ .boolean = has_input } },
+            .{ .key = "had_data", .value = .{ .boolean = had_data } },
+            .{ .key = "polled", .value = .{ .boolean = polled } },
+            .{ .key = "published_changed", .value = .{ .boolean = published_changed } },
+            .{ .key = "published_generation_pre", .value = .{ .unsigned = pubgen_pre } },
+            .{ .key = "published_generation_post", .value = .{ .unsigned = pubgen_post } },
+        });
     }
     return published_changed;
 }

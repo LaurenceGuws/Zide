@@ -28,6 +28,19 @@ pub const OutputMode = enum {
     jsonl,
 };
 
+pub const FieldValue = union(enum) {
+    string: []const u8,
+    integer: i64,
+    unsigned: u64,
+    boolean: bool,
+    float: f64,
+};
+
+pub const Field = struct {
+    key: []const u8,
+    value: FieldValue,
+};
+
 const TimeOfDayMicros = struct {
     h: i64,
     m: i64,
@@ -189,15 +202,23 @@ pub const Logger = struct {
     }
 
     pub fn logf(self: Logger, level: Level, comptime fmt: []const u8, args: anytype) void {
-        const emit_file = self.enabled_file and log_file != null and shouldEmit(level, self.file_level);
-        const emit_console = self.enabled_console and shouldEmit(level, self.console_level);
-        if (!emit_file and !emit_console) return;
-
         var buf: [1024]u8 = undefined;
         const msg = std.fmt.bufPrint(&buf, fmt, args) catch |err| {
             std.debug.print("[app.logger][Warning][{s}] dropped log message due to fmt error: {s}\n", .{ self.name, @errorName(err) });
             return;
         };
+        self.emit(level, msg, &.{});
+    }
+
+    pub fn logFields(self: Logger, level: Level, msg: []const u8, fields: []const Field) void {
+        self.emit(level, msg, fields);
+    }
+
+    fn emit(self: Logger, level: Level, msg: []const u8, fields: []const Field) void {
+        const emit_file = self.enabled_file and log_file != null and shouldEmit(level, self.file_level);
+        const emit_console = self.enabled_console and shouldEmit(level, self.console_level);
+        if (!emit_file and !emit_console and !shouldEmit(level, self.file_level)) return;
+
         const ts_us = timestampMicros();
         const tod = timeOfDayMicrosUtc();
         const level_name = levelName(level);
@@ -207,19 +228,19 @@ pub const Logger = struct {
             defer log_mutex.unlock();
             if (log_file) |file| {
                 if (emit_file) {
-                    writeFormattedLine(file, self.file_output_mode, tod, ts_us, level_name, self.name, msg) catch |err| {
+                    writeFormattedLine(file, self.file_output_mode, tod, ts_us, level_name, self.name, msg, fields) catch |err| {
                         log_file = null;
                         std.debug.print("[app.logger] disabled file sink after write failure: {s}\n", .{@errorName(err)});
                     };
                 }
             }
             if (emit_group) {
-                writeGroupLines(tod, ts_us, level_name, self.name, msg);
+                writeGroupLines(tod, ts_us, level_name, self.name, msg, fields);
             }
         }
 
         if (emit_console) {
-            writeConsoleLine(self.console_output_mode, tod, ts_us, level_name, self.name, msg) catch |err| {
+            writeConsoleLine(self.console_output_mode, tod, ts_us, level_name, self.name, msg, fields) catch |err| {
                 std.debug.print("[app.logger][Warning][{s}] console formatting failed: {s}\n", .{ self.name, @errorName(err) });
             };
         }
@@ -239,7 +260,7 @@ pub const Logger = struct {
         const tod = timeOfDayMicrosUtc();
         const level_name = levelName(level);
         if (emit_console) {
-            writeConsoleLine(self.console_output_mode, tod, ts_us, level_name, self.name, msg) catch |err| {
+            writeConsoleLine(self.console_output_mode, tod, ts_us, level_name, self.name, msg, &.{}) catch |err| {
                 std.debug.print("[app.logger][Warning][{s}] console formatting failed: {s}\n", .{ self.name, @errorName(err) });
             };
         }
@@ -249,14 +270,14 @@ pub const Logger = struct {
             defer log_mutex.unlock();
             if (log_file) |file| {
                 if (emit_file) {
-                    writeFormattedLine(file, self.file_output_mode, tod, ts_us, level_name, self.name, msg) catch |err| {
+                    writeFormattedLine(file, self.file_output_mode, tod, ts_us, level_name, self.name, msg, &.{}) catch |err| {
                         log_file = null;
                         std.debug.print("[app.logger] disabled file sink after write failure: {s}\n", .{@errorName(err)});
                     };
                 }
             }
             if (emit_group) {
-                writeGroupLines(tod, ts_us, level_name, self.name, msg);
+                writeGroupLines(tod, ts_us, level_name, self.name, msg, &.{});
             }
         }
     }
@@ -363,21 +384,19 @@ fn writeFormattedLine(
     level_name: []const u8,
     logger_name: []const u8,
     msg: []const u8,
+    fields: []const Field,
 ) !void {
     switch (mode) {
         .text => {
-            var prefix_buf: [128]u8 = undefined;
-            const prefix = try std.fmt.bufPrint(
-                &prefix_buf,
-                "[{d:0>2}:{d:0>2}:{d:0>2}.{d:0>6}][+{d}us][{s}][{s}] ",
-                .{ tod.h, tod.m, tod.s, tod.us, ts_us, level_name, logger_name },
-            );
-            try writeLogLine(file, prefix, msg);
+            var buf: [4096]u8 = undefined;
+            const line = try renderTextLine(&buf, tod, ts_us, level_name, logger_name, msg, fields);
+            try file.writeAll(line);
+            try file.writeAll("\n");
         },
         .jsonl => {
-            var buf: [2048]u8 = undefined;
+            var buf: [4096]u8 = undefined;
             var stream = std.io.fixedBufferStream(&buf);
-            try writeJsonLine(stream.writer(), tod, ts_us, level_name, logger_name, msg);
+            try writeJsonLine(stream.writer(), tod, ts_us, level_name, logger_name, msg, fields);
             try file.writeAll(stream.getWritten());
             try file.writeAll("\n");
         },
@@ -411,12 +430,13 @@ fn writeGroupLines(
     level_name: []const u8,
     logger_name: []const u8,
     msg: []const u8,
+    fields: []const Field,
 ) void {
     const sinks = log_group_sinks orelse return;
     for (sinks) |*sink| {
         if (!sink.active) continue;
         if (!filterMatches(logger_name, sink.tags)) continue;
-        writeFormattedLine(sink.file, sink.mode, tod, ts_us, level_name, logger_name, msg) catch |err| {
+        writeFormattedLine(sink.file, sink.mode, tod, ts_us, level_name, logger_name, msg, fields) catch |err| {
             std.debug.print("[app.logger] disabled grouped sink {s} after write failure: {s}\n", .{ sink.name, @errorName(err) });
             sink.file.close();
             sink.active = false;
@@ -431,21 +451,18 @@ fn writeConsoleLine(
     level_name: []const u8,
     logger_name: []const u8,
     msg: []const u8,
+    fields: []const Field,
 ) !void {
     switch (mode) {
         .text => {
-            var prefix_buf: [128]u8 = undefined;
-            const prefix = try std.fmt.bufPrint(
-                &prefix_buf,
-                "[{d:0>2}:{d:0>2}:{d:0>2}.{d:0>6}][+{d}us][{s}][{s}] ",
-                .{ tod.h, tod.m, tod.s, tod.us, ts_us, level_name, logger_name },
-            );
-            std.debug.print("{s}{s}\n", .{ prefix, msg });
+            var buf: [4096]u8 = undefined;
+            const line = try renderTextLine(&buf, tod, ts_us, level_name, logger_name, msg, fields);
+            std.debug.print("{s}\n", .{line});
         },
         .jsonl => {
-            var buf: [2048]u8 = undefined;
+            var buf: [4096]u8 = undefined;
             var stream = std.io.fixedBufferStream(&buf);
-            try writeJsonLine(stream.writer(), tod, ts_us, level_name, logger_name, msg);
+            try writeJsonLine(stream.writer(), tod, ts_us, level_name, logger_name, msg, fields);
             std.debug.print("{s}\n", .{stream.getWritten()});
         },
     }
@@ -458,6 +475,7 @@ fn writeJsonLine(
     level_name: []const u8,
     logger_name: []const u8,
     msg: []const u8,
+    fields: []const Field,
 ) !void {
     var tod_buf: [32]u8 = undefined;
     const tod_str = try std.fmt.bufPrint(&tod_buf, "{d:0>2}:{d:0>2}:{d:0>2}.{d:0>6}", .{ tod.h, tod.m, tod.s, tod.us });
@@ -472,7 +490,41 @@ fn writeJsonLine(
     try writeJsonString(writer, logger_name);
     try writer.writeAll(",\"msg\":");
     try writeJsonString(writer, msg);
+    if (fields.len > 0) {
+        try writer.writeAll(",\"fields\":{");
+        for (fields, 0..) |field, i| {
+            if (i != 0) try writer.writeByte(',');
+            try writeJsonString(writer, field.key);
+            try writer.writeByte(':');
+            try writeJsonFieldValue(writer, field.value);
+        }
+        try writer.writeByte('}');
+    }
     try writer.writeByte('}');
+}
+
+fn renderTextLine(
+    buf: []u8,
+    tod: TimeOfDayMicros,
+    ts_us: i128,
+    level_name: []const u8,
+    logger_name: []const u8,
+    msg: []const u8,
+    fields: []const Field,
+) ![]const u8 {
+    var stream = std.io.fixedBufferStream(buf);
+    const writer = stream.writer();
+    try writer.print(
+        "[{d:0>2}:{d:0>2}:{d:0>2}.{d:0>6}][+{d}us][{s}][{s}] {s}",
+        .{ tod.h, tod.m, tod.s, tod.us, ts_us, level_name, logger_name, msg },
+    );
+    for (fields) |field| {
+        try writer.writeByte(' ');
+        try writer.writeAll(field.key);
+        try writer.writeByte('=');
+        try writeTextFieldValue(writer, field.value);
+    }
+    return stream.getWritten();
 }
 
 fn writeJsonString(writer: anytype, value: []const u8) !void {
@@ -496,6 +548,26 @@ fn writeJsonString(writer: anytype, value: []const u8) !void {
         }
     }
     try writer.writeByte('"');
+}
+
+fn writeJsonFieldValue(writer: anytype, value: FieldValue) !void {
+    switch (value) {
+        .string => |v| try writeJsonString(writer, v),
+        .integer => |v| try writer.print("{d}", .{v}),
+        .unsigned => |v| try writer.print("{d}", .{v}),
+        .boolean => |v| try writer.writeAll(if (v) "true" else "false"),
+        .float => |v| try writer.print("{d}", .{v}),
+    }
+}
+
+fn writeTextFieldValue(writer: anytype, value: FieldValue) !void {
+    switch (value) {
+        .string => |v| try writer.writeAll(v),
+        .integer => |v| try writer.print("{d}", .{v}),
+        .unsigned => |v| try writer.print("{d}", .{v}),
+        .boolean => |v| try writer.writeAll(if (v) "true" else "false"),
+        .float => |v| try writer.print("{d:.3}", .{v}),
+    }
 }
 
 fn isEnabled(name: []const u8, filter_override: ?[]const u8, env_key: [:0]const u8) bool {

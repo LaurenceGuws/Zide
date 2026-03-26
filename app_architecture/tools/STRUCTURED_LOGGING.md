@@ -280,4 +280,18 @@ Current limitation:
   - `level`
   - `tag`
   - `msg`
-- explicit structured `fields` are still the next step
+
+2026-03-26 follow-up:
+
+- structured `fields` support is now implemented in `src/app_logger.zig`
+- first migrated machine-relevant tags are:
+  - `terminal.frame`
+  - `input.latency`
+  - `terminal.wake`
+  - `editor.perf`
+
+Current limitation:
+
+- only the first high-value perf/runtime tags have stable explicit fields so far
+- broader subsystem migration is still needed before the text `msg` can be
+  treated as purely human-oriented everywhere

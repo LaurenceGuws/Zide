@@ -115,15 +115,11 @@ pub fn handle(
                         terminal_input_activity,
                     );
                     if (wake_log.enabled_file or wake_log.enabled_console) {
-                        wake_log.logf(
-                            .info,
-                            "stage=visible_poll input_events={d} terminal_input_activity={d} published_changed={d}",
-                            .{
-                                @intFromBool(input_has_events),
-                                @intFromBool(terminal_input_activity),
-                                @intFromBool(published_changed),
-                            },
-                        );
+                        wake_log.logFields(.info, "visible_poll", &.{
+                            .{ .key = "input_events", .value = .{ .boolean = input_has_events } },
+                            .{ .key = "terminal_input_activity", .value = .{ .boolean = terminal_input_activity } },
+                            .{ .key = "published_changed", .value = .{ .boolean = published_changed } },
+                        });
                     }
                     if (published_changed) route.hooks.mark_redraw(route.user_ctx);
                 }

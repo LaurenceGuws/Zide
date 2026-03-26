@@ -207,25 +207,21 @@ pub fn logFramePacing(state: anytype, now: f64, snapshot: Snapshot, drew: bool, 
     const current_delta = snapshot.current_generation -| snapshot.published_generation;
     const draw_gap_ms = if (pacing.last_draw_time > 0) (now - pacing.last_draw_time) * 1000.0 else 0.0;
 
-    log.logf(
-        .info,
-        "drew={d} draw_ms={d:.2} draw_gap_ms={d:.2} sleep_ms={d:.2} redraw_pending={d} parse_backlog={d} output_pressure={d} idle_frames={d} gen={d}/{d}/{d} delta={d}/{d}",
-        .{
-            @intFromBool(drew),
-            draw_ms,
-            draw_gap_ms,
-            if (sleep_s) |v| v * 1000.0 else 0.0,
-            @intFromBool(snapshot.redraw_pending),
-            @intFromBool(snapshot.parse_backlog),
-            @intFromBool(snapshot.output_pressure),
-            pacing.idle_frames,
-            snapshot.presented_generation,
-            snapshot.published_generation,
-            snapshot.current_generation,
-            published_delta,
-            current_delta,
-        },
-    );
+    log.logFields(.info, "frame_pacing", &.{
+        .{ .key = "drew", .value = .{ .boolean = drew } },
+        .{ .key = "draw_ms", .value = .{ .float = draw_ms } },
+        .{ .key = "draw_gap_ms", .value = .{ .float = draw_gap_ms } },
+        .{ .key = "sleep_ms", .value = .{ .float = if (sleep_s) |v| v * 1000.0 else 0.0 } },
+        .{ .key = "redraw_pending", .value = .{ .boolean = snapshot.redraw_pending } },
+        .{ .key = "parse_backlog", .value = .{ .boolean = snapshot.parse_backlog } },
+        .{ .key = "output_pressure", .value = .{ .boolean = snapshot.output_pressure } },
+        .{ .key = "idle_frames", .value = .{ .unsigned = pacing.idle_frames } },
+        .{ .key = "presented_generation", .value = .{ .unsigned = snapshot.presented_generation } },
+        .{ .key = "published_generation", .value = .{ .unsigned = snapshot.published_generation } },
+        .{ .key = "current_generation", .value = .{ .unsigned = snapshot.current_generation } },
+        .{ .key = "published_delta", .value = .{ .unsigned = published_delta } },
+        .{ .key = "current_delta", .value = .{ .unsigned = current_delta } },
+    });
 
     if (drew) pacing.last_draw_time = now;
 
@@ -258,102 +254,91 @@ pub fn logInputLatency(state: anytype, poll_ms: f64, build_ms: f64, update_ms: f
     const poll_counters = term_ctx.poll_counters;
 
     if (poll_metrics != null and draw_metrics != null and poll_counters != null) {
-        state.input_latency_logger.logf(
-            .info,
-            "poll_ms={d:.2} build_ms={d:.2} update_ms={d:.2} draw_ms={d:.2} term_draw_lock_ms={d:.2} term_draw_cache_copy_ms={d:.2} term_draw_texture_ms={d:.2} term_draw_overlay_ms={d:.2} term_draw_render_ms={d:.2} term_poll_tabs={d} term_poll_total={d} term_poll_active={d}/{d} term_poll_bg={d}/{d} term_poll_bg_inspected={d} term_poll_budget_tabs={d} term_poll_hints={d}/{d}/{d} term_poll_epoch={d} term_poll_frames={d} term_poll_totals={d}/{d} term_poll_budget_totals={d}/{d} term_poll_hint_totals={d}/{d}/{d}",
-            .{
-                poll_ms,
-                build_ms,
-                update_ms,
-                draw_ms,
-                draw_metrics.?.lock_ms,
-                draw_metrics.?.cache_copy_ms,
-                draw_metrics.?.texture_update_ms,
-                draw_metrics.?.overlay_ms,
-                draw_metrics.?.render_ms,
-                poll_metrics.?.tab_count,
-                poll_metrics.?.total_polled,
-                poll_metrics.?.active_polled,
-                poll_metrics.?.active_budget,
-                poll_metrics.?.background_polled,
-                poll_metrics.?.background_budget,
-                poll_metrics.?.background_inspected,
-                poll_metrics.?.budget_tabs,
-                @intFromBool(poll_metrics.?.budget_exhausted_hint),
-                @intFromBool(poll_metrics.?.active_spillover_hint),
-                @intFromBool(poll_metrics.?.background_backlog_hint),
-                poll_counters.?.epoch,
-                poll_counters.?.frames,
-                poll_counters.?.active_polled,
-                poll_counters.?.background_polled,
-                poll_counters.?.active_budget,
-                poll_counters.?.background_budget,
-                poll_counters.?.budget_exhausted_frames,
-                poll_counters.?.active_spillover_frames,
-                poll_counters.?.background_backlog_frames,
-            },
-        );
+        state.input_latency_logger.logFields(.info, "frame_latency", &.{
+            .{ .key = "poll_ms", .value = .{ .float = poll_ms } },
+            .{ .key = "build_ms", .value = .{ .float = build_ms } },
+            .{ .key = "update_ms", .value = .{ .float = update_ms } },
+            .{ .key = "draw_ms", .value = .{ .float = draw_ms } },
+            .{ .key = "term_draw_lock_ms", .value = .{ .float = draw_metrics.?.lock_ms } },
+            .{ .key = "term_draw_cache_copy_ms", .value = .{ .float = draw_metrics.?.cache_copy_ms } },
+            .{ .key = "term_draw_texture_ms", .value = .{ .float = draw_metrics.?.texture_update_ms } },
+            .{ .key = "term_draw_overlay_ms", .value = .{ .float = draw_metrics.?.overlay_ms } },
+            .{ .key = "term_draw_render_ms", .value = .{ .float = draw_metrics.?.render_ms } },
+            .{ .key = "term_poll_tabs", .value = .{ .unsigned = poll_metrics.?.tab_count } },
+            .{ .key = "term_poll_total", .value = .{ .unsigned = poll_metrics.?.total_polled } },
+            .{ .key = "term_poll_active", .value = .{ .unsigned = poll_metrics.?.active_polled } },
+            .{ .key = "term_poll_active_budget", .value = .{ .unsigned = poll_metrics.?.active_budget } },
+            .{ .key = "term_poll_bg", .value = .{ .unsigned = poll_metrics.?.background_polled } },
+            .{ .key = "term_poll_bg_budget", .value = .{ .unsigned = poll_metrics.?.background_budget } },
+            .{ .key = "term_poll_bg_inspected", .value = .{ .unsigned = poll_metrics.?.background_inspected } },
+            .{ .key = "term_poll_budget_tabs", .value = .{ .unsigned = poll_metrics.?.budget_tabs } },
+            .{ .key = "term_poll_budget_exhausted_hint", .value = .{ .boolean = poll_metrics.?.budget_exhausted_hint } },
+            .{ .key = "term_poll_active_spillover_hint", .value = .{ .boolean = poll_metrics.?.active_spillover_hint } },
+            .{ .key = "term_poll_background_backlog_hint", .value = .{ .boolean = poll_metrics.?.background_backlog_hint } },
+            .{ .key = "term_poll_epoch", .value = .{ .unsigned = poll_counters.?.epoch } },
+            .{ .key = "term_poll_frames", .value = .{ .unsigned = poll_counters.?.frames } },
+            .{ .key = "term_poll_active_total", .value = .{ .unsigned = poll_counters.?.active_polled } },
+            .{ .key = "term_poll_background_total", .value = .{ .unsigned = poll_counters.?.background_polled } },
+            .{ .key = "term_poll_active_budget_total", .value = .{ .unsigned = poll_counters.?.active_budget } },
+            .{ .key = "term_poll_background_budget_total", .value = .{ .unsigned = poll_counters.?.background_budget } },
+            .{ .key = "term_poll_budget_exhausted_frames", .value = .{ .unsigned = poll_counters.?.budget_exhausted_frames } },
+            .{ .key = "term_poll_active_spillover_frames", .value = .{ .unsigned = poll_counters.?.active_spillover_frames } },
+            .{ .key = "term_poll_background_backlog_frames", .value = .{ .unsigned = poll_counters.?.background_backlog_frames } },
+        });
         return;
     }
 
     if (draw_metrics != null) {
-        state.input_latency_logger.logf(
-            .info,
-            "poll_ms={d:.2} build_ms={d:.2} update_ms={d:.2} draw_ms={d:.2} term_draw_lock_ms={d:.2} term_draw_cache_copy_ms={d:.2} term_draw_texture_ms={d:.2} term_draw_overlay_ms={d:.2} term_draw_render_ms={d:.2}",
-            .{
-                poll_ms,
-                build_ms,
-                update_ms,
-                draw_ms,
-                draw_metrics.?.lock_ms,
-                draw_metrics.?.cache_copy_ms,
-                draw_metrics.?.texture_update_ms,
-                draw_metrics.?.overlay_ms,
-                draw_metrics.?.render_ms,
-            },
-        );
+        state.input_latency_logger.logFields(.info, "frame_latency", &.{
+            .{ .key = "poll_ms", .value = .{ .float = poll_ms } },
+            .{ .key = "build_ms", .value = .{ .float = build_ms } },
+            .{ .key = "update_ms", .value = .{ .float = update_ms } },
+            .{ .key = "draw_ms", .value = .{ .float = draw_ms } },
+            .{ .key = "term_draw_lock_ms", .value = .{ .float = draw_metrics.?.lock_ms } },
+            .{ .key = "term_draw_cache_copy_ms", .value = .{ .float = draw_metrics.?.cache_copy_ms } },
+            .{ .key = "term_draw_texture_ms", .value = .{ .float = draw_metrics.?.texture_update_ms } },
+            .{ .key = "term_draw_overlay_ms", .value = .{ .float = draw_metrics.?.overlay_ms } },
+            .{ .key = "term_draw_render_ms", .value = .{ .float = draw_metrics.?.render_ms } },
+        });
         return;
     }
 
     if (poll_metrics != null and poll_counters != null) {
-        state.input_latency_logger.logf(
-            .info,
-            "poll_ms={d:.2} build_ms={d:.2} update_ms={d:.2} draw_ms={d:.2} term_poll_tabs={d} term_poll_total={d} term_poll_active={d}/{d} term_poll_bg={d}/{d} term_poll_bg_inspected={d} term_poll_budget_tabs={d} term_poll_hints={d}/{d}/{d} term_poll_epoch={d} term_poll_frames={d} term_poll_totals={d}/{d} term_poll_budget_totals={d}/{d} term_poll_hint_totals={d}/{d}/{d}",
-            .{
-                poll_ms,
-                build_ms,
-                update_ms,
-                draw_ms,
-                poll_metrics.?.tab_count,
-                poll_metrics.?.total_polled,
-                poll_metrics.?.active_polled,
-                poll_metrics.?.active_budget,
-                poll_metrics.?.background_polled,
-                poll_metrics.?.background_budget,
-                poll_metrics.?.background_inspected,
-                poll_metrics.?.budget_tabs,
-                @intFromBool(poll_metrics.?.budget_exhausted_hint),
-                @intFromBool(poll_metrics.?.active_spillover_hint),
-                @intFromBool(poll_metrics.?.background_backlog_hint),
-                poll_counters.?.epoch,
-                poll_counters.?.frames,
-                poll_counters.?.active_polled,
-                poll_counters.?.background_polled,
-                poll_counters.?.active_budget,
-                poll_counters.?.background_budget,
-                poll_counters.?.budget_exhausted_frames,
-                poll_counters.?.active_spillover_frames,
-                poll_counters.?.background_backlog_frames,
-            },
-        );
+        state.input_latency_logger.logFields(.info, "frame_latency", &.{
+            .{ .key = "poll_ms", .value = .{ .float = poll_ms } },
+            .{ .key = "build_ms", .value = .{ .float = build_ms } },
+            .{ .key = "update_ms", .value = .{ .float = update_ms } },
+            .{ .key = "draw_ms", .value = .{ .float = draw_ms } },
+            .{ .key = "term_poll_tabs", .value = .{ .unsigned = poll_metrics.?.tab_count } },
+            .{ .key = "term_poll_total", .value = .{ .unsigned = poll_metrics.?.total_polled } },
+            .{ .key = "term_poll_active", .value = .{ .unsigned = poll_metrics.?.active_polled } },
+            .{ .key = "term_poll_active_budget", .value = .{ .unsigned = poll_metrics.?.active_budget } },
+            .{ .key = "term_poll_bg", .value = .{ .unsigned = poll_metrics.?.background_polled } },
+            .{ .key = "term_poll_bg_budget", .value = .{ .unsigned = poll_metrics.?.background_budget } },
+            .{ .key = "term_poll_bg_inspected", .value = .{ .unsigned = poll_metrics.?.background_inspected } },
+            .{ .key = "term_poll_budget_tabs", .value = .{ .unsigned = poll_metrics.?.budget_tabs } },
+            .{ .key = "term_poll_budget_exhausted_hint", .value = .{ .boolean = poll_metrics.?.budget_exhausted_hint } },
+            .{ .key = "term_poll_active_spillover_hint", .value = .{ .boolean = poll_metrics.?.active_spillover_hint } },
+            .{ .key = "term_poll_background_backlog_hint", .value = .{ .boolean = poll_metrics.?.background_backlog_hint } },
+            .{ .key = "term_poll_epoch", .value = .{ .unsigned = poll_counters.?.epoch } },
+            .{ .key = "term_poll_frames", .value = .{ .unsigned = poll_counters.?.frames } },
+            .{ .key = "term_poll_active_total", .value = .{ .unsigned = poll_counters.?.active_polled } },
+            .{ .key = "term_poll_background_total", .value = .{ .unsigned = poll_counters.?.background_polled } },
+            .{ .key = "term_poll_active_budget_total", .value = .{ .unsigned = poll_counters.?.active_budget } },
+            .{ .key = "term_poll_background_budget_total", .value = .{ .unsigned = poll_counters.?.background_budget } },
+            .{ .key = "term_poll_budget_exhausted_frames", .value = .{ .unsigned = poll_counters.?.budget_exhausted_frames } },
+            .{ .key = "term_poll_active_spillover_frames", .value = .{ .unsigned = poll_counters.?.active_spillover_frames } },
+            .{ .key = "term_poll_background_backlog_frames", .value = .{ .unsigned = poll_counters.?.background_backlog_frames } },
+        });
         return;
     }
 
-    state.input_latency_logger.logf(
-        .info,
-        "poll_ms={d:.2} build_ms={d:.2} update_ms={d:.2} draw_ms={d:.2}",
-        .{ poll_ms, build_ms, update_ms, draw_ms },
-    );
+    state.input_latency_logger.logFields(.info, "frame_latency", &.{
+        .{ .key = "poll_ms", .value = .{ .float = poll_ms } },
+        .{ .key = "build_ms", .value = .{ .float = build_ms } },
+        .{ .key = "update_ms", .value = .{ .float = update_ms } },
+        .{ .key = "draw_ms", .value = .{ .float = draw_ms } },
+    });
 }
 
 fn activeFrameState(state: anytype) struct {

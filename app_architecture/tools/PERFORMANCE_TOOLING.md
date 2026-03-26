@@ -196,6 +196,13 @@ Preferred source for `subsystem_events.jsonl` over time:
 
 - structured logger output and stable machine fields
 
+Current implemented producers:
+
+- `terminal.frame`
+- `input.latency`
+- `terminal.wake`
+- `editor.perf`
+
 Transitional source while structured logging is incomplete:
 
 - normalized parsing of selected current text logs

@@ -181,30 +181,26 @@ pub fn pollForFrame(self: anytype, input_active_index: ?usize, policy: anytype) 
         false;
     const active_published_changed = published_post != published_pre;
     if (wake_log.enabled_file or wake_log.enabled_console) {
-        wake_log.logf(
-            .info,
-            "stage=workspace_poll sid={x} tabs={d} active_idx={d} has_input={d} active_lifecycle={s} background_lifecycle={s} active_work_class={s} background_work_class={s} any_polled={d} active_has_data={d}->{d} cur={d}->{d} published_changed={d} pub={d}->{d} presented={d}->{d}",
-            .{
-                session_ptr,
-                count,
-                if (active_idx) |idx| idx else std.math.maxInt(usize),
-                @intFromBool(policy.active_intent.user_input_active),
-                runtime_policy.lifecycleLabel(policy.active_intent.lifecycle),
-                runtime_policy.lifecycleLabel(policy.background_intent.lifecycle),
-                runtime_policy.workClassLabel(policy.active_intent.work_class),
-                runtime_policy.workClassLabel(policy.background_intent.work_class),
-                @intFromBool(any_polled),
-                @intFromBool(active_has_data_pre),
-                @intFromBool(active_has_data_post),
-                current_pre,
-                current_post,
-                @intFromBool(active_published_changed),
-                published_pre,
-                published_post,
-                presented_pre,
-                presented_post,
-            },
-        );
+        wake_log.logFields(.info, "workspace_poll", &.{
+            .{ .key = "session_ptr", .value = .{ .unsigned = session_ptr } },
+            .{ .key = "tabs", .value = .{ .unsigned = count } },
+            .{ .key = "active_idx", .value = .{ .unsigned = if (active_idx) |idx| idx else std.math.maxInt(usize) } },
+            .{ .key = "has_input", .value = .{ .boolean = policy.active_intent.user_input_active } },
+            .{ .key = "active_lifecycle", .value = .{ .string = runtime_policy.lifecycleLabel(policy.active_intent.lifecycle) } },
+            .{ .key = "background_lifecycle", .value = .{ .string = runtime_policy.lifecycleLabel(policy.background_intent.lifecycle) } },
+            .{ .key = "active_work_class", .value = .{ .string = runtime_policy.workClassLabel(policy.active_intent.work_class) } },
+            .{ .key = "background_work_class", .value = .{ .string = runtime_policy.workClassLabel(policy.background_intent.work_class) } },
+            .{ .key = "any_polled", .value = .{ .boolean = any_polled } },
+            .{ .key = "active_has_data_pre", .value = .{ .boolean = active_has_data_pre } },
+            .{ .key = "active_has_data_post", .value = .{ .boolean = active_has_data_post } },
+            .{ .key = "current_generation_pre", .value = .{ .unsigned = current_pre } },
+            .{ .key = "current_generation_post", .value = .{ .unsigned = current_post } },
+            .{ .key = "published_changed", .value = .{ .boolean = active_published_changed } },
+            .{ .key = "published_generation_pre", .value = .{ .unsigned = published_pre } },
+            .{ .key = "published_generation_post", .value = .{ .unsigned = published_post } },
+            .{ .key = "presented_generation_pre", .value = .{ .unsigned = presented_pre } },
+            .{ .key = "presented_generation_post", .value = .{ .unsigned = presented_post } },
+        });
     }
     return @TypeOf(self.*).PollFrameResult{
         .any_polled = any_polled,

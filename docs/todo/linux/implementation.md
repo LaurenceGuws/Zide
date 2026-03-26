@@ -245,8 +245,13 @@ owning subsystem queues.
         `log_console_output_mode`
       - grouped sink routing is now implemented through `logs.groups` with
         exact-tag and `prefix.*` wildcard matching
-      - current structured logger output stabilizes the event envelope only;
-        explicit structured fields remain follow-up work
+      - the first structured-field producers are now in for:
+        - `terminal.frame`
+        - `input.latency`
+        - `terminal.wake`
+        - `editor.perf`
+      - broader subsystem migration still remains before text `msg` can be
+        treated as human-only across the board
     - Linux `install-local` now installs the full launcher family per channel:
       - `zide[-stable|-dev]`
       - `zide-editor[-stable|-dev]`

@@ -28,17 +28,13 @@ pub fn handle(
             );
             const changed = try app_terminal_poll_runtime.pollWorkspace(workspace, active_idx_opt, input_pressure);
             if (wake_log.enabled_file or wake_log.enabled_console) {
-                wake_log.logf(
-                    .info,
-                    "stage=route path=workspace input_events={d} terminal_input_activity={d} input_pressure={d} active_idx={d} published_changed={d}",
-                    .{
-                        @intFromBool(input_has_events),
-                        @intFromBool(terminal_input_activity),
-                        @intFromBool(input_pressure),
-                        if (active_idx_opt) |idx| idx else std.math.maxInt(usize),
-                        @intFromBool(changed),
-                    },
-                );
+                wake_log.logFields(.info, "route_workspace", &.{
+                    .{ .key = "input_events", .value = .{ .boolean = input_has_events } },
+                    .{ .key = "terminal_input_activity", .value = .{ .boolean = terminal_input_activity } },
+                    .{ .key = "input_pressure", .value = .{ .boolean = input_pressure } },
+                    .{ .key = "active_idx", .value = .{ .unsigned = if (active_idx_opt) |idx| idx else std.math.maxInt(usize) } },
+                    .{ .key = "published_changed", .value = .{ .boolean = changed } },
+                });
             }
             return changed;
         }
@@ -48,16 +44,12 @@ pub fn handle(
     if (terminals.len > 0) {
         const changed = try app_terminal_poll_runtime.pollSingleSession(terminals[0], input_pressure);
         if (wake_log.enabled_file or wake_log.enabled_console) {
-            wake_log.logf(
-                .info,
-                "stage=route path=single input_events={d} terminal_input_activity={d} input_pressure={d} published_changed={d}",
-                .{
-                    @intFromBool(input_has_events),
-                    @intFromBool(terminal_input_activity),
-                    @intFromBool(input_pressure),
-                    @intFromBool(changed),
-                },
-            );
+            wake_log.logFields(.info, "route_single", &.{
+                .{ .key = "input_events", .value = .{ .boolean = input_has_events } },
+                .{ .key = "terminal_input_activity", .value = .{ .boolean = terminal_input_activity } },
+                .{ .key = "input_pressure", .value = .{ .boolean = input_pressure } },
+                .{ .key = "published_changed", .value = .{ .boolean = changed } },
+            });
         }
         return changed;
     }
