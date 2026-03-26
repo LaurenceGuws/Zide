@@ -82,6 +82,26 @@ python3 tools/linux_perf_run.py \
   --launch -- ./zig-out/bin/zide-terminal --shell /bin/zsh --command btop
 ```
 
+Let the runner temporarily wire Zide perf sinks itself:
+
+```bash
+python3 tools/linux_perf_run.py \
+  --label zide_terminal_btop \
+  --capture-zide-perf \
+  --launch -- ./zig-out/bin/zide-terminal --shell /bin/zsh --command btop
+```
+
+Notes:
+
+- `--capture-zide-perf` is launch-only right now
+- it temporarily rewrites `./.zide.lua` in the chosen project root
+- it restores the prior `./.zide.lua` contents on exit
+- default captured tags are:
+  - `terminal.frame`
+  - `input.latency`
+  - `terminal.wake`
+  - `editor.perf`
+
 Monitor an existing Zide PID:
 
 ```bash

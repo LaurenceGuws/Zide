@@ -315,3 +315,9 @@ Existing surfaces already in repo:
 
 Those should now converge into one first-class performance tooling lane rather
 than staying as isolated scripts and logs.
+
+Current runner note:
+
+- `tools/linux_perf_run.py` can now temporarily wire grouped perf logging into
+  `./.zide.lua` for launched Zide workloads so host samples and subsystem
+  events land in the same run folder without manual logger setup

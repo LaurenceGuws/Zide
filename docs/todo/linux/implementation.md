@@ -257,6 +257,9 @@ owning subsystem queues.
         - `summary.json`
         - optional `subsystem_events.jsonl`
         - optional `notes.txt`
+      - the perf runner can now temporarily wire grouped perf sink logging
+        through `./.zide.lua` for launched Zide workloads and restore the
+        prior file after capture
       - broader subsystem migration still remains before text `msg` can be
         treated as human-only across the board
     - Linux `install-local` now installs the full launcher family per channel:

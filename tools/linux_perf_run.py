@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import argparse
+import contextlib
 import json
 import os
 import platform
@@ -16,6 +17,12 @@ from typing import Any, Dict, List, Optional
 
 TOOL_VERSION = "0.1"
 DEFAULT_RUNS_DIR = Path("perf_runs")
+DEFAULT_PERF_TAGS = [
+    "terminal.frame",
+    "input.latency",
+    "terminal.wake",
+    "editor.perf",
+]
 
 
 def parse_args(argv: Optional[List[str]] = None) -> argparse.Namespace:
@@ -62,6 +69,23 @@ def parse_args(argv: Optional[List[str]] = None) -> argparse.Namespace:
         action="store_true",
         help="Also persist host_resources.csv in the run folder.",
     )
+    parser.add_argument(
+        "--capture-zide-perf",
+        action="store_true",
+        help="Temporarily configure .zide.lua to write grouped perf JSONL events into this run folder.",
+    )
+    parser.add_argument(
+        "--zide-project-root",
+        type=Path,
+        default=Path.cwd(),
+        help="Project root containing .zide.lua for temporary perf capture setup.",
+    )
+    parser.add_argument(
+        "--perf-tag",
+        action="append",
+        default=[],
+        help="Perf tag to capture when --capture-zide-perf is enabled; repeat as needed.",
+    )
     args = parser.parse_args(raw_argv)
     args.launch = launch_cmd
     if args.pid is None and args.launch is None:
@@ -70,6 +94,8 @@ def parse_args(argv: Optional[List[str]] = None) -> argparse.Namespace:
         parser.error("--pid and --launch are mutually exclusive")
     if args.launch is not None and not args.launch:
         parser.error("--launch requires a command")
+    if args.capture_zide_perf and args.pid is not None:
+        parser.error("--capture-zide-perf currently requires --launch")
     return args
 
 
@@ -188,6 +214,66 @@ def monitor_command(args: argparse.Namespace, host_jsonl: Path, host_csv: Option
     return cmd
 
 
+def lua_quote(value: str) -> str:
+    return json.dumps(value)
+
+
+def resolved_perf_tags(args: argparse.Namespace) -> List[str]:
+    return args.perf_tag or list(DEFAULT_PERF_TAGS)
+
+
+def count_jsonl_records(path: Path) -> int:
+    if not path.exists():
+        return 0
+    with path.open("r", encoding="utf-8") as f:
+        return sum(1 for line in f if line.strip())
+
+
+@contextlib.contextmanager
+def temporary_zide_perf_override(project_root: Path, subsystem_jsonl: Path, tags: List[str]):
+    project_root = project_root.resolve()
+    project_config = project_root / ".zide.lua"
+    backup_path = project_root / ".zide.lua.codex-perf-backup"
+    original_exists = project_config.exists()
+    original_text = project_config.read_text(encoding="utf-8") if original_exists else None
+
+    if backup_path.exists():
+        raise RuntimeError(f"perf backup path already exists: {backup_path}")
+
+    try:
+        if original_text is not None:
+            backup_path.write_text(original_text, encoding="utf-8")
+        tags_lua = ", ".join(lua_quote(tag) for tag in tags)
+        override = f"""local base = {{}}
+local ok, loaded = pcall(dofile, {lua_quote(backup_path.name)})
+if ok and type(loaded) == "table" then
+  base = loaded
+end
+base.logs = base.logs or {{}}
+base.logs.groups = base.logs.groups or {{}}
+base.logs.groups.perf = {{
+  file = {lua_quote(str(subsystem_jsonl.resolve()))},
+  mode = "jsonl",
+  tags = {{ {tags_lua} }},
+}}
+return base
+"""
+        project_config.write_text(override, encoding="utf-8")
+        yield
+    finally:
+        if original_text is not None:
+            project_config.write_text(original_text, encoding="utf-8")
+        else:
+            try:
+                project_config.unlink()
+            except FileNotFoundError:
+                pass
+        try:
+            backup_path.unlink()
+        except FileNotFoundError:
+            pass
+
+
 def main() -> int:
     args = parse_args()
     run_dir = make_run_dir(args.runs_dir, args.label)
@@ -199,7 +285,16 @@ def main() -> int:
     notes_path = run_dir / "notes.txt"
 
     monitor_cmd = monitor_command(args, host_jsonl, host_csv)
-    monitor = subprocess.run(monitor_cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, check=False)
+    auto_perf_tags = resolved_perf_tags(args) if args.capture_zide_perf else []
+    try:
+        if args.capture_zide_perf:
+            with temporary_zide_perf_override(args.zide_project_root, subsystem_jsonl, auto_perf_tags):
+                monitor = subprocess.run(monitor_cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, check=False)
+        else:
+            monitor = subprocess.run(monitor_cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, check=False)
+    except RuntimeError as err:
+        print(str(err), file=sys.stderr)
+        return 2
     if monitor.returncode != 0:
         sys.stderr.write(monitor.stderr)
         if monitor.stdout:
@@ -213,7 +308,9 @@ def main() -> int:
 
     subsystem_paths = [path for path in args.subsystem_events if path.exists()]
     subsystem_event_count = 0
-    if subsystem_paths:
+    if args.capture_zide_perf:
+        subsystem_event_count = count_jsonl_records(subsystem_jsonl)
+    elif subsystem_paths:
         subsystem_event_count = merge_subsystem_events(subsystem_paths, subsystem_jsonl)
 
     manifest = {
@@ -233,6 +330,11 @@ def main() -> int:
         "workload": {
             "pid": args.pid,
             "launch": args.launch,
+        },
+        "zide_perf_capture": {
+            "enabled": args.capture_zide_perf,
+            "project_root": str(args.zide_project_root.resolve()) if args.capture_zide_perf else None,
+            "tags": auto_perf_tags,
         },
         "artifacts": {
             "host_resources_jsonl": host_jsonl.name,
