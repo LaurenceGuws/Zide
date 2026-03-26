@@ -31,7 +31,7 @@ pub fn addReportBuildProfilesStep(
     });
     configureWindowsLinker(exe);
     exe.root_module.addAnonymousImport("target_profile", .{
-        .root_source_file = b.path("build_utils/target_profile.zig"),
+        .root_source_file = b.path("build_system/target_profile.zig"),
         .target = target,
         .optimize = optimize,
     });
