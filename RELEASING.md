@@ -38,7 +38,7 @@ on `main`.
   - terminal FFI package (`libzide-terminal-ffi.so`, header, `RELEASE.txt`, `SHA256SUMS`)
   - editor FFI package (`libzide-editor-ffi.so`, header, `RELEASE.txt`, `SHA256SUMS`)
   - combined `dist/` archives + top-level checksums
-- For the terminal beta branch, use `bash tools/packaging/linux/stage_terminal_release.sh` to
+- For the terminal beta branch, use `bash scripts/linux/Stage-CurrentLinuxDist.sh` to
   stage the terminal bundle + terminal FFI package into this layout before
   publishing.
 
