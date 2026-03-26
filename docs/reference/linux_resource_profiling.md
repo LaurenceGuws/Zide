@@ -11,6 +11,7 @@ Use this when you want:
 - thread/fd/context-switch growth over time
 - optional per-process NVIDIA graphics memory and utilization samples
 - correlation with Zide subsystem counters already emitted by app logs
+- packaged perf run folders that keep host samples and subsystem events together
 
 ## What Is Trustworthy
 
@@ -45,6 +46,7 @@ Important rule:
 Use:
 
 - `tools/linux_resource_monitor.py`
+- `tools/linux_perf_run.py`
 
 It supports:
 
@@ -52,8 +54,33 @@ It supports:
 - launching a command and monitoring the resulting process
 - JSONL and CSV output
 - optional NVIDIA per-process graphics sampling via `nvidia-smi pmon`
+- packaged run folders with:
+  - `manifest.json`
+  - `host_resources.jsonl`
+  - `summary.json`
+  - optional `subsystem_events.jsonl`
+  - optional `notes.txt`
 
 ## Basic Usage
+
+Create a packaged perf run folder:
+
+```bash
+python3 tools/linux_perf_run.py \
+  --label terminal_sleep_smoke \
+  --interval-ms 100 \
+  --launch -- /bin/sh -lc 'sleep 0.2'
+```
+
+Package existing structured subsystem events alongside host samples:
+
+```bash
+python3 tools/linux_perf_run.py \
+  --label zide_terminal_btop \
+  --interval-ms 250 \
+  --subsystem-events ~/.cache/zide-perf.jsonl \
+  --launch -- ./zig-out/bin/zide-terminal --shell /bin/zsh --command btop
+```
 
 Monitor an existing Zide PID:
 
@@ -147,6 +174,7 @@ Practical workflow:
 
 1. choose one repeatable workload
 2. capture resource samples with `linux_resource_monitor.py`
+   - or package one full run with `linux_perf_run.py`
 3. capture only the minimal Zide log tags for the suspected subsystem
 4. compare:
    - idle window

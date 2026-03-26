@@ -308,6 +308,7 @@ This sequence intentionally matches the runtime/resource-management direction:
 Existing surfaces already in repo:
 
 - `tools/linux_resource_monitor.py`
+- `tools/linux_perf_run.py`
 - terminal poll runtime counters
 - editor search/highlight runtime counters
 - existing perf and latency logs

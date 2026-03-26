@@ -250,6 +250,13 @@ owning subsystem queues.
         - `input.latency`
         - `terminal.wake`
         - `editor.perf`
+      - `tools/linux_perf_run.py` now packages first-class perf run folders
+        with:
+        - `manifest.json`
+        - `host_resources.jsonl`
+        - `summary.json`
+        - optional `subsystem_events.jsonl`
+        - optional `notes.txt`
       - broader subsystem migration still remains before text `msg` can be
         treated as human-only across the board
     - Linux `install-local` now installs the full launcher family per channel:
