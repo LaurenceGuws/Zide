@@ -40,6 +40,10 @@ Bundled terminfo source:
 
 - `terminfo/zide.terminfo`
 
+Reference capability dumps used for comparison live under:
+
+- `docs/reference/terminal_terminfo_reference/`
+
 Install the bundled entry with:
 
 ```sh

@@ -11,6 +11,8 @@ Use it for:
 
 Current notable entries:
 
+- `terminal_terminfo_reference/`
+- `tools_layout.md`
 - `terminal_compatibility.md`
 - `terminal_redraw_capture_workflow.md`
 - `terminal_flutter_adapter_notes.md`

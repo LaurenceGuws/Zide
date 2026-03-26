@@ -91,6 +91,42 @@ pub fn addCheckExecutableStep(
     return step;
 }
 
+pub const CheckModuleImport = struct {
+    name: []const u8,
+    root_source_file: []const u8,
+};
+
+pub fn addCheckExecutableStepWithImports(
+    b: *std.Build,
+    target: std.Build.ResolvedTarget,
+    optimize: std.builtin.OptimizeMode,
+    name: []const u8,
+    root_source_file: []const u8,
+    imports: []const CheckModuleImport,
+    step_name: []const u8,
+    description: []const u8,
+) *std.Build.Step {
+    const root_module = b.createModule(.{
+        .root_source_file = b.path(root_source_file),
+        .target = target,
+        .optimize = optimize,
+    });
+    for (imports) |import_spec| {
+        root_module.addImport(import_spec.name, b.createModule(.{
+            .root_source_file = b.path(import_spec.root_source_file),
+        }));
+    }
+    const exe = b.addExecutable(.{
+        .name = name,
+        .root_module = root_module,
+    });
+    configureWindowsLinker(exe);
+    const run = b.addRunArtifact(exe);
+    const step = b.step(step_name, description);
+    step.dependOn(&run.step);
+    return step;
+}
+
 pub fn addRunArtifactStep(
     b: *std.Build,
     artifact: *std.Build.Step.Compile,

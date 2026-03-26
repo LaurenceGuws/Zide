@@ -35,15 +35,15 @@ Both bundles include `mode-size-check`.
 
 Helper wrapper:
 
-- `tools/build/mode_gates.sh fast`
-- `tools/build/mode_gates.sh full`
-- `tools/build/mode_gates.sh manual-smokes`
+- `tools/build_tools/mode_gates.sh fast`
+- `tools/build_tools/mode_gates.sh full`
+- `tools/build_tools/mode_gates.sh manual-smokes`
 
 Binary size tracking:
 
 - `zig build mode-size-report`
 - `zig build mode-size-check`
-- or `tools/build/report_mode_binary_sizes.sh` after `zig build`
+- or `tools/build_tools/report_mode_binary_sizes.sh` after `zig build`
 - Historical size snapshots are no longer kept as first-class docs; rely on the
   reporting commands and release/build history instead.
 

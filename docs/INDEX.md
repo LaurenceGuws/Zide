@@ -105,7 +105,9 @@ Quick reading guide:
 - `docs/research/terminal/TERMINAL_LAYER_REFERENCE_NOTES.md` — per-layer reference-terminal notes behind the high-level terminal design doc.
 - `docs/research/terminal/TERMINAL_FFI_PERFORMANCE_REVIEW_2026-03-15.md` — current terminal FFI hot-path performance review and snapshot-boundary constraints.
 - `docs/reference/terminal_compatibility.md` — terminal compatibility, TERM identity, and terminfo install instructions.
+- `docs/reference/terminal_terminfo_reference/` — reference terminfo dumps used to compare Zide’s advertised capability surface against peer terminals.
 - `docs/reference/linux_resource_profiling.md` — supported Linux workflow for measuring process resource usage and correlating it with Zide subsystem counters.
+- `docs/reference/tools_layout.md` — repository contract for `tools/` domain layout and placement rules.
 - `docs/reference/terminal_redraw_capture_workflow.md` — redraw capture and replay-authority workflow for real terminal repros.
 - `docs/reference/terminal_flutter_adapter_notes.md` — Flutter-style host adapter notes for the terminal bridge.
 - `docs/reference/windows_win11_shell_validation.md` — repeatable local build/install/manual-check ritual for packaged Win11 Explorer integration.

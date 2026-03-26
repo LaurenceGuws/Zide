@@ -264,6 +264,32 @@ owning subsystem queues.
         instead of only as hidden hard-coded defaults
       - broader subsystem migration still remains before text `msg` can be
         treated as human-only across the board
+    - 2026-03-26 tooling-layout follow-up:
+      - completed the `tools/` domain-layout cleanup end to end
+      - `tools/` root now contains directories only; no loose root tool files
+        remain
+      - added `docs/reference/tools_layout.md` as the contributor/operator
+        contract for tool-domain placement and update rules
+      - fixed the moved input import-check wiring so `zig build
+        check-input-imports` works again with the new layout
+      - revalidated moved tooling surfaces with:
+        - `zig build test`
+        - `zig build check-build-report-tools`
+        - `zig build check-app-imports`
+        - `zig build check-editor-imports`
+        - `zig build check-input-imports`
+        - `zig build report-build-profiles`
+        - `python3 -m py_compile ...` across moved Python entrypoints
+        - `bash -n ...` across moved shell entrypoints and updated scripts
+        - `python3 tools/perf/linux_perf_run.py --help`
+        - `python3 tools/perf/linux_resource_monitor.py --help`
+        - `python3 tools/perf/linux_perf_run.py --label layout_smoke ...`
+      - repo-wide path sweep for old flat tool-file references is now clean
+      - remaining failures seen during the sweep are pre-existing repo issues,
+        not layout regressions:
+        - `zig build check-terminal-imports`
+        - `zig build check-build-deps`
+        - `zig build report-build-deps`
     - Linux `install-local` now installs the full launcher family per channel:
       - `zide[-stable|-dev]`
       - `zide-editor[-stable|-dev]`
@@ -277,8 +303,8 @@ owning subsystem queues.
     - install/remove scripts now refresh desktop, icon, and KDE cache indexes
       after mutating launcher metadata
     - canonical Linux `install-local` entrypoints now live under
-      `scripts/linux/install-local/`, with legacy `scripts/dev/*` paths kept as
-      thin compatibility wrappers for now
+      `scripts/linux/install-local/`; the legacy `scripts/dev/*` wrappers were
+      removed during the repo-structure cleanup
     - first desktop-entry maturity pass now adds richer metadata on Linux local
       launchers:
       - `GenericName`

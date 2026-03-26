@@ -124,8 +124,6 @@ Target direction:
     - `scripts/linux/install-local/remove_channels.sh`
     - `scripts/linux/install-local/sync_channel.sh <stable|dev>`
     - `scripts/linux/install-local/sync_channels.sh`
-  - legacy `scripts/dev/*linux*` paths should remain thin compatibility
-    wrappers only until the repo fully stops referencing them
 - `stage-release`
   - current local stage script is now:
     - `scripts/linux/Stage-CurrentLinuxDist.sh`

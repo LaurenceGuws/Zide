@@ -146,9 +146,9 @@ Current bundle behavior:
 
 - Wayland desktop icon/grouping behavior may still require stronger desktop
   metadata ownership than repo-local smoke launches prove.
-- Linux install-local still lives under `scripts/dev/` instead of the final
-  compatibility wrapper paths are still under `scripts/dev/`; canonical Linux
-  install-local entrypoints now live under `scripts/linux/install-local/`.
+- canonical Linux install-local entrypoints now live under
+  `scripts/linux/install-local/`; the old `scripts/dev/` wrappers have been
+  removed.
 
 ## KDE Notes
 

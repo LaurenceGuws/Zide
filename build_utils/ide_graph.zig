@@ -20,6 +20,7 @@ const addRunArtifactStep = step_utils.addRunArtifactStep;
 const addLibcTest = target_factory.addLibcTest;
 const addLibcExecutable = target_factory.addLibcExecutable;
 const addCheckExecutableStep = step_utils.addCheckExecutableStep;
+const addCheckExecutableStepWithImports = step_utils.addCheckExecutableStepWithImports;
 const addSystemCommandStep = step_utils.addSystemCommandStep;
 const addReportBuildProfilesStep = step_reports.addReportBuildProfilesStep;
 const addGateStep = step_utils.addGateStep;
@@ -71,7 +72,7 @@ fn addModeGateAndBundleSteps(
         b,
         "mode-size-report",
         "Report focused mode binary sizes",
-        &.{ "bash", "tools/build/report_mode_binary_sizes.sh" },
+        &.{ "bash", "tools/build_tools/report_mode_binary_sizes.sh" },
         &.{install_step},
     );
 
@@ -95,7 +96,7 @@ fn addModeGateAndBundleSteps(
         b,
         "mode-size-check",
         "Check focused binaries are not larger than main binary",
-        &.{ "bash", "tools/build/check_mode_binary_sizes.sh" },
+        &.{ "bash", "tools/build_tools/check_mode_binary_sizes.sh" },
         &.{install_step},
     );
 
@@ -385,7 +386,7 @@ pub fn planIdeExtendedBuildGraph(
         target,
         optimize,
         "terminal-import-check",
-        "tools/terminal/checks/terminal_import_check.zig",
+        "tools/checks/terminal_import_check.zig",
         "check-terminal-imports",
         "Check terminal module import layering",
     );
@@ -394,7 +395,7 @@ pub fn planIdeExtendedBuildGraph(
         target,
         optimize,
         "editor-import-check",
-        "tools/editor/editor_import_check.zig",
+        "tools/checks/editor_import_check.zig",
         "check-editor-imports",
         "Check editor module import layering",
     );
@@ -403,16 +404,22 @@ pub fn planIdeExtendedBuildGraph(
         target,
         optimize,
         "app-import-check",
-        "tools/app/checks/app_import_check.zig",
+        "tools/checks/app_import_check.zig",
         "check-app-imports",
         "Check app-level and mode-layer import boundaries",
     );
-    const input_import_check_step = addCheckExecutableStep(
+    const input_import_check_step = addCheckExecutableStepWithImports(
         b,
         target,
         optimize,
         "input-import-check",
-        "tools/input/checks/input_import_check.zig",
+        "tools/checks/input_import_check.zig",
+        &.{
+            .{
+                .name = "app_import_check",
+                .root_source_file = "tools/checks/app_import_check.zig",
+            },
+        },
         "check-input-imports",
         "Check input module import layering",
     );
@@ -421,7 +428,7 @@ pub fn planIdeExtendedBuildGraph(
         target,
         optimize,
         "build-dep-policy-check",
-        "tools/build/build_dep_policy_check.zig",
+        "tools/build_tools/build_dep_policy_check.zig",
         "check-build-deps",
         "Check app target dependency policy wiring",
     );
@@ -470,7 +477,7 @@ pub fn planIdeExtendedBuildGraph(
         target,
         optimize,
         "gui-smokes-manual",
-        "tools/build/gui_smokes_manual.zig",
+        "tools/build_tools/gui_smokes_manual.zig",
     );
     const gui_smokes_manual_run = addRunArtifactStep(
         b,
