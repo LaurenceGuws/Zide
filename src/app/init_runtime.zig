@@ -143,6 +143,11 @@ fn initWithMode(
     if (config.log_console_output_mode) |mode| {
         app_logger.setConsoleOutputMode(mode);
     }
+    if (config.log_groups) |groups| {
+        app_logger.setGroupSinks(groups) catch |err| {
+            std.debug.print("log group sink setup error: {any}\n", .{err});
+        };
+    }
     try app_logger.init();
 
     if (config.sdl_log_level) |level| {

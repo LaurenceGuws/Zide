@@ -12,6 +12,7 @@ var log_level_overrides_console: ?[]u8 = null;
 var log_start_ns: i128 = 0;
 var log_output_mode_file: OutputMode = .text;
 var log_output_mode_console: OutputMode = .text;
+var log_group_sinks: ?[]GroupSink = null;
 
 pub const Level = enum(u8) {
     critical = 0,
@@ -32,6 +33,21 @@ const TimeOfDayMicros = struct {
     m: i64,
     s: i64,
     us: i64,
+};
+
+pub const GroupSinkConfig = struct {
+    name: []const u8,
+    file: []const u8,
+    tags: []const u8,
+    mode: OutputMode = .text,
+};
+
+const GroupSink = struct {
+    name: []u8,
+    tags: []u8,
+    mode: OutputMode,
+    file: std.fs.File,
+    active: bool,
 };
 
 pub fn levelFromString(value: []const u8) ?Level {
@@ -126,6 +142,7 @@ pub fn init() !void {
 }
 
 pub fn deinit() void {
+    clearGroupSinks();
     if (log_file) |file| {
         file.close();
     }
@@ -135,6 +152,7 @@ pub fn deinit() void {
 }
 
 pub fn resetConfig() void {
+    clearGroupSinks();
     if (log_filter_file) |filter| {
         std.heap.c_allocator.free(filter);
     }
@@ -183,14 +201,20 @@ pub const Logger = struct {
         const ts_us = timestampMicros();
         const tod = timeOfDayMicrosUtc();
         const level_name = levelName(level);
-        if (emit_file) {
+        const emit_group = shouldEmit(level, self.file_level) and groupSinkEnabled(self.name);
+        if (emit_file or emit_group) {
             log_mutex.lock();
             defer log_mutex.unlock();
             if (log_file) |file| {
-                writeFormattedLine(file, self.file_output_mode, tod, ts_us, level_name, self.name, msg) catch |err| {
-                    log_file = null;
-                    std.debug.print("[app.logger] disabled file sink after write failure: {s}\n", .{@errorName(err)});
-                };
+                if (emit_file) {
+                    writeFormattedLine(file, self.file_output_mode, tod, ts_us, level_name, self.name, msg) catch |err| {
+                        log_file = null;
+                        std.debug.print("[app.logger] disabled file sink after write failure: {s}\n", .{@errorName(err)});
+                    };
+                }
+            }
+            if (emit_group) {
+                writeGroupLines(tod, ts_us, level_name, self.name, msg);
             }
         }
 
@@ -219,14 +243,20 @@ pub const Logger = struct {
                 std.debug.print("[app.logger][Warning][{s}] console formatting failed: {s}\n", .{ self.name, @errorName(err) });
             };
         }
-        if (emit_file) {
+        const emit_group = shouldEmit(level, self.file_level) and groupSinkEnabled(self.name);
+        if (emit_file or emit_group) {
             log_mutex.lock();
             defer log_mutex.unlock();
             if (log_file) |file| {
-                writeFormattedLine(file, self.file_output_mode, tod, ts_us, level_name, self.name, msg) catch |err| {
-                    log_file = null;
-                    std.debug.print("[app.logger] disabled file sink after write failure: {s}\n", .{@errorName(err)});
-                };
+                if (emit_file) {
+                    writeFormattedLine(file, self.file_output_mode, tod, ts_us, level_name, self.name, msg) catch |err| {
+                        log_file = null;
+                        std.debug.print("[app.logger] disabled file sink after write failure: {s}\n", .{@errorName(err)});
+                    };
+                }
+            }
+            if (emit_group) {
+                writeGroupLines(tod, ts_us, level_name, self.name, msg);
             }
         }
     }
@@ -288,6 +318,43 @@ pub fn setConsoleOutputMode(mode: OutputMode) void {
     log_output_mode_console = mode;
 }
 
+pub fn setGroupSinks(configs: anytype) !void {
+    clearGroupSinks();
+    const source = configs;
+    if (source.len == 0) return;
+
+    var sinks = try std.heap.c_allocator.alloc(GroupSink, source.len);
+    errdefer std.heap.c_allocator.free(sinks);
+    var loaded: usize = 0;
+    errdefer {
+        for (sinks[0..loaded]) |*sink| {
+            sink.file.close();
+            std.heap.c_allocator.free(sink.name);
+            std.heap.c_allocator.free(sink.tags);
+        }
+    }
+
+    for (source, 0..) |config, i| {
+        sinks[i] = .{
+            .name = try std.heap.c_allocator.dupe(u8, config.name),
+            .tags = try std.heap.c_allocator.dupe(u8, config.tags),
+            .mode = groupConfigMode(config),
+            .file = try openLogFile(config.file),
+            .active = true,
+        };
+        loaded += 1;
+    }
+
+    log_group_sinks = sinks;
+}
+
+fn groupConfigMode(config: anytype) OutputMode {
+    return switch (@typeInfo(@TypeOf(config.mode))) {
+        .optional => config.mode orelse .text,
+        else => config.mode,
+    };
+}
+
 fn writeFormattedLine(
     file: std.fs.File,
     mode: OutputMode,
@@ -314,6 +381,46 @@ fn writeFormattedLine(
             try file.writeAll(stream.getWritten());
             try file.writeAll("\n");
         },
+    }
+}
+
+fn clearGroupSinks() void {
+    if (log_group_sinks) |sinks| {
+        for (sinks) |*sink| {
+            if (sink.active) sink.file.close();
+            std.heap.c_allocator.free(sink.name);
+            std.heap.c_allocator.free(sink.tags);
+        }
+        std.heap.c_allocator.free(sinks);
+    }
+    log_group_sinks = null;
+}
+
+fn groupSinkEnabled(logger_name: []const u8) bool {
+    const sinks = log_group_sinks orelse return false;
+    for (sinks) |sink| {
+        if (!sink.active) continue;
+        if (filterMatches(logger_name, sink.tags)) return true;
+    }
+    return false;
+}
+
+fn writeGroupLines(
+    tod: TimeOfDayMicros,
+    ts_us: i128,
+    level_name: []const u8,
+    logger_name: []const u8,
+    msg: []const u8,
+) void {
+    const sinks = log_group_sinks orelse return;
+    for (sinks) |*sink| {
+        if (!sink.active) continue;
+        if (!filterMatches(logger_name, sink.tags)) continue;
+        writeFormattedLine(sink.file, sink.mode, tod, ts_us, level_name, logger_name, msg) catch |err| {
+            std.debug.print("[app.logger] disabled grouped sink {s} after write failure: {s}\n", .{ sink.name, @errorName(err) });
+            sink.file.close();
+            sink.active = false;
+        };
     }
 }
 
@@ -402,6 +509,10 @@ fn isEnabled(name: []const u8, filter_override: ?[]const u8, env_key: [:0]const 
         };
         break :blk std.mem.sliceTo(env, 0);
     };
+    return filterMatches(name, raw);
+}
+
+fn filterMatches(name: []const u8, raw: []const u8) bool {
     if (raw.len == 0) return false;
     if (std.mem.eql(u8, raw, "all")) return true;
     if (std.mem.eql(u8, raw, "none")) return false;
@@ -410,6 +521,11 @@ fn isEnabled(name: []const u8, filter_override: ?[]const u8, env_key: [:0]const 
     while (it.next()) |chunk| {
         const trimmed = std.mem.trim(u8, chunk, " \t");
         if (trimmed.len == 0) continue;
+        if (std.mem.endsWith(u8, trimmed, ".*")) {
+            const prefix = trimmed[0 .. trimmed.len - 1];
+            if (std.mem.startsWith(u8, name, prefix)) return true;
+            continue;
+        }
         if (std.mem.eql(u8, trimmed, name)) return true;
     }
     return false;

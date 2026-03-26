@@ -137,6 +137,9 @@ flowchart LR
 | `logs.mode` | Shared output-mode default for file + console | `src/app/init_runtime.zig`, `src/app/reload_config_runtime.zig` | `reloadable` | Applies to both sinks unless a direct per-sink mode overrides it. |
 | `logs.file_mode` | File sink output mode | `src/app/init_runtime.zig`, `src/app/reload_config_runtime.zig` | `reloadable` | Preferred nested form. |
 | `logs.console_mode` | Console sink output mode | `src/app/init_runtime.zig`, `src/app/reload_config_runtime.zig` | `reloadable` | Preferred nested form. |
+| `logs.groups.<name>.tags` | Grouped file-sink tag filter list | `src/app_logger.zig` grouped sink routing | `reloadable` | Accepts string or string-list; exact tags and `prefix.*` wildcard prefixes are supported. |
+| `logs.groups.<name>.file` | Grouped sink file path | `src/app_logger.zig` grouped sink routing | `reloadable` | Relative to cwd today. If omitted, defaults to `zide-<name>.log` or `zide-<name>.jsonl` based on mode. |
+| `logs.groups.<name>.mode` | Grouped sink output mode | `src/app_logger.zig` grouped sink routing | `reloadable` | `text` or `jsonl`; defaults to `text`. |
 
 ### `sdl`
 

@@ -56,6 +56,13 @@ pub const TerminalShellIconMapping = struct {
     icon_path: []u8,
 };
 
+pub const LogGroupConfig = struct {
+    name: []u8,
+    file: []u8,
+    tags: []u8,
+    mode: ?app_logger.OutputMode = null,
+};
+
 pub const TabBarWidthMode = enum {
     fixed,
     dynamic,
@@ -139,6 +146,7 @@ pub const Config = struct {
     log_console_level_overrides: ?[]u8 = null,
     log_file_output_mode: ?app_logger.OutputMode = null,
     log_console_output_mode: ?app_logger.OutputMode = null,
+    log_groups: ?[]LogGroupConfig = null,
     sdl_log_level: ?c_int,
     editor_wrap: ?bool,
     editor_imported_theme_name: ?[]u8,

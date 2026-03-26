@@ -732,6 +732,55 @@ test "parseConfigFromLuaState parses log output modes" {
     try std.testing.expectEqual(@as(?app_logger.OutputMode, .text), config.log_console_output_mode);
 }
 
+test "parseConfigFromLuaState parses grouped log sinks" {
+    const allocator = std.testing.allocator;
+    const lua = try zlua.Lua.init(allocator);
+    defer lua.deinit();
+    lua.openLibs();
+
+    try lua.loadString(
+        \\return {
+        \\    logs = {
+        \\        groups = {
+        \\            perf = {
+        \\                mode = "jsonl",
+        \\                tags = { "terminal.frame", "editor.perf", "terminal.*" },
+        \\            },
+        \\            editor = {
+        \\                file = "custom-editor.jsonl",
+        \\                tags = { "editor.*" },
+        \\            },
+        \\        },
+        \\    },
+        \\}
+    );
+    try lua.protectedCall(.{ .args = 0, .results = 1 });
+
+    var config = try parseConfigFromLuaState(allocator, @ptrCast(lua));
+    defer lua_shared.freeConfig(allocator, &config);
+
+    try std.testing.expect(config.log_groups != null);
+    try std.testing.expectEqual(@as(usize, 2), config.log_groups.?.len);
+
+    var saw_perf = false;
+    var saw_editor = false;
+    for (config.log_groups.?) |group| {
+        if (std.mem.eql(u8, group.name, "perf")) {
+            saw_perf = true;
+            try std.testing.expectEqual(@as(?app_logger.OutputMode, .jsonl), group.mode);
+            try std.testing.expectEqualStrings("zide-perf.jsonl", group.file);
+            try std.testing.expectEqualStrings("terminal.frame,editor.perf,terminal.*", group.tags);
+        } else if (std.mem.eql(u8, group.name, "editor")) {
+            saw_editor = true;
+            try std.testing.expectEqual(@as(?app_logger.OutputMode, null), group.mode);
+            try std.testing.expectEqualStrings("custom-editor.jsonl", group.file);
+            try std.testing.expectEqualStrings("editor.*", group.tags);
+        }
+    }
+    try std.testing.expect(saw_perf);
+    try std.testing.expect(saw_editor);
+}
+
 test "parseConfigFromLuaState parses editor manual highlight overrides" {
     const allocator = std.testing.allocator;
     const lua = try zlua.Lua.init(allocator);

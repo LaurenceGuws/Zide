@@ -5,6 +5,7 @@ const input_actions = @import("../input/input_actions.zig");
 pub const Config = iface.Config;
 const EditorManualHighlightFallback = iface.EditorManualHighlightFallback;
 const EditorManualHighlightRule = iface.EditorManualHighlightRule;
+const LogGroupConfig = iface.LogGroupConfig;
 const TerminalShellIconMapping = iface.TerminalShellIconMapping;
 const editor_syntax_style_slots = iface.editor_syntax_style_slots;
 pub const Theme = iface.Theme;
@@ -77,6 +78,39 @@ fn dupTerminalShellIconMappings(allocator: std.mem.Allocator, mappings: []const 
         out[i] = .{
             .shell = try allocator.dupe(u8, mapping.shell),
             .icon_path = try allocator.dupe(u8, mapping.icon_path),
+        };
+        loaded += 1;
+    }
+    return out;
+}
+
+fn freeLogGroupConfigs(allocator: std.mem.Allocator, groups: []LogGroupConfig) void {
+    for (groups) |*group| {
+        allocator.free(group.name);
+        allocator.free(group.file);
+        allocator.free(group.tags);
+        group.* = undefined;
+    }
+    allocator.free(groups);
+}
+
+fn dupLogGroupConfigs(allocator: std.mem.Allocator, groups: []const LogGroupConfig) ![]LogGroupConfig {
+    var out = try allocator.alloc(LogGroupConfig, groups.len);
+    errdefer allocator.free(out);
+    var loaded: usize = 0;
+    errdefer {
+        for (out[0..loaded]) |*group| {
+            allocator.free(group.name);
+            allocator.free(group.file);
+            allocator.free(group.tags);
+        }
+    }
+    for (groups, 0..) |group, i| {
+        out[i] = .{
+            .name = try allocator.dupe(u8, group.name),
+            .file = try allocator.dupe(u8, group.file),
+            .tags = try allocator.dupe(u8, group.tags),
+            .mode = group.mode,
         };
         loaded += 1;
     }
@@ -161,6 +195,7 @@ pub fn emptyConfig() Config {
         .log_console_level_overrides = null,
         .log_file_output_mode = null,
         .log_console_output_mode = null,
+        .log_groups = null,
         .sdl_log_level = null,
         .editor_wrap = null,
         .editor_imported_theme_name = null,
@@ -242,6 +277,10 @@ pub fn freeConfig(allocator: std.mem.Allocator, config: *Config) void {
     if (config.log_console_level_overrides) |overrides| {
         allocator.free(overrides);
         config.log_console_level_overrides = null;
+    }
+    if (config.log_groups) |groups| {
+        freeLogGroupConfigs(allocator, groups);
+        config.log_groups = null;
     }
     if (config.app_font_path) |path| {
         allocator.free(path);
@@ -421,6 +460,12 @@ pub fn mergeConfig(allocator: std.mem.Allocator, base: *Config, overlay: Config)
     }
     if (overlay.log_file_output_mode) |mode| base.log_file_output_mode = mode;
     if (overlay.log_console_output_mode) |mode| base.log_console_output_mode = mode;
+    if (overlay.log_groups) |groups| {
+        if (dupLogGroupConfigs(allocator, groups)) |dup| {
+            if (base.log_groups) |old| freeLogGroupConfigs(allocator, old);
+            base.log_groups = dup;
+        } else |_| {}
+    }
     if (overlay.sdl_log_level) |level| base.sdl_log_level = level;
     if (overlay.editor_wrap != null) base.editor_wrap = overlay.editor_wrap;
     if (overlay.editor_imported_theme_name) |name| {

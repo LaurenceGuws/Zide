@@ -263,6 +263,13 @@ Until structured mode exists:
   - `logs.console_mode`
   - direct `log_file_output_mode`
   - direct `log_console_output_mode`
+- grouped file sinks are now implemented through:
+  - `logs.groups.<name>.tags`
+  - `logs.groups.<name>.file`
+  - `logs.groups.<name>.mode`
+- grouped tag filters support:
+  - exact tag matches
+  - `prefix.*` wildcard prefixes
 - direct per-sink keys override shared `logs.mode`
 
 Current limitation:
@@ -273,4 +280,4 @@ Current limitation:
   - `level`
   - `tag`
   - `msg`
-- explicit structured `fields` and grouped sink files are still the next step
+- explicit structured `fields` are still the next step

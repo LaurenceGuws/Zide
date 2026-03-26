@@ -243,8 +243,10 @@ owning subsystem queues.
       - Lua config now applies `logs.mode`, `logs.file_mode`,
         `logs.console_mode`, and direct `log_file_output_mode` /
         `log_console_output_mode`
+      - grouped sink routing is now implemented through `logs.groups` with
+        exact-tag and `prefix.*` wildcard matching
       - current structured logger output stabilizes the event envelope only;
-        explicit structured fields and grouped sink files remain follow-up work
+        explicit structured fields remain follow-up work
     - Linux `install-local` now installs the full launcher family per channel:
       - `zide[-stable|-dev]`
       - `zide-editor[-stable|-dev]`
