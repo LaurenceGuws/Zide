@@ -106,6 +106,12 @@ pub fn handle(state: anytype, ctx: *anyopaque, hooks: Hooks) !void {
             std.debug.print("reload log console level overrides parse error: {any}\n", .{err});
         };
     }
+    if (config.log_file_output_mode) |mode| {
+        app_logger.setFileOutputMode(mode);
+    }
+    if (config.log_console_output_mode) |mode| {
+        app_logger.setConsoleOutputMode(mode);
+    }
     if (config.sdl_log_level) |level| {
         app_shell.setSdlLogLevel(level);
     }

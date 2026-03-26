@@ -248,3 +248,29 @@ Until structured mode exists:
 - current text logs remain useful for humans
 - performance tooling should treat them as transitional input, not a permanent
   machine contract
+
+## Current Implementation Checkpoint
+
+2026-03-26:
+
+- logger output modes are now implemented in `src/app_logger.zig`
+- supported sink modes are:
+  - `text`
+  - `jsonl`
+- Lua config now supports:
+  - `logs.mode`
+  - `logs.file_mode`
+  - `logs.console_mode`
+  - direct `log_file_output_mode`
+  - direct `log_console_output_mode`
+- direct per-sink keys override shared `logs.mode`
+
+Current limitation:
+
+- structured output currently stabilizes the envelope only:
+  - `ts_wall`
+  - `ts_us`
+  - `level`
+  - `tag`
+  - `msg`
+- explicit structured `fields` and grouped sink files are still the next step

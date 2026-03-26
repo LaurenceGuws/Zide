@@ -75,6 +75,10 @@ fn parseLoggerLevelFromString(value: []const u8) ?LogLevel {
     return app_logger.levelFromString(value);
 }
 
+fn parseLoggerOutputModeFromString(value: []const u8) ?app_logger.OutputMode {
+    return app_logger.outputModeFromString(value);
+}
+
 pub fn parseLogSettings(allocator: std.mem.Allocator, lua: *zlua.Lua, table_index: i32, out: *Config) !void {
     _ = lua.getField(table_index, "log");
     if (lua.isString(-1)) {
@@ -124,6 +128,22 @@ pub fn parseLogSettings(allocator: std.mem.Allocator, lua: *zlua.Lua, table_inde
     if (try parseLevelOverrideValueOwned(allocator, lua, -1)) |v| out.log_console_level_overrides = v;
     lua.pop(1);
 
+    _ = lua.getField(table_index, "log_file_output_mode");
+    if (lua.isString(-1)) {
+        if (lua.toString(-1)) |v| {
+            if (parseLoggerOutputModeFromString(v)) |mode| out.log_file_output_mode = mode;
+        } else |_| {}
+    }
+    lua.pop(1);
+
+    _ = lua.getField(table_index, "log_console_output_mode");
+    if (lua.isString(-1)) {
+        if (lua.toString(-1)) |v| {
+            if (parseLoggerOutputModeFromString(v)) |mode| out.log_console_output_mode = mode;
+        } else |_| {}
+    }
+    lua.pop(1);
+
     _ = lua.getField(table_index, "logs");
     if (lua.isTable(-1)) {
         const logs_idx = lua.absIndex(-1);
@@ -169,6 +189,33 @@ pub fn parseLogSettings(allocator: std.mem.Allocator, lua: *zlua.Lua, table_inde
         if (lua.isString(-1)) {
             if (lua.toString(-1)) |v| {
                 if (parseLoggerLevelFromString(v)) |level| out.log_console_level = level;
+            } else |_| {}
+        }
+        lua.pop(1);
+
+        _ = lua.getField(logs_idx, "mode");
+        if (lua.isString(-1)) {
+            if (lua.toString(-1)) |v| {
+                if (parseLoggerOutputModeFromString(v)) |mode| {
+                    if (out.log_file_output_mode == null) out.log_file_output_mode = mode;
+                    if (out.log_console_output_mode == null) out.log_console_output_mode = mode;
+                }
+            } else |_| {}
+        }
+        lua.pop(1);
+
+        _ = lua.getField(logs_idx, "file_mode");
+        if (lua.isString(-1)) {
+            if (lua.toString(-1)) |v| {
+                if (parseLoggerOutputModeFromString(v)) |mode| out.log_file_output_mode = mode;
+            } else |_| {}
+        }
+        lua.pop(1);
+
+        _ = lua.getField(logs_idx, "console_mode");
+        if (lua.isString(-1)) {
+            if (lua.toString(-1)) |v| {
+                if (parseLoggerOutputModeFromString(v)) |mode| out.log_console_output_mode = mode;
             } else |_| {}
         }
         lua.pop(1);

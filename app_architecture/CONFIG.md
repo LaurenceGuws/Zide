@@ -132,6 +132,11 @@ flowchart LR
 | `log.file` | File logger filter | `src/main.zig` logger setup | `reloadable` | |
 | `log.console` | Console logger filter | `src/main.zig` logger setup | `reloadable` | |
 | `log.enable` | Backfill for file/console when one or both are unset | `src/main.zig` logger setup | `reloadable` | Convenience form. |
+| `log_file_output_mode` | Direct file sink output mode | `src/app/init_runtime.zig`, `src/app/reload_config_runtime.zig` | `reloadable` | `text` or `jsonl`. |
+| `log_console_output_mode` | Direct console sink output mode | `src/app/init_runtime.zig`, `src/app/reload_config_runtime.zig` | `reloadable` | `text` or `jsonl`. |
+| `logs.mode` | Shared output-mode default for file + console | `src/app/init_runtime.zig`, `src/app/reload_config_runtime.zig` | `reloadable` | Applies to both sinks unless a direct per-sink mode overrides it. |
+| `logs.file_mode` | File sink output mode | `src/app/init_runtime.zig`, `src/app/reload_config_runtime.zig` | `reloadable` | Preferred nested form. |
+| `logs.console_mode` | Console sink output mode | `src/app/init_runtime.zig`, `src/app/reload_config_runtime.zig` | `reloadable` | Preferred nested form. |
 
 ### `sdl`
 

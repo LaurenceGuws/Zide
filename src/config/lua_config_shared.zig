@@ -159,6 +159,8 @@ pub fn emptyConfig() Config {
         .log_console_level = null,
         .log_file_level_overrides = null,
         .log_console_level_overrides = null,
+        .log_file_output_mode = null,
+        .log_console_output_mode = null,
         .sdl_log_level = null,
         .editor_wrap = null,
         .editor_imported_theme_name = null,
@@ -417,6 +419,8 @@ pub fn mergeConfig(allocator: std.mem.Allocator, base: *Config, overlay: Config)
             base.log_console_level_overrides = dup;
         } else |_| {}
     }
+    if (overlay.log_file_output_mode) |mode| base.log_file_output_mode = mode;
+    if (overlay.log_console_output_mode) |mode| base.log_console_output_mode = mode;
     if (overlay.sdl_log_level) |level| base.sdl_log_level = level;
     if (overlay.editor_wrap != null) base.editor_wrap = overlay.editor_wrap;
     if (overlay.editor_imported_theme_name) |name| {

@@ -137,6 +137,12 @@ fn initWithMode(
             std.debug.print("log console level overrides parse error: {any}\n", .{err});
         };
     }
+    if (config.log_file_output_mode) |mode| {
+        app_logger.setFileOutputMode(mode);
+    }
+    if (config.log_console_output_mode) |mode| {
+        app_logger.setConsoleOutputMode(mode);
+    }
     try app_logger.init();
 
     if (config.sdl_log_level) |level| {

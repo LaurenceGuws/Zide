@@ -708,6 +708,30 @@ test "parseConfigFromLuaState parses per-tag log level overrides" {
     try std.testing.expectEqual(app_logger.Level.@"error", app_logger.logger("terminal.ui.redraw").console_level);
 }
 
+test "parseConfigFromLuaState parses log output modes" {
+    const allocator = std.testing.allocator;
+    const lua = try zlua.Lua.init(allocator);
+    defer lua.deinit();
+    lua.openLibs();
+
+    try lua.loadString(
+        \\return {
+        \\    logs = {
+        \\        mode = "jsonl",
+        \\        console_mode = "text",
+        \\    },
+        \\    log_file_output_mode = "text",
+        \\}
+    );
+    try lua.protectedCall(.{ .args = 0, .results = 1 });
+
+    var config = try parseConfigFromLuaState(allocator, @ptrCast(lua));
+    defer lua_shared.freeConfig(allocator, &config);
+
+    try std.testing.expectEqual(@as(?app_logger.OutputMode, .text), config.log_file_output_mode);
+    try std.testing.expectEqual(@as(?app_logger.OutputMode, .text), config.log_console_output_mode);
+}
+
 test "parseConfigFromLuaState parses editor manual highlight overrides" {
     const allocator = std.testing.allocator;
     const lua = try zlua.Lua.init(allocator);

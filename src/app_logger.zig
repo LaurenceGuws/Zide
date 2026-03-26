@@ -10,6 +10,8 @@ var log_level_console: Level = .info;
 var log_level_overrides_file: ?[]u8 = null;
 var log_level_overrides_console: ?[]u8 = null;
 var log_start_ns: i128 = 0;
+var log_output_mode_file: OutputMode = .text;
+var log_output_mode_console: OutputMode = .text;
 
 pub const Level = enum(u8) {
     critical = 0,
@@ -20,6 +22,18 @@ pub const Level = enum(u8) {
     trace = 5,
 };
 
+pub const OutputMode = enum {
+    text,
+    jsonl,
+};
+
+const TimeOfDayMicros = struct {
+    h: i64,
+    m: i64,
+    s: i64,
+    us: i64,
+};
+
 pub fn levelFromString(value: []const u8) ?Level {
     if (std.ascii.eqlIgnoreCase(value, "critical")) return .critical;
     if (std.ascii.eqlIgnoreCase(value, "error")) return .@"error";
@@ -27,6 +41,13 @@ pub fn levelFromString(value: []const u8) ?Level {
     if (std.ascii.eqlIgnoreCase(value, "info")) return .info;
     if (std.ascii.eqlIgnoreCase(value, "debug")) return .debug;
     if (std.ascii.eqlIgnoreCase(value, "trace")) return .trace;
+    return null;
+}
+
+pub fn outputModeFromString(value: []const u8) ?OutputMode {
+    if (std.ascii.eqlIgnoreCase(value, "text")) return .text;
+    if (std.ascii.eqlIgnoreCase(value, "jsonl")) return .jsonl;
+    if (std.ascii.eqlIgnoreCase(value, "json")) return .jsonl;
     return null;
 }
 
@@ -51,7 +72,7 @@ fn timestampMicros() i128 {
     return @divTrunc(now - base, std.time.ns_per_us);
 }
 
-fn timeOfDayMicrosUtc() struct { h: i64, m: i64, s: i64, us: i64 } {
+fn timeOfDayMicrosUtc() TimeOfDayMicros {
     const us_per_day: i64 = 24 * 60 * 60 * 1_000_000;
     const us_now = std.time.microTimestamp();
     var day_us = @mod(us_now, us_per_day);
@@ -132,6 +153,8 @@ pub fn resetConfig() void {
     log_level_overrides_console = null;
     log_level_file = .info;
     log_level_console = .info;
+    log_output_mode_file = .text;
+    log_output_mode_console = .text;
 }
 
 pub const Logger = struct {
@@ -140,6 +163,8 @@ pub const Logger = struct {
     enabled_console: bool,
     file_level: Level,
     console_level: Level,
+    file_output_mode: OutputMode,
+    console_output_mode: OutputMode,
 
     pub fn logfSrc(self: Logger, level: Level, src: std.builtin.SourceLocation, comptime fmt: []const u8, args: anytype) void {
         self.logf(level, "{s}:{d} " ++ fmt, .{ src.file, src.line } ++ args);
@@ -158,32 +183,11 @@ pub const Logger = struct {
         const ts_us = timestampMicros();
         const tod = timeOfDayMicrosUtc();
         const level_name = levelName(level);
-        var prefix_buf: [128]u8 = undefined;
-        const prefix = std.fmt.bufPrint(
-            &prefix_buf,
-            "[{d:0>2}:{d:0>2}:{d:0>2}.{d:0>6}][+{d}us][{s}][{s}] ",
-            .{ tod.h, tod.m, tod.s, tod.us, ts_us, level_name, self.name },
-        ) catch |err| {
-            const fallback_prefix = "[app.logger][Warning] ";
-            if (emit_file) {
-                log_mutex.lock();
-                defer log_mutex.unlock();
-                if (log_file) |file| {
-                    writeLogLine(file, fallback_prefix, msg) catch {};
-                }
-            }
-            if (emit_console) {
-                std.debug.print("{s}{s}\n", .{ fallback_prefix, msg });
-            }
-            std.debug.print("[app.logger][Warning][{s}] prefix formatting failed: {s}\n", .{ self.name, @errorName(err) });
-            return;
-        };
-
         if (emit_file) {
             log_mutex.lock();
             defer log_mutex.unlock();
             if (log_file) |file| {
-                writeLogLine(file, prefix, msg) catch |err| {
+                writeFormattedLine(file, self.file_output_mode, tod, ts_us, level_name, self.name, msg) catch |err| {
                     log_file = null;
                     std.debug.print("[app.logger] disabled file sink after write failure: {s}\n", .{@errorName(err)});
                 };
@@ -191,8 +195,9 @@ pub const Logger = struct {
         }
 
         if (emit_console) {
-            std.debug.print("{s}", .{prefix});
-            std.debug.print("{s}\n", .{msg});
+            writeConsoleLine(self.console_output_mode, tod, ts_us, level_name, self.name, msg) catch |err| {
+                std.debug.print("[app.logger][Warning][{s}] console formatting failed: {s}\n", .{ self.name, @errorName(err) });
+            };
         }
     }
 
@@ -209,36 +214,16 @@ pub const Logger = struct {
         const ts_us = timestampMicros();
         const tod = timeOfDayMicrosUtc();
         const level_name = levelName(level);
-        var prefix_buf: [128]u8 = undefined;
-        const prefix = std.fmt.bufPrint(
-            &prefix_buf,
-            "[{d:0>2}:{d:0>2}:{d:0>2}.{d:0>6}][+{d}us][{s}][{s}] ",
-            .{ tod.h, tod.m, tod.s, tod.us, ts_us, level_name, self.name },
-        ) catch |err| {
-            const fallback_prefix = "[app.logger][Warning] ";
-            if (emit_console) {
-                std.debug.print("{s}{s}\n", .{ fallback_prefix, msg });
-            }
-            if (emit_file) {
-                log_mutex.lock();
-                defer log_mutex.unlock();
-                if (log_file) |file| {
-                    writeLogLine(file, fallback_prefix, msg) catch {};
-                }
-            }
-            std.debug.print("[app.logger][Warning][{s}] prefix formatting failed: {s}\n", .{ self.name, @errorName(err) });
-            return;
-        };
-
         if (emit_console) {
-            std.debug.print("{s}", .{prefix});
-            std.debug.print("{s}\n", .{msg});
+            writeConsoleLine(self.console_output_mode, tod, ts_us, level_name, self.name, msg) catch |err| {
+                std.debug.print("[app.logger][Warning][{s}] console formatting failed: {s}\n", .{ self.name, @errorName(err) });
+            };
         }
         if (emit_file) {
             log_mutex.lock();
             defer log_mutex.unlock();
             if (log_file) |file| {
-                writeLogLine(file, prefix, msg) catch |err| {
+                writeFormattedLine(file, self.file_output_mode, tod, ts_us, level_name, self.name, msg) catch |err| {
                     log_file = null;
                     std.debug.print("[app.logger] disabled file sink after write failure: {s}\n", .{@errorName(err)});
                 };
@@ -254,6 +239,8 @@ pub fn logger(name: []const u8) Logger {
         .enabled_console = isEnabled(name, log_filter_console, "ZIDE_LOG_CONSOLE\x00"),
         .file_level = effectiveLevel(name, log_level_overrides_file, "ZIDE_LOG_FILE_LEVELS\x00", log_level_file),
         .console_level = effectiveLevel(name, log_level_overrides_console, "ZIDE_LOG_CONSOLE_LEVELS\x00", log_level_console),
+        .file_output_mode = log_output_mode_file,
+        .console_output_mode = log_output_mode_console,
     };
 }
 
@@ -291,6 +278,117 @@ pub fn setConsoleLevelOverrideString(value: []const u8) !void {
         std.heap.c_allocator.free(overrides);
     }
     log_level_overrides_console = try std.heap.c_allocator.dupe(u8, value);
+}
+
+pub fn setFileOutputMode(mode: OutputMode) void {
+    log_output_mode_file = mode;
+}
+
+pub fn setConsoleOutputMode(mode: OutputMode) void {
+    log_output_mode_console = mode;
+}
+
+fn writeFormattedLine(
+    file: std.fs.File,
+    mode: OutputMode,
+    tod: TimeOfDayMicros,
+    ts_us: i128,
+    level_name: []const u8,
+    logger_name: []const u8,
+    msg: []const u8,
+) !void {
+    switch (mode) {
+        .text => {
+            var prefix_buf: [128]u8 = undefined;
+            const prefix = try std.fmt.bufPrint(
+                &prefix_buf,
+                "[{d:0>2}:{d:0>2}:{d:0>2}.{d:0>6}][+{d}us][{s}][{s}] ",
+                .{ tod.h, tod.m, tod.s, tod.us, ts_us, level_name, logger_name },
+            );
+            try writeLogLine(file, prefix, msg);
+        },
+        .jsonl => {
+            var buf: [2048]u8 = undefined;
+            var stream = std.io.fixedBufferStream(&buf);
+            try writeJsonLine(stream.writer(), tod, ts_us, level_name, logger_name, msg);
+            try file.writeAll(stream.getWritten());
+            try file.writeAll("\n");
+        },
+    }
+}
+
+fn writeConsoleLine(
+    mode: OutputMode,
+    tod: TimeOfDayMicros,
+    ts_us: i128,
+    level_name: []const u8,
+    logger_name: []const u8,
+    msg: []const u8,
+) !void {
+    switch (mode) {
+        .text => {
+            var prefix_buf: [128]u8 = undefined;
+            const prefix = try std.fmt.bufPrint(
+                &prefix_buf,
+                "[{d:0>2}:{d:0>2}:{d:0>2}.{d:0>6}][+{d}us][{s}][{s}] ",
+                .{ tod.h, tod.m, tod.s, tod.us, ts_us, level_name, logger_name },
+            );
+            std.debug.print("{s}{s}\n", .{ prefix, msg });
+        },
+        .jsonl => {
+            var buf: [2048]u8 = undefined;
+            var stream = std.io.fixedBufferStream(&buf);
+            try writeJsonLine(stream.writer(), tod, ts_us, level_name, logger_name, msg);
+            std.debug.print("{s}\n", .{stream.getWritten()});
+        },
+    }
+}
+
+fn writeJsonLine(
+    writer: anytype,
+    tod: TimeOfDayMicros,
+    ts_us: i128,
+    level_name: []const u8,
+    logger_name: []const u8,
+    msg: []const u8,
+) !void {
+    var tod_buf: [32]u8 = undefined;
+    const tod_str = try std.fmt.bufPrint(&tod_buf, "{d:0>2}:{d:0>2}:{d:0>2}.{d:0>6}", .{ tod.h, tod.m, tod.s, tod.us });
+    try writer.writeByte('{');
+    try writer.writeAll("\"ts_wall\":");
+    try writeJsonString(writer, tod_str);
+    try writer.writeAll(",\"ts_us\":");
+    try writer.print("{d}", .{ts_us});
+    try writer.writeAll(",\"level\":");
+    try writeJsonString(writer, level_name);
+    try writer.writeAll(",\"tag\":");
+    try writeJsonString(writer, logger_name);
+    try writer.writeAll(",\"msg\":");
+    try writeJsonString(writer, msg);
+    try writer.writeByte('}');
+}
+
+fn writeJsonString(writer: anytype, value: []const u8) !void {
+    try writer.writeByte('"');
+    for (value) |ch| {
+        switch (ch) {
+            '"' => try writer.writeAll("\\\""),
+            '\\' => try writer.writeAll("\\\\"),
+            '\n' => try writer.writeAll("\\n"),
+            '\r' => try writer.writeAll("\\r"),
+            '\t' => try writer.writeAll("\\t"),
+            0x08 => try writer.writeAll("\\b"),
+            0x0C => try writer.writeAll("\\f"),
+            else => {
+                if (ch < 0x20) {
+                    try writer.print("\\u{X:0>4}", .{@as(u8, ch)});
+                } else {
+                    try writer.writeByte(ch);
+                }
+            },
+        }
+    }
+    try writer.writeByte('"');
 }
 
 fn isEnabled(name: []const u8, filter_override: ?[]const u8, env_key: [:0]const u8) bool {
@@ -370,4 +468,11 @@ test "resetConfig clears logger filters and level overrides" {
     try std.testing.expect(!logger("terminal.ui.redraw").enabled_console);
     try std.testing.expectEqual(Level.info, logger("terminal.ui.redraw").file_level);
     try std.testing.expectEqual(Level.info, logger("terminal.ui.redraw").console_level);
+}
+
+test "outputModeFromString parses text and jsonl" {
+    try std.testing.expectEqual(@as(?OutputMode, .text), outputModeFromString("text"));
+    try std.testing.expectEqual(@as(?OutputMode, .jsonl), outputModeFromString("jsonl"));
+    try std.testing.expectEqual(@as(?OutputMode, .jsonl), outputModeFromString("json"));
+    try std.testing.expectEqual(@as(?OutputMode, null), outputModeFromString("yaml"));
 }

@@ -238,6 +238,13 @@ owning subsystem queues.
       - one logger system
       - optional text vs JSONL output modes
       - grouped tag-family sinks for machine capture and easy grepping
+    - first implementation cut is now in:
+      - `src/app_logger.zig` supports `text` and `jsonl` output modes
+      - Lua config now applies `logs.mode`, `logs.file_mode`,
+        `logs.console_mode`, and direct `log_file_output_mode` /
+        `log_console_output_mode`
+      - current structured logger output stabilizes the event envelope only;
+        explicit structured fields and grouped sink files remain follow-up work
     - Linux `install-local` now installs the full launcher family per channel:
       - `zide[-stable|-dev]`
       - `zide-editor[-stable|-dev]`

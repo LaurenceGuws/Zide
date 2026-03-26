@@ -137,6 +137,8 @@ pub const Config = struct {
     log_console_level: ?app_logger.Level = null,
     log_file_level_overrides: ?[]u8 = null,
     log_console_level_overrides: ?[]u8 = null,
+    log_file_output_mode: ?app_logger.OutputMode = null,
+    log_console_output_mode: ?app_logger.OutputMode = null,
     sdl_log_level: ?c_int,
     editor_wrap: ?bool,
     editor_imported_theme_name: ?[]u8,
