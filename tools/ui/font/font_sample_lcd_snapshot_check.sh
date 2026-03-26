@@ -12,7 +12,7 @@ while [[ $# -gt 0 ]]; do
       shift
       ;;
     --help|-h)
-      echo "usage: tools/font_sample_lcd_snapshot_check.sh [--latest]"
+      echo "usage: tools/ui/font/font_sample_lcd_snapshot_check.sh [--latest]"
       exit 0
       ;;
     *)

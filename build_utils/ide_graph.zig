@@ -71,7 +71,7 @@ fn addModeGateAndBundleSteps(
         b,
         "mode-size-report",
         "Report focused mode binary sizes",
-        &.{ "bash", "tools/report_mode_binary_sizes.sh" },
+        &.{ "bash", "tools/build/report_mode_binary_sizes.sh" },
         &.{install_step},
     );
 
@@ -82,7 +82,7 @@ fn addModeGateAndBundleSteps(
             "Bundle zide-terminal with resolved shared libs for portable use",
             &.{
                 "bash",
-                "tools/bundle_terminal_linux.sh",
+                "tools/packaging/linux/bundle_terminal_linux.sh",
                 "zig-out/bin/zide-terminal",
                 "zig-out/terminal-bundle",
                 "assets",
@@ -95,7 +95,7 @@ fn addModeGateAndBundleSteps(
         b,
         "mode-size-check",
         "Check focused binaries are not larger than main binary",
-        &.{ "bash", "tools/check_mode_binary_sizes.sh" },
+        &.{ "bash", "tools/build/check_mode_binary_sizes.sh" },
         &.{install_step},
     );
 
@@ -310,7 +310,7 @@ pub fn planIdeExtendedBuildGraph(
         b,
         "perf-editor-gate",
         "Run repeatable editor performance gate against stress fixtures",
-        &.{ "bash", "tools/perf_editor_gate.sh" },
+        &.{ "bash", "tools/perf/perf_editor_gate.sh" },
         &.{},
     );
 
@@ -385,7 +385,7 @@ pub fn planIdeExtendedBuildGraph(
         target,
         optimize,
         "terminal-import-check",
-        "tools/terminal_import_check.zig",
+        "tools/terminal/checks/terminal_import_check.zig",
         "check-terminal-imports",
         "Check terminal module import layering",
     );
@@ -394,7 +394,7 @@ pub fn planIdeExtendedBuildGraph(
         target,
         optimize,
         "editor-import-check",
-        "tools/editor_import_check.zig",
+        "tools/editor/editor_import_check.zig",
         "check-editor-imports",
         "Check editor module import layering",
     );
@@ -403,7 +403,7 @@ pub fn planIdeExtendedBuildGraph(
         target,
         optimize,
         "app-import-check",
-        "tools/app_import_check.zig",
+        "tools/app/checks/app_import_check.zig",
         "check-app-imports",
         "Check app-level and mode-layer import boundaries",
     );
@@ -412,7 +412,7 @@ pub fn planIdeExtendedBuildGraph(
         target,
         optimize,
         "input-import-check",
-        "tools/input_import_check.zig",
+        "tools/input/checks/input_import_check.zig",
         "check-input-imports",
         "Check input module import layering",
     );
@@ -421,7 +421,7 @@ pub fn planIdeExtendedBuildGraph(
         target,
         optimize,
         "build-dep-policy-check",
-        "tools/build_dep_policy_check.zig",
+        "tools/build/build_dep_policy_check.zig",
         "check-build-deps",
         "Check app target dependency policy wiring",
     );
@@ -470,7 +470,7 @@ pub fn planIdeExtendedBuildGraph(
         target,
         optimize,
         "gui-smokes-manual",
-        "tools/gui_smokes_manual.zig",
+        "tools/build/gui_smokes_manual.zig",
     );
     const gui_smokes_manual_run = addRunArtifactStep(
         b,
@@ -510,7 +510,7 @@ pub fn planIdeExtendedBuildGraph(
         target,
         optimize,
         "grammar-update",
-        "tools/grammar_update.zig",
+        "tools/grammar/grammar_update.zig",
     );
     const grammar_update_run = addRunArtifactStep(
         b,

@@ -9,15 +9,15 @@ pipeline (atlas formats, blending, gamma handling, hinting, etc.).
 
 Deterministic fixture compare (sizes 12/14/16/20):
 
-  tools/font_sample_compare.sh
+  tools/ui/font/font_sample_compare.sh
 
 Strict header guard (dimensions/maxval):
 
-  tools/font_sample_compare.sh --strict-header
+  tools/ui/font/font_sample_compare.sh --strict-header
 
 Refresh fixtures explicitly (opt-in):
 
-  tools/font_sample_compare.sh --update-fixtures
+  tools/ui/font/font_sample_compare.sh --update-fixtures
 
 Artifacts are written to:
 
@@ -31,31 +31,31 @@ The compare script pins window size to each fixture's PPM dimensions via:
 
 LCD experiment captures (does not update fixtures):
 
-  tools/font_sample_capture_lcd.sh
+  tools/ui/font/font_sample_capture_lcd.sh
 
 LCD compare summary report:
 
-  tools/font_sample_lcd_report.sh
+  tools/ui/font/font_sample_lcd_report.sh
 
 CSV output:
 
-  tools/font_sample_lcd_report.sh --csv
+  tools/ui/font/font_sample_lcd_report.sh --csv
 
 JSON output:
 
-  tools/font_sample_lcd_report.sh --json
+  tools/ui/font/font_sample_lcd_report.sh --json
 
 PPM sanity validation:
 
-  tools/font_sample_validate_ppm.sh
+  tools/ui/font/font_sample_validate_ppm.sh
 
 Snapshot utilities:
 
-  tools/font_sample_lcd_snapshot.sh --dry-run
-  tools/font_sample_lcd_snapshot.sh --stamp 2026-02-17
-  tools/font_sample_lcd_snapshot.sh --stamp 2026-02-17 --no-capture
-  tools/font_sample_lcd_snapshot_check.sh
-  tools/font_sample_lcd_snapshot_check.sh --latest
+  tools/ui/font/font_sample_lcd_snapshot.sh --dry-run
+  tools/ui/font/font_sample_lcd_snapshot.sh --stamp 2026-02-17
+  tools/ui/font/font_sample_lcd_snapshot.sh --stamp 2026-02-17 --no-capture
+  tools/ui/font/font_sample_lcd_snapshot_check.sh
+  tools/ui/font/font_sample_lcd_snapshot_check.sh --latest
 
 Artifacts are written to:
 
@@ -64,7 +64,7 @@ Artifacts are written to:
 Initial LCD sweep note (2026-02-17):
 - Archived report artifacts now live under
   `docs/review/archive/ui/font_sample_lcd_snapshots/2026-02-17/`.
-- Captured sizes 12/14/16/20 with `tools/font_sample_capture_lcd.sh`.
+- Captured sizes 12/14/16/20 with `tools/ui/font/font_sample_capture_lcd.sh`.
 - All LCD captures differ from default fixture captures (expected for this experiment path).
 
 Capture command (example):
@@ -144,11 +144,11 @@ Troubleshooting mismatches:
   - LCD experiment: `zig-cache/font_sample_lcd/`
 
 Baseline flip handling:
-- If `tools/font_sample_compare.sh --strict-header` fails after intentional
+- If `tools/ui/font/font_sample_compare.sh --strict-header` fails after intentional
   rendering/capture pipeline changes, refresh fixtures with:
-  `tools/font_sample_compare.sh --update-fixtures --strict-header`
+  `tools/ui/font/font_sample_compare.sh --update-fixtures --strict-header`
 - Only do this after the change is documented in
   `docs/todo/ui/font_rendering.md` and approved.
 - After refresh, rerun:
-  - `tools/font_sample_compare.sh --strict-header`
-  - `tools/font_sample_validate_ppm.sh`
+  - `tools/ui/font/font_sample_compare.sh --strict-header`
+  - `tools/ui/font/font_sample_validate_ppm.sh`

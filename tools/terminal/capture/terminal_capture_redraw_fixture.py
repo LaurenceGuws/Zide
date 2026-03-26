@@ -136,7 +136,7 @@ def run_capture(
 ) -> None:
     argv = [
         sys.executable,
-        "tools/terminal_capture_pty.py",
+        "tools/terminal/capture/terminal_capture_pty.py",
         "--output-file",
         str(output_file),
         "--rows",
@@ -286,7 +286,7 @@ def main() -> int:
 
     argv = [
         sys.executable,
-        "tools/terminal_make_redraw_fixture.py",
+        "tools/terminal/capture/terminal_make_redraw_fixture.py",
         "--name",
         args.name,
         "--rows",
@@ -327,7 +327,7 @@ def main() -> int:
         subprocess.run(
             [
                 sys.executable,
-                "tools/terminal_make_redraw_fixture.py",
+                "tools/terminal/capture/terminal_make_redraw_fixture.py",
                 "--manifest-file",
                 str(manifest_path),
                 "--fixture-dir",

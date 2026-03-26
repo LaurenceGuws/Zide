@@ -12,7 +12,7 @@ import sys
 def run_summary(args: argparse.Namespace) -> int:
     summary_cmd = [
         sys.executable,
-        "tools/terminal_summarize_redraw_log.py",
+        "tools/terminal/capture/terminal_summarize_redraw_log.py",
         "--log-file",
         args.log_file,
         "--interesting",

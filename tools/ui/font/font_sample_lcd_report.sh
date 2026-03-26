@@ -18,7 +18,7 @@ while [[ $# -gt 0 ]]; do
       shift
       ;;
     --help|-h)
-      echo "usage: tools/font_sample_lcd_report.sh [--csv|--json] [size ...]"
+      echo "usage: tools/ui/font/font_sample_lcd_report.sh [--csv|--json] [size ...]"
       exit 0
       ;;
     *)

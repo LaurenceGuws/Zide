@@ -26,7 +26,7 @@ while [[ $# -gt 0 ]]; do
       shift
       ;;
     --help|-h)
-      echo "usage: tools/font_sample_lcd_snapshot.sh [--stamp YYYY-MM-DD] [--dry-run] [--no-capture] [stamp]"
+      echo "usage: tools/ui/font/font_sample_lcd_snapshot.sh [--stamp YYYY-MM-DD] [--dry-run] [--no-capture] [stamp]"
       exit 0
       ;;
     *)
@@ -70,7 +70,7 @@ if [[ "$DRY_RUN" -eq 1 ]]; then
   if [[ "$NO_CAPTURE" -eq 1 ]]; then
     echo "would skip capture step (--no-capture)"
   else
-    echo "would run: tools/font_sample_capture_lcd.sh"
+    echo "would run: tools/ui/font/font_sample_capture_lcd.sh"
   fi
   echo "would write:"
   echo "  - ${SNAP_DIR}/lcd_report.txt"
@@ -87,23 +87,23 @@ if [[ "$NO_CAPTURE" -eq 1 ]]; then
   echo "skipping capture step (--no-capture)"
 else
   echo "capturing LCD fixtures..."
-  tools/font_sample_capture_lcd.sh
+  tools/ui/font/font_sample_capture_lcd.sh
 fi
 
 echo "writing reports..."
-tools/font_sample_lcd_report.sh > "${SNAP_DIR}/lcd_report.txt"
-tools/font_sample_lcd_report.sh --csv > "${SNAP_DIR}/lcd_report.csv"
-tools/font_sample_lcd_report.sh --json > "${SNAP_DIR}/lcd_report.json"
+tools/ui/font/font_sample_lcd_report.sh > "${SNAP_DIR}/lcd_report.txt"
+tools/ui/font/font_sample_lcd_report.sh --csv > "${SNAP_DIR}/lcd_report.csv"
+tools/ui/font/font_sample_lcd_report.sh --json > "${SNAP_DIR}/lcd_report.json"
 
 echo "validating default fixture PPMs..."
-tools/font_sample_validate_ppm.sh > "${SNAP_DIR}/ppm_validate.txt"
+tools/ui/font/font_sample_validate_ppm.sh > "${SNAP_DIR}/ppm_validate.txt"
 
 host_name="$(hostname 2>/dev/null || echo unknown)"
 renderer_backend="sdl_gl"
 font_config_digest="$(checksum_file assets/config/init.lua)"
 project_config_digest="$(checksum_file .zide.lua)"
 
-command_line="tools/font_sample_lcd_snapshot.sh --stamp ${STAMP}"
+command_line="tools/ui/font/font_sample_lcd_snapshot.sh --stamp ${STAMP}"
 if [[ "$NO_CAPTURE" -eq 1 ]]; then
   command_line="${command_line} --no-capture"
 fi

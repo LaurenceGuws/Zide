@@ -221,7 +221,7 @@ owning subsystem queues.
       - `zide-terminal-ffi-0.1.0-beta.4-linux-x86_64.tar.gz`
       - `SHA256SUMS-linux-x86_64.txt`
   - 2026-03-26 resource-measurement checkpoint:
-    - added `tools/linux_resource_monitor.py` as the supported local Linux
+    - added `tools/perf/linux_resource_monitor.py` as the supported local Linux
       process sampler for CPU, RSS, virtual memory, threads, fds, IO, context
       switches, and optional NVIDIA per-process graphics metrics
     - added `docs/reference/linux_resource_profiling.md` to define the
@@ -250,7 +250,7 @@ owning subsystem queues.
         - `input.latency`
         - `terminal.wake`
         - `editor.perf`
-      - `tools/linux_perf_run.py` now packages first-class perf run folders
+      - `tools/perf/linux_perf_run.py` now packages first-class perf run folders
         with:
         - `manifest.json`
         - `host_resources.jsonl`

@@ -49,7 +49,7 @@ For a fully automated backend repro loop that runs the terminal, waits for the
 child to exit, and prints the redraw summary:
 
 ```bash
-python3 tools/terminal_run_backend_repro.py \
+python3 tools/terminal/capture/terminal_run_backend_repro.py \
   --rows 40 \
   --cols 120 \
   --cwd /path/to/repo \
@@ -64,7 +64,7 @@ For more complex scripted commands, use a command file instead of shell-quoting
 everything inline, and optionally write the parsed summary as JSON:
 
 ```bash
-python3 tools/terminal_run_backend_repro.py \
+python3 tools/terminal/capture/terminal_run_backend_repro.py \
   --rows 40 \
   --cols 120 \
   --cwd /path/to/repo \
@@ -80,7 +80,7 @@ When a run contains both tiny and broad partial frames, prefer selecting the
 largest interesting frame directly:
 
 ```bash
-python3 tools/terminal_run_backend_repro.py \
+python3 tools/terminal/capture/terminal_run_backend_repro.py \
   --rows 34 \
   --cols 149 \
   --cwd /path/to/repo \
@@ -99,7 +99,7 @@ For long-lived interactive apps that need delayed keystrokes, use the TTY
 driver helper inside the terminal child command:
 
 ```bash
-python3 tools/terminal_run_backend_repro.py \
+python3 tools/terminal/capture/terminal_run_backend_repro.py \
   --rows 34 \
   --cols 149 \
   --cwd /path/to/repo \
@@ -109,7 +109,7 @@ python3 tools/terminal_run_backend_repro.py \
 Where `/tmp/zide-repro-command.sh` contains something like:
 
 ```bash
-python3 tools/terminal_drive_tty.py \
+python3 tools/terminal/capture/terminal_drive_tty.py \
   --step 0.40:text:j \
   --step 0.80:text:k \
   --step 1.20:text::q!\\r \
@@ -132,7 +132,7 @@ If the child command is expected to be short-lived, the wrapper now also has a
 hard timeout so backend repro runs do not hang indefinitely:
 
 ```bash
-python3 tools/terminal_run_backend_repro.py \
+python3 tools/terminal/capture/terminal_run_backend_repro.py \
   --cwd /path/to/repo \
   --command "printf 'hello\\n'" \
   --timeout-seconds 10
@@ -145,14 +145,14 @@ useful instead of throwing away the frame data we were trying to inspect.
 To summarize the latest pair quickly:
 
 ```bash
-python3 tools/terminal_summarize_redraw_log.py
+python3 tools/terminal/capture/terminal_summarize_redraw_log.py
 ```
 
 To skip the common startup/alt-screen churn and prefer the latest interesting
 steady-state frame:
 
 ```bash
-python3 tools/terminal_summarize_redraw_log.py --interesting
+python3 tools/terminal/capture/terminal_summarize_redraw_log.py --interesting
 ```
 
 Lifecycle frames are now emitted on `terminal.ui.lifecycle` instead of being
@@ -163,13 +163,13 @@ meant to find real steady-state redraws rather than filtering stale
 To inspect several recent interesting frames instead of only the latest one:
 
 ```bash
-python3 tools/terminal_summarize_redraw_log.py --interesting --count 5
+python3 tools/terminal/capture/terminal_summarize_redraw_log.py --interesting --count 5
 ```
 
 For machine-readable output:
 
 ```bash
-python3 tools/terminal_summarize_redraw_log.py --json
+python3 tools/terminal/capture/terminal_summarize_redraw_log.py --json
 ```
 
 That prints the latest aggregate redraw record plus the latest row-local partial
@@ -200,15 +200,15 @@ This is better than mixing everything into one `.vt` stream because:
 
 Use:
 
-- [terminal_make_redraw_fixture.py](../../tools/terminal_make_redraw_fixture.py)
-- [terminal_capture_pty.py](../../tools/terminal_capture_pty.py)
-- [terminal_capture_redraw_fixture.py](../../tools/terminal_capture_redraw_fixture.py)
-- [terminal_capture_nvim_real_config_cursor_repro.py](../../tools/terminal_capture_nvim_real_config_cursor_repro.py)
+- [terminal_make_redraw_fixture.py](../../tools/terminal/capture/terminal_make_redraw_fixture.py)
+- [terminal_capture_pty.py](../../tools/terminal/capture/terminal_capture_pty.py)
+- [terminal_capture_redraw_fixture.py](../../tools/terminal/capture/terminal_capture_redraw_fixture.py)
+- [terminal_capture_nvim_real_config_cursor_repro.py](../../tools/terminal/capture/terminal_capture_nvim_real_config_cursor_repro.py)
 
 Capture raw PTY output first:
 
 ```bash
-python3 tools/terminal_capture_pty.py \
+python3 tools/terminal/capture/terminal_capture_pty.py \
   --output-file /tmp/nvim-baseline.txt \
   -- -- nvim
 ```
@@ -216,7 +216,7 @@ python3 tools/terminal_capture_pty.py \
 For a longer-lived single session with staged input and explicit output splits:
 
 ```bash
-python3 tools/terminal_capture_pty.py \
+python3 tools/terminal/capture/terminal_capture_pty.py \
   --output-file /tmp/nvim-full.txt \
   --checkpoint 0.30:/tmp/nvim-baseline.txt \
   --checkpoint 0.60:/tmp/nvim-update.txt \
@@ -237,7 +237,7 @@ For the current plugin-heavy real-config Neovim cursor-step lane, prefer the
 scripted wrapper instead of manual typing first:
 
 ```bash
-python3 tools/terminal_capture_nvim_real_config_cursor_repro.py --no-stdout
+python3 tools/terminal/capture/terminal_capture_nvim_real_config_cursor_repro.py --no-stdout
 ```
 
 That wrapper drives the current reproducer shape automatically:
@@ -267,7 +267,7 @@ Current note:
 For scripted input or a second update phase:
 
 ```bash
-python3 tools/terminal_capture_pty.py \
+python3 tools/terminal/capture/terminal_capture_pty.py \
   --output-file /tmp/nvim-update-1.txt \
   --stdin-file /tmp/nvim-keys-1.txt \
   -- -- nvim
@@ -278,7 +278,7 @@ Then turn those captures into a harness-api fixture:
 Example:
 
 ```bash
-python3 tools/terminal_make_redraw_fixture.py \
+python3 tools/terminal/capture/terminal_make_redraw_fixture.py \
   --name redraw_nvim_real_sample \
   --rows 40 \
   --cols 120 \
@@ -324,7 +324,7 @@ assertions to pass first.
 You can also feed the observed JSON back into the fixture generator directly:
 
 ```bash
-python3 tools/terminal_make_redraw_fixture.py \
+python3 tools/terminal/capture/terminal_make_redraw_fixture.py \
   --manifest-file /tmp/zide-redraw-captures/redraw_nvim_real_sample/manifest.json \
   --strip-baseline-prefix \
   --strip-shared-suffix \
@@ -336,7 +336,7 @@ That rewrites the fixture with the observed redraw contract populated.
 If you already have a staged capture manifest, rebuild from it directly:
 
 ```bash
-python3 tools/terminal_make_redraw_fixture.py \
+python3 tools/terminal/capture/terminal_make_redraw_fixture.py \
   --manifest-file /tmp/zide-redraw-captures/redraw_nvim_real_sample/manifest.json
 ```
 
@@ -346,7 +346,7 @@ of retyping the fixture inputs.
 Or use the staged wrapper:
 
 ```bash
-python3 tools/terminal_capture_redraw_fixture.py \
+python3 tools/terminal/capture/terminal_capture_redraw_fixture.py \
   --name redraw_nvim_real_sample \
   --rows 40 \
   --cols 120 \
@@ -376,7 +376,7 @@ For a true single-session capture, use the wrapper directly over one long-lived
 PTY run:
 
 ```bash
-python3 tools/terminal_capture_redraw_fixture.py \
+python3 tools/terminal/capture/terminal_capture_redraw_fixture.py \
   --name redraw_nvim_real_single_session \
   --rows 40 \
   --cols 120 \

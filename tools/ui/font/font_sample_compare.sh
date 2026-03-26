@@ -18,7 +18,7 @@ while [[ $# -gt 0 ]]; do
       shift
       ;;
     --help|-h)
-      echo "usage: tools/font_sample_compare.sh [--update-fixtures] [--strict-header] [size ...]"
+      echo "usage: tools/ui/font/font_sample_compare.sh [--update-fixtures] [--strict-header] [size ...]"
       exit 0
       ;;
     *)

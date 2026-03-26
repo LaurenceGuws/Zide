@@ -212,7 +212,7 @@ def print_summary(data: dict) -> None:
 
 def main() -> int:
     parser = argparse.ArgumentParser(description="Compare a resolved Neovim theme export against Zide's current theme surface.")
-    parser.add_argument("export", type=Path, help="JSON artifact from tools/nvim_resolved_theme_export.lua")
+    parser.add_argument("export", type=Path, help="JSON artifact from tools/editor/theme/nvim_resolved_theme_export.lua")
     parser.add_argument("--exclude-lsp", action="store_true", help="Ignore @lsp.* names in coarse slot-fit reporting.")
     parser.add_argument("--summary", action="store_true", help="Print a compact base-vs-LSP summary.")
     args = parser.parse_args()

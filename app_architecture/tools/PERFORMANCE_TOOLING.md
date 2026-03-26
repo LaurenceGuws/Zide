@@ -307,8 +307,8 @@ This sequence intentionally matches the runtime/resource-management direction:
 
 Existing surfaces already in repo:
 
-- `tools/linux_resource_monitor.py`
-- `tools/linux_perf_run.py`
+- `tools/perf/linux_resource_monitor.py`
+- `tools/perf/linux_perf_run.py`
 - terminal poll runtime counters
 - editor search/highlight runtime counters
 - existing perf and latency logs
@@ -318,7 +318,7 @@ than staying as isolated scripts and logs.
 
 Current runner note:
 
-- `tools/linux_perf_run.py` can now temporarily wire grouped perf logging into
+- `tools/perf/linux_perf_run.py` can now temporarily wire grouped perf logging into
   `./.zide.lua` for launched Zide workloads so host samples and subsystem
   events land in the same run folder without manual logger setup
 - perf tag selection for that temporary wiring should be treated as named

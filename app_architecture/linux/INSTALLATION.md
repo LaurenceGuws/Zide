@@ -126,7 +126,7 @@ root while assembling the bundles.
 
 Current Linux bundle helper is:
 
-- `tools/bundle_terminal_linux.sh`
+- `tools/packaging/linux/bundle_terminal_linux.sh`
 
 Despite the historical name, it now serves all three launcher modes:
 

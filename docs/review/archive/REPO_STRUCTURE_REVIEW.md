@@ -43,8 +43,8 @@ Repo-level tooling currently lives in:
 
 At review time, `src/tools/` only contained:
 
-- `tools/grammar_fetch.zig`
-- `tools/grammar_update.zig`
+- `tools/grammar/grammar_fetch.zig`
+- `tools/grammar/grammar_update.zig`
 
 Those files read like repository maintenance tools, not runtime product modules. This made the split between `tools/` and `src/tools/` look accidental rather than intentional.
 

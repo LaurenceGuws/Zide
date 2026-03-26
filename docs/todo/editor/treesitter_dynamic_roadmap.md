@@ -65,7 +65,7 @@ CLI command in place:
  - supports `--jobs <n>` to parallelize pack builds
 
 Implemented files:
-- `tools/grammar_update.zig`
+- `tools/grammar/grammar_update.zig`
 
 ### Step 3: Auto-sync Queries (optional)
 Keep queries in sync with nvim-treesitter:

@@ -36,8 +36,8 @@ Current tooling is still allowed to observe and report LSP overlay names.
 
 That example/reference pressure currently lives in:
 
-- `tools/nvim_resolved_theme_export.lua`
-- `tools/nvim_resolved_theme_compare.py`
+- `tools/editor/theme/nvim_resolved_theme_export.lua`
+- `tools/editor/theme/nvim_resolved_theme_compare.py`
 
 Current behavior we are intentionally keeping:
 

@@ -179,13 +179,13 @@ Likely first proving cut later:
   - Prove the exporter can emit one normalized artifact for a live theme.
   - Current state:
     - prototype:
-      - `tools/nvim_resolved_theme_export.lua`
-      - `tools/editor_theme_resolved_baseline.sh`
+      - `tools/editor/theme/nvim_resolved_theme_export.lua`
+      - `tools/editor/theme/editor_theme_resolved_baseline.sh`
     - current preset workflow:
-      - `nvim --headless "+lua dofile('tools/nvim_resolved_theme_export.lua')"`
+      - `nvim --headless "+lua dofile('tools/editor/theme/nvim_resolved_theme_export.lua')"`
       - `-- --colorscheme tokyonight-night --profile treesitter --preset zide-core`
       - or:
-        `tools/editor_theme_resolved_baseline.sh tokyonight-night`
+        `tools/editor/theme/editor_theme_resolved_baseline.sh tokyonight-night`
       - baseline helper also cleans older legacy `*-resolved` registry/file
         clutter for the same colorscheme when it can
     - current artifact shape:
@@ -204,7 +204,7 @@ Likely first proving cut later:
   - Prefer schema fixes only for recurring resolved-state mismatches.
   - Current state:
     - comparison tool:
-      - `tools/nvim_resolved_theme_compare.py`
+      - `tools/editor/theme/nvim_resolved_theme_compare.py`
     - useful modes:
       - full report
       - `--exclude-lsp`
@@ -223,7 +223,7 @@ Likely first proving cut later:
   - Keep base ingestion scoped to non-LSP names.
   - Current state:
     - adapter path now exists in:
-      - `tools/editor_theme_import.py --resolved-export <artifact.json>`
+      - `tools/editor/theme/editor_theme_import.py --resolved-export <artifact.json>`
     - current behavior:
       - reads `aggregate`
       - renders the existing overlay Lua shape
@@ -234,9 +234,9 @@ Likely first proving cut later:
         `assets/themes/init.lua` so runtime imported-theme discovery stays on
         the existing Lua registry authority
       - baseline helper:
-        `tools/editor_theme_resolved_baseline.sh <colorscheme>`
+        `tools/editor/theme/editor_theme_resolved_baseline.sh <colorscheme>`
       - explicit cleanup:
-        `python3 tools/editor_theme_import.py --remove-generated <resolved-name>`
+        `python3 tools/editor/theme/editor_theme_import.py --remove-generated <resolved-name>`
     - current caveat:
       - pruning is still heuristic and should remain explicit
       - `editor-surface` is the current default and recommended reviewable
@@ -256,7 +256,7 @@ Likely first proving cut later:
     concrete unresolved runtime/style question.
 
 - [ ] `ED-THEME-NEW-04` Reframe the current source-parser tooling
-  - Keep `tools/editor_theme_import.py` as:
+  - Keep `tools/editor/theme/editor_theme_import.py` as:
     - schema pressure-test tooling
     - manual fixture generation
     - generic intake/audit research
@@ -271,7 +271,7 @@ authority.
 Keep using them only as supporting reference when needed:
 
 - source-parser research/tooling:
-  - `tools/editor_theme_import.py`
+  - `tools/editor/theme/editor_theme_import.py`
 - current resolved-theme base authority:
   - `app_architecture/editor/RESOLVED_THEME_EXPORT_CONTRACT.md`
 - deferred LSP overlay/example boundary:

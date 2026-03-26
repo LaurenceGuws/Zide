@@ -820,7 +820,7 @@ Migration approach:
   `TerminalGrid.markDirtyRange(...)` by unioning multiple same-row requests,
   not by `view_cache` refinement, widget planning, or skipped dirty retirement
 - a scripted capture wrapper now exists for that same lane in
-  `tools/terminal_capture_nvim_real_config_cursor_repro.py`, which automates
+  `tools/terminal/capture/terminal_capture_nvim_real_config_cursor_repro.py`, which automates
   the current dashboard -> `:e src/app_logger.zig` -> settle -> slow `j`
   cursor-step repro against the real local Neovim config
 - that automation now also has a replay-safe reduced mode (`--open-directly`,

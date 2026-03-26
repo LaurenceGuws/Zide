@@ -27,7 +27,7 @@ This roadmap is downstream from:
 Stress ritual and measurement authority:
 
 - `docs/research/editor/EDITOR_STRESS_RITUAL_2026-03-18.md`
-- `tools/perf_editor_gate.sh`
+- `tools/perf/perf_editor_gate.sh`
 
 ## Roadmap Principles
 
@@ -79,7 +79,7 @@ Make later changes comparable and safe.
 
 - `zig build test`
 - `zig build -Doptimize=ReleaseFast perf-editor-headless`
-- `tools/perf_editor_gate.sh`
+- `tools/perf/perf_editor_gate.sh`
 - manual native editor repro on:
   - `fixtures/editor/stress/unicode_longline_sample.txt`
   - `fixtures/editor/stress/large_highlight_sample.zig`
@@ -384,7 +384,7 @@ composer, stop.
 flowchart LR
     Build[zig build test]
     Headless[perf-editor-headless]
-    Gate[tools/perf_editor_gate.sh]
+    Gate[tools/perf/perf_editor_gate.sh]
     Native[manual native editor repro]
     Logs[bug-scoped logging]
 

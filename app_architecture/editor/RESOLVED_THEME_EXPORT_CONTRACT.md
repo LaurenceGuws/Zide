@@ -38,11 +38,11 @@ The contract is designed around what Neovim has already resolved:
 
 Current prototype exporter:
 
-- `tools/nvim_resolved_theme_export.lua`
+- `tools/editor/theme/nvim_resolved_theme_export.lua`
 
 Current comparison probe:
 
-- `tools/nvim_resolved_theme_compare.py`
+- `tools/editor/theme/nvim_resolved_theme_compare.py`
 
 Current queue owner:
 
@@ -57,13 +57,13 @@ Current authority for editor-level entrypoints:
 Default maintenance workflow:
 
 ```sh
-nvim --headless "+lua dofile('tools/nvim_resolved_theme_export.lua')" -- \
+nvim --headless "+lua dofile('tools/editor/theme/nvim_resolved_theme_export.lua')" -- \
   --colorscheme tokyonight-night \
   --profile treesitter \
   --preset zide-core \
   --out /tmp/tokyonight-preset.json
 
-python3 tools/nvim_resolved_theme_compare.py --summary /tmp/tokyonight-preset.json
+python3 tools/editor/theme/nvim_resolved_theme_compare.py --summary /tmp/tokyonight-preset.json
 ```
 
 This is the preferred quick check when validating the current base contract.
@@ -71,7 +71,7 @@ This is the preferred quick check when validating the current base contract.
 One-command baseline workflow:
 
 ```sh
-tools/editor_theme_resolved_baseline.sh tokyonight-night
+tools/editor/theme/editor_theme_resolved_baseline.sh tokyonight-night
 ```
 
 That command runs export, summary compare, and resolved-overlay apply/register
@@ -83,7 +83,7 @@ fixtures in the runtime registry.
 Explicit cleanup command:
 
 ```sh
-python3 tools/editor_theme_import.py --remove-generated tokyonight-night-resolved
+python3 tools/editor/theme/editor_theme_import.py --remove-generated tokyonight-night-resolved
 ```
 
 ## First Bridge
@@ -92,7 +92,7 @@ Current first bridge from resolved export into Zide's existing Lua overlay
 shape:
 
 ```sh
-python3 tools/editor_theme_import.py \
+python3 tools/editor/theme/editor_theme_import.py \
   --resolved-export /tmp/tokyonight-preset.json \
   --resolved-name tokyonight-resolved \
   --apply \

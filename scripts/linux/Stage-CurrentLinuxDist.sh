@@ -28,19 +28,19 @@ zig build -Dmode=terminal -Doptimize=ReleaseFast
 zig build build-terminal-ffi -Doptimize=ReleaseFast
 zig build build-editor-ffi -Doptimize=ReleaseFast
 
-bash tools/bundle_terminal_linux.sh \
+bash tools/packaging/linux/bundle_terminal_linux.sh \
   zig-out/bin/zide \
   "$IDE_BUNDLE_DIR" \
   assets \
   ide
 
-bash tools/bundle_terminal_linux.sh \
+bash tools/packaging/linux/bundle_terminal_linux.sh \
   zig-out/bin/zide-editor \
   "$EDITOR_BUNDLE_DIR" \
   assets \
   editor
 
-bash tools/bundle_terminal_linux.sh \
+bash tools/packaging/linux/bundle_terminal_linux.sh \
   zig-out/bin/zide-terminal \
   "$TERMINAL_BUNDLE_DIR" \
   assets \

@@ -128,7 +128,7 @@ def main() -> int:
 
     argv = [
         sys.executable,
-        "tools/terminal_capture_redraw_fixture.py",
+        "tools/terminal/capture/terminal_capture_redraw_fixture.py",
         "--name",
         args.name,
         "--rows",

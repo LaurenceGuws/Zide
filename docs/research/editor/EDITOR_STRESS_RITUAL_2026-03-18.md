@@ -252,7 +252,7 @@ Minimum structure:
 
 ### 1. `perf_editor_gate.sh` now mirrors the first-pass workload set
 
-`tools/perf_editor_gate.sh` now runs:
+`tools/perf/perf_editor_gate.sh` now runs:
 
 - synthetic `1 MiB`
 - synthetic `8 MiB`

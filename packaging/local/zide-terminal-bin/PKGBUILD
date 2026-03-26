@@ -19,7 +19,7 @@ build() {
   repo_root="$(cd "${startdir}/../../.." && pwd)"
   cd "${repo_root}"
   zig build -Dmode=terminal -Doptimize=ReleaseFast
-  bash tools/bundle_terminal_linux.sh zig-out/bin/zide-terminal "${srcdir}/zide-terminal-bundle" assets terminal
+  bash tools/packaging/linux/bundle_terminal_linux.sh zig-out/bin/zide-terminal "${srcdir}/zide-terminal-bundle" assets terminal
 }
 
 package() {
