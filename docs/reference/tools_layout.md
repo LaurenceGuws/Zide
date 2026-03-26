@@ -12,7 +12,11 @@ domain-specific subdirectory.
 ## Current Domains
 
 - `tools/build_tools/`
-  - build reports, mode gates, and size checks
+  - build-related tooling grouped into:
+  - `reports/` for build reports and summaries
+  - `checks/` for build policy and size checks
+  - `gates/` for higher-level workflow gate scripts
+  - `smokes/` for manual or operator-run smoke helpers
 - `tools/checks/`
   - shared repo policy and import-layer checks
 - `tools/docs_browser/`

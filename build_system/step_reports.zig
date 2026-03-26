@@ -24,7 +24,7 @@ pub fn addReportBuildProfilesStep(
     const exe = b.addExecutable(.{
         .name = "build-profile-report",
         .root_module = b.createModule(.{
-            .root_source_file = b.path("tools/build_tools/build_profile_report.zig"),
+            .root_source_file = b.path("tools/build_tools/reports/build_profile_report.zig"),
             .target = target,
             .optimize = optimize,
         }),
@@ -53,7 +53,7 @@ pub fn addReportBuildModeStep(
     const exe = b.addExecutable(.{
         .name = "build-mode-report",
         .root_module = b.createModule(.{
-            .root_source_file = b.path("tools/build_tools/build_mode_report.zig"),
+            .root_source_file = b.path("tools/build_tools/reports/build_mode_report.zig"),
             .target = target,
             .optimize = optimize,
         }),
@@ -78,7 +78,7 @@ pub fn addReportBuildBootstrapStep(
     const exe = b.addExecutable(.{
         .name = "build-bootstrap-report",
         .root_module = b.createModule(.{
-            .root_source_file = b.path("tools/build_tools/build_bootstrap_report.zig"),
+            .root_source_file = b.path("tools/build_tools/reports/build_bootstrap_report.zig"),
             .target = target,
             .optimize = optimize,
         }),
@@ -103,7 +103,7 @@ pub fn addReportBuildFocusedPolicyStep(
     const exe = b.addExecutable(.{
         .name = "build-focused-mode-policy-check",
         .root_module = b.createModule(.{
-            .root_source_file = b.path("tools/build_tools/build_focused_mode_policy_check.zig"),
+            .root_source_file = b.path("tools/build_tools/checks/build_focused_mode_policy_check.zig"),
             .target = target,
             .optimize = optimize,
         }),
@@ -128,7 +128,7 @@ pub fn addReportBuildTargetStep(
     const exe = b.addExecutable(.{
         .name = "build-target-report",
         .root_module = b.createModule(.{
-            .root_source_file = b.path("tools/build_tools/build_target_report.zig"),
+            .root_source_file = b.path("tools/build_tools/reports/build_target_report.zig"),
             .target = target,
             .optimize = optimize,
         }),
@@ -158,7 +158,7 @@ pub fn addCheckBuildReportToolsStep(
     const mode_report = b.addExecutable(.{
         .name = "build-mode-report-check",
         .root_module = b.createModule(.{
-            .root_source_file = b.path("tools/build_tools/build_mode_report.zig"),
+            .root_source_file = b.path("tools/build_tools/reports/build_mode_report.zig"),
             .target = target,
             .optimize = optimize,
         }),
@@ -170,7 +170,7 @@ pub fn addCheckBuildReportToolsStep(
     const bootstrap_report = b.addExecutable(.{
         .name = "build-bootstrap-report-check",
         .root_module = b.createModule(.{
-            .root_source_file = b.path("tools/build_tools/build_bootstrap_report.zig"),
+            .root_source_file = b.path("tools/build_tools/reports/build_bootstrap_report.zig"),
             .target = target,
             .optimize = optimize,
         }),
@@ -182,7 +182,7 @@ pub fn addCheckBuildReportToolsStep(
     const focused_policy = b.addExecutable(.{
         .name = "build-focused-policy-report-check",
         .root_module = b.createModule(.{
-            .root_source_file = b.path("tools/build_tools/build_focused_mode_policy_check.zig"),
+            .root_source_file = b.path("tools/build_tools/checks/build_focused_mode_policy_check.zig"),
             .target = target,
             .optimize = optimize,
         }),
@@ -194,7 +194,7 @@ pub fn addCheckBuildReportToolsStep(
     const target_report = b.addExecutable(.{
         .name = "build-target-report-check",
         .root_module = b.createModule(.{
-            .root_source_file = b.path("tools/build_tools/build_target_report.zig"),
+            .root_source_file = b.path("tools/build_tools/reports/build_target_report.zig"),
             .target = target,
             .optimize = optimize,
         }),

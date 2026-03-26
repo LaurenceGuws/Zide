@@ -22,7 +22,7 @@ Historical tracker for the completed app-mode layering extraction. The work spli
 - Automated: `zig build test`, `zig build check-terminal-imports`, `zig build check-app-imports`, `zig build check-input-imports`, `zig build check-editor-imports`
 - Replay: `zig build test-terminal-replay -- --all`
 - Manual smokes: `zig build run`, `zig build run -- --mode terminal`, `zig build run -- --mode editor`, `zig build run -- --mode ide`
-- Bundle helpers added during rollout: `zig build mode-gates`, `zig build mode-gates-fast`, `zig build mode-smokes-manual`, `tools/build_tools/mode_gates.sh`
+- Bundle helpers added during rollout: `zig build mode-gates`, `zig build mode-gates-fast`, `zig build mode-smokes-manual`, `tools/build_tools/gates/mode_gates.sh`
 
 ## Milestones
 
