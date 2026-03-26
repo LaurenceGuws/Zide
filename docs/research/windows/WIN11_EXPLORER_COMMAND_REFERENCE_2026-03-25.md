@@ -10,10 +10,10 @@ command lane and the menu structure we want to keep stable.
 Windows Terminal's shell extension is a single packaged `IExplorerCommand`
 implementation in:
 
-- `reference_repos/terminals/windows_terminal/src/cascadia/ShellExtension/OpenTerminalHere.cpp`
-- `reference_repos/terminals/windows_terminal/src/cascadia/ShellExtension/OpenTerminalHere.h`
-- `reference_repos/terminals/windows_terminal/src/cascadia/ShellExtension/dllmain.cpp`
-- `reference_repos/terminals/windows_terminal/src/cascadia/CascadiaPackage/Package.appxmanifest`
+- `dev_references/terminals/windows_terminal/src/cascadia/ShellExtension/OpenTerminalHere.cpp`
+- `dev_references/terminals/windows_terminal/src/cascadia/ShellExtension/OpenTerminalHere.h`
+- `dev_references/terminals/windows_terminal/src/cascadia/ShellExtension/dllmain.cpp`
+- `dev_references/terminals/windows_terminal/src/cascadia/CascadiaPackage/Package.appxmanifest`
 
 The reference shape is simple:
 

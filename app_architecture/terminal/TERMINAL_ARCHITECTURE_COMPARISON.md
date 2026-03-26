@@ -116,17 +116,17 @@ flowchart LR
 - This split is cleaner today than Zide's current `TerminalCore` /
   `TerminalSession` split.
 - Current local reference bias from
-  [`reference_repos/terminals/ghostty`](reference_repos/terminals/ghostty):
-  - [`include/ghostty/vt.h`](../../reference_repos/terminals/ghostty/include/ghostty/vt.h)
+  [`dev_references/terminals/ghostty`](dev_references/terminals/ghostty):
+  - [`include/ghostty/vt.h`](../../dev_references/terminals/ghostty/include/ghostty/vt.h)
     stays intentionally narrow and does not try to expose runtime/presentation
     churn as public contract
-  - [`src/terminal/Terminal.zig`](../../reference_repos/terminals/ghostty/src/terminal/Terminal.zig)
+  - [`src/terminal/Terminal.zig`](../../dev_references/terminals/ghostty/src/terminal/Terminal.zig)
     keeps scrollback, modes, parser-owned semantics, and terminal state centered
     in the engine object
-  - [`src/terminal/Screen.zig`](../../reference_repos/terminals/ghostty/src/terminal/Screen.zig)
+  - [`src/terminal/Screen.zig`](../../dev_references/terminals/ghostty/src/terminal/Screen.zig)
     keeps dirty/selection/screen mutation state local to the engine-side screen
     model
-  - [`src/input/key_encode.zig`](../../reference_repos/terminals/ghostty/src/input/key_encode.zig)
+  - [`src/input/key_encode.zig`](../../dev_references/terminals/ghostty/src/input/key_encode.zig)
     is a peer subsystem derived from terminal state, not UI-owned glue
 - Important nuance:
   - Ghostty is still ahead on making the engine obviously be the engine.

@@ -15,12 +15,12 @@ Text engine and editing semantics: buffer model, undo, selections, search, and f
 
 ## Reference Map
 
-- Helix: `reference_repos/editors/helix/docs/architecture.md`, `helix-core/src/transaction.rs`, `helix-core/src/selection.rs`
-- Neovim: `reference_repos/editors/neovim/src/nvim/{buffer.c,undo.c,search.c,fold.c}`
-- Kakoune: `reference_repos/editors/kakoune/src/{buffer.cc,selection.cc}`
-- Xi: `reference_repos/editors/xi-editor/rust/core-lib/src/{editor.rs,selection.rs,linewrap.rs}`
-- Scintilla: `reference_repos/text/scintilla/src/{Editor.c,Document.cxx,CellBuffer.cxx}`
-- Ropey / xi-rope: `reference_repos/text/{ropey,xi-rope}/src/*`
+- Helix: `dev_references/editors/helix/docs/architecture.md`, `helix-core/src/transaction.rs`, `helix-core/src/selection.rs`
+- Neovim: `dev_references/editors/neovim/src/nvim/{buffer.c,undo.c,search.c,fold.c}`
+- Kakoune: `dev_references/editors/kakoune/src/{buffer.cc,selection.cc}`
+- Xi: `dev_references/editors/xi-editor/rust/core-lib/src/{editor.rs,selection.rs,linewrap.rs}`
+- Scintilla: `dev_references/text/scintilla/src/{Editor.c,Document.cxx,CellBuffer.cxx}`
+- Ropey / xi-rope: `dev_references/text/{ropey,xi-rope}/src/*`
 
 ## TODO
 

@@ -9,11 +9,11 @@
 - SDL3 distinguishes scancode (physical key) vs keycode (symbol); use scancode for physical bindings and keycode for symbolic actions.
 
 References:
-- Alacritty key encoding path: `reference_repos/terminals/alacritty/alacritty/src/input/keyboard.rs`
-- Kitty keyboard protocol encoder: `reference_repos/terminals/kitty/kitty/key_encoding.c`
-- SDL3 keyboard practice guide: `reference_repos/sdlwiki_md/SDL3/BestKeyboardPractices.md`
-- SDL3 key/text events: `reference_repos/sdlwiki_md/SDL3/SDL_KeyboardEvent.md`, `reference_repos/sdlwiki_md/SDL3/SDL_TextInputEvent.md`, `reference_repos/sdlwiki_md/SDL3/SDL_TextEditingEvent.md`
-- SDL3 text input APIs: `reference_repos/sdlwiki_md/SDL3/SDL_StartTextInput.md`, `reference_repos/sdlwiki_md/SDL3/SDL_StopTextInput.md`, `reference_repos/sdlwiki_md/SDL3/SDL_SetTextInputArea.md`
+- Alacritty key encoding path: `dev_references/terminals/alacritty/alacritty/src/input/keyboard.rs`
+- Kitty keyboard protocol encoder: `dev_references/terminals/kitty/kitty/key_encoding.c`
+- SDL3 keyboard practice guide: `dev_references/sdlwiki_md/SDL3/BestKeyboardPractices.md`
+- SDL3 key/text events: `dev_references/sdlwiki_md/SDL3/SDL_KeyboardEvent.md`, `dev_references/sdlwiki_md/SDL3/SDL_TextInputEvent.md`, `dev_references/sdlwiki_md/SDL3/SDL_TextEditingEvent.md`
+- SDL3 text input APIs: `dev_references/sdlwiki_md/SDL3/SDL_StartTextInput.md`, `dev_references/sdlwiki_md/SDL3/SDL_StopTextInput.md`, `dev_references/sdlwiki_md/SDL3/SDL_SetTextInputArea.md`
 
 ## Current Issues
 

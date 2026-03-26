@@ -139,6 +139,8 @@ Repository-local docs own the detailed operator guidance:
   [docs/DEPENDENCIES.md](docs/DEPENDENCIES.md)
 - release process:
   [RELEASING.md](RELEASING.md)
+- development reference corpus:
+  [dev_references/README.md](dev_references/README.md)
 - docs explorer repository:
   <https://github.com/LaurenceGuws/docs-explorer>
 

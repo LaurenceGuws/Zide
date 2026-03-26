@@ -189,11 +189,11 @@ The current execution order is:
 ### Phase 3A Text Rendering Quality
 
 - [ ] `W3A-01` Replace guesswork with a Windows text-quality fixture lane
-  - Own the reference material under `reference_repos/windows_docs/`
+  - Own the reference material under `dev_references/windows_docs/`
   - Cross-platform implementation references for this lane:
-    - `reference_repos/terminals/wezterm/wezterm-gui/src/`
-    - `reference_repos/terminals/alacritty/alacritty/src/`
-    - `reference_repos/backends/sdl/src/render/SDL_render.c`
+    - `dev_references/terminals/wezterm/wezterm-gui/src/`
+    - `dev_references/terminals/alacritty/alacritty/src/`
+    - `dev_references/backends/sdl/src/render/SDL_render.c`
   - Keep `.zide.lua` logging minimal and bug-scoped
   - Maintain a repeatable GUI smoke workflow and comparison text/sample workflow
 - [x] `W3A-02` Finish the fractional-DPI glyph placement contract

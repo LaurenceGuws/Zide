@@ -47,17 +47,17 @@ Status (2026-01-29)
 
 Canonical references (do not diverge without a documented reason)
 - kitty: OpenGL renderer, glyph atlas, render loop discipline.
-  - reference_repos/terminals/kitty/docs/overview.rst
-  - reference_repos/terminals/kitty/docs/performance.rst
+  - dev_references/terminals/kitty/docs/overview.rst
+  - dev_references/terminals/kitty/docs/performance.rst
 - ghostty: multi-backend renderer (OpenGL on Linux, Metal on macOS).
-  - reference_repos/terminals/ghostty/README.md
+  - dev_references/terminals/ghostty/README.md
 - alacritty: OpenGL terminal renderer architecture.
-  - reference_repos/terminals/alacritty/README.md
+  - dev_references/terminals/alacritty/README.md
 - lite-xl: SDL window/input layer for a GUI editor.
-  - reference_repos/editors/lite-xl/README.md
+  - dev_references/editors/lite-xl/README.md
 - zed: Metal on macOS, Vulkan on Linux (GPU-first UI framework).
-  - reference_repos/editors/zed/docs/src/macos.md
-  - reference_repos/editors/zed/docs/src/linux.md
+  - dev_references/editors/zed/docs/src/macos.md
+  - dev_references/editors/zed/docs/src/linux.md
 
 Non-negotiable rules
 - We do not invent new rendering paradigms. We follow the reference repos unless forced by Zide's architecture.

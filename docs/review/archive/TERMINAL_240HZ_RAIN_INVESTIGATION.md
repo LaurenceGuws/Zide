@@ -35,36 +35,36 @@ This doc records one concluded investigation lane and its evidence.
 ## Key Differential: Kitty vs Zide
 
 Kitty source inspected under:
-- `reference_repos/terminals/kitty/kitty/*`
-- `reference_repos/terminals/kitty/glfw/*`
+- `dev_references/terminals/kitty/kitty/*`
+- `dev_references/terminals/kitty/glfw/*`
 
 ### What Kitty Does (Relevant)
 
 1. No explicit "240Hz mode"
 - It still relies on standard sync/present behavior (`glfwSwapInterval`) and configurable `sync_to_monitor`.
 - Files:
-  - `reference_repos/terminals/kitty/kitty/glfw.c` (`apply_swap_interval`)
-  - `reference_repos/terminals/kitty/kitty/options/definition.py` (`sync_to_monitor`, `repaint_delay`, `input_delay`)
+  - `dev_references/terminals/kitty/kitty/glfw.c` (`apply_swap_interval`)
+  - `dev_references/terminals/kitty/kitty/options/definition.py` (`sync_to_monitor`, `repaint_delay`, `input_delay`)
 
 2. Explicit frame callback request/recovery path (Wayland/macOS)
 - Uses render-frame requests and tracks render-frame readiness.
 - Re-requests frame if one does not arrive within 250ms.
 - Files:
-  - `reference_repos/terminals/kitty/kitty/glfw.c` (`request_frame_render`, frame callbacks)
-  - `reference_repos/terminals/kitty/kitty/child-monitor.c` (`no_render_frame_received_recently`, `render_os_window`)
+  - `dev_references/terminals/kitty/kitty/glfw.c` (`request_frame_render`, frame callbacks)
+  - `dev_references/terminals/kitty/kitty/child-monitor.c` (`no_render_frame_received_recently`, `render_os_window`)
 
 3. Render pacing separated from input pacing
 - `repaint_delay` and `input_delay` are independent.
 - Repaint delay is ignored when pending input exists.
 - Files:
-  - `reference_repos/terminals/kitty/kitty/options/definition.py`
-  - `reference_repos/terminals/kitty/kitty/child-monitor.c` (main/render loop + IO wakeup path)
+  - `dev_references/terminals/kitty/kitty/options/definition.py`
+  - `dev_references/terminals/kitty/kitty/child-monitor.c` (main/render loop + IO wakeup path)
 
 4. Authoritative dirty-line driven GPU updates
 - GPU cell data path updates from line dirty state and marks lines clean post-render.
 - Files:
-  - `reference_repos/terminals/kitty/kitty/screen.c` (`screen_update_cell_data`)
-  - `reference_repos/terminals/kitty/kitty/shaders.c` (`send_cell_data_to_gpu`)
+  - `dev_references/terminals/kitty/kitty/screen.c` (`screen_update_cell_data`)
+  - `dev_references/terminals/kitty/kitty/shaders.c` (`send_cell_data_to_gpu`)
 
 ### What Zide Currently Does (Relevant)
 

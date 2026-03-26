@@ -10,10 +10,10 @@ design reasoning.
 
 ## Compared References
 
-- `reference_repos/editors/helix`
-- `reference_repos/editors/neovim`
-- `reference_repos/editors/zed`
-- `reference_repos/editors/lapce`
+- `dev_references/editors/helix`
+- `dev_references/editors/neovim`
+- `dev_references/editors/zed`
+- `dev_references/editors/lapce`
 
 ## Concern Map
 
@@ -27,11 +27,11 @@ Most useful for:
 
 Local code paths worth revisiting:
 
-- `reference_repos/editors/helix/helix-core/src/transaction.rs`
-- `reference_repos/editors/helix/helix-core/src/indent.rs`
-- `reference_repos/editors/helix/helix-core/src/search.rs`
-- `reference_repos/editors/helix/helix-core/src/syntax.rs`
-- `reference_repos/editors/helix/helix-core/src/selection.rs`
+- `dev_references/editors/helix/helix-core/src/transaction.rs`
+- `dev_references/editors/helix/helix-core/src/indent.rs`
+- `dev_references/editors/helix/helix-core/src/search.rs`
+- `dev_references/editors/helix/helix-core/src/syntax.rs`
+- `dev_references/editors/helix/helix-core/src/selection.rs`
 
 Design pressure on Zide:
 
@@ -49,8 +49,8 @@ Most useful for:
 
 Local code/doc paths worth revisiting:
 
-- `reference_repos/editors/neovim/runtime/doc/treesitter.txt`
-- `reference_repos/editors/neovim/runtime/lua/vim/hl.lua`
+- `dev_references/editors/neovim/runtime/doc/treesitter.txt`
+- `dev_references/editors/neovim/runtime/lua/vim/hl.lua`
 - theme/runtime-related files under `runtime/`
 
 Design pressure on Zide:
@@ -69,11 +69,11 @@ Most useful for:
 
 Local code/doc paths worth revisiting:
 
-- `reference_repos/editors/zed/crates/multi_buffer`
-- `reference_repos/editors/zed/crates/search`
-- `reference_repos/editors/zed/docs/src/development.md`
-- `reference_repos/editors/zed/docs/src/multibuffers.md`
-- `reference_repos/editors/zed/docs/src/migrate/vs-code.md`
+- `dev_references/editors/zed/crates/multi_buffer`
+- `dev_references/editors/zed/crates/search`
+- `dev_references/editors/zed/docs/src/development.md`
+- `dev_references/editors/zed/docs/src/multibuffers.md`
+- `dev_references/editors/zed/docs/src/migrate/vs-code.md`
 
 Design pressure on Zide:
 
@@ -91,10 +91,10 @@ Most useful for:
 
 Local code/doc paths worth revisiting:
 
-- `reference_repos/editors/lapce/docs/why-lapce.md`
-- `reference_repos/editors/lapce/lapce-core`
-- `reference_repos/editors/lapce/lapce-proxy/src/dispatch.rs`
-- `reference_repos/editors/lapce/lapce-proxy/src/buffer.rs`
+- `dev_references/editors/lapce/docs/why-lapce.md`
+- `dev_references/editors/lapce/lapce-core`
+- `dev_references/editors/lapce/lapce-proxy/src/dispatch.rs`
+- `dev_references/editors/lapce/lapce-proxy/src/buffer.rs`
 
 Design pressure on Zide:
 

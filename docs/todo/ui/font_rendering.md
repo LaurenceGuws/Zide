@@ -60,10 +60,10 @@ Status note, 2026-03-20:
 - Ligature track: `docs/todo/ui/terminal_ligatures.md`
 - Zide code: `src/ui/terminal_font.zig`, `src/ui/renderer/gl_backend.zig`, `src/ui/renderer/font_manager.zig`, `src/ui/renderer/text_draw.zig`
 - Cross-platform runtime references:
-  - `reference_repos/terminals/wezterm/wezterm-gui/src/utilsprites.rs`
-  - `reference_repos/terminals/alacritty/alacritty/src/event.rs`
-  - `reference_repos/terminals/alacritty/alacritty/src/window_context.rs`
-  - `reference_repos/backends/sdl/src/render/SDL_render.c`
+  - `dev_references/terminals/wezterm/wezterm-gui/src/utilsprites.rs`
+  - `dev_references/terminals/alacritty/alacritty/src/event.rs`
+  - `dev_references/terminals/alacritty/alacritty/src/window_context.rs`
+  - `dev_references/backends/sdl/src/render/SDL_render.c`
 
 ## Validation Commands
 

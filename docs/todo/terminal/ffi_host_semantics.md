@@ -200,7 +200,7 @@ Current rule from this pass:
   - that means all three references in this lane now point the same way:
     structured progress/activity state is a real terminal/host integration
     family, not just a Zide-specific UI idea
-  - local checkout is still missing under `reference_repos`, so code-level
+  - local checkout is still missing under `dev_references`, so code-level
     comparison should still be added before implementation work that depends on
     Windows-specific details
 

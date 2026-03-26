@@ -1,0 +1,57 @@
+{
+  "terminals": [
+    { "name": "alacritty", "url": "https://github.com/alacritty/alacritty.git" },
+    { "name": "codex", "url": "https://github.com/openai/codex.git" },
+    { "name": "contour", "url": "https://github.com/contour-terminal/contour.git" },
+    { "name": "foot", "url": "https://codeberg.org/dnkl/foot.git" },
+    { "name": "ghostty", "url": "https://github.com/ghostty-org/ghostty.git" },
+    { "name": "hyper", "url": "https://github.com/vercel/hyper.git" },
+    { "name": "iterm2", "url": "https://github.com/gnachman/iTerm2.git" },
+    { "name": "kitty", "url": "https://github.com/kovidgoyal/kitty.git" },
+    { "name": "rio", "url": "https://github.com/raphamorim/rio.git" },
+    { "name": "st", "url": "https://git.suckless.org/st" },
+    { "name": "tabby", "url": "https://github.com/Eugeny/tabby.git" },
+    { "name": "wezterm", "url": "https://github.com/wezterm/wezterm.git" },
+    { "name": "windows_terminal", "url": "https://github.com/microsoft/terminal.git" },
+    { "name": "xterm_snapshots", "url": "https://github.com/xterm-x11/xterm-snapshots.git" }
+  ],
+  "editors": [
+    { "name": "helix", "url": "https://github.com/helix-editor/helix.git" },
+    { "name": "kakoune", "url": "https://github.com/mawww/kakoune.git" },
+    { "name": "lapce", "url": "https://github.com/lapce/lapce.git" },
+    { "name": "lite-xl", "url": "https://github.com/lite-xl/lite-xl.git" },
+    { "name": "neovide", "url": "https://github.com/neovide/neovide.git" },
+    { "name": "neovim", "url": "https://github.com/neovim/neovim.git" },
+    { "name": "notepad-plus-plus", "url": "https://github.com/notepad-plus-plus/notepad-plus-plus.git" },
+    { "name": "xi-editor", "url": "https://github.com/xi-editor/xi-editor.git" },
+    { "name": "zed", "url": "https://github.com/zed-industries/zed.git" }
+  ],
+  "text": [
+    { "name": "ropey", "url": "https://github.com/cessen/ropey.git" },
+    { "name": "scintilla", "url": "https://github.com/mirror/scintilla.git" }
+  ],
+  "backends": [
+    { "name": "alacritty_vte", "url": "https://github.com/alacritty/vte.git" },
+    { "name": "gnome_vte", "url": "https://github.com/GNOME/vte.git" },
+    { "name": "libtsm", "url": "https://github.com/Aetf/libtsm.git" },
+    { "name": "libvterm", "url": "https://github.com/neovim/libvterm.git" },
+    { "name": "sdl", "url": "https://github.com/libsdl-org/SDL.git" },
+    { "name": "wayland", "url": "https://gitlab.freedesktop.org/wayland/wayland.git" },
+    { "name": "wayland_protocols", "url": "https://gitlab.freedesktop.org/wayland/wayland-protocols.git" }
+  ],
+  "fonts": [
+    { "name": "crossfont", "url": "https://github.com/alacritty/crossfont.git" },
+    { "name": "freetype", "url": "https://github.com/freetype/freetype.git" },
+    { "name": "graphite2", "url": "https://github.com/Distrotech/graphite2.git" },
+    { "name": "harfbuzz", "url": "https://github.com/harfbuzz/harfbuzz.git" },
+    { "name": "unicode_width", "url": "https://github.com/alacritty/unicode-width-16.git" }
+  ],
+  "rendering": [
+    { "name": "egl_registry", "url": "https://github.com/KhronosGroup/EGL-Registry.git" },
+    { "name": "mesa", "url": "https://gitlab.freedesktop.org/mesa/mesa.git", "sparse_paths": ["docs", "src/egl", "src/gallium/frontends/dri", "src/gallium/drivers/zink", "src/egl/wayland", "src/egl/drivers"] },
+    { "name": "opengl_registry", "url": "https://github.com/KhronosGroup/OpenGL-Registry.git" },
+    { "name": "pixman", "url": "https://gitlab.freedesktop.org/pixman/pixman.git" },
+    { "name": "skia", "url": "https://github.com/google/skia.git" },
+    { "name": "wgpu", "url": "https://github.com/gfx-rs/wgpu.git" }
+  ]
+}

@@ -55,10 +55,10 @@ proposal, not something the refs explicitly prove.
 
 ## Reference Files
 
-- `reference_repos/terminals/windows_terminal/src/cascadia/ShellExtension/OpenTerminalHere.h`
-- `reference_repos/terminals/windows_terminal/src/cascadia/ShellExtension/OpenTerminalHere.cpp`
-- `reference_repos/terminals/windows_terminal/src/propsheet/PropSheetHandler.cpp`
-- `reference_repos/terminals/windows_terminal/src/cascadia/ShellExtension/WindowsTerminalShellExt.vcxproj`
+- `dev_references/terminals/windows_terminal/src/cascadia/ShellExtension/OpenTerminalHere.h`
+- `dev_references/terminals/windows_terminal/src/cascadia/ShellExtension/OpenTerminalHere.cpp`
+- `dev_references/terminals/windows_terminal/src/propsheet/PropSheetHandler.cpp`
+- `dev_references/terminals/windows_terminal/src/cascadia/ShellExtension/WindowsTerminalShellExt.vcxproj`
 
 ## Zide Follow-Up
 

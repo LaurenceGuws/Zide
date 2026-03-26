@@ -69,7 +69,7 @@ new model:
 
 Source:
 
-- `reference_repos/terminals/kitty/docs/performance.rst`
+- `dev_references/terminals/kitty/docs/performance.rst`
 
 Relevant takeaways:
 
@@ -89,9 +89,9 @@ Why it matters for Zide:
 
 Sources:
 
-- `reference_repos/terminals/ghostty/README.md`
-- `reference_repos/terminals/ghostty/src/termio/Options.zig`
-- `reference_repos/terminals/ghostty/src/termio/Termio.zig`
+- `dev_references/terminals/ghostty/README.md`
+- `dev_references/terminals/ghostty/src/termio/Options.zig`
+- `dev_references/terminals/ghostty/src/termio/Termio.zig`
 - external: <https://mitchellh.com/writing/libghostty-is-coming>
 - external: <https://ghostty.org/docs/about>
 
@@ -114,8 +114,8 @@ Why it matters for Zide:
 
 Sources:
 
-- `reference_repos/editors/lapce/docs/why-lapce.md`
-- `reference_repos/editors/lapce/lapce-proxy/src/dispatch.rs`
+- `dev_references/editors/lapce/docs/why-lapce.md`
+- `dev_references/editors/lapce/lapce-proxy/src/dispatch.rs`
 
 Relevant takeaways:
 
@@ -136,7 +136,7 @@ Why it matters for Zide:
 
 Source:
 
-- `reference_repos/editors/neovide/src/main.rs`
+- `dev_references/editors/neovide/src/main.rs`
 
 Relevant takeaways:
 
@@ -159,8 +159,8 @@ Why it matters for Zide:
 
 Sources:
 
-- `reference_repos/editors/zed/docs/src/development.md`
-- `reference_repos/editors/zed/docs/src/multibuffers.md`
+- `dev_references/editors/zed/docs/src/development.md`
+- `dev_references/editors/zed/docs/src/multibuffers.md`
 
 Relevant takeaways:
 
@@ -179,7 +179,7 @@ Why it matters for Zide:
 
 Sources:
 
-- `reference_repos/text/scintilla`
+- `dev_references/text/scintilla`
 - summarized in `docs/research/editor/EDITOR_THREADING_COMPARISON_2026-03-19.md`
 
 Relevant takeaways:
@@ -198,8 +198,8 @@ Why it matters for Zide:
 
 Sources:
 
-- `reference_repos/sdlwiki_md/SDL3/CategoryRender.md`
-- `reference_repos/sdlwiki_md/SDL3/SDL_GL_MakeCurrent.md`
+- `dev_references/sdlwiki_md/SDL3/CategoryRender.md`
+- `dev_references/sdlwiki_md/SDL3/SDL_GL_MakeCurrent.md`
 
 Relevant takeaways:
 

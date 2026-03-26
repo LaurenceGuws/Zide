@@ -149,19 +149,19 @@ Current answer:
 ## Reference Families
 
 - Terminal architecture references:
-  - `reference_repos/terminals/ghostty`
-  - `reference_repos/terminals/foot`
-  - `reference_repos/terminals/kitty`
-  - `reference_repos/terminals/wezterm`
-  - `reference_repos/terminals/rio`
+  - `dev_references/terminals/ghostty`
+  - `dev_references/terminals/foot`
+  - `dev_references/terminals/kitty`
+  - `dev_references/terminals/wezterm`
+  - `dev_references/terminals/rio`
 - Backend/present-path authorities:
-  - `reference_repos/backends/sdl`
-  - `reference_repos/rendering/mesa`
-  - `reference_repos/backends/wayland`
-  - `reference_repos/backends/wayland_protocols`
-  - `reference_repos/rendering/khronos_refpages_md`
-  - `reference_repos/rendering/egl_registry`
-  - `reference_repos/rendering/opengl_registry`
+  - `dev_references/backends/sdl`
+  - `dev_references/rendering/mesa`
+  - `dev_references/backends/wayland`
+  - `dev_references/backends/wayland_protocols`
+  - `dev_references/rendering/khronos_refpages_md`
+  - `dev_references/rendering/egl_registry`
+  - `dev_references/rendering/opengl_registry`
 
 ## Exit Condition For Design Phase
 

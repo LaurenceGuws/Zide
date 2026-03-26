@@ -14,8 +14,8 @@ Tree-sitter integration for syntax highlighting and semantic metadata.
 
 ## References
 
-- `reference_repos/editors/neovim/runtime/doc/treesitter.txt`
-- `reference_repos/editors/neovim/runtime/lua/vim/treesitter/{highlighter.lua,query.lua}`
+- `dev_references/editors/neovim/runtime/doc/treesitter.txt`
+- `dev_references/editors/neovim/runtime/lua/vim/treesitter/{highlighter.lua,query.lua}`
 
 ## TODO
 

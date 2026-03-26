@@ -335,7 +335,7 @@ Current entries:
 - `zig:zig:src/main.zig`
 - `lua:lua:assets/themes/init.lua`
 - `markdown:markdown:docs/todo/editor/theme_import.md`
-- `vimdoc:help:reference_repos/editors/neovim/runtime/doc/treesitter.txt`
+- `vimdoc:help:dev_references/editors/neovim/runtime/doc/treesitter.txt`
 
 This preset is repo-local and pragmatic. It is not yet a universal export
 policy.

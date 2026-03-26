@@ -12,24 +12,24 @@ Method: Parallel subsystem audit (VT CSI/private modes, kitty graphics, keyboard
 - Reference behavior: under `?69`, `CSI s` is `DECSLRM`, not save-cursor.
 - Zide currently routes zero-param `CSI s` to save-cursor when `?69` is enabled.
 - Evidence:
-  - `reference_repos/terminals/xterm_snapshots/ctlseqs.txt:1584`
-  - `reference_repos/terminals/xterm_snapshots/ctlseqs.txt:1588`
-  - `reference_repos/terminals/ghostty/src/terminal/stream.zig:1736`
+  - `dev_references/terminals/xterm_snapshots/ctlseqs.txt:1584`
+  - `dev_references/terminals/xterm_snapshots/ctlseqs.txt:1588`
+  - `dev_references/terminals/ghostty/src/terminal/stream.zig:1736`
   - `src/terminal/protocol/csi.zig:167`
 
 2. `DECSTBM` cursor-home semantics differ (DECOM interaction)
 - Ghostty/xterm-family behavior homes to display/home semantics via cursor-pos logic.
 - Zide currently forces cursor to `top,leftBoundary` unconditionally in `setScrollRegion`.
 - Evidence:
-  - `reference_repos/terminals/ghostty/src/terminal/Terminal.zig:1354`
+  - `dev_references/terminals/ghostty/src/terminal/Terminal.zig:1354`
   - `src/terminal/model/screen/screen.zig:745`
 
 3. Equal bounds acceptance (`top==bottom`, `left==right`)
 - Ghostty rejects invalid/equal bounds.
 - Zide currently accepts `top <= bottom` and `left <= right`.
 - Evidence:
-  - `reference_repos/terminals/ghostty/src/terminal/Terminal.zig:1357`
-  - `reference_repos/terminals/ghostty/src/terminal/Terminal.zig:1371`
+  - `dev_references/terminals/ghostty/src/terminal/Terminal.zig:1357`
+  - `dev_references/terminals/ghostty/src/terminal/Terminal.zig:1371`
   - `src/terminal/protocol/csi.zig:161`
   - `src/terminal/protocol/csi.zig:174`
 
@@ -37,7 +37,7 @@ Method: Parallel subsystem audit (VT CSI/private modes, kitty graphics, keyboard
 - Ghostty enforces single param for DECRQM.
 - Zide reads first param and ignores extras.
 - Evidence:
-  - `reference_repos/terminals/ghostty/src/terminal/stream.zig:1600`
+  - `dev_references/terminals/ghostty/src/terminal/stream.zig:1600`
   - `src/terminal/protocol/csi.zig:268`
 
 ## Kitty Graphics (kitty + ghostty)
@@ -48,16 +48,16 @@ Method: Parallel subsystem audit (VT CSI/private modes, kitty graphics, keyboard
 - Kitty/ghostty suppress success reply for delete.
 - Zide currently emits `OK` after delete action.
 - Evidence:
-  - `reference_repos/terminals/ghostty/src/terminal/kitty/graphics_exec.zig:291`
-  - `reference_repos/terminals/kitty/kitty/graphics.c:796`
+  - `dev_references/terminals/ghostty/src/terminal/kitty/graphics_exec.zig:291`
+  - `dev_references/terminals/kitty/kitty/graphics.c:796`
   - `src/terminal/kitty/graphics.zig:124`
 
 2. Unknown delete selectors
 - Kitty/ghostty treat unknown selectors as invalid.
 - Zide currently no-ops unsupported selector and reports success (existing fixture lock).
 - Evidence:
-  - `reference_repos/terminals/kitty/kitty/parse-graphics-command.h:185`
-  - `reference_repos/terminals/ghostty/src/terminal/kitty/graphics_command.zig:954`
+  - `dev_references/terminals/kitty/kitty/parse-graphics-command.h:185`
+  - `dev_references/terminals/ghostty/src/terminal/kitty/graphics_command.zig:954`
   - `src/terminal/kitty/graphics.zig:1534`
   - `fixtures/terminal/kitty_delete_unsupported_selector_noop.vt`
 
@@ -65,7 +65,7 @@ Method: Parallel subsystem audit (VT CSI/private modes, kitty graphics, keyboard
 - Kitty allows `P` without `Q` (default parent placement), and depth limit differs.
 - Zide currently requires both `P` and `Q`; depth threshold differs from kitty.
 - Evidence:
-  - `reference_repos/terminals/kitty/kitty/graphics.c:1084`
+  - `dev_references/terminals/kitty/kitty/graphics.c:1084`
   - `src/terminal/kitty/graphics.zig:547`
   - `src/terminal/kitty/graphics.zig:68`
 
@@ -73,7 +73,7 @@ Method: Parallel subsystem audit (VT CSI/private modes, kitty graphics, keyboard
 - Ghostty expects no reply when query lacks both `i/I`.
 - Zide currently replies `EINVAL`.
 - Evidence:
-  - `reference_repos/terminals/ghostty/src/terminal/kitty/graphics_exec.zig:536`
+  - `dev_references/terminals/ghostty/src/terminal/kitty/graphics_exec.zig:536`
   - `src/terminal_kitty_reply_tests.zig:73`
 
 ## Keyboard / CSI-u (kitty + foot + ghostty)
@@ -84,24 +84,24 @@ Method: Parallel subsystem audit (VT CSI/private modes, kitty graphics, keyboard
 - Ghostty/foot suppress associated text on release.
 - Zide currently emits associated text field on release.
 - Evidence:
-  - `reference_repos/terminals/ghostty/src/input/key_encode.zig:279`
-  - `reference_repos/terminals/foot/input.c:1327`
+  - `dev_references/terminals/ghostty/src/input/key_encode.zig:279`
+  - `dev_references/terminals/foot/input.c:1327`
   - `src/terminal/input/input.zig:361`
 
 2. `embed_text` limited to single codepoint
 - Kitty/foot support multi-codepoint associated text fields.
 - Zide currently serializes one codepoint.
 - Evidence:
-  - `reference_repos/terminals/kitty/kitty/key_encoding.c:84`
-  - `reference_repos/terminals/foot/input.c:1515`
+  - `dev_references/terminals/kitty/kitty/key_encoding.c:84`
+  - `dev_references/terminals/foot/input.c:1515`
   - `src/terminal/input/input.zig:364`
 
 3. Alternate key serialization is shift-gated
 - Kitty/foot can emit alternate without requiring shifted variant.
 - Zide currently gate-checks alternate on shift path.
 - Evidence:
-  - `reference_repos/terminals/kitty/kitty/key_encoding.c:56`
-  - `reference_repos/terminals/foot/input.c:1488`
+  - `dev_references/terminals/kitty/kitty/key_encoding.c:56`
+  - `dev_references/terminals/foot/input.c:1488`
   - `src/terminal/input/input.zig:335`
 
 ## Merged Backlog (Combined Todos)

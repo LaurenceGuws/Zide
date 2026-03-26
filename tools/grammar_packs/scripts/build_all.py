@@ -160,7 +160,7 @@ def main() -> int:
 
     repo_root = root.parent.parent
     syntax_out = repo_root / "assets" / "syntax" / "generated.lua"
-    filetype_lua = repo_root / "reference_repos" / "editors" / "neovim" / "runtime" / "lua" / "vim" / "filetype.lua"
+    filetype_lua = repo_root / "dev_references" / "editors" / "neovim" / "runtime" / "lua" / "vim" / "filetype.lua"
     if filetype_lua.is_file() and parsers_path.is_file():
         subprocess.check_call(
             [

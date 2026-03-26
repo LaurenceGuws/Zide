@@ -1,7 +1,7 @@
 # Terminal Protocol Accuracy Progress
 
 Date started: 2026-02-23
-Source review: terminal protocol/code audit against `reference_repos/terminals/*` quality seeds
+Source review: terminal protocol/code audit against `dev_references/terminals/*` quality seeds
 Owner: agent
 
 ## Purpose

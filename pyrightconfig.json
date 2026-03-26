@@ -2,7 +2,7 @@
   "exclude": [
     "**/__pycache__",
     "node_modules",
-    "reference_repos",
+    "dev_references",
     "tools/grammar_packs/work",
     "vendor",
     "zig-out",

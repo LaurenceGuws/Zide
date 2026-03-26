@@ -8,7 +8,7 @@ local PRESET_CONTEXTS = {
 		"zig:zig:src/main.zig",
 		"lua:lua:assets/themes/init.lua",
 		"markdown:markdown:docs/todo/editor/theme_import.md",
-		"vimdoc:help:reference_repos/editors/neovim/runtime/doc/treesitter.txt",
+		"vimdoc:help:dev_references/editors/neovim/runtime/doc/treesitter.txt",
 	},
 }
 

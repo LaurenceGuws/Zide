@@ -120,7 +120,7 @@ The renderer should not reinterpret VT/widget dirtiness heuristics into present
 ownership. Ghostty is a good contrast here: it keeps coarse `false/partial/full`
 dirty state and row-local dirty markers inside render-state ownership rather
 than treating present as the source of truth
-([render.zig](../../../../reference_repos/terminals/ghostty/src/terminal/render.zig)).
+([render.zig](../../../../dev_references/terminals/ghostty/src/terminal/render.zig)).
 
 ### Risk: adopting the existing offscreen experiment as the design
 
@@ -152,11 +152,11 @@ Kitty's `indirect_output` state is a useful signal here:
 - `texture_id`
 - `framebuffer_id`
 
-in [state.h](../../../../reference_repos/terminals/kitty/kitty/state.h),
+in [state.h](../../../../dev_references/terminals/kitty/kitty/state.h),
 with lifecycle in
-[state.c](../../../../reference_repos/terminals/kitty/kitty/state.c)
+[state.c](../../../../dev_references/terminals/kitty/kitty/state.c)
 and output binding in
-[gl.c](../../../../reference_repos/terminals/kitty/kitty/gl.c).
+[gl.c](../../../../dev_references/terminals/kitty/kitty/gl.c).
 The main takeaway is explicit output-target ownership, not Kitty-specific GL
 details.
 
@@ -168,7 +168,7 @@ Foot is useful here even though it is not using the same GPU path. It:
 - applies current damage narrowly
 - submits explicit dirty rectangles with `wl_surface_damage_buffer()`
 
-in [render.c](../../../../reference_repos/terminals/foot/render.c).
+in [render.c](../../../../dev_references/terminals/foot/render.c).
 
 The Zide equivalent is:
 
@@ -180,7 +180,7 @@ The Zide equivalent is:
 Ghostty's coarse `Dirty.false / partial / full` split is a good reminder that
 full invalidation should be explicit and rare, not an accidental side effect of
 presentation uncertainty
-([render.zig](../../../../reference_repos/terminals/ghostty/src/terminal/render.zig)).
+([render.zig](../../../../dev_references/terminals/ghostty/src/terminal/render.zig)).
 
 ## Recommendation Criteria
 

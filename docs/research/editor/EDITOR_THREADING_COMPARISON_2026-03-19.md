@@ -65,7 +65,7 @@ frame path.
 
 Relevant file:
 
-- `reference_repos/editors/neovim/runtime/lua/vim/treesitter/highlighter.lua`
+- `dev_references/editors/neovim/runtime/lua/vim/treesitter/highlighter.lua`
 
 What matters:
 
@@ -91,10 +91,10 @@ precompute logic.
 
 Relevant files:
 
-- `reference_repos/editors/neovide/src/main.rs`
-- `reference_repos/editors/neovide/src/bridge/mod.rs`
-- `reference_repos/editors/neovide/src/bridge/ui_commands.rs`
-- `reference_repos/editors/neovide/src/editor/mod.rs`
+- `dev_references/editors/neovide/src/main.rs`
+- `dev_references/editors/neovide/src/bridge/mod.rs`
+- `dev_references/editors/neovide/src/bridge/ui_commands.rs`
+- `dev_references/editors/neovide/src/editor/mod.rs`
 
 What matters:
 
@@ -123,9 +123,9 @@ ready-to-consume results to the UI path.
 
 Relevant files:
 
-- `reference_repos/editors/notepad-plus-plus/scintilla/doc/ScintillaUsage.html`
-- `reference_repos/editors/notepad-plus-plus/scintilla/src/Editor.cxx`
-- `reference_repos/editors/notepad-plus-plus/scintilla/call/ScintillaCall.cxx`
+- `dev_references/editors/notepad-plus-plus/scintilla/doc/ScintillaUsage.html`
+- `dev_references/editors/notepad-plus-plus/scintilla/src/Editor.cxx`
+- `dev_references/editors/notepad-plus-plus/scintilla/call/ScintillaCall.cxx`
 
 What matters:
 

@@ -14,14 +14,14 @@ repo-structure cleanup lane. It focuses on:
 
 Reference baselines used:
 
-- `reference_repos/terminals/ghostty/include/ghostty/vt.h`
-- `reference_repos/terminals/ghostty/src/terminal/Terminal.zig`
-- `reference_repos/terminals/ghostty/src/terminal/Screen.zig`
-- `reference_repos/terminals/ghostty/src/input/key_encode.zig`
-- `reference_repos/terminals/kitty/kitty/vt-parser.c`
-- `reference_repos/terminals/kitty/kitty/screen.c`
-- `reference_repos/terminals/foot/vt.c`
-- `reference_repos/terminals/foot/terminal.c`
+- `dev_references/terminals/ghostty/include/ghostty/vt.h`
+- `dev_references/terminals/ghostty/src/terminal/Terminal.zig`
+- `dev_references/terminals/ghostty/src/terminal/Screen.zig`
+- `dev_references/terminals/ghostty/src/input/key_encode.zig`
+- `dev_references/terminals/kitty/kitty/vt-parser.c`
+- `dev_references/terminals/kitty/kitty/screen.c`
+- `dev_references/terminals/foot/vt.c`
+- `dev_references/terminals/foot/terminal.c`
 
 ## Main Conclusion
 
@@ -56,8 +56,8 @@ Nuance after the recent FFI/core work:
 
 Ghostty's center is:
 
-- `reference_repos/terminals/ghostty/src/terminal/Terminal.zig`
-- `reference_repos/terminals/ghostty/src/terminal/Screen.zig`
+- `dev_references/terminals/ghostty/src/terminal/Terminal.zig`
+- `dev_references/terminals/ghostty/src/terminal/Screen.zig`
 
 That layer owns:
 
@@ -73,7 +73,7 @@ It reads as a terminal emulator, not as a host session wrapper.
 
 ### 2. Input encoding is a peer subsystem
 
-`reference_repos/terminals/ghostty/src/input/key_encode.zig` is clearly
+`dev_references/terminals/ghostty/src/input/key_encode.zig` is clearly
 separate from renderer and session/runtime concerns. It consumes terminal mode
 state but is not structurally owned by a session object.
 

@@ -36,7 +36,7 @@ not the best source of truth for Win32 non-client behavior.
 
 Primary local reference:
 
-- `reference_repos/terminals/windows_terminal/src/cascadia/WindowsTerminal/NonClientIslandWindow.cpp`
+- `dev_references/terminals/windows_terminal/src/cascadia/WindowsTerminal/NonClientIslandWindow.cpp`
 
 ### Strong points
 
@@ -76,10 +76,10 @@ Primary local reference:
 
 Primary local references:
 
-- `reference_repos/terminals/wezterm/docs/config/lua/config/window_decorations.md`
-- `reference_repos/terminals/wezterm/docs/config/lua/config/integrated_title_button_style.md`
-- `reference_repos/terminals/wezterm/docs/config/lua/config/win32_system_backdrop.md`
-- `reference_repos/terminals/wezterm/window/src/os/windows/window.rs`
+- `dev_references/terminals/wezterm/docs/config/lua/config/window_decorations.md`
+- `dev_references/terminals/wezterm/docs/config/lua/config/integrated_title_button_style.md`
+- `dev_references/terminals/wezterm/docs/config/lua/config/win32_system_backdrop.md`
+- `dev_references/terminals/wezterm/window/src/os/windows/window.rs`
 
 ### Strong points
 
@@ -123,8 +123,8 @@ Primary local references:
 
 Primary local references:
 
-- `reference_repos/terminals/ghostty/src/config/Config.zig`
-- `reference_repos/terminals/ghostty/src/apprt/gtk/class/window.zig`
+- `dev_references/terminals/ghostty/src/config/Config.zig`
+- `dev_references/terminals/ghostty/src/apprt/gtk/class/window.zig`
 
 ### Strong points
 
@@ -179,8 +179,8 @@ VSCodium is still useful, but only as a secondary reference.
 
 Relevant local references:
 
-- `reference_repos/terminals/tabby/app/lib/window.ts`
-- `reference_repos/terminals/hyper/app/ui/window.ts`
+- `dev_references/terminals/tabby/app/lib/window.ts`
+- `dev_references/terminals/hyper/app/ui/window.ts`
 
 Electron is useful, but dangerous if used as the main authority for this lane.
 

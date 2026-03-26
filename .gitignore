@@ -18,7 +18,8 @@ build/
 /tools/docs_explorer/build/
 /dist/
 /releases/
-reference_repos
+/dev_references/*
+!/dev_references/README.md
 zide.log
 /.zide.lua
 

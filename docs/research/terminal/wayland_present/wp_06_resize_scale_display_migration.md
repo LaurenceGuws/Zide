@@ -19,9 +19,9 @@ Primary references:
 - `src/app/window_resize_event_frame.zig`
 - `src/app/terminal/deferred_terminal_resize_frame.zig`
 - `src/platform/window_metrics.zig`
-- `reference_repos/backends/sdl/src/video/wayland/SDL_waylandwindow.c`
-- `reference_repos/backends/sdl/src/video/wayland/SDL_waylandvideo.c`
-- `reference_repos/backends/sdl/src/video/SDL_egl.c`
+- `dev_references/backends/sdl/src/video/wayland/SDL_waylandwindow.c`
+- `dev_references/backends/sdl/src/video/wayland/SDL_waylandvideo.c`
+- `dev_references/backends/sdl/src/video/SDL_egl.c`
 - `docs/AGENT_HANDOFF.md`
 
 ## Key Findings
@@ -44,7 +44,7 @@ Primary references:
 
 3. SDL's Wayland backend actively reconfigures drawable geometry on scale and
    display changes.
-   In `reference_repos/backends/sdl/src/video/wayland/SDL_waylandwindow.c`,
+   In `dev_references/backends/sdl/src/video/wayland/SDL_waylandwindow.c`,
    SDL attaches `wp_viewporter` and fractional-scale listeners when available,
    calls `ConfigureWindowGeometry(window)` before EGL configuration to set the
    drawable backbuffer size, and calls it again on display changes and other
@@ -61,7 +61,7 @@ Primary references:
    - pacing budget / refresh characteristics
 
 5. SDL's Wayland/OpenGL path has explicit frame-callback behavior for OpenGL.
-   `reference_repos/backends/sdl/src/video/wayland/SDL_waylandwindow.c`
+   `dev_references/backends/sdl/src/video/wayland/SDL_waylandwindow.c`
    creates a dedicated frame-event queue for OpenGL windows specifically to
    avoid compositor deadlock when the window is not visible. That is a strong
    signal that pacing/visibility semantics are part of the backend contract, not

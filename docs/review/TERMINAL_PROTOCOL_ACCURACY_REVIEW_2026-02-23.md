@@ -1,7 +1,7 @@
 # Terminal Protocol Accuracy Review Snapshot
 
 Date started: 2026-02-23  
-Source review: terminal protocol/code audit against `reference_repos/terminals/*` quality seeds
+Source review: terminal protocol/code audit against `dev_references/terminals/*` quality seeds
 
 This file holds the detailed review/evidence body that used to live inline under
 `app_architecture/terminal/protocol/ACCURACY_PROGRESS.md`.
@@ -2075,7 +2075,7 @@ Sub-items (traceable parity slices):
 - `PA-08h` Remaining high-value CSI/private-mode gaps promoted from `PA-08a` (e.g. `DECSTR`, `DECSLRM`, `DECRQM` follow-ons)
 
 Priority notes:
-- Focus first on sequences observed in fixtures, vttest, and real apps in `reference_repos/terminals/*`.
+- Focus first on sequences observed in fixtures, vttest, and real apps in `dev_references/terminals/*`.
 - Prefer PTY-stubbed tests before expanding query/reply behavior.
 - Before marking any `PA-08*` item `done`, document:
   - exact sequence scope
@@ -2099,22 +2099,22 @@ Inventory snapshot (`PA-08a`, first pass) checklist (audit-traceable):
 
 | Area | Status | Priority | Tested | Zide refs (impl/tests) | Reference refs | Notes |
 |---|---|---|---|---|---|---|
-| Core cursor movement/positioning (`A/B/C/D/E/F/G/H/f/d`) | implemented | high | replay | `src/terminal/protocol/csi.zig`, `fixtures/terminal/*cursor*` | `reference_repos/terminals/xterm_snapshots/ctlseqs.txt`, `reference_repos/terminals/ghostty/src/terminal/stream.zig` | Strong baseline support for real TUIs |
-| Erase / insert-delete char+line (`J/K/@/P/X/L/M`) | implemented | high | replay | `src/terminal/protocol/csi.zig`, replay fixtures in `fixtures/terminal/` | `reference_repos/terminals/xterm_snapshots/ctlseqs.txt`, `reference_repos/terminals/ghostty/src/terminal/stream.zig` | Covered in existing fixtures |
-| Scroll region + region scroll (`r/S/T`) | implemented | high | replay | `src/terminal/protocol/csi.zig`, `fixtures/terminal/scroll_region_basic.*` | `reference_repos/terminals/xterm_snapshots/ctlseqs.txt`, `reference_repos/terminals/ghostty/src/terminal/stream.zig` | Includes scroll-region fixtures |
-| SGR + cursor style (`m/q`) | implemented | high | replay | `src/terminal/protocol/csi.zig`, `fixtures/terminal/*sgr*` | `reference_repos/terminals/xterm_snapshots/ctlseqs.txt`, `reference_repos/terminals/ghostty/src/terminal/stream.zig` | Basic/256/truecolor/underline-color present |
-| DSR/DA basic replies (`n/c`) | implemented | high | unit+PTY+replay | `src/terminal/protocol/csi.zig`, `src/terminal_csi_reply_tests.zig`, `fixtures/terminal/da_primary_query_reply.*`, `fixtures/terminal/dsr_*_query_reply.*` | `reference_repos/terminals/xterm_snapshots/ctlseqs.txt`, `reference_repos/terminals/foot/csi.c` | PTY-capture + replay reply tests added |
-| DEC private modes (alt screen/DECCKM/DECOM/DECAWM/bracketed paste/sync update/mouse 1000/1002/1003/1006) | implemented | high | replay+app | `src/terminal/protocol/csi.zig`, replay fixtures, app validation (nvim/lazygit) | `reference_repos/terminals/xterm_snapshots/ctlseqs.txt`, `reference_repos/terminals/ghostty/src/terminal/stream.zig`, `reference_repos/terminals/foot/csi.c` | Strong modern TUI coverage |
-| Kitty keyboard mode controls (`CSI >u/<u/=u/?u`) | implemented | high | replay+unit | `src/terminal/protocol/csi.zig`, `src/terminal/input/*`, encoder fixtures in `fixtures/terminal/encoder/` | `reference_repos/terminals/kitty` (protocol behavior), `reference_repos/terminals/ghostty/src/terminal/stream.zig` | Encoding parity still partial under `PA-05` |
-| Tabulation family beyond `TBC` | partial | medium | replay | `src/terminal/protocol/csi.zig` (`I/Z/g`), `src/terminal/model/screen/tabstops.zig`, `fixtures/terminal/csi_tab_cht_cbt_counts.*` | `reference_repos/terminals/xterm_snapshots/ctlseqs.txt`, `reference_repos/terminals/ghostty/src/terminal/stream.zig` | `CHT/CBT/TBC` now implemented; tab-stop report/edit breadth still partial |
-| Mode query/report breadth (`DECRQM` etc.) | partial | high | replay+unit+PTY (partial) | `src/terminal/protocol/csi.zig`, `src/terminal_csi_reply_tests.zig`, `src/terminal_focus_reporting_tests.zig`, `fixtures/terminal/decrqm_*` | `reference_repos/terminals/xterm_snapshots/ctlseqs.txt`, `reference_repos/terminals/foot/csi.c`, `reference_repos/terminals/ghostty/src/terminal/stream.zig`, `reference_repos/terminals/kitty/docs/clipboard.rst` | Private `DECRQM` replies implemented for common DEC modes + ANSI mode `20`; replay reply assertions now available |
-| Focus reporting mode (`?1004`) + event emission path | implemented (bounded) | high | replay+PTY | `src/terminal/protocol/csi.zig`, `src/terminal/core/terminal_session.zig`, `src/terminal_focus_reporting_tests.zig`, `fixtures/terminal/focus_reporting_mode_*` | `reference_repos/terminals/xterm_snapshots/ctlseqs.txt`, `reference_repos/terminals/foot/csi.c` | Implemented with window + pane source toggles; bounded semantics are test-locked |
-| Terminal reset conveniences (`DECSTR`, CSI soft reset breadth) | partial | medium | replay + PTY | `DECSTR` implemented/tested (`src/terminal/protocol/csi.zig`, `src/terminal_focus_reporting_tests.zig`, `fixtures/terminal/decstr_*`); broader reset-family breadth still pending | `reference_repos/terminals/xterm_snapshots/ctlseqs.txt`, `reference_repos/terminals/kitty/kitty/vt-parser.c`, `reference_repos/terminals/ghostty/src/terminal/stream.zig` | `DECSTR` slice active; broader CSI reset-family parity still tracked under `PA-08h` |
-| Left/right margins (`DECSLRM`) + rectangular semantics | partial | medium | replay+PTY | `src/terminal/protocol/csi.zig`, `src/terminal/model/screen/screen.zig`, `src/terminal_focus_reporting_tests.zig`, `fixtures/terminal/decslrm_*` | `reference_repos/terminals/xterm_snapshots/ctlseqs.txt`, `reference_repos/terminals/ghostty/src/terminal/stream.zig`, `reference_repos/terminals/ghostty/src/terminal/Terminal.zig` | core `DECSLRM` behavior implemented and heavily fixture-covered; advanced rectangular breadth remains deferred |
-| Alternate mouse encodings (`1005`, `1015`) | deferred | low/medium | replay (query policy) | `src/terminal/protocol/csi.zig`, `src/terminal/input/mouse_report.zig`, `fixtures/terminal/decrqm_pm_policy_matrix_reply.*` | `reference_repos/terminals/xterm_snapshots/ctlseqs.txt`, `reference_repos/terminals/foot/csi.c` | explicit strategic non-support (`DECRQM Pm=4`); revisit on concrete app compatibility signal |
-| Xterm window ops (`CSI ... t`) | partial | low/medium | PTY + replay | `src/terminal/protocol/csi.zig`, `src/terminal_focus_reporting_tests.zig`, `fixtures/terminal/csi_window_ops_14t_query_reply.*`, `fixtures/terminal/csi_window_ops_16t_query_reply.*`, `fixtures/terminal/csi_window_ops_18t_query_reply.*`, `fixtures/terminal/csi_window_ops_19t_query_reply.*` | `reference_repos/terminals/xterm_snapshots/ctlseqs.txt` | bounded support: `CSI 14 t` (text-area pixels), `CSI 16 t` (cell pixels), `CSI 18 t` (text area chars), `CSI 19 t` (screen chars); broader `t` family still pending |
-| Printer/media/status extensions | deferred | low | no | no Zide support | `reference_repos/terminals/xterm_snapshots/ctlseqs.txt` | Explicit out-of-scope defer for current product/parity phase |
-| Legacy/rare tab-stop report/edit variants | deferred | low | replay | current tab support in `src/terminal/protocol/csi.zig`, `src/terminal/model/screen/tabstops.zig`, `fixtures/terminal/csi_tab_ctc_legacy_variants_deferred_noop.*` | `reference_repos/terminals/xterm_snapshots/ctlseqs.txt` | Explicitly defer-lock representative `CSI Ps W` variants as no-op until app demand appears |
+| Core cursor movement/positioning (`A/B/C/D/E/F/G/H/f/d`) | implemented | high | replay | `src/terminal/protocol/csi.zig`, `fixtures/terminal/*cursor*` | `dev_references/terminals/xterm_snapshots/ctlseqs.txt`, `dev_references/terminals/ghostty/src/terminal/stream.zig` | Strong baseline support for real TUIs |
+| Erase / insert-delete char+line (`J/K/@/P/X/L/M`) | implemented | high | replay | `src/terminal/protocol/csi.zig`, replay fixtures in `fixtures/terminal/` | `dev_references/terminals/xterm_snapshots/ctlseqs.txt`, `dev_references/terminals/ghostty/src/terminal/stream.zig` | Covered in existing fixtures |
+| Scroll region + region scroll (`r/S/T`) | implemented | high | replay | `src/terminal/protocol/csi.zig`, `fixtures/terminal/scroll_region_basic.*` | `dev_references/terminals/xterm_snapshots/ctlseqs.txt`, `dev_references/terminals/ghostty/src/terminal/stream.zig` | Includes scroll-region fixtures |
+| SGR + cursor style (`m/q`) | implemented | high | replay | `src/terminal/protocol/csi.zig`, `fixtures/terminal/*sgr*` | `dev_references/terminals/xterm_snapshots/ctlseqs.txt`, `dev_references/terminals/ghostty/src/terminal/stream.zig` | Basic/256/truecolor/underline-color present |
+| DSR/DA basic replies (`n/c`) | implemented | high | unit+PTY+replay | `src/terminal/protocol/csi.zig`, `src/terminal_csi_reply_tests.zig`, `fixtures/terminal/da_primary_query_reply.*`, `fixtures/terminal/dsr_*_query_reply.*` | `dev_references/terminals/xterm_snapshots/ctlseqs.txt`, `dev_references/terminals/foot/csi.c` | PTY-capture + replay reply tests added |
+| DEC private modes (alt screen/DECCKM/DECOM/DECAWM/bracketed paste/sync update/mouse 1000/1002/1003/1006) | implemented | high | replay+app | `src/terminal/protocol/csi.zig`, replay fixtures, app validation (nvim/lazygit) | `dev_references/terminals/xterm_snapshots/ctlseqs.txt`, `dev_references/terminals/ghostty/src/terminal/stream.zig`, `dev_references/terminals/foot/csi.c` | Strong modern TUI coverage |
+| Kitty keyboard mode controls (`CSI >u/<u/=u/?u`) | implemented | high | replay+unit | `src/terminal/protocol/csi.zig`, `src/terminal/input/*`, encoder fixtures in `fixtures/terminal/encoder/` | `dev_references/terminals/kitty` (protocol behavior), `dev_references/terminals/ghostty/src/terminal/stream.zig` | Encoding parity still partial under `PA-05` |
+| Tabulation family beyond `TBC` | partial | medium | replay | `src/terminal/protocol/csi.zig` (`I/Z/g`), `src/terminal/model/screen/tabstops.zig`, `fixtures/terminal/csi_tab_cht_cbt_counts.*` | `dev_references/terminals/xterm_snapshots/ctlseqs.txt`, `dev_references/terminals/ghostty/src/terminal/stream.zig` | `CHT/CBT/TBC` now implemented; tab-stop report/edit breadth still partial |
+| Mode query/report breadth (`DECRQM` etc.) | partial | high | replay+unit+PTY (partial) | `src/terminal/protocol/csi.zig`, `src/terminal_csi_reply_tests.zig`, `src/terminal_focus_reporting_tests.zig`, `fixtures/terminal/decrqm_*` | `dev_references/terminals/xterm_snapshots/ctlseqs.txt`, `dev_references/terminals/foot/csi.c`, `dev_references/terminals/ghostty/src/terminal/stream.zig`, `dev_references/terminals/kitty/docs/clipboard.rst` | Private `DECRQM` replies implemented for common DEC modes + ANSI mode `20`; replay reply assertions now available |
+| Focus reporting mode (`?1004`) + event emission path | implemented (bounded) | high | replay+PTY | `src/terminal/protocol/csi.zig`, `src/terminal/core/terminal_session.zig`, `src/terminal_focus_reporting_tests.zig`, `fixtures/terminal/focus_reporting_mode_*` | `dev_references/terminals/xterm_snapshots/ctlseqs.txt`, `dev_references/terminals/foot/csi.c` | Implemented with window + pane source toggles; bounded semantics are test-locked |
+| Terminal reset conveniences (`DECSTR`, CSI soft reset breadth) | partial | medium | replay + PTY | `DECSTR` implemented/tested (`src/terminal/protocol/csi.zig`, `src/terminal_focus_reporting_tests.zig`, `fixtures/terminal/decstr_*`); broader reset-family breadth still pending | `dev_references/terminals/xterm_snapshots/ctlseqs.txt`, `dev_references/terminals/kitty/kitty/vt-parser.c`, `dev_references/terminals/ghostty/src/terminal/stream.zig` | `DECSTR` slice active; broader CSI reset-family parity still tracked under `PA-08h` |
+| Left/right margins (`DECSLRM`) + rectangular semantics | partial | medium | replay+PTY | `src/terminal/protocol/csi.zig`, `src/terminal/model/screen/screen.zig`, `src/terminal_focus_reporting_tests.zig`, `fixtures/terminal/decslrm_*` | `dev_references/terminals/xterm_snapshots/ctlseqs.txt`, `dev_references/terminals/ghostty/src/terminal/stream.zig`, `dev_references/terminals/ghostty/src/terminal/Terminal.zig` | core `DECSLRM` behavior implemented and heavily fixture-covered; advanced rectangular breadth remains deferred |
+| Alternate mouse encodings (`1005`, `1015`) | deferred | low/medium | replay (query policy) | `src/terminal/protocol/csi.zig`, `src/terminal/input/mouse_report.zig`, `fixtures/terminal/decrqm_pm_policy_matrix_reply.*` | `dev_references/terminals/xterm_snapshots/ctlseqs.txt`, `dev_references/terminals/foot/csi.c` | explicit strategic non-support (`DECRQM Pm=4`); revisit on concrete app compatibility signal |
+| Xterm window ops (`CSI ... t`) | partial | low/medium | PTY + replay | `src/terminal/protocol/csi.zig`, `src/terminal_focus_reporting_tests.zig`, `fixtures/terminal/csi_window_ops_14t_query_reply.*`, `fixtures/terminal/csi_window_ops_16t_query_reply.*`, `fixtures/terminal/csi_window_ops_18t_query_reply.*`, `fixtures/terminal/csi_window_ops_19t_query_reply.*` | `dev_references/terminals/xterm_snapshots/ctlseqs.txt` | bounded support: `CSI 14 t` (text-area pixels), `CSI 16 t` (cell pixels), `CSI 18 t` (text area chars), `CSI 19 t` (screen chars); broader `t` family still pending |
+| Printer/media/status extensions | deferred | low | no | no Zide support | `dev_references/terminals/xterm_snapshots/ctlseqs.txt` | Explicit out-of-scope defer for current product/parity phase |
+| Legacy/rare tab-stop report/edit variants | deferred | low | replay | current tab support in `src/terminal/protocol/csi.zig`, `src/terminal/model/screen/tabstops.zig`, `fixtures/terminal/csi_tab_ctc_legacy_variants_deferred_noop.*` | `dev_references/terminals/xterm_snapshots/ctlseqs.txt` | Explicitly defer-lock representative `CSI Ps W` variants as no-op until app demand appears |
 
 Suggested `PA-08d` promotion candidates (first pass):
 1. `?1004` focus reporting mode + event emission (real TUI impact)
@@ -2161,13 +2161,13 @@ Implemented (increment 2 / `PA-08b` DCS/APC gap inventory + implement/defer poli
 
 | Family | Sequence scope | Zide status | Reference signal | Decision | Done criteria |
 |---|---|---|---|---|---|
-| DCS XTGETTCAP | `DCS + q` termcap query | implemented (minimal) | foot/rio docs list/support XTGETTCAP (`reference_repos/terminals/rio/docs/docs/escape-sequence-support.md`) | keep + expand on demand | already test-locked via PTY + replay; extend only if missing caps are demanded by apps |
-| DCS DECRQSS/DECRPSS | request/report setting strings | not implemented | xterm control-sequence family (`reference_repos/terminals/xterm_snapshots/ctlseqs.txt`) | defer | promote only with concrete app demand; add PTY reply tests before implementation |
-| DCS sync-update legacy form | `DCS = s` (`=1s` / `=2s`) | implemented (compat alias) | rio/alacritty docs mark this rejected in favor of `CSI ? 2026 h/l` (`reference_repos/terminals/rio/docs/docs/escape-sequence-support.md`, `reference_repos/terminals/alacritty/docs/escape_support.md`) | implemented (bounded) | map `=1s`/`=2s` to existing sync-updates mode state, ignore other values, keep `CSI ?2026` as primary path |
-| DCS sixel/DRCS graphics | sixel payload families | not implemented | rio advertises sixel support; broad surface (`reference_repos/terminals/rio/docs/docs/features/sixel-protocol.md`) | defer | separate large-scope graphics project; not in PA-08 near-term scope |
+| DCS XTGETTCAP | `DCS + q` termcap query | implemented (minimal) | foot/rio docs list/support XTGETTCAP (`dev_references/terminals/rio/docs/docs/escape-sequence-support.md`) | keep + expand on demand | already test-locked via PTY + replay; extend only if missing caps are demanded by apps |
+| DCS DECRQSS/DECRPSS | request/report setting strings | not implemented | xterm control-sequence family (`dev_references/terminals/xterm_snapshots/ctlseqs.txt`) | defer | promote only with concrete app demand; add PTY reply tests before implementation |
+| DCS sync-update legacy form | `DCS = s` (`=1s` / `=2s`) | implemented (compat alias) | rio/alacritty docs mark this rejected in favor of `CSI ? 2026 h/l` (`dev_references/terminals/rio/docs/docs/escape-sequence-support.md`, `dev_references/terminals/alacritty/docs/escape_support.md`) | implemented (bounded) | map `=1s`/`=2s` to existing sync-updates mode state, ignore other values, keep `CSI ?2026` as primary path |
+| DCS sixel/DRCS graphics | sixel payload families | not implemented | rio advertises sixel support; broad surface (`dev_references/terminals/rio/docs/docs/features/sixel-protocol.md`) | defer | separate large-scope graphics project; not in PA-08 near-term scope |
 | APC kitty graphics | `APC G ... ST` | implemented (partial protocol surface under PA-04) | kitty/ghostty convention | keep expanding under PA-04 | continue PA-04 command/error/reply conformance work |
 | APC non-kitty payloads | generic APC app commands | ignored | parser capability exists in reference parsers (rio/copa) but no strong cross-terminal standard behavior | strategic non-support for now | keep ignore-by-default; only promote with explicit product need |
-| PM/SOS strings | privacy/message strings | not implemented/ignored | parser capabilities exist in rio/copa (`reference_repos/terminals/rio/copa/src/lib.rs`) | strategic non-support for now | keep ignored unless compatibility evidence appears |
+| PM/SOS strings | privacy/message strings | not implemented/ignored | parser capabilities exist in rio/copa (`dev_references/terminals/rio/copa/src/lib.rs`) | strategic non-support for now | keep ignored unless compatibility evidence appears |
 
 Verification:
 - source audit + reference doc audit only (inventory increment)
@@ -2424,8 +2424,8 @@ Implemented (increment 6 / `PA-08e` `DECRQM` query coverage expansion + ANSI mod
 - Added minimal ANSI `DECRQM` support for mode `20` (newline mode) with set/reset reporting (`CSI 20 ; Pm $ y`).
 - Broadened PTY-capture `DECRQM` private-mode coverage to include more DEC modes (`?3`, `?5`, `?6`, `?47`, `?1047`, `?1049`, `?1002`, `?1003`) and added an explicit unsupported ANSI `DECRQM` integration test.
 - Convention decision (implemented): unsupported ANSI `DECRQM` queries return `Pm=0` (`not recognized`), following local reference terminal sources:
-  - xterm docs (`reference_repos/terminals/xterm_snapshots/ctlseqs.txt`)
-  - foot implementation/docs (`reference_repos/terminals/foot/csi.c`, `reference_repos/terminals/foot/doc/foot-ctlseqs.7.scd`)
+  - xterm docs (`dev_references/terminals/xterm_snapshots/ctlseqs.txt`)
+  - foot implementation/docs (`dev_references/terminals/foot/csi.c`, `dev_references/terminals/foot/doc/foot-ctlseqs.7.scd`)
 - Current ANSI `DECRQM` scope is intentionally minimal:
   - implemented: mode `20` (newline mode)
   - unsupported ANSI modes: reply with `Pm=0` (not recognized) rather than silent ignore
@@ -2565,7 +2565,7 @@ Planned work (decomposition / `PA-08f` CSI parser intermediate-byte parity):
   - (historical) `DECRQM` support previously depended on final-byte dispatch without exact intermediate matching.
 - Why parity work requires this:
   - xterm control sequences define distinct CSI families that differ only by intermediate bytes (e.g. `CSI Ps $ p` `DECRQM`, `CSI ! p` `DECSTR`, `CSI ? Ps $ p` DEC-private `DECRQM`).
-  - kitty and ghostty both parse CSI intermediates and branch on them; ghostty explicitly logs/ignores unimplemented sequences by final+intermediate combinations rather than conflating by final byte (`reference_repos/terminals/ghostty/src/terminal/stream.zig`, `reference_repos/terminals/kitty/kitty/vt-parser.c`).
+  - kitty and ghostty both parse CSI intermediates and branch on them; ghostty explicitly logs/ignores unimplemented sequences by final+intermediate combinations rather than conflating by final byte (`dev_references/terminals/ghostty/src/terminal/stream.zig`, `dev_references/terminals/kitty/kitty/vt-parser.c`).
 - `PA-08f` done looks like:
   - `CsiAction` captures CSI intermediates (at least enough bytes/range for parity-critical sequences) without regressing existing parser behavior.
   - CSI dispatch in `src/terminal/protocol/csi.zig` uses intermediates for parity-critical families (`DECRQM`, `DECSTR`, and future promoted `$`/`!` forms) instead of final-byte shortcuts.
@@ -2591,10 +2591,10 @@ Planned work (decomposition / `PA-08f` CSI parser intermediate-byte parity):
 
 Planned work (decomposition / `PA-08g` `DECRQM` / `DECRPM` parity breadth + reply policy):
 - Reference convention summary (anchors for parity decisions):
-  - xterm defines `DECRPM` reply values `Pm=0..4` (`not recognized`, `set`, `reset`, `permanently set`, `permanently reset`) for both ANSI and DEC-private `DECRQM` (`reference_repos/terminals/xterm_snapshots/ctlseqs.txt`).
-  - foot implements broad `DECRQM` coverage and uses all `DECRPM` statuses, including permanent states for unsupported/fixed modes such as mouse encodings and other features (`reference_repos/terminals/foot/csi.c`).
-  - kitty protocol docs (clipboard extension) explicitly rely on `DECRQM` for feature detection and note that `0` or `4` can indicate unsupported mode (`CSI ? 5522 $ p` -> `CSI ? 5522 ; Ps $ y`) (`reference_repos/terminals/kitty/docs/clipboard.rst`).
-  - ghostty parses `DECRQM` with CSI intermediate-aware dispatch and routes unknown modes through a dedicated path (`request_mode_unknown`) rather than overloading other CSI `p` families (`reference_repos/terminals/ghostty/src/terminal/stream.zig`, `reference_repos/terminals/ghostty/src/terminal/modes.zig`).
+  - xterm defines `DECRPM` reply values `Pm=0..4` (`not recognized`, `set`, `reset`, `permanently set`, `permanently reset`) for both ANSI and DEC-private `DECRQM` (`dev_references/terminals/xterm_snapshots/ctlseqs.txt`).
+  - foot implements broad `DECRQM` coverage and uses all `DECRPM` statuses, including permanent states for unsupported/fixed modes such as mouse encodings and other features (`dev_references/terminals/foot/csi.c`).
+  - kitty protocol docs (clipboard extension) explicitly rely on `DECRQM` for feature detection and note that `0` or `4` can indicate unsupported mode (`CSI ? 5522 $ p` -> `CSI ? 5522 ; Ps $ y`) (`dev_references/terminals/kitty/docs/clipboard.rst`).
+  - ghostty parses `DECRQM` with CSI intermediate-aware dispatch and routes unknown modes through a dedicated path (`request_mode_unknown`) rather than overloading other CSI `p` families (`dev_references/terminals/ghostty/src/terminal/stream.zig`, `dev_references/terminals/ghostty/src/terminal/modes.zig`).
 - Current Zide state (partial milestone):
   - Implemented DEC-private `DECRQM` for a useful common subset and ANSI mode `20`.
   - Unsupported ANSI/DEC queries reply `Pm=0` (xterm/foot-compatible convention already locked by tests).
@@ -2696,7 +2696,7 @@ Current strategic non-support rows (`Pm=4`) are retained only where references a
 
 Notes:
 - Current Zide implemented set is sourced from `src/terminal/protocol/csi.zig` (`decrqmPrivateModeState`, `decrqmAnsiModeState`).
-- Reference candidate set is seeded primarily from `reference_repos/terminals/foot/csi.c` plus xterm docs and kitty clipboard docs (`?5522`).
+- Reference candidate set is seeded primarily from `dev_references/terminals/foot/csi.c` plus xterm docs and kitty clipboard docs (`?5522`).
 - Final `implement/defer` decisions for each non-implemented row should be recorded here before broadening `PA-08e` mode handling.
 - `?66` is now implemented and test-covered (`DECPAM`/`DECPNM` -> `DECRQM ?66`).
 - `PA-08g` 5-mode batch decision (2026-02-23, implementation-first, batch A):
@@ -2751,9 +2751,9 @@ Notes:
     - `PA-08h` alignment: `DECSTR` reset reply fixture now includes `?5522` (`fixtures/terminal/decstr_resets_modes_query_reply.*`)
 - `PA-08g` next dedicated implementation slice (docs-first, `?2048` in-band resize notifications):
   - Reference anchors:
-    - `foot` supports/query-reports mode `2048` (`reference_repos/terminals/foot/csi.c`); foot ctlseq docs list `2048` as in-band window resize notifications (`reference_repos/terminals/foot/doc/foot-ctlseqs.7.scd`)
-    - `ghostty` emits mode-2048 resize reports on resize when enabled and uses CSI `48;rows;cols;rows_px;cols_px t` (`reference_repos/terminals/ghostty/src/termio/Termio.zig`)
-    - `kitty` emits the same `CSI 48;rows;cols;rows_px;cols_px t` payload on resize (`reference_repos/terminals/kitty/kitty/window.py`)
+    - `foot` supports/query-reports mode `2048` (`dev_references/terminals/foot/csi.c`); foot ctlseq docs list `2048` as in-band window resize notifications (`dev_references/terminals/foot/doc/foot-ctlseqs.7.scd`)
+    - `ghostty` emits mode-2048 resize reports on resize when enabled and uses CSI `48;rows;cols;rows_px;cols_px t` (`dev_references/terminals/ghostty/src/termio/Termio.zig`)
+    - `kitty` emits the same `CSI 48;rows;cols;rows_px;cols_px t` payload on resize (`dev_references/terminals/kitty/kitty/window.py`)
   - Proposed Zide first-slice target (implementation, not reporting polish):
     - `DECRQM/DECSET/DECRST ?2048` returns real mode state (`Pm=1/2`)
     - when enabled, terminal sends in-band resize report to child on terminal resize using `CSI 48;rows;cols;rows_px;cols_px t`
@@ -2784,9 +2784,9 @@ Notes:
     - Keep current `rows_px/cols_px = 0` fallback when cell pixel size is unknown unless reference behavior or app compatibility demands a different policy.
 - `PA-08g` dedicated implementation slice (2026-02-23, `?2031` color-scheme notifications):
   - Reference anchors:
-    - `foot` supports/query-reports mode `2031` and replies to private DSR `?996n` with `CSI ? 997 ; {1|2} n` (`reference_repos/terminals/foot/csi.c`)
-    - `ghostty` supports mode `2031` and emits `CSI ? 997 ; {1|2} n` on color-scheme changes (`reference_repos/terminals/ghostty/src/Surface.zig`)
-    - `kitty` supports color preference notification mode `2031` and private DSR `?996n` handling (`reference_repos/terminals/kitty/kitty/modes.h`, `reference_repos/terminals/kitty/kitty/screen.c`)
+    - `foot` supports/query-reports mode `2031` and replies to private DSR `?996n` with `CSI ? 997 ; {1|2} n` (`dev_references/terminals/foot/csi.c`)
+    - `ghostty` supports mode `2031` and emits `CSI ? 997 ; {1|2} n` on color-scheme changes (`dev_references/terminals/ghostty/src/Surface.zig`)
+    - `kitty` supports color preference notification mode `2031` and private DSR `?996n` handling (`dev_references/terminals/kitty/kitty/modes.h`, `dev_references/terminals/kitty/kitty/screen.c`)
   - Implemented first slice:
     - `DECRQM/DECSET/DECRST ?2031` mode state (`Pm=1/2`)
     - private DSR `CSI ? 996 n` reply for current color-scheme preference (`CSI ? 997 ; 1 n` dark, `CSI ? 997 ; 2 n` light)
@@ -3109,9 +3109,9 @@ Notes:
 
 Planned work (decomposition / `PA-08h` first promoted CSI family: `DECSTR` soft terminal reset):
 - Reference anchors:
-  - xterm docs define `CSI ! p` as `DECSTR` (soft terminal reset), VT220+ (`reference_repos/terminals/xterm_snapshots/ctlseqs.txt`).
-  - kitty parses `DECSTR` as a distinct CSI family keyed by intermediates + final (`reference_repos/terminals/kitty/kitty/vt-parser.c`).
-  - ghostty routes intermediate-bearing CSI families distinctly (via intermediate-aware parsing/dispatch), which is the model we are moving toward with `PA-08f` (`reference_repos/terminals/ghostty/src/terminal/stream.zig`).
+  - xterm docs define `CSI ! p` as `DECSTR` (soft terminal reset), VT220+ (`dev_references/terminals/xterm_snapshots/ctlseqs.txt`).
+  - kitty parses `DECSTR` as a distinct CSI family keyed by intermediates + final (`dev_references/terminals/kitty/kitty/vt-parser.c`).
+  - ghostty routes intermediate-bearing CSI families distinctly (via intermediate-aware parsing/dispatch), which is the model we are moving toward with `PA-08f` (`dev_references/terminals/ghostty/src/terminal/stream.zig`).
 - Why this is a separate `PA-08h` slice (not just a parser follow-up):
   - `DECSTR` semantics are behavioral and reset-scoped; parser support alone is not sufficient.
   - Zide already has a hard reset path (`src/terminal/core/state_reset.zig`, `TerminalSession.resetState()`), and using it for `DECSTR` would be incorrect and destructive (clears screens/kitty images, etc.).
@@ -3169,7 +3169,7 @@ Planned work (decomposition / `PA-08h` first promoted CSI family: `DECSTR` soft 
   - exact metadata reset/preserve behavior across `DECSTR` (title reset vs cwd/clipboard/hyperlink preserve) is now replay-verified in Zide, but broader reference nuance across terminals is not fully audited yet
   - any reference-specific divergences in saved-state scope beyond Zide's current `CSI s/u` model
 - Explicit reference divergence / pending policy decision (do not treat as parity-complete yet):
-  - foot's `DECSTR` path (`reference_repos/terminals/foot/csi.c` -> `term_reset(term, false)` in `reference_repos/terminals/foot/terminal.c`) is materially broader than Zide's current slice:
+  - foot's `DECSTR` path (`dev_references/terminals/foot/csi.c` -> `term_reset(term, false)` in `dev_references/terminals/foot/terminal.c`) is materially broader than Zide's current slice:
     - exits alt-screen
     - resets title/app-id state
     - clears image/notification state

@@ -52,13 +52,13 @@ Historical reference notes:
 
 - Alacritty: frame-based damage tracker with per-line damage bounds and
   full-frame invalidation when needed
-  (`reference_repos/terminals/alacritty/alacritty/src/display/damage.rs`)
+  (`dev_references/terminals/alacritty/alacritty/src/display/damage.rs`)
 - Kitty: explicit dirty flags and full GPU reload paths for certain
   operations; overlays tracked separately
-  (`reference_repos/terminals/kitty/kitty/screen.c`)
+  (`dev_references/terminals/kitty/kitty/screen.c`)
 - WezTerm: rewrap/scrollback logic keeps stable row indices and uses per-line
   sequence numbers to decide updates
-  (`reference_repos/terminals/wezterm/term/src/screen.rs`)
+  (`dev_references/terminals/wezterm/term/src/screen.rs`)
 
 ## Current Follow-Up
 
@@ -113,7 +113,7 @@ ownership.
       instrumentation, the corruption tends to stop triggering
   - Codex reference check confirms the final assistant tail is flushed through a
     distinct completion path rather than the normal newline-gated incremental
-    path (`reference_repos/terminals/codex/.../streaming/controller.rs`,
+    path (`dev_references/terminals/codex/.../streaming/controller.rs`,
     `.../chatwidget.rs`).
   - Detailed Codex-side behavior already inspected locally:
     - normal streaming accumulates text and only emits completed lines once a
@@ -122,9 +122,9 @@ ownership.
     - on completion, Codex calls a separate flush/finalize path that drains the
       remaining buffered tail in one shot
     - relevant local references:
-      - `reference_repos/terminals/codex/codex-rs/tui_app_server/src/streaming/controller.rs`
-      - `reference_repos/terminals/codex/codex-rs/tui_app_server/src/chatwidget.rs`
-      - `reference_repos/terminals/codex/codex-rs/tui_app_server/src/markdown_stream.rs`
+      - `dev_references/terminals/codex/codex-rs/tui_app_server/src/streaming/controller.rs`
+      - `dev_references/terminals/codex/codex-rs/tui_app_server/src/chatwidget.rs`
+      - `dev_references/terminals/codex/codex-rs/tui_app_server/src/markdown_stream.rs`
   - Current Zide reduced-log captures still have one useful clue:
     - the interesting completion-tail burst is not a visible-history / scroll
       shift case

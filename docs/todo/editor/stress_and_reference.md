@@ -66,7 +66,7 @@ The next lane is:
 
 ## Reference Set
 
-Current local references already in scope under `reference_repos/editors/`:
+Current local references already in scope under `dev_references/editors/`:
 
 - `neovim`
 - `helix`

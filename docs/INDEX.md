@@ -84,6 +84,7 @@ Quick reading guide:
 - `docs/releases/v0.1.0-beta.4.md` — current beta checkpoint release notes.
 - `tests/README.md` — repo-wide test layout policy.
 - `app_architecture/BOOTSTRAP.md` — dependencies, bootstrap, build, run, test.
+- `dev_references/README.md` — local development reference corpus contract and setup entrypoint.
 - docs explorer repo — `https://github.com/LaurenceGuws/docs-explorer`
 - `scripts/open_docs_browser.sh` — local standalone docs-explorer launcher for this repo.
 - `tools/docs_browser/` — Zide-owned explorer config and docs index.

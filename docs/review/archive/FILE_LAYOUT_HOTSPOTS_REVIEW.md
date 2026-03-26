@@ -23,9 +23,9 @@ Evidence gathered from the current tree:
 - file-count and line-count passes over `src/app`, `src/terminal`, `src/ui`, `src/editor`, and `src/config`
 
 Reference comparison:
-- `reference_repos/terminals/ghostty`
-- `reference_repos/terminals/kitty`
-- `reference_repos/terminals/alacritty`
+- `dev_references/terminals/ghostty`
+- `dev_references/terminals/kitty`
+- `dev_references/terminals/alacritty`
 
 ## Executive Read
 

@@ -23,7 +23,7 @@ embedded/native constraints.
   binding and explicitly notes that the default framebuffer is not reliably
   zero across drivers; it queries the current binding at runtime instead of
   hard-coding assumptions. See
-  [Framebuffer.zig](../../../../reference_repos/terminals/ghostty/pkg/opengl/Framebuffer.zig).
+  [Framebuffer.zig](../../../../dev_references/terminals/ghostty/pkg/opengl/Framebuffer.zig).
 - That is a useful architectural signal even without reading the whole render
   path: Ghostty expects platform/driver framebuffer state to vary and isolates
   that variability behind an owned rendering abstraction.
@@ -37,16 +37,16 @@ embedded/native constraints.
   presentation discipline.
 - It tracks dirty regions directly in its render path and pushes those regions
   to the compositor with `wl_surface_damage_buffer(...)`. See
-  [render.c](../../../../reference_repos/terminals/foot/render.c).
+  [render.c](../../../../dev_references/terminals/foot/render.c).
 - It also has an explicit strategy for compositor buffer reuse and latency:
   when buffers are released later than ideal, it can pre-apply the previous
   frame's damage to the freed buffer in a worker path so the next frame starts
   from a correct base without waiting for a full redraw. See
-  [render_buffer_release_callback](../../../../reference_repos/terminals/foot/render.c).
+  [render_buffer_release_callback](../../../../dev_references/terminals/foot/render.c).
 - Foot integrates Wayland presentation timing explicitly through
   `wp_presentation` and tracks the compositor presentation clock. See
-  [wayland.h](../../../../reference_repos/terminals/foot/wayland.h)
-  and [wayland.c](../../../../reference_repos/terminals/foot/wayland.c).
+  [wayland.h](../../../../dev_references/terminals/foot/wayland.h)
+  and [wayland.c](../../../../dev_references/terminals/foot/wayland.c).
 - Foot's architecture is not “draw and hope swap semantics work out.” It is:
   - maintain authoritative buffer contents
   - maintain explicit damage
@@ -61,10 +61,10 @@ embedded/native constraints.
   than Zide currently does.
 - Its EGL path is explicit: choose EGL config, create EGL context/surface, make
   current, and swap through `eglSwapBuffers`. See
-  [egl_context.c](../../../../reference_repos/terminals/kitty/glfw/egl_context.c).
+  [egl_context.c](../../../../dev_references/terminals/kitty/glfw/egl_context.c).
 - Its Wayland path loads and owns `wl_egl_window_*` integration directly. See
-  [wl_init.c](../../../../reference_repos/terminals/kitty/glfw/wl_init.c)
-  and [wl_window.c](../../../../reference_repos/terminals/kitty/glfw/wl_window.c).
+  [wl_init.c](../../../../dev_references/terminals/kitty/glfw/wl_init.c)
+  and [wl_window.c](../../../../dev_references/terminals/kitty/glfw/wl_window.c).
 - Kitty is useful less because it demonstrates a specific offscreen-present
   trick and more because it shows a terminal willing to own the backend seam
   directly rather than trust a vague default-framebuffer contract.
@@ -79,10 +79,10 @@ embedded/native constraints.
 - Its window layer explicitly exposes a `pre_present_notify()` call, with
   documentation stating that on Wayland it is used to schedule frame callbacks
   and align redraw pacing with the compositor. See
-  [window.rs](../../../../reference_repos/terminals/wezterm/window/src/window.rs).
+  [window.rs](../../../../dev_references/terminals/wezterm/window/src/window.rs).
 - Its Wayland window layer also explicitly manages the Wayland EGL surface
   resize/scale lifecycle. See
-  [window.rs](../../../../reference_repos/terminals/wezterm/window/src/os/wayland/window.rs).
+  [window.rs](../../../../dev_references/terminals/wezterm/window/src/os/wayland/window.rs).
 - The key architectural lesson is that presentation is treated as a real
   protocol boundary with explicit notification/pacing hooks, not just “call
   swap when rendering is done.”
@@ -97,7 +97,7 @@ embedded/native constraints.
 - `Window::pre_present_notify()` is documented as the correct hook to call
   after drawing and before submitting the buffer, specifically so the windowing
   system can schedule and throttle redraw correctly on Wayland. See
-  [window.rs](../../../../reference_repos/terminals/rio/rio-window/src/window.rs).
+  [window.rs](../../../../dev_references/terminals/rio/rio-window/src/window.rs).
 - Rio is useful because it separates:
   - render work
   - present notification

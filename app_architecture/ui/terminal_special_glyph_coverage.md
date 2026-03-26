@@ -4,10 +4,10 @@ This is the canonical list of codepoints/ranges that reference terminals special
 through sprite/box rendering paths rather than normal font outlines.
 
 Sources:
-- `reference_repos/terminals/kitty/kitty/fonts.c:733`
-- `reference_repos/terminals/kitty/kitty/decorations.c:1538`
-- `reference_repos/terminals/ghostty/src/font/sprite/Face.zig:64`
-- `reference_repos/terminals/ghostty/src/font/sprite/draw/*.zig`
+- `dev_references/terminals/kitty/kitty/fonts.c:733`
+- `dev_references/terminals/kitty/kitty/decorations.c:1538`
+- `dev_references/terminals/ghostty/src/font/sprite/Face.zig:64`
+- `dev_references/terminals/ghostty/src/font/sprite/draw/*.zig`
 
 ## Shared (Kitty + Ghostty)
 - `U+2500..U+259F` (box drawing + block elements)
