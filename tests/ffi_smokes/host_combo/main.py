@@ -4,18 +4,18 @@ import ctypes
 import sys
 from pathlib import Path
 
-ROOT = Path(__file__).resolve().parents[2]
+ROOT = Path(__file__).resolve().parents[3]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-from examples.common.ffi_host_boot import (  # noqa: E402
+from tests.ffi_smokes.common.ffi_host_boot import (  # noqa: E402
     STATUS_OK,
     consume_terminal_events_once,
     consume_terminal_metadata_once,
     consume_terminal_publication_once,
     poll_terminal_then_editor_once,
 )
-from examples.terminal_ffi_smoke.main import (
+from tests.ffi_smokes.terminal.main import (
     CreateConfig,
     EVENT_TITLE_CHANGED,
     HandlePtr as TerminalHandlePtr,
@@ -27,7 +27,7 @@ from examples.terminal_ffi_smoke.main import (
     load_library as load_terminal_library,
     query_redraw_state,
 )
-from examples.editor_ffi_smoke.main import HandlePtr as EditorHandlePtr, StringBuffer, load_library as load_editor_library, to_buf, as_bytes
+from tests.ffi_smokes.editor.main import HandlePtr as EditorHandlePtr, StringBuffer, load_library as load_editor_library, to_buf, as_bytes
 
 
 def run_combo(terminal_lib_path: Path, editor_lib_path: Path) -> int:

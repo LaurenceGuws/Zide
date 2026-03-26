@@ -33,7 +33,7 @@ Text engine and editing semantics: buffer model, undo, selections, search, and f
   - Initial rope build now uses balanced chunked leaves for materially better large-file query latency.
   - Very large files can skip tree-sitter and fall back to lightweight syntax cues.
   - Editor FFI baseline exists, including range edits, undo grouping, multicaret accessors, and search/replace hooks.
-  - `examples/editor_ffi_smoke/` provides a Python ctypes smoke host.
+  - `tests/ffi_smokes/editor/` provides a Python ctypes smoke host.
 
 - [ ] `EP-02` Undo/redo model and batching rules
   - Adjacent inserts and deletes merge in rope history.

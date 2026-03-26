@@ -3,12 +3,12 @@ import argparse
 import sys
 from pathlib import Path
 
-ROOT = Path(__file__).resolve().parents[2]
+ROOT = Path(__file__).resolve().parents[3]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-from examples.editor_ffi_smoke.main import load_library as load_editor_library  # noqa: E402
-from examples.terminal_ffi_smoke.main import load_library as load_terminal_library  # noqa: E402
+from tests.ffi_smokes.editor.main import load_library as load_editor_library  # noqa: E402
+from tests.ffi_smokes.terminal.main import load_library as load_terminal_library  # noqa: E402
 
 
 def run_inventory(terminal_lib_path: Path, editor_lib_path: Path) -> int:

@@ -12,7 +12,7 @@ the simpler embedded-host question:
 
 1. `zig build build-terminal-ffi`
 2. `zig build build-editor-ffi`
-3. `python3 examples/ffi_abi_inventory/main.py --terminal-lib zig-out/lib/libzide-terminal-ffi.so --editor-lib zig-out/lib/libzide-editor-ffi.so`
+3. `python3 tests/ffi_smokes/abi_inventory/main.py --terminal-lib zig-out/lib/libzide-terminal-ffi.so --editor-lib zig-out/lib/libzide-editor-ffi.so`
 
 Current printed inventory:
 - terminal snapshot ABI

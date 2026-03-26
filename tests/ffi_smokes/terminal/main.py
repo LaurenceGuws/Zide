@@ -5,11 +5,11 @@ import sys
 from pathlib import Path
 from typing import cast
 
-ROOT = Path(__file__).resolve().parents[2]
+ROOT = Path(__file__).resolve().parents[3]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-from examples.common.ffi_host_boot import (  # noqa: E402
+from tests.ffi_smokes.common.ffi_host_boot import (  # noqa: E402
     as_bytes,
     consume_terminal_events_once,
     consume_terminal_metadata_once,

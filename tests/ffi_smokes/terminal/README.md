@@ -63,18 +63,18 @@ The PTY-backed smoke remains a follow-on once the bridge-owned shell path is sta
 ## Run
 
 1. `zig build build-terminal-ffi`
-2. `python3 examples/terminal_ffi_smoke/main.py --lib zig-out/lib/libzide-terminal-ffi.so`
+2. `python3 tests/ffi_smokes/terminal/main.py --lib zig-out/lib/libzide-terminal-ffi.so`
 
 Mock external-host scenario:
 1. `zig build build-terminal-ffi`
-2. `python3 examples/terminal_ffi_smoke/main.py --scenario mock-service --lib zig-out/lib/libzide-terminal-ffi.so`
+2. `python3 tests/ffi_smokes/terminal/main.py --scenario mock-service --lib zig-out/lib/libzide-terminal-ffi.so`
 
 ABI-shape regression scenario:
 1. `zig build build-terminal-ffi`
-2. `python3 examples/terminal_ffi_smoke/main.py --scenario abi-mismatch --lib zig-out/lib/libzide-terminal-ffi.so`
+2. `python3 tests/ffi_smokes/terminal/main.py --scenario abi-mismatch --lib zig-out/lib/libzide-terminal-ffi.so`
 
 Shared Python host boot helpers:
-- `examples/common/ffi_host_boot.py`
+- `tests/ffi_smokes/common/ffi_host_boot.py`
   - `consume_terminal_publication_once(...)` is the shared terminal publication primitive for both dedicated and mixed hosts
   - `consume_terminal_metadata_once(...)` is the shared terminal latest-state metadata primitive for both dedicated and mixed hosts, with explicit metadata request flags
   - `consume_terminal_events_once(...)` is the shared terminal event ownership primitive for Python hosts

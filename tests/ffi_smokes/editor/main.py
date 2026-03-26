@@ -4,11 +4,11 @@ import ctypes
 import sys
 from pathlib import Path
 
-ROOT = Path(__file__).resolve().parents[2]
+ROOT = Path(__file__).resolve().parents[3]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-from examples.common.ffi_host_boot import as_bytes, load_cdll, STATUS_OK  # noqa: E402
+from tests.ffi_smokes.common.ffi_host_boot import as_bytes, load_cdll, STATUS_OK  # noqa: E402
 
 
 class ZideEditorHandle(ctypes.Structure):

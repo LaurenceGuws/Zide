@@ -212,7 +212,7 @@ pub fn planIdeExtendedBuildGraph(
         "Run non-interactive terminal+editor FFI combo smoke",
         &.{
             "python3",
-            "examples/ffi_host_combo_smoke/main.py",
+            "tests/ffi_smokes/host_combo/main.py",
             "--terminal-lib",
             "zig-out/lib/libzide-terminal-ffi.so",
             "--editor-lib",

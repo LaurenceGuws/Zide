@@ -21,22 +21,22 @@ Same reason as terminal smoke:
 ## Run
 
 1. `zig build build-editor-ffi`
-2. `python3 examples/editor_ffi_smoke/main.py --lib zig-out/lib/libzide-editor-ffi.so`
+2. `python3 tests/ffi_smokes/editor/main.py --lib zig-out/lib/libzide-editor-ffi.so`
 
 Invalid-argument regression scenario:
 1. `zig build build-editor-ffi`
-2. `python3 examples/editor_ffi_smoke/main.py --scenario invalid-args --lib zig-out/lib/libzide-editor-ffi.so`
+2. `python3 tests/ffi_smokes/editor/main.py --scenario invalid-args --lib zig-out/lib/libzide-editor-ffi.so`
 
 ABI-mismatch regression scenario:
 1. `zig build build-editor-ffi`
-2. `python3 examples/editor_ffi_smoke/main.py --scenario abi-mismatch --lib zig-out/lib/libzide-editor-ffi.so`
+2. `python3 tests/ffi_smokes/editor/main.py --scenario abi-mismatch --lib zig-out/lib/libzide-editor-ffi.so`
 
 Installed bridge artifacts:
 - `zig-out/lib/libzide-editor-ffi.so`
 - `zig-out/include/zide_editor_ffi.h`
 
 Shared Python host boot helpers:
-- `examples/common/ffi_host_boot.py`
+- `tests/ffi_smokes/common/ffi_host_boot.py`
 
 Host migration checklist:
 - if a host owns both bridges, run one terminal pump tick before editor-side mutations/queries

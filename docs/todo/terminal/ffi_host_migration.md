@@ -1,8 +1,8 @@
 # Terminal + Editor FFI Host Migration Todo
 
-- [x] Add one shared FFI host boot helper (`examples/common/ffi_host_boot.py`) that loads both `libzide-terminal-ffi` and `libzide-editor-ffi` with shared Python host setup.
+- [x] Add one shared FFI host boot helper (`tests/ffi_smokes/common/ffi_host_boot.py`) that loads both `libzide-terminal-ffi` and `libzide-editor-ffi` with shared Python host setup.
 - [x] Define a tiny cross-surface event pump contract doc (`poll_terminal_then_editor_once`) and wire it in both smoke hosts.
-- [x] Add terminal+editor combined smoke script (`examples/ffi_host_combo_smoke/main.py`) that runs: publish terminal content, confirm redraw truth, acquire snapshot, acknowledge presentation, then run editor work and clean shutdown.
+- [x] Add terminal+editor combined smoke script (`tests/ffi_smokes/host_combo/main.py`) that runs: publish terminal content, confirm redraw truth, acquire snapshot, acknowledge presentation, then run editor work and clean shutdown.
 - [x] Extract shared terminal publication consumption helper (`consume_terminal_publication_once(...)`) so mixed hosts do not hand-roll redraw-state and present-ack sequencing.
 - [x] Move the standalone terminal smoke onto the same shared publication helper so dedicated and mixed hosts validate the same redraw/present contract.
 - [x] Extract shared terminal metadata consumption helper (`consume_terminal_metadata_once(...)`) so Python hosts do not duplicate metadata request/acquire/release ownership boilerplate.
@@ -17,7 +17,7 @@
 - [x] Add one cross-bridge ABI inventory verifier so mixed embedders can print the shipped terminal/editor ABI-version surface in one non-interactive run.
 - [x] Add a host-migration checklist section in both smoke READMEs describing minimum required calls and resource free order.
 - [x] Add a single `zig build` step that runs the combo smoke in non-interactive mode (no PTY dependency) to verify dual-bridge loading/lifetime.
-- [x] Add a mock external-service scenario to `examples/terminal_ffi_smoke/main.py` so the no-PTY host path can stream chunks incrementally instead of only doing one-shot feed smoke.
+- [x] Add a mock external-service scenario to `tests/ffi_smokes/terminal/main.py` so the no-PTY host path can stream chunks incrementally instead of only doing one-shot feed smoke.
 
 Cross-surface event pump contract:
 - `poll_terminal_then_editor_once(...)` is the minimal shared host tick for mixed terminal/editor embedders.
