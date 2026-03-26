@@ -30,7 +30,7 @@ repository.
 - `docs/AGENT_HANDOFF.md` — high-level current focus, constraints, and entrypoints for a fresh session.
 - `docs/INDEX.md` — repo-local navigation map.
 - `README.md` — customer-facing overview and primary links.
-- `scripts/open_docs_browser.sh` — local launcher for the standalone docs explorer against this repo's docs surface.
+- `ops/open_docs_browser.sh` — local launcher for the standalone docs explorer against this repo's docs surface.
 - `docs/todo/**` — active execution queues and implementation tracking that are not themselves architecture authority.
 - `app_architecture/**.md` — current architecture/design authority plus architecture communication such as design plans, status checkpoints, diagrams, and release/design notes.
 - `docs/reference/**` — contributor/operator-facing technical reference.

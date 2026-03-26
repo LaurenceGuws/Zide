@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../../../.." && pwd)"
 cd "$ROOT_DIR"
 
 CSV_MODE=0
@@ -18,7 +18,7 @@ while [[ $# -gt 0 ]]; do
       shift
       ;;
     --help|-h)
-      echo "usage: tools/ui/font/font_sample_lcd_report.sh [--csv|--json] [size ...]"
+      echo "usage: tools/observability/rendering/font/font_sample_lcd_report.sh [--csv|--json] [size ...]"
       exit 0
       ;;
     *)

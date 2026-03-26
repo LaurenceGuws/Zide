@@ -58,23 +58,23 @@ Defaults + overrides:
 CLI command in place:
 - `zig build grammar-update`
 - runs `sync_from_nvim`, `fetch_grammars`, and `build_all` through the current platform entrypoint (`.sh` / `.ps1`)
-- installs `tools/grammar_packs/dist/` into `%LOCALAPPDATA%/Zide/grammars` on Windows and `~/.config/zide/grammars` elsewhere
+- installs `tools/editor/grammar_packs/dist/` into `%LOCALAPPDATA%/Zide/grammars` on Windows and `~/.config/zide/grammars` elsewhere
 - writes per-pack `manifest.json` next to the `.so` + query files
 - supports `--skip-git` and `--continue-on-error` for best-effort builds
 - supports `--targets` / `--skip-targets` to limit os/arch combos
  - supports `--jobs <n>` to parallelize pack builds
 
 Implemented files:
-- `tools/grammar/grammar_update.zig`
+- `tools/editor/grammar/grammar_update.zig`
 
 ### Step 3: Auto-sync Queries (optional)
 Keep queries in sync with nvim-treesitter:
-- add a helper to copy `tools/grammar_packs/work/queries/<lang>_<query>.scm`
+- add a helper to copy `tools/editor/grammar_packs/work/queries/<lang>_<query>.scm`
   into `assets/queries/<lang>/<query>.scm`
 - this keeps editor defaults aligned with upstream across all query types
 
 Suggested files:
-- `tools/grammar_packs/scripts/sync_queries_to_assets.sh` (new)
+- `tools/editor/grammar_packs/scripts/sync_queries_to_assets.sh` (new)
 - `docs/todo/editor/treesitter_dynamic_roadmap.md` (update with exact command)
 
 ### Step 4: On-demand Download (optional)

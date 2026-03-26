@@ -8,9 +8,9 @@ Windows 11 Explorer integration.
 Use this after changes to:
 
 - `src/platform/windows_shell_extension/open_zide_terminal_here.cpp`
-- `scripts/windows/Install-Zide.ps1`
-- `scripts/windows/Register-ZidePackageIdentity.ps1`
-- `tools/windows/windows_identity_contract.zig`
+- `ops/windows/Install-Zide.ps1`
+- `ops/windows/Register-ZidePackageIdentity.ps1`
+- `tools/packaging/windows/windows_identity_contract.zig`
 
 This is an operator checklist, not design authority. The owning contract lives
 in:

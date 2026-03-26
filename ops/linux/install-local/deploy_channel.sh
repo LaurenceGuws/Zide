@@ -4,7 +4,7 @@ set -euo pipefail
 usage() {
   cat <<'EOF'
 Usage:
-  scripts/linux/install-local/deploy_channel.sh <stable|dev> [--skip-build]
+  ops/linux/install-local/deploy_channel.sh <stable|dev> [--skip-build]
 
 Dev-only local installer for the Linux launcher family.
 

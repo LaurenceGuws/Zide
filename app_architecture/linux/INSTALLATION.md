@@ -25,14 +25,14 @@ Current Linux entrypoints:
 - smoke:
   - `zig build gui-smokes-manual`
 - install-local:
-  - `scripts/linux/install-local/deploy_channel.sh <stable|dev>`
-  - `scripts/linux/install-local/deploy_channels.sh`
-  - `scripts/linux/install-local/remove_channel.sh <stable|dev>`
-  - `scripts/linux/install-local/remove_channels.sh`
-  - `scripts/linux/install-local/sync_channel.sh <stable|dev>`
-  - `scripts/linux/install-local/sync_channels.sh`
+  - `ops/linux/install-local/deploy_channel.sh <stable|dev>`
+  - `ops/linux/install-local/deploy_channels.sh`
+  - `ops/linux/install-local/remove_channel.sh <stable|dev>`
+  - `ops/linux/install-local/remove_channels.sh`
+  - `ops/linux/install-local/sync_channel.sh <stable|dev>`
+  - `ops/linux/install-local/sync_channels.sh`
 - stage-release:
-  - `scripts/linux/Stage-CurrentLinuxDist.sh`
+  - `ops/linux/Stage-CurrentLinuxDist.sh`
 
 ## Local Install Channels
 
@@ -147,7 +147,7 @@ Current bundle behavior:
 - Wayland desktop icon/grouping behavior may still require stronger desktop
   metadata ownership than repo-local smoke launches prove.
 - canonical Linux install-local entrypoints now live under
-  `scripts/linux/install-local/`; the old `scripts/dev/` wrappers have been
+  `ops/linux/install-local/`; the old `scripts/dev/` wrappers have been
   removed.
 
 ## KDE Notes

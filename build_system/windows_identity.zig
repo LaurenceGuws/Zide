@@ -1,5 +1,5 @@
 const std = @import("std");
-const contract = @import("../tools/windows/windows_identity_contract.zig");
+const contract = @import("../tools/packaging/windows/windows_identity_contract.zig");
 
 pub const AppIdentity = struct {
     display_name: []const u8,

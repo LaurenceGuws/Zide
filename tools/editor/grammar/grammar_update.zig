@@ -92,7 +92,7 @@ pub fn main() !void {
     }
 
     if (mode.install) {
-        const dist_root = dist_path orelse try std.fs.path.join(allocator, &.{ repo_root, "tools/grammar_packs/dist" });
+        const dist_root = dist_path orelse try std.fs.path.join(allocator, &.{ repo_root, "tools/editor/grammar_packs/dist" });
         defer if (dist_path == null) allocator.free(dist_root);
         const cache = cache_root orelse try defaultCacheRoot(allocator);
         defer if (cache_root == null) allocator.free(cache);
@@ -115,7 +115,7 @@ fn printUsage() void {
         \\  --targets <list>  Comma list of targets (os/arch) to build
         \\  --skip-targets <list> Comma list of targets (os/arch) to skip
         \\  --jobs <n>        Parallel jobs for git fetch + grammar pack builds
-        \\  --dist <path>     Override dist directory (default tools/grammar_packs/dist)
+        \\  --dist <path>     Override dist directory (default tools/editor/grammar_packs/dist)
         \\  --cache-root <path> Override cache root (default %LOCALAPPDATA%/Zide/grammars on Windows, ~/.config/zide/grammars otherwise)
         \\  --help            Show this help
         \\
@@ -130,7 +130,7 @@ fn runBuildScripts(
     skip_targets: ?[]const u8,
     jobs: ?[]const u8,
 ) !void {
-    const scripts_root = try std.fs.path.join(allocator, &.{ repo_root, "tools/grammar_packs/scripts" });
+    const scripts_root = try std.fs.path.join(allocator, &.{ repo_root, "tools/editor/grammar_packs/scripts" });
     defer allocator.free(scripts_root);
 
     if (!mode.skip_sync) {

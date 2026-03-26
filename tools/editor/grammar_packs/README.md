@@ -34,7 +34,7 @@ Current local behavior:
 - explicit `--targets` / `--skip-targets` still override that default
 
 This writes:
-- `tools/grammar_packs/dist/manifest.json`
+- `tools/editor/grammar_packs/dist/manifest.json`
 - `assets/syntax/generated.lua` (extension + basename → grammar map)
 
 Manual edits belong in:
@@ -43,5 +43,5 @@ Manual edits belong in:
 ## Mapping coverage helper
 To check that every installed grammar pack maps to at least one extension/basename:
 ```
-tools/grammar_packs/scripts/check_syntax_coverage.py
+tools/editor/grammar_packs/scripts/check_syntax_coverage.py
 ```

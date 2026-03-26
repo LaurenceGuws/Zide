@@ -24,9 +24,9 @@ zide.log
 /.zide.lua
 
 # Tree-sitter grammar pack tooling
-tools/grammar_packs/work/
-tools/grammar_packs/dist/
-tools/term_manual_test/terminal-doom
+tools/editor/grammar_packs/work/
+tools/editor/grammar_packs/dist/
+tools/terminal/term_manual_test/terminal-doom
 zig-cache/terminal-replay
 
 /zig-cache

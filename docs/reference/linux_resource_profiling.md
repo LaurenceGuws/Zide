@@ -45,8 +45,8 @@ Important rule:
 
 Use:
 
-- `tools/perf/linux_resource_monitor.py`
-- `tools/perf/linux_perf_run.py`
+- `tools/observability/perf/linux_resource_monitor.py`
+- `tools/observability/perf/linux_perf_run.py`
 
 It supports:
 
@@ -66,7 +66,7 @@ It supports:
 Create a packaged perf run folder:
 
 ```bash
-python3 tools/perf/linux_perf_run.py \
+python3 tools/observability/perf/linux_perf_run.py \
   --label terminal_sleep_smoke \
   --interval-ms 100 \
   --launch -- /bin/sh -lc 'sleep 0.2'
@@ -75,7 +75,7 @@ python3 tools/perf/linux_perf_run.py \
 Package existing structured subsystem events alongside host samples:
 
 ```bash
-python3 tools/perf/linux_perf_run.py \
+python3 tools/observability/perf/linux_perf_run.py \
   --label zide_terminal_btop \
   --interval-ms 250 \
   --subsystem-events ~/.cache/zide-perf.jsonl \
@@ -85,7 +85,7 @@ python3 tools/perf/linux_perf_run.py \
 Let the runner temporarily wire Zide perf sinks itself:
 
 ```bash
-python3 tools/perf/linux_perf_run.py \
+python3 tools/observability/perf/linux_perf_run.py \
   --label zide_terminal_btop \
   --capture-zide-perf \
   --perf-preset terminal \
@@ -116,7 +116,7 @@ Notes:
 Monitor an existing Zide PID:
 
 ```bash
-python3 tools/perf/linux_resource_monitor.py \
+python3 tools/observability/perf/linux_resource_monitor.py \
   --pid 43279 \
   --interval-ms 250 \
   --jsonl ~/.cache/zide-agent-scratch/zide-terminal.jsonl \
@@ -126,7 +126,7 @@ python3 tools/perf/linux_resource_monitor.py \
 Launch and monitor a fresh terminal instance:
 
 ```bash
-python3 tools/perf/linux_resource_monitor.py \
+python3 tools/observability/perf/linux_resource_monitor.py \
   --interval-ms 250 \
   --jsonl ~/.cache/zide-agent-scratch/zide-terminal.jsonl \
   --launch -- ./zig-out/bin/zide-terminal --shell /bin/zsh --command btop
@@ -135,7 +135,7 @@ python3 tools/perf/linux_resource_monitor.py \
 Limit capture duration:
 
 ```bash
-python3 tools/perf/linux_resource_monitor.py \
+python3 tools/observability/perf/linux_resource_monitor.py \
   --pid 43279 \
   --duration-s 15 \
   --interval-ms 200
@@ -144,7 +144,7 @@ python3 tools/perf/linux_resource_monitor.py \
 Disable GPU sampling:
 
 ```bash
-python3 tools/perf/linux_resource_monitor.py \
+python3 tools/observability/perf/linux_resource_monitor.py \
   --pid 43279 \
   --no-gpu
 ```

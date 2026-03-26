@@ -21,10 +21,10 @@ backed by full package registration.
 Current install and registration flow:
 
 - build locally with `zig build`
-- stage a local Windows dist with [`scripts/windows/Stage-CurrentWindowsDist.ps1`](../../../scripts/windows/Stage-CurrentWindowsDist.ps1)
-- install from the staged dist with [`scripts/windows/Install-Zide.ps1`](../../../scripts/windows/Install-Zide.ps1)
-- package identity is registered through [`scripts/windows/Register-ZidePackageIdentity.ps1`](../../../scripts/windows/Register-ZidePackageIdentity.ps1)
-- uninstall cleanup remains owned by [`scripts/windows/Uninstall-Zide.ps1`](../../../scripts/windows/Uninstall-Zide.ps1)
+- stage a local Windows dist with [`ops/windows/Stage-CurrentWindowsDist.ps1`](../../../ops/windows/Stage-CurrentWindowsDist.ps1)
+- install from the staged dist with [`ops/windows/Install-Zide.ps1`](../../../ops/windows/Install-Zide.ps1)
+- package identity is registered through [`ops/windows/Register-ZidePackageIdentity.ps1`](../../../ops/windows/Register-ZidePackageIdentity.ps1)
+- uninstall cleanup remains owned by [`ops/windows/Uninstall-Zide.ps1`](../../../ops/windows/Uninstall-Zide.ps1)
 
 Current menu shape:
 
@@ -61,8 +61,8 @@ The shell-extension implementation lives in
 The current manual ritual that matches the installed path is:
 
 1. run `zig build`
-2. stage a local dist with [`scripts/windows/Stage-CurrentWindowsDist.ps1`](../../../scripts/windows/Stage-CurrentWindowsDist.ps1)
-3. install from the staged dist with [`scripts/windows/Install-Zide.ps1`](../../../scripts/windows/Install-Zide.ps1)
+2. stage a local dist with [`ops/windows/Stage-CurrentWindowsDist.ps1`](../../../ops/windows/Stage-CurrentWindowsDist.ps1)
+3. install from the staged dist with [`ops/windows/Install-Zide.ps1`](../../../ops/windows/Install-Zide.ps1)
 4. run the installer in an elevated shell when package trust needs to be added to the local machine cert stores
 5. confirm `Get-AppxPackage LaurenceGuws.Zide` succeeds after install
 6. verify the package metadata file at `%LOCALAPPDATA%\\Programs\\Zide\\current\\support\\windows-package-identity.json`
@@ -95,9 +95,9 @@ supported path for Explorer command activation on the current Win11 machine.
 
 ## Reference Files
 
-- [scripts/windows/Install-Zide.ps1](../../../scripts/windows/Install-Zide.ps1)
-- [scripts/windows/Register-ZidePackageIdentity.ps1](../../../scripts/windows/Register-ZidePackageIdentity.ps1)
-- [scripts/windows/Uninstall-Zide.ps1](../../../scripts/windows/Uninstall-Zide.ps1)
+- [ops/windows/Install-Zide.ps1](../../../ops/windows/Install-Zide.ps1)
+- [ops/windows/Register-ZidePackageIdentity.ps1](../../../ops/windows/Register-ZidePackageIdentity.ps1)
+- [ops/windows/Uninstall-Zide.ps1](../../../ops/windows/Uninstall-Zide.ps1)
 - [src/platform/windows_shell_extension/open_zide_terminal_here.cpp](../../../src/platform/windows_shell_extension/open_zide_terminal_here.cpp)
 - [app_architecture/windows/EXPLORER_COMMAND_INTEGRATION.md](../../../app_architecture/windows/EXPLORER_COMMAND_INTEGRATION.md)
 - [app_architecture/windows/INSTALLATION.md](../../../app_architecture/windows/INSTALLATION.md)

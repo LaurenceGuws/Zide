@@ -209,7 +209,7 @@ stack issue, not an isolated highlight bug:
     - fixed seed/query/frame parameters
     - result doc location
   - Supporting local gate now aligned:
-    - `tools/perf/perf_editor_gate.sh`
+    - `tools/observability/perf/perf_editor_gate.sh`
 
 - [ ] `ED-STRESS-03` Map Zide against the current reference set by concern
   - Record which reference repos matter for which editor questions.
@@ -244,7 +244,7 @@ stack issue, not an isolated highlight bug:
   - Remaining gap for this item:
     - native interactive observations on the real widget/runtime/render path
   - Supporting local gate now aligned:
-    - `tools/perf/perf_editor_gate.sh`
+    - `tools/observability/perf/perf_editor_gate.sh`
 
 - [ ] `ED-STRESS-05` Write findings back into architecture docs
   - If stress work reveals an unclear subsystem seam, capture the corrected

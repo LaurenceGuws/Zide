@@ -43,8 +43,8 @@ Repo-level tooling currently lives in:
 
 At review time, `src/tools/` only contained:
 
-- `tools/grammar/grammar_fetch.zig`
-- `tools/grammar/grammar_update.zig`
+- `tools/editor/grammar/grammar_fetch.zig`
+- `tools/editor/grammar/grammar_update.zig`
 
 Those files read like repository maintenance tools, not runtime product modules. This made the split between `tools/` and `src/tools/` look accidental rather than intentional.
 
@@ -148,4 +148,4 @@ Highest-priority structural hotspots:
 Lower-priority for now:
 
 - fixture naming consistency inside `fixtures/terminal/`
-- manual test assets inside `tools/term_manual_test/`
+- manual test assets inside `tools/terminal/term_manual_test/`

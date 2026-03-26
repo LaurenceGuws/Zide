@@ -4,7 +4,7 @@ set -euo pipefail
 usage() {
   cat <<'EOF'
 Usage:
-  scripts/linux/install-local/remove_channel.sh <stable|dev>
+  ops/linux/install-local/remove_channel.sh <stable|dev>
 
 Removes one local Linux launcher family installed by deploy_channel.sh.
 

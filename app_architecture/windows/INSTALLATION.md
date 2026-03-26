@@ -181,7 +181,7 @@ Current shell integration policy:
 
 Current first-class Windows install path:
 
-- `scripts/windows/Install-Zide.ps1`
+- `ops/windows/Install-Zide.ps1`
 
 Current non-goals for this first cut:
 
@@ -210,8 +210,8 @@ Current installer supports:
 - release download install
 - local dist-dir install for validation/dev
 - package-identity registration via:
-  - `scripts/windows/Register-ZidePackageIdentity.ps1`
-  - `scripts/windows/Unregister-ZidePackageIdentity.ps1`
+  - `ops/windows/Register-ZidePackageIdentity.ps1`
+  - `ops/windows/Unregister-ZidePackageIdentity.ps1`
   - package-identity metadata is now written into the installed app under:
     - `%LOCALAPPDATA%\Programs\Zide\<version>\support\windows-package-identity.json`
   - registration now builds the Explorer package from the installed metadata

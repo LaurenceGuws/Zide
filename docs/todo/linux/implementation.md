@@ -206,14 +206,14 @@ owning subsystem queues.
   - first alignment cut now uses Linux local channel names `stable` / `dev`,
     with `test` retained only as a compatibility alias during migration
   - Linux stage-release is no longer terminal-only by default; the active local
-    staging path is now `scripts/linux/Stage-CurrentLinuxDist.sh` for IDE,
+    staging path is now `ops/linux/Stage-CurrentLinuxDist.sh` for IDE,
     editor, terminal, and both FFI artifacts together
   - Windows tooling standardization is intentionally deferred to a real Windows
     session; the next Windows-native agent should start from
     `app_architecture/TOOLING_INSTALL_SURFACES.md` and
     `app_architecture/windows/INSTALLATION.md`
   - verified 2026-03-25:
-    - `bash scripts/linux/Stage-CurrentLinuxDist.sh` completed and produced:
+    - `bash ops/linux/Stage-CurrentLinuxDist.sh` completed and produced:
       - `zide-ide-bundle-0.1.0-beta.4-linux-x86_64.tar.gz`
       - `zide-editor-bundle-0.1.0-beta.4-linux-x86_64.tar.gz`
       - `zide-terminal-bundle-0.1.0-beta.4-linux-x86_64.tar.gz`
@@ -221,7 +221,7 @@ owning subsystem queues.
       - `zide-terminal-ffi-0.1.0-beta.4-linux-x86_64.tar.gz`
       - `SHA256SUMS-linux-x86_64.txt`
   - 2026-03-26 resource-measurement checkpoint:
-    - added `tools/perf/linux_resource_monitor.py` as the supported local Linux
+    - added `tools/observability/perf/linux_resource_monitor.py` as the supported local Linux
       process sampler for CPU, RSS, virtual memory, threads, fds, IO, context
       switches, and optional NVIDIA per-process graphics metrics
     - added `docs/reference/linux_resource_profiling.md` to define the
@@ -250,7 +250,7 @@ owning subsystem queues.
         - `input.latency`
         - `terminal.wake`
         - `editor.perf`
-      - `tools/perf/linux_perf_run.py` now packages first-class perf run folders
+      - `tools/observability/perf/linux_perf_run.py` now packages first-class perf run folders
         with:
         - `manifest.json`
         - `host_resources.jsonl`
@@ -281,9 +281,9 @@ owning subsystem queues.
         - `zig build report-build-profiles`
         - `python3 -m py_compile ...` across moved Python entrypoints
         - `bash -n ...` across moved shell entrypoints and updated scripts
-        - `python3 tools/perf/linux_perf_run.py --help`
-        - `python3 tools/perf/linux_resource_monitor.py --help`
-        - `python3 tools/perf/linux_perf_run.py --label layout_smoke ...`
+        - `python3 tools/observability/perf/linux_perf_run.py --help`
+        - `python3 tools/observability/perf/linux_resource_monitor.py --help`
+        - `python3 tools/observability/perf/linux_perf_run.py --label layout_smoke ...`
       - repo-wide path sweep for old flat tool-file references is now clean
       - remaining failures seen during the sweep are pre-existing repo issues,
         not layout regressions:
@@ -295,15 +295,15 @@ owning subsystem queues.
       - `zide-editor[-stable|-dev]`
       - `zide-terminal[-stable|-dev]`
     - Linux `install-local` now also has symmetric channel-family removal:
-      - `scripts/linux/install-local/remove_channel.sh <stable|dev>`
-      - `scripts/linux/install-local/remove_channels.sh`
+      - `ops/linux/install-local/remove_channel.sh <stable|dev>`
+      - `ops/linux/install-local/remove_channels.sh`
     - Linux `install-local` now has explicit in-place sync entrypoints:
-      - `scripts/linux/install-local/sync_channel.sh <stable|dev>`
-      - `scripts/linux/install-local/sync_channels.sh`
+      - `ops/linux/install-local/sync_channel.sh <stable|dev>`
+      - `ops/linux/install-local/sync_channels.sh`
     - install/remove scripts now refresh desktop, icon, and KDE cache indexes
       after mutating launcher metadata
     - canonical Linux `install-local` entrypoints now live under
-      `scripts/linux/install-local/`; the legacy `scripts/dev/*` wrappers were
+      `ops/linux/install-local/`; the legacy `scripts/dev/*` wrappers were
       removed during the repo-structure cleanup
     - first desktop-entry maturity pass now adds richer metadata on Linux local
       launchers:

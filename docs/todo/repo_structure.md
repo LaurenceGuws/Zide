@@ -19,6 +19,6 @@ Track non-product repo structure cleanup: test layout, tooling roots, and docume
 - [x] `REPO-TOOLS-02` Define `tools/` domain layout and placement rules
   `tools/` is now explicitly documented as a parent directory for tool domains in `docs/reference/tools_layout.md`; loose root files were removed and repo references were updated to the new paths.
 - [x] `REPO-TOOLS-03` Collapse fake tool micro-domains and stale wrappers
-  Import checks now live under `tools/checks/`, the dead `scripts/dev/` compatibility wrappers were removed, the ignored-yet-source-looking `build/` root was deleted, root junk files were removed, and terminfo reference dumps moved from `assets/terminfo/` into `docs/reference/terminal_terminfo_reference/`.
+  Import checks now live under `tests/checks/`, the dead `scripts/dev/` compatibility wrappers were removed, the ignored-yet-source-looking `build/` root was deleted, root junk files were removed, and terminfo reference dumps moved from `assets/terminfo/` into `docs/reference/terminal_terminfo_reference/`.
 - [x] `REPO-TOOLS-04` Replace duplicated reference-corpus setup scripts with one authoritative tool
-  Reference corpus setup is now owned by `scripts/setup_reference_corpus.py`, the local corpus root is `dev_references/`, the Git-backed inventory lives in `scripts/reference_corpus_inventory.json`, and repo references were updated to the new corpus contract.
+  Reference corpus setup is now owned by `ops/setup_reference_corpus.py`, the local corpus root is `dev_references/`, the Git-backed inventory lives in `ops/reference_corpus_inventory.json`, and repo references were updated to the new corpus contract.

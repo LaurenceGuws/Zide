@@ -17,32 +17,28 @@ domain-specific subdirectory.
   - `checks/` for build policy and size checks
   - `gates/` for higher-level workflow gate scripts
   - `smokes/` for manual or operator-run smoke helpers
-- `tools/checks/`
+- `tests/checks/`
   - shared repo policy and import-layer checks
-- `tools/docs_browser/`
+- `app_architecture/docs_browser/`
   - project-owned docs-browser config for the standalone docs explorer
 - `tools/docs_explorer/`
   - local docs-explorer implementation workspace
 - `tools/editor/`
-  - editor-specific theme tooling
-- `tools/grammar/`
-  - grammar maintenance entrypoints
-- `tools/grammar_packs/`
-  - grammar-pack source, scripts, work area, and published pack artifacts
-- `tools/logs/`
-  - log inspection helpers
+  - editor-specific tooling, including:
+  - `theme/` for theme import and resolved-theme helpers
+  - `grammar/` for grammar maintenance entrypoints
+  - `grammar_packs/` for grammar-pack source, scripts, work area, and published pack artifacts
+- `tools/observability/`
+  - observability tooling, including:
+  - `logs/` for log inspection helpers
+  - `perf/` for performance and resource-capture tooling
+  - `rendering/font/` for font-rendering capture and comparison helpers
 - `tools/packaging/`
-  - packaging and staged-release helpers
-- `tools/perf/`
-  - performance and resource-capture tooling
-- `tools/term_manual_test/`
-  - manual terminal-test assets and supporting workspaces
+  - packaging helpers, including Windows packaging contracts
 - `tools/terminal/`
-  - terminal capture helpers
-- `tools/ui/`
-  - UI-specific tooling such as font-rendering helpers
-- `tools/windows/`
-  - Windows-specific contracts and helpers
+  - terminal tooling, including:
+  - `capture/` for terminal capture helpers
+  - `term_manual_test/` for manual terminal-test assets and supporting workspaces
 
 ## Placement Rules
 

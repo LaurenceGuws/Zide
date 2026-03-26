@@ -7,10 +7,10 @@ set -euo pipefail
 # - std.log.scoped(.tag)
 #
 # Usage:
-#   tools/logs/list_log_tags.sh
-#   tools/logs/list_log_tags.sh --with-counts
+#   tools/observability/logs/list_log_tags.sh
+#   tools/observability/logs/list_log_tags.sh --with-counts
 
-ROOT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)"
+ROOT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/../../.." && pwd)"
 cd "$ROOT_DIR"
 
 with_counts=0

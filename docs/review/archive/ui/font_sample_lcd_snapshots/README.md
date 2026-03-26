@@ -5,43 +5,43 @@ This folder stores dated LCD experiment artifacts for Phase 5.
 Create a snapshot:
 
 ```bash
-tools/ui/font/font_sample_lcd_snapshot.sh
+tools/observability/rendering/font/font_sample_lcd_snapshot.sh
 ```
 
 Or with an explicit stamp:
 
 ```bash
-tools/ui/font/font_sample_lcd_snapshot.sh 2026-02-17
+tools/observability/rendering/font/font_sample_lcd_snapshot.sh 2026-02-17
 ```
 
 or:
 
 ```bash
-tools/ui/font/font_sample_lcd_snapshot.sh --stamp 2026-02-17
+tools/observability/rendering/font/font_sample_lcd_snapshot.sh --stamp 2026-02-17
 ```
 
 Preview planned outputs only:
 
 ```bash
-tools/ui/font/font_sample_lcd_snapshot.sh --dry-run
+tools/observability/rendering/font/font_sample_lcd_snapshot.sh --dry-run
 ```
 
 Skip capture and refresh reports from existing LCD captures:
 
 ```bash
-tools/ui/font/font_sample_lcd_snapshot.sh --stamp 2026-02-17 --no-capture
+tools/observability/rendering/font/font_sample_lcd_snapshot.sh --stamp 2026-02-17 --no-capture
 ```
 
 Validate all dated snapshots:
 
 ```bash
-tools/ui/font/font_sample_lcd_snapshot_check.sh
+tools/observability/rendering/font/font_sample_lcd_snapshot_check.sh
 ```
 
 Validate only the newest snapshot:
 
 ```bash
-tools/ui/font/font_sample_lcd_snapshot_check.sh --latest
+tools/observability/rendering/font/font_sample_lcd_snapshot_check.sh --latest
 ```
 
 Per snapshot folder (`YYYY-MM-DD`), the expected files are:

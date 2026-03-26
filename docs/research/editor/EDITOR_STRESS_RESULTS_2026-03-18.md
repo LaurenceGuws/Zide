@@ -234,7 +234,7 @@ That shifts the next highest-value investigation toward:
 1. Run the pending native interactive pass from the ritual and capture factual
    observations for first paint, scroll, search churn, edit-to-render
    coherence, and long-line/Unicode cursor behavior.
-2. Update `tools/perf/perf_editor_gate.sh` to use the current stress authority once
+2. Update `tools/observability/perf/perf_editor_gate.sh` to use the current stress authority once
    the ritual is trusted enough to freeze those workloads.
    - Completed after this first pass:
      - the gate now mirrors synthetic `1/8/32 MiB` plus

@@ -3,7 +3,7 @@
     "**/__pycache__",
     "node_modules",
     "dev_references",
-    "tools/grammar_packs/work",
+    "tools/editor/grammar_packs/work",
     "vendor",
     "zig-out",
     ".zig-cache"

@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../../../.." && pwd)"
 cd "$ROOT_DIR"
 
 LATEST_ONLY=0
@@ -12,7 +12,7 @@ while [[ $# -gt 0 ]]; do
       shift
       ;;
     --help|-h)
-      echo "usage: tools/ui/font/font_sample_lcd_snapshot_check.sh [--latest]"
+      echo "usage: tools/observability/rendering/font/font_sample_lcd_snapshot_check.sh [--latest]"
       exit 0
       ;;
     *)

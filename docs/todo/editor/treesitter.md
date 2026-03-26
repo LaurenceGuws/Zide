@@ -58,5 +58,5 @@ Tree-sitter integration for syntax highlighting and semantic metadata.
   - See `docs/todo/editor/treesitter_dynamic_roadmap.md`.
 
 - [x] `TS-08` Grammar pack install tooling
-  - Packs install from `tools/grammar_packs/dist` into `%LOCALAPPDATA%/Zide/grammars` on Windows and `~/.config/zide/grammars` elsewhere.
+  - Packs install from `tools/editor/grammar_packs/dist` into `%LOCALAPPDATA%/Zide/grammars` on Windows and `~/.config/zide/grammars` elsewhere.
   - See `docs/todo/editor/treesitter_dynamic_roadmap.md`.

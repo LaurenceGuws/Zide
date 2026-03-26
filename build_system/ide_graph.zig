@@ -311,7 +311,7 @@ pub fn planIdeExtendedBuildGraph(
         b,
         "perf-editor-gate",
         "Run repeatable editor performance gate against stress fixtures",
-        &.{ "bash", "tools/perf/perf_editor_gate.sh" },
+        &.{ "bash", "tools/observability/perf/perf_editor_gate.sh" },
         &.{},
     );
 
@@ -386,7 +386,7 @@ pub fn planIdeExtendedBuildGraph(
         target,
         optimize,
         "terminal-import-check",
-        "tools/checks/terminal_import_check.zig",
+        "tests/checks/terminal_import_check.zig",
         "check-terminal-imports",
         "Check terminal module import layering",
     );
@@ -395,7 +395,7 @@ pub fn planIdeExtendedBuildGraph(
         target,
         optimize,
         "editor-import-check",
-        "tools/checks/editor_import_check.zig",
+        "tests/checks/editor_import_check.zig",
         "check-editor-imports",
         "Check editor module import layering",
     );
@@ -404,7 +404,7 @@ pub fn planIdeExtendedBuildGraph(
         target,
         optimize,
         "app-import-check",
-        "tools/checks/app_import_check.zig",
+        "tests/checks/app_import_check.zig",
         "check-app-imports",
         "Check app-level and mode-layer import boundaries",
     );
@@ -413,11 +413,11 @@ pub fn planIdeExtendedBuildGraph(
         target,
         optimize,
         "input-import-check",
-        "tools/checks/input_import_check.zig",
+        "tests/checks/input_import_check.zig",
         &.{
             .{
                 .name = "app_import_check",
-                .root_source_file = "tools/checks/app_import_check.zig",
+                .root_source_file = "tests/checks/app_import_check.zig",
             },
         },
         "check-input-imports",
@@ -436,7 +436,7 @@ pub fn planIdeExtendedBuildGraph(
         b,
         "report-build-deps",
         "Report app target dependency policy wiring",
-        &.{ "bash", "-lc", "rg -n \"configureAppExecutable\\(exe(_terminal|_editor|_ide)?|dependency policy violation\" build.zig" },
+        &.{ "bash", "-lc", "rg -n \"configureAppExecutable\\(|dependency policy violation\" build_system" },
         &.{},
     );
     const build_profile_report_step = addReportBuildProfilesStep(
@@ -517,7 +517,7 @@ pub fn planIdeExtendedBuildGraph(
         target,
         optimize,
         "grammar-update",
-        "tools/grammar/grammar_update.zig",
+        "tools/editor/grammar/grammar_update.zig",
     );
     const grammar_update_run = addRunArtifactStep(
         b,

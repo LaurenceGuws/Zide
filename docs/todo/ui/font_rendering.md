@@ -175,8 +175,8 @@ Status note, 2026-03-20:
   - Exit criteria:
     - [ ] Visual QA for JetBrainsMono and IosevkaTerm at 12/14/16/20
     - [ ] No obvious color fringing under selections, cursor inversion, or gutter overlays
-    - [ ] Repeatable reports from `tools/ui/font/font_sample_lcd_report.sh`
-    - [ ] Snapshot history from `tools/ui/font/font_sample_lcd_snapshot.sh`
+    - [ ] Repeatable reports from `tools/observability/rendering/font/font_sample_lcd_report.sh`
+    - [ ] Snapshot history from `tools/observability/rendering/font/font_sample_lcd_snapshot.sh`
 - [x] `FR-V-01` Smoke terminal mode and default run
 - [x] `FR-V-02` Regression-check the font sample capture path
 

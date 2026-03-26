@@ -118,15 +118,15 @@ Target direction:
     - `dev`
     - `stable`
   - canonical local entrypoints now live under:
-    - `scripts/linux/install-local/deploy_channel.sh <stable|dev>`
-    - `scripts/linux/install-local/deploy_channels.sh`
-    - `scripts/linux/install-local/remove_channel.sh <stable|dev>`
-    - `scripts/linux/install-local/remove_channels.sh`
-    - `scripts/linux/install-local/sync_channel.sh <stable|dev>`
-    - `scripts/linux/install-local/sync_channels.sh`
+    - `ops/linux/install-local/deploy_channel.sh <stable|dev>`
+    - `ops/linux/install-local/deploy_channels.sh`
+    - `ops/linux/install-local/remove_channel.sh <stable|dev>`
+    - `ops/linux/install-local/remove_channels.sh`
+    - `ops/linux/install-local/sync_channel.sh <stable|dev>`
+    - `ops/linux/install-local/sync_channels.sh`
 - `stage-release`
   - current local stage script is now:
-    - `scripts/linux/Stage-CurrentLinuxDist.sh`
+    - `ops/linux/Stage-CurrentLinuxDist.sh`
   - this stages app/editor/terminal bundles together plus editor/terminal FFI
     artifacts under one Linux release model
   - terminal-only staging should remain compatibility-only and should not be
@@ -197,9 +197,9 @@ Windows follow-up checklist for the next native Windows session:
      `dev` during the transition, but stop documenting it as the preferred
      surface
 3. Define a shared script layout by intent:
-   - `scripts/<os>/smoke/*`
-   - `scripts/<os>/install-local/*`
-   - `scripts/<os>/stage-release/*`
+   - `ops/<os>/smoke/*`
+   - `ops/<os>/install-local/*`
+   - `ops/<os>/stage-release/*`
 4. Move or wrap legacy tools so old entrypoints can disappear once the new
    contract is live.
 5. Update platform docs so Linux and Windows both describe the same intent

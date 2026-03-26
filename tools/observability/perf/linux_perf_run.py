@@ -213,7 +213,7 @@ def write_notes(path: Path, notes: List[str]) -> None:
 def monitor_command(args: argparse.Namespace, host_jsonl: Path, host_csv: Optional[Path]) -> List[str]:
     cmd = [
         sys.executable,
-        "tools/perf/linux_resource_monitor.py",
+        "tools/observability/perf/linux_resource_monitor.py",
         "--interval-ms",
         str(args.interval_ms),
         "--jsonl",

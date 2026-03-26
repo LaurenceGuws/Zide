@@ -289,8 +289,8 @@ The current execution order is:
     - installed builds now carry package-identity metadata under:
       - `support/windows-package-identity.json`
     - local/dev identity registration now lives in:
-      - `scripts/windows/Register-ZidePackageIdentity.ps1`
-      - `scripts/windows/Unregister-ZidePackageIdentity.ps1`
+      - `ops/windows/Register-ZidePackageIdentity.ps1`
+      - `ops/windows/Unregister-ZidePackageIdentity.ps1`
     - registration now builds the external-location identity package from the
       installed metadata and install root instead of requiring a repo checkout
     - installer now treats package identity plus shell integration as the one

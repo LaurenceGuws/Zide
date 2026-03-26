@@ -84,13 +84,13 @@ For release-install layout and the first per-user installer path, use
 Bootstrap the repo:
 
 ```bash
-./scripts/bootstrap.sh
+./ops/bootstrap.sh
 ```
 
 Windows:
 
 ```powershell
-./scripts/bootstrap.ps1
+./ops/bootstrap.ps1
 ```
 
 Tree-sitter (runtime + Zig parser) and `stb_image` are vendored. Grammar packs
@@ -124,15 +124,15 @@ zig build gui-smokes-manual
 Linux local desktop install surfaces:
 
 ```bash
-scripts/linux/install-local/deploy_channel.sh dev
-scripts/linux/install-local/deploy_channel.sh stable
-scripts/linux/install-local/sync_channel.sh dev
+ops/linux/install-local/deploy_channel.sh dev
+ops/linux/install-local/deploy_channel.sh stable
+ops/linux/install-local/sync_channel.sh dev
 ```
 
 Linux local staged release:
 
 ```bash
-scripts/linux/Stage-CurrentLinuxDist.sh
+ops/linux/Stage-CurrentLinuxDist.sh
 ```
 
 Useful build reports:

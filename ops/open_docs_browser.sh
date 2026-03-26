@@ -4,7 +4,7 @@ set -euo pipefail
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 DOCS_EXPLORER_DIR="$ROOT_DIR/../docs-explorer"
 PORT="${1:-8009}"
-CONFIG_PATH="$ROOT_DIR/tools/docs_browser/project.zide.json"
+CONFIG_PATH="$ROOT_DIR/app_architecture/docs_browser/project.zide.json"
 
 if [[ ! -d "$DOCS_EXPLORER_DIR" ]]; then
   echo "docs-explorer checkout is missing"

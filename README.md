@@ -71,7 +71,7 @@ Local Linux example:
 
 ```bash
 sudo pacman -S zig wayland wayland-protocols libxkbcommon mesa fontconfig
-./scripts/bootstrap.sh
+./ops/bootstrap.sh
 zig build run
 ```
 
@@ -147,10 +147,10 @@ Repository-local docs own the detailed operator guidance:
 Local docs explorer workflow:
 
 ```bash
-./scripts/open_docs_browser.sh
+./ops/open_docs_browser.sh
 ```
 
-Project-owned docs browser config lives under `tools/docs_browser/`.
+Project-owned docs browser config lives under `app_architecture/docs_browser/`.
 
 ## Features and Direction
 
@@ -173,10 +173,10 @@ Local Linux dev launcher channels:
 Commands:
 
 ```bash
-scripts/linux/install-local/deploy_channel.sh stable
-scripts/linux/install-local/deploy_channel.sh dev
-scripts/linux/install-local/deploy_channels.sh
-scripts/linux/install-local/sync_channel.sh dev
+ops/linux/install-local/deploy_channel.sh stable
+ops/linux/install-local/deploy_channel.sh dev
+ops/linux/install-local/deploy_channels.sh
+ops/linux/install-local/sync_channel.sh dev
 ```
 
 This is a local developer workflow under `~/.local`, not the published release
