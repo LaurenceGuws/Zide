@@ -4,6 +4,7 @@ const runtime_policy = @import("../runtime_policy.zig");
 const terminal_widget_draw = @import("../../ui/widgets/terminal_widget_draw.zig");
 
 const TerminalDrawLatencyMetrics = terminal_widget_draw.FrameLatencyMetrics;
+const LogField = app_logger.Field;
 
 pub const SleepPolicy = struct {
     active_sleep_s: f64,
@@ -212,6 +213,93 @@ fn frameIntentWithPolicy(policy: SleepPolicy, state: anytype, now: f64, snapshot
     );
 }
 
+fn appendTerminalRuntimeFields(fields: []LogField, next: *usize) void {
+    fields[next.*] = .{ .key = "runtime_kind", .value = .{ .string = runtime_policy.runtimeKindLabel(.terminal_session) } };
+    next.* += 1;
+}
+
+fn appendTerminalPollRuntimeFields(fields: []LogField, next: *usize, poll_metrics: PollMetrics) void {
+    appendTerminalRuntimeFields(fields, next);
+    fields[next.*] = .{ .key = "term_active_lifecycle", .value = .{ .string = runtime_policy.lifecycleLabel(poll_metrics.active_lifecycle) } };
+    next.* += 1;
+    fields[next.*] = .{ .key = "term_background_lifecycle", .value = .{ .string = runtime_policy.lifecycleLabel(poll_metrics.background_lifecycle) } };
+    next.* += 1;
+    fields[next.*] = .{ .key = "term_active_work_class", .value = .{ .string = runtime_policy.workClassLabel(poll_metrics.active_work_class) } };
+    next.* += 1;
+    fields[next.*] = .{ .key = "term_background_work_class", .value = .{ .string = runtime_policy.workClassLabel(poll_metrics.background_work_class) } };
+    next.* += 1;
+}
+
+fn appendLatencyBaseFields(fields: []LogField, next: *usize, poll_ms: f64, build_ms: f64, update_ms: f64, draw_ms: f64) void {
+    fields[next.*] = .{ .key = "poll_ms", .value = .{ .float = poll_ms } };
+    next.* += 1;
+    fields[next.*] = .{ .key = "build_ms", .value = .{ .float = build_ms } };
+    next.* += 1;
+    fields[next.*] = .{ .key = "update_ms", .value = .{ .float = update_ms } };
+    next.* += 1;
+    fields[next.*] = .{ .key = "draw_ms", .value = .{ .float = draw_ms } };
+    next.* += 1;
+}
+
+fn appendDrawLatencyFields(fields: []LogField, next: *usize, draw_metrics: TerminalDrawLatencyMetrics) void {
+    fields[next.*] = .{ .key = "term_draw_lock_ms", .value = .{ .float = draw_metrics.lock_ms } };
+    next.* += 1;
+    fields[next.*] = .{ .key = "term_draw_cache_copy_ms", .value = .{ .float = draw_metrics.cache_copy_ms } };
+    next.* += 1;
+    fields[next.*] = .{ .key = "term_draw_texture_ms", .value = .{ .float = draw_metrics.texture_update_ms } };
+    next.* += 1;
+    fields[next.*] = .{ .key = "term_draw_overlay_ms", .value = .{ .float = draw_metrics.overlay_ms } };
+    next.* += 1;
+    fields[next.*] = .{ .key = "term_draw_render_ms", .value = .{ .float = draw_metrics.render_ms } };
+    next.* += 1;
+}
+
+fn appendPollMetricFields(fields: []LogField, next: *usize, poll_metrics: PollMetrics) void {
+    fields[next.*] = .{ .key = "term_poll_tabs", .value = .{ .unsigned = poll_metrics.tab_count } };
+    next.* += 1;
+    fields[next.*] = .{ .key = "term_poll_total", .value = .{ .unsigned = poll_metrics.total_polled } };
+    next.* += 1;
+    fields[next.*] = .{ .key = "term_poll_active", .value = .{ .unsigned = poll_metrics.active_polled } };
+    next.* += 1;
+    fields[next.*] = .{ .key = "term_poll_active_budget", .value = .{ .unsigned = poll_metrics.active_budget } };
+    next.* += 1;
+    fields[next.*] = .{ .key = "term_poll_bg", .value = .{ .unsigned = poll_metrics.background_polled } };
+    next.* += 1;
+    fields[next.*] = .{ .key = "term_poll_bg_budget", .value = .{ .unsigned = poll_metrics.background_budget } };
+    next.* += 1;
+    fields[next.*] = .{ .key = "term_poll_bg_inspected", .value = .{ .unsigned = poll_metrics.background_inspected } };
+    next.* += 1;
+    fields[next.*] = .{ .key = "term_poll_budget_tabs", .value = .{ .unsigned = poll_metrics.budget_tabs } };
+    next.* += 1;
+    fields[next.*] = .{ .key = "term_poll_budget_exhausted_hint", .value = .{ .boolean = poll_metrics.budget_exhausted_hint } };
+    next.* += 1;
+    fields[next.*] = .{ .key = "term_poll_active_spillover_hint", .value = .{ .boolean = poll_metrics.active_spillover_hint } };
+    next.* += 1;
+    fields[next.*] = .{ .key = "term_poll_background_backlog_hint", .value = .{ .boolean = poll_metrics.background_backlog_hint } };
+    next.* += 1;
+}
+
+fn appendPollCounterFields(fields: []LogField, next: *usize, poll_counters: PollCounters) void {
+    fields[next.*] = .{ .key = "term_poll_epoch", .value = .{ .unsigned = poll_counters.epoch } };
+    next.* += 1;
+    fields[next.*] = .{ .key = "term_poll_frames", .value = .{ .unsigned = poll_counters.frames } };
+    next.* += 1;
+    fields[next.*] = .{ .key = "term_poll_active_total", .value = .{ .unsigned = poll_counters.active_polled } };
+    next.* += 1;
+    fields[next.*] = .{ .key = "term_poll_background_total", .value = .{ .unsigned = poll_counters.background_polled } };
+    next.* += 1;
+    fields[next.*] = .{ .key = "term_poll_active_budget_total", .value = .{ .unsigned = poll_counters.active_budget } };
+    next.* += 1;
+    fields[next.*] = .{ .key = "term_poll_background_budget_total", .value = .{ .unsigned = poll_counters.background_budget } };
+    next.* += 1;
+    fields[next.*] = .{ .key = "term_poll_budget_exhausted_frames", .value = .{ .unsigned = poll_counters.budget_exhausted_frames } };
+    next.* += 1;
+    fields[next.*] = .{ .key = "term_poll_active_spillover_frames", .value = .{ .unsigned = poll_counters.active_spillover_frames } };
+    next.* += 1;
+    fields[next.*] = .{ .key = "term_poll_background_backlog_frames", .value = .{ .unsigned = poll_counters.background_backlog_frames } };
+    next.* += 1;
+}
+
 pub fn logFramePacing(state: anytype, now: f64, snapshot: Snapshot, drew: bool, draw_ms: f64, sleep_s: ?f64) void {
     const log = app_logger.logger("terminal.frame");
     if (!log.enabled_file and !log.enabled_console) return;
@@ -278,103 +366,43 @@ pub fn logInputLatency(state: anytype, poll_ms: f64, build_ms: f64, update_ms: f
     const poll_counters = term_ctx.poll_counters;
 
     if (poll_metrics != null and draw_metrics != null and poll_counters != null) {
-        state.input_latency_logger.logFields(.info, "frame_latency", &.{
-            .{ .key = "runtime_kind", .value = .{ .string = runtime_policy.runtimeKindLabel(.terminal_session) } },
-            .{ .key = "term_active_lifecycle", .value = .{ .string = runtime_policy.lifecycleLabel(poll_metrics.?.active_lifecycle) } },
-            .{ .key = "term_background_lifecycle", .value = .{ .string = runtime_policy.lifecycleLabel(poll_metrics.?.background_lifecycle) } },
-            .{ .key = "term_active_work_class", .value = .{ .string = runtime_policy.workClassLabel(poll_metrics.?.active_work_class) } },
-            .{ .key = "term_background_work_class", .value = .{ .string = runtime_policy.workClassLabel(poll_metrics.?.background_work_class) } },
-            .{ .key = "poll_ms", .value = .{ .float = poll_ms } },
-            .{ .key = "build_ms", .value = .{ .float = build_ms } },
-            .{ .key = "update_ms", .value = .{ .float = update_ms } },
-            .{ .key = "draw_ms", .value = .{ .float = draw_ms } },
-            .{ .key = "term_draw_lock_ms", .value = .{ .float = draw_metrics.?.lock_ms } },
-            .{ .key = "term_draw_cache_copy_ms", .value = .{ .float = draw_metrics.?.cache_copy_ms } },
-            .{ .key = "term_draw_texture_ms", .value = .{ .float = draw_metrics.?.texture_update_ms } },
-            .{ .key = "term_draw_overlay_ms", .value = .{ .float = draw_metrics.?.overlay_ms } },
-            .{ .key = "term_draw_render_ms", .value = .{ .float = draw_metrics.?.render_ms } },
-            .{ .key = "term_poll_tabs", .value = .{ .unsigned = poll_metrics.?.tab_count } },
-            .{ .key = "term_poll_total", .value = .{ .unsigned = poll_metrics.?.total_polled } },
-            .{ .key = "term_poll_active", .value = .{ .unsigned = poll_metrics.?.active_polled } },
-            .{ .key = "term_poll_active_budget", .value = .{ .unsigned = poll_metrics.?.active_budget } },
-            .{ .key = "term_poll_bg", .value = .{ .unsigned = poll_metrics.?.background_polled } },
-            .{ .key = "term_poll_bg_budget", .value = .{ .unsigned = poll_metrics.?.background_budget } },
-            .{ .key = "term_poll_bg_inspected", .value = .{ .unsigned = poll_metrics.?.background_inspected } },
-            .{ .key = "term_poll_budget_tabs", .value = .{ .unsigned = poll_metrics.?.budget_tabs } },
-            .{ .key = "term_poll_budget_exhausted_hint", .value = .{ .boolean = poll_metrics.?.budget_exhausted_hint } },
-            .{ .key = "term_poll_active_spillover_hint", .value = .{ .boolean = poll_metrics.?.active_spillover_hint } },
-            .{ .key = "term_poll_background_backlog_hint", .value = .{ .boolean = poll_metrics.?.background_backlog_hint } },
-            .{ .key = "term_poll_epoch", .value = .{ .unsigned = poll_counters.?.epoch } },
-            .{ .key = "term_poll_frames", .value = .{ .unsigned = poll_counters.?.frames } },
-            .{ .key = "term_poll_active_total", .value = .{ .unsigned = poll_counters.?.active_polled } },
-            .{ .key = "term_poll_background_total", .value = .{ .unsigned = poll_counters.?.background_polled } },
-            .{ .key = "term_poll_active_budget_total", .value = .{ .unsigned = poll_counters.?.active_budget } },
-            .{ .key = "term_poll_background_budget_total", .value = .{ .unsigned = poll_counters.?.background_budget } },
-            .{ .key = "term_poll_budget_exhausted_frames", .value = .{ .unsigned = poll_counters.?.budget_exhausted_frames } },
-            .{ .key = "term_poll_active_spillover_frames", .value = .{ .unsigned = poll_counters.?.active_spillover_frames } },
-            .{ .key = "term_poll_background_backlog_frames", .value = .{ .unsigned = poll_counters.?.background_backlog_frames } },
-        });
+        var fields: [32]LogField = undefined;
+        var next: usize = 0;
+        appendTerminalPollRuntimeFields(fields[0..], &next, poll_metrics.?);
+        appendLatencyBaseFields(fields[0..], &next, poll_ms, build_ms, update_ms, draw_ms);
+        appendDrawLatencyFields(fields[0..], &next, draw_metrics.?);
+        appendPollMetricFields(fields[0..], &next, poll_metrics.?);
+        appendPollCounterFields(fields[0..], &next, poll_counters.?);
+        state.input_latency_logger.logFields(.info, "frame_latency", fields[0..next]);
         return;
     }
 
     if (draw_metrics != null) {
-        state.input_latency_logger.logFields(.info, "frame_latency", &.{
-            .{ .key = "runtime_kind", .value = .{ .string = runtime_policy.runtimeKindLabel(.terminal_session) } },
-            .{ .key = "poll_ms", .value = .{ .float = poll_ms } },
-            .{ .key = "build_ms", .value = .{ .float = build_ms } },
-            .{ .key = "update_ms", .value = .{ .float = update_ms } },
-            .{ .key = "draw_ms", .value = .{ .float = draw_ms } },
-            .{ .key = "term_draw_lock_ms", .value = .{ .float = draw_metrics.?.lock_ms } },
-            .{ .key = "term_draw_cache_copy_ms", .value = .{ .float = draw_metrics.?.cache_copy_ms } },
-            .{ .key = "term_draw_texture_ms", .value = .{ .float = draw_metrics.?.texture_update_ms } },
-            .{ .key = "term_draw_overlay_ms", .value = .{ .float = draw_metrics.?.overlay_ms } },
-            .{ .key = "term_draw_render_ms", .value = .{ .float = draw_metrics.?.render_ms } },
-        });
+        var fields: [10]LogField = undefined;
+        var next: usize = 0;
+        appendTerminalRuntimeFields(fields[0..], &next);
+        appendLatencyBaseFields(fields[0..], &next, poll_ms, build_ms, update_ms, draw_ms);
+        appendDrawLatencyFields(fields[0..], &next, draw_metrics.?);
+        state.input_latency_logger.logFields(.info, "frame_latency", fields[0..next]);
         return;
     }
 
     if (poll_metrics != null and poll_counters != null) {
-        state.input_latency_logger.logFields(.info, "frame_latency", &.{
-            .{ .key = "runtime_kind", .value = .{ .string = runtime_policy.runtimeKindLabel(.terminal_session) } },
-            .{ .key = "term_active_lifecycle", .value = .{ .string = runtime_policy.lifecycleLabel(poll_metrics.?.active_lifecycle) } },
-            .{ .key = "term_background_lifecycle", .value = .{ .string = runtime_policy.lifecycleLabel(poll_metrics.?.background_lifecycle) } },
-            .{ .key = "term_active_work_class", .value = .{ .string = runtime_policy.workClassLabel(poll_metrics.?.active_work_class) } },
-            .{ .key = "term_background_work_class", .value = .{ .string = runtime_policy.workClassLabel(poll_metrics.?.background_work_class) } },
-            .{ .key = "poll_ms", .value = .{ .float = poll_ms } },
-            .{ .key = "build_ms", .value = .{ .float = build_ms } },
-            .{ .key = "update_ms", .value = .{ .float = update_ms } },
-            .{ .key = "draw_ms", .value = .{ .float = draw_ms } },
-            .{ .key = "term_poll_tabs", .value = .{ .unsigned = poll_metrics.?.tab_count } },
-            .{ .key = "term_poll_total", .value = .{ .unsigned = poll_metrics.?.total_polled } },
-            .{ .key = "term_poll_active", .value = .{ .unsigned = poll_metrics.?.active_polled } },
-            .{ .key = "term_poll_active_budget", .value = .{ .unsigned = poll_metrics.?.active_budget } },
-            .{ .key = "term_poll_bg", .value = .{ .unsigned = poll_metrics.?.background_polled } },
-            .{ .key = "term_poll_bg_budget", .value = .{ .unsigned = poll_metrics.?.background_budget } },
-            .{ .key = "term_poll_bg_inspected", .value = .{ .unsigned = poll_metrics.?.background_inspected } },
-            .{ .key = "term_poll_budget_tabs", .value = .{ .unsigned = poll_metrics.?.budget_tabs } },
-            .{ .key = "term_poll_budget_exhausted_hint", .value = .{ .boolean = poll_metrics.?.budget_exhausted_hint } },
-            .{ .key = "term_poll_active_spillover_hint", .value = .{ .boolean = poll_metrics.?.active_spillover_hint } },
-            .{ .key = "term_poll_background_backlog_hint", .value = .{ .boolean = poll_metrics.?.background_backlog_hint } },
-            .{ .key = "term_poll_epoch", .value = .{ .unsigned = poll_counters.?.epoch } },
-            .{ .key = "term_poll_frames", .value = .{ .unsigned = poll_counters.?.frames } },
-            .{ .key = "term_poll_active_total", .value = .{ .unsigned = poll_counters.?.active_polled } },
-            .{ .key = "term_poll_background_total", .value = .{ .unsigned = poll_counters.?.background_polled } },
-            .{ .key = "term_poll_active_budget_total", .value = .{ .unsigned = poll_counters.?.active_budget } },
-            .{ .key = "term_poll_background_budget_total", .value = .{ .unsigned = poll_counters.?.background_budget } },
-            .{ .key = "term_poll_budget_exhausted_frames", .value = .{ .unsigned = poll_counters.?.budget_exhausted_frames } },
-            .{ .key = "term_poll_active_spillover_frames", .value = .{ .unsigned = poll_counters.?.active_spillover_frames } },
-            .{ .key = "term_poll_background_backlog_frames", .value = .{ .unsigned = poll_counters.?.background_backlog_frames } },
-        });
+        var fields: [27]LogField = undefined;
+        var next: usize = 0;
+        appendTerminalPollRuntimeFields(fields[0..], &next, poll_metrics.?);
+        appendLatencyBaseFields(fields[0..], &next, poll_ms, build_ms, update_ms, draw_ms);
+        appendPollMetricFields(fields[0..], &next, poll_metrics.?);
+        appendPollCounterFields(fields[0..], &next, poll_counters.?);
+        state.input_latency_logger.logFields(.info, "frame_latency", fields[0..next]);
         return;
     }
 
-    state.input_latency_logger.logFields(.info, "frame_latency", &.{
-        .{ .key = "runtime_kind", .value = .{ .string = runtime_policy.runtimeKindLabel(.terminal_session) } },
-        .{ .key = "poll_ms", .value = .{ .float = poll_ms } },
-        .{ .key = "build_ms", .value = .{ .float = build_ms } },
-        .{ .key = "update_ms", .value = .{ .float = update_ms } },
-        .{ .key = "draw_ms", .value = .{ .float = draw_ms } },
-    });
+    var fields: [5]LogField = undefined;
+    var next: usize = 0;
+    appendTerminalRuntimeFields(fields[0..], &next);
+    appendLatencyBaseFields(fields[0..], &next, poll_ms, build_ms, update_ms, draw_ms);
+    state.input_latency_logger.logFields(.info, "frame_latency", fields[0..next]);
 }
 
 fn activeFrameState(state: anytype) struct {
