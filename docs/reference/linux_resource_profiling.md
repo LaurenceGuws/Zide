@@ -127,6 +127,9 @@ Current compare output includes:
 - average and peak RSS deltas
 - peak GPU FB deltas when present
 - subsystem event-count deltas by tag
+- `terminal.wake` lifecycle-field count deltas for:
+  - `active_lifecycle`
+  - `background_lifecycle`
 
 Monitor an existing Zide PID:
 

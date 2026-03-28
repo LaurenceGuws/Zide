@@ -231,6 +231,29 @@ def count_events_by_tag(path: Optional[Path]) -> Dict[str, int]:
     return counts
 
 
+def count_field_values(path: Optional[Path], *, tag_name: str, field_name: str) -> Dict[str, int]:
+    if path is None or not path.exists():
+        return {}
+    counts: Dict[str, int] = {}
+    with path.open("r", encoding="utf-8") as f:
+        for line in f:
+            line = line.strip()
+            if not line:
+                continue
+            payload = json.loads(line)
+            tag = payload.get("tag")
+            if tag != tag_name:
+                continue
+            fields = payload.get("fields")
+            if not isinstance(fields, dict):
+                continue
+            value = fields.get(field_name)
+            if not isinstance(value, str) or not value:
+                continue
+            counts[value] = counts.get(value, 0) + 1
+    return counts
+
+
 def format_delta(base: Optional[float], candidate: Optional[float], unit: str = "") -> str:
     if base is None and candidate is None:
         return "n/a"
@@ -287,6 +310,32 @@ def compare_runs(args: argparse.Namespace) -> int:
             print(f"  {tag}: {base_count} -> {candidate_count} ({sign}{delta})")
     else:
         print("subsystem_event_counts=n/a")
+
+    lifecycle_field_counts = (
+        ("terminal.wake", "background_lifecycle"),
+        ("terminal.wake", "active_lifecycle"),
+    )
+    for tag_name, field_name in lifecycle_field_counts:
+        base_counts = count_field_values(
+            base_run / base_events_name if isinstance(base_events_name, str) else None,
+            tag_name=tag_name,
+            field_name=field_name,
+        )
+        candidate_counts = count_field_values(
+            candidate_run / candidate_events_name if isinstance(candidate_events_name, str) else None,
+            tag_name=tag_name,
+            field_name=field_name,
+        )
+        all_values = sorted(set(base_counts.keys()) | set(candidate_counts.keys()))
+        if not all_values:
+            continue
+        print(f"{tag_name}.{field_name}_counts:")
+        for value in all_values:
+            base_count = base_counts.get(value, 0)
+            candidate_count = candidate_counts.get(value, 0)
+            delta = candidate_count - base_count
+            sign = "+" if delta >= 0 else ""
+            print(f"  {value}: {base_count} -> {candidate_count} ({sign}{delta})")
 
     return 0
 
