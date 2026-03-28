@@ -332,6 +332,7 @@ pub const TerminalWorkspace = struct {
         });
         self.active_index = self.tabs.items.len - 1;
         self.background_poll_cursor = self.active_index;
+        self.resetPollRuntimeCounters();
         return .{
             .id = tab_id,
             .session = session,
@@ -375,6 +376,7 @@ pub const TerminalWorkspace = struct {
         removed.session.deinit();
         self.normalizeActiveAfterRemoval(idx);
         polling.normalizePollCursor(self);
+        self.resetPollRuntimeCounters();
         return true;
     }
 

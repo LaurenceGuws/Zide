@@ -74,3 +74,22 @@ test "terminal workspace first confirm close tab returns first matching tab" {
 
     _ = second;
 }
+
+test "terminal workspace poll epochs reset on topology and active-tab changes" {
+    var workspace = terminal.TerminalWorkspace.init(std.testing.allocator, .{});
+    defer workspace.deinit();
+
+    try std.testing.expectEqual(@as(u64, 0), workspace.pollRuntimeCounters().epoch);
+
+    const first = try workspace.createTab(24, 80);
+    try std.testing.expectEqual(@as(u64, 1), workspace.pollRuntimeCounters().epoch);
+
+    const second = try workspace.createTab(24, 80);
+    try std.testing.expectEqual(@as(u64, 2), workspace.pollRuntimeCounters().epoch);
+
+    try std.testing.expect(workspace.activateTab(first));
+    try std.testing.expectEqual(@as(u64, 3), workspace.pollRuntimeCounters().epoch);
+
+    try std.testing.expect(workspace.closeTab(second));
+    try std.testing.expectEqual(@as(u64, 4), workspace.pollRuntimeCounters().epoch);
+}

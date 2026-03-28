@@ -590,6 +590,9 @@ This is an ownership/foundation cut only:
   - active tab: `focused_visible`
   - exactly one background tab: `visible_inactive`
   - larger background sets: `hidden_warm`
+- terminal poll-counter epochs now also reset on tab create/close topology
+  changes, not only focus changes, so lifecycle measurements stay scoped to one
+  background-shape regime
 - this is intentionally a conservative first cut, not a claim that the app now
   has full terminal visibility truth for secondary/background surfaces
 - the immediate goal is measurable cooling behavior through shared vocabulary
