@@ -110,10 +110,26 @@ test "workspace poll policy carries shared active and background intents" {
         max_tabs_per_frame: usize,
         max_background_tabs_per_frame: usize,
         max_active_polls_per_frame: usize,
-    }, 3, true);
+    }, 2, true);
 
     try std.testing.expectEqual(runtime_policy.LifecycleTier.focused_visible, policy.active_intent.lifecycle);
     try std.testing.expectEqual(runtime_policy.WorkClass.interactive, policy.active_intent.work_class);
+    try std.testing.expectEqual(runtime_policy.LifecycleTier.visible_inactive, policy.background_intent.lifecycle);
+    try std.testing.expectEqual(runtime_policy.WorkClass.background, policy.background_intent.work_class);
+    try std.testing.expectEqual(@as(usize, 2), policy.max_background_tabs_per_frame);
+}
+
+test "workspace poll policy cools larger background sets more aggressively" {
+    const policy = pollPolicyForTabCount(struct {
+        active_intent: runtime_policy.RuntimeIntent,
+        background_intent: runtime_policy.RuntimeIntent,
+        max_tabs_per_frame: usize,
+        max_background_tabs_per_frame: usize,
+        max_active_polls_per_frame: usize,
+    }, 3, false);
+
+    try std.testing.expectEqual(runtime_policy.LifecycleTier.focused_visible, policy.active_intent.lifecycle);
+    try std.testing.expectEqual(runtime_policy.WorkClass.background, policy.active_intent.work_class);
     try std.testing.expectEqual(runtime_policy.LifecycleTier.hidden_warm, policy.background_intent.lifecycle);
     try std.testing.expectEqual(runtime_policy.WorkClass.background, policy.background_intent.work_class);
     try std.testing.expectEqual(@as(usize, 1), policy.max_background_tabs_per_frame);

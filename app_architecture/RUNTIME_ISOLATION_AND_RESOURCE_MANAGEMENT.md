@@ -582,3 +582,15 @@ This is an ownership/foundation cut only:
 
 - it does not yet change user-visible scheduling behavior
 - it exists to stop future runtime work from inventing new vocabulary ad hoc
+
+2026-03-28 terminal lifecycle checkpoint:
+
+- terminal workspace polling now uses the shared lifecycle tiers for a first
+  real budget distinction:
+  - active tab: `focused_visible`
+  - exactly one background tab: `visible_inactive`
+  - larger background sets: `hidden_warm`
+- this is intentionally a conservative first cut, not a claim that the app now
+  has full terminal visibility truth for secondary/background surfaces
+- the immediate goal is measurable cooling behavior through shared vocabulary
+  before a richer UI/runtime visibility model exists

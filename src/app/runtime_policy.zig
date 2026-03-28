@@ -67,7 +67,12 @@ pub fn terminalVisibleIntent(user_input_active: bool) RuntimeIntent {
 pub fn terminalBackgroundIntent(tab_count: usize) RuntimeIntent {
     return .{
         .runtime = .terminal_session,
-        .lifecycle = if (tab_count > 1) .hidden_warm else .focused_visible,
+        .lifecycle = if (tab_count <= 1)
+            .focused_visible
+        else if (tab_count == 2)
+            .visible_inactive
+        else
+            .hidden_warm,
         .work_class = .background,
         .user_input_active = false,
     };
@@ -170,9 +175,17 @@ test "terminal visible intent uses interactive class under input pressure" {
 }
 
 test "terminal workspace intents cool background tabs while keeping active input-sensitive" {
-    const intents = terminalWorkspaceIntents(3, true);
+    const intents = terminalWorkspaceIntents(2, true);
     try std.testing.expectEqual(LifecycleTier.focused_visible, intents.active.lifecycle);
     try std.testing.expectEqual(WorkClass.interactive, intents.active.work_class);
+    try std.testing.expectEqual(LifecycleTier.visible_inactive, intents.background.lifecycle);
+    try std.testing.expectEqual(WorkClass.background, intents.background.work_class);
+}
+
+test "terminal workspace intents cool larger background sets to hidden warm" {
+    const intents = terminalWorkspaceIntents(3, false);
+    try std.testing.expectEqual(LifecycleTier.focused_visible, intents.active.lifecycle);
+    try std.testing.expectEqual(WorkClass.background, intents.active.work_class);
     try std.testing.expectEqual(LifecycleTier.hidden_warm, intents.background.lifecycle);
     try std.testing.expectEqual(WorkClass.background, intents.background.work_class);
 }

@@ -129,12 +129,12 @@ owning subsystem queues.
     - Priority change:
       - status-bar mode implementation is intentionally deferred for now while
         runtime/resource-management foundation work starts
-    - Runtime-lifecycle constraint:
-      - terminal `visible_inactive` is not implemented yet because current
-        terminal workspace/runtime truth only distinguishes the active tab from
-        non-active tabs; no real split-visible or secondary-visible terminal
-        signal exists yet, so background tabs remain modeled as `hidden_warm`
-        until UI/runtime visibility truth improves
+    - 2026-03-28 runtime-lifecycle checkpoint:
+      - terminal workspace polling now uses a limited intermediate
+        `visible_inactive` tier when there is exactly one background tab
+      - larger background sets still cool to `hidden_warm`
+      - this is a budget-policy cut only; the app still does not claim full
+        secondary-visible terminal truth yet
 
 - [ ] `LNX-02` Audit Linux renderer/input/window behavior after recent UI work
   - Focus:
