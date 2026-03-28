@@ -603,10 +603,21 @@ This is an ownership/foundation cut only:
 - `editor.perf` structured events for display-preparation and visible-cache
   precompute now emit the shared runtime vocabulary too:
   - `runtime_kind = editor`
-  - `lifecycle = focused_visible`
+  - `lifecycle = visible_inactive`
   - `work_class = background`
 - this is still an observability/foundation cut, not a claim that editor runtime
   scheduling or inactive-editor lifecycle policy is fully implemented yet
+
+2026-03-28 editor visible-work budget checkpoint:
+
+- visible-cache precompute and visible highlight scheduling now use a first real
+  editor runtime-policy budget seam via `editorVisibleWorkLineBudget`
+- current conservative policy:
+  - visible active editor background work is labeled `visible_inactive`
+  - visible inactive editor work is capped to 8 lines per pass by default
+  - hidden warm editor work would cap to 2 lines if adopted later
+- explicit user-configured `editor_highlight_budget` and `editor_width_budget`
+  still apply as base budgets, then flow through the shared runtime policy cap
 
 2026-03-28 terminal perf event alignment checkpoint:
 

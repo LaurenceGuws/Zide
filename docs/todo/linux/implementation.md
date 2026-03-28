@@ -330,3 +330,7 @@ owning subsystem queues.
       - terminal frame pacing and input-latency structured events now also emit
         shared runtime/lifecycle/work-class fields so terminal wake, frame, and
         latency captures align on one machine-readable scheduling vocabulary
+      - editor visible-cache/highlight background work now uses a first shared
+        runtime-policy budget seam instead of raw visible-line defaults, with a
+        conservative `visible_inactive` cap for non-interactive visible editor
+        work

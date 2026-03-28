@@ -113,9 +113,18 @@ pub fn editorInteractiveIntent() RuntimeIntent {
 pub fn editorBackgroundIntent() RuntimeIntent {
     return .{
         .runtime = .editor,
-        .lifecycle = .focused_visible,
+        .lifecycle = .visible_inactive,
         .work_class = .background,
         .user_input_active = false,
+    };
+}
+
+pub fn editorVisibleWorkLineBudget(base_budget: usize, intent: RuntimeIntent) usize {
+    return switch (intent.lifecycle) {
+        .focused_visible => base_budget,
+        .visible_inactive => @min(base_budget, @as(usize, 8)),
+        .hidden_warm => @min(base_budget, @as(usize, 2)),
+        .paused, .evicted => 0,
     };
 }
 
@@ -214,9 +223,27 @@ test "editor intents distinguish interactive and background work classes" {
     try std.testing.expectEqual(WorkClass.interactive, interactive.work_class);
     try std.testing.expect(interactive.user_input_active);
     try std.testing.expectEqual(RuntimeKind.editor, background.runtime);
-    try std.testing.expectEqual(LifecycleTier.focused_visible, background.lifecycle);
+    try std.testing.expectEqual(LifecycleTier.visible_inactive, background.lifecycle);
     try std.testing.expectEqual(WorkClass.background, background.work_class);
     try std.testing.expect(!background.user_input_active);
+}
+
+test "editor visible work budget cools inactive and hidden work" {
+    try std.testing.expectEqual(@as(usize, 12), editorVisibleWorkLineBudget(12, .{
+        .runtime = .editor,
+        .lifecycle = .focused_visible,
+        .work_class = .interactive,
+    }));
+    try std.testing.expectEqual(@as(usize, 8), editorVisibleWorkLineBudget(12, .{
+        .runtime = .editor,
+        .lifecycle = .visible_inactive,
+        .work_class = .background,
+    }));
+    try std.testing.expectEqual(@as(usize, 2), editorVisibleWorkLineBudget(12, .{
+        .runtime = .editor,
+        .lifecycle = .hidden_warm,
+        .work_class = .background,
+    }));
 }
 
 test "runtime kind labels stay stable for structured logs" {

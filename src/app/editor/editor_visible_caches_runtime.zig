@@ -18,7 +18,8 @@ fn visibleLineBudget(editor_shell: *Shell, editor_layout: layout_types.WidgetLay
 
 fn highlightBudget(widget: *EditorWidget, editor_shell: *Shell, editor_layout: layout_types.WidgetLayout, editor_highlight_budget: ?usize) usize {
     _ = widget;
-    return editor_highlight_budget orelse visibleLineBudget(editor_shell, editor_layout);
+    const base_budget = editor_highlight_budget orelse visibleLineBudget(editor_shell, editor_layout);
+    return runtime_policy.editorVisibleWorkLineBudget(base_budget, runtime_policy.editorBackgroundIntent());
 }
 
 fn runHighlightPrecompute(
@@ -60,7 +61,8 @@ fn runLayoutPrecompute(
     }
     const visible_lines = @as(usize, @intFromFloat(editor_layout.editor.height / editor_shell.editorCharHeight()));
     const default_budget = if (visible_lines > 0) visible_lines + 1 else 0;
-    const width_budget = editor_width_budget orelse default_budget;
+    const base_budget = editor_width_budget orelse default_budget;
+    const width_budget = runtime_policy.editorVisibleWorkLineBudget(base_budget, runtime_policy.editorBackgroundIntent());
     const t_width_start = std.time.nanoTimestamp();
     editor_draw.precomputeLineWidths(widget, editor_render_cache, editor_shell, editor_layout.editor.height, width_budget);
     const width_elapsed_us = @as(i64, @intCast(@divTrunc(std.time.nanoTimestamp() - t_width_start, 1000)));
@@ -143,7 +145,9 @@ pub fn precompute(
         .{ .key = "skipped", .value = .{ .boolean = false } },
         .{ .key = "run_highlight", .value = .{ .boolean = run_highlight } },
         .{ .key = "visible_lines", .value = .{ .unsigned = layout_metrics.visible_lines } },
+        .{ .key = "highlight_budget_base", .value = .{ .unsigned = if (run_highlight) editor_highlight_budget orelse visibleLineBudget(editor_shell, editor_layout) else 0 } },
         .{ .key = "highlight_budget", .value = .{ .unsigned = if (run_highlight) highlightBudget(widget, editor_shell, editor_layout, editor_highlight_budget) else 0 } },
+        .{ .key = "width_budget_base", .value = .{ .unsigned = editor_width_budget orelse (if (layout_metrics.visible_lines > 0) layout_metrics.visible_lines + 1 else 0) } },
         .{ .key = "width_budget", .value = .{ .unsigned = layout_metrics.width_budget } },
         .{ .key = "highlight_us", .value = .{ .integer = highlight_elapsed_us } },
         .{ .key = "width_us", .value = .{ .integer = layout_metrics.width_elapsed_us } },
