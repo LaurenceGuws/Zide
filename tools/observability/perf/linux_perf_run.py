@@ -12,7 +12,7 @@ import subprocess
 import sys
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Tuple
 
 
 TOOL_VERSION = "0.1"
@@ -39,6 +39,16 @@ DEFAULT_PERF_PRESET = "core"
 
 def parse_args(argv: Optional[List[str]] = None) -> argparse.Namespace:
     raw_argv = list(sys.argv[1:] if argv is None else argv)
+    if raw_argv and raw_argv[0] == "compare":
+        parser = argparse.ArgumentParser(
+            prog="linux_perf_run.py compare",
+            description="Compare two packaged Linux perf run folders.",
+        )
+        parser.add_argument("base_run", type=Path, help="Baseline run folder.")
+        parser.add_argument("candidate_run", type=Path, help="Candidate run folder.")
+        parser.set_defaults(mode="compare")
+        return parser.parse_args(raw_argv[1:])
+
     launch_cmd: Optional[List[str]] = None
     if "--launch" in raw_argv:
         idx = raw_argv.index("--launch")
@@ -114,6 +124,7 @@ def parse_args(argv: Optional[List[str]] = None) -> argparse.Namespace:
         parser.error("--launch requires a command")
     if args.capture_zide_perf and args.pid is not None:
         parser.error("--capture-zide-perf currently requires --launch")
+    args.mode = "capture"
     return args
 
 
@@ -185,6 +196,99 @@ def summarize_host_samples(samples: List[Dict[str, Any]]) -> Dict[str, Any]:
         "gpu_mem_pct": numeric_summary("gpu_mem_pct"),
         "gpu_fb_mb": numeric_summary("gpu_fb_mb"),
     }
+
+
+def load_json(path: Path) -> Dict[str, Any]:
+    return json.loads(path.read_text(encoding="utf-8"))
+
+
+def metric_pair(summary: Dict[str, Any], key: str) -> Tuple[Optional[float], Optional[float]]:
+    metric = summary.get("host_resources", {}).get(key, {})
+    if not isinstance(metric, dict):
+        return (None, None)
+    avg = metric.get("avg")
+    peak = metric.get("peak")
+    return (
+        float(avg) if avg is not None else None,
+        float(peak) if peak is not None else None,
+    )
+
+
+def count_events_by_tag(path: Optional[Path]) -> Dict[str, int]:
+    if path is None or not path.exists():
+        return {}
+    counts: Dict[str, int] = {}
+    with path.open("r", encoding="utf-8") as f:
+        for line in f:
+            line = line.strip()
+            if not line:
+                continue
+            payload = json.loads(line)
+            tag = payload.get("tag")
+            if not isinstance(tag, str) or not tag:
+                tag = "<unknown>"
+            counts[tag] = counts.get(tag, 0) + 1
+    return counts
+
+
+def format_delta(base: Optional[float], candidate: Optional[float], unit: str = "") -> str:
+    if base is None and candidate is None:
+        return "n/a"
+    if base is None:
+        return f"added {candidate:.2f}{unit}"
+    if candidate is None:
+        return f"removed (was {base:.2f}{unit})"
+    delta = candidate - base
+    sign = "+" if delta >= 0 else ""
+    return f"{base:.2f}{unit} -> {candidate:.2f}{unit} ({sign}{delta:.2f}{unit})"
+
+
+def compare_runs(args: argparse.Namespace) -> int:
+    base_run = args.base_run.resolve()
+    candidate_run = args.candidate_run.resolve()
+    base_manifest = load_json(base_run / "manifest.json")
+    candidate_manifest = load_json(candidate_run / "manifest.json")
+    base_summary = load_json(base_run / "summary.json")
+    candidate_summary = load_json(candidate_run / "summary.json")
+
+    print(f"base_run={base_run}")
+    print(f"candidate_run={candidate_run}")
+    print(
+        "labels="
+        f"{base_manifest.get('label', base_run.name)} -> "
+        f"{candidate_manifest.get('label', candidate_run.name)}"
+    )
+
+    for metric_key, label, unit in (
+        ("cpu_pct", "cpu_pct.avg", "%"),
+        ("rss_kib", "rss_kib.avg", " KiB"),
+        ("gpu_fb_mb", "gpu_fb_mb.peak", " MiB"),
+    ):
+        base_avg, base_peak = metric_pair(base_summary, metric_key)
+        candidate_avg, candidate_peak = metric_pair(candidate_summary, metric_key)
+        if metric_key == "gpu_fb_mb":
+            print(f"{label}={format_delta(base_peak, candidate_peak, unit)}")
+        else:
+            print(f"{label}={format_delta(base_avg, candidate_avg, unit)}")
+            print(f"{metric_key}.peak={format_delta(base_peak, candidate_peak, unit)}")
+
+    base_events_name = base_manifest.get("artifacts", {}).get("subsystem_events_jsonl")
+    candidate_events_name = candidate_manifest.get("artifacts", {}).get("subsystem_events_jsonl")
+    base_events = count_events_by_tag(base_run / base_events_name) if isinstance(base_events_name, str) else {}
+    candidate_events = count_events_by_tag(candidate_run / candidate_events_name) if isinstance(candidate_events_name, str) else {}
+    all_tags = sorted(set(base_events.keys()) | set(candidate_events.keys()))
+    if all_tags:
+        print("subsystem_event_counts:")
+        for tag in all_tags:
+            base_count = base_events.get(tag, 0)
+            candidate_count = candidate_events.get(tag, 0)
+            delta = candidate_count - base_count
+            sign = "+" if delta >= 0 else ""
+            print(f"  {tag}: {base_count} -> {candidate_count} ({sign}{delta})")
+    else:
+        print("subsystem_event_counts=n/a")
+
+    return 0
 
 
 def merge_subsystem_events(paths: List[Path], output_path: Path) -> int:
@@ -304,6 +408,9 @@ return base
 
 def main() -> int:
     args = parse_args()
+    if args.mode == "compare":
+        return compare_runs(args)
+
     run_dir = make_run_dir(args.runs_dir, args.label)
     host_jsonl = run_dir / "host_resources.jsonl"
     host_csv = run_dir / "host_resources.csv" if args.keep_host_csv else None

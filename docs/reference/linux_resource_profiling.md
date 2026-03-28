@@ -113,6 +113,21 @@ Notes:
     - `input.latency`
 - `--perf-tag` can still add extra tags on top of a preset
 
+Compare two packaged perf runs:
+
+```bash
+python3 tools/observability/perf/linux_perf_run.py compare \
+  perf_runs/2026-03-26T10-15-00Z_terminal_idle \
+  perf_runs/2026-03-26T10-18-00Z_terminal_btop
+```
+
+Current compare output includes:
+
+- average and peak CPU deltas
+- average and peak RSS deltas
+- peak GPU FB deltas when present
+- subsystem event-count deltas by tag
+
 Monitor an existing Zide PID:
 
 ```bash
