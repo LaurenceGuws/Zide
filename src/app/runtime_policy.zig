@@ -147,6 +147,15 @@ pub fn lifecycleLabel(tier: LifecycleTier) []const u8 {
     };
 }
 
+pub fn runtimeKindLabel(kind: RuntimeKind) []const u8 {
+    return switch (kind) {
+        .ui_host => "ui_host",
+        .terminal_session => "terminal_session",
+        .editor => "editor",
+        .workspace_service => "workspace_service",
+    };
+}
+
 pub fn workClassLabel(work_class: WorkClass) []const u8 {
     return switch (work_class) {
         .frame_critical => "frame_critical",
@@ -208,6 +217,13 @@ test "editor intents distinguish interactive and background work classes" {
     try std.testing.expectEqual(LifecycleTier.focused_visible, background.lifecycle);
     try std.testing.expectEqual(WorkClass.background, background.work_class);
     try std.testing.expect(!background.user_input_active);
+}
+
+test "runtime kind labels stay stable for structured logs" {
+    try std.testing.expectEqualStrings("ui_host", runtimeKindLabel(.ui_host));
+    try std.testing.expectEqualStrings("terminal_session", runtimeKindLabel(.terminal_session));
+    try std.testing.expectEqualStrings("editor", runtimeKindLabel(.editor));
+    try std.testing.expectEqualStrings("workspace_service", runtimeKindLabel(.workspace_service));
 }
 
 test "hidden warm background budget is capped harder than visible tiers" {

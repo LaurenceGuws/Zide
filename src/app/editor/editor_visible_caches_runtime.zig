@@ -1,5 +1,6 @@
 const app_editor_display_prepare = @import("editor_display_prepare.zig");
 const app_logger = @import("../../app_logger.zig");
+const runtime_policy = @import("../runtime_policy.zig");
 const shared_types = @import("../../types/mod.zig");
 const app_shell = @import("../../app_shell.zig");
 const widgets = @import("../../ui/widgets.zig");
@@ -106,14 +107,19 @@ pub fn precompute(
     run_highlight: bool,
 ) bool {
     const perf_log = app_logger.logger("editor.perf");
+    const intent = runtime_policy.editorBackgroundIntent();
     if (editor_layout.editor.width <= 0 or editor_layout.editor.height <= 0) return false;
     widget.editor.advanceStartupDeferrals(frame_id);
     if (widget.editor.shouldDeferVisibleCachePrecompute()) {
-        perf_log.logf(
-            .info,
-            "visible_cache_precompute frame={d} skipped=true defer_precompute={d} defer_clusters={d}",
-            .{ frame_id, widget.editor.visible_cache_precompute_defer_frames, widget.editor.cluster_offsets_defer_frames },
-        );
+        perf_log.logFields(.info, "visible_cache_precompute", &.{
+            .{ .key = "runtime_kind", .value = .{ .string = runtime_policy.runtimeKindLabel(intent.runtime) } },
+            .{ .key = "lifecycle", .value = .{ .string = runtime_policy.lifecycleLabel(intent.lifecycle) } },
+            .{ .key = "work_class", .value = .{ .string = runtime_policy.workClassLabel(intent.work_class) } },
+            .{ .key = "frame", .value = .{ .unsigned = frame_id } },
+            .{ .key = "skipped", .value = .{ .boolean = true } },
+            .{ .key = "defer_precompute", .value = .{ .unsigned = widget.editor.visible_cache_precompute_defer_frames } },
+            .{ .key = "defer_clusters", .value = .{ .unsigned = widget.editor.cluster_offsets_defer_frames } },
+        });
         return false;
     }
     const t_start = std.time.nanoTimestamp();
@@ -129,20 +135,20 @@ pub fn precompute(
         0;
     const layout_metrics = runLayoutPrecompute(widget, editor_shell, editor_layout, editor_render_cache, editor_width_budget);
     const elapsed_us = @as(i64, @intCast(@divTrunc(std.time.nanoTimestamp() - t_start, 1000)));
-    perf_log.logf(
-        .info,
-        "visible_cache_precompute frame={d} skipped=false run_highlight={any} visible_lines={d} highlight_budget={d} width_budget={d} highlight_us={d} width_us={d} wrap_us={d} time_us={d}",
-        .{
-            frame_id,
-            run_highlight,
-            layout_metrics.visible_lines,
-            if (run_highlight) highlightBudget(widget, editor_shell, editor_layout, editor_highlight_budget) else 0,
-            layout_metrics.width_budget,
-            highlight_elapsed_us,
-            layout_metrics.width_elapsed_us,
-            layout_metrics.wrap_elapsed_us,
-            elapsed_us,
-        },
-    );
+    perf_log.logFields(.info, "visible_cache_precompute", &.{
+        .{ .key = "runtime_kind", .value = .{ .string = runtime_policy.runtimeKindLabel(intent.runtime) } },
+        .{ .key = "lifecycle", .value = .{ .string = runtime_policy.lifecycleLabel(intent.lifecycle) } },
+        .{ .key = "work_class", .value = .{ .string = runtime_policy.workClassLabel(intent.work_class) } },
+        .{ .key = "frame", .value = .{ .unsigned = frame_id } },
+        .{ .key = "skipped", .value = .{ .boolean = false } },
+        .{ .key = "run_highlight", .value = .{ .boolean = run_highlight } },
+        .{ .key = "visible_lines", .value = .{ .unsigned = layout_metrics.visible_lines } },
+        .{ .key = "highlight_budget", .value = .{ .unsigned = if (run_highlight) highlightBudget(widget, editor_shell, editor_layout, editor_highlight_budget) else 0 } },
+        .{ .key = "width_budget", .value = .{ .unsigned = layout_metrics.width_budget } },
+        .{ .key = "highlight_us", .value = .{ .integer = highlight_elapsed_us } },
+        .{ .key = "width_us", .value = .{ .integer = layout_metrics.width_elapsed_us } },
+        .{ .key = "wrap_us", .value = .{ .integer = layout_metrics.wrap_elapsed_us } },
+        .{ .key = "time_us", .value = .{ .integer = elapsed_us } },
+    });
     return highlight_scheduled;
 }

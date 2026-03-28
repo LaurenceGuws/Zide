@@ -344,3 +344,6 @@ Direction rule:
 - new capture workflows should prefer `--perf-preset <name>`
 - ad hoc `--perf-tag` additions are allowed, but presets are the authority for
   the common capture shapes
+- compare/reporting should prefer shared runtime/lifecycle/work-class field
+  names across those preset tags instead of adding one-off subsystem-specific
+  summaries whenever a new event gains structured scheduling metadata

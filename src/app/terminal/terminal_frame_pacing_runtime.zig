@@ -31,6 +31,10 @@ pub const default_sleep_policy: SleepPolicy = .{
 
 pub const PollMetrics = struct {
     tab_count: usize,
+    active_lifecycle: runtime_policy.LifecycleTier,
+    background_lifecycle: runtime_policy.LifecycleTier,
+    active_work_class: runtime_policy.WorkClass,
+    background_work_class: runtime_policy.WorkClass,
     active_polled: usize,
     background_polled: usize,
     total_polled: usize,
@@ -117,6 +121,10 @@ pub fn consumePollMetrics(state: anytype) ?PollMetrics {
         pacing.last_poll_seq = metrics.seq;
         return .{
             .tab_count = metrics.tab_count,
+            .active_lifecycle = metrics.active_lifecycle,
+            .background_lifecycle = metrics.background_lifecycle,
+            .active_work_class = metrics.active_work_class,
+            .background_work_class = metrics.background_work_class,
             .active_polled = metrics.active_polled,
             .background_polled = metrics.background_polled,
             .total_polled = metrics.total_polled,
@@ -198,16 +206,32 @@ pub fn sleepDurationWithPolicy(policy: SleepPolicy, state: anytype, now: f64, sn
         policy.deep_idle_sleep_s;
 }
 
+fn frameIntentWithPolicy(policy: SleepPolicy, state: anytype, now: f64, snapshot: Snapshot) runtime_policy.RuntimeIntent {
+    return runtime_policy.terminalVisibleIntent(
+        snapshot.output_pressure or snapshot.redraw_pending or generationRecentlyAdvancedWithPolicy(policy, state, now),
+    );
+}
+
 pub fn logFramePacing(state: anytype, now: f64, snapshot: Snapshot, drew: bool, draw_ms: f64, sleep_s: ?f64) void {
     const log = app_logger.logger("terminal.frame");
     if (!log.enabled_file and !log.enabled_console) return;
 
     const pacing = &state.terminal_frame_pacing;
+    const intent = frameIntentWithPolicy(default_sleep_policy, state, now, snapshot);
+    const sleep_lifecycle = runtime_policy.terminalSleepLifecycle(
+        pacing.idle_frames,
+        default_sleep_policy.short_idle_frame_limit,
+        default_sleep_policy.medium_idle_frame_limit,
+    );
     const published_delta = snapshot.published_generation -| snapshot.presented_generation;
     const current_delta = snapshot.current_generation -| snapshot.published_generation;
     const draw_gap_ms = if (pacing.last_draw_time > 0) (now - pacing.last_draw_time) * 1000.0 else 0.0;
 
     log.logFields(.info, "frame_pacing", &.{
+        .{ .key = "runtime_kind", .value = .{ .string = runtime_policy.runtimeKindLabel(intent.runtime) } },
+        .{ .key = "lifecycle", .value = .{ .string = runtime_policy.lifecycleLabel(intent.lifecycle) } },
+        .{ .key = "work_class", .value = .{ .string = runtime_policy.workClassLabel(intent.work_class) } },
+        .{ .key = "sleep_lifecycle", .value = .{ .string = runtime_policy.lifecycleLabel(sleep_lifecycle) } },
         .{ .key = "drew", .value = .{ .boolean = drew } },
         .{ .key = "draw_ms", .value = .{ .float = draw_ms } },
         .{ .key = "draw_gap_ms", .value = .{ .float = draw_gap_ms } },
@@ -255,6 +279,11 @@ pub fn logInputLatency(state: anytype, poll_ms: f64, build_ms: f64, update_ms: f
 
     if (poll_metrics != null and draw_metrics != null and poll_counters != null) {
         state.input_latency_logger.logFields(.info, "frame_latency", &.{
+            .{ .key = "runtime_kind", .value = .{ .string = runtime_policy.runtimeKindLabel(.terminal_session) } },
+            .{ .key = "term_active_lifecycle", .value = .{ .string = runtime_policy.lifecycleLabel(poll_metrics.?.active_lifecycle) } },
+            .{ .key = "term_background_lifecycle", .value = .{ .string = runtime_policy.lifecycleLabel(poll_metrics.?.background_lifecycle) } },
+            .{ .key = "term_active_work_class", .value = .{ .string = runtime_policy.workClassLabel(poll_metrics.?.active_work_class) } },
+            .{ .key = "term_background_work_class", .value = .{ .string = runtime_policy.workClassLabel(poll_metrics.?.background_work_class) } },
             .{ .key = "poll_ms", .value = .{ .float = poll_ms } },
             .{ .key = "build_ms", .value = .{ .float = build_ms } },
             .{ .key = "update_ms", .value = .{ .float = update_ms } },
@@ -290,6 +319,7 @@ pub fn logInputLatency(state: anytype, poll_ms: f64, build_ms: f64, update_ms: f
 
     if (draw_metrics != null) {
         state.input_latency_logger.logFields(.info, "frame_latency", &.{
+            .{ .key = "runtime_kind", .value = .{ .string = runtime_policy.runtimeKindLabel(.terminal_session) } },
             .{ .key = "poll_ms", .value = .{ .float = poll_ms } },
             .{ .key = "build_ms", .value = .{ .float = build_ms } },
             .{ .key = "update_ms", .value = .{ .float = update_ms } },
@@ -305,6 +335,11 @@ pub fn logInputLatency(state: anytype, poll_ms: f64, build_ms: f64, update_ms: f
 
     if (poll_metrics != null and poll_counters != null) {
         state.input_latency_logger.logFields(.info, "frame_latency", &.{
+            .{ .key = "runtime_kind", .value = .{ .string = runtime_policy.runtimeKindLabel(.terminal_session) } },
+            .{ .key = "term_active_lifecycle", .value = .{ .string = runtime_policy.lifecycleLabel(poll_metrics.?.active_lifecycle) } },
+            .{ .key = "term_background_lifecycle", .value = .{ .string = runtime_policy.lifecycleLabel(poll_metrics.?.background_lifecycle) } },
+            .{ .key = "term_active_work_class", .value = .{ .string = runtime_policy.workClassLabel(poll_metrics.?.active_work_class) } },
+            .{ .key = "term_background_work_class", .value = .{ .string = runtime_policy.workClassLabel(poll_metrics.?.background_work_class) } },
             .{ .key = "poll_ms", .value = .{ .float = poll_ms } },
             .{ .key = "build_ms", .value = .{ .float = build_ms } },
             .{ .key = "update_ms", .value = .{ .float = update_ms } },
@@ -334,6 +369,7 @@ pub fn logInputLatency(state: anytype, poll_ms: f64, build_ms: f64, update_ms: f
     }
 
     state.input_latency_logger.logFields(.info, "frame_latency", &.{
+        .{ .key = "runtime_kind", .value = .{ .string = runtime_policy.runtimeKindLabel(.terminal_session) } },
         .{ .key = "poll_ms", .value = .{ .float = poll_ms } },
         .{ .key = "build_ms", .value = .{ .float = build_ms } },
         .{ .key = "update_ms", .value = .{ .float = update_ms } },

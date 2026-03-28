@@ -17,6 +17,25 @@ from typing import Any, Dict, List, Optional, Tuple
 
 TOOL_VERSION = "0.1"
 DEFAULT_RUNS_DIR = Path("perf_runs")
+RUNTIME_COMPARE_FIELDS: Tuple[Tuple[str, str], ...] = (
+    ("terminal.wake", "runtime_kind"),
+    ("terminal.wake", "active_lifecycle"),
+    ("terminal.wake", "background_lifecycle"),
+    ("terminal.wake", "active_work_class"),
+    ("terminal.wake", "background_work_class"),
+    ("terminal.frame", "runtime_kind"),
+    ("terminal.frame", "lifecycle"),
+    ("terminal.frame", "work_class"),
+    ("terminal.frame", "sleep_lifecycle"),
+    ("input.latency", "runtime_kind"),
+    ("input.latency", "term_active_lifecycle"),
+    ("input.latency", "term_background_lifecycle"),
+    ("input.latency", "term_active_work_class"),
+    ("input.latency", "term_background_work_class"),
+    ("editor.perf", "runtime_kind"),
+    ("editor.perf", "lifecycle"),
+    ("editor.perf", "work_class"),
+)
 PERF_PRESETS: Dict[str, List[str]] = {
     "core": [
         "terminal.frame",
@@ -254,6 +273,30 @@ def count_field_values(path: Optional[Path], *, tag_name: str, field_name: str) 
     return counts
 
 
+def print_field_count_deltas(base_path: Optional[Path], candidate_path: Optional[Path], field_specs: Tuple[Tuple[str, str], ...]) -> None:
+    for tag_name, field_name in field_specs:
+        base_counts = count_field_values(
+            base_path,
+            tag_name=tag_name,
+            field_name=field_name,
+        )
+        candidate_counts = count_field_values(
+            candidate_path,
+            tag_name=tag_name,
+            field_name=field_name,
+        )
+        all_values = sorted(set(base_counts.keys()) | set(candidate_counts.keys()))
+        if not all_values:
+            continue
+        print(f"{tag_name}.{field_name}_counts:")
+        for value in all_values:
+            base_count = base_counts.get(value, 0)
+            candidate_count = candidate_counts.get(value, 0)
+            delta = candidate_count - base_count
+            sign = "+" if delta >= 0 else ""
+            print(f"  {value}: {base_count} -> {candidate_count} ({sign}{delta})")
+
+
 def format_delta(base: Optional[float], candidate: Optional[float], unit: str = "") -> str:
     if base is None and candidate is None:
         return "n/a"
@@ -311,31 +354,11 @@ def compare_runs(args: argparse.Namespace) -> int:
     else:
         print("subsystem_event_counts=n/a")
 
-    lifecycle_field_counts = (
-        ("terminal.wake", "background_lifecycle"),
-        ("terminal.wake", "active_lifecycle"),
+    print_field_count_deltas(
+        base_run / base_events_name if isinstance(base_events_name, str) else None,
+        candidate_run / candidate_events_name if isinstance(candidate_events_name, str) else None,
+        RUNTIME_COMPARE_FIELDS,
     )
-    for tag_name, field_name in lifecycle_field_counts:
-        base_counts = count_field_values(
-            base_run / base_events_name if isinstance(base_events_name, str) else None,
-            tag_name=tag_name,
-            field_name=field_name,
-        )
-        candidate_counts = count_field_values(
-            candidate_run / candidate_events_name if isinstance(candidate_events_name, str) else None,
-            tag_name=tag_name,
-            field_name=field_name,
-        )
-        all_values = sorted(set(base_counts.keys()) | set(candidate_counts.keys()))
-        if not all_values:
-            continue
-        print(f"{tag_name}.{field_name}_counts:")
-        for value in all_values:
-            base_count = base_counts.get(value, 0)
-            candidate_count = candidate_counts.get(value, 0)
-            delta = candidate_count - base_count
-            sign = "+" if delta >= 0 else ""
-            print(f"  {value}: {base_count} -> {candidate_count} ({sign}{delta})")
 
     return 0
 

@@ -597,3 +597,27 @@ This is an ownership/foundation cut only:
   has full terminal visibility truth for secondary/background surfaces
 - the immediate goal is measurable cooling behavior through shared vocabulary
   before a richer UI/runtime visibility model exists
+
+2026-03-28 editor observability checkpoint:
+
+- `editor.perf` structured events for display-preparation and visible-cache
+  precompute now emit the shared runtime vocabulary too:
+  - `runtime_kind = editor`
+  - `lifecycle = focused_visible`
+  - `work_class = background`
+- this is still an observability/foundation cut, not a claim that editor runtime
+  scheduling or inactive-editor lifecycle policy is fully implemented yet
+
+2026-03-28 terminal perf event alignment checkpoint:
+
+- `terminal.frame` structured events now also emit shared runtime vocabulary for
+  the active visible terminal path:
+  - `runtime_kind = terminal_session`
+  - `lifecycle`
+  - `work_class`
+  - `sleep_lifecycle`
+- `input.latency` terminal-related structured events now carry the same shared
+  terminal runtime fields plus active/background poll lifecycle and work-class
+  labels from workspace polling metrics
+- this keeps local perf captures aligned across terminal wake, frame pacing, and
+  latency surfaces without introducing a second event vocabulary

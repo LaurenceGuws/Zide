@@ -323,3 +323,10 @@ owning subsystem queues.
         - runtime intent
       - terminal poll-profile selection now routes through that shared runtime
         intent model instead of a raw `has_input` boolean
+      - editor perf structured events now also emit the shared runtime
+        vocabulary for display preparation and visible-cache precompute so local
+        perf captures can compare terminal and editor runtime traces without
+        ad hoc field naming
+      - terminal frame pacing and input-latency structured events now also emit
+        shared runtime/lifecycle/work-class fields so terminal wake, frame, and
+        latency captures align on one machine-readable scheduling vocabulary

@@ -127,9 +127,14 @@ Current compare output includes:
 - average and peak RSS deltas
 - peak GPU FB deltas when present
 - subsystem event-count deltas by tag
-- `terminal.wake` lifecycle-field count deltas for:
-  - `active_lifecycle`
-  - `background_lifecycle`
+- shared runtime-field count deltas where present, including current terminal and
+  editor structured perf fields such as:
+  - `terminal.wake.active_lifecycle`
+  - `terminal.wake.background_lifecycle`
+  - `terminal.frame.lifecycle`
+  - `terminal.frame.sleep_lifecycle`
+  - `input.latency.term_active_lifecycle`
+  - `editor.perf.runtime_kind`
 
 Monitor an existing Zide PID:
 

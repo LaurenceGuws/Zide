@@ -1,6 +1,7 @@
 const editor_mod = @import("../../editor/editor.zig");
 const editor_render_cache_mod = @import("../../editor/render/cache.zig");
 const app_logger = @import("../../app_logger.zig");
+const runtime_policy = @import("../runtime_policy.zig");
 const std = @import("std");
 
 const Editor = editor_mod.Editor;
@@ -12,6 +13,7 @@ pub fn prepare(
     frame_id: u64,
 ) void {
     const perf_log = app_logger.logger("editor.perf");
+    const intent = runtime_policy.editorBackgroundIntent();
     const t_start = std.time.nanoTimestamp();
     editor.advanceStartupDeferrals(frame_id);
     const total_lines = editor.lineCount();
@@ -26,6 +28,9 @@ pub fn prepare(
     const search_counters = editor.searchRuntimeCounters();
     const highlight_counters = editor.highlightRuntimeCounters();
     perf_log.logFields(.info, "display_prepare", &.{
+        .{ .key = "runtime_kind", .value = .{ .string = runtime_policy.runtimeKindLabel(intent.runtime) } },
+        .{ .key = "lifecycle", .value = .{ .string = runtime_policy.lifecycleLabel(intent.lifecycle) } },
+        .{ .key = "work_class", .value = .{ .string = runtime_policy.workClassLabel(intent.work_class) } },
         .{ .key = "frame", .value = .{ .unsigned = frame_id } },
         .{ .key = "invalidated", .value = .{ .boolean = invalidated } },
         .{ .key = "highlight_pending", .value = .{ .boolean = editor.documentCore().highlight_pending } },
