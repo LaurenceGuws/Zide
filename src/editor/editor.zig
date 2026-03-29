@@ -501,6 +501,8 @@ pub const Editor = struct {
     }
 
     pub fn hasPendingSearchResult(self: *const Editor) bool {
+        self.doc.search_runtime.mutex.lock();
+        defer self.doc.search_runtime.mutex.unlock();
         return self.doc.search_runtime.result != null;
     }
 

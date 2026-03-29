@@ -156,10 +156,6 @@ pub fn handle(
     if (editor.applyPendingSearchWork()) {
         out.needs_redraw = true;
     }
-    const should_drive_search_publication = editor.hasPendingSearchResult();
-    if (should_drive_search_publication) {
-        out.needs_redraw = true;
-    }
     var widget = widgets.EditorWidget.initWithCache(editor, editor_cluster_cache, editor_wrap);
     const view = widget.frameView();
     const visible_lines = if (layout.editor.height > 0 and shell.editorCharHeight() > 0)

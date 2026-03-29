@@ -322,7 +322,6 @@ stack issue, not an isolated highlight bug:
         under a named runtime-oriented sub-structure
       - lock/signal/request/result coordination is being routed through
         explicit helper verbs
-      - pending search results now drive redraw from the editor frame hook
       - pending search result application is now initiated from the frame hook
         instead of being hidden in display prepare
       - highlight scheduling ownership has moved off render cache and onto
@@ -388,6 +387,9 @@ stack issue, not an isolated highlight bug:
           break idle waiting
         - frame-hook editor runtime no longer keeps redraw forced just because
           visible highlight compute is still in flight
+        - pending search result publication no longer keeps redraw hot either;
+          the frame hook just applies the completed mailbox on the next
+          wake-driven frame
       - next cleanup target is to keep deleting remaining startup-era control
         branches that still muddy the runtime signal
       - this is still behavior-preserving and does not yet claim full runtime

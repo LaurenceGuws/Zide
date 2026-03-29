@@ -37,8 +37,6 @@ Current implementation progress:
   result ownership before changing wake/publication semantics
 - lock/signal/request/result operations are now being routed through explicit
   editor/runtime helper verbs instead of open-coded nested field access
-- pending search results now explicitly request redraw driving from the editor
-  frame hook instead of depending solely on unrelated input/redraw traffic
 - pending search result application is now initiated from the editor frame hook
   rather than being hidden inside display-prepare work
 - highlight scheduling state in render cache has started being isolated behind a
@@ -103,6 +101,9 @@ Current implementation progress:
     `waitForWakeOrTimeout(...)`
   - frame-hook editor runtime no longer needs to keep redraw forced just
     because visible highlight compute is merely in flight
+  - pending search result publication no longer needs a keep-redrawing frame
+    hook path once the wake event exists; the frame hook just applies completed
+    results on the next wake-driven frame
 - layout-side cache work now also needs the same completed-range discipline as
   highlight and line-width work; wrap-work completion tracking removed the
   long layout-only tail that was still muddying visible-highlight runtime logs
@@ -342,16 +343,16 @@ But the ownership must be explicit.
 Runtime completion must be able to request a redraw/wake without waiting for
  unrelated input.
 
-That can be implemented initially as:
+The current implementation is an explicit wake channel:
 
-- editor-owned `runtime_publish_gen`
-- host-visible `runtime_needs_redraw` flag
+- editor runtime workers request a host wake after publishing search/highlight
+  results
+- the SDL host consumes that wake as a no-op event whose only job is to break
+  idle waiting
+- the frame hook consumes completed mailboxes on the next wake-driven frame
 
-Later it can become:
-
-- explicit wake channel or event queue
-
-But it must be runtime-owned, not implicit polling.
+The key rule is unchanged: wake/redraw must be runtime-owned, not implicit
+polling or unrelated input traffic.
 
 ## Relationship To Display Engine
 
