@@ -3,22 +3,53 @@ const manual_highlights_mod = @import("../editor/manual_highlights.zig");
 const mode_build = @import("mode_build.zig");
 const app_terminal_shell_icon_runtime = @import("terminal/terminal_shell_icon_runtime.zig");
 const app_editor_live_smoke_runtime = @import("editor/live_smoke_runtime.zig");
+const app_lifecycle_runtime = @import("lifecycle_runtime.zig");
 
 pub fn handle(state: anytype) void {
+    const lifecycle_log = app_logger.logger("app.lifecycle");
+    lifecycle_log.logFields(.info, "shutdown_begin", &.{
+        .{ .key = "editors", .value = .{ .unsigned = state.editors.items.len } },
+        .{ .key = "terminals", .value = .{ .unsigned = state.terminals.items.len } },
+    });
+    app_lifecycle_runtime.noteShutdownBegin();
+
+    if (comptime mode_build.focused_mode != .terminal) {
+        for (state.editors.items, 0..) |e, idx| {
+            lifecycle_log.logFields(.info, "editor_shutdown_prepare_begin", &.{
+                .{ .key = "index", .value = .{ .unsigned = idx } },
+                .{ .key = "editor_ptr", .value = .{ .unsigned = @intFromPtr(e) } },
+            });
+            e.prepareForShutdown();
+            lifecycle_log.logFields(.info, "editor_shutdown_prepare_end", &.{
+                .{ .key = "index", .value = .{ .unsigned = idx } },
+            });
+        }
+    }
+
     state.terminal_shell_icon_cache.deinit(state.shell.rendererPtr());
     app_terminal_shell_icon_runtime.freeMappings(state.allocator, state.terminal_tab_bar_shell_icons);
     state.tab_bar.deinit();
 
     // Tear down GUI first so window close is immediate; backend cleanup can
     // continue after renderer shutdown without keeping the UI visible.
+    lifecycle_log.logf(.info, "shell_deinit_begin", .{});
     state.shell.deinit(state.allocator);
+    app_lifecycle_runtime.noteShellDeinitialized();
+    lifecycle_log.logf(.info, "shell_deinit_end", .{});
 
     if (state.font_sample_view) |*view| {
         view.deinit();
     }
     if (comptime mode_build.focused_mode != .terminal) {
-        for (state.editors.items) |e| {
+        for (state.editors.items, 0..) |e, idx| {
+            lifecycle_log.logFields(.info, "editor_deinit_begin", &.{
+                .{ .key = "index", .value = .{ .unsigned = idx } },
+                .{ .key = "editor_ptr", .value = .{ .unsigned = @intFromPtr(e) } },
+            });
             e.deinit();
+            lifecycle_log.logFields(.info, "editor_deinit_end", &.{
+                .{ .key = "index", .value = .{ .unsigned = idx } },
+            });
         }
     }
     state.editors.deinit(state.allocator);

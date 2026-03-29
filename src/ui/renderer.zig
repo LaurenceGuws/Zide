@@ -32,6 +32,7 @@ const input_runtime = @import("renderer/input_runtime.zig");
 const font_runtime = @import("renderer/font_runtime.zig");
 const text_runtime = @import("renderer/text_runtime.zig");
 const window_chrome_runtime = @import("renderer/window_chrome_runtime.zig");
+const app_lifecycle_runtime = @import("../app/lifecycle_runtime.zig");
 const windows_snap_layout_sink = @import("../platform/windows_snap_layout_sink.zig");
 const windows_frame_material = @import("../platform/windows_frame_material.zig");
 const windows_integrated_frame = @import("../platform/windows_integrated_frame.zig");
@@ -1970,6 +1971,12 @@ pub fn waitForWakeOrTimeout(seconds: f64) void {
 }
 
 pub fn requestWake() void {
+    if (app_lifecycle_runtime.shutdownStarted()) {
+        @import("../app_logger.zig").logger("app.lifecycle").logFields(.info, "runtime_wake_request", &.{
+            .{ .key = "renderer_active", .value = .{ .boolean = active_renderer != null } },
+            .{ .key = "shell_deinitialized", .value = .{ .boolean = app_lifecycle_runtime.shellDeinitialized() } },
+        });
+    }
     _ = sdl_api.pushRuntimeWakeEvent();
 }
 

@@ -21,6 +21,7 @@ const widgets = @import("../ui/widgets.zig");
 const font_sample_view_mod = @import("../ui/font_sample_view.zig");
 const input_actions = @import("../input/input_actions.zig");
 const app_editor_live_smoke_runtime = @import("editor/live_smoke_runtime.zig");
+const app_lifecycle_runtime = @import("lifecycle_runtime.zig");
 
 const grammar_manager_mod = if (mode_build.focused_mode == .terminal) struct {
     pub const GrammarManager = app_types.GrammarManager;
@@ -150,6 +151,7 @@ fn initWithMode(
         };
     }
     try app_logger.init();
+    app_lifecycle_runtime.reset();
 
     if (config.sdl_log_level) |level| {
         app_shell.setSdlLogLevel(level);

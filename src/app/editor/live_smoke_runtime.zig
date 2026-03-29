@@ -1,7 +1,11 @@
 const std = @import("std");
 const app_bootstrap = @import("../bootstrap.zig");
 const app_logger = @import("../../app_logger.zig");
+const editor_mod = @import("../../editor/editor.zig");
 const shared_types = @import("../../types/mod.zig");
+
+const Editor = editor_mod.Editor;
+var search_applied_global: bool = false;
 
 pub fn initState(allocator: std.mem.Allocator) !@import("../app_state_types.zig").EditorLiveSmokeState {
     const scenario = app_bootstrap.envSlice("ZIDE_EDITOR_LIVE_SMOKE_SCENARIO") orelse
@@ -30,7 +34,29 @@ pub fn deinitState(allocator: std.mem.Allocator, state: *@import("../app_state_t
     if (state.scenario) |value| allocator.free(value);
     if (state.inject_text) |value| allocator.free(value);
     if (state.output_dir) |value| allocator.free(value);
+    search_applied_global = false;
     state.* = .{};
+}
+
+pub fn applyEditorScenarioActions(frame_id: u64, editor: *Editor) void {
+    const scenario = app_bootstrap.envSlice("ZIDE_EDITOR_LIVE_SMOKE_SCENARIO") orelse return;
+    const query = app_bootstrap.envSlice("ZIDE_EDITOR_LIVE_SMOKE_SEARCH_QUERY") orelse return;
+    const search_frame = app_bootstrap.parseEnvU64("ZIDE_EDITOR_LIVE_SMOKE_SEARCH_FRAME", 2);
+    if (search_applied_global) return;
+    if (frame_id != search_frame) return;
+    editor.setSearchQuery(query) catch |err| {
+        app_logger.logger("editor.live_smoke").logf(.warning, "search_query apply failed frame={d} err={s}", .{
+            frame_id,
+            @errorName(err),
+        });
+        return;
+    };
+    search_applied_global = true;
+    app_logger.logger("editor.live_smoke").logf(.info, "search_query_applied frame={d} scenario={s} query={s}", .{
+        frame_id,
+        scenario,
+        query,
+    });
 }
 
 pub fn appendInjectedText(state: anytype, input_batch: *shared_types.input.InputBatch) void {

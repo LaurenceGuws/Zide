@@ -4,6 +4,7 @@ const app_bootstrap = @import("../bootstrap.zig");
 const app_modes = @import("../modes/mod.zig");
 const app_editor_input_runtime = @import("editor_input_runtime.zig");
 const app_editor_visible_caches_runtime = @import("editor_visible_caches_runtime.zig");
+const app_editor_live_smoke_runtime = @import("live_smoke_runtime.zig");
 const app_shell = @import("../../app_shell.zig");
 const editor_mod = @import("../../editor/editor.zig");
 const editor_types = @import("../../editor/types.zig");
@@ -153,6 +154,7 @@ pub fn handle(
     if (runtime_state.note_input) out.note_input = true;
     const editor = app_active_editor_runtime.fromVisualIndex(tab_bar, editors, active_tab) orelse return out;
     editor.setRuntimeWakeFn(app_shell.requestWake);
+    app_editor_live_smoke_runtime.applyEditorScenarioActions(frame_id, editor);
     if (editor.applyPendingSearchWork()) {
         out.needs_redraw = true;
     }

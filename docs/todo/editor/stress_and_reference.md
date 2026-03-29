@@ -427,6 +427,13 @@ stack issue, not an isolated highlight bug:
         - pending search result publication no longer keeps redraw hot either;
           the frame hook just applies the completed mailbox on the next
           wake-driven frame
+      - shutdown now prepares worker teardown before shell teardown:
+        - search and visible-highlight workers are both stop-signaled before
+          either join waits
+        - editor shutdown joins those workers before shell deinit and before
+          editor memory free
+        - this closes the proven late search-worker publish/wake that had been
+          crossing shell teardown during shutdown
       - next cleanup target is to keep deleting remaining startup-era control
         branches that still muddy the runtime signal
       - this is still behavior-preserving and does not yet claim full runtime

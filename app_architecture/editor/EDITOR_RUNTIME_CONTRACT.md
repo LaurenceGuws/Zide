@@ -365,6 +365,15 @@ The current implementation is an explicit wake channel:
 The key rule is unchanged: wake/redraw must be runtime-owned, not implicit
 polling or unrelated input traffic.
 
+## Shutdown Safety
+
+- editor shutdown now prepares worker teardown before shell/renderer teardown
+- search and visible-highlight workers are both stop-signaled before any join
+  waits, so one worker cannot continue publishing while teardown waits on the
+  other
+- worker join completes before shell deinit, which keeps late publish/wake
+  traffic from crossing the renderer teardown boundary
+
 ## Relationship To Display Engine
 
 The display engine is a consumer of runtime results.

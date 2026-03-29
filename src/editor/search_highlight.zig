@@ -5,6 +5,7 @@ const ts_api = @import("treesitter_api.zig");
 const syntax_registry_mod = @import("syntax_registry.zig");
 const app_logger = @import("../app_logger.zig");
 const runtime_policy = @import("../app/runtime_policy.zig");
+const app_lifecycle_runtime = @import("../app/lifecycle_runtime.zig");
 
 const c = ts_api.c_api;
 const c_allocator = std.heap.c_allocator;
@@ -661,20 +662,37 @@ pub fn SearchHighlightOps(comptime Editor: type) type {
             self.setSearchWorker(worker);
         }
 
-        pub fn stopSearchWorker(self: *Editor) void {
+        pub fn beginSearchWorkerStop(self: *Editor) void {
+            app_logger.logger("editor.lifecycle").logFields(.info, "search_worker_stop_signal", &.{
+                .{ .key = "editor_ptr", .value = .{ .unsigned = @intFromPtr(self) } },
+                .{ .key = "shell_deinitialized", .value = .{ .boolean = app_lifecycle_runtime.shellDeinitialized() } },
+            });
             self.lockSearchRuntime();
             self.setSearchWorkerRunning(false);
             self.clearPendingSearchRequest();
             self.signalSearchRuntime();
             self.unlockSearchRuntime();
+        }
 
+        pub fn finishSearchWorkerStop(self: *Editor) void {
             if (self.takeSearchWorker()) |thread| {
+                app_logger.logger("editor.lifecycle").logFields(.info, "search_worker_join_begin", &.{
+                    .{ .key = "editor_ptr", .value = .{ .unsigned = @intFromPtr(self) } },
+                });
                 thread.join();
+                app_logger.logger("editor.lifecycle").logFields(.info, "search_worker_join_end", &.{
+                    .{ .key = "editor_ptr", .value = .{ .unsigned = @intFromPtr(self) } },
+                });
             }
 
             self.lockSearchRuntime();
             defer self.unlockSearchRuntime();
             self.clearPendingSearchResult();
+        }
+
+        pub fn stopSearchWorker(self: *Editor) void {
+            self.beginSearchWorkerStop();
+            self.finishSearchWorkerStop();
         }
 
         pub fn cancelPendingSearchWork(self: *Editor) void {
@@ -686,6 +704,13 @@ pub fn SearchHighlightOps(comptime Editor: type) type {
         }
 
         pub fn applyPendingSearchResult(self: *Editor) bool {
+            if (self.tearing_down or app_lifecycle_runtime.shutdownStarted()) {
+                app_logger.logger("editor.lifecycle").logFields(.info, "search_apply_during_shutdown", &.{
+                    .{ .key = "editor_ptr", .value = .{ .unsigned = @intFromPtr(self) } },
+                    .{ .key = "tearing_down", .value = .{ .boolean = self.tearing_down } },
+                    .{ .key = "shell_deinitialized", .value = .{ .boolean = app_lifecycle_runtime.shellDeinitialized() } },
+                });
+            }
             self.lockSearchRuntime();
             const result_opt = self.takeSearchResult();
             if (result_opt == null) {
@@ -725,10 +750,19 @@ pub fn SearchHighlightOps(comptime Editor: type) type {
                 }
                 if (!self.isSearchWorkerRunning()) {
                     self.unlockSearchRuntime();
+                    app_logger.logger("editor.lifecycle").logFields(.info, "search_worker_exit", &.{
+                        .{ .key = "editor_ptr", .value = .{ .unsigned = @intFromPtr(self) } },
+                        .{ .key = "reason", .value = .{ .string = "stopped_before_request" } },
+                    });
                     return;
                 }
                 const request = self.takeSearchRequest().?;
                 self.unlockSearchRuntime();
+
+                const debug_delay_ms = debugWorkerDelayMs("ZIDE_EDITOR_DEBUG_SEARCH_DELAY_MS");
+                if (debug_delay_ms > 0) {
+                    std.Thread.sleep(debug_delay_ms * std.time.ns_per_ms);
+                }
 
                 const matches = computeSearchMatchesAlloc(c_allocator, request.mode, request.query, request.content) catch |err| {
                     const log = app_logger.logger("editor.search");
@@ -744,6 +778,10 @@ pub fn SearchHighlightOps(comptime Editor: type) type {
                 if (!self.isSearchWorkerRunning()) {
                     self.unlockSearchRuntime();
                     c_allocator.free(matches);
+                    app_logger.logger("editor.lifecycle").logFields(.info, "search_worker_exit", &.{
+                        .{ .key = "editor_ptr", .value = .{ .unsigned = @intFromPtr(self) } },
+                        .{ .key = "reason", .value = .{ .string = "stopped_after_compute" } },
+                    });
                     return;
                 }
                 if (request.generation != self.currentSearchGeneration()) {
@@ -762,6 +800,13 @@ pub fn SearchHighlightOps(comptime Editor: type) type {
                     c_allocator.free(matches);
                     continue;
                 }
+                app_logger.logger("editor.lifecycle").logFields(.info, "search_worker_publish_attempt", &.{
+                    .{ .key = "editor_ptr", .value = .{ .unsigned = @intFromPtr(self) } },
+                    .{ .key = "tearing_down", .value = .{ .boolean = self.tearing_down } },
+                    .{ .key = "shutdown_started", .value = .{ .boolean = app_lifecycle_runtime.shutdownStarted() } },
+                    .{ .key = "shell_deinitialized", .value = .{ .boolean = app_lifecycle_runtime.shellDeinitialized() } },
+                    .{ .key = "generation", .value = .{ .unsigned = request.generation } },
+                });
                 self.replaceSearchResult(.{
                     .generation = request.generation,
                     .preferred_offset = request.preferred_offset,
@@ -849,6 +894,12 @@ fn envFlagEnabled(name: [:0]const u8) bool {
     if (std.mem.eql(u8, value, "yes")) return true;
     if (std.mem.eql(u8, value, "YES")) return true;
     return false;
+}
+
+fn debugWorkerDelayMs(name: [:0]const u8) u64 {
+    const raw = std.c.getenv(name) orelse return 0;
+    const value = std.mem.sliceTo(raw, 0);
+    return std.fmt.parseUnsigned(u64, value, 10) catch 0;
 }
 
 fn computeSearchMatchesAlloc(
