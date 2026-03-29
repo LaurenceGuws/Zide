@@ -25,6 +25,8 @@ const PipeCapture = struct {
                 .cached_fg_pgrp = 0,
                 .cached_fg_name_len = 0,
                 .cached_fg_name = [_]u8{0} ** 128,
+                .cached_fg_command_len = 0,
+                .cached_fg_command = [_]u8{0} ** 256,
             },
         };
     }
@@ -2063,7 +2065,7 @@ test "terminal DECSTR clears hidden alt kitty state while primary screen is acti
 
     // Seed kitty state directly on hidden alt while primary is active.
     const rgba = try allocator.dupe(u8, &[_]u8{ 0xff, 0xff, 0xff, 0xff });
-    try session.kitty_alt.images.append(allocator, .{
+    try session.core.kitty_alt.images.append(allocator, .{
         .id = 1,
         .width = 1,
         .height = 1,
@@ -2071,7 +2073,7 @@ test "terminal DECSTR clears hidden alt kitty state while primary screen is acti
         .data = rgba,
         .version = 1,
     });
-    try session.kitty_alt.placements.append(allocator, .{
+    try session.core.kitty_alt.placements.append(allocator, .{
         .image_id = 1,
         .placement_id = 0,
         .row = 0,
@@ -2086,17 +2088,17 @@ test "terminal DECSTR clears hidden alt kitty state while primary screen is acti
         .offset_x = 0,
         .offset_y = 0,
     });
-    session.kitty_alt.total_bytes = rgba.len;
+    session.core.kitty_alt.total_bytes = rgba.len;
 
-    try std.testing.expectEqual(@as(usize, 1), session.kitty_alt.images.items.len);
-    try std.testing.expectEqual(@as(usize, 1), session.kitty_alt.placements.items.len);
+    try std.testing.expectEqual(@as(usize, 1), session.core.kitty_alt.images.items.len);
+    try std.testing.expectEqual(@as(usize, 1), session.core.kitty_alt.placements.items.len);
 
     // DECSTR on primary now clears both active + hidden kitty states.
     terminal.debugFeedBytes(session, "\x1b[!p");
-    try std.testing.expectEqual(@as(usize, 0), session.kitty_primary.images.items.len);
-    try std.testing.expectEqual(@as(usize, 0), session.kitty_primary.placements.items.len);
-    try std.testing.expectEqual(@as(usize, 0), session.kitty_alt.images.items.len);
-    try std.testing.expectEqual(@as(usize, 0), session.kitty_alt.placements.items.len);
+    try std.testing.expectEqual(@as(usize, 0), session.core.kitty_primary.images.items.len);
+    try std.testing.expectEqual(@as(usize, 0), session.core.kitty_primary.placements.items.len);
+    try std.testing.expectEqual(@as(usize, 0), session.core.kitty_alt.images.items.len);
+    try std.testing.expectEqual(@as(usize, 0), session.core.kitty_alt.placements.items.len);
 
     // Re-enter alt to prove hidden-alt state was really cleared.
     terminal.debugFeedBytes(session, "\x1b[?1047h");

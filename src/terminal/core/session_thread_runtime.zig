@@ -70,8 +70,8 @@ test "hasData stays true for threaded session while unread parse buffer remains"
         session.deinit();
     }
 
-    session.read_thread = std.mem.zeroes(std.Thread);
-    session.parse_thread = std.mem.zeroes(std.Thread);
+    session.read_thread = undefined;
+    session.parse_thread = undefined;
     session.output_pending.store(false, .release);
     try session.io_buffer.appendSlice(session.allocator, "queued");
     session.io_read_offset = 0;

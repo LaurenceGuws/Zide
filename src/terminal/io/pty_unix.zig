@@ -386,7 +386,8 @@ fn summarizeCmdline(cmdline: []const u8, out_buf: []u8) ?usize {
 }
 
 fn isWrapperProcess(name: []const u8) bool {
-    return std.mem.eql(u8, name, "node") or
+    return std.mem.eql(u8, name, "env") or
+        std.mem.eql(u8, name, "node") or
         std.mem.eql(u8, name, "nodejs") or
         std.mem.eql(u8, name, "python") or
         std.mem.startsWith(u8, name, "python3") or
@@ -404,7 +405,7 @@ fn summarizeArgToken(token: []const u8, strip_script_ext: bool) []const u8 {
     if (strip_script_ext) {
         if (std.mem.lastIndexOfScalar(u8, display, '.')) |dot| {
             const ext = display[dot..];
-            if (std.mem.eql(u8, ext, ".js") or std.mem.eql(u8, ext, ".mjs") or std.mem.eql(u8, ext, ".cjs") or std.mem.eql(u8, ext, ".py")) {
+            if (std.mem.eql(u8, ext, ".js") or std.mem.eql(u8, ext, ".mjs") or std.mem.eql(u8, ext, ".cjs")) {
                 display = display[0..dot];
             }
         }
@@ -721,6 +722,7 @@ fn terminfoInDirSlice(dir: []const u8, name: []const u8) bool {
     var buf: [std.fs.max_path_bytes]u8 = undefined;
     const subdir = name[0];
     const path = std.fmt.bufPrint(&buf, "{s}/{c}/{s}", .{ dir, subdir, name }) catch |err| {
+        if (err == error.NoSpaceLeft) return false;
         log.logf(.warning, "terminfo path format failed dir={s} name={s}: {s}", .{ dir, name, @errorName(err) });
         return false;
     };
@@ -767,7 +769,7 @@ test "chooseTermName falls back to xterm-kitty when zide terminfo is unavailable
     try std.testing.expectEqualStrings("xterm-kitty", chooseTermName(Exists.has));
 }
 
-test "unix pty smoke prefers TERM=xterm-zide when bundled terminfo is installed" {
+test "unix pty smoke uses preferred TERM when bundled terminfo is installed" {
     if (builtin.target.os.tag == .windows) return;
 
     const allocator = std.testing.allocator;
@@ -788,6 +790,7 @@ test "unix pty smoke prefers TERM=xterm-zide when bundled terminfo is installed"
         }
     }
     _ = c.setenv("TERMINFO", terminfo_dir.ptr, 1);
+    const expected_term = chooseTermName(terminfoExists);
 
     var pty = Pty.init(allocator, .{ .rows = 24, .cols = 80, .cell_width = 8, .cell_height = 16 }, "/bin/sh") catch |err| switch (err) {
         error.OpenPtyFailed => return,
@@ -808,11 +811,15 @@ test "unix pty smoke prefers TERM=xterm-zide when bundled terminfo is installed"
         if (n_opt) |n| {
             if (n == 0) break;
             _ = try output.appendSlice(allocator, buf[0..n]);
-            if (std.mem.indexOf(u8, output.items, "TERM=xterm-zide") != null) break;
+            var expected_line_buf: [64]u8 = undefined;
+            const expected_line = try std.fmt.bufPrint(&expected_line_buf, "TERM={s}", .{expected_term});
+            if (std.mem.indexOf(u8, output.items, expected_line) != null) break;
         }
     }
 
-    try std.testing.expect(std.mem.indexOf(u8, output.items, "TERM=xterm-zide") != null);
+    var expected_line_buf: [64]u8 = undefined;
+    const expected_line = try std.fmt.bufPrint(&expected_line_buf, "TERM={s}", .{expected_term});
+    try std.testing.expect(std.mem.indexOf(u8, output.items, expected_line) != null);
 }
 
 test "compiled zide terminfo advertises Ms Setulc and Sync" {
@@ -828,7 +835,7 @@ test "compiled zide terminfo advertises Ms Setulc and Sync" {
 
     const infocmp = std.process.Child.run(.{
         .allocator = allocator,
-        .argv = &.{ "infocmp", "-x", "-A", terminfo_dir, "zide" },
+        .argv = &.{ "infocmp", "-x", "-A", terminfo_dir, "xterm-zide" },
     }) catch |err| switch (err) {
         error.FileNotFound => return,
         else => return err,

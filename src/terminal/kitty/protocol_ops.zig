@@ -71,9 +71,11 @@ pub const KittyProtocolOps = struct {
             return;
         };
         chunk = inflateQueryChunk(self, query_control, image_id, chunk) orelse return;
-        defer self.allocator.free(chunk);
 
-        if (handleQueryPayloadSizeReply(self, query_control, image_id, chunk.len)) return;
+        if (handleQueryPayloadSizeReply(self, query_control, image_id, chunk.len)) {
+            self.allocator.free(chunk);
+            return;
+        }
         _ = handleQueryChunkBuildReply(self, query_control, image_id, chunk.len, QueryBuilder{ .chunk = chunk }, QueryBuilder.run);
     }
 
@@ -172,7 +174,7 @@ pub const KittyProtocolOps = struct {
     }
 
     fn handleQueryChunkBuildReply(self: anytype, control: common.KittyControl, image_id: u32, chunk_len: usize, builder_ctx: anytype, comptime build_fn: anytype) bool {
-        if (handleQueryPayloadSizeReply(self, control, image_id, chunk_len)) return true;
+        _ = chunk_len;
         build_fn(builder_ctx, self, image_id, control) catch |err| {
             writeKittyResponse(self, control, image_id, false, queryBuildErrorReplyMessage(err));
             return true;

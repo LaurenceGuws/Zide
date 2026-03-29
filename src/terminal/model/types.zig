@@ -152,6 +152,22 @@ pub fn defaultCell() Cell {
 
 pub const default_fg = Color{ .r = 220, .g = 220, .b = 220 };
 pub const default_bg = Color{ .r = 24, .g = 25, .b = 33 };
+pub const default_underline_color = Color{ .r = 0, .g = 0, .b = 0, .a = 0 };
+pub const default_cell_attrs = CellAttrs{
+    .fg = default_fg,
+    .bg = default_bg,
+    .bold = false,
+    .blink = false,
+    .blink_fast = false,
+    .reverse = false,
+    .underline = false,
+    .underline_color = default_underline_color,
+    .link_id = 0,
+};
+pub const default_cell = Cell{
+    .codepoint = 0,
+    .attrs = default_cell_attrs,
+};
 
 pub const ansiColors = [_]Color{
     .{ .r = 0, .g = 0, .b = 0 }, // black

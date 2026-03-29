@@ -1,4 +1,5 @@
 const std = @import("std");
+const app_logger = @import("../../app_logger.zig");
 const publication = @import("view_cache_publication.zig");
 
 fn restoredCarriedSpan(active_start: u16, active_end: u16, cols: usize) ?struct { start: u16, end: u16 } {
@@ -172,7 +173,15 @@ test "refineRowHashDamage preserves disjoint row spans after row-hash narrowing"
         &active_cache,
         1,
         20,
-        .{ .enabled_file = false, .enabled_console = false, .file_level = .info, .console_level = .info },
+        app_logger.Logger{
+            .name = "test.view_cache_refinement",
+            .enabled_file = false,
+            .enabled_console = false,
+            .file_level = .info,
+            .console_level = .info,
+            .file_output_mode = .text,
+            .console_output_mode = .text,
+        },
         true,
         false,
     );

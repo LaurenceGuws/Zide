@@ -110,6 +110,8 @@ const PipeCapture = struct {
                 .cached_fg_pgrp = 0,
                 .cached_fg_name_len = 0,
                 .cached_fg_name = [_]u8{0} ** 128,
+                .cached_fg_command_len = 0,
+                .cached_fg_command = [_]u8{0} ** 256,
             },
         };
     }
@@ -232,10 +234,10 @@ test "kitty multipart T first chunk preserves auto-place through t continuations
     kitty.parseKittyGraphics(session, "a=t,i=7,O=2,m=1;AA==");
     kitty.parseKittyGraphics(session, "a=t,i=7,O=3;/w==");
 
-    try std.testing.expectEqual(@as(usize, 1), session.kitty_primary.images.items.len);
-    try std.testing.expectEqual(@as(usize, 1), session.kitty_primary.placements.items.len);
-    try std.testing.expectEqual(@as(u32, 7), session.kitty_primary.images.items[0].id);
-    try std.testing.expectEqual(@as(u32, 7), session.kitty_primary.placements.items[0].image_id);
+    try std.testing.expectEqual(@as(usize, 1), session.core.kitty_primary.images.items.len);
+    try std.testing.expectEqual(@as(usize, 1), session.core.kitty_primary.placements.items.len);
+    try std.testing.expectEqual(@as(u32, 7), session.core.kitty_primary.images.items[0].id);
+    try std.testing.expectEqual(@as(u32, 7), session.core.kitty_primary.placements.items[0].image_id);
 }
 
 test "kitty parse query rgba short payload emits ENODATA reply" {

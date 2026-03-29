@@ -19,12 +19,17 @@ const InputSnapshot = @import("terminal_session.zig").InputSnapshot;
 pub fn init(allocator: std.mem.Allocator, rows: u16, cols: u16, options: anytype) !*@import("terminal_session.zig").TerminalSession {
     const Session = @import("terminal_session.zig").TerminalSession;
     const session = try allocator.create(Session);
-    const scrollback_rows = options.scrollback_rows orelse @import("terminal_session.zig").default_scrollback_rows;
+    const has_scrollback_rows = comptime @hasField(@TypeOf(options), "scrollback_rows");
+    const has_cursor_style = comptime @hasField(@TypeOf(options), "cursor_style");
+    const scrollback_rows = if (has_scrollback_rows)
+        options.scrollback_rows orelse @import("terminal_session.zig").default_scrollback_rows
+    else
+        @import("terminal_session.zig").default_scrollback_rows;
     const log = app_logger.logger("terminal.core");
     log.logf(.info, "terminal init rows={d} cols={d} scrollback_max={d}", .{ rows, cols, scrollback_rows });
     const core = try TerminalCore.init(allocator, rows, cols, .{
         .scrollback_rows = scrollback_rows,
-        .cursor_style = options.cursor_style,
+        .cursor_style = if (has_cursor_style) options.cursor_style else null,
     });
     session.* = .{
         .allocator = allocator,

@@ -913,7 +913,7 @@ const FakeWriter = struct {
         self.buffer.deinit(allocator);
     }
 
-    fn write(self: *FakeWriter, bytes: []const u8) !usize {
+    pub fn write(self: *FakeWriter, bytes: []const u8) !usize {
         try self.buffer.appendSlice(std.testing.allocator, bytes);
         return bytes.len;
     }

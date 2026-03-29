@@ -483,7 +483,7 @@ test "same-row disjoint dirty writes collapse to one union span today" {
     var grid = try TerminalGrid.init(allocator, 2, 20, .{
         .codepoint = 0,
         .width = 1,
-        .attrs = .{},
+        .attrs = @import("../types.zig").default_cell_attrs,
     });
     defer grid.deinit();
 

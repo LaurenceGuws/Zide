@@ -63,6 +63,7 @@ pub const DecstrContext = struct {
     set_sync_updates_locked_fn: *const fn (ctx: *anyopaque, enabled: bool) void,
     clear_all_kitty_images_fn: *const fn (ctx: *anyopaque) void,
     reset_active_screen_state_fn: *const fn (ctx: *anyopaque) void,
+    publish_snapshot_fn: *const fn (ctx: *anyopaque) void,
     mark_active_screen_decstr_dirty_fn: *const fn (ctx: *anyopaque) void,
 
     pub fn from(session: anytype) DecstrContext {
@@ -159,6 +160,12 @@ pub const DecstrContext = struct {
                     s.activeScreen().resetState();
                 }
             }.call,
+            .publish_snapshot_fn = struct {
+                fn call(ctx: *anyopaque) void {
+                    const s: SessionPtr = @ptrCast(@alignCast(ctx));
+                    @import("../core/input_modes.zig").publishSnapshot(s);
+                }
+            }.call,
             .mark_active_screen_decstr_dirty_fn = struct {
                 fn call(ctx: *anyopaque) void {
                     const s: SessionPtr = @ptrCast(@alignCast(ctx));
@@ -213,6 +220,9 @@ pub const DecstrContext = struct {
     pub fn resetActiveScreenState(self: *const DecstrContext) void {
         self.reset_active_screen_state_fn(self.ctx);
     }
+    pub fn publishSnapshot(self: *const DecstrContext) void {
+        self.publish_snapshot_fn(self.ctx);
+    }
     pub fn markActiveScreenDecstrDirty(self: *const DecstrContext) void {
         self.mark_active_screen_decstr_dirty_fn(self.ctx);
     }
@@ -234,6 +244,7 @@ pub fn applyDecstrReset(context: DecstrContext) void {
     context.setSyncUpdatesLocked(false);
     context.clearAllKittyImages();
     context.resetActiveScreenState();
+    context.publishSnapshot();
     context.markActiveScreenDecstrDirty();
 }
 
