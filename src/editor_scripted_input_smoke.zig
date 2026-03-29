@@ -1,10 +1,19 @@
 const std = @import("std");
 const editor_mod = @import("editor/editor.zig");
 const grammar_manager_mod = @import("editor/grammar_manager.zig");
+const syntax_mod = @import("editor/syntax.zig");
 const cache_mod = @import("editor/render/cache.zig");
+const frame_view_mod = @import("editor/view/frame.zig");
+const runtime_mod = @import("editor/view/runtime.zig");
+const draw_mod = @import("ui/widgets/editor_widget_draw.zig");
+const renderer_mod = @import("ui/renderer.zig");
+const shared_types = @import("types/mod.zig");
 
 const Editor = editor_mod.Editor;
 const EditorRenderCache = cache_mod.EditorRenderCache;
+const InputSnapshot = shared_types.input.InputSnapshot;
+const EditorTextStyleFlags = renderer_mod.EditorTextStyleFlags;
+const TokenKind = syntax_mod.TokenKind;
 
 const Scenario = enum {
     single_insert,
@@ -30,6 +39,10 @@ const FrameSummary = struct {
     result_pending: bool,
     compute_in_flight: bool,
     styling_authority: []const u8,
+    editor_texture_update_count: usize,
+    editor_texture_blit_count: usize,
+    composition_clip_count: usize,
+    composition_full_pane_clear: bool,
 };
 
 const RunSummary = struct {
@@ -40,11 +53,298 @@ const RunSummary = struct {
     frames: []FrameSummary,
 };
 
+const FakeColor = struct {
+    r: u8,
+    g: u8,
+    b: u8,
+    a: u8 = 255,
+};
+
+const FakeTheme = struct {
+    background: FakeColor = .{ .r = 40, .g = 42, .b = 54 },
+    foreground: FakeColor = .{ .r = 248, .g = 248, .b = 242 },
+    selection: FakeColor = .{ .r = 68, .g = 71, .b = 90 },
+    cursor: FakeColor = .{ .r = 248, .g = 248, .b = 242 },
+    link: FakeColor = .{ .r = 139, .g = 233, .b = 253 },
+    line_number: FakeColor = .{ .r = 98, .g = 114, .b = 164 },
+    line_number_bg: FakeColor = .{ .r = 33, .g = 34, .b = 44 },
+    current_line: FakeColor = .{ .r = 50, .g = 52, .b = 66 },
+    comment_color: FakeColor = .{ .r = 98, .g = 114, .b = 164 },
+    string: FakeColor = .{ .r = 241, .g = 250, .b = 140 },
+    keyword: FakeColor = .{ .r = 255, .g = 121, .b = 198 },
+    number: FakeColor = .{ .r = 189, .g = 147, .b = 249 },
+    function: FakeColor = .{ .r = 80, .g = 250, .b = 123 },
+    variable: FakeColor = .{ .r = 248, .g = 248, .b = 242 },
+    type_name: FakeColor = .{ .r = 139, .g = 233, .b = 253 },
+    operator: FakeColor = .{ .r = 255, .g = 121, .b = 198 },
+    builtin_color: FakeColor = .{ .r = 139, .g = 233, .b = 253 },
+    punctuation: FakeColor = .{ .r = 248, .g = 248, .b = 242 },
+    constant: FakeColor = .{ .r = 189, .g = 147, .b = 249 },
+    attribute: FakeColor = .{ .r = 80, .g = 250, .b = 123 },
+    namespace: FakeColor = .{ .r = 139, .g = 233, .b = 253 },
+    label: FakeColor = .{ .r = 139, .g = 233, .b = 253 },
+    error_token: FakeColor = .{ .r = 255, .g = 85, .b = 85 },
+    preproc: FakeColor = .{ .r = 143, .g = 188, .b = 187 },
+    macro: FakeColor = .{ .r = 180, .g = 142, .b = 173 },
+    escape: FakeColor = .{ .r = 136, .g = 192, .b = 208 },
+    keyword_control: FakeColor = .{ .r = 255, .g = 121, .b = 198 },
+    function_method: FakeColor = .{ .r = 80, .g = 250, .b = 123 },
+    type_builtin: FakeColor = .{ .r = 139, .g = 233, .b = 253 },
+    syntax_style_flags: [token_kind_count]EditorTextStyleFlags = [_]EditorTextStyleFlags{.{}} ** token_kind_count,
+    syntax_special_colors: [token_kind_count]?FakeColor = [_]?FakeColor{null} ** token_kind_count,
+};
+
+const SelectionOverlayStyle = struct {
+    smooth_enabled: bool = true,
+    corner_px: ?f32 = null,
+    pad_px: ?f32 = null,
+};
+
+const CompositionCapture = struct {
+    editor_texture_update_count: usize = 0,
+    editor_texture_blit_count: usize = 0,
+    composition_clip_count: usize = 0,
+    composition_full_pane_clear: bool = false,
+};
+
+const token_kind_count: usize = switch (@typeInfo(TokenKind)) {
+    .@"enum" => |info| info.fields.len,
+    else => 0,
+};
+
+const FakeRenderer = struct {
+    width: i32,
+    height: i32,
+    editor_char_width: f32,
+    editor_char_height: f32,
+    editor_disable_ligatures: @import("ui/renderer.zig").TerminalDisableLigaturesStrategy = .never,
+    theme: FakeTheme = .{},
+    editor_selection_overlay_style: SelectionOverlayStyle = .{},
+    terminal_selection_overlay_style: SelectionOverlayStyle = .{},
+    editor_texture_created: bool = false,
+    in_editor_texture: bool = false,
+    capture: CompositionCapture = .{},
+
+    fn init(width: i32, height: i32, char_width: f32, char_height: f32) FakeRenderer {
+        return .{
+            .width = width,
+            .height = height,
+            .editor_char_width = char_width,
+            .editor_char_height = char_height,
+        };
+    }
+
+    pub fn rendererPtr(self: *FakeRenderer) *FakeRenderer {
+        return self;
+    }
+
+    pub fn uiScaleFactor(self: *FakeRenderer) f32 {
+        _ = self;
+        return 1.0;
+    }
+
+    pub fn editorSelectionOverlayStyle(self: *FakeRenderer) SelectionOverlayStyle {
+        return self.editor_selection_overlay_style;
+    }
+
+    pub fn terminalSelectionOverlayStyle(self: *FakeRenderer) SelectionOverlayStyle {
+        return self.terminal_selection_overlay_style;
+    }
+
+    pub fn ensureEditorTexture(self: *FakeRenderer, width: i32, height: i32) bool {
+        _ = width;
+        _ = height;
+        if (!self.editor_texture_created) {
+            self.editor_texture_created = true;
+            return true;
+        }
+        return false;
+    }
+
+    pub fn beginEditorTexture(self: *FakeRenderer) bool {
+        self.in_editor_texture = true;
+        self.capture.editor_texture_update_count += 1;
+        return true;
+    }
+
+    pub fn endEditorTexture(self: *FakeRenderer) void {
+        self.in_editor_texture = false;
+    }
+
+    pub fn beginClip(self: *FakeRenderer, x: i32, y: i32, w: i32, h: i32) void {
+        _ = x;
+        _ = y;
+        _ = w;
+        _ = h;
+        self.capture.composition_clip_count += 1;
+    }
+
+    pub fn endClip(self: *FakeRenderer) void {
+        _ = self;
+    }
+
+    pub fn drawEditorTexture(self: *FakeRenderer, x: f32, y: f32) void {
+        _ = x;
+        _ = y;
+        self.capture.editor_texture_blit_count += 1;
+    }
+
+    pub fn drawRect(self: *FakeRenderer, x: i32, y: i32, w: i32, h: i32, color: FakeColor) void {
+        _ = color;
+        if (self.in_editor_texture and x == 0 and y == 0 and w == self.width and h == self.height) {
+            self.capture.composition_full_pane_clear = true;
+        }
+    }
+
+    pub fn drawText(self: *FakeRenderer, text: []const u8, x: f32, y: f32, color: FakeColor) void {
+        _ = self;
+        _ = text;
+        _ = x;
+        _ = y;
+        _ = color;
+    }
+
+    pub fn drawTextMonospace(self: *FakeRenderer, text: []const u8, x: f32, y: f32, color: FakeColor) void {
+        self.drawText(text, x, y, color);
+    }
+
+    pub fn drawTextMonospacePolicy(self: *FakeRenderer, text: []const u8, x: f32, y: f32, color: FakeColor, disable_programming_ligatures: bool) void {
+        _ = disable_programming_ligatures;
+        self.drawText(text, x, y, color);
+    }
+
+    pub fn drawTextMonospaceOnBg(self: *FakeRenderer, text: []const u8, x: f32, y: f32, color: FakeColor, bg: FakeColor) void {
+        _ = bg;
+        self.drawText(text, x, y, color);
+    }
+
+    pub fn drawTextMonospaceOnBgPolicy(self: *FakeRenderer, text: []const u8, x: f32, y: f32, color: FakeColor, bg: FakeColor, disable_programming_ligatures: bool) void {
+        _ = bg;
+        _ = disable_programming_ligatures;
+        self.drawText(text, x, y, color);
+    }
+
+    pub fn drawTextMonospaceOnBgStyledPolicy(self: *FakeRenderer, text: []const u8, x: f32, y: f32, color: FakeColor, bg: FakeColor, disable_programming_ligatures: bool, italic: bool) void {
+        _ = italic;
+        self.drawTextMonospaceOnBgPolicy(text, x, y, color, bg, disable_programming_ligatures);
+    }
+
+    pub fn drawTextMonospaceStyledPolicy(self: *FakeRenderer, text: []const u8, x: f32, y: f32, color: FakeColor, disable_programming_ligatures: bool, italic: bool) void {
+        _ = italic;
+        self.drawTextMonospacePolicy(text, x, y, color, disable_programming_ligatures);
+    }
+
+    pub fn drawCursor(self: *FakeRenderer, x: f32, y: f32, mode: enum { block, line, underline }) void {
+        _ = self;
+        _ = x;
+        _ = y;
+        _ = mode;
+    }
+
+    fn clearCapture(self: *FakeRenderer) void {
+        self.capture = .{};
+    }
+};
+
+const FakeWidget = struct {
+    editor: *Editor,
+    gutter_width: f32 = 0,
+    wrap_enabled: bool = false,
+
+    const CursorLineCtx = struct {
+        widget: *FakeWidget,
+    };
+
+    fn cursorLineText(ctx: *anyopaque, line_idx: usize, scratch: *runtime_mod.LineScratch) runtime_mod.LineSlice {
+        const payload: *CursorLineCtx = @ptrCast(@alignCast(ctx));
+        const editor = payload.widget.editor;
+        const line_len = editor.lineLen(line_idx);
+        if (line_len <= scratch.buf.len) {
+            const len = editor.getLine(line_idx, scratch.buf);
+            return .{ .text = scratch.buf[0..len], .owned = null };
+        }
+        const owned = editor.getLineAlloc(line_idx) catch {
+            return .{ .text = &[_]u8{}, .owned = null };
+        };
+        return .{ .text = owned, .owned = owned };
+    }
+
+    fn cursorClusters(ctx: *anyopaque, line_idx: usize, line_text: []const u8) runtime_mod.ClusterSlice {
+        _ = ctx;
+        _ = line_idx;
+        _ = line_text;
+        return .{ .clusters = null, .owned = false };
+    }
+
+    fn cursorFreeLineText(ctx: *anyopaque, owned: []u8) void {
+        const payload: *CursorLineCtx = @ptrCast(@alignCast(ctx));
+        payload.widget.editor.allocator.free(owned);
+    }
+
+    fn cursorFreeClusters(ctx: *anyopaque, owned: []const u32) void {
+        const payload: *CursorLineCtx = @ptrCast(@alignCast(ctx));
+        payload.widget.editor.allocator.free(owned);
+    }
+
+    pub fn frameView(self: *FakeWidget) frame_view_mod.EditorFrameView {
+        return frame_view_mod.EditorFrameView.init(self.editor, self.wrap_enabled);
+    }
+
+    pub fn viewportColumns(self: *FakeWidget, renderer: *FakeRenderer) usize {
+        const editor_width = @max(0, renderer.width - @as(i32, @intFromFloat(self.gutter_width)));
+        if (renderer.editor_char_width <= 0) return 0;
+        return @as(usize, @intFromFloat(@as(f32, @floatFromInt(editor_width)) / renderer.editor_char_width));
+    }
+
+    pub fn clusterOffsets(
+        self: *FakeWidget,
+        renderer: *FakeRenderer,
+        line_idx: usize,
+        line_text: []const u8,
+        out_slice: *?[]const u32,
+        out_owned: *bool,
+    ) void {
+        _ = self;
+        _ = renderer;
+        _ = line_idx;
+        _ = line_text;
+        out_slice.* = null;
+        out_owned.* = false;
+    }
+
+    fn initViewRuntime(self: *FakeWidget, ctx: *CursorLineCtx) runtime_mod.EditorViewRuntime {
+        return .{
+            .editor = self.editor,
+            .wrap_enabled = self.wrap_enabled,
+            .ctx = ctx,
+            .getLineText = cursorLineText,
+            .getClusters = cursorClusters,
+            .freeLineText = cursorFreeLineText,
+            .freeClusters = cursorFreeClusters,
+        };
+    }
+
+    pub fn lineData(self: *FakeWidget, shell: *FakeRenderer, line_idx: usize, scratch: *runtime_mod.LineScratch) runtime_mod.LineData {
+        _ = shell;
+        var ctx = CursorLineCtx{ .widget = self };
+        const runtime = self.initViewRuntime(&ctx);
+        return runtime.lineData(line_idx, scratch);
+    }
+
+    pub fn releaseLineData(self: *FakeWidget, data: *runtime_mod.LineData) void {
+        if (data.owned_text) |owned| self.editor.allocator.free(owned);
+        if (data.owned_clusters) {
+            if (data.clusters) |clusters| self.editor.allocator.free(clusters);
+        }
+    }
+};
+
 const Harness = struct {
     allocator: std.mem.Allocator,
     grammar_manager: *grammar_manager_mod.GrammarManager,
     editor: *Editor,
     cache: EditorRenderCache,
+    renderer: FakeRenderer,
 
     fn init(allocator: std.mem.Allocator) !Harness {
         const grammar_manager = try allocator.create(grammar_manager_mod.GrammarManager);
@@ -58,6 +358,7 @@ const Harness = struct {
             .grammar_manager = grammar_manager,
             .editor = editor,
             .cache = EditorRenderCache.init(allocator, 256),
+            .renderer = FakeRenderer.init(1200, 800, 8, 16),
         };
     }
 
@@ -119,6 +420,7 @@ fn stageFrame(
     allocator: std.mem.Allocator,
     editor: *Editor,
     cache: *EditorRenderCache,
+    renderer: *FakeRenderer,
     frame: u64,
     action: []const u8,
     visible_start: usize,
@@ -132,18 +434,19 @@ fn stageFrame(
     const doc = editor.documentCore();
     const epoch = doc.highlightEpoch();
     const change_tick = doc.changeTick();
-    const full_redraw = cache.beginFrame(
-        frame,
-        120,
-        false,
-        1200,
-        800,
-        change_tick,
+    var widget = FakeWidget{ .editor = editor };
+    const view = widget.frameView();
+    const cols = widget.viewportColumns(renderer);
+    const full_redraw = cache.wouldBeginFrameFullRedraw(
+        cols,
+        widget.wrap_enabled,
+        renderer.width,
+        renderer.height,
         epoch,
-        0,
-        0,
-        0,
-        0,
+        view.scroll_line,
+        view.scroll_row_offset,
+        view.scroll_col,
+        view.selectionStateHash(),
     );
 
     editor.beginVisibleHighlightWork(visible_start, visible_end, epoch, change_tick);
@@ -192,6 +495,10 @@ fn stageFrame(
     else
         "plain_fallback";
 
+    const input = InputSnapshot.init(.{ .x = 0, .y = 0 }, .{});
+    renderer.clearCapture();
+    draw_mod.drawCached(&widget, renderer, cache, 0, 0, 1200, 800, frame, input);
+
     return .{
         .frame = frame,
         .action = action,
@@ -205,6 +512,10 @@ fn stageFrame(
         .result_pending = editor.hasPendingVisibleHighlightResult(),
         .compute_in_flight = editor.visibleHighlightComputeInFlight(),
         .styling_authority = authority,
+        .editor_texture_update_count = renderer.capture.editor_texture_update_count,
+        .editor_texture_blit_count = renderer.capture.editor_texture_blit_count,
+        .composition_clip_count = renderer.capture.composition_clip_count,
+        .composition_full_pane_clear = renderer.capture.composition_full_pane_clear,
     };
 }
 
@@ -229,6 +540,7 @@ fn runScenario(allocator: std.mem.Allocator, fixture_path: []const u8, scenario:
         allocator,
         harness.editor,
         &harness.cache,
+        &harness.renderer,
         1,
         "stabilize",
         visible_start,
@@ -252,6 +564,7 @@ fn runScenario(allocator: std.mem.Allocator, fixture_path: []const u8, scenario:
         allocator,
         harness.editor,
         &harness.cache,
+        &harness.renderer,
         2,
         "edit",
         visible_start,
@@ -265,6 +578,7 @@ fn runScenario(allocator: std.mem.Allocator, fixture_path: []const u8, scenario:
             allocator,
             harness.editor,
             &harness.cache,
+            &harness.renderer,
             3,
             "refresh_complete",
             visible_start,
@@ -292,7 +606,7 @@ fn printHumanSummary(summary: RunSummary) void {
     });
     for (summary.frames) |frame| {
         std.debug.print(
-            "frame={d} action={s} invalidation_full={any} invalidation_ranges={d} full_redraw={any} request={any} apply={any} apply_lines={d} request_pending={any} result_pending={any} compute_in_flight={any} authority={s}\n",
+            "frame={d} action={s} invalidation_full={any} invalidation_ranges={d} full_redraw={any} request={any} apply={any} apply_lines={d} request_pending={any} result_pending={any} compute_in_flight={any} authority={s} texture_updates={d} texture_blits={d} clip_count={d} full_pane_clear={any}\n",
             .{
                 frame.frame,
                 frame.action,
@@ -306,6 +620,10 @@ fn printHumanSummary(summary: RunSummary) void {
                 frame.result_pending,
                 frame.compute_in_flight,
                 frame.styling_authority,
+                frame.editor_texture_update_count,
+                frame.editor_texture_blit_count,
+                frame.composition_clip_count,
+                frame.composition_full_pane_clear,
             },
         );
     }

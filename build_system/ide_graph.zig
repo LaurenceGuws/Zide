@@ -267,9 +267,12 @@ pub fn planIdeExtendedBuildGraph(
         "editor-scripted-input-smoke",
         "src/editor_scripted_input_smoke.zig",
     );
-    editor_scripted_input_smoke.linkLibrary(treesitter.?);
-    editor_scripted_input_smoke.addIncludePath(b.path("vendor"));
-    addTreeSitterIncludes(editor_scripted_input_smoke, treesitter.?);
+    configureAppExecutable(
+        editor_scripted_input_smoke,
+        app_link_ctx,
+        "editor-scripted-input-smoke",
+        target_profile.app_editor,
+    );
     const editor_scripted_input_smoke_run = addRunArtifactStep(
         b,
         editor_scripted_input_smoke,
