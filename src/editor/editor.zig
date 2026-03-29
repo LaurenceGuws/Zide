@@ -546,7 +546,13 @@ pub const Editor = struct {
             return null;
         }
         const start_line = self.visible_highlight_runtime.work.next;
-        const end_line = @min(self.visible_highlight_runtime.work.end, start_line + max_lines);
+        const should_coalesce_refresh =
+            self.visible_highlight_runtime.work.change_tick != self.visible_highlight_runtime.work.completed_change_tick or
+            self.visible_highlight_runtime.work.epoch != self.visible_highlight_runtime.work.completed_epoch;
+        const end_line = if (should_coalesce_refresh)
+            self.visible_highlight_runtime.work.end
+        else
+            @min(self.visible_highlight_runtime.work.end, start_line + max_lines);
         self.visible_highlight_runtime.work.next = end_line;
         if (self.visible_highlight_runtime.work.next >= self.visible_highlight_runtime.work.end) {
             self.visible_highlight_runtime.work.active = false;

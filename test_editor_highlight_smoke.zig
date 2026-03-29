@@ -228,3 +228,54 @@ test "editor invalidated highlight line retains previous tokens until replacemen
 
     try std.testing.expect(cache.tryHighlightTokens(0, 0, 222, 7).len > 0);
 }
+
+test "editor edit refresh requests one coherent visible highlight region" {
+    const allocator = std.testing.allocator;
+    var fixture = try EditorFixture.init(allocator);
+    defer fixture.deinit();
+    const editor = fixture.editor;
+
+    var tmp = std.testing.tmpDir(.{});
+    defer tmp.cleanup();
+    try tmp.dir.writeFile(.{
+        .sub_path = "fixture.zig",
+        .data =
+            \\const foo = bar;
+            \\const keep = 1;
+            \\const stay = 2;
+            \\
+        ,
+    });
+    const path = try tmp.dir.realpathAlloc(allocator, "fixture.zig");
+    defer allocator.free(path);
+
+    try editor.openFile(path);
+    try editor.tryInitHighlighter(path);
+    if (editor.takeHighlightInvalidationBatch()) |initial_batch| {
+        allocator.free(initial_batch.ranges);
+    }
+
+    const before = editor.documentCore();
+    const epoch_before = before.highlightEpoch();
+    const change_tick_before = before.changeTick();
+
+    editor.beginVisibleHighlightWork(0, 3, epoch_before, change_tick_before);
+    const initial_batch = editor.takeVisibleHighlightWorkBatch(1) orelse return error.TestUnexpectedResult;
+    try std.testing.expectEqual(@as(usize, 0), initial_batch.start_line);
+    try std.testing.expectEqual(@as(usize, 3), initial_batch.end_line);
+
+    editor.setCursor(0, 7);
+    try editor.insertText("x");
+
+    const after = editor.documentCore();
+    const epoch_after = after.highlightEpoch();
+    const change_tick_after = after.changeTick();
+    try std.testing.expectEqual(epoch_before, epoch_after);
+    try std.testing.expect(change_tick_after != change_tick_before);
+
+    editor.beginVisibleHighlightWork(0, 3, epoch_after, change_tick_after);
+    const refresh_batch = editor.takeVisibleHighlightWorkBatch(1) orelse return error.TestUnexpectedResult;
+    try std.testing.expectEqual(@as(usize, 0), refresh_batch.start_line);
+    try std.testing.expectEqual(@as(usize, 3), refresh_batch.end_line);
+    try std.testing.expect(!editor.hasPendingVisibleHighlightWork());
+}
