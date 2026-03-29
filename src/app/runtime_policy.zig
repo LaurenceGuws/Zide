@@ -50,6 +50,12 @@ pub const RuntimeIntent = struct {
     }
 };
 
+pub const EditorStartupDeferrals = struct {
+    highlight_frames: u8,
+    visible_cache_frames: u8,
+    cluster_offset_frames: u8,
+};
+
 pub const TerminalWorkspaceIntents = struct {
     active: RuntimeIntent,
     background: RuntimeIntent,
@@ -125,6 +131,31 @@ pub fn editorVisibleWorkLineBudget(base_budget: usize, intent: RuntimeIntent) us
         .visible_inactive => @min(base_budget, @as(usize, 8)),
         .hidden_warm => @min(base_budget, @as(usize, 2)),
         .paused, .evicted => 0,
+    };
+}
+
+pub fn editorStartupDeferrals(intent: RuntimeIntent, highlight_disabled_for_large_file: bool) EditorStartupDeferrals {
+    return switch (intent.lifecycle) {
+        .focused_visible => .{
+            .highlight_frames = if (highlight_disabled_for_large_file) 0 else 2,
+            .visible_cache_frames = 2,
+            .cluster_offset_frames = 4,
+        },
+        .visible_inactive => .{
+            .highlight_frames = if (highlight_disabled_for_large_file) 0 else 4,
+            .visible_cache_frames = 3,
+            .cluster_offset_frames = 6,
+        },
+        .hidden_warm => .{
+            .highlight_frames = if (highlight_disabled_for_large_file) 0 else 6,
+            .visible_cache_frames = 4,
+            .cluster_offset_frames = 8,
+        },
+        .paused, .evicted => .{
+            .highlight_frames = 0,
+            .visible_cache_frames = 0,
+            .cluster_offset_frames = 0,
+        },
     };
 }
 
@@ -244,6 +275,17 @@ test "editor visible work budget cools inactive and hidden work" {
         .lifecycle = .hidden_warm,
         .work_class = .background,
     }));
+}
+
+test "editor startup deferrals cool visible inactive work" {
+    const active = editorStartupDeferrals(editorInteractiveIntent(), false);
+    const background = editorStartupDeferrals(editorBackgroundIntent(), false);
+    try std.testing.expectEqual(@as(u8, 2), active.highlight_frames);
+    try std.testing.expectEqual(@as(u8, 2), active.visible_cache_frames);
+    try std.testing.expectEqual(@as(u8, 4), active.cluster_offset_frames);
+    try std.testing.expectEqual(@as(u8, 4), background.highlight_frames);
+    try std.testing.expectEqual(@as(u8, 3), background.visible_cache_frames);
+    try std.testing.expectEqual(@as(u8, 6), background.cluster_offset_frames);
 }
 
 test "runtime kind labels stay stable for structured logs" {

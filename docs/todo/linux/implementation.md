@@ -334,3 +334,6 @@ owning subsystem queues.
         runtime-policy budget seam instead of raw visible-line defaults, with a
         conservative `visible_inactive` cap for non-interactive visible editor
         work
+      - editor file-open startup deferrals now also route through shared runtime
+        policy instead of hardcoded frame counts, cooling non-interactive open
+        follow-through before highlight/precompute work starts

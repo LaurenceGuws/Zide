@@ -10,6 +10,7 @@ const editor_selection_state = @import("selection_state.zig");
 const editor_navigation = @import("navigation.zig");
 const editor_edit_ops = @import("edit_ops.zig");
 const app_logger = @import("../app_logger.zig");
+const runtime_policy = @import("../app/runtime_policy.zig");
 
 const TextStore = text_store.TextStore;
 const CursorPos = types.CursorPos;
@@ -1040,9 +1041,10 @@ pub const Editor = struct {
         self.markSaved();
         self.clearHighlightDirtyRange();
         self.setHighlightDisabledForLargeFile();
-        self.highlight_defer_frames = if (self.doc.highlight_disabled_for_large_file) 0 else 2;
-        self.visible_cache_precompute_defer_frames = 2;
-        self.cluster_offsets_defer_frames = 4;
+        const startup_deferrals = runtime_policy.editorStartupDeferrals(runtime_policy.editorBackgroundIntent(), self.doc.highlight_disabled_for_large_file);
+        self.highlight_defer_frames = startup_deferrals.highlight_frames;
+        self.visible_cache_precompute_defer_frames = startup_deferrals.visible_cache_frames;
+        self.cluster_offsets_defer_frames = startup_deferrals.cluster_offset_frames;
         self.startup_defer_last_frame_id = 0;
         self.scheduleHighlighter(path);
         const elapsed_us = @as(i64, @intCast(@divTrunc(std.time.nanoTimestamp() - t_start, 1000)));

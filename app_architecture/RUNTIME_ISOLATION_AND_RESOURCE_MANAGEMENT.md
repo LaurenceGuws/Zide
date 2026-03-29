@@ -619,6 +619,18 @@ This is an ownership/foundation cut only:
 - explicit user-configured `editor_highlight_budget` and `editor_width_budget`
   still apply as base budgets, then flow through the shared runtime policy cap
 
+2026-03-28 editor startup deferral checkpoint:
+
+- editor file-open startup now routes highlight/precompute/cluster deferrals
+  through shared runtime policy instead of hardcoded frame counts in editor
+  state reset
+- current conservative visible-inactive startup policy on open:
+  - highlight init: 4 frames
+  - visible-cache precompute: 3 frames
+  - cluster offsets: 6 frames
+- save/save-as on the active editor still keeps immediate local follow-through;
+  this cut is scoped to open/startup background work cooling
+
 2026-03-28 terminal perf event alignment checkpoint:
 
 - `terminal.frame` structured events now also emit shared runtime vocabulary for
