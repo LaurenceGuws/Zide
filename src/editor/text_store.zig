@@ -5,6 +5,7 @@ const app_logger = @import("../app_logger.zig");
 
 pub const TextStore = struct {
     const mmap_threshold_bytes: usize = 16 * 1024 * 1024;
+    const binary_probe_bytes: usize = 4096;
 
     allocator: std.mem.Allocator,
     rope: *rope_mod.Rope,
@@ -44,6 +45,10 @@ pub const TextStore = struct {
                 break :blk null;
             };
             if (mapped) |mapped_bytes| {
+                if (looksLikeBinary(mapped_bytes[0..@min(mapped_bytes.len, binary_probe_bytes)])) {
+                    std.posix.munmap(mapped_bytes);
+                    return initBinaryPlaceholder(allocator, path, stat.size);
+                }
                 const t_map_end = std.time.nanoTimestamp();
                 const t_rope_start = std.time.nanoTimestamp();
                 errdefer std.posix.munmap(mapped_bytes);
@@ -72,6 +77,10 @@ pub const TextStore = struct {
         const t_read_start = std.time.nanoTimestamp();
         const data = try file.readToEndAlloc(allocator, size);
         const t_read_end = std.time.nanoTimestamp();
+        if (looksLikeBinary(data[0..@min(data.len, binary_probe_bytes)])) {
+            allocator.free(data);
+            return initBinaryPlaceholder(allocator, path, stat.size);
+        }
 
         const t_rope_start = std.time.nanoTimestamp();
         const store = try allocator.create(TextStore);
@@ -95,6 +104,32 @@ pub const TextStore = struct {
         );
 
         return store;
+    }
+
+    fn initBinaryPlaceholder(allocator: std.mem.Allocator, path: []const u8, size: u64) !*TextStore {
+        const message = try std.fmt.allocPrint(
+            allocator,
+            \\Binary file not displayed.
+            \\Path: {s}
+            \\Size: {d} bytes
+            \\
+        ,
+            .{ path, size },
+        );
+        defer allocator.free(message);
+        return init(allocator, message);
+    }
+
+    fn looksLikeBinary(sample: []const u8) bool {
+        if (sample.len == 0) return false;
+        var control_count: usize = 0;
+        for (sample) |byte| {
+            if (byte == 0) return true;
+            if (byte < 0x20 and byte != '\n' and byte != '\r' and byte != '\t' and byte != 0x0c) {
+                control_count += 1;
+            }
+        }
+        return control_count * 8 > sample.len;
     }
 
     pub fn deinit(self: *TextStore) void {
@@ -212,3 +247,22 @@ pub const TextStore = struct {
         self.rope.annotateClosedUndoGroupAfter(after_state);
     }
 };
+
+test "initFromFile replaces binary payload with placeholder text" {
+    const allocator = std.testing.allocator;
+    var tmp = std.testing.tmpDir(.{});
+    defer tmp.cleanup();
+    try tmp.dir.writeFile(.{
+        .sub_path = "binary.bin",
+        .data = "\x7fELF\x02\x01\x01\x00junk",
+    });
+    const path = try tmp.dir.realpathAlloc(allocator, "binary.bin");
+    defer allocator.free(path);
+
+    const store = try TextStore.initFromFile(allocator, path);
+    defer store.deinit();
+
+    const text = try store.readRangeAlloc(0, store.totalLen());
+    defer allocator.free(text);
+    try std.testing.expect(std.mem.startsWith(u8, text, "Binary file not displayed."));
+}
