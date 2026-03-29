@@ -33,7 +33,7 @@ fn scheduleVisibleHighlightRequest(widget: anytype, shell: anytype, height: f32,
 
     const start_line = view.scroll_line;
     const end_line = @min(start_line + visible_lines + 1, total_lines);
-    widget.editor.beginVisibleHighlightWork(start_line, end_line, view.highlight_epoch);
+    widget.editor.beginVisibleHighlightWork(start_line, end_line, view.highlight_epoch, view.change_tick);
     const batch = widget.editor.takeVisibleHighlightWorkBatch(budget_lines) orelse {
         perf_log.logf(.info, "visible_precompute_highlight lines=0 budget={d} time_us=0", .{budget_lines});
         return null;
@@ -42,6 +42,7 @@ fn scheduleVisibleHighlightRequest(widget: anytype, shell: anytype, height: f32,
         .start_line = batch.start_line,
         .end_line = batch.end_line,
         .epoch = view.highlight_epoch,
+        .change_tick = view.change_tick,
     });
     return batch;
 }

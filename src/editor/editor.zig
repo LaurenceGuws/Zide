@@ -70,16 +70,19 @@ pub const Editor = struct {
         end: usize,
         next: usize,
         epoch: u64,
+        change_tick: u64,
         active: bool,
         completed_start: usize,
         completed_end: usize,
         completed_epoch: u64,
+        completed_change_tick: u64,
     };
 
     pub const VisibleHighlightWorkRequest = struct {
         start_line: usize,
         end_line: usize,
         epoch: u64,
+        change_tick: u64,
     };
 
     pub const VisibleHighlightLineResult = struct {
@@ -510,7 +513,7 @@ pub const Editor = struct {
         end_line: usize,
     };
 
-    pub fn beginVisibleHighlightWork(self: *Editor, start_line: usize, end_line: usize, epoch: u64) void {
+    pub fn beginVisibleHighlightWork(self: *Editor, start_line: usize, end_line: usize, epoch: u64, change_tick: u64) void {
         if (end_line <= start_line) {
             self.visible_highlight_runtime.work.active = false;
             return;
@@ -518,17 +521,20 @@ pub const Editor = struct {
         const completed_same_range = !self.visible_highlight_runtime.work.active and
             start_line == self.visible_highlight_runtime.work.completed_start and
             end_line == self.visible_highlight_runtime.work.completed_end and
-            epoch == self.visible_highlight_runtime.work.completed_epoch;
+            epoch == self.visible_highlight_runtime.work.completed_epoch and
+            change_tick == self.visible_highlight_runtime.work.completed_change_tick;
         if (completed_same_range) return;
         const range_changed = !self.visible_highlight_runtime.work.active or
             start_line != self.visible_highlight_runtime.work.start or
             end_line != self.visible_highlight_runtime.work.end or
-            epoch != self.visible_highlight_runtime.work.epoch;
+            epoch != self.visible_highlight_runtime.work.epoch or
+            change_tick != self.visible_highlight_runtime.work.change_tick;
         if (range_changed) {
             self.visible_highlight_runtime.work.start = start_line;
             self.visible_highlight_runtime.work.end = end_line;
             self.visible_highlight_runtime.work.next = start_line;
             self.visible_highlight_runtime.work.epoch = epoch;
+            self.visible_highlight_runtime.work.change_tick = change_tick;
             self.visible_highlight_runtime.work.active = true;
         }
     }
@@ -547,6 +553,7 @@ pub const Editor = struct {
             self.visible_highlight_runtime.work.completed_start = self.visible_highlight_runtime.work.start;
             self.visible_highlight_runtime.work.completed_end = self.visible_highlight_runtime.work.end;
             self.visible_highlight_runtime.work.completed_epoch = self.visible_highlight_runtime.work.epoch;
+            self.visible_highlight_runtime.work.completed_change_tick = self.visible_highlight_runtime.work.change_tick;
         }
         return .{ .start_line = start_line, .end_line = end_line };
     }
@@ -669,6 +676,9 @@ pub const Editor = struct {
         self.unlockVisibleHighlightRuntime();
         var result = owned_result;
         defer self.deinitVisibleHighlightResult(&result);
+        if (result.request.change_tick != self.doc.change_tick or result.request.epoch != self.doc.highlight_epoch) {
+            return false;
+        }
 
         for (result.lines) |line| {
             cache.storeHighlightTokens(
@@ -865,6 +875,11 @@ pub const Editor = struct {
                 self.deinitVisibleHighlightResult(&result);
                 return;
             }
+            if (result.request.change_tick != self.doc.change_tick or result.request.epoch != self.doc.highlight_epoch) {
+                self.unlockVisibleHighlightRuntime();
+                self.deinitVisibleHighlightResult(&result);
+                continue;
+            }
             perf_log.logf(
                 .info,
                 "visible_highlight_worker_ready lines={d} start_line={d} end_line={d}",
@@ -899,9 +914,11 @@ pub const Editor = struct {
         self.visible_highlight_runtime.work.end = 0;
         self.visible_highlight_runtime.work.next = 0;
         self.visible_highlight_runtime.work.epoch = 0;
+        self.visible_highlight_runtime.work.change_tick = 0;
         self.visible_highlight_runtime.work.completed_start = 0;
         self.visible_highlight_runtime.work.completed_end = 0;
         self.visible_highlight_runtime.work.completed_epoch = 0;
+        self.visible_highlight_runtime.work.completed_change_tick = 0;
         self.clearVisibleHighlightRequest();
         self.clearVisibleHighlightResult();
     }
@@ -970,10 +987,12 @@ pub const Editor = struct {
                     .end = 0,
                     .next = 0,
                     .epoch = 0,
+                    .change_tick = 0,
                     .active = false,
                     .completed_start = 0,
                     .completed_end = 0,
                     .completed_epoch = 0,
+                    .completed_change_tick = 0,
                 },
                 .worker = null,
                 .worker_running = false,
