@@ -3,6 +3,9 @@ const editor_mod = @import("src/editor/editor.zig");
 const grammar_manager_mod = @import("src/editor/grammar_manager.zig");
 const cache_mod = @import("src/editor/render/cache.zig");
 const editor_display_prepare_mod = @import("src/app/editor/editor_display_prepare.zig");
+comptime {
+    _ = @import("src/ui/widgets/editor_widget_draw.zig");
+}
 
 const Editor = editor_mod.Editor;
 

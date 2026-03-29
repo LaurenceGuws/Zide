@@ -22,6 +22,10 @@ const EditorDrawList = draw_list_mod.EditorDrawList;
 const ByteRange = overlay_mod.ByteRange;
 const Segment = traversal_mod.Segment;
 
+fn clippedEditorRowHeight(seg_band_h: i32, remaining_height: i32) i32 {
+    return @max(1, @min(seg_band_h, remaining_height));
+}
+
 pub fn draw(
     widget: anytype,
     shell: anytype,
@@ -354,7 +358,7 @@ pub fn drawCached(
                 if (!r_local.beginEditorTexture()) return;
                 defer r_local.endEditorTexture();
 
-                const clip_h = @min(seg_band.h_i + 1, @as(i32, @intFromFloat(height_local)) - seg_band.y_i);
+                const clip_h = clippedEditorRowHeight(seg_band.h_i, @as(i32, @intFromFloat(height_local)) - seg_band.y_i);
                 r_local.beginClip(
                     @intFromFloat(origin_x_local),
                     seg_band.y_i,
@@ -600,4 +604,10 @@ pub fn precomputeWrapCounts(
     budget_lines: usize,
 ) void {
     cache_helpers.precomputeWrapCounts(widget, cache, shell, height, budget_lines);
+}
+
+test "editor dirty row clip does not spill into following row" {
+    try std.testing.expectEqual(@as(i32, 16), clippedEditorRowHeight(16, 64));
+    try std.testing.expectEqual(@as(i32, 16), clippedEditorRowHeight(16, 16));
+    try std.testing.expectEqual(@as(i32, 8), clippedEditorRowHeight(16, 8));
 }
