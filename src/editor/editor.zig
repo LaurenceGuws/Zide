@@ -94,6 +94,14 @@ pub const Editor = struct {
         lines: []VisibleHighlightLineResult,
     };
 
+    pub const HighlightInvalidationRange = editor_search_highlight.HighlightInvalidationRange;
+    pub const HighlightInvalidationBatch = editor_search_highlight.HighlightInvalidationBatch;
+
+    pub const HighlightInvalidationState = struct {
+        full_document: bool,
+        ranges: std.ArrayList(HighlightInvalidationRange),
+    };
+
     pub const VisibleHighlightRuntimeState = struct {
         work: HighlightWorkState,
         worker: ?std.Thread,
@@ -108,8 +116,7 @@ pub const Editor = struct {
     pub const DocumentCore = struct {
         buffer: *TextStore,
         highlighter: ?*syntax_mod.SyntaxHighlighter,
-        highlight_dirty_start_line: ?usize,
-        highlight_dirty_end_line: ?usize,
+        highlight_invalidation: HighlightInvalidationState,
         highlight_pending: bool,
         highlight_disabled_for_large_file: bool,
         search_query: ?[]u8,
@@ -176,7 +183,6 @@ pub const Editor = struct {
     pub const SearchMode = editor_search_highlight.SearchMode;
     const SearchWorkRequest = editor_search_highlight.SearchWorkRequest;
     const SearchWorkResult = editor_search_highlight.SearchWorkResult;
-    pub const HighlightDirtyRange = editor_search_highlight.HighlightDirtyRange;
 
     allocator: std.mem.Allocator,
     doc: DocumentCore,
@@ -288,9 +294,9 @@ pub const Editor = struct {
         self.doc.modified = contentHash(self.doc.buffer) != self.doc.saved_content_hash;
     }
 
-    pub fn clearHighlightDirtyRange(self: *Editor) void {
-        self.doc.highlight_dirty_start_line = null;
-        self.doc.highlight_dirty_end_line = null;
+    pub fn clearHighlightInvalidation(self: *Editor) void {
+        self.doc.highlight_invalidation.full_document = false;
+        self.doc.highlight_invalidation.ranges.clearRetainingCapacity();
     }
 
     pub fn setHighlightDisabledForLargeFile(self: *Editor) void {
@@ -916,8 +922,10 @@ pub const Editor = struct {
             .doc = .{
                 .buffer = buffer,
                 .highlighter = null,
-                .highlight_dirty_start_line = null,
-                .highlight_dirty_end_line = null,
+                .highlight_invalidation = .{
+                    .full_document = false,
+                    .ranges = .empty,
+                },
                 .highlight_pending = false,
                 .highlight_disabled_for_large_file = buffer.totalLen() >= highlighter_large_file_threshold_bytes,
                 .search_query = null,
@@ -1000,6 +1008,7 @@ pub const Editor = struct {
             self.allocator.free(query);
         }
         self.doc.search_matches.deinit(self.allocator);
+        self.doc.highlight_invalidation.ranges.deinit(self.allocator);
         for (self.doc.undo_selection_states.items) |state| {
             self.allocator.free(state.selections);
         }
@@ -1035,7 +1044,7 @@ pub const Editor = struct {
         self.resetScrollState();
         self.invalidateLineWidthCache();
         self.markSaved();
-        self.clearHighlightDirtyRange();
+        self.clearHighlightInvalidation();
         self.setHighlightDisabledForLargeFile();
         const startup_deferrals = runtime_policy.editorStartupDeferrals(runtime_policy.editorBackgroundIntent(), self.doc.highlight_disabled_for_large_file);
         self.highlight_defer_frames = startup_deferrals.highlight_frames;
@@ -1700,7 +1709,7 @@ pub const Editor = struct {
             }
             if (self.doc.highlighter) |h| {
                 _ = h.reparseFull();
-                self.noteHighlightDirtyRange(0, self.doc.buffer.totalLen());
+                self.noteHighlightFullInvalidation();
                 self.bumpHighlightEpoch();
             }
             self.invalidateLineWidthCache();
@@ -1746,7 +1755,7 @@ pub const Editor = struct {
             }
             if (self.doc.highlighter) |h| {
                 _ = h.reparseFull();
-                self.noteHighlightDirtyRange(0, self.doc.buffer.totalLen());
+                self.noteHighlightFullInvalidation();
                 self.bumpHighlightEpoch();
             }
             self.invalidateLineWidthCache();
@@ -1797,8 +1806,8 @@ pub const Editor = struct {
         return out;
     }
 
-    pub fn takeHighlightDirtyRange(self: *Editor) ?HighlightDirtyRange {
-        return SearchHighlight.takeHighlightDirtyRange(self);
+    pub fn takeHighlightInvalidationBatch(self: *Editor) ?HighlightInvalidationBatch {
+        return SearchHighlight.takeHighlightInvalidationBatch(self);
     }
 
     pub fn noteTextChanged(self: *Editor) void {
@@ -1809,8 +1818,16 @@ pub const Editor = struct {
         SearchHighlight.noteTextChangedNoSearchRefresh(self);
     }
 
-    pub fn noteHighlightDirtyRange(self: *Editor, start_byte: usize, end_byte: usize) void {
-        SearchHighlight.noteHighlightDirtyRange(self, start_byte, end_byte);
+    pub fn noteHighlightInvalidationBytes(self: *Editor, start_byte: usize, end_byte: usize) void {
+        SearchHighlight.noteHighlightInvalidationBytes(self, start_byte, end_byte);
+    }
+
+    pub fn noteHighlightInvalidationLines(self: *Editor, start_line: usize, end_line: usize) void {
+        SearchHighlight.noteHighlightInvalidationLines(self, start_line, end_line);
+    }
+
+    pub fn noteHighlightFullInvalidation(self: *Editor) void {
+        SearchHighlight.noteHighlightFullInvalidation(self);
     }
 
     pub fn applyHighlightEdit(

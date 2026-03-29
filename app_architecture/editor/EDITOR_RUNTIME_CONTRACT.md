@@ -39,6 +39,12 @@ Current implementation progress:
   editor/runtime helper verbs instead of open-coded nested field access
 - pending search result application is now initiated from the editor frame hook
   rather than being hidden inside display-prepare work
+- highlight invalidation no longer collapses immediately to one coarse dirty
+  line span:
+  - parser-derived changed ranges now enter an editor-owned invalidation seam
+  - display/cache invalidation consumes that seam directly
+  - full-document invalidation remains available as the coarse fallback for
+    reparse-heavy paths such as undo/redo and highlighter re-init
 - highlight scheduling state in render cache has started being isolated behind a
   named state block so the next ownership move can be structural instead of a
   diffuse field sweep

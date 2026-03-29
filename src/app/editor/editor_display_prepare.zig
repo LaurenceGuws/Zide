@@ -18,10 +18,22 @@ pub fn prepare(
     editor.advanceStartupDeferrals(frame_id);
     const total_lines = editor.lineCount();
     var invalidated = false;
-    if (editor.takeHighlightDirtyRange()) |range| {
-        const end_line = @min(range.end_line, total_lines);
-        editor_render_cache.invalidateHighlightRange(range.start_line, end_line);
-        invalidated = true;
+    var invalidated_ranges: usize = 0;
+    var invalidated_full_document = false;
+    if (editor.takeHighlightInvalidationBatch()) |batch| {
+        defer editor.allocator.free(batch.ranges);
+        if (batch.full_document) {
+            editor_render_cache.clearHighlightEntries();
+            invalidated = true;
+            invalidated_full_document = true;
+        } else {
+            for (batch.ranges) |range| {
+                const end_line = @min(range.end_line, total_lines);
+                editor_render_cache.invalidateHighlightRange(range.start_line, end_line);
+                invalidated = true;
+                invalidated_ranges += 1;
+            }
+        }
     }
     editor.ensureHighlighter();
     const elapsed_us = @as(i64, @intCast(@divTrunc(std.time.nanoTimestamp() - t_start, 1000)));
@@ -33,6 +45,8 @@ pub fn prepare(
         .{ .key = "work_class", .value = .{ .string = runtime_policy.workClassLabel(intent.work_class) } },
         .{ .key = "frame", .value = .{ .unsigned = frame_id } },
         .{ .key = "invalidated", .value = .{ .boolean = invalidated } },
+        .{ .key = "highlight_invalidated_full_document", .value = .{ .boolean = invalidated_full_document } },
+        .{ .key = "highlight_invalidated_ranges", .value = .{ .unsigned = invalidated_ranges } },
         .{ .key = "highlight_pending", .value = .{ .boolean = editor.documentCore().highlight_pending } },
         .{ .key = "defer_highlight", .value = .{ .unsigned = editor.highlight_defer_frames } },
         .{ .key = "defer_precompute", .value = .{ .unsigned = editor.visible_cache_precompute_defer_frames } },

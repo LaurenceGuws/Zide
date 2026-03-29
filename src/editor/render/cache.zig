@@ -296,7 +296,7 @@ pub const EditorRenderCache = struct {
         self.line_entries.clearRetainingCapacity();
     }
 
-    fn clearHighlightEntries(self: *EditorRenderCache) void {
+    pub fn clearHighlightEntries(self: *EditorRenderCache) void {
         var it = self.highlight_entries.iterator();
         while (it.next()) |entry| {
             self.allocator.free(entry.value_ptr.tokens);

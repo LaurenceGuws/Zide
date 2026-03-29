@@ -324,6 +324,12 @@ stack issue, not an isolated highlight bug:
         explicit helper verbs
       - pending search result application is now initiated from the frame hook
         instead of being hidden in display prepare
+      - highlight invalidation now has a real editor-owned seam instead of
+        collapsing parser truth immediately to one coarse dirty span
+      - parser-derived changed ranges now publish into that invalidation seam,
+        and display/cache invalidation consumes it directly
+      - coarse full-document invalidation is still used as the fallback path
+        for undo/redo and highlighter re-init
       - highlight scheduling ownership has moved off render cache and onto
         editor-owned state
       - visible highlight publication now also drives redraw from the frame

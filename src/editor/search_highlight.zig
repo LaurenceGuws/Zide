@@ -44,19 +44,29 @@ pub const SearchWorkResult = struct {
     matches: []SearchMatch,
 };
 
-pub const HighlightDirtyRange = struct {
+pub const HighlightInvalidationRange = struct {
     start_line: usize,
     end_line: usize,
 };
 
+pub const HighlightInvalidationBatch = struct {
+    full_document: bool,
+    ranges: []HighlightInvalidationRange,
+};
+
 pub fn SearchHighlightOps(comptime Editor: type) type {
     return struct {
-        pub fn takeHighlightDirtyRange(self: *Editor) ?HighlightDirtyRange {
-            if (self.doc.highlight_dirty_start_line == null) return null;
-            const start = self.doc.highlight_dirty_start_line.?;
-            const end = self.doc.highlight_dirty_end_line orelse (start + 1);
-            self.clearHighlightDirtyRange();
-            return .{ .start_line = start, .end_line = end };
+        pub fn takeHighlightInvalidationBatch(self: *Editor) ?HighlightInvalidationBatch {
+            if (!self.doc.highlight_invalidation.full_document and self.doc.highlight_invalidation.ranges.items.len == 0) return null;
+            const batch = HighlightInvalidationBatch{
+                .full_document = self.doc.highlight_invalidation.full_document,
+                .ranges = self.doc.highlight_invalidation.ranges.items,
+            };
+            self.doc.highlight_invalidation = .{
+                .full_document = false,
+                .ranges = .empty,
+            };
+            return batch;
         }
 
         pub fn noteTextChanged(self: *Editor) void {
@@ -73,13 +83,42 @@ pub fn SearchHighlightOps(comptime Editor: type) type {
             self.noteTextChangedBase();
         }
 
-        pub fn noteHighlightDirtyRange(self: *Editor, start_byte: usize, end_byte: usize) void {
+        pub fn noteHighlightInvalidationLines(self: *Editor, start_line: usize, end_line: usize) void {
+            if (self.doc.highlight_invalidation.full_document) return;
+            if (end_line <= start_line) return;
+
+            var merged_start = start_line;
+            var merged_end = end_line;
+            var idx: usize = 0;
+            while (idx < self.doc.highlight_invalidation.ranges.items.len) {
+                const existing = self.doc.highlight_invalidation.ranges.items[idx];
+                if (merged_end < existing.start_line or existing.end_line < merged_start) {
+                    idx += 1;
+                    continue;
+                }
+                merged_start = @min(merged_start, existing.start_line);
+                merged_end = @max(merged_end, existing.end_line);
+                _ = self.doc.highlight_invalidation.ranges.orderedRemove(idx);
+            }
+            self.doc.highlight_invalidation.ranges.append(self.allocator, .{
+                .start_line = merged_start,
+                .end_line = merged_end,
+            }) catch |err| {
+                const log = app_logger.logger("editor.highlight");
+                log.logf(.warning, "highlight invalidation append failed start_line={d} end_line={d} err={s}", .{ merged_start, merged_end, @errorName(err) });
+                self.noteHighlightFullInvalidation();
+            };
+        }
+
+        pub fn noteHighlightInvalidationBytes(self: *Editor, start_byte: usize, end_byte: usize) void {
             const start_line = self.doc.buffer.lineIndexForOffset(start_byte);
             const end_line = self.doc.buffer.lineIndexForOffset(end_byte) + 1;
-            const start = self.doc.highlight_dirty_start_line orelse start_line;
-            const end = self.doc.highlight_dirty_end_line orelse end_line;
-            self.doc.highlight_dirty_start_line = @min(start, start_line);
-            self.doc.highlight_dirty_end_line = @max(end, end_line);
+            self.noteHighlightInvalidationLines(start_line, end_line);
+        }
+
+        pub fn noteHighlightFullInvalidation(self: *Editor) void {
+            self.doc.highlight_invalidation.full_document = true;
+            self.doc.highlight_invalidation.ranges.clearRetainingCapacity();
         }
 
         pub fn applyHighlightEdit(
@@ -103,7 +142,7 @@ pub fn SearchHighlightOps(comptime Editor: type) type {
                 self.allocator,
             ) catch {
                 _ = h.reparseFull();
-                self.noteHighlightDirtyRange(0, self.doc.buffer.totalLen());
+                self.noteHighlightFullInvalidation();
                 return;
             };
             defer self.allocator.free(ranges);
@@ -111,11 +150,11 @@ pub fn SearchHighlightOps(comptime Editor: type) type {
             if (ranges.len == 0) {
                 const min_byte = @min(start_byte, @min(old_end_byte, new_end_byte));
                 const max_byte = @max(start_byte, @max(old_end_byte, new_end_byte));
-                self.noteHighlightDirtyRange(min_byte, max_byte);
+                self.noteHighlightInvalidationBytes(min_byte, max_byte);
                 return;
             }
             for (ranges) |range| {
-                self.noteHighlightDirtyRange(range.start_byte, range.end_byte);
+                self.noteHighlightInvalidationBytes(range.start_byte, range.end_byte);
             }
         }
 
@@ -130,7 +169,7 @@ pub fn SearchHighlightOps(comptime Editor: type) type {
                     self.clearHighlighter();
                 }
                 self.bumpHighlightEpoch();
-                self.clearHighlightDirtyRange();
+                self.clearHighlightInvalidation();
                 self.setHighlightPending(false);
                 log.logf(
                     .info,
@@ -154,7 +193,7 @@ pub fn SearchHighlightOps(comptime Editor: type) type {
                     self.clearHighlighter();
                 }
                 self.bumpHighlightEpoch();
-                self.clearHighlightDirtyRange();
+                self.clearHighlightInvalidation();
                 self.setHighlightPending(false);
                 log.logf(
                     .info,
@@ -207,7 +246,7 @@ pub fn SearchHighlightOps(comptime Editor: type) type {
                     self.clearHighlighter();
                 }
                 self.bumpHighlightEpoch();
-                self.clearHighlightDirtyRange();
+                self.clearHighlightInvalidation();
                 log.logf(.info, "highlight disabled path=\"{s}\"", .{path orelse ""});
                 return;
             }
@@ -263,7 +302,7 @@ pub fn SearchHighlightOps(comptime Editor: type) type {
                 };
                 self.recordHighlightInitSuccess();
                 self.bumpHighlightEpoch();
-                self.noteHighlightDirtyRange(0, self.doc.buffer.totalLen());
+                self.noteHighlightFullInvalidation();
                 const elapsed_ns = std.time.nanoTimestamp() - t_start;
                 log.logf(
                     .info,
@@ -524,7 +563,7 @@ pub fn SearchHighlightOps(comptime Editor: type) type {
             self.clearSearchMatches();
             self.setSearchActive(null);
             self.bumpSearchEpoch();
-            if (total > 0) self.noteHighlightDirtyRange(0, total - 1);
+            if (total > 0) self.noteHighlightInvalidationBytes(0, total - 1);
 
             const log = app_logger.logger("editor.search");
             log.logf(
@@ -570,7 +609,7 @@ pub fn SearchHighlightOps(comptime Editor: type) type {
             try self.replaceSearchMatches(matches);
             self.setSearchActive(self.pickSearchActiveIndex(preferred_offset));
             self.bumpSearchEpoch();
-            if (total > 0) self.noteHighlightDirtyRange(0, total - 1);
+            if (total > 0) self.noteHighlightInvalidationBytes(0, total - 1);
         }
 
         pub fn queueSearchRequest(
@@ -671,7 +710,7 @@ pub fn SearchHighlightOps(comptime Editor: type) type {
             self.setSearchActive(self.pickSearchActiveIndex(result.preferred_offset));
             self.bumpSearchEpoch();
             const total = self.doc.buffer.totalLen();
-            if (total > 0) self.noteHighlightDirtyRange(0, total - 1);
+            if (total > 0) self.noteHighlightInvalidationBytes(0, total - 1);
             return true;
         }
 
