@@ -89,6 +89,12 @@ Current implementation progress:
 - visible cache precompute logging now distinguishes highlight-running frames
   from layout/publication-only frames via `run_highlight`, which makes the
   remaining cadence work measurable without mixed-path noise
+- visible cache precompute logs now also expose why highlight scheduling did
+  or did not run on a given frame:
+  - `highlight_compute_in_flight`
+  - `highlight_pending_request`
+  - `highlight_pending_result`
+  - `highlight_range_incomplete`
 - frame/runtime publication now happens early enough that the next visible
   highlight batch can usually be scheduled in the same frame, tightening the
   worker cadence without reintroducing inline execution

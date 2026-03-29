@@ -358,6 +358,9 @@ stack issue, not an isolated highlight bug:
       - visible cache precompute logging now distinguishes highlight-running
         frames from layout-only frames so worker/runtime cleanup can be judged
         against honest telemetry instead of mixed-path noise
+      - visible cache precompute logs now also record whether highlight
+        scheduling was blocked by in-flight compute, a pending request, a
+        pending result, or a fully completed visible range
       - current Unicode repro now shows tighter worker cadence: publication and
         next-batch scheduling chain together in the same frame for the main
         visible range, with only the final tail leaving one layout-only frame

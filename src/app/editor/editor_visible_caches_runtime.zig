@@ -11,6 +11,13 @@ const layout_types = shared_types.layout;
 const Shell = app_shell.Shell;
 const EditorWidget = widgets.EditorWidget;
 
+pub const HighlightScheduleState = struct {
+    compute_in_flight: bool,
+    pending_request: bool,
+    pending_result: bool,
+    range_incomplete: bool,
+};
+
 fn visibleLineBudget(editor_shell: *Shell, editor_layout: layout_types.WidgetLayout) usize {
     const visible_lines = @as(usize, @intFromFloat(editor_layout.editor.height / editor_shell.editorCharHeight()));
     return if (visible_lines > 0) visible_lines + 1 else 0;
@@ -107,6 +114,7 @@ pub fn precompute(
     editor_width_budget: ?usize,
     frame_id: u64,
     run_highlight: bool,
+    highlight_state: HighlightScheduleState,
 ) bool {
     const perf_log = app_logger.logger("editor.perf");
     const intent = runtime_policy.editorBackgroundIntent();
@@ -144,6 +152,10 @@ pub fn precompute(
         .{ .key = "frame", .value = .{ .unsigned = frame_id } },
         .{ .key = "skipped", .value = .{ .boolean = false } },
         .{ .key = "run_highlight", .value = .{ .boolean = run_highlight } },
+        .{ .key = "highlight_compute_in_flight", .value = .{ .boolean = highlight_state.compute_in_flight } },
+        .{ .key = "highlight_pending_request", .value = .{ .boolean = highlight_state.pending_request } },
+        .{ .key = "highlight_pending_result", .value = .{ .boolean = highlight_state.pending_result } },
+        .{ .key = "highlight_range_incomplete", .value = .{ .boolean = highlight_state.range_incomplete } },
         .{ .key = "visible_lines", .value = .{ .unsigned = layout_metrics.visible_lines } },
         .{ .key = "highlight_budget_base", .value = .{ .unsigned = if (run_highlight) editor_highlight_budget orelse visibleLineBudget(editor_shell, editor_layout) else 0 } },
         .{ .key = "highlight_budget", .value = .{ .unsigned = if (run_highlight) highlightBudget(widget, editor_shell, editor_layout, editor_highlight_budget) else 0 } },
