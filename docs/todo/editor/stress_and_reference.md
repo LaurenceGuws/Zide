@@ -335,7 +335,8 @@ stack issue, not an isolated highlight bug:
         though execution is still synchronous
       - visible highlight cache publication now happens from the
         editor frame/runtime lane instead of widget precompute
-      - visible highlight completion now has an explicit runtime redraw signal
+      - visible highlight completion now uses the runtime result mailbox plus
+        host wake instead of a separate frame-local redraw flag
       - visible highlight scheduling and execution are now separate phases in
         code, though execution is still synchronous
       - visible highlight execution is now called explicitly from the

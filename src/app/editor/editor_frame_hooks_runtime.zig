@@ -164,9 +164,6 @@ pub fn handle(
         0;
     const start_line = view.scroll_line;
     const end_line = @min(start_line + visible_lines, view.lineCount());
-    if (editor.visibleHighlightNeedsRedraw()) {
-        out.needs_redraw = true;
-    }
     const published_visible_highlights = editor.applyPendingVisibleHighlightResult(editor_render_cache);
     if (published_visible_highlights) {
         out.needs_redraw = true;
