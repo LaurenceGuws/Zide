@@ -109,7 +109,7 @@ pub const EditorRenderCache = struct {
         selection_hash: u64,
     ) bool {
         self.frame_id = frame_id;
-        const line_cache_dirty = cols != self.last_cols or wrap_enabled != self.last_wrap or width != self.last_width or height != self.last_height or change_tick != self.last_change_tick or scroll_line != self.last_scroll_line or scroll_row_offset != self.last_scroll_row_offset or scroll_col != self.last_scroll_col or selection_hash != self.last_selection_hash;
+        const line_cache_dirty = cols != self.last_cols or wrap_enabled != self.last_wrap or width != self.last_width or height != self.last_height or scroll_line != self.last_scroll_line or scroll_row_offset != self.last_scroll_row_offset or scroll_col != self.last_scroll_col or selection_hash != self.last_selection_hash;
         const highlight_dirty = highlight_epoch != self.last_highlight_epoch;
         const full_redraw = line_cache_dirty or highlight_dirty;
         if (line_cache_dirty) {

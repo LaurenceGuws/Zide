@@ -57,6 +57,9 @@ test "editor visible highlight invalidation after edit requires reschedule" {
 
     try editor.openFile(path);
     try editor.tryInitHighlighter(path);
+    if (editor.takeHighlightInvalidationBatch()) |initial_batch| {
+        allocator.free(initial_batch.ranges);
+    }
 
     const doc_before = editor.documentCore();
     const epoch_before = doc_before.highlightEpoch();
@@ -116,4 +119,92 @@ test "editor visible highlight invalidation after edit requires reschedule" {
         epoch_after,
         change_tick_after,
     ));
+}
+
+test "editor inline typing does not force full redraw beyond changed line" {
+    const allocator = std.testing.allocator;
+    var fixture = try EditorFixture.init(allocator);
+    defer fixture.deinit();
+    const editor = fixture.editor;
+
+    var tmp = std.testing.tmpDir(.{});
+    defer tmp.cleanup();
+    try tmp.dir.writeFile(.{
+        .sub_path = "fixture.zig",
+        .data =
+            \\const foo = bar;
+            \\const keep = 1;
+            \\const stay = 2;
+            \\
+        ,
+    });
+    const path = try tmp.dir.realpathAlloc(allocator, "fixture.zig");
+    defer allocator.free(path);
+
+    try editor.openFile(path);
+    try editor.tryInitHighlighter(path);
+    if (editor.takeHighlightInvalidationBatch()) |initial_batch| {
+        allocator.free(initial_batch.ranges);
+    }
+
+    var cache = cache_mod.EditorRenderCache.init(allocator, 64);
+    defer cache.deinit();
+
+    const doc_before = editor.documentCore();
+    const epoch_before = doc_before.highlightEpoch();
+    const change_tick_before = doc_before.changeTick();
+
+    editor.beginVisibleHighlightWork(0, 1, epoch_before, change_tick_before);
+    const batch = editor.takeVisibleHighlightWorkBatch(1) orelse return error.TestUnexpectedResult;
+    try std.testing.expectEqual(@as(usize, 0), batch.start_line);
+    try std.testing.expectEqual(@as(usize, 1), batch.end_line);
+    editor.replaceVisibleHighlightRequest(.{
+        .start_line = batch.start_line,
+        .end_line = batch.end_line,
+        .epoch = epoch_before,
+        .change_tick = change_tick_before,
+    });
+    try std.testing.expect(editor.executePendingVisibleHighlightRequest());
+    try std.testing.expect(editor.applyPendingVisibleHighlightResult(&cache));
+
+    _ = cache.beginFrame(1, 80, false, 640, 96, change_tick_before, epoch_before, 0, 0, 0, 0);
+    try std.testing.expect(cache.segmentDirty(.{ .line_idx = 0, .seg_idx = 0 }, 1001));
+    try std.testing.expect(cache.segmentDirty(.{ .line_idx = 1, .seg_idx = 0 }, 1002));
+    try std.testing.expect(cache.segmentDirty(.{ .line_idx = 2, .seg_idx = 0 }, 1003));
+
+    editor.setCursor(0, 7);
+    try editor.insertText("x");
+
+    if (editor.takeHighlightInvalidationBatch()) |published| {
+        defer allocator.free(published.ranges);
+        try std.testing.expect(!published.full_document);
+        try std.testing.expectEqual(@as(usize, 1), published.ranges.len);
+        try std.testing.expectEqual(@as(usize, 0), published.ranges[0].start_line);
+        try std.testing.expectEqual(@as(usize, 1), published.ranges[0].end_line);
+    } else {
+        return error.TestUnexpectedResult;
+    }
+
+    const doc_after = editor.documentCore();
+    const epoch_after = doc_after.highlightEpoch();
+    const change_tick_after = doc_after.changeTick();
+    try std.testing.expectEqual(epoch_before, epoch_after);
+
+    editor.beginVisibleHighlightWork(0, 1, epoch_after, change_tick_after);
+    const edit_batch = editor.takeVisibleHighlightWorkBatch(1) orelse return error.TestUnexpectedResult;
+    try std.testing.expectEqual(@as(usize, 0), edit_batch.start_line);
+    try std.testing.expectEqual(@as(usize, 1), edit_batch.end_line);
+    editor.replaceVisibleHighlightRequest(.{
+        .start_line = edit_batch.start_line,
+        .end_line = edit_batch.end_line,
+        .epoch = epoch_after,
+        .change_tick = change_tick_after,
+    });
+    try std.testing.expect(editor.executePendingVisibleHighlightRequest());
+    try std.testing.expect(editor.applyPendingVisibleHighlightResult(&cache));
+
+    try std.testing.expect(!cache.beginFrame(2, 80, false, 640, 96, change_tick_after, epoch_after, 0, 0, 0, 0));
+    try std.testing.expect(cache.segmentDirty(.{ .line_idx = 0, .seg_idx = 0 }, 2001));
+    try std.testing.expect(!cache.segmentDirty(.{ .line_idx = 1, .seg_idx = 0 }, 1002));
+    try std.testing.expect(!cache.segmentDirty(.{ .line_idx = 2, .seg_idx = 0 }, 1003));
 }
