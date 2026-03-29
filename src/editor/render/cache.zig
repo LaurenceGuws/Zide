@@ -143,8 +143,7 @@ pub const EditorRenderCache = struct {
         var line = start_line;
         while (line < end_line) : (line += 1) {
             if (self.highlight_entries.getPtr(line)) |entry| {
-                self.allocator.free(entry.tokens);
-                _ = self.highlight_entries.remove(line);
+                entry.stale = true;
             }
         }
     }
@@ -187,6 +186,7 @@ pub const EditorRenderCache = struct {
         if (self.highlight_entries.getPtr(line_idx)) |entry| {
             if (entry.text_hash == line_text_hash and entry.epoch == highlight_epoch and entry.line_start == line_start) {
                 entry.last_used = self.frame_id;
+                entry.stale = false;
                 return entry.tokens;
             }
             self.allocator.free(entry.tokens);
@@ -195,6 +195,7 @@ pub const EditorRenderCache = struct {
                 .line_start = line_start,
                 .epoch = highlight_epoch,
                 .tokens = highlightLine(highlighter.?, line_start, line_end, self.allocator),
+                .stale = false,
                 .last_used = self.frame_id,
             };
             sortTokens(entry.tokens);
@@ -208,6 +209,7 @@ pub const EditorRenderCache = struct {
             .line_start = line_start,
             .epoch = highlight_epoch,
             .tokens = tokens,
+            .stale = false,
             .last_used = self.frame_id,
         }) catch |err| {
             log.logf(.warning, "highlight cache insert failed line={d} err={s}", .{ line_idx, @errorName(err) });
@@ -225,6 +227,11 @@ pub const EditorRenderCache = struct {
     ) []HighlightToken {
         if (self.highlight_entries.getPtr(line_idx)) |entry| {
             if (entry.text_hash == line_text_hash and entry.epoch == highlight_epoch and entry.line_start == line_start) {
+                entry.last_used = self.frame_id;
+                entry.stale = false;
+                return entry.tokens;
+            }
+            if (entry.stale and entry.epoch == highlight_epoch and entry.line_start == line_start) {
                 entry.last_used = self.frame_id;
                 return entry.tokens;
             }
@@ -255,6 +262,7 @@ pub const EditorRenderCache = struct {
                 .line_start = line_start,
                 .epoch = highlight_epoch,
                 .tokens = owned,
+                .stale = false,
                 .last_used = self.frame_id,
             };
             return;
@@ -264,6 +272,7 @@ pub const EditorRenderCache = struct {
             .line_start = line_start,
             .epoch = highlight_epoch,
             .tokens = owned,
+            .stale = false,
             .last_used = self.frame_id,
         }) catch |err| {
             self.allocator.free(owned);
@@ -540,6 +549,7 @@ const HighlightEntry = struct {
     line_start: usize,
     epoch: u64,
     tokens: []HighlightToken,
+    stale: bool,
     last_used: u64,
 };
 

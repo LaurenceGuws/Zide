@@ -3,6 +3,7 @@ const editor_mod = @import("src/editor/editor.zig");
 const grammar_manager_mod = @import("src/editor/grammar_manager.zig");
 const cache_mod = @import("src/editor/render/cache.zig");
 const editor_display_prepare_mod = @import("src/app/editor/editor_display_prepare.zig");
+const syntax_mod = @import("src/editor/syntax.zig");
 comptime {
     _ = @import("src/ui/widgets/editor_widget_draw.zig");
 }
@@ -114,7 +115,7 @@ test "editor visible highlight invalidation after edit requires reschedule" {
     defer allocator.free(line_after);
     const line_start_after = editor.lineStart(0);
     const hash_after = hashLine(line_after);
-    try std.testing.expectEqual(@as(usize, 0), cache.tryHighlightTokens(0, line_start_after, hash_after, epoch_after).len);
+    try std.testing.expect(cache.tryHighlightTokens(0, line_start_after, hash_after, epoch_after).len > 0);
 
     try std.testing.expect(editor.shouldThrottleVisibleHighlightRange(
         visible_start,
@@ -210,4 +211,20 @@ test "editor inline typing does not force full redraw beyond changed line" {
     try std.testing.expect(cache.segmentDirty(.{ .line_idx = 0, .seg_idx = 0 }, 2001));
     try std.testing.expect(!cache.segmentDirty(.{ .line_idx = 1, .seg_idx = 0 }, 1002));
     try std.testing.expect(!cache.segmentDirty(.{ .line_idx = 2, .seg_idx = 0 }, 1003));
+}
+
+test "editor invalidated highlight line retains previous tokens until replacement" {
+    const allocator = std.testing.allocator;
+    var cache = cache_mod.EditorRenderCache.init(allocator, 8);
+    defer cache.deinit();
+
+    const tokens = [_]syntax_mod.HighlightToken{
+        .{ .start = 6, .end = 9, .kind = .keyword, .priority = 0, .conceal = null, .url = null, .conceal_lines = false },
+    };
+    cache.storeHighlightTokens(0, 0, 111, 7, &tokens);
+
+    try std.testing.expect(cache.tryHighlightTokens(0, 0, 111, 7).len > 0);
+    cache.invalidateHighlightRange(0, 1);
+
+    try std.testing.expect(cache.tryHighlightTokens(0, 0, 222, 7).len > 0);
 }
