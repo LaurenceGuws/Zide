@@ -6,6 +6,7 @@ not a progress log and should stay brief.
 ### Current Focus
 
 - Primary active product lane: Linux native catch-up after the recent Win11 integration and UI-improvement sprint, with terminal work paused except for concrete regressions or contract follow-ups that already have clear authority.
+- Current implementation lane on `main`: app-wide runtime scheduling/resource-management adoption, with terminal and editor as the first concrete adopters of the shared lifecycle/work-class policy seams.
 - Linux catch-up should focus first on restoring parity and polish in the shared Linux native host: editor/IDE behavior, renderer/input quality, Linux platform integration, and any regressions or missing affordances that were deprioritized during the Windows lane.
 - Within the editor lane, current product priority remains basic Notepad-grade usability and editor-only chrome: common shortcuts, expected mouse/selection behavior, file/open/save flows, friendly Lua config, and editor CLI behavior should land before optimization-focused work.
 - Terminal quality bar remains: native terminal behavior should stay in the same band as `kitty` / `ghostty` for correctness, smoothness, compatibility, and steady-state cost.
@@ -28,6 +29,10 @@ not a progress log and should stay brief.
   - selective terminal follow-up only for already-open, high-confidence issues
   - selective Windows shell follow-up only for the packaged Explorer command lane
 - Avoid optimization-led editor work until the common editor feature/config/CLI baseline is in place.
+- Keep current runtime-policy work cohesive before widening scope:
+  - shared runtime vocabulary should stay the single authority for lifecycle/work-class naming
+  - terminal wake/frame/latency and editor perf/open-startup work should continue adopting that same policy surface
+  - prefer closing the editor runtime-policy lane end-to-end before opening unrelated feature work
 - Renderer architecture direction is already set:
   - narrow retained widget-local targets where they pay off
   - renderer-owned authoritative scene target
@@ -46,6 +51,13 @@ not a progress log and should stay brief.
 - A later Flutty re-check against upstream `4c2a953e` confirmed the viewport-pinning regression is closed on current `main`: request-based snapshot adoption stayed straightforward, the redraw path naturally uses `include_flags = 0`, pinned viewport changes now affect acquired snapshot content, and no widget/runtime fork or local workaround logic was needed.
 - The latest Flutty diff re-checks now close the first diff cut end-to-end: downstream removed the old cursor-preservation workaround, settled-baseline granular diff works after the upstream `present_ack(...)` retirement fix, one-acquire fallback remains clean, and startup PTY churn still stays outside the granular guarantee on purpose.
 - Current implementation authority lives in the terminal architecture docs and owning todos, not in stale investigation notes.
+- Recent `main` commits advanced the shared runtime-policy lane:
+  - terminal lifecycle tiers now drive background polling behavior and poll-epoch resets
+  - perf events and compare tooling now align on shared runtime/lifecycle/work-class fields across terminal and editor
+  - editor visible background precompute now uses runtime-policy budget caps
+  - editor file-open startup deferrals now route through runtime policy instead of hardcoded frame counts
+- Local validation for that lane was completed with `zig build test` and `zig build` before the latest push.
+- Current cross-machine setup blocker: `zig build grammar-update` can fail on `tree-sitter-proto` because the pinned upstream commit is no longer fetchable; retry with `--continue-on-error` if you only need the rest of the grammars, and treat the proto pin as follow-up work.
 - Current Windows shell follow-up should focus on the packaged Explorer commands:
   - only reopen this lane for concrete packaged Explorer regressions
   - keep Windows default terminal integration deferred
@@ -58,6 +70,7 @@ not a progress log and should stay brief.
   - `app_architecture/editor/DESIGN.md`
   - `app_architecture/RUNTIME_ISOLATION_AND_RESOURCE_MANAGEMENT.md`
   - `docs/todo/editor/README.md`
+  - `docs/todo/editor/app_baseline.md`
 - Present implementation authority:
   - `app_architecture/terminal/present/WAYLAND_DESIGN_BRIEF.md`
   - `app_architecture/terminal/present/WAYLAND_TECHNICAL_WRITEUP.md`
@@ -76,6 +89,9 @@ not a progress log and should stay brief.
  - Active Windows shell docs:
    - `app_architecture/windows/EXPLORER_COMMAND_INTEGRATION.md`
    - `docs/todo/windows/implementation.md`
+ - Grammar/setup follow-up if bootstrapping a new machine:
+   - `tools/editor/grammar/grammar_update.zig`
+   - `tools/editor/grammar/grammar_fetch.zig`
 
 ### Constraints
 
