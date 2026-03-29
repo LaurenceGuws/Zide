@@ -120,7 +120,7 @@ pub const EditorRenderCache = struct {
             scroll_col,
             selection_hash,
         );
-        const line_cache_dirty = cols != self.last_cols or wrap_enabled != self.last_wrap or width != self.last_width or height != self.last_height or scroll_line != self.last_scroll_line or scroll_row_offset != self.last_scroll_row_offset or scroll_col != self.last_scroll_col or selection_hash != self.last_selection_hash;
+        const line_cache_dirty = cols != self.last_cols or wrap_enabled != self.last_wrap or width != self.last_width or height != self.last_height or scroll_line != self.last_scroll_line or scroll_row_offset != self.last_scroll_row_offset or scroll_col != self.last_scroll_col;
         const highlight_dirty = highlight_epoch != self.last_highlight_epoch;
         if (line_cache_dirty) {
             self.clearLineEntries();
@@ -160,14 +160,14 @@ pub const EditorRenderCache = struct {
         scroll_col: usize,
         selection_hash: u64,
     ) bool {
+        _ = selection_hash;
         const line_cache_dirty = cols != self.last_cols or
             wrap_enabled != self.last_wrap or
             width != self.last_width or
             height != self.last_height or
             scroll_line != self.last_scroll_line or
             scroll_row_offset != self.last_scroll_row_offset or
-            scroll_col != self.last_scroll_col or
-            selection_hash != self.last_selection_hash;
+            scroll_col != self.last_scroll_col;
         const highlight_dirty = highlight_epoch != self.last_highlight_epoch;
         return line_cache_dirty or highlight_dirty;
     }
