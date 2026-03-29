@@ -14,6 +14,12 @@ pub const TextureUpdatePlan = struct {
     needs_partial: bool,
 };
 
+pub const FullFrameFastPathDecision = struct {
+    union_cells: usize = 0,
+    total_cells: usize = 0,
+    threshold_hit: bool = false,
+};
+
 pub const PartialPlanBounds = struct {
     start_row: usize,
     end_row: usize,
@@ -272,6 +278,88 @@ pub fn chooseTextureUpdatePlan(
     };
 }
 
+pub fn decideFullFrameFastPath(
+    cache: *const RenderCache,
+    shifted_rows: usize,
+    viewport_shift_rows: i32,
+    shift_requires_fullwidth_partial: bool,
+    blink_requires_partial: bool,
+    threshold: f64,
+) FullFrameFastPathDecision {
+    const rows = cache.rows;
+    const cols = cache.cols;
+    const total_cells = rows * cols;
+    if (rows == 0 or cols == 0) return .{ .total_cells = total_cells };
+    if (cache.dirty != .partial) return .{ .total_cells = total_cells };
+    if (shift_requires_fullwidth_partial) {
+        return .{
+            .union_cells = total_cells,
+            .total_cells = total_cells,
+            .threshold_hit = true,
+        };
+    }
+
+    const shift_up = viewport_shift_rows > 0;
+    var min_row: usize = rows;
+    var max_row: usize = 0;
+    var min_col: usize = cols;
+    var max_col: usize = 0;
+    var any = false;
+
+    var row: usize = 0;
+    while (row < rows) : (row += 1) {
+        const is_shift_row = shifted_rows > 0 and (if (shift_up) row >= rows - shifted_rows else row < shifted_rows);
+        const is_dirty_row = row < cache.dirty_rows.items.len and cache.dirty_rows.items[row];
+        if (!(is_shift_row or is_dirty_row)) continue;
+
+        var row_min: usize = if (is_shift_row or blink_requires_partial) 0 else cols;
+        var row_max: usize = if (is_shift_row or blink_requires_partial) cols - 1 else 0;
+        var row_any = is_shift_row or blink_requires_partial;
+
+        if (!row_any and
+            row < cache.row_dirty_span_counts.items.len and
+            row < cache.row_dirty_spans.items.len and
+            cache.row_dirty_span_counts.items[row] > 0)
+        {
+            var span_idx: usize = 0;
+            while (span_idx < cache.row_dirty_span_counts.items[row]) : (span_idx += 1) {
+                const span = cache.row_dirty_spans.items[row][span_idx];
+                if (span.start > span.end) continue;
+                row_min = @min(row_min, @min(@as(usize, span.start), cols - 1));
+                row_max = @max(row_max, @min(@as(usize, span.end), cols - 1));
+                row_any = true;
+            }
+        }
+
+        if (!row_any and row < cache.dirty_cols_start.items.len and row < cache.dirty_cols_end.items.len) {
+            row_min = @min(@as(usize, cache.dirty_cols_start.items[row]), cols - 1);
+            row_max = @min(@as(usize, cache.dirty_cols_end.items[row]), cols - 1);
+            row_any = row_max >= row_min;
+        }
+
+        if (!row_any) continue;
+        min_row = @min(min_row, row);
+        max_row = @max(max_row, row);
+        min_col = @min(min_col, row_min);
+        max_col = @max(max_col, row_max);
+        any = true;
+    }
+
+    const union_cells: usize = if (any and max_row >= min_row and max_col >= min_col)
+        (max_row - min_row + 1) * (max_col - min_col + 1)
+    else
+        0;
+    const threshold_hit = if (total_cells > 0)
+        @as(f64, @floatFromInt(union_cells)) / @as(f64, @floatFromInt(total_cells)) >= threshold
+    else
+        false;
+    return .{
+        .union_cells = union_cells,
+        .total_cells = total_cells,
+        .threshold_hit = threshold_hit,
+    };
+}
+
 pub fn forceFullTextureUpdatePlan(plan: TextureUpdatePlan, enabled: bool) TextureUpdatePlan {
     if (!enabled or plan.needs_full or !plan.needs_partial) return plan;
     return .{
@@ -286,6 +374,57 @@ pub fn forceFullTextureUpdatePlanEveryFrame(plan: TextureUpdatePlan, enabled: bo
         .needs_full = true,
         .needs_partial = false,
     };
+}
+
+test "decide full-frame fast path hits for near-full partial coverage" {
+    var cache = RenderCache.init();
+    defer cache.deinit(std.testing.allocator);
+    cache.rows = 4;
+    cache.cols = 10;
+    cache.dirty = .partial;
+    try cache.dirty_rows.resize(std.testing.allocator, 4);
+    @memset(cache.dirty_rows.items, true);
+    try cache.row_dirty_span_counts.resize(std.testing.allocator, 4);
+    @memset(cache.row_dirty_span_counts.items, 0);
+    try cache.row_dirty_spans.resize(std.testing.allocator, 4);
+    try cache.dirty_cols_start.resize(std.testing.allocator, 4);
+    try cache.dirty_cols_end.resize(std.testing.allocator, 4);
+    for (cache.dirty_cols_start.items, cache.dirty_cols_end.items) |*start, *end| {
+        start.* = 0;
+        end.* = 8;
+    }
+
+    const decision = decideFullFrameFastPath(&cache, 0, 0, false, false, 0.85);
+    try std.testing.expectEqual(@as(usize, 36), decision.union_cells);
+    try std.testing.expectEqual(@as(usize, 40), decision.total_cells);
+    try std.testing.expect(decision.threshold_hit);
+}
+
+test "decide full-frame fast path stays off for smaller partial coverage" {
+    var cache = RenderCache.init();
+    defer cache.deinit(std.testing.allocator);
+    cache.rows = 4;
+    cache.cols = 10;
+    cache.dirty = .partial;
+    try cache.dirty_rows.resize(std.testing.allocator, 4);
+    @memset(cache.dirty_rows.items, false);
+    cache.dirty_rows.items[1] = true;
+    try cache.row_dirty_span_counts.resize(std.testing.allocator, 4);
+    @memset(cache.row_dirty_span_counts.items, 0);
+    try cache.row_dirty_spans.resize(std.testing.allocator, 4);
+    try cache.dirty_cols_start.resize(std.testing.allocator, 4);
+    try cache.dirty_cols_end.resize(std.testing.allocator, 4);
+    for (cache.dirty_cols_start.items, cache.dirty_cols_end.items) |*start, *end| {
+        start.* = 0;
+        end.* = 0;
+    }
+    cache.dirty_cols_start.items[1] = 2;
+    cache.dirty_cols_end.items[1] = 4;
+
+    const decision = decideFullFrameFastPath(&cache, 0, 0, false, false, 0.85);
+    try std.testing.expectEqual(@as(usize, 3), decision.union_cells);
+    try std.testing.expectEqual(@as(usize, 40), decision.total_cells);
+    try std.testing.expect(!decision.threshold_hit);
 }
 
 pub fn markPartialPlanRows(

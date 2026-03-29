@@ -351,15 +351,18 @@ Progress:
 - Terminal glyph atlas now reuses a staging buffer and supports compaction when full.
 - Added lightweight frame/draw/input-latency metrics to track pacing.
 - Refined ED (erase display) damage to track the cursor row column range separately from full-row damage below/above.
+- Near-full fullscreen churn now bypasses partial-plan construction and routes to the existing full-texture rebuild path once dirty coverage crosses a fixed threshold.
 
 Decision:
 - Cache terminal grid in a render texture and update only dirty rows; draw cursor as an overlay on the main frame.
+- Treat near-full churn as a separate rendering class: keep partial updates for genuinely partial workloads, but route high-churn fullscreen workloads through an explicit full-frame texture rebuild path.
 - Use atlas compaction to keep the glyph cache effective without per-glyph allocations.
 - Track frame/draw/input latency with EMA metrics for future tuning.
 - Track per-row column bounds; multi-row ops issue separate dirty ranges so partial rows don’t force full-row redraw.
 
 Why:
 - Render texture keeps frame cost stable while preserving per-row invalidation for partial updates.
+- When dirty coverage is effectively global, partial-plan bookkeeping no longer buys useful selectivity and should not stay on the hot path.
 - Reusing a staging buffer reduces per-glyph churn; compaction avoids hard failures when atlas fills.
 - Metrics make pacing regressions visible without heavy profiling.
 - Column bounds reduce overdraw for row-local edits while keeping row-level dirtiness simple.

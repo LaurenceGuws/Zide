@@ -73,6 +73,7 @@ pub const DrawPreparation = struct {
 
 const ViewportTextureShiftPlan = draw_texture.ViewportTextureShiftPlan;
 const TextureUpdatePlan = draw_texture.TextureUpdatePlan;
+const FullFrameFastPathDecision = draw_texture.FullFrameFastPathDecision;
 
 pub fn latestFrameLatencyMetrics() FrameLatencyMetrics {
     return frame_latency_metrics;
@@ -257,6 +258,7 @@ pub fn drawPrepared(
     var glyph_stats_summary_buf: [220]u8 = undefined;
     var sprite_stats_summary_buf: [48]u8 = undefined;
     var lock_stats_summary_buf: [64]u8 = undefined;
+    var fullframe_fastpath_decision: FullFrameFastPathDecision = .{};
     if (cache.dirty != .none) {
         for (view_dirty_rows) |row_dirty| {
             if (row_dirty) dirty_rows_count += 1;
@@ -385,7 +387,7 @@ pub fn drawPrepared(
                 },
             );
         }
-        const needs_full = update_plan.needs_full;
+        var needs_full = update_plan.needs_full;
         var needs_partial = update_plan.needs_partial;
         const use_viewport_shift = draw_texture.useViewportShiftForPartialPlan(cache.dirty, viewport_shift_rows);
         active_viewport_shift_rows = if (use_viewport_shift) viewport_shift_rows else 0;
@@ -461,6 +463,38 @@ pub fn drawPrepared(
                     shift_requires_fullwidth_partial = true;
                 }
             },
+        }
+        if (!needs_full and needs_partial) {
+            fullframe_fastpath_decision = draw_texture.decideFullFrameFastPath(
+                cache,
+                shifted_rows,
+                active_viewport_shift_rows,
+                shift_requires_fullwidth_partial,
+                blink_requires_partial,
+                0.85,
+            );
+            const fullframe_fastpath_log = app_logger.logger("terminal.ui.fullframe_fastpath");
+            if (fullframe_fastpath_log.enabled_file or fullframe_fastpath_log.enabled_console) {
+                fullframe_fastpath_log.logf(
+                    .info,
+                    "threshold_hit={d} fast_path_taken={d} threshold={d:.2} total_cells={d} union_cells={d} dirty={s} rows={d} cols={d} shift_rows={d}",
+                    .{
+                        @intFromBool(fullframe_fastpath_decision.threshold_hit),
+                        @intFromBool(fullframe_fastpath_decision.threshold_hit),
+                        0.85,
+                        fullframe_fastpath_decision.total_cells,
+                        fullframe_fastpath_decision.union_cells,
+                        @tagName(cache.dirty),
+                        rows,
+                        cols,
+                        active_viewport_shift_rows,
+                    },
+                );
+            }
+            if (fullframe_fastpath_decision.threshold_hit) {
+                needs_full = true;
+                needs_partial = false;
+            }
         }
         texture_full_update = needs_full;
         texture_partial_update = needs_partial;
