@@ -95,6 +95,14 @@ Current implementation progress:
 - frame/runtime publication now happens early enough that the next visible
   highlight batch can usually be scheduled in the same frame, tightening the
   worker cadence without reintroducing inline execution
+- worker completion now uses an explicit host wake hook rather than relying on
+  unrelated input or continuous redraw churn to break the app idle wait:
+  - search and visible-highlight workers request a runtime wake after
+    publishing results
+  - the SDL host consumes that wake as a no-op event that only exists to break
+    `waitForWakeOrTimeout(...)`
+  - frame-hook editor runtime no longer needs to keep redraw forced just
+    because visible highlight compute is merely in flight
 - layout-side cache work now also needs the same completed-range discipline as
   highlight and line-width work; wrap-work completion tracking removed the
   long layout-only tail that was still muddying visible-highlight runtime logs

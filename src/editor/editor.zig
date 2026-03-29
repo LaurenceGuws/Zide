@@ -196,6 +196,7 @@ pub const Editor = struct {
     cluster_offsets_defer_frames: u8,
     startup_defer_last_frame_id: u64,
     tab_width: usize,
+    runtime_wake_fn: ?*const fn () void,
 
     const ClusterOffsetEntry = struct {
         text_hash: u64,
@@ -216,6 +217,15 @@ pub const Editor = struct {
 
     pub fn viewStateMut(self: *Editor) *EditorViewState {
         return &self.view;
+    }
+
+    pub fn setRuntimeWakeFn(self: *Editor, wake_fn: *const fn () void) void {
+        self.runtime_wake_fn = wake_fn;
+    }
+
+    pub fn requestRuntimeWake(self: *const Editor) void {
+        const wake_fn = self.runtime_wake_fn orelse return;
+        wake_fn();
     }
 
     pub fn clearPreferredVisualCol(self: *Editor) void {
@@ -873,6 +883,7 @@ pub const Editor = struct {
             self.visible_highlight_runtime.result = result;
             self.visible_highlight_runtime.needs_redraw = true;
             self.unlockVisibleHighlightRuntime();
+            self.requestRuntimeWake();
         }
     }
 
@@ -987,6 +998,7 @@ pub const Editor = struct {
             .cluster_offsets_defer_frames = 0,
             .startup_defer_last_frame_id = 0,
             .tab_width = 4,
+            .runtime_wake_fn = null,
         };
         return editor;
     }

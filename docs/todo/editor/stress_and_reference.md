@@ -380,6 +380,14 @@ stack issue, not an isolated highlight bug:
         (`start_line=0 end_line=33`, `highlight_budget=64`)
       - visible precompute now follows a worker schedule contract instead of
         the old inline-publish contract
+      - worker completion now has a real host wake path instead of relying on
+        unrelated input or forced redraw churn:
+        - search and visible-highlight workers request an explicit runtime wake
+          after publishing results
+        - the SDL host consumes that wake as a no-op event that only exists to
+          break idle waiting
+        - frame-hook editor runtime no longer keeps redraw forced just because
+          visible highlight compute is still in flight
       - next cleanup target is to keep deleting remaining startup-era control
         branches that still muddy the runtime signal
       - this is still behavior-preserving and does not yet claim full runtime

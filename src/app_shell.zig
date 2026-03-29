@@ -119,6 +119,7 @@ pub const pollInputEvents = input.pollInputEvents;
 pub const getTime = input.getTime;
 pub const waitTime = input.waitTime;
 pub const waitForWakeOrTimeout = r.waitForWakeOrTimeout;
+pub const requestWake = r.requestWake;
 pub const isWindowResized = r.isWindowResized;
 pub const getScreenWidth = r.getScreenWidth;
 pub const getScreenHeight = r.getScreenHeight;

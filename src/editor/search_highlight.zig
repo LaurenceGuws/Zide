@@ -726,6 +726,7 @@ pub fn SearchHighlightOps(comptime Editor: type) type {
                     .matches = matches,
                 });
                 self.unlockSearchRuntime();
+                self.requestRuntimeWake();
             }
         }
 

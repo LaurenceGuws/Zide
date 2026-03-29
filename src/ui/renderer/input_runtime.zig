@@ -167,6 +167,7 @@ fn handleEvent(
         },
         sdl_api.EVENT_MOUSE_WHEEL => input_state.addMouseWheel(state.mouse_wheel_delta, platform_input_events.wheelDelta(event)),
         else => {
+            if (sdl_api.isRuntimeWakeEvent(event.type)) return;
             if (sdl_api.isWindowEventType(event.type)) {
                 if (sdl_api.windowEventId(event) != main_window_id) return;
                 handleWindowEvent(event.type, &self.should_close_flag, &self.window_resized_flag);

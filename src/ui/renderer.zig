@@ -1914,6 +1914,10 @@ pub fn waitForWakeOrTimeout(seconds: f64) void {
     time_utils.waitTime(seconds);
 }
 
+pub fn requestWake() void {
+    _ = sdl_api.pushRuntimeWakeEvent();
+}
+
 pub fn getTime() f64 {
     if (active_renderer) |renderer| {
         return time_utils.getTime(renderer.start_counter, renderer.perf_freq);

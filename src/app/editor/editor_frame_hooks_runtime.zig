@@ -152,6 +152,7 @@ pub fn handle(
     if (runtime_state.needs_redraw) out.needs_redraw = true;
     if (runtime_state.note_input) out.note_input = true;
     const editor = app_active_editor_runtime.fromVisualIndex(tab_bar, editors, active_tab) orelse return out;
+    editor.setRuntimeWakeFn(app_shell.requestWake);
     if (editor.applyPendingSearchWork()) {
         out.needs_redraw = true;
     }
@@ -202,9 +203,6 @@ pub fn handle(
             should_schedule_visible_work,
         );
         if (scheduled_visible_highlights) {
-            out.needs_redraw = true;
-        }
-        if (editor.visibleHighlightWorkInFlight()) {
             out.needs_redraw = true;
         }
     }

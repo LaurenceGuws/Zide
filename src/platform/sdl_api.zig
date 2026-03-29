@@ -1,6 +1,9 @@
 const std = @import("std");
 const builtin = @import("builtin");
 
+var runtime_wake_event_type: c_uint = 0;
+var runtime_wake_event_mutex: std.Thread.Mutex = .{};
+
 pub const c = @cImport({
     if (builtin.target.os.tag == .windows) {
         // Work around Zig translate-c emitting a strong definition for
@@ -157,6 +160,28 @@ pub fn getError() []const u8 {
 
 pub fn init(flags: c_uint) bool {
     return c.SDL_Init(flags);
+}
+
+fn getRuntimeWakeEventType() ?c_uint {
+    runtime_wake_event_mutex.lock();
+    defer runtime_wake_event_mutex.unlock();
+    if (runtime_wake_event_type == 0) {
+        const event_type = c.SDL_RegisterEvents(1);
+        if (event_type == std.math.maxInt(c_uint)) return null;
+        runtime_wake_event_type = event_type;
+    }
+    return runtime_wake_event_type;
+}
+
+pub fn isRuntimeWakeEvent(event_type: c_uint) bool {
+    return runtime_wake_event_type != 0 and event_type == runtime_wake_event_type;
+}
+
+pub fn pushRuntimeWakeEvent() bool {
+    const event_type = getRuntimeWakeEventType() orelse return false;
+    var event = std.mem.zeroes(c.SDL_Event);
+    event.type = event_type;
+    return c.SDL_PushEvent(&event);
 }
 
 pub fn defaultInitFlags() c_uint {
