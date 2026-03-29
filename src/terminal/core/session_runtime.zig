@@ -79,6 +79,7 @@ pub fn init(allocator: std.mem.Allocator, rows: u16, cols: u16, options: anytype
         .child_exited = std.atomic.Value(bool).init(false),
         .child_exit_code = std.atomic.Value(i32).init(-1),
         .launch_shell_path = null,
+        .tearing_down = false,
     };
     input_modes.publishSnapshot(session);
     return session;
@@ -114,6 +115,10 @@ pub fn reportExternalChildExit(self: anytype, code: ?i32) bool {
 
 pub fn deinit(self: anytype) void {
     session_thread_runtime.deinit(self);
+}
+
+pub fn prepareForShutdown(self: anytype) void {
+    session_thread_runtime.prepareForShutdown(self);
 }
 
 pub fn startNoThreads(self: anytype, shell: ?[:0]const u8) !void {

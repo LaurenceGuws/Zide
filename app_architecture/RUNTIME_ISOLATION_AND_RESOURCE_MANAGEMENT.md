@@ -644,3 +644,19 @@ This is an ownership/foundation cut only:
   labels from workspace polling metrics
 - this keeps local perf captures aligned across terminal wake, frame pacing, and
   latency surfaces without introducing a second event vocabulary
+
+2026-03-29 terminal shutdown-hardening checkpoint:
+
+- terminal sessions now have an explicit `prepareForShutdown()` phase that runs
+  before shell/renderer teardown in app shutdown
+- that phase stop-signals and joins the PTY read/parse threads first, then
+  tears down the terminal transport while `shell_deinitialized = false`
+- the verified Linux terminal GUI shutdown trace now shows:
+  - `shutdown_begin`
+  - `terminal_prepare_shutdown_begin`
+  - per-session thread stop/join and transport teardown
+  - `shell_deinit_begin`
+  - `shell_deinit_end`
+- this closes the previous app-level ordering gap where terminal async work
+  could remain alive past shell teardown even though session deinit later joined
+  threads correctly

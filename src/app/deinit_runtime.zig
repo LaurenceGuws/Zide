@@ -26,6 +26,38 @@ pub fn handle(state: anytype) void {
         }
     }
 
+    if (state.terminal_workspace) |*workspace| {
+        lifecycle_log.logFields(.info, "terminal_prepare_shutdown_begin", &.{
+            .{ .key = "workspace", .value = .{ .boolean = true } },
+            .{ .key = "sessions", .value = .{ .unsigned = workspace.tabCount() } },
+        });
+        workspace.prepareForShutdown();
+        lifecycle_log.logFields(.info, "terminal_prepare_shutdown_end", &.{
+            .{ .key = "workspace", .value = .{ .boolean = true } },
+            .{ .key = "sessions", .value = .{ .unsigned = workspace.tabCount() } },
+        });
+    } else {
+        lifecycle_log.logFields(.info, "terminal_prepare_shutdown_begin", &.{
+            .{ .key = "workspace", .value = .{ .boolean = false } },
+            .{ .key = "sessions", .value = .{ .unsigned = state.terminals.items.len } },
+        });
+        for (state.terminals.items, 0..) |t, idx| {
+            lifecycle_log.logFields(.info, "terminal_session_prepare_shutdown_begin", &.{
+                .{ .key = "index", .value = .{ .unsigned = idx } },
+                .{ .key = "session_ptr", .value = .{ .unsigned = @intFromPtr(t) } },
+            });
+            t.prepareForShutdown();
+            lifecycle_log.logFields(.info, "terminal_session_prepare_shutdown_end", &.{
+                .{ .key = "index", .value = .{ .unsigned = idx } },
+                .{ .key = "session_ptr", .value = .{ .unsigned = @intFromPtr(t) } },
+            });
+        }
+        lifecycle_log.logFields(.info, "terminal_prepare_shutdown_end", &.{
+            .{ .key = "workspace", .value = .{ .boolean = false } },
+            .{ .key = "sessions", .value = .{ .unsigned = state.terminals.items.len } },
+        });
+    }
+
     state.terminal_shell_icon_cache.deinit(state.shell.rendererPtr());
     app_terminal_shell_icon_runtime.freeMappings(state.allocator, state.terminal_tab_bar_shell_icons);
     state.tab_bar.deinit();

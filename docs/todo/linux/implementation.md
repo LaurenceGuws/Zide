@@ -129,12 +129,24 @@ owning subsystem queues.
     - Priority change:
       - status-bar mode implementation is intentionally deferred for now while
         runtime/resource-management foundation work starts
-    - 2026-03-28 runtime-lifecycle checkpoint:
+  - 2026-03-28 runtime-lifecycle checkpoint:
       - terminal workspace polling now uses a limited intermediate
         `visible_inactive` tier when there is exactly one background tab
       - larger background sets still cool to `hidden_warm`
       - this is a budget-policy cut only; the app still does not claim full
         secondary-visible terminal truth yet
+  - 2026-03-29 shutdown-hardening checkpoint:
+    - focused terminal GUI shutdown on Linux now prepares terminal session
+      teardown before shell/renderer teardown
+    - verified trace order:
+      - `shutdown_begin`
+      - `terminal_prepare_shutdown_begin`
+      - read/parse thread stop + join
+      - PTY transport teardown
+      - `shell_deinit_begin`
+      - `shell_deinit_end`
+    - no terminal read activity was observed after shutdown began in the
+      validated run, and no terminal thread remained alive past shell teardown
 
 - [ ] `LNX-02` Audit Linux renderer/input/window behavior after recent UI work
   - Focus:

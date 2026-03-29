@@ -258,6 +258,7 @@ pub const TerminalSession = struct {
     child_exited: std.atomic.Value(bool),
     child_exit_code: std.atomic.Value(i32),
     launch_shell_path: ?[]u8,
+    tearing_down: bool,
 
     pub fn init(allocator: std.mem.Allocator, rows: u16, cols: u16) !*TerminalSession {
         return initWithOptions(allocator, rows, cols, .{});
@@ -330,6 +331,10 @@ pub const TerminalSession = struct {
 
     pub fn deinit(self: *TerminalSession) void {
         session_runtime.deinit(self);
+    }
+
+    pub fn prepareForShutdown(self: *TerminalSession) void {
+        session_runtime.prepareForShutdown(self);
     }
 
     pub fn start(self: *TerminalSession, shell: ?[:0]const u8) !void {

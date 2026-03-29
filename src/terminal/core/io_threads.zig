@@ -1,6 +1,7 @@
 const std = @import("std");
 const parser_mod = @import("../parser/parser.zig");
 const app_logger = @import("../../app_logger.zig");
+const app_lifecycle_runtime = @import("../../app/lifecycle_runtime.zig");
 const terminal_transport = @import("terminal_transport.zig");
 
 fn shouldPublishParseBatch(
@@ -55,6 +56,7 @@ pub fn readThreadMain(session: anytype) void {
     var bytes_since_log: usize = 0;
     var reads_since_log: usize = 0;
     var peak_queue_bytes_since_log: usize = 0;
+    var io_after_shutdown_logged = false;
 
     while (session.read_thread_running.load(.acquire)) {
         if (terminal_transport.Transport.fromSession(session)) |transport| {
@@ -65,6 +67,14 @@ pub fn readThreadMain(session: anytype) void {
             while (session.read_thread_running.load(.acquire)) {
                 const n = transport.read(&buf) catch break;
                 if (n == null or n.? == 0) break;
+                if (app_lifecycle_runtime.shutdownStarted() and !io_after_shutdown_logged) {
+                    io_after_shutdown_logged = true;
+                    app_logger.logger("terminal.lifecycle").logFields(.warning, "terminal_read_activity_after_shutdown_begin", &.{
+                        .{ .key = "session_ptr", .value = .{ .unsigned = @intFromPtr(session) } },
+                        .{ .key = "shell_deinitialized", .value = .{ .boolean = app_lifecycle_runtime.shellDeinitialized() } },
+                        .{ .key = "bytes", .value = .{ .unsigned = n.? } },
+                    });
+                }
                 processed += n.?;
                 logCsiSequences(io_log, buf[0..n.?]);
                 session.io_mutex.lock();
@@ -106,6 +116,11 @@ pub fn readThreadMain(session: anytype) void {
             break;
         }
     }
+    app_logger.logger("terminal.lifecycle").logFields(.info, "terminal_read_thread_exit", &.{
+        .{ .key = "session_ptr", .value = .{ .unsigned = @intFromPtr(session) } },
+        .{ .key = "shutdown_started", .value = .{ .boolean = app_lifecycle_runtime.shutdownStarted() } },
+        .{ .key = "shell_deinitialized", .value = .{ .boolean = app_lifecycle_runtime.shellDeinitialized() } },
+    });
 }
 
 pub fn parseThreadMain(session: anytype) void {
@@ -301,6 +316,11 @@ pub fn parseThreadMain(session: anytype) void {
             }
         }
     }
+    app_logger.logger("terminal.lifecycle").logFields(.info, "terminal_parse_thread_exit", &.{
+        .{ .key = "session_ptr", .value = .{ .unsigned = @intFromPtr(session) } },
+        .{ .key = "shutdown_started", .value = .{ .boolean = app_lifecycle_runtime.shutdownStarted() } },
+        .{ .key = "shell_deinitialized", .value = .{ .boolean = app_lifecycle_runtime.shellDeinitialized() } },
+    });
 }
 
 test "shouldPublishParseBatch suppresses intermediate publish during sync updates" {

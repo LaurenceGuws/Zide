@@ -154,6 +154,12 @@ pub const TerminalWorkspace = struct {
         self.tabs.deinit(self.allocator);
     }
 
+    pub fn prepareForShutdown(self: *TerminalWorkspace) void {
+        for (self.tabs.items) |tab| {
+            tab.session.prepareForShutdown();
+        }
+    }
+
     pub fn tabCount(self: *const TerminalWorkspace) usize {
         return self.tabs.items.len;
     }
