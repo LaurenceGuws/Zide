@@ -83,6 +83,14 @@ pub const FrameSubmission = struct {
     succeeded: bool,
     sequence: u64,
 };
+pub const PresentTrace = struct {
+    frame_seq: u64 = 0,
+    editor_texture_update_count: usize = 0,
+    editor_texture_blit_count: usize = 0,
+    composition_clip_count: usize = 0,
+    composition_full_pane_clear: bool = false,
+    captured_path: ?[]const u8 = null,
+};
 pub const TerminalDisableLigaturesStrategy = enum {
     never,
     cursor,
@@ -471,6 +479,12 @@ pub const Renderer = struct {
     last_present_gap_ms: f64,
     last_swap_ms: f64,
     scene_frame_active: bool,
+    present_trace_current: PresentTrace,
+    present_trace_last: PresentTrace,
+    present_capture_path: ?[]const u8,
+    present_capture_armed: bool,
+    present_capture_frame_seq: u64,
+    drawing_editor_target: bool,
 
     fn snapInt(value: f32) i32 {
         return @intFromFloat(std.math.round(value));
@@ -725,6 +739,12 @@ pub const Renderer = struct {
             .last_present_gap_ms = 0.0,
             .last_swap_ms = 0.0,
             .scene_frame_active = false,
+            .present_trace_current = .{},
+            .present_trace_last = .{},
+            .present_capture_path = null,
+            .present_capture_armed = false,
+            .present_capture_frame_seq = 0,
+            .drawing_editor_target = false,
         };
 
         if (renderer.terminal_recent_input_force_full_enabled) {
@@ -996,6 +1016,7 @@ pub const Renderer = struct {
 
     pub fn beginFrame(self: *Renderer) void {
         self.frame_seq +%= 1;
+        self.present_trace_current = .{ .frame_seq = self.frame_seq };
         const sizes = refreshWindowSizes(self.window);
         self.width = sizes.width;
         self.height = sizes.height;
@@ -1024,6 +1045,18 @@ pub const Renderer = struct {
 
     pub fn submitFrame(self: *Renderer) FrameSubmission {
         if (self.scene_frame_active) self.drawSceneTargetToDefault();
+        if (self.present_capture_armed) {
+            if (self.present_capture_path) |path| {
+                self.dumpWindowScreenshotPpm(path) catch |err| {
+                    app_logger.logger("renderer.present").logf(.warning, "capture failed frame_seq={d} path={s} err={s}", .{
+                        self.frame_seq,
+                        path,
+                        @errorName(err),
+                    });
+                };
+                self.present_trace_current.captured_path = path;
+            }
+        }
         const swap_start = sdl_api.getPerformanceCounter();
         const swap_ok = sdl_api.glSwapWindow(self.window);
         if (!swap_ok) {
@@ -1032,6 +1065,10 @@ pub const Renderer = struct {
         const swap_end = sdl_api.getPerformanceCounter();
         self.last_swap_ms = performanceDeltaMs(swap_start, swap_end, self.perf_freq);
         self.scene_frame_active = false;
+        self.present_trace_last = self.present_trace_current;
+        self.present_capture_path = null;
+        self.present_capture_armed = false;
+        self.present_capture_frame_seq = 0;
         if (swap_ok) self.submission_sequence += 1;
         return .{
             .succeeded = swap_ok,
@@ -1273,10 +1310,13 @@ pub const Renderer = struct {
     }
 
     pub fn beginEditorTexture(self: *Renderer) bool {
+        self.present_trace_current.editor_texture_update_count += 1;
+        self.drawing_editor_target = true;
         return self.beginRenderTarget(self.editor_target);
     }
 
     pub fn endEditorTexture(self: *Renderer) void {
+        self.drawing_editor_target = false;
         self.restoreMainCompositionTarget();
     }
 
@@ -1312,6 +1352,7 @@ pub const Renderer = struct {
 
     pub fn drawEditorTexture(self: *Renderer, x: f32, y: f32) void {
         if (self.editor_target) |target| {
+            self.present_trace_current.editor_texture_blit_count += 1;
             const snapped_x = snapToDevicePixel(x, self.render_scale);
             const snapped_y = snapToDevicePixel(y, self.render_scale);
             const src = texture_draw.fullTextureSrcRect(target.texture);
@@ -1327,6 +1368,9 @@ pub const Renderer = struct {
 
     pub fn drawRect(self: *Renderer, x: i32, y: i32, w: i32, h: i32, color: Color) void {
         if (w <= 0 or h <= 0) return;
+        if (self.drawing_editor_target and w == self.target_width and h == self.target_height and x == 0 and y == 0) {
+            self.present_trace_current.composition_full_pane_clear = true;
+        }
         const dest = shape_utils.rectFromInts(x, y, w, h);
         const src = texture_draw.unitSrcRect();
         self.drawTextureRect(self.white_texture, src, dest, color.toRgba());
@@ -1398,6 +1442,7 @@ pub const Renderer = struct {
     }
 
     pub fn beginClip(self: *Renderer, x: i32, y: i32, w: i32, h: i32) void {
+        self.present_trace_current.composition_clip_count += 1;
         gl.Enable(gl.c.GL_SCISSOR_TEST);
         const scale_x = @as(f32, @floatFromInt(self.target_pixel_width)) / @as(f32, @floatFromInt(self.target_width));
         const scale_y = @as(f32, @floatFromInt(self.target_pixel_height)) / @as(f32, @floatFromInt(self.target_height));
@@ -1410,6 +1455,16 @@ pub const Renderer = struct {
 
     pub fn endClip(_: *Renderer) void {
         gl.Disable(gl.c.GL_SCISSOR_TEST);
+    }
+
+    pub fn armPresentCapture(self: *Renderer, path: []const u8) void {
+        self.present_capture_path = path;
+        self.present_capture_armed = true;
+        self.present_capture_frame_seq = self.frame_seq;
+    }
+
+    pub fn lastPresentTrace(self: *const Renderer) PresentTrace {
+        return self.present_trace_last;
     }
 
     pub fn drawTerminalCell(

@@ -2,6 +2,7 @@ const app_logger = @import("../app_logger.zig");
 const manual_highlights_mod = @import("../editor/manual_highlights.zig");
 const mode_build = @import("mode_build.zig");
 const app_terminal_shell_icon_runtime = @import("terminal/terminal_shell_icon_runtime.zig");
+const app_editor_live_smoke_runtime = @import("editor/live_smoke_runtime.zig");
 
 pub fn handle(state: anytype) void {
     state.terminal_shell_icon_cache.deinit(state.shell.rendererPtr());
@@ -66,6 +67,7 @@ pub fn handle(state: anytype) void {
     if (state.editor_imported_theme_name) |name| {
         state.allocator.free(name);
     }
+    app_editor_live_smoke_runtime.deinitState(state.allocator, &state.editor_live_smoke);
     manual_highlights_mod.reset();
     app_logger.deinit();
     state.allocator.destroy(state);

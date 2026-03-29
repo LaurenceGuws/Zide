@@ -6,6 +6,7 @@ const app_run_loop_driver = @import("run_loop_driver.zig");
 const app_shell = @import("../app_shell.zig");
 const app_signals = @import("signals.zig");
 const app_terminal_tab_navigation_runtime = @import("terminal/terminal_tab_navigation_runtime.zig");
+const app_editor_live_smoke_runtime = @import("editor/live_smoke_runtime.zig");
 const input_builder = @import("../input/input_builder.zig");
 
 pub fn prepare(state: anytype) !?app_run_loop_driver.FrameSetup {
@@ -52,10 +53,13 @@ fn prepareWithMode(
     }
 
     const build_start = app_shell.getTime();
-    const input_batch = input_builder.buildInputBatch(state.allocator, state.shell);
+    var input_batch = input_builder.buildInputBatch(state.allocator, state.shell);
     const build_end = app_shell.getTime();
 
     state.frame_id +|= 1;
+    if (app_modes.ide.supportsEditorSurface(app_mode)) {
+        app_editor_live_smoke_runtime.appendInjectedText(state, &input_batch);
+    }
     if (!app_modes.ide.shouldUseTerminalWorkspace(app_mode)) {
         state.editor_cluster_cache.beginFrame(state.frame_id);
     }

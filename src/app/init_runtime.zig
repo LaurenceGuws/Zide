@@ -20,6 +20,7 @@ const shared_types = @import("../types/mod.zig");
 const widgets = @import("../ui/widgets.zig");
 const font_sample_view_mod = @import("../ui/font_sample_view.zig");
 const input_actions = @import("../input/input_actions.zig");
+const app_editor_live_smoke_runtime = @import("editor/live_smoke_runtime.zig");
 
 const grammar_manager_mod = if (mode_build.focused_mode == .terminal) struct {
     pub const GrammarManager = app_types.GrammarManager;
@@ -220,6 +221,10 @@ fn initWithMode(
     else
         null;
     const startup_file_paths = app_bootstrap.parseStartupFilePaths(allocator);
+    const editor_live_smoke: app_types.EditorLiveSmokeState = if (app_modes.ide.supportsEditorSurface(app_mode))
+        try app_editor_live_smoke_runtime.initState(allocator)
+    else
+        .{};
     const perf_mode = perf_file_path != null;
     const perf_frames_total: u64 = if (perf_mode)
         app_bootstrap.parseEnvU64("ZIDE_EDITOR_PERF_FRAMES", 240)
@@ -391,6 +396,7 @@ fn initWithMode(
             0,
         .font_sample_close_pending = false,
         .font_sample_screenshot_path = if (app_modes.ide.isFontSample(app_mode)) app_bootstrap.envSlice("ZIDE_FONT_SAMPLE_SCREENSHOT") else null,
+        .editor_live_smoke = editor_live_smoke,
         .search_panel = .{
             .active = false,
             .query = std.ArrayList(u8).empty,

@@ -89,6 +89,18 @@ pub const TerminalNewTabStartLocationMode = enum {
     default,
 };
 
+pub const EditorLiveSmokeState = struct {
+    enabled: bool = false,
+    scenario: ?[]u8 = null,
+    inject_text: ?[]u8 = null,
+    inject_frame: u64 = 0,
+    capture_start_frame: u64 = 0,
+    capture_end_frame: u64 = 0,
+    close_after_frame: u64 = 0,
+    output_dir: ?[]u8 = null,
+    injected: bool = false,
+};
+
 pub const WindowCaptionButton = enum {
     minimize,
     maximize_restore,

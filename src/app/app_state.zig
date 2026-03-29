@@ -108,6 +108,7 @@ pub const AppState = struct {
     font_sample_auto_close_frames: u64,
     font_sample_close_pending: bool,
     font_sample_screenshot_path: ?[]const u8,
+    editor_live_smoke: t.EditorLiveSmokeState,
     search_panel: SearchPanelState,
     path_prompt: PathPromptState,
     terminal_close_confirm_tab: ?t.TerminalTabId,

@@ -222,6 +222,21 @@ stack issue, not an isolated highlight bug:
       - cached full-redraw decision
       - pending request/result state
       - styling authority on the sampled visible line
+  - Live GUI scripted repro path now available for present-boundary checks on the
+    real editor window:
+    - launch `./zig-out/bin/zide-editor <fixture>` with:
+      - `ZIDE_EDITOR_LIVE_SMOKE_SCENARIO=<name>`
+      - `ZIDE_EDITOR_LIVE_SMOKE_TEXT=<char>`
+      - `ZIDE_EDITOR_LIVE_SMOKE_INJECT_FRAME=<n>`
+      - `ZIDE_EDITOR_LIVE_SMOKE_CAPTURE_START=<n>`
+      - `ZIDE_EDITOR_LIVE_SMOKE_CAPTURE_END=<n>`
+      - `ZIDE_EDITOR_LIVE_SMOKE_CLOSE_FRAME=<n>`
+    - captured real-window frames are written to:
+      - `.tmp/editor-live-smoke/`
+    - current runtime evidence from the live path covers:
+      - `editor.live_smoke` injected/captured frame markers
+      - `renderer.present` frame-present markers with editor-texture update/blit counts
+      - `editor.perf` invalidation, worker-ready, and visible-highlight publish timing
 
 - [ ] `ED-STRESS-03` Map Zide against the current reference set by concern
   - Record which reference repos matter for which editor questions.
