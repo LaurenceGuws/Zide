@@ -58,15 +58,18 @@ pub fn SearchHighlightOps(comptime Editor: type) type {
     return struct {
         pub fn takeHighlightInvalidationBatch(self: *Editor) ?HighlightInvalidationBatch {
             if (!self.doc.highlight_invalidation.full_document and self.doc.highlight_invalidation.ranges.items.len == 0) return null;
-            const batch = HighlightInvalidationBatch{
-                .full_document = self.doc.highlight_invalidation.full_document,
-                .ranges = self.doc.highlight_invalidation.ranges.items,
+            const full_document = self.doc.highlight_invalidation.full_document;
+            const ranges = self.doc.highlight_invalidation.ranges.toOwnedSlice(self.allocator) catch |err| {
+                const log = app_logger.logger("editor.highlight");
+                log.logf(.warning, "highlight invalidation ownership transfer failed err={s}", .{@errorName(err)});
+                self.noteHighlightFullInvalidation();
+                return null;
             };
-            self.doc.highlight_invalidation = .{
-                .full_document = false,
-                .ranges = .empty,
+            self.doc.highlight_invalidation.full_document = false;
+            return .{
+                .full_document = full_document,
+                .ranges = ranges,
             };
-            return batch;
         }
 
         pub fn noteTextChanged(self: *Editor) void {
