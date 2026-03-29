@@ -1,3 +1,4 @@
+const std = @import("std");
 const app_bootstrap = @import("bootstrap.zig");
 const app_modes = @import("modes/mod.zig");
 pub const Hooks = struct {
@@ -8,6 +9,13 @@ pub const Hooks = struct {
     new_editor: *const fn (*anyopaque) anyerror!void,
     seed_default_welcome_buffer: *const fn (*anyopaque) anyerror!void,
 };
+
+fn shouldRunSingleSessionStartupSmoke(app_mode: app_bootstrap.AppMode) bool {
+    if (app_modes.ide.shouldUseTerminalWorkspace(app_mode)) return false;
+    if (app_modes.ide.isFontSample(app_mode)) return false;
+    const scenario = app_bootstrap.envSlice("ZIDE_TERMINAL_STARTUP_SMOKE_SCENARIO") orelse return false;
+    return std.mem.eql(u8, scenario, "single_session");
+}
 
 pub fn initialize(
     app_mode: app_bootstrap.AppMode,
@@ -26,6 +34,11 @@ pub fn initialize(
     }
 
     if (app_modes.ide.isFontSample(app_mode)) {
+        return;
+    }
+
+    if (shouldRunSingleSessionStartupSmoke(app_mode)) {
+        try hooks.new_terminal(ctx);
         return;
     }
 

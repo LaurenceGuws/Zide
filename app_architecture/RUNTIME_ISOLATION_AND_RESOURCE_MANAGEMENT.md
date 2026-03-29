@@ -689,3 +689,28 @@ This is an ownership/foundation cut only:
 - this closes the stale child-exit status gap where a PTY child could already
   be dead at shutdown start but transport teardown still ran with
   `child_exited=false`
+
+Lifecycle repro tooling note:
+
+- `ZIDE_TERMINAL_STARTUP_SMOKE_SCENARIO=single_session` now drives the real
+  single-session `new_terminal` startup path during non-workspace app startup
+  so lifecycle failpoints like `ZIDE_TERMINAL_STARTUP_FAIL_POINT=single_after_start`
+  can be validated through an actual app run instead of only unit coverage
+
+2026-03-29 single-session startup rollback checkpoint:
+
+- real app-path validation now exists for the non-workspace single-session
+  terminal startup rollback path
+- verified Linux `entry_ide` repro:
+  - `ZIDE_TERMINAL_STARTUP_SMOKE_SCENARIO=single_session`
+  - `ZIDE_TERMINAL_STARTUP_FAIL_POINT=single_after_start`
+  - `terminal_startup_failure_injected`
+  - `terminal_startup_single_rollback_begin`
+  - read/parse thread stop + join
+  - `terminal_transport_prepare_shutdown_begin`
+  - `terminal_transport_prepare_shutdown_end`
+  - `terminal_startup_single_rollback_end terminals_after=0 widgets_after=0`
+  - `shutdown_begin`
+- this confirms the single-session startup path now matches the workspace
+  rollback guarantee: a PTY/threaded session started before later startup
+  failure is synchronously torn down and removed before app shutdown continues

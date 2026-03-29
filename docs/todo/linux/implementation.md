@@ -161,6 +161,20 @@ owning subsystem queues.
     - this closes the stale child-exit status gap at shutdown where teardown
       could previously proceed with `child_exited=false` even though the PTY
       child had already died
+  - 2026-03-29 single-session startup rollback checkpoint:
+    - real `entry_ide` startup repro now validates the non-workspace
+      single-session rollback path using:
+      - `ZIDE_TERMINAL_STARTUP_SMOKE_SCENARIO=single_session`
+      - `ZIDE_TERMINAL_STARTUP_FAIL_POINT=single_after_start`
+    - verified trace order:
+      - `terminal_startup_failure_injected`
+      - `terminal_startup_single_rollback_begin`
+      - read/parse thread stop + join
+      - `terminal_transport_prepare_shutdown_begin`
+      - `terminal_transport_prepare_shutdown_end`
+      - `terminal_startup_single_rollback_end terminals_after=0 widgets_after=0`
+      - `shutdown_begin`
+    - no lingering `zide` process remained after the failed startup run
 
 - [ ] `LNX-02` Audit Linux renderer/input/window behavior after recent UI work
   - Focus:
