@@ -13,6 +13,8 @@ const MetadataOwner = shared.MetadataOwner;
 const ScrollbackOwner = shared.ScrollbackOwner;
 const EventOwner = shared.EventOwner;
 
+pub var destroy_debug_pause_ms_for_tests = std.atomic.Value(u32).init(0);
+
 fn currentCloseConfirmSignals(handle: *shared.Handle) shared.CloseConfirmSignals {
     const activity = handle.session.currentActivityMetadata();
     const foreground_process = @intFromBool(activity.foreground_process_present);
@@ -379,6 +381,7 @@ pub fn create(config: ?*const shared.CreateConfig, out_handle: *?*shared.ZideTer
     handle.* = .{
         .allocator = allocator,
         .session = session,
+        .destroying = std.atomic.Value(bool).init(false),
         .pending_events = .empty,
         .last_title = .empty,
         .last_cwd = .empty,
@@ -406,7 +409,7 @@ pub fn create(config: ?*const shared.CreateConfig, out_handle: *?*shared.ZideTer
 }
 
 pub fn presentAck(handle: ?*shared.ZideTerminalHandle, generation: u64) shared.Status {
-    const h = shared.fromOpaque(handle) orelse return .invalid_argument;
+    const h = shared.fromOpaqueActive(handle) orelse return .invalid_argument;
     const published_generation = currentPublishedGeneration(h);
     if (generation > published_generation) return .invalid_argument;
     if (generation < h.last_acknowledged_generation) return .invalid_argument;
@@ -416,19 +419,19 @@ pub fn presentAck(handle: ?*shared.ZideTerminalHandle, generation: u64) shared.S
 }
 
 pub fn acknowledgedGeneration(handle: ?*shared.ZideTerminalHandle, out_generation: *u64) shared.Status {
-    const h = shared.fromOpaque(handle) orelse return .invalid_argument;
+    const h = shared.fromOpaqueActive(handle) orelse return .invalid_argument;
     out_generation.* = h.last_acknowledged_generation;
     return .ok;
 }
 
 pub fn publishedGeneration(handle: ?*shared.ZideTerminalHandle, out_generation: *u64) shared.Status {
-    const h = shared.fromOpaque(handle) orelse return .invalid_argument;
+    const h = shared.fromOpaqueActive(handle) orelse return .invalid_argument;
     out_generation.* = currentPublishedGeneration(h);
     return .ok;
 }
 
 pub fn redrawState(handle: ?*shared.ZideTerminalHandle, out_state: *shared.RedrawState) shared.Status {
-    const h = shared.fromOpaque(handle) orelse return .invalid_argument;
+    const h = shared.fromOpaqueActive(handle) orelse return .invalid_argument;
     const published_generation = currentPublishedGeneration(h);
     const acknowledged_generation = h.last_acknowledged_generation;
     out_state.* = .{
@@ -442,19 +445,24 @@ pub fn redrawState(handle: ?*shared.ZideTerminalHandle, out_state: *shared.Redra
 }
 
 pub fn closeConfirmSignals(handle: ?*shared.ZideTerminalHandle, out_signals: *shared.CloseConfirmSignals) shared.Status {
-    const h = shared.fromOpaque(handle) orelse return .invalid_argument;
+    const h = shared.fromOpaqueActive(handle) orelse return .invalid_argument;
     out_signals.* = currentCloseConfirmSignals(h);
     return .ok;
 }
 
 pub fn needsRedraw(handle: ?*shared.ZideTerminalHandle) u8 {
-    const h = shared.fromOpaque(handle) orelse return 0;
+    const h = shared.fromOpaqueActive(handle) orelse return 0;
     const published_generation = currentPublishedGeneration(h);
     return @intFromBool(published_generation != h.last_acknowledged_generation);
 }
 
 pub fn destroy(handle: ?*shared.ZideTerminalHandle) void {
     const h = shared.fromOpaque(handle) orelse return;
+    h.destroying.store(true, .release);
+    const pause_ms = destroy_debug_pause_ms_for_tests.load(.acquire);
+    if (pause_ms > 0) {
+        std.Thread.sleep(@as(u64, pause_ms) * std.time.ns_per_ms);
+    }
     var i: usize = 0;
     while (i < h.pending_events.items.len) : (i += 1) {
         h.allocator.free(h.pending_events.items[i].data);
@@ -472,7 +480,7 @@ pub fn destroy(handle: ?*shared.ZideTerminalHandle) void {
 }
 
 pub fn feedOutput(handle: ?*shared.ZideTerminalHandle, bytes: ?[*]const u8, len: usize) shared.Status {
-    const h = shared.fromOpaque(handle) orelse return .invalid_argument;
+    const h = shared.fromOpaqueActive(handle) orelse return .invalid_argument;
     const slice = shared.ptrLen(bytes, len) orelse return .invalid_argument;
     if (h.session.enqueueExternalBytes(slice) catch |err| return shared.mapError(err)) {
         h.session.poll() catch |err| return shared.mapError(err);
@@ -483,13 +491,13 @@ pub fn feedOutput(handle: ?*shared.ZideTerminalHandle, bytes: ?[*]const u8, len:
 }
 
 pub fn closeInput(handle: ?*shared.ZideTerminalHandle) shared.Status {
-    const h = shared.fromOpaque(handle) orelse return .invalid_argument;
+    const h = shared.fromOpaqueActive(handle) orelse return .invalid_argument;
     if (!h.session.closeExternalTransport()) return .invalid_argument;
     return shared.syncDerivedEvents(h);
 }
 
 pub fn pendingInputAcquire(handle: ?*shared.ZideTerminalHandle, out_buffer: *shared.ByteBuffer) shared.Status {
-    const h = shared.fromOpaque(handle) orelse return .invalid_argument;
+    const h = shared.fromOpaqueActive(handle) orelse return .invalid_argument;
     const bytes = h.session.takeExternalOutgoingBytes(h.allocator) catch |err| return shared.mapError(err);
     const slice = bytes orelse return .invalid_argument;
     return shared.byteBufferFromOwnedSlice(h.allocator, slice, out_buffer);
@@ -501,7 +509,7 @@ pub fn pendingInputRelease(out_buffer: *shared.ByteBuffer) void {
 
 pub fn snapshotAcquire(handle: ?*shared.ZideTerminalHandle, request: ?*const shared.SnapshotRequest, out_snapshot: *shared.Snapshot) shared.Status {
     const log = app_logger.logger("terminal.ffi");
-    const h = shared.fromOpaque(handle) orelse return .invalid_argument;
+    const h = shared.fromOpaqueActive(handle) orelse return .invalid_argument;
     const req = request orelse return .invalid_argument;
     if (req.abi_version != shared.snapshot_abi_version) return .invalid_argument;
     if (req.struct_size != @sizeOf(shared.SnapshotRequest)) return .invalid_argument;
@@ -577,7 +585,7 @@ pub fn snapshotRelease(snapshot: *shared.Snapshot) void {
 
 pub fn snapshotDiffAcquire(handle: ?*shared.ZideTerminalHandle, request: ?*const shared.SnapshotDiffRequest, out_diff: *shared.SnapshotDiff) shared.Status {
     const log = app_logger.logger("terminal.ffi");
-    const h = shared.fromOpaque(handle) orelse return .invalid_argument;
+    const h = shared.fromOpaqueActive(handle) orelse return .invalid_argument;
     const req = request orelse return .invalid_argument;
     out_diff.* = .{};
     if (req.abi_version != shared.snapshot_diff_abi_version) return .invalid_argument;
@@ -712,7 +720,7 @@ pub fn snapshotDiffRelease(diff: *shared.SnapshotDiff) void {
 
 pub fn scrollbackAcquire(handle: ?*shared.ZideTerminalHandle, start_row: u32, max_rows: u32, out_buffer: *shared.ScrollbackBuffer) shared.Status {
     const log = app_logger.logger("terminal.ffi");
-    const h = shared.fromOpaque(handle) orelse return .invalid_argument;
+    const h = shared.fromOpaqueActive(handle) orelse return .invalid_argument;
     out_buffer.* = .{};
     const allocator = h.allocator;
 
@@ -777,7 +785,7 @@ pub fn scrollbackRelease(scrollback: *shared.ScrollbackBuffer) void {
 
 pub fn metadataAcquire(handle: ?*shared.ZideTerminalHandle, request: ?*const shared.MetadataRequest, out_metadata: *shared.Metadata) shared.Status {
     const log = app_logger.logger("terminal.ffi");
-    const h = shared.fromOpaque(handle) orelse return .invalid_argument;
+    const h = shared.fromOpaqueActive(handle) orelse return .invalid_argument;
     const req = request orelse return .invalid_argument;
     out_metadata.* = .{};
     if (req.abi_version != shared.metadata_abi_version) return .invalid_argument;
@@ -878,7 +886,7 @@ pub fn metadataRelease(metadata: *shared.Metadata) void {
 
 pub fn eventDrain(handle: ?*shared.ZideTerminalHandle, out_events: *shared.EventBuffer) shared.Status {
     const log = app_logger.logger("terminal.ffi");
-    const h = shared.fromOpaque(handle) orelse return .invalid_argument;
+    const h = shared.fromOpaqueActive(handle) orelse return .invalid_argument;
     out_events.* = .{};
     if (h.pending_events.items.len == 0) return .ok;
 
@@ -943,7 +951,7 @@ pub fn eventsFree(events: *shared.EventBuffer) void {
 }
 
 pub fn selectionText(handle: ?*shared.ZideTerminalHandle, out_string: *shared.StringBuffer) shared.Status {
-    const h = shared.fromOpaque(handle) orelse return .invalid_argument;
+    const h = shared.fromOpaqueActive(handle) orelse return .invalid_argument;
     const text = (h.session.selectionPlainTextAlloc(h.allocator) catch |err| {
         return shared.mapError(err);
     }) orelse return shared.stringFromSlice(h.allocator, "", out_string);
@@ -951,14 +959,14 @@ pub fn selectionText(handle: ?*shared.ZideTerminalHandle, out_string: *shared.St
 }
 
 pub fn clipboardWrite(handle: ?*shared.ZideTerminalHandle, out_string: *shared.StringBuffer) shared.Status {
-    const h = shared.fromOpaque(handle) orelse return .invalid_argument;
+    const h = shared.fromOpaqueActive(handle) orelse return .invalid_argument;
     if (!h.clipboard_write_pending) return shared.stringFromSlice(h.allocator, "", out_string);
     h.clipboard_write_pending = false;
     return shared.stringFromSlice(h.allocator, h.pending_clipboard_write.items, out_string);
 }
 
 pub fn scrollbackPlainText(handle: ?*shared.ZideTerminalHandle, out_string: *shared.StringBuffer) shared.Status {
-    const h = shared.fromOpaque(handle) orelse return .invalid_argument;
+    const h = shared.fromOpaqueActive(handle) orelse return .invalid_argument;
     const text = h.session.scrollbackPlainTextAlloc(h.allocator) catch |err| {
         return shared.mapError(err);
     };
@@ -966,7 +974,7 @@ pub fn scrollbackPlainText(handle: ?*shared.ZideTerminalHandle, out_string: *sha
 }
 
 pub fn scrollbackAnsiText(handle: ?*shared.ZideTerminalHandle, out_string: *shared.StringBuffer) shared.Status {
-    const h = shared.fromOpaque(handle) orelse return .invalid_argument;
+    const h = shared.fromOpaqueActive(handle) orelse return .invalid_argument;
     const text = h.session.scrollbackAnsiTextAlloc(h.allocator) catch |err| {
         return shared.mapError(err);
     };

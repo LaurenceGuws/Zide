@@ -316,6 +316,7 @@ pub const PendingEvent = struct {
 pub const Handle = struct {
     allocator: std.mem.Allocator,
     session: *terminal.TerminalSession,
+    destroying: std.atomic.Value(bool),
     pending_events: std.ArrayList(PendingEvent),
     last_title: std.ArrayList(u8),
     last_cwd: std.ArrayList(u8),
@@ -382,6 +383,12 @@ pub fn ptrLen(ptr: ?[*]const u8, len: usize) ?[]const u8 {
 pub fn fromOpaque(handle: ?*ZideTerminalHandle) ?*Handle {
     const value = handle orelse return null;
     return @ptrCast(@alignCast(value));
+}
+
+pub fn fromOpaqueActive(handle: ?*ZideTerminalHandle) ?*Handle {
+    const h = fromOpaque(handle) orelse return null;
+    if (h.destroying.load(.acquire)) return null;
+    return h;
 }
 
 pub fn toOpaque(handle: *Handle) *ZideTerminalHandle {
@@ -592,6 +599,7 @@ fn currentDerivedEventState(handle: *Handle) !DerivedEventState {
 }
 
 pub fn syncDerivedEvents(handle: *Handle) Status {
+    if (handle.destroying.load(.acquire)) return .invalid_argument;
     const generation = handle.session.publishedGeneration();
     if (handle.last_generation != generation) {
         queueEvent(handle, .redraw_ready, &[_]u8{}, 0, 0) catch |err| return mapError(err);

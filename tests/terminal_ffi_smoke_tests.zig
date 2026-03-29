@@ -1,6 +1,7 @@
 const std = @import("std");
 const app_logger = @import("../src/app_logger.zig");
 const c_api = @import("../src/terminal/ffi/c_api.zig");
+const core_api = @import("../src/terminal/ffi/core_api.zig");
 
 test "ffi non-pty snapshot and event ownership smoke" {
     try app_logger.setConsoleFilterString("none");
@@ -528,8 +529,8 @@ test "ffi viewport controls pin snapshot scrollback offset and follow live botto
     try expectSnapshotRowText(&live_snapshot, 1, "DDDD");
 
     var live_metadata: c_api.ZideTerminalMetadata = .{};
-    var live_request = metadataRequest(0);
-    try std.testing.expectEqual(@as(c_int, 0), c_api.zide_terminal_metadata_acquire(handle, &live_request, &live_metadata));
+    var live_metadata_request = metadataRequest(0);
+    try std.testing.expectEqual(@as(c_int, 0), c_api.zide_terminal_metadata_acquire(handle, &live_metadata_request, &live_metadata));
     defer c_api.zide_terminal_metadata_release(&live_metadata);
     try std.testing.expectEqual(@as(u32, 0), live_metadata.scrollback_offset);
 
@@ -867,6 +868,46 @@ test "ffi PTY metadata exposes foreground process and semantic prompt activity" 
         }
         try std.testing.expect(saw_semantic);
     }
+}
+
+const DestroyThreadCtx = struct {
+    handle: ?*c_api.ZideTerminalHandle,
+};
+
+fn destroyTerminalHandle(ctx: *const DestroyThreadCtx) void {
+    c_api.zide_terminal_destroy(ctx.handle);
+}
+
+test "ffi destroy blocks host-visible transport and event calls once teardown begins" {
+    try app_logger.setConsoleFilterString("none");
+    try app_logger.setFileFilterString("none");
+
+    var handle: ?*c_api.ZideTerminalHandle = null;
+    try std.testing.expectEqual(@as(c_int, 0), c_api.zide_terminal_create(null, &handle));
+    try std.testing.expectEqual(@as(c_int, 0), c_api.zide_terminal_resize(handle, 80, 24, 8, 16));
+    try std.testing.expectEqual(@as(c_int, 0), c_api.zide_terminal_feed_output(handle, "seed".ptr, 4));
+
+    core_api.destroy_debug_pause_ms_for_tests.store(150, .release);
+    defer core_api.destroy_debug_pause_ms_for_tests.store(0, .release);
+
+    const ctx = DestroyThreadCtx{ .handle = handle };
+    const destroy_thread = try std.Thread.spawn(.{}, destroyTerminalHandle, .{&ctx});
+    defer destroy_thread.join();
+
+    std.Thread.sleep(20 * std.time.ns_per_ms);
+
+    var redraw_state: c_api.ZideTerminalRedrawState = .{};
+    var events: c_api.ZideTerminalEventBuffer = .{};
+    var pending_input: c_api.ZideTerminalByteBuffer = .{};
+    var reported: u8 = 99;
+
+    try std.testing.expectEqual(@as(c_int, 1), c_api.zide_terminal_feed_output(handle, "late".ptr, 4));
+    try std.testing.expectEqual(@as(c_int, 1), c_api.zide_terminal_event_drain(handle, &events));
+    try std.testing.expectEqual(@as(c_int, 1), c_api.zide_terminal_redraw_state(handle, &redraw_state));
+    try std.testing.expectEqual(@as(c_int, 1), c_api.zide_terminal_pending_input_acquire(handle, &pending_input));
+    try std.testing.expectEqual(@as(c_int, 1), c_api.zide_terminal_report_child_exit(handle, 7, 1));
+    try std.testing.expectEqual(@as(c_int, 1), c_api.zide_terminal_report_focus_changed(handle, 1, &reported));
+    try std.testing.expectEqual(@as(u8, 0), c_api.zide_terminal_needs_redraw(handle));
 }
 
 test "ffi can report focus and color scheme changes over PTY when enabled by app" {

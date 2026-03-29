@@ -84,6 +84,16 @@ Current judgment:
     and requested strings in one locked pass
   - the remaining dominant snapshot cost is now the single explicit copied
     flat cell buffer itself
+- 2026-03-29 destroy-ordering checkpoint:
+  - FFI handles now mark destroy in progress at `destroy(...)` entry and reject
+    host-visible bridge calls once that phase begins
+  - focused destroy-window smoke proved the pre-fix gap on the real C-API
+    path: during a paused `destroy(...)`, the handle still accepted
+    `feed_output`, `event_drain`, `redraw_state`, `report_child_exit`, and
+    `report_focus_changed`
+  - fixed smoke now rejects those calls during destroy, so external transport
+    activity and host-visible queue/state do not continue crossing the destroy
+    boundary
 
 ## TODO
 

@@ -568,6 +568,28 @@ Lifecycle/latest-state policy:
   for:
   - alive
   - exit status presence/code
+
+2026-03-29 destroy-ordering checkpoint:
+
+- terminal FFI handles now mark themselves `destroying` at destroy entry before
+  session teardown and handle memory release
+- bridge entrypoints now reject handle-driven state mutation/query once destroy
+  has begun:
+  - external transport feed/report paths
+  - redraw/event/latest-state getters
+  - pending-input drain
+- verified destroy-window repro:
+  - temporary host-side pause inside `zide_terminal_destroy(...)`
+  - pre-fix real FFI smoke still accepted:
+    - `feed_output(...)`
+    - `event_drain(...)`
+    - `redraw_state(...)`
+    - `report_child_exit(...)`
+    - `report_focus_changed(...)`
+  - fixed smoke rejects those calls once destroy has begun
+- this closes the bridge gap where host-visible state and external transport
+  activity could still be accepted during the destroy window before the handle
+  actually freed
   - title
   - cwd
   - scrollback counts
