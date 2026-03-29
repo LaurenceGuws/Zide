@@ -799,24 +799,37 @@ pub fn drawRowGlyphs(
         const span_can_direct_special = cellCanDirectSpecial(cell0);
         const span_start_col = col;
         var scan_col: usize = col;
-        while (scan_col <= col_end and scan_col < cols_count) {
-            const ccell = row_cells[scan_col];
-            if (ccell.x != 0 or ccell.y != 0) {
-                scan_col += 1;
-                continue;
-            }
-            const cwidth_units = @as(usize, @max(@as(u8, 1), ccell.width));
-            if (span_fast != null) {
+        if (span_fast != null and span_can_bypass and !span_can_direct_special) {
+            while (scan_col <= col_end and scan_col < cols_count) {
+                const ccell = row_cells[scan_col];
+                if (ccell.x != 0 or ccell.y != 0) {
+                    scan_col += 1;
+                    continue;
+                }
+                const cwidth_units = @as(usize, @max(@as(u8, 1), ccell.width));
                 if (rr.terminal_font.directFastGlyphForCodepoint(ccell.codepoint) == null) break;
-            } else {
-                const choice_start = app_shell.getTime();
-                const choice = rr.terminal_font.pickFontForCodepoint(ccell.codepoint);
-                span_font_choice_ms += (app_shell.getTime() - choice_start) * 1000.0;
-                if (choice.hb_font != span_hb_font) break;
+                scan_col += cwidth_units;
             }
-            if (cellCanBypassShaping(ccell) != span_can_bypass) break;
-            if (cellCanDirectSpecial(ccell) != span_can_direct_special) break;
-            scan_col += cwidth_units;
+        } else {
+            while (scan_col <= col_end and scan_col < cols_count) {
+                const ccell = row_cells[scan_col];
+                if (ccell.x != 0 or ccell.y != 0) {
+                    scan_col += 1;
+                    continue;
+                }
+                const cwidth_units = @as(usize, @max(@as(u8, 1), ccell.width));
+                if (span_fast != null) {
+                    if (rr.terminal_font.directFastGlyphForCodepoint(ccell.codepoint) == null) break;
+                } else {
+                    const choice_start = app_shell.getTime();
+                    const choice = rr.terminal_font.pickFontForCodepoint(ccell.codepoint);
+                    span_font_choice_ms += (app_shell.getTime() - choice_start) * 1000.0;
+                    if (choice.hb_font != span_hb_font) break;
+                }
+                if (cellCanBypassShaping(ccell) != span_can_bypass) break;
+                if (cellCanDirectSpecial(ccell) != span_can_direct_special) break;
+                scan_col += cwidth_units;
+            }
         }
         var span_end_excl = @min(scan_col, col_end + 1);
         if (cursor_row_active) {
