@@ -660,3 +660,16 @@ This is an ownership/foundation cut only:
 - this closes the previous app-level ordering gap where terminal async work
   could remain alive past shell teardown even though session deinit later joined
   threads correctly
+
+2026-03-29 terminal startup-rollback checkpoint:
+
+- terminal startup now treats session/widget creation as one rollbackable unit
+  at the app layer
+- workspace startup records the initial tab/widget counts and rolls back any
+  newly created sessions/widgets if a later startup step fails
+- single-session startup now also rolls back the started-but-not-yet-owned
+  session if failure happens after PTY/thread start but before the session is
+  fully integrated into `state.terminals` plus `state.terminal_widgets`
+- this closes the partial-init ownership gap where a live PTY/process/session
+  could outlive a failed startup step because ownership had not yet become
+  durable or rollback had not been wired

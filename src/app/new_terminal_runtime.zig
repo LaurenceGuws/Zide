@@ -8,9 +8,15 @@ const app_terminal_theme_apply = @import("terminal/terminal_theme_apply.zig");
 const app_ui_layout_runtime = @import("ui_layout_runtime.zig");
 const terminal_cli = @import("terminal_cli.zig");
 const terminal_mod = @import("../terminal/core/terminal.zig");
+const app_logger = @import("../app_logger.zig");
 
 const TerminalSession = terminal_mod.TerminalSession;
 const TerminalWorkspace = terminal_mod.TerminalWorkspace;
+
+const StartupFailPoint = enum {
+    workspace_after_start,
+    single_after_start,
+};
 
 const LaunchCwd = struct {
     value: ?[]const u8 = null,
@@ -73,6 +79,114 @@ fn launchCwdForWorkspaceNewTab(state: anytype, workspace: *TerminalWorkspace) !L
     }
 }
 
+fn shouldInjectStartupFailure(point: StartupFailPoint) bool {
+    const raw = std.c.getenv("ZIDE_TERMINAL_STARTUP_FAIL_POINT") orelse return false;
+    const value = std.mem.sliceTo(raw, 0);
+    return std.mem.eql(u8, value, switch (point) {
+        .workspace_after_start => "workspace_after_start",
+        .single_after_start => "single_after_start",
+    });
+}
+
+fn injectStartupFailureIfRequested(point: StartupFailPoint, term: *TerminalSession) !void {
+    if (!shouldInjectStartupFailure(point)) return;
+    std.debug.print("terminal_startup_failure_injected point={s} session_ptr={x}\n", .{
+        switch (point) {
+            .workspace_after_start => "workspace_after_start",
+            .single_after_start => "single_after_start",
+        },
+        @intFromPtr(term),
+    });
+    app_logger.logger("terminal.lifecycle").logFields(.warning, "terminal_startup_failure_injected", &.{
+        .{ .key = "point", .value = .{ .string = switch (point) {
+            .workspace_after_start => "workspace_after_start",
+            .single_after_start => "single_after_start",
+        } } },
+        .{ .key = "session_ptr", .value = .{ .unsigned = @intFromPtr(term) } },
+    });
+    return error.TerminalStartupInjectedFailure;
+}
+
+fn rollbackAddedWidgets(state: anytype, initial_widget_count: usize) void {
+    while (state.terminal_widgets.items.len > initial_widget_count) {
+        const idx = state.terminal_widgets.items.len - 1;
+        state.terminal_widgets.items[idx].deinit();
+        _ = state.terminal_widgets.orderedRemove(idx);
+    }
+}
+
+fn rollbackWorkspaceStartup(state: anytype, workspace: *TerminalWorkspace, initial_tab_count: usize, initial_widget_count: usize) void {
+    std.debug.print("terminal_startup_workspace_rollback_begin tabs_before={d} tabs_target={d} widgets_before={d} widgets_target={d}\n", .{
+        workspace.tabCount(),
+        initial_tab_count,
+        state.terminal_widgets.items.len,
+        initial_widget_count,
+    });
+    app_logger.logger("terminal.lifecycle").logFields(.warning, "terminal_startup_workspace_rollback_begin", &.{
+        .{ .key = "tabs_before", .value = .{ .unsigned = workspace.tabCount() } },
+        .{ .key = "tabs_target", .value = .{ .unsigned = initial_tab_count } },
+        .{ .key = "widgets_before", .value = .{ .unsigned = state.terminal_widgets.items.len } },
+        .{ .key = "widgets_target", .value = .{ .unsigned = initial_widget_count } },
+    });
+    rollbackAddedWidgets(state, initial_widget_count);
+    while (workspace.tabCount() > initial_tab_count) {
+        const idx = workspace.tabCount() - 1;
+        const tab_id = workspace.tabIdAt(idx) orelse break;
+        _ = workspace.closeTab(tab_id);
+    }
+    std.debug.print("terminal_startup_workspace_rollback_end tabs_after={d} widgets_after={d}\n", .{
+        workspace.tabCount(),
+        state.terminal_widgets.items.len,
+    });
+    app_logger.logger("terminal.lifecycle").logFields(.warning, "terminal_startup_workspace_rollback_end", &.{
+        .{ .key = "tabs_after", .value = .{ .unsigned = workspace.tabCount() } },
+        .{ .key = "widgets_after", .value = .{ .unsigned = state.terminal_widgets.items.len } },
+    });
+}
+
+fn rollbackSingleSessionStartup(
+    state: anytype,
+    initial_terminal_count: usize,
+    initial_widget_count: usize,
+    unowned_term: *?*TerminalSession,
+) void {
+    std.debug.print("terminal_startup_single_rollback_begin terminals_before={d} terminals_target={d} widgets_before={d} widgets_target={d} has_unowned_term={any}\n", .{
+        state.terminals.items.len,
+        initial_terminal_count,
+        state.terminal_widgets.items.len,
+        initial_widget_count,
+        unowned_term.* != null,
+    });
+    app_logger.logger("terminal.lifecycle").logFields(.warning, "terminal_startup_single_rollback_begin", &.{
+        .{ .key = "terminals_before", .value = .{ .unsigned = state.terminals.items.len } },
+        .{ .key = "terminals_target", .value = .{ .unsigned = initial_terminal_count } },
+        .{ .key = "widgets_before", .value = .{ .unsigned = state.terminal_widgets.items.len } },
+        .{ .key = "widgets_target", .value = .{ .unsigned = initial_widget_count } },
+        .{ .key = "has_unowned_term", .value = .{ .boolean = unowned_term.* != null } },
+    });
+    rollbackAddedWidgets(state, initial_widget_count);
+    while (state.terminals.items.len > initial_terminal_count) {
+        const idx = state.terminals.items.len - 1;
+        const term = state.terminals.items[idx];
+        _ = state.terminals.orderedRemove(idx);
+        term.deinit();
+    }
+    if (state.terminals.items.len == initial_terminal_count) {
+        if (unowned_term.*) |term| {
+            term.deinit();
+            unowned_term.* = null;
+        }
+    }
+    std.debug.print("terminal_startup_single_rollback_end terminals_after={d} widgets_after={d}\n", .{
+        state.terminals.items.len,
+        state.terminal_widgets.items.len,
+    });
+    app_logger.logger("terminal.lifecycle").logFields(.warning, "terminal_startup_single_rollback_end", &.{
+        .{ .key = "terminals_after", .value = .{ .unsigned = state.terminals.items.len } },
+        .{ .key = "widgets_after", .value = .{ .unsigned = state.terminal_widgets.items.len } },
+    });
+}
+
 fn createWorkspaceTerminalTab(state: anytype, workspace: *TerminalWorkspace, rows: u16, cols: u16, launch_cwd: ?[]const u8) !void {
     const shell = state.shell;
     const theme = &state.terminal_theme;
@@ -80,6 +194,7 @@ fn createWorkspaceTerminalTab(state: anytype, workspace: *TerminalWorkspace, row
     const term = created.session;
     app_terminal_theme_apply.setSessionPalette(term, theme);
     try app_terminal_session_bootstrap.startSessionWithShellCellSize(term, shell, launch_cwd, state.terminal_shell_path);
+    try injectStartupFailureIfRequested(.workspace_after_start, term);
     const widget = app_terminal_session_bootstrap.initWidget(
         term,
         state.terminal_blink_style,
@@ -130,6 +245,9 @@ pub fn handle(state: anytype) !void {
 
     if (app_modes.ide.shouldUseTerminalWorkspace(state.app_mode)) {
         if (state.terminal_workspace) |*workspace| {
+            const initial_tab_count = workspace.tabCount();
+            const initial_widget_count = state.terminal_widgets.items.len;
+            errdefer rollbackWorkspaceStartup(state, workspace, initial_tab_count, initial_widget_count);
             const launched_many = try launchWorkspaceStartupTabsFromArgs(state, workspace, rows, cols);
             if (!launched_many) {
                 var launch_cwd = try launchCwdForWorkspaceNewTab(state, workspace);
@@ -153,15 +271,21 @@ pub fn handle(state: anytype) !void {
         return error.TerminalWorkspaceMissing;
     }
 
+    const initial_terminal_count = state.terminals.items.len;
+    const initial_widget_count = state.terminal_widgets.items.len;
     const term = try TerminalSession.initWithOptions(state.allocator, rows, cols, .{
         .scrollback_rows = state.terminal_scrollback_rows,
         .cursor_style = state.terminal_cursor_style,
     });
+    var unowned_term: ?*TerminalSession = term;
+    errdefer rollbackSingleSessionStartup(state, initial_terminal_count, initial_widget_count, &unowned_term);
     app_terminal_theme_apply.setSessionPalette(term, theme);
     var launch_cwd = try fallbackDefaultStartLocation(state);
     defer launch_cwd.deinit(state.allocator);
     try app_terminal_session_bootstrap.startSessionWithShellCellSize(term, shell, launch_cwd.value, state.terminal_shell_path);
+    try injectStartupFailureIfRequested(.single_after_start, term);
     try state.terminals.append(state.allocator, term);
+    unowned_term = null;
     const widget = app_terminal_session_bootstrap.initWidget(
         term,
         state.terminal_blink_style,
