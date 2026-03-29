@@ -171,7 +171,7 @@ pub fn handle(
     const visible_highlight_compute_in_flight = editor.visibleHighlightComputeInFlight();
     const pending_visible_highlight_request = editor.hasPendingVisibleHighlightRequest();
     const pending_visible_highlight_result = editor.hasPendingVisibleHighlightResult();
-    const visible_highlight_range_incomplete = editor.shouldThrottleVisibleHighlightRange(start_line, end_line, view.highlight_epoch);
+    const visible_highlight_range_incomplete = editor.shouldThrottleVisibleHighlightRange(start_line, end_line, view.highlight_epoch, view.change_tick);
     const can_schedule_visible_work =
         !visible_highlight_compute_in_flight and
         !pending_visible_highlight_request and

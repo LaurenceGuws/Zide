@@ -25,7 +25,7 @@ pub fn buildSnapshot(allocator: std.mem.Allocator, editor: *editor_mod.Editor, v
 
     const total_len = editor.totalLen();
     const text = if (total_len > 0 and total_len <= 4096)
-        try editor.buffer.readRangeAlloc(0, total_len)
+        try editor.documentCore().textStore().readRangeAlloc(0, total_len)
     else
         &[_]u8{};
     const text_owned = text.len > 0;

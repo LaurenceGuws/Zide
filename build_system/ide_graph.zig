@@ -246,6 +246,18 @@ pub fn planIdeExtendedBuildGraph(
     );
     _ = addRunArtifactStep(b, editor_tests, "test-editor", "Run editor-specific tests").step;
 
+    const editor_highlight_smoke = addSdlConfiguredTest(
+        b,
+        target,
+        optimize,
+        "test_editor_highlight_smoke.zig",
+        build_options,
+        zlua_module,
+        app_link_ctx,
+        target_profile.test_editor,
+    );
+    _ = addRunArtifactStep(b, editor_highlight_smoke, "test-editor-highlight-smoke", "Run focused editor highlight smoke").step;
+
     const config_tests = addSdlConfiguredTest(
         b,
         target,

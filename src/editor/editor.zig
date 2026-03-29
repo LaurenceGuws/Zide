@@ -1892,15 +1892,16 @@ pub const Editor = struct {
         return self.cluster_offsets_defer_frames > 0;
     }
 
-    pub fn isVisibleHighlightRangeComplete(self: *const Editor, start_line: usize, end_line: usize, epoch: u64) bool {
+    pub fn isVisibleHighlightRangeComplete(self: *const Editor, start_line: usize, end_line: usize, epoch: u64, change_tick: u64) bool {
         return !self.visible_highlight_runtime.work.active and
             start_line == self.visible_highlight_runtime.work.completed_start and
             end_line == self.visible_highlight_runtime.work.completed_end and
-            epoch == self.visible_highlight_runtime.work.completed_epoch;
+            epoch == self.visible_highlight_runtime.work.completed_epoch and
+            change_tick == self.visible_highlight_runtime.work.completed_change_tick;
     }
 
-    pub fn shouldThrottleVisibleHighlightRange(self: *const Editor, start_line: usize, end_line: usize, epoch: u64) bool {
-        return !self.isVisibleHighlightRangeComplete(start_line, end_line, epoch);
+    pub fn shouldThrottleVisibleHighlightRange(self: *const Editor, start_line: usize, end_line: usize, epoch: u64, change_tick: u64) bool {
+        return !self.isVisibleHighlightRangeComplete(start_line, end_line, epoch, change_tick);
     }
 
     pub fn setSearchQuery(self: *Editor, query: ?[]const u8) !void {
@@ -2047,7 +2048,7 @@ pub const Editor = struct {
 };
 
 test "deleteCurrentLine removes middle line and keeps cursor on following line" {
-    var grammar_manager = grammar_manager_mod.GrammarManager.init(std.testing.allocator);
+    var grammar_manager = try grammar_manager_mod.GrammarManager.init(std.testing.allocator);
     defer grammar_manager.deinit();
 
     const buffer = try text_store.TextStore.init(std.testing.allocator, "alpha\nbeta\ngamma");
@@ -2057,17 +2058,18 @@ test "deleteCurrentLine removes middle line and keeps cursor on following line" 
     editor.setCursor(1, 2);
     try editor.deleteCurrentLine();
 
-    const snapshot = try @import("snapshot.zig").capture(std.testing.allocator, editor);
-    defer std.testing.allocator.free(snapshot);
+    const snapshot = try @import("snapshot.zig").buildSnapshot(std.testing.allocator, editor, .{ .width = 0, .height = 0 });
+    defer if (snapshot.text_owned) std.testing.allocator.free(snapshot.text);
+    defer std.testing.allocator.free(snapshot.line_offsets);
 
-    try std.testing.expectEqualStrings("alpha\ngamma", snapshot);
+    try std.testing.expectEqualStrings("alpha\ngamma", snapshot.text);
     try std.testing.expectEqual(@as(usize, 1), editor.cursor.line);
     try std.testing.expectEqual(@as(usize, 0), editor.cursor.col);
-    try std.testing.expect(editor.modified);
+    try std.testing.expect(editor.documentCore().isModified());
 }
 
 test "duplicateCurrentLine duplicates middle line and keeps cursor on duplicate" {
-    var grammar_manager = grammar_manager_mod.GrammarManager.init(std.testing.allocator);
+    var grammar_manager = try grammar_manager_mod.GrammarManager.init(std.testing.allocator);
     defer grammar_manager.deinit();
 
     const buffer = try text_store.TextStore.init(std.testing.allocator, "alpha\nbeta\ngamma");
@@ -2077,17 +2079,18 @@ test "duplicateCurrentLine duplicates middle line and keeps cursor on duplicate"
     editor.setCursor(1, 2);
     try editor.duplicateCurrentLine();
 
-    const snapshot = try @import("snapshot.zig").capture(std.testing.allocator, editor);
-    defer std.testing.allocator.free(snapshot);
+    const snapshot = try @import("snapshot.zig").buildSnapshot(std.testing.allocator, editor, .{ .width = 0, .height = 0 });
+    defer if (snapshot.text_owned) std.testing.allocator.free(snapshot.text);
+    defer std.testing.allocator.free(snapshot.line_offsets);
 
-    try std.testing.expectEqualStrings("alpha\nbeta\nbeta\ngamma", snapshot);
+    try std.testing.expectEqualStrings("alpha\nbeta\nbeta\ngamma", snapshot.text);
     try std.testing.expectEqual(@as(usize, 2), editor.cursor.line);
     try std.testing.expectEqual(@as(usize, 2), editor.cursor.col);
-    try std.testing.expect(editor.modified);
+    try std.testing.expect(editor.documentCore().isModified());
 }
 
 test "indentSelectedLines indents current line when no selection" {
-    var grammar_manager = grammar_manager_mod.GrammarManager.init(std.testing.allocator);
+    var grammar_manager = try grammar_manager_mod.GrammarManager.init(std.testing.allocator);
     defer grammar_manager.deinit();
 
     const buffer = try text_store.TextStore.init(std.testing.allocator, "alpha\nbeta");
@@ -2097,16 +2100,17 @@ test "indentSelectedLines indents current line when no selection" {
     editor.setCursor(1, 2);
     try editor.indentSelectedLines();
 
-    const snapshot = try @import("snapshot.zig").capture(std.testing.allocator, editor);
-    defer std.testing.allocator.free(snapshot);
+    const snapshot = try @import("snapshot.zig").buildSnapshot(std.testing.allocator, editor, .{ .width = 0, .height = 0 });
+    defer if (snapshot.text_owned) std.testing.allocator.free(snapshot.text);
+    defer std.testing.allocator.free(snapshot.line_offsets);
 
-    try std.testing.expectEqualStrings("alpha\n\tbeta", snapshot);
+    try std.testing.expectEqualStrings("alpha\n\tbeta", snapshot.text);
     try std.testing.expectEqual(@as(usize, 1), editor.cursor.line);
     try std.testing.expectEqual(@as(usize, 3), editor.cursor.col);
 }
 
 test "outdentSelectedLines removes leading tab from selected lines" {
-    var grammar_manager = grammar_manager_mod.GrammarManager.init(std.testing.allocator);
+    var grammar_manager = try grammar_manager_mod.GrammarManager.init(std.testing.allocator);
     defer grammar_manager.deinit();
 
     const buffer = try text_store.TextStore.init(std.testing.allocator, "\tone\n\ttwo\nthree");
@@ -2120,8 +2124,9 @@ test "outdentSelectedLines removes leading tab from selected lines" {
     editor.setCursorNoClear(1, 1);
     try editor.outdentSelectedLines();
 
-    const snapshot = try @import("snapshot.zig").capture(std.testing.allocator, editor);
-    defer std.testing.allocator.free(snapshot);
+    const snapshot = try @import("snapshot.zig").buildSnapshot(std.testing.allocator, editor, .{ .width = 0, .height = 0 });
+    defer if (snapshot.text_owned) std.testing.allocator.free(snapshot.text);
+    defer std.testing.allocator.free(snapshot.line_offsets);
 
-    try std.testing.expectEqualStrings("one\ntwo\nthree", snapshot);
+    try std.testing.expectEqualStrings("one\ntwo\nthree", snapshot.text);
 }
