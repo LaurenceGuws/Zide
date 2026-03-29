@@ -118,6 +118,7 @@ pub fn deinit(self: anytype) void {
 }
 
 pub fn prepareForShutdown(self: anytype) void {
+    session_lifecycle.refreshChildExit(self);
     session_thread_runtime.prepareForShutdown(self);
 }
 

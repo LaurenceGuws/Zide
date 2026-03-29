@@ -147,6 +147,20 @@ owning subsystem queues.
       - `shell_deinit_end`
     - no terminal read activity was observed after shutdown began in the
       validated run, and no terminal thread remained alive past shell teardown
+  - 2026-03-29 child-exit/shutdown checkpoint:
+    - focused terminal GUI repro now refreshes child-exit truth during
+      terminal shutdown preparation before transport teardown
+    - verified trace order:
+      - helper kills the PTY child before shutdown
+      - `shutdown_begin`
+      - `terminal_prepare_shutdown_begin`
+      - `terminal_child_exit_poll_begin`
+      - `terminal_child_exit_detected`
+      - `terminal_transport_prepare_shutdown_begin child_exited=true`
+      - `shell_deinit_begin`
+    - this closes the stale child-exit status gap at shutdown where teardown
+      could previously proceed with `child_exited=false` even though the PTY
+      child had already died
 
 - [ ] `LNX-02` Audit Linux renderer/input/window behavior after recent UI work
   - Focus:

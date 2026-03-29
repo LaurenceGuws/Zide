@@ -673,3 +673,19 @@ This is an ownership/foundation cut only:
 - this closes the partial-init ownership gap where a live PTY/process/session
   could outlive a failed startup step because ownership had not yet become
   durable or rollback had not been wired
+
+2026-03-29 terminal child-exit shutdown checkpoint:
+
+- terminal shutdown preparation now refreshes child-exit truth before transport
+  teardown
+- verified Linux terminal GUI repro:
+  - external helper kills the PTY child shortly before app shutdown
+  - `shutdown_begin`
+  - `terminal_prepare_shutdown_begin`
+  - `terminal_child_exit_poll_begin`
+  - `terminal_child_exit_detected`
+  - `terminal_transport_prepare_shutdown_begin child_exited=true`
+  - `shell_deinit_begin`
+- this closes the stale child-exit status gap where a PTY child could already
+  be dead at shutdown start but transport teardown still ran with
+  `child_exited=false`

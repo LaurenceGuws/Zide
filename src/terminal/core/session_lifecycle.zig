@@ -1,4 +1,5 @@
 const app_logger = @import("../../app_logger.zig");
+const app_lifecycle_runtime = @import("../../app/lifecycle_runtime.zig");
 const terminal_transport = @import("terminal_transport.zig");
 
 pub fn reportExternalChildExit(self: anytype, code: ?i32) bool {
@@ -27,6 +28,11 @@ pub fn childExitCode(self: anytype) ?i32 {
 pub fn maybeUpdateChildExit(self: anytype) void {
     if (self.child_exited.load(.acquire)) return;
     if (terminal_transport.Transport.fromSession(self)) |transport| {
+        app_logger.logger("terminal.lifecycle").logFields(.info, "terminal_child_exit_poll_begin", &.{
+            .{ .key = "session_ptr", .value = .{ .unsigned = @intFromPtr(self) } },
+            .{ .key = "shutdown_started", .value = .{ .boolean = app_lifecycle_runtime.shutdownStarted() } },
+            .{ .key = "shell_deinitialized", .value = .{ .boolean = app_lifecycle_runtime.shellDeinitialized() } },
+        });
         if (transport.pollExit() catch |err| blk: {
             const log = app_logger.logger("terminal.pty");
             log.logf(.warning, "pty pollExit failed err={s}", .{@errorName(err)});
@@ -37,6 +43,12 @@ pub fn maybeUpdateChildExit(self: anytype) void {
 
             const log = app_logger.logger("terminal.pty");
             log.logf(.info, "pty child exited code={d}", .{code});
+            app_logger.logger("terminal.lifecycle").logFields(.info, "terminal_child_exit_detected", &.{
+                .{ .key = "session_ptr", .value = .{ .unsigned = @intFromPtr(self) } },
+                .{ .key = "code", .value = .{ .integer = code } },
+                .{ .key = "shutdown_started", .value = .{ .boolean = app_lifecycle_runtime.shutdownStarted() } },
+                .{ .key = "shell_deinitialized", .value = .{ .boolean = app_lifecycle_runtime.shellDeinitialized() } },
+            });
         }
     }
 }

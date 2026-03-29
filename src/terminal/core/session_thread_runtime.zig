@@ -10,6 +10,8 @@ pub fn deinit(self: anytype) void {
             .{ .key = "session_ptr", .value = .{ .unsigned = @intFromPtr(self) } },
             .{ .key = "shell_deinitialized", .value = .{ .boolean = app_lifecycle_runtime.shellDeinitialized() } },
             .{ .key = "transport_alive", .value = .{ .boolean = transport.isAlive() } },
+            .{ .key = "child_exited", .value = .{ .boolean = self.child_exited.load(.acquire) } },
+            .{ .key = "child_exit_code", .value = .{ .integer = self.child_exit_code.load(.acquire) } },
         });
         transport.deinit();
         app_logger.logger("terminal.lifecycle").logFields(.info, "terminal_transport_deinit_end", &.{
@@ -38,6 +40,8 @@ pub fn prepareForShutdown(self: anytype) void {
             .{ .key = "session_ptr", .value = .{ .unsigned = @intFromPtr(self) } },
             .{ .key = "shell_deinitialized", .value = .{ .boolean = app_lifecycle_runtime.shellDeinitialized() } },
             .{ .key = "transport_alive", .value = .{ .boolean = transport.isAlive() } },
+            .{ .key = "child_exited", .value = .{ .boolean = self.child_exited.load(.acquire) } },
+            .{ .key = "child_exit_code", .value = .{ .integer = self.child_exit_code.load(.acquire) } },
         });
         transport.deinit();
         app_logger.logger("terminal.lifecycle").logFields(.info, "terminal_transport_prepare_shutdown_end", &.{
