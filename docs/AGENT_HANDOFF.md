@@ -10,6 +10,7 @@ not a progress log and should stay brief.
 - Linux catch-up should focus first on restoring parity and polish in the shared Linux native host: renderer/input quality, Linux platform integration, runtime/lifecycle behavior, and concrete regressions or missing affordances left behind during the Windows lane.
 - Editor work is currently in scope only where it advances lifecycle management, runtime policy, startup/resource behavior, or closely related observability/validation seams.
 - Keep focused validation lanes healthy while runtime-policy work continues: terminal/editor targeted tests should stay runnable, and environment-sensitive host checks should not spill into focused behavior lanes without a clear reason.
+- For editor visual/runtime defects, live GUI scripted repro is now the proving standard; focused scripted smokes and internal counters support it but do not replace it.
 - Terminal quality bar remains: native terminal behavior should stay in the same band as `kitty` / `ghostty` for correctness, smoothness, compatibility, and steady-state cost, but terminal is not the active product invention lane right now.
 - Native GUI remains the proving ground and reference host for both editor and terminal contracts. Keep native honest first, but do not let it become a privileged semantic path over FFI/embedded hosts.
 - Windows shell scope is split intentionally:
@@ -51,6 +52,12 @@ not a progress log and should stay brief.
 - A later Flutty re-check against upstream `4c2a953e` confirmed the viewport-pinning regression is closed on current `main`: request-based snapshot adoption stayed straightforward, the redraw path naturally uses `include_flags = 0`, pinned viewport changes now affect acquired snapshot content, and no widget/runtime fork or local workaround logic was needed.
 - The latest Flutty diff re-checks now close the first diff cut end-to-end: downstream removed the old cursor-preservation workaround, settled-baseline granular diff works after the upstream `present_ack(...)` retirement fix, one-acquire fallback remains clean, and startup PTY churn still stays outside the granular guarantee on purpose.
 - Current implementation authority lives in the terminal architecture docs and owning todos, not in stale investigation notes.
+- Recent lifecycle checkpoints on `main` are now closed:
+  - editor workers stop and join before shell teardown
+  - terminal PTY read/parse threads and transport teardown complete before shell teardown
+  - terminal startup rollback is proven on both workspace and single-session app paths
+  - terminal FFI handles reject host-visible calls once destroy begins
+  - terminal `close_on_child_exit` is accepted frame-driven behavior: same-frame close when the child is already dead before the check, next-frame close when the child dies just after a prior check
 - Recent `main` commits advanced the shared runtime-policy lane:
   - terminal lifecycle tiers now drive background polling behavior and poll-epoch resets
   - perf events and compare tooling now align on shared runtime/lifecycle/work-class fields across terminal and editor
@@ -61,6 +68,11 @@ not a progress log and should stay brief.
 - Current Windows shell follow-up should focus on the packaged Explorer commands:
   - only reopen this lane for concrete packaged Explorer regressions
   - keep Windows default terminal integration deferred
+- Working model for bug slices:
+  - prove the boundary
+  - make the smallest fix
+  - validate on the real host path
+  - commit the checkpoint
 
 ### Where To Look
 

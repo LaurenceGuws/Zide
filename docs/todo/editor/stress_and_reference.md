@@ -260,7 +260,7 @@ stack issue, not an isolated highlight bug:
   - Focused threading/runtime comparison now captured in:
     - `docs/research/editor/EDITOR_THREADING_COMPARISON_2026-03-19.md`
 
-- [ ] `ED-STRESS-04` Start with core text + render pipeline checks
+- [x] `ED-STRESS-04` Start with core text + render pipeline checks
   - Prefer the first end-to-end checks that exercise text model, editor state,
     highlight/runtime, and rendering together.
   - First concrete pass should follow the ritual in
@@ -268,8 +268,9 @@ stack issue, not an isolated highlight bug:
     broader comparison noise.
   - Headless first-pass results now live in:
     - `docs/research/editor/EDITOR_STRESS_RESULTS_2026-03-18.md`
-  - Remaining gap for this item:
-    - native interactive observations on the real widget/runtime/render path
+  - Completed:
+    - native interactive observations now exist on the real
+      widget/runtime/render path through the live GUI scripted repro lane
   - Supporting local gate now aligned:
     - `tools/observability/perf/perf_editor_gate.sh`
 
@@ -277,13 +278,20 @@ stack issue, not an isolated highlight bug:
   - If stress work reveals an unclear subsystem seam, capture the corrected
     understanding in `app_architecture/editor/`.
 
-- [ ] `ED-STRESS-06` Replace foreground visible highlight warmup with editor-runtime work
+- [x] `ED-STRESS-06` Replace foreground visible highlight warmup with editor-runtime work
   - Current authority from the comparison:
     - `docs/research/editor/EDITOR_THREADING_COMPARISON_2026-03-19.md`
   - Required outcome:
     - widget/frame precompute no longer calls expensive highlight generation
     - highlight work is owned by a persistent editor-runtime seam
     - UI thread only requests work, applies completed results, and redraws
+  - Completed:
+    - visible highlight now runs through editor-owned runtime request/result
+      state and worker execution rather than synchronous widget/frame
+      precompute
+    - live GUI scripted repro plus focused scripted smoke now prove that
+      visible highlight publication/present behavior is driven from the runtime
+      seam rather than inline foreground execution
 
 - [ ] `ED-STRESS-07` Plan the full editor stack redesign
   - Current authority:
@@ -333,16 +341,20 @@ stack issue, not an isolated highlight bug:
       - treat search worker synchronization as the first explicit `Phase 2`
         extraction target
 
-- [ ] `ED-STRESS-09` Define the editor runtime publication seam
+- [ ] `ED-STRESS-09` Harden the editor runtime publication seam
   - Current authority:
     - `app_architecture/editor/EDITOR_RUNTIME_CONTRACT.md`
   - Required outcome:
     - search and highlight are owned by `EditorRuntime`
     - render cache stops owning highlight queue/progress state
     - runtime completion can wake/redraw without unrelated input
-  - First implementation target:
-    - extract the existing search worker synchronization seam into explicit
-      runtime-owned state before tackling visible highlight runtime ownership
+  - Current remaining scope:
+    - keep the runtime-owned search/highlight seam honest under live GUI
+      interaction
+    - tighten publication/apply/present behavior only where a real repro proves
+      a remaining boundary
+    - keep visual/runtime claims grounded in the live GUI scripted repro path,
+      with focused scripted smokes as supporting evidence
   - Current progress:
     - the first structural cut is in code:
       - search worker lifecycle/request/result/generation state is being moved
@@ -364,14 +376,13 @@ stack issue, not an isolated highlight bug:
       - visible highlight scheduling now lives under a named editor-owned
         runtime block keyed by visible-range work state rather than a separate
         startup-only control flag
-      - visible highlight now also has runtime request/result mailbox state,
-        though execution is still synchronous
+      - visible highlight now also has runtime request/result mailbox state
       - visible highlight cache publication now happens from the
         editor frame/runtime lane instead of widget precompute
       - visible highlight completion now uses the runtime result mailbox plus
         host wake instead of a separate frame-local redraw flag
       - visible highlight scheduling and execution are now separate phases in
-        code, though execution is still synchronous
+        code
       - visible highlight execution is now called explicitly from the
         app/runtime precompute path
       - visible highlight execution logic is now editor-owned rather than
@@ -436,8 +447,8 @@ stack issue, not an isolated highlight bug:
           crossing shell teardown during shutdown
       - next cleanup target is to keep deleting remaining startup-era control
         branches that still muddy the runtime signal
-      - this is still behavior-preserving and does not yet claim full runtime
-        ownership
+      - real GUI scripted repro is now the authority for visual/runtime claims
+        on this lane; focused scripted smokes remain supporting evidence
 
 - [ ] `ED-STRESS-10` Define immutable display publication
   - Current authority:

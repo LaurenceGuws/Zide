@@ -135,12 +135,14 @@ Current implementation progress:
 
 Today:
 
-- search uses a worker thread and a single pending-result mailbox
-- search completion is polling-based
+- search uses a worker thread and a pending-result mailbox
+- search completion is wake-driven through the editor/runtime seam
 - grammar bootstrap is detached global worker logic
-- visible highlight queue/progress/completion state lives in `EditorRenderCache`
-- visible highlight production still executes synchronously from widget/frame
-  precompute
+- visible highlight queue/progress/completion state is editor-owned runtime
+  state rather than `EditorRenderCache`-owned state
+- visible highlight production no longer executes synchronously from
+  widget/frame precompute; the frame/runtime lane schedules work and applies
+  completed results
 
 That means runtime work is not owned by one subsystem seam.
 
@@ -364,6 +366,27 @@ The current implementation is an explicit wake channel:
 
 The key rule is unchanged: wake/redraw must be runtime-owned, not implicit
 polling or unrelated input traffic.
+
+## Runtime Proof Standard
+
+For editor visual/runtime claims, the proving order is:
+
+- real GUI scripted repro first
+- focused scripted smoke second
+- internal counters/logs as supporting evidence
+
+Current real-host path:
+
+- `./zig-out/bin/zide-editor <fixture>`
+- `ZIDE_EDITOR_LIVE_SMOKE_SCENARIO=<name>`
+- `ZIDE_EDITOR_LIVE_SMOKE_TEXT=<char>`
+- `ZIDE_EDITOR_LIVE_SMOKE_INJECT_FRAME=<n>`
+- `ZIDE_EDITOR_LIVE_SMOKE_CAPTURE_START=<n>`
+- `ZIDE_EDITOR_LIVE_SMOKE_CAPTURE_END=<n>`
+- `ZIDE_EDITOR_LIVE_SMOKE_CLOSE_FRAME=<n>`
+
+This is the authority for claims about visible intermediate states, present
+ordering, and live typing behavior.
 
 ## Shutdown Safety
 

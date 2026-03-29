@@ -714,3 +714,34 @@ Lifecycle repro tooling note:
 - this confirms the single-session startup path now matches the workspace
   rollback guarantee: a PTY/threaded session started before later startup
   failure is synchronously torn down and removed before app shutdown continues
+
+2026-03-29 editor worker shutdown checkpoint:
+
+- editor shutdown now prepares search and visible-highlight worker teardown
+  before shell/renderer teardown
+- both workers are stop-signaled before either join waits
+- verified Linux GUI repro showed no late worker publish, wake, or apply after
+  shutdown preparation began
+- this closes the async-lifecycle gap where a late worker publish/wake could
+  cross shell teardown
+
+2026-03-29 FFI destroy-window checkpoint:
+
+- terminal FFI handles now mark destroy in progress at `destroy(...)` entry
+- once destroy begins, host-visible calls such as transport feed, redraw
+  queries, event drain, and external child-exit/focus reporting are rejected
+- focused real-C-API destroy-window smoke proved both the pre-fix gap and the
+  fixed rejection behavior
+- this closes the destroy-ordering gap where host-visible queue/state mutation
+  could continue during handle teardown
+
+2026-03-29 close-on-child-exit decision-window checkpoint:
+
+- terminal `close_on_child_exit` remains a frame-driven decision in
+  `prepare_run_frame_runtime.zig`
+- verified Linux PTY-backed app repro:
+  - if the child is already dead before the frame check, the same frame closes
+  - if the child dies just after a prior frame check, close is taken on the
+    next frame
+- no missed close and no stale alive state beyond the next frame were observed
+- this is accepted behavior, not a correctness bug

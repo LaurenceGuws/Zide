@@ -11,17 +11,20 @@ Use it for:
 
 Current priority order:
 
-- Notepad-grade editor usability and basic editor-only chrome first
-- editor config / CLI friendliness as part of that baseline
-- modularization only where it keeps the feature work clean or removes bad ownership
-- optimization and reference-repo comparison after the common editor feature baseline lands
+- lifecycle/runtime correctness first
+- observability and deterministic repro tooling where they materially improve
+  runtime validation
+- editor bug fixing only where it materially supports lifecycle/runtime policy,
+  startup/resource behavior, or closely related validation seams
+- modularization only where it keeps that lane clean or removes bad ownership
 
 Current high-signal entrypoints:
 
-- `app_baseline.md` — primary editor execution queue for Notepad-grade app/editor behavior
+- `app_baseline.md` — baseline editor/app queue when a concrete lifecycle or
+  runtime slice depends on it
 - `editor_action_baseline_register.md` — action-centric baseline checklist with reference bindings from common editors
 - `protocol.md` — text-engine and editing semantics queue after the common app baseline
-- `stress_and_reference.md` — editor stress-testing and cross-reference comparison queue
+- `stress_and_reference.md` — active editor runtime/stress/proof queue
 - `treesitter.md` — tree-sitter query/highlight integration queue
 - `treesitter_dynamic_roadmap.md` — dynamic grammar-pack rollout order
 - `theme_import.md` — resolved-theme export/import and schema-pressure queue
