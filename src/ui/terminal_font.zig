@@ -366,6 +366,16 @@ const GlyphKey = struct {
 };
 
 pub const TerminalFont = struct {
+    pub const FrameAtlasStats = struct {
+        glyph_cache_hits: usize = 0,
+        glyph_cache_misses: usize = 0,
+        rasterized_glyphs: usize = 0,
+        atlas_compactions: usize = 0,
+        uploaded_coverage_glyphs: usize = 0,
+        uploaded_color_glyphs: usize = 0,
+        uploaded_pixels: usize = 0,
+    };
+
     allocator: std.mem.Allocator,
     ft_library: c.FT_Library,
     ft_face: c.FT_Face,
@@ -412,6 +422,7 @@ pub const TerminalFont = struct {
     use_lcd: bool,
     overflow_policy: AllowSquareGlyphOverflow,
     ascii_primary_glyph_ids: [128]u32,
+    frame_atlas_stats: FrameAtlasStats = .{},
 
     pub const FontChoice = struct {
         face: c.FT_Face,
@@ -750,8 +761,20 @@ pub const TerminalFont = struct {
         _ = c.FT_Done_FreeType(self.ft_library);
     }
 
+    pub fn beginFrameAtlasStats(self: *TerminalFont) void {
+        self.frame_atlas_stats = .{};
+    }
+
+    pub fn frameAtlasStats(self: *const TerminalFont) FrameAtlasStats {
+        return self.frame_atlas_stats;
+    }
+
     fn getGlyphByKey(self: *TerminalFont, key: GlyphKey, hb_x_advance: c_int) GlyphError!*Glyph {
-        if (self.glyphs.getPtr(key)) |glyph| return glyph;
+        if (self.glyphs.getPtr(key)) |glyph| {
+            self.frame_atlas_stats.glyph_cache_hits += 1;
+            return glyph;
+        }
+        self.frame_atlas_stats.glyph_cache_misses += 1;
         try self.rasterizeGlyphKey(key, hb_x_advance, true);
         return self.glyphs.getPtr(key).?;
     }

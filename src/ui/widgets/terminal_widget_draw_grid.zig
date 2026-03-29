@@ -68,6 +68,9 @@ pub const GlyphDrawStats = struct {
     special_sprite_cache_hits: usize = 0,
     special_sprite_cache_misses: usize = 0,
     special_sprite_creates: usize = 0,
+    direct_row_fixed_ms: f64 = 0.0,
+    direct_span_scan_ms: f64 = 0.0,
+    direct_font_choice_ms: f64 = 0.0,
     direct_lookup_ms: f64 = 0.0,
     direct_draw_ms: f64 = 0.0,
 };
@@ -742,6 +745,7 @@ pub fn drawRowGlyphs(
     sample_capture: ?*[max_direct_glyph_samples]DirectGlyphSample,
     stats: ?*GlyphDrawStats,
 ) void {
+    const row_fixed_start = app_shell.getTime();
     _ = padding_x_i;
     const BlinkStyleT = @TypeOf(blink_style_mode);
     const rr = renderer.rendererPtr();
@@ -768,15 +772,28 @@ pub fn drawRowGlyphs(
     } else 0;
     var row_sprite_cache = RowSpecialSpriteCache{};
     var direct_samples = [1]DirectGlyphSample{.{}} ** max_direct_glyph_samples;
+    if (stats) |s| s.direct_row_fixed_ms += (app_shell.getTime() - row_fixed_start) * 1000.0;
 
     var col: usize = col_start;
     while (col <= col_end and col < cols_count) {
+        const span_scan_start = app_shell.getTime();
+        var span_font_choice_ms: f64 = 0.0;
         const cell0 = row_cells[col];
         if (cell0.x != 0 or cell0.y != 0) {
             col += 1;
             continue;
         }
-        const span_choice = rr.terminal_font.pickFontForCodepoint(cell0.codepoint);
+        const span_fast = rr.terminal_font.directFastGlyphForCodepoint(cell0.codepoint);
+        const span_choice = if (span_fast != null) terminal_font_mod.TerminalFont.FontChoice{
+            .face = rr.terminal_font.ft_face,
+            .hb_font = rr.terminal_font.hb_font,
+            .want_color = false,
+        } else blk: {
+            const span_choice_start = app_shell.getTime();
+            const span_choice = rr.terminal_font.pickFontForCodepoint(cell0.codepoint);
+            span_font_choice_ms += (app_shell.getTime() - span_choice_start) * 1000.0;
+            break :blk span_choice;
+        };
         const span_hb_font = span_choice.hb_font;
         const span_can_bypass = cellCanBypassShaping(cell0);
         const span_can_direct_special = cellCanDirectSpecial(cell0);
@@ -789,8 +806,14 @@ pub fn drawRowGlyphs(
                 continue;
             }
             const cwidth_units = @as(usize, @max(@as(u8, 1), ccell.width));
-            const choice = rr.terminal_font.pickFontForCodepoint(ccell.codepoint);
-            if (choice.hb_font != span_hb_font) break;
+            if (span_fast != null) {
+                if (rr.terminal_font.directFastGlyphForCodepoint(ccell.codepoint) == null) break;
+            } else {
+                const choice_start = app_shell.getTime();
+                const choice = rr.terminal_font.pickFontForCodepoint(ccell.codepoint);
+                span_font_choice_ms += (app_shell.getTime() - choice_start) * 1000.0;
+                if (choice.hb_font != span_hb_font) break;
+            }
             if (cellCanBypassShaping(ccell) != span_can_bypass) break;
             if (cellCanDirectSpecial(ccell) != span_can_direct_special) break;
             scan_col += cwidth_units;
@@ -818,6 +841,10 @@ pub fn drawRowGlyphs(
         var shape_features_buf: [16]hb.hb_feature_t = undefined;
         const shape_features_len = rr.collectShapeFeatures(.terminal, disable_programming_ligatures, shape_features_buf[0..]);
         if (shape_features_len == 0 and span_can_bypass and spanCanBypassShaping(row_cells, span_start_col, span_end_excl)) {
+            if (stats) |s| {
+                s.direct_font_choice_ms += span_font_choice_ms;
+                s.direct_span_scan_ms += (app_shell.getTime() - span_scan_start) * 1000.0 - span_font_choice_ms;
+            }
             const direct_render_scale = if (rr.terminal_font.render_scale > 0.0) rr.terminal_font.render_scale else 1.0;
             const direct_inv_scale = 1.0 / direct_render_scale;
             const row_baseline = @as(f32, @floatFromInt(base_y_i + @as(i32, @intCast(row_idx)) * cell_h_i)) + rr.terminal_metrics.baseline_from_top;
@@ -840,6 +867,7 @@ pub fn drawRowGlyphs(
                 behind_rgba.a = 255;
                 rr.text_bg_rgba = behind_rgba;
 
+                const direct_choice_start = app_shell.getTime();
                 const choice = if (rr.terminal_font.directFastGlyphForCodepoint(cell.codepoint)) |fast|
                     fast
                 else blk: {
@@ -853,6 +881,7 @@ pub fn drawRowGlyphs(
                         .simple_ascii = false,
                     };
                 };
+                if (stats) |s| s.direct_font_choice_ms += (app_shell.getTime() - direct_choice_start) * 1000.0;
                 const cell_x_i = base_x_i + @as(i32, @intCast(direct_col)) * cell_w_i;
                 const followed_by_space = blk: {
                     const next_col = direct_col + 1;

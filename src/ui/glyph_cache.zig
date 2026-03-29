@@ -10,9 +10,17 @@ const Vertex = draw_ops.Vertex;
 const BatchDraw = draw_ops.BatchDraw;
 
 pub const GlyphCache = struct {
+    pub const FrameMetrics = struct {
+        quad_count: usize = 0,
+        flush_count: usize = 0,
+        draw_call_count: usize = 0,
+        vertex_count: usize = 0,
+    };
+
     allocator: std.mem.Allocator,
     vertices: std.ArrayList(Vertex),
     draws: std.ArrayList(BatchDraw),
+    frame_metrics: FrameMetrics = .{},
 
     pub fn init(allocator: std.mem.Allocator) GlyphCache {
         return .{
@@ -30,6 +38,7 @@ pub const GlyphCache = struct {
     pub fn begin(self: *GlyphCache) void {
         self.vertices.clearRetainingCapacity();
         self.draws.clearRetainingCapacity();
+        self.frame_metrics = .{};
     }
 
     pub fn addQuad(self: *GlyphCache, texture: types.Texture, src: types.Rect, dest: types.Rect, color: types.Rgba, bg_color: types.Rgba, kind: types.TextureKind) void {
@@ -70,6 +79,7 @@ pub const GlyphCache = struct {
             .{ .x = x1, .y = y1, .u = u_max, .v = v_max, .r = r, .g = g, .b = b, .a = a, .br = br, .bg = bg, .bb = bb, .ba = ba },
             .{ .x = x0, .y = y1, .u = u_min, .v = v_max, .r = r, .g = g, .b = b, .a = a, .br = br, .bg = bg, .bb = bb, .ba = ba },
         };
+        self.frame_metrics.quad_count += 1;
         if (self.draws.items.len > 0) {
             const last_idx = self.draws.items.len - 1;
             if (self.draws.items[last_idx].texture_id == texture.id and self.draws.items[last_idx].kind == kind) {
@@ -97,6 +107,8 @@ pub const GlyphCache = struct {
     pub fn flush(self: *GlyphCache, renderer: anytype) void {
         const vertex_count = self.vertices.items.len;
         if (vertex_count == 0) return;
+        self.frame_metrics.flush_count += 1;
+        self.frame_metrics.vertex_count += vertex_count;
         draw_ops.ensureVboCapacity(renderer, vertex_count);
         gl.UseProgram(renderer.shader_program);
         gl.BindVertexArray(renderer.vao);
@@ -109,12 +121,17 @@ pub const GlyphCache = struct {
         );
         for (self.draws.items) |draw| {
             if (draw.texture_id == 0) continue;
+            self.frame_metrics.draw_call_count += 1;
             gl.ActiveTexture(gl.c.GL_TEXTURE0);
             gl.BindTexture(gl.c.GL_TEXTURE_2D, draw.texture_id);
             if (renderer.uniform_kind >= 0) gl.Uniform1i(renderer.uniform_kind, @intFromEnum(draw.kind));
             applyBlendForKind(draw.kind);
             gl.DrawArrays(gl.c.GL_TRIANGLES, @intCast(draw.start), @intCast(draw.count));
         }
+    }
+
+    pub fn frameMetrics(self: *const GlyphCache) FrameMetrics {
+        return self.frame_metrics;
     }
 };
 

@@ -23,6 +23,7 @@ pub fn setAtlasFilterPoint(self: anytype) void {
 }
 
 pub fn rasterizeGlyphKey(self: anytype, key: anytype, hb_x_advance: c_int, allow_compact: bool) GlyphError!void {
+    self.frame_atlas_stats.rasterized_glyphs += 1;
     var face = key.face;
     const want_color = key.want_color;
     const synthetic_italic = key.italic and !want_color;
@@ -131,9 +132,12 @@ pub fn rasterizeGlyphKey(self: anytype, key: anytype, hb_x_advance: c_int, allow
         };
         if (is_color_bitmap) {
             updateTextureRegion(self.color_texture, rec, upload);
+            self.frame_atlas_stats.uploaded_color_glyphs += 1;
         } else {
             updateTextureRegionR8(self.coverage_texture, rec, upload);
+            self.frame_atlas_stats.uploaded_coverage_glyphs += 1;
         }
+        self.frame_atlas_stats.uploaded_pixels += pixel_count;
 
         if (height > self.row_h) self.row_h = height;
         const advance = @as(f32, @floatFromInt(hb_x_advance)) / 64.0;
@@ -178,6 +182,7 @@ pub fn rasterizeGlyphKey(self: anytype, key: anytype, hb_x_advance: c_int, allow
 }
 
 pub fn compactAtlas(self: anytype) GlyphError!void {
+    self.frame_atlas_stats.atlas_compactions += 1;
     var old_order = try self.glyph_order.clone(self.allocator);
     defer old_order.deinit(self.allocator);
 

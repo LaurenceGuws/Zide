@@ -256,6 +256,8 @@ pub fn drawPrepared(
     var partial_plan_summary: []const u8 = "";
     var partial_plan_summary_buf: [256]u8 = undefined;
     var glyph_stats_summary_buf: [220]u8 = undefined;
+    var glyph_batch_summary_buf: [96]u8 = undefined;
+    var glyph_atlas_summary_buf: [96]u8 = undefined;
     var sprite_stats_summary_buf: [48]u8 = undefined;
     var lock_stats_summary_buf: [64]u8 = undefined;
     var fullframe_fastpath_decision: FullFrameFastPathDecision = .{};
@@ -533,6 +535,7 @@ pub fn drawPrepared(
                     texture_kitty_ms += time_utils.secondsToMs(app_shell.getTime() - kitty_phase_start);
                 }
                 const glyph_phase_start = app_shell.getTime();
+                r.terminal_font.beginFrameAtlasStats();
                 r.beginTerminalGlyphBatch();
                 row = 0;
                 while (row < rows) : (row += 1) {
@@ -672,6 +675,7 @@ pub fn drawPrepared(
                     texture_kitty_ms += time_utils.secondsToMs(app_shell.getTime() - kitty_phase_start);
                 }
                 const glyph_phase_start = app_shell.getTime();
+                r.terminal_font.beginFrameAtlasStats();
                 r.beginTerminalGlyphBatch();
                 for (0..rows) |row| {
                     if (!self.partial_draw_rows.items[row]) continue;
@@ -924,7 +928,7 @@ pub fn drawPrepared(
         );
         active_perf_log.logf(
             .info,
-            "draw_ms={d:.2} lock_stats={s} texture_update_ms={d:.2} texture_bg_ms={d:.2} texture_glyph_ms={d:.2} texture_kitty_ms={d:.2} overlay_ms={d:.2} full={d} partial={d} updated={d} sync={d} clear_ok={d} dirty={s} current_reason={s} dirty_rows={d} damage_rows={d} damage_cols={d} plan_rows={d} plan_row_span={d} plan_col_span={d} plan_cells={d} plan_union_cells={d} blink_cells={d} blink_phase_changed={d} shift_rows={d} shift_exposed_only={d} sprite_stats={s} glyph_stats={s} rows={d} cols={d}",
+            "draw_ms={d:.2} lock_stats={s} texture_update_ms={d:.2} texture_bg_ms={d:.2} texture_glyph_ms={d:.2} texture_kitty_ms={d:.2} overlay_ms={d:.2} full={d} partial={d} updated={d} sync={d} clear_ok={d} dirty={s} current_reason={s} dirty_rows={d} damage_rows={d} damage_cols={d} plan_rows={d} plan_row_span={d} plan_col_span={d} plan_cells={d} plan_union_cells={d} blink_cells={d} blink_phase_changed={d} shift_rows={d} shift_exposed_only={d} sprite_stats={s} glyph_batch_stats={s} glyph_atlas_stats={s} glyph_stats={s} rows={d} cols={d}",
             .{
                 elapsed_ms,
                 std.fmt.bufPrint(&lock_stats_summary_buf, "{d:.2}/{d:.2}/{d:.2}/{d:.2}/{d:.2}", .{
@@ -964,7 +968,22 @@ pub fn drawPrepared(
                     glyph_draw_stats.special_sprite_creates,
                     glyph_draw_stats.special_sprite_lookup_ms,
                 }) catch "overflow",
-                std.fmt.bufPrint(&glyph_stats_summary_buf, "{d}/{d}/{d}/{d}/{d}/{d}/{d}/{d}/{d:.2}/{d:.2}/{d:.2}/{d:.2}/{d:.2}/{d:.2}/{d:.2}/{d:.2}/{d:.2}/{d:.2}/{d:.2}", .{
+                std.fmt.bufPrint(&glyph_batch_summary_buf, "{d}/{d}/{d}/{d}", .{
+                    r.terminal_glyph_cache.frameMetrics().quad_count,
+                    r.terminal_glyph_cache.frameMetrics().flush_count,
+                    r.terminal_glyph_cache.frameMetrics().draw_call_count,
+                    r.terminal_glyph_cache.frameMetrics().vertex_count,
+                }) catch "overflow",
+                std.fmt.bufPrint(&glyph_atlas_summary_buf, "{d}/{d}/{d}/{d}/{d}/{d}/{d}", .{
+                    r.terminal_font.frameAtlasStats().glyph_cache_hits,
+                    r.terminal_font.frameAtlasStats().glyph_cache_misses,
+                    r.terminal_font.frameAtlasStats().rasterized_glyphs,
+                    r.terminal_font.frameAtlasStats().atlas_compactions,
+                    r.terminal_font.frameAtlasStats().uploaded_coverage_glyphs,
+                    r.terminal_font.frameAtlasStats().uploaded_color_glyphs,
+                    r.terminal_font.frameAtlasStats().uploaded_pixels,
+                }) catch "overflow",
+                std.fmt.bufPrint(&glyph_stats_summary_buf, "{d}/{d}/{d}/{d}/{d}/{d}/{d}/{d}/{d:.2}/{d:.2}/{d:.2}/{d:.2}/{d:.2}/{d:.2}/{d:.2}/{d:.2}/{d:.2}/{d:.2}/{d:.2}/{d:.2}/{d:.2}/{d:.2}", .{
                     glyph_draw_stats.shaping_spans,
                     glyph_draw_stats.shaped_glyphs,
                     glyph_draw_stats.fallback_cells,
@@ -982,6 +1001,9 @@ pub fn drawPrepared(
                     glyph_draw_stats.box_sprite_submit_ms,
                     glyph_draw_stats.box_rect_submit_ms,
                     glyph_draw_stats.special_sprite_lookup_ms,
+                    glyph_draw_stats.direct_row_fixed_ms,
+                    glyph_draw_stats.direct_span_scan_ms,
+                    glyph_draw_stats.direct_font_choice_ms,
                     glyph_draw_stats.direct_lookup_ms,
                     glyph_draw_stats.direct_draw_ms,
                 }) catch "overflow",
