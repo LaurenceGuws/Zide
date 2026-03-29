@@ -300,6 +300,11 @@ fn appendPollCounterFields(fields: []LogField, next: *usize, poll_counters: Poll
     next.* += 1;
 }
 
+const latency_fields_base_count = 5;
+const latency_fields_draw_count = 10;
+const latency_fields_poll_count = 29;
+const latency_fields_poll_draw_count = 34;
+
 pub fn logFramePacing(state: anytype, now: f64, snapshot: Snapshot, drew: bool, draw_ms: f64, sleep_s: ?f64) void {
     const log = app_logger.logger("terminal.frame");
     if (!log.enabled_file and !log.enabled_console) return;
@@ -366,7 +371,7 @@ pub fn logInputLatency(state: anytype, poll_ms: f64, build_ms: f64, update_ms: f
     const poll_counters = term_ctx.poll_counters;
 
     if (poll_metrics != null and draw_metrics != null and poll_counters != null) {
-        var fields: [32]LogField = undefined;
+        var fields: [latency_fields_poll_draw_count]LogField = undefined;
         var next: usize = 0;
         appendTerminalPollRuntimeFields(fields[0..], &next, poll_metrics.?);
         appendLatencyBaseFields(fields[0..], &next, poll_ms, build_ms, update_ms, draw_ms);
@@ -378,7 +383,7 @@ pub fn logInputLatency(state: anytype, poll_ms: f64, build_ms: f64, update_ms: f
     }
 
     if (draw_metrics != null) {
-        var fields: [10]LogField = undefined;
+        var fields: [latency_fields_draw_count]LogField = undefined;
         var next: usize = 0;
         appendTerminalRuntimeFields(fields[0..], &next);
         appendLatencyBaseFields(fields[0..], &next, poll_ms, build_ms, update_ms, draw_ms);
@@ -388,7 +393,7 @@ pub fn logInputLatency(state: anytype, poll_ms: f64, build_ms: f64, update_ms: f
     }
 
     if (poll_metrics != null and poll_counters != null) {
-        var fields: [27]LogField = undefined;
+        var fields: [latency_fields_poll_count]LogField = undefined;
         var next: usize = 0;
         appendTerminalPollRuntimeFields(fields[0..], &next, poll_metrics.?);
         appendLatencyBaseFields(fields[0..], &next, poll_ms, build_ms, update_ms, draw_ms);
@@ -398,7 +403,7 @@ pub fn logInputLatency(state: anytype, poll_ms: f64, build_ms: f64, update_ms: f
         return;
     }
 
-    var fields: [5]LogField = undefined;
+    var fields: [latency_fields_base_count]LogField = undefined;
     var next: usize = 0;
     appendTerminalRuntimeFields(fields[0..], &next);
     appendLatencyBaseFields(fields[0..], &next, poll_ms, build_ms, update_ms, draw_ms);

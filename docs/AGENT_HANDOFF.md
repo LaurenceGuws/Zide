@@ -5,11 +5,12 @@ not a progress log and should stay brief.
 
 ### Current Focus
 
-- Primary active product lane: Linux native catch-up after the recent Win11 integration and UI-improvement sprint, with terminal work paused except for concrete regressions or contract follow-ups that already have clear authority.
-- Current implementation lane on `main`: app-wide runtime scheduling/resource-management adoption, with terminal and editor as the first concrete adopters of the shared lifecycle/work-class policy seams.
-- Linux catch-up should focus first on restoring parity and polish in the shared Linux native host: editor/IDE behavior, renderer/input quality, Linux platform integration, and any regressions or missing affordances that were deprioritized during the Windows lane.
-- Within the editor lane, current product priority remains basic Notepad-grade usability and editor-only chrome: common shortcuts, expected mouse/selection behavior, file/open/save flows, friendly Lua config, and editor CLI behavior should land before optimization-focused work.
-- Terminal quality bar remains: native terminal behavior should stay in the same band as `kitty` / `ghostty` for correctness, smoothness, compatibility, and steady-state cost.
+- Primary active product lane: Linux native catch-up after the recent Win11 integration and UI-improvement sprint, centered on shared runtime scheduling/resource-management adoption plus the observability needed to keep that lane measurable and reviewable.
+- Current implementation lane on `main`: app-wide lifecycle/work-class policy adoption, with terminal and editor as the first concrete adopters of the shared runtime vocabulary.
+- Linux catch-up should focus first on restoring parity and polish in the shared Linux native host: renderer/input quality, Linux platform integration, runtime/lifecycle behavior, and concrete regressions or missing affordances left behind during the Windows lane.
+- Editor work is currently in scope only where it advances lifecycle management, runtime policy, startup/resource behavior, or closely related observability/validation seams.
+- Keep focused validation lanes healthy while runtime-policy work continues: terminal/editor targeted tests should stay runnable, and environment-sensitive host checks should not spill into focused behavior lanes without a clear reason.
+- Terminal quality bar remains: native terminal behavior should stay in the same band as `kitty` / `ghostty` for correctness, smoothness, compatibility, and steady-state cost, but terminal is not the active product invention lane right now.
 - Native GUI remains the proving ground and reference host for both editor and terminal contracts. Keep native honest first, but do not let it become a privileged semantic path over FFI/embedded hosts.
 - Windows shell scope is split intentionally:
   - packaged top-level Windows 11 Explorer integration is the supported surface
@@ -22,17 +23,16 @@ not a progress log and should stay brief.
 - The main VT/present rewrite is no longer the active invention lane on `main`.
 - Default work now should be:
   - Linux native catch-up first, with one owning queue for parity gaps, regressions, and polish follow-up after the Windows week
-  - editor app-level feature work and UX completion first
+  - lifecycle/resource-management implementation and cleanup first
+  - observability improvements that make lifecycle/runtime-policy behavior easier to validate and compare
   - Linux renderer/input/platform follow-up where Windows integration work or recent UI changes left Linux behind
-  - editor/widget bug fixing and quality passes
-  - editor modularization/boundary cleanup only where it materially supports the feature lane or keeps the implementation clean
-  - selective terminal follow-up only for already-open, high-confidence issues
+  - targeted test/build-root cleanup where it materially improves validation quality for the active lanes
+  - editor bug fixing only where it materially supports the lifecycle/runtime-policy lane
   - selective Windows shell follow-up only for the packaged Explorer command lane
-- Avoid optimization-led editor work until the common editor feature/config/CLI baseline is in place.
 - Keep current runtime-policy work cohesive before widening scope:
   - shared runtime vocabulary should stay the single authority for lifecycle/work-class naming
   - terminal wake/frame/latency and editor perf/open-startup work should continue adopting that same policy surface
-  - prefer closing the editor runtime-policy lane end-to-end before opening unrelated feature work
+  - prefer closing the current lifecycle/observability/test-hygiene loop before opening unrelated feature work
 - Renderer architecture direction is already set:
   - narrow retained widget-local targets where they pay off
   - renderer-owned authoritative scene target
