@@ -109,9 +109,19 @@ pub const EditorRenderCache = struct {
         selection_hash: u64,
     ) bool {
         self.frame_id = frame_id;
+        const full_redraw = self.wouldBeginFrameFullRedraw(
+            cols,
+            wrap_enabled,
+            width,
+            height,
+            highlight_epoch,
+            scroll_line,
+            scroll_row_offset,
+            scroll_col,
+            selection_hash,
+        );
         const line_cache_dirty = cols != self.last_cols or wrap_enabled != self.last_wrap or width != self.last_width or height != self.last_height or scroll_line != self.last_scroll_line or scroll_row_offset != self.last_scroll_row_offset or scroll_col != self.last_scroll_col or selection_hash != self.last_selection_hash;
         const highlight_dirty = highlight_epoch != self.last_highlight_epoch;
-        const full_redraw = line_cache_dirty or highlight_dirty;
         if (line_cache_dirty) {
             self.clearLineEntries();
         }
@@ -136,6 +146,30 @@ pub const EditorRenderCache = struct {
         self.last_scroll_col = scroll_col;
         self.last_selection_hash = selection_hash;
         return full_redraw;
+    }
+
+    pub fn wouldBeginFrameFullRedraw(
+        self: *const EditorRenderCache,
+        cols: usize,
+        wrap_enabled: bool,
+        width: i32,
+        height: i32,
+        highlight_epoch: u64,
+        scroll_line: usize,
+        scroll_row_offset: usize,
+        scroll_col: usize,
+        selection_hash: u64,
+    ) bool {
+        const line_cache_dirty = cols != self.last_cols or
+            wrap_enabled != self.last_wrap or
+            width != self.last_width or
+            height != self.last_height or
+            scroll_line != self.last_scroll_line or
+            scroll_row_offset != self.last_scroll_row_offset or
+            scroll_col != self.last_scroll_col or
+            selection_hash != self.last_selection_hash;
+        const highlight_dirty = highlight_epoch != self.last_highlight_epoch;
+        return line_cache_dirty or highlight_dirty;
     }
 
     pub fn invalidateHighlightRange(self: *EditorRenderCache, start_line: usize, end_line: usize) void {

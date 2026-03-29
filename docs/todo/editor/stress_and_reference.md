@@ -210,6 +210,18 @@ stack issue, not an isolated highlight bug:
     - result doc location
   - Supporting local gate now aligned:
     - `tools/observability/perf/perf_editor_gate.sh`
+  - Focused scripted input harness now available for deterministic edit traces:
+    - `zig build test-editor-scripted-input-smoke -- <fixture> <scenario>`
+    - initial scenarios:
+      - `single_insert`
+      - `burst_typing`
+      - `edit_pending_refresh`
+    - current summary fields cover:
+      - highlight invalidation publication/consumption
+      - visible-highlight request/apply ranges
+      - cached full-redraw decision
+      - pending request/result state
+      - styling authority on the sampled visible line
 
 - [ ] `ED-STRESS-03` Map Zide against the current reference set by concern
   - Record which reference repos matter for which editor questions.

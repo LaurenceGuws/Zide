@@ -258,6 +258,27 @@ pub fn planIdeExtendedBuildGraph(
     );
     _ = addRunArtifactStep(b, editor_highlight_smoke, "test-editor-highlight-smoke", "Run focused editor highlight smoke").step;
 
+    const editor_scripted_input_smoke = addAppExecutable(
+        b,
+        target,
+        optimize,
+        build_options,
+        zlua_module,
+        "editor-scripted-input-smoke",
+        "src/editor_scripted_input_smoke.zig",
+    );
+    editor_scripted_input_smoke.linkLibrary(treesitter.?);
+    editor_scripted_input_smoke.addIncludePath(b.path("vendor"));
+    addTreeSitterIncludes(editor_scripted_input_smoke, treesitter.?);
+    const editor_scripted_input_smoke_run = addRunArtifactStep(
+        b,
+        editor_scripted_input_smoke,
+        "test-editor-scripted-input-smoke",
+        "Run scripted editor input smoke harness",
+    );
+    if (b.args) |args| editor_scripted_input_smoke_run.run.addArgs(args);
+    _ = editor_scripted_input_smoke_run.step;
+
     const config_tests = addSdlConfiguredTest(
         b,
         target,
