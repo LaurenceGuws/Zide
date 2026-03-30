@@ -1332,6 +1332,35 @@ pub const Renderer = struct {
                 .width = @floatFromInt(target.logical_width),
                 .height = @floatFromInt(target.logical_height),
             };
+            const log = app_logger.logger("renderer.terminal_present");
+            if (log.enabled_file or log.enabled_console) {
+                log.logf(
+                    .info,
+                    "draw tex={d} tex_px={d}x{d} target_logical={d}x{d} src_rect={d:.2},{d:.2} {d:.2}x{d:.2} dest={d:.2},{d:.2} {d:.2}x{d:.2} framebuffer={d}x{d} target_px={d}x{d} window={d}x{d} render_scale={d:.3}",
+                    .{
+                        target.texture.id,
+                        target.texture.width,
+                        target.texture.height,
+                        target.logical_width,
+                        target.logical_height,
+                        src.x,
+                        src.y,
+                        src.width,
+                        src.height,
+                        dest.x,
+                        dest.y,
+                        dest.width,
+                        dest.height,
+                        self.render_width,
+                        self.render_height,
+                        self.target_pixel_width,
+                        self.target_pixel_height,
+                        self.width,
+                        self.height,
+                        self.render_scale,
+                    },
+                );
+            }
             draw_ops.drawTextureRect(self, target.texture, src, dest, Color.white.toRgba(), types.Rgba{ .r = 0, .g = 0, .b = 0, .a = 0 }, .linear_premul);
         }
     }
@@ -1451,6 +1480,29 @@ pub const Renderer = struct {
         const sy: i32 = @intFromFloat(@as(f32, @floatFromInt(self.target_height - (y + h))) * scale_y);
         const sw: i32 = @intFromFloat(@as(f32, @floatFromInt(w)) * scale_x);
         const sh: i32 = @intFromFloat(@as(f32, @floatFromInt(h)) * scale_y);
+        const log = app_logger.logger("renderer.terminal_present");
+        if (log.enabled_file or log.enabled_console) {
+            log.logf(
+                .info,
+                "clip logical={d},{d} {d}x{d} scissor={d},{d} {d}x{d} target_logical={d}x{d} target_px={d}x{d} scale={d:.3},{d:.3}",
+                .{
+                    x,
+                    y,
+                    w,
+                    h,
+                    sx,
+                    sy,
+                    sw,
+                    sh,
+                    self.target_width,
+                    self.target_height,
+                    self.target_pixel_width,
+                    self.target_pixel_height,
+                    scale_x,
+                    scale_y,
+                },
+            );
+        }
         gl.Scissor(sx, sy, sw, sh);
     }
 

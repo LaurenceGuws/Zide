@@ -820,6 +820,71 @@ pub fn drawPrepared(
             const base_y_i: i32 = @intFromFloat(std.math.round(base_y));
             const clip_w_i: i32 = @min(@as(i32, @intFromFloat(std.math.round(width))), cell_w_i * @as(i32, @intCast(cols)));
             const clip_h_i: i32 = @min(@as(i32, @intFromFloat(std.math.round(height))), @as(i32, @intFromFloat(std.math.round(r.terminal_metrics.cell_height))) * @as(i32, @intCast(rows)));
+            const spatial_log = app_logger.logger("terminal.spatial_compose");
+            if (spatial_log.enabled_file or spatial_log.enabled_console) {
+                const total_cells = rows * cols;
+                const damage_rows = if (cache.damage.end_row >= cache.damage.start_row and cache.damage.end_row < rows)
+                    cache.damage.end_row - cache.damage.start_row + 1
+                else
+                    0;
+                const damage_cols = if (cache.damage.end_col >= cache.damage.start_col and cache.damage.end_col < cols)
+                    cache.damage.end_col - cache.damage.start_col + 1
+                else
+                    0;
+                const damage_bbox_cells = damage_rows * damage_cols;
+                const updated_cells = if (texture_full_update) total_cells else partial_plan_cells;
+                const updated_union_cells = if (texture_full_update) total_cells else partial_plan_union_cells;
+                const preserved_cells = total_cells -| updated_union_cells;
+                const updated_percent = if (total_cells > 0)
+                    (@as(f64, @floatFromInt(updated_union_cells)) * 100.0) / @as(f64, @floatFromInt(total_cells))
+                else
+                    0.0;
+                const preserved_percent = if (total_cells > 0)
+                    (@as(f64, @floatFromInt(preserved_cells)) * 100.0) / @as(f64, @floatFromInt(total_cells))
+                else
+                    0.0;
+                const damage_percent = if (total_cells > 0)
+                    (@as(f64, @floatFromInt(damage_bbox_cells)) * 100.0) / @as(f64, @floatFromInt(total_cells))
+                else
+                    0.0;
+                const clip_cells_w = if (cell_w_i > 0) @divFloor(clip_w_i, cell_w_i) else 0;
+                const cell_h_pixels: i32 = @intFromFloat(std.math.round(r.terminal_metrics.cell_height));
+                const clip_cells_h = if (cell_h_pixels > 0) @divFloor(clip_h_i, cell_h_pixels) else 0;
+                spatial_log.logf(
+                    .info,
+                    "presented_gen={d} widget_logical={d}x{d} texture_px={d}x{d} grid={d}x{d} full={d} partial={d} damage_bbox={d}..{d}/{d}..{d} damage_bbox_cells={d} damage_pct={d:.2} updated_cells={d} updated_union_cells={d} updated_pct={d:.2} preserved_cells={d} preserved_pct={d:.2} shift_rows={d} shift_exposed_only={d} scroll_copy_used={d} clip_px={d}x{d} clip_cells={d}x{d} clip_intersects={d}",
+                    .{
+                        cache.generation,
+                        @as(i32, @intFromFloat(std.math.round(width))),
+                        @as(i32, @intFromFloat(std.math.round(height))),
+                        texture_w,
+                        texture_h,
+                        rows,
+                        cols,
+                        @intFromBool(texture_full_update),
+                        @intFromBool(texture_partial_update),
+                        cache.damage.start_row,
+                        cache.damage.end_row,
+                        cache.damage.start_col,
+                        cache.damage.end_col,
+                        damage_bbox_cells,
+                        damage_percent,
+                        updated_cells,
+                        updated_union_cells,
+                        updated_percent,
+                        preserved_cells,
+                        preserved_percent,
+                        active_viewport_shift_rows,
+                        @intFromBool(active_shift_exposed_only),
+                        @intFromBool(shifted_rows > 0),
+                        clip_w_i,
+                        clip_h_i,
+                        clip_cells_w,
+                        clip_cells_h,
+                        @intFromBool(clip_w_i > 0 and clip_h_i > 0),
+                    },
+                );
+            }
             r.beginClip(
                 base_x_i,
                 base_y_i,
