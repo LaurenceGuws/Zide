@@ -74,6 +74,12 @@ pub const DrawPreparation = struct {
 const ViewportTextureShiftPlan = draw_texture.ViewportTextureShiftPlan;
 const TextureUpdatePlan = draw_texture.TextureUpdatePlan;
 const FullFrameFastPathDecision = draw_texture.FullFrameFastPathDecision;
+const max_frame_generation_buckets = 8;
+
+const GenerationBucket = struct {
+    generation: u64,
+    count: usize,
+};
 
 pub fn latestFrameLatencyMetrics() FrameLatencyMetrics {
     return frame_latency_metrics;
@@ -126,6 +132,247 @@ fn rowSlice(cells: []const Cell, cols_count: usize, row: usize) []const Cell {
     const row_start = row * cols_count;
     if (row_start + cols_count > cells.len) return cells[0..0];
     return cells[row_start .. row_start + cols_count];
+}
+
+const ColumnProbe = struct {
+    col: usize,
+    top_row: i32,
+    bottom_row: i32,
+    occupied: usize,
+    hash: u64,
+};
+
+fn samplePresentedColumn(cells: []const Cell, rows: usize, cols: usize, col: usize) ColumnProbe {
+    if (rows == 0 or cols == 0 or col >= cols or cells.len < rows * cols) {
+        return .{ .col = col, .top_row = -1, .bottom_row = -1, .occupied = 0, .hash = 0 };
+    }
+
+    var top_row: i32 = -1;
+    var bottom_row: i32 = -1;
+    var occupied: usize = 0;
+    var hash = std.hash.Wyhash.init(0);
+
+    var row: usize = 0;
+    while (row < rows) : (row += 1) {
+        const cell = cells[row * cols + col];
+        const cp: u32 = cell.codepoint;
+        hash.update(std.mem.asBytes(&cp));
+        if (cp != ' ') {
+            occupied += 1;
+            if (top_row < 0) top_row = @intCast(row);
+            bottom_row = @intCast(row);
+        }
+    }
+
+    return .{
+        .col = col,
+        .top_row = top_row,
+        .bottom_row = bottom_row,
+        .occupied = occupied,
+        .hash = hash.final(),
+    };
+}
+
+fn logPresentedColumnProbe(cache: *const RenderCache) void {
+    const log = app_logger.logger("terminal.column_probe");
+    if (!log.enabled_file and !log.enabled_console) return;
+    if (cache.rows == 0 or cache.cols == 0) return;
+    if (cache.cells.items.len < cache.rows * cache.cols) return;
+
+    const sample_cols = [_]usize{ 58, 59, 60, 61, 62, 178, 179, 180, 181, 182 };
+    var buf: [512]u8 = undefined;
+    var fbs = std.io.fixedBufferStream(&buf);
+    const writer = fbs.writer();
+    var first = true;
+
+    for (sample_cols) |raw_col| {
+        const col = if (cache.cols == 0) 0 else @min(raw_col, cache.cols - 1);
+        const probe = samplePresentedColumn(cache.cells.items, cache.rows, cache.cols, col);
+        if (!first) writer.writeAll(" ") catch return;
+        first = false;
+        writer.print(
+            "c{d}=t{d}:b{d}:o{d}:h{x}",
+            .{ probe.col, probe.top_row, probe.bottom_row, probe.occupied, probe.hash },
+        ) catch return;
+    }
+
+    log.logf(
+        .info,
+        "gen={d} rows={d} cols={d} {s}",
+        .{ cache.generation, cache.rows, cache.cols, fbs.getWritten() },
+    );
+}
+
+fn ensurePresentedGenerationCells(self: anytype, rows: usize, cols: usize) !void {
+    const total = rows * cols;
+    try self.presented_generation_cells.resize(self.session.allocator, total);
+}
+
+fn fillPresentedGenerationCells(self: anytype, rows: usize, cols: usize, generation: u64) void {
+    const total = rows * cols;
+    if (self.presented_generation_cells.items.len < total) return;
+    @memset(self.presented_generation_cells.items[0..total], generation);
+}
+
+fn markPresentedGenerationRowRange(self: anytype, rows: usize, cols: usize, row: usize, col_start: usize, col_end: usize, generation: u64) void {
+    if (row >= rows or cols == 0 or self.presented_generation_cells.items.len < rows * cols) return;
+    const start = @min(col_start, cols - 1);
+    const end = @min(col_end, cols - 1);
+    if (end < start) return;
+    const row_offset = row * cols;
+    @memset(self.presented_generation_cells.items[row_offset + start .. row_offset + end + 1], generation);
+}
+
+fn shiftPresentedGenerationCells(self: anytype, rows: usize, cols: usize, viewport_shift_rows: i32) void {
+    if (rows == 0 or cols == 0 or viewport_shift_rows == 0) return;
+    const total = rows * cols;
+    if (self.presented_generation_cells.items.len < total) return;
+    const abs_shift: usize = @intCast(@abs(viewport_shift_rows));
+    if (abs_shift == 0 or abs_shift >= rows) return;
+    const row_width = cols;
+    if (viewport_shift_rows > 0) {
+        var row: usize = 0;
+        while (row + abs_shift < rows) : (row += 1) {
+            const dst = row * row_width;
+            const src = (row + abs_shift) * row_width;
+            std.mem.copyForwards(u64, self.presented_generation_cells.items[dst .. dst + row_width], self.presented_generation_cells.items[src .. src + row_width]);
+        }
+    } else {
+        var row: usize = rows - abs_shift;
+        while (true) {
+            const dst = (row + abs_shift) * row_width;
+            const src = row * row_width;
+            std.mem.copyBackwards(u64, self.presented_generation_cells.items[dst .. dst + row_width], self.presented_generation_cells.items[src .. src + row_width]);
+            if (row == 0) break;
+            row -= 1;
+        }
+    }
+}
+
+fn insertGenerationBucket(buckets: *[max_frame_generation_buckets]GenerationBucket, bucket_count: *usize, generation: u64) void {
+    var idx: usize = 0;
+    while (idx < bucket_count.*) : (idx += 1) {
+        if (buckets[idx].generation == generation) {
+            buckets[idx].count += 1;
+            return;
+        }
+    }
+    if (bucket_count.* < buckets.len) {
+        buckets[bucket_count.*] = .{ .generation = generation, .count = 1 };
+        bucket_count.* += 1;
+        return;
+    }
+    buckets[buckets.len - 1].count += 1;
+}
+
+fn logPresentedGenerationProvenance(self: anytype, cache: *const RenderCache) void {
+    const log = app_logger.logger("terminal.frame_provenance");
+    if (!log.enabled_file and !log.enabled_console) return;
+    const rows = cache.rows;
+    const cols = cache.cols;
+    const total = rows * cols;
+    if (rows == 0 or cols == 0 or self.presented_generation_cells.items.len < total) return;
+
+    var min_generation: u64 = std.math.maxInt(u64);
+    var max_generation: u64 = 0;
+    var buckets: [max_frame_generation_buckets]GenerationBucket = undefined;
+    var bucket_count: usize = 0;
+    var modal_generation: u64 = 0;
+    var modal_count: usize = 0;
+
+    var row_min: usize = rows;
+    var row_max: usize = 0;
+    var col_min: usize = cols;
+    var col_max: usize = 0;
+    var non_modal_count: usize = 0;
+
+    for (self.presented_generation_cells.items[0..total]) |generation| {
+        min_generation = @min(min_generation, generation);
+        max_generation = @max(max_generation, generation);
+        insertGenerationBucket(&buckets, &bucket_count, generation);
+    }
+    var idx: usize = 0;
+    while (idx < bucket_count) : (idx += 1) {
+        if (buckets[idx].count > modal_count) {
+            modal_count = buckets[idx].count;
+            modal_generation = buckets[idx].generation;
+        }
+    }
+
+    var row: usize = 0;
+    while (row < rows) : (row += 1) {
+        var col: usize = 0;
+        while (col < cols) : (col += 1) {
+            const generation = self.presented_generation_cells.items[row * cols + col];
+            if (generation == modal_generation) continue;
+            non_modal_count += 1;
+            row_min = @min(row_min, row);
+            row_max = @max(row_max, row);
+            col_min = @min(col_min, col);
+            col_max = @max(col_max, col);
+        }
+    }
+
+    var bucket_buf: [192]u8 = undefined;
+    var stream = std.io.fixedBufferStream(&bucket_buf);
+    const writer = stream.writer();
+    idx = 0;
+    while (idx < bucket_count) : (idx += 1) {
+        if (idx > 0) writer.writeAll(" ") catch break;
+        writer.print("{d}:{d}", .{ buckets[idx].generation, buckets[idx].count }) catch break;
+    }
+    const bbox_present = non_modal_count > 0 and row_min < rows and col_min < cols;
+    log.logf(
+        .info,
+        "presented_gen={d} frame_mode={d} min={d} max={d} total_cells={d} modal_cells={d} non_modal_cells={d} per_gen={s} bbox_present={d} bbox={d}..{d}/{d}..{d} damage={d}..{d}/{d}..{d}",
+        .{
+            cache.generation,
+            modal_generation,
+            min_generation,
+            max_generation,
+            total,
+            modal_count,
+            non_modal_count,
+            stream.getWritten(),
+            @intFromBool(bbox_present),
+            if (bbox_present) row_min else 0,
+            if (bbox_present) row_max else 0,
+            if (bbox_present) col_min else 0,
+            if (bbox_present) col_max else 0,
+            cache.damage.start_row,
+            cache.damage.end_row,
+            cache.damage.start_col,
+            cache.damage.end_col,
+        },
+    );
+}
+
+fn partialPlanTouchesCell(self: anytype, row: usize, col: usize) bool {
+    if (row >= self.partial_draw_rows.items.len or !self.partial_draw_rows.items[row]) return false;
+    if (row < self.partial_draw_span_counts.items.len and row < self.partial_draw_spans.items.len and self.partial_draw_span_counts.items[row] > 0) {
+        var span_idx: usize = 0;
+        while (span_idx < self.partial_draw_span_counts.items[row]) : (span_idx += 1) {
+            const span = self.partial_draw_spans.items[row][span_idx];
+            if (col >= span.start and col <= span.end) return true;
+        }
+        return false;
+    }
+    if (row >= self.partial_draw_cols_start.items.len or row >= self.partial_draw_cols_end.items.len) return false;
+    return col >= self.partial_draw_cols_start.items[row] and col <= self.partial_draw_cols_end.items[row];
+}
+
+fn partialWouldPreserveOlderGeneration(self: anytype, rows: usize, cols: usize, target_generation: u64) bool {
+    const total = rows * cols;
+    if (rows == 0 or cols == 0 or self.presented_generation_cells.items.len < total) return false;
+    var row: usize = 0;
+    while (row < rows) : (row += 1) {
+        var col: usize = 0;
+        while (col < cols) : (col += 1) {
+            if (partialPlanTouchesCell(self, row, col)) continue;
+            if (self.presented_generation_cells.items[row * cols + col] != target_generation) return true;
+        }
+    }
+    return false;
 }
 
 pub fn drawPrepared(
@@ -205,7 +452,7 @@ pub fn drawPrepared(
             @intFromFloat(height),
             bg_color,
         );
-        r.drawTerminalTexture(x, y);
+        r.drawTerminalTexture(x, y, width, height);
         return outcome;
     }
     const draw_start_time = if (alt_exit) app_shell.getTime() else 0;
@@ -307,6 +554,10 @@ pub fn drawPrepared(
     const texture_phase_start = app_shell.getTime();
     const texture_ready_before_draw = self.terminal_texture_ready;
     if (rows > 0 and cols > 0) {
+        ensurePresentedGenerationCells(self, rows, cols) catch |err| {
+            const provenance_log = app_logger.logger("terminal.frame_provenance");
+            provenance_log.logf(.warning, "presented_generation_cells resize failed rows={d} cols={d} err={s}", .{ rows, cols, @errorName(err) });
+        };
         cell_w_i = @intFromFloat(std.math.round(r.terminal_metrics.cell_width));
         cell_h_i = @intFromFloat(std.math.round(r.terminal_metrics.cell_height));
         const cell_metrics_changed = cell_w_i != self.last_cell_w_i or cell_h_i != self.last_cell_h_i;
@@ -411,6 +662,7 @@ pub fn drawPrepared(
                 if (r.scrollTerminalTexture(0, dy_pixels)) {
                     needs_partial = true;
                     shifted_rows = shift_rows;
+                    shiftPresentedGenerationCells(self, rows, cols, active_viewport_shift_rows);
                     texture_shift_log.logf(
                         .info,
                         "result=scroll_copy_ok gen={d} dirty={s} shift_rows={d} exposed_only={d} scroll_offset={d} damage={d}..{d}/{d}..{d}",
@@ -498,6 +750,64 @@ pub fn drawPrepared(
                 needs_partial = false;
             }
         }
+        if (!needs_full and needs_partial) {
+            self.partial_draw_rows.resize(self.session.allocator, rows) catch |err| {
+                const log = app_logger.logger("terminal.ui.redraw");
+                log.logf(.warning, "partial row plan resize failed field=rows rows={d} err={s}", .{ rows, @errorName(err) });
+                needs_full = true;
+                needs_partial = false;
+            };
+            self.partial_draw_cols_start.resize(self.session.allocator, rows) catch |err| {
+                const log = app_logger.logger("terminal.ui.redraw");
+                log.logf(.warning, "partial row plan resize failed field=cols_start rows={d} err={s}", .{ rows, @errorName(err) });
+                needs_full = true;
+                needs_partial = false;
+            };
+            self.partial_draw_cols_end.resize(self.session.allocator, rows) catch |err| {
+                const log = app_logger.logger("terminal.ui.redraw");
+                log.logf(.warning, "partial row plan resize failed field=cols_end rows={d} err={s}", .{ rows, @errorName(err) });
+                needs_full = true;
+                needs_partial = false;
+            };
+            self.partial_draw_span_counts.resize(self.session.allocator, rows) catch |err| {
+                const log = app_logger.logger("terminal.ui.redraw");
+                log.logf(.warning, "partial row plan resize failed field=span_counts rows={d} err={s}", .{ rows, @errorName(err) });
+                needs_full = true;
+                needs_partial = false;
+            };
+            self.partial_draw_spans.resize(self.session.allocator, rows) catch |err| {
+                const log = app_logger.logger("terminal.ui.redraw");
+                log.logf(.warning, "partial row plan resize failed field=spans rows={d} err={s}", .{ rows, @errorName(err) });
+                needs_full = true;
+                needs_partial = false;
+            };
+            if (!needs_full and needs_partial) {
+                _ = buildPartialPlan(
+                    cache,
+                    self.partial_draw_rows.items,
+                    self.partial_draw_span_counts.items,
+                    self.partial_draw_spans.items,
+                    self.partial_draw_cols_start.items,
+                    self.partial_draw_cols_end.items,
+                    shifted_rows,
+                    active_viewport_shift_rows,
+                    shift_requires_fullwidth_partial,
+                    blink_requires_partial,
+                );
+                if (partialWouldPreserveOlderGeneration(self, rows, cols, cache.generation)) {
+                    const provenance_log = app_logger.logger("terminal.frame_provenance");
+                    if (provenance_log.enabled_file or provenance_log.enabled_console) {
+                        provenance_log.logf(
+                            .info,
+                            "stage=escalate_full_for_generation_coherence gen={d} rows={d} cols={d}",
+                            .{ cache.generation, rows, cols },
+                        );
+                    }
+                    needs_full = true;
+                    needs_partial = false;
+                }
+            }
+        }
         texture_full_update = needs_full;
         texture_partial_update = needs_partial;
 
@@ -509,6 +819,7 @@ pub fn drawPrepared(
             const base_y_local: f32 = 0;
 
             if (needs_full) {
+                fillPresentedGenerationCells(self, rows, cols, cache.generation);
                 const bg_phase_start = app_shell.getTime();
                 const bg = if (view_cells.len > 0) blk: {
                     const cell = view_cells[0];
@@ -605,11 +916,13 @@ pub fn drawPrepared(
                             const row_start = @as(usize, span.start);
                             const row_end = @as(usize, span.end);
                             if (row_end >= row_start) partial_plan_cells += row_end - row_start + 1;
+                            markPresentedGenerationRowRange(self, rows, cols, row, row_start, row_end, cache.generation);
                         }
                     } else {
                         const row_start = @as(usize, self.partial_draw_cols_start.items[row]);
                         const row_end = @as(usize, self.partial_draw_cols_end.items[row]);
                         if (row_end >= row_start) partial_plan_cells += row_end - row_start + 1;
+                        markPresentedGenerationRowRange(self, rows, cols, row, row_start, row_end, cache.generation);
                     }
                 }
                 if (partial_plan_bounds) |bounds| {
@@ -811,6 +1124,8 @@ pub fn drawPrepared(
                     },
                 );
             }
+            logPresentedColumnProbe(cache);
+            logPresentedGenerationProvenance(self, cache);
             self.last_render_generation = cache.generation;
             self.last_render_clear_generation = cache.clear_generation;
             self.last_cell_w_i = cell_w_i;
@@ -913,7 +1228,7 @@ pub fn drawPrepared(
                 bg,
             );
         }
-        r.drawTerminalTexture(base_x, base_y);
+        r.drawTerminalTexture(base_x, base_y, width, height);
     }
     texture_update_ms = time_utils.secondsToMs(app_shell.getTime() - texture_phase_start);
     const overlay_phase_start = app_shell.getTime();
@@ -1048,7 +1363,7 @@ pub fn drawPrepared(
                     r.terminal_font.frameAtlasStats().uploaded_color_glyphs,
                     r.terminal_font.frameAtlasStats().uploaded_pixels,
                 }) catch "overflow",
-                std.fmt.bufPrint(&glyph_stats_summary_buf, "{d}/{d}/{d}/{d}/{d}/{d}/{d}/{d}/{d:.2}/{d:.2}/{d:.2}/{d:.2}/{d:.2}/{d:.2}/{d:.2}/{d:.2}/{d:.2}/{d:.2}/{d:.2}/{d:.2}/{d:.2}/{d:.2}", .{
+                std.fmt.bufPrint(&glyph_stats_summary_buf, "{d}/{d}/{d}/{d}/{d}/{d}/{d}/{d}/{d:.2}/{d:.2}/{d:.2}/{d:.2}/{d:.2}/{d:.2}/{d:.2}/{d:.2}/{d:.2}/{d:.2}/{d:.2}", .{
                     glyph_draw_stats.shaping_spans,
                     glyph_draw_stats.shaped_glyphs,
                     glyph_draw_stats.fallback_cells,
@@ -1066,9 +1381,6 @@ pub fn drawPrepared(
                     glyph_draw_stats.box_sprite_submit_ms,
                     glyph_draw_stats.box_rect_submit_ms,
                     glyph_draw_stats.special_sprite_lookup_ms,
-                    glyph_draw_stats.direct_row_fixed_ms,
-                    glyph_draw_stats.direct_span_scan_ms,
-                    glyph_draw_stats.direct_font_choice_ms,
                     glyph_draw_stats.direct_lookup_ms,
                     glyph_draw_stats.direct_draw_ms,
                 }) catch "overflow",

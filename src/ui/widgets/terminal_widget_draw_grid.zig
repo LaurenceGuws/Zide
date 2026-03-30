@@ -68,9 +68,6 @@ pub const GlyphDrawStats = struct {
     special_sprite_cache_hits: usize = 0,
     special_sprite_cache_misses: usize = 0,
     special_sprite_creates: usize = 0,
-    direct_row_fixed_ms: f64 = 0.0,
-    direct_span_scan_ms: f64 = 0.0,
-    direct_font_choice_ms: f64 = 0.0,
     direct_lookup_ms: f64 = 0.0,
     direct_draw_ms: f64 = 0.0,
 };
@@ -772,7 +769,7 @@ pub fn drawRowGlyphs(
     } else 0;
     var row_sprite_cache = RowSpecialSpriteCache{};
     var direct_samples = [1]DirectGlyphSample{.{}} ** max_direct_glyph_samples;
-    if (stats) |s| s.direct_row_fixed_ms += (app_shell.getTime() - row_fixed_start) * 1000.0;
+    _ = row_fixed_start;
 
     var col: usize = col_start;
     while (col <= col_end and col < cols_count) {
@@ -854,10 +851,7 @@ pub fn drawRowGlyphs(
         var shape_features_buf: [16]hb.hb_feature_t = undefined;
         const shape_features_len = rr.collectShapeFeatures(.terminal, disable_programming_ligatures, shape_features_buf[0..]);
         if (shape_features_len == 0 and span_can_bypass and spanCanBypassShaping(row_cells, span_start_col, span_end_excl)) {
-            if (stats) |s| {
-                s.direct_font_choice_ms += span_font_choice_ms;
-                s.direct_span_scan_ms += (app_shell.getTime() - span_scan_start) * 1000.0 - span_font_choice_ms;
-            }
+            _ = span_scan_start;
             const direct_render_scale = if (rr.terminal_font.render_scale > 0.0) rr.terminal_font.render_scale else 1.0;
             const direct_inv_scale = 1.0 / direct_render_scale;
             const row_baseline = @as(f32, @floatFromInt(base_y_i + @as(i32, @intCast(row_idx)) * cell_h_i)) + rr.terminal_metrics.baseline_from_top;
@@ -894,7 +888,7 @@ pub fn drawRowGlyphs(
                         .simple_ascii = false,
                     };
                 };
-                if (stats) |s| s.direct_font_choice_ms += (app_shell.getTime() - direct_choice_start) * 1000.0;
+                _ = direct_choice_start;
                 const cell_x_i = base_x_i + @as(i32, @intCast(direct_col)) * cell_w_i;
                 const followed_by_space = blk: {
                     const next_col = direct_col + 1;

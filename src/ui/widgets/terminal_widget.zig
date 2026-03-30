@@ -44,6 +44,7 @@ pub const TerminalWidget = struct {
     pending_open: ?PendingOpen = null,
     last_draw_log_time: f64 = 0,
     draw_cache: RenderCache,
+    presented_generation_cells: std.ArrayList(u64),
     partial_draw_rows: std.ArrayList(bool),
     partial_draw_span_counts: std.ArrayList(u8),
     partial_draw_spans: std.ArrayList([render_cache_mod.max_row_dirty_spans]render_cache_mod.RowDirtySpan),
@@ -88,6 +89,7 @@ pub const TerminalWidget = struct {
             .pending_open = null,
             .last_draw_log_time = 0,
             .draw_cache = RenderCache.init(),
+            .presented_generation_cells = std.ArrayList(u64).empty,
             .partial_draw_rows = std.ArrayList(bool).empty,
             .partial_draw_span_counts = std.ArrayList(u8).empty,
             .partial_draw_spans = std.ArrayList([render_cache_mod.max_row_dirty_spans]render_cache_mod.RowDirtySpan).empty,
@@ -208,6 +210,7 @@ pub const TerminalWidget = struct {
             self.pending_open = null;
         }
         self.draw_cache.deinit(self.session.allocator);
+        self.presented_generation_cells.deinit(self.session.allocator);
         self.partial_draw_rows.deinit(self.session.allocator);
         self.partial_draw_span_counts.deinit(self.session.allocator);
         self.partial_draw_spans.deinit(self.session.allocator);
@@ -335,7 +338,7 @@ pub const TerminalWidget = struct {
     ) DrawOutcome {
         const draw_start = app_shell.getTime();
         const handoff_log = app_logger.logger("terminal.generation_handoff");
-        const first_capture = self.session.capturePresentation(&self.draw_cache) catch |err| {
+        var capture = self.session.capturePresentation(&self.draw_cache) catch |err| {
             const log = app_logger.logger("terminal.ui.redraw");
             log.logf(.warning, "draw snapshot copy failed err={s}", .{@errorName(err)});
             return .{};
@@ -347,7 +350,7 @@ pub const TerminalWidget = struct {
                 .{
                     @intFromPtr(self.session),
                     self.last_render_generation,
-                    first_capture.presented.generation,
+                    capture.presented.generation,
                     self.session.currentGeneration(),
                     self.session.publishedGeneration(),
                     self.session.presentedGeneration(),
@@ -355,36 +358,35 @@ pub const TerminalWidget = struct {
                 },
             );
         }
-        var outcome = draw_mod.drawPrepared(self, shell, x, y, width, height, input, DrawPreparation.fromCapture(draw_start, first_capture));
-        const published_after_first_draw = self.session.publishedGeneration();
-        if (published_after_first_draw > self.last_render_generation) {
+        const published_before_draw = self.session.publishedGeneration();
+        if (published_before_draw > capture.presented.generation) {
             if (handoff_log.enabled_file or handoff_log.enabled_console) {
                 handoff_log.logf(
                     .info,
-                    "stage=widget_late_recapture sid={x} committed={d} pub_now={d} cur_now={d} presented_now={d}",
+                    "stage=widget_pre_draw_refresh sid={x} captured={d} pub_now={d} cur_now={d} presented_now={d}",
                     .{
                         @intFromPtr(self.session),
-                        self.last_render_generation,
-                        published_after_first_draw,
+                        capture.presented.generation,
+                        published_before_draw,
                         self.session.currentGeneration(),
                         self.session.presentedGeneration(),
                     },
                 );
             }
-            const second_capture = self.session.capturePresentation(&self.draw_cache) catch |err| {
+            const refreshed_capture = self.session.capturePresentation(&self.draw_cache) catch |err| {
                 const log = app_logger.logger("terminal.ui.redraw");
-                log.logf(.warning, "late draw snapshot copy failed err={s}", .{@errorName(err)});
-                return outcome;
+                log.logf(.warning, "pre-draw snapshot refresh failed err={s}", .{@errorName(err)});
+                return .{};
             };
-            if (second_capture.presented.generation > self.last_render_generation) {
+            if (refreshed_capture.presented.generation > capture.presented.generation) {
                 if (handoff_log.enabled_file or handoff_log.enabled_console) {
                     handoff_log.logf(
                         .info,
-                        "stage=widget_prepare_retry sid={x} last_render={d} captured={d} cur={d} pub={d} presented={d} texture_ready={d}",
+                        "stage=widget_prepare_latest sid={x} last_render={d} captured={d} cur={d} pub={d} presented={d} texture_ready={d}",
                         .{
                             @intFromPtr(self.session),
                             self.last_render_generation,
-                            second_capture.presented.generation,
+                            refreshed_capture.presented.generation,
                             self.session.currentGeneration(),
                             self.session.publishedGeneration(),
                             self.session.presentedGeneration(),
@@ -392,10 +394,10 @@ pub const TerminalWidget = struct {
                         },
                     );
                 }
-                outcome = draw_mod.drawPrepared(self, shell, x, y, width, height, input, DrawPreparation.fromCapture(draw_start, second_capture));
+                capture = refreshed_capture;
             }
         }
-        return outcome;
+        return draw_mod.drawPrepared(self, shell, x, y, width, height, input, DrawPreparation.fromCapture(draw_start, capture));
     }
 
     /// Handle input, returns true if any input was processed

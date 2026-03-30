@@ -10,7 +10,38 @@ pub const PublicationPlan = struct {
     needs_full_damage: bool,
 };
 
-test "buildPublicationPlan classifies live-bottom history growth as scroll shift" {
+test "buildPublicationPlan classifies clean live-bottom history growth as scroll shift" {
+    const plan = buildPublicationPlan(
+        0,
+        0,
+        0,
+        0,
+        46,
+        45,
+        58,
+        57,
+        12,
+        12,
+        40,
+        40,
+        false,
+        false,
+        .none,
+        true,
+        1,
+        1,
+        false,
+        false,
+    );
+
+    try std.testing.expect(plan.visible_history_changed);
+    try std.testing.expectEqual(@as(i32, 1), plan.viewport_shift_rows);
+    try std.testing.expectEqual(@as(usize, 1), plan.shift_abs);
+    try std.testing.expect(plan.can_publish_scroll_shift);
+    try std.testing.expect(!plan.needs_full_damage);
+}
+
+test "buildPublicationPlan forbids live scroll shift when visible grid is also dirty" {
     const plan = buildPublicationPlan(
         0,
         0,
@@ -37,7 +68,7 @@ test "buildPublicationPlan classifies live-bottom history growth as scroll shift
     try std.testing.expect(plan.visible_history_changed);
     try std.testing.expectEqual(@as(i32, 1), plan.viewport_shift_rows);
     try std.testing.expectEqual(@as(usize, 1), plan.shift_abs);
-    try std.testing.expect(plan.can_publish_scroll_shift);
+    try std.testing.expect(!plan.can_publish_scroll_shift);
     try std.testing.expect(!plan.needs_full_damage);
 }
 
@@ -132,7 +163,7 @@ pub fn buildPublicationPlan(
         !selection_active and
         !active_selection_active and
         visible_history_changed and
-        view_dirty != .full and
+        view_dirty_none and
         active_rows == rows and
         active_cols == cols and
         active_generation == presented_generation and

@@ -155,6 +155,18 @@ ownership.
       declare it fixed
     - only close it after longer normal dogfooding or a more decisive repro
       disappearance across the original trigger lane
+  - Follow-up cut, 2026-03-30:
+    - the live-bottom viewport-shift fast path was still allowed when visible
+      history advanced and the current viewport also carried ordinary partial
+      dirty rows
+    - that mixed case is exactly where renderer texture self-copy is most
+      likely to flash stale content under heavy streaming/clear workloads
+    - current direction is more conservative:
+      - keep viewport-shift publication for clean live scroll advancement
+      - forbid the shift fast path when the same publication also carries
+        in-place visible-grid dirtiness
+    - treat any remaining Codex-style flicker after this cut as a narrower
+      present/partial-consumption bug, not as a generic live-scroll-shift issue
   - Resume only when we have one of:
     - a reliable manual repro
     - a deterministic capture/log slice that actually shows the bad frame

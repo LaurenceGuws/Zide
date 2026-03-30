@@ -40,7 +40,7 @@ end
 
 local terminal_font_path = app_font_path
 if file_exists(iosevka_font_path) then
-	terminal_font_path = jetbrains_font_path
+	terminal_font_path = iosevka_font_path
 end
 
 local terminal_shell_path = nil

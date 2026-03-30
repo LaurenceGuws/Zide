@@ -40,6 +40,25 @@ Status note, 2026-03-20:
   - reference-app comparison
   - startup font-init churn cleanup
 
+Status note, 2026-03-30:
+
+- Terminal/editor/app font init now wires the bundled fallback stack directly
+  instead of leaving all fallback slots null and relying entirely on host
+  system fallback.
+- Active bundled fallback paths now include:
+  - `SymbolsNerdFontMono-Regular.ttf`
+  - `NotoSansSymbols2-Regular.ttf`
+  - `NotoSansSymbols-Regular.ttf`
+  - `NotoSansMono-Regular.ttf`
+  - `NotoSans-Regular.ttf`
+  - `NotoColorEmoji.ttf`
+  - `NotoEmoji-Regular.ttf`
+- This is intended to reduce cross-platform drift, especially the Linux case
+  where Fontconfig can route some emoji-presenting codepoints and emoji-style
+  sequences into non-emoji fonts even when a color emoji font is installed.
+- This does not by itself close sequence-level emoji shaping parity; it is a
+  fallback-stack correctness baseline.
+
 ## Constraints
 
 - Introduce repeatable visual or metric harnesses before large rendering changes.

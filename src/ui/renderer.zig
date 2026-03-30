@@ -1321,7 +1321,7 @@ pub const Renderer = struct {
         self.restoreMainCompositionTarget();
     }
 
-    pub fn drawTerminalTexture(self: *Renderer, x: f32, y: f32) void {
+    pub fn drawTerminalTexture(self: *Renderer, x: f32, y: f32, width: f32, height: f32) void {
         if (self.terminal_target) |target| {
             const snapped_x = snapToDevicePixel(x, self.render_scale);
             const snapped_y = snapToDevicePixel(y, self.render_scale);
@@ -1329,8 +1329,8 @@ pub const Renderer = struct {
             const dest = types.Rect{
                 .x = snapped_x,
                 .y = snapped_y,
-                .width = @floatFromInt(target.logical_width),
-                .height = @floatFromInt(target.logical_height),
+                .width = width,
+                .height = height,
             };
             const log = app_logger.logger("renderer.terminal_present");
             if (log.enabled_file or log.enabled_console) {
