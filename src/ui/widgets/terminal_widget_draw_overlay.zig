@@ -1,5 +1,6 @@
 const std = @import("std");
 const app_shell = @import("../../app_shell.zig");
+const app_logger = @import("../../app_logger.zig");
 const terminal_mod = @import("../../terminal/core/terminal.zig");
 const render_cache_mod = @import("../../terminal/core/render_cache.zig");
 const shared_types = @import("../../types/mod.zig");
@@ -140,6 +141,7 @@ pub fn drawOverlays(
     _ = height;
     _ = screen_reverse;
     const r = shell.rendererPtr();
+    const trace_log = app_logger.logger("terminal.cursor_cell_trace");
     const composing_len: usize = if (input.composing_active and input.composing_text.len > 0) blk: {
         var count: usize = 0;
         var count_iter = std.unicode.Utf8Iterator{ .bytes = input.composing_text, .i = 0 };
@@ -228,7 +230,12 @@ pub fn drawOverlays(
                 r.drawRect(box_x, box_y, border_w, box_h, r.theme.cursor);
                 r.drawRect(box_x + box_w - border_w, box_y, border_w, box_h, r.theme.cursor);
             } else switch (cursor_style.shape) {
-                .block => {},
+                .block => {
+                    if (trace_log.enabled_file or trace_log.enabled_console) {
+                        const scale = if (r.render_scale > 0.0) r.render_scale else 1.0;
+                        trace_log.logf(.info, "pass=overlay_block_none row={d} col={d} cp=U+{X} logical={d:.3},{d:.3} {d:.3}x{d:.3} device={d:.3},{d:.3} {d:.3}x{d:.3} emitted=0", .{ cursor.row, cursor.col, cell.codepoint, cell_x, cell_y, geom.cell_width_logical_exact * @as(f32, @floatFromInt(cursor_w_i)) / @as(f32, @floatFromInt(cell_w_i)), geom.cell_height_logical_exact, cell_x * scale, cell_y * scale, (geom.cell_width_logical_exact * @as(f32, @floatFromInt(cursor_w_i)) / @as(f32, @floatFromInt(cell_w_i))) * scale, geom.cell_height_logical_exact * scale });
+                    }
+                },
                 .underline => {
                     const draw_x = cell_x_i + cursor_edge_inset;
                     const draw_w = @max(1, cursor_w_i - cursor_edge_inset * 2);

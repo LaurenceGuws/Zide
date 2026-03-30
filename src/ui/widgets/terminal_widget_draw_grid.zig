@@ -235,6 +235,7 @@ pub fn drawRowBackgrounds(
     cursor_style: anytype,
 ) void {
     const rr = renderer.rendererPtr();
+    const trace_log = app_logger.logger("terminal.cursor_cell_trace");
     const geom = rr.terminalCellGeometry();
     const cell_w = geom.cell_width_logical_exact;
     const cell_h = geom.cell_height_logical_exact;
@@ -259,6 +260,9 @@ pub fn drawRowBackgrounds(
             const bg = Color{ .r = cell.attrs.bg.r, .g = cell.attrs.bg.g, .b = cell.attrs.bg.b, .a = cell.attrs.bg.a };
             const cell_reverse = cell.attrs.reverse != screen_reverse_mode;
             run_color = if (cell_reverse) fg else bg;
+            if (trace_log.enabled_file or trace_log.enabled_console) {
+                trace_log.logf(.info, "pass=row_bg row={d} col={d} cp=U+{X} logical={d:.3},{d:.3} {d:.3}x{d:.3} device={d:.3},{d:.3} {d:.3}x{d:.3} source=logical_cell bg={d}:{d}:{d}:{d}", .{ row_idx, col, cell.codepoint, cell_x, cell_y, cell_w, cell_h, cell_x * scale, cell_y * scale, cell_w * scale, cell_h * scale, run_color.r, run_color.g, run_color.b, run_color.a });
+            }
         }
         const run_end = backgroundRunEnd(row_cells, cols_count, col, col_end, screen_reverse_mode, run_color);
         const run_width_cols = run_end - col;
@@ -756,6 +760,7 @@ pub fn drawRowGlyphs(
     _ = padding_x_i;
     const BlinkStyleT = @TypeOf(blink_style_mode);
     const rr = renderer.rendererPtr();
+    const trace_log = app_logger.logger("terminal.cursor_cell_trace");
     const geom = rr.terminalCellGeometry();
     const cell_w = geom.cell_width_logical_exact;
     const cell_h = geom.cell_height_logical_exact;
@@ -899,6 +904,15 @@ pub fn drawRowGlyphs(
                 };
                 _ = direct_choice_start;
                 const cell_x = base_x_local + @as(f32, @floatFromInt(@as(i32, @intCast(direct_col)))) * cell_w;
+                if ((trace_log.enabled_file or trace_log.enabled_console) and row_idx == cursor_pos.row and direct_col == cursor_pos.col) {
+                    const glyph = rr.terminal_font.getGlyphById(choice.face, choice.glyph_id, choice.want_color, false, 0) catch null;
+                    const glyph_h: f32 = if (glyph) |g| @as(f32, @floatFromInt(g.height)) * direct_inv_scale else -1;
+                    const glyph_w: f32 = if (glyph) |g| @as(f32, @floatFromInt(g.width)) * direct_inv_scale else -1;
+                    const bearing_y: f32 = if (glyph) |g| @as(f32, @floatFromInt(g.bearing_y)) * direct_inv_scale else 0;
+                    const draw_y = row_baseline - bearing_y;
+                    const snapped_origin = @as(f32, @floatFromInt(@as(i32, @intFromFloat(std.math.round(draw_y * direct_render_scale))))) / direct_render_scale;
+                    trace_log.logf(.info, "pass=row_glyph_direct row={d} col={d} cp=U+{X} face={*} gid={d} logical_cell={d:.3},{d:.3} {d:.3}x{d:.3} baseline={d:.3} glyph_logical={d:.3}x{d:.3} draw_y={d:.3} quant_y={d:.3} quant_h={d:.3} device={d:.3},{d:.3} {d:.3}x{d:.3} reverse={d} blink={d} bold={d}", .{ row_idx, direct_col, cell.codepoint, choice.face, choice.glyph_id, cell_x, base_y_local + @as(f32, @floatFromInt(@as(i32, @intCast(row_idx)))) * cell_h, cell_w, cell_h, row_baseline, glyph_w, glyph_h, draw_y, snapped_origin, glyph_h, cell_x * direct_render_scale, snapped_origin * direct_render_scale, glyph_w * direct_render_scale, glyph_h * direct_render_scale, @intFromBool(cell.attrs.reverse != screen_reverse_mode), @intFromBool(cell.attrs.blink), @intFromBool(cell.attrs.bold) });
+                }
                 const followed_by_space = blk: {
                     const next_col = direct_col + 1;
                     if (next_col < row_cells.len) {
@@ -1092,6 +1106,10 @@ pub fn drawRowGlyphs(
                     }
                     break :blk true;
                 };
+                if ((trace_log.enabled_file or trace_log.enabled_console) and row_idx == cursor_pos.row and fb_col == cursor_pos.col) {
+                    const scale = if (rr.render_scale > 0.0) rr.render_scale else 1.0;
+                    trace_log.logf(.info, "pass=row_glyph_fallback row={d} col={d} cp=U+{X} logical_cell={d:.3},{d:.3} {d:.3}x{d:.3} device={d:.3},{d:.3} {d:.3}x{d:.3} reverse={d} blink={d} bold={d}", .{ row_idx, fb_col, cell.codepoint, cell_x, cell_y, cell_w * @as(f32, @floatFromInt(@as(i32, @intCast(cell_width_units)))), cell_h, cell_x * scale, cell_y * scale, cell_w * @as(f32, @floatFromInt(@as(i32, @intCast(cell_width_units)))) * scale, cell_h * scale, @intFromBool(cell_reverse), @intFromBool(cell.attrs.blink), @intFromBool(cell.attrs.bold) });
+                }
                 if (cell.combining_len > 0) {
                     rr.drawTerminalCellGraphemeBatched(cell.codepoint, cell.combining[0..@intCast(cell.combining_len)], cell_x, cell_y, cell_w * @as(f32, @floatFromInt(@as(i32, @intCast(cell_width_units)))), cell_h, if (cell_reverse) bg else fg, if (cell_reverse) fg else bg, underline_color, cell.attrs.bold, false, false, followed_by_space, false);
                 } else {
@@ -1200,6 +1218,17 @@ pub fn drawRowGlyphs(
             }
 
             const text_submit_start = app_shell.getTime();
+            if ((trace_log.enabled_file or trace_log.enabled_console) and row_idx == cursor_pos.row and abs_col == cursor_pos.col) {
+                const glyph = rr.terminal_font.getGlyphById(span_choice.face, infos[i].codepoint, span_choice.want_color, false, positions[i].x_advance) catch null;
+                const glyph_h: f32 = if (glyph) |g| @as(f32, @floatFromInt(g.height)) * inv_scale else -1;
+                const glyph_w: f32 = if (glyph) |g| @as(f32, @floatFromInt(g.width)) * inv_scale else -1;
+                const bearing_y: f32 = if (glyph) |g| @as(f32, @floatFromInt(g.bearing_y)) * inv_scale else 0;
+                const gy_off = (@as(f32, @floatFromInt(positions[i].y_offset)) / 64.0) * inv_scale;
+                const baseline = cell_y + geom.baseline_logical_exact;
+                const draw_y = (baseline - bearing_y) - gy_off;
+                const snapped_origin = @as(f32, @floatFromInt(@as(i32, @intFromFloat(std.math.round(draw_y * render_scale))))) / render_scale;
+                trace_log.logf(.info, "pass=row_glyph_shaped row={d} col={d} cp=U+{X} face={*} gid={d} logical_cell={d:.3},{d:.3} {d:.3}x{d:.3} baseline={d:.3} glyph_logical={d:.3}x{d:.3} draw_y={d:.3} quant_y={d:.3} quant_h={d:.3} device={d:.3},{d:.3} {d:.3}x{d:.3} reverse={d} blink={d} bold={d}", .{ row_idx, abs_col, cell.codepoint, span_choice.face, infos[i].codepoint, cell_x, cell_y, cell_w_span, cell_h_span, baseline, glyph_w, glyph_h, draw_y, snapped_origin, glyph_h, cell_x * render_scale, snapped_origin * render_scale, glyph_w * render_scale, glyph_h * render_scale, @intFromBool(cell.attrs.reverse != screen_reverse_mode), @intFromBool(cell.attrs.blink), @intFromBool(cell.attrs.bold) });
+            }
             drawShapedGlyph(&rr.terminal_font, draw_ctx, span_choice.face, span_choice.want_color, cell.codepoint, infos[i].codepoint, positions[i], pen_rel, cell_x, cell_y, geom.baseline_logical_exact, cell_w_span, cell_h_span, followed_by_space, fg_draw.toRgba());
             if (stats) |s| {
                 s.shaped_glyphs += 1;
