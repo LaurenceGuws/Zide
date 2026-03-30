@@ -141,7 +141,6 @@ pub fn drawOverlays(
     _ = height;
     _ = screen_reverse;
     const r = shell.rendererPtr();
-    const trace_log = app_logger.logger("terminal.cursor_cell_trace");
     const composing_len: usize = if (input.composing_active and input.composing_text.len > 0) blk: {
         var count: usize = 0;
         var count_iter = std.unicode.Utf8Iterator{ .bytes = input.composing_text, .i = 0 };
@@ -231,10 +230,6 @@ pub fn drawOverlays(
                 r.drawRect(box_x + box_w - border_w, box_y, border_w, box_h, r.theme.cursor);
             } else switch (cursor_style.shape) {
                 .block => {
-                    if (trace_log.enabled_file or trace_log.enabled_console) {
-                        const scale = if (r.render_scale > 0.0) r.render_scale else 1.0;
-                        trace_log.logf(.info, "pass=overlay_block_none row={d} col={d} cp=U+{X} logical={d:.3},{d:.3} {d:.3}x{d:.3} device={d:.3},{d:.3} {d:.3}x{d:.3} emitted=0", .{ cursor.row, cursor.col, cell.codepoint, cell_x, cell_y, geom.cell_width_logical_exact * @as(f32, @floatFromInt(cursor_w_i)) / @as(f32, @floatFromInt(cell_w_i)), geom.cell_height_logical_exact, cell_x * scale, cell_y * scale, (geom.cell_width_logical_exact * @as(f32, @floatFromInt(cursor_w_i)) / @as(f32, @floatFromInt(cell_w_i))) * scale, geom.cell_height_logical_exact * scale });
-                    }
                 },
                 .underline => {
                     const draw_x = cell_x_i + cursor_edge_inset;
@@ -243,10 +238,12 @@ pub fn drawOverlays(
                     r.drawRect(draw_x, draw_y, draw_w, cursor_stroke, r.theme.cursor);
                 },
                 .bar => {
-                    const draw_x = cell_x_i + cursor_edge_inset;
-                    const draw_h = @max(1, cell_h_i - cursor_edge_inset * 2);
-                    const draw_y = cell_y_i + @divFloor(cell_h_i - draw_h, 2);
-                    r.drawRect(draw_x, draw_y, cursor_stroke, draw_h, r.theme.cursor);
+                    const inset_f = @as(f32, @floatFromInt(cursor_edge_inset));
+                    const stroke_f = @as(f32, @floatFromInt(cursor_stroke));
+                    const draw_x = cell_x + inset_f;
+                    const draw_y = cell_y + inset_f;
+                    const draw_h = @max(1.0, geom.cell_height_logical_exact - inset_f * 2.0);
+                    r.drawRectF(draw_x, draw_y, stroke_f, draw_h, r.theme.cursor);
                 },
             }
 
