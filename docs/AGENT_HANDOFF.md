@@ -48,10 +48,14 @@ not a progress log and should stay brief.
   - canonical per-frame terminal cell geometry now drives terminal-space consumers under fractional scale
   - duplicate focused block-cursor glyph drawing is removed
   - focused `.bar` cursor height now stays in logical space, so it matches row text at both `render_scale=1.00` and `render_scale=1.65`
-- The next active terminal bug is a proven incomplete migration seam from the old `ascii-rain` / scene-target rewrite lane:
+- The next active terminal bug is a proven incomplete migration seam from the old scene-target rewrite lane that was rediscovered while probing `ascii-rain`:
   - on some idle frames, the scene target is cleared and presented with `terminal_texture_draws=0`
   - input restores the foreground because a real redraw reintroduces the terminal blit
   - the remaining work is to make retained terminal presentation mandatory on any cleared frame that is submitted
+- The archived `ascii-rain` investigation now has a narrower, corrected framing:
+  - we know the visible trouble starts when `ascii-rain` switches into its denser workload mode at `COLS >= 100`
+  - we do not yet know which Zide rendering-path defect causes that workload to break
+  - do not describe the current rain bug as an arbitrary 240Hz-only or width-threshold root cause
 - Recent git history closed a concentrated Win11 packaged-shell and UI-polish lane on `main`; the immediate follow-up is to bring Linux native behavior and product quality back up to the same bar before reopening broader platform work.
 - The heaviest post-rewrite bug-hunting lane has cooled after recent fixes for `nvim`, `btop`, Codex inline history, Zig `std.Progress`, and focused input latency.
 - The remaining Codex completion-tail terminal bug stays explicitly deferred; short re-checks against a candidate pacing/present seam change were encouraging, but not strong enough to close it.

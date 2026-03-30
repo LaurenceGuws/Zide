@@ -8,9 +8,25 @@ Status note, 2026-03-15:
   `docs/AGENT_HANDOFF.md` and the active terminal docs for present-tense
   priorities.
 
+Status note, 2026-03-30:
+
+- This file is still historical evidence, but one important conclusion has changed.
+- We now know what workload exposes the live Zide bug:
+  - `ascii-rain` changes mode at `COLS >= 100`
+  - below `100` columns on a 36-line terminal it uses a sparser/slower drop mode
+  - at `100` columns and above it switches to a denser/faster mode
+- We do not yet know why Zide fails under that denser mode.
+- Do not describe the current rain issue as:
+  - a proven 240Hz-only bug
+  - a proven arbitrary renderer width threshold
+  - a solved root-cause investigation
+- The correct current phrasing is:
+  - `ascii-rain`'s denser `COLS >= 100` mode is the known trigger
+  - the renderer-side defect that this workload exposes is still unresolved
+
 ## Scope
 
-Investigate why `ascii-rain-git` shows intermittent "standing still" drops in some layouts. Initial assumption was "240Hz-only", but updated reproduction indicates the stronger trigger is large single-tile Hyprland layouts (also reproducible on 60Hz at 4k).
+Investigate why `ascii-rain-git` shows intermittent "standing still" drops in some layouts. The original lane started from a "240Hz-only" suspicion, but later evidence showed the important present-day distinction is workload, not refresh alone.
 
 This note documents:
 - what was observed and compared
@@ -31,6 +47,57 @@ This doc records one concluded investigation lane and its evidence.
   - Can reproduce on 60Hz at 4k in that large-tile layout.
   - New probe clarification: observed logs came from a single `ascii-rain` instance.
   - Correction: this is not primarily a resize-event trigger. Launching directly in large full-tile state reproduces; launching in half-tile state often does not.
+
+## Corrected Trigger Boundary
+
+The most important later finding was not in Zide first; it was in `ascii-rain`
+itself.
+
+Local source inspected under:
+
+- `~/.cache/yay/ascii-rain-git/src/ascii-rain/rain.c`
+
+Relevant code:
+
+```c
+int getNumOfDrops()
+{
+    int nDrops = 0;
+
+    if ((LINES < 20 && COLS > 100) || (COLS < 100 && LINES < 40))
+    {
+        nDrops = (int) (COLS * 0.75);
+        slowerDrops = 1;
+    }
+    else
+    {
+        nDrops = (int) (COLS * 1.5);
+        slowerDrops = 0;
+    }
+
+    return nDrops;
+}
+```
+
+For the reproduced terminal geometry in this lane (`LINES = 36`), that means:
+
+- `COLS < 100`: sparse/slower rain mode
+- `COLS >= 100`: dense/faster rain mode
+
+This is now the authoritative explanation for the observed width breakpoint in
+manual repros.
+
+What this does mean:
+
+- the width sweep was still valuable
+- the `99 -> 100` transition is a real and meaningful trigger boundary
+- the bad state is tied to a materially heavier `ascii-rain` workload
+
+What this does **not** mean:
+
+- it does not explain why Zide breaks under that workload
+- it does not prove an arbitrary renderer width threshold
+- it does not prove a 240Hz-specific root cause
 
 ## Key Differential: Kitty vs Zide
 
@@ -92,7 +159,17 @@ Pure PTY throughput limitation as the primary cause is unlikely:
 - Same workload renders smoothly in Kitty at high refresh.
 - Existing Zide issue signature is selective visual stall (subset appears frozen), which better matches redraw/damage scheduling behavior than total throughput saturation.
 
-## Working Hypotheses (Ranked)
+An arbitrary width threshold inside Zide is also no longer the best framing:
+
+- later repros showed the strongest visible breakpoint aligning with
+  `ascii-rain`'s own `COLS >= 100` mode switch
+- width is still relevant, but currently as a workload selector first
+
+## Working Hypotheses (Historical)
+
+The list below is preserved as historical reasoning from the earlier lane.
+Read it as "possible renderer-side explanations for why Zide fails under the
+heavy `ascii-rain` mode," not as current proven ranking.
 
 1. Redraw scheduling starvation under high-refresh cadence
 - Terminal output exists, but redraw trigger or cadence occasionally fails to keep texture updates continuous.
@@ -202,7 +279,7 @@ Runtime-only instrumentation has been added (no behavior/path forcing):
 - `.zide.lua` configured to low-noise bug-scoped tags:
   - `terminal.ui.statebug,terminal.ui.perf,input.latency,terminal.core`
 
-## Confirmed Signal (2026-03-08, latest logs)
+## Confirmed Signal (Historical 2026-03-08 logs)
 
 - `poll_probe` repeatedly showed `hasData_pre=0/hasData_post=0` windows while generation later jumped significantly on subsequent draws.
 - `idle_backoff_after_gen_advance` fired with `sleep_ms=0.033` and `gen_advance_ms~145ms`, confirming idle backoff can still trigger shortly after output generation movement when `hasData` is low.
@@ -210,7 +287,9 @@ This confirms a practical scheduler race window around `hasData` gating and idle
 - A stronger rendering signal emerged from later traces:
   - in the problematic large-tile case, `terminal.ui.perf` spends long stretches with `dirty=full` and `full_reasons ... dirty_full=1`
   - this keeps Zide on full-surface redraws instead of the viewport-shift / partial-damage fast path
-  - the cost increase scales directly with terminal width, matching the “full tile bad, half tile okay” symptom much better than the `poll_probe` log rate itself
+  - at the time this was described as a width-scaling symptom; the corrected modern reading is narrower:
+    - width was selecting a heavier `ascii-rain` workload
+    - these traces still did not prove why Zide broke under that heavier mode
 - With full-dirty attribution, the next narrowing step is to identify which `full_dirty_reason` dominates during `ascii-rain` stalls in the large-tile case and then target that producer path directly.
 - Follow-up fix:
   - `view_cache` forced-full path now emits explicit `full_dirty_reason` attribution instead of inheriting ambiguous/empty source reason.
@@ -495,7 +574,11 @@ This confirms a practical scheduler race window around `hasData` gating and idle
 - Intent:
   - keep poll scheduling conservative while making poll metrics and diagnostics reflect the real two-stage pipeline (PTY readiness plus parse/cache publication backlog)
 
-## Acceptance Criteria for Fix
+## Acceptance Criteria for Fix (Historical)
+
+These criteria were written before the later workload-boundary clarification.
+They should now be read as period-specific goals for that lane, not as the
+current authoritative statement of the bug.
 
 - At 240Hz, `ascii-rain` no longer shows perceptible frozen subsets under normal runtime load.
 - No regressions at 60Hz.

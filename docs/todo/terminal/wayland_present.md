@@ -26,7 +26,7 @@ Status note, 2026-03-14:
 
 Status note, 2026-03-30:
 
-- The scene-target path is still the live authority on `main`, but rendering-correctness cleanup is active again because the old `ascii-rain` / frozen-frame investigation exposed incomplete migration seams that still matter on the native host.
+- The scene-target path is still the live authority on `main`, but rendering-correctness cleanup is active again because the old `ascii-rain` investigation exposed incomplete migration seams that still matter on the native host.
 - Accepted recent fixes on top of the landed path:
   - canonical per-frame terminal cell geometry is now the authority for terminal-space consumers under fractional scale
   - duplicate focused block-cursor glyph drawing is removed
@@ -35,6 +35,11 @@ Status note, 2026-03-30:
   - some idle frames clear and submit the authoritative scene target without blitting the retained terminal texture (`terminal_texture_draws=0`)
   - input restores the foreground because a real redraw reintroduces the terminal blit
   - this is currently treated as an incomplete migration bug, not a text/glyph bug
+- Current `ascii-rain` framing correction:
+  - the observed repro boundary is now known: `ascii-rain` itself switches into a denser/faster mode at `COLS >= 100`
+  - that workload change is what exposes the remaining renderer bug in Zide
+  - the renderer-side root cause for the live rain failure is still unknown
+  - do not treat `99 -> 100` columns as proof of an arbitrary renderer threshold by itself
 
 Authority note:
 
@@ -87,6 +92,11 @@ The current native bug signature is:
 - foreground appears lost until input triggers a redraw
 
 That bug should be treated as a migration-completeness failure in final scene composition ownership, not as a terminal text-quality issue.
+
+The archived `ascii-rain` lane should now be read with one constraint:
+
+- `ascii-rain` is still useful as a stressor, but any comparison across widths must account for its own workload-mode switch at `COLS >= 100`
+- when the width changes across that boundary, we learn what workload breaks Zide, not yet why it breaks Zide
 
 ## Constraints
 
