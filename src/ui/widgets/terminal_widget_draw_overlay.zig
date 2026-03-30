@@ -5,6 +5,7 @@ const render_cache_mod = @import("../../terminal/core/render_cache.zig");
 const shared_types = @import("../../types/mod.zig");
 const common = @import("common.zig");
 const hover_mod = @import("terminal_widget_hover.zig");
+const draw_grid = @import("terminal_widget_draw_grid.zig");
 
 const Shell = app_shell.Shell;
 const Color = app_shell.Color;
@@ -216,14 +217,6 @@ pub fn drawOverlays(
             if (cell.attrs.link_id != 0) underline = cell.attrs.link_id == hover_link_id;
 
             const cell_reverse = cell.attrs.reverse != screen_reverse;
-            const followed_by_space = blk: {
-                const next_col = cursor.col + cell_width_units;
-                if (next_col < cols) {
-                    const next_cell = row_cells[next_col];
-                    break :blk next_cell.codepoint == ' ' or next_cell.codepoint == 0;
-                }
-                break :blk true;
-            };
             const cursor_w_i: i32 = cell_w_i * @as(i32, @intCast(cell_width_units));
             if (!self.ui_focused) {
                 const border_w: i32 = 1;
@@ -237,11 +230,33 @@ pub fn drawOverlays(
                 r.drawRect(box_x + box_w - border_w, box_y, border_w, box_h, r.theme.cursor);
             } else switch (cursor_style.shape) {
                 .block => {
-                    if (cell.combining_len > 0) {
-                        r.drawTerminalCellGrapheme(cell.codepoint, cell.combining[0..@intCast(cell.combining_len)], cell_x, cell_y, geom.cell_width_logical_exact * @as(f32, @floatFromInt(@as(i32, @intCast(cell_width_units)))), geom.cell_height_logical_exact, if (cell_reverse) bg else fg, if (cell_reverse) fg else bg, underline_color, cell.attrs.bold, underline, true, followed_by_space, true);
-                    } else {
-                        r.drawTerminalCell(cell.codepoint, cell_x, cell_y, geom.cell_width_logical_exact * @as(f32, @floatFromInt(@as(i32, @intCast(cell_width_units)))), geom.cell_height_logical_exact, if (cell_reverse) bg else fg, if (cell_reverse) fg else bg, underline_color, cell.attrs.bold, underline, true, followed_by_space, true);
-                    }
+                    var cursor_cell = cell;
+                    const fg_draw = if (cell_reverse) bg else fg;
+                    const bg_draw = if (cell_reverse) fg else bg;
+                    cursor_cell.attrs.fg = .{ .r = bg_draw.r, .g = bg_draw.g, .b = bg_draw.b, .a = bg_draw.a };
+                    cursor_cell.attrs.bg = .{ .r = fg_draw.r, .g = fg_draw.g, .b = fg_draw.b, .a = fg_draw.a };
+                    cursor_cell.attrs.reverse = false;
+                    const cursor_cells = [_]Cell{cursor_cell};
+                    draw_grid.drawRowGlyphs(
+                        shell,
+                        cursor_cells[0..],
+                        1,
+                        0,
+                        0,
+                        0,
+                        cell_x,
+                        cell_y,
+                        0,
+                        hover_link_id,
+                        false,
+                        @TypeOf(self.blink_style).off,
+                        0.0,
+                        false,
+                        cursor,
+                        .never,
+                        null,
+                        null,
+                    );
                 },
                 .underline => {
                     const draw_x = cell_x_i + cursor_edge_inset;
