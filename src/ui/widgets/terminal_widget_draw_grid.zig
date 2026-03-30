@@ -260,9 +260,9 @@ pub fn drawRowBackgrounds(
             const bg = Color{ .r = cell.attrs.bg.r, .g = cell.attrs.bg.g, .b = cell.attrs.bg.b, .a = cell.attrs.bg.a };
             const cell_reverse = cell.attrs.reverse != screen_reverse_mode;
             run_color = if (cell_reverse) fg else bg;
-            if (trace_log.enabled_file or trace_log.enabled_console) {
-                trace_log.logf(.info, "pass=row_bg row={d} col={d} cp=U+{X} logical={d:.3},{d:.3} {d:.3}x{d:.3} device={d:.3},{d:.3} {d:.3}x{d:.3} source=logical_cell bg={d}:{d}:{d}:{d}", .{ row_idx, col, cell.codepoint, cell_x, cell_y, cell_w, cell_h, cell_x * scale, cell_y * scale, cell_w * scale, cell_h * scale, run_color.r, run_color.g, run_color.b, run_color.a });
-            }
+        }
+        if ((trace_log.enabled_file or trace_log.enabled_console) and shouldTraceComparisonCell(row_idx, col, cursor_pos, cols_count)) {
+            trace_log.logf(.info, "pass=row_bg row={d} col={d} role={s} cp=U+{X} logical={d:.3},{d:.3} {d:.3}x{d:.3} device={d:.3},{d:.3} {d:.3}x{d:.3} source=logical_cell bg={d}:{d}:{d}:{d} run_w_cols={d}", .{ row_idx, col, if (col == cursor_pos.col) "cursor" else "normal", cell.codepoint, cell_x, cell_y, cell_w, cell_h, cell_x * scale, cell_y * scale, cell_w * scale, cell_h * scale, run_color.r, run_color.g, run_color.b, run_color.a, backgroundRunEnd(row_cells, cols_count, col, col_end, screen_reverse_mode, run_color) - col });
         }
         const run_end = backgroundRunEnd(row_cells, cols_count, col, col_end, screen_reverse_mode, run_color);
         const run_width_cols = run_end - col;
@@ -496,6 +496,7 @@ fn drawShapedGlyph(
     trace_cursor_col: ?usize,
 ) void {
     const trace_log = app_logger.logger("terminal.cursor_glyph_trace");
+    const rr: *Renderer = @ptrCast(@alignCast(ctx_draw.ctx));
     const glyph_cached = font.hasGlyphCachedById(face, glyph_id, want_color, false);
     const glyph = font.getGlyphById(face, glyph_id, want_color, false, hb_pos.x_advance) catch |err| {
         const log = app_logger.logger("terminal.draw");
@@ -553,13 +554,12 @@ fn drawShapedGlyph(
     if ((trace_log.enabled_file or trace_log.enabled_console) and trace_row != null and trace_col != null and trace_cursor_col != null) {
         trace_log.logf(
             .info,
-            "path=shaped row={d} col={d} role={s} cp=U+{X} face={*} gid={d} cached={d} texture_id={d} atlas_px={d:.3},{d:.3} {d:.3}x{d:.3} bitmap_px={d}x{d} baseline={d:.3} draw_logical={d:.3},{d:.3} {d:.3}x{d:.3} draw_device={d:.3},{d:.3} {d:.3}x{d:.3} render_scale={d:.3}",
+            "path=shaped row={d} col={d} role={s} cp=U+{X} gid={d} cached={d} tex={d} atlas={d:.0},{d:.0} {d:.0}x{d:.0} bmp={d}x{d} quad_dev={d:.0},{d:.0} {d:.0}x{d:.0} fg={d}:{d}:{d} bgp={d}:{d}:{d} blend={s} texkind={s}",
             .{
                 trace_row.?,
                 trace_col.?,
                 if (trace_col.? == trace_cursor_col.?) "cursor" else "normal",
                 base_codepoint,
-                face,
                 glyph_id,
                 @intFromBool(glyph_cached),
                 if (glyph.is_color) font.color_texture.id else font.coverage_texture.id,
@@ -569,16 +569,18 @@ fn drawShapedGlyph(
                 glyph.rect.height,
                 glyph.width,
                 glyph.height,
-                baseline,
-                dest.x,
-                dest.y,
-                dest.width,
-                dest.height,
                 dest.x * render_scale,
                 dest.y * render_scale,
                 dest.width * render_scale,
                 dest.height * render_scale,
-                render_scale,
+                draw_color.r,
+                draw_color.g,
+                draw_color.b,
+                rr.text_bg_rgba.r,
+                rr.text_bg_rgba.g,
+                rr.text_bg_rgba.b,
+                if (glyph.is_color) "rgba" else "font_coverage",
+                if (glyph.is_color) "color_texture" else "coverage_texture",
             },
         );
     }
@@ -611,6 +613,7 @@ fn drawDirectGlyphById(
     trace_cursor_col: ?usize,
 ) void {
     const trace_log = app_logger.logger("terminal.cursor_glyph_trace");
+    const rr: *Renderer = @ptrCast(@alignCast(ctx_draw.ctx));
     const glyph_cached = font.hasGlyphCachedById(face, glyph_id, want_color, false);
     const glyph_lookup_start = app_shell.getTime();
     const glyph = font.getGlyphById(face, glyph_id, want_color, false, 0) catch |err| {
@@ -672,13 +675,12 @@ fn drawDirectGlyphById(
     if ((trace_log.enabled_file or trace_log.enabled_console) and trace_row != null and trace_col != null and trace_cursor_col != null) {
         trace_log.logf(
             .info,
-            "path=direct row={d} col={d} role={s} cp=U+{X} face={*} gid={d} cached={d} texture_id={d} atlas_px={d:.3},{d:.3} {d:.3}x{d:.3} bitmap_px={d}x{d} baseline={d:.3} draw_logical={d:.3},{d:.3} {d:.3}x{d:.3} draw_device={d:.3},{d:.3} {d:.3}x{d:.3} render_scale={d:.3}",
+            "path=direct row={d} col={d} role={s} cp=U+{X} gid={d} cached={d} tex={d} atlas={d:.0},{d:.0} {d:.0}x{d:.0} bmp={d}x{d} quad_dev={d:.0},{d:.0} {d:.0}x{d:.0} fg={d}:{d}:{d} bgp={d}:{d}:{d} blend={s} texkind={s}",
             .{
                 trace_row.?,
                 trace_col.?,
                 if (trace_col.? == trace_cursor_col.?) "cursor" else "normal",
                 base_codepoint,
-                face,
                 glyph_id,
                 @intFromBool(glyph_cached),
                 if (glyph.is_color) font.color_texture.id else font.coverage_texture.id,
@@ -688,16 +690,18 @@ fn drawDirectGlyphById(
                 glyph.rect.height,
                 glyph.width,
                 glyph.height,
-                baseline,
-                dest.x,
-                dest.y,
-                dest.width,
-                dest.height,
                 dest.x * render_scale,
                 dest.y * render_scale,
                 dest.width * render_scale,
                 dest.height * render_scale,
-                render_scale,
+                draw_color.r,
+                draw_color.g,
+                draw_color.b,
+                rr.text_bg_rgba.r,
+                rr.text_bg_rgba.g,
+                rr.text_bg_rgba.b,
+                if (glyph.is_color) "rgba" else "font_coverage",
+                if (glyph.is_color) "color_texture" else "coverage_texture",
             },
         );
     }
