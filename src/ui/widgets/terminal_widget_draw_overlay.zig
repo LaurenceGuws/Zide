@@ -5,7 +5,6 @@ const render_cache_mod = @import("../../terminal/core/render_cache.zig");
 const shared_types = @import("../../types/mod.zig");
 const common = @import("common.zig");
 const hover_mod = @import("terminal_widget_hover.zig");
-const draw_grid = @import("terminal_widget_draw_grid.zig");
 
 const Shell = app_shell.Shell;
 const Color = app_shell.Color;
@@ -230,32 +229,13 @@ pub fn drawOverlays(
                 r.drawRect(box_x + box_w - border_w, box_y, border_w, box_h, r.theme.cursor);
             } else switch (cursor_style.shape) {
                 .block => {
-                    var cursor_cell = cell;
-                    const fg_draw = if (cell_reverse) bg else fg;
                     const bg_draw = if (cell_reverse) fg else bg;
-                    cursor_cell.attrs.fg = .{ .r = bg_draw.r, .g = bg_draw.g, .b = bg_draw.b, .a = bg_draw.a };
-                    cursor_cell.attrs.bg = .{ .r = fg_draw.r, .g = fg_draw.g, .b = fg_draw.b, .a = fg_draw.a };
-                    cursor_cell.attrs.reverse = false;
-                    const cursor_cells = [_]Cell{cursor_cell};
-                    draw_grid.drawRowGlyphs(
-                        shell,
-                        cursor_cells[0..],
-                        1,
-                        0,
-                        0,
-                        0,
+                    r.drawRectF(
                         cell_x,
                         cell_y,
-                        0,
-                        hover_link_id,
-                        false,
-                        @TypeOf(self.blink_style).off,
-                        0.0,
-                        false,
-                        cursor,
-                        .never,
-                        null,
-                        null,
+                        geom.cell_width_logical_exact * @as(f32, @floatFromInt(cursor_w_i)) / @as(f32, @floatFromInt(cell_w_i)),
+                        geom.cell_height_logical_exact,
+                        bg_draw,
                     );
                 },
                 .underline => {
