@@ -98,6 +98,11 @@ The archived `ascii-rain` lane should now be read with one constraint:
 - `ascii-rain` is still useful as a stressor, but any comparison across widths must account for its own workload-mode switch at `COLS >= 100`
 - when the width changes across that boundary, we learn what workload breaks Zide, not yet why it breaks Zide
 
+Investigation tooling note:
+
+- the current rain lane now has a useful `Scroll Lock` capture trigger for narrow console-only frame markers and short burst traces
+- keep that tool for the current bug, but add a future follow-up to generalize it into a reusable investigation capture utility rather than leaving it terminal/rain-specific forever
+
 ## Constraints
 
 1. No compatibility sludge.

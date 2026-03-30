@@ -25,6 +25,8 @@ const PresentedRenderCache = terminal_mod.PresentedRenderCache;
 const PresentationFeedback = terminal_mod.PresentationFeedback;
 var frame_latency_seq: u64 = 0;
 var frame_latency_metrics: FrameLatencyMetrics = .{};
+var capture_burst_seq: u64 = 0;
+var capture_burst_frames_remaining: u32 = 0;
 
 pub const FrameLatencyMetrics = struct {
     seq: u64 = 0,
@@ -81,8 +83,144 @@ const GenerationBucket = struct {
     count: usize,
 };
 
+const PresentedGenerationSummary = struct {
+    min_generation: u64 = 0,
+    max_generation: u64 = 0,
+    modal_generation: u64 = 0,
+    modal_count: usize = 0,
+    non_modal_count: usize = 0,
+    bbox_present: bool = false,
+    row_min: usize = 0,
+    row_max: usize = 0,
+    col_min: usize = 0,
+    col_max: usize = 0,
+};
+
+const RowContentSummary = struct {
+    row: usize,
+    occupied: usize,
+    first_col: i32,
+    last_col: i32,
+    hash: u64,
+};
+
 pub fn latestFrameLatencyMetrics() FrameLatencyMetrics {
     return frame_latency_metrics;
+}
+
+pub fn armCaptureBurst(frames: u32) u64 {
+    capture_burst_seq +%= 1;
+    capture_burst_frames_remaining = frames;
+    return capture_burst_seq;
+}
+
+fn maybeLogCaptureBurst(
+    self: anytype,
+    shell: *Shell,
+    cache: *const RenderCache,
+    width: f32,
+    height: f32,
+    viewport_w: f32,
+    viewport_h: f32,
+    visible_w: i32,
+    visible_h: i32,
+    rows: usize,
+    cols: usize,
+    full: bool,
+    partial: bool,
+    viewport_shift_rows: i32,
+    threshold_hit: bool,
+    fast_total_cells: usize,
+    fast_union_cells: usize,
+    partial_plan_cells: usize,
+    partial_plan_union_cells: usize,
+    current_reason: []const u8,
+    glyph_draw_stats: GlyphDrawStats,
+) void {
+    if (capture_burst_frames_remaining == 0) return;
+    const log = app_logger.logger("terminal.capture_trigger");
+    const r = shell.rendererPtr();
+    const geom = r.terminalCellGeometry();
+    const glyph_frame = r.terminal_glyph_cache.frameMetrics();
+    const atlas_frame = r.terminal_font.frameAtlasStats();
+    const generation_summary = summarizePresentedGeneration(self, cache);
+    var glyph_summary_buf: [96]u8 = undefined;
+    var batch_summary_buf: [64]u8 = undefined;
+    var atlas_summary_buf: [64]u8 = undefined;
+    var provenance_summary_buf: [128]u8 = undefined;
+    var row_summary_buf: [256]u8 = undefined;
+    const glyph_summary = std.fmt.bufPrint(&glyph_summary_buf, "d:{d} s:{d} st:{d} sp:{d} b:{d} f:{d}", .{
+        glyph_draw_stats.direct_text_glyphs,
+        glyph_draw_stats.shaped_glyphs,
+        glyph_draw_stats.shaped_text_glyphs,
+        glyph_draw_stats.special_sprite_glyphs,
+        glyph_draw_stats.box_glyphs,
+        glyph_draw_stats.fallback_cells,
+    }) catch "overflow";
+    const batch_summary = std.fmt.bufPrint(&batch_summary_buf, "{d}/{d}/{d}/{d}", .{
+        glyph_frame.quad_count,
+        glyph_frame.flush_count,
+        glyph_frame.draw_call_count,
+        glyph_frame.vertex_count,
+    }) catch "overflow";
+    const atlas_summary = std.fmt.bufPrint(&atlas_summary_buf, "{d}/{d}/{d}", .{
+        atlas_frame.glyph_cache_hits,
+        atlas_frame.glyph_cache_misses,
+        atlas_frame.rasterized_glyphs,
+    }) catch "overflow";
+    const provenance_summary = std.fmt.bufPrint(&provenance_summary_buf, "m:{d}:{d} min:{d} max:{d} non:{d} bbox:{d}:{d}..{d}/{d}..{d}", .{
+        generation_summary.modal_generation,
+        generation_summary.modal_count,
+        generation_summary.min_generation,
+        generation_summary.max_generation,
+        generation_summary.non_modal_count,
+        @intFromBool(generation_summary.bbox_present),
+        generation_summary.row_min,
+        generation_summary.row_max,
+        generation_summary.col_min,
+        generation_summary.col_max,
+    }) catch "overflow";
+    const row_summary = formatTopRowContentSummary(&row_summary_buf, cache, @min(rows, @as(usize, 6)));
+    const visible_cols: i32 = if (geom.cell_width_logical_exact > 0) @intFromFloat(std.math.floor(@max(viewport_w, 0) / geom.cell_width_logical_exact)) else 0;
+    const visible_rows: i32 = if (geom.cell_height_logical_exact > 0) @intFromFloat(std.math.floor(@max(viewport_h, 0) / geom.cell_height_logical_exact)) else 0;
+    log.logf(
+        .info,
+        "capture_burst seq={d} frames_left={d} gen={d} rows={d} cols={d} widget={d:.1}x{d:.1} viewport={d:.1}x{d:.1} visible_px={d}x{d} visible_cells={d}x{d} cell_dev={d}x{d} full={d} partial={d} shift_rows={d} threshold_hit={d} fast_total_cells={d} fast_union_cells={d} plan_cells={d} plan_union_cells={d} reason={s} glyphs={s} batch={s} atlas={s} prov={s} rowsum={s} texture_ready={d} last_render_gen={d}",
+        .{
+            capture_burst_seq,
+            capture_burst_frames_remaining,
+            cache.generation,
+            rows,
+            cols,
+            width,
+            height,
+            viewport_w,
+            viewport_h,
+            visible_w,
+            visible_h,
+            visible_cols,
+            visible_rows,
+            geom.cell_width_device_px,
+            geom.cell_height_device_px,
+            @intFromBool(full),
+            @intFromBool(partial),
+            viewport_shift_rows,
+            @intFromBool(threshold_hit),
+            fast_total_cells,
+            fast_union_cells,
+            partial_plan_cells,
+            partial_plan_union_cells,
+            current_reason,
+            glyph_summary,
+            batch_summary,
+            atlas_summary,
+            provenance_summary,
+            row_summary,
+            @intFromBool(self.terminal_texture_ready),
+            self.last_render_generation,
+        },
+    );
+    capture_burst_frames_remaining -= 1;
 }
 
 fn publishFrameLatencyMetrics(
@@ -268,10 +406,56 @@ fn insertGenerationBucket(buckets: *[max_frame_generation_buckets]GenerationBuck
 fn logPresentedGenerationProvenance(self: anytype, cache: *const RenderCache) void {
     const log = app_logger.logger("terminal.frame_provenance");
     if (!log.enabled_file and !log.enabled_console) return;
+    const summary = summarizePresentedGeneration(self, cache);
+    log.logf(
+        .info,
+        "presented_gen={d} frame_mode={d} min={d} max={d} total_cells={d} modal_cells={d} non_modal_cells={d} per_gen={s} bbox_present={d} bbox={d}..{d}/{d}..{d} damage={d}..{d}/{d}..{d}",
+        .{
+            cache.generation,
+            summary.modal_generation,
+            summary.min_generation,
+            summary.max_generation,
+            cache.rows * cache.cols,
+            summary.modal_count,
+            summary.non_modal_count,
+            blk: {
+                const rows = cache.rows;
+                const cols = cache.cols;
+                const total = rows * cols;
+                var buckets: [max_frame_generation_buckets]GenerationBucket = undefined;
+                var bucket_count: usize = 0;
+                var idx_fill: usize = 0;
+                while (idx_fill < total) : (idx_fill += 1) {
+                    insertGenerationBucket(&buckets, &bucket_count, self.presented_generation_cells.items[idx_fill]);
+                }
+                var bucket_buf: [192]u8 = undefined;
+                var stream = std.io.fixedBufferStream(&bucket_buf);
+                const writer = stream.writer();
+                var idx: usize = 0;
+                while (idx < bucket_count) : (idx += 1) {
+                    if (idx > 0) writer.writeAll(" ") catch break;
+                    writer.print("{d}:{d}", .{ buckets[idx].generation, buckets[idx].count }) catch break;
+                }
+                break :blk stream.getWritten();
+            },
+            @intFromBool(summary.bbox_present),
+            if (summary.bbox_present) summary.row_min else 0,
+            if (summary.bbox_present) summary.row_max else 0,
+            if (summary.bbox_present) summary.col_min else 0,
+            if (summary.bbox_present) summary.col_max else 0,
+            cache.damage.start_row,
+            cache.damage.end_row,
+            cache.damage.start_col,
+            cache.damage.end_col,
+        },
+    );
+}
+
+fn summarizePresentedGeneration(self: anytype, cache: *const RenderCache) PresentedGenerationSummary {
     const rows = cache.rows;
     const cols = cache.cols;
     const total = rows * cols;
-    if (rows == 0 or cols == 0 or self.presented_generation_cells.items.len < total) return;
+    if (rows == 0 or cols == 0 or self.presented_generation_cells.items.len < total) return .{};
 
     var min_generation: u64 = std.math.maxInt(u64);
     var max_generation: u64 = 0;
@@ -313,38 +497,65 @@ fn logPresentedGenerationProvenance(self: anytype, cache: *const RenderCache) vo
         }
     }
 
-    var bucket_buf: [192]u8 = undefined;
-    var stream = std.io.fixedBufferStream(&bucket_buf);
-    const writer = stream.writer();
-    idx = 0;
-    while (idx < bucket_count) : (idx += 1) {
-        if (idx > 0) writer.writeAll(" ") catch break;
-        writer.print("{d}:{d}", .{ buckets[idx].generation, buckets[idx].count }) catch break;
-    }
     const bbox_present = non_modal_count > 0 and row_min < rows and col_min < cols;
-    log.logf(
-        .info,
-        "presented_gen={d} frame_mode={d} min={d} max={d} total_cells={d} modal_cells={d} non_modal_cells={d} per_gen={s} bbox_present={d} bbox={d}..{d}/{d}..{d} damage={d}..{d}/{d}..{d}",
-        .{
-            cache.generation,
-            modal_generation,
-            min_generation,
-            max_generation,
-            total,
-            modal_count,
-            non_modal_count,
-            stream.getWritten(),
-            @intFromBool(bbox_present),
-            if (bbox_present) row_min else 0,
-            if (bbox_present) row_max else 0,
-            if (bbox_present) col_min else 0,
-            if (bbox_present) col_max else 0,
-            cache.damage.start_row,
-            cache.damage.end_row,
-            cache.damage.start_col,
-            cache.damage.end_col,
-        },
-    );
+    return .{
+        .min_generation = if (min_generation == std.math.maxInt(u64)) 0 else min_generation,
+        .max_generation = max_generation,
+        .modal_generation = modal_generation,
+        .modal_count = modal_count,
+        .non_modal_count = non_modal_count,
+        .bbox_present = bbox_present,
+        .row_min = if (bbox_present) row_min else 0,
+        .row_max = if (bbox_present) row_max else 0,
+        .col_min = if (bbox_present) col_min else 0,
+        .col_max = if (bbox_present) col_max else 0,
+    };
+}
+
+fn summarizeRowContent(cache: *const RenderCache, row: usize) RowContentSummary {
+    if (row >= cache.rows or cache.cols == 0 or cache.cells.items.len < cache.rows * cache.cols) {
+        return .{ .row = row, .occupied = 0, .first_col = -1, .last_col = -1, .hash = 0 };
+    }
+    const cells = rowSlice(cache.cells.items, cache.cols, row);
+    var occupied: usize = 0;
+    var first_col: i32 = -1;
+    var last_col: i32 = -1;
+    var hash = std.hash.Wyhash.init(0);
+    for (cells, 0..) |cell, col| {
+        const cp = cell.codepoint;
+        hash.update(std.mem.asBytes(&cp));
+        if (cp != ' ' and cp != 0) {
+            occupied += 1;
+            if (first_col < 0) first_col = @intCast(col);
+            last_col = @intCast(col);
+        }
+    }
+    return .{
+        .row = row,
+        .occupied = occupied,
+        .first_col = first_col,
+        .last_col = last_col,
+        .hash = hash.final(),
+    };
+}
+
+fn formatTopRowContentSummary(buf: []u8, cache: *const RenderCache, row_count: usize) []const u8 {
+    if (row_count == 0) return "";
+    var stream = std.io.fixedBufferStream(buf);
+    const writer = stream.writer();
+    var row: usize = 0;
+    while (row < row_count and row < cache.rows) : (row += 1) {
+        const summary = summarizeRowContent(cache, row);
+        if (row > 0) writer.writeAll(" ") catch break;
+        writer.print("r{d}={d}:{d}..{d}:h{x}", .{
+            summary.row,
+            summary.occupied,
+            summary.first_col,
+            summary.last_col,
+            summary.hash,
+        }) catch break;
+    }
+    return stream.getWritten();
 }
 
 fn partialPlanTouchesCell(self: anytype, row: usize, col: usize) bool {
@@ -547,6 +758,10 @@ pub fn drawPrepared(
     var texture_partial_update = false;
     var active_viewport_shift_rows: i32 = 0;
     var active_shift_exposed_only = false;
+    var fastpath_threshold_hit = false;
+    var fastpath_total_cells: usize = 0;
+    var fastpath_union_cells: usize = 0;
+    var capture_reason: []const u8 = "clean";
     var cell_w_i: i32 = 0;
     var cell_h_i: i32 = 0;
     var visible_w: i32 = 0;
@@ -659,6 +874,14 @@ pub fn drawPrepared(
         const use_viewport_shift = draw_texture.useViewportShiftForPartialPlan(cache.dirty, viewport_shift_rows);
         active_viewport_shift_rows = if (use_viewport_shift) viewport_shift_rows else 0;
         active_shift_exposed_only = use_viewport_shift and cache.viewport_shift_exposed_only;
+        capture_reason = switch (cache.dirty) {
+            .full => @tagName(cache.full_dirty_reason),
+            .partial => if (cache.viewport_shift_rows != 0)
+                (if (cache.viewport_shift_exposed_only) "viewport_shift_exposed" else "viewport_shift")
+            else
+                "partial",
+            .none => "clean",
+        };
         var shifted_rows: usize = 0;
         var shift_requires_fullwidth_partial = false;
         switch (planViewportTextureShift(
@@ -759,6 +982,9 @@ pub fn drawPrepared(
                     },
                 );
             }
+            fastpath_threshold_hit = fullframe_fastpath_decision.threshold_hit;
+            fastpath_total_cells = fullframe_fastpath_decision.total_cells;
+            fastpath_union_cells = fullframe_fastpath_decision.union_cells;
             if (fullframe_fastpath_decision.threshold_hit) {
                 needs_full = true;
                 needs_partial = false;
@@ -1182,6 +1408,29 @@ pub fn drawPrepared(
         if (self.terminal_texture_ready and visible_w > 0 and visible_h > 0) {
             r.drawTerminalTexture(base_x, base_y, viewport_w, viewport_h);
         }
+        maybeLogCaptureBurst(
+            self,
+            shell,
+            cache,
+            width,
+            height,
+            viewport_w,
+            viewport_h,
+            visible_w,
+            visible_h,
+            rows,
+            cols,
+            texture_full_update,
+            texture_partial_update,
+            active_viewport_shift_rows,
+            fastpath_threshold_hit,
+            fastpath_total_cells,
+            fastpath_union_cells,
+            partial_plan_cells,
+            partial_plan_union_cells,
+            capture_reason,
+            glyph_draw_stats,
+        );
     }
     texture_update_ms = time_utils.secondsToMs(app_shell.getTime() - texture_phase_start);
     const overlay_phase_start = app_shell.getTime();

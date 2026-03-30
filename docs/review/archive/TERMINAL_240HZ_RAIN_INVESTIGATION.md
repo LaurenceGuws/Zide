@@ -92,12 +92,99 @@ What this does mean:
 - the width sweep was still valuable
 - the `99 -> 100` transition is a real and meaningful trigger boundary
 - the bad state is tied to a materially heavier `ascii-rain` workload
+- Zide remains the outlier in this lane: other terminals handle the same
+  `ascii-rain` workload correctly, so the workload switch is the trigger, not
+  the explanation
 
 What this does **not** mean:
 
 - it does not explain why Zide breaks under that workload
 - it does not prove an arbitrary renderer width threshold
 - it does not prove a 240Hz-specific root cause
+
+## Investigation Surface Map (2026-03-30)
+
+The current evidence changes not only the trigger framing, but also which
+layers deserve suspicion.
+
+### Surfaces already heavily investigated
+
+These layers have had months of direct rain-lane scrutiny:
+
+- widget draw / texture-update policy
+- partial-vs-full redraw selection
+- viewport-shift and exposed-only partial paths
+- presented-generation / stale-texture hypotheses
+- scene-target / present / submission ownership
+- idle followthrough / redraw wake policy
+
+Representative files:
+
+- `src/ui/widgets/terminal_widget_draw.zig`
+- `src/app/frame_render_idle_runtime.zig`
+- renderer-present docs and follow-up fixes around scene-target ownership
+
+Important current conclusion:
+
+- final presented terminal textures in the bad dense-mode repro are coherent
+- sampled row content evolves over time at fixed bad width
+- this strongly weakens the old "renderer is showing stale mixed generations"
+  explanation
+
+### Surfaces investigated, but mostly as redraw producers
+
+These layers were examined mainly to explain redraw classification and damage
+shape, not to prove the published visible content itself was semantically
+correct:
+
+- `src/terminal/model/screen/grid.zig`
+- `src/terminal/core/view_cache.zig`
+- `src/terminal/core/view_cache_*`
+- `src/terminal/core/render_cache.zig`
+
+The historical lane asked questions like:
+
+- why did this become `dirty=full`?
+- why did the partial path not survive?
+- why did refinement collapse top-row damage?
+
+Those were valid questions, but they still leave an important gap:
+
+- a publication layer can be internally coherent and still publish the wrong
+  visible state
+
+### Most under-investigated rain surfaces now
+
+These files and seams have been touched structurally, but they have not
+received the same level of rain-specific suspicion as the UI/present path:
+
+- `src/terminal/model/history.zig`
+- `src/terminal/core/session_rendering.zig`
+- `src/terminal/core/session_publication_updates.zig`
+- `src/terminal/core/session_publication_state.zig`
+- `src/terminal/core/session_presentation_handoff.zig`
+
+Why they matter now:
+
+- they sit on the in-house VT-engine publication boundary
+- they decide what visible state is published and when
+- they can produce a coherent but wrong terminal image without any final
+  renderer corruption
+
+### Current best framing
+
+The strongest live hypothesis is no longer:
+
+- "the renderer/present path is still dropping or preserving stale cells"
+
+It is now closer to:
+
+- "the in-house engine/publication shell may be publishing the wrong visible
+  intermediate state under dense `ascii-rain` churn"
+
+That does not mean `TerminalCore` is proven wrong.
+It means the investigation should now drill below the final UI layer and stop
+reopening already-exhausted present-path theories by default.
 
 ## Key Differential: Kitty vs Zide
 

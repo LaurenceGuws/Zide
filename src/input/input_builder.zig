@@ -171,23 +171,22 @@ pub fn buildInputBatch(allocator: std.mem.Allocator, shell: *app_shell.Shell) sh
     }
 
     while (r.getKeyPressed()) |press| {
-        if (inputKeyFromShell(press.scancode)) |key| {
-            var key_mods = batch.mods;
-            key_mods.altgr = sdlModHasAltGr(press.mod_bits);
-            batch.append(.{
-                .key = .{
-                    .key = key,
-                    .mods = key_mods,
-                    .repeated = press.repeated,
-                    .pressed = true,
-                    .scancode = press.scancode,
-                    .sym = press.sym,
-                    .sdl_mod_bits = press.mod_bits,
-                },
-            }) catch |err| {
-                log.logf(.warning, "batch append key failed key={s} err={s}", .{ @tagName(key), @errorName(err) });
-            };
-        }
+        const key = inputKeyFromShell(press.scancode) orelse .unknown;
+        var key_mods = batch.mods;
+        key_mods.altgr = sdlModHasAltGr(press.mod_bits);
+        batch.append(.{
+            .key = .{
+                .key = key,
+                .mods = key_mods,
+                .repeated = press.repeated,
+                .pressed = true,
+                .scancode = press.scancode,
+                .sym = press.sym,
+                .sdl_mod_bits = press.mod_bits,
+            },
+        }) catch |err| {
+            log.logf(.warning, "batch append key failed key={s} sc={d} err={s}", .{ @tagName(key), press.scancode, @errorName(err) });
+        };
     }
 
     for (key_map) |entry| {
