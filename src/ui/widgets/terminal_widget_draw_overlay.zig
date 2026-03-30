@@ -230,11 +230,14 @@ pub fn drawOverlays(
             } else switch (cursor_style.shape) {
                 .block => {
                     const bg_draw = if (cell_reverse) fg else bg;
+                    const scale = if (r.render_scale > 0.0) r.render_scale else 1.0;
+                    const snapped_y = @as(f32, @floatFromInt(@as(i32, @intFromFloat(std.math.round(cell_y * scale))))) / scale;
+                    const snapped_y_end = @as(f32, @floatFromInt(@as(i32, @intFromFloat(std.math.round((cell_y + geom.cell_height_logical_exact) * scale))))) / scale;
                     r.drawRectF(
                         cell_x,
-                        cell_y,
+                        snapped_y,
                         geom.cell_width_logical_exact * @as(f32, @floatFromInt(cursor_w_i)) / @as(f32, @floatFromInt(cell_w_i)),
-                        geom.cell_height_logical_exact,
+                        @max(1.0 / scale, snapped_y_end - snapped_y),
                         bg_draw,
                     );
                 },
