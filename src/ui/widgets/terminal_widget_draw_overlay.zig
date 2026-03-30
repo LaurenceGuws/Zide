@@ -138,6 +138,7 @@ pub fn drawOverlays(
 ) void {
     _ = width;
     _ = height;
+    _ = screen_reverse;
     const r = shell.rendererPtr();
     const composing_len: usize = if (input.composing_active and input.composing_text.len > 0) blk: {
         var count: usize = 0;
@@ -215,7 +216,6 @@ pub fn drawOverlays(
             var underline = cell.attrs.underline;
             if (cell.attrs.link_id != 0) underline = cell.attrs.link_id == hover_link_id;
 
-            const cell_reverse = cell.attrs.reverse != screen_reverse;
             const cursor_w_i: i32 = cell_w_i * @as(i32, @intCast(cell_width_units));
             if (!self.ui_focused) {
                 const border_w: i32 = 1;
@@ -228,19 +228,7 @@ pub fn drawOverlays(
                 r.drawRect(box_x, box_y, border_w, box_h, r.theme.cursor);
                 r.drawRect(box_x + box_w - border_w, box_y, border_w, box_h, r.theme.cursor);
             } else switch (cursor_style.shape) {
-                .block => {
-                    const bg_draw = if (cell_reverse) fg else bg;
-                    const scale = if (r.render_scale > 0.0) r.render_scale else 1.0;
-                    const snapped_y = @as(f32, @floatFromInt(@as(i32, @intFromFloat(std.math.round(cell_y * scale))))) / scale;
-                    const snapped_y_end = @as(f32, @floatFromInt(@as(i32, @intFromFloat(std.math.round((cell_y + geom.cell_height_logical_exact) * scale))))) / scale;
-                    r.drawRectF(
-                        cell_x,
-                        snapped_y,
-                        geom.cell_width_logical_exact * @as(f32, @floatFromInt(cursor_w_i)) / @as(f32, @floatFromInt(cell_w_i)),
-                        @max(1.0 / scale, snapped_y_end - snapped_y),
-                        bg_draw,
-                    );
-                },
+                .block => {},
                 .underline => {
                     const draw_x = cell_x_i + cursor_edge_inset;
                     const draw_w = @max(1, cursor_w_i - cursor_edge_inset * 2);

@@ -230,6 +230,9 @@ pub fn drawRowBackgrounds(
     padding_x_i: i32,
     draw_padding: bool,
     screen_reverse_mode: bool,
+    draw_cursor_mode: bool,
+    cursor_pos: CursorPos,
+    cursor_style: anytype,
 ) void {
     const rr = renderer.rendererPtr();
     const geom = rr.terminalCellGeometry();
@@ -250,7 +253,13 @@ pub fn drawRowBackgrounds(
         if (cell.x != 0 or cell.y != 0) continue;
         const cell_x = base_x_local + @as(f32, @floatFromInt(@as(i32, @intCast(col)))) * cell_w;
         const cell_y = base_y_local + @as(f32, @floatFromInt(@as(i32, @intCast(row_idx)))) * cell_h;
-        const run_color = resolvedBackgroundColor(cell, screen_reverse_mode);
+        var run_color = resolvedBackgroundColor(cell, screen_reverse_mode);
+        if (draw_cursor_mode and cursor_style.shape == .block and row_idx == cursor_pos.row and col == cursor_pos.col) {
+            const fg = Color{ .r = cell.attrs.fg.r, .g = cell.attrs.fg.g, .b = cell.attrs.fg.b, .a = cell.attrs.fg.a };
+            const bg = Color{ .r = cell.attrs.bg.r, .g = cell.attrs.bg.g, .b = cell.attrs.bg.b, .a = cell.attrs.bg.a };
+            const cell_reverse = cell.attrs.reverse != screen_reverse_mode;
+            run_color = if (cell_reverse) fg else bg;
+        }
         const run_end = backgroundRunEnd(row_cells, cols_count, col, col_end, screen_reverse_mode, run_color);
         const run_width_cols = run_end - col;
         rr.addTerminalRectF(

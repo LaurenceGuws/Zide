@@ -841,7 +841,7 @@ pub fn drawPrepared(
                 r.addTerminalRect(0, 0, texture_w, texture_h, bg);
                 var row: usize = 0;
                 while (row < rows) : (row += 1) {
-                    drawRowBackgrounds(shell, view_cells, cols, row, 0, cols - 1, base_x_local, base_y_local, padding_x_i, true, screen_reverse);
+                    drawRowBackgrounds(shell, view_cells, cols, row, 0, cols - 1, base_x_local, base_y_local, padding_x_i, true, screen_reverse, draw_cursor, cursor, cursor_style);
                 }
                 r.flushTerminalBatch();
                 texture_bg_ms += time_utils.secondsToMs(app_shell.getTime() - bg_phase_start);
@@ -976,14 +976,14 @@ pub fn drawPrepared(
                             const col_start = @min(@as(usize, span.start), cols - 1);
                             const col_end = @min(@as(usize, span.end), cols - 1);
                             const draw_padding = col_end >= cols - 1;
-                            drawRowBackgrounds(shell, view_cells, cols, row, col_start, col_end, base_x_local, base_y_local, padding_x_i, draw_padding, screen_reverse);
+                            drawRowBackgrounds(shell, view_cells, cols, row, col_start, col_end, base_x_local, base_y_local, padding_x_i, draw_padding, screen_reverse, draw_cursor, cursor, cursor_style);
                         }
                         continue;
                     }
                     const col_start = @min(@as(usize, self.partial_draw_cols_start.items[row]), cols - 1);
                     const col_end = @min(@as(usize, self.partial_draw_cols_end.items[row]), cols - 1);
                     const draw_padding = col_end >= cols - 1;
-                    drawRowBackgrounds(shell, view_cells, cols, row, col_start, col_end, base_x_local, base_y_local, padding_x_i, draw_padding, screen_reverse);
+                    drawRowBackgrounds(shell, view_cells, cols, row, col_start, col_end, base_x_local, base_y_local, padding_x_i, draw_padding, screen_reverse, draw_cursor, cursor, cursor_style);
                 }
                 r.flushTerminalBatch();
                 texture_bg_ms += time_utils.secondsToMs(app_shell.getTime() - bg_phase_start);
