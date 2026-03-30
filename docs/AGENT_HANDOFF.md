@@ -5,8 +5,8 @@ not a progress log and should stay brief.
 
 ### Current Focus
 
-- Primary active product lane: Linux native catch-up after the recent Win11 integration and UI-improvement sprint, centered on shared runtime scheduling/resource-management adoption plus the observability needed to keep that lane measurable and reviewable.
-- Current implementation lane on `main`: app-wide lifecycle/work-class policy adoption, with terminal and editor as the first concrete adopters of the shared runtime vocabulary.
+- Primary active product lane: Linux native rendering-correctness catch-up after the recent Win11 integration and UI-improvement sprint, with current emphasis on finishing the scene-target / present migration cleanly on the native terminal path.
+- Current implementation lane on `main`: renderer/present correctness and lifecycle-policy adoption, with terminal and editor sharing the same runtime vocabulary but terminal owning the immediate native-host rendering bug lane.
 - Linux catch-up should focus first on restoring parity and polish in the shared Linux native host: renderer/input quality, Linux platform integration, runtime/lifecycle behavior, and concrete regressions or missing affordances left behind during the Windows lane.
 - Editor work is currently in scope only where it advances lifecycle management, runtime policy, startup/resource behavior, or closely related observability/validation seams.
 - Keep focused validation lanes healthy while runtime-policy work continues: terminal/editor targeted tests should stay runnable, and environment-sensitive host checks should not spill into focused behavior lanes without a clear reason.
@@ -21,9 +21,10 @@ not a progress log and should stay brief.
 
 ### Current Direction
 
-- The main VT/present rewrite is no longer the active invention lane on `main`.
+- The main VT/present rewrite is no longer the active invention lane on `main`, but post-rewrite rendering correctness remains an active cleanup lane where incomplete migration seams are still being closed.
 - Default work now should be:
   - Linux native catch-up first, with one owning queue for parity gaps, regressions, and polish follow-up after the Windows week
+  - terminal rendering correctness first where the scene-target / present migration still leaves native-host regressions
   - lifecycle/resource-management implementation and cleanup first
   - observability improvements that make lifecycle/runtime-policy behavior easier to validate and compare
   - Linux renderer/input/platform follow-up where Windows integration work or recent UI changes left Linux behind
@@ -43,6 +44,14 @@ not a progress log and should stay brief.
 
 - The scene-owned composition path is active on `main`.
 - Rewrite-era present/debug baggage has been materially reduced from the live path.
+- Recent terminal rendering-correctness work on `main` closed several real quality seams:
+  - canonical per-frame terminal cell geometry now drives terminal-space consumers under fractional scale
+  - duplicate focused block-cursor glyph drawing is removed
+  - focused `.bar` cursor height now stays in logical space, so it matches row text at both `render_scale=1.00` and `render_scale=1.65`
+- The next active terminal bug is a proven incomplete migration seam from the old `ascii-rain` / scene-target rewrite lane:
+  - on some idle frames, the scene target is cleared and presented with `terminal_texture_draws=0`
+  - input restores the foreground because a real redraw reintroduces the terminal blit
+  - the remaining work is to make retained terminal presentation mandatory on any cleared frame that is submitted
 - Recent git history closed a concentrated Win11 packaged-shell and UI-polish lane on `main`; the immediate follow-up is to bring Linux native behavior and product quality back up to the same bar before reopening broader platform work.
 - The heaviest post-rewrite bug-hunting lane has cooled after recent fixes for `nvim`, `btop`, Codex inline history, Zig `std.Progress`, and focused input latency.
 - The remaining Codex completion-tail terminal bug stays explicitly deferred; short re-checks against a candidate pacing/present seam change were encouraging, but not strong enough to close it.
@@ -78,6 +87,10 @@ not a progress log and should stay brief.
 
 - Linux native catch-up queue:
   - `docs/todo/linux/implementation.md`
+- Terminal rendering correctness / present migration cleanup:
+  - `docs/todo/terminal/wayland_present.md`
+  - `app_architecture/RENDERER_SCENE_PUBLICATION_CONTRACT.md`
+  - `docs/review/archive/TERMINAL_240HZ_RAIN_INVESTIGATION.md`
 - Editor implementation authority:
   - `app_architecture/editor/DESIGN.md`
   - `app_architecture/RUNTIME_ISOLATION_AND_RESOURCE_MANAGEMENT.md`

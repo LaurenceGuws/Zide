@@ -24,6 +24,18 @@ Status note, 2026-03-14:
 - `rain` remains explicitly out of the active validation matrix until future
   special-character / visual-polish work.
 
+Status note, 2026-03-30:
+
+- The scene-target path is still the live authority on `main`, but rendering-correctness cleanup is active again because the old `ascii-rain` / frozen-frame investigation exposed incomplete migration seams that still matter on the native host.
+- Accepted recent fixes on top of the landed path:
+  - canonical per-frame terminal cell geometry is now the authority for terminal-space consumers under fractional scale
+  - duplicate focused block-cursor glyph drawing is removed
+  - focused `.bar` cursor height now uses logical cell geometry and visually matches row text at both `render_scale=1.00` and `render_scale=1.65`
+- Current open bug in this queue:
+  - some idle frames clear and submit the authoritative scene target without blitting the retained terminal texture (`terminal_texture_draws=0`)
+  - input restores the foreground because a real redraw reintroduces the terminal blit
+  - this is currently treated as an incomplete migration bug, not a text/glyph bug
+
 Authority note:
 
 - This file is the current architectural authority for the landed scene-owned
@@ -59,6 +71,22 @@ What **does** change:
 - presentation acknowledgement is defined against renderer-owned scene
   submission, not implicit default-framebuffer behavior
 - default-framebuffer composition stops being an architectural dependency
+
+## Current Cleanup Focus
+
+The highest-value remaining correctness item in this queue is:
+
+- retained terminal content must still be presented on any frame that clears and submits the authoritative scene target
+
+The current native bug signature is:
+
+- idle frame
+- scene target cleared
+- swap succeeds
+- terminal texture blit omitted
+- foreground appears lost until input triggers a redraw
+
+That bug should be treated as a migration-completeness failure in final scene composition ownership, not as a terminal text-quality issue.
 
 ## Constraints
 

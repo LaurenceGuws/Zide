@@ -50,12 +50,14 @@ What already exists:
 - renderer owns a scene target
 - scene target is composed to the default framebuffer on submit
 - terminal uses stronger publication semantics upstream
+- terminal fractional-scale cell geometry is now derived from raster/device metrics once per frame and reused across terminal-space consumers
 
 What is still weak:
 
 - editor and terminal still use dedicated renderer target APIs
 - scene composition input is not yet a generic subsystem-publication contract
 - redraw is still one app-global flag instead of per-subsystem publication truth
+- some native idle frames can still clear and submit the scene target without re-blitting retained terminal content, which violates the renderer-owned scene authority contract
 
 ## Target Model
 
@@ -110,6 +112,7 @@ Owns:
 - deciding when a frame should be drawn
 - collecting subsystem publications for the active frame
 - feeding present acknowledgement back to subsystem pacing/publication logic
+- guaranteeing that any frame submitted after a scene clear recomposes all retained surfaces that remain part of scene truth
 
 ### Renderer
 
@@ -201,6 +204,10 @@ Avoid as long-term API:
 
 The frame loop should answer “should I draw?” from subsystem publication truth,
 not just one app-global boolean.
+
+Additional native correctness rule:
+
+- once the renderer-owned scene target is cleared for a frame, retained subsystem surfaces that are still part of the visible scene must be re-blitted before submit even if their publication generation did not advance
 
 ### Target inputs
 
