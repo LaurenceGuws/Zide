@@ -571,6 +571,14 @@ pub fn drawPrepared(
         const scale = if (r.render_scale > 0.0) r.render_scale else 1.0;
         const texture_w = @as(i32, @intFromFloat(std.math.round(@as(f32, @floatFromInt(cell_w_i * @as(i32, @intCast(cols)) + padding_x_i)) / scale)));
         const texture_h = @as(i32, @intFromFloat(std.math.round(@as(f32, @floatFromInt(cell_h_i * @as(i32, @intCast(rows)))) / scale)));
+        const clip_w = @min(width, geom.cell_width_logical_exact * @as(f32, @floatFromInt(cols)));
+        const clip_h = @min(height, geom.cell_height_logical_exact * @as(f32, @floatFromInt(rows)));
+        const visible_cols: i32 = if (geom.cell_width_logical_exact > 0) @intFromFloat(std.math.floor(clip_w / geom.cell_width_logical_exact)) else 0;
+        const visible_rows: i32 = if (geom.cell_height_logical_exact > 0) @intFromFloat(std.math.floor(clip_h / geom.cell_height_logical_exact)) else 0;
+        visible_w = @intFromFloat(std.math.round(@as(f32, @floatFromInt(visible_cols * geom.cell_width_device_px)) / scale));
+        visible_h = @intFromFloat(std.math.round(@as(f32, @floatFromInt(visible_rows * geom.cell_height_device_px)) / scale));
+        viewport_w = @as(f32, @floatFromInt(visible_w));
+        viewport_h = @as(f32, @floatFromInt(visible_h));
         const recreated = r.ensureTerminalTexture(texture_w, texture_h);
         const gen_changed = cache.generation != self.last_render_generation;
         const clear_generation_changed = cache.clear_generation != self.last_render_clear_generation;
@@ -1137,14 +1145,6 @@ pub fn drawPrepared(
             self.last_cell_w_i = cell_w_i;
             self.last_cell_h_i = cell_h_i;
             self.last_render_scale = r.render_scale;
-            const clip_w = @min(width, geom.cell_width_logical_exact * @as(f32, @floatFromInt(cols)));
-            const clip_h = @min(height, geom.cell_height_logical_exact * @as(f32, @floatFromInt(rows)));
-            const visible_cols: i32 = if (geom.cell_width_logical_exact > 0) @intFromFloat(std.math.floor(clip_w / geom.cell_width_logical_exact)) else 0;
-            const visible_rows: i32 = if (geom.cell_height_logical_exact > 0) @intFromFloat(std.math.floor(clip_h / geom.cell_height_logical_exact)) else 0;
-            visible_w = @intFromFloat(std.math.round(@as(f32, @floatFromInt(visible_cols * geom.cell_width_device_px)) / scale));
-            visible_h = @intFromFloat(std.math.round(@as(f32, @floatFromInt(visible_rows * geom.cell_height_device_px)) / scale));
-            viewport_w = @as(f32, @floatFromInt(visible_w));
-            viewport_h = @as(f32, @floatFromInt(visible_h));
             if (visible_w > 0 and visible_h > 0) {
                 r.beginClip(
                     @intFromFloat(std.math.round(base_x)),
@@ -1154,6 +1154,14 @@ pub fn drawPrepared(
                 );
             }
             updated = true;
+        }
+        if (!updated and self.terminal_texture_ready and visible_w > 0 and visible_h > 0) {
+            r.beginClip(
+                @intFromFloat(std.math.round(base_x)),
+                @intFromFloat(std.math.round(base_y)),
+                visible_w,
+                visible_h,
+            );
         }
         if (rows > 0 and cols > 0) {
             const bg = if (view_cells.len > 0) blk: {
@@ -1171,7 +1179,7 @@ pub fn drawPrepared(
                 r.drawRectF(base_x, base_y, viewport_w, viewport_h, bg);
             }
         }
-        if (visible_w > 0 and visible_h > 0) {
+        if (self.terminal_texture_ready and visible_w > 0 and visible_h > 0) {
             r.drawTerminalTexture(base_x, base_y, viewport_w, viewport_h);
         }
     }
