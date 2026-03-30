@@ -150,10 +150,9 @@ pub fn drawOverlays(
         const selection_rows = cache.selection_rows.items;
         if (selection_rows.len == rows) {
             const selection_color = softSelectionColor(r.theme.selection);
-            const cell_w_i: i32 = @intFromFloat(std.math.round(r.terminal_metrics.cell_width));
-            const cell_h_i: i32 = @intFromFloat(std.math.round(r.terminal_metrics.cell_height));
-            const base_x_i: i32 = @intFromFloat(std.math.round(x));
-            const base_y_i: i32 = @intFromFloat(std.math.round(y));
+            const geom = r.terminalCellGeometry();
+            const cell_w = geom.cell_width_logical_exact;
+            const cell_h = geom.cell_height_logical_exact;
 
             var row_idx: usize = 0;
             while (row_idx < rows) : (row_idx += 1) {
@@ -162,10 +161,10 @@ pub fn drawOverlays(
                 const col_end = @as(usize, cache.selection_cols_end.items[row_idx]);
                 if (col_end < col_start or col_end >= cols) continue;
 
-                const rect_x = base_x_i + @as(i32, @intCast(col_start)) * cell_w_i;
-                const rect_y = base_y_i + @as(i32, @intCast(row_idx)) * cell_h_i;
-                const rect_w = cell_w_i * @as(i32, @intCast(col_end - col_start + 1));
-                const rect_h = cell_h_i;
+                const rect_x = @as(i32, @intFromFloat(std.math.round(x + @as(f32, @floatFromInt(@as(i32, @intCast(col_start)))) * cell_w)));
+                const rect_y = @as(i32, @intFromFloat(std.math.round(y + @as(f32, @floatFromInt(@as(i32, @intCast(row_idx)))) * cell_h)));
+                const rect_w = @as(i32, @intFromFloat(std.math.round(cell_w * @as(f32, @floatFromInt(@as(i32, @intCast(col_end - col_start + 1)))))));
+                const rect_h = @as(i32, @intFromFloat(std.math.round(cell_h)));
                 const has_prev = row_idx > 0 and selection_rows[row_idx - 1];
                 const has_next = row_idx + 1 < rows and selection_rows[row_idx + 1];
                 const edge_tolerance: usize = 1;
@@ -199,14 +198,13 @@ pub fn drawOverlays(
         if (row_cells.len != 0) {
             const cell = row_cells[cursor.col];
             const cell_width_units = @as(usize, @max(@as(u8, 1), cell.width));
-            const cell_w_i: i32 = @intFromFloat(std.math.round(r.terminal_metrics.cell_width));
-            const cell_h_i: i32 = @intFromFloat(std.math.round(r.terminal_metrics.cell_height));
-            const base_x_i: i32 = @intFromFloat(std.math.round(x));
-            const base_y_i: i32 = @intFromFloat(std.math.round(y));
-            const cell_x_i = base_x_i + @as(i32, @intCast(cursor.col)) * cell_w_i;
-            const cell_y_i = base_y_i + @as(i32, @intCast(cursor.row)) * cell_h_i;
-            const cell_x = @as(f32, @floatFromInt(cell_x_i));
-            const cell_y = @as(f32, @floatFromInt(cell_y_i));
+            const geom = r.terminalCellGeometry();
+            const cell_w_i: i32 = geom.cell_width_device_px;
+            const cell_h_i: i32 = geom.cell_height_device_px;
+            const cell_x = x + @as(f32, @floatFromInt(@as(i32, @intCast(cursor.col)))) * geom.cell_width_logical_exact;
+            const cell_y = y + @as(f32, @floatFromInt(@as(i32, @intCast(cursor.row)))) * geom.cell_height_logical_exact;
+            const cell_x_i = @as(i32, @intFromFloat(std.math.round(cell_x)));
+            const cell_y_i = @as(i32, @intFromFloat(std.math.round(cell_y)));
             const cursor_edge_inset: i32 = @max(0, @as(i32, @intFromFloat(std.math.floor(r.uiScaleFactor() * 0.5))));
             const cursor_stroke: i32 = @max(1, @as(i32, @intFromFloat(std.math.round(r.uiScaleFactor()))));
 
@@ -226,7 +224,6 @@ pub fn drawOverlays(
                 }
                 break :blk true;
             };
-
             const cursor_w_i: i32 = cell_w_i * @as(i32, @intCast(cell_width_units));
             if (!self.ui_focused) {
                 const border_w: i32 = 1;
@@ -241,9 +238,9 @@ pub fn drawOverlays(
             } else switch (cursor_style.shape) {
                 .block => {
                     if (cell.combining_len > 0) {
-                        r.drawTerminalCellGrapheme(cell.codepoint, cell.combining[0..@intCast(cell.combining_len)], cell_x, cell_y, @as(f32, @floatFromInt(cursor_w_i)), @as(f32, @floatFromInt(cell_h_i)), if (cell_reverse) bg else fg, if (cell_reverse) fg else bg, underline_color, cell.attrs.bold, underline, true, followed_by_space, true);
+                        r.drawTerminalCellGrapheme(cell.codepoint, cell.combining[0..@intCast(cell.combining_len)], cell_x, cell_y, geom.cell_width_logical_exact * @as(f32, @floatFromInt(@as(i32, @intCast(cell_width_units)))), geom.cell_height_logical_exact, if (cell_reverse) bg else fg, if (cell_reverse) fg else bg, underline_color, cell.attrs.bold, underline, true, followed_by_space, true);
                     } else {
-                        r.drawTerminalCell(cell.codepoint, cell_x, cell_y, @as(f32, @floatFromInt(cursor_w_i)), @as(f32, @floatFromInt(cell_h_i)), if (cell_reverse) bg else fg, if (cell_reverse) fg else bg, underline_color, cell.attrs.bold, underline, true, followed_by_space, true);
+                        r.drawTerminalCell(cell.codepoint, cell_x, cell_y, geom.cell_width_logical_exact * @as(f32, @floatFromInt(@as(i32, @intCast(cell_width_units)))), geom.cell_height_logical_exact, if (cell_reverse) bg else fg, if (cell_reverse) fg else bg, underline_color, cell.attrs.bold, underline, true, followed_by_space, true);
                     }
                 },
                 .underline => {
@@ -261,18 +258,18 @@ pub fn drawOverlays(
             }
 
             const composing_cells: usize = composing_len;
-            const cursor_rect_w = if (composing_cells > 0) @as(i32, @intCast(@max(@as(usize, 1), composing_cells))) * cell_w_i else cell_w_i;
+            const cursor_rect_w = if (composing_cells > 0) @as(i32, @intFromFloat(std.math.round(@as(f32, @floatFromInt(@as(i32, @intCast(@max(@as(usize, 1), composing_cells))))) * geom.cell_width_logical_exact))) else @as(i32, @intFromFloat(std.math.round(geom.cell_width_logical_exact)));
             shell.setTextInputRect(cell_x_i, cell_y_i, cursor_rect_w, cell_h_i);
 
             if (composing_cells > 0) {
                 var iter = std.unicode.Utf8Iterator{ .bytes = input.composing_text, .i = 0 };
                 var comp_col: usize = 0;
                 while (iter.nextCodepoint()) |cp| {
-                    const comp_x = cell_x + @as(f32, @floatFromInt(@as(i32, @intCast(comp_col)) * cell_w_i));
-                    r.drawTerminalCell(cp, comp_x, cell_y, @as(f32, @floatFromInt(cell_w_i)), @as(f32, @floatFromInt(cell_h_i)), r.theme.foreground, bg, underline_color, false, true, false, true, false);
+                    const comp_x = cell_x + @as(f32, @floatFromInt(@as(i32, @intCast(comp_col)))) * geom.cell_width_logical_exact;
+                    r.drawTerminalCell(cp, comp_x, cell_y, geom.cell_width_logical_exact, geom.cell_height_logical_exact, r.theme.foreground, bg, underline_color, false, true, false, true, false);
                     comp_col += 1;
                 }
-                const underline_w = @as(i32, @intCast(@max(@as(usize, 1), comp_col))) * cell_w_i;
+                const underline_w = @as(i32, @intFromFloat(std.math.round(@as(f32, @floatFromInt(@as(i32, @intCast(@max(@as(usize, 1), comp_col))))) * geom.cell_width_logical_exact)));
                 r.drawRect(cell_x_i, cell_y_i + cell_h_i - 2, underline_w, 2, r.theme.selection);
             }
         }

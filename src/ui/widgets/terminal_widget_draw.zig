@@ -433,6 +433,8 @@ pub fn drawPrepared(
     const screen_reverse = cache.screen_reverse;
     const blink_style = self.blink_style;
     const blink_time = app_shell.getTime();
+    const rows = cache.rows;
+    const cols = cache.cols;
     if (sync_updates and cache.cells.items.len > 0) {
         const view_cells = cache.cells.items;
         const bg_color = if (view_cells.len > 0) blk: {
@@ -456,8 +458,6 @@ pub fn drawPrepared(
         return outcome;
     }
     const draw_start_time = if (alt_exit) app_shell.getTime() else 0;
-    const rows = cache.rows;
-    const cols = cache.cols;
     const history_len = cache.history_len;
     const total_lines = cache.total_lines;
     const scroll_offset = cache.scroll_offset;
@@ -549,6 +549,10 @@ pub fn drawPrepared(
     var active_shift_exposed_only = false;
     var cell_w_i: i32 = 0;
     var cell_h_i: i32 = 0;
+    var visible_w: i32 = 0;
+    var visible_h: i32 = 0;
+    var viewport_w: f32 = 0;
+    var viewport_h: f32 = 0;
     const row_render_log = app_logger.logger("terminal.ui.row_render_pass");
     const row_render_runs_log = app_logger.logger("terminal.ui.row_render_pass_runs");
     const texture_phase_start = app_shell.getTime();
@@ -558,13 +562,15 @@ pub fn drawPrepared(
             const provenance_log = app_logger.logger("terminal.frame_provenance");
             provenance_log.logf(.warning, "presented_generation_cells resize failed rows={d} cols={d} err={s}", .{ rows, cols, @errorName(err) });
         };
-        cell_w_i = @intFromFloat(std.math.round(r.terminal_metrics.cell_width));
-        cell_h_i = @intFromFloat(std.math.round(r.terminal_metrics.cell_height));
+        const geom = r.terminalCellGeometry();
+        cell_w_i = geom.cell_width_device_px;
+        cell_h_i = geom.cell_height_device_px;
         const cell_metrics_changed = cell_w_i != self.last_cell_w_i or cell_h_i != self.last_cell_h_i;
         const render_scale_changed = r.render_scale != self.last_render_scale;
         const padding_x_i: i32 = @max(2, @divTrunc(cell_w_i, 2));
-        const texture_w = cell_w_i * @as(i32, @intCast(cols)) + padding_x_i;
-        const texture_h = cell_h_i * @as(i32, @intCast(rows));
+        const scale = if (r.render_scale > 0.0) r.render_scale else 1.0;
+        const texture_w = @as(i32, @intFromFloat(std.math.round(@as(f32, @floatFromInt(cell_w_i * @as(i32, @intCast(cols)) + padding_x_i)) / scale)));
+        const texture_h = @as(i32, @intFromFloat(std.math.round(@as(f32, @floatFromInt(cell_h_i * @as(i32, @intCast(rows)))) / scale)));
         const recreated = r.ensureTerminalTexture(texture_w, texture_h);
         const gen_changed = cache.generation != self.last_render_generation;
         const clear_generation_changed = cache.clear_generation != self.last_render_clear_generation;
@@ -1131,81 +1137,22 @@ pub fn drawPrepared(
             self.last_cell_w_i = cell_w_i;
             self.last_cell_h_i = cell_h_i;
             self.last_render_scale = r.render_scale;
-            const base_x_i: i32 = @intFromFloat(std.math.round(base_x));
-            const base_y_i: i32 = @intFromFloat(std.math.round(base_y));
-            const clip_w_i: i32 = @min(@as(i32, @intFromFloat(std.math.round(width))), cell_w_i * @as(i32, @intCast(cols)));
-            const clip_h_i: i32 = @min(@as(i32, @intFromFloat(std.math.round(height))), @as(i32, @intFromFloat(std.math.round(r.terminal_metrics.cell_height))) * @as(i32, @intCast(rows)));
-            const spatial_log = app_logger.logger("terminal.spatial_compose");
-            if (spatial_log.enabled_file or spatial_log.enabled_console) {
-                const total_cells = rows * cols;
-                const damage_rows = if (cache.damage.end_row >= cache.damage.start_row and cache.damage.end_row < rows)
-                    cache.damage.end_row - cache.damage.start_row + 1
-                else
-                    0;
-                const damage_cols = if (cache.damage.end_col >= cache.damage.start_col and cache.damage.end_col < cols)
-                    cache.damage.end_col - cache.damage.start_col + 1
-                else
-                    0;
-                const damage_bbox_cells = damage_rows * damage_cols;
-                const updated_cells = if (texture_full_update) total_cells else partial_plan_cells;
-                const updated_union_cells = if (texture_full_update) total_cells else partial_plan_union_cells;
-                const preserved_cells = total_cells -| updated_union_cells;
-                const updated_percent = if (total_cells > 0)
-                    (@as(f64, @floatFromInt(updated_union_cells)) * 100.0) / @as(f64, @floatFromInt(total_cells))
-                else
-                    0.0;
-                const preserved_percent = if (total_cells > 0)
-                    (@as(f64, @floatFromInt(preserved_cells)) * 100.0) / @as(f64, @floatFromInt(total_cells))
-                else
-                    0.0;
-                const damage_percent = if (total_cells > 0)
-                    (@as(f64, @floatFromInt(damage_bbox_cells)) * 100.0) / @as(f64, @floatFromInt(total_cells))
-                else
-                    0.0;
-                const clip_cells_w = if (cell_w_i > 0) @divFloor(clip_w_i, cell_w_i) else 0;
-                const cell_h_pixels: i32 = @intFromFloat(std.math.round(r.terminal_metrics.cell_height));
-                const clip_cells_h = if (cell_h_pixels > 0) @divFloor(clip_h_i, cell_h_pixels) else 0;
-                spatial_log.logf(
-                    .info,
-                    "presented_gen={d} widget_logical={d}x{d} texture_px={d}x{d} grid={d}x{d} full={d} partial={d} damage_bbox={d}..{d}/{d}..{d} damage_bbox_cells={d} damage_pct={d:.2} updated_cells={d} updated_union_cells={d} updated_pct={d:.2} preserved_cells={d} preserved_pct={d:.2} shift_rows={d} shift_exposed_only={d} scroll_copy_used={d} clip_px={d}x{d} clip_cells={d}x{d} clip_intersects={d}",
-                    .{
-                        cache.generation,
-                        @as(i32, @intFromFloat(std.math.round(width))),
-                        @as(i32, @intFromFloat(std.math.round(height))),
-                        texture_w,
-                        texture_h,
-                        rows,
-                        cols,
-                        @intFromBool(texture_full_update),
-                        @intFromBool(texture_partial_update),
-                        cache.damage.start_row,
-                        cache.damage.end_row,
-                        cache.damage.start_col,
-                        cache.damage.end_col,
-                        damage_bbox_cells,
-                        damage_percent,
-                        updated_cells,
-                        updated_union_cells,
-                        updated_percent,
-                        preserved_cells,
-                        preserved_percent,
-                        active_viewport_shift_rows,
-                        @intFromBool(active_shift_exposed_only),
-                        @intFromBool(shifted_rows > 0),
-                        clip_w_i,
-                        clip_h_i,
-                        clip_cells_w,
-                        clip_cells_h,
-                        @intFromBool(clip_w_i > 0 and clip_h_i > 0),
-                    },
+            const clip_w = @min(width, geom.cell_width_logical_exact * @as(f32, @floatFromInt(cols)));
+            const clip_h = @min(height, geom.cell_height_logical_exact * @as(f32, @floatFromInt(rows)));
+            const visible_cols: i32 = if (geom.cell_width_logical_exact > 0) @intFromFloat(std.math.floor(clip_w / geom.cell_width_logical_exact)) else 0;
+            const visible_rows: i32 = if (geom.cell_height_logical_exact > 0) @intFromFloat(std.math.floor(clip_h / geom.cell_height_logical_exact)) else 0;
+            visible_w = @intFromFloat(std.math.round(@as(f32, @floatFromInt(visible_cols * geom.cell_width_device_px)) / scale));
+            visible_h = @intFromFloat(std.math.round(@as(f32, @floatFromInt(visible_rows * geom.cell_height_device_px)) / scale));
+            viewport_w = @as(f32, @floatFromInt(visible_w));
+            viewport_h = @as(f32, @floatFromInt(visible_h));
+            if (visible_w > 0 and visible_h > 0) {
+                r.beginClip(
+                    @intFromFloat(std.math.round(base_x)),
+                    @intFromFloat(std.math.round(base_y)),
+                    visible_w,
+                    visible_h,
                 );
             }
-            r.beginClip(
-                base_x_i,
-                base_y_i,
-                clip_w_i,
-                clip_h_i,
-            );
             updated = true;
         }
         if (rows > 0 and cols > 0) {
@@ -1220,15 +1167,13 @@ pub fn drawPrepared(
                     .a = base_bg.a,
                 };
             } else r.theme.background;
-            r.drawRect(
-                @intFromFloat(base_x),
-                @intFromFloat(base_y),
-                @intFromFloat(width),
-                @intFromFloat(height),
-                bg,
-            );
+            if (visible_w > 0 and visible_h > 0) {
+                r.drawRectF(base_x, base_y, viewport_w, viewport_h, bg);
+            }
         }
-        r.drawTerminalTexture(base_x, base_y, width, height);
+        if (visible_w > 0 and visible_h > 0) {
+            r.drawTerminalTexture(base_x, base_y, viewport_w, viewport_h);
+        }
     }
     texture_update_ms = time_utils.secondsToMs(app_shell.getTime() - texture_phase_start);
     const overlay_phase_start = app_shell.getTime();
@@ -1240,8 +1185,8 @@ pub fn drawPrepared(
         shell,
         base_x,
         base_y,
-        width,
-        height,
+        viewport_w,
+        viewport_h,
         input,
         cache,
         view_cells,

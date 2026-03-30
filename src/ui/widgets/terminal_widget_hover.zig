@@ -92,10 +92,9 @@ pub fn drawHoverUnderlineOverlay(
     if (hover_link_id == 0) return;
     if (view_cells.len < rows * cols) return;
 
-    const cell_w_i: i32 = @intFromFloat(std.math.round(r.terminal_metrics.cell_width));
-    const cell_h_i: i32 = @intFromFloat(std.math.round(r.terminal_metrics.cell_height));
-    const base_x_i: i32 = @intFromFloat(std.math.round(base_x));
-    const base_y_i: i32 = @intFromFloat(std.math.round(base_y));
+    const geom = r.terminalCellGeometry();
+    const cell_w = geom.cell_width_logical_exact;
+    const cell_h = geom.cell_height_logical_exact;
     const underline_color = r.theme.link;
 
     var row_idx: usize = 0;
@@ -112,10 +111,10 @@ pub fn drawHoverUnderlineOverlay(
             while (col_idx < cols and view_cells[row_idx * cols + col_idx].attrs.link_id == hover_link_id) {
                 col_idx += 1;
             }
-            const rect_x = base_x_i + @as(i32, @intCast(start_col)) * cell_w_i;
-            const rect_y = base_y_i + @as(i32, @intCast(row_idx)) * cell_h_i + (cell_h_i - 2);
-            const rect_w = cell_w_i * @as(i32, @intCast(col_idx - start_col));
-            r.drawRect(rect_x, rect_y, rect_w, 2, underline_color);
+            const rect_x = base_x + @as(f32, @floatFromInt(@as(i32, @intCast(start_col)))) * cell_w;
+            const rect_y = base_y + @as(f32, @floatFromInt(@as(i32, @intCast(row_idx)))) * cell_h + (cell_h - (2.0 / (if (r.render_scale > 0.0) r.render_scale else 1.0)));
+            const rect_w = cell_w * @as(f32, @floatFromInt(@as(i32, @intCast(col_idx - start_col))));
+            r.drawRectF(rect_x, rect_y, rect_w, 2.0 / (if (r.render_scale > 0.0) r.render_scale else 1.0), underline_color);
         }
     }
 }

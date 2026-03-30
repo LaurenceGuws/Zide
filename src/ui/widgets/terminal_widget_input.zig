@@ -41,10 +41,11 @@ pub fn handleInput(
     const start_line = if (end_line > rows) end_line - rows else 0;
     const has_visible_grid = rows > 0 and cols > 0 and view_cells.len >= rows * cols;
     const r = shell.rendererPtr();
-    const hit_cell_w = @as(f32, @floatFromInt(@max(1, @as(i32, @intFromFloat(std.math.round(r.terminal_metrics.cell_width))))));
-    const hit_cell_h = @as(f32, @floatFromInt(@max(1, @as(i32, @intFromFloat(std.math.round(r.terminal_metrics.cell_height))))));
-    const hit_base_x = @as(f32, @floatFromInt(@as(i32, @intFromFloat(std.math.round(x)))));
-    const hit_base_y = @as(f32, @floatFromInt(@as(i32, @intFromFloat(std.math.round(y)))));
+    const geom = r.terminalCellGeometry();
+    const hit_cell_w = geom.cell_width_logical_exact;
+    const hit_cell_h = geom.cell_height_logical_exact;
+    const hit_base_x = x;
+    const hit_base_y = y;
     hover_mod.updateHoverStateVisible(
         &self.hover,
         x,

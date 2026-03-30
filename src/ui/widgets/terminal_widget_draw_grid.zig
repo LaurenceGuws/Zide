@@ -232,10 +232,11 @@ pub fn drawRowBackgrounds(
     screen_reverse_mode: bool,
 ) void {
     const rr = renderer.rendererPtr();
-    const cell_w_i: i32 = @intFromFloat(std.math.round(rr.terminal_metrics.cell_width));
-    const cell_h_i: i32 = @intFromFloat(std.math.round(rr.terminal_metrics.cell_height));
-    const base_x_i: i32 = @intFromFloat(std.math.round(base_x_local));
-    const base_y_i: i32 = @intFromFloat(std.math.round(base_y_local));
+    const geom = rr.terminalCellGeometry();
+    const cell_w = geom.cell_width_logical_exact;
+    const cell_h = geom.cell_height_logical_exact;
+    const scale = if (rr.render_scale > 0.0) rr.render_scale else 1.0;
+    const padding_x = @as(f32, @floatFromInt(padding_x_i)) / scale;
 
     const row_cells = rowSlice(snapshot_cells, cols_count, row_idx);
     if (row_cells.len != cols_count) return;
@@ -247,16 +248,16 @@ pub fn drawRowBackgrounds(
     while (col <= col_end and col < cols_count) : (col += 1) {
         const cell = row_cells[col];
         if (cell.x != 0 or cell.y != 0) continue;
-        const cell_x_i = base_x_i + @as(i32, @intCast(col)) * cell_w_i;
-        const cell_y_i = base_y_i + @as(i32, @intCast(row_idx)) * cell_h_i;
+        const cell_x = base_x_local + @as(f32, @floatFromInt(@as(i32, @intCast(col)))) * cell_w;
+        const cell_y = base_y_local + @as(f32, @floatFromInt(@as(i32, @intCast(row_idx)))) * cell_h;
         const run_color = resolvedBackgroundColor(cell, screen_reverse_mode);
         const run_end = backgroundRunEnd(row_cells, cols_count, col, col_end, screen_reverse_mode, run_color);
         const run_width_cols = run_end - col;
-        rr.addTerminalRect(
-            cell_x_i,
-            cell_y_i,
-            cell_w_i * @as(i32, @intCast(run_width_cols)),
-            cell_h_i,
+        rr.addTerminalRectF(
+            cell_x,
+            cell_y,
+            cell_w * @as(f32, @floatFromInt(@as(i32, @intCast(run_width_cols)))),
+            cell_h,
             run_color,
         );
         col = run_end - 1;
@@ -264,11 +265,11 @@ pub fn drawRowBackgrounds(
 
     if (draw_padding and padding_x_i > 0 and cols_count > 0) {
         const last_cell = row_cells[cols_count - 1];
-        rr.addTerminalRect(
-            base_x_i + @as(i32, @intCast(cols_count)) * cell_w_i,
-            base_y_i + @as(i32, @intCast(row_idx)) * cell_h_i,
-            padding_x_i,
-            cell_h_i,
+        rr.addTerminalRectF(
+            base_x_local + @as(f32, @floatFromInt(@as(i32, @intCast(cols_count)))) * cell_w,
+            base_y_local + @as(f32, @floatFromInt(@as(i32, @intCast(row_idx)))) * cell_h,
+            padding_x,
+            cell_h,
             resolvedBackgroundColor(last_cell, screen_reverse_mode),
         );
     }
@@ -746,10 +747,9 @@ pub fn drawRowGlyphs(
     _ = padding_x_i;
     const BlinkStyleT = @TypeOf(blink_style_mode);
     const rr = renderer.rendererPtr();
-    const cell_w_i: i32 = @intFromFloat(std.math.round(rr.terminal_metrics.cell_width));
-    const cell_h_i: i32 = @intFromFloat(std.math.round(rr.terminal_metrics.cell_height));
-    const base_x_i: i32 = @intFromFloat(std.math.round(base_x_local));
-    const base_y_i: i32 = @intFromFloat(std.math.round(base_y_local));
+    const geom = rr.terminalCellGeometry();
+    const cell_w = geom.cell_width_logical_exact;
+    const cell_h = geom.cell_height_logical_exact;
     const row_cells = rowSlice(snapshot_cells, cols_count, row_idx);
     if (row_cells.len != cols_count) return;
     const col_start = @min(col_start_in, cols_count - 1);
@@ -854,7 +854,7 @@ pub fn drawRowGlyphs(
             _ = span_scan_start;
             const direct_render_scale = if (rr.terminal_font.render_scale > 0.0) rr.terminal_font.render_scale else 1.0;
             const direct_inv_scale = 1.0 / direct_render_scale;
-            const row_baseline = @as(f32, @floatFromInt(base_y_i + @as(i32, @intCast(row_idx)) * cell_h_i)) + rr.terminal_metrics.baseline_from_top;
+            const row_baseline = base_y_local + @as(f32, @floatFromInt(@as(i32, @intCast(row_idx)))) * cell_h + geom.baseline_logical_exact;
             var direct_col = span_start_col;
             while (direct_col < span_end_excl and direct_col < row_cells.len) : (direct_col += 1) {
                 const cell = row_cells[direct_col];
@@ -889,7 +889,7 @@ pub fn drawRowGlyphs(
                     };
                 };
                 _ = direct_choice_start;
-                const cell_x_i = base_x_i + @as(i32, @intCast(direct_col)) * cell_w_i;
+                const cell_x = base_x_local + @as(f32, @floatFromInt(@as(i32, @intCast(direct_col)))) * cell_w;
                 const followed_by_space = blk: {
                     const next_col = direct_col + 1;
                     if (next_col < row_cells.len) {
@@ -909,9 +909,9 @@ pub fn drawRowGlyphs(
                     direct_render_scale,
                     direct_inv_scale,
                     row_baseline,
-                    @as(f32, @floatFromInt(cell_x_i)),
-                    @as(f32, @floatFromInt(cell_w_i)),
-                    @as(f32, @floatFromInt(cell_h_i)),
+                    cell_x,
+                    cell_w,
+                    cell_h,
                     followed_by_space,
                     fg_draw.toRgba(),
                     stats,
@@ -947,14 +947,14 @@ pub fn drawRowGlyphs(
                 var behind_rgba = bg_draw.toRgba();
                 behind_rgba.a = 255;
                 rr.text_bg_rgba = behind_rgba;
-                const box_x_i = base_x_i + @as(i32, @intCast(special_col)) * cell_w_i;
-                const box_y_i = base_y_i + @as(i32, @intCast(row_idx)) * cell_h_i;
-                const box_w_i = cell_w_i * @as(i32, @intCast(width_units));
-                const box_h_i = cell_h_i;
+                const box_x = base_x_local + @as(f32, @floatFromInt(@as(i32, @intCast(special_col)))) * cell_w;
+                const box_y = base_y_local + @as(f32, @floatFromInt(@as(i32, @intCast(row_idx)))) * cell_h;
+                const box_w = cell_w * @as(f32, @floatFromInt(@as(i32, @intCast(width_units))));
+                const box_h = cell_h;
                 if (terminal_glyphs.specialVariantForCodepoint(cell.codepoint)) |variant| {
                     if (variant == .shade) {
                         const special_submit_start = app_shell.getTime();
-                        _ = terminal_glyphs.drawBoxGlyphBatched(addTerminalGlyphRect, rr, cell.codepoint, @as(f32, @floatFromInt(box_x_i)), @as(f32, @floatFromInt(box_y_i)), @as(f32, @floatFromInt(box_w_i)), @as(f32, @floatFromInt(box_h_i)), fg_draw);
+                        _ = terminal_glyphs.drawBoxGlyphBatched(addTerminalGlyphRect, rr, cell.codepoint, box_x, box_y, box_w, box_h, fg_draw);
                         if (stats) |s| {
                             const submit_ms = (app_shell.getTime() - special_submit_start) * 1000.0;
                             s.shaped_special_glyphs += 1;
@@ -964,10 +964,10 @@ pub fn drawRowGlyphs(
                         }
                         continue;
                     }
-                    _ = drawAlignedSpecialGlyphSprite(rr, row_cells, special_col, width_units, screen_reverse_mode, cell.codepoint, variant, box_x_i, box_y_i, box_w_i, box_h_i, fg_draw, if (rr.terminal_font.render_scale > 0.0) rr.terminal_font.render_scale else 1.0, &row_sprite_cache, stats);
+                    _ = drawAlignedSpecialGlyphSprite(rr, row_cells, special_col, width_units, screen_reverse_mode, cell.codepoint, variant, @as(i32, @intFromFloat(std.math.round(box_x))), @as(i32, @intFromFloat(std.math.round(box_y))), @as(i32, @intFromFloat(std.math.round(box_w))), @as(i32, @intFromFloat(std.math.round(box_h))), fg_draw, if (rr.terminal_font.render_scale > 0.0) rr.terminal_font.render_scale else 1.0, &row_sprite_cache, stats);
                 } else if (isTerminalBoxGlyph(cell.codepoint)) {
                     const special_submit_start = app_shell.getTime();
-                    _ = terminal_glyphs.drawBoxGlyphBatched(addTerminalGlyphRect, rr, cell.codepoint, @as(f32, @floatFromInt(box_x_i)), @as(f32, @floatFromInt(box_y_i)), @as(f32, @floatFromInt(box_w_i)), @as(f32, @floatFromInt(box_h_i)), fg_draw);
+                    _ = terminal_glyphs.drawBoxGlyphBatched(addTerminalGlyphRect, rr, cell.codepoint, box_x, box_y, box_w, box_h, fg_draw);
                     if (stats) |s| {
                         const submit_ms = (app_shell.getTime() - special_submit_start) * 1000.0;
                         s.shaped_special_glyphs += 1;
@@ -1015,8 +1015,8 @@ pub fn drawRowGlyphs(
                 continue;
             }
             const cwidth_units = @as(usize, @max(@as(u8, 1), ccell.width));
-            const cell_x_i = base_x_i + @as(i32, @intCast(cc)) * cell_w_i;
-            const cell_y_i = base_y_i + @as(i32, @intCast(row_idx)) * cell_h_i;
+            const cell_x = base_x_local + @as(f32, @floatFromInt(@as(i32, @intCast(cc)))) * cell_w;
+            const cell_y = base_y_local + @as(f32, @floatFromInt(@as(i32, @intCast(row_idx)))) * cell_h;
             const underline_color = Color{ .r = ccell.attrs.underline_color.r, .g = ccell.attrs.underline_color.g, .b = ccell.attrs.underline_color.b, .a = ccell.attrs.underline_color.a };
             var underline = ccell.attrs.underline;
             if (ccell.attrs.link_id != 0) underline = ccell.attrs.link_id == hover_link;
@@ -1029,7 +1029,7 @@ pub fn drawRowGlyphs(
                 }
             }
             if (underline and ccell.codepoint != 0) {
-                terminal_underline.drawUnderline(addTerminalGlyphRect, rr, cell_x_i, cell_y_i, cell_w_i * @as(i32, @intCast(cwidth_units)), cell_h_i, underline_color);
+                terminal_underline.drawUnderline(addTerminalGlyphRect, rr, @as(i32, @intFromFloat(std.math.round(cell_x))), @as(i32, @intFromFloat(std.math.round(cell_y))), @as(i32, @intFromFloat(std.math.round(cell_w * @as(f32, @floatFromInt(@as(i32, @intCast(cwidth_units))))))), @as(i32, @intFromFloat(std.math.round(cell_h))), underline_color);
             }
             cc += cwidth_units;
         }
@@ -1061,8 +1061,8 @@ pub fn drawRowGlyphs(
                     continue;
                 }
                 const cell_width_units = @as(usize, @max(@as(u8, 1), cell.width));
-                const cell_x_i = base_x_i + @as(i32, @intCast(fb_col)) * cell_w_i;
-                const cell_y_i = base_y_i + @as(i32, @intCast(row_idx)) * cell_h_i;
+                const cell_x = base_x_local + @as(f32, @floatFromInt(@as(i32, @intCast(fb_col)))) * cell_w;
+                const cell_y = base_y_local + @as(f32, @floatFromInt(@as(i32, @intCast(row_idx)))) * cell_h;
                 const fg = Color{ .r = cell.attrs.fg.r, .g = cell.attrs.fg.g, .b = cell.attrs.fg.b, .a = cell.attrs.fg.a };
                 const bg = Color{ .r = cell.attrs.bg.r, .g = cell.attrs.bg.g, .b = cell.attrs.bg.b, .a = cell.attrs.bg.a };
                 const underline_color = Color{ .r = cell.attrs.underline_color.r, .g = cell.attrs.underline_color.g, .b = cell.attrs.underline_color.b, .a = cell.attrs.underline_color.a };
@@ -1084,9 +1084,9 @@ pub fn drawRowGlyphs(
                     break :blk true;
                 };
                 if (cell.combining_len > 0) {
-                    rr.drawTerminalCellGraphemeBatched(cell.codepoint, cell.combining[0..@intCast(cell.combining_len)], @as(f32, @floatFromInt(cell_x_i)), @as(f32, @floatFromInt(cell_y_i)), @as(f32, @floatFromInt(cell_w_i * @as(i32, @intCast(cell_width_units)))), @as(f32, @floatFromInt(cell_h_i)), if (cell_reverse) bg else fg, if (cell_reverse) fg else bg, underline_color, cell.attrs.bold, false, false, followed_by_space, false);
+                    rr.drawTerminalCellGraphemeBatched(cell.codepoint, cell.combining[0..@intCast(cell.combining_len)], cell_x, cell_y, cell_w * @as(f32, @floatFromInt(@as(i32, @intCast(cell_width_units)))), cell_h, if (cell_reverse) bg else fg, if (cell_reverse) fg else bg, underline_color, cell.attrs.bold, false, false, followed_by_space, false);
                 } else {
-                    rr.drawTerminalCellBatched(cell.codepoint, @as(f32, @floatFromInt(cell_x_i)), @as(f32, @floatFromInt(cell_y_i)), @as(f32, @floatFromInt(cell_w_i * @as(i32, @intCast(cell_width_units)))), @as(f32, @floatFromInt(cell_h_i)), if (cell_reverse) bg else fg, if (cell_reverse) fg else bg, underline_color, cell.attrs.bold, false, false, followed_by_space, false);
+                    rr.drawTerminalCellBatched(cell.codepoint, cell_x, cell_y, cell_w * @as(f32, @floatFromInt(@as(i32, @intCast(cell_width_units)))), cell_h, if (cell_reverse) bg else fg, if (cell_reverse) fg else bg, underline_color, cell.attrs.bold, false, false, followed_by_space, false);
                 }
                 if (stats) |s| s.fallback_cells += 1;
                 fb_col += cell_width_units;
@@ -1112,12 +1112,10 @@ pub fn drawRowGlyphs(
             const cell = row_cells[abs_col];
             if (cell.x != 0 or cell.y != 0) continue;
             const width_units = @as(usize, @max(@as(u8, 1), cell.width));
-            const cell_x_i = base_x_i + @as(i32, @intCast(abs_col)) * cell_w_i;
-            const cell_y_i = base_y_i + @as(i32, @intCast(row_idx)) * cell_h_i;
-            const cell_x = @as(f32, @floatFromInt(cell_x_i));
-            const cell_y = @as(f32, @floatFromInt(cell_y_i));
-            const cell_w = @as(f32, @floatFromInt(cell_w_i * @as(i32, @intCast(width_units))));
-            const cell_h = @as(f32, @floatFromInt(cell_h_i));
+            const cell_x = base_x_local + @as(f32, @floatFromInt(@as(i32, @intCast(abs_col)))) * cell_w;
+            const cell_y = base_y_local + @as(f32, @floatFromInt(@as(i32, @intCast(row_idx)))) * cell_h;
+            const cell_w_span = cell_w * @as(f32, @floatFromInt(@as(i32, @intCast(width_units))));
+            const cell_h_span = cell_h;
 
             if (!rr.terminal_shape_first_pen_set.items[cluster_rel]) {
                 rr.terminal_shape_first_pen_set.items[cluster_rel] = true;
@@ -1152,14 +1150,14 @@ pub fn drawRowGlyphs(
                 continue;
             }
             if (cell.combining_len == 0) {
-                const box_x_i = base_x_i + @as(i32, @intCast(abs_col)) * cell_w_i;
-                const box_y_i = base_y_i + @as(i32, @intCast(row_idx)) * cell_h_i;
-                const box_w_i = cell_w_i * @as(i32, @intCast(width_units));
-                const box_h_i = cell_h_i;
+                const box_x = cell_x;
+                const box_y = cell_y;
+                const box_w = cell_w_span;
+                const box_h = cell_h_span;
                 if (terminal_glyphs.specialVariantForCodepoint(cell.codepoint)) |variant| {
                     if (variant == .shade) {
                         const special_submit_start = app_shell.getTime();
-                        _ = terminal_glyphs.drawBoxGlyphBatched(addTerminalGlyphRect, rr, cell.codepoint, @as(f32, @floatFromInt(box_x_i)), @as(f32, @floatFromInt(box_y_i)), @as(f32, @floatFromInt(box_w_i)), @as(f32, @floatFromInt(box_h_i)), fg_draw);
+                        _ = terminal_glyphs.drawBoxGlyphBatched(addTerminalGlyphRect, rr, cell.codepoint, box_x, box_y, box_w, box_h, fg_draw);
                         if (stats) |s| {
                             const submit_ms = (app_shell.getTime() - special_submit_start) * 1000.0;
                             s.shaped_special_glyphs += 1;
@@ -1169,22 +1167,18 @@ pub fn drawRowGlyphs(
                         }
                         continue;
                     }
-                    if (drawAlignedSpecialGlyphSprite(rr, row_cells, abs_col, width_units, screen_reverse_mode, cell.codepoint, variant, box_x_i, box_y_i, box_w_i, box_h_i, fg_draw, render_scale, &row_sprite_cache, stats)) {
+                    if (drawAlignedSpecialGlyphSprite(rr, row_cells, abs_col, width_units, screen_reverse_mode, cell.codepoint, variant, @as(i32, @intFromFloat(std.math.round(box_x))), @as(i32, @intFromFloat(std.math.round(box_y))), @as(i32, @intFromFloat(std.math.round(box_w))), @as(i32, @intFromFloat(std.math.round(box_h))), fg_draw, render_scale, &row_sprite_cache, stats)) {
                         continue;
                     }
                     if (variant == .powerline or variant == .box or variant == .braille or variant == .legacy or variant == .branch or variant == .shade) {
                         const special_log = app_logger.logger("terminal.glyph.special");
-                        special_log.logf(.info, "sprite_missing cp=U+{X} variant={s} cell={d}x{d}", .{ cell.codepoint, @tagName(variant), box_w_i, box_h_i });
+                        special_log.logf(.info, "sprite_missing cp=U+{X} variant={s} cell={d}x{d}", .{ cell.codepoint, @tagName(variant), @as(i32, @intFromFloat(std.math.round(box_w))), @as(i32, @intFromFloat(std.math.round(box_h))) });
                     }
                 }
             }
             if (cell.combining_len == 0 and isTerminalBoxGlyph(cell.codepoint)) {
                 const special_submit_start = app_shell.getTime();
-                const box_x_i = base_x_i + @as(i32, @intCast(abs_col)) * cell_w_i;
-                const box_y_i = base_y_i + @as(i32, @intCast(row_idx)) * cell_h_i;
-                const box_w_i = cell_w_i * @as(i32, @intCast(width_units));
-                const box_h_i = cell_h_i;
-                _ = terminal_glyphs.drawBoxGlyphBatched(addTerminalGlyphRect, rr, cell.codepoint, @as(f32, @floatFromInt(box_x_i)), @as(f32, @floatFromInt(box_y_i)), @as(f32, @floatFromInt(box_w_i)), @as(f32, @floatFromInt(box_h_i)), fg_draw);
+                _ = terminal_glyphs.drawBoxGlyphBatched(addTerminalGlyphRect, rr, cell.codepoint, cell_x, cell_y, cell_w_span, cell_h_span, fg_draw);
                 if (stats) |s| {
                     const submit_ms = (app_shell.getTime() - special_submit_start) * 1000.0;
                     s.shaped_special_glyphs += 1;
@@ -1197,7 +1191,7 @@ pub fn drawRowGlyphs(
             }
 
             const text_submit_start = app_shell.getTime();
-            drawShapedGlyph(&rr.terminal_font, draw_ctx, span_choice.face, span_choice.want_color, cell.codepoint, infos[i].codepoint, positions[i], pen_rel, cell_x, cell_y, rr.terminal_metrics.baseline_from_top, cell_w, cell_h, followed_by_space, fg_draw.toRgba());
+            drawShapedGlyph(&rr.terminal_font, draw_ctx, span_choice.face, span_choice.want_color, cell.codepoint, infos[i].codepoint, positions[i], pen_rel, cell_x, cell_y, geom.baseline_logical_exact, cell_w_span, cell_h_span, followed_by_space, fg_draw.toRgba());
             if (stats) |s| {
                 s.shaped_glyphs += 1;
                 s.shaped_text_glyphs += 1;

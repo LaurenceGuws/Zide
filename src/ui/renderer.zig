@@ -329,6 +329,15 @@ pub const Renderer = struct {
         baseline_from_top: f32,
     };
 
+    pub const TerminalCellGeometry = struct {
+        cell_width_logical_exact: f32,
+        cell_height_logical_exact: f32,
+        baseline_logical_exact: f32,
+        cell_width_device_px: i32,
+        cell_height_device_px: i32,
+        baseline_device_px: i32,
+    };
+
     pub const SelectionOverlayStyle = struct {
         smooth_enabled: bool = true,
         corner_px: ?f32 = null,
@@ -1406,6 +1415,13 @@ pub const Renderer = struct {
         self.drawTextureRect(self.white_texture, src, dest, color.toRgba());
     }
 
+    pub fn drawRectF(self: *Renderer, x: f32, y: f32, w: f32, h: f32, color: Color) void {
+        if (w <= 0 or h <= 0) return;
+        const dest = types.Rect{ .x = x, .y = y, .width = w, .height = h };
+        const src = texture_draw.unitSrcRect();
+        self.drawTextureRect(self.white_texture, src, dest, color.toRgba());
+    }
+
     pub fn drawRectOutline(self: *Renderer, x: i32, y: i32, w: i32, h: i32, color: Color) void {
         shape_draw.drawRectOutline(drawRectThunk, self, x, y, w, h, color);
     }
@@ -1938,6 +1954,28 @@ pub const Renderer = struct {
 
     pub fn addTerminalRect(self: *Renderer, x: i32, y: i32, w: i32, h: i32, color: Color) void {
         draw_ops.addTerminalRect(self, x, y, w, h, color.toRgba());
+    }
+
+    pub fn addTerminalRectF(self: *Renderer, x: f32, y: f32, w: f32, h: f32, color: Color) void {
+        if (w <= 0 or h <= 0) return;
+        const src = texture_draw.unitSrcRect();
+        const dest = types.Rect{ .x = x, .y = y, .width = w, .height = h };
+        draw_ops.addBatchQuad(self, self.white_texture, src, dest, color.toRgba(), types.Rgba{ .r = 0, .g = 0, .b = 0, .a = 0 }, .rgba);
+    }
+
+    pub fn terminalCellGeometry(self: *Renderer) TerminalCellGeometry {
+        const scale = if (self.render_scale > 0.0) self.render_scale else 1.0;
+        const cell_width_device_px = @max(1, @as(i32, @intFromFloat(std.math.round(self.terminal_metrics.cell_width * scale))));
+        const cell_height_device_px = @max(1, @as(i32, @intFromFloat(std.math.round(self.terminal_metrics.cell_height * scale))));
+        const baseline_device_px = @max(1, @as(i32, @intFromFloat(std.math.round(self.terminal_metrics.baseline_from_top * scale))));
+        return .{
+            .cell_width_logical_exact = @as(f32, @floatFromInt(cell_width_device_px)) / scale,
+            .cell_height_logical_exact = @as(f32, @floatFromInt(cell_height_device_px)) / scale,
+            .baseline_logical_exact = @as(f32, @floatFromInt(baseline_device_px)) / scale,
+            .cell_width_device_px = cell_width_device_px,
+            .cell_height_device_px = cell_height_device_px,
+            .baseline_device_px = baseline_device_px,
+        };
     }
 
     pub fn addTerminalGlyphRect(self: *Renderer, x: i32, y: i32, w: i32, h: i32, color: Color) void {
