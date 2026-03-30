@@ -413,6 +413,13 @@ fn addTerminalGlyphRect(ctx: *anyopaque, x: i32, y: i32, w: i32, h: i32, color: 
     rr.addTerminalGlyphRect(x, y, w, h, color);
 }
 
+fn shouldTraceComparisonCell(row_idx: usize, col_idx: usize, cursor_pos: CursorPos, cols_count: usize) bool {
+    if (row_idx != cursor_pos.row) return false;
+    if (col_idx == cursor_pos.col) return true;
+    const normal_col = @min(cols_count - 1, cursor_pos.col + 1);
+    return col_idx == normal_col;
+}
+
 fn isTerminalBoxGlyph(codepoint: u32) bool {
     return terminal_glyphs.hasAnalyticBoxGlyphCoverage(codepoint);
 }
@@ -484,7 +491,12 @@ fn drawShapedGlyph(
     cell_height: f32,
     followed_by_space: bool,
     color: Rgba,
+    trace_row: ?usize,
+    trace_col: ?usize,
+    trace_cursor_col: ?usize,
 ) void {
+    const trace_log = app_logger.logger("terminal.cursor_glyph_trace");
+    const glyph_cached = font.hasGlyphCachedById(face, glyph_id, want_color, false);
     const glyph = font.getGlyphById(face, glyph_id, want_color, false, hb_pos.x_advance) catch |err| {
         const log = app_logger.logger("terminal.draw");
         log.logf(.warning, "shaped glyph lookup failed cp=U+{X} glyph_id={d} err={s}", .{ base_codepoint, glyph_id, @errorName(err) });
@@ -538,6 +550,38 @@ fn drawShapedGlyph(
     } else terminal_font_mod.Rect{ .x = snapped_x, .y = snapped_y, .width = axis_x.size, .height = axis_y.size };
 
     const draw_color = if (glyph.is_color) Rgba{ .r = 255, .g = 255, .b = 255, .a = 255 } else color;
+    if ((trace_log.enabled_file or trace_log.enabled_console) and trace_row != null and trace_col != null and trace_cursor_col != null) {
+        trace_log.logf(
+            .info,
+            "path=shaped row={d} col={d} role={s} cp=U+{X} face={*} gid={d} cached={d} texture_id={d} atlas_px={d:.3},{d:.3} {d:.3}x{d:.3} bitmap_px={d}x{d} baseline={d:.3} draw_logical={d:.3},{d:.3} {d:.3}x{d:.3} draw_device={d:.3},{d:.3} {d:.3}x{d:.3} render_scale={d:.3}",
+            .{
+                trace_row.?,
+                trace_col.?,
+                if (trace_col.? == trace_cursor_col.?) "cursor" else "normal",
+                base_codepoint,
+                face,
+                glyph_id,
+                @intFromBool(glyph_cached),
+                if (glyph.is_color) font.color_texture.id else font.coverage_texture.id,
+                glyph.rect.x,
+                glyph.rect.y,
+                glyph.rect.width,
+                glyph.rect.height,
+                glyph.width,
+                glyph.height,
+                baseline,
+                dest.x,
+                dest.y,
+                dest.width,
+                dest.height,
+                dest.x * render_scale,
+                dest.y * render_scale,
+                dest.width * render_scale,
+                dest.height * render_scale,
+                render_scale,
+            },
+        );
+    }
     if (glyph.is_color) {
         ctx_draw.drawTexture(ctx_draw.ctx, font.color_texture, glyph.rect, dest, draw_color, .rgba);
     } else {
@@ -562,7 +606,12 @@ fn drawDirectGlyphById(
     followed_by_space: bool,
     color: Rgba,
     stats: ?*GlyphDrawStats,
+    trace_row: ?usize,
+    trace_col: ?usize,
+    trace_cursor_col: ?usize,
 ) void {
+    const trace_log = app_logger.logger("terminal.cursor_glyph_trace");
+    const glyph_cached = font.hasGlyphCachedById(face, glyph_id, want_color, false);
     const glyph_lookup_start = app_shell.getTime();
     const glyph = font.getGlyphById(face, glyph_id, want_color, false, 0) catch |err| {
         const log = app_logger.logger("terminal.draw");
@@ -620,6 +669,38 @@ fn drawDirectGlyphById(
         };
     };
     const draw_color = if (glyph.is_color) Rgba{ .r = 255, .g = 255, .b = 255, .a = 255 } else color;
+    if ((trace_log.enabled_file or trace_log.enabled_console) and trace_row != null and trace_col != null and trace_cursor_col != null) {
+        trace_log.logf(
+            .info,
+            "path=direct row={d} col={d} role={s} cp=U+{X} face={*} gid={d} cached={d} texture_id={d} atlas_px={d:.3},{d:.3} {d:.3}x{d:.3} bitmap_px={d}x{d} baseline={d:.3} draw_logical={d:.3},{d:.3} {d:.3}x{d:.3} draw_device={d:.3},{d:.3} {d:.3}x{d:.3} render_scale={d:.3}",
+            .{
+                trace_row.?,
+                trace_col.?,
+                if (trace_col.? == trace_cursor_col.?) "cursor" else "normal",
+                base_codepoint,
+                face,
+                glyph_id,
+                @intFromBool(glyph_cached),
+                if (glyph.is_color) font.color_texture.id else font.coverage_texture.id,
+                glyph.rect.x,
+                glyph.rect.y,
+                glyph.rect.width,
+                glyph.rect.height,
+                glyph.width,
+                glyph.height,
+                baseline,
+                dest.x,
+                dest.y,
+                dest.width,
+                dest.height,
+                dest.x * render_scale,
+                dest.y * render_scale,
+                dest.width * render_scale,
+                dest.height * render_scale,
+                render_scale,
+            },
+        );
+    }
     if (glyph.is_color) {
         ctx_draw.drawTexture(ctx_draw.ctx, font.color_texture, glyph.rect, dest, draw_color, .rgba);
     } else {
@@ -938,6 +1019,9 @@ pub fn drawRowGlyphs(
                     followed_by_space,
                     fg_draw.toRgba(),
                     stats,
+                    if (shouldTraceComparisonCell(row_idx, direct_col, cursor_pos, cols_count)) row_idx else null,
+                    if (shouldTraceComparisonCell(row_idx, direct_col, cursor_pos, cols_count)) direct_col else null,
+                    if (shouldTraceComparisonCell(row_idx, direct_col, cursor_pos, cols_count)) cursor_pos.col else null,
                 );
                 recordDirectGlyphSample(&direct_samples, row_idx, direct_col, cell.codepoint, choice.glyph_id, choice.simple_ascii, choice.want_color, fg_draw, bg_draw);
                 if (sample_capture) |capture| {
@@ -1229,7 +1313,26 @@ pub fn drawRowGlyphs(
                 const snapped_origin = @as(f32, @floatFromInt(@as(i32, @intFromFloat(std.math.round(draw_y * render_scale))))) / render_scale;
                 trace_log.logf(.info, "pass=row_glyph_shaped row={d} col={d} cp=U+{X} face={*} gid={d} logical_cell={d:.3},{d:.3} {d:.3}x{d:.3} baseline={d:.3} glyph_logical={d:.3}x{d:.3} draw_y={d:.3} quant_y={d:.3} quant_h={d:.3} device={d:.3},{d:.3} {d:.3}x{d:.3} reverse={d} blink={d} bold={d}", .{ row_idx, abs_col, cell.codepoint, span_choice.face, infos[i].codepoint, cell_x, cell_y, cell_w_span, cell_h_span, baseline, glyph_w, glyph_h, draw_y, snapped_origin, glyph_h, cell_x * render_scale, snapped_origin * render_scale, glyph_w * render_scale, glyph_h * render_scale, @intFromBool(cell.attrs.reverse != screen_reverse_mode), @intFromBool(cell.attrs.blink), @intFromBool(cell.attrs.bold) });
             }
-            drawShapedGlyph(&rr.terminal_font, draw_ctx, span_choice.face, span_choice.want_color, cell.codepoint, infos[i].codepoint, positions[i], pen_rel, cell_x, cell_y, geom.baseline_logical_exact, cell_w_span, cell_h_span, followed_by_space, fg_draw.toRgba());
+                drawShapedGlyph(
+                    &rr.terminal_font,
+                    draw_ctx,
+                    span_choice.face,
+                    span_choice.want_color,
+                    cell.codepoint,
+                    infos[i].codepoint,
+                    positions[i],
+                    pen_rel,
+                    cell_x,
+                    cell_y,
+                    geom.baseline_logical_exact,
+                    cell_w_span,
+                    cell_h_span,
+                    followed_by_space,
+                    fg_draw.toRgba(),
+                    if (shouldTraceComparisonCell(row_idx, abs_col, cursor_pos, cols_count)) row_idx else null,
+                    if (shouldTraceComparisonCell(row_idx, abs_col, cursor_pos, cols_count)) abs_col else null,
+                    if (shouldTraceComparisonCell(row_idx, abs_col, cursor_pos, cols_count)) cursor_pos.col else null,
+                );
             if (stats) |s| {
                 s.shaped_glyphs += 1;
                 s.shaped_text_glyphs += 1;

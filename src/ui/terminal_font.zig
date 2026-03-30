@@ -784,6 +784,11 @@ pub const TerminalFont = struct {
         return self.getGlyphByKey(key, hb_x_advance);
     }
 
+    pub fn hasGlyphCachedById(self: *const TerminalFont, face: c.FT_Face, glyph_id: u32, want_color: bool, italic: bool) bool {
+        const key = GlyphKey{ .face = face, .glyph_id = glyph_id, .want_color = want_color, .italic = italic };
+        return self.glyphs.contains(key);
+    }
+
     pub fn pickFontForCodepoint(self: *TerminalFont, codepoint_in: u32) FontChoice {
         var codepoint = codepoint_in;
         if (codepoint == 0) codepoint = ' ';
