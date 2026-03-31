@@ -195,7 +195,19 @@ zig build run -- --write-default-config=/tmp/zide-init.lua
 zig build run -- --write-default-config --stdout
 ```
 
-Once your editor's LuaLS workspace can see this repo's [.luarc.json](/home/home/personal/worktrees/zide-portable-zbar-lua/.luarc.json) and [lua/zide-meta.lua](/home/home/personal/worktrees/zide-portable-zbar-lua/lua/zide-meta.lua), that seeded user config gets the same completion surface as repo-local `.zide.lua`.
+To make `~/.config/zide/init.lua` completion-friendly when opened as its own
+workspace, install user-side LuaLS metadata too:
+
+```bash
+zig build run -- --install-user-lua-meta
+```
+
+That writes:
+- `~/.config/zide/lua/zide-meta.lua`
+- `~/.config/zide/.luarc.json`
+
+Then opening `~/.config/zide` in a LuaLS-capable editor gives the same config
+completion surface without requiring the main repo workspace.
 
 ## Developer Notes
 

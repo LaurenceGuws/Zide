@@ -33,10 +33,14 @@ pub const StartupCommand = union(enum) {
             self.force = false;
         }
     },
+    install_user_lua_meta: struct {
+        force: bool = false,
+    },
 
     pub fn deinit(self: *@This(), allocator: std.mem.Allocator) void {
         switch (self.*) {
             .write_default_config => |*cmd| cmd.deinit(allocator),
+            .install_user_lua_meta => |*cmd| cmd.force = false,
             .run => {},
         }
         self.* = .run;
@@ -72,6 +76,11 @@ fn parseStartupCommandArgs(allocator: std.mem.Allocator, args: []const []const u
             } };
             continue;
         }
+        if (std.mem.eql(u8, arg, "--install-user-lua-meta")) {
+            command.deinit(allocator);
+            command = .{ .install_user_lua_meta = .{} };
+            continue;
+        }
         if (std.mem.eql(u8, arg, "--stdout")) {
             switch (command) {
                 .write_default_config => |*cmd| {
@@ -85,6 +94,7 @@ fn parseStartupCommandArgs(allocator: std.mem.Allocator, args: []const []const u
         if (std.mem.eql(u8, arg, "--force")) {
             switch (command) {
                 .write_default_config => |*cmd| cmd.force = true,
+                .install_user_lua_meta => |*cmd| cmd.force = true,
                 else => {},
             }
             continue;
@@ -167,6 +177,7 @@ pub fn parseStartupFilePaths(allocator: std.mem.Allocator) ?[][]u8 {
             continue;
         }
         if (std.mem.startsWith(u8, arg, "--write-default-config=")) continue;
+        if (std.mem.eql(u8, arg, "--install-user-lua-meta")) continue;
         if (std.mem.eql(u8, arg, "--stdout") or std.mem.eql(u8, arg, "--force")) continue;
         if (isStartupDirectoryFlagWithValue(arg)) {
             if (i + 1 < args.len) i += 1;
@@ -331,5 +342,18 @@ test "parse startup command supports custom path and stdout target" {
             else => try std.testing.expect(false),
         },
         .run => try std.testing.expect(false),
+    }
+}
+
+test "parse startup command supports user lua meta install" {
+    const argv = [_][]const u8{
+        "--install-user-lua-meta",
+        "--force",
+    };
+    var command = try parseStartupCommandArgs(std.testing.allocator, &argv);
+    defer command.deinit(std.testing.allocator);
+    switch (command) {
+        .install_user_lua_meta => |cmd| try std.testing.expect(cmd.force),
+        else => try std.testing.expect(false),
     }
 }

@@ -77,6 +77,13 @@ That copies `assets/config/init.lua` to the platform user-config location
 before any user edits, which is also the recommended starting point for LuaLS
 completion-backed personal config authoring.
 
+For repo-independent user-config completions, install the generated LuaLS
+metadata into the user config directory too:
+
+```bash
+zig build run -- --install-user-lua-meta
+```
+
 ```mermaid
 flowchart LR
     Defaults[assets/config/init.lua] --> Merge[parse + merge]

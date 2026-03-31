@@ -170,6 +170,15 @@ pub fn userConfigDestinationPath(allocator: std.mem.Allocator) iface.LuaConfigEr
     }
 }
 
+pub fn userConfigBaseDir(allocator: std.mem.Allocator) iface.LuaConfigError![]u8 {
+    const init_path = try userConfigDestinationPath(allocator);
+    errdefer allocator.free(init_path);
+    const dir = std.fs.path.dirname(init_path) orelse return iface.LuaConfigError.InvalidConfig;
+    const owned = try allocator.dupe(u8, dir);
+    allocator.free(init_path);
+    return owned;
+}
+
 pub fn findUserConfigPath(allocator: std.mem.Allocator) iface.LuaConfigError!?[]u8 {
     const path = userConfigDestinationPath(allocator) catch |err| switch (err) {
         iface.LuaConfigError.InvalidConfig => return null,

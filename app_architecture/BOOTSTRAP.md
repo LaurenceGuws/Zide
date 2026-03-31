@@ -190,6 +190,13 @@ zig build run -- --write-default-config=/tmp/zide-init.lua
 zig build run -- --write-default-config --stdout
 ```
 
+Install LuaLS metadata beside the user config so opening `~/.config/zide`
+directly still gets completions:
+
+```bash
+zig build run -- --install-user-lua-meta
+```
+
 ## Terminal Setup
 
 Install the bundled terminfo entry:
