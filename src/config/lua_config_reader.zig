@@ -49,6 +49,29 @@ pub const Reader = struct {
         return @floatCast(value);
     }
 
+    pub fn stringOrStringListOwned(self: Reader, field: []const u8) !?[]u8 {
+        self.state.getField(self.table.index, field);
+        defer self.state.pop(1);
+
+        if (self.state.readString(-1)) |value| {
+            return try self.allocator.dupe(u8, value);
+        }
+        if (!self.state.isTable(-1)) return null;
+
+        var out = std.ArrayList(u8).empty;
+        errdefer out.deinit(self.allocator);
+
+        const value_reader = zlua_portable.reader.Reader.init(self.state, self.allocator, -1);
+        var it = value_reader.iter();
+        defer it.finish();
+        while (it.next()) {
+            const value = it.valueString() orelse continue;
+            if (out.items.len > 0) try out.append(self.allocator, ',');
+            try out.appendSlice(self.allocator, value);
+        }
+        return try out.toOwnedSlice(self.allocator);
+    }
+
     pub fn rawLen(self: Reader, idx: i32) usize {
         return self.state.rawLen(idx);
     }

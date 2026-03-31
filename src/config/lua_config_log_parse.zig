@@ -184,29 +184,14 @@ fn parseLogGroupsOwned(allocator: std.mem.Allocator, lua: *zlua.Lua, idx: i32) !
 pub fn parseLogSettings(allocator: std.mem.Allocator, lua: *zlua.Lua, table_index: i32, out: *Config) !void {
     const reader = config_reader.Reader.init(lua, allocator, table_index);
 
-    _ = lua.getField(table_index, "log");
-    if (lua.isString(-1)) {
-        if (lua.toString(-1)) |v| {
-            out.log_file_filter = try allocator.dupe(u8, v);
-            out.log_console_filter = try allocator.dupe(u8, v);
-        } else |_| {}
-    } else if (lua.isTable(-1)) {
-        if (try parseFilterValueOwned(allocator, lua, -1)) |v| {
-            out.log_file_filter = v;
-            out.log_console_filter = try allocator.dupe(u8, v);
-        }
+    if (try reader.stringOrStringListOwned("log")) |v| {
+        out.log_file_filter = v;
+        out.log_console_filter = try allocator.dupe(u8, v);
     }
-    lua.pop(1);
 
-    _ = lua.getField(table_index, "log_file_filter");
-    const log_file_direct = try parseFilterValueOwned(allocator, lua, -1);
-    if (log_file_direct) |v| out.log_file_filter = v;
-    lua.pop(1);
+    if (try reader.stringOrStringListOwned("log_file_filter")) |v| out.log_file_filter = v;
 
-    _ = lua.getField(table_index, "log_console_filter");
-    const log_console_direct = try parseFilterValueOwned(allocator, lua, -1);
-    if (log_console_direct) |v| out.log_console_filter = v;
-    lua.pop(1);
+    if (try reader.stringOrStringListOwned("log_console_filter")) |v| out.log_console_filter = v;
 
     if (parseLogLevelField(reader, "log_file_level")) |level| out.log_file_level = level;
 
@@ -229,16 +214,15 @@ pub fn parseLogSettings(allocator: std.mem.Allocator, lua: *zlua.Lua, table_inde
         const logs_idx = lua.absIndex(-1);
         const logs_reader = config_reader.Reader.init(lua, allocator, logs_idx);
 
-        _ = lua.getField(logs_idx, "file");
-        if (try parseFilterValueOwned(allocator, lua, -1)) |v| replaceOwnedString(allocator, &out.log_file_filter, v);
-        lua.pop(1);
+        if (try logs_reader.stringOrStringListOwned("file")) |v| {
+            replaceOwnedString(allocator, &out.log_file_filter, v);
+        }
 
-        _ = lua.getField(logs_idx, "console");
-        if (try parseFilterValueOwned(allocator, lua, -1)) |v| replaceOwnedString(allocator, &out.log_console_filter, v);
-        lua.pop(1);
+        if (try logs_reader.stringOrStringListOwned("console")) |v| {
+            replaceOwnedString(allocator, &out.log_console_filter, v);
+        }
 
-        _ = lua.getField(logs_idx, "enable");
-        if (try parseFilterValueOwned(allocator, lua, -1)) |v| {
+        if (try logs_reader.stringOrStringListOwned("enable")) |v| {
             if (out.log_file_filter == null) {
                 out.log_file_filter = v;
             } else {
@@ -248,7 +232,6 @@ pub fn parseLogSettings(allocator: std.mem.Allocator, lua: *zlua.Lua, table_inde
                 if (out.log_file_filter) |file_v| out.log_console_filter = try allocator.dupe(u8, file_v);
             }
         }
-        lua.pop(1);
 
         if (parseLogLevelField(logs_reader, "file_level")) |level| out.log_file_level = level;
 

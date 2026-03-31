@@ -4,7 +4,6 @@ const config_reader = @import("./lua_config_reader.zig");
 const iface = @import("./lua_config_iface.zig");
 
 const Config = iface.Config;
-const LuaConfigError = iface.LuaConfigError;
 const FontHinting = std.meta.Child(@TypeOf((@as(Config, undefined)).font_hinting));
 const GlyphOverflow = std.meta.Child(@TypeOf((@as(Config, undefined)).font_glyph_overflow));
 const LigatureStrategy = std.meta.Child(@TypeOf((@as(Config, undefined)).terminal_disable_ligatures));
@@ -92,7 +91,6 @@ pub fn parseEditorFontTable(
     lua: *zlua.Lua,
     editor_idx: i32,
     out: *Config,
-    parse_filter_value_owned: fn (std.mem.Allocator, *zlua.Lua, i32) LuaConfigError!?[]u8,
     replace_owned_string: fn (std.mem.Allocator, *?[]u8, ?[]u8) void,
     parse_ligature_strategy_from_string: fn ([]const u8) ?LigatureStrategy,
 ) !void {
@@ -101,9 +99,9 @@ pub fn parseEditorFontTable(
     try parseFontSetting(allocator, lua, -1, &out.editor_font_path, &out.editor_font_size);
     lua.pop(1);
 
-    _ = lua.getField(editor_idx, "font_features");
-    if (try parse_filter_value_owned(allocator, lua, -1)) |v| replace_owned_string(allocator, &out.editor_font_features, v);
-    lua.pop(1);
+    if (try reader.stringOrStringListOwned("font_features")) |v| {
+        replace_owned_string(allocator, &out.editor_font_features, v);
+    }
 
     if (reader.fieldString("disable_ligatures")) |v| {
         if (parse_ligature_strategy_from_string(v)) |strategy| out.editor_disable_ligatures = strategy;
@@ -115,7 +113,6 @@ pub fn parseTerminalFontTable(
     lua: *zlua.Lua,
     terminal_idx: i32,
     out: *Config,
-    parse_filter_value_owned: fn (std.mem.Allocator, *zlua.Lua, i32) LuaConfigError!?[]u8,
     replace_owned_string: fn (std.mem.Allocator, *?[]u8, ?[]u8) void,
     parse_ligature_strategy_from_string: fn ([]const u8) ?LigatureStrategy,
 ) !void {
@@ -124,9 +121,9 @@ pub fn parseTerminalFontTable(
     try parseFontSetting(allocator, lua, -1, &out.terminal_font_path, &out.terminal_font_size);
     lua.pop(1);
 
-    _ = lua.getField(terminal_idx, "font_features");
-    if (try parse_filter_value_owned(allocator, lua, -1)) |v| replace_owned_string(allocator, &out.terminal_font_features, v);
-    lua.pop(1);
+    if (try reader.stringOrStringListOwned("font_features")) |v| {
+        replace_owned_string(allocator, &out.terminal_font_features, v);
+    }
 
     if (reader.fieldString("disable_ligatures")) |v| {
         if (parse_ligature_strategy_from_string(v)) |strategy| out.terminal_disable_ligatures = strategy;

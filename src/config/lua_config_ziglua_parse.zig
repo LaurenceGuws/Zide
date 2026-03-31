@@ -495,7 +495,6 @@ fn parseNativeScalarOverlay(allocator: std.mem.Allocator, lua: *zlua.Lua, table_
             lua,
             editor_idx,
             &out,
-            lua_log_parse.parseFilterValueOwned,
             replaceOwnedString,
             lua_runtime_parse.parseLigatureStrategyFromString,
         );
@@ -522,7 +521,6 @@ fn parseNativeScalarOverlay(allocator: std.mem.Allocator, lua: *zlua.Lua, table_
             lua,
             terminal_idx,
             &out,
-            lua_log_parse.parseFilterValueOwned,
             replaceOwnedString,
             lua_runtime_parse.parseLigatureStrategyFromString,
         );
