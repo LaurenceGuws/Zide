@@ -25,9 +25,35 @@ pub fn renderStandaloneDefaultConfig(allocator: std.mem.Allocator, scope: Export
     defer out.deinit(allocator);
     const writer = out.writer(allocator);
 
-    try writer.writeAll(
+    try writeLuaHeader(writer, scope);
+    try writeLuaRootConfig(writer, lua, lua.absIndex(-1), scope);
+    try writer.writeAll("\n)\n");
+    return try out.toOwnedSlice(allocator);
+}
+
+fn writeLuaHeader(writer: anytype, scope: ExportScope) anyerror!void {
+    const header = switch (scope) {
+        .full =>
         \\-- Zide default config reference (exported standalone for user customization).
         \\-- This file is self-contained and safe to place at ~/.config/zide/init.lua.
+        \\
+        ,
+        .editor =>
+        \\-- Zide editor-scoped config reference.
+        \\-- This is a partial override config, not a full init.lua baseline.
+        \\-- Merge it into ~/.config/zide/init.lua or ./.zide.lua as needed.
+        \\
+        ,
+        .terminal =>
+        \\-- Zide terminal-scoped config reference.
+        \\-- This is a partial override config, not a full init.lua baseline.
+        \\-- Merge it into ~/.config/zide/init.lua or ./.zide.lua as needed.
+        \\
+        ,
+    };
+
+    try writer.writeAll(header);
+    try writer.writeAll(
         \\---@diagnostic disable: undefined-global
         \\local mod
         \\do
@@ -51,9 +77,6 @@ pub fn renderStandaloneDefaultConfig(allocator: std.mem.Allocator, scope: Export
         \\---@type ZideConfig
         \\return zide.config(
     );
-    try writeLuaRootConfig(writer, lua, lua.absIndex(-1), scope);
-    try writer.writeAll("\n)\n");
-    return try out.toOwnedSlice(allocator);
 }
 
 fn writeLuaRootConfig(writer: anytype, lua: State, idx: c_int, scope: ExportScope) anyerror!void {
@@ -344,6 +367,7 @@ test "standalone default config export can be loaded back by config parser" {
 test "editor scoped export excludes terminal section" {
     const rendered = try renderStandaloneDefaultConfig(std.testing.allocator, .editor);
     defer std.testing.allocator.free(rendered);
+    try std.testing.expect(std.mem.indexOf(u8, rendered, "partial override config") != null);
     try std.testing.expect(std.mem.indexOf(u8, rendered, "editor =") != null);
     try std.testing.expect(std.mem.indexOf(u8, rendered, "terminal =") == null);
     try std.testing.expect(std.mem.indexOf(u8, rendered, "  terminal = {") == null);
@@ -352,6 +376,7 @@ test "editor scoped export excludes terminal section" {
 test "terminal scoped export excludes editor section" {
     const rendered = try renderStandaloneDefaultConfig(std.testing.allocator, .terminal);
     defer std.testing.allocator.free(rendered);
+    try std.testing.expect(std.mem.indexOf(u8, rendered, "partial override config") != null);
     try std.testing.expect(std.mem.indexOf(u8, rendered, "terminal =") != null);
     try std.testing.expect(std.mem.indexOf(u8, rendered, "editor =") == null);
     try std.testing.expect(std.mem.indexOf(u8, rendered, "  editor = {") == null);
