@@ -6,6 +6,8 @@ serious terminal quality, and resource-aware tooling.
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 [![Release](https://img.shields.io/github/v/release/LaurenceGuws/Zide?include_prereleases&label=release)](https://github.com/LaurenceGuws/Zide/releases)
 [![Docs Tool](https://img.shields.io/badge/docs--tool-repo-d47a45)](https://github.com/LaurenceGuws/docs-explorer)
+[![Shared Lua](https://img.shields.io/badge/shared--lua-zlua--portable-2f855a)](https://github.com/LaurenceGuws/zlua-portable)
+[![Sibling App](https://img.shields.io/badge/sibling%20app-zbar-bb6b20)](https://github.com/LaurenceGuws/zbar)
 [![Zig](https://img.shields.io/badge/zig-0.15.2-f7a41d)](https://ziglang.org/download/)
 [![Status](https://img.shields.io/badge/status-beta-b44cff)](https://github.com/LaurenceGuws/Zide/releases)
 
@@ -15,6 +17,14 @@ serious terminal quality, and resource-aware tooling.
 - [Releases](https://github.com/LaurenceGuws/Zide/releases)
 - [Issues](https://github.com/LaurenceGuws/Zide/issues)
 - [Docs Index](docs/INDEX.md)
+
+## Related Projects
+
+- [zlua-portable](https://github.com/LaurenceGuws/zlua-portable) provides the
+  shared low-level Lua embedding and reader helpers used by Zide's config
+  layer.
+- [zbar](https://github.com/LaurenceGuws/zbar) is the sibling Zig status bar
+  project that shares the same `zlua-portable` package boundary.
 
 ## Demo
 
