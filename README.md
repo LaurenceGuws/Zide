@@ -161,6 +161,21 @@ Good starting points:
 
 Contributor/operator navigation lives in [docs/INDEX.md](docs/INDEX.md).
 
+## Lua Authoring
+
+The repo ships LuaLS-facing config metadata and a scaffold snippet for
+`.zide.lua` authoring:
+
+- [lua/zide-meta.lua](/home/home/personal/worktrees/zide-portable-zbar-lua/lua/zide-meta.lua)
+- [snippets/lua.json](/home/home/personal/worktrees/zide-portable-zbar-lua/snippets/lua.json)
+- [.luarc.json](/home/home/personal/worktrees/zide-portable-zbar-lua/.luarc.json)
+
+Refresh them with:
+
+```bash
+zig build meta
+```
+
 ## Developer Notes
 
 Repository-local docs own the detailed operator guidance:

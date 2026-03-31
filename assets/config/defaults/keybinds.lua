@@ -1,0 +1,87 @@
+return {
+	-- Keybindings (keycode-based). Key names match `shared_types.input.Key` tags.
+	-- Supported mods: "ctrl", "shift", "alt", "super", "altgr".
+	-- "altgr" is an advanced desktop/layout-specific modifier; use it deliberately.
+	-- Example:
+	--   { key = "b", mods = { "ctrl" }, action = "toggle_terminal" }
+	-- Use ["repeat"] = true for repeatable actions (zoom, undo).
+	-- By default user/project configs fill gaps on top of these bindings.
+	-- Set `no_defaults = true` in an override config to replace the default set entirely.
+	keybinds = {
+		-- no_defaults = false,
+		global = {
+			-- Config hot reload.
+			{ key = "n", mods = { "ctrl" }, action = "new_editor" },
+			{ key = "o", mods = { "ctrl" }, action = "open_file" },
+			{ key = "q", mods = { "ctrl" }, action = "quit_app" },
+			{ key = "equal", mods = { "ctrl" }, action = "zoom_in", ["repeat"] = true },
+			{ key = "kp_add", mods = { "ctrl" }, action = "zoom_in", ["repeat"] = true },
+			{ key = "minus", mods = { "ctrl" }, action = "zoom_out", ["repeat"] = true },
+			{ key = "kp_subtract", mods = { "ctrl" }, action = "zoom_out", ["repeat"] = true },
+			{ key = "zero", mods = { "ctrl" }, action = "zoom_reset" },
+			{ key = "grave", mods = { "ctrl" }, action = "toggle_terminal" },
+			{ key = "f5", mods = { "ctrl", "shift" }, action = "reload_config" },
+		},
+		editor = {
+			{ key = "a", mods = { "ctrl" }, action = "select_all" },
+			{ key = "tab", mods = { "ctrl" }, action = "next_document" },
+			{ key = "tab", mods = { "ctrl", "shift" }, action = "prev_document" },
+			{ key = "w", mods = { "ctrl" }, action = "close_editor" },
+			{ key = "g", mods = { "ctrl" }, action = "go_to_line" },
+			{ key = "s", mods = { "ctrl" }, action = "save" },
+			{ key = "s", mods = { "ctrl", "shift" }, action = "save_as" },
+			{ key = "z", mods = { "ctrl" }, action = "undo", ["repeat"] = true },
+			{ key = "y", mods = { "ctrl" }, action = "redo", ["repeat"] = true },
+			{ key = "c", mods = { "ctrl" }, action = "copy" },
+			{ key = "x", mods = { "ctrl" }, action = "cut" },
+			{ key = "v", mods = { "ctrl" }, action = "paste" },
+			{ key = "k", mods = { "ctrl", "shift" }, action = "delete_line" },
+			{ key = "d", mods = { "ctrl" }, action = "duplicate_line" },
+			{ key = "tab", mods = {}, action = "indent_lines" },
+			{ key = "tab", mods = { "shift" }, action = "outdent_lines" },
+			{ key = "left", mods = { "ctrl" }, action = "editor_move_word_left", ["repeat"] = true },
+			{ key = "right", mods = { "ctrl" }, action = "editor_move_word_right", ["repeat"] = true },
+			{ key = "up", mods = { "ctrl" }, action = "editor_move_large_up", ["repeat"] = true },
+			{ key = "down", mods = { "ctrl" }, action = "editor_move_large_down", ["repeat"] = true },
+			{ key = "left", mods = { "shift" }, action = "editor_extend_left", ["repeat"] = true },
+			{ key = "right", mods = { "shift" }, action = "editor_extend_right", ["repeat"] = true },
+			{ key = "home", mods = { "shift" }, action = "editor_extend_line_start", ["repeat"] = true },
+			{ key = "end", mods = { "shift" }, action = "editor_extend_line_end", ["repeat"] = true },
+			{ key = "left", mods = { "ctrl", "shift" }, action = "editor_extend_word_left", ["repeat"] = true },
+			{ key = "right", mods = { "ctrl", "shift" }, action = "editor_extend_word_right", ["repeat"] = true },
+			{ key = "up", mods = { "shift" }, action = "editor_extend_up", ["repeat"] = true },
+			{ key = "down", mods = { "shift" }, action = "editor_extend_down", ["repeat"] = true },
+			{ key = "up", mods = { "ctrl", "shift" }, action = "editor_extend_large_up", ["repeat"] = true },
+			{ key = "down", mods = { "ctrl", "shift" }, action = "editor_extend_large_down", ["repeat"] = true },
+			{ key = "f", mods = { "ctrl" }, action = "editor_search_open" },
+			{ key = "h", mods = { "ctrl" }, action = "editor_replace_open" },
+			{ key = "f3", mods = {}, action = "editor_search_next" },
+			{ key = "f3", mods = { "shift" }, action = "editor_search_prev" },
+			{ key = "left_bracket", mods = { "ctrl", "alt" }, action = "editor_cycle_imported_theme_prev" },
+			{ key = "right_bracket", mods = { "ctrl", "alt" }, action = "editor_cycle_imported_theme_next" },
+			{ key = "up", mods = { "shift", "alt" }, action = "editor_add_caret_up" },
+			{ key = "down", mods = { "shift", "alt" }, action = "editor_add_caret_down" },
+		},
+		terminal = {
+			{ key = "t", mods = { "ctrl", "shift" }, action = "terminal_new_tab" },
+			{ key = "w", mods = { "ctrl", "shift" }, action = "terminal_close_tab" },
+			{ key = "tab", mods = { "ctrl" }, action = "terminal_next_tab" },
+			{ key = "tab", mods = { "ctrl", "shift" }, action = "terminal_prev_tab" },
+			{ key = "right", mods = { "ctrl", "shift" }, action = "terminal_next_tab" },
+			{ key = "left", mods = { "ctrl", "shift" }, action = "terminal_prev_tab" },
+			{ key = "one", mods = { "ctrl" }, action = "terminal_focus_tab_1" },
+			{ key = "two", mods = { "ctrl" }, action = "terminal_focus_tab_2" },
+			{ key = "three", mods = { "ctrl" }, action = "terminal_focus_tab_3" },
+			{ key = "four", mods = { "ctrl" }, action = "terminal_focus_tab_4" },
+			{ key = "five", mods = { "ctrl" }, action = "terminal_focus_tab_5" },
+			{ key = "six", mods = { "ctrl" }, action = "terminal_focus_tab_6" },
+			{ key = "seven", mods = { "ctrl" }, action = "terminal_focus_tab_7" },
+			{ key = "eight", mods = { "ctrl" }, action = "terminal_focus_tab_8" },
+			{ key = "nine", mods = { "ctrl" }, action = "terminal_focus_tab_9" },
+			{ key = "c", mods = { "ctrl", "shift" }, action = "copy" },
+			{ key = "v", mods = { "ctrl", "shift" }, action = "paste" },
+			-- Debug helper: dump current terminal scrollback + visible grid to a temp file and open in pager.
+			{ key = "h", mods = { "ctrl", "shift" }, action = "terminal_scrollback_pager" },
+		},
+	},
+}
