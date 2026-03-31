@@ -16,6 +16,7 @@ pub const BuildBootstrap = struct {
     build_options: *std.Build.Step.Options,
     treesitter: ?*std.Build.Step.Compile,
     zlua_module: *std.Build.Module,
+    zlua_portable_module: *std.Build.Module,
     app_link_ctx: AppLinkContext,
 };
 
@@ -132,6 +133,7 @@ pub fn initBuildBootstrap(b: *std.Build) BuildBootstrap {
         .build_options = build_options,
         .treesitter = deps.treesitter,
         .zlua_module = deps.zlua_module,
+        .zlua_portable_module = deps.zlua_portable_module,
         .app_link_ctx = app_link_ctx,
     };
 }

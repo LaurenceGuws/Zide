@@ -9,6 +9,7 @@ pub const BuildDependencies = struct {
     treesitter: ?*std.Build.Step.Compile,
     sdl_lib: *std.Build.Step.Compile,
     zlua_module: *std.Build.Module,
+    zlua_portable_module: *std.Build.Module,
     lua_lib: ?*std.Build.Step.Compile,
     freetype_lib: ?*std.Build.Step.Compile,
     harfbuzz_lib: ?*std.Build.Step.Compile,
@@ -42,6 +43,11 @@ pub fn resolveDependencies(
         .optimize = optimize,
     });
     const zlua_module = zlua_dep.module("zlua");
+    const zlua_portable_dep = b.dependency("zlua_portable", .{
+        .target = target,
+        .optimize = optimize,
+    });
+    const zlua_portable_module = zlua_portable_dep.module("zlua_portable");
     const lua_lib: ?*std.Build.Step.Compile = null;
 
     const freetype_dep = b.dependency("freetype", .{
@@ -68,6 +74,7 @@ pub fn resolveDependencies(
         .treesitter = treesitter,
         .sdl_lib = sdl_lib,
         .zlua_module = zlua_module,
+        .zlua_portable_module = zlua_portable_module,
         .lua_lib = lua_lib,
         .freetype_lib = freetype_lib,
         .harfbuzz_lib = harfbuzz_lib,

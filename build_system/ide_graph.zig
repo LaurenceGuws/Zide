@@ -163,6 +163,7 @@ pub fn planIdeExtendedBuildGraph(
     app_link_ctx: AppLinkContext,
     build_options: *std.Build.Step.Options,
     zlua_module: *std.Build.Module,
+    zlua_portable_module: ?*std.Build.Module,
 ) void {
     const windows_shell_extension_install = addWindowsShellExtension(b, target, optimize);
 
@@ -229,6 +230,7 @@ pub fn planIdeExtendedBuildGraph(
         "src/main.zig",
         build_options,
         zlua_module,
+        zlua_portable_module,
         app_link_ctx,
         target_profile.test_unit,
     );
@@ -241,6 +243,7 @@ pub fn planIdeExtendedBuildGraph(
         "tests/tests_main.zig",
         build_options,
         zlua_module,
+        zlua_portable_module,
         app_link_ctx,
         target_profile.test_editor,
     );
@@ -253,6 +256,7 @@ pub fn planIdeExtendedBuildGraph(
         "test_editor_highlight_smoke.zig",
         build_options,
         zlua_module,
+        zlua_portable_module,
         app_link_ctx,
         target_profile.test_editor,
     );
@@ -264,6 +268,7 @@ pub fn planIdeExtendedBuildGraph(
         optimize,
         build_options,
         zlua_module,
+        zlua_portable_module,
         "editor-scripted-input-smoke",
         "src/editor_scripted_input_smoke.zig",
     );
@@ -289,6 +294,7 @@ pub fn planIdeExtendedBuildGraph(
         "src/config_tests.zig",
         build_options,
         zlua_module,
+        zlua_portable_module,
         app_link_ctx,
         target_profile.test_config,
     );
@@ -301,6 +307,7 @@ pub fn planIdeExtendedBuildGraph(
         optimize,
         "terminal-replay",
         "src/terminal_replay_main.zig",
+        zlua_portable_module,
         app_link_ctx,
         target_profile.test_terminal_replay,
     );
@@ -328,6 +335,7 @@ pub fn planIdeExtendedBuildGraph(
         optimize,
         build_options,
         zlua_module,
+        zlua_portable_module,
         "editor-perf-headless",
         "src/editor_perf_main.zig",
     );
@@ -359,6 +367,7 @@ pub fn planIdeExtendedBuildGraph(
             spec.root_source_file,
             null,
             zlua_module,
+            zlua_portable_module,
             app_link_ctx,
             spec.profile,
         );
@@ -488,6 +497,7 @@ pub fn planIdeExtendedBuildGraph(
         optimize,
         build_options,
         zlua_module,
+        zlua_portable_module,
         "zide-terminal",
         "src/entry_terminal.zig",
     );
@@ -501,6 +511,7 @@ pub fn planIdeExtendedBuildGraph(
         optimize,
         build_options,
         zlua_module,
+        zlua_portable_module,
         "zide-editor",
         "src/entry_editor.zig",
     );

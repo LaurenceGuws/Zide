@@ -13,6 +13,7 @@ pub fn build(b: *std.Build) void {
         boot.optimize,
         boot.build_options,
         boot.zlua_module,
+        boot.zlua_portable_module,
         boot.app_link_ctx,
         boot.build_mode,
         b.args,
@@ -27,5 +28,6 @@ pub fn build(b: *std.Build) void {
         boot.app_link_ctx,
         boot.build_options,
         boot.zlua_module,
+        boot.zlua_portable_module,
     );
 }

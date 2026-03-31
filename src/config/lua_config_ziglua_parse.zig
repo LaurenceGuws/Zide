@@ -1,5 +1,6 @@
 const std = @import("std");
 const zlua = @import("zlua");
+const zlua_portable = @import("zlua_portable");
 const iface = @import("./lua_config_iface.zig");
 const lua_font_parse = @import("./lua_config_font_parse.zig");
 const lua_keybind_parse = @import("./lua_config_keybind_parse.zig");
@@ -22,29 +23,6 @@ fn replaceOwnedString(allocator: std.mem.Allocator, slot: *?[]u8, value: ?[]u8) 
     slot.* = value;
 }
 
-fn parseFilterValueOwned(allocator: std.mem.Allocator, lua: *zlua.Lua, idx: i32) !?[]u8 {
-    if (lua.isString(idx)) {
-        if (lua.toString(idx)) |v| return try allocator.dupe(u8, v) else |_| return null;
-    }
-    if (!lua.isTable(idx)) return null;
-
-    var out = std.ArrayList(u8).empty;
-    errdefer out.deinit(allocator);
-
-    const table_index = lua.absIndex(idx);
-    lua.pushNil();
-    while (lua.next(table_index)) {
-        defer lua.pop(1);
-        if (lua.isString(-1)) {
-            if (lua.toString(-1)) |s| {
-                if (out.items.len > 0) try out.append(allocator, ',');
-                try out.appendSlice(allocator, s);
-            } else |_| {}
-        }
-    }
-    return try out.toOwnedSlice(allocator);
-}
-
 fn parseManualHighlightSpec(
     allocator: std.mem.Allocator,
     lua: *zlua.Lua,
@@ -65,44 +43,34 @@ fn parseManualHighlightSpec(
         if (query_path) |value| allocator.free(value);
     }
 
-    _ = lua.getField(table_index, "parser");
-    if (lua.isString(-1)) {
-        if (lua.toString(-1)) |v| parser = try allocator.dupe(u8, v) else |_| {}
+    const reader = zlua_portable.reader.Reader.init(zlua_portable.api.State.fromRaw(@ptrCast(lua)), allocator, table_index);
+
+    if (reader.fieldString("parser")) |v| {
+        parser = try allocator.dupe(u8, v);
     }
-    lua.pop(1);
     if (parser == null) {
-        _ = lua.getField(table_index, "language");
-        if (lua.isString(-1)) {
-            if (lua.toString(-1)) |v| parser = try allocator.dupe(u8, v) else |_| {}
+        if (reader.fieldString("language")) |v| {
+            parser = try allocator.dupe(u8, v);
         }
-        lua.pop(1);
     }
 
-    _ = lua.getField(table_index, "builtin");
-    if (lua.isString(-1)) {
-        if (lua.toString(-1)) |v| builtin = try allocator.dupe(u8, v) else |_| {}
+    if (reader.fieldString("builtin")) |v| {
+        builtin = try allocator.dupe(u8, v);
     }
-    lua.pop(1);
 
-    _ = lua.getField(table_index, "query_path");
-    if (lua.isString(-1)) {
-        if (lua.toString(-1)) |v| query_path = try allocator.dupe(u8, v) else |_| {}
+    if (reader.fieldString("query_path")) |v| {
+        query_path = try allocator.dupe(u8, v);
     }
-    lua.pop(1);
 
-    _ = lua.getField(table_index, "mode");
-    if (lua.isString(-1)) {
-        if (lua.toString(-1)) |v| {
-            if (std.mem.eql(u8, v, "replace")) {
-                mode = .replace;
-            } else if (std.mem.eql(u8, v, "prepend")) {
-                mode = .prepend;
-            } else if (std.mem.eql(u8, v, "append")) {
-                mode = .append;
-            }
-        } else |_| {}
+    if (reader.fieldString("mode")) |v| {
+        if (std.mem.eql(u8, v, "replace")) {
+            mode = .replace;
+        } else if (std.mem.eql(u8, v, "prepend")) {
+            mode = .prepend;
+        } else if (std.mem.eql(u8, v, "append")) {
+            mode = .append;
+        }
     }
-    lua.pop(1);
 
     if (parser == null) return null;
     return .{
@@ -184,59 +152,40 @@ fn parseTerminalShellIconMappings(
 
 fn parseNativeScalarOverlay(allocator: std.mem.Allocator, lua: *zlua.Lua, table_index: i32) !Config {
     var out = lua_shared.emptyConfig();
+    const reader = zlua_portable.reader.Reader.init(zlua_portable.api.State.fromRaw(@ptrCast(lua)), allocator, table_index);
 
     _ = lua.getField(table_index, "theme");
     if (try lua_theme_parse.parseThemeAtStackIndex(lua, -1)) |parsed| out.theme = parsed;
     lua.pop(1);
     try lua_log_parse.parseLogSettings(allocator, lua, table_index, &out);
 
-    _ = lua.getField(table_index, "editor_wrap");
-    if (lua.isBoolean(-1)) out.editor_wrap = lua.toBoolean(-1);
-    lua.pop(1);
+    if (reader.boolField("editor_wrap")) |value| out.editor_wrap = value;
 
-    _ = lua.getField(table_index, "terminal_focus_report_window");
-    if (lua.isBoolean(-1)) out.terminal_focus_report_window = lua.toBoolean(-1);
-    lua.pop(1);
+    if (reader.boolField("terminal_focus_report_window")) |value| out.terminal_focus_report_window = value;
 
-    _ = lua.getField(table_index, "terminal_focus_report_pane");
-    if (lua.isBoolean(-1)) out.terminal_focus_report_pane = lua.toBoolean(-1);
-    lua.pop(1);
+    if (reader.boolField("terminal_focus_report_pane")) |value| out.terminal_focus_report_pane = value;
 
-    _ = lua.getField(table_index, "editor_large_jump_rows");
-    if (lua.isNumber(-1)) {
-        if (lua.toInteger(-1)) |v| {
-            if (v > 0) out.editor_large_jump_rows = @intCast(v);
-        } else |_| {}
+    if (reader.intField("editor_large_jump_rows")) |v| {
+        if (v > 0) out.editor_large_jump_rows = @intCast(v);
     }
-    lua.pop(1);
 
-    _ = lua.getField(table_index, "editor_highlight_budget");
-    if (lua.isNumber(-1)) {
-        if (lua.toInteger(-1)) |v| {
-            if (v > 0) out.editor_highlight_budget = @intCast(v);
-        } else |_| {}
+    if (reader.intField("editor_highlight_budget")) |v| {
+        if (v > 0) out.editor_highlight_budget = @intCast(v);
     }
-    lua.pop(1);
 
-    _ = lua.getField(table_index, "editor_width_budget");
-    if (lua.isNumber(-1)) {
-        if (lua.toInteger(-1)) |v| {
-            if (v > 0) out.editor_width_budget = @intCast(v);
-        } else |_| {}
+    if (reader.intField("editor_width_budget")) |v| {
+        if (v > 0) out.editor_width_budget = @intCast(v);
     }
-    lua.pop(1);
 
-    _ = lua.getField(table_index, "selection_overlay_smooth");
-    if (lua.isBoolean(-1)) out.selection_overlay_smooth = lua.toBoolean(-1);
-    lua.pop(1);
+    if (reader.boolField("selection_overlay_smooth")) |value| out.selection_overlay_smooth = value;
 
-    _ = lua.getField(table_index, "selection_overlay_corner_px");
-    if (lua_runtime_parse.parsePositiveF32(lua, -1)) |v| out.selection_overlay_corner_px = v;
-    lua.pop(1);
+    if (reader.numberField("selection_overlay_corner_px")) |v| {
+        if (v > 0) out.selection_overlay_corner_px = @floatCast(v);
+    }
 
-    _ = lua.getField(table_index, "selection_overlay_pad_px");
-    if (lua_runtime_parse.parsePositiveF32(lua, -1)) |v| out.selection_overlay_pad_px = v;
-    lua.pop(1);
+    if (reader.numberField("selection_overlay_pad_px")) |v| {
+        if (v > 0) out.selection_overlay_pad_px = @floatCast(v);
+    }
 
     _ = lua.getField(table_index, "selection_overlay");
     lua_runtime_parse.parseSelectionOverlayTable(lua, -1, &out, .global);
@@ -388,7 +337,7 @@ fn parseNativeScalarOverlay(allocator: std.mem.Allocator, lua: *zlua.Lua, table_
             lua,
             editor_idx,
             &out,
-            parseFilterValueOwned,
+            lua_log_parse.parseFilterValueOwned,
             replaceOwnedString,
             lua_runtime_parse.parseLigatureStrategyFromString,
         );
@@ -463,7 +412,7 @@ fn parseNativeScalarOverlay(allocator: std.mem.Allocator, lua: *zlua.Lua, table_
             lua,
             terminal_idx,
             &out,
-            parseFilterValueOwned,
+            lua_log_parse.parseFilterValueOwned,
             replaceOwnedString,
             lua_runtime_parse.parseLigatureStrategyFromString,
         );

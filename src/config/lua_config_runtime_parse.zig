@@ -1,5 +1,6 @@
 const std = @import("std");
 const zlua = @import("zlua");
+const zlua_portable = @import("zlua_portable");
 const iface = @import("./lua_config_iface.zig");
 
 const Config = iface.Config;
@@ -67,10 +68,10 @@ pub fn normalizeScrollback(value: i64) usize {
 }
 
 pub fn parsePositiveF32(lua: *zlua.Lua, idx: i32) ?f32 {
-    if (!lua.isNumber(idx)) return null;
-    if (lua.toNumber(idx)) |v| {
-        if (v > 0) return @floatCast(v);
-    } else |_| {}
+    const state = zlua_portable.api.State.fromRaw(@ptrCast(lua));
+    if (!state.isNumber(idx)) return null;
+    const v = state.readNumber(idx);
+    if (v > 0) return @floatCast(v);
     return null;
 }
 
@@ -80,37 +81,33 @@ pub fn parseSelectionOverlayTable(
     out: *Config,
     prefix: SelectionOverlayPrefix,
 ) void {
-    if (!lua.isTable(idx)) return;
-    const table_idx = lua.absIndex(idx);
+    const state = zlua_portable.api.State.fromRaw(@ptrCast(lua));
+    if (!state.isTable(idx)) return;
+    const reader = zlua_portable.reader.Reader.init(state, std.heap.page_allocator, idx);
 
-    _ = lua.getField(table_idx, "smooth");
-    if (lua.isBoolean(-1)) {
-        const value = lua.toBoolean(-1);
+    if (reader.boolField("smooth")) |value| {
         switch (prefix) {
             .global => out.selection_overlay_smooth = value,
             .editor => out.editor_selection_overlay_smooth = value,
             .terminal => out.terminal_selection_overlay_smooth = value,
         }
     }
-    lua.pop(1);
 
-    _ = lua.getField(table_idx, "corner_px");
-    if (parsePositiveF32(lua, -1)) |value| {
-        switch (prefix) {
+    if (reader.numberField("corner_px")) |raw_value| {
+        const value: f32 = @floatCast(raw_value);
+        if (value > 0) switch (prefix) {
             .global => out.selection_overlay_corner_px = value,
             .editor => out.editor_selection_overlay_corner_px = value,
             .terminal => out.terminal_selection_overlay_corner_px = value,
-        }
+        };
     }
-    lua.pop(1);
 
-    _ = lua.getField(table_idx, "pad_px");
-    if (parsePositiveF32(lua, -1)) |value| {
-        switch (prefix) {
+    if (reader.numberField("pad_px")) |raw_value| {
+        const value: f32 = @floatCast(raw_value);
+        if (value > 0) switch (prefix) {
             .global => out.selection_overlay_pad_px = value,
             .editor => out.editor_selection_overlay_pad_px = value,
             .terminal => out.terminal_selection_overlay_pad_px = value,
-        }
+        };
     }
-    lua.pop(1);
 }

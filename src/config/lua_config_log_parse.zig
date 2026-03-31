@@ -1,5 +1,6 @@
 const std = @import("std");
 const zlua = @import("zlua");
+const zlua_portable = @import("zlua_portable");
 const iface = @import("./lua_config_iface.zig");
 const app_logger = @import("../app_logger.zig");
 
@@ -8,50 +9,53 @@ const LogGroupConfig = iface.LogGroupConfig;
 const LogLevel = std.meta.Child(@TypeOf((@as(Config, undefined)).log_file_level));
 const SdlLogLevel = std.meta.Child(@TypeOf((@as(Config, undefined)).sdl_log_level));
 
+fn luaState(lua: *zlua.Lua) zlua_portable.api.State {
+    return zlua_portable.api.State.fromRaw(@ptrCast(lua));
+}
+
 fn replaceOwnedString(allocator: std.mem.Allocator, slot: *?[]u8, value: ?[]u8) void {
     if (slot.*) |old| allocator.free(old);
     slot.* = value;
 }
 
-fn parseFilterValueOwned(allocator: std.mem.Allocator, lua: *zlua.Lua, idx: i32) !?[]u8 {
-    if (lua.isString(idx)) {
-        if (lua.toString(idx)) |v| return try allocator.dupe(u8, v) else |_| return null;
+pub fn parseFilterValueOwned(allocator: std.mem.Allocator, lua: *zlua.Lua, idx: i32) !?[]u8 {
+    const state = luaState(lua);
+    if (state.readString(idx)) |v| {
+        return try allocator.dupe(u8, v);
     }
-    if (!lua.isTable(idx)) return null;
+    if (!state.isTable(idx)) return null;
 
     var out = std.ArrayList(u8).empty;
     errdefer out.deinit(allocator);
 
-    const table_index = lua.absIndex(idx);
-    lua.pushNil();
-    while (lua.next(table_index)) {
-        defer lua.pop(1);
-        if (lua.isString(-1)) {
-            if (lua.toString(-1)) |s| {
-                if (out.items.len > 0) try out.append(allocator, ',');
-                try out.appendSlice(allocator, s);
-            } else |_| {}
+    const reader = zlua_portable.reader.Reader.init(state, allocator, idx);
+    var it = reader.iter();
+    defer it.finish();
+    while (it.next()) {
+        if (it.valueString()) |s| {
+            if (out.items.len > 0) try out.append(allocator, ',');
+            try out.appendSlice(allocator, s);
         }
     }
     return try out.toOwnedSlice(allocator);
 }
 
 fn parseLevelOverrideValueOwned(allocator: std.mem.Allocator, lua: *zlua.Lua, idx: i32) !?[]u8 {
-    if (lua.isString(idx)) {
-        if (lua.toString(idx)) |v| return try allocator.dupe(u8, v) else |_| return null;
+    const state = luaState(lua);
+    if (state.readString(idx)) |v| {
+        return try allocator.dupe(u8, v);
     }
-    if (!lua.isTable(idx)) return null;
+    if (!state.isTable(idx)) return null;
 
     var out = std.ArrayList(u8).empty;
     errdefer out.deinit(allocator);
 
-    const table_index = lua.absIndex(idx);
-    lua.pushNil();
-    while (lua.next(table_index)) {
-        defer lua.pop(1);
-        if (!lua.isString(-2) or !lua.isString(-1)) continue;
-        const key = lua.toString(-2) catch continue;
-        const value = lua.toString(-1) catch continue;
+    const reader = zlua_portable.reader.Reader.init(state, allocator, idx);
+    var it = reader.iter();
+    defer it.finish();
+    while (it.next()) {
+        const key = it.keyString() orelse continue;
+        const value = it.valueString() orelse continue;
         if (parseLoggerLevelFromString(value) == null) continue;
         if (out.items.len > 0) try out.append(allocator, ',');
         try out.appendSlice(allocator, key);
@@ -93,7 +97,8 @@ fn defaultLogGroupFileName(
 }
 
 fn parseLogGroupsOwned(allocator: std.mem.Allocator, lua: *zlua.Lua, idx: i32) !?[]LogGroupConfig {
-    if (!lua.isTable(idx)) return null;
+    const state = luaState(lua);
+    if (!state.isTable(idx)) return null;
 
     var groups = std.ArrayList(LogGroupConfig).empty;
     errdefer {
@@ -105,40 +110,35 @@ fn parseLogGroupsOwned(allocator: std.mem.Allocator, lua: *zlua.Lua, idx: i32) !
         groups.deinit(allocator);
     }
 
-    const table_index = lua.absIndex(idx);
-    lua.pushNil();
-    while (lua.next(table_index)) {
-        defer lua.pop(1);
-        if (!lua.isString(-2) or !lua.isTable(-1)) continue;
-        const group_name = lua.toString(-2) catch continue;
+    const reader = zlua_portable.reader.Reader.init(state, allocator, idx);
+    var it = reader.iter();
+    defer it.finish();
+    while (it.next()) {
+        const group_name = it.keyString() orelse continue;
         if (group_name.len == 0) continue;
 
-        const group_idx = lua.absIndex(-1);
-        _ = lua.getField(group_idx, "tags");
-        const tags = try parseFilterValueOwned(allocator, lua, -1);
-        lua.pop(1);
+        if (!reader.state.isTable(-1)) continue;
+        const group_reader = zlua_portable.reader.Reader.init(reader.state, allocator, -1);
+        defer group_reader.finish();
+
+        const tags = if (group_reader.child("tags")) |tags_reader| blk: {
+            defer tags_reader.finish();
+            break :blk try parseFilterValueOwned(allocator, lua, -1);
+        } else null;
         if (tags == null or tags.?.len == 0) {
             if (tags) |value| allocator.free(value);
             continue;
         }
 
-        _ = lua.getField(group_idx, "mode");
         var mode: ?app_logger.OutputMode = null;
-        if (lua.isString(-1)) {
-            if (lua.toString(-1)) |value| {
-                mode = parseLoggerOutputModeFromString(value);
-            } else |_| {}
+        if (group_reader.fieldString("mode")) |value| {
+            mode = parseLoggerOutputModeFromString(value);
         }
-        lua.pop(1);
 
-        _ = lua.getField(group_idx, "file");
         var file_path: ?[]u8 = null;
-        if (lua.isString(-1)) {
-            if (lua.toString(-1)) |value| {
-                file_path = try allocator.dupe(u8, value);
-            } else |_| {}
+        if (group_reader.fieldString("file")) |value| {
+            file_path = try allocator.dupe(u8, value);
         }
-        lua.pop(1);
 
         const resolved_file = file_path orelse try defaultLogGroupFileName(allocator, group_name, mode);
         try groups.append(allocator, .{

@@ -21,6 +21,7 @@ pub fn addAppExecutable(
     optimize: std.builtin.OptimizeMode,
     build_options: *std.Build.Step.Options,
     zlua_module: *std.Build.Module,
+    zlua_portable_module: ?*std.Build.Module,
     name: []const u8,
     root_source_file: []const u8,
 ) *std.Build.Step.Compile {
@@ -37,6 +38,9 @@ pub fn addAppExecutable(
     windows_identity.configureExecutableResources(b, exe, target, name);
     exe.root_module.addOptions("build_options", build_options);
     exe.root_module.addImport("zlua", zlua_module);
+    if (zlua_portable_module) |module| {
+        exe.root_module.addImport("zlua_portable", module);
+    }
     return exe;
 }
 
@@ -46,6 +50,7 @@ pub fn addFocusedModeExecutable(
     optimize: std.builtin.OptimizeMode,
     build_options: *std.Build.Step.Options,
     zlua_module: *std.Build.Module,
+    zlua_portable_module: ?*std.Build.Module,
     ctx: app_types.AppLinkContext,
     name: []const u8,
     root_source_file: []const u8,
@@ -60,6 +65,7 @@ pub fn addFocusedModeExecutable(
         optimize,
         build_options,
         zlua_module,
+        zlua_portable_module,
         name,
         root_source_file,
     );
@@ -85,6 +91,7 @@ pub fn addSdlConfiguredTest(
     root_source_file: []const u8,
     build_options: ?*std.Build.Step.Options,
     zlua_module: ?*std.Build.Module,
+    zlua_portable_module: ?*std.Build.Module,
     ctx: app_types.AppLinkContext,
     profile: target_profile.LinkProfile,
 ) *std.Build.Step.Compile {
@@ -103,6 +110,9 @@ pub fn addSdlConfiguredTest(
     if (zlua_module) |module| {
         test_target.root_module.addImport("zlua", module);
     }
+    if (zlua_portable_module) |module| {
+        test_target.root_module.addImport("zlua_portable", module);
+    }
     target_config.configureSdlTestTarget(
         test_target,
         ctx,
@@ -117,6 +127,7 @@ pub fn addSdlConfiguredExecutable(
     optimize: std.builtin.OptimizeMode,
     name: []const u8,
     root_source_file: []const u8,
+    zlua_portable_module: ?*std.Build.Module,
     ctx: app_types.AppLinkContext,
     profile: target_profile.LinkProfile,
 ) *std.Build.Step.Compile {
@@ -130,6 +141,9 @@ pub fn addSdlConfiguredExecutable(
         }),
     });
     configureWindowsLinker(exe);
+    if (zlua_portable_module) |module| {
+        exe.root_module.addImport("zlua_portable", module);
+    }
     target_config.configureSdlTestTarget(
         exe,
         ctx,
