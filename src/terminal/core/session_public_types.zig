@@ -5,7 +5,7 @@ const session_content = @import("session_content.zig");
 const session_host_types = @import("session_host_types.zig");
 const session_input_snapshot = @import("session_input_snapshot.zig");
 const session_presentation_feedback = @import("session_presentation_feedback.zig");
-const session_rendering = @import("session_rendering.zig");
+const terminal_publication = @import("terminal_publication.zig");
 const session_selection = @import("session_selection.zig");
 const terminal_transport = @import("terminal_transport.zig");
 
@@ -22,8 +22,8 @@ pub const ScrollbackRange = session_content.ScrollbackRange;
 pub const SelectionGesture = session_selection.SelectionGesture;
 pub const ClickSelectionResult = session_selection.ClickSelectionResult;
 pub const SessionMetadata = session_host_types.SessionMetadata;
-pub const PresentedRenderCache = session_rendering.PresentedRenderCache;
-pub const PresentationCapture = session_rendering.PresentationCapture;
+pub const PresentedRenderCache = terminal_publication.PresentedRenderCache;
+pub const PresentationCapture = terminal_publication.PresentationCapture;
 pub const AltExitPresentationInfo = session_presentation_feedback.AltExitPresentationInfo;
 pub const PresentationFeedback = session_presentation_feedback.PresentationFeedback;
 

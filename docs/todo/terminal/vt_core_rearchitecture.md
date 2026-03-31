@@ -69,19 +69,22 @@ Milestone rule:
 - merge back into `main` once this milestone is validated
 - do not stack the next milestone on top of an unmerged one
 
-Current milestone: `M3` collapse remaining PTY host-wrapper alias noise
+Current milestone: `M4` make publication center explicit
 
 Merge goal:
 
-- the root/public contract should have one obvious PTY host-wrapper name
-- workspace internals should stop exporting redundant PTY wrapper aliases
-- docs and validation should capture the contract simplification clearly enough
-  that the merge to `main` is a real milestone, not a partial scratch state
+- session/publication call paths should route through an explicit
+  `terminal_publication` center
+- the old `session_rendering` shell should stop acting as the visible
+  publication truth center
+- docs and validation should capture the ownership shift clearly enough that
+  the merge to `main` is a real milestone, not a partial scratch state
 
 Checklist:
 
-- [x] unused public `WorkspacePtyTerminalSession` root export removed
-- [x] workspace PTY wrapper alias made internal
+- [x] explicit `terminal_publication.zig` center exists
+- [x] session/publication call paths route through `terminal_publication`
+- [x] `session_rendering.zig` removed from live call paths
 - [x] milestone validation pass captured
 - [ ] milestone merged back into `main`
 
@@ -90,10 +93,10 @@ Validation note, 2026-03-31:
 - passed:
   - `zig build test`
   - `zig build check-app-imports`
-- contract simplification:
-  - the unused public `WorkspacePtyTerminalSession` export is removed from
-    `src/terminal/core/terminal.zig`
-  - `src/terminal/core/workspace.zig` keeps the PTY wrapper alias internal
+- ownership shift:
+  - session/publication callers now route through
+    `src/terminal/core/terminal_publication.zig`
+  - the old `src/terminal/core/session_rendering.zig` shell is removed
 
 ## TODO
 

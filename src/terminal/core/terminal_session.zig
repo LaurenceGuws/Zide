@@ -32,7 +32,7 @@ const session_interaction = @import("session_interaction.zig");
 const session_init_options = @import("session_init_options.zig");
 const session_input_snapshot = @import("session_input_snapshot.zig");
 const session_presentation_feedback = @import("session_presentation_feedback.zig");
-const session_rendering = @import("session_rendering.zig");
+const terminal_publication = @import("terminal_publication.zig");
 const session_protocol = @import("session_protocol.zig");
 const session_config = @import("session_config.zig");
 const session_content_api = @import("session_content_api.zig");
@@ -281,7 +281,7 @@ pub const TerminalSession = struct {
     }
 
     fn updateViewCacheNoLock(self: *TerminalSession, generation: u64, scroll_offset: usize) void {
-        session_rendering.updateViewCacheNoLock(self, generation, scroll_offset);
+        terminal_publication.updateViewCacheNoLock(self, generation, scroll_offset);
     }
 
     pub fn isAltActive(self: *const TerminalSession) bool {
@@ -412,27 +412,27 @@ pub const TerminalSession = struct {
     }
 
     pub fn currentGeneration(self: *const TerminalSession) u64 {
-        return session_rendering.currentGeneration(self);
+        return terminal_publication.currentGeneration(self);
     }
 
     pub fn publishedGeneration(self: *const TerminalSession) u64 {
-        return session_rendering.publishedGeneration(self);
+        return terminal_publication.publishedGeneration(self);
     }
 
     pub fn presentedGeneration(self: *const TerminalSession) u64 {
-        return session_rendering.presentedGeneration(self);
+        return terminal_publication.presentedGeneration(self);
     }
 
     pub fn notePresentedGeneration(self: *TerminalSession, generation: u64) void {
-        session_rendering.notePresentedGeneration(self, generation);
+        terminal_publication.notePresentedGeneration(self, generation);
     }
 
     pub fn acknowledgePresentedGeneration(self: *TerminalSession, generation: u64) bool {
-        return session_rendering.acknowledgePresentedGeneration(self, generation);
+        return terminal_publication.acknowledgePresentedGeneration(self, generation);
     }
 
     pub fn hasPublishedGenerationBacklog(self: *TerminalSession) bool {
-        return session_rendering.hasPublishedGenerationBacklog(self);
+        return terminal_publication.hasPublishedGenerationBacklog(self);
     }
 
     pub fn pollBacklogHint(self: *TerminalSession) bool {
@@ -655,11 +655,11 @@ pub const TerminalSession = struct {
     }
 
     pub fn updateViewCacheForScroll(self: *TerminalSession) void {
-        session_rendering.updateViewCacheForScroll(self);
+        terminal_publication.updateViewCacheForScroll(self);
     }
 
     pub fn updateViewCacheForScrollLocked(self: *TerminalSession) void {
-        session_rendering.updateViewCacheForScrollLocked(self);
+        terminal_publication.updateViewCacheForScrollLocked(self);
     }
 
     pub fn setCursorStyle(self: *TerminalSession, mode: i32) void {
@@ -691,43 +691,43 @@ pub const TerminalSession = struct {
     }
 
     pub fn snapshot(self: *TerminalSession) TerminalSnapshot {
-        return session_rendering.snapshot(self);
+        return terminal_publication.snapshot(self);
     }
 
     pub fn renderCache(self: *TerminalSession) *const RenderCache {
-        return session_rendering.renderCache(self);
+        return terminal_publication.renderCache(self);
     }
 
     pub fn copyPublishedRenderCache(self: *TerminalSession, dst: *RenderCache) !PresentedRenderCache {
-        return session_rendering.copyPublishedRenderCache(self, dst);
+        return terminal_publication.copyPublishedRenderCache(self, dst);
     }
 
     pub fn capturePresentation(self: *TerminalSession, dst: *RenderCache) !PresentationCapture {
-        return session_rendering.capturePresentation(self, dst);
+        return terminal_publication.capturePresentation(self, dst);
     }
 
     pub fn completePresentationFeedback(self: *TerminalSession, feedback: PresentationFeedback) void {
-        session_rendering.completePresentationFeedback(self, feedback);
+        terminal_publication.completePresentationFeedback(self, feedback);
     }
 
     pub fn finishFramePresentation(self: *TerminalSession, feedback: PresentationFeedback) void {
-        session_rendering.finishFramePresentation(self, feedback);
+        terminal_publication.finishFramePresentation(self, feedback);
     }
 
     pub fn syncUpdatesActive(self: *const TerminalSession) bool {
-        return session_rendering.syncUpdatesActive(self);
+        return terminal_publication.syncUpdatesActive(self);
     }
 
     pub fn setSyncUpdates(self: *TerminalSession, enabled: bool) void {
-        session_rendering.setSyncUpdates(self, enabled);
+        terminal_publication.setSyncUpdates(self, enabled);
     }
 
     pub fn setSyncUpdatesLocked(self: *TerminalSession, enabled: bool) void {
-        session_rendering.setSyncUpdatesLocked(self, enabled);
+        terminal_publication.setSyncUpdatesLocked(self, enabled);
     }
 
     pub fn clearPublishedDamageIfGeneration(self: *TerminalSession, expected_generation: u64, clear_screen_dirty: bool) bool {
-        return session_rendering.clearPublishedDamageIfGeneration(self, expected_generation, clear_screen_dirty);
+        return terminal_publication.clearPublishedDamageIfGeneration(self, expected_generation, clear_screen_dirty);
     }
 
     pub const CloseConfirmSignals = session_host_types.CloseConfirmSignals;

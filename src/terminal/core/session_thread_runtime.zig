@@ -66,7 +66,7 @@ pub fn hasData(self: anytype) bool {
 }
 
 pub fn pollBacklogHint(self: anytype) bool {
-    return hasData(self) or @import("session_rendering.zig").hasPublishedGenerationBacklog(self);
+    return hasData(self) or @import("terminal_publication.zig").hasPublishedGenerationBacklog(self);
 }
 
 fn hasUnreadBufferedIo(self: anytype) bool {

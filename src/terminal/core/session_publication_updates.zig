@@ -1,5 +1,6 @@
 const view_cache = @import("view_cache.zig");
 const core_feed = @import("terminal_core_feed.zig");
+const terminal_publication = @import("terminal_publication.zig");
 
 pub fn publishFeedResultLocked(self: anytype, result: core_feed.FeedResult) void {
     if (!result.parsed) return;
@@ -8,7 +9,7 @@ pub fn publishFeedResultLocked(self: anytype, result: core_feed.FeedResult) void
 }
 
 pub fn updateViewCacheNoLock(self: anytype, generation: u64, scroll_offset: usize) void {
-    view_cache.updateViewCacheNoLockTagged(self, generation, scroll_offset, "session_rendering_direct");
+    view_cache.updateViewCacheNoLockTagged(self, generation, scroll_offset, "terminal_publication_direct");
 }
 
 pub fn updateViewCacheForScroll(self: anytype) void {
@@ -27,7 +28,7 @@ pub fn setSyncUpdates(self: anytype, enabled: bool) void {
 
 pub fn setSyncUpdatesLocked(self: anytype, enabled: bool) void {
     if (!self.core.setSyncUpdates(enabled)) return;
-    const cache = @import("session_rendering.zig").renderCache(self);
+    const cache = terminal_publication.renderCache(self);
     const presented_generation = @import("session_publication_state.zig").presentedGeneration(self);
     if (cache.generation == presented_generation and cache.dirty == .none) return;
     _ = self.output_generation.fetchAdd(1, .acq_rel);

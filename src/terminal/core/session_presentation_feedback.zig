@@ -1,6 +1,6 @@
-const session_rendering = @import("session_rendering.zig");
+const terminal_publication = @import("terminal_publication.zig");
 
-pub const PresentedRenderCache = session_rendering.PresentedRenderCache;
+pub const PresentedRenderCache = terminal_publication.PresentedRenderCache;
 
 pub const AltExitPresentationInfo = struct {
     draw_ms: f64,

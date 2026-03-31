@@ -1,17 +1,18 @@
 const std = @import("std");
 const render_cache_mod = @import("render_cache.zig");
+const terminal_publication = @import("terminal_publication.zig");
 
 pub const RenderCache = render_cache_mod.RenderCache;
-pub const PresentedRenderCache = @import("session_rendering.zig").PresentedRenderCache;
-pub const PresentationCapture = @import("session_rendering.zig").PresentationCapture;
+pub const PresentedRenderCache = terminal_publication.PresentedRenderCache;
+pub const PresentationCapture = terminal_publication.PresentationCapture;
 
 pub fn copyPublishedRenderCache(self: anytype, dst: *RenderCache) !PresentedRenderCache {
     self.lock();
     defer self.unlock();
     if (self.view_cache_pending.load(.acquire)) {
-        @import("session_rendering.zig").updateViewCacheForScrollLocked(self);
+        terminal_publication.updateViewCacheForScrollLocked(self);
     }
-    const cache = @import("session_rendering.zig").renderCache(self);
+    const cache = terminal_publication.renderCache(self);
     try render_cache_mod.copySnapshot(dst, self.allocator, cache);
     return .{
         .generation = cache.generation,
@@ -32,12 +33,12 @@ pub fn capturePresentation(self: anytype, dst: *RenderCache) !PresentationCaptur
     var view_cache_ms: f64 = 0.0;
     if (had_view_cache_pending) {
         const view_cache_start_ns = std.time.nanoTimestamp();
-        @import("session_rendering.zig").updateViewCacheForScrollLocked(self);
+        terminal_publication.updateViewCacheForScrollLocked(self);
         const view_cache_end_ns = std.time.nanoTimestamp();
         view_cache_ms = @as(f64, @floatFromInt(view_cache_end_ns - view_cache_start_ns)) / @as(f64, @floatFromInt(std.time.ns_per_ms));
     }
     const copy_start_ns = std.time.nanoTimestamp();
-    const cache = @import("session_rendering.zig").renderCache(self);
+    const cache = terminal_publication.renderCache(self);
     try render_cache_mod.copySnapshot(dst, self.allocator, cache);
     const copy_end_ns = std.time.nanoTimestamp();
     const presented = PresentedRenderCache{

@@ -3,7 +3,7 @@ const core_protocol = @import("terminal_core_protocol.zig");
 const core_dispatch = @import("terminal_core_dispatch.zig");
 const core_feed = @import("terminal_core_feed.zig");
 const session_mode_effects = @import("session_mode_effects.zig");
-const session_rendering = @import("session_rendering.zig");
+const terminal_publication = @import("terminal_publication.zig");
 const types = @import("../model/types.zig");
 
 pub fn handleControl(self: anytype, byte: u8) void {
@@ -38,7 +38,7 @@ pub fn feedOutputBytes(self: anytype, bytes: []const u8) void {
     self.state_mutex.lock();
     defer self.state_mutex.unlock();
     const result = core_feed.feedOutputBytesLocked(self, bytes);
-    session_rendering.publishFeedResultLocked(self, result);
+    terminal_publication.publishFeedResultLocked(self, result);
 }
 
 pub fn resetState(self: anytype) void {
