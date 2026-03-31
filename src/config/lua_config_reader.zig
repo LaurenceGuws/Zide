@@ -22,6 +22,16 @@ pub const Reader = struct {
         return self.table.child(field);
     }
 
+    pub fn childReader(self: Reader, field: []const u8) ?Reader {
+        const child_table = self.table.child(field) orelse return null;
+        return .{
+            .lua = self.lua,
+            .allocator = self.allocator,
+            .state = self.state,
+            .table = child_table,
+        };
+    }
+
     pub fn fieldString(self: Reader, field: []const u8) ?[]const u8 {
         return self.table.fieldString(field);
     }

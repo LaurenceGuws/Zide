@@ -209,10 +209,9 @@ pub fn parseLogSettings(allocator: std.mem.Allocator, lua: *zlua.Lua, table_inde
 
     if (parseOutputModeField(reader, "log_console_output_mode")) |mode| out.log_console_output_mode = mode;
 
-    _ = lua.getField(table_index, "logs");
-    if (lua.isTable(-1)) {
-        const logs_idx = lua.absIndex(-1);
-        const logs_reader = config_reader.Reader.init(lua, allocator, logs_idx);
+    if (reader.childReader("logs")) |logs_reader| {
+        defer logs_reader.table.finish();
+        const logs_idx = logs_reader.table.index;
 
         if (try logs_reader.stringOrStringListOwned("file")) |v| {
             replaceOwnedString(allocator, &out.log_file_filter, v);
@@ -260,7 +259,6 @@ pub fn parseLogSettings(allocator: std.mem.Allocator, lua: *zlua.Lua, table_inde
         }
         lua.pop(1);
     }
-    lua.pop(1);
 
     if (parseSdlLogLevelField(reader, "sdl_log_level")) |lvl| out.sdl_log_level = lvl;
 

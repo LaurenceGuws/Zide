@@ -81,9 +81,10 @@ pub fn parseAppFontTable(
     app_idx: i32,
     out: *Config,
 ) !void {
-    _ = lua.getField(app_idx, "font");
-    try parseFontSetting(allocator, lua, -1, &out.app_font_path, &out.app_font_size);
-    lua.pop(1);
+    const reader = config_reader.Reader.init(lua, allocator, app_idx);
+    const font_reader = reader.childReader("font") orelse return;
+    defer font_reader.table.finish();
+    try parseFontSetting(allocator, lua, font_reader.table.index, &out.app_font_path, &out.app_font_size);
 }
 
 pub fn parseEditorFontTable(
@@ -95,9 +96,10 @@ pub fn parseEditorFontTable(
     parse_ligature_strategy_from_string: fn ([]const u8) ?LigatureStrategy,
 ) !void {
     const reader = config_reader.Reader.init(lua, allocator, editor_idx);
-    _ = lua.getField(editor_idx, "font");
-    try parseFontSetting(allocator, lua, -1, &out.editor_font_path, &out.editor_font_size);
-    lua.pop(1);
+    if (reader.childReader("font")) |font_reader| {
+        defer font_reader.table.finish();
+        try parseFontSetting(allocator, lua, font_reader.table.index, &out.editor_font_path, &out.editor_font_size);
+    }
 
     if (try reader.stringOrStringListOwned("font_features")) |v| {
         replace_owned_string(allocator, &out.editor_font_features, v);
@@ -117,9 +119,10 @@ pub fn parseTerminalFontTable(
     parse_ligature_strategy_from_string: fn ([]const u8) ?LigatureStrategy,
 ) !void {
     const reader = config_reader.Reader.init(lua, allocator, terminal_idx);
-    _ = lua.getField(terminal_idx, "font");
-    try parseFontSetting(allocator, lua, -1, &out.terminal_font_path, &out.terminal_font_size);
-    lua.pop(1);
+    if (reader.childReader("font")) |font_reader| {
+        defer font_reader.table.finish();
+        try parseFontSetting(allocator, lua, font_reader.table.index, &out.terminal_font_path, &out.terminal_font_size);
+    }
 
     if (try reader.stringOrStringListOwned("font_features")) |v| {
         replace_owned_string(allocator, &out.terminal_font_features, v);
