@@ -24,64 +24,40 @@ pub const PresentationCapture = struct {
 };
 
 pub fn snapshot(self: anytype) TerminalSnapshot {
-    const alt_active = self.isAltActive();
-    const scrollback_offset = self.core.scrollbackOffset();
-    if (!alt_active and scrollback_offset != 0) {
-        const cache = self.renderCache();
-        return .{
-            .rows = cache.rows,
-            .cols = cache.cols,
-            .cells = cache.cells.items,
-            .dirty_rows = cache.dirty_rows.items,
-            .row_dirty_span_counts = cache.row_dirty_span_counts.items,
-            .row_dirty_span_overflow = cache.row_dirty_span_overflow.items,
-            .row_dirty_spans = cache.row_dirty_spans.items,
-            .dirty_cols_start = cache.dirty_cols_start.items,
-            .dirty_cols_end = cache.dirty_cols_end.items,
-            .cursor = cache.cursor,
-            .cursor_style = cache.cursor_style,
-            .cursor_visible = cache.cursor_visible,
-            .dirty = cache.dirty,
-            .damage = cache.damage,
-            .scrollback_count = self.core.scrollbackCount(),
-            .scrollback_offset = scrollback_offset,
-            .selection = selection_mod.selectionState(self),
-            .alt_active = alt_active,
-            .screen_reverse = cache.screen_reverse,
-            .generation = self.output_generation.load(.acquire),
-            .kitty_images = cache.kitty_images.items,
-            .kitty_placements = cache.kitty_placements.items,
-            .kitty_generation = cache.kitty_generation,
-        };
+    if (self.view_cache_pending.load(.acquire)) {
+        self.lock();
+        defer self.unlock();
+        if (self.view_cache_pending.load(.acquire)) {
+            updateViewCacheForScrollLocked(self);
+        }
     }
 
-    const screen = self.activeScreenConst();
-    const view = screen.snapshotView();
-    const kitty = kitty_mod.kittyStateConst(self);
+    const cache = self.renderCache();
+    const scrollback_offset = self.core.scrollbackOffset();
     return .{
-        .rows = view.rows,
-        .cols = view.cols,
-        .cells = view.cells,
-        .dirty_rows = view.dirty_rows,
-        .row_dirty_span_counts = view.row_dirty_span_counts,
-        .row_dirty_span_overflow = view.row_dirty_span_overflow,
-        .row_dirty_spans = view.row_dirty_spans,
-        .dirty_cols_start = view.dirty_cols_start,
-        .dirty_cols_end = view.dirty_cols_end,
-        .cursor = view.cursor,
-        .cursor_style = view.cursor_style,
-        .cursor_visible = view.cursor_visible,
-        .dirty = view.dirty,
-        .damage = view.damage,
+        .rows = cache.rows,
+        .cols = cache.cols,
+        .cells = cache.cells.items,
+        .dirty_rows = cache.dirty_rows.items,
+        .row_dirty_span_counts = cache.row_dirty_span_counts.items,
+        .row_dirty_span_overflow = cache.row_dirty_span_overflow.items,
+        .row_dirty_spans = cache.row_dirty_spans.items,
+        .dirty_cols_start = cache.dirty_cols_start.items,
+        .dirty_cols_end = cache.dirty_cols_end.items,
+        .cursor = cache.cursor,
+        .cursor_style = cache.cursor_style,
+        .cursor_visible = cache.cursor_visible,
+        .dirty = cache.dirty,
+        .damage = cache.damage,
         .scrollback_count = self.core.scrollbackCount(),
         .scrollback_offset = scrollback_offset,
         .selection = selection_mod.selectionState(self),
-        .alt_active = alt_active,
-        .screen_reverse = screen.screen_reverse,
+        .alt_active = cache.alt_active,
+        .screen_reverse = cache.screen_reverse,
         .generation = self.output_generation.load(.acquire),
-        .kitty_images = kitty.images.items,
-        .kitty_placements = kitty.placements.items,
-        .kitty_generation = kitty.generation,
+        .kitty_images = cache.kitty_images.items,
+        .kitty_placements = cache.kitty_placements.items,
+        .kitty_generation = cache.kitty_generation,
     };
 }
 

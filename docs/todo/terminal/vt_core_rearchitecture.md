@@ -148,6 +148,13 @@ Validation note, 2026-03-31:
   publication truth: snapshot still switches between direct screen-owned state
   and render-cache-backed state, and the publication object model is still too
   mirror-heavy.
+  Progress note, 2026-03-31, later:
+  - `terminal_publication.snapshot(...)` now reads from one published render
+    cache surface instead of switching between direct screen-owned state and
+    render-cache state.
+  - remaining gap: publication is still mirror-heavy because render-cache and
+    related handoff/update state still duplicate too much terminal-visible
+    truth.
 - [ ] `VTCORE-06` Keep input encoding as a peer subsystem.
   Notes: transport-agnostic writer-based encoding, fake-writer regression coverage, and PTY-backed `TerminalSession.sendText(...)` / `sendKey(...)` regressions through the real session writer boundary are in place; remaining work is keeping the subsystem decoupled as the rest of the split finishes.
 - [ ] `VTCORE-07` Preserve desktop Zide behavior while opening the embedding path.
