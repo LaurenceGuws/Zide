@@ -188,6 +188,7 @@ Variants:
 zig build run -- --write-default-config --force
 zig build run -- --write-default-config=/tmp/zide-init.lua
 zig build run -- --write-default-config --stdout
+zig build run -- --write-default-config --with-lua-meta
 ```
 
 Install LuaLS metadata beside the user config so opening `~/.config/zide`

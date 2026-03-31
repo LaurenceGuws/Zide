@@ -27,10 +27,12 @@ pub const StartupCommand = union(enum) {
     write_default_config: struct {
         target: WriteDefaultConfigTarget,
         force: bool = false,
+        with_lua_meta: bool = false,
 
         pub fn deinit(self: *@This(), allocator: std.mem.Allocator) void {
             self.target.deinit(allocator);
             self.force = false;
+            self.with_lua_meta = false;
         }
     },
     install_user_lua_meta: struct {
@@ -95,6 +97,13 @@ fn parseStartupCommandArgs(allocator: std.mem.Allocator, args: []const []const u
             switch (command) {
                 .write_default_config => |*cmd| cmd.force = true,
                 .install_user_lua_meta => |*cmd| cmd.force = true,
+                else => {},
+            }
+            continue;
+        }
+        if (std.mem.eql(u8, arg, "--with-lua-meta")) {
+            switch (command) {
+                .write_default_config => |*cmd| cmd.with_lua_meta = true,
                 else => {},
             }
             continue;
@@ -178,7 +187,7 @@ pub fn parseStartupFilePaths(allocator: std.mem.Allocator) ?[][]u8 {
         }
         if (std.mem.startsWith(u8, arg, "--write-default-config=")) continue;
         if (std.mem.eql(u8, arg, "--install-user-lua-meta")) continue;
-        if (std.mem.eql(u8, arg, "--stdout") or std.mem.eql(u8, arg, "--force")) continue;
+        if (std.mem.eql(u8, arg, "--stdout") or std.mem.eql(u8, arg, "--force") or std.mem.eql(u8, arg, "--with-lua-meta")) continue;
         if (isStartupDirectoryFlagWithValue(arg)) {
             if (i + 1 < args.len) i += 1;
             continue;
@@ -323,9 +332,10 @@ test "parse startup command supports writing default config" {
     switch (command) {
         .write_default_config => |cmd| {
             try std.testing.expectEqual(true, cmd.force);
+            try std.testing.expect(!cmd.with_lua_meta);
             try std.testing.expectEqual(@as(WriteDefaultConfigTarget, .user), cmd.target);
         },
-        .run => try std.testing.expect(false),
+        else => try std.testing.expect(false),
     }
 }
 
@@ -337,11 +347,15 @@ test "parse startup command supports custom path and stdout target" {
     var command = try parseStartupCommandArgs(std.testing.allocator, &argv);
     defer command.deinit(std.testing.allocator);
     switch (command) {
-        .write_default_config => |cmd| switch (cmd.target) {
-            .stdout => {},
-            else => try std.testing.expect(false),
+        .write_default_config => |cmd| {
+            try std.testing.expect(!cmd.force);
+            try std.testing.expect(!cmd.with_lua_meta);
+            switch (cmd.target) {
+                .stdout => {},
+                else => try std.testing.expect(false),
+            }
         },
-        .run => try std.testing.expect(false),
+        else => try std.testing.expect(false),
     }
 }
 
@@ -354,6 +368,24 @@ test "parse startup command supports user lua meta install" {
     defer command.deinit(std.testing.allocator);
     switch (command) {
         .install_user_lua_meta => |cmd| try std.testing.expect(cmd.force),
+        else => try std.testing.expect(false),
+    }
+}
+
+test "parse startup command supports default config with lua meta" {
+    const argv = [_][]const u8{
+        "--write-default-config",
+        "--with-lua-meta",
+        "--force",
+    };
+    var command = try parseStartupCommandArgs(std.testing.allocator, &argv);
+    defer command.deinit(std.testing.allocator);
+    switch (command) {
+        .write_default_config => |cmd| {
+            try std.testing.expect(cmd.force);
+            try std.testing.expect(cmd.with_lua_meta);
+            try std.testing.expectEqual(@as(WriteDefaultConfigTarget, .user), cmd.target);
+        },
         else => try std.testing.expect(false),
     }
 }

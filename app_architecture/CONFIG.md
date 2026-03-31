@@ -71,6 +71,7 @@ run:
 
 ```bash
 zig build run -- --write-default-config
+zig build run -- --write-default-config --with-lua-meta
 ```
 
 That copies `assets/config/init.lua` to the platform user-config location

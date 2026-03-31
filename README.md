@@ -193,6 +193,7 @@ Useful variants:
 zig build run -- --write-default-config --force
 zig build run -- --write-default-config=/tmp/zide-init.lua
 zig build run -- --write-default-config --stdout
+zig build run -- --write-default-config --with-lua-meta
 ```
 
 To make `~/.config/zide/init.lua` completion-friendly when opened as its own
@@ -200,6 +201,7 @@ workspace, install user-side LuaLS metadata too:
 
 ```bash
 zig build run -- --install-user-lua-meta
+zig build run -- --write-default-config --with-lua-meta
 ```
 
 That writes:

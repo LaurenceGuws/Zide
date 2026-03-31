@@ -120,6 +120,6 @@ not a progress log and should stay brief.
 
 - Keep this file high-level only.
 - Detailed progress belongs in the owning files under `docs/todo/` and the relevant `app_architecture/` authority docs.
-- `main` is the default branch unless isolation materially reduces risk.
+- Do not work directly on `main`; treat it as merge-only and start active work on a branch from current `main`.
 - `.zide.lua` logging is agent-owned and should stay minimal and bug-scoped.
 - No CI; validation is local build/test plus manual verification.

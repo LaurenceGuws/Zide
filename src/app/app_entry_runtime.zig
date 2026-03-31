@@ -49,6 +49,9 @@ fn writeDefaultConfig(
             const path = try lua_config_shared.userConfigDestinationPath(allocator);
             defer allocator.free(path);
             try writeDefaultConfigFile(path, rendered, command.force);
+            if (command.with_lua_meta) {
+                try installUserLuaMeta(allocator, command.force);
+            }
             std.debug.print("wrote default config to {s}\n", .{path});
         },
         .path => |path| {
