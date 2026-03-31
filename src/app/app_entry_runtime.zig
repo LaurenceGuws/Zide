@@ -10,6 +10,10 @@ const lua_config_export = @import("../config/lua_config_export.zig");
 
 pub const AppMode = app_state_mod.AppMode;
 const AppState = app_state_mod.AppState;
+const WriteOutcome = enum {
+    written,
+    skipped_exists,
+};
 
 pub fn runWithMode(allocator: std.mem.Allocator, app_mode: AppMode) !void {
     const effective_mode = mode_build.effectiveMode(app_mode);
@@ -48,21 +52,27 @@ fn writeDefaultConfig(
         .user => {
             const path = try lua_config_shared.userConfigDestinationPath(allocator);
             defer allocator.free(path);
-            try writeDefaultConfigFile(path, rendered, command.force);
+            const init_outcome = try writeDefaultConfigFile(path, rendered, command.force);
             if (command.with_lua_meta) {
                 try installUserLuaMeta(allocator, command.force);
             }
-            std.debug.print("wrote default config to {s}\n", .{path});
+            switch (init_outcome) {
+                .written => std.debug.print("wrote default config to {s}\n", .{path}),
+                .skipped_exists => std.debug.print("kept existing default config at {s} (use --force to overwrite)\n", .{path}),
+            }
         },
         .path => |path| {
-            try writeDefaultConfigFile(path, rendered, command.force);
-            std.debug.print("wrote default config to {s}\n", .{path});
+            const outcome = try writeDefaultConfigFile(path, rendered, command.force);
+            switch (outcome) {
+                .written => std.debug.print("wrote default config to {s}\n", .{path}),
+                .skipped_exists => std.debug.print("kept existing default config at {s} (use --force to overwrite)\n", .{path}),
+            }
         },
     }
 }
 
-fn writeDefaultConfigFile(path: []const u8, bytes: []const u8, force: bool) !void {
-    if (!force and lua_config_shared.fileExists(path)) return error.PathAlreadyExists;
+fn writeDefaultConfigFile(path: []const u8, bytes: []const u8, force: bool) !WriteOutcome {
+    if (!force and lua_config_shared.fileExists(path)) return .skipped_exists;
 
     if (std.fs.path.dirname(path)) |dir_path| {
         if (std.fs.path.isAbsolute(dir_path)) {
@@ -81,6 +91,7 @@ fn writeDefaultConfigFile(path: []const u8, bytes: []const u8, force: bool) !voi
     } else {
         try std.fs.cwd().writeFile(.{ .sub_path = path, .data = bytes });
     }
+    return .written;
 }
 
 fn makePathAbsolute(dir_path: []const u8) !void {
@@ -111,8 +122,14 @@ fn installUserLuaMeta(allocator: std.mem.Allocator, force: bool) !void {
     const luarc_bytes = try renderUserLuaRc(allocator);
     defer allocator.free(luarc_bytes);
 
-    try writeDefaultConfigFile(meta_dst, meta_bytes, force);
-    try writeDefaultConfigFile(luarc_dst, luarc_bytes, force);
+    const meta_outcome = try writeDefaultConfigFile(meta_dst, meta_bytes, force);
+    const luarc_outcome = try writeDefaultConfigFile(luarc_dst, luarc_bytes, force);
+
+    if (meta_outcome == .skipped_exists and luarc_outcome == .skipped_exists) {
+        std.debug.print("kept existing user LuaLS support in {s} (use --force to overwrite)\n", .{base_dir});
+        return;
+    }
+
     std.debug.print("installed user LuaLS support to {s}\n", .{base_dir});
 }
 
@@ -152,4 +169,21 @@ pub fn runMain() !void {
             try runFromArgs(allocator);
         }
     }.call);
+}
+
+test "write default config file skips existing file without force" {
+    var tmp = std.testing.tmpDir(.{});
+    defer tmp.cleanup();
+
+    var path_buf: [std.fs.max_path_bytes]u8 = undefined;
+    const base = try tmp.dir.realpath(".", &path_buf);
+    const path = try std.fs.path.join(std.testing.allocator, &.{ base, "init.lua" });
+    defer std.testing.allocator.free(path);
+
+    try tmp.dir.writeFile(.{ .sub_path = "init.lua", .data = "original\n" });
+    try std.testing.expectEqual(WriteOutcome.skipped_exists, try writeDefaultConfigFile(path, "new\n", false));
+
+    const contents = try tmp.dir.readFileAlloc(std.testing.allocator, "init.lua", 1024);
+    defer std.testing.allocator.free(contents);
+    try std.testing.expectEqualStrings("original\n", contents);
 }
