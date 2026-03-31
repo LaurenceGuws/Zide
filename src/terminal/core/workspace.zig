@@ -4,7 +4,7 @@ const app_logger = @import("../../app_logger.zig");
 const runtime_policy = @import("../../app/runtime_policy.zig");
 const polling = @import("workspace_polling.zig");
 
-pub const PtyTerminalSession = session_mod.TerminalSession;
+const PtyTerminalSession = session_mod.TerminalSession;
 pub const TabId = u64;
 
 const Tab = struct {

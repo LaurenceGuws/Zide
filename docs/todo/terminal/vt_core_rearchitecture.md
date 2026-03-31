@@ -69,21 +69,19 @@ Milestone rule:
 - merge back into `main` once this milestone is validated
 - do not stack the next milestone on top of an unmerged one
 
-Current milestone: `M2` printable semantics below the VT boundary
+Current milestone: `M3` collapse remaining PTY host-wrapper alias noise
 
 Merge goal:
 
-- parser-hook glue should stop owning printable text semantics
-- codepoint and ASCII write behavior should read as core-owned terminal
-  semantics, not session-facing hook behavior
-- docs and validation should capture the ownership change clearly enough that
-  the merge to `main` is a real milestone, not a partial scratch state
+- the root/public contract should have one obvious PTY host-wrapper name
+- workspace internals should stop exporting redundant PTY wrapper aliases
+- docs and validation should capture the contract simplification clearly enough
+  that the merge to `main` is a real milestone, not a partial scratch state
 
 Checklist:
 
-- [x] core-owned text write module exists below parser hooks
-- [x] parser hooks reduced to dispatch glue for printable text
-- [x] session/public call sites still behave through the new core-owned text path
+- [x] unused public `WorkspacePtyTerminalSession` root export removed
+- [x] workspace PTY wrapper alias made internal
 - [x] milestone validation pass captured
 - [ ] milestone merged back into `main`
 
@@ -92,10 +90,10 @@ Validation note, 2026-03-31:
 - passed:
   - `zig build test`
   - `zig build check-app-imports`
-- ownership shift:
-  - printable text semantics now live in `src/terminal/core/terminal_core_text.zig`
-  - `src/terminal/core/parser_hooks.zig` now acts as parser-facing dispatch
-    glue instead of owning codepoint/ASCII write behavior directly
+- contract simplification:
+  - the unused public `WorkspacePtyTerminalSession` export is removed from
+    `src/terminal/core/terminal.zig`
+  - `src/terminal/core/workspace.zig` keeps the PTY wrapper alias internal
 
 ## TODO
 

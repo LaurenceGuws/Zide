@@ -25,7 +25,6 @@ pub const debugPushScrollbackRow = session_mod.debugPushScrollbackRow;
 pub const debugSetGridRow = session_mod.debugSetGridRow;
 
 pub const PtyTerminalSession = session_mod.TerminalSession;
-pub const WorkspacePtyTerminalSession = workspace_mod.PtyTerminalSession;
 pub const TerminalWorkspace = workspace_mod.TerminalWorkspace;
 pub const TerminalTabId = workspace_mod.TabId;
 pub const TerminalTabSyncEntry = workspace_mod.TabSyncEntry;
