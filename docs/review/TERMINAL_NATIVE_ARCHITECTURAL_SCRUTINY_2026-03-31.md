@@ -57,7 +57,9 @@ In short:
 Primary files:
 
 - `src/terminal/core/terminal_session.zig`
-- `src/terminal/core/terminal.zig`
+- `src/terminal/core/terminal_runtime.zig`
+- `src/terminal/core/terminal_publication.zig`
+- `src/terminal/core/terminal_debug.zig`
 
 Evidence:
 
@@ -71,14 +73,31 @@ Evidence:
   - selection
   - host queries
   - debug helpers
-- `terminal.zig` is almost entirely a barrel of re-exports from
-  `terminal_session.zig`
+- the old `terminal.zig` root barrel was deleted after the explicit runtime and
+  publication surfaces took over native/widget/FFI/replay/test/smoke call
+  paths
 
 Judgment:
 
 - this is cleaner than the older monolith, but still not best-in-class
 - the system still reads as "many focused helpers behind one broad god-facade"
   rather than "engine plus narrow host wrapper"
+- the newly introduced explicit surfaces
+  - `src/terminal/core/terminal_runtime.zig`
+  - `src/terminal/core/terminal_publication.zig`
+  - `src/terminal/core/terminal_debug.zig`
+  are the right direction because they give native/replay/FFI/widget consumers
+  an enforced explicit entrypoint instead of a broad root barrel
+- the old mixed alias hub `src/terminal/core/session_public_types.zig` is also
+  gone, which is an honest improvement: `terminal_session.zig` now imports
+  direct owners instead of hiding public-facing types behind one more helper
+  facade
+- `src/terminal/core/session_runtime_api.zig` and
+  `src/terminal/core/session_publication_api.zig` now carry the runtime and
+  publication/present method groups that were previously written inline on
+  `terminal_session.zig`
+- but they are only the first strike, not the kill:
+  `terminal_session.zig` still owns too much behavior
 
 Why it matters:
 
@@ -228,21 +247,22 @@ Why it matters:
 - if Zide wants native and FFI to sit on one engine truth, the shared snapshot
   seam cannot stay stub-shaped for long
 
-### 7. Root re-export patterns still blur the intended contract
+### 7. Re-export patterns still blur the intended contract
 
 Primary files:
 
-- `src/terminal/core/terminal.zig`
+- `src/terminal/core/terminal_runtime.zig`
+- `src/terminal/core/terminal_publication.zig`
 - `src/terminal/core/terminal_session.zig`
 
 Evidence:
 
 - public types and methods are re-exported through multiple files
-- the re-export shell hides whether callers are using:
+- the remaining re-export surfaces can still hide whether callers are using:
   - engine truth
   - host wrapper convenience
   - publication surface
-  - legacy compatibility surface
+  - debug/replay surface
 
 Judgment:
 
@@ -321,9 +341,9 @@ Judgment:
    center, and shrink `TerminalSession` into a narrow host/runtime wrapper.
 2. Delete parser-owned semantic text handling from `parser_hooks.zig` by moving
    printable write behavior fully below the VT action boundary.
-3. Replace broad `terminal.zig` and `terminal_session.zig` re-export shells
-   with smaller explicit surfaces for engine, publication, host runtime, and
-   debug/replay.
+3. Keep shrinking `terminal_session.zig` now that `terminal.zig` is dead, and
+   stop re-exporting broad mixed ownership through runtime/publication helper
+   surfaces where direct ownership types would be clearer.
 4. Collapse duplicated publication state so one canonical published snapshot
    shape exists, instead of parallel screen/view-cache/render-cache truths.
 5. Split native widget draw into smaller renderer-facing units and stop letting

@@ -1,14 +1,21 @@
 const std = @import("std");
-const kitty_mod = @import("../kitty/graphics.zig");
 const render_cache_mod = @import("render_cache.zig");
 const snapshot_mod = @import("snapshot.zig");
 const selection_mod = @import("selection.zig");
 const publication_state = @import("session_publication_state.zig");
 const presentation_handoff = @import("session_presentation_handoff.zig");
 const publication_updates = @import("session_publication_updates.zig");
+const types = @import("../model/types.zig");
 
-pub const RenderCache = render_cache_mod.RenderCache;
+pub const KittyImageFormat = snapshot_mod.KittyImageFormat;
+pub const KittyImage = snapshot_mod.KittyImage;
+pub const KittyPlacement = snapshot_mod.KittyPlacement;
+
 pub const TerminalSnapshot = snapshot_mod.TerminalSnapshot;
+pub const DebugSnapshot = snapshot_mod.DebugSnapshot;
+pub const RenderCache = render_cache_mod.RenderCache;
+pub const Hyperlink = snapshot_mod.Hyperlink;
+
 pub const PresentedRenderCache = struct {
     generation: u64,
     dirty: @import("../model/screen.zig").Dirty,
@@ -22,6 +29,25 @@ pub const PresentationCapture = struct {
     cache_copy_ms: f64,
     presented: PresentedRenderCache,
 };
+
+pub const AltExitPresentationInfo = struct {
+    draw_ms: f64,
+    rows: usize,
+    cols: usize,
+    history_len: usize,
+    scroll_offset: usize,
+};
+
+pub const PresentationFeedback = struct {
+    presented: ?PresentedRenderCache = null,
+    texture_updated: bool = false,
+    alt_exit_info: ?AltExitPresentationInfo = null,
+};
+
+pub const CursorPos = types.CursorPos;
+pub const Cell = types.Cell;
+pub const CellAttrs = types.CellAttrs;
+pub const Color = types.Color;
 
 pub fn snapshot(self: anytype) TerminalSnapshot {
     if (self.view_cache_pending.load(.acquire)) {

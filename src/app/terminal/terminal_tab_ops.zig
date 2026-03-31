@@ -1,10 +1,10 @@
 const app_bootstrap = @import("../bootstrap.zig");
 const app_modes = @import("../modes/mod.zig");
-const terminal_mod = @import("../../terminal/core/terminal.zig");
+const terminal_runtime = @import("../../terminal/core/terminal_runtime.zig");
 const widgets = @import("../../ui/widgets.zig");
 
 const AppMode = app_bootstrap.AppMode;
-const TerminalWorkspace = terminal_mod.TerminalWorkspace;
+const TerminalWorkspace = terminal_runtime.TerminalWorkspace;
 const TabBar = widgets.TabBar;
 
 pub fn focusByVisualIndex(

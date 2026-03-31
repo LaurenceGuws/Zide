@@ -1,9 +1,9 @@
 const app_bootstrap = @import("../bootstrap.zig");
 const app_modes = @import("../modes/mod.zig");
-const terminal_mod = @import("../../terminal/core/terminal.zig");
+const terminal_runtime = @import("../../terminal/core/terminal_runtime.zig");
 
 const AppMode = app_bootstrap.AppMode;
-const TerminalWorkspace = terminal_mod.TerminalWorkspace;
+const TerminalWorkspace = terminal_runtime.TerminalWorkspace;
 
 pub fn count(
     app_mode: AppMode,

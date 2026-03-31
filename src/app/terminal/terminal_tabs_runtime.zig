@@ -1,10 +1,10 @@
 const app_bootstrap = @import("../bootstrap.zig");
 const app_terminal_tabs = @import("terminal_tabs.zig");
-const terminal_mod = @import("../../terminal/core/terminal.zig");
+const terminal_runtime = @import("../../terminal/core/terminal_runtime.zig");
 
 pub fn count(
     app_mode: app_bootstrap.AppMode,
-    terminal_workspace: ?terminal_mod.TerminalWorkspace,
+    terminal_workspace: ?terminal_runtime.TerminalWorkspace,
     terminals_len: usize,
 ) usize {
     return app_terminal_tabs.count(app_mode, terminal_workspace, terminals_len);
@@ -13,7 +13,7 @@ pub fn count(
 pub fn barVisible(
     app_mode: app_bootstrap.AppMode,
     show_single_tab: bool,
-    terminal_workspace: ?terminal_mod.TerminalWorkspace,
+    terminal_workspace: ?terminal_runtime.TerminalWorkspace,
     terminals_len: usize,
 ) bool {
     return app_terminal_tabs.barVisible(
@@ -25,7 +25,7 @@ pub fn barVisible(
 
 pub fn activeIndex(
     app_mode: app_bootstrap.AppMode,
-    terminal_workspace: ?terminal_mod.TerminalWorkspace,
+    terminal_workspace: ?terminal_runtime.TerminalWorkspace,
     terminals_len: usize,
 ) ?usize {
     return app_terminal_tabs.activeIndex(

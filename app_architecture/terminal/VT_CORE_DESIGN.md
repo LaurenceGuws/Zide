@@ -81,12 +81,26 @@ Status note, 2026-03-31:
   - validate hard
   - delete the old seam
 - First public-surface slice landed under that rule:
-  - the root terminal module now names the PTY-backed wrapper explicitly as
-    `PtyTerminalSession`
-  - native app/runtime, FFI, and replay code were moved to that name
-  - this is not the end-state, but it removes one layer of contract blur where
-    the public barrel previously exported `TerminalSession` as if it were the
-    neutral terminal center
+  - `src/terminal/core/terminal_runtime.zig` now acts as the explicit runtime
+    surface for native app/runtime, replay-harness, and FFI consumers
+  - `src/terminal/core/terminal_publication.zig` now acts as the explicit
+    publication/type surface for native widget, replay-harness, and FFI
+    consumers
+  - `src/terminal/core/terminal_debug.zig` now acts as the explicit test/replay
+    debug surface instead of letting debug authority piggyback on runtime
+  - `src/terminal/core/session_public_types.zig` is gone, so
+    `terminal_session.zig` no longer gets to hide direct ownership behind a
+    mixed alias hub
+  - `src/terminal/core/session_runtime_api.zig` and
+    `src/terminal/core/session_publication_api.zig` now hold the runtime and
+    publication/present method groups that were previously written inline on
+    `terminal_session.zig`
+  - that cut matters because it removed the need for a root barrel import
+    entirely
+  - `src/terminal/core/terminal.zig` has now been deleted
+  - first-class native/replay/FFI/widget/tests/smoke consumers must now choose
+    an explicit runtime, publication, or debug surface instead of flowing
+    through one fake "terminal center"
 - This doc should now be read as authority for a terminal-core offensive, not
   as permission to preserve the current center with smaller helper files.
 
@@ -115,7 +129,7 @@ Authority note:
 
 ```mermaid
 flowchart LR
-    Host["Desktop host / FFI host / replay host"] --> Session["PtyTerminalSession or host wrapper"]
+    Host["Desktop host / FFI host / replay host"] --> Session["PtyTerminalRuntime or host wrapper"]
     Session --> Transport["TerminalTransport"]
     Session --> Core["TerminalCore"]
     Transport <--> Core
@@ -487,7 +501,7 @@ Current state:
   spans directly
 - old `dirty_cols_start/end` union fields remain compatibility mirrors only
 
-### 3. `PtyTerminalSession`
+### 3. `PtyTerminalRuntime`
 
 This is the desktop-host runtime wrapper.
 
@@ -608,7 +622,7 @@ flowchart LR
     end
 
     subgraph Host["Host/runtime-owned"]
-        Session["PtyTerminalSession / host wrapper"]
+        Session["PtyTerminalRuntime / host wrapper"]
         Renderer["Renderer / foreign host"]
     end
 
@@ -925,7 +939,7 @@ These names are recommended to avoid ambiguity:
 - `TerminalCoreSnapshot`
 - `TerminalCoreEvent`
 - `TerminalTransport`
-- `PtyTerminalSession`
+- `PtyTerminalRuntime`
 
 Avoid continuing to use `TerminalSession` as the name of the engine center once
 the new boundary exists.

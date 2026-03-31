@@ -1,5 +1,6 @@
 const std = @import("std");
-const terminal = @import("../core/terminal.zig");
+const terminal_runtime = @import("../core/terminal_runtime.zig");
+const terminal_publication = @import("../core/terminal_publication.zig");
 const terminal_transport = @import("../core/terminal_transport.zig");
 const types = @import("../model/types.zig");
 const screen = @import("../model/screen.zig");
@@ -45,7 +46,7 @@ const SnapshotExportState = struct {
     rows: usize,
     cols: usize,
     generation: u64,
-    cursor: terminal.CursorPos,
+    cursor: terminal_publication.CursorPos,
     cursor_style: types.CursorStyle,
     cursor_visible: bool,
     alt_active: bool,
@@ -64,7 +65,7 @@ const SnapshotDiffExportState = struct {
     base_generation: u64,
     rows: usize,
     cols: usize,
-    cursor: terminal.CursorPos,
+    cursor: terminal_publication.CursorPos,
     cursor_style: types.CursorStyle,
     cursor_visible: bool,
     alt_active: bool,
@@ -130,7 +131,7 @@ fn copyPublishedSnapshotExport(
     };
 }
 
-fn renderCacheForGenerationLocked(session: *terminal.PtyTerminalSession, generation: u64) ?*const @import("../core/render_cache.zig").RenderCache {
+fn renderCacheForGenerationLocked(session: *terminal_runtime.PtyTerminalRuntime, generation: u64) ?*const @import("../core/render_cache.zig").RenderCache {
     inline for (0..2) |i| {
         const cache = &session.render_caches[i];
         if (cache.generation == generation) return cache;
@@ -372,7 +373,7 @@ pub fn create(config: ?*const shared.CreateConfig, out_handle: *?*shared.ZideTer
         },
         .blink = cfg.cursor_blink != 0,
     };
-    const session = terminal.PtyTerminalSession.initWithOptions(allocator, cfg.rows, cfg.cols, .{
+    const session = terminal_runtime.PtyTerminalRuntime.initWithOptions(allocator, cfg.rows, cfg.cols, .{
         .scrollback_rows = cfg.scrollback_rows,
         .cursor_style = cursor_style,
     }) catch |err| return shared.mapError(err);

@@ -17,7 +17,8 @@ const editor_mod = @import("../src/editor/editor.zig");
 const grammar_manager_mod = @import("../src/editor/grammar_manager.zig");
 const text_store = @import("../src/editor/text_store.zig");
 const metrics_mod = @import("../src/terminal/model/metrics.zig");
-const terminal_mod = @import("../src/terminal/core/terminal.zig");
+const terminal_runtime = @import("../src/terminal/core/terminal_runtime.zig");
+const terminal_publication = @import("../src/terminal/core/terminal_publication.zig");
 const shared_types = @import("../src/types/mod.zig");
 const widgets = @import("../src/ui/widgets.zig");
 
@@ -70,12 +71,12 @@ test "theme utils dark classifier uses background luma" {
 
 test "terminal ansi palette update remaps existing screen and scrollback cells" {
     const allocator = std.testing.allocator;
-    const term = try terminal_mod.TerminalSession.init(allocator, 2, 2);
+    const term = try terminal_runtime.PtyTerminalRuntime.init(allocator, 2, 2);
     defer term.deinit();
 
     const palette_idx: u8 = 1;
     const old_color = term.paletteColor(palette_idx);
-    const new_color = terminal_mod.Color{ .r = 12, .g = 210, .b = 160, .a = 255 };
+    const new_color = terminal_publication.Color{ .r = 12, .g = 210, .b = 160, .a = 255 };
 
     term.primary.grid.cells.items[0].attrs.fg = old_color;
     term.primary.grid.cells.items[0].attrs.bg = old_color;
@@ -86,13 +87,13 @@ test "terminal ansi palette update remaps existing screen and scrollback cells" 
     term.alt.grid.cells.items[0].attrs.underline_color = old_color;
 
     const default_cell = term.primary.defaultCell();
-    var row = [_]terminal_mod.Cell{ default_cell, default_cell };
+    var row = [_]terminal_publication.Cell{ default_cell, default_cell };
     row[0].attrs.fg = old_color;
     row[0].attrs.bg = old_color;
     row[0].attrs.underline_color = old_color;
     term.history.pushRow(row[0..], false, default_cell);
 
-    var new_palette: [16]terminal_mod.Color = undefined;
+    var new_palette: [16]terminal_publication.Color = undefined;
     for (0..16) |i| {
         const color = term.paletteColor(@intCast(i));
         new_palette[i] = color;
@@ -109,7 +110,7 @@ test "terminal ansi palette update remaps existing screen and scrollback cells" 
     try std.testing.expectEqualDeep(new_color, term.alt.grid.cells.items[0].attrs.bg);
     try std.testing.expectEqualDeep(new_color, term.alt.grid.cells.items[0].attrs.underline_color);
 
-    var scroll_cells = std.ArrayList(terminal_mod.Cell).empty;
+    var scroll_cells = std.ArrayList(terminal_publication.Cell).empty;
     defer scroll_cells.deinit(allocator);
     const scroll_range = try term.copyScrollbackRange(allocator, 0, 1, &scroll_cells);
     try std.testing.expectEqual(@as(usize, 1), scroll_range.row_count);
@@ -532,7 +533,7 @@ test "terminal workspace drag reorder updates cycle order after sync" {
     var app = try initTestAppStateForTerminalTabRouting(allocator);
     defer deinitTestAppStateForTerminalTabRouting(&app, allocator);
 
-    app.terminal_workspace = terminal_mod.TerminalWorkspace.init(allocator, .{});
+    app.terminal_workspace = terminal_runtime.TerminalWorkspace.init(allocator, .{});
     var workspace = &app.terminal_workspace.?;
 
     const t1 = try workspace.createTab(24, 80);
@@ -569,7 +570,7 @@ test "terminal workspace reorder keeps widget session aligned with active tab" {
     var app = try initTestAppStateForTerminalTabRouting(allocator);
     defer deinitTestAppStateForTerminalTabRouting(&app, allocator);
 
-    app.terminal_workspace = terminal_mod.TerminalWorkspace.init(allocator, .{});
+    app.terminal_workspace = terminal_runtime.TerminalWorkspace.init(allocator, .{});
     var workspace = &app.terminal_workspace.?;
 
     const created_1 = try workspace.createTabWithSession(24, 80);
@@ -633,7 +634,7 @@ test "requestCancelTerminalCloseFromModal clears pending tab and marks redraw" {
         },
     );
     try std.testing.expect(consumed);
-    try std.testing.expectEqual(@as(?terminal_mod.TerminalTabId, null), app.terminal_close_confirm_tab);
+    try std.testing.expectEqual(@as(?terminal_runtime.TerminalTabId, null), app.terminal_close_confirm_tab);
     try std.testing.expect(app.needs_redraw);
 }
 

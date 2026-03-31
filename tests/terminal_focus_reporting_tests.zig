@@ -2,7 +2,8 @@ const std = @import("std");
 const builtin = @import("builtin");
 const posix = std.posix;
 
-const terminal = @import("../src/terminal/core/terminal.zig");
+const terminal_runtime = @import("../src/terminal/core/terminal_runtime.zig");
+const terminal_debug = @import("../src/terminal/core/terminal_debug.zig");
 const pty_mod = @import("../src/terminal/io/pty.zig");
 const terminal_widget_mod = @import("../src/ui/widgets/terminal_widget.zig");
 
@@ -50,10 +51,10 @@ const PipeCapture = struct {
     }
 };
 
-fn withSessionAndCapture(test_fn: fn (*terminal.TerminalSession, *PipeCapture) anyerror!void) !void {
+fn withSessionAndCapture(test_fn: fn (*terminal_runtime.PtyTerminalRuntime, *PipeCapture) anyerror!void) !void {
     try requireUnix();
     const allocator = std.testing.allocator;
-    var session = try terminal.TerminalSession.init(allocator, 6, 12);
+    var session = try terminal_runtime.PtyTerminalRuntime.init(allocator, 6, 12);
     defer session.deinit();
 
     var capture = try PipeCapture.init();
@@ -67,21 +68,21 @@ fn withSessionAndCapture(test_fn: fn (*terminal.TerminalSession, *PipeCapture) a
 
 test "terminal focus reporting toggles via CSI ?1004 h/l" {
     const allocator = std.testing.allocator;
-    var session = try terminal.TerminalSession.init(allocator, 6, 12);
+    var session = try terminal_runtime.PtyTerminalRuntime.init(allocator, 6, 12);
     defer session.deinit();
 
     try std.testing.expect(!session.focusReportingEnabled());
-    terminal.debugFeedBytes(session, "\x1b[?1004h");
+    terminal_debug.debugFeedBytes(session, "\x1b[?1004h");
     try std.testing.expect(session.focusReportingEnabled());
-    terminal.debugFeedBytes(session, "\x1b[?1004l");
+    terminal_debug.debugFeedBytes(session, "\x1b[?1004l");
     try std.testing.expect(!session.focusReportingEnabled());
 }
 
 test "terminal focus reporting writes focus in/out when enabled" {
     try withSessionAndCapture(struct {
-        fn run(session: *terminal.TerminalSession, capture: *PipeCapture) !void {
+        fn run(session: *terminal_runtime.PtyTerminalRuntime, capture: *PipeCapture) !void {
             const allocator = std.testing.allocator;
-            terminal.debugFeedBytes(session, "\x1b[?1004h");
+            terminal_debug.debugFeedBytes(session, "\x1b[?1004h");
             try std.testing.expect(try session.reportFocusChanged(true));
             {
                 const reply = try capture.readReply(allocator);
@@ -101,12 +102,12 @@ test "terminal focus reporting writes focus in/out when enabled" {
 
 test "terminal focus reporting suppresses writes when disabled or cleared" {
     try withSessionAndCapture(struct {
-        fn run(session: *terminal.TerminalSession, capture: *PipeCapture) !void {
+        fn run(session: *terminal_runtime.PtyTerminalRuntime, capture: *PipeCapture) !void {
             try std.testing.expect(!(try session.reportFocusChanged(true)));
             try capture.expectNoReply();
 
-            terminal.debugFeedBytes(session, "\x1b[?1004h");
-            terminal.debugFeedBytes(session, "\x1b[?1004l");
+            terminal_debug.debugFeedBytes(session, "\x1b[?1004h");
+            terminal_debug.debugFeedBytes(session, "\x1b[?1004l");
             try std.testing.expect(!(try session.reportFocusChanged(true)));
             try capture.expectNoReply();
         }
@@ -115,18 +116,18 @@ test "terminal focus reporting suppresses writes when disabled or cleared" {
 
 test "terminal DECRQM private query reports ?1004 set/reset state" {
     try withSessionAndCapture(struct {
-        fn run(session: *terminal.TerminalSession, capture: *PipeCapture) !void {
+        fn run(session: *terminal_runtime.PtyTerminalRuntime, capture: *PipeCapture) !void {
             const allocator = std.testing.allocator;
 
-            terminal.debugFeedBytes(session, "\x1b[?1004$p");
+            terminal_debug.debugFeedBytes(session, "\x1b[?1004$p");
             {
                 const reply = try capture.readReply(allocator);
                 defer allocator.free(reply);
                 try std.testing.expectEqualStrings("\x1b[?1004;2$y", reply);
             }
 
-            terminal.debugFeedBytes(session, "\x1b[?1004h");
-            terminal.debugFeedBytes(session, "\x1b[?1004$p");
+            terminal_debug.debugFeedBytes(session, "\x1b[?1004h");
+            terminal_debug.debugFeedBytes(session, "\x1b[?1004$p");
             {
                 const reply = try capture.readReply(allocator);
                 defer allocator.free(reply);
@@ -138,7 +139,7 @@ test "terminal DECRQM private query reports ?1004 set/reset state" {
 
 test "terminal DECRQM private queries report common mode set/reset states" {
     try withSessionAndCapture(struct {
-        fn run(session: *terminal.TerminalSession, capture: *PipeCapture) !void {
+        fn run(session: *terminal_runtime.PtyTerminalRuntime, capture: *PipeCapture) !void {
             const allocator = std.testing.allocator;
             const Case = struct {
                 mode: i32,
@@ -179,7 +180,7 @@ test "terminal DECRQM private queries report common mode set/reset states" {
             for (cases) |case| {
                 var qbuf: [32]u8 = undefined;
                 const query = try std.fmt.bufPrint(&qbuf, "\x1b[?{d}$p", .{case.mode});
-                terminal.debugFeedBytes(session, query);
+                terminal_debug.debugFeedBytes(session, query);
                 {
                     const reply = try capture.readReply(allocator);
                     defer allocator.free(reply);
@@ -189,8 +190,8 @@ test "terminal DECRQM private queries report common mode set/reset states" {
                     try std.testing.expectEqualStrings(expected, reply);
                 }
 
-                terminal.debugFeedBytes(session, case.set_seq);
-                terminal.debugFeedBytes(session, query);
+                terminal_debug.debugFeedBytes(session, case.set_seq);
+                terminal_debug.debugFeedBytes(session, query);
                 {
                     const reply = try capture.readReply(allocator);
                     defer allocator.free(reply);
@@ -199,8 +200,8 @@ test "terminal DECRQM private queries report common mode set/reset states" {
                     try std.testing.expectEqualStrings(expected, reply);
                 }
 
-                terminal.debugFeedBytes(session, case.reset_seq);
-                terminal.debugFeedBytes(session, query);
+                terminal_debug.debugFeedBytes(session, case.reset_seq);
+                terminal_debug.debugFeedBytes(session, query);
                 {
                     const reply = try capture.readReply(allocator);
                     defer allocator.free(reply);
@@ -215,26 +216,26 @@ test "terminal DECRQM private queries report common mode set/reset states" {
 
 test "terminal DECRQM private query reports keypad mode ?66 via DECPAM/DECPNM state" {
     try withSessionAndCapture(struct {
-        fn run(session: *terminal.TerminalSession, capture: *PipeCapture) !void {
+        fn run(session: *terminal_runtime.PtyTerminalRuntime, capture: *PipeCapture) !void {
             const allocator = std.testing.allocator;
 
-            terminal.debugFeedBytes(session, "\x1b[?66$p");
+            terminal_debug.debugFeedBytes(session, "\x1b[?66$p");
             {
                 const reply = try capture.readReply(allocator);
                 defer allocator.free(reply);
                 try std.testing.expectEqualStrings("\x1b[?66;2$y", reply);
             }
 
-            terminal.debugFeedBytes(session, "\x1b=");
-            terminal.debugFeedBytes(session, "\x1b[?66$p");
+            terminal_debug.debugFeedBytes(session, "\x1b=");
+            terminal_debug.debugFeedBytes(session, "\x1b[?66$p");
             {
                 const reply = try capture.readReply(allocator);
                 defer allocator.free(reply);
                 try std.testing.expectEqualStrings("\x1b[?66;1$y", reply);
             }
 
-            terminal.debugFeedBytes(session, "\x1b>");
-            terminal.debugFeedBytes(session, "\x1b[?66$p");
+            terminal_debug.debugFeedBytes(session, "\x1b>");
+            terminal_debug.debugFeedBytes(session, "\x1b[?66$p");
             {
                 const reply = try capture.readReply(allocator);
                 defer allocator.free(reply);
@@ -246,24 +247,24 @@ test "terminal DECRQM private query reports keypad mode ?66 via DECPAM/DECPNM st
 
 test "terminal DECSLRM applies margins only when ?69 mode is enabled" {
     try withSessionAndCapture(struct {
-        fn run(session: *terminal.TerminalSession, capture: *PipeCapture) !void {
+        fn run(session: *terminal_runtime.PtyTerminalRuntime, capture: *PipeCapture) !void {
             const allocator = std.testing.allocator;
             const screen = session.activeScreen();
 
             // Without ?69, CSI ... s remains SCP behavior and does not change margins.
-            terminal.debugFeedBytes(session, "\x1b[3;8s");
+            terminal_debug.debugFeedBytes(session, "\x1b[3;8s");
             try std.testing.expectEqual(@as(usize, 0), screen.left_margin);
             try std.testing.expectEqual(@as(usize, @intCast(screen.grid.cols - 1)), screen.right_margin);
 
             // Enable left/right margin mode and set margins.
-            terminal.debugFeedBytes(session, "\x1b[?69h");
-            terminal.debugFeedBytes(session, "\x1b[3;8s");
+            terminal_debug.debugFeedBytes(session, "\x1b[?69h");
+            terminal_debug.debugFeedBytes(session, "\x1b[3;8s");
             try std.testing.expect(screen.left_right_margin_mode_69);
             try std.testing.expectEqual(@as(usize, 2), screen.left_margin);
             try std.testing.expectEqual(@as(usize, 7), screen.right_margin);
 
             // Cursor should home to row 1 at left margin after DECSLRM.
-            terminal.debugFeedBytes(session, "\x1b[6n");
+            terminal_debug.debugFeedBytes(session, "\x1b[6n");
             {
                 const reply = try capture.readReply(allocator);
                 defer allocator.free(reply);
@@ -275,13 +276,13 @@ test "terminal DECSLRM applies margins only when ?69 mode is enabled" {
 
 test "terminal CSI s is save-cursor when ?69 is off and DECSLRM reset when ?69 is on" {
     const allocator = std.testing.allocator;
-    var session = try terminal.TerminalSession.init(allocator, 6, 12);
+    var session = try terminal_runtime.PtyTerminalRuntime.init(allocator, 6, 12);
     defer session.deinit();
 
     const screen = session.activeScreen();
 
     // ?69 disabled: CSI s/u behaves as save/restore cursor.
-    terminal.debugFeedBytes(session, "\x1b[4;7H\x1b[s\x1b[1;1H\x1b[u");
+    terminal_debug.debugFeedBytes(session, "\x1b[4;7H\x1b[s\x1b[1;1H\x1b[u");
     {
         const pos = session.getCursorPos();
         try std.testing.expectEqual(@as(usize, 3), pos.row);
@@ -289,7 +290,7 @@ test "terminal CSI s is save-cursor when ?69 is off and DECSLRM reset when ?69 i
     }
 
     // ?69 enabled: zero-param CSI s is DECSLRM reset-to-full-width, not save-cursor.
-    terminal.debugFeedBytes(session, "\x1b[?69h\x1b[3;8s\x1b[2;5H\x1b[s");
+    terminal_debug.debugFeedBytes(session, "\x1b[?69h\x1b[3;8s\x1b[2;5H\x1b[s");
     try std.testing.expect(screen.left_right_margin_mode_69);
     try std.testing.expectEqual(@as(usize, 0), screen.left_margin);
     try std.testing.expectEqual(@as(usize, @intCast(screen.grid.cols - 1)), screen.right_margin);
@@ -300,7 +301,7 @@ test "terminal CSI s is save-cursor when ?69 is off and DECSLRM reset when ?69 i
     }
 
     // Saved cursor from the pre-?69 CSI s should still restore.
-    terminal.debugFeedBytes(session, "\x1b[u");
+    terminal_debug.debugFeedBytes(session, "\x1b[u");
     {
         const pos = session.getCursorPos();
         try std.testing.expectEqual(@as(usize, 3), pos.row);
@@ -310,14 +311,14 @@ test "terminal CSI s is save-cursor when ?69 is off and DECSLRM reset when ?69 i
 
 test "terminal DECSLRM clips ICH DCH ECH edits to active horizontal margins" {
     const allocator = std.testing.allocator;
-    var session = try terminal.TerminalSession.init(allocator, 6, 12);
+    var session = try terminal_runtime.PtyTerminalRuntime.init(allocator, 6, 12);
     defer session.deinit();
 
-    terminal.debugFeedBytes(session, "ABCDEFGHIJKL");
+    terminal_debug.debugFeedBytes(session, "ABCDEFGHIJKL");
     // Enable DECSLRM and set margins to columns 3..8 (0-based 2..7).
-    terminal.debugFeedBytes(session, "\x1b[?69h\x1b[3;8s");
-    terminal.debugFeedBytes(session, "\x1b[1;5H"); // row 1, col 5 (inside margin)
-    terminal.debugFeedBytes(session, "\x1b[2@\x1b[P\x1b[2X"); // ICH 2, DCH 1, ECH 2
+    terminal_debug.debugFeedBytes(session, "\x1b[?69h\x1b[3;8s");
+    terminal_debug.debugFeedBytes(session, "\x1b[1;5H"); // row 1, col 5 (inside margin)
+    terminal_debug.debugFeedBytes(session, "\x1b[2@\x1b[P\x1b[2X"); // ICH 2, DCH 1, ECH 2
 
     // Outside-margin cells should remain unchanged.
     try std.testing.expectEqual(@as(u32, 'A'), session.getCell(0, 0).codepoint);
@@ -338,11 +339,11 @@ test "terminal DECSLRM clips ICH DCH ECH edits to active horizontal margins" {
 
 test "terminal DECSLRM autowrap continues at left margin" {
     const allocator = std.testing.allocator;
-    var session = try terminal.TerminalSession.init(allocator, 6, 12);
+    var session = try terminal_runtime.PtyTerminalRuntime.init(allocator, 6, 12);
     defer session.deinit();
 
-    terminal.debugFeedBytes(session, "\x1b[?69h\x1b[3;8s");
-    terminal.debugFeedBytes(session, "\x1b[1;8HXY");
+    terminal_debug.debugFeedBytes(session, "\x1b[?69h\x1b[3;8s");
+    terminal_debug.debugFeedBytes(session, "\x1b[1;8HXY");
 
     // First glyph lands at right margin, second wraps to next row left margin.
     try std.testing.expectEqual(@as(u32, 'X'), session.getCell(0, 7).codepoint);
@@ -357,12 +358,12 @@ test "terminal DECSLRM autowrap continues at left margin" {
 
 test "terminal DECSLRM clips EL to active horizontal margins" {
     const allocator = std.testing.allocator;
-    var session = try terminal.TerminalSession.init(allocator, 6, 12);
+    var session = try terminal_runtime.PtyTerminalRuntime.init(allocator, 6, 12);
     defer session.deinit();
 
-    terminal.debugFeedBytes(session, "ABCDEFGHIJKL");
-    terminal.debugFeedBytes(session, "\x1b[?69h\x1b[3;8s");
-    terminal.debugFeedBytes(session, "\x1b[1;5H\x1b[2K");
+    terminal_debug.debugFeedBytes(session, "ABCDEFGHIJKL");
+    terminal_debug.debugFeedBytes(session, "\x1b[?69h\x1b[3;8s");
+    terminal_debug.debugFeedBytes(session, "\x1b[1;5H\x1b[2K");
 
     // Outside margins (0..1 and 8..11) must remain untouched.
     try std.testing.expectEqual(@as(u32, 'A'), session.getCell(0, 0).codepoint);
@@ -381,15 +382,15 @@ test "terminal DECSLRM clips EL to active horizontal margins" {
 
 test "terminal DECSLRM clips ED to active horizontal margins" {
     const allocator = std.testing.allocator;
-    var session = try terminal.TerminalSession.init(allocator, 4, 12);
+    var session = try terminal_runtime.PtyTerminalRuntime.init(allocator, 4, 12);
     defer session.deinit();
 
-    terminal.debugFeedBytes(session, "\x1b[1;1HAAAAAAAAAAAA");
-    terminal.debugFeedBytes(session, "\x1b[2;1HBBBBBBBBBBBB");
-    terminal.debugFeedBytes(session, "\x1b[3;1HCCCCCCCCCCCC");
-    terminal.debugFeedBytes(session, "\x1b[?69h\x1b[3;8s");
+    terminal_debug.debugFeedBytes(session, "\x1b[1;1HAAAAAAAAAAAA");
+    terminal_debug.debugFeedBytes(session, "\x1b[2;1HBBBBBBBBBBBB");
+    terminal_debug.debugFeedBytes(session, "\x1b[3;1HCCCCCCCCCCCC");
+    terminal_debug.debugFeedBytes(session, "\x1b[?69h\x1b[3;8s");
 
-    terminal.debugFeedBytes(session, "\x1b[2;5H\x1b[2J");
+    terminal_debug.debugFeedBytes(session, "\x1b[2;5H\x1b[2J");
     for (0..3) |r| {
         try std.testing.expectEqual(@as(u32, @intCast('A' + r)), session.getCell(r, 0).codepoint);
         try std.testing.expectEqual(@as(u32, @intCast('A' + r)), session.getCell(r, 1).codepoint);
@@ -403,17 +404,17 @@ test "terminal DECSLRM clips ED to active horizontal margins" {
 
 test "terminal DECSLRM clips IL and DL to active horizontal margins" {
     const allocator = std.testing.allocator;
-    var session = try terminal.TerminalSession.init(allocator, 6, 12);
+    var session = try terminal_runtime.PtyTerminalRuntime.init(allocator, 6, 12);
     defer session.deinit();
 
-    terminal.debugFeedBytes(session, "\x1b[1;1HAAAAAAAAAAAA");
-    terminal.debugFeedBytes(session, "\x1b[2;1HBBBBBBBBBBBB");
-    terminal.debugFeedBytes(session, "\x1b[3;1HCCCCCCCCCCCC");
-    terminal.debugFeedBytes(session, "\x1b[4;1HDDDDDDDDDDDD");
-    terminal.debugFeedBytes(session, "\x1b[?69h\x1b[3;8s");
+    terminal_debug.debugFeedBytes(session, "\x1b[1;1HAAAAAAAAAAAA");
+    terminal_debug.debugFeedBytes(session, "\x1b[2;1HBBBBBBBBBBBB");
+    terminal_debug.debugFeedBytes(session, "\x1b[3;1HCCCCCCCCCCCC");
+    terminal_debug.debugFeedBytes(session, "\x1b[4;1HDDDDDDDDDDDD");
+    terminal_debug.debugFeedBytes(session, "\x1b[?69h\x1b[3;8s");
 
     // Insert one line at row 2, col 3; only margin band should shift.
-    terminal.debugFeedBytes(session, "\x1b[2;3H\x1b[1L");
+    terminal_debug.debugFeedBytes(session, "\x1b[2;3H\x1b[1L");
     try std.testing.expectEqual(@as(u32, 'B'), session.getCell(1, 0).codepoint);
     try std.testing.expectEqual(@as(u32, 0), session.getCell(1, 2).codepoint);
     try std.testing.expectEqual(@as(u32, 'B'), session.getCell(2, 2).codepoint);
@@ -421,7 +422,7 @@ test "terminal DECSLRM clips IL and DL to active horizontal margins" {
     try std.testing.expectEqual(@as(u32, 'D'), session.getCell(4, 2).codepoint);
 
     // Delete one line at row 2, col 3; margin band shifts back up.
-    terminal.debugFeedBytes(session, "\x1b[2;3H\x1b[1M");
+    terminal_debug.debugFeedBytes(session, "\x1b[2;3H\x1b[1M");
     try std.testing.expectEqual(@as(u32, 'B'), session.getCell(1, 0).codepoint);
     try std.testing.expectEqual(@as(u32, 'C'), session.getCell(2, 0).codepoint);
     try std.testing.expectEqual(@as(u32, 'D'), session.getCell(3, 0).codepoint);
@@ -433,37 +434,37 @@ test "terminal DECSLRM clips IL and DL to active horizontal margins" {
 test "terminal DECSLRM IL and DL are no-op when cursor is outside margins" {
     const allocator = std.testing.allocator;
 
-    var il_session = try terminal.TerminalSession.init(allocator, 4, 12);
+    var il_session = try terminal_runtime.PtyTerminalRuntime.init(allocator, 4, 12);
     defer il_session.deinit();
-    terminal.debugFeedBytes(il_session, "\x1b[1;1HAAAAAAAAAAAA");
-    terminal.debugFeedBytes(il_session, "\x1b[2;1HBBBBBBBBBBBB");
-    terminal.debugFeedBytes(il_session, "\x1b[3;1HCCCCCCCCCCCC");
-    terminal.debugFeedBytes(il_session, "\x1b[4;1HDDDDDDDDDDDD");
-    terminal.debugFeedBytes(il_session, "\x1b[?69h\x1b[3;8s");
+    terminal_debug.debugFeedBytes(il_session, "\x1b[1;1HAAAAAAAAAAAA");
+    terminal_debug.debugFeedBytes(il_session, "\x1b[2;1HBBBBBBBBBBBB");
+    terminal_debug.debugFeedBytes(il_session, "\x1b[3;1HCCCCCCCCCCCC");
+    terminal_debug.debugFeedBytes(il_session, "\x1b[4;1HDDDDDDDDDDDD");
+    terminal_debug.debugFeedBytes(il_session, "\x1b[?69h\x1b[3;8s");
     {
         const screen = il_session.activeScreen();
         screen.cursor.row = 1;
         screen.cursor.col = 0; // deliberately outside left margin (2)
     }
-    terminal.debugFeedBytes(il_session, "\x1b[1L");
+    terminal_debug.debugFeedBytes(il_session, "\x1b[1L");
     try std.testing.expectEqual(@as(u32, 'A'), il_session.getCell(0, 2).codepoint);
     try std.testing.expectEqual(@as(u32, 'B'), il_session.getCell(1, 2).codepoint);
     try std.testing.expectEqual(@as(u32, 'C'), il_session.getCell(2, 2).codepoint);
     try std.testing.expectEqual(@as(u32, 'D'), il_session.getCell(3, 2).codepoint);
 
-    var dl_session = try terminal.TerminalSession.init(allocator, 4, 12);
+    var dl_session = try terminal_runtime.PtyTerminalRuntime.init(allocator, 4, 12);
     defer dl_session.deinit();
-    terminal.debugFeedBytes(dl_session, "\x1b[1;1HAAAAAAAAAAAA");
-    terminal.debugFeedBytes(dl_session, "\x1b[2;1HBBBBBBBBBBBB");
-    terminal.debugFeedBytes(dl_session, "\x1b[3;1HCCCCCCCCCCCC");
-    terminal.debugFeedBytes(dl_session, "\x1b[4;1HDDDDDDDDDDDD");
-    terminal.debugFeedBytes(dl_session, "\x1b[?69h\x1b[3;8s");
+    terminal_debug.debugFeedBytes(dl_session, "\x1b[1;1HAAAAAAAAAAAA");
+    terminal_debug.debugFeedBytes(dl_session, "\x1b[2;1HBBBBBBBBBBBB");
+    terminal_debug.debugFeedBytes(dl_session, "\x1b[3;1HCCCCCCCCCCCC");
+    terminal_debug.debugFeedBytes(dl_session, "\x1b[4;1HDDDDDDDDDDDD");
+    terminal_debug.debugFeedBytes(dl_session, "\x1b[?69h\x1b[3;8s");
     {
         const screen = dl_session.activeScreen();
         screen.cursor.row = 1;
         screen.cursor.col = 0; // deliberately outside left margin (2)
     }
-    terminal.debugFeedBytes(dl_session, "\x1b[1M");
+    terminal_debug.debugFeedBytes(dl_session, "\x1b[1M");
     try std.testing.expectEqual(@as(u32, 'A'), dl_session.getCell(0, 2).codepoint);
     try std.testing.expectEqual(@as(u32, 'B'), dl_session.getCell(1, 2).codepoint);
     try std.testing.expectEqual(@as(u32, 'C'), dl_session.getCell(2, 2).codepoint);
@@ -473,13 +474,13 @@ test "terminal DECSLRM IL and DL are no-op when cursor is outside margins" {
 test "terminal DECSLRM clips SU and SD to active horizontal margins" {
     const allocator = std.testing.allocator;
 
-    var up_session = try terminal.TerminalSession.init(allocator, 4, 12);
+    var up_session = try terminal_runtime.PtyTerminalRuntime.init(allocator, 4, 12);
     defer up_session.deinit();
-    terminal.debugFeedBytes(up_session, "\x1b[1;1HAAAAAAAAAAAA");
-    terminal.debugFeedBytes(up_session, "\x1b[2;1HBBBBBBBBBBBB");
-    terminal.debugFeedBytes(up_session, "\x1b[3;1HCCCCCCCCCCCC");
-    terminal.debugFeedBytes(up_session, "\x1b[4;1HDDDDDDDDDDDD");
-    terminal.debugFeedBytes(up_session, "\x1b[?69h\x1b[3;8s\x1b[1S");
+    terminal_debug.debugFeedBytes(up_session, "\x1b[1;1HAAAAAAAAAAAA");
+    terminal_debug.debugFeedBytes(up_session, "\x1b[2;1HBBBBBBBBBBBB");
+    terminal_debug.debugFeedBytes(up_session, "\x1b[3;1HCCCCCCCCCCCC");
+    terminal_debug.debugFeedBytes(up_session, "\x1b[4;1HDDDDDDDDDDDD");
+    terminal_debug.debugFeedBytes(up_session, "\x1b[?69h\x1b[3;8s\x1b[1S");
     try std.testing.expectEqual(@as(u32, 'A'), up_session.getCell(0, 0).codepoint);
     try std.testing.expectEqual(@as(u32, 'B'), up_session.getCell(0, 2).codepoint);
     try std.testing.expectEqual(@as(u32, 'B'), up_session.getCell(1, 0).codepoint);
@@ -489,13 +490,13 @@ test "terminal DECSLRM clips SU and SD to active horizontal margins" {
     try std.testing.expectEqual(@as(u32, 'D'), up_session.getCell(3, 0).codepoint);
     try std.testing.expectEqual(@as(u32, 0), up_session.getCell(3, 2).codepoint);
 
-    var down_session = try terminal.TerminalSession.init(allocator, 4, 12);
+    var down_session = try terminal_runtime.PtyTerminalRuntime.init(allocator, 4, 12);
     defer down_session.deinit();
-    terminal.debugFeedBytes(down_session, "\x1b[1;1HAAAAAAAAAAAA");
-    terminal.debugFeedBytes(down_session, "\x1b[2;1HBBBBBBBBBBBB");
-    terminal.debugFeedBytes(down_session, "\x1b[3;1HCCCCCCCCCCCC");
-    terminal.debugFeedBytes(down_session, "\x1b[4;1HDDDDDDDDDDDD");
-    terminal.debugFeedBytes(down_session, "\x1b[?69h\x1b[3;8s\x1b[1T");
+    terminal_debug.debugFeedBytes(down_session, "\x1b[1;1HAAAAAAAAAAAA");
+    terminal_debug.debugFeedBytes(down_session, "\x1b[2;1HBBBBBBBBBBBB");
+    terminal_debug.debugFeedBytes(down_session, "\x1b[3;1HCCCCCCCCCCCC");
+    terminal_debug.debugFeedBytes(down_session, "\x1b[4;1HDDDDDDDDDDDD");
+    terminal_debug.debugFeedBytes(down_session, "\x1b[?69h\x1b[3;8s\x1b[1T");
     try std.testing.expectEqual(@as(u32, 'A'), down_session.getCell(0, 0).codepoint);
     try std.testing.expectEqual(@as(u32, 0), down_session.getCell(0, 2).codepoint);
     try std.testing.expectEqual(@as(u32, 'B'), down_session.getCell(1, 0).codepoint);
@@ -508,15 +509,15 @@ test "terminal DECSLRM clips SU and SD to active horizontal margins" {
 
 test "terminal DECSLRM and DECSTBM clip SU to margin band within scroll region" {
     const allocator = std.testing.allocator;
-    var session = try terminal.TerminalSession.init(allocator, 5, 12);
+    var session = try terminal_runtime.PtyTerminalRuntime.init(allocator, 5, 12);
     defer session.deinit();
 
-    terminal.debugFeedBytes(session, "\x1b[1;1HAAAAAAAAAAAA");
-    terminal.debugFeedBytes(session, "\x1b[2;1HBBBBBBBBBBBB");
-    terminal.debugFeedBytes(session, "\x1b[3;1HCCCCCCCCCCCC");
-    terminal.debugFeedBytes(session, "\x1b[4;1HDDDDDDDDDDDD");
-    terminal.debugFeedBytes(session, "\x1b[5;1HEEEEEEEEEEEE");
-    terminal.debugFeedBytes(session, "\x1b[?69h\x1b[3;8s\x1b[2;4r\x1b[1S");
+    terminal_debug.debugFeedBytes(session, "\x1b[1;1HAAAAAAAAAAAA");
+    terminal_debug.debugFeedBytes(session, "\x1b[2;1HBBBBBBBBBBBB");
+    terminal_debug.debugFeedBytes(session, "\x1b[3;1HCCCCCCCCCCCC");
+    terminal_debug.debugFeedBytes(session, "\x1b[4;1HDDDDDDDDDDDD");
+    terminal_debug.debugFeedBytes(session, "\x1b[5;1HEEEEEEEEEEEE");
+    terminal_debug.debugFeedBytes(session, "\x1b[?69h\x1b[3;8s\x1b[2;4r\x1b[1S");
 
     // Outside the vertical region is unchanged.
     try std.testing.expectEqual(@as(u32, 'A'), session.getCell(0, 2).codepoint);
@@ -535,15 +536,15 @@ test "terminal DECSLRM and DECSTBM clip SU to margin band within scroll region" 
 
 test "terminal DECSLRM and DECSTBM clip SD to margin band within scroll region" {
     const allocator = std.testing.allocator;
-    var session = try terminal.TerminalSession.init(allocator, 5, 12);
+    var session = try terminal_runtime.PtyTerminalRuntime.init(allocator, 5, 12);
     defer session.deinit();
 
-    terminal.debugFeedBytes(session, "\x1b[1;1HAAAAAAAAAAAA");
-    terminal.debugFeedBytes(session, "\x1b[2;1HBBBBBBBBBBBB");
-    terminal.debugFeedBytes(session, "\x1b[3;1HCCCCCCCCCCCC");
-    terminal.debugFeedBytes(session, "\x1b[4;1HDDDDDDDDDDDD");
-    terminal.debugFeedBytes(session, "\x1b[5;1HEEEEEEEEEEEE");
-    terminal.debugFeedBytes(session, "\x1b[?69h\x1b[3;8s\x1b[2;4r\x1b[1T");
+    terminal_debug.debugFeedBytes(session, "\x1b[1;1HAAAAAAAAAAAA");
+    terminal_debug.debugFeedBytes(session, "\x1b[2;1HBBBBBBBBBBBB");
+    terminal_debug.debugFeedBytes(session, "\x1b[3;1HCCCCCCCCCCCC");
+    terminal_debug.debugFeedBytes(session, "\x1b[4;1HDDDDDDDDDDDD");
+    terminal_debug.debugFeedBytes(session, "\x1b[5;1HEEEEEEEEEEEE");
+    terminal_debug.debugFeedBytes(session, "\x1b[?69h\x1b[3;8s\x1b[2;4r\x1b[1T");
 
     // Outside the vertical region is unchanged.
     try std.testing.expectEqual(@as(u32, 'A'), session.getCell(0, 2).codepoint);
@@ -562,15 +563,15 @@ test "terminal DECSLRM and DECSTBM clip SD to margin band within scroll region" 
 
 test "terminal DECSLRM and DECSTBM clip IL to margin band within scroll region" {
     const allocator = std.testing.allocator;
-    var session = try terminal.TerminalSession.init(allocator, 5, 12);
+    var session = try terminal_runtime.PtyTerminalRuntime.init(allocator, 5, 12);
     defer session.deinit();
 
-    terminal.debugFeedBytes(session, "\x1b[1;1HAAAAAAAAAAAA");
-    terminal.debugFeedBytes(session, "\x1b[2;1HBBBBBBBBBBBB");
-    terminal.debugFeedBytes(session, "\x1b[3;1HCCCCCCCCCCCC");
-    terminal.debugFeedBytes(session, "\x1b[4;1HDDDDDDDDDDDD");
-    terminal.debugFeedBytes(session, "\x1b[5;1HEEEEEEEEEEEE");
-    terminal.debugFeedBytes(session, "\x1b[?69h\x1b[3;8s\x1b[2;4r\x1b[3;3H\x1b[1L");
+    terminal_debug.debugFeedBytes(session, "\x1b[1;1HAAAAAAAAAAAA");
+    terminal_debug.debugFeedBytes(session, "\x1b[2;1HBBBBBBBBBBBB");
+    terminal_debug.debugFeedBytes(session, "\x1b[3;1HCCCCCCCCCCCC");
+    terminal_debug.debugFeedBytes(session, "\x1b[4;1HDDDDDDDDDDDD");
+    terminal_debug.debugFeedBytes(session, "\x1b[5;1HEEEEEEEEEEEE");
+    terminal_debug.debugFeedBytes(session, "\x1b[?69h\x1b[3;8s\x1b[2;4r\x1b[3;3H\x1b[1L");
 
     // Outside vertical region is unchanged.
     try std.testing.expectEqual(@as(u32, 'A'), session.getCell(0, 2).codepoint);
@@ -589,15 +590,15 @@ test "terminal DECSLRM and DECSTBM clip IL to margin band within scroll region" 
 
 test "terminal DECSLRM and DECSTBM clip DL to margin band within scroll region" {
     const allocator = std.testing.allocator;
-    var session = try terminal.TerminalSession.init(allocator, 5, 12);
+    var session = try terminal_runtime.PtyTerminalRuntime.init(allocator, 5, 12);
     defer session.deinit();
 
-    terminal.debugFeedBytes(session, "\x1b[1;1HAAAAAAAAAAAA");
-    terminal.debugFeedBytes(session, "\x1b[2;1HBBBBBBBBBBBB");
-    terminal.debugFeedBytes(session, "\x1b[3;1HCCCCCCCCCCCC");
-    terminal.debugFeedBytes(session, "\x1b[4;1HDDDDDDDDDDDD");
-    terminal.debugFeedBytes(session, "\x1b[5;1HEEEEEEEEEEEE");
-    terminal.debugFeedBytes(session, "\x1b[?69h\x1b[3;8s\x1b[2;4r\x1b[3;3H\x1b[1M");
+    terminal_debug.debugFeedBytes(session, "\x1b[1;1HAAAAAAAAAAAA");
+    terminal_debug.debugFeedBytes(session, "\x1b[2;1HBBBBBBBBBBBB");
+    terminal_debug.debugFeedBytes(session, "\x1b[3;1HCCCCCCCCCCCC");
+    terminal_debug.debugFeedBytes(session, "\x1b[4;1HDDDDDDDDDDDD");
+    terminal_debug.debugFeedBytes(session, "\x1b[5;1HEEEEEEEEEEEE");
+    terminal_debug.debugFeedBytes(session, "\x1b[?69h\x1b[3;8s\x1b[2;4r\x1b[3;3H\x1b[1M");
 
     // Outside vertical region is unchanged.
     try std.testing.expectEqual(@as(u32, 'A'), session.getCell(0, 2).codepoint);
@@ -616,17 +617,17 @@ test "terminal DECSLRM and DECSTBM clip DL to margin band within scroll region" 
 
 test "terminal DECSTBM homes cursor using DECOM semantics under DECLRMM" {
     try withSessionAndCapture(struct {
-        fn run(session: *terminal.TerminalSession, capture: *PipeCapture) !void {
+        fn run(session: *terminal_runtime.PtyTerminalRuntime, capture: *PipeCapture) !void {
             const allocator = std.testing.allocator;
             const screen = session.activeScreen();
 
-            terminal.debugFeedBytes(session, "\x1b[?69h\x1b[3;8s");
+            terminal_debug.debugFeedBytes(session, "\x1b[?69h\x1b[3;8s");
             try std.testing.expect(screen.left_right_margin_mode_69);
             try std.testing.expectEqual(@as(usize, 2), screen.left_margin);
             try std.testing.expectEqual(@as(usize, 7), screen.right_margin);
 
             // DECOM off: DECSTBM homes to display 1;1, not top/left-margin.
-            terminal.debugFeedBytes(session, "\x1b[?6l\x1b[2;4r\x1b[6n");
+            terminal_debug.debugFeedBytes(session, "\x1b[?6l\x1b[2;4r\x1b[6n");
             {
                 const reply = try capture.readReply(allocator);
                 defer allocator.free(reply);
@@ -634,7 +635,7 @@ test "terminal DECSTBM homes cursor using DECOM semantics under DECLRMM" {
             }
 
             // DECOM on: DECSTBM homes to scroll-top and left margin.
-            terminal.debugFeedBytes(session, "\x1b[?6h\x1b[2;4r\x1b[6n");
+            terminal_debug.debugFeedBytes(session, "\x1b[?6h\x1b[2;4r\x1b[6n");
             {
                 const reply = try capture.readReply(allocator);
                 defer allocator.free(reply);
@@ -646,22 +647,22 @@ test "terminal DECSTBM homes cursor using DECOM semantics under DECLRMM" {
 
 test "terminal DECSTBM equal bounds are rejected as no-op" {
     try withSessionAndCapture(struct {
-        fn run(session: *terminal.TerminalSession, capture: *PipeCapture) !void {
+        fn run(session: *terminal_runtime.PtyTerminalRuntime, capture: *PipeCapture) !void {
             const allocator = std.testing.allocator;
             const screen = session.activeScreen();
 
-            terminal.debugFeedBytes(session, "\x1b[2;5r");
+            terminal_debug.debugFeedBytes(session, "\x1b[2;5r");
             try std.testing.expectEqual(@as(usize, 1), screen.scroll_top);
             try std.testing.expectEqual(@as(usize, 4), screen.scroll_bottom);
 
-            terminal.debugFeedBytes(session, "\x1b[4;4H");
-            terminal.debugFeedBytes(session, "\x1b[3;3r");
+            terminal_debug.debugFeedBytes(session, "\x1b[4;4H");
+            terminal_debug.debugFeedBytes(session, "\x1b[3;3r");
 
             // Invalid top==bottom must not alter region or home cursor.
             try std.testing.expectEqual(@as(usize, 1), screen.scroll_top);
             try std.testing.expectEqual(@as(usize, 4), screen.scroll_bottom);
 
-            terminal.debugFeedBytes(session, "\x1b[6n");
+            terminal_debug.debugFeedBytes(session, "\x1b[6n");
             {
                 const reply = try capture.readReply(allocator);
                 defer allocator.free(reply);
@@ -673,22 +674,22 @@ test "terminal DECSTBM equal bounds are rejected as no-op" {
 
 test "terminal DECSLRM equal bounds are rejected as no-op" {
     try withSessionAndCapture(struct {
-        fn run(session: *terminal.TerminalSession, capture: *PipeCapture) !void {
+        fn run(session: *terminal_runtime.PtyTerminalRuntime, capture: *PipeCapture) !void {
             const allocator = std.testing.allocator;
             const screen = session.activeScreen();
 
-            terminal.debugFeedBytes(session, "\x1b[?69h\x1b[3;8s");
+            terminal_debug.debugFeedBytes(session, "\x1b[?69h\x1b[3;8s");
             try std.testing.expectEqual(@as(usize, 2), screen.left_margin);
             try std.testing.expectEqual(@as(usize, 7), screen.right_margin);
 
-            terminal.debugFeedBytes(session, "\x1b[2;5H");
-            terminal.debugFeedBytes(session, "\x1b[4;4s");
+            terminal_debug.debugFeedBytes(session, "\x1b[2;5H");
+            terminal_debug.debugFeedBytes(session, "\x1b[4;4s");
 
             // Invalid left==right must not alter margins or home cursor.
             try std.testing.expectEqual(@as(usize, 2), screen.left_margin);
             try std.testing.expectEqual(@as(usize, 7), screen.right_margin);
 
-            terminal.debugFeedBytes(session, "\x1b[6n");
+            terminal_debug.debugFeedBytes(session, "\x1b[6n");
             {
                 const reply = try capture.readReply(allocator);
                 defer allocator.free(reply);
@@ -700,14 +701,14 @@ test "terminal DECSLRM equal bounds are rejected as no-op" {
 
 test "terminal DECRQM strategic fixed-off private modes report permanently reset (Pm=4)" {
     try withSessionAndCapture(struct {
-        fn run(session: *terminal.TerminalSession, capture: *PipeCapture) !void {
+        fn run(session: *terminal_runtime.PtyTerminalRuntime, capture: *PipeCapture) !void {
             const allocator = std.testing.allocator;
             const modes = [_]i32{ 67, 1001, 1005, 1015, 1034, 1035, 1036, 1042, 1070 };
 
             for (modes) |mode| {
                 var qbuf: [32]u8 = undefined;
                 const query = try std.fmt.bufPrint(&qbuf, "\x1b[?{d}$p", .{mode});
-                terminal.debugFeedBytes(session, query);
+                terminal_debug.debugFeedBytes(session, query);
                 const reply = try capture.readReply(allocator);
                 defer allocator.free(reply);
                 const expected = try std.fmt.allocPrint(allocator, "\x1b[?{d};4$y", .{mode});
@@ -720,7 +721,7 @@ test "terminal DECRQM strategic fixed-off private modes report permanently reset
 
 test "terminal DECRQM emits no Pm=3 replies in current policy scope" {
     try withSessionAndCapture(struct {
-        fn run(session: *terminal.TerminalSession, capture: *PipeCapture) !void {
+        fn run(session: *terminal_runtime.PtyTerminalRuntime, capture: *PipeCapture) !void {
             const allocator = std.testing.allocator;
             const queries = [_][]const u8{
                 "\x1b[4$p", // ANSI IRM
@@ -743,7 +744,7 @@ test "terminal DECRQM emits no Pm=3 replies in current policy scope" {
             };
 
             for (queries) |query| {
-                terminal.debugFeedBytes(session, query);
+                terminal_debug.debugFeedBytes(session, query);
                 const reply = try capture.readReply(allocator);
                 defer allocator.free(reply);
                 try std.testing.expect(std.mem.indexOf(u8, reply, ";3$y") == null);
@@ -754,7 +755,7 @@ test "terminal DECRQM emits no Pm=3 replies in current policy scope" {
 
 test "terminal DECRQM representative Pm policy matrix returns 0 1 2 and 4" {
     try withSessionAndCapture(struct {
-        fn run(session: *terminal.TerminalSession, capture: *PipeCapture) !void {
+        fn run(session: *terminal_runtime.PtyTerminalRuntime, capture: *PipeCapture) !void {
             const allocator = std.testing.allocator;
             const cases = [_]struct {
                 seq: []const u8,
@@ -769,7 +770,7 @@ test "terminal DECRQM representative Pm policy matrix returns 0 1 2 and 4" {
             };
 
             for (cases) |case| {
-                terminal.debugFeedBytes(session, case.seq);
+                terminal_debug.debugFeedBytes(session, case.seq);
                 const reply = try capture.readReply(allocator);
                 defer allocator.free(reply);
                 try std.testing.expectEqualStrings(case.expected, reply);
@@ -780,9 +781,9 @@ test "terminal DECRQM representative Pm policy matrix returns 0 1 2 and 4" {
 
 test "terminal DECRQM private query returns Pm=0 for unsupported mode" {
     try withSessionAndCapture(struct {
-        fn run(session: *terminal.TerminalSession, capture: *PipeCapture) !void {
+        fn run(session: *terminal_runtime.PtyTerminalRuntime, capture: *PipeCapture) !void {
             const allocator = std.testing.allocator;
-            terminal.debugFeedBytes(session, "\x1b[?9999$p");
+            terminal_debug.debugFeedBytes(session, "\x1b[?9999$p");
             const reply = try capture.readReply(allocator);
             defer allocator.free(reply);
             try std.testing.expectEqualStrings("\x1b[?9999;0$y", reply);
@@ -792,21 +793,21 @@ test "terminal DECRQM private query returns Pm=0 for unsupported mode" {
 
 test "terminal reverse-wrap mode ?45 enables BS wrap to previous wrapped row" {
     const allocator = std.testing.allocator;
-    var session = try terminal.TerminalSession.init(allocator, 3, 4);
+    var session = try terminal_runtime.PtyTerminalRuntime.init(allocator, 3, 4);
     defer session.deinit();
 
-    terminal.debugFeedBytes(session, "ABCDX");
-    terminal.debugFeedBytes(session, "\r");
+    terminal_debug.debugFeedBytes(session, "ABCDX");
+    terminal_debug.debugFeedBytes(session, "\r");
 
-    terminal.debugFeedBytes(session, "\x08");
+    terminal_debug.debugFeedBytes(session, "\x08");
     {
         const snap = session.snapshot();
         try std.testing.expectEqual(@as(usize, 1), snap.cursor.row);
         try std.testing.expectEqual(@as(usize, 0), snap.cursor.col);
     }
 
-    terminal.debugFeedBytes(session, "\x1b[?45h");
-    terminal.debugFeedBytes(session, "\x08");
+    terminal_debug.debugFeedBytes(session, "\x1b[?45h");
+    terminal_debug.debugFeedBytes(session, "\x08");
     {
         const snap = session.snapshot();
         try std.testing.expectEqual(@as(usize, 0), snap.cursor.row);
@@ -816,21 +817,21 @@ test "terminal reverse-wrap mode ?45 enables BS wrap to previous wrapped row" {
 
 test "terminal reverse-wrap mode ?45 enables CUB wrap to previous wrapped row" {
     const allocator = std.testing.allocator;
-    var session = try terminal.TerminalSession.init(allocator, 3, 4);
+    var session = try terminal_runtime.PtyTerminalRuntime.init(allocator, 3, 4);
     defer session.deinit();
 
-    terminal.debugFeedBytes(session, "ABCDX");
-    terminal.debugFeedBytes(session, "\x1b[2;1H");
+    terminal_debug.debugFeedBytes(session, "ABCDX");
+    terminal_debug.debugFeedBytes(session, "\x1b[2;1H");
 
-    terminal.debugFeedBytes(session, "\x1b[D");
+    terminal_debug.debugFeedBytes(session, "\x1b[D");
     {
         const snap = session.snapshot();
         try std.testing.expectEqual(@as(usize, 1), snap.cursor.row);
         try std.testing.expectEqual(@as(usize, 0), snap.cursor.col);
     }
 
-    terminal.debugFeedBytes(session, "\x1b[?45h");
-    terminal.debugFeedBytes(session, "\x1b[2D");
+    terminal_debug.debugFeedBytes(session, "\x1b[?45h");
+    terminal_debug.debugFeedBytes(session, "\x1b[2D");
     {
         const snap = session.snapshot();
         try std.testing.expectEqual(@as(usize, 0), snap.cursor.row);
@@ -840,14 +841,14 @@ test "terminal reverse-wrap mode ?45 enables CUB wrap to previous wrapped row" {
 
 test "terminal DECRQM private query returns Pm=4 only for strategic fixed-off unsupported modes" {
     try withSessionAndCapture(struct {
-        fn run(session: *terminal.TerminalSession, capture: *PipeCapture) !void {
+        fn run(session: *terminal_runtime.PtyTerminalRuntime, capture: *PipeCapture) !void {
             const allocator = std.testing.allocator;
             const modes = [_]i32{ 67, 1001, 1005, 1015, 1034, 1035, 1036, 1042, 1070 };
 
             for (modes) |mode| {
                 var qbuf: [32]u8 = undefined;
                 const query = try std.fmt.bufPrint(&qbuf, "\x1b[?{d}$p", .{mode});
-                terminal.debugFeedBytes(session, query);
+                terminal_debug.debugFeedBytes(session, query);
                 const reply = try capture.readReply(allocator);
                 defer allocator.free(reply);
                 const expected = try std.fmt.allocPrint(allocator, "\x1b[?{d};4$y", .{mode});
@@ -860,10 +861,10 @@ test "terminal DECRQM private query returns Pm=4 only for strategic fixed-off un
 
 test "terminal kitty paste events mode emits OSC 5522 mime list and serves text/plain/text/html/uri-list/image-png reads" {
     try withSessionAndCapture(struct {
-        fn run(session: *terminal.TerminalSession, capture: *PipeCapture) !void {
+        fn run(session: *terminal_runtime.PtyTerminalRuntime, capture: *PipeCapture) !void {
             const allocator = std.testing.allocator;
 
-            terminal.debugFeedBytes(session, "\x1b[?5522h");
+            terminal_debug.debugFeedBytes(session, "\x1b[?5522h");
             try std.testing.expect(session.kittyPasteEvents5522Enabled());
 
             const png = [_]u8{ 0x89, 'P', 'N', 'G', '\r', '\n', 0x1a, '\n' };
@@ -877,7 +878,7 @@ test "terminal kitty paste events mode emits OSC 5522 mime list and serves text/
                 );
             }
 
-            terminal.debugFeedBytes(session, "\x1b]5522;type=read;dGV4dC9wbGFpbg==\x1b\\");
+            terminal_debug.debugFeedBytes(session, "\x1b]5522;type=read;dGV4dC9wbGFpbg==\x1b\\");
             {
                 const reply = try capture.readReply(allocator);
                 defer allocator.free(reply);
@@ -887,7 +888,7 @@ test "terminal kitty paste events mode emits OSC 5522 mime list and serves text/
                 );
             }
 
-            terminal.debugFeedBytes(session, "\x1b]5522;type=read;dGV4dC9odG1s\x1b\\");
+            terminal_debug.debugFeedBytes(session, "\x1b]5522;type=read;dGV4dC9odG1s\x1b\\");
             {
                 const reply = try capture.readReply(allocator);
                 defer allocator.free(reply);
@@ -897,7 +898,7 @@ test "terminal kitty paste events mode emits OSC 5522 mime list and serves text/
                 );
             }
 
-            terminal.debugFeedBytes(session, "\x1b]5522;type=read;dGV4dC91cmktbGlzdA==\x1b\\");
+            terminal_debug.debugFeedBytes(session, "\x1b]5522;type=read;dGV4dC91cmktbGlzdA==\x1b\\");
             {
                 const reply = try capture.readReply(allocator);
                 defer allocator.free(reply);
@@ -907,7 +908,7 @@ test "terminal kitty paste events mode emits OSC 5522 mime list and serves text/
                 );
             }
 
-            terminal.debugFeedBytes(session, "\x1b]5522;type=read;aW1hZ2UvcG5n\x1b\\");
+            terminal_debug.debugFeedBytes(session, "\x1b]5522;type=read;aW1hZ2UvcG5n\x1b\\");
             {
                 const reply = try capture.readReply(allocator);
                 defer allocator.free(reply);
@@ -922,11 +923,11 @@ test "terminal kitty paste events mode emits OSC 5522 mime list and serves text/
 
 test "terminal kitty paste events mode supports image-only clipboard payloads" {
     try withSessionAndCapture(struct {
-        fn run(session: *terminal.TerminalSession, capture: *PipeCapture) !void {
+        fn run(session: *terminal_runtime.PtyTerminalRuntime, capture: *PipeCapture) !void {
             const allocator = std.testing.allocator;
             const png = [_]u8{ 0x89, 'P', 'N', 'G', '\r', '\n', 0x1a, '\n' };
 
-            terminal.debugFeedBytes(session, "\x1b[?5522h");
+            terminal_debug.debugFeedBytes(session, "\x1b[?5522h");
             try std.testing.expect(try session.sendKittyPasteEvent5522WithMimeRich("", null, null, &png));
             {
                 const reply = try capture.readReply(allocator);
@@ -942,9 +943,9 @@ test "terminal kitty paste events mode supports image-only clipboard payloads" {
 
 test "terminal OSC 5522 read echoes sanitized id metadata" {
     try withSessionAndCapture(struct {
-        fn run(session: *terminal.TerminalSession, capture: *PipeCapture) !void {
+        fn run(session: *terminal_runtime.PtyTerminalRuntime, capture: *PipeCapture) !void {
             const allocator = std.testing.allocator;
-            terminal.debugFeedBytes(session, "\x1b[?5522h");
+            terminal_debug.debugFeedBytes(session, "\x1b[?5522h");
             try std.testing.expect(try session.sendKittyPasteEvent5522("hi"));
             {
                 const unsolicited = try capture.readReply(allocator);
@@ -952,7 +953,7 @@ test "terminal OSC 5522 read echoes sanitized id metadata" {
             }
 
             // `!` is stripped; `+._-` are preserved.
-            terminal.debugFeedBytes(session, "\x1b]5522;type=read:id=ab!c+._-9;dGV4dC9wbGFpbg==\x1b\\");
+            terminal_debug.debugFeedBytes(session, "\x1b]5522;type=read:id=ab!c+._-9;dGV4dC9wbGFpbg==\x1b\\");
             {
                 const reply = try capture.readReply(allocator);
                 defer allocator.free(reply);
@@ -967,16 +968,16 @@ test "terminal OSC 5522 read echoes sanitized id metadata" {
 
 test "terminal OSC 5522 read preserves BEL terminator" {
     try withSessionAndCapture(struct {
-        fn run(session: *terminal.TerminalSession, capture: *PipeCapture) !void {
+        fn run(session: *terminal_runtime.PtyTerminalRuntime, capture: *PipeCapture) !void {
             const allocator = std.testing.allocator;
-            terminal.debugFeedBytes(session, "\x1b[?5522h");
+            terminal_debug.debugFeedBytes(session, "\x1b[?5522h");
             try std.testing.expect(try session.sendKittyPasteEvent5522("hi"));
             {
                 const unsolicited = try capture.readReply(allocator);
                 defer allocator.free(unsolicited);
             }
 
-            terminal.debugFeedBytes(session, "\x1b]5522;type=read;dGV4dC9wbGFpbg==\x07");
+            terminal_debug.debugFeedBytes(session, "\x1b]5522;type=read;dGV4dC9wbGFpbg==\x07");
             {
                 const reply = try capture.readReply(allocator);
                 defer allocator.free(reply);
@@ -991,16 +992,16 @@ test "terminal OSC 5522 read preserves BEL terminator" {
 
 test "terminal OSC 5522 read returns ENOSYS for unsupported MIME request" {
     try withSessionAndCapture(struct {
-        fn run(session: *terminal.TerminalSession, capture: *PipeCapture) !void {
+        fn run(session: *terminal_runtime.PtyTerminalRuntime, capture: *PipeCapture) !void {
             const allocator = std.testing.allocator;
-            terminal.debugFeedBytes(session, "\x1b[?5522h");
+            terminal_debug.debugFeedBytes(session, "\x1b[?5522h");
             try std.testing.expect(try session.sendKittyPasteEvent5522("hi"));
             {
                 const unsolicited = try capture.readReply(allocator);
                 defer allocator.free(unsolicited);
             }
 
-            terminal.debugFeedBytes(session, "\x1b]5522;type=read;YXBwbGljYXRpb24vanNvbg==\x1b\\");
+            terminal_debug.debugFeedBytes(session, "\x1b]5522;type=read;YXBwbGljYXRpb24vanNvbg==\x1b\\");
             {
                 const reply = try capture.readReply(allocator);
                 defer allocator.free(reply);
@@ -1012,16 +1013,16 @@ test "terminal OSC 5522 read returns ENOSYS for unsupported MIME request" {
 
 test "terminal OSC 5522 read returns ENOSYS for loc=primary" {
     try withSessionAndCapture(struct {
-        fn run(session: *terminal.TerminalSession, capture: *PipeCapture) !void {
+        fn run(session: *terminal_runtime.PtyTerminalRuntime, capture: *PipeCapture) !void {
             const allocator = std.testing.allocator;
-            terminal.debugFeedBytes(session, "\x1b[?5522h");
+            terminal_debug.debugFeedBytes(session, "\x1b[?5522h");
             try std.testing.expect(try session.sendKittyPasteEvent5522("hi"));
             {
                 const unsolicited = try capture.readReply(allocator);
                 defer allocator.free(unsolicited);
             }
 
-            terminal.debugFeedBytes(session, "\x1b]5522;type=read:loc=primary;dGV4dC9wbGFpbg==\x1b\\");
+            terminal_debug.debugFeedBytes(session, "\x1b]5522;type=read:loc=primary;dGV4dC9wbGFpbg==\x1b\\");
             {
                 const reply = try capture.readReply(allocator);
                 defer allocator.free(reply);
@@ -1033,9 +1034,9 @@ test "terminal OSC 5522 read returns ENOSYS for loc=primary" {
 
 test "terminal OSC 5522 read returns EINVAL for malformed payload" {
     try withSessionAndCapture(struct {
-        fn run(session: *terminal.TerminalSession, capture: *PipeCapture) !void {
+        fn run(session: *terminal_runtime.PtyTerminalRuntime, capture: *PipeCapture) !void {
             const allocator = std.testing.allocator;
-            terminal.debugFeedBytes(session, "\x1b]5522;type=read;%%%\x1b\\");
+            terminal_debug.debugFeedBytes(session, "\x1b]5522;type=read;%%%\x1b\\");
             {
                 const reply = try capture.readReply(allocator);
                 defer allocator.free(reply);
@@ -1047,9 +1048,9 @@ test "terminal OSC 5522 read returns EINVAL for malformed payload" {
 
 test "terminal SGR pixel mouse mode ?1016 emits pixel coordinates when enabled" {
     try withSessionAndCapture(struct {
-        fn run(session: *terminal.TerminalSession, capture: *PipeCapture) !void {
+        fn run(session: *terminal_runtime.PtyTerminalRuntime, capture: *PipeCapture) !void {
             const allocator = std.testing.allocator;
-            terminal.debugFeedBytes(session, "\x1b[?1000h\x1b[?1002h\x1b[?1006h");
+            terminal_debug.debugFeedBytes(session, "\x1b[?1000h\x1b[?1002h\x1b[?1006h");
 
             _ = try session.reportMouseEvent(.{
                 .kind = .press,
@@ -1058,7 +1059,7 @@ test "terminal SGR pixel mouse mode ?1016 emits pixel coordinates when enabled" 
                 .col = 2,
                 .pixel_x = 19,
                 .pixel_y = 33,
-                .mod = terminal.VTERM_MOD_NONE,
+                .mod = terminal_runtime.VTERM_MOD_NONE,
                 .buttons_down = 1,
             });
             {
@@ -1067,7 +1068,7 @@ test "terminal SGR pixel mouse mode ?1016 emits pixel coordinates when enabled" 
                 try std.testing.expectEqualStrings("\x1b[<0;3;2M", reply);
             }
 
-            terminal.debugFeedBytes(session, "\x1b[?1016h");
+            terminal_debug.debugFeedBytes(session, "\x1b[?1016h");
             _ = try session.reportMouseEvent(.{
                 .kind = .press,
                 .button = .left,
@@ -1075,7 +1076,7 @@ test "terminal SGR pixel mouse mode ?1016 emits pixel coordinates when enabled" 
                 .col = 2,
                 .pixel_x = 19,
                 .pixel_y = 33,
-                .mod = terminal.VTERM_MOD_NONE,
+                .mod = terminal_runtime.VTERM_MOD_NONE,
                 .buttons_down = 1,
             });
             {
@@ -1091,7 +1092,7 @@ test "terminal SGR pixel mouse mode ?1016 emits pixel coordinates when enabled" 
                 .col = 3,
                 .pixel_x = 27,
                 .pixel_y = 49,
-                .mod = terminal.VTERM_MOD_NONE,
+                .mod = terminal_runtime.VTERM_MOD_NONE,
                 .buttons_down = 1,
             });
             {
@@ -1107,7 +1108,7 @@ test "terminal SGR pixel mouse mode ?1016 emits pixel coordinates when enabled" 
                 .col = 3,
                 .pixel_x = 27,
                 .pixel_y = 49,
-                .mod = terminal.VTERM_MOD_NONE,
+                .mod = terminal_runtime.VTERM_MOD_NONE,
                 .buttons_down = 0,
             });
             {
@@ -1122,11 +1123,11 @@ test "terminal SGR pixel mouse mode ?1016 emits pixel coordinates when enabled" 
                 expected: []const u8,
             };
             const wheel_cases = [_]WheelCase{
-                .{ .button = .wheel_up, .mod = terminal.VTERM_MOD_SHIFT, .expected = "\x1b[<68;41;61M" },
-                .{ .button = .wheel_down, .mod = terminal.VTERM_MOD_ALT, .expected = "\x1b[<73;41;61M" },
-                .{ .button = .wheel_up, .mod = terminal.VTERM_MOD_CTRL, .expected = "\x1b[<80;41;61M" },
-                .{ .button = .wheel_up, .mod = terminal.VTERM_MOD_SHIFT | terminal.VTERM_MOD_ALT, .expected = "\x1b[<76;41;61M" },
-                .{ .button = .wheel_down, .mod = terminal.VTERM_MOD_SHIFT | terminal.VTERM_MOD_CTRL, .expected = "\x1b[<85;41;61M" },
+                .{ .button = .wheel_up, .mod = terminal_runtime.VTERM_MOD_SHIFT, .expected = "\x1b[<68;41;61M" },
+                .{ .button = .wheel_down, .mod = terminal_runtime.VTERM_MOD_ALT, .expected = "\x1b[<73;41;61M" },
+                .{ .button = .wheel_up, .mod = terminal_runtime.VTERM_MOD_CTRL, .expected = "\x1b[<80;41;61M" },
+                .{ .button = .wheel_up, .mod = terminal_runtime.VTERM_MOD_SHIFT | terminal_runtime.VTERM_MOD_ALT, .expected = "\x1b[<76;41;61M" },
+                .{ .button = .wheel_down, .mod = terminal_runtime.VTERM_MOD_SHIFT | terminal_runtime.VTERM_MOD_CTRL, .expected = "\x1b[<85;41;61M" },
             };
             for (wheel_cases) |case| {
                 _ = try session.reportMouseEvent(.{
@@ -1152,7 +1153,7 @@ test "terminal SGR pixel mouse mode ?1016 emits pixel coordinates when enabled" 
                 .col = 5,
                 .pixel_x = 40,
                 .pixel_y = 60,
-                .mod = terminal.VTERM_MOD_NONE,
+                .mod = terminal_runtime.VTERM_MOD_NONE,
                 .buttons_down = 0,
             });
             {
@@ -1167,7 +1168,7 @@ test "terminal SGR pixel mouse mode ?1016 emits pixel coordinates when enabled" 
                 .col = 5,
                 .pixel_x = 40,
                 .pixel_y = 60,
-                .mod = terminal.VTERM_MOD_NONE,
+                .mod = terminal_runtime.VTERM_MOD_NONE,
                 .buttons_down = 0,
             });
             {
@@ -1176,7 +1177,7 @@ test "terminal SGR pixel mouse mode ?1016 emits pixel coordinates when enabled" 
                 try std.testing.expectEqualStrings("\x1b[<64;41;61M", reply);
             }
 
-            terminal.debugFeedBytes(session, "\x1b[?1006l");
+            terminal_debug.debugFeedBytes(session, "\x1b[?1006l");
             _ = try session.reportMouseEvent(.{
                 .kind = .press,
                 .button = .left,
@@ -1184,7 +1185,7 @@ test "terminal SGR pixel mouse mode ?1016 emits pixel coordinates when enabled" 
                 .col = 2,
                 .pixel_x = 99,
                 .pixel_y = 199,
-                .mod = terminal.VTERM_MOD_NONE,
+                .mod = terminal_runtime.VTERM_MOD_NONE,
                 .buttons_down = 1,
             });
             {
@@ -1204,14 +1205,14 @@ test "terminal SGR pixel mouse mode ?1016 emits pixel coordinates when enabled" 
 
 test "terminal in-band resize notifications ?2048 emit CSI 48 t when enabled" {
     try withSessionAndCapture(struct {
-        fn run(session: *terminal.TerminalSession, capture: *PipeCapture) !void {
+        fn run(session: *terminal_runtime.PtyTerminalRuntime, capture: *PipeCapture) !void {
             const allocator = std.testing.allocator;
             session.setCellSize(8, 16);
 
             try session.resize(7, 13);
             try capture.expectNoReply();
 
-            terminal.debugFeedBytes(session, "\x1b[?2048h");
+            terminal_debug.debugFeedBytes(session, "\x1b[?2048h");
             try session.resize(7, 13);
             {
                 const reply = try capture.readReply(allocator);
@@ -1219,7 +1220,7 @@ test "terminal in-band resize notifications ?2048 emit CSI 48 t when enabled" {
                 try std.testing.expectEqualStrings("\x1b[48;7;13;112;104t", reply);
             }
 
-            terminal.debugFeedBytes(session, "\x1b[?2048l");
+            terminal_debug.debugFeedBytes(session, "\x1b[?2048l");
             try session.resize(8, 14);
             try capture.expectNoReply();
         }
@@ -1228,9 +1229,9 @@ test "terminal in-band resize notifications ?2048 emit CSI 48 t when enabled" {
 
 test "terminal in-band resize notifications ?2048 use zero pixel fallback when cell size unknown" {
     try withSessionAndCapture(struct {
-        fn run(session: *terminal.TerminalSession, capture: *PipeCapture) !void {
+        fn run(session: *terminal_runtime.PtyTerminalRuntime, capture: *PipeCapture) !void {
             const allocator = std.testing.allocator;
-            terminal.debugFeedBytes(session, "\x1b[?2048h");
+            terminal_debug.debugFeedBytes(session, "\x1b[?2048h");
             try session.resize(6, 12);
             {
                 const reply = try capture.readReply(allocator);
@@ -1243,10 +1244,10 @@ test "terminal in-band resize notifications ?2048 use zero pixel fallback when c
 
 test "terminal color scheme notifications ?2031 reply to DSR ?996 and emit on change" {
     try withSessionAndCapture(struct {
-        fn run(session: *terminal.TerminalSession, capture: *PipeCapture) !void {
+        fn run(session: *terminal_runtime.PtyTerminalRuntime, capture: *PipeCapture) !void {
             const allocator = std.testing.allocator;
 
-            terminal.debugFeedBytes(session, "\x1b[?996n");
+            terminal_debug.debugFeedBytes(session, "\x1b[?996n");
             {
                 const reply = try capture.readReply(allocator);
                 defer allocator.free(reply);
@@ -1256,7 +1257,7 @@ test "terminal color scheme notifications ?2031 reply to DSR ?996 and emit on ch
             try std.testing.expect(!(try session.reportColorSchemeChanged(false)));
             try capture.expectNoReply();
 
-            terminal.debugFeedBytes(session, "\x1b[?2031h");
+            terminal_debug.debugFeedBytes(session, "\x1b[?2031h");
             try std.testing.expect(try session.reportColorSchemeChanged(false));
             {
                 const reply = try capture.readReply(allocator);
@@ -1264,14 +1265,14 @@ test "terminal color scheme notifications ?2031 reply to DSR ?996 and emit on ch
                 try std.testing.expectEqualStrings("\x1b[?997;2n", reply);
             }
 
-            terminal.debugFeedBytes(session, "\x1b[?996n");
+            terminal_debug.debugFeedBytes(session, "\x1b[?996n");
             {
                 const reply = try capture.readReply(allocator);
                 defer allocator.free(reply);
                 try std.testing.expectEqualStrings("\x1b[?997;2n", reply);
             }
 
-            terminal.debugFeedBytes(session, "\x1b[?2031l");
+            terminal_debug.debugFeedBytes(session, "\x1b[?2031l");
             try std.testing.expect(!(try session.reportColorSchemeChanged(true)));
             try capture.expectNoReply();
         }
@@ -1280,30 +1281,30 @@ test "terminal color scheme notifications ?2031 reply to DSR ?996 and emit on ch
 
 test "terminal legacy DCS sync updates toggles ?2026 mode state" {
     try withSessionAndCapture(struct {
-        fn run(session: *terminal.TerminalSession, capture: *PipeCapture) !void {
+        fn run(session: *terminal_runtime.PtyTerminalRuntime, capture: *PipeCapture) !void {
             const allocator = std.testing.allocator;
 
-            terminal.debugFeedBytes(session, "\x1b[?2026$p");
+            terminal_debug.debugFeedBytes(session, "\x1b[?2026$p");
             {
                 const reply = try capture.readReply(allocator);
                 defer allocator.free(reply);
                 try std.testing.expectEqualStrings("\x1b[?2026;2$y", reply);
             }
 
-            terminal.debugFeedBytes(session, "\x1bP=1s\x1b\\");
+            terminal_debug.debugFeedBytes(session, "\x1bP=1s\x1b\\");
             try capture.expectNoReply();
 
-            terminal.debugFeedBytes(session, "\x1b[?2026$p");
+            terminal_debug.debugFeedBytes(session, "\x1b[?2026$p");
             {
                 const reply = try capture.readReply(allocator);
                 defer allocator.free(reply);
                 try std.testing.expectEqualStrings("\x1b[?2026;1$y", reply);
             }
 
-            terminal.debugFeedBytes(session, "\x1bP=2s\x1b\\");
+            terminal_debug.debugFeedBytes(session, "\x1bP=2s\x1b\\");
             try capture.expectNoReply();
 
-            terminal.debugFeedBytes(session, "\x1b[?2026$p");
+            terminal_debug.debugFeedBytes(session, "\x1b[?2026$p");
             {
                 const reply = try capture.readReply(allocator);
                 defer allocator.free(reply);
@@ -1311,9 +1312,9 @@ test "terminal legacy DCS sync updates toggles ?2026 mode state" {
             }
 
             // Unsupported legacy DCS value is ignored and does not emit a reply.
-            terminal.debugFeedBytes(session, "\x1bP=3s\x1b\\");
+            terminal_debug.debugFeedBytes(session, "\x1bP=3s\x1b\\");
             try capture.expectNoReply();
-            terminal.debugFeedBytes(session, "\x1b[?2026$p");
+            terminal_debug.debugFeedBytes(session, "\x1b[?2026$p");
             {
                 const reply = try capture.readReply(allocator);
                 defer allocator.free(reply);
@@ -1326,18 +1327,18 @@ test "terminal legacy DCS sync updates toggles ?2026 mode state" {
 test "terminal grapheme cluster mode ?2027 first slice is queryable no-op for text model" {
     const allocator = std.testing.allocator;
 
-    var a = try terminal.TerminalSession.init(allocator, 6, 12);
+    var a = try terminal_runtime.PtyTerminalRuntime.init(allocator, 6, 12);
     defer a.deinit();
-    var b = try terminal.TerminalSession.init(allocator, 6, 12);
+    var b = try terminal_runtime.PtyTerminalRuntime.init(allocator, 6, 12);
     defer b.deinit();
 
     // Representative multicodepoint sequence (emoji ZWJ family) should currently
     // behave the same in Zide regardless of ?2027 until shaping semantics are implemented.
     const seq = "\xF0\x9F\x91\xA8\xE2\x80\x8D\xF0\x9F\x91\xA9\xE2\x80\x8D\xF0\x9F\x91\xA7";
 
-    terminal.debugFeedBytes(a, seq);
-    terminal.debugFeedBytes(b, "\x1b[?2027h");
-    terminal.debugFeedBytes(b, seq);
+    terminal_debug.debugFeedBytes(a, seq);
+    terminal_debug.debugFeedBytes(b, "\x1b[?2027h");
+    terminal_debug.debugFeedBytes(b, seq);
 
     try std.testing.expect(!a.grapheme_cluster_shaping_2027);
     try std.testing.expect(b.grapheme_cluster_shaping_2027);
@@ -1362,21 +1363,21 @@ test "terminal grapheme cluster mode ?2027 first slice is queryable no-op for te
 
 test "terminal DECSTR restores default-set modes ?8 and ?1007" {
     try withSessionAndCapture(struct {
-        fn run(session: *terminal.TerminalSession, capture: *PipeCapture) !void {
+        fn run(session: *terminal_runtime.PtyTerminalRuntime, capture: *PipeCapture) !void {
             const allocator = std.testing.allocator;
-            terminal.debugFeedBytes(session, "\x1b[?8l\x1b[?1007l");
+            terminal_debug.debugFeedBytes(session, "\x1b[?8l\x1b[?1007l");
 
-            terminal.debugFeedBytes(session, "\x1b[?8$p\x1b[?1007$p");
+            terminal_debug.debugFeedBytes(session, "\x1b[?8$p\x1b[?1007$p");
             {
                 const reply = try capture.readReply(allocator);
                 defer allocator.free(reply);
                 try std.testing.expectEqualStrings("\x1b[?8;2$y\x1b[?1007;2$y", reply);
             }
 
-            terminal.debugFeedBytes(session, "\x1b[!p");
+            terminal_debug.debugFeedBytes(session, "\x1b[!p");
             try capture.expectNoReply();
 
-            terminal.debugFeedBytes(session, "\x1b[?8$p\x1b[?1007$p");
+            terminal_debug.debugFeedBytes(session, "\x1b[?8$p\x1b[?1007$p");
             {
                 const reply = try capture.readReply(allocator);
                 defer allocator.free(reply);
@@ -1388,11 +1389,11 @@ test "terminal DECSTR restores default-set modes ?8 and ?1007" {
 
 test "terminal DECSTR suppresses ?2031 and ?2048 live emissions after reset" {
     try withSessionAndCapture(struct {
-        fn run(session: *terminal.TerminalSession, capture: *PipeCapture) !void {
+        fn run(session: *terminal_runtime.PtyTerminalRuntime, capture: *PipeCapture) !void {
             const allocator = std.testing.allocator;
             session.setCellSize(8, 16);
 
-            terminal.debugFeedBytes(session, "\x1b[?2031h\x1b[?2048h");
+            terminal_debug.debugFeedBytes(session, "\x1b[?2031h\x1b[?2048h");
 
             try std.testing.expect(try session.reportColorSchemeChanged(false));
             {
@@ -1408,7 +1409,7 @@ test "terminal DECSTR suppresses ?2031 and ?2048 live emissions after reset" {
                 try std.testing.expectEqualStrings("\x1b[48;7;13;112;104t", reply);
             }
 
-            terminal.debugFeedBytes(session, "\x1b[!p");
+            terminal_debug.debugFeedBytes(session, "\x1b[!p");
             try capture.expectNoReply();
 
             try std.testing.expect(!(try session.reportColorSchemeChanged(true)));
@@ -1417,7 +1418,7 @@ test "terminal DECSTR suppresses ?2031 and ?2048 live emissions after reset" {
             try session.resize(8, 14);
             try capture.expectNoReply();
 
-            terminal.debugFeedBytes(session, "\x1b[?2048h");
+            terminal_debug.debugFeedBytes(session, "\x1b[?2048h");
             try session.resize(9, 15);
             {
                 const reply = try capture.readReply(allocator);
@@ -1430,10 +1431,10 @@ test "terminal DECSTR suppresses ?2031 and ?2048 live emissions after reset" {
 
 test "terminal DECSTR suppresses ?5522 unsolicited paste events until re-enabled" {
     try withSessionAndCapture(struct {
-        fn run(session: *terminal.TerminalSession, capture: *PipeCapture) !void {
+        fn run(session: *terminal_runtime.PtyTerminalRuntime, capture: *PipeCapture) !void {
             const allocator = std.testing.allocator;
 
-            terminal.debugFeedBytes(session, "\x1b[?5522h");
+            terminal_debug.debugFeedBytes(session, "\x1b[?5522h");
             try std.testing.expect(session.kittyPasteEvents5522Enabled());
             try std.testing.expect(try session.sendKittyPasteEvent5522("hi"));
             {
@@ -1442,14 +1443,14 @@ test "terminal DECSTR suppresses ?5522 unsolicited paste events until re-enabled
                 try std.testing.expect(std.mem.startsWith(u8, reply, "\x1b]5522;type=read:status=OK"));
             }
 
-            terminal.debugFeedBytes(session, "\x1b[!p");
+            terminal_debug.debugFeedBytes(session, "\x1b[!p");
             try capture.expectNoReply();
             try std.testing.expect(!session.kittyPasteEvents5522Enabled());
 
             try std.testing.expect(!(try session.sendKittyPasteEvent5522("hi")));
             try capture.expectNoReply();
 
-            terminal.debugFeedBytes(session, "\x1b[?5522h");
+            terminal_debug.debugFeedBytes(session, "\x1b[?5522h");
             try std.testing.expect(session.kittyPasteEvents5522Enabled());
             try std.testing.expect(try session.sendKittyPasteEvent5522("hi"));
             {
@@ -1463,22 +1464,22 @@ test "terminal DECSTR suppresses ?5522 unsolicited paste events until re-enabled
 
 test "terminal DECARM ?8 disables repeat key output" {
     try withSessionAndCapture(struct {
-        fn run(session: *terminal.TerminalSession, capture: *PipeCapture) !void {
+        fn run(session: *terminal_runtime.PtyTerminalRuntime, capture: *PipeCapture) !void {
             const allocator = std.testing.allocator;
 
-            try session.sendKeyAction(terminal.VTERM_KEY_UP, terminal.VTERM_MOD_NONE, .repeat);
+            try session.sendKeyAction(terminal_runtime.VTERM_KEY_UP, terminal_runtime.VTERM_MOD_NONE, .repeat);
             {
                 const reply = try capture.readReply(allocator);
                 defer allocator.free(reply);
                 try std.testing.expectEqualStrings("\x1b[A", reply);
             }
 
-            terminal.debugFeedBytes(session, "\x1b[?8l");
-            try session.sendKeyAction(terminal.VTERM_KEY_UP, terminal.VTERM_MOD_NONE, .repeat);
+            terminal_debug.debugFeedBytes(session, "\x1b[?8l");
+            try session.sendKeyAction(terminal_runtime.VTERM_KEY_UP, terminal_runtime.VTERM_MOD_NONE, .repeat);
             try capture.expectNoReply();
 
-            terminal.debugFeedBytes(session, "\x1b[?8h");
-            try session.sendKeyAction(terminal.VTERM_KEY_UP, terminal.VTERM_MOD_NONE, .repeat);
+            terminal_debug.debugFeedBytes(session, "\x1b[?8h");
+            try session.sendKeyAction(terminal_runtime.VTERM_KEY_UP, terminal_runtime.VTERM_MOD_NONE, .repeat);
             {
                 const reply = try capture.readReply(allocator);
                 defer allocator.free(reply);
@@ -1490,26 +1491,26 @@ test "terminal DECARM ?8 disables repeat key output" {
 
 test "terminal alt-scroll ?1007 emits arrows in alt screen" {
     try withSessionAndCapture(struct {
-        fn run(session: *terminal.TerminalSession, capture: *PipeCapture) !void {
+        fn run(session: *terminal_runtime.PtyTerminalRuntime, capture: *PipeCapture) !void {
             const allocator = std.testing.allocator;
 
-            try std.testing.expect(!(try session.reportAlternateScrollWheel(1, terminal.VTERM_MOD_NONE)));
+            try std.testing.expect(!(try session.reportAlternateScrollWheel(1, terminal_runtime.VTERM_MOD_NONE)));
             try capture.expectNoReply();
 
-            terminal.debugFeedBytes(session, "\x1b[?1049h");
-            try std.testing.expect(try session.reportAlternateScrollWheel(2, terminal.VTERM_MOD_NONE));
+            terminal_debug.debugFeedBytes(session, "\x1b[?1049h");
+            try std.testing.expect(try session.reportAlternateScrollWheel(2, terminal_runtime.VTERM_MOD_NONE));
             {
                 const reply = try capture.readReply(allocator);
                 defer allocator.free(reply);
                 try std.testing.expectEqualStrings("\x1b[A\x1b[A", reply);
             }
 
-            terminal.debugFeedBytes(session, "\x1b[?1007l");
-            try std.testing.expect(!(try session.reportAlternateScrollWheel(-1, terminal.VTERM_MOD_NONE)));
+            terminal_debug.debugFeedBytes(session, "\x1b[?1007l");
+            try std.testing.expect(!(try session.reportAlternateScrollWheel(-1, terminal_runtime.VTERM_MOD_NONE)));
             try capture.expectNoReply();
 
-            terminal.debugFeedBytes(session, "\x1b[?1007h");
-            try std.testing.expect(try session.reportAlternateScrollWheel(-1, terminal.VTERM_MOD_NONE));
+            terminal_debug.debugFeedBytes(session, "\x1b[?1007h");
+            try std.testing.expect(try session.reportAlternateScrollWheel(-1, terminal_runtime.VTERM_MOD_NONE));
             {
                 const reply = try capture.readReply(allocator);
                 defer allocator.free(reply);
@@ -1521,7 +1522,7 @@ test "terminal alt-scroll ?1007 emits arrows in alt screen" {
 
 test "terminal DECRQM ansi queries report mode 4, 12 and 20 set/reset state" {
     try withSessionAndCapture(struct {
-        fn run(session: *terminal.TerminalSession, capture: *PipeCapture) !void {
+        fn run(session: *terminal_runtime.PtyTerminalRuntime, capture: *PipeCapture) !void {
             const allocator = std.testing.allocator;
             const Case = struct {
                 mode: i32,
@@ -1538,7 +1539,7 @@ test "terminal DECRQM ansi queries report mode 4, 12 and 20 set/reset state" {
             for (cases) |case| {
                 var qbuf: [32]u8 = undefined;
                 const query = try std.fmt.bufPrint(&qbuf, "\x1b[{d}$p", .{case.mode});
-                terminal.debugFeedBytes(session, query);
+                terminal_debug.debugFeedBytes(session, query);
                 {
                     const reply = try capture.readReply(allocator);
                     defer allocator.free(reply);
@@ -1548,8 +1549,8 @@ test "terminal DECRQM ansi queries report mode 4, 12 and 20 set/reset state" {
                     try std.testing.expectEqualStrings(expected, reply);
                 }
 
-                terminal.debugFeedBytes(session, case.set_seq);
-                terminal.debugFeedBytes(session, query);
+                terminal_debug.debugFeedBytes(session, case.set_seq);
+                terminal_debug.debugFeedBytes(session, query);
                 {
                     const reply = try capture.readReply(allocator);
                     defer allocator.free(reply);
@@ -1558,8 +1559,8 @@ test "terminal DECRQM ansi queries report mode 4, 12 and 20 set/reset state" {
                     try std.testing.expectEqualStrings(expected, reply);
                 }
 
-                terminal.debugFeedBytes(session, case.reset_seq);
-                terminal.debugFeedBytes(session, query);
+                terminal_debug.debugFeedBytes(session, case.reset_seq);
+                terminal_debug.debugFeedBytes(session, query);
                 {
                     const reply = try capture.readReply(allocator);
                     defer allocator.free(reply);
@@ -1574,14 +1575,14 @@ test "terminal DECRQM ansi queries report mode 4, 12 and 20 set/reset state" {
 
 test "terminal DECRQM representative unsupported ANSI modes return Pm=0" {
     try withSessionAndCapture(struct {
-        fn run(session: *terminal.TerminalSession, capture: *PipeCapture) !void {
+        fn run(session: *terminal_runtime.PtyTerminalRuntime, capture: *PipeCapture) !void {
             const allocator = std.testing.allocator;
             const unsupported_modes = [_]i32{ 1, 2, 3, 5, 6, 10, 13, 14, 18, 19 };
 
             for (unsupported_modes) |mode| {
                 var qbuf: [32]u8 = undefined;
                 const query = try std.fmt.bufPrint(&qbuf, "\x1b[{d}$p", .{mode});
-                terminal.debugFeedBytes(session, query);
+                terminal_debug.debugFeedBytes(session, query);
                 const reply = try capture.readReply(allocator);
                 defer allocator.free(reply);
 
@@ -1595,19 +1596,19 @@ test "terminal DECRQM representative unsupported ANSI modes return Pm=0" {
 
 test "terminal ANSI local echo mode 12 echoes chars only without PTY" {
     const allocator = std.testing.allocator;
-    var session = try terminal.TerminalSession.init(allocator, 3, 6);
+    var session = try terminal_runtime.PtyTerminalRuntime.init(allocator, 3, 6);
     defer session.deinit();
 
-    terminal.debugFeedBytes(session, "\x1b[12h");
-    try session.sendChar('a', terminal.VTERM_MOD_NONE);
+    terminal_debug.debugFeedBytes(session, "\x1b[12h");
+    try session.sendChar('a', terminal_runtime.VTERM_MOD_NONE);
     {
         const snap = session.snapshot();
         try std.testing.expectEqual(@as(u32, 'a'), snap.cellAt(0, 0).codepoint);
         try std.testing.expectEqual(@as(usize, 1), snap.cursor.col);
     }
 
-    terminal.debugFeedBytes(session, "\x1b[12l");
-    try session.sendChar('b', terminal.VTERM_MOD_NONE);
+    terminal_debug.debugFeedBytes(session, "\x1b[12l");
+    try session.sendChar('b', terminal_runtime.VTERM_MOD_NONE);
     {
         const snap = session.snapshot();
         try std.testing.expectEqual(@as(u32, 0), snap.cellAt(0, 1).codepoint);
@@ -1617,17 +1618,17 @@ test "terminal ANSI local echo mode 12 echoes chars only without PTY" {
 
 test "terminal grapheme cluster mode ?2027 keeps shaping-priority combining mark on overflow" {
     const allocator = std.testing.allocator;
-    var off = try terminal.TerminalSession.init(allocator, 3, 8);
+    var off = try terminal_runtime.PtyTerminalRuntime.init(allocator, 3, 8);
     defer off.deinit();
-    var on = try terminal.TerminalSession.init(allocator, 3, 8);
+    var on = try terminal_runtime.PtyTerminalRuntime.init(allocator, 3, 8);
     defer on.deinit();
 
     // Turn mode on only for `on`.
-    terminal.debugFeedBytes(on, "\x1b[?2027h");
+    terminal_debug.debugFeedBytes(on, "\x1b[?2027h");
 
     // Base + 3 combining marks (capacity is 2); VS16 is the shaping-priority mark.
-    terminal.debugFeedBytes(off, "A\u{0301}\u{0300}\u{FE0F}");
-    terminal.debugFeedBytes(on, "A\u{0301}\u{0300}\u{FE0F}");
+    terminal_debug.debugFeedBytes(off, "A\u{0301}\u{0300}\u{FE0F}");
+    terminal_debug.debugFeedBytes(on, "A\u{0301}\u{0300}\u{FE0F}");
 
     {
         const snap_off = off.snapshot();
@@ -1648,9 +1649,9 @@ test "terminal grapheme cluster mode ?2027 keeps shaping-priority combining mark
 
 test "terminal DECRQM ansi query returns Pm=0 for unsupported mode per xterm-foot convention" {
     try withSessionAndCapture(struct {
-        fn run(session: *terminal.TerminalSession, capture: *PipeCapture) !void {
+        fn run(session: *terminal_runtime.PtyTerminalRuntime, capture: *PipeCapture) !void {
             const allocator = std.testing.allocator;
-            terminal.debugFeedBytes(session, "\x1b[999$p");
+            terminal_debug.debugFeedBytes(session, "\x1b[999$p");
             const reply = try capture.readReply(allocator);
             defer allocator.free(reply);
             try std.testing.expectEqualStrings("\x1b[999;0$y", reply);
@@ -1660,7 +1661,7 @@ test "terminal DECRQM ansi query returns Pm=0 for unsupported mode per xterm-foo
 
 test "terminal DECRQM requires exactly one parameter" {
     try withSessionAndCapture(struct {
-        fn run(session: *terminal.TerminalSession, capture: *PipeCapture) !void {
+        fn run(session: *terminal_runtime.PtyTerminalRuntime, capture: *PipeCapture) !void {
             const cases = [_][]const u8{
                 "\x1b[$p", // missing ANSI mode
                 "\x1b[?$p", // missing DEC private mode
@@ -1671,7 +1672,7 @@ test "terminal DECRQM requires exactly one parameter" {
             };
 
             for (cases) |seq| {
-                terminal.debugFeedBytes(session, seq);
+                terminal_debug.debugFeedBytes(session, seq);
                 try capture.expectNoReply();
             }
         }
@@ -1680,8 +1681,8 @@ test "terminal DECRQM requires exactly one parameter" {
 
 test "terminal CSI !p does not trigger DECRQM reply" {
     try withSessionAndCapture(struct {
-        fn run(session: *terminal.TerminalSession, capture: *PipeCapture) !void {
-            terminal.debugFeedBytes(session, "\x1b[!p");
+        fn run(session: *terminal_runtime.PtyTerminalRuntime, capture: *PipeCapture) !void {
+            terminal_debug.debugFeedBytes(session, "\x1b[!p");
             try capture.expectNoReply();
         }
     }.run);
@@ -1689,9 +1690,9 @@ test "terminal CSI !p does not trigger DECRQM reply" {
 
 test "terminal DECSTR soft reset clears mode subset and preserves grid" {
     try withSessionAndCapture(struct {
-        fn run(session: *terminal.TerminalSession, capture: *PipeCapture) !void {
-            terminal.debugFeedBytes(session, "AB");
-            terminal.debugFeedBytes(
+        fn run(session: *terminal_runtime.PtyTerminalRuntime, capture: *PipeCapture) !void {
+            terminal_debug.debugFeedBytes(session, "AB");
+            terminal_debug.debugFeedBytes(
                 session,
                 "\x1b[?1004h" ++ // focus reporting
                     "\x1b[?2004h" ++ // bracketed paste
@@ -1714,7 +1715,7 @@ test "terminal DECSTR soft reset clears mode subset and preserves grid" {
             try std.testing.expect(session.appKeypadEnabled());
             try std.testing.expect(session.keyModeFlagsValue() != 0);
 
-            terminal.debugFeedBytes(session, "\x1b[!p");
+            terminal_debug.debugFeedBytes(session, "\x1b[!p");
             try capture.expectNoReply();
 
             // Content is preserved (soft reset, not hard reset).
@@ -1747,9 +1748,9 @@ test "terminal DECSTR soft reset clears mode subset and preserves grid" {
 
 test "terminal DECSTR resets DECRQM-queryable modes to defaults" {
     try withSessionAndCapture(struct {
-        fn run(session: *terminal.TerminalSession, capture: *PipeCapture) !void {
+        fn run(session: *terminal_runtime.PtyTerminalRuntime, capture: *PipeCapture) !void {
             const allocator = std.testing.allocator;
-            terminal.debugFeedBytes(session, "\x1b[?1004h\x1b[?1002h\x1b[?1016h\x1b[?2004h\x1b[?2027h\x1b[?2031h\x1b[?2048h\x1b[?5522h\x1b[?69h\x1b[20h\x1b=");
+            terminal_debug.debugFeedBytes(session, "\x1b[?1004h\x1b[?1002h\x1b[?1016h\x1b[?2004h\x1b[?2027h\x1b[?2031h\x1b[?2048h\x1b[?5522h\x1b[?69h\x1b[20h\x1b=");
 
             const Case = struct {
                 query: []const u8,
@@ -1771,17 +1772,17 @@ test "terminal DECSTR resets DECRQM-queryable modes to defaults" {
             };
 
             for (cases) |case| {
-                terminal.debugFeedBytes(session, case.query);
+                terminal_debug.debugFeedBytes(session, case.query);
                 const reply = try capture.readReply(allocator);
                 defer allocator.free(reply);
                 try std.testing.expectEqualStrings(case.before_reply, reply);
             }
 
-            terminal.debugFeedBytes(session, "\x1b[!p");
+            terminal_debug.debugFeedBytes(session, "\x1b[!p");
             try capture.expectNoReply(); // DECSTR itself
 
             for (cases) |case| {
-                terminal.debugFeedBytes(session, case.query);
+                terminal_debug.debugFeedBytes(session, case.query);
                 const reply = try capture.readReply(allocator);
                 defer allocator.free(reply);
                 try std.testing.expectEqualStrings(case.after_reply, reply);
@@ -1792,17 +1793,17 @@ test "terminal DECSTR resets DECRQM-queryable modes to defaults" {
 
 test "terminal DECSTR in alt screen preserves active screen selection and primary contents" {
     try withSessionAndCapture(struct {
-        fn run(session: *terminal.TerminalSession, capture: *PipeCapture) !void {
+        fn run(session: *terminal_runtime.PtyTerminalRuntime, capture: *PipeCapture) !void {
             const allocator = std.testing.allocator;
 
-            terminal.debugFeedBytes(session, "P");
-            terminal.debugFeedBytes(session, "\x1b[?1049h");
-            terminal.debugFeedBytes(session, "A");
-            terminal.debugFeedBytes(session, "\x1b[!p");
+            terminal_debug.debugFeedBytes(session, "P");
+            terminal_debug.debugFeedBytes(session, "\x1b[?1049h");
+            terminal_debug.debugFeedBytes(session, "A");
+            terminal_debug.debugFeedBytes(session, "\x1b[!p");
             try capture.expectNoReply();
 
             // Still in alt screen after DECSTR.
-            terminal.debugFeedBytes(session, "\x1b[?1049$p");
+            terminal_debug.debugFeedBytes(session, "\x1b[?1049$p");
             {
                 const reply = try capture.readReply(allocator);
                 defer allocator.free(reply);
@@ -1815,7 +1816,7 @@ test "terminal DECSTR in alt screen preserves active screen selection and primar
                 try std.testing.expectEqual(@as(u32, 'A'), session.getCell(0, 0).codepoint);
             }
 
-            terminal.debugFeedBytes(session, "\x1b[?1049l");
+            terminal_debug.debugFeedBytes(session, "\x1b[?1049l");
 
             {
                 const snap = session.snapshot();
@@ -1828,8 +1829,8 @@ test "terminal DECSTR in alt screen preserves active screen selection and primar
 
 test "terminal DECSTR invalidates saved cursor restore slot" {
     try withSessionAndCapture(struct {
-        fn run(session: *terminal.TerminalSession, capture: *PipeCapture) !void {
-            terminal.debugFeedBytes(session, "\x1b[3;5H\x1b[s\x1b[1;1H\x1b[!p\x1b[u");
+        fn run(session: *terminal_runtime.PtyTerminalRuntime, capture: *PipeCapture) !void {
+            terminal_debug.debugFeedBytes(session, "\x1b[3;5H\x1b[s\x1b[1;1H\x1b[!p\x1b[u");
             try capture.expectNoReply();
             const pos = session.getCursorPos();
             try std.testing.expectEqual(@as(usize, 0), pos.row);
@@ -1840,18 +1841,18 @@ test "terminal DECSTR invalidates saved cursor restore slot" {
 
 test "terminal DECSTR resets parser charset and clears saved charset restore" {
     try withSessionAndCapture(struct {
-        fn run(session: *terminal.TerminalSession, capture: *PipeCapture) !void {
-            terminal.debugFeedBytes(session, "\x1b(0"); // DEC special G0 active in GL by default
-            terminal.debugFeedBytes(session, "j");
+        fn run(session: *terminal_runtime.PtyTerminalRuntime, capture: *PipeCapture) !void {
+            terminal_debug.debugFeedBytes(session, "\x1b(0"); // DEC special G0 active in GL by default
+            terminal_debug.debugFeedBytes(session, "j");
             const before = session.getCell(0, 0).codepoint;
             try std.testing.expect(before != @as(u32, 'j'));
 
-            terminal.debugFeedBytes(session, "\x1b[s"); // save cursor + charset state
-            terminal.debugFeedBytes(session, "\x1b(B"); // back to ASCII
-            terminal.debugFeedBytes(session, "\x1b[!p"); // DECSTR clears saved charset + parser state
+            terminal_debug.debugFeedBytes(session, "\x1b[s"); // save cursor + charset state
+            terminal_debug.debugFeedBytes(session, "\x1b(B"); // back to ASCII
+            terminal_debug.debugFeedBytes(session, "\x1b[!p"); // DECSTR clears saved charset + parser state
             try capture.expectNoReply();
-            terminal.debugFeedBytes(session, "\x1b[u"); // should not restore saved charset/cursor after DECSTR
-            terminal.debugFeedBytes(session, "j");
+            terminal_debug.debugFeedBytes(session, "\x1b[u"); // should not restore saved charset/cursor after DECSTR
+            terminal_debug.debugFeedBytes(session, "j");
 
             try std.testing.expectEqual(@as(u32, 'j'), session.getCell(0, 0).codepoint);
             try std.testing.expectEqual(@as(usize, 1), session.getCursorPos().col);
@@ -1861,15 +1862,15 @@ test "terminal DECSTR resets parser charset and clears saved charset restore" {
 
 test "terminal DECSTR resets cursor style to default" {
     try withSessionAndCapture(struct {
-        fn run(session: *terminal.TerminalSession, capture: *PipeCapture) !void {
-            terminal.debugFeedBytes(session, "\x1b[6 q"); // bar, steady
+        fn run(session: *terminal_runtime.PtyTerminalRuntime, capture: *PipeCapture) !void {
+            terminal_debug.debugFeedBytes(session, "\x1b[6 q"); // bar, steady
             {
                 const snap = session.snapshot();
                 try std.testing.expectEqual(.bar, snap.cursor_style.shape);
                 try std.testing.expect(!snap.cursor_style.blink);
             }
 
-            terminal.debugFeedBytes(session, "\x1b[!p");
+            terminal_debug.debugFeedBytes(session, "\x1b[!p");
             try capture.expectNoReply();
 
             {
@@ -1883,19 +1884,19 @@ test "terminal DECSTR resets cursor style to default" {
 
 test "terminal DECRQSS cursor-style query replies with DECSCUSR state" {
     try withSessionAndCapture(struct {
-        fn run(session: *terminal.TerminalSession, capture: *PipeCapture) !void {
+        fn run(session: *terminal_runtime.PtyTerminalRuntime, capture: *PipeCapture) !void {
             const allocator = std.testing.allocator;
 
-            terminal.debugFeedBytes(session, "\x1b[3 q");
-            terminal.debugFeedBytes(session, "\x1bP$q q\x1b\\");
+            terminal_debug.debugFeedBytes(session, "\x1b[3 q");
+            terminal_debug.debugFeedBytes(session, "\x1bP$q q\x1b\\");
             {
                 const reply = try capture.readReply(allocator);
                 defer allocator.free(reply);
                 try std.testing.expectEqualStrings("\x1bP1$r3 q\x1b\\", reply);
             }
 
-            terminal.debugFeedBytes(session, "\x1b[6 q");
-            terminal.debugFeedBytes(session, "\x1bP$q q\x1b\\");
+            terminal_debug.debugFeedBytes(session, "\x1b[6 q");
+            terminal_debug.debugFeedBytes(session, "\x1bP$q q\x1b\\");
             {
                 const reply = try capture.readReply(allocator);
                 defer allocator.free(reply);
@@ -1907,11 +1908,11 @@ test "terminal DECRQSS cursor-style query replies with DECSCUSR state" {
 
 test "terminal DECRQSS SGR query replies for bounded attribute state" {
     try withSessionAndCapture(struct {
-        fn run(session: *terminal.TerminalSession, capture: *PipeCapture) !void {
+        fn run(session: *terminal_runtime.PtyTerminalRuntime, capture: *PipeCapture) !void {
             const allocator = std.testing.allocator;
 
-            terminal.debugFeedBytes(session, "\x1b[1;5;7;31;42m");
-            terminal.debugFeedBytes(session, "\x1bP$qm\x1b\\");
+            terminal_debug.debugFeedBytes(session, "\x1b[1;5;7;31;42m");
+            terminal_debug.debugFeedBytes(session, "\x1bP$qm\x1b\\");
             {
                 const reply = try capture.readReply(allocator);
                 defer allocator.free(reply);
@@ -1923,11 +1924,11 @@ test "terminal DECRQSS SGR query replies for bounded attribute state" {
 
 test "terminal DECRQSS DECSTBM query replies with current scroll region" {
     try withSessionAndCapture(struct {
-        fn run(session: *terminal.TerminalSession, capture: *PipeCapture) !void {
+        fn run(session: *terminal_runtime.PtyTerminalRuntime, capture: *PipeCapture) !void {
             const allocator = std.testing.allocator;
 
-            terminal.debugFeedBytes(session, "\x1b[2;5r");
-            terminal.debugFeedBytes(session, "\x1bP$qr\x1b\\");
+            terminal_debug.debugFeedBytes(session, "\x1b[2;5r");
+            terminal_debug.debugFeedBytes(session, "\x1bP$qr\x1b\\");
             {
                 const reply = try capture.readReply(allocator);
                 defer allocator.free(reply);
@@ -1939,12 +1940,12 @@ test "terminal DECRQSS DECSTBM query replies with current scroll region" {
 
 test "terminal DECRQSS DECSLRM query replies with current left-right margins" {
     try withSessionAndCapture(struct {
-        fn run(session: *terminal.TerminalSession, capture: *PipeCapture) !void {
+        fn run(session: *terminal_runtime.PtyTerminalRuntime, capture: *PipeCapture) !void {
             const allocator = std.testing.allocator;
 
-            terminal.debugFeedBytes(session, "\x1b[?69h");
-            terminal.debugFeedBytes(session, "\x1b[3;8s");
-            terminal.debugFeedBytes(session, "\x1bP$qs\x1b\\");
+            terminal_debug.debugFeedBytes(session, "\x1b[?69h");
+            terminal_debug.debugFeedBytes(session, "\x1b[3;8s");
+            terminal_debug.debugFeedBytes(session, "\x1bP$qs\x1b\\");
             {
                 const reply = try capture.readReply(allocator);
                 defer allocator.free(reply);
@@ -1956,25 +1957,25 @@ test "terminal DECRQSS DECSLRM query replies with current left-right margins" {
 
 test "terminal DECSTR resets title to default" {
     try withSessionAndCapture(struct {
-        fn run(session: *terminal.TerminalSession, capture: *PipeCapture) !void {
-            terminal.debugFeedBytes(session, "\x1b]2;custom title\x07");
-            try std.testing.expectEqualStrings("custom title", terminal.debugSnapshot(session).title);
+        fn run(session: *terminal_runtime.PtyTerminalRuntime, capture: *PipeCapture) !void {
+            terminal_debug.debugFeedBytes(session, "\x1b]2;custom title\x07");
+            try std.testing.expectEqualStrings("custom title", terminal_debug.debugSnapshot(session).title);
 
-            terminal.debugFeedBytes(session, "\x1b[!p");
+            terminal_debug.debugFeedBytes(session, "\x1b[!p");
             try capture.expectNoReply();
 
-            try std.testing.expectEqualStrings("Terminal", terminal.debugSnapshot(session).title);
+            try std.testing.expectEqualStrings("Terminal", terminal_debug.debugSnapshot(session).title);
         }
     }.run);
 }
 
 test "terminal DECSTR clears active-screen kitty state while alt screen remains active" {
     const allocator = std.testing.allocator;
-    var session = try terminal.TerminalSession.init(allocator, 6, 12);
+    var session = try terminal_runtime.PtyTerminalRuntime.init(allocator, 6, 12);
     defer session.deinit();
 
-    terminal.debugFeedBytes(session, "\x1b[?1047h");
-    terminal.debugFeedBytes(
+    terminal_debug.debugFeedBytes(session, "\x1b[?1047h");
+    terminal_debug.debugFeedBytes(
         session,
         "\x1b_Ga=t,f=100,i=1;iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR4nGNgYAAAAAMAASsJTYQAAAAASUVORK5CYII=\x1b\\" ++
             "\x1b_Ga=p,i=1,c=2,r=1,x=1,y=1\x1b\\",
@@ -1987,7 +1988,7 @@ test "terminal DECSTR clears active-screen kitty state while alt screen remains 
         try std.testing.expectEqual(@as(usize, 1), snap.kitty_placements.len);
     }
 
-    terminal.debugFeedBytes(session, "\x1b[!p");
+    terminal_debug.debugFeedBytes(session, "\x1b[!p");
 
     {
         const snap = session.snapshot();
@@ -1999,17 +2000,17 @@ test "terminal DECSTR clears active-screen kitty state while alt screen remains 
 
 test "terminal DECSTR alt-screen kitty placement does not leak to primary after exit" {
     const allocator = std.testing.allocator;
-    var session = try terminal.TerminalSession.init(allocator, 6, 12);
+    var session = try terminal_runtime.PtyTerminalRuntime.init(allocator, 6, 12);
     defer session.deinit();
 
-    terminal.debugFeedBytes(session, "P");
-    terminal.debugFeedBytes(session, "\x1b[?1049h");
-    terminal.debugFeedBytes(
+    terminal_debug.debugFeedBytes(session, "P");
+    terminal_debug.debugFeedBytes(session, "\x1b[?1049h");
+    terminal_debug.debugFeedBytes(
         session,
         "\x1b_Ga=t,f=100,i=1;iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR4nGNgYAAAAAMAASsJTYQAAAAASUVORK5CYII=\x1b\\" ++
             "\x1b_Ga=p,i=1,c=2,r=1,x=1,y=1\x1b\\",
     );
-    terminal.debugFeedBytes(session, "\x1b[!p");
+    terminal_debug.debugFeedBytes(session, "\x1b[!p");
 
     {
         const snap = session.snapshot();
@@ -2017,7 +2018,7 @@ test "terminal DECSTR alt-screen kitty placement does not leak to primary after 
         try std.testing.expectEqual(@as(usize, 0), snap.kitty_placements.len);
     }
 
-    terminal.debugFeedBytes(session, "\x1b[?1047l");
+    terminal_debug.debugFeedBytes(session, "\x1b[?1047l");
 
     {
         const snap = session.snapshot();
@@ -2029,11 +2030,11 @@ test "terminal DECSTR alt-screen kitty placement does not leak to primary after 
 
 test "terminal DECSTR clears hidden primary kitty state while alt screen is active" {
     const allocator = std.testing.allocator;
-    var session = try terminal.TerminalSession.init(allocator, 6, 12);
+    var session = try terminal_runtime.PtyTerminalRuntime.init(allocator, 6, 12);
     defer session.deinit();
 
     // Seed kitty state on primary.
-    terminal.debugFeedBytes(
+    terminal_debug.debugFeedBytes(
         session,
         "\x1b_Ga=t,f=100,i=1;iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR4nGNgYAAAAAMAASsJTYQAAAAASUVORK5CYII=\x1b\\" ++
             "\x1b_Ga=p,i=1,c=2,r=1,x=1,y=1\x1b\\",
@@ -2046,9 +2047,9 @@ test "terminal DECSTR clears hidden primary kitty state while alt screen is acti
     }
 
     // Switch to alt, issue DECSTR (applies to both screens now), then return.
-    terminal.debugFeedBytes(session, "\x1b[?1049h");
-    terminal.debugFeedBytes(session, "\x1b[!p");
-    terminal.debugFeedBytes(session, "\x1b[?1049l");
+    terminal_debug.debugFeedBytes(session, "\x1b[?1049h");
+    terminal_debug.debugFeedBytes(session, "\x1b[!p");
+    terminal_debug.debugFeedBytes(session, "\x1b[?1049l");
 
     {
         const snap = session.snapshot();
@@ -2060,7 +2061,7 @@ test "terminal DECSTR clears hidden primary kitty state while alt screen is acti
 
 test "terminal DECSTR clears hidden alt kitty state while primary screen is active" {
     const allocator = std.testing.allocator;
-    var session = try terminal.TerminalSession.init(allocator, 6, 12);
+    var session = try terminal_runtime.PtyTerminalRuntime.init(allocator, 6, 12);
     defer session.deinit();
 
     // Seed kitty state directly on hidden alt while primary is active.
@@ -2094,14 +2095,14 @@ test "terminal DECSTR clears hidden alt kitty state while primary screen is acti
     try std.testing.expectEqual(@as(usize, 1), session.core.kitty_alt.placements.items.len);
 
     // DECSTR on primary now clears both active + hidden kitty states.
-    terminal.debugFeedBytes(session, "\x1b[!p");
+    terminal_debug.debugFeedBytes(session, "\x1b[!p");
     try std.testing.expectEqual(@as(usize, 0), session.core.kitty_primary.images.items.len);
     try std.testing.expectEqual(@as(usize, 0), session.core.kitty_primary.placements.items.len);
     try std.testing.expectEqual(@as(usize, 0), session.core.kitty_alt.images.items.len);
     try std.testing.expectEqual(@as(usize, 0), session.core.kitty_alt.placements.items.len);
 
     // Re-enter alt to prove hidden-alt state was really cleared.
-    terminal.debugFeedBytes(session, "\x1b[?1047h");
+    terminal_debug.debugFeedBytes(session, "\x1b[?1047h");
     {
         const snap = session.snapshot();
         try std.testing.expect(snap.alt_active);
@@ -2112,8 +2113,8 @@ test "terminal DECSTR clears hidden alt kitty state while primary screen is acti
 
 test "terminal CSI ?1004p without $ intermediate does not trigger DECRQM reply" {
     try withSessionAndCapture(struct {
-        fn run(session: *terminal.TerminalSession, capture: *PipeCapture) !void {
-            terminal.debugFeedBytes(session, "\x1b[?1004p");
+        fn run(session: *terminal_runtime.PtyTerminalRuntime, capture: *PipeCapture) !void {
+            terminal_debug.debugFeedBytes(session, "\x1b[?1004p");
             try capture.expectNoReply();
         }
     }.run);
@@ -2121,8 +2122,8 @@ test "terminal CSI ?1004p without $ intermediate does not trigger DECRQM reply" 
 
 test "terminal CSI #p does not trigger DECRQM reply" {
     try withSessionAndCapture(struct {
-        fn run(session: *terminal.TerminalSession, capture: *PipeCapture) !void {
-            terminal.debugFeedBytes(session, "\x1b[#p");
+        fn run(session: *terminal_runtime.PtyTerminalRuntime, capture: *PipeCapture) !void {
+            terminal_debug.debugFeedBytes(session, "\x1b[#p");
             try capture.expectNoReply();
         }
     }.run);
@@ -2130,7 +2131,7 @@ test "terminal CSI #p does not trigger DECRQM reply" {
 
 test "terminal CSI malformed p-family intermediates do not trigger DECRQM or DECSTR" {
     try withSessionAndCapture(struct {
-        fn run(session: *terminal.TerminalSession, capture: *PipeCapture) !void {
+        fn run(session: *terminal_runtime.PtyTerminalRuntime, capture: *PipeCapture) !void {
             const cases = [_][]const u8{
                 "\x1b[?1004$!p", // malformed mixed DECRQM+DECSTR intermediates
                 "\x1b[20!$p", // malformed ansi mixed-intermediate form
@@ -2139,7 +2140,7 @@ test "terminal CSI malformed p-family intermediates do not trigger DECRQM or DEC
             };
 
             for (cases) |seq| {
-                terminal.debugFeedBytes(session, seq);
+                terminal_debug.debugFeedBytes(session, seq);
                 try capture.expectNoReply();
             }
         }
@@ -2148,10 +2149,10 @@ test "terminal CSI malformed p-family intermediates do not trigger DECRQM or DEC
 
 test "terminal CSI 18 t reports text area size in chars" {
     try withSessionAndCapture(struct {
-        fn run(session: *terminal.TerminalSession, capture: *PipeCapture) !void {
+        fn run(session: *terminal_runtime.PtyTerminalRuntime, capture: *PipeCapture) !void {
             const allocator = std.testing.allocator;
 
-            terminal.debugFeedBytes(session, "\x1b[18t");
+            terminal_debug.debugFeedBytes(session, "\x1b[18t");
             {
                 const reply = try capture.readReply(allocator);
                 defer allocator.free(reply);
@@ -2159,7 +2160,7 @@ test "terminal CSI 18 t reports text area size in chars" {
             }
 
             // Unsupported window-op mode: no reply.
-            terminal.debugFeedBytes(session, "\x1b[99t");
+            terminal_debug.debugFeedBytes(session, "\x1b[99t");
             try capture.expectNoReply();
         }
     }.run);
@@ -2167,11 +2168,11 @@ test "terminal CSI 18 t reports text area size in chars" {
 
 test "terminal CSI 14 t reports text area size in pixels" {
     try withSessionAndCapture(struct {
-        fn run(session: *terminal.TerminalSession, capture: *PipeCapture) !void {
+        fn run(session: *terminal_runtime.PtyTerminalRuntime, capture: *PipeCapture) !void {
             const allocator = std.testing.allocator;
 
             // Default cell metrics are unknown, so report zeros.
-            terminal.debugFeedBytes(session, "\x1b[14t");
+            terminal_debug.debugFeedBytes(session, "\x1b[14t");
             {
                 const reply = try capture.readReply(allocator);
                 defer allocator.free(reply);
@@ -2180,7 +2181,7 @@ test "terminal CSI 14 t reports text area size in pixels" {
 
             // Once metrics are known, reply in pixels.
             session.setCellSize(9, 21);
-            terminal.debugFeedBytes(session, "\x1b[14t");
+            terminal_debug.debugFeedBytes(session, "\x1b[14t");
             {
                 const reply = try capture.readReply(allocator);
                 defer allocator.free(reply);
@@ -2192,10 +2193,10 @@ test "terminal CSI 14 t reports text area size in pixels" {
 
 test "terminal CSI 19 t reports screen size in chars" {
     try withSessionAndCapture(struct {
-        fn run(session: *terminal.TerminalSession, capture: *PipeCapture) !void {
+        fn run(session: *terminal_runtime.PtyTerminalRuntime, capture: *PipeCapture) !void {
             const allocator = std.testing.allocator;
 
-            terminal.debugFeedBytes(session, "\x1b[19t");
+            terminal_debug.debugFeedBytes(session, "\x1b[19t");
             {
                 const reply = try capture.readReply(allocator);
                 defer allocator.free(reply);
@@ -2207,11 +2208,11 @@ test "terminal CSI 19 t reports screen size in chars" {
 
 test "terminal CSI 16 t reports character cell size in pixels" {
     try withSessionAndCapture(struct {
-        fn run(session: *terminal.TerminalSession, capture: *PipeCapture) !void {
+        fn run(session: *terminal_runtime.PtyTerminalRuntime, capture: *PipeCapture) !void {
             const allocator = std.testing.allocator;
 
             // Default unknown metrics.
-            terminal.debugFeedBytes(session, "\x1b[16t");
+            terminal_debug.debugFeedBytes(session, "\x1b[16t");
             {
                 const reply = try capture.readReply(allocator);
                 defer allocator.free(reply);
@@ -2219,7 +2220,7 @@ test "terminal CSI 16 t reports character cell size in pixels" {
             }
 
             session.setCellSize(9, 21);
-            terminal.debugFeedBytes(session, "\x1b[16t");
+            terminal_debug.debugFeedBytes(session, "\x1b[16t");
             {
                 const reply = try capture.readReply(allocator);
                 defer allocator.free(reply);
@@ -2231,9 +2232,9 @@ test "terminal CSI 16 t reports character cell size in pixels" {
 
 test "terminal widget focus source toggles gate window and pane reports" {
     try withSessionAndCapture(struct {
-        fn run(session: *terminal.TerminalSession, capture: *PipeCapture) !void {
+        fn run(session: *terminal_runtime.PtyTerminalRuntime, capture: *PipeCapture) !void {
             const allocator = std.testing.allocator;
-            terminal.debugFeedBytes(session, "\x1b[?1004h");
+            terminal_debug.debugFeedBytes(session, "\x1b[?1004h");
 
             var widget = terminal_widget_mod.TerminalWidget.init(session, .kitty);
             widget.setFocusReportSources(true, false);
@@ -2253,9 +2254,9 @@ test "terminal widget focus source toggles gate window and pane reports" {
 
 test "terminal widget focus source dedupe suppresses duplicate state across sources" {
     try withSessionAndCapture(struct {
-        fn run(session: *terminal.TerminalSession, capture: *PipeCapture) !void {
+        fn run(session: *terminal_runtime.PtyTerminalRuntime, capture: *PipeCapture) !void {
             const allocator = std.testing.allocator;
-            terminal.debugFeedBytes(session, "\x1b[?1004h");
+            terminal_debug.debugFeedBytes(session, "\x1b[?1004h");
 
             var widget = terminal_widget_mod.TerminalWidget.init(session, .kitty);
             widget.setFocusReportSources(true, true);

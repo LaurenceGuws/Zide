@@ -1,10 +1,10 @@
 const std = @import("std");
 const app_logger = @import("../../app_logger.zig");
 const shared_types = @import("../../types/mod.zig");
-const terminal_mod = @import("../../terminal/core/terminal.zig");
+const terminal_publication = @import("../../terminal/core/terminal_publication.zig");
 const common = @import("common.zig");
 
-const Cell = terminal_mod.Cell;
+const Cell = terminal_publication.Cell;
 
 pub const HoverState = struct {
     last_hover_link_id: u32 = 0,

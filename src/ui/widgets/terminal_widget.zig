@@ -1,6 +1,7 @@
 const std = @import("std");
 const app_shell = @import("../../app_shell.zig");
-const terminal_mod = @import("../../terminal/core/terminal.zig");
+const terminal_runtime = @import("../../terminal/core/terminal_runtime.zig");
+const terminal_publication = @import("../../terminal/core/terminal_publication.zig");
 const terminal_types = @import("../../terminal/model/types.zig");
 const key_encoder = @import("../../terminal/input/key_encoder.zig");
 const app_logger = @import("../../app_logger.zig");
@@ -14,14 +15,14 @@ const input_mod = @import("terminal_widget_input.zig");
 const render_cache_mod = @import("../../terminal/core/render_cache.zig");
 
 const Shell = app_shell.Shell;
-const TerminalSession = terminal_mod.PtyTerminalSession;
-const CursorPos = terminal_mod.CursorPos;
-const KittyImage = terminal_mod.KittyImage;
-const KittyPlacement = terminal_mod.KittyPlacement;
+const TerminalSession = terminal_runtime.PtyTerminalRuntime;
+const CursorPos = terminal_publication.CursorPos;
+const KittyImage = terminal_publication.KittyImage;
+const KittyPlacement = terminal_publication.KittyPlacement;
 const RenderCache = render_cache_mod.RenderCache;
 const DrawOutcome = draw_mod.DrawOutcome;
 const DrawPreparation = draw_mod.DrawPreparation;
-const Cell = terminal_mod.Cell;
+const Cell = terminal_publication.Cell;
 
 const visible_ascii_dump_path = "zide_terminal_view_dump.txt";
 
@@ -68,7 +69,7 @@ pub const TerminalWidget = struct {
     last_focus_reported: ?bool = null,
     ui_focused: bool = true,
     ui_window_focused: bool = true,
-    selection_gesture: terminal_mod.SelectionGesture = .{},
+    selection_gesture: terminal_runtime.SelectionGesture = .{},
     selection_press_origin: ?shared_types.input.MousePos = null,
     selection_drag_active: bool = false,
 

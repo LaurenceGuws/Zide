@@ -1,13 +1,13 @@
 const std = @import("std");
 const app_shell = @import("../../app_shell.zig");
-const terminal_mod = @import("../../terminal/core/terminal.zig");
+const terminal_runtime = @import("../../terminal/core/terminal_runtime.zig");
 const widgets = @import("../../ui/widgets.zig");
 const c = @cImport({
     @cInclude("stdlib.h");
 });
 
 const Shell = app_shell.Shell;
-const TerminalSession = terminal_mod.PtyTerminalSession;
+const TerminalSession = terminal_runtime.PtyTerminalRuntime;
 const TerminalWidget = widgets.TerminalWidget;
 
 const win32 = if (@import("builtin").os.tag == .windows) struct {

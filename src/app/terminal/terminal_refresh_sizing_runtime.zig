@@ -4,11 +4,11 @@ const app_terminal_grid = @import("terminal_grid.zig");
 const app_terminal_resize = @import("terminal_resize.zig");
 const app_terminal_tabs_runtime = @import("terminal_tabs_runtime.zig");
 const app_ui_layout_runtime = @import("../ui_layout_runtime.zig");
-const terminal_mod = @import("../../terminal/core/terminal.zig");
+const terminal_runtime = @import("../../terminal/core/terminal_runtime.zig");
 
 const AppMode = app_bootstrap.AppMode;
-const TerminalSession = terminal_mod.PtyTerminalSession;
-const TerminalWorkspace = terminal_mod.TerminalWorkspace;
+const TerminalSession = terminal_runtime.PtyTerminalRuntime;
+const TerminalWorkspace = terminal_runtime.TerminalWorkspace;
 
 pub fn handle(
     state: anytype,

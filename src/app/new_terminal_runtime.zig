@@ -7,11 +7,11 @@ const app_terminal_tab_bar_sync_runtime = @import("terminal/terminal_tab_bar_syn
 const app_terminal_theme_apply = @import("terminal/terminal_theme_apply.zig");
 const app_ui_layout_runtime = @import("ui_layout_runtime.zig");
 const terminal_cli = @import("terminal_cli.zig");
-const terminal_mod = @import("../terminal/core/terminal.zig");
+const terminal_runtime = @import("../terminal/core/terminal_runtime.zig");
 const app_logger = @import("../app_logger.zig");
 
-const TerminalSession = terminal_mod.PtyTerminalSession;
-const TerminalWorkspace = terminal_mod.TerminalWorkspace;
+const TerminalSession = terminal_runtime.PtyTerminalRuntime;
+const TerminalWorkspace = terminal_runtime.TerminalWorkspace;
 
 const StartupFailPoint = enum {
     workspace_after_start,

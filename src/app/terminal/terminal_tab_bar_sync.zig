@@ -1,7 +1,7 @@
 const std = @import("std");
 const config_mod = @import("../../config/lua_config.zig");
 const app_terminal_shell_icon_runtime = @import("terminal_shell_icon_runtime.zig");
-const terminal_mod = @import("../../terminal/core/terminal.zig");
+const terminal_runtime = @import("../../terminal/core/terminal_runtime.zig");
 const widgets = @import("../../ui/widgets.zig");
 
 const TerminalTabLabelModel = struct {
@@ -10,7 +10,7 @@ const TerminalTabLabelModel = struct {
     foreground_process_label: []const u8,
     cwd: []const u8,
     shell_path: []const u8,
-    progress_state: terminal_mod.ProgressState,
+    progress_state: terminal_runtime.ProgressState,
     progress_value: ?u8,
 };
 
@@ -57,7 +57,7 @@ fn appendProgressPrefix(
     }
 }
 
-fn terminalTabLabelModel(entry: terminal_mod.TerminalTabSyncEntry, strings: []const u8) TerminalTabLabelModel {
+fn terminalTabLabelModel(entry: terminal_runtime.TerminalTabSyncEntry, strings: []const u8) TerminalTabLabelModel {
     return .{
         .raw_title = entry.title(strings),
         .foreground_process_command = entry.foregroundProcessCommand(strings),
@@ -92,7 +92,7 @@ fn terminalTabLabel(
     return scratch.items;
 }
 
-fn hasTabId(entries: []const terminal_mod.TerminalTabSyncEntry, tab_id: u64) bool {
+fn hasTabId(entries: []const terminal_runtime.TerminalTabSyncEntry, tab_id: u64) bool {
     for (entries) |entry| {
         if (entry.id == tab_id) return true;
     }
@@ -101,12 +101,12 @@ fn hasTabId(entries: []const terminal_mod.TerminalTabSyncEntry, tab_id: u64) boo
 
 pub fn syncFromWorkspace(
     tab_bar: *widgets.TabBar,
-    terminal_workspace: *?terminal_mod.TerminalWorkspace,
+    terminal_workspace: *?terminal_runtime.TerminalWorkspace,
     show_shell_icon: bool,
     shell_icons: ?[]const config_mod.TerminalShellIconMapping,
 ) !void {
     if (terminal_workspace.*) |*workspace| {
-        var entry_buf = std.ArrayList(terminal_mod.TerminalTabSyncEntry).empty;
+        var entry_buf = std.ArrayList(terminal_runtime.TerminalTabSyncEntry).empty;
         defer entry_buf.deinit(tab_bar.allocator);
         var string_buf = std.ArrayList(u8).empty;
         defer string_buf.deinit(tab_bar.allocator);

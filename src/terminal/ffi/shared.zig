@@ -1,5 +1,5 @@
 const std = @import("std");
-const terminal = @import("../core/terminal.zig");
+const terminal_runtime = @import("../core/terminal_runtime.zig");
 const session_lifecycle = @import("../core/session_lifecycle.zig");
 const types = @import("../model/types.zig");
 const app_logger = @import("../../app_logger.zig");
@@ -315,7 +315,7 @@ pub const PendingEvent = struct {
 
 pub const Handle = struct {
     allocator: std.mem.Allocator,
-    session: *terminal.PtyTerminalSession,
+    session: *terminal_runtime.PtyTerminalRuntime,
     destroying: std.atomic.Value(bool),
     pending_events: std.ArrayList(PendingEvent),
     last_title: std.ArrayList(u8),

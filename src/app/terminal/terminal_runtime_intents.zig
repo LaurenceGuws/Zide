@@ -1,7 +1,7 @@
 const app_modes = @import("../modes/mod.zig");
 const app_terminal_intent_route = @import("terminal_intent_route.zig");
 const app_terminal_workspace_route = @import("terminal_workspace_route.zig");
-const terminal_mod = @import("../../terminal/core/terminal.zig");
+const terminal_runtime = @import("../../terminal/core/terminal_runtime.zig");
 const std = @import("std");
 
 pub const Intent = enum {
@@ -36,7 +36,7 @@ fn routeFromWorkspaceCtx(raw: *anyopaque, tab_id: ?u64) !bool {
 
 pub fn routeForActiveWorkspaceTabAndSync(
     intent: Intent,
-    terminal_workspace: *?terminal_mod.TerminalWorkspace,
+    terminal_workspace: *?terminal_runtime.TerminalWorkspace,
     route_ctx: *anyopaque,
     route_fn: TabActionRouteFn,
 ) !bool {

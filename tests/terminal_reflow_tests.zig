@@ -1,11 +1,13 @@
 const std = @import("std");
-const term_mod = @import("../src/terminal/core/terminal.zig");
+const terminal_runtime = @import("../src/terminal/core/terminal_runtime.zig");
+const terminal_debug = @import("../src/terminal/core/terminal_debug.zig");
+const terminal_publication = @import("../src/terminal/core/terminal_publication.zig");
 
-fn firstCodepoint(session: *term_mod.TerminalSession, global_row: usize) ?u32 {
+fn firstCodepoint(session: *terminal_runtime.PtyTerminalRuntime, global_row: usize) ?u32 {
     const snapshot = session.snapshot();
     const history_len = snapshot.scrollback_count;
     if (global_row < history_len) {
-        var cells = std.ArrayList(term_mod.Cell).empty;
+        var cells = std.ArrayList(terminal_publication.Cell).empty;
         defer cells.deinit(std.testing.allocator);
         const range = session.copyScrollbackRange(std.testing.allocator, global_row, 1, &cells) catch return null;
         if (range.row_count == 1 and range.cols > 0) return cells.items[0].codepoint;
@@ -18,11 +20,11 @@ fn firstCodepoint(session: *term_mod.TerminalSession, global_row: usize) ?u32 {
     return snapshot.cells[row_start].codepoint;
 }
 
-fn codepointAt(session: *term_mod.TerminalSession, global_row: usize, col: usize) ?u32 {
+fn codepointAt(session: *terminal_runtime.PtyTerminalRuntime, global_row: usize, col: usize) ?u32 {
     const snapshot = session.snapshot();
     const history_len = snapshot.scrollback_count;
     if (global_row < history_len) {
-        var cells = std.ArrayList(term_mod.Cell).empty;
+        var cells = std.ArrayList(terminal_publication.Cell).empty;
         defer cells.deinit(std.testing.allocator);
         const range = session.copyScrollbackRange(std.testing.allocator, global_row, 1, &cells) catch return null;
         if (range.row_count != 1 or col >= range.cols) return null;
@@ -35,7 +37,7 @@ fn codepointAt(session: *term_mod.TerminalSession, global_row: usize, col: usize
     return snapshot.cells[row_start + col].codepoint;
 }
 
-fn rowMatches(session: *term_mod.TerminalSession, global_row: usize, expected: []const u8) bool {
+fn rowMatches(session: *terminal_runtime.PtyTerminalRuntime, global_row: usize, expected: []const u8) bool {
     var i: usize = 0;
     while (i < expected.len) : (i += 1) {
         const cp = codepointAt(session, global_row, i) orelse return false;
@@ -44,7 +46,7 @@ fn rowMatches(session: *term_mod.TerminalSession, global_row: usize, expected: [
     return true;
 }
 
-fn bottomNonBlankRowFirstCodepoint(session: *term_mod.TerminalSession) ?u32 {
+fn bottomNonBlankRowFirstCodepoint(session: *terminal_runtime.PtyTerminalRuntime) ?u32 {
     const snapshot = session.snapshot();
     const total = snapshot.scrollback_count + snapshot.rows;
     var idx: usize = total;
@@ -59,10 +61,10 @@ fn bottomNonBlankRowFirstCodepoint(session: *term_mod.TerminalSession) ?u32 {
 test "terminal reflow merges wrapped scrollback rows" {
     const allocator = std.testing.allocator;
 
-    var session = try term_mod.TerminalSession.init(allocator, 2, 4);
+    var session = try terminal_runtime.PtyTerminalRuntime.init(allocator, 2, 4);
     defer session.deinit();
 
-    term_mod.debugFeedBytes(session, "ABCDEFG\nHIJ\n");
+    terminal_debug.debugFeedBytes(session, "ABCDEFG\nHIJ\n");
     try session.resize(2, 8);
 
     const snapshot = session.snapshot();
@@ -81,11 +83,11 @@ test "terminal reflow merges wrapped scrollback rows" {
 test "terminal reflow preserves trailing blank cursor and selection" {
     const allocator = std.testing.allocator;
 
-    var session = try term_mod.TerminalSession.init(allocator, 1, 4);
+    var session = try terminal_runtime.PtyTerminalRuntime.init(allocator, 1, 4);
     defer session.deinit();
 
-    term_mod.debugFeedBytes(session, "A");
-    term_mod.debugSetCursor(session, 0, 3);
+    terminal_debug.debugFeedBytes(session, "A");
+    terminal_debug.debugSetCursor(session, 0, 3);
     session.startSelection(0, 3);
     session.finishSelection();
 
@@ -105,10 +107,10 @@ test "terminal reflow preserves trailing blank cursor and selection" {
 test "terminal reflow wraps wide scrollback rows" {
     const allocator = std.testing.allocator;
 
-    var session = try term_mod.TerminalSession.init(allocator, 1, 8);
+    var session = try terminal_runtime.PtyTerminalRuntime.init(allocator, 1, 8);
     defer session.deinit();
 
-    term_mod.debugFeedBytes(session, "ABCDEFGH\n");
+    terminal_debug.debugFeedBytes(session, "ABCDEFGH\n");
     try session.resize(1, 4);
 
     const snapshot = session.snapshot();
@@ -129,10 +131,10 @@ test "terminal reflow wraps wide scrollback rows" {
 test "terminal reflow preserves scrolled anchor line" {
     const allocator = std.testing.allocator;
 
-    var session = try term_mod.TerminalSession.init(allocator, 2, 4);
+    var session = try terminal_runtime.PtyTerminalRuntime.init(allocator, 2, 4);
     defer session.deinit();
 
-    term_mod.debugFeedBytes(session, "AAAAAA\nBBBBBB\nCCCCCC\nDDDDDD\n");
+    terminal_debug.debugFeedBytes(session, "AAAAAA\nBBBBBB\nCCCCCC\nDDDDDD\n");
     session.scrollBy(2);
 
     const snapshot_before = session.snapshot();
@@ -152,10 +154,10 @@ test "terminal reflow preserves scrolled anchor line" {
 test "terminal reflow preserves bottom anchor when not scrolled" {
     const allocator = std.testing.allocator;
 
-    var session = try term_mod.TerminalSession.init(allocator, 2, 4);
+    var session = try terminal_runtime.PtyTerminalRuntime.init(allocator, 2, 4);
     defer session.deinit();
 
-    term_mod.debugFeedBytes(session, "111111\n222222\n333333\n444444\n");
+    terminal_debug.debugFeedBytes(session, "111111\n222222\n333333\n444444\n");
 
     const expected = bottomNonBlankRowFirstCodepoint(session) orelse return error.MissingScrollback;
 
@@ -168,10 +170,10 @@ test "terminal reflow preserves bottom anchor when not scrolled" {
 test "terminal reflow keeps selection active when scrolled" {
     const allocator = std.testing.allocator;
 
-    var session = try term_mod.TerminalSession.init(allocator, 2, 4);
+    var session = try terminal_runtime.PtyTerminalRuntime.init(allocator, 2, 4);
     defer session.deinit();
 
-    term_mod.debugFeedBytes(session, "AAAAAA\nBBBBBB\nCCCCCC\nDDDDDD\n");
+    terminal_debug.debugFeedBytes(session, "AAAAAA\nBBBBBB\nCCCCCC\nDDDDDD\n");
     session.scrollBy(2);
 
     const snapshot_before = session.snapshot();
@@ -196,10 +198,10 @@ test "terminal reflow keeps selection active when scrolled" {
 test "terminal reflow preserves selection content after resize" {
     const allocator = std.testing.allocator;
 
-    var session = try term_mod.TerminalSession.init(allocator, 2, 4);
+    var session = try terminal_runtime.PtyTerminalRuntime.init(allocator, 2, 4);
     defer session.deinit();
 
-    term_mod.debugFeedBytes(session, "AAAAAA\nBBBBBB\nCCCCCC\nDDDDDD\n");
+    terminal_debug.debugFeedBytes(session, "AAAAAA\nBBBBBB\nCCCCCC\nDDDDDD\n");
     session.scrollBy(2);
 
     const snapshot_before = session.snapshot();
@@ -225,10 +227,10 @@ test "terminal reflow preserves selection content after resize" {
 test "terminal reflow expands scrollback when narrowing" {
     const allocator = std.testing.allocator;
 
-    var session = try term_mod.TerminalSession.init(allocator, 2, 6);
+    var session = try terminal_runtime.PtyTerminalRuntime.init(allocator, 2, 6);
     defer session.deinit();
 
-    term_mod.debugFeedBytes(session, "AAAAAA\nBBBBBB\nCCCCCC\nDDDDDD\nEEEEEE\n");
+    terminal_debug.debugFeedBytes(session, "AAAAAA\nBBBBBB\nCCCCCC\nDDDDDD\nEEEEEE\n");
 
     const scrollback_before = session.snapshot().scrollback_count;
     try session.resize(2, 3);
@@ -240,10 +242,10 @@ test "terminal reflow expands scrollback when narrowing" {
 test "terminal selection survives output while scrolled" {
     const allocator = std.testing.allocator;
 
-    var session = try term_mod.TerminalSession.init(allocator, 2, 6);
+    var session = try terminal_runtime.PtyTerminalRuntime.init(allocator, 2, 6);
     defer session.deinit();
 
-    term_mod.debugFeedBytes(session, "AAAAAA\nBBBBBB\nCCCCCC\nDDDDDD\n");
+    terminal_debug.debugFeedBytes(session, "AAAAAA\nBBBBBB\nCCCCCC\nDDDDDD\n");
     session.scrollBy(2);
 
     const snapshot_before = session.snapshot();
@@ -254,7 +256,7 @@ test "terminal selection survives output while scrolled" {
     session.updateSelection(select_row, 4);
     session.finishSelection();
 
-    term_mod.debugFeedBytes(session, "EEEEEE\n");
+    terminal_debug.debugFeedBytes(session, "EEEEEE\n");
 
     if (session.snapshot().selection) |selection| {
         try std.testing.expect(selection.active);
@@ -269,10 +271,10 @@ test "terminal selection survives output while scrolled" {
 test "terminal view cache selection clamps row end to last content column" {
     const allocator = std.testing.allocator;
 
-    var session = try term_mod.TerminalSession.init(allocator, 2, 8);
+    var session = try terminal_runtime.PtyTerminalRuntime.init(allocator, 2, 8);
     defer session.deinit();
 
-    term_mod.debugFeedBytes(session, "ab\n");
+    terminal_debug.debugFeedBytes(session, "ab\n");
     session.startSelection(0, 0);
     session.updateSelection(0, 7);
     session.finishSelection();
@@ -289,10 +291,10 @@ test "terminal view cache selection clamps row end to last content column" {
 test "terminal view cache suppresses blank rows in multi-row selection overlay" {
     const allocator = std.testing.allocator;
 
-    var session = try term_mod.TerminalSession.init(allocator, 2, 8);
+    var session = try terminal_runtime.PtyTerminalRuntime.init(allocator, 2, 8);
     defer session.deinit();
 
-    term_mod.debugFeedBytes(session, "ab\n");
+    terminal_debug.debugFeedBytes(session, "ab\n");
     session.startSelection(0, 0);
     session.updateSelection(1, 7);
     session.finishSelection();
@@ -310,10 +312,10 @@ test "terminal view cache suppresses blank rows in multi-row selection overlay" 
 test "terminal locked scroll refresh consumes pending view cache update" {
     const allocator = std.testing.allocator;
 
-    var session = try term_mod.TerminalSession.init(allocator, 2, 4);
+    var session = try terminal_runtime.PtyTerminalRuntime.init(allocator, 2, 4);
     defer session.deinit();
 
-    term_mod.debugFeedBytes(session, "AAAA\nBBBB\nCCCC\nDDDD\n");
+    terminal_debug.debugFeedBytes(session, "AAAA\nBBBB\nCCCC\nDDDD\n");
     session.updateViewCacheForScrollLocked();
 
     session.lock();
@@ -332,10 +334,10 @@ test "terminal locked scroll refresh consumes pending view cache update" {
 test "terminal reflow remaps saved cursor" {
     const allocator = std.testing.allocator;
 
-    var session = try term_mod.TerminalSession.init(allocator, 2, 4);
+    var session = try terminal_runtime.PtyTerminalRuntime.init(allocator, 2, 4);
     defer session.deinit();
 
-    term_mod.debugFeedBytes(session, "ABCDEFGH");
+    terminal_debug.debugFeedBytes(session, "ABCDEFGH");
     session.primary.setCursor(1, 1);
     session.saveCursor();
 
@@ -349,7 +351,7 @@ test "terminal reflow remaps saved cursor" {
 test "terminal reflow preserves multi-row cell roots" {
     const allocator = std.testing.allocator;
 
-    var session = try term_mod.TerminalSession.init(allocator, 2, 4);
+    var session = try terminal_runtime.PtyTerminalRuntime.init(allocator, 2, 4);
     defer session.deinit();
 
     const default_cell = session.primary.defaultCell();
@@ -383,10 +385,10 @@ test "terminal reflow preserves multi-row cell roots" {
 test "terminal reflow keeps top content visible without scrollback" {
     const allocator = std.testing.allocator;
 
-    var session = try term_mod.TerminalSession.init(allocator, 4, 8);
+    var session = try terminal_runtime.PtyTerminalRuntime.init(allocator, 4, 8);
     defer session.deinit();
 
-    term_mod.debugFeedBytes(session, "HELLO\n");
+    terminal_debug.debugFeedBytes(session, "HELLO\n");
 
     try session.resize(2, 10);
 

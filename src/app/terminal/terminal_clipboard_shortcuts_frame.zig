@@ -6,14 +6,14 @@ const app_terminal_clipboard_shortcuts_runtime = @import("terminal_clipboard_sho
 const input_actions = @import("../../input/input_actions.zig");
 const app_shell = @import("../../app_shell.zig");
 const widgets = @import("../../ui/widgets.zig");
-const terminal_mod = @import("../../terminal/core/terminal.zig");
+const terminal_runtime = @import("../../terminal/core/terminal_runtime.zig");
 
 pub fn handle(
     actions: []const input_actions.InputAction,
     allocator: std.mem.Allocator,
     app_mode: app_bootstrap.AppMode,
-    terminal_workspace: *?terminal_mod.TerminalWorkspace,
-    terminals: []*terminal_mod.PtyTerminalSession,
+    terminal_workspace: *?terminal_runtime.TerminalWorkspace,
+    terminals: []*terminal_runtime.PtyTerminalRuntime,
     terminal_widgets: []widgets.TerminalWidget,
     shell: *app_shell.Shell,
     input_event_count: usize,

@@ -2,10 +2,10 @@ const std = @import("std");
 const app_theme_utils = @import("../theme_utils.zig");
 const app_shell = @import("../../app_shell.zig");
 const term_types = @import("../../terminal/model/types.zig");
-const terminal_mod = @import("../../terminal/core/terminal.zig");
+const terminal_runtime = @import("../../terminal/core/terminal_runtime.zig");
 const widgets = @import("../../ui/widgets.zig");
 
-const TerminalSession = terminal_mod.PtyTerminalSession;
+const TerminalSession = terminal_runtime.PtyTerminalRuntime;
 const TerminalWidget = widgets.TerminalWidget;
 
 pub fn setSessionPalette(term: *TerminalSession, theme: *const app_shell.Theme) void {

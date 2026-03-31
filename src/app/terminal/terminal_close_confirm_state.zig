@@ -1,8 +1,8 @@
 const app_modes = @import("../modes/mod.zig");
-const terminal_mod = @import("../../terminal/core/terminal.zig");
+const terminal_runtime = @import("../../terminal/core/terminal_runtime.zig");
 
-const TerminalTabId = terminal_mod.TerminalTabId;
-const TerminalWorkspace = terminal_mod.TerminalWorkspace;
+const TerminalTabId = terminal_runtime.TerminalTabId;
+const TerminalWorkspace = terminal_runtime.TerminalWorkspace;
 
 pub fn reconcilePending(
     pending: ?TerminalTabId,

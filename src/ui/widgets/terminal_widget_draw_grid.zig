@@ -1,7 +1,7 @@
 const std = @import("std");
 const app_shell = @import("../../app_shell.zig");
 const app_logger = @import("../../app_logger.zig");
-const terminal_mod = @import("../../terminal/core/terminal.zig");
+const terminal_publication = @import("../../terminal/core/terminal_publication.zig");
 const renderer_mod = @import("../renderer.zig");
 const terminal_font_mod = @import("../terminal_font.zig");
 const terminal_glyphs = @import("../renderer/terminal_glyphs.zig");
@@ -9,8 +9,8 @@ const terminal_underline = @import("../renderer/terminal_underline.zig");
 
 const Shell = app_shell.Shell;
 const Color = app_shell.Color;
-const CursorPos = terminal_mod.CursorPos;
-const Cell = terminal_mod.Cell;
+const CursorPos = terminal_publication.CursorPos;
+const Cell = terminal_publication.Cell;
 const TerminalFont = terminal_font_mod.TerminalFont;
 const hb = terminal_font_mod.c;
 const DrawContext = terminal_font_mod.DrawContext;

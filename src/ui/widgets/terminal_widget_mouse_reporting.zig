@@ -1,4 +1,4 @@
-const terminal_mod = @import("../../terminal/core/terminal.zig");
+const terminal_runtime = @import("../../terminal/core/terminal_runtime.zig");
 const shared_types = @import("../../types/mod.zig");
 
 pub const MouseReportingParams = struct {
@@ -9,7 +9,7 @@ pub const MouseReportingParams = struct {
     hit_cell_h: f32,
     rows: usize,
     cols: usize,
-    mod: terminal_mod.Modifier,
+    mod: terminal_runtime.Modifier,
 };
 
 pub fn handleMouseReporting(
@@ -48,7 +48,7 @@ pub fn handleMouseReporting(
     if (wheel_steps != 0) {
         var remaining = wheel_steps;
         while (remaining != 0) {
-            const button: terminal_mod.MouseButton = if (remaining > 0) .wheel_up else .wheel_down;
+            const button: terminal_runtime.MouseButton = if (remaining > 0) .wheel_up else .wheel_down;
             if (try self.session.reportMouseEvent(.{
                 .kind = .wheel,
                 .button = button,

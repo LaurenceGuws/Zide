@@ -5,7 +5,8 @@ const app_modes = @import("modes/mod.zig");
 const terminal_shell_icon_runtime = @import("terminal/terminal_shell_icon_runtime.zig");
 const editor_types = @import("../editor/types.zig");
 const app_logger = @import("../app_logger.zig");
-const terminal_mod = @import("../terminal/core/terminal.zig");
+const terminal_runtime = @import("../terminal/core/terminal_runtime.zig");
+const terminal_publication = @import("../terminal/core/terminal_publication.zig");
 const metrics_mod = @import("../terminal/model/metrics.zig");
 const term_types = @import("../terminal/model/types.zig");
 const shared_types = @import("../types/mod.zig");
@@ -50,11 +51,11 @@ pub const GrammarManager = grammar_manager_mod.GrammarManager;
 pub const EditorRenderCache = editor_render_cache_mod.EditorRenderCache;
 pub const EditorClusterCache = widgets.EditorClusterCache;
 
-pub const TerminalSession = terminal_mod.PtyTerminalSession;
-pub const TerminalWorkspace = terminal_mod.TerminalWorkspace;
-pub const TerminalTabId = terminal_mod.TerminalTabId;
-pub const TerminalPresentationFeedback = terminal_mod.PresentationFeedback;
-pub const TerminalCloseConfirmContext = terminal_mod.TerminalWorkspace.CloseConfirmContext;
+pub const TerminalSession = terminal_runtime.PtyTerminalRuntime;
+pub const TerminalWorkspace = terminal_runtime.TerminalWorkspace;
+pub const TerminalTabId = terminal_runtime.TerminalTabId;
+pub const TerminalPresentationFeedback = terminal_publication.PresentationFeedback;
+pub const TerminalCloseConfirmContext = terminal_runtime.TerminalWorkspace.CloseConfirmContext;
 
 pub const PendingTerminalPresentationFeedback = struct {
     session: *TerminalSession,

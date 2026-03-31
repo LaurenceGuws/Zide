@@ -2,7 +2,7 @@ const std = @import("std");
 const builtin = @import("builtin");
 const app_logger = @import("app_logger.zig");
 const c_api = @import("terminal/ffi/c_api.zig");
-const terminal = @import("terminal/core/terminal.zig");
+const terminal_runtime = @import("terminal/core/terminal_runtime.zig");
 
 pub fn main() !void {
     if (builtin.os.tag == .windows) return;
@@ -23,8 +23,8 @@ pub fn main() !void {
     if (c_api.zide_terminal_send_text(handle, command.ptr, command.len) != 0) return error.SendTextFailed;
 
     const enter_event = c_api.ZideTerminalKeyEvent{
-        .key = terminal.VTERM_KEY_ENTER,
-        .modifiers = terminal.VTERM_MOD_NONE,
+        .key = terminal_runtime.VTERM_KEY_ENTER,
+        .modifiers = terminal_runtime.VTERM_MOD_NONE,
     };
     if (c_api.zide_terminal_send_key(handle, &enter_event) != 0) return error.SendEnterFailed;
 

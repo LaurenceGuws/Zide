@@ -1,6 +1,7 @@
 const std = @import("std");
 const shared_types = @import("../src/types/mod.zig");
-const terminal_mod = @import("../src/terminal/core/terminal.zig");
+const terminal_runtime = @import("../src/terminal/core/terminal_runtime.zig");
+const terminal_publication = @import("../src/terminal/core/terminal_publication.zig");
 const terminal_widget_mod = @import("../src/ui/widgets/terminal_widget.zig");
 const terminal_hover_mod = @import("../src/ui/widgets/terminal_widget_hover.zig");
 
@@ -208,7 +209,7 @@ test "input snapshot init and snapshot copy" {
 
 test "input replay updates terminal hover state" {
     const allocator = std.testing.allocator;
-    var session = try terminal_mod.TerminalSession.init(allocator, 2, 3);
+    var session = try terminal_runtime.PtyTerminalRuntime.init(allocator, 2, 3);
     defer session.deinit();
 
     var widget = terminal_widget_mod.TerminalWidget.init(session, .kitty);

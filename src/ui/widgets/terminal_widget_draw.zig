@@ -1,6 +1,6 @@
 const std = @import("std");
 const app_shell = @import("../../app_shell.zig");
-const terminal_mod = @import("../../terminal/core/terminal.zig");
+const terminal_publication = @import("../../terminal/core/terminal_publication.zig");
 const render_cache_mod = @import("../../terminal/core/render_cache.zig");
 const app_logger = @import("../../app_logger.zig");
 const shared_types = @import("../../types/mod.zig");
@@ -15,14 +15,14 @@ const kitty_mod = @import("terminal_widget_kitty.zig");
 
 const Shell = app_shell.Shell;
 const Color = app_shell.Color;
-const CursorPos = terminal_mod.CursorPos;
-const Cell = terminal_mod.Cell;
+const CursorPos = terminal_publication.CursorPos;
+const Cell = terminal_publication.Cell;
 const Rgba = terminal_font_mod.Rgba;
 
 const RenderCache = render_cache_mod.RenderCache;
-const PresentationCapture = terminal_mod.PresentationCapture;
-const PresentedRenderCache = terminal_mod.PresentedRenderCache;
-const PresentationFeedback = terminal_mod.PresentationFeedback;
+const PresentationCapture = terminal_publication.PresentationCapture;
+const PresentedRenderCache = terminal_publication.PresentedRenderCache;
+const PresentationFeedback = terminal_publication.PresentationFeedback;
 var frame_latency_seq: u64 = 0;
 var frame_latency_metrics: FrameLatencyMetrics = .{};
 var capture_burst_seq: u64 = 0;

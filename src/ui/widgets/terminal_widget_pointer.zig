@@ -1,6 +1,6 @@
 const std = @import("std");
 
-const terminal_mod = @import("../../terminal/core/terminal.zig");
+const terminal_runtime = @import("../../terminal/core/terminal_runtime.zig");
 const app_logger = @import("../../app_logger.zig");
 const shared_types = @import("../../types/mod.zig");
 const paste_mod = @import("terminal_widget_paste.zig");
@@ -24,7 +24,7 @@ pub const PointerParams = struct {
     scroll_offset: usize,
     has_visible_grid: bool,
     cache_selection_active: bool,
-    mod: terminal_mod.Modifier,
+    mod: terminal_runtime.Modifier,
 };
 
 pub const PointerResult = struct {
@@ -136,11 +136,11 @@ pub fn handlePointerInput(
             const global_row = params.start_line + clamped_row;
             if (global_row < params.history_len + params.rows) {
                 if (!selection_active) {
-                    const anchor = terminal_mod.SelectionPos{
+                    const anchor = terminal_runtime.SelectionPos{
                         .row = self.selection_gesture.row,
                         .col = self.selection_gesture.col_start,
                     };
-                    const target = terminal_mod.SelectionPos{
+                    const target = terminal_runtime.SelectionPos{
                         .row = global_row,
                         .col = clamped_col,
                     };

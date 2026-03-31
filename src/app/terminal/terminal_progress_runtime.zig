@@ -1,17 +1,17 @@
 const std = @import("std");
 const app_shell = @import("../../app_shell.zig");
-const terminal_mod = @import("../../terminal/core/terminal.zig");
+const terminal_runtime = @import("../../terminal/core/terminal_runtime.zig");
 
 const Shell = app_shell.Shell;
 const Color = app_shell.Color;
-const ProgressState = terminal_mod.ProgressState;
+const ProgressState = terminal_runtime.ProgressState;
 
 pub fn drawActiveTabProgress(
     shell: *Shell,
     x: f32,
     y: f32,
     width: f32,
-    activity: terminal_mod.ActivityMetadata,
+    activity: terminal_runtime.ActivityMetadata,
 ) void {
     if (width <= 0) return;
     if (!activity.progress.active()) return;

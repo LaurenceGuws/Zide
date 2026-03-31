@@ -1,7 +1,7 @@
 const shared = @import("../../types/mod.zig").snapshots;
-const term_mod = @import("terminal.zig");
+const terminal_publication = @import("terminal_publication.zig");
 
-pub fn toSharedSnapshot(snapshot: term_mod.TerminalSnapshot) shared.TerminalSnapshot {
+pub fn toSharedSnapshot(snapshot: terminal_publication.TerminalSnapshot) shared.TerminalSnapshot {
     // TODO: map terminal snapshot to shared types once widget/core split lands.
     return shared.TerminalSnapshot{
         .rows = @intCast(snapshot.rows),

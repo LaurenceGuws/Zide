@@ -38,7 +38,8 @@ const session_config = @import("session_config.zig");
 const session_content_api = @import("session_content_api.zig");
 const session_runtime = @import("session_runtime.zig");
 const session_debug = @import("terminal_session_debug.zig");
-const session_public_types = @import("session_public_types.zig");
+const session_runtime_api = @import("session_runtime_api.zig");
+const session_publication_api = @import("session_publication_api.zig");
 const osc_kitty_clipboard = @import("../protocol/osc_kitty_clipboard.zig");
 const terminal_transport = @import("terminal_transport.zig");
 const Pty = pty_mod.Pty;
@@ -56,29 +57,29 @@ const TerminalCoreType = terminal_core_mod.TerminalCore;
 const ActiveScreen = terminal_core_mod.ActiveScreen;
 pub const TerminalCore = terminal_core_mod.TerminalCore;
 
-pub const KittyImageFormat = session_public_types.KittyImageFormat;
-pub const KittyImage = session_public_types.KittyImage;
-pub const KittyPlacement = session_public_types.KittyPlacement;
+pub const KittyImageFormat = snapshot_mod.KittyImageFormat;
+pub const KittyImage = snapshot_mod.KittyImage;
+pub const KittyPlacement = snapshot_mod.KittyPlacement;
 
-pub const RenderCache = session_public_types.RenderCache;
+pub const RenderCache = @import("render_cache.zig").RenderCache;
 
-pub const TerminalSnapshot = session_public_types.TerminalSnapshot;
-pub const DebugSnapshot = session_public_types.DebugSnapshot;
-pub const ScrollbackInfo = session_public_types.ScrollbackInfo;
-pub const ScrollbackRange = session_public_types.ScrollbackRange;
-pub const SelectionGesture = session_public_types.SelectionGesture;
-pub const ClickSelectionResult = session_public_types.ClickSelectionResult;
-pub const SessionMetadata = session_public_types.SessionMetadata;
+pub const TerminalSnapshot = snapshot_mod.TerminalSnapshot;
+pub const DebugSnapshot = snapshot_mod.DebugSnapshot;
+pub const ScrollbackInfo = session_content.ScrollbackInfo;
+pub const ScrollbackRange = session_content.ScrollbackRange;
+pub const SelectionGesture = session_selection.SelectionGesture;
+pub const ClickSelectionResult = session_selection.ClickSelectionResult;
+pub const SessionMetadata = session_host_types.SessionMetadata;
 pub const ActivityMetadata = session_host_types.ActivityMetadata;
 pub const ProgressMetadata = session_host_types.ProgressMetadata;
 pub const ProgressState = session_host_types.ProgressState;
-pub const PresentedRenderCache = session_public_types.PresentedRenderCache;
-pub const PresentationCapture = session_public_types.PresentationCapture;
-pub const AltExitPresentationInfo = session_public_types.AltExitPresentationInfo;
-pub const PresentationFeedback = session_public_types.PresentationFeedback;
+pub const PresentedRenderCache = terminal_publication.PresentedRenderCache;
+pub const PresentationCapture = terminal_publication.PresentationCapture;
+pub const AltExitPresentationInfo = terminal_publication.AltExitPresentationInfo;
+pub const PresentationFeedback = terminal_publication.PresentationFeedback;
 
-pub const PtyWriteGuard = session_public_types.PtyWriteGuard;
-pub const InputSnapshot = session_public_types.InputSnapshot;
+pub const PtyWriteGuard = terminal_transport.Writer;
+pub const InputSnapshot = session_input_snapshot.InputSnapshot;
 
 pub fn debugSnapshot(self: *TerminalSession) DebugSnapshot {
     return session_debug.debugSnapshot(self);
@@ -226,7 +227,7 @@ pub const TerminalSession = struct {
     grapheme_cluster_shaping_2027: bool,
     color_scheme_dark: bool,
     kitty_paste_events_5522: bool,
-    input: session_public_types.InputState,
+    input: input_mod.InputState,
     input_snapshot: InputSnapshot,
     pty_write_mutex: std.Thread.Mutex,
     cell_width: u16,
@@ -333,71 +334,21 @@ pub const TerminalSession = struct {
         session_runtime.deinit(self);
     }
 
-    pub fn prepareForShutdown(self: *TerminalSession) void {
-        session_runtime.prepareForShutdown(self);
-    }
-
-    pub fn start(self: *TerminalSession, shell: ?[:0]const u8) !void {
-        try session_runtime.start(self, shell);
-    }
-
-    pub fn attachPtyTransport(self: *TerminalSession, pty: Pty) void {
-        session_runtime.attachPtyTransport(self, pty);
-    }
-
-    pub fn detachPtyTransport(self: *TerminalSession) void {
-        session_runtime.detachPtyTransport(self);
-    }
-
-    pub fn startNoThreads(self: *TerminalSession, shell: ?[:0]const u8) !void {
-        try session_runtime.startNoThreads(self, shell);
-    }
-
-    pub fn setLaunchShellPath(self: *TerminalSession, shell_path: ?[]const u8) !void {
-        if (self.launch_shell_path) |old| {
-            self.allocator.free(old);
-            self.launch_shell_path = null;
-        }
-        if (shell_path) |path| {
-            self.launch_shell_path = try self.allocator.dupe(u8, path);
-        }
-    }
-
-    pub fn launchShellPath(self: *const TerminalSession) []const u8 {
-        return self.launch_shell_path orelse "";
-    }
-
-    pub fn attachExternalTransport(self: *TerminalSession) void {
-        session_runtime.attachExternalTransport(self);
-    }
-
-    pub fn enqueueExternalBytes(self: *TerminalSession, bytes: []const u8) !bool {
-        return try session_runtime.enqueueExternalBytes(self, bytes);
-    }
-
-    pub fn closeExternalTransport(self: *TerminalSession) bool {
-        return session_runtime.closeExternalTransport(self);
-    }
-
-    pub fn reportExternalChildExit(self: *TerminalSession, code: ?i32) bool {
-        return session_runtime.reportExternalChildExit(self, code);
-    }
-
-    pub fn takeExternalOutgoingBytes(self: *TerminalSession, allocator: std.mem.Allocator) !?[]u8 {
-        return try session_runtime.takeExternalOutgoingBytes(self, allocator);
-    }
-
-    pub fn poll(self: *TerminalSession) !void {
-        return session_runtime.poll(self);
-    }
-
-    pub fn refreshChildExit(self: *TerminalSession) void {
-        session_runtime.refreshChildExit(self);
-    }
-
-    pub fn hasData(self: *TerminalSession) bool {
-        return session_runtime.hasData(self);
-    }
+    pub const prepareForShutdown = session_runtime_api.prepareForShutdown;
+    pub const start = session_runtime_api.start;
+    pub const attachPtyTransport = session_runtime_api.attachPtyTransport;
+    pub const detachPtyTransport = session_runtime_api.detachPtyTransport;
+    pub const startNoThreads = session_runtime_api.startNoThreads;
+    pub const setLaunchShellPath = session_runtime_api.setLaunchShellPath;
+    pub const launchShellPath = session_runtime_api.launchShellPath;
+    pub const attachExternalTransport = session_runtime_api.attachExternalTransport;
+    pub const enqueueExternalBytes = session_runtime_api.enqueueExternalBytes;
+    pub const closeExternalTransport = session_runtime_api.closeExternalTransport;
+    pub const reportExternalChildExit = session_runtime_api.reportExternalChildExit;
+    pub const takeExternalOutgoingBytes = session_runtime_api.takeExternalOutgoingBytes;
+    pub const poll = session_runtime_api.poll;
+    pub const refreshChildExit = session_runtime_api.refreshChildExit;
+    pub const hasData = session_runtime_api.hasData;
 
     pub fn lock(self: *TerminalSession) void {
         self.state_mutex.lock();
@@ -411,41 +362,15 @@ pub const TerminalSession = struct {
         self.state_mutex.unlock();
     }
 
-    pub fn currentGeneration(self: *const TerminalSession) u64 {
-        return terminal_publication.currentGeneration(self);
-    }
-
-    pub fn publishedGeneration(self: *const TerminalSession) u64 {
-        return terminal_publication.publishedGeneration(self);
-    }
-
-    pub fn presentedGeneration(self: *const TerminalSession) u64 {
-        return terminal_publication.presentedGeneration(self);
-    }
-
-    pub fn notePresentedGeneration(self: *TerminalSession, generation: u64) void {
-        terminal_publication.notePresentedGeneration(self, generation);
-    }
-
-    pub fn acknowledgePresentedGeneration(self: *TerminalSession, generation: u64) bool {
-        return terminal_publication.acknowledgePresentedGeneration(self, generation);
-    }
-
-    pub fn hasPublishedGenerationBacklog(self: *TerminalSession) bool {
-        return terminal_publication.hasPublishedGenerationBacklog(self);
-    }
-
-    pub fn pollBacklogHint(self: *TerminalSession) bool {
-        return session_runtime.pollBacklogHint(self);
-    }
-
-    pub fn lockPtyWriter(self: *TerminalSession) ?PtyWriteGuard {
-        return session_runtime.lockPtyWriter(self);
-    }
-
-    pub fn writePtyBytes(self: *TerminalSession, bytes: []const u8) !void {
-        try session_runtime.writePtyBytes(self, bytes);
-    }
+    pub const currentGeneration = session_publication_api.currentGeneration;
+    pub const publishedGeneration = session_publication_api.publishedGeneration;
+    pub const presentedGeneration = session_publication_api.presentedGeneration;
+    pub const notePresentedGeneration = session_publication_api.notePresentedGeneration;
+    pub const acknowledgePresentedGeneration = session_publication_api.acknowledgePresentedGeneration;
+    pub const hasPublishedGenerationBacklog = session_publication_api.hasPublishedGenerationBacklog;
+    pub const pollBacklogHint = session_runtime_api.pollBacklogHint;
+    pub const lockPtyWriter = session_runtime_api.lockPtyWriter;
+    pub const writePtyBytes = session_runtime_api.writePtyBytes;
 
     pub fn sendKey(self: *TerminalSession, key: Key, mod: Modifier) !void {
         try session_input.sendKey(self, key, mod);
@@ -690,45 +615,16 @@ pub const TerminalSession = struct {
         session_protocol.exitAltScreen(self, restore_cursor);
     }
 
-    pub fn snapshot(self: *TerminalSession) TerminalSnapshot {
-        return terminal_publication.snapshot(self);
-    }
-
-    pub fn renderCache(self: *TerminalSession) *const RenderCache {
-        return terminal_publication.renderCache(self);
-    }
-
-    pub fn copyPublishedRenderCache(self: *TerminalSession, dst: *RenderCache) !PresentedRenderCache {
-        return terminal_publication.copyPublishedRenderCache(self, dst);
-    }
-
-    pub fn capturePresentation(self: *TerminalSession, dst: *RenderCache) !PresentationCapture {
-        return terminal_publication.capturePresentation(self, dst);
-    }
-
-    pub fn completePresentationFeedback(self: *TerminalSession, feedback: PresentationFeedback) void {
-        terminal_publication.completePresentationFeedback(self, feedback);
-    }
-
-    pub fn finishFramePresentation(self: *TerminalSession, feedback: PresentationFeedback) void {
-        terminal_publication.finishFramePresentation(self, feedback);
-    }
-
-    pub fn syncUpdatesActive(self: *const TerminalSession) bool {
-        return terminal_publication.syncUpdatesActive(self);
-    }
-
-    pub fn setSyncUpdates(self: *TerminalSession, enabled: bool) void {
-        terminal_publication.setSyncUpdates(self, enabled);
-    }
-
-    pub fn setSyncUpdatesLocked(self: *TerminalSession, enabled: bool) void {
-        terminal_publication.setSyncUpdatesLocked(self, enabled);
-    }
-
-    pub fn clearPublishedDamageIfGeneration(self: *TerminalSession, expected_generation: u64, clear_screen_dirty: bool) bool {
-        return terminal_publication.clearPublishedDamageIfGeneration(self, expected_generation, clear_screen_dirty);
-    }
+    pub const snapshot = session_publication_api.snapshot;
+    pub const renderCache = session_publication_api.renderCache;
+    pub const copyPublishedRenderCache = session_publication_api.copyPublishedRenderCache;
+    pub const capturePresentation = session_publication_api.capturePresentation;
+    pub const completePresentationFeedback = session_publication_api.completePresentationFeedback;
+    pub const finishFramePresentation = session_publication_api.finishFramePresentation;
+    pub const syncUpdatesActive = session_publication_api.syncUpdatesActive;
+    pub const setSyncUpdates = session_publication_api.setSyncUpdates;
+    pub const setSyncUpdatesLocked = session_publication_api.setSyncUpdatesLocked;
+    pub const clearPublishedDamageIfGeneration = session_publication_api.clearPublishedDamageIfGeneration;
 
     pub const CloseConfirmSignals = session_host_types.CloseConfirmSignals;
 };

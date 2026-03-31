@@ -46,7 +46,6 @@ pub const RenderCache = struct {
     selection_active: bool,
     sync_updates_active: bool,
     screen_reverse: bool,
-    mouse_reporting_active: bool,
     kitty_generation: u64,
     clear_generation: u64,
     viewport_shift_rows: i32,
@@ -86,7 +85,6 @@ pub const RenderCache = struct {
             .selection_active = false,
             .sync_updates_active = false,
             .screen_reverse = false,
-            .mouse_reporting_active = false,
             .kitty_generation = 0,
             .clear_generation = 0,
             .viewport_shift_rows = 0,
@@ -170,7 +168,6 @@ pub fn copySnapshot(dst: *RenderCache, allocator: std.mem.Allocator, src: *const
     dst.selection_active = src.selection_active;
     dst.sync_updates_active = src.sync_updates_active;
     dst.screen_reverse = src.screen_reverse;
-    dst.mouse_reporting_active = src.mouse_reporting_active;
     dst.kitty_generation = src.kitty_generation;
     dst.clear_generation = src.clear_generation;
     dst.viewport_shift_rows = src.viewport_shift_rows;

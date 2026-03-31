@@ -2,7 +2,7 @@ const std = @import("std");
 const builtin = @import("builtin");
 const posix = std.posix;
 
-const terminal = @import("../src/terminal/core/terminal.zig");
+const terminal_runtime = @import("../src/terminal/core/terminal_runtime.zig");
 const kitty = @import("../src/terminal/kitty/graphics.zig");
 const pty_mod = @import("../src/terminal/io/pty.zig");
 
@@ -141,11 +141,11 @@ const PipeCapture = struct {
 };
 
 fn withSessionAndCapture(
-    test_fn: fn (*terminal.TerminalSession, *PipeCapture) anyerror!void,
+    test_fn: fn (*terminal_runtime.PtyTerminalRuntime, *PipeCapture) anyerror!void,
 ) !void {
     try requireUnix();
     const allocator = std.testing.allocator;
-    var session = try terminal.TerminalSession.init(allocator, 6, 12);
+    var session = try terminal_runtime.PtyTerminalRuntime.init(allocator, 6, 12);
     defer session.deinit();
 
     var capture = try PipeCapture.init();
@@ -160,7 +160,7 @@ fn withSessionAndCapture(
 fn expectKittyQueryReply(seq: []const u8, expected_reply: []const u8) !void {
     try requireUnix();
     const allocator = std.testing.allocator;
-    var session = try terminal.TerminalSession.init(allocator, 6, 12);
+    var session = try terminal_runtime.PtyTerminalRuntime.init(allocator, 6, 12);
     defer session.deinit();
 
     var capture = try PipeCapture.init();
@@ -178,7 +178,7 @@ fn expectKittyQueryReply(seq: []const u8, expected_reply: []const u8) !void {
 fn expectKittyQueryNoReply(seq: []const u8) !void {
     try requireUnix();
     const allocator = std.testing.allocator;
-    var session = try terminal.TerminalSession.init(allocator, 6, 12);
+    var session = try terminal_runtime.PtyTerminalRuntime.init(allocator, 6, 12);
     defer session.deinit();
 
     var capture = try PipeCapture.init();
@@ -193,7 +193,7 @@ fn expectKittyQueryNoReply(seq: []const u8) !void {
 
 test "kitty parse query metadata-only emits OK reply" {
     try withSessionAndCapture(struct {
-        fn run(session: *terminal.TerminalSession, capture: *PipeCapture) !void {
+        fn run(session: *terminal_runtime.PtyTerminalRuntime, capture: *PipeCapture) !void {
             kitty.parseKittyGraphics(session, "a=q,i=7");
             const reply = try capture.readReply(std.testing.allocator);
             defer std.testing.allocator.free(reply);
@@ -204,7 +204,7 @@ test "kitty parse query metadata-only emits OK reply" {
 
 test "kitty parse query invalid png emits EBADPNG reply" {
     try withSessionAndCapture(struct {
-        fn run(session: *terminal.TerminalSession, capture: *PipeCapture) !void {
+        fn run(session: *terminal_runtime.PtyTerminalRuntime, capture: *PipeCapture) !void {
             kitty.parseKittyGraphics(session, "a=q,i=7,f=100;AA==");
             const reply = try capture.readReply(std.testing.allocator);
             defer std.testing.allocator.free(reply);
@@ -215,7 +215,7 @@ test "kitty parse query invalid png emits EBADPNG reply" {
 
 test "kitty parse query rgba payload emits OK reply" {
     try withSessionAndCapture(struct {
-        fn run(session: *terminal.TerminalSession, capture: *PipeCapture) !void {
+        fn run(session: *terminal_runtime.PtyTerminalRuntime, capture: *PipeCapture) !void {
             kitty.parseKittyGraphics(session, "a=q,i=7,f=32,s=1,v=1;AAAA/w==");
             const reply = try capture.readReply(std.testing.allocator);
             defer std.testing.allocator.free(reply);
@@ -226,7 +226,7 @@ test "kitty parse query rgba payload emits OK reply" {
 
 test "kitty multipart T first chunk preserves auto-place through t continuations" {
     const allocator = std.testing.allocator;
-    var session = try terminal.TerminalSession.init(allocator, 6, 12);
+    var session = try terminal_runtime.PtyTerminalRuntime.init(allocator, 6, 12);
     defer session.deinit();
 
     kitty.parseKittyGraphics(session, "a=T,i=7,f=32,s=1,v=1,S=4,m=1,U=1;AA==");
@@ -242,7 +242,7 @@ test "kitty multipart T first chunk preserves auto-place through t continuations
 
 test "kitty parse query rgba short payload emits ENODATA reply" {
     try withSessionAndCapture(struct {
-        fn run(session: *terminal.TerminalSession, capture: *PipeCapture) !void {
+        fn run(session: *terminal_runtime.PtyTerminalRuntime, capture: *PipeCapture) !void {
             kitty.parseKittyGraphics(session, "a=q,i=7,f=32,s=2,v=2;AAAA");
             const reply = try capture.readReply(std.testing.allocator);
             defer std.testing.allocator.free(reply);
@@ -256,7 +256,7 @@ test "kitty parse query rgba short payload emits ENODATA reply" {
 
 test "kitty parse query quiet=1 suppresses success reply" {
     try withSessionAndCapture(struct {
-        fn run(session: *terminal.TerminalSession, capture: *PipeCapture) !void {
+        fn run(session: *terminal_runtime.PtyTerminalRuntime, capture: *PipeCapture) !void {
             kitty.parseKittyGraphics(session, "a=q,i=7,q=1");
             try capture.expectNoReply();
         }
@@ -265,7 +265,7 @@ test "kitty parse query quiet=1 suppresses success reply" {
 
 test "kitty parse query quiet=1 does not suppress error reply" {
     try withSessionAndCapture(struct {
-        fn run(session: *terminal.TerminalSession, capture: *PipeCapture) !void {
+        fn run(session: *terminal_runtime.PtyTerminalRuntime, capture: *PipeCapture) !void {
             kitty.parseKittyGraphics(session, "a=q,i=7,q=1,f=100;AA==");
             const reply = try capture.readReply(std.testing.allocator);
             defer std.testing.allocator.free(reply);
@@ -276,7 +276,7 @@ test "kitty parse query quiet=1 does not suppress error reply" {
 
 test "kitty parse query quiet=2 suppresses error reply" {
     try withSessionAndCapture(struct {
-        fn run(session: *terminal.TerminalSession, capture: *PipeCapture) !void {
+        fn run(session: *terminal_runtime.PtyTerminalRuntime, capture: *PipeCapture) !void {
             kitty.parseKittyGraphics(session, "a=q,i=7,q=2,f=100;AA==");
             try capture.expectNoReply();
         }
@@ -285,7 +285,7 @@ test "kitty parse query quiet=2 suppresses error reply" {
 
 test "kitty parse placement with P without Q replies EINVAL (policy lock)" {
     try withSessionAndCapture(struct {
-        fn run(session: *terminal.TerminalSession, capture: *PipeCapture) !void {
+        fn run(session: *terminal_runtime.PtyTerminalRuntime, capture: *PipeCapture) !void {
             kitty.parseKittyGraphics(session, "a=t,q=2,f=100,i=1;" ++ tiny_png_1x1);
             kitty.parseKittyGraphics(session, "a=p,i=1,p=31,P=1,c=1,r=1");
             const reply = try capture.readReply(std.testing.allocator);
@@ -297,7 +297,7 @@ test "kitty parse placement with P without Q replies EINVAL (policy lock)" {
 
 test "kitty parse query chunked form emits EINVAL" {
     try withSessionAndCapture(struct {
-        fn run(session: *terminal.TerminalSession, capture: *PipeCapture) !void {
+        fn run(session: *terminal_runtime.PtyTerminalRuntime, capture: *PipeCapture) !void {
             kitty.parseKittyGraphics(session, "a=q,i=7,m=1;AAAA");
             const reply = try capture.readReply(std.testing.allocator);
             defer std.testing.allocator.free(reply);
@@ -308,7 +308,7 @@ test "kitty parse query chunked form emits EINVAL" {
 
 test "kitty parse query offset form emits EINVAL" {
     try withSessionAndCapture(struct {
-        fn run(session: *terminal.TerminalSession, capture: *PipeCapture) !void {
+        fn run(session: *terminal_runtime.PtyTerminalRuntime, capture: *PipeCapture) !void {
             kitty.parseKittyGraphics(session, "a=q,i=7,O=1;AAAA");
             const reply = try capture.readReply(std.testing.allocator);
             defer std.testing.allocator.free(reply);
@@ -319,7 +319,7 @@ test "kitty parse query offset form emits EINVAL" {
 
 test "kitty parse query quiet=2 suppresses success reply" {
     try withSessionAndCapture(struct {
-        fn run(session: *terminal.TerminalSession, capture: *PipeCapture) !void {
+        fn run(session: *terminal_runtime.PtyTerminalRuntime, capture: *PipeCapture) !void {
             kitty.parseKittyGraphics(session, "a=q,i=7,q=2,f=32,s=1,v=1;AAAA/w==");
             try capture.expectNoReply();
         }
@@ -328,7 +328,7 @@ test "kitty parse query quiet=2 suppresses success reply" {
 
 test "kitty parse query quiet=1 does not suppress ENODATA reply" {
     try withSessionAndCapture(struct {
-        fn run(session: *terminal.TerminalSession, capture: *PipeCapture) !void {
+        fn run(session: *terminal_runtime.PtyTerminalRuntime, capture: *PipeCapture) !void {
             kitty.parseKittyGraphics(session, "a=q,i=7,q=1,f=32,s=2,v=2;AAAA");
             const reply = try capture.readReply(std.testing.allocator);
             defer std.testing.allocator.free(reply);
@@ -342,7 +342,7 @@ test "kitty parse query quiet=1 does not suppress ENODATA reply" {
 
 test "kitty parse query quiet=1 does not suppress EINVAL preflight reply" {
     try withSessionAndCapture(struct {
-        fn run(session: *terminal.TerminalSession, capture: *PipeCapture) !void {
+        fn run(session: *terminal_runtime.PtyTerminalRuntime, capture: *PipeCapture) !void {
             kitty.parseKittyGraphics(session, "a=q,i=7,q=1,m=1;AAAA");
             const reply = try capture.readReply(std.testing.allocator);
             defer std.testing.allocator.free(reply);
@@ -353,7 +353,7 @@ test "kitty parse query quiet=1 does not suppress EINVAL preflight reply" {
 
 test "kitty parse query quiet=2 suppresses ENODATA reply" {
     try withSessionAndCapture(struct {
-        fn run(session: *terminal.TerminalSession, capture: *PipeCapture) !void {
+        fn run(session: *terminal_runtime.PtyTerminalRuntime, capture: *PipeCapture) !void {
             kitty.parseKittyGraphics(session, "a=q,i=7,q=2,f=32,s=2,v=2;AAAA");
             try capture.expectNoReply();
         }
@@ -362,7 +362,7 @@ test "kitty parse query quiet=2 suppresses ENODATA reply" {
 
 test "kitty parse query quiet=2 suppresses EINVAL preflight reply" {
     try withSessionAndCapture(struct {
-        fn run(session: *terminal.TerminalSession, capture: *PipeCapture) !void {
+        fn run(session: *terminal_runtime.PtyTerminalRuntime, capture: *PipeCapture) !void {
             kitty.parseKittyGraphics(session, "a=q,i=7,q=2,m=1;AAAA");
             try capture.expectNoReply();
         }
@@ -431,7 +431,7 @@ test "kitty parse query o=z decompression-error quiet-policy matrix" {
 
 test "kitty parse query rgb payload emits OK reply" {
     try withSessionAndCapture(struct {
-        fn run(session: *terminal.TerminalSession, capture: *PipeCapture) !void {
+        fn run(session: *terminal_runtime.PtyTerminalRuntime, capture: *PipeCapture) !void {
             kitty.parseKittyGraphics(session, "a=q,i=7,f=24,s=1,v=1;AAAA");
             const reply = try capture.readReply(std.testing.allocator);
             defer std.testing.allocator.free(reply);
@@ -442,7 +442,7 @@ test "kitty parse query rgb payload emits OK reply" {
 
 test "kitty parse query rgb short payload emits ENODATA reply" {
     try withSessionAndCapture(struct {
-        fn run(session: *terminal.TerminalSession, capture: *PipeCapture) !void {
+        fn run(session: *terminal_runtime.PtyTerminalRuntime, capture: *PipeCapture) !void {
             kitty.parseKittyGraphics(session, "a=q,i=7,f=24,s=2,v=1;AAAA");
             const reply = try capture.readReply(std.testing.allocator);
             defer std.testing.allocator.free(reply);
@@ -456,7 +456,7 @@ test "kitty parse query rgb short payload emits ENODATA reply" {
 
 test "kitty parse query png payload emits OK reply" {
     try withSessionAndCapture(struct {
-        fn run(session: *terminal.TerminalSession, capture: *PipeCapture) !void {
+        fn run(session: *terminal_runtime.PtyTerminalRuntime, capture: *PipeCapture) !void {
             kitty.parseKittyGraphics(session, "a=q,i=7,f=100;" ++ tiny_png_1x1);
             const reply = try capture.readReply(std.testing.allocator);
             defer std.testing.allocator.free(reply);
@@ -467,7 +467,7 @@ test "kitty parse query png payload emits OK reply" {
 
 test "kitty parse query quiet=2 suppresses png success reply" {
     try withSessionAndCapture(struct {
-        fn run(session: *terminal.TerminalSession, capture: *PipeCapture) !void {
+        fn run(session: *terminal_runtime.PtyTerminalRuntime, capture: *PipeCapture) !void {
             kitty.parseKittyGraphics(session, "a=q,i=7,q=2,f=100;" ++ tiny_png_1x1);
             try capture.expectNoReply();
         }
@@ -476,7 +476,7 @@ test "kitty parse query quiet=2 suppresses png success reply" {
 
 test "kitty parse query invalid format emits EINVAL reply" {
     try withSessionAndCapture(struct {
-        fn run(session: *terminal.TerminalSession, capture: *PipeCapture) !void {
+        fn run(session: *terminal_runtime.PtyTerminalRuntime, capture: *PipeCapture) !void {
             kitty.parseKittyGraphics(session, "a=q,i=7,f=999;AAAA");
             const reply = try capture.readReply(std.testing.allocator);
             defer std.testing.allocator.free(reply);
@@ -487,7 +487,7 @@ test "kitty parse query invalid format emits EINVAL reply" {
 
 test "kitty parse query quiet=2 suppresses invalid format reply" {
     try withSessionAndCapture(struct {
-        fn run(session: *terminal.TerminalSession, capture: *PipeCapture) !void {
+        fn run(session: *terminal_runtime.PtyTerminalRuntime, capture: *PipeCapture) !void {
             kitty.parseKittyGraphics(session, "a=q,i=7,q=2,f=999;AAAA");
             try capture.expectNoReply();
         }
@@ -496,7 +496,7 @@ test "kitty parse query quiet=2 suppresses invalid format reply" {
 
 test "kitty parse query rgba missing dimensions emits EINVAL reply" {
     try withSessionAndCapture(struct {
-        fn run(session: *terminal.TerminalSession, capture: *PipeCapture) !void {
+        fn run(session: *terminal_runtime.PtyTerminalRuntime, capture: *PipeCapture) !void {
             kitty.parseKittyGraphics(session, "a=q,i=7,f=32;AAAA/w==");
             const reply = try capture.readReply(std.testing.allocator);
             defer std.testing.allocator.free(reply);
@@ -507,7 +507,7 @@ test "kitty parse query rgba missing dimensions emits EINVAL reply" {
 
 test "kitty parse query quiet=2 suppresses missing-dimensions EINVAL reply" {
     try withSessionAndCapture(struct {
-        fn run(session: *terminal.TerminalSession, capture: *PipeCapture) !void {
+        fn run(session: *terminal_runtime.PtyTerminalRuntime, capture: *PipeCapture) !void {
             kitty.parseKittyGraphics(session, "a=q,i=7,q=2,f=32;AAAA/w==");
             try capture.expectNoReply();
         }
@@ -516,7 +516,7 @@ test "kitty parse query quiet=2 suppresses missing-dimensions EINVAL reply" {
 
 test "kitty parse query malformed base64 emits EINVAL reply" {
     try withSessionAndCapture(struct {
-        fn run(session: *terminal.TerminalSession, capture: *PipeCapture) !void {
+        fn run(session: *terminal_runtime.PtyTerminalRuntime, capture: *PipeCapture) !void {
             kitty.parseKittyGraphics(session, "a=q,i=7,f=32,s=1,v=1;!!!");
             const reply = try capture.readReply(std.testing.allocator);
             defer std.testing.allocator.free(reply);
@@ -527,7 +527,7 @@ test "kitty parse query malformed base64 emits EINVAL reply" {
 
 test "kitty parse query quiet=2 suppresses malformed base64 reply" {
     try withSessionAndCapture(struct {
-        fn run(session: *terminal.TerminalSession, capture: *PipeCapture) !void {
+        fn run(session: *terminal_runtime.PtyTerminalRuntime, capture: *PipeCapture) !void {
             kitty.parseKittyGraphics(session, "a=q,i=7,q=2,f=32,s=1,v=1;!!!");
             try capture.expectNoReply();
         }
@@ -536,7 +536,7 @@ test "kitty parse query quiet=2 suppresses malformed base64 reply" {
 
 test "kitty parse query compressed rgba payload emits OK reply" {
     try withSessionAndCapture(struct {
-        fn run(session: *terminal.TerminalSession, capture: *PipeCapture) !void {
+        fn run(session: *terminal_runtime.PtyTerminalRuntime, capture: *PipeCapture) !void {
             kitty.parseKittyGraphics(session, "a=q,i=7,o=z,f=32,s=1,v=1;" ++ zlib_rgba_1x1);
             const reply = try capture.readReply(std.testing.allocator);
             defer std.testing.allocator.free(reply);
@@ -547,7 +547,7 @@ test "kitty parse query compressed rgba payload emits OK reply" {
 
 test "kitty parse query o=z with uncompressed rgba emits EINVAL" {
     try withSessionAndCapture(struct {
-        fn run(session: *terminal.TerminalSession, capture: *PipeCapture) !void {
+        fn run(session: *terminal_runtime.PtyTerminalRuntime, capture: *PipeCapture) !void {
             kitty.parseKittyGraphics(session, "a=q,i=7,o=z,f=32,s=1,v=1;AAAA/w==");
             const reply = try capture.readReply(std.testing.allocator);
             defer std.testing.allocator.free(reply);
@@ -558,7 +558,7 @@ test "kitty parse query o=z with uncompressed rgba emits EINVAL" {
 
 test "kitty parse query quiet=2 suppresses compressed rgba success reply" {
     try withSessionAndCapture(struct {
-        fn run(session: *terminal.TerminalSession, capture: *PipeCapture) !void {
+        fn run(session: *terminal_runtime.PtyTerminalRuntime, capture: *PipeCapture) !void {
             kitty.parseKittyGraphics(session, "a=q,i=7,q=2,o=z,f=32,s=1,v=1;" ++ zlib_rgba_1x1);
             try capture.expectNoReply();
         }
@@ -567,7 +567,7 @@ test "kitty parse query quiet=2 suppresses compressed rgba success reply" {
 
 test "kitty parse query quiet=1 does not suppress o=z decompression error" {
     try withSessionAndCapture(struct {
-        fn run(session: *terminal.TerminalSession, capture: *PipeCapture) !void {
+        fn run(session: *terminal_runtime.PtyTerminalRuntime, capture: *PipeCapture) !void {
             kitty.parseKittyGraphics(session, "a=q,i=7,q=1,o=z,f=32,s=1,v=1;AAAA/w==");
             const reply = try capture.readReply(std.testing.allocator);
             defer std.testing.allocator.free(reply);
@@ -578,7 +578,7 @@ test "kitty parse query quiet=1 does not suppress o=z decompression error" {
 
 test "kitty parse query quiet=2 suppresses o=z decompression error" {
     try withSessionAndCapture(struct {
-        fn run(session: *terminal.TerminalSession, capture: *PipeCapture) !void {
+        fn run(session: *terminal_runtime.PtyTerminalRuntime, capture: *PipeCapture) !void {
             kitty.parseKittyGraphics(session, "a=q,i=7,q=2,o=z,f=32,s=1,v=1;AAAA/w==");
             try capture.expectNoReply();
         }
@@ -587,7 +587,7 @@ test "kitty parse query quiet=2 suppresses o=z decompression error" {
 
 test "kitty parse query malformed zlib payload emits EINVAL" {
     try withSessionAndCapture(struct {
-        fn run(session: *terminal.TerminalSession, capture: *PipeCapture) !void {
+        fn run(session: *terminal_runtime.PtyTerminalRuntime, capture: *PipeCapture) !void {
             kitty.parseKittyGraphics(session, "a=q,i=7,o=z,f=32,s=1,v=1;AQIDBA==");
             const reply = try capture.readReply(std.testing.allocator);
             defer std.testing.allocator.free(reply);
@@ -598,7 +598,7 @@ test "kitty parse query malformed zlib payload emits EINVAL" {
 
 test "kitty parse query post-inflate size mismatch emits ENODATA" {
     try withSessionAndCapture(struct {
-        fn run(session: *terminal.TerminalSession, capture: *PipeCapture) !void {
+        fn run(session: *terminal_runtime.PtyTerminalRuntime, capture: *PipeCapture) !void {
             kitty.parseKittyGraphics(session, "a=q,i=7,o=z,f=32,s=1,v=1;" ++ zlib_three_bytes);
             const reply = try capture.readReply(std.testing.allocator);
             defer std.testing.allocator.free(reply);
@@ -612,7 +612,7 @@ test "kitty parse query post-inflate size mismatch emits ENODATA" {
 
 test "kitty parse query compressed png payload emits OK reply" {
     try withSessionAndCapture(struct {
-        fn run(session: *terminal.TerminalSession, capture: *PipeCapture) !void {
+        fn run(session: *terminal_runtime.PtyTerminalRuntime, capture: *PipeCapture) !void {
             kitty.parseKittyGraphics(session, "a=q,i=7,o=z,f=100;" ++ zlib_png_1x1);
             const reply = try capture.readReply(std.testing.allocator);
             defer std.testing.allocator.free(reply);
@@ -623,7 +623,7 @@ test "kitty parse query compressed png payload emits OK reply" {
 
 test "kitty parse query quiet=2 suppresses compressed png success reply" {
     try withSessionAndCapture(struct {
-        fn run(session: *terminal.TerminalSession, capture: *PipeCapture) !void {
+        fn run(session: *terminal_runtime.PtyTerminalRuntime, capture: *PipeCapture) !void {
             kitty.parseKittyGraphics(session, "a=q,i=7,q=2,o=z,f=100;" ++ zlib_png_1x1);
             try capture.expectNoReply();
         }
@@ -632,7 +632,7 @@ test "kitty parse query quiet=2 suppresses compressed png success reply" {
 
 test "kitty parse query compressed invalid png emits EBADPNG reply" {
     try withSessionAndCapture(struct {
-        fn run(session: *terminal.TerminalSession, capture: *PipeCapture) !void {
+        fn run(session: *terminal_runtime.PtyTerminalRuntime, capture: *PipeCapture) !void {
             kitty.parseKittyGraphics(session, "a=q,i=7,o=z,f=100;" ++ zlib_not_png);
             const reply = try capture.readReply(std.testing.allocator);
             defer std.testing.allocator.free(reply);
@@ -643,7 +643,7 @@ test "kitty parse query compressed invalid png emits EBADPNG reply" {
 
 test "kitty parse query quiet=1 does not suppress compressed png EBADPNG" {
     try withSessionAndCapture(struct {
-        fn run(session: *terminal.TerminalSession, capture: *PipeCapture) !void {
+        fn run(session: *terminal_runtime.PtyTerminalRuntime, capture: *PipeCapture) !void {
             kitty.parseKittyGraphics(session, "a=q,i=7,q=1,o=z,f=100;" ++ zlib_not_png);
             const reply = try capture.readReply(std.testing.allocator);
             defer std.testing.allocator.free(reply);
@@ -654,7 +654,7 @@ test "kitty parse query quiet=1 does not suppress compressed png EBADPNG" {
 
 test "kitty parse query quiet=2 suppresses compressed png EBADPNG" {
     try withSessionAndCapture(struct {
-        fn run(session: *terminal.TerminalSession, capture: *PipeCapture) !void {
+        fn run(session: *terminal_runtime.PtyTerminalRuntime, capture: *PipeCapture) !void {
             kitty.parseKittyGraphics(session, "a=q,i=7,q=2,o=z,f=100;" ++ zlib_not_png);
             try capture.expectNoReply();
         }
@@ -1004,7 +1004,7 @@ test "kitty parse query temp medium chunk/offset preflight does not consume temp
     const temp_path_b64 = try encodeBase64Alloc(allocator, temp_path);
     defer allocator.free(temp_path_b64);
 
-    var session = try terminal.TerminalSession.init(allocator, 6, 12);
+    var session = try terminal_runtime.PtyTerminalRuntime.init(allocator, 6, 12);
     defer session.deinit();
 
     var capture = try PipeCapture.init();

@@ -1,15 +1,15 @@
 const std = @import("std");
 const app_shell = @import("../../app_shell.zig");
 const app_logger = @import("../../app_logger.zig");
-const terminal_mod = @import("../../terminal/core/terminal.zig");
+const terminal_publication = @import("../../terminal/core/terminal_publication.zig");
 
 const gl = @import("../renderer/gl.zig");
 const types = @import("../renderer/types.zig");
 
 const Shell = app_shell.Shell;
 const Color = app_shell.Color;
-const KittyImage = terminal_mod.KittyImage;
-const KittyPlacement = terminal_mod.KittyPlacement;
+const KittyImage = terminal_publication.KittyImage;
+const KittyPlacement = terminal_publication.KittyPlacement;
 
 const KittyTexture = struct {
     texture: types.Texture,

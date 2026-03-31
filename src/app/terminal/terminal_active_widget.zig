@@ -1,11 +1,11 @@
 const app_bootstrap = @import("../bootstrap.zig");
 const app_terminal_tabs = @import("terminal_tabs.zig");
-const terminal_mod = @import("../../terminal/core/terminal.zig");
+const terminal_runtime = @import("../../terminal/core/terminal_runtime.zig");
 const widgets = @import("../../ui/widgets.zig");
 
 pub fn resolveActive(
     app_mode: app_bootstrap.AppMode,
-    terminal_workspace: *?terminal_mod.TerminalWorkspace,
+    terminal_workspace: *?terminal_runtime.TerminalWorkspace,
     terminals_len: usize,
     terminal_widgets: []widgets.TerminalWidget,
 ) ?*widgets.TerminalWidget {

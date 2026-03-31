@@ -11,7 +11,7 @@ const widgets = @import("../../ui/widgets.zig");
 const Rect = shared_types.layout.Rect;
 const Shell = app_shell.Shell;
 const TabBar = widgets.TabBar;
-const TerminalWorkspace = @import("../../terminal/core/terminal.zig").TerminalWorkspace;
+const TerminalWorkspace = @import("../../terminal/core/terminal_runtime.zig").TerminalWorkspace;
 
 pub const CaptionButton = app_types.WindowCaptionButton;
 

@@ -120,14 +120,30 @@ Validation note, 2026-03-31:
     preserve one broad fake center
   - this lane stays hot until that center is broken
   Progress note, 2026-03-31:
-  - landed a first public-surface cut at the root terminal module:
-    `src/terminal/core/terminal.zig` now exports the PTY-backed host wrapper as
-    `PtyTerminalSession`, and native app/runtime, FFI, and replay-harness
-    consumers were moved onto that explicit name.
-  - this does not finish `VTCORE-01`; `terminal_session.zig` is still broad.
-    It does remove one layer of public contract blur by stopping the root
-    terminal barrel from presenting the PTY host wrapper as the terminal's
-    neutral center.
+  - landed the first runtime/publication public-surface cut:
+    - `src/terminal/core/terminal_runtime.zig`
+    - `src/terminal/core/terminal_publication.zig`
+  - native app/runtime, widget, FFI, replay-harness, smoke tools, and tests
+    were moved onto those explicit surfaces.
+  Progress note, 2026-04-01:
+  - `src/terminal/core/terminal.zig` is deleted.
+  - there is no broad root barrel left in live call paths.
+  - this is the first real kill shot against the false public center:
+    runtime/publication consumers now have to choose an explicit surface.
+  - `src/terminal/core/terminal_debug.zig` now owns replay/test debug helpers,
+    so `terminal_runtime.zig` no longer exports test/debug authority as if it
+    were part of normal host runtime ownership.
+  - `src/terminal/core/session_public_types.zig` is deleted; `terminal_session.zig`
+    now imports direct ownership modules instead of routing public-facing types
+    through a mixed alias hub.
+  - the next extraction cut is also in:
+    - `src/terminal/core/session_runtime_api.zig`
+    - `src/terminal/core/session_publication_api.zig`
+  - host/runtime and publication/present public methods are no longer written
+    inline on `terminal_session.zig`; they are now grouped behind explicit API
+    modules and re-exported without behavior changes.
+  - `terminal_session.zig` is still broad, so `VTCORE-01` remains open, but
+    one whole fake center is already dead.
 - [ ] `VTCORE-02` Make FFI a first-class core interface.
   Notes: shared FFI state plus `host_api` and `core_api` splits are landed; remaining work is maturity and convergence, not proving the shape. Recent slices closed real host-facing gaps such as close-confirm signals and backend-owned viewport control.
   Done when:
@@ -152,6 +168,10 @@ Validation note, 2026-03-31:
   - `terminal_publication.snapshot(...)` now reads from one published render
     cache surface instead of switching between direct screen-owned state and
     render-cache state.
+  - dead publication-only mirror state is starting to come out of
+    `src/terminal/core/render_cache.zig`; for example,
+    `mouse_reporting_active` was removed after confirming it had no host,
+    widget, FFI, or publication consumer.
   - remaining gap: publication is still mirror-heavy because render-cache and
     related handoff/update state still duplicate too much terminal-visible
     truth.

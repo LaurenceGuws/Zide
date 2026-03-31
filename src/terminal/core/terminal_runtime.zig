@@ -1,39 +1,15 @@
 const session_mod = @import("terminal_session.zig");
 const workspace_mod = @import("workspace.zig");
 
-pub const KittyImageFormat = session_mod.KittyImageFormat;
-pub const KittyImage = session_mod.KittyImage;
-pub const KittyPlacement = session_mod.KittyPlacement;
-
-pub const TerminalSnapshot = session_mod.TerminalSnapshot;
-pub const DebugSnapshot = session_mod.DebugSnapshot;
-pub const PresentedRenderCache = session_mod.PresentedRenderCache;
-pub const PresentationCapture = session_mod.PresentationCapture;
-pub const AltExitPresentationInfo = session_mod.AltExitPresentationInfo;
-pub const PresentationFeedback = session_mod.PresentationFeedback;
-pub const TerminalCore = session_mod.TerminalCore;
-pub const RenderCache = session_mod.RenderCache;
-
-pub const debugSnapshot = session_mod.debugSnapshot;
-pub const debugScrollbackRow = session_mod.debugScrollbackRow;
-pub const debugSetCursor = session_mod.debugSetCursor;
-pub const debugFeedBytes = session_mod.debugFeedBytes;
-pub const debugScrollUp = session_mod.debugScrollUp;
-pub const debugSetScrollOffset = session_mod.debugSetScrollOffset;
-pub const debugSetScrollbackCell = session_mod.debugSetScrollbackCell;
-pub const debugPushScrollbackRow = session_mod.debugPushScrollbackRow;
-pub const debugSetGridRow = session_mod.debugSetGridRow;
-
-pub const PtyTerminalSession = session_mod.TerminalSession;
+pub const PtyTerminalRuntime = session_mod.TerminalSession;
 pub const TerminalWorkspace = workspace_mod.TerminalWorkspace;
 pub const TerminalTabId = workspace_mod.TabId;
 pub const TerminalTabSyncEntry = workspace_mod.TabSyncEntry;
 pub const TerminalTabSyncState = workspace_mod.TabSyncState;
+
 pub const ActivityMetadata = session_mod.ActivityMetadata;
 pub const ProgressMetadata = session_mod.ProgressMetadata;
 pub const ProgressState = session_mod.ProgressState;
-
-pub const Hyperlink = session_mod.Hyperlink;
 
 pub const VTERM_KEY_NONE = session_mod.VTERM_KEY_NONE;
 pub const VTERM_KEY_ENTER = session_mod.VTERM_KEY_ENTER;
@@ -67,16 +43,13 @@ pub const VTERM_MOD_SHIFT = session_mod.VTERM_MOD_SHIFT;
 pub const VTERM_MOD_ALT = session_mod.VTERM_MOD_ALT;
 pub const VTERM_MOD_CTRL = session_mod.VTERM_MOD_CTRL;
 
-pub const CursorPos = session_mod.CursorPos;
-pub const SelectionPos = session_mod.SelectionPos;
-pub const TerminalSelection = session_mod.TerminalSelection;
-pub const SelectionGesture = session_mod.SelectionGesture;
-pub const ClickSelectionResult = session_mod.ClickSelectionResult;
-pub const Cell = session_mod.Cell;
-pub const CellAttrs = session_mod.CellAttrs;
-pub const Color = session_mod.Color;
 pub const Key = session_mod.Key;
 pub const Modifier = session_mod.Modifier;
 pub const MouseButton = session_mod.MouseButton;
 pub const MouseEventKind = session_mod.MouseEventKind;
 pub const MouseEvent = session_mod.MouseEvent;
+
+pub const SelectionPos = session_mod.SelectionPos;
+pub const TerminalSelection = session_mod.TerminalSelection;
+pub const SelectionGesture = session_mod.SelectionGesture;
+pub const ClickSelectionResult = session_mod.ClickSelectionResult;

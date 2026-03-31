@@ -1,12 +1,14 @@
 const std = @import("std");
-const term_mod = @import("../src/terminal/core/terminal.zig");
+const terminal_runtime = @import("../src/terminal/core/terminal_runtime.zig");
+const terminal_debug = @import("../src/terminal/core/terminal_debug.zig");
+const terminal_publication = @import("../src/terminal/core/terminal_publication.zig");
 const adapter = @import("../src/terminal/core/snapshot_adapter.zig");
 const shared = @import("../src/types/mod.zig").snapshots;
 
 test "terminal snapshot adapter empty" {
     const allocator = std.testing.allocator;
 
-    var session = try term_mod.TerminalSession.init(allocator, 1, 1);
+    var session = try terminal_runtime.PtyTerminalRuntime.init(allocator, 1, 1);
     defer session.deinit();
 
     const snapshot = session.snapshot();
@@ -24,10 +26,10 @@ test "terminal snapshot adapter empty" {
 test "terminal snapshot adapter remains empty after write" {
     const allocator = std.testing.allocator;
 
-    var session = try term_mod.TerminalSession.init(allocator, 2, 2);
+    var session = try terminal_runtime.PtyTerminalRuntime.init(allocator, 2, 2);
     defer session.deinit();
 
-    term_mod.debugFeedBytes(session, "hi");
+    terminal_debug.debugFeedBytes(session, "hi");
 
     const snapshot = session.snapshot();
     const shared_snapshot = adapter.toSharedSnapshot(snapshot);

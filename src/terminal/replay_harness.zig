@@ -1,6 +1,8 @@
 const std = @import("std");
 const builtin = @import("builtin");
-const terminal = @import("core/terminal.zig");
+const terminal_runtime = @import("core/terminal_runtime.zig");
+const terminal_publication = @import("core/terminal_publication.zig");
+const terminal_debug = @import("core/terminal_debug.zig");
 const screen_mod = @import("model/screen.zig");
 const pty_mod = @import("io/pty.zig");
 const snapshot_mod = @import("core/snapshot.zig");
@@ -381,7 +383,7 @@ pub fn runFixtureObservedWithOptions(
         return error.InvalidFixtureSize;
     }
 
-    var session = try terminal.PtyTerminalSession.init(allocator, fixture.meta.rows, fixture.meta.cols);
+    var session = try terminal_runtime.PtyTerminalRuntime.init(allocator, fixture.meta.rows, fixture.meta.cols);
     defer session.deinit();
     var baseline_publication: BaselinePublication = .{};
 
@@ -400,7 +402,7 @@ pub fn runFixtureObservedWithOptions(
         }
     }
 
-    terminal.debugSetCursor(session, fixture.meta.cursor.row, fixture.meta.cursor.col);
+    terminal_debug.debugSetCursor(session, fixture.meta.cursor.row, fixture.meta.cursor.col);
     try seedOsc5522Clipboard(session, fixture.meta);
 
     if (fixture.meta.baseline_input != null or
@@ -443,7 +445,7 @@ pub fn runFixtureObservedWithOptions(
     try applyMouseActions(session, fixture.meta.mouse);
 
     const snapshot = session.snapshot();
-    const debug = terminal.debugSnapshot(session);
+    const debug = terminal_debug.debugSnapshot(session);
     if (options.validate_assertions) {
         try validateAssertions(fixture, snapshot, debug, baseline_publication);
     }
@@ -456,23 +458,23 @@ pub fn runFixtureObservedWithOptions(
         if (!std.mem.eql(u8, actual, expected)) return error.ReplyAssertionMismatch;
     }
 
-    const output = try snapshot_mod.encodeSnapshot(allocator, session, snapshot, debug, terminal.debugScrollbackRow);
+    const output = try snapshot_mod.encodeSnapshot(allocator, session, snapshot, debug, terminal_debug.debugScrollbackRow);
     return .{
         .output = output,
         .observed = try observedFixtureState(allocator, snapshot, debug, baseline_publication),
     };
 }
 
-fn runFixtureInputPhase(session: *terminal.PtyTerminalSession, input: []const u8, uses_reply_capture: bool) !void {
+fn runFixtureInputPhase(session: *terminal_runtime.PtyTerminalRuntime, input: []const u8, uses_reply_capture: bool) !void {
     if (uses_reply_capture) {
-        terminal.debugFeedBytes(session, input);
+        terminal_debug.debugFeedBytes(session, input);
     } else {
         _ = try session.enqueueExternalBytes(input);
         try session.poll();
     }
 }
 
-fn seedOsc5522Clipboard(session: *terminal.PtyTerminalSession, meta: FixtureMeta) !void {
+fn seedOsc5522Clipboard(session: *terminal_runtime.PtyTerminalRuntime, meta: FixtureMeta) !void {
     if (meta.osc_5522_clipboard_text) |text| {
         session.core.kitty_osc5522_clipboard_text.clearRetainingCapacity();
         try session.core.kitty_osc5522_clipboard_text.ensureTotalCapacity(session.allocator, text.len);
@@ -584,8 +586,8 @@ fn validateEncoderAssertions(fixture: *const Fixture) !void {
 
 fn validateAssertions(
     fixture: *const Fixture,
-    snapshot: terminal.TerminalSnapshot,
-    debug: terminal.DebugSnapshot,
+    snapshot: terminal_publication.TerminalSnapshot,
+    debug: terminal_publication.DebugSnapshot,
     baseline_publication: BaselinePublication,
 ) !void {
     for (fixture.meta.assertions) |tag| {
@@ -706,14 +708,14 @@ fn validateAssertions(
     }
 }
 
-fn fixtureRenderCache(debug: terminal.DebugSnapshot) ?*const terminal.RenderCache {
+fn fixtureRenderCache(debug: terminal_publication.DebugSnapshot) ?*const terminal_publication.RenderCache {
     return debug.render_cache;
 }
 
 fn observedFixtureState(
     allocator: std.mem.Allocator,
-    snapshot: terminal.TerminalSnapshot,
-    debug: terminal.DebugSnapshot,
+    snapshot: terminal_publication.TerminalSnapshot,
+    debug: terminal_publication.DebugSnapshot,
     baseline_publication: BaselinePublication,
 ) !ObservedFixtureState {
     const cache = fixtureRenderCache(debug);
@@ -780,7 +782,7 @@ fn decodeHex(allocator: std.mem.Allocator, hex: []const u8) ![]u8 {
     return out;
 }
 
-fn snapshotHasNonDefaultGrid(snapshot: terminal.TerminalSnapshot) bool {
+fn snapshotHasNonDefaultGrid(snapshot: terminal_publication.TerminalSnapshot) bool {
     for (snapshot.cells) |cell| {
         if (cell.width == 0) return true;
         if (cell.codepoint != 0) return true;
@@ -789,14 +791,14 @@ fn snapshotHasNonDefaultGrid(snapshot: terminal.TerminalSnapshot) bool {
     return false;
 }
 
-fn snapshotHasNonDefaultAttrs(snapshot: terminal.TerminalSnapshot, base_default: terminal.CellAttrs) bool {
+fn snapshotHasNonDefaultAttrs(snapshot: terminal_publication.TerminalSnapshot, base_default: terminal_publication.CellAttrs) bool {
     for (snapshot.cells) |cell| {
         if (!attrsEqual(cell.attrs, base_default)) return true;
     }
     return false;
 }
 
-fn fixtureExercisesScrollbackOrScrollSemantics(fixture: *const Fixture, debug: terminal.DebugSnapshot) bool {
+fn fixtureExercisesScrollbackOrScrollSemantics(fixture: *const Fixture, debug: terminal_publication.DebugSnapshot) bool {
     if (debug.scrollback_count > 0 or debug.scrollback_offset > 0) return true;
     const input = fixture.input;
     if (inputHasCsiFinal(input, 'r') or // DECSTBM set/reset scroll region
@@ -841,7 +843,7 @@ fn inputLineBreakCount(input: []const u8) usize {
     return count;
 }
 
-fn attrsEqual(a: terminal.CellAttrs, b: terminal.CellAttrs) bool {
+fn attrsEqual(a: terminal_publication.CellAttrs, b: terminal_publication.CellAttrs) bool {
     return a.fg.r == b.fg.r and a.fg.g == b.fg.g and a.fg.b == b.fg.b and a.fg.a == b.fg.a and
         a.bg.r == b.bg.r and a.bg.g == b.bg.g and a.bg.b == b.bg.b and a.bg.a == b.bg.a and
         a.bold == b.bold and a.blink == b.blink and a.blink_fast == b.blink_fast and
@@ -853,7 +855,7 @@ fn attrsEqual(a: terminal.CellAttrs, b: terminal.CellAttrs) bool {
         a.link_id == b.link_id;
 }
 
-fn applySelectionActions(session: *terminal.PtyTerminalSession, actions: []const SelectionAction) void {
+fn applySelectionActions(session: *terminal_runtime.PtyTerminalRuntime, actions: []const SelectionAction) void {
     for (actions) |action| {
         switch (action.op) {
             .start => session.startSelection(action.row, action.col),
@@ -871,7 +873,7 @@ fn applySelectionActions(session: *terminal.PtyTerminalSession, actions: []const
 
 fn applyOutputChunks(
     allocator: std.mem.Allocator,
-    session: *terminal.PtyTerminalSession,
+    session: *terminal_runtime.PtyTerminalRuntime,
     chunks: []const []const u8,
     line_ending: LineEnding,
     uses_reply_capture: bool,
@@ -883,39 +885,39 @@ fn applyOutputChunks(
     }
 }
 
-fn applyScrollFullUp(session: *terminal.PtyTerminalSession, count: usize) void {
+fn applyScrollFullUp(session: *terminal_runtime.PtyTerminalRuntime, count: usize) void {
     var i: usize = 0;
     while (i < count) : (i += 1) {
-        terminal.debugScrollUp(session);
+        terminal_debug.debugScrollUp(session);
     }
 }
 
-fn applyScrollOffsetActions(session: *terminal.PtyTerminalSession, actions: []const ScrollOffsetAction) void {
+fn applyScrollOffsetActions(session: *terminal_runtime.PtyTerminalRuntime, actions: []const ScrollOffsetAction) void {
     for (actions) |action| {
-        terminal.debugSetScrollOffset(session, action.offset);
+        terminal_debug.debugSetScrollOffset(session, action.offset);
     }
 }
 
-fn applyScrollbackCellActions(session: *terminal.PtyTerminalSession, fixture_name: []const u8, actions: []const ScrollbackCellAction) void {
+fn applyScrollbackCellActions(session: *terminal_runtime.PtyTerminalRuntime, fixture_name: []const u8, actions: []const ScrollbackCellAction) void {
     _ = fixture_name;
     for (actions) |action| {
-        terminal.debugSetScrollbackCell(session, action.row, action.col, action.codepoint);
+        terminal_debug.debugSetScrollbackCell(session, action.row, action.col, action.codepoint);
     }
 }
 
-fn applyBaselineScrollbackRows(session: *terminal.PtyTerminalSession, rows: []const []const u8) void {
+fn applyBaselineScrollbackRows(session: *terminal_runtime.PtyTerminalRuntime, rows: []const []const u8) void {
     for (rows) |row| {
-        terminal.debugPushScrollbackRow(session, row);
+        terminal_debug.debugPushScrollbackRow(session, row);
     }
 }
 
-fn applyBaselineGridRows(session: *terminal.PtyTerminalSession, rows: []const []const u8) void {
+fn applyBaselineGridRows(session: *terminal_runtime.PtyTerminalRuntime, rows: []const []const u8) void {
     for (rows, 0..) |row, idx| {
-        terminal.debugSetGridRow(session, idx, row);
+        terminal_debug.debugSetGridRow(session, idx, row);
     }
 }
 
-fn applyMouseActions(session: *terminal.PtyTerminalSession, actions: []const MouseAction) !void {
+fn applyMouseActions(session: *terminal_runtime.PtyTerminalRuntime, actions: []const MouseAction) !void {
     for (actions) |action| {
         _ = try session.reportMouseEvent(.{
             .kind = action.kind,

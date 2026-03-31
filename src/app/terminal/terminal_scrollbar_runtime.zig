@@ -1,7 +1,7 @@
 const app_shell = @import("../../app_shell.zig");
 const shared_types = @import("../../types/mod.zig");
 const widgets = @import("../../ui/widgets.zig");
-const terminal_mod = @import("../../terminal/core/terminal.zig");
+const terminal_runtime = @import("../../terminal/core/terminal_runtime.zig");
 const terminal_scrollbar_mod = @import("../../ui/widgets/terminal_scrollbar.zig");
 
 const Shell = app_shell.Shell;
@@ -173,7 +173,7 @@ pub fn draw(
     );
 }
 
-fn updateFromMouse(session: *terminal_mod.PtyTerminalSession, mouse_y: f32, geometry: terminal_scrollbar_mod.VerticalGeometry, grab_offset: f32) bool {
+fn updateFromMouse(session: *terminal_runtime.PtyTerminalRuntime, mouse_y: f32, geometry: terminal_scrollbar_mod.VerticalGeometry, grab_offset: f32) bool {
     session.lock();
     defer session.unlock();
     const available = geometry.thumb.available;
