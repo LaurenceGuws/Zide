@@ -47,10 +47,7 @@ pub fn clearPublishedDamageIfGeneration(self: anytype, expected_generation: u64,
         );
         self.activeScreen().clearDirty();
     }
-    inline for (0..2) |i| {
-        self.render_caches[i].dirty = .none;
-        self.render_caches[i].damage = .{ .start_row = 0, .end_row = 0, .start_col = 0, .end_col = 0 };
-    }
+    terminal_publication.clearPublishedDamage(self);
     return true;
 }
 
@@ -59,8 +56,7 @@ pub fn currentGeneration(self: anytype) u64 {
 }
 
 pub fn publishedGeneration(self: anytype) u64 {
-    const idx = self.render_cache_index.load(.acquire);
-    return self.render_caches[idx].generation;
+    return terminal_publication.renderCache(self).generation;
 }
 
 pub fn presentedGeneration(self: anytype) u64 {
@@ -115,10 +111,8 @@ pub fn hasPublishedGenerationBacklog(self: anytype) bool {
 }
 
 fn renderCacheSyncUpdatesActiveForGeneration(self: anytype, generation: u64) bool {
-    inline for (0..2) |i| {
-        if (self.render_caches[i].generation == generation) {
-            return self.render_caches[i].sync_updates_active;
-        }
+    if (terminal_publication.renderCacheForGeneration(self, generation)) |cache| {
+        return cache.sync_updates_active;
     }
     return self.core.syncUpdatesActive();
 }

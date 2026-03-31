@@ -82,6 +82,21 @@ pub fn renderCache(self: anytype) *const RenderCache {
     return &self.render_caches[idx];
 }
 
+pub fn renderCacheForGeneration(self: anytype, generation: u64) ?*const RenderCache {
+    inline for (0..2) |i| {
+        const cache = &self.render_caches[i];
+        if (cache.generation == generation) return cache;
+    }
+    return null;
+}
+
+pub fn clearPublishedDamage(self: anytype) void {
+    inline for (0..2) |i| {
+        self.render_caches[i].dirty = .none;
+        self.render_caches[i].damage = .{ .start_row = 0, .end_row = 0, .start_col = 0, .end_col = 0 };
+    }
+}
+
 pub fn copyPublishedRenderCache(self: anytype, dst: *RenderCache) !PresentedRenderCache {
     return presentation_handoff.copyPublishedRenderCache(self, dst);
 }
