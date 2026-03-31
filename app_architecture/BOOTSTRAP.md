@@ -176,6 +176,20 @@ Useful build reports:
 zig build run
 ```
 
+Write the shipped default config to the platform user-config path:
+
+```bash
+zig build run -- --write-default-config
+```
+
+Variants:
+
+```bash
+zig build run -- --write-default-config --force
+zig build run -- --write-default-config=/tmp/zide-init.lua
+zig build run -- --write-default-config --stdout
+```
+
 ## Terminal Setup
 
 Install the bundled terminfo entry:

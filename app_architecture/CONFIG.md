@@ -66,6 +66,17 @@ Zide loads config in this order:
 
 Later layers override earlier ones.
 
+To seed a user config from the exact shipped defaults for the current version,
+run:
+
+```bash
+zig build run -- --write-default-config
+```
+
+That copies `assets/config/init.lua` to the platform user-config location
+before any user edits, which is also the recommended starting point for LuaLS
+completion-backed personal config authoring.
+
 ```mermaid
 flowchart LR
     Defaults[assets/config/init.lua] --> Merge[parse + merge]

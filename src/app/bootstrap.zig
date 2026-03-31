@@ -8,6 +8,92 @@ pub const AppMode = enum {
     font_sample,
 };
 
+pub const WriteDefaultConfigTarget = union(enum) {
+    user,
+    stdout,
+    path: []u8,
+
+    pub fn deinit(self: *@This(), allocator: std.mem.Allocator) void {
+        switch (self.*) {
+            .path => |path| allocator.free(path),
+            else => {},
+        }
+        self.* = .user;
+    }
+};
+
+pub const StartupCommand = union(enum) {
+    run,
+    write_default_config: struct {
+        target: WriteDefaultConfigTarget,
+        force: bool = false,
+
+        pub fn deinit(self: *@This(), allocator: std.mem.Allocator) void {
+            self.target.deinit(allocator);
+            self.force = false;
+        }
+    },
+
+    pub fn deinit(self: *@This(), allocator: std.mem.Allocator) void {
+        switch (self.*) {
+            .write_default_config => |*cmd| cmd.deinit(allocator),
+            .run => {},
+        }
+        self.* = .run;
+    }
+};
+
+pub fn parseStartupCommand(allocator: std.mem.Allocator) !StartupCommand {
+    const args = try std.process.argsAlloc(allocator);
+    defer std.process.argsFree(allocator, args);
+    return try parseStartupCommandArgs(allocator, args[1..]);
+}
+
+fn parseStartupCommandArgs(allocator: std.mem.Allocator, args: []const []const u8) !StartupCommand {
+    var command: StartupCommand = .run;
+    errdefer command.deinit(allocator);
+
+    var i: usize = 0;
+    while (i < args.len) : (i += 1) {
+        const arg = args[i];
+        if (std.mem.eql(u8, arg, "--write-default-config")) {
+            const target: WriteDefaultConfigTarget = if (i + 1 < args.len and !std.mem.startsWith(u8, args[i + 1], "-")) blk: {
+                i += 1;
+                break :blk .{ .path = try allocator.dupe(u8, args[i]) };
+            } else .user;
+            command.deinit(allocator);
+            command = .{ .write_default_config = .{ .target = target } };
+            continue;
+        }
+        if (std.mem.startsWith(u8, arg, "--write-default-config=")) {
+            command.deinit(allocator);
+            command = .{ .write_default_config = .{
+                .target = .{ .path = try allocator.dupe(u8, arg["--write-default-config=".len..]) },
+            } };
+            continue;
+        }
+        if (std.mem.eql(u8, arg, "--stdout")) {
+            switch (command) {
+                .write_default_config => |*cmd| {
+                    cmd.target.deinit(allocator);
+                    cmd.target = .stdout;
+                },
+                else => {},
+            }
+            continue;
+        }
+        if (std.mem.eql(u8, arg, "--force")) {
+            switch (command) {
+                .write_default_config => |*cmd| cmd.force = true,
+                else => {},
+            }
+            continue;
+        }
+    }
+
+    return command;
+}
+
 pub fn parseAppMode(allocator: std.mem.Allocator) AppMode {
     if (comptime mode_build.focused_mode) |mode| return mode;
 
@@ -76,6 +162,12 @@ pub fn parseStartupFilePaths(allocator: std.mem.Allocator) ?[][]u8 {
             if (i + 1 < args.len) i += 1;
             continue;
         }
+        if (std.mem.eql(u8, arg, "--write-default-config")) {
+            if (i + 1 < args.len and !std.mem.startsWith(u8, args[i + 1], "-")) i += 1;
+            continue;
+        }
+        if (std.mem.startsWith(u8, arg, "--write-default-config=")) continue;
+        if (std.mem.eql(u8, arg, "--stdout") or std.mem.eql(u8, arg, "--force")) continue;
         if (isStartupDirectoryFlagWithValue(arg)) {
             if (i + 1 < args.len) i += 1;
             continue;
@@ -208,4 +300,36 @@ test "startup directory helpers recognize folder flags" {
     try std.testing.expect(isStartupDirectoryInlineFlag("--folder=C:\\repo"));
     try std.testing.expect(!isStartupDirectoryFlagWithValue("--cwd"));
     try std.testing.expect(!isStartupDirectoryInlineFlag("README.md"));
+}
+
+test "parse startup command supports writing default config" {
+    const argv = [_][]const u8{
+        "--write-default-config",
+        "--force",
+    };
+    var command = try parseStartupCommandArgs(std.testing.allocator, &argv);
+    defer command.deinit(std.testing.allocator);
+    switch (command) {
+        .write_default_config => |cmd| {
+            try std.testing.expectEqual(true, cmd.force);
+            try std.testing.expectEqual(@as(WriteDefaultConfigTarget, .user), cmd.target);
+        },
+        .run => try std.testing.expect(false),
+    }
+}
+
+test "parse startup command supports custom path and stdout target" {
+    const argv = [_][]const u8{
+        "--write-default-config=tmp/init.lua",
+        "--stdout",
+    };
+    var command = try parseStartupCommandArgs(std.testing.allocator, &argv);
+    defer command.deinit(std.testing.allocator);
+    switch (command) {
+        .write_default_config => |cmd| switch (cmd.target) {
+            .stdout => {},
+            else => try std.testing.expect(false),
+        },
+        .run => try std.testing.expect(false),
+    }
 }

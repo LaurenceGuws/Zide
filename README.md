@@ -176,6 +176,27 @@ Refresh them with:
 zig build meta
 ```
 
+To seed a real user config from the shipped current-version defaults:
+
+```bash
+zig build run -- --write-default-config
+```
+
+That writes the default config to your platform user-config location:
+- Linux: `${XDG_CONFIG_HOME:-~/.config}/zide/init.lua`
+- macOS: `~/Library/Application Support/Zide/init.lua`
+- Windows: `%APPDATA%\\Zide\\init.lua`
+
+Useful variants:
+
+```bash
+zig build run -- --write-default-config --force
+zig build run -- --write-default-config=/tmp/zide-init.lua
+zig build run -- --write-default-config --stdout
+```
+
+Once your editor's LuaLS workspace can see this repo's [.luarc.json](/home/home/personal/worktrees/zide-portable-zbar-lua/.luarc.json) and [lua/zide-meta.lua](/home/home/personal/worktrees/zide-portable-zbar-lua/lua/zide-meta.lua), that seeded user config gets the same completion surface as repo-local `.zide.lua`.
+
 ## Developer Notes
 
 Repository-local docs own the detailed operator guidance:
