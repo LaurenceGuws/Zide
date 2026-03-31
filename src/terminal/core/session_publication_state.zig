@@ -1,23 +1,24 @@
 const app_logger = @import("../../app_logger.zig");
+const terminal_publication = @import("terminal_publication.zig");
 
 pub fn clearPublishedDamageIfGeneration(self: anytype, expected_generation: u64, clear_screen_dirty: bool) bool {
     self.lock();
     defer self.unlock();
     const current_generation = self.output_generation.load(.acquire);
+    const cache = terminal_publication.renderCache(self);
     if (current_generation != expected_generation) {
         if (clear_screen_dirty) {
-            const view = self.activeScreenConst().snapshotView();
-            const rows = view.rows;
-            const cols = view.cols;
-            const damage_rows = if (view.damage.end_row >= view.damage.start_row) view.damage.end_row - view.damage.start_row + 1 else 0;
-            const damage_cols = if (view.damage.end_col >= view.damage.start_col) view.damage.end_col - view.damage.start_col + 1 else 0;
+            const rows = cache.rows;
+            const cols = cache.cols;
+            const damage_rows = if (cache.damage.end_row >= cache.damage.start_row) cache.damage.end_row - cache.damage.start_row + 1 else 0;
+            const damage_cols = if (cache.damage.end_col >= cache.damage.start_col) cache.damage.end_col - cache.damage.start_col + 1 else 0;
             app_logger.logger("terminal.ui.dirty_retirement").logf(
                 .info,
                 "result=skipped expected_generation={d} current_generation={d} dirty={s} damage_rows={d} damage_cols={d} rows={d} cols={d}",
                 .{
                     expected_generation,
                     current_generation,
-                    @tagName(view.dirty),
+                    @tagName(cache.dirty),
                     damage_rows,
                     damage_cols,
                     rows,
@@ -28,17 +29,16 @@ pub fn clearPublishedDamageIfGeneration(self: anytype, expected_generation: u64,
         return false;
     }
     if (clear_screen_dirty) {
-        const view = self.activeScreenConst().snapshotView();
-        const rows = view.rows;
-        const cols = view.cols;
-        const damage_rows = if (view.damage.end_row >= view.damage.start_row) view.damage.end_row - view.damage.start_row + 1 else 0;
-        const damage_cols = if (view.damage.end_col >= view.damage.start_col) view.damage.end_col - view.damage.start_col + 1 else 0;
+        const rows = cache.rows;
+        const cols = cache.cols;
+        const damage_rows = if (cache.damage.end_row >= cache.damage.start_row) cache.damage.end_row - cache.damage.start_row + 1 else 0;
+        const damage_cols = if (cache.damage.end_col >= cache.damage.start_col) cache.damage.end_col - cache.damage.start_col + 1 else 0;
         app_logger.logger("terminal.ui.dirty_retirement").logf(
             .info,
             "result=cleared generation={d} dirty={s} damage_rows={d} damage_cols={d} rows={d} cols={d}",
             .{
                 expected_generation,
-                @tagName(view.dirty),
+                @tagName(cache.dirty),
                 damage_rows,
                 damage_cols,
                 rows,
