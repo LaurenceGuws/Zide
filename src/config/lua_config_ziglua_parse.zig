@@ -871,3 +871,85 @@ test "parseConfigFromLuaState parses terminal shell icon mappings" {
     try std.testing.expect(saw_pwsh);
     try std.testing.expect(saw_bash);
 }
+
+test "parseConfigFromLuaState accepts empty config table" {
+    const allocator = std.testing.allocator;
+    const lua = try zlua.Lua.init(allocator);
+    defer lua.deinit();
+    lua.openLibs();
+
+    try lua.loadString(
+        \\return {}
+    );
+    try lua.protectedCall(.{ .args = 0, .results = 1 });
+
+    var config = try parseConfigFromLuaState(allocator, @ptrCast(lua));
+    defer lua_shared.freeConfig(allocator, &config);
+
+    try std.testing.expectEqual(@as(?bool, null), config.editor_wrap);
+    try std.testing.expectEqual(@as(?bool, null), config.terminal_tab_bar_show_shell_icon);
+}
+
+test "parseConfigFromLuaState parses string-or-list fields through shared reader paths" {
+    const allocator = std.testing.allocator;
+    const lua = try zlua.Lua.init(allocator);
+    defer lua.deinit();
+    lua.openLibs();
+
+    try lua.loadString(
+        \\return {
+        \\    log = { "terminal.frame", "editor.perf" },
+        \\    editor = {
+        \\        font_features = { "liga", "calt" },
+        \\    },
+        \\    terminal = {
+        \\        font_features = "ss01",
+        \\    },
+        \\}
+    );
+    try lua.protectedCall(.{ .args = 0, .results = 1 });
+
+    var config = try parseConfigFromLuaState(allocator, @ptrCast(lua));
+    defer lua_shared.freeConfig(allocator, &config);
+
+    try std.testing.expect(config.log_file_filter != null);
+    try std.testing.expect(config.log_console_filter != null);
+    try std.testing.expect(config.editor_font_features != null);
+    try std.testing.expect(config.terminal_font_features != null);
+    try std.testing.expectEqualStrings("terminal.frame,editor.perf", config.log_file_filter.?);
+    try std.testing.expectEqualStrings("terminal.frame,editor.perf", config.log_console_filter.?);
+    try std.testing.expectEqualStrings("liga,calt", config.editor_font_features.?);
+    try std.testing.expectEqualStrings("ss01", config.terminal_font_features.?);
+}
+
+test "parseConfigFromLuaState parses keybind mods from string lists" {
+    const allocator = std.testing.allocator;
+    const lua = try zlua.Lua.init(allocator);
+    defer lua.deinit();
+    lua.openLibs();
+
+    try lua.loadString(
+        \\return {
+        \\    keybinds = {
+        \\        global = {
+        \\            {
+        \\                key = "p",
+        \\                mods = { "ctrl", "shift" },
+        \\                action = "palette_open",
+        \\                repeat = false,
+        \\            },
+        \\        },
+        \\    },
+        \\}
+    );
+    try lua.protectedCall(.{ .args = 0, .results = 1 });
+
+    var config = try parseConfigFromLuaState(allocator, @ptrCast(lua));
+    defer lua_shared.freeConfig(allocator, &config);
+
+    try std.testing.expect(config.keybinds != null);
+    try std.testing.expectEqual(@as(usize, 1), config.keybinds.?.len);
+    try std.testing.expect(config.keybinds.?[0].mods.ctrl);
+    try std.testing.expect(config.keybinds.?[0].mods.shift);
+    try std.testing.expect(!config.keybinds.?[0].mods.alt);
+}
