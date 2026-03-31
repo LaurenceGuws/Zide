@@ -58,4 +58,13 @@ pub const Reader = struct {
         defer self.state.pop(1);
         return self.state.readString(-1);
     }
+
+    pub fn childRawIndex(self: Reader, idx: i32, index_1_based: usize) ?zlua_portable.reader.Reader {
+        self.state.rawGetIndex(idx, index_1_based);
+        if (!self.state.isTable(-1)) {
+            self.state.pop(1);
+            return null;
+        }
+        return zlua_portable.reader.Reader.init(self.state, self.allocator, -1);
+    }
 };

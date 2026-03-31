@@ -34,15 +34,13 @@ fn applyMod(mods: *input_types.Modifiers, mod_flag: ModFlag) void {
 fn parseModsField(lua: *zlua.Lua, idx: i32) input_types.Modifiers {
     var mods: input_types.Modifiers = .{};
     const reader = config_reader.Reader.init(lua, std.heap.page_allocator, idx);
-    _ = lua.getField(idx, "mods");
-    defer lua.pop(1);
-
-    if (lua.isString(-1)) {
-        if (lua.toString(-1)) |s| {
-            if (readModString(s)) |mod_flag| applyMod(&mods, mod_flag);
-        } else |_| {}
+    if (reader.fieldString("mods")) |s| {
+        if (readModString(s)) |mod_flag| applyMod(&mods, mod_flag);
         return mods;
     }
+
+    _ = lua.getField(idx, "mods");
+    defer lua.pop(1);
     if (!lua.isTable(-1)) return mods;
 
     const mods_idx = lua.absIndex(-1);
@@ -73,19 +71,16 @@ fn parseKeybindScope(
     scope: input_actions.BindScope,
     out: *std.ArrayList(input_actions.BindSpec),
 ) !void {
-    _ = lua.getField(idx, field);
-    defer lua.pop(1);
-    if (!lua.isTable(-1)) return;
+    const root_reader = config_reader.Reader.init(lua, allocator, idx);
+    const scope_reader = root_reader.child(field) orelse return;
+    defer scope_reader.finish();
 
-    const scope_idx = lua.absIndex(-1);
-    const len = lua.rawLen(scope_idx);
-    var i: i32 = 1;
-    while (i <= @as(i32, @intCast(len))) : (i += 1) {
-        _ = lua.rawGetIndex(scope_idx, i);
-        defer lua.pop(1);
-        if (!lua.isTable(-1)) continue;
+    const len = scope_reader.arrayLen();
+    for (0..len) |i| {
+        const entry_reader = scope_reader.arrayItem(i + 1) orelse continue;
+        defer entry_reader.finish();
 
-        const entry_idx = lua.absIndex(-1);
+        const entry_idx = entry_reader.index;
         const key = parseKeyField(lua, entry_idx) orelse continue;
         const action = parseActionField(lua, entry_idx) orelse continue;
         const mods = parseModsField(lua, entry_idx);
