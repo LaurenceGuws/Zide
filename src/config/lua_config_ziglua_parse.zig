@@ -621,11 +621,11 @@ pub fn parseConfigFromLuaState(allocator: std.mem.Allocator, L: *anyopaque) LuaC
     }
 
     const table_index = lua.absIndex(-1);
-    lua.pushNil();
-    if (!lua.next(table_index)) {
+    var it = zlua_portable.api.State.fromRaw(@ptrCast(lua)).tableIter(table_index);
+    defer it.finish();
+    if (!it.next()) {
         return lua_shared.emptyConfig();
     }
-    lua.pop(2);
 
     return try parseNativeScalarOverlay(allocator, lua, table_index);
 }
