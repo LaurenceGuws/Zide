@@ -81,6 +81,67 @@ fn applyEditorSectionScalars(
     }
 }
 
+fn applyEditorRenderTable(
+    allocator: std.mem.Allocator,
+    lua: *zlua.Lua,
+    editor_idx: i32,
+    out: *Config,
+) void {
+    _ = lua.getField(editor_idx, "render");
+    if (lua.isTable(-1)) {
+        const render_reader = zlua_portable.reader.Reader.init(zlua_portable.api.State.fromRaw(@ptrCast(lua)), allocator, lua.absIndex(-1));
+        if (render_reader.intField("highlight_budget")) |v| {
+            if (v >= 0) out.editor_highlight_budget = @intCast(v);
+        }
+        if (render_reader.intField("width_budget")) |v| {
+            if (v >= 0) out.editor_width_budget = @intCast(v);
+        }
+    }
+    lua.pop(1);
+}
+
+fn applyEditorTabBarTable(
+    allocator: std.mem.Allocator,
+    lua: *zlua.Lua,
+    editor_idx: i32,
+    out: *Config,
+) void {
+    _ = lua.getField(editor_idx, "tab_bar");
+    if (lua.isTable(-1)) {
+        const tab_reader = zlua_portable.reader.Reader.init(zlua_portable.api.State.fromRaw(@ptrCast(lua)), allocator, lua.absIndex(-1));
+        if (tab_reader.fieldString("width_mode")) |v| {
+            if (lua_runtime_parse.parseTabBarWidthModeFromString(v)) |mode| {
+                out.editor_tab_bar_width_mode = mode;
+            }
+        }
+    }
+    lua.pop(1);
+}
+
+fn applyEditorHighlightsTable(
+    allocator: std.mem.Allocator,
+    lua: *zlua.Lua,
+    editor_idx: i32,
+    out: *Config,
+) !void {
+    _ = lua.getField(editor_idx, "highlights");
+    if (lua.isTable(-1)) {
+        const highlights_idx = lua.absIndex(-1);
+        _ = lua.getField(highlights_idx, "extensions");
+        if (lua.isTable(-1)) {
+            out.editor_manual_highlight_rules = try parseManualHighlightRules(allocator, lua, lua.absIndex(-1));
+        }
+        lua.pop(1);
+
+        _ = lua.getField(highlights_idx, "unsupported");
+        if (lua.isTable(-1)) {
+            out.editor_manual_highlight_unsupported = try parseManualHighlightFallback(allocator, lua, lua.absIndex(-1));
+        }
+        lua.pop(1);
+    }
+    lua.pop(1);
+}
+
 fn applyTerminalShellValue(
     allocator: std.mem.Allocator,
     lua: *zlua.Lua,
@@ -419,62 +480,13 @@ fn parseNativeScalarOverlay(allocator: std.mem.Allocator, lua: *zlua.Lua, table_
             replaceOwnedString,
             lua_runtime_parse.parseLigatureStrategyFromString,
         );
-
-        _ = lua.getField(editor_idx, "render");
-        if (lua.isTable(-1)) {
-            const render_idx = lua.absIndex(-1);
-            _ = lua.getField(render_idx, "highlight_budget");
-            if (lua.isNumber(-1)) {
-                if (lua.toInteger(-1)) |v| {
-                    if (v >= 0) out.editor_highlight_budget = @intCast(v);
-                } else |_| {}
-            }
-            lua.pop(1);
-            _ = lua.getField(render_idx, "width_budget");
-            if (lua.isNumber(-1)) {
-                if (lua.toInteger(-1)) |v| {
-                    if (v >= 0) out.editor_width_budget = @intCast(v);
-                } else |_| {}
-            }
-            lua.pop(1);
-        }
-        lua.pop(1);
-
-        _ = lua.getField(editor_idx, "tab_bar");
-        if (lua.isTable(-1)) {
-            const tab_idx = lua.absIndex(-1);
-            _ = lua.getField(tab_idx, "width_mode");
-            if (lua.isString(-1)) {
-                if (lua.toString(-1)) |v| {
-                    if (lua_runtime_parse.parseTabBarWidthModeFromString(v)) |mode| {
-                        out.editor_tab_bar_width_mode = mode;
-                    }
-                } else |_| {}
-            }
-            lua.pop(1);
-        }
-        lua.pop(1);
+        applyEditorRenderTable(allocator, lua, editor_idx, &out);
+        applyEditorTabBarTable(allocator, lua, editor_idx, &out);
 
         _ = lua.getField(editor_idx, "selection_overlay");
         lua_runtime_parse.parseSelectionOverlayTable(lua, -1, &out, .editor);
         lua.pop(1);
-
-        _ = lua.getField(editor_idx, "highlights");
-        if (lua.isTable(-1)) {
-            const highlights_idx = lua.absIndex(-1);
-            _ = lua.getField(highlights_idx, "extensions");
-            if (lua.isTable(-1)) {
-                out.editor_manual_highlight_rules = try parseManualHighlightRules(allocator, lua, lua.absIndex(-1));
-            }
-            lua.pop(1);
-
-            _ = lua.getField(highlights_idx, "unsupported");
-            if (lua.isTable(-1)) {
-                out.editor_manual_highlight_unsupported = try parseManualHighlightFallback(allocator, lua, lua.absIndex(-1));
-            }
-            lua.pop(1);
-        }
-        lua.pop(1);
+        try applyEditorHighlightsTable(allocator, lua, editor_idx, &out);
     }
     lua.pop(1);
 
