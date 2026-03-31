@@ -1,5 +1,6 @@
 const std = @import("std");
 const zlua = @import("zlua");
+const zlua_portable = @import("zlua_portable");
 const iface = @import("./lua_config_iface.zig");
 const ziglua_parse = @import("./lua_config_ziglua_parse.zig");
 const lua_shared = @import("./lua_config_shared.zig");
@@ -153,12 +154,11 @@ pub fn loadAvailableEditorImportedThemes(allocator: std.mem.Allocator) LuaConfig
         names.deinit(allocator);
     }
 
-    lua.pushNil();
-    while (lua.next(-2)) {
-        defer lua.pop(1);
-        if (lua.toString(-2)) |key| {
-            try names.append(allocator, allocator.dupe(u8, key) catch return LuaConfigError.OutOfMemory);
-        } else |_| {}
+    var it = zlua_portable.api.State.fromRaw(@ptrCast(lua)).tableIter(-1);
+    defer it.finish();
+    while (it.next()) {
+        const key = it.keyString() orelse continue;
+        try names.append(allocator, allocator.dupe(u8, key) catch return LuaConfigError.OutOfMemory);
     }
 
     std.mem.sort([]u8, names.items, {}, struct {
@@ -198,71 +198,71 @@ test "loadConfigWithImportedThemeOverride preserves project overrides while swit
     try tmp.dir.writeFile(.{
         .sub_path = "assets/config/init.lua",
         .data =
-            \\return {
-            \\  editor = {
-            \\    imported_theme = "theme-a",
-            \\  },
-            \\}
+        \\return {
+        \\  editor = {
+        \\    imported_theme = "theme-a",
+        \\  },
+        \\}
         ,
     });
     try tmp.dir.writeFile(.{
         .sub_path = "assets/themes/init.lua",
         .data =
-            \\local M = {}
-            \\local available = {
-            \\  ["theme-a"] = "assets/themes/theme-a.lua",
-            \\  ["theme-b"] = "assets/themes/theme-b.lua",
-            \\}
-            \\function M.available()
-            \\  return available
-            \\end
-            \\function M.load(name)
-            \\  local path = available[name]
-            \\  assert(path)
-            \\  return dofile(path)
-            \\end
-            \\return M
+        \\local M = {}
+        \\local available = {
+        \\  ["theme-a"] = "assets/themes/theme-a.lua",
+        \\  ["theme-b"] = "assets/themes/theme-b.lua",
+        \\}
+        \\function M.available()
+        \\  return available
+        \\end
+        \\function M.load(name)
+        \\  local path = available[name]
+        \\  assert(path)
+        \\  return dofile(path)
+        \\end
+        \\return M
         ,
     });
     try tmp.dir.writeFile(.{
         .sub_path = "assets/themes/theme-a.lua",
         .data =
-            \\return {
-            \\  editor = {
-            \\    theme = {
-            \\      background = "#101010",
-            \\    },
-            \\  },
-            \\}
+        \\return {
+        \\  editor = {
+        \\    theme = {
+        \\      background = "#101010",
+        \\    },
+        \\  },
+        \\}
         ,
     });
     try tmp.dir.writeFile(.{
         .sub_path = "assets/themes/theme-b.lua",
         .data =
-            \\return {
-            \\  editor = {
-            \\    theme = {
-            \\      background = "#202020",
-            \\    },
-            \\  },
-            \\}
+        \\return {
+        \\  editor = {
+        \\    theme = {
+        \\      background = "#202020",
+        \\    },
+        \\  },
+        \\}
         ,
     });
     try tmp.dir.writeFile(.{
         .sub_path = ".zide.lua",
         .data =
-            \\return {
-            \\  app = {
-            \\    theme = {
-            \\      ui_accent = "#123456",
-            \\    },
-            \\  },
-            \\  editor = {
-            \\    theme = {
-            \\      cursor = "#abcdef",
-            \\    },
-            \\  },
-            \\}
+        \\return {
+        \\  app = {
+        \\    theme = {
+        \\      ui_accent = "#123456",
+        \\    },
+        \\  },
+        \\  editor = {
+        \\    theme = {
+        \\      cursor = "#abcdef",
+        \\    },
+        \\  },
+        \\}
         ,
     });
 
@@ -297,16 +297,16 @@ test "loadAvailableEditorImportedThemes reads the Lua registry as the single aut
     try tmp.dir.writeFile(.{
         .sub_path = "assets/themes/init.lua",
         .data =
-            \\local M = {}
-            \\local available = {
-            \\  ["z-last"] = "assets/themes/z-last.lua",
-            \\  ["a-first"] = "assets/themes/a-first.lua",
-            \\  ["m-middle"] = "assets/themes/m-middle.lua",
-            \\}
-            \\function M.available()
-            \\  return available
-            \\end
-            \\return M
+        \\local M = {}
+        \\local available = {
+        \\  ["z-last"] = "assets/themes/z-last.lua",
+        \\  ["a-first"] = "assets/themes/a-first.lua",
+        \\  ["m-middle"] = "assets/themes/m-middle.lua",
+        \\}
+        \\function M.available()
+        \\  return available
+        \\end
+        \\return M
         ,
     });
 

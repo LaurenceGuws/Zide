@@ -1,11 +1,16 @@
 const std = @import("std");
 const zlua = @import("zlua");
+const zlua_portable = @import("zlua_portable");
 const iface = @import("./lua_config_iface.zig");
 
 const ThemeConfig = iface.ThemeConfig;
 const Color = std.meta.Child(@TypeOf((@as(ThemeConfig, undefined)).background));
 const EditorTextStyleFlags = iface.EditorTextStyleFlags;
 const LuaConfigError = iface.LuaConfigError;
+
+fn luaState(lua: *zlua.Lua) zlua_portable.api.State {
+    return zlua_portable.api.State.fromRaw(@ptrCast(lua));
+}
 
 fn parseHexByte(slice: []const u8) ?u8 {
     return std.fmt.parseInt(u8, slice, 16) catch null;
@@ -25,42 +30,35 @@ fn parseHexColor(value: []const u8) ?Color {
 }
 
 fn parseColorChannel(lua: *zlua.Lua, idx: i32) ?u8 {
-    if (!lua.isNumber(idx)) return null;
-    if (lua.toInteger(idx)) |value| {
-        if (value < 0 or value > 255) return null;
-        return @intCast(value);
-    } else |_| return null;
+    const state = luaState(lua);
+    if (!state.isInteger(idx)) return null;
+    const value = state.readInteger(idx);
+    if (value < 0 or value > 255) return null;
+    return @intCast(value);
 }
 
 fn parseColorFromValue(lua: *zlua.Lua, idx: i32) ?Color {
-    if (lua.isString(idx)) {
-        if (lua.toString(idx)) |value| return parseHexColor(value) else |_| return null;
-    }
-    if (lua.isTable(idx)) {
-        const table_idx = lua.absIndex(idx);
-        var r: ?u8 = null;
-        var g: ?u8 = null;
-        var b: ?u8 = null;
-        var a: ?u8 = null;
+    const state = luaState(lua);
+    if (state.readString(idx)) |value| return parseHexColor(value);
+    if (!state.isTable(idx)) return null;
 
-        _ = lua.getField(table_idx, "r");
-        r = parseColorChannel(lua, -1);
-        lua.pop(1);
-        _ = lua.getField(table_idx, "g");
-        g = parseColorChannel(lua, -1);
-        lua.pop(1);
-        _ = lua.getField(table_idx, "b");
-        b = parseColorChannel(lua, -1);
-        lua.pop(1);
-        _ = lua.getField(table_idx, "a");
-        a = parseColorChannel(lua, -1);
-        lua.pop(1);
+    const reader = zlua_portable.reader.Reader.init(state, std.heap.page_allocator, idx);
+    const r = reader.intField("r") orelse return null;
+    const g = reader.intField("g") orelse return null;
+    const b = reader.intField("b") orelse return null;
+    if (r < 0 or r > 255 or g < 0 or g > 255 or b < 0 or b > 255) return null;
 
-        if (r != null and g != null and b != null) {
-            return Color{ .r = r.?, .g = g.?, .b = b.?, .a = a orelse 255 };
-        }
+    const a_raw = reader.intField("a");
+    if (a_raw) |value| {
+        if (value < 0 or value > 255) return null;
     }
-    return null;
+
+    return Color{
+        .r = @intCast(r),
+        .g = @intCast(g),
+        .b = @intCast(b),
+        .a = if (a_raw) |value| @intCast(value) else 255,
+    };
 }
 
 fn parseColorField(lua: *zlua.Lua, idx: i32, field: [:0]const u8, out: *?Color) void {
@@ -380,27 +378,28 @@ fn captureNameMatches(key: []const u8, name: []const u8) bool {
 }
 
 fn resolveEditorThemeColorFromSection(lua: *zlua.Lua, theme_idx: i32, section_name: [:0]const u8, theme: *const ThemeConfig, name: []const u8, depth: u8) ?Color {
-    _ = lua.getField(theme_idx, section_name);
-    if (!lua.isTable(-1)) {
-        lua.pop(1);
+    const state = luaState(lua);
+    state.getField(theme_idx, section_name);
+    if (!state.isTable(-1)) {
+        state.pop(1);
         return null;
     }
-    const section_idx = lua.absIndex(-1);
+    const section_idx = state.absIndex(-1);
     var color: ?Color = null;
-    lua.pushNil();
-    while (lua.next(section_idx)) {
-        defer lua.pop(1);
-        if (!lua.isString(-2)) continue;
-        if (lua.toString(-2)) |source_name| {
-            if (!captureNameMatches(source_name, name)) continue;
-            color = parseEditorThemeColorFromValue(lua, -1);
-            if (color == null) {
-                if (editorThemeLinkTargetFromValue(lua, -1)) |target_name| color = resolveEditorThemeColor(lua, theme_idx, theme, target_name, depth);
+    var it = state.tableIter(section_idx);
+    defer it.finish();
+    while (it.next()) {
+        const source_name = it.keyString() orelse continue;
+        if (!captureNameMatches(source_name, name)) continue;
+        color = parseEditorThemeColorFromValue(lua, -1);
+        if (color == null) {
+            if (editorThemeLinkTargetFromValue(lua, -1)) |target_name| {
+                color = resolveEditorThemeColor(lua, theme_idx, theme, target_name, depth);
             }
-            break;
-        } else |_| {}
+        }
+        break;
     }
-    lua.pop(1);
+    state.pop(1);
     return color;
 }
 
@@ -414,52 +413,51 @@ fn resolveEditorThemeColor(lua: *zlua.Lua, theme_idx: i32, theme: *const ThemeCo
 }
 
 fn applyEditorThemeColorSection(lua: *zlua.Lua, theme_idx: i32, section_name: [:0]const u8, theme: *ThemeConfig) void {
-    _ = lua.getField(theme_idx, section_name);
-    if (!lua.isTable(-1)) {
-        lua.pop(1);
+    const state = luaState(lua);
+    state.getField(theme_idx, section_name);
+    if (!state.isTable(-1)) {
+        state.pop(1);
         return;
     }
-    const section_idx = lua.absIndex(-1);
-    lua.pushNil();
-    while (lua.next(section_idx)) {
-        defer lua.pop(1);
-        if (!lua.isString(-2)) continue;
-        if (lua.toString(-2)) |source_name| {
-            if (parseEditorThemeColorFromValue(lua, -1)) |color| _ = setThemeColorByEditorName(theme, source_name, color);
-        } else |_| {}
+    const section_idx = state.absIndex(-1);
+    var it = state.tableIter(section_idx);
+    defer it.finish();
+    while (it.next()) {
+        const source_name = it.keyString() orelse continue;
+        if (parseEditorThemeColorFromValue(lua, -1)) |color| _ = setThemeColorByEditorName(theme, source_name, color);
     }
-    lua.pop(1);
+    state.pop(1);
 }
 
 fn applyEditorThemeStyleSection(lua: *zlua.Lua, theme_idx: i32, section_name: [:0]const u8, theme: *ThemeConfig) void {
-    _ = lua.getField(theme_idx, section_name);
-    if (!lua.isTable(-1)) {
-        lua.pop(1);
+    const state = luaState(lua);
+    state.getField(theme_idx, section_name);
+    if (!state.isTable(-1)) {
+        state.pop(1);
         return;
     }
-    const section_idx = lua.absIndex(-1);
-    lua.pushNil();
-    while (lua.next(section_idx)) {
-        defer lua.pop(1);
-        if (!lua.isString(-2)) continue;
-        if (lua.toString(-2)) |source_name| {
-            const style_idx = themeStyleIndexByEditorName(source_name) orelse continue;
-            if (parseEditorThemeStyleFromValue(lua, -1)) |style| {
-                theme.syntax_style_flags[style_idx] = style.flags;
-                if (style.special_color) |color| theme.syntax_special_colors[style_idx] = color;
-            }
-        } else |_| {}
+    const section_idx = state.absIndex(-1);
+    var it = state.tableIter(section_idx);
+    defer it.finish();
+    while (it.next()) {
+        const source_name = it.keyString() orelse continue;
+        const style_idx = themeStyleIndexByEditorName(source_name) orelse continue;
+        if (parseEditorThemeStyleFromValue(lua, -1)) |style| {
+            theme.syntax_style_flags[style_idx] = style.flags;
+            if (style.special_color) |color| theme.syntax_special_colors[style_idx] = color;
+        }
     }
-    lua.pop(1);
+    state.pop(1);
 }
 
 fn applyEditorThemeLinkSection(lua: *zlua.Lua, theme_idx: i32, section_name: [:0]const u8, theme: *ThemeConfig) void {
-    _ = lua.getField(theme_idx, section_name);
-    if (!lua.isTable(-1)) {
-        lua.pop(1);
+    const state = luaState(lua);
+    state.getField(theme_idx, section_name);
+    if (!state.isTable(-1)) {
+        state.pop(1);
         return;
     }
-    const section_idx = lua.absIndex(-1);
+    const section_idx = state.absIndex(-1);
     var pending = std.ArrayList(struct { source: []const u8, target: []const u8 }).empty;
     defer {
         for (pending.items) |entry| {
@@ -468,20 +466,18 @@ fn applyEditorThemeLinkSection(lua: *zlua.Lua, theme_idx: i32, section_name: [:0
         }
         pending.deinit(std.heap.page_allocator);
     }
-    lua.pushNil();
-    while (lua.next(section_idx)) {
-        defer lua.pop(1);
-        if (!lua.isString(-2)) continue;
-        if (lua.toString(-2)) |source_name| {
-            if (editorThemeLinkTargetFromValue(lua, -1)) |target_name| {
-                pending.append(std.heap.page_allocator, .{
-                    .source = std.heap.page_allocator.dupe(u8, source_name) catch continue,
-                    .target = std.heap.page_allocator.dupe(u8, target_name) catch continue,
-                }) catch {};
-            }
-        } else |_| {}
+    var it = state.tableIter(section_idx);
+    defer it.finish();
+    while (it.next()) {
+        const source_name = it.keyString() orelse continue;
+        if (editorThemeLinkTargetFromValue(lua, -1)) |target_name| {
+            pending.append(std.heap.page_allocator, .{
+                .source = std.heap.page_allocator.dupe(u8, source_name) catch continue,
+                .target = std.heap.page_allocator.dupe(u8, target_name) catch continue,
+            }) catch {};
+        }
     }
-    lua.pop(1);
+    state.pop(1);
     for (pending.items) |entry| {
         if (resolveEditorThemeColor(lua, theme_idx, theme, entry.target, 0)) |color| {
             _ = setThemeColorByEditorName(theme, entry.source, color);
