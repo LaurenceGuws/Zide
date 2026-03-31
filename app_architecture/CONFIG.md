@@ -74,6 +74,8 @@ zig build run -- --write-default-config
 zig build run -- --write-default-config --with-lua-meta
 zig build run -- --write-default-config --config-scope=editor --stdout
 zig build run -- --write-default-config --config-scope=terminal --stdout
+zig build run -- --write-default-config --config-scope=editor --with-lua-meta
+zig build run -- --write-default-config --config-scope=terminal --with-lua-meta
 ```
 
 That copies `assets/config/init.lua` to the platform user-config location

@@ -196,6 +196,8 @@ zig build run -- --write-default-config --stdout
 zig build run -- --write-default-config --with-lua-meta
 zig build run -- --write-default-config --config-scope=editor --stdout
 zig build run -- --write-default-config --config-scope=terminal --stdout
+zig build run -- --write-default-config --config-scope=editor --with-lua-meta
+zig build run -- --write-default-config --config-scope=terminal --with-lua-meta
 ```
 
 By default, rerunning the command preserves an existing user `init.lua`.
@@ -213,6 +215,8 @@ workspace, install user-side LuaLS metadata too:
 ```bash
 zig build run -- --install-user-lua-meta
 zig build run -- --write-default-config --with-lua-meta
+zig build run -- --write-default-config --config-scope=editor --with-lua-meta
+zig build run -- --write-default-config --config-scope=terminal --with-lua-meta
 ```
 
 That writes:

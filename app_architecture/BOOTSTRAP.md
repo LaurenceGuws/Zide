@@ -191,6 +191,8 @@ zig build run -- --write-default-config --stdout
 zig build run -- --write-default-config --with-lua-meta
 zig build run -- --write-default-config --config-scope=editor --stdout
 zig build run -- --write-default-config --config-scope=terminal --stdout
+zig build run -- --write-default-config --config-scope=editor --with-lua-meta
+zig build run -- --write-default-config --config-scope=terminal --with-lua-meta
 ```
 
 Without `--force`, an existing user `init.lua` is preserved and only missing
