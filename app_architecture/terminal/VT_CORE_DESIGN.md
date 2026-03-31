@@ -80,6 +80,13 @@ Status note, 2026-03-31:
   - cut through the real surface area
   - validate hard
   - delete the old seam
+- First public-surface slice landed under that rule:
+  - the root terminal module now names the PTY-backed wrapper explicitly as
+    `PtyTerminalSession`
+  - native app/runtime, FFI, and replay code were moved to that name
+  - this is not the end-state, but it removes one layer of contract blur where
+    the public barrel previously exported `TerminalSession` as if it were the
+    neutral terminal center
 - This doc should now be read as authority for a terminal-core offensive, not
   as permission to preserve the current center with smaller helper files.
 

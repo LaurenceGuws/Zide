@@ -10,7 +10,7 @@ const terminal_cli = @import("terminal_cli.zig");
 const terminal_mod = @import("../terminal/core/terminal.zig");
 const app_logger = @import("../app_logger.zig");
 
-const TerminalSession = terminal_mod.TerminalSession;
+const TerminalSession = terminal_mod.PtyTerminalSession;
 const TerminalWorkspace = terminal_mod.TerminalWorkspace;
 
 const StartupFailPoint = enum {

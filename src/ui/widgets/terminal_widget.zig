@@ -14,7 +14,7 @@ const input_mod = @import("terminal_widget_input.zig");
 const render_cache_mod = @import("../../terminal/core/render_cache.zig");
 
 const Shell = app_shell.Shell;
-const TerminalSession = terminal_mod.TerminalSession;
+const TerminalSession = terminal_mod.PtyTerminalSession;
 const CursorPos = terminal_mod.CursorPos;
 const KittyImage = terminal_mod.KittyImage;
 const KittyPlacement = terminal_mod.KittyPlacement;

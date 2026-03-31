@@ -3,7 +3,7 @@ const builtin = @import("builtin");
 const app_logger = @import("../../app_logger.zig");
 const terminal_mod = @import("../../terminal/core/terminal.zig");
 
-const TerminalSession = terminal_mod.TerminalSession;
+const TerminalSession = terminal_mod.PtyTerminalSession;
 
 fn shellSingleQuoteAlloc(allocator: std.mem.Allocator, value: []const u8) ![]u8 {
     var out = std.ArrayList(u8).empty;

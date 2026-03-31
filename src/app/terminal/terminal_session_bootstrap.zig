@@ -7,7 +7,7 @@ const c = @cImport({
 });
 
 const Shell = app_shell.Shell;
-const TerminalSession = terminal_mod.TerminalSession;
+const TerminalSession = terminal_mod.PtyTerminalSession;
 const TerminalWidget = widgets.TerminalWidget;
 
 const win32 = if (@import("builtin").os.tag == .windows) struct {

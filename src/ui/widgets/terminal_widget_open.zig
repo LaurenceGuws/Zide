@@ -5,7 +5,7 @@ const app_logger = @import("../../app_logger.zig");
 const terminal_mod = @import("../../terminal/core/terminal.zig");
 const hover_mod = @import("terminal_widget_hover.zig");
 
-const TerminalSession = terminal_mod.TerminalSession;
+const TerminalSession = terminal_mod.PtyTerminalSession;
 const Cell = terminal_mod.Cell;
 
 pub const PendingOpen = struct {

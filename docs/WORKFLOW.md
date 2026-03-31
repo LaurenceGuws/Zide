@@ -23,6 +23,18 @@ repository.
 - `main` is the default branch.
 - Create a feature branch only when isolation materially improves safety or reviewability.
 - If you create a branch, own it end-to-end: branch from current `main`, validate locally, merge back, and delete it after landing.
+- For large architecture campaigns, a temporary "war branch" is allowed when it
+  materially improves checkpoint discipline and keeps `main` clean between
+  milestones.
+- War-branch rule:
+  - branch from the current `main`
+  - keep small coherent checkpoint commits on the branch
+  - define explicit milestones up front
+  - merge back into `main` at each validated milestone instead of letting the
+    branch drift across multiple unmerged milestones
+  - after each milestone merge, continue from refreshed `main` and keep the
+    next branch scope narrow
+  - delete the branch once its current milestone work is landed
 
 ## Documentation Roles
 

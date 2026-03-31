@@ -7,7 +7,7 @@ const app_ui_layout_runtime = @import("../ui_layout_runtime.zig");
 const terminal_mod = @import("../../terminal/core/terminal.zig");
 
 const AppMode = app_bootstrap.AppMode;
-const TerminalSession = terminal_mod.TerminalSession;
+const TerminalSession = terminal_mod.PtyTerminalSession;
 const TerminalWorkspace = terminal_mod.TerminalWorkspace;
 
 pub fn handle(

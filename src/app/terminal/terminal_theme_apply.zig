@@ -5,7 +5,7 @@ const term_types = @import("../../terminal/model/types.zig");
 const terminal_mod = @import("../../terminal/core/terminal.zig");
 const widgets = @import("../../ui/widgets.zig");
 
-const TerminalSession = terminal_mod.TerminalSession;
+const TerminalSession = terminal_mod.PtyTerminalSession;
 const TerminalWidget = widgets.TerminalWidget;
 
 pub fn setSessionPalette(term: *TerminalSession, theme: *const app_shell.Theme) void {

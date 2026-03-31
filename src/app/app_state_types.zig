@@ -50,7 +50,7 @@ pub const GrammarManager = grammar_manager_mod.GrammarManager;
 pub const EditorRenderCache = editor_render_cache_mod.EditorRenderCache;
 pub const EditorClusterCache = widgets.EditorClusterCache;
 
-pub const TerminalSession = terminal_mod.TerminalSession;
+pub const TerminalSession = terminal_mod.PtyTerminalSession;
 pub const TerminalWorkspace = terminal_mod.TerminalWorkspace;
 pub const TerminalTabId = terminal_mod.TerminalTabId;
 pub const TerminalPresentationFeedback = terminal_mod.PresentationFeedback;

@@ -57,6 +57,53 @@ Focused follow-up lane:
   Why: this is the current ruthless read on what still looks second-rate at
   first glance and what should be demolished first.
 
+## Current Milestone
+
+Branch:
+
+- `terminal-war`
+
+Milestone rule:
+
+- keep small checkpoint commits on `terminal-war`
+- merge back into `main` once this milestone is validated
+- do not stack the next milestone on top of an unmerged one
+
+Current milestone: `M1` public/session-center dismantling
+
+Merge goal:
+
+- native, FFI, replay, and workspace-facing code should no longer present the
+  PTY session shell as the neutral terminal center
+- the root/public contract should read more explicitly as engine +
+  PTY-host-wrapper, not "terminal equals session"
+- docs and validation should reflect the new checkpoint clearly enough that the
+  merge to `main` is a real milestone, not a partial scratch state
+
+Checklist:
+
+- [x] root terminal module exports `PtyTerminalSession`
+- [x] native app/runtime consumers moved to `PtyTerminalSession`
+- [x] FFI consumers moved to `PtyTerminalSession`
+- [x] replay harness consumers moved to `PtyTerminalSession`
+- [x] workspace/session-facing naming and contract reviewed for the same false-center smell
+- [x] milestone validation pass captured
+- [ ] milestone merged back into `main`
+
+Validation note, 2026-03-31:
+
+- passed:
+  - `zig build test`
+  - `zig build check-app-imports`
+- structural grep confirms the root/app/ui/ffi/workspace consumers no longer
+  import `TerminalSession` from `terminal.zig`; the remaining public/root names
+  are `PtyTerminalSession` and workspace-local `PtyTerminalSession`.
+- known unrelated blocker:
+  - `zig build test-terminal-replay -- --fixture scroll_region_origin_scrolls_history`
+    still fails because the inline replay `Pty` fixture shape is stale versus
+    `src/terminal/io/pty_unix.zig` and is missing `cached_fg_command_len` plus
+    `cached_fg_command`
+
 ## TODO
 
 - [x] `VTCORE-00` Define the terminal core boundary.
@@ -78,6 +125,15 @@ Focused follow-up lane:
   - the remaining problem is architectural theater: too many smaller files still
     preserve one broad fake center
   - this lane stays hot until that center is broken
+  Progress note, 2026-03-31:
+  - landed a first public-surface cut at the root terminal module:
+    `src/terminal/core/terminal.zig` now exports the PTY-backed host wrapper as
+    `PtyTerminalSession`, and native app/runtime, FFI, and replay-harness
+    consumers were moved onto that explicit name.
+  - this does not finish `VTCORE-01`; `terminal_session.zig` is still broad.
+    It does remove one layer of public contract blur by stopping the root
+    terminal barrel from presenting the PTY host wrapper as the terminal's
+    neutral center.
 - [ ] `VTCORE-02` Make FFI a first-class core interface.
   Notes: shared FFI state plus `host_api` and `core_api` splits are landed; remaining work is maturity and convergence, not proving the shape. Recent slices closed real host-facing gaps such as close-confirm signals and backend-owned viewport control.
   Done when:

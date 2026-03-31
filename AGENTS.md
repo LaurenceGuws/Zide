@@ -18,13 +18,14 @@ Follow this workflow for every feature/task:
 8. If the user explicitly says to commit, treat that instruction as approval and comply without blocking on test approval.
 9. Work on `main` by default. Create a feature branch only when the task is large enough that isolated branch management materially reduces risk or review cost.
 10. If you create a feature branch, you own it end-to-end: branch from current `main`, keep commits coherent, merge back into `main` after validation, and delete the branch once its work is on `main`.
-11. Do not keep compatibility shims, dead paths, or duplicate seams purely to avoid a clean cut. If the old surface is wrong and removing it improves the architecture, replace it directly in a reviewable step.
-12. Keep diffs reviewable; no file moves before baseline tests exist unless the move is itself the point of the approved change.
-13. No behavior changes during extraction-only refactors; any semantic change must be separately scoped and test-driven.
-14. Extraction-only constraint: no renaming of public symbols, no logic changes, no behavior-motivated simplifications, no "while we're here" cleanups.
-15. Before any refactor, implement the replay harness, capture baseline goldens, and lock the fixture list as regression authority.
-16. Once approved (or explicitly instructed to commit), commit each step labeled as the step header.
-17. Return to the todo and suggest 3 next changes.
+11. A temporary "war branch" is allowed for a large architecture campaign when it improves checkpoint discipline, but it must still merge into `main` at each validated milestone rather than drifting across multiple unmerged milestones.
+12. Do not keep compatibility shims, dead paths, or duplicate seams purely to avoid a clean cut. If the old surface is wrong and removing it improves the architecture, replace it directly in a reviewable step.
+13. Keep diffs reviewable; no file moves before baseline tests exist unless the move is itself the point of the approved change.
+14. No behavior changes during extraction-only refactors; any semantic change must be separately scoped and test-driven.
+15. Extraction-only constraint: no renaming of public symbols, no logic changes, no behavior-motivated simplifications, no "while we're here" cleanups.
+16. Before any refactor, implement the replay harness, capture baseline goldens, and lock the fixture list as regression authority.
+17. Once approved (or explicitly instructed to commit), commit each step labeled as the step header.
+18. Return to the todo and suggest 3 next changes.
 
 ## Doc scope policy
 
