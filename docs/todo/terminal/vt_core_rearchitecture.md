@@ -69,24 +69,21 @@ Milestone rule:
 - merge back into `main` once this milestone is validated
 - do not stack the next milestone on top of an unmerged one
 
-Current milestone: `M1` public/session-center dismantling
+Current milestone: `M2` printable semantics below the VT boundary
 
 Merge goal:
 
-- native, FFI, replay, and workspace-facing code should no longer present the
-  PTY session shell as the neutral terminal center
-- the root/public contract should read more explicitly as engine +
-  PTY-host-wrapper, not "terminal equals session"
-- docs and validation should reflect the new checkpoint clearly enough that the
-  merge to `main` is a real milestone, not a partial scratch state
+- parser-hook glue should stop owning printable text semantics
+- codepoint and ASCII write behavior should read as core-owned terminal
+  semantics, not session-facing hook behavior
+- docs and validation should capture the ownership change clearly enough that
+  the merge to `main` is a real milestone, not a partial scratch state
 
 Checklist:
 
-- [x] root terminal module exports `PtyTerminalSession`
-- [x] native app/runtime consumers moved to `PtyTerminalSession`
-- [x] FFI consumers moved to `PtyTerminalSession`
-- [x] replay harness consumers moved to `PtyTerminalSession`
-- [x] workspace/session-facing naming and contract reviewed for the same false-center smell
+- [x] core-owned text write module exists below parser hooks
+- [x] parser hooks reduced to dispatch glue for printable text
+- [x] session/public call sites still behave through the new core-owned text path
 - [x] milestone validation pass captured
 - [ ] milestone merged back into `main`
 
@@ -95,14 +92,10 @@ Validation note, 2026-03-31:
 - passed:
   - `zig build test`
   - `zig build check-app-imports`
-- structural grep confirms the root/app/ui/ffi/workspace consumers no longer
-  import `TerminalSession` from `terminal.zig`; the remaining public/root names
-  are `PtyTerminalSession` and workspace-local `PtyTerminalSession`.
-- known unrelated blocker:
-  - `zig build test-terminal-replay -- --fixture scroll_region_origin_scrolls_history`
-    still fails because the inline replay `Pty` fixture shape is stale versus
-    `src/terminal/io/pty_unix.zig` and is missing `cached_fg_command_len` plus
-    `cached_fg_command`
+- ownership shift:
+  - printable text semantics now live in `src/terminal/core/terminal_core_text.zig`
+  - `src/terminal/core/parser_hooks.zig` now acts as parser-facing dispatch
+    glue instead of owning codepoint/ASCII write behavior directly
 
 ## TODO
 

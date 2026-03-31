@@ -12,13 +12,13 @@ const app_active_editor_runtime = @import("editor/active_editor_runtime.zig");
 const app_logger = @import("../app_logger.zig");
 const app_shell = @import("../app_shell.zig");
 const app_bootstrap = @import("bootstrap.zig");
-const capture_burst = @import("../debug/capture_burst.zig");
 const app_modes = @import("modes/mod.zig");
 const mode_build = @import("mode_build.zig");
 const input_actions = @import("../input/input_actions.zig");
 const sdl_api = @import("../platform/sdl_api.zig");
 const shared_types = @import("../types/mod.zig");
 const terminal_mod = @import("../terminal/core/terminal.zig");
+const terminal_widget_draw = @import("../ui/widgets/terminal_widget_draw.zig");
 
 const Shell = app_shell.Shell;
 const input_types = shared_types.input;
@@ -45,7 +45,7 @@ fn maybeConsumeScrollLockCapture(
                 if (key.scancode == null or key.scancode.? != sdl_api.c.SDL_SCANCODE_SCROLLLOCK) continue;
 
                 const renderer = frame_shell.rendererPtr();
-                const burst_seq = capture_burst.arm(8);
+                const burst_seq = terminal_widget_draw.armCaptureBurst(8);
                 var rows: usize = 0;
                 var cols: usize = 0;
                 var visible_cols: i32 = 0;
