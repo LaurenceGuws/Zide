@@ -83,7 +83,7 @@ manipulation:
 
 - [x] `CFG-ARCH-00-01` Keep `zlua-portable` free of `zide` config semantics
 - [x] `CFG-ARCH-00-02` Add a dedicated internal config-reader layer in `src/config`
-- [ ] `CFG-ARCH-00-03` Record the layer boundary in architecture docs
+- [x] `CFG-ARCH-00-03` Record the layer boundary in architecture docs
 
 ### Phase 1 Reader Layer
 
@@ -127,6 +127,8 @@ manipulation:
   shell icon maps.
 - Log parsing now routes scalar enum/string fields through the config reader
   layer instead of direct field/string decoding.
+- Parser-layer boundary is now recorded in `app_architecture/CONFIG.md` as the
+  current technical authority.
 - Validation remains blocked on the pre-existing
   `src/ui/renderer/window_chrome_runtime.zig` `c_int` vs `c_uint` test mismatch,
   so parser changes are being checked up to that unrelated failure point.

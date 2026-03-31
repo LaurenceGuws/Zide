@@ -23,6 +23,29 @@ Defaults reference:
 Tracker:
 - `docs/todo/config.md`
 
+## Parser Layering
+
+Config parsing is intentionally split into 3 layers:
+
+1. Shared Lua mechanics
+   - owned by `zlua-portable`
+   - owns generic Lua state access, field reads, scalar conversion, and table iteration
+   - must not learn `zide` config paths, enums, merge rules, or runtime policy
+
+2. Zide config reader helpers
+   - owned by `src/config/lua_config_reader.zig`
+   - adapts `zlua-portable` to common `zide` parser needs such as string-or-list fields, child-table access, and typed scalar reads
+   - may reduce parser duplication, but must stay generic enough to avoid turning into hidden app-policy code
+
+3. Zide domain parsers
+   - owned by `src/config/lua_config_*.zig`
+   - responsible for config meaning, domain defaults, aliases, merge semantics, and theme/keybind/runtime policy
+   - should express config semantics, not open-code generic stack mechanics unless a domain-specific shape truly requires it
+
+Boundary rule:
+- if a helper could be reused by `zbar`, `zide`, and another unrelated Zig/Lua app, it belongs in `zlua-portable`
+- if it knows what `editor.wrap`, theme links, terminal blink policy, or keybind identity means, it belongs in `zide`
+
 ## File Load Order
 
 Zide loads config in this order:
