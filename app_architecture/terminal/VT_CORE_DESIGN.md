@@ -95,6 +95,12 @@ Status note, 2026-03-31:
     `src/terminal/core/session_publication_api.zig` now hold the runtime and
     publication/present method groups that were previously written inline on
     `terminal_session.zig`
+  - `src/terminal/core/session_input_api.zig` now holds the host input
+    send/report method group that was previously written inline on
+    `terminal_session.zig`
+  - `src/terminal/core/session_protocol_api.zig` now holds the protocol/VT
+    mutation method group that was previously written inline on
+    `terminal_session.zig`
   - that cut matters because it removed the need for a root barrel import
     entirely
   - `src/terminal/core/terminal.zig` has now been deleted

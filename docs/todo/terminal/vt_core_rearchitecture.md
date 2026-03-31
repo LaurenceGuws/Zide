@@ -142,6 +142,12 @@ Validation note, 2026-03-31:
   - host/runtime and publication/present public methods are no longer written
     inline on `terminal_session.zig`; they are now grouped behind explicit API
     modules and re-exported without behavior changes.
+  - `src/terminal/core/session_input_api.zig` now groups the input send/report
+    public methods that were previously written inline on
+    `terminal_session.zig`.
+  - `src/terminal/core/session_protocol_api.zig` now groups the protocol/VT
+    mutation public methods that were previously written inline on
+    `terminal_session.zig`.
   - `terminal_session.zig` is still broad, so `VTCORE-01` remains open, but
     one whole fake center is already dead.
 - [ ] `VTCORE-02` Make FFI a first-class core interface.

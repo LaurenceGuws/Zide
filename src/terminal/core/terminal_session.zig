@@ -27,7 +27,6 @@ const session_queries = @import("session_queries.zig");
 const session_content = @import("session_content.zig");
 const session_host_types = @import("session_host_types.zig");
 const session_selection = @import("session_selection.zig");
-const session_input = @import("session_input.zig");
 const session_interaction = @import("session_interaction.zig");
 const session_init_options = @import("session_init_options.zig");
 const session_input_snapshot = @import("session_input_snapshot.zig");
@@ -40,6 +39,8 @@ const session_runtime = @import("session_runtime.zig");
 const session_debug = @import("terminal_session_debug.zig");
 const session_runtime_api = @import("session_runtime_api.zig");
 const session_publication_api = @import("session_publication_api.zig");
+const session_input_api = @import("session_input_api.zig");
+const session_protocol_api = @import("session_protocol_api.zig");
 const osc_kitty_clipboard = @import("../protocol/osc_kitty_clipboard.zig");
 const terminal_transport = @import("terminal_transport.zig");
 const Pty = pty_mod.Pty;
@@ -372,81 +373,22 @@ pub const TerminalSession = struct {
     pub const lockPtyWriter = session_runtime_api.lockPtyWriter;
     pub const writePtyBytes = session_runtime_api.writePtyBytes;
 
-    pub fn sendKey(self: *TerminalSession, key: Key, mod: Modifier) !void {
-        try session_input.sendKey(self, key, mod);
-    }
-
-    pub fn sendKeyAction(self: *TerminalSession, key: Key, mod: Modifier, action: input_mod.KeyAction) !void {
-        try session_input.sendKeyAction(self, key, mod, action);
-    }
-
-    pub fn sendKeyActionWithMetadata(
-        self: *TerminalSession,
-        key: Key,
-        mod: Modifier,
-        action: input_mod.KeyAction,
-        alternate_meta: ?types.KeyboardAlternateMetadata,
-    ) !void {
-        try session_input.sendKeyActionWithMetadata(self, key, mod, action, alternate_meta);
-    }
-
-    pub fn sendKeypad(self: *TerminalSession, key: input_mod.KeypadKey, mod: Modifier) !void {
-        try session_input.sendKeypad(self, key, mod);
-    }
-
-    pub fn sendKeypadAction(self: *TerminalSession, key: input_mod.KeypadKey, mod: Modifier, action: input_mod.KeyAction) !void {
-        try session_input.sendKeypadAction(self, key, mod, action);
-    }
-
-    pub fn appKeypadEnabled(self: *const TerminalSession) bool {
-        return session_input.appKeypadEnabled(self);
-    }
-
-    pub fn appCursorKeysEnabled(self: *const TerminalSession) bool {
-        return session_input.appCursorKeysEnabled(self);
-    }
-
-    pub fn sendChar(self: *TerminalSession, char: u32, mod: Modifier) !void {
-        try session_input.sendChar(self, char, mod);
-    }
-
-    pub fn sendCharAction(self: *TerminalSession, char: u32, mod: Modifier, action: input_mod.KeyAction) !void {
-        try session_input.sendCharAction(self, char, mod, action);
-    }
-
-    pub fn sendCharActionWithMetadata(
-        self: *TerminalSession,
-        char: u32,
-        mod: Modifier,
-        action: input_mod.KeyAction,
-        alternate_meta: ?types.KeyboardAlternateMetadata,
-    ) !void {
-        try session_input.sendCharActionWithMetadata(self, char, mod, action, alternate_meta);
-    }
-
-    pub fn reportMouseEvent(self: *TerminalSession, event: MouseEvent) !bool {
-        return session_input.reportMouseEvent(self, event);
-    }
-
-    pub fn reportAlternateScrollWheel(self: *TerminalSession, wheel_steps: i32, mod: Modifier) !bool {
-        return session_input.reportAlternateScrollWheel(self, wheel_steps, mod);
-    }
-
-    pub fn sendText(self: *TerminalSession, text: []const u8) !void {
-        try session_input.sendText(self, text);
-    }
-
-    pub fn sendBytes(self: *TerminalSession, bytes: []const u8) !void {
-        try session_input.sendBytes(self, bytes);
-    }
-
-    pub fn reportFocusChanged(self: *TerminalSession, focused: bool) !bool {
-        return session_input.reportFocusChanged(self, focused);
-    }
-
-    pub fn reportColorSchemeChanged(self: *TerminalSession, dark: bool) !bool {
-        return session_input.reportColorSchemeChanged(self, dark);
-    }
+    pub const sendKey = session_input_api.sendKey;
+    pub const sendKeyAction = session_input_api.sendKeyAction;
+    pub const sendKeyActionWithMetadata = session_input_api.sendKeyActionWithMetadata;
+    pub const sendKeypad = session_input_api.sendKeypad;
+    pub const sendKeypadAction = session_input_api.sendKeypadAction;
+    pub const appKeypadEnabled = session_input_api.appKeypadEnabled;
+    pub const appCursorKeysEnabled = session_input_api.appCursorKeysEnabled;
+    pub const sendChar = session_input_api.sendChar;
+    pub const sendCharAction = session_input_api.sendCharAction;
+    pub const sendCharActionWithMetadata = session_input_api.sendCharActionWithMetadata;
+    pub const reportMouseEvent = session_input_api.reportMouseEvent;
+    pub const reportAlternateScrollWheel = session_input_api.reportAlternateScrollWheel;
+    pub const sendText = session_input_api.sendText;
+    pub const sendBytes = session_input_api.sendBytes;
+    pub const reportFocusChanged = session_input_api.reportFocusChanged;
+    pub const reportColorSchemeChanged = session_input_api.reportColorSchemeChanged;
 
     pub fn resize(self: *TerminalSession, rows: u16, cols: u16) !void {
         try session_runtime.resize(self, rows, cols);
@@ -464,120 +406,41 @@ pub const TerminalSession = struct {
         session_config.setCellSize(self, cell_width, cell_height);
     }
 
-    pub fn handleControl(self: *TerminalSession, byte: u8) void {
-        session_protocol.handleControl(self, byte);
-    }
-
-    pub fn parseDcs(self: *TerminalSession, payload: []const u8) void {
-        session_protocol.parseDcs(self, payload);
-    }
-
-    pub fn parseApc(self: *TerminalSession, payload: []const u8) void {
-        session_protocol.parseApc(self, payload);
-    }
-
-    pub fn parseOsc(self: *TerminalSession, payload: []const u8, terminator: OscTerminator) void {
-        session_protocol.parseOsc(self, payload, terminator);
-    }
+    pub const handleControl = session_protocol_api.handleControl;
+    pub const parseDcs = session_protocol_api.parseDcs;
+    pub const parseApc = session_protocol_api.parseApc;
+    pub const parseOsc = session_protocol_api.parseOsc;
     pub fn appendHyperlink(self: *TerminalSession, uri: []const u8) ?u32 {
-        return session_protocol.appendHyperlink(self, uri, max_hyperlinks);
+        return session_protocol_api.appendHyperlink(self, uri, max_hyperlinks);
     }
-
-    pub fn clearAllKittyImages(self: *TerminalSession) void {
-        session_protocol.clearAllKittyImages(self);
-    }
-
-    pub fn handleCsi(self: *TerminalSession, action: csi_mod.CsiAction) void {
-        session_protocol.handleCsi(self, action);
-    }
-
-    pub fn feedOutputBytes(self: *TerminalSession, bytes: []const u8) void {
-        session_protocol.feedOutputBytes(self, bytes);
-    }
-
-    pub fn resetState(self: *TerminalSession) void {
-        session_protocol.resetState(self);
-    }
-
-    pub fn resetStateLocked(self: *TerminalSession) void {
-        session_protocol.resetStateLocked(self);
-    }
-
-    pub fn reverseIndex(self: *TerminalSession) void {
-        session_protocol.reverseIndex(self);
-    }
-
-    pub fn eraseDisplay(self: *TerminalSession, mode: i32) void {
-        session_protocol.eraseDisplay(self, mode);
-    }
-
-    pub fn eraseLine(self: *TerminalSession, mode: i32) void {
-        session_protocol.eraseLine(self, mode);
-    }
-
-    pub fn insertChars(self: *TerminalSession, count: usize) void {
-        session_protocol.insertChars(self, count);
-    }
-
-    pub fn deleteChars(self: *TerminalSession, count: usize) void {
-        session_protocol.deleteChars(self, count);
-    }
-
-    pub fn eraseChars(self: *TerminalSession, count: usize) void {
-        session_protocol.eraseChars(self, count);
-    }
-
-    pub fn insertLines(self: *TerminalSession, count: usize) void {
-        session_protocol.insertLines(self, count);
-    }
-
-    pub fn deleteLines(self: *TerminalSession, count: usize) void {
-        session_protocol.deleteLines(self, count);
-    }
-
-    pub fn scrollRegionUp(self: *TerminalSession, count: usize) void {
-        session_protocol.scrollRegionUp(self, count);
-    }
-
-    pub fn scrollRegionUpWithOrigin(self: *TerminalSession, count: usize, origin: ?[]const u8) void {
-        session_protocol.scrollRegionUpWithOrigin(self, count, origin);
-    }
-
-    pub fn scrollRegionDown(self: *TerminalSession, count: usize) void {
-        session_protocol.scrollRegionDown(self, count);
-    }
-
-    pub fn paletteColor(self: *const TerminalSession, idx: u8) types.Color {
-        return session_protocol.paletteColor(self, idx);
-    }
-
-    pub fn handleCodepoint(self: *TerminalSession, codepoint: u32) void {
-        session_protocol.handleCodepoint(self, codepoint);
-    }
-
-    pub fn handleAsciiSlice(self: *TerminalSession, bytes: []const u8) void {
-        session_protocol.handleAsciiSlice(self, bytes);
-    }
-
-    pub fn newline(self: *TerminalSession) void {
-        session_protocol.newline(self);
-    }
-
-    pub fn wrapNewline(self: *TerminalSession) void {
-        session_protocol.wrapNewline(self);
-    }
+    pub const clearAllKittyImages = session_protocol_api.clearAllKittyImages;
+    pub const handleCsi = session_protocol_api.handleCsi;
+    pub const feedOutputBytes = session_protocol_api.feedOutputBytes;
+    pub const resetState = session_protocol_api.resetState;
+    pub const resetStateLocked = session_protocol_api.resetStateLocked;
+    pub const reverseIndex = session_protocol_api.reverseIndex;
+    pub const eraseDisplay = session_protocol_api.eraseDisplay;
+    pub const eraseLine = session_protocol_api.eraseLine;
+    pub const insertChars = session_protocol_api.insertChars;
+    pub const deleteChars = session_protocol_api.deleteChars;
+    pub const eraseChars = session_protocol_api.eraseChars;
+    pub const insertLines = session_protocol_api.insertLines;
+    pub const deleteLines = session_protocol_api.deleteLines;
+    pub const scrollRegionUp = session_protocol_api.scrollRegionUp;
+    pub const scrollRegionUpWithOrigin = session_protocol_api.scrollRegionUpWithOrigin;
+    pub const scrollRegionDown = session_protocol_api.scrollRegionDown;
+    pub const paletteColor = session_protocol_api.paletteColor;
+    pub const handleCodepoint = session_protocol_api.handleCodepoint;
+    pub const handleAsciiSlice = session_protocol_api.handleAsciiSlice;
+    pub const newline = session_protocol_api.newline;
+    pub const wrapNewline = session_protocol_api.wrapNewline;
 
     fn scrollUp(self: *TerminalSession) void {
         scrolling_mod.scrollUp(self);
     }
 
-    pub fn getCell(self: *TerminalSession, row: usize, col: usize) Cell {
-        return session_protocol.getCell(self, row, col);
-    }
-
-    pub fn getCursorPos(self: *TerminalSession) CursorPos {
-        return session_protocol.getCursorPos(self);
-    }
+    pub const getCell = session_protocol_api.getCell;
+    pub const getCursorPos = session_protocol_api.getCursorPos;
 
     pub fn updateViewCacheForScroll(self: *TerminalSession) void {
         terminal_publication.updateViewCacheForScroll(self);
@@ -587,33 +450,13 @@ pub const TerminalSession = struct {
         terminal_publication.updateViewCacheForScrollLocked(self);
     }
 
-    pub fn setCursorStyle(self: *TerminalSession, mode: i32) void {
-        session_protocol.setCursorStyle(self, mode);
-    }
-
-    pub fn decrqssReplyInto(self: *TerminalSession, text: []const u8, buf: []u8) ?[]const u8 {
-        return session_protocol.decrqssReplyInto(self, text, buf);
-    }
-
-    pub fn saveCursor(self: *TerminalSession) void {
-        session_protocol.saveCursor(self);
-    }
-
-    pub fn restoreCursor(self: *TerminalSession) void {
-        session_protocol.restoreCursor(self);
-    }
-
-    pub fn setTabAtCursor(self: *TerminalSession) void {
-        session_protocol.setTabAtCursor(self);
-    }
-
-    pub fn enterAltScreen(self: *TerminalSession, clear: bool, save_cursor: bool) void {
-        session_protocol.enterAltScreen(self, clear, save_cursor);
-    }
-
-    pub fn exitAltScreen(self: *TerminalSession, restore_cursor: bool) void {
-        session_protocol.exitAltScreen(self, restore_cursor);
-    }
+    pub const setCursorStyle = session_protocol_api.setCursorStyle;
+    pub const decrqssReplyInto = session_protocol_api.decrqssReplyInto;
+    pub const saveCursor = session_protocol_api.saveCursor;
+    pub const restoreCursor = session_protocol_api.restoreCursor;
+    pub const setTabAtCursor = session_protocol_api.setTabAtCursor;
+    pub const enterAltScreen = session_protocol_api.enterAltScreen;
+    pub const exitAltScreen = session_protocol_api.exitAltScreen;
 
     pub const snapshot = session_publication_api.snapshot;
     pub const renderCache = session_publication_api.renderCache;
