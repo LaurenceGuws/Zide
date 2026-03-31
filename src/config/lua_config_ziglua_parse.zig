@@ -546,15 +546,10 @@ fn applyKeybindsSection(
     lua.pop(1);
 }
 
-fn parseNativeScalarOverlay(allocator: std.mem.Allocator, lua: *zlua.Lua, table_index: i32) !Config {
-    var out = lua_shared.emptyConfig();
-    const reader = zlua_portable.reader.Reader.init(zlua_portable.api.State.fromRaw(@ptrCast(lua)), allocator, table_index);
-
-    _ = lua.getField(table_index, "theme");
-    if (try lua_theme_parse.parseThemeAtStackIndex(lua, -1)) |parsed| out.theme = parsed;
-    lua.pop(1);
-    try lua_log_parse.parseLogSettings(allocator, lua, table_index, &out);
-
+fn applyGlobalScalarFields(
+    reader: zlua_portable.reader.Reader,
+    out: *Config,
+) void {
     if (reader.boolField("editor_wrap")) |value| out.editor_wrap = value;
 
     if (reader.boolField("terminal_focus_report_window")) |value| out.terminal_focus_report_window = value;
@@ -582,10 +577,28 @@ fn parseNativeScalarOverlay(allocator: std.mem.Allocator, lua: *zlua.Lua, table_
     if (reader.numberField("selection_overlay_pad_px")) |v| {
         if (v > 0) out.selection_overlay_pad_px = @floatCast(v);
     }
+}
 
+fn applyGlobalSelectionOverlay(
+    lua: *zlua.Lua,
+    table_index: i32,
+    out: *Config,
+) void {
     _ = lua.getField(table_index, "selection_overlay");
-    lua_runtime_parse.parseSelectionOverlayTable(lua, -1, &out, .global);
+    lua_runtime_parse.parseSelectionOverlayTable(lua, -1, out, .global);
     lua.pop(1);
+}
+
+fn parseNativeScalarOverlay(allocator: std.mem.Allocator, lua: *zlua.Lua, table_index: i32) !Config {
+    var out = lua_shared.emptyConfig();
+    const reader = zlua_portable.reader.Reader.init(zlua_portable.api.State.fromRaw(@ptrCast(lua)), allocator, table_index);
+
+    _ = lua.getField(table_index, "theme");
+    if (try lua_theme_parse.parseThemeAtStackIndex(lua, -1)) |parsed| out.theme = parsed;
+    lua.pop(1);
+    try lua_log_parse.parseLogSettings(allocator, lua, table_index, &out);
+    applyGlobalScalarFields(reader, &out);
+    applyGlobalSelectionOverlay(lua, table_index, &out);
 
     try applyRootScalarAliases(allocator, reader, &out);
     try lua_font_parse.parseRootFontSettings(allocator, lua, table_index, &out);
