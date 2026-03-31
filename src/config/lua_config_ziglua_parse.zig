@@ -1,6 +1,7 @@
 const std = @import("std");
 const zlua = @import("zlua");
 const zlua_portable = @import("zlua_portable");
+const config_reader = @import("./lua_config_reader.zig");
 const iface = @import("./lua_config_iface.zig");
 const lua_font_parse = @import("./lua_config_font_parse.zig");
 const lua_keybind_parse = @import("./lua_config_keybind_parse.zig");
@@ -278,6 +279,25 @@ fn applyTerminalWindowChromeTable(
     lua.pop(1);
 }
 
+fn applyTerminalSimpleScalars(
+    terminal_reader: config_reader.Reader,
+    out: *Config,
+) void {
+    if (terminal_reader.fieldString("blink")) |v| {
+        if (lua_runtime_parse.parseBlinkStyleFromString(v)) |style| {
+            out.terminal_blink_style = style;
+        }
+    } else if (terminal_reader.boolField("blink")) |enabled| {
+        out.terminal_blink_style = if (enabled) .kitty else .off;
+    }
+
+    if (terminal_reader.intField("scrollback")) |v| {
+        out.terminal_scrollback_rows = lua_runtime_parse.normalizeScrollback(v);
+    }
+
+    if (terminal_reader.boolField("texture_shift")) |v| out.terminal_texture_shift = v;
+}
+
 fn parseManualHighlightSpec(
     allocator: std.mem.Allocator,
     lua: *zlua.Lua,
@@ -348,11 +368,11 @@ fn parseManualHighlightRules(allocator: std.mem.Allocator, lua: *zlua.Lua, table
         rules.deinit(allocator);
     }
 
-    lua.pushNil();
-    while (lua.next(table_index)) {
-        defer lua.pop(1);
-        if (!lua.isString(-2) or !lua.isTable(-1)) continue;
-        const extension = if (lua.toString(-2)) |v| v else |_| continue;
+    var it = zlua_portable.api.State.fromRaw(@ptrCast(lua)).tableIter(table_index);
+    defer it.finish();
+    while (it.next()) {
+        const extension = it.keyString() orelse continue;
+        if (!lua.isTable(-1)) continue;
         const spec = try parseManualHighlightSpec(allocator, lua, lua.absIndex(-1)) orelse continue;
         try rules.append(allocator, .{
             .extension = try allocator.dupe(u8, extension),
@@ -389,12 +409,11 @@ fn parseTerminalShellIconMappings(
         mappings.deinit(allocator);
     }
 
-    lua.pushNil();
-    while (lua.next(table_index)) {
-        defer lua.pop(1);
-        if (!lua.isString(-2) or !lua.isString(-1)) continue;
-        const shell = if (lua.toString(-2)) |value| value else |_| continue;
-        const icon_path = if (lua.toString(-1)) |value| value else |_| continue;
+    var it = zlua_portable.api.State.fromRaw(@ptrCast(lua)).tableIter(table_index);
+    defer it.finish();
+    while (it.next()) {
+        const shell = it.keyString() orelse continue;
+        const icon_path = it.valueString() orelse continue;
         if (shell.len == 0 or icon_path.len == 0) continue;
         try mappings.append(allocator, .{
             .shell = try allocator.dupe(u8, shell),
@@ -493,6 +512,7 @@ fn parseNativeScalarOverlay(allocator: std.mem.Allocator, lua: *zlua.Lua, table_
     _ = lua.getField(table_index, "terminal");
     if (lua.isTable(-1)) {
         const terminal_idx = lua.absIndex(-1);
+        const terminal_reader = config_reader.Reader.init(lua, allocator, terminal_idx);
 
         _ = lua.getField(terminal_idx, "theme");
         if (try lua_theme_parse.parseThemeAtStackIndex(lua, -1)) |parsed| out.terminal_theme = parsed;
@@ -507,31 +527,8 @@ fn parseNativeScalarOverlay(allocator: std.mem.Allocator, lua: *zlua.Lua, table_
             lua_runtime_parse.parseLigatureStrategyFromString,
         );
         try applyTerminalShellValue(allocator, lua, terminal_idx, &out);
-
-        _ = lua.getField(terminal_idx, "blink");
-        if (lua.isBoolean(-1)) {
-            out.terminal_blink_style = if (lua.toBoolean(-1)) .kitty else .off;
-        } else if (lua.isString(-1)) {
-            if (lua.toString(-1)) |v| {
-                if (lua_runtime_parse.parseBlinkStyleFromString(v)) |style| {
-                    out.terminal_blink_style = style;
-                }
-            } else |_| {}
-        }
-        lua.pop(1);
-
-        _ = lua.getField(terminal_idx, "scrollback");
-        if (lua.isNumber(-1)) {
-            if (lua.toInteger(-1)) |v| out.terminal_scrollback_rows = lua_runtime_parse.normalizeScrollback(v) else |_| {}
-        }
-        lua.pop(1);
-
+        applyTerminalSimpleScalars(terminal_reader, &out);
         applyTerminalCursorTable(allocator, lua, terminal_idx, &out);
-
-        _ = lua.getField(terminal_idx, "texture_shift");
-        if (lua.isBoolean(-1)) out.terminal_texture_shift = lua.toBoolean(-1);
-        lua.pop(1);
-
         applyTerminalPresentationTable(allocator, lua, terminal_idx, &out);
         try applyTerminalTabBarTable(allocator, lua, terminal_idx, &out);
         applyTerminalFocusReporting(allocator, lua, terminal_idx, &out);
