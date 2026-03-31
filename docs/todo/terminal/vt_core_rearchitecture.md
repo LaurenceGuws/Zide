@@ -86,7 +86,7 @@ Checklist:
 - [x] session/publication call paths route through `terminal_publication`
 - [x] `session_rendering.zig` removed from live call paths
 - [x] milestone validation pass captured
-- [ ] milestone merged back into `main`
+- [x] milestone merged back into `main`
 
 Validation note, 2026-03-31:
 
@@ -137,14 +137,17 @@ Validation note, 2026-03-31:
 - [ ] `VTCORE-03` Introduce transport-agnostic host integration.
   Notes: transport contracts, writer/read boundaries, external transport, replay-harness use, no-PTY host support, and shared redraw/alive wake behavior are landed; remaining work is deeper cleanup rather than first transport abstraction.
 - [ ] `VTCORE-04` Move protocol execution onto core/model contracts.
-  Notes: the main protocol relocation is landed, but the text path still carries
-  a serious smell: `parser_hooks.zig` still owns semantic write behavior that a
-  cleaner engine would own below the VT boundary.
+  Notes: the main protocol relocation is landed, and printable text ownership
+  is now moved below parser hooks into `src/terminal/core/terminal_core_text.zig`.
+  The remaining gap is that the text-write contract is still session-shaped and
+  not yet reduced to a cleaner engine-owned boundary.
 - [ ] `VTCORE-05` Simplify snapshot and render publication.
-  Notes: publication planning is explicit now, but the implementation still
-  mirrors too much truth and still feels too session-centered. This lane is no
-  longer about "hardening what exists" alone. It is about crushing duplicated
-  publication truth until one obvious published state center remains.
+  Notes: the explicit publication center now lives in
+  `src/terminal/core/terminal_publication.zig`, and the old live
+  `session_rendering.zig` shell is removed. The remaining problem is duplicated
+  publication truth: snapshot still switches between direct screen-owned state
+  and render-cache-backed state, and the publication object model is still too
+  mirror-heavy.
 - [ ] `VTCORE-06` Keep input encoding as a peer subsystem.
   Notes: transport-agnostic writer-based encoding, fake-writer regression coverage, and PTY-backed `TerminalSession.sendText(...)` / `sendKey(...)` regressions through the real session writer boundary are in place; remaining work is keeping the subsystem decoupled as the rest of the split finishes.
 - [ ] `VTCORE-07` Preserve desktop Zide behavior while opening the embedding path.
@@ -154,6 +157,7 @@ Validation note, 2026-03-31:
 
 - [ ] break `TerminalSession` as the false center
 - [ ] move printable semantics below the VT boundary
+- [x] move printable semantics below the VT boundary
 - [ ] replace duplicated publication/cache truth with one explicit center
 - [ ] shrink native widget draw into a host/presentation consumer, not a
       publication co-owner
