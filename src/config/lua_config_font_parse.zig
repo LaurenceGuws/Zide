@@ -1,5 +1,6 @@
 const std = @import("std");
 const zlua = @import("zlua");
+const config_reader = @import("./lua_config_reader.zig");
 const iface = @import("./lua_config_iface.zig");
 
 const Config = iface.Config;
@@ -35,28 +36,15 @@ pub fn parseFontSetting(
     path_out: *?[]u8,
     size_out: *?f32,
 ) !void {
+    const reader = config_reader.Reader.init(lua, allocator, idx);
     if (lua.isString(idx)) {
-        if (lua.toString(idx)) |v| {
-            replaceOwnedString(allocator, path_out, try allocator.dupe(u8, v));
-        } else |_| {}
+        if (reader.state.readString(idx)) |v| replaceOwnedString(allocator, path_out, try allocator.dupe(u8, v));
         return;
     }
-    if (!lua.isTable(idx)) return;
+    if (!reader.state.isTable(idx)) return;
 
-    const table_idx = lua.absIndex(idx);
-    _ = lua.getField(table_idx, "path");
-    if (lua.isString(-1)) {
-        if (lua.toString(-1)) |v| replaceOwnedString(allocator, path_out, try allocator.dupe(u8, v)) else |_| {}
-    }
-    lua.pop(1);
-
-    _ = lua.getField(table_idx, "size");
-    if (lua.isNumber(-1)) {
-        if (lua.toNumber(-1)) |v| {
-            if (v > 0) size_out.* = @floatCast(v);
-        } else |_| {}
-    }
-    lua.pop(1);
+    if (try reader.ownedStringField("path")) |v| replaceOwnedString(allocator, path_out, v);
+    if (reader.positiveF32Field("size")) |v| size_out.* = v;
 }
 
 pub fn parseRootFontSettings(
@@ -65,93 +53,27 @@ pub fn parseRootFontSettings(
     table_index: i32,
     out: *Config,
 ) !void {
-    _ = lua.getField(table_index, "font_lcd");
-    if (lua.isBoolean(-1)) out.font_lcd = lua.toBoolean(-1);
-    lua.pop(1);
+    const reader = config_reader.Reader.init(lua, allocator, table_index);
 
-    _ = lua.getField(table_index, "font_autohint");
-    if (lua.isBoolean(-1)) out.font_autohint = lua.toBoolean(-1);
-    lua.pop(1);
-
-    _ = lua.getField(table_index, "text_linear_correction");
-    if (lua.isBoolean(-1)) out.text_linear_correction = lua.toBoolean(-1);
-    lua.pop(1);
-
-    _ = lua.getField(table_index, "text_gamma");
-    if (lua.isNumber(-1)) {
-        if (lua.toNumber(-1)) |v| out.text_gamma = @floatCast(v) else |_| {}
+    if (reader.boolField("font_lcd")) |v| out.font_lcd = v;
+    if (reader.boolField("font_autohint")) |v| out.font_autohint = v;
+    if (reader.boolField("text_linear_correction")) |v| out.text_linear_correction = v;
+    if (reader.positiveF32Field("text_gamma")) |v| out.text_gamma = v;
+    if (reader.positiveF32Field("text_contrast")) |v| out.text_contrast = v;
+    if (reader.positiveF32Field("app_font_size")) |v| out.app_font_size = v;
+    if (reader.positiveF32Field("editor_font_size")) |v| out.editor_font_size = v;
+    if (reader.positiveF32Field("terminal_font_size")) |v| out.terminal_font_size = v;
+    if (try reader.ownedStringField("app_font_path")) |v| out.app_font_path = v;
+    if (try reader.ownedStringField("editor_font_path")) |v| out.editor_font_path = v;
+    if (try reader.ownedStringField("terminal_font_path")) |v| out.terminal_font_path = v;
+    if (try reader.ownedStringField("editor_font_features")) |v| out.editor_font_features = v;
+    if (try reader.ownedStringField("terminal_font_features")) |v| out.terminal_font_features = v;
+    if (reader.fieldString("font_hinting")) |v| {
+        if (parseFontHintingFromString(v)) |hint| out.font_hinting = hint;
     }
-    lua.pop(1);
-
-    _ = lua.getField(table_index, "text_contrast");
-    if (lua.isNumber(-1)) {
-        if (lua.toNumber(-1)) |v| out.text_contrast = @floatCast(v) else |_| {}
+    if (reader.fieldString("font_glyph_overflow")) |v| {
+        if (parseGlyphOverflowFromString(v)) |mode| out.font_glyph_overflow = mode;
     }
-    lua.pop(1);
-
-    _ = lua.getField(table_index, "app_font_size");
-    if (lua.isNumber(-1)) {
-        if (lua.toNumber(-1)) |v| out.app_font_size = @floatCast(v) else |_| {}
-    }
-    lua.pop(1);
-
-    _ = lua.getField(table_index, "editor_font_size");
-    if (lua.isNumber(-1)) {
-        if (lua.toNumber(-1)) |v| out.editor_font_size = @floatCast(v) else |_| {}
-    }
-    lua.pop(1);
-
-    _ = lua.getField(table_index, "terminal_font_size");
-    if (lua.isNumber(-1)) {
-        if (lua.toNumber(-1)) |v| out.terminal_font_size = @floatCast(v) else |_| {}
-    }
-    lua.pop(1);
-
-    _ = lua.getField(table_index, "app_font_path");
-    if (lua.isString(-1)) {
-        if (lua.toString(-1)) |v| out.app_font_path = try allocator.dupe(u8, v) else |_| {}
-    }
-    lua.pop(1);
-
-    _ = lua.getField(table_index, "editor_font_path");
-    if (lua.isString(-1)) {
-        if (lua.toString(-1)) |v| out.editor_font_path = try allocator.dupe(u8, v) else |_| {}
-    }
-    lua.pop(1);
-
-    _ = lua.getField(table_index, "terminal_font_path");
-    if (lua.isString(-1)) {
-        if (lua.toString(-1)) |v| out.terminal_font_path = try allocator.dupe(u8, v) else |_| {}
-    }
-    lua.pop(1);
-
-    _ = lua.getField(table_index, "editor_font_features");
-    if (lua.isString(-1)) {
-        if (lua.toString(-1)) |v| out.editor_font_features = try allocator.dupe(u8, v) else |_| {}
-    }
-    lua.pop(1);
-
-    _ = lua.getField(table_index, "terminal_font_features");
-    if (lua.isString(-1)) {
-        if (lua.toString(-1)) |v| out.terminal_font_features = try allocator.dupe(u8, v) else |_| {}
-    }
-    lua.pop(1);
-
-    _ = lua.getField(table_index, "font_hinting");
-    if (lua.isString(-1)) {
-        if (lua.toString(-1)) |v| {
-            if (parseFontHintingFromString(v)) |hint| out.font_hinting = hint;
-        } else |_| {}
-    }
-    lua.pop(1);
-
-    _ = lua.getField(table_index, "font_glyph_overflow");
-    if (lua.isString(-1)) {
-        if (lua.toString(-1)) |v| {
-            if (parseGlyphOverflowFromString(v)) |mode| out.font_glyph_overflow = mode;
-        } else |_| {}
-    }
-    lua.pop(1);
 }
 
 pub fn parseAppFontTable(
@@ -174,6 +96,7 @@ pub fn parseEditorFontTable(
     replace_owned_string: fn (std.mem.Allocator, *?[]u8, ?[]u8) void,
     parse_ligature_strategy_from_string: fn ([]const u8) ?LigatureStrategy,
 ) !void {
+    const reader = config_reader.Reader.init(lua, allocator, editor_idx);
     _ = lua.getField(editor_idx, "font");
     try parseFontSetting(allocator, lua, -1, &out.editor_font_path, &out.editor_font_size);
     lua.pop(1);
@@ -182,13 +105,9 @@ pub fn parseEditorFontTable(
     if (try parse_filter_value_owned(allocator, lua, -1)) |v| replace_owned_string(allocator, &out.editor_font_features, v);
     lua.pop(1);
 
-    _ = lua.getField(editor_idx, "disable_ligatures");
-    if (lua.isString(-1)) {
-        if (lua.toString(-1)) |v| {
-            if (parse_ligature_strategy_from_string(v)) |strategy| out.editor_disable_ligatures = strategy;
-        } else |_| {}
+    if (reader.fieldString("disable_ligatures")) |v| {
+        if (parse_ligature_strategy_from_string(v)) |strategy| out.editor_disable_ligatures = strategy;
     }
-    lua.pop(1);
 }
 
 pub fn parseTerminalFontTable(
@@ -200,6 +119,7 @@ pub fn parseTerminalFontTable(
     replace_owned_string: fn (std.mem.Allocator, *?[]u8, ?[]u8) void,
     parse_ligature_strategy_from_string: fn ([]const u8) ?LigatureStrategy,
 ) !void {
+    const reader = config_reader.Reader.init(lua, allocator, terminal_idx);
     _ = lua.getField(terminal_idx, "font");
     try parseFontSetting(allocator, lua, -1, &out.terminal_font_path, &out.terminal_font_size);
     lua.pop(1);
@@ -208,65 +128,32 @@ pub fn parseTerminalFontTable(
     if (try parse_filter_value_owned(allocator, lua, -1)) |v| replace_owned_string(allocator, &out.terminal_font_features, v);
     lua.pop(1);
 
-    _ = lua.getField(terminal_idx, "disable_ligatures");
-    if (lua.isString(-1)) {
-        if (lua.toString(-1)) |v| {
-            if (parse_ligature_strategy_from_string(v)) |strategy| out.terminal_disable_ligatures = strategy;
-        } else |_| {}
+    if (reader.fieldString("disable_ligatures")) |v| {
+        if (parse_ligature_strategy_from_string(v)) |strategy| out.terminal_disable_ligatures = strategy;
     }
-    lua.pop(1);
 }
 
 pub fn parseFontRenderingTable(lua: *zlua.Lua, idx: i32, out: *Config) void {
-    if (!lua.isTable(idx)) return;
+    const reader = config_reader.Reader.init(lua, std.heap.page_allocator, idx);
+    if (!reader.state.isTable(idx)) return;
 
-    const fr_idx = lua.absIndex(idx);
-    _ = lua.getField(fr_idx, "lcd");
-    if (lua.isBoolean(-1)) out.font_lcd = lua.toBoolean(-1);
-    lua.pop(1);
-
-    _ = lua.getField(fr_idx, "autohint");
-    if (lua.isBoolean(-1)) out.font_autohint = lua.toBoolean(-1);
-    lua.pop(1);
-
-    _ = lua.getField(fr_idx, "hinting");
-    if (lua.isString(-1)) {
-        if (lua.toString(-1)) |v| {
-            if (parseFontHintingFromString(v)) |hint| out.font_hinting = hint;
-        } else |_| {}
+    if (reader.boolField("lcd")) |v| out.font_lcd = v;
+    if (reader.boolField("autohint")) |v| out.font_autohint = v;
+    if (reader.fieldString("hinting")) |v| {
+        if (parseFontHintingFromString(v)) |hint| out.font_hinting = hint;
     }
-    lua.pop(1);
-
-    _ = lua.getField(fr_idx, "glyph_overflow");
-    if (lua.isString(-1)) {
-        if (lua.toString(-1)) |v| {
-            if (parseGlyphOverflowFromString(v)) |go| out.font_glyph_overflow = go;
-        } else |_| {}
+    if (reader.fieldString("glyph_overflow")) |v| {
+        if (parseGlyphOverflowFromString(v)) |go| out.font_glyph_overflow = go;
     }
-    lua.pop(1);
 
-    _ = lua.getField(fr_idx, "text");
-    if (lua.isTable(-1)) {
-        const text_idx = lua.absIndex(-1);
-        _ = lua.getField(text_idx, "gamma");
-        if (lua.isNumber(-1)) {
-            if (lua.toNumber(-1)) |v| {
-                if (v > 0) out.text_gamma = @floatCast(v);
-            } else |_| {}
+    if (reader.child("text")) |text_reader| {
+        defer text_reader.finish();
+        if (text_reader.numberField("gamma")) |v| {
+            if (v > 0) out.text_gamma = @floatCast(v);
         }
-        lua.pop(1);
-
-        _ = lua.getField(text_idx, "contrast");
-        if (lua.isNumber(-1)) {
-            if (lua.toNumber(-1)) |v| {
-                if (v > 0) out.text_contrast = @floatCast(v);
-            } else |_| {}
+        if (text_reader.numberField("contrast")) |v| {
+            if (v > 0) out.text_contrast = @floatCast(v);
         }
-        lua.pop(1);
-
-        _ = lua.getField(text_idx, "linear_correction");
-        if (lua.isBoolean(-1)) out.text_linear_correction = lua.toBoolean(-1);
-        lua.pop(1);
+        if (text_reader.boolField("linear_correction")) |v| out.text_linear_correction = v;
     }
-    lua.pop(1);
 }

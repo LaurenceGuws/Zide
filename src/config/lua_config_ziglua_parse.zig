@@ -23,6 +23,64 @@ fn replaceOwnedString(allocator: std.mem.Allocator, slot: *?[]u8, value: ?[]u8) 
     slot.* = value;
 }
 
+fn applyRootScalarAliases(
+    allocator: std.mem.Allocator,
+    reader: zlua_portable.reader.Reader,
+    out: *Config,
+) !void {
+    if (reader.intField("terminal_scrollback_rows")) |v| {
+        out.terminal_scrollback_rows = lua_runtime_parse.normalizeScrollback(v);
+    }
+    if (reader.boolField("terminal_cursor_blink")) |v| out.terminal_cursor_blink = v;
+    if (reader.boolField("terminal_texture_shift")) |v| out.terminal_texture_shift = v;
+    if (reader.boolField("terminal_recent_input_force_full")) |v| out.terminal_recent_input_force_full = v;
+    if (reader.intField("terminal_recent_input_force_full_ms")) |v| {
+        if (v > 0) out.terminal_recent_input_force_full_ms = @intCast(v);
+    }
+    if (reader.boolField("terminal_tab_bar_show_single_tab")) |v| out.terminal_tab_bar_show_single_tab = v;
+    if (reader.boolField("keybinds_no_defaults")) |v| out.keybinds_no_defaults = v;
+    if (reader.fieldString("terminal_default_start_location")) |v| {
+        replaceOwnedString(allocator, &out.terminal_default_start_location, try allocator.dupe(u8, v));
+    }
+    if (reader.fieldString("terminal_new_tab_start_location")) |v| {
+        if (lua_runtime_parse.parseTerminalNewTabStartLocationModeFromString(v)) |mode| {
+            out.terminal_new_tab_start_location = mode;
+        }
+    }
+    if (reader.fieldString("editor_tab_bar_width_mode")) |v| {
+        if (lua_runtime_parse.parseTabBarWidthModeFromString(v)) |mode| out.editor_tab_bar_width_mode = mode;
+    }
+    if (reader.fieldString("terminal_tab_bar_width_mode")) |v| {
+        if (lua_runtime_parse.parseTabBarWidthModeFromString(v)) |mode| out.terminal_tab_bar_width_mode = mode;
+    }
+    if (reader.fieldString("terminal_cursor_shape")) |v| {
+        if (lua_runtime_parse.parseCursorShapeFromString(v)) |shape| out.terminal_cursor_shape = shape;
+    }
+    if (reader.fieldString("terminal_blink_style")) |v| {
+        if (lua_runtime_parse.parseBlinkStyleFromString(v)) |style| out.terminal_blink_style = style;
+    }
+    if (reader.fieldString("terminal_disable_ligatures")) |v| {
+        if (lua_runtime_parse.parseLigatureStrategyFromString(v)) |strategy| out.terminal_disable_ligatures = strategy;
+    }
+    if (reader.fieldString("editor_disable_ligatures")) |v| {
+        if (lua_runtime_parse.parseLigatureStrategyFromString(v)) |strategy| out.editor_disable_ligatures = strategy;
+    }
+}
+
+fn applyEditorSectionScalars(
+    allocator: std.mem.Allocator,
+    editor_reader: zlua_portable.reader.Reader,
+    out: *Config,
+) !void {
+    if (editor_reader.boolField("wrap")) |v| out.editor_wrap = v;
+    if (editor_reader.fieldString("imported_theme")) |v| {
+        out.editor_imported_theme_name = try allocator.dupe(u8, v);
+    }
+    if (editor_reader.intField("large_cursor_jump_rows")) |v| {
+        if (v > 0) out.editor_large_jump_rows = @intCast(v);
+    }
+}
+
 fn parseManualHighlightSpec(
     allocator: std.mem.Allocator,
     lua: *zlua.Lua,
@@ -191,109 +249,8 @@ fn parseNativeScalarOverlay(allocator: std.mem.Allocator, lua: *zlua.Lua, table_
     lua_runtime_parse.parseSelectionOverlayTable(lua, -1, &out, .global);
     lua.pop(1);
 
-    _ = lua.getField(table_index, "terminal_scrollback_rows");
-    if (lua.isNumber(-1)) {
-        if (lua.toInteger(-1)) |v| {
-            out.terminal_scrollback_rows = lua_runtime_parse.normalizeScrollback(v);
-        } else |_| {}
-    }
-    lua.pop(1);
-
-    _ = lua.getField(table_index, "terminal_cursor_blink");
-    if (lua.isBoolean(-1)) out.terminal_cursor_blink = lua.toBoolean(-1);
-    lua.pop(1);
-
-    _ = lua.getField(table_index, "terminal_texture_shift");
-    if (lua.isBoolean(-1)) out.terminal_texture_shift = lua.toBoolean(-1);
-    lua.pop(1);
-
-    _ = lua.getField(table_index, "terminal_recent_input_force_full");
-    if (lua.isBoolean(-1)) out.terminal_recent_input_force_full = lua.toBoolean(-1);
-    lua.pop(1);
-
-    _ = lua.getField(table_index, "terminal_recent_input_force_full_ms");
-    if (lua.isNumber(-1)) {
-        if (lua.toInteger(-1)) |v| {
-            if (v > 0) out.terminal_recent_input_force_full_ms = @intCast(v);
-        } else |_| {}
-    }
-    lua.pop(1);
-
-    _ = lua.getField(table_index, "terminal_tab_bar_show_single_tab");
-    if (lua.isBoolean(-1)) out.terminal_tab_bar_show_single_tab = lua.toBoolean(-1);
-    lua.pop(1);
-
-    _ = lua.getField(table_index, "keybinds_no_defaults");
-    if (lua.isBoolean(-1)) out.keybinds_no_defaults = lua.toBoolean(-1);
-    lua.pop(1);
-
+    try applyRootScalarAliases(allocator, reader, &out);
     try lua_font_parse.parseRootFontSettings(allocator, lua, table_index, &out);
-
-    _ = lua.getField(table_index, "terminal_default_start_location");
-    if (lua.isString(-1)) {
-        if (lua.toString(-1)) |v| {
-            replaceOwnedString(allocator, &out.terminal_default_start_location, try allocator.dupe(u8, v));
-        } else |_| {}
-    }
-    lua.pop(1);
-
-    _ = lua.getField(table_index, "terminal_new_tab_start_location");
-    if (lua.isString(-1)) {
-        if (lua.toString(-1)) |v| {
-            if (lua_runtime_parse.parseTerminalNewTabStartLocationModeFromString(v)) |mode| {
-                out.terminal_new_tab_start_location = mode;
-            }
-        } else |_| {}
-    }
-    lua.pop(1);
-
-    _ = lua.getField(table_index, "editor_tab_bar_width_mode");
-    if (lua.isString(-1)) {
-        if (lua.toString(-1)) |v| {
-            if (lua_runtime_parse.parseTabBarWidthModeFromString(v)) |mode| out.editor_tab_bar_width_mode = mode;
-        } else |_| {}
-    }
-    lua.pop(1);
-
-    _ = lua.getField(table_index, "terminal_tab_bar_width_mode");
-    if (lua.isString(-1)) {
-        if (lua.toString(-1)) |v| {
-            if (lua_runtime_parse.parseTabBarWidthModeFromString(v)) |mode| out.terminal_tab_bar_width_mode = mode;
-        } else |_| {}
-    }
-    lua.pop(1);
-
-    _ = lua.getField(table_index, "terminal_cursor_shape");
-    if (lua.isString(-1)) {
-        if (lua.toString(-1)) |v| {
-            if (lua_runtime_parse.parseCursorShapeFromString(v)) |shape| out.terminal_cursor_shape = shape;
-        } else |_| {}
-    }
-    lua.pop(1);
-
-    _ = lua.getField(table_index, "terminal_blink_style");
-    if (lua.isString(-1)) {
-        if (lua.toString(-1)) |v| {
-            if (lua_runtime_parse.parseBlinkStyleFromString(v)) |style| out.terminal_blink_style = style;
-        } else |_| {}
-    }
-    lua.pop(1);
-
-    _ = lua.getField(table_index, "terminal_disable_ligatures");
-    if (lua.isString(-1)) {
-        if (lua.toString(-1)) |v| {
-            if (lua_runtime_parse.parseLigatureStrategyFromString(v)) |strategy| out.terminal_disable_ligatures = strategy;
-        } else |_| {}
-    }
-    lua.pop(1);
-
-    _ = lua.getField(table_index, "editor_disable_ligatures");
-    if (lua.isString(-1)) {
-        if (lua.toString(-1)) |v| {
-            if (lua_runtime_parse.parseLigatureStrategyFromString(v)) |strategy| out.editor_disable_ligatures = strategy;
-        } else |_| {}
-    }
-    lua.pop(1);
 
     _ = lua.getField(table_index, "app");
     if (lua.isTable(-1)) {
@@ -308,24 +265,9 @@ fn parseNativeScalarOverlay(allocator: std.mem.Allocator, lua: *zlua.Lua, table_
     _ = lua.getField(table_index, "editor");
     if (lua.isTable(-1)) {
         const editor_idx = lua.absIndex(-1);
+        const editor_reader = zlua_portable.reader.Reader.init(zlua_portable.api.State.fromRaw(@ptrCast(lua)), allocator, editor_idx);
 
-        _ = lua.getField(editor_idx, "wrap");
-        if (lua.isBoolean(-1)) out.editor_wrap = lua.toBoolean(-1);
-        lua.pop(1);
-
-        _ = lua.getField(editor_idx, "imported_theme");
-        if (lua.isString(-1)) {
-            if (lua.toString(-1)) |v| out.editor_imported_theme_name = try allocator.dupe(u8, v) else |_| {}
-        }
-        lua.pop(1);
-
-        _ = lua.getField(editor_idx, "large_cursor_jump_rows");
-        if (lua.isNumber(-1)) {
-            if (lua.toInteger(-1)) |v| {
-                if (v > 0) out.editor_large_jump_rows = @intCast(v);
-            } else |_| {}
-        }
-        lua.pop(1);
+        try applyEditorSectionScalars(allocator, editor_reader, &out);
 
         _ = lua.getField(editor_idx, "theme");
         if (lua.isTable(-1)) {

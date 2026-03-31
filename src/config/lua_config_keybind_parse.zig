@@ -1,13 +1,13 @@
 const std = @import("std");
 const zlua = @import("zlua");
+const config_reader = @import("./lua_config_reader.zig");
 const input_actions = @import("../input/input_actions.zig");
 const input_types = @import("../types/input.zig");
 
 fn parseKeyField(lua: *zlua.Lua, idx: i32) ?input_types.Key {
-    _ = lua.getField(idx, "key");
-    defer lua.pop(1);
-    if (!lua.isString(-1)) return null;
-    if (lua.toString(-1)) |s| return std.meta.stringToEnum(input_types.Key, s) else |_| return null;
+    const reader = config_reader.Reader.init(lua, std.heap.page_allocator, idx);
+    const s = reader.fieldString("key") orelse return null;
+    return std.meta.stringToEnum(input_types.Key, s);
 }
 
 const ModFlag = enum { ctrl, shift, alt, super, altgr };
@@ -33,6 +33,7 @@ fn applyMod(mods: *input_types.Modifiers, mod_flag: ModFlag) void {
 
 fn parseModsField(lua: *zlua.Lua, idx: i32) input_types.Modifiers {
     var mods: input_types.Modifiers = .{};
+    const reader = config_reader.Reader.init(lua, std.heap.page_allocator, idx);
     _ = lua.getField(idx, "mods");
     defer lua.pop(1);
 
@@ -45,32 +46,23 @@ fn parseModsField(lua: *zlua.Lua, idx: i32) input_types.Modifiers {
     if (!lua.isTable(-1)) return mods;
 
     const mods_idx = lua.absIndex(-1);
-    const len = lua.rawLen(mods_idx);
-    var i: i32 = 1;
-    while (i <= @as(i32, @intCast(len))) : (i += 1) {
-        _ = lua.rawGetIndex(mods_idx, i);
-        if (lua.isString(-1)) {
-            if (lua.toString(-1)) |s| {
-                if (readModString(s)) |mod_flag| applyMod(&mods, mod_flag);
-            } else |_| {}
-        }
-        lua.pop(1);
+    const len = reader.rawLen(mods_idx);
+    for (0..len) |i| {
+        const s = reader.rawStringIndex(mods_idx, i + 1) orelse continue;
+        if (readModString(s)) |mod_flag| applyMod(&mods, mod_flag);
     }
     return mods;
 }
 
 fn parseActionField(lua: *zlua.Lua, idx: i32) ?input_actions.ActionKind {
-    _ = lua.getField(idx, "action");
-    defer lua.pop(1);
-    if (!lua.isString(-1)) return null;
-    if (lua.toString(-1)) |s| return std.meta.stringToEnum(input_actions.ActionKind, s) else |_| return null;
+    const reader = config_reader.Reader.init(lua, std.heap.page_allocator, idx);
+    const s = reader.fieldString("action") orelse return null;
+    return std.meta.stringToEnum(input_actions.ActionKind, s);
 }
 
 fn parseRepeatField(lua: *zlua.Lua, idx: i32) bool {
-    _ = lua.getField(idx, "repeat");
-    defer lua.pop(1);
-    if (!lua.isBoolean(-1)) return false;
-    return lua.toBoolean(-1);
+    const reader = config_reader.Reader.init(lua, std.heap.page_allocator, idx);
+    return reader.boolField("repeat") orelse false;
 }
 
 fn parseKeybindScope(
