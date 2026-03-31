@@ -78,6 +78,9 @@ That copies `assets/config/init.lua` to the platform user-config location
 before any user edits, which is also the recommended starting point for LuaLS
 completion-backed personal config authoring.
 
+Without `--force`, rerunning the command preserves an existing user
+`init.lua` and leaves personal edits intact.
+
 For repo-independent user-config completions, install the generated LuaLS
 metadata into the user config directory too:
 

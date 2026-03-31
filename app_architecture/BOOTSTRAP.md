@@ -191,6 +191,9 @@ zig build run -- --write-default-config --stdout
 zig build run -- --write-default-config --with-lua-meta
 ```
 
+Without `--force`, an existing user `init.lua` is preserved and only missing
+files are added.
+
 Install LuaLS metadata beside the user config so opening `~/.config/zide`
 directly still gets completions:
 

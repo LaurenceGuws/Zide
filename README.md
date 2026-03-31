@@ -196,6 +196,10 @@ zig build run -- --write-default-config --stdout
 zig build run -- --write-default-config --with-lua-meta
 ```
 
+By default, rerunning the command preserves an existing user `init.lua`.
+Use `--force` only when you want to overwrite it with the current shipped
+defaults.
+
 To make `~/.config/zide/init.lua` completion-friendly when opened as its own
 workspace, install user-side LuaLS metadata too:
 
