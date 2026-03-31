@@ -8,6 +8,7 @@ This document describes the current config surface as implemented today: parser 
 
 Parser and merge logic:
 - `src/config/lua_config.zig`
+- `src/config/meta.zig` for LuaLS/snippet metadata authority
 
 Runtime application:
 - `src/app/init_runtime.zig`
@@ -19,6 +20,12 @@ Runtime application:
 
 Defaults reference:
 - `assets/config/init.lua`
+
+Lua authoring artifacts:
+- `tools/generate_lua_meta.zig`
+- `lua/zide-meta.lua`
+- `snippets/lua.json`
+- `.luarc.json`
 
 Tracker:
 - `docs/todo/config.md`
