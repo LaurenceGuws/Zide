@@ -94,22 +94,22 @@ manipulation:
 
 ### Phase 2 Parser Decoupling
 
-- [ ] `CFG-ARCH-02-01` Make `lua_config_ziglua_parse.zig` a coordinator, not a raw stack owner
-- [ ] `CFG-ARCH-02-02` Consolidate repeated string-or-list parsing behind one helper path
-- [ ] `CFG-ARCH-02-03` Consolidate repeated nested-section parsing behind one helper path
-- [ ] `CFG-ARCH-02-04` Remove remaining low-value direct `ziglua` field access from non-theme parsers
+- [x] `CFG-ARCH-02-01` Make `lua_config_ziglua_parse.zig` a coordinator, not a raw stack owner
+- [x] `CFG-ARCH-02-02` Consolidate repeated string-or-list parsing behind one helper path
+- [x] `CFG-ARCH-02-03` Consolidate repeated nested-section parsing behind one helper path
+- [x] `CFG-ARCH-02-04` Remove remaining low-value direct `ziglua` field access from non-theme parsers
 
 ### Phase 3 Theme And Schema Discipline
 
-- [ ] `CFG-ARCH-03-01` Audit `lua_config_theme_parse.zig` for helper-only extraction without moving app semantics into `zlua-portable`
-- [ ] `CFG-ARCH-03-02` Define which parser helpers are truly generic enough to live in `zlua-portable`
-- [ ] `CFG-ARCH-03-03` Leave app-owned schema/policy in `zide`
+- [x] `CFG-ARCH-03-01` Audit `lua_config_theme_parse.zig` for helper-only extraction without moving app semantics into `zlua-portable`
+- [x] `CFG-ARCH-03-02` Define which parser helpers are truly generic enough to live in `zlua-portable`
+- [x] `CFG-ARCH-03-03` Leave app-owned schema/policy in `zide`
 
 ### Phase 4 Coverage And Drift Control
 
-- [ ] `CFG-ARCH-04-01` Add parser-boundary tests for helper behavior and alias forms
-- [ ] `CFG-ARCH-04-02` Add coverage for string-vs-list and nested-table shapes
-- [ ] `CFG-ARCH-04-03` Keep architecture docs in sync after each completed migration slice
+- [x] `CFG-ARCH-04-01` Add parser-boundary tests for helper behavior and alias forms
+- [x] `CFG-ARCH-04-02` Add coverage for string-vs-list and nested-table shapes
+- [x] `CFG-ARCH-04-03` Keep architecture docs in sync after each completed migration slice
 
 ## Done Criteria
 
@@ -117,6 +117,7 @@ manipulation:
 - `zide` has one internal config-reader layer
 - domain parsers mostly express config meaning, not stack manipulation
 - `lua_config_ziglua_parse.zig` acts as coordinator/facade
+- remaining direct `ziglua` calls are boundary-justified, not leftover generic helper duplication
 - parser behavior is pinned by targeted tests
 
 ## Progress Notes
@@ -132,3 +133,33 @@ manipulation:
 - Validation remains blocked on the pre-existing
   `src/ui/renderer/window_chrome_runtime.zig` `c_int` vs `c_uint` test mismatch,
   so parser changes are being checked up to that unrelated failure point.
+
+## Remaining Raw-Site Audit
+
+Current remaining direct `ziglua` calls fall into 3 buckets:
+
+1. Intentional domain-owned parsing
+   - `lua_config_theme_parse.zig` still owns theme-specific shapes such as
+     palette aliases, editor-style flag extraction, and theme link/color
+     resolution.
+   - `lua_config_ziglua_parse.zig` still opens section/theme/overlay entrypoints
+     where the next step is domain semantics, not generic table mechanics.
+
+2. Existing parser entrypoint handoff
+   - some call sites still push a child table onto the stack and then hand the
+     stack index to an existing parser function (`theme`, `selection_overlay`,
+     log override maps).
+   - these are acceptable until a clearly better generic helper exists that
+     reduces complexity instead of hiding semantics.
+
+3. Future optional cleanup only if justified
+   - additional helper extraction is only worthwhile when it removes generic Lua
+     mechanics without pulling app policy into `zlua-portable` or bloating the
+     `zide` reader layer.
+
+Current closeout judgement:
+- low-level helper duplication is removed
+- shared Lua iteration/field/scalar mechanics are used broadly where
+  appropriate
+- remaining raw calls are now mostly boundary-justified rather than migration
+  misses
