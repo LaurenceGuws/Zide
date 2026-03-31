@@ -81,6 +81,142 @@ fn applyEditorSectionScalars(
     }
 }
 
+fn applyTerminalShellValue(
+    allocator: std.mem.Allocator,
+    lua: *zlua.Lua,
+    terminal_idx: i32,
+    out: *Config,
+) !void {
+    _ = lua.getField(terminal_idx, "shell");
+    if (lua.isString(-1)) {
+        if (lua.toString(-1)) |v| {
+            replaceOwnedString(allocator, &out.terminal_shell_path, try allocator.dupe(u8, v));
+        } else |_| {}
+    } else if (lua.isTable(-1)) {
+        const shell_reader = zlua_portable.reader.Reader.init(zlua_portable.api.State.fromRaw(@ptrCast(lua)), allocator, lua.absIndex(-1));
+        if (shell_reader.fieldString("path")) |v| {
+            replaceOwnedString(allocator, &out.terminal_shell_path, try allocator.dupe(u8, v));
+        }
+    }
+    lua.pop(1);
+}
+
+fn applyTerminalCursorTable(
+    allocator: std.mem.Allocator,
+    lua: *zlua.Lua,
+    terminal_idx: i32,
+    out: *Config,
+) void {
+    _ = lua.getField(terminal_idx, "cursor");
+    if (lua.isTable(-1)) {
+        const cursor_reader = zlua_portable.reader.Reader.init(zlua_portable.api.State.fromRaw(@ptrCast(lua)), allocator, lua.absIndex(-1));
+        if (cursor_reader.fieldString("shape")) |v| {
+            if (lua_runtime_parse.parseCursorShapeFromString(v)) |shape| out.terminal_cursor_shape = shape;
+        }
+        if (cursor_reader.boolField("blink")) |v| out.terminal_cursor_blink = v;
+    }
+    lua.pop(1);
+}
+
+fn applyTerminalPresentationTable(
+    allocator: std.mem.Allocator,
+    lua: *zlua.Lua,
+    terminal_idx: i32,
+    out: *Config,
+) void {
+    _ = lua.getField(terminal_idx, "presentation");
+    if (lua.isTable(-1)) {
+        const presentation_reader = zlua_portable.reader.Reader.init(zlua_portable.api.State.fromRaw(@ptrCast(lua)), allocator, lua.absIndex(-1));
+        if (presentation_reader.boolField("recent_input_force_full")) |v| out.terminal_recent_input_force_full = v;
+        if (presentation_reader.intField("recent_input_force_full_ms")) |v| {
+            if (v > 0) out.terminal_recent_input_force_full_ms = @intCast(v);
+        }
+    }
+    lua.pop(1);
+}
+
+fn applyTerminalTabBarTable(
+    allocator: std.mem.Allocator,
+    lua: *zlua.Lua,
+    terminal_idx: i32,
+    out: *Config,
+) !void {
+    _ = lua.getField(terminal_idx, "tab_bar");
+    if (lua.isTable(-1)) {
+        const tab_idx = lua.absIndex(-1);
+        const tab_reader = zlua_portable.reader.Reader.init(zlua_portable.api.State.fromRaw(@ptrCast(lua)), allocator, tab_idx);
+        if (tab_reader.boolField("show_single_tab")) |v| out.terminal_tab_bar_show_single_tab = v;
+        if (tab_reader.boolField("show_shell_icon")) |v| out.terminal_tab_bar_show_shell_icon = v;
+        if (tab_reader.fieldString("width_mode")) |v| {
+            if (lua_runtime_parse.parseTabBarWidthModeFromString(v)) |mode| out.terminal_tab_bar_width_mode = mode;
+        }
+        _ = lua.getField(tab_idx, "shell_icons");
+        if (lua.isTable(-1)) {
+            out.terminal_tab_bar_shell_icons = try parseTerminalShellIconMappings(allocator, lua, lua.absIndex(-1));
+        }
+        lua.pop(1);
+    }
+    lua.pop(1);
+}
+
+fn applyTerminalFocusReporting(
+    allocator: std.mem.Allocator,
+    lua: *zlua.Lua,
+    terminal_idx: i32,
+    out: *Config,
+) void {
+    _ = lua.getField(terminal_idx, "focus_reporting");
+    if (lua.isBoolean(-1)) {
+        const enabled = lua.toBoolean(-1);
+        out.terminal_focus_report_window = enabled;
+        out.terminal_focus_report_pane = enabled;
+    } else if (lua.isTable(-1)) {
+        const focus_reader = zlua_portable.reader.Reader.init(zlua_portable.api.State.fromRaw(@ptrCast(lua)), allocator, lua.absIndex(-1));
+        if (focus_reader.boolField("window")) |v| out.terminal_focus_report_window = v;
+        if (focus_reader.boolField("pane")) |v| out.terminal_focus_report_pane = v;
+    }
+    lua.pop(1);
+}
+
+fn applyTerminalStartLocationTable(
+    allocator: std.mem.Allocator,
+    lua: *zlua.Lua,
+    terminal_idx: i32,
+    out: *Config,
+) !void {
+    _ = lua.getField(terminal_idx, "start_location");
+    if (lua.isTable(-1)) {
+        const start_reader = zlua_portable.reader.Reader.init(zlua_portable.api.State.fromRaw(@ptrCast(lua)), allocator, lua.absIndex(-1));
+        if (start_reader.fieldString("default")) |v| {
+            replaceOwnedString(allocator, &out.terminal_default_start_location, try allocator.dupe(u8, v));
+        }
+        if (start_reader.fieldString("new_tab")) |v| {
+            if (lua_runtime_parse.parseTerminalNewTabStartLocationModeFromString(v)) |mode| {
+                out.terminal_new_tab_start_location = mode;
+            }
+        }
+    }
+    lua.pop(1);
+}
+
+fn applyTerminalWindowChromeTable(
+    allocator: std.mem.Allocator,
+    lua: *zlua.Lua,
+    terminal_idx: i32,
+    out: *Config,
+) void {
+    _ = lua.getField(terminal_idx, "window_chrome");
+    if (lua.isTable(-1)) {
+        const chrome_reader = zlua_portable.reader.Reader.init(zlua_portable.api.State.fromRaw(@ptrCast(lua)), allocator, lua.absIndex(-1));
+        if (chrome_reader.fieldString("mode")) |v| {
+            if (lua_runtime_parse.parseTerminalWindowChromeModeFromString(v)) |mode| {
+                out.terminal_window_chrome_mode = mode;
+            }
+        }
+    }
+    lua.pop(1);
+}
+
 fn parseManualHighlightSpec(
     allocator: std.mem.Allocator,
     lua: *zlua.Lua,
@@ -358,23 +494,7 @@ fn parseNativeScalarOverlay(allocator: std.mem.Allocator, lua: *zlua.Lua, table_
             replaceOwnedString,
             lua_runtime_parse.parseLigatureStrategyFromString,
         );
-
-        _ = lua.getField(terminal_idx, "shell");
-        if (lua.isString(-1)) {
-            if (lua.toString(-1)) |v| {
-                replaceOwnedString(allocator, &out.terminal_shell_path, try allocator.dupe(u8, v));
-            } else |_| {}
-        } else if (lua.isTable(-1)) {
-            const shell_idx = lua.absIndex(-1);
-            _ = lua.getField(shell_idx, "path");
-            if (lua.isString(-1)) {
-                if (lua.toString(-1)) |v| {
-                    replaceOwnedString(allocator, &out.terminal_shell_path, try allocator.dupe(u8, v));
-                } else |_| {}
-            }
-            lua.pop(1);
-        }
-        lua.pop(1);
+        try applyTerminalShellValue(allocator, lua, terminal_idx, &out);
 
         _ = lua.getField(terminal_idx, "blink");
         if (lua.isBoolean(-1)) {
@@ -394,123 +514,17 @@ fn parseNativeScalarOverlay(allocator: std.mem.Allocator, lua: *zlua.Lua, table_
         }
         lua.pop(1);
 
-        _ = lua.getField(terminal_idx, "cursor");
-        if (lua.isTable(-1)) {
-            const cursor_idx = lua.absIndex(-1);
-            _ = lua.getField(cursor_idx, "shape");
-            if (lua.isString(-1)) {
-                if (lua.toString(-1)) |v| {
-                    if (lua_runtime_parse.parseCursorShapeFromString(v)) |shape| {
-                        out.terminal_cursor_shape = shape;
-                    }
-                } else |_| {}
-            }
-            lua.pop(1);
-            _ = lua.getField(cursor_idx, "blink");
-            if (lua.isBoolean(-1)) out.terminal_cursor_blink = lua.toBoolean(-1);
-            lua.pop(1);
-        }
-        lua.pop(1);
+        applyTerminalCursorTable(allocator, lua, terminal_idx, &out);
 
         _ = lua.getField(terminal_idx, "texture_shift");
         if (lua.isBoolean(-1)) out.terminal_texture_shift = lua.toBoolean(-1);
         lua.pop(1);
 
-        _ = lua.getField(terminal_idx, "presentation");
-        if (lua.isTable(-1)) {
-            const presentation_idx = lua.absIndex(-1);
-            _ = lua.getField(presentation_idx, "recent_input_force_full");
-            if (lua.isBoolean(-1)) out.terminal_recent_input_force_full = lua.toBoolean(-1);
-            lua.pop(1);
-            _ = lua.getField(presentation_idx, "recent_input_force_full_ms");
-            if (lua.isNumber(-1)) {
-                if (lua.toInteger(-1)) |v| {
-                    if (v > 0) out.terminal_recent_input_force_full_ms = @intCast(v);
-                } else |_| {}
-            }
-            lua.pop(1);
-        }
-        lua.pop(1);
-
-        _ = lua.getField(terminal_idx, "tab_bar");
-        if (lua.isTable(-1)) {
-            const tab_idx = lua.absIndex(-1);
-            _ = lua.getField(tab_idx, "show_single_tab");
-            if (lua.isBoolean(-1)) out.terminal_tab_bar_show_single_tab = lua.toBoolean(-1);
-            lua.pop(1);
-            _ = lua.getField(tab_idx, "show_shell_icon");
-            if (lua.isBoolean(-1)) out.terminal_tab_bar_show_shell_icon = lua.toBoolean(-1);
-            lua.pop(1);
-            _ = lua.getField(tab_idx, "width_mode");
-            if (lua.isString(-1)) {
-                if (lua.toString(-1)) |v| {
-                    if (lua_runtime_parse.parseTabBarWidthModeFromString(v)) |mode| {
-                        out.terminal_tab_bar_width_mode = mode;
-                    }
-                } else |_| {}
-            }
-            lua.pop(1);
-            _ = lua.getField(tab_idx, "shell_icons");
-            if (lua.isTable(-1)) {
-                out.terminal_tab_bar_shell_icons = try parseTerminalShellIconMappings(allocator, lua, lua.absIndex(-1));
-            }
-            lua.pop(1);
-        }
-        lua.pop(1);
-
-        _ = lua.getField(terminal_idx, "focus_reporting");
-        if (lua.isBoolean(-1)) {
-            const enabled = lua.toBoolean(-1);
-            out.terminal_focus_report_window = enabled;
-            out.terminal_focus_report_pane = enabled;
-        } else if (lua.isTable(-1)) {
-            const focus_idx = lua.absIndex(-1);
-            _ = lua.getField(focus_idx, "window");
-            if (lua.isBoolean(-1)) out.terminal_focus_report_window = lua.toBoolean(-1);
-            lua.pop(1);
-            _ = lua.getField(focus_idx, "pane");
-            if (lua.isBoolean(-1)) out.terminal_focus_report_pane = lua.toBoolean(-1);
-            lua.pop(1);
-        }
-        lua.pop(1);
-
-        _ = lua.getField(terminal_idx, "start_location");
-        if (lua.isTable(-1)) {
-            const start_location_idx = lua.absIndex(-1);
-            _ = lua.getField(start_location_idx, "default");
-            if (lua.isString(-1)) {
-                if (lua.toString(-1)) |v| {
-                    replaceOwnedString(allocator, &out.terminal_default_start_location, try allocator.dupe(u8, v));
-                } else |_| {}
-            }
-            lua.pop(1);
-
-            _ = lua.getField(start_location_idx, "new_tab");
-            if (lua.isString(-1)) {
-                if (lua.toString(-1)) |v| {
-                    if (lua_runtime_parse.parseTerminalNewTabStartLocationModeFromString(v)) |mode| {
-                        out.terminal_new_tab_start_location = mode;
-                    }
-                } else |_| {}
-            }
-            lua.pop(1);
-        }
-        lua.pop(1);
-
-        _ = lua.getField(terminal_idx, "window_chrome");
-        if (lua.isTable(-1)) {
-            const window_chrome_idx = lua.absIndex(-1);
-            _ = lua.getField(window_chrome_idx, "mode");
-            if (lua.isString(-1)) {
-                if (lua.toString(-1)) |v| {
-                    if (lua_runtime_parse.parseTerminalWindowChromeModeFromString(v)) |mode| {
-                        out.terminal_window_chrome_mode = mode;
-                    }
-                } else |_| {}
-            }
-            lua.pop(1);
-        }
-        lua.pop(1);
+        applyTerminalPresentationTable(allocator, lua, terminal_idx, &out);
+        try applyTerminalTabBarTable(allocator, lua, terminal_idx, &out);
+        applyTerminalFocusReporting(allocator, lua, terminal_idx, &out);
+        try applyTerminalStartLocationTable(allocator, lua, terminal_idx, &out);
+        applyTerminalWindowChromeTable(allocator, lua, terminal_idx, &out);
 
         _ = lua.getField(terminal_idx, "selection_overlay");
         lua_runtime_parse.parseSelectionOverlayTable(lua, -1, &out, .terminal);
