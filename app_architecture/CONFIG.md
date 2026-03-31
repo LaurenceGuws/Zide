@@ -72,6 +72,8 @@ run:
 ```bash
 zig build run -- --write-default-config
 zig build run -- --write-default-config --with-lua-meta
+zig build run -- --write-default-config --config-scope=editor --stdout
+zig build run -- --write-default-config --config-scope=terminal --stdout
 ```
 
 That copies `assets/config/init.lua` to the platform user-config location
@@ -80,6 +82,10 @@ completion-backed personal config authoring.
 
 Without `--force`, rerunning the command preserves an existing user
 `init.lua` and leaves personal edits intact.
+
+Scoped export profiles emit partial configs from the same defaults authority:
+- `editor` keeps editor-focused sections plus shared theme/text config
+- `terminal` keeps terminal-focused sections plus shared theme/text config
 
 For repo-independent user-config completions, install the generated LuaLS
 metadata into the user config directory too:

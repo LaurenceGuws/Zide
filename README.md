@@ -194,11 +194,18 @@ zig build run -- --write-default-config --force
 zig build run -- --write-default-config=/tmp/zide-init.lua
 zig build run -- --write-default-config --stdout
 zig build run -- --write-default-config --with-lua-meta
+zig build run -- --write-default-config --config-scope=editor --stdout
+zig build run -- --write-default-config --config-scope=terminal --stdout
 ```
 
 By default, rerunning the command preserves an existing user `init.lua`.
 Use `--force` only when you want to overwrite it with the current shipped
 defaults.
+
+Scoped exports are partial starter configs intended for merge-friendly
+user/project overrides:
+- `--config-scope=editor` exports editor-focused defaults
+- `--config-scope=terminal` exports terminal-focused defaults
 
 To make `~/.config/zide/init.lua` completion-friendly when opened as its own
 workspace, install user-side LuaLS metadata too:

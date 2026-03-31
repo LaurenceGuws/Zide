@@ -6,7 +6,13 @@ const lua_config = @import("./lua_config.zig");
 const State = zlua_portable.api.State;
 const c = zlua_portable.api.c;
 
-pub fn renderStandaloneDefaultConfig(allocator: std.mem.Allocator) ![]u8 {
+pub const ExportScope = enum {
+    full,
+    editor,
+    terminal,
+};
+
+pub fn renderStandaloneDefaultConfig(allocator: std.mem.Allocator, scope: ExportScope) ![]u8 {
     const init_path = (try lua_shared.findInstalledAssetPath(allocator, "assets/config/init.lua")) orelse return error.MissingDefaultConfig;
     defer allocator.free(init_path);
 
@@ -45,9 +51,107 @@ pub fn renderStandaloneDefaultConfig(allocator: std.mem.Allocator) ![]u8 {
         \\---@type ZideConfig
         \\return zide.config(
     );
-    try writeLuaValue(writer, lua, lua.absIndex(-1), 0);
+    try writeLuaRootConfig(writer, lua, lua.absIndex(-1), scope);
     try writer.writeAll("\n)\n");
     return try out.toOwnedSlice(allocator);
+}
+
+fn writeLuaRootConfig(writer: anytype, lua: State, idx: c_int, scope: ExportScope) anyerror!void {
+    const table_index = lua.absIndex(idx);
+    var keys = std.ArrayList([]const u8).empty;
+    defer keys.deinit(std.heap.page_allocator);
+    var it = lua.tableIter(table_index);
+    defer it.finish();
+    while (it.next()) {
+        const key = it.keyString() orelse return error.UnsupportedLuaTableKey;
+        if (rootKeyAllowed(scope, key)) {
+            try keys.append(std.heap.page_allocator, key);
+        }
+    }
+    std.mem.sort([]const u8, keys.items, {}, struct {
+        fn lessThan(_: void, lhs: []const u8, rhs: []const u8) bool {
+            return std.mem.lessThan(u8, lhs, rhs);
+        }
+    }.lessThan);
+
+    if (keys.items.len == 0) {
+        try writer.writeAll("{}");
+        return;
+    }
+
+    try writer.writeAll("{\n");
+    for (keys.items) |key| {
+        try writeIndent(writer, 1);
+        try writeLuaKey(writer, key);
+        try writer.writeAll(" = ");
+        lua.getField(table_index, key);
+        defer lua.pop(1);
+        if (std.mem.eql(u8, key, "keybinds") and scope != .full) {
+            try writeScopedKeybinds(writer, lua, lua.absIndex(-1), scope, 1);
+        } else {
+            try writeLuaValue(writer, lua, lua.absIndex(-1), 1);
+        }
+        try writer.writeAll(",\n");
+    }
+    try writer.writeAll("}");
+}
+
+fn rootKeyAllowed(scope: ExportScope, key: []const u8) bool {
+    return switch (scope) {
+        .full => true,
+        .editor => std.mem.eql(u8, key, "theme") or
+            std.mem.eql(u8, key, "font_rendering") or
+            std.mem.eql(u8, key, "selection_overlay") or
+            std.mem.eql(u8, key, "editor") or
+            std.mem.eql(u8, key, "keybinds"),
+        .terminal => std.mem.eql(u8, key, "theme") or
+            std.mem.eql(u8, key, "font_rendering") or
+            std.mem.eql(u8, key, "selection_overlay") or
+            std.mem.eql(u8, key, "terminal") or
+            std.mem.eql(u8, key, "keybinds"),
+    };
+}
+
+fn writeScopedKeybinds(writer: anytype, lua: State, idx: c_int, scope: ExportScope, indent: usize) anyerror!void {
+    const table_index = lua.absIndex(idx);
+    var keys = std.ArrayList([]const u8).empty;
+    defer keys.deinit(std.heap.page_allocator);
+
+    var it = lua.tableIter(table_index);
+    defer it.finish();
+    while (it.next()) {
+        const key = it.keyString() orelse return error.UnsupportedLuaTableKey;
+        if (std.mem.eql(u8, key, "global") or
+            (scope == .editor and std.mem.eql(u8, key, "editor")) or
+            (scope == .terminal and std.mem.eql(u8, key, "terminal")))
+        {
+            try keys.append(std.heap.page_allocator, key);
+        }
+    }
+
+    std.mem.sort([]const u8, keys.items, {}, struct {
+        fn lessThan(_: void, lhs: []const u8, rhs: []const u8) bool {
+            return std.mem.lessThan(u8, lhs, rhs);
+        }
+    }.lessThan);
+
+    if (keys.items.len == 0) {
+        try writer.writeAll("{}");
+        return;
+    }
+
+    try writer.writeAll("{\n");
+    for (keys.items) |key| {
+        try writeIndent(writer, indent + 1);
+        try writeLuaKey(writer, key);
+        try writer.writeAll(" = ");
+        lua.getField(table_index, key);
+        defer lua.pop(1);
+        try writeLuaValue(writer, lua, lua.absIndex(-1), indent + 1);
+        try writer.writeAll(",\n");
+    }
+    try writeIndent(writer, indent);
+    try writer.writeAll("}");
 }
 
 fn writeLuaValue(writer: anytype, lua: State, idx: c_int, indent: usize) anyerror!void {
@@ -212,7 +316,7 @@ fn writeIndent(writer: anytype, indent: usize) anyerror!void {
 }
 
 test "standalone default config export is self-contained" {
-    const rendered = try renderStandaloneDefaultConfig(std.testing.allocator);
+    const rendered = try renderStandaloneDefaultConfig(std.testing.allocator, .full);
     defer std.testing.allocator.free(rendered);
     try std.testing.expect(std.mem.indexOf(u8, rendered, "load_relative(") == null);
     try std.testing.expect(std.mem.indexOf(u8, rendered, "return zide.config(") != null);
@@ -221,7 +325,7 @@ test "standalone default config export is self-contained" {
 
 test "standalone default config export can be loaded back by config parser" {
     const allocator = std.testing.allocator;
-    const rendered = try renderStandaloneDefaultConfig(allocator);
+    const rendered = try renderStandaloneDefaultConfig(allocator, .full);
     defer allocator.free(rendered);
 
     var tmp = std.testing.tmpDir(.{});
@@ -235,4 +339,20 @@ test "standalone default config export can be loaded back by config parser" {
 
     try std.testing.expect(config.terminal_texture_shift != null);
     try std.testing.expect(config.editor_wrap != null);
+}
+
+test "editor scoped export excludes terminal section" {
+    const rendered = try renderStandaloneDefaultConfig(std.testing.allocator, .editor);
+    defer std.testing.allocator.free(rendered);
+    try std.testing.expect(std.mem.indexOf(u8, rendered, "editor =") != null);
+    try std.testing.expect(std.mem.indexOf(u8, rendered, "terminal =") == null);
+    try std.testing.expect(std.mem.indexOf(u8, rendered, "  terminal = {") == null);
+}
+
+test "terminal scoped export excludes editor section" {
+    const rendered = try renderStandaloneDefaultConfig(std.testing.allocator, .terminal);
+    defer std.testing.allocator.free(rendered);
+    try std.testing.expect(std.mem.indexOf(u8, rendered, "terminal =") != null);
+    try std.testing.expect(std.mem.indexOf(u8, rendered, "editor =") == null);
+    try std.testing.expect(std.mem.indexOf(u8, rendered, "  editor = {") == null);
 }

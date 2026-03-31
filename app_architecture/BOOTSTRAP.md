@@ -189,6 +189,8 @@ zig build run -- --write-default-config --force
 zig build run -- --write-default-config=/tmp/zide-init.lua
 zig build run -- --write-default-config --stdout
 zig build run -- --write-default-config --with-lua-meta
+zig build run -- --write-default-config --config-scope=editor --stdout
+zig build run -- --write-default-config --config-scope=terminal --stdout
 ```
 
 Without `--force`, an existing user `init.lua` is preserved and only missing

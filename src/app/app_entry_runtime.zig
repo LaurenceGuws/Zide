@@ -42,7 +42,12 @@ fn writeDefaultConfig(
     allocator: std.mem.Allocator,
     command: std.meta.TagPayload(app_bootstrap.StartupCommand, .write_default_config),
 ) !void {
-    const rendered = try lua_config_export.renderStandaloneDefaultConfig(allocator);
+    const scope: lua_config_export.ExportScope = switch (command.scope) {
+        .full => .full,
+        .editor => .editor,
+        .terminal => .terminal,
+    };
+    const rendered = try lua_config_export.renderStandaloneDefaultConfig(allocator, scope);
     defer allocator.free(rendered);
 
     switch (command.target) {

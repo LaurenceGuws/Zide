@@ -22,15 +22,23 @@ pub const WriteDefaultConfigTarget = union(enum) {
     }
 };
 
+pub const DefaultConfigScope = enum {
+    full,
+    editor,
+    terminal,
+};
+
 pub const StartupCommand = union(enum) {
     run,
     write_default_config: struct {
         target: WriteDefaultConfigTarget,
+        scope: DefaultConfigScope = .full,
         force: bool = false,
         with_lua_meta: bool = false,
 
         pub fn deinit(self: *@This(), allocator: std.mem.Allocator) void {
             self.target.deinit(allocator);
+            self.scope = .full;
             self.force = false;
             self.with_lua_meta = false;
         }
@@ -81,6 +89,24 @@ fn parseStartupCommandArgs(allocator: std.mem.Allocator, args: []const []const u
         if (std.mem.eql(u8, arg, "--install-user-lua-meta")) {
             command.deinit(allocator);
             command = .{ .install_user_lua_meta = .{} };
+            continue;
+        }
+        if (std.mem.eql(u8, arg, "--config-scope")) {
+            const value = args[i + 1];
+            if (i + 1 >= args.len) return error.MissingConfigScope;
+            i += 1;
+            switch (command) {
+                .write_default_config => |*cmd| cmd.scope = parseDefaultConfigScope(value) orelse return error.InvalidConfigScope,
+                else => {},
+            }
+            continue;
+        }
+        if (std.mem.startsWith(u8, arg, "--config-scope=")) {
+            const value = arg["--config-scope=".len..];
+            switch (command) {
+                .write_default_config => |*cmd| cmd.scope = parseDefaultConfigScope(value) orelse return error.InvalidConfigScope,
+                else => {},
+            }
             continue;
         }
         if (std.mem.eql(u8, arg, "--stdout")) {
@@ -186,6 +212,11 @@ pub fn parseStartupFilePaths(allocator: std.mem.Allocator) ?[][]u8 {
             continue;
         }
         if (std.mem.startsWith(u8, arg, "--write-default-config=")) continue;
+        if (std.mem.eql(u8, arg, "--config-scope")) {
+            if (i + 1 < args.len) i += 1;
+            continue;
+        }
+        if (std.mem.startsWith(u8, arg, "--config-scope=")) continue;
         if (std.mem.eql(u8, arg, "--install-user-lua-meta")) continue;
         if (std.mem.eql(u8, arg, "--stdout") or std.mem.eql(u8, arg, "--force") or std.mem.eql(u8, arg, "--with-lua-meta")) continue;
         if (isStartupDirectoryFlagWithValue(arg)) {
@@ -264,6 +295,13 @@ pub fn modeFromArg(value: []const u8) ?AppMode {
     return null;
 }
 
+fn parseDefaultConfigScope(value: []const u8) ?DefaultConfigScope {
+    if (std.mem.eql(u8, value, "full")) return .full;
+    if (std.mem.eql(u8, value, "editor")) return .editor;
+    if (std.mem.eql(u8, value, "terminal")) return .terminal;
+    return null;
+}
+
 pub fn parseEnvU64(env_key: [:0]const u8, default_value: u64) u64 {
     const raw = std.c.getenv(env_key) orelse return default_value;
     const slice = std.mem.sliceTo(raw, 0);
@@ -332,6 +370,7 @@ test "parse startup command supports writing default config" {
     switch (command) {
         .write_default_config => |cmd| {
             try std.testing.expectEqual(true, cmd.force);
+            try std.testing.expectEqual(DefaultConfigScope.full, cmd.scope);
             try std.testing.expect(!cmd.with_lua_meta);
             try std.testing.expectEqual(@as(WriteDefaultConfigTarget, .user), cmd.target);
         },
@@ -349,6 +388,7 @@ test "parse startup command supports custom path and stdout target" {
     switch (command) {
         .write_default_config => |cmd| {
             try std.testing.expect(!cmd.force);
+            try std.testing.expectEqual(DefaultConfigScope.full, cmd.scope);
             try std.testing.expect(!cmd.with_lua_meta);
             switch (cmd.target) {
                 .stdout => {},
@@ -383,9 +423,23 @@ test "parse startup command supports default config with lua meta" {
     switch (command) {
         .write_default_config => |cmd| {
             try std.testing.expect(cmd.force);
+            try std.testing.expectEqual(DefaultConfigScope.full, cmd.scope);
             try std.testing.expect(cmd.with_lua_meta);
             try std.testing.expectEqual(@as(WriteDefaultConfigTarget, .user), cmd.target);
         },
+        else => try std.testing.expect(false),
+    }
+}
+
+test "parse startup command supports config scope" {
+    const argv = [_][]const u8{
+        "--write-default-config",
+        "--config-scope=terminal",
+    };
+    var command = try parseStartupCommandArgs(std.testing.allocator, &argv);
+    defer command.deinit(std.testing.allocator);
+    switch (command) {
+        .write_default_config => |cmd| try std.testing.expectEqual(DefaultConfigScope.terminal, cmd.scope),
         else => try std.testing.expect(false),
     }
 }
