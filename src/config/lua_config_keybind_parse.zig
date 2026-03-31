@@ -34,20 +34,14 @@ fn applyMod(mods: *input_types.Modifiers, mod_flag: ModFlag) void {
 fn parseModsField(lua: *zlua.Lua, idx: i32) input_types.Modifiers {
     var mods: input_types.Modifiers = .{};
     const reader = config_reader.Reader.init(lua, std.heap.page_allocator, idx);
-    if (reader.fieldString("mods")) |s| {
-        if (readModString(s)) |mod_flag| applyMod(&mods, mod_flag);
-        return mods;
-    }
-
-    _ = lua.getField(idx, "mods");
-    defer lua.pop(1);
-    if (!lua.isTable(-1)) return mods;
-
-    const mods_idx = lua.absIndex(-1);
-    const len = reader.rawLen(mods_idx);
-    for (0..len) |i| {
-        const s = reader.rawStringIndex(mods_idx, i + 1) orelse continue;
-        if (readModString(s)) |mod_flag| applyMod(&mods, mod_flag);
+    const value = reader.stringOrStringListOwned("mods") catch return mods;
+    defer if (value) |v| std.heap.page_allocator.free(v);
+    if (value) |raw| {
+        var it = std.mem.splitScalar(u8, raw, ',');
+        while (it.next()) |s| {
+            if (s.len == 0) continue;
+            if (readModString(s)) |mod_flag| applyMod(&mods, mod_flag);
+        }
     }
     return mods;
 }
