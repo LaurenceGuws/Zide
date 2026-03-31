@@ -79,12 +79,34 @@ Important:
 
 - In normal Linux/macOS flow, SDL3, Lua, FreeType, HarfBuzz, and tree-sitter
   are resolved through Zig package-managed dependencies.
+- `zlua-portable` is now consumed as a pinned Zig package dependency from the
+  `v0.1.0-beta.1` release line.
 - Linux package-manager setup is now mostly for platform/runtime libraries such
   as Wayland, Mesa/OpenGL, `libxkbcommon`, and `fontconfig`, not for sourcing
   the primary app library stack.
 - You still need platform/system libraries for native execution.
 - For exact platform dependency details, prefer the hosted dependency docs over
   cargo-culting old package lists from stale snippets.
+
+Fresh local checkout:
+
+```bash
+cd /home/home/personal
+git clone git@github.com:LaurenceGuws/Zide.git zide
+cd zide
+./ops/bootstrap.sh
+zig build check-app-imports
+zig build test
+```
+
+For local co-development only, you can temporarily replace the pinned package
+with a sibling path dependency to a local `zlua-portable` checkout:
+
+```zig
+.zlua_portable = .{
+    .path = "../zlua-portable",
+},
+```
 
 If you are testing the terminal seriously, install the bundled terminfo entry:
 

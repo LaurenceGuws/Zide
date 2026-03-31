@@ -14,7 +14,8 @@
             .hash = "zlua-0.1.0-hGRpCww-BQCx3cX6zbKWfTgOx6B7Peo4P17RK2hm7-xV",
         },
         .zlua_portable = .{
-            .path = "../../zlua-portable",
+            .url = "git+https://github.com/LaurenceGuws/zlua-portable?ref=v0.1.0-beta.1",
+            .hash = "zlua_portable-0.1.0-beta.1-e7pElsE7AABG6etflj2VnxabqS7D2jA4UybfCnzfm7Yr",
         },
         .tree_sitter = .{
             .url = "git+https://github.com/tree-sitter/tree-sitter#cf302b07d1cae984068b7eb44a6e44529566a8c9",

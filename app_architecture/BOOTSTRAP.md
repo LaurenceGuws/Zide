@@ -16,6 +16,10 @@ Normal build flow now uses Zig package-managed dependencies for:
 - FreeType
 - HarfBuzz
 
+Current local-package exception:
+
+- `zlua-portable`, pinned from release tag `v0.1.0-beta.1`
+
 That means Linux and macOS no longer use the old "install SDL3, Lua,
 FreeType, HarfBuzz, and tree-sitter from the system package manager first"
 workflow as the normal path.
@@ -85,6 +89,28 @@ Bootstrap the repo:
 
 ```bash
 ./ops/bootstrap.sh
+```
+
+Fresh local checkout example:
+
+```bash
+cd /home/home/personal
+git clone git@github.com:LaurenceGuws/Zide.git zide
+cd zide
+./ops/bootstrap.sh
+```
+
+Local co-development note:
+
+- if you need to change `zlua-portable` and `zide` together, temporarily swap
+  the pinned package dependency for a sibling local path override
+
+Override shape:
+
+```zig
+.zlua_portable = .{
+    .path = "../zlua-portable",
+},
 ```
 
 Windows:
@@ -191,6 +217,7 @@ by default.
 
 ```bash
 zig build test
+zig build check-app-imports
 ```
 
 ## Notes
