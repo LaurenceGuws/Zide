@@ -559,19 +559,24 @@ pub fn planIdeExtendedBuildGraph(
     );
 
     // Developer tooling
-    const grammar_update = addLibcExecutable(
-        b,
-        target,
-        optimize,
+    const grammar_update_cmd = b.addSystemCommand(&.{
+        "bash",
+        "-lc",
+        "set -euo pipefail\n" ++
+            "repo_root=\"$PWD\"\n" ++
+            "cd ../../zide-tree-sitter\n" ++
+            "zig build grammar-update -- \"$@\"\n" ++
+            "cd \"$repo_root\"\n" ++
+            "rm -rf assets/queries\n" ++
+            "cp -R ../../zide-tree-sitter/assets/queries assets/queries\n" ++
+            "mkdir -p assets/syntax\n" ++
+            "cp ../../zide-tree-sitter/assets/syntax/generated.lua assets/syntax/generated.lua\n",
+        "_",
+    });
+    if (b.args) |args| grammar_update_cmd.addArgs(args);
+    const grammar_update_step = b.step(
         "grammar-update",
-        "tools/editor/grammar/grammar_update.zig",
+        "Build and install tree-sitter grammar packs via zide-tree-sitter",
     );
-    const grammar_update_run = addRunArtifactStep(
-        b,
-        grammar_update,
-        "grammar-update",
-        "Build and install tree-sitter grammar packs",
-    );
-    if (b.args) |args| grammar_update_run.run.addArgs(args);
-    _ = grammar_update_run.step;
+    grammar_update_step.dependOn(&grammar_update_cmd.step);
 }

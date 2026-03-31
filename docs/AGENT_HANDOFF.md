@@ -113,8 +113,9 @@ not a progress log and should stay brief.
    - `app_architecture/windows/EXPLORER_COMMAND_INTEGRATION.md`
    - `docs/todo/windows/implementation.md`
  - Grammar/setup follow-up if bootstrapping a new machine:
-   - `tools/editor/grammar/grammar_update.zig`
-   - `tools/editor/grammar/grammar_fetch.zig`
+   - `app_architecture/editor/TREE_SITTER_REPO_BOUNDARY.md`
+   - `docs/todo/editor/treesitter_repo_extraction.md`
+   - sibling repo `../zide-tree-sitter`
 
 ### Constraints
 
