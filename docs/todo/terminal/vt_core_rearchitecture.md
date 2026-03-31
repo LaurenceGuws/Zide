@@ -18,52 +18,66 @@ Continue the post-rewrite split that makes the terminal core the architectural c
 
 ## Current Direction
 
-The main invention phase is over. The bug-hunting-heavy phase did the work it needed to do: the rewritten path is now the baseline, and the active lane has shifted toward cleanup/restructure plus native/FFI convergence. The renderer-owned scene path is the live direction, and the remaining terminal core work is about finishing the engine boundary cleanly rather than reopening the old architecture.
+The passive cleanup phase is over. The active lane is now a deliberate assault
+on every architectural seam that keeps `TerminalCore` from being the obvious
+center. This is still iterative work, but it is no longer gentle work. Each
+cut should remove a structural lie, not merely rearrange the same center of
+gravity into smaller files.
 
 ## Priority Now
 
 Highest-value remaining items, ranked against the current `libghostty-vt` comparison:
 
-1. `VTCORE-02` keep the FFI boundary aligned with the stronger native contract
-   Why: embeddability is already real, so the remaining work is keeping the public engine boundary honest instead of letting native-only assumptions creep back in. Native should prove the contract, not define a different one. Current nuance against `libghostty-vt`: Ghostty still wins on engine-centered cleanliness, but Zide is no longer obviously behind on host-facing contract richness.
-2. `VTCORE-01` shrink `TerminalSession` further toward a true host/runtime wrapper
-   Why: this is still the biggest structural gap between Zide and a cleaner engine-first boundary like `libghostty-vt`, but the highest-yield seams have recently narrowed; the remaining cuts should only continue when they remove another real native-only ownership leak rather than mostly internal palette/config bookkeeping.
-3. `VTCORE-06` keep input encoding transport-agnostic as the host/runtime split finishes
-   Why: Ghostty’s encoder remains a strong reference for a peer subsystem that consumes terminal state without becoming session-owned glue.
+1. `VTCORE-01` break `TerminalSession` as the architectural center
+   Why: this is still the most visible fake center in the native terminal
+   stack. As long as it reads like the real terminal, the architecture is
+   lying on first glance.
+2. `VTCORE-05` replace duplicated publication truth with an explicit engine-owned publication center
+   Why: mirror-heavy publication state keeps native rendering and backend
+   retirement too tightly coupled, and it weakens the contract story.
+3. `VTCORE-04` move the remaining semantic text/protocol ownership below the VT boundary
+   Why: parser-hook text semantics are still one of the clearest "wrong layer"
+   smells versus the strongest references.
+4. `VTCORE-02` keep the FFI boundary aligned with the stronger native contract
+   Why: native must become the cleanest reference host over one engine truth,
+   not a privileged semantic owner that FFI tries to imitate later.
+5. `VTCORE-06` keep input encoding transport-agnostic as the rest of the kill-order proceeds
+   Why: this must remain a peer subsystem, not collapse back into session glue.
 
-Supporting cleanup:
+Supporting cuts:
 
-- `VTCORE-03` transport is already real; remaining work is cleanup and contract tightening
-- `VTCORE-04` main protocol/core relocation is already real; remaining work is session-owned residue
-- `VTCORE-05` renderer/publication architecture is already live; remaining work is hardening and keeping the contract honest
-- `VTCORE-07` remains a guardrail, not a separate invention lane
+- `VTCORE-03` transport is already real; keep it narrow and prevent it from
+  becoming a second semantic center
+- `VTCORE-07` remains a guardrail: native must become the sharpest host, not a
+  special host
 
 Focused follow-up lane:
 
-- `widget_boundary_split.md`
-  Why: recent dogfood fixes proved that viewport chrome and hover/scrollbar
-  behavior were still mixed across widget/content/runtime layers. The next
-  cleanup is to keep shrinking widget/runtime policy and host conveniences
-  toward a cleaner engine/host/chrome split without widening FFI casually.
+- `docs/review/TERMINAL_NATIVE_ARCHITECTURAL_SCRUTINY_2026-03-31.md`
+  Why: this is the current ruthless read on what still looks second-rate at
+  first glance and what should be demolished first.
 
 ## TODO
 
 - [x] `VTCORE-00` Define the terminal core boundary.
   Notes: the concrete boundary and target types now live in `app_architecture/terminal/VT_CORE_DESIGN.md`.
 - [ ] `VTCORE-01` Separate VT core from host session/runtime.
-  Notes: `TerminalCore`, `session_runtime`, debug helpers, render/query/runtime splits, and several root-session delegations are already landed; the remaining work is shrinking `TerminalSession` into a thinner host wrapper. Latest slices: input-mode snapshot state now lives in `src/terminal/core/session_input_snapshot.zig`, presentation-feedback structs now live in `src/terminal/core/session_presentation_feedback.zig`, session init options now live in `src/terminal/core/session_init_options.zig`, host-query structs now live in `src/terminal/core/session_host_types.zig`, the remaining session-facing public type aliases now live in `src/terminal/core/session_public_types.zig`, the scrollback/viewport content wrapper now lives behind `src/terminal/core/session_content_api.zig`, the selection wrapper is now aliased directly from `src/terminal/core/session_selection.zig`, the public host/query surface is now aliased directly from `src/terminal/core/session_queries.zig` and `src/terminal/core/session_host_queries.zig`, the interaction/mode surface is now aliased directly from `src/terminal/core/session_interaction.zig`, host metadata/close-confirm queries now consume core-owned accessors instead of reaching straight into raw `self.core` fields, clipboard-related host semantics now mutate engine-owned OSC/OSC5522 buffers through `TerminalCore` methods instead of raw session-side buffer access, sync-update plus scrollback-count/offset rendering and config cache paths now also route through `TerminalCore` accessors/mutators instead of direct session-side field/history access, the backend-owned viewport/scrollback path in `scrollback_view.zig` now also routes through `TerminalCore` scrollback accessors/mutators instead of raw history choreography, save/restore cursor plus saved-charset state now also live on `TerminalCore` instead of session-style helper choreography, parser control/reset state for SO/SI, ESC entry, parser reset, and saved-charset clearing now also route through `TerminalCore` instead of direct parser-field mutation from control/reset helpers, OSC title/cwd buffer clearing, append, and publish/default-title operations now also route through `TerminalCore` instead of direct core-buffer mutation from OSC protocol helpers, selection clear/start/update/finish/read now also route through `TerminalCore` instead of raw history selection mutation from the selection helper path, resize/reflow now also restores or clears selection through `TerminalCore` instead of mutating raw history-selection internals directly, full reset now also lives on `TerminalCore` instead of open-coded core-field mutation in `terminal_core_reset.zig`, column-mode reset/clear-generation semantics now also live behind a core-owned mutator instead of session-side field choreography, default-color / ANSI remap, palette snapshot/reset, and dynamic-color update semantics now also route through `TerminalCore` mutators instead of direct screen/history/palette mutation from `session_config`, child-exit truth polling/reporting now lives behind `src/terminal/core/session_lifecycle.zig` instead of being split between `session_runtime.zig` and host-query code, transport open/attach/close, writer access, external-outgoing drain, and resize-report choreography now lives behind `src/terminal/core/session_transport_runtime.zig` instead of staying bundled inside `session_runtime.zig`, thread shutdown plus queued-IO/backlog observation now lives behind `src/terminal/core/session_thread_runtime.zig` instead of staying open-coded inside `session_runtime.zig`, and terminal startup rollback now lives at the app/session boundary so a started PTY/thread/process cannot survive a later startup failure after `startSessionWithShellCellSize(...)`. This remains the top restructure item because `TerminalSession` is still the main center-of-gravity gap versus the cleaner `libghostty-vt` style engine boundary documented in `docs/review/TERMINAL_CORE_ARCHITECTURE_REVIEW_2026-03-10.md`.
+  Notes: this is no longer a "trim a few helpers" item. This is the campaign to
+  dethrone `TerminalSession` as the visual and practical center of the
+  terminal. Prior extractions still matter, but only insofar as they make
+  deletion and decomposition easier. Judge every remaining method, re-export,
+  and helper by one question: does it still make `TerminalSession` look like
+  the real terminal?
   Done when:
-  - `TerminalSession` reads primarily as host/runtime assembly plus narrow host conveniences, not as the place where terminal semantics still live.
-  - coherent public method clusters are either owned by `TerminalCore` or forwarded through focused `session_*` boundary modules instead of being hand-written across the root facade.
-  - native host code no longer relies on privileged deep-core access patterns that an equivalent FFI host cannot reach through the intended engine contract.
+  - `TerminalSession` no longer reads like the engine at first glance.
+  - the public center is explicit and smaller than the current root facade.
+  - remaining host/runtime assembly is narrow enough to justify either a hard
+    rename or outright deletion of the current `TerminalSession` shape.
   Current judgment:
-  - the highest-yield session/core seams have materially cooled after the recent host-query, clipboard, sync-update, column-mode, and palette/default-color cuts
-  - remaining `session_config` seams are increasingly internal core bookkeeping rather than host-contract asymmetries
-  - the stronger remaining center-of-gravity issue is no longer mostly raw VT semantics living on the root facade; it is that runtime/publication assembly still exists around `TerminalCore`
-  - recent runtime/publication cuts materially improved that situation: lifecycle truth now lives behind `session_lifecycle.zig`, transport runtime helpers now live behind `session_transport_runtime.zig`, thread/runtime teardown now lives behind `session_thread_runtime.zig`, publication generation state now lives behind `session_publication_state.zig`, presentation handoff now lives behind `session_presentation_handoff.zig`, publication update choreography now lives behind `session_publication_updates.zig`, PTY poll publication wake/update logic now lives behind `pty_poll_publication.zig`, and the PTY-threaded / external-transport parse loops now live behind `pty_poll_processing.zig`
-  - after those cuts, `session_runtime.zig` reads more like orchestration, `session_rendering.zig` reads more like a coordination shell, and `pty_io.zig` reads more like a narrow poll orchestrator over parse-throughput and transport policy
-  - that means this lane should pause again unless another comparably coherent runtime/publication ownership cut appears
-  - do not keep pushing this lane for symmetry alone; prefer `VTCORE-02` unless another native-only ownership leak is clearly identified
+  - helper extraction alone is no longer enough
+  - the remaining problem is architectural theater: too many smaller files still
+    preserve one broad fake center
+  - this lane stays hot until that center is broken
 - [ ] `VTCORE-02` Make FFI a first-class core interface.
   Notes: shared FFI state plus `host_api` and `core_api` splits are landed; remaining work is maturity and convergence, not proving the shape. Recent slices closed real host-facing gaps such as close-confirm signals and backend-owned viewport control.
   Done when:
@@ -73,27 +87,38 @@ Focused follow-up lane:
 - [ ] `VTCORE-03` Introduce transport-agnostic host integration.
   Notes: transport contracts, writer/read boundaries, external transport, replay-harness use, no-PTY host support, and shared redraw/alive wake behavior are landed; remaining work is deeper cleanup rather than first transport abstraction.
 - [ ] `VTCORE-04` Move protocol execution onto core/model contracts.
-  Notes: the main core-side dispatch, feed, mode, reset, and protocol helper slices are landed; remaining work is finishing the session-owned residue.
+  Notes: the main protocol relocation is landed, but the text path still carries
+  a serious smell: `parser_hooks.zig` still owns semantic write behavior that a
+  cleaner engine would own below the VT boundary.
 - [ ] `VTCORE-05` Simplify snapshot and render publication.
-  Notes: publication planning has been heavily split and hardened, replay authority is broad, multi-span row damage now survives through backend and renderer planning, the scene-owned presentation path is live, and present-ack ownership moved later in submission. The active work is now narrower but also more structurally important than the older wording implied: `session_rendering.zig`, the publication-state seam, the publication-updates seam, and the presentation-handoff seam now look like the strongest remaining "session still feels like the center" lane because they still own published/presented generation bookkeeping, render-cache handoff, view-cache update choreography, sync-update publication behavior, and presentation capture/feedback around `TerminalCore`. Keep the new publication/present contract honest, continue redraw/perf hardening, and avoid reopening old default-framebuffer assumptions.
+  Notes: publication planning is explicit now, but the implementation still
+  mirrors too much truth and still feels too session-centered. This lane is no
+  longer about "hardening what exists" alone. It is about crushing duplicated
+  publication truth until one obvious published state center remains.
 - [ ] `VTCORE-06` Keep input encoding as a peer subsystem.
   Notes: transport-agnostic writer-based encoding, fake-writer regression coverage, and PTY-backed `TerminalSession.sendText(...)` / `sendKey(...)` regressions through the real session writer boundary are in place; remaining work is keeping the subsystem decoupled as the rest of the split finishes.
 - [ ] `VTCORE-07` Preserve desktop Zide behavior while opening the embedding path.
   Notes: this means preserving native quality while keeping native and FFI as peer hosts over the same engine truth, with native acting as the lowest-friction reference implementation rather than as a second semantic center.
 
-## Active Focus Inside VTCORE-05
+## Current Kill Order
 
-- [ ] Keep replay/manual authority current for redraw and present behavior.
-- [ ] Continue post-rewrite compatibility hardening on real workloads.
-- [ ] Keep recent-input publication mitigation and scene-target ownership aligned with the current Wayland/present plan.
-- [ ] Avoid reintroducing session-centered or default-framebuffer-centered assumptions.
+- [ ] break `TerminalSession` as the false center
+- [ ] move printable semantics below the VT boundary
+- [ ] replace duplicated publication/cache truth with one explicit center
+- [ ] shrink native widget draw into a host/presentation consumer, not a
+      publication co-owner
+- [ ] delete mirrors, fallback paths, and compatibility residue that survive
+      only because nobody has taken the knife to them yet
 
 ## Current Audit Result
 
-- The engine-center gap versus `libghostty-vt` is smaller than the older docs implied.
-- The remaining structural gap is now more specifically runtime/publication center-of-gravity:
-  - `session_runtime.zig` is now much closer to a narrow orchestration shell after lifecycle, transport, and thread-helper extraction.
-  - `session_rendering.zig` is now much closer to a coordination shell after publication-state, publication-updates, and presentation-handoff extraction.
-  - `pty_io.zig` is now closer to a narrow poll orchestrator after PTY poll publication wake/update logic moved behind `pty_poll_publication.zig` and buffered parse/poll loops moved behind `pty_poll_processing.zig`.
-  - `terminal_session.zig` is still large, but increasingly as the assembly shell around those runtime/publication lanes rather than as the place where raw VT semantics live.
-- That means the next strongest comparison lane against Ghostty is no longer "trim more facade methods for symmetry," and it may no longer be "keep extracting runtime/publication shards" either unless another coherent seam appears. The stronger next lane is likely FFI snapshot/export maturity plus any remaining engine-centered ownership cuts that materially reduce privileged orchestration around `TerminalCore`.
+- The engine-center gap versus `libghostty-vt` is now mostly about obviousness
+  and ownership gravity, not lack of subsystems.
+- The largest remaining architectural enemies are:
+  - `TerminalSession` as a false center
+  - parser-hook semantics above the engine
+  - duplicated publication truth
+  - oversized native widget/render coordination
+- The terminal campaign should now judge success by first-glance authority:
+  when a strong maintainer opens the code, the engine must obviously be the
+  engine.

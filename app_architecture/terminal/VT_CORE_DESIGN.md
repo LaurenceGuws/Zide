@@ -60,6 +60,29 @@ Status note, 2026-03-14:
     snapshot/export maturity unless another comparably coherent engine-ownership
     seam appears
 
+Status note, 2026-03-31:
+
+- The architecture campaign has been re-focused aggressively.
+- The old "post-rewrite cleanup" framing is no longer strong enough.
+- The new standard is not "improve the current split a bit more." The new
+  standard is:
+  - destroy every false center
+  - delete fallback-path thinking that survives only from inertia
+  - make the engine so obvious that strong terminal maintainers can read the
+    shape at first glance
+- The current strategic enemies are now explicit:
+  - `TerminalSession` as a broad fake center
+  - parser-hook semantic text handling above the VT boundary
+  - duplicated publication/cache truth
+  - oversized native widget/render coordination around terminal publication
+- The current operating rule is sequential but ruthless:
+  - define the replacement shape
+  - cut through the real surface area
+  - validate hard
+  - delete the old seam
+- This doc should now be read as authority for a terminal-core offensive, not
+  as permission to preserve the current center with smaller helper files.
+
 Purpose: define the exact ownership split for the next terminal-core redesign
 lane so code changes do not drift between "session cleanup", "FFI cleanup", and
 "embed-friendly cleanup".
@@ -151,11 +174,14 @@ Turn Zide's terminal backend into a real embeddable VT engine with:
 - renderer-agnostic snapshots and damage
 
 Desktop PTY-backed Zide remains a supported host, but it must stop defining the
-architectural center.
+architectural center and stop receiving sentimental protection as the old
+default shape.
 
 ## Host Principle
 
 The native GUI is the reference host implementation for the engine contract.
+It is not exempt from architectural discipline just because it is fast or
+convenient.
 
 That means:
 
@@ -222,6 +248,9 @@ Operationally, this means:
 - every meaningful host-facing FFI expansion should be checked against whether
   native is still cheating through deeper session access instead of the same
   engine truth
+- every fallback path, compatibility mirror, or helper seam that survives from
+  earlier cuts should now be treated as an explicit deletion target unless it
+  still proves its worth
 
 ### 1. `TerminalCore`
 
