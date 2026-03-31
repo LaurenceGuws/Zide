@@ -424,6 +424,128 @@ fn parseTerminalShellIconMappings(
     return try mappings.toOwnedSlice(allocator);
 }
 
+fn applyAppSection(
+    allocator: std.mem.Allocator,
+    lua: *zlua.Lua,
+    table_index: i32,
+    out: *Config,
+) !void {
+    _ = lua.getField(table_index, "app");
+    if (lua.isTable(-1)) {
+        const app_idx = lua.absIndex(-1);
+        _ = lua.getField(app_idx, "theme");
+        if (try lua_theme_parse.parseThemeAtStackIndex(lua, -1)) |parsed| out.app_theme = parsed;
+        lua.pop(1);
+        try lua_font_parse.parseAppFontTable(allocator, lua, app_idx, out);
+    }
+    lua.pop(1);
+}
+
+fn applyEditorSection(
+    allocator: std.mem.Allocator,
+    lua: *zlua.Lua,
+    table_index: i32,
+    out: *Config,
+) !void {
+    _ = lua.getField(table_index, "editor");
+    if (lua.isTable(-1)) {
+        const editor_idx = lua.absIndex(-1);
+        const editor_reader = zlua_portable.reader.Reader.init(zlua_portable.api.State.fromRaw(@ptrCast(lua)), allocator, editor_idx);
+
+        try applyEditorSectionScalars(allocator, editor_reader, out);
+
+        _ = lua.getField(editor_idx, "theme");
+        if (lua.isTable(-1)) {
+            if (lua_theme_parse.parseEditorThemeAtStackIndex(lua, -1)) |parsed| out.editor_theme = parsed;
+        }
+        lua.pop(1);
+
+        try lua_font_parse.parseEditorFontTable(
+            allocator,
+            lua,
+            editor_idx,
+            out,
+            replaceOwnedString,
+            lua_runtime_parse.parseLigatureStrategyFromString,
+        );
+        applyEditorRenderTable(allocator, lua, editor_idx, out);
+        applyEditorTabBarTable(allocator, lua, editor_idx, out);
+
+        _ = lua.getField(editor_idx, "selection_overlay");
+        lua_runtime_parse.parseSelectionOverlayTable(lua, -1, out, .editor);
+        lua.pop(1);
+
+        try applyEditorHighlightsTable(allocator, lua, editor_idx, out);
+    }
+    lua.pop(1);
+}
+
+fn applyTerminalSection(
+    allocator: std.mem.Allocator,
+    lua: *zlua.Lua,
+    table_index: i32,
+    out: *Config,
+) !void {
+    _ = lua.getField(table_index, "terminal");
+    if (lua.isTable(-1)) {
+        const terminal_idx = lua.absIndex(-1);
+        const terminal_reader = config_reader.Reader.init(lua, allocator, terminal_idx);
+
+        _ = lua.getField(terminal_idx, "theme");
+        if (try lua_theme_parse.parseThemeAtStackIndex(lua, -1)) |parsed| out.terminal_theme = parsed;
+        lua.pop(1);
+
+        try lua_font_parse.parseTerminalFontTable(
+            allocator,
+            lua,
+            terminal_idx,
+            out,
+            replaceOwnedString,
+            lua_runtime_parse.parseLigatureStrategyFromString,
+        );
+        try applyTerminalShellValue(allocator, lua, terminal_idx, out);
+        applyTerminalSimpleScalars(terminal_reader, out);
+        applyTerminalCursorTable(allocator, lua, terminal_idx, out);
+        applyTerminalPresentationTable(allocator, lua, terminal_idx, out);
+        try applyTerminalTabBarTable(allocator, lua, terminal_idx, out);
+        applyTerminalFocusReporting(allocator, lua, terminal_idx, out);
+        try applyTerminalStartLocationTable(allocator, lua, terminal_idx, out);
+        applyTerminalWindowChromeTable(allocator, lua, terminal_idx, out);
+
+        _ = lua.getField(terminal_idx, "selection_overlay");
+        lua_runtime_parse.parseSelectionOverlayTable(lua, -1, out, .terminal);
+        lua.pop(1);
+    }
+    lua.pop(1);
+}
+
+fn applyFontRenderingSection(
+    lua: *zlua.Lua,
+    table_index: i32,
+    out: *Config,
+) void {
+    _ = lua.getField(table_index, "font_rendering");
+    lua_font_parse.parseFontRenderingTable(lua, -1, out);
+    lua.pop(1);
+}
+
+fn applyKeybindsSection(
+    allocator: std.mem.Allocator,
+    lua: *zlua.Lua,
+    table_index: i32,
+    out: *Config,
+) !void {
+    _ = lua.getField(table_index, "keybinds");
+    if (lua.isTable(-1)) {
+        const keybinds_idx = lua.absIndex(-1);
+        _ = lua.getField(keybinds_idx, "no_defaults");
+        if (lua.isBoolean(-1)) out.keybinds_no_defaults = lua.toBoolean(-1);
+        lua.pop(1);
+        out.keybinds = try lua_keybind_parse.parseKeybindsNative(allocator, lua, keybinds_idx);
+    }
+    lua.pop(1);
+}
+
 fn parseNativeScalarOverlay(allocator: std.mem.Allocator, lua: *zlua.Lua, table_index: i32) !Config {
     var out = lua_shared.emptyConfig();
     const reader = zlua_portable.reader.Reader.init(zlua_portable.api.State.fromRaw(@ptrCast(lua)), allocator, table_index);
@@ -467,91 +589,11 @@ fn parseNativeScalarOverlay(allocator: std.mem.Allocator, lua: *zlua.Lua, table_
 
     try applyRootScalarAliases(allocator, reader, &out);
     try lua_font_parse.parseRootFontSettings(allocator, lua, table_index, &out);
-
-    _ = lua.getField(table_index, "app");
-    if (lua.isTable(-1)) {
-        const app_idx = lua.absIndex(-1);
-        _ = lua.getField(app_idx, "theme");
-        if (try lua_theme_parse.parseThemeAtStackIndex(lua, -1)) |parsed| out.app_theme = parsed;
-        lua.pop(1);
-        try lua_font_parse.parseAppFontTable(allocator, lua, app_idx, &out);
-    }
-    lua.pop(1);
-
-    _ = lua.getField(table_index, "editor");
-    if (lua.isTable(-1)) {
-        const editor_idx = lua.absIndex(-1);
-        const editor_reader = zlua_portable.reader.Reader.init(zlua_portable.api.State.fromRaw(@ptrCast(lua)), allocator, editor_idx);
-
-        try applyEditorSectionScalars(allocator, editor_reader, &out);
-
-        _ = lua.getField(editor_idx, "theme");
-        if (lua.isTable(-1)) {
-            if (lua_theme_parse.parseEditorThemeAtStackIndex(lua, -1)) |parsed| out.editor_theme = parsed;
-        }
-        lua.pop(1);
-        try lua_font_parse.parseEditorFontTable(
-            allocator,
-            lua,
-            editor_idx,
-            &out,
-            replaceOwnedString,
-            lua_runtime_parse.parseLigatureStrategyFromString,
-        );
-        applyEditorRenderTable(allocator, lua, editor_idx, &out);
-        applyEditorTabBarTable(allocator, lua, editor_idx, &out);
-
-        _ = lua.getField(editor_idx, "selection_overlay");
-        lua_runtime_parse.parseSelectionOverlayTable(lua, -1, &out, .editor);
-        lua.pop(1);
-        try applyEditorHighlightsTable(allocator, lua, editor_idx, &out);
-    }
-    lua.pop(1);
-
-    _ = lua.getField(table_index, "terminal");
-    if (lua.isTable(-1)) {
-        const terminal_idx = lua.absIndex(-1);
-        const terminal_reader = config_reader.Reader.init(lua, allocator, terminal_idx);
-
-        _ = lua.getField(terminal_idx, "theme");
-        if (try lua_theme_parse.parseThemeAtStackIndex(lua, -1)) |parsed| out.terminal_theme = parsed;
-        lua.pop(1);
-        try lua_font_parse.parseTerminalFontTable(
-            allocator,
-            lua,
-            terminal_idx,
-            &out,
-            replaceOwnedString,
-            lua_runtime_parse.parseLigatureStrategyFromString,
-        );
-        try applyTerminalShellValue(allocator, lua, terminal_idx, &out);
-        applyTerminalSimpleScalars(terminal_reader, &out);
-        applyTerminalCursorTable(allocator, lua, terminal_idx, &out);
-        applyTerminalPresentationTable(allocator, lua, terminal_idx, &out);
-        try applyTerminalTabBarTable(allocator, lua, terminal_idx, &out);
-        applyTerminalFocusReporting(allocator, lua, terminal_idx, &out);
-        try applyTerminalStartLocationTable(allocator, lua, terminal_idx, &out);
-        applyTerminalWindowChromeTable(allocator, lua, terminal_idx, &out);
-
-        _ = lua.getField(terminal_idx, "selection_overlay");
-        lua_runtime_parse.parseSelectionOverlayTable(lua, -1, &out, .terminal);
-        lua.pop(1);
-    }
-    lua.pop(1);
-
-    _ = lua.getField(table_index, "font_rendering");
-    lua_font_parse.parseFontRenderingTable(lua, -1, &out);
-    lua.pop(1);
-
-    _ = lua.getField(table_index, "keybinds");
-    if (lua.isTable(-1)) {
-        const keybinds_idx = lua.absIndex(-1);
-        _ = lua.getField(keybinds_idx, "no_defaults");
-        if (lua.isBoolean(-1)) out.keybinds_no_defaults = lua.toBoolean(-1);
-        lua.pop(1);
-        out.keybinds = try lua_keybind_parse.parseKeybindsNative(allocator, lua, keybinds_idx);
-    }
-    lua.pop(1);
+    try applyAppSection(allocator, lua, table_index, &out);
+    try applyEditorSection(allocator, lua, table_index, &out);
+    try applyTerminalSection(allocator, lua, table_index, &out);
+    applyFontRenderingSection(lua, table_index, &out);
+    try applyKeybindsSection(allocator, lua, table_index, &out);
 
     return out;
 }
