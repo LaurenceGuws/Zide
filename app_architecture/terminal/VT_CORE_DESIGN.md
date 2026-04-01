@@ -116,6 +116,10 @@ Status note, 2026-03-31:
   - the OSC cwd wrapper chain is gone too:
     `osc_cwd.zig` and `osc_util.zig` now run directly on the live
     core/runtime object instead of stacking `SessionFacade` wrappers
+  - the outer kitty clipboard wrapper entrypoints are gone too:
+    `osc_kitty_clipboard.zig` still carries internal reply/state helpers, but
+    its public entrypoints now take the live core/runtime object directly
+    instead of requiring an outer `SessionFacade`
   - duplicated publication/cache truth
   - oversized native widget/render coordination around terminal publication
 - The current operating rule is sequential but ruthless:

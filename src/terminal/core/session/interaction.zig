@@ -76,7 +76,7 @@ pub fn sendKittyPasteEvent5522WithMimeRich(
     if (self.lockPtyWriter()) |writer_guard| {
         var writer = writer_guard;
         defer writer.unlock();
-        osc_kitty_clipboard.sendPasteEventMimes(osc_kitty_clipboard.SessionFacade.from(self), &writer, .st);
+        osc_kitty_clipboard.sendPasteEventMimes(self, &writer, .st);
         return true;
     }
     app_logger.logger("terminal.osc").logf(.warning, "osc5522 paste dropped after buffer prep reason=missing-pty", .{});

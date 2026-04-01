@@ -266,6 +266,10 @@ Evidence:
 - the OSC cwd wrapper chain is gone too:
   `osc_cwd.zig` and `osc_util.zig` now run directly on the live core/runtime
   object instead of stacking `SessionFacade` wrappers
+- the outer kitty clipboard wrapper entrypoints are gone too:
+  `osc_kitty_clipboard.zig` still carries internal reply/state helpers, but
+  its public entrypoints now take the live core/runtime object directly
+  instead of requiring an outer `SessionFacade`
 - the remaining callback seam is narrower:
   - wrap/newline effects
   - insert-mode char insertion effects

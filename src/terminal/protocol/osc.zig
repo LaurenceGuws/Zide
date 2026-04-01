@@ -56,7 +56,7 @@ pub fn parseOsc(self: anytype, payload: []const u8, terminator: OscTerminator) v
             osc_clipboard.parseClipboard(self, text, terminator);
         },
         5522 => {
-            osc_kitty_clipboard.parseOsc5522(osc_kitty_clipboard.SessionFacade.from(self), text, terminator);
+            osc_kitty_clipboard.parseOsc5522(self, text, terminator);
         },
         133 => {
             osc_semantic.parseSemanticPrompt(self, text);

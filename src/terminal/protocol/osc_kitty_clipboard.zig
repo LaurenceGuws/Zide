@@ -118,8 +118,8 @@ const ReadReq = struct {
     wants_image_png: bool = false,
 };
 
-pub fn parseOsc5522(session: SessionFacade, text: []const u8, terminator: OscTerminator) void {
-    session.parseOsc5522(text, terminator);
+pub fn parseOsc5522(self: anytype, text: []const u8, terminator: OscTerminator) void {
+    parseOsc5522OnSession(self, text, terminator);
 }
 
 fn parseOsc5522OnSession(self: anytype, text: []const u8, terminator: OscTerminator) void {
@@ -149,8 +149,8 @@ fn parseOsc5522OnSession(self: anytype, text: []const u8, terminator: OscTermina
     }
 }
 
-pub fn sendPasteEventMimes(session: SessionFacade, pty: anytype, terminator: OscTerminator) void {
-    session.sendPasteEventMimes(pty, terminator);
+pub fn sendPasteEventMimes(self: anytype, pty: anytype, terminator: OscTerminator) void {
+    sendPasteEventMimesOnSession(self, WriterFacade.from(pty), terminator);
 }
 
 fn sendPasteEventMimesOnSession(self: anytype, writer: WriterFacade, terminator: OscTerminator) void {
