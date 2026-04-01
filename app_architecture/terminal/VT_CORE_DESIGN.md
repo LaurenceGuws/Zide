@@ -321,6 +321,12 @@ Status note, 2026-03-31:
     `session.bumpGeneration()` / `session.publishCurrentViewLocked(...)`; the
     regression authority now calls `terminal_publication.bumpGeneration(...)`
     and `terminal_publication.publishCurrentViewLocked(...)` directly
+  - wrapper-owned protocol internals are thinner too:
+    parser `RIS`, OSC hyperlink handling, FFI feed-output fallback, and the
+    PTY runtime protocol/reset regression tests now call the real owners
+    directly via `terminal_core_feed`, `mode_effects`, and
+    `terminal_core_protocol`; `pty_terminal_runtime.zig` no longer re-exports
+    that internal feed/reset/hyperlink slab
   - the same direct-owner cleanup now applies in `workspace.zig`: wrapper
     composition reads as runtime/workspace ownership, and progress-state typing
     no longer comes through `pty_terminal_runtime.zig`

@@ -3,7 +3,9 @@ const builtin = @import("builtin");
 const snapshot_mod = @import("publication/snapshot.zig");
 const render_cache = @import("publication/render_cache.zig");
 const terminal_publication = @import("publication/terminal_publication.zig");
+const terminal_core_feed = @import("protocol/terminal_core_feed.zig");
 const terminal_core_protocol = @import("protocol/terminal_core_protocol.zig");
+const mode_effects = @import("session/mode_effects.zig");
 const scrolling = @import("scrolling.zig");
 const host_types = @import("session/host_types.zig");
 const types = @import("../model/types.zig");
@@ -263,7 +265,7 @@ test "top-anchored partial scroll region retires rows into scrollback" {
         }
     }
 
-    session.feedOutputBytes("\x1b[1;3r");
+    terminal_core_feed.feedOutputBytes(session, "\x1b[1;3r");
     terminal_core_protocol.scrollRegionUpWithOrigin(session, 1, "test.top_anchored_scroll_region");
 
     try std.testing.expectEqual(@as(usize, 1), session.scrollbackInfo().total_rows);
@@ -291,7 +293,7 @@ test "feedOutputBytes keeps incremental damage after baseline publish" {
     session.alt.clearDirty();
     try std.testing.expect(terminal_publication.acknowledgePresentedGeneration(session, terminal_publication.renderCache(session).generation));
 
-    session.feedOutputBytes("A");
+    terminal_core_feed.feedOutputBytes(session, "A");
 
     const cache = terminal_publication.renderCache(session);
     try std.testing.expectEqual(Dirty.partial, cache.dirty);
@@ -307,15 +309,15 @@ test "carriage return plus erase line rewrites current row in place" {
     var session = try PtyTerminalRuntime.init(allocator, 4, 20);
     defer session.deinit();
 
-    session.feedOutputBytes("hello");
-    session.feedOutputBytes("\r\x1b[2Kbye");
+    terminal_core_feed.feedOutputBytes(session, "hello");
+    terminal_core_feed.feedOutputBytes(session, "\r\x1b[2Kbye");
 
     try std.testing.expectEqual(@as(usize, 0), session.scrollbackInfo().total_rows);
     const snapshot = session.snapshot();
     try expectSnapshotRow(snapshot, 0, "bye                 ");
 
-    session.feedOutputBytes("\r\x1b[2Kstep 1");
-    session.feedOutputBytes("\r\x1b[2Kstep 2");
+    terminal_core_feed.feedOutputBytes(session, "\r\x1b[2Kstep 1");
+    terminal_core_feed.feedOutputBytes(session, "\r\x1b[2Kstep 2");
 
     try std.testing.expectEqual(@as(usize, 0), session.scrollbackInfo().total_rows);
     try expectSnapshotRow(session.snapshot(), 0, "step 2              ");
@@ -329,8 +331,8 @@ test "zig progress redraw pattern rewrites block instead of appending" {
 
     debugSetCursor(&session, 4, 0);
 
-    session.feedOutputBytes("\x1b[Jbuild one\nitem a\n\r\x1bM\x1bM");
-    session.feedOutputBytes("\x1b[Jbuild two\nitem b\n\r\x1bM\x1bM");
+    terminal_core_feed.feedOutputBytes(session, "\x1b[Jbuild one\nitem a\n\r\x1bM\x1bM");
+    terminal_core_feed.feedOutputBytes(session, "\x1b[Jbuild two\nitem b\n\r\x1bM\x1bM");
 
     const snapshot = session.snapshot();
     try std.testing.expectEqual(@as(usize, 0), snapshot.scrollback_count);
@@ -345,7 +347,7 @@ test "zig progress redraw invalidates cleared tail rows" {
     defer session.deinit();
 
     debugSetCursor(&session, 4, 0);
-    session.feedOutputBytes("\x1b[Jbuild one\nitem a\n\r\x1bM\x1bM");
+    terminal_core_feed.feedOutputBytes(session, "\x1b[Jbuild one\nitem a\n\r\x1bM\x1bM");
 
     _ = terminal_publication.bumpGeneration(session);
     terminal_publication.publishCurrentViewLocked(session, "test_publication");
@@ -354,7 +356,7 @@ test "zig progress redraw invalidates cleared tail rows" {
     session.alt.clearDirty();
     try std.testing.expect(terminal_publication.acknowledgePresentedGeneration(session, terminal_publication.renderCache(session).generation));
 
-    session.feedOutputBytes("\x1b[Jbuild two\nitem b\n\r\x1bM\x1bM");
+    terminal_core_feed.feedOutputBytes(session, "\x1b[Jbuild two\nitem b\n\r\x1bM\x1bM");
 
     const cache = terminal_publication.renderCache(session);
     try std.testing.expectEqual(Dirty.partial, cache.dirty);
@@ -372,10 +374,10 @@ test "bottom-edge in-place redraw keeps blank separator rows dirty" {
 
     debugSetCursor(&session, 67, 0);
 
-    session.feedOutputBytes("\x1b[?2026h");
+    terminal_core_feed.feedOutputBytes(session, "\x1b[?2026h");
     try std.testing.expect(terminal_publication.syncUpdatesActive(session));
 
-    session.feedOutputBytes("\x1b[Jfirst row\nsecond row\nthird row\nfourth row\r\x1bM\x1bM\x1bM\x1bM");
+    terminal_core_feed.feedOutputBytes(session, "\x1b[Jfirst row\nsecond row\nthird row\nfourth row\r\x1bM\x1bM\x1bM\x1bM");
 
     _ = terminal_publication.bumpGeneration(session);
     terminal_publication.publishCurrentViewLocked(session, "test_publication");
@@ -384,7 +386,7 @@ test "bottom-edge in-place redraw keeps blank separator rows dirty" {
     session.alt.clearDirty();
     try std.testing.expect(terminal_publication.acknowledgePresentedGeneration(session, terminal_publication.renderCache(session).generation));
 
-    session.feedOutputBytes("\x1b[Jfull line\n\nnext header\n\n\r\x1bM\x1bM\x1bM\x1bM");
+    terminal_core_feed.feedOutputBytes(session, "\x1b[Jfull line\n\nnext header\n\n\r\x1bM\x1bM\x1bM\x1bM");
 
     const snapshot = session.snapshot();
     try std.testing.expectEqual(@as(usize, 0), snapshot.scrollback_count);
@@ -413,15 +415,15 @@ test "synchronized zig progress redraw does not retire intermediate scrollback" 
 
     debugSetCursor(&session, 67, 0);
 
-    session.feedOutputBytes("\x1b[?2026h");
+    terminal_core_feed.feedOutputBytes(session, "\x1b[?2026h");
     try std.testing.expect(terminal_publication.syncUpdatesActive(session));
 
-    session.feedOutputBytes("\x1b[Jbuild one\nitem a\n\r\x1bM\x1bM");
-    session.feedOutputBytes("\x1b[Jbuild two\nitem b\n\r\x1bM\x1bM");
+    terminal_core_feed.feedOutputBytes(session, "\x1b[Jbuild one\nitem a\n\r\x1bM\x1bM");
+    terminal_core_feed.feedOutputBytes(session, "\x1b[Jbuild two\nitem b\n\r\x1bM\x1bM");
 
     try std.testing.expectEqual(@as(usize, 0), session.scrollbackInfo().total_rows);
 
-    session.feedOutputBytes("\x1b[?2026l");
+    terminal_core_feed.feedOutputBytes(session, "\x1b[?2026l");
     try std.testing.expect(!terminal_publication.syncUpdatesActive(session));
 
     const snapshot = session.snapshot();
@@ -450,10 +452,10 @@ test "synchronized top-anchored partial scroll region retires rows into scrollba
         }
     }
 
-    session.feedOutputBytes("\x1b[?2026h");
+    terminal_core_feed.feedOutputBytes(session, "\x1b[?2026h");
     try std.testing.expect(terminal_publication.syncUpdatesActive(session));
 
-    session.feedOutputBytes("\x1b[1;3r");
+    terminal_core_feed.feedOutputBytes(session, "\x1b[1;3r");
     terminal_core_protocol.scrollRegionUpWithOrigin(session, 1, "test.sync_top_anchored_scroll_region");
 
     try std.testing.expectEqual(@as(usize, 1), session.scrollbackInfo().total_rows);
@@ -475,7 +477,7 @@ test "single-chunk synchronized progress sequence keeps newline scroll inside sy
     defer session.deinit();
 
     debugSetCursor(&session, 67, 0);
-    session.feedOutputBytes("\x1b[?2026h\x1b[Jbuild one\nitem a\r\x1bM\x1b[?2026l");
+    terminal_core_feed.feedOutputBytes(session, "\x1b[?2026h\x1b[Jbuild one\nitem a\r\x1bM\x1b[?2026l");
 
     try std.testing.expectEqual(@as(usize, 0), session.scrollbackInfo().total_rows);
     try std.testing.expect(!terminal_publication.syncUpdatesActive(session));
@@ -493,7 +495,7 @@ test "reverse index moves cursor up inside scroll region" {
     defer session.deinit();
 
     debugSetCursor(&session, 4, 2);
-    session.feedOutputBytes("\x1bM");
+    terminal_core_feed.feedOutputBytes(session, "\x1bM");
 
     const cursor = terminal_core_protocol.getCursorPos(session);
     try std.testing.expectEqual(@as(usize, 3), cursor.row);
@@ -507,7 +509,8 @@ test "real zig redraw chunk rewrites in place at bottom edge" {
     defer session.deinit();
 
     debugSetCursor(&session, 67, 0);
-    session.feedOutputBytes(
+    terminal_core_feed.feedOutputBytes(
+        session,
         "\x1b[?2026h" ++
             "\x1b[J" ++
             "[3] Compile Build Script\r\n" ++
@@ -537,17 +540,17 @@ test "osc 9;4 progress reports update structured host progress state" {
     var session = try PtyTerminalRuntime.init(allocator, 4, 20);
     defer session.deinit();
 
-    session.feedOutputBytes("\x1b]9;4;1;42\x07");
+    terminal_core_feed.feedOutputBytes(session, "\x1b]9;4;1;42\x07");
     var activity = session.currentActivityMetadata();
     try std.testing.expectEqual(host_types.ProgressState.set, activity.progress.state);
     try std.testing.expectEqual(@as(?u8, 42), activity.progress.value);
 
-    session.feedOutputBytes("\x1b]9;4;3\x07");
+    terminal_core_feed.feedOutputBytes(session, "\x1b]9;4;3\x07");
     activity = session.currentActivityMetadata();
     try std.testing.expectEqual(host_types.ProgressState.indeterminate, activity.progress.state);
     try std.testing.expectEqual(@as(?u8, null), activity.progress.value);
 
-    session.feedOutputBytes("\x1b]9;4;0\x07");
+    terminal_core_feed.feedOutputBytes(session, "\x1b]9;4;0\x07");
     activity = session.currentActivityMetadata();
     try std.testing.expectEqual(host_types.ProgressState.none, activity.progress.state);
     try std.testing.expectEqual(@as(?u8, null), activity.progress.value);
@@ -1178,7 +1181,7 @@ test "session snapshot reflects pinned scrollback viewport" {
     defer session.deinit();
     session.attachExternalTransport();
 
-    session.feedOutputBytes("AAAA\r\nBBBB\r\nCCCC\r\nDDDD\r\n");
+    terminal_core_feed.feedOutputBytes(session, "AAAA\r\nBBBB\r\nCCCC\r\nDDDD\r\n");
 
     const live_snapshot = session.snapshot();
     try expectSnapshotRow(live_snapshot, 0, "CCCC");
@@ -2402,7 +2405,7 @@ test "terminal reset republishes input snapshot state" {
     try std.testing.expect(session.appKeypadEnabled());
     try std.testing.expect(session.interaction.input_snapshot.interaction.app_cursor_keys.load(.acquire));
 
-    session.resetState();
+    mode_effects.resetState(session);
 
     try std.testing.expect(!session.appKeypadEnabled());
     try std.testing.expect(!session.interaction.input_snapshot.interaction.app_cursor_keys.load(.acquire));
@@ -2414,10 +2417,10 @@ test "feedOutputBytes publishes keypad mode through locked parser path" {
     var session = try PtyTerminalRuntime.init(allocator, 2, 2);
     defer session.deinit();
 
-    session.feedOutputBytes("\x1b=");
+    terminal_core_feed.feedOutputBytes(session, "\x1b=");
     try std.testing.expect(session.appKeypadEnabled());
 
-    session.feedOutputBytes("\x1b>");
+    terminal_core_feed.feedOutputBytes(session, "\x1b>");
     try std.testing.expect(!session.appKeypadEnabled());
 }
 
@@ -2427,10 +2430,10 @@ test "feedOutputBytes publishes kitty key mode flags through locked parser path"
     var session = try PtyTerminalRuntime.init(allocator, 2, 2);
     defer session.deinit();
 
-    session.feedOutputBytes("\x1b[>13u");
+    terminal_core_feed.feedOutputBytes(session, "\x1b[>13u");
     try std.testing.expectEqual(@as(u32, 13), session.keyModeFlagsValue());
 
-    session.feedOutputBytes("\x1b[<1u");
+    terminal_core_feed.feedOutputBytes(session, "\x1b[<1u");
     try std.testing.expectEqual(@as(u32, 0), session.keyModeFlagsValue());
 }
 
@@ -2440,7 +2443,8 @@ test "feedOutputBytes RIS resets input modes and clears screen" {
     var session = try PtyTerminalRuntime.init(allocator, 2, 2);
     defer session.deinit();
 
-    session.feedOutputBytes(
+    terminal_core_feed.feedOutputBytes(
+        session,
         "\x1b[?1004h" ++
             "\x1b[?2004h" ++
             "\x1b[?1002h" ++
@@ -2460,7 +2464,7 @@ test "feedOutputBytes RIS resets input modes and clears screen" {
     try std.testing.expectEqual(@as(u32, 'A'), terminal_core_protocol.getCell(session, 0, 0).codepoint);
     try std.testing.expectEqual(@as(u32, 'B'), terminal_core_protocol.getCell(session, 0, 1).codepoint);
 
-    session.feedOutputBytes("\x1bc");
+    terminal_core_feed.feedOutputBytes(session, "\x1bc");
 
     try std.testing.expect(!session.focusReportingEnabled());
     try std.testing.expect(!session.bracketedPasteEnabled());

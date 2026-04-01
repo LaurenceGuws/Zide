@@ -1,5 +1,6 @@
 const std = @import("std");
 const app_logger = @import("../../app_logger.zig");
+const terminal_core_protocol = @import("../core/protocol/terminal_core_protocol.zig");
 
 pub fn parseHyperlink(self: anytype, text: []const u8) void {
     const log = app_logger.logger("terminal.osc");
@@ -16,5 +17,5 @@ pub fn parseHyperlink(self: anytype, text: []const u8) void {
         return;
     };
     self.core.osc_hyperlink_active = true;
-    self.core.current_hyperlink_id = self.appendHyperlink(uri) orelse 0;
+    self.core.current_hyperlink_id = terminal_core_protocol.appendHyperlink2048(self, uri) orelse 0;
 }

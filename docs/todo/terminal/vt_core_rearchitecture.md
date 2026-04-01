@@ -334,6 +334,15 @@ Validation note, 2026-03-31:
     `terminal_publication.publishCurrentViewLocked(...)` directly, so the
     regression authority stops reinforcing wrapper ownership for publication
     mutation
+  - wrapper-owned protocol internals are thinner too:
+    parser `RIS`, OSC hyperlink handling, FFI feed-output fallback, and the
+    PTY runtime protocol/reset regression tests now call the real owners
+    directly:
+    `terminal_core_feed.feedOutputBytes(...)`,
+    `mode_effects.resetState{Locked}(...)`, and
+    `terminal_core_protocol.appendHyperlink2048(...)`;
+    `pty_terminal_runtime.zig` no longer re-exports that internal
+    feed/reset/hyperlink slab
   - the remaining publication/view-cache helper stubs and the special-case
     protocol `appendHyperlink` wrapper are no longer written inline on
     `pty_terminal_runtime.zig`; those exceptions now route through the explicit

@@ -1,6 +1,7 @@
 const std = @import("std");
 const terminal_runtime = @import("../core/terminal_runtime.zig");
 const terminal_publication = @import("../core/terminal_publication.zig");
+const terminal_core_feed = @import("../core/protocol/terminal_core_feed.zig");
 const types = @import("../model/types.zig");
 const screen = @import("../model/screen.zig");
 const app_logger = @import("../../app_logger.zig");
@@ -465,7 +466,7 @@ pub fn feedOutput(handle: ?*shared.ZideTerminalHandle, bytes: ?[*]const u8, len:
     if (h.session.enqueueExternalBytes(slice) catch |err| return shared.mapError(err)) {
         h.session.poll() catch |err| return shared.mapError(err);
     } else {
-        h.session.feedOutputBytes(slice);
+        terminal_core_feed.feedOutputBytes(h.session, slice);
     }
     return shared.syncDerivedEvents(h);
 }
