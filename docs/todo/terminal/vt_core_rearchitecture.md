@@ -334,6 +334,10 @@ Validation note, 2026-03-31:
     - `DrawLogBuffers`
     now owns the partial-plan and perf-log formatting scratch buffers instead
     of leaving a slab of unrelated local arrays in the middle of draw
+  - widget draw logger handles are also grouped now:
+    - `DrawLoggers`
+    now owns the redraw/texture-shift/row-render/perf/lifecycle/pressure/
+    handoff logger set instead of scattering logger locals through draw
   - lifecycle/dirty helpers now also own more of the direct truth widget draw
     needs:
     - `lifecycleTransitionInfo(...)` carries current alt-state

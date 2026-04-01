@@ -153,6 +153,17 @@ const DrawLogBuffers = struct {
     lock_stats_summary_buf: [64]u8 = undefined,
 };
 
+const DrawLoggers = struct {
+    redraw: @TypeOf(app_logger.logger("terminal.ui.redraw")),
+    texture_shift: @TypeOf(app_logger.logger("terminal.ui.texture_shift")),
+    row_render: @TypeOf(app_logger.logger("terminal.ui.row_render_pass")),
+    row_render_runs: @TypeOf(app_logger.logger("terminal.ui.row_render_pass_runs")),
+    perf: @TypeOf(app_logger.logger("terminal.ui.perf")),
+    lifecycle: @TypeOf(app_logger.logger("terminal.ui.lifecycle")),
+    pressure: @TypeOf(app_logger.logger("terminal.ui.present_pressure")),
+    handoff: @TypeOf(app_logger.logger("terminal.generation_handoff")),
+};
+
 pub fn latestFrameLatencyMetrics() FrameLatencyMetrics {
     return frame_latency_metrics;
 }
@@ -794,8 +805,16 @@ pub fn drawPrepared(
         upload_stats = self.kitty.processPendingUploads(shell);
     }
 
-    const draw_log = app_logger.logger("terminal.ui.redraw");
-    const texture_shift_log = app_logger.logger("terminal.ui.texture_shift");
+    const logs = DrawLoggers{
+        .redraw = app_logger.logger("terminal.ui.redraw"),
+        .texture_shift = app_logger.logger("terminal.ui.texture_shift"),
+        .row_render = app_logger.logger("terminal.ui.row_render_pass"),
+        .row_render_runs = app_logger.logger("terminal.ui.row_render_pass_runs"),
+        .perf = app_logger.logger("terminal.ui.perf"),
+        .lifecycle = app_logger.logger("terminal.ui.lifecycle"),
+        .pressure = app_logger.logger("terminal.ui.present_pressure"),
+        .handoff = app_logger.logger("terminal.generation_handoff"),
+    };
     const dirty_summary = terminal_publication.dirtySummary(cache);
     var partial_plan_rows_count: usize = 0;
     var partial_plan_row_span: usize = 0;
@@ -839,8 +858,6 @@ pub fn drawPrepared(
     var visible_h: i32 = 0;
     var viewport_w: f32 = 0;
     var viewport_h: f32 = 0;
-    const row_render_log = app_logger.logger("terminal.ui.row_render_pass");
-    const row_render_runs_log = app_logger.logger("terminal.ui.row_render_pass_runs");
     const texture_phase_start = app_shell.getTime();
     const texture_ready_before_draw = self.terminal_texture_ready;
     if (rows > 0 and cols > 0) {
@@ -903,11 +920,10 @@ pub fn drawPrepared(
         handoff_state.pending_generation = self.session.pendingGeneration();
         handoff_state.published_generation = self.session.publishedGeneration();
         handoff_state.presented_generation = self.session.presentedGeneration();
-        const pressure_log = app_logger.logger("terminal.ui.present_pressure");
-        if ((pressure_log.enabled_file or pressure_log.enabled_console) and
+        if ((logs.pressure.enabled_file or logs.pressure.enabled_console) and
             (pressure_state.plan_was_active or gen_changed or pressure_state.recent_input_window_active or pressure_state.modifier_pressure_active))
         {
-            pressure_log.logf(
+            logs.pressure.logf(
                 .info,
                 "gen_changed={d} pub_gen={d}->{d} texture_ready={d} recreated={d} plan_active={d} plan_full={d} plan_partial={d} recent_cfg={d} recent_active={d} recent_age_ms={d:.2} recent_window_ms={d:.2} modifier={d}",
                 .{
@@ -927,11 +943,10 @@ pub fn drawPrepared(
                 },
             );
         }
-        const handoff_log = app_logger.logger("terminal.generation_handoff");
-        if ((handoff_log.enabled_file or handoff_log.enabled_console) and
+        if ((logs.handoff.enabled_file or logs.handoff.enabled_console) and
             (gen_changed or pressure_state.plan_was_active or update_plan.needs_full or update_plan.needs_partial))
         {
-            handoff_log.logf(
+            logs.handoff.logf(
                 .info,
                 "stage=widget_plan sid={x} last_render={d} cache_gen={d} cur={d} pub={d} presented={d} gen_changed={d} plan_full={d} plan_partial={d} texture_ready={d}",
                 .{
@@ -972,7 +987,7 @@ pub fn drawPrepared(
                     needs_partial = true;
                     shifted_rows = shift_rows;
                     shiftPresentedGenerationCells(self, rows, cols, viewport_shift.rows);
-                    texture_shift_log.logf(
+                    logs.texture_shift.logf(
                         .info,
                         "result=scroll_copy_ok gen={d} dirty={s} shift_rows={d} exposed_only={d} scroll_offset={d} damage={d}..{d}/{d}..{d}",
                         .{
@@ -989,7 +1004,7 @@ pub fn drawPrepared(
                     );
                 } else {
                     shifted_rows = 0;
-                    texture_shift_log.logf(
+                    logs.texture_shift.logf(
                         .info,
                         "result=scroll_copy_failed gen={d} dirty={s} shift_rows={d} exposed_only={d} scroll_offset={d}",
                         .{
@@ -1008,7 +1023,7 @@ pub fn drawPrepared(
             },
             .none => {
                 if (viewport_shift.rows != 0) {
-                    texture_shift_log.logf(
+                    logs.texture_shift.logf(
                         .info,
                         "result=scroll_copy_skipped gen={d} dirty={s} shift_rows={d} exposed_only={d} scroll_offset={d} full={d}",
                         .{
@@ -1213,7 +1228,7 @@ pub fn drawPrepared(
                     cols,
                     draw_state.generation,
                     partial_plan_bounds,
-                    draw_log.enabled_file or draw_log.enabled_console,
+                    logs.redraw.enabled_file or logs.redraw.enabled_console,
                     telemetry.texture_partial_update,
                     &log_buffers.partial_plan_summary_buf,
                 );
@@ -1224,7 +1239,7 @@ pub fn drawPrepared(
                 partial_plan_union_cells = partial_plan.union_cells;
                 partial_plan_summary = partial_plan.summary;
                 if (shifted_rows > 0 or shift_requires_fullwidth_partial) {
-                    texture_shift_log.logf(
+                    logs.texture_shift.logf(
                         .info,
                         "result=partial_plan gen={d} shifted_rows={d} fullwidth_exposed={d} plan_rows={d} plan_row_span={d} plan_col_span={d} plan_cells={d} plan_union_cells={d} spans={s}",
                         .{
@@ -1315,9 +1330,9 @@ pub fn drawPrepared(
                     const row_box = glyph_draw_stats.box_glyphs - before_stats.box_glyphs;
                     const row_shaped_text = glyph_draw_stats.shaped_text_glyphs - before_stats.shaped_text_glyphs;
                     const row_fallback = glyph_draw_stats.fallback_cells - before_stats.fallback_cells;
-                    if ((row_render_log.enabled_file or row_render_log.enabled_console) and row_span_count > 0) {
+                    if ((logs.row_render.enabled_file or logs.row_render.enabled_console) and row_span_count > 0) {
                         if (row_width >= cols / 2 or row == cursor.row) {
-                            row_render_log.logf(
+                            logs.row_render.logf(
                                 .info,
                                 "row={d} cols={d}..{d} width={d} spans={d} bg_runs={d} bg1={d}..{d}@{d}:{d}:{d} bg2={d}..{d}@{d}:{d}:{d} bg3={d}..{d}@{d}:{d}:{d} glyph_total={d} direct_text={d} shaped_text={d} special={d} box={d} fallback={d} direct_draw_ms={d:.2} special_lookup_ms={d:.2} special_submit_ms={d:.2} box_submit_ms={d:.2}",
                                 .{
@@ -1354,7 +1369,7 @@ pub fn drawPrepared(
                                     glyph_draw_stats.box_submit_ms - before_stats.box_submit_ms,
                                 },
                             );
-                            row_render_runs_log.logf(
+                            logs.row_render_runs.logf(
                                 .info,
                                 "row={d} bg2s=p{d} col={d} cp={d} fg={d}:{d}:{d} bg={d}:{d}:{d} rev={d} res={d}:{d}:{d}",
                                 .{
@@ -1390,8 +1405,8 @@ pub fn drawPrepared(
                 self.kitty.last_generation = kitty_generation;
             }
             self.terminal_texture_ready = true;
-            if (handoff_log.enabled_file or handoff_log.enabled_console) {
-                handoff_log.logf(
+            if (logs.handoff.enabled_file or logs.handoff.enabled_console) {
+                logs.handoff.logf(
                     .info,
                     "stage=widget_commit sid={x} last_render={d}->{d} cur={d} pub={d} presented={d} full={d} partial={d}",
                     .{
@@ -1503,8 +1518,6 @@ pub fn drawPrepared(
         };
     }
 
-    const perf_log = app_logger.logger("terminal.ui.perf");
-    const lifecycle_log = app_logger.logger("terminal.ui.lifecycle");
     const now = app_shell.getTime();
     const elapsed_ms = time_utils.secondsToMs(now - draw_start);
     const has_kitty_images = self.kitty.images_view.items.len > 0;
@@ -1514,8 +1527,8 @@ pub fn drawPrepared(
         reason
     else
         null;
-    const active_draw_log = if (lifecycle_reason != null) lifecycle_log else draw_log;
-    const active_perf_log = if (lifecycle_reason != null) lifecycle_log else perf_log;
+    const active_draw_log = if (lifecycle_reason != null) logs.lifecycle else logs.redraw;
+    const active_perf_log = if (lifecycle_reason != null) logs.lifecycle else logs.perf;
     const log_partial_update = telemetry.texture_partial_update and updated and (active_draw_log.enabled_file or active_draw_log.enabled_console or active_perf_log.enabled_file or active_perf_log.enabled_console);
     if ((elapsed_ms >= 4.0 or has_kitty_images or log_partial_update) and (now - self.last_draw_log_time) >= 0.1) {
         self.last_draw_log_time = now;
