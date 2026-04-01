@@ -293,6 +293,10 @@ Validation note, 2026-03-31:
     protocol/text owners directly, so `src/terminal/core/pty_terminal_runtime.zig`
     no longer carries the old parser-facing method slab for control/CSI/OSC/DCS
     / printable text dispatch
+  - the wrapper file also lost another dead local scaffolding block after those
+    cuts: stale parser/snapshot/debug/type aliases are gone from
+    `src/terminal/core/pty_terminal_runtime.zig`, so the file reads closer to
+    its live surface instead of historical baggage
   - raw session state is no longer a flat lie:
     - `src/terminal/core/session/publication_fields.zig`
     - `src/terminal/core/session/runtime_fields.zig`

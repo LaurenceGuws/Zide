@@ -199,6 +199,9 @@ Status note, 2026-03-31:
     local-echo input call the real protocol/text owners directly, so
     `src/terminal/core/pty_terminal_runtime.zig` no longer has to advertise the
     old parser-facing method slab for control/CSI/OSC/DCS/printable text
+  - after that cut, `src/terminal/core/pty_terminal_runtime.zig` also dropped a
+    dead local alias block for parser/snapshot/debug/type scaffolding that was
+    no longer part of the live wrapper surface
   - the same direct-owner cleanup now applies in `workspace.zig`: wrapper
     composition reads as runtime/workspace ownership, and progress-state typing
     no longer comes through `pty_terminal_runtime.zig`

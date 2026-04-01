@@ -264,6 +264,8 @@ Judgment:
   local-echo input call the real protocol/text owners directly, so
   `src/terminal/core/pty_terminal_runtime.zig` no longer needs the old
   parser-facing method slab for control/CSI/OSC/DCS/printable text dispatch
+- after that, `src/terminal/core/pty_terminal_runtime.zig` also lost the dead
+  local parser/snapshot/debug/type alias block that no longer had live use
 - the flat root state is now also grouped into explicit subsystem-owned
   embedded structs:
   - `session/publication_fields`

@@ -1,10 +1,6 @@
 const std = @import("std");
-const pty_mod = @import("../io/pty.zig");
 const input_mod = @import("../input/input.zig");
-const parser_mod = @import("../parser/parser.zig");
 const screen_mod = @import("../model/screen.zig");
-const snapshot_mod = @import("publication/snapshot.zig");
-const semantic_prompt_mod = @import("semantic_prompt.zig");
 const pty_io = @import("runtime/pty_io.zig");
 const view_cache = @import("publication/view_cache.zig");
 const resize_reflow = @import("resize_reflow.zig");
@@ -33,34 +29,8 @@ const interaction_fields = @import("session/interaction_fields.zig");
 const control_fields = @import("session/control_fields.zig");
 const osc_kitty_clipboard = @import("../protocol/osc_kitty_clipboard.zig");
 const terminal_transport = @import("runtime/terminal_transport.zig");
-const Pty = pty_mod.Pty;
-const PtySize = pty_mod.PtySize;
 const Screen = screen_mod.Screen;
-const Dirty = screen_mod.Dirty;
-const Damage = screen_mod.Damage;
-const OscTerminator = parser_mod.OscTerminator;
-const Charset = parser_mod.Charset;
-const CharsetTarget = parser_mod.CharsetTarget;
-
-const SemanticPromptKind = semantic_prompt_mod.SemanticPromptKind;
-const SemanticPromptState = semantic_prompt_mod.SemanticPromptState;
 const TerminalCoreType = terminal_core_mod.TerminalCore;
-const ActiveScreen = terminal_core_mod.ActiveScreen;
-const TerminalCore = terminal_core_mod.TerminalCore;
-
-const KittyImageFormat = snapshot_mod.KittyImageFormat;
-const KittyImage = snapshot_mod.KittyImage;
-const KittyPlacement = snapshot_mod.KittyPlacement;
-
-const debugSnapshot = session_debug.debugSnapshot;
-const debugScrollbackRow = session_debug.debugScrollbackRow;
-const debugSetCursor = session_debug.debugSetCursor;
-const debugFeedBytes = session_debug.debugFeedBytes;
-const debugScrollUp = session_debug.debugScrollUp;
-const debugSetScrollOffset = session_debug.debugSetScrollOffset;
-const debugSetScrollbackCell = session_debug.debugSetScrollbackCell;
-const debugPushScrollbackRow = session_debug.debugPushScrollbackRow;
-const debugSetGridRow = session_debug.debugSetGridRow;
 
 pub const PtyTerminalRuntime = struct {
     const Self = @This();
