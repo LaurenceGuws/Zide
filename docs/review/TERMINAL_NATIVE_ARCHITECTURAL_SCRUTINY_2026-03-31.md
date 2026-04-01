@@ -148,6 +148,9 @@ Judgment:
 - that publication home is now broader and more honest:
   the published-view builder and its plan/damage/selection helpers now also
   live under `src/terminal/core/publication/`
+- dead core wrapper residue is now being deleted too:
+  `state_reset.zig` and `terminal_core_reset.zig` no longer exist as one-line
+  pass-through seams
 - the next honest peer subtree is now in too:
   parser/protocol execution files now live under
   `src/terminal/core/protocol/` instead of continuing to sprawl as a flat

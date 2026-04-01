@@ -20,7 +20,6 @@ const control_handlers = @import("protocol/control_handlers.zig");
 const parser_hooks = @import("protocol/parser_hooks.zig");
 const input_modes = @import("input_modes.zig");
 const hyperlink_table = @import("hyperlink_table.zig");
-const state_reset = @import("state_reset.zig");
 const terminal_core_mod = @import("terminal_core.zig");
 const session_host_queries = @import("session/session_host_queries.zig");
 const session_queries = @import("session/session_queries.zig");
