@@ -1,7 +1,6 @@
 const std = @import("std");
 const parser_mod = @import("../parser/parser.zig");
 const app_logger = @import("../../app_logger.zig");
-const io_threads = @import("io_threads.zig");
 const terminal_publication = @import("terminal_publication.zig");
 
 pub const PtyPollResult = struct {
@@ -99,14 +98,11 @@ pub fn processExternalTransportOutput(self: anytype, transport: anytype, input_p
     const publish_lock_hold_ns: i128 = 0;
     const max_bytes_per_poll: usize = 256 * 1024;
     const start_ms = std.time.milliTimestamp();
-    const io_log = app_logger.logger("terminal.io");
-
     while (true) {
         const n = try transport.read(&buf);
         if (n == null or n.? == 0) break;
         had_data = true;
         processed += n.?;
-        io_threads.logCsiSequences(io_log, buf[0..n.?]);
         const parse_lock_start_ns = std.time.nanoTimestamp();
         self.core.parser.handleSlice(parser_mod.Parser.SessionFacade.from(self), buf[0..n.?]);
         parse_lock_hold_ns += std.time.nanoTimestamp() - parse_lock_start_ns;

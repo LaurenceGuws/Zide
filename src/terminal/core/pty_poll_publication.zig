@@ -13,18 +13,11 @@ pub fn publishPtyPollResult(self: anytype, had_data: bool, processed: usize, inp
     if (processed > 0) {
         const end_ms = std.time.milliTimestamp();
         const elapsed_ms = @as(f64, @floatFromInt(end_ms - start_ms));
-        const should_log = elapsed_ms >= 8.0 or queued_bytes >= 1024 * 1024 or processed >= 512 * 1024;
-        if (should_log and (end_ms - self.control.last_parse_log_ms) >= 100) {
-            self.control.last_parse_log_ms = end_ms;
-            @import("../../app_logger.zig").logger("terminal.parse").logf(.info, "parse_ms={d:.2} parse_lock_ms={d:.2} publish_lock_ms={d:.2} bytes={d} queued_bytes={d} input_pressure={any}", .{
-                elapsed_ms,
-                @as(f64, @floatFromInt(parse_lock_hold_ns)) / @as(f64, @floatFromInt(std.time.ns_per_ms)),
-                @as(f64, @floatFromInt(publish_lock_hold_ns.*)) / @as(f64, @floatFromInt(std.time.ns_per_ms)),
-                processed,
-                queued_bytes,
-                input_pressure,
-            });
-        }
+        _ = queued_bytes;
+        _ = parse_lock_hold_ns;
+        _ = input_pressure;
+        self.control.last_parse_log_ms = end_ms;
+        _ = elapsed_ms;
     }
 
     self.runtime.io_mutex.lock();
@@ -40,29 +33,18 @@ pub fn publishPtyPollResult(self: anytype, had_data: bool, processed: usize, inp
 }
 
 pub fn publishTransportPollResult(self: anytype, had_data: bool, processed: usize, input_pressure: bool, parse_lock_hold_ns: i128, publish_lock_hold_ns: *i128, start_ms: i64) void {
+    _ = start_ms;
     if (had_data) {
         const publish_lock_start_ns = std.time.nanoTimestamp();
         terminal_publication.publishCurrentViewLocked(self, "transport_poll_publish");
         publish_lock_hold_ns.* += std.time.nanoTimestamp() - publish_lock_start_ns;
     }
-    if (processed > 0 and terminal_publication.takeAltExitPending(self)) {
-        const elapsed_ms = @as(f64, @floatFromInt(std.time.milliTimestamp() - start_ms));
-        @import("../../app_logger.zig").logger("terminal.io").logf(.info, "alt_exit_io_ms={d:.2} bytes={d}", .{ elapsed_ms, processed });
-    }
+    if (processed > 0) _ = terminal_publication.takeAltExitPending(self);
     if (processed > 0) {
         const end_ms = std.time.milliTimestamp();
-        const elapsed_ms = @as(f64, @floatFromInt(end_ms - start_ms));
-        const should_log = elapsed_ms >= 8.0 or processed >= 512 * 1024;
-        if (should_log and (end_ms - self.control.last_parse_log_ms) >= 100) {
-            self.control.last_parse_log_ms = end_ms;
-            @import("../../app_logger.zig").logger("terminal.parse").logf(.info, "parse_ms={d:.2} parse_lock_ms={d:.2} publish_lock_ms={d:.2} bytes={d} input_pressure={any}", .{
-                elapsed_ms,
-                @as(f64, @floatFromInt(parse_lock_hold_ns)) / @as(f64, @floatFromInt(std.time.ns_per_ms)),
-                @as(f64, @floatFromInt(publish_lock_hold_ns.*)) / @as(f64, @floatFromInt(std.time.ns_per_ms)),
-                processed,
-                input_pressure,
-            });
-        }
+        _ = parse_lock_hold_ns;
+        _ = input_pressure;
+        self.control.last_parse_log_ms = end_ms;
     }
     if (self.publication.view_cache_pending.load(.acquire)) {
         const publish_lock_start_ns = std.time.nanoTimestamp();
