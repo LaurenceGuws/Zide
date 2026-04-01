@@ -915,6 +915,8 @@ work:
   extra pathname as false structure
 - once a runtime export has zero live callers, delete it instead of carrying it
   as speculative convenience surface
+- once publication slot choreography has one real owner, expose a contract for
+  it instead of leaking raw active/inactive cache-slot helpers
 
 ## Final Assessment
 

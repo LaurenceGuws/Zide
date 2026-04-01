@@ -28,6 +28,12 @@ pub const PresentationCapture = struct {
     presented: PresentedRenderCache,
 };
 
+pub const CachePublicationTarget = struct {
+    target_index: u8,
+    active_cache: *RenderCache,
+    target_cache: *RenderCache,
+};
+
 const CaptureCopy = struct {
     presented: PresentedRenderCache,
     lock_wait_ms: f64,
@@ -405,24 +411,37 @@ pub fn renderCacheLocked(self: anytype, source: []const u8) *const RenderCache {
     return renderCache(self);
 }
 
-pub fn activeRenderCacheIndex(self: anytype) u8 {
+fn activeRenderCacheIndex(self: anytype) u8 {
     return self.publication.render_cache_index.load(.acquire);
 }
 
-pub fn inactiveRenderCacheIndex(self: anytype) u8 {
+fn inactiveRenderCacheIndex(self: anytype) u8 {
     return if (activeRenderCacheIndex(self) == 0) 1 else 0;
 }
 
-pub fn activeRenderCache(self: anytype) *RenderCache {
+fn activeRenderCache(self: anytype) *RenderCache {
     return &self.publication.render_caches[activeRenderCacheIndex(self)];
 }
 
-pub fn inactiveRenderCache(self: anytype) *RenderCache {
+fn inactiveRenderCache(self: anytype) *RenderCache {
     return &self.publication.render_caches[inactiveRenderCacheIndex(self)];
 }
 
-pub fn publishRenderCacheIndex(self: anytype, index: u8) void {
+fn publishRenderCacheIndex(self: anytype, index: u8) void {
     self.publication.render_cache_index.store(index, .release);
+}
+
+pub fn beginCachePublication(self: anytype) CachePublicationTarget {
+    const target_index = inactiveRenderCacheIndex(self);
+    return .{
+        .target_index = target_index,
+        .active_cache = activeRenderCache(self),
+        .target_cache = inactiveRenderCache(self),
+    };
+}
+
+pub fn finishCachePublication(self: anytype, target: CachePublicationTarget) void {
+    publishRenderCacheIndex(self, target.target_index);
 }
 
 fn renderCacheForGeneration(self: anytype, generation: u64) ?*const RenderCache {

@@ -825,6 +825,12 @@ Validation note, 2026-03-31:
   (`copyActivityMetadata`, `sendKittyPasteEvent5522WithHtml`,
   `sendKittyPasteEvent5522WithMime`, `setDefaultColorsLocked`), so the stable
   runtime surface is not carrying fake contract weight for unused entrypoints.
+- Another `VTCORE-05` ownership cut is in too: `view_cache.zig` no longer
+  reaches through publication for raw active/inactive cache slots and index
+  publication. `terminal_publication.zig` now owns that slot choreography via
+  `beginCachePublication(...)` / `finishCachePublication(...)`, so view-cache
+  publication depends on a contract-shaped owner seam instead of storage-layout
+  helpers.
 - The terminal campaign should now judge success by first-glance authority:
   when a strong maintainer opens the code, the engine must obviously be the
   engine.

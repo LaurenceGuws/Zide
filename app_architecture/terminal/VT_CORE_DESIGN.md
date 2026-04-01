@@ -1447,6 +1447,11 @@ It also no longer carries dead wrapper exports with no in-tree callers, so the
 runtime surface keeps shrinking toward the actual stable contract instead of
 pretending every historical alias is still live API.
 
+Publication is tighter too: `view_cache.zig` no longer drives active/inactive
+render-cache slot selection and publish-index storage through raw helper
+exposure. `terminal_publication.zig` now owns that choreography behind
+`beginCachePublication(...)` / `finishCachePublication(...)`.
+
 Avoid continuing to use `TerminalSession` as the name of the engine center once
 the new boundary exists.
 
