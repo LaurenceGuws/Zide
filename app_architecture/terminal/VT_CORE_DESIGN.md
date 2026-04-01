@@ -108,7 +108,7 @@ Status note, 2026-03-31:
   - `src/terminal/core/session_input_api.zig` now holds the host input
     send/report method group that was previously written inline on
     `pty_terminal_runtime.zig`
-  - `src/terminal/core/session_protocol_api.zig` now holds the protocol/VT
+  - `src/terminal/core/terminal_protocol_api.zig` now holds the protocol/VT
     mutation method group that was previously written inline on
     `pty_terminal_runtime.zig`
   - `src/terminal/core/session_config_api.zig` now holds the config, palette,
@@ -938,7 +938,7 @@ Protocol execution also moved another step toward core ownership:
   `src/terminal/core/terminal_core_modes.zig`
 - the stale `src/terminal/core/session_protocol.zig` forwarding shell is now
   deleted
-- `src/terminal/core/session_protocol_api.zig` now routes directly to the real
+- `src/terminal/core/terminal_protocol_api.zig` now routes directly to the real
   owners instead of hiding them behind one more session-named hop
 - RIS/reset core mutation now also lives behind
   `src/terminal/core/terminal_core_reset.zig`, with the remaining session-owned

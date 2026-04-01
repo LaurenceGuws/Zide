@@ -145,7 +145,7 @@ Validation note, 2026-03-31:
   - `src/terminal/core/session_input_api.zig` now groups the input send/report
     public methods that were previously written inline on
     `pty_terminal_runtime.zig`.
-  - `src/terminal/core/session_protocol_api.zig` now groups the protocol/VT
+  - `src/terminal/core/terminal_protocol_api.zig` now groups the protocol/VT
     mutation public methods that were previously written inline on
     `pty_terminal_runtime.zig`.
   - `src/terminal/core/session_config_api.zig` now groups the config, palette,
@@ -214,8 +214,10 @@ Validation note, 2026-03-31:
     `src/terminal/core/terminal_core_protocol.zig` instead of being wired
     inline inside `terminal_core_text.zig`
   - the stale `src/terminal/core/session_protocol.zig` forwarding shell is now
-    deleted; `session_protocol_api.zig` routes directly to the real core,
+    deleted; `terminal_protocol_api.zig` routes directly to the real core,
     protocol, mode-effect, feed, and publication owners
+  - the API seam name is now honest too:
+    `src/terminal/core/terminal_protocol_api.zig`
 - [ ] `VTCORE-05` Simplify snapshot and render publication.
   Notes: the explicit publication center now lives in
   `src/terminal/core/terminal_publication.zig`, and the old live

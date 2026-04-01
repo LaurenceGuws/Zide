@@ -42,7 +42,7 @@ const session_runtime_fields = @import("session_runtime_fields.zig");
 const session_interaction_fields = @import("session_interaction_fields.zig");
 const session_control_fields = @import("session_control_fields.zig");
 const session_input_api = @import("session_input_api.zig");
-const session_protocol_api = @import("session_protocol_api.zig");
+const terminal_protocol_api = @import("terminal_protocol_api.zig");
 const session_config_api = @import("session_config_api.zig");
 const session_lifecycle_api = @import("session_lifecycle_api.zig");
 const session_surface_api = @import("session_surface_api.zig");
@@ -278,50 +278,50 @@ pub const PtyTerminalRuntime = struct {
     pub const setColumnMode132Locked = session_config_api.setColumnMode132Locked;
     pub const setCellSize = session_config_api.setCellSize;
 
-    pub const handleControl = session_protocol_api.handleControl;
-    pub const parseDcs = session_protocol_api.parseDcs;
-    pub const parseApc = session_protocol_api.parseApc;
-    pub const parseOsc = session_protocol_api.parseOsc;
-    pub const appendHyperlink = session_protocol_api.appendHyperlink;
-    pub const clearAllKittyImages = session_protocol_api.clearAllKittyImages;
-    pub const handleCsi = session_protocol_api.handleCsi;
-    pub const feedOutputBytes = session_protocol_api.feedOutputBytes;
-    pub const resetState = session_protocol_api.resetState;
-    pub const resetStateLocked = session_protocol_api.resetStateLocked;
-    pub const reverseIndex = session_protocol_api.reverseIndex;
-    pub const eraseDisplay = session_protocol_api.eraseDisplay;
-    pub const eraseLine = session_protocol_api.eraseLine;
-    pub const insertChars = session_protocol_api.insertChars;
-    pub const deleteChars = session_protocol_api.deleteChars;
-    pub const eraseChars = session_protocol_api.eraseChars;
-    pub const insertLines = session_protocol_api.insertLines;
-    pub const deleteLines = session_protocol_api.deleteLines;
-    pub const scrollRegionUp = session_protocol_api.scrollRegionUp;
-    pub const scrollRegionUpWithOrigin = session_protocol_api.scrollRegionUpWithOrigin;
-    pub const scrollRegionDown = session_protocol_api.scrollRegionDown;
-    pub const paletteColor = session_protocol_api.paletteColor;
-    pub const handleCodepoint = session_protocol_api.handleCodepoint;
-    pub const handleAsciiSlice = session_protocol_api.handleAsciiSlice;
-    pub const newline = session_protocol_api.newline;
-    pub const wrapNewline = session_protocol_api.wrapNewline;
+    pub const handleControl = terminal_protocol_api.handleControl;
+    pub const parseDcs = terminal_protocol_api.parseDcs;
+    pub const parseApc = terminal_protocol_api.parseApc;
+    pub const parseOsc = terminal_protocol_api.parseOsc;
+    pub const appendHyperlink = terminal_protocol_api.appendHyperlink;
+    pub const clearAllKittyImages = terminal_protocol_api.clearAllKittyImages;
+    pub const handleCsi = terminal_protocol_api.handleCsi;
+    pub const feedOutputBytes = terminal_protocol_api.feedOutputBytes;
+    pub const resetState = terminal_protocol_api.resetState;
+    pub const resetStateLocked = terminal_protocol_api.resetStateLocked;
+    pub const reverseIndex = terminal_protocol_api.reverseIndex;
+    pub const eraseDisplay = terminal_protocol_api.eraseDisplay;
+    pub const eraseLine = terminal_protocol_api.eraseLine;
+    pub const insertChars = terminal_protocol_api.insertChars;
+    pub const deleteChars = terminal_protocol_api.deleteChars;
+    pub const eraseChars = terminal_protocol_api.eraseChars;
+    pub const insertLines = terminal_protocol_api.insertLines;
+    pub const deleteLines = terminal_protocol_api.deleteLines;
+    pub const scrollRegionUp = terminal_protocol_api.scrollRegionUp;
+    pub const scrollRegionUpWithOrigin = terminal_protocol_api.scrollRegionUpWithOrigin;
+    pub const scrollRegionDown = terminal_protocol_api.scrollRegionDown;
+    pub const paletteColor = terminal_protocol_api.paletteColor;
+    pub const handleCodepoint = terminal_protocol_api.handleCodepoint;
+    pub const handleAsciiSlice = terminal_protocol_api.handleAsciiSlice;
+    pub const newline = terminal_protocol_api.newline;
+    pub const wrapNewline = terminal_protocol_api.wrapNewline;
 
     fn scrollUp(self: *PtyTerminalRuntime) void {
         scrolling_mod.scrollUp(self);
     }
 
-    pub const getCell = session_protocol_api.getCell;
-    pub const getCursorPos = session_protocol_api.getCursorPos;
+    pub const getCell = terminal_protocol_api.getCell;
+    pub const getCursorPos = terminal_protocol_api.getCursorPos;
 
     pub const updateViewCacheForScroll = session_publication_api.updateViewCacheForScroll;
     pub const updateViewCacheForScrollLocked = session_publication_api.updateViewCacheForScrollLocked;
 
-    pub const setCursorStyle = session_protocol_api.setCursorStyle;
-    pub const decrqssReplyInto = session_protocol_api.decrqssReplyInto;
-    pub const saveCursor = session_protocol_api.saveCursor;
-    pub const restoreCursor = session_protocol_api.restoreCursor;
-    pub const setTabAtCursor = session_protocol_api.setTabAtCursor;
-    pub const enterAltScreen = session_protocol_api.enterAltScreen;
-    pub const exitAltScreen = session_protocol_api.exitAltScreen;
+    pub const setCursorStyle = terminal_protocol_api.setCursorStyle;
+    pub const decrqssReplyInto = terminal_protocol_api.decrqssReplyInto;
+    pub const saveCursor = terminal_protocol_api.saveCursor;
+    pub const restoreCursor = terminal_protocol_api.restoreCursor;
+    pub const setTabAtCursor = terminal_protocol_api.setTabAtCursor;
+    pub const enterAltScreen = terminal_protocol_api.enterAltScreen;
+    pub const exitAltScreen = terminal_protocol_api.exitAltScreen;
 
     pub const snapshot = session_publication_api.snapshot;
     pub const renderCache = session_publication_api.renderCache;
