@@ -303,6 +303,11 @@ Judgment:
   `handleDecrqmQuery(...)` in `src/terminal/protocol/csi_mode_query.zig`;
   CSI now computes the mode state and calls the writer-owned DECRQM reply
   function directly
+- the DECRQM snapshot path is thinner too:
+  `src/terminal/protocol/csi_mode_query.zig` now reads mouse-mode snapshot
+  bits directly from `interaction.input_snapshot`, so the stable runtime
+  surface no longer carries one-consumer mouse-mode query helpers or the dead
+  `getDamage` export
 - protocol query helpers are shrinking the same way too: runtime/focus tests
   now use `terminal_core_protocol.zig` directly for `getCell` /
   `getCursorPos`, so those no longer sit on the wrapper surface

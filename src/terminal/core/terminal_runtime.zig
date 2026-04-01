@@ -78,17 +78,10 @@ pub const PtyTerminalRuntime = struct {
     pub const bracketedPasteEnabled = interaction.bracketedPasteEnabled;
     pub const focusReportingEnabled = interaction.focusReportingEnabled;
     pub const autoRepeatEnabled = interaction.autoRepeatEnabled;
-    pub const mouseAlternateScrollEnabled = interaction.mouseAlternateScrollEnabled;
-    pub const mouseModeX10Enabled = interaction.mouseModeX10Enabled;
-    pub const mouseModeButtonEnabled = interaction.mouseModeButtonEnabled;
-    pub const mouseModeAnyEnabled = interaction.mouseModeAnyEnabled;
-    pub const mouseModeSgrEnabled = interaction.mouseModeSgrEnabled;
-    pub const mouseModeSgrPixelsEnabled = interaction.mouseModeSgrPixelsEnabled;
     pub const kittyPasteEvents5522Enabled = interaction.kittyPasteEvents5522Enabled;
     pub const sendKittyPasteEvent5522 = interaction.sendKittyPasteEvent5522;
     pub const sendKittyPasteEvent5522WithMimeRich = interaction.sendKittyPasteEvent5522WithMimeRich;
     pub const mouseReportingEnabled = interaction.mouseReportingEnabled;
-    pub const getDamage = interaction.getDamage;
     pub const keyModeFlagsValue = interaction.keyModeFlagsValue;
 
     allocator: std.mem.Allocator,

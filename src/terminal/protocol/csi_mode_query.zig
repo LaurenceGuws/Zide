@@ -37,6 +37,7 @@ pub const ModeSnapshot = struct {
 
 pub fn modeSnapshot(self: anytype) ModeSnapshot {
     const screen = self.core.activeScreen();
+    const input_snapshot = self.interaction.input_snapshot;
     return .{
         .app_cursor_keys = self.appCursorKeysEnabled(),
         .column_mode_132 = self.core.column_mode_132,
@@ -44,7 +45,7 @@ pub fn modeSnapshot(self: anytype) ModeSnapshot {
         .origin_mode = screen.origin_mode,
         .auto_wrap = screen.auto_wrap,
         .auto_repeat = self.autoRepeatEnabled(),
-        .mouse_mode_x10 = self.mouseModeX10Enabled(),
+        .mouse_mode_x10 = input_snapshot.mouse_mode_x10.load(.acquire),
         .cursor_blink = screen.cursor_style.blink,
         .cursor_visible = screen.cursor_visible,
         .reverse_wrap = screen.reverse_wrap,
@@ -52,12 +53,12 @@ pub fn modeSnapshot(self: anytype) ModeSnapshot {
         .alt_active = self.core.active == .alt,
         .save_cursor_mode_1048 = screen.save_cursor_mode_1048,
         .app_keypad = self.appKeypadEnabled(),
-        .mouse_mode_button = self.mouseModeButtonEnabled(),
-        .mouse_mode_any = self.mouseModeAnyEnabled(),
+        .mouse_mode_button = input_snapshot.mouse_mode_button.load(.acquire),
+        .mouse_mode_any = input_snapshot.mouse_mode_any.load(.acquire),
         .focus_reporting = self.focusReportingEnabled(),
-        .mouse_mode_sgr = self.mouseModeSgrEnabled(),
-        .mouse_alternate_scroll = self.mouseAlternateScrollEnabled(),
-        .mouse_mode_sgr_pixels = self.mouseModeSgrPixelsEnabled(),
+        .mouse_mode_sgr = input_snapshot.mouse_mode_sgr.load(.acquire),
+        .mouse_alternate_scroll = input_snapshot.mouse_alternate_scroll.load(.acquire),
+        .mouse_mode_sgr_pixels = input_snapshot.mouse_mode_sgr_pixels_1016.load(.acquire),
         .bracketed_paste = self.bracketedPasteEnabled(),
         .sync_updates_active = self.core.sync_updates_active,
         .grapheme_cluster_shaping_2027 = self.interaction.grapheme_cluster_shaping_2027,
