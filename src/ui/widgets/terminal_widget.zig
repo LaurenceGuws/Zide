@@ -318,13 +318,13 @@ pub const TerminalWidget = struct {
 
     pub fn scrollbarModel(self: *const TerminalWidget) ScrollbarModel {
         const cache = &self.draw_cache;
-        const allowed = !cache.alt_active and !self.session.mouseReportingEnabled() and cache.rows > 0 and cache.totalLines() > cache.rows;
+        const allowed = terminal_publication.scrollbarAllowed(cache, self.session.mouseReportingEnabled());
         return .{
             .allowed = allowed,
             .visible = allowed,
             .rows = cache.rows,
             .total_lines = cache.totalLines(),
-            .scroll_offset = cache.scroll_offset,
+            .scroll_offset = terminal_publication.viewportInfo(cache).scroll_offset,
         };
     }
 

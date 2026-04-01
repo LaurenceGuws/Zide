@@ -45,10 +45,74 @@ pub const PresentationFeedback = struct {
     alt_exit_info: ?AltExitPresentationInfo = null,
 };
 
+pub const ViewportInfo = struct {
+    history_len: usize,
+    total_lines: usize,
+    scroll_offset: usize,
+    start_line: usize,
+};
+
+pub const AltTransition = struct {
+    changed: bool,
+    exited: bool,
+};
+
+pub const PartialCaptureInfo = struct {
+    use_viewport_shift: bool,
+    active_viewport_shift_rows: i32,
+    shift_exposed_only: bool,
+    reason: []const u8,
+};
+
 pub const CursorPos = types.CursorPos;
 pub const Cell = types.Cell;
 pub const CellAttrs = types.CellAttrs;
 pub const Color = types.Color;
+
+pub fn viewportInfo(cache: *const RenderCache) ViewportInfo {
+    const total_lines = cache.totalLines();
+    const end_line = total_lines - cache.scroll_offset;
+    return .{
+        .history_len = cache.history_len,
+        .total_lines = total_lines,
+        .scroll_offset = cache.scroll_offset,
+        .start_line = if (end_line > cache.rows) end_line - cache.rows else 0,
+    };
+}
+
+pub fn scrollbarAllowed(cache: *const RenderCache, mouse_reporting_enabled: bool) bool {
+    return !cache.alt_active and !mouse_reporting_enabled and cache.rows > 0 and cache.totalLines() > cache.rows;
+}
+
+pub fn drawCursorVisible(cache: *const RenderCache) bool {
+    return cache.scroll_offset == 0 and cache.cursor_visible;
+}
+
+pub fn altTransition(previous_alt_active: bool, cache: *const RenderCache) AltTransition {
+    return .{
+        .changed = previous_alt_active != cache.alt_active,
+        .exited = previous_alt_active and !cache.alt_active,
+    };
+}
+
+pub fn partialCaptureInfo(cache: *const RenderCache) PartialCaptureInfo {
+    const use_viewport_shift = @import("../../ui/widgets/terminal_widget_draw_texture.zig").useViewportShiftForPartialPlan(cache.dirty, cache.viewport_shift_rows);
+    const active_viewport_shift_rows = if (use_viewport_shift) cache.viewport_shift_rows else 0;
+    const shift_exposed_only = use_viewport_shift and cache.viewport_shift_exposed_only;
+    return .{
+        .use_viewport_shift = use_viewport_shift,
+        .active_viewport_shift_rows = active_viewport_shift_rows,
+        .shift_exposed_only = shift_exposed_only,
+        .reason = switch (cache.dirty) {
+            .full => @tagName(cache.full_dirty_reason),
+            .partial => if (cache.viewport_shift_rows != 0)
+                (if (cache.viewport_shift_exposed_only) "viewport_shift_exposed" else "viewport_shift")
+            else
+                "partial",
+            .none => "clean",
+        },
+    };
+}
 
 pub fn snapshot(self: anytype) TerminalSnapshot {
     if (viewRefreshPending(self)) {

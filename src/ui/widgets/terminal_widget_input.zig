@@ -1,6 +1,7 @@
 const std = @import("std");
 
 const app_shell = @import("../../app_shell.zig");
+const terminal_publication = @import("../../terminal/core/terminal_publication.zig");
 const terminal_runtime = @import("../../terminal/core/terminal_runtime.zig");
 const app_logger = @import("../../app_logger.zig");
 const shared_types = @import("../../types/mod.zig");
@@ -32,13 +33,13 @@ pub fn handleInput(
     const scale = shell.uiScaleFactor();
     const cache = &self.draw_cache;
     const view_cells = cache.cells.items;
-    const history_len = cache.history_len;
     const rows = cache.rows;
     const cols = cache.cols;
-    const total_lines = cache.totalLines();
-    const scroll_offset = cache.scroll_offset;
-    const end_line = total_lines - scroll_offset;
-    const start_line = if (end_line > rows) end_line - rows else 0;
+    const viewport = terminal_publication.viewportInfo(cache);
+    const history_len = viewport.history_len;
+    const total_lines = viewport.total_lines;
+    const scroll_offset = viewport.scroll_offset;
+    const start_line = viewport.start_line;
     const has_visible_grid = rows > 0 and cols > 0 and view_cells.len >= rows * cols;
     const r = shell.rendererPtr();
     const geom = r.terminalCellGeometry();

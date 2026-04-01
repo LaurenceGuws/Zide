@@ -633,10 +633,9 @@ pub fn drawPrepared(
 
     const r = shell.rendererPtr();
     const cache = &self.draw_cache;
-    var alt_exit = false;
-    var alt_state_changed = false;
-    alt_state_changed = self.last_alt_active != cache.alt_active;
-    alt_exit = self.last_alt_active and !cache.alt_active;
+    const alt_transition = terminal_publication.altTransition(self.last_alt_active, cache);
+    const alt_state_changed = alt_transition.changed;
+    const alt_exit = alt_transition.exited;
     self.last_alt_active = cache.alt_active;
     render_phase_start = app_shell.getTime();
 
@@ -669,13 +668,11 @@ pub fn drawPrepared(
         return outcome;
     }
     const draw_start_time = if (alt_exit) app_shell.getTime() else 0;
-    const history_len = cache.history_len;
-    const total_lines = cache.totalLines();
-    const scroll_offset = cache.scroll_offset;
-    const viewport_shift_rows = cache.viewport_shift_rows;
-    const end_line = total_lines - scroll_offset;
-    const start_line = if (end_line > rows) end_line - rows else 0;
-    var draw_cursor = scroll_offset == 0 and cache.cursor_visible;
+    const viewport = terminal_publication.viewportInfo(cache);
+    const history_len = viewport.history_len;
+    const scroll_offset = viewport.scroll_offset;
+    const start_line = viewport.start_line;
+    var draw_cursor = terminal_publication.drawCursorVisible(cache);
     const cursor = if (draw_cursor) cache.cursor else CursorPos{ .row = rows + 1, .col = cols + 1 };
     const cursor_style = cache.cursor_style;
     if (draw_cursor and self.ui_focused and cursor_style.blink) {
@@ -871,17 +868,10 @@ pub fn drawPrepared(
         }
         var needs_full = update_plan.needs_full;
         var needs_partial = update_plan.needs_partial;
-        const use_viewport_shift = draw_texture.useViewportShiftForPartialPlan(cache.dirty, viewport_shift_rows);
-        active_viewport_shift_rows = if (use_viewport_shift) viewport_shift_rows else 0;
-        active_shift_exposed_only = use_viewport_shift and cache.viewport_shift_exposed_only;
-        capture_reason = switch (cache.dirty) {
-            .full => @tagName(cache.full_dirty_reason),
-            .partial => if (cache.viewport_shift_rows != 0)
-                (if (cache.viewport_shift_exposed_only) "viewport_shift_exposed" else "viewport_shift")
-            else
-                "partial",
-            .none => "clean",
-        };
+        const partial_capture = terminal_publication.partialCaptureInfo(cache);
+        active_viewport_shift_rows = partial_capture.active_viewport_shift_rows;
+        active_shift_exposed_only = partial_capture.shift_exposed_only;
+        capture_reason = partial_capture.reason;
         var shifted_rows: usize = 0;
         var shift_requires_fullwidth_partial = false;
         switch (planViewportTextureShift(
@@ -1485,14 +1475,7 @@ pub fn drawPrepared(
     const active_draw_log = if (lifecycle_reason != null) lifecycle_log else draw_log;
     const active_perf_log = if (lifecycle_reason != null) lifecycle_log else perf_log;
     const log_partial_update = texture_partial_update and updated and (active_draw_log.enabled_file or active_draw_log.enabled_console or active_perf_log.enabled_file or active_perf_log.enabled_console);
-    const current_reason = switch (cache.dirty) {
-        .full => @tagName(cache.full_dirty_reason),
-        .partial => if (cache.viewport_shift_rows != 0)
-            (if (cache.viewport_shift_exposed_only) "viewport_shift_exposed" else "viewport_shift")
-        else
-            "partial",
-        .none => "clean",
-    };
+    const current_reason = terminal_publication.partialCaptureInfo(cache).reason;
     if ((elapsed_ms >= 4.0 or has_kitty_images or log_partial_update) and (now - self.last_draw_log_time) >= 0.1) {
         self.last_draw_log_time = now;
         active_draw_log.logf(

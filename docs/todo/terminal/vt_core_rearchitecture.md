@@ -270,6 +270,17 @@ Validation note, 2026-03-31:
     - `logBroadRefinedSpans(...)`
     now live with `view_cache_refinement.zig` instead of leaving the
     refinement gate and broad-span logging inline in `view_cache.zig`
+  - widget/publication interaction is starting to tighten too:
+    - `viewportInfo(...)`
+    - `scrollbarAllowed(...)`
+    - `drawCursorVisible(...)`
+    - `altTransition(...)`
+    now give widget code explicit publication-facing queries instead of making
+    it re-derive those answers from raw cache fields every time
+  - that widget-facing helper layer now also owns partial-capture interpretation:
+    - `partialCaptureInfo(...)`
+    now gives widget draw one publication answer for viewport-shift use and
+    capture reason instead of rebuilding that logic ad hoc from raw cache flags
   - `snapshot().generation` now reports the generation of the published render
     cache it actually returns, not a newer unpublished pending epoch
   - remaining gap: publication is still mirror-heavy because render-cache and

@@ -182,6 +182,12 @@ Status note, 2026-03-31:
     cache builder no longer hand-copies history/grid rows inline
   - row-hash refinement gating and broad-span refinement logging now live with
     the refinement seam instead of staying inline in the main cache builder
+  - widget/publication interaction is now beginning to use explicit publication
+  queries for viewport, scrollbar eligibility, cursor-at-live-bottom, and
+  alt-state transition instead of re-deriving those answers ad hoc from raw
+  cache fields
+  - that same helper layer now also owns partial-capture interpretation for
+    viewport-shift use and capture reason
 - This doc should now be read as authority for a terminal-core offensive, not
   as permission to preserve the current center with smaller helper files.
 

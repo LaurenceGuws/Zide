@@ -235,6 +235,12 @@ Judgment:
   - row-hash refinement gating and broad refined-span logging now live with the
     refinement seam too, which removes another renderer-facing decision island
     from `view_cache.zig`
+  - widget code is also starting to ask publication explicit questions
+    (`viewportInfo`, `scrollbarAllowed`, `drawCursorVisible`, `altTransition`)
+    instead of re-deriving those answers ad hoc from raw cache fields
+  - widget draw now also asks publication for partial-capture interpretation
+    (`partialCaptureInfo`) instead of rebuilding viewport-shift/capture-reason
+    logic directly from raw cache flags
   - that is the standard the rest of the publication war should keep:
     if a cache field is just restating derivable published state, it should die
 
