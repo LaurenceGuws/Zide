@@ -220,6 +220,9 @@ Status note, 2026-03-31:
   - the same applies to recent-input/full-frame pressure planning state; if it
     drives both update-plan forcing and logging, group it instead of leaving it
     as a loose cluster of temporary values
+  - handoff/log snapshot state inside draw should also be grouped once it feeds
+    multiple logging sites, instead of repeating the same session-generation
+    reads inline
   - once a publication helper exists, widget draw should consume its direct
     truth completely; it should not keep mixing helper-owned state with raw
     reads like `cache.alt_active` or repeated `cache.dirty == .none`

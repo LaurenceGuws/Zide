@@ -137,6 +137,13 @@ const PresentPressureState = struct {
     plan_was_active: bool,
 };
 
+const HandoffState = struct {
+    last_render_generation: u64,
+    pending_generation: u64,
+    published_generation: u64,
+    presented_generation: u64,
+};
+
 pub fn latestFrameLatencyMetrics() FrameLatencyMetrics {
     return frame_latency_metrics;
 }
@@ -816,6 +823,12 @@ pub fn drawPrepared(
     var updated = false;
     var telemetry = DrawTelemetry{};
     var viewport_shift = ViewportShiftState{};
+    var handoff_state = HandoffState{
+        .last_render_generation = self.last_render_generation,
+        .pending_generation = 0,
+        .published_generation = 0,
+        .presented_generation = 0,
+    };
     var cell_w_i: i32 = 0;
     var cell_h_i: i32 = 0;
     var visible_w: i32 = 0;
@@ -883,6 +896,9 @@ pub fn drawPrepared(
             pressure_state.recent_input_window_active,
         );
         pressure_state.plan_was_active = update_plan.needs_full or update_plan.needs_partial;
+        handoff_state.pending_generation = self.session.pendingGeneration();
+        handoff_state.published_generation = self.session.publishedGeneration();
+        handoff_state.presented_generation = self.session.presentedGeneration();
         const pressure_log = app_logger.logger("terminal.ui.present_pressure");
         if ((pressure_log.enabled_file or pressure_log.enabled_console) and
             (pressure_state.plan_was_active or gen_changed or pressure_state.recent_input_window_active or pressure_state.modifier_pressure_active))
@@ -916,11 +932,11 @@ pub fn drawPrepared(
                 "stage=widget_plan sid={x} last_render={d} cache_gen={d} cur={d} pub={d} presented={d} gen_changed={d} plan_full={d} plan_partial={d} texture_ready={d}",
                 .{
                     @intFromPtr(self.session),
-                    self.last_render_generation,
+                    handoff_state.last_render_generation,
                     draw_state.generation,
-                    self.session.pendingGeneration(),
-                    self.session.publishedGeneration(),
-                    self.session.presentedGeneration(),
+                    handoff_state.pending_generation,
+                    handoff_state.published_generation,
+                    handoff_state.presented_generation,
                     @intFromBool(gen_changed),
                     @intFromBool(update_plan.needs_full),
                     @intFromBool(update_plan.needs_partial),
@@ -1376,11 +1392,11 @@ pub fn drawPrepared(
                     "stage=widget_commit sid={x} last_render={d}->{d} cur={d} pub={d} presented={d} full={d} partial={d}",
                     .{
                         @intFromPtr(self.session),
-                        self.last_render_generation,
+                        handoff_state.last_render_generation,
                         draw_state.generation,
-                        self.session.pendingGeneration(),
-                        self.session.publishedGeneration(),
-                        self.session.presentedGeneration(),
+                        handoff_state.pending_generation,
+                        handoff_state.published_generation,
+                        handoff_state.presented_generation,
                         @intFromBool(telemetry.texture_full_update),
                         @intFromBool(telemetry.texture_partial_update),
                     },

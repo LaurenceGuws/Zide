@@ -281,6 +281,8 @@ Judgment:
   - recent-input/full-frame pressure planning state is now grouped in
     `PresentPressureState` instead of being smeared across update-plan forcing
     and pressure logging
+  - widget draw handoff/log snapshot state is now grouped in `HandoffState`
+    instead of repeating the same generation reads across plan/commit logs
   - widget draw now also uses helper-owned current alt-state and clean-state
     instead of falling back to raw `cache.alt_active` and repeated
     `cache.dirty == .none` checks where publication already owns the answer
