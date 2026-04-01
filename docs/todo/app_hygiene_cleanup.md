@@ -37,6 +37,9 @@ High-confidence hotspots from the initial branch investigation:
    - currently carries tests, gates, reports, packaging, Windows shell
      extension work, and `grammar-update` proxying
    - likely too broad to be the right build-graph center
+   - 2026-04-01 progress: workflow glue for Windows shell extension, mode
+     gates/bundles, and `grammar-update` moved under
+     `build_system/ide_workflow.zig`
 
 3. `src/editor/tree_sitter_assets.zig`
    - the `zide-tree-sitter` extraction was directionally correct
@@ -157,6 +160,14 @@ Done when:
 - workflow/report/task-runner concerns are either narrowed or moved behind
   clearer tooling boundaries
 - build graph ownership feels deliberate instead of accumulated
+
+Progress note, 2026-04-01:
+
+- workflow-heavy steps for Windows shell extension build, mode gate/bundle
+  orchestration, and grammar-update proxying now live in
+  `build_system/ide_workflow.zig`
+- `build_system/ide_graph.zig` is narrower and reads more as artifact/test
+  planning than repo-operations choreography
 
 ### AH-04 App Orchestration Honesty
 

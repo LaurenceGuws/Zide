@@ -4,6 +4,7 @@ const mode_specs = @import("mode_specs.zig");
 const target_profile = @import("target_profile.zig");
 const target_config = @import("target_config.zig");
 const target_factory = @import("target_factory.zig");
+const ide_workflow = @import("ide_workflow.zig");
 const step_utils = @import("step_utils.zig");
 const step_reports = @import("step_reports.zig");
 
@@ -21,138 +22,7 @@ const addLibcTest = target_factory.addLibcTest;
 const addLibcExecutable = target_factory.addLibcExecutable;
 const addCheckExecutableStep = step_utils.addCheckExecutableStep;
 const addCheckExecutableStepWithImports = step_utils.addCheckExecutableStepWithImports;
-const addSystemCommandStep = step_utils.addSystemCommandStep;
 const addReportBuildProfilesStep = step_reports.addReportBuildProfilesStep;
-const addGateStep = step_utils.addGateStep;
-
-fn addWindowsShellExtension(
-    b: *std.Build,
-    target: std.Build.ResolvedTarget,
-    optimize: std.builtin.OptimizeMode,
-) ?*std.Build.Step {
-    if (target.result.os.tag != .windows) return null;
-
-    const dll = b.addLibrary(.{
-        .name = "zide-shell-ext",
-        .linkage = .dynamic,
-        .root_module = b.createModule(.{
-            .target = target,
-            .optimize = optimize,
-            .link_libc = true,
-        }),
-    });
-    dll.addCSourceFile(.{
-        .file = .{ .cwd_relative = "src/platform/windows_shell_extension/open_zide_terminal_here.cpp" },
-        .flags = &.{ "-std=c++17", "-Wno-unused-command-line-argument" },
-    });
-    dll.linkSystemLibrary("ole32");
-    dll.linkSystemLibrary("shell32");
-    dll.linkSystemLibrary("shlwapi");
-    dll.linkSystemLibrary("user32");
-    const install = b.addInstallArtifact(dll, .{});
-    return &install.step;
-}
-
-fn addModeGateAndBundleSteps(
-    b: *std.Build,
-    target_os: std.Target.Os.Tag,
-    install_step: *std.Build.Step,
-    test_step: *std.Build.Step,
-    terminal_import_check_step: *std.Build.Step,
-    app_import_check_step: *std.Build.Step,
-    input_import_check_step: *std.Build.Step,
-    editor_import_check_step: *std.Build.Step,
-    build_dep_policy_step: *std.Build.Step,
-    build_profile_report_step: *std.Build.Step,
-    terminal_replay_all_step: *std.Build.Step,
-    gui_smokes_manual_step: *std.Build.Step,
-) void {
-    // Mode utility + packaging steps
-    _ = addSystemCommandStep(
-        b,
-        "mode-size-report",
-        "Report focused mode binary sizes",
-        &.{ "bash", "tools/build_tools/reports/report_mode_binary_sizes.sh" },
-        &.{install_step},
-    );
-
-    if (target_os == .linux) {
-        _ = addSystemCommandStep(
-            b,
-            "bundle-terminal",
-            "Bundle zide-terminal with resolved shared libs for portable use",
-            &.{
-                "bash",
-                "tools/packaging/linux/bundle_terminal_linux.sh",
-                "zig-out/bin/zide-terminal",
-                "zig-out/terminal-bundle",
-                "assets",
-            },
-            &.{install_step},
-        );
-    }
-
-    const mode_size_check_step = addSystemCommandStep(
-        b,
-        "mode-size-check",
-        "Check focused binaries are not larger than main binary",
-        &.{ "bash", "tools/build_tools/checks/check_mode_binary_sizes.sh" },
-        &.{install_step},
-    );
-
-    _ = addGateStep(
-        b,
-        "mode-gates",
-        "Run MODE extraction regression gate bundle",
-        &.{
-            test_step,
-            terminal_import_check_step,
-            app_import_check_step,
-            input_import_check_step,
-            editor_import_check_step,
-            build_dep_policy_step,
-            build_profile_report_step,
-            install_step,
-            mode_size_check_step,
-            terminal_replay_all_step,
-        },
-    );
-
-    _ = addGateStep(
-        b,
-        "mode-gates-fast",
-        "Run fast non-replay MODE extraction gates",
-        &.{
-            test_step,
-            terminal_import_check_step,
-            app_import_check_step,
-            input_import_check_step,
-            editor_import_check_step,
-            build_dep_policy_step,
-            build_profile_report_step,
-            install_step,
-            mode_size_check_step,
-        },
-    );
-
-    _ = addGateStep(
-        b,
-        "gui-smokes-manual-gates",
-        "Run GUI smoke prerequisites",
-        &.{
-            install_step,
-        },
-    );
-
-    _ = addGateStep(
-        b,
-        "gui-smokes-manual",
-        "Run interactive GUI smokes (manual)",
-        &.{
-            gui_smokes_manual_step,
-        },
-    );
-}
 
 pub fn planIdeExtendedBuildGraph(
     b: *std.Build,
@@ -165,7 +35,7 @@ pub fn planIdeExtendedBuildGraph(
     zlua_module: *std.Build.Module,
     zlua_portable_module: ?*std.Build.Module,
 ) void {
-    const windows_shell_extension_install = addWindowsShellExtension(b, target, optimize);
+    const windows_shell_extension_install = ide_workflow.addWindowsShellExtension(b, target, optimize);
 
     // FFI artifacts
     const terminal_ffi = b.addLibrary(.{
@@ -207,7 +77,7 @@ pub fn planIdeExtendedBuildGraph(
     editor_ffi_step.dependOn(&install_editor_ffi.step);
     editor_ffi_step.dependOn(&install_editor_ffi_header.step);
 
-    _ = addSystemCommandStep(
+    _ = step_utils.addSystemCommandStep(
         b,
         "test-ffi-host-combo",
         "Run non-interactive terminal+editor FFI combo smoke",
@@ -351,7 +221,7 @@ pub fn planIdeExtendedBuildGraph(
     if (b.args) |args| editor_perf_headless_run.run.addArgs(args);
     _ = editor_perf_headless_run.step;
 
-    _ = addSystemCommandStep(
+    _ = step_utils.addSystemCommandStep(
         b,
         "perf-editor-gate",
         "Run repeatable editor performance gate against stress fixtures",
@@ -477,7 +347,7 @@ pub fn planIdeExtendedBuildGraph(
         "check-build-deps",
         "Check app target dependency policy wiring",
     );
-    _ = addSystemCommandStep(
+    _ = step_utils.addSystemCommandStep(
         b,
         "report-build-deps",
         "Report app target dependency policy wiring",
@@ -543,7 +413,7 @@ pub fn planIdeExtendedBuildGraph(
         b.getInstallStep().dependOn(step);
     }
 
-    addModeGateAndBundleSteps(
+    ide_workflow.addModeGateAndBundleSteps(
         b,
         target_os,
         b.getInstallStep(),
@@ -558,15 +428,5 @@ pub fn planIdeExtendedBuildGraph(
         gui_smokes_manual_run.step,
     );
 
-    // Developer tooling
-    const grammar_update_cmd = b.addSystemCommand(&.{
-        "bash",
-        "tools/editor/tree_sitter/grammar_update_proxy.sh",
-    });
-    if (b.args) |args| grammar_update_cmd.addArgs(args);
-    const grammar_update_step = b.step(
-        "grammar-update",
-        "Build and install tree-sitter grammar packs via zide-tree-sitter",
-    );
-    grammar_update_step.dependOn(&grammar_update_cmd.step);
+    ide_workflow.addGrammarUpdateStep(b, b.args);
 }
