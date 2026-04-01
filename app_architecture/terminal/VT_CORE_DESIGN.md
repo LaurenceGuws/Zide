@@ -126,7 +126,7 @@ Status note, 2026-03-31:
   - `src/terminal/core/session/session_lifecycle_api.zig` now owns the lifecycle and
     composition method block that was still written directly on
     `pty_terminal_runtime.zig`
-  - `src/terminal/core/session/session_surface_api.zig` now owns the content,
+  - `src/terminal/core/session/surface_api.zig` now owns the content,
     selection, host-query, and interaction alias surface that used to dominate
     the top of `pty_terminal_runtime.zig`
   - `src/terminal/core/session/session_types_api.zig` now owns the shared terminal

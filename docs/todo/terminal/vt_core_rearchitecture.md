@@ -166,7 +166,7 @@ Validation note, 2026-03-31:
     composition block (`init`, screen access, input pressure, lock state,
     resize, shutdown-facing methods) that was still written directly on the
     session root.
-  - `src/terminal/core/session/session_surface_api.zig` now owns the content,
+  - `src/terminal/core/session/surface_api.zig` now owns the content,
     selection, host-query, and interaction alias slab that used to dominate
     the top of `pty_terminal_runtime.zig`.
   - `src/terminal/core/session/session_types_api.zig` now owns the bottom export slab

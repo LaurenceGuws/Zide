@@ -121,7 +121,7 @@ Judgment:
 - `src/terminal/core/session/session_lifecycle_api.zig` now owns the lifecycle and
   composition block instead of leaving those direct methods written on the root
   session type
-- `src/terminal/core/session/session_surface_api.zig` now owns the giant content,
+- `src/terminal/core/session/surface_api.zig` now owns the giant content,
   selection, host-query, and interaction alias surface instead of leaving that
   umbrella slab at the top of `pty_terminal_runtime.zig`
 - `src/terminal/core/session/session_types_api.zig` now owns the shared constant/type
