@@ -302,6 +302,11 @@ Validation note, 2026-03-31:
     - it now also owns the live published cell slice and kitty image/placement
       slices used by widget draw instead of leaving those arrays as raw cache
       reads
+  - base background color interpretation is moving there too:
+    - `baseColorInfo(...)`
+    now gives widget draw one publication-owned answer for raw background and
+    resolved screen-reverse background instead of rebuilding first-cell color
+    logic in multiple places
   - lifecycle/dirty helpers now also own more of the direct truth widget draw
     needs:
     - `lifecycleTransitionInfo(...)` carries current alt-state

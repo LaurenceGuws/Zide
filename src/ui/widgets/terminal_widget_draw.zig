@@ -262,6 +262,10 @@ fn snapToDevicePixel(value: f32, render_scale: f32) f32 {
     return @as(f32, @floatFromInt(@as(i32, @intFromFloat(std.math.round(value * scale))))) / scale;
 }
 
+fn toShellColor(color: terminal_publication.Color) Color {
+    return .{ .r = color.r, .g = color.g, .b = color.b, .a = color.a };
+}
+
 fn spansOverlap(start_a: usize, end_a: usize, start_b: usize, end_b: usize) bool {
     return start_a <= end_b and start_b <= end_a;
 }
@@ -647,17 +651,9 @@ pub fn drawPrepared(
     const rows = draw_state.rows;
     const cols = draw_state.cols;
     const view_cells = draw_state.cells;
+    const base_colors = terminal_publication.baseColorInfo(cache);
     if (sync_updates and view_cells.len > 0) {
-        const bg_color = if (view_cells.len > 0) blk: {
-            const cell = view_cells[0];
-            const reversed = cell.attrs.reverse != screen_reverse;
-            const bg = if (reversed) cell.attrs.fg else cell.attrs.bg;
-            break :blk Color{
-                .r = bg.r,
-                .g = bg.g,
-                .b = bg.b,
-            };
-        } else r.theme.background;
+        const bg_color = if (view_cells.len > 0) toShellColor(base_colors.resolved_background) else r.theme.background;
         r.drawRect(
             @intFromFloat(x),
             @intFromFloat(y),
@@ -714,11 +710,7 @@ pub fn drawPrepared(
     var lock_stats_summary_buf: [64]u8 = undefined;
     var fullframe_fastpath_decision: FullFrameFastPathDecision = .{};
     const has_kitty = self.kitty.hasKitty();
-    const bg_color = if (view_cells.len > 0) Color{
-        .r = view_cells[0].attrs.bg.r,
-        .g = view_cells[0].attrs.bg.g,
-        .b = view_cells[0].attrs.bg.b,
-    } else r.theme.background;
+    const bg_color = if (view_cells.len > 0) toShellColor(base_colors.background) else r.theme.background;
     r.drawRect(
         @intFromFloat(x),
         @intFromFloat(y),
@@ -1037,16 +1029,7 @@ pub fn drawPrepared(
             if (needs_full) {
                 fillPresentedGenerationCells(self, rows, cols, draw_state.generation);
                 const bg_phase_start = app_shell.getTime();
-                const bg = if (view_cells.len > 0) blk: {
-                    const cell = view_cells[0];
-                    const reversed = cell.attrs.reverse != screen_reverse;
-                    const base_bg = if (reversed) cell.attrs.fg else cell.attrs.bg;
-                    break :blk Color{
-                        .r = base_bg.r,
-                        .g = base_bg.g,
-                        .b = base_bg.b,
-                    };
-                } else r.theme.background;
+                const bg = if (view_cells.len > 0) toShellColor(base_colors.resolved_background) else r.theme.background;
                 r.beginTerminalBatch();
                 r.addTerminalRect(0, 0, texture_w, texture_h, bg);
                 var row: usize = 0;
@@ -1366,17 +1349,7 @@ pub fn drawPrepared(
             );
         }
         if (rows > 0 and cols > 0) {
-            const bg = if (view_cells.len > 0) blk: {
-                const cell = view_cells[0];
-                const reversed = cell.attrs.reverse != screen_reverse;
-                const base_bg = if (reversed) cell.attrs.fg else cell.attrs.bg;
-                break :blk Color{
-                    .r = base_bg.r,
-                    .g = base_bg.g,
-                    .b = base_bg.b,
-                    .a = base_bg.a,
-                };
-            } else r.theme.background;
+            const bg = if (view_cells.len > 0) toShellColor(base_colors.resolved_background) else r.theme.background;
             if (visible_w > 0 and visible_h > 0) {
                 r.drawRectF(base_x, base_y, viewport_w, viewport_h, bg);
             }

@@ -123,6 +123,11 @@ pub const DrawStateInfo = struct {
     kitty_placements: []const KittyPlacement,
 };
 
+pub const BaseColorInfo = struct {
+    background: Color,
+    resolved_background: Color,
+};
+
 pub const VisibleViewDumpInfo = struct {
     rows: usize,
     cols: usize,
@@ -281,6 +286,22 @@ pub fn drawStateInfo(cache: *const RenderCache) DrawStateInfo {
         .cells = cache.cells.items,
         .kitty_images = cache.kitty_images.items,
         .kitty_placements = cache.kitty_placements.items,
+    };
+}
+
+pub fn baseColorInfo(cache: *const RenderCache) BaseColorInfo {
+    const render_state = renderStateInfo(cache);
+    if (cache.cells.items.len == 0) {
+        return .{
+            .background = .{ .r = 0, .g = 0, .b = 0, .a = 255 },
+            .resolved_background = .{ .r = 0, .g = 0, .b = 0, .a = 255 },
+        };
+    }
+    const cell = cache.cells.items[0];
+    const reversed = cell.attrs.reverse != render_state.screen_reverse;
+    return .{
+        .background = cell.attrs.bg,
+        .resolved_background = if (reversed) cell.attrs.fg else cell.attrs.bg,
     };
 }
 

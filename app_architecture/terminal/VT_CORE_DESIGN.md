@@ -205,6 +205,9 @@ Status note, 2026-03-31:
     reads scattered through widget draw
   - it should also own the live published cell/kitty slices consumed by widget
     draw so UI code stops reaching into cache storage directly for those arrays
+  - first-cell base background interpretation should also be publication-owned
+    via helpers like `baseColorInfo(...)` instead of being reconstructed in
+    multiple widget draw branches
   - once a publication helper exists, widget draw should consume its direct
     truth completely; it should not keep mixing helper-owned state with raw
     reads like `cache.alt_active` or repeated `cache.dirty == .none`
