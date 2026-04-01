@@ -212,6 +212,11 @@ Progress note, 2026-04-01:
   style resolution, and initial tab-bar/ui-scale application in named helpers
 - this makes bootstrapping read more like explicit initialization phases and
   less like one long inline setup slab
+- the same init path now also separates startup perf/env capture, terminal
+  bootstrap resource resolution, and mode-adapter creation from the main state
+  literal
+- this reduces the amount of policy and allocation choreography mixed directly
+  into `initWithMode`
 
 ## Investigation Follow-up
 
