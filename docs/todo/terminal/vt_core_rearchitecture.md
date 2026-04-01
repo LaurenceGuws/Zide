@@ -248,6 +248,12 @@ Validation note, 2026-03-31:
     `applyPendingViewRefreshLocked(...)` instead of hand-driving raw
     `view_cache_pending` checks and direct locked refresh calls inside
     `snapshot()` / `captureCopy()`
+  - presented-generation retirement now follows that same owner rule too:
+    `src/terminal/core/publication/terminal_publication.zig` now retires
+    presented generations through one locked publication-owned path instead of
+    splitting the contract across `acknowledgePresentedGeneration(...)`,
+    `clearPublishedDamageIfGeneration(...)`, and a separate sync-update policy
+    helper
   - the remaining publication/view-cache helper stubs and the special-case
     protocol `appendHyperlink` wrapper are no longer written inline on
     `pty_terminal_runtime.zig`; those exceptions now route through the explicit

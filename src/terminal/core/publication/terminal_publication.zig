@@ -471,18 +471,6 @@ pub fn setSyncUpdatesLocked(self: anytype, enabled: bool) void {
     view_cache.updateViewCacheNoLockTagged(self, pendingGeneration(self), offset, "set_sync_updates");
 }
 
-pub fn clearPublishedDamageIfGeneration(self: anytype, expected_generation: u64, clear_screen_dirty: bool) bool {
-    self.lock();
-    defer self.unlock();
-    const pending_generation = self.publication.pending_generation.load(.acquire);
-    if (pending_generation != expected_generation) return false;
-    if (clear_screen_dirty) {
-        self.core.activeScreen().clearDirty();
-    }
-    clearPublishedDamage(self);
-    return true;
-}
-
 pub fn pendingGeneration(self: anytype) u64 {
     return self.publication.pending_generation.load(.acquire);
 }
@@ -532,12 +520,9 @@ pub fn notePresentedGeneration(self: anytype, generation: u64) void {
 }
 
 pub fn acknowledgePresentedGeneration(self: anytype, generation: u64) bool {
-    notePresentedGeneration(self, generation);
-    const sync_updates_active = renderCacheSyncUpdatesActiveForGeneration(self, generation);
-    return if (sync_updates_active)
-        clearPublishedDamageIfGeneration(self, generation, false)
-    else
-        clearPublishedDamageIfGeneration(self, generation, true);
+    self.lock();
+    defer self.unlock();
+    return retirePresentedGenerationLocked(self, generation);
 }
 
 pub fn hasPublishedGenerationBacklog(self: anytype) bool {
@@ -570,11 +555,19 @@ pub fn finishFramePresentation(self: anytype, feedback: anytype) void {
     completePresentationFeedback(self, feedback);
 }
 
-fn renderCacheSyncUpdatesActiveForGeneration(self: anytype, generation: u64) bool {
-    if (renderCacheForGeneration(self, generation)) |cache| {
-        return cache.sync_updates_active;
+fn retirePresentedGenerationLocked(self: anytype, generation: u64) bool {
+    notePresentedGeneration(self, generation);
+    if (pendingGeneration(self) != generation) return false;
+
+    const clear_screen_dirty = if (renderCacheForGeneration(self, generation)) |cache|
+        !cache.sync_updates_active
+    else
+        !self.core.syncUpdatesActive();
+    if (clear_screen_dirty) {
+        self.core.activeScreen().clearDirty();
     }
-    return self.core.syncUpdatesActive();
+    clearPublishedDamage(self);
+    return true;
 }
 
 fn captureCopy(self: anytype, dst: *RenderCache, log_capture: bool) !CaptureCopy {

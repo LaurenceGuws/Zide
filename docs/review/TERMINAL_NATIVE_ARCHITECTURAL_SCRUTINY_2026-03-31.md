@@ -396,6 +396,11 @@ Evidence:
   refresh work through `applyPendingViewRefreshLocked(...)` instead of
   open-coding `view_cache_pending` checks and direct locked refresh
   consumption inside `snapshot()` and `captureCopy()`
+- presented-generation retirement now follows that same owner rule too:
+  `src/terminal/core/publication/terminal_publication.zig` handles
+  presented-generation acknowledgement, sync-update retirement policy, and
+  dirty retirement in one locked publication-owned path instead of splitting
+  that contract across multiple helpers
 - the outer CSI forwarding shell is gone too:
   `terminal_protocol_api.zig` now routes CSI directly into
   `src/terminal/protocol/csi.zig` without stepping through an extra
