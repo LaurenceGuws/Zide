@@ -1,3 +1,5 @@
+const bootstrap_policy = @import("bootstrap_policy.zig");
+
 pub const PolicyLine = struct {
     text: []const u8,
 };
@@ -9,7 +11,7 @@ pub const PolicyOption = struct {
 
 pub const supported_options = [_]PolicyOption{
     .{ .flag = "-Dmode=ide|terminal|editor", .description = "select runtime app mode" },
-    .{ .flag = "-Drenderer-backend=sdl_gl", .description = "select the renderer backend" },
+    .{ .flag = "-Drenderer-backend=sdl_gl", .description = bootstrap_policy.supported_renderer_options[0].description },
     .{ .flag = "standard Zig target/optimize options", .description = "use standard Zig build target and optimize controls" },
 };
 

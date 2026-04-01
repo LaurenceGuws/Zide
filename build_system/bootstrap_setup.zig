@@ -1,9 +1,8 @@
 const std = @import("std");
-const builtin = @import("builtin");
 const app_types = @import("app_types.zig");
+const bootstrap_policy = @import("bootstrap_policy.zig");
 const dependency_resolver = @import("dependency_resolver.zig");
 const mode_specs = @import("mode_specs.zig");
-const platform_capabilities = @import("platform_capabilities.zig");
 const step_reports = @import("step_reports.zig");
 
 const AppLinkContext = app_types.AppLinkContext;
@@ -25,23 +24,15 @@ pub const BootstrapDeps = struct {
 
 pub fn initBootstrapOptions(b: *std.Build) BootstrapOptions {
     const target = b.standardTargetOptions(.{
-        .default_target = if (builtin.os.tag == .windows) .{
-            .cpu_arch = .x86_64,
-            .os_tag = .windows,
-            .abi = .msvc,
-        } else .{},
+        .default_target = bootstrap_policy.defaultTargetQuery(),
     });
     const optimize = b.standardOptimizeOption(.{});
 
-    const build_mode_raw = b.option(
-        []const u8,
-        "mode",
-        "Build app mode: ide (default), terminal, editor",
-    ) orelse "ide";
-    const build_mode = mode_specs.parseBuildMode(build_mode_raw);
+    const build_mode_raw = bootstrap_policy.readBuildModeOptionRaw(b);
+    const build_mode = bootstrap_policy.parseBuildModeRaw(build_mode_raw);
     const target_os = target.result.os.tag;
 
-    const renderer_backend = readRendererBackendOption(b);
+    const renderer_backend = bootstrap_policy.readRendererBackendOption(b);
 
     const build_options = b.addOptions();
     build_options.addOption([]const u8, "renderer_backend", renderer_backend);
@@ -165,20 +156,4 @@ pub fn addBootstrapReportSteps(
             build_report_tools_check_step,
         },
     );
-}
-
-fn readRendererBackendOption(b: *std.Build) []const u8 {
-    const default_renderer_backend = platform_capabilities.rendererBackendName(.sdl_gl);
-    const renderer_backend = b.option(
-        []const u8,
-        "renderer-backend",
-        "Renderer backend (only sdl_gl is implemented; wgl/egl are TODO)",
-    ) orelse default_renderer_backend;
-    if (!platform_capabilities.isSupportedRendererBackend(renderer_backend)) {
-        std.debug.panic(
-            "renderer backend '{s}' is not implemented (use -Drenderer-backend=sdl_gl)",
-            .{renderer_backend},
-        );
-    }
-    return renderer_backend;
 }

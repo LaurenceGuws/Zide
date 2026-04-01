@@ -134,6 +134,9 @@ Progress note, 2026-04-02:
 - Windows resources, Windows GUI subsystem selection, Windows shell extension
   build gating, and Linux terminal bundle gating now also route through shared
   platform capability data instead of hardcoded raw OS checks
+- bootstrap default-target policy and renderer/build-mode option parsing now
+  live under `build_system/bootstrap_policy.zig` instead of being inlined in
+  `build_system/bootstrap_setup.zig`
 
 ## Repo Boundary Rule
 
