@@ -1,6 +1,6 @@
 const std = @import("std");
 const types = @import("../../model/types.zig");
-const session_content = @import("session_content.zig");
+const session_content = @import("content.zig");
 
 pub fn API(comptime PtyTerminalRuntime: type, comptime Cell: type, comptime ScrollbackInfo: type, comptime ScrollbackRange: type) type {
     return struct {

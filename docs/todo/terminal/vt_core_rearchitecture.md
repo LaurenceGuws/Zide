@@ -158,6 +158,10 @@ Validation note, 2026-03-31:
   - `src/terminal/core/session/debug_api.zig` now owns the debug method
     group directly; `pty_terminal_runtime.zig`, replay, and tests point at the
     real seam instead of routing through an extra flat wrapper.
+  - the wrapper-content seam now follows the same rule:
+    `src/terminal/core/session/content.zig` and
+    `src/terminal/core/session/content_api.zig` replace the redundant
+    `session_content*` naming inside the already-explicit `session/` subtree.
   - `src/terminal/core/session/session_lifecycle_api.zig` now owns the lifecycle and
     composition block (`init`, screen access, input pressure, lock state,
     resize, shutdown-facing methods) that was still written directly on the

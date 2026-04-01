@@ -115,6 +115,9 @@ Judgment:
   `appendHyperlink` wrapper no longer live inline on `pty_terminal_runtime.zig`
 - `src/terminal/core/session/debug_api.zig` now owns the debug method group
   instead of making `pty_terminal_runtime.zig` the visible debug authority
+- `src/terminal/core/session/content.zig` and
+  `src/terminal/core/session/content_api.zig` now carry the wrapper content
+  seam without redundant `session_` naming inside the subtree
 - `src/terminal/core/session/session_lifecycle_api.zig` now owns the lifecycle and
   composition block instead of leaving those direct methods written on the root
   session type

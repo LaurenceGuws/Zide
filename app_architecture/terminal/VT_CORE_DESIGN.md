@@ -120,6 +120,9 @@ Status note, 2026-03-31:
     instead of living as root-session exceptions
   - `src/terminal/core/session/debug_api.zig` now owns the root debug method
     group instead of routing debug authority through `pty_terminal_runtime.zig`
+  - `src/terminal/core/session/content.zig` and
+    `src/terminal/core/session/content_api.zig` now own the wrapper content
+    seam without repeating `session_` in the file names
   - `src/terminal/core/session/session_lifecycle_api.zig` now owns the lifecycle and
     composition method block that was still written directly on
     `pty_terminal_runtime.zig`
