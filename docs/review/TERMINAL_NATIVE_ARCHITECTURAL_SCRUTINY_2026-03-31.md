@@ -180,9 +180,13 @@ Judgment:
 - `src/terminal/core/session/surface_api.zig` is gone too; the wrapper now
   binds directly to the content, selection, host-query, and interaction owners
   instead of routing through one more umbrella shell
-- `src/terminal/core/session/types_api.zig` now owns the shared constant/type
-  export slab instead of leaving that import-umbrella surface at the bottom of
-  `pty_terminal_runtime.zig`
+- the thin shared type/constant alias slab is now dead too:
+  `src/terminal/core/session/types_api.zig` is deleted, so
+  `src/terminal/core/terminal_runtime.zig`,
+  `src/terminal/core/pty_terminal_runtime.zig`, and
+  `src/terminal/core/session/runtime.zig` now pull shared constants and
+  types from their direct owners instead of routing them through one more
+  wrapper-side export file
 - the flat root state is now also grouped into explicit subsystem-owned
   embedded structs:
   - `session/publication_fields`

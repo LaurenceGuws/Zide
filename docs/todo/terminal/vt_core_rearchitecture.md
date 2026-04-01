@@ -208,8 +208,13 @@ Validation note, 2026-03-31:
     `pty_terminal_runtime.zig` binds straight to
     `src/terminal/core/session/runtime.zig` plus its few genuinely local
     screen/lock helpers instead of routing through one more forwarding layer
-  - `src/terminal/core/session/types_api.zig` now owns the bottom export slab
-    for shared terminal constants and core-facing type aliases.
+  - the thin shared type/constant alias slab is now dead too:
+    `src/terminal/core/session/types_api.zig` is deleted, so
+    `src/terminal/core/terminal_runtime.zig`,
+    `src/terminal/core/pty_terminal_runtime.zig`, and
+    `src/terminal/core/session/runtime.zig` now pull shared constants and
+    types from their direct owners instead of routing them through one more
+    wrapper-side export file
   - raw session state is no longer a flat lie:
     - `src/terminal/core/session/publication_fields.zig`
     - `src/terminal/core/session/runtime_fields.zig`
