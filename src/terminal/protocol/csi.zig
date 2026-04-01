@@ -94,18 +94,16 @@ pub fn handleCsi(self: anytype, action: parser_csi.CsiAction) void {
                 var writer = writer_guard;
                 defer writer.unlock();
                 const screen = self.core.activeScreen();
-                csi_reply.handleDsrQuery(.{
-                    .color_scheme_dark = self.interaction.color_scheme_dark,
-                    .cell_height = self.interaction.cell_height,
-                    .cell_width = self.interaction.cell_width,
-                }, &writer, .{
-                    .cursor_report = blk: {
-                        const pos = screen.cursorReport();
-                        break :blk .{ .row_1 = pos.row_1, .col_1 = pos.col_1 };
-                    },
-                    .rows = screen.grid.rows,
-                    .cols = screen.grid.cols,
-                }, action, param_len, p);
+                const pos = screen.cursorReport();
+                csi_reply.handleDsrQuery(
+                    self.interaction.color_scheme_dark,
+                    &writer,
+                    pos.row_1,
+                    pos.col_1,
+                    action,
+                    param_len,
+                    p,
+                );
             }
         },
         'c' => { // DA
@@ -123,18 +121,15 @@ pub fn handleCsi(self: anytype, action: parser_csi.CsiAction) void {
                     var writer = writer_guard;
                     defer writer.unlock();
                     const screen = self.core.activeScreen();
-                    csi_reply.handleWindowOpQuery(.{
-                        .color_scheme_dark = self.interaction.color_scheme_dark,
-                        .cell_height = self.interaction.cell_height,
-                        .cell_width = self.interaction.cell_width,
-                    }, &writer, .{
-                        .cursor_report = blk: {
-                            const pos = screen.cursorReport();
-                            break :blk .{ .row_1 = pos.row_1, .col_1 = pos.col_1 };
-                        },
-                        .rows = screen.grid.rows,
-                        .cols = screen.grid.cols,
-                    }, param_len, p);
+                    csi_reply.handleWindowOpQuery(
+                        self.interaction.cell_height,
+                        self.interaction.cell_width,
+                        &writer,
+                        screen.grid.rows,
+                        screen.grid.cols,
+                        param_len,
+                        p,
+                    );
                 }
             }
         },

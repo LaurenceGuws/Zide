@@ -850,6 +850,10 @@ Validation note, 2026-03-31:
   longer assemble pending/published/presented generation triplets from three
   separate publication queries. `terminal_publication.generationState(...)`
   now owns that status snapshot as one contract.
+- Another `VTCORE-04` mini-adapter kill is in too: `csi_reply.zig` no longer
+  carries `QueryState`, `CursorReport`, and `ScreenState` ferry structs just to
+  move a few reply fields across one call boundary. CSI reply handlers now take
+  raw owner-shaped arguments directly.
 - The terminal campaign should now judge success by first-glance authority:
   when a strong maintainer opens the code, the engine must obviously be the
   engine.

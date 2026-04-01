@@ -926,6 +926,8 @@ work:
   publication-owned request contract instead of making callers reconstruct it
 - once a caller always reads multiple publication generations together, expose
   that status as one publication-owned summary instead of three separate calls
+- once a protocol reply path only ferries a few fields through one hop, delete
+  the transport structs instead of pretending they are real boundary types
 
 ## Final Assessment
 

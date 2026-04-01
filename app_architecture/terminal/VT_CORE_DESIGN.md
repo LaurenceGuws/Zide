@@ -1468,6 +1468,10 @@ The same cleanup standard now applies to generation status: publication now
 owns the pending/published/presented triplet as one summary contract instead of
 forcing callers to assemble it from three separate reads.
 
+The same low-level rule still applies in the protocol lane too: if a reply path
+only ferries a handful of fields across one call boundary, delete the adapter
+structs and pass the raw owner-shaped values directly.
+
 Avoid continuing to use `TerminalSession` as the name of the engine center once
 the new boundary exists.
 

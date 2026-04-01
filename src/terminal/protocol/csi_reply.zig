@@ -2,23 +2,6 @@ const std = @import("std");
 const parser_csi = @import("../parser/csi.zig");
 const app_logger = @import("../../app_logger.zig");
 
-pub const QueryState = struct {
-    color_scheme_dark: bool,
-    cell_height: u16,
-    cell_width: u16,
-};
-
-pub const CursorReport = struct {
-    row_1: usize,
-    col_1: usize,
-};
-
-pub const ScreenState = struct {
-    cursor_report: CursorReport,
-    rows: u16,
-    cols: u16,
-};
-
 pub fn writeDaPrimaryReplyWithWriter(writer: anytype) bool {
     const log = app_logger.logger("terminal.csi");
     _ = writer.write("\x1b[?62;1;2;4;6;7;8;9;15;18;21;22;28;29c") catch |err| {
@@ -75,25 +58,29 @@ pub fn writeDsrReplyWithWriter(writer: anytype, leader: u8, mode: i32, row_1: us
     return false;
 }
 
-pub fn handleDsrQuery(query: QueryState, writer: anytype, screen: ScreenState, action: parser_csi.CsiAction, param_len: usize, params: [parser_csi.max_params]i32) void {
+pub fn handleDsrQuery(
+    color_scheme_dark: bool,
+    writer: anytype,
+    cursor_row_1: usize,
+    cursor_col_1: usize,
+    action: parser_csi.CsiAction,
+    param_len: usize,
+    params: [parser_csi.max_params]i32,
+) void {
     const mode = if (param_len > 0) params[0] else 0;
     if (action.leader == '?') {
         switch (mode) {
             6 => {
-                const pos = screen.cursor_report;
-                _ = writeDsrReplyWithWriter(writer, action.leader, mode, pos.row_1, pos.col_1);
+                _ = writeDsrReplyWithWriter(writer, action.leader, mode, cursor_row_1, cursor_col_1);
             },
             15, 25, 26, 55, 56, 75, 85 => _ = writeDsrReplyWithWriter(writer, action.leader, mode, 0, 0),
-            996 => _ = writeColorSchemePreferenceReplyWithWriter(writer, query.color_scheme_dark),
+            996 => _ = writeColorSchemePreferenceReplyWithWriter(writer, color_scheme_dark),
             else => {},
         }
     } else if (action.leader == 0) {
         switch (mode) {
             5 => _ = writeDsrReplyWithWriter(writer, action.leader, mode, 0, 0),
-            6 => {
-                const pos = screen.cursor_report;
-                _ = writeDsrReplyWithWriter(writer, action.leader, mode, pos.row_1, pos.col_1);
-            },
+            6 => _ = writeDsrReplyWithWriter(writer, action.leader, mode, cursor_row_1, cursor_col_1),
             else => {},
         }
     }
@@ -103,13 +90,21 @@ pub fn handleDaQuery(writer: anytype) void {
     _ = writeDaPrimaryReplyWithWriter(writer);
 }
 
-pub fn handleWindowOpQuery(query: QueryState, writer: anytype, screen: ScreenState, param_len: usize, params: [parser_csi.max_params]i32) void {
+pub fn handleWindowOpQuery(
+    cell_height: u16,
+    cell_width: u16,
+    writer: anytype,
+    rows: u16,
+    cols: u16,
+    param_len: usize,
+    params: [parser_csi.max_params]i32,
+) void {
     const mode = if (param_len > 0) params[0] else 0;
     switch (mode) {
-        14 => _ = writeWindowOpPixelsReplyWithWriter(writer, @as(u32, query.cell_height) * screen.rows, @as(u32, query.cell_width) * screen.cols),
-        16 => _ = writeWindowOpCellPixelsReplyWithWriter(writer, query.cell_height, query.cell_width),
-        18 => _ = writeWindowOpCharsReplyWithWriter(writer, screen.rows, screen.cols),
-        19 => _ = writeWindowOpScreenCharsReplyWithWriter(writer, screen.rows, screen.cols),
+        14 => _ = writeWindowOpPixelsReplyWithWriter(writer, @as(u32, cell_height) * rows, @as(u32, cell_width) * cols),
+        16 => _ = writeWindowOpCellPixelsReplyWithWriter(writer, cell_height, cell_width),
+        18 => _ = writeWindowOpCharsReplyWithWriter(writer, rows, cols),
+        19 => _ = writeWindowOpScreenCharsReplyWithWriter(writer, rows, cols),
         else => {},
     }
 }
