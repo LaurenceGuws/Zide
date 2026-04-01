@@ -646,8 +646,8 @@ pub fn drawPrepared(
     const blink_time = app_shell.getTime();
     const rows = draw_state.rows;
     const cols = draw_state.cols;
-    if (sync_updates and cache.cells.items.len > 0) {
-        const view_cells = cache.cells.items;
+    const view_cells = draw_state.cells;
+    if (sync_updates and view_cells.len > 0) {
         const bg_color = if (view_cells.len > 0) blk: {
             const cell = view_cells[0];
             const reversed = cell.attrs.reverse != screen_reverse;
@@ -689,7 +689,7 @@ pub fn drawPrepared(
     self.blink_phase_changed_pending = false;
     const blink_requires_partial = has_blink and blink_phase_changed;
 
-    self.kitty.updateViews(self.session.allocator, rows, cols, cache.kitty_images.items, cache.kitty_placements.items);
+    self.kitty.updateViews(self.session.allocator, rows, cols, draw_state.kitty_images, draw_state.kitty_placements);
 
     var upload_stats: kitty_mod.KittyState.UploadStats = .{};
     if (self.kitty.images_view.items.len > 0) {
@@ -697,7 +697,6 @@ pub fn drawPrepared(
         upload_stats = self.kitty.processPendingUploads(shell);
     }
 
-    const view_cells = cache.cells.items;
     const draw_log = app_logger.logger("terminal.ui.redraw");
     const texture_shift_log = app_logger.logger("terminal.ui.texture_shift");
     const dirty_summary = terminal_publication.dirtySummary(cache);

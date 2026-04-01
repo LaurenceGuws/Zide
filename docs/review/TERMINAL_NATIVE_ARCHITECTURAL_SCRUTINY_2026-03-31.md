@@ -265,6 +265,9 @@ Judgment:
   - widget draw now also uses that same draw-state helper for generation and
     clear-generation bookkeeping instead of scattering raw cache generation
     reads through planning/coherence/handoff paths
+  - widget draw now also uses that same draw-state helper for the published
+    cell slice and kitty image/placement slices instead of reaching directly
+    into cache storage for those arrays
   - widget draw now also uses helper-owned current alt-state and clean-state
     instead of falling back to raw `cache.alt_active` and repeated
     `cache.dirty == .none` checks where publication already owns the answer

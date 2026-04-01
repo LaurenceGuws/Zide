@@ -299,6 +299,9 @@ Validation note, 2026-03-31:
     cursor position instead of pulling those facts piecemeal from raw cache
     - it now also owns generation and clear-generation reads used by draw
       planning, coherence checks, and handoff logging
+    - it now also owns the live published cell slice and kitty image/placement
+      slices used by widget draw instead of leaving those arrays as raw cache
+      reads
   - lifecycle/dirty helpers now also own more of the direct truth widget draw
     needs:
     - `lifecycleTransitionInfo(...)` carries current alt-state

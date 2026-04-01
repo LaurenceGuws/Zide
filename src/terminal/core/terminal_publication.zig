@@ -118,6 +118,9 @@ pub const DrawStateInfo = struct {
     sync_updates_active: bool,
     kitty_generation: u64,
     cursor: CursorPos,
+    cells: []const Cell,
+    kitty_images: []const KittyImage,
+    kitty_placements: []const KittyPlacement,
 };
 
 pub const VisibleViewDumpInfo = struct {
@@ -275,6 +278,9 @@ pub fn drawStateInfo(cache: *const RenderCache) DrawStateInfo {
         .sync_updates_active = cache.sync_updates_active,
         .kitty_generation = cache.kitty_generation,
         .cursor = cache.cursor,
+        .cells = cache.cells.items,
+        .kitty_images = cache.kitty_images.items,
+        .kitty_placements = cache.kitty_placements.items,
     };
 }
 

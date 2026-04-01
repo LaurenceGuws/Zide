@@ -203,6 +203,8 @@ Status note, 2026-03-31:
   - that same draw-state summary should also own generation bookkeeping used
     by draw planning and handoff logs instead of leaving raw cache generation
     reads scattered through widget draw
+  - it should also own the live published cell/kitty slices consumed by widget
+    draw so UI code stops reaching into cache storage directly for those arrays
   - once a publication helper exists, widget draw should consume its direct
     truth completely; it should not keep mixing helper-owned state with raw
     reads like `cache.alt_active` or repeated `cache.dirty == .none`
