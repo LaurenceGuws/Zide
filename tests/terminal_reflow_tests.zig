@@ -1,6 +1,7 @@
 const std = @import("std");
 const terminal_runtime = @import("../src/terminal/core/terminal_runtime.zig");
 const terminal_debug = @import("../src/terminal/core/session/debug_ops.zig");
+const terminal_core_modes = @import("../src/terminal/core/terminal_core_modes.zig");
 const terminal_publication = @import("../src/terminal/core/publication/terminal_publication.zig");
 
 fn firstCodepoint(session: *terminal_runtime.PtyTerminalRuntime, global_row: usize) ?u32 {
@@ -339,7 +340,7 @@ test "terminal reflow remaps saved cursor" {
 
     terminal_debug.debugFeedBytes(session, "ABCDEFGH");
     session.primary.setCursor(1, 1);
-    session.saveCursor();
+    terminal_core_modes.saveCursor(session);
 
     try session.resize(2, 3);
 

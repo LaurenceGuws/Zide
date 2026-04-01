@@ -270,6 +270,9 @@ Judgment:
   `feedOutputBytes`, `resetState`, and the fixed-limit `appendHyperlink`
   helper now live in their real owner modules instead of inline on
   `src/terminal/core/pty_terminal_runtime.zig`
+- `saveCursor` / `restoreCursor` now route through
+  `src/terminal/core/terminal_core_modes.zig` directly too, so the wrapper no
+  longer claims that mode-state seam
 - the flat root state is now also grouped into explicit subsystem-owned
   embedded structs:
   - `session/publication_fields`

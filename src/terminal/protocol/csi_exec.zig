@@ -1,5 +1,6 @@
 const std = @import("std");
 const parser_csi = @import("../parser/csi.zig");
+const terminal_core_modes = @import("../core/terminal_core_modes.zig");
 
 pub fn handleSimpleCsi(
     self: anytype,
@@ -81,12 +82,12 @@ pub fn handleSpecialCsi(
                     }
                     return;
                 }
-                self.saveCursor();
+                terminal_core_modes.saveCursor(self);
             }
         },
         'u' => {
             if (action.leader == 0 and !action.private) {
-                self.restoreCursor();
+                terminal_core_modes.restoreCursor(self);
                 return;
             }
             const flags: u32 = if (param_len > 0) @intCast(@max(0, params[0])) else 0;

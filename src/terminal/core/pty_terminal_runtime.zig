@@ -275,8 +275,6 @@ pub const PtyTerminalRuntime = struct {
 
     pub const setCursorStyle = @import("protocol/terminal_core_protocol.zig").setCursorStyle;
     pub const decrqssReplyInto = @import("protocol/terminal_core_protocol.zig").decrqssReplyInto;
-    pub const saveCursor = @import("terminal_core_modes.zig").saveCursor;
-    pub const restoreCursor = @import("terminal_core_modes.zig").restoreCursor;
     pub const enterAltScreen = mode_effects.enterAltScreen;
     pub const exitAltScreen = mode_effects.exitAltScreen;
 

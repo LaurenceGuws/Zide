@@ -1,4 +1,5 @@
 const parser_csi = @import("../parser/csi.zig");
+const terminal_core_modes = @import("../core/terminal_core_modes.zig");
 
 pub fn applyModeMutation(
     self: anytype,
@@ -54,9 +55,9 @@ fn applyPrivateModeMutation(self: anytype, param_len: usize, params: [parser_csi
             1047 => if (enabled) self.enterAltScreen(true, false) else self.exitAltScreen(false),
             1048 => {
                 if (enabled) {
-                    self.saveCursor();
+                    terminal_core_modes.saveCursor(self);
                 } else {
-                    self.restoreCursor();
+                    terminal_core_modes.restoreCursor(self);
                 }
                 self.activeScreen().*.setSaveCursorMode1048(enabled);
             },

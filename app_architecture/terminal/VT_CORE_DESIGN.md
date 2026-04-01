@@ -206,6 +206,9 @@ Status note, 2026-03-31:
     `feedOutputBytes`, `resetState`, and the fixed-limit `appendHyperlink`
     helper now live in their real owner modules instead of inline on
     `src/terminal/core/pty_terminal_runtime.zig`
+  - `saveCursor` / `restoreCursor` now route through
+    `src/terminal/core/terminal_core_modes.zig` directly too, so the wrapper no
+    longer claims that mode-state seam
   - the same direct-owner cleanup now applies in `workspace.zig`: wrapper
     composition reads as runtime/workspace ownership, and progress-state typing
     no longer comes through `pty_terminal_runtime.zig`

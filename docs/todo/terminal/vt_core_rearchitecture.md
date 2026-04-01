@@ -301,6 +301,9 @@ Validation note, 2026-03-31:
     `feedOutputBytes`, `resetState`, and the fixed-limit `appendHyperlink`
     helper now live in their real owner modules instead of squatting inline on
     `src/terminal/core/pty_terminal_runtime.zig`
+  - `saveCursor` / `restoreCursor` no longer masquerade as wrapper-owned
+    protocol surface either: parser/protocol/test callers now use
+    `src/terminal/core/terminal_core_modes.zig` directly
   - raw session state is no longer a flat lie:
     - `src/terminal/core/session/publication_fields.zig`
     - `src/terminal/core/session/runtime_fields.zig`
