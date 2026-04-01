@@ -207,9 +207,6 @@ pub const PtyTerminalRuntime = struct {
     pub const feedOutputBytes = @import("protocol/terminal_core_feed.zig").feedOutputBytes;
     pub const resetState = mode_effects.resetState;
     pub const resetStateLocked = mode_effects.resetStateLocked;
-    pub const updateViewCacheForScroll = terminal_publication.updateViewCacheForScroll;
-    pub const updateViewCacheForScrollLocked = terminal_publication.updateViewCacheForScrollLocked;
-
     pub const enterAltScreen = mode_effects.enterAltScreen;
     pub const exitAltScreen = mode_effects.exitAltScreen;
 

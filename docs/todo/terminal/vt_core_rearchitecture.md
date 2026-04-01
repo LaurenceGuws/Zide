@@ -320,6 +320,11 @@ Validation note, 2026-03-31:
     `terminal_publication.{pendingGeneration,publishedGeneration,presentedGeneration,capturePresentation,syncUpdatesActive}(...)`
     directly, and `pty_terminal_runtime.zig` no longer re-exports that
     publication-only query/control slab
+  - scroll-driven view-cache refresh now follows that same owner rule too:
+    replay harness, reflow tests, resize reflow, and scrollback view now call
+    `terminal_publication.updateViewCacheForScroll{Locked}(...)` directly, and
+    `pty_terminal_runtime.zig` no longer re-exports that publication mutator
+    slab either
   - the remaining publication/view-cache helper stubs and the special-case
     protocol `appendHyperlink` wrapper are no longer written inline on
     `pty_terminal_runtime.zig`; those exceptions now route through the explicit

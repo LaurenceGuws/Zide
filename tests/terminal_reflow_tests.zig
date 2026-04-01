@@ -279,7 +279,7 @@ test "terminal view cache selection clamps row end to last content column" {
     session.startSelection(0, 0);
     session.updateSelection(0, 7);
     session.finishSelection();
-    session.updateViewCacheForScrollLocked();
+    terminal_publication.updateViewCacheForScrollLocked(session);
 
     const cache = terminal_publication.renderCache(session);
     try std.testing.expect(cache.hasSelection());
@@ -299,7 +299,7 @@ test "terminal view cache suppresses blank rows in multi-row selection overlay" 
     session.startSelection(0, 0);
     session.updateSelection(1, 7);
     session.finishSelection();
-    session.updateViewCacheForScrollLocked();
+    terminal_publication.updateViewCacheForScrollLocked(session);
 
     const cache = terminal_publication.renderCache(session);
     try std.testing.expect(cache.hasSelection());
@@ -317,7 +317,7 @@ test "terminal locked scroll refresh consumes pending view cache update" {
     defer session.deinit();
 
     terminal_debug.debugFeedBytes(session, "AAAA\nBBBB\nCCCC\nDDDD\n");
-    session.updateViewCacheForScrollLocked();
+    terminal_publication.updateViewCacheForScrollLocked(session);
 
     session.lock();
     defer session.unlock();
@@ -326,7 +326,7 @@ test "terminal locked scroll refresh consumes pending view cache update" {
     try std.testing.expect(session.viewRefreshPending());
     try std.testing.expectEqual(@as(usize, 0), terminal_publication.renderCache(session).scroll_offset);
 
-    session.updateViewCacheForScrollLocked();
+    terminal_publication.updateViewCacheForScrollLocked(session);
 
     try std.testing.expect(!session.viewRefreshPending());
     try std.testing.expectEqual(session.snapshot().scrollback_offset, terminal_publication.renderCache(session).scroll_offset);

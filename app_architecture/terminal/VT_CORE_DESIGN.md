@@ -310,6 +310,11 @@ Status note, 2026-03-31:
     directly for generation state, presentation capture, and sync-update
     state; `pty_terminal_runtime.zig` no longer re-exports that
     publication-only query/control slab
+  - scroll-driven view-cache refresh now follows that same owner rule too:
+    replay harness, reflow tests, resize reflow, and scrollback view now call
+    `terminal_publication.updateViewCacheForScroll{Locked}(...)` directly, and
+    `pty_terminal_runtime.zig` no longer re-exports that publication mutator
+    slab either
   - the same direct-owner cleanup now applies in `workspace.zig`: wrapper
     composition reads as runtime/workspace ownership, and progress-state typing
     no longer comes through `pty_terminal_runtime.zig`

@@ -854,7 +854,7 @@ fn applySelectionActions(session: *terminal_runtime.PtyTerminalRuntime, actions:
                 action.finished,
             ),
         }
-        session.updateViewCacheForScroll();
+        terminal_publication.updateViewCacheForScroll(session);
     }
 }
 

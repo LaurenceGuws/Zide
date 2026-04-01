@@ -362,7 +362,7 @@ fn reflowResizePrimary(
     } else {
         self.core.history.scrollback_offset = new_scroll_offset;
         terminal_publication.queueViewRefreshLocked(self, self.core.history.scrollback_offset);
-        self.updateViewCacheForScrollLocked();
+        terminal_publication.updateViewCacheForScrollLocked(self);
     }
     const max_offset = self.core.history.maxScrollOffset(rows);
     if (self.core.history.saved_scrollback_offset > max_offset) {
