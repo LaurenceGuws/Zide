@@ -2,6 +2,7 @@ const csi_mod = @import("../parser/csi.zig");
 const parser_mod = @import("../parser/parser.zig");
 const parser_hooks = @import("parser_hooks.zig");
 const control_handlers = @import("control_handlers.zig");
+const terminal_core_protocol = @import("terminal_core_protocol.zig");
 const terminal_core_text = @import("terminal_core_text.zig");
 
 pub fn handleControl(self: anytype, byte: u8) void {
@@ -33,13 +34,13 @@ pub fn handleAsciiSlice(self: anytype, bytes: []const u8) void {
 }
 
 pub fn newline(self: anytype) void {
-    control_handlers.newline(self);
+    terminal_core_protocol.newline(self);
 }
 
 pub fn wrapNewline(self: anytype) void {
-    control_handlers.wrapNewline(self);
+    terminal_core_protocol.wrapNewline(self);
 }
 
 pub fn reverseIndex(self: anytype) void {
-    control_handlers.reverseIndex(self);
+    terminal_core_protocol.reverseIndex(self);
 }

@@ -167,6 +167,10 @@ Evidence:
 - that effect seam now lives with protocol ownership in
   `terminal_core_protocol.zig` instead of being wired inline inside the text
   module
+- the same ownership correction is now broader:
+  newline, wrap-newline, and reverse-index no longer live in
+  `control_handlers.zig`; they now live with the rest of the protocol effect
+  surface in `terminal_core_protocol.zig`
 
 Reference comparison:
 

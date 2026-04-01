@@ -218,6 +218,10 @@ Validation note, 2026-03-31:
     protocol, mode-effect, feed, and publication owners
   - the API seam name is now honest too:
     `src/terminal/core/terminal_protocol_api.zig`
+  - newline, wrap-newline, and reverse-index now live under
+    `src/terminal/core/terminal_core_protocol.zig`
+    instead of staying split awkwardly between dispatch and
+    `control_handlers.zig`
 - [ ] `VTCORE-05` Simplify snapshot and render publication.
   Notes: the explicit publication center now lives in
   `src/terminal/core/terminal_publication.zig`, and the old live

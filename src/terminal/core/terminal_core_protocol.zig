@@ -17,7 +17,12 @@ pub const TextEffects = struct {
             .wrap_newline_fn = struct {
                 fn call(ctx: *anyopaque) void {
                     const self: OwnerPtr = @ptrCast(@alignCast(ctx));
-                    @import("control_handlers.zig").wrapNewline(self);
+                    const screen = self.activeScreen();
+                    switch (screen.wrapNewlineAction()) {
+                        .moved => {},
+                        .scroll_region => self.scrollRegionUpWithOrigin(1, "control.wrap_newline.scroll_region"),
+                        .scroll_full => scrolling_mod.scrollUp(self),
+                    }
                 }
             }.call,
             .insert_chars_fn = struct {
@@ -70,6 +75,35 @@ pub fn insertChars(self: anytype, count: usize) void {
     const screen = self.core.activeScreen();
     const blank_cell = screen.blankCell();
     screen.insertChars(count, blank_cell);
+}
+
+pub fn newline(self: anytype) void {
+    const screen = self.activeScreen();
+    switch (screen.newlineAction()) {
+        .moved => {},
+        .scroll_region => self.scrollRegionUpWithOrigin(1, "control.lf.scroll_region"),
+        .scroll_full => scrolling_mod.scrollUp(self),
+    }
+}
+
+pub fn wrapNewline(self: anytype) void {
+    const screen = self.activeScreen();
+    switch (screen.wrapNewlineAction()) {
+        .moved => {},
+        .scroll_region => self.scrollRegionUpWithOrigin(1, "control.wrap_newline.scroll_region"),
+        .scroll_full => scrolling_mod.scrollUp(self),
+    }
+}
+
+pub fn reverseIndex(self: anytype) void {
+    const screen = self.activeScreen();
+    if (screen.cursor.row > screen.scroll_top) {
+        screen.cursorUp(1);
+        return;
+    }
+    if (screen.cursor.row == screen.scroll_top) {
+        self.scrollRegionDown(1);
+    }
 }
 
 pub fn deleteChars(self: anytype, count: usize) void {

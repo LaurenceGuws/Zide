@@ -1,4 +1,3 @@
-const scrolling_mod = @import("scrolling.zig");
 pub fn handleControl(self: anytype, byte: u8) void {
     const screen = self.activeScreen();
     switch (byte) {
@@ -9,7 +8,7 @@ pub fn handleControl(self: anytype, byte: u8) void {
             screen.tab();
         },
         0x0A => { // LF
-            newline(self);
+            @import("terminal_core_protocol.zig").newline(self);
         },
         0x0D => { // CR
             screen.carriageReturn();
@@ -24,34 +23,5 @@ pub fn handleControl(self: anytype, byte: u8) void {
             self.core.enterEscapeState();
         },
         else => {},
-    }
-}
-
-pub fn newline(self: anytype) void {
-    const screen = self.activeScreen();
-    switch (screen.newlineAction()) {
-        .moved => {},
-        .scroll_region => self.scrollRegionUpWithOrigin(1, "control.lf.scroll_region"),
-        .scroll_full => scrolling_mod.scrollUp(self),
-    }
-}
-
-pub fn wrapNewline(self: anytype) void {
-    const screen = self.activeScreen();
-    switch (screen.wrapNewlineAction()) {
-        .moved => {},
-        .scroll_region => self.scrollRegionUpWithOrigin(1, "control.wrap_newline.scroll_region"),
-        .scroll_full => scrolling_mod.scrollUp(self),
-    }
-}
-
-pub fn reverseIndex(self: anytype) void {
-    const screen = self.activeScreen();
-    if (screen.cursor.row > screen.scroll_top) {
-        screen.cursorUp(1);
-        return;
-    }
-    if (screen.cursor.row == screen.scroll_top) {
-        self.scrollRegionDown(1);
     }
 }
