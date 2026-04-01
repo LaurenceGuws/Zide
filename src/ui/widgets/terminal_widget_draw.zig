@@ -144,6 +144,15 @@ const HandoffState = struct {
     presented_generation: u64,
 };
 
+const DrawLogBuffers = struct {
+    partial_plan_summary_buf: [256]u8 = undefined,
+    glyph_stats_summary_buf: [220]u8 = undefined,
+    glyph_batch_summary_buf: [96]u8 = undefined,
+    glyph_atlas_summary_buf: [96]u8 = undefined,
+    sprite_stats_summary_buf: [48]u8 = undefined,
+    lock_stats_summary_buf: [64]u8 = undefined,
+};
+
 pub fn latestFrameLatencyMetrics() FrameLatencyMetrics {
     return frame_latency_metrics;
 }
@@ -794,12 +803,7 @@ pub fn drawPrepared(
     var partial_plan_cells: usize = 0;
     var partial_plan_union_cells: usize = 0;
     var partial_plan_summary: []const u8 = "";
-    var partial_plan_summary_buf: [256]u8 = undefined;
-    var glyph_stats_summary_buf: [220]u8 = undefined;
-    var glyph_batch_summary_buf: [96]u8 = undefined;
-    var glyph_atlas_summary_buf: [96]u8 = undefined;
-    var sprite_stats_summary_buf: [48]u8 = undefined;
-    var lock_stats_summary_buf: [64]u8 = undefined;
+    var log_buffers = DrawLogBuffers{};
     var fullframe_fastpath_decision: FullFrameFastPathDecision = .{};
     const has_kitty = self.kitty.hasKitty();
     const bg_color = if (view_cells.len > 0) toShellColor(base_colors.background) else r.theme.background;
@@ -1211,7 +1215,7 @@ pub fn drawPrepared(
                     partial_plan_bounds,
                     draw_log.enabled_file or draw_log.enabled_console,
                     telemetry.texture_partial_update,
-                    &partial_plan_summary_buf,
+                    &log_buffers.partial_plan_summary_buf,
                 );
                 partial_plan_rows_count = partial_plan.rows_count;
                 partial_plan_row_span = partial_plan.row_span;
@@ -1533,7 +1537,7 @@ pub fn drawPrepared(
             "draw_ms={d:.2} lock_stats={s} texture_update_ms={d:.2} texture_bg_ms={d:.2} texture_glyph_ms={d:.2} texture_kitty_ms={d:.2} overlay_ms={d:.2} full={d} partial={d} updated={d} sync={d} clear_ok={d} dirty={s} current_reason={s} dirty_rows={d} damage_rows={d} damage_cols={d} plan_rows={d} plan_row_span={d} plan_col_span={d} plan_cells={d} plan_union_cells={d} blink_cells={d} blink_phase_changed={d} shift_rows={d} shift_exposed_only={d} sprite_stats={s} glyph_batch_stats={s} glyph_atlas_stats={s} glyph_stats={s} rows={d} cols={d}",
             .{
                 elapsed_ms,
-                std.fmt.bufPrint(&lock_stats_summary_buf, "{d:.2}/{d:.2}/{d:.2}/{d:.2}/{d:.2}", .{
+                std.fmt.bufPrint(&log_buffers.lock_stats_summary_buf, "{d:.2}/{d:.2}/{d:.2}/{d:.2}/{d:.2}", .{
                     lock_ms,
                     lock_wait_ms,
                     lock_hold_ms,
@@ -1564,19 +1568,19 @@ pub fn drawPrepared(
                 @intFromBool(blink_phase_changed),
                 viewport_shift.rows,
                 @intFromBool(viewport_shift.exposed_only),
-                std.fmt.bufPrint(&sprite_stats_summary_buf, "{d}/{d}/{d}/{d:.2}", .{
+                std.fmt.bufPrint(&log_buffers.sprite_stats_summary_buf, "{d}/{d}/{d}/{d:.2}", .{
                     glyph_draw_stats.special_sprite_cache_hits,
                     glyph_draw_stats.special_sprite_cache_misses,
                     glyph_draw_stats.special_sprite_creates,
                     glyph_draw_stats.special_sprite_lookup_ms,
                 }) catch "overflow",
-                std.fmt.bufPrint(&glyph_batch_summary_buf, "{d}/{d}/{d}/{d}", .{
+                std.fmt.bufPrint(&log_buffers.glyph_batch_summary_buf, "{d}/{d}/{d}/{d}", .{
                     r.terminal_glyph_cache.frameMetrics().quad_count,
                     r.terminal_glyph_cache.frameMetrics().flush_count,
                     r.terminal_glyph_cache.frameMetrics().draw_call_count,
                     r.terminal_glyph_cache.frameMetrics().vertex_count,
                 }) catch "overflow",
-                std.fmt.bufPrint(&glyph_atlas_summary_buf, "{d}/{d}/{d}/{d}/{d}/{d}/{d}", .{
+                std.fmt.bufPrint(&log_buffers.glyph_atlas_summary_buf, "{d}/{d}/{d}/{d}/{d}/{d}/{d}", .{
                     r.terminal_font.frameAtlasStats().glyph_cache_hits,
                     r.terminal_font.frameAtlasStats().glyph_cache_misses,
                     r.terminal_font.frameAtlasStats().rasterized_glyphs,
@@ -1585,7 +1589,7 @@ pub fn drawPrepared(
                     r.terminal_font.frameAtlasStats().uploaded_color_glyphs,
                     r.terminal_font.frameAtlasStats().uploaded_pixels,
                 }) catch "overflow",
-                std.fmt.bufPrint(&glyph_stats_summary_buf, "{d}/{d}/{d}/{d}/{d}/{d}/{d}/{d}/{d:.2}/{d:.2}/{d:.2}/{d:.2}/{d:.2}/{d:.2}/{d:.2}/{d:.2}/{d:.2}/{d:.2}/{d:.2}", .{
+                std.fmt.bufPrint(&log_buffers.glyph_stats_summary_buf, "{d}/{d}/{d}/{d}/{d}/{d}/{d}/{d}/{d:.2}/{d:.2}/{d:.2}/{d:.2}/{d:.2}/{d:.2}/{d:.2}/{d:.2}/{d:.2}/{d:.2}/{d:.2}", .{
                     glyph_draw_stats.shaping_spans,
                     glyph_draw_stats.shaped_glyphs,
                     glyph_draw_stats.fallback_cells,

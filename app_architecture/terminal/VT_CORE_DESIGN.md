@@ -223,6 +223,9 @@ Status note, 2026-03-31:
   - handoff/log snapshot state inside draw should also be grouped once it feeds
     multiple logging sites, instead of repeating the same session-generation
     reads inline
+  - formatting scratch buffers used only for draw logging should be grouped too
+    once they start reading like an unrelated local slab in the main render
+    body
   - once a publication helper exists, widget draw should consume its direct
     truth completely; it should not keep mixing helper-owned state with raw
     reads like `cache.alt_active` or repeated `cache.dirty == .none`

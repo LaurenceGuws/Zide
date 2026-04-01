@@ -330,6 +330,10 @@ Validation note, 2026-03-31:
     - `HandoffState`
     now owns the last/pending/published/presented generation snapshot used by
     widget plan/commit logging instead of rebuilding that state ad hoc
+  - draw-log formatting buffers are also grouped now:
+    - `DrawLogBuffers`
+    now owns the partial-plan and perf-log formatting scratch buffers instead
+    of leaving a slab of unrelated local arrays in the middle of draw
   - lifecycle/dirty helpers now also own more of the direct truth widget draw
     needs:
     - `lifecycleTransitionInfo(...)` carries current alt-state
