@@ -418,6 +418,9 @@ Evidence:
   debug, and runtime tests:
   those paths use `terminal_publication.renderCache(...)` directly and the
   dead wrapper `renderCache` export is gone from `pty_terminal_runtime.zig`
+- raw generation-cache lookup is now publication-internal too:
+  host code only gets the locked publication contract for generation lookup,
+  not the raw unlocked storage walk
 - the outer CSI forwarding shell is gone too:
   `terminal_protocol_api.zig` now routes CSI directly into
   `src/terminal/protocol/csi.zig` without stepping through an extra

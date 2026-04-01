@@ -276,6 +276,11 @@ Validation note, 2026-03-31:
     those paths now use `terminal_publication.renderCache(...)` directly, and
     the dead wrapper `renderCache` export is removed from
     `pty_terminal_runtime.zig`
+  - raw generation-cache lookup is no longer part of the public publication
+    surface:
+    `renderCacheForGeneration(...)` is now publication-internal, and host code
+    only gets the locked publication contract through
+    `renderCacheForGenerationLocked(...)`
   - the remaining publication/view-cache helper stubs and the special-case
     protocol `appendHyperlink` wrapper are no longer written inline on
     `pty_terminal_runtime.zig`; those exceptions now route through the explicit

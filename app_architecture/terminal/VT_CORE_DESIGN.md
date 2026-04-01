@@ -272,6 +272,9 @@ Status note, 2026-03-31:
     debug, and runtime tests:
     those paths use `terminal_publication.renderCache(...)` directly instead of
     treating the wrapper as publication storage owner
+  - raw generation-cache lookup is now publication-internal too:
+    host code only gets the locked publication contract for generation lookup,
+    not the raw unlocked storage walk
   - the same direct-owner cleanup now applies in `workspace.zig`: wrapper
     composition reads as runtime/workspace ownership, and progress-state typing
     no longer comes through `pty_terminal_runtime.zig`

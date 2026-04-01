@@ -425,7 +425,7 @@ pub fn publishRenderCacheIndex(self: anytype, index: u8) void {
     self.publication.render_cache_index.store(index, .release);
 }
 
-pub fn renderCacheForGeneration(self: anytype, generation: u64) ?*const RenderCache {
+fn renderCacheForGeneration(self: anytype, generation: u64) ?*const RenderCache {
     inline for (0..2) |i| {
         const cache = &self.publication.render_caches[i];
         if (cache.generation == generation) return cache;
