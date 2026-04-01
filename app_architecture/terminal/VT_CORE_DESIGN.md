@@ -101,6 +101,10 @@ Status note, 2026-03-31:
     `terminal_protocol_api.zig` now routes OSC directly into
     `src/terminal/protocol/osc.zig` without stepping through an extra
     aggregate `SessionFacade`
+  - the outer DCS/APC forwarding shell is gone too:
+    `terminal_protocol_api.zig` now routes DCS/APC directly into
+    `src/terminal/protocol/dcs_apc.zig` without stepping through an extra
+    `SessionFacade`
   - duplicated publication/cache truth
   - oversized native widget/render coordination around terminal publication
 - The current operating rule is sequential but ruthless:

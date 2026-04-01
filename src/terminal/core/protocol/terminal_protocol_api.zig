@@ -17,11 +17,11 @@ pub fn handleControl(self: anytype, byte: u8) void {
 }
 
 pub fn parseDcs(self: anytype, payload: []const u8) void {
-    protocol_dcs_apc.parseDcs(protocol_dcs_apc.SessionFacade.from(self), payload);
+    protocol_dcs_apc.parseDcs(self, payload);
 }
 
 pub fn parseApc(self: anytype, payload: []const u8) void {
-    protocol_dcs_apc.parseApc(protocol_dcs_apc.SessionFacade.from(self), payload);
+    protocol_dcs_apc.parseApc(self, payload);
 }
 
 pub fn parseOsc(self: anytype, payload: []const u8, terminator: parser_mod.OscTerminator) void {

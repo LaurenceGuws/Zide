@@ -252,6 +252,10 @@ Evidence:
   `terminal_protocol_api.zig` now routes OSC directly into
   `src/terminal/protocol/osc.zig` without stepping through an extra aggregate
   `SessionFacade`
+- the outer DCS/APC forwarding shell is gone too:
+  `terminal_protocol_api.zig` now routes DCS/APC directly into
+  `src/terminal/protocol/dcs_apc.zig` without stepping through an extra
+  `SessionFacade`
 - the remaining callback seam is narrower:
   - wrap/newline effects
   - insert-mode char insertion effects

@@ -308,6 +308,10 @@ Validation note, 2026-03-31:
   - the dead outer `SessionFacade` shell in `src/terminal/protocol/osc.zig` is
     now gone too; `terminal_protocol_api.zig` routes OSC directly while the
     smaller OSC subsystem facades remain in place
+  - the dead outer `SessionFacade` shell in
+    `src/terminal/protocol/dcs_apc.zig` is now gone too;
+    `terminal_protocol_api.zig` routes DCS/APC directly while the real DCS/APC
+    behavior stays in place
   - the stale `src/terminal/core/session_protocol.zig` forwarding shell is now
     deleted; `protocol/terminal_protocol_api.zig` routes directly to the real core,
     protocol, mode-effect, feed, and publication owners
