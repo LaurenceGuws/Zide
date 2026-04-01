@@ -19,7 +19,7 @@ pub fn debugSnapshot(self: anytype) @import("../publication/snapshot.zig").Debug
         .focus_reporting = self.interaction.focus_reporting,
         .selection = selection_mod.selectionState(self),
         .base_default_attrs = self.core.base_default_attrs,
-        .render_cache = self.renderCache(),
+        .render_cache = terminal_publication.renderCache(self),
     };
 }
 

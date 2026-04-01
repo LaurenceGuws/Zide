@@ -418,9 +418,9 @@ pub fn runFixtureObservedWithOptions(
         applyBaselineScrollbackRows(session, fixture.meta.baseline_scrollback_rows);
         applyBaselineGridRows(session, fixture.meta.baseline_grid_rows);
         applyScrollOffsetActions(session, fixture.meta.baseline_scroll_offsets);
-        baseline_publication.generation = session.renderCache().generation;
-        terminal_publication.notePresentedGeneration(session, session.renderCache().generation);
-        if (!terminal_publication.acknowledgePresentedGeneration(session, session.renderCache().generation)) {
+        baseline_publication.generation = terminal_publication.renderCache(session).generation;
+        terminal_publication.notePresentedGeneration(session, terminal_publication.renderCache(session).generation);
+        if (!terminal_publication.acknowledgePresentedGeneration(session, terminal_publication.renderCache(session).generation)) {
             return error.BaselinePublishAcknowledgeFailed;
         }
     }

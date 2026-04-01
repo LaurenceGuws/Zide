@@ -271,6 +271,11 @@ Validation note, 2026-03-31:
     `acknowledgePresentedGeneration(...)` on
     `src/terminal/core/publication/terminal_publication.zig` directly, and the
     dead wrapper exports are removed from `pty_terminal_runtime.zig`
+  - the same direct-owner rule now applies to published render-cache reads in
+    replay, debug, and runtime tests:
+    those paths now use `terminal_publication.renderCache(...)` directly, and
+    the dead wrapper `renderCache` export is removed from
+    `pty_terminal_runtime.zig`
   - the remaining publication/view-cache helper stubs and the special-case
     protocol `appendHyperlink` wrapper are no longer written inline on
     `pty_terminal_runtime.zig`; those exceptions now route through the explicit

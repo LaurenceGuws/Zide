@@ -219,7 +219,6 @@ pub const PtyTerminalRuntime = struct {
     pub const exitAltScreen = mode_effects.exitAltScreen;
 
     pub const snapshot = terminal_publication.snapshot;
-    pub const renderCache = terminal_publication.renderCache;
     pub const copyPublishedRenderCache = terminal_publication.copyPublishedRenderCache;
     pub const capturePresentation = terminal_publication.capturePresentation;
     pub const completePresentationFeedback = terminal_publication.completePresentationFeedback;

@@ -414,6 +414,10 @@ Evidence:
   generation note/ack flow as wrapper contract:
   they now call `terminal_publication.zig` directly and the dead wrapper
   exports are gone from `pty_terminal_runtime.zig`
+- published render-cache reads now follow that same owner rule in replay,
+  debug, and runtime tests:
+  those paths use `terminal_publication.renderCache(...)` directly and the
+  dead wrapper `renderCache` export is gone from `pty_terminal_runtime.zig`
 - the outer CSI forwarding shell is gone too:
   `terminal_protocol_api.zig` now routes CSI directly into
   `src/terminal/protocol/csi.zig` without stepping through an extra

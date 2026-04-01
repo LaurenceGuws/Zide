@@ -268,6 +268,10 @@ Status note, 2026-03-31:
     replay, FFI present-ack, and runtime tests now target
     `terminal_publication.zig` directly for presented-generation note/ack flow,
     and the dead wrapper exports are removed
+  - published render-cache reads now follow that same owner rule in replay,
+    debug, and runtime tests:
+    those paths use `terminal_publication.renderCache(...)` directly instead of
+    treating the wrapper as publication storage owner
   - the same direct-owner cleanup now applies in `workspace.zig`: wrapper
     composition reads as runtime/workspace ownership, and progress-state typing
     no longer comes through `pty_terminal_runtime.zig`

@@ -317,7 +317,7 @@ pub fn snapshot(self: anytype) TerminalSnapshot {
         _ = applyPendingViewRefreshLocked(self, "snapshot");
     }
 
-    const cache = self.renderCache();
+    const cache = renderCache(self);
     const scrollback_offset = self.core.scrollbackOffset();
     return .{
         .rows = cache.rows,
