@@ -5,7 +5,6 @@ pub fn applySelectionDirtyExpansion(
     active_cache: anytype,
     rows: usize,
     cols: usize,
-    fullwidth_origin_log: anytype,
     allow_selection_narrowing: bool,
 ) void {
     if (active_cache.selection_rows.items.len != rows) return;
@@ -29,18 +28,6 @@ pub fn applySelectionDirtyExpansion(
             publication.addRowDirtySpan(cache, row_idx, 0, cols - 1, cols);
         }
         publication.rebuildRowDirtyUnion(cache, row_idx, cols);
-        fullwidth_origin_log.logf(
-            .info,
-            "source=view_cache row={d} reason=selection_change cols=0..{d} was_selected={d} is_selected={d} rows={d} cols={d}",
-            .{
-                row_idx,
-                if (cols > 0) cols - 1 else 0,
-                @intFromBool(was_selected),
-                @intFromBool(is_selected),
-                rows,
-                cols,
-            },
-        );
         if (cache.dirty == .none) {
             cache.dirty = .partial;
             cache.damage = .{

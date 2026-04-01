@@ -1,5 +1,4 @@
 const std = @import("std");
-const app_logger = @import("../../app_logger.zig");
 const publication = @import("view_cache_publication.zig");
 
 pub fn canRefineRowHashDamage(
@@ -19,41 +18,6 @@ pub fn canRefineRowHashDamage(
         kitty_generation_unchanged and
         active_cache.row_hashes.items.len == rows and
         (active_cache.generation == presented_generation or active_cache.dirty == .partial);
-}
-
-pub fn logBroadRefinedSpans(
-    cache: anytype,
-    rows: usize,
-    cols: usize,
-    fullwidth_origin_log: anytype,
-) void {
-    if (cols == 0 or cache.dirty != .partial) return;
-    var broad_refined_logged: usize = 0;
-    var row_idx: usize = 0;
-    while (row_idx < rows and broad_refined_logged < 5) : (row_idx += 1) {
-        if (!cache.dirty_rows.items[row_idx]) continue;
-        const start_col = @as(usize, cache.dirty_cols_start.items[row_idx]);
-        const end_col = @as(usize, cache.dirty_cols_end.items[row_idx]);
-        if (end_col < start_col) continue;
-        const span_width = end_col - start_col + 1;
-        if (span_width < cols / 2 or (start_col == 0 and end_col == cols - 1)) continue;
-        fullwidth_origin_log.logf(
-            .info,
-            "source=view_cache row={d} reason=refined_broad_span cols={d}..{d} width={d} dirty={s} damage_rows={d} damage_cols={d} rows={d} cols={d}",
-            .{
-                row_idx,
-                start_col,
-                end_col,
-                span_width,
-                @tagName(cache.dirty),
-                if (cache.damage.end_row >= cache.damage.start_row) cache.damage.end_row - cache.damage.start_row + 1 else 0,
-                if (cache.damage.end_col >= cache.damage.start_col) cache.damage.end_col - cache.damage.start_col + 1 else 0,
-                rows,
-                cols,
-            },
-        );
-        broad_refined_logged += 1;
-    }
 }
 
 fn restoredCarriedSpan(active_start: u16, active_end: u16, cols: usize) ?struct { start: u16, end: u16 } {
@@ -90,7 +54,6 @@ pub fn refineRowHashDamage(
     active_cache: anytype,
     rows: usize,
     cols: usize,
-    fullwidth_origin_log: anytype,
     allow_row_hash_narrowing: bool,
     merge_active_partial: bool,
 ) void {
@@ -123,17 +86,6 @@ pub fn refineRowHashDamage(
                 publication.addRowDirtySpan(cache, row_idx, span.start, span.end, cols);
             }
             publication.rebuildRowDirtyUnion(cache, row_idx, cols);
-            fullwidth_origin_log.logf(
-                .info,
-                "source=view_cache row={d} reason=row_hash_changed cols={d}..{d} rows={d} cols={d}",
-                .{
-                    row_idx,
-                    cache.dirty_cols_start.items[row_idx],
-                    cache.dirty_cols_end.items[row_idx],
-                    rows,
-                    cols,
-                },
-            );
             any_dirty = true;
         }
     }
@@ -227,15 +179,6 @@ test "refineRowHashDamage preserves disjoint row spans after row-hash narrowing"
         &active_cache,
         1,
         20,
-        app_logger.Logger{
-            .name = "test.view_cache_refinement",
-            .enabled_file = false,
-            .enabled_console = false,
-            .file_level = .info,
-            .console_level = .info,
-            .file_output_mode = .text,
-            .console_output_mode = .text,
-        },
         true,
         false,
     );

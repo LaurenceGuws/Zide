@@ -388,8 +388,6 @@ pub fn assignDirtyColsFromView(
     view: anytype,
     plan: anytype,
     rows: usize,
-    cols: usize,
-    fullwidth_origin_log: anytype,
 ) bool {
     if (!(view.dirty_cols_start.len == rows and
         view.dirty_cols_end.len == rows and
@@ -401,51 +399,6 @@ pub fn assignDirtyColsFromView(
 
     std.mem.copyForwards(u16, cache.dirty_cols_start.items, view.dirty_cols_start);
     std.mem.copyForwards(u16, cache.dirty_cols_end.items, view.dirty_cols_end);
-    if (cols > 0 and view.dirty == .partial) {
-        var logged: usize = 0;
-        var broad_logged: usize = 0;
-        var row_idx: usize = 0;
-        while (row_idx < rows and (logged < 5 or broad_logged < 5)) : (row_idx += 1) {
-            if (!cache.dirty_rows.items[row_idx]) continue;
-            const start_col = @as(usize, cache.dirty_cols_start.items[row_idx]);
-            const end_col = @as(usize, cache.dirty_cols_end.items[row_idx]);
-            if (start_col == 0 and end_col == cols - 1 and logged < 5) {
-                fullwidth_origin_log.logf(
-                    .info,
-                    "source=view row={d} reason=copied_from_view cols=0..{d} dirty={s} damage_rows={d} damage_cols={d} rows={d} cols={d}",
-                    .{
-                        row_idx,
-                        cols - 1,
-                        @tagName(view.dirty),
-                        if (view.damage.end_row >= view.damage.start_row) view.damage.end_row - view.damage.start_row + 1 else 0,
-                        if (view.damage.end_col >= view.damage.start_col) view.damage.end_col - view.damage.start_col + 1 else 0,
-                        rows,
-                        cols,
-                    },
-                );
-                logged += 1;
-            }
-            const span_width = end_col - start_col + 1;
-            if (broad_logged < 5 and span_width >= cols / 2 and !(start_col == 0 and end_col == cols - 1)) {
-                fullwidth_origin_log.logf(
-                    .info,
-                    "source=view row={d} reason=copied_broad_from_view cols={d}..{d} width={d} dirty={s} damage_rows={d} damage_cols={d} rows={d} cols={d}",
-                    .{
-                        row_idx,
-                        start_col,
-                        end_col,
-                        span_width,
-                        @tagName(view.dirty),
-                        if (view.damage.end_row >= view.damage.start_row) view.damage.end_row - view.damage.start_row + 1 else 0,
-                        if (view.damage.end_col >= view.damage.start_col) view.damage.end_col - view.damage.start_col + 1 else 0,
-                        rows,
-                        cols,
-                    },
-                );
-                broad_logged += 1;
-            }
-        }
-    }
     return true;
 }
 
