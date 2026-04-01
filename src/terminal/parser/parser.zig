@@ -1,6 +1,12 @@
 const std = @import("std");
 const stream_mod = @import("stream.zig");
 const csi_mod = @import("csi.zig");
+const control_handlers = @import("../core/protocol/control_handlers.zig");
+const terminal_core_protocol = @import("../core/protocol/terminal_core_protocol.zig");
+const terminal_core_text = @import("../core/protocol/terminal_core_text.zig");
+const protocol_csi = @import("../protocol/csi.zig");
+const osc = @import("../protocol/osc.zig");
+const dcs_apc = @import("../protocol/dcs_apc.zig");
 const app_logger = @import("../../app_logger.zig");
 
 pub const Parser = struct {
@@ -87,9 +93,9 @@ pub const Parser = struct {
                 }
                 if (self.stream.feed(byte)) |event| {
                     switch (event) {
-                        .codepoint => |cp| session.handleCodepoint(@intCast(cp)),
-                        .control => |c| session.handleControl(c),
-                        .invalid => session.handleCodepoint(0xFFFD),
+                        .codepoint => |cp| terminal_core_text.handleCodepoint(session, @intCast(cp)),
+                        .control => |c| control_handlers.handleControl(session, c),
+                        .invalid => terminal_core_text.handleCodepoint(session, 0xFFFD),
                     }
                 }
             },
@@ -128,10 +134,10 @@ pub const Parser = struct {
                     session.restoreCursor();
                     self.esc_state = .ground;
                 } else if (byte == 'H') {
-                    session.setTabAtCursor();
+                    terminal_core_protocol.setTabAtCursor(session);
                     self.esc_state = .ground;
                 } else if (byte == 'M') { // RI
-                    session.reverseIndex();
+                    terminal_core_protocol.reverseIndex(session);
                     self.esc_state = .ground;
                 } else if (byte == '=') {
                     session.setKeypadModeLocked(true);
@@ -160,7 +166,7 @@ pub const Parser = struct {
             },
             .csi => {
                 if (self.csi.feed(byte)) |action| {
-                    session.handleCsi(action);
+                    protocol_csi.handleCsi(session, action);
                     self.esc_state = .ground;
                 }
             },
@@ -194,7 +200,7 @@ pub const Parser = struct {
                     i += 1;
                 }
                 if (i > start) {
-                    session.handleAsciiSlice(bytes[start..i]);
+                    terminal_core_text.handleAsciiSlice(session, bytes[start..i]);
                     continue;
                 }
             }
@@ -241,7 +247,7 @@ pub const Parser = struct {
     }
 
     fn finishOsc(self: *Parser, session: anytype) void {
-        session.parseOsc(self.osc_buffer.items, self.osc_terminator);
+        osc.parseOsc(session, self.osc_buffer.items, self.osc_terminator);
         self.osc_buffer.clearRetainingCapacity();
         self.osc_state = .idle;
     }
@@ -281,7 +287,7 @@ pub const Parser = struct {
     }
 
     fn finishApc(self: *Parser, session: anytype) void {
-        session.parseApc(self.apc_buffer.items);
+        dcs_apc.parseApc(session, self.apc_buffer.items);
         self.apc_buffer.clearRetainingCapacity();
         self.apc_state = .idle;
     }
@@ -316,7 +322,7 @@ pub const Parser = struct {
     }
 
     fn finishDcs(self: *Parser, session: anytype) void {
-        session.parseDcs(self.dcs_buffer.items);
+        dcs_apc.parseDcs(session, self.dcs_buffer.items);
         self.dcs_buffer.clearRetainingCapacity();
         self.dcs_state = .idle;
     }

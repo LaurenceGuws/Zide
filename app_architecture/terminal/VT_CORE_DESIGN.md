@@ -195,6 +195,10 @@ Status note, 2026-03-31:
     is literally just the stable wrapper entrypoint with no dead import
     residue, and `src/terminal/core/pty_terminal_runtime.zig` dropped the dead
     type/constant alias slab that no longer had live repo callers
+  - parser dispatch is now flatter too: `src/terminal/parser/parser.zig` and
+    local-echo input call the real protocol/text owners directly, so
+    `src/terminal/core/pty_terminal_runtime.zig` no longer has to advertise the
+    old parser-facing method slab for control/CSI/OSC/DCS/printable text
   - the same direct-owner cleanup now applies in `workspace.zig`: wrapper
     composition reads as runtime/workspace ownership, and progress-state typing
     no longer comes through `pty_terminal_runtime.zig`

@@ -1,5 +1,6 @@
 const std = @import("std");
 const input_modes = @import("../input_modes.zig");
+const terminal_core_text = @import("../protocol/terminal_core_text.zig");
 const terminal_transport = @import("../runtime/terminal_transport.zig");
 const input_mod = @import("../../input/input.zig");
 const types = @import("../../model/types.zig");
@@ -22,7 +23,7 @@ fn echoCharLocallyIfEnabled(self: anytype, char: u32, mod: Modifier, action: inp
     if (char > 0x10FFFF or (char >= 0xD800 and char <= 0xDFFF)) return;
     const screen = self.activeScreen();
     if (!screen.local_echo_mode_12) return;
-    self.handleCodepoint(char);
+    terminal_core_text.handleCodepoint(self, char);
 }
 
 pub fn sendKey(self: anytype, key: Key, mod: Modifier) !void {

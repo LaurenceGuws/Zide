@@ -260,6 +260,10 @@ Judgment:
   is literally just the stable wrapper entrypoint with no dead import residue,
   and `src/terminal/core/pty_terminal_runtime.zig` dropped the dead
   type/constant alias slab that no longer had live callers
+- parser dispatch is flatter now too: `src/terminal/parser/parser.zig` and
+  local-echo input call the real protocol/text owners directly, so
+  `src/terminal/core/pty_terminal_runtime.zig` no longer needs the old
+  parser-facing method slab for control/CSI/OSC/DCS/printable text dispatch
 - the flat root state is now also grouped into explicit subsystem-owned
   embedded structs:
   - `session/publication_fields`

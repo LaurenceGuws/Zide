@@ -288,6 +288,11 @@ Validation note, 2026-03-31:
     is now literally just the wrapper entrypoint with no dead import residue,
     and `src/terminal/core/pty_terminal_runtime.zig` dropped the dead
     wrapper-side type/constant alias slab that no longer had live callers
+  - another real `VTCORE-04` / `VTCORE-01` ownership cut is now in too:
+    `src/terminal/parser/parser.zig` and local-echo input now call the real
+    protocol/text owners directly, so `src/terminal/core/pty_terminal_runtime.zig`
+    no longer carries the old parser-facing method slab for control/CSI/OSC/DCS
+    / printable text dispatch
   - raw session state is no longer a flat lie:
     - `src/terminal/core/session/publication_fields.zig`
     - `src/terminal/core/session/runtime_fields.zig`
