@@ -1,18 +1,8 @@
 const std = @import("std");
 const compile_utils = @import("compile_utils.zig");
+const report_catalog = @import("report_catalog.zig");
 
-const ReportToolSpec = struct {
-    exe_name: []const u8,
-    root_source_file: []const u8,
-    step_name: []const u8,
-    description: []const u8,
-    adds_build_options: bool = true,
-    adds_target_profile_import: bool = false,
-    adds_step_catalog_import: bool = false,
-    adds_policy_catalog_import: bool = false,
-    adds_profile_catalog_import: bool = false,
-    adds_platform_capabilities_import: bool = false,
-};
+const ReportToolSpec = report_catalog.ReportToolSpec;
 
 pub fn addReportBuildAllStep(
     b: *std.Build,
@@ -31,21 +21,7 @@ pub fn addReportBuildProfilesStep(
     target: std.Build.ResolvedTarget,
     optimize: std.builtin.OptimizeMode,
 ) *std.Build.Step {
-    return addReportToolRunStep(
-        b,
-        target,
-        optimize,
-        null,
-        .{
-            .exe_name = "build-profile-report",
-            .root_source_file = "build_system/reports/build_profile_report.zig",
-            .step_name = "report-build-profiles",
-            .description = "Report active build dependency profiles",
-            .adds_build_options = false,
-            .adds_target_profile_import = true,
-            .adds_profile_catalog_import = true,
-        },
-    );
+    return addReportToolRunStep(b, target, optimize, null, report_catalog.build_profile_report);
 }
 
 pub fn addReportBuildDependenciesStep(
@@ -53,20 +29,7 @@ pub fn addReportBuildDependenciesStep(
     target: std.Build.ResolvedTarget,
     optimize: std.builtin.OptimizeMode,
 ) *std.Build.Step {
-    return addReportToolRunStep(
-        b,
-        target,
-        optimize,
-        null,
-        .{
-            .exe_name = "build-dependency-report",
-            .root_source_file = "build_system/reports/build_dependency_report.zig",
-            .step_name = "report-build-dependencies",
-            .description = "Report dependency intent for each build profile",
-            .adds_build_options = false,
-            .adds_profile_catalog_import = true,
-        },
-    );
+    return addReportToolRunStep(b, target, optimize, null, report_catalog.build_dependency_report);
 }
 
 pub fn addReportBuildModeStep(
@@ -75,18 +38,7 @@ pub fn addReportBuildModeStep(
     optimize: std.builtin.OptimizeMode,
     build_options: *std.Build.Step.Options,
 ) *std.Build.Step {
-    return addReportToolRunStep(
-        b,
-        target,
-        optimize,
-        build_options,
-        .{
-            .exe_name = "build-mode-report",
-            .root_source_file = "build_system/reports/build_mode_report.zig",
-            .step_name = "report-build-mode",
-            .description = "Report selected app build mode and graph path",
-        },
-    );
+    return addReportToolRunStep(b, target, optimize, build_options, report_catalog.build_mode_report);
 }
 
 pub fn addReportBuildBootstrapStep(
@@ -95,18 +47,7 @@ pub fn addReportBuildBootstrapStep(
     optimize: std.builtin.OptimizeMode,
     build_options: *std.Build.Step.Options,
 ) *std.Build.Step {
-    return addReportToolRunStep(
-        b,
-        target,
-        optimize,
-        build_options,
-        .{
-            .exe_name = "build-bootstrap-report",
-            .root_source_file = "build_system/reports/build_bootstrap_report.zig",
-            .step_name = "report-build-bootstrap",
-            .description = "Report resolved build bootstrap context",
-        },
-    );
+    return addReportToolRunStep(b, target, optimize, build_options, report_catalog.build_bootstrap_report);
 }
 
 pub fn addReportBuildFocusedPolicyStep(
@@ -115,18 +56,7 @@ pub fn addReportBuildFocusedPolicyStep(
     optimize: std.builtin.OptimizeMode,
     build_options: *std.Build.Step.Options,
 ) *std.Build.Step {
-    return addReportToolRunStep(
-        b,
-        target,
-        optimize,
-        build_options,
-        .{
-            .exe_name = "build-focused-mode-policy-check",
-            .root_source_file = "build_system/checks/build_focused_mode_policy_check.zig",
-            .step_name = "report-build-focused-policy",
-            .description = "Check focused mode dependency policy",
-        },
-    );
+    return addReportToolRunStep(b, target, optimize, build_options, report_catalog.build_focused_policy_report);
 }
 
 pub fn addReportBuildTargetStep(
@@ -135,18 +65,7 @@ pub fn addReportBuildTargetStep(
     optimize: std.builtin.OptimizeMode,
     build_options: *std.Build.Step.Options,
 ) *std.Build.Step {
-    return addReportToolRunStep(
-        b,
-        target,
-        optimize,
-        build_options,
-        .{
-            .exe_name = "build-target-report",
-            .root_source_file = "build_system/reports/build_target_report.zig",
-            .step_name = "report-build-target",
-            .description = "Report resolved target and optimize settings",
-        },
-    );
+    return addReportToolRunStep(b, target, optimize, build_options, report_catalog.build_target_report);
 }
 
 pub fn addReportBuildPolicyStep(
@@ -155,19 +74,7 @@ pub fn addReportBuildPolicyStep(
     optimize: std.builtin.OptimizeMode,
     build_options: *std.Build.Step.Options,
 ) *std.Build.Step {
-    return addReportToolRunStep(
-        b,
-        target,
-        optimize,
-        build_options,
-        .{
-            .exe_name = "build-policy-report",
-            .root_source_file = "build_system/reports/build_policy_report.zig",
-            .step_name = "report-build-policy",
-            .description = "Report supported build options and hard constraints",
-            .adds_policy_catalog_import = true,
-        },
-    );
+    return addReportToolRunStep(b, target, optimize, build_options, report_catalog.build_policy_report);
 }
 
 pub fn addReportBuildPlatformStep(
@@ -176,19 +83,7 @@ pub fn addReportBuildPlatformStep(
     optimize: std.builtin.OptimizeMode,
     build_options: *std.Build.Step.Options,
 ) *std.Build.Step {
-    return addReportToolRunStep(
-        b,
-        target,
-        optimize,
-        build_options,
-        .{
-            .exe_name = "build-platform-report",
-            .root_source_file = "build_system/reports/build_platform_report.zig",
-            .step_name = "report-build-platform",
-            .description = "Report target platform capability assumptions",
-            .adds_platform_capabilities_import = true,
-        },
-    );
+    return addReportToolRunStep(b, target, optimize, build_options, report_catalog.build_platform_report);
 }
 
 pub fn addReportBuildSurfaceStep(
@@ -196,20 +91,27 @@ pub fn addReportBuildSurfaceStep(
     target: std.Build.ResolvedTarget,
     optimize: std.builtin.OptimizeMode,
 ) *std.Build.Step {
-    return addReportToolRunStep(
+    return addReportToolRunStep(b, target, optimize, null, report_catalog.build_surface_report);
+}
+
+pub fn addCoreBuildReportSuite(
+    b: *std.Build,
+    target: std.Build.ResolvedTarget,
+    optimize: std.builtin.OptimizeMode,
+    build_options: *std.Build.Step.Options,
+) *std.Build.Step {
+    var deps: [report_catalog.core_bootstrap_report_specs.len + 1]*std.Build.Step = undefined;
+    inline for (report_catalog.core_bootstrap_report_specs, 0..) |spec, index| {
+        const maybe_build_options = if (spec.adds_build_options) build_options else null;
+        deps[index] = addReportToolRunStep(b, target, optimize, maybe_build_options, spec);
+    }
+    deps[report_catalog.core_bootstrap_report_specs.len] = addCheckBuildReportToolsStep(
         b,
         target,
         optimize,
-        null,
-        .{
-            .exe_name = "build-surface-report",
-            .root_source_file = "build_system/reports/build_surface_report.zig",
-            .step_name = "report-build-surface",
-            .description = "Report operator-facing build step taxonomy",
-            .adds_build_options = false,
-            .adds_step_catalog_import = true,
-        },
+        build_options,
     );
+    return addReportBuildAllStep(b, &deps);
 }
 
 pub fn addCheckBuildReportToolsStep(
@@ -222,78 +124,12 @@ pub fn addCheckBuildReportToolsStep(
         "check-build-report-tools",
         "Compile-check all core build report tools",
     );
-    for (core_build_report_tool_specs) |spec| {
-        step.dependOn(&addReportToolExecutable(b, target, optimize, build_options, spec).step);
+    for (report_catalog.core_report_tool_specs) |spec| {
+        step.dependOn(&addReportToolCheckExecutable(b, target, optimize, build_options, spec).step);
     }
 
     return step;
 }
-
-const core_build_report_tool_specs = [_]ReportToolSpec{
-    .{
-        .exe_name = "build-mode-report-check",
-        .root_source_file = "build_system/reports/build_mode_report.zig",
-        .step_name = "",
-        .description = "",
-    },
-    .{
-        .exe_name = "build-bootstrap-report-check",
-        .root_source_file = "build_system/reports/build_bootstrap_report.zig",
-        .step_name = "",
-        .description = "",
-    },
-    .{
-        .exe_name = "build-focused-policy-report-check",
-        .root_source_file = "build_system/checks/build_focused_mode_policy_check.zig",
-        .step_name = "",
-        .description = "",
-    },
-    .{
-        .exe_name = "build-target-report-check",
-        .root_source_file = "build_system/reports/build_target_report.zig",
-        .step_name = "",
-        .description = "",
-    },
-    .{
-        .exe_name = "build-surface-report-check",
-        .root_source_file = "build_system/reports/build_surface_report.zig",
-        .step_name = "",
-        .description = "",
-        .adds_build_options = false,
-        .adds_step_catalog_import = true,
-    },
-    .{
-        .exe_name = "build-policy-report-check",
-        .root_source_file = "build_system/reports/build_policy_report.zig",
-        .step_name = "",
-        .description = "",
-        .adds_policy_catalog_import = true,
-    },
-    .{
-        .exe_name = "build-platform-report-check",
-        .root_source_file = "build_system/reports/build_platform_report.zig",
-        .step_name = "",
-        .description = "",
-        .adds_platform_capabilities_import = true,
-    },
-    .{
-        .exe_name = "build-profile-report-check",
-        .root_source_file = "build_system/reports/build_profile_report.zig",
-        .step_name = "",
-        .description = "",
-        .adds_build_options = false,
-        .adds_target_profile_import = true,
-        .adds_profile_catalog_import = true,
-    },
-    .{
-        .exe_name = "build-dependency-report-check",
-        .root_source_file = "build_system/reports/build_dependency_report.zig",
-        .step_name = "",
-        .description = "",
-        .adds_build_options = false,
-        .adds_profile_catalog_import = true,
-    },
-};
 
 fn addReportToolRunStep(
     b: *std.Build,
@@ -307,6 +143,28 @@ fn addReportToolRunStep(
     const step = b.step(spec.step_name, spec.description);
     step.dependOn(&run.step);
     return step;
+}
+
+fn addReportToolCheckExecutable(
+    b: *std.Build,
+    target: std.Build.ResolvedTarget,
+    optimize: std.builtin.OptimizeMode,
+    build_options: ?*std.Build.Step.Options,
+    spec: ReportToolSpec,
+) *std.Build.Step.Compile {
+    return addReportToolExecutable(b, target, optimize, build_options, .{
+        .exe_name = spec.check_exe_name,
+        .check_exe_name = spec.check_exe_name,
+        .root_source_file = spec.root_source_file,
+        .step_name = spec.step_name,
+        .description = spec.description,
+        .adds_build_options = spec.adds_build_options,
+        .adds_target_profile_import = spec.adds_target_profile_import,
+        .adds_step_catalog_import = spec.adds_step_catalog_import,
+        .adds_policy_catalog_import = spec.adds_policy_catalog_import,
+        .adds_profile_catalog_import = spec.adds_profile_catalog_import,
+        .adds_platform_capabilities_import = spec.adds_platform_capabilities_import,
+    });
 }
 
 fn addReportToolExecutable(

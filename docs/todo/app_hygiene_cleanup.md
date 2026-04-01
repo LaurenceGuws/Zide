@@ -137,6 +137,12 @@ Progress note, 2026-04-02:
 - bootstrap default-target policy and renderer/build-mode option parsing now
   live under `build_system/bootstrap_policy.zig` instead of being inlined in
   `build_system/bootstrap_setup.zig`
+- core build report tool metadata now lives in `build_system/report_catalog.zig`
+  instead of being duplicated between one-off step builders and separate
+  compile-check lists
+- `build_system/bootstrap_setup.zig` now registers the core report suite
+  through one shared builder instead of hand-wiring each report step one by
+  one
 
 ## Repo Boundary Rule
 
