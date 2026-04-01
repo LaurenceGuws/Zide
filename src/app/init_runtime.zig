@@ -14,6 +14,7 @@ const app_logger = @import("../app_logger.zig");
 const config_mod = @import("../config/lua_config.zig");
 const manual_highlights_mod = @import("../editor/manual_highlights.zig");
 const terminal_runtime = @import("../terminal/core/terminal_runtime.zig");
+const workspace_mod = @import("../terminal/core/workspace.zig");
 const metrics_mod = @import("../terminal/model/metrics.zig");
 const term_types = @import("../terminal/model/types.zig");
 const shared_types = @import("../types/mod.zig");
@@ -31,7 +32,7 @@ const editor_render_cache_mod = if (mode_build.focused_mode == .terminal) struct
     pub const EditorRenderCache = app_types.EditorRenderCache;
 } else @import("../editor/render/cache.zig");
 
-const TerminalWorkspace = terminal_runtime.TerminalWorkspace;
+const TerminalWorkspace = workspace_mod.TerminalWorkspace;
 const Metrics = metrics_mod.Metrics;
 const EditorClusterCache = widgets.EditorClusterCache;
 const EditorRenderCache = editor_render_cache_mod.EditorRenderCache;

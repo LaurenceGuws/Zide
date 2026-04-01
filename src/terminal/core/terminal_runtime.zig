@@ -1,13 +1,8 @@
 const runtime_mod = @import("pty_terminal_runtime.zig");
 const input_mod = @import("../input/input.zig");
 const types = @import("../model/types.zig");
-const workspace_mod = @import("workspace.zig");
 
 pub const PtyTerminalRuntime = runtime_mod.PtyTerminalRuntime;
-pub const TerminalWorkspace = workspace_mod.TerminalWorkspace;
-pub const TerminalTabId = workspace_mod.TabId;
-pub const TerminalTabSyncEntry = workspace_mod.TabSyncEntry;
-pub const TerminalTabSyncState = workspace_mod.TabSyncState;
 
 pub const VTERM_KEY_NONE = types.VTERM_KEY_NONE;
 pub const VTERM_KEY_ENTER = types.VTERM_KEY_ENTER;

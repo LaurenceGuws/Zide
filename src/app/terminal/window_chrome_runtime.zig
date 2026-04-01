@@ -7,11 +7,12 @@ const app_types = @import("../app_state_types.zig");
 const window_caption_buttons_runtime = @import("../window_caption_buttons_runtime.zig");
 const shared_types = @import("../../types/mod.zig");
 const widgets = @import("../../ui/widgets.zig");
+const workspace_mod = @import("../../terminal/core/workspace.zig");
 
 const Rect = shared_types.layout.Rect;
 const Shell = app_shell.Shell;
 const TabBar = widgets.TabBar;
-const TerminalWorkspace = @import("../../terminal/core/terminal_runtime.zig").TerminalWorkspace;
+const TerminalWorkspace = workspace_mod.TerminalWorkspace;
 
 pub const CaptionButton = app_types.WindowCaptionButton;
 

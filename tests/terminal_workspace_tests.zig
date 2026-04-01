@@ -2,9 +2,10 @@ const std = @import("std");
 const terminal_runtime = @import("../src/terminal/core/terminal_runtime.zig");
 const terminal_debug = @import("../src/terminal/core/session/debug_ops.zig");
 const host_types = @import("../src/terminal/core/session/host_types.zig");
+const workspace_mod = @import("../src/terminal/core/workspace.zig");
 
 test "terminal workspace create switch move close lifecycle" {
-    var workspace = terminal_runtime.TerminalWorkspace.init(std.testing.allocator, .{});
+    var workspace = workspace_mod.TerminalWorkspace.init(std.testing.allocator, .{});
     defer workspace.deinit();
 
     const tab_1 = try workspace.createTab(24, 80);
@@ -37,9 +38,9 @@ test "terminal workspace create switch move close lifecycle" {
 }
 
 test "terminal workspace tab sync state is session-derived" {
-    var workspace = terminal_runtime.TerminalWorkspace.init(std.testing.allocator, .{});
+    var workspace = workspace_mod.TerminalWorkspace.init(std.testing.allocator, .{});
     defer workspace.deinit();
-    var entry_buf = std.ArrayList(terminal_runtime.TerminalTabSyncEntry).empty;
+    var entry_buf = std.ArrayList(workspace_mod.TabSyncEntry).empty;
     defer entry_buf.deinit(std.testing.allocator);
     var string_buf = std.ArrayList(u8).empty;
     defer string_buf.deinit(std.testing.allocator);
@@ -59,7 +60,7 @@ test "terminal workspace tab sync state is session-derived" {
 }
 
 test "terminal workspace first confirm close tab returns first matching tab" {
-    var workspace = terminal_runtime.TerminalWorkspace.init(std.testing.allocator, .{});
+    var workspace = workspace_mod.TerminalWorkspace.init(std.testing.allocator, .{});
     defer workspace.deinit();
 
     const first = try workspace.createTabWithSession(24, 80);
@@ -78,7 +79,7 @@ test "terminal workspace first confirm close tab returns first matching tab" {
 }
 
 test "terminal workspace poll epochs reset on topology and active-tab changes" {
-    var workspace = terminal_runtime.TerminalWorkspace.init(std.testing.allocator, .{});
+    var workspace = workspace_mod.TerminalWorkspace.init(std.testing.allocator, .{});
     defer workspace.deinit();
 
     try std.testing.expectEqual(@as(u64, 0), workspace.pollRuntimeCounters().epoch);

@@ -18,6 +18,7 @@ const grammar_manager_mod = @import("../src/editor/grammar_manager.zig");
 const text_store = @import("../src/editor/text_store.zig");
 const metrics_mod = @import("../src/terminal/model/metrics.zig");
 const terminal_runtime = @import("../src/terminal/core/terminal_runtime.zig");
+const workspace_mod = @import("../src/terminal/core/workspace.zig");
 const terminal_publication = @import("../src/terminal/core/publication/terminal_publication.zig");
 const shared_types = @import("../src/types/mod.zig");
 const widgets = @import("../src/ui/widgets.zig");
@@ -533,7 +534,7 @@ test "terminal workspace drag reorder updates cycle order after sync" {
     var app = try initTestAppStateForTerminalTabRouting(allocator);
     defer deinitTestAppStateForTerminalTabRouting(&app, allocator);
 
-    app.terminal_workspace = terminal_runtime.TerminalWorkspace.init(allocator, .{});
+    app.terminal_workspace = workspace_mod.TerminalWorkspace.init(allocator, .{});
     var workspace = &app.terminal_workspace.?;
 
     const t1 = try workspace.createTab(24, 80);
@@ -570,7 +571,7 @@ test "terminal workspace reorder keeps widget session aligned with active tab" {
     var app = try initTestAppStateForTerminalTabRouting(allocator);
     defer deinitTestAppStateForTerminalTabRouting(&app, allocator);
 
-    app.terminal_workspace = terminal_runtime.TerminalWorkspace.init(allocator, .{});
+    app.terminal_workspace = workspace_mod.TerminalWorkspace.init(allocator, .{});
     var workspace = &app.terminal_workspace.?;
 
     const created_1 = try workspace.createTabWithSession(24, 80);
@@ -634,7 +635,7 @@ test "requestCancelTerminalCloseFromModal clears pending tab and marks redraw" {
         },
     );
     try std.testing.expect(consumed);
-    try std.testing.expectEqual(@as(?terminal_runtime.TerminalTabId, null), app.terminal_close_confirm_tab);
+    try std.testing.expectEqual(@as(?workspace_mod.TabId, null), app.terminal_close_confirm_tab);
     try std.testing.expect(app.needs_redraw);
 }
 

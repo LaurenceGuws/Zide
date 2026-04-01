@@ -6,6 +6,7 @@ const terminal_shell_icon_runtime = @import("terminal/terminal_shell_icon_runtim
 const editor_types = @import("../editor/types.zig");
 const app_logger = @import("../app_logger.zig");
 const terminal_runtime = @import("../terminal/core/terminal_runtime.zig");
+const workspace_mod = @import("../terminal/core/workspace.zig");
 const terminal_publication = @import("../terminal/core/publication/terminal_publication.zig");
 const metrics_mod = @import("../terminal/model/metrics.zig");
 const term_types = @import("../terminal/model/types.zig");
@@ -52,10 +53,10 @@ pub const EditorRenderCache = editor_render_cache_mod.EditorRenderCache;
 pub const EditorClusterCache = widgets.EditorClusterCache;
 
 pub const PtyTerminalRuntime = terminal_runtime.PtyTerminalRuntime;
-pub const TerminalWorkspace = terminal_runtime.TerminalWorkspace;
-pub const TerminalTabId = terminal_runtime.TerminalTabId;
+pub const TerminalWorkspace = workspace_mod.TerminalWorkspace;
+pub const TerminalTabId = workspace_mod.TabId;
 pub const TerminalPresentationFeedback = terminal_publication.PresentationFeedback;
-pub const TerminalCloseConfirmContext = terminal_runtime.TerminalWorkspace.CloseConfirmContext;
+pub const TerminalCloseConfirmContext = workspace_mod.TerminalWorkspace.CloseConfirmContext;
 
 pub const PendingTerminalPresentationFeedback = struct {
     session: *PtyTerminalRuntime,

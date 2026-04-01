@@ -17,6 +17,7 @@ const input_actions = @import("../input/input_actions.zig");
 const sdl_api = @import("../platform/sdl_api.zig");
 const shared_types = @import("../types/mod.zig");
 const terminal_runtime = @import("../terminal/core/terminal_runtime.zig");
+const workspace_mod = @import("../terminal/core/workspace.zig");
 
 const Shell = app_shell.Shell;
 const input_types = shared_types.input;
@@ -30,7 +31,7 @@ fn maybeConsumeScrollLockCapture(
     handled_shortcut: bool,
     app_mode: app_bootstrap.AppMode,
     show_terminal: bool,
-    terminal_workspace: *?terminal_runtime.TerminalWorkspace,
+    terminal_workspace: *?workspace_mod.TerminalWorkspace,
     terminals: []*terminal_runtime.PtyTerminalRuntime,
     terminal_widgets: anytype,
     live_layout: layout_types.WidgetLayout,
@@ -81,7 +82,7 @@ pub fn handle(
     app_mode: app_bootstrap.AppMode,
     terminal_window_chrome_mode: anytype,
     show_terminal: bool,
-    terminal_workspace: *?terminal_runtime.TerminalWorkspace,
+    terminal_workspace: *?workspace_mod.TerminalWorkspace,
     terminals: []*terminal_runtime.PtyTerminalRuntime,
     terminal_widgets: anytype,
     allocator: std.mem.Allocator,

@@ -8,10 +8,11 @@ const app_terminal_theme_apply = @import("terminal/terminal_theme_apply.zig");
 const app_ui_layout_runtime = @import("ui_layout_runtime.zig");
 const terminal_cli = @import("terminal_cli.zig");
 const terminal_runtime = @import("../terminal/core/terminal_runtime.zig");
+const workspace_mod = @import("../terminal/core/workspace.zig");
 const app_logger = @import("../app_logger.zig");
 
 const PtyTerminalRuntime = terminal_runtime.PtyTerminalRuntime;
-const TerminalWorkspace = terminal_runtime.TerminalWorkspace;
+const TerminalWorkspace = workspace_mod.TerminalWorkspace;
 
 const StartupFailPoint = enum {
     workspace_after_start,

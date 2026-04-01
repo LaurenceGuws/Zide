@@ -1,8 +1,9 @@
 const app_shell = @import("../../app_shell.zig");
 const terminal_runtime = @import("../../terminal/core/terminal_runtime.zig");
+const workspace_mod = @import("../../terminal/core/workspace.zig");
 
 const Shell = app_shell.Shell;
-const TerminalWorkspace = terminal_runtime.TerminalWorkspace;
+const TerminalWorkspace = workspace_mod.TerminalWorkspace;
 const PtyTerminalRuntime = terminal_runtime.PtyTerminalRuntime;
 
 pub fn resizeWorkspaceWithShellCellSize(

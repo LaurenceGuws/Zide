@@ -271,6 +271,11 @@ Validation note, 2026-03-31:
     `SelectionPos`, or `TerminalSelection`; widget callers now use
     `terminal/model/types.zig` directly while the stable runtime surface keeps
     only the remaining key/mod constant surface
+  - the stable runtime surface no longer launders workspace ownership either:
+    `src/terminal/core/terminal_runtime.zig` no longer re-exports
+    `TerminalWorkspace`, `TerminalTabId`, `TerminalTabSyncEntry`, or
+    `TerminalTabSyncState`; active app/test callers now import those names
+    from `src/terminal/core/workspace.zig` directly
   - raw session state is no longer a flat lie:
     - `src/terminal/core/session/publication_fields.zig`
     - `src/terminal/core/session/runtime_fields.zig`
