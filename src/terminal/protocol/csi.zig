@@ -27,7 +27,6 @@ fn modeSnapshotFromContext(ctx: ModeCaptureContext) ModeSnapshot {
     return csi_mode_query.modeSnapshotFromContext(ctx);
 }
 
-const DecstrContext = csi_style_reset.DecstrContext;
 
 fn csiIntermediatesEq(action: parser_csi.CsiAction, bytes: []const u8) bool {
     if (action.intermediates_len != bytes.len) return false;
@@ -159,7 +158,7 @@ fn handleCsiOnSession(self: anytype, action: parser_csi.CsiAction) void {
         'p' => { // DECRQM (requires '$' intermediate)
             if (csiIntermediatesEq(action, "!")) { // DECSTR (soft terminal reset)
                 if (action.leader == 0 and !action.private) {
-                    csi_style_reset.applyDecstrReset(DecstrContext.from(self));
+                    csi_style_reset.applyDecstrReset(self);
                 }
                 return;
             }

@@ -176,6 +176,11 @@ Judgment:
   `src/terminal/protocol/csi_style_reset.zig`, and SGR application now reads
   palette/default/current attribute state directly from the live runtime
   object instead of routing those three reads through another callback shell
+- the DECSTR reset shell is dead too:
+  `DecstrContext` is deleted from
+  `src/terminal/protocol/csi_style_reset.zig`, and soft terminal reset now
+  runs directly on the live runtime object instead of bouncing through a
+  large callback wrapper
 - the stale `src/terminal/core/session_protocol.zig` forwarding shell is now
   deleted, so that API seam no longer routes through one extra session-named
   hop before reaching the real owners
