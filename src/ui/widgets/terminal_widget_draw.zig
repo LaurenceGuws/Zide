@@ -697,12 +697,9 @@ pub fn drawPrepared(
     }
 
     const view_cells = cache.cells.items;
-    const view_dirty_rows = cache.dirty_rows.items;
     const draw_log = app_logger.logger("terminal.ui.redraw");
     const texture_shift_log = app_logger.logger("terminal.ui.texture_shift");
-    var dirty_rows_count: usize = 0;
-    var damage_row_span: usize = 0;
-    var damage_col_span: usize = 0;
+    const dirty_summary = terminal_publication.dirtySummary(cache);
     var partial_plan_rows_count: usize = 0;
     var partial_plan_row_span: usize = 0;
     var partial_plan_col_span: usize = 0;
@@ -716,17 +713,6 @@ pub fn drawPrepared(
     var sprite_stats_summary_buf: [48]u8 = undefined;
     var lock_stats_summary_buf: [64]u8 = undefined;
     var fullframe_fastpath_decision: FullFrameFastPathDecision = .{};
-    if (cache.dirty != .none) {
-        for (view_dirty_rows) |row_dirty| {
-            if (row_dirty) dirty_rows_count += 1;
-        }
-        if (cache.damage.end_row >= cache.damage.start_row) {
-            damage_row_span = cache.damage.end_row - cache.damage.start_row + 1;
-        }
-        if (cache.damage.end_col >= cache.damage.start_col) {
-            damage_col_span = cache.damage.end_col - cache.damage.start_col + 1;
-        }
-    }
     const has_kitty = self.kitty.hasKitty();
     const bg_color = if (view_cells.len > 0) Color{
         .r = view_cells[0].attrs.bg.r,
@@ -1475,7 +1461,6 @@ pub fn drawPrepared(
     const active_draw_log = if (lifecycle_reason != null) lifecycle_log else draw_log;
     const active_perf_log = if (lifecycle_reason != null) lifecycle_log else perf_log;
     const log_partial_update = texture_partial_update and updated and (active_draw_log.enabled_file or active_draw_log.enabled_console or active_perf_log.enabled_file or active_perf_log.enabled_console);
-    const current_reason = terminal_publication.partialCaptureInfo(cache).reason;
     if ((elapsed_ms >= 4.0 or has_kitty_images or log_partial_update) and (now - self.last_draw_log_time) >= 0.1) {
         self.last_draw_log_time = now;
         active_draw_log.logf(
@@ -1513,11 +1498,11 @@ pub fn drawPrepared(
                 @intFromBool(updated),
                 @intFromBool(sync_updates),
                 @intFromBool(outcome.presented != null and (outcome.texture_updated or cache.dirty == .none)),
-                @tagName(cache.dirty),
-                current_reason,
-                dirty_rows_count,
-                damage_row_span,
-                damage_col_span,
+                dirty_summary.dirty_tag,
+                dirty_summary.current_reason,
+                dirty_summary.dirty_rows_count,
+                dirty_summary.damage_row_span,
+                dirty_summary.damage_col_span,
                 partial_plan_rows_count,
                 partial_plan_row_span,
                 partial_plan_col_span,

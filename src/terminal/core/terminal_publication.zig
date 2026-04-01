@@ -95,6 +95,14 @@ pub const BackgroundRunInfo = struct {
     screen_reverse: bool,
 };
 
+pub const DirtySummary = struct {
+    dirty_tag: []const u8,
+    current_reason: []const u8,
+    dirty_rows_count: usize,
+    damage_row_span: usize,
+    damage_col_span: usize,
+};
+
 pub const VisibleViewDumpInfo = struct {
     rows: usize,
     cols: usize,
@@ -205,6 +213,32 @@ pub fn visibleViewDumpInfo(cache: *const RenderCache) VisibleViewDumpInfo {
         .cursor = cache.cursor,
         .draw_cursor_visible = render_state.draw_cursor_visible,
         .screen_reverse = render_state.screen_reverse,
+    };
+}
+
+pub fn dirtySummary(cache: *const RenderCache) DirtySummary {
+    var dirty_rows_count: usize = 0;
+    var damage_row_span: usize = 0;
+    var damage_col_span: usize = 0;
+
+    if (cache.dirty != .none) {
+        for (cache.dirty_rows.items) |row_dirty| {
+            if (row_dirty) dirty_rows_count += 1;
+        }
+        if (cache.damage.end_row >= cache.damage.start_row) {
+            damage_row_span = cache.damage.end_row - cache.damage.start_row + 1;
+        }
+        if (cache.damage.end_col >= cache.damage.start_col) {
+            damage_col_span = cache.damage.end_col - cache.damage.start_col + 1;
+        }
+    }
+
+    return .{
+        .dirty_tag = @tagName(cache.dirty),
+        .current_reason = partialCaptureInfo(cache).reason,
+        .dirty_rows_count = dirty_rows_count,
+        .damage_row_span = damage_row_span,
+        .damage_col_span = damage_col_span,
     };
 }
 

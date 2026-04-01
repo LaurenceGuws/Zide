@@ -193,6 +193,9 @@ Status note, 2026-03-31:
     viewport-shift use and capture reason
   - render-state interpretation for widget draw is also moving there, reducing
     more raw cache-flag reads in the UI path
+  - dirty/render summary interpretation should also come from publication-owned
+    summaries like `dirtySummary(...)` instead of another inline cache-state
+    reconstruction in widget draw
   - widget debug/background-run interpretation is also moving there, reducing
     more raw cache-flag reads in support/debug helpers too
   - widget visible-view dump metadata should come from publication-owned

@@ -256,6 +256,9 @@ Judgment:
   - widget lifecycle logging now also asks publication for
     `lifecycleTransitionInfo` instead of repeating inline alt-state
     interpretation in draw code
+  - widget draw now also asks publication for `dirtySummary` instead of
+    rebuilding dirty-tag/current-reason/dirty-row-count/damage-span state
+    inline from raw cache fields
     inside the widget layer
   - that is the standard the rest of the publication war should keep:
     if a cache field is just restating derivable published state, it should die

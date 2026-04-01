@@ -287,6 +287,11 @@ Validation note, 2026-03-31:
     - `renderStateInfo(...)`
     now gives widget draw one publication answer for screen-reverse, cursor
     visibility-at-live-bottom, cursor style, and blinking-cell presence
+  - dirty/render summary interpretation is moving there too:
+    - `dirtySummary(...)`
+    now gives widget draw one publication answer for dirty-tag, current dirty
+    reason, dirty-row count, and damage spans instead of rebuilding that state
+    inline from raw cache fields
   - widget debug/background-run interpretation is moving there too:
     - `backgroundRunInfo(...)`
     now gives widget helpers one publication answer for cursor-presence and
