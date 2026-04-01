@@ -203,6 +203,11 @@ Progress note, 2026-04-01:
 - that keeps the prelude callback contract intact while making the front half
   of the app update path read like explicit policy steps instead of inline
   callback shards
+- `src/app/pre_input_shortcut_hooks_runtime.zig` now centralizes reload-config,
+  reload-notice, terminal-close-confirm, layout, redraw, and metric side
+  effects in named helpers instead of repeating them inside hook structs
+- this keeps shortcut behavior fixed while reducing another dense callback
+  policy cluster in the app update lane
 
 ## Investigation Follow-up
 
