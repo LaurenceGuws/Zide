@@ -199,6 +199,9 @@ Status note, 2026-03-31:
   - baseline widget draw state should also come from publication-owned
     summaries like `drawStateInfo(...)` instead of reading rows/cols/viewport/
     render/sync/kitty/cursor facts piecemeal from the cache
+  - once a publication helper exists, widget draw should consume its direct
+    truth completely; it should not keep mixing helper-owned state with raw
+    reads like `cache.alt_active` or repeated `cache.dirty == .none`
   - widget debug/background-run interpretation is also moving there, reducing
     more raw cache-flag reads in support/debug helpers too
   - widget visible-view dump metadata should come from publication-owned

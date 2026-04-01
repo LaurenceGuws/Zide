@@ -96,6 +96,7 @@ pub const BackgroundRunInfo = struct {
 };
 
 pub const DirtySummary = struct {
+    is_clean: bool,
     dirty_tag: []const u8,
     current_reason: []const u8,
     dirty_rows_count: usize,
@@ -244,6 +245,7 @@ pub fn dirtySummary(cache: *const RenderCache) DirtySummary {
     }
 
     return .{
+        .is_clean = cache.dirty == .none,
         .dirty_tag = @tagName(cache.dirty),
         .current_reason = partialCaptureInfo(cache).reason,
         .dirty_rows_count = dirty_rows_count,

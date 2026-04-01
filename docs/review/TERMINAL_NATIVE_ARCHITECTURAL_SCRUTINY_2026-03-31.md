@@ -262,6 +262,9 @@ Judgment:
   - widget draw now also asks publication for `drawStateInfo` instead of
     pulling rows/cols/viewport/render/sync/kitty/cursor facts piecemeal from
     raw cache state
+  - widget draw now also uses helper-owned current alt-state and clean-state
+    instead of falling back to raw `cache.alt_active` and repeated
+    `cache.dirty == .none` checks where publication already owns the answer
     inside the widget layer
   - that is the standard the rest of the publication war should keep:
     if a cache field is just restating derivable published state, it should die

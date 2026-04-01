@@ -297,6 +297,12 @@ Validation note, 2026-03-31:
     now gives widget draw one publication-owned summary for rows, cols,
     viewport state, render state, sync-update state, kitty generation, and
     cursor position instead of pulling those facts piecemeal from raw cache
+  - lifecycle/dirty helpers now also own more of the direct truth widget draw
+    needs:
+    - `lifecycleTransitionInfo(...)` carries current alt-state
+    - `dirtySummary(...)` carries clean-state
+    so widget draw no longer has to fall back to raw `cache.alt_active` or
+    repeated `cache.dirty == .none` checks where helper-owned truth exists
   - widget debug/background-run interpretation is moving there too:
     - `backgroundRunInfo(...)`
     now gives widget helpers one publication answer for cursor-presence and

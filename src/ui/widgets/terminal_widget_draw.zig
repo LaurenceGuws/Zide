@@ -635,7 +635,7 @@ pub fn drawPrepared(
     const cache = &self.draw_cache;
     const lifecycle_transition = terminal_publication.lifecycleTransitionInfo(self.last_alt_active, cache);
     const alt_exit = lifecycle_transition.exited;
-    self.last_alt_active = cache.alt_active;
+    self.last_alt_active = lifecycle_transition.current_alt_active;
     render_phase_start = app_shell.getTime();
 
     const draw_state = terminal_publication.drawStateInfo(cache);
@@ -1433,7 +1433,7 @@ pub fn drawPrepared(
         cursor_style,
     );
 
-    if (updated or cache.dirty == .none) {
+    if (updated or dirty_summary.is_clean) {
         outcome.texture_updated = updated;
     }
     overlay_ms = time_utils.secondsToMs(app_shell.getTime() - overlay_phase_start);
@@ -1498,7 +1498,7 @@ pub fn drawPrepared(
                 @intFromBool(texture_partial_update),
                 @intFromBool(updated),
                 @intFromBool(sync_updates),
-                @intFromBool(outcome.presented != null and (outcome.texture_updated or cache.dirty == .none)),
+                @intFromBool(outcome.presented != null and (outcome.texture_updated or dirty_summary.is_clean)),
                 dirty_summary.dirty_tag,
                 dirty_summary.current_reason,
                 dirty_summary.dirty_rows_count,
