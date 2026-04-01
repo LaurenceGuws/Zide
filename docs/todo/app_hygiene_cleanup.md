@@ -192,6 +192,11 @@ Progress note, 2026-04-01:
 - this is an extraction-only narrowing step: behavior is unchanged, but the
   post-preinput frame path now reads more as orchestration and less as inline
   policy sprawl
+- `src/app/update_frame_hooks_runtime.zig` now moves the largest interactive
+  frame callback bodies into named local helpers for tab-drag and active-view
+  dispatch
+- this keeps the hook contract intact while reducing closure-wall density in
+  the main app update path
 
 ## Investigation Follow-up
 

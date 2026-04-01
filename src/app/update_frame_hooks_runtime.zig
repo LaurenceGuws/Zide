@@ -28,6 +28,210 @@ const app_editor_tab_bar_sync_runtime = if (mode_build.focused_mode == .terminal
 const Shell = app_shell.Shell;
 const layout_types = shared_types.layout;
 
+fn handleTabDrag(state: anytype, frame_input_batch: *shared_types.input.InputBatch, layout: layout_types.WidgetLayout, mouse: shared_types.input.MousePos, at: f64) !void {
+    const State = @TypeOf(state.*);
+    try app_tab_drag_input_runtime.handle(
+        state.app_mode,
+        &state.tab_bar,
+        app_terminal_window_chrome_runtime.barVisible(
+            state.app_mode,
+            state.terminal_window_chrome_mode,
+            state.terminal_tab_bar_show_single_tab,
+            state.terminal_workspace,
+            state.terminals.items.len,
+        ),
+        state.terminal_window_chrome_mode,
+        &state.active_tab,
+        state.shell,
+        frame_input_batch,
+        layout,
+        mouse,
+        at,
+        @ptrCast(state),
+        .{
+            .apply_terminal_action = struct {
+                fn call(hook_raw: *anyopaque, action: app_modes.shared.actions.TabAction) !void {
+                    const hook_state: *State = @ptrCast(@alignCast(hook_raw));
+                    switch (action) {
+                        .move => |mv| {
+                            if (app_terminal_tab_navigation_runtime.moveByVisualIndex(
+                                hook_state.app_mode,
+                                &hook_state.terminal_workspace,
+                                &hook_state.tab_bar,
+                                mv.to_index,
+                            )) {
+                                _ = app_terminal_tab_navigation_runtime.moveWidgetByIndex(
+                                    hook_state,
+                                    mv.from_index,
+                                    mv.to_index,
+                                );
+                                try app_terminal_tab_bar_sync_runtime.syncIfWorkspace(hook_state);
+                                return;
+                            }
+                        },
+                        else => {},
+                    }
+                    try app_tab_action_apply_runtime.applyTerminalAndSync(hook_state, action);
+                }
+            }.call,
+            .route_activate_by_tab_id = struct {
+                fn call(hook_raw: *anyopaque, tab_id: ?u64) !void {
+                    const hook_state: *State = @ptrCast(@alignCast(hook_raw));
+                    _ = try app_terminal_intent_route_runtime.routeByTabIdAndSync(
+                        hook_state,
+                        .activate,
+                        tab_id,
+                    );
+                }
+            }.call,
+            .focus_terminal_tab_index = struct {
+                fn call(hook_raw: *anyopaque, index: usize) bool {
+                    const hook_state: *State = @ptrCast(@alignCast(hook_raw));
+                    return app_terminal_tab_navigation_runtime.focusByIndex(hook_state, index);
+                }
+            }.call,
+            .apply_editor_action = struct {
+                fn call(hook_raw: *anyopaque, action: app_modes.shared.actions.TabAction) !void {
+                    const hook_state: *State = @ptrCast(@alignCast(hook_raw));
+                    try app_tab_action_apply_runtime.applyEditorAndSync(hook_state, action);
+                }
+            }.call,
+            .mark_redraw = struct {
+                fn call(hook_raw: *anyopaque) void {
+                    const hook_state: *State = @ptrCast(@alignCast(hook_raw));
+                    hook_state.needs_redraw = true;
+                }
+            }.call,
+            .note_input = struct {
+                fn call(hook_raw: *anyopaque, t: f64) void {
+                    const hook_state: *State = @ptrCast(@alignCast(hook_raw));
+                    hook_state.metrics.noteInput(t);
+                }
+            }.call,
+        },
+    );
+}
+
+fn handleActiveView(
+    state: anytype,
+    frame_shell: *Shell,
+    layout: layout_types.WidgetLayout,
+    mouse: shared_types.input.MousePos,
+    frame_input_batch: *shared_types.input.InputBatch,
+    frame_suppress_terminal_shortcuts: bool,
+    frame_terminal_close_modal_active: bool,
+    at: f64,
+) !void {
+    if (comptime mode_build.focused_mode == .terminal) {
+        try app_visible_terminal_frame_hooks_runtime.handle(
+            state.app_mode,
+            state.show_terminal,
+            &state.terminal_workspace,
+            state.terminals.items,
+            state.terminal_widgets.items,
+            state.tab_bar.isDragging(),
+            state.active_kind,
+            frame_shell,
+            layout,
+            frame_input_batch,
+            false,
+            frame_suppress_terminal_shortcuts,
+            frame_terminal_close_modal_active,
+            at,
+            state.allocator,
+            &state.terminal_scrollbar_dragging,
+            &state.terminal_scrollbar_grab_offset,
+            &state.terminal_scrollbar_hovered,
+            @ptrCast(state),
+            .{
+                .open_file = struct {
+                    fn call(raw: *anyopaque, path: []const u8) !void {
+                        const s: *@TypeOf(state.*) = @ptrCast(@alignCast(raw));
+                        try s.openFile(path);
+                    }
+                }.call,
+                .open_file_at = struct {
+                    fn call(raw: *anyopaque, path: []const u8, line_1: usize, col_1: ?usize) !void {
+                        const s: *@TypeOf(state.*) = @ptrCast(@alignCast(raw));
+                        try s.openFileAt(path, line_1, col_1);
+                    }
+                }.call,
+                .mark_redraw = struct {
+                    fn call(raw: *anyopaque) void {
+                        const s: *@TypeOf(state.*) = @ptrCast(@alignCast(raw));
+                        s.needs_redraw = true;
+                    }
+                }.call,
+                .note_input = struct {
+                    fn call(raw: *anyopaque, t: f64) void {
+                        const s: *@TypeOf(state.*) = @ptrCast(@alignCast(raw));
+                        s.metrics.noteInput(t);
+                    }
+                }.call,
+                .sync_terminal_tab_bar = struct {
+                    fn call(raw: *anyopaque) !void {
+                        const s: *@TypeOf(state.*) = @ptrCast(@alignCast(raw));
+                        try app_terminal_tab_bar_sync_runtime.syncIfWorkspace(s);
+                    }
+                }.call,
+            },
+        );
+        return;
+    }
+
+    const app_active_view_hooks_runtime = @import("active_view_hooks_runtime.zig");
+    try app_active_view_hooks_runtime.handle(
+        state.allocator,
+        &state.path_prompt,
+        &state.search_panel.active,
+        &state.search_panel.select_all,
+        &state.search_panel.query,
+        state.editors.items,
+        state.active_tab,
+        &state.tab_bar,
+        state.app_mode,
+        state.active_kind,
+        &state.editor_cluster_cache,
+        state.editor_wrap,
+        frame_shell,
+        layout,
+        mouse,
+        frame_input_batch,
+        state.perf_mode,
+        &state.perf_frames_done,
+        state.perf_frames_total,
+        state.perf_scroll_delta,
+        state.frame_id,
+        &state.editor_render_cache,
+        state.editor_highlight_budget,
+        state.editor_width_budget,
+        .{
+            .editor_hscroll_dragging = &state.editor_hscroll_dragging,
+            .editor_hscroll_grab_offset = &state.editor_hscroll_grab_offset,
+            .editor_vscroll_dragging = &state.editor_vscroll_dragging,
+            .editor_vscroll_grab_offset = &state.editor_vscroll_grab_offset,
+            .editor_dragging = &state.editor_dragging,
+            .editor_drag_start = &state.editor_drag_start,
+            .editor_drag_rect = &state.editor_drag_rect,
+        },
+        &state.terminal_scrollbar_dragging,
+        &state.terminal_scrollbar_grab_offset,
+        &state.terminal_scrollbar_hovered,
+        state.show_terminal,
+        &state.terminal_workspace,
+        state.terminals.items,
+        state.terminal_widgets.items,
+        state.tab_bar.isDragging(),
+        frame_suppress_terminal_shortcuts,
+        frame_terminal_close_modal_active,
+        state.allocator,
+        at,
+        &state.needs_redraw,
+        &state.metrics,
+        state,
+    );
+}
+
 pub fn handle(state: anytype, input_batch: *shared_types.input.InputBatch) !void {
     const State = @TypeOf(state.*);
     try app_update_driver.handle(
@@ -190,86 +394,7 @@ pub fn handle(state: anytype, input_batch: *shared_types.input.InputBatch) !void
                                     at: f64,
                                 ) !void {
                                     const inner_state: *State = @ptrCast(@alignCast(inner_raw));
-                                    try app_tab_drag_input_runtime.handle(
-                                        inner_state.app_mode,
-                                        &inner_state.tab_bar,
-                                        app_terminal_window_chrome_runtime.barVisible(
-                                            inner_state.app_mode,
-                                            inner_state.terminal_window_chrome_mode,
-                                            inner_state.terminal_tab_bar_show_single_tab,
-                                            inner_state.terminal_workspace,
-                                            inner_state.terminals.items.len,
-                                        ),
-                                        inner_state.terminal_window_chrome_mode,
-                                        &inner_state.active_tab,
-                                        inner_state.shell,
-                                        frame_input_batch,
-                                        layout,
-                                        mouse,
-                                        at,
-                                        @ptrCast(inner_state),
-                                        .{
-                                            .apply_terminal_action = struct {
-                                                fn call(hook_raw: *anyopaque, action: app_modes.shared.actions.TabAction) !void {
-                                                    const hook_state: *State = @ptrCast(@alignCast(hook_raw));
-                                                    switch (action) {
-                                                        .move => |mv| {
-                                                            if (app_terminal_tab_navigation_runtime.moveByVisualIndex(
-                                                                hook_state.app_mode,
-                                                                &hook_state.terminal_workspace,
-                                                                &hook_state.tab_bar,
-                                                                mv.to_index,
-                                                            )) {
-                                                                _ = app_terminal_tab_navigation_runtime.moveWidgetByIndex(
-                                                                    hook_state,
-                                                                    mv.from_index,
-                                                                    mv.to_index,
-                                                                );
-                                                                try app_terminal_tab_bar_sync_runtime.syncIfWorkspace(hook_state);
-                                                                return;
-                                                            }
-                                                        },
-                                                        else => {},
-                                                    }
-                                                    try app_tab_action_apply_runtime.applyTerminalAndSync(hook_state, action);
-                                                }
-                                            }.call,
-                                            .route_activate_by_tab_id = struct {
-                                                fn call(hook_raw: *anyopaque, tab_id: ?u64) !void {
-                                                    const hook_state: *State = @ptrCast(@alignCast(hook_raw));
-                                                    _ = try app_terminal_intent_route_runtime.routeByTabIdAndSync(
-                                                        hook_state,
-                                                        .activate,
-                                                        tab_id,
-                                                    );
-                                                }
-                                            }.call,
-                                            .focus_terminal_tab_index = struct {
-                                                fn call(hook_raw: *anyopaque, index: usize) bool {
-                                                    const hook_state: *State = @ptrCast(@alignCast(hook_raw));
-                                                    return app_terminal_tab_navigation_runtime.focusByIndex(hook_state, index);
-                                                }
-                                            }.call,
-                                            .apply_editor_action = struct {
-                                                fn call(hook_raw: *anyopaque, action: app_modes.shared.actions.TabAction) !void {
-                                                    const hook_state: *State = @ptrCast(@alignCast(hook_raw));
-                                                    try app_tab_action_apply_runtime.applyEditorAndSync(hook_state, action);
-                                                }
-                                            }.call,
-                                            .mark_redraw = struct {
-                                                fn call(hook_raw: *anyopaque) void {
-                                                    const hook_state: *State = @ptrCast(@alignCast(hook_raw));
-                                                    hook_state.needs_redraw = true;
-                                                }
-                                            }.call,
-                                            .note_input = struct {
-                                                fn call(hook_raw: *anyopaque, t: f64) void {
-                                                    const hook_state: *State = @ptrCast(@alignCast(hook_raw));
-                                                    hook_state.metrics.noteInput(t);
-                                                }
-                                            }.call,
-                                        },
-                                    );
+                                    try handleTabDrag(inner_state, frame_input_batch, layout, mouse, at);
                                 }
                             }.inner,
                             .handle_active_view = struct {
@@ -284,113 +409,16 @@ pub fn handle(state: anytype, input_batch: *shared_types.input.InputBatch) !void
                                     at: f64,
                                 ) !void {
                                     const inner_state: *State = @ptrCast(@alignCast(inner_raw));
-                                    if (comptime mode_build.focused_mode == .terminal) {
-                                        try app_visible_terminal_frame_hooks_runtime.handle(
-                                            inner_state.app_mode,
-                                            inner_state.show_terminal,
-                                            &inner_state.terminal_workspace,
-                                            inner_state.terminals.items,
-                                            inner_state.terminal_widgets.items,
-                                            inner_state.tab_bar.isDragging(),
-                                            inner_state.active_kind,
-                                            frame_shell,
-                                            layout,
-                                            frame_input_batch,
-                                            false,
-                                            frame_suppress_terminal_shortcuts,
-                                            frame_terminal_close_modal_active,
-                                            at,
-                                            inner_state.allocator,
-                                            &inner_state.terminal_scrollbar_dragging,
-                                            &inner_state.terminal_scrollbar_grab_offset,
-                                            &inner_state.terminal_scrollbar_hovered,
-                                            inner_raw,
-                                            .{
-                                                .open_file = struct {
-                                                    fn call(raw: *anyopaque, path: []const u8) !void {
-                                                        const s: *State = @ptrCast(@alignCast(raw));
-                                                        try s.openFile(path);
-                                                    }
-                                                }.call,
-                                                .open_file_at = struct {
-                                                    fn call(raw: *anyopaque, path: []const u8, line_1: usize, col_1: ?usize) !void {
-                                                        const s: *State = @ptrCast(@alignCast(raw));
-                                                        try s.openFileAt(path, line_1, col_1);
-                                                    }
-                                                }.call,
-                                                .mark_redraw = struct {
-                                                    fn call(raw: *anyopaque) void {
-                                                        const s: *State = @ptrCast(@alignCast(raw));
-                                                        s.needs_redraw = true;
-                                                    }
-                                                }.call,
-                                                .note_input = struct {
-                                                    fn call(raw: *anyopaque, t: f64) void {
-                                                        const s: *State = @ptrCast(@alignCast(raw));
-                                                        s.metrics.noteInput(t);
-                                                    }
-                                                }.call,
-                                                .sync_terminal_tab_bar = struct {
-                                                    fn call(raw: *anyopaque) !void {
-                                                        const s: *State = @ptrCast(@alignCast(raw));
-                                                        try app_terminal_tab_bar_sync_runtime.syncIfWorkspace(s);
-                                                    }
-                                                }.call,
-                                            },
-                                        );
-                                    } else {
-                                        const app_active_view_hooks_runtime = @import("active_view_hooks_runtime.zig");
-        try app_active_view_hooks_runtime.handle(
-            inner_state.allocator,
-            &inner_state.path_prompt,
-                                            &inner_state.search_panel.active,
-                                            &inner_state.search_panel.select_all,
-                                            &inner_state.search_panel.query,
-                                            inner_state.editors.items,
-                                            inner_state.active_tab,
-                                            &inner_state.tab_bar,
-                                            inner_state.app_mode,
-                                            inner_state.active_kind,
-                                            &inner_state.editor_cluster_cache,
-                                            inner_state.editor_wrap,
-                                            frame_shell,
-                                            layout,
-                                            mouse,
-                                            frame_input_batch,
-            inner_state.perf_mode,
-            &inner_state.perf_frames_done,
-            inner_state.perf_frames_total,
-            inner_state.perf_scroll_delta,
-            inner_state.frame_id,
-            &inner_state.editor_render_cache,
-            inner_state.editor_highlight_budget,
-            inner_state.editor_width_budget,
-                                            .{
-                                                .editor_hscroll_dragging = &inner_state.editor_hscroll_dragging,
-                                                .editor_hscroll_grab_offset = &inner_state.editor_hscroll_grab_offset,
-                                                .editor_vscroll_dragging = &inner_state.editor_vscroll_dragging,
-                                                .editor_vscroll_grab_offset = &inner_state.editor_vscroll_grab_offset,
-                                                .editor_dragging = &inner_state.editor_dragging,
-                                                .editor_drag_start = &inner_state.editor_drag_start,
-                                                .editor_drag_rect = &inner_state.editor_drag_rect,
-                                            },
-                                            &inner_state.terminal_scrollbar_dragging,
-                                            &inner_state.terminal_scrollbar_grab_offset,
-                                            &inner_state.terminal_scrollbar_hovered,
-                                            inner_state.show_terminal,
-                                            &inner_state.terminal_workspace,
-                                            inner_state.terminals.items,
-                                            inner_state.terminal_widgets.items,
-                                            inner_state.tab_bar.isDragging(),
-                                            frame_suppress_terminal_shortcuts,
-                                            frame_terminal_close_modal_active,
-                                            inner_state.allocator,
-                                            at,
-                                            &inner_state.needs_redraw,
-                                            &inner_state.metrics,
-                                            inner_state,
-                                        );
-                                    }
+                                    try handleActiveView(
+                                        inner_state,
+                                        frame_shell,
+                                        layout,
+                                        mouse,
+                                        frame_input_batch,
+                                        frame_suppress_terminal_shortcuts,
+                                        frame_terminal_close_modal_active,
+                                        at,
+                                    );
                                 }
                             }.inner,
                         },
