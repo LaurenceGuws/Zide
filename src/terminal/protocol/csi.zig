@@ -95,15 +95,21 @@ pub fn handleCsi(self: anytype, action: parser_csi.CsiAction) void {
                 defer writer.unlock();
                 const screen = self.core.activeScreen();
                 const pos = screen.cursorReport();
-                csi_reply.handleDsrQuery(
-                    self.interaction.color_scheme_dark,
-                    &writer,
-                    pos.row_1,
-                    pos.col_1,
-                    action,
-                    param_len,
-                    p,
-                );
+                const mode = if (param_len > 0) p[0] else 0;
+                if (action.leader == '?') {
+                    switch (mode) {
+                        6 => _ = csi_reply.writeDsrReplyWithWriter(&writer, action.leader, mode, pos.row_1, pos.col_1),
+                        15, 25, 26, 55, 56, 75, 85 => _ = csi_reply.writeDsrReplyWithWriter(&writer, action.leader, mode, 0, 0),
+                        996 => _ = csi_reply.writeColorSchemePreferenceReplyWithWriter(&writer, self.interaction.color_scheme_dark),
+                        else => {},
+                    }
+                } else if (action.leader == 0) {
+                    switch (mode) {
+                        5 => _ = csi_reply.writeDsrReplyWithWriter(&writer, action.leader, mode, 0, 0),
+                        6 => _ = csi_reply.writeDsrReplyWithWriter(&writer, action.leader, mode, pos.row_1, pos.col_1),
+                        else => {},
+                    }
+                }
             }
         },
         'c' => { // DA
@@ -121,15 +127,18 @@ pub fn handleCsi(self: anytype, action: parser_csi.CsiAction) void {
                     var writer = writer_guard;
                     defer writer.unlock();
                     const screen = self.core.activeScreen();
-                    csi_reply.handleWindowOpQuery(
-                        self.interaction.cell_height,
-                        self.interaction.cell_width,
-                        &writer,
-                        screen.grid.rows,
-                        screen.grid.cols,
-                        param_len,
-                        p,
-                    );
+                    const mode = if (param_len > 0) p[0] else 0;
+                    switch (mode) {
+                        14 => _ = csi_reply.writeWindowOpPixelsReplyWithWriter(
+                            &writer,
+                            @as(u32, self.interaction.cell_height) * screen.grid.rows,
+                            @as(u32, self.interaction.cell_width) * screen.grid.cols,
+                        ),
+                        16 => _ = csi_reply.writeWindowOpCellPixelsReplyWithWriter(&writer, self.interaction.cell_height, self.interaction.cell_width),
+                        18 => _ = csi_reply.writeWindowOpCharsReplyWithWriter(&writer, screen.grid.rows, screen.grid.cols),
+                        19 => _ = csi_reply.writeWindowOpScreenCharsReplyWithWriter(&writer, screen.grid.rows, screen.grid.cols),
+                        else => {},
+                    }
                 }
             }
         },

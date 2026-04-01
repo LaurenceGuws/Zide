@@ -293,6 +293,11 @@ Judgment:
   `src/terminal/core/session/config.zig` directly, so the stable runtime
   surface no longer carries palette reset/mutation, dynamic-color mutation,
   or dead ANSI color setters as fake host contract
+- the CSI reply dispatch slab is flatter too:
+  `src/terminal/protocol/csi.zig` no longer routes DSR and window-op replies
+  through `handleDsrQuery(...)` / `handleWindowOpQuery(...)` in
+  `src/terminal/protocol/csi_reply.zig`; CSI now calls the writer-owned reply
+  functions directly instead of keeping another forwarding layer alive
 - protocol query helpers are shrinking the same way too: runtime/focus tests
   now use `terminal_core_protocol.zig` directly for `getCell` /
   `getCursorPos`, so those no longer sit on the wrapper surface

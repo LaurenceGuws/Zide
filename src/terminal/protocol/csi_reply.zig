@@ -58,54 +58,7 @@ pub fn writeDsrReplyWithWriter(writer: anytype, leader: u8, mode: i32, row_1: us
     return false;
 }
 
-pub fn handleDsrQuery(
-    color_scheme_dark: bool,
-    writer: anytype,
-    cursor_row_1: usize,
-    cursor_col_1: usize,
-    action: parser_csi.CsiAction,
-    param_len: usize,
-    params: [parser_csi.max_params]i32,
-) void {
-    const mode = if (param_len > 0) params[0] else 0;
-    if (action.leader == '?') {
-        switch (mode) {
-            6 => {
-                _ = writeDsrReplyWithWriter(writer, action.leader, mode, cursor_row_1, cursor_col_1);
-            },
-            15, 25, 26, 55, 56, 75, 85 => _ = writeDsrReplyWithWriter(writer, action.leader, mode, 0, 0),
-            996 => _ = writeColorSchemePreferenceReplyWithWriter(writer, color_scheme_dark),
-            else => {},
-        }
-    } else if (action.leader == 0) {
-        switch (mode) {
-            5 => _ = writeDsrReplyWithWriter(writer, action.leader, mode, 0, 0),
-            6 => _ = writeDsrReplyWithWriter(writer, action.leader, mode, cursor_row_1, cursor_col_1),
-            else => {},
-        }
-    }
-}
-
-pub fn handleWindowOpQuery(
-    cell_height: u16,
-    cell_width: u16,
-    writer: anytype,
-    rows: u16,
-    cols: u16,
-    param_len: usize,
-    params: [parser_csi.max_params]i32,
-) void {
-    const mode = if (param_len > 0) params[0] else 0;
-    switch (mode) {
-        14 => _ = writeWindowOpPixelsReplyWithWriter(writer, @as(u32, cell_height) * rows, @as(u32, cell_width) * cols),
-        16 => _ = writeWindowOpCellPixelsReplyWithWriter(writer, cell_height, cell_width),
-        18 => _ = writeWindowOpCharsReplyWithWriter(writer, rows, cols),
-        19 => _ = writeWindowOpScreenCharsReplyWithWriter(writer, rows, cols),
-        else => {},
-    }
-}
-
-pub fn writeConst(writer: anytype, seq: []const u8) bool {
+fn writeConst(writer: anytype, seq: []const u8) bool {
     const log = app_logger.logger("terminal.csi");
     _ = writer.write(seq) catch |err| {
         log.logf(.warning, "CSI const reply write failed: {s}", .{@errorName(err)});

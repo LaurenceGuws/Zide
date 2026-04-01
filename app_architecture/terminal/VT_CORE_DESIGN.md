@@ -231,6 +231,11 @@ Status note, 2026-03-31:
     surface no longer advertises palette reset/mutation, dynamic-color
     mutation, or dead ANSI color setters that are not part of the real host
     contract
+  - the CSI reply dispatch slab is flatter too:
+    `src/terminal/protocol/csi.zig` no longer routes DSR and window-op replies
+    through `handleDsrQuery(...)` / `handleWindowOpQuery(...)` in
+    `src/terminal/protocol/csi_reply.zig`; CSI now calls the writer-owned reply
+    functions directly instead of keeping another forwarding layer alive
   - protocol query helpers are shrinking the same way too: runtime/focus tests
     now use `terminal_core_protocol.zig` directly for `getCell` /
     `getCursorPos`, so those no longer inflate the wrapper surface
