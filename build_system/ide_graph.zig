@@ -394,7 +394,7 @@ pub fn planIdeExtendedBuildGraph(
         target,
         optimize,
         "gui-smokes-manual",
-        "tools/build_tools/smokes/gui_smokes_manual.zig",
+        "tests/manual/gui_smokes_manual.zig",
     );
     const gui_smokes_manual_run = addRunArtifactStep(
         b,

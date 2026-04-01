@@ -266,6 +266,10 @@ Progress note, 2026-04-01:
   `tools/build_tools/` into `build_system/`
 - this keeps `tools/` for genuine tooling surfaces and `build_system/` for
   build-owned Zig, reducing another non-`src` location leak
+- the Zig manual GUI smoke harness was moved from `tools/build_tools/smokes/`
+  into `tests/manual/` because it is test authority, not a general tool
+- after this cut, the remaining Zig file in `tools/` is the actual standalone
+  metadata generator, which cleanly defends its location
 
 ## Investigation Follow-up
 
