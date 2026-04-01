@@ -229,6 +229,13 @@ Validation note, 2026-03-31:
       old rendering-investigation lane
     - the probe-only presented-generation shadow buffer and partial-update
       coherence escalation path are also removed from the widget layer
+  - terminal logging ownership is now explicit:
+    - temporary probes are session tools and must die with the session that
+      needed them
+    - draw/cache/parser/poll narration does not get to squat in the live code
+      path as fake architecture
+    - only contract, warning, lifecycle, and subsystem-boundary logs survive
+      by default
   - mirror-heavy cache metadata is now starting to come out of
     `src/terminal/core/render_cache.zig`:
     - `RenderCache.total_lines` is deleted

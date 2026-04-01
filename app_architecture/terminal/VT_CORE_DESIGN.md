@@ -224,6 +224,9 @@ Status note, 2026-03-31:
     row-pass probe logs, and frame-provenance/column-probe logging are not
     part of a best-in-class terminal architecture; they are temporary probes
     and should be deleted once the session that needed them is over
+  - low-level draw/cache/parser/poll narration is not architecture either; if
+    a log is not defending a contract, warning path, lifecycle edge, or
+    subsystem boundary, it should be deleted instead of normalized
     drives both update-plan forcing and logging, group it instead of leaving it
     as a loose cluster of temporary values
   - handoff/log snapshot state inside draw should also be grouped once it feeds

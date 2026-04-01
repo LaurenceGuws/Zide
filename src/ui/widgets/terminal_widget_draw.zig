@@ -11,8 +11,6 @@ const draw_overlay = @import("terminal_widget_draw_overlay.zig");
 const draw_texture = @import("terminal_widget_draw_texture.zig");
 
 const hover_mod = @import("terminal_widget_hover.zig");
-const kitty_mod = @import("terminal_widget_kitty.zig");
-
 const Shell = app_shell.Shell;
 const Color = app_shell.Color;
 const CursorPos = terminal_publication.CursorPos;
@@ -74,58 +72,10 @@ pub const DrawPreparation = struct {
 const ViewportTextureShiftPlan = draw_texture.ViewportTextureShiftPlan;
 const TextureUpdatePlan = draw_texture.TextureUpdatePlan;
 const FullFrameFastPathDecision = draw_texture.FullFrameFastPathDecision;
-const PartialPlanBounds = draw_texture.PartialPlanBounds;
-const PartialPlanSummary = struct {
-    rows_count: usize = 0,
-    row_span: usize = 0,
-    col_span: usize = 0,
-    cells: usize = 0,
-    union_cells: usize = 0,
-    summary: []const u8 = "",
-};
-
-const DrawTelemetry = struct {
-    texture_full_update: bool = false,
-    texture_partial_update: bool = false,
-};
 
 const ViewportShiftState = struct {
     rows: i32 = 0,
     exposed_only: bool = false,
-};
-
-const DrawLogBuffers = struct {
-    partial_plan_summary_buf: [256]u8 = undefined,
-    glyph_stats_summary_buf: [220]u8 = undefined,
-    glyph_batch_summary_buf: [96]u8 = undefined,
-    glyph_atlas_summary_buf: [96]u8 = undefined,
-    sprite_stats_summary_buf: [48]u8 = undefined,
-    lock_stats_summary_buf: [64]u8 = undefined,
-};
-
-const DrawLoggers = struct {
-    redraw: @TypeOf(app_logger.logger("terminal.ui.redraw")),
-    texture_shift: @TypeOf(app_logger.logger("terminal.ui.texture_shift")),
-    perf: @TypeOf(app_logger.logger("terminal.ui.perf")),
-    lifecycle: @TypeOf(app_logger.logger("terminal.ui.lifecycle")),
-};
-
-const RowRenderStats = struct {
-    bg_runs: usize = 0,
-    span_count: usize = 0,
-    col_min: usize,
-    col_max: usize = 0,
-    bg_summary: draw_grid.BackgroundRunSummary = .{},
-    shaped_total: usize = 0,
-    direct_text: usize = 0,
-    special: usize = 0,
-    box: usize = 0,
-    shaped_text: usize = 0,
-    fallback: usize = 0,
-
-    fn width(self: RowRenderStats, cols: usize) usize {
-        return if (self.col_min < cols and self.col_max >= self.col_min) self.col_max - self.col_min + 1 else 0;
-    }
 };
 
 pub fn latestFrameLatencyMetrics() FrameLatencyMetrics {
@@ -177,53 +127,6 @@ fn toShellColor(color: terminal_publication.Color) Color {
 
 fn spansOverlap(start_a: usize, end_a: usize, start_b: usize, end_b: usize) bool {
     return start_a <= end_b and start_b <= end_a;
-}
-
-fn summarizePartialPlan(
-    self: anytype,
-    partial_plan_bounds: ?PartialPlanBounds,
-    draw_log_enabled: bool,
-    texture_partial_update: bool,
-    summary_buf: []u8,
-) PartialPlanSummary {
-    var summary = PartialPlanSummary{};
-
-    for (self.partial_draw_rows.items) |row_draw| {
-        if (row_draw) summary.rows_count += 1;
-    }
-    for (self.partial_draw_rows.items, 0..) |row_draw, row| {
-        if (!row_draw) continue;
-        if (row < self.partial_draw_span_counts.items.len and row < self.partial_draw_spans.items.len and self.partial_draw_span_counts.items[row] > 0) {
-            var span_idx: usize = 0;
-            while (span_idx < self.partial_draw_span_counts.items[row]) : (span_idx += 1) {
-                const span = self.partial_draw_spans.items[row][span_idx];
-                const row_start = @as(usize, span.start);
-                const row_end = @as(usize, span.end);
-                if (row_end >= row_start) summary.cells += row_end - row_start + 1;
-            }
-        } else {
-            const row_start = @as(usize, self.partial_draw_cols_start.items[row]);
-            const row_end = @as(usize, self.partial_draw_cols_end.items[row]);
-            if (row_end >= row_start) summary.cells += row_end - row_start + 1;
-        }
-    }
-    if (partial_plan_bounds) |bounds| {
-        summary.row_span = bounds.end_row - bounds.start_row + 1;
-        summary.col_span = bounds.end_col - bounds.start_col + 1;
-        summary.union_cells = summary.row_span * summary.col_span;
-    }
-    if (draw_log_enabled and texture_partial_update) {
-        summary.summary = draw_texture.formatPartialPlanRows(
-            summary_buf,
-            self.partial_draw_rows.items,
-            self.partial_draw_span_counts.items,
-            self.partial_draw_spans.items,
-            self.partial_draw_cols_start.items,
-            self.partial_draw_cols_end.items,
-            12,
-        );
-    }
-    return summary;
 }
 
 pub fn drawPrepared(
@@ -323,27 +226,11 @@ pub fn drawPrepared(
 
     self.kitty.updateViews(self.session.allocator, rows, cols, draw_state.kitty_images, draw_state.kitty_placements);
 
-    var upload_stats: kitty_mod.KittyState.UploadStats = .{};
     if (self.kitty.images_view.items.len > 0) {
         self.kitty.primeUploads(self.session.allocator);
-        upload_stats = self.kitty.processPendingUploads(shell);
+        _ = self.kitty.processPendingUploads(shell);
     }
 
-    const logs = DrawLoggers{
-        .redraw = app_logger.logger("terminal.ui.redraw"),
-        .texture_shift = app_logger.logger("terminal.ui.texture_shift"),
-        .perf = app_logger.logger("terminal.ui.perf"),
-        .lifecycle = app_logger.logger("terminal.ui.lifecycle"),
-    };
-    const dirty_summary = terminal_publication.dirtySummary(cache);
-    var partial_plan_rows_count: usize = 0;
-    var partial_plan_row_span: usize = 0;
-    var partial_plan_col_span: usize = 0;
-    var partial_plan_cells: usize = 0;
-    var partial_plan_union_cells: usize = 0;
-    var partial_plan_summary: []const u8 = "";
-    var log_buffers = DrawLogBuffers{};
-    var fullframe_fastpath_decision: FullFrameFastPathDecision = .{};
     const has_kitty = self.kitty.hasKitty();
     const bg_color = if (view_cells.len > 0) toShellColor(base_colors.background) else r.theme.background;
     r.drawRect(
@@ -364,7 +251,6 @@ pub fn drawPrepared(
     const hover_link_id = hover_mod.hoverLinkId(&self.hover);
 
     var updated = false;
-    var telemetry = DrawTelemetry{};
     var viewport_shift = ViewportShiftState{};
     var cell_w_i: i32 = 0;
     var cell_h_i: i32 = 0;
@@ -373,7 +259,6 @@ pub fn drawPrepared(
     var viewport_w: f32 = 0;
     var viewport_h: f32 = 0;
     const texture_phase_start = app_shell.getTime();
-    const texture_ready_before_draw = self.terminal_texture_ready;
     if (rows > 0 and cols > 0) {
         const geom = r.terminalCellGeometry();
         cell_w_i = geom.cell_width_device_px;
@@ -436,34 +321,8 @@ pub fn drawPrepared(
                 if (r.scrollTerminalTexture(0, dy_pixels)) {
                     needs_partial = true;
                     shifted_rows = shift_rows;
-                    logs.texture_shift.logf(
-                        .info,
-                        "result=scroll_copy_ok gen={d} dirty={s} shift_rows={d} exposed_only={d} scroll_offset={d} damage={d}..{d}/{d}..{d}",
-                        .{
-                            draw_state.generation,
-                            dirty_summary.dirty_tag,
-                            viewport_shift.rows,
-                            @intFromBool(viewport_shift.exposed_only),
-                            scroll_offset,
-                            dirty_summary.damage_start_row,
-                            dirty_summary.damage_end_row,
-                            dirty_summary.damage_start_col,
-                            dirty_summary.damage_end_col,
-                        },
-                    );
                 } else {
                     shifted_rows = 0;
-                    logs.texture_shift.logf(
-                        .info,
-                        "result=scroll_copy_failed gen={d} dirty={s} shift_rows={d} exposed_only={d} scroll_offset={d}",
-                        .{
-                            draw_state.generation,
-                            dirty_summary.dirty_tag,
-                            viewport_shift.rows,
-                            @intFromBool(viewport_shift.exposed_only),
-                            scroll_offset,
-                        },
-                    );
                     if (viewport_shift.exposed_only) {
                         needs_partial = true;
                         shift_requires_fullwidth_partial = true;
@@ -471,20 +330,6 @@ pub fn drawPrepared(
                 }
             },
             .none => {
-                if (viewport_shift.rows != 0) {
-                    logs.texture_shift.logf(
-                        .info,
-                        "result=scroll_copy_skipped gen={d} dirty={s} shift_rows={d} exposed_only={d} scroll_offset={d} full={d}",
-                        .{
-                            draw_state.generation,
-                            dirty_summary.dirty_tag,
-                            viewport_shift.rows,
-                            @intFromBool(viewport_shift.exposed_only),
-                            scroll_offset,
-                            @intFromBool(needs_full),
-                        },
-                    );
-                }
                 if (viewport_shift.exposed_only) {
                     needs_partial = true;
                     shift_requires_fullwidth_partial = true;
@@ -492,7 +337,7 @@ pub fn drawPrepared(
             },
         }
         if (!needs_full and needs_partial) {
-            fullframe_fastpath_decision = draw_texture.decideFullFrameFastPath(
+            const fullframe_fastpath_decision: FullFrameFastPathDecision = draw_texture.decideFullFrameFastPath(
                 cache,
                 shifted_rows,
                 viewport_shift.rows,
@@ -551,9 +396,6 @@ pub fn drawPrepared(
                 );
             }
         }
-        telemetry.texture_full_update = needs_full;
-        telemetry.texture_partial_update = needs_partial;
-
         if ((needs_full or needs_partial) and r.beginTerminalTexture()) {
             // Disable scissor while updating the offscreen texture.
             // The main draw pass will restore the clip for on-screen drawing.
@@ -625,7 +467,7 @@ pub fn drawPrepared(
                     return outcome;
                 };
 
-                const partial_plan_bounds = buildPartialPlan(
+                _ = buildPartialPlan(
                     cache,
                     self.partial_draw_rows.items,
                     self.partial_draw_span_counts.items,
@@ -637,36 +479,6 @@ pub fn drawPrepared(
                     shift_requires_fullwidth_partial,
                     blink_requires_partial,
                 );
-                const partial_plan = summarizePartialPlan(
-                    self,
-                    partial_plan_bounds,
-                    logs.redraw.enabled_file or logs.redraw.enabled_console,
-                    telemetry.texture_partial_update,
-                    &log_buffers.partial_plan_summary_buf,
-                );
-                partial_plan_rows_count = partial_plan.rows_count;
-                partial_plan_row_span = partial_plan.row_span;
-                partial_plan_col_span = partial_plan.col_span;
-                partial_plan_cells = partial_plan.cells;
-                partial_plan_union_cells = partial_plan.union_cells;
-                partial_plan_summary = partial_plan.summary;
-                if (shifted_rows > 0 or shift_requires_fullwidth_partial) {
-                    logs.texture_shift.logf(
-                        .info,
-                        "result=partial_plan gen={d} shifted_rows={d} fullwidth_exposed={d} plan_rows={d} plan_row_span={d} plan_col_span={d} plan_cells={d} plan_union_cells={d} spans={s}",
-                        .{
-                            draw_state.generation,
-                            shifted_rows,
-                            @intFromBool(shift_requires_fullwidth_partial),
-                            partial_plan_rows_count,
-                            partial_plan_row_span,
-                            partial_plan_col_span,
-                            partial_plan_cells,
-                            partial_plan_union_cells,
-                            partial_plan_summary,
-                        },
-                    );
-                }
 
                 const bg_phase_start = app_shell.getTime();
                 r.beginTerminalBatch();
@@ -701,41 +513,19 @@ pub fn drawPrepared(
                 r.beginTerminalGlyphBatch();
                 for (0..rows) |row| {
                     if (!self.partial_draw_rows.items[row]) continue;
-                    const before_stats = glyph_draw_stats;
-                    var row_stats = RowRenderStats{ .col_min = cols };
                     if (row < self.partial_draw_span_counts.items.len and row < self.partial_draw_spans.items.len and self.partial_draw_span_counts.items[row] > 0) {
                         var span_idx: usize = 0;
                         while (span_idx < self.partial_draw_span_counts.items[row]) : (span_idx += 1) {
                             const span = self.partial_draw_spans.items[row][span_idx];
                             const col_start = @min(@as(usize, span.start), cols - 1);
                             const col_end = @min(@as(usize, span.end), cols - 1);
-                            const draw_padding = col_end >= cols - 1;
-                            row_stats.bg_runs += draw_grid.countRowBackgroundRuns(view_cells, cols, row, col_start, col_end, draw_padding, screen_reverse);
-                            if (row_stats.bg_summary.runs == 0) {
-                                row_stats.bg_summary = draw_grid.summarizeRowBackgroundRuns(view_cells, cols, row, col_start, col_end, draw_padding, screen_reverse);
-                            }
-                            row_stats.span_count += 1;
-                            row_stats.col_min = @min(row_stats.col_min, col_start);
-                            row_stats.col_max = @max(row_stats.col_max, col_end);
                             drawRowGlyphs(shell, view_cells, cols, row, col_start, col_end, base_x_local, base_y_local, padding_x_i, hover_link_id, screen_reverse, blink_style, blink_time, draw_cursor, cursor, r.terminal_disable_ligatures, &glyph_draw_stats);
                         }
                     } else {
                         const col_start = @min(@as(usize, self.partial_draw_cols_start.items[row]), cols - 1);
                         const col_end = @min(@as(usize, self.partial_draw_cols_end.items[row]), cols - 1);
-                        const draw_padding = col_end >= cols - 1;
-                        row_stats.bg_runs += draw_grid.countRowBackgroundRuns(view_cells, cols, row, col_start, col_end, draw_padding, screen_reverse);
-                        row_stats.bg_summary = draw_grid.summarizeRowBackgroundRuns(view_cells, cols, row, col_start, col_end, draw_padding, screen_reverse);
-                        row_stats.span_count = 1;
-                        row_stats.col_min = col_start;
-                        row_stats.col_max = col_end;
                         drawRowGlyphs(shell, view_cells, cols, row, col_start, col_end, base_x_local, base_y_local, padding_x_i, hover_link_id, screen_reverse, blink_style, blink_time, draw_cursor, cursor, r.terminal_disable_ligatures, &glyph_draw_stats);
                     }
-                    row_stats.shaped_total = glyph_draw_stats.shaped_glyphs - before_stats.shaped_glyphs;
-                    row_stats.direct_text = glyph_draw_stats.direct_text_glyphs - before_stats.direct_text_glyphs;
-                    row_stats.special = glyph_draw_stats.special_sprite_glyphs - before_stats.special_sprite_glyphs;
-                    row_stats.box = glyph_draw_stats.box_glyphs - before_stats.box_glyphs;
-                    row_stats.shaped_text = glyph_draw_stats.shaped_text_glyphs - before_stats.shaped_text_glyphs;
-                    row_stats.fallback = glyph_draw_stats.fallback_cells - before_stats.fallback_cells;
                 }
                 r.flushTerminalGlyphBatch();
                 texture_glyph_ms += time_utils.secondsToMs(app_shell.getTime() - glyph_phase_start);
@@ -807,7 +597,7 @@ pub fn drawPrepared(
         cursor_style,
     );
 
-    if (updated or dirty_summary.is_clean) {
+    if (updated or cache.dirty == .none) {
         outcome.texture_updated = updated;
     }
     overlay_ms = time_utils.secondsToMs(app_shell.getTime() - overlay_phase_start);
@@ -821,130 +611,6 @@ pub fn drawPrepared(
             .scroll_offset = scroll_offset,
         };
     }
-
-    const now = app_shell.getTime();
-    const elapsed_ms = time_utils.secondsToMs(now - draw_start);
-    const has_kitty_images = self.kitty.images_view.items.len > 0;
-    const lifecycle_reason = if (!texture_ready_before_draw)
-        "init"
-    else if (lifecycle_transition.reason()) |reason|
-        reason
-    else
-        null;
-    const active_draw_log = if (lifecycle_reason != null) logs.lifecycle else logs.redraw;
-    const active_perf_log = if (lifecycle_reason != null) logs.lifecycle else logs.perf;
-    const log_partial_update = telemetry.texture_partial_update and updated and (active_draw_log.enabled_file or active_draw_log.enabled_console or active_perf_log.enabled_file or active_perf_log.enabled_console);
-    if ((elapsed_ms >= 4.0 or has_kitty_images or log_partial_update) and (now - self.last_draw_log_time) >= 0.1) {
-        self.last_draw_log_time = now;
-        active_draw_log.logf(
-            .info,
-            "draw_ms={d:.2} rows={d} cols={d} history={d} cells={d} kitty_images={d} kitty_placements={d}",
-            .{
-                elapsed_ms,
-                rows,
-                cols,
-                history_len,
-                rows * cols,
-                self.kitty.images_view.items.len,
-                self.kitty.placements_view.items.len,
-            },
-        );
-        active_perf_log.logf(
-            .info,
-            "draw_ms={d:.2} lock_stats={s} texture_update_ms={d:.2} texture_bg_ms={d:.2} texture_glyph_ms={d:.2} texture_kitty_ms={d:.2} overlay_ms={d:.2} full={d} partial={d} updated={d} sync={d} clear_ok={d} dirty={s} current_reason={s} dirty_rows={d} damage_rows={d} damage_cols={d} plan_rows={d} plan_row_span={d} plan_col_span={d} plan_cells={d} plan_union_cells={d} blink_cells={d} blink_phase_changed={d} shift_rows={d} shift_exposed_only={d} sprite_stats={s} glyph_batch_stats={s} glyph_atlas_stats={s} glyph_stats={s} rows={d} cols={d}",
-            .{
-                elapsed_ms,
-                std.fmt.bufPrint(&log_buffers.lock_stats_summary_buf, "{d:.2}/{d:.2}/{d:.2}/{d:.2}/{d:.2}", .{
-                    lock_ms,
-                    lock_wait_ms,
-                    lock_hold_ms,
-                    view_cache_ms,
-                    cache_copy_ms,
-                }) catch "overflow",
-                texture_update_ms,
-                texture_bg_ms,
-                texture_glyph_ms,
-                texture_kitty_ms,
-                overlay_ms,
-                @intFromBool(telemetry.texture_full_update),
-                @intFromBool(telemetry.texture_partial_update),
-                @intFromBool(updated),
-                @intFromBool(sync_updates),
-                @intFromBool(outcome.presented != null and (outcome.texture_updated or dirty_summary.is_clean)),
-                dirty_summary.dirty_tag,
-                dirty_summary.current_reason,
-                dirty_summary.dirty_rows_count,
-                dirty_summary.damage_row_span,
-                dirty_summary.damage_col_span,
-                partial_plan_rows_count,
-                partial_plan_row_span,
-                partial_plan_col_span,
-                partial_plan_cells,
-                partial_plan_union_cells,
-                @intFromBool(has_blink),
-                @intFromBool(blink_phase_changed),
-                viewport_shift.rows,
-                @intFromBool(viewport_shift.exposed_only),
-                std.fmt.bufPrint(&log_buffers.sprite_stats_summary_buf, "{d}/{d}/{d}/{d:.2}", .{
-                    glyph_draw_stats.special_sprite_cache_hits,
-                    glyph_draw_stats.special_sprite_cache_misses,
-                    glyph_draw_stats.special_sprite_creates,
-                    glyph_draw_stats.special_sprite_lookup_ms,
-                }) catch "overflow",
-                std.fmt.bufPrint(&log_buffers.glyph_batch_summary_buf, "{d}/{d}/{d}/{d}", .{
-                    r.terminal_glyph_cache.frameMetrics().quad_count,
-                    r.terminal_glyph_cache.frameMetrics().flush_count,
-                    r.terminal_glyph_cache.frameMetrics().draw_call_count,
-                    r.terminal_glyph_cache.frameMetrics().vertex_count,
-                }) catch "overflow",
-                std.fmt.bufPrint(&log_buffers.glyph_atlas_summary_buf, "{d}/{d}/{d}/{d}/{d}/{d}/{d}", .{
-                    r.terminal_font.frameAtlasStats().glyph_cache_hits,
-                    r.terminal_font.frameAtlasStats().glyph_cache_misses,
-                    r.terminal_font.frameAtlasStats().rasterized_glyphs,
-                    r.terminal_font.frameAtlasStats().atlas_compactions,
-                    r.terminal_font.frameAtlasStats().uploaded_coverage_glyphs,
-                    r.terminal_font.frameAtlasStats().uploaded_color_glyphs,
-                    r.terminal_font.frameAtlasStats().uploaded_pixels,
-                }) catch "overflow",
-                std.fmt.bufPrint(&log_buffers.glyph_stats_summary_buf, "{d}/{d}/{d}/{d}/{d}/{d}/{d}/{d}/{d:.2}/{d:.2}/{d:.2}/{d:.2}/{d:.2}/{d:.2}/{d:.2}/{d:.2}/{d:.2}/{d:.2}/{d:.2}", .{
-                    glyph_draw_stats.shaping_spans,
-                    glyph_draw_stats.shaped_glyphs,
-                    glyph_draw_stats.fallback_cells,
-                    glyph_draw_stats.special_sprite_glyphs,
-                    glyph_draw_stats.box_glyphs,
-                    glyph_draw_stats.shaped_text_glyphs,
-                    glyph_draw_stats.shaped_special_glyphs,
-                    glyph_draw_stats.shaped_space_skips,
-                    glyph_draw_stats.shape_ms,
-                    glyph_draw_stats.submit_ms,
-                    glyph_draw_stats.shaped_text_submit_ms,
-                    glyph_draw_stats.shaped_special_submit_ms,
-                    glyph_draw_stats.special_sprite_submit_ms,
-                    glyph_draw_stats.box_submit_ms,
-                    glyph_draw_stats.box_sprite_submit_ms,
-                    glyph_draw_stats.box_rect_submit_ms,
-                    glyph_draw_stats.special_sprite_lookup_ms,
-                    glyph_draw_stats.direct_lookup_ms,
-                    glyph_draw_stats.direct_draw_ms,
-                }) catch "overflow",
-                rows,
-                cols,
-            },
-        );
-        if (partial_plan_summary.len > 0) {
-            active_draw_log.logf(
-                .debug,
-                "partial_plan rows={d} row_span={d} col_span={d} spans={s}",
-                .{
-                    partial_plan_rows_count,
-                    partial_plan_row_span,
-                    partial_plan_col_span,
-                    partial_plan_summary,
-                },
-            );
-        }
-    }
-
     return outcome;
 }
 

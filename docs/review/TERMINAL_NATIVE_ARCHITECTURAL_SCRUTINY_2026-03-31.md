@@ -223,6 +223,10 @@ Judgment:
     Scroll Lock capture plumbing, widget-side generation shadow state,
     frame-provenance/column probes, and row-pass/fullframe-fastpath probe logs
     do not belong in the permanent terminal design
+  - the same rule applies to low-level terminal narration generally:
+    draw/cache/parser/poll logs that are not defending a warning path,
+    lifecycle edge, contract, or subsystem boundary are stale probe debt in a
+    different costume and should be deleted
   - it also now owns projected-diff eligibility and full-dirty metadata
     assignment, which further reduces the amount of publication rule text
     living inline in `view_cache.zig`
