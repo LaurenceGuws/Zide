@@ -111,7 +111,7 @@ pub fn handleCsi(self: anytype, action: parser_csi.CsiAction) void {
                 if (self.lockPtyWriter()) |writer_guard| {
                     var writer = writer_guard;
                     defer writer.unlock();
-                    csi_reply.handleDaQuery(&writer);
+                    _ = csi_reply.writeDaPrimaryReplyWithWriter(&writer);
                 }
             }
         },

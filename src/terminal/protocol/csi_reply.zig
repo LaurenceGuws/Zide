@@ -86,10 +86,6 @@ pub fn handleDsrQuery(
     }
 }
 
-pub fn handleDaQuery(writer: anytype) void {
-    _ = writeDaPrimaryReplyWithWriter(writer);
-}
-
 pub fn handleWindowOpQuery(
     cell_height: u16,
     cell_width: u16,

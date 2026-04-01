@@ -930,6 +930,7 @@ work:
   the transport structs instead of pretending they are real boundary types
 - once a protocol helper only bounces straight into another protocol helper,
   delete it instead of preserving a duplicate name with no contract value
+- apply the same rule to tiny CSI writer bounces like the old DA wrapper
 
 ## Final Assessment
 

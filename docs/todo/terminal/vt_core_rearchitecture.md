@@ -857,6 +857,8 @@ Validation note, 2026-03-31:
 - Another small protocol bounce is gone too: `osc_kitty_clipboard.zig` no
   longer keeps a duplicate `writeReadStatus(...)` wrapper over
   `writeReadStatusWithId(...)`.
+- Another small CSI bounce is gone too: `csi_reply.handleDaQuery(...)` is dead,
+  and the DA path now calls `writeDaPrimaryReplyWithWriter(...)` directly.
 - The terminal campaign should now judge success by first-glance authority:
   when a strong maintainer opens the code, the engine must obviously be the
   engine.

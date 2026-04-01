@@ -1475,6 +1475,9 @@ structs and pass the raw owner-shaped values directly.
 The same applies to tiny duplicate wrappers: if one protocol helper only bounces
 straight into the real writer-shaped helper, delete it.
 
+That includes tiny CSI reply hops too; the DA path now calls the writer-shaped
+reply helper directly instead of routing through another duplicate function.
+
 Avoid continuing to use `TerminalSession` as the name of the engine center once
 the new boundary exists.
 
