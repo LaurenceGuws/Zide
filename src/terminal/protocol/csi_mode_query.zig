@@ -99,58 +99,40 @@ pub fn modeSnapshotFromContext(ctx: ModeCaptureContext) ModeSnapshot {
     };
 }
 
-pub const ModeQueryContext = struct {
-    ctx: *anyopaque,
-    mode_snapshot_fn: *const fn (ctx: *anyopaque) ModeSnapshot,
-
-    pub fn from(session: anytype) ModeQueryContext {
-        const SessionPtr = @TypeOf(session);
-        return .{
-            .ctx = @ptrCast(session),
-            .mode_snapshot_fn = struct {
-                fn call(ctx: *anyopaque) ModeSnapshot {
-                    const s: SessionPtr = @ptrCast(@alignCast(ctx));
-                    const screen = s.activeScreen();
-                    return modeSnapshotFromContext(.{
-                        .app_cursor_keys = s.appCursorKeysEnabled(),
-                        .column_mode_132 = s.core.column_mode_132,
-                        .screen_reverse = screen.screen_reverse,
-                        .origin_mode = screen.origin_mode,
-                        .auto_wrap = screen.auto_wrap,
-                        .auto_repeat = s.autoRepeatEnabled(),
-                        .mouse_mode_x10 = s.mouseModeX10Enabled(),
-                        .cursor_blink = screen.cursor_style.blink,
-                        .cursor_visible = screen.cursor_visible,
-                        .reverse_wrap = screen.reverse_wrap,
-                        .left_right_margin_mode_69 = screen.left_right_margin_mode_69,
-                        .alt_active = s.core.active == .alt,
-                        .save_cursor_mode_1048 = screen.save_cursor_mode_1048,
-                        .app_keypad = s.appKeypadEnabled(),
-                        .mouse_mode_button = s.mouseModeButtonEnabled(),
-                        .mouse_mode_any = s.mouseModeAnyEnabled(),
-                        .focus_reporting = s.focusReportingEnabled(),
-                        .mouse_mode_sgr = s.mouseModeSgrEnabled(),
-                        .mouse_alternate_scroll = s.mouseAlternateScrollEnabled(),
-                        .mouse_mode_sgr_pixels = s.mouseModeSgrPixelsEnabled(),
-                        .bracketed_paste = s.bracketedPasteEnabled(),
-                        .sync_updates_active = s.core.sync_updates_active,
-                        .grapheme_cluster_shaping_2027 = s.interaction.grapheme_cluster_shaping_2027,
-                        .report_color_scheme_2031 = s.interaction.report_color_scheme_2031,
-                        .inband_resize_notifications_2048 = s.interaction.inband_resize_notifications_2048,
-                        .kitty_paste_events_5522 = s.interaction.kitty_paste_events_5522,
-                        .insert_mode = screen.insert_mode,
-                        .local_echo_mode_12 = screen.local_echo_mode_12,
-                        .newline_mode = screen.newline_mode,
-                    });
-                }
-            }.call,
-        };
-    }
-
-    pub fn snapshot(self: *const ModeQueryContext) ModeSnapshot {
-        return self.mode_snapshot_fn(self.ctx);
-    }
-};
+pub fn modeSnapshot(self: anytype) ModeSnapshot {
+    const screen = self.activeScreen();
+    return modeSnapshotFromContext(.{
+        .app_cursor_keys = self.appCursorKeysEnabled(),
+        .column_mode_132 = self.core.column_mode_132,
+        .screen_reverse = screen.screen_reverse,
+        .origin_mode = screen.origin_mode,
+        .auto_wrap = screen.auto_wrap,
+        .auto_repeat = self.autoRepeatEnabled(),
+        .mouse_mode_x10 = self.mouseModeX10Enabled(),
+        .cursor_blink = screen.cursor_style.blink,
+        .cursor_visible = screen.cursor_visible,
+        .reverse_wrap = screen.reverse_wrap,
+        .left_right_margin_mode_69 = screen.left_right_margin_mode_69,
+        .alt_active = self.core.active == .alt,
+        .save_cursor_mode_1048 = screen.save_cursor_mode_1048,
+        .app_keypad = self.appKeypadEnabled(),
+        .mouse_mode_button = self.mouseModeButtonEnabled(),
+        .mouse_mode_any = self.mouseModeAnyEnabled(),
+        .focus_reporting = self.focusReportingEnabled(),
+        .mouse_mode_sgr = self.mouseModeSgrEnabled(),
+        .mouse_alternate_scroll = self.mouseAlternateScrollEnabled(),
+        .mouse_mode_sgr_pixels = self.mouseModeSgrPixelsEnabled(),
+        .bracketed_paste = self.bracketedPasteEnabled(),
+        .sync_updates_active = self.core.sync_updates_active,
+        .grapheme_cluster_shaping_2027 = self.interaction.grapheme_cluster_shaping_2027,
+        .report_color_scheme_2031 = self.interaction.report_color_scheme_2031,
+        .inband_resize_notifications_2048 = self.interaction.inband_resize_notifications_2048,
+        .kitty_paste_events_5522 = self.interaction.kitty_paste_events_5522,
+        .insert_mode = screen.insert_mode,
+        .local_echo_mode_12 = screen.local_echo_mode_12,
+        .newline_mode = screen.newline_mode,
+    });
+}
 
 pub fn decrqmPrivateModeState(snapshot: ModeSnapshot, mode: i32) csi_mod.DecrpmState {
     return switch (mode) {

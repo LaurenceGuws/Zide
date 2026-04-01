@@ -21,7 +21,6 @@ pub const DecrpmState = enum(u8) {
 
 const ModeSnapshot = csi_mode_query.ModeSnapshot;
 const ModeCaptureContext = csi_mode_query.ModeCaptureContext;
-const ModeQueryContext = csi_mode_query.ModeQueryContext;
 const ModeMutationContext = csi_mode_mutation.ModeMutationContext;
 
 fn modeSnapshotFromContext(ctx: ModeCaptureContext) ModeSnapshot {
@@ -145,7 +144,7 @@ fn handleCsiOnSession(self: anytype, action: parser_csi.CsiAction) void {
                 if (self.lockPtyWriter()) |writer_guard| {
                     var writer = writer_guard;
                     defer writer.unlock();
-                    handleDecrqmQuery(CsiWriter.from(&writer), action, p[0], ModeQueryContext.from(self).snapshot());
+                    handleDecrqmQuery(CsiWriter.from(&writer), action, p[0], csi_mode_query.modeSnapshot(self));
                 }
             }
         },

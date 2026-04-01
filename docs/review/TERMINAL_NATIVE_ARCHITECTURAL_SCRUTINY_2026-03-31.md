@@ -161,6 +161,11 @@ Judgment:
   `src/terminal/protocol/csi_exec.zig` now operates on the live runtime
   object directly instead of routing simple/special CSI execution through
   two more adapter structs
+- the DECRQM mode-query shell is dead too:
+  `ModeQueryContext` is deleted from
+  `src/terminal/protocol/csi_mode_query.zig`, and DECRQM now snapshots mode
+  state directly from the live runtime object via
+  `csi_mode_query.modeSnapshot(self)`
 - the stale `src/terminal/core/session_protocol.zig` forwarding shell is now
   deleted, so that API seam no longer routes through one extra session-named
   hop before reaching the real owners

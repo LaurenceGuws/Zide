@@ -180,6 +180,11 @@ Validation note, 2026-03-31:
     `src/terminal/protocol/csi_exec.zig` now operates on the live runtime
     object directly instead of routing simple/special CSI execution through
     two more adapter structs
+  - the DECRQM mode-query shell is dead too:
+    `ModeQueryContext` is deleted from
+    `src/terminal/protocol/csi_mode_query.zig`, and DECRQM now snapshots mode
+    state directly from the live runtime object via
+    `csi_mode_query.modeSnapshot(self)`
   - the remaining publication/view-cache helper stubs and the special-case
     protocol `appendHyperlink` wrapper are no longer written inline on
     `pty_terminal_runtime.zig`; those exceptions now route through the explicit
