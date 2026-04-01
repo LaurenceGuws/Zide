@@ -165,9 +165,9 @@ Status note, 2026-03-31:
   - `src/terminal/core/session/input_api.zig` now holds the host input
     send/report method group that was previously written inline on
     `pty_terminal_runtime.zig`
-  - `src/terminal/core/protocol/terminal_protocol_api.zig` now holds the protocol/VT
-    mutation method group that was previously written inline on
-    `pty_terminal_runtime.zig`
+  - protocol/VT mutation methods no longer route through a separate wrapper
+    shell; `pty_terminal_runtime.zig` now points straight at the real protocol
+    owners
   - `src/terminal/core/session/config_api.zig` now holds the config, palette,
     and mode-setting method group that was previously written inline on
     `pty_terminal_runtime.zig`

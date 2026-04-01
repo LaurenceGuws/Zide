@@ -28,6 +28,7 @@ const host_selection = @import("session/selection.zig");
 const interaction = @import("session/interaction.zig");
 const init_options = @import("session/init_options.zig");
 const input_snapshot = @import("session/input_snapshot.zig");
+const mode_effects = @import("session/mode_effects.zig");
 const presentation_feedback = @import("session/presentation_feedback.zig");
 const terminal_publication = @import("publication/terminal_publication.zig");
 const config = @import("session/config.zig");
@@ -39,7 +40,6 @@ const runtime_fields = @import("session/runtime_fields.zig");
 const interaction_fields = @import("session/interaction_fields.zig");
 const control_fields = @import("session/control_fields.zig");
 const input_api = @import("session/input_api.zig");
-const terminal_protocol_api = @import("protocol/terminal_protocol_api.zig");
 const config_api = @import("session/config_api.zig");
 const lifecycle_api = @import("session/lifecycle_api.zig");
 const surface_api = @import("session/surface_api.zig");
@@ -275,50 +275,50 @@ pub const PtyTerminalRuntime = struct {
     pub const setColumnMode132Locked = config_api.setColumnMode132Locked;
     pub const setCellSize = config_api.setCellSize;
 
-    pub const handleControl = terminal_protocol_api.handleControl;
-    pub const parseDcs = terminal_protocol_api.parseDcs;
-    pub const parseApc = terminal_protocol_api.parseApc;
-    pub const parseOsc = terminal_protocol_api.parseOsc;
-    pub const appendHyperlink = terminal_protocol_api.appendHyperlink;
-    pub const clearAllKittyImages = terminal_protocol_api.clearAllKittyImages;
-    pub const handleCsi = terminal_protocol_api.handleCsi;
-    pub const feedOutputBytes = terminal_protocol_api.feedOutputBytes;
-    pub const resetState = terminal_protocol_api.resetState;
-    pub const resetStateLocked = terminal_protocol_api.resetStateLocked;
-    pub const reverseIndex = terminal_protocol_api.reverseIndex;
-    pub const eraseDisplay = terminal_protocol_api.eraseDisplay;
-    pub const eraseLine = terminal_protocol_api.eraseLine;
-    pub const insertChars = terminal_protocol_api.insertChars;
-    pub const deleteChars = terminal_protocol_api.deleteChars;
-    pub const eraseChars = terminal_protocol_api.eraseChars;
-    pub const insertLines = terminal_protocol_api.insertLines;
-    pub const deleteLines = terminal_protocol_api.deleteLines;
-    pub const scrollRegionUp = terminal_protocol_api.scrollRegionUp;
-    pub const scrollRegionUpWithOrigin = terminal_protocol_api.scrollRegionUpWithOrigin;
-    pub const scrollRegionDown = terminal_protocol_api.scrollRegionDown;
-    pub const paletteColor = terminal_protocol_api.paletteColor;
-    pub const handleCodepoint = terminal_protocol_api.handleCodepoint;
-    pub const handleAsciiSlice = terminal_protocol_api.handleAsciiSlice;
-    pub const newline = terminal_protocol_api.newline;
-    pub const wrapNewline = terminal_protocol_api.wrapNewline;
+    pub const handleControl = control_handlers.handleControl;
+    pub const parseDcs = @import("../protocol/dcs_apc.zig").parseDcs;
+    pub const parseApc = @import("../protocol/dcs_apc.zig").parseApc;
+    pub const parseOsc = @import("../protocol/osc.zig").parseOsc;
+    pub const appendHyperlink = appendHyperlinkImpl;
+    pub const clearAllKittyImages = @import("protocol/terminal_core_protocol.zig").clearAllKittyImages;
+    pub const handleCsi = protocol_csi.handleCsi;
+    pub const feedOutputBytes = feedOutputBytesImpl;
+    pub const resetState = resetStateImpl;
+    pub const resetStateLocked = mode_effects.resetStateLocked;
+    pub const reverseIndex = @import("protocol/terminal_core_protocol.zig").reverseIndex;
+    pub const eraseDisplay = @import("protocol/terminal_core_protocol.zig").eraseDisplay;
+    pub const eraseLine = @import("protocol/terminal_core_protocol.zig").eraseLine;
+    pub const insertChars = @import("protocol/terminal_core_protocol.zig").insertChars;
+    pub const deleteChars = @import("protocol/terminal_core_protocol.zig").deleteChars;
+    pub const eraseChars = @import("protocol/terminal_core_protocol.zig").eraseChars;
+    pub const insertLines = @import("protocol/terminal_core_protocol.zig").insertLines;
+    pub const deleteLines = @import("protocol/terminal_core_protocol.zig").deleteLines;
+    pub const scrollRegionUp = @import("protocol/terminal_core_protocol.zig").scrollRegionUp;
+    pub const scrollRegionUpWithOrigin = @import("protocol/terminal_core_protocol.zig").scrollRegionUpWithOrigin;
+    pub const scrollRegionDown = @import("protocol/terminal_core_protocol.zig").scrollRegionDown;
+    pub const paletteColor = @import("protocol/terminal_core_protocol.zig").paletteColor;
+    pub const handleCodepoint = @import("protocol/terminal_core_text.zig").handleCodepoint;
+    pub const handleAsciiSlice = @import("protocol/terminal_core_text.zig").handleAsciiSlice;
+    pub const newline = @import("protocol/terminal_core_protocol.zig").newline;
+    pub const wrapNewline = @import("protocol/terminal_core_protocol.zig").wrapNewline;
 
     fn scrollUp(self: *PtyTerminalRuntime) void {
         scrolling_mod.scrollUp(self);
     }
 
-    pub const getCell = terminal_protocol_api.getCell;
-    pub const getCursorPos = terminal_protocol_api.getCursorPos;
+    pub const getCell = @import("protocol/terminal_core_protocol.zig").getCell;
+    pub const getCursorPos = @import("protocol/terminal_core_protocol.zig").getCursorPos;
 
     pub const updateViewCacheForScroll = terminal_publication.updateViewCacheForScroll;
     pub const updateViewCacheForScrollLocked = terminal_publication.updateViewCacheForScrollLocked;
 
-    pub const setCursorStyle = terminal_protocol_api.setCursorStyle;
-    pub const decrqssReplyInto = terminal_protocol_api.decrqssReplyInto;
-    pub const saveCursor = terminal_protocol_api.saveCursor;
-    pub const restoreCursor = terminal_protocol_api.restoreCursor;
-    pub const setTabAtCursor = terminal_protocol_api.setTabAtCursor;
-    pub const enterAltScreen = terminal_protocol_api.enterAltScreen;
-    pub const exitAltScreen = terminal_protocol_api.exitAltScreen;
+    pub const setCursorStyle = @import("protocol/terminal_core_protocol.zig").setCursorStyle;
+    pub const decrqssReplyInto = @import("protocol/terminal_core_protocol.zig").decrqssReplyInto;
+    pub const saveCursor = @import("terminal_core_modes.zig").saveCursor;
+    pub const restoreCursor = @import("terminal_core_modes.zig").restoreCursor;
+    pub const setTabAtCursor = @import("protocol/terminal_core_protocol.zig").setTabAtCursor;
+    pub const enterAltScreen = mode_effects.enterAltScreen;
+    pub const exitAltScreen = mode_effects.exitAltScreen;
 
     pub const snapshot = terminal_publication.snapshot;
     pub const renderCache = terminal_publication.renderCache;
@@ -333,6 +333,23 @@ pub const PtyTerminalRuntime = struct {
 
     pub const CloseConfirmSignals = host_types.CloseConfirmSignals;
 };
+
+fn appendHyperlinkImpl(self: anytype, uri: []const u8) ?u32 {
+    return @import("protocol/terminal_core_protocol.zig").appendHyperlink(self, uri, 2048);
+}
+
+fn feedOutputBytesImpl(self: anytype, bytes: []const u8) void {
+    self.control.state_mutex.lock();
+    defer self.control.state_mutex.unlock();
+    const result = @import("protocol/terminal_core_feed.zig").feedOutputBytesLocked(self, bytes);
+    terminal_publication.publishFeedResultLocked(self, result);
+}
+
+fn resetStateImpl(self: anytype) void {
+    self.control.state_mutex.lock();
+    defer self.control.state_mutex.unlock();
+    mode_effects.resetStateLocked(self);
+}
 
 pub const Hyperlink = types_api.Hyperlink;
 
