@@ -292,10 +292,10 @@ Judgment:
     and pressure logging
   - widget draw handoff/log snapshot state is now grouped in `HandoffState`
     instead of repeating the same generation reads across plan/commit logs
-  - draw-log formatting scratch buffers are now grouped in `DrawLogBuffers`
-    instead of sitting as an unrelated local-array slab in the render body
-  - widget draw logger handles are now grouped in `DrawLoggers` instead of
-    being repeated as another unrelated local slab in the render body
+  - the stronger correction now applies to those draw-log seams too:
+    formatting-buffer and logger-handle slabs that only existed to support
+    low-level narration are not a structure to preserve; they are debt to
+    delete
   - partial glyph-pass row metrics are now grouped in `RowRenderStats`
     instead of being expanded inline as another local metrics blob
   - widget draw now also uses helper-owned current alt-state and clean-state

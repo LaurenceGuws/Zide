@@ -1090,10 +1090,6 @@ pub fn drawRowGlyphs(
                     if (drawAlignedSpecialGlyphSprite(rr, row_cells, abs_col, width_units, screen_reverse_mode, cell.codepoint, variant, @as(i32, @intFromFloat(std.math.round(box_x))), @as(i32, @intFromFloat(std.math.round(box_y))), @as(i32, @intFromFloat(std.math.round(box_w))), @as(i32, @intFromFloat(std.math.round(box_h))), fg_draw, render_scale, &row_sprite_cache, stats)) {
                         continue;
                     }
-                    if (variant == .powerline or variant == .box or variant == .braille or variant == .legacy or variant == .branch or variant == .shade) {
-                        const special_log = app_logger.logger("terminal.glyph.special");
-                        special_log.logf(.info, "sprite_missing cp=U+{X} variant={s} cell={d}x{d}", .{ cell.codepoint, @tagName(variant), @as(i32, @intFromFloat(std.math.round(box_w))), @as(i32, @intFromFloat(std.math.round(box_h))) });
-                    }
                 }
             }
             if (cell.combining_len == 0 and isTerminalBoxGlyph(cell.codepoint)) {

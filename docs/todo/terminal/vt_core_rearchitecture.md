@@ -350,14 +350,10 @@ Validation note, 2026-03-31:
     - `HandoffState`
     now owns the last/pending/published/presented generation snapshot used by
     widget plan/commit logging instead of rebuilding that state ad hoc
-  - draw-log formatting buffers are also grouped now:
-    - `DrawLogBuffers`
-    now owns the partial-plan and perf-log formatting scratch buffers instead
-    of leaving a slab of unrelated local arrays in the middle of draw
-  - widget draw logger handles are also grouped now:
-    - `DrawLoggers`
-    now owns the redraw/texture-shift/row-render/perf/lifecycle/pressure/
-    handoff logger set instead of scattering logger locals through draw
+  - the stronger correction now wins over the old “group the logger slab”
+    framing:
+    - draw-log formatting buffers and logger-handle slabs that only existed to
+      support low-level narration are being deleted, not normalized
   - row-render metrics are also grouped now:
     - `RowRenderStats`
     now owns the per-row background/span/glyph/sample metrics used by the

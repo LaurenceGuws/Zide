@@ -233,11 +233,9 @@ Status note, 2026-03-31:
   - handoff/log snapshot state inside draw should also be grouped once it feeds
     multiple logging sites, instead of repeating the same session-generation
     reads inline
-  - formatting scratch buffers used only for draw logging should be grouped too
-    once they start reading like an unrelated local slab in the main render
-    body
-  - logger handles used throughout draw should also be grouped once they become
-    a repeated local slab instead of a meaningful part of the render flow
+  - formatting scratch buffers and logger-handle slabs that only existed to
+    support low-level draw narration should be deleted once that narration is
+    no longer justified
   - per-row render metrics in the partial glyph path should also be grouped
     once they become a dense local blob of counters, ranges, summaries, and
     sample buffers
