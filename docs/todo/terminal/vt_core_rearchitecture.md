@@ -213,6 +213,9 @@ Validation note, 2026-03-31:
   - that remaining effect boundary now lives under protocol ownership in
     `src/terminal/core/terminal_core_protocol.zig` instead of being wired
     inline inside `terminal_core_text.zig`
+  - the stale `src/terminal/core/session_protocol.zig` forwarding shell is now
+    deleted; `session_protocol_api.zig` routes directly to the real core,
+    protocol, mode-effect, feed, and publication owners
 - [ ] `VTCORE-05` Simplify snapshot and render publication.
   Notes: the explicit publication center now lives in
   `src/terminal/core/terminal_publication.zig`, and the old live

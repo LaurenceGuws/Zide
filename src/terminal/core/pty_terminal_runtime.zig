@@ -32,7 +32,6 @@ const session_init_options = @import("session_init_options.zig");
 const session_input_snapshot = @import("session_input_snapshot.zig");
 const session_presentation_feedback = @import("session_presentation_feedback.zig");
 const terminal_publication = @import("terminal_publication.zig");
-const session_protocol = @import("session_protocol.zig");
 const session_config = @import("session_config.zig");
 const session_runtime = @import("session_runtime.zig");
 const session_debug_api = @import("session_debug_api.zig");

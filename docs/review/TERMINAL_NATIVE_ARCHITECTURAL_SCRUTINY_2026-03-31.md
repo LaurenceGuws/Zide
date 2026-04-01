@@ -104,6 +104,9 @@ Judgment:
 - `src/terminal/core/session_protocol_api.zig` now carries the protocol/VT
   mutation method group that was previously written inline on
   `pty_terminal_runtime.zig`
+- the stale `src/terminal/core/session_protocol.zig` forwarding shell is now
+  deleted, so that API seam no longer routes through one extra session-named
+  hop before reaching the real owners
 - `src/terminal/core/session_config_api.zig` now carries the config, palette,
   and mode-setting method group that was previously written inline on
   `pty_terminal_runtime.zig`
