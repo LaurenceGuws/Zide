@@ -76,6 +76,35 @@ The drag is elsewhere:
 - app runtime hook/callback sprawl
 - SDL3-era migration residue still sitting in `src/platform/`
 
+## Build Maturity Direction
+
+This lane is not only about deleting old seams. It is also about maturing the
+build surface so it reads like a serious product system.
+
+Reference pressure from Ghostty, Bun, TigerBeetle, and Neovim suggests the
+next bar is:
+
+- top-level `build.zig` as composition, not implementation sludge
+- build options as explicit product policy, not incidental flags
+- named steps as a stable operator surface
+- reusable build-side modules for shared artifact/report/tooling patterns
+- target/platform constraints made deliberate and inspectable
+- room for codegen, packaging, docs, reports, and test lanes without turning
+  the root graph into a dump
+
+The practical rule for upcoming work:
+
+- keep deleting stale seams
+- but prefer replacements that make the build surface stronger, more legible,
+  and more reference-grade than it was before
+
+Progress note, 2026-04-02:
+
+- the build system now exposes `zig build report-build-surface`
+- this gives the repo an explicit operator-facing map of the build step
+  taxonomy instead of expecting contributors to infer it from scattered
+  planner modules
+
 ## Repo Boundary Rule
 
 Only split code or assets into a dedicated repo when all of the following are

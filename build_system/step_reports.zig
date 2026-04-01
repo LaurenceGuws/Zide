@@ -123,6 +123,26 @@ pub fn addReportBuildTargetStep(
     );
 }
 
+pub fn addReportBuildSurfaceStep(
+    b: *std.Build,
+    target: std.Build.ResolvedTarget,
+    optimize: std.builtin.OptimizeMode,
+) *std.Build.Step {
+    return addReportToolRunStep(
+        b,
+        target,
+        optimize,
+        null,
+        .{
+            .exe_name = "build-surface-report",
+            .root_source_file = "build_system/reports/build_surface_report.zig",
+            .step_name = "report-build-surface",
+            .description = "Report operator-facing build step taxonomy",
+            .adds_build_options = false,
+        },
+    );
+}
+
 pub fn addCheckBuildReportToolsStep(
     b: *std.Build,
     target: std.Build.ResolvedTarget,
@@ -164,6 +184,13 @@ const core_build_report_tool_specs = [_]ReportToolSpec{
         .root_source_file = "build_system/reports/build_target_report.zig",
         .step_name = "",
         .description = "",
+    },
+    .{
+        .exe_name = "build-surface-report-check",
+        .root_source_file = "build_system/reports/build_surface_report.zig",
+        .step_name = "",
+        .description = "",
+        .adds_build_options = false,
     },
 };
 

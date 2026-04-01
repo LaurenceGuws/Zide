@@ -122,6 +122,11 @@ pub fn addBootstrapReportSteps(
         optimize,
         build_options,
     );
+    const build_surface_report_step = step_reports.addReportBuildSurfaceStep(
+        b,
+        target,
+        optimize,
+    );
     const build_report_tools_check_step = step_reports.addCheckBuildReportToolsStep(
         b,
         target,
@@ -135,6 +140,7 @@ pub fn addBootstrapReportSteps(
             build_bootstrap_report_step,
             build_focused_policy_report_step,
             build_target_report_step,
+            build_surface_report_step,
             build_report_tools_check_step,
         },
     );
