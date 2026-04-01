@@ -411,6 +411,11 @@ Validation note, 2026-03-31:
     `src/terminal/protocol/osc_kitty_clipboard.zig` is gone too; clipboard
     reads, allocator use, and reply generation now run directly on the live
     session object instead of bouncing through one more manual facade shell
+  - the remaining OSC 5522 writer shell is gone too:
+    `WriterFacade` is deleted from
+    `src/terminal/protocol/osc_kitty_clipboard.zig`, and clipboard reply
+    generation now writes directly to the live writer object instead of
+    routing one-method writes through another `anyopaque` adapter
   - the parser's own `SessionFacade` shell is gone too:
     `src/terminal/parser/parser.zig` now operates directly on the live
     runtime object, and feed/poll/debug entrypoints call `handleSlice(...)`

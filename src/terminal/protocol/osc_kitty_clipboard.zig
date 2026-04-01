@@ -7,28 +7,6 @@ const OscTerminator = parser_mod.OscTerminator;
 const max_clipboard_bytes: usize = 1024 * 1024;
 const data_chunk_max: usize = 4096;
 
-const WriterFacade = struct {
-    ctx: *anyopaque,
-    write_fn: *const fn (ctx: *anyopaque, bytes: []const u8) anyerror!usize,
-
-    pub fn from(writer: anytype) WriterFacade {
-        const WriterPtr = @TypeOf(writer);
-        return .{
-            .ctx = @ptrCast(writer),
-            .write_fn = struct {
-                fn call(ctx: *anyopaque, bytes: []const u8) anyerror!usize {
-                    const typed: WriterPtr = @ptrCast(@alignCast(ctx));
-                    return try typed.write(bytes);
-                }
-            }.call,
-        };
-    }
-
-    pub fn write(self: WriterFacade, bytes: []const u8) anyerror!usize {
-        return try self.write_fn(self.ctx, bytes);
-    }
-};
-
 const ReadReq = struct {
     id: []const u8 = "",
     is_primary: bool = false,
@@ -52,11 +30,10 @@ fn parseOsc5522OnSession(self: anytype, text: []const u8, terminator: OscTermina
         if (self.lockPtyWriter()) |writer_guard| {
             var writer = writer_guard;
             defer writer.unlock();
-            const facade = WriterFacade.from(&writer);
             switch (err) {
                 error.UnsupportedPacketType => {},
-                error.UnsupportedPrimarySelection => writeReadStatus(self, facade, terminator, "", "ENOSYS"),
-                else => writeReadStatus(self, facade, terminator, "", "EINVAL"),
+                error.UnsupportedPrimarySelection => writeReadStatus(self, &writer, terminator, "", "ENOSYS"),
+                else => writeReadStatus(self, &writer, terminator, "", "EINVAL"),
             }
         }
         return;
@@ -65,15 +42,15 @@ fn parseOsc5522OnSession(self: anytype, text: []const u8, terminator: OscTermina
     if (self.lockPtyWriter()) |writer_guard| {
         var writer = writer_guard;
         defer writer.unlock();
-        replyReadRequest(self, WriterFacade.from(&writer), &req, terminator);
+        replyReadRequest(self, &writer, &req, terminator);
     }
 }
 
 pub fn sendPasteEventMimes(self: anytype, pty: anytype, terminator: OscTerminator) void {
-    sendPasteEventMimesOnSession(self, WriterFacade.from(pty), terminator);
+    sendPasteEventMimesOnSession(self, pty, terminator);
 }
 
-fn sendPasteEventMimesOnSession(self: anytype, writer: WriterFacade, terminator: OscTerminator) void {
+fn sendPasteEventMimesOnSession(self: anytype, writer: anytype, terminator: OscTerminator) void {
     var req = ReadReq{ .wants_targets = true };
     replyReadRequest(self, writer, &req, terminator);
 }
@@ -129,7 +106,7 @@ fn parseReadRequest(self: anytype, metadata: []const u8, payload_b64: []const u8
     return req;
 }
 
-fn replyReadRequest(self: anytype, writer: WriterFacade, req: *const ReadReq, terminator: OscTerminator) void {
+fn replyReadRequest(self: anytype, writer: anytype, req: *const ReadReq, terminator: OscTerminator) void {
     const id = sanitizeId(self, req.id);
     defer if (id.owned) self.allocator.free(id.value);
 
@@ -222,11 +199,11 @@ fn replyReadRequest(self: anytype, writer: WriterFacade, req: *const ReadReq, te
     writeReadStatusWithId(self, writer, terminator, id.value, "ENOSYS");
 }
 
-fn writeReadStatus(self: anytype, writer: WriterFacade, terminator: OscTerminator, id: []const u8, status: []const u8) void {
+fn writeReadStatus(self: anytype, writer: anytype, terminator: OscTerminator, id: []const u8, status: []const u8) void {
     writeReadStatusWithId(self, writer, terminator, id, status);
 }
 
-fn writeReadStatusWithId(self: anytype, writer: WriterFacade, terminator: OscTerminator, id: []const u8, status: []const u8) void {
+fn writeReadStatusWithId(self: anytype, writer: anytype, terminator: OscTerminator, id: []const u8, status: []const u8) void {
     const log = app_logger.logger("terminal.osc");
     var seq = std.ArrayList(u8).empty;
     defer seq.deinit(self.allocator);
@@ -252,7 +229,7 @@ fn writeReadStatusWithId(self: anytype, writer: WriterFacade, terminator: OscTer
     writeSeq(writer, seq.items);
 }
 
-fn writeReadData(self: anytype, writer: WriterFacade, terminator: OscTerminator, id: []const u8, mime: []const u8, payload: []const u8) void {
+fn writeReadData(self: anytype, writer: anytype, terminator: OscTerminator, id: []const u8, mime: []const u8, payload: []const u8) void {
     const log = app_logger.logger("terminal.osc");
     const mime_b64_len = std.base64.standard.Encoder.calcSize(mime.len);
     const payload_b64_len = std.base64.standard.Encoder.calcSize(payload.len);
@@ -309,7 +286,7 @@ fn appendOscTerminator(allocator: std.mem.Allocator, seq: *std.ArrayList(u8), te
     };
 }
 
-fn writeSeq(writer: WriterFacade, seq: []const u8) void {
+fn writeSeq(writer: anytype, seq: []const u8) void {
     const log = app_logger.logger("terminal.osc");
     log.logf(.debug, "osc5522 reply=\"{s}\"", .{seq});
     _ = writer.write(seq) catch |err| blk: {
