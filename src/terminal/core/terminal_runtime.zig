@@ -109,12 +109,6 @@ pub const PtyTerminalRuntime = struct {
     pub const setInputPressure = runtime.setInputPressure;
 
     pub const setDefaultColors = config.setDefaultColors;
-    pub const setAnsiColors = config.setAnsiColors;
-    pub const remapAnsiColors = config.remapAnsiColors;
-    pub const setPaletteColorLocked = config.setPaletteColorLocked;
-    pub const resetPaletteColorLocked = config.resetPaletteColorLocked;
-    pub const resetAllPaletteColorsLocked = config.resetAllPaletteColorsLocked;
-    pub const setDynamicColorCodeLocked = config.setDynamicColorCodeLocked;
     pub const applyThemePalette = config.applyThemePalette;
     pub const setConfiguredCursorStyle = config.setConfiguredCursorStyle;
 

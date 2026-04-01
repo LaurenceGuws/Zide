@@ -225,6 +225,12 @@ Status note, 2026-03-31:
     surface no longer advertises key-mode, mouse-mode, bracketed-paste,
     keypad/app-cursor, or column-mode mutation as part of the host runtime
     contract
+  - the same is now true for the palette/config mutation slab:
+    OSC palette and dynamic-color handlers now call
+    `src/terminal/core/session/config.zig` directly, so the stable runtime
+    surface no longer advertises palette reset/mutation, dynamic-color
+    mutation, or dead ANSI color setters that are not part of the real host
+    contract
   - protocol query helpers are shrinking the same way too: runtime/focus tests
     now use `terminal_core_protocol.zig` directly for `getCell` /
     `getCursorPos`, so those no longer inflate the wrapper surface

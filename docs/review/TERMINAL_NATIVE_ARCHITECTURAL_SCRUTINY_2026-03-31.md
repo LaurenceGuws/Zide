@@ -288,6 +288,11 @@ Judgment:
   `src/terminal/core/session/config.zig` directly, so the stable runtime
   surface no longer carries key-mode, mouse-mode, bracketed-paste,
   keypad/app-cursor, or column-mode mutation as fake host contract
+- the same is now true for the palette/config mutation slab:
+  OSC palette and dynamic-color handlers now call
+  `src/terminal/core/session/config.zig` directly, so the stable runtime
+  surface no longer carries palette reset/mutation, dynamic-color mutation,
+  or dead ANSI color setters as fake host contract
 - protocol query helpers are shrinking the same way too: runtime/focus tests
   now use `terminal_core_protocol.zig` directly for `getCell` /
   `getCursorPos`, so those no longer sit on the wrapper surface

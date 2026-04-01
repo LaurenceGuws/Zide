@@ -1,6 +1,7 @@
 const std = @import("std");
 const types = @import("../model/types.zig");
 const parser_mod = @import("../parser/parser.zig");
+const config = @import("../core/session/config.zig");
 const app_logger = @import("../../app_logger.zig");
 const OscTerminator = parser_mod.OscTerminator;
 
@@ -28,20 +29,20 @@ pub fn handleOscPalette(self: anytype, text: []const u8, terminator: OscTerminat
             continue;
         }
         if (parseOscColor(color_text)) |color| {
-            self.setPaletteColorLocked(idx, color);
+            config.setPaletteColorLocked(self, idx, color);
         }
     }
 }
 
 pub fn handleOscPaletteReset(self: anytype, text: []const u8) void {
     if (text.len == 0) {
-        self.resetAllPaletteColorsLocked();
+        config.resetAllPaletteColorsLocked(self);
         return;
     }
     var it = std.mem.splitScalar(u8, text, ';');
     while (it.next()) |idx_text| {
         const idx = parseOscIndex(idx_text) orelse continue;
-        self.resetPaletteColorLocked(idx);
+        config.resetPaletteColorLocked(self, idx);
     }
 }
 
@@ -52,12 +53,12 @@ pub fn handleOscDynamicColor(self: anytype, code: u8, text: []const u8, terminat
         return;
     }
     if (parseOscColor(text)) |color| {
-        self.setDynamicColorCodeLocked(code, color);
+        config.setDynamicColorCodeLocked(self, code, color);
     }
 }
 
 pub fn handleOscDynamicReset(self: anytype, code: u8) void {
-    self.setDynamicColorCodeLocked(code - 100, null);
+    config.setDynamicColorCodeLocked(self, code - 100, null);
 }
 
 pub fn dynamicColorValue(self: anytype, code: u8) types.Color {
