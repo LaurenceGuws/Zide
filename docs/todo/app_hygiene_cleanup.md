@@ -236,6 +236,10 @@ Progress note, 2026-04-01:
   reload handling in named helpers
 - this makes config reload read more like staged policy application and less
   like a long mutation script
+- duplicated config/runtime policy shared by init and reload now lives in
+  `src/app/config_runtime_common.zig`
+- this removes parallel copies of terminal path resolution, logger setup, and
+  terminal cursor-style resolution from the two main config entrypoints
 
 ## Investigation Follow-up
 

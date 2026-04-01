@@ -3,6 +3,7 @@ const app_bootstrap = @import("bootstrap.zig");
 const build_options = @import("build_options");
 const mode_build = @import("mode_build.zig");
 const app_font_rendering = @import("font_rendering.zig");
+const app_config_runtime_common = @import("config_runtime_common.zig");
 const app_theme_utils = @import("theme_utils.zig");
 const app_terminal_shell_icon_runtime = @import("terminal/terminal_shell_icon_runtime.zig");
 const app_ui_layout_runtime = @import("ui_layout_runtime.zig");
@@ -69,37 +70,6 @@ fn mapTerminalWindowChromeMode(mode: ?config_mod.TerminalWindowChromeMode) app_t
     return mode orelse .native;
 }
 
-fn resolveTerminalDefaultStartLocation(
-    allocator: std.mem.Allocator,
-    configured: ?[]const u8,
-) !?[]u8 {
-    const home = blk: {
-        if (std.c.getenv("HOME")) |value| break :blk std.mem.sliceTo(value, 0);
-        if (std.c.getenv("USERPROFILE")) |value| break :blk std.mem.sliceTo(value, 0);
-        break :blk null;
-    };
-    const raw = configured orelse home orelse return null;
-    if (raw.len == 0) return null;
-
-    if (raw[0] == '~' and home != null) {
-        if (raw.len == 1) return try allocator.dupe(u8, home.?);
-        if (raw.len >= 2 and raw[1] == '/') {
-            return try std.fs.path.join(allocator, &.{ home.?, raw[2..] });
-        }
-    }
-
-    return try allocator.dupe(u8, raw);
-}
-
-fn resolveTerminalShellPath(
-    allocator: std.mem.Allocator,
-    configured: ?[]const u8,
-) !?[]u8 {
-    const raw = configured orelse return null;
-    if (raw.len == 0) return null;
-    return try allocator.dupe(u8, raw);
-}
-
 fn windowTitleForMode(app_mode: app_bootstrap.AppMode) [*:0]const u8 {
     return switch (app_mode) {
         .ide => "Zide - Zig IDE",
@@ -107,60 +77,6 @@ fn windowTitleForMode(app_mode: app_bootstrap.AppMode) [*:0]const u8 {
         .terminal => "Zide Terminal",
         .font_sample => "Zide Font Sample",
     };
-}
-
-fn applyLoggerConfig(config: *const config_mod.Config) !void {
-    app_logger.resetConfig();
-    if (config.log_file_filter) |filter| {
-        app_logger.setFileFilterString(filter) catch |err| {
-            std.debug.print("log file filter parse error: {any}\n", .{err});
-        };
-    }
-    if (config.log_console_filter) |filter| {
-        app_logger.setConsoleFilterString(filter) catch |err| {
-            std.debug.print("log console filter parse error: {any}\n", .{err});
-        };
-    }
-    if (config.log_file_level) |level| {
-        app_logger.setFileLevel(level);
-    }
-    if (config.log_console_level) |level| {
-        app_logger.setConsoleLevel(level);
-    }
-    if (config.log_file_level_overrides) |value| {
-        app_logger.setFileLevelOverrideString(value) catch |err| {
-            std.debug.print("log file level overrides parse error: {any}\n", .{err});
-        };
-    }
-    if (config.log_console_level_overrides) |value| {
-        app_logger.setConsoleLevelOverrideString(value) catch |err| {
-            std.debug.print("log console level overrides parse error: {any}\n", .{err});
-        };
-    }
-    if (config.log_file_output_mode) |mode| {
-        app_logger.setFileOutputMode(mode);
-    }
-    if (config.log_console_output_mode) |mode| {
-        app_logger.setConsoleOutputMode(mode);
-    }
-    if (config.log_groups) |groups| {
-        app_logger.setGroupSinks(groups) catch |err| {
-            std.debug.print("log group sink setup error: {any}\n", .{err});
-        };
-    }
-}
-
-fn resolveTerminalCursorStyle(config: *const config_mod.Config) ?term_types.CursorStyle {
-    if (config.terminal_cursor_shape == null and config.terminal_cursor_blink == null) return null;
-
-    var cursor_style = term_types.default_cursor_style;
-    if (config.terminal_cursor_shape) |shape| {
-        cursor_style.shape = shape;
-    }
-    if (config.terminal_cursor_blink) |blink| {
-        cursor_style.blink = blink;
-    }
-    return cursor_style;
 }
 
 fn applyCurrentTabBarWidthMode(state: anytype) void {
@@ -237,11 +153,11 @@ fn resolveTerminalStartup(
         })
     else
         null;
-    const terminal_default_start_location = try resolveTerminalDefaultStartLocation(
+    const terminal_default_start_location = try app_config_runtime_common.resolveTerminalDefaultStartLocation(
         allocator,
         config.terminal_default_start_location,
     );
-    const terminal_shell_path = try resolveTerminalShellPath(
+    const terminal_shell_path = try app_config_runtime_common.resolveTerminalShellPath(
         allocator,
         config.terminal_shell_path,
     );
@@ -302,7 +218,7 @@ fn initWithMode(
     try manual_highlights_mod.applyConfig(allocator, &config);
     errdefer manual_highlights_mod.reset();
 
-    try applyLoggerConfig(&config);
+    app_config_runtime_common.applyLoggerConfig(&config, "");
     try app_logger.init();
     app_lifecycle_runtime.reset();
 
@@ -377,7 +293,7 @@ fn initWithMode(
         .kitty => .kitty,
         .off => .off,
     };
-    const terminal_cursor_style = resolveTerminalCursorStyle(&config);
+    const terminal_cursor_style = app_config_runtime_common.resolveTerminalCursorStyle(&config);
 
     const shell_base_theme = shell.theme().*;
     const resolved_themes = app_theme_utils.resolveConfigThemes(shell_base_theme, &config);

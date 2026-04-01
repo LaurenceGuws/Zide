@@ -1,6 +1,7 @@
 const std = @import("std");
 const app_logger = @import("../app_logger.zig");
 const app_shell = @import("../app_shell.zig");
+const app_config_runtime_common = @import("config_runtime_common.zig");
 const app_font_rendering = @import("font_rendering.zig");
 const app_tab_bar_width = @import("tabs/tab_bar_width.zig");
 const app_terminal_shell_icon_runtime = @import("terminal/terminal_shell_icon_runtime.zig");
@@ -22,37 +23,6 @@ fn mapTerminalWindowChromeMode(mode: ?config_mod.TerminalWindowChromeMode) app_t
     return mode orelse .native;
 }
 
-fn resolveTerminalDefaultStartLocation(
-    allocator: std.mem.Allocator,
-    configured: ?[]const u8,
-) !?[]u8 {
-    const home = blk: {
-        if (std.c.getenv("HOME")) |value| break :blk std.mem.sliceTo(value, 0);
-        if (std.c.getenv("USERPROFILE")) |value| break :blk std.mem.sliceTo(value, 0);
-        break :blk null;
-    };
-    const raw = configured orelse home orelse return null;
-    if (raw.len == 0) return null;
-
-    if (raw[0] == '~' and home != null) {
-        if (raw.len == 1) return try allocator.dupe(u8, home.?);
-        if (raw.len >= 2 and raw[1] == '/') {
-            return try std.fs.path.join(allocator, &.{ home.?, raw[2..] });
-        }
-    }
-
-    return try allocator.dupe(u8, raw);
-}
-
-fn resolveTerminalShellPath(
-    allocator: std.mem.Allocator,
-    configured: ?[]const u8,
-) !?[]u8 {
-    const raw = configured orelse return null;
-    if (raw.len == 0) return null;
-    return try allocator.dupe(u8, raw);
-}
-
 fn shellIconMappingsEqual(
     a: ?[]const app_types.TerminalShellIconMapping,
     b: ?[]const app_types.TerminalShellIconMapping,
@@ -65,60 +35,6 @@ fn shellIconMappingsEqual(
         if (!std.mem.eql(u8, lhs.icon_path, rhs.icon_path)) return false;
     }
     return true;
-}
-
-fn applyLoggerConfig(config: *const config_mod.Config) void {
-    app_logger.resetConfig();
-    if (config.log_file_filter) |filter| {
-        app_logger.setFileFilterString(filter) catch |err| {
-            std.debug.print("reload log file filter parse error: {any}\n", .{err});
-        };
-    }
-    if (config.log_console_filter) |filter| {
-        app_logger.setConsoleFilterString(filter) catch |err| {
-            std.debug.print("reload log console filter parse error: {any}\n", .{err});
-        };
-    }
-    if (config.log_file_level) |level| {
-        app_logger.setFileLevel(level);
-    }
-    if (config.log_console_level) |level| {
-        app_logger.setConsoleLevel(level);
-    }
-    if (config.log_file_level_overrides) |value| {
-        app_logger.setFileLevelOverrideString(value) catch |err| {
-            std.debug.print("reload log file level overrides parse error: {any}\n", .{err});
-        };
-    }
-    if (config.log_console_level_overrides) |value| {
-        app_logger.setConsoleLevelOverrideString(value) catch |err| {
-            std.debug.print("reload log console level overrides parse error: {any}\n", .{err});
-        };
-    }
-    if (config.log_file_output_mode) |mode| {
-        app_logger.setFileOutputMode(mode);
-    }
-    if (config.log_console_output_mode) |mode| {
-        app_logger.setConsoleOutputMode(mode);
-    }
-    if (config.log_groups) |groups| {
-        app_logger.setGroupSinks(groups) catch |err| {
-            std.debug.print("reload log group sink setup error: {any}\n", .{err});
-        };
-    }
-}
-
-fn resolveTerminalCursorStyle(config: *const config_mod.Config) ?term_types.CursorStyle {
-    if (config.terminal_cursor_shape == null and config.terminal_cursor_blink == null) return null;
-
-    var cursor_style = term_types.default_cursor_style;
-    if (config.terminal_cursor_shape) |shape| {
-        cursor_style.shape = shape;
-    }
-    if (config.terminal_cursor_blink) |blink| {
-        cursor_style.blink = blink;
-    }
-    return cursor_style;
 }
 
 fn applyResolvedThemes(state: anytype, config: *const config_mod.Config) !void {
@@ -200,7 +116,7 @@ pub fn handle(state: anytype, ctx: *anyopaque, hooks: Hooks) !void {
 
     try manual_highlights_mod.applyConfig(state.allocator, &config);
 
-    applyLoggerConfig(&config);
+    app_config_runtime_common.applyLoggerConfig(&config, "reload");
     if (config.sdl_log_level) |level| {
         app_shell.setSdlLogLevel(level);
     }
@@ -313,7 +229,7 @@ pub fn handle(state: anytype, ctx: *anyopaque, hooks: Hooks) !void {
         });
     }
 
-    if (resolveTerminalCursorStyle(&config)) |cursor_style| {
+    if (app_config_runtime_common.resolveTerminalCursorStyle(&config)) |cursor_style| {
         state.terminal_cursor_style = cursor_style;
         for (state.terminals.items) |term| {
             term.setConfiguredCursorStyle(cursor_style);
@@ -327,7 +243,7 @@ pub fn handle(state: anytype, ctx: *anyopaque, hooks: Hooks) !void {
         log.logStdout(.info, "reload note: terminal scrollback cap applies to new sessions", .{});
     }
     {
-        const next_shell_path = try resolveTerminalShellPath(
+        const next_shell_path = try app_config_runtime_common.resolveTerminalShellPath(
             state.allocator,
             config.terminal_shell_path,
         );
@@ -340,7 +256,7 @@ pub fn handle(state: anytype, ctx: *anyopaque, hooks: Hooks) !void {
         });
     }
     {
-        const next_default_start_location = try resolveTerminalDefaultStartLocation(
+        const next_default_start_location = try app_config_runtime_common.resolveTerminalDefaultStartLocation(
             state.allocator,
             config.terminal_default_start_location,
         );
