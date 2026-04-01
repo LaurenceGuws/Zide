@@ -97,13 +97,13 @@ pub const DecstrContext = struct {
             .set_report_color_scheme_2031_fn = struct {
                 fn call(ctx: *anyopaque, enabled: bool) void {
                     const s: SessionPtr = @ptrCast(@alignCast(ctx));
-                    s.report_color_scheme_2031 = enabled;
+                    s.interaction.report_color_scheme_2031 = enabled;
                 }
             }.call,
             .set_grapheme_cluster_shaping_2027_fn = struct {
                 fn call(ctx: *anyopaque, enabled: bool) void {
                     const s: SessionPtr = @ptrCast(@alignCast(ctx));
-                    s.grapheme_cluster_shaping_2027 = enabled;
+                    s.interaction.grapheme_cluster_shaping_2027 = enabled;
                 }
             }.call,
             .set_primary_grapheme_cluster_shaping_2027_fn = struct {
@@ -121,13 +121,13 @@ pub const DecstrContext = struct {
             .set_inband_resize_notifications_2048_fn = struct {
                 fn call(ctx: *anyopaque, enabled: bool) void {
                     const s: SessionPtr = @ptrCast(@alignCast(ctx));
-                    s.inband_resize_notifications_2048 = enabled;
+                    s.interaction.inband_resize_notifications_2048 = enabled;
                 }
             }.call,
             .set_kitty_paste_events_5522_fn = struct {
                 fn call(ctx: *anyopaque, enabled: bool) void {
                     const s: SessionPtr = @ptrCast(@alignCast(ctx));
-                    s.kitty_paste_events_5522 = enabled;
+                    s.interaction.kitty_paste_events_5522 = enabled;
                 }
             }.call,
             .reset_input_modes_locked_fn = struct {

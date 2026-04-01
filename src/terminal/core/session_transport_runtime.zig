@@ -32,13 +32,13 @@ pub fn closeExternalTransport(self: anytype) bool {
     return terminal_transport.closeExternalTransport(self);
 }
 
-pub fn lockPtyWriter(self: anytype) ?@import("terminal_session.zig").PtyWriteGuard {
+pub fn lockPtyWriter(self: anytype) ?@import("pty_terminal_runtime.zig").PtyWriteGuard {
     return terminal_transport.Writer.fromSession(self);
 }
 
 pub fn takeExternalOutgoingBytes(self: anytype, allocator: std.mem.Allocator) !?[]u8 {
     _ = allocator;
-    if (self.external_transport) |*transport| {
+    if (self.runtime.external_transport) |*transport| {
         return try transport.takeOutgoing();
     }
     return null;
@@ -56,11 +56,11 @@ pub fn resize(self: anytype, rows: u16, cols: u16) !void {
 }
 
 fn reportInBandResize2048(self: anytype, rows: u16, cols: u16) !void {
-    if (!self.inband_resize_notifications_2048) return;
+    if (!self.interaction.inband_resize_notifications_2048) return;
     if (lockPtyWriter(self)) |writer_guard| {
         var writer = writer_guard;
-        const rows_px: u32 = @as(u32, rows) * @as(u32, self.cell_height);
-        const cols_px: u32 = @as(u32, cols) * @as(u32, self.cell_width);
+        const rows_px: u32 = @as(u32, rows) * @as(u32, self.interaction.cell_height);
+        const cols_px: u32 = @as(u32, cols) * @as(u32, self.interaction.cell_width);
         var buf: [64]u8 = undefined;
         const seq = try std.fmt.bufPrint(
             &buf,

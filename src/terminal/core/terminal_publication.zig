@@ -5,6 +5,7 @@ const selection_mod = @import("selection.zig");
 const publication_state = @import("session_publication_state.zig");
 const presentation_handoff = @import("session_presentation_handoff.zig");
 const publication_updates = @import("session_publication_updates.zig");
+const view_cache = @import("view_cache.zig");
 const types = @import("../model/types.zig");
 
 pub const KittyImageFormat = snapshot_mod.KittyImageFormat;
@@ -50,10 +51,10 @@ pub const CellAttrs = types.CellAttrs;
 pub const Color = types.Color;
 
 pub fn snapshot(self: anytype) TerminalSnapshot {
-    if (self.view_cache_pending.load(.acquire)) {
+    if (viewRefreshPending(self)) {
         self.lock();
         defer self.unlock();
-        if (self.view_cache_pending.load(.acquire)) {
+        if (viewRefreshPending(self)) {
             updateViewCacheForScrollLocked(self);
         }
     }
@@ -80,7 +81,7 @@ pub fn snapshot(self: anytype) TerminalSnapshot {
         .selection = selection_mod.selectionState(self),
         .alt_active = cache.alt_active,
         .screen_reverse = cache.screen_reverse,
-        .generation = self.output_generation.load(.acquire),
+        .generation = cache.generation,
         .kitty_images = cache.kitty_images.items,
         .kitty_placements = cache.kitty_placements.items,
         .kitty_generation = cache.kitty_generation,
@@ -91,8 +92,32 @@ pub fn publishFeedResultLocked(self: anytype, result: @import("terminal_core_fee
     publication_updates.publishFeedResultLocked(self, result);
 }
 
-pub fn updateViewCacheNoLock(self: anytype, generation: u64, scroll_offset: usize) void {
-    publication_updates.updateViewCacheNoLock(self, generation, scroll_offset);
+pub fn bumpGeneration(self: anytype) u64 {
+    return publication_updates.bumpGeneration(self);
+}
+
+pub fn requestViewRefreshLocked(self: anytype, scroll_offset: usize) u64 {
+    return publication_updates.requestViewRefreshLocked(self, scroll_offset);
+}
+
+pub fn queueViewRefreshLocked(self: anytype, scroll_offset: usize) void {
+    publication_updates.queueViewRefreshLocked(self, scroll_offset);
+}
+
+pub fn clearPendingViewRefresh(self: anytype) void {
+    publication_updates.clearPendingViewRefresh(self);
+}
+
+pub fn publishGenerationLocked(self: anytype, generation: u64, scroll_offset: usize, source: []const u8) void {
+    view_cache.updateViewCacheNoLockTagged(self, generation, scroll_offset, source);
+}
+
+pub fn publishCurrentViewLocked(self: anytype, source: []const u8) void {
+    publishGenerationLocked(self, pendingGeneration(self), self.core.scrollbackOffset(), source);
+}
+
+pub fn applyPendingViewRefreshLocked(self: anytype, source: []const u8) bool {
+    return publication_updates.applyPendingViewRefreshLocked(self, source);
 }
 
 pub fn updateViewCacheForScroll(self: anytype) void {
@@ -104,13 +129,33 @@ pub fn updateViewCacheForScrollLocked(self: anytype) void {
 }
 
 pub fn renderCache(self: anytype) *const RenderCache {
-    const idx = self.render_cache_index.load(.acquire);
-    return &self.render_caches[idx];
+    const idx = self.publication.render_cache_index.load(.acquire);
+    return &self.publication.render_caches[idx];
+}
+
+pub fn activeRenderCacheIndex(self: anytype) u8 {
+    return self.publication.render_cache_index.load(.acquire);
+}
+
+pub fn inactiveRenderCacheIndex(self: anytype) u8 {
+    return if (activeRenderCacheIndex(self) == 0) 1 else 0;
+}
+
+pub fn activeRenderCache(self: anytype) *RenderCache {
+    return &self.publication.render_caches[activeRenderCacheIndex(self)];
+}
+
+pub fn inactiveRenderCache(self: anytype) *RenderCache {
+    return &self.publication.render_caches[inactiveRenderCacheIndex(self)];
+}
+
+pub fn publishRenderCacheIndex(self: anytype, index: u8) void {
+    self.publication.render_cache_index.store(index, .release);
 }
 
 pub fn renderCacheForGeneration(self: anytype, generation: u64) ?*const RenderCache {
     inline for (0..2) |i| {
-        const cache = &self.render_caches[i];
+        const cache = &self.publication.render_caches[i];
         if (cache.generation == generation) return cache;
     }
     return null;
@@ -118,8 +163,8 @@ pub fn renderCacheForGeneration(self: anytype, generation: u64) ?*const RenderCa
 
 pub fn clearPublishedDamage(self: anytype) void {
     inline for (0..2) |i| {
-        self.render_caches[i].dirty = .none;
-        self.render_caches[i].damage = .{ .start_row = 0, .end_row = 0, .start_col = 0, .end_col = 0 };
+        self.publication.render_caches[i].dirty = .none;
+        self.publication.render_caches[i].damage = .{ .start_row = 0, .end_row = 0, .start_col = 0, .end_col = 0 };
     }
 }
 
@@ -147,8 +192,36 @@ pub fn clearPublishedDamageIfGeneration(self: anytype, expected_generation: u64,
     return publication_state.clearPublishedDamageIfGeneration(self, expected_generation, clear_screen_dirty);
 }
 
-pub fn currentGeneration(self: anytype) u64 {
-    return publication_state.currentGeneration(self);
+pub fn pendingGeneration(self: anytype) u64 {
+    return publication_state.pendingGeneration(self);
+}
+
+pub fn outputPending(self: anytype) bool {
+    return publication_state.outputPending(self);
+}
+
+pub fn clearOutputPending(self: anytype) bool {
+    return publication_state.clearOutputPending(self);
+}
+
+pub fn markOutputPending(self: anytype) void {
+    publication_state.markOutputPending(self);
+}
+
+pub fn viewRefreshPending(self: anytype) bool {
+    return publication_state.viewRefreshPending(self);
+}
+
+pub fn takePendingViewRefresh(self: anytype) ?usize {
+    return publication_state.takePendingViewRefresh(self);
+}
+
+pub fn takeAltExitPending(self: anytype) bool {
+    return publication_state.takeAltExitPending(self);
+}
+
+pub fn consumeAltExitTimeMs(self: anytype) i64 {
+    return publication_state.consumeAltExitTimeMs(self);
 }
 
 pub fn publishedGeneration(self: anytype) u64 {
@@ -172,8 +245,8 @@ pub fn hasPublishedGenerationBacklog(self: anytype) bool {
 }
 
 pub fn noteAltExitPending(self: anytype) void {
-    self.alt_exit_pending.store(true, .release);
-    self.alt_exit_time_ms.store(std.time.milliTimestamp(), .release);
+    self.publication.alt_exit_pending.store(true, .release);
+    self.publication.alt_exit_time_ms.store(std.time.milliTimestamp(), .release);
 }
 
 pub fn completePresentationFeedback(self: anytype, feedback: anytype) void {

@@ -20,10 +20,10 @@ fn captureCopy(self: anytype, dst: *RenderCache, log_capture: bool) !CaptureCopy
     self.lock();
     defer self.unlock();
     const lock_acquired_ns = std.time.nanoTimestamp();
-    const current_generation = self.output_generation.load(.acquire);
+    const pending_generation = self.publication.pending_generation.load(.acquire);
     const published_generation = @import("session_publication_state.zig").publishedGeneration(self);
     const presented_generation = @import("session_publication_state.zig").presentedGeneration(self);
-    const had_view_cache_pending = self.view_cache_pending.load(.acquire);
+    const had_view_cache_pending = self.publication.view_cache_pending.load(.acquire);
     var view_cache_ms: f64 = 0.0;
     if (had_view_cache_pending) {
         const view_cache_start_ns = std.time.nanoTimestamp();
@@ -49,7 +49,7 @@ fn captureCopy(self: anytype, dst: *RenderCache, log_capture: bool) !CaptureCopy
             .{
                 @intFromPtr(self),
                 @intFromBool(had_view_cache_pending),
-                current_generation,
+                pending_generation,
                 published_generation,
                 presented_generation,
                 presented.generation,
@@ -92,7 +92,7 @@ pub fn completePresentationFeedback(self: anytype, feedback: anytype) void {
         }
     }
     if (feedback.alt_exit_info) |info| {
-        const exit_time_ms = self.alt_exit_time_ms.swap(-1, .acq_rel);
+        const exit_time_ms = @import("terminal_publication.zig").consumeAltExitTimeMs(self);
         const exit_to_draw_ms: f64 = if (exit_time_ms >= 0)
             @as(f64, @floatFromInt(std.time.milliTimestamp() - exit_time_ms))
         else

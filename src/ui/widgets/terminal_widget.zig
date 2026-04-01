@@ -15,7 +15,7 @@ const input_mod = @import("terminal_widget_input.zig");
 const render_cache_mod = @import("../../terminal/core/render_cache.zig");
 
 const Shell = app_shell.Shell;
-const TerminalSession = terminal_runtime.PtyTerminalRuntime;
+const PtyTerminalRuntime = terminal_runtime.PtyTerminalRuntime;
 const CursorPos = terminal_publication.CursorPos;
 const KittyImage = terminal_publication.KittyImage;
 const KittyPlacement = terminal_publication.KittyPlacement;
@@ -38,7 +38,7 @@ pub const TerminalWidget = struct {
         window,
         pane,
     };
-    session: *TerminalSession,
+    session: *PtyTerminalRuntime,
     blink_style: BlinkStyle = .kitty,
     kitty: kitty_mod.KittyState,
     hover: hover_mod.HoverState = .{},
@@ -81,7 +81,7 @@ pub const TerminalWidget = struct {
         scroll_offset: usize,
     };
 
-    pub fn init(session: *TerminalSession, blink_style: BlinkStyle) TerminalWidget {
+    pub fn init(session: *PtyTerminalRuntime, blink_style: BlinkStyle) TerminalWidget {
         return .{
             .session = session,
             .blink_style = blink_style,
@@ -318,12 +318,12 @@ pub const TerminalWidget = struct {
 
     pub fn scrollbarModel(self: *const TerminalWidget) ScrollbarModel {
         const cache = &self.draw_cache;
-        const allowed = !cache.alt_active and !self.session.mouseReportingEnabled() and cache.rows > 0 and cache.total_lines > cache.rows;
+        const allowed = !cache.alt_active and !self.session.mouseReportingEnabled() and cache.rows > 0 and cache.totalLines() > cache.rows;
         return .{
             .allowed = allowed,
             .visible = allowed,
             .rows = cache.rows,
-            .total_lines = cache.total_lines,
+            .total_lines = cache.totalLines(),
             .scroll_offset = cache.scroll_offset,
         };
     }
@@ -352,7 +352,7 @@ pub const TerminalWidget = struct {
                     @intFromPtr(self.session),
                     self.last_render_generation,
                     capture.presented.generation,
-                    self.session.currentGeneration(),
+                    self.session.pendingGeneration(),
                     self.session.publishedGeneration(),
                     self.session.presentedGeneration(),
                     @intFromBool(self.terminal_texture_ready),
@@ -369,7 +369,7 @@ pub const TerminalWidget = struct {
                         @intFromPtr(self.session),
                         capture.presented.generation,
                         published_before_draw,
-                        self.session.currentGeneration(),
+                        self.session.pendingGeneration(),
                         self.session.presentedGeneration(),
                     },
                 );
@@ -388,7 +388,7 @@ pub const TerminalWidget = struct {
                             @intFromPtr(self.session),
                             self.last_render_generation,
                             refreshed_capture.presented.generation,
-                            self.session.currentGeneration(),
+                            self.session.pendingGeneration(),
                             self.session.publishedGeneration(),
                             self.session.presentedGeneration(),
                             @intFromBool(self.terminal_texture_ready),

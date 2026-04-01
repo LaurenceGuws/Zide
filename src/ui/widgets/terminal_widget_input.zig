@@ -35,7 +35,7 @@ pub fn handleInput(
     const history_len = cache.history_len;
     const rows = cache.rows;
     const cols = cache.cols;
-    const total_lines = cache.total_lines;
+    const total_lines = cache.totalLines();
     const scroll_offset = cache.scroll_offset;
     const end_line = total_lines - scroll_offset;
     const start_line = if (end_line > rows) end_line - rows else 0;
@@ -162,7 +162,7 @@ pub fn handleInput(
                     .start_line = start_line,
                     .scroll_offset = scroll_offset,
                     .has_visible_grid = has_visible_grid,
-                    .cache_selection_active = cache.selection_active,
+                    .cache_selection_active = cache.hasSelection(),
                     .mod = mod,
                 },
                 view_cells,

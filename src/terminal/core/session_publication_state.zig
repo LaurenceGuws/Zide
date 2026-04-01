@@ -1,12 +1,41 @@
 const app_logger = @import("../../app_logger.zig");
 const terminal_publication = @import("terminal_publication.zig");
 
+pub fn outputPending(self: anytype) bool {
+    return self.publication.output_pending.load(.acquire);
+}
+
+pub fn clearOutputPending(self: anytype) bool {
+    return self.publication.output_pending.swap(false, .acq_rel);
+}
+
+pub fn markOutputPending(self: anytype) void {
+    self.publication.output_pending.store(true, .release);
+}
+
+pub fn viewRefreshPending(self: anytype) bool {
+    return self.publication.view_cache_pending.load(.acquire);
+}
+
+pub fn takePendingViewRefresh(self: anytype) ?usize {
+    if (!self.publication.view_cache_pending.swap(false, .acq_rel)) return null;
+    return @intCast(self.publication.view_cache_request_offset.load(.acquire));
+}
+
+pub fn takeAltExitPending(self: anytype) bool {
+    return self.publication.alt_exit_pending.swap(false, .acq_rel);
+}
+
+pub fn consumeAltExitTimeMs(self: anytype) i64 {
+    return self.publication.alt_exit_time_ms.swap(-1, .acq_rel);
+}
+
 pub fn clearPublishedDamageIfGeneration(self: anytype, expected_generation: u64, clear_screen_dirty: bool) bool {
     self.lock();
     defer self.unlock();
-    const current_generation = self.output_generation.load(.acquire);
+    const pending_generation = self.publication.pending_generation.load(.acquire);
     const cache = terminal_publication.renderCache(self);
-    if (current_generation != expected_generation) {
+    if (pending_generation != expected_generation) {
         if (clear_screen_dirty) {
             const rows = cache.rows;
             const cols = cache.cols;
@@ -14,10 +43,10 @@ pub fn clearPublishedDamageIfGeneration(self: anytype, expected_generation: u64,
             const damage_cols = if (cache.damage.end_col >= cache.damage.start_col) cache.damage.end_col - cache.damage.start_col + 1 else 0;
             app_logger.logger("terminal.ui.dirty_retirement").logf(
                 .info,
-                "result=skipped expected_generation={d} current_generation={d} dirty={s} damage_rows={d} damage_cols={d} rows={d} cols={d}",
+                "result=skipped expected_generation={d} pending_generation={d} dirty={s} damage_rows={d} damage_cols={d} rows={d} cols={d}",
                 .{
                     expected_generation,
-                    current_generation,
+                    pending_generation,
                     @tagName(cache.dirty),
                     damage_rows,
                     damage_cols,
@@ -51,8 +80,8 @@ pub fn clearPublishedDamageIfGeneration(self: anytype, expected_generation: u64,
     return true;
 }
 
-pub fn currentGeneration(self: anytype) u64 {
-    return self.output_generation.load(.acquire);
+pub fn pendingGeneration(self: anytype) u64 {
+    return self.publication.pending_generation.load(.acquire);
 }
 
 pub fn publishedGeneration(self: anytype) u64 {
@@ -60,14 +89,14 @@ pub fn publishedGeneration(self: anytype) u64 {
 }
 
 pub fn presentedGeneration(self: anytype) u64 {
-    return self.presented_generation.load(.acquire);
+    return self.publication.presented_generation.load(.acquire);
 }
 
 pub fn notePresentedGeneration(self: anytype, generation: u64) void {
     const log = app_logger.logger("terminal.generation_handoff");
-    var current = self.presented_generation.load(.acquire);
+    var current = self.publication.presented_generation.load(.acquire);
     while (generation > current) {
-        current = self.presented_generation.cmpxchgWeak(current, generation, .acq_rel, .acquire) orelse {
+        current = self.publication.presented_generation.cmpxchgWeak(current, generation, .acq_rel, .acquire) orelse {
             if (log.enabled_file or log.enabled_console) {
                 log.logf(
                     .info,
@@ -97,7 +126,7 @@ pub fn acknowledgePresentedGeneration(self: anytype, generation: u64) bool {
                 generation,
                 @intFromBool(cleared),
                 @intFromBool(sync_updates_active),
-                currentGeneration(self),
+                pendingGeneration(self),
                 publishedGeneration(self),
                 presentedGeneration(self),
             },
@@ -107,7 +136,7 @@ pub fn acknowledgePresentedGeneration(self: anytype, generation: u64) bool {
 }
 
 pub fn hasPublishedGenerationBacklog(self: anytype) bool {
-    return currentGeneration(self) != publishedGeneration(self);
+    return pendingGeneration(self) != publishedGeneration(self);
 }
 
 fn renderCacheSyncUpdatesActiveForGeneration(self: anytype, generation: u64) bool {

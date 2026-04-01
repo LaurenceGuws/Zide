@@ -670,7 +670,7 @@ pub fn drawPrepared(
     }
     const draw_start_time = if (alt_exit) app_shell.getTime() else 0;
     const history_len = cache.history_len;
-    const total_lines = cache.total_lines;
+    const total_lines = cache.totalLines();
     const scroll_offset = cache.scroll_offset;
     const viewport_shift_rows = cache.viewport_shift_rows;
     const end_line = total_lines - scroll_offset;
@@ -859,7 +859,7 @@ pub fn drawPrepared(
                     @intFromPtr(self.session),
                     self.last_render_generation,
                     cache.generation,
-                    self.session.currentGeneration(),
+                    self.session.pendingGeneration(),
                     self.session.publishedGeneration(),
                     self.session.presentedGeneration(),
                     @intFromBool(gen_changed),
@@ -1356,7 +1356,7 @@ pub fn drawPrepared(
                         @intFromPtr(self.session),
                         self.last_render_generation,
                         cache.generation,
-                        self.session.currentGeneration(),
+                        self.session.pendingGeneration(),
                         self.session.publishedGeneration(),
                         self.session.presentedGeneration(),
                         @intFromBool(texture_full_update),

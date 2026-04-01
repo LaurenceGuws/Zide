@@ -37,19 +37,19 @@ pub const QueryContext = struct {
             .color_scheme_dark_fn = struct {
                 fn call(ctx: *anyopaque) bool {
                     const s: SessionPtr = @ptrCast(@alignCast(ctx));
-                    return s.color_scheme_dark;
+                    return s.interaction.color_scheme_dark;
                 }
             }.call,
             .cell_height_fn = struct {
                 fn call(ctx: *anyopaque) u16 {
                     const s: SessionPtr = @ptrCast(@alignCast(ctx));
-                    return s.cell_height;
+                    return s.interaction.cell_height;
                 }
             }.call,
             .cell_width_fn = struct {
                 fn call(ctx: *anyopaque) u16 {
                     const s: SessionPtr = @ptrCast(@alignCast(ctx));
-                    return s.cell_width;
+                    return s.interaction.cell_width;
                 }
             }.call,
         };

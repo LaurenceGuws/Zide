@@ -3,6 +3,7 @@ const terminal_transport = @import("terminal_transport.zig");
 const scrollback_buffer = @import("../model/scrollback_buffer.zig");
 const types = @import("../model/types.zig");
 const app_logger = @import("../../app_logger.zig");
+const terminal_publication = @import("terminal_publication.zig");
 
 const PtySize = terminal_transport.PtySize;
 const Cell = types.Cell;
@@ -13,13 +14,13 @@ const RowMapEntry = struct {
 };
 
 pub fn resize(self: anytype, rows: u16, cols: u16) !void {
-    self.state_mutex.lock();
+    self.control.state_mutex.lock();
     try resizeLocked(self, rows, cols);
     const log = app_logger.logger("terminal.core");
     log.logf(.info, "terminal resize rows={d} cols={d} scrollback_cols={d}", .{ rows, cols, self.core.primary.grid.cols });
-    const cell_width = self.cell_width;
-    const cell_height = self.cell_height;
-    self.state_mutex.unlock();
+    const cell_width = self.interaction.cell_width;
+    const cell_height = self.interaction.cell_height;
+    self.control.state_mutex.unlock();
     if (terminal_transport.Transport.fromSession(self)) |transport| {
         const size = PtySize{
             .rows = rows,
@@ -363,9 +364,7 @@ fn reflowResizePrimary(
         self.core.history.scrollback_offset = 0;
     } else {
         self.core.history.scrollback_offset = new_scroll_offset;
-        self.view_cache_request_offset.store(@intCast(self.core.history.scrollback_offset), .release);
-        self.view_cache_pending.store(true, .release);
-        self.io_wait_cond.signal();
+        terminal_publication.queueViewRefreshLocked(self, self.core.history.scrollback_offset);
         self.updateViewCacheForScrollLocked();
     }
     const max_offset = self.core.history.maxScrollOffset(rows);

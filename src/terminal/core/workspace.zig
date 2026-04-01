@@ -1,15 +1,15 @@
 const std = @import("std");
-const session_mod = @import("terminal_session.zig");
+const session_mod = @import("pty_terminal_runtime.zig");
 const app_logger = @import("../../app_logger.zig");
 const runtime_policy = @import("../../app/runtime_policy.zig");
 const polling = @import("workspace_polling.zig");
 
-const PtyTerminalSession = session_mod.TerminalSession;
+const PtyTerminalRuntime = session_mod.PtyTerminalRuntime;
 pub const TabId = u64;
 
 const Tab = struct {
     id: TabId,
-    session: *PtyTerminalSession,
+    session: *PtyTerminalRuntime,
 };
 
 pub const TabSyncEntry = struct {
@@ -71,7 +71,7 @@ pub const TerminalWorkspace = struct {
     pub const ActiveFrameState = struct {
         has_data: bool = false,
         session_ptr: usize = 0,
-        current_generation: u64 = 0,
+        pending_generation: u64 = 0,
         published_generation: u64 = 0,
         presented_generation: u64 = 0,
     };
@@ -122,7 +122,7 @@ pub const TerminalWorkspace = struct {
     };
 
     allocator: std.mem.Allocator,
-    init_options: PtyTerminalSession.InitOptions,
+    init_options: PtyTerminalRuntime.InitOptions,
     tabs: std.ArrayList(Tab),
     active_index: usize,
     next_tab_id: TabId,
@@ -132,7 +132,7 @@ pub const TerminalWorkspace = struct {
     last_poll_metrics: PollFrameMetrics,
     poll_runtime_counters: PollRuntimeCounters,
 
-    pub fn init(allocator: std.mem.Allocator, init_options: PtyTerminalSession.InitOptions) TerminalWorkspace {
+    pub fn init(allocator: std.mem.Allocator, init_options: PtyTerminalRuntime.InitOptions) TerminalWorkspace {
         return .{
             .allocator = allocator,
             .init_options = init_options,
@@ -179,17 +179,17 @@ pub const TerminalWorkspace = struct {
         return self.tabs.items[self.activeIndex()].id;
     }
 
-    fn sessionAt(self: *TerminalWorkspace, index: usize) ?*PtyTerminalSession {
+    fn sessionAt(self: *TerminalWorkspace, index: usize) ?*PtyTerminalRuntime {
         if (index >= self.tabs.items.len) return null;
         return self.tabs.items[index].session;
     }
 
-    fn activeSession(self: *TerminalWorkspace) ?*PtyTerminalSession {
+    fn activeSession(self: *TerminalWorkspace) ?*PtyTerminalRuntime {
         if (self.tabs.items.len == 0) return null;
         return self.tabs.items[self.activeIndex()].session;
     }
 
-    fn sessionNeedsCloseConfirm(session: *PtyTerminalSession) bool {
+    fn sessionNeedsCloseConfirm(session: *PtyTerminalRuntime) bool {
         if (!session.isAlive()) return false;
         const activity = session.currentActivityMetadata();
         return activity.foreground_process_present or
@@ -235,7 +235,7 @@ pub const TerminalWorkspace = struct {
         return .{
             .has_data = session.hasData(),
             .session_ptr = @intFromPtr(session),
-            .current_generation = session.currentGeneration(),
+            .pending_generation = session.pendingGeneration(),
             .published_generation = session.publishedGeneration(),
             .presented_generation = session.presentedGeneration(),
         };
@@ -323,11 +323,11 @@ pub const TerminalWorkspace = struct {
 
     pub const CreatedTab = struct {
         id: TabId,
-        session: *PtyTerminalSession,
+        session: *PtyTerminalRuntime,
     };
 
     pub fn createTabWithSession(self: *TerminalWorkspace, rows: u16, cols: u16) !CreatedTab {
-        const session = try PtyTerminalSession.initWithOptions(self.allocator, rows, cols, self.init_options);
+        const session = try PtyTerminalRuntime.initWithOptions(self.allocator, rows, cols, self.init_options);
         errdefer session.deinit();
 
         const tab_id = self.next_tab_id;

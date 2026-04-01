@@ -18,8 +18,6 @@ test "buildPublicationPlan classifies clean live-bottom history growth as scroll
         0,
         46,
         45,
-        58,
-        57,
         12,
         12,
         40,
@@ -49,8 +47,6 @@ test "buildPublicationPlan forbids live scroll shift when visible grid is also d
         0,
         46,
         45,
-        58,
-        57,
         12,
         12,
         40,
@@ -80,8 +76,6 @@ test "buildPublicationPlan forbids live scroll shift against unpresented base" {
         0,
         46,
         45,
-        58,
-        57,
         12,
         12,
         40,
@@ -109,8 +103,6 @@ pub fn buildPublicationPlan(
     active_scroll_offset: usize,
     history_len: usize,
     active_history_len: usize,
-    total_lines: usize,
-    active_total_lines: usize,
     rows: usize,
     active_rows: usize,
     cols: usize,
@@ -124,6 +116,8 @@ pub fn buildPublicationPlan(
     active_is_alt: bool,
     cache_alt_active: bool,
 ) PublicationPlan {
+    const total_lines = history_len + rows;
+    const active_total_lines = active_history_len + active_rows;
     const visible_history_changed = visible_history_generation != active_visible_history_generation or
         (clamped_offset > 0 and (history_len != active_history_len or total_lines != active_total_lines)) or
         (clamped_offset == 0 and active_scroll_offset == 0 and

@@ -3,6 +3,7 @@ const parser_mod = @import("../parser/parser.zig");
 const app_logger = @import("../../app_logger.zig");
 const app_lifecycle_runtime = @import("../../app/lifecycle_runtime.zig");
 const terminal_transport = @import("terminal_transport.zig");
+const terminal_publication = @import("terminal_publication.zig");
 
 fn shouldPublishParseBatch(
     sync_updates_active: bool,
@@ -23,8 +24,7 @@ fn shouldPublishParseBatch(
 }
 
 fn publishedVisibleCellCount(session: anytype) usize {
-    const idx = session.render_cache_index.load(.acquire);
-    const cache = session.render_caches[idx];
+    const cache = terminal_publication.renderCache(session).*;
     return @as(usize, cache.rows) * @as(usize, cache.cols);
 }
 
@@ -64,13 +64,13 @@ pub fn readThreadMain(session: anytype) void {
     var peak_queue_bytes_since_log: usize = 0;
     var io_after_shutdown_logged = false;
 
-    while (session.read_thread_running.load(.acquire)) {
+    while (session.runtime.read_thread_running.load(.acquire)) {
         if (terminal_transport.Transport.fromSession(session)) |transport| {
             if (!transport.waitForData(10)) continue;
             var processed: usize = 0;
             const start_ms = std.time.milliTimestamp();
             const io_log = app_logger.logger("terminal.io");
-            while (session.read_thread_running.load(.acquire)) {
+            while (session.runtime.read_thread_running.load(.acquire)) {
                 const n = transport.read(&buf) catch break;
                 if (n == null or n.? == 0) break;
                 if (app_lifecycle_runtime.shutdownStarted() and !io_after_shutdown_logged) {
@@ -83,15 +83,15 @@ pub fn readThreadMain(session: anytype) void {
                 }
                 processed += n.?;
                 logCsiSequences(io_log, buf[0..n.?]);
-                session.io_mutex.lock();
-                session.io_buffer.appendSlice(session.allocator, buf[0..n.?]) catch |err| {
+                session.runtime.io_mutex.lock();
+                session.runtime.io_buffer.appendSlice(session.allocator, buf[0..n.?]) catch |err| {
                     io_log.logf(.warning, "io buffer append failed bytes={d} err={s}", .{ n.?, @errorName(err) });
                 };
-                const queue_bytes = if (session.io_buffer.items.len > session.io_read_offset)
-                    session.io_buffer.items.len - session.io_read_offset
+                const queue_bytes = if (session.runtime.io_buffer.items.len > session.runtime.io_read_offset)
+                    session.runtime.io_buffer.items.len - session.runtime.io_read_offset
                 else
                     0;
-                session.io_mutex.unlock();
+                session.runtime.io_mutex.unlock();
                 bytes_since_log += n.?;
                 reads_since_log += 1;
                 peak_queue_bytes_since_log = @max(peak_queue_bytes_since_log, queue_bytes);
@@ -108,13 +108,13 @@ pub fn readThreadMain(session: anytype) void {
                     reads_since_log = 0;
                     peak_queue_bytes_since_log = queue_bytes;
                 }
-                session.io_wait_cond.signal();
-                if (session.parse_thread == null) {
-                    session.output_pending.store(true, .release);
-                    _ = session.output_generation.fetchAdd(1, .acq_rel);
+                session.runtime.io_wait_cond.signal();
+                if (session.runtime.parse_thread == null) {
+                    terminal_publication.markOutputPending(session);
+                    _ = terminal_publication.bumpGeneration(session);
                 }
             }
-            if (processed > 0 and session.alt_exit_pending.swap(false, .acq_rel)) {
+            if (processed > 0 and terminal_publication.takeAltExitPending(session)) {
                 const elapsed_ms = @as(f64, @floatFromInt(std.time.milliTimestamp() - start_ms));
                 io_log.logf(.info, "alt_exit_io_ms={d:.2} bytes={d}", .{ elapsed_ms, processed });
             }
@@ -133,56 +133,53 @@ pub fn parseThreadMain(session: anytype) void {
     var temp: [4096]u8 = undefined;
     const publication_log = app_logger.logger("terminal.publication");
 
-    while (session.parse_thread_running.load(.acquire)) {
-        const input_pressure = session.input_pressure.load(.acquire);
-        const presentation_backlog = session.output_pending.load(.acquire);
+    while (session.runtime.parse_thread_running.load(.acquire)) {
+        const input_pressure = session.control.input_pressure.load(.acquire);
+        const presentation_backlog = terminal_publication.outputPending(session);
         var max_bytes: usize = if (input_pressure) 64 * 1024 else 512 * 1024;
         var max_ms: i64 = if (input_pressure) 2 else 8;
-        var pending_offset: ?usize = null;
-        if (session.view_cache_pending.swap(false, .acq_rel)) {
-            pending_offset = @intCast(session.view_cache_request_offset.load(.acquire));
-        }
+        const pending_offset = terminal_publication.takePendingViewRefresh(session);
 
         var queued_bytes: usize = 0;
-        session.io_mutex.lock();
-        if (session.io_buffer.items.len > session.io_read_offset) {
-            queued_bytes = session.io_buffer.items.len - session.io_read_offset;
+        session.runtime.io_mutex.lock();
+        if (session.runtime.io_buffer.items.len > session.runtime.io_read_offset) {
+            queued_bytes = session.runtime.io_buffer.items.len - session.runtime.io_read_offset;
         } else {
             if (pending_offset == null) {
-                session.io_wait_cond.timedWait(&session.io_mutex, 10 * std.time.ns_per_ms) catch |err| {
+                session.runtime.io_wait_cond.timedWait(&session.runtime.io_mutex, 10 * std.time.ns_per_ms) catch |err| {
                     if (err != error.Timeout) {
                         app_logger.logger("terminal.parse").logf(.warning, "parse wait timedWait failed err={s}", .{@errorName(err)});
                     }
                 };
             }
-            if (!session.parse_thread_running.load(.acquire)) {
-                session.io_mutex.unlock();
+            if (!session.runtime.parse_thread_running.load(.acquire)) {
+                session.runtime.io_mutex.unlock();
                 break;
             }
-            if (session.io_buffer.items.len > session.io_read_offset) {
-                queued_bytes = session.io_buffer.items.len - session.io_read_offset;
+            if (session.runtime.io_buffer.items.len > session.runtime.io_read_offset) {
+                queued_bytes = session.runtime.io_buffer.items.len - session.runtime.io_read_offset;
             }
         }
-        session.io_mutex.unlock();
+        session.runtime.io_mutex.unlock();
 
         if (queued_bytes == 0) {
-            if (session.parse_bytes_since_publish > 0 and pending_offset == null and !session.core.sync_updates_active) {
+            if (session.control.parse_bytes_since_publish > 0 and pending_offset == null and !session.core.sync_updates_active) {
                 const publish_lock_start_ns = std.time.nanoTimestamp();
-                session.state_mutex.lock();
-                const generation_before = session.output_generation.load(.acquire);
+                session.control.state_mutex.lock();
+                const generation_before = terminal_publication.pendingGeneration(session);
                 const published_before = session.publishedGeneration();
                 const view = session.core.activeScreenConst().snapshotView();
                 const rows = view.rows;
                 const cols = view.cols;
-                @import("view_cache.zig").updateViewCacheNoLockTagged(session, generation_before, session.core.history.scrollOffset(), "parse_thread_idle_publish");
+                terminal_publication.publishGenerationLocked(session, generation_before, session.core.history.scrollOffset(), "parse_thread_idle_publish");
                 const published_after = session.publishedGeneration();
-                session.state_mutex.unlock();
+                session.control.state_mutex.unlock();
                 const publish_lock_ns = std.time.nanoTimestamp() - publish_lock_start_ns;
-                session.parse_publishes_since_log += 1;
-                session.parse_bytes_since_log += session.parse_bytes_since_publish;
-                session.parse_bytes_since_publish = 0;
-                session.last_parse_publish_ms = std.time.milliTimestamp();
-                session.output_pending.store(true, .release);
+                session.control.parse_publishes_since_log += 1;
+                session.control.parse_bytes_since_log += session.control.parse_bytes_since_publish;
+                session.control.parse_bytes_since_publish = 0;
+                session.control.last_parse_publish_ms = std.time.milliTimestamp();
+                terminal_publication.markOutputPending(session);
                 if (publication_log.enabled_file or publication_log.enabled_console) {
                     publication_log.logf(
                         .info,
@@ -191,7 +188,7 @@ pub fn parseThreadMain(session: anytype) void {
                             published_before,
                             generation_before,
                             published_after,
-                            session.parse_bytes_since_log,
+                            session.control.parse_bytes_since_log,
                             rows,
                             cols,
                             @as(f64, @floatFromInt(publish_lock_ns)) / @as(f64, @floatFromInt(std.time.ns_per_ms)),
@@ -200,11 +197,11 @@ pub fn parseThreadMain(session: anytype) void {
                 }
             }
             if (pending_offset) |offset| {
-                session.state_mutex.lock();
+                session.control.state_mutex.lock();
                 if (!session.core.sync_updates_active) {
-                    @import("view_cache.zig").updateViewCacheNoLockTagged(session, session.output_generation.load(.acquire), offset, "parse_thread_pending_offset");
+                    terminal_publication.publishGenerationLocked(session, terminal_publication.pendingGeneration(session), offset, "parse_thread_pending_offset");
                 }
-                session.state_mutex.unlock();
+                session.control.state_mutex.unlock();
             }
             continue;
         }
@@ -241,49 +238,49 @@ pub fn parseThreadMain(session: anytype) void {
 
         while (processed < max_bytes and std.time.milliTimestamp() - start_ms < max_ms) {
             var chunk_len: usize = 0;
-            session.io_mutex.lock();
-            const available = if (session.io_buffer.items.len > session.io_read_offset)
-                session.io_buffer.items.len - session.io_read_offset
+            session.runtime.io_mutex.lock();
+            const available = if (session.runtime.io_buffer.items.len > session.runtime.io_read_offset)
+                session.runtime.io_buffer.items.len - session.runtime.io_read_offset
             else
                 0;
             if (available > 0) {
                 chunk_len = @min(temp.len, available);
-                std.mem.copyForwards(u8, temp[0..chunk_len], session.io_buffer.items[session.io_read_offset .. session.io_read_offset + chunk_len]);
-                session.io_read_offset += chunk_len;
+                std.mem.copyForwards(u8, temp[0..chunk_len], session.runtime.io_buffer.items[session.runtime.io_read_offset .. session.runtime.io_read_offset + chunk_len]);
+                session.runtime.io_read_offset += chunk_len;
                 had_data = true;
-                if (session.io_read_offset >= session.io_buffer.items.len) {
-                    session.io_buffer.items.len = 0;
-                    session.io_read_offset = 0;
-                } else if (session.io_read_offset > 64 * 1024 and session.io_read_offset > session.io_buffer.items.len / 2) {
-                    const remaining = session.io_buffer.items.len - session.io_read_offset;
-                    std.mem.copyForwards(u8, session.io_buffer.items[0..remaining], session.io_buffer.items[session.io_read_offset..session.io_buffer.items.len]);
-                    session.io_buffer.items.len = remaining;
-                    session.io_read_offset = 0;
+                if (session.runtime.io_read_offset >= session.runtime.io_buffer.items.len) {
+                    session.runtime.io_buffer.items.len = 0;
+                    session.runtime.io_read_offset = 0;
+                } else if (session.runtime.io_read_offset > 64 * 1024 and session.runtime.io_read_offset > session.runtime.io_buffer.items.len / 2) {
+                    const remaining = session.runtime.io_buffer.items.len - session.runtime.io_read_offset;
+                    std.mem.copyForwards(u8, session.runtime.io_buffer.items[0..remaining], session.runtime.io_buffer.items[session.runtime.io_read_offset..session.runtime.io_buffer.items.len]);
+                    session.runtime.io_buffer.items.len = remaining;
+                    session.runtime.io_read_offset = 0;
                 }
             }
-            session.io_mutex.unlock();
+            session.runtime.io_mutex.unlock();
 
             if (chunk_len == 0) break;
 
             const parse_lock_start_ns = std.time.nanoTimestamp();
-            session.state_mutex.lock();
+            session.control.state_mutex.lock();
             session.core.parser.handleSlice(parser_mod.Parser.SessionFacade.from(session), temp[0..chunk_len]);
-            session.state_mutex.unlock();
+            session.control.state_mutex.unlock();
             parse_lock_hold_ns += std.time.nanoTimestamp() - parse_lock_start_ns;
             processed += chunk_len;
-            _ = session.output_generation.fetchAdd(1, .acq_rel);
+            _ = terminal_publication.bumpGeneration(session);
         }
 
-        session.io_mutex.lock();
-        queued_after = if (session.io_buffer.items.len > session.io_read_offset)
-            session.io_buffer.items.len - session.io_read_offset
+        session.runtime.io_mutex.lock();
+        queued_after = if (session.runtime.io_buffer.items.len > session.runtime.io_read_offset)
+            session.runtime.io_buffer.items.len - session.runtime.io_read_offset
         else
             0;
-        session.io_mutex.unlock();
+        session.runtime.io_mutex.unlock();
 
         if (processed > 0) {
             const end_ms = std.time.milliTimestamp();
-            session.parse_bytes_since_publish += processed;
+            session.control.parse_bytes_since_publish += processed;
             if (had_data or pending_offset != null) {
                 var backlog_publish_max_ms: i64 = if (input_pressure) 2 else 8;
                 var backlog_publish_min_bytes: usize = if (input_pressure) 32 * 1024 else 128 * 1024;
@@ -291,19 +288,19 @@ pub fn parseThreadMain(session: anytype) void {
                     backlog_publish_max_ms = @min(backlog_publish_max_ms, @as(i64, 4));
                     backlog_publish_min_bytes = @min(backlog_publish_min_bytes, @as(usize, 16 * 1024));
                 }
-                const elapsed_since_publish = if (session.last_parse_publish_ms == 0)
+                const elapsed_since_publish = if (session.control.last_parse_publish_ms == 0)
                     backlog_publish_max_ms
                 else
-                    end_ms - session.last_parse_publish_ms;
+                    end_ms - session.control.last_parse_publish_ms;
                 const drained_available = queued_bytes > 0 and processed >= queued_bytes;
-                const current_generation = session.output_generation.load(.acquire);
+                const pending_generation = terminal_publication.pendingGeneration(session);
                 const published_generation = session.publishedGeneration();
                 const should_publish = shouldPublishParseBatch(
                     session.core.sync_updates_active,
                     pending_offset,
                     presentation_backlog,
                     drained_available,
-                    session.parse_bytes_since_publish,
+                    session.control.parse_bytes_since_publish,
                     elapsed_since_publish,
                     backlog_publish_min_bytes,
                     backlog_publish_max_ms,
@@ -311,22 +308,22 @@ pub fn parseThreadMain(session: anytype) void {
                 if (should_publish) {
                     const target_offset = pending_offset orelse session.core.history.scrollOffset();
                     const publish_lock_start_ns = std.time.nanoTimestamp();
-                    session.state_mutex.lock();
-                    const generation_before = session.output_generation.load(.acquire);
+                    session.control.state_mutex.lock();
+                    const generation_before = terminal_publication.pendingGeneration(session);
                     const published_before = session.publishedGeneration();
                     const view = session.core.activeScreenConst().snapshotView();
                     const rows = view.rows;
                     const cols = view.cols;
-                    @import("view_cache.zig").updateViewCacheNoLockTagged(session, generation_before, target_offset, "parse_thread_publish");
+                    terminal_publication.publishGenerationLocked(session, generation_before, target_offset, "parse_thread_publish");
                     const published_after = session.publishedGeneration();
-                    session.state_mutex.unlock();
+                    session.control.state_mutex.unlock();
                     const publish_lock_ns = std.time.nanoTimestamp() - publish_lock_start_ns;
                     publish_lock_hold_ns += publish_lock_ns;
-                    session.parse_publishes_since_log += 1;
-                    session.parse_bytes_since_log += session.parse_bytes_since_publish;
-                    session.parse_bytes_since_publish = 0;
-                    session.last_parse_publish_ms = end_ms;
-                    session.output_pending.store(true, .release);
+                    session.control.parse_publishes_since_log += 1;
+                    session.control.parse_bytes_since_log += session.control.parse_bytes_since_publish;
+                    session.control.parse_bytes_since_publish = 0;
+                    session.control.last_parse_publish_ms = end_ms;
+                    terminal_publication.markOutputPending(session);
                     if (publication_log.enabled_file or publication_log.enabled_console) {
                         publication_log.logf(
                             .info,
@@ -335,7 +332,7 @@ pub fn parseThreadMain(session: anytype) void {
                                 @as(u8, @intFromBool(pending_offset != null)),
                                 @intFromBool(presentation_backlog),
                                 @intFromBool(drained_available),
-                                session.parse_bytes_since_log,
+                                session.control.parse_bytes_since_log,
                                 elapsed_since_publish,
                                 backlog_publish_min_bytes,
                                 backlog_publish_max_ms,
@@ -351,7 +348,7 @@ pub fn parseThreadMain(session: anytype) void {
                     if (presentation_backlog) {
                         std.Thread.yield() catch {};
                     }
-                } else if ((publication_log.enabled_file or publication_log.enabled_console) and current_generation > published_generation) {
+                } else if ((publication_log.enabled_file or publication_log.enabled_console) and pending_generation > published_generation) {
                     publication_log.logf(
                         .info,
                         "stage=parse_publish_skipped attempted=0 reason_sync_updates={d} reason_pending_offset={d} reason_presentation_backlog={d} reason_drained_available={d} reason_bytes_threshold={d} reason_time_threshold={d} bytes_since_publish={d} elapsed_since_publish_ms={d} min_bytes={d} max_ms={d} current={d} published={d} queued_before={d} processed={d}",
@@ -360,13 +357,13 @@ pub fn parseThreadMain(session: anytype) void {
                             @intFromBool(pending_offset != null),
                             @intFromBool(!presentation_backlog),
                             @intFromBool(drained_available),
-                            @intFromBool(session.parse_bytes_since_publish >= backlog_publish_min_bytes),
+                            @intFromBool(session.control.parse_bytes_since_publish >= backlog_publish_min_bytes),
                             @intFromBool(elapsed_since_publish >= backlog_publish_max_ms),
-                            session.parse_bytes_since_publish,
+                            session.control.parse_bytes_since_publish,
                             elapsed_since_publish,
                             backlog_publish_min_bytes,
                             backlog_publish_max_ms,
-                            current_generation,
+                            pending_generation,
                             published_generation,
                             queued_before,
                             processed,
@@ -377,12 +374,12 @@ pub fn parseThreadMain(session: anytype) void {
 
             const elapsed_ms = @as(f64, @floatFromInt(end_ms - start_ms));
             const should_log = elapsed_ms >= 2.0 or queued_bytes >= 128 * 1024 or processed >= 64 * 1024;
-            if (should_log and (end_ms - session.last_parse_log_ms) >= 100) {
-                const publishes = session.parse_publishes_since_log;
-                const publish_bytes = session.parse_bytes_since_log;
-                session.parse_publishes_since_log = 0;
-                session.parse_bytes_since_log = 0;
-                session.last_parse_log_ms = end_ms;
+            if (should_log and (end_ms - session.control.last_parse_log_ms) >= 100) {
+                const publishes = session.control.parse_publishes_since_log;
+                const publish_bytes = session.control.parse_bytes_since_log;
+                session.control.parse_publishes_since_log = 0;
+                session.control.parse_bytes_since_log = 0;
+                session.control.last_parse_log_ms = end_ms;
                 perf_log.logf(.info, "parse_ms={d:.2} parse_lock_ms={d:.2} publish_lock_ms={d:.2} bytes={d} queued_before={d} queued_after={d} queue_delta={d} publishes={d} avg_publish_bytes={d} input_pressure={any} presentation_backlog={any}", .{
                     elapsed_ms,
                     @as(f64, @floatFromInt(parse_lock_hold_ns)) / @as(f64, @floatFromInt(std.time.ns_per_ms)),

@@ -19,8 +19,8 @@ pub fn parseOsc(self: anytype, payload: []const u8, terminator: parser_mod.OscTe
     session_protocol.parseOsc(self, payload, terminator);
 }
 
-pub fn appendHyperlink(self: anytype, uri: []const u8, max_hyperlinks: usize) ?u32 {
-    return session_protocol.appendHyperlink(self, uri, max_hyperlinks);
+pub fn appendHyperlink(self: anytype, uri: []const u8) ?u32 {
+    return session_protocol.appendHyperlink(self, uri, 2048);
 }
 
 pub fn clearAllKittyImages(self: anytype) void {

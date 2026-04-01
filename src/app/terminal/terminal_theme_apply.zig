@@ -5,10 +5,10 @@ const term_types = @import("../../terminal/model/types.zig");
 const terminal_runtime = @import("../../terminal/core/terminal_runtime.zig");
 const widgets = @import("../../ui/widgets.zig");
 
-const TerminalSession = terminal_runtime.PtyTerminalRuntime;
+const PtyTerminalRuntime = terminal_runtime.PtyTerminalRuntime;
 const TerminalWidget = widgets.TerminalWidget;
 
-pub fn setSessionPalette(term: *TerminalSession, theme: *const app_shell.Theme) void {
+pub fn setSessionPalette(term: *PtyTerminalRuntime, theme: *const app_shell.Theme) void {
     const fg = term_types.Color{
         .r = theme.foreground.r,
         .g = theme.foreground.g,

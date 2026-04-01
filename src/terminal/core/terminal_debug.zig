@@ -1,11 +1,11 @@
-const session_mod = @import("terminal_session.zig");
+const session_debug_api = @import("session_debug_api.zig");
 
-pub const debugSnapshot = session_mod.debugSnapshot;
-pub const debugScrollbackRow = session_mod.debugScrollbackRow;
-pub const debugSetCursor = session_mod.debugSetCursor;
-pub const debugFeedBytes = session_mod.debugFeedBytes;
-pub const debugScrollUp = session_mod.debugScrollUp;
-pub const debugSetScrollOffset = session_mod.debugSetScrollOffset;
-pub const debugSetScrollbackCell = session_mod.debugSetScrollbackCell;
-pub const debugPushScrollbackRow = session_mod.debugPushScrollbackRow;
-pub const debugSetGridRow = session_mod.debugSetGridRow;
+pub const debugSnapshot = session_debug_api.debugSnapshot;
+pub const debugScrollbackRow = session_debug_api.debugScrollbackRow;
+pub const debugSetCursor = session_debug_api.debugSetCursor;
+pub const debugFeedBytes = session_debug_api.debugFeedBytes;
+pub const debugScrollUp = session_debug_api.debugScrollUp;
+pub const debugSetScrollOffset = session_debug_api.debugSetScrollOffset;
+pub const debugSetScrollbackCell = session_debug_api.debugSetScrollbackCell;
+pub const debugPushScrollbackRow = session_debug_api.debugPushScrollbackRow;
+pub const debugSetGridRow = session_debug_api.debugSetGridRow;

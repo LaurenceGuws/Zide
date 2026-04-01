@@ -21,7 +21,7 @@ If the bridge is painful to bind from Python, the ABI is probably too clever.
 ## Current flow
 
 1. load the terminal bridge shared library
-2. create a terminal session
+2. create a runtime wrapper
 3. resize it through the bridge
 4. resolve one terminal publication cycle through the shared Python host helper
 5. verify dimensions, cell count, title/cwd pointers, and initial row data

@@ -1,5 +1,6 @@
 const types = @import("../model/types.zig");
 const selection_semantics = @import("../model/selection_semantics.zig");
+const terminal_publication = @import("terminal_publication.zig");
 
 pub const SelectionGestureMode = enum {
     none,
@@ -20,17 +21,14 @@ pub const ClickSelectionResult = struct {
 };
 
 pub fn clearSelection(self: anytype) void {
-    self.state_mutex.lock();
-    defer self.state_mutex.unlock();
+    self.control.state_mutex.lock();
+    defer self.control.state_mutex.unlock();
     clearSelectionLocked(self);
 }
 
 pub fn clearSelectionLocked(self: anytype) void {
     self.core.clearSelection();
-    _ = self.output_generation.fetchAdd(1, .acq_rel);
-    self.view_cache_request_offset.store(@intCast(self.core.scrollbackOffset()), .release);
-    self.view_cache_pending.store(true, .release);
-    self.io_wait_cond.signal();
+    _ = terminal_publication.requestViewRefreshLocked(self, self.core.scrollbackOffset());
 }
 
 pub fn clearSelectionIfActiveLocked(self: anytype) bool {
@@ -40,48 +38,39 @@ pub fn clearSelectionIfActiveLocked(self: anytype) bool {
 }
 
 pub fn startSelection(self: anytype, row: usize, col: usize) void {
-    self.state_mutex.lock();
-    defer self.state_mutex.unlock();
+    self.control.state_mutex.lock();
+    defer self.control.state_mutex.unlock();
     startSelectionLocked(self, row, col);
 }
 
 pub fn startSelectionLocked(self: anytype, row: usize, col: usize) void {
     if (self.core.active == .alt) return;
     self.core.startSelection(row, col);
-    _ = self.output_generation.fetchAdd(1, .acq_rel);
-    self.view_cache_request_offset.store(@intCast(self.core.scrollbackOffset()), .release);
-    self.view_cache_pending.store(true, .release);
-    self.io_wait_cond.signal();
+    _ = terminal_publication.requestViewRefreshLocked(self, self.core.scrollbackOffset());
 }
 
 pub fn updateSelection(self: anytype, row: usize, col: usize) void {
-    self.state_mutex.lock();
-    defer self.state_mutex.unlock();
+    self.control.state_mutex.lock();
+    defer self.control.state_mutex.unlock();
     updateSelectionLocked(self, row, col);
 }
 
 pub fn updateSelectionLocked(self: anytype, row: usize, col: usize) void {
     if (self.core.active == .alt) return;
     self.core.updateSelection(row, col);
-    _ = self.output_generation.fetchAdd(1, .acq_rel);
-    self.view_cache_request_offset.store(@intCast(self.core.scrollbackOffset()), .release);
-    self.view_cache_pending.store(true, .release);
-    self.io_wait_cond.signal();
+    _ = terminal_publication.requestViewRefreshLocked(self, self.core.scrollbackOffset());
 }
 
 pub fn finishSelection(self: anytype) void {
-    self.state_mutex.lock();
-    defer self.state_mutex.unlock();
+    self.control.state_mutex.lock();
+    defer self.control.state_mutex.unlock();
     finishSelectionLocked(self);
 }
 
 pub fn finishSelectionLocked(self: anytype) void {
     if (self.core.active == .alt) return;
     self.core.finishSelection();
-    _ = self.output_generation.fetchAdd(1, .acq_rel);
-    self.view_cache_request_offset.store(@intCast(self.core.scrollbackOffset()), .release);
-    self.view_cache_pending.store(true, .release);
-    self.io_wait_cond.signal();
+    _ = terminal_publication.requestViewRefreshLocked(self, self.core.scrollbackOffset());
 }
 
 pub fn finishSelectionIfActiveLocked(self: anytype) bool {
@@ -91,8 +80,8 @@ pub fn finishSelectionIfActiveLocked(self: anytype) bool {
 }
 
 pub fn selectRange(self: anytype, start: types.SelectionPos, end: types.SelectionPos, finished: bool) void {
-    self.state_mutex.lock();
-    defer self.state_mutex.unlock();
+    self.control.state_mutex.lock();
+    defer self.control.state_mutex.unlock();
     selectRangeLocked(self, start, end, finished);
 }
 
@@ -103,10 +92,7 @@ pub fn selectRangeLocked(self: anytype, start: types.SelectionPos, end: types.Se
     if (finished) {
         self.core.finishSelection();
     }
-    _ = self.output_generation.fetchAdd(1, .acq_rel);
-    self.view_cache_request_offset.store(@intCast(self.core.scrollbackOffset()), .release);
-    self.view_cache_pending.store(true, .release);
-    self.io_wait_cond.signal();
+    _ = terminal_publication.requestViewRefreshLocked(self, self.core.scrollbackOffset());
 }
 
 pub fn selectCellLocked(self: anytype, pos: types.SelectionPos, finished: bool) void {

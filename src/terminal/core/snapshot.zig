@@ -123,7 +123,7 @@ pub fn encodeSnapshot(
         "scrollback: count={d} view_offset={d}",
         .{ debug.scrollback_count, debug.scrollback_offset },
     );
-    if (debug.focus_reporting) {
+    if (debug.interaction.focus_reporting) {
         try appendLine(&out, allocator, "focus_reporting: 1");
     }
     try appendQuotedField(&out, allocator, "title", debug.title);

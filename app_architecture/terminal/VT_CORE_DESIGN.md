@@ -21,7 +21,7 @@ Status note, 2026-03-14:
   - session-facade cleanup
     - input-mode snapshot state, presentation-feedback structs, init options,
       host-query structs, and public type aliases now live in dedicated
-      `session_*` modules instead of inline in `terminal_session.zig`
+      `session_*` modules instead of inline in `pty_terminal_runtime.zig`
     - the content, selection, host-query, and interaction facades now alias
       focused modules instead of being hand-redeclared on the root session
   - engine ownership
@@ -41,7 +41,7 @@ Status note, 2026-03-14:
       focused helper seams instead of one large session blob
 - Input encoding remains on the dedicated subsystem path:
   - writer-agnostic encoder coverage exists at both the fake-writer level and
-    the real PTY-backed `TerminalSession` writer boundary
+    the real PTY-backed `PtyTerminalRuntime` writer boundary
 - Current architectural read:
   - Ghostty is still ahead on making the engine obviously be the engine
   - Zide is no longer obviously behind on host-facing contract richness; the
@@ -71,7 +71,7 @@ Status note, 2026-03-31:
   - make the engine so obvious that strong terminal maintainers can read the
     shape at first glance
 - The current strategic enemies are now explicit:
-  - `TerminalSession` as a broad fake center
+  - `PtyTerminalRuntime` as a broad fake center
   - parser-hook semantic text handling above the VT boundary
   - duplicated publication/cache truth
   - oversized native widget/render coordination around terminal publication
@@ -89,24 +89,88 @@ Status note, 2026-03-31:
   - `src/terminal/core/terminal_debug.zig` now acts as the explicit test/replay
     debug surface instead of letting debug authority piggyback on runtime
   - `src/terminal/core/session_public_types.zig` is gone, so
-    `terminal_session.zig` no longer gets to hide direct ownership behind a
+    `pty_terminal_runtime.zig` no longer gets to hide direct ownership behind a
     mixed alias hub
   - `src/terminal/core/session_runtime_api.zig` and
     `src/terminal/core/session_publication_api.zig` now hold the runtime and
     publication/present method groups that were previously written inline on
-    `terminal_session.zig`
+    `pty_terminal_runtime.zig`
   - `src/terminal/core/session_input_api.zig` now holds the host input
     send/report method group that was previously written inline on
-    `terminal_session.zig`
+    `pty_terminal_runtime.zig`
   - `src/terminal/core/session_protocol_api.zig` now holds the protocol/VT
     mutation method group that was previously written inline on
-    `terminal_session.zig`
+    `pty_terminal_runtime.zig`
+  - `src/terminal/core/session_config_api.zig` now holds the config, palette,
+    and mode-setting method group that was previously written inline on
+    `pty_terminal_runtime.zig`
+  - the remaining publication/view-cache helper stubs and the special-case
+    `appendHyperlink` wrapper now also route through explicit API modules
+    instead of living as root-session exceptions
+  - `src/terminal/core/session_debug_api.zig` now owns the root debug method
+    group instead of routing debug authority through `pty_terminal_runtime.zig`
+  - `src/terminal/core/session_lifecycle_api.zig` now owns the lifecycle and
+    composition method block that was still written directly on
+    `pty_terminal_runtime.zig`
+  - `src/terminal/core/session_surface_api.zig` now owns the content,
+    selection, host-query, and interaction alias surface that used to dominate
+    the top of `pty_terminal_runtime.zig`
+  - `src/terminal/core/session_types_api.zig` now owns the shared terminal
+    constant/type export slab that used to live at the bottom of
+    `pty_terminal_runtime.zig`
+  - the flat root state has now been grouped into explicit subsystem-owned
+    embedded structs:
+    - `src/terminal/core/session_publication_fields.zig`
+    - `src/terminal/core/session_runtime_fields.zig`
+    - `src/terminal/core/session_interaction_fields.zig`
+    - `src/terminal/core/session_control_fields.zig`
+  - that matters because `pty_terminal_runtime.zig` no longer reads like a bag of
+    every field in the system; it reads like allocator/core plus grouped
+    subsystems
   - that cut matters because it removed the need for a root barrel import
     entirely
   - `src/terminal/core/terminal.zig` has now been deleted
   - first-class native/replay/FFI/widget/tests/smoke consumers must now choose
     an explicit runtime, publication, or debug surface instead of flowing
     through one fake "terminal center"
+- the new decision point is therefore sharper:
+  - the public rename is now complete:
+    - the PTY-backed host wrapper type is `PtyTerminalRuntime`
+    - the old `TerminalSession` public type name is gone from live code paths
+    - the old `terminal_session.zig` module path is gone from live code paths
+  - the next question is no longer whether the wrapper deserves a runtime name
+  - the next question is whether the remaining `pty_terminal_runtime.zig` module
+    and shell shape are honest enough to survive under that runtime identity
+- publication authority also became sharper in the current war lane:
+  - generation vocabulary now distinguishes:
+    - `pendingGeneration`
+    - `publishedGeneration`
+    - `presentedGeneration`
+  - `snapshot().generation` now reports the published render-cache generation
+    of the snapshot payload it returns
+  - publication now owns more of:
+    - generation bumping
+    - queued view-refresh state
+    - output-pending state
+    - alt-exit pending state
+    - render-cache slot selection
+  - mirror-heavy cache metadata is now being cut, not just criticized:
+    - `RenderCache.total_lines` is gone
+    - `RenderCache.selection_active` is gone
+    - published cache metadata now stores `history_len` plus `rows`, and
+      callers derive total line count instead of trusting one more redundant
+      aggregate field
+    - published selection presence is now derived from the projected selection
+      rows instead of trusting one more redundant cache flag
+  - publication fast-path matching is now less smeared:
+    - `RenderCache.matchesPublishedState(...)` centralizes the published-state
+      equality contract that `view_cache.zig` used to open-code inline
+  - publication fast-path decisions are also starting to move behind explicit
+  helper seams instead of remaining as one large inline `view_cache.zig`
+  conditional block
+  - the same seam now also owns projected-diff gating and full-dirty metadata
+    assignment, which reduces the amount of publication rule text still smeared
+    through `view_cache.zig`
 - This doc should now be read as authority for a terminal-core offensive, not
   as permission to preserve the current center with smaller helper files.
 
@@ -270,7 +334,7 @@ Operationally, this means:
 
 - if native reaches into core-owned behavior in a way that a high-quality FFI
   host cannot, that is a boundary bug to remove, not a perk to preserve
-- every meaningful `TerminalSession` shrink should be evaluated against whether
+- every meaningful `PtyTerminalRuntime` shrink should be evaluated against whether
   it also clarifies the shared host contract
 - every meaningful host-facing FFI expansion should be checked against whether
   native is still cheating through deeper session access instead of the same
@@ -307,7 +371,7 @@ It does not own:
 
 Expected direction:
 
-- `src/terminal/core/terminal_session.zig` stops being the owner of the above
+- `src/terminal/core/pty_terminal_runtime.zig` stops being the owner of the above
 - the future public engine center should live under `src/terminal/core/` or
   `src/terminal/engine/`
 
@@ -383,7 +447,7 @@ Current conclusion relevant to this file:
   evidence
 - the strongest remaining structural ownership question is now publication and
   runtime assembly around `TerminalCore`, not whether the old raw terminal
-  semantics still belong on `TerminalSession`
+  semantics still belong on `PtyTerminalRuntime`
 
 ## Publication/Present Ownership Gap
 
@@ -524,7 +588,7 @@ It wraps:
 - `TerminalCore`
 - one PTY transport implementation
 
-This is the likely future role of today's `TerminalSession`.
+This is the likely future role of today's `PtyTerminalRuntime`.
 
 ### 4. `TerminalSnapshot`
 
@@ -730,7 +794,7 @@ they do not need.
   uses it for normal non-reply fixtures, while PTY attachment remains only for
   the reply-capture subset that genuinely needs a writable transport sink
 - reply-capture PTY attachment in the replay harness now also goes through
-  `TerminalSession` host-wrapper methods instead of raw transport assembly
+  `PtyTerminalRuntime` host-wrapper methods instead of raw transport assembly
 - at this point higher-level setup callers no longer need raw
   `terminal_transport.attach*/detach*` for normal session assembly paths
 
@@ -780,7 +844,7 @@ So the current Zide FFI direction is:
 - wake on visible-state transitions such as streamed output, poll-driven PTY
   updates, and resize
 
-The `TerminalSession` root also shed another non-runtime owner:
+The `PtyTerminalRuntime` root also shed another non-runtime owner:
 
 - the input-mode query/toggle surface now routes through
   `src/terminal/core/session_interaction.zig`
@@ -817,7 +881,7 @@ Migration approach:
 
 1. define `TerminalCore` contract in docs
 2. introduce a new internal core type without changing behavior
-3. make current `TerminalSession` wrap that core
+3. make current `PtyTerminalRuntime` wrap that core
 4. move protocol execution and state ownership onto the core
 5. move FFI to target the core boundary first
 6. keep PTY-backed desktop behavior working through the wrapper
@@ -825,14 +889,14 @@ Migration approach:
 ## Current Internal State
 
 - `src/terminal/core/terminal_core.zig` owns the engine-centered terminal state
-- `TerminalSession` wraps `core: TerminalCore`
+- `PtyTerminalRuntime` wraps `core: TerminalCore`
 - PTY/runtime/thread/render-publication ownership still lives in
-  `TerminalSession` for now
+  `PtyTerminalRuntime` for now
 - session construction and host/runtime assembly route through
   `src/terminal/core/session_runtime.zig`
 - input-mode snapshot state now also lives in
   `src/terminal/core/session_input_snapshot.zig` instead of being defined
-  inline in `terminal_session.zig`
+  inline in `pty_terminal_runtime.zig`
 - replay/test-only debug helpers live in
   `src/terminal/core/terminal_session_debug.zig`
 - host-facing metadata, liveness, and close-confirm queries live under
@@ -946,6 +1010,9 @@ These names are recommended to avoid ambiguity:
 - `TerminalCoreEvent`
 - `TerminalTransport`
 - `PtyTerminalRuntime`
+
+That naming cut is now landed in code: the PTY-backed wrapper is
+`PtyTerminalRuntime`, not `TerminalSession`.
 
 Avoid continuing to use `TerminalSession` as the name of the engine center once
 the new boundary exists.

@@ -3,6 +3,7 @@ const types = @import("../model/types.zig");
 const screen_mod = @import("../model/screen.zig");
 
 const Cell = types.Cell;
+const PublishedStateMatch = @import("render_cache.zig").RenderCache.PublishedStateMatch;
 const FullDirtyReason = screen_mod.FullDirtyReason;
 pub const RowDirtySpan = screen_mod.RowDirtySpan;
 pub const max_row_dirty_spans = screen_mod.max_row_dirty_spans;
@@ -25,6 +26,92 @@ pub fn pickForcedFullDirtyReason(
         return if (view_reason == .unknown) .view_cache_view_dirty_full else view_reason;
     }
     return .unknown;
+}
+
+pub fn canSkipPublish(
+    active_cache: anytype,
+    expected: PublishedStateMatch,
+    total_lines: usize,
+    view_dirty: anytype,
+) bool {
+    return active_cache.matchesPublishedState(expected) and
+        view_dirty == .none and
+        active_cache.dirty == .none and
+        total_lines == active_cache.totalLines();
+}
+
+pub fn canCleanAdvancePublish(
+    active_cache: anytype,
+    expected: PublishedStateMatch,
+    total_lines: usize,
+    view_dirty: anytype,
+) bool {
+    return active_cache.matchesPublishedState(expected) and
+        view_dirty == .none and
+        active_cache.dirty == .none and
+        total_lines == active_cache.totalLines();
+}
+
+pub fn applyCleanAdvancePublish(
+    active_cache: anytype,
+    generation: u64,
+    cursor: types.CursorPos,
+    cursor_style: types.CursorStyle,
+    cursor_visible: bool,
+) void {
+    active_cache.generation = generation;
+    active_cache.cursor = cursor;
+    active_cache.cursor_style = cursor_style;
+    active_cache.cursor_visible = cursor_visible;
+}
+
+pub fn canAssignProjectedDiffDamage(
+    plan: anytype,
+    view_dirty: anytype,
+    active_cache: anytype,
+    cache: anytype,
+    rows: usize,
+    cols: usize,
+    presented_generation: u64,
+) bool {
+    return !plan.needs_full_damage and
+        !plan.can_publish_scroll_shift and
+        plan.visible_history_changed and
+        view_dirty == .none and
+        active_cache.rows == rows and
+        active_cache.cols == cols and
+        active_cache.generation == presented_generation and
+        active_cache.cells.items.len == cache.cells.items.len;
+}
+
+pub fn assignFullDirtyMetadata(
+    cache: anytype,
+    active_cache: anytype,
+    rows: usize,
+    cols: usize,
+    plan: anytype,
+    active_is_alt: bool,
+    view_dirty: anytype,
+    view_full_dirty_reason: FullDirtyReason,
+    view_full_dirty_seq: u64,
+) void {
+    if (plan.needs_full_damage) {
+        cache.full_dirty_reason = pickForcedFullDirtyReason(
+            rows,
+            active_cache.rows,
+            cols,
+            active_cache.cols,
+            plan.requires_full_damage_for_scroll_offset_change,
+            active_is_alt,
+            active_cache.alt_active,
+            view_dirty,
+            view_full_dirty_reason,
+        );
+        cache.full_dirty_seq = active_cache.full_dirty_seq +% 1;
+        return;
+    }
+    cache.full_dirty_reason = view_full_dirty_reason;
+    cache.full_dirty_seq = view_full_dirty_seq;
 }
 
 pub fn rowLastContentCol(row_cells: []const Cell, cols: usize) ?usize {

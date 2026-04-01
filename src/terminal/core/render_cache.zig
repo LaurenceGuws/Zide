@@ -30,7 +30,6 @@ pub const RenderCache = struct {
     rows: usize,
     cols: usize,
     history_len: usize,
-    total_lines: usize,
     visible_history_generation: u64,
     generation: u64,
     scroll_offset: usize,
@@ -43,7 +42,6 @@ pub const RenderCache = struct {
     full_dirty_reason: FullDirtyReason,
     full_dirty_seq: u64,
     alt_active: bool,
-    selection_active: bool,
     sync_updates_active: bool,
     screen_reverse: bool,
     kitty_generation: u64,
@@ -69,7 +67,6 @@ pub const RenderCache = struct {
             .rows = 0,
             .cols = 0,
             .history_len = 0,
-            .total_lines = 0,
             .visible_history_generation = 0,
             .generation = 0,
             .scroll_offset = 0,
@@ -82,7 +79,6 @@ pub const RenderCache = struct {
             .full_dirty_reason = .unknown,
             .full_dirty_seq = 0,
             .alt_active = false,
-            .selection_active = false,
             .sync_updates_active = false,
             .screen_reverse = false,
             .kitty_generation = 0,
@@ -106,6 +102,65 @@ pub const RenderCache = struct {
         self.row_hashes.deinit(allocator);
         self.kitty_images.deinit(allocator);
         self.kitty_placements.deinit(allocator);
+    }
+
+    pub fn totalLines(self: *const RenderCache) usize {
+        return self.history_len + self.rows;
+    }
+
+    pub fn hasSelection(self: *const RenderCache) bool {
+        for (self.selection_rows.items) |selected| {
+            if (selected) return true;
+        }
+        return false;
+    }
+
+    pub const PublishedStateMatch = struct {
+        rows: usize,
+        cols: usize,
+        history_len: usize,
+        visible_history_generation: u64,
+        scroll_offset: usize,
+        generation: ?u64 = null,
+        clear_generation: u64,
+        alt_active: bool,
+        selection_active: bool,
+        sync_updates_active: bool,
+        screen_reverse: bool,
+        kitty_generation: u64,
+        cursor: ?types.CursorPos = null,
+        cursor_style: ?types.CursorStyle = null,
+        cursor_visible: ?bool = null,
+    };
+
+    pub fn matchesPublishedState(self: *const RenderCache, expected: PublishedStateMatch) bool {
+        if (self.rows != expected.rows or
+            self.cols != expected.cols or
+            self.history_len != expected.history_len or
+            self.visible_history_generation != expected.visible_history_generation or
+            self.scroll_offset != expected.scroll_offset or
+            self.clear_generation != expected.clear_generation or
+            self.alt_active != expected.alt_active or
+            self.hasSelection() != expected.selection_active or
+            self.sync_updates_active != expected.sync_updates_active or
+            self.screen_reverse != expected.screen_reverse or
+            self.kitty_generation != expected.kitty_generation)
+        {
+            return false;
+        }
+        if (expected.generation) |generation| {
+            if (self.generation != generation) return false;
+        }
+        if (expected.cursor) |cursor| {
+            if (!std.meta.eql(self.cursor, cursor)) return false;
+        }
+        if (expected.cursor_style) |cursor_style| {
+            if (!std.meta.eql(self.cursor_style, cursor_style)) return false;
+        }
+        if (expected.cursor_visible) |cursor_visible| {
+            if (self.cursor_visible != cursor_visible) return false;
+        }
+        return true;
     }
 };
 
@@ -152,7 +207,6 @@ pub fn copySnapshot(dst: *RenderCache, allocator: std.mem.Allocator, src: *const
     dst.rows = src.rows;
     dst.cols = src.cols;
     dst.history_len = src.history_len;
-    dst.total_lines = src.total_lines;
     dst.visible_history_generation = src.visible_history_generation;
     dst.generation = src.generation;
     dst.scroll_offset = src.scroll_offset;
@@ -165,7 +219,6 @@ pub fn copySnapshot(dst: *RenderCache, allocator: std.mem.Allocator, src: *const
     dst.full_dirty_reason = src.full_dirty_reason;
     dst.full_dirty_seq = src.full_dirty_seq;
     dst.alt_active = src.alt_active;
-    dst.selection_active = src.selection_active;
     dst.sync_updates_active = src.sync_updates_active;
     dst.screen_reverse = src.screen_reverse;
     dst.kitty_generation = src.kitty_generation;

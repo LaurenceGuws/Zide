@@ -51,14 +51,14 @@ pub const GrammarManager = grammar_manager_mod.GrammarManager;
 pub const EditorRenderCache = editor_render_cache_mod.EditorRenderCache;
 pub const EditorClusterCache = widgets.EditorClusterCache;
 
-pub const TerminalSession = terminal_runtime.PtyTerminalRuntime;
+pub const PtyTerminalRuntime = terminal_runtime.PtyTerminalRuntime;
 pub const TerminalWorkspace = terminal_runtime.TerminalWorkspace;
 pub const TerminalTabId = terminal_runtime.TerminalTabId;
 pub const TerminalPresentationFeedback = terminal_publication.PresentationFeedback;
 pub const TerminalCloseConfirmContext = terminal_runtime.TerminalWorkspace.CloseConfirmContext;
 
 pub const PendingTerminalPresentationFeedback = struct {
-    session: *TerminalSession,
+    session: *PtyTerminalRuntime,
     feedback: TerminalPresentationFeedback,
 };
 
@@ -112,7 +112,7 @@ pub const TerminalFramePacingState = struct {
     last_draw_seq: u64 = 0,
     last_poll_seq: u64 = 0,
     last_observed_generation: u64 = 0,
-    last_observed_current_generation: u64 = 0,
+    last_observed_pending_generation: u64 = 0,
     last_drawn_generation: u64 = 0,
     last_generation_change_time: f64 = 0,
     last_draw_time: f64 = 0,

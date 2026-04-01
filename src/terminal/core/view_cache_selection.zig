@@ -10,15 +10,13 @@ pub fn projectSelection(
     start_line: usize,
     rows: usize,
     cols: usize,
-    selection_active: bool,
+    _: bool,
 ) void {
     if (self.core.active == .alt) {
         for (cache.selection_rows.items) |*row_selected| {
             row_selected.* = false;
         }
-        cache.selection_active = selection_active;
     } else if (self.core.history.selectionState()) |selection| {
-        cache.selection_active = selection_active;
         var start_sel = selection.start;
         var end_sel = selection.end;
         if (start_sel.row > end_sel.row or (start_sel.row == end_sel.row and start_sel.col > end_sel.col)) {
@@ -68,6 +66,5 @@ pub fn projectSelection(
         for (cache.selection_rows.items) |*row_selected| {
             row_selected.* = false;
         }
-        cache.selection_active = selection_active;
     }
 }

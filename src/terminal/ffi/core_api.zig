@@ -85,7 +85,7 @@ fn copyPublishedSnapshotExport(
     handle.session.lock();
     errdefer handle.session.unlock();
 
-    if (handle.session.view_cache_pending.load(.acquire)) {
+    if (handle.session.viewRefreshPending()) {
         handle.session.updateViewCacheForScrollLocked();
     }
 
@@ -132,11 +132,7 @@ fn copyPublishedSnapshotExport(
 }
 
 fn renderCacheForGenerationLocked(session: *terminal_runtime.PtyTerminalRuntime, generation: u64) ?*const @import("../core/render_cache.zig").RenderCache {
-    inline for (0..2) |i| {
-        const cache = &session.render_caches[i];
-        if (cache.generation == generation) return cache;
-    }
-    return null;
+    return terminal_publication.renderCacheForGeneration(session, generation);
 }
 
 fn copyGranularSnapshotDiffExport(
@@ -148,7 +144,7 @@ fn copyGranularSnapshotDiffExport(
     handle.session.lock();
     defer handle.session.unlock();
 
-    if (handle.session.view_cache_pending.load(.acquire)) {
+    if (handle.session.viewRefreshPending()) {
         handle.session.updateViewCacheForScrollLocked();
     }
 

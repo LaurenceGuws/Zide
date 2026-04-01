@@ -1,10 +1,10 @@
 const types = @import("../model/types.zig");
 const input_modes = @import("input_modes.zig");
-const view_cache = @import("view_cache.zig");
+const terminal_publication = @import("terminal_publication.zig");
 
 pub fn setDefaultColorsLocked(self: anytype, fg: types.Color, bg: types.Color) void {
     self.core.setDefaultColors(fg, bg);
-    view_cache.updateViewCacheNoLockTagged(self, self.output_generation.load(.acquire), self.core.scrollbackOffset(), "session_config_default_colors");
+    terminal_publication.publishCurrentViewLocked(self, "session_config_default_colors");
 }
 
 pub fn setDefaultColors(self: anytype, fg: types.Color, bg: types.Color) void {
@@ -15,7 +15,7 @@ pub fn setDefaultColors(self: anytype, fg: types.Color, bg: types.Color) void {
 
 fn setAnsiColorsLocked(self: anytype, colors: [16]types.Color) void {
     self.core.setAnsiColors(colors);
-    view_cache.updateViewCacheNoLockTagged(self, self.output_generation.load(.acquire), self.core.scrollbackOffset(), "session_config_ansi_colors");
+    terminal_publication.publishCurrentViewLocked(self, "session_config_ansi_colors");
 }
 
 pub fn setAnsiColors(self: anytype, colors: [16]types.Color) void {
@@ -26,7 +26,7 @@ pub fn setAnsiColors(self: anytype, colors: [16]types.Color) void {
 
 fn remapAnsiColorsLocked(self: anytype, old_colors: [16]types.Color, new_colors: [16]types.Color) void {
     self.core.remapAnsiColors(old_colors, new_colors);
-    view_cache.updateViewCacheNoLockTagged(self, self.output_generation.load(.acquire), self.core.scrollbackOffset(), "session_config_remap_ansi");
+    terminal_publication.publishCurrentViewLocked(self, "session_config_remap_ansi");
 }
 
 pub fn remapAnsiColors(self: anytype, old_colors: [16]types.Color, new_colors: [16]types.Color) void {
@@ -76,12 +76,12 @@ pub fn setColumnMode132(self: anytype, enabled: bool) void {
 pub fn setColumnMode132Locked(self: anytype, enabled: bool) void {
     if (!self.core.setColumnMode132(enabled)) return;
     if (!enabled) return;
-    view_cache.updateViewCacheNoLockTagged(self, self.output_generation.load(.acquire), self.core.scrollbackOffset(), "session_config_column_mode_132");
+    terminal_publication.publishCurrentViewLocked(self, "session_config_column_mode_132");
 }
 
 pub fn setCellSize(self: anytype, cell_width: u16, cell_height: u16) void {
     self.lock();
     defer self.unlock();
-    self.cell_width = cell_width;
-    self.cell_height = cell_height;
+    self.interaction.cell_width = cell_width;
+    self.interaction.cell_height = cell_height;
 }

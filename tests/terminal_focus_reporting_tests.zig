@@ -60,8 +60,8 @@ fn withSessionAndCapture(test_fn: fn (*terminal_runtime.PtyTerminalRuntime, *Pip
     var capture = try PipeCapture.init();
     defer capture.deinit();
 
-    session.pty = capture.pty;
-    defer session.pty = null;
+    session.runtime.pty = capture.pty;
+    defer session.runtime.pty = null;
 
     try test_fn(session, &capture);
 }

@@ -35,15 +35,15 @@ pub fn handleCsi(self: anytype, action: @import("../parser/csi.zig").CsiAction) 
 }
 
 pub fn feedOutputBytes(self: anytype, bytes: []const u8) void {
-    self.state_mutex.lock();
-    defer self.state_mutex.unlock();
+    self.control.state_mutex.lock();
+    defer self.control.state_mutex.unlock();
     const result = core_feed.feedOutputBytesLocked(self, bytes);
     terminal_publication.publishFeedResultLocked(self, result);
 }
 
 pub fn resetState(self: anytype) void {
-    self.state_mutex.lock();
-    defer self.state_mutex.unlock();
+    self.control.state_mutex.lock();
+    defer self.control.state_mutex.unlock();
     resetStateLocked(self);
 }
 

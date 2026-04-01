@@ -147,7 +147,7 @@ pub fn pollForFrame(self: anytype, input_active_index: ?usize, policy: anytype) 
     else
         0;
     const current_pre = if (active_idx) |idx|
-        self.tabs.items[idx].session.currentGeneration()
+        self.tabs.items[idx].session.pendingGeneration()
     else
         0;
     const published_pre = if (active_idx) |idx|
@@ -164,7 +164,7 @@ pub fn pollForFrame(self: anytype, input_active_index: ?usize, policy: anytype) 
         false;
     const any_polled = try pollBudgeted(self, input_active_index, policy);
     const current_post = if (active_idx) |idx|
-        self.tabs.items[idx].session.currentGeneration()
+        self.tabs.items[idx].session.pendingGeneration()
     else
         0;
     const published_post = if (active_idx) |idx|
@@ -193,8 +193,8 @@ pub fn pollForFrame(self: anytype, input_active_index: ?usize, policy: anytype) 
             .{ .key = "any_polled", .value = .{ .boolean = any_polled } },
             .{ .key = "active_has_data_pre", .value = .{ .boolean = active_has_data_pre } },
             .{ .key = "active_has_data_post", .value = .{ .boolean = active_has_data_post } },
-            .{ .key = "current_generation_pre", .value = .{ .unsigned = current_pre } },
-            .{ .key = "current_generation_post", .value = .{ .unsigned = current_post } },
+            .{ .key = "pending_generation_pre", .value = .{ .unsigned = current_pre } },
+            .{ .key = "pending_generation_post", .value = .{ .unsigned = current_post } },
             .{ .key = "published_changed", .value = .{ .boolean = active_published_changed } },
             .{ .key = "published_generation_pre", .value = .{ .unsigned = published_pre } },
             .{ .key = "published_generation_post", .value = .{ .unsigned = published_post } },

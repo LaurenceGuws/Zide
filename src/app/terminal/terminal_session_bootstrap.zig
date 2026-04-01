@@ -7,7 +7,7 @@ const c = @cImport({
 });
 
 const Shell = app_shell.Shell;
-const TerminalSession = terminal_runtime.PtyTerminalRuntime;
+const PtyTerminalRuntime = terminal_runtime.PtyTerminalRuntime;
 const TerminalWidget = widgets.TerminalWidget;
 
 const win32 = if (@import("builtin").os.tag == .windows) struct {
@@ -55,7 +55,7 @@ fn resolveLaunchShellPathOwned(
 }
 
 pub fn startSessionWithShellCellSize(
-    term: *TerminalSession,
+    term: *PtyTerminalRuntime,
     shell: *Shell,
     launch_cwd: ?[]const u8,
     configured_shell_path: ?[]const u8,
@@ -106,7 +106,7 @@ pub fn startSessionWithShellCellSize(
 }
 
 pub fn initWidget(
-    term: *TerminalSession,
+    term: *PtyTerminalRuntime,
     blink_style: TerminalWidget.BlinkStyle,
     focus_report_window_events: bool,
     focus_report_pane_events: bool,

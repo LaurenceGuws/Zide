@@ -1,16 +1,17 @@
 const std = @import("std");
 const terminal_transport = @import("terminal_transport.zig");
+const terminal_publication = @import("terminal_publication.zig");
 const pty_poll_publication = @import("pty_poll_publication.zig");
 const pty_poll_processing = @import("pty_poll_processing.zig");
 
 pub fn poll(self: anytype) !void {
-    const input_pressure = self.input_pressure.load(.acquire);
-    if (self.read_thread != null) {
-        if (self.parse_thread != null) {
-            _ = self.output_pending.swap(false, .acq_rel);
+    const input_pressure = self.control.input_pressure.load(.acquire);
+    if (self.runtime.read_thread != null) {
+        if (self.runtime.parse_thread != null) {
+            _ = terminal_publication.clearOutputPending(self);
             return;
         }
-        _ = self.output_pending.swap(false, .acq_rel);
+        _ = terminal_publication.clearOutputPending(self);
         var result = pty_poll_processing.processBufferedPtyOutput(self, input_pressure);
         pty_poll_publication.publishPtyPollResult(
             self,

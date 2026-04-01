@@ -2,6 +2,7 @@ const builtin = @import("builtin");
 const parser_mod = @import("../parser/parser.zig");
 const selection_mod = @import("selection.zig");
 const types = @import("../model/types.zig");
+const terminal_publication = @import("terminal_publication.zig");
 
 pub fn debugSnapshot(self: anytype) @import("snapshot.zig").DebugSnapshot {
     if (!debugAccessAllowed()) @panic("debugSnapshot is test-only");
@@ -13,7 +14,7 @@ pub fn debugSnapshot(self: anytype) @import("snapshot.zig").DebugSnapshot {
         .hyperlinks = self.core.hyperlink_table.items,
         .scrollback_count = self.core.history.scrollbackCount(),
         .scrollback_offset = self.core.history.scrollOffset(),
-        .focus_reporting = self.focus_reporting,
+        .focus_reporting = self.interaction.focus_reporting,
         .selection = selection_mod.selectionState(self),
         .base_default_attrs = self.core.base_default_attrs,
         .render_cache = self.renderCache(),
@@ -38,8 +39,8 @@ pub fn debugFeedBytes(self: anytype, bytes: []const u8) void {
 pub fn debugScrollUp(self: anytype) void {
     if (!debugAccessAllowed()) @panic("debugScrollUp is test-only");
     @import("scrolling.zig").scrollUp(self);
-    _ = self.output_generation.fetchAdd(1, .acq_rel);
-    @import("view_cache.zig").updateViewCacheNoLockTagged(self, self.output_generation.load(.acquire), self.core.history.scrollOffset(), "debug_push_output");
+    _ = terminal_publication.bumpGeneration(self);
+    terminal_publication.publishCurrentViewLocked(self, "debug_push_output");
 }
 
 pub fn debugSetScrollOffset(self: anytype, offset: usize) void {
@@ -49,11 +50,10 @@ pub fn debugSetScrollOffset(self: anytype, offset: usize) void {
     self.core.history.setScrollOffset(self.core.primary.grid.rows, offset);
     const after = self.core.history.scrollOffset();
     if (after != before) {
-        _ = self.output_generation.fetchAdd(1, .acq_rel);
+        _ = terminal_publication.bumpGeneration(self);
     }
-    self.view_cache_request_offset.store(@intCast(self.core.history.scrollOffset()), .release);
-    self.view_cache_pending.store(false, .release);
-    @import("view_cache.zig").updateViewCacheNoLockTagged(self, self.output_generation.load(.acquire), self.core.history.scrollOffset(), "debug_apply_without_pending");
+    terminal_publication.clearPendingViewRefresh(self);
+    terminal_publication.publishCurrentViewLocked(self, "debug_apply_without_pending");
 }
 
 pub fn debugSetScrollbackCell(self: anytype, row: usize, col: usize, codepoint: u32) void {
@@ -62,8 +62,8 @@ pub fn debugSetScrollbackCell(self: anytype, row: usize, col: usize, codepoint: 
     if (col >= line.cells.len) return;
     line.cells[col].codepoint = codepoint;
     self.core.history.markScrollbackChanged();
-    _ = self.output_generation.fetchAdd(1, .acq_rel);
-    @import("view_cache.zig").updateViewCacheNoLockTagged(self, self.output_generation.load(.acquire), self.core.history.scrollOffset(), "debug_scrollback_row");
+    _ = terminal_publication.bumpGeneration(self);
+    terminal_publication.publishCurrentViewLocked(self, "debug_scrollback_row");
 }
 
 pub fn debugPushScrollbackRow(self: anytype, text: []const u8) void {
@@ -81,8 +81,8 @@ pub fn debugPushScrollbackRow(self: anytype, text: []const u8) void {
     }
     self.core.history.pushRow(row, false, base);
     self.core.history.ensureViewCache(cols, base);
-    _ = self.output_generation.fetchAdd(1, .acq_rel);
-    @import("view_cache.zig").updateViewCacheNoLockTagged(self, self.output_generation.load(.acquire), self.core.history.scrollOffset(), "debug_grid_row");
+    _ = terminal_publication.bumpGeneration(self);
+    terminal_publication.publishCurrentViewLocked(self, "debug_grid_row");
 }
 
 pub fn debugSetGridRow(self: anytype, row_index: usize, text: []const u8) void {
@@ -99,8 +99,8 @@ pub fn debugSetGridRow(self: anytype, row_index: usize, text: []const u8) void {
         self.core.primary.grid.cells.items[start + i].codepoint = text[i];
     }
     self.core.primary.grid.markDirtyRange(row_index, row_index, 0, cols - 1);
-    _ = self.output_generation.fetchAdd(1, .acq_rel);
-    @import("view_cache.zig").updateViewCacheNoLockTagged(self, self.output_generation.load(.acquire), self.core.history.scrollOffset(), "debug_cursor");
+    _ = terminal_publication.bumpGeneration(self);
+    terminal_publication.publishCurrentViewLocked(self, "debug_cursor");
 }
 
 fn debugAccessAllowed() bool {

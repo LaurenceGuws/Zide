@@ -44,7 +44,9 @@ In short:
 
 - `TerminalCore` is real
 - but it is still not obviously the only center
-- `TerminalSession` still reads as a broad assembly/export shell
+- the old `TerminalSession` center has now been renamed publicly to
+  `PtyTerminalRuntime`, but the remaining wrapper/module gravity still needs to
+  be cut down further
 - widget/render code is still too large and too intimate with publication
   details
 - publication still duplicates more state than a best-in-class engine boundary
@@ -52,18 +54,18 @@ In short:
 
 ## Sequential Findings
 
-### 1. `TerminalSession` is still too large to be the right public center
+### 1. `PtyTerminalRuntime` is still too large to be the right public center
 
 Primary files:
 
-- `src/terminal/core/terminal_session.zig`
+- `src/terminal/core/pty_terminal_runtime.zig`
 - `src/terminal/core/terminal_runtime.zig`
 - `src/terminal/core/terminal_publication.zig`
 - `src/terminal/core/terminal_debug.zig`
 
 Evidence:
 
-- `terminal_session.zig` is still `791` lines and acts as the root public
+- `pty_terminal_runtime.zig` is still `791` lines and acts as the root public
   facade for:
   - runtime
   - input
@@ -89,21 +91,47 @@ Judgment:
   are the right direction because they give native/replay/FFI/widget consumers
   an enforced explicit entrypoint instead of a broad root barrel
 - the old mixed alias hub `src/terminal/core/session_public_types.zig` is also
-  gone, which is an honest improvement: `terminal_session.zig` now imports
+  gone, which is an honest improvement: `pty_terminal_runtime.zig` now imports
   direct owners instead of hiding public-facing types behind one more helper
   facade
 - `src/terminal/core/session_runtime_api.zig` and
   `src/terminal/core/session_publication_api.zig` now carry the runtime and
   publication/present method groups that were previously written inline on
-  `terminal_session.zig`
+  `pty_terminal_runtime.zig`
 - `src/terminal/core/session_input_api.zig` now carries the host input
   send/report method group that was previously written inline on
-  `terminal_session.zig`
+  `pty_terminal_runtime.zig`
 - `src/terminal/core/session_protocol_api.zig` now carries the protocol/VT
   mutation method group that was previously written inline on
-  `terminal_session.zig`
-- but they are only the first strike, not the kill:
-  `terminal_session.zig` still owns too much behavior
+  `pty_terminal_runtime.zig`
+- `src/terminal/core/session_config_api.zig` now carries the config, palette,
+  and mode-setting method group that was previously written inline on
+  `pty_terminal_runtime.zig`
+- the remaining publication/view-cache helper stubs and the special-case
+  `appendHyperlink` wrapper no longer live inline on `pty_terminal_runtime.zig`
+- `src/terminal/core/session_debug_api.zig` now owns the debug method group
+  instead of making `pty_terminal_runtime.zig` the visible debug authority
+- `src/terminal/core/session_lifecycle_api.zig` now owns the lifecycle and
+  composition block instead of leaving those direct methods written on the root
+  session type
+- `src/terminal/core/session_surface_api.zig` now owns the giant content,
+  selection, host-query, and interaction alias surface instead of leaving that
+  umbrella slab at the top of `pty_terminal_runtime.zig`
+- `src/terminal/core/session_types_api.zig` now owns the shared constant/type
+  export slab instead of leaving that import-umbrella surface at the bottom of
+  `pty_terminal_runtime.zig`
+- the flat root state is now also grouped into explicit subsystem-owned
+  embedded structs:
+  - `session_publication_fields`
+  - `session_runtime_fields`
+  - `session_interaction_fields`
+  - `session_control_fields`
+- current judgment:
+  - this is no longer just "a broad session file with helpers extracted"
+  - it is now allocator/core plus grouped subsystems and explicit API seams
+  - the rename has already happened
+  - the next real question is whether that shell is honest enough to keep,
+    not whether more random helper extraction is needed
 
 Why it matters:
 
@@ -164,12 +192,37 @@ Evidence:
   - scrollback/publication metadata
 - `capturePresentation(...)` and `copyPublishedRenderCache(...)` still copy
   large cache snapshots under the session shell
+- until the latest cuts, generation vocabulary also overstated one internal
+  field as if it were the published truth
+  - live code now distinguishes:
+    - `pendingGeneration`
+    - `publishedGeneration`
+    - `presentedGeneration`
+  - `snapshot().generation` now reports the published cache generation it
+    actually returns
 
 Judgment:
 
 - the publication contract is now explicit, which is good
 - but the implementation still feels heavier than ideal because published state
   is mirrored, copied, and coordinated in several places
+- this lane is no longer purely theoretical:
+  - `RenderCache.total_lines` has already been deleted because it was merely
+    `history_len + rows` stored as duplicate cache truth
+  - `RenderCache.selection_active` has also been deleted because projected
+    selection rows already make selection presence derivable from the cache
+  - `view_cache.zig` no longer hand-expands the same broad publication-state
+    equality check inline; that contract now lives in
+    `RenderCache.matchesPublishedState(...)`
+  - `view_cache_publication.zig` now owns part of the publication fast-path
+    decision surface (`canSkipPublish`, `canCleanAdvancePublish`,
+    `applyCleanAdvancePublish`) instead of leaving that logic smeared inline in
+    `view_cache.zig`
+  - it also now owns projected-diff eligibility and full-dirty metadata
+    assignment, which further reduces the amount of publication rule text
+    living inline in `view_cache.zig`
+  - that is the standard the rest of the publication war should keep:
+    if a cache field is just restating derivable published state, it should die
 
 Why it matters:
 
@@ -259,7 +312,7 @@ Primary files:
 
 - `src/terminal/core/terminal_runtime.zig`
 - `src/terminal/core/terminal_publication.zig`
-- `src/terminal/core/terminal_session.zig`
+- `src/terminal/core/pty_terminal_runtime.zig`
 
 Evidence:
 
@@ -287,7 +340,7 @@ Primary files:
 Evidence:
 
 - runtime and transport ownership are much improved
-- but they still read as an extracted assembly shell around `TerminalSession`,
+- but they still read as an extracted assembly shell around `PtyTerminalRuntime`,
   not as a more self-contained host/runtime boundary object
 
 Judgment:
@@ -344,10 +397,10 @@ Judgment:
 ## Largest Potential Changes For Maximum Payoff
 
 1. Make `TerminalCore` plus an explicit publication object the true public
-   center, and shrink `TerminalSession` into a narrow host/runtime wrapper.
+   center, and shrink `PtyTerminalRuntime` into a narrow host/runtime wrapper.
 2. Delete parser-owned semantic text handling from `parser_hooks.zig` by moving
    printable write behavior fully below the VT action boundary.
-3. Keep shrinking `terminal_session.zig` now that `terminal.zig` is dead, and
+3. Keep shrinking `pty_terminal_runtime.zig` now that `terminal.zig` is dead, and
    stop re-exporting broad mixed ownership through runtime/publication helper
    surfaces where direct ownership types would be clearer.
 4. Collapse duplicated publication state so one canonical published snapshot
@@ -391,7 +444,7 @@ These should be treated as explicit architecture rules for future terminal
 work:
 
 - no new terminal semantics in widget files
-- no new host-policy convenience in `TerminalSession`
+- no new host-policy convenience in `PtyTerminalRuntime`
 - no new publication mirrors unless they are temporary and deletion is planned
 - no parser-hook behavior that mutates terminal semantics if the engine can own
   it directly

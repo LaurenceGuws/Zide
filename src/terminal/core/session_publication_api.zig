@@ -1,7 +1,35 @@
 const terminal_publication = @import("terminal_publication.zig");
 
-pub fn currentGeneration(self: anytype) u64 {
-    return terminal_publication.currentGeneration(self);
+pub fn pendingGeneration(self: anytype) u64 {
+    return terminal_publication.pendingGeneration(self);
+}
+
+pub fn outputPending(self: anytype) bool {
+    return terminal_publication.outputPending(self);
+}
+
+pub fn clearOutputPending(self: anytype) bool {
+    return terminal_publication.clearOutputPending(self);
+}
+
+pub fn markOutputPending(self: anytype) void {
+    terminal_publication.markOutputPending(self);
+}
+
+pub fn viewRefreshPending(self: anytype) bool {
+    return terminal_publication.viewRefreshPending(self);
+}
+
+pub fn takePendingViewRefresh(self: anytype) ?usize {
+    return terminal_publication.takePendingViewRefresh(self);
+}
+
+pub fn takeAltExitPending(self: anytype) bool {
+    return terminal_publication.takeAltExitPending(self);
+}
+
+pub fn consumeAltExitTimeMs(self: anytype) i64 {
+    return terminal_publication.consumeAltExitTimeMs(self);
 }
 
 pub fn publishedGeneration(self: anytype) u64 {
@@ -74,4 +102,12 @@ pub fn setSyncUpdatesLocked(self: anytype, enabled: bool) void {
 
 pub fn clearPublishedDamageIfGeneration(self: anytype, expected_generation: u64, clear_screen_dirty: bool) bool {
     return terminal_publication.clearPublishedDamageIfGeneration(self, expected_generation, clear_screen_dirty);
+}
+
+pub fn updateViewCacheForScroll(self: anytype) void {
+    terminal_publication.updateViewCacheForScroll(self);
+}
+
+pub fn updateViewCacheForScrollLocked(self: anytype) void {
+    terminal_publication.updateViewCacheForScrollLocked(self);
 }

@@ -1,7 +1,7 @@
-const session_mod = @import("terminal_session.zig");
+const session_mod = @import("pty_terminal_runtime.zig");
 const workspace_mod = @import("workspace.zig");
 
-pub const PtyTerminalRuntime = session_mod.TerminalSession;
+pub const PtyTerminalRuntime = session_mod.PtyTerminalRuntime;
 pub const TerminalWorkspace = workspace_mod.TerminalWorkspace;
 pub const TerminalTabId = workspace_mod.TabId;
 pub const TerminalTabSyncEntry = workspace_mod.TabSyncEntry;
@@ -36,7 +36,7 @@ pub const VTERM_KEY_LEFT_SUPER = session_mod.VTERM_KEY_LEFT_SUPER;
 pub const VTERM_KEY_RIGHT_SUPER = session_mod.VTERM_KEY_RIGHT_SUPER;
 pub const KeypadKey = session_mod.KeypadKey;
 pub const KeyAction = session_mod.KeyAction;
-pub const keyModeFlagsValue = session_mod.TerminalSession.keyModeFlagsValue;
+pub const keyModeFlagsValue = session_mod.PtyTerminalRuntime.keyModeFlagsValue;
 
 pub const VTERM_MOD_NONE = session_mod.VTERM_MOD_NONE;
 pub const VTERM_MOD_SHIFT = session_mod.VTERM_MOD_SHIFT;

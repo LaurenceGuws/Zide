@@ -22,17 +22,17 @@ pub fn startNoThreads(self: anytype, shell: ?[:0]const u8) !void {
 }
 
 pub fn setLaunchShellPath(self: anytype, shell_path: ?[]const u8) !void {
-    if (self.launch_shell_path) |old| {
+    if (self.runtime.launch_shell_path) |old| {
         self.allocator.free(old);
-        self.launch_shell_path = null;
+        self.runtime.launch_shell_path = null;
     }
     if (shell_path) |path| {
-        self.launch_shell_path = try self.allocator.dupe(u8, path);
+        self.runtime.launch_shell_path = try self.allocator.dupe(u8, path);
     }
 }
 
 pub fn launchShellPath(self: anytype) []const u8 {
-    return self.launch_shell_path orelse "";
+    return self.runtime.launch_shell_path orelse "";
 }
 
 pub fn attachExternalTransport(self: anytype) void {

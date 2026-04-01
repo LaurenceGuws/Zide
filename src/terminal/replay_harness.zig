@@ -763,7 +763,7 @@ fn observedFixtureState(
         .generation = snapshot.generation,
         .baseline_generation = baseline_publication.generation,
         .history_len = if (cache) |c| c.history_len else null,
-        .total_lines = if (cache) |c| c.total_lines else null,
+        .total_lines = if (cache) |c| c.totalLines() else null,
         .scroll_offset = if (cache) |c| c.scroll_offset else null,
         .row_spans = try row_spans.toOwnedSlice(allocator),
     };
