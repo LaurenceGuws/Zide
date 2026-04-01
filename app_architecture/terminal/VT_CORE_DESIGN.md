@@ -136,10 +136,12 @@ Status note, 2026-03-31:
   - `src/terminal/core/session_public_types.zig` is gone, so
     `pty_terminal_runtime.zig` no longer gets to hide direct ownership behind a
     mixed alias hub
-  - `src/terminal/core/session/runtime_api.zig` and
-    `src/terminal/core/session/publication_api.zig` now hold the runtime and
-    publication/present method groups that were previously written inline on
+  - `src/terminal/core/session/runtime_api.zig` still holds the runtime
+    method group that was previously written inline on
     `pty_terminal_runtime.zig`
+  - publication/present methods no longer route through a wrapper API seam;
+    `pty_terminal_runtime.zig` now re-exports them straight from
+    `src/terminal/core/publication/terminal_publication.zig`
   - `src/terminal/core/session/runtime.zig`,
     `src/terminal/core/session/input.zig`,
     `src/terminal/core/session/config.zig`, and

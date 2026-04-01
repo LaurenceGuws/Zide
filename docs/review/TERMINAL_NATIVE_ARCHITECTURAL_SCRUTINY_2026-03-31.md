@@ -107,10 +107,12 @@ Judgment:
 - the PTY runtime regression tests now follow the same rule for snapshot,
   cell/color, dirty-state, and progress-state imports instead of reinforcing
   wrapper gravity through test-only barrel usage
-- `src/terminal/core/session/runtime_api.zig` and
-  `src/terminal/core/session/publication_api.zig` now carry the runtime and
-  publication/present method groups that were previously written inline on
+- `src/terminal/core/session/runtime_api.zig` still carries the runtime
+  method group that was previously written inline on
   `pty_terminal_runtime.zig`
+- publication/present methods no longer route through a wrapper API seam;
+  `pty_terminal_runtime.zig` now re-exports them straight from
+  `src/terminal/core/publication/terminal_publication.zig`
 - `src/terminal/core/session/runtime.zig`,
   `src/terminal/core/session/input.zig`,
   `src/terminal/core/session/config.zig`, and

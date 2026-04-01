@@ -34,7 +34,6 @@ const config = @import("session/config.zig");
 const runtime = @import("session/runtime.zig");
 const debug_api = @import("session/debug_api.zig");
 const runtime_api = @import("session/runtime_api.zig");
-const publication_api = @import("session/publication_api.zig");
 const publication_fields = @import("session/publication_fields.zig");
 const runtime_fields = @import("session/runtime_fields.zig");
 const interaction_fields = @import("session/interaction_fields.zig");
@@ -243,12 +242,12 @@ pub const PtyTerminalRuntime = struct {
     pub const tryLock = lifecycle_api.tryLock;
     pub const unlock = lifecycle_api.unlock;
 
-    pub const pendingGeneration = publication_api.pendingGeneration;
-    pub const publishedGeneration = publication_api.publishedGeneration;
-    pub const presentedGeneration = publication_api.presentedGeneration;
-    pub const notePresentedGeneration = publication_api.notePresentedGeneration;
-    pub const acknowledgePresentedGeneration = publication_api.acknowledgePresentedGeneration;
-    pub const hasPublishedGenerationBacklog = publication_api.hasPublishedGenerationBacklog;
+    pub const pendingGeneration = terminal_publication.pendingGeneration;
+    pub const publishedGeneration = terminal_publication.publishedGeneration;
+    pub const presentedGeneration = terminal_publication.presentedGeneration;
+    pub const notePresentedGeneration = terminal_publication.notePresentedGeneration;
+    pub const acknowledgePresentedGeneration = terminal_publication.acknowledgePresentedGeneration;
+    pub const hasPublishedGenerationBacklog = terminal_publication.hasPublishedGenerationBacklog;
     pub const pollBacklogHint = runtime_api.pollBacklogHint;
     pub const lockPtyWriter = runtime_api.lockPtyWriter;
     pub const writePtyBytes = runtime_api.writePtyBytes;
@@ -310,8 +309,8 @@ pub const PtyTerminalRuntime = struct {
     pub const getCell = terminal_protocol_api.getCell;
     pub const getCursorPos = terminal_protocol_api.getCursorPos;
 
-    pub const updateViewCacheForScroll = publication_api.updateViewCacheForScroll;
-    pub const updateViewCacheForScrollLocked = publication_api.updateViewCacheForScrollLocked;
+    pub const updateViewCacheForScroll = terminal_publication.updateViewCacheForScroll;
+    pub const updateViewCacheForScrollLocked = terminal_publication.updateViewCacheForScrollLocked;
 
     pub const setCursorStyle = terminal_protocol_api.setCursorStyle;
     pub const decrqssReplyInto = terminal_protocol_api.decrqssReplyInto;
@@ -321,16 +320,16 @@ pub const PtyTerminalRuntime = struct {
     pub const enterAltScreen = terminal_protocol_api.enterAltScreen;
     pub const exitAltScreen = terminal_protocol_api.exitAltScreen;
 
-    pub const snapshot = publication_api.snapshot;
-    pub const renderCache = publication_api.renderCache;
-    pub const copyPublishedRenderCache = publication_api.copyPublishedRenderCache;
-    pub const capturePresentation = publication_api.capturePresentation;
-    pub const completePresentationFeedback = publication_api.completePresentationFeedback;
-    pub const finishFramePresentation = publication_api.finishFramePresentation;
-    pub const syncUpdatesActive = publication_api.syncUpdatesActive;
-    pub const setSyncUpdates = publication_api.setSyncUpdates;
-    pub const setSyncUpdatesLocked = publication_api.setSyncUpdatesLocked;
-    pub const clearPublishedDamageIfGeneration = publication_api.clearPublishedDamageIfGeneration;
+    pub const snapshot = terminal_publication.snapshot;
+    pub const renderCache = terminal_publication.renderCache;
+    pub const copyPublishedRenderCache = terminal_publication.copyPublishedRenderCache;
+    pub const capturePresentation = terminal_publication.capturePresentation;
+    pub const completePresentationFeedback = terminal_publication.completePresentationFeedback;
+    pub const finishFramePresentation = terminal_publication.finishFramePresentation;
+    pub const syncUpdatesActive = terminal_publication.syncUpdatesActive;
+    pub const setSyncUpdates = terminal_publication.setSyncUpdates;
+    pub const setSyncUpdatesLocked = terminal_publication.setSyncUpdatesLocked;
+    pub const clearPublishedDamageIfGeneration = terminal_publication.clearPublishedDamageIfGeneration;
 
     pub const CloseConfirmSignals = host_types.CloseConfirmSignals;
 };
