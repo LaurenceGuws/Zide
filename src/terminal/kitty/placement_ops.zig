@@ -19,7 +19,7 @@ pub const KittyPlacementOps = struct {
     }
 
     pub fn markPlacementDirty(self: anytype, placement: common.KittyPlacement, src: std.builtin.SourceLocation) void {
-        const screen = self.activeScreen();
+        const screen = self.core.activeScreen();
         const kitty = common.kittyStateConst(self);
         const image = common.findKittyImageById(kitty.images.items, placement.image_id);
         switch (common.kittyPlacementDirtyRegion(
@@ -90,7 +90,7 @@ pub const KittyPlacementOps = struct {
 pub fn updateKittyPlacementsForScroll(self: anytype) void {
     const kitty = common.kittyState(self);
     if (kitty.placements.items.len == 0) return;
-    const screen = self.activeScreenConst();
+    const screen = self.core.activeScreenConst();
     const rows = @as(u64, screen.grid.rows);
     const top = common.kittyVisibleTop(self);
     const max_row = top + rows;
@@ -184,7 +184,7 @@ pub fn shiftKittyPlacementsDown(self: anytype, top: usize, bottom: usize, count:
 pub fn placeKittyImage(self: anytype, image_id: u32, control: common.KittyControl) ?[]const u8 {
     const log = app_logger.logger("terminal.kitty");
     const kitty = common.kittyState(self);
-    const screen = self.activeScreen();
+    const screen = self.core.activeScreen();
     if (screen.grid.rows == 0 or screen.grid.cols == 0) return "EINVAL";
     if (common.findKittyImageById(kitty.images.items, image_id) == null) return "ENOENT";
     const base_row = @min(@as(u16, @intCast(screen.cursor.row)), screen.grid.rows - 1);

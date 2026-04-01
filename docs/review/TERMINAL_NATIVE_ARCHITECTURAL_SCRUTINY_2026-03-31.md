@@ -366,6 +366,12 @@ Evidence:
 - the `TextEffects` adapter layer is gone too:
   `terminal_core_text.zig` already calls protocol-owned functions directly, so
   `terminal_core_protocol.zig` no longer carries that extra wrapper type
+- wrapper-owned screen access is thinner too:
+  `src/terminal/core/pty_terminal_runtime.zig` no longer exports
+  `activeScreen`, `activeScreenConst`, `isAltActive`, or the local `scrollUp`
+  helper; protocol/session/kitty internals now read screen state from
+  `self.core` or direct owners instead of treating the wrapper as the screen
+  owner
 - the outer CSI forwarding shell is gone too:
   `terminal_protocol_api.zig` now routes CSI directly into
   `src/terminal/protocol/csi.zig` without stepping through an extra

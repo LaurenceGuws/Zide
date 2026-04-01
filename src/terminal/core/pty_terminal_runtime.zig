@@ -1,10 +1,8 @@
 const std = @import("std");
 const input_mod = @import("../input/input.zig");
-const screen_mod = @import("../model/screen.zig");
 const pty_io = @import("runtime/pty_io.zig");
 const view_cache = @import("publication/view_cache.zig");
 const resize_reflow = @import("resize_reflow.zig");
-const scrolling_mod = @import("scrolling.zig");
 const input_modes = @import("input_modes.zig");
 const hyperlink_table = @import("hyperlink_table.zig");
 const terminal_core_mod = @import("terminal_core.zig");
@@ -29,7 +27,6 @@ const interaction_fields = @import("session/interaction_fields.zig");
 const control_fields = @import("session/control_fields.zig");
 const osc_kitty_clipboard = @import("../protocol/osc_kitty_clipboard.zig");
 const terminal_transport = @import("runtime/terminal_transport.zig");
-const Screen = screen_mod.Screen;
 const TerminalCoreType = terminal_core_mod.TerminalCore;
 
 pub const PtyTerminalRuntime = struct {
@@ -144,19 +141,7 @@ pub const PtyTerminalRuntime = struct {
         return try runtime.init(PtyTerminalRuntime, allocator, rows, cols, options);
     }
 
-    pub fn activeScreen(self: *Self) *Screen {
-        return self.core.activeScreen();
-    }
-
-    pub fn activeScreenConst(self: *const Self) *const Screen {
-        return self.core.activeScreenConst();
-    }
-
     pub const setInputPressure = runtime.setInputPressure;
-
-    pub fn isAltActive(self: *const Self) bool {
-        return self.core.isAltActive();
-    }
 
     pub const setDefaultColorsLocked = config.setDefaultColorsLocked;
     pub const setDefaultColors = config.setDefaultColors;
@@ -248,10 +233,6 @@ pub const PtyTerminalRuntime = struct {
     pub const feedOutputBytes = @import("protocol/terminal_core_feed.zig").feedOutputBytes;
     pub const resetState = mode_effects.resetState;
     pub const resetStateLocked = mode_effects.resetStateLocked;
-    fn scrollUp(self: *PtyTerminalRuntime) void {
-        scrolling_mod.scrollUp(self);
-    }
-
     pub const updateViewCacheForScroll = terminal_publication.updateViewCacheForScroll;
     pub const updateViewCacheForScrollLocked = terminal_publication.updateViewCacheForScrollLocked;
 

@@ -214,6 +214,12 @@ Validation note, 2026-03-31:
     `src/terminal/protocol/csi_mode_query.zig`, and DECRQM mode snapshots now
     construct `ModeSnapshot` directly instead of cloning it through a
     duplicate intermediate struct
+  - wrapper-owned screen access is thinner too:
+    `src/terminal/core/pty_terminal_runtime.zig` no longer exports
+    `activeScreen`, `activeScreenConst`, `isAltActive`, or the local
+    `scrollUp` helper; protocol/session/kitty internals now read screen state
+    from `self.core` or direct owners instead of treating the wrapper as the
+    screen owner
   - the remaining publication/view-cache helper stubs and the special-case
     protocol `appendHyperlink` wrapper are no longer written inline on
     `pty_terminal_runtime.zig`; those exceptions now route through the explicit

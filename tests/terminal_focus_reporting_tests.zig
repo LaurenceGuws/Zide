@@ -251,7 +251,7 @@ test "terminal DECSLRM applies margins only when ?69 mode is enabled" {
     try withSessionAndCapture(struct {
         fn run(session: *terminal_runtime.PtyTerminalRuntime, capture: *PipeCapture) !void {
             const allocator = std.testing.allocator;
-            const screen = session.activeScreen();
+            const screen = session.core.activeScreen();
 
             // Without ?69, CSI ... s remains SCP behavior and does not change margins.
             terminal_debug.debugFeedBytes(session, "\x1b[3;8s");
@@ -281,7 +281,7 @@ test "terminal CSI s is save-cursor when ?69 is off and DECSLRM reset when ?69 i
     var session = try terminal_runtime.PtyTerminalRuntime.init(allocator, 6, 12);
     defer session.deinit();
 
-    const screen = session.activeScreen();
+    const screen = session.core.activeScreen();
 
     // ?69 disabled: CSI s/u behaves as save/restore cursor.
     terminal_debug.debugFeedBytes(session, "\x1b[4;7H\x1b[s\x1b[1;1H\x1b[u");
@@ -444,7 +444,7 @@ test "terminal DECSLRM IL and DL are no-op when cursor is outside margins" {
     terminal_debug.debugFeedBytes(il_session, "\x1b[4;1HDDDDDDDDDDDD");
     terminal_debug.debugFeedBytes(il_session, "\x1b[?69h\x1b[3;8s");
     {
-        const screen = il_session.activeScreen();
+        const screen = il_session.core.activeScreen();
         screen.cursor.row = 1;
         screen.cursor.col = 0; // deliberately outside left margin (2)
     }
@@ -462,7 +462,7 @@ test "terminal DECSLRM IL and DL are no-op when cursor is outside margins" {
     terminal_debug.debugFeedBytes(dl_session, "\x1b[4;1HDDDDDDDDDDDD");
     terminal_debug.debugFeedBytes(dl_session, "\x1b[?69h\x1b[3;8s");
     {
-        const screen = dl_session.activeScreen();
+        const screen = dl_session.core.activeScreen();
         screen.cursor.row = 1;
         screen.cursor.col = 0; // deliberately outside left margin (2)
     }
@@ -621,7 +621,7 @@ test "terminal DECSTBM homes cursor using DECOM semantics under DECLRMM" {
     try withSessionAndCapture(struct {
         fn run(session: *terminal_runtime.PtyTerminalRuntime, capture: *PipeCapture) !void {
             const allocator = std.testing.allocator;
-            const screen = session.activeScreen();
+            const screen = session.core.activeScreen();
 
             terminal_debug.debugFeedBytes(session, "\x1b[?69h\x1b[3;8s");
             try std.testing.expect(screen.left_right_margin_mode_69);
@@ -651,7 +651,7 @@ test "terminal DECSTBM equal bounds are rejected as no-op" {
     try withSessionAndCapture(struct {
         fn run(session: *terminal_runtime.PtyTerminalRuntime, capture: *PipeCapture) !void {
             const allocator = std.testing.allocator;
-            const screen = session.activeScreen();
+            const screen = session.core.activeScreen();
 
             terminal_debug.debugFeedBytes(session, "\x1b[2;5r");
             try std.testing.expectEqual(@as(usize, 1), screen.scroll_top);
@@ -678,7 +678,7 @@ test "terminal DECSLRM equal bounds are rejected as no-op" {
     try withSessionAndCapture(struct {
         fn run(session: *terminal_runtime.PtyTerminalRuntime, capture: *PipeCapture) !void {
             const allocator = std.testing.allocator;
-            const screen = session.activeScreen();
+            const screen = session.core.activeScreen();
 
             terminal_debug.debugFeedBytes(session, "\x1b[?69h\x1b[3;8s");
             try std.testing.expectEqual(@as(usize, 2), screen.left_margin);
@@ -1737,7 +1737,7 @@ test "terminal DECSTR soft reset clears mode subset and preserves grid" {
             try std.testing.expectEqual(@as(usize, 0), pos.row);
             try std.testing.expectEqual(@as(usize, 0), pos.col);
 
-            const screen = session.activeScreen();
+            const screen = session.core.activeScreen();
             try std.testing.expect(screen.cursor_visible);
             try std.testing.expect(!screen.screen_reverse);
             try std.testing.expect(!screen.origin_mode);

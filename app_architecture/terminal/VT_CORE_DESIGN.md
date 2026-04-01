@@ -221,6 +221,12 @@ Status note, 2026-03-31:
   - protocol query helpers are shrinking the same way too: runtime/focus tests
     now use `terminal_core_protocol.zig` directly for `getCell` /
     `getCursorPos`, so those no longer inflate the wrapper surface
+  - wrapper-owned screen access is thinner too:
+    `src/terminal/core/pty_terminal_runtime.zig` no longer exports
+    `activeScreen`, `activeScreenConst`, `isAltActive`, or its local
+    `scrollUp` helper; protocol/session/kitty internals now read screen state
+    from `self.core` or direct engine owners instead of pretending the wrapper
+    owns the screen seam
   - the same direct-owner cleanup now applies in `workspace.zig`: wrapper
     composition reads as runtime/workspace ownership, and progress-state typing
     no longer comes through `pty_terminal_runtime.zig`

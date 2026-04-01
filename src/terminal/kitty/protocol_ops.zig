@@ -468,7 +468,7 @@ fn deleteKittyByAction(self: anytype, control: common.KittyControl) bool {
     const action = if (control.delete_action == 0) 'a' else control.delete_action;
     const id = resolveKittyImageId(control);
     const placement_id = control.placement_id orelse 0;
-    const screen = self.activeScreenConst();
+    const screen = self.core.activeScreenConst();
     const cursor_row = @as(u16, @intCast(screen.cursor.row));
     const cursor_col = @as(u16, @intCast(screen.cursor.col));
     const x = if (control.x > 0) control.x - 1 else 0;

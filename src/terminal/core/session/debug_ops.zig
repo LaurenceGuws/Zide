@@ -30,7 +30,7 @@ pub fn debugScrollbackRow(self: anytype, index: usize) ?[]const @import("../../m
 
 pub fn debugSetCursor(self: anytype, row: usize, col: usize) void {
     if (!debugAccessAllowed()) @panic("debugSetCursor is test-only");
-    self.activeScreen().setCursor(row, col);
+    self.core.activeScreen().setCursor(row, col);
 }
 
 pub fn debugFeedBytes(self: anytype, bytes: []const u8) void {

@@ -14,7 +14,7 @@ pub fn sanitizeKeyModeFlags(flags: u32) u32 {
 }
 
 pub fn keyModeFlags(self: anytype) u32 {
-    return sanitizeKeyModeFlags(self.activeScreen().keyModeFlags());
+    return sanitizeKeyModeFlags(self.core.activeScreen().keyModeFlags());
 }
 
 pub fn publishSnapshot(self: anytype) void {
@@ -50,7 +50,7 @@ pub fn keyModePush(self: anytype, flags: u32) void {
 }
 
 pub fn keyModePushLocked(self: anytype, flags: u32) void {
-    self.activeScreen().keyModePush(sanitizeKeyModeFlags(flags));
+    self.core.activeScreen().keyModePush(sanitizeKeyModeFlags(flags));
     publishSnapshot(self);
 }
 
@@ -61,7 +61,7 @@ pub fn keyModePop(self: anytype, count: usize) void {
 }
 
 pub fn keyModePopLocked(self: anytype, count: usize) void {
-    self.activeScreen().keyModePop(count);
+    self.core.activeScreen().keyModePop(count);
     publishSnapshot(self);
 }
 
@@ -72,7 +72,7 @@ pub fn keyModeModify(self: anytype, flags: u32, mode: u32) void {
 }
 
 pub fn keyModeModifyLocked(self: anytype, flags: u32, mode: u32) void {
-    self.activeScreen().keyModeModify(sanitizeKeyModeFlags(flags), mode);
+    self.core.activeScreen().keyModeModify(sanitizeKeyModeFlags(flags), mode);
     publishSnapshot(self);
 }
 

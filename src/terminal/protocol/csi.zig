@@ -101,7 +101,7 @@ fn handleCsiOnSession(self: anytype, action: parser_csi.CsiAction) void {
             if (self.lockPtyWriter()) |writer_guard| {
                 var writer = writer_guard;
                 defer writer.unlock();
-                const screen = self.activeScreen();
+                const screen = self.core.activeScreen();
                 handleDsrQuery(.{
                     .color_scheme_dark = self.interaction.color_scheme_dark,
                     .cell_height = self.interaction.cell_height,
@@ -130,7 +130,7 @@ fn handleCsiOnSession(self: anytype, action: parser_csi.CsiAction) void {
                 if (self.lockPtyWriter()) |writer_guard| {
                     var writer = writer_guard;
                     defer writer.unlock();
-                    const screen = self.activeScreen();
+                    const screen = self.core.activeScreen();
                     handleWindowOpQuery(.{
                         .color_scheme_dark = self.interaction.color_scheme_dark,
                         .cell_height = self.interaction.cell_height,

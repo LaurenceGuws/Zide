@@ -4,6 +4,7 @@ const snapshot_mod = @import("publication/snapshot.zig");
 const render_cache = @import("publication/render_cache.zig");
 const terminal_publication = @import("publication/terminal_publication.zig");
 const terminal_core_protocol = @import("protocol/terminal_core_protocol.zig");
+const scrolling = @import("scrolling.zig");
 const host_types = @import("session/host_types.zig");
 const types = @import("../model/types.zig");
 const runtime_mod = @import("terminal_runtime.zig");
@@ -112,14 +113,14 @@ test "alt screen core helpers preserve cursor save restore behavior" {
     session.primary.setCursor(2, 3);
     session.enterAltScreen(true, true);
     try std.testing.expect(session.core.isAltActive());
-    try std.testing.expectEqual(@as(usize, 0), session.activeScreen().cursor.row);
-    try std.testing.expectEqual(@as(usize, 0), session.activeScreen().cursor.col);
+    try std.testing.expectEqual(@as(usize, 0), session.core.activeScreen().cursor.row);
+    try std.testing.expectEqual(@as(usize, 0), session.core.activeScreen().cursor.col);
 
-    session.activeScreen().setCursor(1, 1);
+    session.core.activeScreen().setCursor(1, 1);
     session.exitAltScreen(true);
     try std.testing.expect(!session.core.isAltActive());
-    try std.testing.expectEqual(@as(usize, 2), session.activeScreen().cursor.row);
-    try std.testing.expectEqual(@as(usize, 3), session.activeScreen().cursor.col);
+    try std.testing.expectEqual(@as(usize, 2), session.core.activeScreen().cursor.row);
+    try std.testing.expectEqual(@as(usize, 3), session.core.activeScreen().cursor.col);
 }
 
 test "full-region scroll publishes partial cache damage at live bottom" {
@@ -147,7 +148,7 @@ test "full-region scroll publishes partial cache damage at live bottom" {
     session.alt.clearDirty();
     try std.testing.expect(session.acknowledgePresentedGeneration(session.renderCache().generation));
 
-    session.scrollUp();
+    scrolling.scrollUp(session);
     _ = session.bumpGeneration();
     session.publishCurrentViewLocked("test_publication");
 
@@ -670,7 +671,7 @@ test "repeat guide second packet keeps raw screen bottom row clean" {
     try std.testing.expect(try session.enqueueExternalBytes("\x1b[1;4H|\x1b[2;4H|"));
     try session.poll();
 
-    const view = session.activeScreenConst().snapshotView();
+    const view = session.core.activeScreenConst().snapshotView();
     try std.testing.expect(view.dirty_rows[0]);
     try std.testing.expect(view.dirty_rows[1]);
     try std.testing.expect(!view.dirty_rows[2]);
@@ -695,7 +696,7 @@ test "manual repeat guide publication still dirties bottom row today" {
     session.publishCurrentViewLocked("test_publication");
 
     session.debugFeedBytes("\x1b[1;4H|\x1b[2;4H|");
-    const view = session.activeScreenConst().snapshotView();
+    const view = session.core.activeScreenConst().snapshotView();
     try std.testing.expect(view.dirty_rows[0]);
     try std.testing.expect(view.dirty_rows[1]);
     try std.testing.expect(!view.dirty_rows[2]);
@@ -758,11 +759,11 @@ test "row hash refinement does not skip unpresented top rows" {
     session.alt.clearDirty();
     try std.testing.expect(session.acknowledgePresentedGeneration(session.renderCache().generation));
 
-    session.scrollUp();
+    scrolling.scrollUp(session);
     _ = session.bumpGeneration();
     session.publishCurrentViewLocked("test_publication");
 
-    session.scrollUp();
+    scrolling.scrollUp(session);
     _ = session.bumpGeneration();
     session.publishCurrentViewLocked("test_publication");
 
@@ -804,7 +805,7 @@ test "live-bottom history growth keeps blank exposed row dirty" {
     session.alt.clearDirty();
     try std.testing.expect(session.acknowledgePresentedGeneration(session.renderCache().generation));
 
-    session.scrollUp();
+    scrolling.scrollUp(session);
     _ = session.bumpGeneration();
     session.publishCurrentViewLocked("test_publication");
 
@@ -885,7 +886,7 @@ test "snapshot view preserves disjoint same-row dirty spans" {
     session.primary.grid.markDirtyRangeWithOrigin("test.small_region", 0, 0, 2, 5);
     session.primary.grid.markDirtyRangeWithOrigin("test.body_rewrite", 0, 0, 10, 18);
 
-    const view = session.activeScreenConst().snapshotView();
+    const view = session.core.activeScreenConst().snapshotView();
     try std.testing.expect(view.dirty_rows[0]);
     try std.testing.expectEqual(@as(u8, 2), view.row_dirty_span_counts[0]);
     try std.testing.expect(!view.row_dirty_span_overflow[0]);
@@ -1587,7 +1588,7 @@ test "screen reverse toggle stays on partial path" {
     session.alt.clearDirty();
     try std.testing.expect(session.acknowledgePresentedGeneration(session.renderCache().generation));
 
-    session.activeScreen().setScreenReverse(true);
+    session.core.activeScreen().setScreenReverse(true);
     session.publishCurrentViewLocked("test_publication");
 
     const cache = session.renderCache();
@@ -2045,7 +2046,7 @@ test "screen clear stays on partial path" {
     session.alt.clearDirty();
     try std.testing.expect(session.acknowledgePresentedGeneration(session.renderCache().generation));
 
-    session.activeScreen().clear();
+    session.core.activeScreen().clear();
     _ = session.bumpGeneration();
     session.publishCurrentViewLocked("test_publication");
 

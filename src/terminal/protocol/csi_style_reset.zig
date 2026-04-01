@@ -21,15 +21,15 @@ pub fn applyDecstrReset(self: anytype) void {
     self.core.column_mode_132 = false;
     terminal_publication.setSyncUpdatesLocked(self, false);
     terminal_core_protocol.clearAllKittyImages(self);
-    self.activeScreen().resetState();
+    self.core.activeScreen().resetState();
     @import("../core/input_modes.zig").publishSnapshot(self);
-    self.activeScreen().markDirtyAllWithReason(.decstr_soft_reset, @src());
+    self.core.activeScreen().markDirtyAllWithReason(.decstr_soft_reset, @src());
 }
 
 pub fn applySgr(self: anytype, action: parser_csi.CsiAction, effective_sgr_param_count: *const fn (action: parser_csi.CsiAction) usize) void {
     const params = action.params;
     const n_params = effective_sgr_param_count(action);
-    const screen = self.activeScreen();
+    const screen = self.core.activeScreen();
     const current_attrs = &screen.current_attrs;
     const default_attrs = &screen.default_attrs;
     const log = app_logger.logger("terminal.sgr");

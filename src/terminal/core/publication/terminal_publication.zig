@@ -479,7 +479,7 @@ pub fn clearPublishedDamageIfGeneration(self: anytype, expected_generation: u64,
     const pending_generation = self.publication.pending_generation.load(.acquire);
     if (pending_generation != expected_generation) return false;
     if (clear_screen_dirty) {
-        self.activeScreen().clearDirty();
+        self.core.activeScreen().clearDirty();
     }
     clearPublishedDamage(self);
     return true;

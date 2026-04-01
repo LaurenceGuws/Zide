@@ -14,7 +14,7 @@ pub fn handleSimpleCsi(
             return if (idx < parser_csi.max_params) local_params[idx] else default;
         }
     }.at;
-    const screen = self.activeScreen();
+    const screen = self.core.activeScreen();
 
     switch (action.final) {
         'A' => screen.cursorUp(@intCast(@max(1, get(params, 0, 1)))),
@@ -67,7 +67,7 @@ pub fn handleSpecialCsi(
     param_len: usize,
     params: [parser_csi.max_params]i32,
 ) void {
-    const screen = self.activeScreen();
+    const screen = self.core.activeScreen();
     switch (action.final) {
         's' => {
             if (!action.private) {

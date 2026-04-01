@@ -21,7 +21,7 @@ fn echoCharLocallyIfEnabled(self: anytype, char: u32, mod: Modifier, action: inp
     if (mod != VTERM_MOD_NONE) return;
     if (char < 0x20 or char == 0x7F) return;
     if (char > 0x10FFFF or (char >= 0xD800 and char <= 0xDFFF)) return;
-    const screen = self.activeScreen();
+    const screen = self.core.activeScreen();
     if (!screen.local_echo_mode_12) return;
     terminal_core_text.handleCodepoint(self, char);
 }
@@ -166,7 +166,7 @@ pub fn sendCharActionWithMetadata(
 
 pub fn reportMouseEvent(self: anytype, event: MouseEvent) !bool {
     if (!terminal_transport.Writer.exists(self)) return false;
-    const screen = self.activeScreen();
+    const screen = self.core.activeScreen();
     if (self.lockPtyWriter()) |writer_guard| {
         var writer = writer_guard;
         defer writer.unlock();
