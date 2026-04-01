@@ -96,6 +96,7 @@ Fresh local checkout example:
 ```bash
 cd /home/home/personal
 git clone git@github.com:LaurenceGuws/Zide.git zide
+git clone git@github.com:LaurenceGuws/zide-tree-sitter.git zide-tree-sitter
 cd zide
 ./ops/bootstrap.sh
 ```
@@ -119,8 +120,10 @@ Windows:
 ./ops/bootstrap.ps1
 ```
 
-Tree-sitter (runtime + Zig parser) and `stb_image` are vendored. Grammar packs
-are handled separately via `zig build grammar-update`.
+Tree-sitter runtime and the Zig parser remain vendored in `zide`. Grammar-pack
+production now lives in sibling repo `../zide-tree-sitter`, and `zig build
+grammar-update` in `zide` proxies into that repo for local maintenance and
+installs shared query/mapping assets into the user Tree-sitter asset root.
 
 The main app-library stack is not vendored and not expected to come from the
 system package manager in normal Linux/macOS flow; it is pinned in the Zig
@@ -176,6 +179,35 @@ Useful build reports:
 zig build run
 ```
 
+Write the shipped default config to the platform user-config path:
+
+```bash
+zig build run -- --write-default-config
+```
+
+Variants:
+
+```bash
+zig build run -- --write-default-config --force
+zig build run -- --write-default-config=/tmp/zide-init.lua
+zig build run -- --write-default-config --stdout
+zig build run -- --write-default-config --with-lua-meta
+zig build run -- --write-default-config --config-scope=editor --stdout
+zig build run -- --write-default-config --config-scope=terminal --stdout
+zig build run -- --write-default-config --config-scope=editor --with-lua-meta
+zig build run -- --write-default-config --config-scope=terminal --with-lua-meta
+```
+
+Without `--force`, an existing user `init.lua` is preserved and only missing
+files are added.
+
+Install LuaLS metadata beside the user config so opening `~/.config/zide`
+directly still gets completions:
+
+```bash
+zig build run -- --install-user-lua-meta
+```
+
 ## Terminal Setup
 
 Install the bundled terminfo entry:
@@ -208,10 +240,19 @@ For the full compatibility surface, use
 zig build grammar-update -- --skip-git --continue-on-error --jobs 8
 ```
 
-On Windows, `grammar-update` now uses PowerShell and Python 3 by default; Git
-Bash is no longer required for the normal local path.
+Local layout requirement for grammar maintenance:
+
+```text
+personal/
+  zide/
+  zide-tree-sitter/
+```
+
+On Windows, `grammar-update` now uses PowerShell and Python 3 by default inside
+`zide-tree-sitter`; Git Bash is no longer required for the normal local path.
 Installed grammar packs live under `%LOCALAPPDATA%\\Zide\\grammars` on Windows
-by default.
+by default. Shared query/mapping assets live beside the user config under
+`tree-sitter-assets/`.
 
 ## Test
 

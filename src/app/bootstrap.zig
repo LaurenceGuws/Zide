@@ -8,6 +8,137 @@ pub const AppMode = enum {
     font_sample,
 };
 
+pub const WriteDefaultConfigTarget = union(enum) {
+    user,
+    stdout,
+    path: []u8,
+
+    pub fn deinit(self: *@This(), allocator: std.mem.Allocator) void {
+        switch (self.*) {
+            .path => |path| allocator.free(path),
+            else => {},
+        }
+        self.* = .user;
+    }
+};
+
+pub const DefaultConfigScope = enum {
+    full,
+    editor,
+    terminal,
+};
+
+pub const StartupCommand = union(enum) {
+    run,
+    write_default_config: struct {
+        target: WriteDefaultConfigTarget,
+        scope: DefaultConfigScope = .full,
+        force: bool = false,
+        with_lua_meta: bool = false,
+
+        pub fn deinit(self: *@This(), allocator: std.mem.Allocator) void {
+            self.target.deinit(allocator);
+            self.scope = .full;
+            self.force = false;
+            self.with_lua_meta = false;
+        }
+    },
+    install_user_lua_meta: struct {
+        force: bool = false,
+    },
+
+    pub fn deinit(self: *@This(), allocator: std.mem.Allocator) void {
+        switch (self.*) {
+            .write_default_config => |*cmd| cmd.deinit(allocator),
+            .install_user_lua_meta => |*cmd| cmd.force = false,
+            .run => {},
+        }
+        self.* = .run;
+    }
+};
+
+pub fn parseStartupCommand(allocator: std.mem.Allocator) !StartupCommand {
+    const args = try std.process.argsAlloc(allocator);
+    defer std.process.argsFree(allocator, args);
+    return try parseStartupCommandArgs(allocator, args[1..]);
+}
+
+fn parseStartupCommandArgs(allocator: std.mem.Allocator, args: []const []const u8) !StartupCommand {
+    var command: StartupCommand = .run;
+    errdefer command.deinit(allocator);
+
+    var i: usize = 0;
+    while (i < args.len) : (i += 1) {
+        const arg = args[i];
+        if (std.mem.eql(u8, arg, "--write-default-config")) {
+            const target: WriteDefaultConfigTarget = if (i + 1 < args.len and !std.mem.startsWith(u8, args[i + 1], "-")) blk: {
+                i += 1;
+                break :blk .{ .path = try allocator.dupe(u8, args[i]) };
+            } else .user;
+            command.deinit(allocator);
+            command = .{ .write_default_config = .{ .target = target } };
+            continue;
+        }
+        if (std.mem.startsWith(u8, arg, "--write-default-config=")) {
+            command.deinit(allocator);
+            command = .{ .write_default_config = .{
+                .target = .{ .path = try allocator.dupe(u8, arg["--write-default-config=".len..]) },
+            } };
+            continue;
+        }
+        if (std.mem.eql(u8, arg, "--install-user-lua-meta")) {
+            command.deinit(allocator);
+            command = .{ .install_user_lua_meta = .{} };
+            continue;
+        }
+        if (std.mem.eql(u8, arg, "--config-scope")) {
+            const value = args[i + 1];
+            if (i + 1 >= args.len) return error.MissingConfigScope;
+            i += 1;
+            switch (command) {
+                .write_default_config => |*cmd| cmd.scope = parseDefaultConfigScope(value) orelse return error.InvalidConfigScope,
+                else => {},
+            }
+            continue;
+        }
+        if (std.mem.startsWith(u8, arg, "--config-scope=")) {
+            const value = arg["--config-scope=".len..];
+            switch (command) {
+                .write_default_config => |*cmd| cmd.scope = parseDefaultConfigScope(value) orelse return error.InvalidConfigScope,
+                else => {},
+            }
+            continue;
+        }
+        if (std.mem.eql(u8, arg, "--stdout")) {
+            switch (command) {
+                .write_default_config => |*cmd| {
+                    cmd.target.deinit(allocator);
+                    cmd.target = .stdout;
+                },
+                else => {},
+            }
+            continue;
+        }
+        if (std.mem.eql(u8, arg, "--force")) {
+            switch (command) {
+                .write_default_config => |*cmd| cmd.force = true,
+                .install_user_lua_meta => |*cmd| cmd.force = true,
+                else => {},
+            }
+            continue;
+        }
+        if (std.mem.eql(u8, arg, "--with-lua-meta")) {
+            switch (command) {
+                .write_default_config => |*cmd| cmd.with_lua_meta = true,
+                else => {},
+            }
+            continue;
+        }
+    }
+
+    return command;
+}
+
 pub fn parseAppMode(allocator: std.mem.Allocator) AppMode {
     if (comptime mode_build.focused_mode) |mode| return mode;
 
@@ -76,6 +207,18 @@ pub fn parseStartupFilePaths(allocator: std.mem.Allocator) ?[][]u8 {
             if (i + 1 < args.len) i += 1;
             continue;
         }
+        if (std.mem.eql(u8, arg, "--write-default-config")) {
+            if (i + 1 < args.len and !std.mem.startsWith(u8, args[i + 1], "-")) i += 1;
+            continue;
+        }
+        if (std.mem.startsWith(u8, arg, "--write-default-config=")) continue;
+        if (std.mem.eql(u8, arg, "--config-scope")) {
+            if (i + 1 < args.len) i += 1;
+            continue;
+        }
+        if (std.mem.startsWith(u8, arg, "--config-scope=")) continue;
+        if (std.mem.eql(u8, arg, "--install-user-lua-meta")) continue;
+        if (std.mem.eql(u8, arg, "--stdout") or std.mem.eql(u8, arg, "--force") or std.mem.eql(u8, arg, "--with-lua-meta")) continue;
         if (isStartupDirectoryFlagWithValue(arg)) {
             if (i + 1 < args.len) i += 1;
             continue;
@@ -152,6 +295,13 @@ pub fn modeFromArg(value: []const u8) ?AppMode {
     return null;
 }
 
+fn parseDefaultConfigScope(value: []const u8) ?DefaultConfigScope {
+    if (std.mem.eql(u8, value, "full")) return .full;
+    if (std.mem.eql(u8, value, "editor")) return .editor;
+    if (std.mem.eql(u8, value, "terminal")) return .terminal;
+    return null;
+}
+
 pub fn parseEnvU64(env_key: [:0]const u8, default_value: u64) u64 {
     const raw = std.c.getenv(env_key) orelse return default_value;
     const slice = std.mem.sliceTo(raw, 0);
@@ -208,4 +358,88 @@ test "startup directory helpers recognize folder flags" {
     try std.testing.expect(isStartupDirectoryInlineFlag("--folder=C:\\repo"));
     try std.testing.expect(!isStartupDirectoryFlagWithValue("--cwd"));
     try std.testing.expect(!isStartupDirectoryInlineFlag("README.md"));
+}
+
+test "parse startup command supports writing default config" {
+    const argv = [_][]const u8{
+        "--write-default-config",
+        "--force",
+    };
+    var command = try parseStartupCommandArgs(std.testing.allocator, &argv);
+    defer command.deinit(std.testing.allocator);
+    switch (command) {
+        .write_default_config => |cmd| {
+            try std.testing.expectEqual(true, cmd.force);
+            try std.testing.expectEqual(DefaultConfigScope.full, cmd.scope);
+            try std.testing.expect(!cmd.with_lua_meta);
+            try std.testing.expectEqual(@as(WriteDefaultConfigTarget, .user), cmd.target);
+        },
+        else => try std.testing.expect(false),
+    }
+}
+
+test "parse startup command supports custom path and stdout target" {
+    const argv = [_][]const u8{
+        "--write-default-config=tmp/init.lua",
+        "--stdout",
+    };
+    var command = try parseStartupCommandArgs(std.testing.allocator, &argv);
+    defer command.deinit(std.testing.allocator);
+    switch (command) {
+        .write_default_config => |cmd| {
+            try std.testing.expect(!cmd.force);
+            try std.testing.expectEqual(DefaultConfigScope.full, cmd.scope);
+            try std.testing.expect(!cmd.with_lua_meta);
+            switch (cmd.target) {
+                .stdout => {},
+                else => try std.testing.expect(false),
+            }
+        },
+        else => try std.testing.expect(false),
+    }
+}
+
+test "parse startup command supports user lua meta install" {
+    const argv = [_][]const u8{
+        "--install-user-lua-meta",
+        "--force",
+    };
+    var command = try parseStartupCommandArgs(std.testing.allocator, &argv);
+    defer command.deinit(std.testing.allocator);
+    switch (command) {
+        .install_user_lua_meta => |cmd| try std.testing.expect(cmd.force),
+        else => try std.testing.expect(false),
+    }
+}
+
+test "parse startup command supports default config with lua meta" {
+    const argv = [_][]const u8{
+        "--write-default-config",
+        "--with-lua-meta",
+        "--force",
+    };
+    var command = try parseStartupCommandArgs(std.testing.allocator, &argv);
+    defer command.deinit(std.testing.allocator);
+    switch (command) {
+        .write_default_config => |cmd| {
+            try std.testing.expect(cmd.force);
+            try std.testing.expectEqual(DefaultConfigScope.full, cmd.scope);
+            try std.testing.expect(cmd.with_lua_meta);
+            try std.testing.expectEqual(@as(WriteDefaultConfigTarget, .user), cmd.target);
+        },
+        else => try std.testing.expect(false),
+    }
+}
+
+test "parse startup command supports config scope" {
+    const argv = [_][]const u8{
+        "--write-default-config",
+        "--config-scope=terminal",
+    };
+    var command = try parseStartupCommandArgs(std.testing.allocator, &argv);
+    defer command.deinit(std.testing.allocator);
+    switch (command) {
+        .write_default_config => |cmd| try std.testing.expectEqual(DefaultConfigScope.terminal, cmd.scope),
+        else => try std.testing.expect(false),
+    }
 }

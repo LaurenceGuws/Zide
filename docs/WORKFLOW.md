@@ -20,8 +20,9 @@ repository.
 
 ## Branching
 
-- `main` is the default branch.
-- Create a feature branch only when isolation materially improves safety or reviewability.
+- Do not implement directly on `main`.
+- `main` is merge-only and should stay clean between validated milestones.
+- Start active work on a feature branch from current `main`.
 - If you create a branch, own it end-to-end: branch from current `main`, validate locally, merge back, and delete it after landing.
 - For large architecture campaigns, a temporary "war branch" is allowed when it
   materially improves checkpoint discipline and keeps `main` clean between

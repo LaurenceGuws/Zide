@@ -142,32 +142,22 @@ pub fn findInstalledAssetPath(allocator: std.mem.Allocator, relative_path: []con
     return candidate;
 }
 
-pub fn findUserConfigPath(allocator: std.mem.Allocator) iface.LuaConfigError!?[]u8 {
+pub fn userConfigDestinationPath(allocator: std.mem.Allocator) iface.LuaConfigError![]u8 {
     switch (@import("builtin").target.os.tag) {
         .windows => {
-            const appdata = std.c.getenv("APPDATA") orelse return null;
+            const appdata = std.c.getenv("APPDATA") orelse return iface.LuaConfigError.InvalidConfig;
             const base = std.mem.sliceTo(appdata, 0);
-            const path = try std.fs.path.join(allocator, &.{ base, "Zide", "init.lua" });
-            if (!fileExists(path)) {
-                allocator.free(path);
-                return null;
-            }
-            return path;
+            return try std.fs.path.join(allocator, &.{ base, "Zide", "init.lua" });
         },
         .macos => {
-            const home = std.c.getenv("HOME") orelse return null;
+            const home = std.c.getenv("HOME") orelse return iface.LuaConfigError.InvalidConfig;
             const base = std.mem.sliceTo(home, 0);
-            const path = try std.fs.path.join(allocator, &.{ base, "Library", "Application Support", "Zide", "init.lua" });
-            if (!fileExists(path)) {
-                allocator.free(path);
-                return null;
-            }
-            return path;
+            return try std.fs.path.join(allocator, &.{ base, "Library", "Application Support", "Zide", "init.lua" });
         },
         else => {
             const xdg = std.c.getenv("XDG_CONFIG_HOME");
             const home = std.c.getenv("HOME");
-            if (xdg == null and home == null) return null;
+            if (xdg == null and home == null) return iface.LuaConfigError.InvalidConfig;
 
             const base = if (xdg) |val| std.mem.sliceTo(val, 0) else blk: {
                 const home_slice = std.mem.sliceTo(home.?, 0);
@@ -175,14 +165,31 @@ pub fn findUserConfigPath(allocator: std.mem.Allocator) iface.LuaConfigError!?[]
             };
             defer if (xdg == null and home != null) allocator.free(base);
 
-            const path = try std.fs.path.join(allocator, &.{ base, "zide", "init.lua" });
-            if (!fileExists(path)) {
-                allocator.free(path);
-                return null;
-            }
-            return path;
+            return try std.fs.path.join(allocator, &.{ base, "zide", "init.lua" });
         },
     }
+}
+
+pub fn userConfigBaseDir(allocator: std.mem.Allocator) iface.LuaConfigError![]u8 {
+    const init_path = try userConfigDestinationPath(allocator);
+    errdefer allocator.free(init_path);
+    const dir = std.fs.path.dirname(init_path) orelse return iface.LuaConfigError.InvalidConfig;
+    const owned = try allocator.dupe(u8, dir);
+    allocator.free(init_path);
+    return owned;
+}
+
+pub fn findUserConfigPath(allocator: std.mem.Allocator) iface.LuaConfigError!?[]u8 {
+    const path = userConfigDestinationPath(allocator) catch |err| switch (err) {
+        iface.LuaConfigError.InvalidConfig => return null,
+        else => return err,
+    };
+    errdefer allocator.free(path);
+    if (!fileExists(path)) {
+        allocator.free(path);
+        return null;
+    }
+    return path;
 }
 
 pub fn emptyConfig() Config {

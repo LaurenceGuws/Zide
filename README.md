@@ -176,6 +176,56 @@ Refresh them with:
 zig build meta
 ```
 
+To seed a real user config from the shipped current-version defaults:
+
+```bash
+zig build run -- --write-default-config
+```
+
+That writes the default config to your platform user-config location:
+- Linux: `${XDG_CONFIG_HOME:-~/.config}/zide/init.lua`
+- macOS: `~/Library/Application Support/Zide/init.lua`
+- Windows: `%APPDATA%\\Zide\\init.lua`
+
+Useful variants:
+
+```bash
+zig build run -- --write-default-config --force
+zig build run -- --write-default-config=/tmp/zide-init.lua
+zig build run -- --write-default-config --stdout
+zig build run -- --write-default-config --with-lua-meta
+zig build run -- --write-default-config --config-scope=editor --stdout
+zig build run -- --write-default-config --config-scope=terminal --stdout
+zig build run -- --write-default-config --config-scope=editor --with-lua-meta
+zig build run -- --write-default-config --config-scope=terminal --with-lua-meta
+```
+
+By default, rerunning the command preserves an existing user `init.lua`.
+Use `--force` only when you want to overwrite it with the current shipped
+defaults.
+
+Scoped exports are partial starter configs intended for merge-friendly
+user/project overrides:
+- `--config-scope=editor` exports editor-focused defaults
+- `--config-scope=terminal` exports terminal-focused defaults
+
+To make `~/.config/zide/init.lua` completion-friendly when opened as its own
+workspace, install user-side LuaLS metadata too:
+
+```bash
+zig build run -- --install-user-lua-meta
+zig build run -- --write-default-config --with-lua-meta
+zig build run -- --write-default-config --config-scope=editor --with-lua-meta
+zig build run -- --write-default-config --config-scope=terminal --with-lua-meta
+```
+
+That writes:
+- `~/.config/zide/lua/zide-meta.lua`
+- `~/.config/zide/.luarc.json`
+
+Then opening `~/.config/zide` in a LuaLS-capable editor gives the same config
+completion surface without requiring the main repo workspace.
+
 ## Developer Notes
 
 Repository-local docs own the detailed operator guidance:

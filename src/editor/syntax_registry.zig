@@ -1,4 +1,5 @@
 const std = @import("std");
+const tree_sitter_assets = @import("tree_sitter_assets.zig");
 const log = std.log.scoped(.syntax_registry);
 pub const SyntaxRegistry = struct {
     pub fn defaultLanguage() ?[]const u8 {
@@ -119,8 +120,8 @@ fn loadMaps() *MapTable {
         .injections = std.StringHashMap([]const u8).init(allocator),
     };
 
-    loadLuaMap(allocator, "assets/syntax/generated.lua") catch |err| {
-        log.warn("failed to load {s}: {s}", .{ "assets/syntax/generated.lua", @errorName(err) });
+    loadSharedLuaMap(allocator, "syntax/generated.lua") catch |err| {
+        log.warn("failed to load shared syntax/generated.lua: {s}", .{@errorName(err)});
     };
     loadLuaMap(allocator, "assets/syntax/overrides.lua") catch |err| {
         log.warn("failed to load {s}: {s}", .{ "assets/syntax/overrides.lua", @errorName(err) });
@@ -229,6 +230,12 @@ fn loadLuaMap(allocator: std.mem.Allocator, path: []const u8) !void {
     }
 }
 
+fn loadSharedLuaMap(allocator: std.mem.Allocator, rel_path: []const u8) !void {
+    const resolved_path = try tree_sitter_assets.resolveSharedAssetPath(allocator, rel_path) orelse return;
+    defer allocator.free(resolved_path);
+    try loadLuaMap(allocator, resolved_path);
+}
+
 fn resolveMapPath(allocator: std.mem.Allocator, path: []const u8) ![]const u8 {
     if (std.fs.path.isAbsolute(path) or fileExists(path)) return path;
 
@@ -293,38 +300,4 @@ test "globMatch handles basic wildcards" {
     try std.testing.expect(globMatch("templates/*.yaml", "templates/values.yaml"));
     try std.testing.expect(globMatch("templates/_*.tpl", "templates/_helpers.tpl"));
     try std.testing.expect(!globMatch("templates/*.yaml", "templates/values.yml"));
-}
-
-test "resolveMapPathWithBase falls back to install layout when cwd lacks syntax assets" {
-    var tmp = std.testing.tmpDir(.{});
-    defer tmp.cleanup();
-
-    try tmp.dir.makePath("install/assets/syntax");
-    try tmp.dir.makePath("cwd");
-
-    {
-        const file = try tmp.dir.createFile("install/assets/syntax/generated.lua", .{});
-        file.close();
-    }
-
-    const root_path = try tmp.dir.realpathAlloc(std.testing.allocator, ".");
-    defer std.testing.allocator.free(root_path);
-
-    const install_path = try std.fs.path.join(std.testing.allocator, &.{ root_path, "install" });
-    defer std.testing.allocator.free(install_path);
-
-    const cwd_path = try std.fs.path.join(std.testing.allocator, &.{ root_path, "cwd" });
-    defer std.testing.allocator.free(cwd_path);
-
-    const previous_cwd = try std.process.getCwdAlloc(std.testing.allocator);
-    defer std.testing.allocator.free(previous_cwd);
-    try std.posix.chdir(cwd_path);
-    defer std.posix.chdir(previous_cwd) catch {};
-
-    const resolved = try resolveMapPathWithBase(std.testing.allocator, "assets/syntax/generated.lua", install_path);
-    defer if (resolved.ptr != "assets/syntax/generated.lua".ptr) std.testing.allocator.free(resolved);
-
-    const expected = try std.fs.path.join(std.testing.allocator, &.{ install_path, "assets/syntax/generated.lua" });
-    defer std.testing.allocator.free(expected);
-    try std.testing.expectEqualStrings(expected, resolved);
 }

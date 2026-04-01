@@ -1,5 +1,6 @@
 const std = @import("std");
 const config_mod = @import("../config/lua_config.zig");
+const tree_sitter_assets = @import("tree_sitter_assets.zig");
 
 pub const QueryMergeMode = config_mod.EditorManualHighlightMode;
 
@@ -131,7 +132,12 @@ fn extensionName(path: ?[]const u8) ?[]const u8 {
 
 fn resolveQueryPath(allocator: std.mem.Allocator, builtin: ?[]const u8, explicit_path: ?[]const u8) !?[]u8 {
     if (explicit_path) |path| return try allocator.dupe(u8, path);
-    if (builtin) |name| return try std.fmt.allocPrint(allocator, "assets/queries/manual/{s}.scm", .{name});
+    if (builtin) |name| {
+        const rel_path = try std.fmt.allocPrint(allocator, "queries/manual/{s}.scm", .{name});
+        defer allocator.free(rel_path);
+        if (try tree_sitter_assets.resolveSharedAssetPath(allocator, rel_path)) |path| return path;
+        return try std.fmt.allocPrint(allocator, "assets/{s}", .{rel_path});
+    }
     return null;
 }
 

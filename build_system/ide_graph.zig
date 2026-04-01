@@ -559,19 +559,27 @@ pub fn planIdeExtendedBuildGraph(
     );
 
     // Developer tooling
-    const grammar_update = addLibcExecutable(
-        b,
-        target,
-        optimize,
+    const grammar_update_cmd = b.addSystemCommand(&.{
+        "bash",
+        "-lc",
+        "set -euo pipefail\n" ++
+            "repo_root=\"$PWD\"\n" ++
+            "cd ../../zide-tree-sitter\n" ++
+            "zig build grammar-update -- \"$@\"\n" ++
+            "if [ -n \"${XDG_CONFIG_HOME:-}\" ]; then asset_root=\"$XDG_CONFIG_HOME/zide/tree-sitter-assets\"; " ++
+            "elif [ -n \"${HOME:-}\" ]; then asset_root=\"$HOME/.config/zide/tree-sitter-assets\"; " ++
+            "else asset_root=\"$repo_root/.zide/tree-sitter-assets\"; fi\n" ++
+            "mkdir -p \"$asset_root\"\n" ++
+            "rm -rf \"$asset_root/queries\"\n" ++
+            "cp -R assets/queries \"$asset_root/queries\"\n" ++
+            "mkdir -p \"$asset_root/syntax\"\n" ++
+            "cp assets/syntax/generated.lua \"$asset_root/syntax/generated.lua\"\n",
+        "_",
+    });
+    if (b.args) |args| grammar_update_cmd.addArgs(args);
+    const grammar_update_step = b.step(
         "grammar-update",
-        "tools/editor/grammar/grammar_update.zig",
+        "Build and install tree-sitter grammar packs via zide-tree-sitter",
     );
-    const grammar_update_run = addRunArtifactStep(
-        b,
-        grammar_update,
-        "grammar-update",
-        "Build and install tree-sitter grammar packs",
-    );
-    if (b.args) |args| grammar_update_run.run.addArgs(args);
-    _ = grammar_update_run.step;
+    grammar_update_step.dependOn(&grammar_update_cmd.step);
 }

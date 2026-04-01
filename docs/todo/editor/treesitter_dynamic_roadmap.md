@@ -5,14 +5,15 @@ Date: 2026-01-24
 Goal: fully automate Tree-sitter grammar/query pulling, compiling, and runtime loading.
 
 This roadmap is optimized for a new agent to pick up with minimal context. Each step is intended
-to be small and testable, and to reuse the existing `tools/grammar_packs` workflow.
+to be small and testable. Producer-side grammar-pack workflow ownership now lives in sibling repo
+`../zide-tree-sitter`.
 
 ## Current State (2026-01-28)
 - Grammar pack tooling builds multi-query packs (highlights/injections/locals/tags/textobjects/indents).
 - Runtime loader + syntax registry are implemented (`src/editor/grammar_manager.zig`, `src/editor/syntax_registry.zig`).
-- `zig build grammar-update` installs packs into `%LOCALAPPDATA%/Zide/grammars` on Windows and `~/.config/zide/grammars` elsewhere.
+- `zig build grammar-update` in `zide` proxies into sibling repo `../zide-tree-sitter` and installs packs into `%LOCALAPPDATA%/Zide/grammars` on Windows and `~/.config/zide/grammars` elsewhere.
 - Tree-sitter runtime is vendored in `vendor/tree-sitter/`; Zig language is built-in.
-- Manual shipped query presets now also exist for plain-text-ish editor cases via `assets/queries/manual/*.scm`, with Lua-configurable editor highlight overrides layered on top.
+- Manual shipped query presets now live in `zide-tree-sitter/assets/queries/manual/*.scm`, with Lua-configurable editor highlight overrides layered on top.
 
 ## Target Runtime Layout
 Default cache dir (Linux):
@@ -49,7 +50,7 @@ Errors/logging:
 - avoid language-specific fallbacks; use the same lookup path for all languages
 
 Defaults + overrides:
-- Defaults baked at `assets/syntax/generated.lua` (generated from Neovim + parsers.lua)
+- Defaults baked at `zide-tree-sitter/assets/syntax/generated.lua` (generated from Neovim + parsers.lua)
 - Manual overrides at `assets/syntax/overrides.lua` (extensions, basenames, globs)
 - User overrides at `~/.config/zide/syntax.lua`
 - Project overrides at `.zide/syntax.lua`
@@ -57,24 +58,25 @@ Defaults + overrides:
 ### Step 2: Pack Fetch/Install (local) — done
 CLI command in place:
 - `zig build grammar-update`
+- proxies into sibling repo `../zide-tree-sitter`
 - runs `sync_from_nvim`, `fetch_grammars`, and `build_all` through the current platform entrypoint (`.sh` / `.ps1`)
-- installs `tools/editor/grammar_packs/dist/` into `%LOCALAPPDATA%/Zide/grammars` on Windows and `~/.config/zide/grammars` elsewhere
+- installs `tools/grammar_packs/dist/` from `zide-tree-sitter` into `%LOCALAPPDATA%/Zide/grammars` on Windows and `~/.config/zide/grammars` elsewhere
 - writes per-pack `manifest.json` next to the `.so` + query files
 - supports `--skip-git` and `--continue-on-error` for best-effort builds
 - supports `--targets` / `--skip-targets` to limit os/arch combos
  - supports `--jobs <n>` to parallelize pack builds
 
 Implemented files:
-- `tools/editor/grammar/grammar_update.zig`
+- `../zide-tree-sitter/tools/grammar/grammar_update.zig`
 
 ### Step 3: Auto-sync Queries (optional)
 Keep queries in sync with nvim-treesitter:
-- add a helper to copy `tools/editor/grammar_packs/work/queries/<lang>_<query>.scm`
-  into `assets/queries/<lang>/<query>.scm`
+- add a helper to copy `../zide-tree-sitter/tools/grammar_packs/work/queries/<lang>_<query>.scm`
+  into the shared Tree-sitter asset root or directly into `zide-tree-sitter/assets/queries/<lang>/<query>.scm`
 - this keeps editor defaults aligned with upstream across all query types
 
 Suggested files:
-- `tools/editor/grammar_packs/scripts/sync_queries_to_assets.sh` (new)
+- `../zide-tree-sitter/tools/grammar_packs/scripts/sync_queries_to_assets.sh` (new)
 - `docs/todo/editor/treesitter_dynamic_roadmap.md` (update with exact command)
 
 ### Step 4: On-demand Download (optional)

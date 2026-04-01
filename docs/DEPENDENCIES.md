@@ -126,6 +126,19 @@ macOS by default.
 - PowerShell
 - Python 3 for `zig build grammar-update`
 
+### Local grammar-maintenance layout
+
+For local Tree-sitter grammar maintenance, keep the sibling repos together:
+
+```text
+personal/
+  zide/
+  zide-tree-sitter/
+```
+
+`zig build grammar-update` in `zide` now proxies into sibling repo
+`zide-tree-sitter`.
+
 ### Configure build
 
 Build:
