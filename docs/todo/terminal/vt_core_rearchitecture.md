@@ -278,6 +278,9 @@ Validation note, 2026-03-31:
   - app-side terminal cursor-style reload no longer mutates `core.primary` and
     `core.alt` directly; it now routes through an explicit runtime config
     method, which is a better host/runtime boundary than direct screen pokes
+  - replay/tests no longer seed OSC 5522 clipboard state or kitty state by
+    poking `core.kitty_*` internals directly; those now route through explicit
+    debug helpers under `src/terminal/core/session/debug_ops.zig`
   Done when:
   - the best host-facing terminal semantics reachable from native are also reachable through an explicit FFI/core contract, unless the difference is purely renderer-local.
   - FFI no longer needs to approximate native-only ownership or reconstruct backend truth from side channels.

@@ -1088,6 +1088,9 @@ Migration approach:
 - app-side terminal cursor-style reload now routes through an explicit runtime
   config method too, instead of mutating `core.primary` and `core.alt`
   directly from reload code
+- replay/tests now use explicit debug helpers for OSC 5522 clipboard seeding
+  and kitty-state setup/counts instead of reaching through `core.kitty_*`
+  internals from outer harness code
 - publication/diff, selection projection, plan/refinement, selection-dirty
   expansion, and damage helpers are split across focused `view_cache_*` modules
 - presented-generation acknowledgement, damage retirement, publication

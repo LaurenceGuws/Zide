@@ -234,10 +234,11 @@ test "kitty multipart T first chunk preserves auto-place through t continuations
     kitty.parseKittyGraphics(session, "a=t,i=7,O=2,m=1;AA==");
     kitty.parseKittyGraphics(session, "a=t,i=7,O=3;/w==");
 
-    try std.testing.expectEqual(@as(usize, 1), session.core.kitty_primary.images.items.len);
-    try std.testing.expectEqual(@as(usize, 1), session.core.kitty_primary.placements.items.len);
-    try std.testing.expectEqual(@as(u32, 7), session.core.kitty_primary.images.items[0].id);
-    try std.testing.expectEqual(@as(u32, 7), session.core.kitty_primary.placements.items[0].image_id);
+    const snapshot = session.snapshot();
+    try std.testing.expectEqual(@as(usize, 1), snapshot.kitty_images.len);
+    try std.testing.expectEqual(@as(usize, 1), snapshot.kitty_placements.len);
+    try std.testing.expectEqual(@as(u32, 7), snapshot.kitty_images[0].id);
+    try std.testing.expectEqual(@as(u32, 7), snapshot.kitty_placements[0].image_id);
 }
 
 test "kitty parse query rgba short payload emits ENODATA reply" {

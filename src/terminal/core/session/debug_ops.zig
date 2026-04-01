@@ -1,8 +1,10 @@
+const std = @import("std");
 const builtin = @import("builtin");
 const parser_mod = @import("../../parser/parser.zig");
 const selection_mod = @import("../selection.zig");
 const types = @import("../../model/types.zig");
 const terminal_publication = @import("../publication/terminal_publication.zig");
+const kitty_mod = @import("../../kitty/graphics.zig");
 
 pub fn debugSnapshot(self: anytype) @import("../publication/snapshot.zig").DebugSnapshot {
     if (!debugAccessAllowed()) @panic("debugSnapshot is test-only");
@@ -101,6 +103,68 @@ pub fn debugSetGridRow(self: anytype, row_index: usize, text: []const u8) void {
     self.core.primary.grid.markDirtyRange(row_index, row_index, 0, cols - 1);
     _ = terminal_publication.bumpGeneration(self);
     terminal_publication.publishCurrentViewLocked(self, "debug_cursor");
+}
+
+pub const KittyStateSelector = enum {
+    primary,
+    alt,
+};
+
+pub const KittyStateCounts = struct {
+    images: usize,
+    placements: usize,
+    total_bytes: usize,
+};
+
+pub fn debugSeedOsc5522Clipboard(
+    self: anytype,
+    text: ?[]const u8,
+    html: ?[]const u8,
+    uri_list: ?[]const u8,
+    png: ?[]const u8,
+) !void {
+    if (!debugAccessAllowed()) @panic("debugSeedOsc5522Clipboard is test-only");
+    try replaceOwnedBytes(self, &self.core.kitty_osc5522_clipboard_text, text);
+    try replaceOwnedBytes(self, &self.core.kitty_osc5522_clipboard_html, html);
+    try replaceOwnedBytes(self, &self.core.kitty_osc5522_clipboard_uri_list, uri_list);
+    try replaceOwnedBytes(self, &self.core.kitty_osc5522_clipboard_png, png);
+}
+
+pub fn debugSeedKittyState(
+    self: anytype,
+    which: KittyStateSelector,
+    image: kitty_mod.KittyImage,
+    placement: kitty_mod.KittyPlacement,
+) !void {
+    if (!debugAccessAllowed()) @panic("debugSeedKittyState is test-only");
+    const state = switch (which) {
+        .primary => &self.core.kitty_primary,
+        .alt => &self.core.kitty_alt,
+    };
+    try state.images.append(self.allocator, image);
+    try state.placements.append(self.allocator, placement);
+    state.total_bytes = image.data.len;
+}
+
+pub fn debugKittyStateCounts(self: anytype, which: KittyStateSelector) KittyStateCounts {
+    if (!debugAccessAllowed()) @panic("debugKittyStateCounts is test-only");
+    const state = switch (which) {
+        .primary => &self.core.kitty_primary,
+        .alt => &self.core.kitty_alt,
+    };
+    return .{
+        .images = state.images.items.len,
+        .placements = state.placements.items.len,
+        .total_bytes = state.total_bytes,
+    };
+}
+
+fn replaceOwnedBytes(self: anytype, list: *std.ArrayList(u8), value: ?[]const u8) !void {
+    list.clearRetainingCapacity();
+    if (value) |bytes| {
+        try list.ensureTotalCapacity(self.allocator, bytes.len);
+        try list.appendSlice(self.allocator, bytes);
+    }
 }
 
 fn debugAccessAllowed() bool {

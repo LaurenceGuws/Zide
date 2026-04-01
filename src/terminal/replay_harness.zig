@@ -475,28 +475,15 @@ fn runFixtureInputPhase(session: *terminal_runtime.PtyTerminalRuntime, input: []
 }
 
 fn seedOsc5522Clipboard(session: *terminal_runtime.PtyTerminalRuntime, meta: FixtureMeta) !void {
-    if (meta.osc_5522_clipboard_text) |text| {
-        session.core.kitty_osc5522_clipboard_text.clearRetainingCapacity();
-        try session.core.kitty_osc5522_clipboard_text.ensureTotalCapacity(session.allocator, text.len);
-        try session.core.kitty_osc5522_clipboard_text.appendSlice(session.allocator, text);
-    }
-    if (meta.osc_5522_clipboard_html) |html| {
-        session.core.kitty_osc5522_clipboard_html.clearRetainingCapacity();
-        try session.core.kitty_osc5522_clipboard_html.ensureTotalCapacity(session.allocator, html.len);
-        try session.core.kitty_osc5522_clipboard_html.appendSlice(session.allocator, html);
-    }
-    if (meta.osc_5522_clipboard_uri_list) |uri_list| {
-        session.core.kitty_osc5522_clipboard_uri_list.clearRetainingCapacity();
-        try session.core.kitty_osc5522_clipboard_uri_list.ensureTotalCapacity(session.allocator, uri_list.len);
-        try session.core.kitty_osc5522_clipboard_uri_list.appendSlice(session.allocator, uri_list);
-    }
-    if (meta.osc_5522_clipboard_png_hex) |hex| {
-        const bytes = try decodeHex(session.allocator, hex);
-        defer session.allocator.free(bytes);
-        session.core.kitty_osc5522_clipboard_png.clearRetainingCapacity();
-        try session.core.kitty_osc5522_clipboard_png.ensureTotalCapacity(session.allocator, bytes.len);
-        try session.core.kitty_osc5522_clipboard_png.appendSlice(session.allocator, bytes);
-    }
+    const png = if (meta.osc_5522_clipboard_png_hex) |hex| try decodeHex(session.allocator, hex) else null;
+    defer if (png) |bytes| session.allocator.free(bytes);
+    try terminal_debug.debugSeedOsc5522Clipboard(
+        session,
+        meta.osc_5522_clipboard_text,
+        meta.osc_5522_clipboard_html,
+        meta.osc_5522_clipboard_uri_list,
+        png,
+    );
 }
 
 pub fn runEncoderFixture(

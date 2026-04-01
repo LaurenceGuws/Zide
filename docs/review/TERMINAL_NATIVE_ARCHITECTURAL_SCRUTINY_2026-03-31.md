@@ -282,6 +282,10 @@ Evidence:
   `core.alt` directly either; that now routes through an explicit runtime
   config method, which is a better outer-host boundary than direct screen
   mutation
+- replay/tests no longer seed OSC 5522 clipboard state or kitty state by
+  poking `core.kitty_*` internals directly; those now route through explicit
+  debug helpers, which is a better test/replay boundary than direct core
+  mutation from harness code
 - the remaining callback seam is narrower:
   - wrap/newline effects
   - insert-mode char insertion effects
