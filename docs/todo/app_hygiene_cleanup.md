@@ -129,6 +129,16 @@ Done when:
 - local co-development remains possible without leaking repo-layout knowledge
   through the app
 
+Progress note, 2026-04-01:
+
+- runtime consumer path probing for `../zide-tree-sitter/assets` is removed
+  from `src/editor/tree_sitter_assets.zig`
+- live asset lookup now prefers explicit asset roots, installed user assets,
+  and bundled repo assets only
+- maintainer-side `zig build grammar-update` proxy now routes through
+  `tools/editor/tree_sitter/grammar_update_proxy.sh` instead of embedding
+  sibling-repo choreography inline in `build_system/ide_graph.zig`
+
 ### AH-03 Build Graph Scope Control
 
 Focus:

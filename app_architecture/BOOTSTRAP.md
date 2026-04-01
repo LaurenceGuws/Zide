@@ -125,6 +125,13 @@ production now lives in sibling repo `../zide-tree-sitter`, and `zig build
 grammar-update` in `zide` proxies into that repo for local maintenance and
 installs shared query/mapping assets into the user Tree-sitter asset root.
 
+Proxy note:
+
+- the proxy entrypoint now lives at
+  `tools/editor/tree_sitter/grammar_update_proxy.sh`
+- set `ZIDE_TREE_SITTER_REPO` if your local repo layout is not the standard
+  sibling checkout shape
+
 The main app-library stack is not vendored and not expected to come from the
 system package manager in normal Linux/macOS flow; it is pinned in the Zig
 package graph.

@@ -561,20 +561,7 @@ pub fn planIdeExtendedBuildGraph(
     // Developer tooling
     const grammar_update_cmd = b.addSystemCommand(&.{
         "bash",
-        "-lc",
-        "set -euo pipefail\n" ++
-            "repo_root=\"$PWD\"\n" ++
-            "cd ../../zide-tree-sitter\n" ++
-            "zig build grammar-update -- \"$@\"\n" ++
-            "if [ -n \"${XDG_CONFIG_HOME:-}\" ]; then asset_root=\"$XDG_CONFIG_HOME/zide/tree-sitter-assets\"; " ++
-            "elif [ -n \"${HOME:-}\" ]; then asset_root=\"$HOME/.config/zide/tree-sitter-assets\"; " ++
-            "else asset_root=\"$repo_root/.zide/tree-sitter-assets\"; fi\n" ++
-            "mkdir -p \"$asset_root\"\n" ++
-            "rm -rf \"$asset_root/queries\"\n" ++
-            "cp -R assets/queries \"$asset_root/queries\"\n" ++
-            "mkdir -p \"$asset_root/syntax\"\n" ++
-            "cp assets/syntax/generated.lua \"$asset_root/syntax/generated.lua\"\n",
-        "_",
+        "tools/editor/tree_sitter/grammar_update_proxy.sh",
     });
     if (b.args) |args| grammar_update_cmd.addArgs(args);
     const grammar_update_step = b.step(

@@ -12,16 +12,6 @@ pub fn resolveSharedAssetPath(allocator: std.mem.Allocator, rel_path: []const u8
         if (try joinIfExists(allocator, root, rel_path)) |path| return path;
     }
 
-    if (try cwdDevAssetRoot(allocator)) |root| {
-        defer allocator.free(root);
-        if (try joinIfExists(allocator, root, rel_path)) |path| return path;
-    }
-
-    if (try exeDevAssetRoot(allocator)) |root| {
-        defer allocator.free(root);
-        if (try joinIfExists(allocator, root, rel_path)) |path| return path;
-    }
-
     if (try joinIfExists(allocator, "assets", rel_path)) |path| return path;
     return null;
 }
@@ -48,33 +38,6 @@ pub fn userAssetRoot(allocator: std.mem.Allocator) !?[]u8 {
     return null;
 }
 
-fn cwdDevAssetRoot(allocator: std.mem.Allocator) !?[]u8 {
-    const candidates = [_][]const u8{
-        "../zide-tree-sitter/assets",
-        "../../zide-tree-sitter/assets",
-    };
-    for (candidates) |candidate| {
-        if (fileExists(candidate)) return allocator.dupe(u8, candidate);
-    }
-    return null;
-}
-
-fn exeDevAssetRoot(allocator: std.mem.Allocator) !?[]u8 {
-    const exe_dir = std.fs.selfExeDirPathAlloc(allocator) catch return null;
-    defer allocator.free(exe_dir);
-    const candidates = [_][]const u8{
-        "../zide-tree-sitter/assets",
-        "../../zide-tree-sitter/assets",
-        "../../../zide-tree-sitter/assets",
-    };
-    for (candidates) |candidate| {
-        const joined = try std.fs.path.join(allocator, &.{ exe_dir, candidate });
-        defer allocator.free(joined);
-        if (fileExists(joined)) return try allocator.dupe(u8, joined);
-    }
-    return null;
-}
-
 fn joinIfExists(allocator: std.mem.Allocator, base: []const u8, rel_path: []const u8) !?[]u8 {
     const path = try std.fs.path.join(allocator, &.{ base, rel_path });
     errdefer allocator.free(path);
@@ -95,21 +58,21 @@ fn fileExists(path: []const u8) bool {
     return true;
 }
 
-test "resolveSharedAssetPath prefers user asset root over dev fallback" {
+test "resolveSharedAssetPath prefers user asset root over bundled assets" {
     var tmp = std.testing.tmpDir(.{});
     defer tmp.cleanup();
 
     try tmp.dir.makePath("user/tree-sitter-assets/syntax");
     try tmp.dir.makePath("workspace/zide");
-    try tmp.dir.makePath("workspace/zide-tree-sitter/assets/syntax");
+    try tmp.dir.makePath("workspace/zide/assets/syntax");
 
     try tmp.dir.writeFile(.{
         .sub_path = "user/tree-sitter-assets/syntax/generated.lua",
         .data = "user",
     });
     try tmp.dir.writeFile(.{
-        .sub_path = "workspace/zide-tree-sitter/assets/syntax/generated.lua",
-        .data = "dev",
+        .sub_path = "workspace/zide/assets/syntax/generated.lua",
+        .data = "bundled",
     });
 
     const root_path = try tmp.dir.realpathAlloc(std.testing.allocator, ".");
