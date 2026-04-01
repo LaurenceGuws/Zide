@@ -93,6 +93,10 @@ Status note, 2026-03-31:
   - the `TextEffects` adapter layer is gone too:
     `terminal_core_text.zig` already calls protocol-owned functions directly,
     so `terminal_core_protocol.zig` no longer carries that extra wrapper type
+  - the outer CSI forwarding shell is gone too:
+    `terminal_protocol_api.zig` now routes CSI directly into
+    `src/terminal/protocol/csi.zig` without stepping through an extra
+    `SessionFacade`
   - duplicated publication/cache truth
   - oversized native widget/render coordination around terminal publication
 - The current operating rule is sequential but ruthless:

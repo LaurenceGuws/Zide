@@ -389,30 +389,8 @@ const QueryContext = csi_reply.QueryContext;
 const CursorReport = csi_reply.CursorReport;
 const ScreenQueryContext = csi_reply.ScreenQueryContext;
 
-pub const SessionFacade = struct {
-    ctx: *anyopaque,
-    handle_csi_fn: *const fn (ctx: *anyopaque, action: parser_csi.CsiAction) void,
-
-    pub fn from(session: anytype) SessionFacade {
-        const SessionPtr = @TypeOf(session);
-        return .{
-            .ctx = @ptrCast(session),
-            .handle_csi_fn = struct {
-                fn call(ctx: *anyopaque, action: parser_csi.CsiAction) void {
-                    const s: SessionPtr = @ptrCast(@alignCast(ctx));
-                    handleCsiOnSession(s, action);
-                }
-            }.call,
-        };
-    }
-
-    pub fn handleCsi(self: *const SessionFacade, action: parser_csi.CsiAction) void {
-        self.handle_csi_fn(self.ctx, action);
-    }
-};
-
-pub fn handleCsi(session: SessionFacade, action: parser_csi.CsiAction) void {
-    session.handleCsi(action);
+pub fn handleCsi(self: anytype, action: parser_csi.CsiAction) void {
+    handleCsiOnSession(self, action);
 }
 
 fn handleCsiOnSession(self: anytype, action: parser_csi.CsiAction) void {

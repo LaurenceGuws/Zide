@@ -244,6 +244,10 @@ Evidence:
 - the `TextEffects` adapter layer is gone too:
   `terminal_core_text.zig` already calls protocol-owned functions directly, so
   `terminal_core_protocol.zig` no longer carries that extra wrapper type
+- the outer CSI forwarding shell is gone too:
+  `terminal_protocol_api.zig` now routes CSI directly into
+  `src/terminal/protocol/csi.zig` without stepping through an extra
+  `SessionFacade`
 - the remaining callback seam is narrower:
   - wrap/newline effects
   - insert-mode char insertion effects

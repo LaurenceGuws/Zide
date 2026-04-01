@@ -302,6 +302,9 @@ Validation note, 2026-03-31:
   - the dead `src/terminal/core/protocol/parser_hooks.zig` forwarding shell is
     now gone too; `terminal_protocol_api.zig` routes DCS/APC/OSC/CSI traffic
     directly to the real protocol owners
+  - the dead outer `SessionFacade` shell in `src/terminal/protocol/csi.zig` is
+    now gone too; CSI now routes directly to `handleCsiOnSession(...)` while
+    the smaller execution contexts remain in place
   - the stale `src/terminal/core/session_protocol.zig` forwarding shell is now
     deleted; `protocol/terminal_protocol_api.zig` routes directly to the real core,
     protocol, mode-effect, feed, and publication owners
