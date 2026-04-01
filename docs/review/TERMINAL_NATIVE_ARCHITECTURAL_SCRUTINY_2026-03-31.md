@@ -95,11 +95,11 @@ Judgment:
   gone, which is an honest improvement: `pty_terminal_runtime.zig` now imports
   direct owners instead of hiding public-facing types behind one more helper
   facade
-- `src/terminal/core/session/session_runtime_api.zig` and
+- `src/terminal/core/session/runtime_api.zig` and
   `src/terminal/core/session/session_publication_api.zig` now carry the runtime and
   publication/present method groups that were previously written inline on
   `pty_terminal_runtime.zig`
-- `src/terminal/core/session/session_input_api.zig` now carries the host input
+- `src/terminal/core/session/input_api.zig` now carries the host input
   send/report method group that was previously written inline on
   `pty_terminal_runtime.zig`
 - `src/terminal/core/protocol/terminal_protocol_api.zig` now carries the protocol/VT
@@ -108,7 +108,7 @@ Judgment:
 - the stale `src/terminal/core/session_protocol.zig` forwarding shell is now
   deleted, so that API seam no longer routes through one extra session-named
   hop before reaching the real owners
-- `src/terminal/core/session/session_config_api.zig` now carries the config, palette,
+- `src/terminal/core/session/config_api.zig` now carries the config, palette,
   and mode-setting method group that was previously written inline on
   `pty_terminal_runtime.zig`
 - the remaining publication/view-cache helper stubs and the special-case

@@ -102,17 +102,17 @@ Status note, 2026-03-31:
   - `src/terminal/core/session_public_types.zig` is gone, so
     `pty_terminal_runtime.zig` no longer gets to hide direct ownership behind a
     mixed alias hub
-  - `src/terminal/core/session/session_runtime_api.zig` and
+  - `src/terminal/core/session/runtime_api.zig` and
     `src/terminal/core/session/session_publication_api.zig` now hold the runtime and
     publication/present method groups that were previously written inline on
     `pty_terminal_runtime.zig`
-  - `src/terminal/core/session/session_input_api.zig` now holds the host input
+  - `src/terminal/core/session/input_api.zig` now holds the host input
     send/report method group that was previously written inline on
     `pty_terminal_runtime.zig`
   - `src/terminal/core/protocol/terminal_protocol_api.zig` now holds the protocol/VT
     mutation method group that was previously written inline on
     `pty_terminal_runtime.zig`
-  - `src/terminal/core/session/session_config_api.zig` now holds the config, palette,
+  - `src/terminal/core/session/config_api.zig` now holds the config, palette,
     and mode-setting method group that was previously written inline on
     `pty_terminal_runtime.zig`
   - the remaining publication/view-cache helper stubs and the special-case

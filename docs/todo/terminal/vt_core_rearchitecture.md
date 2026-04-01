@@ -137,18 +137,18 @@ Validation note, 2026-03-31:
     now imports direct ownership modules instead of routing public-facing types
     through a mixed alias hub.
   - the next extraction cut is also in:
-    - `src/terminal/core/session/session_runtime_api.zig`
+    - `src/terminal/core/session/runtime_api.zig`
     - `src/terminal/core/session/session_publication_api.zig`
   - host/runtime and publication/present public methods are no longer written
     inline on `pty_terminal_runtime.zig`; they are now grouped behind explicit API
     modules and re-exported without behavior changes.
-  - `src/terminal/core/session/session_input_api.zig` now groups the input send/report
+  - `src/terminal/core/session/input_api.zig` now groups the input send/report
     public methods that were previously written inline on
     `pty_terminal_runtime.zig`.
   - `src/terminal/core/protocol/terminal_protocol_api.zig` now groups the protocol/VT
     mutation public methods that were previously written inline on
     `pty_terminal_runtime.zig`.
-  - `src/terminal/core/session/session_config_api.zig` now groups the config, palette,
+  - `src/terminal/core/session/config_api.zig` now groups the config, palette,
     and mode-setting public methods that were previously written inline on
     `pty_terminal_runtime.zig`.
   - the remaining publication/view-cache helper stubs and the special-case
