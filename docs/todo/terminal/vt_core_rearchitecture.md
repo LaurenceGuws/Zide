@@ -240,6 +240,9 @@ Validation note, 2026-03-31:
       input-send chatter, scroll/resize/init narration, disabled-feature
       debug logs, and dirty-retirement storytelling are being deleted from the
       live terminal core
+    - parse/publication cadence storytelling and thread-exit narration are now
+      in the same bucket; they do not survive unless they defend a real
+      warning path or lifecycle contract
   - mirror-heavy cache metadata is now starting to come out of
     `src/terminal/core/render_cache.zig`:
     - `RenderCache.total_lines` is deleted

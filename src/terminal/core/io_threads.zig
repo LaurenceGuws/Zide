@@ -67,16 +67,10 @@ pub fn readThreadMain(session: anytype) void {
             break;
         }
     }
-    app_logger.logger("terminal.lifecycle").logFields(.info, "terminal_read_thread_exit", &.{
-        .{ .key = "session_ptr", .value = .{ .unsigned = @intFromPtr(session) } },
-        .{ .key = "shutdown_started", .value = .{ .boolean = app_lifecycle_runtime.shutdownStarted() } },
-        .{ .key = "shell_deinitialized", .value = .{ .boolean = app_lifecycle_runtime.shellDeinitialized() } },
-    });
 }
 
 pub fn parseThreadMain(session: anytype) void {
     var temp: [4096]u8 = undefined;
-    const publication_log = app_logger.logger("terminal.publication");
 
     while (session.runtime.parse_thread_running.load(.acquire)) {
         const input_pressure = session.control.input_pressure.load(.acquire);
@@ -112,34 +106,14 @@ pub fn parseThreadMain(session: anytype) void {
                 const publish_lock_start_ns = std.time.nanoTimestamp();
                 session.control.state_mutex.lock();
                 const generation_before = terminal_publication.pendingGeneration(session);
-                const published_before = session.publishedGeneration();
-                const view = session.core.activeScreenConst().snapshotView();
-                const rows = view.rows;
-                const cols = view.cols;
                 terminal_publication.publishGenerationLocked(session, generation_before, session.core.history.scrollOffset(), "parse_thread_idle_publish");
-                const published_after = session.publishedGeneration();
                 session.control.state_mutex.unlock();
-                const publish_lock_ns = std.time.nanoTimestamp() - publish_lock_start_ns;
+                _ = std.time.nanoTimestamp() - publish_lock_start_ns;
                 session.control.parse_publishes_since_log += 1;
                 session.control.parse_bytes_since_log += session.control.parse_bytes_since_publish;
                 session.control.parse_bytes_since_publish = 0;
                 session.control.last_parse_publish_ms = std.time.milliTimestamp();
                 terminal_publication.markOutputPending(session);
-                if (publication_log.enabled_file or publication_log.enabled_console) {
-                    publication_log.logf(
-                        .info,
-                        "stage=parse_idle_publish attempted=1 published_before={d} current_before={d} published_after={d} bytes={d} rows={d} cols={d} publish_ms={d:.3}",
-                        .{
-                            published_before,
-                            generation_before,
-                            published_after,
-                            session.control.parse_bytes_since_log,
-                            rows,
-                            cols,
-                            @as(f64, @floatFromInt(publish_lock_ns)) / @as(f64, @floatFromInt(std.time.ns_per_ms)),
-                        },
-                    );
-                }
             }
             if (pending_offset) |offset| {
                 session.control.state_mutex.lock();
@@ -237,8 +211,6 @@ pub fn parseThreadMain(session: anytype) void {
                 else
                     end_ms - session.control.last_parse_publish_ms;
                 const drained_available = queued_bytes > 0 and processed >= queued_bytes;
-                const pending_generation = terminal_publication.pendingGeneration(session);
-                const published_generation = session.publishedGeneration();
                 const should_publish = shouldPublishParseBatch(
                     session.core.sync_updates_active,
                     pending_offset,
@@ -254,12 +226,7 @@ pub fn parseThreadMain(session: anytype) void {
                     const publish_lock_start_ns = std.time.nanoTimestamp();
                     session.control.state_mutex.lock();
                     const generation_before = terminal_publication.pendingGeneration(session);
-                    const published_before = session.publishedGeneration();
-                    const view = session.core.activeScreenConst().snapshotView();
-                    const rows = view.rows;
-                    const cols = view.cols;
                     terminal_publication.publishGenerationLocked(session, generation_before, target_offset, "parse_thread_publish");
-                    const published_after = session.publishedGeneration();
                     session.control.state_mutex.unlock();
                     const publish_lock_ns = std.time.nanoTimestamp() - publish_lock_start_ns;
                     publish_lock_hold_ns += publish_lock_ns;
@@ -268,51 +235,9 @@ pub fn parseThreadMain(session: anytype) void {
                     session.control.parse_bytes_since_publish = 0;
                     session.control.last_parse_publish_ms = end_ms;
                     terminal_publication.markOutputPending(session);
-                    if (publication_log.enabled_file or publication_log.enabled_console) {
-                        publication_log.logf(
-                            .info,
-                            "stage=parse_publish attempted=1 pending_offset={d} presentation_backlog={d} drained_available={d} bytes_since_publish={d} elapsed_since_publish_ms={d} min_bytes={d} max_ms={d} published_before={d} current_before={d} published_after={d} rows={d} cols={d} publish_ms={d:.3}",
-                            .{
-                                @as(u8, @intFromBool(pending_offset != null)),
-                                @intFromBool(presentation_backlog),
-                                @intFromBool(drained_available),
-                                session.control.parse_bytes_since_log,
-                                elapsed_since_publish,
-                                backlog_publish_min_bytes,
-                                backlog_publish_max_ms,
-                                published_before,
-                                generation_before,
-                                published_after,
-                                rows,
-                                cols,
-                                @as(f64, @floatFromInt(publish_lock_ns)) / @as(f64, @floatFromInt(std.time.ns_per_ms)),
-                            },
-                        );
-                    }
                     if (presentation_backlog) {
                         std.Thread.yield() catch {};
                     }
-                } else if ((publication_log.enabled_file or publication_log.enabled_console) and pending_generation > published_generation) {
-                    publication_log.logf(
-                        .info,
-                        "stage=parse_publish_skipped attempted=0 reason_sync_updates={d} reason_pending_offset={d} reason_presentation_backlog={d} reason_drained_available={d} reason_bytes_threshold={d} reason_time_threshold={d} bytes_since_publish={d} elapsed_since_publish_ms={d} min_bytes={d} max_ms={d} current={d} published={d} queued_before={d} processed={d}",
-                        .{
-                            @intFromBool(session.core.sync_updates_active),
-                            @intFromBool(pending_offset != null),
-                            @intFromBool(!presentation_backlog),
-                            @intFromBool(drained_available),
-                            @intFromBool(session.control.parse_bytes_since_publish >= backlog_publish_min_bytes),
-                            @intFromBool(elapsed_since_publish >= backlog_publish_max_ms),
-                            session.control.parse_bytes_since_publish,
-                            elapsed_since_publish,
-                            backlog_publish_min_bytes,
-                            backlog_publish_max_ms,
-                            pending_generation,
-                            published_generation,
-                            queued_before,
-                            processed,
-                        },
-                    );
                 }
             }
 
@@ -320,11 +245,6 @@ pub fn parseThreadMain(session: anytype) void {
             _ = elapsed_ms;
         }
     }
-    app_logger.logger("terminal.lifecycle").logFields(.info, "terminal_parse_thread_exit", &.{
-        .{ .key = "session_ptr", .value = .{ .unsigned = @intFromPtr(session) } },
-        .{ .key = "shutdown_started", .value = .{ .boolean = app_lifecycle_runtime.shutdownStarted() } },
-        .{ .key = "shell_deinitialized", .value = .{ .boolean = app_lifecycle_runtime.shellDeinitialized() } },
-    });
 }
 
 test "shouldPublishParseBatch suppresses intermediate publish during sync updates" {
