@@ -162,14 +162,14 @@ Validation note, 2026-03-31:
     `src/terminal/core/session/content.zig` and
     `src/terminal/core/session/content_api.zig` replace the redundant
     `session_content*` naming inside the already-explicit `session/` subtree.
-  - `src/terminal/core/session/session_lifecycle_api.zig` now owns the lifecycle and
+  - `src/terminal/core/session/lifecycle_api.zig` now owns the lifecycle and
     composition block (`init`, screen access, input pressure, lock state,
     resize, shutdown-facing methods) that was still written directly on the
     session root.
   - `src/terminal/core/session/surface_api.zig` now owns the content,
     selection, host-query, and interaction alias slab that used to dominate
     the top of `pty_terminal_runtime.zig`.
-  - `src/terminal/core/session/session_types_api.zig` now owns the bottom export slab
+  - `src/terminal/core/session/types_api.zig` now owns the bottom export slab
     for shared terminal constants and core-facing type aliases.
   - raw session state is no longer a flat lie:
     - `src/terminal/core/session/session_publication_fields.zig`

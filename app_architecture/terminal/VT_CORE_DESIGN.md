@@ -123,13 +123,13 @@ Status note, 2026-03-31:
   - `src/terminal/core/session/content.zig` and
     `src/terminal/core/session/content_api.zig` now own the wrapper content
     seam without repeating `session_` in the file names
-  - `src/terminal/core/session/session_lifecycle_api.zig` now owns the lifecycle and
+  - `src/terminal/core/session/lifecycle_api.zig` now owns the lifecycle and
     composition method block that was still written directly on
     `pty_terminal_runtime.zig`
   - `src/terminal/core/session/surface_api.zig` now owns the content,
     selection, host-query, and interaction alias surface that used to dominate
     the top of `pty_terminal_runtime.zig`
-  - `src/terminal/core/session/session_types_api.zig` now owns the shared terminal
+  - `src/terminal/core/session/types_api.zig` now owns the shared terminal
     constant/type export slab that used to live at the bottom of
     `pty_terminal_runtime.zig`
   - the flat root state has now been grouped into explicit subsystem-owned
