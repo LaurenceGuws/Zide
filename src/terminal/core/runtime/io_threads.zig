@@ -62,7 +62,7 @@ pub fn readThreadMain(session: anytype) void {
                 }
             }
             _ = start_ms;
-            if (processed > 0) _ = terminal_publication.takeAltExitPending(session);
+            terminal_publication.noteProcessedOutput(session, processed);
         } else {
             break;
         }

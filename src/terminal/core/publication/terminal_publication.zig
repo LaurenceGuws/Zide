@@ -508,7 +508,7 @@ pub fn outputPending(self: anytype) bool {
     return self.publication.output_pending.load(.acquire);
 }
 
-pub fn clearOutputPending(self: anytype) bool {
+fn clearOutputPending(self: anytype) bool {
     return self.publication.output_pending.swap(false, .acq_rel);
 }
 
@@ -525,7 +525,7 @@ pub fn takePendingViewRefresh(self: anytype) ?usize {
     return @intCast(self.publication.view_cache_request_offset.load(.acquire));
 }
 
-pub fn takeAltExitPending(self: anytype) bool {
+fn takeAltExitPending(self: anytype) bool {
     return self.publication.alt_exit_pending.swap(false, .acq_rel);
 }
 
@@ -556,6 +556,14 @@ pub fn acknowledgePresentedGeneration(self: anytype, generation: u64) bool {
 
 pub fn hasPublishedGenerationBacklog(self: anytype) bool {
     return pendingGeneration(self) != publishedGeneration(self);
+}
+
+pub fn clearPublishedOutputPending(self: anytype) bool {
+    return clearOutputPending(self);
+}
+
+pub fn noteProcessedOutput(self: anytype, processed: usize) void {
+    if (processed > 0) _ = takeAltExitPending(self);
 }
 
 pub fn noteAltExitPending(self: anytype) void {

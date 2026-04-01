@@ -1452,6 +1452,10 @@ render-cache slot selection and publish-index storage through raw helper
 exposure. `terminal_publication.zig` now owns that choreography behind
 `beginCachePublication(...)` / `finishCachePublication(...)`.
 
+The same rule now applies to publication flags: runtime/thread code no longer
+consumes raw clear/take helpers for output-pending and alt-exit state when the
+publication owner can expose one intent-shaped operation instead.
+
 Avoid continuing to use `TerminalSession` as the name of the engine center once
 the new boundary exists.
 

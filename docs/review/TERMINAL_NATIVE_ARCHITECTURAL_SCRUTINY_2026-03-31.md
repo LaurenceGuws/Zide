@@ -917,6 +917,8 @@ work:
   as speculative convenience surface
 - once publication slot choreography has one real owner, expose a contract for
   it instead of leaking raw active/inactive cache-slot helpers
+- once publication flag handling has one real owner, expose intent-shaped
+  helpers instead of teaching runtime code raw flag-clear / flag-take verbs
 
 ## Final Assessment
 

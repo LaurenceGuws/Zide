@@ -831,6 +831,11 @@ Validation note, 2026-03-31:
   `beginCachePublication(...)` / `finishCachePublication(...)`, so view-cache
   publication depends on a contract-shaped owner seam instead of storage-layout
   helpers.
+- Another publication-owner cleanup is in too: runtime/thread code no longer
+  directly clears output-pending or consumes alt-exit flags through raw
+  storage-flavored helpers. That now goes through intent-shaped publication
+  entrypoints like `clearPublishedOutputPending(...)` and
+  `noteProcessedOutput(...)`.
 - The terminal campaign should now judge success by first-glance authority:
   when a strong maintainer opens the code, the engine must obviously be the
   engine.

@@ -39,7 +39,7 @@ pub fn publishTransportPollResult(self: anytype, had_data: bool, processed: usiz
         terminal_publication.publishCurrentViewLocked(self, "transport_poll_publish");
         publish_lock_hold_ns.* += std.time.nanoTimestamp() - publish_lock_start_ns;
     }
-    if (processed > 0) _ = terminal_publication.takeAltExitPending(self);
+    terminal_publication.noteProcessedOutput(self, processed);
     if (processed > 0) {
         const end_ms = std.time.milliTimestamp();
         _ = parse_lock_hold_ns;
