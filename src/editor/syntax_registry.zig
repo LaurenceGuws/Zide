@@ -1,4 +1,5 @@
 const std = @import("std");
+const tree_sitter_assets = @import("tree_sitter_assets.zig");
 const log = std.log.scoped(.syntax_registry);
 pub const SyntaxRegistry = struct {
     pub fn defaultLanguage() ?[]const u8 {
@@ -119,8 +120,8 @@ fn loadMaps() *MapTable {
         .injections = std.StringHashMap([]const u8).init(allocator),
     };
 
-    loadLuaMap(allocator, "assets/syntax/generated.lua") catch |err| {
-        log.warn("failed to load {s}: {s}", .{ "assets/syntax/generated.lua", @errorName(err) });
+    loadSharedLuaMap(allocator, "syntax/generated.lua") catch |err| {
+        log.warn("failed to load shared syntax/generated.lua: {s}", .{@errorName(err)});
     };
     loadLuaMap(allocator, "assets/syntax/overrides.lua") catch |err| {
         log.warn("failed to load {s}: {s}", .{ "assets/syntax/overrides.lua", @errorName(err) });
@@ -227,6 +228,12 @@ fn loadLuaMap(allocator: std.mem.Allocator, path: []const u8) !void {
         }
         map_tables.globs = combined;
     }
+}
+
+fn loadSharedLuaMap(allocator: std.mem.Allocator, rel_path: []const u8) !void {
+    const resolved_path = try tree_sitter_assets.resolveSharedAssetPath(allocator, rel_path) orelse return;
+    defer allocator.free(resolved_path);
+    try loadLuaMap(allocator, resolved_path);
 }
 
 fn resolveMapPath(allocator: std.mem.Allocator, path: []const u8) ![]const u8 {

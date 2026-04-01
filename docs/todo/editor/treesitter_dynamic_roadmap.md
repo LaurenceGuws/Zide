@@ -13,7 +13,7 @@ to be small and testable. Producer-side grammar-pack workflow ownership now live
 - Runtime loader + syntax registry are implemented (`src/editor/grammar_manager.zig`, `src/editor/syntax_registry.zig`).
 - `zig build grammar-update` in `zide` proxies into sibling repo `../zide-tree-sitter` and installs packs into `%LOCALAPPDATA%/Zide/grammars` on Windows and `~/.config/zide/grammars` elsewhere.
 - Tree-sitter runtime is vendored in `vendor/tree-sitter/`; Zig language is built-in.
-- Manual shipped query presets now also exist for plain-text-ish editor cases via `assets/queries/manual/*.scm`, with Lua-configurable editor highlight overrides layered on top.
+- Manual shipped query presets now live in `zide-tree-sitter/assets/queries/manual/*.scm`, with Lua-configurable editor highlight overrides layered on top.
 
 ## Target Runtime Layout
 Default cache dir (Linux):
@@ -50,7 +50,7 @@ Errors/logging:
 - avoid language-specific fallbacks; use the same lookup path for all languages
 
 Defaults + overrides:
-- Defaults baked at `assets/syntax/generated.lua` (generated from Neovim + parsers.lua)
+- Defaults baked at `zide-tree-sitter/assets/syntax/generated.lua` (generated from Neovim + parsers.lua)
 - Manual overrides at `assets/syntax/overrides.lua` (extensions, basenames, globs)
 - User overrides at `~/.config/zide/syntax.lua`
 - Project overrides at `.zide/syntax.lua`
@@ -72,7 +72,7 @@ Implemented files:
 ### Step 3: Auto-sync Queries (optional)
 Keep queries in sync with nvim-treesitter:
 - add a helper to copy `../zide-tree-sitter/tools/grammar_packs/work/queries/<lang>_<query>.scm`
-  into `assets/queries/<lang>/<query>.scm`
+  into the shared Tree-sitter asset root or directly into `zide-tree-sitter/assets/queries/<lang>/<query>.scm`
 - this keeps editor defaults aligned with upstream across all query types
 
 Suggested files:

@@ -122,8 +122,8 @@ Windows:
 
 Tree-sitter runtime and the Zig parser remain vendored in `zide`. Grammar-pack
 production now lives in sibling repo `../zide-tree-sitter`, and `zig build
-grammar-update` in `zide` proxies into that repo for local maintenance and then
-syncs consumer assets back into `zide/assets/`.
+grammar-update` in `zide` proxies into that repo for local maintenance and
+installs shared query/mapping assets into the user Tree-sitter asset root.
 
 The main app-library stack is not vendored and not expected to come from the
 system package manager in normal Linux/macOS flow; it is pinned in the Zig
@@ -251,7 +251,8 @@ personal/
 On Windows, `grammar-update` now uses PowerShell and Python 3 by default inside
 `zide-tree-sitter`; Git Bash is no longer required for the normal local path.
 Installed grammar packs live under `%LOCALAPPDATA%\\Zide\\grammars` on Windows
-by default.
+by default. Shared query/mapping assets live beside the user config under
+`tree-sitter-assets/`.
 
 ## Test
 

@@ -87,6 +87,8 @@ Initial contract:
 
 - grammar packs under:
   - `<cache>/<lang>/<version>/...`
+- shared query/mapping assets under:
+  - `<config>/tree-sitter-assets/...`
 - per-pack query files:
   - `highlights`
   - `injections`

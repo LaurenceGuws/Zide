@@ -2,6 +2,7 @@ const std = @import("std");
 const grammar_manager_mod = @import("grammar_manager.zig");
 const ts_api = @import("treesitter_api.zig");
 const app_logger = @import("../app_logger.zig");
+const tree_sitter_assets = @import("tree_sitter_assets.zig");
 
 const c = ts_api.c_api;
 pub const QueryMergeMode = @import("manual_highlights.zig").QueryMergeMode;
@@ -360,12 +361,12 @@ fn loadBaseQueryText(
         }
     }
 
-    if (try readInstalledAssetFileIfExists(allocator, rel_path)) |data| {
+    if (try readSharedAssetFileIfExists(allocator, rel_path)) |data| {
         if (data.len == 0) {
             allocator.free(data);
             return null;
         }
-        log.logf(.info, "query source path=assets/{s} bytes={d}", .{ rel_path, data.len });
+        log.logf(.info, "query source shared_asset={s} bytes={d}", .{ rel_path, data.len });
         return data;
     }
 
@@ -419,13 +420,8 @@ fn readFileJoinedIfExists(allocator: std.mem.Allocator, parts: []const []const u
     return readFileIfExists(allocator, path);
 }
 
-fn readInstalledAssetFileIfExists(allocator: std.mem.Allocator, rel_path: []const u8) !?[]u8 {
-    if (try readFileJoinedIfExists(allocator, &.{ "assets", rel_path })) |data| return data;
-
-    const exe_dir = std.fs.selfExeDirPathAlloc(allocator) catch return null;
-    defer allocator.free(exe_dir);
-
-    const path = try std.fs.path.join(allocator, &.{ exe_dir, "assets", rel_path });
+fn readSharedAssetFileIfExists(allocator: std.mem.Allocator, rel_path: []const u8) !?[]u8 {
+    const path = try tree_sitter_assets.resolveSharedAssetPath(allocator, rel_path) orelse return null;
     defer allocator.free(path);
     return readFileAbsoluteIfExists(allocator, path);
 }

@@ -566,11 +566,14 @@ pub fn planIdeExtendedBuildGraph(
             "repo_root=\"$PWD\"\n" ++
             "cd ../../zide-tree-sitter\n" ++
             "zig build grammar-update -- \"$@\"\n" ++
-            "cd \"$repo_root\"\n" ++
-            "rm -rf assets/queries\n" ++
-            "cp -R ../../zide-tree-sitter/assets/queries assets/queries\n" ++
-            "mkdir -p assets/syntax\n" ++
-            "cp ../../zide-tree-sitter/assets/syntax/generated.lua assets/syntax/generated.lua\n",
+            "if [ -n \"${XDG_CONFIG_HOME:-}\" ]; then asset_root=\"$XDG_CONFIG_HOME/zide/tree-sitter-assets\"; " ++
+            "elif [ -n \"${HOME:-}\" ]; then asset_root=\"$HOME/.config/zide/tree-sitter-assets\"; " ++
+            "else asset_root=\"$repo_root/.zide/tree-sitter-assets\"; fi\n" ++
+            "mkdir -p \"$asset_root\"\n" ++
+            "rm -rf \"$asset_root/queries\"\n" ++
+            "cp -R assets/queries \"$asset_root/queries\"\n" ++
+            "mkdir -p \"$asset_root/syntax\"\n" ++
+            "cp assets/syntax/generated.lua \"$asset_root/syntax/generated.lua\"\n",
         "_",
     });
     if (b.args) |args| grammar_update_cmd.addArgs(args);

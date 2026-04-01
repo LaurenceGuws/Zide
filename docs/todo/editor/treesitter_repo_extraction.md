@@ -35,18 +35,19 @@ Authority:
   - move syntax mapping generation ownership
   - keep `zide` on a stable consumer contract
 
-- [ ] `TS-REPO-06` Rewire `zide` consumption
+- [x] `TS-REPO-06` Rewire `zide` consumption
   - remove moved-tool ownership from `zide`
   - document the new local setup
   - validate grammar install/update from the new repo
 
-Current partial state:
+Current state:
 
-- `zig build grammar-update` in `zide` now proxies into sibling repo
+- `zig build grammar-update` in `zide` proxies into sibling repo
   `../../zide-tree-sitter`
-- after the producer run, consumer assets are synced back into `zide/assets/`
-- full ownership cleanup is still pending because the consumer copy still lives
-  in `zide`
+- produced query/mapping assets are installed into the user Tree-sitter asset
+  root
+- `zide` runtime resolves shared assets through an asset-root search path
+- mirrored producer asset ownership in `zide/assets/` was removed
 
 ## Notes
 
