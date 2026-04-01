@@ -114,6 +114,15 @@ const PartialPlanSummary = struct {
     summary: []const u8 = "",
 };
 
+const DrawTelemetry = struct {
+    texture_full_update: bool = false,
+    texture_partial_update: bool = false,
+    fastpath_threshold_hit: bool = false,
+    fastpath_total_cells: usize = 0,
+    fastpath_union_cells: usize = 0,
+    capture_reason: []const u8 = "clean",
+};
+
 pub fn latestFrameLatencyMetrics() FrameLatencyMetrics {
     return frame_latency_metrics;
 }
@@ -791,14 +800,9 @@ pub fn drawPrepared(
     const hover_link_id = hover_mod.hoverLinkId(&self.hover);
 
     var updated = false;
-    var texture_full_update = false;
-    var texture_partial_update = false;
+    var telemetry = DrawTelemetry{};
     var active_viewport_shift_rows: i32 = 0;
     var active_shift_exposed_only = false;
-    var fastpath_threshold_hit = false;
-    var fastpath_total_cells: usize = 0;
-    var fastpath_union_cells: usize = 0;
-    var capture_reason: []const u8 = "clean";
     var cell_w_i: i32 = 0;
     var cell_h_i: i32 = 0;
     var visible_w: i32 = 0;
@@ -911,7 +915,7 @@ pub fn drawPrepared(
         const partial_capture = terminal_publication.partialCaptureInfo(cache);
         active_viewport_shift_rows = partial_capture.active_viewport_shift_rows;
         active_shift_exposed_only = partial_capture.shift_exposed_only;
-        capture_reason = partial_capture.reason;
+        telemetry.capture_reason = partial_capture.reason;
         var shifted_rows: usize = 0;
         var shift_requires_fullwidth_partial = false;
         switch (planViewportTextureShift(
@@ -1012,9 +1016,9 @@ pub fn drawPrepared(
                     },
                 );
             }
-            fastpath_threshold_hit = fullframe_fastpath_decision.threshold_hit;
-            fastpath_total_cells = fullframe_fastpath_decision.total_cells;
-            fastpath_union_cells = fullframe_fastpath_decision.union_cells;
+            telemetry.fastpath_threshold_hit = fullframe_fastpath_decision.threshold_hit;
+            telemetry.fastpath_total_cells = fullframe_fastpath_decision.total_cells;
+            telemetry.fastpath_union_cells = fullframe_fastpath_decision.union_cells;
             if (fullframe_fastpath_decision.threshold_hit) {
                 needs_full = true;
                 needs_partial = false;
@@ -1078,8 +1082,8 @@ pub fn drawPrepared(
                 }
             }
         }
-        texture_full_update = needs_full;
-        texture_partial_update = needs_partial;
+        telemetry.texture_full_update = needs_full;
+        telemetry.texture_partial_update = needs_partial;
 
         if ((needs_full or needs_partial) and r.beginTerminalTexture()) {
             // Disable scissor while updating the offscreen texture.
@@ -1172,7 +1176,7 @@ pub fn drawPrepared(
                     draw_state.generation,
                     partial_plan_bounds,
                     draw_log.enabled_file or draw_log.enabled_console,
-                    texture_partial_update,
+                    telemetry.texture_partial_update,
                     &partial_plan_summary_buf,
                 );
                 partial_plan_rows_count = partial_plan.rows_count;
@@ -1359,8 +1363,8 @@ pub fn drawPrepared(
                         self.session.pendingGeneration(),
                         self.session.publishedGeneration(),
                         self.session.presentedGeneration(),
-                        @intFromBool(texture_full_update),
-                        @intFromBool(texture_partial_update),
+                        @intFromBool(telemetry.texture_full_update),
+                        @intFromBool(telemetry.texture_partial_update),
                     },
                 );
             }
@@ -1410,15 +1414,15 @@ pub fn drawPrepared(
             visible_h,
             rows,
             cols,
-            texture_full_update,
-            texture_partial_update,
+            telemetry.texture_full_update,
+            telemetry.texture_partial_update,
             active_viewport_shift_rows,
-            fastpath_threshold_hit,
-            fastpath_total_cells,
-            fastpath_union_cells,
+            telemetry.fastpath_threshold_hit,
+            telemetry.fastpath_total_cells,
+            telemetry.fastpath_union_cells,
             partial_plan_cells,
             partial_plan_union_cells,
-            capture_reason,
+            telemetry.capture_reason,
             glyph_draw_stats,
         );
     }
@@ -1474,7 +1478,7 @@ pub fn drawPrepared(
         null;
     const active_draw_log = if (lifecycle_reason != null) lifecycle_log else draw_log;
     const active_perf_log = if (lifecycle_reason != null) lifecycle_log else perf_log;
-    const log_partial_update = texture_partial_update and updated and (active_draw_log.enabled_file or active_draw_log.enabled_console or active_perf_log.enabled_file or active_perf_log.enabled_console);
+    const log_partial_update = telemetry.texture_partial_update and updated and (active_draw_log.enabled_file or active_draw_log.enabled_console or active_perf_log.enabled_file or active_perf_log.enabled_console);
     if ((elapsed_ms >= 4.0 or has_kitty_images or log_partial_update) and (now - self.last_draw_log_time) >= 0.1) {
         self.last_draw_log_time = now;
         active_draw_log.logf(
@@ -1507,8 +1511,8 @@ pub fn drawPrepared(
                 texture_glyph_ms,
                 texture_kitty_ms,
                 overlay_ms,
-                @intFromBool(texture_full_update),
-                @intFromBool(texture_partial_update),
+                @intFromBool(telemetry.texture_full_update),
+                @intFromBool(telemetry.texture_partial_update),
                 @intFromBool(updated),
                 @intFromBool(sync_updates),
                 @intFromBool(outcome.presented != null and (outcome.texture_updated or dirty_summary.is_clean)),

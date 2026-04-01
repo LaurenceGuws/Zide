@@ -274,6 +274,8 @@ Judgment:
   - the widget-owned partial-plan accounting blob is now isolated in
     `summarizePartialPlan(...)` instead of being hand-expanded in the middle of
     the texture update path
+  - widget draw telemetry is now grouped in `DrawTelemetry` instead of being
+    smeared through the render body as loose flags, counts, and capture reason
   - widget draw now also uses helper-owned current alt-state and clean-state
     instead of falling back to raw `cache.alt_active` and repeated
     `cache.dirty == .none` checks where publication already owns the answer

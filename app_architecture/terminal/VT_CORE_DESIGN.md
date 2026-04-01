@@ -211,6 +211,9 @@ Status note, 2026-03-31:
   - widget-owned planning/accounting blobs should still be extracted into
     named local helpers once they become dense enough to hide the real draw
     flow; `summarizePartialPlan(...)` is the current example
+  - the same rule applies to draw telemetry scratch state; it should live in a
+    named local struct instead of leaking as a loose cluster of booleans,
+    counters, and reasons through the main render body
   - once a publication helper exists, widget draw should consume its direct
     truth completely; it should not keep mixing helper-owned state with raw
     reads like `cache.alt_active` or repeated `cache.dirty == .none`
