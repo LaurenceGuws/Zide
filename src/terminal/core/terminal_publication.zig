@@ -71,6 +71,12 @@ pub const RenderStateInfo = struct {
     has_blinking_cells: bool,
 };
 
+pub const BackgroundRunInfo = struct {
+    cursor_here: bool,
+    cursor_col: ?usize,
+    screen_reverse: bool,
+};
+
 pub const CursorPos = types.CursorPos;
 pub const Cell = types.Cell;
 pub const CellAttrs = types.CellAttrs;
@@ -127,6 +133,15 @@ pub fn renderStateInfo(cache: *const RenderCache) RenderStateInfo {
         .draw_cursor_visible = drawCursorVisible(cache),
         .cursor_style = cache.cursor_style,
         .has_blinking_cells = cache.has_blink,
+    };
+}
+
+pub fn backgroundRunInfo(cache: *const RenderCache, row: usize) BackgroundRunInfo {
+    const cursor_here = cache.cursor_visible and cache.cursor.row == row and cache.cursor.col < cache.cols;
+    return .{
+        .cursor_here = cursor_here,
+        .cursor_col = if (cursor_here) cache.cursor.col else null,
+        .screen_reverse = cache.screen_reverse,
     };
 }
 

@@ -285,6 +285,11 @@ Validation note, 2026-03-31:
     - `renderStateInfo(...)`
     now gives widget draw one publication answer for screen-reverse, cursor
     visibility-at-live-bottom, cursor style, and blinking-cell presence
+  - widget debug/background-run interpretation is moving there too:
+    - `backgroundRunInfo(...)`
+    now gives widget helpers one publication answer for cursor-presence and
+    background-run reverse resolution instead of reading those raw cache flags
+    directly
   - `snapshot().generation` now reports the generation of the published render
     cache it actually returns, not a newer unpublished pending epoch
   - remaining gap: publication is still mirror-heavy because render-cache and

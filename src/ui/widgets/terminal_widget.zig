@@ -233,6 +233,8 @@ pub const TerminalWidget = struct {
     pub fn dumpVisibleAsciiView(self: *TerminalWidget) !void {
         var out = std.ArrayList(u8).empty;
         defer out.deinit(self.session.allocator);
+        const render_state = terminal_publication.renderStateInfo(&self.draw_cache);
+        const viewport = terminal_publication.viewportInfo(&self.draw_cache);
 
         try out.writer(self.session.allocator).print(
             "# Zide terminal visible-view dump\npath={s}\nrows={d} cols={d} generation={d} scroll_offset={d} alt_active={d} cursor={d}:{d} cursor_visible={d} screen_reverse={d}\n",
@@ -241,12 +243,12 @@ pub const TerminalWidget = struct {
                 self.draw_cache.rows,
                 self.draw_cache.cols,
                 self.draw_cache.generation,
-                self.draw_cache.scroll_offset,
+                viewport.scroll_offset,
                 @intFromBool(self.draw_cache.alt_active),
                 self.draw_cache.cursor.row,
                 self.draw_cache.cursor.col,
-                @intFromBool(self.draw_cache.cursor_visible),
-                @intFromBool(self.draw_cache.screen_reverse),
+                @intFromBool(render_state.draw_cursor_visible),
+                @intFromBool(render_state.screen_reverse),
             },
         );
 
@@ -488,13 +490,13 @@ fn appendResolvedBackgroundRuns(
         return;
     }
 
-    const cursor_here = cache.cursor_visible and cache.cursor.row == row and cache.cursor.col < cache.cols;
+    const run_info = terminal_publication.backgroundRunInfo(&cache, row);
     try out.writer(allocator).print(
         "row={d:0>3} cursor_here={d} cursor_col={d} runs=",
         .{
             row,
-            @intFromBool(cursor_here),
-            if (cursor_here) @as(i64, @intCast(cache.cursor.col)) else -1,
+            @intFromBool(run_info.cursor_here),
+            if (run_info.cursor_col) |cursor_col| @as(i64, @intCast(cursor_col)) else -1,
         },
     );
 
@@ -502,12 +504,12 @@ fn appendResolvedBackgroundRuns(
     while (col < cache.cols) {
         const idx = row_start + col;
         if (idx >= cache.cells.items.len) break;
-        const run_color = resolvedBackgroundColor(cache.cells.items[idx], cache.screen_reverse);
+        const run_color = resolvedBackgroundColor(cache.cells.items[idx], run_info.screen_reverse);
         var end_col = col;
         while (end_col + 1 < cache.cols) : (end_col += 1) {
             const next_idx = row_start + end_col + 1;
             if (next_idx >= cache.cells.items.len) break;
-            const next_color = resolvedBackgroundColor(cache.cells.items[next_idx], cache.screen_reverse);
+            const next_color = resolvedBackgroundColor(cache.cells.items[next_idx], run_info.screen_reverse);
             if (!sameColor(run_color, next_color)) break;
         }
         try out.writer(allocator).print(
