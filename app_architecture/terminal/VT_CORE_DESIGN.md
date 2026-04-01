@@ -97,7 +97,7 @@ Status note, 2026-03-31:
     publication/type surface for native widget, replay-harness, and FFI
     consumers
   - test/replay debug imports now target
-    `src/terminal/core/session/session_debug_api.zig` directly instead of going
+    `src/terminal/core/session/debug_api.zig` directly instead of going
     through a flat `terminal_debug.zig` shim
   - `src/terminal/core/session_public_types.zig` is gone, so
     `pty_terminal_runtime.zig` no longer gets to hide direct ownership behind a
@@ -118,7 +118,7 @@ Status note, 2026-03-31:
   - the remaining publication/view-cache helper stubs and the special-case
     `appendHyperlink` wrapper now also route through explicit API modules
     instead of living as root-session exceptions
-  - `src/terminal/core/session/session_debug_api.zig` now owns the root debug method
+  - `src/terminal/core/session/debug_api.zig` now owns the root debug method
     group instead of routing debug authority through `pty_terminal_runtime.zig`
   - `src/terminal/core/session/session_lifecycle_api.zig` now owns the lifecycle and
     composition method block that was still written directly on

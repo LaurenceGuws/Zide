@@ -131,7 +131,7 @@ Validation note, 2026-03-31:
   - this is the first real kill shot against the false public center:
     runtime/publication consumers now have to choose an explicit surface.
   - replay/test debug imports now target
-    `src/terminal/core/session/session_debug_api.zig` directly, so there is no
+    `src/terminal/core/session/debug_api.zig` directly, so there is no
     extra flat `terminal_debug.zig` shim pretending to be a core peer.
   - `src/terminal/core/session_public_types.zig` is deleted; `pty_terminal_runtime.zig`
     now imports direct ownership modules instead of routing public-facing types
@@ -155,7 +155,7 @@ Validation note, 2026-03-31:
     protocol `appendHyperlink` wrapper are no longer written inline on
     `pty_terminal_runtime.zig`; those exceptions now route through the explicit
     publication/protocol API seams too.
-  - `src/terminal/core/session/session_debug_api.zig` now owns the debug method
+  - `src/terminal/core/session/debug_api.zig` now owns the debug method
     group directly; `pty_terminal_runtime.zig`, replay, and tests point at the
     real seam instead of routing through an extra flat wrapper.
   - `src/terminal/core/session/session_lifecycle_api.zig` now owns the lifecycle and

@@ -89,7 +89,7 @@ Judgment:
   are the right direction because they give native/FFI/widget consumers an
   enforced explicit entrypoint instead of a broad root barrel
 - replay/test debug imports are cleaner now too: they target
-  `src/terminal/core/session/session_debug_api.zig` directly instead of going
+  `src/terminal/core/session/debug_api.zig` directly instead of going
   through a flat `terminal_debug.zig` shim
 - the old mixed alias hub `src/terminal/core/session_public_types.zig` is also
   gone, which is an honest improvement: `pty_terminal_runtime.zig` now imports
@@ -113,7 +113,7 @@ Judgment:
   `pty_terminal_runtime.zig`
 - the remaining publication/view-cache helper stubs and the special-case
   `appendHyperlink` wrapper no longer live inline on `pty_terminal_runtime.zig`
-- `src/terminal/core/session/session_debug_api.zig` now owns the debug method group
+- `src/terminal/core/session/debug_api.zig` now owns the debug method group
   instead of making `pty_terminal_runtime.zig` the visible debug authority
 - `src/terminal/core/session/session_lifecycle_api.zig` now owns the lifecycle and
   composition block instead of leaving those direct methods written on the root

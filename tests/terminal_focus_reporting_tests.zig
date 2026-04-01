@@ -3,7 +3,7 @@ const builtin = @import("builtin");
 const posix = std.posix;
 
 const terminal_runtime = @import("../src/terminal/core/terminal_runtime.zig");
-const terminal_debug = @import("../src/terminal/core/session/session_debug_api.zig");
+const terminal_debug = @import("../src/terminal/core/session/debug_api.zig");
 const pty_mod = @import("../src/terminal/io/pty.zig");
 const terminal_widget_mod = @import("../src/ui/widgets/terminal_widget.zig");
 
