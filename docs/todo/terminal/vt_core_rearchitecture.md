@@ -290,8 +290,8 @@ Validation note, 2026-03-31:
   - dirty/render summary interpretation is moving there too:
     - `dirtySummary(...)`
     now gives widget draw one publication answer for dirty-tag, current dirty
-    reason, dirty-row count, and damage spans instead of rebuilding that state
-    inline from raw cache fields
+    reason, dirty-row count, damage spans, and damage bounds instead of
+    rebuilding that state inline from raw cache fields
   - baseline widget draw state is moving there too:
     - `drawStateInfo(...)`
     now gives widget draw one publication-owned summary for rows, cols,

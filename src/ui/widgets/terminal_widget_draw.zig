@@ -886,10 +886,10 @@ pub fn drawPrepared(
                             active_viewport_shift_rows,
                             @intFromBool(active_shift_exposed_only),
                             scroll_offset,
-                            cache.damage.start_row,
-                            cache.damage.end_row,
-                            cache.damage.start_col,
-                            cache.damage.end_col,
+                            dirty_summary.damage_start_row,
+                            dirty_summary.damage_end_row,
+                            dirty_summary.damage_start_col,
+                            dirty_summary.damage_end_col,
                         },
                     );
                 } else {

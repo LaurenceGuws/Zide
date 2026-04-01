@@ -195,7 +195,8 @@ Status note, 2026-03-31:
     more raw cache-flag reads in the UI path
   - dirty/render summary interpretation should also come from publication-owned
     summaries like `dirtySummary(...)` instead of another inline cache-state
-    reconstruction in widget draw
+    reconstruction in widget draw; that includes damage bounds as well as
+    coarse dirty spans
   - baseline widget draw state should also come from publication-owned
     summaries like `drawStateInfo(...)` instead of reading rows/cols/viewport/
     render/sync/kitty/cursor facts piecemeal from the cache

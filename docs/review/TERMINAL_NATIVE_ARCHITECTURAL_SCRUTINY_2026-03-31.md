@@ -257,8 +257,8 @@ Judgment:
     `lifecycleTransitionInfo` instead of repeating inline alt-state
     interpretation in draw code
   - widget draw now also asks publication for `dirtySummary` instead of
-    rebuilding dirty-tag/current-reason/dirty-row-count/damage-span state
-    inline from raw cache fields
+    rebuilding dirty-tag/current-reason/dirty-row-count/damage-span/bounds
+    state inline from raw cache fields
   - widget draw now also asks publication for `drawStateInfo` instead of
     pulling rows/cols/viewport/render/sync/kitty/cursor facts piecemeal from
     raw cache state

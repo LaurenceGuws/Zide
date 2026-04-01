@@ -102,6 +102,10 @@ pub const DirtySummary = struct {
     dirty_rows_count: usize,
     damage_row_span: usize,
     damage_col_span: usize,
+    damage_start_row: usize,
+    damage_end_row: usize,
+    damage_start_col: usize,
+    damage_end_col: usize,
 };
 
 pub const DrawStateInfo = struct {
@@ -253,6 +257,10 @@ pub fn dirtySummary(cache: *const RenderCache) DirtySummary {
         .dirty_rows_count = dirty_rows_count,
         .damage_row_span = damage_row_span,
         .damage_col_span = damage_col_span,
+        .damage_start_row = cache.damage.start_row,
+        .damage_end_row = cache.damage.end_row,
+        .damage_start_col = cache.damage.start_col,
+        .damage_end_col = cache.damage.end_col,
     };
 }
 
