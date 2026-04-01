@@ -61,7 +61,6 @@ Primary files:
 - `src/terminal/core/pty_terminal_runtime.zig`
 - `src/terminal/core/terminal_runtime.zig`
 - `src/terminal/core/terminal_publication.zig`
-- `src/terminal/core/terminal_debug.zig`
 
 Evidence:
 
@@ -87,9 +86,11 @@ Judgment:
 - the newly introduced explicit surfaces
   - `src/terminal/core/terminal_runtime.zig`
   - `src/terminal/core/publication/terminal_publication.zig`
-  - `src/terminal/core/terminal_debug.zig`
-  are the right direction because they give native/replay/FFI/widget consumers
-  an enforced explicit entrypoint instead of a broad root barrel
+  are the right direction because they give native/FFI/widget consumers an
+  enforced explicit entrypoint instead of a broad root barrel
+- replay/test debug imports are cleaner now too: they target
+  `src/terminal/core/session/session_debug_api.zig` directly instead of going
+  through a flat `terminal_debug.zig` shim
 - the old mixed alias hub `src/terminal/core/session_public_types.zig` is also
   gone, which is an honest improvement: `pty_terminal_runtime.zig` now imports
   direct owners instead of hiding public-facing types behind one more helper

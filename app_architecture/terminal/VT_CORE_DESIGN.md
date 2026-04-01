@@ -96,8 +96,9 @@ Status note, 2026-03-31:
   - `src/terminal/core/publication/terminal_publication.zig` now acts as the explicit
     publication/type surface for native widget, replay-harness, and FFI
     consumers
-  - `src/terminal/core/terminal_debug.zig` now acts as the explicit test/replay
-    debug surface instead of letting debug authority piggyback on runtime
+  - test/replay debug imports now target
+    `src/terminal/core/session/session_debug_api.zig` directly instead of going
+    through a flat `terminal_debug.zig` shim
   - `src/terminal/core/session_public_types.zig` is gone, so
     `pty_terminal_runtime.zig` no longer gets to hide direct ownership behind a
     mixed alias hub

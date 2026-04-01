@@ -130,9 +130,9 @@ Validation note, 2026-03-31:
   - there is no broad root barrel left in live call paths.
   - this is the first real kill shot against the false public center:
     runtime/publication consumers now have to choose an explicit surface.
-  - `src/terminal/core/terminal_debug.zig` now owns replay/test debug helpers,
-    so `terminal_runtime.zig` no longer exports test/debug authority as if it
-    were part of normal host runtime ownership.
+  - replay/test debug imports now target
+    `src/terminal/core/session/session_debug_api.zig` directly, so there is no
+    extra flat `terminal_debug.zig` shim pretending to be a core peer.
   - `src/terminal/core/session_public_types.zig` is deleted; `pty_terminal_runtime.zig`
     now imports direct ownership modules instead of routing public-facing types
     through a mixed alias hub.
@@ -155,9 +155,9 @@ Validation note, 2026-03-31:
     protocol `appendHyperlink` wrapper are no longer written inline on
     `pty_terminal_runtime.zig`; those exceptions now route through the explicit
     publication/protocol API seams too.
-  - `src/terminal/core/session/session_debug_api.zig` now owns the root debug method
-    group, so `terminal_debug.zig` and `pty_terminal_runtime.zig` both point at an
-    explicit debug API seam instead of treating the session root as the owner.
+  - `src/terminal/core/session/session_debug_api.zig` now owns the debug method
+    group directly; `pty_terminal_runtime.zig`, replay, and tests point at the
+    real seam instead of routing through an extra flat wrapper.
   - `src/terminal/core/session/session_lifecycle_api.zig` now owns the lifecycle and
     composition block (`init`, screen access, input pressure, lock state,
     resize, shutdown-facing methods) that was still written directly on the
