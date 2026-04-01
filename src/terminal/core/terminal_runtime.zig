@@ -129,14 +129,10 @@ pub const PtyTerminalRuntime = struct {
 
     pub const sendKey = session_input.sendKey;
     pub const sendKeyAction = session_input.sendKeyAction;
-    pub const sendKeyActionWithMetadata = session_input.sendKeyActionWithMetadata;
     pub const sendKeypad = session_input.sendKeypad;
-    pub const sendKeypadAction = session_input.sendKeypadAction;
     pub const appKeypadEnabled = session_input.appKeypadEnabled;
     pub const appCursorKeysEnabled = session_input.appCursorKeysEnabled;
     pub const sendChar = session_input.sendChar;
-    pub const sendCharAction = session_input.sendCharAction;
-    pub const sendCharActionWithMetadata = session_input.sendCharActionWithMetadata;
     pub const reportMouseEvent = session_input.reportMouseEvent;
     pub const reportAlternateScrollWheel = session_input.reportAlternateScrollWheel;
     pub const sendText = session_input.sendText;

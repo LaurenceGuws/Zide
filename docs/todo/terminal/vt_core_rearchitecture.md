@@ -476,6 +476,13 @@ Validation note, 2026-03-31:
     `session/host_queries.zig`, `session/config.zig`, and `session/runtime.zig`
     instead of inflating the stable runtime surface with app-only convenience
     methods
+  - the stable runtime surface also no longer carries low-level input-encoder
+    plumbing:
+    `sendKeyActionWithMetadata`, `sendKeypadAction`, `sendCharAction`, and
+    `sendCharActionWithMetadata` now route through
+    `src/terminal/core/session/input.zig` directly from the key encoder and
+    widget keyboard path instead of pretending to be host-level runtime
+    contract
   - protocol query helpers are shrinking the same way:
     runtime/focus tests now use `terminal_core_protocol.zig` directly for
     `getCell` / `getCursorPos`, so those no longer sit on the wrapper surface

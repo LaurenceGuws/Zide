@@ -2,6 +2,7 @@ const std = @import("std");
 const builtin = @import("builtin");
 
 const terminal_runtime = @import("../../terminal/core/terminal_runtime.zig");
+const session_input = @import("../../terminal/core/session/input.zig");
 const terminal_types = @import("../../terminal/model/types.zig");
 const input_mod = @import("../../terminal/input/input.zig");
 const key_encoder = @import("../../terminal/input/key_encoder.zig");
@@ -125,7 +126,7 @@ pub fn handleKeyboardInput(
                 if (report_text_enabled) {
                     if (key_encoder.baseCharForKey(key)) |base_char| {
                         clearLiveState(self);
-                        try self.session.sendCharActionWithMetadata(base_char, event_mod, .release, keyAltMeta(renderer, altmeta_log, event.key, base_char));
+                        try session_input.sendCharActionWithMetadata(self.session, base_char, event_mod, .release, keyAltMeta(renderer, altmeta_log, event.key, base_char));
                         key_log.logf(.info, "send char key={d} action=release base_char={d}", .{ @intFromEnum(key), base_char });
                         result.handled = true;
                         result.skip_chars = true;
@@ -153,7 +154,7 @@ pub fn handleKeyboardInput(
             if (report_text_enabled) {
                 if (key_encoder.baseCharForKey(key)) |base_char| {
                     clearLiveState(self);
-                    try self.session.sendCharActionWithMetadata(base_char, event_mod, action, keyAltMeta(renderer, altmeta_log, event.key, base_char));
+                    try session_input.sendCharActionWithMetadata(self.session, base_char, event_mod, action, keyAltMeta(renderer, altmeta_log, event.key, base_char));
                     key_log.logf(.info, "send char key={d} action={s} base_char={d}", .{ @intFromEnum(key), @tagName(action), base_char });
                     result.handled = true;
                     result.skip_chars = true;
@@ -194,7 +195,7 @@ pub fn handleKeyboardInput(
                     if (char < 32) continue;
                     const alt_meta = textAltMeta(renderer, altmeta_log, text_event, pending_text_key, char);
                     clearLiveState(self);
-                    try self.session.sendCharActionWithMetadata(char, mod, .press, alt_meta);
+                    try session_input.sendCharActionWithMetadata(self.session, char, mod, .press, alt_meta);
                     result.handled = true;
                     pending_text_key = null;
                 },
