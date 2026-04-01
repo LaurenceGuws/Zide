@@ -195,6 +195,12 @@ Validation note, 2026-03-31:
   is now moved below parser hooks into `src/terminal/core/terminal_core_text.zig`.
   The remaining gap is that the text-write contract is still session-shaped and
   not yet reduced to a cleaner engine-owned boundary.
+  Progress note, 2026-04-01, later:
+  - printable text no longer routes through `parser_hooks.zig` at all
+  - `terminal_core_dispatch.zig` now sends codepoint/ASCII traffic directly to
+    `terminal_core_text.zig`
+  - `parser_hooks.zig` is reduced to parser-control surfaces instead of
+    continuing to masquerade as the owner of printable semantics
 - [ ] `VTCORE-05` Simplify snapshot and render publication.
   Notes: the explicit publication center now lives in
   `src/terminal/core/terminal_publication.zig`, and the old live

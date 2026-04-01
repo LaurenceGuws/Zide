@@ -477,6 +477,11 @@ Judgment:
    center, and shrink `PtyTerminalRuntime` into a narrow host/runtime wrapper.
 2. Delete parser-owned semantic text handling from `parser_hooks.zig` by moving
    printable write behavior fully below the VT action boundary.
+   Progress note, 2026-04-01, later:
+   printable text no longer routes through `parser_hooks.zig`; that seam now
+   handles parser-control surfaces only, while printable codepoint/ASCII
+   dispatch goes directly through `terminal_core_dispatch.zig` into
+   `terminal_core_text.zig`.
 3. Keep shrinking `pty_terminal_runtime.zig` now that `terminal.zig` is dead, and
    stop re-exporting broad mixed ownership through runtime/publication helper
    surfaces where direct ownership types would be clearer.

@@ -2,6 +2,7 @@ const csi_mod = @import("../parser/csi.zig");
 const parser_mod = @import("../parser/parser.zig");
 const parser_hooks = @import("parser_hooks.zig");
 const control_handlers = @import("control_handlers.zig");
+const terminal_core_text = @import("terminal_core_text.zig");
 
 pub fn handleControl(self: anytype, byte: u8) void {
     control_handlers.handleControl(self, byte);
@@ -24,11 +25,11 @@ pub fn handleCsi(self: anytype, action: csi_mod.CsiAction) void {
 }
 
 pub fn handleCodepoint(self: anytype, codepoint: u32) void {
-    parser_hooks.handleCodepoint(parser_hooks.SessionFacade.from(self), codepoint);
+    terminal_core_text.handleCodepoint(terminal_core_text.TextContext.from(self), codepoint);
 }
 
 pub fn handleAsciiSlice(self: anytype, bytes: []const u8) void {
-    parser_hooks.handleAsciiSlice(parser_hooks.SessionFacade.from(self), bytes);
+    terminal_core_text.handleAsciiSlice(terminal_core_text.TextContext.from(self), bytes);
 }
 
 pub fn newline(self: anytype) void {

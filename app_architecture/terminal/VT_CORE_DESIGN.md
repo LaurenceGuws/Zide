@@ -73,6 +73,9 @@ Status note, 2026-03-31:
 - The current strategic enemies are now explicit:
   - `PtyTerminalRuntime` as a broad fake center
   - parser-hook semantic text handling above the VT boundary
+  - the first correction is now in: printable text no longer routes through
+    `parser_hooks.zig`; the remaining gap is the session-shaped text contract
+    still used by `terminal_core_text.zig`
   - duplicated publication/cache truth
   - oversized native widget/render coordination around terminal publication
 - The current operating rule is sequential but ruthless:
