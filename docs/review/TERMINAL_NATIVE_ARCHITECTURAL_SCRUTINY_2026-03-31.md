@@ -377,6 +377,10 @@ Evidence:
   `src/terminal/core/session/runtime.zig`, and lock/tryLock/unlock now live in
   `src/terminal/core/session/control.zig` instead of remaining inline on
   `pty_terminal_runtime.zig`
+- the focus-reporting/runtime tests no longer lean on an implicit
+  wrapper-looking method surface for `getCell` / `getCursorPos`; they now call
+  `src/terminal/core/protocol/terminal_core_protocol.zig` directly, so the
+  test surface no longer reinforces phantom wrapper ownership
 - the outer CSI forwarding shell is gone too:
   `terminal_protocol_api.zig` now routes CSI directly into
   `src/terminal/protocol/csi.zig` without stepping through an extra

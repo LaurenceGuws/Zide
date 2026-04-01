@@ -225,6 +225,10 @@ Validation note, 2026-03-31:
     `src/terminal/core/session/runtime.zig`, and lock/tryLock/unlock now live
     in `src/terminal/core/session/control.zig` instead of sitting inline on
     `pty_terminal_runtime.zig`
+  - the focus-reporting/runtime tests no longer lean on an implicit wrapper
+    method surface for `getCell` / `getCursorPos`; they now call
+    `src/terminal/core/protocol/terminal_core_protocol.zig` directly, so test
+    code no longer reinforces phantom wrapper ownership for those query helpers
   - the remaining publication/view-cache helper stubs and the special-case
     protocol `appendHyperlink` wrapper are no longer written inline on
     `pty_terminal_runtime.zig`; those exceptions now route through the explicit
