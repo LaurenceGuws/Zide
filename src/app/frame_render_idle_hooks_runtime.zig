@@ -8,6 +8,53 @@ const shared_types = @import("../types/mod.zig");
 
 const layout_types = shared_types.layout;
 
+fn computeLayout(state: anytype, width: f32, height: f32) layout_types.WidgetLayout {
+    return app_ui_layout_runtime.computeLayout(state, width, height);
+}
+
+fn applyCurrentTabBarWidthMode(state: anytype) void {
+    app_tab_bar_width.applyForMode(
+        &state.tab_bar,
+        state.app_mode,
+        state.terminal_window_chrome_mode,
+        state.editor_tab_bar_width_mode,
+        state.terminal_tab_bar_width_mode,
+    );
+}
+
+fn terminalCloseConfirmActive(state: anytype) bool {
+    return app_terminal_close_confirm_active_runtime.reconcile(state);
+}
+
+fn drawFrame(state: anytype) void {
+    const State = @TypeOf(state.*);
+    app_draw_frame_runtime.draw(
+        state,
+        state.shell,
+        @ptrCast(state),
+        .{
+            .compute_layout = struct {
+                fn inner(inner_raw: *anyopaque, width: f32, height: f32) layout_types.WidgetLayout {
+                    const inner_state: *State = @ptrCast(@alignCast(inner_raw));
+                    return computeLayout(inner_state, width, height);
+                }
+            }.inner,
+            .apply_current_tab_bar_width_mode = struct {
+                fn inner(inner_raw: *anyopaque) void {
+                    const inner_state: *State = @ptrCast(@alignCast(inner_raw));
+                    applyCurrentTabBarWidthMode(inner_state);
+                }
+            }.inner,
+            .terminal_close_confirm_active = struct {
+                fn inner(inner_raw: *anyopaque) bool {
+                    const inner_state: *State = @ptrCast(@alignCast(inner_raw));
+                    return terminalCloseConfirmActive(inner_state);
+                }
+            }.inner,
+        },
+    );
+}
+
 pub fn handle(
     state: anytype,
     input_batch: *shared_types.input.InputBatch,
@@ -27,37 +74,7 @@ pub fn handle(
             .draw = struct {
                 fn cb(cb_raw: *anyopaque) void {
                     const cb_state: *State = @ptrCast(@alignCast(cb_raw));
-                    app_draw_frame_runtime.draw(
-                        cb_state,
-                        cb_state.shell,
-                        cb_raw,
-                        .{
-                            .compute_layout = struct {
-                                fn inner(inner_raw: *anyopaque, width: f32, height: f32) layout_types.WidgetLayout {
-                                    const inner_state: *State = @ptrCast(@alignCast(inner_raw));
-                                    return app_ui_layout_runtime.computeLayout(inner_state, width, height);
-                                }
-                            }.inner,
-                            .apply_current_tab_bar_width_mode = struct {
-                                fn inner(inner_raw: *anyopaque) void {
-                                    const inner_state: *State = @ptrCast(@alignCast(inner_raw));
-                                    app_tab_bar_width.applyForMode(
-                                        &inner_state.tab_bar,
-                                        inner_state.app_mode,
-                                        inner_state.terminal_window_chrome_mode,
-                                        inner_state.editor_tab_bar_width_mode,
-                                        inner_state.terminal_tab_bar_width_mode,
-                                    );
-                                }
-                            }.inner,
-                            .terminal_close_confirm_active = struct {
-                                fn inner(inner_raw: *anyopaque) bool {
-                                    const inner_state: *State = @ptrCast(@alignCast(inner_raw));
-                                    return app_terminal_close_confirm_active_runtime.reconcile(inner_state);
-                                }
-                            }.inner,
-                        },
-                    );
+                    drawFrame(cb_state);
                 }
             }.cb,
             .maybe_log_metrics = struct {

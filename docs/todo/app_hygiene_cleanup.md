@@ -217,6 +217,11 @@ Progress note, 2026-04-01:
   literal
 - this reduces the amount of policy and allocation choreography mixed directly
   into `initWithMode`
+- `src/app/frame_render_idle_hooks_runtime.zig` now centralizes render-idle
+  layout, tab-bar-width, modal-state, and draw dispatch policy in named
+  helpers instead of inline hook bodies
+- this keeps render behavior unchanged while making the idle/render glue read
+  more like orchestration than callback plumbing
 
 ## Investigation Follow-up
 
