@@ -323,12 +323,12 @@ test "terminal locked scroll refresh consumes pending view cache update" {
     defer session.unlock();
 
     session.scrollBy(1);
-    try std.testing.expect(session.publication.view_cache_pending.load(.acquire));
+    try std.testing.expect(session.viewRefreshPending());
     try std.testing.expectEqual(@as(usize, 0), session.renderCache().scroll_offset);
 
     session.updateViewCacheForScrollLocked();
 
-    try std.testing.expect(!session.publication.view_cache_pending.load(.acquire));
+    try std.testing.expect(!session.viewRefreshPending());
     try std.testing.expectEqual(session.snapshot().scrollback_offset, session.renderCache().scroll_offset);
 }
 

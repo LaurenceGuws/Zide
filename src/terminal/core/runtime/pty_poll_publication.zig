@@ -22,10 +22,10 @@ pub fn publishPtyPollResult(self: anytype, had_data: bool, processed: usize, inp
 
     self.runtime.io_mutex.lock();
     if (self.runtime.io_buffer.items.len > self.runtime.io_read_offset) {
-        self.publication.output_pending.store(true, .release);
+        terminal_publication.markOutputPending(self);
     }
     self.runtime.io_mutex.unlock();
-    if (self.publication.view_cache_pending.load(.acquire)) {
+    if (terminal_publication.viewRefreshPending(self)) {
         self.control.state_mutex.lock();
         _ = terminal_publication.applyPendingViewRefreshLocked(self, "pty_pending_offset");
         self.control.state_mutex.unlock();
@@ -46,7 +46,7 @@ pub fn publishTransportPollResult(self: anytype, had_data: bool, processed: usiz
         _ = input_pressure;
         self.control.last_parse_log_ms = end_ms;
     }
-    if (self.publication.view_cache_pending.load(.acquire)) {
+    if (terminal_publication.viewRefreshPending(self)) {
         const publish_lock_start_ns = std.time.nanoTimestamp();
         _ = terminal_publication.applyPendingViewRefreshLocked(self, "transport_pending_offset");
         publish_lock_hold_ns.* += std.time.nanoTimestamp() - publish_lock_start_ns;

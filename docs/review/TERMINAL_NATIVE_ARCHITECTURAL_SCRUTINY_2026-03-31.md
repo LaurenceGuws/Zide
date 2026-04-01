@@ -381,6 +381,12 @@ Evidence:
   wrapper-looking method surface for `getCell` / `getCursorPos`; they now call
   `src/terminal/core/protocol/terminal_core_protocol.zig` directly, so the
   test surface no longer reinforces phantom wrapper ownership
+- publication-owner flag usage is tighter too:
+  `src/terminal/core/runtime/pty_poll_publication.zig` and the locked-scroll
+  reflow test now use publication-owned helpers like `markOutputPending()` and
+  `viewRefreshPending()` instead of peeking at raw publication flags, and the
+  dead constant residue at the bottom of
+  `src/terminal/core/pty_terminal_runtime.zig` is gone
 - the outer CSI forwarding shell is gone too:
   `terminal_protocol_api.zig` now routes CSI directly into
   `src/terminal/protocol/csi.zig` without stepping through an extra

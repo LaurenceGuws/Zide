@@ -229,14 +229,3 @@ pub const PtyTerminalRuntime = struct {
     pub const syncUpdatesActive = terminal_publication.syncUpdatesActive;
     pub const clearPublishedDamageIfGeneration = terminal_publication.clearPublishedDamageIfGeneration;
 };
-
-const default_scrollback_rows: usize = 1000;
-const key_mode_disambiguate: u32 = 1;
-const key_mode_report_all_event_types: u32 = 2;
-const key_mode_report_alternate_key: u32 = 4;
-const key_mode_report_text: u32 = 8;
-const key_mode_embed_text: u32 = 16;
-
-const mouse_button_left_mask: u8 = 1;
-const mouse_button_middle_mask: u8 = 2;
-const mouse_button_right_mask: u8 = 4;

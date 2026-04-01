@@ -236,6 +236,12 @@ Status note, 2026-03-31:
     wrapper-looking method surface for `getCell` / `getCursorPos`; they now
     call `terminal_core_protocol.zig` directly, so the test surface no longer
     suggests those query helpers belong to `PtyTerminalRuntime`
+  - publication-owner flag usage is tighter too:
+    `src/terminal/core/runtime/pty_poll_publication.zig` and the locked-scroll
+    reflow test now use publication-owned helpers like `markOutputPending()`
+    and `viewRefreshPending()` instead of peeking at raw publication flags, and
+    the dead constant residue at the bottom of
+    `src/terminal/core/pty_terminal_runtime.zig` is gone
   - the same direct-owner cleanup now applies in `workspace.zig`: wrapper
     composition reads as runtime/workspace ownership, and progress-state typing
     no longer comes through `pty_terminal_runtime.zig`
