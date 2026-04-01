@@ -77,6 +77,17 @@ pub const BackgroundRunInfo = struct {
     screen_reverse: bool,
 };
 
+pub const VisibleViewDumpInfo = struct {
+    rows: usize,
+    cols: usize,
+    generation: u64,
+    scroll_offset: usize,
+    alt_active: bool,
+    cursor: CursorPos,
+    draw_cursor_visible: bool,
+    screen_reverse: bool,
+};
+
 pub const CursorPos = types.CursorPos;
 pub const Cell = types.Cell;
 pub const CellAttrs = types.CellAttrs;
@@ -142,6 +153,21 @@ pub fn backgroundRunInfo(cache: *const RenderCache, row: usize) BackgroundRunInf
         .cursor_here = cursor_here,
         .cursor_col = if (cursor_here) cache.cursor.col else null,
         .screen_reverse = cache.screen_reverse,
+    };
+}
+
+pub fn visibleViewDumpInfo(cache: *const RenderCache) VisibleViewDumpInfo {
+    const viewport = viewportInfo(cache);
+    const render_state = renderStateInfo(cache);
+    return .{
+        .rows = cache.rows,
+        .cols = cache.cols,
+        .generation = cache.generation,
+        .scroll_offset = viewport.scroll_offset,
+        .alt_active = cache.alt_active,
+        .cursor = cache.cursor,
+        .draw_cursor_visible = render_state.draw_cursor_visible,
+        .screen_reverse = render_state.screen_reverse,
     };
 }
 

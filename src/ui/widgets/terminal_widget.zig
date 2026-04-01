@@ -233,26 +233,25 @@ pub const TerminalWidget = struct {
     pub fn dumpVisibleAsciiView(self: *TerminalWidget) !void {
         var out = std.ArrayList(u8).empty;
         defer out.deinit(self.session.allocator);
-        const render_state = terminal_publication.renderStateInfo(&self.draw_cache);
-        const viewport = terminal_publication.viewportInfo(&self.draw_cache);
+        const dump_info = terminal_publication.visibleViewDumpInfo(&self.draw_cache);
 
         try out.writer(self.session.allocator).print(
             "# Zide terminal visible-view dump\npath={s}\nrows={d} cols={d} generation={d} scroll_offset={d} alt_active={d} cursor={d}:{d} cursor_visible={d} screen_reverse={d}\n",
             .{
                 visible_ascii_dump_path,
-                self.draw_cache.rows,
-                self.draw_cache.cols,
-                self.draw_cache.generation,
-                viewport.scroll_offset,
-                @intFromBool(self.draw_cache.alt_active),
-                self.draw_cache.cursor.row,
-                self.draw_cache.cursor.col,
-                @intFromBool(render_state.draw_cursor_visible),
-                @intFromBool(render_state.screen_reverse),
+                dump_info.rows,
+                dump_info.cols,
+                dump_info.generation,
+                dump_info.scroll_offset,
+                @intFromBool(dump_info.alt_active),
+                dump_info.cursor.row,
+                dump_info.cursor.col,
+                @intFromBool(dump_info.draw_cursor_visible),
+                @intFromBool(dump_info.screen_reverse),
             },
         );
 
-        try appendViewportColumnRuler(&out, self.session.allocator, self.draw_cache.cols);
+        try appendViewportColumnRuler(&out, self.session.allocator, dump_info.cols);
         try out.append(self.session.allocator, '\n');
 
         if (self.draw_cache.rows == 0 or self.draw_cache.cols == 0 or self.draw_cache.cells.items.len == 0) {

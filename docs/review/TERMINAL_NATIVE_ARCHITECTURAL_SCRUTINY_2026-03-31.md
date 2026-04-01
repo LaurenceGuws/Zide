@@ -247,6 +247,9 @@ Judgment:
   - widget debug/background-run helpers now also ask publication for
     `backgroundRunInfo` instead of reading cursor/screen-reverse state directly
     off raw cache fields
+  - widget visible-view diagnostics now also ask publication for
+    `visibleViewDumpInfo` instead of hand-assembling another cache header
+    inside the widget layer
   - that is the standard the rest of the publication war should keep:
     if a cache field is just restating derivable published state, it should die
 

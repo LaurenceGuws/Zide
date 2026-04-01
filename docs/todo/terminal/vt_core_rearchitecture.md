@@ -290,6 +290,10 @@ Validation note, 2026-03-31:
     now gives widget helpers one publication answer for cursor-presence and
     background-run reverse resolution instead of reading those raw cache flags
     directly
+  - widget dump diagnostics are moving there too:
+    - `visibleViewDumpInfo(...)`
+    now gives widget debug dumps one publication-owned header summary instead
+    of hand-assembling another cache-shaped view inline
   - `snapshot().generation` now reports the generation of the published render
     cache it actually returns, not a newer unpublished pending epoch
   - remaining gap: publication is still mirror-heavy because render-cache and
