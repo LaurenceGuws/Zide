@@ -194,6 +194,10 @@ Progress note, 2026-04-01:
 - `build_system/app_target_factory.zig` now owns runtime app entrypoint
   creation, while `build_system/test_target_factory.zig` owns SDL/libc test
   artifact construction
+- Lua metadata tool wiring now lives under `build_system/tooling_graph.zig`
+  instead of being inlined directly in `build_system/build_entry.zig`
+- `build_system/build_entry.zig` is now closer to a pure top-level build
+  composition entrypoint
 
 ### AH-04 App Orchestration Honesty
 
