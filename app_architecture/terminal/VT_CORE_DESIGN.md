@@ -275,6 +275,10 @@ Status note, 2026-03-31:
   - raw generation-cache lookup is now publication-internal too:
     host code only gets the locked publication contract for generation lookup,
     not the raw unlocked storage walk
+  - the CSI reply/query path is flatter too:
+    `src/terminal/protocol/csi.zig` now routes directly to
+    `csi_reply.zig` / `csi_mode_query.zig` without carrying another local
+    forwarding slab for DA/DSR/window-op reply and query handling
   - the same direct-owner cleanup now applies in `workspace.zig`: wrapper
     composition reads as runtime/workspace ownership, and progress-state typing
     no longer comes through `pty_terminal_runtime.zig`

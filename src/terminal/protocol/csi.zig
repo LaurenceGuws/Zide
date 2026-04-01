@@ -38,10 +38,6 @@ fn effectiveSgrParamCount(action: parser_csi.CsiAction) usize {
     return raw_count;
 }
 
-const CursorReport = csi_reply.CursorReport;
-const QueryState = csi_reply.QueryState;
-const ScreenState = csi_reply.ScreenState;
-
 pub fn handleCsi(self: anytype, action: parser_csi.CsiAction) void {
     handleCsiOnSession(self, action);
 }
@@ -102,7 +98,7 @@ fn handleCsiOnSession(self: anytype, action: parser_csi.CsiAction) void {
                 var writer = writer_guard;
                 defer writer.unlock();
                 const screen = self.core.activeScreen();
-                handleDsrQuery(.{
+                csi_reply.handleDsrQuery(.{
                     .color_scheme_dark = self.interaction.color_scheme_dark,
                     .cell_height = self.interaction.cell_height,
                     .cell_width = self.interaction.cell_width,
@@ -121,7 +117,7 @@ fn handleCsiOnSession(self: anytype, action: parser_csi.CsiAction) void {
                 if (self.lockPtyWriter()) |writer_guard| {
                     var writer = writer_guard;
                     defer writer.unlock();
-                    handleDaQuery(&writer);
+                    csi_reply.handleDaQuery(&writer);
                 }
             }
         },
@@ -131,7 +127,7 @@ fn handleCsiOnSession(self: anytype, action: parser_csi.CsiAction) void {
                     var writer = writer_guard;
                     defer writer.unlock();
                     const screen = self.core.activeScreen();
-                    handleWindowOpQuery(.{
+                    csi_reply.handleWindowOpQuery(.{
                         .color_scheme_dark = self.interaction.color_scheme_dark,
                         .cell_height = self.interaction.cell_height,
                         .cell_width = self.interaction.cell_width,
@@ -157,7 +153,7 @@ fn handleCsiOnSession(self: anytype, action: parser_csi.CsiAction) void {
                 if (self.lockPtyWriter()) |writer_guard| {
                     var writer = writer_guard;
                     defer writer.unlock();
-                    handleDecrqmQuery(&writer, action, p[0], csi_mode_query.modeSnapshot(self));
+                    csi_mode_query.handleDecrqmQuery(&writer, action, p[0], csi_mode_query.modeSnapshot(self));
                 }
             }
         },
@@ -171,22 +167,6 @@ fn handleCsiOnSession(self: anytype, action: parser_csi.CsiAction) void {
         },
         else => {},
     }
-}
-
-pub fn writeDaPrimaryReply(pty: anytype) bool {
-    return csi_reply.writeDaPrimaryReply(pty);
-}
-
-fn writeDaPrimaryReplyWithWriter(writer: anytype) bool {
-    return csi_reply.writeDaPrimaryReplyWithWriter(writer);
-}
-
-pub fn writeDsrReply(pty: anytype, leader: u8, mode: i32, row_1: usize, col_1: usize) bool {
-    return csi_reply.writeDsrReply(pty, leader, mode, row_1, col_1);
-}
-
-fn writeDsrReplyWithWriter(writer: anytype, leader: u8, mode: i32, row_1: usize, col_1: usize) bool {
-    return csi_reply.writeDsrReplyWithWriter(writer, leader, mode, row_1, col_1);
 }
 
 pub fn writeDecrqmReply(pty: anytype, private: bool, mode: i32, state: DecrpmState) bool {
@@ -209,66 +189,6 @@ pub fn writeDecrqmReplyWithWriter(writer: anytype, private: bool, mode: i32, sta
         return false;
     };
     return true;
-}
-
-fn handleDsrQuery(query: QueryState, writer: anytype, screen: ScreenState, action: parser_csi.CsiAction, param_len: usize, params: [parser_csi.max_params]i32) void {
-    csi_reply.handleDsrQuery(query, writer, screen, action, param_len, params);
-}
-
-fn handleDaQuery(writer: anytype) void {
-    csi_reply.handleDaQuery(writer);
-}
-
-fn handleWindowOpQuery(query: QueryState, writer: anytype, screen: ScreenState, param_len: usize, params: [parser_csi.max_params]i32) void {
-    csi_reply.handleWindowOpQuery(query, writer, screen, param_len, params);
-}
-
-fn handleDecrqmQuery(writer: anytype, action: parser_csi.CsiAction, mode: i32, snapshot: ModeSnapshot) void {
-    csi_mode_query.handleDecrqmQuery(writer, action, mode, snapshot);
-}
-
-fn writeConst(writer: anytype, seq: []const u8) bool {
-    return csi_reply.writeConst(writer, seq);
-}
-
-pub fn writeColorSchemePreferenceReply(pty: anytype, dark: bool) bool {
-    return csi_reply.writeColorSchemePreferenceReply(pty, dark);
-}
-
-fn writeColorSchemePreferenceReplyWithWriter(writer: anytype, dark: bool) bool {
-    return csi_reply.writeColorSchemePreferenceReplyWithWriter(writer, dark);
-}
-
-pub fn writeWindowOpCharsReply(pty: anytype, rows: u16, cols: u16) bool {
-    return csi_reply.writeWindowOpCharsReply(pty, rows, cols);
-}
-
-fn writeWindowOpCharsReplyWithWriter(writer: anytype, rows: u16, cols: u16) bool {
-    return csi_reply.writeWindowOpCharsReplyWithWriter(writer, rows, cols);
-}
-
-pub fn writeWindowOpScreenCharsReply(pty: anytype, rows: u16, cols: u16) bool {
-    return csi_reply.writeWindowOpScreenCharsReply(pty, rows, cols);
-}
-
-fn writeWindowOpScreenCharsReplyWithWriter(writer: anytype, rows: u16, cols: u16) bool {
-    return csi_reply.writeWindowOpScreenCharsReplyWithWriter(writer, rows, cols);
-}
-
-pub fn writeWindowOpPixelsReply(pty: anytype, height_px: u32, width_px: u32) bool {
-    return csi_reply.writeWindowOpPixelsReply(pty, height_px, width_px);
-}
-
-fn writeWindowOpPixelsReplyWithWriter(writer: anytype, height_px: u32, width_px: u32) bool {
-    return csi_reply.writeWindowOpPixelsReplyWithWriter(writer, height_px, width_px);
-}
-
-pub fn writeWindowOpCellPixelsReply(pty: anytype, cell_h: u16, cell_w: u16) bool {
-    return csi_reply.writeWindowOpCellPixelsReply(pty, cell_h, cell_w);
-}
-
-fn writeWindowOpCellPixelsReplyWithWriter(writer: anytype, cell_h: u16, cell_w: u16) bool {
-    return csi_reply.writeWindowOpCellPixelsReplyWithWriter(writer, cell_h, cell_w);
 }
 
 pub fn applySgr(self: anytype, action: parser_csi.CsiAction) void {

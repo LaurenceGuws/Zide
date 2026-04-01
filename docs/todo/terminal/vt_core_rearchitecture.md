@@ -281,6 +281,11 @@ Validation note, 2026-03-31:
     `renderCacheForGeneration(...)` is now publication-internal, and host code
     only gets the locked publication contract through
     `renderCacheForGenerationLocked(...)`
+  - the CSI reply/query path lost another forwarding slab:
+    `src/terminal/protocol/csi.zig` no longer carries local DA/DSR/window-op
+    bounce helpers that only forwarded into `csi_reply.zig` /
+    `csi_mode_query.zig`, and CSI reply tests now target
+    `src/terminal/protocol/csi_reply.zig` directly for reply-owner behavior
   - the remaining publication/view-cache helper stubs and the special-case
     protocol `appendHyperlink` wrapper are no longer written inline on
     `pty_terminal_runtime.zig`; those exceptions now route through the explicit

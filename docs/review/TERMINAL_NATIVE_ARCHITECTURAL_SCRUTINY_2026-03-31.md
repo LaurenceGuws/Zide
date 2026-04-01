@@ -421,6 +421,10 @@ Evidence:
 - raw generation-cache lookup is now publication-internal too:
   host code only gets the locked publication contract for generation lookup,
   not the raw unlocked storage walk
+- the CSI reply/query path lost another forwarding slab:
+  `src/terminal/protocol/csi.zig` no longer carries local DA/DSR/window-op
+  bounce helpers that only forwarded into `csi_reply.zig` /
+  `csi_mode_query.zig`
 - the outer CSI forwarding shell is gone too:
   `terminal_protocol_api.zig` now routes CSI directly into
   `src/terminal/protocol/csi.zig` without stepping through an extra
