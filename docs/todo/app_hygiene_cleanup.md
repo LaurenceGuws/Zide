@@ -197,6 +197,12 @@ Progress note, 2026-04-01:
   dispatch
 - this keeps the hook contract intact while reducing closure-wall density in
   the main app update path
+- the update prelude side of the same file now lifts font-sample handling,
+  widget input sync, reload-notice ticking, focus routing, and input snapshot
+  bookkeeping into named helpers
+- that keeps the prelude callback contract intact while making the front half
+  of the app update path read like explicit policy steps instead of inline
+  callback shards
 
 ## Investigation Follow-up
 
