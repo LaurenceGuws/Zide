@@ -172,6 +172,12 @@ Status note, 2026-03-31:
     `ActivityMetadata`, `ProgressMetadata`, `ProgressState`,
     `SelectionGesture`, or `ClickSelectionResult`; active callers now import
     those names from `session/host_types.zig` and `selection.zig` directly
+  - the widget-facing input/selection type barrel is narrower too:
+    `src/terminal/core/terminal_runtime.zig` no longer re-exports
+    `Modifier`, `MouseButton`, `MouseEventKind`, `MouseEvent`,
+    `SelectionPos`, or `TerminalSelection`; widget callers now use
+    `terminal/model/types.zig` directly while the stable runtime surface keeps
+    only the remaining key/mod constant surface
   - the same direct-owner cleanup now applies in `workspace.zig`: wrapper
     composition reads as runtime/workspace ownership, and progress-state typing
     no longer comes through `pty_terminal_runtime.zig`

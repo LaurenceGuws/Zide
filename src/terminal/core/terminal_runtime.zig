@@ -39,12 +39,3 @@ pub const VTERM_MOD_NONE = types.VTERM_MOD_NONE;
 pub const VTERM_MOD_SHIFT = types.VTERM_MOD_SHIFT;
 pub const VTERM_MOD_ALT = types.VTERM_MOD_ALT;
 pub const VTERM_MOD_CTRL = types.VTERM_MOD_CTRL;
-
-pub const Key = types.Key;
-pub const Modifier = types.Modifier;
-pub const MouseButton = types.MouseButton;
-pub const MouseEventKind = types.MouseEventKind;
-pub const MouseEvent = types.MouseEvent;
-
-pub const SelectionPos = types.SelectionPos;
-pub const TerminalSelection = types.TerminalSelection;
