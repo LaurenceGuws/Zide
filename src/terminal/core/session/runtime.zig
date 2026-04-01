@@ -9,21 +9,23 @@ const input_modes = @import("../input_modes.zig");
 const session_lifecycle = @import("lifecycle.zig");
 const session_transport_runtime = @import("transport_runtime.zig");
 const session_thread_runtime = @import("thread_runtime.zig");
+const input_snapshot_mod = @import("input_snapshot.zig");
+const types_api = @import("types_api.zig");
 
 const Pty = pty_mod.Pty;
 const TerminalCore = terminal_core_mod.TerminalCore;
 const RenderCache = render_cache_mod.RenderCache;
-const InputSnapshot = @import("../pty_terminal_runtime.zig").InputSnapshot;
+const InputSnapshot = input_snapshot_mod.InputSnapshot;
 
-pub fn init(allocator: std.mem.Allocator, rows: u16, cols: u16, options: anytype) !*@import("../pty_terminal_runtime.zig").PtyTerminalRuntime {
-    const Session = @import("../pty_terminal_runtime.zig").PtyTerminalRuntime;
+pub fn init(self_type: type, allocator: std.mem.Allocator, rows: u16, cols: u16, options: anytype) !*self_type {
+    const Session = self_type;
     const session = try allocator.create(Session);
     const has_scrollback_rows = comptime @hasField(@TypeOf(options), "scrollback_rows");
     const has_cursor_style = comptime @hasField(@TypeOf(options), "cursor_style");
     const scrollback_rows = if (has_scrollback_rows)
-        options.scrollback_rows orelse @import("../pty_terminal_runtime.zig").default_scrollback_rows
+        options.scrollback_rows orelse types_api.default_scrollback_rows
     else
-        @import("../pty_terminal_runtime.zig").default_scrollback_rows;
+        types_api.default_scrollback_rows;
     const core = try TerminalCore.init(allocator, rows, cols, .{
         .scrollback_rows = scrollback_rows,
         .cursor_style = if (has_cursor_style) options.cursor_style else null,
@@ -152,7 +154,7 @@ pub fn pollBacklogHint(self: anytype) bool {
     return session_thread_runtime.pollBacklogHint(self);
 }
 
-pub fn lockPtyWriter(self: anytype) ?@import("../pty_terminal_runtime.zig").PtyWriteGuard {
+pub fn lockPtyWriter(self: anytype) ?terminal_transport.Writer {
     return session_transport_runtime.lockPtyWriter(self);
 }
 

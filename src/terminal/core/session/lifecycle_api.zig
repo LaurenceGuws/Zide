@@ -13,7 +13,7 @@ pub fn initWithOptions(
     cols: u16,
     options: anytype,
 ) !*self_type {
-    return try session_runtime.init(allocator, rows, cols, options);
+    return try session_runtime.init(self_type, allocator, rows, cols, options);
 }
 
 pub fn activeScreen(self: anytype) *screen_mod.Screen {

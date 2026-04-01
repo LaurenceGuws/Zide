@@ -32,7 +32,7 @@ pub fn closeExternalTransport(self: anytype) bool {
     return terminal_transport.closeExternalTransport(self);
 }
 
-pub fn lockPtyWriter(self: anytype) ?@import("../pty_terminal_runtime.zig").PtyWriteGuard {
+pub fn lockPtyWriter(self: anytype) ?terminal_transport.Writer {
     return terminal_transport.Writer.fromSession(self);
 }
 

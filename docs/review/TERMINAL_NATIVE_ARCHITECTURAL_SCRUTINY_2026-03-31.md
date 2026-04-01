@@ -95,6 +95,10 @@ Judgment:
   gone, which is an honest improvement: `pty_terminal_runtime.zig` now imports
   direct owners instead of hiding public-facing types behind one more helper
   facade
+- the wrapper-owned runtime helpers no longer import
+  `src/terminal/core/pty_terminal_runtime.zig` for their own defaults,
+  snapshots, or PTY writer types; those now come from direct owners under
+  `session/` and `runtime/`, which is a better low-level ownership read
 - `src/terminal/core/terminal_runtime.zig` still appears to be the right stable
   public surface, but it no longer routes shared input/selection/progress
   types through `pty_terminal_runtime.zig`; those names now come from their
