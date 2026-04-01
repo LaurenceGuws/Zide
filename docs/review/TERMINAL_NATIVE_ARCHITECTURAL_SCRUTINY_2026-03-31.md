@@ -221,6 +221,20 @@ Judgment:
   - it also now owns projected-diff eligibility and full-dirty metadata
     assignment, which further reduces the amount of publication rule text
     living inline in `view_cache.zig`
+  - baseline dirty-row/span/scroll-shift setup is now moving there too, which
+    means `view_cache.zig` is losing raw cache-array choreography as well as
+    decision logic
+  - the copied-from-view dirty-column path and its broad-span logging now live
+    there as well, which removes another large inline publication island from
+    `view_cache.zig`
+  - published cache finalization now lives there as well, which means
+    `view_cache.zig` is also losing the hand-written block that assigned blink,
+    mode, clear-generation, and viewport-shift state directly
+  - visible-cell population now lives there too, which removes the history/grid
+    copy loop as another inline publication responsibility from `view_cache.zig`
+  - row-hash refinement gating and broad refined-span logging now live with the
+    refinement seam too, which removes another renderer-facing decision island
+    from `view_cache.zig`
   - that is the standard the rest of the publication war should keep:
     if a cache field is just restating derivable published state, it should die
 

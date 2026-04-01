@@ -621,17 +621,28 @@ pub fn updateViewCacheNoLockTagged(self: anytype, generation: u64, scroll_offset
         cache.cursor = view.cursor;
         cache.cursor_style = view.cursor_style;
         cache.cursor_visible = view.cursor_visible;
-        cache.has_blink = false;
         cache.dirty = .full;
         cache.damage = .{ .start_row = 0, .end_row = 0, .start_col = 0, .end_col = 0 };
         cache.full_dirty_reason = view.full_dirty_reason;
         cache.full_dirty_seq = view.full_dirty_seq;
-        cache.alt_active = self.core.active == .alt;
-        cache.sync_updates_active = self.core.sync_updates_active;
-        cache.screen_reverse = screen_reverse;
-        cache.clear_generation = clear_generation;
-        cache.viewport_shift_rows = 0;
-        cache.viewport_shift_exposed_only = false;
+        publication.assignPublishedCacheState(
+            cache,
+            0,
+            0,
+            history_len,
+            visible_history_generation,
+            generation,
+            clamped_offset,
+            view.cursor,
+            view.cursor_style,
+            view.cursor_visible,
+            self.core.active == .alt,
+            self.core.sync_updates_active,
+            screen_reverse,
+            clear_generation,
+            0,
+            false,
+        );
         updateKittyViewNoLock(self, cache);
         if (handoff_log.enabled_file or handoff_log.enabled_console) {
             handoff_log.logf(
@@ -765,23 +776,8 @@ pub fn updateViewCacheNoLockTagged(self: anytype, generation: u64, scroll_offset
             },
         );
     }
+    publication.populateVisibleCells(self, cache, view, history_len, start_line, rows, cols);
     var row: usize = 0;
-    while (row < rows) : (row += 1) {
-        const global_row = start_line + row;
-        const row_start = row * cols;
-        const row_dest = cache.cells.items[row_start .. row_start + cols];
-        if (global_row < history_len) {
-            if (self.core.history.scrollbackRow(global_row)) |history_row| {
-                std.mem.copyForwards(Cell, row_dest, history_row[0..cols]);
-            } else {
-                std.mem.copyForwards(Cell, row_dest, view.cells[0..cols]);
-            }
-        } else {
-            const grid_row = global_row - history_len;
-            const src_start = grid_row * cols;
-            std.mem.copyForwards(Cell, row_dest, view.cells[src_start .. src_start + cols]);
-        }
-    }
     selection_projection.projectSelection(self, cache, total_lines, start_line, rows, cols, selection_active);
     if (plan.needs_full_damage) {
         row = 0;
@@ -791,111 +787,13 @@ pub fn updateViewCacheNoLockTagged(self: anytype, generation: u64, scroll_offset
             cache.row_hashes.items[row] = publication.hashRow(row_cells);
         }
     }
+    publication.assignDirtyRows(cache, view, plan, rows);
+    publication.assignDirtySpans(cache, view, plan, rows, cols);
     if (plan.can_publish_scroll_shift) {
-        for (cache.dirty_rows.items) |*row_dirty| {
-            row_dirty.* = false;
-        }
-    } else if (view.dirty_rows.len == rows and !plan.needs_full_damage and !plan.visible_history_changed) {
-        std.mem.copyForwards(bool, cache.dirty_rows.items, view.dirty_rows);
-    } else {
-        for (cache.dirty_rows.items) |*row_dirty| {
-            row_dirty.* = true;
-        }
-    }
-    if (view.row_dirty_span_counts.len == rows and view.row_dirty_span_overflow.len == rows and view.row_dirty_spans.len == rows and !plan.needs_full_damage and !plan.visible_history_changed) {
-        std.mem.copyForwards(u8, cache.row_dirty_span_counts.items, view.row_dirty_span_counts);
-        std.mem.copyForwards(bool, cache.row_dirty_span_overflow.items, view.row_dirty_span_overflow);
-        std.mem.copyForwards([screen_mod.max_row_dirty_spans]screen_mod.RowDirtySpan, cache.row_dirty_spans.items, view.row_dirty_spans);
-    } else {
-        var row_idx: usize = 0;
-        while (row_idx < rows) : (row_idx += 1) {
-            if (cache.dirty_rows.items[row_idx]) {
-                cache.row_dirty_span_counts.items[row_idx] = 1;
-                cache.row_dirty_span_overflow.items[row_idx] = false;
-                cache.row_dirty_spans.items[row_idx][0] = .{
-                    .start = if (cols > 0) 0 else 0,
-                    .end = if (cols > 0) @intCast(cols - 1) else 0,
-                };
-            } else {
-                cache.row_dirty_span_counts.items[row_idx] = 0;
-                cache.row_dirty_span_overflow.items[row_idx] = false;
-                cache.row_dirty_spans.items[row_idx][0] = .{ .start = @intCast(cols), .end = 0 };
-            }
-            var span_idx: usize = 1;
-            while (span_idx < screen_mod.max_row_dirty_spans) : (span_idx += 1) {
-                cache.row_dirty_spans.items[row_idx][span_idx] = .{ .start = @intCast(cols), .end = 0 };
-            }
-        }
-    }
-    if (plan.can_publish_scroll_shift) {
-        for (cache.dirty_cols_start.items, cache.dirty_cols_end.items) |*col_start, *col_end| {
-            col_start.* = 0;
-            col_end.* = if (cols > 0) @intCast(cols - 1) else 0;
-        }
-        if (plan.viewport_shift_rows > 0) {
-            var row_idx = rows - plan.shift_abs;
-            while (row_idx < rows) : (row_idx += 1) {
-                cache.dirty_rows.items[row_idx] = true;
-            }
-        } else {
-            var row_idx: usize = 0;
-            while (row_idx < plan.shift_abs) : (row_idx += 1) {
-                cache.dirty_rows.items[row_idx] = true;
-            }
-        }
-    } else if (view.dirty_cols_start.len == rows and view.dirty_cols_end.len == rows and !plan.needs_full_damage and !plan.visible_history_changed) {
-        std.mem.copyForwards(u16, cache.dirty_cols_start.items, view.dirty_cols_start);
-        std.mem.copyForwards(u16, cache.dirty_cols_end.items, view.dirty_cols_end);
-        if (cols > 0 and view.dirty == .partial) {
-            var logged: usize = 0;
-            var broad_logged: usize = 0;
-            var row_idx: usize = 0;
-            while (row_idx < rows and (logged < 5 or broad_logged < 5)) : (row_idx += 1) {
-                if (!cache.dirty_rows.items[row_idx]) continue;
-                const start_col = @as(usize, cache.dirty_cols_start.items[row_idx]);
-                const end_col = @as(usize, cache.dirty_cols_end.items[row_idx]);
-                if (start_col == 0 and end_col == cols - 1 and logged < 5) {
-                    fullwidth_origin_log.logf(
-                        .info,
-                        "source=view row={d} reason=copied_from_view cols=0..{d} dirty={s} damage_rows={d} damage_cols={d} rows={d} cols={d}",
-                        .{
-                            row_idx,
-                            cols - 1,
-                            @tagName(view.dirty),
-                            if (view.damage.end_row >= view.damage.start_row) view.damage.end_row - view.damage.start_row + 1 else 0,
-                            if (view.damage.end_col >= view.damage.start_col) view.damage.end_col - view.damage.start_col + 1 else 0,
-                            rows,
-                            cols,
-                        },
-                    );
-                    logged += 1;
-                }
-                const span_width = end_col - start_col + 1;
-                if (broad_logged < 5 and span_width >= cols / 2 and !(start_col == 0 and end_col == cols - 1)) {
-                    fullwidth_origin_log.logf(
-                        .info,
-                        "source=view row={d} reason=copied_broad_from_view cols={d}..{d} width={d} dirty={s} damage_rows={d} damage_cols={d} rows={d} cols={d}",
-                        .{
-                            row_idx,
-                            start_col,
-                            end_col,
-                            span_width,
-                            @tagName(view.dirty),
-                            if (view.damage.end_row >= view.damage.start_row) view.damage.end_row - view.damage.start_row + 1 else 0,
-                            if (view.damage.end_col >= view.damage.start_col) view.damage.end_col - view.damage.start_col + 1 else 0,
-                            rows,
-                            cols,
-                        },
-                    );
-                    broad_logged += 1;
-                }
-            }
-        }
-    } else {
-        for (cache.dirty_cols_start.items, cache.dirty_cols_end.items) |*col_start, *col_end| {
-            col_start.* = 0;
-            col_end.* = if (cols > 0) @intCast(cols - 1) else 0;
-        }
+        publication.assignDirtyColsFallback(cache, cols);
+        publication.assignScrollShiftDirtyRows(cache, plan, rows);
+    } else if (publication.assignDirtyColsFromView(cache, view, plan, rows, cols, fullwidth_origin_log)) {} else {
+        publication.assignDirtyColsFallback(cache, cols);
     }
 
     if (!plan.needs_full_damage and active_cache.rows == rows and active_cache.cols == cols) {
@@ -909,22 +807,24 @@ pub fn updateViewCacheNoLockTagged(self: anytype, generation: u64, scroll_offset
         );
     }
 
-    cache.rows = rows;
-    cache.cols = cols;
-    cache.history_len = history_len;
-    cache.visible_history_generation = visible_history_generation;
-    cache.generation = generation;
-    cache.scroll_offset = clamped_offset;
-    cache.cursor = view.cursor;
-    cache.cursor_style = view.cursor_style;
-    cache.cursor_visible = view.cursor_visible;
-    cache.has_blink = false;
-    for (cache.cells.items) |cell| {
-        if (cell.attrs.blink) {
-            cache.has_blink = true;
-            break;
-        }
-    }
+    publication.assignPublishedCacheState(
+        cache,
+        rows,
+        cols,
+        history_len,
+        visible_history_generation,
+        generation,
+        clamped_offset,
+        view.cursor,
+        view.cursor_style,
+        view.cursor_visible,
+        self.core.active == .alt,
+        self.core.sync_updates_active,
+        screen_reverse,
+        clear_generation,
+        plan.viewport_shift_rows,
+        plan.can_publish_scroll_shift,
+    );
     damage_mod.assignBaseDamage(cache, view, plan, rows, cols);
     const kitty_generation_unchanged = active_cache.kitty_generation == kitty_generation;
 
@@ -943,15 +843,7 @@ pub fn updateViewCacheNoLockTagged(self: anytype, generation: u64, scroll_offset
         view.full_dirty_seq,
     );
 
-    if (!plan.needs_full_damage and
-        !plan.can_publish_scroll_shift and
-        (view.dirty == .partial or plan.visible_history_changed) and
-        active_cache.rows == rows and
-        active_cache.cols == cols and
-        kitty_generation_unchanged and
-        active_cache.row_hashes.items.len == rows and
-        (active_cache.generation == presented_generation or active_cache.dirty == .partial))
-    {
+    if (refinement.canRefineRowHashDamage(plan, view.dirty, active_cache, rows, cols, kitty_generation_unchanged, presented_generation)) {
         refinement.refineRowHashDamage(
             cache,
             active_cache,
@@ -961,45 +853,12 @@ pub fn updateViewCacheNoLockTagged(self: anytype, generation: u64, scroll_offset
             active_cache.generation == presented_generation,
             active_cache.generation != presented_generation,
         );
-        if (cols > 0 and cache.dirty == .partial) {
-            var broad_refined_logged: usize = 0;
-            var row_idx: usize = 0;
-            while (row_idx < rows and broad_refined_logged < 5) : (row_idx += 1) {
-                if (!cache.dirty_rows.items[row_idx]) continue;
-                const start_col = @as(usize, cache.dirty_cols_start.items[row_idx]);
-                const end_col = @as(usize, cache.dirty_cols_end.items[row_idx]);
-                if (end_col < start_col) continue;
-                const span_width = end_col - start_col + 1;
-                if (span_width < cols / 2 or (start_col == 0 and end_col == cols - 1)) continue;
-                fullwidth_origin_log.logf(
-                    .info,
-                    "source=view_cache row={d} reason=refined_broad_span cols={d}..{d} width={d} dirty={s} damage_rows={d} damage_cols={d} rows={d} cols={d}",
-                    .{
-                        row_idx,
-                        start_col,
-                        end_col,
-                        span_width,
-                        @tagName(cache.dirty),
-                        if (cache.damage.end_row >= cache.damage.start_row) cache.damage.end_row - cache.damage.start_row + 1 else 0,
-                        if (cache.damage.end_col >= cache.damage.start_col) cache.damage.end_col - cache.damage.start_col + 1 else 0,
-                        rows,
-                        cols,
-                    },
-                );
-                broad_refined_logged += 1;
-            }
-        }
+        refinement.logBroadRefinedSpans(cache, rows, cols, fullwidth_origin_log);
     }
 
     // Cursor is rendered as a UI overlay in terminal_widget_draw, so cursor visibility
     // changes should not dirty the cached terminal texture rows every frame.
 
-    cache.alt_active = self.core.active == .alt;
-    cache.sync_updates_active = self.core.sync_updates_active;
-    cache.screen_reverse = screen_reverse;
-    cache.clear_generation = clear_generation;
-    cache.viewport_shift_rows = plan.viewport_shift_rows;
-    cache.viewport_shift_exposed_only = plan.can_publish_scroll_shift;
     if (shouldPreserveUnpresentedDirtyPublication(active_cache, cache, presented_generation)) {
         const preserve_mode = preserveUnpresentedDirtyPublication(cache, active_cache, rows, cols);
         if (handoff_log.enabled_file or handoff_log.enabled_console) {

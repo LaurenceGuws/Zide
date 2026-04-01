@@ -245,6 +245,31 @@ Validation note, 2026-03-31:
     - `assignFullDirtyMetadata(...)`
     now own projected-diff gating and forced full-dirty metadata assignment
     instead of leaving those rules inline in `view_cache.zig`
+  - row-bookkeeping ownership is now moving too:
+    - `assignDirtyRows(...)`
+    - `assignDirtySpans(...)`
+    - `assignDirtyColsFallback(...)`
+    - `assignScrollShiftDirtyRows(...)`
+    now own the baseline dirty-row/span/scroll-shift setup that used to sit
+    inline in `view_cache.zig`
+  - the copied-from-view dirty-column branch is also out:
+    - `assignDirtyColsFromView(...)`
+    now owns the column-copy path and its broad-span logging instead of
+    leaving that inline in `view_cache.zig`
+  - published-cache finalization is moving there too:
+    - `updateBlinkState(...)`
+    - `assignPublishedCacheState(...)`
+    now own the final cache-state assignment block instead of leaving
+    `view_cache.zig` to hand-set those fields inline
+  - visible-cell population is moving there too:
+    - `populateVisibleCells(...)`
+    now owns the history/grid copy loop that used to sit inline in
+    `view_cache.zig`
+  - row-hash refinement ownership is sharper too:
+    - `canRefineRowHashDamage(...)`
+    - `logBroadRefinedSpans(...)`
+    now live with `view_cache_refinement.zig` instead of leaving the
+    refinement gate and broad-span logging inline in `view_cache.zig`
   - `snapshot().generation` now reports the generation of the published render
     cache it actually returns, not a newer unpublished pending epoch
   - remaining gap: publication is still mirror-heavy because render-cache and

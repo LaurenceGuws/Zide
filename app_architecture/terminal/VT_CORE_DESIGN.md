@@ -171,6 +171,17 @@ Status note, 2026-03-31:
   - the same seam now also owns projected-diff gating and full-dirty metadata
     assignment, which reduces the amount of publication rule text still smeared
     through `view_cache.zig`
+  - baseline dirty-row/span/scroll-shift bookkeeping is also moving behind the
+    publication helper seam, shrinking the amount of raw cache-array
+    choreography still written inline in `view_cache.zig`
+  - the copied-from-view dirty-column path now lives there too, including its
+    broad-span/full-width logging behavior
+  - published cache finalization now lives there too, which further reduces
+    the amount of raw cache-state mutation written inline in `view_cache.zig`
+  - visible-cell population now lives there too, which means the published
+    cache builder no longer hand-copies history/grid rows inline
+  - row-hash refinement gating and broad-span refinement logging now live with
+    the refinement seam instead of staying inline in the main cache builder
 - This doc should now be read as authority for a terminal-core offensive, not
   as permission to preserve the current center with smaller helper files.
 

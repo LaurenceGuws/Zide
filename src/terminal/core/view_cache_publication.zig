@@ -294,6 +294,235 @@ pub fn rebuildPartialDamageFromRowSpans(cache: anytype, rows: usize, cols: usize
     }
 }
 
+pub fn assignDirtyRows(
+    cache: anytype,
+    view: anytype,
+    plan: anytype,
+    rows: usize,
+) void {
+    if (plan.can_publish_scroll_shift) {
+        for (cache.dirty_rows.items) |*row_dirty| {
+            row_dirty.* = false;
+        }
+        return;
+    }
+    if (view.dirty_rows.len == rows and !plan.needs_full_damage and !plan.visible_history_changed) {
+        std.mem.copyForwards(bool, cache.dirty_rows.items, view.dirty_rows);
+        return;
+    }
+    for (cache.dirty_rows.items) |*row_dirty| {
+        row_dirty.* = true;
+    }
+}
+
+pub fn assignDirtySpans(
+    cache: anytype,
+    view: anytype,
+    plan: anytype,
+    rows: usize,
+    cols: usize,
+) void {
+    if (view.row_dirty_span_counts.len == rows and
+        view.row_dirty_span_overflow.len == rows and
+        view.row_dirty_spans.len == rows and
+        !plan.needs_full_damage and
+        !plan.visible_history_changed)
+    {
+        std.mem.copyForwards(u8, cache.row_dirty_span_counts.items, view.row_dirty_span_counts);
+        std.mem.copyForwards(bool, cache.row_dirty_span_overflow.items, view.row_dirty_span_overflow);
+        std.mem.copyForwards([max_row_dirty_spans]RowDirtySpan, cache.row_dirty_spans.items, view.row_dirty_spans);
+        return;
+    }
+
+    var row_idx: usize = 0;
+    while (row_idx < rows) : (row_idx += 1) {
+        if (cache.dirty_rows.items[row_idx]) {
+            cache.row_dirty_span_counts.items[row_idx] = 1;
+            cache.row_dirty_span_overflow.items[row_idx] = false;
+            cache.row_dirty_spans.items[row_idx][0] = .{
+                .start = 0,
+                .end = if (cols > 0) @intCast(cols - 1) else 0,
+            };
+        } else {
+            cache.row_dirty_span_counts.items[row_idx] = 0;
+            cache.row_dirty_span_overflow.items[row_idx] = false;
+            cache.row_dirty_spans.items[row_idx][0] = invalidRowSpan(cols);
+        }
+        var span_idx: usize = 1;
+        while (span_idx < max_row_dirty_spans) : (span_idx += 1) {
+            cache.row_dirty_spans.items[row_idx][span_idx] = invalidRowSpan(cols);
+        }
+    }
+}
+
+pub fn assignDirtyColsFallback(
+    cache: anytype,
+    cols: usize,
+) void {
+    for (cache.dirty_cols_start.items, cache.dirty_cols_end.items) |*col_start, *col_end| {
+        col_start.* = 0;
+        col_end.* = if (cols > 0) @intCast(cols - 1) else 0;
+    }
+}
+
+pub fn assignScrollShiftDirtyRows(
+    cache: anytype,
+    plan: anytype,
+    rows: usize,
+) void {
+    if (plan.viewport_shift_rows > 0) {
+        var row_idx = rows - plan.shift_abs;
+        while (row_idx < rows) : (row_idx += 1) {
+            cache.dirty_rows.items[row_idx] = true;
+        }
+        return;
+    }
+    var row_idx: usize = 0;
+    while (row_idx < plan.shift_abs) : (row_idx += 1) {
+        cache.dirty_rows.items[row_idx] = true;
+    }
+}
+
+pub fn assignDirtyColsFromView(
+    cache: anytype,
+    view: anytype,
+    plan: anytype,
+    rows: usize,
+    cols: usize,
+    fullwidth_origin_log: anytype,
+) bool {
+    if (!(view.dirty_cols_start.len == rows and
+        view.dirty_cols_end.len == rows and
+        !plan.needs_full_damage and
+        !plan.visible_history_changed))
+    {
+        return false;
+    }
+
+    std.mem.copyForwards(u16, cache.dirty_cols_start.items, view.dirty_cols_start);
+    std.mem.copyForwards(u16, cache.dirty_cols_end.items, view.dirty_cols_end);
+    if (cols > 0 and view.dirty == .partial) {
+        var logged: usize = 0;
+        var broad_logged: usize = 0;
+        var row_idx: usize = 0;
+        while (row_idx < rows and (logged < 5 or broad_logged < 5)) : (row_idx += 1) {
+            if (!cache.dirty_rows.items[row_idx]) continue;
+            const start_col = @as(usize, cache.dirty_cols_start.items[row_idx]);
+            const end_col = @as(usize, cache.dirty_cols_end.items[row_idx]);
+            if (start_col == 0 and end_col == cols - 1 and logged < 5) {
+                fullwidth_origin_log.logf(
+                    .info,
+                    "source=view row={d} reason=copied_from_view cols=0..{d} dirty={s} damage_rows={d} damage_cols={d} rows={d} cols={d}",
+                    .{
+                        row_idx,
+                        cols - 1,
+                        @tagName(view.dirty),
+                        if (view.damage.end_row >= view.damage.start_row) view.damage.end_row - view.damage.start_row + 1 else 0,
+                        if (view.damage.end_col >= view.damage.start_col) view.damage.end_col - view.damage.start_col + 1 else 0,
+                        rows,
+                        cols,
+                    },
+                );
+                logged += 1;
+            }
+            const span_width = end_col - start_col + 1;
+            if (broad_logged < 5 and span_width >= cols / 2 and !(start_col == 0 and end_col == cols - 1)) {
+                fullwidth_origin_log.logf(
+                    .info,
+                    "source=view row={d} reason=copied_broad_from_view cols={d}..{d} width={d} dirty={s} damage_rows={d} damage_cols={d} rows={d} cols={d}",
+                    .{
+                        row_idx,
+                        start_col,
+                        end_col,
+                        span_width,
+                        @tagName(view.dirty),
+                        if (view.damage.end_row >= view.damage.start_row) view.damage.end_row - view.damage.start_row + 1 else 0,
+                        if (view.damage.end_col >= view.damage.start_col) view.damage.end_col - view.damage.start_col + 1 else 0,
+                        rows,
+                        cols,
+                    },
+                );
+                broad_logged += 1;
+            }
+        }
+    }
+    return true;
+}
+
+pub fn updateBlinkState(cache: anytype) void {
+    cache.has_blink = false;
+    for (cache.cells.items) |cell| {
+        if (cell.attrs.blink) {
+            cache.has_blink = true;
+            break;
+        }
+    }
+}
+
+pub fn assignPublishedCacheState(
+    cache: anytype,
+    rows: usize,
+    cols: usize,
+    history_len: usize,
+    visible_history_generation: u64,
+    generation: u64,
+    scroll_offset: usize,
+    cursor: types.CursorPos,
+    cursor_style: types.CursorStyle,
+    cursor_visible: bool,
+    alt_active: bool,
+    sync_updates_active: bool,
+    screen_reverse: bool,
+    clear_generation: u64,
+    viewport_shift_rows: i32,
+    viewport_shift_exposed_only: bool,
+) void {
+    cache.rows = rows;
+    cache.cols = cols;
+    cache.history_len = history_len;
+    cache.visible_history_generation = visible_history_generation;
+    cache.generation = generation;
+    cache.scroll_offset = scroll_offset;
+    cache.cursor = cursor;
+    cache.cursor_style = cursor_style;
+    cache.cursor_visible = cursor_visible;
+    cache.alt_active = alt_active;
+    cache.sync_updates_active = sync_updates_active;
+    cache.screen_reverse = screen_reverse;
+    cache.clear_generation = clear_generation;
+    cache.viewport_shift_rows = viewport_shift_rows;
+    cache.viewport_shift_exposed_only = viewport_shift_exposed_only;
+    updateBlinkState(cache);
+}
+
+pub fn populateVisibleCells(
+    self: anytype,
+    cache: anytype,
+    view: anytype,
+    history_len: usize,
+    start_line: usize,
+    rows: usize,
+    cols: usize,
+) void {
+    var row: usize = 0;
+    while (row < rows) : (row += 1) {
+        const global_row = start_line + row;
+        const row_start = row * cols;
+        const row_dest = cache.cells.items[row_start .. row_start + cols];
+        if (global_row < history_len) {
+            if (self.core.history.scrollbackRow(global_row)) |history_row| {
+                std.mem.copyForwards(Cell, row_dest, history_row[0..cols]);
+            } else {
+                std.mem.copyForwards(Cell, row_dest, view.cells[0..cols]);
+            }
+        } else {
+            const grid_row = global_row - history_len;
+            const src_start = grid_row * cols;
+            std.mem.copyForwards(Cell, row_dest, view.cells[src_start .. src_start + cols]);
+        }
+    }
+}
+
 pub fn rowDiffSpans(new_row: []const Cell, old_row: []const Cell, cols: usize) RowDiffSpans {
     var out = RowDiffSpans{
         .count = 0,
