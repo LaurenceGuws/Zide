@@ -43,6 +43,7 @@ pub fn main() !void {
         \\- `zig build report-build-target`: report target/optimize settings
         \\- `zig build report-build-profiles`: report dependency profiles
         \\- `zig build report-build-focused-policy`: report focused-mode policy
+        \\- `zig build report-build-policy`: report supported options and hard constraints
         \\- `zig build report-build-surface`: report this operator-facing step taxonomy
         \\- `zig build report-build-all`: run all core build reports/checks
         \\

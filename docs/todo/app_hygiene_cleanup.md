@@ -104,6 +104,9 @@ Progress note, 2026-04-02:
 - this gives the repo an explicit operator-facing map of the build step
   taxonomy instead of expecting contributors to infer it from scattered
   planner modules
+- the build system now also exposes `zig build report-build-policy`
+- this gives operators a direct summary of supported `-D...` knobs and current
+  hard constraints instead of forcing that knowledge to live only in source
 
 ## Repo Boundary Rule
 

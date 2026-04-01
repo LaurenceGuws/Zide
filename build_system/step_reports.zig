@@ -123,6 +123,26 @@ pub fn addReportBuildTargetStep(
     );
 }
 
+pub fn addReportBuildPolicyStep(
+    b: *std.Build,
+    target: std.Build.ResolvedTarget,
+    optimize: std.builtin.OptimizeMode,
+    build_options: *std.Build.Step.Options,
+) *std.Build.Step {
+    return addReportToolRunStep(
+        b,
+        target,
+        optimize,
+        build_options,
+        .{
+            .exe_name = "build-policy-report",
+            .root_source_file = "build_system/reports/build_policy_report.zig",
+            .step_name = "report-build-policy",
+            .description = "Report supported build options and hard constraints",
+        },
+    );
+}
+
 pub fn addReportBuildSurfaceStep(
     b: *std.Build,
     target: std.Build.ResolvedTarget,
@@ -191,6 +211,12 @@ const core_build_report_tool_specs = [_]ReportToolSpec{
         .step_name = "",
         .description = "",
         .adds_build_options = false,
+    },
+    .{
+        .exe_name = "build-policy-report-check",
+        .root_source_file = "build_system/reports/build_policy_report.zig",
+        .step_name = "",
+        .description = "",
     },
 };
 
