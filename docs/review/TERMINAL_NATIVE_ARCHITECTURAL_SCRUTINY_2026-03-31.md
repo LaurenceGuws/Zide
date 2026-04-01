@@ -440,6 +440,10 @@ Evidence:
   `src/terminal/protocol/osc_kitty_clipboard.zig` no longer routes
   `parseOsc5522(...)` / `sendPasteEventMimes(...)` through duplicate
   `*OnSession` bounce helpers
+- the dead presentation-feedback alias seam is gone too:
+  `src/terminal/core/session/presentation_feedback.zig` is deleted, so
+  presentation-feedback types now live only at the publication owner instead
+  of surviving as one more wrapper-side alias shell
 - the outer CSI forwarding shell is gone too:
   `terminal_protocol_api.zig` now routes CSI directly into
   `src/terminal/protocol/csi.zig` without stepping through an extra

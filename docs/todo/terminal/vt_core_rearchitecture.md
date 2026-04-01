@@ -304,6 +304,10 @@ Validation note, 2026-03-31:
     `src/terminal/protocol/osc_kitty_clipboard.zig` no longer routes
     `parseOsc5522(...)` / `sendPasteEventMimes(...)` through duplicate
     `*OnSession` bounce helpers; those entrypoints now execute directly
+  - the dead presentation-feedback alias seam is gone too:
+    `src/terminal/core/session/presentation_feedback.zig` is deleted, so
+    presentation-feedback types now live only at the publication owner instead
+    of surviving as one more wrapper-side alias shell
   - the remaining publication/view-cache helper stubs and the special-case
     protocol `appendHyperlink` wrapper are no longer written inline on
     `pty_terminal_runtime.zig`; those exceptions now route through the explicit

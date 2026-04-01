@@ -294,6 +294,10 @@ Status note, 2026-03-31:
     `handleCsiOnSession(...)`, and `osc_kitty_clipboard.zig` no longer routes
     `parseOsc5522(...)` / `sendPasteEventMimes(...)` through duplicate
     `*OnSession` bounce helpers; those entrypoints now execute directly
+  - the dead presentation-feedback alias seam is gone too:
+    `src/terminal/core/session/presentation_feedback.zig` is deleted, so
+    presentation-feedback types now live only at the publication owner instead
+    of surviving as one more wrapper-side alias shell
   - the same direct-owner cleanup now applies in `workspace.zig`: wrapper
     composition reads as runtime/workspace ownership, and progress-state typing
     no longer comes through `pty_terminal_runtime.zig`
