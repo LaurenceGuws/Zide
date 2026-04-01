@@ -139,6 +139,9 @@ Validation note, 2026-03-31:
   - the same cleanup now applies in `src/terminal/core/workspace.zig`, which
     no longer uses stale `session_mod` vocabulary or wrapper-routed
     `ProgressState` typing
+  - the PTY runtime regression tests now also stop using the wrapper as a
+    type barrel for snapshot, cell/color, dirty-state, and progress-state
+    imports
   - replay/test debug imports now target
     `src/terminal/core/session/debug_api.zig` directly, so there is no
     extra flat `terminal_debug.zig` shim pretending to be a core peer.

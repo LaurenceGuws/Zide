@@ -102,6 +102,9 @@ Status note, 2026-03-31:
   - the same direct-owner cleanup now applies in `workspace.zig`: wrapper
     composition reads as runtime/workspace ownership, and progress-state typing
     no longer comes through `pty_terminal_runtime.zig`
+  - the PTY runtime regression tests now follow the same rule for snapshot,
+    cell/color, dirty-state, and progress-state imports instead of treating the
+    wrapper as a type barrel
   - `src/terminal/core/publication/terminal_publication.zig` now acts as the explicit
     publication/type surface for native widget, replay-harness, and FFI
     consumers

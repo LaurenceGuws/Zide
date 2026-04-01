@@ -1,17 +1,20 @@
 const std = @import("std");
 const builtin = @import("builtin");
+const snapshot_mod = @import("publication/snapshot.zig");
+const render_cache = @import("publication/render_cache.zig");
+const host_types = @import("session/host_types.zig");
 const types = @import("../model/types.zig");
-const session_mod = @import("pty_terminal_runtime.zig");
+const runtime_mod = @import("pty_terminal_runtime.zig");
 const terminal_transport = @import("runtime/terminal_transport.zig");
 const pty_mod = @import("../io/pty.zig");
 
-const PtyTerminalRuntime = session_mod.PtyTerminalRuntime;
-const Cell = session_mod.Cell;
-const Color = session_mod.Color;
-const Dirty = session_mod.Dirty;
+const PtyTerminalRuntime = runtime_mod.PtyTerminalRuntime;
+const Cell = types.Cell;
+const Color = types.Color;
+const Dirty = render_cache.Dirty;
 const Pty = pty_mod.Pty;
 
-fn expectSnapshotRow(snapshot: session_mod.TerminalSnapshot, row: usize, expected: []const u8) !void {
+fn expectSnapshotRow(snapshot: snapshot_mod.TerminalSnapshot, row: usize, expected: []const u8) !void {
     const cells = snapshot.rowSlice(row);
     try std.testing.expectEqual(expected.len, cells.len);
     for (cells, expected) |cell, ch| {
@@ -19,7 +22,7 @@ fn expectSnapshotRow(snapshot: session_mod.TerminalSnapshot, row: usize, expecte
     }
 }
 
-fn snapshotContainsAscii(snapshot: session_mod.TerminalSnapshot, needle: []const u8) bool {
+fn snapshotContainsAscii(snapshot: snapshot_mod.TerminalSnapshot, needle: []const u8) bool {
     var row: usize = 0;
     while (row < snapshot.rows) : (row += 1) {
         const cells = snapshot.rowSlice(row);
@@ -221,7 +224,7 @@ test "pty-backed session sendKey enter writes through session writer boundary" {
     session.attachPtyTransport(pty);
 
     try session.sendText("printf hi; exit");
-    try session.sendKey(session_mod.VTERM_KEY_ENTER, session_mod.VTERM_MOD_NONE);
+    try session.sendKey(runtime_mod.VTERM_KEY_ENTER, runtime_mod.VTERM_MOD_NONE);
 
     const start_ms = std.time.milliTimestamp();
     while (std.time.milliTimestamp() - start_ms < 4000) {
@@ -531,17 +534,17 @@ test "osc 9;4 progress reports update structured host progress state" {
 
     session.feedOutputBytes("\x1b]9;4;1;42\x07");
     var activity = session.currentActivityMetadata();
-    try std.testing.expectEqual(session_mod.ProgressState.set, activity.progress.state);
+    try std.testing.expectEqual(host_types.ProgressState.set, activity.progress.state);
     try std.testing.expectEqual(@as(?u8, 42), activity.progress.value);
 
     session.feedOutputBytes("\x1b]9;4;3\x07");
     activity = session.currentActivityMetadata();
-    try std.testing.expectEqual(session_mod.ProgressState.indeterminate, activity.progress.state);
+    try std.testing.expectEqual(host_types.ProgressState.indeterminate, activity.progress.state);
     try std.testing.expectEqual(@as(?u8, null), activity.progress.value);
 
     session.feedOutputBytes("\x1b]9;4;0\x07");
     activity = session.currentActivityMetadata();
-    try std.testing.expectEqual(session_mod.ProgressState.none, activity.progress.state);
+    try std.testing.expectEqual(host_types.ProgressState.none, activity.progress.state);
     try std.testing.expectEqual(@as(?u8, null), activity.progress.value);
 }
 

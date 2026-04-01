@@ -104,6 +104,9 @@ Judgment:
   even while staying a stable entrypoint
 - the same cleanup now applies in `workspace.zig`, which no longer carries
   stale `session_mod` vocabulary or wrapper-routed progress-state typing
+- the PTY runtime regression tests now follow the same rule for snapshot,
+  cell/color, dirty-state, and progress-state imports instead of reinforcing
+  wrapper gravity through test-only barrel usage
 - `src/terminal/core/session/runtime_api.zig` and
   `src/terminal/core/session/publication_api.zig` now carry the runtime and
   publication/present method groups that were previously written inline on
