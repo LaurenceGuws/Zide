@@ -123,6 +123,11 @@ const DrawTelemetry = struct {
     capture_reason: []const u8 = "clean",
 };
 
+const ViewportShiftState = struct {
+    rows: i32 = 0,
+    exposed_only: bool = false,
+};
+
 pub fn latestFrameLatencyMetrics() FrameLatencyMetrics {
     return frame_latency_metrics;
 }
@@ -801,8 +806,7 @@ pub fn drawPrepared(
 
     var updated = false;
     var telemetry = DrawTelemetry{};
-    var active_viewport_shift_rows: i32 = 0;
-    var active_shift_exposed_only = false;
+    var viewport_shift = ViewportShiftState{};
     var cell_w_i: i32 = 0;
     var cell_h_i: i32 = 0;
     var visible_w: i32 = 0;
@@ -913,35 +917,35 @@ pub fn drawPrepared(
         var needs_full = update_plan.needs_full;
         var needs_partial = update_plan.needs_partial;
         const partial_capture = terminal_publication.partialCaptureInfo(cache);
-        active_viewport_shift_rows = partial_capture.active_viewport_shift_rows;
-        active_shift_exposed_only = partial_capture.shift_exposed_only;
+        viewport_shift.rows = partial_capture.active_viewport_shift_rows;
+        viewport_shift.exposed_only = partial_capture.shift_exposed_only;
         telemetry.capture_reason = partial_capture.reason;
         var shifted_rows: usize = 0;
         var shift_requires_fullwidth_partial = false;
         switch (planViewportTextureShift(
             r.terminalTextureShiftEnabled(),
             gen_changed,
-            active_viewport_shift_rows,
-            active_shift_exposed_only,
+            viewport_shift.rows,
+            viewport_shift.exposed_only,
             scroll_offset,
             needs_full,
             self.terminal_texture_ready,
             rows,
         )) {
             .attempt => |shift_rows| {
-                const dy_pixels: i32 = -active_viewport_shift_rows * cell_h_i;
+                const dy_pixels: i32 = -viewport_shift.rows * cell_h_i;
                 if (r.scrollTerminalTexture(0, dy_pixels)) {
                     needs_partial = true;
                     shifted_rows = shift_rows;
-                    shiftPresentedGenerationCells(self, rows, cols, active_viewport_shift_rows);
+                    shiftPresentedGenerationCells(self, rows, cols, viewport_shift.rows);
                     texture_shift_log.logf(
                         .info,
                         "result=scroll_copy_ok gen={d} dirty={s} shift_rows={d} exposed_only={d} scroll_offset={d} damage={d}..{d}/{d}..{d}",
                         .{
                             draw_state.generation,
                             dirty_summary.dirty_tag,
-                            active_viewport_shift_rows,
-                            @intFromBool(active_shift_exposed_only),
+                            viewport_shift.rows,
+                            @intFromBool(viewport_shift.exposed_only),
                             scroll_offset,
                             dirty_summary.damage_start_row,
                             dirty_summary.damage_end_row,
@@ -957,33 +961,33 @@ pub fn drawPrepared(
                         .{
                             draw_state.generation,
                             dirty_summary.dirty_tag,
-                            active_viewport_shift_rows,
-                            @intFromBool(active_shift_exposed_only),
+                            viewport_shift.rows,
+                            @intFromBool(viewport_shift.exposed_only),
                             scroll_offset,
                         },
                     );
-                    if (active_shift_exposed_only) {
+                    if (viewport_shift.exposed_only) {
                         needs_partial = true;
                         shift_requires_fullwidth_partial = true;
                     }
                 }
             },
             .none => {
-                if (active_viewport_shift_rows != 0) {
+                if (viewport_shift.rows != 0) {
                     texture_shift_log.logf(
                         .info,
                         "result=scroll_copy_skipped gen={d} dirty={s} shift_rows={d} exposed_only={d} scroll_offset={d} full={d}",
                         .{
                             draw_state.generation,
                             dirty_summary.dirty_tag,
-                            active_viewport_shift_rows,
-                            @intFromBool(active_shift_exposed_only),
+                            viewport_shift.rows,
+                            @intFromBool(viewport_shift.exposed_only),
                             scroll_offset,
                             @intFromBool(needs_full),
                         },
                     );
                 }
-                if (active_shift_exposed_only) {
+                if (viewport_shift.exposed_only) {
                     needs_partial = true;
                     shift_requires_fullwidth_partial = true;
                 }
@@ -993,7 +997,7 @@ pub fn drawPrepared(
             fullframe_fastpath_decision = draw_texture.decideFullFrameFastPath(
                 cache,
                 shifted_rows,
-                active_viewport_shift_rows,
+                viewport_shift.rows,
                 shift_requires_fullwidth_partial,
                 blink_requires_partial,
                 0.85,
@@ -1012,7 +1016,7 @@ pub fn drawPrepared(
                         dirty_summary.dirty_tag,
                         rows,
                         cols,
-                        active_viewport_shift_rows,
+                        viewport_shift.rows,
                     },
                 );
             }
@@ -1064,7 +1068,7 @@ pub fn drawPrepared(
                     self.partial_draw_cols_start.items,
                     self.partial_draw_cols_end.items,
                     shifted_rows,
-                    active_viewport_shift_rows,
+                    viewport_shift.rows,
                     shift_requires_fullwidth_partial,
                     blink_requires_partial,
                 );
@@ -1165,7 +1169,7 @@ pub fn drawPrepared(
                     self.partial_draw_cols_start.items,
                     self.partial_draw_cols_end.items,
                     shifted_rows,
-                    active_viewport_shift_rows,
+                    viewport_shift.rows,
                     shift_requires_fullwidth_partial,
                     blink_requires_partial,
                 );
@@ -1416,7 +1420,7 @@ pub fn drawPrepared(
             cols,
             telemetry.texture_full_update,
             telemetry.texture_partial_update,
-            active_viewport_shift_rows,
+            viewport_shift.rows,
             telemetry.fastpath_threshold_hit,
             telemetry.fastpath_total_cells,
             telemetry.fastpath_union_cells,
@@ -1528,8 +1532,8 @@ pub fn drawPrepared(
                 partial_plan_union_cells,
                 @intFromBool(has_blink),
                 @intFromBool(blink_phase_changed),
-                active_viewport_shift_rows,
-                @intFromBool(active_shift_exposed_only),
+                viewport_shift.rows,
+                @intFromBool(viewport_shift.exposed_only),
                 std.fmt.bufPrint(&sprite_stats_summary_buf, "{d}/{d}/{d}/{d:.2}", .{
                     glyph_draw_stats.special_sprite_cache_hits,
                     glyph_draw_stats.special_sprite_cache_misses,

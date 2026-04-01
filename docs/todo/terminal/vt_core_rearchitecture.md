@@ -318,6 +318,10 @@ Validation note, 2026-03-31:
     - `DrawTelemetry`
     now owns capture reason, fast-path counts, and texture update flags so the
     main draw flow reads less like a scratchpad
+  - viewport-shift state is also grouped now:
+    - `ViewportShiftState`
+    now owns shift rows and exposed-only state so texture-shift planning and
+    logging stop passing those facts around as loose locals
   - lifecycle/dirty helpers now also own more of the direct truth widget draw
     needs:
     - `lifecycleTransitionInfo(...)` carries current alt-state

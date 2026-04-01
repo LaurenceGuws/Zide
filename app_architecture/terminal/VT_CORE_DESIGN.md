@@ -214,6 +214,9 @@ Status note, 2026-03-31:
   - the same rule applies to draw telemetry scratch state; it should live in a
     named local struct instead of leaking as a loose cluster of booleans,
     counters, and reasons through the main render body
+  - transient viewport-shift planning state should follow the same rule; if it
+    threads through multiple planning/logging sites, group it instead of
+    letting it leak as loose locals
   - once a publication helper exists, widget draw should consume its direct
     truth completely; it should not keep mixing helper-owned state with raw
     reads like `cache.alt_active` or repeated `cache.dirty == .none`
