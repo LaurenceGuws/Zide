@@ -105,6 +105,10 @@ Status note, 2026-03-31:
     `terminal_protocol_api.zig` now routes DCS/APC directly into
     `src/terminal/protocol/dcs_apc.zig` without stepping through an extra
     `SessionFacade`
+  - the first tiny inner OSC wrappers are gone too:
+    `osc_progress.zig`, `osc_semantic.zig`, and `osc_title.zig` now run
+    directly on the live core/runtime object instead of wrapping it in tiny
+    per-module `SessionFacade` shells
   - duplicated publication/cache truth
   - oversized native widget/render coordination around terminal publication
 - The current operating rule is sequential but ruthless:

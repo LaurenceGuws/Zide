@@ -37,7 +37,7 @@ pub fn parseOsc(self: anytype, payload: []const u8, terminator: OscTerminator) v
     const text = payload[i..];
     switch (code) {
         0, 2 => {
-            osc_title.setTitle(osc_title.SessionFacade.from(self), text);
+            osc_title.setTitle(self, text);
         },
         4 => palette_mod.handleOscPalette(palette_mod.SessionFacade.from(self), text, terminator),
         10...19 => palette_mod.handleOscDynamicColor(palette_mod.SessionFacade.from(self), @intCast(code), text, terminator),
@@ -50,7 +50,7 @@ pub fn parseOsc(self: anytype, payload: []const u8, terminator: OscTerminator) v
             osc_cwd.parseCwd(osc_cwd.SessionFacade.from(self), text);
         },
         9 => {
-            osc_progress.parseProgress(osc_progress.SessionFacade.from(self), text);
+            osc_progress.parseProgress(self, text);
         },
         52 => {
             osc_clipboard.parseClipboard(osc_clipboard.SessionFacade.from(self), text, terminator);
@@ -59,10 +59,10 @@ pub fn parseOsc(self: anytype, payload: []const u8, terminator: OscTerminator) v
             osc_kitty_clipboard.parseOsc5522(osc_kitty_clipboard.SessionFacade.from(self), text, terminator);
         },
         133 => {
-            osc_semantic.parseSemanticPrompt(osc_semantic.SessionFacade.from(self), text);
+            osc_semantic.parseSemanticPrompt(self, text);
         },
         1337 => {
-            osc_semantic.parseUserVar(osc_semantic.SessionFacade.from(self), text);
+            osc_semantic.parseUserVar(self, text);
         },
         else => {},
     }

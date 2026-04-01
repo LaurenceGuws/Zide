@@ -255,6 +255,10 @@ Evidence:
   `terminal_protocol_api.zig` now routes DCS/APC directly into
   `src/terminal/protocol/dcs_apc.zig` without stepping through an extra
   `SessionFacade`
+- the first tiny inner OSC wrappers are gone too:
+  `osc_progress.zig`, `osc_semantic.zig`, and `osc_title.zig` now run directly
+  on the live core/runtime object instead of wrapping it in tiny per-module
+  `SessionFacade` shells
 - the remaining callback seam is narrower:
   - wrap/newline effects
   - insert-mode char insertion effects
