@@ -1,9 +1,9 @@
-const csi_mod = @import("../parser/csi.zig");
-const protocol_csi = @import("../protocol/csi.zig");
-const protocol_dcs_apc = @import("../protocol/dcs_apc.zig");
-const protocol_osc = @import("../protocol/osc.zig");
-const kitty_mod = @import("../kitty/graphics.zig");
-const parser_mod = @import("../parser/parser.zig");
+const csi_mod = @import("../../parser/csi.zig");
+const protocol_csi = @import("../../protocol/csi.zig");
+const protocol_dcs_apc = @import("../../protocol/dcs_apc.zig");
+const protocol_osc = @import("../../protocol/osc.zig");
+const kitty_mod = @import("../../kitty/graphics.zig");
+const parser_mod = @import("../../parser/parser.zig");
 
 const OscTerminator = parser_mod.OscTerminator;
 

@@ -1,9 +1,9 @@
 const std = @import("std");
-const terminal_core_mod = @import("terminal_core.zig");
-const types = @import("../model/types.zig");
-const hyperlink_table = @import("hyperlink_table.zig");
-const kitty_mod = @import("../kitty/graphics.zig");
-const scrolling_mod = @import("scrolling.zig");
+const terminal_core_mod = @import("../terminal_core.zig");
+const types = @import("../../model/types.zig");
+const hyperlink_table = @import("../hyperlink_table.zig");
+const kitty_mod = @import("../../kitty/graphics.zig");
+const scrolling_mod = @import("../scrolling.zig");
 
 pub const TextEffects = struct {
     ctx: *anyopaque,
@@ -164,7 +164,7 @@ pub fn setTabAtCursor(self: anytype) void {
 }
 
 pub fn decrqssReplyInto(self: anytype, text: []const u8, buf: []u8) ?[]const u8 {
-    const log = @import("../../app_logger.zig").logger("terminal.apc");
+    const log = @import("../../../app_logger.zig").logger("terminal.apc");
     if (std.mem.eql(u8, text, " q")) {
         const style = self.core.activeScreen().cursor_style;
         return switch (style.shape) {
@@ -254,7 +254,7 @@ fn colorEq(a: types.Color, b: types.Color) bool {
 }
 
 fn appendParam(buf: []u8, pos: *usize, param: u8) bool {
-    const log = @import("../../app_logger.zig").logger("terminal.csi");
+    const log = @import("../../../app_logger.zig").logger("terminal.csi");
     var tmp: [4]u8 = undefined;
     const text = std.fmt.bufPrint(&tmp, "{d}", .{param}) catch |err| {
         log.logf(.warning, "appendParam format failed param={d}: {s}", .{ param, @errorName(err) });

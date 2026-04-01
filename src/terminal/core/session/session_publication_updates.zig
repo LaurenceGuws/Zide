@@ -1,5 +1,5 @@
 const view_cache = @import("../view_cache.zig");
-const core_feed = @import("../terminal_core_feed.zig");
+const core_feed = @import("../protocol/terminal_core_feed.zig");
 const terminal_publication = @import("../publication/terminal_publication.zig");
 
 pub fn bumpGeneration(self: anytype) u64 {

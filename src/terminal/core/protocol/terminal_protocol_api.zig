@@ -1,13 +1,13 @@
-const csi_mod = @import("../parser/csi.zig");
-const parser_mod = @import("../parser/parser.zig");
+const csi_mod = @import("../../parser/csi.zig");
+const parser_mod = @import("../../parser/parser.zig");
 const control_handlers = @import("control_handlers.zig");
 const core_feed = @import("terminal_core_feed.zig");
 const core_protocol = @import("terminal_core_protocol.zig");
 const parser_hooks = @import("parser_hooks.zig");
-const session_mode_effects = @import("session/session_mode_effects.zig");
+const session_mode_effects = @import("../session/session_mode_effects.zig");
 const terminal_core_text = @import("terminal_core_text.zig");
-const terminal_publication = @import("publication/terminal_publication.zig");
-const types = @import("../model/types.zig");
+const terminal_publication = @import("../publication/terminal_publication.zig");
+const types = @import("../../model/types.zig");
 
 pub fn handleControl(self: anytype, byte: u8) void {
     control_handlers.handleControl(self, byte);
@@ -135,11 +135,11 @@ pub fn decrqssReplyInto(self: anytype, text: []const u8, buf: []u8) ?[]const u8 
 }
 
 pub fn saveCursor(self: anytype) void {
-    @import("terminal_core_modes.zig").saveCursor(self);
+    @import("../terminal_core_modes.zig").saveCursor(self);
 }
 
 pub fn restoreCursor(self: anytype) void {
-    @import("terminal_core_modes.zig").restoreCursor(self);
+    @import("../terminal_core_modes.zig").restoreCursor(self);
 }
 
 pub fn setTabAtCursor(self: anytype) void {

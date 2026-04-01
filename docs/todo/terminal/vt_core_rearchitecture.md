@@ -145,7 +145,7 @@ Validation note, 2026-03-31:
   - `src/terminal/core/session/session_input_api.zig` now groups the input send/report
     public methods that were previously written inline on
     `pty_terminal_runtime.zig`.
-  - `src/terminal/core/terminal_protocol_api.zig` now groups the protocol/VT
+  - `src/terminal/core/protocol/terminal_protocol_api.zig` now groups the protocol/VT
     mutation public methods that were previously written inline on
     `pty_terminal_runtime.zig`.
   - `src/terminal/core/session/session_config_api.zig` now groups the config, palette,
@@ -189,6 +189,10 @@ Validation note, 2026-03-31:
     publication-owned cache, snapshot, and publication helper files now live
     under `src/terminal/core/publication/` instead of continuing to sprawl as
     another flat cluster beside engine-owned files
+  - the next peer subtree is now in too:
+    parser/protocol execution files now live under
+    `src/terminal/core/protocol/` instead of continuing to sprawl as a flat
+    execution cluster beside engine and wrapper files
   - `pty_terminal_runtime.zig` now reads as allocator/core plus grouped subsystem
     state and explicit API seams, not as one broad undifferentiated owner.
   - the rename threshold is now crossed:
@@ -209,7 +213,7 @@ Validation note, 2026-03-31:
   Notes: transport contracts, writer/read boundaries, external transport, replay-harness use, no-PTY host support, and shared redraw/alive wake behavior are landed; remaining work is deeper cleanup rather than first transport abstraction.
 - [ ] `VTCORE-04` Move protocol execution onto core/model contracts.
   Notes: the main protocol relocation is landed, and printable text ownership
-  is now moved below parser hooks into `src/terminal/core/terminal_core_text.zig`.
+  is now moved below parser hooks into `src/terminal/core/protocol/terminal_core_text.zig`.
   The remaining gap is that the text-write contract is still session-shaped and
   not yet reduced to a cleaner engine-owned boundary.
   Progress note, 2026-04-01, later:
@@ -228,17 +232,17 @@ Validation note, 2026-03-31:
     only owner-level effects like wrap-newline and insert-chars still cross a
     callback boundary
   - that remaining effect boundary now lives under protocol ownership in
-    `src/terminal/core/terminal_core_protocol.zig` instead of being wired
+    `src/terminal/core/protocol/terminal_core_protocol.zig` instead of being wired
     inline inside `terminal_core_text.zig`
   - the stale `src/terminal/core/session_protocol.zig` forwarding shell is now
-    deleted; `terminal_protocol_api.zig` routes directly to the real core,
+    deleted; `protocol/terminal_protocol_api.zig` routes directly to the real core,
     protocol, mode-effect, feed, and publication owners
   - the API seam name is now honest too:
-    `src/terminal/core/terminal_protocol_api.zig`
+    `src/terminal/core/protocol/terminal_protocol_api.zig`
   - the dead `src/terminal/core/terminal_core_dispatch.zig` middleman is now
-    deleted; `terminal_protocol_api.zig` routes straight to the real owners
+    deleted; `protocol/terminal_protocol_api.zig` routes straight to the real owners
   - newline, wrap-newline, and reverse-index now live under
-    `src/terminal/core/terminal_core_protocol.zig`
+    `src/terminal/core/protocol/terminal_core_protocol.zig`
     instead of staying split awkwardly with `control_handlers.zig`
 - [ ] `VTCORE-05` Simplify snapshot and render publication.
   Notes: the explicit publication center now lives in

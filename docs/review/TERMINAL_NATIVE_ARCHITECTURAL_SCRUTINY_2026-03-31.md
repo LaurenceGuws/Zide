@@ -101,7 +101,7 @@ Judgment:
 - `src/terminal/core/session/session_input_api.zig` now carries the host input
   send/report method group that was previously written inline on
   `pty_terminal_runtime.zig`
-- `src/terminal/core/terminal_protocol_api.zig` now carries the protocol/VT
+- `src/terminal/core/protocol/terminal_protocol_api.zig` now carries the protocol/VT
   mutation method group that was previously written inline on
   `pty_terminal_runtime.zig`
 - the stale `src/terminal/core/session_protocol.zig` forwarding shell is now
@@ -145,6 +145,10 @@ Judgment:
   publication-owned cache, snapshot, and publication helper files now live
   under `src/terminal/core/publication/` instead of continuing to sprawl as
   another flat cluster beside engine-owned files
+- the next honest peer subtree is now in too:
+  parser/protocol execution files now live under
+  `src/terminal/core/protocol/` instead of continuing to sprawl as a flat
+  execution cluster beside engine-owned files
 - current judgment:
   - this is no longer just "a broad session file with helpers extracted"
   - it is now allocator/core plus grouped subsystems and explicit API seams
@@ -163,9 +167,9 @@ Why it matters:
 
 Primary files:
 
-- `src/terminal/core/terminal_core_text.zig`
-- `src/terminal/core/terminal_protocol_api.zig`
-- `src/terminal/core/control_handlers.zig`
+- `src/terminal/core/protocol/terminal_core_text.zig`
+- `src/terminal/core/protocol/terminal_protocol_api.zig`
+- `src/terminal/core/protocol/control_handlers.zig`
 
 Evidence:
 

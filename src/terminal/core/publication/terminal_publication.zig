@@ -343,7 +343,7 @@ pub fn snapshot(self: anytype) TerminalSnapshot {
     };
 }
 
-pub fn publishFeedResultLocked(self: anytype, result: @import("../terminal_core_feed.zig").FeedResult) void {
+pub fn publishFeedResultLocked(self: anytype, result: @import("../protocol/terminal_core_feed.zig").FeedResult) void {
     publication_updates.publishFeedResultLocked(self, result);
 }
 

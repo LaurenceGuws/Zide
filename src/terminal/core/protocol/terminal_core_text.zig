@@ -1,8 +1,8 @@
-const screen_mod = @import("../model/screen.zig");
-const terminal_core_mod = @import("terminal_core.zig");
+const screen_mod = @import("../../model/screen.zig");
+const terminal_core_mod = @import("../terminal_core.zig");
 const terminal_core_protocol = @import("terminal_core_protocol.zig");
-const parser_mod = @import("../parser/parser.zig");
-const types = @import("../model/types.zig");
+const parser_mod = @import("../../parser/parser.zig");
+const types = @import("../../model/types.zig");
 
 pub const TextContext = struct {
     core: *terminal_core_mod.TerminalCore,

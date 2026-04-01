@@ -1,4 +1,4 @@
-const parser_mod = @import("../parser/parser.zig");
+const parser_mod = @import("../../parser/parser.zig");
 
 pub const FeedResult = struct {
     parsed: bool,

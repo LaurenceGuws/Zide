@@ -108,7 +108,7 @@ Status note, 2026-03-31:
   - `src/terminal/core/session/session_input_api.zig` now holds the host input
     send/report method group that was previously written inline on
     `pty_terminal_runtime.zig`
-  - `src/terminal/core/terminal_protocol_api.zig` now holds the protocol/VT
+  - `src/terminal/core/protocol/terminal_protocol_api.zig` now holds the protocol/VT
     mutation method group that was previously written inline on
     `pty_terminal_runtime.zig`
   - `src/terminal/core/session/session_config_api.zig` now holds the config, palette,
@@ -150,6 +150,10 @@ Status note, 2026-03-31:
     publication-owned cache, snapshot, and publication helper files now live
     under `src/terminal/core/publication/` instead of continuing to squat as a
     flat cluster beside engine-owned files
+  - the next honest peer subtree is now real too:
+    parser/protocol execution files now live under
+    `src/terminal/core/protocol/` instead of continuing to squat as a flat
+    execution cluster beside engine-owned files
   - that matters because `pty_terminal_runtime.zig` no longer reads like a bag of
     every field in the system; it reads like allocator/core plus grouped
     subsystems
