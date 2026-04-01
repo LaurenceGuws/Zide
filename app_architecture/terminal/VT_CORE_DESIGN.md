@@ -173,8 +173,9 @@ Status note, 2026-03-31:
     publication/type surface for native widget, replay-harness, and FFI
     consumers
   - test/replay debug imports now target
-    `src/terminal/core/session/debug_api.zig` directly instead of going
-    through a flat `terminal_debug.zig` shim
+    `src/terminal/core/session/debug_ops.zig` directly instead of going
+    through a flat `terminal_debug.zig` shim or a wrapper-side debug export
+    shell
   - `src/terminal/core/session_public_types.zig` is gone, so
     `pty_terminal_runtime.zig` no longer gets to hide direct ownership behind a
     mixed alias hub
@@ -204,11 +205,12 @@ Status note, 2026-03-31:
   - the remaining publication/view-cache helper stubs and the special-case
     `appendHyperlink` wrapper now also route through explicit API modules
     instead of living as root-session exceptions
-  - `src/terminal/core/session/debug_api.zig` now owns the root debug method
-    group instead of routing debug authority through `pty_terminal_runtime.zig`
-  - `src/terminal/core/session/content.zig` and
-    `src/terminal/core/session/content_api.zig` now own the wrapper content
-    seam without repeating `session_` in the file names
+  - the thin wrapper-side debug/content API shells are now dead too:
+    `src/terminal/core/session/debug_api.zig` and
+    `src/terminal/core/session/content_api.zig` are deleted, so replay/tests
+    import `src/terminal/core/session/debug_ops.zig` directly and
+    `pty_terminal_runtime.zig` binds straight to
+    `src/terminal/core/session/content.zig`
   - `src/terminal/core/session/surface_api.zig` is gone too; the wrapper now
     binds directly to the content, selection, host-query, and interaction
     owners instead of routing through one more umbrella shell

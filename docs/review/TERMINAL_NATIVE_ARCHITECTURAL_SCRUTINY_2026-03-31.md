@@ -89,8 +89,9 @@ Judgment:
   are the right direction because they give native/FFI/widget consumers an
   enforced explicit entrypoint instead of a broad root barrel
 - replay/test debug imports are cleaner now too: they target
-  `src/terminal/core/session/debug_api.zig` directly instead of going
-  through a flat `terminal_debug.zig` shim
+  `src/terminal/core/session/debug_ops.zig` directly instead of going
+  through a flat `terminal_debug.zig` shim or a wrapper-side debug export
+  shell
 - the old mixed alias hub `src/terminal/core/session_public_types.zig` is also
   gone, which is an honest improvement: `pty_terminal_runtime.zig` now imports
   direct owners instead of hiding public-facing types behind one more helper
@@ -154,11 +155,12 @@ Judgment:
   `pty_terminal_runtime.zig`
 - the remaining publication/view-cache helper stubs and the special-case
   `appendHyperlink` wrapper no longer live inline on `pty_terminal_runtime.zig`
-- `src/terminal/core/session/debug_api.zig` now owns the debug method group
-  instead of making `pty_terminal_runtime.zig` the visible debug authority
-- `src/terminal/core/session/content.zig` and
-  `src/terminal/core/session/content_api.zig` now carry the wrapper content
-  seam without redundant `session_` naming inside the subtree
+- the thin wrapper-side debug/content API shells are now dead too:
+  `src/terminal/core/session/debug_api.zig` and
+  `src/terminal/core/session/content_api.zig` are deleted, so replay/tests
+  import `src/terminal/core/session/debug_ops.zig` directly and
+  `pty_terminal_runtime.zig` binds straight to
+  `src/terminal/core/session/content.zig`
 - `src/terminal/core/session/runtime.zig`,
   `src/terminal/core/session/config.zig`,
   `src/terminal/core/session/input.zig`,

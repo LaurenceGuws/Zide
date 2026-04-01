@@ -1,6 +1,6 @@
 const std = @import("std");
 const terminal_runtime = @import("../src/terminal/core/terminal_runtime.zig");
-const terminal_debug = @import("../src/terminal/core/session/debug_api.zig");
+const terminal_debug = @import("../src/terminal/core/session/debug_ops.zig");
 
 test "terminal workspace create switch move close lifecycle" {
     var workspace = terminal_runtime.TerminalWorkspace.init(std.testing.allocator, .{});

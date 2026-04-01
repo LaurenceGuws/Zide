@@ -143,8 +143,9 @@ Validation note, 2026-03-31:
     type barrel for snapshot, cell/color, dirty-state, and progress-state
     imports
   - replay/test debug imports now target
-    `src/terminal/core/session/debug_api.zig` directly, so there is no
-    extra flat `terminal_debug.zig` shim pretending to be a core peer.
+    `src/terminal/core/session/debug_ops.zig` directly, so there is no
+    extra flat `terminal_debug.zig` shim or wrapper-side debug export shell
+    pretending to be a core peer.
   - `src/terminal/core/session_public_types.zig` is deleted; `pty_terminal_runtime.zig`
     now imports direct ownership modules instead of routing public-facing types
     through a mixed alias hub.
@@ -172,13 +173,12 @@ Validation note, 2026-03-31:
     protocol `appendHyperlink` wrapper are no longer written inline on
     `pty_terminal_runtime.zig`; those exceptions now route through the explicit
     publication/protocol API seams too.
-  - `src/terminal/core/session/debug_api.zig` now owns the debug method
-    group directly; `pty_terminal_runtime.zig`, replay, and tests point at the
-    real seam instead of routing through an extra flat wrapper.
-  - the wrapper-content seam now follows the same rule:
-    `src/terminal/core/session/content.zig` and
-    `src/terminal/core/session/content_api.zig` replace the redundant
-    `session_content*` naming inside the already-explicit `session/` subtree.
+  - the thin wrapper-side debug/content API shells are now dead too:
+    `src/terminal/core/session/debug_api.zig` and
+    `src/terminal/core/session/content_api.zig` are deleted, so replay/tests
+    import `src/terminal/core/session/debug_ops.zig` directly and
+    `pty_terminal_runtime.zig` binds straight to
+    `src/terminal/core/session/content.zig`
   - the wrapper behavior and support seams now follow the same rule too:
     `src/terminal/core/session/runtime.zig`,
     `src/terminal/core/session/config.zig`,
