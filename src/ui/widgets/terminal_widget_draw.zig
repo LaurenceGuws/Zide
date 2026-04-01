@@ -87,31 +87,11 @@ const PartialPlanSummary = struct {
 const DrawTelemetry = struct {
     texture_full_update: bool = false,
     texture_partial_update: bool = false,
-    fastpath_threshold_hit: bool = false,
-    fastpath_total_cells: usize = 0,
-    fastpath_union_cells: usize = 0,
-    capture_reason: []const u8 = "clean",
 };
 
 const ViewportShiftState = struct {
     rows: i32 = 0,
     exposed_only: bool = false,
-};
-
-const PresentPressureState = struct {
-    force_recent_window: bool,
-    recent_window_seconds: f64,
-    modifier_pressure_active: bool,
-    recent_input_age_s: f64,
-    recent_input_window_active: bool,
-    plan_was_active: bool,
-};
-
-const HandoffState = struct {
-    last_render_generation: u64,
-    pending_generation: u64,
-    published_generation: u64,
-    presented_generation: u64,
 };
 
 const DrawLogBuffers = struct {
@@ -128,8 +108,6 @@ const DrawLoggers = struct {
     texture_shift: @TypeOf(app_logger.logger("terminal.ui.texture_shift")),
     perf: @TypeOf(app_logger.logger("terminal.ui.perf")),
     lifecycle: @TypeOf(app_logger.logger("terminal.ui.lifecycle")),
-    pressure: @TypeOf(app_logger.logger("terminal.ui.present_pressure")),
-    handoff: @TypeOf(app_logger.logger("terminal.generation_handoff")),
 };
 
 const RowRenderStats = struct {
@@ -200,20 +178,6 @@ fn toShellColor(color: terminal_publication.Color) Color {
 
 fn spansOverlap(start_a: usize, end_a: usize, start_b: usize, end_b: usize) bool {
     return start_a <= end_b and start_b <= end_a;
-}
-
-fn partialPlanTouchesCell(self: anytype, row: usize, col: usize) bool {
-    if (row >= self.partial_draw_rows.items.len or !self.partial_draw_rows.items[row]) return false;
-    if (row < self.partial_draw_span_counts.items.len and row < self.partial_draw_spans.items.len and self.partial_draw_span_counts.items[row] > 0) {
-        var span_idx: usize = 0;
-        while (span_idx < self.partial_draw_span_counts.items[row]) : (span_idx += 1) {
-            const span = self.partial_draw_spans.items[row][span_idx];
-            if (col >= span.start and col <= span.end) return true;
-        }
-        return false;
-    }
-    if (row >= self.partial_draw_cols_start.items.len or row >= self.partial_draw_cols_end.items.len) return false;
-    return col >= self.partial_draw_cols_start.items[row] and col <= self.partial_draw_cols_end.items[row];
 }
 
 fn summarizePartialPlan(
@@ -371,8 +335,6 @@ pub fn drawPrepared(
         .texture_shift = app_logger.logger("terminal.ui.texture_shift"),
         .perf = app_logger.logger("terminal.ui.perf"),
         .lifecycle = app_logger.logger("terminal.ui.lifecycle"),
-        .pressure = app_logger.logger("terminal.ui.present_pressure"),
-        .handoff = app_logger.logger("terminal.generation_handoff"),
     };
     const dirty_summary = terminal_publication.dirtySummary(cache);
     var partial_plan_rows_count: usize = 0;
@@ -405,12 +367,6 @@ pub fn drawPrepared(
     var updated = false;
     var telemetry = DrawTelemetry{};
     var viewport_shift = ViewportShiftState{};
-    var handoff_state = HandoffState{
-        .last_render_generation = self.last_render_generation,
-        .pending_generation = 0,
-        .published_generation = 0,
-        .presented_generation = 0,
-    };
     var cell_w_i: i32 = 0;
     var cell_h_i: i32 = 0;
     var visible_w: i32 = 0;
@@ -449,81 +405,21 @@ pub fn drawPrepared(
             blink_requires_partial,
             self.terminal_texture_ready,
         );
-        var pressure_state = PresentPressureState{
-            .force_recent_window = r.forceFullTerminalTexturePublicationRecentInputWindow(),
-            .recent_window_seconds = r.fullTerminalTexturePublicationRecentInputWindowSeconds(),
-            .modifier_pressure_active = input.mods.ctrl or input.mods.shift or input.mods.alt or input.mods.super,
-            .recent_input_age_s = -1.0,
-            .recent_input_window_active = false,
-            .plan_was_active = false,
-        };
         const plan_time = app_shell.getTime();
-        pressure_state.recent_input_age_s = if (self.last_terminal_input_time > 0 and plan_time >= self.last_terminal_input_time)
-            plan_time - self.last_terminal_input_time
-        else
-            -1.0;
-        pressure_state.recent_input_window_active = pressure_state.force_recent_window and
-            (pressure_state.modifier_pressure_active or
+        const recent_input_window_active = r.forceFullTerminalTexturePublicationRecentInputWindow() and
+            ((input.mods.ctrl or input.mods.shift or input.mods.alt or input.mods.super) or
                 (self.last_terminal_input_time > 0 and
-                    pressure_state.recent_input_age_s >= 0 and
-                    pressure_state.recent_input_age_s <= pressure_state.recent_window_seconds));
+                    plan_time >= self.last_terminal_input_time and
+                    (plan_time - self.last_terminal_input_time) <= r.fullTerminalTexturePublicationRecentInputWindowSeconds()));
         update_plan = forceFullTextureUpdatePlanEveryFrame(
             update_plan,
-            pressure_state.recent_input_window_active,
+            recent_input_window_active,
         );
-        pressure_state.plan_was_active = update_plan.needs_full or update_plan.needs_partial;
-        handoff_state.pending_generation = self.session.pendingGeneration();
-        handoff_state.published_generation = self.session.publishedGeneration();
-        handoff_state.presented_generation = self.session.presentedGeneration();
-        if ((logs.pressure.enabled_file or logs.pressure.enabled_console) and
-            (pressure_state.plan_was_active or gen_changed or pressure_state.recent_input_window_active or pressure_state.modifier_pressure_active))
-        {
-            logs.pressure.logf(
-                .info,
-                "gen_changed={d} pub_gen={d}->{d} texture_ready={d} recreated={d} plan_active={d} plan_full={d} plan_partial={d} recent_cfg={d} recent_active={d} recent_age_ms={d:.2} recent_window_ms={d:.2} modifier={d}",
-                .{
-                    @intFromBool(gen_changed),
-                    self.last_render_generation,
-                    draw_state.generation,
-                    @intFromBool(texture_ready_before_draw),
-                    @intFromBool(recreated),
-                    @intFromBool(pressure_state.plan_was_active),
-                    @intFromBool(update_plan.needs_full),
-                    @intFromBool(update_plan.needs_partial),
-                    @intFromBool(pressure_state.force_recent_window),
-                    @intFromBool(pressure_state.recent_input_window_active),
-                    if (pressure_state.recent_input_age_s >= 0) pressure_state.recent_input_age_s * 1000.0 else -1.0,
-                    pressure_state.recent_window_seconds * 1000.0,
-                    @intFromBool(pressure_state.modifier_pressure_active),
-                },
-            );
-        }
-        if ((logs.handoff.enabled_file or logs.handoff.enabled_console) and
-            (gen_changed or pressure_state.plan_was_active or update_plan.needs_full or update_plan.needs_partial))
-        {
-            logs.handoff.logf(
-                .info,
-                "stage=widget_plan sid={x} last_render={d} cache_gen={d} cur={d} pub={d} presented={d} gen_changed={d} plan_full={d} plan_partial={d} texture_ready={d}",
-                .{
-                    @intFromPtr(self.session),
-                    handoff_state.last_render_generation,
-                    draw_state.generation,
-                    handoff_state.pending_generation,
-                    handoff_state.published_generation,
-                    handoff_state.presented_generation,
-                    @intFromBool(gen_changed),
-                    @intFromBool(update_plan.needs_full),
-                    @intFromBool(update_plan.needs_partial),
-                    @intFromBool(texture_ready_before_draw),
-                },
-            );
-        }
         var needs_full = update_plan.needs_full;
         var needs_partial = update_plan.needs_partial;
         const partial_capture = terminal_publication.partialCaptureInfo(cache);
         viewport_shift.rows = partial_capture.active_viewport_shift_rows;
         viewport_shift.exposed_only = partial_capture.shift_exposed_only;
-        telemetry.capture_reason = partial_capture.reason;
         var shifted_rows: usize = 0;
         var shift_requires_fullwidth_partial = false;
         switch (planViewportTextureShift(
@@ -605,9 +501,6 @@ pub fn drawPrepared(
                 blink_requires_partial,
                 0.85,
             );
-            telemetry.fastpath_threshold_hit = fullframe_fastpath_decision.threshold_hit;
-            telemetry.fastpath_total_cells = fullframe_fastpath_decision.total_cells;
-            telemetry.fastpath_union_cells = fullframe_fastpath_decision.union_cells;
             if (fullframe_fastpath_decision.threshold_hit) {
                 needs_full = true;
                 needs_partial = false;
@@ -858,22 +751,6 @@ pub fn drawPrepared(
                 self.kitty.last_generation = kitty_generation;
             }
             self.terminal_texture_ready = true;
-            if (logs.handoff.enabled_file or logs.handoff.enabled_console) {
-                logs.handoff.logf(
-                    .info,
-                    "stage=widget_commit sid={x} last_render={d}->{d} cur={d} pub={d} presented={d} full={d} partial={d}",
-                    .{
-                        @intFromPtr(self.session),
-                        handoff_state.last_render_generation,
-                        draw_state.generation,
-                        handoff_state.pending_generation,
-                        handoff_state.published_generation,
-                        handoff_state.presented_generation,
-                        @intFromBool(telemetry.texture_full_update),
-                        @intFromBool(telemetry.texture_partial_update),
-                    },
-                );
-            }
             self.last_render_generation = draw_state.generation;
             self.last_render_clear_generation = draw_state.clear_generation;
             self.last_cell_w_i = cell_w_i;
