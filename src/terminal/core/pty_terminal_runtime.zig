@@ -259,7 +259,6 @@ pub const PtyTerminalRuntime = struct {
     pub const scrollRegionUp = @import("protocol/terminal_core_protocol.zig").scrollRegionUp;
     pub const scrollRegionUpWithOrigin = @import("protocol/terminal_core_protocol.zig").scrollRegionUpWithOrigin;
     pub const scrollRegionDown = @import("protocol/terminal_core_protocol.zig").scrollRegionDown;
-    pub const paletteColor = @import("protocol/terminal_core_protocol.zig").paletteColor;
     pub const newline = @import("protocol/terminal_core_protocol.zig").newline;
     pub const wrapNewline = @import("protocol/terminal_core_protocol.zig").wrapNewline;
 
@@ -273,8 +272,6 @@ pub const PtyTerminalRuntime = struct {
     pub const updateViewCacheForScroll = terminal_publication.updateViewCacheForScroll;
     pub const updateViewCacheForScrollLocked = terminal_publication.updateViewCacheForScrollLocked;
 
-    pub const setCursorStyle = @import("protocol/terminal_core_protocol.zig").setCursorStyle;
-    pub const decrqssReplyInto = @import("protocol/terminal_core_protocol.zig").decrqssReplyInto;
     pub const enterAltScreen = mode_effects.enterAltScreen;
     pub const exitAltScreen = mode_effects.exitAltScreen;
 

@@ -209,6 +209,10 @@ Status note, 2026-03-31:
   - `saveCursor` / `restoreCursor` now route through
     `src/terminal/core/terminal_core_modes.zig` directly too, so the wrapper no
     longer claims that mode-state seam
+  - protocol-only helpers now route through
+    `src/terminal/core/protocol/terminal_core_protocol.zig` directly too:
+    `paletteColor`, `setCursorStyle`, and DECRQSS reply generation no longer
+    inflate the wrapper surface
   - the same direct-owner cleanup now applies in `workspace.zig`: wrapper
     composition reads as runtime/workspace ownership, and progress-state typing
     no longer comes through `pty_terminal_runtime.zig`

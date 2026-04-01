@@ -273,6 +273,10 @@ Judgment:
 - `saveCursor` / `restoreCursor` now route through
   `src/terminal/core/terminal_core_modes.zig` directly too, so the wrapper no
   longer claims that mode-state seam
+- protocol-only helpers now route through
+  `src/terminal/core/protocol/terminal_core_protocol.zig` directly too:
+  `paletteColor`, `setCursorStyle`, and DECRQSS reply generation no longer
+  inflate the wrapper surface
 - the flat root state is now also grouped into explicit subsystem-owned
   embedded structs:
   - `session/publication_fields`

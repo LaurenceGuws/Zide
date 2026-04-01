@@ -1,5 +1,6 @@
 const types = @import("../model/types.zig");
 const parser_csi = @import("../parser/csi.zig");
+const terminal_core_protocol = @import("../core/protocol/terminal_core_protocol.zig");
 const app_logger = @import("../../app_logger.zig");
 
 const Color = types.Color;
@@ -42,7 +43,7 @@ pub fn applySgr(self: anytype, action: parser_csi.CsiAction, effective_sgr_param
                 const mode = params[i + 1];
                 if (mode == 5 and i + 2 < n_params) {
                     const idx = types.clampColorIndex(params[i + 2]);
-                    const color = self.paletteColor(idx);
+                    const color = terminal_core_protocol.paletteColor(self, idx);
                     switch (p) {
                         38 => current_attrs.fg = color,
                         48 => current_attrs.bg = color,
@@ -114,10 +115,10 @@ pub fn applySgr(self: anytype, action: parser_csi.CsiAction, effective_sgr_param
             39 => current_attrs.fg = default_attrs.fg,
             49 => current_attrs.bg = default_attrs.bg,
             59 => current_attrs.underline_color = default_attrs.underline_color,
-            30...37 => current_attrs.fg = self.paletteColor(@intCast(p - 30)),
-            40...47 => current_attrs.bg = self.paletteColor(@intCast(p - 40)),
-            90...97 => current_attrs.fg = self.paletteColor(@intCast(8 + (p - 90))),
-            100...107 => current_attrs.bg = self.paletteColor(@intCast(8 + (p - 100))),
+            30...37 => current_attrs.fg = terminal_core_protocol.paletteColor(self, @intCast(p - 30)),
+            40...47 => current_attrs.bg = terminal_core_protocol.paletteColor(self, @intCast(p - 40)),
+            90...97 => current_attrs.fg = terminal_core_protocol.paletteColor(self, @intCast(8 + (p - 90))),
+            100...107 => current_attrs.bg = terminal_core_protocol.paletteColor(self, @intCast(8 + (p - 100))),
             else => {},
         }
         i += 1;

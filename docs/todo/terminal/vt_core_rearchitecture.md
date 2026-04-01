@@ -304,6 +304,10 @@ Validation note, 2026-03-31:
   - `saveCursor` / `restoreCursor` no longer masquerade as wrapper-owned
     protocol surface either: parser/protocol/test callers now use
     `src/terminal/core/terminal_core_modes.zig` directly
+  - protocol-only helpers now route to
+    `src/terminal/core/protocol/terminal_core_protocol.zig` directly too:
+    `paletteColor`, `setCursorStyle`, and DECRQSS reply generation no longer
+    pretend to belong to `src/terminal/core/pty_terminal_runtime.zig`
   - raw session state is no longer a flat lie:
     - `src/terminal/core/session/publication_fields.zig`
     - `src/terminal/core/session/runtime_fields.zig`

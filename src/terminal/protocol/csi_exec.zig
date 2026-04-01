@@ -1,6 +1,7 @@
 const std = @import("std");
 const parser_csi = @import("../parser/csi.zig");
 const terminal_core_modes = @import("../core/terminal_core_modes.zig");
+const terminal_core_protocol = @import("../core/protocol/terminal_core_protocol.zig");
 
 pub fn handleSimpleCsi(
     self: anytype,
@@ -102,7 +103,7 @@ pub fn handleSpecialCsi(
         },
         'q' => {
             if (action.leader == 0 and !action.private) {
-                self.setCursorStyle(if (param_len > 0) params[0] else 0);
+                terminal_core_protocol.setCursorStyle(self, if (param_len > 0) params[0] else 0);
             }
         },
         'g' => {
