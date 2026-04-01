@@ -1,5 +1,5 @@
 const std = @import("std");
-const session_runtime = @import("../session_runtime.zig");
+const session_runtime = @import("session_runtime.zig");
 
 pub fn prepareForShutdown(self: anytype) void {
     session_runtime.prepareForShutdown(self);

@@ -133,6 +133,10 @@ Judgment:
   truly session-owned API/field/debug seams live under
   `src/terminal/core/session/` instead of continuing to sprawl as a flat
   prefix beside engine-owned files
+- that subtree is now broad enough to be meaningful:
+  runtime, lifecycle, publication-state, publication-update, presentation-
+  handoff, content, queries, selection, interaction, and config helpers that
+  are still truly wrapper-owned now live there too
 - current judgment:
   - this is no longer just "a broad session file with helpers extracted"
   - it is now allocator/core plus grouped subsystems and explicit API seams

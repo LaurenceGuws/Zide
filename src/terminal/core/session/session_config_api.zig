@@ -1,4 +1,4 @@
-const session_config = @import("../session_config.zig");
+const session_config = @import("session_config.zig");
 const types = @import("../../model/types.zig");
 
 pub fn setDefaultColorsLocked(self: anytype, fg: types.Color, bg: types.Color) void {

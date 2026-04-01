@@ -176,6 +176,11 @@ Validation note, 2026-03-31:
     the truly session-owned API, field, and debug seams live under
     `src/terminal/core/session/` instead of squatting as a flat `session_*`
     prefix beside engine-owned files
+  - that subtree is now broader and more honest:
+    runtime, lifecycle, publication-state, publication-update, presentation-
+    handoff, content, queries, selection, interaction, and config helpers that
+    are still genuinely wrapper-owned also live under
+    `src/terminal/core/session/`
   - `pty_terminal_runtime.zig` now reads as allocator/core plus grouped subsystem
     state and explicit API seams, not as one broad undifferentiated owner.
   - the rename threshold is now crossed:

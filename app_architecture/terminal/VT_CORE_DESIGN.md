@@ -138,6 +138,10 @@ Status note, 2026-03-31:
     those truly session-owned API/field/debug seams live under
     `src/terminal/core/session/` instead of pretending to be a flat sibling
     taxonomy for the whole terminal core
+  - that cut is no longer just API/field scaffolding:
+    runtime, lifecycle, publication-state, publication-update, presentation-
+    handoff, content, queries, selection, interaction, and config helpers that
+    are still truly wrapper-owned also live under `src/terminal/core/session/`
   - that matters because `pty_terminal_runtime.zig` no longer reads like a bag of
     every field in the system; it reads like allocator/core plus grouped
     subsystems
