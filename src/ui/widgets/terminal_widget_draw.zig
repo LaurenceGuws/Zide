@@ -76,6 +76,7 @@ pub const DrawPreparation = struct {
 const ViewportTextureShiftPlan = draw_texture.ViewportTextureShiftPlan;
 const TextureUpdatePlan = draw_texture.TextureUpdatePlan;
 const FullFrameFastPathDecision = draw_texture.FullFrameFastPathDecision;
+const PartialPlanBounds = draw_texture.PartialPlanBounds;
 const max_frame_generation_buckets = 8;
 
 const GenerationBucket = struct {
@@ -102,6 +103,15 @@ const RowContentSummary = struct {
     first_col: i32,
     last_col: i32,
     hash: u64,
+};
+
+const PartialPlanSummary = struct {
+    rows_count: usize = 0,
+    row_span: usize = 0,
+    col_span: usize = 0,
+    cells: usize = 0,
+    union_cells: usize = 0,
+    summary: []const u8 = "",
 };
 
 pub fn latestFrameLatencyMetrics() FrameLatencyMetrics {
@@ -588,6 +598,58 @@ fn partialWouldPreserveOlderGeneration(self: anytype, rows: usize, cols: usize, 
         }
     }
     return false;
+}
+
+fn summarizePartialPlan(
+    self: anytype,
+    rows: usize,
+    cols: usize,
+    generation: u64,
+    partial_plan_bounds: ?PartialPlanBounds,
+    draw_log_enabled: bool,
+    texture_partial_update: bool,
+    summary_buf: []u8,
+) PartialPlanSummary {
+    var summary = PartialPlanSummary{};
+
+    for (self.partial_draw_rows.items) |row_draw| {
+        if (row_draw) summary.rows_count += 1;
+    }
+    for (self.partial_draw_rows.items, 0..) |row_draw, row| {
+        if (!row_draw) continue;
+        if (row < self.partial_draw_span_counts.items.len and row < self.partial_draw_spans.items.len and self.partial_draw_span_counts.items[row] > 0) {
+            var span_idx: usize = 0;
+            while (span_idx < self.partial_draw_span_counts.items[row]) : (span_idx += 1) {
+                const span = self.partial_draw_spans.items[row][span_idx];
+                const row_start = @as(usize, span.start);
+                const row_end = @as(usize, span.end);
+                if (row_end >= row_start) summary.cells += row_end - row_start + 1;
+                markPresentedGenerationRowRange(self, rows, cols, row, row_start, row_end, generation);
+            }
+        } else {
+            const row_start = @as(usize, self.partial_draw_cols_start.items[row]);
+            const row_end = @as(usize, self.partial_draw_cols_end.items[row]);
+            if (row_end >= row_start) summary.cells += row_end - row_start + 1;
+            markPresentedGenerationRowRange(self, rows, cols, row, row_start, row_end, generation);
+        }
+    }
+    if (partial_plan_bounds) |bounds| {
+        summary.row_span = bounds.end_row - bounds.start_row + 1;
+        summary.col_span = bounds.end_col - bounds.start_col + 1;
+        summary.union_cells = summary.row_span * summary.col_span;
+    }
+    if (draw_log_enabled and texture_partial_update) {
+        summary.summary = draw_texture.formatPartialPlanRows(
+            summary_buf,
+            self.partial_draw_rows.items,
+            self.partial_draw_span_counts.items,
+            self.partial_draw_spans.items,
+            self.partial_draw_cols_start.items,
+            self.partial_draw_cols_end.items,
+            12,
+        );
+    }
+    return summary;
 }
 
 pub fn drawPrepared(
@@ -1103,43 +1165,22 @@ pub fn drawPrepared(
                     shift_requires_fullwidth_partial,
                     blink_requires_partial,
                 );
-                for (self.partial_draw_rows.items) |row_draw| {
-                    if (row_draw) partial_plan_rows_count += 1;
-                }
-                for (self.partial_draw_rows.items, 0..) |row_draw, row| {
-                    if (!row_draw) continue;
-                    if (row < self.partial_draw_span_counts.items.len and row < self.partial_draw_spans.items.len and self.partial_draw_span_counts.items[row] > 0) {
-                        var span_idx: usize = 0;
-                        while (span_idx < self.partial_draw_span_counts.items[row]) : (span_idx += 1) {
-                            const span = self.partial_draw_spans.items[row][span_idx];
-                            const row_start = @as(usize, span.start);
-                            const row_end = @as(usize, span.end);
-                            if (row_end >= row_start) partial_plan_cells += row_end - row_start + 1;
-                            markPresentedGenerationRowRange(self, rows, cols, row, row_start, row_end, draw_state.generation);
-                        }
-                    } else {
-                        const row_start = @as(usize, self.partial_draw_cols_start.items[row]);
-                        const row_end = @as(usize, self.partial_draw_cols_end.items[row]);
-                        if (row_end >= row_start) partial_plan_cells += row_end - row_start + 1;
-                        markPresentedGenerationRowRange(self, rows, cols, row, row_start, row_end, draw_state.generation);
-                    }
-                }
-                if (partial_plan_bounds) |bounds| {
-                    partial_plan_row_span = bounds.end_row - bounds.start_row + 1;
-                    partial_plan_col_span = bounds.end_col - bounds.start_col + 1;
-                    partial_plan_union_cells = partial_plan_row_span * partial_plan_col_span;
-                }
-                if ((draw_log.enabled_file or draw_log.enabled_console) and texture_partial_update) {
-                    partial_plan_summary = draw_texture.formatPartialPlanRows(
-                        &partial_plan_summary_buf,
-                        self.partial_draw_rows.items,
-                        self.partial_draw_span_counts.items,
-                        self.partial_draw_spans.items,
-                        self.partial_draw_cols_start.items,
-                        self.partial_draw_cols_end.items,
-                        12,
-                    );
-                }
+                const partial_plan = summarizePartialPlan(
+                    self,
+                    rows,
+                    cols,
+                    draw_state.generation,
+                    partial_plan_bounds,
+                    draw_log.enabled_file or draw_log.enabled_console,
+                    texture_partial_update,
+                    &partial_plan_summary_buf,
+                );
+                partial_plan_rows_count = partial_plan.rows_count;
+                partial_plan_row_span = partial_plan.row_span;
+                partial_plan_col_span = partial_plan.col_span;
+                partial_plan_cells = partial_plan.cells;
+                partial_plan_union_cells = partial_plan.union_cells;
+                partial_plan_summary = partial_plan.summary;
                 if (shifted_rows > 0 or shift_requires_fullwidth_partial) {
                     texture_shift_log.logf(
                         .info,

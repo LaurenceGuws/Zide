@@ -307,6 +307,12 @@ Validation note, 2026-03-31:
     now gives widget draw one publication-owned answer for raw background and
     resolved screen-reverse background instead of rebuilding first-cell color
     logic in multiple places
+  - widget-local partial-plan bookkeeping is no longer smeared inline through
+    the main draw path:
+    - `summarizePartialPlan(...)`
+    now owns the row/cell/union accounting and summary-text assembly for the
+    partial draw plan instead of leaving that accounting blob in the middle of
+    texture update flow
   - lifecycle/dirty helpers now also own more of the direct truth widget draw
     needs:
     - `lifecycleTransitionInfo(...)` carries current alt-state

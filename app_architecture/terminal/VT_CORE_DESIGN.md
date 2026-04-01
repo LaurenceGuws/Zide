@@ -208,6 +208,9 @@ Status note, 2026-03-31:
   - first-cell base background interpretation should also be publication-owned
     via helpers like `baseColorInfo(...)` instead of being reconstructed in
     multiple widget draw branches
+  - widget-owned planning/accounting blobs should still be extracted into
+    named local helpers once they become dense enough to hide the real draw
+    flow; `summarizePartialPlan(...)` is the current example
   - once a publication helper exists, widget draw should consume its direct
     truth completely; it should not keep mixing helper-owned state with raw
     reads like `cache.alt_active` or repeated `cache.dirty == .none`

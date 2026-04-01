@@ -271,6 +271,9 @@ Judgment:
   - widget draw now also asks publication for `baseColorInfo` instead of
     rebuilding first-cell background and reverse-resolved background logic in
     multiple branches
+  - the widget-owned partial-plan accounting blob is now isolated in
+    `summarizePartialPlan(...)` instead of being hand-expanded in the middle of
+    the texture update path
   - widget draw now also uses helper-owned current alt-state and clean-state
     instead of falling back to raw `cache.alt_active` and repeated
     `cache.dirty == .none` checks where publication already owns the answer
