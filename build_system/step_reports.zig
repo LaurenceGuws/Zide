@@ -10,6 +10,7 @@ const ReportToolSpec = struct {
     adds_target_profile_import: bool = false,
     adds_step_catalog_import: bool = false,
     adds_policy_catalog_import: bool = false,
+    adds_profile_catalog_import: bool = false,
 };
 
 pub fn addReportBuildAllStep(
@@ -41,6 +42,28 @@ pub fn addReportBuildProfilesStep(
             .description = "Report active build dependency profiles",
             .adds_build_options = false,
             .adds_target_profile_import = true,
+            .adds_profile_catalog_import = true,
+        },
+    );
+}
+
+pub fn addReportBuildDependenciesStep(
+    b: *std.Build,
+    target: std.Build.ResolvedTarget,
+    optimize: std.builtin.OptimizeMode,
+) *std.Build.Step {
+    return addReportToolRunStep(
+        b,
+        target,
+        optimize,
+        null,
+        .{
+            .exe_name = "build-dependency-report",
+            .root_source_file = "build_system/reports/build_dependency_report.zig",
+            .step_name = "report-build-dependencies",
+            .description = "Report dependency intent for each build profile",
+            .adds_build_options = false,
+            .adds_profile_catalog_import = true,
         },
     );
 }
@@ -224,6 +247,23 @@ const core_build_report_tool_specs = [_]ReportToolSpec{
         .description = "",
         .adds_policy_catalog_import = true,
     },
+    .{
+        .exe_name = "build-profile-report-check",
+        .root_source_file = "build_system/reports/build_profile_report.zig",
+        .step_name = "",
+        .description = "",
+        .adds_build_options = false,
+        .adds_target_profile_import = true,
+        .adds_profile_catalog_import = true,
+    },
+    .{
+        .exe_name = "build-dependency-report-check",
+        .root_source_file = "build_system/reports/build_dependency_report.zig",
+        .step_name = "",
+        .description = "",
+        .adds_build_options = false,
+        .adds_profile_catalog_import = true,
+    },
 };
 
 fn addReportToolRunStep(
@@ -272,6 +312,13 @@ fn addReportToolExecutable(
     if (spec.adds_policy_catalog_import) {
         exe.root_module.addAnonymousImport("policy_catalog", .{
             .root_source_file = b.path("build_system/policy_catalog.zig"),
+            .target = target,
+            .optimize = optimize,
+        });
+    }
+    if (spec.adds_profile_catalog_import) {
+        exe.root_module.addAnonymousImport("profile_catalog", .{
+            .root_source_file = b.path("build_system/profile_catalog.zig"),
             .target = target,
             .optimize = optimize,
         });

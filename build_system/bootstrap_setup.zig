@@ -128,6 +128,11 @@ pub fn addBootstrapReportSteps(
         optimize,
         build_options,
     );
+    const build_dependency_report_step = step_reports.addReportBuildDependenciesStep(
+        b,
+        target,
+        optimize,
+    );
     const build_surface_report_step = step_reports.addReportBuildSurfaceStep(
         b,
         target,
@@ -147,6 +152,7 @@ pub fn addBootstrapReportSteps(
             build_focused_policy_report_step,
             build_target_report_step,
             build_policy_report_step,
+            build_dependency_report_step,
             build_surface_report_step,
             build_report_tools_check_step,
         },

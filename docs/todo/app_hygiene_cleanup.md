@@ -115,6 +115,10 @@ Progress note, 2026-04-02:
   instead of only as a hand-maintained report body
 - this gives the build system shared data for supported options, hard
   constraints, and operator intent
+- build profile metadata now lives in `build_system/profile_catalog.zig`
+  instead of only in `report-build-profiles`
+- the build system now exposes `zig build report-build-dependencies` to explain
+  dependency intent per profile instead of leaving that matrix implicit
 
 ## Repo Boundary Rule
 

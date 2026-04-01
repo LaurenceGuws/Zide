@@ -48,6 +48,7 @@ pub const tooling_and_report_steps = [_]StepSpec{
     .{ .name = "zig build report-build-bootstrap", .description = "report bootstrap context" },
     .{ .name = "zig build report-build-target", .description = "report target/optimize settings" },
     .{ .name = "zig build report-build-profiles", .description = "report dependency profiles" },
+    .{ .name = "zig build report-build-dependencies", .description = "report dependency intent per profile" },
     .{ .name = "zig build report-build-focused-policy", .description = "report focused-mode policy" },
     .{ .name = "zig build report-build-policy", .description = "report supported options and hard constraints" },
     .{ .name = "zig build report-build-surface", .description = "report operator-facing step taxonomy" },
