@@ -291,6 +291,10 @@ Validation note, 2026-03-31:
   - that remaining effect boundary now lives under protocol ownership in
     `src/terminal/core/protocol/terminal_core_protocol.zig` instead of being wired
     inline inside `terminal_core_text.zig`
+  - the dead `TextContext` adapter struct is now gone too:
+    `terminal_core_text.zig` talks directly to `self.core` plus protocol-owned
+    effects instead of routing text execution through one more wrapper-shaped
+    contract
   - the stale `src/terminal/core/session_protocol.zig` forwarding shell is now
     deleted; `protocol/terminal_protocol_api.zig` routes directly to the real core,
     protocol, mode-effect, feed, and publication owners

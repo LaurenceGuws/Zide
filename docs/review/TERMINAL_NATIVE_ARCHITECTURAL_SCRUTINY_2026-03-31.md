@@ -235,6 +235,9 @@ Evidence:
   - active screen access
   - GL charset selection
   - hyperlink attribute application
+- the dead `TextContext` adapter layer is now gone too:
+  `terminal_core_text.zig` talks directly to `self.core` plus protocol-owned
+  effects instead of routing through one more wrapper-shaped contract
 - the remaining callback seam is narrower:
   - wrap/newline effects
   - insert-mode char insertion effects

@@ -103,11 +103,11 @@ pub fn paletteColor(self: anytype, idx: u8) types.Color {
 }
 
 pub fn handleCodepoint(self: anytype, codepoint: u32) void {
-    terminal_core_text.handleCodepoint(terminal_core_text.TextContext.from(self), codepoint);
+    terminal_core_text.handleCodepoint(self, codepoint);
 }
 
 pub fn handleAsciiSlice(self: anytype, bytes: []const u8) void {
-    terminal_core_text.handleAsciiSlice(terminal_core_text.TextContext.from(self), bytes);
+    terminal_core_text.handleAsciiSlice(self, bytes);
 }
 
 pub fn newline(self: anytype) void {

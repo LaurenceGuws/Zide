@@ -4,48 +4,16 @@ const terminal_core_protocol = @import("terminal_core_protocol.zig");
 const parser_mod = @import("../../parser/parser.zig");
 const types = @import("../../model/types.zig");
 
-pub const TextContext = struct {
-    core: *terminal_core_mod.TerminalCore,
-    effects: terminal_core_protocol.TextEffects,
-
-    pub fn from(session: anytype) TextContext {
-        return .{
-            .core = &session.core,
-            .effects = terminal_core_protocol.TextEffects.from(session),
-        };
-    }
-
-    pub fn activeScreen(self: *const TextContext) *screen_mod.Screen {
-        return self.core.activeScreen();
-    }
-
-    pub fn applyHyperlinkAttrs(self: *const TextContext, attrs: *types.CellAttrs) void {
-        self.core.applyHyperlinkAttrs(attrs);
-    }
-
-    pub fn glCharset(self: *const TextContext) parser_mod.Charset {
-        return self.core.glCharset();
-    }
-
-    pub fn wrapNewline(self: *const TextContext) void {
-        self.effects.wrapNewline();
-    }
-
-    pub fn insertChars(self: *const TextContext, count: usize) void {
-        self.effects.insertChars(count);
-    }
-};
-
-pub fn handleCodepoint(context: TextContext, codepoint: u32) void {
+pub fn handleCodepoint(self: anytype, codepoint: u32) void {
     if (codepoint == 0) return;
     if (codepoint > 0x10FFFF or (codepoint >= 0xD800 and codepoint <= 0xDFFF)) return;
 
     var cp = codepoint;
-    if (context.glCharset() == .dec_special) {
+    if (self.core.glCharset() == .dec_special) {
         cp = screen_mod.mapDecSpecial(codepoint);
     }
 
-    const screen = context.activeScreen();
+    const screen = self.core.activeScreen();
     const rows = @as(usize, screen.grid.rows);
     const cols = @as(usize, screen.grid.cols);
     if (rows == 0 or cols == 0) return;
@@ -53,7 +21,7 @@ pub fn handleCodepoint(context: TextContext, codepoint: u32) void {
     while (true) {
         switch (screen.prepareWrite()) {
             .done => return,
-            .need_wrap => context.wrapNewline(),
+            .need_wrap => terminal_core_protocol.wrapNewline(self),
             .proceed => break,
         }
     }
@@ -63,11 +31,11 @@ pub fn handleCodepoint(context: TextContext, codepoint: u32) void {
         const right = screen.writeRightBoundary();
         const cpw: usize = cp_width;
         if (cp_width > 1 and screen.cursor.col + cpw > right + 1) {
-            context.wrapNewline();
+            terminal_core_protocol.wrapNewline(self);
             while (true) {
                 switch (screen.prepareWrite()) {
                     .done => return,
-                    .need_wrap => context.wrapNewline(),
+                    .need_wrap => terminal_core_protocol.wrapNewline(self),
                     .proceed => break,
                 }
             }
@@ -75,25 +43,25 @@ pub fn handleCodepoint(context: TextContext, codepoint: u32) void {
     }
 
     var attrs = screen.current_attrs;
-    context.applyHyperlinkAttrs(&attrs);
+    self.core.applyHyperlinkAttrs(&attrs);
     const cp_width = screen_mod.Screen.codepointCellWidth(cp);
     if (screen.insert_mode and cp_width > 0) {
-        context.insertChars(@intCast(cp_width));
+        terminal_core_protocol.insertChars(self, @intCast(cp_width));
     }
     screen.writeCodepoint(cp, attrs);
 }
 
-pub fn handleAsciiSlice(context: TextContext, bytes: []const u8) void {
+pub fn handleAsciiSlice(self: anytype, bytes: []const u8) void {
     if (bytes.len == 0) return;
-    const screen = context.activeScreen();
+    const screen = self.core.activeScreen();
     const rows = @as(usize, screen.grid.rows);
     const cols = @as(usize, screen.grid.cols);
     if (rows == 0 or cols == 0) return;
     if (screen.cursor.row >= rows) return;
 
     var attrs = screen.current_attrs;
-    context.applyHyperlinkAttrs(&attrs);
-    const use_dec_special = context.glCharset() == .dec_special;
+    self.core.applyHyperlinkAttrs(&attrs);
+    const use_dec_special = self.core.glCharset() == .dec_special;
 
     if (screen.insert_mode) {
         for (bytes) |b| {
@@ -101,13 +69,13 @@ pub fn handleAsciiSlice(context: TextContext, bytes: []const u8) void {
                 switch (screen.prepareWrite()) {
                     .done => return,
                     .need_wrap => {
-                        context.wrapNewline();
+                        terminal_core_protocol.wrapNewline(self);
                         continue;
                     },
                     .proceed => break,
                 }
             }
-            context.insertChars(1);
+            terminal_core_protocol.insertChars(self, 1);
             screen.writeCodepoint(@intCast(b), attrs);
         }
         return;
@@ -118,7 +86,7 @@ pub fn handleAsciiSlice(context: TextContext, bytes: []const u8) void {
         switch (screen.prepareWrite()) {
             .done => break,
             .need_wrap => {
-                context.wrapNewline();
+                terminal_core_protocol.wrapNewline(self);
                 continue;
             },
             .proceed => {},

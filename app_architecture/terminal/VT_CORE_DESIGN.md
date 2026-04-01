@@ -83,6 +83,10 @@ Status note, 2026-03-31:
   - that seam is now protocol-owned instead of text-owned:
     `terminal_core_protocol.zig` defines the effect boundary used by
     `terminal_core_text.zig`
+  - the extra `TextContext` adapter layer is now gone too:
+    `terminal_core_text.zig` talks directly to `self.core` plus those
+    protocol-owned effects instead of routing through one more wrapper-shaped
+    contract
   - duplicated publication/cache truth
   - oversized native widget/render coordination around terminal publication
 - The current operating rule is sequential but ruthless:
