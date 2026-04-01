@@ -153,7 +153,15 @@ pub fn handleCsi(self: anytype, action: parser_csi.CsiAction) void {
                 if (self.lockPtyWriter()) |writer_guard| {
                     var writer = writer_guard;
                     defer writer.unlock();
-                    csi_mode_query.handleDecrqmQuery(&writer, action, p[0], csi_mode_query.modeSnapshot(self));
+                    const mode = p[0];
+                    const snapshot = csi_mode_query.modeSnapshot(self);
+                    if (action.leader == '?' and action.private) {
+                        const state = csi_mode_query.decrqmPrivateModeState(snapshot, mode);
+                        _ = csi_mode_query.writeDecrqmReplyWithWriter(&writer, true, mode, state);
+                    } else if (action.leader == 0 and !action.private) {
+                        const state = csi_mode_query.decrqmAnsiModeState(snapshot, mode);
+                        _ = csi_mode_query.writeDecrqmReplyWithWriter(&writer, false, mode, state);
+                    }
                 }
             }
         },

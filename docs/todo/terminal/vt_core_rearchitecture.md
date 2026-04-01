@@ -460,6 +460,11 @@ Validation note, 2026-03-31:
     through `handleDsrQuery(...)` / `handleWindowOpQuery(...)` in
     `src/terminal/protocol/csi_reply.zig`; CSI now calls the writer-owned reply
     functions directly instead of keeping another forwarding layer alive
+  - the same is now true for DECRQM reply dispatch:
+    `src/terminal/protocol/csi.zig` no longer routes DECRQM replies through
+    `handleDecrqmQuery(...)` in `src/terminal/protocol/csi_mode_query.zig`;
+    CSI now computes the mode state and calls the writer-owned DECRQM reply
+    function directly
   - protocol query helpers are shrinking the same way:
     runtime/focus tests now use `terminal_core_protocol.zig` directly for
     `getCell` / `getCursorPos`, so those no longer sit on the wrapper surface

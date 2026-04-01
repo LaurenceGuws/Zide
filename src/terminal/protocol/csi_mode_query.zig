@@ -121,18 +121,6 @@ pub fn decrqmAnsiModeState(snapshot: ModeSnapshot, mode: i32) csi_mod.DecrpmStat
     };
 }
 
-pub fn handleDecrqmQuery(writer: anytype, action: parser_csi.CsiAction, mode: i32, snapshot: ModeSnapshot) void {
-    if (action.leader == '?' and action.private) {
-        const state = decrqmPrivateModeState(snapshot, mode);
-        _ = writeDecrqmReplyWithWriter(writer, true, mode, state);
-        return;
-    }
-    if (action.leader == 0 and !action.private) {
-        const state = decrqmAnsiModeState(snapshot, mode);
-        _ = writeDecrqmReplyWithWriter(writer, false, mode, state);
-    }
-}
-
 pub fn writeDecrqmReplyWithWriter(writer: anytype, private: bool, mode: i32, state: csi_mod.DecrpmState) bool {
     const log = app_logger.logger("terminal.csi");
     var buf: [32]u8 = undefined;
