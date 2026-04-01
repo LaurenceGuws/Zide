@@ -459,6 +459,12 @@ Evidence:
   replay harness, reflow tests, resize reflow, and scrollback view now call
   `terminal_publication.updateViewCacheForScroll{Locked}(...)` directly, and
   the wrapper no longer re-exports that publication mutator slab either
+- publication mutation authority is explicit in the PTY runtime regression
+  tests now too:
+  `pty_terminal_runtime_tests.zig` no longer stages publication through
+  `session.bumpGeneration()` / `session.publishCurrentViewLocked(...)`; the
+  regression authority now calls `terminal_publication.bumpGeneration(...)`
+  and `terminal_publication.publishCurrentViewLocked(...)` directly
 - the outer CSI forwarding shell is gone too:
   `terminal_protocol_api.zig` now routes CSI directly into
   `src/terminal/protocol/csi.zig` without stepping through an extra

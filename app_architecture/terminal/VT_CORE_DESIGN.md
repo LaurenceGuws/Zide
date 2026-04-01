@@ -315,6 +315,12 @@ Status note, 2026-03-31:
     `terminal_publication.updateViewCacheForScroll{Locked}(...)` directly, and
     `pty_terminal_runtime.zig` no longer re-exports that publication mutator
     slab either
+  - publication mutation authority is explicit in the PTY runtime regression
+    tests now too:
+    `pty_terminal_runtime_tests.zig` no longer stages publication through
+    `session.bumpGeneration()` / `session.publishCurrentViewLocked(...)`; the
+    regression authority now calls `terminal_publication.bumpGeneration(...)`
+    and `terminal_publication.publishCurrentViewLocked(...)` directly
   - the same direct-owner cleanup now applies in `workspace.zig`: wrapper
     composition reads as runtime/workspace ownership, and progress-state typing
     no longer comes through `pty_terminal_runtime.zig`

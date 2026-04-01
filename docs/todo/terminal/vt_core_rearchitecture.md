@@ -325,6 +325,15 @@ Validation note, 2026-03-31:
     `terminal_publication.updateViewCacheForScroll{Locked}(...)` directly, and
     `pty_terminal_runtime.zig` no longer re-exports that publication mutator
     slab either
+  - publication mutation authority is explicit in the PTY runtime regression
+    tests now too:
+    `src/terminal/core/pty_terminal_runtime_tests.zig` no longer stages
+    publication through `session.bumpGeneration()` /
+    `session.publishCurrentViewLocked(...)`; those tests now call
+    `terminal_publication.bumpGeneration(...)` and
+    `terminal_publication.publishCurrentViewLocked(...)` directly, so the
+    regression authority stops reinforcing wrapper ownership for publication
+    mutation
   - the remaining publication/view-cache helper stubs and the special-case
     protocol `appendHyperlink` wrapper are no longer written inline on
     `pty_terminal_runtime.zig`; those exceptions now route through the explicit
