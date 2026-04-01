@@ -246,6 +246,11 @@ Status note, 2026-03-31:
     `src/terminal/core/publication/view_cache.zig` consumes pending refresh
     work through `takePendingViewRefresh()` and `pendingGeneration()` instead of
     swapping raw publication fields itself
+  - publication snapshot/capture now follow that same owner rule too:
+    `src/terminal/core/publication/terminal_publication.zig` routes pending
+    refresh work through `applyPendingViewRefreshLocked(...)` instead of
+    open-coding `view_cache_pending` checks and direct locked refresh
+    consumption inside `snapshot()` and `captureCopy()`
   - the same direct-owner cleanup now applies in `workspace.zig`: wrapper
     composition reads as runtime/workspace ownership, and progress-state typing
     no longer comes through `pty_terminal_runtime.zig`

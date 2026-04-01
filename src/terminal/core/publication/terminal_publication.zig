@@ -314,9 +314,7 @@ pub fn snapshot(self: anytype) TerminalSnapshot {
     if (viewRefreshPending(self)) {
         self.lock();
         defer self.unlock();
-        if (viewRefreshPending(self)) {
-            updateViewCacheForScrollLocked(self);
-        }
+        _ = applyPendingViewRefreshLocked(self, "snapshot");
     }
 
     const cache = self.renderCache();
@@ -585,14 +583,10 @@ fn captureCopy(self: anytype, dst: *RenderCache, log_capture: bool) !CaptureCopy
     self.lock();
     defer self.unlock();
     const lock_acquired_ns = std.time.nanoTimestamp();
-    const pending_generation = self.publication.pending_generation.load(.acquire);
-    const published_generation = publishedGeneration(self);
-    const presented_generation = presentedGeneration(self);
-    const had_view_cache_pending = self.publication.view_cache_pending.load(.acquire);
     var view_cache_ms: f64 = 0.0;
-    if (had_view_cache_pending) {
+    if (viewRefreshPending(self)) {
         const view_cache_start_ns = std.time.nanoTimestamp();
-        updateViewCacheForScrollLocked(self);
+        _ = applyPendingViewRefreshLocked(self, "capture_copy");
         const view_cache_end_ns = std.time.nanoTimestamp();
         view_cache_ms = @as(f64, @floatFromInt(view_cache_end_ns - view_cache_start_ns)) / @as(f64, @floatFromInt(std.time.ns_per_ms));
     }
@@ -607,9 +601,6 @@ fn captureCopy(self: anytype, dst: *RenderCache, log_capture: bool) !CaptureCopy
     const lock_release_ns = std.time.nanoTimestamp();
     const lock_wait_ms = @as(f64, @floatFromInt(lock_acquired_ns - wait_start_ns)) / @as(f64, @floatFromInt(std.time.ns_per_ms));
     const lock_hold_ms = @as(f64, @floatFromInt(lock_release_ns - lock_acquired_ns)) / @as(f64, @floatFromInt(std.time.ns_per_ms));
-    _ = pending_generation;
-    _ = published_generation;
-    _ = presented_generation;
     return .{
         .presented = presented,
         .lock_wait_ms = lock_wait_ms,

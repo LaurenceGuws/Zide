@@ -241,6 +241,13 @@ Validation note, 2026-03-31:
     `takePendingViewRefresh()` and `pendingGeneration()` from
     `terminal_publication.zig` instead of swapping `view_cache_pending` and
     loading `view_cache_request_offset` / `pending_generation` itself
+  - publication capture/snapshot refresh handling now follows that same owner
+    rule too:
+    `src/terminal/core/publication/terminal_publication.zig` now routes
+    pending snapshot/capture refresh work through
+    `applyPendingViewRefreshLocked(...)` instead of hand-driving raw
+    `view_cache_pending` checks and direct locked refresh calls inside
+    `snapshot()` / `captureCopy()`
   - the remaining publication/view-cache helper stubs and the special-case
     protocol `appendHyperlink` wrapper are no longer written inline on
     `pty_terminal_runtime.zig`; those exceptions now route through the explicit
