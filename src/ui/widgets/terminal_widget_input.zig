@@ -2,6 +2,7 @@ const std = @import("std");
 
 const app_shell = @import("../../app_shell.zig");
 const terminal_publication = @import("../../terminal/core/publication/terminal_publication.zig");
+const session_queries = @import("../../terminal/core/session/queries.zig");
 const terminal_runtime = @import("../../terminal/core/terminal_runtime.zig");
 const terminal_types = @import("../../terminal/model/types.zig");
 const app_logger = @import("../../app_logger.zig");
@@ -107,7 +108,7 @@ pub fn handleInput(
 
     var osc_clipboard = std.ArrayList(u8).empty;
     defer osc_clipboard.deinit(self.session.allocator);
-    if (self.session.tryTakeOscClipboardCopy(self.session.allocator, &osc_clipboard) catch false) {
+    if (session_queries.tryTakeOscClipboardCopy(self.session, self.session.allocator, &osc_clipboard) catch false) {
         const cstr: [*:0]const u8 = @ptrCast(osc_clipboard.items.ptr);
         shell.setClipboardText(cstr);
         handled = true;

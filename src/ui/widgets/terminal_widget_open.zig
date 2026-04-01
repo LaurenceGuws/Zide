@@ -2,6 +2,7 @@ const std = @import("std");
 const builtin = @import("builtin");
 const app_logger = @import("../../app_logger.zig");
 
+const session_queries = @import("../../terminal/core/session/queries.zig");
 const terminal_runtime = @import("../../terminal/core/terminal_runtime.zig");
 const terminal_publication = @import("../../terminal/core/publication/terminal_publication.zig");
 const hover_mod = @import("terminal_widget_hover.zig");
@@ -42,7 +43,7 @@ pub fn ctrlClickOpenVisibleMaybe(
     if (link_id != 0) {
         var link_buf = std.ArrayList(u8).empty;
         defer link_buf.deinit(allocator);
-        if ((session.copyHyperlinkUri(allocator, link_id, &link_buf) catch |err| {
+        if ((session_queries.copyHyperlinkUri(session, allocator, link_id, &link_buf) catch |err| {
             log.logf(.warning, "ctrl-open hyperlink copy failed link_id={d} err={s}", .{ link_id, @errorName(err) });
             return false;
         })) |link| {

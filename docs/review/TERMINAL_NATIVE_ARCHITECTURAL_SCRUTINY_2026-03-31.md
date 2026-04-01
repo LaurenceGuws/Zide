@@ -321,6 +321,12 @@ Judgment:
   `src/terminal/core/session/input.zig` directly from the key encoder and
   widget keyboard path instead of pretending to be host-level runtime
   contract
+- widget and FFI copy/query helpers are shrinking the same way too:
+  OSC clipboard copy and hyperlink URI copy now route through
+  `src/terminal/core/session/queries.zig` directly from widget and FFI
+  callers instead of sitting on the stable runtime surface as thin
+  convenience exports
+  contract
 - protocol query helpers are shrinking the same way too: runtime/focus tests
   now use `terminal_core_protocol.zig` directly for `getCell` /
   `getCursorPos`, so those no longer sit on the wrapper surface
