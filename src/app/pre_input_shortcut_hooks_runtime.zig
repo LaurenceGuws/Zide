@@ -3,7 +3,6 @@ const app_modes = @import("modes/mod.zig");
 const app_pre_input_shortcut_frame_runtime = @import("pre_input_shortcut_frame_runtime.zig");
 const app_reload_config_runtime = @import("reload_config_runtime.zig");
 const app_shell = @import("../app_shell.zig");
-const app_tab_bar_width = @import("tabs/tab_bar_width.zig");
 const app_terminal_close_active_runtime = @import("terminal/terminal_close_active_runtime.zig");
 const app_terminal_close_confirm_active_runtime = @import("terminal/terminal_close_confirm_active_runtime.zig");
 const app_terminal_close_confirm_decision_runtime = @import("terminal/terminal_close_confirm_decision_runtime.zig");
@@ -31,13 +30,7 @@ fn refreshTerminalSizing(state: anytype) !void {
 }
 
 fn applyCurrentTabBarWidthMode(state: anytype) void {
-    app_tab_bar_width.applyForMode(
-        &state.tab_bar,
-        state.app_mode,
-        state.terminal_window_chrome_mode,
-        state.editor_tab_bar_width_mode,
-        state.terminal_tab_bar_width_mode,
-    );
+    app_ui_layout_runtime.applyCurrentTabBarWidthMode(state);
 }
 
 fn reloadConfig(state: anytype) !void {

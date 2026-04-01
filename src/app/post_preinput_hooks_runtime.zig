@@ -3,7 +3,6 @@ const app_modes = @import("modes/mod.zig");
 const app_update_driver = @import("update_driver.zig");
 const app_post_preinput_frame = @import("post_preinput_frame.zig");
 const app_ui_layout_runtime = @import("ui_layout_runtime.zig");
-const app_tab_bar_width = @import("tabs/tab_bar_width.zig");
 const app_terminal_refresh_sizing_runtime = @import("terminal/terminal_refresh_sizing_runtime.zig");
 const app_window_resize_event_frame = @import("window_resize_event_frame.zig");
 const app_cursor_blink_frame = @import("cursor_blink_frame.zig");
@@ -28,29 +27,11 @@ const layout_types = shared_types.layout;
 const WindowCaptionButton = app_state_types.WindowCaptionButton;
 
 fn applyCurrentTabBarWidthMode(state: anytype) void {
-    app_tab_bar_width.applyForMode(
-        &state.tab_bar,
-        state.app_mode,
-        state.terminal_window_chrome_mode,
-        state.editor_tab_bar_width_mode,
-        state.terminal_tab_bar_width_mode,
-    );
+    app_ui_layout_runtime.applyCurrentTabBarWidthMode(state);
 }
 
 fn applyUiScale(state: anytype) void {
-    app_ui_layout_runtime.applyUiScale(
-        state,
-        state.shell.uiScaleFactor(),
-        @ptrCast(state),
-        .{
-            .apply_current_tab_bar_width_mode = struct {
-                fn call(scale_raw: *anyopaque) void {
-                    const cb_state: *@TypeOf(state.*) = @ptrCast(@alignCast(scale_raw));
-                    applyCurrentTabBarWidthMode(cb_state);
-                }
-            }.call,
-        },
-    );
+    app_ui_layout_runtime.applyUiScaleForState(state, state.shell.uiScaleFactor());
 }
 
 fn syncWindowChrome(state: anytype, shell: *Shell, layout: layout_types.WidgetLayout) void {

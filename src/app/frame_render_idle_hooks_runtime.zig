@@ -1,7 +1,6 @@
 const app_draw_frame_runtime = @import("draw_frame_runtime.zig");
 const app_frame_render_idle_runtime = @import("frame_render_idle_runtime.zig");
 const app_metrics_log_runtime = @import("metrics_log_runtime.zig");
-const app_tab_bar_width = @import("tabs/tab_bar_width.zig");
 const app_terminal_close_confirm_active_runtime = @import("terminal/terminal_close_confirm_active_runtime.zig");
 const app_ui_layout_runtime = @import("ui_layout_runtime.zig");
 const shared_types = @import("../types/mod.zig");
@@ -13,13 +12,7 @@ fn computeLayout(state: anytype, width: f32, height: f32) layout_types.WidgetLay
 }
 
 fn applyCurrentTabBarWidthMode(state: anytype) void {
-    app_tab_bar_width.applyForMode(
-        &state.tab_bar,
-        state.app_mode,
-        state.terminal_window_chrome_mode,
-        state.editor_tab_bar_width_mode,
-        state.terminal_tab_bar_width_mode,
-    );
+    app_ui_layout_runtime.applyCurrentTabBarWidthMode(state);
 }
 
 fn terminalCloseConfirmActive(state: anytype) bool {

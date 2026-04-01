@@ -7,7 +7,6 @@ const app_config_runtime_common = @import("config_runtime_common.zig");
 const app_theme_utils = @import("theme_utils.zig");
 const app_terminal_shell_icon_runtime = @import("terminal/terminal_shell_icon_runtime.zig");
 const app_ui_layout_runtime = @import("ui_layout_runtime.zig");
-const app_tab_bar_width = @import("tabs/tab_bar_width.zig");
 const app_modes = @import("modes/mod.zig");
 const app_types = @import("app_state_types.zig");
 const app_shell = @import("../app_shell.zig");
@@ -79,32 +78,8 @@ fn windowTitleForMode(app_mode: app_bootstrap.AppMode) [*:0]const u8 {
     };
 }
 
-fn applyCurrentTabBarWidthMode(state: anytype) void {
-    app_tab_bar_width.applyForMode(
-        &state.tab_bar,
-        state.app_mode,
-        state.terminal_window_chrome_mode,
-        state.editor_tab_bar_width_mode,
-        state.terminal_tab_bar_width_mode,
-    );
-}
-
 fn applyInitialUiScale(state: anytype) void {
-    const State = @TypeOf(state.*);
-    app_ui_layout_runtime.applyUiScale(
-        state,
-        state.shell.uiScaleFactor(),
-        @ptrCast(state),
-        .{
-            .apply_current_tab_bar_width_mode = struct {
-                fn call(raw: *anyopaque) void {
-                    const cb_state: *State = @ptrCast(@alignCast(raw));
-                    applyCurrentTabBarWidthMode(cb_state);
-                }
-            }.call,
-        },
-    );
-    applyCurrentTabBarWidthMode(state);
+    app_ui_layout_runtime.applyUiScaleForState(state, state.shell.uiScaleFactor());
 }
 
 fn resolveStartupPerf(
@@ -350,9 +325,9 @@ fn initWithMode(
         .terminal_tab_bar_show_shell_icon = config.terminal_tab_bar_show_shell_icon orelse false,
         .terminal_tab_bar_shell_icons = terminal_startup.terminal_tab_bar_shell_icons,
         .terminal_shell_icon_cache = app_terminal_shell_icon_runtime.ShellIconCache.init(allocator),
-        .editor_tab_bar_width_mode = app_tab_bar_width.mapMode(config.editor_tab_bar_width_mode),
+        .editor_tab_bar_width_mode = @import("tabs/tab_bar_width.zig").mapMode(config.editor_tab_bar_width_mode),
         .terminal_tab_bar_show_single_tab = config.terminal_tab_bar_show_single_tab orelse false,
-        .terminal_tab_bar_width_mode = app_tab_bar_width.mapMode(config.terminal_tab_bar_width_mode),
+        .terminal_tab_bar_width_mode = @import("tabs/tab_bar_width.zig").mapMode(config.terminal_tab_bar_width_mode),
         .terminal_focus_report_window_events = config.terminal_focus_report_window orelse true,
         .terminal_focus_report_pane_events = config.terminal_focus_report_pane orelse false,
         .last_terminal_pane_focus_reported = null,

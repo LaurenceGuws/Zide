@@ -240,6 +240,10 @@ Progress note, 2026-04-01:
   `src/app/config_runtime_common.zig`
 - this removes parallel copies of terminal path resolution, logger setup, and
   terminal cursor-style resolution from the two main config entrypoints
+- duplicated tab-bar-width and UI-scale-for-state policy now lives under
+  `src/app/ui_layout_runtime.zig`
+- this removes another repeated app-shell seam from init, post-preinput,
+  pre-input shortcut, and render-idle hook paths
 
 ## Investigation Follow-up
 
