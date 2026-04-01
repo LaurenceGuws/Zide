@@ -160,15 +160,15 @@ Validation note, 2026-03-31:
     `src/terminal/core/session/config.zig`, and
     `src/terminal/core/session/interaction.zig` replace the redundant
     `session_*` naming inside the already-explicit `session/` subtree.
-  - `src/terminal/core/session/input_api.zig` now groups the input send/report
-    public methods that were previously written inline on
-    `pty_terminal_runtime.zig`.
+  - the thin wrapper-side input/config API shells are now dead too:
+    `src/terminal/core/session/input_api.zig` and
+    `src/terminal/core/session/config_api.zig` are deleted, so
+    `pty_terminal_runtime.zig` binds straight to
+    `src/terminal/core/session/input.zig` and
+    `src/terminal/core/session/config.zig`
   - protocol/VT mutation methods no longer route through a separate wrapper
     shell; `pty_terminal_runtime.zig` now points straight at the real protocol
     owners
-  - `src/terminal/core/session/config_api.zig` now groups the config, palette,
-    and mode-setting public methods that were previously written inline on
-    `pty_terminal_runtime.zig`.
   - the remaining publication/view-cache helper stubs and the special-case
     protocol `appendHyperlink` wrapper are no longer written inline on
     `pty_terminal_runtime.zig`; those exceptions now route through the explicit

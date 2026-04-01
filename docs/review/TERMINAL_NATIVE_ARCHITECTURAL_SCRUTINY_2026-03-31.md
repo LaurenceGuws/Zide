@@ -141,18 +141,18 @@ Judgment:
   `src/terminal/core/session/config.zig`, and
   `src/terminal/core/session/interaction.zig` now carry the wrapper behavior
   seams without redundant `session_` naming inside the subtree
-- `src/terminal/core/session/input_api.zig` now carries the host input
-  send/report method group that was previously written inline on
-  `pty_terminal_runtime.zig`
+- the thin wrapper-side input/config API shells are now dead too:
+  `src/terminal/core/session/input_api.zig` and
+  `src/terminal/core/session/config_api.zig` are deleted, so
+  `pty_terminal_runtime.zig` binds straight to
+  `src/terminal/core/session/input.zig` and
+  `src/terminal/core/session/config.zig`
 - protocol/VT mutation methods no longer route through a separate wrapper
   shell; `pty_terminal_runtime.zig` now points straight at the real protocol
   owners
 - the stale `src/terminal/core/session_protocol.zig` forwarding shell is now
   deleted, so that API seam no longer routes through one extra session-named
   hop before reaching the real owners
-- `src/terminal/core/session/config_api.zig` now carries the config, palette,
-  and mode-setting method group that was previously written inline on
-  `pty_terminal_runtime.zig`
 - the remaining publication/view-cache helper stubs and the special-case
   `appendHyperlink` wrapper no longer live inline on `pty_terminal_runtime.zig`
 - the thin wrapper-side debug/content API shells are now dead too:

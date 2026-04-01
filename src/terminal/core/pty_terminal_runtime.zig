@@ -26,6 +26,7 @@ const content = @import("session/content.zig");
 const host_types = @import("session/host_types.zig");
 const host_selection = @import("session/selection.zig");
 const interaction = @import("session/interaction.zig");
+const session_input = @import("session/input.zig");
 const init_options = @import("session/init_options.zig");
 const input_snapshot = @import("session/input_snapshot.zig");
 const mode_effects = @import("session/mode_effects.zig");
@@ -38,8 +39,6 @@ const publication_fields = @import("session/publication_fields.zig");
 const runtime_fields = @import("session/runtime_fields.zig");
 const interaction_fields = @import("session/interaction_fields.zig");
 const control_fields = @import("session/control_fields.zig");
-const input_api = @import("session/input_api.zig");
-const config_api = @import("session/config_api.zig");
 const types_api = @import("session/types_api.zig");
 const osc_kitty_clipboard = @import("../protocol/osc_kitty_clipboard.zig");
 const terminal_transport = @import("runtime/terminal_transport.zig");
@@ -218,16 +217,16 @@ pub const PtyTerminalRuntime = struct {
         return self.core.isAltActive();
     }
 
-    pub const setDefaultColorsLocked = config_api.setDefaultColorsLocked;
-    pub const setDefaultColors = config_api.setDefaultColors;
-    pub const setAnsiColors = config_api.setAnsiColors;
-    pub const remapAnsiColors = config_api.remapAnsiColors;
-    pub const setPaletteColorLocked = config_api.setPaletteColorLocked;
-    pub const resetPaletteColorLocked = config_api.resetPaletteColorLocked;
-    pub const resetAllPaletteColorsLocked = config_api.resetAllPaletteColorsLocked;
-    pub const setDynamicColorCodeLocked = config_api.setDynamicColorCodeLocked;
-    pub const applyThemePalette = config_api.applyThemePalette;
-    pub const setConfiguredCursorStyle = config_api.setConfiguredCursorStyle;
+    pub const setDefaultColorsLocked = config.setDefaultColorsLocked;
+    pub const setDefaultColors = config.setDefaultColors;
+    pub const setAnsiColors = config.setAnsiColors;
+    pub const remapAnsiColors = config.remapAnsiColors;
+    pub const setPaletteColorLocked = config.setPaletteColorLocked;
+    pub const resetPaletteColorLocked = config.resetPaletteColorLocked;
+    pub const resetAllPaletteColorsLocked = config.resetAllPaletteColorsLocked;
+    pub const setDynamicColorCodeLocked = config.setDynamicColorCodeLocked;
+    pub const applyThemePalette = config.applyThemePalette;
+    pub const setConfiguredCursorStyle = config.setConfiguredCursorStyle;
 
     pub const deinit = runtime.deinit;
 
@@ -281,28 +280,28 @@ pub const PtyTerminalRuntime = struct {
     pub const lockPtyWriter = runtime.lockPtyWriter;
     pub const writePtyBytes = runtime.writePtyBytes;
 
-    pub const sendKey = input_api.sendKey;
-    pub const sendKeyAction = input_api.sendKeyAction;
-    pub const sendKeyActionWithMetadata = input_api.sendKeyActionWithMetadata;
-    pub const sendKeypad = input_api.sendKeypad;
-    pub const sendKeypadAction = input_api.sendKeypadAction;
-    pub const appKeypadEnabled = input_api.appKeypadEnabled;
-    pub const appCursorKeysEnabled = input_api.appCursorKeysEnabled;
-    pub const sendChar = input_api.sendChar;
-    pub const sendCharAction = input_api.sendCharAction;
-    pub const sendCharActionWithMetadata = input_api.sendCharActionWithMetadata;
-    pub const reportMouseEvent = input_api.reportMouseEvent;
-    pub const reportAlternateScrollWheel = input_api.reportAlternateScrollWheel;
-    pub const sendText = input_api.sendText;
-    pub const sendBytes = input_api.sendBytes;
-    pub const reportFocusChanged = input_api.reportFocusChanged;
-    pub const reportColorSchemeChanged = input_api.reportColorSchemeChanged;
+    pub const sendKey = session_input.sendKey;
+    pub const sendKeyAction = session_input.sendKeyAction;
+    pub const sendKeyActionWithMetadata = session_input.sendKeyActionWithMetadata;
+    pub const sendKeypad = session_input.sendKeypad;
+    pub const sendKeypadAction = session_input.sendKeypadAction;
+    pub const appKeypadEnabled = session_input.appKeypadEnabled;
+    pub const appCursorKeysEnabled = session_input.appCursorKeysEnabled;
+    pub const sendChar = session_input.sendChar;
+    pub const sendCharAction = session_input.sendCharAction;
+    pub const sendCharActionWithMetadata = session_input.sendCharActionWithMetadata;
+    pub const reportMouseEvent = session_input.reportMouseEvent;
+    pub const reportAlternateScrollWheel = session_input.reportAlternateScrollWheel;
+    pub const sendText = session_input.sendText;
+    pub const sendBytes = session_input.sendBytes;
+    pub const reportFocusChanged = session_input.reportFocusChanged;
+    pub const reportColorSchemeChanged = session_input.reportColorSchemeChanged;
 
     pub const resize = runtime.resize;
 
-    pub const setColumnMode132 = config_api.setColumnMode132;
-    pub const setColumnMode132Locked = config_api.setColumnMode132Locked;
-    pub const setCellSize = config_api.setCellSize;
+    pub const setColumnMode132 = config.setColumnMode132;
+    pub const setColumnMode132Locked = config.setColumnMode132Locked;
+    pub const setCellSize = config.setCellSize;
 
     pub const handleControl = control_handlers.handleControl;
     pub const parseDcs = @import("../protocol/dcs_apc.zig").parseDcs;
