@@ -51,8 +51,10 @@ High-confidence hotspots from the initial branch investigation:
    - current modularization may still hide app-level coordination gravity
 
 5. Build/link fallback residue
-   - `build_system/target_config.zig` still needs scrutiny for old fallback
-     assumptions and over-broad responsibility
+   - `build_system/target_config.zig` still needs scrutiny for over-broad
+     responsibility
+   - hardcoded FreeType/HarfBuzz include fallback baggage was removed on
+     2026-04-01 in favor of explicit dependency-policy enforcement
 
 ## Broad Judgment
 
