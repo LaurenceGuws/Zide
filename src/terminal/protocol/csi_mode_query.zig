@@ -33,75 +33,9 @@ pub const ModeSnapshot = struct {
     newline_mode: bool,
 };
 
-pub const ModeCaptureContext = struct {
-    app_cursor_keys: bool,
-    column_mode_132: bool,
-    screen_reverse: bool,
-    origin_mode: bool,
-    auto_wrap: bool,
-    auto_repeat: bool,
-    mouse_mode_x10: bool,
-    cursor_blink: bool,
-    cursor_visible: bool,
-    reverse_wrap: bool,
-    left_right_margin_mode_69: bool,
-    alt_active: bool,
-    save_cursor_mode_1048: bool,
-    app_keypad: bool,
-    mouse_mode_button: bool,
-    mouse_mode_any: bool,
-    focus_reporting: bool,
-    mouse_mode_sgr: bool,
-    mouse_alternate_scroll: bool,
-    mouse_mode_sgr_pixels: bool,
-    bracketed_paste: bool,
-    sync_updates_active: bool,
-    grapheme_cluster_shaping_2027: bool,
-    report_color_scheme_2031: bool,
-    inband_resize_notifications_2048: bool,
-    kitty_paste_events_5522: bool,
-    insert_mode: bool,
-    local_echo_mode_12: bool,
-    newline_mode: bool,
-};
-
-pub fn modeSnapshotFromContext(ctx: ModeCaptureContext) ModeSnapshot {
-    return .{
-        .app_cursor_keys = ctx.app_cursor_keys,
-        .column_mode_132 = ctx.column_mode_132,
-        .screen_reverse = ctx.screen_reverse,
-        .origin_mode = ctx.origin_mode,
-        .auto_wrap = ctx.auto_wrap,
-        .auto_repeat = ctx.auto_repeat,
-        .mouse_mode_x10 = ctx.mouse_mode_x10,
-        .cursor_blink = ctx.cursor_blink,
-        .cursor_visible = ctx.cursor_visible,
-        .reverse_wrap = ctx.reverse_wrap,
-        .left_right_margin_mode_69 = ctx.left_right_margin_mode_69,
-        .alt_active = ctx.alt_active,
-        .save_cursor_mode_1048 = ctx.save_cursor_mode_1048,
-        .app_keypad = ctx.app_keypad,
-        .mouse_mode_button = ctx.mouse_mode_button,
-        .mouse_mode_any = ctx.mouse_mode_any,
-        .focus_reporting = ctx.focus_reporting,
-        .mouse_mode_sgr = ctx.mouse_mode_sgr,
-        .mouse_alternate_scroll = ctx.mouse_alternate_scroll,
-        .mouse_mode_sgr_pixels = ctx.mouse_mode_sgr_pixels,
-        .bracketed_paste = ctx.bracketed_paste,
-        .sync_updates_active = ctx.sync_updates_active,
-        .grapheme_cluster_shaping_2027 = ctx.grapheme_cluster_shaping_2027,
-        .report_color_scheme_2031 = ctx.report_color_scheme_2031,
-        .inband_resize_notifications_2048 = ctx.inband_resize_notifications_2048,
-        .kitty_paste_events_5522 = ctx.kitty_paste_events_5522,
-        .insert_mode = ctx.insert_mode,
-        .local_echo_mode_12 = ctx.local_echo_mode_12,
-        .newline_mode = ctx.newline_mode,
-    };
-}
-
 pub fn modeSnapshot(self: anytype) ModeSnapshot {
     const screen = self.activeScreen();
-    return modeSnapshotFromContext(.{
+    return .{
         .app_cursor_keys = self.appCursorKeysEnabled(),
         .column_mode_132 = self.core.column_mode_132,
         .screen_reverse = screen.screen_reverse,
@@ -131,7 +65,7 @@ pub fn modeSnapshot(self: anytype) ModeSnapshot {
         .insert_mode = screen.insert_mode,
         .local_echo_mode_12 = screen.local_echo_mode_12,
         .newline_mode = screen.newline_mode,
-    });
+    };
 }
 
 pub fn decrqmPrivateModeState(snapshot: ModeSnapshot, mode: i32) csi_mod.DecrpmState {

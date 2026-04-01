@@ -20,11 +20,6 @@ pub const DecrpmState = enum(u8) {
 };
 
 const ModeSnapshot = csi_mode_query.ModeSnapshot;
-const ModeCaptureContext = csi_mode_query.ModeCaptureContext;
-
-fn modeSnapshotFromContext(ctx: ModeCaptureContext) ModeSnapshot {
-    return csi_mode_query.modeSnapshotFromContext(ctx);
-}
 
 fn csiIntermediatesEq(action: parser_csi.CsiAction, bytes: []const u8) bool {
     if (action.intermediates_len != bytes.len) return false;

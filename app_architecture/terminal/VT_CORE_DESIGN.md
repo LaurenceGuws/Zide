@@ -242,6 +242,11 @@ Status note, 2026-03-31:
     `CsiWriter` is deleted from `src/terminal/protocol/csi_reply.zig`, and
     CSI reply/query helpers now operate on direct writer objects instead of
     routing one-method writes through an `anyopaque` adapter
+  - the DECRQM capture shell is dead too:
+    `ModeCaptureContext` is deleted from
+    `src/terminal/protocol/csi_mode_query.zig`, and DECRQM mode snapshots now
+    construct `ModeSnapshot` directly instead of cloning it through a
+    duplicate intermediate struct
   - the remaining publication/view-cache helper stubs and the special-case
     `appendHyperlink` wrapper now also route through explicit API modules
     instead of living as root-session exceptions
