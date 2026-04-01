@@ -1,0 +1,173 @@
+# App Hygiene Cleanup
+
+## Scope
+
+Drive an app-level architecture cleanup campaign focused on dependency
+boundaries, build-graph scope, platform/helper residue, and app-shell
+coordination seams.
+
+This is not the terminal-core campaign. It is the parallel app/platform/build
+lane that should make the host shell, build surfaces, and dependency contracts
+look deliberate rather than transitional.
+
+## Goal
+
+Make Zide's app-level architecture read as:
+
+- dependency-disciplined
+- reference-grade
+- SDL3-native instead of workaround-shaped
+- explicit about repo boundaries
+- free of stale helper seams that survive only from migration history
+
+## Current Findings
+
+High-confidence hotspots from the initial branch investigation:
+
+1. `src/platform/compositor.zig`
+   - deleted on 2026-04-01
+   - it was pre-SDL3 scaling-workaround residue
+   - `getWaylandScale()` was unused
+   - compositor detection was unused
+   - the only live use was the no-op Wayland branch in
+     `src/platform/mouse_state.zig`
+
+2. `build_system/ide_graph.zig`
+   - mixes build planning with operator workflow glue
+   - currently carries tests, gates, reports, packaging, Windows shell
+     extension work, and `grammar-update` proxying
+   - likely too broad to be the right build-graph center
+
+3. `src/editor/tree_sitter_assets.zig`
+   - the `zide-tree-sitter` extraction was directionally correct
+   - the consumer contract is still not fully clean
+   - sibling-repo path probing remains in live code
+
+4. App orchestration centers
+   - `src/app/init_runtime.zig`
+   - `src/app/update_frame_hooks_runtime.zig`
+   - `src/app/post_preinput_hooks_runtime.zig`
+   - `src/app/terminal/terminal_frame_pacing_runtime.zig`
+   - current modularization may still hide app-level coordination gravity
+
+5. Build/link fallback residue
+   - `build_system/target_config.zig` still needs scrutiny for old fallback
+     assumptions and over-broad responsibility
+
+## Broad Judgment
+
+The current app-level problem is not that dependency policy is weak.
+The dependency model itself is mostly stronger now:
+
+- Zig package-managed app/library stack
+- explicit target dependency policy
+- justified external reusable boundaries for `zlua-portable`
+- justified producer/tooling split for `zide-tree-sitter`
+
+The drag is elsewhere:
+
+- overgrown build-graph responsibility
+- unfinished repo-boundary cleanup on the consumer side
+- app runtime hook/callback sprawl
+- SDL3-era migration residue still sitting in `src/platform/`
+
+## Repo Boundary Rule
+
+Only split code or assets into a dedicated repo when all of the following are
+true:
+
+- reusable outside Zide
+- stable consumer contract exists
+- independent release cadence is useful
+- ownership becomes clearer instead of merely smaller
+- product/runtime semantics stay in `zide`
+
+Current judgment:
+
+- `zlua-portable`: justified
+- `zide-tree-sitter`: justified, but consumer contract cleanup still required
+- more app/platform/build repo splits: not justified by default
+
+## Initial Milestones
+
+### AH-01 SDL3 Residue Purge
+
+Focus:
+
+- audit `src/platform/` for helper seams that no longer make sense after SDL3
+- delete or drastically reduce `src/platform/compositor.zig`
+- identify any other app/platform behavior still shaped around old backend
+  assumptions
+
+Done when:
+
+- compositor-specific fallback helpers are removed or reduced to only live
+  platform truth
+- platform helpers read as current SDL/platform integration, not migration
+  leftovers
+
+Progress note, 2026-04-01:
+
+- `src/platform/compositor.zig` is deleted
+- `src/platform/mouse_state.zig` no longer carries the dead Wayland
+  compositor check
+- `src/ui/renderer.zig` no longer imports compositor-only type residue
+
+### AH-02 Tree-sitter Consumer Contract Hardening
+
+Focus:
+
+- remove sibling-repo layout assumptions from live `zide` consumer code
+- keep `zide-tree-sitter` as the producer/tooling repo
+- make `zide` consume a stable asset contract rather than path heuristics
+
+Done when:
+
+- `src/editor/tree_sitter_assets.zig` no longer probes sibling-repo paths as a
+  normal consumer behavior
+- build/runtime flows point to explicit asset roots or installed artifacts
+- local co-development remains possible without leaking repo-layout knowledge
+  through the app
+
+### AH-03 Build Graph Scope Control
+
+Focus:
+
+- separate true build/dependency policy from repo workflow glue
+- audit `build_system/ide_graph.zig`, `build_system/bootstrap_graph.zig`, and
+  `build_system/target_config.zig`
+- keep the Zig build graph strong, but stop using it as a dumping ground for
+  every maintainer workflow
+
+Done when:
+
+- build policy remains explicit and enforceable
+- workflow/report/task-runner concerns are either narrowed or moved behind
+  clearer tooling boundaries
+- build graph ownership feels deliberate instead of accumulated
+
+### AH-04 App Orchestration Honesty
+
+Focus:
+
+- inspect the `*_hooks_runtime.zig` / `*_frame_runtime.zig` lattice
+- determine which files are real policy seams versus app-level wrapper theater
+- shrink or regroup broad callback matrices where the composition model is no
+  longer honest
+
+Done when:
+
+- the app shell has fewer fake centers
+- runtime composition reads as intentional policy ownership, not callback
+  forwarding scaffolding
+
+## Investigation Follow-up
+
+Next investigation pass should scrutinize these findings against:
+
+- official dependency documentation
+- the populated `dev_references` corpus in the main `zide` clone
+- reference build/platform/repo-boundary patterns from strongest peers
+
+That second pass should either strengthen or overturn the current judgments
+before major cuts begin.

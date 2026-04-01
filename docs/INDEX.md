@@ -42,6 +42,7 @@ Quick reading guide:
   - `docs/todo/ui/terminal_special_glyphs.md` — active terminal UI quality lane for special glyphs.
   - `docs/todo/ui/font_rendering.md` — remaining text-rendering quality work.
   - `docs/todo/dependencies.md` — Zig-managed dependency migration plan (SDL3/FreeType/HarfBuzz/Lua/tree-sitter).
+  - `docs/todo/app_hygiene_cleanup.md` — app/build/platform hygiene cleanup queue for dependency boundaries, SDL3 residue, and repo-contract hardening.
 
 ## Architecture + design
 - `app_architecture/ui/DEVELOPMENT_JOURNEY.md` — renderer plan and per-OS journey.
@@ -95,6 +96,7 @@ Quick reading guide:
 ## Research + Reference
 - `docs/reference/README.md` — reference-doc placement and role.
 - `docs/research/README.md` — research-doc placement and role.
+- `docs/research/APP_HYGIENE_REFERENCE_SCRUTINY_2026-04-01.md` — official-doc and reference-repo scrutiny for the app hygiene cleanup lane.
 - `docs/research/editor/README.md` — editor research subtree entrypoint.
 - `docs/research/windows/README.md` — Windows shell/context-menu research subtree entrypoint.
 - `docs/research/editor/EDITOR_REFERENCE_COMPARISON_2026-03-18.md` — first focused editor reference comparison by concern.
