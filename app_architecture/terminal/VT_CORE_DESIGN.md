@@ -97,6 +97,10 @@ Status note, 2026-03-31:
     `terminal_protocol_api.zig` now routes CSI directly into
     `src/terminal/protocol/csi.zig` without stepping through an extra
     `SessionFacade`
+  - the outer OSC forwarding shell is gone too:
+    `terminal_protocol_api.zig` now routes OSC directly into
+    `src/terminal/protocol/osc.zig` without stepping through an extra
+    aggregate `SessionFacade`
   - duplicated publication/cache truth
   - oversized native widget/render coordination around terminal publication
 - The current operating rule is sequential but ruthless:

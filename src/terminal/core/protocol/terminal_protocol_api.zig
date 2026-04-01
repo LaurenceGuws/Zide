@@ -25,7 +25,7 @@ pub fn parseApc(self: anytype, payload: []const u8) void {
 }
 
 pub fn parseOsc(self: anytype, payload: []const u8, terminator: parser_mod.OscTerminator) void {
-    protocol_osc.parseOsc(protocol_osc.SessionFacade.from(self), payload, terminator);
+    protocol_osc.parseOsc(self, payload, terminator);
 }
 
 pub fn appendHyperlink(self: anytype, uri: []const u8) ?u32 {
