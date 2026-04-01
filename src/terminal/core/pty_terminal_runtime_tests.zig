@@ -5,6 +5,7 @@ const render_cache = @import("publication/render_cache.zig");
 const terminal_publication = @import("publication/terminal_publication.zig");
 const terminal_core_feed = @import("protocol/terminal_core_feed.zig");
 const terminal_core_protocol = @import("protocol/terminal_core_protocol.zig");
+const input_modes = @import("input_modes.zig");
 const mode_effects = @import("session/mode_effects.zig");
 const scrolling = @import("scrolling.zig");
 const host_types = @import("session/host_types.zig");
@@ -2400,8 +2401,8 @@ test "terminal reset republishes input snapshot state" {
     var session = try PtyTerminalRuntime.init(allocator, 2, 2);
     defer session.deinit();
 
-    session.setKeypadMode(true);
-    session.setAppCursorKeys(true);
+    input_modes.setKeypadMode(session, true);
+    input_modes.setAppCursorKeys(session, true);
     try std.testing.expect(session.appKeypadEnabled());
     try std.testing.expect(session.interaction.input_snapshot.interaction.app_cursor_keys.load(.acquire));
 

@@ -218,6 +218,13 @@ Status note, 2026-03-31:
     `terminal_core_protocol.zig` / `terminal_publication.zig` directly for
     erase/edit/scroll-region and sync-update operations, so those no longer
     inflate the wrapper surface either
+  - the protocol-side input-mode mutation slab is thinner too:
+    parser keypad mode, CSI key-mode control, DECSTR input-mode reset, and
+    private mode mutation now call `src/terminal/core/input_modes.zig` and
+    `src/terminal/core/session/config.zig` directly, so the stable runtime
+    surface no longer advertises key-mode, mouse-mode, bracketed-paste,
+    keypad/app-cursor, or column-mode mutation as part of the host runtime
+    contract
   - protocol query helpers are shrinking the same way too: runtime/focus tests
     now use `terminal_core_protocol.zig` directly for `getCell` /
     `getCursorPos`, so those no longer inflate the wrapper surface

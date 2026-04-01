@@ -2,6 +2,7 @@ const std = @import("std");
 const stream_mod = @import("stream.zig");
 const csi_mod = @import("csi.zig");
 const control_handlers = @import("../core/protocol/control_handlers.zig");
+const input_modes = @import("../core/input_modes.zig");
 const terminal_core_modes = @import("../core/terminal_core_modes.zig");
 const terminal_core_protocol = @import("../core/protocol/terminal_core_protocol.zig");
 const terminal_core_text = @import("../core/protocol/terminal_core_text.zig");
@@ -142,10 +143,10 @@ pub const Parser = struct {
                     terminal_core_protocol.reverseIndex(session);
                     self.esc_state = .ground;
                 } else if (byte == '=') {
-                    session.setKeypadModeLocked(true);
+                    input_modes.setKeypadModeLocked(session, true);
                     self.esc_state = .ground;
                 } else if (byte == '>') {
-                    session.setKeypadModeLocked(false);
+                    input_modes.setKeypadModeLocked(session, false);
                     self.esc_state = .ground;
                 } else {
                     self.esc_state = .ground;

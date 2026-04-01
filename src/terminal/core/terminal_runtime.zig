@@ -90,38 +90,6 @@ pub const PtyTerminalRuntime = struct {
     pub const mouseReportingEnabled = interaction.mouseReportingEnabled;
     pub const getDamage = interaction.getDamage;
     pub const keyModeFlagsValue = interaction.keyModeFlagsValue;
-    pub const keyModePush = interaction.keyModePush;
-    pub const keyModePushLocked = interaction.keyModePushLocked;
-    pub const keyModePop = interaction.keyModePop;
-    pub const keyModePopLocked = interaction.keyModePopLocked;
-    pub const keyModeModify = interaction.keyModeModify;
-    pub const keyModeModifyLocked = interaction.keyModeModifyLocked;
-    pub const keyModeQuery = interaction.keyModeQuery;
-    pub const keyModeQueryLocked = interaction.keyModeQueryLocked;
-    pub const setAppCursorKeys = interaction.setAppCursorKeys;
-    pub const setAppCursorKeysLocked = interaction.setAppCursorKeysLocked;
-    pub const setAutoRepeat = interaction.setAutoRepeat;
-    pub const setAutoRepeatLocked = interaction.setAutoRepeatLocked;
-    pub const setBracketedPaste = interaction.setBracketedPaste;
-    pub const setBracketedPasteLocked = interaction.setBracketedPasteLocked;
-    pub const setFocusReporting = interaction.setFocusReporting;
-    pub const setFocusReportingLocked = interaction.setFocusReportingLocked;
-    pub const setMouseAlternateScroll = interaction.setMouseAlternateScroll;
-    pub const setMouseAlternateScrollLocked = interaction.setMouseAlternateScrollLocked;
-    pub const setMouseModeX10 = interaction.setMouseModeX10;
-    pub const setMouseModeX10Locked = interaction.setMouseModeX10Locked;
-    pub const setMouseModeButton = interaction.setMouseModeButton;
-    pub const setMouseModeButtonLocked = interaction.setMouseModeButtonLocked;
-    pub const setMouseModeAny = interaction.setMouseModeAny;
-    pub const setMouseModeAnyLocked = interaction.setMouseModeAnyLocked;
-    pub const setMouseModeSgr = interaction.setMouseModeSgr;
-    pub const setMouseModeSgrLocked = interaction.setMouseModeSgrLocked;
-    pub const setMouseModeSgrPixels = interaction.setMouseModeSgrPixels;
-    pub const setMouseModeSgrPixelsLocked = interaction.setMouseModeSgrPixelsLocked;
-    pub const resetInputModes = interaction.resetInputModes;
-    pub const resetInputModesLocked = interaction.resetInputModesLocked;
-    pub const setKeypadMode = interaction.setKeypadMode;
-    pub const setKeypadModeLocked = interaction.setKeypadModeLocked;
 
     allocator: std.mem.Allocator,
     runtime: runtime_fields.Fields,
@@ -195,8 +163,6 @@ pub const PtyTerminalRuntime = struct {
 
     pub const resize = runtime.resize;
 
-    pub const setColumnMode132 = config.setColumnMode132;
-    pub const setColumnMode132Locked = config.setColumnMode132Locked;
     pub const setCellSize = config.setCellSize;
 
     pub const enterAltScreen = mode_effects.enterAltScreen;

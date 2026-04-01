@@ -1,5 +1,6 @@
 const std = @import("std");
 const parser_csi = @import("../parser/csi.zig");
+const input_modes = @import("../core/input_modes.zig");
 const terminal_core_modes = @import("../core/terminal_core_modes.zig");
 const terminal_core_protocol = @import("../core/protocol/terminal_core_protocol.zig");
 
@@ -94,10 +95,10 @@ pub fn handleSpecialCsi(
             const flags: u32 = if (param_len > 0) @intCast(@max(0, params[0])) else 0;
             const mode: u32 = if (param_len > 1) @intCast(@max(0, params[1])) else 1;
             switch (action.leader) {
-                '>' => self.keyModePushLocked(flags),
-                '<' => self.keyModePopLocked(if (param_len > 0) @intCast(@max(1, params[0])) else 1),
-                '=' => self.keyModeModifyLocked(flags, mode),
-                '?' => self.keyModeQueryLocked(),
+                '>' => input_modes.keyModePushLocked(self, flags),
+                '<' => input_modes.keyModePopLocked(self, if (param_len > 0) @intCast(@max(1, params[0])) else 1),
+                '=' => input_modes.keyModeModifyLocked(self, flags, mode),
+                '?' => input_modes.keyModeQueryLocked(self),
                 else => {},
             }
         },
