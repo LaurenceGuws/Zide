@@ -158,9 +158,12 @@ Evidence:
   - active screen access
   - GL charset selection
   - hyperlink attribute application
-- the remaining callback seam is narrower, but still host-shaped:
+- the remaining callback seam is narrower:
   - wrap/newline effects
   - insert-mode char insertion effects
+- that effect seam now lives with protocol ownership in
+  `terminal_core_protocol.zig` instead of being wired inline inside the text
+  module
 
 Reference comparison:
 

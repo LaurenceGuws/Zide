@@ -78,8 +78,11 @@ Status note, 2026-03-31:
   - the next correction is also in: `terminal_core_text.zig` now reads
     core-owned text state directly from `TerminalCore`
   - the remaining gap is narrower now:
-    only owner-level effects like wrap-newline and insert-chars still enter
-    text handling through a host-shaped callback seam
+    only owner-level effects like wrap-newline and insert-chars still cross a
+    callback seam
+  - that seam is now protocol-owned instead of text-owned:
+    `terminal_core_protocol.zig` defines the effect boundary used by
+    `terminal_core_text.zig`
   - duplicated publication/cache truth
   - oversized native widget/render coordination around terminal publication
 - The current operating rule is sequential but ruthless:

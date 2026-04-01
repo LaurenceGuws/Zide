@@ -1,8 +1,44 @@
 const std = @import("std");
+const terminal_core_mod = @import("terminal_core.zig");
 const types = @import("../model/types.zig");
 const hyperlink_table = @import("hyperlink_table.zig");
 const kitty_mod = @import("../kitty/graphics.zig");
 const scrolling_mod = @import("scrolling.zig");
+
+pub const TextEffects = struct {
+    ctx: *anyopaque,
+    wrap_newline_fn: *const fn (ctx: *anyopaque) void,
+    insert_chars_fn: *const fn (ctx: *anyopaque, count: usize) void,
+
+    pub fn from(owner: anytype) TextEffects {
+        const OwnerPtr = @TypeOf(owner);
+        return .{
+            .ctx = @ptrCast(owner),
+            .wrap_newline_fn = struct {
+                fn call(ctx: *anyopaque) void {
+                    const self: OwnerPtr = @ptrCast(@alignCast(ctx));
+                    @import("control_handlers.zig").wrapNewline(self);
+                }
+            }.call,
+            .insert_chars_fn = struct {
+                fn call(ctx: *anyopaque, count: usize) void {
+                    const self: OwnerPtr = @ptrCast(@alignCast(ctx));
+                    const screen = self.core.activeScreen();
+                    const blank_cell = screen.blankCell();
+                    screen.insertChars(count, blank_cell);
+                }
+            }.call,
+        };
+    }
+
+    pub fn wrapNewline(self: *const TextEffects) void {
+        self.wrap_newline_fn(self.ctx);
+    }
+
+    pub fn insertChars(self: *const TextEffects, count: usize) void {
+        self.insert_chars_fn(self.ctx, count);
+    }
+};
 
 pub fn appendHyperlink(self: anytype, uri: []const u8, max_hyperlinks: usize) ?u32 {
     return hyperlink_table.appendHyperlink(self, uri, max_hyperlinks);

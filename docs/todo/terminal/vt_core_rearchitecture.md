@@ -208,8 +208,11 @@ Validation note, 2026-03-31:
     - GL charset selection
     - hyperlink attribute application
   - the remaining non-core contract is now narrower and more honest:
-    only owner-level effects like wrap-newline and insert-chars still come in
-    through callbacks
+    only owner-level effects like wrap-newline and insert-chars still cross a
+    callback boundary
+  - that remaining effect boundary now lives under protocol ownership in
+    `src/terminal/core/terminal_core_protocol.zig` instead of being wired
+    inline inside `terminal_core_text.zig`
 - [ ] `VTCORE-05` Simplify snapshot and render publication.
   Notes: the explicit publication center now lives in
   `src/terminal/core/terminal_publication.zig`, and the old live

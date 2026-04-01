@@ -1,31 +1,17 @@
 const screen_mod = @import("../model/screen.zig");
 const terminal_core_mod = @import("terminal_core.zig");
+const terminal_core_protocol = @import("terminal_core_protocol.zig");
 const parser_mod = @import("../parser/parser.zig");
 const types = @import("../model/types.zig");
 
 pub const TextContext = struct {
-    ctx: *anyopaque,
     core: *terminal_core_mod.TerminalCore,
-    wrap_newline_fn: *const fn (ctx: *anyopaque) void,
-    insert_chars_fn: *const fn (ctx: *anyopaque, count: usize) void,
+    effects: terminal_core_protocol.TextEffects,
 
     pub fn from(session: anytype) TextContext {
-        const SessionPtr = @TypeOf(session);
         return .{
-            .ctx = @ptrCast(session),
             .core = &session.core,
-            .wrap_newline_fn = struct {
-                fn call(ctx: *anyopaque) void {
-                    const s: SessionPtr = @ptrCast(@alignCast(ctx));
-                    s.wrapNewline();
-                }
-            }.call,
-            .insert_chars_fn = struct {
-                fn call(ctx: *anyopaque, count: usize) void {
-                    const s: SessionPtr = @ptrCast(@alignCast(ctx));
-                    s.insertChars(count);
-                }
-            }.call,
+            .effects = terminal_core_protocol.TextEffects.from(session),
         };
     }
 
@@ -42,11 +28,11 @@ pub const TextContext = struct {
     }
 
     pub fn wrapNewline(self: *const TextContext) void {
-        self.wrap_newline_fn(self.ctx);
+        self.effects.wrapNewline();
     }
 
     pub fn insertChars(self: *const TextContext, count: usize) void {
-        self.insert_chars_fn(self.ctx, count);
+        self.effects.insertChars(count);
     }
 };
 
