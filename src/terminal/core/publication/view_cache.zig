@@ -348,16 +348,14 @@ pub fn updateViewCacheNoLock(self: anytype, generation: u64, scroll_offset: usiz
 pub fn updateViewCacheForScroll(self: anytype) void {
     if (self.control.state_mutex.tryLock()) {
         defer self.control.state_mutex.unlock();
-        if (!self.publication.view_cache_pending.swap(false, .acq_rel)) return;
-        const offset: usize = @intCast(self.publication.view_cache_request_offset.load(.acquire));
-        updateViewCacheNoLockTagged(self, self.publication.pending_generation.load(.acquire), offset, "view_cache_for_scroll");
+        const offset = terminal_publication.takePendingViewRefresh(self) orelse return;
+        updateViewCacheNoLockTagged(self, terminal_publication.pendingGeneration(self), offset, "view_cache_for_scroll");
     }
 }
 
 pub fn updateViewCacheForScrollLocked(self: anytype) void {
-    if (!self.publication.view_cache_pending.swap(false, .acq_rel)) return;
-    const offset: usize = @intCast(self.publication.view_cache_request_offset.load(.acquire));
-    updateViewCacheNoLockTagged(self, self.publication.pending_generation.load(.acquire), offset, "view_cache_for_scroll_locked");
+    const offset = terminal_publication.takePendingViewRefresh(self) orelse return;
+    updateViewCacheNoLockTagged(self, terminal_publication.pendingGeneration(self), offset, "view_cache_for_scroll_locked");
 }
 
 fn updateKittyViewNoLock(self: anytype, cache: *RenderCache) void {

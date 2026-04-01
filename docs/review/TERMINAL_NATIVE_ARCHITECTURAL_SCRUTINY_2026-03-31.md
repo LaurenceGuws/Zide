@@ -387,6 +387,10 @@ Evidence:
   `viewRefreshPending()` instead of peeking at raw publication flags, and the
   dead constant residue at the bottom of
   `src/terminal/core/pty_terminal_runtime.zig` is gone
+- the published-view builder now follows that same owner rule too:
+  `src/terminal/core/publication/view_cache.zig` consumes pending refresh work
+  through `takePendingViewRefresh()` and `pendingGeneration()` instead of
+  swapping raw publication fields itself
 - the outer CSI forwarding shell is gone too:
   `terminal_protocol_api.zig` now routes CSI directly into
   `src/terminal/protocol/csi.zig` without stepping through an extra

@@ -235,6 +235,12 @@ Validation note, 2026-03-31:
     and `viewRefreshPending()` instead of peeking at raw publication flags, and
     the dead constant residue at the bottom of
     `src/terminal/core/pty_terminal_runtime.zig` is gone
+  - the published-view builder no longer consumes pending refresh work by
+    reading raw publication storage directly:
+    `src/terminal/core/publication/view_cache.zig` now uses
+    `takePendingViewRefresh()` and `pendingGeneration()` from
+    `terminal_publication.zig` instead of swapping `view_cache_pending` and
+    loading `view_cache_request_offset` / `pending_generation` itself
   - the remaining publication/view-cache helper stubs and the special-case
     protocol `appendHyperlink` wrapper are no longer written inline on
     `pty_terminal_runtime.zig`; those exceptions now route through the explicit

@@ -242,6 +242,10 @@ Status note, 2026-03-31:
     and `viewRefreshPending()` instead of peeking at raw publication flags, and
     the dead constant residue at the bottom of
     `src/terminal/core/pty_terminal_runtime.zig` is gone
+  - the published-view builder now follows that same owner rule too:
+    `src/terminal/core/publication/view_cache.zig` consumes pending refresh
+    work through `takePendingViewRefresh()` and `pendingGeneration()` instead of
+    swapping raw publication fields itself
   - the same direct-owner cleanup now applies in `workspace.zig`: wrapper
     composition reads as runtime/workspace ownership, and progress-state typing
     no longer comes through `pty_terminal_runtime.zig`
