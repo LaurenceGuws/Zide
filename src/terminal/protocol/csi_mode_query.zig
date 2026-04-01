@@ -133,10 +133,6 @@ pub fn handleDecrqmQuery(writer: anytype, action: parser_csi.CsiAction, mode: i3
     }
 }
 
-pub fn writeDecrqmReply(pty: anytype, private: bool, mode: i32, state: csi_mod.DecrpmState) bool {
-    return writeDecrqmReplyWithWriter(pty, private, mode, state);
-}
-
 pub fn writeDecrqmReplyWithWriter(writer: anytype, private: bool, mode: i32, state: csi_mod.DecrpmState) bool {
     const log = app_logger.logger("terminal.csi");
     var buf: [32]u8 = undefined;

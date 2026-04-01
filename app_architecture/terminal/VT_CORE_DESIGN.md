@@ -282,6 +282,13 @@ Status note, 2026-03-31:
   - DECRQM reply formatting now lives with the DECRQM query owner too:
     `csi_mode_query.zig` owns both DECRQM state derivation and DECRQM reply
     formatting, so `csi.zig` no longer has to masquerade as the reply owner
+  - duplicate test-facing reply wrappers are dead too:
+    `csi_reply.zig` no longer exposes `pty`-shaped wrapper entrypoints that
+    only forwarded into its real writer-owned reply helpers, and
+    `csi_mode_query.zig` no longer carries the same duplicate
+    `writeDecrqmReply(...)` wrapper over `writeDecrqmReplyWithWriter(...)`;
+    the reply owners now expose one honest writer-shaped surface and the CSI
+    reply tests target that contract directly
   - the same direct-owner cleanup now applies in `workspace.zig`: wrapper
     composition reads as runtime/workspace ownership, and progress-state typing
     no longer comes through `pty_terminal_runtime.zig`

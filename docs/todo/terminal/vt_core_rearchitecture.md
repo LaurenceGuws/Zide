@@ -290,6 +290,14 @@ Validation note, 2026-03-31:
     `src/terminal/protocol/csi_mode_query.zig` now owns
     `writeDecrqmReply(...)`, and the remaining test-facing DECRQM reply surface
     no longer routes through `csi.zig`
+  - duplicate test-facing reply wrappers are dead too:
+    `src/terminal/protocol/csi_reply.zig` no longer exposes `pty`-shaped
+    wrapper entrypoints that only forwarded into its real writer-owned reply
+    helpers, and `src/terminal/protocol/csi_mode_query.zig` no longer carries
+    the same duplicate `writeDecrqmReply(...)` wrapper over
+    `writeDecrqmReplyWithWriter(...)`; the reply owners now expose one honest
+    writer-shaped surface and the CSI reply tests target that contract
+    directly
   - the remaining publication/view-cache helper stubs and the special-case
     protocol `appendHyperlink` wrapper are no longer written inline on
     `pty_terminal_runtime.zig`; those exceptions now route through the explicit

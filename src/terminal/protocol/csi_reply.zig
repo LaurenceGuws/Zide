@@ -19,10 +19,6 @@ pub const ScreenState = struct {
     cols: u16,
 };
 
-pub fn writeDaPrimaryReply(pty: anytype) bool {
-    return writeDaPrimaryReplyWithWriter(pty);
-}
-
 pub fn writeDaPrimaryReplyWithWriter(writer: anytype) bool {
     const log = app_logger.logger("terminal.csi");
     _ = writer.write("\x1b[?62;1;2;4;6;7;8;9;15;18;21;22;28;29c") catch |err| {
@@ -30,10 +26,6 @@ pub fn writeDaPrimaryReplyWithWriter(writer: anytype) bool {
         return false;
     };
     return true;
-}
-
-pub fn writeDsrReply(pty: anytype, leader: u8, mode: i32, row_1: usize, col_1: usize) bool {
-    return writeDsrReplyWithWriter(pty, leader, mode, row_1, col_1);
 }
 
 pub fn writeDsrReplyWithWriter(writer: anytype, leader: u8, mode: i32, row_1: usize, col_1: usize) bool {
@@ -131,10 +123,6 @@ pub fn writeConst(writer: anytype, seq: []const u8) bool {
     return true;
 }
 
-pub fn writeColorSchemePreferenceReply(pty: anytype, dark: bool) bool {
-    return writeColorSchemePreferenceReplyWithWriter(pty, dark);
-}
-
 pub fn writeColorSchemePreferenceReplyWithWriter(writer: anytype, dark: bool) bool {
     const log = app_logger.logger("terminal.csi");
     var buf: [16]u8 = undefined;
@@ -147,10 +135,6 @@ pub fn writeColorSchemePreferenceReplyWithWriter(writer: anytype, dark: bool) bo
         return false;
     };
     return true;
-}
-
-pub fn writeWindowOpCharsReply(pty: anytype, rows: u16, cols: u16) bool {
-    return writeWindowOpCharsReplyWithWriter(pty, rows, cols);
 }
 
 pub fn writeWindowOpCharsReplyWithWriter(writer: anytype, rows: u16, cols: u16) bool {
@@ -167,10 +151,6 @@ pub fn writeWindowOpCharsReplyWithWriter(writer: anytype, rows: u16, cols: u16) 
     return true;
 }
 
-pub fn writeWindowOpScreenCharsReply(pty: anytype, rows: u16, cols: u16) bool {
-    return writeWindowOpScreenCharsReplyWithWriter(pty, rows, cols);
-}
-
 pub fn writeWindowOpScreenCharsReplyWithWriter(writer: anytype, rows: u16, cols: u16) bool {
     const log = app_logger.logger("terminal.csi");
     var buf: [32]u8 = undefined;
@@ -185,10 +165,6 @@ pub fn writeWindowOpScreenCharsReplyWithWriter(writer: anytype, rows: u16, cols:
     return true;
 }
 
-pub fn writeWindowOpPixelsReply(pty: anytype, height_px: u32, width_px: u32) bool {
-    return writeWindowOpPixelsReplyWithWriter(pty, height_px, width_px);
-}
-
 pub fn writeWindowOpPixelsReplyWithWriter(writer: anytype, height_px: u32, width_px: u32) bool {
     const log = app_logger.logger("terminal.csi");
     var buf: [40]u8 = undefined;
@@ -201,10 +177,6 @@ pub fn writeWindowOpPixelsReplyWithWriter(writer: anytype, height_px: u32, width
         return false;
     };
     return true;
-}
-
-pub fn writeWindowOpCellPixelsReply(pty: anytype, cell_h: u16, cell_w: u16) bool {
-    return writeWindowOpCellPixelsReplyWithWriter(pty, cell_h, cell_w);
 }
 
 pub fn writeWindowOpCellPixelsReplyWithWriter(writer: anytype, cell_h: u16, cell_w: u16) bool {
