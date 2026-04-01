@@ -15,5 +15,9 @@ pub fn main() !void {
     std.debug.print("graphics_backend: {s}\n", .{capability.graphics_backend});
     std.debug.print("ffi_surface: {s}\n", .{capability.ffi_surface});
     std.debug.print("supports_fontconfig: {any}\n", .{capability.supports_fontconfig});
+    std.debug.print("supports_terminal_bundle: {any}\n", .{capability.supports_terminal_bundle});
+    std.debug.print("supports_windows_shell_extension: {any}\n", .{capability.supports_windows_shell_extension});
+    std.debug.print("uses_windows_gui_subsystem: {any}\n", .{capability.uses_windows_gui_subsystem});
+    std.debug.print("supports_windows_resources: {any}\n", .{capability.supports_windows_resources});
     std.debug.print("renderer_backend: {s}\n", .{build_options.renderer_backend});
 }

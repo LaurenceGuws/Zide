@@ -1,4 +1,5 @@
 const std = @import("std");
+const platform_capabilities = @import("platform_capabilities.zig");
 const step_utils = @import("step_utils.zig");
 
 const addSystemCommandStep = step_utils.addSystemCommandStep;
@@ -9,7 +10,9 @@ pub fn addWindowsShellExtension(
     target: std.Build.ResolvedTarget,
     optimize: std.builtin.OptimizeMode,
 ) ?*std.Build.Step {
-    if (target.result.os.tag != .windows) return null;
+    const capability = platform_capabilities.platformCapability(target.result.os.tag) orelse
+        @panic("dependency policy violation: unsupported target os for workflow setup");
+    if (!capability.supports_windows_shell_extension) return null;
 
     const dll = b.addLibrary(.{
         .name = "zide-shell-ext",
@@ -54,7 +57,9 @@ pub fn addModeGateAndBundleSteps(
         &.{install_step},
     );
 
-    if (target_os == .linux) {
+    const capability = platform_capabilities.platformCapability(target_os) orelse
+        @panic("dependency policy violation: unsupported target os for workflow steps");
+    if (capability.supports_terminal_bundle) {
         _ = addSystemCommandStep(
             b,
             "bundle-terminal",

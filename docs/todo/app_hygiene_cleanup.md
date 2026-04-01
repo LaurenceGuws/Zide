@@ -131,6 +131,9 @@ Progress note, 2026-04-02:
 - common graphics, ffi, and SDL-test link surfaces now come from shared
   platform capability link specs instead of being scattered across tiny
   platform-only helper modules
+- Windows resources, Windows GUI subsystem selection, Windows shell extension
+  build gating, and Linux terminal bundle gating now also route through shared
+  platform capability data instead of hardcoded raw OS checks
 
 ## Repo Boundary Rule
 

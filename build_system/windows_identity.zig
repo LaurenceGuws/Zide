@@ -1,5 +1,6 @@
 const std = @import("std");
 const contract = @import("windows_identity_contract.zig");
+const platform_capabilities = @import("platform_capabilities.zig");
 
 pub const AppIdentity = struct {
     display_name: []const u8,
@@ -26,7 +27,9 @@ pub fn configureExecutableResources(
     target: std.Build.ResolvedTarget,
     artifact_name: []const u8,
 ) void {
-    if (target.result.os.tag != .windows) return;
+    const capability = platform_capabilities.platformCapability(target.result.os.tag) orelse
+        @panic("dependency policy violation: unsupported target os for windows identity");
+    if (!capability.supports_windows_resources) return;
 
     const identity = identityForArtifact(artifact_name);
     const version = readVersionInfo(b);

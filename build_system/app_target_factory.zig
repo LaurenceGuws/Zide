@@ -1,5 +1,6 @@
 const std = @import("std");
 const app_types = @import("app_types.zig");
+const platform_capabilities = @import("platform_capabilities.zig");
 const target_config = @import("target_config.zig");
 const step_utils = @import("step_utils.zig");
 const target_profile = @import("target_profile.zig");
@@ -7,7 +8,9 @@ const windows_identity = @import("windows_identity.zig");
 const compile_utils = @import("compile_utils.zig");
 
 pub fn configureWindowsGuiSubsystem(step: *std.Build.Step.Compile, target: std.Build.ResolvedTarget) void {
-    if (target.result.os.tag == .windows) {
+    const capability = platform_capabilities.platformCapability(target.result.os.tag) orelse
+        @panic("dependency policy violation: unsupported target os for app target factory");
+    if (capability.uses_windows_gui_subsystem) {
         step.subsystem = .Windows;
     }
 }
