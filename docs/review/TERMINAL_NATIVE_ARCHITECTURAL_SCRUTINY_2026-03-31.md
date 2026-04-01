@@ -150,6 +150,11 @@ Judgment:
 - protocol/VT mutation methods no longer route through a separate wrapper
   shell; `pty_terminal_runtime.zig` now points straight at the real protocol
   owners
+- the local CSI reply callback shell is dead too:
+  `ReplyCsiContext` is deleted from `src/terminal/protocol/csi.zig`, so
+  DSR/DA/window-op/DECRQM/DECSTR reply handling now executes directly in
+  `handleCsiOnSession(...)` instead of bouncing through one more adapter
+  layer
 - the stale `src/terminal/core/session_protocol.zig` forwarding shell is now
   deleted, so that API seam no longer routes through one extra session-named
   hop before reaching the real owners

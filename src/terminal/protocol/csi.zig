@@ -275,98 +275,6 @@ pub const SpecialCsiContext = struct {
     }
 };
 
-const ReplyCsiContext = struct {
-    ctx: *anyopaque,
-    active_screen_fn: *const fn (ctx: *anyopaque) *screen_mod.Screen,
-    handle_dsr_fn: *const fn (ctx: *anyopaque, action: parser_csi.CsiAction, param_len: usize, params: [parser_csi.max_params]i32) void,
-    handle_da_fn: *const fn (ctx: *anyopaque, action: parser_csi.CsiAction) void,
-    handle_window_op_fn: *const fn (ctx: *anyopaque, action: parser_csi.CsiAction, param_len: usize, params: [parser_csi.max_params]i32) void,
-    handle_decrqm_fn: *const fn (ctx: *anyopaque, action: parser_csi.CsiAction, param_len: usize, params: [parser_csi.max_params]i32) void,
-    apply_decstr_fn: *const fn (ctx: *anyopaque) void,
-
-    pub fn from(session: anytype) ReplyCsiContext {
-        const SessionPtr = @TypeOf(session);
-        return .{
-            .ctx = @ptrCast(session),
-            .active_screen_fn = struct {
-                fn call(ctx: *anyopaque) *screen_mod.Screen {
-                    const s: SessionPtr = @ptrCast(@alignCast(ctx));
-                    return s.activeScreen();
-                }
-            }.call,
-            .handle_dsr_fn = struct {
-                fn call(ctx: *anyopaque, action: parser_csi.CsiAction, param_len: usize, params: [parser_csi.max_params]i32) void {
-                    const s: SessionPtr = @ptrCast(@alignCast(ctx));
-                    if (s.lockPtyWriter()) |writer_guard| {
-                        var writer = writer_guard;
-                        defer writer.unlock();
-                        handleDsrQuery(QueryContext.from(s), CsiWriter.from(&writer), ScreenQueryContext.from(s.activeScreen()), action, param_len, params);
-                    }
-                }
-            }.call,
-            .handle_da_fn = struct {
-                fn call(ctx: *anyopaque, action: parser_csi.CsiAction) void {
-                    const s: SessionPtr = @ptrCast(@alignCast(ctx));
-                    if (!(action.leader == 0 or action.leader == '?')) return;
-                    if (s.lockPtyWriter()) |writer_guard| {
-                        var writer = writer_guard;
-                        defer writer.unlock();
-                        handleDaQuery(CsiWriter.from(&writer));
-                    }
-                }
-            }.call,
-            .handle_window_op_fn = struct {
-                fn call(ctx: *anyopaque, action: parser_csi.CsiAction, param_len: usize, params: [parser_csi.max_params]i32) void {
-                    const s: SessionPtr = @ptrCast(@alignCast(ctx));
-                    if (action.leader != 0 or action.private) return;
-                    if (s.lockPtyWriter()) |writer_guard| {
-                        var writer = writer_guard;
-                        defer writer.unlock();
-                        handleWindowOpQuery(QueryContext.from(s), CsiWriter.from(&writer), ScreenQueryContext.from(s.activeScreen()), param_len, params);
-                    }
-                }
-            }.call,
-            .handle_decrqm_fn = struct {
-                fn call(ctx: *anyopaque, action: parser_csi.CsiAction, param_len: usize, params: [parser_csi.max_params]i32) void {
-                    const s: SessionPtr = @ptrCast(@alignCast(ctx));
-                    if (!csiIntermediatesEq(action, "$")) return;
-                    if (param_len != 1) return;
-                    if (s.lockPtyWriter()) |writer_guard| {
-                        var writer = writer_guard;
-                        defer writer.unlock();
-                        handleDecrqmQuery(CsiWriter.from(&writer), action, params[0], ModeQueryContext.from(s).snapshot());
-                    }
-                }
-            }.call,
-            .apply_decstr_fn = struct {
-                fn call(ctx: *anyopaque) void {
-                    const s: SessionPtr = @ptrCast(@alignCast(ctx));
-                    csi_style_reset.applyDecstrReset(DecstrContext.from(s));
-                }
-            }.call,
-        };
-    }
-
-    pub fn activeScreen(self: *const ReplyCsiContext) *screen_mod.Screen {
-        return self.active_screen_fn(self.ctx);
-    }
-    pub fn handleDsr(self: *const ReplyCsiContext, action: parser_csi.CsiAction, param_len: usize, params: [parser_csi.max_params]i32) void {
-        self.handle_dsr_fn(self.ctx, action, param_len, params);
-    }
-    pub fn handleDa(self: *const ReplyCsiContext, action: parser_csi.CsiAction) void {
-        self.handle_da_fn(self.ctx, action);
-    }
-    pub fn handleWindowOp(self: *const ReplyCsiContext, action: parser_csi.CsiAction, param_len: usize, params: [parser_csi.max_params]i32) void {
-        self.handle_window_op_fn(self.ctx, action, param_len, params);
-    }
-    pub fn handleDecrqm(self: *const ReplyCsiContext, action: parser_csi.CsiAction, param_len: usize, params: [parser_csi.max_params]i32) void {
-        self.handle_decrqm_fn(self.ctx, action, param_len, params);
-    }
-    pub fn applyDecstr(self: *const ReplyCsiContext) void {
-        self.apply_decstr_fn(self.ctx);
-    }
-};
-
 fn csiIntermediatesEq(action: parser_csi.CsiAction, bytes: []const u8) bool {
     if (action.intermediates_len != bytes.len) return false;
     return std.mem.eql(u8, action.intermediates[0..action.intermediates_len], bytes);
@@ -428,8 +336,6 @@ fn handleCsiOnSession(self: anytype, action: parser_csi.CsiAction) void {
     const mode_context = ModeMutationContext.from(self);
     const simple = SimpleCsiContext.from(self);
     const special = SpecialCsiContext.from(self);
-    const reply = ReplyCsiContext.from(self);
-
     switch (action.final) {
         'A', 'B', 'C', 'D', 'E', 'F', 'G', 'I', 'H', 'f', 'd', 'J', 'K', '@', 'P', 'X', 'L', 'M', 'S', 'T', 'Z', 'r' => {
             handleSimpleCsi(simple, action, param_len, p);
@@ -450,22 +356,44 @@ fn handleCsiOnSession(self: anytype, action: parser_csi.CsiAction) void {
             handleSpecialCsi(special, action, param_len, p);
         },
         'n' => { // DSR
-            reply.handleDsr(action, param_len, p);
+            if (self.lockPtyWriter()) |writer_guard| {
+                var writer = writer_guard;
+                defer writer.unlock();
+                handleDsrQuery(QueryContext.from(self), CsiWriter.from(&writer), ScreenQueryContext.from(self.activeScreen()), action, param_len, p);
+            }
         },
         'c' => { // DA
-            reply.handleDa(action);
+            if (action.leader == 0 or action.leader == '?') {
+                if (self.lockPtyWriter()) |writer_guard| {
+                    var writer = writer_guard;
+                    defer writer.unlock();
+                    handleDaQuery(CsiWriter.from(&writer));
+                }
+            }
         },
         't' => { // Window ops (bounded subset)
-            reply.handleWindowOp(action, param_len, p);
+            if (action.leader == 0 and !action.private) {
+                if (self.lockPtyWriter()) |writer_guard| {
+                    var writer = writer_guard;
+                    defer writer.unlock();
+                    handleWindowOpQuery(QueryContext.from(self), CsiWriter.from(&writer), ScreenQueryContext.from(self.activeScreen()), param_len, p);
+                }
+            }
         },
         'p' => { // DECRQM (requires '$' intermediate)
             if (csiIntermediatesEq(action, "!")) { // DECSTR (soft terminal reset)
                 if (action.leader == 0 and !action.private) {
-                    reply.applyDecstr();
+                    csi_style_reset.applyDecstrReset(DecstrContext.from(self));
                 }
                 return;
             }
-            reply.handleDecrqm(action, param_len, p);
+            if (csiIntermediatesEq(action, "$") and param_len == 1) {
+                if (self.lockPtyWriter()) |writer_guard| {
+                    var writer = writer_guard;
+                    defer writer.unlock();
+                    handleDecrqmQuery(CsiWriter.from(&writer), action, p[0], ModeQueryContext.from(self).snapshot());
+                }
+            }
         },
         'h' => { // SM
             csi_mode_mutation.applyModeMutation(mode_context, action, param_len, p, true);
