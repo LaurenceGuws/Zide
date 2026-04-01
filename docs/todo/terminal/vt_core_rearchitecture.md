@@ -338,7 +338,8 @@ Validation note, 2026-03-31:
     - `PresentPressureState`
     now owns recent-input/full-frame pressure facts so update-plan forcing and
     pressure logging stop smearing that state across loose locals
-  - draw handoff snapshot state is also grouped now:
+  - the remaining widget-local handoff scratch state was reduced to one narrow
+    seam instead of being rebuilt ad hoc:
     - `HandoffState`
     now owns the last/pending/published/presented generation snapshot used by
     widget plan/commit logging instead of rebuilding that state ad hoc

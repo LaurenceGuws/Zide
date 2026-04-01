@@ -287,8 +287,9 @@ Judgment:
   - `PresentPressureState` owns the present-pressure seam instead of leaving
     recent-input/full-frame planning smeared across update-plan forcing and
     pressure logging
-  - widget draw handoff/log snapshot state is now grouped in `HandoffState`
-    instead of repeating the same generation reads across plan/commit logs
+  - widget draw handoff/log snapshot state was reduced to one narrow local seam
+    (`HandoffState`) instead of repeating the same generation reads across
+    plan/commit logs
   - the stronger correction now applies to those draw-log seams too:
     formatting-buffer and logger-handle slabs that only existed to support
     low-level narration are not a structure to preserve; they are debt to

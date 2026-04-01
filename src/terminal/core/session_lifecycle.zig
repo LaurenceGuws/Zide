@@ -1,5 +1,4 @@
 const app_logger = @import("../../app_logger.zig");
-const app_lifecycle_runtime = @import("../../app/lifecycle_runtime.zig");
 const terminal_transport = @import("terminal_transport.zig");
 
 pub fn reportExternalChildExit(self: anytype, code: ?i32) bool {
@@ -35,12 +34,6 @@ pub fn maybeUpdateChildExit(self: anytype) void {
         }) |code| {
             self.runtime.child_exit_code.store(code, .release);
             self.runtime.child_exited.store(true, .release);
-            app_logger.logger("terminal.lifecycle").logFields(.info, "terminal_child_exit_detected", &.{
-                .{ .key = "session_ptr", .value = .{ .unsigned = @intFromPtr(self) } },
-                .{ .key = "code", .value = .{ .integer = code } },
-                .{ .key = "shutdown_started", .value = .{ .boolean = app_lifecycle_runtime.shutdownStarted() } },
-                .{ .key = "shell_deinitialized", .value = .{ .boolean = app_lifecycle_runtime.shellDeinitialized() } },
-            });
         }
     }
 }
