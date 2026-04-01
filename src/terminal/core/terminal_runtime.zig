@@ -1,6 +1,4 @@
 const runtime_mod = @import("pty_terminal_runtime.zig");
-const host_types = @import("session/host_types.zig");
-const selection_mod = @import("selection.zig");
 const input_mod = @import("../input/input.zig");
 const types = @import("../model/types.zig");
 const workspace_mod = @import("workspace.zig");
@@ -10,10 +8,6 @@ pub const TerminalWorkspace = workspace_mod.TerminalWorkspace;
 pub const TerminalTabId = workspace_mod.TabId;
 pub const TerminalTabSyncEntry = workspace_mod.TabSyncEntry;
 pub const TerminalTabSyncState = workspace_mod.TabSyncState;
-
-pub const ActivityMetadata = host_types.ActivityMetadata;
-pub const ProgressMetadata = host_types.ProgressMetadata;
-pub const ProgressState = host_types.ProgressState;
 
 pub const VTERM_KEY_NONE = types.VTERM_KEY_NONE;
 pub const VTERM_KEY_ENTER = types.VTERM_KEY_ENTER;
@@ -54,5 +48,3 @@ pub const MouseEvent = types.MouseEvent;
 
 pub const SelectionPos = types.SelectionPos;
 pub const TerminalSelection = types.TerminalSelection;
-pub const SelectionGesture = selection_mod.SelectionGesture;
-pub const ClickSelectionResult = selection_mod.ClickSelectionResult;

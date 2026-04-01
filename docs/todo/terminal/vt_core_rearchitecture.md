@@ -260,6 +260,11 @@ Validation note, 2026-03-31:
     `src/terminal/core/session/runtime.zig` now pull shared constants and
     types from their direct owners instead of routing them through one more
     wrapper-side export file
+  - the stable runtime surface is narrower now too:
+    `src/terminal/core/terminal_runtime.zig` no longer re-exports
+    `ActivityMetadata`, `ProgressMetadata`, `ProgressState`,
+    `SelectionGesture`, or `ClickSelectionResult`; active callers now import
+    those names from `session/host_types.zig` and `selection.zig` directly
   - raw session state is no longer a flat lie:
     - `src/terminal/core/session/publication_fields.zig`
     - `src/terminal/core/session/runtime_fields.zig`

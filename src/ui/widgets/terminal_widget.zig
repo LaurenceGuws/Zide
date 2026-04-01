@@ -2,6 +2,7 @@ const std = @import("std");
 const app_shell = @import("../../app_shell.zig");
 const terminal_runtime = @import("../../terminal/core/terminal_runtime.zig");
 const terminal_publication = @import("../../terminal/core/publication/terminal_publication.zig");
+const terminal_selection = @import("../../terminal/core/selection.zig");
 const terminal_types = @import("../../terminal/model/types.zig");
 const key_encoder = @import("../../terminal/input/key_encoder.zig");
 const app_logger = @import("../../app_logger.zig");
@@ -67,7 +68,7 @@ pub const TerminalWidget = struct {
     last_focus_reported: ?bool = null,
     ui_focused: bool = true,
     ui_window_focused: bool = true,
-    selection_gesture: terminal_runtime.SelectionGesture = .{},
+    selection_gesture: terminal_selection.SelectionGesture = .{},
     selection_press_origin: ?shared_types.input.MousePos = null,
     selection_drag_active: bool = false,
 

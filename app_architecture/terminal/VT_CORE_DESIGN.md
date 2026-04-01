@@ -167,6 +167,11 @@ Status note, 2026-03-31:
   - selection gesture types and key-mode flag access also now come from their
     direct owners instead of reinforcing wrapper gravity through the same
     public surface
+  - the stable runtime surface is narrower now too:
+    `src/terminal/core/terminal_runtime.zig` no longer re-exports
+    `ActivityMetadata`, `ProgressMetadata`, `ProgressState`,
+    `SelectionGesture`, or `ClickSelectionResult`; active callers now import
+    those names from `session/host_types.zig` and `selection.zig` directly
   - the same direct-owner cleanup now applies in `workspace.zig`: wrapper
     composition reads as runtime/workspace ownership, and progress-state typing
     no longer comes through `pty_terminal_runtime.zig`

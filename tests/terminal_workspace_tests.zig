@@ -1,6 +1,7 @@
 const std = @import("std");
 const terminal_runtime = @import("../src/terminal/core/terminal_runtime.zig");
 const terminal_debug = @import("../src/terminal/core/session/debug_ops.zig");
+const host_types = @import("../src/terminal/core/session/host_types.zig");
 
 test "terminal workspace create switch move close lifecycle" {
     var workspace = terminal_runtime.TerminalWorkspace.init(std.testing.allocator, .{});
@@ -53,7 +54,7 @@ test "terminal workspace tab sync state is session-derived" {
     try std.testing.expectEqual(created.id, sync_state.active_tab_id.?);
     try std.testing.expectEqual(created.id, sync_state.tabs[0].id);
     try std.testing.expectEqualStrings("build-shell", sync_state.tabs[0].title(sync_state.strings));
-    try std.testing.expectEqual(terminal_runtime.ProgressState.set, sync_state.tabs[0].progress_state);
+    try std.testing.expectEqual(host_types.ProgressState.set, sync_state.tabs[0].progress_state);
     try std.testing.expectEqual(@as(?u8, 42), sync_state.tabs[0].progress_value);
 }
 

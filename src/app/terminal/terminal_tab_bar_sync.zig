@@ -2,6 +2,7 @@ const std = @import("std");
 const config_mod = @import("../../config/lua_config.zig");
 const app_terminal_shell_icon_runtime = @import("terminal_shell_icon_runtime.zig");
 const terminal_runtime = @import("../../terminal/core/terminal_runtime.zig");
+const host_types = @import("../../terminal/core/session/host_types.zig");
 const widgets = @import("../../ui/widgets.zig");
 
 const TerminalTabLabelModel = struct {
@@ -10,7 +11,7 @@ const TerminalTabLabelModel = struct {
     foreground_process_label: []const u8,
     cwd: []const u8,
     shell_path: []const u8,
-    progress_state: terminal_runtime.ProgressState,
+    progress_state: host_types.ProgressState,
     progress_value: ?u8,
 };
 
