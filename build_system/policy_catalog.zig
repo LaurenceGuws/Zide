@@ -18,6 +18,7 @@ pub const hard_constraints = [_]PolicyLine{
     .{ .text = "non-terminal modes must resolve tree-sitter" },
     .{ .text = "renderer backend support is currently SDL GL only" },
     .{ .text = "build graph is intentionally split between runtime app planning and extended IDE/test planning" },
+    .{ .text = "platform graphics/ffi assumptions are modeled per target OS" },
 };
 
 pub const operator_intent = [_]PolicyLine{

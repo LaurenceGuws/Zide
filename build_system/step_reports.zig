@@ -11,6 +11,7 @@ const ReportToolSpec = struct {
     adds_step_catalog_import: bool = false,
     adds_policy_catalog_import: bool = false,
     adds_profile_catalog_import: bool = false,
+    adds_platform_capabilities_import: bool = false,
 };
 
 pub fn addReportBuildAllStep(
@@ -169,6 +170,27 @@ pub fn addReportBuildPolicyStep(
     );
 }
 
+pub fn addReportBuildPlatformStep(
+    b: *std.Build,
+    target: std.Build.ResolvedTarget,
+    optimize: std.builtin.OptimizeMode,
+    build_options: *std.Build.Step.Options,
+) *std.Build.Step {
+    return addReportToolRunStep(
+        b,
+        target,
+        optimize,
+        build_options,
+        .{
+            .exe_name = "build-platform-report",
+            .root_source_file = "build_system/reports/build_platform_report.zig",
+            .step_name = "report-build-platform",
+            .description = "Report target platform capability assumptions",
+            .adds_platform_capabilities_import = true,
+        },
+    );
+}
+
 pub fn addReportBuildSurfaceStep(
     b: *std.Build,
     target: std.Build.ResolvedTarget,
@@ -248,6 +270,13 @@ const core_build_report_tool_specs = [_]ReportToolSpec{
         .adds_policy_catalog_import = true,
     },
     .{
+        .exe_name = "build-platform-report-check",
+        .root_source_file = "build_system/reports/build_platform_report.zig",
+        .step_name = "",
+        .description = "",
+        .adds_platform_capabilities_import = true,
+    },
+    .{
         .exe_name = "build-profile-report-check",
         .root_source_file = "build_system/reports/build_profile_report.zig",
         .step_name = "",
@@ -319,6 +348,13 @@ fn addReportToolExecutable(
     if (spec.adds_profile_catalog_import) {
         exe.root_module.addAnonymousImport("profile_catalog", .{
             .root_source_file = b.path("build_system/profile_catalog.zig"),
+            .target = target,
+            .optimize = optimize,
+        });
+    }
+    if (spec.adds_platform_capabilities_import) {
+        exe.root_module.addAnonymousImport("platform_capabilities", .{
+            .root_source_file = b.path("build_system/platform_capabilities.zig"),
             .target = target,
             .optimize = optimize,
         });

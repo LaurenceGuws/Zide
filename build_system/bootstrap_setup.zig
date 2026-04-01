@@ -3,6 +3,7 @@ const builtin = @import("builtin");
 const app_types = @import("app_types.zig");
 const dependency_resolver = @import("dependency_resolver.zig");
 const mode_specs = @import("mode_specs.zig");
+const platform_capabilities = @import("platform_capabilities.zig");
 const step_reports = @import("step_reports.zig");
 
 const AppLinkContext = app_types.AppLinkContext;
@@ -128,6 +129,12 @@ pub fn addBootstrapReportSteps(
         optimize,
         build_options,
     );
+    const build_platform_report_step = step_reports.addReportBuildPlatformStep(
+        b,
+        target,
+        optimize,
+        build_options,
+    );
     const build_dependency_report_step = step_reports.addReportBuildDependenciesStep(
         b,
         target,
@@ -152,6 +159,7 @@ pub fn addBootstrapReportSteps(
             build_focused_policy_report_step,
             build_target_report_step,
             build_policy_report_step,
+            build_platform_report_step,
             build_dependency_report_step,
             build_surface_report_step,
             build_report_tools_check_step,
@@ -160,13 +168,13 @@ pub fn addBootstrapReportSteps(
 }
 
 fn readRendererBackendOption(b: *std.Build) []const u8 {
-    const default_renderer_backend = "sdl_gl";
+    const default_renderer_backend = platform_capabilities.rendererBackendName(.sdl_gl);
     const renderer_backend = b.option(
         []const u8,
         "renderer-backend",
         "Renderer backend (only sdl_gl is implemented; wgl/egl are TODO)",
     ) orelse default_renderer_backend;
-    if (!std.mem.eql(u8, renderer_backend, "sdl_gl")) {
+    if (!platform_capabilities.isSupportedRendererBackend(renderer_backend)) {
         std.debug.panic(
             "renderer backend '{s}' is not implemented (use -Drenderer-backend=sdl_gl)",
             .{renderer_backend},

@@ -119,6 +119,10 @@ Progress note, 2026-04-02:
   instead of only in `report-build-profiles`
 - the build system now exposes `zig build report-build-dependencies` to explain
   dependency intent per profile instead of leaving that matrix implicit
+- renderer/backend and platform capability assumptions now live in
+  `build_system/platform_capabilities.zig`
+- the build system now exposes `zig build report-build-platform` so target
+  graphics/ffi assumptions are inspectable instead of scattered
 
 ## Repo Boundary Rule
 
