@@ -575,9 +575,8 @@ The publication contract is now explicit and far stronger than the early
 rewrite period, but it is also the clearest remaining center-of-gravity gap in
 the current codebase.
 
-Today, `session_rendering.zig`, the publication-state seam, the
-publication-updates seam, and the presentation-handoff seam still own much of
-the choreography around:
+Today, the publication-state seam, the publication-updates seam, and the
+presentation-handoff seam still own much of the choreography around:
 
 - published vs acknowledged generation bookkeeping
 - render-cache handoff
