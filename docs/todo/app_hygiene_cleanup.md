@@ -123,6 +123,9 @@ Progress note, 2026-04-02:
   `build_system/platform_capabilities.zig`
 - the build system now exposes `zig build report-build-platform` so target
   graphics/ffi assumptions are inspectable instead of scattered
+- `build_system/target_config.zig` and `build_system/dependency_resolver.zig`
+  now consume shared platform capability data for text-stack/fontconfig/zlib
+  behavior instead of each carrying local OS-condition policy
 
 ## Repo Boundary Rule
 

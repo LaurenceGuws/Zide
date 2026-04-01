@@ -1,6 +1,7 @@
 const std = @import("std");
 const app_types = @import("app_types.zig");
 const target_profile = @import("target_profile.zig");
+const platform_capabilities = @import("platform_capabilities.zig");
 const links_windows = @import("platform_links_windows.zig");
 const links_linux = @import("platform_links_linux.zig");
 const links_macos = @import("platform_links_macos.zig");
@@ -42,9 +43,11 @@ fn linkTextStack(
     target_os: std.Target.Os.Tag,
     text_stack: TextStackDeps,
 ) void {
+    const capability = platform_capabilities.platformCapability(target_os) orelse
+        @panic("dependency policy violation: unsupported target os for text stack");
     step.linkLibrary(text_stack.freetype);
     step.linkLibrary(text_stack.harfbuzz);
-    if (target_os != .windows) {
+    if (capability.needs_system_zlib) {
         step.linkSystemLibrary("z");
     }
 }
@@ -54,11 +57,18 @@ fn addTextStackIncludes(
     target_os: std.Target.Os.Tag,
     text_stack: TextStackDeps,
 ) void {
+    const capability = platform_capabilities.platformCapability(target_os) orelse
+        @panic("dependency policy violation: unsupported target os for text stack includes");
     step.addIncludePath(text_stack.freetype.getEmittedIncludeTree());
     step.addIncludePath(text_stack.harfbuzz.getEmittedIncludeTree());
-    if (target_os == .linux) {
-        step.addIncludePath(.{ .cwd_relative = "/usr/include/fontconfig" });
+    if (capability.fontconfig_include_dir) |include_dir| {
+        step.addIncludePath(.{ .cwd_relative = include_dir });
     }
+}
+
+fn supportsFontconfig(target_os: std.Target.Os.Tag) bool {
+    return (platform_capabilities.platformCapability(target_os) orelse
+        @panic("dependency policy violation: unsupported target os for fontconfig")).supports_fontconfig;
 }
 
 fn linkCommonPlatformGraphics(exe: *std.Build.Step.Compile, target_os: std.Target.Os.Tag) void {
@@ -102,7 +112,7 @@ pub fn configureSdlTestTarget(
     linkSdl3(step, ctx.sdl_lib);
     if (text_stack) |deps| linkTextStack(step, ctx.target_os, deps);
     if (profile.include_lua and ctx.lua_lib != null) linkLua(step, ctx.lua_lib);
-    if (profile.include_fontconfig and ctx.target_os == .linux) {
+    if (profile.include_fontconfig and supportsFontconfig(ctx.target_os)) {
         step.linkSystemLibrary("fontconfig");
     }
     linkSdlTestGraphics(step, ctx.target_os);
@@ -132,7 +142,7 @@ pub fn configureAppExecutable(
         linkLua(exe, ctx.lua_lib);
     }
     linkSdl3(exe, ctx.sdl_lib);
-    if (profile.include_fontconfig and ctx.target_os == .linux) {
+    if (profile.include_fontconfig and supportsFontconfig(ctx.target_os)) {
         exe.linkSystemLibrary("fontconfig");
     }
     addVendorAndStb(exe);

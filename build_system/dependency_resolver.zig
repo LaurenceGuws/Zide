@@ -1,5 +1,6 @@
 const std = @import("std");
 const compile_utils = @import("compile_utils.zig");
+const platform_capabilities = @import("platform_capabilities.zig");
 
 pub const BuildDependencies = struct {
     treesitter: ?*std.Build.Step.Compile,
@@ -17,6 +18,8 @@ pub fn resolveDependencies(
     optimize: std.builtin.OptimizeMode,
     need_treesitter: bool,
 ) BuildDependencies {
+    const capability = platform_capabilities.platformCapability(target.result.os.tag) orelse
+        @panic("dependency policy violation: unsupported target os for dependency resolution");
     const tree_sitter_dep = if (need_treesitter)
         b.dependency("tree_sitter", .{
             .target = target,
@@ -49,7 +52,7 @@ pub fn resolveDependencies(
     const freetype_dep = b.dependency("freetype", .{
         .target = target,
         .optimize = optimize,
-        .use_system_zlib = target.result.os.tag != .windows,
+        .use_system_zlib = capability.needs_system_zlib,
         .enable_brotli = false,
     });
 
@@ -57,7 +60,7 @@ pub fn resolveDependencies(
         .target = target,
         .optimize = optimize,
         .enable_freetype = true,
-        .freetype_use_system_zlib = target.result.os.tag != .windows,
+        .freetype_use_system_zlib = capability.needs_system_zlib,
         .freetype_enable_brotli = false,
     });
 
