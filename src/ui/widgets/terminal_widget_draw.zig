@@ -164,6 +164,25 @@ const DrawLoggers = struct {
     handoff: @TypeOf(app_logger.logger("terminal.generation_handoff")),
 };
 
+const RowRenderStats = struct {
+    bg_runs: usize = 0,
+    span_count: usize = 0,
+    col_min: usize,
+    col_max: usize = 0,
+    bg_summary: draw_grid.BackgroundRunSummary = .{},
+    direct_samples: [draw_grid.max_direct_glyph_samples]draw_grid.DirectGlyphSample = [_]draw_grid.DirectGlyphSample{.{}} ** draw_grid.max_direct_glyph_samples,
+    shaped_total: usize = 0,
+    direct_text: usize = 0,
+    special: usize = 0,
+    box: usize = 0,
+    shaped_text: usize = 0,
+    fallback: usize = 0,
+
+    fn width(self: RowRenderStats, cols: usize) usize {
+        return if (self.col_min < cols and self.col_max >= self.col_min) self.col_max - self.col_min + 1 else 0;
+    }
+};
+
 pub fn latestFrameLatencyMetrics() FrameLatencyMetrics {
     return frame_latency_metrics;
 }
@@ -1290,12 +1309,7 @@ pub fn drawPrepared(
                 for (0..rows) |row| {
                     if (!self.partial_draw_rows.items[row]) continue;
                     const before_stats = glyph_draw_stats;
-                    var row_bg_runs: usize = 0;
-                    var row_span_count: usize = 0;
-                    var row_col_min: usize = cols;
-                    var row_col_max: usize = 0;
-                    var row_bg_summary = draw_grid.BackgroundRunSummary{};
-                    var row_direct_samples = [_]draw_grid.DirectGlyphSample{.{}} ** draw_grid.max_direct_glyph_samples;
+                    var row_stats = RowRenderStats{ .col_min = cols };
                     if (row < self.partial_draw_span_counts.items.len and row < self.partial_draw_spans.items.len and self.partial_draw_span_counts.items[row] > 0) {
                         var span_idx: usize = 0;
                         while (span_idx < self.partial_draw_span_counts.items[row]) : (span_idx += 1) {
@@ -1303,66 +1317,65 @@ pub fn drawPrepared(
                             const col_start = @min(@as(usize, span.start), cols - 1);
                             const col_end = @min(@as(usize, span.end), cols - 1);
                             const draw_padding = col_end >= cols - 1;
-                            row_bg_runs += draw_grid.countRowBackgroundRuns(view_cells, cols, row, col_start, col_end, draw_padding, screen_reverse);
-                            if (row_bg_summary.runs == 0) {
-                                row_bg_summary = draw_grid.summarizeRowBackgroundRuns(view_cells, cols, row, col_start, col_end, draw_padding, screen_reverse);
+                            row_stats.bg_runs += draw_grid.countRowBackgroundRuns(view_cells, cols, row, col_start, col_end, draw_padding, screen_reverse);
+                            if (row_stats.bg_summary.runs == 0) {
+                                row_stats.bg_summary = draw_grid.summarizeRowBackgroundRuns(view_cells, cols, row, col_start, col_end, draw_padding, screen_reverse);
                             }
-                            row_span_count += 1;
-                            row_col_min = @min(row_col_min, col_start);
-                            row_col_max = @max(row_col_max, col_end);
-                            drawRowGlyphs(shell, view_cells, cols, row, col_start, col_end, base_x_local, base_y_local, padding_x_i, hover_link_id, screen_reverse, blink_style, blink_time, draw_cursor, cursor, r.terminal_disable_ligatures, &row_direct_samples, &glyph_draw_stats);
+                            row_stats.span_count += 1;
+                            row_stats.col_min = @min(row_stats.col_min, col_start);
+                            row_stats.col_max = @max(row_stats.col_max, col_end);
+                            drawRowGlyphs(shell, view_cells, cols, row, col_start, col_end, base_x_local, base_y_local, padding_x_i, hover_link_id, screen_reverse, blink_style, blink_time, draw_cursor, cursor, r.terminal_disable_ligatures, &row_stats.direct_samples, &glyph_draw_stats);
                         }
                     } else {
                         const col_start = @min(@as(usize, self.partial_draw_cols_start.items[row]), cols - 1);
                         const col_end = @min(@as(usize, self.partial_draw_cols_end.items[row]), cols - 1);
                         const draw_padding = col_end >= cols - 1;
-                        row_bg_runs += draw_grid.countRowBackgroundRuns(view_cells, cols, row, col_start, col_end, draw_padding, screen_reverse);
-                        row_bg_summary = draw_grid.summarizeRowBackgroundRuns(view_cells, cols, row, col_start, col_end, draw_padding, screen_reverse);
-                        row_span_count = 1;
-                        row_col_min = col_start;
-                        row_col_max = col_end;
-                        drawRowGlyphs(shell, view_cells, cols, row, col_start, col_end, base_x_local, base_y_local, padding_x_i, hover_link_id, screen_reverse, blink_style, blink_time, draw_cursor, cursor, r.terminal_disable_ligatures, &row_direct_samples, &glyph_draw_stats);
+                        row_stats.bg_runs += draw_grid.countRowBackgroundRuns(view_cells, cols, row, col_start, col_end, draw_padding, screen_reverse);
+                        row_stats.bg_summary = draw_grid.summarizeRowBackgroundRuns(view_cells, cols, row, col_start, col_end, draw_padding, screen_reverse);
+                        row_stats.span_count = 1;
+                        row_stats.col_min = col_start;
+                        row_stats.col_max = col_end;
+                        drawRowGlyphs(shell, view_cells, cols, row, col_start, col_end, base_x_local, base_y_local, padding_x_i, hover_link_id, screen_reverse, blink_style, blink_time, draw_cursor, cursor, r.terminal_disable_ligatures, &row_stats.direct_samples, &glyph_draw_stats);
                     }
-                    const row_width = if (row_col_min < cols and row_col_max >= row_col_min) row_col_max - row_col_min + 1 else 0;
-                    const row_shaped_total = glyph_draw_stats.shaped_glyphs - before_stats.shaped_glyphs;
-                    const row_direct_text = glyph_draw_stats.direct_text_glyphs - before_stats.direct_text_glyphs;
-                    const row_special = glyph_draw_stats.special_sprite_glyphs - before_stats.special_sprite_glyphs;
-                    const row_box = glyph_draw_stats.box_glyphs - before_stats.box_glyphs;
-                    const row_shaped_text = glyph_draw_stats.shaped_text_glyphs - before_stats.shaped_text_glyphs;
-                    const row_fallback = glyph_draw_stats.fallback_cells - before_stats.fallback_cells;
-                    if ((logs.row_render.enabled_file or logs.row_render.enabled_console) and row_span_count > 0) {
-                        if (row_width >= cols / 2 or row == cursor.row) {
+                    row_stats.shaped_total = glyph_draw_stats.shaped_glyphs - before_stats.shaped_glyphs;
+                    row_stats.direct_text = glyph_draw_stats.direct_text_glyphs - before_stats.direct_text_glyphs;
+                    row_stats.special = glyph_draw_stats.special_sprite_glyphs - before_stats.special_sprite_glyphs;
+                    row_stats.box = glyph_draw_stats.box_glyphs - before_stats.box_glyphs;
+                    row_stats.shaped_text = glyph_draw_stats.shaped_text_glyphs - before_stats.shaped_text_glyphs;
+                    row_stats.fallback = glyph_draw_stats.fallback_cells - before_stats.fallback_cells;
+                    if ((logs.row_render.enabled_file or logs.row_render.enabled_console) and row_stats.span_count > 0) {
+                        if (row_stats.width(cols) >= cols / 2 or row == cursor.row) {
                             logs.row_render.logf(
                                 .info,
                                 "row={d} cols={d}..{d} width={d} spans={d} bg_runs={d} bg1={d}..{d}@{d}:{d}:{d} bg2={d}..{d}@{d}:{d}:{d} bg3={d}..{d}@{d}:{d}:{d} glyph_total={d} direct_text={d} shaped_text={d} special={d} box={d} fallback={d} direct_draw_ms={d:.2} special_lookup_ms={d:.2} special_submit_ms={d:.2} box_submit_ms={d:.2}",
                                 .{
                                     row,
-                                    row_col_min,
-                                    row_col_max,
-                                    row_width,
-                                    row_span_count,
-                                    row_bg_runs,
-                                    row_bg_summary.first_start,
-                                    row_bg_summary.first_end,
-                                    row_bg_summary.first_color.r,
-                                    row_bg_summary.first_color.g,
-                                    row_bg_summary.first_color.b,
-                                    row_bg_summary.second_start,
-                                    row_bg_summary.second_end,
-                                    row_bg_summary.second_color.r,
-                                    row_bg_summary.second_color.g,
-                                    row_bg_summary.second_color.b,
-                                    row_bg_summary.third_start,
-                                    row_bg_summary.third_end,
-                                    row_bg_summary.third_color.r,
-                                    row_bg_summary.third_color.g,
-                                    row_bg_summary.third_color.b,
-                                    row_shaped_total,
-                                    row_direct_text,
-                                    row_shaped_text,
-                                    row_special,
-                                    row_box,
-                                    row_fallback,
+                                    row_stats.col_min,
+                                    row_stats.col_max,
+                                    row_stats.width(cols),
+                                    row_stats.span_count,
+                                    row_stats.bg_runs,
+                                    row_stats.bg_summary.first_start,
+                                    row_stats.bg_summary.first_end,
+                                    row_stats.bg_summary.first_color.r,
+                                    row_stats.bg_summary.first_color.g,
+                                    row_stats.bg_summary.first_color.b,
+                                    row_stats.bg_summary.second_start,
+                                    row_stats.bg_summary.second_end,
+                                    row_stats.bg_summary.second_color.r,
+                                    row_stats.bg_summary.second_color.g,
+                                    row_stats.bg_summary.second_color.b,
+                                    row_stats.bg_summary.third_start,
+                                    row_stats.bg_summary.third_end,
+                                    row_stats.bg_summary.third_color.r,
+                                    row_stats.bg_summary.third_color.g,
+                                    row_stats.bg_summary.third_color.b,
+                                    row_stats.shaped_total,
+                                    row_stats.direct_text,
+                                    row_stats.shaped_text,
+                                    row_stats.special,
+                                    row_stats.box,
+                                    row_stats.fallback,
                                     glyph_draw_stats.direct_draw_ms - before_stats.direct_draw_ms,
                                     glyph_draw_stats.special_sprite_lookup_ms - before_stats.special_sprite_lookup_ms,
                                     glyph_draw_stats.shaped_special_submit_ms - before_stats.shaped_special_submit_ms,
@@ -1374,19 +1387,19 @@ pub fn drawPrepared(
                                 "row={d} bg2s=p{d} col={d} cp={d} fg={d}:{d}:{d} bg={d}:{d}:{d} rev={d} res={d}:{d}:{d}",
                                 .{
                                     row,
-                                    @intFromBool(row_bg_summary.second_sample.present),
-                                    row_bg_summary.second_sample.col,
-                                    row_bg_summary.second_sample.codepoint,
-                                    row_bg_summary.second_sample.fg.r,
-                                    row_bg_summary.second_sample.fg.g,
-                                    row_bg_summary.second_sample.fg.b,
-                                    row_bg_summary.second_sample.bg.r,
-                                    row_bg_summary.second_sample.bg.g,
-                                    row_bg_summary.second_sample.bg.b,
-                                    @intFromBool(row_bg_summary.second_sample.reverse),
-                                    row_bg_summary.second_sample.resolved_bg.r,
-                                    row_bg_summary.second_sample.resolved_bg.g,
-                                    row_bg_summary.second_sample.resolved_bg.b,
+                                    @intFromBool(row_stats.bg_summary.second_sample.present),
+                                    row_stats.bg_summary.second_sample.col,
+                                    row_stats.bg_summary.second_sample.codepoint,
+                                    row_stats.bg_summary.second_sample.fg.r,
+                                    row_stats.bg_summary.second_sample.fg.g,
+                                    row_stats.bg_summary.second_sample.fg.b,
+                                    row_stats.bg_summary.second_sample.bg.r,
+                                    row_stats.bg_summary.second_sample.bg.g,
+                                    row_stats.bg_summary.second_sample.bg.b,
+                                    @intFromBool(row_stats.bg_summary.second_sample.reverse),
+                                    row_stats.bg_summary.second_sample.resolved_bg.r,
+                                    row_stats.bg_summary.second_sample.resolved_bg.g,
+                                    row_stats.bg_summary.second_sample.resolved_bg.b,
                                 },
                             );
                         }

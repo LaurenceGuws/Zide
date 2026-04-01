@@ -338,6 +338,10 @@ Validation note, 2026-03-31:
     - `DrawLoggers`
     now owns the redraw/texture-shift/row-render/perf/lifecycle/pressure/
     handoff logger set instead of scattering logger locals through draw
+  - row-render metrics are also grouped now:
+    - `RowRenderStats`
+    now owns the per-row background/span/glyph/sample metrics used by the
+    partial glyph pass instead of leaving another loose metrics blob inline
   - lifecycle/dirty helpers now also own more of the direct truth widget draw
     needs:
     - `lifecycleTransitionInfo(...)` carries current alt-state

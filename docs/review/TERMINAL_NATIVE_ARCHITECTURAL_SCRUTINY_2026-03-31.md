@@ -287,6 +287,8 @@ Judgment:
     instead of sitting as an unrelated local-array slab in the render body
   - widget draw logger handles are now grouped in `DrawLoggers` instead of
     being repeated as another unrelated local slab in the render body
+  - partial glyph-pass row metrics are now grouped in `RowRenderStats`
+    instead of being expanded inline as another local metrics blob
   - widget draw now also uses helper-owned current alt-state and clean-state
     instead of falling back to raw `cache.alt_active` and repeated
     `cache.dirty == .none` checks where publication already owns the answer

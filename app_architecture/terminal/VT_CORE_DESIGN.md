@@ -228,6 +228,9 @@ Status note, 2026-03-31:
     body
   - logger handles used throughout draw should also be grouped once they become
     a repeated local slab instead of a meaningful part of the render flow
+  - per-row render metrics in the partial glyph path should also be grouped
+    once they become a dense local blob of counters, ranges, summaries, and
+    sample buffers
   - once a publication helper exists, widget draw should consume its direct
     truth completely; it should not keep mixing helper-owned state with raw
     reads like `cache.alt_active` or repeated `cache.dirty == .none`
