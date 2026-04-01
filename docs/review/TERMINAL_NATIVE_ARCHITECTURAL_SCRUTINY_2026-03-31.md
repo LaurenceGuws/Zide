@@ -106,6 +106,10 @@ Judgment:
 - `src/terminal/core/pty_terminal_runtime.zig` no longer exports a broad
   top-level type/constant barrel; only `PtyTerminalRuntime` remains public
   there, which is a materially better first-glance ownership read
+- the oversized `src/terminal/core/session/surface_api.zig` aggregate shell is
+  gone too; the wrapper now binds directly to the real session-owned
+  content/query/selection/host-query/interaction modules instead of routing
+  those through one more export facade
 - `src/terminal/core/terminal_runtime.zig` still appears to be the right stable
   public surface, but it no longer routes shared input/selection/progress
   types through `pty_terminal_runtime.zig`; those names now come from their

@@ -273,6 +273,10 @@ Validation note, 2026-03-31:
   - `pty_terminal_runtime.zig` itself no longer exports a broad top-level
     type/constant barrel; only `PtyTerminalRuntime` remains public there,
     which makes the wrapper file read far more honestly at first glance
+  - the oversized `src/terminal/core/session/surface_api.zig` aggregate shell
+    is gone too; the wrapper now binds directly to the real session-owned
+    content/query/selection/host-query/interaction modules instead of routing
+    those through one more export facade
 - [ ] `VTCORE-02` Make FFI a first-class core interface.
   Notes: shared FFI state plus `host_api` and `core_api` splits are landed; remaining work is maturity and convergence, not proving the shape. Recent slices closed real host-facing gaps such as close-confirm signals and backend-owned viewport control.
   Progress note, 2026-04-01, later:

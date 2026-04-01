@@ -139,6 +139,10 @@ Status note, 2026-03-31:
   - `src/terminal/core/pty_terminal_runtime.zig` no longer exports a broad
     top-level type/constant barrel; only `PtyTerminalRuntime` remains public
     there, which makes the wrapper file read much more honestly
+  - the oversized `src/terminal/core/session/surface_api.zig` aggregate shell
+    is gone too; the wrapper now binds directly to the real session-owned
+    content/query/selection/host-query/interaction modules instead of routing
+    those through one more export facade
   - duplicated publication/cache truth
   - oversized native widget/render coordination around terminal publication
 - The current operating rule is sequential but ruthless:
