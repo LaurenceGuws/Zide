@@ -1,4 +1,4 @@
-const session_debug_api = @import("session_debug_api.zig");
+const session_debug_api = @import("session/session_debug_api.zig");
 
 pub const debugSnapshot = session_debug_api.debugSnapshot;
 pub const debugScrollbackRow = session_debug_api.debugScrollbackRow;

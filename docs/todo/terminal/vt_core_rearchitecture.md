@@ -137,41 +137,45 @@ Validation note, 2026-03-31:
     now imports direct ownership modules instead of routing public-facing types
     through a mixed alias hub.
   - the next extraction cut is also in:
-    - `src/terminal/core/session_runtime_api.zig`
-    - `src/terminal/core/session_publication_api.zig`
+    - `src/terminal/core/session/session_runtime_api.zig`
+    - `src/terminal/core/session/session_publication_api.zig`
   - host/runtime and publication/present public methods are no longer written
     inline on `pty_terminal_runtime.zig`; they are now grouped behind explicit API
     modules and re-exported without behavior changes.
-  - `src/terminal/core/session_input_api.zig` now groups the input send/report
+  - `src/terminal/core/session/session_input_api.zig` now groups the input send/report
     public methods that were previously written inline on
     `pty_terminal_runtime.zig`.
   - `src/terminal/core/terminal_protocol_api.zig` now groups the protocol/VT
     mutation public methods that were previously written inline on
     `pty_terminal_runtime.zig`.
-  - `src/terminal/core/session_config_api.zig` now groups the config, palette,
+  - `src/terminal/core/session/session_config_api.zig` now groups the config, palette,
     and mode-setting public methods that were previously written inline on
     `pty_terminal_runtime.zig`.
   - the remaining publication/view-cache helper stubs and the special-case
     protocol `appendHyperlink` wrapper are no longer written inline on
     `pty_terminal_runtime.zig`; those exceptions now route through the explicit
     publication/protocol API seams too.
-  - `src/terminal/core/session_debug_api.zig` now owns the root debug method
+  - `src/terminal/core/session/session_debug_api.zig` now owns the root debug method
     group, so `terminal_debug.zig` and `pty_terminal_runtime.zig` both point at an
     explicit debug API seam instead of treating the session root as the owner.
-  - `src/terminal/core/session_lifecycle_api.zig` now owns the lifecycle and
+  - `src/terminal/core/session/session_lifecycle_api.zig` now owns the lifecycle and
     composition block (`init`, screen access, input pressure, lock state,
     resize, shutdown-facing methods) that was still written directly on the
     session root.
-  - `src/terminal/core/session_surface_api.zig` now owns the content,
+  - `src/terminal/core/session/session_surface_api.zig` now owns the content,
     selection, host-query, and interaction alias slab that used to dominate
     the top of `pty_terminal_runtime.zig`.
-  - `src/terminal/core/session_types_api.zig` now owns the bottom export slab
+  - `src/terminal/core/session/session_types_api.zig` now owns the bottom export slab
     for shared terminal constants and core-facing type aliases.
   - raw session state is no longer a flat lie:
-    - `src/terminal/core/session_publication_fields.zig`
-    - `src/terminal/core/session_runtime_fields.zig`
-    - `src/terminal/core/session_interaction_fields.zig`
-    - `src/terminal/core/session_control_fields.zig`
+    - `src/terminal/core/session/session_publication_fields.zig`
+    - `src/terminal/core/session/session_runtime_fields.zig`
+    - `src/terminal/core/session/session_interaction_fields.zig`
+    - `src/terminal/core/session/session_control_fields.zig`
+  - the first honest directory cut is now in too:
+    the truly session-owned API, field, and debug seams live under
+    `src/terminal/core/session/` instead of squatting as a flat `session_*`
+    prefix beside engine-owned files
   - `pty_terminal_runtime.zig` now reads as allocator/core plus grouped subsystem
     state and explicit API seams, not as one broad undifferentiated owner.
   - the rename threshold is now crossed:

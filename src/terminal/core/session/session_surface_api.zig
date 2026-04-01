@@ -1,0 +1,104 @@
+const session_content_api = @import("../session_content_api.zig");
+const session_selection = @import("../session_selection.zig");
+const session_queries = @import("../session_queries.zig");
+const session_host_queries = @import("../session_host_queries.zig");
+const session_interaction = @import("../session_interaction.zig");
+
+pub fn API(comptime Self: type, comptime Cell: type, comptime ScrollbackInfo: type, comptime ScrollbackRange: type) type {
+    const ContentAPI = session_content_api.API(Self, Cell, ScrollbackInfo, ScrollbackRange);
+
+    return struct {
+        pub const scrollbackInfo = ContentAPI.scrollbackInfo;
+        pub const copyScrollbackRange = ContentAPI.copyScrollbackRange;
+        pub const selectionPlainTextAlloc = ContentAPI.selectionPlainTextAlloc;
+        pub const scrollbackPlainTextAlloc = ContentAPI.scrollbackPlainTextAlloc;
+        pub const scrollbackAnsiTextAlloc = ContentAPI.scrollbackAnsiTextAlloc;
+        pub const setScrollOffset = ContentAPI.setScrollOffset;
+        pub const setScrollOffsetLocked = ContentAPI.setScrollOffsetLocked;
+        pub const resetToLiveBottomLocked = ContentAPI.resetToLiveBottomLocked;
+        pub const resetToLiveBottomForInputLocked = ContentAPI.resetToLiveBottomForInputLocked;
+        pub const setScrollOffsetFromNormalizedTrackLocked = ContentAPI.setScrollOffsetFromNormalizedTrackLocked;
+        pub const scrollSelectionDragLocked = ContentAPI.scrollSelectionDragLocked;
+        pub const scrollBy = ContentAPI.scrollBy;
+        pub const scrollByLocked = ContentAPI.scrollByLocked;
+        pub const scrollWheelLocked = ContentAPI.scrollWheelLocked;
+
+        pub const clearSelection = session_selection.clearSelection;
+        pub const clearSelectionLocked = session_selection.clearSelectionLocked;
+        pub const clearSelectionIfActiveLocked = session_selection.clearSelectionIfActiveLocked;
+        pub const startSelection = session_selection.startSelection;
+        pub const startSelectionLocked = session_selection.startSelectionLocked;
+        pub const updateSelection = session_selection.updateSelection;
+        pub const updateSelectionLocked = session_selection.updateSelectionLocked;
+        pub const finishSelection = session_selection.finishSelection;
+        pub const finishSelectionLocked = session_selection.finishSelectionLocked;
+        pub const finishSelectionIfActiveLocked = session_selection.finishSelectionIfActiveLocked;
+        pub const selectRange = session_selection.selectRange;
+        pub const selectRangeLocked = session_selection.selectRangeLocked;
+        pub const selectCellLocked = session_selection.selectCellLocked;
+        pub const selectOrUpdateCellLocked = session_selection.selectOrUpdateCellLocked;
+        pub const selectOrderedRangeLocked = session_selection.selectOrderedRangeLocked;
+        pub const beginClickSelectionLocked = session_selection.beginClickSelectionLocked;
+        pub const extendGestureSelectionLocked = session_selection.extendGestureSelectionLocked;
+        pub const selectOrUpdateCellInRowLocked = session_selection.selectOrUpdateCellInRowLocked;
+
+        pub const takeOscClipboardCopy = session_queries.takeOscClipboardCopy;
+        pub const tryTakeOscClipboardCopy = session_queries.tryTakeOscClipboardCopy;
+        pub const copyHyperlinkUri = session_queries.copyHyperlinkUri;
+
+        pub const copyMetadata = session_host_queries.copyMetadata;
+        pub const currentActivityMetadata = session_host_queries.currentActivityMetadata;
+        pub const copyActivityMetadata = session_host_queries.copyActivityMetadata;
+        pub const isAlive = session_host_queries.isAlive;
+
+        pub const bracketedPasteEnabled = session_interaction.bracketedPasteEnabled;
+        pub const focusReportingEnabled = session_interaction.focusReportingEnabled;
+        pub const autoRepeatEnabled = session_interaction.autoRepeatEnabled;
+        pub const mouseAlternateScrollEnabled = session_interaction.mouseAlternateScrollEnabled;
+        pub const mouseModeX10Enabled = session_interaction.mouseModeX10Enabled;
+        pub const mouseModeButtonEnabled = session_interaction.mouseModeButtonEnabled;
+        pub const mouseModeAnyEnabled = session_interaction.mouseModeAnyEnabled;
+        pub const mouseModeSgrEnabled = session_interaction.mouseModeSgrEnabled;
+        pub const mouseModeSgrPixelsEnabled = session_interaction.mouseModeSgrPixelsEnabled;
+        pub const kittyPasteEvents5522Enabled = session_interaction.kittyPasteEvents5522Enabled;
+        pub const sendKittyPasteEvent5522 = session_interaction.sendKittyPasteEvent5522;
+        pub const sendKittyPasteEvent5522WithHtml = session_interaction.sendKittyPasteEvent5522WithHtml;
+        pub const sendKittyPasteEvent5522WithMime = session_interaction.sendKittyPasteEvent5522WithMime;
+        pub const sendKittyPasteEvent5522WithMimeRich = session_interaction.sendKittyPasteEvent5522WithMimeRich;
+        pub const mouseReportingEnabled = session_interaction.mouseReportingEnabled;
+        pub const getDamage = session_interaction.getDamage;
+        pub const keyModeFlagsValue = session_interaction.keyModeFlagsValue;
+        pub const keyModePush = session_interaction.keyModePush;
+        pub const keyModePushLocked = session_interaction.keyModePushLocked;
+        pub const keyModePop = session_interaction.keyModePop;
+        pub const keyModePopLocked = session_interaction.keyModePopLocked;
+        pub const keyModeModify = session_interaction.keyModeModify;
+        pub const keyModeModifyLocked = session_interaction.keyModeModifyLocked;
+        pub const keyModeQuery = session_interaction.keyModeQuery;
+        pub const keyModeQueryLocked = session_interaction.keyModeQueryLocked;
+        pub const setAppCursorKeys = session_interaction.setAppCursorKeys;
+        pub const setAppCursorKeysLocked = session_interaction.setAppCursorKeysLocked;
+        pub const setAutoRepeat = session_interaction.setAutoRepeat;
+        pub const setAutoRepeatLocked = session_interaction.setAutoRepeatLocked;
+        pub const setBracketedPaste = session_interaction.setBracketedPaste;
+        pub const setBracketedPasteLocked = session_interaction.setBracketedPasteLocked;
+        pub const setFocusReporting = session_interaction.setFocusReporting;
+        pub const setFocusReportingLocked = session_interaction.setFocusReportingLocked;
+        pub const setMouseAlternateScroll = session_interaction.setMouseAlternateScroll;
+        pub const setMouseAlternateScrollLocked = session_interaction.setMouseAlternateScrollLocked;
+        pub const setMouseModeX10 = session_interaction.setMouseModeX10;
+        pub const setMouseModeX10Locked = session_interaction.setMouseModeX10Locked;
+        pub const setMouseModeButton = session_interaction.setMouseModeButton;
+        pub const setMouseModeButtonLocked = session_interaction.setMouseModeButtonLocked;
+        pub const setMouseModeAny = session_interaction.setMouseModeAny;
+        pub const setMouseModeAnyLocked = session_interaction.setMouseModeAnyLocked;
+        pub const setMouseModeSgr = session_interaction.setMouseModeSgr;
+        pub const setMouseModeSgrLocked = session_interaction.setMouseModeSgrLocked;
+        pub const setMouseModeSgrPixels = session_interaction.setMouseModeSgrPixels;
+        pub const setMouseModeSgrPixelsLocked = session_interaction.setMouseModeSgrPixelsLocked;
+        pub const resetInputModes = session_interaction.resetInputModes;
+        pub const resetInputModesLocked = session_interaction.resetInputModesLocked;
+        pub const setKeypadMode = session_interaction.setKeypadMode;
+        pub const setKeypadModeLocked = session_interaction.setKeypadModeLocked;
+    };
+}
