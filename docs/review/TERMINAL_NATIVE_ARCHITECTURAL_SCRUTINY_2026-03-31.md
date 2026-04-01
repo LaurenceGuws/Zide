@@ -928,6 +928,8 @@ work:
   that status as one publication-owned summary instead of three separate calls
 - once a protocol reply path only ferries a few fields through one hop, delete
   the transport structs instead of pretending they are real boundary types
+- once a protocol helper only bounces straight into another protocol helper,
+  delete it instead of preserving a duplicate name with no contract value
 
 ## Final Assessment
 

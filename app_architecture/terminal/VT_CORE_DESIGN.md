@@ -1472,6 +1472,9 @@ The same low-level rule still applies in the protocol lane too: if a reply path
 only ferries a handful of fields across one call boundary, delete the adapter
 structs and pass the raw owner-shaped values directly.
 
+The same applies to tiny duplicate wrappers: if one protocol helper only bounces
+straight into the real writer-shaped helper, delete it.
+
 Avoid continuing to use `TerminalSession` as the name of the engine center once
 the new boundary exists.
 

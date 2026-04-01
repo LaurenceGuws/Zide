@@ -854,6 +854,9 @@ Validation note, 2026-03-31:
   carries `QueryState`, `CursorReport`, and `ScreenState` ferry structs just to
   move a few reply fields across one call boundary. CSI reply handlers now take
   raw owner-shaped arguments directly.
+- Another small protocol bounce is gone too: `osc_kitty_clipboard.zig` no
+  longer keeps a duplicate `writeReadStatus(...)` wrapper over
+  `writeReadStatusWithId(...)`.
 - The terminal campaign should now judge success by first-glance authority:
   when a strong maintainer opens the code, the engine must obviously be the
   engine.

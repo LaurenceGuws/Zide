@@ -28,8 +28,8 @@ pub fn parseOsc5522(self: anytype, text: []const u8, terminator: OscTerminator) 
             defer writer.unlock();
             switch (err) {
                 error.UnsupportedPacketType => {},
-                error.UnsupportedPrimarySelection => writeReadStatus(self, &writer, terminator, "", "ENOSYS"),
-                else => writeReadStatus(self, &writer, terminator, "", "EINVAL"),
+                error.UnsupportedPrimarySelection => writeReadStatusWithId(self, &writer, terminator, "", "ENOSYS"),
+                else => writeReadStatusWithId(self, &writer, terminator, "", "EINVAL"),
             }
         }
         return;
@@ -190,10 +190,6 @@ fn replyReadRequest(self: anytype, writer: anytype, req: *const ReadReq, termina
     }
 
     writeReadStatusWithId(self, writer, terminator, id.value, "ENOSYS");
-}
-
-fn writeReadStatus(self: anytype, writer: anytype, terminator: OscTerminator, id: []const u8, status: []const u8) void {
-    writeReadStatusWithId(self, writer, terminator, id, status);
 }
 
 fn writeReadStatusWithId(self: anytype, writer: anytype, terminator: OscTerminator, id: []const u8, status: []const u8) void {
