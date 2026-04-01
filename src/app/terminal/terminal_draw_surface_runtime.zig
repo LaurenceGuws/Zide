@@ -3,6 +3,7 @@ const app_terminal_active_widget = @import("terminal_active_widget.zig");
 const app_terminal_progress_runtime = @import("terminal_progress_runtime.zig");
 const app_terminal_scrollbar_runtime = @import("terminal_scrollbar_runtime.zig");
 const app_terminal_surface_gate = @import("terminal_surface_gate.zig");
+const terminal_publication = @import("../../terminal/core/publication/terminal_publication.zig");
 const shared_types = @import("../../types/mod.zig");
 
 const layout_types = shared_types.layout;
@@ -69,7 +70,7 @@ pub fn draw(state: anytype, shell: anytype, layout: layout_types.WidgetLayout) v
 pub fn flushPresentationFeedback(state: anytype, submission: anytype) void {
     if (state.pending_terminal_presentation_feedback) |pending| {
         if (submission.succeeded) {
-            pending.session.finishFramePresentation(pending.feedback);
+            terminal_publication.completePresentationFeedback(pending.session, pending.feedback);
             state.last_terminal_submission_sequence = submission.sequence;
         }
         state.pending_terminal_presentation_feedback = null;

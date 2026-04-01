@@ -444,6 +444,11 @@ Evidence:
   `src/terminal/core/session/presentation_feedback.zig` is deleted, so
   presentation-feedback types now live only at the publication owner instead
   of surviving as one more wrapper-side alias shell
+- frame-presentation feedback now follows that same owner rule too:
+  the duplicate `finishFramePresentation(...)` bounce is gone from both
+  `terminal_publication.zig` and `pty_terminal_runtime.zig`, and the app
+  draw-surface runtime now calls
+  `terminal_publication.completePresentationFeedback(...)` directly
 - the outer CSI forwarding shell is gone too:
   `terminal_protocol_api.zig` now routes CSI directly into
   `src/terminal/protocol/csi.zig` without stepping through an extra

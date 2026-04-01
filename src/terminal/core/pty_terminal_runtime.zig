@@ -221,6 +221,5 @@ pub const PtyTerminalRuntime = struct {
     pub const copyPublishedRenderCache = terminal_publication.copyPublishedRenderCache;
     pub const capturePresentation = terminal_publication.capturePresentation;
     pub const completePresentationFeedback = terminal_publication.completePresentationFeedback;
-    pub const finishFramePresentation = terminal_publication.finishFramePresentation;
     pub const syncUpdatesActive = terminal_publication.syncUpdatesActive;
 };

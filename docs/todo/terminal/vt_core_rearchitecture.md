@@ -308,6 +308,11 @@ Validation note, 2026-03-31:
     `src/terminal/core/session/presentation_feedback.zig` is deleted, so
     presentation-feedback types now live only at the publication owner instead
     of surviving as one more wrapper-side alias shell
+  - frame-presentation feedback now follows that same owner rule too:
+    the duplicate `finishFramePresentation(...)` bounce is gone from both
+    `terminal_publication.zig` and `pty_terminal_runtime.zig`, and the app
+    draw-surface runtime now calls
+    `terminal_publication.completePresentationFeedback(...)` directly
   - the remaining publication/view-cache helper stubs and the special-case
     protocol `appendHyperlink` wrapper are no longer written inline on
     `pty_terminal_runtime.zig`; those exceptions now route through the explicit
