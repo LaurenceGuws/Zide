@@ -281,6 +281,9 @@ Validation note, 2026-03-31:
     `VTERM_KEY_*`, `VTERM_MOD_*`, `KeyAction`, or `KeypadKey`; active widget,
     smoke, and test callers now use `terminal/model/types.zig` and
     `terminal/input/input.zig` directly
+  - that leaves `src/terminal/core/terminal_runtime.zig` as a nearly minimal
+    stable entrypoint: it now exposes only `PtyTerminalRuntime`, not a broad
+    wrapper-adjacent type/constant/workspace barrel
   - raw session state is no longer a flat lie:
     - `src/terminal/core/session/publication_fields.zig`
     - `src/terminal/core/session/runtime_fields.zig`

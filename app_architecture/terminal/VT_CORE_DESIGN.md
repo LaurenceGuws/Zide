@@ -188,6 +188,9 @@ Status note, 2026-03-31:
     `VTERM_KEY_*`, `VTERM_MOD_*`, `KeyAction`, or `KeypadKey`; active widget,
     smoke, and test callers now use `terminal/model/types.zig` and
     `terminal/input/input.zig` directly
+  - that leaves `src/terminal/core/terminal_runtime.zig` as a nearly minimal
+    stable entrypoint: it now exposes only `PtyTerminalRuntime`, not a broad
+    wrapper-adjacent type/constant/workspace barrel
   - the same direct-owner cleanup now applies in `workspace.zig`: wrapper
     composition reads as runtime/workspace ownership, and progress-state typing
     no longer comes through `pty_terminal_runtime.zig`
