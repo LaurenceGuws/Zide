@@ -110,6 +110,10 @@ Judgment:
   gone too; the wrapper now binds directly to the real session-owned
   content/query/selection/host-query/interaction modules instead of routing
   those through one more export facade
+- `src/terminal/core/terminal_runtime.zig` dropped the dead
+  `keyModeFlagsValue` re-export too; callers already use the runtime-instance
+  method, so the stable public surface no longer carries that gratuitous
+  alias
 - `src/terminal/core/terminal_runtime.zig` still appears to be the right stable
   public surface, but it no longer routes shared input/selection/progress
   types through `pty_terminal_runtime.zig`; those names now come from their
