@@ -281,6 +281,10 @@ Validation note, 2026-03-31:
     - `partialCaptureInfo(...)`
     now gives widget draw one publication answer for viewport-shift use and
     capture reason instead of rebuilding that logic ad hoc from raw cache flags
+  - render-state interpretation is moving there too:
+    - `renderStateInfo(...)`
+    now gives widget draw one publication answer for screen-reverse, cursor
+    visibility-at-live-bottom, cursor style, and blinking-cell presence
   - `snapshot().generation` now reports the generation of the published render
     cache it actually returns, not a newer unpublished pending epoch
   - remaining gap: publication is still mirror-heavy because render-cache and

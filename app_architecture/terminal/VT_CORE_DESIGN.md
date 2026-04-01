@@ -188,6 +188,8 @@ Status note, 2026-03-31:
   cache fields
   - that same helper layer now also owns partial-capture interpretation for
     viewport-shift use and capture reason
+  - render-state interpretation for widget draw is also moving there, reducing
+    more raw cache-flag reads in the UI path
 - This doc should now be read as authority for a terminal-core offensive, not
   as permission to preserve the current center with smaller helper files.
 

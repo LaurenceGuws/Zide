@@ -241,6 +241,9 @@ Judgment:
   - widget draw now also asks publication for partial-capture interpretation
     (`partialCaptureInfo`) instead of rebuilding viewport-shift/capture-reason
     logic directly from raw cache flags
+  - widget draw now also asks publication for render-state interpretation
+    (`renderStateInfo`) instead of reading screen-reverse/cursor/blink state
+    directly off raw cache fields each time
   - that is the standard the rest of the publication war should keep:
     if a cache field is just restating derivable published state, it should die
 

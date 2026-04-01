@@ -64,6 +64,13 @@ pub const PartialCaptureInfo = struct {
     reason: []const u8,
 };
 
+pub const RenderStateInfo = struct {
+    screen_reverse: bool,
+    draw_cursor_visible: bool,
+    cursor_style: types.CursorStyle,
+    has_blinking_cells: bool,
+};
+
 pub const CursorPos = types.CursorPos;
 pub const Cell = types.Cell;
 pub const CellAttrs = types.CellAttrs;
@@ -96,7 +103,7 @@ pub fn altTransition(previous_alt_active: bool, cache: *const RenderCache) AltTr
 }
 
 pub fn partialCaptureInfo(cache: *const RenderCache) PartialCaptureInfo {
-    const use_viewport_shift = @import("../../ui/widgets/terminal_widget_draw_texture.zig").useViewportShiftForPartialPlan(cache.dirty, cache.viewport_shift_rows);
+    const use_viewport_shift = cache.dirty == .partial and cache.viewport_shift_rows != 0;
     const active_viewport_shift_rows = if (use_viewport_shift) cache.viewport_shift_rows else 0;
     const shift_exposed_only = use_viewport_shift and cache.viewport_shift_exposed_only;
     return .{
@@ -111,6 +118,15 @@ pub fn partialCaptureInfo(cache: *const RenderCache) PartialCaptureInfo {
                 "partial",
             .none => "clean",
         },
+    };
+}
+
+pub fn renderStateInfo(cache: *const RenderCache) RenderStateInfo {
+    return .{
+        .screen_reverse = cache.screen_reverse,
+        .draw_cursor_visible = drawCursorVisible(cache),
+        .cursor_style = cache.cursor_style,
+        .has_blinking_cells = cache.has_blink,
     };
 }
 

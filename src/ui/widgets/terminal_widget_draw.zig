@@ -639,8 +639,9 @@ pub fn drawPrepared(
     self.last_alt_active = cache.alt_active;
     render_phase_start = app_shell.getTime();
 
+    const render_state = terminal_publication.renderStateInfo(cache);
     const sync_updates = cache.sync_updates_active;
-    const screen_reverse = cache.screen_reverse;
+    const screen_reverse = render_state.screen_reverse;
     const blink_style = self.blink_style;
     const blink_time = app_shell.getTime();
     const rows = cache.rows;
@@ -672,9 +673,9 @@ pub fn drawPrepared(
     const history_len = viewport.history_len;
     const scroll_offset = viewport.scroll_offset;
     const start_line = viewport.start_line;
-    var draw_cursor = terminal_publication.drawCursorVisible(cache);
+    var draw_cursor = render_state.draw_cursor_visible;
     const cursor = if (draw_cursor) cache.cursor else CursorPos{ .row = rows + 1, .col = cols + 1 };
-    const cursor_style = cache.cursor_style;
+    const cursor_style = render_state.cursor_style;
     if (draw_cursor and self.ui_focused and cursor_style.blink) {
         if (blink_time >= self.cursor_blink_pause_until) {
             const period: f64 = 0.5;
@@ -683,7 +684,7 @@ pub fn drawPrepared(
         }
     }
     const kitty_generation = cache.kitty_generation;
-    const has_blink = blink_style != .off and cache.has_blink;
+    const has_blink = blink_style != .off and render_state.has_blinking_cells;
     const blink_phase_changed = self.blink_phase_changed_pending;
     self.blink_phase_changed_pending = false;
     const blink_requires_partial = has_blink and blink_phase_changed;
