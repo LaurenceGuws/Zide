@@ -105,6 +105,8 @@ pub const DirtySummary = struct {
 };
 
 pub const DrawStateInfo = struct {
+    generation: u64,
+    clear_generation: u64,
     rows: usize,
     cols: usize,
     viewport: ViewportInfo,
@@ -256,6 +258,8 @@ pub fn dirtySummary(cache: *const RenderCache) DirtySummary {
 
 pub fn drawStateInfo(cache: *const RenderCache) DrawStateInfo {
     return .{
+        .generation = cache.generation,
+        .clear_generation = cache.clear_generation,
         .rows = cache.rows,
         .cols = cache.cols,
         .viewport = viewportInfo(cache),

@@ -615,7 +615,7 @@ pub fn drawPrepared(
         const draw_ms_total = time_utils.secondsToMs(draw_end - draw_start);
         const render_ms = time_utils.secondsToMs(draw_end - render_phase_start);
         publishFrameLatencyMetrics(
-            self.draw_cache.generation,
+            terminal_publication.drawStateInfo(&self.draw_cache).generation,
             lock_ms,
             lock_wait_ms,
             lock_hold_ms,
@@ -779,8 +779,8 @@ pub fn drawPrepared(
         viewport_w = @as(f32, @floatFromInt(visible_w));
         viewport_h = @as(f32, @floatFromInt(visible_h));
         const recreated = r.ensureTerminalTexture(texture_w, texture_h);
-        const gen_changed = cache.generation != self.last_render_generation;
-        const clear_generation_changed = cache.clear_generation != self.last_render_clear_generation;
+        const gen_changed = draw_state.generation != self.last_render_generation;
+        const clear_generation_changed = draw_state.clear_generation != self.last_render_clear_generation;
         var update_plan = chooseTextureUpdatePlan(
             cache.dirty,
             recreated,
@@ -818,7 +818,7 @@ pub fn drawPrepared(
                 .{
                     @intFromBool(gen_changed),
                     self.last_render_generation,
-                    cache.generation,
+                    draw_state.generation,
                     @intFromBool(texture_ready_before_draw),
                     @intFromBool(recreated),
                     @intFromBool(plan_was_active),
@@ -842,7 +842,7 @@ pub fn drawPrepared(
                 .{
                     @intFromPtr(self.session),
                     self.last_render_generation,
-                    cache.generation,
+                    draw_state.generation,
                     self.session.pendingGeneration(),
                     self.session.publishedGeneration(),
                     self.session.presentedGeneration(),
@@ -881,8 +881,8 @@ pub fn drawPrepared(
                         .info,
                         "result=scroll_copy_ok gen={d} dirty={s} shift_rows={d} exposed_only={d} scroll_offset={d} damage={d}..{d}/{d}..{d}",
                         .{
-                            cache.generation,
-                            @tagName(cache.dirty),
+                            draw_state.generation,
+                            dirty_summary.dirty_tag,
                             active_viewport_shift_rows,
                             @intFromBool(active_shift_exposed_only),
                             scroll_offset,
@@ -898,8 +898,8 @@ pub fn drawPrepared(
                         .info,
                         "result=scroll_copy_failed gen={d} dirty={s} shift_rows={d} exposed_only={d} scroll_offset={d}",
                         .{
-                            cache.generation,
-                            @tagName(cache.dirty),
+                            draw_state.generation,
+                            dirty_summary.dirty_tag,
                             active_viewport_shift_rows,
                             @intFromBool(active_shift_exposed_only),
                             scroll_offset,
@@ -917,8 +917,8 @@ pub fn drawPrepared(
                         .info,
                         "result=scroll_copy_skipped gen={d} dirty={s} shift_rows={d} exposed_only={d} scroll_offset={d} full={d}",
                         .{
-                            cache.generation,
-                            @tagName(cache.dirty),
+                            draw_state.generation,
+                            dirty_summary.dirty_tag,
                             active_viewport_shift_rows,
                             @intFromBool(active_shift_exposed_only),
                             scroll_offset,
@@ -952,7 +952,7 @@ pub fn drawPrepared(
                         0.85,
                         fullframe_fastpath_decision.total_cells,
                         fullframe_fastpath_decision.union_cells,
-                        @tagName(cache.dirty),
+                        dirty_summary.dirty_tag,
                         rows,
                         cols,
                         active_viewport_shift_rows,
@@ -1011,13 +1011,13 @@ pub fn drawPrepared(
                     shift_requires_fullwidth_partial,
                     blink_requires_partial,
                 );
-                if (partialWouldPreserveOlderGeneration(self, rows, cols, cache.generation)) {
+                if (partialWouldPreserveOlderGeneration(self, rows, cols, draw_state.generation)) {
                     const provenance_log = app_logger.logger("terminal.frame_provenance");
                     if (provenance_log.enabled_file or provenance_log.enabled_console) {
                         provenance_log.logf(
                             .info,
                             "stage=escalate_full_for_generation_coherence gen={d} rows={d} cols={d}",
-                            .{ cache.generation, rows, cols },
+                            .{ draw_state.generation, rows, cols },
                         );
                     }
                     needs_full = true;
@@ -1036,7 +1036,7 @@ pub fn drawPrepared(
             const base_y_local: f32 = 0;
 
             if (needs_full) {
-                fillPresentedGenerationCells(self, rows, cols, cache.generation);
+                fillPresentedGenerationCells(self, rows, cols, draw_state.generation);
                 const bg_phase_start = app_shell.getTime();
                 const bg = if (view_cells.len > 0) blk: {
                     const cell = view_cells[0];
@@ -1133,13 +1133,13 @@ pub fn drawPrepared(
                             const row_start = @as(usize, span.start);
                             const row_end = @as(usize, span.end);
                             if (row_end >= row_start) partial_plan_cells += row_end - row_start + 1;
-                            markPresentedGenerationRowRange(self, rows, cols, row, row_start, row_end, cache.generation);
+                            markPresentedGenerationRowRange(self, rows, cols, row, row_start, row_end, draw_state.generation);
                         }
                     } else {
                         const row_start = @as(usize, self.partial_draw_cols_start.items[row]);
                         const row_end = @as(usize, self.partial_draw_cols_end.items[row]);
                         if (row_end >= row_start) partial_plan_cells += row_end - row_start + 1;
-                        markPresentedGenerationRowRange(self, rows, cols, row, row_start, row_end, cache.generation);
+                        markPresentedGenerationRowRange(self, rows, cols, row, row_start, row_end, draw_state.generation);
                     }
                 }
                 if (partial_plan_bounds) |bounds| {
@@ -1163,7 +1163,7 @@ pub fn drawPrepared(
                         .info,
                         "result=partial_plan gen={d} shifted_rows={d} fullwidth_exposed={d} plan_rows={d} plan_row_span={d} plan_col_span={d} plan_cells={d} plan_union_cells={d} spans={s}",
                         .{
-                            cache.generation,
+                            draw_state.generation,
                             shifted_rows,
                             @intFromBool(shift_requires_fullwidth_partial),
                             partial_plan_rows_count,
@@ -1332,7 +1332,7 @@ pub fn drawPrepared(
                     .{
                         @intFromPtr(self.session),
                         self.last_render_generation,
-                        cache.generation,
+                        draw_state.generation,
                         self.session.pendingGeneration(),
                         self.session.publishedGeneration(),
                         self.session.presentedGeneration(),
@@ -1343,8 +1343,8 @@ pub fn drawPrepared(
             }
             logPresentedColumnProbe(cache);
             logPresentedGenerationProvenance(self, cache);
-            self.last_render_generation = cache.generation;
-            self.last_render_clear_generation = cache.clear_generation;
+            self.last_render_generation = draw_state.generation;
+            self.last_render_clear_generation = draw_state.clear_generation;
             self.last_cell_w_i = cell_w_i;
             self.last_cell_h_i = cell_h_i;
             self.last_render_scale = r.render_scale;
