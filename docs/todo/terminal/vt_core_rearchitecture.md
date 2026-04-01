@@ -193,6 +193,10 @@ Validation note, 2026-03-31:
     parser/protocol execution files now live under
     `src/terminal/core/protocol/` instead of continuing to sprawl as a flat
     execution cluster beside engine and wrapper files
+  - the next peer subtree is now in too:
+    transport/poll/thread runtime execution files now live under
+    `src/terminal/core/runtime/` instead of continuing to sprawl as a flat
+    runtime cluster beside engine and wrapper files
   - `pty_terminal_runtime.zig` now reads as allocator/core plus grouped subsystem
     state and explicit API seams, not as one broad undifferentiated owner.
   - the rename threshold is now crossed:

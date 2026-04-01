@@ -71,7 +71,7 @@ pub fn pollBacklogHint(self: anytype) bool {
     return session_runtime.pollBacklogHint(self);
 }
 
-pub fn lockPtyWriter(self: anytype) ?@import("../terminal_transport.zig").Writer {
+pub fn lockPtyWriter(self: anytype) ?@import("../runtime/terminal_transport.zig").Writer {
     return session_runtime.lockPtyWriter(self);
 }
 

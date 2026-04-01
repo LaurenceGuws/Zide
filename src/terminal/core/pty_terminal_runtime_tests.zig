@@ -2,7 +2,7 @@ const std = @import("std");
 const builtin = @import("builtin");
 const types = @import("../model/types.zig");
 const session_mod = @import("pty_terminal_runtime.zig");
-const terminal_transport = @import("terminal_transport.zig");
+const terminal_transport = @import("runtime/terminal_transport.zig");
 const pty_mod = @import("../io/pty.zig");
 
 const PtyTerminalRuntime = session_mod.PtyTerminalRuntime;

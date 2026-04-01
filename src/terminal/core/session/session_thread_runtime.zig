@@ -1,5 +1,5 @@
 const std = @import("std");
-const terminal_transport = @import("../terminal_transport.zig");
+const terminal_transport = @import("../runtime/terminal_transport.zig");
 const terminal_publication = @import("../publication/terminal_publication.zig");
 
 pub fn deinit(self: anytype) void {

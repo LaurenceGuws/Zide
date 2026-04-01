@@ -1,6 +1,6 @@
 const std = @import("std");
 const app_logger = @import("../../../app_logger.zig");
-const terminal_transport = @import("../terminal_transport.zig");
+const terminal_transport = @import("../runtime/terminal_transport.zig");
 const osc_kitty_clipboard = @import("../../protocol/osc_kitty_clipboard.zig");
 const input_modes = @import("../input_modes.zig");
 

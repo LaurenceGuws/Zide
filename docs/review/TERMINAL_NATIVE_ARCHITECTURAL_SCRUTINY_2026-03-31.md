@@ -149,6 +149,10 @@ Judgment:
   parser/protocol execution files now live under
   `src/terminal/core/protocol/` instead of continuing to sprawl as a flat
   execution cluster beside engine-owned files
+- the next honest peer subtree is now in too:
+  transport/poll/thread runtime execution files now live under
+  `src/terminal/core/runtime/` instead of continuing to sprawl as a flat
+  runtime cluster beside engine-owned files
 - current judgment:
   - this is no longer just "a broad session file with helpers extracted"
   - it is now allocator/core plus grouped subsystems and explicit API seams

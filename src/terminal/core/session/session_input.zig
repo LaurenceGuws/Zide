@@ -1,6 +1,6 @@
 const std = @import("std");
 const input_modes = @import("../input_modes.zig");
-const terminal_transport = @import("../terminal_transport.zig");
+const terminal_transport = @import("../runtime/terminal_transport.zig");
 const input_mod = @import("../../input/input.zig");
 const types = @import("../../model/types.zig");
 

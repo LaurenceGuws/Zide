@@ -1,5 +1,5 @@
 const app_logger = @import("../../../app_logger.zig");
-const terminal_transport = @import("../terminal_transport.zig");
+const terminal_transport = @import("../runtime/terminal_transport.zig");
 
 pub fn reportExternalChildExit(self: anytype, code: ?i32) bool {
     if (self.runtime.external_transport == null) return false;

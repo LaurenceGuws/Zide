@@ -1,9 +1,9 @@
 const std = @import("std");
 const builtin = @import("builtin");
-const pty_mod = @import("../io/pty.zig");
+const pty_mod = @import("../../io/pty.zig");
 const io_threads = @import("io_threads.zig");
-const input_mod = @import("../input/input.zig");
-const types = @import("../model/types.zig");
+const input_mod = @import("../../input/input.zig");
+const types = @import("../../model/types.zig");
 
 pub const PtySize = pty_mod.PtySize;
 
