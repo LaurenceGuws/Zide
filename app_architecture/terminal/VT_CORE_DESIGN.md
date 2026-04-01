@@ -256,6 +256,9 @@ Status note, 2026-03-31:
     presented-generation acknowledgement, sync-update retirement policy, and
     dirty retirement in one locked publication-owned path instead of splitting
     that contract across multiple helpers
+  - the damage-clear step is now publication-internal too:
+    published damage is retired through publication-owned locked flow instead
+    of remaining exposed as a separate storage-oriented helper
   - the same direct-owner cleanup now applies in `workspace.zig`: wrapper
     composition reads as runtime/workspace ownership, and progress-state typing
     no longer comes through `pty_terminal_runtime.zig`

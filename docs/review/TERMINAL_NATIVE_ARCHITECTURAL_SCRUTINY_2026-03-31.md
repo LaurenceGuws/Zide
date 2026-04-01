@@ -401,6 +401,10 @@ Evidence:
   presented-generation acknowledgement, sync-update retirement policy, and
   dirty retirement in one locked publication-owned path instead of splitting
   that contract across multiple helpers
+- published damage clearing is no longer exposed as a public helper:
+  publication now treats damage retirement as an internal locked concern
+  instead of exporting another storage-oriented operation from
+  `terminal_publication.zig`
 - the outer CSI forwarding shell is gone too:
   `terminal_protocol_api.zig` now routes CSI directly into
   `src/terminal/protocol/csi.zig` without stepping through an extra

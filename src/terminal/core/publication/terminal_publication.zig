@@ -428,7 +428,7 @@ pub fn renderCacheForGeneration(self: anytype, generation: u64) ?*const RenderCa
     return null;
 }
 
-pub fn clearPublishedDamage(self: anytype) void {
+fn clearPublishedDamageLocked(self: anytype) void {
     inline for (0..2) |i| {
         self.publication.render_caches[i].dirty = .none;
         self.publication.render_caches[i].damage = .{ .start_row = 0, .end_row = 0, .start_col = 0, .end_col = 0 };
@@ -559,15 +559,18 @@ fn retirePresentedGenerationLocked(self: anytype, generation: u64) bool {
     notePresentedGeneration(self, generation);
     if (pendingGeneration(self) != generation) return false;
 
-    const clear_screen_dirty = if (renderCacheForGeneration(self, generation)) |cache|
-        !cache.sync_updates_active
-    else
-        !self.core.syncUpdatesActive();
-    if (clear_screen_dirty) {
+    if (shouldClearScreenDirtyOnPresentationRetirement(self, generation)) {
         self.core.activeScreen().clearDirty();
     }
-    clearPublishedDamage(self);
+    clearPublishedDamageLocked(self);
     return true;
+}
+
+fn shouldClearScreenDirtyOnPresentationRetirement(self: anytype, generation: u64) bool {
+    if (renderCacheForGeneration(self, generation)) |cache| {
+        return !cache.sync_updates_active;
+    }
+    return !self.core.syncUpdatesActive();
 }
 
 fn captureCopy(self: anytype, dst: *RenderCache, log_capture: bool) !CaptureCopy {

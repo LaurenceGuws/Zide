@@ -254,6 +254,10 @@ Validation note, 2026-03-31:
     splitting the contract across `acknowledgePresentedGeneration(...)`,
     `clearPublishedDamageIfGeneration(...)`, and a separate sync-update policy
     helper
+  - published-damage clearing is no longer exposed as a public helper:
+    publication now treats damage retirement as an internal locked concern
+    instead of exporting another storage-oriented operation from
+    `terminal_publication.zig`
   - the remaining publication/view-cache helper stubs and the special-case
     protocol `appendHyperlink` wrapper are no longer written inline on
     `pty_terminal_runtime.zig`; those exceptions now route through the explicit
