@@ -185,7 +185,7 @@ pub fn decrqmAnsiModeState(snapshot: ModeSnapshot, mode: i32) csi_mod.DecrpmStat
     };
 }
 
-pub fn handleDecrqmQuery(writer: csi_mod.CsiWriter, action: parser_csi.CsiAction, mode: i32, snapshot: ModeSnapshot) void {
+pub fn handleDecrqmQuery(writer: anytype, action: parser_csi.CsiAction, mode: i32, snapshot: ModeSnapshot) void {
     if (action.leader == '?' and action.private) {
         const state = decrqmPrivateModeState(snapshot, mode);
         _ = csi_mod.writeDecrqmReplyWithWriter(writer, true, mode, state);

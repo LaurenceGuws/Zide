@@ -43,7 +43,6 @@ fn effectiveSgrParamCount(action: parser_csi.CsiAction) usize {
     return raw_count;
 }
 
-pub const CsiWriter = csi_reply.CsiWriter;
 const CursorReport = csi_reply.CursorReport;
 const QueryState = csi_reply.QueryState;
 const ScreenState = csi_reply.ScreenState;
@@ -112,7 +111,7 @@ fn handleCsiOnSession(self: anytype, action: parser_csi.CsiAction) void {
                     .color_scheme_dark = self.interaction.color_scheme_dark,
                     .cell_height = self.interaction.cell_height,
                     .cell_width = self.interaction.cell_width,
-                }, CsiWriter.from(&writer), .{
+                }, &writer, .{
                     .cursor_report = blk: {
                         const pos = screen.cursorReport();
                         break :blk .{ .row_1 = pos.row_1, .col_1 = pos.col_1 };
@@ -127,7 +126,7 @@ fn handleCsiOnSession(self: anytype, action: parser_csi.CsiAction) void {
                 if (self.lockPtyWriter()) |writer_guard| {
                     var writer = writer_guard;
                     defer writer.unlock();
-                    handleDaQuery(CsiWriter.from(&writer));
+                    handleDaQuery(&writer);
                 }
             }
         },
@@ -141,7 +140,7 @@ fn handleCsiOnSession(self: anytype, action: parser_csi.CsiAction) void {
                         .color_scheme_dark = self.interaction.color_scheme_dark,
                         .cell_height = self.interaction.cell_height,
                         .cell_width = self.interaction.cell_width,
-                    }, CsiWriter.from(&writer), .{
+                    }, &writer, .{
                         .cursor_report = blk: {
                             const pos = screen.cursorReport();
                             break :blk .{ .row_1 = pos.row_1, .col_1 = pos.col_1 };
@@ -163,7 +162,7 @@ fn handleCsiOnSession(self: anytype, action: parser_csi.CsiAction) void {
                 if (self.lockPtyWriter()) |writer_guard| {
                     var writer = writer_guard;
                     defer writer.unlock();
-                    handleDecrqmQuery(CsiWriter.from(&writer), action, p[0], csi_mode_query.modeSnapshot(self));
+                    handleDecrqmQuery(&writer, action, p[0], csi_mode_query.modeSnapshot(self));
                 }
             }
         },
@@ -183,7 +182,7 @@ pub fn writeDaPrimaryReply(pty: anytype) bool {
     return csi_reply.writeDaPrimaryReply(pty);
 }
 
-fn writeDaPrimaryReplyWithWriter(writer: CsiWriter) bool {
+fn writeDaPrimaryReplyWithWriter(writer: anytype) bool {
     return csi_reply.writeDaPrimaryReplyWithWriter(writer);
 }
 
@@ -191,15 +190,15 @@ pub fn writeDsrReply(pty: anytype, leader: u8, mode: i32, row_1: usize, col_1: u
     return csi_reply.writeDsrReply(pty, leader, mode, row_1, col_1);
 }
 
-fn writeDsrReplyWithWriter(writer: CsiWriter, leader: u8, mode: i32, row_1: usize, col_1: usize) bool {
+fn writeDsrReplyWithWriter(writer: anytype, leader: u8, mode: i32, row_1: usize, col_1: usize) bool {
     return csi_reply.writeDsrReplyWithWriter(writer, leader, mode, row_1, col_1);
 }
 
 pub fn writeDecrqmReply(pty: anytype, private: bool, mode: i32, state: DecrpmState) bool {
-    return writeDecrqmReplyWithWriter(CsiWriter.from(pty), private, mode, state);
+    return writeDecrqmReplyWithWriter(pty, private, mode, state);
 }
 
-pub fn writeDecrqmReplyWithWriter(writer: CsiWriter, private: bool, mode: i32, state: DecrpmState) bool {
+pub fn writeDecrqmReplyWithWriter(writer: anytype, private: bool, mode: i32, state: DecrpmState) bool {
     const log = app_logger.logger("terminal.csi");
     var buf: [32]u8 = undefined;
     const seq = if (private)
@@ -217,23 +216,23 @@ pub fn writeDecrqmReplyWithWriter(writer: CsiWriter, private: bool, mode: i32, s
     return true;
 }
 
-fn handleDsrQuery(query: QueryState, writer: CsiWriter, screen: ScreenState, action: parser_csi.CsiAction, param_len: usize, params: [parser_csi.max_params]i32) void {
+fn handleDsrQuery(query: QueryState, writer: anytype, screen: ScreenState, action: parser_csi.CsiAction, param_len: usize, params: [parser_csi.max_params]i32) void {
     csi_reply.handleDsrQuery(query, writer, screen, action, param_len, params);
 }
 
-fn handleDaQuery(writer: CsiWriter) void {
+fn handleDaQuery(writer: anytype) void {
     csi_reply.handleDaQuery(writer);
 }
 
-fn handleWindowOpQuery(query: QueryState, writer: CsiWriter, screen: ScreenState, param_len: usize, params: [parser_csi.max_params]i32) void {
+fn handleWindowOpQuery(query: QueryState, writer: anytype, screen: ScreenState, param_len: usize, params: [parser_csi.max_params]i32) void {
     csi_reply.handleWindowOpQuery(query, writer, screen, param_len, params);
 }
 
-fn handleDecrqmQuery(writer: CsiWriter, action: parser_csi.CsiAction, mode: i32, snapshot: ModeSnapshot) void {
+fn handleDecrqmQuery(writer: anytype, action: parser_csi.CsiAction, mode: i32, snapshot: ModeSnapshot) void {
     csi_mode_query.handleDecrqmQuery(writer, action, mode, snapshot);
 }
 
-fn writeConst(writer: CsiWriter, seq: []const u8) bool {
+fn writeConst(writer: anytype, seq: []const u8) bool {
     return csi_reply.writeConst(writer, seq);
 }
 
@@ -241,7 +240,7 @@ pub fn writeColorSchemePreferenceReply(pty: anytype, dark: bool) bool {
     return csi_reply.writeColorSchemePreferenceReply(pty, dark);
 }
 
-fn writeColorSchemePreferenceReplyWithWriter(writer: CsiWriter, dark: bool) bool {
+fn writeColorSchemePreferenceReplyWithWriter(writer: anytype, dark: bool) bool {
     return csi_reply.writeColorSchemePreferenceReplyWithWriter(writer, dark);
 }
 
@@ -249,7 +248,7 @@ pub fn writeWindowOpCharsReply(pty: anytype, rows: u16, cols: u16) bool {
     return csi_reply.writeWindowOpCharsReply(pty, rows, cols);
 }
 
-fn writeWindowOpCharsReplyWithWriter(writer: CsiWriter, rows: u16, cols: u16) bool {
+fn writeWindowOpCharsReplyWithWriter(writer: anytype, rows: u16, cols: u16) bool {
     return csi_reply.writeWindowOpCharsReplyWithWriter(writer, rows, cols);
 }
 
@@ -257,7 +256,7 @@ pub fn writeWindowOpScreenCharsReply(pty: anytype, rows: u16, cols: u16) bool {
     return csi_reply.writeWindowOpScreenCharsReply(pty, rows, cols);
 }
 
-fn writeWindowOpScreenCharsReplyWithWriter(writer: CsiWriter, rows: u16, cols: u16) bool {
+fn writeWindowOpScreenCharsReplyWithWriter(writer: anytype, rows: u16, cols: u16) bool {
     return csi_reply.writeWindowOpScreenCharsReplyWithWriter(writer, rows, cols);
 }
 
@@ -265,7 +264,7 @@ pub fn writeWindowOpPixelsReply(pty: anytype, height_px: u32, width_px: u32) boo
     return csi_reply.writeWindowOpPixelsReply(pty, height_px, width_px);
 }
 
-fn writeWindowOpPixelsReplyWithWriter(writer: CsiWriter, height_px: u32, width_px: u32) bool {
+fn writeWindowOpPixelsReplyWithWriter(writer: anytype, height_px: u32, width_px: u32) bool {
     return csi_reply.writeWindowOpPixelsReplyWithWriter(writer, height_px, width_px);
 }
 
@@ -273,7 +272,7 @@ pub fn writeWindowOpCellPixelsReply(pty: anytype, cell_h: u16, cell_w: u16) bool
     return csi_reply.writeWindowOpCellPixelsReply(pty, cell_h, cell_w);
 }
 
-fn writeWindowOpCellPixelsReplyWithWriter(writer: CsiWriter, cell_h: u16, cell_w: u16) bool {
+fn writeWindowOpCellPixelsReplyWithWriter(writer: anytype, cell_h: u16, cell_w: u16) bool {
     return csi_reply.writeWindowOpCellPixelsReplyWithWriter(writer, cell_h, cell_w);
 }
 

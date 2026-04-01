@@ -186,6 +186,10 @@ Judgment:
   `src/terminal/protocol/csi_mode_mutation.zig`, and CSI SM/RM mutation now
   applies directly on the live runtime object instead of routing a giant
   callback wrapper through `csi.zig`
+- the CSI writer shell is dead too:
+  `CsiWriter` is deleted from `src/terminal/protocol/csi_reply.zig`, and CSI
+  reply/query helpers now operate on direct writer objects instead of routing
+  one-method writes through an `anyopaque` adapter
 - the stale `src/terminal/core/session_protocol.zig` forwarding shell is now
   deleted, so that API seam no longer routes through one extra session-named
   hop before reaching the real owners

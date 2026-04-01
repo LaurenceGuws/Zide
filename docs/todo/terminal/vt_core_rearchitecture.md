@@ -205,6 +205,10 @@ Validation note, 2026-03-31:
     `src/terminal/protocol/csi_mode_mutation.zig`, and CSI SM/RM mutation now
     applies directly on the live runtime object instead of routing a giant
     callback wrapper through `csi.zig`
+  - the CSI writer shell is dead too:
+    `CsiWriter` is deleted from `src/terminal/protocol/csi_reply.zig`, and
+    CSI reply/query helpers now operate on direct writer objects instead of
+    routing one-method writes through an `anyopaque` adapter
   - the remaining publication/view-cache helper stubs and the special-case
     protocol `appendHyperlink` wrapper are no longer written inline on
     `pty_terminal_runtime.zig`; those exceptions now route through the explicit
