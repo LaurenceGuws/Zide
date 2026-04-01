@@ -2,6 +2,7 @@ const std = @import("std");
 const terminal_publication = @import("publication/terminal_publication.zig");
 const runtime_mod = @import("terminal_runtime.zig");
 const host_types = @import("session/host_types.zig");
+const session_runtime = @import("session/runtime.zig");
 const app_logger = @import("../../app_logger.zig");
 const runtime_policy = @import("../../app/runtime_policy.zig");
 const polling = @import("workspace_polling.zig");
@@ -294,7 +295,7 @@ pub const TerminalWorkspace = struct {
             try strings_out.appendSlice(allocator, activity.foreground_process_command);
             const cwd_offset = strings_out.items.len;
             try strings_out.appendSlice(allocator, metadata.cwd);
-            const shell_path = tab.session.launchShellPath();
+            const shell_path = session_runtime.launchShellPath(tab.session);
             const shell_path_offset = strings_out.items.len;
             try strings_out.appendSlice(allocator, shell_path);
 

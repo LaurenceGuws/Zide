@@ -70,7 +70,6 @@ pub const PtyTerminalRuntime = struct {
     pub const copyHyperlinkUri = queries.copyHyperlinkUri;
     pub const copyMetadata = host_queries.copyMetadata;
     pub const titleText = host_queries.titleText;
-    pub const displayTitleText = host_queries.displayTitleText;
     pub const cwdText = host_queries.cwdText;
     pub const altScreenActive = host_queries.altScreenActive;
     pub const currentActivityMetadata = host_queries.currentActivityMetadata;
@@ -103,7 +102,6 @@ pub const PtyTerminalRuntime = struct {
 
     pub const setDefaultColors = config.setDefaultColors;
     pub const applyThemePalette = config.applyThemePalette;
-    pub const setConfiguredCursorStyle = config.setConfiguredCursorStyle;
 
     pub const deinit = runtime.deinit;
 
@@ -121,8 +119,6 @@ pub const PtyTerminalRuntime = struct {
     pub const refreshChildExit = runtime.refreshChildExit;
     pub const hasData = runtime.hasData;
 
-    pub const setLaunchShellPath = runtime.setLaunchShellPath;
-    pub const launchShellPath = runtime.launchShellPath;
     pub const lock = control.lock;
     pub const tryLock = control.tryLock;
     pub const unlock = control.unlock;

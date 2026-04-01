@@ -9,6 +9,7 @@ const app_theme_utils = @import("theme_utils.zig");
 const config_mod = @import("../config/lua_config.zig");
 const manual_highlights_mod = @import("../editor/manual_highlights.zig");
 const term_types = @import("../terminal/model/types.zig");
+const session_config = @import("../terminal/core/session/config.zig");
 const app_types = @import("app_state_types.zig");
 
 fn mapTerminalNewTabStartLocationMode(mode: ?config_mod.TerminalNewTabStartLocationMode) app_types.TerminalNewTabStartLocationMode {
@@ -279,7 +280,7 @@ pub fn handle(state: anytype, ctx: *anyopaque, hooks: Hooks) !void {
         }
         state.terminal_cursor_style = cursor_style;
         for (state.terminals.items) |term| {
-            term.setConfiguredCursorStyle(cursor_style);
+            session_config.setConfiguredCursorStyle(term, cursor_style);
         }
         state.needs_redraw = true;
         log.logStdout(.info, "reload terminal cursor shape={s} blink={any}", .{ @tagName(cursor_style.shape), cursor_style.blink });

@@ -2,6 +2,7 @@ const std = @import("std");
 const terminal_runtime = @import("../core/terminal_runtime.zig");
 const terminal_publication = @import("../core/terminal_publication.zig");
 const terminal_core_feed = @import("../core/protocol/terminal_core_feed.zig");
+const host_queries = @import("../core/session/host_queries.zig");
 const types = @import("../model/types.zig");
 const screen = @import("../model/screen.zig");
 const app_logger = @import("../../app_logger.zig");
@@ -98,7 +99,7 @@ fn copyPublishedSnapshotExport(
     errdefer if (cwd.len > 0) allocator.free(cwd);
 
     if ((include_flags & @intFromEnum(shared.SnapshotIncludeFlags.title)) != 0) {
-        title = try allocator.dupe(u8, handle.session.displayTitleText());
+        title = try allocator.dupe(u8, host_queries.displayTitleText(handle.session));
     }
     if ((include_flags & @intFromEnum(shared.SnapshotIncludeFlags.cwd)) != 0) {
         cwd = try allocator.dupe(u8, handle.session.cwdText());

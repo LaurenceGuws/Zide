@@ -470,6 +470,12 @@ Validation note, 2026-03-31:
     bits directly from `interaction.input_snapshot`, so the stable runtime
     surface no longer carries one-consumer mouse-mode query helpers or the dead
     `getDamage` export
+  - the same is now true for single-caller app/FFI convenience exports:
+    `displayTitleText`, `setConfiguredCursorStyle`, `setLaunchShellPath`, and
+    `launchShellPath` now route through their direct owners in
+    `session/host_queries.zig`, `session/config.zig`, and `session/runtime.zig`
+    instead of inflating the stable runtime surface with app-only convenience
+    methods
   - protocol query helpers are shrinking the same way:
     runtime/focus tests now use `terminal_core_protocol.zig` directly for
     `getCell` / `getCursorPos`, so those no longer sit on the wrapper surface
