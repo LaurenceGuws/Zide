@@ -191,6 +191,10 @@ Status note, 2026-03-31:
   - that leaves `src/terminal/core/terminal_runtime.zig` as a nearly minimal
     stable entrypoint: it now exposes only `PtyTerminalRuntime`, not a broad
     wrapper-adjacent type/constant/workspace barrel
+  - one more wrapper-gravity cut is now in: `src/terminal/core/terminal_runtime.zig`
+    is literally just the stable wrapper entrypoint with no dead import
+    residue, and `src/terminal/core/pty_terminal_runtime.zig` dropped the dead
+    type/constant alias slab that no longer had live repo callers
   - the same direct-owner cleanup now applies in `workspace.zig`: wrapper
     composition reads as runtime/workspace ownership, and progress-state typing
     no longer comes through `pty_terminal_runtime.zig`

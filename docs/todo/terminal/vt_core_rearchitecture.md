@@ -284,6 +284,10 @@ Validation note, 2026-03-31:
   - that leaves `src/terminal/core/terminal_runtime.zig` as a nearly minimal
     stable entrypoint: it now exposes only `PtyTerminalRuntime`, not a broad
     wrapper-adjacent type/constant/workspace barrel
+  - one more `VTCORE-01` gravity cut is now in too: `src/terminal/core/terminal_runtime.zig`
+    is now literally just the wrapper entrypoint with no dead import residue,
+    and `src/terminal/core/pty_terminal_runtime.zig` dropped the dead
+    wrapper-side type/constant alias slab that no longer had live callers
   - raw session state is no longer a flat lie:
     - `src/terminal/core/session/publication_fields.zig`
     - `src/terminal/core/session/runtime_fields.zig`

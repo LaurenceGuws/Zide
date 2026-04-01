@@ -1,20 +1,14 @@
 const std = @import("std");
 const pty_mod = @import("../io/pty.zig");
 const input_mod = @import("../input/input.zig");
-const history_mod = @import("../model/history.zig");
-const csi_mod = @import("../parser/csi.zig");
 const parser_mod = @import("../parser/parser.zig");
 const protocol_csi = @import("../protocol/csi.zig");
 const screen_mod = @import("../model/screen.zig");
 const snapshot_mod = @import("publication/snapshot.zig");
-const types = @import("../model/types.zig");
-const kitty_mod = @import("../kitty/graphics.zig");
 const semantic_prompt_mod = @import("semantic_prompt.zig");
-const palette_mod = @import("../protocol/palette.zig");
 const pty_io = @import("runtime/pty_io.zig");
 const view_cache = @import("publication/view_cache.zig");
 const resize_reflow = @import("resize_reflow.zig");
-const selection_mod = @import("selection.zig");
 const scrolling_mod = @import("scrolling.zig");
 const control_handlers = @import("protocol/control_handlers.zig");
 const input_modes = @import("input_modes.zig");
@@ -59,26 +53,6 @@ const TerminalCore = terminal_core_mod.TerminalCore;
 const KittyImageFormat = snapshot_mod.KittyImageFormat;
 const KittyImage = snapshot_mod.KittyImage;
 const KittyPlacement = snapshot_mod.KittyPlacement;
-
-const RenderCache = @import("publication/render_cache.zig").RenderCache;
-
-const TerminalSnapshot = snapshot_mod.TerminalSnapshot;
-const DebugSnapshot = snapshot_mod.DebugSnapshot;
-const ScrollbackInfo = content.ScrollbackInfo;
-const ScrollbackRange = content.ScrollbackRange;
-const SelectionGesture = host_selection.SelectionGesture;
-const ClickSelectionResult = host_selection.ClickSelectionResult;
-const SessionMetadata = host_types.SessionMetadata;
-const ActivityMetadata = host_types.ActivityMetadata;
-const ProgressMetadata = host_types.ProgressMetadata;
-const ProgressState = host_types.ProgressState;
-const PresentedRenderCache = terminal_publication.PresentedRenderCache;
-const PresentationCapture = terminal_publication.PresentationCapture;
-const AltExitPresentationInfo = terminal_publication.AltExitPresentationInfo;
-const PresentationFeedback = terminal_publication.PresentationFeedback;
-
-const PtyWriteGuard = terminal_transport.Writer;
-const InputSnapshot = input_snapshot.InputSnapshot;
 
 const debugSnapshot = session_debug.debugSnapshot;
 const debugScrollbackRow = session_debug.debugScrollbackRow;
@@ -357,8 +331,6 @@ pub const PtyTerminalRuntime = struct {
     pub const setSyncUpdates = terminal_publication.setSyncUpdates;
     pub const setSyncUpdatesLocked = terminal_publication.setSyncUpdatesLocked;
     pub const clearPublishedDamageIfGeneration = terminal_publication.clearPublishedDamageIfGeneration;
-
-    pub const CloseConfirmSignals = host_types.CloseConfirmSignals;
 };
 
 fn appendHyperlinkImpl(self: anytype, uri: []const u8) ?u32 {
@@ -378,39 +350,6 @@ fn resetStateImpl(self: anytype) void {
     mode_effects.resetStateLocked(self);
 }
 
-const Hyperlink = snapshot_mod.Hyperlink;
-
-const VTERM_KEY_NONE = types.VTERM_KEY_NONE;
-const VTERM_KEY_ENTER = types.VTERM_KEY_ENTER;
-const VTERM_KEY_TAB = types.VTERM_KEY_TAB;
-const VTERM_KEY_BACKSPACE = types.VTERM_KEY_BACKSPACE;
-const VTERM_KEY_ESCAPE = types.VTERM_KEY_ESCAPE;
-const VTERM_KEY_UP = types.VTERM_KEY_UP;
-const VTERM_KEY_DOWN = types.VTERM_KEY_DOWN;
-const VTERM_KEY_LEFT = types.VTERM_KEY_LEFT;
-const VTERM_KEY_RIGHT = types.VTERM_KEY_RIGHT;
-const VTERM_KEY_INS = types.VTERM_KEY_INS;
-const VTERM_KEY_DEL = types.VTERM_KEY_DEL;
-const VTERM_KEY_HOME = types.VTERM_KEY_HOME;
-const VTERM_KEY_END = types.VTERM_KEY_END;
-const VTERM_KEY_PAGEUP = types.VTERM_KEY_PAGEUP;
-const VTERM_KEY_PAGEDOWN = types.VTERM_KEY_PAGEDOWN;
-const VTERM_KEY_LEFT_SHIFT = types.VTERM_KEY_LEFT_SHIFT;
-const VTERM_KEY_RIGHT_SHIFT = types.VTERM_KEY_RIGHT_SHIFT;
-const VTERM_KEY_LEFT_CTRL = types.VTERM_KEY_LEFT_CTRL;
-const VTERM_KEY_RIGHT_CTRL = types.VTERM_KEY_RIGHT_CTRL;
-const VTERM_KEY_LEFT_ALT = types.VTERM_KEY_LEFT_ALT;
-const VTERM_KEY_RIGHT_ALT = types.VTERM_KEY_RIGHT_ALT;
-const VTERM_KEY_LEFT_SUPER = types.VTERM_KEY_LEFT_SUPER;
-const VTERM_KEY_RIGHT_SUPER = types.VTERM_KEY_RIGHT_SUPER;
-const KeypadKey = input_mod.KeypadKey;
-const KeyAction = input_mod.KeyAction;
-
-const VTERM_MOD_NONE = types.VTERM_MOD_NONE;
-const VTERM_MOD_SHIFT = types.VTERM_MOD_SHIFT;
-const VTERM_MOD_ALT = types.VTERM_MOD_ALT;
-const VTERM_MOD_CTRL = types.VTERM_MOD_CTRL;
-
 const default_scrollback_rows: usize = 1000;
 const key_mode_disambiguate: u32 = 1;
 const key_mode_report_all_event_types: u32 = 2;
@@ -421,14 +360,3 @@ const key_mode_embed_text: u32 = 16;
 const mouse_button_left_mask: u8 = 1;
 const mouse_button_middle_mask: u8 = 2;
 const mouse_button_right_mask: u8 = 4;
-const CursorPos = types.CursorPos;
-const SelectionPos = types.SelectionPos;
-const TerminalSelection = types.TerminalSelection;
-const Cell = types.Cell;
-const CellAttrs = types.CellAttrs;
-const Color = types.Color;
-const Key = types.Key;
-const Modifier = types.Modifier;
-const MouseButton = types.MouseButton;
-const MouseEventKind = types.MouseEventKind;
-const MouseEvent = types.MouseEvent;
