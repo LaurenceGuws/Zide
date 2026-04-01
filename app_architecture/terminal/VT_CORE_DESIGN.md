@@ -134,10 +134,10 @@ Status note, 2026-03-31:
     `pty_terminal_runtime.zig`
   - the flat root state has now been grouped into explicit subsystem-owned
     embedded structs:
-    - `src/terminal/core/session/session_publication_fields.zig`
-    - `src/terminal/core/session/session_runtime_fields.zig`
-    - `src/terminal/core/session/session_interaction_fields.zig`
-    - `src/terminal/core/session/session_control_fields.zig`
+    - `src/terminal/core/session/publication_fields.zig`
+    - `src/terminal/core/session/runtime_fields.zig`
+    - `src/terminal/core/session/interaction_fields.zig`
+    - `src/terminal/core/session/control_fields.zig`
   - the first honest directory cut is now in:
     those truly session-owned API/field/debug seams live under
     `src/terminal/core/session/` instead of pretending to be a flat sibling

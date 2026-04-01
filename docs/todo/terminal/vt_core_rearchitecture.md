@@ -172,10 +172,10 @@ Validation note, 2026-03-31:
   - `src/terminal/core/session/types_api.zig` now owns the bottom export slab
     for shared terminal constants and core-facing type aliases.
   - raw session state is no longer a flat lie:
-    - `src/terminal/core/session/session_publication_fields.zig`
-    - `src/terminal/core/session/session_runtime_fields.zig`
-    - `src/terminal/core/session/session_interaction_fields.zig`
-    - `src/terminal/core/session/session_control_fields.zig`
+    - `src/terminal/core/session/publication_fields.zig`
+    - `src/terminal/core/session/runtime_fields.zig`
+    - `src/terminal/core/session/interaction_fields.zig`
+    - `src/terminal/core/session/control_fields.zig`
   - the first honest directory cut is now in too:
     the truly session-owned API, field, and debug seams live under
     `src/terminal/core/session/` instead of squatting as a flat `session_*`
