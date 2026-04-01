@@ -4,7 +4,7 @@ const control_handlers = @import("control_handlers.zig");
 const core_feed = @import("terminal_core_feed.zig");
 const core_protocol = @import("terminal_core_protocol.zig");
 const parser_hooks = @import("parser_hooks.zig");
-const session_mode_effects = @import("../session/mode_effects.zig");
+const mode_effects = @import("../session/mode_effects.zig");
 const terminal_core_text = @import("terminal_core_text.zig");
 const terminal_publication = @import("../publication/terminal_publication.zig");
 const types = @import("../../model/types.zig");
@@ -51,7 +51,7 @@ pub fn resetState(self: anytype) void {
 }
 
 pub fn resetStateLocked(self: anytype) void {
-    session_mode_effects.resetStateLocked(self);
+    mode_effects.resetStateLocked(self);
 }
 
 pub fn reverseIndex(self: anytype) void {
@@ -147,9 +147,9 @@ pub fn setTabAtCursor(self: anytype) void {
 }
 
 pub fn enterAltScreen(self: anytype, clear: bool, save_cursor: bool) void {
-    session_mode_effects.enterAltScreen(self, clear, save_cursor);
+    mode_effects.enterAltScreen(self, clear, save_cursor);
 }
 
 pub fn exitAltScreen(self: anytype, restore_cursor: bool) void {
-    session_mode_effects.exitAltScreen(self, restore_cursor);
+    mode_effects.exitAltScreen(self, restore_cursor);
 }

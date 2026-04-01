@@ -6,14 +6,14 @@ const snapshot_mod = @import("publication/snapshot.zig");
 const types = @import("../model/types.zig");
 const kitty_mod = @import("../kitty/graphics.zig");
 const semantic_prompt_mod = @import("semantic_prompt.zig");
-const session_host_types = @import("session/host_types.zig");
+const host_types = @import("session/host_types.zig");
 const palette_mod = @import("../protocol/palette.zig");
 
 const Screen = screen_mod.Screen;
 const Charset = parser_mod.Charset;
 const CharsetTarget = parser_mod.CharsetTarget;
 const SemanticPromptState = semantic_prompt_mod.SemanticPromptState;
-const ProgressState = session_host_types.ProgressState;
+const ProgressState = host_types.ProgressState;
 const Hyperlink = snapshot_mod.Hyperlink;
 
 const dynamic_color_count: usize = 10;
