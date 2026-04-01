@@ -123,7 +123,7 @@ pub fn planIdeExtendedBuildGraph(
         b,
         target,
         optimize,
-        "test_editor_highlight_smoke.zig",
+        "tests/editor_highlight_smoke_tests.zig",
         build_options,
         zlua_module,
         zlua_portable_module,
@@ -253,7 +253,7 @@ pub fn planIdeExtendedBuildGraph(
         b,
         target,
         optimize,
-        "test_terminal_ffi.zig",
+        "tests/terminal_ffi_entry_tests.zig",
     );
     addVendorAndStb(terminal_ffi_tests);
     _ = addRunArtifactStep(

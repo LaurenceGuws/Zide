@@ -248,6 +248,10 @@ Progress note, 2026-04-01:
   workspace launch, single-session launch, and shared post-start terminal sync
 - this makes terminal startup read more like explicit app policy phases and
   less like one large branch-heavy launch script
+- repo-root test wrapper Zig files were removed and relocated under `tests/`
+  with build-graph references updated accordingly
+- this tightens the repo rule that non-`src` Zig must clearly justify itself as
+  build/test/tooling surface instead of leaking ad hoc entrypoints into root
 
 ## Investigation Follow-up
 
