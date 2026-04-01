@@ -1,5 +1,5 @@
 const std = @import("std");
-const runtime_mod = @import("pty_terminal_runtime.zig");
+const runtime_mod = @import("terminal_runtime.zig");
 const host_types = @import("session/host_types.zig");
 const app_logger = @import("../../app_logger.zig");
 const runtime_policy = @import("../../app/runtime_policy.zig");

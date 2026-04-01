@@ -7,7 +7,7 @@ comptime {
     _ = @import("input_tests.zig");
     _ = @import("layout_tests.zig");
     _ = @import("terminal_reflow_tests.zig");
-    _ = @import("../src/terminal/core/pty_terminal_runtime.zig");
+    _ = @import("../src/terminal/core/terminal_runtime.zig");
     _ = @import("../src/terminal/core/pty_terminal_runtime_tests.zig");
     _ = @import("../src/ui/widgets/terminal_widget_draw.zig");
     _ = @import("terminal_key_encoder_tests.zig");

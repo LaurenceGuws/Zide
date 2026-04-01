@@ -99,6 +99,10 @@ Judgment:
   `src/terminal/core/pty_terminal_runtime.zig` for their own defaults,
   snapshots, or PTY writer types; those now come from direct owners under
   `session/` and `runtime/`, which is a better low-level ownership read
+- workspace and core runtime test entrypoints now import
+  `src/terminal/core/terminal_runtime.zig` instead of
+  `src/terminal/core/pty_terminal_runtime.zig`, which reduces the wrapper's
+  remaining false public-center gravity
 - `src/terminal/core/terminal_runtime.zig` still appears to be the right stable
   public surface, but it no longer routes shared input/selection/progress
   types through `pty_terminal_runtime.zig`; those names now come from their

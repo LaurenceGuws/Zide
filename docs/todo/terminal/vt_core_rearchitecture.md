@@ -267,6 +267,9 @@ Validation note, 2026-03-31:
     for their own defaults, snapshots, or writer types; those now come from
     direct owners under `session/` and `runtime/`, which reduces the wrapper's
     remaining center-of-gravity pull inside its own helper tree
+  - workspace and core runtime test entrypoints no longer import
+    `pty_terminal_runtime.zig` directly; they now go through
+    `terminal_runtime.zig`, which is the honest stable public runtime surface
 - [ ] `VTCORE-02` Make FFI a first-class core interface.
   Notes: shared FFI state plus `host_api` and `core_api` splits are landed; remaining work is maturity and convergence, not proving the shape. Recent slices closed real host-facing gaps such as close-confirm signals and backend-owned viewport control.
   Progress note, 2026-04-01, later:

@@ -4,7 +4,7 @@ const snapshot_mod = @import("publication/snapshot.zig");
 const render_cache = @import("publication/render_cache.zig");
 const host_types = @import("session/host_types.zig");
 const types = @import("../model/types.zig");
-const runtime_mod = @import("pty_terminal_runtime.zig");
+const runtime_mod = @import("terminal_runtime.zig");
 const terminal_transport = @import("runtime/terminal_transport.zig");
 const pty_mod = @import("../io/pty.zig");
 
@@ -12,6 +12,8 @@ const PtyTerminalRuntime = runtime_mod.PtyTerminalRuntime;
 const Cell = types.Cell;
 const Color = types.Color;
 const Dirty = render_cache.Dirty;
+const VTERM_KEY_ENTER = runtime_mod.VTERM_KEY_ENTER;
+const VTERM_MOD_NONE = runtime_mod.VTERM_MOD_NONE;
 const Pty = pty_mod.Pty;
 
 fn expectSnapshotRow(snapshot: snapshot_mod.TerminalSnapshot, row: usize, expected: []const u8) !void {
@@ -224,7 +226,7 @@ test "pty-backed session sendKey enter writes through session writer boundary" {
     session.attachPtyTransport(pty);
 
     try session.sendText("printf hi; exit");
-    try session.sendKey(runtime_mod.VTERM_KEY_ENTER, runtime_mod.VTERM_MOD_NONE);
+    try session.sendKey(VTERM_KEY_ENTER, VTERM_MOD_NONE);
 
     const start_ms = std.time.milliTimestamp();
     while (std.time.milliTimestamp() - start_ms < 4000) {

@@ -128,6 +128,10 @@ Status note, 2026-03-31:
     `src/terminal/core/pty_terminal_runtime.zig` for their own defaults,
     snapshots, or PTY writer types; those now come from direct owners under
     `session/` and `runtime/`
+  - workspace and core runtime test entrypoints now import
+    `src/terminal/core/terminal_runtime.zig` instead of
+    `src/terminal/core/pty_terminal_runtime.zig`, which is a better match for
+    the claimed stable public runtime surface
   - duplicated publication/cache truth
   - oversized native widget/render coordination around terminal publication
 - The current operating rule is sequential but ruthless:
