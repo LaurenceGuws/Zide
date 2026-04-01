@@ -180,8 +180,6 @@ pub const PtyTerminalRuntime = struct {
     pub const pendingGeneration = terminal_publication.pendingGeneration;
     pub const publishedGeneration = terminal_publication.publishedGeneration;
     pub const presentedGeneration = terminal_publication.presentedGeneration;
-    pub const notePresentedGeneration = terminal_publication.notePresentedGeneration;
-    pub const acknowledgePresentedGeneration = terminal_publication.acknowledgePresentedGeneration;
     pub const hasPublishedGenerationBacklog = terminal_publication.hasPublishedGenerationBacklog;
     pub const pollBacklogHint = runtime.pollBacklogHint;
     pub const lockPtyWriter = runtime.lockPtyWriter;
@@ -227,5 +225,4 @@ pub const PtyTerminalRuntime = struct {
     pub const completePresentationFeedback = terminal_publication.completePresentationFeedback;
     pub const finishFramePresentation = terminal_publication.finishFramePresentation;
     pub const syncUpdatesActive = terminal_publication.syncUpdatesActive;
-    pub const clearPublishedDamageIfGeneration = terminal_publication.clearPublishedDamageIfGeneration;
 };

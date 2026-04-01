@@ -265,6 +265,12 @@ Validation note, 2026-03-31:
     `src/terminal/core/publication/terminal_publication.zig` instead of
     manually locking, checking `viewRefreshPending()`, and forcing locked
     refresh work before reading publication state
+  - replay, FFI present-ack, and runtime tests no longer treat presentation
+    acknowledgement as wrapper contract:
+    they now call `notePresentedGeneration(...)` and
+    `acknowledgePresentedGeneration(...)` on
+    `src/terminal/core/publication/terminal_publication.zig` directly, and the
+    dead wrapper exports are removed from `pty_terminal_runtime.zig`
   - the remaining publication/view-cache helper stubs and the special-case
     protocol `appendHyperlink` wrapper are no longer written inline on
     `pty_terminal_runtime.zig`; those exceptions now route through the explicit

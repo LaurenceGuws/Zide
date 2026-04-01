@@ -263,6 +263,11 @@ Status note, 2026-03-31:
     snapshot/diff export in `src/terminal/ffi/core_api.zig` now asks
     `terminal_publication.zig` for locked current/generation cache access
     instead of reimplementing publication refresh choreography in host code
+  - publication acknowledgement is no longer treated as wrapper-owned test
+    control surface:
+    replay, FFI present-ack, and runtime tests now target
+    `terminal_publication.zig` directly for presented-generation note/ack flow,
+    and the dead wrapper exports are removed
   - the same direct-owner cleanup now applies in `workspace.zig`: wrapper
     composition reads as runtime/workspace ownership, and progress-state typing
     no longer comes through `pty_terminal_runtime.zig`

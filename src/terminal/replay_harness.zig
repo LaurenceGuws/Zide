@@ -419,8 +419,8 @@ pub fn runFixtureObservedWithOptions(
         applyBaselineGridRows(session, fixture.meta.baseline_grid_rows);
         applyScrollOffsetActions(session, fixture.meta.baseline_scroll_offsets);
         baseline_publication.generation = session.renderCache().generation;
-        session.notePresentedGeneration(session.renderCache().generation);
-        if (!session.acknowledgePresentedGeneration(session.renderCache().generation)) {
+        terminal_publication.notePresentedGeneration(session, session.renderCache().generation);
+        if (!terminal_publication.acknowledgePresentedGeneration(session, session.renderCache().generation)) {
             return error.BaselinePublishAcknowledgeFailed;
         }
     }

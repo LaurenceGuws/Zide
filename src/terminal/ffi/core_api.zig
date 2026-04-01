@@ -393,7 +393,7 @@ pub fn presentAck(handle: ?*shared.ZideTerminalHandle, generation: u64) shared.S
     const published_generation = currentPublishedGeneration(h);
     if (generation > published_generation) return .invalid_argument;
     if (generation < h.last_acknowledged_generation) return .invalid_argument;
-    _ = h.session.acknowledgePresentedGeneration(generation);
+    _ = terminal_publication.acknowledgePresentedGeneration(h.session, generation);
     h.last_acknowledged_generation = generation;
     return .ok;
 }
