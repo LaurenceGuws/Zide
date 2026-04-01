@@ -116,7 +116,6 @@ const RowRenderStats = struct {
     col_min: usize,
     col_max: usize = 0,
     bg_summary: draw_grid.BackgroundRunSummary = .{},
-    direct_samples: [draw_grid.max_direct_glyph_samples]draw_grid.DirectGlyphSample = [_]draw_grid.DirectGlyphSample{.{}} ** draw_grid.max_direct_glyph_samples,
     shaped_total: usize = 0,
     direct_text: usize = 0,
     special: usize = 0,
@@ -584,7 +583,7 @@ pub fn drawPrepared(
                 r.beginTerminalGlyphBatch();
                 row = 0;
                 while (row < rows) : (row += 1) {
-                    drawRowGlyphs(shell, view_cells, cols, row, 0, cols - 1, base_x_local, base_y_local, padding_x_i, hover_link_id, screen_reverse, blink_style, blink_time, draw_cursor, cursor, r.terminal_disable_ligatures, null, &glyph_draw_stats);
+                    drawRowGlyphs(shell, view_cells, cols, row, 0, cols - 1, base_x_local, base_y_local, padding_x_i, hover_link_id, screen_reverse, blink_style, blink_time, draw_cursor, cursor, r.terminal_disable_ligatures, &glyph_draw_stats);
                 }
                 r.flushTerminalGlyphBatch();
                 texture_glyph_ms += time_utils.secondsToMs(app_shell.getTime() - glyph_phase_start);
@@ -718,7 +717,7 @@ pub fn drawPrepared(
                             row_stats.span_count += 1;
                             row_stats.col_min = @min(row_stats.col_min, col_start);
                             row_stats.col_max = @max(row_stats.col_max, col_end);
-                            drawRowGlyphs(shell, view_cells, cols, row, col_start, col_end, base_x_local, base_y_local, padding_x_i, hover_link_id, screen_reverse, blink_style, blink_time, draw_cursor, cursor, r.terminal_disable_ligatures, &row_stats.direct_samples, &glyph_draw_stats);
+                            drawRowGlyphs(shell, view_cells, cols, row, col_start, col_end, base_x_local, base_y_local, padding_x_i, hover_link_id, screen_reverse, blink_style, blink_time, draw_cursor, cursor, r.terminal_disable_ligatures, &glyph_draw_stats);
                         }
                     } else {
                         const col_start = @min(@as(usize, self.partial_draw_cols_start.items[row]), cols - 1);
@@ -729,7 +728,7 @@ pub fn drawPrepared(
                         row_stats.span_count = 1;
                         row_stats.col_min = col_start;
                         row_stats.col_max = col_end;
-                        drawRowGlyphs(shell, view_cells, cols, row, col_start, col_end, base_x_local, base_y_local, padding_x_i, hover_link_id, screen_reverse, blink_style, blink_time, draw_cursor, cursor, r.terminal_disable_ligatures, &row_stats.direct_samples, &glyph_draw_stats);
+                        drawRowGlyphs(shell, view_cells, cols, row, col_start, col_end, base_x_local, base_y_local, padding_x_i, hover_link_id, screen_reverse, blink_style, blink_time, draw_cursor, cursor, r.terminal_disable_ligatures, &glyph_draw_stats);
                     }
                     row_stats.shaped_total = glyph_draw_stats.shaped_glyphs - before_stats.shaped_glyphs;
                     row_stats.direct_text = glyph_draw_stats.direct_text_glyphs - before_stats.direct_text_glyphs;
