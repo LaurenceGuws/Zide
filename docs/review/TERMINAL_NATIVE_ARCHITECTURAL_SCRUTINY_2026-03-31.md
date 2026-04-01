@@ -155,6 +155,12 @@ Judgment:
   DSR/DA/window-op/DECRQM/DECSTR reply handling now executes directly in
   `handleCsiOnSession(...)` instead of bouncing through one more adapter
   layer
+- the local CSI execution callback shells are dead too:
+  `SimpleCsiContext` and `SpecialCsiContext` are deleted from
+  `src/terminal/protocol/csi.zig`, and
+  `src/terminal/protocol/csi_exec.zig` now operates on the live runtime
+  object directly instead of routing simple/special CSI execution through
+  two more adapter structs
 - the stale `src/terminal/core/session_protocol.zig` forwarding shell is now
   deleted, so that API seam no longer routes through one extra session-named
   hop before reaching the real owners

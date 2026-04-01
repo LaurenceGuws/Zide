@@ -174,6 +174,12 @@ Validation note, 2026-03-31:
     DSR/DA/window-op/DECRQM/DECSTR reply handling now executes directly in
     `handleCsiOnSession(...)` instead of bouncing through one more adapter
     layer
+  - the local CSI execution callback shells are dead too:
+    `SimpleCsiContext` and `SpecialCsiContext` are deleted from
+    `src/terminal/protocol/csi.zig`, and
+    `src/terminal/protocol/csi_exec.zig` now operates on the live runtime
+    object directly instead of routing simple/special CSI execution through
+    two more adapter structs
   - the remaining publication/view-cache helper stubs and the special-case
     protocol `appendHyperlink` wrapper are no longer written inline on
     `pty_terminal_runtime.zig`; those exceptions now route through the explicit

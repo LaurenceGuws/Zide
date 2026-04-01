@@ -31,250 +31,6 @@ fn modeSnapshotFromContext(ctx: ModeCaptureContext) ModeSnapshot {
 const SgrContext = csi_style_reset.SgrContext;
 const DecstrContext = csi_style_reset.DecstrContext;
 
-pub const SimpleCsiContext = struct {
-    ctx: *anyopaque,
-    active_screen_fn: *const fn (ctx: *anyopaque) *screen_mod.Screen,
-    erase_display_fn: *const fn (ctx: *anyopaque, mode: i32) void,
-    erase_line_fn: *const fn (ctx: *anyopaque, mode: i32) void,
-    insert_chars_fn: *const fn (ctx: *anyopaque, count: usize) void,
-    delete_chars_fn: *const fn (ctx: *anyopaque, count: usize) void,
-    erase_chars_fn: *const fn (ctx: *anyopaque, count: usize) void,
-    insert_lines_fn: *const fn (ctx: *anyopaque, count: usize) void,
-    delete_lines_fn: *const fn (ctx: *anyopaque, count: usize) void,
-    scroll_region_up_fn: *const fn (ctx: *anyopaque, count: usize) void,
-    scroll_region_up_with_origin_fn: *const fn (ctx: *anyopaque, count: usize, origin: ?[]const u8) void,
-    scroll_region_down_fn: *const fn (ctx: *anyopaque, count: usize) void,
-    save_cursor_fn: *const fn (ctx: *anyopaque) void,
-    restore_cursor_fn: *const fn (ctx: *anyopaque) void,
-    set_cursor_style_fn: *const fn (ctx: *anyopaque, mode: i32) void,
-
-    pub fn from(session: anytype) SimpleCsiContext {
-        const SessionPtr = @TypeOf(session);
-        return .{
-            .ctx = @ptrCast(session),
-            .active_screen_fn = struct {
-                fn call(ctx: *anyopaque) *screen_mod.Screen {
-                    const s: SessionPtr = @ptrCast(@alignCast(ctx));
-                    return s.activeScreen();
-                }
-            }.call,
-            .erase_display_fn = struct {
-                fn call(ctx: *anyopaque, mode: i32) void {
-                    const s: SessionPtr = @ptrCast(@alignCast(ctx));
-                    s.eraseDisplay(mode);
-                }
-            }.call,
-            .erase_line_fn = struct {
-                fn call(ctx: *anyopaque, mode: i32) void {
-                    const s: SessionPtr = @ptrCast(@alignCast(ctx));
-                    s.eraseLine(mode);
-                }
-            }.call,
-            .insert_chars_fn = struct {
-                fn call(ctx: *anyopaque, count: usize) void {
-                    const s: SessionPtr = @ptrCast(@alignCast(ctx));
-                    s.insertChars(count);
-                }
-            }.call,
-            .delete_chars_fn = struct {
-                fn call(ctx: *anyopaque, count: usize) void {
-                    const s: SessionPtr = @ptrCast(@alignCast(ctx));
-                    s.deleteChars(count);
-                }
-            }.call,
-            .erase_chars_fn = struct {
-                fn call(ctx: *anyopaque, count: usize) void {
-                    const s: SessionPtr = @ptrCast(@alignCast(ctx));
-                    s.eraseChars(count);
-                }
-            }.call,
-            .insert_lines_fn = struct {
-                fn call(ctx: *anyopaque, count: usize) void {
-                    const s: SessionPtr = @ptrCast(@alignCast(ctx));
-                    s.insertLines(count);
-                }
-            }.call,
-            .delete_lines_fn = struct {
-                fn call(ctx: *anyopaque, count: usize) void {
-                    const s: SessionPtr = @ptrCast(@alignCast(ctx));
-                    s.deleteLines(count);
-                }
-            }.call,
-            .scroll_region_up_fn = struct {
-                fn call(ctx: *anyopaque, count: usize) void {
-                    const s: SessionPtr = @ptrCast(@alignCast(ctx));
-                    s.scrollRegionUp(count);
-                }
-            }.call,
-            .scroll_region_up_with_origin_fn = struct {
-                fn call(ctx: *anyopaque, count: usize, origin: ?[]const u8) void {
-                    const s: SessionPtr = @ptrCast(@alignCast(ctx));
-                    s.scrollRegionUpWithOrigin(count, origin);
-                }
-            }.call,
-            .scroll_region_down_fn = struct {
-                fn call(ctx: *anyopaque, count: usize) void {
-                    const s: SessionPtr = @ptrCast(@alignCast(ctx));
-                    s.scrollRegionDown(count);
-                }
-            }.call,
-            .save_cursor_fn = struct {
-                fn call(ctx: *anyopaque) void {
-                    const s: SessionPtr = @ptrCast(@alignCast(ctx));
-                    s.saveCursor();
-                }
-            }.call,
-            .restore_cursor_fn = struct {
-                fn call(ctx: *anyopaque) void {
-                    const s: SessionPtr = @ptrCast(@alignCast(ctx));
-                    s.restoreCursor();
-                }
-            }.call,
-            .set_cursor_style_fn = struct {
-                fn call(ctx: *anyopaque, mode: i32) void {
-                    const s: SessionPtr = @ptrCast(@alignCast(ctx));
-                    s.setCursorStyle(mode);
-                }
-            }.call,
-        };
-    }
-
-    pub fn activeScreen(self: *const SimpleCsiContext) *screen_mod.Screen {
-        return self.active_screen_fn(self.ctx);
-    }
-    pub fn eraseDisplay(self: *const SimpleCsiContext, mode: i32) void {
-        self.erase_display_fn(self.ctx, mode);
-    }
-    pub fn eraseLine(self: *const SimpleCsiContext, mode: i32) void {
-        self.erase_line_fn(self.ctx, mode);
-    }
-    pub fn insertChars(self: *const SimpleCsiContext, count: usize) void {
-        self.insert_chars_fn(self.ctx, count);
-    }
-    pub fn deleteChars(self: *const SimpleCsiContext, count: usize) void {
-        self.delete_chars_fn(self.ctx, count);
-    }
-    pub fn eraseChars(self: *const SimpleCsiContext, count: usize) void {
-        self.erase_chars_fn(self.ctx, count);
-    }
-    pub fn insertLines(self: *const SimpleCsiContext, count: usize) void {
-        self.insert_lines_fn(self.ctx, count);
-    }
-    pub fn deleteLines(self: *const SimpleCsiContext, count: usize) void {
-        self.delete_lines_fn(self.ctx, count);
-    }
-    pub fn scrollRegionUp(self: *const SimpleCsiContext, count: usize) void {
-        self.scroll_region_up_fn(self.ctx, count);
-    }
-    pub fn scrollRegionUpWithOrigin(self: *const SimpleCsiContext, count: usize, origin: ?[]const u8) void {
-        self.scroll_region_up_with_origin_fn(self.ctx, count, origin);
-    }
-    pub fn scrollRegionDown(self: *const SimpleCsiContext, count: usize) void {
-        self.scroll_region_down_fn(self.ctx, count);
-    }
-    pub fn saveCursor(self: *const SimpleCsiContext) void {
-        self.save_cursor_fn(self.ctx);
-    }
-    pub fn restoreCursor(self: *const SimpleCsiContext) void {
-        self.restore_cursor_fn(self.ctx);
-    }
-    pub fn setCursorStyle(self: *const SimpleCsiContext, mode: i32) void {
-        self.set_cursor_style_fn(self.ctx, mode);
-    }
-};
-
-pub const SpecialCsiContext = struct {
-    ctx: *anyopaque,
-    active_screen_fn: *const fn (ctx: *anyopaque) *screen_mod.Screen,
-    save_cursor_fn: *const fn (ctx: *anyopaque) void,
-    restore_cursor_fn: *const fn (ctx: *anyopaque) void,
-    set_cursor_style_fn: *const fn (ctx: *anyopaque, mode: i32) void,
-    key_mode_push_locked_fn: *const fn (ctx: *anyopaque, flags: u32) void,
-    key_mode_pop_locked_fn: *const fn (ctx: *anyopaque, count: usize) void,
-    key_mode_modify_locked_fn: *const fn (ctx: *anyopaque, flags: u32, mode: u32) void,
-    key_mode_query_locked_fn: *const fn (ctx: *anyopaque) void,
-
-    pub fn from(session: anytype) SpecialCsiContext {
-        const SessionPtr = @TypeOf(session);
-        return .{
-            .ctx = @ptrCast(session),
-            .active_screen_fn = struct {
-                fn call(ctx: *anyopaque) *screen_mod.Screen {
-                    const s: SessionPtr = @ptrCast(@alignCast(ctx));
-                    return s.activeScreen();
-                }
-            }.call,
-            .save_cursor_fn = struct {
-                fn call(ctx: *anyopaque) void {
-                    const s: SessionPtr = @ptrCast(@alignCast(ctx));
-                    s.saveCursor();
-                }
-            }.call,
-            .restore_cursor_fn = struct {
-                fn call(ctx: *anyopaque) void {
-                    const s: SessionPtr = @ptrCast(@alignCast(ctx));
-                    s.restoreCursor();
-                }
-            }.call,
-            .set_cursor_style_fn = struct {
-                fn call(ctx: *anyopaque, mode: i32) void {
-                    const s: SessionPtr = @ptrCast(@alignCast(ctx));
-                    s.setCursorStyle(mode);
-                }
-            }.call,
-            .key_mode_push_locked_fn = struct {
-                fn call(ctx: *anyopaque, flags: u32) void {
-                    const s: SessionPtr = @ptrCast(@alignCast(ctx));
-                    s.keyModePushLocked(flags);
-                }
-            }.call,
-            .key_mode_pop_locked_fn = struct {
-                fn call(ctx: *anyopaque, count: usize) void {
-                    const s: SessionPtr = @ptrCast(@alignCast(ctx));
-                    s.keyModePopLocked(count);
-                }
-            }.call,
-            .key_mode_modify_locked_fn = struct {
-                fn call(ctx: *anyopaque, flags: u32, mode: u32) void {
-                    const s: SessionPtr = @ptrCast(@alignCast(ctx));
-                    s.keyModeModifyLocked(flags, mode);
-                }
-            }.call,
-            .key_mode_query_locked_fn = struct {
-                fn call(ctx: *anyopaque) void {
-                    const s: SessionPtr = @ptrCast(@alignCast(ctx));
-                    s.keyModeQueryLocked();
-                }
-            }.call,
-        };
-    }
-
-    pub fn activeScreen(self: *const SpecialCsiContext) *screen_mod.Screen {
-        return self.active_screen_fn(self.ctx);
-    }
-    pub fn saveCursor(self: *const SpecialCsiContext) void {
-        self.save_cursor_fn(self.ctx);
-    }
-    pub fn restoreCursor(self: *const SpecialCsiContext) void {
-        self.restore_cursor_fn(self.ctx);
-    }
-    pub fn setCursorStyle(self: *const SpecialCsiContext, mode: i32) void {
-        self.set_cursor_style_fn(self.ctx, mode);
-    }
-    pub fn keyModePushLocked(self: *const SpecialCsiContext, flags: u32) void {
-        self.key_mode_push_locked_fn(self.ctx, flags);
-    }
-    pub fn keyModePopLocked(self: *const SpecialCsiContext, count: usize) void {
-        self.key_mode_pop_locked_fn(self.ctx, count);
-    }
-    pub fn keyModeModifyLocked(self: *const SpecialCsiContext, flags: u32, mode: u32) void {
-        self.key_mode_modify_locked_fn(self.ctx, flags, mode);
-    }
-    pub fn keyModeQueryLocked(self: *const SpecialCsiContext) void {
-        self.key_mode_query_locked_fn(self.ctx);
-    }
-};
-
 fn csiIntermediatesEq(action: parser_csi.CsiAction, bytes: []const u8) bool {
     if (action.intermediates_len != bytes.len) return false;
     return std.mem.eql(u8, action.intermediates[0..action.intermediates_len], bytes);
@@ -334,26 +90,24 @@ fn handleCsiOnSession(self: anytype, action: parser_csi.CsiAction) void {
     const p = action.params;
     const param_len = csi_param_count;
     const mode_context = ModeMutationContext.from(self);
-    const simple = SimpleCsiContext.from(self);
-    const special = SpecialCsiContext.from(self);
     switch (action.final) {
         'A', 'B', 'C', 'D', 'E', 'F', 'G', 'I', 'H', 'f', 'd', 'J', 'K', '@', 'P', 'X', 'L', 'M', 'S', 'T', 'Z', 'r' => {
-            handleSimpleCsi(simple, action, param_len, p);
+            csi_exec.handleSimpleCsi(self, action, param_len, p);
         },
         's' => { // SCP / DECSLRM (when ?69 enabled)
-            handleSpecialCsi(special, action, param_len, p);
+            csi_exec.handleSpecialCsi(self, action, param_len, p);
         },
         'u' => { // RCP
-            handleSpecialCsi(special, action, param_len, p);
+            csi_exec.handleSpecialCsi(self, action, param_len, p);
         },
         'm' => { // SGR
             applySgr(SgrContext.from(self), action);
         },
         'q' => { // DECSCUSR
-            handleSpecialCsi(special, action, param_len, p);
+            csi_exec.handleSpecialCsi(self, action, param_len, p);
         },
         'g' => { // TBC
-            handleSpecialCsi(special, action, param_len, p);
+            csi_exec.handleSpecialCsi(self, action, param_len, p);
         },
         'n' => { // DSR
             if (self.lockPtyWriter()) |writer_guard| {
@@ -405,24 +159,6 @@ fn handleCsiOnSession(self: anytype, action: parser_csi.CsiAction) void {
         },
         else => {},
     }
-}
-
-fn handleSimpleCsi(
-    context: SimpleCsiContext,
-    action: parser_csi.CsiAction,
-    param_len: usize,
-    params: [parser_csi.max_params]i32,
-) void {
-    csi_exec.handleSimpleCsi(context, action, param_len, params);
-}
-
-fn handleSpecialCsi(
-    context: SpecialCsiContext,
-    action: parser_csi.CsiAction,
-    param_len: usize,
-    params: [parser_csi.max_params]i32,
-) void {
-    csi_exec.handleSpecialCsi(context, action, param_len, params);
 }
 
 pub fn writeDaPrimaryReply(pty: anytype) bool {
