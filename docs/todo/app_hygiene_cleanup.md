@@ -173,6 +173,10 @@ Progress note, 2026-04-01:
 - `build_system/ide_graph.zig` is now further reduced to top-level composition
   of build-side planners instead of directly owning every extended artifact
   band itself
+- bootstrap option parsing, dependency resolution, and build-report
+  registration now live under `build_system/bootstrap_setup.zig`
+- `build_system/bootstrap_graph.zig` is narrower and reads more as bootstrap
+  composition than as a single mixed initializer
 
 ### AH-04 App Orchestration Honesty
 
