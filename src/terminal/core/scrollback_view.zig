@@ -1,5 +1,4 @@
 const std = @import("std");
-const app_logger = @import("../../app_logger.zig");
 const types = @import("../model/types.zig");
 const terminal_publication = @import("terminal_publication.zig");
 
@@ -95,9 +94,6 @@ pub fn setScrollOffsetLocked(self: anytype, offset: usize) void {
         terminal_publication.queueViewRefreshLocked(self, after);
     }
     self.updateViewCacheForScrollLocked();
-    const log = app_logger.logger("terminal.core");
-    const max_offset = self.core.maxScrollbackOffset(self.core.primary.grid.rows, self.core.primary.grid.cols, self.core.primary.defaultCell());
-    log.logf(.debug, "set scroll offset={d} max={d}", .{ after, max_offset });
 }
 
 pub fn resetToLiveBottomLocked(self: anytype) bool {
@@ -154,7 +150,4 @@ pub fn scrollByLocked(self: anytype, delta: isize) void {
         terminal_publication.queueViewRefreshLocked(self, after);
     }
     self.updateViewCacheForScrollLocked();
-    const log = app_logger.logger("terminal.core");
-    const max_offset = self.core.maxScrollbackOffset(self.core.primary.grid.rows, self.core.primary.grid.cols, self.core.primary.defaultCell());
-    log.logf(.debug, "scroll by delta={d} offset={d} max={d}", .{ delta, after, max_offset });
 }

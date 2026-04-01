@@ -63,13 +63,11 @@ pub fn sendKittyPasteEvent5522WithMimeRich(
     uri_list: ?[]const u8,
     png: ?[]const u8,
 ) !bool {
-    const log = app_logger.logger("terminal.osc");
     if (!self.interaction.kitty_paste_events_5522) {
-        log.logf(.debug, "osc5522 paste skipped reason=disabled", .{});
         return false;
     }
     if (!terminal_transport.Writer.exists(self)) {
-        log.logf(.warning, "osc5522 paste dropped reason=missing-pty", .{});
+        app_logger.logger("terminal.osc").logf(.warning, "osc5522 paste dropped reason=missing-pty", .{});
         return false;
     }
 
@@ -81,7 +79,7 @@ pub fn sendKittyPasteEvent5522WithMimeRich(
         osc_kitty_clipboard.sendPasteEventMimes(osc_kitty_clipboard.SessionFacade.from(self), &writer, .st);
         return true;
     }
-    log.logf(.warning, "osc5522 paste dropped after buffer prep reason=missing-pty", .{});
+    app_logger.logger("terminal.osc").logf(.warning, "osc5522 paste dropped after buffer prep reason=missing-pty", .{});
     return false;
 }
 

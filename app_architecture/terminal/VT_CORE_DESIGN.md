@@ -227,8 +227,9 @@ Status note, 2026-03-31:
   - low-level draw/cache/parser/poll narration is not architecture either; if
     a log is not defending a contract, warning path, lifecycle edge, or
     subsystem boundary, it should be deleted instead of normalized
-    drives both update-plan forcing and logging, group it instead of leaving it
-    as a loose cluster of temporary values
+  - the same standard applies to input/runtime/publication seams too; send-key
+    chatter, scroll/resize/init narration, disabled-feature debug logs, and
+    dirty-retirement storytelling should not survive in the live code path
   - handoff/log snapshot state inside draw should also be grouped once it feeds
     multiple logging sites, instead of repeating the same session-generation
     reads inline

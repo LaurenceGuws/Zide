@@ -236,6 +236,10 @@ Validation note, 2026-03-31:
       path as fake architecture
     - only contract, warning, lifecycle, and subsystem-boundary logs survive
       by default
+    - this now applies beyond widget rendering too:
+      input-send chatter, scroll/resize/init narration, disabled-feature
+      debug logs, and dirty-retirement storytelling are being deleted from the
+      live terminal core
   - mirror-heavy cache metadata is now starting to come out of
     `src/terminal/core/render_cache.zig`:
     - `RenderCache.total_lines` is deleted
