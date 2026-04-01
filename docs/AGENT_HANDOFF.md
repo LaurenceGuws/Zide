@@ -37,7 +37,7 @@ not a progress log and should stay brief.
   - remove the old seam instead of preserving it for comfort
 - Default terminal work now should be:
   - eliminate false centers around `TerminalCore`
-  - dismantle `TerminalSession` as the de facto architectural center
+  - dismantle `PtyTerminalRuntime` as the de facto architectural center
   - move semantic text/protocol behavior below the VT boundary where it
     belongs
   - collapse duplicated publication truth and compatibility mirrors
@@ -60,7 +60,8 @@ not a progress log and should stay brief.
 - `TerminalCore` is real, but it is still not the only obvious center.
 - The broad remaining architectural enemy is not random compatibility debt. It
   is the collection of fake centers around the engine:
-  - `TerminalSession` as the de facto public center
+  - the remaining `pty_terminal_runtime.zig` / host-wrapper gravity around
+    `PtyTerminalRuntime`
   - parser-hook text semantics above the engine boundary
   - duplicated publication/cache truth
   - oversized native widget/render coordination

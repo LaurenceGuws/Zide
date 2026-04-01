@@ -4,255 +4,32 @@ const app_logger = @import("../../app_logger.zig");
 
 const Color = types.Color;
 
-pub const SgrContext = struct {
-    ctx: *anyopaque,
-    palette_color_fn: *const fn (ctx: *anyopaque, idx: u8) Color,
-    current_attrs_ptr_fn: *const fn (ctx: *anyopaque) *types.CellAttrs,
-    default_attrs_ptr_fn: *const fn (ctx: *anyopaque) *const types.CellAttrs,
-
-    pub fn from(session: anytype) SgrContext {
-        const SessionPtr = @TypeOf(session);
-        return .{
-            .ctx = @ptrCast(session),
-            .palette_color_fn = struct {
-                fn call(ctx: *anyopaque, idx: u8) Color {
-                    const s: SessionPtr = @ptrCast(@alignCast(ctx));
-                    return s.paletteColor(idx);
-                }
-            }.call,
-            .current_attrs_ptr_fn = struct {
-                fn call(ctx: *anyopaque) *types.CellAttrs {
-                    const s: SessionPtr = @ptrCast(@alignCast(ctx));
-                    return &s.activeScreen().current_attrs;
-                }
-            }.call,
-            .default_attrs_ptr_fn = struct {
-                fn call(ctx: *anyopaque) *const types.CellAttrs {
-                    const s: SessionPtr = @ptrCast(@alignCast(ctx));
-                    return &s.activeScreen().default_attrs;
-                }
-            }.call,
-        };
-    }
-
-    pub fn paletteColor(self: *const SgrContext, idx: u8) Color {
-        return self.palette_color_fn(self.ctx, idx);
-    }
-    pub fn currentAttrs(self: *const SgrContext) *types.CellAttrs {
-        return self.current_attrs_ptr_fn(self.ctx);
-    }
-    pub fn defaultAttrs(self: *const SgrContext) *const types.CellAttrs {
-        return self.default_attrs_ptr_fn(self.ctx);
-    }
-};
-
-pub const DecstrContext = struct {
-    ctx: *anyopaque,
-    reset_parser_fn: *const fn (ctx: *anyopaque) void,
-    reset_saved_charset_fn: *const fn (ctx: *anyopaque) void,
-    clear_title_buffer_fn: *const fn (ctx: *anyopaque) void,
-    set_default_title_fn: *const fn (ctx: *anyopaque) void,
-    set_report_color_scheme_2031_fn: *const fn (ctx: *anyopaque, enabled: bool) void,
-    set_grapheme_cluster_shaping_2027_fn: *const fn (ctx: *anyopaque, enabled: bool) void,
-    set_primary_grapheme_cluster_shaping_2027_fn: *const fn (ctx: *anyopaque, enabled: bool) void,
-    set_alt_grapheme_cluster_shaping_2027_fn: *const fn (ctx: *anyopaque, enabled: bool) void,
-    set_inband_resize_notifications_2048_fn: *const fn (ctx: *anyopaque, enabled: bool) void,
-    set_kitty_paste_events_5522_fn: *const fn (ctx: *anyopaque, enabled: bool) void,
-    reset_input_modes_locked_fn: *const fn (ctx: *anyopaque) void,
-    set_column_mode_132_fn: *const fn (ctx: *anyopaque, enabled: bool) void,
-    set_sync_updates_locked_fn: *const fn (ctx: *anyopaque, enabled: bool) void,
-    clear_all_kitty_images_fn: *const fn (ctx: *anyopaque) void,
-    reset_active_screen_state_fn: *const fn (ctx: *anyopaque) void,
-    publish_snapshot_fn: *const fn (ctx: *anyopaque) void,
-    mark_active_screen_decstr_dirty_fn: *const fn (ctx: *anyopaque) void,
-
-    pub fn from(session: anytype) DecstrContext {
-        const SessionPtr = @TypeOf(session);
-        return .{
-            .ctx = @ptrCast(session),
-            .reset_parser_fn = struct {
-                fn call(ctx: *anyopaque) void {
-                    const s: SessionPtr = @ptrCast(@alignCast(ctx));
-                    s.core.resetParserState();
-                }
-            }.call,
-            .reset_saved_charset_fn = struct {
-                fn call(ctx: *anyopaque) void {
-                    const s: SessionPtr = @ptrCast(@alignCast(ctx));
-                    s.core.clearSavedCharsetState();
-                }
-            }.call,
-            .clear_title_buffer_fn = struct {
-                fn call(ctx: *anyopaque) void {
-                    const s: SessionPtr = @ptrCast(@alignCast(ctx));
-                    s.core.clearTitleBuffer();
-                }
-            }.call,
-            .set_default_title_fn = struct {
-                fn call(ctx: *anyopaque) void {
-                    const s: SessionPtr = @ptrCast(@alignCast(ctx));
-                    s.core.setDefaultTitle();
-                }
-            }.call,
-            .set_report_color_scheme_2031_fn = struct {
-                fn call(ctx: *anyopaque, enabled: bool) void {
-                    const s: SessionPtr = @ptrCast(@alignCast(ctx));
-                    s.report_color_scheme_2031 = enabled;
-                }
-            }.call,
-            .set_grapheme_cluster_shaping_2027_fn = struct {
-                fn call(ctx: *anyopaque, enabled: bool) void {
-                    const s: SessionPtr = @ptrCast(@alignCast(ctx));
-                    s.grapheme_cluster_shaping_2027 = enabled;
-                }
-            }.call,
-            .set_primary_grapheme_cluster_shaping_2027_fn = struct {
-                fn call(ctx: *anyopaque, enabled: bool) void {
-                    const s: SessionPtr = @ptrCast(@alignCast(ctx));
-                    s.core.primary.setGraphemeClusterShaping2027(enabled);
-                }
-            }.call,
-            .set_alt_grapheme_cluster_shaping_2027_fn = struct {
-                fn call(ctx: *anyopaque, enabled: bool) void {
-                    const s: SessionPtr = @ptrCast(@alignCast(ctx));
-                    s.core.alt.setGraphemeClusterShaping2027(enabled);
-                }
-            }.call,
-            .set_inband_resize_notifications_2048_fn = struct {
-                fn call(ctx: *anyopaque, enabled: bool) void {
-                    const s: SessionPtr = @ptrCast(@alignCast(ctx));
-                    s.inband_resize_notifications_2048 = enabled;
-                }
-            }.call,
-            .set_kitty_paste_events_5522_fn = struct {
-                fn call(ctx: *anyopaque, enabled: bool) void {
-                    const s: SessionPtr = @ptrCast(@alignCast(ctx));
-                    s.kitty_paste_events_5522 = enabled;
-                }
-            }.call,
-            .reset_input_modes_locked_fn = struct {
-                fn call(ctx: *anyopaque) void {
-                    const s: SessionPtr = @ptrCast(@alignCast(ctx));
-                    s.resetInputModesLocked();
-                }
-            }.call,
-            .set_column_mode_132_fn = struct {
-                fn call(ctx: *anyopaque, enabled: bool) void {
-                    const s: SessionPtr = @ptrCast(@alignCast(ctx));
-                    s.core.column_mode_132 = enabled;
-                }
-            }.call,
-            .set_sync_updates_locked_fn = struct {
-                fn call(ctx: *anyopaque, enabled: bool) void {
-                    const s: SessionPtr = @ptrCast(@alignCast(ctx));
-                    s.setSyncUpdatesLocked(enabled);
-                }
-            }.call,
-            .clear_all_kitty_images_fn = struct {
-                fn call(ctx: *anyopaque) void {
-                    const s: SessionPtr = @ptrCast(@alignCast(ctx));
-                    s.clearAllKittyImages();
-                }
-            }.call,
-            .reset_active_screen_state_fn = struct {
-                fn call(ctx: *anyopaque) void {
-                    const s: SessionPtr = @ptrCast(@alignCast(ctx));
-                    s.activeScreen().resetState();
-                }
-            }.call,
-            .publish_snapshot_fn = struct {
-                fn call(ctx: *anyopaque) void {
-                    const s: SessionPtr = @ptrCast(@alignCast(ctx));
-                    @import("../core/input_modes.zig").publishSnapshot(s);
-                }
-            }.call,
-            .mark_active_screen_decstr_dirty_fn = struct {
-                fn call(ctx: *anyopaque) void {
-                    const s: SessionPtr = @ptrCast(@alignCast(ctx));
-                    s.activeScreen().markDirtyAllWithReason(.decstr_soft_reset, @src());
-                }
-            }.call,
-        };
-    }
-
-    pub fn resetParser(self: *const DecstrContext) void {
-        self.reset_parser_fn(self.ctx);
-    }
-    pub fn resetSavedCharset(self: *const DecstrContext) void {
-        self.reset_saved_charset_fn(self.ctx);
-    }
-    pub fn clearTitleBuffer(self: *const DecstrContext) void {
-        self.clear_title_buffer_fn(self.ctx);
-    }
-    pub fn setDefaultTitle(self: *const DecstrContext) void {
-        self.set_default_title_fn(self.ctx);
-    }
-    pub fn setReportColorScheme2031(self: *const DecstrContext, enabled: bool) void {
-        self.set_report_color_scheme_2031_fn(self.ctx, enabled);
-    }
-    pub fn setGraphemeClusterShaping2027(self: *const DecstrContext, enabled: bool) void {
-        self.set_grapheme_cluster_shaping_2027_fn(self.ctx, enabled);
-    }
-    pub fn setPrimaryGraphemeClusterShaping2027(self: *const DecstrContext, enabled: bool) void {
-        self.set_primary_grapheme_cluster_shaping_2027_fn(self.ctx, enabled);
-    }
-    pub fn setAltGraphemeClusterShaping2027(self: *const DecstrContext, enabled: bool) void {
-        self.set_alt_grapheme_cluster_shaping_2027_fn(self.ctx, enabled);
-    }
-    pub fn setInbandResizeNotifications2048(self: *const DecstrContext, enabled: bool) void {
-        self.set_inband_resize_notifications_2048_fn(self.ctx, enabled);
-    }
-    pub fn setKittyPasteEvents5522(self: *const DecstrContext, enabled: bool) void {
-        self.set_kitty_paste_events_5522_fn(self.ctx, enabled);
-    }
-    pub fn resetInputModesLocked(self: *const DecstrContext) void {
-        self.reset_input_modes_locked_fn(self.ctx);
-    }
-    pub fn setColumnMode132(self: *const DecstrContext, enabled: bool) void {
-        self.set_column_mode_132_fn(self.ctx, enabled);
-    }
-    pub fn setSyncUpdatesLocked(self: *const DecstrContext, enabled: bool) void {
-        self.set_sync_updates_locked_fn(self.ctx, enabled);
-    }
-    pub fn clearAllKittyImages(self: *const DecstrContext) void {
-        self.clear_all_kitty_images_fn(self.ctx);
-    }
-    pub fn resetActiveScreenState(self: *const DecstrContext) void {
-        self.reset_active_screen_state_fn(self.ctx);
-    }
-    pub fn publishSnapshot(self: *const DecstrContext) void {
-        self.publish_snapshot_fn(self.ctx);
-    }
-    pub fn markActiveScreenDecstrDirty(self: *const DecstrContext) void {
-        self.mark_active_screen_decstr_dirty_fn(self.ctx);
-    }
-};
-
-pub fn applyDecstrReset(context: DecstrContext) void {
-    context.resetParser();
-    context.resetSavedCharset();
-    context.clearTitleBuffer();
-    context.setDefaultTitle();
-    context.setReportColorScheme2031(false);
-    context.setGraphemeClusterShaping2027(false);
-    context.setPrimaryGraphemeClusterShaping2027(false);
-    context.setAltGraphemeClusterShaping2027(false);
-    context.setInbandResizeNotifications2048(false);
-    context.setKittyPasteEvents5522(false);
-    context.resetInputModesLocked();
-    context.setColumnMode132(false);
-    context.setSyncUpdatesLocked(false);
-    context.clearAllKittyImages();
-    context.resetActiveScreenState();
-    context.publishSnapshot();
-    context.markActiveScreenDecstrDirty();
+pub fn applyDecstrReset(self: anytype) void {
+    self.core.resetParserState();
+    self.core.clearSavedCharsetState();
+    self.core.clearTitleBuffer();
+    self.core.setDefaultTitle();
+    self.interaction.report_color_scheme_2031 = false;
+    self.interaction.grapheme_cluster_shaping_2027 = false;
+    self.core.primary.setGraphemeClusterShaping2027(false);
+    self.core.alt.setGraphemeClusterShaping2027(false);
+    self.interaction.inband_resize_notifications_2048 = false;
+    self.interaction.kitty_paste_events_5522 = false;
+    self.resetInputModesLocked();
+    self.core.column_mode_132 = false;
+    self.setSyncUpdatesLocked(false);
+    self.clearAllKittyImages();
+    self.activeScreen().resetState();
+    @import("../core/input_modes.zig").publishSnapshot(self);
+    self.activeScreen().markDirtyAllWithReason(.decstr_soft_reset, @src());
 }
 
-pub fn applySgr(context: SgrContext, action: parser_csi.CsiAction, effective_sgr_param_count: *const fn (action: parser_csi.CsiAction) usize) void {
+pub fn applySgr(self: anytype, action: parser_csi.CsiAction, effective_sgr_param_count: *const fn (action: parser_csi.CsiAction) usize) void {
     const params = action.params;
     const n_params = effective_sgr_param_count(action);
-    const current_attrs = context.currentAttrs();
-    const default_attrs = context.defaultAttrs();
+    const screen = self.activeScreen();
+    const current_attrs = &screen.current_attrs;
+    const default_attrs = &screen.default_attrs;
     const log = app_logger.logger("terminal.sgr");
     log.logf(.debug, "sgr count={d} params={d},{d},{d},{d},{d},{d},{d},{d},{d},{d},{d},{d},{d},{d},{d},{d}", .{
         n_params, params[0], params[1], params[2], params[3], params[4], params[5], params[6], params[7], params[8], params[9], params[10], params[11], params[12], params[13], params[14], params[15],
@@ -265,7 +42,7 @@ pub fn applySgr(context: SgrContext, action: parser_csi.CsiAction, effective_sgr
                 const mode = params[i + 1];
                 if (mode == 5 and i + 2 < n_params) {
                     const idx = types.clampColorIndex(params[i + 2]);
-                    const color = context.paletteColor(idx);
+                    const color = self.paletteColor(idx);
                     switch (p) {
                         38 => current_attrs.fg = color,
                         48 => current_attrs.bg = color,
@@ -337,10 +114,10 @@ pub fn applySgr(context: SgrContext, action: parser_csi.CsiAction, effective_sgr
             39 => current_attrs.fg = default_attrs.fg,
             49 => current_attrs.bg = default_attrs.bg,
             59 => current_attrs.underline_color = default_attrs.underline_color,
-            30...37 => current_attrs.fg = context.paletteColor(@intCast(p - 30)),
-            40...47 => current_attrs.bg = context.paletteColor(@intCast(p - 40)),
-            90...97 => current_attrs.fg = context.paletteColor(@intCast(8 + (p - 90))),
-            100...107 => current_attrs.bg = context.paletteColor(@intCast(8 + (p - 100))),
+            30...37 => current_attrs.fg = self.paletteColor(@intCast(p - 30)),
+            40...47 => current_attrs.bg = self.paletteColor(@intCast(p - 40)),
+            90...97 => current_attrs.fg = self.paletteColor(@intCast(8 + (p - 90))),
+            100...107 => current_attrs.bg = self.paletteColor(@intCast(8 + (p - 100))),
             else => {},
         }
         i += 1;

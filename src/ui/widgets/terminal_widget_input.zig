@@ -1,7 +1,9 @@
 const std = @import("std");
 
 const app_shell = @import("../../app_shell.zig");
+const terminal_publication = @import("../../terminal/core/publication/terminal_publication.zig");
 const terminal_runtime = @import("../../terminal/core/terminal_runtime.zig");
+const terminal_types = @import("../../terminal/model/types.zig");
 const app_logger = @import("../../app_logger.zig");
 const shared_types = @import("../../types/mod.zig");
 
@@ -32,13 +34,13 @@ pub fn handleInput(
     const scale = shell.uiScaleFactor();
     const cache = &self.draw_cache;
     const view_cells = cache.cells.items;
-    const history_len = cache.history_len;
     const rows = cache.rows;
     const cols = cache.cols;
-    const total_lines = cache.total_lines;
-    const scroll_offset = cache.scroll_offset;
-    const end_line = total_lines - scroll_offset;
-    const start_line = if (end_line > rows) end_line - rows else 0;
+    const viewport = terminal_publication.viewportInfo(cache);
+    const history_len = viewport.history_len;
+    const total_lines = viewport.total_lines;
+    const scroll_offset = viewport.scroll_offset;
+    const start_line = viewport.start_line;
     const has_visible_grid = rows > 0 and cols > 0 and view_cells.len >= rows * cols;
     const r = shell.rendererPtr();
     const geom = r.terminalCellGeometry();
@@ -65,10 +67,10 @@ pub fn handleInput(
     const ctrl = input_batch.mods.ctrl;
     const shift = input_batch.mods.shift;
     const alt = input_batch.mods.alt;
-    var mod: terminal_runtime.Modifier = terminal_runtime.VTERM_MOD_NONE;
-    if (shift) mod |= terminal_runtime.VTERM_MOD_SHIFT;
-    if (alt) mod |= terminal_runtime.VTERM_MOD_ALT;
-    if (ctrl) mod |= terminal_runtime.VTERM_MOD_CTRL;
+    var mod: terminal_types.Modifier = terminal_types.VTERM_MOD_NONE;
+    if (shift) mod |= terminal_types.VTERM_MOD_SHIFT;
+    if (alt) mod |= terminal_types.VTERM_MOD_ALT;
+    if (ctrl) mod |= terminal_types.VTERM_MOD_CTRL;
 
     const wheel_delta = if (in_terminal) input_batch.scroll.y else 0;
     var wheel_steps: i32 = 0;
@@ -162,7 +164,7 @@ pub fn handleInput(
                     .start_line = start_line,
                     .scroll_offset = scroll_offset,
                     .has_visible_grid = has_visible_grid,
-                    .cache_selection_active = cache.selection_active,
+                    .cache_selection_active = cache.hasSelection(),
                     .mod = mod,
                 },
                 view_cells,

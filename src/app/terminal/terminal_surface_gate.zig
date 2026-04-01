@@ -1,12 +1,12 @@
 const app_bootstrap = @import("../bootstrap.zig");
 const app_modes = @import("../modes/mod.zig");
 const app_terminal_tabs_runtime = @import("terminal_tabs_runtime.zig");
-const terminal_runtime = @import("../../terminal/core/terminal_runtime.zig");
+const workspace_mod = @import("../../terminal/core/workspace.zig");
 
 pub fn hasVisibleTerminalTabs(
     app_mode: app_bootstrap.AppMode,
     show_terminal: bool,
-    terminal_workspace: ?terminal_runtime.TerminalWorkspace,
+    terminal_workspace: ?workspace_mod.TerminalWorkspace,
     terminals_len: usize,
 ) bool {
     return app_modes.ide.supportsTerminalSurface(app_mode) and
@@ -17,7 +17,7 @@ pub fn hasVisibleTerminalTabs(
 pub fn hasTerminalInputScopeWithTabs(
     app_mode: app_bootstrap.AppMode,
     show_terminal: bool,
-    terminal_workspace: ?terminal_runtime.TerminalWorkspace,
+    terminal_workspace: ?workspace_mod.TerminalWorkspace,
     terminals_len: usize,
 ) bool {
     return app_modes.ide.hasTerminalInputScope(app_mode, show_terminal) and

@@ -1,10 +1,8 @@
 const std = @import("std");
 const parser_csi = @import("../parser/csi.zig");
-const screen_mod = @import("../model/screen.zig");
-const csi_mod = @import("csi.zig");
 
 pub fn handleSimpleCsi(
-    context: csi_mod.SimpleCsiContext,
+    self: anytype,
     action: parser_csi.CsiAction,
     param_len: usize,
     params: [parser_csi.max_params]i32,
@@ -14,7 +12,7 @@ pub fn handleSimpleCsi(
             return if (idx < parser_csi.max_params) local_params[idx] else default;
         }
     }.at;
-    const screen = context.activeScreen();
+    const screen = self.activeScreen();
 
     switch (action.final) {
         'A' => screen.cursorUp(@intCast(@max(1, get(params, 0, 1)))),
@@ -31,18 +29,18 @@ pub fn handleSimpleCsi(
         },
         'H', 'f' => screen.cursorPosAbsolute(@max(1, get(params, 0, 1)), @max(1, get(params, 1, 1))),
         'd' => screen.cursorRowAbsolute(@max(1, get(params, 0, 1))),
-        'J' => context.eraseDisplay(if (param_len > 0) params[0] else 0),
-        'K' => context.eraseLine(if (param_len > 0) params[0] else 0),
-        '@' => context.insertChars(@intCast(@max(1, get(params, 0, 1)))),
-        'P' => context.deleteChars(@intCast(@max(1, get(params, 0, 1)))),
-        'X' => context.eraseChars(@intCast(@max(1, get(params, 0, 1)))),
-        'L' => context.insertLines(@intCast(@max(1, get(params, 0, 1)))),
-        'M' => context.deleteLines(@intCast(@max(1, get(params, 0, 1)))),
+        'J' => self.eraseDisplay(if (param_len > 0) params[0] else 0),
+        'K' => self.eraseLine(if (param_len > 0) params[0] else 0),
+        '@' => self.insertChars(@intCast(@max(1, get(params, 0, 1)))),
+        'P' => self.deleteChars(@intCast(@max(1, get(params, 0, 1)))),
+        'X' => self.eraseChars(@intCast(@max(1, get(params, 0, 1)))),
+        'L' => self.insertLines(@intCast(@max(1, get(params, 0, 1)))),
+        'M' => self.deleteLines(@intCast(@max(1, get(params, 0, 1)))),
         'S' => {
             const count = @as(usize, @intCast(@max(1, get(params, 0, 1))));
-            context.scrollRegionUpWithOrigin(count, "csi.S.scroll_region_up");
+            self.scrollRegionUpWithOrigin(count, "csi.S.scroll_region_up");
         },
-        'T' => context.scrollRegionDown(@intCast(@max(1, get(params, 0, 1)))),
+        'T' => self.scrollRegionDown(@intCast(@max(1, get(params, 0, 1)))),
         'Z' => {
             var i: i32 = 0;
             const n = @max(1, get(params, 0, 1));
@@ -62,12 +60,12 @@ pub fn handleSimpleCsi(
 }
 
 pub fn handleSpecialCsi(
-    context: csi_mod.SpecialCsiContext,
+    self: anytype,
     action: parser_csi.CsiAction,
     param_len: usize,
     params: [parser_csi.max_params]i32,
 ) void {
-    const screen = context.activeScreen();
+    const screen = self.activeScreen();
     switch (action.final) {
         's' => {
             if (!action.private) {
@@ -83,27 +81,27 @@ pub fn handleSpecialCsi(
                     }
                     return;
                 }
-                context.saveCursor();
+                self.saveCursor();
             }
         },
         'u' => {
             if (action.leader == 0 and !action.private) {
-                context.restoreCursor();
+                self.restoreCursor();
                 return;
             }
             const flags: u32 = if (param_len > 0) @intCast(@max(0, params[0])) else 0;
             const mode: u32 = if (param_len > 1) @intCast(@max(0, params[1])) else 1;
             switch (action.leader) {
-                '>' => context.keyModePushLocked(flags),
-                '<' => context.keyModePopLocked(if (param_len > 0) @intCast(@max(1, params[0])) else 1),
-                '=' => context.keyModeModifyLocked(flags, mode),
-                '?' => context.keyModeQueryLocked(),
+                '>' => self.keyModePushLocked(flags),
+                '<' => self.keyModePopLocked(if (param_len > 0) @intCast(@max(1, params[0])) else 1),
+                '=' => self.keyModeModifyLocked(flags, mode),
+                '?' => self.keyModeQueryLocked(),
                 else => {},
             }
         },
         'q' => {
             if (action.leader == 0 and !action.private) {
-                context.setCursorStyle(if (param_len > 0) params[0] else 0);
+                self.setCursorStyle(if (param_len > 0) params[0] else 0);
             }
         },
         'g' => {

@@ -151,8 +151,8 @@ fn withSessionAndCapture(
     var capture = try PipeCapture.init();
     defer capture.deinit();
 
-    session.pty = capture.pty;
-    defer session.pty = null;
+    session.runtime.pty = capture.pty;
+    defer session.runtime.pty = null;
 
     try test_fn(session, &capture);
 }
@@ -166,8 +166,8 @@ fn expectKittyQueryReply(seq: []const u8, expected_reply: []const u8) !void {
     var capture = try PipeCapture.init();
     defer capture.deinit();
 
-    session.pty = capture.pty;
-    defer session.pty = null;
+    session.runtime.pty = capture.pty;
+    defer session.runtime.pty = null;
 
     kitty.parseKittyGraphics(session, seq);
     const reply = try capture.readReply(allocator);
@@ -184,8 +184,8 @@ fn expectKittyQueryNoReply(seq: []const u8) !void {
     var capture = try PipeCapture.init();
     defer capture.deinit();
 
-    session.pty = capture.pty;
-    defer session.pty = null;
+    session.runtime.pty = capture.pty;
+    defer session.runtime.pty = null;
 
     kitty.parseKittyGraphics(session, seq);
     try capture.expectNoReply();
@@ -234,10 +234,11 @@ test "kitty multipart T first chunk preserves auto-place through t continuations
     kitty.parseKittyGraphics(session, "a=t,i=7,O=2,m=1;AA==");
     kitty.parseKittyGraphics(session, "a=t,i=7,O=3;/w==");
 
-    try std.testing.expectEqual(@as(usize, 1), session.core.kitty_primary.images.items.len);
-    try std.testing.expectEqual(@as(usize, 1), session.core.kitty_primary.placements.items.len);
-    try std.testing.expectEqual(@as(u32, 7), session.core.kitty_primary.images.items[0].id);
-    try std.testing.expectEqual(@as(u32, 7), session.core.kitty_primary.placements.items[0].image_id);
+    const snapshot = session.snapshot();
+    try std.testing.expectEqual(@as(usize, 1), snapshot.kitty_images.len);
+    try std.testing.expectEqual(@as(usize, 1), snapshot.kitty_placements.len);
+    try std.testing.expectEqual(@as(u32, 7), snapshot.kitty_images[0].id);
+    try std.testing.expectEqual(@as(u32, 7), snapshot.kitty_placements[0].image_id);
 }
 
 test "kitty parse query rgba short payload emits ENODATA reply" {
@@ -1010,8 +1011,8 @@ test "kitty parse query temp medium chunk/offset preflight does not consume temp
     var capture = try PipeCapture.init();
     defer capture.deinit();
 
-    session.pty = capture.pty;
-    defer session.pty = null;
+    session.runtime.pty = capture.pty;
+    defer session.runtime.pty = null;
 
     const seq_q1_m = try std.fmt.allocPrint(allocator, "a=q,i=7,q=1,t=t,m=1,f=100;{s}", .{temp_path_b64});
     defer allocator.free(seq_q1_m);

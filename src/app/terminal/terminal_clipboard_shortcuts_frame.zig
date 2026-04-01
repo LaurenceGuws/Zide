@@ -7,12 +7,13 @@ const input_actions = @import("../../input/input_actions.zig");
 const app_shell = @import("../../app_shell.zig");
 const widgets = @import("../../ui/widgets.zig");
 const terminal_runtime = @import("../../terminal/core/terminal_runtime.zig");
+const workspace_mod = @import("../../terminal/core/workspace.zig");
 
 pub fn handle(
     actions: []const input_actions.InputAction,
     allocator: std.mem.Allocator,
     app_mode: app_bootstrap.AppMode,
-    terminal_workspace: *?terminal_runtime.TerminalWorkspace,
+    terminal_workspace: *?workspace_mod.TerminalWorkspace,
     terminals: []*terminal_runtime.PtyTerminalRuntime,
     terminal_widgets: []widgets.TerminalWidget,
     shell: *app_shell.Shell,

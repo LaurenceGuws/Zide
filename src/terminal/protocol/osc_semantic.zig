@@ -3,26 +3,6 @@ const app_logger = @import("../../app_logger.zig");
 const osc_util = @import("osc_util.zig");
 const semantic_prompt_mod = @import("../core/semantic_prompt.zig");
 
-pub const SessionFacade = struct {
-    state: SessionState,
-
-    pub fn from(session: anytype) SessionFacade {
-        return .{
-            .state = SessionState.from(session),
-        };
-    }
-
-    pub fn parseSemanticPrompt(self: *const SessionFacade, text: []const u8) void {
-        var state = self.state;
-        parseSemanticPromptWithState(&state, text);
-    }
-
-    pub fn parseUserVar(self: *const SessionFacade, text: []const u8) void {
-        var state = self.state;
-        parseUserVarWithState(&state, text);
-    }
-};
-
 const SessionState = struct {
     allocator: std.mem.Allocator,
     semantic_prompt: *semantic_prompt_mod.SemanticPromptState,
@@ -43,12 +23,14 @@ const SessionState = struct {
     }
 };
 
-pub fn parseSemanticPrompt(session: SessionFacade, text: []const u8) void {
-    session.parseSemanticPrompt(text);
+pub fn parseSemanticPrompt(self: anytype, text: []const u8) void {
+    var state = SessionState.from(self);
+    parseSemanticPromptWithState(&state, text);
 }
 
-pub fn parseUserVar(session: SessionFacade, text: []const u8) void {
-    session.parseUserVar(text);
+pub fn parseUserVar(self: anytype, text: []const u8) void {
+    var state = SessionState.from(self);
+    parseUserVarWithState(&state, text);
 }
 
 fn parseSemanticPromptWithState(state: *SessionState, text: []const u8) void {

@@ -1,13 +1,12 @@
 const std = @import("std");
 const kitty_mod = @import("../kitty/graphics.zig");
-const state_reset = @import("state_reset.zig");
 
 pub fn saveCursor(self: anytype) void {
-    state_reset.saveCursor(self);
+    self.core.saveCursorState();
 }
 
 pub fn restoreCursor(self: anytype) void {
-    state_reset.restoreCursor(self);
+    self.core.restoreCursorState();
 }
 
 pub fn enterAltScreenCore(self: anytype, clear: bool, save_cursor: bool) bool {

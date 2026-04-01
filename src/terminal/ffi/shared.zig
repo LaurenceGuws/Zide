@@ -1,6 +1,6 @@
 const std = @import("std");
 const terminal_runtime = @import("../core/terminal_runtime.zig");
-const session_lifecycle = @import("../core/session_lifecycle.zig");
+const session_lifecycle = @import("../core/session/lifecycle.zig");
 const types = @import("../model/types.zig");
 const app_logger = @import("../../app_logger.zig");
 
@@ -591,8 +591,8 @@ fn currentDerivedEventState(handle: *Handle) !DerivedEventState {
     defer handle.session.unlock();
 
     return .{
-        .title = try copyTextInto(handle.allocator, &handle.scratch_title, handle.session.core.titleText()),
-        .cwd = try copyTextInto(handle.allocator, &handle.scratch_cwd, handle.session.core.cwdText()),
+        .title = try copyTextInto(handle.allocator, &handle.scratch_title, handle.session.titleText()),
+        .cwd = try copyTextInto(handle.allocator, &handle.scratch_cwd, handle.session.cwdText()),
         .alive = handle.session.isAlive(),
         .exit_code = session_lifecycle.childExitCode(handle.session),
     };

@@ -68,7 +68,7 @@ pub const LatencyContext = struct {
 
 pub const Snapshot = struct {
     session_ptr: usize = 0,
-    current_generation: u64 = 0,
+    pending_generation: u64 = 0,
     published_generation: u64 = 0,
     presented_generation: u64 = 0,
     redraw_pending: bool = false,
@@ -79,10 +79,10 @@ pub const Snapshot = struct {
 pub fn observe(state: anytype, now: f64) Snapshot {
     const pacing = &state.terminal_frame_pacing;
     const frame_state = activeFrameState(state);
-    const current_generation = frame_state.current_generation;
+    const pending_generation = frame_state.pending_generation;
     const published_generation = frame_state.published_generation;
-    if (current_generation != pacing.last_observed_current_generation) {
-        pacing.last_observed_current_generation = current_generation;
+    if (pending_generation != pacing.last_observed_pending_generation) {
+        pacing.last_observed_pending_generation = pending_generation;
         pacing.last_generation_change_time = now;
     }
     if (published_generation != pacing.last_observed_generation) {
@@ -91,10 +91,10 @@ pub fn observe(state: anytype, now: f64) Snapshot {
     }
 
     const redraw_pending = published_generation != frame_state.presented_generation;
-    const parse_backlog = current_generation != published_generation;
+    const parse_backlog = pending_generation != published_generation;
     return .{
         .session_ptr = frame_state.session_ptr,
-        .current_generation = current_generation,
+        .pending_generation = pending_generation,
         .published_generation = published_generation,
         .presented_generation = frame_state.presented_generation,
         .redraw_pending = redraw_pending,
@@ -317,7 +317,7 @@ pub fn logFramePacing(state: anytype, now: f64, snapshot: Snapshot, drew: bool, 
         default_sleep_policy.medium_idle_frame_limit,
     );
     const published_delta = snapshot.published_generation -| snapshot.presented_generation;
-    const current_delta = snapshot.current_generation -| snapshot.published_generation;
+    const current_delta = snapshot.pending_generation -| snapshot.published_generation;
     const draw_gap_ms = if (pacing.last_draw_time > 0) (now - pacing.last_draw_time) * 1000.0 else 0.0;
 
     log.logFields(.info, "frame_pacing", &.{
@@ -335,7 +335,7 @@ pub fn logFramePacing(state: anytype, now: f64, snapshot: Snapshot, drew: bool, 
         .{ .key = "idle_frames", .value = .{ .unsigned = pacing.idle_frames } },
         .{ .key = "presented_generation", .value = .{ .unsigned = snapshot.presented_generation } },
         .{ .key = "published_generation", .value = .{ .unsigned = snapshot.published_generation } },
-        .{ .key = "current_generation", .value = .{ .unsigned = snapshot.current_generation } },
+        .{ .key = "pending_generation", .value = .{ .unsigned = snapshot.pending_generation } },
         .{ .key = "published_delta", .value = .{ .unsigned = published_delta } },
         .{ .key = "current_delta", .value = .{ .unsigned = current_delta } },
     });
@@ -359,7 +359,7 @@ pub fn logFramePacing(state: anytype, now: f64, snapshot: Snapshot, drew: bool, 
                 if (sleep_s) |v| v * 1000.0 else 0.0,
                 snapshot.presented_generation,
                 snapshot.published_generation,
-                snapshot.current_generation,
+                snapshot.pending_generation,
             },
         );
     }
@@ -413,7 +413,7 @@ pub fn logInputLatency(state: anytype, poll_ms: f64, build_ms: f64, update_ms: f
 fn activeFrameState(state: anytype) struct {
     has_data: bool,
     session_ptr: usize,
-    current_generation: u64,
+    pending_generation: u64,
     published_generation: u64,
     presented_generation: u64,
 } {
@@ -422,7 +422,7 @@ fn activeFrameState(state: anytype) struct {
         return .{
             .has_data = false,
             .session_ptr = 0,
-            .current_generation = 0,
+            .pending_generation = 0,
             .published_generation = 0,
             .presented_generation = 0,
         };
@@ -433,7 +433,7 @@ fn activeFrameState(state: anytype) struct {
         return .{
             .has_data = frame_state.has_data,
             .session_ptr = frame_state.session_ptr,
-            .current_generation = frame_state.current_generation,
+            .pending_generation = frame_state.pending_generation,
             .published_generation = frame_state.published_generation,
             .presented_generation = frame_state.presented_generation,
         };
@@ -441,7 +441,7 @@ fn activeFrameState(state: anytype) struct {
     return .{
         .has_data = false,
         .session_ptr = 0,
-        .current_generation = 0,
+        .pending_generation = 0,
         .published_generation = 0,
         .presented_generation = 0,
     };
@@ -508,14 +508,14 @@ test "observe keeps redraw pending until published generation is presented" {
         fn activeFrameState(_: *@This()) struct {
             has_data: bool,
             session_ptr: usize,
-            current_generation: u64,
+            pending_generation: u64,
             published_generation: u64,
             presented_generation: u64,
         } {
             return .{
                 .has_data = false,
                 .session_ptr = 0x1234,
-                .current_generation = 14,
+                .pending_generation = 14,
                 .published_generation = 13,
                 .presented_generation = 12,
             };

@@ -3,23 +3,7 @@ const builtin = @import("builtin");
 const osc_util = @import("osc_util.zig");
 const app_logger = @import("../../app_logger.zig");
 
-pub const SessionFacade = struct {
-    allocator: std.mem.Allocator,
-    cwd: osc_util.SessionFacade,
-
-    pub fn from(session: anytype) SessionFacade {
-        return .{
-            .allocator = session.allocator,
-            .cwd = osc_util.SessionFacade.from(session),
-        };
-    }
-
-    pub fn normalizeCwd(self: *const SessionFacade, raw_path: []const u8) void {
-        osc_util.normalizeCwd(self.cwd, raw_path);
-    }
-};
-
-pub fn parseCwd(session: SessionFacade, text: []const u8) void {
+pub fn parseCwd(self: anytype, text: []const u8) void {
     const prefix = "file://";
     if (!std.mem.startsWith(u8, text, prefix)) return;
     const rest = text[prefix.len..];
@@ -30,10 +14,10 @@ pub fn parseCwd(session: SessionFacade, text: []const u8) void {
     if (!oscCwdHostOk(host)) return;
 
     var decoded = std.ArrayList(u8).empty;
-    defer decoded.deinit(session.allocator);
-    if (!osc_util.decodeOscPercent(session.allocator, &decoded, raw_path)) return;
+    defer decoded.deinit(self.allocator);
+    if (!osc_util.decodeOscPercent(self.allocator, &decoded, raw_path)) return;
 
-    session.normalizeCwd(decoded.items);
+    osc_util.normalizeCwd(self, decoded.items);
 }
 
 fn oscCwdHostOk(host: []const u8) bool {

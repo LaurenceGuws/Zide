@@ -3,7 +3,7 @@ const builtin = @import("builtin");
 const app_logger = @import("../../app_logger.zig");
 const terminal_runtime = @import("../../terminal/core/terminal_runtime.zig");
 
-const TerminalSession = terminal_runtime.PtyTerminalRuntime;
+const PtyTerminalRuntime = terminal_runtime.PtyTerminalRuntime;
 
 fn shellSingleQuoteAlloc(allocator: std.mem.Allocator, value: []const u8) ![]u8 {
     var out = std.ArrayList(u8).empty;
@@ -22,7 +22,7 @@ fn shellSingleQuoteAlloc(allocator: std.mem.Allocator, value: []const u8) ![]u8 
 
 pub fn openInPager(
     allocator: std.mem.Allocator,
-    term: *TerminalSession,
+    term: *PtyTerminalRuntime,
 ) !bool {
     const log = app_logger.logger("terminal.scrollback.pager");
     const text = try term.scrollbackAnsiTextAlloc(allocator);

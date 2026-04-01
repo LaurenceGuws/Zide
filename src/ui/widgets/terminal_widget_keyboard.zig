@@ -3,6 +3,7 @@ const builtin = @import("builtin");
 
 const terminal_runtime = @import("../../terminal/core/terminal_runtime.zig");
 const terminal_types = @import("../../terminal/model/types.zig");
+const input_mod = @import("../../terminal/input/input.zig");
 const key_encoder = @import("../../terminal/input/key_encoder.zig");
 const alt_probe = @import("../../terminal/input/alternate_probe.zig");
 const app_logger = @import("../../app_logger.zig");
@@ -22,7 +23,7 @@ pub fn handleKeyboardInput(
     allow_input: bool,
     suppress_shortcuts: bool,
     input_batch: *shared_types.input.InputBatch,
-    mod: terminal_runtime.Modifier,
+    mod: terminal_types.Modifier,
 ) !InputResult {
     _ = allow_input;
     var result = InputResult{};
@@ -140,7 +141,7 @@ pub fn handleKeyboardInput(
                 }
                 continue;
             }
-            const action: terminal_runtime.KeyAction = if (event.key.repeated) .repeat else .press;
+            const action: input_mod.KeyAction = if (event.key.repeated) .repeat else .press;
             if (action == .repeat and !self.session.autoRepeatEnabled()) {
                 key_log.logf(.info, "skip key={d} action=repeat reason=auto_repeat_disabled", .{@intFromEnum(key)});
                 continue;
@@ -277,11 +278,11 @@ test "suppressed terminal clipboard shortcuts do not count as live-reset input" 
     _ = shared;
 }
 
-fn keyModFromEvent(key_event: shared_types.input.KeyEvent) terminal_runtime.Modifier {
-    var m: terminal_runtime.Modifier = terminal_runtime.VTERM_MOD_NONE;
-    if (key_event.mods.shift) m |= terminal_runtime.VTERM_MOD_SHIFT;
-    if (key_event.mods.alt) m |= terminal_runtime.VTERM_MOD_ALT;
-    if (key_event.mods.ctrl) m |= terminal_runtime.VTERM_MOD_CTRL;
+fn keyModFromEvent(key_event: shared_types.input.KeyEvent) terminal_types.Modifier {
+    var m: terminal_types.Modifier = terminal_types.VTERM_MOD_NONE;
+    if (key_event.mods.shift) m |= terminal_types.VTERM_MOD_SHIFT;
+    if (key_event.mods.alt) m |= terminal_types.VTERM_MOD_ALT;
+    if (key_event.mods.ctrl) m |= terminal_types.VTERM_MOD_CTRL;
     return m;
 }
 

@@ -5,7 +5,7 @@ const app_terminal_surface_gate = @import("terminal_surface_gate.zig");
 const app_shell = @import("../../app_shell.zig");
 const shared_types = @import("../../types/mod.zig");
 const widgets = @import("../../ui/widgets.zig");
-const terminal_runtime = @import("../../terminal/core/terminal_runtime.zig");
+const workspace_mod = @import("../../terminal/core/workspace.zig");
 
 const layout_types = shared_types.layout;
 const input_types = shared_types.input;
@@ -63,7 +63,7 @@ pub const Hooks = struct {
 pub fn handle(
     app_mode: app_bootstrap.AppMode,
     show_terminal: bool,
-    terminal_workspace: *?terminal_runtime.TerminalWorkspace,
+    terminal_workspace: *?workspace_mod.TerminalWorkspace,
     terminals_len: usize,
     terminal_widgets: []widgets.TerminalWidget,
     tab_bar_dragging: bool,

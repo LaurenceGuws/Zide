@@ -2,7 +2,7 @@ const std = @import("std");
 const builtin = @import("builtin");
 const terminal_runtime = @import("core/terminal_runtime.zig");
 const terminal_publication = @import("core/terminal_publication.zig");
-const terminal_debug = @import("core/terminal_debug.zig");
+const terminal_debug = @import("core/session/debug_ops.zig");
 const screen_mod = @import("model/screen.zig");
 const pty_mod = @import("io/pty.zig");
 const snapshot_mod = @import("core/snapshot.zig");
@@ -475,28 +475,15 @@ fn runFixtureInputPhase(session: *terminal_runtime.PtyTerminalRuntime, input: []
 }
 
 fn seedOsc5522Clipboard(session: *terminal_runtime.PtyTerminalRuntime, meta: FixtureMeta) !void {
-    if (meta.osc_5522_clipboard_text) |text| {
-        session.core.kitty_osc5522_clipboard_text.clearRetainingCapacity();
-        try session.core.kitty_osc5522_clipboard_text.ensureTotalCapacity(session.allocator, text.len);
-        try session.core.kitty_osc5522_clipboard_text.appendSlice(session.allocator, text);
-    }
-    if (meta.osc_5522_clipboard_html) |html| {
-        session.core.kitty_osc5522_clipboard_html.clearRetainingCapacity();
-        try session.core.kitty_osc5522_clipboard_html.ensureTotalCapacity(session.allocator, html.len);
-        try session.core.kitty_osc5522_clipboard_html.appendSlice(session.allocator, html);
-    }
-    if (meta.osc_5522_clipboard_uri_list) |uri_list| {
-        session.core.kitty_osc5522_clipboard_uri_list.clearRetainingCapacity();
-        try session.core.kitty_osc5522_clipboard_uri_list.ensureTotalCapacity(session.allocator, uri_list.len);
-        try session.core.kitty_osc5522_clipboard_uri_list.appendSlice(session.allocator, uri_list);
-    }
-    if (meta.osc_5522_clipboard_png_hex) |hex| {
-        const bytes = try decodeHex(session.allocator, hex);
-        defer session.allocator.free(bytes);
-        session.core.kitty_osc5522_clipboard_png.clearRetainingCapacity();
-        try session.core.kitty_osc5522_clipboard_png.ensureTotalCapacity(session.allocator, bytes.len);
-        try session.core.kitty_osc5522_clipboard_png.appendSlice(session.allocator, bytes);
-    }
+    const png = if (meta.osc_5522_clipboard_png_hex) |hex| try decodeHex(session.allocator, hex) else null;
+    defer if (png) |bytes| session.allocator.free(bytes);
+    try terminal_debug.debugSeedOsc5522Clipboard(
+        session,
+        meta.osc_5522_clipboard_text,
+        meta.osc_5522_clipboard_html,
+        meta.osc_5522_clipboard_uri_list,
+        png,
+    );
 }
 
 pub fn runEncoderFixture(
@@ -763,7 +750,7 @@ fn observedFixtureState(
         .generation = snapshot.generation,
         .baseline_generation = baseline_publication.generation,
         .history_len = if (cache) |c| c.history_len else null,
-        .total_lines = if (cache) |c| c.total_lines else null,
+        .total_lines = if (cache) |c| c.totalLines() else null,
         .scroll_offset = if (cache) |c| c.scroll_offset else null,
         .row_spans = try row_spans.toOwnedSlice(allocator),
     };

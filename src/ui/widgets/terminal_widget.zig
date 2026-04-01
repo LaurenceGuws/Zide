@@ -1,7 +1,8 @@
 const std = @import("std");
 const app_shell = @import("../../app_shell.zig");
 const terminal_runtime = @import("../../terminal/core/terminal_runtime.zig");
-const terminal_publication = @import("../../terminal/core/terminal_publication.zig");
+const terminal_publication = @import("../../terminal/core/publication/terminal_publication.zig");
+const terminal_selection = @import("../../terminal/core/selection.zig");
 const terminal_types = @import("../../terminal/model/types.zig");
 const key_encoder = @import("../../terminal/input/key_encoder.zig");
 const app_logger = @import("../../app_logger.zig");
@@ -12,10 +13,10 @@ const kitty_mod = @import("terminal_widget_kitty.zig");
 const paste_mod = @import("terminal_widget_paste.zig");
 const draw_mod = @import("terminal_widget_draw.zig");
 const input_mod = @import("terminal_widget_input.zig");
-const render_cache_mod = @import("../../terminal/core/render_cache.zig");
+const render_cache_mod = @import("../../terminal/core/publication/render_cache.zig");
 
 const Shell = app_shell.Shell;
-const TerminalSession = terminal_runtime.PtyTerminalRuntime;
+const PtyTerminalRuntime = terminal_runtime.PtyTerminalRuntime;
 const CursorPos = terminal_publication.CursorPos;
 const KittyImage = terminal_publication.KittyImage;
 const KittyPlacement = terminal_publication.KittyPlacement;
@@ -38,14 +39,12 @@ pub const TerminalWidget = struct {
         window,
         pane,
     };
-    session: *TerminalSession,
+    session: *PtyTerminalRuntime,
     blink_style: BlinkStyle = .kitty,
     kitty: kitty_mod.KittyState,
     hover: hover_mod.HoverState = .{},
     pending_open: ?PendingOpen = null,
-    last_draw_log_time: f64 = 0,
     draw_cache: RenderCache,
-    presented_generation_cells: std.ArrayList(u64),
     partial_draw_rows: std.ArrayList(bool),
     partial_draw_span_counts: std.ArrayList(u8),
     partial_draw_spans: std.ArrayList([render_cache_mod.max_row_dirty_spans]render_cache_mod.RowDirtySpan),
@@ -69,7 +68,7 @@ pub const TerminalWidget = struct {
     last_focus_reported: ?bool = null,
     ui_focused: bool = true,
     ui_window_focused: bool = true,
-    selection_gesture: terminal_runtime.SelectionGesture = .{},
+    selection_gesture: terminal_selection.SelectionGesture = .{},
     selection_press_origin: ?shared_types.input.MousePos = null,
     selection_drag_active: bool = false,
 
@@ -81,16 +80,14 @@ pub const TerminalWidget = struct {
         scroll_offset: usize,
     };
 
-    pub fn init(session: *TerminalSession, blink_style: BlinkStyle) TerminalWidget {
+    pub fn init(session: *PtyTerminalRuntime, blink_style: BlinkStyle) TerminalWidget {
         return .{
             .session = session,
             .blink_style = blink_style,
             .kitty = kitty_mod.KittyState.init(session.allocator),
             .hover = .{},
             .pending_open = null,
-            .last_draw_log_time = 0,
             .draw_cache = RenderCache.init(),
-            .presented_generation_cells = std.ArrayList(u64).empty,
             .partial_draw_rows = std.ArrayList(bool).empty,
             .partial_draw_span_counts = std.ArrayList(u8).empty,
             .partial_draw_spans = std.ArrayList([render_cache_mod.max_row_dirty_spans]render_cache_mod.RowDirtySpan).empty,
@@ -211,7 +208,6 @@ pub const TerminalWidget = struct {
             self.pending_open = null;
         }
         self.draw_cache.deinit(self.session.allocator);
-        self.presented_generation_cells.deinit(self.session.allocator);
         self.partial_draw_rows.deinit(self.session.allocator);
         self.partial_draw_span_counts.deinit(self.session.allocator);
         self.partial_draw_spans.deinit(self.session.allocator);
@@ -233,24 +229,25 @@ pub const TerminalWidget = struct {
     pub fn dumpVisibleAsciiView(self: *TerminalWidget) !void {
         var out = std.ArrayList(u8).empty;
         defer out.deinit(self.session.allocator);
+        const dump_info = terminal_publication.visibleViewDumpInfo(&self.draw_cache);
 
         try out.writer(self.session.allocator).print(
             "# Zide terminal visible-view dump\npath={s}\nrows={d} cols={d} generation={d} scroll_offset={d} alt_active={d} cursor={d}:{d} cursor_visible={d} screen_reverse={d}\n",
             .{
                 visible_ascii_dump_path,
-                self.draw_cache.rows,
-                self.draw_cache.cols,
-                self.draw_cache.generation,
-                self.draw_cache.scroll_offset,
-                @intFromBool(self.draw_cache.alt_active),
-                self.draw_cache.cursor.row,
-                self.draw_cache.cursor.col,
-                @intFromBool(self.draw_cache.cursor_visible),
-                @intFromBool(self.draw_cache.screen_reverse),
+                dump_info.rows,
+                dump_info.cols,
+                dump_info.generation,
+                dump_info.scroll_offset,
+                @intFromBool(dump_info.alt_active),
+                dump_info.cursor.row,
+                dump_info.cursor.col,
+                @intFromBool(dump_info.draw_cursor_visible),
+                @intFromBool(dump_info.screen_reverse),
             },
         );
 
-        try appendViewportColumnRuler(&out, self.session.allocator, self.draw_cache.cols);
+        try appendViewportColumnRuler(&out, self.session.allocator, dump_info.cols);
         try out.append(self.session.allocator, '\n');
 
         if (self.draw_cache.rows == 0 or self.draw_cache.cols == 0 or self.draw_cache.cells.items.len == 0) {
@@ -318,13 +315,13 @@ pub const TerminalWidget = struct {
 
     pub fn scrollbarModel(self: *const TerminalWidget) ScrollbarModel {
         const cache = &self.draw_cache;
-        const allowed = !cache.alt_active and !self.session.mouseReportingEnabled() and cache.rows > 0 and cache.total_lines > cache.rows;
+        const scrollbar = terminal_publication.scrollbarInfo(cache, self.session.mouseReportingEnabled());
         return .{
-            .allowed = allowed,
-            .visible = allowed,
-            .rows = cache.rows,
-            .total_lines = cache.total_lines,
-            .scroll_offset = cache.scroll_offset,
+            .allowed = scrollbar.allowed,
+            .visible = scrollbar.allowed,
+            .rows = scrollbar.rows,
+            .total_lines = scrollbar.total_lines,
+            .scroll_offset = scrollbar.scroll_offset,
         };
     }
 
@@ -352,7 +349,7 @@ pub const TerminalWidget = struct {
                     @intFromPtr(self.session),
                     self.last_render_generation,
                     capture.presented.generation,
-                    self.session.currentGeneration(),
+                    self.session.pendingGeneration(),
                     self.session.publishedGeneration(),
                     self.session.presentedGeneration(),
                     @intFromBool(self.terminal_texture_ready),
@@ -369,7 +366,7 @@ pub const TerminalWidget = struct {
                         @intFromPtr(self.session),
                         capture.presented.generation,
                         published_before_draw,
-                        self.session.currentGeneration(),
+                        self.session.pendingGeneration(),
                         self.session.presentedGeneration(),
                     },
                 );
@@ -388,7 +385,7 @@ pub const TerminalWidget = struct {
                             @intFromPtr(self.session),
                             self.last_render_generation,
                             refreshed_capture.presented.generation,
-                            self.session.currentGeneration(),
+                            self.session.pendingGeneration(),
                             self.session.publishedGeneration(),
                             self.session.presentedGeneration(),
                             @intFromBool(self.terminal_texture_ready),
@@ -488,13 +485,13 @@ fn appendResolvedBackgroundRuns(
         return;
     }
 
-    const cursor_here = cache.cursor_visible and cache.cursor.row == row and cache.cursor.col < cache.cols;
+    const run_info = terminal_publication.backgroundRunInfo(&cache, row);
     try out.writer(allocator).print(
         "row={d:0>3} cursor_here={d} cursor_col={d} runs=",
         .{
             row,
-            @intFromBool(cursor_here),
-            if (cursor_here) @as(i64, @intCast(cache.cursor.col)) else -1,
+            @intFromBool(run_info.cursor_here),
+            if (run_info.cursor_col) |cursor_col| @as(i64, @intCast(cursor_col)) else -1,
         },
     );
 
@@ -502,12 +499,12 @@ fn appendResolvedBackgroundRuns(
     while (col < cache.cols) {
         const idx = row_start + col;
         if (idx >= cache.cells.items.len) break;
-        const run_color = resolvedBackgroundColor(cache.cells.items[idx], cache.screen_reverse);
+        const run_color = resolvedBackgroundColor(cache.cells.items[idx], run_info.screen_reverse);
         var end_col = col;
         while (end_col + 1 < cache.cols) : (end_col += 1) {
             const next_idx = row_start + end_col + 1;
             if (next_idx >= cache.cells.items.len) break;
-            const next_color = resolvedBackgroundColor(cache.cells.items[next_idx], cache.screen_reverse);
+            const next_color = resolvedBackgroundColor(cache.cells.items[next_idx], run_info.screen_reverse);
             if (!sameColor(run_color, next_color)) break;
         }
         try out.writer(allocator).print(

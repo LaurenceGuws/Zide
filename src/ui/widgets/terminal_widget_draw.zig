@@ -1,7 +1,7 @@
 const std = @import("std");
 const app_shell = @import("../../app_shell.zig");
-const terminal_publication = @import("../../terminal/core/terminal_publication.zig");
-const render_cache_mod = @import("../../terminal/core/render_cache.zig");
+const terminal_publication = @import("../../terminal/core/publication/terminal_publication.zig");
+const render_cache_mod = @import("../../terminal/core/publication/render_cache.zig");
 const app_logger = @import("../../app_logger.zig");
 const shared_types = @import("../../types/mod.zig");
 const time_utils = @import("../renderer/time_utils.zig");
@@ -11,8 +11,6 @@ const draw_overlay = @import("terminal_widget_draw_overlay.zig");
 const draw_texture = @import("terminal_widget_draw_texture.zig");
 
 const hover_mod = @import("terminal_widget_hover.zig");
-const kitty_mod = @import("terminal_widget_kitty.zig");
-
 const Shell = app_shell.Shell;
 const Color = app_shell.Color;
 const CursorPos = terminal_publication.CursorPos;
@@ -25,8 +23,6 @@ const PresentedRenderCache = terminal_publication.PresentedRenderCache;
 const PresentationFeedback = terminal_publication.PresentationFeedback;
 var frame_latency_seq: u64 = 0;
 var frame_latency_metrics: FrameLatencyMetrics = .{};
-var capture_burst_seq: u64 = 0;
-var capture_burst_frames_remaining: u32 = 0;
 
 pub const FrameLatencyMetrics = struct {
     seq: u64 = 0,
@@ -76,151 +72,14 @@ pub const DrawPreparation = struct {
 const ViewportTextureShiftPlan = draw_texture.ViewportTextureShiftPlan;
 const TextureUpdatePlan = draw_texture.TextureUpdatePlan;
 const FullFrameFastPathDecision = draw_texture.FullFrameFastPathDecision;
-const max_frame_generation_buckets = 8;
 
-const GenerationBucket = struct {
-    generation: u64,
-    count: usize,
-};
-
-const PresentedGenerationSummary = struct {
-    min_generation: u64 = 0,
-    max_generation: u64 = 0,
-    modal_generation: u64 = 0,
-    modal_count: usize = 0,
-    non_modal_count: usize = 0,
-    bbox_present: bool = false,
-    row_min: usize = 0,
-    row_max: usize = 0,
-    col_min: usize = 0,
-    col_max: usize = 0,
-};
-
-const RowContentSummary = struct {
-    row: usize,
-    occupied: usize,
-    first_col: i32,
-    last_col: i32,
-    hash: u64,
+const ViewportShiftState = struct {
+    rows: i32 = 0,
+    exposed_only: bool = false,
 };
 
 pub fn latestFrameLatencyMetrics() FrameLatencyMetrics {
     return frame_latency_metrics;
-}
-
-pub fn armCaptureBurst(frames: u32) u64 {
-    capture_burst_seq +%= 1;
-    capture_burst_frames_remaining = frames;
-    return capture_burst_seq;
-}
-
-fn maybeLogCaptureBurst(
-    self: anytype,
-    shell: *Shell,
-    cache: *const RenderCache,
-    width: f32,
-    height: f32,
-    viewport_w: f32,
-    viewport_h: f32,
-    visible_w: i32,
-    visible_h: i32,
-    rows: usize,
-    cols: usize,
-    full: bool,
-    partial: bool,
-    viewport_shift_rows: i32,
-    threshold_hit: bool,
-    fast_total_cells: usize,
-    fast_union_cells: usize,
-    partial_plan_cells: usize,
-    partial_plan_union_cells: usize,
-    current_reason: []const u8,
-    glyph_draw_stats: GlyphDrawStats,
-) void {
-    if (capture_burst_frames_remaining == 0) return;
-    const log = app_logger.logger("terminal.capture_trigger");
-    const r = shell.rendererPtr();
-    const geom = r.terminalCellGeometry();
-    const glyph_frame = r.terminal_glyph_cache.frameMetrics();
-    const atlas_frame = r.terminal_font.frameAtlasStats();
-    const generation_summary = summarizePresentedGeneration(self, cache);
-    var glyph_summary_buf: [96]u8 = undefined;
-    var batch_summary_buf: [64]u8 = undefined;
-    var atlas_summary_buf: [64]u8 = undefined;
-    var provenance_summary_buf: [128]u8 = undefined;
-    var row_summary_buf: [256]u8 = undefined;
-    const glyph_summary = std.fmt.bufPrint(&glyph_summary_buf, "d:{d} s:{d} st:{d} sp:{d} b:{d} f:{d}", .{
-        glyph_draw_stats.direct_text_glyphs,
-        glyph_draw_stats.shaped_glyphs,
-        glyph_draw_stats.shaped_text_glyphs,
-        glyph_draw_stats.special_sprite_glyphs,
-        glyph_draw_stats.box_glyphs,
-        glyph_draw_stats.fallback_cells,
-    }) catch "overflow";
-    const batch_summary = std.fmt.bufPrint(&batch_summary_buf, "{d}/{d}/{d}/{d}", .{
-        glyph_frame.quad_count,
-        glyph_frame.flush_count,
-        glyph_frame.draw_call_count,
-        glyph_frame.vertex_count,
-    }) catch "overflow";
-    const atlas_summary = std.fmt.bufPrint(&atlas_summary_buf, "{d}/{d}/{d}", .{
-        atlas_frame.glyph_cache_hits,
-        atlas_frame.glyph_cache_misses,
-        atlas_frame.rasterized_glyphs,
-    }) catch "overflow";
-    const provenance_summary = std.fmt.bufPrint(&provenance_summary_buf, "m:{d}:{d} min:{d} max:{d} non:{d} bbox:{d}:{d}..{d}/{d}..{d}", .{
-        generation_summary.modal_generation,
-        generation_summary.modal_count,
-        generation_summary.min_generation,
-        generation_summary.max_generation,
-        generation_summary.non_modal_count,
-        @intFromBool(generation_summary.bbox_present),
-        generation_summary.row_min,
-        generation_summary.row_max,
-        generation_summary.col_min,
-        generation_summary.col_max,
-    }) catch "overflow";
-    const row_summary = formatTopRowContentSummary(&row_summary_buf, cache, @min(rows, @as(usize, 6)));
-    const visible_cols: i32 = if (geom.cell_width_logical_exact > 0) @intFromFloat(std.math.floor(@max(viewport_w, 0) / geom.cell_width_logical_exact)) else 0;
-    const visible_rows: i32 = if (geom.cell_height_logical_exact > 0) @intFromFloat(std.math.floor(@max(viewport_h, 0) / geom.cell_height_logical_exact)) else 0;
-    log.logf(
-        .info,
-        "capture_burst seq={d} frames_left={d} gen={d} rows={d} cols={d} widget={d:.1}x{d:.1} viewport={d:.1}x{d:.1} visible_px={d}x{d} visible_cells={d}x{d} cell_dev={d}x{d} full={d} partial={d} shift_rows={d} threshold_hit={d} fast_total_cells={d} fast_union_cells={d} plan_cells={d} plan_union_cells={d} reason={s} glyphs={s} batch={s} atlas={s} prov={s} rowsum={s} texture_ready={d} last_render_gen={d}",
-        .{
-            capture_burst_seq,
-            capture_burst_frames_remaining,
-            cache.generation,
-            rows,
-            cols,
-            width,
-            height,
-            viewport_w,
-            viewport_h,
-            visible_w,
-            visible_h,
-            visible_cols,
-            visible_rows,
-            geom.cell_width_device_px,
-            geom.cell_height_device_px,
-            @intFromBool(full),
-            @intFromBool(partial),
-            viewport_shift_rows,
-            @intFromBool(threshold_hit),
-            fast_total_cells,
-            fast_union_cells,
-            partial_plan_cells,
-            partial_plan_union_cells,
-            current_reason,
-            glyph_summary,
-            batch_summary,
-            atlas_summary,
-            provenance_summary,
-            row_summary,
-            @intFromBool(self.terminal_texture_ready),
-            self.last_render_generation,
-        },
-    );
-    capture_burst_frames_remaining -= 1;
 }
 
 fn publishFrameLatencyMetrics(
@@ -262,328 +121,12 @@ fn snapToDevicePixel(value: f32, render_scale: f32) f32 {
     return @as(f32, @floatFromInt(@as(i32, @intFromFloat(std.math.round(value * scale))))) / scale;
 }
 
+fn toShellColor(color: terminal_publication.Color) Color {
+    return .{ .r = color.r, .g = color.g, .b = color.b, .a = color.a };
+}
+
 fn spansOverlap(start_a: usize, end_a: usize, start_b: usize, end_b: usize) bool {
     return start_a <= end_b and start_b <= end_a;
-}
-
-fn rowSlice(cells: []const Cell, cols_count: usize, row: usize) []const Cell {
-    const row_start = row * cols_count;
-    if (row_start + cols_count > cells.len) return cells[0..0];
-    return cells[row_start .. row_start + cols_count];
-}
-
-const ColumnProbe = struct {
-    col: usize,
-    top_row: i32,
-    bottom_row: i32,
-    occupied: usize,
-    hash: u64,
-};
-
-fn samplePresentedColumn(cells: []const Cell, rows: usize, cols: usize, col: usize) ColumnProbe {
-    if (rows == 0 or cols == 0 or col >= cols or cells.len < rows * cols) {
-        return .{ .col = col, .top_row = -1, .bottom_row = -1, .occupied = 0, .hash = 0 };
-    }
-
-    var top_row: i32 = -1;
-    var bottom_row: i32 = -1;
-    var occupied: usize = 0;
-    var hash = std.hash.Wyhash.init(0);
-
-    var row: usize = 0;
-    while (row < rows) : (row += 1) {
-        const cell = cells[row * cols + col];
-        const cp: u32 = cell.codepoint;
-        hash.update(std.mem.asBytes(&cp));
-        if (cp != ' ') {
-            occupied += 1;
-            if (top_row < 0) top_row = @intCast(row);
-            bottom_row = @intCast(row);
-        }
-    }
-
-    return .{
-        .col = col,
-        .top_row = top_row,
-        .bottom_row = bottom_row,
-        .occupied = occupied,
-        .hash = hash.final(),
-    };
-}
-
-fn logPresentedColumnProbe(cache: *const RenderCache) void {
-    const log = app_logger.logger("terminal.column_probe");
-    if (!log.enabled_file and !log.enabled_console) return;
-    if (cache.rows == 0 or cache.cols == 0) return;
-    if (cache.cells.items.len < cache.rows * cache.cols) return;
-
-    const sample_cols = [_]usize{ 58, 59, 60, 61, 62, 178, 179, 180, 181, 182 };
-    var buf: [512]u8 = undefined;
-    var fbs = std.io.fixedBufferStream(&buf);
-    const writer = fbs.writer();
-    var first = true;
-
-    for (sample_cols) |raw_col| {
-        const col = if (cache.cols == 0) 0 else @min(raw_col, cache.cols - 1);
-        const probe = samplePresentedColumn(cache.cells.items, cache.rows, cache.cols, col);
-        if (!first) writer.writeAll(" ") catch return;
-        first = false;
-        writer.print(
-            "c{d}=t{d}:b{d}:o{d}:h{x}",
-            .{ probe.col, probe.top_row, probe.bottom_row, probe.occupied, probe.hash },
-        ) catch return;
-    }
-
-    log.logf(
-        .info,
-        "gen={d} rows={d} cols={d} {s}",
-        .{ cache.generation, cache.rows, cache.cols, fbs.getWritten() },
-    );
-}
-
-fn ensurePresentedGenerationCells(self: anytype, rows: usize, cols: usize) !void {
-    const total = rows * cols;
-    try self.presented_generation_cells.resize(self.session.allocator, total);
-}
-
-fn fillPresentedGenerationCells(self: anytype, rows: usize, cols: usize, generation: u64) void {
-    const total = rows * cols;
-    if (self.presented_generation_cells.items.len < total) return;
-    @memset(self.presented_generation_cells.items[0..total], generation);
-}
-
-fn markPresentedGenerationRowRange(self: anytype, rows: usize, cols: usize, row: usize, col_start: usize, col_end: usize, generation: u64) void {
-    if (row >= rows or cols == 0 or self.presented_generation_cells.items.len < rows * cols) return;
-    const start = @min(col_start, cols - 1);
-    const end = @min(col_end, cols - 1);
-    if (end < start) return;
-    const row_offset = row * cols;
-    @memset(self.presented_generation_cells.items[row_offset + start .. row_offset + end + 1], generation);
-}
-
-fn shiftPresentedGenerationCells(self: anytype, rows: usize, cols: usize, viewport_shift_rows: i32) void {
-    if (rows == 0 or cols == 0 or viewport_shift_rows == 0) return;
-    const total = rows * cols;
-    if (self.presented_generation_cells.items.len < total) return;
-    const abs_shift: usize = @intCast(@abs(viewport_shift_rows));
-    if (abs_shift == 0 or abs_shift >= rows) return;
-    const row_width = cols;
-    if (viewport_shift_rows > 0) {
-        var row: usize = 0;
-        while (row + abs_shift < rows) : (row += 1) {
-            const dst = row * row_width;
-            const src = (row + abs_shift) * row_width;
-            std.mem.copyForwards(u64, self.presented_generation_cells.items[dst .. dst + row_width], self.presented_generation_cells.items[src .. src + row_width]);
-        }
-    } else {
-        var row: usize = rows - abs_shift;
-        while (true) {
-            const dst = (row + abs_shift) * row_width;
-            const src = row * row_width;
-            std.mem.copyBackwards(u64, self.presented_generation_cells.items[dst .. dst + row_width], self.presented_generation_cells.items[src .. src + row_width]);
-            if (row == 0) break;
-            row -= 1;
-        }
-    }
-}
-
-fn insertGenerationBucket(buckets: *[max_frame_generation_buckets]GenerationBucket, bucket_count: *usize, generation: u64) void {
-    var idx: usize = 0;
-    while (idx < bucket_count.*) : (idx += 1) {
-        if (buckets[idx].generation == generation) {
-            buckets[idx].count += 1;
-            return;
-        }
-    }
-    if (bucket_count.* < buckets.len) {
-        buckets[bucket_count.*] = .{ .generation = generation, .count = 1 };
-        bucket_count.* += 1;
-        return;
-    }
-    buckets[buckets.len - 1].count += 1;
-}
-
-fn logPresentedGenerationProvenance(self: anytype, cache: *const RenderCache) void {
-    const log = app_logger.logger("terminal.frame_provenance");
-    if (!log.enabled_file and !log.enabled_console) return;
-    const summary = summarizePresentedGeneration(self, cache);
-    log.logf(
-        .info,
-        "presented_gen={d} frame_mode={d} min={d} max={d} total_cells={d} modal_cells={d} non_modal_cells={d} per_gen={s} bbox_present={d} bbox={d}..{d}/{d}..{d} damage={d}..{d}/{d}..{d}",
-        .{
-            cache.generation,
-            summary.modal_generation,
-            summary.min_generation,
-            summary.max_generation,
-            cache.rows * cache.cols,
-            summary.modal_count,
-            summary.non_modal_count,
-            blk: {
-                const rows = cache.rows;
-                const cols = cache.cols;
-                const total = rows * cols;
-                var buckets: [max_frame_generation_buckets]GenerationBucket = undefined;
-                var bucket_count: usize = 0;
-                var idx_fill: usize = 0;
-                while (idx_fill < total) : (idx_fill += 1) {
-                    insertGenerationBucket(&buckets, &bucket_count, self.presented_generation_cells.items[idx_fill]);
-                }
-                var bucket_buf: [192]u8 = undefined;
-                var stream = std.io.fixedBufferStream(&bucket_buf);
-                const writer = stream.writer();
-                var idx: usize = 0;
-                while (idx < bucket_count) : (idx += 1) {
-                    if (idx > 0) writer.writeAll(" ") catch break;
-                    writer.print("{d}:{d}", .{ buckets[idx].generation, buckets[idx].count }) catch break;
-                }
-                break :blk stream.getWritten();
-            },
-            @intFromBool(summary.bbox_present),
-            if (summary.bbox_present) summary.row_min else 0,
-            if (summary.bbox_present) summary.row_max else 0,
-            if (summary.bbox_present) summary.col_min else 0,
-            if (summary.bbox_present) summary.col_max else 0,
-            cache.damage.start_row,
-            cache.damage.end_row,
-            cache.damage.start_col,
-            cache.damage.end_col,
-        },
-    );
-}
-
-fn summarizePresentedGeneration(self: anytype, cache: *const RenderCache) PresentedGenerationSummary {
-    const rows = cache.rows;
-    const cols = cache.cols;
-    const total = rows * cols;
-    if (rows == 0 or cols == 0 or self.presented_generation_cells.items.len < total) return .{};
-
-    var min_generation: u64 = std.math.maxInt(u64);
-    var max_generation: u64 = 0;
-    var buckets: [max_frame_generation_buckets]GenerationBucket = undefined;
-    var bucket_count: usize = 0;
-    var modal_generation: u64 = 0;
-    var modal_count: usize = 0;
-
-    var row_min: usize = rows;
-    var row_max: usize = 0;
-    var col_min: usize = cols;
-    var col_max: usize = 0;
-    var non_modal_count: usize = 0;
-
-    for (self.presented_generation_cells.items[0..total]) |generation| {
-        min_generation = @min(min_generation, generation);
-        max_generation = @max(max_generation, generation);
-        insertGenerationBucket(&buckets, &bucket_count, generation);
-    }
-    var idx: usize = 0;
-    while (idx < bucket_count) : (idx += 1) {
-        if (buckets[idx].count > modal_count) {
-            modal_count = buckets[idx].count;
-            modal_generation = buckets[idx].generation;
-        }
-    }
-
-    var row: usize = 0;
-    while (row < rows) : (row += 1) {
-        var col: usize = 0;
-        while (col < cols) : (col += 1) {
-            const generation = self.presented_generation_cells.items[row * cols + col];
-            if (generation == modal_generation) continue;
-            non_modal_count += 1;
-            row_min = @min(row_min, row);
-            row_max = @max(row_max, row);
-            col_min = @min(col_min, col);
-            col_max = @max(col_max, col);
-        }
-    }
-
-    const bbox_present = non_modal_count > 0 and row_min < rows and col_min < cols;
-    return .{
-        .min_generation = if (min_generation == std.math.maxInt(u64)) 0 else min_generation,
-        .max_generation = max_generation,
-        .modal_generation = modal_generation,
-        .modal_count = modal_count,
-        .non_modal_count = non_modal_count,
-        .bbox_present = bbox_present,
-        .row_min = if (bbox_present) row_min else 0,
-        .row_max = if (bbox_present) row_max else 0,
-        .col_min = if (bbox_present) col_min else 0,
-        .col_max = if (bbox_present) col_max else 0,
-    };
-}
-
-fn summarizeRowContent(cache: *const RenderCache, row: usize) RowContentSummary {
-    if (row >= cache.rows or cache.cols == 0 or cache.cells.items.len < cache.rows * cache.cols) {
-        return .{ .row = row, .occupied = 0, .first_col = -1, .last_col = -1, .hash = 0 };
-    }
-    const cells = rowSlice(cache.cells.items, cache.cols, row);
-    var occupied: usize = 0;
-    var first_col: i32 = -1;
-    var last_col: i32 = -1;
-    var hash = std.hash.Wyhash.init(0);
-    for (cells, 0..) |cell, col| {
-        const cp = cell.codepoint;
-        hash.update(std.mem.asBytes(&cp));
-        if (cp != ' ' and cp != 0) {
-            occupied += 1;
-            if (first_col < 0) first_col = @intCast(col);
-            last_col = @intCast(col);
-        }
-    }
-    return .{
-        .row = row,
-        .occupied = occupied,
-        .first_col = first_col,
-        .last_col = last_col,
-        .hash = hash.final(),
-    };
-}
-
-fn formatTopRowContentSummary(buf: []u8, cache: *const RenderCache, row_count: usize) []const u8 {
-    if (row_count == 0) return "";
-    var stream = std.io.fixedBufferStream(buf);
-    const writer = stream.writer();
-    var row: usize = 0;
-    while (row < row_count and row < cache.rows) : (row += 1) {
-        const summary = summarizeRowContent(cache, row);
-        if (row > 0) writer.writeAll(" ") catch break;
-        writer.print("r{d}={d}:{d}..{d}:h{x}", .{
-            summary.row,
-            summary.occupied,
-            summary.first_col,
-            summary.last_col,
-            summary.hash,
-        }) catch break;
-    }
-    return stream.getWritten();
-}
-
-fn partialPlanTouchesCell(self: anytype, row: usize, col: usize) bool {
-    if (row >= self.partial_draw_rows.items.len or !self.partial_draw_rows.items[row]) return false;
-    if (row < self.partial_draw_span_counts.items.len and row < self.partial_draw_spans.items.len and self.partial_draw_span_counts.items[row] > 0) {
-        var span_idx: usize = 0;
-        while (span_idx < self.partial_draw_span_counts.items[row]) : (span_idx += 1) {
-            const span = self.partial_draw_spans.items[row][span_idx];
-            if (col >= span.start and col <= span.end) return true;
-        }
-        return false;
-    }
-    if (row >= self.partial_draw_cols_start.items.len or row >= self.partial_draw_cols_end.items.len) return false;
-    return col >= self.partial_draw_cols_start.items[row] and col <= self.partial_draw_cols_end.items[row];
-}
-
-fn partialWouldPreserveOlderGeneration(self: anytype, rows: usize, cols: usize, target_generation: u64) bool {
-    const total = rows * cols;
-    if (rows == 0 or cols == 0 or self.presented_generation_cells.items.len < total) return false;
-    var row: usize = 0;
-    while (row < rows) : (row += 1) {
-        var col: usize = 0;
-        while (col < cols) : (col += 1) {
-            if (partialPlanTouchesCell(self, row, col)) continue;
-            if (self.presented_generation_cells.items[row * cols + col] != target_generation) return true;
-        }
-    }
-    return false;
 }
 
 pub fn drawPrepared(
@@ -615,7 +158,7 @@ pub fn drawPrepared(
         const draw_ms_total = time_utils.secondsToMs(draw_end - draw_start);
         const render_ms = time_utils.secondsToMs(draw_end - render_phase_start);
         publishFrameLatencyMetrics(
-            self.draw_cache.generation,
+            terminal_publication.drawStateInfo(&self.draw_cache).generation,
             lock_ms,
             lock_wait_ms,
             lock_hold_ms,
@@ -633,31 +176,23 @@ pub fn drawPrepared(
 
     const r = shell.rendererPtr();
     const cache = &self.draw_cache;
-    var alt_exit = false;
-    var alt_state_changed = false;
-    alt_state_changed = self.last_alt_active != cache.alt_active;
-    alt_exit = self.last_alt_active and !cache.alt_active;
-    self.last_alt_active = cache.alt_active;
+    const lifecycle_transition = terminal_publication.lifecycleTransitionInfo(self.last_alt_active, cache);
+    const alt_exit = lifecycle_transition.exited;
+    self.last_alt_active = lifecycle_transition.current_alt_active;
     render_phase_start = app_shell.getTime();
 
-    const sync_updates = cache.sync_updates_active;
-    const screen_reverse = cache.screen_reverse;
+    const draw_state = terminal_publication.drawStateInfo(cache);
+    const render_state = draw_state.render;
+    const sync_updates = draw_state.sync_updates_active;
+    const screen_reverse = render_state.screen_reverse;
     const blink_style = self.blink_style;
     const blink_time = app_shell.getTime();
-    const rows = cache.rows;
-    const cols = cache.cols;
-    if (sync_updates and cache.cells.items.len > 0) {
-        const view_cells = cache.cells.items;
-        const bg_color = if (view_cells.len > 0) blk: {
-            const cell = view_cells[0];
-            const reversed = cell.attrs.reverse != screen_reverse;
-            const bg = if (reversed) cell.attrs.fg else cell.attrs.bg;
-            break :blk Color{
-                .r = bg.r,
-                .g = bg.g,
-                .b = bg.b,
-            };
-        } else r.theme.background;
+    const rows = draw_state.rows;
+    const cols = draw_state.cols;
+    const view_cells = draw_state.cells;
+    const base_colors = terminal_publication.baseColorInfo(cache);
+    if (sync_updates and view_cells.len > 0) {
+        const bg_color = if (view_cells.len > 0) toShellColor(base_colors.resolved_background) else r.theme.background;
         r.drawRect(
             @intFromFloat(x),
             @intFromFloat(y),
@@ -669,15 +204,13 @@ pub fn drawPrepared(
         return outcome;
     }
     const draw_start_time = if (alt_exit) app_shell.getTime() else 0;
-    const history_len = cache.history_len;
-    const total_lines = cache.total_lines;
-    const scroll_offset = cache.scroll_offset;
-    const viewport_shift_rows = cache.viewport_shift_rows;
-    const end_line = total_lines - scroll_offset;
-    const start_line = if (end_line > rows) end_line - rows else 0;
-    var draw_cursor = scroll_offset == 0 and cache.cursor_visible;
-    const cursor = if (draw_cursor) cache.cursor else CursorPos{ .row = rows + 1, .col = cols + 1 };
-    const cursor_style = cache.cursor_style;
+    const viewport = draw_state.viewport;
+    const history_len = viewport.history_len;
+    const scroll_offset = viewport.scroll_offset;
+    const start_line = viewport.start_line;
+    var draw_cursor = render_state.draw_cursor_visible;
+    const cursor = if (draw_cursor) draw_state.cursor else CursorPos{ .row = rows + 1, .col = cols + 1 };
+    const cursor_style = render_state.cursor_style;
     if (draw_cursor and self.ui_focused and cursor_style.blink) {
         if (blink_time >= self.cursor_blink_pause_until) {
             const period: f64 = 0.5;
@@ -685,57 +218,21 @@ pub fn drawPrepared(
             draw_cursor = phase < period;
         }
     }
-    const kitty_generation = cache.kitty_generation;
-    const has_blink = blink_style != .off and cache.has_blink;
+    const kitty_generation = draw_state.kitty_generation;
+    const has_blink = blink_style != .off and render_state.has_blinking_cells;
     const blink_phase_changed = self.blink_phase_changed_pending;
     self.blink_phase_changed_pending = false;
     const blink_requires_partial = has_blink and blink_phase_changed;
 
-    self.kitty.updateViews(self.session.allocator, rows, cols, cache.kitty_images.items, cache.kitty_placements.items);
+    self.kitty.updateViews(self.session.allocator, rows, cols, draw_state.kitty_images, draw_state.kitty_placements);
 
-    var upload_stats: kitty_mod.KittyState.UploadStats = .{};
     if (self.kitty.images_view.items.len > 0) {
         self.kitty.primeUploads(self.session.allocator);
-        upload_stats = self.kitty.processPendingUploads(shell);
+        _ = self.kitty.processPendingUploads(shell);
     }
 
-    const view_cells = cache.cells.items;
-    const view_dirty_rows = cache.dirty_rows.items;
-    const draw_log = app_logger.logger("terminal.ui.redraw");
-    const texture_shift_log = app_logger.logger("terminal.ui.texture_shift");
-    var dirty_rows_count: usize = 0;
-    var damage_row_span: usize = 0;
-    var damage_col_span: usize = 0;
-    var partial_plan_rows_count: usize = 0;
-    var partial_plan_row_span: usize = 0;
-    var partial_plan_col_span: usize = 0;
-    var partial_plan_cells: usize = 0;
-    var partial_plan_union_cells: usize = 0;
-    var partial_plan_summary: []const u8 = "";
-    var partial_plan_summary_buf: [256]u8 = undefined;
-    var glyph_stats_summary_buf: [220]u8 = undefined;
-    var glyph_batch_summary_buf: [96]u8 = undefined;
-    var glyph_atlas_summary_buf: [96]u8 = undefined;
-    var sprite_stats_summary_buf: [48]u8 = undefined;
-    var lock_stats_summary_buf: [64]u8 = undefined;
-    var fullframe_fastpath_decision: FullFrameFastPathDecision = .{};
-    if (cache.dirty != .none) {
-        for (view_dirty_rows) |row_dirty| {
-            if (row_dirty) dirty_rows_count += 1;
-        }
-        if (cache.damage.end_row >= cache.damage.start_row) {
-            damage_row_span = cache.damage.end_row - cache.damage.start_row + 1;
-        }
-        if (cache.damage.end_col >= cache.damage.start_col) {
-            damage_col_span = cache.damage.end_col - cache.damage.start_col + 1;
-        }
-    }
     const has_kitty = self.kitty.hasKitty();
-    const bg_color = if (view_cells.len > 0) Color{
-        .r = view_cells[0].attrs.bg.r,
-        .g = view_cells[0].attrs.bg.g,
-        .b = view_cells[0].attrs.bg.b,
-    } else r.theme.background;
+    const bg_color = if (view_cells.len > 0) toShellColor(base_colors.background) else r.theme.background;
     r.drawRect(
         @intFromFloat(x),
         @intFromFloat(y),
@@ -754,29 +251,15 @@ pub fn drawPrepared(
     const hover_link_id = hover_mod.hoverLinkId(&self.hover);
 
     var updated = false;
-    var texture_full_update = false;
-    var texture_partial_update = false;
-    var active_viewport_shift_rows: i32 = 0;
-    var active_shift_exposed_only = false;
-    var fastpath_threshold_hit = false;
-    var fastpath_total_cells: usize = 0;
-    var fastpath_union_cells: usize = 0;
-    var capture_reason: []const u8 = "clean";
+    var viewport_shift = ViewportShiftState{};
     var cell_w_i: i32 = 0;
     var cell_h_i: i32 = 0;
     var visible_w: i32 = 0;
     var visible_h: i32 = 0;
     var viewport_w: f32 = 0;
     var viewport_h: f32 = 0;
-    const row_render_log = app_logger.logger("terminal.ui.row_render_pass");
-    const row_render_runs_log = app_logger.logger("terminal.ui.row_render_pass_runs");
     const texture_phase_start = app_shell.getTime();
-    const texture_ready_before_draw = self.terminal_texture_ready;
     if (rows > 0 and cols > 0) {
-        ensurePresentedGenerationCells(self, rows, cols) catch |err| {
-            const provenance_log = app_logger.logger("terminal.frame_provenance");
-            provenance_log.logf(.warning, "presented_generation_cells resize failed rows={d} cols={d} err={s}", .{ rows, cols, @errorName(err) });
-        };
         const geom = r.terminalCellGeometry();
         cell_w_i = geom.cell_width_device_px;
         cell_h_i = geom.cell_height_device_px;
@@ -795,8 +278,8 @@ pub fn drawPrepared(
         viewport_w = @as(f32, @floatFromInt(visible_w));
         viewport_h = @as(f32, @floatFromInt(visible_h));
         const recreated = r.ensureTerminalTexture(texture_w, texture_h);
-        const gen_changed = cache.generation != self.last_render_generation;
-        const clear_generation_changed = cache.clear_generation != self.last_render_clear_generation;
+        const gen_changed = draw_state.generation != self.last_render_generation;
+        const clear_generation_changed = draw_state.clear_generation != self.last_render_clear_generation;
         var update_plan = chooseTextureUpdatePlan(
             cache.dirty,
             recreated,
@@ -806,185 +289,62 @@ pub fn drawPrepared(
             blink_requires_partial,
             self.terminal_texture_ready,
         );
-        const force_full_recent_input_window = r.forceFullTerminalTexturePublicationRecentInputWindow();
-        const recent_input_window_seconds = r.fullTerminalTexturePublicationRecentInputWindowSeconds();
-        const modifier_pressure_active = input.mods.ctrl or input.mods.shift or input.mods.alt or input.mods.super;
         const plan_time = app_shell.getTime();
-        const recent_input_age_s = if (self.last_terminal_input_time > 0 and plan_time >= self.last_terminal_input_time)
-            plan_time - self.last_terminal_input_time
-        else
-            -1.0;
-        const recent_input_window_active = force_full_recent_input_window and
-            (modifier_pressure_active or
+        const recent_input_window_active = r.forceFullTerminalTexturePublicationRecentInputWindow() and
+            ((input.mods.ctrl or input.mods.shift or input.mods.alt or input.mods.super) or
                 (self.last_terminal_input_time > 0 and
-                    recent_input_age_s >= 0 and
-                    recent_input_age_s <= recent_input_window_seconds));
+                    plan_time >= self.last_terminal_input_time and
+                    (plan_time - self.last_terminal_input_time) <= r.fullTerminalTexturePublicationRecentInputWindowSeconds()));
         update_plan = forceFullTextureUpdatePlanEveryFrame(
             update_plan,
             recent_input_window_active,
         );
-        const plan_was_active = update_plan.needs_full or update_plan.needs_partial;
-        const pressure_log = app_logger.logger("terminal.ui.present_pressure");
-        if ((pressure_log.enabled_file or pressure_log.enabled_console) and
-            (plan_was_active or gen_changed or recent_input_window_active or modifier_pressure_active))
-        {
-            pressure_log.logf(
-                .info,
-                "gen_changed={d} pub_gen={d}->{d} texture_ready={d} recreated={d} plan_active={d} plan_full={d} plan_partial={d} recent_cfg={d} recent_active={d} recent_age_ms={d:.2} recent_window_ms={d:.2} modifier={d}",
-                .{
-                    @intFromBool(gen_changed),
-                    self.last_render_generation,
-                    cache.generation,
-                    @intFromBool(texture_ready_before_draw),
-                    @intFromBool(recreated),
-                    @intFromBool(plan_was_active),
-                    @intFromBool(update_plan.needs_full),
-                    @intFromBool(update_plan.needs_partial),
-                    @intFromBool(force_full_recent_input_window),
-                    @intFromBool(recent_input_window_active),
-                    if (recent_input_age_s >= 0) recent_input_age_s * 1000.0 else -1.0,
-                    recent_input_window_seconds * 1000.0,
-                    @intFromBool(modifier_pressure_active),
-                },
-            );
-        }
-        const handoff_log = app_logger.logger("terminal.generation_handoff");
-        if ((handoff_log.enabled_file or handoff_log.enabled_console) and
-            (gen_changed or plan_was_active or update_plan.needs_full or update_plan.needs_partial))
-        {
-            handoff_log.logf(
-                .info,
-                "stage=widget_plan sid={x} last_render={d} cache_gen={d} cur={d} pub={d} presented={d} gen_changed={d} plan_full={d} plan_partial={d} texture_ready={d}",
-                .{
-                    @intFromPtr(self.session),
-                    self.last_render_generation,
-                    cache.generation,
-                    self.session.currentGeneration(),
-                    self.session.publishedGeneration(),
-                    self.session.presentedGeneration(),
-                    @intFromBool(gen_changed),
-                    @intFromBool(update_plan.needs_full),
-                    @intFromBool(update_plan.needs_partial),
-                    @intFromBool(texture_ready_before_draw),
-                },
-            );
-        }
         var needs_full = update_plan.needs_full;
         var needs_partial = update_plan.needs_partial;
-        const use_viewport_shift = draw_texture.useViewportShiftForPartialPlan(cache.dirty, viewport_shift_rows);
-        active_viewport_shift_rows = if (use_viewport_shift) viewport_shift_rows else 0;
-        active_shift_exposed_only = use_viewport_shift and cache.viewport_shift_exposed_only;
-        capture_reason = switch (cache.dirty) {
-            .full => @tagName(cache.full_dirty_reason),
-            .partial => if (cache.viewport_shift_rows != 0)
-                (if (cache.viewport_shift_exposed_only) "viewport_shift_exposed" else "viewport_shift")
-            else
-                "partial",
-            .none => "clean",
-        };
+        const partial_capture = terminal_publication.partialCaptureInfo(cache);
+        viewport_shift.rows = partial_capture.active_viewport_shift_rows;
+        viewport_shift.exposed_only = partial_capture.shift_exposed_only;
         var shifted_rows: usize = 0;
         var shift_requires_fullwidth_partial = false;
         switch (planViewportTextureShift(
             r.terminalTextureShiftEnabled(),
             gen_changed,
-            active_viewport_shift_rows,
-            active_shift_exposed_only,
+            viewport_shift.rows,
+            viewport_shift.exposed_only,
             scroll_offset,
             needs_full,
             self.terminal_texture_ready,
             rows,
         )) {
             .attempt => |shift_rows| {
-                const dy_pixels: i32 = -active_viewport_shift_rows * cell_h_i;
+                const dy_pixels: i32 = -viewport_shift.rows * cell_h_i;
                 if (r.scrollTerminalTexture(0, dy_pixels)) {
                     needs_partial = true;
                     shifted_rows = shift_rows;
-                    shiftPresentedGenerationCells(self, rows, cols, active_viewport_shift_rows);
-                    texture_shift_log.logf(
-                        .info,
-                        "result=scroll_copy_ok gen={d} dirty={s} shift_rows={d} exposed_only={d} scroll_offset={d} damage={d}..{d}/{d}..{d}",
-                        .{
-                            cache.generation,
-                            @tagName(cache.dirty),
-                            active_viewport_shift_rows,
-                            @intFromBool(active_shift_exposed_only),
-                            scroll_offset,
-                            cache.damage.start_row,
-                            cache.damage.end_row,
-                            cache.damage.start_col,
-                            cache.damage.end_col,
-                        },
-                    );
                 } else {
                     shifted_rows = 0;
-                    texture_shift_log.logf(
-                        .info,
-                        "result=scroll_copy_failed gen={d} dirty={s} shift_rows={d} exposed_only={d} scroll_offset={d}",
-                        .{
-                            cache.generation,
-                            @tagName(cache.dirty),
-                            active_viewport_shift_rows,
-                            @intFromBool(active_shift_exposed_only),
-                            scroll_offset,
-                        },
-                    );
-                    if (active_shift_exposed_only) {
+                    if (viewport_shift.exposed_only) {
                         needs_partial = true;
                         shift_requires_fullwidth_partial = true;
                     }
                 }
             },
             .none => {
-                if (active_viewport_shift_rows != 0) {
-                    texture_shift_log.logf(
-                        .info,
-                        "result=scroll_copy_skipped gen={d} dirty={s} shift_rows={d} exposed_only={d} scroll_offset={d} full={d}",
-                        .{
-                            cache.generation,
-                            @tagName(cache.dirty),
-                            active_viewport_shift_rows,
-                            @intFromBool(active_shift_exposed_only),
-                            scroll_offset,
-                            @intFromBool(needs_full),
-                        },
-                    );
-                }
-                if (active_shift_exposed_only) {
+                if (viewport_shift.exposed_only) {
                     needs_partial = true;
                     shift_requires_fullwidth_partial = true;
                 }
             },
         }
         if (!needs_full and needs_partial) {
-            fullframe_fastpath_decision = draw_texture.decideFullFrameFastPath(
+            const fullframe_fastpath_decision: FullFrameFastPathDecision = draw_texture.decideFullFrameFastPath(
                 cache,
                 shifted_rows,
-                active_viewport_shift_rows,
+                viewport_shift.rows,
                 shift_requires_fullwidth_partial,
                 blink_requires_partial,
                 0.85,
             );
-            const fullframe_fastpath_log = app_logger.logger("terminal.ui.fullframe_fastpath");
-            if (fullframe_fastpath_log.enabled_file or fullframe_fastpath_log.enabled_console) {
-                fullframe_fastpath_log.logf(
-                    .info,
-                    "threshold_hit={d} fast_path_taken={d} threshold={d:.2} total_cells={d} union_cells={d} dirty={s} rows={d} cols={d} shift_rows={d}",
-                    .{
-                        @intFromBool(fullframe_fastpath_decision.threshold_hit),
-                        @intFromBool(fullframe_fastpath_decision.threshold_hit),
-                        0.85,
-                        fullframe_fastpath_decision.total_cells,
-                        fullframe_fastpath_decision.union_cells,
-                        @tagName(cache.dirty),
-                        rows,
-                        cols,
-                        active_viewport_shift_rows,
-                    },
-                );
-            }
-            fastpath_threshold_hit = fullframe_fastpath_decision.threshold_hit;
-            fastpath_total_cells = fullframe_fastpath_decision.total_cells;
-            fastpath_union_cells = fullframe_fastpath_decision.union_cells;
             if (fullframe_fastpath_decision.threshold_hit) {
                 needs_full = true;
                 needs_partial = false;
@@ -1030,27 +390,12 @@ pub fn drawPrepared(
                     self.partial_draw_cols_start.items,
                     self.partial_draw_cols_end.items,
                     shifted_rows,
-                    active_viewport_shift_rows,
+                    viewport_shift.rows,
                     shift_requires_fullwidth_partial,
                     blink_requires_partial,
                 );
-                if (partialWouldPreserveOlderGeneration(self, rows, cols, cache.generation)) {
-                    const provenance_log = app_logger.logger("terminal.frame_provenance");
-                    if (provenance_log.enabled_file or provenance_log.enabled_console) {
-                        provenance_log.logf(
-                            .info,
-                            "stage=escalate_full_for_generation_coherence gen={d} rows={d} cols={d}",
-                            .{ cache.generation, rows, cols },
-                        );
-                    }
-                    needs_full = true;
-                    needs_partial = false;
-                }
             }
         }
-        texture_full_update = needs_full;
-        texture_partial_update = needs_partial;
-
         if ((needs_full or needs_partial) and r.beginTerminalTexture()) {
             // Disable scissor while updating the offscreen texture.
             // The main draw pass will restore the clip for on-screen drawing.
@@ -1059,18 +404,8 @@ pub fn drawPrepared(
             const base_y_local: f32 = 0;
 
             if (needs_full) {
-                fillPresentedGenerationCells(self, rows, cols, cache.generation);
                 const bg_phase_start = app_shell.getTime();
-                const bg = if (view_cells.len > 0) blk: {
-                    const cell = view_cells[0];
-                    const reversed = cell.attrs.reverse != screen_reverse;
-                    const base_bg = if (reversed) cell.attrs.fg else cell.attrs.bg;
-                    break :blk Color{
-                        .r = base_bg.r,
-                        .g = base_bg.g,
-                        .b = base_bg.b,
-                    };
-                } else r.theme.background;
+                const bg = if (view_cells.len > 0) toShellColor(base_colors.resolved_background) else r.theme.background;
                 r.beginTerminalBatch();
                 r.addTerminalRect(0, 0, texture_w, texture_h, bg);
                 var row: usize = 0;
@@ -1090,7 +425,7 @@ pub fn drawPrepared(
                 r.beginTerminalGlyphBatch();
                 row = 0;
                 while (row < rows) : (row += 1) {
-                    drawRowGlyphs(shell, view_cells, cols, row, 0, cols - 1, base_x_local, base_y_local, padding_x_i, hover_link_id, screen_reverse, blink_style, blink_time, draw_cursor, cursor, r.terminal_disable_ligatures, null, &glyph_draw_stats);
+                    drawRowGlyphs(shell, view_cells, cols, row, 0, cols - 1, base_x_local, base_y_local, padding_x_i, hover_link_id, screen_reverse, blink_style, blink_time, draw_cursor, cursor, r.terminal_disable_ligatures, &glyph_draw_stats);
                 }
                 r.flushTerminalGlyphBatch();
                 texture_glyph_ms += time_utils.secondsToMs(app_shell.getTime() - glyph_phase_start);
@@ -1132,7 +467,7 @@ pub fn drawPrepared(
                     return outcome;
                 };
 
-                const partial_plan_bounds = buildPartialPlan(
+                _ = buildPartialPlan(
                     cache,
                     self.partial_draw_rows.items,
                     self.partial_draw_span_counts.items,
@@ -1140,64 +475,10 @@ pub fn drawPrepared(
                     self.partial_draw_cols_start.items,
                     self.partial_draw_cols_end.items,
                     shifted_rows,
-                    active_viewport_shift_rows,
+                    viewport_shift.rows,
                     shift_requires_fullwidth_partial,
                     blink_requires_partial,
                 );
-                for (self.partial_draw_rows.items) |row_draw| {
-                    if (row_draw) partial_plan_rows_count += 1;
-                }
-                for (self.partial_draw_rows.items, 0..) |row_draw, row| {
-                    if (!row_draw) continue;
-                    if (row < self.partial_draw_span_counts.items.len and row < self.partial_draw_spans.items.len and self.partial_draw_span_counts.items[row] > 0) {
-                        var span_idx: usize = 0;
-                        while (span_idx < self.partial_draw_span_counts.items[row]) : (span_idx += 1) {
-                            const span = self.partial_draw_spans.items[row][span_idx];
-                            const row_start = @as(usize, span.start);
-                            const row_end = @as(usize, span.end);
-                            if (row_end >= row_start) partial_plan_cells += row_end - row_start + 1;
-                            markPresentedGenerationRowRange(self, rows, cols, row, row_start, row_end, cache.generation);
-                        }
-                    } else {
-                        const row_start = @as(usize, self.partial_draw_cols_start.items[row]);
-                        const row_end = @as(usize, self.partial_draw_cols_end.items[row]);
-                        if (row_end >= row_start) partial_plan_cells += row_end - row_start + 1;
-                        markPresentedGenerationRowRange(self, rows, cols, row, row_start, row_end, cache.generation);
-                    }
-                }
-                if (partial_plan_bounds) |bounds| {
-                    partial_plan_row_span = bounds.end_row - bounds.start_row + 1;
-                    partial_plan_col_span = bounds.end_col - bounds.start_col + 1;
-                    partial_plan_union_cells = partial_plan_row_span * partial_plan_col_span;
-                }
-                if ((draw_log.enabled_file or draw_log.enabled_console) and texture_partial_update) {
-                    partial_plan_summary = draw_texture.formatPartialPlanRows(
-                        &partial_plan_summary_buf,
-                        self.partial_draw_rows.items,
-                        self.partial_draw_span_counts.items,
-                        self.partial_draw_spans.items,
-                        self.partial_draw_cols_start.items,
-                        self.partial_draw_cols_end.items,
-                        12,
-                    );
-                }
-                if (shifted_rows > 0 or shift_requires_fullwidth_partial) {
-                    texture_shift_log.logf(
-                        .info,
-                        "result=partial_plan gen={d} shifted_rows={d} fullwidth_exposed={d} plan_rows={d} plan_row_span={d} plan_col_span={d} plan_cells={d} plan_union_cells={d} spans={s}",
-                        .{
-                            cache.generation,
-                            shifted_rows,
-                            @intFromBool(shift_requires_fullwidth_partial),
-                            partial_plan_rows_count,
-                            partial_plan_row_span,
-                            partial_plan_col_span,
-                            partial_plan_cells,
-                            partial_plan_union_cells,
-                            partial_plan_summary,
-                        },
-                    );
-                }
 
                 const bg_phase_start = app_shell.getTime();
                 r.beginTerminalBatch();
@@ -1232,107 +513,18 @@ pub fn drawPrepared(
                 r.beginTerminalGlyphBatch();
                 for (0..rows) |row| {
                     if (!self.partial_draw_rows.items[row]) continue;
-                    const before_stats = glyph_draw_stats;
-                    var row_bg_runs: usize = 0;
-                    var row_span_count: usize = 0;
-                    var row_col_min: usize = cols;
-                    var row_col_max: usize = 0;
-                    var row_bg_summary = draw_grid.BackgroundRunSummary{};
-                    var row_direct_samples = [_]draw_grid.DirectGlyphSample{.{}} ** draw_grid.max_direct_glyph_samples;
                     if (row < self.partial_draw_span_counts.items.len and row < self.partial_draw_spans.items.len and self.partial_draw_span_counts.items[row] > 0) {
                         var span_idx: usize = 0;
                         while (span_idx < self.partial_draw_span_counts.items[row]) : (span_idx += 1) {
                             const span = self.partial_draw_spans.items[row][span_idx];
                             const col_start = @min(@as(usize, span.start), cols - 1);
                             const col_end = @min(@as(usize, span.end), cols - 1);
-                            const draw_padding = col_end >= cols - 1;
-                            row_bg_runs += draw_grid.countRowBackgroundRuns(view_cells, cols, row, col_start, col_end, draw_padding, screen_reverse);
-                            if (row_bg_summary.runs == 0) {
-                                row_bg_summary = draw_grid.summarizeRowBackgroundRuns(view_cells, cols, row, col_start, col_end, draw_padding, screen_reverse);
-                            }
-                            row_span_count += 1;
-                            row_col_min = @min(row_col_min, col_start);
-                            row_col_max = @max(row_col_max, col_end);
-                            drawRowGlyphs(shell, view_cells, cols, row, col_start, col_end, base_x_local, base_y_local, padding_x_i, hover_link_id, screen_reverse, blink_style, blink_time, draw_cursor, cursor, r.terminal_disable_ligatures, &row_direct_samples, &glyph_draw_stats);
+                            drawRowGlyphs(shell, view_cells, cols, row, col_start, col_end, base_x_local, base_y_local, padding_x_i, hover_link_id, screen_reverse, blink_style, blink_time, draw_cursor, cursor, r.terminal_disable_ligatures, &glyph_draw_stats);
                         }
                     } else {
                         const col_start = @min(@as(usize, self.partial_draw_cols_start.items[row]), cols - 1);
                         const col_end = @min(@as(usize, self.partial_draw_cols_end.items[row]), cols - 1);
-                        const draw_padding = col_end >= cols - 1;
-                        row_bg_runs += draw_grid.countRowBackgroundRuns(view_cells, cols, row, col_start, col_end, draw_padding, screen_reverse);
-                        row_bg_summary = draw_grid.summarizeRowBackgroundRuns(view_cells, cols, row, col_start, col_end, draw_padding, screen_reverse);
-                        row_span_count = 1;
-                        row_col_min = col_start;
-                        row_col_max = col_end;
-                        drawRowGlyphs(shell, view_cells, cols, row, col_start, col_end, base_x_local, base_y_local, padding_x_i, hover_link_id, screen_reverse, blink_style, blink_time, draw_cursor, cursor, r.terminal_disable_ligatures, &row_direct_samples, &glyph_draw_stats);
-                    }
-                    const row_width = if (row_col_min < cols and row_col_max >= row_col_min) row_col_max - row_col_min + 1 else 0;
-                    const row_shaped_total = glyph_draw_stats.shaped_glyphs - before_stats.shaped_glyphs;
-                    const row_direct_text = glyph_draw_stats.direct_text_glyphs - before_stats.direct_text_glyphs;
-                    const row_special = glyph_draw_stats.special_sprite_glyphs - before_stats.special_sprite_glyphs;
-                    const row_box = glyph_draw_stats.box_glyphs - before_stats.box_glyphs;
-                    const row_shaped_text = glyph_draw_stats.shaped_text_glyphs - before_stats.shaped_text_glyphs;
-                    const row_fallback = glyph_draw_stats.fallback_cells - before_stats.fallback_cells;
-                    if ((row_render_log.enabled_file or row_render_log.enabled_console) and row_span_count > 0) {
-                        if (row_width >= cols / 2 or row == cursor.row) {
-                            row_render_log.logf(
-                                .info,
-                                "row={d} cols={d}..{d} width={d} spans={d} bg_runs={d} bg1={d}..{d}@{d}:{d}:{d} bg2={d}..{d}@{d}:{d}:{d} bg3={d}..{d}@{d}:{d}:{d} glyph_total={d} direct_text={d} shaped_text={d} special={d} box={d} fallback={d} direct_draw_ms={d:.2} special_lookup_ms={d:.2} special_submit_ms={d:.2} box_submit_ms={d:.2}",
-                                .{
-                                    row,
-                                    row_col_min,
-                                    row_col_max,
-                                    row_width,
-                                    row_span_count,
-                                    row_bg_runs,
-                                    row_bg_summary.first_start,
-                                    row_bg_summary.first_end,
-                                    row_bg_summary.first_color.r,
-                                    row_bg_summary.first_color.g,
-                                    row_bg_summary.first_color.b,
-                                    row_bg_summary.second_start,
-                                    row_bg_summary.second_end,
-                                    row_bg_summary.second_color.r,
-                                    row_bg_summary.second_color.g,
-                                    row_bg_summary.second_color.b,
-                                    row_bg_summary.third_start,
-                                    row_bg_summary.third_end,
-                                    row_bg_summary.third_color.r,
-                                    row_bg_summary.third_color.g,
-                                    row_bg_summary.third_color.b,
-                                    row_shaped_total,
-                                    row_direct_text,
-                                    row_shaped_text,
-                                    row_special,
-                                    row_box,
-                                    row_fallback,
-                                    glyph_draw_stats.direct_draw_ms - before_stats.direct_draw_ms,
-                                    glyph_draw_stats.special_sprite_lookup_ms - before_stats.special_sprite_lookup_ms,
-                                    glyph_draw_stats.shaped_special_submit_ms - before_stats.shaped_special_submit_ms,
-                                    glyph_draw_stats.box_submit_ms - before_stats.box_submit_ms,
-                                },
-                            );
-                            row_render_runs_log.logf(
-                                .info,
-                                "row={d} bg2s=p{d} col={d} cp={d} fg={d}:{d}:{d} bg={d}:{d}:{d} rev={d} res={d}:{d}:{d}",
-                                .{
-                                    row,
-                                    @intFromBool(row_bg_summary.second_sample.present),
-                                    row_bg_summary.second_sample.col,
-                                    row_bg_summary.second_sample.codepoint,
-                                    row_bg_summary.second_sample.fg.r,
-                                    row_bg_summary.second_sample.fg.g,
-                                    row_bg_summary.second_sample.fg.b,
-                                    row_bg_summary.second_sample.bg.r,
-                                    row_bg_summary.second_sample.bg.g,
-                                    row_bg_summary.second_sample.bg.b,
-                                    @intFromBool(row_bg_summary.second_sample.reverse),
-                                    row_bg_summary.second_sample.resolved_bg.r,
-                                    row_bg_summary.second_sample.resolved_bg.g,
-                                    row_bg_summary.second_sample.resolved_bg.b,
-                                },
-                            );
-                        }
+                        drawRowGlyphs(shell, view_cells, cols, row, col_start, col_end, base_x_local, base_y_local, padding_x_i, hover_link_id, screen_reverse, blink_style, blink_time, draw_cursor, cursor, r.terminal_disable_ligatures, &glyph_draw_stats);
                     }
                 }
                 r.flushTerminalGlyphBatch();
@@ -1348,26 +540,8 @@ pub fn drawPrepared(
                 self.kitty.last_generation = kitty_generation;
             }
             self.terminal_texture_ready = true;
-            if (handoff_log.enabled_file or handoff_log.enabled_console) {
-                handoff_log.logf(
-                    .info,
-                    "stage=widget_commit sid={x} last_render={d}->{d} cur={d} pub={d} presented={d} full={d} partial={d}",
-                    .{
-                        @intFromPtr(self.session),
-                        self.last_render_generation,
-                        cache.generation,
-                        self.session.currentGeneration(),
-                        self.session.publishedGeneration(),
-                        self.session.presentedGeneration(),
-                        @intFromBool(texture_full_update),
-                        @intFromBool(texture_partial_update),
-                    },
-                );
-            }
-            logPresentedColumnProbe(cache);
-            logPresentedGenerationProvenance(self, cache);
-            self.last_render_generation = cache.generation;
-            self.last_render_clear_generation = cache.clear_generation;
+            self.last_render_generation = draw_state.generation;
+            self.last_render_clear_generation = draw_state.clear_generation;
             self.last_cell_w_i = cell_w_i;
             self.last_cell_h_i = cell_h_i;
             self.last_render_scale = r.render_scale;
@@ -1390,17 +564,7 @@ pub fn drawPrepared(
             );
         }
         if (rows > 0 and cols > 0) {
-            const bg = if (view_cells.len > 0) blk: {
-                const cell = view_cells[0];
-                const reversed = cell.attrs.reverse != screen_reverse;
-                const base_bg = if (reversed) cell.attrs.fg else cell.attrs.bg;
-                break :blk Color{
-                    .r = base_bg.r,
-                    .g = base_bg.g,
-                    .b = base_bg.b,
-                    .a = base_bg.a,
-                };
-            } else r.theme.background;
+            const bg = if (view_cells.len > 0) toShellColor(base_colors.resolved_background) else r.theme.background;
             if (visible_w > 0 and visible_h > 0) {
                 r.drawRectF(base_x, base_y, viewport_w, viewport_h, bg);
             }
@@ -1408,29 +572,6 @@ pub fn drawPrepared(
         if (self.terminal_texture_ready and visible_w > 0 and visible_h > 0) {
             r.drawTerminalTexture(base_x, base_y, viewport_w, viewport_h);
         }
-        maybeLogCaptureBurst(
-            self,
-            shell,
-            cache,
-            width,
-            height,
-            viewport_w,
-            viewport_h,
-            visible_w,
-            visible_h,
-            rows,
-            cols,
-            texture_full_update,
-            texture_partial_update,
-            active_viewport_shift_rows,
-            fastpath_threshold_hit,
-            fastpath_total_cells,
-            fastpath_union_cells,
-            partial_plan_cells,
-            partial_plan_union_cells,
-            capture_reason,
-            glyph_draw_stats,
-        );
     }
     texture_update_ms = time_utils.secondsToMs(app_shell.getTime() - texture_phase_start);
     const overlay_phase_start = app_shell.getTime();
@@ -1470,140 +611,6 @@ pub fn drawPrepared(
             .scroll_offset = scroll_offset,
         };
     }
-
-    const perf_log = app_logger.logger("terminal.ui.perf");
-    const lifecycle_log = app_logger.logger("terminal.ui.lifecycle");
-    const now = app_shell.getTime();
-    const elapsed_ms = time_utils.secondsToMs(now - draw_start);
-    const has_kitty_images = self.kitty.images_view.items.len > 0;
-    const lifecycle_reason = if (!texture_ready_before_draw)
-        "init"
-    else if (alt_state_changed)
-        (if (cache.alt_active) "alt_enter" else "alt_exit")
-    else
-        null;
-    const active_draw_log = if (lifecycle_reason != null) lifecycle_log else draw_log;
-    const active_perf_log = if (lifecycle_reason != null) lifecycle_log else perf_log;
-    const log_partial_update = texture_partial_update and updated and (active_draw_log.enabled_file or active_draw_log.enabled_console or active_perf_log.enabled_file or active_perf_log.enabled_console);
-    const current_reason = switch (cache.dirty) {
-        .full => @tagName(cache.full_dirty_reason),
-        .partial => if (cache.viewport_shift_rows != 0)
-            (if (cache.viewport_shift_exposed_only) "viewport_shift_exposed" else "viewport_shift")
-        else
-            "partial",
-        .none => "clean",
-    };
-    if ((elapsed_ms >= 4.0 or has_kitty_images or log_partial_update) and (now - self.last_draw_log_time) >= 0.1) {
-        self.last_draw_log_time = now;
-        active_draw_log.logf(
-            .info,
-            "draw_ms={d:.2} rows={d} cols={d} history={d} cells={d} kitty_images={d} kitty_placements={d}",
-            .{
-                elapsed_ms,
-                rows,
-                cols,
-                history_len,
-                rows * cols,
-                self.kitty.images_view.items.len,
-                self.kitty.placements_view.items.len,
-            },
-        );
-        active_perf_log.logf(
-            .info,
-            "draw_ms={d:.2} lock_stats={s} texture_update_ms={d:.2} texture_bg_ms={d:.2} texture_glyph_ms={d:.2} texture_kitty_ms={d:.2} overlay_ms={d:.2} full={d} partial={d} updated={d} sync={d} clear_ok={d} dirty={s} current_reason={s} dirty_rows={d} damage_rows={d} damage_cols={d} plan_rows={d} plan_row_span={d} plan_col_span={d} plan_cells={d} plan_union_cells={d} blink_cells={d} blink_phase_changed={d} shift_rows={d} shift_exposed_only={d} sprite_stats={s} glyph_batch_stats={s} glyph_atlas_stats={s} glyph_stats={s} rows={d} cols={d}",
-            .{
-                elapsed_ms,
-                std.fmt.bufPrint(&lock_stats_summary_buf, "{d:.2}/{d:.2}/{d:.2}/{d:.2}/{d:.2}", .{
-                    lock_ms,
-                    lock_wait_ms,
-                    lock_hold_ms,
-                    view_cache_ms,
-                    cache_copy_ms,
-                }) catch "overflow",
-                texture_update_ms,
-                texture_bg_ms,
-                texture_glyph_ms,
-                texture_kitty_ms,
-                overlay_ms,
-                @intFromBool(texture_full_update),
-                @intFromBool(texture_partial_update),
-                @intFromBool(updated),
-                @intFromBool(sync_updates),
-                @intFromBool(outcome.presented != null and (outcome.texture_updated or cache.dirty == .none)),
-                @tagName(cache.dirty),
-                current_reason,
-                dirty_rows_count,
-                damage_row_span,
-                damage_col_span,
-                partial_plan_rows_count,
-                partial_plan_row_span,
-                partial_plan_col_span,
-                partial_plan_cells,
-                partial_plan_union_cells,
-                @intFromBool(has_blink),
-                @intFromBool(blink_phase_changed),
-                active_viewport_shift_rows,
-                @intFromBool(active_shift_exposed_only),
-                std.fmt.bufPrint(&sprite_stats_summary_buf, "{d}/{d}/{d}/{d:.2}", .{
-                    glyph_draw_stats.special_sprite_cache_hits,
-                    glyph_draw_stats.special_sprite_cache_misses,
-                    glyph_draw_stats.special_sprite_creates,
-                    glyph_draw_stats.special_sprite_lookup_ms,
-                }) catch "overflow",
-                std.fmt.bufPrint(&glyph_batch_summary_buf, "{d}/{d}/{d}/{d}", .{
-                    r.terminal_glyph_cache.frameMetrics().quad_count,
-                    r.terminal_glyph_cache.frameMetrics().flush_count,
-                    r.terminal_glyph_cache.frameMetrics().draw_call_count,
-                    r.terminal_glyph_cache.frameMetrics().vertex_count,
-                }) catch "overflow",
-                std.fmt.bufPrint(&glyph_atlas_summary_buf, "{d}/{d}/{d}/{d}/{d}/{d}/{d}", .{
-                    r.terminal_font.frameAtlasStats().glyph_cache_hits,
-                    r.terminal_font.frameAtlasStats().glyph_cache_misses,
-                    r.terminal_font.frameAtlasStats().rasterized_glyphs,
-                    r.terminal_font.frameAtlasStats().atlas_compactions,
-                    r.terminal_font.frameAtlasStats().uploaded_coverage_glyphs,
-                    r.terminal_font.frameAtlasStats().uploaded_color_glyphs,
-                    r.terminal_font.frameAtlasStats().uploaded_pixels,
-                }) catch "overflow",
-                std.fmt.bufPrint(&glyph_stats_summary_buf, "{d}/{d}/{d}/{d}/{d}/{d}/{d}/{d}/{d:.2}/{d:.2}/{d:.2}/{d:.2}/{d:.2}/{d:.2}/{d:.2}/{d:.2}/{d:.2}/{d:.2}/{d:.2}", .{
-                    glyph_draw_stats.shaping_spans,
-                    glyph_draw_stats.shaped_glyphs,
-                    glyph_draw_stats.fallback_cells,
-                    glyph_draw_stats.special_sprite_glyphs,
-                    glyph_draw_stats.box_glyphs,
-                    glyph_draw_stats.shaped_text_glyphs,
-                    glyph_draw_stats.shaped_special_glyphs,
-                    glyph_draw_stats.shaped_space_skips,
-                    glyph_draw_stats.shape_ms,
-                    glyph_draw_stats.submit_ms,
-                    glyph_draw_stats.shaped_text_submit_ms,
-                    glyph_draw_stats.shaped_special_submit_ms,
-                    glyph_draw_stats.special_sprite_submit_ms,
-                    glyph_draw_stats.box_submit_ms,
-                    glyph_draw_stats.box_sprite_submit_ms,
-                    glyph_draw_stats.box_rect_submit_ms,
-                    glyph_draw_stats.special_sprite_lookup_ms,
-                    glyph_draw_stats.direct_lookup_ms,
-                    glyph_draw_stats.direct_draw_ms,
-                }) catch "overflow",
-                rows,
-                cols,
-            },
-        );
-        if (partial_plan_summary.len > 0) {
-            active_draw_log.logf(
-                .debug,
-                "partial_plan rows={d} row_span={d} col_span={d} spans={s}",
-                .{
-                    partial_plan_rows_count,
-                    partial_plan_row_span,
-                    partial_plan_col_span,
-                    partial_plan_summary,
-                },
-            );
-        }
-    }
-
     return outcome;
 }
 

@@ -1,6 +1,6 @@
 const std = @import("std");
-const app_logger = @import("../../app_logger.zig");
 const types = @import("../model/types.zig");
+const terminal_publication = @import("publication/terminal_publication.zig");
 
 const Cell = types.Cell;
 
@@ -47,8 +47,8 @@ pub fn copyScrollbackRange(
     max_rows: usize,
     out: *std.ArrayList(Cell),
 ) !ScrollbackRange {
-    self.state_mutex.lock();
-    defer self.state_mutex.unlock();
+    self.control.state_mutex.lock();
+    defer self.control.state_mutex.unlock();
 
     out.clearRetainingCapacity();
     const info = scrollbackInfo(self);
@@ -80,8 +80,8 @@ pub fn scrollOffset(self: anytype) usize {
 }
 
 pub fn setScrollOffset(self: anytype, offset: usize) void {
-    self.state_mutex.lock();
-    defer self.state_mutex.unlock();
+    self.control.state_mutex.lock();
+    defer self.control.state_mutex.unlock();
     setScrollOffsetLocked(self, offset);
 }
 
@@ -89,15 +89,11 @@ pub fn setScrollOffsetLocked(self: anytype, offset: usize) void {
     const before = self.core.history.scrollOffset();
     const after = self.core.setScrollbackOffset(self.core.primary.grid.rows, self.core.primary.grid.cols, self.core.primary.defaultCell(), offset);
     if (after != before) {
-        _ = self.output_generation.fetchAdd(1, .acq_rel);
+        _ = terminal_publication.requestViewRefreshLocked(self, after);
+    } else {
+        terminal_publication.queueViewRefreshLocked(self, after);
     }
-    self.view_cache_request_offset.store(@intCast(after), .release);
-    self.view_cache_pending.store(true, .release);
-    self.io_wait_cond.signal();
     self.updateViewCacheForScrollLocked();
-    const log = app_logger.logger("terminal.core");
-    const max_offset = self.core.maxScrollbackOffset(self.core.primary.grid.rows, self.core.primary.grid.cols, self.core.primary.defaultCell());
-    log.logf(.debug, "set scroll offset={d} max={d}", .{ after, max_offset });
 }
 
 pub fn resetToLiveBottomLocked(self: anytype) bool {
@@ -138,8 +134,8 @@ pub fn scrollWheelLocked(self: anytype, wheel_steps: i32) bool {
 }
 
 pub fn scrollBy(self: anytype, delta: isize) void {
-    self.state_mutex.lock();
-    defer self.state_mutex.unlock();
+    self.control.state_mutex.lock();
+    defer self.control.state_mutex.unlock();
     scrollByLocked(self, delta);
 }
 
@@ -149,13 +145,9 @@ pub fn scrollByLocked(self: anytype, delta: isize) void {
     const before = self.core.history.scrollOffset();
     const after = self.core.scrollScrollbackBy(self.core.primary.grid.rows, self.core.primary.grid.cols, self.core.primary.defaultCell(), delta);
     if (after != before) {
-        _ = self.output_generation.fetchAdd(1, .acq_rel);
+        _ = terminal_publication.requestViewRefreshLocked(self, after);
+    } else {
+        terminal_publication.queueViewRefreshLocked(self, after);
     }
-    self.view_cache_request_offset.store(@intCast(after), .release);
-    self.view_cache_pending.store(true, .release);
-    self.io_wait_cond.signal();
     self.updateViewCacheForScrollLocked();
-    const log = app_logger.logger("terminal.core");
-    const max_offset = self.core.maxScrollbackOffset(self.core.primary.grid.rows, self.core.primary.grid.cols, self.core.primary.defaultCell());
-    log.logf(.debug, "scroll by delta={d} offset={d} max={d}", .{ delta, after, max_offset });
 }

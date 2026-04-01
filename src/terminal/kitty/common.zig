@@ -1,5 +1,5 @@
 const std = @import("std");
-const snapshot_mod = @import("../core/snapshot.zig");
+const snapshot_mod = @import("../core/publication/snapshot.zig");
 
 pub const KittyImageFormat = snapshot_mod.KittyImageFormat;
 pub const KittyImage = snapshot_mod.KittyImage;

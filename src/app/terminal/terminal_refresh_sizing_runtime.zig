@@ -5,16 +5,17 @@ const app_terminal_resize = @import("terminal_resize.zig");
 const app_terminal_tabs_runtime = @import("terminal_tabs_runtime.zig");
 const app_ui_layout_runtime = @import("../ui_layout_runtime.zig");
 const terminal_runtime = @import("../../terminal/core/terminal_runtime.zig");
+const workspace_mod = @import("../../terminal/core/workspace.zig");
 
 const AppMode = app_bootstrap.AppMode;
-const TerminalSession = terminal_runtime.PtyTerminalRuntime;
-const TerminalWorkspace = terminal_runtime.TerminalWorkspace;
+const PtyTerminalRuntime = terminal_runtime.PtyTerminalRuntime;
+const TerminalWorkspace = workspace_mod.TerminalWorkspace;
 
 pub fn handle(
     state: anytype,
     app_mode: AppMode,
     terminal_workspace: *?TerminalWorkspace,
-    terminals: []*TerminalSession,
+    terminals: []*PtyTerminalRuntime,
     show_terminal: bool,
     terminal_height: f32,
     shell: anytype,

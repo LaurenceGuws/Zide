@@ -1,9 +1,9 @@
 const app_terminal_runtime_intents = @import("terminal_runtime_intents.zig");
 const app_tab_action_apply_runtime = @import("../tabs/tab_action_apply_runtime.zig");
 const app_modes = @import("../modes/mod.zig");
-const terminal_runtime = @import("../../terminal/core/terminal_runtime.zig");
+const workspace_mod = @import("../../terminal/core/workspace.zig");
 
-const TerminalTabId = terminal_runtime.TerminalTabId;
+const TerminalTabId = workspace_mod.TabId;
 
 pub fn routeActiveAndSync(state: anytype, intent: app_terminal_runtime_intents.Intent) !bool {
     return try app_terminal_runtime_intents.routeForActiveWorkspaceTabAndSync(

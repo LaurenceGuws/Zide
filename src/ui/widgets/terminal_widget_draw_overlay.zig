@@ -1,8 +1,8 @@
 const std = @import("std");
 const app_shell = @import("../../app_shell.zig");
 const app_logger = @import("../../app_logger.zig");
-const terminal_publication = @import("../../terminal/core/terminal_publication.zig");
-const render_cache_mod = @import("../../terminal/core/render_cache.zig");
+const terminal_publication = @import("../../terminal/core/publication/terminal_publication.zig");
+const render_cache_mod = @import("../../terminal/core/publication/render_cache.zig");
 const shared_types = @import("../../types/mod.zig");
 const common = @import("common.zig");
 const hover_mod = @import("terminal_widget_hover.zig");
@@ -148,7 +148,7 @@ pub fn drawOverlays(
         break :blk count;
     } else 0;
 
-    if (rows > 0 and cols > 0 and cache.selection_active) {
+    if (rows > 0 and cols > 0 and cache.hasSelection()) {
         const selection_rows = cache.selection_rows.items;
         if (selection_rows.len == rows) {
             const selection_color = softSelectionColor(r.theme.selection);
@@ -229,8 +229,7 @@ pub fn drawOverlays(
                 r.drawRect(box_x, box_y, border_w, box_h, r.theme.cursor);
                 r.drawRect(box_x + box_w - border_w, box_y, border_w, box_h, r.theme.cursor);
             } else switch (cursor_style.shape) {
-                .block => {
-                },
+                .block => {},
                 .underline => {
                     const draw_x = cell_x_i + cursor_edge_inset;
                     const draw_w = @max(1, cursor_w_i - cursor_edge_inset * 2);
