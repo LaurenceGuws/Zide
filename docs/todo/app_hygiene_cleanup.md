@@ -182,6 +182,13 @@ Progress note, 2026-04-01:
   compile/run wiring per report
 - this keeps step names and behavior intact while removing another build-side
   duplication slab from the justified non-`src` surface
+- compile-step linker setup now routes through
+  `build_system/compile_utils.zig` instead of being redefined as no-op stubs in
+  multiple build modules
+- `build_system/step_utils.zig`, `build_system/step_reports.zig`,
+  `build_system/target_factory.zig`, and `build_system/dependency_resolver.zig`
+  now share one build-owned compile utility seam instead of carrying repeated
+  local linker boilerplate
 
 ### AH-04 App Orchestration Honesty
 

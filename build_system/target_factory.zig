@@ -4,10 +4,7 @@ const target_config = @import("target_config.zig");
 const step_utils = @import("step_utils.zig");
 const target_profile = @import("target_profile.zig");
 const windows_identity = @import("windows_identity.zig");
-
-fn configureWindowsLinker(step: *std.Build.Step.Compile) void {
-    _ = step;
-}
+const compile_utils = @import("compile_utils.zig");
 
 pub fn configureWindowsGuiSubsystem(step: *std.Build.Step.Compile, target: std.Build.ResolvedTarget) void {
     if (target.result.os.tag == .windows) {
@@ -25,16 +22,12 @@ pub fn addAppExecutable(
     name: []const u8,
     root_source_file: []const u8,
 ) *std.Build.Step.Compile {
-    const exe = b.addExecutable(.{
-        .name = name,
-        .root_module = b.createModule(.{
-            .root_source_file = b.path(root_source_file),
-            .target = target,
-            .optimize = optimize,
-            .link_libc = true,
-        }),
-    });
-    configureWindowsLinker(exe);
+    const exe = compile_utils.addExecutable(b, name, b.createModule(.{
+        .root_source_file = b.path(root_source_file),
+        .target = target,
+        .optimize = optimize,
+        .link_libc = true,
+    }));
     windows_identity.configureExecutableResources(b, exe, target, name);
     exe.root_module.addOptions("build_options", build_options);
     exe.root_module.addImport("zlua", zlua_module);
@@ -103,7 +96,7 @@ pub fn addSdlConfiguredTest(
             .link_libc = true,
         }),
     });
-    configureWindowsLinker(test_target);
+    compile_utils.configureWindowsLinker(test_target);
     if (build_options) |opts| {
         test_target.root_module.addOptions("build_options", opts);
     }
@@ -131,16 +124,12 @@ pub fn addSdlConfiguredExecutable(
     ctx: app_types.AppLinkContext,
     profile: target_profile.LinkProfile,
 ) *std.Build.Step.Compile {
-    const exe = b.addExecutable(.{
-        .name = name,
-        .root_module = b.createModule(.{
-            .root_source_file = b.path(root_source_file),
-            .target = target,
-            .optimize = optimize,
-            .link_libc = true,
-        }),
-    });
-    configureWindowsLinker(exe);
+    const exe = compile_utils.addExecutable(b, name, b.createModule(.{
+        .root_source_file = b.path(root_source_file),
+        .target = target,
+        .optimize = optimize,
+        .link_libc = true,
+    }));
     if (zlua_portable_module) |module| {
         exe.root_module.addImport("zlua_portable", module);
     }
@@ -166,7 +155,7 @@ pub fn addLibcTest(
             .link_libc = true,
         }),
     });
-    configureWindowsLinker(test_target);
+    compile_utils.configureWindowsLinker(test_target);
     return test_target;
 }
 
@@ -177,15 +166,10 @@ pub fn addLibcExecutable(
     name: []const u8,
     root_source_file: []const u8,
 ) *std.Build.Step.Compile {
-    const exe = b.addExecutable(.{
-        .name = name,
-        .root_module = b.createModule(.{
-            .root_source_file = b.path(root_source_file),
-            .target = target,
-            .optimize = optimize,
-            .link_libc = true,
-        }),
-    });
-    configureWindowsLinker(exe);
-    return exe;
+    return compile_utils.addExecutable(b, name, b.createModule(.{
+        .root_source_file = b.path(root_source_file),
+        .target = target,
+        .optimize = optimize,
+        .link_libc = true,
+    }));
 }

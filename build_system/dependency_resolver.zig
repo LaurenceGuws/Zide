@@ -1,9 +1,5 @@
 const std = @import("std");
-
-fn configureWindowsLinker(step: *std.Build.Step.Compile, target: std.Build.ResolvedTarget) void {
-    _ = step;
-    _ = target;
-}
+const compile_utils = @import("compile_utils.zig");
 
 pub const BuildDependencies = struct {
     treesitter: ?*std.Build.Step.Compile,
@@ -29,14 +25,14 @@ pub fn resolveDependencies(
     else
         null;
     const treesitter = if (tree_sitter_dep) |dep| dep.artifact("tree-sitter") else null;
-    if (treesitter) |lib| configureWindowsLinker(lib, target);
+    if (treesitter) |lib| compile_utils.configureWindowsLinker(lib);
 
     const sdl_dep = b.dependency("sdl", .{
         .target = target,
         .optimize = optimize,
     });
     const sdl_lib = sdl_dep.artifact("SDL3");
-    configureWindowsLinker(sdl_lib, target);
+    compile_utils.configureWindowsLinker(sdl_lib);
 
     const zlua_dep = b.dependency("zlua", .{
         .target = target,
@@ -67,8 +63,8 @@ pub fn resolveDependencies(
 
     const freetype_lib: ?*std.Build.Step.Compile = freetype_dep.artifact("freetype");
     const harfbuzz_lib: ?*std.Build.Step.Compile = harfbuzz_dep.artifact("harfbuzz");
-    if (freetype_lib) |lib| configureWindowsLinker(lib, target);
-    if (harfbuzz_lib) |lib| configureWindowsLinker(lib, target);
+    if (freetype_lib) |lib| compile_utils.configureWindowsLinker(lib);
+    if (harfbuzz_lib) |lib| compile_utils.configureWindowsLinker(lib);
 
     return .{
         .treesitter = treesitter,

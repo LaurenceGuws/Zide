@@ -1,8 +1,5 @@
 const std = @import("std");
-
-fn configureWindowsLinker(step: *std.Build.Step.Compile) void {
-    _ = step;
-}
+const compile_utils = @import("compile_utils.zig");
 
 const ReportToolSpec = struct {
     exe_name: []const u8,
@@ -191,15 +188,11 @@ fn addReportToolExecutable(
     build_options: ?*std.Build.Step.Options,
     spec: ReportToolSpec,
 ) *std.Build.Step.Compile {
-    const exe = b.addExecutable(.{
-        .name = spec.exe_name,
-        .root_module = b.createModule(.{
-            .root_source_file = b.path(spec.root_source_file),
-            .target = target,
-            .optimize = optimize,
-        }),
-    });
-    configureWindowsLinker(exe);
+    const exe = compile_utils.addExecutable(b, spec.exe_name, b.createModule(.{
+        .root_source_file = b.path(spec.root_source_file),
+        .target = target,
+        .optimize = optimize,
+    }));
     if (spec.adds_build_options) {
         exe.root_module.addOptions("build_options", build_options.?);
     }
