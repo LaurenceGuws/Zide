@@ -253,6 +253,9 @@ Judgment:
   - widget scroll models now also ask publication for `scrollbarInfo`
     instead of rebuilding allowed/rows/total-lines/offset from multiple
     cache-derived calls
+  - widget lifecycle logging now also asks publication for
+    `lifecycleTransitionInfo` instead of repeating inline alt-state
+    interpretation in draw code
     inside the widget layer
   - that is the standard the rest of the publication war should keep:
     if a cache field is just restating derivable published state, it should die

@@ -276,6 +276,7 @@ Validation note, 2026-03-31:
     - `scrollbarAllowed(...)`
     - `drawCursorVisible(...)`
     - `altTransition(...)`
+    - `lifecycleTransitionInfo(...)`
     now give widget code explicit publication-facing queries instead of making
     it re-derive those answers from raw cache fields every time
   - that widget-facing helper layer now also owns partial-capture interpretation:

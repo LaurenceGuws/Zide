@@ -633,9 +633,8 @@ pub fn drawPrepared(
 
     const r = shell.rendererPtr();
     const cache = &self.draw_cache;
-    const alt_transition = terminal_publication.altTransition(self.last_alt_active, cache);
-    const alt_state_changed = alt_transition.changed;
-    const alt_exit = alt_transition.exited;
+    const lifecycle_transition = terminal_publication.lifecycleTransitionInfo(self.last_alt_active, cache);
+    const alt_exit = lifecycle_transition.exited;
     self.last_alt_active = cache.alt_active;
     render_phase_start = app_shell.getTime();
 
@@ -1469,8 +1468,8 @@ pub fn drawPrepared(
     const has_kitty_images = self.kitty.images_view.items.len > 0;
     const lifecycle_reason = if (!texture_ready_before_draw)
         "init"
-    else if (alt_state_changed)
-        (if (cache.alt_active) "alt_enter" else "alt_exit")
+    else if (lifecycle_transition.reason()) |reason|
+        reason
     else
         null;
     const active_draw_log = if (lifecycle_reason != null) lifecycle_log else draw_log;

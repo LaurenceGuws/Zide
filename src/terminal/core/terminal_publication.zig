@@ -64,6 +64,17 @@ pub const AltTransition = struct {
     exited: bool,
 };
 
+pub const LifecycleTransitionInfo = struct {
+    changed: bool,
+    exited: bool,
+    current_alt_active: bool,
+
+    pub fn reason(self: LifecycleTransitionInfo) ?[]const u8 {
+        if (!self.changed) return null;
+        return if (self.current_alt_active) "alt_enter" else "alt_exit";
+    }
+};
+
 pub const PartialCaptureInfo = struct {
     use_viewport_shift: bool,
     active_viewport_shift_rows: i32,
@@ -133,6 +144,15 @@ pub fn altTransition(previous_alt_active: bool, cache: *const RenderCache) AltTr
     return .{
         .changed = previous_alt_active != cache.alt_active,
         .exited = previous_alt_active and !cache.alt_active,
+    };
+}
+
+pub fn lifecycleTransitionInfo(previous_alt_active: bool, cache: *const RenderCache) LifecycleTransitionInfo {
+    const transition = altTransition(previous_alt_active, cache);
+    return .{
+        .changed = transition.changed,
+        .exited = transition.exited,
+        .current_alt_active = cache.alt_active,
     };
 }
 

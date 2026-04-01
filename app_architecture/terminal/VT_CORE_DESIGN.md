@@ -186,6 +186,9 @@ Status note, 2026-03-31:
   queries for viewport, scrollbar eligibility, cursor-at-live-bottom, and
   alt-state transition instead of re-deriving those answers ad hoc from raw
   cache fields
+  - widget lifecycle logging/transition labels should come from
+    publication-owned transition summaries like `lifecycleTransitionInfo(...)`
+    instead of repeating inline alt-state interpretation in draw code
   - that same helper layer now also owns partial-capture interpretation for
     viewport-shift use and capture reason
   - render-state interpretation for widget draw is also moving there, reducing
