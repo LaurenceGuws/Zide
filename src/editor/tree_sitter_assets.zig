@@ -20,20 +20,20 @@ pub fn userAssetRoot(allocator: std.mem.Allocator) !?[]u8 {
     if (builtin.os.tag == .windows) {
         if (std.c.getenv("LOCALAPPDATA")) |local_appdata| {
             const base = std.mem.sliceTo(local_appdata, 0);
-            return std.fs.path.join(allocator, &.{ base, "Zide", "tree-sitter-assets" });
+            return try std.fs.path.join(allocator, &.{ base, "Zide", "tree-sitter-assets" });
         }
         if (std.c.getenv("APPDATA")) |appdata| {
             const base = std.mem.sliceTo(appdata, 0);
-            return std.fs.path.join(allocator, &.{ base, "Zide", "tree-sitter-assets" });
+            return try std.fs.path.join(allocator, &.{ base, "Zide", "tree-sitter-assets" });
         }
     }
     if (std.c.getenv("XDG_CONFIG_HOME")) |xdg| {
         const base = std.mem.sliceTo(xdg, 0);
-        return std.fs.path.join(allocator, &.{ base, "zide", "tree-sitter-assets" });
+        return try std.fs.path.join(allocator, &.{ base, "zide", "tree-sitter-assets" });
     }
     if (std.c.getenv("HOME")) |home| {
         const base = std.mem.sliceTo(home, 0);
-        return std.fs.path.join(allocator, &.{ base, ".config", "zide", "tree-sitter-assets" });
+        return try std.fs.path.join(allocator, &.{ base, ".config", "zide", "tree-sitter-assets" });
     }
     return null;
 }
