@@ -1,26 +1,28 @@
 const csi_mod = @import("../parser/csi.zig");
 const parser_mod = @import("../parser/parser.zig");
-const core_dispatch = @import("terminal_core_dispatch.zig");
+const control_handlers = @import("control_handlers.zig");
 const core_feed = @import("terminal_core_feed.zig");
 const core_protocol = @import("terminal_core_protocol.zig");
+const parser_hooks = @import("parser_hooks.zig");
 const session_mode_effects = @import("session_mode_effects.zig");
+const terminal_core_text = @import("terminal_core_text.zig");
 const terminal_publication = @import("terminal_publication.zig");
 const types = @import("../model/types.zig");
 
 pub fn handleControl(self: anytype, byte: u8) void {
-    core_dispatch.handleControl(self, byte);
+    control_handlers.handleControl(self, byte);
 }
 
 pub fn parseDcs(self: anytype, payload: []const u8) void {
-    core_dispatch.parseDcs(self, payload);
+    parser_hooks.parseDcs(parser_hooks.SessionFacade.from(self), payload);
 }
 
 pub fn parseApc(self: anytype, payload: []const u8) void {
-    core_dispatch.parseApc(self, payload);
+    parser_hooks.parseApc(parser_hooks.SessionFacade.from(self), payload);
 }
 
 pub fn parseOsc(self: anytype, payload: []const u8, terminator: parser_mod.OscTerminator) void {
-    core_dispatch.parseOsc(self, payload, terminator);
+    parser_hooks.parseOsc(parser_hooks.SessionFacade.from(self), payload, terminator);
 }
 
 pub fn appendHyperlink(self: anytype, uri: []const u8) ?u32 {
@@ -32,7 +34,7 @@ pub fn clearAllKittyImages(self: anytype) void {
 }
 
 pub fn handleCsi(self: anytype, action: csi_mod.CsiAction) void {
-    core_dispatch.handleCsi(self, action);
+    parser_hooks.handleCsi(parser_hooks.SessionFacade.from(self), action);
 }
 
 pub fn feedOutputBytes(self: anytype, bytes: []const u8) void {
@@ -53,7 +55,7 @@ pub fn resetStateLocked(self: anytype) void {
 }
 
 pub fn reverseIndex(self: anytype) void {
-    core_dispatch.reverseIndex(self);
+    core_protocol.reverseIndex(self);
 }
 
 pub fn eraseDisplay(self: anytype, mode: i32) void {
@@ -101,19 +103,19 @@ pub fn paletteColor(self: anytype, idx: u8) types.Color {
 }
 
 pub fn handleCodepoint(self: anytype, codepoint: u32) void {
-    core_dispatch.handleCodepoint(self, codepoint);
+    terminal_core_text.handleCodepoint(terminal_core_text.TextContext.from(self), codepoint);
 }
 
 pub fn handleAsciiSlice(self: anytype, bytes: []const u8) void {
-    core_dispatch.handleAsciiSlice(self, bytes);
+    terminal_core_text.handleAsciiSlice(terminal_core_text.TextContext.from(self), bytes);
 }
 
 pub fn newline(self: anytype) void {
-    core_dispatch.newline(self);
+    core_protocol.newline(self);
 }
 
 pub fn wrapNewline(self: anytype) void {
-    core_dispatch.wrapNewline(self);
+    core_protocol.wrapNewline(self);
 }
 
 pub fn getCell(self: anytype, row: usize, col: usize) types.Cell {

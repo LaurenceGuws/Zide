@@ -197,7 +197,7 @@ Validation note, 2026-03-31:
   not yet reduced to a cleaner engine-owned boundary.
   Progress note, 2026-04-01, later:
   - printable text no longer routes through `parser_hooks.zig` at all
-  - `terminal_core_dispatch.zig` now sends codepoint/ASCII traffic directly to
+  - codepoint/ASCII traffic now routes directly into
     `terminal_core_text.zig`
   - `parser_hooks.zig` is reduced to parser-control surfaces instead of
     continuing to masquerade as the owner of printable semantics
@@ -218,10 +218,11 @@ Validation note, 2026-03-31:
     protocol, mode-effect, feed, and publication owners
   - the API seam name is now honest too:
     `src/terminal/core/terminal_protocol_api.zig`
+  - the dead `src/terminal/core/terminal_core_dispatch.zig` middleman is now
+    deleted; `terminal_protocol_api.zig` routes straight to the real owners
   - newline, wrap-newline, and reverse-index now live under
     `src/terminal/core/terminal_core_protocol.zig`
-    instead of staying split awkwardly between dispatch and
-    `control_handlers.zig`
+    instead of staying split awkwardly with `control_handlers.zig`
 - [ ] `VTCORE-05` Simplify snapshot and render publication.
   Notes: the explicit publication center now lives in
   `src/terminal/core/terminal_publication.zig`, and the old live

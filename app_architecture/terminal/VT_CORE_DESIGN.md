@@ -940,9 +940,11 @@ Protocol execution also moved another step toward core ownership:
   deleted
 - `src/terminal/core/terminal_protocol_api.zig` now routes directly to the real
   owners instead of hiding them behind one more session-named hop
+- the dead `src/terminal/core/terminal_core_dispatch.zig` middleman is now
+  gone too; protocol API now talks to the real owners directly
 - newline, wrap-newline, and reverse-index now also live under
   `src/terminal/core/terminal_core_protocol.zig` instead of staying split
-  between dispatch glue and `control_handlers.zig`
+  with `control_handlers.zig`
 - RIS/reset core mutation now also lives behind
   `src/terminal/core/terminal_core_reset.zig`, with the remaining session-owned
   input-mode snapshot republish step now expressed through

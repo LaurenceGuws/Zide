@@ -148,14 +148,14 @@ Why it matters:
 Primary files:
 
 - `src/terminal/core/terminal_core_text.zig`
-- `src/terminal/core/terminal_core_dispatch.zig`
+- `src/terminal/core/terminal_protocol_api.zig`
 - `src/terminal/core/control_handlers.zig`
 
 Evidence:
 
 - printable text no longer routes through `parser_hooks.zig`
-- `terminal_core_dispatch.zig` now sends codepoint/ASCII traffic directly to
-  `terminal_core_text.zig`
+- codepoint/ASCII traffic now routes directly into `terminal_core_text.zig`
+- the dead `terminal_core_dispatch.zig` middleman is now deleted
 - `terminal_core_text.zig` now reads core-owned text state directly from
   `TerminalCore` for:
   - active screen access
