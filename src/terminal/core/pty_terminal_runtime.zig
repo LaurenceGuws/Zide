@@ -17,7 +17,6 @@ const resize_reflow = @import("resize_reflow.zig");
 const selection_mod = @import("selection.zig");
 const scrolling_mod = @import("scrolling.zig");
 const control_handlers = @import("protocol/control_handlers.zig");
-const parser_hooks = @import("protocol/parser_hooks.zig");
 const input_modes = @import("input_modes.zig");
 const hyperlink_table = @import("hyperlink_table.zig");
 const terminal_core_mod = @import("terminal_core.zig");

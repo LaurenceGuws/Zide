@@ -238,6 +238,9 @@ Evidence:
 - the dead `TextContext` adapter layer is now gone too:
   `terminal_core_text.zig` talks directly to `self.core` plus protocol-owned
   effects instead of routing through one more wrapper-shaped contract
+- the parser-facing forwarding shell is now gone too:
+  `terminal_protocol_api.zig` routes DCS/APC/OSC/CSI traffic directly to the
+  real protocol owners instead of stepping through `parser_hooks.zig`
 - the remaining callback seam is narrower:
   - wrap/newline effects
   - insert-mode char insertion effects

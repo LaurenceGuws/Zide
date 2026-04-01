@@ -3,7 +3,10 @@ const parser_mod = @import("../../parser/parser.zig");
 const control_handlers = @import("control_handlers.zig");
 const core_feed = @import("terminal_core_feed.zig");
 const core_protocol = @import("terminal_core_protocol.zig");
-const parser_hooks = @import("parser_hooks.zig");
+const protocol_csi = @import("../../protocol/csi.zig");
+const protocol_dcs_apc = @import("../../protocol/dcs_apc.zig");
+const protocol_osc = @import("../../protocol/osc.zig");
+const kitty_mod = @import("../../kitty/graphics.zig");
 const mode_effects = @import("../session/mode_effects.zig");
 const terminal_core_text = @import("terminal_core_text.zig");
 const terminal_publication = @import("../publication/terminal_publication.zig");
@@ -14,15 +17,15 @@ pub fn handleControl(self: anytype, byte: u8) void {
 }
 
 pub fn parseDcs(self: anytype, payload: []const u8) void {
-    parser_hooks.parseDcs(parser_hooks.SessionFacade.from(self), payload);
+    protocol_dcs_apc.parseDcs(protocol_dcs_apc.SessionFacade.from(self), payload);
 }
 
 pub fn parseApc(self: anytype, payload: []const u8) void {
-    parser_hooks.parseApc(parser_hooks.SessionFacade.from(self), payload);
+    protocol_dcs_apc.parseApc(protocol_dcs_apc.SessionFacade.from(self), payload);
 }
 
 pub fn parseOsc(self: anytype, payload: []const u8, terminator: parser_mod.OscTerminator) void {
-    parser_hooks.parseOsc(parser_hooks.SessionFacade.from(self), payload, terminator);
+    protocol_osc.parseOsc(protocol_osc.SessionFacade.from(self), payload, terminator);
 }
 
 pub fn appendHyperlink(self: anytype, uri: []const u8) ?u32 {
@@ -34,7 +37,11 @@ pub fn clearAllKittyImages(self: anytype) void {
 }
 
 pub fn handleCsi(self: anytype, action: csi_mod.CsiAction) void {
-    parser_hooks.handleCsi(parser_hooks.SessionFacade.from(self), action);
+    protocol_csi.handleCsi(protocol_csi.SessionFacade.from(self), action);
+}
+
+pub fn parseKittyGraphics(self: anytype, payload: []const u8) void {
+    kitty_mod.parseKittyGraphics(self, payload);
 }
 
 pub fn feedOutputBytes(self: anytype, bytes: []const u8) void {

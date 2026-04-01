@@ -295,6 +295,9 @@ Validation note, 2026-03-31:
     `terminal_core_text.zig` talks directly to `self.core` plus protocol-owned
     effects instead of routing text execution through one more wrapper-shaped
     contract
+  - the dead `src/terminal/core/protocol/parser_hooks.zig` forwarding shell is
+    now gone too; `terminal_protocol_api.zig` routes DCS/APC/OSC/CSI traffic
+    directly to the real protocol owners
   - the stale `src/terminal/core/session_protocol.zig` forwarding shell is now
     deleted; `protocol/terminal_protocol_api.zig` routes directly to the real core,
     protocol, mode-effect, feed, and publication owners

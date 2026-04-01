@@ -87,6 +87,9 @@ Status note, 2026-03-31:
     `terminal_core_text.zig` talks directly to `self.core` plus those
     protocol-owned effects instead of routing through one more wrapper-shaped
     contract
+  - the parser-facing forwarding shell is gone too:
+    `terminal_protocol_api.zig` now routes DCS/APC/OSC/CSI traffic directly to
+    the real protocol owners instead of stepping through `parser_hooks.zig`
   - duplicated publication/cache truth
   - oversized native widget/render coordination around terminal publication
 - The current operating rule is sequential but ruthless:
