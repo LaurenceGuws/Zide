@@ -1,5 +1,7 @@
 const parser_csi = @import("../parser/csi.zig");
 const csi_mod = @import("csi.zig");
+const std = @import("std");
+const app_logger = @import("../../app_logger.zig");
 
 pub const ModeSnapshot = struct {
     app_cursor_keys: bool,
@@ -122,13 +124,35 @@ pub fn decrqmAnsiModeState(snapshot: ModeSnapshot, mode: i32) csi_mod.DecrpmStat
 pub fn handleDecrqmQuery(writer: anytype, action: parser_csi.CsiAction, mode: i32, snapshot: ModeSnapshot) void {
     if (action.leader == '?' and action.private) {
         const state = decrqmPrivateModeState(snapshot, mode);
-        _ = csi_mod.writeDecrqmReplyWithWriter(writer, true, mode, state);
+        _ = writeDecrqmReplyWithWriter(writer, true, mode, state);
         return;
     }
     if (action.leader == 0 and !action.private) {
         const state = decrqmAnsiModeState(snapshot, mode);
-        _ = csi_mod.writeDecrqmReplyWithWriter(writer, false, mode, state);
+        _ = writeDecrqmReplyWithWriter(writer, false, mode, state);
     }
+}
+
+pub fn writeDecrqmReply(pty: anytype, private: bool, mode: i32, state: csi_mod.DecrpmState) bool {
+    return writeDecrqmReplyWithWriter(pty, private, mode, state);
+}
+
+pub fn writeDecrqmReplyWithWriter(writer: anytype, private: bool, mode: i32, state: csi_mod.DecrpmState) bool {
+    const log = app_logger.logger("terminal.csi");
+    var buf: [32]u8 = undefined;
+    const seq = if (private)
+        std.fmt.bufPrint(&buf, "\x1b[?{d};{d}$y", .{ mode, @intFromEnum(state) })
+    else
+        std.fmt.bufPrint(&buf, "\x1b[{d};{d}$y", .{ mode, @intFromEnum(state) });
+    const bytes = seq catch |err| {
+        log.logf(.warning, "DECRQM reply format failed mode={d} private={d}: {s}", .{ mode, @as(u8, @intFromBool(private)), @errorName(err) });
+        return false;
+    };
+    _ = writer.write(bytes) catch |err| {
+        log.logf(.warning, "DECRQM reply write failed mode={d} private={d}: {s}", .{ mode, @as(u8, @intFromBool(private)), @errorName(err) });
+        return false;
+    };
+    return true;
 }
 
 fn boolModeState(enabled: bool) csi_mod.DecrpmState {

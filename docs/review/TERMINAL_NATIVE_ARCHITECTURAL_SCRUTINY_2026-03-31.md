@@ -425,6 +425,9 @@ Evidence:
   `src/terminal/protocol/csi.zig` no longer carries local DA/DSR/window-op
   bounce helpers that only forwarded into `csi_reply.zig` /
   `csi_mode_query.zig`
+- DECRQM reply formatting now lives with the DECRQM query owner too:
+  `src/terminal/protocol/csi_mode_query.zig` now owns the DECRQM reply writer
+  surface instead of leaving a leftover public reply seam on `csi.zig`
 - the outer CSI forwarding shell is gone too:
   `terminal_protocol_api.zig` now routes CSI directly into
   `src/terminal/protocol/csi.zig` without stepping through an extra

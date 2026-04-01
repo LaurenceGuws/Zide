@@ -286,6 +286,10 @@ Validation note, 2026-03-31:
     bounce helpers that only forwarded into `csi_reply.zig` /
     `csi_mode_query.zig`, and CSI reply tests now target
     `src/terminal/protocol/csi_reply.zig` directly for reply-owner behavior
+  - DECRQM reply formatting now lives with the DECRQM query owner too:
+    `src/terminal/protocol/csi_mode_query.zig` now owns
+    `writeDecrqmReply(...)`, and the remaining test-facing DECRQM reply surface
+    no longer routes through `csi.zig`
   - the remaining publication/view-cache helper stubs and the special-case
     protocol `appendHyperlink` wrapper are no longer written inline on
     `pty_terminal_runtime.zig`; those exceptions now route through the explicit

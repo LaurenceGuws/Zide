@@ -279,6 +279,9 @@ Status note, 2026-03-31:
     `src/terminal/protocol/csi.zig` now routes directly to
     `csi_reply.zig` / `csi_mode_query.zig` without carrying another local
     forwarding slab for DA/DSR/window-op reply and query handling
+  - DECRQM reply formatting now lives with the DECRQM query owner too:
+    `csi_mode_query.zig` owns both DECRQM state derivation and DECRQM reply
+    formatting, so `csi.zig` no longer has to masquerade as the reply owner
   - the same direct-owner cleanup now applies in `workspace.zig`: wrapper
     composition reads as runtime/workspace ownership, and progress-state typing
     no longer comes through `pty_terminal_runtime.zig`

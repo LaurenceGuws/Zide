@@ -169,28 +169,6 @@ fn handleCsiOnSession(self: anytype, action: parser_csi.CsiAction) void {
     }
 }
 
-pub fn writeDecrqmReply(pty: anytype, private: bool, mode: i32, state: DecrpmState) bool {
-    return writeDecrqmReplyWithWriter(pty, private, mode, state);
-}
-
-pub fn writeDecrqmReplyWithWriter(writer: anytype, private: bool, mode: i32, state: DecrpmState) bool {
-    const log = app_logger.logger("terminal.csi");
-    var buf: [32]u8 = undefined;
-    const seq = if (private)
-        std.fmt.bufPrint(&buf, "\x1b[?{d};{d}$y", .{ mode, @intFromEnum(state) })
-    else
-        std.fmt.bufPrint(&buf, "\x1b[{d};{d}$y", .{ mode, @intFromEnum(state) });
-    const bytes = seq catch |err| {
-        log.logf(.warning, "DECRQM reply format failed mode={d} private={d}: {s}", .{ mode, @as(u8, @intFromBool(private)), @errorName(err) });
-        return false;
-    };
-    _ = writer.write(bytes) catch |err| {
-        log.logf(.warning, "DECRQM reply write failed mode={d} private={d}: {s}", .{ mode, @as(u8, @intFromBool(private)), @errorName(err) });
-        return false;
-    };
-    return true;
-}
-
 pub fn applySgr(self: anytype, action: parser_csi.CsiAction) void {
     csi_style_reset.applySgr(self, action, effectiveSgrParamCount);
 }

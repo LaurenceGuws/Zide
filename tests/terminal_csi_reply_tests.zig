@@ -1,6 +1,7 @@
 const std = @import("std");
 const csi = @import("../src/terminal/protocol/csi.zig");
 const csi_reply = @import("../src/terminal/protocol/csi_reply.zig");
+const csi_mode_query = @import("../src/terminal/protocol/csi_mode_query.zig");
 
 const FakePty = struct {
     writes: std.ArrayList(u8),
@@ -64,14 +65,14 @@ test "CSI DSR unsupported mode returns false and writes nothing" {
 test "CSI DECRQM private reply bytes" {
     var pty = FakePty.init();
     defer pty.deinit();
-    try std.testing.expect(csi.writeDecrqmReply(&pty, true, 1004, .set));
+    try std.testing.expect(csi_mode_query.writeDecrqmReply(&pty, true, 1004, .set));
     try std.testing.expectEqualStrings("\x1b[?1004;1$y", pty.writes.items);
 }
 
 test "CSI DECRQM ansi reply bytes" {
     var pty = FakePty.init();
     defer pty.deinit();
-    try std.testing.expect(csi.writeDecrqmReply(&pty, false, 20, .reset));
+    try std.testing.expect(csi_mode_query.writeDecrqmReply(&pty, false, 20, .reset));
     try std.testing.expectEqualStrings("\x1b[20;2$y", pty.writes.items);
 }
 
@@ -91,7 +92,7 @@ test "CSI DECRQM reply bytes cover representative Pm policy values" {
     for (cases) |case| {
         var pty = FakePty.init();
         defer pty.deinit();
-        try std.testing.expect(csi.writeDecrqmReply(&pty, case.private, case.mode, case.state));
+        try std.testing.expect(csi_mode_query.writeDecrqmReply(&pty, case.private, case.mode, case.state));
         try std.testing.expectEqualStrings(case.expected, pty.writes.items);
     }
 }
