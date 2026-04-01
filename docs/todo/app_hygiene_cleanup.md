@@ -222,6 +222,11 @@ Progress note, 2026-04-01:
   helpers instead of inline hook bodies
 - this keeps render behavior unchanged while making the idle/render glue read
   more like orchestration than callback plumbing
+- `src/app/draw_frame_runtime.zig` now splits the draw pipeline into named
+  phases for main-surface draw, pending editor-highlight redraw, live-smoke
+  capture arming, and completed-present handling
+- this makes the draw path easier to reason about without changing frame
+  behavior or present-side effects
 
 ## Investigation Follow-up
 
