@@ -277,6 +277,11 @@ Judgment:
   `src/terminal/core/protocol/terminal_core_protocol.zig` directly too:
   `paletteColor`, `setCursorStyle`, and DECRQSS reply generation no longer
   inflate the wrapper surface
+- the same is now true for the edit/scroll/sync-update protocol cluster:
+  protocol modules and runtime tests use
+  `terminal_core_protocol.zig` / `terminal_publication.zig` directly for
+  erase/edit/scroll-region and sync-update operations, so those no longer sit
+  on the wrapper surface either
 - the flat root state is now also grouped into explicit subsystem-owned
   embedded structs:
   - `session/publication_fields`

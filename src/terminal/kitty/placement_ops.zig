@@ -1,6 +1,7 @@
 const std = @import("std");
 const app_logger = @import("../../app_logger.zig");
 const common = @import("common.zig");
+const terminal_core_protocol = @import("../core/protocol/terminal_core_protocol.zig");
 
 pub const KittyPlacementOps = struct {
     pub fn dropForImage(self: anytype, image_id: u32, include_children: bool) void {
@@ -259,7 +260,7 @@ pub fn placeKittyImage(self: anytype, image_id: u32, control: common.KittyContro
         if (rows > 0) {
             var moved: u32 = 0;
             while (moved < rows) : (moved += 1) {
-                self.newline();
+                terminal_core_protocol.newline(self);
             }
             screen.cursor.col = @min(@as(usize, col) + cols, @as(usize, screen.grid.cols - 1));
         } else if (cols > 0) {

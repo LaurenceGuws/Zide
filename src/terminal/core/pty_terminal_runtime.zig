@@ -245,23 +245,9 @@ pub const PtyTerminalRuntime = struct {
     pub const setCellSize = config.setCellSize;
 
     pub const appendHyperlink = @import("protocol/terminal_core_protocol.zig").appendHyperlink2048;
-    pub const clearAllKittyImages = @import("protocol/terminal_core_protocol.zig").clearAllKittyImages;
     pub const feedOutputBytes = @import("protocol/terminal_core_feed.zig").feedOutputBytes;
     pub const resetState = mode_effects.resetState;
     pub const resetStateLocked = mode_effects.resetStateLocked;
-    pub const eraseDisplay = @import("protocol/terminal_core_protocol.zig").eraseDisplay;
-    pub const eraseLine = @import("protocol/terminal_core_protocol.zig").eraseLine;
-    pub const insertChars = @import("protocol/terminal_core_protocol.zig").insertChars;
-    pub const deleteChars = @import("protocol/terminal_core_protocol.zig").deleteChars;
-    pub const eraseChars = @import("protocol/terminal_core_protocol.zig").eraseChars;
-    pub const insertLines = @import("protocol/terminal_core_protocol.zig").insertLines;
-    pub const deleteLines = @import("protocol/terminal_core_protocol.zig").deleteLines;
-    pub const scrollRegionUp = @import("protocol/terminal_core_protocol.zig").scrollRegionUp;
-    pub const scrollRegionUpWithOrigin = @import("protocol/terminal_core_protocol.zig").scrollRegionUpWithOrigin;
-    pub const scrollRegionDown = @import("protocol/terminal_core_protocol.zig").scrollRegionDown;
-    pub const newline = @import("protocol/terminal_core_protocol.zig").newline;
-    pub const wrapNewline = @import("protocol/terminal_core_protocol.zig").wrapNewline;
-
     fn scrollUp(self: *PtyTerminalRuntime) void {
         scrolling_mod.scrollUp(self);
     }
@@ -282,8 +268,6 @@ pub const PtyTerminalRuntime = struct {
     pub const completePresentationFeedback = terminal_publication.completePresentationFeedback;
     pub const finishFramePresentation = terminal_publication.finishFramePresentation;
     pub const syncUpdatesActive = terminal_publication.syncUpdatesActive;
-    pub const setSyncUpdates = terminal_publication.setSyncUpdates;
-    pub const setSyncUpdatesLocked = terminal_publication.setSyncUpdatesLocked;
     pub const clearPublishedDamageIfGeneration = terminal_publication.clearPublishedDamageIfGeneration;
 };
 

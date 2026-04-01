@@ -31,18 +31,18 @@ pub fn handleSimpleCsi(
         },
         'H', 'f' => screen.cursorPosAbsolute(@max(1, get(params, 0, 1)), @max(1, get(params, 1, 1))),
         'd' => screen.cursorRowAbsolute(@max(1, get(params, 0, 1))),
-        'J' => self.eraseDisplay(if (param_len > 0) params[0] else 0),
-        'K' => self.eraseLine(if (param_len > 0) params[0] else 0),
-        '@' => self.insertChars(@intCast(@max(1, get(params, 0, 1)))),
-        'P' => self.deleteChars(@intCast(@max(1, get(params, 0, 1)))),
-        'X' => self.eraseChars(@intCast(@max(1, get(params, 0, 1)))),
-        'L' => self.insertLines(@intCast(@max(1, get(params, 0, 1)))),
-        'M' => self.deleteLines(@intCast(@max(1, get(params, 0, 1)))),
+        'J' => terminal_core_protocol.eraseDisplay(self, if (param_len > 0) params[0] else 0),
+        'K' => terminal_core_protocol.eraseLine(self, if (param_len > 0) params[0] else 0),
+        '@' => terminal_core_protocol.insertChars(self, @intCast(@max(1, get(params, 0, 1)))),
+        'P' => terminal_core_protocol.deleteChars(self, @intCast(@max(1, get(params, 0, 1)))),
+        'X' => terminal_core_protocol.eraseChars(self, @intCast(@max(1, get(params, 0, 1)))),
+        'L' => terminal_core_protocol.insertLines(self, @intCast(@max(1, get(params, 0, 1)))),
+        'M' => terminal_core_protocol.deleteLines(self, @intCast(@max(1, get(params, 0, 1)))),
         'S' => {
             const count = @as(usize, @intCast(@max(1, get(params, 0, 1))));
-            self.scrollRegionUpWithOrigin(count, "csi.S.scroll_region_up");
+            terminal_core_protocol.scrollRegionUpWithOrigin(self, count, "csi.S.scroll_region_up");
         },
-        'T' => self.scrollRegionDown(@intCast(@max(1, get(params, 0, 1)))),
+        'T' => terminal_core_protocol.scrollRegionDown(self, @intCast(@max(1, get(params, 0, 1)))),
         'Z' => {
             var i: i32 = 0;
             const n = @max(1, get(params, 0, 1));

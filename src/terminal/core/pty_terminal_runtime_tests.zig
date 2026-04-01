@@ -2,6 +2,8 @@ const std = @import("std");
 const builtin = @import("builtin");
 const snapshot_mod = @import("publication/snapshot.zig");
 const render_cache = @import("publication/render_cache.zig");
+const terminal_publication = @import("publication/terminal_publication.zig");
+const terminal_core_protocol = @import("protocol/terminal_core_protocol.zig");
 const host_types = @import("session/host_types.zig");
 const types = @import("../model/types.zig");
 const runtime_mod = @import("terminal_runtime.zig");
@@ -261,7 +263,7 @@ test "top-anchored partial scroll region retires rows into scrollback" {
     }
 
     session.feedOutputBytes("\x1b[1;3r");
-    session.scrollRegionUpWithOrigin(1, "test.top_anchored_scroll_region");
+    terminal_core_protocol.scrollRegionUpWithOrigin(session, 1, "test.top_anchored_scroll_region");
 
     try std.testing.expectEqual(@as(usize, 1), session.scrollbackInfo().total_rows);
     const history_row = session.scrollbackRow(0) orelse return error.TestExpectedEqual;
@@ -451,7 +453,7 @@ test "synchronized top-anchored partial scroll region retires rows into scrollba
     try std.testing.expect(session.syncUpdatesActive());
 
     session.feedOutputBytes("\x1b[1;3r");
-    session.scrollRegionUpWithOrigin(1, "test.sync_top_anchored_scroll_region");
+    terminal_core_protocol.scrollRegionUpWithOrigin(session, 1, "test.sync_top_anchored_scroll_region");
 
     try std.testing.expectEqual(@as(usize, 1), session.scrollbackInfo().total_rows);
     const history_row = session.scrollbackRow(0) orelse return error.TestExpectedEqual;
@@ -722,7 +724,7 @@ test "acknowledgePresentedGeneration derives sync dirty retirement from cache" {
     try std.testing.expectEqual(Dirty.none, session.primary.grid.dirty);
 
     session.primary.markDirtyAllWithReason(.unknown, @src());
-    session.setSyncUpdates(true);
+    terminal_publication.setSyncUpdates(session, true);
     _ = session.bumpGeneration();
     session.publishCurrentViewLocked("test_publication");
     const sync_generation = session.renderCache().generation;
@@ -932,7 +934,7 @@ test "setSyncUpdates enable does not force redraw when screen is otherwise clean
     session.alt.clearDirty();
     try std.testing.expect(session.acknowledgePresentedGeneration(session.renderCache().generation));
 
-    session.setSyncUpdates(true);
+    terminal_publication.setSyncUpdates(session, true);
 
     const cache = session.renderCache();
     try std.testing.expect(session.syncUpdatesActive());
@@ -958,7 +960,7 @@ test "setSyncUpdates enable does not publish dirty screen state on presented gen
     session.primary.grid.cells.items[0] = cell;
     session.primary.grid.markDirtyRange(0, 0, 0, 0);
 
-    session.setSyncUpdates(true);
+    terminal_publication.setSyncUpdates(session, true);
 
     var cache = session.renderCache();
     try std.testing.expect(session.syncUpdatesActive());
@@ -983,14 +985,14 @@ test "setSyncUpdates disable stays clean when no buffered changes exist" {
     var session = try PtyTerminalRuntime.init(allocator, 2, 4);
     defer session.deinit();
 
-    session.setSyncUpdates(true);
+    terminal_publication.setSyncUpdates(session, true);
     _ = session.bumpGeneration();
     session.publishCurrentViewLocked("test_publication");
     session.primary.clearDirty();
     session.alt.clearDirty();
     try std.testing.expect(session.acknowledgePresentedGeneration(session.renderCache().generation));
 
-    session.setSyncUpdates(false);
+    terminal_publication.setSyncUpdates(session, false);
 
     const cache = session.renderCache();
     try std.testing.expect(!session.syncUpdatesActive());
@@ -1009,7 +1011,7 @@ test "setSyncUpdates disable preserves buffered partial damage" {
     session.alt.clearDirty();
     try std.testing.expect(session.acknowledgePresentedGeneration(session.renderCache().generation));
 
-    session.setSyncUpdates(true);
+    terminal_publication.setSyncUpdates(session, true);
 
     var cell = session.primary.defaultCell();
     cell.codepoint = 'Z';
@@ -1018,7 +1020,7 @@ test "setSyncUpdates disable preserves buffered partial damage" {
     _ = session.bumpGeneration();
     session.publishCurrentViewLocked("test_publication");
 
-    session.setSyncUpdates(false);
+    terminal_publication.setSyncUpdates(session, false);
 
     const cache = session.renderCache();
     try std.testing.expect(!session.syncUpdatesActive());
@@ -1950,7 +1952,7 @@ test "eraseDisplay cursor-to-end keeps partial damage" {
     session.alt.clearDirty();
     try std.testing.expect(session.acknowledgePresentedGeneration(session.renderCache().generation));
 
-    session.eraseDisplay(0);
+    terminal_core_protocol.eraseDisplay(session, 0);
     _ = session.bumpGeneration();
     session.publishCurrentViewLocked("test_publication");
 
@@ -1981,7 +1983,7 @@ test "eraseDisplay start-to-cursor keeps partial damage" {
     session.alt.clearDirty();
     try std.testing.expect(session.acknowledgePresentedGeneration(session.renderCache().generation));
 
-    session.eraseDisplay(1);
+    terminal_core_protocol.eraseDisplay(session, 1);
     _ = session.bumpGeneration();
     session.publishCurrentViewLocked("test_publication");
 
@@ -2011,7 +2013,7 @@ test "eraseDisplay full keeps full-width partial damage" {
     session.alt.clearDirty();
     try std.testing.expect(session.acknowledgePresentedGeneration(session.renderCache().generation));
 
-    session.eraseDisplay(2);
+    terminal_core_protocol.eraseDisplay(session, 2);
     _ = session.bumpGeneration();
     session.publishCurrentViewLocked("test_publication");
 

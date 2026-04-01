@@ -1,5 +1,6 @@
 const types = @import("../model/types.zig");
 const parser_csi = @import("../parser/csi.zig");
+const terminal_publication = @import("../core/publication/terminal_publication.zig");
 const terminal_core_protocol = @import("../core/protocol/terminal_core_protocol.zig");
 const app_logger = @import("../../app_logger.zig");
 
@@ -18,8 +19,8 @@ pub fn applyDecstrReset(self: anytype) void {
     self.interaction.kitty_paste_events_5522 = false;
     self.resetInputModesLocked();
     self.core.column_mode_132 = false;
-    self.setSyncUpdatesLocked(false);
-    self.clearAllKittyImages();
+    terminal_publication.setSyncUpdatesLocked(self, false);
+    terminal_core_protocol.clearAllKittyImages(self);
     self.activeScreen().resetState();
     @import("../core/input_modes.zig").publishSnapshot(self);
     self.activeScreen().markDirtyAllWithReason(.decstr_soft_reset, @src());

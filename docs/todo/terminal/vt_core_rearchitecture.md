@@ -308,6 +308,11 @@ Validation note, 2026-03-31:
     `src/terminal/core/protocol/terminal_core_protocol.zig` directly too:
     `paletteColor`, `setCursorStyle`, and DECRQSS reply generation no longer
     pretend to belong to `src/terminal/core/pty_terminal_runtime.zig`
+  - the same is now true for the edit/scroll/sync-update protocol cluster:
+    protocol modules and runtime tests use
+    `terminal_core_protocol.zig` / `terminal_publication.zig` directly for
+    erase/edit/scroll-region and sync-update operations, so those no longer sit
+    on the wrapper surface either
   - raw session state is no longer a flat lie:
     - `src/terminal/core/session/publication_fields.zig`
     - `src/terminal/core/session/runtime_fields.zig`

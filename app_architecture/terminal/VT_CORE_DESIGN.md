@@ -213,6 +213,11 @@ Status note, 2026-03-31:
     `src/terminal/core/protocol/terminal_core_protocol.zig` directly too:
     `paletteColor`, `setCursorStyle`, and DECRQSS reply generation no longer
     inflate the wrapper surface
+  - the same is now true for the edit/scroll/sync-update protocol cluster:
+    protocol modules and runtime tests use
+    `terminal_core_protocol.zig` / `terminal_publication.zig` directly for
+    erase/edit/scroll-region and sync-update operations, so those no longer
+    inflate the wrapper surface either
   - the same direct-owner cleanup now applies in `workspace.zig`: wrapper
     composition reads as runtime/workspace ownership, and progress-state typing
     no longer comes through `pty_terminal_runtime.zig`
