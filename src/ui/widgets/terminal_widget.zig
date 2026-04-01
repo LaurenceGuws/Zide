@@ -1,7 +1,7 @@
 const std = @import("std");
 const app_shell = @import("../../app_shell.zig");
 const terminal_runtime = @import("../../terminal/core/terminal_runtime.zig");
-const terminal_publication = @import("../../terminal/core/terminal_publication.zig");
+const terminal_publication = @import("../../terminal/core/publication/terminal_publication.zig");
 const terminal_types = @import("../../terminal/model/types.zig");
 const key_encoder = @import("../../terminal/input/key_encoder.zig");
 const app_logger = @import("../../app_logger.zig");
@@ -12,7 +12,7 @@ const kitty_mod = @import("terminal_widget_kitty.zig");
 const paste_mod = @import("terminal_widget_paste.zig");
 const draw_mod = @import("terminal_widget_draw.zig");
 const input_mod = @import("terminal_widget_input.zig");
-const render_cache_mod = @import("../../terminal/core/render_cache.zig");
+const render_cache_mod = @import("../../terminal/core/publication/render_cache.zig");
 
 const Shell = app_shell.Shell;
 const PtyTerminalRuntime = terminal_runtime.PtyTerminalRuntime;

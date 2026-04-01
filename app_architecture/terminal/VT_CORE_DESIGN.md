@@ -93,7 +93,7 @@ Status note, 2026-03-31:
 - First public-surface slice landed under that rule:
   - `src/terminal/core/terminal_runtime.zig` now acts as the explicit runtime
     surface for native app/runtime, replay-harness, and FFI consumers
-  - `src/terminal/core/terminal_publication.zig` now acts as the explicit
+  - `src/terminal/core/publication/terminal_publication.zig` now acts as the explicit
     publication/type surface for native widget, replay-harness, and FFI
     consumers
   - `src/terminal/core/terminal_debug.zig` now acts as the explicit test/replay
@@ -146,6 +146,10 @@ Status note, 2026-03-31:
     host types/metadata, init options, input send/report helpers, input
     snapshot state, and presentation feedback structs now also live under
     `src/terminal/core/session/`
+  - the next honest peer subtree is now real too:
+    publication-owned cache, snapshot, and publication helper files now live
+    under `src/terminal/core/publication/` instead of continuing to squat as a
+    flat cluster beside engine-owned files
   - that matters because `pty_terminal_runtime.zig` no longer reads like a bag of
     every field in the system; it reads like allocator/core plus grouped
     subsystems

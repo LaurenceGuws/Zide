@@ -128,7 +128,7 @@ test "restoredCarriedSpan rejects invalid source spans" {
 test "refineRowHashDamage preserves disjoint row spans after row-hash narrowing" {
     const allocator = std.testing.allocator;
     const render_cache = @import("render_cache.zig");
-    const types = @import("../model/types.zig");
+    const types = @import("../../model/types.zig");
     const default_cell = types.default_cell;
 
     var cache = render_cache.RenderCache.init();

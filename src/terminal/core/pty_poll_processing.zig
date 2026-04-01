@@ -1,7 +1,7 @@
 const std = @import("std");
 const parser_mod = @import("../parser/parser.zig");
 const app_logger = @import("../../app_logger.zig");
-const terminal_publication = @import("terminal_publication.zig");
+const terminal_publication = @import("publication/terminal_publication.zig");
 
 pub const PtyPollResult = struct {
     queued_bytes: usize,

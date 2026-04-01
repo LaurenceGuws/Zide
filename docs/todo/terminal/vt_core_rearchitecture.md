@@ -82,8 +82,8 @@ Merge goal:
 
 Checklist:
 
-- [x] explicit `terminal_publication.zig` center exists
-- [x] session/publication call paths route through `terminal_publication`
+- [x] explicit `publication/terminal_publication.zig` center exists
+- [x] session/publication call paths route through `publication/terminal_publication`
 - [x] `session_rendering.zig` removed from live call paths
 - [x] milestone validation pass captured
 - [x] milestone merged back into `main`
@@ -95,7 +95,7 @@ Validation note, 2026-03-31:
   - `zig build check-app-imports`
 - ownership shift:
   - session/publication callers now route through
-    `src/terminal/core/terminal_publication.zig`
+    `src/terminal/core/publication/terminal_publication.zig`
   - the old `src/terminal/core/session_rendering.zig` shell is removed
 
 ## TODO
@@ -185,6 +185,10 @@ Validation note, 2026-03-31:
     host metadata/types, init options, input send/report helpers, input
     snapshot state, and presentation feedback structs now also live under
     `src/terminal/core/session/`
+  - the next honest peer subtree is now in too:
+    publication-owned cache, snapshot, and publication helper files now live
+    under `src/terminal/core/publication/` instead of continuing to sprawl as
+    another flat cluster beside engine-owned files
   - `pty_terminal_runtime.zig` now reads as allocator/core plus grouped subsystem
     state and explicit API seams, not as one broad undifferentiated owner.
   - the rename threshold is now crossed:
@@ -238,7 +242,7 @@ Validation note, 2026-03-31:
     instead of staying split awkwardly with `control_handlers.zig`
 - [ ] `VTCORE-05` Simplify snapshot and render publication.
   Notes: the explicit publication center now lives in
-  `src/terminal/core/terminal_publication.zig`, and the old live
+  `src/terminal/core/publication/terminal_publication.zig`, and the old live
   `session_rendering.zig` shell is removed. The remaining problem is duplicated
   publication truth: snapshot still switches between direct screen-owned state
   and render-cache-backed state, and the publication object model is still too

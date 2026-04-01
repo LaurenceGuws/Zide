@@ -1,4 +1,4 @@
-const terminal_publication = @import("../terminal_publication.zig");
+const terminal_publication = @import("../publication/terminal_publication.zig");
 
 pub fn outputPending(self: anytype) bool {
     return self.publication.output_pending.load(.acquire);

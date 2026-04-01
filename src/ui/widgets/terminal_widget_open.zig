@@ -3,7 +3,7 @@ const builtin = @import("builtin");
 const app_logger = @import("../../app_logger.zig");
 
 const terminal_runtime = @import("../../terminal/core/terminal_runtime.zig");
-const terminal_publication = @import("../../terminal/core/terminal_publication.zig");
+const terminal_publication = @import("../../terminal/core/publication/terminal_publication.zig");
 const hover_mod = @import("terminal_widget_hover.zig");
 
 const PtyTerminalRuntime = terminal_runtime.PtyTerminalRuntime;

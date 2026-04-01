@@ -18,7 +18,7 @@ const grammar_manager_mod = @import("../src/editor/grammar_manager.zig");
 const text_store = @import("../src/editor/text_store.zig");
 const metrics_mod = @import("../src/terminal/model/metrics.zig");
 const terminal_runtime = @import("../src/terminal/core/terminal_runtime.zig");
-const terminal_publication = @import("../src/terminal/core/terminal_publication.zig");
+const terminal_publication = @import("../src/terminal/core/publication/terminal_publication.zig");
 const shared_types = @import("../src/types/mod.zig");
 const widgets = @import("../src/ui/widgets.zig");
 

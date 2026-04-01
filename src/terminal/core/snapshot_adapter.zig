@@ -1,5 +1,5 @@
 const shared = @import("../../types/mod.zig").snapshots;
-const terminal_publication = @import("terminal_publication.zig");
+const terminal_publication = @import("publication/terminal_publication.zig");
 
 pub fn toSharedSnapshot(snapshot: terminal_publication.TerminalSnapshot) shared.TerminalSnapshot {
     // TODO: map terminal snapshot to shared types once widget/core split lands.

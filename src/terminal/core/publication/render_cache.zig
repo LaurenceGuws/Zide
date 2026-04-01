@@ -1,7 +1,7 @@
 const std = @import("std");
-const screen_mod = @import("../model/screen.zig");
+const screen_mod = @import("../../model/screen.zig");
 const snapshot_mod = @import("snapshot.zig");
-const types = @import("../model/types.zig");
+const types = @import("../../model/types.zig");
 
 const Cell = types.Cell;
 const Dirty = screen_mod.Dirty;

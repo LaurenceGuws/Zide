@@ -1,6 +1,6 @@
 const std = @import("std");
-const render_cache_mod = @import("../render_cache.zig");
-const terminal_publication = @import("../terminal_publication.zig");
+const render_cache_mod = @import("../publication/render_cache.zig");
+const terminal_publication = @import("../publication/terminal_publication.zig");
 
 pub const RenderCache = render_cache_mod.RenderCache;
 pub const PresentedRenderCache = terminal_publication.PresentedRenderCache;
@@ -77,7 +77,7 @@ pub fn completePresentationFeedback(self: anytype, feedback: anytype) void {
         }
     }
     if (feedback.alt_exit_info) |info| {
-        const exit_time_ms = @import("../terminal_publication.zig").consumeAltExitTimeMs(self);
+        const exit_time_ms = @import("../publication/terminal_publication.zig").consumeAltExitTimeMs(self);
         const exit_to_draw_ms: f64 = if (exit_time_ms >= 0)
             @as(f64, @floatFromInt(std.time.milliTimestamp() - exit_time_ms))
         else

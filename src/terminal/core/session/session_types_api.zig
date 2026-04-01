@@ -1,5 +1,5 @@
 const input_mod = @import("../../input/input.zig");
-const snapshot_mod = @import("../snapshot.zig");
+const snapshot_mod = @import("../publication/snapshot.zig");
 const types = @import("../../model/types.zig");
 
 pub const Hyperlink = snapshot_mod.Hyperlink;

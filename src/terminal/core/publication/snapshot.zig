@@ -1,7 +1,7 @@
 const std = @import("std");
-const screen_mod = @import("../model/screen.zig");
-const types = @import("../model/types.zig");
-const app_logger = @import("../../app_logger.zig");
+const screen_mod = @import("../../model/screen.zig");
+const types = @import("../../model/types.zig");
+const app_logger = @import("../../../app_logger.zig");
 
 pub const KittyImageFormat = enum {
     rgb,

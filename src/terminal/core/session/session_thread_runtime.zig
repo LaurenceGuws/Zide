@@ -1,6 +1,6 @@
 const std = @import("std");
 const terminal_transport = @import("../terminal_transport.zig");
-const terminal_publication = @import("../terminal_publication.zig");
+const terminal_publication = @import("../publication/terminal_publication.zig");
 
 pub fn deinit(self: anytype) void {
     prepareForShutdown(self);
@@ -43,7 +43,7 @@ pub fn hasData(self: anytype) bool {
 }
 
 pub fn pollBacklogHint(self: anytype) bool {
-    return hasData(self) or @import("../terminal_publication.zig").hasPublishedGenerationBacklog(self);
+    return hasData(self) or @import("../publication/terminal_publication.zig").hasPublishedGenerationBacklog(self);
 }
 
 fn hasUnreadBufferedIo(self: anytype) bool {

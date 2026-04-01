@@ -1,6 +1,6 @@
 const types = @import("../model/types.zig");
 const selection_semantics = @import("../model/selection_semantics.zig");
-const terminal_publication = @import("terminal_publication.zig");
+const terminal_publication = @import("publication/terminal_publication.zig");
 
 pub const SelectionGestureMode = enum {
     none,

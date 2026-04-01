@@ -1,6 +1,6 @@
 const std = @import("std");
 const terminal_transport = @import("terminal_transport.zig");
-const terminal_publication = @import("terminal_publication.zig");
+const terminal_publication = @import("publication/terminal_publication.zig");
 const pty_poll_publication = @import("pty_poll_publication.zig");
 const pty_poll_processing = @import("pty_poll_processing.zig");
 

@@ -1,12 +1,12 @@
 const std = @import("std");
 const render_cache_mod = @import("render_cache.zig");
 const snapshot_mod = @import("snapshot.zig");
-const selection_mod = @import("selection.zig");
-const publication_state = @import("session/session_publication_state.zig");
-const presentation_handoff = @import("session/session_presentation_handoff.zig");
-const publication_updates = @import("session/session_publication_updates.zig");
-const view_cache = @import("view_cache.zig");
-const types = @import("../model/types.zig");
+const selection_mod = @import("../selection.zig");
+const publication_state = @import("../session/session_publication_state.zig");
+const presentation_handoff = @import("../session/session_presentation_handoff.zig");
+const publication_updates = @import("../session/session_publication_updates.zig");
+const view_cache = @import("../view_cache.zig");
+const types = @import("../../model/types.zig");
 
 pub const KittyImageFormat = snapshot_mod.KittyImageFormat;
 pub const KittyImage = snapshot_mod.KittyImage;
@@ -19,7 +19,7 @@ pub const Hyperlink = snapshot_mod.Hyperlink;
 
 pub const PresentedRenderCache = struct {
     generation: u64,
-    dirty: @import("../model/screen.zig").Dirty,
+    dirty: @import("../../model/screen.zig").Dirty,
 };
 
 pub const PresentationCapture = struct {
@@ -343,7 +343,7 @@ pub fn snapshot(self: anytype) TerminalSnapshot {
     };
 }
 
-pub fn publishFeedResultLocked(self: anytype, result: @import("terminal_core_feed.zig").FeedResult) void {
+pub fn publishFeedResultLocked(self: anytype, result: @import("../terminal_core_feed.zig").FeedResult) void {
     publication_updates.publishFeedResultLocked(self, result);
 }
 

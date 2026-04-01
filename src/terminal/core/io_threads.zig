@@ -3,7 +3,7 @@ const parser_mod = @import("../parser/parser.zig");
 const app_logger = @import("../../app_logger.zig");
 const app_lifecycle_runtime = @import("../../app/lifecycle_runtime.zig");
 const terminal_transport = @import("terminal_transport.zig");
-const terminal_publication = @import("terminal_publication.zig");
+const terminal_publication = @import("publication/terminal_publication.zig");
 
 fn shouldPublishParseBatch(
     sync_updates_active: bool,

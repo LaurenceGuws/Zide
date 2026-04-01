@@ -2,7 +2,7 @@ const std = @import("std");
 const core_modes = @import("../terminal_core_modes.zig");
 const core_reset = @import("../terminal_core_reset.zig");
 const input_modes = @import("../input_modes.zig");
-const terminal_publication = @import("../terminal_publication.zig");
+const terminal_publication = @import("../publication/terminal_publication.zig");
 
 pub fn resetStateLocked(self: anytype) void {
     core_reset.resetStateCore(self);

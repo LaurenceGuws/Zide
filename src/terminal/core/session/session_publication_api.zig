@@ -1,6 +1,6 @@
-const render_cache_mod = @import("../render_cache.zig");
-const snapshot_mod = @import("../snapshot.zig");
-const terminal_publication = @import("../terminal_publication.zig");
+const render_cache_mod = @import("../publication/render_cache.zig");
+const snapshot_mod = @import("../publication/snapshot.zig");
+const terminal_publication = @import("../publication/terminal_publication.zig");
 
 pub fn pendingGeneration(self: anytype) u64 {
     return terminal_publication.pendingGeneration(self);

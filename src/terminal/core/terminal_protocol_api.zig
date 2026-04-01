@@ -6,7 +6,7 @@ const core_protocol = @import("terminal_core_protocol.zig");
 const parser_hooks = @import("parser_hooks.zig");
 const session_mode_effects = @import("session/session_mode_effects.zig");
 const terminal_core_text = @import("terminal_core_text.zig");
-const terminal_publication = @import("terminal_publication.zig");
+const terminal_publication = @import("publication/terminal_publication.zig");
 const types = @import("../model/types.zig");
 
 pub fn handleControl(self: anytype, byte: u8) void {

@@ -2,7 +2,7 @@ const std = @import("std");
 const terminal_transport = @import("terminal_transport.zig");
 const scrollback_buffer = @import("../model/scrollback_buffer.zig");
 const types = @import("../model/types.zig");
-const terminal_publication = @import("terminal_publication.zig");
+const terminal_publication = @import("publication/terminal_publication.zig");
 
 const PtySize = terminal_transport.PtySize;
 const Cell = types.Cell;

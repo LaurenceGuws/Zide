@@ -1,5 +1,5 @@
 const std = @import("std");
-const render_cache_mod = @import("../../terminal/core/render_cache.zig");
+const render_cache_mod = @import("../../terminal/core/publication/render_cache.zig");
 const screen_mod = @import("../../terminal/model/screen.zig");
 
 const RenderCache = render_cache_mod.RenderCache;

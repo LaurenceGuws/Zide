@@ -1,6 +1,6 @@
 const std = @import("std");
 const types = @import("../model/types.zig");
-const terminal_publication = @import("terminal_publication.zig");
+const terminal_publication = @import("publication/terminal_publication.zig");
 
 const Cell = types.Cell;
 

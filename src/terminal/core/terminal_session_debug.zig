@@ -2,9 +2,9 @@ const builtin = @import("builtin");
 const parser_mod = @import("../parser/parser.zig");
 const selection_mod = @import("selection.zig");
 const types = @import("../model/types.zig");
-const terminal_publication = @import("terminal_publication.zig");
+const terminal_publication = @import("publication/terminal_publication.zig");
 
-pub fn debugSnapshot(self: anytype) @import("snapshot.zig").DebugSnapshot {
+pub fn debugSnapshot(self: anytype) @import("publication/snapshot.zig").DebugSnapshot {
     if (!debugAccessAllowed()) @panic("debugSnapshot is test-only");
     return .{
         .title = self.core.title,

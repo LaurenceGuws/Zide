@@ -1,6 +1,6 @@
 const std = @import("std");
-const types = @import("../model/types.zig");
-const screen_mod = @import("../model/screen.zig");
+const types = @import("../../model/types.zig");
+const screen_mod = @import("../../model/screen.zig");
 
 const Cell = types.Cell;
 const PublishedStateMatch = @import("render_cache.zig").RenderCache.PublishedStateMatch;

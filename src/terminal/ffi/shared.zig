@@ -1,6 +1,6 @@
 const std = @import("std");
 const terminal_runtime = @import("../core/terminal_runtime.zig");
-const session_lifecycle = @import("../core/session_lifecycle.zig");
+const session_lifecycle = @import("../core/session/session_lifecycle.zig");
 const types = @import("../model/types.zig");
 const app_logger = @import("../../app_logger.zig");
 

@@ -1,6 +1,6 @@
 const view_cache = @import("../view_cache.zig");
 const core_feed = @import("../terminal_core_feed.zig");
-const terminal_publication = @import("../terminal_publication.zig");
+const terminal_publication = @import("../publication/terminal_publication.zig");
 
 pub fn bumpGeneration(self: anytype) u64 {
     return self.publication.pending_generation.fetchAdd(1, .acq_rel) + 1;

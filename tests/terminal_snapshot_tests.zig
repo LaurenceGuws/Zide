@@ -1,7 +1,7 @@
 const std = @import("std");
 const terminal_runtime = @import("../src/terminal/core/terminal_runtime.zig");
 const terminal_debug = @import("../src/terminal/core/terminal_debug.zig");
-const terminal_publication = @import("../src/terminal/core/terminal_publication.zig");
+const terminal_publication = @import("../src/terminal/core/publication/terminal_publication.zig");
 const adapter = @import("../src/terminal/core/snapshot_adapter.zig");
 const shared = @import("../src/types/mod.zig").snapshots;
 

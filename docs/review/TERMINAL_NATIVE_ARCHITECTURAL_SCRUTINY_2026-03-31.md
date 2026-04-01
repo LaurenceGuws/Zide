@@ -86,7 +86,7 @@ Judgment:
   rather than "engine plus narrow host wrapper"
 - the newly introduced explicit surfaces
   - `src/terminal/core/terminal_runtime.zig`
-  - `src/terminal/core/terminal_publication.zig`
+  - `src/terminal/core/publication/terminal_publication.zig`
   - `src/terminal/core/terminal_debug.zig`
   are the right direction because they give native/replay/FFI/widget consumers
   an enforced explicit entrypoint instead of a broad root barrel
@@ -141,6 +141,10 @@ Judgment:
   host metadata/types, init options, input send/report helpers, input
   snapshot state, and presentation feedback structs also live under
   `src/terminal/core/session/`
+- the next honest peer subtree is now in too:
+  publication-owned cache, snapshot, and publication helper files now live
+  under `src/terminal/core/publication/` instead of continuing to sprawl as
+  another flat cluster beside engine-owned files
 - current judgment:
   - this is no longer just "a broad session file with helpers extracted"
   - it is now allocator/core plus grouped subsystems and explicit API seams

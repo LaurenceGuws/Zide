@@ -1,6 +1,6 @@
 const types = @import("../../model/types.zig");
 const input_modes = @import("../input_modes.zig");
-const terminal_publication = @import("../terminal_publication.zig");
+const terminal_publication = @import("../publication/terminal_publication.zig");
 
 pub fn setDefaultColorsLocked(self: anytype, fg: types.Color, bg: types.Color) void {
     self.core.setDefaultColors(fg, bg);

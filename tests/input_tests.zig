@@ -1,7 +1,7 @@
 const std = @import("std");
 const shared_types = @import("../src/types/mod.zig");
 const terminal_runtime = @import("../src/terminal/core/terminal_runtime.zig");
-const terminal_publication = @import("../src/terminal/core/terminal_publication.zig");
+const terminal_publication = @import("../src/terminal/core/publication/terminal_publication.zig");
 const terminal_widget_mod = @import("../src/ui/widgets/terminal_widget.zig");
 const terminal_hover_mod = @import("../src/ui/widgets/terminal_widget_hover.zig");
 

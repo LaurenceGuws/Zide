@@ -1,5 +1,5 @@
 const std = @import("std");
-const render_cache_mod = @import("../render_cache.zig");
+const render_cache_mod = @import("../publication/render_cache.zig");
 
 pub const Fields = struct {
     output_pending: std.atomic.Value(bool),

@@ -6,7 +6,7 @@ const csi_mod = @import("../parser/csi.zig");
 const parser_mod = @import("../parser/parser.zig");
 const protocol_csi = @import("../protocol/csi.zig");
 const screen_mod = @import("../model/screen.zig");
-const snapshot_mod = @import("snapshot.zig");
+const snapshot_mod = @import("publication/snapshot.zig");
 const types = @import("../model/types.zig");
 const kitty_mod = @import("../kitty/graphics.zig");
 const semantic_prompt_mod = @import("semantic_prompt.zig");
@@ -31,7 +31,7 @@ const session_interaction = @import("session/session_interaction.zig");
 const session_init_options = @import("session/session_init_options.zig");
 const session_input_snapshot = @import("session/session_input_snapshot.zig");
 const session_presentation_feedback = @import("session/session_presentation_feedback.zig");
-const terminal_publication = @import("terminal_publication.zig");
+const terminal_publication = @import("publication/terminal_publication.zig");
 const session_config = @import("session/session_config.zig");
 const session_runtime = @import("session/session_runtime.zig");
 const session_debug_api = @import("session/session_debug_api.zig");
@@ -68,7 +68,7 @@ pub const KittyImageFormat = snapshot_mod.KittyImageFormat;
 pub const KittyImage = snapshot_mod.KittyImage;
 pub const KittyPlacement = snapshot_mod.KittyPlacement;
 
-pub const RenderCache = @import("render_cache.zig").RenderCache;
+pub const RenderCache = @import("publication/render_cache.zig").RenderCache;
 
 pub const TerminalSnapshot = snapshot_mod.TerminalSnapshot;
 pub const DebugSnapshot = snapshot_mod.DebugSnapshot;

@@ -1,7 +1,7 @@
 const std = @import("std");
 
 const app_shell = @import("../../app_shell.zig");
-const terminal_publication = @import("../../terminal/core/terminal_publication.zig");
+const terminal_publication = @import("../../terminal/core/publication/terminal_publication.zig");
 const terminal_runtime = @import("../../terminal/core/terminal_runtime.zig");
 const app_logger = @import("../../app_logger.zig");
 const shared_types = @import("../../types/mod.zig");
