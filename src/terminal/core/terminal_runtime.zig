@@ -1,11 +1,11 @@
-const session_mod = @import("pty_terminal_runtime.zig");
+const runtime_mod = @import("pty_terminal_runtime.zig");
 const host_types = @import("session/host_types.zig");
 const interaction = @import("session/interaction.zig");
 const selection_mod = @import("selection.zig");
 const types_api = @import("session/types_api.zig");
 const workspace_mod = @import("workspace.zig");
 
-pub const PtyTerminalRuntime = session_mod.PtyTerminalRuntime;
+pub const PtyTerminalRuntime = runtime_mod.PtyTerminalRuntime;
 pub const TerminalWorkspace = workspace_mod.TerminalWorkspace;
 pub const TerminalTabId = workspace_mod.TabId;
 pub const TerminalTabSyncEntry = workspace_mod.TabSyncEntry;
