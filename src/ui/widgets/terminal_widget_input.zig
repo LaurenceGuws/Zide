@@ -67,10 +67,10 @@ pub fn handleInput(
     const ctrl = input_batch.mods.ctrl;
     const shift = input_batch.mods.shift;
     const alt = input_batch.mods.alt;
-    var mod: terminal_types.Modifier = terminal_runtime.VTERM_MOD_NONE;
-    if (shift) mod |= terminal_runtime.VTERM_MOD_SHIFT;
-    if (alt) mod |= terminal_runtime.VTERM_MOD_ALT;
-    if (ctrl) mod |= terminal_runtime.VTERM_MOD_CTRL;
+    var mod: terminal_types.Modifier = terminal_types.VTERM_MOD_NONE;
+    if (shift) mod |= terminal_types.VTERM_MOD_SHIFT;
+    if (alt) mod |= terminal_types.VTERM_MOD_ALT;
+    if (ctrl) mod |= terminal_types.VTERM_MOD_CTRL;
 
     const wheel_delta = if (in_terminal) input_batch.scroll.y else 0;
     var wheel_steps: i32 = 0;

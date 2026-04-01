@@ -248,6 +248,11 @@ Judgment:
   `TerminalWorkspace`, `TerminalTabId`, `TerminalTabSyncEntry`, or
   `TerminalTabSyncState`; active app/test callers now import those names from
   `src/terminal/core/workspace.zig` directly
+- the stable runtime surface no longer acts as the key/mod constant barrel:
+  `src/terminal/core/terminal_runtime.zig` no longer re-exports
+  `VTERM_KEY_*`, `VTERM_MOD_*`, `KeyAction`, or `KeypadKey`; active widget,
+  smoke, and test callers now use `terminal/model/types.zig` and
+  `terminal/input/input.zig` directly
 - the flat root state is now also grouped into explicit subsystem-owned
   embedded structs:
   - `session/publication_fields`

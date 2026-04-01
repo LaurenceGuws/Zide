@@ -3,6 +3,7 @@ const builtin = @import("builtin");
 const posix = std.posix;
 
 const terminal_runtime = @import("../src/terminal/core/terminal_runtime.zig");
+const terminal_types = @import("../src/terminal/model/types.zig");
 const terminal_debug = @import("../src/terminal/core/session/debug_ops.zig");
 const pty_mod = @import("../src/terminal/io/pty.zig");
 const terminal_widget_mod = @import("../src/ui/widgets/terminal_widget.zig");
@@ -1059,7 +1060,7 @@ test "terminal SGR pixel mouse mode ?1016 emits pixel coordinates when enabled" 
                 .col = 2,
                 .pixel_x = 19,
                 .pixel_y = 33,
-                .mod = terminal_runtime.VTERM_MOD_NONE,
+                .mod = terminal_types.VTERM_MOD_NONE,
                 .buttons_down = 1,
             });
             {
@@ -1076,7 +1077,7 @@ test "terminal SGR pixel mouse mode ?1016 emits pixel coordinates when enabled" 
                 .col = 2,
                 .pixel_x = 19,
                 .pixel_y = 33,
-                .mod = terminal_runtime.VTERM_MOD_NONE,
+                .mod = terminal_types.VTERM_MOD_NONE,
                 .buttons_down = 1,
             });
             {
@@ -1092,7 +1093,7 @@ test "terminal SGR pixel mouse mode ?1016 emits pixel coordinates when enabled" 
                 .col = 3,
                 .pixel_x = 27,
                 .pixel_y = 49,
-                .mod = terminal_runtime.VTERM_MOD_NONE,
+                .mod = terminal_types.VTERM_MOD_NONE,
                 .buttons_down = 1,
             });
             {
@@ -1108,7 +1109,7 @@ test "terminal SGR pixel mouse mode ?1016 emits pixel coordinates when enabled" 
                 .col = 3,
                 .pixel_x = 27,
                 .pixel_y = 49,
-                .mod = terminal_runtime.VTERM_MOD_NONE,
+                .mod = terminal_types.VTERM_MOD_NONE,
                 .buttons_down = 0,
             });
             {
@@ -1123,11 +1124,11 @@ test "terminal SGR pixel mouse mode ?1016 emits pixel coordinates when enabled" 
                 expected: []const u8,
             };
             const wheel_cases = [_]WheelCase{
-                .{ .button = .wheel_up, .mod = terminal_runtime.VTERM_MOD_SHIFT, .expected = "\x1b[<68;41;61M" },
-                .{ .button = .wheel_down, .mod = terminal_runtime.VTERM_MOD_ALT, .expected = "\x1b[<73;41;61M" },
-                .{ .button = .wheel_up, .mod = terminal_runtime.VTERM_MOD_CTRL, .expected = "\x1b[<80;41;61M" },
-                .{ .button = .wheel_up, .mod = terminal_runtime.VTERM_MOD_SHIFT | terminal_runtime.VTERM_MOD_ALT, .expected = "\x1b[<76;41;61M" },
-                .{ .button = .wheel_down, .mod = terminal_runtime.VTERM_MOD_SHIFT | terminal_runtime.VTERM_MOD_CTRL, .expected = "\x1b[<85;41;61M" },
+                .{ .button = .wheel_up, .mod = terminal_types.VTERM_MOD_SHIFT, .expected = "\x1b[<68;41;61M" },
+                .{ .button = .wheel_down, .mod = terminal_types.VTERM_MOD_ALT, .expected = "\x1b[<73;41;61M" },
+                .{ .button = .wheel_up, .mod = terminal_types.VTERM_MOD_CTRL, .expected = "\x1b[<80;41;61M" },
+                .{ .button = .wheel_up, .mod = terminal_types.VTERM_MOD_SHIFT | terminal_types.VTERM_MOD_ALT, .expected = "\x1b[<76;41;61M" },
+                .{ .button = .wheel_down, .mod = terminal_types.VTERM_MOD_SHIFT | terminal_types.VTERM_MOD_CTRL, .expected = "\x1b[<85;41;61M" },
             };
             for (wheel_cases) |case| {
                 _ = try session.reportMouseEvent(.{
@@ -1153,7 +1154,7 @@ test "terminal SGR pixel mouse mode ?1016 emits pixel coordinates when enabled" 
                 .col = 5,
                 .pixel_x = 40,
                 .pixel_y = 60,
-                .mod = terminal_runtime.VTERM_MOD_NONE,
+                .mod = terminal_types.VTERM_MOD_NONE,
                 .buttons_down = 0,
             });
             {
@@ -1168,7 +1169,7 @@ test "terminal SGR pixel mouse mode ?1016 emits pixel coordinates when enabled" 
                 .col = 5,
                 .pixel_x = 40,
                 .pixel_y = 60,
-                .mod = terminal_runtime.VTERM_MOD_NONE,
+                .mod = terminal_types.VTERM_MOD_NONE,
                 .buttons_down = 0,
             });
             {
@@ -1185,7 +1186,7 @@ test "terminal SGR pixel mouse mode ?1016 emits pixel coordinates when enabled" 
                 .col = 2,
                 .pixel_x = 99,
                 .pixel_y = 199,
-                .mod = terminal_runtime.VTERM_MOD_NONE,
+                .mod = terminal_types.VTERM_MOD_NONE,
                 .buttons_down = 1,
             });
             {
@@ -1467,7 +1468,7 @@ test "terminal DECARM ?8 disables repeat key output" {
         fn run(session: *terminal_runtime.PtyTerminalRuntime, capture: *PipeCapture) !void {
             const allocator = std.testing.allocator;
 
-            try session.sendKeyAction(terminal_runtime.VTERM_KEY_UP, terminal_runtime.VTERM_MOD_NONE, .repeat);
+            try session.sendKeyAction(terminal_types.VTERM_KEY_UP, terminal_types.VTERM_MOD_NONE, .repeat);
             {
                 const reply = try capture.readReply(allocator);
                 defer allocator.free(reply);
@@ -1475,11 +1476,11 @@ test "terminal DECARM ?8 disables repeat key output" {
             }
 
             terminal_debug.debugFeedBytes(session, "\x1b[?8l");
-            try session.sendKeyAction(terminal_runtime.VTERM_KEY_UP, terminal_runtime.VTERM_MOD_NONE, .repeat);
+            try session.sendKeyAction(terminal_types.VTERM_KEY_UP, terminal_types.VTERM_MOD_NONE, .repeat);
             try capture.expectNoReply();
 
             terminal_debug.debugFeedBytes(session, "\x1b[?8h");
-            try session.sendKeyAction(terminal_runtime.VTERM_KEY_UP, terminal_runtime.VTERM_MOD_NONE, .repeat);
+            try session.sendKeyAction(terminal_types.VTERM_KEY_UP, terminal_types.VTERM_MOD_NONE, .repeat);
             {
                 const reply = try capture.readReply(allocator);
                 defer allocator.free(reply);
@@ -1494,11 +1495,11 @@ test "terminal alt-scroll ?1007 emits arrows in alt screen" {
         fn run(session: *terminal_runtime.PtyTerminalRuntime, capture: *PipeCapture) !void {
             const allocator = std.testing.allocator;
 
-            try std.testing.expect(!(try session.reportAlternateScrollWheel(1, terminal_runtime.VTERM_MOD_NONE)));
+            try std.testing.expect(!(try session.reportAlternateScrollWheel(1, terminal_types.VTERM_MOD_NONE)));
             try capture.expectNoReply();
 
             terminal_debug.debugFeedBytes(session, "\x1b[?1049h");
-            try std.testing.expect(try session.reportAlternateScrollWheel(2, terminal_runtime.VTERM_MOD_NONE));
+            try std.testing.expect(try session.reportAlternateScrollWheel(2, terminal_types.VTERM_MOD_NONE));
             {
                 const reply = try capture.readReply(allocator);
                 defer allocator.free(reply);
@@ -1506,11 +1507,11 @@ test "terminal alt-scroll ?1007 emits arrows in alt screen" {
             }
 
             terminal_debug.debugFeedBytes(session, "\x1b[?1007l");
-            try std.testing.expect(!(try session.reportAlternateScrollWheel(-1, terminal_runtime.VTERM_MOD_NONE)));
+            try std.testing.expect(!(try session.reportAlternateScrollWheel(-1, terminal_types.VTERM_MOD_NONE)));
             try capture.expectNoReply();
 
             terminal_debug.debugFeedBytes(session, "\x1b[?1007h");
-            try std.testing.expect(try session.reportAlternateScrollWheel(-1, terminal_runtime.VTERM_MOD_NONE));
+            try std.testing.expect(try session.reportAlternateScrollWheel(-1, terminal_types.VTERM_MOD_NONE));
             {
                 const reply = try capture.readReply(allocator);
                 defer allocator.free(reply);
@@ -1600,7 +1601,7 @@ test "terminal ANSI local echo mode 12 echoes chars only without PTY" {
     defer session.deinit();
 
     terminal_debug.debugFeedBytes(session, "\x1b[12h");
-    try session.sendChar('a', terminal_runtime.VTERM_MOD_NONE);
+    try session.sendChar('a', terminal_types.VTERM_MOD_NONE);
     {
         const snap = session.snapshot();
         try std.testing.expectEqual(@as(u32, 'a'), snap.cellAt(0, 0).codepoint);
@@ -1608,7 +1609,7 @@ test "terminal ANSI local echo mode 12 echoes chars only without PTY" {
     }
 
     terminal_debug.debugFeedBytes(session, "\x1b[12l");
-    try session.sendChar('b', terminal_runtime.VTERM_MOD_NONE);
+    try session.sendChar('b', terminal_types.VTERM_MOD_NONE);
     {
         const snap = session.snapshot();
         try std.testing.expectEqual(@as(u32, 0), snap.cellAt(0, 1).codepoint);

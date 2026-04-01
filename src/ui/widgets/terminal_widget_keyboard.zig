@@ -279,10 +279,10 @@ test "suppressed terminal clipboard shortcuts do not count as live-reset input" 
 }
 
 fn keyModFromEvent(key_event: shared_types.input.KeyEvent) terminal_types.Modifier {
-    var m: terminal_types.Modifier = terminal_runtime.VTERM_MOD_NONE;
-    if (key_event.mods.shift) m |= terminal_runtime.VTERM_MOD_SHIFT;
-    if (key_event.mods.alt) m |= terminal_runtime.VTERM_MOD_ALT;
-    if (key_event.mods.ctrl) m |= terminal_runtime.VTERM_MOD_CTRL;
+    var m: terminal_types.Modifier = terminal_types.VTERM_MOD_NONE;
+    if (key_event.mods.shift) m |= terminal_types.VTERM_MOD_SHIFT;
+    if (key_event.mods.alt) m |= terminal_types.VTERM_MOD_ALT;
+    if (key_event.mods.ctrl) m |= terminal_types.VTERM_MOD_CTRL;
     return m;
 }
 
