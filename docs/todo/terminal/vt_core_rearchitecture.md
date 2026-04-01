@@ -136,6 +136,9 @@ Validation note, 2026-03-31:
     names now come from their direct `session/` owners
   - that direct-owner cleanup now also covers selection gesture types and
     key-mode flag access, which no longer come through the wrapper either
+  - the same cleanup now applies in `src/terminal/core/workspace.zig`, which
+    no longer uses stale `session_mod` vocabulary or wrapper-routed
+    `ProgressState` typing
   - replay/test debug imports now target
     `src/terminal/core/session/debug_api.zig` directly, so there is no
     extra flat `terminal_debug.zig` shim pretending to be a core peer.

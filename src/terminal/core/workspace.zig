@@ -1,10 +1,11 @@
 const std = @import("std");
-const session_mod = @import("pty_terminal_runtime.zig");
+const runtime_mod = @import("pty_terminal_runtime.zig");
+const host_types = @import("session/host_types.zig");
 const app_logger = @import("../../app_logger.zig");
 const runtime_policy = @import("../../app/runtime_policy.zig");
 const polling = @import("workspace_polling.zig");
 
-const PtyTerminalRuntime = session_mod.PtyTerminalRuntime;
+const PtyTerminalRuntime = runtime_mod.PtyTerminalRuntime;
 pub const TabId = u64;
 
 const Tab = struct {
@@ -26,7 +27,7 @@ pub const TabSyncEntry = struct {
     shell_path_len: usize,
     alive: bool,
     exit_code: ?i32,
-    progress_state: session_mod.ProgressState = .none,
+    progress_state: host_types.ProgressState = .none,
     progress_value: ?u8 = null,
 
     pub fn title(self: TabSyncEntry, strings: []const u8) []const u8 {

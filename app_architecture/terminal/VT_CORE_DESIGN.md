@@ -99,6 +99,9 @@ Status note, 2026-03-31:
   - selection gesture types and key-mode flag access also now come from their
     direct owners instead of reinforcing wrapper gravity through the same
     public surface
+  - the same direct-owner cleanup now applies in `workspace.zig`: wrapper
+    composition reads as runtime/workspace ownership, and progress-state typing
+    no longer comes through `pty_terminal_runtime.zig`
   - `src/terminal/core/publication/terminal_publication.zig` now acts as the explicit
     publication/type surface for native widget, replay-harness, and FFI
     consumers

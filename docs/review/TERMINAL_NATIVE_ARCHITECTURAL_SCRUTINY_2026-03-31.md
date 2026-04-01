@@ -102,6 +102,8 @@ Judgment:
 - the same cleanup now applies to selection gesture types and key-mode flag
   access, so the public runtime surface depends less on wrapper-owned aliases
   even while staying a stable entrypoint
+- the same cleanup now applies in `workspace.zig`, which no longer carries
+  stale `session_mod` vocabulary or wrapper-routed progress-state typing
 - `src/terminal/core/session/runtime_api.zig` and
   `src/terminal/core/session/publication_api.zig` now carry the runtime and
   publication/present method groups that were previously written inline on
