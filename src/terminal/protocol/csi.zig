@@ -39,10 +39,6 @@ fn effectiveSgrParamCount(action: parser_csi.CsiAction) usize {
 }
 
 pub fn handleCsi(self: anytype, action: parser_csi.CsiAction) void {
-    handleCsiOnSession(self, action);
-}
-
-fn handleCsiOnSession(self: anytype, action: parser_csi.CsiAction) void {
     const log = app_logger.logger("terminal.csi");
     const csi_param_count = effectiveCsiParamCount(action);
     log.logf(

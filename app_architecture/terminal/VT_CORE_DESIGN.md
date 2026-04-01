@@ -289,6 +289,11 @@ Status note, 2026-03-31:
     `writeDecrqmReply(...)` wrapper over `writeDecrqmReplyWithWriter(...)`;
     the reply owners now expose one honest writer-shaped surface and the CSI
     reply tests target that contract directly
+  - the remaining same-object protocol trampolines are thinner too:
+    `csi.zig` no longer routes `handleCsi(...)` through a private
+    `handleCsiOnSession(...)`, and `osc_kitty_clipboard.zig` no longer routes
+    `parseOsc5522(...)` / `sendPasteEventMimes(...)` through duplicate
+    `*OnSession` bounce helpers; those entrypoints now execute directly
   - the same direct-owner cleanup now applies in `workspace.zig`: wrapper
     composition reads as runtime/workspace ownership, and progress-state typing
     no longer comes through `pty_terminal_runtime.zig`

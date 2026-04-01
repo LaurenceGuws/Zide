@@ -18,10 +18,6 @@ const ReadReq = struct {
 };
 
 pub fn parseOsc5522(self: anytype, text: []const u8, terminator: OscTerminator) void {
-    parseOsc5522OnSession(self, text, terminator);
-}
-
-fn parseOsc5522OnSession(self: anytype, text: []const u8, terminator: OscTerminator) void {
     const split = std.mem.indexOfScalar(u8, text, ';') orelse return;
     const metadata = text[0..split];
     const payload_b64 = text[split + 1 ..];
@@ -47,10 +43,7 @@ fn parseOsc5522OnSession(self: anytype, text: []const u8, terminator: OscTermina
 }
 
 pub fn sendPasteEventMimes(self: anytype, pty: anytype, terminator: OscTerminator) void {
-    sendPasteEventMimesOnSession(self, pty, terminator);
-}
-
-fn sendPasteEventMimesOnSession(self: anytype, writer: anytype, terminator: OscTerminator) void {
+    const writer = pty;
     var req = ReadReq{ .wants_targets = true };
     replyReadRequest(self, writer, &req, terminator);
 }

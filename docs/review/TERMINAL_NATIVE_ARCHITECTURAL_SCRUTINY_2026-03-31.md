@@ -434,6 +434,12 @@ Evidence:
   and `src/terminal/protocol/csi_mode_query.zig` no longer carries the same
   duplicate `writeDecrqmReply(...)` wrapper over
   `writeDecrqmReplyWithWriter(...)`
+- the remaining same-object protocol trampolines are thinner too:
+  `src/terminal/protocol/csi.zig` no longer routes `handleCsi(...)` through a
+  private `handleCsiOnSession(...)`, and
+  `src/terminal/protocol/osc_kitty_clipboard.zig` no longer routes
+  `parseOsc5522(...)` / `sendPasteEventMimes(...)` through duplicate
+  `*OnSession` bounce helpers
 - the outer CSI forwarding shell is gone too:
   `terminal_protocol_api.zig` now routes CSI directly into
   `src/terminal/protocol/csi.zig` without stepping through an extra

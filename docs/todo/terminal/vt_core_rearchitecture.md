@@ -298,6 +298,12 @@ Validation note, 2026-03-31:
     `writeDecrqmReplyWithWriter(...)`; the reply owners now expose one honest
     writer-shaped surface and the CSI reply tests target that contract
     directly
+  - the remaining same-object protocol trampolines are thinner too:
+    `src/terminal/protocol/csi.zig` no longer routes `handleCsi(...)` through
+    a private `handleCsiOnSession(...)`, and
+    `src/terminal/protocol/osc_kitty_clipboard.zig` no longer routes
+    `parseOsc5522(...)` / `sendPasteEventMimes(...)` through duplicate
+    `*OnSession` bounce helpers; those entrypoints now execute directly
   - the remaining publication/view-cache helper stubs and the special-case
     protocol `appendHyperlink` wrapper are no longer written inline on
     `pty_terminal_runtime.zig`; those exceptions now route through the explicit
