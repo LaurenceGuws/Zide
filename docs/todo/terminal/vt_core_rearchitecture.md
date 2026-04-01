@@ -327,11 +327,11 @@ Validation note, 2026-03-31:
     now gives widget draw one publication-owned answer for raw background and
     resolved screen-reverse background instead of rebuilding first-cell color
     logic in multiple places
-  - viewport-shift state is also grouped now:
+  - the surviving widget-local planning state is now narrower and more honest:
     - `ViewportShiftState`
     now owns shift rows and exposed-only state so texture-shift planning and
     logging stop passing those facts around as loose locals
-  - present-pressure planning scratch state is also grouped now:
+  - the same applies to present-pressure planning scratch state:
     - `PresentPressureState`
     now owns recent-input/full-frame pressure facts so update-plan forcing and
     pressure logging stop smearing that state across loose locals

@@ -209,7 +209,7 @@ Status note, 2026-03-31:
     via helpers like `baseColorInfo(...)` instead of being reconstructed in
     multiple widget draw branches
   - widget-owned planning/accounting blobs should still be extracted into
-  - transient viewport-shift planning state should follow the same rule; if it
+  - surviving widget-local planning state should follow the same rule; if it
     threads through multiple planning/logging sites, group it instead of
     letting it leak as loose locals
   - the same applies to recent-input/full-frame pressure planning state; if it

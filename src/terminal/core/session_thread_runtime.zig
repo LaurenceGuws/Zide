@@ -1,24 +1,11 @@
 const std = @import("std");
-const app_logger = @import("../../app_logger.zig");
-const app_lifecycle_runtime = @import("../../app/lifecycle_runtime.zig");
 const terminal_transport = @import("terminal_transport.zig");
 const terminal_publication = @import("terminal_publication.zig");
 
 pub fn deinit(self: anytype) void {
     prepareForShutdown(self);
     if (terminal_transport.Transport.fromSession(self)) |transport| {
-        app_logger.logger("terminal.lifecycle").logFields(.info, "terminal_transport_deinit_begin", &.{
-            .{ .key = "session_ptr", .value = .{ .unsigned = @intFromPtr(self) } },
-            .{ .key = "shell_deinitialized", .value = .{ .boolean = app_lifecycle_runtime.shellDeinitialized() } },
-            .{ .key = "transport_alive", .value = .{ .boolean = transport.isAlive() } },
-            .{ .key = "child_exited", .value = .{ .boolean = self.runtime.child_exited.load(.acquire) } },
-            .{ .key = "child_exit_code", .value = .{ .integer = self.runtime.child_exit_code.load(.acquire) } },
-        });
         transport.deinit();
-        app_logger.logger("terminal.lifecycle").logFields(.info, "terminal_transport_deinit_end", &.{
-            .{ .key = "session_ptr", .value = .{ .unsigned = @intFromPtr(self) } },
-            .{ .key = "shell_deinitialized", .value = .{ .boolean = app_lifecycle_runtime.shellDeinitialized() } },
-        });
     }
     if (self.runtime.launch_shell_path) |path| {
         self.allocator.free(path);
@@ -37,18 +24,7 @@ pub fn prepareForShutdown(self: anytype) void {
     }
     stopThreads(self);
     if (terminal_transport.Transport.fromSession(self)) |transport| {
-        app_logger.logger("terminal.lifecycle").logFields(.info, "terminal_transport_prepare_shutdown_begin", &.{
-            .{ .key = "session_ptr", .value = .{ .unsigned = @intFromPtr(self) } },
-            .{ .key = "shell_deinitialized", .value = .{ .boolean = app_lifecycle_runtime.shellDeinitialized() } },
-            .{ .key = "transport_alive", .value = .{ .boolean = transport.isAlive() } },
-            .{ .key = "child_exited", .value = .{ .boolean = self.runtime.child_exited.load(.acquire) } },
-            .{ .key = "child_exit_code", .value = .{ .integer = self.runtime.child_exit_code.load(.acquire) } },
-        });
         transport.deinit();
-        app_logger.logger("terminal.lifecycle").logFields(.info, "terminal_transport_prepare_shutdown_end", &.{
-            .{ .key = "session_ptr", .value = .{ .unsigned = @intFromPtr(self) } },
-            .{ .key = "shell_deinitialized", .value = .{ .boolean = app_lifecycle_runtime.shellDeinitialized() } },
-        });
     }
 }
 
@@ -82,38 +58,14 @@ fn hasUnreadBufferedIo(self: anytype) bool {
 
 fn stopThreads(self: anytype) void {
     if (self.runtime.read_thread) |thread| {
-        app_logger.logger("terminal.lifecycle").logFields(.info, "terminal_read_thread_stop_signal", &.{
-            .{ .key = "session_ptr", .value = .{ .unsigned = @intFromPtr(self) } },
-            .{ .key = "shutdown_started", .value = .{ .boolean = app_lifecycle_runtime.shutdownStarted() } },
-            .{ .key = "shell_deinitialized", .value = .{ .boolean = app_lifecycle_runtime.shellDeinitialized() } },
-        });
         self.runtime.read_thread_running.store(false, .release);
-        app_logger.logger("terminal.lifecycle").logFields(.info, "terminal_read_thread_join_begin", &.{
-            .{ .key = "session_ptr", .value = .{ .unsigned = @intFromPtr(self) } },
-        });
         thread.join();
-        app_logger.logger("terminal.lifecycle").logFields(.info, "terminal_read_thread_join_end", &.{
-            .{ .key = "session_ptr", .value = .{ .unsigned = @intFromPtr(self) } },
-            .{ .key = "shell_deinitialized", .value = .{ .boolean = app_lifecycle_runtime.shellDeinitialized() } },
-        });
         self.runtime.read_thread = null;
     }
     if (self.runtime.parse_thread) |thread| {
-        app_logger.logger("terminal.lifecycle").logFields(.info, "terminal_parse_thread_stop_signal", &.{
-            .{ .key = "session_ptr", .value = .{ .unsigned = @intFromPtr(self) } },
-            .{ .key = "shutdown_started", .value = .{ .boolean = app_lifecycle_runtime.shutdownStarted() } },
-            .{ .key = "shell_deinitialized", .value = .{ .boolean = app_lifecycle_runtime.shellDeinitialized() } },
-        });
         self.runtime.parse_thread_running.store(false, .release);
         self.runtime.io_wait_cond.signal();
-        app_logger.logger("terminal.lifecycle").logFields(.info, "terminal_parse_thread_join_begin", &.{
-            .{ .key = "session_ptr", .value = .{ .unsigned = @intFromPtr(self) } },
-        });
         thread.join();
-        app_logger.logger("terminal.lifecycle").logFields(.info, "terminal_parse_thread_join_end", &.{
-            .{ .key = "session_ptr", .value = .{ .unsigned = @intFromPtr(self) } },
-            .{ .key = "shell_deinitialized", .value = .{ .boolean = app_lifecycle_runtime.shellDeinitialized() } },
-        });
         self.runtime.parse_thread = null;
     }
 }

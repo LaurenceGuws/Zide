@@ -281,11 +281,12 @@ Judgment:
     rebuilding first-cell background and reverse-resolved background logic in
     multiple branches
   - the widget-owned partial-plan accounting blob is now isolated in
-  - viewport-shift planning state is now grouped in `ViewportShiftState`
+  - surviving widget-local planning state is now narrower and more honest:
+    `ViewportShiftState` owns the viewport-shift seam
     instead of being passed through texture-shift logic as loose locals
-  - recent-input/full-frame pressure planning state is now grouped in
-    `PresentPressureState` instead of being smeared across update-plan forcing
-    and pressure logging
+  - `PresentPressureState` owns the present-pressure seam instead of leaving
+    recent-input/full-frame planning smeared across update-plan forcing and
+    pressure logging
   - widget draw handoff/log snapshot state is now grouped in `HandoffState`
     instead of repeating the same generation reads across plan/commit logs
   - the stronger correction now applies to those draw-log seams too:
