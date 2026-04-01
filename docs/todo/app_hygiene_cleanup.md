@@ -252,6 +252,11 @@ Progress note, 2026-04-01:
   with build-graph references updated accordingly
 - this tightens the repo rule that non-`src` Zig must clearly justify itself as
   build/test/tooling surface instead of leaking ad hoc entrypoints into root
+- Windows packaging identity Zig data was moved from `tools/packaging/windows/`
+  into `build_system/` because it is build-only contract data, not a tooling
+  entrypoint
+- this continues the rule that non-`src` Zig files must defend their location
+  by ownership, not habit
 
 ## Investigation Follow-up
 

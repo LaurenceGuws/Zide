@@ -10,7 +10,7 @@ Use this after changes to:
 - `src/platform/windows_shell_extension/open_zide_terminal_here.cpp`
 - `ops/windows/Install-Zide.ps1`
 - `ops/windows/Register-ZidePackageIdentity.ps1`
-- `tools/packaging/windows/windows_identity_contract.zig`
+- `build_system/windows_identity_contract.zig`
 
 This is an operator checklist, not design authority. The owning contract lives
 in:
