@@ -1460,6 +1460,10 @@ The same cleanup standard now applies to debug staging too: if a caller means
 "discard pending refresh and publish the current view", publication owns that
 intent directly instead of exposing raw verbs for the caller to compose.
 
+The same rule now applies to pending refresh requests: publication exposes one
+request object instead of forcing callers to separately pull offset and
+generation from publication state.
+
 Avoid continuing to use `TerminalSession` as the name of the engine center once
 the new boundary exists.
 

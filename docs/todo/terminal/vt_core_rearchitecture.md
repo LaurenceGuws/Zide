@@ -841,6 +841,11 @@ Validation note, 2026-03-31:
   staging no longer hand-composes `clearPendingViewRefresh(...)` plus
   `publishCurrentViewLocked(...)`. That intent now lives under the owner as
   `replacePendingRefreshWithCurrentViewLocked(...)`.
+- Another publication contract cut is in too: callers no longer compose
+  `takePendingViewRefresh()` plus `pendingGeneration()` themselves.
+  `terminal_publication.zig` now exposes a single
+  `takePendingViewRefreshRequest(...)` contract so view-cache refresh and parse
+  publish paths consume one owner-shaped request instead of reassembling it.
 - The terminal campaign should now judge success by first-glance authority:
   when a strong maintainer opens the code, the engine must obviously be the
   engine.

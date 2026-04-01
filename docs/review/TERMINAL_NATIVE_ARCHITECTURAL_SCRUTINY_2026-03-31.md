@@ -922,6 +922,8 @@ work:
 - once a publication export goes dead, delete it; once a caller composes two
   publication verbs to express one owner-owned action, replace that with a
   publication intent helper
+- once a pending refresh request has multiple required fields, expose it as one
+  publication-owned request contract instead of making callers reconstruct it
 
 ## Final Assessment
 

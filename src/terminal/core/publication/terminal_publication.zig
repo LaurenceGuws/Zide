@@ -34,6 +34,11 @@ pub const CachePublicationTarget = struct {
     target_cache: *RenderCache,
 };
 
+pub const ViewRefreshRequest = struct {
+    generation: u64,
+    scroll_offset: usize,
+};
+
 const CaptureCopy = struct {
     presented: PresentedRenderCache,
     lock_wait_ms: f64,
@@ -521,9 +526,17 @@ pub fn viewRefreshPending(self: anytype) bool {
     return self.publication.view_cache_pending.load(.acquire);
 }
 
-pub fn takePendingViewRefresh(self: anytype) ?usize {
+fn takePendingViewRefresh(self: anytype) ?usize {
     if (!self.publication.view_cache_pending.swap(false, .acq_rel)) return null;
     return @intCast(self.publication.view_cache_request_offset.load(.acquire));
+}
+
+pub fn takePendingViewRefreshRequest(self: anytype) ?ViewRefreshRequest {
+    const scroll_offset = takePendingViewRefresh(self) orelse return null;
+    return .{
+        .generation = pendingGeneration(self),
+        .scroll_offset = scroll_offset,
+    };
 }
 
 fn takeAltExitPending(self: anytype) bool {
