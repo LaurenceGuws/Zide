@@ -194,12 +194,16 @@ Validation note, 2026-03-31:
     `src/terminal/core/session/presentation_feedback.zig`,
     `src/terminal/core/session/lifecycle.zig`,
     `src/terminal/core/session/mode_effects.zig`,
-    `src/terminal/core/session/publication_state.zig`,
     `src/terminal/core/session/publication_updates.zig`,
     `src/terminal/core/session/presentation_handoff.zig`,
     `src/terminal/core/session/thread_runtime.zig`, and
     `src/terminal/core/session/transport_runtime.zig`
     replace the old flat `session_*` naming inside the subtree.
+  - publication-owned state no longer routes through a wrapper shell:
+    `src/terminal/core/publication/terminal_publication.zig` now owns pending,
+    published, and presented generation state along with damage-retirement
+    acknowledgement, and `src/terminal/core/session/publication_state.zig` is
+    deleted.
   - `src/terminal/core/session/lifecycle_api.zig` now owns the lifecycle and
     composition block (`init`, screen access, input pressure, lock state,
     resize, shutdown-facing methods) that was still written directly on the

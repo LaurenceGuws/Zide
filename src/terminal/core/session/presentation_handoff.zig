@@ -21,8 +21,8 @@ fn captureCopy(self: anytype, dst: *RenderCache, log_capture: bool) !CaptureCopy
     defer self.unlock();
     const lock_acquired_ns = std.time.nanoTimestamp();
     const pending_generation = self.publication.pending_generation.load(.acquire);
-    const published_generation = @import("publication_state.zig").publishedGeneration(self);
-    const presented_generation = @import("publication_state.zig").presentedGeneration(self);
+    const published_generation = terminal_publication.publishedGeneration(self);
+    const presented_generation = terminal_publication.presentedGeneration(self);
     const had_view_cache_pending = self.publication.view_cache_pending.load(.acquire);
     var view_cache_ms: f64 = 0.0;
     if (had_view_cache_pending) {
@@ -73,7 +73,7 @@ pub fn capturePresentation(self: anytype, dst: *RenderCache) !PresentationCaptur
 pub fn completePresentationFeedback(self: anytype, feedback: anytype) void {
     if (feedback.presented) |presented| {
         if (feedback.texture_updated or presented.dirty == .none) {
-            _ = @import("publication_state.zig").acknowledgePresentedGeneration(self, presented.generation);
+            _ = terminal_publication.acknowledgePresentedGeneration(self, presented.generation);
         }
     }
     if (feedback.alt_exit_info) |info| {

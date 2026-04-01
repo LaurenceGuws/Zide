@@ -148,7 +148,6 @@ Judgment:
   `src/terminal/core/session/presentation_feedback.zig`,
   `src/terminal/core/session/lifecycle.zig`,
   `src/terminal/core/session/mode_effects.zig`,
-  `src/terminal/core/session/publication_state.zig`,
   `src/terminal/core/session/publication_updates.zig`,
   `src/terminal/core/session/presentation_handoff.zig`,
   `src/terminal/core/session/thread_runtime.zig`, and
@@ -455,16 +454,18 @@ session-centered
 
 Primary files:
 
-- `src/terminal/core/session/publication_state.zig`
+- `src/terminal/core/publication/terminal_publication.zig`
 - `src/terminal/core/session/publication_updates.zig`
 - `src/terminal/core/session/presentation_handoff.zig`
 
 Evidence:
 
-- these are now nicely split, but still fundamentally operate as helper seams
-  over session-owned caches and locks
-- acknowledgement, damage retirement, and view-cache refresh still depend on
-  the session shell as the coordination center
+- publication state ownership is now correctly centered in
+  `terminal_publication.zig`, but updates and presentation handoff still live
+  in the wrapper subtree
+- acknowledgement, damage retirement, and view-cache refresh no longer depend
+  on a dedicated wrapper-side state shell, but they still cross the
+  session/publication seam more than a best-in-class low-level design should
 
 Judgment:
 

@@ -52,7 +52,7 @@ pub fn setSyncUpdates(self: anytype, enabled: bool) void {
 pub fn setSyncUpdatesLocked(self: anytype, enabled: bool) void {
     if (!self.core.setSyncUpdates(enabled)) return;
     const cache = terminal_publication.renderCache(self);
-    const presented_generation = @import("publication_state.zig").presentedGeneration(self);
+    const presented_generation = terminal_publication.presentedGeneration(self);
     if (cache.generation == presented_generation and cache.dirty == .none) return;
     _ = bumpGeneration(self);
     const offset: usize = self.core.scrollbackOffset();

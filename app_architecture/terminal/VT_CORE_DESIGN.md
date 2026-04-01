@@ -1063,8 +1063,8 @@ Migration approach:
   `src/terminal/core/session/host_queries.zig`
 - publication/diff, selection projection, plan/refinement, selection-dirty
   expansion, and damage helpers are split across focused `view_cache_*` modules
-- presented-generation acknowledgement and damage retirement now live under
-  `src/terminal/core/session/publication_state.zig`
+- presented-generation acknowledgement and damage retirement now live directly
+  under `src/terminal/core/publication/terminal_publication.zig`
 - publication-trigger and sync-update/view-cache update helpers now live under
   `src/terminal/core/session/publication_updates.zig`
 - presentation capture/copy/feedback handoff now lives under
