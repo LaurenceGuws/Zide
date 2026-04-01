@@ -142,6 +142,12 @@ Validation note, 2026-03-31:
   - host/runtime and publication/present public methods are no longer written
     inline on `pty_terminal_runtime.zig`; they are now grouped behind explicit API
     modules and re-exported without behavior changes.
+  - the wrapper behavior files now follow the same rule too:
+    `src/terminal/core/session/runtime.zig`,
+    `src/terminal/core/session/input.zig`,
+    `src/terminal/core/session/config.zig`, and
+    `src/terminal/core/session/interaction.zig` replace the redundant
+    `session_*` naming inside the already-explicit `session/` subtree.
   - `src/terminal/core/session/input_api.zig` now groups the input send/report
     public methods that were previously written inline on
     `pty_terminal_runtime.zig`.

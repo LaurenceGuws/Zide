@@ -99,6 +99,11 @@ Judgment:
   `src/terminal/core/session/publication_api.zig` now carry the runtime and
   publication/present method groups that were previously written inline on
   `pty_terminal_runtime.zig`
+- `src/terminal/core/session/runtime.zig`,
+  `src/terminal/core/session/input.zig`,
+  `src/terminal/core/session/config.zig`, and
+  `src/terminal/core/session/interaction.zig` now carry the wrapper behavior
+  seams without redundant `session_` naming inside the subtree
 - `src/terminal/core/session/input_api.zig` now carries the host input
   send/report method group that was previously written inline on
   `pty_terminal_runtime.zig`
@@ -463,10 +468,10 @@ Judgment:
 
 Primary files:
 
-- `src/terminal/core/session_runtime.zig`
-- `src/terminal/core/session_transport_runtime.zig`
-- `src/terminal/core/session_thread_runtime.zig`
-- `src/terminal/core/pty_io.zig`
+- `src/terminal/core/session/runtime.zig`
+- `src/terminal/core/session/session_transport_runtime.zig`
+- `src/terminal/core/session/session_thread_runtime.zig`
+- `src/terminal/core/runtime/pty_io.zig`
 
 Evidence:
 

@@ -2,7 +2,7 @@ const content_api = @import("content_api.zig");
 const session_selection = @import("session_selection.zig");
 const session_queries = @import("session_queries.zig");
 const session_host_queries = @import("session_host_queries.zig");
-const session_interaction = @import("session_interaction.zig");
+const session_interaction = @import("interaction.zig");
 
 pub fn API(comptime Self: type, comptime Cell: type, comptime ScrollbackInfo: type, comptime ScrollbackRange: type) type {
     const ContentAPI = content_api.API(Self, Cell, ScrollbackInfo, ScrollbackRange);

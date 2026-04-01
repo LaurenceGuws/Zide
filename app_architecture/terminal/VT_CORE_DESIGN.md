@@ -54,7 +54,7 @@ Status note, 2026-03-14:
     facade
   - the stronger remaining weight is the runtime/publication shell around
     `TerminalCore`, especially the orchestration still centered in
-    `session_runtime.zig` and `session_rendering.zig`
+    `session/runtime.zig` and the publication shell
   - after the recent extractions, those files are closer to orchestration
     shells than semantic owners, so the next strongest lane is likely FFI
     snapshot/export maturity unless another comparably coherent engine-ownership
@@ -106,6 +106,11 @@ Status note, 2026-03-31:
     `src/terminal/core/session/publication_api.zig` now hold the runtime and
     publication/present method groups that were previously written inline on
     `pty_terminal_runtime.zig`
+  - `src/terminal/core/session/runtime.zig`,
+    `src/terminal/core/session/input.zig`,
+    `src/terminal/core/session/config.zig`, and
+    `src/terminal/core/session/interaction.zig` now carry the wrapper behavior
+    seams without repeating `session_` inside the subtree
   - `src/terminal/core/session/input_api.zig` now holds the host input
     send/report method group that was previously written inline on
     `pty_terminal_runtime.zig`
@@ -348,8 +353,8 @@ flowchart LR
     end
 
     subgraph Current["Current center"]
-        CRuntime["session_runtime.zig + helpers"] --> CCore["TerminalCore"]
-        CCore --> CPublication["session_rendering.zig + publication helpers"]
+        CRuntime["session/runtime.zig + helpers"] --> CCore["TerminalCore"]
+        CCore --> CPublication["publication/ + helpers"]
         CRuntime -. still heavier than ideal .-> CCore
         CPublication -. still heavier than ideal .-> CCore
     end
@@ -519,7 +524,7 @@ host signals.
 Current remaining gap:
 
 - the transport split is real and external transport is no longer second-class
-- but `session_runtime.zig` still owns much of the runtime center-of-gravity
+- but `session/runtime.zig` still owns much of the runtime center-of-gravity
   around that split:
   - thread lifecycle
   - parse/read loop assembly
@@ -962,7 +967,7 @@ So the current Zide FFI direction is:
 The `PtyTerminalRuntime` root also shed another non-runtime owner:
 
 - the input-mode query/toggle surface now routes through
-  `src/terminal/core/session_interaction.zig`
+  `src/terminal/core/session/interaction.zig`
 - the root session facade still exports the same API, but it no longer carries
   that interaction/mode-management block inline
 
@@ -1013,7 +1018,7 @@ Migration approach:
 - PTY/runtime/thread/render-publication ownership still lives in
   `PtyTerminalRuntime` for now
 - session construction and host/runtime assembly route through
-  `src/terminal/core/session_runtime.zig`
+  `src/terminal/core/session/runtime.zig`
 - input-mode snapshot state now also lives in
   `src/terminal/core/session_input_snapshot.zig` instead of being defined
   inline in `pty_terminal_runtime.zig`

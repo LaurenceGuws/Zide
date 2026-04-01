@@ -1,6 +1,6 @@
 const std = @import("std");
 const screen_mod = @import("../../model/screen.zig");
-const session_runtime = @import("session_runtime.zig");
+const session_runtime = @import("runtime.zig");
 
 pub fn init(self_type: type, allocator: std.mem.Allocator, rows: u16, cols: u16) !*self_type {
     return initWithOptions(self_type, allocator, rows, cols, .{});

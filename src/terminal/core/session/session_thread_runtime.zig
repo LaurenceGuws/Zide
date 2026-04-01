@@ -71,7 +71,7 @@ fn stopThreads(self: anytype) void {
 }
 
 test "hasData stays true for threaded session while unread parse buffer remains" {
-    const session_runtime = @import("session_runtime.zig");
+    const session_runtime = @import("runtime.zig");
 
     const allocator = std.testing.allocator;
     const session = try session_runtime.init(allocator, 24, 80, .{});
