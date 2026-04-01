@@ -190,6 +190,11 @@ Validation note, 2026-03-31:
     `src/terminal/protocol/csi_reply.zig`, and DSR/window-op reply handling
     now passes raw query/screen state instead of bouncing through callback
     wrappers for three values at a time
+  - the SGR query shell is dead too:
+    `SgrContext` is deleted from
+    `src/terminal/protocol/csi_style_reset.zig`, and SGR application now reads
+    palette/default/current attribute state directly from the live runtime
+    object instead of routing those three reads through another callback shell
   - the remaining publication/view-cache helper stubs and the special-case
     protocol `appendHyperlink` wrapper are no longer written inline on
     `pty_terminal_runtime.zig`; those exceptions now route through the explicit

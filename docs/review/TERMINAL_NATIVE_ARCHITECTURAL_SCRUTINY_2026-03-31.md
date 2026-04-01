@@ -171,6 +171,11 @@ Judgment:
   `src/terminal/protocol/csi_reply.zig`, and DSR/window-op reply handling
   now passes raw query/screen state instead of bouncing through callback
   wrappers for three values at a time
+- the SGR query shell is dead too:
+  `SgrContext` is deleted from
+  `src/terminal/protocol/csi_style_reset.zig`, and SGR application now reads
+  palette/default/current attribute state directly from the live runtime
+  object instead of routing those three reads through another callback shell
 - the stale `src/terminal/core/session_protocol.zig` forwarding shell is now
   deleted, so that API seam no longer routes through one extra session-named
   hop before reaching the real owners

@@ -27,7 +27,6 @@ fn modeSnapshotFromContext(ctx: ModeCaptureContext) ModeSnapshot {
     return csi_mode_query.modeSnapshotFromContext(ctx);
 }
 
-const SgrContext = csi_style_reset.SgrContext;
 const DecstrContext = csi_style_reset.DecstrContext;
 
 fn csiIntermediatesEq(action: parser_csi.CsiAction, bytes: []const u8) bool {
@@ -100,7 +99,7 @@ fn handleCsiOnSession(self: anytype, action: parser_csi.CsiAction) void {
             csi_exec.handleSpecialCsi(self, action, param_len, p);
         },
         'm' => { // SGR
-            applySgr(SgrContext.from(self), action);
+            applySgr(self, action);
         },
         'q' => { // DECSCUSR
             csi_exec.handleSpecialCsi(self, action, param_len, p);
@@ -282,6 +281,6 @@ fn writeWindowOpCellPixelsReplyWithWriter(writer: CsiWriter, cell_h: u16, cell_w
     return csi_reply.writeWindowOpCellPixelsReplyWithWriter(writer, cell_h, cell_w);
 }
 
-pub fn applySgr(context: SgrContext, action: parser_csi.CsiAction) void {
-    csi_style_reset.applySgr(context, action, effectiveSgrParamCount);
+pub fn applySgr(self: anytype, action: parser_csi.CsiAction) void {
+    csi_style_reset.applySgr(self, action, effectiveSgrParamCount);
 }
