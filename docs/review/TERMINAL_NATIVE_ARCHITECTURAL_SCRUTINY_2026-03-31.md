@@ -924,6 +924,8 @@ work:
   publication intent helper
 - once a pending refresh request has multiple required fields, expose it as one
   publication-owned request contract instead of making callers reconstruct it
+- once a caller always reads multiple publication generations together, expose
+  that status as one publication-owned summary instead of three separate calls
 
 ## Final Assessment
 

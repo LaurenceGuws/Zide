@@ -234,12 +234,13 @@ pub const TerminalWorkspace = struct {
     pub fn activeFrameState(self: *const TerminalWorkspace) ActiveFrameState {
         if (self.tabs.items.len == 0) return .{};
         const session = self.tabs.items[self.activeIndex()].session;
+        const generation_state = terminal_publication.generationState(session);
         return .{
             .has_data = session.hasData(),
             .session_ptr = @intFromPtr(session),
-            .pending_generation = terminal_publication.pendingGeneration(session),
-            .published_generation = terminal_publication.publishedGeneration(session),
-            .presented_generation = terminal_publication.presentedGeneration(session),
+            .pending_generation = generation_state.pending,
+            .published_generation = generation_state.published,
+            .presented_generation = generation_state.presented,
         };
     }
 

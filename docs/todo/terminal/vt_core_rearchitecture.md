@@ -846,6 +846,10 @@ Validation note, 2026-03-31:
   `terminal_publication.zig` now exposes a single
   `takePendingViewRefreshRequest(...)` contract so view-cache refresh and parse
   publish paths consume one owner-shaped request instead of reassembling it.
+- Another publication-owner summary cut is in too: widget/workspace callers no
+  longer assemble pending/published/presented generation triplets from three
+  separate publication queries. `terminal_publication.generationState(...)`
+  now owns that status snapshot as one contract.
 - The terminal campaign should now judge success by first-glance authority:
   when a strong maintainer opens the code, the engine must obviously be the
   engine.

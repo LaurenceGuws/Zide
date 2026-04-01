@@ -342,6 +342,7 @@ pub const TerminalWidget = struct {
             return .{};
         };
         if (handoff_log.enabled_file or handoff_log.enabled_console) {
+            const generation_state = terminal_publication.generationState(self.session);
             handoff_log.logf(
                 .info,
                 "stage=widget_prepare sid={x} last_render={d} captured={d} cur={d} pub={d} presented={d} texture_ready={d}",
@@ -349,9 +350,9 @@ pub const TerminalWidget = struct {
                     @intFromPtr(self.session),
                     self.last_render_generation,
                     capture.presented.generation,
-                    terminal_publication.pendingGeneration(self.session),
-                    terminal_publication.publishedGeneration(self.session),
-                    terminal_publication.presentedGeneration(self.session),
+                    generation_state.pending,
+                    generation_state.published,
+                    generation_state.presented,
                     @intFromBool(self.terminal_texture_ready),
                 },
             );
@@ -359,6 +360,7 @@ pub const TerminalWidget = struct {
         const published_before_draw = terminal_publication.publishedGeneration(self.session);
         if (published_before_draw > capture.presented.generation) {
             if (handoff_log.enabled_file or handoff_log.enabled_console) {
+                const generation_state = terminal_publication.generationState(self.session);
                 handoff_log.logf(
                     .info,
                     "stage=widget_pre_draw_refresh sid={x} captured={d} pub_now={d} cur_now={d} presented_now={d}",
@@ -366,8 +368,8 @@ pub const TerminalWidget = struct {
                         @intFromPtr(self.session),
                         capture.presented.generation,
                         published_before_draw,
-                        terminal_publication.pendingGeneration(self.session),
-                        terminal_publication.presentedGeneration(self.session),
+                        generation_state.pending,
+                        generation_state.presented,
                     },
                 );
             }
@@ -378,6 +380,7 @@ pub const TerminalWidget = struct {
             };
             if (refreshed_capture.presented.generation > capture.presented.generation) {
                 if (handoff_log.enabled_file or handoff_log.enabled_console) {
+                    const generation_state = terminal_publication.generationState(self.session);
                     handoff_log.logf(
                         .info,
                         "stage=widget_prepare_latest sid={x} last_render={d} captured={d} cur={d} pub={d} presented={d} texture_ready={d}",
@@ -385,9 +388,9 @@ pub const TerminalWidget = struct {
                             @intFromPtr(self.session),
                             self.last_render_generation,
                             refreshed_capture.presented.generation,
-                            terminal_publication.pendingGeneration(self.session),
-                            terminal_publication.publishedGeneration(self.session),
-                            terminal_publication.presentedGeneration(self.session),
+                            generation_state.pending,
+                            generation_state.published,
+                            generation_state.presented,
                             @intFromBool(self.terminal_texture_ready),
                         },
                     );

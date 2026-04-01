@@ -1464,6 +1464,10 @@ The same rule now applies to pending refresh requests: publication exposes one
 request object instead of forcing callers to separately pull offset and
 generation from publication state.
 
+The same cleanup standard now applies to generation status: publication now
+owns the pending/published/presented triplet as one summary contract instead of
+forcing callers to assemble it from three separate reads.
+
 Avoid continuing to use `TerminalSession` as the name of the engine center once
 the new boundary exists.
 

@@ -61,6 +61,12 @@ pub const PresentationFeedback = struct {
     alt_exit_info: ?AltExitPresentationInfo = null,
 };
 
+pub const GenerationState = struct {
+    pending: u64,
+    published: u64,
+    presented: u64,
+};
+
 pub const ViewportInfo = struct {
     history_len: usize,
     total_lines: usize,
@@ -508,6 +514,14 @@ pub fn setSyncUpdatesLocked(self: anytype, enabled: bool) void {
 
 pub fn pendingGeneration(self: anytype) u64 {
     return self.publication.pending_generation.load(.acquire);
+}
+
+pub fn generationState(self: anytype) GenerationState {
+    return .{
+        .pending = pendingGeneration(self),
+        .published = publishedGeneration(self),
+        .presented = presentedGeneration(self),
+    };
 }
 
 pub fn outputPending(self: anytype) bool {
