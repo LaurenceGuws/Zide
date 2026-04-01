@@ -220,6 +220,11 @@ Validation note, 2026-03-31:
     `scrollUp` helper; protocol/session/kitty internals now read screen state
     from `self.core` or direct owners instead of treating the wrapper as the
     screen owner
+  - the remaining inline runtime/control helper bodies are thinner too:
+    launch-shell path access now lives in
+    `src/terminal/core/session/runtime.zig`, and lock/tryLock/unlock now live
+    in `src/terminal/core/session/control.zig` instead of sitting inline on
+    `pty_terminal_runtime.zig`
   - the remaining publication/view-cache helper stubs and the special-case
     protocol `appendHyperlink` wrapper are no longer written inline on
     `pty_terminal_runtime.zig`; those exceptions now route through the explicit

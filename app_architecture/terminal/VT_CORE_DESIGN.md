@@ -227,6 +227,11 @@ Status note, 2026-03-31:
     `scrollUp` helper; protocol/session/kitty internals now read screen state
     from `self.core` or direct engine owners instead of pretending the wrapper
     owns the screen seam
+  - the last inline runtime/control helper bodies are thinner too:
+    launch-shell path access now lives in
+    `src/terminal/core/session/runtime.zig`, and lock/tryLock/unlock now live
+    in `src/terminal/core/session/control.zig` instead of remaining inline on
+    `pty_terminal_runtime.zig`
   - the same direct-owner cleanup now applies in `workspace.zig`: wrapper
     composition reads as runtime/workspace ownership, and progress-state typing
     no longer comes through `pty_terminal_runtime.zig`

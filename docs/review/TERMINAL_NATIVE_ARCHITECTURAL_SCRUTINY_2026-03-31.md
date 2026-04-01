@@ -372,6 +372,11 @@ Evidence:
   helper; protocol/session/kitty internals now read screen state from
   `self.core` or direct owners instead of treating the wrapper as the screen
   owner
+- the last inline runtime/control helper bodies are thinner too:
+  launch-shell path access now lives in
+  `src/terminal/core/session/runtime.zig`, and lock/tryLock/unlock now live in
+  `src/terminal/core/session/control.zig` instead of remaining inline on
+  `pty_terminal_runtime.zig`
 - the outer CSI forwarding shell is gone too:
   `terminal_protocol_api.zig` now routes CSI directly into
   `src/terminal/protocol/csi.zig` without stepping through an extra

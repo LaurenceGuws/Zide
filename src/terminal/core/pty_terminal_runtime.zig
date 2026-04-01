@@ -15,6 +15,7 @@ const interaction = @import("session/interaction.zig");
 const session_input = @import("session/input.zig");
 const init_options = @import("session/init_options.zig");
 const input_snapshot = @import("session/input_snapshot.zig");
+const control = @import("session/control.zig");
 const mode_effects = @import("session/mode_effects.zig");
 const presentation_feedback = @import("session/presentation_feedback.zig");
 const terminal_publication = @import("publication/terminal_publication.zig");
@@ -170,31 +171,11 @@ pub const PtyTerminalRuntime = struct {
     pub const refreshChildExit = runtime.refreshChildExit;
     pub const hasData = runtime.hasData;
 
-    pub fn setLaunchShellPath(self: *Self, shell_path: ?[]const u8) !void {
-        if (self.runtime.launch_shell_path) |old| {
-            self.allocator.free(old);
-            self.runtime.launch_shell_path = null;
-        }
-        if (shell_path) |path| {
-            self.runtime.launch_shell_path = try self.allocator.dupe(u8, path);
-        }
-    }
-
-    pub fn launchShellPath(self: *const Self) []const u8 {
-        return self.runtime.launch_shell_path orelse "";
-    }
-
-    pub fn lock(self: *Self) void {
-        self.control.state_mutex.lock();
-    }
-
-    pub fn tryLock(self: *Self) bool {
-        return self.control.state_mutex.tryLock();
-    }
-
-    pub fn unlock(self: *Self) void {
-        self.control.state_mutex.unlock();
-    }
+    pub const setLaunchShellPath = runtime.setLaunchShellPath;
+    pub const launchShellPath = runtime.launchShellPath;
+    pub const lock = control.lock;
+    pub const tryLock = control.tryLock;
+    pub const unlock = control.unlock;
 
     pub const pendingGeneration = terminal_publication.pendingGeneration;
     pub const publishedGeneration = terminal_publication.publishedGeneration;
