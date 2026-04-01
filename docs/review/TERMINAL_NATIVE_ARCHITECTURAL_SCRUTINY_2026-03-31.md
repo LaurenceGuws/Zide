@@ -282,6 +282,9 @@ Judgment:
   `terminal_core_protocol.zig` / `terminal_publication.zig` directly for
   erase/edit/scroll-region and sync-update operations, so those no longer sit
   on the wrapper surface either
+- protocol query helpers are shrinking the same way too: runtime/focus tests
+  now use `terminal_core_protocol.zig` directly for `getCell` /
+  `getCursorPos`, so those no longer sit on the wrapper surface
 - the flat root state is now also grouped into explicit subsystem-owned
   embedded structs:
   - `session/publication_fields`

@@ -313,6 +313,9 @@ Validation note, 2026-03-31:
     `terminal_core_protocol.zig` / `terminal_publication.zig` directly for
     erase/edit/scroll-region and sync-update operations, so those no longer sit
     on the wrapper surface either
+  - protocol query helpers are shrinking the same way:
+    runtime/focus tests now use `terminal_core_protocol.zig` directly for
+    `getCell` / `getCursorPos`, so those no longer sit on the wrapper surface
   - raw session state is no longer a flat lie:
     - `src/terminal/core/session/publication_fields.zig`
     - `src/terminal/core/session/runtime_fields.zig`

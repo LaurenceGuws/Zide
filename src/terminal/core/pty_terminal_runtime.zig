@@ -252,9 +252,6 @@ pub const PtyTerminalRuntime = struct {
         scrolling_mod.scrollUp(self);
     }
 
-    pub const getCell = @import("protocol/terminal_core_protocol.zig").getCell;
-    pub const getCursorPos = @import("protocol/terminal_core_protocol.zig").getCursorPos;
-
     pub const updateViewCacheForScroll = terminal_publication.updateViewCacheForScroll;
     pub const updateViewCacheForScrollLocked = terminal_publication.updateViewCacheForScrollLocked;
 

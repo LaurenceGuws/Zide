@@ -218,6 +218,9 @@ Status note, 2026-03-31:
     `terminal_core_protocol.zig` / `terminal_publication.zig` directly for
     erase/edit/scroll-region and sync-update operations, so those no longer
     inflate the wrapper surface either
+  - protocol query helpers are shrinking the same way too: runtime/focus tests
+    now use `terminal_core_protocol.zig` directly for `getCell` /
+    `getCursorPos`, so those no longer inflate the wrapper surface
   - the same direct-owner cleanup now applies in `workspace.zig`: wrapper
     composition reads as runtime/workspace ownership, and progress-state typing
     no longer comes through `pty_terminal_runtime.zig`

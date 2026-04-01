@@ -3,6 +3,7 @@ const builtin = @import("builtin");
 const posix = std.posix;
 
 const terminal_runtime = @import("../src/terminal/core/terminal_runtime.zig");
+const terminal_core_protocol = @import("../src/terminal/core/protocol/terminal_core_protocol.zig");
 const terminal_types = @import("../src/terminal/model/types.zig");
 const terminal_debug = @import("../src/terminal/core/session/debug_ops.zig");
 const pty_mod = @import("../src/terminal/io/pty.zig");
@@ -285,7 +286,7 @@ test "terminal CSI s is save-cursor when ?69 is off and DECSLRM reset when ?69 i
     // ?69 disabled: CSI s/u behaves as save/restore cursor.
     terminal_debug.debugFeedBytes(session, "\x1b[4;7H\x1b[s\x1b[1;1H\x1b[u");
     {
-        const pos = session.getCursorPos();
+        const pos = terminal_core_protocol.getCursorPos(session);
         try std.testing.expectEqual(@as(usize, 3), pos.row);
         try std.testing.expectEqual(@as(usize, 6), pos.col);
     }
@@ -296,7 +297,7 @@ test "terminal CSI s is save-cursor when ?69 is off and DECSLRM reset when ?69 i
     try std.testing.expectEqual(@as(usize, 0), screen.left_margin);
     try std.testing.expectEqual(@as(usize, @intCast(screen.grid.cols - 1)), screen.right_margin);
     {
-        const pos = session.getCursorPos();
+        const pos = terminal_core_protocol.getCursorPos(session);
         try std.testing.expectEqual(@as(usize, 0), pos.row);
         try std.testing.expectEqual(@as(usize, 0), pos.col);
     }
@@ -304,7 +305,7 @@ test "terminal CSI s is save-cursor when ?69 is off and DECSLRM reset when ?69 i
     // Saved cursor from the pre-?69 CSI s should still restore.
     terminal_debug.debugFeedBytes(session, "\x1b[u");
     {
-        const pos = session.getCursorPos();
+        const pos = terminal_core_protocol.getCursorPos(session);
         try std.testing.expectEqual(@as(usize, 3), pos.row);
         try std.testing.expectEqual(@as(usize, 6), pos.col);
     }

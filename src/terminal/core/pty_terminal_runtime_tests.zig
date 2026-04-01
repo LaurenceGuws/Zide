@@ -494,7 +494,7 @@ test "reverse index moves cursor up inside scroll region" {
     debugSetCursor(&session, 4, 2);
     session.feedOutputBytes("\x1bM");
 
-    const cursor = session.getCursorPos();
+    const cursor = terminal_core_protocol.getCursorPos(session);
     try std.testing.expectEqual(@as(usize, 3), cursor.row);
     try std.testing.expectEqual(@as(usize, 2), cursor.col);
 }
@@ -2456,8 +2456,8 @@ test "feedOutputBytes RIS resets input modes and clears screen" {
     try std.testing.expect(session.mouseModeSgrPixelsEnabled());
     try std.testing.expect(session.appCursorKeysEnabled());
     try std.testing.expect(session.appKeypadEnabled());
-    try std.testing.expectEqual(@as(u32, 'A'), session.getCell(0, 0).codepoint);
-    try std.testing.expectEqual(@as(u32, 'B'), session.getCell(0, 1).codepoint);
+    try std.testing.expectEqual(@as(u32, 'A'), terminal_core_protocol.getCell(session, 0, 0).codepoint);
+    try std.testing.expectEqual(@as(u32, 'B'), terminal_core_protocol.getCell(session, 0, 1).codepoint);
 
     session.feedOutputBytes("\x1bc");
 
@@ -2467,6 +2467,6 @@ test "feedOutputBytes RIS resets input modes and clears screen" {
     try std.testing.expect(!session.mouseModeSgrPixelsEnabled());
     try std.testing.expect(!session.appCursorKeysEnabled());
     try std.testing.expect(!session.appKeypadEnabled());
-    try std.testing.expectEqual(@as(u32, 0), session.getCell(0, 0).codepoint);
-    try std.testing.expectEqual(@as(u32, 0), session.getCell(0, 1).codepoint);
+    try std.testing.expectEqual(@as(u32, 0), terminal_core_protocol.getCell(session, 0, 0).codepoint);
+    try std.testing.expectEqual(@as(u32, 0), terminal_core_protocol.getCell(session, 0, 1).codepoint);
 }
