@@ -272,6 +272,7 @@ Validation note, 2026-03-31:
     refinement gate and broad-span logging inline in `view_cache.zig`
   - widget/publication interaction is starting to tighten too:
     - `viewportInfo(...)`
+    - `scrollbarInfo(...)`
     - `scrollbarAllowed(...)`
     - `drawCursorVisible(...)`
     - `altTransition(...)`

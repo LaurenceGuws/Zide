@@ -195,6 +195,9 @@ Status note, 2026-03-31:
   - widget visible-view dump metadata should come from publication-owned
     summaries like `visibleViewDumpInfo(...)` instead of another open-coded
     cache header assembly in the widget layer
+  - widget scroll models should also consume publication-owned summaries like
+    `scrollbarInfo(...)` instead of rebuilding the same state from multiple
+    cache-derived calls
 - This doc should now be read as authority for a terminal-core offensive, not
   as permission to preserve the current center with smaller helper files.
 

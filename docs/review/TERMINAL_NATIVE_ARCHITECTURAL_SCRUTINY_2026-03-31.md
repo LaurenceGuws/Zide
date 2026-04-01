@@ -250,6 +250,10 @@ Judgment:
   - widget visible-view diagnostics now also ask publication for
     `visibleViewDumpInfo` instead of hand-assembling another cache header
     inside the widget layer
+  - widget scroll models now also ask publication for `scrollbarInfo`
+    instead of rebuilding allowed/rows/total-lines/offset from multiple
+    cache-derived calls
+    inside the widget layer
   - that is the standard the rest of the publication war should keep:
     if a cache field is just restating derivable published state, it should die
 

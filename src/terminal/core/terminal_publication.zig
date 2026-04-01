@@ -52,6 +52,13 @@ pub const ViewportInfo = struct {
     start_line: usize,
 };
 
+pub const ScrollbarInfo = struct {
+    allowed: bool,
+    rows: usize,
+    total_lines: usize,
+    scroll_offset: usize,
+};
+
 pub const AltTransition = struct {
     changed: bool,
     exited: bool,
@@ -106,6 +113,16 @@ pub fn viewportInfo(cache: *const RenderCache) ViewportInfo {
 
 pub fn scrollbarAllowed(cache: *const RenderCache, mouse_reporting_enabled: bool) bool {
     return !cache.alt_active and !mouse_reporting_enabled and cache.rows > 0 and cache.totalLines() > cache.rows;
+}
+
+pub fn scrollbarInfo(cache: *const RenderCache, mouse_reporting_enabled: bool) ScrollbarInfo {
+    const viewport = viewportInfo(cache);
+    return .{
+        .allowed = scrollbarAllowed(cache, mouse_reporting_enabled),
+        .rows = cache.rows,
+        .total_lines = viewport.total_lines,
+        .scroll_offset = viewport.scroll_offset,
+    };
 }
 
 pub fn drawCursorVisible(cache: *const RenderCache) bool {
