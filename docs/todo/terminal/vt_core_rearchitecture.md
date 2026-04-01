@@ -292,6 +292,11 @@ Validation note, 2026-03-31:
     now gives widget draw one publication answer for dirty-tag, current dirty
     reason, dirty-row count, and damage spans instead of rebuilding that state
     inline from raw cache fields
+  - baseline widget draw state is moving there too:
+    - `drawStateInfo(...)`
+    now gives widget draw one publication-owned summary for rows, cols,
+    viewport state, render state, sync-update state, kitty generation, and
+    cursor position instead of pulling those facts piecemeal from raw cache
   - widget debug/background-run interpretation is moving there too:
     - `backgroundRunInfo(...)`
     now gives widget helpers one publication answer for cursor-presence and

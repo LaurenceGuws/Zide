@@ -638,13 +638,14 @@ pub fn drawPrepared(
     self.last_alt_active = cache.alt_active;
     render_phase_start = app_shell.getTime();
 
-    const render_state = terminal_publication.renderStateInfo(cache);
-    const sync_updates = cache.sync_updates_active;
+    const draw_state = terminal_publication.drawStateInfo(cache);
+    const render_state = draw_state.render;
+    const sync_updates = draw_state.sync_updates_active;
     const screen_reverse = render_state.screen_reverse;
     const blink_style = self.blink_style;
     const blink_time = app_shell.getTime();
-    const rows = cache.rows;
-    const cols = cache.cols;
+    const rows = draw_state.rows;
+    const cols = draw_state.cols;
     if (sync_updates and cache.cells.items.len > 0) {
         const view_cells = cache.cells.items;
         const bg_color = if (view_cells.len > 0) blk: {
@@ -668,12 +669,12 @@ pub fn drawPrepared(
         return outcome;
     }
     const draw_start_time = if (alt_exit) app_shell.getTime() else 0;
-    const viewport = terminal_publication.viewportInfo(cache);
+    const viewport = draw_state.viewport;
     const history_len = viewport.history_len;
     const scroll_offset = viewport.scroll_offset;
     const start_line = viewport.start_line;
     var draw_cursor = render_state.draw_cursor_visible;
-    const cursor = if (draw_cursor) cache.cursor else CursorPos{ .row = rows + 1, .col = cols + 1 };
+    const cursor = if (draw_cursor) draw_state.cursor else CursorPos{ .row = rows + 1, .col = cols + 1 };
     const cursor_style = render_state.cursor_style;
     if (draw_cursor and self.ui_focused and cursor_style.blink) {
         if (blink_time >= self.cursor_blink_pause_until) {
@@ -682,7 +683,7 @@ pub fn drawPrepared(
             draw_cursor = phase < period;
         }
     }
-    const kitty_generation = cache.kitty_generation;
+    const kitty_generation = draw_state.kitty_generation;
     const has_blink = blink_style != .off and render_state.has_blinking_cells;
     const blink_phase_changed = self.blink_phase_changed_pending;
     self.blink_phase_changed_pending = false;

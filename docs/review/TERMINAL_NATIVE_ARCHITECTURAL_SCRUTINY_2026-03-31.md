@@ -259,6 +259,9 @@ Judgment:
   - widget draw now also asks publication for `dirtySummary` instead of
     rebuilding dirty-tag/current-reason/dirty-row-count/damage-span state
     inline from raw cache fields
+  - widget draw now also asks publication for `drawStateInfo` instead of
+    pulling rows/cols/viewport/render/sync/kitty/cursor facts piecemeal from
+    raw cache state
     inside the widget layer
   - that is the standard the rest of the publication war should keep:
     if a cache field is just restating derivable published state, it should die

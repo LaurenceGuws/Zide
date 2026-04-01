@@ -103,6 +103,16 @@ pub const DirtySummary = struct {
     damage_col_span: usize,
 };
 
+pub const DrawStateInfo = struct {
+    rows: usize,
+    cols: usize,
+    viewport: ViewportInfo,
+    render: RenderStateInfo,
+    sync_updates_active: bool,
+    kitty_generation: u64,
+    cursor: CursorPos,
+};
+
 pub const VisibleViewDumpInfo = struct {
     rows: usize,
     cols: usize,
@@ -239,6 +249,18 @@ pub fn dirtySummary(cache: *const RenderCache) DirtySummary {
         .dirty_rows_count = dirty_rows_count,
         .damage_row_span = damage_row_span,
         .damage_col_span = damage_col_span,
+    };
+}
+
+pub fn drawStateInfo(cache: *const RenderCache) DrawStateInfo {
+    return .{
+        .rows = cache.rows,
+        .cols = cache.cols,
+        .viewport = viewportInfo(cache),
+        .render = renderStateInfo(cache),
+        .sync_updates_active = cache.sync_updates_active,
+        .kitty_generation = cache.kitty_generation,
+        .cursor = cache.cursor,
     };
 }
 

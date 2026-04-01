@@ -196,6 +196,9 @@ Status note, 2026-03-31:
   - dirty/render summary interpretation should also come from publication-owned
     summaries like `dirtySummary(...)` instead of another inline cache-state
     reconstruction in widget draw
+  - baseline widget draw state should also come from publication-owned
+    summaries like `drawStateInfo(...)` instead of reading rows/cols/viewport/
+    render/sync/kitty/cursor facts piecemeal from the cache
   - widget debug/background-run interpretation is also moving there, reducing
     more raw cache-flag reads in support/debug helpers too
   - widget visible-view dump metadata should come from publication-owned
