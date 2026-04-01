@@ -179,6 +179,19 @@ pub const TerminalCore = struct {
         return if (self.active == .alt) &self.alt else &self.primary;
     }
 
+    pub fn glCharset(self: *const TerminalCore) Charset {
+        return self.parser.gl_charset;
+    }
+
+    pub fn applyHyperlinkAttrs(self: *const TerminalCore, attrs: *types.CellAttrs) void {
+        if (self.osc_hyperlink_active and self.current_hyperlink_id > 0) {
+            attrs.link_id = self.current_hyperlink_id;
+            attrs.underline = true;
+        } else {
+            attrs.link_id = 0;
+        }
+    }
+
     pub fn activeScreenConst(self: *const TerminalCore) *const Screen {
         return if (self.active == .alt) &self.alt else &self.primary;
     }

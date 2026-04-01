@@ -1,12 +1,11 @@
 const screen_mod = @import("../model/screen.zig");
-const types = @import("../model/types.zig");
+const terminal_core_mod = @import("terminal_core.zig");
 const parser_mod = @import("../parser/parser.zig");
+const types = @import("../model/types.zig");
 
 pub const TextContext = struct {
     ctx: *anyopaque,
-    active_screen_fn: *const fn (ctx: *anyopaque) *screen_mod.Screen,
-    gl_charset_fn: *const fn (ctx: *anyopaque) parser_mod.Charset,
-    hyperlink_attrs_fn: *const fn (ctx: *anyopaque, attrs: *types.CellAttrs) void,
+    core: *terminal_core_mod.TerminalCore,
     wrap_newline_fn: *const fn (ctx: *anyopaque) void,
     insert_chars_fn: *const fn (ctx: *anyopaque, count: usize) void,
 
@@ -14,29 +13,7 @@ pub const TextContext = struct {
         const SessionPtr = @TypeOf(session);
         return .{
             .ctx = @ptrCast(session),
-            .active_screen_fn = struct {
-                fn call(ctx: *anyopaque) *screen_mod.Screen {
-                    const s: SessionPtr = @ptrCast(@alignCast(ctx));
-                    return s.activeScreen();
-                }
-            }.call,
-            .gl_charset_fn = struct {
-                fn call(ctx: *anyopaque) parser_mod.Charset {
-                    const s: SessionPtr = @ptrCast(@alignCast(ctx));
-                    return s.core.parser.gl_charset;
-                }
-            }.call,
-            .hyperlink_attrs_fn = struct {
-                fn call(ctx: *anyopaque, attrs: *types.CellAttrs) void {
-                    const s: SessionPtr = @ptrCast(@alignCast(ctx));
-                    if (s.core.osc_hyperlink_active and s.core.current_hyperlink_id > 0) {
-                        attrs.link_id = s.core.current_hyperlink_id;
-                        attrs.underline = true;
-                    } else {
-                        attrs.link_id = 0;
-                    }
-                }
-            }.call,
+            .core = &session.core,
             .wrap_newline_fn = struct {
                 fn call(ctx: *anyopaque) void {
                     const s: SessionPtr = @ptrCast(@alignCast(ctx));
@@ -53,15 +30,15 @@ pub const TextContext = struct {
     }
 
     pub fn activeScreen(self: *const TextContext) *screen_mod.Screen {
-        return self.active_screen_fn(self.ctx);
-    }
-
-    pub fn glCharset(self: *const TextContext) parser_mod.Charset {
-        return self.gl_charset_fn(self.ctx);
+        return self.core.activeScreen();
     }
 
     pub fn applyHyperlinkAttrs(self: *const TextContext, attrs: *types.CellAttrs) void {
-        self.hyperlink_attrs_fn(self.ctx, attrs);
+        self.core.applyHyperlinkAttrs(attrs);
+    }
+
+    pub fn glCharset(self: *const TextContext) parser_mod.Charset {
+        return self.core.glCharset();
     }
 
     pub fn wrapNewline(self: *const TextContext) void {

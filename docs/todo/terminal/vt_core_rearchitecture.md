@@ -201,6 +201,15 @@ Validation note, 2026-03-31:
     `terminal_core_text.zig`
   - `parser_hooks.zig` is reduced to parser-control surfaces instead of
     continuing to masquerade as the owner of printable semantics
+  Progress note, 2026-04-01, later still:
+  - `terminal_core_text.zig` now reads core-owned text state directly from
+    `TerminalCore` instead of reaching through session-shaped callbacks for:
+    - active screen access
+    - GL charset selection
+    - hyperlink attribute application
+  - the remaining non-core contract is now narrower and more honest:
+    only owner-level effects like wrap-newline and insert-chars still come in
+    through callbacks
 - [ ] `VTCORE-05` Simplify snapshot and render publication.
   Notes: the explicit publication center now lives in
   `src/terminal/core/terminal_publication.zig`, and the old live

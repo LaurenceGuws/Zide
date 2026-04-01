@@ -140,32 +140,38 @@ Why it matters:
 - it keeps native and FFI tempted to depend on the same broad shell instead of
   a more explicit engine/publication boundary
 
-### 2. Printable-text semantics still live above the engine boundary
+### 2. Printable-text semantics are cleaner, but the final text-effect seam is still too host-shaped
 
 Primary files:
 
-- `src/terminal/core/parser_hooks.zig`
+- `src/terminal/core/terminal_core_text.zig`
 - `src/terminal/core/terminal_core_dispatch.zig`
+- `src/terminal/core/control_handlers.zig`
 
 Evidence:
 
-- `parser_hooks.zig` still owns meaningful text-write behavior:
-  - ASCII slice handling
-  - codepoint write preparation loops
-  - DEC special charset mapping during writes
-  - hyperlink attr injection
-  - insert-mode write behavior
-  - wrap/newline coordination
+- printable text no longer routes through `parser_hooks.zig`
+- `terminal_core_dispatch.zig` now sends codepoint/ASCII traffic directly to
+  `terminal_core_text.zig`
+- `terminal_core_text.zig` now reads core-owned text state directly from
+  `TerminalCore` for:
+  - active screen access
+  - GL charset selection
+  - hyperlink attribute application
+- the remaining callback seam is narrower, but still host-shaped:
+  - wrap/newline effects
+  - insert-mode char insertion effects
 
 Reference comparison:
 
 - Ghostty drives parser actions more directly into terminal methods
-- Zide still routes parser output through a session-facing hook seam that owns
-  semantic write behavior
+- Zide has killed the old parser-hook ownership lie, but text execution still
+  depends on a host-shaped effect boundary where the strongest references are
+  more terminal/protocol-owned
 
 Judgment:
 
-- this is one of the strongest remaining "wrong layer" smells
+- this is still one of the strongest remaining "wrong layer" smells
 - even if it is not the current root cause of any specific bug, it is not the
   cleanest engine shape
 
