@@ -126,6 +126,11 @@ Progress note, 2026-04-02:
 - `build_system/target_config.zig` and `build_system/dependency_resolver.zig`
   now consume shared platform capability data for text-stack/fontconfig/zlib
   behavior instead of each carrying local OS-condition policy
+- the old `platform_links_linux.zig`, `platform_links_macos.zig`, and
+  `platform_links_windows.zig` split is gone
+- common graphics, ffi, and SDL-test link surfaces now come from shared
+  platform capability link specs instead of being scattered across tiny
+  platform-only helper modules
 
 ## Repo Boundary Rule
 

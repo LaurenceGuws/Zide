@@ -2,9 +2,6 @@ const std = @import("std");
 const app_types = @import("app_types.zig");
 const target_profile = @import("target_profile.zig");
 const platform_capabilities = @import("platform_capabilities.zig");
-const links_windows = @import("platform_links_windows.zig");
-const links_linux = @import("platform_links_linux.zig");
-const links_macos = @import("platform_links_macos.zig");
 
 fn linkSdl3(step: *std.Build.Step.Compile, sdl_lib: ?*std.Build.Step.Compile) void {
     step.linkLibrary(sdl_lib.?);
@@ -71,12 +68,23 @@ fn supportsFontconfig(target_os: std.Target.Os.Tag) bool {
         @panic("dependency policy violation: unsupported target os for fontconfig")).supports_fontconfig;
 }
 
-fn linkCommonPlatformGraphics(exe: *std.Build.Step.Compile, target_os: std.Target.Os.Tag) void {
-    switch (target_os) {
-        .windows => links_windows.linkCommonPlatformGraphics(exe),
-        .macos => links_macos.linkCommonPlatformGraphics(exe),
-        else => links_linux.linkCommonPlatformGraphics(exe),
+fn linkSystemLibs(step: *std.Build.Step.Compile, libs: []const []const u8) void {
+    for (libs) |lib_name| {
+        step.linkSystemLibrary(lib_name);
     }
+}
+
+fn linkFrameworks(step: *std.Build.Step.Compile, frameworks: []const []const u8) void {
+    for (frameworks) |framework_name| {
+        step.linkFramework(framework_name);
+    }
+}
+
+fn linkCommonPlatformGraphics(exe: *std.Build.Step.Compile, target_os: std.Target.Os.Tag) void {
+    const capability = platform_capabilities.platformCapability(target_os) orelse
+        @panic("dependency policy violation: unsupported target os for common graphics linking");
+    linkSystemLibs(exe, capability.common_graphics_system_libs);
+    linkFrameworks(exe, capability.common_graphics_frameworks);
 }
 
 pub fn addVendorAndStb(step: *std.Build.Step.Compile) void {
@@ -88,19 +96,17 @@ pub fn addVendorAndStb(step: *std.Build.Step.Compile) void {
 }
 
 pub fn linkFfiPlatform(step: *std.Build.Step.Compile, target_os: std.Target.Os.Tag) void {
-    switch (target_os) {
-        .windows => links_windows.linkFfiPlatform(step),
-        .macos => links_macos.linkFfiPlatform(step),
-        else => links_linux.linkFfiPlatform(step),
-    }
+    const capability = platform_capabilities.platformCapability(target_os) orelse
+        @panic("dependency policy violation: unsupported target os for ffi linking");
+    linkSystemLibs(step, capability.ffi_system_libs);
+    linkFrameworks(step, capability.ffi_frameworks);
 }
 
 fn linkSdlTestGraphics(step: *std.Build.Step.Compile, target_os: std.Target.Os.Tag) void {
-    switch (target_os) {
-        .windows => links_windows.linkSdlTestGraphics(step),
-        .macos => links_macos.linkSdlTestGraphics(step),
-        else => links_linux.linkSdlTestGraphics(step),
-    }
+    const capability = platform_capabilities.platformCapability(target_os) orelse
+        @panic("dependency policy violation: unsupported target os for SDL test graphics linking");
+    linkSystemLibs(step, capability.sdl_test_system_libs);
+    linkFrameworks(step, capability.sdl_test_frameworks);
 }
 
 pub fn configureSdlTestTarget(

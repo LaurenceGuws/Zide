@@ -11,6 +11,12 @@ pub const PlatformCapability = struct {
     supports_fontconfig: bool,
     fontconfig_include_dir: ?[]const u8,
     needs_system_zlib: bool,
+    common_graphics_system_libs: []const []const u8,
+    common_graphics_frameworks: []const []const u8,
+    ffi_system_libs: []const []const u8,
+    ffi_frameworks: []const []const u8,
+    sdl_test_system_libs: []const []const u8,
+    sdl_test_frameworks: []const []const u8,
 };
 
 pub const supported_renderer_backends = [_]RendererBackend{
@@ -25,6 +31,12 @@ pub const supported_platforms = [_]PlatformCapability{
         .supports_fontconfig = true,
         .fontconfig_include_dir = "/usr/include/fontconfig",
         .needs_system_zlib = true,
+        .common_graphics_system_libs = &.{ "GL", "m", "pthread", "dl", "rt" },
+        .common_graphics_frameworks = &.{},
+        .ffi_system_libs = &.{ "m", "pthread", "dl", "rt" },
+        .ffi_frameworks = &.{},
+        .sdl_test_system_libs = &.{"GL"},
+        .sdl_test_frameworks = &.{},
     },
     .{
         .os_tag = .macos,
@@ -33,6 +45,12 @@ pub const supported_platforms = [_]PlatformCapability{
         .supports_fontconfig = false,
         .fontconfig_include_dir = null,
         .needs_system_zlib = true,
+        .common_graphics_system_libs = &.{},
+        .common_graphics_frameworks = &.{ "OpenGL", "Cocoa", "IOKit", "CoreVideo" },
+        .ffi_system_libs = &.{},
+        .ffi_frameworks = &.{"Cocoa"},
+        .sdl_test_system_libs = &.{},
+        .sdl_test_frameworks = &.{"OpenGL"},
     },
     .{
         .os_tag = .windows,
@@ -41,6 +59,12 @@ pub const supported_platforms = [_]PlatformCapability{
         .supports_fontconfig = false,
         .fontconfig_include_dir = null,
         .needs_system_zlib = false,
+        .common_graphics_system_libs = &.{ "opengl32", "gdi32", "comdlg32", "dwrite", "ole32", "winmm", "user32", "shell32" },
+        .common_graphics_frameworks = &.{},
+        .ffi_system_libs = &.{ "user32", "shell32" },
+        .ffi_frameworks = &.{},
+        .sdl_test_system_libs = &.{"opengl32"},
+        .sdl_test_frameworks = &.{},
     },
 };
 
