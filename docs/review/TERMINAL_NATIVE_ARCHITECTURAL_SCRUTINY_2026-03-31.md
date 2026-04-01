@@ -263,6 +263,9 @@ Evidence:
   `palette.zig`, `osc_clipboard.zig`, and `osc_hyperlink.zig` now run directly
   on the live core/runtime object instead of wrapping it in tiny per-module
   `SessionFacade` shells
+- the OSC cwd wrapper chain is gone too:
+  `osc_cwd.zig` and `osc_util.zig` now run directly on the live core/runtime
+  object instead of stacking `SessionFacade` wrappers
 - the remaining callback seam is narrower:
   - wrap/newline effects
   - insert-mode char insertion effects

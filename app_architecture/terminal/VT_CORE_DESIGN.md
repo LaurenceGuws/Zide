@@ -113,6 +113,9 @@ Status note, 2026-03-31:
     `palette.zig`, `osc_clipboard.zig`, and `osc_hyperlink.zig` now run
     directly on the live core/runtime object instead of wrapping it in tiny
     per-module `SessionFacade` shells
+  - the OSC cwd wrapper chain is gone too:
+    `osc_cwd.zig` and `osc_util.zig` now run directly on the live
+    core/runtime object instead of stacking `SessionFacade` wrappers
   - duplicated publication/cache truth
   - oversized native widget/render coordination around terminal publication
 - The current operating rule is sequential but ruthless:

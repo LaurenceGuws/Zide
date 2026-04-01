@@ -47,7 +47,7 @@ pub fn parseOsc(self: anytype, payload: []const u8, terminator: OscTerminator) v
             osc_hyperlink.parseHyperlink(self, text);
         },
         7 => {
-            osc_cwd.parseCwd(osc_cwd.SessionFacade.from(self), text);
+            osc_cwd.parseCwd(self, text);
         },
         9 => {
             osc_progress.parseProgress(self, text);

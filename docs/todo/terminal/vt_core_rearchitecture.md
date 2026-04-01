@@ -326,6 +326,10 @@ Validation note, 2026-03-31:
     `src/terminal/protocol/osc_hyperlink.zig` now operate directly on the
     live core/runtime object instead of wrapping it in tiny `SessionFacade`
     shells
+  - the OSC cwd wrapper chain is gone too:
+    `src/terminal/protocol/osc_cwd.zig` and
+    `src/terminal/protocol/osc_util.zig` now operate directly on the live
+    core/runtime object instead of stacking `SessionFacade` wrappers
   - the stale `src/terminal/core/session_protocol.zig` forwarding shell is now
     deleted; `protocol/terminal_protocol_api.zig` routes directly to the real core,
     protocol, mode-effect, feed, and publication owners
