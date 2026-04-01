@@ -28,6 +28,17 @@ pub const PresentationCapture = struct {
     presented: PresentedRenderCache,
 };
 
+pub const CachePublicationTarget = struct {
+    target_index: u8,
+    active_cache: *RenderCache,
+    target_cache: *RenderCache,
+};
+
+pub const ViewRefreshRequest = struct {
+    generation: u64,
+    scroll_offset: usize,
+};
+
 const CaptureCopy = struct {
     presented: PresentedRenderCache,
     lock_wait_ms: f64,
@@ -48,6 +59,12 @@ pub const PresentationFeedback = struct {
     presented: ?PresentedRenderCache = null,
     texture_updated: bool = false,
     alt_exit_info: ?AltExitPresentationInfo = null,
+};
+
+pub const GenerationState = struct {
+    pending: u64,
+    published: u64,
+    presented: u64,
 };
 
 pub const ViewportInfo = struct {
@@ -314,12 +331,10 @@ pub fn snapshot(self: anytype) TerminalSnapshot {
     if (viewRefreshPending(self)) {
         self.lock();
         defer self.unlock();
-        if (viewRefreshPending(self)) {
-            updateViewCacheForScrollLocked(self);
-        }
+        _ = applyPendingViewRefreshLocked(self, "snapshot");
     }
 
-    const cache = self.renderCache();
+    const cache = renderCache(self);
     const scrollback_offset = self.core.scrollbackOffset();
     return .{
         .rows = cache.rows,
@@ -370,7 +385,7 @@ pub fn queueViewRefreshLocked(self: anytype, scroll_offset: usize) void {
     self.runtime.io_wait_cond.signal();
 }
 
-pub fn clearPendingViewRefresh(self: anytype) void {
+fn clearPendingViewRefresh(self: anytype) void {
     self.publication.view_cache_pending.store(false, .release);
 }
 
@@ -380,6 +395,11 @@ pub fn publishGenerationLocked(self: anytype, generation: u64, scroll_offset: us
 
 pub fn publishCurrentViewLocked(self: anytype, source: []const u8) void {
     publishGenerationLocked(self, pendingGeneration(self), self.core.scrollbackOffset(), source);
+}
+
+pub fn replacePendingRefreshWithCurrentViewLocked(self: anytype, source: []const u8) void {
+    clearPendingViewRefresh(self);
+    publishCurrentViewLocked(self, source);
 }
 
 pub fn applyPendingViewRefreshLocked(self: anytype, source: []const u8) bool {
@@ -402,27 +422,45 @@ pub fn renderCache(self: anytype) *const RenderCache {
     return &self.publication.render_caches[idx];
 }
 
-pub fn activeRenderCacheIndex(self: anytype) u8 {
+pub fn renderCacheLocked(self: anytype, source: []const u8) *const RenderCache {
+    _ = applyPendingViewRefreshLocked(self, source);
+    return renderCache(self);
+}
+
+fn activeRenderCacheIndex(self: anytype) u8 {
     return self.publication.render_cache_index.load(.acquire);
 }
 
-pub fn inactiveRenderCacheIndex(self: anytype) u8 {
+fn inactiveRenderCacheIndex(self: anytype) u8 {
     return if (activeRenderCacheIndex(self) == 0) 1 else 0;
 }
 
-pub fn activeRenderCache(self: anytype) *RenderCache {
+fn activeRenderCache(self: anytype) *RenderCache {
     return &self.publication.render_caches[activeRenderCacheIndex(self)];
 }
 
-pub fn inactiveRenderCache(self: anytype) *RenderCache {
+fn inactiveRenderCache(self: anytype) *RenderCache {
     return &self.publication.render_caches[inactiveRenderCacheIndex(self)];
 }
 
-pub fn publishRenderCacheIndex(self: anytype, index: u8) void {
+fn publishRenderCacheIndex(self: anytype, index: u8) void {
     self.publication.render_cache_index.store(index, .release);
 }
 
-pub fn renderCacheForGeneration(self: anytype, generation: u64) ?*const RenderCache {
+pub fn beginCachePublication(self: anytype) CachePublicationTarget {
+    const target_index = inactiveRenderCacheIndex(self);
+    return .{
+        .target_index = target_index,
+        .active_cache = activeRenderCache(self),
+        .target_cache = inactiveRenderCache(self),
+    };
+}
+
+pub fn finishCachePublication(self: anytype, target: CachePublicationTarget) void {
+    publishRenderCacheIndex(self, target.target_index);
+}
+
+fn renderCacheForGeneration(self: anytype, generation: u64) ?*const RenderCache {
     inline for (0..2) |i| {
         const cache = &self.publication.render_caches[i];
         if (cache.generation == generation) return cache;
@@ -430,15 +468,16 @@ pub fn renderCacheForGeneration(self: anytype, generation: u64) ?*const RenderCa
     return null;
 }
 
-pub fn clearPublishedDamage(self: anytype) void {
+pub fn renderCacheForGenerationLocked(self: anytype, generation: u64, source: []const u8) ?*const RenderCache {
+    _ = applyPendingViewRefreshLocked(self, source);
+    return renderCacheForGeneration(self, generation);
+}
+
+fn clearPublishedDamageLocked(self: anytype) void {
     inline for (0..2) |i| {
         self.publication.render_caches[i].dirty = .none;
         self.publication.render_caches[i].damage = .{ .start_row = 0, .end_row = 0, .start_col = 0, .end_col = 0 };
     }
-}
-
-pub fn copyPublishedRenderCache(self: anytype, dst: *RenderCache) !PresentedRenderCache {
-    return (try captureCopy(self, dst, false)).presented;
 }
 
 pub fn capturePresentation(self: anytype, dst: *RenderCache) !PresentationCapture {
@@ -473,27 +512,23 @@ pub fn setSyncUpdatesLocked(self: anytype, enabled: bool) void {
     view_cache.updateViewCacheNoLockTagged(self, pendingGeneration(self), offset, "set_sync_updates");
 }
 
-pub fn clearPublishedDamageIfGeneration(self: anytype, expected_generation: u64, clear_screen_dirty: bool) bool {
-    self.lock();
-    defer self.unlock();
-    const pending_generation = self.publication.pending_generation.load(.acquire);
-    if (pending_generation != expected_generation) return false;
-    if (clear_screen_dirty) {
-        self.activeScreen().clearDirty();
-    }
-    clearPublishedDamage(self);
-    return true;
-}
-
 pub fn pendingGeneration(self: anytype) u64 {
     return self.publication.pending_generation.load(.acquire);
+}
+
+pub fn generationState(self: anytype) GenerationState {
+    return .{
+        .pending = pendingGeneration(self),
+        .published = publishedGeneration(self),
+        .presented = presentedGeneration(self),
+    };
 }
 
 pub fn outputPending(self: anytype) bool {
     return self.publication.output_pending.load(.acquire);
 }
 
-pub fn clearOutputPending(self: anytype) bool {
+fn clearOutputPending(self: anytype) bool {
     return self.publication.output_pending.swap(false, .acq_rel);
 }
 
@@ -505,12 +540,20 @@ pub fn viewRefreshPending(self: anytype) bool {
     return self.publication.view_cache_pending.load(.acquire);
 }
 
-pub fn takePendingViewRefresh(self: anytype) ?usize {
+fn takePendingViewRefresh(self: anytype) ?usize {
     if (!self.publication.view_cache_pending.swap(false, .acq_rel)) return null;
     return @intCast(self.publication.view_cache_request_offset.load(.acquire));
 }
 
-pub fn takeAltExitPending(self: anytype) bool {
+pub fn takePendingViewRefreshRequest(self: anytype) ?ViewRefreshRequest {
+    const scroll_offset = takePendingViewRefresh(self) orelse return null;
+    return .{
+        .generation = pendingGeneration(self),
+        .scroll_offset = scroll_offset,
+    };
+}
+
+fn takeAltExitPending(self: anytype) bool {
     return self.publication.alt_exit_pending.swap(false, .acq_rel);
 }
 
@@ -534,16 +577,21 @@ pub fn notePresentedGeneration(self: anytype, generation: u64) void {
 }
 
 pub fn acknowledgePresentedGeneration(self: anytype, generation: u64) bool {
-    notePresentedGeneration(self, generation);
-    const sync_updates_active = renderCacheSyncUpdatesActiveForGeneration(self, generation);
-    return if (sync_updates_active)
-        clearPublishedDamageIfGeneration(self, generation, false)
-    else
-        clearPublishedDamageIfGeneration(self, generation, true);
+    self.lock();
+    defer self.unlock();
+    return retirePresentedGenerationLocked(self, generation);
 }
 
 pub fn hasPublishedGenerationBacklog(self: anytype) bool {
     return pendingGeneration(self) != publishedGeneration(self);
+}
+
+pub fn clearPublishedOutputPending(self: anytype) bool {
+    return clearOutputPending(self);
+}
+
+pub fn noteProcessedOutput(self: anytype, processed: usize) void {
+    if (processed > 0) _ = takeAltExitPending(self);
 }
 
 pub fn noteAltExitPending(self: anytype) void {
@@ -568,15 +616,22 @@ pub fn completePresentationFeedback(self: anytype, feedback: anytype) void {
     }
 }
 
-pub fn finishFramePresentation(self: anytype, feedback: anytype) void {
-    completePresentationFeedback(self, feedback);
+fn retirePresentedGenerationLocked(self: anytype, generation: u64) bool {
+    notePresentedGeneration(self, generation);
+    if (pendingGeneration(self) != generation) return false;
+
+    if (shouldClearScreenDirtyOnPresentationRetirement(self, generation)) {
+        self.core.activeScreen().clearDirty();
+    }
+    clearPublishedDamageLocked(self);
+    return true;
 }
 
-fn renderCacheSyncUpdatesActiveForGeneration(self: anytype, generation: u64) bool {
+fn shouldClearScreenDirtyOnPresentationRetirement(self: anytype, generation: u64) bool {
     if (renderCacheForGeneration(self, generation)) |cache| {
-        return cache.sync_updates_active;
+        return !cache.sync_updates_active;
     }
-    return self.core.syncUpdatesActive();
+    return !self.core.syncUpdatesActive();
 }
 
 fn captureCopy(self: anytype, dst: *RenderCache, log_capture: bool) !CaptureCopy {
@@ -585,14 +640,10 @@ fn captureCopy(self: anytype, dst: *RenderCache, log_capture: bool) !CaptureCopy
     self.lock();
     defer self.unlock();
     const lock_acquired_ns = std.time.nanoTimestamp();
-    const pending_generation = self.publication.pending_generation.load(.acquire);
-    const published_generation = publishedGeneration(self);
-    const presented_generation = presentedGeneration(self);
-    const had_view_cache_pending = self.publication.view_cache_pending.load(.acquire);
     var view_cache_ms: f64 = 0.0;
-    if (had_view_cache_pending) {
+    if (viewRefreshPending(self)) {
         const view_cache_start_ns = std.time.nanoTimestamp();
-        updateViewCacheForScrollLocked(self);
+        _ = applyPendingViewRefreshLocked(self, "capture_copy");
         const view_cache_end_ns = std.time.nanoTimestamp();
         view_cache_ms = @as(f64, @floatFromInt(view_cache_end_ns - view_cache_start_ns)) / @as(f64, @floatFromInt(std.time.ns_per_ms));
     }
@@ -607,9 +658,6 @@ fn captureCopy(self: anytype, dst: *RenderCache, log_capture: bool) !CaptureCopy
     const lock_release_ns = std.time.nanoTimestamp();
     const lock_wait_ms = @as(f64, @floatFromInt(lock_acquired_ns - wait_start_ns)) / @as(f64, @floatFromInt(std.time.ns_per_ms));
     const lock_hold_ms = @as(f64, @floatFromInt(lock_release_ns - lock_acquired_ns)) / @as(f64, @floatFromInt(std.time.ns_per_ms));
-    _ = pending_generation;
-    _ = published_generation;
-    _ = presented_generation;
     return .{
         .presented = presented,
         .lock_wait_ms = lock_wait_ms,

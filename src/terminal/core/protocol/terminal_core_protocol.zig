@@ -9,6 +9,10 @@ pub fn appendHyperlink(self: anytype, uri: []const u8, max_hyperlinks: usize) ?u
     return hyperlink_table.appendHyperlink(self, uri, max_hyperlinks);
 }
 
+pub fn appendHyperlink2048(self: anytype, uri: []const u8) ?u32 {
+    return appendHyperlink(self, uri, 2048);
+}
+
 pub fn clearAllKittyImages(self: anytype) void {
     kitty_mod.clearAllKittyImages(self);
 }
@@ -38,31 +42,31 @@ pub fn insertChars(self: anytype, count: usize) void {
 }
 
 pub fn newline(self: anytype) void {
-    const screen = self.activeScreen();
+    const screen = self.core.activeScreen();
     switch (screen.newlineAction()) {
         .moved => {},
-        .scroll_region => self.scrollRegionUpWithOrigin(1, "control.lf.scroll_region"),
+        .scroll_region => scrollRegionUpWithOrigin(self, 1, "control.lf.scroll_region"),
         .scroll_full => scrolling_mod.scrollUp(self),
     }
 }
 
 pub fn wrapNewline(self: anytype) void {
-    const screen = self.activeScreen();
+    const screen = self.core.activeScreen();
     switch (screen.wrapNewlineAction()) {
         .moved => {},
-        .scroll_region => self.scrollRegionUpWithOrigin(1, "control.wrap_newline.scroll_region"),
+        .scroll_region => scrollRegionUpWithOrigin(self, 1, "control.wrap_newline.scroll_region"),
         .scroll_full => scrolling_mod.scrollUp(self),
     }
 }
 
 pub fn reverseIndex(self: anytype) void {
-    const screen = self.activeScreen();
+    const screen = self.core.activeScreen();
     if (screen.cursor.row > screen.scroll_top) {
         screen.cursorUp(1);
         return;
     }
     if (screen.cursor.row == screen.scroll_top) {
-        self.scrollRegionDown(1);
+        scrollRegionDown(self, 1);
     }
 }
 

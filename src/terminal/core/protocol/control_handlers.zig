@@ -1,5 +1,5 @@
 pub fn handleControl(self: anytype, byte: u8) void {
-    const screen = self.activeScreen();
+    const screen = self.core.activeScreen();
     switch (byte) {
         0x08 => { // BS
             screen.backspace();

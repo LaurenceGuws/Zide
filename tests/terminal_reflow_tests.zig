@@ -1,6 +1,7 @@
 const std = @import("std");
 const terminal_runtime = @import("../src/terminal/core/terminal_runtime.zig");
 const terminal_debug = @import("../src/terminal/core/session/debug_ops.zig");
+const terminal_core_modes = @import("../src/terminal/core/terminal_core_modes.zig");
 const terminal_publication = @import("../src/terminal/core/publication/terminal_publication.zig");
 
 fn firstCodepoint(session: *terminal_runtime.PtyTerminalRuntime, global_row: usize) ?u32 {
@@ -278,9 +279,9 @@ test "terminal view cache selection clamps row end to last content column" {
     session.startSelection(0, 0);
     session.updateSelection(0, 7);
     session.finishSelection();
-    session.updateViewCacheForScrollLocked();
+    terminal_publication.updateViewCacheForScrollLocked(session);
 
-    const cache = session.renderCache();
+    const cache = terminal_publication.renderCache(session);
     try std.testing.expect(cache.hasSelection());
     try std.testing.expectEqual(@as(usize, 2), cache.selection_rows.items.len);
     try std.testing.expect(cache.selection_rows.items[0]);
@@ -298,9 +299,9 @@ test "terminal view cache suppresses blank rows in multi-row selection overlay" 
     session.startSelection(0, 0);
     session.updateSelection(1, 7);
     session.finishSelection();
-    session.updateViewCacheForScrollLocked();
+    terminal_publication.updateViewCacheForScrollLocked(session);
 
-    const cache = session.renderCache();
+    const cache = terminal_publication.renderCache(session);
     try std.testing.expect(cache.hasSelection());
     try std.testing.expectEqual(@as(usize, 2), cache.selection_rows.items.len);
     try std.testing.expect(cache.selection_rows.items[0]);
@@ -316,19 +317,19 @@ test "terminal locked scroll refresh consumes pending view cache update" {
     defer session.deinit();
 
     terminal_debug.debugFeedBytes(session, "AAAA\nBBBB\nCCCC\nDDDD\n");
-    session.updateViewCacheForScrollLocked();
+    terminal_publication.updateViewCacheForScrollLocked(session);
 
     session.lock();
     defer session.unlock();
 
     session.scrollBy(1);
-    try std.testing.expect(session.publication.view_cache_pending.load(.acquire));
-    try std.testing.expectEqual(@as(usize, 0), session.renderCache().scroll_offset);
+    try std.testing.expect(session.viewRefreshPending());
+    try std.testing.expectEqual(@as(usize, 0), terminal_publication.renderCache(session).scroll_offset);
 
-    session.updateViewCacheForScrollLocked();
+    terminal_publication.updateViewCacheForScrollLocked(session);
 
-    try std.testing.expect(!session.publication.view_cache_pending.load(.acquire));
-    try std.testing.expectEqual(session.snapshot().scrollback_offset, session.renderCache().scroll_offset);
+    try std.testing.expect(!session.viewRefreshPending());
+    try std.testing.expectEqual(session.snapshot().scrollback_offset, terminal_publication.renderCache(session).scroll_offset);
 }
 
 test "terminal reflow remaps saved cursor" {
@@ -339,7 +340,7 @@ test "terminal reflow remaps saved cursor" {
 
     terminal_debug.debugFeedBytes(session, "ABCDEFGH");
     session.primary.setCursor(1, 1);
-    session.saveCursor();
+    terminal_core_modes.saveCursor(session);
 
     try session.resize(2, 3);
 

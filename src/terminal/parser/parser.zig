@@ -2,8 +2,10 @@ const std = @import("std");
 const stream_mod = @import("stream.zig");
 const csi_mod = @import("csi.zig");
 const control_handlers = @import("../core/protocol/control_handlers.zig");
+const terminal_core_modes = @import("../core/terminal_core_modes.zig");
 const terminal_core_protocol = @import("../core/protocol/terminal_core_protocol.zig");
 const terminal_core_text = @import("../core/protocol/terminal_core_text.zig");
+const mode_effects = @import("../core/session/mode_effects.zig");
 const protocol_csi = @import("../protocol/csi.zig");
 const osc = @import("../protocol/osc.zig");
 const dcs_apc = @import("../protocol/dcs_apc.zig");
@@ -125,13 +127,13 @@ pub const Parser = struct {
                     self.charset_target = .g1;
                     self.esc_state = .charset;
                 } else if (byte == 'c') {
-                    session.resetStateLocked();
+                    mode_effects.resetStateLocked(session);
                     self.esc_state = .ground;
                 } else if (byte == '7') {
-                    session.saveCursor();
+                    terminal_core_modes.saveCursor(session);
                     self.esc_state = .ground;
                 } else if (byte == '8') {
-                    session.restoreCursor();
+                    terminal_core_modes.restoreCursor(session);
                     self.esc_state = .ground;
                 } else if (byte == 'H') {
                     terminal_core_protocol.setTabAtCursor(session);

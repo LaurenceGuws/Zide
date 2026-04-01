@@ -2,6 +2,11 @@ const std = @import("std");
 const builtin = @import("builtin");
 const snapshot_mod = @import("publication/snapshot.zig");
 const render_cache = @import("publication/render_cache.zig");
+const terminal_publication = @import("publication/terminal_publication.zig");
+const terminal_core_feed = @import("protocol/terminal_core_feed.zig");
+const terminal_core_protocol = @import("protocol/terminal_core_protocol.zig");
+const mode_effects = @import("session/mode_effects.zig");
+const scrolling = @import("scrolling.zig");
 const host_types = @import("session/host_types.zig");
 const types = @import("../model/types.zig");
 const runtime_mod = @import("terminal_runtime.zig");
@@ -110,14 +115,14 @@ test "alt screen core helpers preserve cursor save restore behavior" {
     session.primary.setCursor(2, 3);
     session.enterAltScreen(true, true);
     try std.testing.expect(session.core.isAltActive());
-    try std.testing.expectEqual(@as(usize, 0), session.activeScreen().cursor.row);
-    try std.testing.expectEqual(@as(usize, 0), session.activeScreen().cursor.col);
+    try std.testing.expectEqual(@as(usize, 0), session.core.activeScreen().cursor.row);
+    try std.testing.expectEqual(@as(usize, 0), session.core.activeScreen().cursor.col);
 
-    session.activeScreen().setCursor(1, 1);
+    session.core.activeScreen().setCursor(1, 1);
     session.exitAltScreen(true);
     try std.testing.expect(!session.core.isAltActive());
-    try std.testing.expectEqual(@as(usize, 2), session.activeScreen().cursor.row);
-    try std.testing.expectEqual(@as(usize, 3), session.activeScreen().cursor.col);
+    try std.testing.expectEqual(@as(usize, 2), session.core.activeScreen().cursor.row);
+    try std.testing.expectEqual(@as(usize, 3), session.core.activeScreen().cursor.col);
 }
 
 test "full-region scroll publishes partial cache damage at live bottom" {
@@ -138,18 +143,18 @@ test "full-region scroll publishes partial cache damage at live bottom" {
     }
     session.primary.setCursor(2, 0);
 
-    _ = session.bumpGeneration();
-    session.publishCurrentViewLocked("test_publication");
+    _ = terminal_publication.bumpGeneration(session);
+    terminal_publication.publishCurrentViewLocked(session, "test_publication");
 
     session.primary.clearDirty();
     session.alt.clearDirty();
-    try std.testing.expect(session.acknowledgePresentedGeneration(session.renderCache().generation));
+    try std.testing.expect(terminal_publication.acknowledgePresentedGeneration(session, terminal_publication.renderCache(session).generation));
 
-    session.scrollUp();
-    _ = session.bumpGeneration();
-    session.publishCurrentViewLocked("test_publication");
+    scrolling.scrollUp(session);
+    _ = terminal_publication.bumpGeneration(session);
+    terminal_publication.publishCurrentViewLocked(session, "test_publication");
 
-    const cache = session.renderCache();
+    const cache = terminal_publication.renderCache(session);
     try std.testing.expectEqual(Dirty.partial, cache.dirty);
     try std.testing.expectEqual(@as(i32, 1), cache.viewport_shift_rows);
     try std.testing.expect(cache.viewport_shift_exposed_only);
@@ -260,8 +265,8 @@ test "top-anchored partial scroll region retires rows into scrollback" {
         }
     }
 
-    session.feedOutputBytes("\x1b[1;3r");
-    session.scrollRegionUpWithOrigin(1, "test.top_anchored_scroll_region");
+    terminal_core_feed.feedOutputBytes(session, "\x1b[1;3r");
+    terminal_core_protocol.scrollRegionUpWithOrigin(session, 1, "test.top_anchored_scroll_region");
 
     try std.testing.expectEqual(@as(usize, 1), session.scrollbackInfo().total_rows);
     const history_row = session.scrollbackRow(0) orelse return error.TestExpectedEqual;
@@ -281,16 +286,16 @@ test "feedOutputBytes keeps incremental damage after baseline publish" {
     var session = try PtyTerminalRuntime.init(allocator, 1, 4);
     defer session.deinit();
 
-    _ = session.bumpGeneration();
-    session.publishCurrentViewLocked("test_publication");
+    _ = terminal_publication.bumpGeneration(session);
+    terminal_publication.publishCurrentViewLocked(session, "test_publication");
 
     session.primary.clearDirty();
     session.alt.clearDirty();
-    try std.testing.expect(session.acknowledgePresentedGeneration(session.renderCache().generation));
+    try std.testing.expect(terminal_publication.acknowledgePresentedGeneration(session, terminal_publication.renderCache(session).generation));
 
-    session.feedOutputBytes("A");
+    terminal_core_feed.feedOutputBytes(session, "A");
 
-    const cache = session.renderCache();
+    const cache = terminal_publication.renderCache(session);
     try std.testing.expectEqual(Dirty.partial, cache.dirty);
     try std.testing.expectEqual(@as(usize, 0), cache.damage.start_row);
     try std.testing.expectEqual(@as(usize, 0), cache.damage.end_row);
@@ -304,15 +309,15 @@ test "carriage return plus erase line rewrites current row in place" {
     var session = try PtyTerminalRuntime.init(allocator, 4, 20);
     defer session.deinit();
 
-    session.feedOutputBytes("hello");
-    session.feedOutputBytes("\r\x1b[2Kbye");
+    terminal_core_feed.feedOutputBytes(session, "hello");
+    terminal_core_feed.feedOutputBytes(session, "\r\x1b[2Kbye");
 
     try std.testing.expectEqual(@as(usize, 0), session.scrollbackInfo().total_rows);
     const snapshot = session.snapshot();
     try expectSnapshotRow(snapshot, 0, "bye                 ");
 
-    session.feedOutputBytes("\r\x1b[2Kstep 1");
-    session.feedOutputBytes("\r\x1b[2Kstep 2");
+    terminal_core_feed.feedOutputBytes(session, "\r\x1b[2Kstep 1");
+    terminal_core_feed.feedOutputBytes(session, "\r\x1b[2Kstep 2");
 
     try std.testing.expectEqual(@as(usize, 0), session.scrollbackInfo().total_rows);
     try expectSnapshotRow(session.snapshot(), 0, "step 2              ");
@@ -326,8 +331,8 @@ test "zig progress redraw pattern rewrites block instead of appending" {
 
     debugSetCursor(&session, 4, 0);
 
-    session.feedOutputBytes("\x1b[Jbuild one\nitem a\n\r\x1bM\x1bM");
-    session.feedOutputBytes("\x1b[Jbuild two\nitem b\n\r\x1bM\x1bM");
+    terminal_core_feed.feedOutputBytes(session, "\x1b[Jbuild one\nitem a\n\r\x1bM\x1bM");
+    terminal_core_feed.feedOutputBytes(session, "\x1b[Jbuild two\nitem b\n\r\x1bM\x1bM");
 
     const snapshot = session.snapshot();
     try std.testing.expectEqual(@as(usize, 0), snapshot.scrollback_count);
@@ -342,18 +347,18 @@ test "zig progress redraw invalidates cleared tail rows" {
     defer session.deinit();
 
     debugSetCursor(&session, 4, 0);
-    session.feedOutputBytes("\x1b[Jbuild one\nitem a\n\r\x1bM\x1bM");
+    terminal_core_feed.feedOutputBytes(session, "\x1b[Jbuild one\nitem a\n\r\x1bM\x1bM");
 
-    _ = session.bumpGeneration();
-    session.publishCurrentViewLocked("test_publication");
+    _ = terminal_publication.bumpGeneration(session);
+    terminal_publication.publishCurrentViewLocked(session, "test_publication");
 
     session.primary.clearDirty();
     session.alt.clearDirty();
-    try std.testing.expect(session.acknowledgePresentedGeneration(session.renderCache().generation));
+    try std.testing.expect(terminal_publication.acknowledgePresentedGeneration(session, terminal_publication.renderCache(session).generation));
 
-    session.feedOutputBytes("\x1b[Jbuild two\nitem b\n\r\x1bM\x1bM");
+    terminal_core_feed.feedOutputBytes(session, "\x1b[Jbuild two\nitem b\n\r\x1bM\x1bM");
 
-    const cache = session.renderCache();
+    const cache = terminal_publication.renderCache(session);
     try std.testing.expectEqual(Dirty.partial, cache.dirty);
     try std.testing.expectEqual(@as(usize, 2), cache.damage.start_row);
     try std.testing.expectEqual(@as(usize, 5), cache.damage.end_row);
@@ -369,19 +374,19 @@ test "bottom-edge in-place redraw keeps blank separator rows dirty" {
 
     debugSetCursor(&session, 67, 0);
 
-    session.feedOutputBytes("\x1b[?2026h");
-    try std.testing.expect(session.syncUpdatesActive());
+    terminal_core_feed.feedOutputBytes(session, "\x1b[?2026h");
+    try std.testing.expect(terminal_publication.syncUpdatesActive(session));
 
-    session.feedOutputBytes("\x1b[Jfirst row\nsecond row\nthird row\nfourth row\r\x1bM\x1bM\x1bM\x1bM");
+    terminal_core_feed.feedOutputBytes(session, "\x1b[Jfirst row\nsecond row\nthird row\nfourth row\r\x1bM\x1bM\x1bM\x1bM");
 
-    _ = session.bumpGeneration();
-    session.publishCurrentViewLocked("test_publication");
+    _ = terminal_publication.bumpGeneration(session);
+    terminal_publication.publishCurrentViewLocked(session, "test_publication");
 
     session.primary.clearDirty();
     session.alt.clearDirty();
-    try std.testing.expect(session.acknowledgePresentedGeneration(session.renderCache().generation));
+    try std.testing.expect(terminal_publication.acknowledgePresentedGeneration(session, terminal_publication.renderCache(session).generation));
 
-    session.feedOutputBytes("\x1b[Jfull line\n\nnext header\n\n\r\x1bM\x1bM\x1bM\x1bM");
+    terminal_core_feed.feedOutputBytes(session, "\x1b[Jfull line\n\nnext header\n\n\r\x1bM\x1bM\x1bM\x1bM");
 
     const snapshot = session.snapshot();
     try std.testing.expectEqual(@as(usize, 0), snapshot.scrollback_count);
@@ -390,7 +395,7 @@ test "bottom-edge in-place redraw keeps blank separator rows dirty" {
     try expectSnapshotRow(snapshot, 66, "next header             ");
     try expectSnapshotRow(snapshot, 67, "                        ");
 
-    const cache = session.renderCache();
+    const cache = terminal_publication.renderCache(session);
     try std.testing.expectEqual(Dirty.partial, cache.dirty);
     try std.testing.expectEqual(@as(usize, 64), cache.damage.start_row);
     try std.testing.expectEqual(@as(usize, 67), cache.damage.end_row);
@@ -410,16 +415,16 @@ test "synchronized zig progress redraw does not retire intermediate scrollback" 
 
     debugSetCursor(&session, 67, 0);
 
-    session.feedOutputBytes("\x1b[?2026h");
-    try std.testing.expect(session.syncUpdatesActive());
+    terminal_core_feed.feedOutputBytes(session, "\x1b[?2026h");
+    try std.testing.expect(terminal_publication.syncUpdatesActive(session));
 
-    session.feedOutputBytes("\x1b[Jbuild one\nitem a\n\r\x1bM\x1bM");
-    session.feedOutputBytes("\x1b[Jbuild two\nitem b\n\r\x1bM\x1bM");
+    terminal_core_feed.feedOutputBytes(session, "\x1b[Jbuild one\nitem a\n\r\x1bM\x1bM");
+    terminal_core_feed.feedOutputBytes(session, "\x1b[Jbuild two\nitem b\n\r\x1bM\x1bM");
 
     try std.testing.expectEqual(@as(usize, 0), session.scrollbackInfo().total_rows);
 
-    session.feedOutputBytes("\x1b[?2026l");
-    try std.testing.expect(!session.syncUpdatesActive());
+    terminal_core_feed.feedOutputBytes(session, "\x1b[?2026l");
+    try std.testing.expect(!terminal_publication.syncUpdatesActive(session));
 
     const snapshot = session.snapshot();
     try std.testing.expectEqual(@as(usize, 0), snapshot.scrollback_count);
@@ -447,11 +452,11 @@ test "synchronized top-anchored partial scroll region retires rows into scrollba
         }
     }
 
-    session.feedOutputBytes("\x1b[?2026h");
-    try std.testing.expect(session.syncUpdatesActive());
+    terminal_core_feed.feedOutputBytes(session, "\x1b[?2026h");
+    try std.testing.expect(terminal_publication.syncUpdatesActive(session));
 
-    session.feedOutputBytes("\x1b[1;3r");
-    session.scrollRegionUpWithOrigin(1, "test.sync_top_anchored_scroll_region");
+    terminal_core_feed.feedOutputBytes(session, "\x1b[1;3r");
+    terminal_core_protocol.scrollRegionUpWithOrigin(session, 1, "test.sync_top_anchored_scroll_region");
 
     try std.testing.expectEqual(@as(usize, 1), session.scrollbackInfo().total_rows);
     const history_row = session.scrollbackRow(0) orelse return error.TestExpectedEqual;
@@ -472,10 +477,10 @@ test "single-chunk synchronized progress sequence keeps newline scroll inside sy
     defer session.deinit();
 
     debugSetCursor(&session, 67, 0);
-    session.feedOutputBytes("\x1b[?2026h\x1b[Jbuild one\nitem a\r\x1bM\x1b[?2026l");
+    terminal_core_feed.feedOutputBytes(session, "\x1b[?2026h\x1b[Jbuild one\nitem a\r\x1bM\x1b[?2026l");
 
     try std.testing.expectEqual(@as(usize, 0), session.scrollbackInfo().total_rows);
-    try std.testing.expect(!session.syncUpdatesActive());
+    try std.testing.expect(!terminal_publication.syncUpdatesActive(session));
 
     const snapshot = session.snapshot();
     try std.testing.expectEqual(@as(usize, 0), snapshot.scrollback_count);
@@ -490,9 +495,9 @@ test "reverse index moves cursor up inside scroll region" {
     defer session.deinit();
 
     debugSetCursor(&session, 4, 2);
-    session.feedOutputBytes("\x1bM");
+    terminal_core_feed.feedOutputBytes(session, "\x1bM");
 
-    const cursor = session.getCursorPos();
+    const cursor = terminal_core_protocol.getCursorPos(session);
     try std.testing.expectEqual(@as(usize, 3), cursor.row);
     try std.testing.expectEqual(@as(usize, 2), cursor.col);
 }
@@ -504,7 +509,8 @@ test "real zig redraw chunk rewrites in place at bottom edge" {
     defer session.deinit();
 
     debugSetCursor(&session, 67, 0);
-    session.feedOutputBytes(
+    terminal_core_feed.feedOutputBytes(
+        session,
         "\x1b[?2026h" ++
             "\x1b[J" ++
             "[3] Compile Build Script\r\n" ++
@@ -518,7 +524,7 @@ test "real zig redraw chunk rewrites in place at bottom edge" {
     );
 
     try std.testing.expectEqual(@as(usize, 0), session.scrollbackInfo().total_rows);
-    try std.testing.expect(!session.syncUpdatesActive());
+    try std.testing.expect(!terminal_publication.syncUpdatesActive(session));
 
     const snapshot = session.snapshot();
     try expectSnapshotRow(snapshot, 63, "[3] Compile Build Script                                                         ");
@@ -534,17 +540,17 @@ test "osc 9;4 progress reports update structured host progress state" {
     var session = try PtyTerminalRuntime.init(allocator, 4, 20);
     defer session.deinit();
 
-    session.feedOutputBytes("\x1b]9;4;1;42\x07");
+    terminal_core_feed.feedOutputBytes(session, "\x1b]9;4;1;42\x07");
     var activity = session.currentActivityMetadata();
     try std.testing.expectEqual(host_types.ProgressState.set, activity.progress.state);
     try std.testing.expectEqual(@as(?u8, 42), activity.progress.value);
 
-    session.feedOutputBytes("\x1b]9;4;3\x07");
+    terminal_core_feed.feedOutputBytes(session, "\x1b]9;4;3\x07");
     activity = session.currentActivityMetadata();
     try std.testing.expectEqual(host_types.ProgressState.indeterminate, activity.progress.state);
     try std.testing.expectEqual(@as(?u8, null), activity.progress.value);
 
-    session.feedOutputBytes("\x1b]9;4;0\x07");
+    terminal_core_feed.feedOutputBytes(session, "\x1b]9;4;0\x07");
     activity = session.currentActivityMetadata();
     try std.testing.expectEqual(host_types.ProgressState.none, activity.progress.state);
     try std.testing.expectEqual(@as(?u8, null), activity.progress.value);
@@ -561,7 +567,7 @@ test "repeat guide chunks do not grow scrollback unexpectedly" {
     try session.poll();
     try std.testing.expectEqual(@as(usize, 0), session.scrollbackInfo().total_rows);
 
-    try std.testing.expect(session.acknowledgePresentedGeneration(session.renderCache().generation));
+    try std.testing.expect(terminal_publication.acknowledgePresentedGeneration(session, terminal_publication.renderCache(session).generation));
 
     try std.testing.expect(try session.enqueueExternalBytes("\x1b[H5\x1b[2;1H+>"));
     try session.poll();
@@ -588,7 +594,7 @@ test "repeat guide chunks publish current broad cache contract" {
 
     try std.testing.expect(try session.enqueueExternalBytes("\x1b[H1| |aaa \x1b[2;1H2| |bbb \x1b[3;1H3| |ccc \x1b[4;1H4| |ddd "));
     try session.poll();
-    try std.testing.expect(session.acknowledgePresentedGeneration(session.renderCache().generation));
+    try std.testing.expect(terminal_publication.acknowledgePresentedGeneration(session, terminal_publication.renderCache(session).generation));
 
     try std.testing.expect(try session.enqueueExternalBytes("\x1b[H5\x1b[2;1H+>"));
     try session.poll();
@@ -596,7 +602,7 @@ test "repeat guide chunks publish current broad cache contract" {
     try std.testing.expect(try session.enqueueExternalBytes("\x1b[1;4H|\x1b[2;4H|"));
     try session.poll();
 
-    const cache = session.renderCache();
+    const cache = terminal_publication.renderCache(session);
     try std.testing.expectEqual(Dirty.partial, cache.dirty);
     try std.testing.expectEqual(@as(usize, 0), cache.damage.start_row);
     try std.testing.expectEqual(@as(usize, 3), cache.damage.end_row);
@@ -613,12 +619,12 @@ test "first repeat guide packet keeps bottom row clean today" {
 
     try std.testing.expect(try session.enqueueExternalBytes("\x1b[H1| |aaa \x1b[2;1H2| |bbb \x1b[3;1H3| |ccc \x1b[4;1H4| |ddd "));
     try session.poll();
-    try std.testing.expect(session.acknowledgePresentedGeneration(session.renderCache().generation));
+    try std.testing.expect(terminal_publication.acknowledgePresentedGeneration(session, terminal_publication.renderCache(session).generation));
 
     try std.testing.expect(try session.enqueueExternalBytes("\x1b[H5\x1b[2;1H+>"));
     try session.poll();
 
-    const cache = session.renderCache();
+    const cache = terminal_publication.renderCache(session);
     try std.testing.expect(cache.dirty_rows.items[0]);
     try std.testing.expect(cache.dirty_rows.items[1]);
     try std.testing.expect(!cache.dirty_rows.items[2]);
@@ -634,7 +640,7 @@ test "repeat guide chunks mark unexpected bottom row dirty today" {
 
     try std.testing.expect(try session.enqueueExternalBytes("\x1b[H1| |aaa \x1b[2;1H2| |bbb \x1b[3;1H3| |ccc \x1b[4;1H4| |ddd "));
     try session.poll();
-    try std.testing.expect(session.acknowledgePresentedGeneration(session.renderCache().generation));
+    try std.testing.expect(terminal_publication.acknowledgePresentedGeneration(session, terminal_publication.renderCache(session).generation));
 
     try std.testing.expect(try session.enqueueExternalBytes("\x1b[H5\x1b[2;1H+>"));
     try session.poll();
@@ -642,7 +648,7 @@ test "repeat guide chunks mark unexpected bottom row dirty today" {
     try std.testing.expect(try session.enqueueExternalBytes("\x1b[1;4H|\x1b[2;4H|"));
     try session.poll();
 
-    const cache = session.renderCache();
+    const cache = terminal_publication.renderCache(session);
     try std.testing.expect(cache.dirty_rows.items[0]);
     try std.testing.expect(cache.dirty_rows.items[1]);
     try std.testing.expect(!cache.dirty_rows.items[2]);
@@ -660,7 +666,7 @@ test "repeat guide second packet keeps raw screen bottom row clean" {
 
     try std.testing.expect(try session.enqueueExternalBytes("\x1b[H1| |aaa \x1b[2;1H2| |bbb \x1b[3;1H3| |ccc \x1b[4;1H4| |ddd "));
     try session.poll();
-    try std.testing.expect(session.acknowledgePresentedGeneration(session.renderCache().generation));
+    try std.testing.expect(terminal_publication.acknowledgePresentedGeneration(session, terminal_publication.renderCache(session).generation));
 
     try std.testing.expect(try session.enqueueExternalBytes("\x1b[H5\x1b[2;1H+>"));
     try session.poll();
@@ -668,7 +674,7 @@ test "repeat guide second packet keeps raw screen bottom row clean" {
     try std.testing.expect(try session.enqueueExternalBytes("\x1b[1;4H|\x1b[2;4H|"));
     try session.poll();
 
-    const view = session.activeScreenConst().snapshotView();
+    const view = session.core.activeScreenConst().snapshotView();
     try std.testing.expect(view.dirty_rows[0]);
     try std.testing.expect(view.dirty_rows[1]);
     try std.testing.expect(!view.dirty_rows[2]);
@@ -682,27 +688,27 @@ test "manual repeat guide publication still dirties bottom row today" {
     defer session.deinit();
 
     session.debugFeedBytes("\x1b[H1| |aaa \x1b[2;1H2| |bbb \x1b[3;1H3| |ccc \x1b[4;1H4| |ddd ");
-    _ = session.bumpGeneration();
-    session.publishCurrentViewLocked("test_publication");
+    _ = terminal_publication.bumpGeneration(session);
+    terminal_publication.publishCurrentViewLocked(session, "test_publication");
     session.primary.clearDirty();
     session.alt.clearDirty();
-    try std.testing.expect(session.acknowledgePresentedGeneration(session.renderCache().generation));
+    try std.testing.expect(terminal_publication.acknowledgePresentedGeneration(session, terminal_publication.renderCache(session).generation));
 
     session.debugFeedBytes("\x1b[H5\x1b[2;1H+>");
-    _ = session.bumpGeneration();
-    session.publishCurrentViewLocked("test_publication");
+    _ = terminal_publication.bumpGeneration(session);
+    terminal_publication.publishCurrentViewLocked(session, "test_publication");
 
     session.debugFeedBytes("\x1b[1;4H|\x1b[2;4H|");
-    const view = session.activeScreenConst().snapshotView();
+    const view = session.core.activeScreenConst().snapshotView();
     try std.testing.expect(view.dirty_rows[0]);
     try std.testing.expect(view.dirty_rows[1]);
     try std.testing.expect(!view.dirty_rows[2]);
     try std.testing.expect(!view.dirty_rows[3]);
 
-    _ = session.bumpGeneration();
-    session.publishCurrentViewLocked("test_publication");
+    _ = terminal_publication.bumpGeneration(session);
+    terminal_publication.publishCurrentViewLocked(session, "test_publication");
 
-    const cache = session.renderCache();
+    const cache = terminal_publication.renderCache(session);
     try std.testing.expect(cache.dirty_rows.items[3]);
     try std.testing.expectEqual(@as(u16, 0), cache.dirty_cols_start.items[3]);
     try std.testing.expectEqual(@as(u16, 9), cache.dirty_cols_end.items[3]);
@@ -715,18 +721,18 @@ test "acknowledgePresentedGeneration derives sync dirty retirement from cache" {
     defer session.deinit();
 
     session.primary.markDirtyAllWithReason(.unknown, @src());
-    _ = session.bumpGeneration();
-    session.publishCurrentViewLocked("test_publication");
-    const normal_generation = session.renderCache().generation;
-    try std.testing.expect(session.acknowledgePresentedGeneration(normal_generation));
+    _ = terminal_publication.bumpGeneration(session);
+    terminal_publication.publishCurrentViewLocked(session, "test_publication");
+    const normal_generation = terminal_publication.renderCache(session).generation;
+    try std.testing.expect(terminal_publication.acknowledgePresentedGeneration(session, normal_generation));
     try std.testing.expectEqual(Dirty.none, session.primary.grid.dirty);
 
     session.primary.markDirtyAllWithReason(.unknown, @src());
-    session.setSyncUpdates(true);
-    _ = session.bumpGeneration();
-    session.publishCurrentViewLocked("test_publication");
-    const sync_generation = session.renderCache().generation;
-    try std.testing.expect(session.acknowledgePresentedGeneration(sync_generation));
+    terminal_publication.setSyncUpdates(session, true);
+    _ = terminal_publication.bumpGeneration(session);
+    terminal_publication.publishCurrentViewLocked(session, "test_publication");
+    const sync_generation = terminal_publication.renderCache(session).generation;
+    try std.testing.expect(terminal_publication.acknowledgePresentedGeneration(session, sync_generation));
     try std.testing.expectEqual(Dirty.full, session.primary.grid.dirty);
 }
 
@@ -748,23 +754,23 @@ test "row hash refinement does not skip unpresented top rows" {
     }
     session.primary.setCursor(2, 0);
 
-    _ = session.bumpGeneration();
-    session.publishCurrentViewLocked("test_publication");
-    session.notePresentedGeneration(session.renderCache().generation);
+    _ = terminal_publication.bumpGeneration(session);
+    terminal_publication.publishCurrentViewLocked(session, "test_publication");
+    terminal_publication.notePresentedGeneration(session, terminal_publication.renderCache(session).generation);
 
     session.primary.clearDirty();
     session.alt.clearDirty();
-    try std.testing.expect(session.acknowledgePresentedGeneration(session.renderCache().generation));
+    try std.testing.expect(terminal_publication.acknowledgePresentedGeneration(session, terminal_publication.renderCache(session).generation));
 
-    session.scrollUp();
-    _ = session.bumpGeneration();
-    session.publishCurrentViewLocked("test_publication");
+    scrolling.scrollUp(session);
+    _ = terminal_publication.bumpGeneration(session);
+    terminal_publication.publishCurrentViewLocked(session, "test_publication");
 
-    session.scrollUp();
-    _ = session.bumpGeneration();
-    session.publishCurrentViewLocked("test_publication");
+    scrolling.scrollUp(session);
+    _ = terminal_publication.bumpGeneration(session);
+    terminal_publication.publishCurrentViewLocked(session, "test_publication");
 
-    const cache = session.renderCache();
+    const cache = terminal_publication.renderCache(session);
     try std.testing.expectEqual(Dirty.partial, cache.dirty);
     try std.testing.expectEqual(@as(usize, 0), cache.damage.start_row);
     try std.testing.expect(cache.dirty_rows.items[0]);
@@ -795,18 +801,18 @@ test "live-bottom history growth keeps blank exposed row dirty" {
     }
     session.primary.setCursor(2, 0);
 
-    _ = session.bumpGeneration();
-    session.publishCurrentViewLocked("test_publication");
+    _ = terminal_publication.bumpGeneration(session);
+    terminal_publication.publishCurrentViewLocked(session, "test_publication");
 
     session.primary.clearDirty();
     session.alt.clearDirty();
-    try std.testing.expect(session.acknowledgePresentedGeneration(session.renderCache().generation));
+    try std.testing.expect(terminal_publication.acknowledgePresentedGeneration(session, terminal_publication.renderCache(session).generation));
 
-    session.scrollUp();
-    _ = session.bumpGeneration();
-    session.publishCurrentViewLocked("test_publication");
+    scrolling.scrollUp(session);
+    _ = terminal_publication.bumpGeneration(session);
+    terminal_publication.publishCurrentViewLocked(session, "test_publication");
 
-    const cache = session.renderCache();
+    const cache = terminal_publication.renderCache(session);
     try std.testing.expectEqual(Dirty.partial, cache.dirty);
     try std.testing.expectEqual(@as(i32, 1), cache.viewport_shift_rows);
     try std.testing.expect(cache.viewport_shift_exposed_only);
@@ -838,33 +844,33 @@ test "row hash refinement does not suppress newly dirty rows against unpresented
         }
     }
 
-    _ = session.bumpGeneration();
-    session.publishCurrentViewLocked("test_publication");
-    session.notePresentedGeneration(session.renderCache().generation);
+    _ = terminal_publication.bumpGeneration(session);
+    terminal_publication.publishCurrentViewLocked(session, "test_publication");
+    terminal_publication.notePresentedGeneration(session, terminal_publication.renderCache(session).generation);
 
     session.primary.clearDirty();
     session.alt.clearDirty();
-    try std.testing.expect(session.acknowledgePresentedGeneration(session.renderCache().generation));
+    try std.testing.expect(terminal_publication.acknowledgePresentedGeneration(session, terminal_publication.renderCache(session).generation));
 
     var cell = session.primary.grid.cells.items[0];
     cell.codepoint = 'Z';
     session.primary.grid.cells.items[0] = cell;
     session.primary.grid.markDirtyRange(0, 0, 0, 0);
-    _ = session.bumpGeneration();
-    session.publishCurrentViewLocked("test_publication");
+    _ = terminal_publication.bumpGeneration(session);
+    terminal_publication.publishCurrentViewLocked(session, "test_publication");
 
-    const unpresented_generation = session.renderCache().generation;
-    try std.testing.expect(unpresented_generation != session.presentedGeneration());
-    try std.testing.expectEqual(Dirty.partial, session.renderCache().dirty);
+    const unpresented_generation = terminal_publication.renderCache(session).generation;
+    try std.testing.expect(unpresented_generation != terminal_publication.presentedGeneration(session));
+    try std.testing.expectEqual(Dirty.partial, terminal_publication.renderCache(session).dirty);
 
     session.primary.clearDirty();
     session.primary.grid.markDirtyRange(0, 0, 0, 0);
-    _ = session.bumpGeneration();
-    session.publishCurrentViewLocked("test_publication");
+    _ = terminal_publication.bumpGeneration(session);
+    terminal_publication.publishCurrentViewLocked(session, "test_publication");
 
-    const cache = session.renderCache();
+    const cache = terminal_publication.renderCache(session);
     try std.testing.expectEqual(Dirty.partial, cache.dirty);
-    try std.testing.expect(cache.generation != session.presentedGeneration());
+    try std.testing.expect(cache.generation != terminal_publication.presentedGeneration(session));
     try std.testing.expect(cache.dirty_rows.items[0]);
     try std.testing.expectEqual(@as(usize, 0), cache.damage.start_row);
     try std.testing.expectEqual(@as(usize, 0), cache.damage.end_row);
@@ -883,7 +889,7 @@ test "snapshot view preserves disjoint same-row dirty spans" {
     session.primary.grid.markDirtyRangeWithOrigin("test.small_region", 0, 0, 2, 5);
     session.primary.grid.markDirtyRangeWithOrigin("test.body_rewrite", 0, 0, 10, 18);
 
-    const view = session.activeScreenConst().snapshotView();
+    const view = session.core.activeScreenConst().snapshotView();
     try std.testing.expect(view.dirty_rows[0]);
     try std.testing.expectEqual(@as(u8, 2), view.row_dirty_span_counts[0]);
     try std.testing.expect(!view.row_dirty_span_overflow[0]);
@@ -905,10 +911,10 @@ test "view cache preserves disjoint same-row dirty spans" {
     session.primary.grid.markDirtyRangeWithOrigin("test.small_region", 0, 0, 2, 5);
     session.primary.grid.markDirtyRangeWithOrigin("test.body_rewrite", 0, 0, 10, 18);
 
-    _ = session.bumpGeneration();
-    session.publishCurrentViewLocked("test_publication");
+    _ = terminal_publication.bumpGeneration(session);
+    terminal_publication.publishCurrentViewLocked(session, "test_publication");
 
-    const cache = session.renderCache();
+    const cache = terminal_publication.renderCache(session);
     try std.testing.expect(cache.dirty_rows.items[0]);
     try std.testing.expectEqual(@as(u8, 2), cache.row_dirty_span_counts.items[0]);
     try std.testing.expect(!cache.row_dirty_span_overflow.items[0]);
@@ -926,16 +932,16 @@ test "setSyncUpdates enable does not force redraw when screen is otherwise clean
     var session = try PtyTerminalRuntime.init(allocator, 2, 4);
     defer session.deinit();
 
-    _ = session.bumpGeneration();
-    session.publishCurrentViewLocked("test_publication");
+    _ = terminal_publication.bumpGeneration(session);
+    terminal_publication.publishCurrentViewLocked(session, "test_publication");
     session.primary.clearDirty();
     session.alt.clearDirty();
-    try std.testing.expect(session.acknowledgePresentedGeneration(session.renderCache().generation));
+    try std.testing.expect(terminal_publication.acknowledgePresentedGeneration(session, terminal_publication.renderCache(session).generation));
 
-    session.setSyncUpdates(true);
+    terminal_publication.setSyncUpdates(session, true);
 
-    const cache = session.renderCache();
-    try std.testing.expect(session.syncUpdatesActive());
+    const cache = terminal_publication.renderCache(session);
+    try std.testing.expect(terminal_publication.syncUpdatesActive(session));
     try std.testing.expectEqual(Dirty.none, cache.dirty);
     try std.testing.expectEqual(@as(u64, 0), cache.full_dirty_seq);
 }
@@ -946,29 +952,29 @@ test "setSyncUpdates enable does not publish dirty screen state on presented gen
     var session = try PtyTerminalRuntime.init(allocator, 2, 4);
     defer session.deinit();
 
-    _ = session.bumpGeneration();
-    session.publishCurrentViewLocked("test_publication");
+    _ = terminal_publication.bumpGeneration(session);
+    terminal_publication.publishCurrentViewLocked(session, "test_publication");
     session.primary.clearDirty();
     session.alt.clearDirty();
-    try std.testing.expect(session.acknowledgePresentedGeneration(session.renderCache().generation));
+    try std.testing.expect(terminal_publication.acknowledgePresentedGeneration(session, terminal_publication.renderCache(session).generation));
 
-    const baseline_generation = session.renderCache().generation;
+    const baseline_generation = terminal_publication.renderCache(session).generation;
     var cell = session.primary.defaultCell();
     cell.codepoint = 'Z';
     session.primary.grid.cells.items[0] = cell;
     session.primary.grid.markDirtyRange(0, 0, 0, 0);
 
-    session.setSyncUpdates(true);
+    terminal_publication.setSyncUpdates(session, true);
 
-    var cache = session.renderCache();
-    try std.testing.expect(session.syncUpdatesActive());
+    var cache = terminal_publication.renderCache(session);
+    try std.testing.expect(terminal_publication.syncUpdatesActive(session));
     try std.testing.expectEqual(baseline_generation, cache.generation);
     try std.testing.expectEqual(Dirty.none, cache.dirty);
 
-    _ = session.bumpGeneration();
-    session.publishCurrentViewLocked("test_publication");
+    _ = terminal_publication.bumpGeneration(session);
+    terminal_publication.publishCurrentViewLocked(session, "test_publication");
 
-    cache = session.renderCache();
+    cache = terminal_publication.renderCache(session);
     try std.testing.expectEqual(baseline_generation + 1, cache.generation);
     try std.testing.expectEqual(Dirty.partial, cache.dirty);
     try std.testing.expectEqual(@as(usize, 0), cache.damage.start_row);
@@ -983,17 +989,17 @@ test "setSyncUpdates disable stays clean when no buffered changes exist" {
     var session = try PtyTerminalRuntime.init(allocator, 2, 4);
     defer session.deinit();
 
-    session.setSyncUpdates(true);
-    _ = session.bumpGeneration();
-    session.publishCurrentViewLocked("test_publication");
+    terminal_publication.setSyncUpdates(session, true);
+    _ = terminal_publication.bumpGeneration(session);
+    terminal_publication.publishCurrentViewLocked(session, "test_publication");
     session.primary.clearDirty();
     session.alt.clearDirty();
-    try std.testing.expect(session.acknowledgePresentedGeneration(session.renderCache().generation));
+    try std.testing.expect(terminal_publication.acknowledgePresentedGeneration(session, terminal_publication.renderCache(session).generation));
 
-    session.setSyncUpdates(false);
+    terminal_publication.setSyncUpdates(session, false);
 
-    const cache = session.renderCache();
-    try std.testing.expect(!session.syncUpdatesActive());
+    const cache = terminal_publication.renderCache(session);
+    try std.testing.expect(!terminal_publication.syncUpdatesActive(session));
     try std.testing.expectEqual(Dirty.none, cache.dirty);
 }
 
@@ -1003,25 +1009,25 @@ test "setSyncUpdates disable preserves buffered partial damage" {
     var session = try PtyTerminalRuntime.init(allocator, 2, 4);
     defer session.deinit();
 
-    _ = session.bumpGeneration();
-    session.publishCurrentViewLocked("test_publication");
+    _ = terminal_publication.bumpGeneration(session);
+    terminal_publication.publishCurrentViewLocked(session, "test_publication");
     session.primary.clearDirty();
     session.alt.clearDirty();
-    try std.testing.expect(session.acknowledgePresentedGeneration(session.renderCache().generation));
+    try std.testing.expect(terminal_publication.acknowledgePresentedGeneration(session, terminal_publication.renderCache(session).generation));
 
-    session.setSyncUpdates(true);
+    terminal_publication.setSyncUpdates(session, true);
 
     var cell = session.primary.defaultCell();
     cell.codepoint = 'Z';
     session.primary.grid.cells.items[0] = cell;
     session.primary.grid.markDirtyRange(0, 0, 0, 0);
-    _ = session.bumpGeneration();
-    session.publishCurrentViewLocked("test_publication");
+    _ = terminal_publication.bumpGeneration(session);
+    terminal_publication.publishCurrentViewLocked(session, "test_publication");
 
-    session.setSyncUpdates(false);
+    terminal_publication.setSyncUpdates(session, false);
 
-    const cache = session.renderCache();
-    try std.testing.expect(!session.syncUpdatesActive());
+    const cache = terminal_publication.renderCache(session);
+    try std.testing.expect(!terminal_publication.syncUpdatesActive(session));
     try std.testing.expectEqual(Dirty.partial, cache.dirty);
     try std.testing.expectEqual(@as(usize, 0), cache.damage.start_row);
     try std.testing.expectEqual(@as(usize, 0), cache.damage.end_row);
@@ -1046,19 +1052,19 @@ test "visible history changes publish partial cache damage without force-full" {
     session.history.ensureViewCache(session.primary.grid.cols, base);
     session.history.setScrollOffset(session.primary.grid.rows, 2);
 
-    _ = session.bumpGeneration();
-    session.publishCurrentViewLocked("test_publication");
-    session.notePresentedGeneration(session.renderCache().generation);
+    _ = terminal_publication.bumpGeneration(session);
+    terminal_publication.publishCurrentViewLocked(session, "test_publication");
+    terminal_publication.notePresentedGeneration(session, terminal_publication.renderCache(session).generation);
 
     session.primary.clearDirty();
     session.alt.clearDirty();
-    try std.testing.expect(session.acknowledgePresentedGeneration(session.renderCache().generation));
+    try std.testing.expect(terminal_publication.acknowledgePresentedGeneration(session, terminal_publication.renderCache(session).generation));
 
     const new_fg = Color{ .r = 0x11, .g = 0x22, .b = 0x33, .a = 0xff };
     session.history.updateDefaultColors(base.attrs.fg, base.attrs.bg, new_fg, base.attrs.bg);
-    session.publishCurrentViewLocked("test_publication");
+    terminal_publication.publishCurrentViewLocked(session, "test_publication");
 
-    const cache = session.renderCache();
+    const cache = terminal_publication.renderCache(session);
     try std.testing.expectEqual(Dirty.partial, cache.dirty);
     try std.testing.expectEqual(@as(usize, 0), cache.damage.start_row);
     try std.testing.expect(cache.dirty_rows.items[0]);
@@ -1082,18 +1088,18 @@ test "visible history changes without presented diff base stay partial" {
     session.history.ensureViewCache(session.primary.grid.cols, base);
     session.history.setScrollOffset(session.primary.grid.rows, 2);
 
-    _ = session.bumpGeneration();
-    session.publishCurrentViewLocked("test_publication");
+    _ = terminal_publication.bumpGeneration(session);
+    terminal_publication.publishCurrentViewLocked(session, "test_publication");
 
     session.primary.clearDirty();
     session.alt.clearDirty();
-    try std.testing.expect(session.acknowledgePresentedGeneration(session.renderCache().generation));
+    try std.testing.expect(terminal_publication.acknowledgePresentedGeneration(session, terminal_publication.renderCache(session).generation));
 
     const new_fg = Color{ .r = 0x44, .g = 0x55, .b = 0x66, .a = 0xff };
     session.history.updateDefaultColors(base.attrs.fg, base.attrs.bg, new_fg, base.attrs.bg);
-    session.publishCurrentViewLocked("test_publication");
+    terminal_publication.publishCurrentViewLocked(session, "test_publication");
 
-    const cache = session.renderCache();
+    const cache = terminal_publication.renderCache(session);
     try std.testing.expectEqual(Dirty.partial, cache.dirty);
     try std.testing.expectEqual(@as(usize, 0), cache.damage.start_row);
     try std.testing.expectEqual(@as(usize, 1), cache.damage.end_row);
@@ -1126,17 +1132,17 @@ test "scrollback offset change publishes shift-exposed partial damage" {
 
     session.history.ensureViewCache(session.primary.grid.cols, base);
     session.history.setScrollOffset(session.primary.grid.rows, 2);
-    _ = session.bumpGeneration();
-    session.publishCurrentViewLocked("test_publication");
-    session.notePresentedGeneration(session.renderCache().generation);
+    _ = terminal_publication.bumpGeneration(session);
+    terminal_publication.publishCurrentViewLocked(session, "test_publication");
+    terminal_publication.notePresentedGeneration(session, terminal_publication.renderCache(session).generation);
 
     session.primary.clearDirty();
     session.alt.clearDirty();
-    try std.testing.expect(session.acknowledgePresentedGeneration(session.renderCache().generation));
+    try std.testing.expect(terminal_publication.acknowledgePresentedGeneration(session, terminal_publication.renderCache(session).generation));
 
     session.setScrollOffset(1);
 
-    const cache = session.renderCache();
+    const cache = terminal_publication.renderCache(session);
     try std.testing.expectEqual(Dirty.partial, cache.dirty);
     try std.testing.expectEqual(@as(i32, 1), cache.viewport_shift_rows);
     try std.testing.expect(cache.viewport_shift_exposed_only);
@@ -1154,16 +1160,16 @@ test "scrollback offset change advances published generation" {
     session.debugPushScrollbackRow("BBBB");
     session.debugSetGridRow(0, "CCCC");
     session.debugSetGridRow(1, "DDDD");
-    session.notePresentedGeneration(session.renderCache().generation);
+    terminal_publication.notePresentedGeneration(session, terminal_publication.renderCache(session).generation);
 
     session.primary.clearDirty();
     session.alt.clearDirty();
-    try std.testing.expect(session.acknowledgePresentedGeneration(session.renderCache().generation));
+    try std.testing.expect(terminal_publication.acknowledgePresentedGeneration(session, terminal_publication.renderCache(session).generation));
 
-    const baseline_generation = session.renderCache().generation;
+    const baseline_generation = terminal_publication.renderCache(session).generation;
     session.setScrollOffset(1);
 
-    const cache = session.renderCache();
+    const cache = terminal_publication.renderCache(session);
     try std.testing.expectEqual(@as(usize, 1), cache.scroll_offset);
     try std.testing.expect(cache.generation != baseline_generation);
 }
@@ -1175,7 +1181,7 @@ test "session snapshot reflects pinned scrollback viewport" {
     defer session.deinit();
     session.attachExternalTransport();
 
-    session.feedOutputBytes("AAAA\r\nBBBB\r\nCCCC\r\nDDDD\r\n");
+    terminal_core_feed.feedOutputBytes(session, "AAAA\r\nBBBB\r\nCCCC\r\nDDDD\r\n");
 
     const live_snapshot = session.snapshot();
     try expectSnapshotRow(live_snapshot, 0, "CCCC");
@@ -1198,20 +1204,20 @@ test "acknowledgePresentedGeneration does not retire newer scrollback view publi
     session.debugPushScrollbackRow("BBBB");
     session.debugSetGridRow(0, "CCCC");
     session.debugSetGridRow(1, "DDDD");
-    session.notePresentedGeneration(session.renderCache().generation);
+    terminal_publication.notePresentedGeneration(session, terminal_publication.renderCache(session).generation);
 
     session.primary.clearDirty();
     session.alt.clearDirty();
-    try std.testing.expect(session.acknowledgePresentedGeneration(session.renderCache().generation));
+    try std.testing.expect(terminal_publication.acknowledgePresentedGeneration(session, terminal_publication.renderCache(session).generation));
 
-    const baseline_generation = session.renderCache().generation;
+    const baseline_generation = terminal_publication.renderCache(session).generation;
     session.setScrollOffset(1);
 
-    const cache = session.renderCache();
+    const cache = terminal_publication.renderCache(session);
     try std.testing.expectEqual(Dirty.partial, cache.dirty);
-    try std.testing.expect(!session.acknowledgePresentedGeneration(baseline_generation));
-    try std.testing.expectEqual(Dirty.partial, session.renderCache().dirty);
-    try std.testing.expectEqual(@as(usize, 1), session.renderCache().scroll_offset);
+    try std.testing.expect(!terminal_publication.acknowledgePresentedGeneration(session, baseline_generation));
+    try std.testing.expectEqual(Dirty.partial, terminal_publication.renderCache(session).dirty);
+    try std.testing.expectEqual(@as(usize, 1), terminal_publication.renderCache(session).scroll_offset);
 }
 
 test "acknowledgePresentedGeneration does not retire newer normal publication" {
@@ -1220,32 +1226,32 @@ test "acknowledgePresentedGeneration does not retire newer normal publication" {
     var session = try PtyTerminalRuntime.init(allocator, 2, 4);
     defer session.deinit();
 
-    _ = session.bumpGeneration();
-    session.publishCurrentViewLocked("test_publication");
-    session.notePresentedGeneration(session.renderCache().generation);
+    _ = terminal_publication.bumpGeneration(session);
+    terminal_publication.publishCurrentViewLocked(session, "test_publication");
+    terminal_publication.notePresentedGeneration(session, terminal_publication.renderCache(session).generation);
 
     session.primary.clearDirty();
     session.alt.clearDirty();
-    try std.testing.expect(session.acknowledgePresentedGeneration(session.renderCache().generation));
+    try std.testing.expect(terminal_publication.acknowledgePresentedGeneration(session, terminal_publication.renderCache(session).generation));
 
-    const baseline_generation = session.renderCache().generation;
+    const baseline_generation = terminal_publication.renderCache(session).generation;
     session.primary.grid.markDirtyRange(0, 0, 0, 0);
-    _ = session.bumpGeneration();
-    session.publishCurrentViewLocked("test_publication");
+    _ = terminal_publication.bumpGeneration(session);
+    terminal_publication.publishCurrentViewLocked(session, "test_publication");
 
-    const cache = session.renderCache();
+    const cache = terminal_publication.renderCache(session);
     try std.testing.expectEqual(Dirty.partial, cache.dirty);
     try std.testing.expectEqual(@as(usize, 0), cache.damage.start_row);
     try std.testing.expectEqual(@as(usize, 0), cache.damage.end_row);
     try std.testing.expectEqual(@as(usize, 0), cache.damage.start_col);
     try std.testing.expectEqual(@as(usize, 0), cache.damage.end_col);
-    try std.testing.expect(!session.acknowledgePresentedGeneration(baseline_generation));
-    try std.testing.expectEqual(cache.generation - 1, session.presentedGeneration());
-    try std.testing.expectEqual(Dirty.partial, session.renderCache().dirty);
-    try std.testing.expectEqual(@as(usize, 0), session.renderCache().damage.start_row);
-    try std.testing.expectEqual(@as(usize, 0), session.renderCache().damage.end_row);
-    try std.testing.expectEqual(@as(usize, 0), session.renderCache().damage.start_col);
-    try std.testing.expectEqual(@as(usize, 0), session.renderCache().damage.end_col);
+    try std.testing.expect(!terminal_publication.acknowledgePresentedGeneration(session, baseline_generation));
+    try std.testing.expectEqual(cache.generation - 1, terminal_publication.presentedGeneration(session));
+    try std.testing.expectEqual(Dirty.partial, terminal_publication.renderCache(session).dirty);
+    try std.testing.expectEqual(@as(usize, 0), terminal_publication.renderCache(session).damage.start_row);
+    try std.testing.expectEqual(@as(usize, 0), terminal_publication.renderCache(session).damage.end_row);
+    try std.testing.expectEqual(@as(usize, 0), terminal_publication.renderCache(session).damage.start_col);
+    try std.testing.expectEqual(@as(usize, 0), terminal_publication.renderCache(session).damage.end_col);
 }
 
 test "retired startup baseline allows first in-place overwrite to publish partial damage" {
@@ -1267,11 +1273,11 @@ test "retired startup baseline allows first in-place overwrite to publish partia
     session.primary.grid.cells.items[8] = base;
     session.primary.grid.markDirtyRange(0, 0, 0, 7);
 
-    _ = session.bumpGeneration();
-    session.publishCurrentViewLocked("test_publication");
-    const baseline_generation = session.renderCache().generation;
-    try std.testing.expectEqual(Dirty.partial, session.renderCache().dirty);
-    try std.testing.expect(session.acknowledgePresentedGeneration(baseline_generation));
+    _ = terminal_publication.bumpGeneration(session);
+    terminal_publication.publishCurrentViewLocked(session, "test_publication");
+    const baseline_generation = terminal_publication.renderCache(session).generation;
+    try std.testing.expectEqual(Dirty.partial, terminal_publication.renderCache(session).dirty);
+    try std.testing.expect(terminal_publication.acknowledgePresentedGeneration(session, baseline_generation));
     try std.testing.expectEqual(Dirty.none, session.primary.grid.dirty);
 
     var overwrite_col: usize = 0;
@@ -1282,10 +1288,10 @@ test "retired startup baseline allows first in-place overwrite to publish partia
     }
     session.primary.grid.markDirtyRange(0, 0, 0, 3);
 
-    _ = session.bumpGeneration();
-    session.publishCurrentViewLocked("test_publication");
+    _ = terminal_publication.bumpGeneration(session);
+    terminal_publication.publishCurrentViewLocked(session, "test_publication");
 
-    const cache = session.renderCache();
+    const cache = terminal_publication.renderCache(session);
     try std.testing.expectEqual(Dirty.partial, cache.dirty);
     try std.testing.expectEqual(@as(usize, 0), cache.damage.start_row);
     try std.testing.expectEqual(@as(usize, 0), cache.damage.end_row);
@@ -1315,11 +1321,11 @@ test "unretired full baseline promotes first in-place overwrite to full damage" 
     session.primary.grid.cells.items[8] = base;
     session.primary.markDirtyAllWithReason(.resize_reflow, @src());
 
-    _ = session.bumpGeneration();
-    session.publishCurrentViewLocked("test_publication");
-    const baseline_generation = session.renderCache().generation;
-    session.notePresentedGeneration(baseline_generation);
-    try std.testing.expectEqual(Dirty.full, session.renderCache().dirty);
+    _ = terminal_publication.bumpGeneration(session);
+    terminal_publication.publishCurrentViewLocked(session, "test_publication");
+    const baseline_generation = terminal_publication.renderCache(session).generation;
+    terminal_publication.notePresentedGeneration(session, baseline_generation);
+    try std.testing.expectEqual(Dirty.full, terminal_publication.renderCache(session).dirty);
 
     var overwrite_col: usize = 0;
     while (overwrite_col < 4) : (overwrite_col += 1) {
@@ -1329,10 +1335,10 @@ test "unretired full baseline promotes first in-place overwrite to full damage" 
     }
     session.primary.grid.markDirtyRange(0, 0, 0, 3);
 
-    _ = session.bumpGeneration();
-    session.publishCurrentViewLocked("test_publication");
+    _ = terminal_publication.bumpGeneration(session);
+    terminal_publication.publishCurrentViewLocked(session, "test_publication");
 
-    const cache = session.renderCache();
+    const cache = terminal_publication.renderCache(session);
     try std.testing.expectEqual(Dirty.full, cache.dirty);
     try std.testing.expectEqual(types.FullDirtyReason.resize_reflow, cache.full_dirty_reason);
     try std.testing.expectEqual(@as(usize, 0), cache.damage.start_row);
@@ -1347,33 +1353,33 @@ test "clean publication does not overwrite unpresented dirty publication" {
     var session = try PtyTerminalRuntime.init(allocator, 2, 4);
     defer session.deinit();
 
-    _ = session.bumpGeneration();
-    session.publishCurrentViewLocked("test_publication");
-    session.notePresentedGeneration(session.renderCache().generation);
+    _ = terminal_publication.bumpGeneration(session);
+    terminal_publication.publishCurrentViewLocked(session, "test_publication");
+    terminal_publication.notePresentedGeneration(session, terminal_publication.renderCache(session).generation);
 
     session.primary.clearDirty();
     session.alt.clearDirty();
-    try std.testing.expect(session.acknowledgePresentedGeneration(session.renderCache().generation));
+    try std.testing.expect(terminal_publication.acknowledgePresentedGeneration(session, terminal_publication.renderCache(session).generation));
 
     var cell = session.primary.grid.cells.items[0];
     cell.codepoint = 'Z';
     session.primary.grid.cells.items[0] = cell;
     session.primary.grid.markDirtyRange(0, 0, 0, 0);
-    _ = session.bumpGeneration();
-    session.publishCurrentViewLocked("test_publication");
+    _ = terminal_publication.bumpGeneration(session);
+    terminal_publication.publishCurrentViewLocked(session, "test_publication");
 
-    const dirty_generation = session.renderCache().generation;
-    try std.testing.expectEqual(Dirty.partial, session.renderCache().dirty);
-    try std.testing.expectEqual(@as(u32, 'Z'), session.renderCache().cells.items[0].codepoint);
+    const dirty_generation = terminal_publication.renderCache(session).generation;
+    try std.testing.expectEqual(Dirty.partial, terminal_publication.renderCache(session).dirty);
+    try std.testing.expectEqual(@as(u32, 'Z'), terminal_publication.renderCache(session).cells.items[0].codepoint);
 
     session.primary.clearDirty();
     session.alt.clearDirty();
-    _ = session.bumpGeneration();
-    session.publishCurrentViewLocked("test_publication");
+    _ = terminal_publication.bumpGeneration(session);
+    terminal_publication.publishCurrentViewLocked(session, "test_publication");
 
-    const cache = session.renderCache();
+    const cache = terminal_publication.renderCache(session);
     try std.testing.expectEqual(dirty_generation + 1, cache.generation);
-    try std.testing.expect(cache.generation != session.presentedGeneration());
+    try std.testing.expect(cache.generation != terminal_publication.presentedGeneration(session));
     try std.testing.expectEqual(Dirty.partial, cache.dirty);
     try std.testing.expect(cache.dirty_rows.items[0]);
     try std.testing.expectEqual(@as(usize, 0), cache.damage.start_row);
@@ -1389,10 +1395,10 @@ test "notePresentedGeneration does not regress presented generation" {
     var session = try PtyTerminalRuntime.init(allocator, 2, 4);
     defer session.deinit();
 
-    session.notePresentedGeneration(7);
-    session.notePresentedGeneration(3);
+    terminal_publication.notePresentedGeneration(session, 7);
+    terminal_publication.notePresentedGeneration(session, 3);
 
-    try std.testing.expectEqual(@as(u64, 7), session.presentedGeneration());
+    try std.testing.expectEqual(@as(u64, 7), terminal_publication.presentedGeneration(session));
 }
 
 test "cursor style updates publish through cache without texture invalidation" {
@@ -1401,16 +1407,16 @@ test "cursor style updates publish through cache without texture invalidation" {
     var session = try PtyTerminalRuntime.init(allocator, 2, 4);
     defer session.deinit();
 
-    _ = session.bumpGeneration();
-    session.publishCurrentViewLocked("test_publication");
+    _ = terminal_publication.bumpGeneration(session);
+    terminal_publication.publishCurrentViewLocked(session, "test_publication");
     session.primary.clearDirty();
     session.alt.clearDirty();
-    try std.testing.expect(session.acknowledgePresentedGeneration(session.renderCache().generation));
+    try std.testing.expect(terminal_publication.acknowledgePresentedGeneration(session, terminal_publication.renderCache(session).generation));
 
     session.primary.cursor_style = .{ .shape = .bar, .blink = false };
-    session.publishCurrentViewLocked("test_publication");
+    terminal_publication.publishCurrentViewLocked(session, "test_publication");
 
-    const cache = session.renderCache();
+    const cache = terminal_publication.renderCache(session);
     try std.testing.expectEqual(Dirty.none, cache.dirty);
     try std.testing.expectEqual(types.CursorStyle{ .shape = .bar, .blink = false }, cache.cursor_style);
 }
@@ -1421,20 +1427,20 @@ test "kitty generation delta does not force full damage when cell damage is part
     var session = try PtyTerminalRuntime.init(allocator, 2, 4);
     defer session.deinit();
 
-    _ = session.bumpGeneration();
-    session.publishCurrentViewLocked("test_publication");
-    session.notePresentedGeneration(session.renderCache().generation);
+    _ = terminal_publication.bumpGeneration(session);
+    terminal_publication.publishCurrentViewLocked(session, "test_publication");
+    terminal_publication.notePresentedGeneration(session, terminal_publication.renderCache(session).generation);
 
     session.primary.clearDirty();
     session.alt.clearDirty();
-    try std.testing.expect(session.acknowledgePresentedGeneration(session.renderCache().generation));
+    try std.testing.expect(terminal_publication.acknowledgePresentedGeneration(session, terminal_publication.renderCache(session).generation));
 
     session.kitty_primary.generation += 1;
     session.primary.grid.markDirtyRange(0, 0, 0, 0);
-    _ = session.bumpGeneration();
-    session.publishCurrentViewLocked("test_publication");
+    _ = terminal_publication.bumpGeneration(session);
+    terminal_publication.publishCurrentViewLocked(session, "test_publication");
 
-    const cache = session.renderCache();
+    const cache = terminal_publication.renderCache(session);
     try std.testing.expectEqual(Dirty.partial, cache.dirty);
     try std.testing.expectEqual(@as(usize, 0), cache.damage.start_row);
     try std.testing.expectEqual(@as(usize, 0), cache.damage.end_row);
@@ -1448,18 +1454,18 @@ test "kitty generation delta without visible damage stays clean" {
     var session = try PtyTerminalRuntime.init(allocator, 2, 4);
     defer session.deinit();
 
-    _ = session.bumpGeneration();
-    session.publishCurrentViewLocked("test_publication");
-    session.notePresentedGeneration(session.renderCache().generation);
+    _ = terminal_publication.bumpGeneration(session);
+    terminal_publication.publishCurrentViewLocked(session, "test_publication");
+    terminal_publication.notePresentedGeneration(session, terminal_publication.renderCache(session).generation);
 
     session.primary.clearDirty();
     session.alt.clearDirty();
-    try std.testing.expect(session.acknowledgePresentedGeneration(session.renderCache().generation));
+    try std.testing.expect(terminal_publication.acknowledgePresentedGeneration(session, terminal_publication.renderCache(session).generation));
 
     session.kitty_primary.generation += 1;
-    session.publishCurrentViewLocked("test_publication");
+    terminal_publication.publishCurrentViewLocked(session, "test_publication");
 
-    const cache = session.renderCache();
+    const cache = terminal_publication.renderCache(session);
     try std.testing.expectEqual(Dirty.none, cache.dirty);
 }
 
@@ -1496,13 +1502,13 @@ test "kitty placement move stays dirty even when text cells are unchanged" {
     });
     session.kitty_primary.generation = 1;
 
-    _ = session.bumpGeneration();
-    session.publishCurrentViewLocked("test_publication");
-    session.notePresentedGeneration(session.renderCache().generation);
+    _ = terminal_publication.bumpGeneration(session);
+    terminal_publication.publishCurrentViewLocked(session, "test_publication");
+    terminal_publication.notePresentedGeneration(session, terminal_publication.renderCache(session).generation);
 
     session.primary.clearDirty();
     session.alt.clearDirty();
-    try std.testing.expect(session.acknowledgePresentedGeneration(session.renderCache().generation));
+    try std.testing.expect(terminal_publication.acknowledgePresentedGeneration(session, terminal_publication.renderCache(session).generation));
 
     session.kitty_primary.placements.items[0].row = 1;
     session.kitty_primary.placements.items[0].anchor_row = 1;
@@ -1510,10 +1516,10 @@ test "kitty placement move stays dirty even when text cells are unchanged" {
     session.primary.grid.markDirtyRange(0, 0, 0, 0);
     session.primary.grid.markDirtyRange(1, 1, 0, 0);
 
-    _ = session.bumpGeneration();
-    session.publishCurrentViewLocked("test_publication");
+    _ = terminal_publication.bumpGeneration(session);
+    terminal_publication.publishCurrentViewLocked(session, "test_publication");
 
-    const cache = session.renderCache();
+    const cache = terminal_publication.renderCache(session);
     try std.testing.expectEqual(Dirty.partial, cache.dirty);
     try std.testing.expectEqual(@as(usize, 0), cache.damage.start_row);
     try std.testing.expectEqual(@as(usize, 1), cache.damage.end_row);
@@ -1529,18 +1535,18 @@ test "clear generation delta without visible damage stays clean" {
     var session = try PtyTerminalRuntime.init(allocator, 2, 4);
     defer session.deinit();
 
-    _ = session.bumpGeneration();
-    session.publishCurrentViewLocked("test_publication");
-    session.notePresentedGeneration(session.renderCache().generation);
+    _ = terminal_publication.bumpGeneration(session);
+    terminal_publication.publishCurrentViewLocked(session, "test_publication");
+    terminal_publication.notePresentedGeneration(session, terminal_publication.renderCache(session).generation);
 
     session.primary.clearDirty();
     session.alt.clearDirty();
-    try std.testing.expect(session.acknowledgePresentedGeneration(session.renderCache().generation));
+    try std.testing.expect(terminal_publication.acknowledgePresentedGeneration(session, terminal_publication.renderCache(session).generation));
 
     _ = session.clear_generation.fetchAdd(1, .acq_rel);
-    session.publishCurrentViewLocked("test_publication");
+    terminal_publication.publishCurrentViewLocked(session, "test_publication");
 
-    const cache = session.renderCache();
+    const cache = terminal_publication.renderCache(session);
     try std.testing.expectEqual(Dirty.none, cache.dirty);
 }
 
@@ -1550,19 +1556,19 @@ test "default color remap stays on partial path" {
     var session = try PtyTerminalRuntime.init(allocator, 2, 4);
     defer session.deinit();
 
-    _ = session.bumpGeneration();
-    session.publishCurrentViewLocked("test_publication");
-    session.notePresentedGeneration(session.renderCache().generation);
+    _ = terminal_publication.bumpGeneration(session);
+    terminal_publication.publishCurrentViewLocked(session, "test_publication");
+    terminal_publication.notePresentedGeneration(session, terminal_publication.renderCache(session).generation);
 
     session.primary.clearDirty();
     session.alt.clearDirty();
-    try std.testing.expect(session.acknowledgePresentedGeneration(session.renderCache().generation));
+    try std.testing.expect(terminal_publication.acknowledgePresentedGeneration(session, terminal_publication.renderCache(session).generation));
 
     const old_attrs = session.primary.default_attrs;
     const new_fg = Color{ .r = 0xaa, .g = 0xbb, .b = 0xcc, .a = 0xff };
     session.setDefaultColors(new_fg, old_attrs.bg);
 
-    const cache = session.renderCache();
+    const cache = terminal_publication.renderCache(session);
     try std.testing.expectEqual(Dirty.partial, cache.dirty);
     try std.testing.expectEqual(@as(usize, 0), cache.damage.start_row);
     try std.testing.expectEqual(@as(usize, 1), cache.damage.end_row);
@@ -1577,18 +1583,18 @@ test "screen reverse toggle stays on partial path" {
     var session = try PtyTerminalRuntime.init(allocator, 2, 4);
     defer session.deinit();
 
-    _ = session.bumpGeneration();
-    session.publishCurrentViewLocked("test_publication");
-    session.notePresentedGeneration(session.renderCache().generation);
+    _ = terminal_publication.bumpGeneration(session);
+    terminal_publication.publishCurrentViewLocked(session, "test_publication");
+    terminal_publication.notePresentedGeneration(session, terminal_publication.renderCache(session).generation);
 
     session.primary.clearDirty();
     session.alt.clearDirty();
-    try std.testing.expect(session.acknowledgePresentedGeneration(session.renderCache().generation));
+    try std.testing.expect(terminal_publication.acknowledgePresentedGeneration(session, terminal_publication.renderCache(session).generation));
 
-    session.activeScreen().setScreenReverse(true);
-    session.publishCurrentViewLocked("test_publication");
+    session.core.activeScreen().setScreenReverse(true);
+    terminal_publication.publishCurrentViewLocked(session, "test_publication");
 
-    const cache = session.renderCache();
+    const cache = terminal_publication.renderCache(session);
     try std.testing.expectEqual(Dirty.partial, cache.dirty);
     try std.testing.expectEqual(@as(usize, 0), cache.damage.start_row);
     try std.testing.expectEqual(@as(usize, 1), cache.damage.end_row);
@@ -1614,20 +1620,20 @@ test "visible history change narrows to projected diff against presented base" {
     session.history.ensureViewCache(session.primary.grid.cols, base);
     session.history.setScrollOffset(session.primary.grid.rows, 2);
 
-    _ = session.bumpGeneration();
-    session.publishCurrentViewLocked("test_publication");
-    session.notePresentedGeneration(session.renderCache().generation);
+    _ = terminal_publication.bumpGeneration(session);
+    terminal_publication.publishCurrentViewLocked(session, "test_publication");
+    terminal_publication.notePresentedGeneration(session, terminal_publication.renderCache(session).generation);
 
     session.primary.clearDirty();
     session.alt.clearDirty();
-    try std.testing.expect(session.acknowledgePresentedGeneration(session.renderCache().generation));
+    try std.testing.expect(terminal_publication.acknowledgePresentedGeneration(session, terminal_publication.renderCache(session).generation));
 
     const history_row = session.history.scrollback.lineByIndexMut(0).?;
     history_row.cells[0].codepoint = 'Z';
     session.history.markScrollbackChanged();
-    session.publishCurrentViewLocked("test_publication");
+    terminal_publication.publishCurrentViewLocked(session, "test_publication");
 
-    const cache = session.renderCache();
+    const cache = terminal_publication.renderCache(session);
     try std.testing.expectEqual(Dirty.partial, cache.dirty);
     try std.testing.expectEqual(@as(usize, 0), cache.damage.start_row);
     try std.testing.expectEqual(@as(usize, 0), cache.damage.end_row);
@@ -1657,25 +1663,25 @@ test "visible history change stays conservative against unpresented base" {
     session.history.ensureViewCache(session.primary.grid.cols, base);
     session.history.setScrollOffset(session.primary.grid.rows, 2);
 
-    _ = session.bumpGeneration();
-    session.publishCurrentViewLocked("test_publication");
-    session.notePresentedGeneration(session.renderCache().generation);
+    _ = terminal_publication.bumpGeneration(session);
+    terminal_publication.publishCurrentViewLocked(session, "test_publication");
+    terminal_publication.notePresentedGeneration(session, terminal_publication.renderCache(session).generation);
 
     session.primary.clearDirty();
     session.alt.clearDirty();
-    try std.testing.expect(session.acknowledgePresentedGeneration(session.renderCache().generation));
+    try std.testing.expect(terminal_publication.acknowledgePresentedGeneration(session, terminal_publication.renderCache(session).generation));
 
     const first_update = session.history.scrollback.lineByIndexMut(0).?;
     first_update.cells[0].codepoint = 'Z';
     session.history.markScrollbackChanged();
-    session.publishCurrentViewLocked("test_publication");
+    terminal_publication.publishCurrentViewLocked(session, "test_publication");
 
     const second_update = session.history.scrollback.lineByIndexMut(0).?;
     second_update.cells[1].codepoint = 'Y';
     session.history.markScrollbackChanged();
-    session.publishCurrentViewLocked("test_publication");
+    terminal_publication.publishCurrentViewLocked(session, "test_publication");
 
-    const cache = session.renderCache();
+    const cache = terminal_publication.renderCache(session);
     try std.testing.expectEqual(Dirty.partial, cache.dirty);
     try std.testing.expectEqual(@as(usize, 0), cache.damage.start_row);
     try std.testing.expectEqual(@as(usize, 1), cache.damage.end_row);
@@ -1708,27 +1714,27 @@ test "visible history change with blank separator rows stays conservative agains
     session.history.ensureViewCache(session.primary.grid.cols, base);
     session.history.setScrollOffset(session.primary.grid.rows, 4);
 
-    _ = session.bumpGeneration();
-    session.publishCurrentViewLocked("test_publication");
-    session.notePresentedGeneration(session.renderCache().generation);
+    _ = terminal_publication.bumpGeneration(session);
+    terminal_publication.publishCurrentViewLocked(session, "test_publication");
+    terminal_publication.notePresentedGeneration(session, terminal_publication.renderCache(session).generation);
 
     session.primary.clearDirty();
     session.alt.clearDirty();
-    try std.testing.expect(session.acknowledgePresentedGeneration(session.renderCache().generation));
+    try std.testing.expect(terminal_publication.acknowledgePresentedGeneration(session, terminal_publication.renderCache(session).generation));
 
     const first_update = session.history.scrollback.lineByIndexMut(0).?;
     first_update.cells[0].codepoint = 'Z';
     session.history.markScrollbackChanged();
-    session.publishCurrentViewLocked("test_publication");
+    terminal_publication.publishCurrentViewLocked(session, "test_publication");
 
     const second_row = session.history.scrollback.lineByIndexMut(1).?;
     for (second_row.cells[0..4]) |*cell| cell.* = base;
     const fourth_row = session.history.scrollback.lineByIndexMut(3).?;
     for (fourth_row.cells[0..4]) |*cell| cell.* = base;
     session.history.markScrollbackChanged();
-    session.publishCurrentViewLocked("test_publication");
+    terminal_publication.publishCurrentViewLocked(session, "test_publication");
 
-    const cache = session.renderCache();
+    const cache = terminal_publication.renderCache(session);
     try std.testing.expectEqual(Dirty.partial, cache.dirty);
     try std.testing.expectEqual(@as(usize, 0), cache.damage.start_row);
     try std.testing.expectEqual(@as(usize, 3), cache.damage.end_row);
@@ -1753,10 +1759,10 @@ test "debug scrollback helpers preserve visible-history baseline shape" {
     session.debugPushScrollbackRow("ABCD");
     session.debugPushScrollbackRow("EFGH");
     session.debugSetScrollOffset(2);
-    session.notePresentedGeneration(session.renderCache().generation);
-    try std.testing.expect(session.acknowledgePresentedGeneration(session.renderCache().generation));
+    terminal_publication.notePresentedGeneration(session, terminal_publication.renderCache(session).generation);
+    try std.testing.expect(terminal_publication.acknowledgePresentedGeneration(session, terminal_publication.renderCache(session).generation));
 
-    const cache = session.renderCache();
+    const cache = terminal_publication.renderCache(session);
     try std.testing.expectEqual(@as(usize, 2), cache.history_len);
     try std.testing.expectEqual(@as(usize, 4), cache.totalLines());
     try std.testing.expectEqual(@as(usize, 2), cache.scroll_offset);
@@ -1784,12 +1790,12 @@ test "debug scrollback cell mutation keeps two-row visible-history shape" {
     session.debugPushScrollbackRow("ABCD");
     session.debugPushScrollbackRow("EFGH");
     session.debugSetScrollOffset(2);
-    session.notePresentedGeneration(session.renderCache().generation);
-    try std.testing.expect(session.acknowledgePresentedGeneration(session.renderCache().generation));
+    terminal_publication.notePresentedGeneration(session, terminal_publication.renderCache(session).generation);
+    try std.testing.expect(terminal_publication.acknowledgePresentedGeneration(session, terminal_publication.renderCache(session).generation));
 
     session.debugSetScrollbackCell(0, 0, 'Z');
 
-    const cache = session.renderCache();
+    const cache = terminal_publication.renderCache(session);
     try std.testing.expectEqual(@as(usize, 2), cache.history_len);
     try std.testing.expectEqual(@as(usize, 4), cache.totalLines());
     try std.testing.expectEqual(@as(usize, 2), cache.scroll_offset);
@@ -1823,13 +1829,13 @@ test "debug scrollback helper stays conservative on second unpresented visible-h
     session.debugPushScrollbackRow("ABCD");
     session.debugPushScrollbackRow("EFGH");
     session.debugSetScrollOffset(2);
-    session.notePresentedGeneration(session.renderCache().generation);
-    try std.testing.expect(session.acknowledgePresentedGeneration(session.renderCache().generation));
+    terminal_publication.notePresentedGeneration(session, terminal_publication.renderCache(session).generation);
+    try std.testing.expect(terminal_publication.acknowledgePresentedGeneration(session, terminal_publication.renderCache(session).generation));
 
     session.debugSetScrollbackCell(0, 0, 'Z');
     session.debugSetScrollbackCell(0, 1, 'Y');
 
-    const cache = session.renderCache();
+    const cache = terminal_publication.renderCache(session);
     try std.testing.expectEqual(Dirty.partial, cache.dirty);
     try std.testing.expectEqual(@as(usize, 0), cache.damage.start_row);
     try std.testing.expectEqual(@as(usize, 1), cache.damage.end_row);
@@ -1849,13 +1855,13 @@ test "debug scrollback helper with replay cursor setup stays conservative on sec
     session.debugPushScrollbackRow("ABCD");
     session.debugPushScrollbackRow("EFGH");
     session.debugSetScrollOffset(2);
-    session.notePresentedGeneration(session.renderCache().generation);
-    try std.testing.expect(session.acknowledgePresentedGeneration(session.renderCache().generation));
+    terminal_publication.notePresentedGeneration(session, terminal_publication.renderCache(session).generation);
+    try std.testing.expect(terminal_publication.acknowledgePresentedGeneration(session, terminal_publication.renderCache(session).generation));
 
     session.debugSetScrollbackCell(0, 0, 'Z');
     session.debugSetScrollbackCell(0, 1, 'Y');
 
-    const cache = session.renderCache();
+    const cache = terminal_publication.renderCache(session);
     try std.testing.expectEqual(Dirty.partial, cache.dirty);
     try std.testing.expectEqual(@as(usize, 0), cache.damage.start_row);
     try std.testing.expectEqual(@as(usize, 1), cache.damage.end_row);
@@ -1876,13 +1882,13 @@ test "debug scrollback helper with replay transport setup stays conservative on 
     session.debugPushScrollbackRow("ABCD");
     session.debugPushScrollbackRow("EFGH");
     session.debugSetScrollOffset(2);
-    session.notePresentedGeneration(session.renderCache().generation);
-    try std.testing.expect(session.acknowledgePresentedGeneration(session.renderCache().generation));
+    terminal_publication.notePresentedGeneration(session, terminal_publication.renderCache(session).generation);
+    try std.testing.expect(terminal_publication.acknowledgePresentedGeneration(session, terminal_publication.renderCache(session).generation));
 
     session.debugSetScrollbackCell(0, 0, 'Z');
     session.debugSetScrollbackCell(0, 1, 'Y');
 
-    const cache = session.renderCache();
+    const cache = terminal_publication.renderCache(session);
     try std.testing.expectEqual(Dirty.partial, cache.dirty);
     try std.testing.expectEqual(@as(usize, 0), cache.damage.start_row);
     try std.testing.expectEqual(@as(usize, 1), cache.damage.end_row);
@@ -1903,25 +1909,25 @@ test "selection dirty expansion does not suppress repeated unpresented selection
     cell.codepoint = 'A';
     session.primary.grid.cells.items[0] = cell;
 
-    _ = session.bumpGeneration();
-    session.publishCurrentViewLocked("test_publication");
-    session.notePresentedGeneration(session.renderCache().generation);
+    _ = terminal_publication.bumpGeneration(session);
+    terminal_publication.publishCurrentViewLocked(session, "test_publication");
+    terminal_publication.notePresentedGeneration(session, terminal_publication.renderCache(session).generation);
 
     session.primary.clearDirty();
     session.alt.clearDirty();
-    try std.testing.expect(session.acknowledgePresentedGeneration(session.renderCache().generation));
+    try std.testing.expect(terminal_publication.acknowledgePresentedGeneration(session, terminal_publication.renderCache(session).generation));
 
     session.selectRange(.{ .row = 0, .col = 0 }, .{ .row = 0, .col = 0 }, true);
 
-    var cache = session.renderCache();
+    var cache = terminal_publication.renderCache(session);
     try std.testing.expectEqual(Dirty.partial, cache.dirty);
     try std.testing.expect(cache.dirty_rows.items[0]);
 
     session.selectRange(.{ .row = 0, .col = 0 }, .{ .row = 0, .col = 0 }, true);
 
-    cache = session.renderCache();
+    cache = terminal_publication.renderCache(session);
     try std.testing.expectEqual(Dirty.partial, cache.dirty);
-    try std.testing.expect(cache.generation != session.presentedGeneration());
+    try std.testing.expect(cache.generation != terminal_publication.presentedGeneration(session));
     try std.testing.expect(cache.dirty_rows.items[0]);
     try std.testing.expectEqual(@as(usize, 0), cache.damage.start_row);
     try std.testing.expectEqual(@as(usize, 0), cache.damage.end_row);
@@ -1942,19 +1948,19 @@ test "eraseDisplay cursor-to-end keeps partial damage" {
     }
     session.primary.setCursor(1, 1);
 
-    _ = session.bumpGeneration();
-    session.publishCurrentViewLocked("test_publication");
-    session.notePresentedGeneration(session.renderCache().generation);
+    _ = terminal_publication.bumpGeneration(session);
+    terminal_publication.publishCurrentViewLocked(session, "test_publication");
+    terminal_publication.notePresentedGeneration(session, terminal_publication.renderCache(session).generation);
 
     session.primary.clearDirty();
     session.alt.clearDirty();
-    try std.testing.expect(session.acknowledgePresentedGeneration(session.renderCache().generation));
+    try std.testing.expect(terminal_publication.acknowledgePresentedGeneration(session, terminal_publication.renderCache(session).generation));
 
-    session.eraseDisplay(0);
-    _ = session.bumpGeneration();
-    session.publishCurrentViewLocked("test_publication");
+    terminal_core_protocol.eraseDisplay(session, 0);
+    _ = terminal_publication.bumpGeneration(session);
+    terminal_publication.publishCurrentViewLocked(session, "test_publication");
 
-    const cache = session.renderCache();
+    const cache = terminal_publication.renderCache(session);
     try std.testing.expectEqual(Dirty.partial, cache.dirty);
     try std.testing.expectEqual(@as(usize, 1), cache.damage.start_row);
     try std.testing.expectEqual(@as(usize, 2), cache.damage.end_row);
@@ -1973,19 +1979,19 @@ test "eraseDisplay start-to-cursor keeps partial damage" {
     }
     session.primary.setCursor(1, 2);
 
-    _ = session.bumpGeneration();
-    session.publishCurrentViewLocked("test_publication");
-    session.notePresentedGeneration(session.renderCache().generation);
+    _ = terminal_publication.bumpGeneration(session);
+    terminal_publication.publishCurrentViewLocked(session, "test_publication");
+    terminal_publication.notePresentedGeneration(session, terminal_publication.renderCache(session).generation);
 
     session.primary.clearDirty();
     session.alt.clearDirty();
-    try std.testing.expect(session.acknowledgePresentedGeneration(session.renderCache().generation));
+    try std.testing.expect(terminal_publication.acknowledgePresentedGeneration(session, terminal_publication.renderCache(session).generation));
 
-    session.eraseDisplay(1);
-    _ = session.bumpGeneration();
-    session.publishCurrentViewLocked("test_publication");
+    terminal_core_protocol.eraseDisplay(session, 1);
+    _ = terminal_publication.bumpGeneration(session);
+    terminal_publication.publishCurrentViewLocked(session, "test_publication");
 
-    const cache = session.renderCache();
+    const cache = terminal_publication.renderCache(session);
     try std.testing.expectEqual(Dirty.partial, cache.dirty);
     try std.testing.expectEqual(@as(usize, 0), cache.damage.start_row);
     try std.testing.expectEqual(@as(usize, 1), cache.damage.end_row);
@@ -2003,19 +2009,19 @@ test "eraseDisplay full keeps full-width partial damage" {
         cell.codepoint = @as(u32, 'A') + @as(u32, @intCast(idx % 4));
     }
 
-    _ = session.bumpGeneration();
-    session.publishCurrentViewLocked("test_publication");
-    session.notePresentedGeneration(session.renderCache().generation);
+    _ = terminal_publication.bumpGeneration(session);
+    terminal_publication.publishCurrentViewLocked(session, "test_publication");
+    terminal_publication.notePresentedGeneration(session, terminal_publication.renderCache(session).generation);
 
     session.primary.clearDirty();
     session.alt.clearDirty();
-    try std.testing.expect(session.acknowledgePresentedGeneration(session.renderCache().generation));
+    try std.testing.expect(terminal_publication.acknowledgePresentedGeneration(session, terminal_publication.renderCache(session).generation));
 
-    session.eraseDisplay(2);
-    _ = session.bumpGeneration();
-    session.publishCurrentViewLocked("test_publication");
+    terminal_core_protocol.eraseDisplay(session, 2);
+    _ = terminal_publication.bumpGeneration(session);
+    terminal_publication.publishCurrentViewLocked(session, "test_publication");
 
-    const cache = session.renderCache();
+    const cache = terminal_publication.renderCache(session);
     try std.testing.expectEqual(Dirty.partial, cache.dirty);
     try std.testing.expectEqual(@as(usize, 0), cache.damage.start_row);
     try std.testing.expectEqual(@as(usize, 2), cache.damage.end_row);
@@ -2035,19 +2041,19 @@ test "screen clear stays on partial path" {
         cell.codepoint = @as(u32, 'A') + @as(u32, @intCast(idx % 4));
     }
 
-    _ = session.bumpGeneration();
-    session.publishCurrentViewLocked("test_publication");
-    session.notePresentedGeneration(session.renderCache().generation);
+    _ = terminal_publication.bumpGeneration(session);
+    terminal_publication.publishCurrentViewLocked(session, "test_publication");
+    terminal_publication.notePresentedGeneration(session, terminal_publication.renderCache(session).generation);
 
     session.primary.clearDirty();
     session.alt.clearDirty();
-    try std.testing.expect(session.acknowledgePresentedGeneration(session.renderCache().generation));
+    try std.testing.expect(terminal_publication.acknowledgePresentedGeneration(session, terminal_publication.renderCache(session).generation));
 
-    session.activeScreen().clear();
-    _ = session.bumpGeneration();
-    session.publishCurrentViewLocked("test_publication");
+    session.core.activeScreen().clear();
+    _ = terminal_publication.bumpGeneration(session);
+    terminal_publication.publishCurrentViewLocked(session, "test_publication");
 
-    const cache = session.renderCache();
+    const cache = terminal_publication.renderCache(session);
     try std.testing.expectEqual(Dirty.partial, cache.dirty);
     try std.testing.expectEqual(@as(usize, 0), cache.damage.start_row);
     try std.testing.expectEqual(@as(usize, 1), cache.damage.end_row);
@@ -2399,7 +2405,7 @@ test "terminal reset republishes input snapshot state" {
     try std.testing.expect(session.appKeypadEnabled());
     try std.testing.expect(session.interaction.input_snapshot.interaction.app_cursor_keys.load(.acquire));
 
-    session.resetState();
+    mode_effects.resetState(session);
 
     try std.testing.expect(!session.appKeypadEnabled());
     try std.testing.expect(!session.interaction.input_snapshot.interaction.app_cursor_keys.load(.acquire));
@@ -2411,10 +2417,10 @@ test "feedOutputBytes publishes keypad mode through locked parser path" {
     var session = try PtyTerminalRuntime.init(allocator, 2, 2);
     defer session.deinit();
 
-    session.feedOutputBytes("\x1b=");
+    terminal_core_feed.feedOutputBytes(session, "\x1b=");
     try std.testing.expect(session.appKeypadEnabled());
 
-    session.feedOutputBytes("\x1b>");
+    terminal_core_feed.feedOutputBytes(session, "\x1b>");
     try std.testing.expect(!session.appKeypadEnabled());
 }
 
@@ -2424,10 +2430,10 @@ test "feedOutputBytes publishes kitty key mode flags through locked parser path"
     var session = try PtyTerminalRuntime.init(allocator, 2, 2);
     defer session.deinit();
 
-    session.feedOutputBytes("\x1b[>13u");
+    terminal_core_feed.feedOutputBytes(session, "\x1b[>13u");
     try std.testing.expectEqual(@as(u32, 13), session.keyModeFlagsValue());
 
-    session.feedOutputBytes("\x1b[<1u");
+    terminal_core_feed.feedOutputBytes(session, "\x1b[<1u");
     try std.testing.expectEqual(@as(u32, 0), session.keyModeFlagsValue());
 }
 
@@ -2437,7 +2443,8 @@ test "feedOutputBytes RIS resets input modes and clears screen" {
     var session = try PtyTerminalRuntime.init(allocator, 2, 2);
     defer session.deinit();
 
-    session.feedOutputBytes(
+    terminal_core_feed.feedOutputBytes(
+        session,
         "\x1b[?1004h" ++
             "\x1b[?2004h" ++
             "\x1b[?1002h" ++
@@ -2454,10 +2461,10 @@ test "feedOutputBytes RIS resets input modes and clears screen" {
     try std.testing.expect(session.mouseModeSgrPixelsEnabled());
     try std.testing.expect(session.appCursorKeysEnabled());
     try std.testing.expect(session.appKeypadEnabled());
-    try std.testing.expectEqual(@as(u32, 'A'), session.getCell(0, 0).codepoint);
-    try std.testing.expectEqual(@as(u32, 'B'), session.getCell(0, 1).codepoint);
+    try std.testing.expectEqual(@as(u32, 'A'), terminal_core_protocol.getCell(session, 0, 0).codepoint);
+    try std.testing.expectEqual(@as(u32, 'B'), terminal_core_protocol.getCell(session, 0, 1).codepoint);
 
-    session.feedOutputBytes("\x1bc");
+    terminal_core_feed.feedOutputBytes(session, "\x1bc");
 
     try std.testing.expect(!session.focusReportingEnabled());
     try std.testing.expect(!session.bracketedPasteEnabled());
@@ -2465,6 +2472,6 @@ test "feedOutputBytes RIS resets input modes and clears screen" {
     try std.testing.expect(!session.mouseModeSgrPixelsEnabled());
     try std.testing.expect(!session.appCursorKeysEnabled());
     try std.testing.expect(!session.appKeypadEnabled());
-    try std.testing.expectEqual(@as(u32, 0), session.getCell(0, 0).codepoint);
-    try std.testing.expectEqual(@as(u32, 0), session.getCell(0, 1).codepoint);
+    try std.testing.expectEqual(@as(u32, 0), terminal_core_protocol.getCell(session, 0, 0).codepoint);
+    try std.testing.expectEqual(@as(u32, 0), terminal_core_protocol.getCell(session, 0, 1).codepoint);
 }

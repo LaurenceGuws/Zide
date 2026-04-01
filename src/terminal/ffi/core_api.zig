@@ -1,6 +1,7 @@
 const std = @import("std");
 const terminal_runtime = @import("../core/terminal_runtime.zig");
 const terminal_publication = @import("../core/terminal_publication.zig");
+const terminal_core_feed = @import("../core/protocol/terminal_core_feed.zig");
 const types = @import("../model/types.zig");
 const screen = @import("../model/screen.zig");
 const app_logger = @import("../../app_logger.zig");
@@ -38,7 +39,7 @@ fn currentCloseConfirmSignals(handle: *shared.Handle) shared.CloseConfirmSignals
 }
 
 fn currentPublishedGeneration(handle: *shared.Handle) u64 {
-    return handle.session.publishedGeneration();
+    return terminal_publication.publishedGeneration(handle.session);
 }
 
 const SnapshotExportState = struct {
@@ -84,11 +85,7 @@ fn copyPublishedSnapshotExport(
     handle.session.lock();
     errdefer handle.session.unlock();
 
-    if (handle.session.viewRefreshPending()) {
-        handle.session.updateViewCacheForScrollLocked();
-    }
-
-    const cache = handle.session.renderCache();
+    const cache = terminal_publication.renderCacheLocked(handle.session, "ffi_snapshot");
     const cells = try allocator.alloc(shared.Cell, cache.cells.items.len);
     errdefer allocator.free(cells);
     for (cache.cells.items, 0..) |cell, i| {
@@ -126,10 +123,6 @@ fn copyPublishedSnapshotExport(
     };
 }
 
-fn renderCacheForGenerationLocked(session: *terminal_runtime.PtyTerminalRuntime, generation: u64) ?*const @import("../core/render_cache.zig").RenderCache {
-    return terminal_publication.renderCacheForGeneration(session, generation);
-}
-
 fn copyGranularSnapshotDiffExport(
     handle: *shared.Handle,
     allocator: std.mem.Allocator,
@@ -139,12 +132,8 @@ fn copyGranularSnapshotDiffExport(
     handle.session.lock();
     defer handle.session.unlock();
 
-    if (handle.session.viewRefreshPending()) {
-        handle.session.updateViewCacheForScrollLocked();
-    }
-
-    const current = handle.session.renderCache();
-    const previous = renderCacheForGenerationLocked(handle.session, base_generation) orelse {
+    const current = terminal_publication.renderCacheLocked(handle.session, "ffi_snapshot_diff");
+    const previous = terminal_publication.renderCacheForGenerationLocked(handle.session, base_generation, "ffi_snapshot_diff") orelse {
         out_state.* = .{
             .generation = current.generation,
             .base_generation = base_generation,
@@ -389,7 +378,7 @@ pub fn create(config: ?*const shared.CreateConfig, out_handle: *?*shared.ZideTer
         .exit_delivered = false,
     };
     session.attachExternalTransport();
-    handle.last_generation = session.publishedGeneration();
+    handle.last_generation = terminal_publication.publishedGeneration(session);
     const initial_metadata = session.copyMetadata(allocator, &handle.last_title, &handle.last_cwd) catch |err| {
         log.logf(.warning, "create metadata copy failed err={s}", .{@errorName(err)});
         return .out_of_memory;
@@ -405,7 +394,7 @@ pub fn presentAck(handle: ?*shared.ZideTerminalHandle, generation: u64) shared.S
     const published_generation = currentPublishedGeneration(h);
     if (generation > published_generation) return .invalid_argument;
     if (generation < h.last_acknowledged_generation) return .invalid_argument;
-    _ = h.session.acknowledgePresentedGeneration(generation);
+    _ = terminal_publication.acknowledgePresentedGeneration(h.session, generation);
     h.last_acknowledged_generation = generation;
     return .ok;
 }
@@ -477,7 +466,7 @@ pub fn feedOutput(handle: ?*shared.ZideTerminalHandle, bytes: ?[*]const u8, len:
     if (h.session.enqueueExternalBytes(slice) catch |err| return shared.mapError(err)) {
         h.session.poll() catch |err| return shared.mapError(err);
     } else {
-        h.session.feedOutputBytes(slice);
+        terminal_core_feed.feedOutputBytes(h.session, slice);
     }
     return shared.syncDerivedEvents(h);
 }

@@ -17,6 +17,7 @@ const editor_mod = @import("../src/editor/editor.zig");
 const grammar_manager_mod = @import("../src/editor/grammar_manager.zig");
 const text_store = @import("../src/editor/text_store.zig");
 const metrics_mod = @import("../src/terminal/model/metrics.zig");
+const terminal_core_protocol = @import("../src/terminal/core/protocol/terminal_core_protocol.zig");
 const terminal_runtime = @import("../src/terminal/core/terminal_runtime.zig");
 const workspace_mod = @import("../src/terminal/core/workspace.zig");
 const terminal_publication = @import("../src/terminal/core/publication/terminal_publication.zig");
@@ -76,7 +77,7 @@ test "terminal ansi palette update remaps existing screen and scrollback cells" 
     defer term.deinit();
 
     const palette_idx: u8 = 1;
-    const old_color = term.paletteColor(palette_idx);
+    const old_color = terminal_core_protocol.paletteColor(term, palette_idx);
     const new_color = terminal_publication.Color{ .r = 12, .g = 210, .b = 160, .a = 255 };
 
     term.primary.grid.cells.items[0].attrs.fg = old_color;
@@ -96,7 +97,7 @@ test "terminal ansi palette update remaps existing screen and scrollback cells" 
 
     var new_palette: [16]terminal_publication.Color = undefined;
     for (0..16) |i| {
-        const color = term.paletteColor(@intCast(i));
+        const color = terminal_core_protocol.paletteColor(term, @intCast(i));
         new_palette[i] = color;
     }
     new_palette[palette_idx] = new_color;

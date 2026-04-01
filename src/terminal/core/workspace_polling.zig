@@ -1,5 +1,6 @@
 const std = @import("std");
 const app_logger = @import("../../app_logger.zig");
+const terminal_publication = @import("publication/terminal_publication.zig");
 const runtime_policy = @import("../../app/runtime_policy.zig");
 
 pub fn pollBudgeted(self: anytype, input_active_index: ?usize, policy: anytype) !bool {
@@ -142,12 +143,12 @@ pub fn pollForFrame(self: anytype, input_active_index: ?usize, policy: anytype) 
     const count = self.tabs.items.len;
     const active_idx = normalizeIndex(input_active_index, count);
     const published_pre = if (active_idx) |idx|
-        self.tabs.items[idx].session.publishedGeneration()
+        terminal_publication.publishedGeneration(self.tabs.items[idx].session)
     else
         0;
     const any_polled = try pollBudgeted(self, input_active_index, policy);
     const published_post = if (active_idx) |idx|
-        self.tabs.items[idx].session.publishedGeneration()
+        terminal_publication.publishedGeneration(self.tabs.items[idx].session)
     else
         0;
     const active_published_changed = published_post != published_pre;

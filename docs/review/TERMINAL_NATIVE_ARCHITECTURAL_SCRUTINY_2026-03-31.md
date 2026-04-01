@@ -266,6 +266,25 @@ Judgment:
   parser-facing method slab for control/CSI/OSC/DCS/printable text dispatch
 - after that, `src/terminal/core/pty_terminal_runtime.zig` also lost the dead
   local parser/snapshot/debug/type alias block that no longer had live use
+- the last inline wrapper helper bodies in that lane are gone too:
+  `feedOutputBytes`, `resetState`, and the fixed-limit `appendHyperlink`
+  helper now live in their real owner modules instead of inline on
+  `src/terminal/core/pty_terminal_runtime.zig`
+- `saveCursor` / `restoreCursor` now route through
+  `src/terminal/core/terminal_core_modes.zig` directly too, so the wrapper no
+  longer claims that mode-state seam
+- protocol-only helpers now route through
+  `src/terminal/core/protocol/terminal_core_protocol.zig` directly too:
+  `paletteColor`, `setCursorStyle`, and DECRQSS reply generation no longer
+  inflate the wrapper surface
+- the same is now true for the edit/scroll/sync-update protocol cluster:
+  protocol modules and runtime tests use
+  `terminal_core_protocol.zig` / `terminal_publication.zig` directly for
+  erase/edit/scroll-region and sync-update operations, so those no longer sit
+  on the wrapper surface either
+- protocol query helpers are shrinking the same way too: runtime/focus tests
+  now use `terminal_core_protocol.zig` directly for `getCell` /
+  `getCursorPos`, so those no longer sit on the wrapper surface
 - the flat root state is now also grouped into explicit subsystem-owned
   embedded structs:
   - `session/publication_fields`
@@ -347,6 +366,110 @@ Evidence:
 - the `TextEffects` adapter layer is gone too:
   `terminal_core_text.zig` already calls protocol-owned functions directly, so
   `terminal_core_protocol.zig` no longer carries that extra wrapper type
+- wrapper-owned screen access is thinner too:
+  `src/terminal/core/pty_terminal_runtime.zig` no longer exports
+  `activeScreen`, `activeScreenConst`, `isAltActive`, or the local `scrollUp`
+  helper; protocol/session/kitty internals now read screen state from
+  `self.core` or direct owners instead of treating the wrapper as the screen
+  owner
+- the last inline runtime/control helper bodies are thinner too:
+  launch-shell path access now lives in
+  `src/terminal/core/session/runtime.zig`, and lock/tryLock/unlock now live in
+  `src/terminal/core/session/control.zig` instead of remaining inline on
+  `pty_terminal_runtime.zig`
+- the focus-reporting/runtime tests no longer lean on an implicit
+  wrapper-looking method surface for `getCell` / `getCursorPos`; they now call
+  `src/terminal/core/protocol/terminal_core_protocol.zig` directly, so the
+  test surface no longer reinforces phantom wrapper ownership
+- publication-owner flag usage is tighter too:
+  `src/terminal/core/runtime/pty_poll_publication.zig` and the locked-scroll
+  reflow test now use publication-owned helpers like `markOutputPending()` and
+  `viewRefreshPending()` instead of peeking at raw publication flags, and the
+  dead constant residue at the bottom of
+  `src/terminal/core/pty_terminal_runtime.zig` is gone
+- the published-view builder now follows that same owner rule too:
+  `src/terminal/core/publication/view_cache.zig` consumes pending refresh work
+  through `takePendingViewRefresh()` and `pendingGeneration()` instead of
+  swapping raw publication fields itself
+- publication snapshot/capture now follow that same owner rule too:
+  `src/terminal/core/publication/terminal_publication.zig` routes pending
+  refresh work through `applyPendingViewRefreshLocked(...)` instead of
+  open-coding `view_cache_pending` checks and direct locked refresh
+  consumption inside `snapshot()` and `captureCopy()`
+- presented-generation retirement now follows that same owner rule too:
+  `src/terminal/core/publication/terminal_publication.zig` handles
+  presented-generation acknowledgement, sync-update retirement policy, and
+  dirty retirement in one locked publication-owned path instead of splitting
+  that contract across multiple helpers
+- published damage clearing is no longer exposed as a public helper:
+  publication now treats damage retirement as an internal locked concern
+  instead of exporting another storage-oriented operation from
+  `terminal_publication.zig`
+- the same publication-owned refresh rule now covers FFI export too:
+  `src/terminal/ffi/core_api.zig` now uses
+  `renderCacheLocked(...)` / `renderCacheForGenerationLocked(...)` from
+  `src/terminal/core/publication/terminal_publication.zig` instead of
+  reimplementing publication refresh choreography under the host lock
+- replay, FFI present-ack, and runtime tests no longer treat presented-
+  generation note/ack flow as wrapper contract:
+  they now call `terminal_publication.zig` directly and the dead wrapper
+  exports are gone from `pty_terminal_runtime.zig`
+- published render-cache reads now follow that same owner rule in replay,
+  debug, and runtime tests:
+  those paths use `terminal_publication.renderCache(...)` directly and the
+  dead wrapper `renderCache` export is gone from `pty_terminal_runtime.zig`
+- raw generation-cache lookup is now publication-internal too:
+  host code only gets the locked publication contract for generation lookup,
+  not the raw unlocked storage walk
+- the CSI reply/query path lost another forwarding slab:
+  `src/terminal/protocol/csi.zig` no longer carries local DA/DSR/window-op
+  bounce helpers that only forwarded into `csi_reply.zig` /
+  `csi_mode_query.zig`
+- DECRQM reply formatting now lives with the DECRQM query owner too:
+  `src/terminal/protocol/csi_mode_query.zig` now owns the DECRQM reply writer
+  surface instead of leaving a leftover public reply seam on `csi.zig`
+- duplicate test-facing reply wrappers are dead too:
+  `src/terminal/protocol/csi_reply.zig` no longer exposes `pty`-shaped wrapper
+  entrypoints that only forwarded into its real writer-owned reply helpers,
+  and `src/terminal/protocol/csi_mode_query.zig` no longer carries the same
+  duplicate `writeDecrqmReply(...)` wrapper over
+  `writeDecrqmReplyWithWriter(...)`
+- the remaining same-object protocol trampolines are thinner too:
+  `src/terminal/protocol/csi.zig` no longer routes `handleCsi(...)` through a
+  private `handleCsiOnSession(...)`, and
+  `src/terminal/protocol/osc_kitty_clipboard.zig` no longer routes
+  `parseOsc5522(...)` / `sendPasteEventMimes(...)` through duplicate
+  `*OnSession` bounce helpers
+- the dead presentation-feedback alias seam is gone too:
+  `src/terminal/core/session/presentation_feedback.zig` is deleted, so
+  presentation-feedback types now live only at the publication owner instead
+  of surviving as one more wrapper-side alias shell
+- frame-presentation feedback now follows that same owner rule too:
+  the duplicate `finishFramePresentation(...)` bounce is gone from both
+  `terminal_publication.zig` and `pty_terminal_runtime.zig`, and the app
+  draw-surface runtime now calls
+  `terminal_publication.completePresentationFeedback(...)` directly
+- publication-only generation/capture/sync reads now follow that same owner
+  rule too:
+  widget draw, workspace/workspace-polling, FFI redraw tracking, poll runtime,
+  and PTY runtime regression tests now call the publication owner directly for
+  generation state, presentation capture, and sync-update state; the wrapper
+  no longer re-exports that publication-only slab
+- scroll-driven view-cache refresh now follows that same owner rule too:
+  replay harness, reflow tests, resize reflow, and scrollback view now call
+  `terminal_publication.updateViewCacheForScroll{Locked}(...)` directly, and
+  the wrapper no longer re-exports that publication mutator slab either
+- publication mutation authority is explicit in the PTY runtime regression
+  tests now too:
+  `pty_terminal_runtime_tests.zig` no longer stages publication through
+  `session.bumpGeneration()` / `session.publishCurrentViewLocked(...)`; the
+  regression authority now calls `terminal_publication.bumpGeneration(...)`
+  and `terminal_publication.publishCurrentViewLocked(...)` directly
+- wrapper-owned protocol internals are thinner too:
+  parser `RIS`, OSC hyperlink handling, FFI feed-output fallback, and the PTY
+  runtime protocol/reset regression tests now call the real owners directly
+  via `terminal_core_feed`, `mode_effects`, and `terminal_core_protocol`; the
+  wrapper no longer re-exports that internal feed/reset/hyperlink slab
 - the outer CSI forwarding shell is gone too:
   `terminal_protocol_api.zig` now routes CSI directly into
   `src/terminal/protocol/csi.zig` without stepping through an extra
@@ -788,6 +911,25 @@ work:
   it directly
 - no investigation scaffolding left in hot files after the owning bug lane
   cools
+- once a facade file becomes a dead alias, delete it instead of preserving the
+  extra pathname as false structure
+- once a runtime export has zero live callers, delete it instead of carrying it
+  as speculative convenience surface
+- once publication slot choreography has one real owner, expose a contract for
+  it instead of leaking raw active/inactive cache-slot helpers
+- once publication flag handling has one real owner, expose intent-shaped
+  helpers instead of teaching runtime code raw flag-clear / flag-take verbs
+- once a publication export goes dead, delete it; once a caller composes two
+  publication verbs to express one owner-owned action, replace that with a
+  publication intent helper
+- once a pending refresh request has multiple required fields, expose it as one
+  publication-owned request contract instead of making callers reconstruct it
+- once a caller always reads multiple publication generations together, expose
+  that status as one publication-owned summary instead of three separate calls
+- once a protocol reply path only ferries a few fields through one hop, delete
+  the transport structs instead of pretending they are real boundary types
+- once a protocol helper only bounces straight into another protocol helper,
+  delete it instead of preserving a duplicate name with no contract value
 
 ## Final Assessment
 

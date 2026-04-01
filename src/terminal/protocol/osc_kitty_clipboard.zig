@@ -18,10 +18,6 @@ const ReadReq = struct {
 };
 
 pub fn parseOsc5522(self: anytype, text: []const u8, terminator: OscTerminator) void {
-    parseOsc5522OnSession(self, text, terminator);
-}
-
-fn parseOsc5522OnSession(self: anytype, text: []const u8, terminator: OscTerminator) void {
     const split = std.mem.indexOfScalar(u8, text, ';') orelse return;
     const metadata = text[0..split];
     const payload_b64 = text[split + 1 ..];
@@ -32,8 +28,8 @@ fn parseOsc5522OnSession(self: anytype, text: []const u8, terminator: OscTermina
             defer writer.unlock();
             switch (err) {
                 error.UnsupportedPacketType => {},
-                error.UnsupportedPrimarySelection => writeReadStatus(self, &writer, terminator, "", "ENOSYS"),
-                else => writeReadStatus(self, &writer, terminator, "", "EINVAL"),
+                error.UnsupportedPrimarySelection => writeReadStatusWithId(self, &writer, terminator, "", "ENOSYS"),
+                else => writeReadStatusWithId(self, &writer, terminator, "", "EINVAL"),
             }
         }
         return;
@@ -47,10 +43,7 @@ fn parseOsc5522OnSession(self: anytype, text: []const u8, terminator: OscTermina
 }
 
 pub fn sendPasteEventMimes(self: anytype, pty: anytype, terminator: OscTerminator) void {
-    sendPasteEventMimesOnSession(self, pty, terminator);
-}
-
-fn sendPasteEventMimesOnSession(self: anytype, writer: anytype, terminator: OscTerminator) void {
+    const writer = pty;
     var req = ReadReq{ .wants_targets = true };
     replyReadRequest(self, writer, &req, terminator);
 }
@@ -197,10 +190,6 @@ fn replyReadRequest(self: anytype, writer: anytype, req: *const ReadReq, termina
     }
 
     writeReadStatusWithId(self, writer, terminator, id.value, "ENOSYS");
-}
-
-fn writeReadStatus(self: anytype, writer: anytype, terminator: OscTerminator, id: []const u8, status: []const u8) void {
-    writeReadStatusWithId(self, writer, terminator, id, status);
 }
 
 fn writeReadStatusWithId(self: anytype, writer: anytype, terminator: OscTerminator, id: []const u8, status: []const u8) void {

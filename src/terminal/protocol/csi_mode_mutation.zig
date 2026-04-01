@@ -1,4 +1,6 @@
 const parser_csi = @import("../parser/csi.zig");
+const terminal_publication = @import("../core/publication/terminal_publication.zig");
+const terminal_core_modes = @import("../core/terminal_core_modes.zig");
 
 pub fn applyModeMutation(
     self: anytype,
@@ -20,9 +22,9 @@ fn applyAnsiModeMutation(self: anytype, param_len: usize, params: [parser_csi.ma
     var idx: u8 = 0;
     while (idx < param_len and idx < params.len) : (idx += 1) {
         switch (params[idx]) {
-            4 => self.activeScreen().*.setInsertMode(enabled),
-            12 => self.activeScreen().*.setLocalEchoMode12(enabled),
-            20 => self.activeScreen().*.setNewlineMode(enabled),
+            4 => self.core.activeScreen().*.setInsertMode(enabled),
+            12 => self.core.activeScreen().*.setLocalEchoMode12(enabled),
+            20 => self.core.activeScreen().*.setNewlineMode(enabled),
             else => {},
         }
     }
@@ -34,16 +36,16 @@ fn applyPrivateModeMutation(self: anytype, param_len: usize, params: [parser_csi
         switch (params[idx]) {
             1 => self.setAppCursorKeysLocked(enabled),
             3 => self.setColumnMode132Locked(enabled),
-            5 => self.activeScreen().*.setScreenReverse(enabled),
-            6 => self.activeScreen().*.setOriginMode(enabled),
-            7 => self.activeScreen().*.setAutowrap(enabled),
+            5 => self.core.activeScreen().*.setScreenReverse(enabled),
+            6 => self.core.activeScreen().*.setOriginMode(enabled),
+            7 => self.core.activeScreen().*.setAutowrap(enabled),
             8 => self.setAutoRepeatLocked(enabled),
             9 => self.setMouseModeX10Locked(enabled),
-            12 => self.activeScreen().*.setCursorBlink(enabled),
-            25 => self.activeScreen().setCursorVisible(enabled),
-            45 => self.activeScreen().*.setReverseWrap(enabled),
+            12 => self.core.activeScreen().*.setCursorBlink(enabled),
+            25 => self.core.activeScreen().setCursorVisible(enabled),
+            45 => self.core.activeScreen().*.setReverseWrap(enabled),
             47 => if (enabled) self.enterAltScreen(false, false) else self.exitAltScreen(false),
-            69 => self.activeScreen().*.setLeftRightMarginMode69(enabled),
+            69 => self.core.activeScreen().*.setLeftRightMarginMode69(enabled),
             1000 => self.setMouseModeX10Locked(enabled),
             1002 => self.setMouseModeButtonLocked(enabled),
             1003 => self.setMouseModeAnyLocked(enabled),
@@ -54,15 +56,15 @@ fn applyPrivateModeMutation(self: anytype, param_len: usize, params: [parser_csi
             1047 => if (enabled) self.enterAltScreen(true, false) else self.exitAltScreen(false),
             1048 => {
                 if (enabled) {
-                    self.saveCursor();
+                    terminal_core_modes.saveCursor(self);
                 } else {
-                    self.restoreCursor();
+                    terminal_core_modes.restoreCursor(self);
                 }
-                self.activeScreen().*.setSaveCursorMode1048(enabled);
+                self.core.activeScreen().*.setSaveCursorMode1048(enabled);
             },
             1049 => if (enabled) self.enterAltScreen(true, true) else self.exitAltScreen(true),
             2004 => self.setBracketedPasteLocked(enabled),
-            2026 => self.setSyncUpdatesLocked(enabled),
+            2026 => terminal_publication.setSyncUpdatesLocked(self, enabled),
             2027 => {
                 self.interaction.grapheme_cluster_shaping_2027 = enabled;
                 self.core.primary.setGraphemeClusterShaping2027(enabled);

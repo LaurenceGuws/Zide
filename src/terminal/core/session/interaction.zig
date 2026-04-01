@@ -96,7 +96,7 @@ pub fn getDamage(self: anytype) ?struct {
     start_col: usize,
     end_col: usize,
 } {
-    return self.activeScreenConst().getDamage();
+    return self.core.activeScreenConst().getDamage();
 }
 
 pub fn keyModeFlagsValue(self: anytype) u32 {

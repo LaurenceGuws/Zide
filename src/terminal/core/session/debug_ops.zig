@@ -19,7 +19,7 @@ pub fn debugSnapshot(self: anytype) @import("../publication/snapshot.zig").Debug
         .focus_reporting = self.interaction.focus_reporting,
         .selection = selection_mod.selectionState(self),
         .base_default_attrs = self.core.base_default_attrs,
-        .render_cache = self.renderCache(),
+        .render_cache = terminal_publication.renderCache(self),
     };
 }
 
@@ -30,7 +30,7 @@ pub fn debugScrollbackRow(self: anytype, index: usize) ?[]const @import("../../m
 
 pub fn debugSetCursor(self: anytype, row: usize, col: usize) void {
     if (!debugAccessAllowed()) @panic("debugSetCursor is test-only");
-    self.activeScreen().setCursor(row, col);
+    self.core.activeScreen().setCursor(row, col);
 }
 
 pub fn debugFeedBytes(self: anytype, bytes: []const u8) void {
@@ -54,8 +54,7 @@ pub fn debugSetScrollOffset(self: anytype, offset: usize) void {
     if (after != before) {
         _ = terminal_publication.bumpGeneration(self);
     }
-    terminal_publication.clearPendingViewRefresh(self);
-    terminal_publication.publishCurrentViewLocked(self, "debug_apply_without_pending");
+    terminal_publication.replacePendingRefreshWithCurrentViewLocked(self, "debug_apply_without_pending");
 }
 
 pub fn debugSetScrollbackCell(self: anytype, row: usize, col: usize, codepoint: u32) void {

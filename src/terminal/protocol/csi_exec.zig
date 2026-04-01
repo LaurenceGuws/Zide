@@ -1,5 +1,7 @@
 const std = @import("std");
 const parser_csi = @import("../parser/csi.zig");
+const terminal_core_modes = @import("../core/terminal_core_modes.zig");
+const terminal_core_protocol = @import("../core/protocol/terminal_core_protocol.zig");
 
 pub fn handleSimpleCsi(
     self: anytype,
@@ -12,7 +14,7 @@ pub fn handleSimpleCsi(
             return if (idx < parser_csi.max_params) local_params[idx] else default;
         }
     }.at;
-    const screen = self.activeScreen();
+    const screen = self.core.activeScreen();
 
     switch (action.final) {
         'A' => screen.cursorUp(@intCast(@max(1, get(params, 0, 1)))),
@@ -29,18 +31,18 @@ pub fn handleSimpleCsi(
         },
         'H', 'f' => screen.cursorPosAbsolute(@max(1, get(params, 0, 1)), @max(1, get(params, 1, 1))),
         'd' => screen.cursorRowAbsolute(@max(1, get(params, 0, 1))),
-        'J' => self.eraseDisplay(if (param_len > 0) params[0] else 0),
-        'K' => self.eraseLine(if (param_len > 0) params[0] else 0),
-        '@' => self.insertChars(@intCast(@max(1, get(params, 0, 1)))),
-        'P' => self.deleteChars(@intCast(@max(1, get(params, 0, 1)))),
-        'X' => self.eraseChars(@intCast(@max(1, get(params, 0, 1)))),
-        'L' => self.insertLines(@intCast(@max(1, get(params, 0, 1)))),
-        'M' => self.deleteLines(@intCast(@max(1, get(params, 0, 1)))),
+        'J' => terminal_core_protocol.eraseDisplay(self, if (param_len > 0) params[0] else 0),
+        'K' => terminal_core_protocol.eraseLine(self, if (param_len > 0) params[0] else 0),
+        '@' => terminal_core_protocol.insertChars(self, @intCast(@max(1, get(params, 0, 1)))),
+        'P' => terminal_core_protocol.deleteChars(self, @intCast(@max(1, get(params, 0, 1)))),
+        'X' => terminal_core_protocol.eraseChars(self, @intCast(@max(1, get(params, 0, 1)))),
+        'L' => terminal_core_protocol.insertLines(self, @intCast(@max(1, get(params, 0, 1)))),
+        'M' => terminal_core_protocol.deleteLines(self, @intCast(@max(1, get(params, 0, 1)))),
         'S' => {
             const count = @as(usize, @intCast(@max(1, get(params, 0, 1))));
-            self.scrollRegionUpWithOrigin(count, "csi.S.scroll_region_up");
+            terminal_core_protocol.scrollRegionUpWithOrigin(self, count, "csi.S.scroll_region_up");
         },
-        'T' => self.scrollRegionDown(@intCast(@max(1, get(params, 0, 1)))),
+        'T' => terminal_core_protocol.scrollRegionDown(self, @intCast(@max(1, get(params, 0, 1)))),
         'Z' => {
             var i: i32 = 0;
             const n = @max(1, get(params, 0, 1));
@@ -65,7 +67,7 @@ pub fn handleSpecialCsi(
     param_len: usize,
     params: [parser_csi.max_params]i32,
 ) void {
-    const screen = self.activeScreen();
+    const screen = self.core.activeScreen();
     switch (action.final) {
         's' => {
             if (!action.private) {
@@ -81,12 +83,12 @@ pub fn handleSpecialCsi(
                     }
                     return;
                 }
-                self.saveCursor();
+                terminal_core_modes.saveCursor(self);
             }
         },
         'u' => {
             if (action.leader == 0 and !action.private) {
-                self.restoreCursor();
+                terminal_core_modes.restoreCursor(self);
                 return;
             }
             const flags: u32 = if (param_len > 0) @intCast(@max(0, params[0])) else 0;
@@ -101,7 +103,7 @@ pub fn handleSpecialCsi(
         },
         'q' => {
             if (action.leader == 0 and !action.private) {
-                self.setCursorStyle(if (param_len > 0) params[0] else 0);
+                terminal_core_protocol.setCursorStyle(self, if (param_len > 0) params[0] else 0);
             }
         },
         'g' => {

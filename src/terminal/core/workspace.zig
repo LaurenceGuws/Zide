@@ -1,4 +1,5 @@
 const std = @import("std");
+const terminal_publication = @import("publication/terminal_publication.zig");
 const runtime_mod = @import("terminal_runtime.zig");
 const host_types = @import("session/host_types.zig");
 const app_logger = @import("../../app_logger.zig");
@@ -233,12 +234,13 @@ pub const TerminalWorkspace = struct {
     pub fn activeFrameState(self: *const TerminalWorkspace) ActiveFrameState {
         if (self.tabs.items.len == 0) return .{};
         const session = self.tabs.items[self.activeIndex()].session;
+        const generation_state = terminal_publication.generationState(session);
         return .{
             .has_data = session.hasData(),
             .session_ptr = @intFromPtr(session),
-            .pending_generation = session.pendingGeneration(),
-            .published_generation = session.publishedGeneration(),
-            .presented_generation = session.presentedGeneration(),
+            .pending_generation = generation_state.pending,
+            .published_generation = generation_state.published,
+            .presented_generation = generation_state.presented,
         };
     }
 

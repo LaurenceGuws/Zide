@@ -83,7 +83,7 @@ test "hasData stays true for threaded session while unread parse buffer remains"
 
     session.runtime.read_thread = undefined;
     session.runtime.parse_thread = undefined;
-    terminal_publication.clearOutputPending(session);
+    terminal_publication.clearPublishedOutputPending(session);
     try session.runtime.io_buffer.appendSlice(session.allocator, "queued");
     session.runtime.io_read_offset = 0;
 

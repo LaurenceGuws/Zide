@@ -93,7 +93,7 @@ pub fn setScrollOffsetLocked(self: anytype, offset: usize) void {
     } else {
         terminal_publication.queueViewRefreshLocked(self, after);
     }
-    self.updateViewCacheForScrollLocked();
+    terminal_publication.updateViewCacheForScrollLocked(self);
 }
 
 pub fn resetToLiveBottomLocked(self: anytype) bool {
@@ -149,5 +149,5 @@ pub fn scrollByLocked(self: anytype, delta: isize) void {
     } else {
         terminal_publication.queueViewRefreshLocked(self, after);
     }
-    self.updateViewCacheForScrollLocked();
+    terminal_publication.updateViewCacheForScrollLocked(self);
 }

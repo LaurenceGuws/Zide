@@ -83,8 +83,8 @@ pub fn updateViewCacheNoLockTagged(self: anytype, generation: u64, scroll_offset
     const screen_reverse = screen.screen_reverse;
     const rows = view.rows;
     const cols = view.cols;
-    const target_index = terminal_publication.inactiveRenderCacheIndex(self);
-    var cache = terminal_publication.inactiveRenderCache(self);
+    const publication_target = terminal_publication.beginCachePublication(self);
+    var cache = publication_target.target_cache;
     if (self.core.active != .alt and !(scroll_offset == 0 and self.core.history.view_cols == cols and self.core.history.view_row_count_generation == self.core.history.scrollback_generation)) {
         self.core.history.ensureViewCache(@intCast(cols), self.core.primary.defaultCell());
     }
@@ -99,8 +99,8 @@ pub fn updateViewCacheNoLockTagged(self: anytype, generation: u64, scroll_offset
     const kitty_generation = kitty_mod.kittyStateConst(self).generation;
     const clear_generation = self.core.clear_generation.load(.acquire);
     const selection_active = self.core.active != .alt and self.core.history.selectionState() != null;
-    const active_cache = terminal_publication.activeRenderCache(self);
-    const presented_generation = self.presentedGeneration();
+    const active_cache = publication_target.active_cache;
+    const presented_generation = terminal_publication.presentedGeneration(self);
 
     if (publication.canSkipPublish(active_cache, .{
         .rows = rows,
@@ -180,7 +180,7 @@ pub fn updateViewCacheNoLockTagged(self: anytype, generation: u64, scroll_offset
             false,
         );
         updateKittyViewNoLock(self, cache);
-        terminal_publication.publishRenderCacheIndex(self, target_index);
+        terminal_publication.finishCachePublication(self, publication_target);
         return;
     }
 
@@ -338,7 +338,7 @@ pub fn updateViewCacheNoLockTagged(self: anytype, generation: u64, scroll_offset
         _ = preserveUnpresentedDirtyPublication(cache, active_cache, rows, cols);
     }
     updateKittyViewNoLock(self, cache);
-    terminal_publication.publishRenderCacheIndex(self, target_index);
+    terminal_publication.finishCachePublication(self, publication_target);
 }
 
 pub fn updateViewCacheNoLock(self: anytype, generation: u64, scroll_offset: usize) void {
@@ -348,16 +348,14 @@ pub fn updateViewCacheNoLock(self: anytype, generation: u64, scroll_offset: usiz
 pub fn updateViewCacheForScroll(self: anytype) void {
     if (self.control.state_mutex.tryLock()) {
         defer self.control.state_mutex.unlock();
-        if (!self.publication.view_cache_pending.swap(false, .acq_rel)) return;
-        const offset: usize = @intCast(self.publication.view_cache_request_offset.load(.acquire));
-        updateViewCacheNoLockTagged(self, self.publication.pending_generation.load(.acquire), offset, "view_cache_for_scroll");
+        const request = terminal_publication.takePendingViewRefreshRequest(self) orelse return;
+        updateViewCacheNoLockTagged(self, request.generation, request.scroll_offset, "view_cache_for_scroll");
     }
 }
 
 pub fn updateViewCacheForScrollLocked(self: anytype) void {
-    if (!self.publication.view_cache_pending.swap(false, .acq_rel)) return;
-    const offset: usize = @intCast(self.publication.view_cache_request_offset.load(.acquire));
-    updateViewCacheNoLockTagged(self, self.publication.pending_generation.load(.acquire), offset, "view_cache_for_scroll_locked");
+    const request = terminal_publication.takePendingViewRefreshRequest(self) orelse return;
+    updateViewCacheNoLockTagged(self, request.generation, request.scroll_offset, "view_cache_for_scroll_locked");
 }
 
 fn updateKittyViewNoLock(self: anytype, cache: *RenderCache) void {

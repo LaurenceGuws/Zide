@@ -163,7 +163,7 @@ pub fn selectionPlainTextAlloc(self: anytype, allocator: std.mem.Allocator) !?[]
     defer self.unlock();
 
     const selection = selection_mod.selectionState(self) orelse return null;
-    const screen = self.activeScreenConst();
+    const screen = self.core.activeScreenConst();
     const view = screen.snapshotView();
     const rows = view.rows;
     const cols = view.cols;
@@ -203,7 +203,7 @@ pub fn scrollbackPlainTextAlloc(self: anytype, allocator: std.mem.Allocator) ![]
     self.lock();
     defer self.unlock();
 
-    const screen = self.activeScreenConst();
+    const screen = self.core.activeScreenConst();
     const view = screen.snapshotView();
     const rows = view.rows;
     const cols = view.cols;
@@ -225,7 +225,7 @@ pub fn scrollbackAnsiTextAlloc(self: anytype, allocator: std.mem.Allocator) ![]u
     self.lock();
     defer self.unlock();
 
-    const screen = self.activeScreenConst();
+    const screen = self.core.activeScreenConst();
     const view = screen.snapshotView();
     const rows = view.rows;
     const cols = view.cols;

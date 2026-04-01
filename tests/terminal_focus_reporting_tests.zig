@@ -3,6 +3,7 @@ const builtin = @import("builtin");
 const posix = std.posix;
 
 const terminal_runtime = @import("../src/terminal/core/terminal_runtime.zig");
+const terminal_core_protocol = @import("../src/terminal/core/protocol/terminal_core_protocol.zig");
 const terminal_types = @import("../src/terminal/model/types.zig");
 const terminal_debug = @import("../src/terminal/core/session/debug_ops.zig");
 const pty_mod = @import("../src/terminal/io/pty.zig");
@@ -250,7 +251,7 @@ test "terminal DECSLRM applies margins only when ?69 mode is enabled" {
     try withSessionAndCapture(struct {
         fn run(session: *terminal_runtime.PtyTerminalRuntime, capture: *PipeCapture) !void {
             const allocator = std.testing.allocator;
-            const screen = session.activeScreen();
+            const screen = session.core.activeScreen();
 
             // Without ?69, CSI ... s remains SCP behavior and does not change margins.
             terminal_debug.debugFeedBytes(session, "\x1b[3;8s");
@@ -280,12 +281,12 @@ test "terminal CSI s is save-cursor when ?69 is off and DECSLRM reset when ?69 i
     var session = try terminal_runtime.PtyTerminalRuntime.init(allocator, 6, 12);
     defer session.deinit();
 
-    const screen = session.activeScreen();
+    const screen = session.core.activeScreen();
 
     // ?69 disabled: CSI s/u behaves as save/restore cursor.
     terminal_debug.debugFeedBytes(session, "\x1b[4;7H\x1b[s\x1b[1;1H\x1b[u");
     {
-        const pos = session.getCursorPos();
+        const pos = terminal_core_protocol.getCursorPos(session);
         try std.testing.expectEqual(@as(usize, 3), pos.row);
         try std.testing.expectEqual(@as(usize, 6), pos.col);
     }
@@ -296,7 +297,7 @@ test "terminal CSI s is save-cursor when ?69 is off and DECSLRM reset when ?69 i
     try std.testing.expectEqual(@as(usize, 0), screen.left_margin);
     try std.testing.expectEqual(@as(usize, @intCast(screen.grid.cols - 1)), screen.right_margin);
     {
-        const pos = session.getCursorPos();
+        const pos = terminal_core_protocol.getCursorPos(session);
         try std.testing.expectEqual(@as(usize, 0), pos.row);
         try std.testing.expectEqual(@as(usize, 0), pos.col);
     }
@@ -304,7 +305,7 @@ test "terminal CSI s is save-cursor when ?69 is off and DECSLRM reset when ?69 i
     // Saved cursor from the pre-?69 CSI s should still restore.
     terminal_debug.debugFeedBytes(session, "\x1b[u");
     {
-        const pos = session.getCursorPos();
+        const pos = terminal_core_protocol.getCursorPos(session);
         try std.testing.expectEqual(@as(usize, 3), pos.row);
         try std.testing.expectEqual(@as(usize, 6), pos.col);
     }
@@ -322,20 +323,20 @@ test "terminal DECSLRM clips ICH DCH ECH edits to active horizontal margins" {
     terminal_debug.debugFeedBytes(session, "\x1b[2@\x1b[P\x1b[2X"); // ICH 2, DCH 1, ECH 2
 
     // Outside-margin cells should remain unchanged.
-    try std.testing.expectEqual(@as(u32, 'A'), session.getCell(0, 0).codepoint);
-    try std.testing.expectEqual(@as(u32, 'B'), session.getCell(0, 1).codepoint);
-    try std.testing.expectEqual(@as(u32, 'I'), session.getCell(0, 8).codepoint);
-    try std.testing.expectEqual(@as(u32, 'J'), session.getCell(0, 9).codepoint);
-    try std.testing.expectEqual(@as(u32, 'K'), session.getCell(0, 10).codepoint);
-    try std.testing.expectEqual(@as(u32, 'L'), session.getCell(0, 11).codepoint);
+    try std.testing.expectEqual(@as(u32, 'A'), terminal_core_protocol.getCell(session, 0, 0).codepoint);
+    try std.testing.expectEqual(@as(u32, 'B'), terminal_core_protocol.getCell(session, 0, 1).codepoint);
+    try std.testing.expectEqual(@as(u32, 'I'), terminal_core_protocol.getCell(session, 0, 8).codepoint);
+    try std.testing.expectEqual(@as(u32, 'J'), terminal_core_protocol.getCell(session, 0, 9).codepoint);
+    try std.testing.expectEqual(@as(u32, 'K'), terminal_core_protocol.getCell(session, 0, 10).codepoint);
+    try std.testing.expectEqual(@as(u32, 'L'), terminal_core_protocol.getCell(session, 0, 11).codepoint);
 
     // Margin interior reflects clipped edits only within 3..8.
-    try std.testing.expectEqual(@as(u32, 'C'), session.getCell(0, 2).codepoint);
-    try std.testing.expectEqual(@as(u32, 'D'), session.getCell(0, 3).codepoint);
-    try std.testing.expectEqual(@as(u32, 0), session.getCell(0, 4).codepoint);
-    try std.testing.expectEqual(@as(u32, 0), session.getCell(0, 5).codepoint);
-    try std.testing.expectEqual(@as(u32, 'F'), session.getCell(0, 6).codepoint);
-    try std.testing.expectEqual(@as(u32, 0), session.getCell(0, 7).codepoint);
+    try std.testing.expectEqual(@as(u32, 'C'), terminal_core_protocol.getCell(session, 0, 2).codepoint);
+    try std.testing.expectEqual(@as(u32, 'D'), terminal_core_protocol.getCell(session, 0, 3).codepoint);
+    try std.testing.expectEqual(@as(u32, 0), terminal_core_protocol.getCell(session, 0, 4).codepoint);
+    try std.testing.expectEqual(@as(u32, 0), terminal_core_protocol.getCell(session, 0, 5).codepoint);
+    try std.testing.expectEqual(@as(u32, 'F'), terminal_core_protocol.getCell(session, 0, 6).codepoint);
+    try std.testing.expectEqual(@as(u32, 0), terminal_core_protocol.getCell(session, 0, 7).codepoint);
 }
 
 test "terminal DECSLRM autowrap continues at left margin" {
@@ -347,12 +348,12 @@ test "terminal DECSLRM autowrap continues at left margin" {
     terminal_debug.debugFeedBytes(session, "\x1b[1;8HXY");
 
     // First glyph lands at right margin, second wraps to next row left margin.
-    try std.testing.expectEqual(@as(u32, 'X'), session.getCell(0, 7).codepoint);
-    try std.testing.expectEqual(@as(u32, 'Y'), session.getCell(1, 2).codepoint);
-    try std.testing.expectEqual(@as(u32, 0), session.getCell(1, 0).codepoint);
-    try std.testing.expectEqual(@as(u32, 0), session.getCell(1, 1).codepoint);
+    try std.testing.expectEqual(@as(u32, 'X'), terminal_core_protocol.getCell(session, 0, 7).codepoint);
+    try std.testing.expectEqual(@as(u32, 'Y'), terminal_core_protocol.getCell(session, 1, 2).codepoint);
+    try std.testing.expectEqual(@as(u32, 0), terminal_core_protocol.getCell(session, 1, 0).codepoint);
+    try std.testing.expectEqual(@as(u32, 0), terminal_core_protocol.getCell(session, 1, 1).codepoint);
 
-    const pos = session.getCursorPos();
+    const pos = terminal_core_protocol.getCursorPos(session);
     try std.testing.expectEqual(@as(usize, 1), pos.row);
     try std.testing.expectEqual(@as(usize, 3), pos.col);
 }
@@ -367,17 +368,17 @@ test "terminal DECSLRM clips EL to active horizontal margins" {
     terminal_debug.debugFeedBytes(session, "\x1b[1;5H\x1b[2K");
 
     // Outside margins (0..1 and 8..11) must remain untouched.
-    try std.testing.expectEqual(@as(u32, 'A'), session.getCell(0, 0).codepoint);
-    try std.testing.expectEqual(@as(u32, 'B'), session.getCell(0, 1).codepoint);
-    try std.testing.expectEqual(@as(u32, 'I'), session.getCell(0, 8).codepoint);
-    try std.testing.expectEqual(@as(u32, 'J'), session.getCell(0, 9).codepoint);
-    try std.testing.expectEqual(@as(u32, 'K'), session.getCell(0, 10).codepoint);
-    try std.testing.expectEqual(@as(u32, 'L'), session.getCell(0, 11).codepoint);
+    try std.testing.expectEqual(@as(u32, 'A'), terminal_core_protocol.getCell(session, 0, 0).codepoint);
+    try std.testing.expectEqual(@as(u32, 'B'), terminal_core_protocol.getCell(session, 0, 1).codepoint);
+    try std.testing.expectEqual(@as(u32, 'I'), terminal_core_protocol.getCell(session, 0, 8).codepoint);
+    try std.testing.expectEqual(@as(u32, 'J'), terminal_core_protocol.getCell(session, 0, 9).codepoint);
+    try std.testing.expectEqual(@as(u32, 'K'), terminal_core_protocol.getCell(session, 0, 10).codepoint);
+    try std.testing.expectEqual(@as(u32, 'L'), terminal_core_protocol.getCell(session, 0, 11).codepoint);
 
     // Margin interior (2..7) should be erased.
     var c: usize = 2;
     while (c <= 7) : (c += 1) {
-        try std.testing.expectEqual(@as(u32, 0), session.getCell(0, c).codepoint);
+        try std.testing.expectEqual(@as(u32, 0), terminal_core_protocol.getCell(session, 0, c).codepoint);
     }
 }
 
@@ -393,12 +394,12 @@ test "terminal DECSLRM clips ED to active horizontal margins" {
 
     terminal_debug.debugFeedBytes(session, "\x1b[2;5H\x1b[2J");
     for (0..3) |r| {
-        try std.testing.expectEqual(@as(u32, @intCast('A' + r)), session.getCell(r, 0).codepoint);
-        try std.testing.expectEqual(@as(u32, @intCast('A' + r)), session.getCell(r, 1).codepoint);
-        try std.testing.expectEqual(@as(u32, @intCast('A' + r)), session.getCell(r, 8).codepoint);
-        try std.testing.expectEqual(@as(u32, @intCast('A' + r)), session.getCell(r, 11).codepoint);
+        try std.testing.expectEqual(@as(u32, @intCast('A' + r)), terminal_core_protocol.getCell(session, r, 0).codepoint);
+        try std.testing.expectEqual(@as(u32, @intCast('A' + r)), terminal_core_protocol.getCell(session, r, 1).codepoint);
+        try std.testing.expectEqual(@as(u32, @intCast('A' + r)), terminal_core_protocol.getCell(session, r, 8).codepoint);
+        try std.testing.expectEqual(@as(u32, @intCast('A' + r)), terminal_core_protocol.getCell(session, r, 11).codepoint);
         for (2..8) |c| {
-            try std.testing.expectEqual(@as(u32, 0), session.getCell(r, c).codepoint);
+            try std.testing.expectEqual(@as(u32, 0), terminal_core_protocol.getCell(session, r, c).codepoint);
         }
     }
 }
@@ -416,20 +417,20 @@ test "terminal DECSLRM clips IL and DL to active horizontal margins" {
 
     // Insert one line at row 2, col 3; only margin band should shift.
     terminal_debug.debugFeedBytes(session, "\x1b[2;3H\x1b[1L");
-    try std.testing.expectEqual(@as(u32, 'B'), session.getCell(1, 0).codepoint);
-    try std.testing.expectEqual(@as(u32, 0), session.getCell(1, 2).codepoint);
-    try std.testing.expectEqual(@as(u32, 'B'), session.getCell(2, 2).codepoint);
-    try std.testing.expectEqual(@as(u32, 'C'), session.getCell(3, 2).codepoint);
-    try std.testing.expectEqual(@as(u32, 'D'), session.getCell(4, 2).codepoint);
+    try std.testing.expectEqual(@as(u32, 'B'), terminal_core_protocol.getCell(session, 1, 0).codepoint);
+    try std.testing.expectEqual(@as(u32, 0), terminal_core_protocol.getCell(session, 1, 2).codepoint);
+    try std.testing.expectEqual(@as(u32, 'B'), terminal_core_protocol.getCell(session, 2, 2).codepoint);
+    try std.testing.expectEqual(@as(u32, 'C'), terminal_core_protocol.getCell(session, 3, 2).codepoint);
+    try std.testing.expectEqual(@as(u32, 'D'), terminal_core_protocol.getCell(session, 4, 2).codepoint);
 
     // Delete one line at row 2, col 3; margin band shifts back up.
     terminal_debug.debugFeedBytes(session, "\x1b[2;3H\x1b[1M");
-    try std.testing.expectEqual(@as(u32, 'B'), session.getCell(1, 0).codepoint);
-    try std.testing.expectEqual(@as(u32, 'C'), session.getCell(2, 0).codepoint);
-    try std.testing.expectEqual(@as(u32, 'D'), session.getCell(3, 0).codepoint);
-    try std.testing.expectEqual(@as(u32, 'B'), session.getCell(1, 2).codepoint);
-    try std.testing.expectEqual(@as(u32, 'C'), session.getCell(2, 2).codepoint);
-    try std.testing.expectEqual(@as(u32, 'D'), session.getCell(3, 2).codepoint);
+    try std.testing.expectEqual(@as(u32, 'B'), terminal_core_protocol.getCell(session, 1, 0).codepoint);
+    try std.testing.expectEqual(@as(u32, 'C'), terminal_core_protocol.getCell(session, 2, 0).codepoint);
+    try std.testing.expectEqual(@as(u32, 'D'), terminal_core_protocol.getCell(session, 3, 0).codepoint);
+    try std.testing.expectEqual(@as(u32, 'B'), terminal_core_protocol.getCell(session, 1, 2).codepoint);
+    try std.testing.expectEqual(@as(u32, 'C'), terminal_core_protocol.getCell(session, 2, 2).codepoint);
+    try std.testing.expectEqual(@as(u32, 'D'), terminal_core_protocol.getCell(session, 3, 2).codepoint);
 }
 
 test "terminal DECSLRM IL and DL are no-op when cursor is outside margins" {
@@ -443,15 +444,15 @@ test "terminal DECSLRM IL and DL are no-op when cursor is outside margins" {
     terminal_debug.debugFeedBytes(il_session, "\x1b[4;1HDDDDDDDDDDDD");
     terminal_debug.debugFeedBytes(il_session, "\x1b[?69h\x1b[3;8s");
     {
-        const screen = il_session.activeScreen();
+        const screen = il_session.core.activeScreen();
         screen.cursor.row = 1;
         screen.cursor.col = 0; // deliberately outside left margin (2)
     }
     terminal_debug.debugFeedBytes(il_session, "\x1b[1L");
-    try std.testing.expectEqual(@as(u32, 'A'), il_session.getCell(0, 2).codepoint);
-    try std.testing.expectEqual(@as(u32, 'B'), il_session.getCell(1, 2).codepoint);
-    try std.testing.expectEqual(@as(u32, 'C'), il_session.getCell(2, 2).codepoint);
-    try std.testing.expectEqual(@as(u32, 'D'), il_session.getCell(3, 2).codepoint);
+    try std.testing.expectEqual(@as(u32, 'A'), terminal_core_protocol.getCell(il_session, 0, 2).codepoint);
+    try std.testing.expectEqual(@as(u32, 'B'), terminal_core_protocol.getCell(il_session, 1, 2).codepoint);
+    try std.testing.expectEqual(@as(u32, 'C'), terminal_core_protocol.getCell(il_session, 2, 2).codepoint);
+    try std.testing.expectEqual(@as(u32, 'D'), terminal_core_protocol.getCell(il_session, 3, 2).codepoint);
 
     var dl_session = try terminal_runtime.PtyTerminalRuntime.init(allocator, 4, 12);
     defer dl_session.deinit();
@@ -461,15 +462,15 @@ test "terminal DECSLRM IL and DL are no-op when cursor is outside margins" {
     terminal_debug.debugFeedBytes(dl_session, "\x1b[4;1HDDDDDDDDDDDD");
     terminal_debug.debugFeedBytes(dl_session, "\x1b[?69h\x1b[3;8s");
     {
-        const screen = dl_session.activeScreen();
+        const screen = dl_session.core.activeScreen();
         screen.cursor.row = 1;
         screen.cursor.col = 0; // deliberately outside left margin (2)
     }
     terminal_debug.debugFeedBytes(dl_session, "\x1b[1M");
-    try std.testing.expectEqual(@as(u32, 'A'), dl_session.getCell(0, 2).codepoint);
-    try std.testing.expectEqual(@as(u32, 'B'), dl_session.getCell(1, 2).codepoint);
-    try std.testing.expectEqual(@as(u32, 'C'), dl_session.getCell(2, 2).codepoint);
-    try std.testing.expectEqual(@as(u32, 'D'), dl_session.getCell(3, 2).codepoint);
+    try std.testing.expectEqual(@as(u32, 'A'), terminal_core_protocol.getCell(dl_session, 0, 2).codepoint);
+    try std.testing.expectEqual(@as(u32, 'B'), terminal_core_protocol.getCell(dl_session, 1, 2).codepoint);
+    try std.testing.expectEqual(@as(u32, 'C'), terminal_core_protocol.getCell(dl_session, 2, 2).codepoint);
+    try std.testing.expectEqual(@as(u32, 'D'), terminal_core_protocol.getCell(dl_session, 3, 2).codepoint);
 }
 
 test "terminal DECSLRM clips SU and SD to active horizontal margins" {
@@ -482,14 +483,14 @@ test "terminal DECSLRM clips SU and SD to active horizontal margins" {
     terminal_debug.debugFeedBytes(up_session, "\x1b[3;1HCCCCCCCCCCCC");
     terminal_debug.debugFeedBytes(up_session, "\x1b[4;1HDDDDDDDDDDDD");
     terminal_debug.debugFeedBytes(up_session, "\x1b[?69h\x1b[3;8s\x1b[1S");
-    try std.testing.expectEqual(@as(u32, 'A'), up_session.getCell(0, 0).codepoint);
-    try std.testing.expectEqual(@as(u32, 'B'), up_session.getCell(0, 2).codepoint);
-    try std.testing.expectEqual(@as(u32, 'B'), up_session.getCell(1, 0).codepoint);
-    try std.testing.expectEqual(@as(u32, 'C'), up_session.getCell(1, 2).codepoint);
-    try std.testing.expectEqual(@as(u32, 'C'), up_session.getCell(2, 0).codepoint);
-    try std.testing.expectEqual(@as(u32, 'D'), up_session.getCell(2, 2).codepoint);
-    try std.testing.expectEqual(@as(u32, 'D'), up_session.getCell(3, 0).codepoint);
-    try std.testing.expectEqual(@as(u32, 0), up_session.getCell(3, 2).codepoint);
+    try std.testing.expectEqual(@as(u32, 'A'), terminal_core_protocol.getCell(up_session, 0, 0).codepoint);
+    try std.testing.expectEqual(@as(u32, 'B'), terminal_core_protocol.getCell(up_session, 0, 2).codepoint);
+    try std.testing.expectEqual(@as(u32, 'B'), terminal_core_protocol.getCell(up_session, 1, 0).codepoint);
+    try std.testing.expectEqual(@as(u32, 'C'), terminal_core_protocol.getCell(up_session, 1, 2).codepoint);
+    try std.testing.expectEqual(@as(u32, 'C'), terminal_core_protocol.getCell(up_session, 2, 0).codepoint);
+    try std.testing.expectEqual(@as(u32, 'D'), terminal_core_protocol.getCell(up_session, 2, 2).codepoint);
+    try std.testing.expectEqual(@as(u32, 'D'), terminal_core_protocol.getCell(up_session, 3, 0).codepoint);
+    try std.testing.expectEqual(@as(u32, 0), terminal_core_protocol.getCell(up_session, 3, 2).codepoint);
 
     var down_session = try terminal_runtime.PtyTerminalRuntime.init(allocator, 4, 12);
     defer down_session.deinit();
@@ -498,14 +499,14 @@ test "terminal DECSLRM clips SU and SD to active horizontal margins" {
     terminal_debug.debugFeedBytes(down_session, "\x1b[3;1HCCCCCCCCCCCC");
     terminal_debug.debugFeedBytes(down_session, "\x1b[4;1HDDDDDDDDDDDD");
     terminal_debug.debugFeedBytes(down_session, "\x1b[?69h\x1b[3;8s\x1b[1T");
-    try std.testing.expectEqual(@as(u32, 'A'), down_session.getCell(0, 0).codepoint);
-    try std.testing.expectEqual(@as(u32, 0), down_session.getCell(0, 2).codepoint);
-    try std.testing.expectEqual(@as(u32, 'B'), down_session.getCell(1, 0).codepoint);
-    try std.testing.expectEqual(@as(u32, 'A'), down_session.getCell(1, 2).codepoint);
-    try std.testing.expectEqual(@as(u32, 'C'), down_session.getCell(2, 0).codepoint);
-    try std.testing.expectEqual(@as(u32, 'B'), down_session.getCell(2, 2).codepoint);
-    try std.testing.expectEqual(@as(u32, 'D'), down_session.getCell(3, 0).codepoint);
-    try std.testing.expectEqual(@as(u32, 'C'), down_session.getCell(3, 2).codepoint);
+    try std.testing.expectEqual(@as(u32, 'A'), terminal_core_protocol.getCell(down_session, 0, 0).codepoint);
+    try std.testing.expectEqual(@as(u32, 0), terminal_core_protocol.getCell(down_session, 0, 2).codepoint);
+    try std.testing.expectEqual(@as(u32, 'B'), terminal_core_protocol.getCell(down_session, 1, 0).codepoint);
+    try std.testing.expectEqual(@as(u32, 'A'), terminal_core_protocol.getCell(down_session, 1, 2).codepoint);
+    try std.testing.expectEqual(@as(u32, 'C'), terminal_core_protocol.getCell(down_session, 2, 0).codepoint);
+    try std.testing.expectEqual(@as(u32, 'B'), terminal_core_protocol.getCell(down_session, 2, 2).codepoint);
+    try std.testing.expectEqual(@as(u32, 'D'), terminal_core_protocol.getCell(down_session, 3, 0).codepoint);
+    try std.testing.expectEqual(@as(u32, 'C'), terminal_core_protocol.getCell(down_session, 3, 2).codepoint);
 }
 
 test "terminal DECSLRM and DECSTBM clip SU to margin band within scroll region" {
@@ -521,18 +522,18 @@ test "terminal DECSLRM and DECSTBM clip SU to margin band within scroll region" 
     terminal_debug.debugFeedBytes(session, "\x1b[?69h\x1b[3;8s\x1b[2;4r\x1b[1S");
 
     // Outside the vertical region is unchanged.
-    try std.testing.expectEqual(@as(u32, 'A'), session.getCell(0, 2).codepoint);
-    try std.testing.expectEqual(@as(u32, 'E'), session.getCell(4, 2).codepoint);
+    try std.testing.expectEqual(@as(u32, 'A'), terminal_core_protocol.getCell(session, 0, 2).codepoint);
+    try std.testing.expectEqual(@as(u32, 'E'), terminal_core_protocol.getCell(session, 4, 2).codepoint);
 
     // Outside horizontal margins is preserved within the region.
-    try std.testing.expectEqual(@as(u32, 'B'), session.getCell(1, 0).codepoint);
-    try std.testing.expectEqual(@as(u32, 'C'), session.getCell(2, 0).codepoint);
-    try std.testing.expectEqual(@as(u32, 'D'), session.getCell(3, 0).codepoint);
+    try std.testing.expectEqual(@as(u32, 'B'), terminal_core_protocol.getCell(session, 1, 0).codepoint);
+    try std.testing.expectEqual(@as(u32, 'C'), terminal_core_protocol.getCell(session, 2, 0).codepoint);
+    try std.testing.expectEqual(@as(u32, 'D'), terminal_core_protocol.getCell(session, 3, 0).codepoint);
 
     // Margin band shifts up only within DECSTBM rows 2..4.
-    try std.testing.expectEqual(@as(u32, 'C'), session.getCell(1, 2).codepoint);
-    try std.testing.expectEqual(@as(u32, 'D'), session.getCell(2, 2).codepoint);
-    try std.testing.expectEqual(@as(u32, 0), session.getCell(3, 2).codepoint);
+    try std.testing.expectEqual(@as(u32, 'C'), terminal_core_protocol.getCell(session, 1, 2).codepoint);
+    try std.testing.expectEqual(@as(u32, 'D'), terminal_core_protocol.getCell(session, 2, 2).codepoint);
+    try std.testing.expectEqual(@as(u32, 0), terminal_core_protocol.getCell(session, 3, 2).codepoint);
 }
 
 test "terminal DECSLRM and DECSTBM clip SD to margin band within scroll region" {
@@ -548,18 +549,18 @@ test "terminal DECSLRM and DECSTBM clip SD to margin band within scroll region" 
     terminal_debug.debugFeedBytes(session, "\x1b[?69h\x1b[3;8s\x1b[2;4r\x1b[1T");
 
     // Outside the vertical region is unchanged.
-    try std.testing.expectEqual(@as(u32, 'A'), session.getCell(0, 2).codepoint);
-    try std.testing.expectEqual(@as(u32, 'E'), session.getCell(4, 2).codepoint);
+    try std.testing.expectEqual(@as(u32, 'A'), terminal_core_protocol.getCell(session, 0, 2).codepoint);
+    try std.testing.expectEqual(@as(u32, 'E'), terminal_core_protocol.getCell(session, 4, 2).codepoint);
 
     // Outside horizontal margins is preserved within the region.
-    try std.testing.expectEqual(@as(u32, 'B'), session.getCell(1, 0).codepoint);
-    try std.testing.expectEqual(@as(u32, 'C'), session.getCell(2, 0).codepoint);
-    try std.testing.expectEqual(@as(u32, 'D'), session.getCell(3, 0).codepoint);
+    try std.testing.expectEqual(@as(u32, 'B'), terminal_core_protocol.getCell(session, 1, 0).codepoint);
+    try std.testing.expectEqual(@as(u32, 'C'), terminal_core_protocol.getCell(session, 2, 0).codepoint);
+    try std.testing.expectEqual(@as(u32, 'D'), terminal_core_protocol.getCell(session, 3, 0).codepoint);
 
     // Margin band shifts down only within DECSTBM rows 2..4.
-    try std.testing.expectEqual(@as(u32, 0), session.getCell(1, 2).codepoint);
-    try std.testing.expectEqual(@as(u32, 'B'), session.getCell(2, 2).codepoint);
-    try std.testing.expectEqual(@as(u32, 'C'), session.getCell(3, 2).codepoint);
+    try std.testing.expectEqual(@as(u32, 0), terminal_core_protocol.getCell(session, 1, 2).codepoint);
+    try std.testing.expectEqual(@as(u32, 'B'), terminal_core_protocol.getCell(session, 2, 2).codepoint);
+    try std.testing.expectEqual(@as(u32, 'C'), terminal_core_protocol.getCell(session, 3, 2).codepoint);
 }
 
 test "terminal DECSLRM and DECSTBM clip IL to margin band within scroll region" {
@@ -575,18 +576,18 @@ test "terminal DECSLRM and DECSTBM clip IL to margin band within scroll region" 
     terminal_debug.debugFeedBytes(session, "\x1b[?69h\x1b[3;8s\x1b[2;4r\x1b[3;3H\x1b[1L");
 
     // Outside vertical region is unchanged.
-    try std.testing.expectEqual(@as(u32, 'A'), session.getCell(0, 2).codepoint);
-    try std.testing.expectEqual(@as(u32, 'E'), session.getCell(4, 2).codepoint);
+    try std.testing.expectEqual(@as(u32, 'A'), terminal_core_protocol.getCell(session, 0, 2).codepoint);
+    try std.testing.expectEqual(@as(u32, 'E'), terminal_core_protocol.getCell(session, 4, 2).codepoint);
 
     // Outside horizontal margins is preserved within the region.
-    try std.testing.expectEqual(@as(u32, 'B'), session.getCell(1, 0).codepoint);
-    try std.testing.expectEqual(@as(u32, 'C'), session.getCell(2, 0).codepoint);
-    try std.testing.expectEqual(@as(u32, 'D'), session.getCell(3, 0).codepoint);
+    try std.testing.expectEqual(@as(u32, 'B'), terminal_core_protocol.getCell(session, 1, 0).codepoint);
+    try std.testing.expectEqual(@as(u32, 'C'), terminal_core_protocol.getCell(session, 2, 0).codepoint);
+    try std.testing.expectEqual(@as(u32, 'D'), terminal_core_protocol.getCell(session, 3, 0).codepoint);
 
     // Margin band insert is limited to cursor row..bottom within DECSTBM rows 2..4.
-    try std.testing.expectEqual(@as(u32, 'B'), session.getCell(1, 2).codepoint);
-    try std.testing.expectEqual(@as(u32, 0), session.getCell(2, 2).codepoint);
-    try std.testing.expectEqual(@as(u32, 'C'), session.getCell(3, 2).codepoint);
+    try std.testing.expectEqual(@as(u32, 'B'), terminal_core_protocol.getCell(session, 1, 2).codepoint);
+    try std.testing.expectEqual(@as(u32, 0), terminal_core_protocol.getCell(session, 2, 2).codepoint);
+    try std.testing.expectEqual(@as(u32, 'C'), terminal_core_protocol.getCell(session, 3, 2).codepoint);
 }
 
 test "terminal DECSLRM and DECSTBM clip DL to margin band within scroll region" {
@@ -602,25 +603,25 @@ test "terminal DECSLRM and DECSTBM clip DL to margin band within scroll region" 
     terminal_debug.debugFeedBytes(session, "\x1b[?69h\x1b[3;8s\x1b[2;4r\x1b[3;3H\x1b[1M");
 
     // Outside vertical region is unchanged.
-    try std.testing.expectEqual(@as(u32, 'A'), session.getCell(0, 2).codepoint);
-    try std.testing.expectEqual(@as(u32, 'E'), session.getCell(4, 2).codepoint);
+    try std.testing.expectEqual(@as(u32, 'A'), terminal_core_protocol.getCell(session, 0, 2).codepoint);
+    try std.testing.expectEqual(@as(u32, 'E'), terminal_core_protocol.getCell(session, 4, 2).codepoint);
 
     // Outside horizontal margins is preserved within the region.
-    try std.testing.expectEqual(@as(u32, 'B'), session.getCell(1, 0).codepoint);
-    try std.testing.expectEqual(@as(u32, 'C'), session.getCell(2, 0).codepoint);
-    try std.testing.expectEqual(@as(u32, 'D'), session.getCell(3, 0).codepoint);
+    try std.testing.expectEqual(@as(u32, 'B'), terminal_core_protocol.getCell(session, 1, 0).codepoint);
+    try std.testing.expectEqual(@as(u32, 'C'), terminal_core_protocol.getCell(session, 2, 0).codepoint);
+    try std.testing.expectEqual(@as(u32, 'D'), terminal_core_protocol.getCell(session, 3, 0).codepoint);
 
     // Margin band delete is limited to cursor row..bottom within DECSTBM rows 2..4.
-    try std.testing.expectEqual(@as(u32, 'B'), session.getCell(1, 2).codepoint);
-    try std.testing.expectEqual(@as(u32, 'D'), session.getCell(2, 2).codepoint);
-    try std.testing.expectEqual(@as(u32, 0), session.getCell(3, 2).codepoint);
+    try std.testing.expectEqual(@as(u32, 'B'), terminal_core_protocol.getCell(session, 1, 2).codepoint);
+    try std.testing.expectEqual(@as(u32, 'D'), terminal_core_protocol.getCell(session, 2, 2).codepoint);
+    try std.testing.expectEqual(@as(u32, 0), terminal_core_protocol.getCell(session, 3, 2).codepoint);
 }
 
 test "terminal DECSTBM homes cursor using DECOM semantics under DECLRMM" {
     try withSessionAndCapture(struct {
         fn run(session: *terminal_runtime.PtyTerminalRuntime, capture: *PipeCapture) !void {
             const allocator = std.testing.allocator;
-            const screen = session.activeScreen();
+            const screen = session.core.activeScreen();
 
             terminal_debug.debugFeedBytes(session, "\x1b[?69h\x1b[3;8s");
             try std.testing.expect(screen.left_right_margin_mode_69);
@@ -650,7 +651,7 @@ test "terminal DECSTBM equal bounds are rejected as no-op" {
     try withSessionAndCapture(struct {
         fn run(session: *terminal_runtime.PtyTerminalRuntime, capture: *PipeCapture) !void {
             const allocator = std.testing.allocator;
-            const screen = session.activeScreen();
+            const screen = session.core.activeScreen();
 
             terminal_debug.debugFeedBytes(session, "\x1b[2;5r");
             try std.testing.expectEqual(@as(usize, 1), screen.scroll_top);
@@ -677,7 +678,7 @@ test "terminal DECSLRM equal bounds are rejected as no-op" {
     try withSessionAndCapture(struct {
         fn run(session: *terminal_runtime.PtyTerminalRuntime, capture: *PipeCapture) !void {
             const allocator = std.testing.allocator;
-            const screen = session.activeScreen();
+            const screen = session.core.activeScreen();
 
             terminal_debug.debugFeedBytes(session, "\x1b[?69h\x1b[3;8s");
             try std.testing.expectEqual(@as(usize, 2), screen.left_margin);
@@ -1344,8 +1345,8 @@ test "terminal grapheme cluster mode ?2027 first slice is queryable no-op for te
     try std.testing.expect(!a.grapheme_cluster_shaping_2027);
     try std.testing.expect(b.grapheme_cluster_shaping_2027);
 
-    const posa = a.getCursorPos();
-    const posb = b.getCursorPos();
+    const posa = terminal_core_protocol.getCursorPos(a);
+    const posb = terminal_core_protocol.getCursorPos(b);
     try std.testing.expectEqual(posa.row, posb.row);
     try std.testing.expectEqual(posa.col, posb.col);
 
@@ -1353,8 +1354,8 @@ test "terminal grapheme cluster mode ?2027 first slice is queryable no-op for te
     while (row < 2) : (row += 1) {
         var col: usize = 0;
         while (col < 8) : (col += 1) {
-            const ca = a.getCell(row, col);
-            const cb = b.getCell(row, col);
+            const ca = terminal_core_protocol.getCell(a, row, col);
+            const cb = terminal_core_protocol.getCell(b, row, col);
             try std.testing.expectEqual(ca.codepoint, cb.codepoint);
             try std.testing.expectEqual(ca.width, cb.width);
             try std.testing.expectEqual(ca.combining_len, cb.combining_len);
@@ -1720,8 +1721,8 @@ test "terminal DECSTR soft reset clears mode subset and preserves grid" {
             try capture.expectNoReply();
 
             // Content is preserved (soft reset, not hard reset).
-            try std.testing.expectEqual(@as(u32, 'A'), session.getCell(0, 0).codepoint);
-            try std.testing.expectEqual(@as(u32, 'B'), session.getCell(0, 1).codepoint);
+            try std.testing.expectEqual(@as(u32, 'A'), terminal_core_protocol.getCell(session, 0, 0).codepoint);
+            try std.testing.expectEqual(@as(u32, 'B'), terminal_core_protocol.getCell(session, 0, 1).codepoint);
 
             // Key global/session modes reset to defaults.
             try std.testing.expect(!session.focusReportingEnabled());
@@ -1732,11 +1733,11 @@ test "terminal DECSTR soft reset clears mode subset and preserves grid" {
             try std.testing.expectEqual(@as(u32, 0), session.keyModeFlagsValue());
 
             // Active-screen soft reset defaults restored.
-            const pos = session.getCursorPos();
+            const pos = terminal_core_protocol.getCursorPos(session);
             try std.testing.expectEqual(@as(usize, 0), pos.row);
             try std.testing.expectEqual(@as(usize, 0), pos.col);
 
-            const screen = session.activeScreen();
+            const screen = session.core.activeScreen();
             try std.testing.expect(screen.cursor_visible);
             try std.testing.expect(!screen.screen_reverse);
             try std.testing.expect(!screen.origin_mode);
@@ -1814,7 +1815,7 @@ test "terminal DECSTR in alt screen preserves active screen selection and primar
             {
                 const snap = session.snapshot();
                 try std.testing.expect(snap.alt_active);
-                try std.testing.expectEqual(@as(u32, 'A'), session.getCell(0, 0).codepoint);
+                try std.testing.expectEqual(@as(u32, 'A'), terminal_core_protocol.getCell(session, 0, 0).codepoint);
             }
 
             terminal_debug.debugFeedBytes(session, "\x1b[?1049l");
@@ -1822,7 +1823,7 @@ test "terminal DECSTR in alt screen preserves active screen selection and primar
             {
                 const snap = session.snapshot();
                 try std.testing.expect(!snap.alt_active);
-                try std.testing.expectEqual(@as(u32, 'P'), session.getCell(0, 0).codepoint);
+                try std.testing.expectEqual(@as(u32, 'P'), terminal_core_protocol.getCell(session, 0, 0).codepoint);
             }
         }
     }.run);
@@ -1833,7 +1834,7 @@ test "terminal DECSTR invalidates saved cursor restore slot" {
         fn run(session: *terminal_runtime.PtyTerminalRuntime, capture: *PipeCapture) !void {
             terminal_debug.debugFeedBytes(session, "\x1b[3;5H\x1b[s\x1b[1;1H\x1b[!p\x1b[u");
             try capture.expectNoReply();
-            const pos = session.getCursorPos();
+            const pos = terminal_core_protocol.getCursorPos(session);
             try std.testing.expectEqual(@as(usize, 0), pos.row);
             try std.testing.expectEqual(@as(usize, 0), pos.col);
         }
@@ -1845,7 +1846,7 @@ test "terminal DECSTR resets parser charset and clears saved charset restore" {
         fn run(session: *terminal_runtime.PtyTerminalRuntime, capture: *PipeCapture) !void {
             terminal_debug.debugFeedBytes(session, "\x1b(0"); // DEC special G0 active in GL by default
             terminal_debug.debugFeedBytes(session, "j");
-            const before = session.getCell(0, 0).codepoint;
+            const before = terminal_core_protocol.getCell(session, 0, 0).codepoint;
             try std.testing.expect(before != @as(u32, 'j'));
 
             terminal_debug.debugFeedBytes(session, "\x1b[s"); // save cursor + charset state
@@ -1855,8 +1856,8 @@ test "terminal DECSTR resets parser charset and clears saved charset restore" {
             terminal_debug.debugFeedBytes(session, "\x1b[u"); // should not restore saved charset/cursor after DECSTR
             terminal_debug.debugFeedBytes(session, "j");
 
-            try std.testing.expectEqual(@as(u32, 'j'), session.getCell(0, 0).codepoint);
-            try std.testing.expectEqual(@as(usize, 1), session.getCursorPos().col);
+            try std.testing.expectEqual(@as(u32, 'j'), terminal_core_protocol.getCell(session, 0, 0).codepoint);
+            try std.testing.expectEqual(@as(usize, 1), terminal_core_protocol.getCursorPos(session).col);
         }
     }.run);
 }
@@ -2025,7 +2026,7 @@ test "terminal DECSTR alt-screen kitty placement does not leak to primary after 
         const snap = session.snapshot();
         try std.testing.expect(!snap.alt_active);
         try std.testing.expectEqual(@as(usize, 0), snap.kitty_placements.len);
-        try std.testing.expectEqual(@as(u32, 'P'), session.getCell(0, 0).codepoint);
+        try std.testing.expectEqual(@as(u32, 'P'), terminal_core_protocol.getCell(session, 0, 0).codepoint);
     }
 }
 

@@ -8,10 +8,10 @@ pub fn poll(self: anytype) !void {
     const input_pressure = self.control.input_pressure.load(.acquire);
     if (self.runtime.read_thread != null) {
         if (self.runtime.parse_thread != null) {
-            _ = terminal_publication.clearOutputPending(self);
+            _ = terminal_publication.clearPublishedOutputPending(self);
             return;
         }
-        _ = terminal_publication.clearOutputPending(self);
+        _ = terminal_publication.clearPublishedOutputPending(self);
         var result = pty_poll_processing.processBufferedPtyOutput(self, input_pressure);
         pty_poll_publication.publishPtyPollResult(
             self,
