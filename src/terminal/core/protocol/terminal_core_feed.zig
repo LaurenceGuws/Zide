@@ -11,3 +11,10 @@ pub fn feedOutputBytesLocked(self: anytype, bytes: []const u8) FeedResult {
         .scroll_offset = self.core.history.scrollOffset(),
     };
 }
+
+pub fn feedOutputBytes(self: anytype, bytes: []const u8) void {
+    self.control.state_mutex.lock();
+    defer self.control.state_mutex.unlock();
+    const result = feedOutputBytesLocked(self, bytes);
+    @import("../publication/terminal_publication.zig").publishFeedResultLocked(self, result);
+}

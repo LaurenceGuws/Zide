@@ -244,10 +244,10 @@ pub const PtyTerminalRuntime = struct {
     pub const setColumnMode132Locked = config.setColumnMode132Locked;
     pub const setCellSize = config.setCellSize;
 
-    pub const appendHyperlink = appendHyperlinkImpl;
+    pub const appendHyperlink = @import("protocol/terminal_core_protocol.zig").appendHyperlink2048;
     pub const clearAllKittyImages = @import("protocol/terminal_core_protocol.zig").clearAllKittyImages;
-    pub const feedOutputBytes = feedOutputBytesImpl;
-    pub const resetState = resetStateImpl;
+    pub const feedOutputBytes = @import("protocol/terminal_core_feed.zig").feedOutputBytes;
+    pub const resetState = mode_effects.resetState;
     pub const resetStateLocked = mode_effects.resetStateLocked;
     pub const eraseDisplay = @import("protocol/terminal_core_protocol.zig").eraseDisplay;
     pub const eraseLine = @import("protocol/terminal_core_protocol.zig").eraseLine;
@@ -291,23 +291,6 @@ pub const PtyTerminalRuntime = struct {
     pub const setSyncUpdatesLocked = terminal_publication.setSyncUpdatesLocked;
     pub const clearPublishedDamageIfGeneration = terminal_publication.clearPublishedDamageIfGeneration;
 };
-
-fn appendHyperlinkImpl(self: anytype, uri: []const u8) ?u32 {
-    return @import("protocol/terminal_core_protocol.zig").appendHyperlink(self, uri, 2048);
-}
-
-fn feedOutputBytesImpl(self: anytype, bytes: []const u8) void {
-    self.control.state_mutex.lock();
-    defer self.control.state_mutex.unlock();
-    const result = @import("protocol/terminal_core_feed.zig").feedOutputBytesLocked(self, bytes);
-    terminal_publication.publishFeedResultLocked(self, result);
-}
-
-fn resetStateImpl(self: anytype) void {
-    self.control.state_mutex.lock();
-    defer self.control.state_mutex.unlock();
-    mode_effects.resetStateLocked(self);
-}
 
 const default_scrollback_rows: usize = 1000;
 const key_mode_disambiguate: u32 = 1;

@@ -297,6 +297,10 @@ Validation note, 2026-03-31:
     cuts: stale parser/snapshot/debug/type aliases are gone from
     `src/terminal/core/pty_terminal_runtime.zig`, so the file reads closer to
     its live surface instead of historical baggage
+  - the last inline wrapper helper bodies in that lane are gone too:
+    `feedOutputBytes`, `resetState`, and the fixed-limit `appendHyperlink`
+    helper now live in their real owner modules instead of squatting inline on
+    `src/terminal/core/pty_terminal_runtime.zig`
   - raw session state is no longer a flat lie:
     - `src/terminal/core/session/publication_fields.zig`
     - `src/terminal/core/session/runtime_fields.zig`

@@ -9,6 +9,10 @@ pub fn appendHyperlink(self: anytype, uri: []const u8, max_hyperlinks: usize) ?u
     return hyperlink_table.appendHyperlink(self, uri, max_hyperlinks);
 }
 
+pub fn appendHyperlink2048(self: anytype, uri: []const u8) ?u32 {
+    return appendHyperlink(self, uri, 2048);
+}
+
 pub fn clearAllKittyImages(self: anytype) void {
     kitty_mod.clearAllKittyImages(self);
 }

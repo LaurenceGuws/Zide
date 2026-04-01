@@ -8,6 +8,12 @@ pub fn resetStateLocked(self: anytype) void {
     input_modes.resetInputModesLocked(self);
 }
 
+pub fn resetState(self: anytype) void {
+    self.control.state_mutex.lock();
+    defer self.control.state_mutex.unlock();
+    resetStateLocked(self);
+}
+
 pub fn enterAltScreen(self: anytype, clear: bool, save_cursor: bool) void {
     if (!core_modes.enterAltScreenCore(self, clear, save_cursor)) return;
     self.clearSelectionLocked();

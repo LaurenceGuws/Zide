@@ -266,6 +266,10 @@ Judgment:
   parser-facing method slab for control/CSI/OSC/DCS/printable text dispatch
 - after that, `src/terminal/core/pty_terminal_runtime.zig` also lost the dead
   local parser/snapshot/debug/type alias block that no longer had live use
+- the last inline wrapper helper bodies in that lane are gone too:
+  `feedOutputBytes`, `resetState`, and the fixed-limit `appendHyperlink`
+  helper now live in their real owner modules instead of inline on
+  `src/terminal/core/pty_terminal_runtime.zig`
 - the flat root state is now also grouped into explicit subsystem-owned
   embedded structs:
   - `session/publication_fields`
