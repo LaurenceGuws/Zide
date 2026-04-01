@@ -188,6 +188,8 @@ Validation note, 2026-03-31:
   - wrapper-only debug and text-export helpers now also live where they belong:
     `src/terminal/core/session/debug_ops.zig` and
     `src/terminal/core/session/text_export.zig`
+  - the old `src/terminal/core/snapshot_adapter.zig` seam is deleted instead of
+    being preserved as a knowingly false shared contract placeholder
   - the next honest peer subtree is now in too:
     publication-owned cache, snapshot, and publication helper files now live
     under `src/terminal/core/publication/` instead of continuing to sprawl as

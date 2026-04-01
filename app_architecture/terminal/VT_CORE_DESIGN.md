@@ -1018,6 +1018,8 @@ Migration approach:
   `src/terminal/core/session/debug_ops.zig`
 - wrapper-owned text export also lives under the same session home in
   `src/terminal/core/session/text_export.zig`
+- the old shared snapshot adapter is gone; there is no longer a knowingly
+  false placeholder mapping sitting in the live core tree
 - host-facing metadata, liveness, and close-confirm queries live under
   `src/terminal/core/session_host_queries.zig`
 - publication/diff, selection projection, plan/refinement, selection-dirty

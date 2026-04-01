@@ -412,22 +412,22 @@ Judgment:
 - but it is still "session-centered publication split into files," not yet the
   cleanest engine-centered publication object model
 
-### 6. `snapshot_adapter.zig` is an explicit unfinished seam
+### 6. The old shared snapshot adapter deserved deletion, not preservation
 
-Primary file:
+Former file:
 
 - `src/terminal/core/snapshot_adapter.zig`
 
 Evidence:
 
-- the adapter returns an almost-empty placeholder shared snapshot
-- it contains an explicit TODO saying the mapping waits on widget/core split
+- the adapter returned an almost-empty placeholder shared snapshot
+- it carried an explicit TODO saying the mapping waited on a future split
+- its only tests locked in that knowingly false placeholder contract
 
 Judgment:
 
-- this is honest, but architecturally weak
-- unfinished adapters are where duplicate contracts and long-lived temporary
-  surfaces tend to accumulate
+- that seam was not a real boundary; it was a stub pretending to be one
+- deleting it is stronger than preserving a fake shared contract in live code
 
 Why it matters:
 
