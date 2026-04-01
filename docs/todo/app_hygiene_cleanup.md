@@ -189,6 +189,11 @@ Progress note, 2026-04-01:
   `build_system/target_factory.zig`, and `build_system/dependency_resolver.zig`
   now share one build-owned compile utility seam instead of carrying repeated
   local linker boilerplate
+- runtime app executable construction and SDL/libc test artifact construction
+  no longer share one broad build factory file
+- `build_system/app_target_factory.zig` now owns runtime app entrypoint
+  creation, while `build_system/test_target_factory.zig` owns SDL/libc test
+  artifact construction
 
 ### AH-04 App Orchestration Honesty
 

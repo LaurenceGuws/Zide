@@ -2,16 +2,16 @@ const std = @import("std");
 const app_types = @import("app_types.zig");
 const mode_specs = @import("mode_specs.zig");
 const target_profile = @import("target_profile.zig");
-const target_factory = @import("target_factory.zig");
+const app_target_factory = @import("app_target_factory.zig");
 const target_config = @import("target_config.zig");
 const step_utils = @import("step_utils.zig");
 
 const AppLinkContext = app_types.AppLinkContext;
-const addAppExecutable = target_factory.addAppExecutable;
-const configureWindowsGuiSubsystem = target_factory.configureWindowsGuiSubsystem;
+const addAppExecutable = app_target_factory.addAppExecutable;
+const configureWindowsGuiSubsystem = app_target_factory.configureWindowsGuiSubsystem;
 const configureAppExecutable = target_config.configureAppExecutable;
 const addMainModeRunSteps = step_utils.addMainModeRunSteps;
-const addFocusedModeExecutable = target_factory.addFocusedModeExecutable;
+const addFocusedModeExecutable = app_target_factory.addFocusedModeExecutable;
 const MainModeRunSteps = step_utils.MainModeRunSteps;
 
 pub fn planIdePrimaryAppGraph(
