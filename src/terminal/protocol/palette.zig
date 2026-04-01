@@ -6,102 +6,6 @@ const OscTerminator = parser_mod.OscTerminator;
 
 const dynamic_color_base: u8 = 10;
 
-pub const SessionFacade = struct {
-    ctx: *anyopaque,
-    palette_current: *const [256]types.Color,
-    primary_default_attrs: *const types.CellAttrs,
-    dynamic_colors: []const ?types.Color,
-    write_pty_bytes_fn: *const fn (ctx: *anyopaque, bytes: []const u8) anyerror!void,
-    set_palette_color_locked_fn: *const fn (ctx: *anyopaque, idx: usize, color: types.Color) void,
-    reset_palette_color_locked_fn: *const fn (ctx: *anyopaque, idx: usize) void,
-    reset_all_palette_colors_locked_fn: *const fn (ctx: *anyopaque) void,
-    set_dynamic_color_code_locked_fn: *const fn (ctx: *anyopaque, code: u8, color: ?types.Color) void,
-
-    pub fn from(session: anytype) SessionFacade {
-        const SessionPtr = @TypeOf(session);
-        return .{
-            .ctx = @ptrCast(session),
-            .palette_current = &session.core.palette_current,
-            .primary_default_attrs = &session.core.primary.default_attrs,
-            .dynamic_colors = session.core.dynamic_colors[0..],
-            .write_pty_bytes_fn = struct {
-                fn call(ctx: *anyopaque, bytes: []const u8) anyerror!void {
-                    const s: SessionPtr = @ptrCast(@alignCast(ctx));
-                    try s.writePtyBytes(bytes);
-                }
-            }.call,
-            .set_palette_color_locked_fn = struct {
-                fn call(ctx: *anyopaque, idx: usize, color: types.Color) void {
-                    const s: SessionPtr = @ptrCast(@alignCast(ctx));
-                    s.setPaletteColorLocked(idx, color);
-                }
-            }.call,
-            .reset_palette_color_locked_fn = struct {
-                fn call(ctx: *anyopaque, idx: usize) void {
-                    const s: SessionPtr = @ptrCast(@alignCast(ctx));
-                    s.resetPaletteColorLocked(idx);
-                }
-            }.call,
-            .reset_all_palette_colors_locked_fn = struct {
-                fn call(ctx: *anyopaque) void {
-                    const s: SessionPtr = @ptrCast(@alignCast(ctx));
-                    s.resetAllPaletteColorsLocked();
-                }
-            }.call,
-            .set_dynamic_color_code_locked_fn = struct {
-                fn call(ctx: *anyopaque, code: u8, color: ?types.Color) void {
-                    const s: SessionPtr = @ptrCast(@alignCast(ctx));
-                    s.setDynamicColorCodeLocked(code, color);
-                }
-            }.call,
-        };
-    }
-
-    pub fn writePtyBytes(self: *const SessionFacade, bytes: []const u8) !void {
-        try self.write_pty_bytes_fn(self.ctx, bytes);
-    }
-
-    pub fn setPaletteColorLocked(self: *const SessionFacade, idx: usize, color: types.Color) void {
-        self.set_palette_color_locked_fn(self.ctx, idx, color);
-    }
-
-    pub fn resetPaletteColorLocked(self: *const SessionFacade, idx: usize) void {
-        self.reset_palette_color_locked_fn(self.ctx, idx);
-    }
-
-    pub fn resetAllPaletteColorsLocked(self: *const SessionFacade) void {
-        self.reset_all_palette_colors_locked_fn(self.ctx);
-    }
-
-    pub fn setDynamicColorCodeLocked(self: *const SessionFacade, code: u8, color: ?types.Color) void {
-        self.set_dynamic_color_code_locked_fn(self.ctx, code, color);
-    }
-
-    pub fn paletteLen(self: *const SessionFacade) usize {
-        return self.palette_current.len;
-    }
-
-    pub fn paletteColorAt(self: *const SessionFacade, idx: usize) types.Color {
-        return self.palette_current[idx];
-    }
-
-    pub fn defaultFg(self: *const SessionFacade) types.Color {
-        return self.primary_default_attrs.fg;
-    }
-
-    pub fn defaultBg(self: *const SessionFacade) types.Color {
-        return self.primary_default_attrs.bg;
-    }
-
-    pub fn dynamicColorAt(self: *const SessionFacade, idx: usize) ?types.Color {
-        return self.dynamic_colors[idx];
-    }
-
-    pub fn dynamicColorLen(self: *const SessionFacade) usize {
-        return self.dynamic_colors.len;
-    }
-};
-
 pub fn buildDefaultPalette() [256]types.Color {
     var palette: [256]types.Color = undefined;
     var idx: usize = 0;
@@ -111,62 +15,62 @@ pub fn buildDefaultPalette() [256]types.Color {
     return palette;
 }
 
-pub fn handleOscPalette(session: SessionFacade, text: []const u8, terminator: OscTerminator) void {
+pub fn handleOscPalette(self: anytype, text: []const u8, terminator: OscTerminator) void {
     if (text.len == 0) return;
     var it = std.mem.splitScalar(u8, text, ';');
     while (true) {
         const idx_text = it.next() orelse break;
         const color_text = it.next() orelse break;
         const idx = parseOscIndex(idx_text) orelse continue;
-        if (idx >= session.paletteLen()) continue;
+        if (idx >= self.core.palette_current.len) continue;
         if (color_text.len == 1 and color_text[0] == '?') {
-            writeOscPaletteReply(session, @intCast(idx), session.paletteColorAt(idx), terminator);
+            writeOscPaletteReply(self, @intCast(idx), self.core.palette_current[idx], terminator);
             continue;
         }
         if (parseOscColor(color_text)) |color| {
-            session.setPaletteColorLocked(idx, color);
+            self.setPaletteColorLocked(idx, color);
         }
     }
 }
 
-pub fn handleOscPaletteReset(session: SessionFacade, text: []const u8) void {
+pub fn handleOscPaletteReset(self: anytype, text: []const u8) void {
     if (text.len == 0) {
-        session.resetAllPaletteColorsLocked();
+        self.resetAllPaletteColorsLocked();
         return;
     }
     var it = std.mem.splitScalar(u8, text, ';');
     while (it.next()) |idx_text| {
         const idx = parseOscIndex(idx_text) orelse continue;
-        session.resetPaletteColorLocked(idx);
+        self.resetPaletteColorLocked(idx);
     }
 }
 
-pub fn handleOscDynamicColor(session: SessionFacade, code: u8, text: []const u8, terminator: OscTerminator) void {
+pub fn handleOscDynamicColor(self: anytype, code: u8, text: []const u8, terminator: OscTerminator) void {
     if (text.len == 1 and text[0] == '?') {
-        const color = dynamicColorValue(session, code);
-        writeOscColorReply(session, code, color, terminator);
+        const color = dynamicColorValue(self, code);
+        writeOscColorReply(self, code, color, terminator);
         return;
     }
     if (parseOscColor(text)) |color| {
-        session.setDynamicColorCodeLocked(code, color);
+        self.setDynamicColorCodeLocked(code, color);
     }
 }
 
-pub fn handleOscDynamicReset(session: SessionFacade, code: u8) void {
-    session.setDynamicColorCodeLocked(code - 100, null);
+pub fn handleOscDynamicReset(self: anytype, code: u8) void {
+    self.setDynamicColorCodeLocked(code - 100, null);
 }
 
-pub fn dynamicColorValue(session: SessionFacade, code: u8) types.Color {
-    if (code == 10) return session.defaultFg();
-    if (code == 11) return session.defaultBg();
+pub fn dynamicColorValue(self: anytype, code: u8) types.Color {
+    if (code == 10) return self.core.primary.default_attrs.fg;
+    if (code == 11) return self.core.primary.default_attrs.bg;
     const idx = @as(usize, code - dynamic_color_base);
-    if (idx < session.dynamicColorLen()) {
-        if (session.dynamicColorAt(idx)) |color| return color;
+    if (idx < self.core.dynamic_colors.len) {
+        if (self.core.dynamic_colors[idx]) |color| return color;
     }
     return switch (code) {
-        12 => session.defaultFg(),
-        17, 19 => session.defaultBg(),
-        else => session.defaultFg(),
+        12 => self.core.primary.default_attrs.fg,
+        17, 19 => self.core.primary.default_attrs.bg,
+        else => self.core.primary.default_attrs.fg,
     };
 }
 
@@ -233,7 +137,7 @@ fn parseOscIndex(text: []const u8) ?usize {
     return value;
 }
 
-fn writeOscColorReply(session: SessionFacade, code: u8, color: types.Color, terminator: OscTerminator) void {
+fn writeOscColorReply(self: anytype, code: u8, color: types.Color, terminator: OscTerminator) void {
     const log = app_logger.logger("terminal.osc");
     var buf: [80]u8 = undefined;
     const end = if (terminator == .bel) "\x07" else "\x1b\\";
@@ -250,12 +154,12 @@ fn writeOscColorReply(session: SessionFacade, code: u8, color: types.Color, term
     };
     log.logf(.debug, "osc reply=\"{s}\"", .{seq});
     logOscReplyHex(log, seq);
-    session.writePtyBytes(seq) catch |err| {
+    self.writePtyBytes(seq) catch |err| {
         log.logf(.warning, "osc reply write failed code={d} err={s}", .{ code, @errorName(err) });
     };
 }
 
-fn writeOscPaletteReply(session: SessionFacade, idx: u8, color: types.Color, terminator: OscTerminator) void {
+fn writeOscPaletteReply(self: anytype, idx: u8, color: types.Color, terminator: OscTerminator) void {
     const log = app_logger.logger("terminal.osc");
     var buf: [88]u8 = undefined;
     const end = if (terminator == .bel) "\x07" else "\x1b\\";
@@ -272,7 +176,7 @@ fn writeOscPaletteReply(session: SessionFacade, idx: u8, color: types.Color, ter
     };
     log.logf(.debug, "osc reply=\"{s}\"", .{seq});
     logOscReplyHex(log, seq);
-    session.writePtyBytes(seq) catch |err| {
+    self.writePtyBytes(seq) catch |err| {
         log.logf(.warning, "osc palette reply write failed idx={d} err={s}", .{ idx, @errorName(err) });
     };
 }

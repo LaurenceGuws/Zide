@@ -259,6 +259,10 @@ Evidence:
   `osc_progress.zig`, `osc_semantic.zig`, and `osc_title.zig` now run directly
   on the live core/runtime object instead of wrapping it in tiny per-module
   `SessionFacade` shells
+- the next OSC wrapper batch is gone too:
+  `palette.zig`, `osc_clipboard.zig`, and `osc_hyperlink.zig` now run directly
+  on the live core/runtime object instead of wrapping it in tiny per-module
+  `SessionFacade` shells
 - the remaining callback seam is narrower:
   - wrap/newline effects
   - insert-mode char insertion effects

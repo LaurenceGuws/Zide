@@ -320,6 +320,12 @@ Validation note, 2026-03-31:
     `src/terminal/protocol/osc_semantic.zig`, and
     `src/terminal/protocol/osc_title.zig` now operate directly on the live
     core/runtime object instead of wrapping it in tiny `SessionFacade` shells
+  - the next OSC wrapper batch is gone too:
+    `src/terminal/protocol/palette.zig`,
+    `src/terminal/protocol/osc_clipboard.zig`, and
+    `src/terminal/protocol/osc_hyperlink.zig` now operate directly on the
+    live core/runtime object instead of wrapping it in tiny `SessionFacade`
+    shells
   - the stale `src/terminal/core/session_protocol.zig` forwarding shell is now
     deleted; `protocol/terminal_protocol_api.zig` routes directly to the real core,
     protocol, mode-effect, feed, and publication owners

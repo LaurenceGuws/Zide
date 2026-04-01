@@ -109,6 +109,10 @@ Status note, 2026-03-31:
     `osc_progress.zig`, `osc_semantic.zig`, and `osc_title.zig` now run
     directly on the live core/runtime object instead of wrapping it in tiny
     per-module `SessionFacade` shells
+  - the next OSC wrapper batch is gone too:
+    `palette.zig`, `osc_clipboard.zig`, and `osc_hyperlink.zig` now run
+    directly on the live core/runtime object instead of wrapping it in tiny
+    per-module `SessionFacade` shells
   - duplicated publication/cache truth
   - oversized native widget/render coordination around terminal publication
 - The current operating rule is sequential but ruthless:

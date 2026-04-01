@@ -39,12 +39,12 @@ pub fn parseOsc(self: anytype, payload: []const u8, terminator: OscTerminator) v
         0, 2 => {
             osc_title.setTitle(self, text);
         },
-        4 => palette_mod.handleOscPalette(palette_mod.SessionFacade.from(self), text, terminator),
-        10...19 => palette_mod.handleOscDynamicColor(palette_mod.SessionFacade.from(self), @intCast(code), text, terminator),
-        104 => palette_mod.handleOscPaletteReset(palette_mod.SessionFacade.from(self), text),
-        110...119 => palette_mod.handleOscDynamicReset(palette_mod.SessionFacade.from(self), @intCast(code)),
+        4 => palette_mod.handleOscPalette(self, text, terminator),
+        10...19 => palette_mod.handleOscDynamicColor(self, @intCast(code), text, terminator),
+        104 => palette_mod.handleOscPaletteReset(self, text),
+        110...119 => palette_mod.handleOscDynamicReset(self, @intCast(code)),
         8 => {
-            osc_hyperlink.parseHyperlink(osc_hyperlink.SessionFacade.from(self), text);
+            osc_hyperlink.parseHyperlink(self, text);
         },
         7 => {
             osc_cwd.parseCwd(osc_cwd.SessionFacade.from(self), text);
@@ -53,7 +53,7 @@ pub fn parseOsc(self: anytype, payload: []const u8, terminator: OscTerminator) v
             osc_progress.parseProgress(self, text);
         },
         52 => {
-            osc_clipboard.parseClipboard(osc_clipboard.SessionFacade.from(self), text, terminator);
+            osc_clipboard.parseClipboard(self, text, terminator);
         },
         5522 => {
             osc_kitty_clipboard.parseOsc5522(osc_kitty_clipboard.SessionFacade.from(self), text, terminator);
