@@ -138,7 +138,7 @@ Validation note, 2026-03-31:
     through a mixed alias hub.
   - the next extraction cut is also in:
     - `src/terminal/core/session/runtime_api.zig`
-    - `src/terminal/core/session/session_publication_api.zig`
+    - `src/terminal/core/session/publication_api.zig`
   - host/runtime and publication/present public methods are no longer written
     inline on `pty_terminal_runtime.zig`; they are now grouped behind explicit API
     modules and re-exported without behavior changes.

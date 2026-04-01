@@ -96,7 +96,7 @@ Judgment:
   direct owners instead of hiding public-facing types behind one more helper
   facade
 - `src/terminal/core/session/runtime_api.zig` and
-  `src/terminal/core/session/session_publication_api.zig` now carry the runtime and
+  `src/terminal/core/session/publication_api.zig` now carry the runtime and
   publication/present method groups that were previously written inline on
   `pty_terminal_runtime.zig`
 - `src/terminal/core/session/input_api.zig` now carries the host input

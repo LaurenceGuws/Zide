@@ -103,7 +103,7 @@ Status note, 2026-03-31:
     `pty_terminal_runtime.zig` no longer gets to hide direct ownership behind a
     mixed alias hub
   - `src/terminal/core/session/runtime_api.zig` and
-    `src/terminal/core/session/session_publication_api.zig` now hold the runtime and
+    `src/terminal/core/session/publication_api.zig` now hold the runtime and
     publication/present method groups that were previously written inline on
     `pty_terminal_runtime.zig`
   - `src/terminal/core/session/input_api.zig` now holds the host input
