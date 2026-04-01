@@ -346,6 +346,10 @@ Validation note, 2026-03-31:
     `src/terminal/protocol/osc_cwd.zig` and
     `src/terminal/protocol/osc_util.zig` now operate directly on the live
     core/runtime object instead of stacking `SessionFacade` wrappers
+  - the remaining inner `SessionFacade` in
+    `src/terminal/protocol/osc_kitty_clipboard.zig` is gone too; clipboard
+    reads, allocator use, and reply generation now run directly on the live
+    session object instead of bouncing through one more manual facade shell
   - the outer kitty clipboard wrapper entrypoints are gone too:
     `src/terminal/protocol/osc_kitty_clipboard.zig` still carries internal
     reply/state helpers, but `parseOsc5522(...)` and `sendPasteEventMimes(...)`

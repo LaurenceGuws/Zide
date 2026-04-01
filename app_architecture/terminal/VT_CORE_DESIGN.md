@@ -120,6 +120,10 @@ Status note, 2026-03-31:
     `osc_kitty_clipboard.zig` still carries internal reply/state helpers, but
     its public entrypoints now take the live core/runtime object directly
     instead of requiring an outer `SessionFacade`
+  - the remaining inner `SessionFacade` in `osc_kitty_clipboard.zig` is gone
+    too; clipboard reads, allocator use, and reply generation now run directly
+    on the live session object instead of bouncing through one more manual
+    facade shell
   - wrapper-owned runtime helpers no longer import
     `src/terminal/core/pty_terminal_runtime.zig` for their own defaults,
     snapshots, or PTY writer types; those now come from direct owners under
