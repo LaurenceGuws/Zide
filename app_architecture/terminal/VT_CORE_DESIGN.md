@@ -90,9 +90,12 @@ Status note, 2026-03-31:
   - cut through the real surface area
   - validate hard
   - delete the old seam
-- First public-surface slice landed under that rule:
+  - First public-surface slice landed under that rule:
   - `src/terminal/core/terminal_runtime.zig` now acts as the explicit runtime
     surface for native app/runtime, replay-harness, and FFI consumers
+  - that runtime surface now pulls shared input/selection/progress types from
+    their direct owners under `session/` instead of laundering them through
+    `pty_terminal_runtime.zig`
   - `src/terminal/core/publication/terminal_publication.zig` now acts as the explicit
     publication/type surface for native widget, replay-harness, and FFI
     consumers

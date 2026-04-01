@@ -130,6 +130,10 @@ Validation note, 2026-03-31:
   - there is no broad root barrel left in live call paths.
   - this is the first real kill shot against the false public center:
     runtime/publication consumers now have to choose an explicit surface.
+  - `src/terminal/core/terminal_runtime.zig` still earns its role as the
+    stable public runtime surface, but it no longer launders shared
+    input/selection/progress types through `pty_terminal_runtime.zig`; those
+    names now come from their direct `session/` owners
   - replay/test debug imports now target
     `src/terminal/core/session/debug_api.zig` directly, so there is no
     extra flat `terminal_debug.zig` shim pretending to be a core peer.

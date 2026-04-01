@@ -95,6 +95,10 @@ Judgment:
   gone, which is an honest improvement: `pty_terminal_runtime.zig` now imports
   direct owners instead of hiding public-facing types behind one more helper
   facade
+- `src/terminal/core/terminal_runtime.zig` still appears to be the right stable
+  public surface, but it no longer routes shared input/selection/progress
+  types through `pty_terminal_runtime.zig`; those names now come from their
+  direct `session/` owners instead of reinforcing wrapper gravity
 - `src/terminal/core/session/runtime_api.zig` and
   `src/terminal/core/session/publication_api.zig` now carry the runtime and
   publication/present method groups that were previously written inline on
