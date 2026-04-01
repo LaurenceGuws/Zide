@@ -26,6 +26,13 @@
     { "name": "xi-editor", "url": "https://github.com/xi-editor/xi-editor.git" },
     { "name": "zed", "url": "https://github.com/zed-industries/zed.git" }
   ],
+  "zig_projects": [
+    { "name": "bun", "url": "https://github.com/oven-sh/bun.git" },
+    { "name": "tigerbeetle", "url": "https://github.com/tigerbeetle/tigerbeetle.git" }
+  ],
+  "databases": [
+    { "name": "duckdb", "url": "https://github.com/duckdb/duckdb.git" }
+  ],
   "text": [
     { "name": "ropey", "url": "https://github.com/cessen/ropey.git" },
     { "name": "scintilla", "url": "https://github.com/mirror/scintilla.git" }
