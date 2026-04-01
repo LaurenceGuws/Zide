@@ -227,6 +227,10 @@ Progress note, 2026-04-01:
   capture arming, and completed-present handling
 - this makes the draw path easier to reason about without changing frame
   behavior or present-side effects
+- `src/app/frame_render_idle_runtime.zig` now separates redraw handling, idle
+  handling, and shared latency/perf logging into named helpers
+- this makes the frame pacing loop read as explicit control-flow phases instead
+  of one long mixed redraw/idle slab
 
 ## Investigation Follow-up
 
