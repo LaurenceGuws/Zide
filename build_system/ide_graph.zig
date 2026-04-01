@@ -343,7 +343,7 @@ pub fn planIdeExtendedBuildGraph(
         target,
         optimize,
         "build-dep-policy-check",
-        "tools/build_tools/checks/build_dep_policy_check.zig",
+        "build_system/checks/build_dep_policy_check.zig",
         "check-build-deps",
         "Check app target dependency policy wiring",
     );

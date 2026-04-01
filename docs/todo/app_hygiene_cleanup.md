@@ -262,6 +262,10 @@ Progress note, 2026-04-01:
   fixture or product surface
 - this keeps non-`src` Zig closer to the ownership boundary that actually
   justifies it
+- build-internal Zig report/check entrypoints were moved from
+  `tools/build_tools/` into `build_system/`
+- this keeps `tools/` for genuine tooling surfaces and `build_system/` for
+  build-owned Zig, reducing another non-`src` location leak
 
 ## Investigation Follow-up
 
