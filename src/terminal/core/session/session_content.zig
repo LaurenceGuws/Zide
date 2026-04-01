@@ -1,6 +1,6 @@
 const std = @import("std");
 const scrollback_view = @import("../scrollback_view.zig");
-const text_export = @import("../text_export.zig");
+const text_export = @import("text_export.zig");
 const types = @import("../../model/types.zig");
 
 pub const ScrollbackInfo = scrollback_view.ScrollbackInfo;

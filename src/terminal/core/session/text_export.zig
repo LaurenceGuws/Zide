@@ -1,7 +1,7 @@
 const std = @import("std");
-const types = @import("../model/types.zig");
-const selection_mod = @import("selection.zig");
-const scrollback_view = @import("scrollback_view.zig");
+const types = @import("../../model/types.zig");
+const selection_mod = @import("../selection.zig");
+const scrollback_view = @import("../scrollback_view.zig");
 
 const Cell = types.Cell;
 const CellAttrs = types.CellAttrs;

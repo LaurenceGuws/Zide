@@ -1,10 +1,10 @@
 const builtin = @import("builtin");
-const parser_mod = @import("../parser/parser.zig");
-const selection_mod = @import("selection.zig");
-const types = @import("../model/types.zig");
-const terminal_publication = @import("publication/terminal_publication.zig");
+const parser_mod = @import("../../parser/parser.zig");
+const selection_mod = @import("../selection.zig");
+const types = @import("../../model/types.zig");
+const terminal_publication = @import("../publication/terminal_publication.zig");
 
-pub fn debugSnapshot(self: anytype) @import("publication/snapshot.zig").DebugSnapshot {
+pub fn debugSnapshot(self: anytype) @import("../publication/snapshot.zig").DebugSnapshot {
     if (!debugAccessAllowed()) @panic("debugSnapshot is test-only");
     return .{
         .title = self.core.title,
@@ -21,7 +21,7 @@ pub fn debugSnapshot(self: anytype) @import("publication/snapshot.zig").DebugSna
     };
 }
 
-pub fn debugScrollbackRow(self: anytype, index: usize) ?[]const @import("../model/types.zig").Cell {
+pub fn debugScrollbackRow(self: anytype, index: usize) ?[]const @import("../../model/types.zig").Cell {
     if (!debugAccessAllowed()) @panic("debugScrollbackRow is test-only");
     return self.core.history.scrollbackRow(index);
 }
@@ -38,7 +38,7 @@ pub fn debugFeedBytes(self: anytype, bytes: []const u8) void {
 
 pub fn debugScrollUp(self: anytype) void {
     if (!debugAccessAllowed()) @panic("debugScrollUp is test-only");
-    @import("scrolling.zig").scrollUp(self);
+    @import("../scrolling.zig").scrollUp(self);
     _ = terminal_publication.bumpGeneration(self);
     terminal_publication.publishCurrentViewLocked(self, "debug_push_output");
 }

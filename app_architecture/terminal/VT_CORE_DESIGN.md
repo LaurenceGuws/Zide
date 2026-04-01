@@ -1013,8 +1013,10 @@ Migration approach:
 - input-mode snapshot state now also lives in
   `src/terminal/core/session_input_snapshot.zig` instead of being defined
   inline in `pty_terminal_runtime.zig`
-- replay/test-only debug helpers live in
-  `src/terminal/core/terminal_session_debug.zig`
+- replay/test-only debug helpers now live under the wrapper-owned session home in
+  `src/terminal/core/session/debug_ops.zig`
+- wrapper-owned text export also lives under the same session home in
+  `src/terminal/core/session/text_export.zig`
 - host-facing metadata, liveness, and close-confirm queries live under
   `src/terminal/core/session_host_queries.zig`
 - publication/diff, selection projection, plan/refinement, selection-dirty

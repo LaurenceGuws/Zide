@@ -141,6 +141,10 @@ Judgment:
   host metadata/types, init options, input send/report helpers, input
   snapshot state, and presentation feedback structs also live under
   `src/terminal/core/session/`
+- wrapper-only debug and text-export helpers now also live under the same
+  session home:
+  `src/terminal/core/session/debug_ops.zig` and
+  `src/terminal/core/session/text_export.zig`
 - the next honest peer subtree is now in too:
   publication-owned cache, snapshot, and publication helper files now live
   under `src/terminal/core/publication/` instead of continuing to sprawl as
