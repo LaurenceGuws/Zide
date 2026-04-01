@@ -8,6 +8,7 @@ const ReportToolSpec = struct {
     description: []const u8,
     adds_build_options: bool = true,
     adds_target_profile_import: bool = false,
+    adds_step_catalog_import: bool = false,
 };
 
 pub fn addReportBuildAllStep(
@@ -159,6 +160,7 @@ pub fn addReportBuildSurfaceStep(
             .step_name = "report-build-surface",
             .description = "Report operator-facing build step taxonomy",
             .adds_build_options = false,
+            .adds_step_catalog_import = true,
         },
     );
 }
@@ -211,6 +213,7 @@ const core_build_report_tool_specs = [_]ReportToolSpec{
         .step_name = "",
         .description = "",
         .adds_build_options = false,
+        .adds_step_catalog_import = true,
     },
     .{
         .exe_name = "build-policy-report-check",
@@ -252,6 +255,13 @@ fn addReportToolExecutable(
     if (spec.adds_target_profile_import) {
         exe.root_module.addAnonymousImport("target_profile", .{
             .root_source_file = b.path("build_system/target_profile.zig"),
+            .target = target,
+            .optimize = optimize,
+        });
+    }
+    if (spec.adds_step_catalog_import) {
+        exe.root_module.addAnonymousImport("step_catalog", .{
+            .root_source_file = b.path("build_system/step_catalog.zig"),
             .target = target,
             .optimize = optimize,
         });

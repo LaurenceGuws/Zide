@@ -107,6 +107,10 @@ Progress note, 2026-04-02:
 - the build system now also exposes `zig build report-build-policy`
 - this gives operators a direct summary of supported `-D...` knobs and current
   hard constraints instead of forcing that knowledge to live only in source
+- the operator-facing step taxonomy now lives in `build_system/step_catalog.zig`
+  instead of only as a hand-maintained report string block
+- this reduces drift risk between the real build surface and the reported build
+  surface
 
 ## Repo Boundary Rule
 
