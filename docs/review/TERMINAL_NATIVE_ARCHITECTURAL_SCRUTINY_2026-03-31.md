@@ -919,6 +919,9 @@ work:
   it instead of leaking raw active/inactive cache-slot helpers
 - once publication flag handling has one real owner, expose intent-shaped
   helpers instead of teaching runtime code raw flag-clear / flag-take verbs
+- once a publication export goes dead, delete it; once a caller composes two
+  publication verbs to express one owner-owned action, replace that with a
+  publication intent helper
 
 ## Final Assessment
 

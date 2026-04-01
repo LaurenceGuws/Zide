@@ -54,8 +54,7 @@ pub fn debugSetScrollOffset(self: anytype, offset: usize) void {
     if (after != before) {
         _ = terminal_publication.bumpGeneration(self);
     }
-    terminal_publication.clearPendingViewRefresh(self);
-    terminal_publication.publishCurrentViewLocked(self, "debug_apply_without_pending");
+    terminal_publication.replacePendingRefreshWithCurrentViewLocked(self, "debug_apply_without_pending");
 }
 
 pub fn debugSetScrollbackCell(self: anytype, row: usize, col: usize, codepoint: u32) void {

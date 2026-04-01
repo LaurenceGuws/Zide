@@ -1456,6 +1456,10 @@ The same rule now applies to publication flags: runtime/thread code no longer
 consumes raw clear/take helpers for output-pending and alt-exit state when the
 publication owner can expose one intent-shaped operation instead.
 
+The same cleanup standard now applies to debug staging too: if a caller means
+"discard pending refresh and publish the current view", publication owns that
+intent directly instead of exposing raw verbs for the caller to compose.
+
 Avoid continuing to use `TerminalSession` as the name of the engine center once
 the new boundary exists.
 

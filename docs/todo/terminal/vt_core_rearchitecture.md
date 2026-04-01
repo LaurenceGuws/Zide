@@ -836,6 +836,11 @@ Validation note, 2026-03-31:
   storage-flavored helpers. That now goes through intent-shaped publication
   entrypoints like `clearPublishedOutputPending(...)` and
   `noteProcessedOutput(...)`.
+- Another publication-surface cleanup is in too: the dead
+  `copyPublishedRenderCache(...)` export is gone, and debug scroll-offset
+  staging no longer hand-composes `clearPendingViewRefresh(...)` plus
+  `publishCurrentViewLocked(...)`. That intent now lives under the owner as
+  `replacePendingRefreshWithCurrentViewLocked(...)`.
 - The terminal campaign should now judge success by first-glance authority:
   when a strong maintainer opens the code, the engine must obviously be the
   engine.

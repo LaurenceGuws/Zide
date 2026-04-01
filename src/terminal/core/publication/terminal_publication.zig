@@ -374,7 +374,7 @@ pub fn queueViewRefreshLocked(self: anytype, scroll_offset: usize) void {
     self.runtime.io_wait_cond.signal();
 }
 
-pub fn clearPendingViewRefresh(self: anytype) void {
+fn clearPendingViewRefresh(self: anytype) void {
     self.publication.view_cache_pending.store(false, .release);
 }
 
@@ -384,6 +384,11 @@ pub fn publishGenerationLocked(self: anytype, generation: u64, scroll_offset: us
 
 pub fn publishCurrentViewLocked(self: anytype, source: []const u8) void {
     publishGenerationLocked(self, pendingGeneration(self), self.core.scrollbackOffset(), source);
+}
+
+pub fn replacePendingRefreshWithCurrentViewLocked(self: anytype, source: []const u8) void {
+    clearPendingViewRefresh(self);
+    publishCurrentViewLocked(self, source);
 }
 
 pub fn applyPendingViewRefreshLocked(self: anytype, source: []const u8) bool {
@@ -462,10 +467,6 @@ fn clearPublishedDamageLocked(self: anytype) void {
         self.publication.render_caches[i].dirty = .none;
         self.publication.render_caches[i].damage = .{ .start_row = 0, .end_row = 0, .start_col = 0, .end_col = 0 };
     }
-}
-
-pub fn copyPublishedRenderCache(self: anytype, dst: *RenderCache) !PresentedRenderCache {
-    return (try captureCopy(self, dst, false)).presented;
 }
 
 pub fn capturePresentation(self: anytype, dst: *RenderCache) !PresentationCapture {
