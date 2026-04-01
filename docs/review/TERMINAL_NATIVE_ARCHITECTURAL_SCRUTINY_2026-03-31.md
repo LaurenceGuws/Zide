@@ -278,6 +278,9 @@ Judgment:
     smeared through the render body as loose flags, counts, and capture reason
   - viewport-shift planning state is now grouped in `ViewportShiftState`
     instead of being passed through texture-shift logic as loose locals
+  - recent-input/full-frame pressure planning state is now grouped in
+    `PresentPressureState` instead of being smeared across update-plan forcing
+    and pressure logging
   - widget draw now also uses helper-owned current alt-state and clean-state
     instead of falling back to raw `cache.alt_active` and repeated
     `cache.dirty == .none` checks where publication already owns the answer

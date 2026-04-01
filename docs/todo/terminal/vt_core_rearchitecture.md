@@ -322,6 +322,10 @@ Validation note, 2026-03-31:
     - `ViewportShiftState`
     now owns shift rows and exposed-only state so texture-shift planning and
     logging stop passing those facts around as loose locals
+  - present-pressure planning scratch state is also grouped now:
+    - `PresentPressureState`
+    now owns recent-input/full-frame pressure facts so update-plan forcing and
+    pressure logging stop smearing that state across loose locals
   - lifecycle/dirty helpers now also own more of the direct truth widget draw
     needs:
     - `lifecycleTransitionInfo(...)` carries current alt-state

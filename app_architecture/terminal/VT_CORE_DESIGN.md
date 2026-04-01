@@ -217,6 +217,9 @@ Status note, 2026-03-31:
   - transient viewport-shift planning state should follow the same rule; if it
     threads through multiple planning/logging sites, group it instead of
     letting it leak as loose locals
+  - the same applies to recent-input/full-frame pressure planning state; if it
+    drives both update-plan forcing and logging, group it instead of leaving it
+    as a loose cluster of temporary values
   - once a publication helper exists, widget draw should consume its direct
     truth completely; it should not keep mixing helper-owned state with raw
     reads like `cache.alt_active` or repeated `cache.dirty == .none`

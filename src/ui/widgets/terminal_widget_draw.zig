@@ -128,6 +128,15 @@ const ViewportShiftState = struct {
     exposed_only: bool = false,
 };
 
+const PresentPressureState = struct {
+    force_recent_window: bool,
+    recent_window_seconds: f64,
+    modifier_pressure_active: bool,
+    recent_input_age_s: f64,
+    recent_input_window_active: bool,
+    plan_was_active: bool,
+};
+
 pub fn latestFrameLatencyMetrics() FrameLatencyMetrics {
     return frame_latency_metrics;
 }
@@ -851,27 +860,32 @@ pub fn drawPrepared(
             blink_requires_partial,
             self.terminal_texture_ready,
         );
-        const force_full_recent_input_window = r.forceFullTerminalTexturePublicationRecentInputWindow();
-        const recent_input_window_seconds = r.fullTerminalTexturePublicationRecentInputWindowSeconds();
-        const modifier_pressure_active = input.mods.ctrl or input.mods.shift or input.mods.alt or input.mods.super;
+        var pressure_state = PresentPressureState{
+            .force_recent_window = r.forceFullTerminalTexturePublicationRecentInputWindow(),
+            .recent_window_seconds = r.fullTerminalTexturePublicationRecentInputWindowSeconds(),
+            .modifier_pressure_active = input.mods.ctrl or input.mods.shift or input.mods.alt or input.mods.super,
+            .recent_input_age_s = -1.0,
+            .recent_input_window_active = false,
+            .plan_was_active = false,
+        };
         const plan_time = app_shell.getTime();
-        const recent_input_age_s = if (self.last_terminal_input_time > 0 and plan_time >= self.last_terminal_input_time)
+        pressure_state.recent_input_age_s = if (self.last_terminal_input_time > 0 and plan_time >= self.last_terminal_input_time)
             plan_time - self.last_terminal_input_time
         else
             -1.0;
-        const recent_input_window_active = force_full_recent_input_window and
-            (modifier_pressure_active or
+        pressure_state.recent_input_window_active = pressure_state.force_recent_window and
+            (pressure_state.modifier_pressure_active or
                 (self.last_terminal_input_time > 0 and
-                    recent_input_age_s >= 0 and
-                    recent_input_age_s <= recent_input_window_seconds));
+                    pressure_state.recent_input_age_s >= 0 and
+                    pressure_state.recent_input_age_s <= pressure_state.recent_window_seconds));
         update_plan = forceFullTextureUpdatePlanEveryFrame(
             update_plan,
-            recent_input_window_active,
+            pressure_state.recent_input_window_active,
         );
-        const plan_was_active = update_plan.needs_full or update_plan.needs_partial;
+        pressure_state.plan_was_active = update_plan.needs_full or update_plan.needs_partial;
         const pressure_log = app_logger.logger("terminal.ui.present_pressure");
         if ((pressure_log.enabled_file or pressure_log.enabled_console) and
-            (plan_was_active or gen_changed or recent_input_window_active or modifier_pressure_active))
+            (pressure_state.plan_was_active or gen_changed or pressure_state.recent_input_window_active or pressure_state.modifier_pressure_active))
         {
             pressure_log.logf(
                 .info,
@@ -882,20 +896,20 @@ pub fn drawPrepared(
                     draw_state.generation,
                     @intFromBool(texture_ready_before_draw),
                     @intFromBool(recreated),
-                    @intFromBool(plan_was_active),
+                    @intFromBool(pressure_state.plan_was_active),
                     @intFromBool(update_plan.needs_full),
                     @intFromBool(update_plan.needs_partial),
-                    @intFromBool(force_full_recent_input_window),
-                    @intFromBool(recent_input_window_active),
-                    if (recent_input_age_s >= 0) recent_input_age_s * 1000.0 else -1.0,
-                    recent_input_window_seconds * 1000.0,
-                    @intFromBool(modifier_pressure_active),
+                    @intFromBool(pressure_state.force_recent_window),
+                    @intFromBool(pressure_state.recent_input_window_active),
+                    if (pressure_state.recent_input_age_s >= 0) pressure_state.recent_input_age_s * 1000.0 else -1.0,
+                    pressure_state.recent_window_seconds * 1000.0,
+                    @intFromBool(pressure_state.modifier_pressure_active),
                 },
             );
         }
         const handoff_log = app_logger.logger("terminal.generation_handoff");
         if ((handoff_log.enabled_file or handoff_log.enabled_console) and
-            (gen_changed or plan_was_active or update_plan.needs_full or update_plan.needs_partial))
+            (gen_changed or pressure_state.plan_was_active or update_plan.needs_full or update_plan.needs_partial))
         {
             handoff_log.logf(
                 .info,
