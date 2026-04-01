@@ -90,6 +90,9 @@ Status note, 2026-03-31:
   - the parser-facing forwarding shell is gone too:
     `terminal_protocol_api.zig` now routes DCS/APC/OSC/CSI traffic directly to
     the real protocol owners instead of stepping through `parser_hooks.zig`
+  - the `TextEffects` adapter layer is gone too:
+    `terminal_core_text.zig` already calls protocol-owned functions directly,
+    so `terminal_core_protocol.zig` no longer carries that extra wrapper type
   - duplicated publication/cache truth
   - oversized native widget/render coordination around terminal publication
 - The current operating rule is sequential but ruthless:

@@ -241,6 +241,9 @@ Evidence:
 - the parser-facing forwarding shell is now gone too:
   `terminal_protocol_api.zig` routes DCS/APC/OSC/CSI traffic directly to the
   real protocol owners instead of stepping through `parser_hooks.zig`
+- the `TextEffects` adapter layer is gone too:
+  `terminal_core_text.zig` already calls protocol-owned functions directly, so
+  `terminal_core_protocol.zig` no longer carries that extra wrapper type
 - the remaining callback seam is narrower:
   - wrap/newline effects
   - insert-mode char insertion effects

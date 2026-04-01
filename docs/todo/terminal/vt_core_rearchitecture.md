@@ -295,6 +295,10 @@ Validation note, 2026-03-31:
     `terminal_core_text.zig` talks directly to `self.core` plus protocol-owned
     effects instead of routing text execution through one more wrapper-shaped
     contract
+  - the dead `TextEffects` adapter in
+    `src/terminal/core/protocol/terminal_core_protocol.zig` is now gone too;
+    the text path already talks to protocol-owned functions directly, so that
+    wrapper layer no longer exists
   - the dead `src/terminal/core/protocol/parser_hooks.zig` forwarding shell is
     now gone too; `terminal_protocol_api.zig` routes DCS/APC/OSC/CSI traffic
     directly to the real protocol owners
