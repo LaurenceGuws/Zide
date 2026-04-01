@@ -356,6 +356,10 @@ Validation note, 2026-03-31:
     `src/terminal/protocol/osc_kitty_clipboard.zig` is gone too; clipboard
     reads, allocator use, and reply generation now run directly on the live
     session object instead of bouncing through one more manual facade shell
+  - the parser's own `SessionFacade` shell is gone too:
+    `src/terminal/parser/parser.zig` now operates directly on the live
+    runtime object, and feed/poll/debug entrypoints call `handleSlice(...)`
+    without wrapping the runtime in one more callback facade
   - the outer kitty clipboard wrapper entrypoints are gone too:
     `src/terminal/protocol/osc_kitty_clipboard.zig` still carries internal
     reply/state helpers, but `parseOsc5522(...)` and `sendPasteEventMimes(...)`

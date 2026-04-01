@@ -285,6 +285,10 @@ Evidence:
   too; clipboard reads, allocator use, and reply generation now run directly
   on the live session object instead of bouncing through one more manual
   facade shell
+- the parser's own `SessionFacade` shell is gone too:
+  `src/terminal/parser/parser.zig` now operates directly on the live
+  runtime object, and feed/poll/debug entrypoints call `handleSlice(...)`
+  without wrapping the runtime in one more callback facade
 - FFI/workspace host-facing title, cwd, and alt-screen reads no longer reach
   through `session.core.*`; those now route through explicit host-query
   methods on `PtyTerminalRuntime`, which is a better host/runtime boundary

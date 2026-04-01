@@ -73,7 +73,7 @@ pub fn processBufferedPtyOutput(self: anytype, input_pressure: bool) PtyPollResu
 
         const parse_lock_start_ns = std.time.nanoTimestamp();
         self.control.state_mutex.lock();
-        self.core.parser.handleSlice(parser_mod.Parser.SessionFacade.from(self), temp[0..chunk_len]);
+        self.core.parser.handleSlice(self, temp[0..chunk_len]);
         self.control.state_mutex.unlock();
         parse_lock_hold_ns += std.time.nanoTimestamp() - parse_lock_start_ns;
         processed += chunk_len;
@@ -104,7 +104,7 @@ pub fn processExternalTransportOutput(self: anytype, transport: anytype, input_p
         had_data = true;
         processed += n.?;
         const parse_lock_start_ns = std.time.nanoTimestamp();
-        self.core.parser.handleSlice(parser_mod.Parser.SessionFacade.from(self), buf[0..n.?]);
+        self.core.parser.handleSlice(self, buf[0..n.?]);
         parse_lock_hold_ns += std.time.nanoTimestamp() - parse_lock_start_ns;
         _ = terminal_publication.bumpGeneration(self);
         if (processed >= max_bytes_per_poll) break;
