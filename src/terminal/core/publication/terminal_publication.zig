@@ -2,9 +2,9 @@ const std = @import("std");
 const render_cache_mod = @import("render_cache.zig");
 const snapshot_mod = @import("snapshot.zig");
 const selection_mod = @import("../selection.zig");
-const publication_state = @import("../session/session_publication_state.zig");
-const presentation_handoff = @import("../session/session_presentation_handoff.zig");
-const publication_updates = @import("../session/session_publication_updates.zig");
+const publication_state = @import("../session/publication_state.zig");
+const presentation_handoff = @import("../session/presentation_handoff.zig");
+const publication_updates = @import("../session/publication_updates.zig");
 const view_cache = @import("view_cache.zig");
 const types = @import("../../model/types.zig");
 

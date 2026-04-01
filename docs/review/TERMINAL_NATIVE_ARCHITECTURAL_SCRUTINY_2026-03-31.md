@@ -123,6 +123,25 @@ Judgment:
 - `src/terminal/core/session/content.zig` and
   `src/terminal/core/session/content_api.zig` now carry the wrapper content
   seam without redundant `session_` naming inside the subtree
+- `src/terminal/core/session/runtime.zig`,
+  `src/terminal/core/session/config.zig`,
+  `src/terminal/core/session/input.zig`,
+  `src/terminal/core/session/interaction.zig`,
+  `src/terminal/core/session/queries.zig`,
+  `src/terminal/core/session/selection.zig`,
+  `src/terminal/core/session/host_queries.zig`,
+  `src/terminal/core/session/host_types.zig`,
+  `src/terminal/core/session/init_options.zig`,
+  `src/terminal/core/session/input_snapshot.zig`,
+  `src/terminal/core/session/presentation_feedback.zig`,
+  `src/terminal/core/session/lifecycle.zig`,
+  `src/terminal/core/session/mode_effects.zig`,
+  `src/terminal/core/session/publication_state.zig`,
+  `src/terminal/core/session/publication_updates.zig`,
+  `src/terminal/core/session/presentation_handoff.zig`,
+  `src/terminal/core/session/thread_runtime.zig`, and
+  `src/terminal/core/session/transport_runtime.zig` now follow the same rule:
+  subtree ownership is explicit, so the repeated `session_` prefix is gone
 - `src/terminal/core/session/lifecycle_api.zig` now owns the lifecycle and
   composition block instead of leaving those direct methods written on the root
   session type
@@ -235,7 +254,7 @@ Primary files:
 - `src/terminal/core/render_cache.zig`
 - `src/terminal/core/publication/view_cache.zig`
 - `src/terminal/core/session_rendering.zig`
-- `src/terminal/core/session_presentation_handoff.zig`
+- `src/terminal/core/session/presentation_handoff.zig`
 
 Evidence:
 
@@ -403,9 +422,9 @@ session-centered
 
 Primary files:
 
-- `src/terminal/core/session_publication_state.zig`
-- `src/terminal/core/session_publication_updates.zig`
-- `src/terminal/core/session_presentation_handoff.zig`
+- `src/terminal/core/session/publication_state.zig`
+- `src/terminal/core/session/publication_updates.zig`
+- `src/terminal/core/session/presentation_handoff.zig`
 
 Evidence:
 
@@ -469,8 +488,8 @@ Judgment:
 Primary files:
 
 - `src/terminal/core/session/runtime.zig`
-- `src/terminal/core/session/session_transport_runtime.zig`
-- `src/terminal/core/session/session_thread_runtime.zig`
+- `src/terminal/core/session/transport_runtime.zig`
+- `src/terminal/core/session/thread_runtime.zig`
 - `src/terminal/core/runtime/pty_io.zig`
 
 Evidence:

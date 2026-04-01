@@ -31,11 +31,11 @@ Status note, 2026-03-14:
       selection restoration, and full reset now route through `TerminalCore`
       instead of direct session-side field or history mutation
   - runtime/publication cleanup
-    - lifecycle truth now lives behind `session_lifecycle.zig`
+    - lifecycle truth now lives behind `session/lifecycle.zig`
     - transport attach/open/close, writer access, outgoing drain, and resize
-      reporting now live behind `session_transport_runtime.zig`
+      reporting now live behind `session/transport_runtime.zig`
     - thread teardown and queued-IO/backlog observation now live behind
-      `session_thread_runtime.zig`
+      `session/thread_runtime.zig`
     - publication generation state, publication updates, presentation handoff,
       and PTY poll publication wake/update choreography now live behind
       focused helper seams instead of one large session blob
@@ -984,19 +984,17 @@ Protocol execution also moved another step toward core ownership:
 - newline, wrap-newline, and reverse-index now also live under
   `src/terminal/core/terminal_core_protocol.zig` instead of staying split
   with `control_handlers.zig`
-- RIS/reset core mutation now also lives behind
-  `src/terminal/core/terminal_core_reset.zig`, with the remaining session-owned
-  input-mode snapshot republish step now expressed through
-  `src/terminal/core/session_mode_effects.zig`
+- RIS/reset core mutation now lives directly on `TerminalCore`, with the
+  remaining session-owned input-mode snapshot republish step expressed through
+  `src/terminal/core/session/mode_effects.zig`
 - hyperlink allocation, kitty image clearing, and scroll-region mutation now
   also live behind `src/terminal/core/terminal_core_protocol.zig`
 - the remaining session-owned alt-screen/reset side effects now also live in
-  `src/terminal/core/session_mode_effects.zig`, making those selection/input-
+  `src/terminal/core/session/mode_effects.zig`, making those selection/input-
   snapshot/presentation consequences explicit instead of leaving them embedded
   behind another protocol shell
-- alt-screen exit presentation timing now also routes through
-  `src/terminal/core/session_rendering.zig`, so mode-side effects no longer
-  mutate render/publication timing state inline
+- alt-screen exit presentation timing now routes through the focused session
+  publication seam instead of inline root-state mutation
 
 ## Compatibility Strategy
 
@@ -1020,7 +1018,7 @@ Migration approach:
 - session construction and host/runtime assembly route through
   `src/terminal/core/session/runtime.zig`
 - input-mode snapshot state now also lives in
-  `src/terminal/core/session_input_snapshot.zig` instead of being defined
+  `src/terminal/core/session/input_snapshot.zig` instead of being defined
   inline in `pty_terminal_runtime.zig`
 - replay/test-only debug helpers now live under the wrapper-owned session home in
   `src/terminal/core/session/debug_ops.zig`
@@ -1029,15 +1027,15 @@ Migration approach:
 - the old shared snapshot adapter is gone; there is no longer a knowingly
   false placeholder mapping sitting in the live core tree
 - host-facing metadata, liveness, and close-confirm queries live under
-  `src/terminal/core/session_host_queries.zig`
+  `src/terminal/core/session/host_queries.zig`
 - publication/diff, selection projection, plan/refinement, selection-dirty
   expansion, and damage helpers are split across focused `view_cache_*` modules
 - presented-generation acknowledgement and damage retirement now live under
-  `src/terminal/core/session_publication_state.zig`
+  `src/terminal/core/session/publication_state.zig`
 - publication-trigger and sync-update/view-cache update helpers now live under
-  `src/terminal/core/session_publication_updates.zig`
+  `src/terminal/core/session/publication_updates.zig`
 - presentation capture/copy/feedback handoff now lives under
-  `src/terminal/core/session_presentation_handoff.zig`
+  `src/terminal/core/session/presentation_handoff.zig`
 - PTY/external poll publication wake/update choreography now partially lives
   under `src/terminal/core/pty_poll_publication.zig` instead of staying fully
   mixed into `pty_io.zig`

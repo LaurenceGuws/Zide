@@ -6,9 +6,9 @@ const terminal_core_mod = @import("../terminal_core.zig");
 const input_mod = @import("../../input/input.zig");
 const render_cache_mod = @import("../publication/render_cache.zig");
 const input_modes = @import("../input_modes.zig");
-const session_lifecycle = @import("session_lifecycle.zig");
-const session_transport_runtime = @import("session_transport_runtime.zig");
-const session_thread_runtime = @import("session_thread_runtime.zig");
+const session_lifecycle = @import("lifecycle.zig");
+const session_transport_runtime = @import("transport_runtime.zig");
+const session_thread_runtime = @import("thread_runtime.zig");
 
 const Pty = pty_mod.Pty;
 const TerminalCore = terminal_core_mod.TerminalCore;

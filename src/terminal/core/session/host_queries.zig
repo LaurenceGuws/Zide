@@ -1,8 +1,8 @@
 const std = @import("std");
 const scrollback_view = @import("../scrollback_view.zig");
 const terminal_transport = @import("../runtime/terminal_transport.zig");
-const session_host_types = @import("session_host_types.zig");
-const session_lifecycle = @import("session_lifecycle.zig");
+const session_host_types = @import("host_types.zig");
+const session_lifecycle = @import("lifecycle.zig");
 
 pub const SessionMetadata = session_host_types.SessionMetadata;
 pub const ActivityMetadata = session_host_types.ActivityMetadata;

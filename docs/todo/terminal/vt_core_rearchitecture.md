@@ -168,6 +168,26 @@ Validation note, 2026-03-31:
     `src/terminal/core/session/content.zig` and
     `src/terminal/core/session/content_api.zig` replace the redundant
     `session_content*` naming inside the already-explicit `session/` subtree.
+  - the wrapper behavior and support seams now follow the same rule too:
+    `src/terminal/core/session/runtime.zig`,
+    `src/terminal/core/session/config.zig`,
+    `src/terminal/core/session/input.zig`,
+    `src/terminal/core/session/interaction.zig`,
+    `src/terminal/core/session/queries.zig`,
+    `src/terminal/core/session/selection.zig`,
+    `src/terminal/core/session/host_queries.zig`,
+    `src/terminal/core/session/host_types.zig`,
+    `src/terminal/core/session/init_options.zig`,
+    `src/terminal/core/session/input_snapshot.zig`,
+    `src/terminal/core/session/presentation_feedback.zig`,
+    `src/terminal/core/session/lifecycle.zig`,
+    `src/terminal/core/session/mode_effects.zig`,
+    `src/terminal/core/session/publication_state.zig`,
+    `src/terminal/core/session/publication_updates.zig`,
+    `src/terminal/core/session/presentation_handoff.zig`,
+    `src/terminal/core/session/thread_runtime.zig`, and
+    `src/terminal/core/session/transport_runtime.zig`
+    replace the old flat `session_*` naming inside the subtree.
   - `src/terminal/core/session/lifecycle_api.zig` now owns the lifecycle and
     composition block (`init`, screen access, input pressure, lock state,
     resize, shutdown-facing methods) that was still written directly on the
