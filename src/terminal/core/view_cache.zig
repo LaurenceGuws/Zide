@@ -77,7 +77,7 @@ fn preserveUnpresentedDirtyPublication(cache: *RenderCache, active_cache: *const
 }
 
 pub fn updateViewCacheNoLockTagged(self: anytype, generation: u64, scroll_offset: usize, source: []const u8) void {
-    const handoff_log = app_logger.logger("terminal.generation_handoff");
+    _ = source;
     const screen = self.core.activeScreenConst();
     const view = screen.snapshotView();
     const screen_reverse = screen.screen_reverse;
@@ -102,15 +102,6 @@ pub fn updateViewCacheNoLockTagged(self: anytype, generation: u64, scroll_offset
     const active_cache = terminal_publication.activeRenderCache(self);
     const presented_generation = self.presentedGeneration();
 
-    const finalDirtyRowCount = struct {
-        fn count(rows_slice: []const bool) usize {
-            var total: usize = 0;
-            for (rows_slice) |dirty| {
-                if (dirty) total += 1;
-            }
-            return total;
-        }
-    }.count;
     if (publication.canSkipPublish(active_cache, .{
         .rows = rows,
         .cols = cols,
@@ -143,27 +134,6 @@ pub fn updateViewCacheNoLockTagged(self: anytype, generation: u64, scroll_offset
         .screen_reverse = screen_reverse,
         .kitty_generation = kitty_generation,
     }, total_lines, view.dirty)) {
-        if ((handoff_log.enabled_file or handoff_log.enabled_console) and generation != active_cache.generation) {
-            handoff_log.logf(
-                .info,
-                "stage=view_cache_clean_advance sid={x} source={s} cache_gen={d}->{d} presented={d} dirty_view={s} dirty_cache={s} cursor={d}:{d}->{d}:{d} cursor_visible={d}->{d}",
-                .{
-                    @intFromPtr(self),
-                    source,
-                    active_cache.generation,
-                    generation,
-                    presented_generation,
-                    @tagName(view.dirty),
-                    @tagName(active_cache.dirty),
-                    active_cache.cursor.row,
-                    active_cache.cursor.col,
-                    view.cursor.row,
-                    view.cursor.col,
-                    @intFromBool(active_cache.cursor_visible),
-                    @intFromBool(view.cursor_visible),
-                },
-            );
-        }
         // Generation can advance without visible cell changes (e.g. cursor-only shell
         // movement). Keep overlay-facing state current even when cell contents stay the same.
         publication.applyCleanAdvancePublish(active_cache, generation, view.cursor, view.cursor_style, view.cursor_visible);
@@ -210,24 +180,6 @@ pub fn updateViewCacheNoLockTagged(self: anytype, generation: u64, scroll_offset
             false,
         );
         updateKittyViewNoLock(self, cache);
-        if (handoff_log.enabled_file or handoff_log.enabled_console) {
-            handoff_log.logf(
-                .info,
-                "stage=view_cache_publish_final sid={x} source={s} cache_gen={d} dirty={s} damage={d}..{d}/{d}..{d} dirty_rows={d} target_index={d}",
-                .{
-                    @intFromPtr(self),
-                    source,
-                    cache.generation,
-                    @tagName(cache.dirty),
-                    cache.damage.start_row,
-                    cache.damage.end_row,
-                    cache.damage.start_col,
-                    cache.damage.end_col,
-                    0,
-                    target_index,
-                },
-            );
-        }
         terminal_publication.publishRenderCacheIndex(self, target_index);
         return;
     }
@@ -302,46 +254,6 @@ pub fn updateViewCacheNoLockTagged(self: anytype, generation: u64, scroll_offset
         self.core.active == .alt,
         active_cache.alt_active,
     );
-    if ((handoff_log.enabled_file or handoff_log.enabled_console) and generation != active_cache.generation) {
-        handoff_log.logf(
-            .info,
-            "stage=view_cache_publish sid={x} source={s} cache_gen={d}->{d} presented={d} dirty_view={s} dirty_cache={s} plan_full={d} plan_shift={d} visible_history_changed={d} cursor={d}:{d}->{d}:{d}",
-            .{
-                @intFromPtr(self),
-                source,
-                active_cache.generation,
-                generation,
-                presented_generation,
-                @tagName(view.dirty),
-                @tagName(active_cache.dirty),
-                @intFromBool(plan.needs_full_damage),
-                @intFromBool(plan.can_publish_scroll_shift),
-                @intFromBool(plan.visible_history_changed),
-                active_cache.cursor.row,
-                active_cache.cursor.col,
-                view.cursor.row,
-                view.cursor.col,
-            },
-        );
-    }
-    if ((handoff_log.enabled_file or handoff_log.enabled_console) and
-        generation == active_cache.generation and
-        view.dirty != .none)
-    {
-        handoff_log.logf(
-            .info,
-            "stage=view_cache_same_generation_dirty sid={x} source={s} generation={d} presented={d} dirty_view={s} dirty_cache={s} scroll_offset={d}",
-            .{
-                @intFromPtr(self),
-                source,
-                generation,
-                presented_generation,
-                @tagName(view.dirty),
-                @tagName(active_cache.dirty),
-                clamped_offset,
-            },
-        );
-    }
     publication.populateVisibleCells(self, cache, view, history_len, start_line, rows, cols);
     var row: usize = 0;
     selection_projection.projectSelection(self, cache, total_lines, start_line, rows, cols, selection_active);
@@ -423,48 +335,9 @@ pub fn updateViewCacheNoLockTagged(self: anytype, generation: u64, scroll_offset
     // changes should not dirty the cached terminal texture rows every frame.
 
     if (shouldPreserveUnpresentedDirtyPublication(active_cache, cache, presented_generation)) {
-        const preserve_mode = preserveUnpresentedDirtyPublication(cache, active_cache, rows, cols);
-        if (handoff_log.enabled_file or handoff_log.enabled_console) {
-            handoff_log.logf(
-                .info,
-                "stage=view_cache_preserve_pending_damage sid={x} source={s} mode={s} active_gen={d} cache_gen={d} presented={d} dirty_active={s} damage={d}..{d}/{d}..{d}",
-                .{
-                    @intFromPtr(self),
-                    source,
-                    preserve_mode,
-                    active_cache.generation,
-                    cache.generation,
-                    presented_generation,
-                    @tagName(active_cache.dirty),
-                    cache.damage.start_row,
-                    cache.damage.end_row,
-                    cache.damage.start_col,
-                    cache.damage.end_col,
-                },
-            );
-        }
+        _ = preserveUnpresentedDirtyPublication(cache, active_cache, rows, cols);
     }
     updateKittyViewNoLock(self, cache);
-    if (handoff_log.enabled_file or handoff_log.enabled_console) {
-        handoff_log.logf(
-            .info,
-            "stage=view_cache_publish_final sid={x} source={s} cache_gen={d} dirty={s} damage={d}..{d}/{d}..{d} dirty_rows={d} target_index={d} shift_rows={d} shift_exposed_only={d}",
-            .{
-                @intFromPtr(self),
-                source,
-                cache.generation,
-                @tagName(cache.dirty),
-                cache.damage.start_row,
-                cache.damage.end_row,
-                cache.damage.start_col,
-                cache.damage.end_col,
-                finalDirtyRowCount(cache.dirty_rows.items),
-                target_index,
-                cache.viewport_shift_rows,
-                @intFromBool(cache.viewport_shift_exposed_only),
-            },
-        );
-    }
     terminal_publication.publishRenderCacheIndex(self, target_index);
 }
 

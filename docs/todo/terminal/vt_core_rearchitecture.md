@@ -327,17 +327,6 @@ Validation note, 2026-03-31:
     now gives widget draw one publication-owned answer for raw background and
     resolved screen-reverse background instead of rebuilding first-cell color
     logic in multiple places
-  - widget-local partial-plan bookkeeping is no longer smeared inline through
-    the main draw path:
-    - `summarizePartialPlan(...)`
-    now owns the row/cell/union accounting and summary-text assembly for the
-    partial draw plan instead of leaving that accounting blob in the middle of
-    texture update flow
-  - widget-local draw telemetry is now grouped instead of scattered as loose
-    locals:
-    - `DrawTelemetry`
-    now owns capture reason, fast-path counts, and texture update flags so the
-    main draw flow reads less like a scratchpad
   - viewport-shift state is also grouped now:
     - `ViewportShiftState`
     now owns shift rows and exposed-only state so texture-shift planning and
@@ -354,10 +343,6 @@ Validation note, 2026-03-31:
     framing:
     - draw-log formatting buffers and logger-handle slabs that only existed to
       support low-level narration are being deleted, not normalized
-  - row-render metrics are also grouped now:
-    - `RowRenderStats`
-    now owns the per-row background/span/glyph/sample metrics used by the
-    partial glyph pass instead of leaving another loose metrics blob inline
   - lifecycle/dirty helpers now also own more of the direct truth widget draw
     needs:
     - `lifecycleTransitionInfo(...)` carries current alt-state

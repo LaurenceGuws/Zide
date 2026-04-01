@@ -15,7 +15,7 @@ const CaptureCopy = struct {
 };
 
 fn captureCopy(self: anytype, dst: *RenderCache, log_capture: bool) !CaptureCopy {
-    const handoff_log = @import("../../app_logger.zig").logger("terminal.generation_handoff");
+    _ = log_capture;
     const wait_start_ns = std.time.nanoTimestamp();
     self.lock();
     defer self.unlock();
@@ -42,24 +42,9 @@ fn captureCopy(self: anytype, dst: *RenderCache, log_capture: bool) !CaptureCopy
     const lock_release_ns = std.time.nanoTimestamp();
     const lock_wait_ms = @as(f64, @floatFromInt(lock_acquired_ns - wait_start_ns)) / @as(f64, @floatFromInt(std.time.ns_per_ms));
     const lock_hold_ms = @as(f64, @floatFromInt(lock_release_ns - lock_acquired_ns)) / @as(f64, @floatFromInt(std.time.ns_per_ms));
-    if (log_capture and (handoff_log.enabled_file or handoff_log.enabled_console)) {
-        handoff_log.logf(
-            .info,
-            "stage=capture sid={x} view_cache_pending={d} cur={d} pub_before={d} presented={d} captured={d} dirty={s} lock_wait_ms={d:.2} view_cache_ms={d:.2} copy_ms={d:.2}",
-            .{
-                @intFromPtr(self),
-                @intFromBool(had_view_cache_pending),
-                pending_generation,
-                published_generation,
-                presented_generation,
-                presented.generation,
-                @tagName(presented.dirty),
-                lock_wait_ms,
-                view_cache_ms,
-                @as(f64, @floatFromInt(copy_end_ns - copy_start_ns)) / @as(f64, @floatFromInt(std.time.ns_per_ms)),
-            },
-        );
-    }
+    _ = pending_generation;
+    _ = published_generation;
+    _ = presented_generation;
     return .{
         .presented = presented,
         .lock_wait_ms = lock_wait_ms,
@@ -97,15 +82,8 @@ pub fn completePresentationFeedback(self: anytype, feedback: anytype) void {
             @as(f64, @floatFromInt(std.time.milliTimestamp() - exit_time_ms))
         else
             -1.0;
-        const log = @import("../../app_logger.zig").logger("terminal.alt");
-        log.logf(.info, "alt_exit_draw_ms={d:.2} exit_to_draw_ms={d:.2} rows={d} cols={d} history={d} scroll_offset={d}", .{
-            info.draw_ms,
-            exit_to_draw_ms,
-            info.rows,
-            info.cols,
-            info.history_len,
-            info.scroll_offset,
-        });
+        _ = info;
+        _ = exit_to_draw_ms;
     }
 }
 

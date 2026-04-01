@@ -281,10 +281,6 @@ Judgment:
     rebuilding first-cell background and reverse-resolved background logic in
     multiple branches
   - the widget-owned partial-plan accounting blob is now isolated in
-    `summarizePartialPlan(...)` instead of being hand-expanded in the middle of
-    the texture update path
-  - widget draw telemetry is now grouped in `DrawTelemetry` instead of being
-    smeared through the render body as loose flags, counts, and capture reason
   - viewport-shift planning state is now grouped in `ViewportShiftState`
     instead of being passed through texture-shift logic as loose locals
   - recent-input/full-frame pressure planning state is now grouped in
@@ -296,8 +292,6 @@ Judgment:
     formatting-buffer and logger-handle slabs that only existed to support
     low-level narration are not a structure to preserve; they are debt to
     delete
-  - partial glyph-pass row metrics are now grouped in `RowRenderStats`
-    instead of being expanded inline as another local metrics blob
   - widget draw now also uses helper-owned current alt-state and clean-state
     instead of falling back to raw `cache.alt_active` and repeated
     `cache.dirty == .none` checks where publication already owns the answer
