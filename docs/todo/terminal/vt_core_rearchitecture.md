@@ -820,6 +820,11 @@ Validation note, 2026-03-31:
   - parser-hook semantics above the engine
   - duplicated publication truth
   - oversized native widget/render coordination
+- Another small but honest surface kill is in too: `terminal_runtime.zig`
+  dropped dead wrapper exports that had no in-tree callers
+  (`copyActivityMetadata`, `sendKittyPasteEvent5522WithHtml`,
+  `sendKittyPasteEvent5522WithMime`, `setDefaultColorsLocked`), so the stable
+  runtime surface is not carrying fake contract weight for unused entrypoints.
 - The terminal campaign should now judge success by first-glance authority:
   when a strong maintainer opens the code, the engine must obviously be the
   engine.

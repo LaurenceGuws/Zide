@@ -913,6 +913,8 @@ work:
   cools
 - once a facade file becomes a dead alias, delete it instead of preserving the
   extra pathname as false structure
+- once a runtime export has zero live callers, delete it instead of carrying it
+  as speculative convenience surface
 
 ## Final Assessment
 

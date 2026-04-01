@@ -74,7 +74,6 @@ pub const PtyTerminalRuntime = struct {
     pub const cwdText = host_queries.cwdText;
     pub const altScreenActive = host_queries.altScreenActive;
     pub const currentActivityMetadata = host_queries.currentActivityMetadata;
-    pub const copyActivityMetadata = host_queries.copyActivityMetadata;
     pub const isAlive = host_queries.isAlive;
     pub const bracketedPasteEnabled = interaction.bracketedPasteEnabled;
     pub const focusReportingEnabled = interaction.focusReportingEnabled;
@@ -87,8 +86,6 @@ pub const PtyTerminalRuntime = struct {
     pub const mouseModeSgrPixelsEnabled = interaction.mouseModeSgrPixelsEnabled;
     pub const kittyPasteEvents5522Enabled = interaction.kittyPasteEvents5522Enabled;
     pub const sendKittyPasteEvent5522 = interaction.sendKittyPasteEvent5522;
-    pub const sendKittyPasteEvent5522WithHtml = interaction.sendKittyPasteEvent5522WithHtml;
-    pub const sendKittyPasteEvent5522WithMime = interaction.sendKittyPasteEvent5522WithMime;
     pub const sendKittyPasteEvent5522WithMimeRich = interaction.sendKittyPasteEvent5522WithMimeRich;
     pub const mouseReportingEnabled = interaction.mouseReportingEnabled;
     pub const getDamage = interaction.getDamage;
@@ -143,7 +140,6 @@ pub const PtyTerminalRuntime = struct {
 
     pub const setInputPressure = runtime.setInputPressure;
 
-    pub const setDefaultColorsLocked = config.setDefaultColorsLocked;
     pub const setDefaultColors = config.setDefaultColors;
     pub const setAnsiColors = config.setAnsiColors;
     pub const remapAnsiColors = config.remapAnsiColors;
