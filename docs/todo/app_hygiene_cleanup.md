@@ -111,6 +111,10 @@ Progress note, 2026-04-02:
   instead of only as a hand-maintained report string block
 - this reduces drift risk between the real build surface and the reported build
   surface
+- the build policy surface now lives in `build_system/policy_catalog.zig`
+  instead of only as a hand-maintained report body
+- this gives the build system shared data for supported options, hard
+  constraints, and operator intent
 
 ## Repo Boundary Rule
 

@@ -9,6 +9,7 @@ const ReportToolSpec = struct {
     adds_build_options: bool = true,
     adds_target_profile_import: bool = false,
     adds_step_catalog_import: bool = false,
+    adds_policy_catalog_import: bool = false,
 };
 
 pub fn addReportBuildAllStep(
@@ -140,6 +141,7 @@ pub fn addReportBuildPolicyStep(
             .root_source_file = "build_system/reports/build_policy_report.zig",
             .step_name = "report-build-policy",
             .description = "Report supported build options and hard constraints",
+            .adds_policy_catalog_import = true,
         },
     );
 }
@@ -220,6 +222,7 @@ const core_build_report_tool_specs = [_]ReportToolSpec{
         .root_source_file = "build_system/reports/build_policy_report.zig",
         .step_name = "",
         .description = "",
+        .adds_policy_catalog_import = true,
     },
 };
 
@@ -262,6 +265,13 @@ fn addReportToolExecutable(
     if (spec.adds_step_catalog_import) {
         exe.root_module.addAnonymousImport("step_catalog", .{
             .root_source_file = b.path("build_system/step_catalog.zig"),
+            .target = target,
+            .optimize = optimize,
+        });
+    }
+    if (spec.adds_policy_catalog_import) {
+        exe.root_module.addAnonymousImport("policy_catalog", .{
+            .root_source_file = b.path("build_system/policy_catalog.zig"),
             .target = target,
             .optimize = optimize,
         });
