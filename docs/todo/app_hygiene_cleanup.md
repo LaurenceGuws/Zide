@@ -168,6 +168,11 @@ Progress note, 2026-04-01:
   `build_system/ide_workflow.zig`
 - `build_system/ide_graph.zig` is narrower and reads more as artifact/test
   planning than repo-operations choreography
+- extended FFI/test-harness/check/manual-smoke planning now lives in
+  `build_system/ide_extended_artifacts.zig`
+- `build_system/ide_graph.zig` is now further reduced to top-level composition
+  of build-side planners instead of directly owning every extended artifact
+  band itself
 
 ### AH-04 App Orchestration Honesty
 
