@@ -103,6 +103,9 @@ Judgment:
   `src/terminal/core/terminal_runtime.zig` instead of
   `src/terminal/core/pty_terminal_runtime.zig`, which reduces the wrapper's
   remaining false public-center gravity
+- `src/terminal/core/pty_terminal_runtime.zig` no longer exports a broad
+  top-level type/constant barrel; only `PtyTerminalRuntime` remains public
+  there, which is a materially better first-glance ownership read
 - `src/terminal/core/terminal_runtime.zig` still appears to be the right stable
   public surface, but it no longer routes shared input/selection/progress
   types through `pty_terminal_runtime.zig`; those names now come from their

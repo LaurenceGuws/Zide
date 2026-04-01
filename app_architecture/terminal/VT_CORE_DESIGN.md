@@ -132,6 +132,9 @@ Status note, 2026-03-31:
     `src/terminal/core/terminal_runtime.zig` instead of
     `src/terminal/core/pty_terminal_runtime.zig`, which is a better match for
     the claimed stable public runtime surface
+  - `src/terminal/core/pty_terminal_runtime.zig` no longer exports a broad
+    top-level type/constant barrel; only `PtyTerminalRuntime` remains public
+    there, which makes the wrapper file read much more honestly
   - duplicated publication/cache truth
   - oversized native widget/render coordination around terminal publication
 - The current operating rule is sequential but ruthless:
