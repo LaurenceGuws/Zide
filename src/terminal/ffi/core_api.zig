@@ -38,7 +38,7 @@ fn currentCloseConfirmSignals(handle: *shared.Handle) shared.CloseConfirmSignals
 }
 
 fn currentPublishedGeneration(handle: *shared.Handle) u64 {
-    return handle.session.publishedGeneration();
+    return terminal_publication.publishedGeneration(handle.session);
 }
 
 const SnapshotExportState = struct {
@@ -377,7 +377,7 @@ pub fn create(config: ?*const shared.CreateConfig, out_handle: *?*shared.ZideTer
         .exit_delivered = false,
     };
     session.attachExternalTransport();
-    handle.last_generation = session.publishedGeneration();
+    handle.last_generation = terminal_publication.publishedGeneration(session);
     const initial_metadata = session.copyMetadata(allocator, &handle.last_title, &handle.last_cwd) catch |err| {
         log.logf(.warning, "create metadata copy failed err={s}", .{@errorName(err)});
         return .out_of_memory;

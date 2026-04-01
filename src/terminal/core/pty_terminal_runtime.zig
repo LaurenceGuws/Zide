@@ -176,10 +176,6 @@ pub const PtyTerminalRuntime = struct {
     pub const tryLock = control.tryLock;
     pub const unlock = control.unlock;
 
-    pub const pendingGeneration = terminal_publication.pendingGeneration;
-    pub const publishedGeneration = terminal_publication.publishedGeneration;
-    pub const presentedGeneration = terminal_publication.presentedGeneration;
-    pub const hasPublishedGenerationBacklog = terminal_publication.hasPublishedGenerationBacklog;
     pub const pollBacklogHint = runtime.pollBacklogHint;
     pub const lockPtyWriter = runtime.lockPtyWriter;
     pub const writePtyBytes = runtime.writePtyBytes;
@@ -218,8 +214,4 @@ pub const PtyTerminalRuntime = struct {
     pub const exitAltScreen = mode_effects.exitAltScreen;
 
     pub const snapshot = terminal_publication.snapshot;
-    pub const copyPublishedRenderCache = terminal_publication.copyPublishedRenderCache;
-    pub const capturePresentation = terminal_publication.capturePresentation;
-    pub const completePresentationFeedback = terminal_publication.completePresentationFeedback;
-    pub const syncUpdatesActive = terminal_publication.syncUpdatesActive;
 };

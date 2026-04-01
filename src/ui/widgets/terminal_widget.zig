@@ -336,7 +336,7 @@ pub const TerminalWidget = struct {
     ) DrawOutcome {
         const draw_start = app_shell.getTime();
         const handoff_log = app_logger.logger("terminal.generation_handoff");
-        var capture = self.session.capturePresentation(&self.draw_cache) catch |err| {
+        var capture = terminal_publication.capturePresentation(self.session, &self.draw_cache) catch |err| {
             const log = app_logger.logger("terminal.ui.redraw");
             log.logf(.warning, "draw snapshot copy failed err={s}", .{@errorName(err)});
             return .{};
@@ -349,14 +349,14 @@ pub const TerminalWidget = struct {
                     @intFromPtr(self.session),
                     self.last_render_generation,
                     capture.presented.generation,
-                    self.session.pendingGeneration(),
-                    self.session.publishedGeneration(),
-                    self.session.presentedGeneration(),
+                    terminal_publication.pendingGeneration(self.session),
+                    terminal_publication.publishedGeneration(self.session),
+                    terminal_publication.presentedGeneration(self.session),
                     @intFromBool(self.terminal_texture_ready),
                 },
             );
         }
-        const published_before_draw = self.session.publishedGeneration();
+        const published_before_draw = terminal_publication.publishedGeneration(self.session);
         if (published_before_draw > capture.presented.generation) {
             if (handoff_log.enabled_file or handoff_log.enabled_console) {
                 handoff_log.logf(
@@ -366,12 +366,12 @@ pub const TerminalWidget = struct {
                         @intFromPtr(self.session),
                         capture.presented.generation,
                         published_before_draw,
-                        self.session.pendingGeneration(),
-                        self.session.presentedGeneration(),
+                        terminal_publication.pendingGeneration(self.session),
+                        terminal_publication.presentedGeneration(self.session),
                     },
                 );
             }
-            const refreshed_capture = self.session.capturePresentation(&self.draw_cache) catch |err| {
+            const refreshed_capture = terminal_publication.capturePresentation(self.session, &self.draw_cache) catch |err| {
                 const log = app_logger.logger("terminal.ui.redraw");
                 log.logf(.warning, "pre-draw snapshot refresh failed err={s}", .{@errorName(err)});
                 return .{};
@@ -385,9 +385,9 @@ pub const TerminalWidget = struct {
                             @intFromPtr(self.session),
                             self.last_render_generation,
                             refreshed_capture.presented.generation,
-                            self.session.pendingGeneration(),
-                            self.session.publishedGeneration(),
-                            self.session.presentedGeneration(),
+                            terminal_publication.pendingGeneration(self.session),
+                            terminal_publication.publishedGeneration(self.session),
+                            terminal_publication.presentedGeneration(self.session),
                             @intFromBool(self.terminal_texture_ready),
                         },
                     );

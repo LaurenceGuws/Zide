@@ -313,6 +313,13 @@ Validation note, 2026-03-31:
     `terminal_publication.zig` and `pty_terminal_runtime.zig`, and the app
     draw-surface runtime now calls
     `terminal_publication.completePresentationFeedback(...)` directly
+  - publication-only generation/capture/sync reads now follow that same owner
+    rule too:
+    widget draw, workspace/workspace-polling, FFI redraw tracking, poll
+    runtime, and PTY runtime regression tests now call
+    `terminal_publication.{pendingGeneration,publishedGeneration,presentedGeneration,capturePresentation,syncUpdatesActive}(...)`
+    directly, and `pty_terminal_runtime.zig` no longer re-exports that
+    publication-only query/control slab
   - the remaining publication/view-cache helper stubs and the special-case
     protocol `appendHyperlink` wrapper are no longer written inline on
     `pty_terminal_runtime.zig`; those exceptions now route through the explicit

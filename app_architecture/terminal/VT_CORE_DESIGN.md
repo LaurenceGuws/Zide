@@ -303,6 +303,13 @@ Status note, 2026-03-31:
     `terminal_publication.zig` and `pty_terminal_runtime.zig`, and the app
     draw-surface runtime now calls
     `terminal_publication.completePresentationFeedback(...)` directly
+  - publication-only generation/capture/sync reads now follow that same owner
+    rule too:
+    widget draw, workspace/workspace-polling, FFI redraw tracking, poll
+    runtime, and PTY runtime regression tests now call the publication owner
+    directly for generation state, presentation capture, and sync-update
+    state; `pty_terminal_runtime.zig` no longer re-exports that
+    publication-only query/control slab
   - the same direct-owner cleanup now applies in `workspace.zig`: wrapper
     composition reads as runtime/workspace ownership, and progress-state typing
     no longer comes through `pty_terminal_runtime.zig`

@@ -373,7 +373,7 @@ test "bottom-edge in-place redraw keeps blank separator rows dirty" {
     debugSetCursor(&session, 67, 0);
 
     session.feedOutputBytes("\x1b[?2026h");
-    try std.testing.expect(session.syncUpdatesActive());
+    try std.testing.expect(terminal_publication.syncUpdatesActive(session));
 
     session.feedOutputBytes("\x1b[Jfirst row\nsecond row\nthird row\nfourth row\r\x1bM\x1bM\x1bM\x1bM");
 
@@ -414,7 +414,7 @@ test "synchronized zig progress redraw does not retire intermediate scrollback" 
     debugSetCursor(&session, 67, 0);
 
     session.feedOutputBytes("\x1b[?2026h");
-    try std.testing.expect(session.syncUpdatesActive());
+    try std.testing.expect(terminal_publication.syncUpdatesActive(session));
 
     session.feedOutputBytes("\x1b[Jbuild one\nitem a\n\r\x1bM\x1bM");
     session.feedOutputBytes("\x1b[Jbuild two\nitem b\n\r\x1bM\x1bM");
@@ -422,7 +422,7 @@ test "synchronized zig progress redraw does not retire intermediate scrollback" 
     try std.testing.expectEqual(@as(usize, 0), session.scrollbackInfo().total_rows);
 
     session.feedOutputBytes("\x1b[?2026l");
-    try std.testing.expect(!session.syncUpdatesActive());
+    try std.testing.expect(!terminal_publication.syncUpdatesActive(session));
 
     const snapshot = session.snapshot();
     try std.testing.expectEqual(@as(usize, 0), snapshot.scrollback_count);
@@ -451,7 +451,7 @@ test "synchronized top-anchored partial scroll region retires rows into scrollba
     }
 
     session.feedOutputBytes("\x1b[?2026h");
-    try std.testing.expect(session.syncUpdatesActive());
+    try std.testing.expect(terminal_publication.syncUpdatesActive(session));
 
     session.feedOutputBytes("\x1b[1;3r");
     terminal_core_protocol.scrollRegionUpWithOrigin(session, 1, "test.sync_top_anchored_scroll_region");
@@ -478,7 +478,7 @@ test "single-chunk synchronized progress sequence keeps newline scroll inside sy
     session.feedOutputBytes("\x1b[?2026h\x1b[Jbuild one\nitem a\r\x1bM\x1b[?2026l");
 
     try std.testing.expectEqual(@as(usize, 0), session.scrollbackInfo().total_rows);
-    try std.testing.expect(!session.syncUpdatesActive());
+    try std.testing.expect(!terminal_publication.syncUpdatesActive(session));
 
     const snapshot = session.snapshot();
     try std.testing.expectEqual(@as(usize, 0), snapshot.scrollback_count);
@@ -521,7 +521,7 @@ test "real zig redraw chunk rewrites in place at bottom edge" {
     );
 
     try std.testing.expectEqual(@as(usize, 0), session.scrollbackInfo().total_rows);
-    try std.testing.expect(!session.syncUpdatesActive());
+    try std.testing.expect(!terminal_publication.syncUpdatesActive(session));
 
     const snapshot = session.snapshot();
     try expectSnapshotRow(snapshot, 63, "[3] Compile Build Script                                                         ");
@@ -857,7 +857,7 @@ test "row hash refinement does not suppress newly dirty rows against unpresented
     session.publishCurrentViewLocked("test_publication");
 
     const unpresented_generation = terminal_publication.renderCache(session).generation;
-    try std.testing.expect(unpresented_generation != session.presentedGeneration());
+    try std.testing.expect(unpresented_generation != terminal_publication.presentedGeneration(session));
     try std.testing.expectEqual(Dirty.partial, terminal_publication.renderCache(session).dirty);
 
     session.primary.clearDirty();
@@ -867,7 +867,7 @@ test "row hash refinement does not suppress newly dirty rows against unpresented
 
     const cache = terminal_publication.renderCache(session);
     try std.testing.expectEqual(Dirty.partial, cache.dirty);
-    try std.testing.expect(cache.generation != session.presentedGeneration());
+    try std.testing.expect(cache.generation != terminal_publication.presentedGeneration(session));
     try std.testing.expect(cache.dirty_rows.items[0]);
     try std.testing.expectEqual(@as(usize, 0), cache.damage.start_row);
     try std.testing.expectEqual(@as(usize, 0), cache.damage.end_row);
@@ -938,7 +938,7 @@ test "setSyncUpdates enable does not force redraw when screen is otherwise clean
     terminal_publication.setSyncUpdates(session, true);
 
     const cache = terminal_publication.renderCache(session);
-    try std.testing.expect(session.syncUpdatesActive());
+    try std.testing.expect(terminal_publication.syncUpdatesActive(session));
     try std.testing.expectEqual(Dirty.none, cache.dirty);
     try std.testing.expectEqual(@as(u64, 0), cache.full_dirty_seq);
 }
@@ -964,7 +964,7 @@ test "setSyncUpdates enable does not publish dirty screen state on presented gen
     terminal_publication.setSyncUpdates(session, true);
 
     var cache = terminal_publication.renderCache(session);
-    try std.testing.expect(session.syncUpdatesActive());
+    try std.testing.expect(terminal_publication.syncUpdatesActive(session));
     try std.testing.expectEqual(baseline_generation, cache.generation);
     try std.testing.expectEqual(Dirty.none, cache.dirty);
 
@@ -996,7 +996,7 @@ test "setSyncUpdates disable stays clean when no buffered changes exist" {
     terminal_publication.setSyncUpdates(session, false);
 
     const cache = terminal_publication.renderCache(session);
-    try std.testing.expect(!session.syncUpdatesActive());
+    try std.testing.expect(!terminal_publication.syncUpdatesActive(session));
     try std.testing.expectEqual(Dirty.none, cache.dirty);
 }
 
@@ -1024,7 +1024,7 @@ test "setSyncUpdates disable preserves buffered partial damage" {
     terminal_publication.setSyncUpdates(session, false);
 
     const cache = terminal_publication.renderCache(session);
-    try std.testing.expect(!session.syncUpdatesActive());
+    try std.testing.expect(!terminal_publication.syncUpdatesActive(session));
     try std.testing.expectEqual(Dirty.partial, cache.dirty);
     try std.testing.expectEqual(@as(usize, 0), cache.damage.start_row);
     try std.testing.expectEqual(@as(usize, 0), cache.damage.end_row);
@@ -1243,7 +1243,7 @@ test "acknowledgePresentedGeneration does not retire newer normal publication" {
     try std.testing.expectEqual(@as(usize, 0), cache.damage.start_col);
     try std.testing.expectEqual(@as(usize, 0), cache.damage.end_col);
     try std.testing.expect(!terminal_publication.acknowledgePresentedGeneration(session, baseline_generation));
-    try std.testing.expectEqual(cache.generation - 1, session.presentedGeneration());
+    try std.testing.expectEqual(cache.generation - 1, terminal_publication.presentedGeneration(session));
     try std.testing.expectEqual(Dirty.partial, terminal_publication.renderCache(session).dirty);
     try std.testing.expectEqual(@as(usize, 0), terminal_publication.renderCache(session).damage.start_row);
     try std.testing.expectEqual(@as(usize, 0), terminal_publication.renderCache(session).damage.end_row);
@@ -1376,7 +1376,7 @@ test "clean publication does not overwrite unpresented dirty publication" {
 
     const cache = terminal_publication.renderCache(session);
     try std.testing.expectEqual(dirty_generation + 1, cache.generation);
-    try std.testing.expect(cache.generation != session.presentedGeneration());
+    try std.testing.expect(cache.generation != terminal_publication.presentedGeneration(session));
     try std.testing.expectEqual(Dirty.partial, cache.dirty);
     try std.testing.expect(cache.dirty_rows.items[0]);
     try std.testing.expectEqual(@as(usize, 0), cache.damage.start_row);
@@ -1395,7 +1395,7 @@ test "notePresentedGeneration does not regress presented generation" {
     terminal_publication.notePresentedGeneration(session, 7);
     terminal_publication.notePresentedGeneration(session, 3);
 
-    try std.testing.expectEqual(@as(u64, 7), session.presentedGeneration());
+    try std.testing.expectEqual(@as(u64, 7), terminal_publication.presentedGeneration(session));
 }
 
 test "cursor style updates publish through cache without texture invalidation" {
@@ -1924,7 +1924,7 @@ test "selection dirty expansion does not suppress repeated unpresented selection
 
     cache = terminal_publication.renderCache(session);
     try std.testing.expectEqual(Dirty.partial, cache.dirty);
-    try std.testing.expect(cache.generation != session.presentedGeneration());
+    try std.testing.expect(cache.generation != terminal_publication.presentedGeneration(session));
     try std.testing.expect(cache.dirty_rows.items[0]);
     try std.testing.expectEqual(@as(usize, 0), cache.damage.start_row);
     try std.testing.expectEqual(@as(usize, 0), cache.damage.end_row);

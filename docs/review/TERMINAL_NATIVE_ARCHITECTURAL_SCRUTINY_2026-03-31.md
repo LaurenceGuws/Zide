@@ -449,6 +449,12 @@ Evidence:
   `terminal_publication.zig` and `pty_terminal_runtime.zig`, and the app
   draw-surface runtime now calls
   `terminal_publication.completePresentationFeedback(...)` directly
+- publication-only generation/capture/sync reads now follow that same owner
+  rule too:
+  widget draw, workspace/workspace-polling, FFI redraw tracking, poll runtime,
+  and PTY runtime regression tests now call the publication owner directly for
+  generation state, presentation capture, and sync-update state; the wrapper
+  no longer re-exports that publication-only slab
 - the outer CSI forwarding shell is gone too:
   `terminal_protocol_api.zig` now routes CSI directly into
   `src/terminal/protocol/csi.zig` without stepping through an extra

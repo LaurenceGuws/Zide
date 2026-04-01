@@ -100,7 +100,7 @@ pub fn updateViewCacheNoLockTagged(self: anytype, generation: u64, scroll_offset
     const clear_generation = self.core.clear_generation.load(.acquire);
     const selection_active = self.core.active != .alt and self.core.history.selectionState() != null;
     const active_cache = terminal_publication.activeRenderCache(self);
-    const presented_generation = self.presentedGeneration();
+    const presented_generation = terminal_publication.presentedGeneration(self);
 
     if (publication.canSkipPublish(active_cache, .{
         .rows = rows,

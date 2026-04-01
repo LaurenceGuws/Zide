@@ -1,4 +1,5 @@
 const std = @import("std");
+const terminal_publication = @import("publication/terminal_publication.zig");
 const runtime_mod = @import("terminal_runtime.zig");
 const host_types = @import("session/host_types.zig");
 const app_logger = @import("../../app_logger.zig");
@@ -236,9 +237,9 @@ pub const TerminalWorkspace = struct {
         return .{
             .has_data = session.hasData(),
             .session_ptr = @intFromPtr(session),
-            .pending_generation = session.pendingGeneration(),
-            .published_generation = session.publishedGeneration(),
-            .presented_generation = session.presentedGeneration(),
+            .pending_generation = terminal_publication.pendingGeneration(session),
+            .published_generation = terminal_publication.publishedGeneration(session),
+            .presented_generation = terminal_publication.presentedGeneration(session),
         };
     }
 
