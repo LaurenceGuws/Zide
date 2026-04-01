@@ -45,7 +45,6 @@ pub const TerminalWidget = struct {
     pending_open: ?PendingOpen = null,
     last_draw_log_time: f64 = 0,
     draw_cache: RenderCache,
-    presented_generation_cells: std.ArrayList(u64),
     partial_draw_rows: std.ArrayList(bool),
     partial_draw_span_counts: std.ArrayList(u8),
     partial_draw_spans: std.ArrayList([render_cache_mod.max_row_dirty_spans]render_cache_mod.RowDirtySpan),
@@ -90,7 +89,6 @@ pub const TerminalWidget = struct {
             .pending_open = null,
             .last_draw_log_time = 0,
             .draw_cache = RenderCache.init(),
-            .presented_generation_cells = std.ArrayList(u64).empty,
             .partial_draw_rows = std.ArrayList(bool).empty,
             .partial_draw_span_counts = std.ArrayList(u8).empty,
             .partial_draw_spans = std.ArrayList([render_cache_mod.max_row_dirty_spans]render_cache_mod.RowDirtySpan).empty,
@@ -211,7 +209,6 @@ pub const TerminalWidget = struct {
             self.pending_open = null;
         }
         self.draw_cache.deinit(self.session.allocator);
-        self.presented_generation_cells.deinit(self.session.allocator);
         self.partial_draw_rows.deinit(self.session.allocator);
         self.partial_draw_span_counts.deinit(self.session.allocator);
         self.partial_draw_spans.deinit(self.session.allocator);

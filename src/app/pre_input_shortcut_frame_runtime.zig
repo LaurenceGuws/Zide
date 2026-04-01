@@ -9,7 +9,6 @@ const app_terminal_window_chrome_runtime = @import("terminal/window_chrome_runti
 const app_terminal_active_widget = @import("terminal/terminal_active_widget.zig");
 const app_update_prelude_frame_runtime = @import("update_prelude_frame_runtime.zig");
 const app_active_editor_runtime = @import("editor/active_editor_runtime.zig");
-const app_logger = @import("../app_logger.zig");
 const app_shell = @import("../app_shell.zig");
 const app_bootstrap = @import("bootstrap.zig");
 const app_modes = @import("modes/mod.zig");
@@ -18,7 +17,6 @@ const input_actions = @import("../input/input_actions.zig");
 const sdl_api = @import("../platform/sdl_api.zig");
 const shared_types = @import("../types/mod.zig");
 const terminal_runtime = @import("../terminal/core/terminal_runtime.zig");
-const terminal_widget_draw = @import("../ui/widgets/terminal_widget_draw.zig");
 
 const Shell = app_shell.Shell;
 const input_types = shared_types.input;
@@ -37,65 +35,20 @@ fn maybeConsumeScrollLockCapture(
     terminal_widgets: anytype,
     live_layout: layout_types.WidgetLayout,
 ) ?app_update_prelude_frame_runtime.PreInputResult {
+    _ = frame_shell;
+    _ = at;
+    _ = app_mode;
     _ = show_terminal;
+    _ = terminal_workspace;
+    _ = terminals;
+    _ = terminal_widgets;
+    _ = live_layout;
     for (frame_input_batch.events.items) |event| {
         switch (event) {
             .key => |key| {
                 if (!key.pressed or key.repeated) continue;
                 if (key.scancode == null or key.scancode.? != sdl_api.c.SDL_SCANCODE_SCROLLLOCK) continue;
 
-                const renderer = frame_shell.rendererPtr();
-                const burst_seq = terminal_widget_draw.armCaptureBurst(8);
-                var rows: usize = 0;
-                var cols: usize = 0;
-                var visible_cols: i32 = 0;
-                var visible_rows: i32 = 0;
-                var viewport_w: f32 = 0;
-                var viewport_h: f32 = 0;
-                var texture_ready: bool = false;
-                var render_generation: u64 = 0;
-                if (app_terminal_active_widget.resolveActive(app_mode, terminal_workspace, terminals.len, terminal_widgets)) |term_widget| {
-                    rows = term_widget.draw_cache.rows;
-                    cols = term_widget.draw_cache.cols;
-                    texture_ready = term_widget.terminal_texture_ready;
-                    render_generation = term_widget.last_render_generation;
-                    const strip = app_modes.ide.terminalStrip(app_mode, live_layout.terminal.height);
-                    const geom = renderer.terminalCellGeometry();
-                    viewport_w = @min(live_layout.terminal.width, geom.cell_width_logical_exact * @as(f32, @floatFromInt(cols)));
-                    viewport_h = @min(strip.draw_height, geom.cell_height_logical_exact * @as(f32, @floatFromInt(rows)));
-                    visible_cols = if (geom.cell_width_logical_exact > 0) @intFromFloat(std.math.floor(viewport_w / geom.cell_width_logical_exact)) else 0;
-                    visible_rows = if (geom.cell_height_logical_exact > 0) @intFromFloat(std.math.floor(viewport_h / geom.cell_height_logical_exact)) else 0;
-                }
-                app_logger.logger("terminal.capture_trigger").logf(
-                    .info,
-                    "scroll_lock_capture seq={d} at={d:.3} render_scale={d:.3} window={d}x{d} drawable={d}x{d} target_logical={d}x{d} target_px={d}x{d} rows={d} cols={d} viewport={d:.1}x{d:.1} visible_cells={d}x{d} texture_ready={d} last_render_gen={d} mods=shift:{d} alt:{d} ctrl:{d} super:{d} altgr:{d}",
-                    .{
-                        burst_seq,
-                        at,
-                        renderer.render_scale,
-                        renderer.width,
-                        renderer.height,
-                        renderer.render_width,
-                        renderer.render_height,
-                        renderer.target_width,
-                        renderer.target_height,
-                        renderer.target_pixel_width,
-                        renderer.target_pixel_height,
-                        rows,
-                        cols,
-                        viewport_w,
-                        viewport_h,
-                        visible_cols,
-                        visible_rows,
-                        @intFromBool(texture_ready),
-                        render_generation,
-                        @intFromBool(key.mods.shift),
-                        @intFromBool(key.mods.alt),
-                        @intFromBool(key.mods.ctrl),
-                        @intFromBool(key.mods.super),
-                        @intFromBool(key.mods.altgr),
-                    },
-                );
                 return .{
                     .suppress_terminal_shortcuts = false,
                     .terminal_close_modal_active = terminal_close_modal_active,

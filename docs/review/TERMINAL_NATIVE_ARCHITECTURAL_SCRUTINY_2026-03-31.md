@@ -218,6 +218,11 @@ Judgment:
     decision surface (`canSkipPublish`, `canCleanAdvancePublish`,
     `applyCleanAdvancePublish`) instead of leaving that logic smeared inline in
     `view_cache.zig`
+  - stale rendering-investigation probe residue is now being purged from the
+    live widget/runtime path instead of being normalized as architecture:
+    Scroll Lock capture plumbing, widget-side generation shadow state,
+    frame-provenance/column probes, and row-pass/fullframe-fastpath probe logs
+    do not belong in the permanent terminal design
   - it also now owns projected-diff eligibility and full-dirty metadata
     assignment, which further reduces the amount of publication rule text
     living inline in `view_cache.zig`

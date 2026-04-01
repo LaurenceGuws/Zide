@@ -220,6 +220,15 @@ Validation note, 2026-03-31:
     - `pendingGeneration`
     - `publishedGeneration`
     - `presentedGeneration`
+  - stale render-defect probe residue is now being deleted instead of carried
+    as permanent architecture debt:
+    - the Scroll Lock capture trigger path is removed from live shortcut
+      handling
+    - widget draw no longer carries stale capture-burst, column-probe,
+      frame-provenance, fullframe-fastpath, or row-pass probe logs from the
+      old rendering-investigation lane
+    - the probe-only presented-generation shadow buffer and partial-update
+      coherence escalation path are also removed from the widget layer
   - mirror-heavy cache metadata is now starting to come out of
     `src/terminal/core/render_cache.zig`:
     - `RenderCache.total_lines` is deleted

@@ -218,6 +218,12 @@ Status note, 2026-03-31:
     threads through multiple planning/logging sites, group it instead of
     letting it leak as loose locals
   - the same applies to recent-input/full-frame pressure planning state; if it
+  - stale render-defect probe machinery should not survive in the live widget
+    path once the investigation session is over
+  - old Scroll Lock capture triggers, presented-generation shadow tracking,
+    row-pass probe logs, and frame-provenance/column-probe logging are not
+    part of a best-in-class terminal architecture; they are temporary probes
+    and should be deleted once the session that needed them is over
     drives both update-plan forcing and logging, group it instead of leaving it
     as a loose cluster of temporary values
   - handoff/log snapshot state inside draw should also be grouped once it feeds
