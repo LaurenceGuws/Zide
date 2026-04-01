@@ -88,31 +88,7 @@ fn windowTitleForMode(app_mode: app_bootstrap.AppMode) [*:0]const u8 {
     };
 }
 
-pub fn init(comptime AppStateT: type, allocator: std.mem.Allocator, app_mode: app_bootstrap.AppMode) !*AppStateT {
-    return try initWithMode(AppStateT, allocator, null, app_mode);
-}
-
-pub fn initFocused(comptime AppStateT: type, allocator: std.mem.Allocator, comptime app_mode: app_bootstrap.AppMode) !*AppStateT {
-    return try initWithMode(AppStateT, allocator, app_mode, .ide);
-}
-
-fn initWithMode(
-    comptime AppStateT: type,
-    allocator: std.mem.Allocator,
-    comptime forced_mode: ?app_bootstrap.AppMode,
-    runtime_mode: app_bootstrap.AppMode,
-) !*AppStateT {
-    const app_mode = if (comptime forced_mode) |mode| mode else runtime_mode;
-
-    var config = config_mod.loadConfig(allocator) catch |err| blk: {
-        std.debug.print("config load error: {any}\n", .{err});
-        break :blk config_mod.emptyConfig();
-    };
-    defer config_mod.freeConfig(allocator, &config);
-
-    try manual_highlights_mod.applyConfig(allocator, &config);
-    errdefer manual_highlights_mod.reset();
-
+fn applyLoggerConfig(config: *const config_mod.Config) !void {
     app_logger.resetConfig();
     if (config.log_file_filter) |filter| {
         app_logger.setFileFilterString(filter) catch |err| {
@@ -151,6 +127,75 @@ fn initWithMode(
             std.debug.print("log group sink setup error: {any}\n", .{err});
         };
     }
+}
+
+fn resolveTerminalCursorStyle(config: *const config_mod.Config) ?term_types.CursorStyle {
+    if (config.terminal_cursor_shape == null and config.terminal_cursor_blink == null) return null;
+
+    var cursor_style = term_types.default_cursor_style;
+    if (config.terminal_cursor_shape) |shape| {
+        cursor_style.shape = shape;
+    }
+    if (config.terminal_cursor_blink) |blink| {
+        cursor_style.blink = blink;
+    }
+    return cursor_style;
+}
+
+fn applyCurrentTabBarWidthMode(state: anytype) void {
+    app_tab_bar_width.applyForMode(
+        &state.tab_bar,
+        state.app_mode,
+        state.terminal_window_chrome_mode,
+        state.editor_tab_bar_width_mode,
+        state.terminal_tab_bar_width_mode,
+    );
+}
+
+fn applyInitialUiScale(state: anytype) void {
+    const State = @TypeOf(state.*);
+    app_ui_layout_runtime.applyUiScale(
+        state,
+        state.shell.uiScaleFactor(),
+        @ptrCast(state),
+        .{
+            .apply_current_tab_bar_width_mode = struct {
+                fn call(raw: *anyopaque) void {
+                    const cb_state: *State = @ptrCast(@alignCast(raw));
+                    applyCurrentTabBarWidthMode(cb_state);
+                }
+            }.call,
+        },
+    );
+    applyCurrentTabBarWidthMode(state);
+}
+
+pub fn init(comptime AppStateT: type, allocator: std.mem.Allocator, app_mode: app_bootstrap.AppMode) !*AppStateT {
+    return try initWithMode(AppStateT, allocator, null, app_mode);
+}
+
+pub fn initFocused(comptime AppStateT: type, allocator: std.mem.Allocator, comptime app_mode: app_bootstrap.AppMode) !*AppStateT {
+    return try initWithMode(AppStateT, allocator, app_mode, .ide);
+}
+
+fn initWithMode(
+    comptime AppStateT: type,
+    allocator: std.mem.Allocator,
+    comptime forced_mode: ?app_bootstrap.AppMode,
+    runtime_mode: app_bootstrap.AppMode,
+) !*AppStateT {
+    const app_mode = if (comptime forced_mode) |mode| mode else runtime_mode;
+
+    var config = config_mod.loadConfig(allocator) catch |err| blk: {
+        std.debug.print("config load error: {any}\n", .{err});
+        break :blk config_mod.emptyConfig();
+    };
+    defer config_mod.freeConfig(allocator, &config);
+
+    try manual_highlights_mod.applyConfig(allocator, &config);
+    errdefer manual_highlights_mod.reset();
+
+    try applyLoggerConfig(&config);
     try app_logger.init();
     app_lifecycle_runtime.reset();
 
@@ -243,17 +288,7 @@ fn initWithMode(
         .kitty => .kitty,
         .off => .off,
     };
-    var terminal_cursor_style = @as(?term_types.CursorStyle, null);
-    if (config.terminal_cursor_shape != null or config.terminal_cursor_blink != null) {
-        var cursor_style = term_types.default_cursor_style;
-        if (config.terminal_cursor_shape) |shape| {
-            cursor_style.shape = shape;
-        }
-        if (config.terminal_cursor_blink) |blink| {
-            cursor_style.blink = blink;
-        }
-        terminal_cursor_style = cursor_style;
-    }
+    const terminal_cursor_style = resolveTerminalCursorStyle(&config);
 
     const shell_base_theme = shell.theme().*;
     const resolved_themes = app_theme_utils.resolveConfigThemes(shell_base_theme, &config);
@@ -415,32 +450,7 @@ fn initWithMode(
     if (config.keybinds) |binds| {
         state.input_router.setBindings(binds);
     }
-    app_ui_layout_runtime.applyUiScale(
-        state,
-        state.shell.uiScaleFactor(),
-        @ptrCast(state),
-        .{
-            .apply_current_tab_bar_width_mode = struct {
-                fn call(raw: *anyopaque) void {
-                    const cb_state: *AppStateT = @ptrCast(@alignCast(raw));
-                    app_tab_bar_width.applyForMode(
-                        &cb_state.tab_bar,
-                        cb_state.app_mode,
-                        cb_state.terminal_window_chrome_mode,
-                        cb_state.editor_tab_bar_width_mode,
-                        cb_state.terminal_tab_bar_width_mode,
-                    );
-                }
-            }.call,
-        },
-    );
-    app_tab_bar_width.applyForMode(
-        &state.tab_bar,
-        state.app_mode,
-        state.terminal_window_chrome_mode,
-        state.editor_tab_bar_width_mode,
-        state.terminal_tab_bar_width_mode,
-    );
+    applyInitialUiScale(state);
 
     return state;
 }

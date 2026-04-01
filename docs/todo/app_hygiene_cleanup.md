@@ -208,6 +208,10 @@ Progress note, 2026-04-01:
   effects in named helpers instead of repeating them inside hook structs
 - this keeps shortcut behavior fixed while reducing another dense callback
   policy cluster in the app update lane
+- `src/app/init_runtime.zig` now centralizes logger config, terminal cursor
+  style resolution, and initial tab-bar/ui-scale application in named helpers
+- this makes bootstrapping read more like explicit initialization phases and
+  less like one long inline setup slab
 
 ## Investigation Follow-up
 
