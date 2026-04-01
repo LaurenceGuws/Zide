@@ -1,5 +1,5 @@
 const std = @import("std");
-const publication = @import("publication/view_cache_publication.zig");
+const publication = @import("view_cache_publication.zig");
 
 pub fn assignBaseDamage(
     cache: anytype,
@@ -58,8 +58,8 @@ pub fn widenPartialDamage(cache: anytype, rows: usize, cols: usize) void {
 }
 
 test "assignBaseDamage exposes only shifted rows for scroll shift publication" {
-    const screen = @import("../model/screen.zig");
-    var cache = @import("publication/render_cache.zig").RenderCache.init();
+    const screen = @import("../../model/screen.zig");
+    var cache = @import("render_cache.zig").RenderCache.init();
 
     assignBaseDamage(
         &cache,
@@ -86,8 +86,8 @@ test "assignBaseDamage exposes only shifted rows for scroll shift publication" {
 }
 
 test "assignBaseDamage uses full viewport when history changed without row-local truth" {
-    const screen = @import("../model/screen.zig");
-    var cache = @import("publication/render_cache.zig").RenderCache.init();
+    const screen = @import("../../model/screen.zig");
+    var cache = @import("render_cache.zig").RenderCache.init();
 
     assignBaseDamage(
         &cache,

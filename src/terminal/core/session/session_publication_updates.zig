@@ -1,4 +1,4 @@
-const view_cache = @import("../view_cache.zig");
+const view_cache = @import("../publication/view_cache.zig");
 const core_feed = @import("../protocol/terminal_core_feed.zig");
 const terminal_publication = @import("../publication/terminal_publication.zig");
 

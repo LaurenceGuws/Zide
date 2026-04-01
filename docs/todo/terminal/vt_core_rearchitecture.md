@@ -189,6 +189,9 @@ Validation note, 2026-03-31:
     publication-owned cache, snapshot, and publication helper files now live
     under `src/terminal/core/publication/` instead of continuing to sprawl as
     another flat cluster beside engine-owned files
+  - that publication home is now broader and more honest:
+    the published-view builder and its plan/damage/selection helpers now also
+    live under `src/terminal/core/publication/`
   - the next peer subtree is now in too:
     parser/protocol execution files now live under
     `src/terminal/core/protocol/` instead of continuing to sprawl as a flat
@@ -311,41 +314,41 @@ Validation note, 2026-03-31:
     - `RenderCache.matchesPublishedState(...)` now centralizes the published
       state match contract for those fast paths
   - publication fast-path decisions are starting to move out of the big
-    `view_cache.zig` body too:
+    `publication/view_cache.zig` body too:
     - `canSkipPublish(...)`
     - `canCleanAdvancePublish(...)`
     - `applyCleanAdvancePublish(...)`
-    now live in `src/terminal/core/view_cache_publication.zig`
+    now live in `src/terminal/core/publication/view_cache_publication.zig`
   - more publication-rule ownership moved behind that same seam:
     - `canAssignProjectedDiffDamage(...)`
     - `assignFullDirtyMetadata(...)`
     now own projected-diff gating and forced full-dirty metadata assignment
-    instead of leaving those rules inline in `view_cache.zig`
+    instead of leaving those rules inline in `publication/view_cache.zig`
   - row-bookkeeping ownership is now moving too:
     - `assignDirtyRows(...)`
     - `assignDirtySpans(...)`
     - `assignDirtyColsFallback(...)`
     - `assignScrollShiftDirtyRows(...)`
     now own the baseline dirty-row/span/scroll-shift setup that used to sit
-    inline in `view_cache.zig`
+    inline in `publication/view_cache.zig`
   - the copied-from-view dirty-column branch is also out:
     - `assignDirtyColsFromView(...)`
     now owns the column-copy path and its broad-span logging instead of
-    leaving that inline in `view_cache.zig`
+    leaving that inline in `publication/view_cache.zig`
   - published-cache finalization is moving there too:
     - `updateBlinkState(...)`
     - `assignPublishedCacheState(...)`
     now own the final cache-state assignment block instead of leaving
-    `view_cache.zig` to hand-set those fields inline
+    `publication/view_cache.zig` to hand-set those fields inline
   - visible-cell population is moving there too:
     - `populateVisibleCells(...)`
     now owns the history/grid copy loop that used to sit inline in
-    `view_cache.zig`
+    `publication/view_cache.zig`
   - row-hash refinement ownership is sharper too:
     - `canRefineRowHashDamage(...)`
     - `logBroadRefinedSpans(...)`
-    now live with `view_cache_refinement.zig` instead of leaving the
-    refinement gate and broad-span logging inline in `view_cache.zig`
+    now live with `publication/view_cache_refinement.zig` instead of leaving the
+    refinement gate and broad-span logging inline in `publication/view_cache.zig`
   - widget/publication interaction is starting to tighten too:
     - `viewportInfo(...)`
     - `scrollbarInfo(...)`

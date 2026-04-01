@@ -145,6 +145,9 @@ Judgment:
   publication-owned cache, snapshot, and publication helper files now live
   under `src/terminal/core/publication/` instead of continuing to sprawl as
   another flat cluster beside engine-owned files
+- that publication home is now broader and more honest:
+  the published-view builder and its plan/damage/selection helpers now also
+  live under `src/terminal/core/publication/`
 - the next honest peer subtree is now in too:
   parser/protocol execution files now live under
   `src/terminal/core/protocol/` instead of continuing to sprawl as a flat
@@ -214,7 +217,7 @@ Judgment:
 Primary files:
 
 - `src/terminal/core/render_cache.zig`
-- `src/terminal/core/view_cache.zig`
+- `src/terminal/core/publication/view_cache.zig`
 - `src/terminal/core/session_rendering.zig`
 - `src/terminal/core/session_presentation_handoff.zig`
 

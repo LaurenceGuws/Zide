@@ -150,6 +150,9 @@ Status note, 2026-03-31:
     publication-owned cache, snapshot, and publication helper files now live
     under `src/terminal/core/publication/` instead of continuing to squat as a
     flat cluster beside engine-owned files
+  - that publication home is now broader and more honest:
+    the published-view builder and its plan/damage/selection helpers now also
+    live under `src/terminal/core/publication/`
   - the next honest peer subtree is now real too:
     parser/protocol execution files now live under
     `src/terminal/core/protocol/` instead of continuing to squat as a flat

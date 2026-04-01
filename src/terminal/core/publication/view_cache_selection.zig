@@ -1,5 +1,5 @@
-const types = @import("../model/types.zig");
-const publication = @import("publication/view_cache_publication.zig");
+const types = @import("../../model/types.zig");
+const publication = @import("view_cache_publication.zig");
 
 const Cell = types.Cell;
 

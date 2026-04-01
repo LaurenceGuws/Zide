@@ -5,7 +5,7 @@ const selection_mod = @import("../selection.zig");
 const publication_state = @import("../session/session_publication_state.zig");
 const presentation_handoff = @import("../session/session_presentation_handoff.zig");
 const publication_updates = @import("../session/session_publication_updates.zig");
-const view_cache = @import("../view_cache.zig");
+const view_cache = @import("view_cache.zig");
 const types = @import("../../model/types.zig");
 
 pub const KittyImageFormat = snapshot_mod.KittyImageFormat;
