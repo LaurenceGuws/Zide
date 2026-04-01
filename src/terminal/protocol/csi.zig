@@ -21,12 +21,10 @@ pub const DecrpmState = enum(u8) {
 
 const ModeSnapshot = csi_mode_query.ModeSnapshot;
 const ModeCaptureContext = csi_mode_query.ModeCaptureContext;
-const ModeMutationContext = csi_mode_mutation.ModeMutationContext;
 
 fn modeSnapshotFromContext(ctx: ModeCaptureContext) ModeSnapshot {
     return csi_mode_query.modeSnapshotFromContext(ctx);
 }
-
 
 fn csiIntermediatesEq(action: parser_csi.CsiAction, bytes: []const u8) bool {
     if (action.intermediates_len != bytes.len) return false;
@@ -86,7 +84,6 @@ fn handleCsiOnSession(self: anytype, action: parser_csi.CsiAction) void {
     );
     const p = action.params;
     const param_len = csi_param_count;
-    const mode_context = ModeMutationContext.from(self);
     switch (action.final) {
         'A', 'B', 'C', 'D', 'E', 'F', 'G', 'I', 'H', 'f', 'd', 'J', 'K', '@', 'P', 'X', 'L', 'M', 'S', 'T', 'Z', 'r' => {
             csi_exec.handleSimpleCsi(self, action, param_len, p);
@@ -171,11 +168,11 @@ fn handleCsiOnSession(self: anytype, action: parser_csi.CsiAction) void {
             }
         },
         'h' => { // SM
-            csi_mode_mutation.applyModeMutation(mode_context, action, param_len, p, true);
+            csi_mode_mutation.applyModeMutation(self, action, param_len, p, true);
             return;
         },
         'l' => { // RM
-            csi_mode_mutation.applyModeMutation(mode_context, action, param_len, p, false);
+            csi_mode_mutation.applyModeMutation(self, action, param_len, p, false);
             return;
         },
         else => {},

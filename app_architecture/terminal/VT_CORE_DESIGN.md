@@ -233,6 +233,11 @@ Status note, 2026-03-31:
     `src/terminal/protocol/csi_style_reset.zig`, and soft terminal reset now
     runs directly on the live runtime object instead of bouncing through a
     large callback wrapper
+  - the CSI mode-mutation shell is dead too:
+    `ModeMutationContext` is deleted from
+    `src/terminal/protocol/csi_mode_mutation.zig`, and CSI SM/RM mutation now
+    applies directly on the live runtime object instead of routing a giant
+    callback wrapper through `csi.zig`
   - the remaining publication/view-cache helper stubs and the special-case
     `appendHyperlink` wrapper now also route through explicit API modules
     instead of living as root-session exceptions

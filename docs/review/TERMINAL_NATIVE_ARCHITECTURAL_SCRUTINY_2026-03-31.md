@@ -181,6 +181,11 @@ Judgment:
   `src/terminal/protocol/csi_style_reset.zig`, and soft terminal reset now
   runs directly on the live runtime object instead of bouncing through a
   large callback wrapper
+- the CSI mode-mutation shell is dead too:
+  `ModeMutationContext` is deleted from
+  `src/terminal/protocol/csi_mode_mutation.zig`, and CSI SM/RM mutation now
+  applies directly on the live runtime object instead of routing a giant
+  callback wrapper through `csi.zig`
 - the stale `src/terminal/core/session_protocol.zig` forwarding shell is now
   deleted, so that API seam no longer routes through one extra session-named
   hop before reaching the real owners
