@@ -4,6 +4,15 @@ fn configureWindowsLinker(step: *std.Build.Step.Compile) void {
     _ = step;
 }
 
+const ReportToolSpec = struct {
+    exe_name: []const u8,
+    root_source_file: []const u8,
+    step_name: []const u8,
+    description: []const u8,
+    adds_build_options: bool = true,
+    adds_target_profile_import: bool = false,
+};
+
 pub fn addReportBuildAllStep(
     b: *std.Build,
     deps: []const *std.Build.Step,
@@ -21,27 +30,20 @@ pub fn addReportBuildProfilesStep(
     target: std.Build.ResolvedTarget,
     optimize: std.builtin.OptimizeMode,
 ) *std.Build.Step {
-    const exe = b.addExecutable(.{
-        .name = "build-profile-report",
-        .root_module = b.createModule(.{
-            .root_source_file = b.path("build_system/reports/build_profile_report.zig"),
-            .target = target,
-            .optimize = optimize,
-        }),
-    });
-    configureWindowsLinker(exe);
-    exe.root_module.addAnonymousImport("target_profile", .{
-        .root_source_file = b.path("build_system/target_profile.zig"),
-        .target = target,
-        .optimize = optimize,
-    });
-    const run = b.addRunArtifact(exe);
-    const step = b.step(
-        "report-build-profiles",
-        "Report active build dependency profiles",
+    return addReportToolRunStep(
+        b,
+        target,
+        optimize,
+        null,
+        .{
+            .exe_name = "build-profile-report",
+            .root_source_file = "build_system/reports/build_profile_report.zig",
+            .step_name = "report-build-profiles",
+            .description = "Report active build dependency profiles",
+            .adds_build_options = false,
+            .adds_target_profile_import = true,
+        },
     );
-    step.dependOn(&run.step);
-    return step;
 }
 
 pub fn addReportBuildModeStep(
@@ -50,23 +52,18 @@ pub fn addReportBuildModeStep(
     optimize: std.builtin.OptimizeMode,
     build_options: *std.Build.Step.Options,
 ) *std.Build.Step {
-    const exe = b.addExecutable(.{
-        .name = "build-mode-report",
-        .root_module = b.createModule(.{
-            .root_source_file = b.path("build_system/reports/build_mode_report.zig"),
-            .target = target,
-            .optimize = optimize,
-        }),
-    });
-    configureWindowsLinker(exe);
-    exe.root_module.addOptions("build_options", build_options);
-    const run = b.addRunArtifact(exe);
-    const step = b.step(
-        "report-build-mode",
-        "Report selected app build mode and graph path",
+    return addReportToolRunStep(
+        b,
+        target,
+        optimize,
+        build_options,
+        .{
+            .exe_name = "build-mode-report",
+            .root_source_file = "build_system/reports/build_mode_report.zig",
+            .step_name = "report-build-mode",
+            .description = "Report selected app build mode and graph path",
+        },
     );
-    step.dependOn(&run.step);
-    return step;
 }
 
 pub fn addReportBuildBootstrapStep(
@@ -75,23 +72,18 @@ pub fn addReportBuildBootstrapStep(
     optimize: std.builtin.OptimizeMode,
     build_options: *std.Build.Step.Options,
 ) *std.Build.Step {
-    const exe = b.addExecutable(.{
-        .name = "build-bootstrap-report",
-        .root_module = b.createModule(.{
-            .root_source_file = b.path("build_system/reports/build_bootstrap_report.zig"),
-            .target = target,
-            .optimize = optimize,
-        }),
-    });
-    configureWindowsLinker(exe);
-    exe.root_module.addOptions("build_options", build_options);
-    const run = b.addRunArtifact(exe);
-    const step = b.step(
-        "report-build-bootstrap",
-        "Report resolved build bootstrap context",
+    return addReportToolRunStep(
+        b,
+        target,
+        optimize,
+        build_options,
+        .{
+            .exe_name = "build-bootstrap-report",
+            .root_source_file = "build_system/reports/build_bootstrap_report.zig",
+            .step_name = "report-build-bootstrap",
+            .description = "Report resolved build bootstrap context",
+        },
     );
-    step.dependOn(&run.step);
-    return step;
 }
 
 pub fn addReportBuildFocusedPolicyStep(
@@ -100,23 +92,18 @@ pub fn addReportBuildFocusedPolicyStep(
     optimize: std.builtin.OptimizeMode,
     build_options: *std.Build.Step.Options,
 ) *std.Build.Step {
-    const exe = b.addExecutable(.{
-        .name = "build-focused-mode-policy-check",
-        .root_module = b.createModule(.{
-            .root_source_file = b.path("build_system/checks/build_focused_mode_policy_check.zig"),
-            .target = target,
-            .optimize = optimize,
-        }),
-    });
-    configureWindowsLinker(exe);
-    exe.root_module.addOptions("build_options", build_options);
-    const run = b.addRunArtifact(exe);
-    const step = b.step(
-        "report-build-focused-policy",
-        "Check focused mode dependency policy",
+    return addReportToolRunStep(
+        b,
+        target,
+        optimize,
+        build_options,
+        .{
+            .exe_name = "build-focused-mode-policy-check",
+            .root_source_file = "build_system/checks/build_focused_mode_policy_check.zig",
+            .step_name = "report-build-focused-policy",
+            .description = "Check focused mode dependency policy",
+        },
     );
-    step.dependOn(&run.step);
-    return step;
 }
 
 pub fn addReportBuildTargetStep(
@@ -125,23 +112,18 @@ pub fn addReportBuildTargetStep(
     optimize: std.builtin.OptimizeMode,
     build_options: *std.Build.Step.Options,
 ) *std.Build.Step {
-    const exe = b.addExecutable(.{
-        .name = "build-target-report",
-        .root_module = b.createModule(.{
-            .root_source_file = b.path("build_system/reports/build_target_report.zig"),
-            .target = target,
-            .optimize = optimize,
-        }),
-    });
-    configureWindowsLinker(exe);
-    exe.root_module.addOptions("build_options", build_options);
-    const run = b.addRunArtifact(exe);
-    const step = b.step(
-        "report-build-target",
-        "Report resolved target and optimize settings",
+    return addReportToolRunStep(
+        b,
+        target,
+        optimize,
+        build_options,
+        .{
+            .exe_name = "build-target-report",
+            .root_source_file = "build_system/reports/build_target_report.zig",
+            .step_name = "report-build-target",
+            .description = "Report resolved target and optimize settings",
+        },
     );
-    step.dependOn(&run.step);
-    return step;
 }
 
 pub fn addCheckBuildReportToolsStep(
@@ -154,54 +136,79 @@ pub fn addCheckBuildReportToolsStep(
         "check-build-report-tools",
         "Compile-check all core build report tools",
     );
-
-    const mode_report = b.addExecutable(.{
-        .name = "build-mode-report-check",
-        .root_module = b.createModule(.{
-            .root_source_file = b.path("build_system/reports/build_mode_report.zig"),
-            .target = target,
-            .optimize = optimize,
-        }),
-    });
-    configureWindowsLinker(mode_report);
-    mode_report.root_module.addOptions("build_options", build_options);
-    step.dependOn(&mode_report.step);
-
-    const bootstrap_report = b.addExecutable(.{
-        .name = "build-bootstrap-report-check",
-        .root_module = b.createModule(.{
-            .root_source_file = b.path("build_system/reports/build_bootstrap_report.zig"),
-            .target = target,
-            .optimize = optimize,
-        }),
-    });
-    configureWindowsLinker(bootstrap_report);
-    bootstrap_report.root_module.addOptions("build_options", build_options);
-    step.dependOn(&bootstrap_report.step);
-
-    const focused_policy = b.addExecutable(.{
-        .name = "build-focused-policy-report-check",
-        .root_module = b.createModule(.{
-            .root_source_file = b.path("build_system/checks/build_focused_mode_policy_check.zig"),
-            .target = target,
-            .optimize = optimize,
-        }),
-    });
-    configureWindowsLinker(focused_policy);
-    focused_policy.root_module.addOptions("build_options", build_options);
-    step.dependOn(&focused_policy.step);
-
-    const target_report = b.addExecutable(.{
-        .name = "build-target-report-check",
-        .root_module = b.createModule(.{
-            .root_source_file = b.path("build_system/reports/build_target_report.zig"),
-            .target = target,
-            .optimize = optimize,
-        }),
-    });
-    configureWindowsLinker(target_report);
-    target_report.root_module.addOptions("build_options", build_options);
-    step.dependOn(&target_report.step);
+    for (core_build_report_tool_specs) |spec| {
+        step.dependOn(&addReportToolExecutable(b, target, optimize, build_options, spec).step);
+    }
 
     return step;
+}
+
+const core_build_report_tool_specs = [_]ReportToolSpec{
+    .{
+        .exe_name = "build-mode-report-check",
+        .root_source_file = "build_system/reports/build_mode_report.zig",
+        .step_name = "",
+        .description = "",
+    },
+    .{
+        .exe_name = "build-bootstrap-report-check",
+        .root_source_file = "build_system/reports/build_bootstrap_report.zig",
+        .step_name = "",
+        .description = "",
+    },
+    .{
+        .exe_name = "build-focused-policy-report-check",
+        .root_source_file = "build_system/checks/build_focused_mode_policy_check.zig",
+        .step_name = "",
+        .description = "",
+    },
+    .{
+        .exe_name = "build-target-report-check",
+        .root_source_file = "build_system/reports/build_target_report.zig",
+        .step_name = "",
+        .description = "",
+    },
+};
+
+fn addReportToolRunStep(
+    b: *std.Build,
+    target: std.Build.ResolvedTarget,
+    optimize: std.builtin.OptimizeMode,
+    build_options: ?*std.Build.Step.Options,
+    spec: ReportToolSpec,
+) *std.Build.Step {
+    const exe = addReportToolExecutable(b, target, optimize, build_options, spec);
+    const run = b.addRunArtifact(exe);
+    const step = b.step(spec.step_name, spec.description);
+    step.dependOn(&run.step);
+    return step;
+}
+
+fn addReportToolExecutable(
+    b: *std.Build,
+    target: std.Build.ResolvedTarget,
+    optimize: std.builtin.OptimizeMode,
+    build_options: ?*std.Build.Step.Options,
+    spec: ReportToolSpec,
+) *std.Build.Step.Compile {
+    const exe = b.addExecutable(.{
+        .name = spec.exe_name,
+        .root_module = b.createModule(.{
+            .root_source_file = b.path(spec.root_source_file),
+            .target = target,
+            .optimize = optimize,
+        }),
+    });
+    configureWindowsLinker(exe);
+    if (spec.adds_build_options) {
+        exe.root_module.addOptions("build_options", build_options.?);
+    }
+    if (spec.adds_target_profile_import) {
+        exe.root_module.addAnonymousImport("target_profile", .{
+            .root_source_file = b.path("build_system/target_profile.zig"),
+            .target = target,
+            .optimize = optimize,
+        });
+    }
+    return exe;
 }

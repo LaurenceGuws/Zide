@@ -177,6 +177,11 @@ Progress note, 2026-04-01:
   registration now live under `build_system/bootstrap_setup.zig`
 - `build_system/bootstrap_graph.zig` is narrower and reads more as bootstrap
   composition than as a single mixed initializer
+- `build_system/step_reports.zig` now routes all build report/check executables
+  through shared report-tool helpers instead of repeating near-identical
+  compile/run wiring per report
+- this keeps step names and behavior intact while removing another build-side
+  duplication slab from the justified non-`src` surface
 
 ### AH-04 App Orchestration Honesty
 
