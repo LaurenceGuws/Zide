@@ -142,6 +142,10 @@ Status note, 2026-03-31:
     runtime, lifecycle, publication-state, publication-update, presentation-
     handoff, content, queries, selection, interaction, and config helpers that
     are still truly wrapper-owned also live under `src/terminal/core/session/`
+  - the last obviously wrapper-owned flat residue is now there too:
+    host types/metadata, init options, input send/report helpers, input
+    snapshot state, and presentation feedback structs now also live under
+    `src/terminal/core/session/`
   - that matters because `pty_terminal_runtime.zig` no longer reads like a bag of
     every field in the system; it reads like allocator/core plus grouped
     subsystems

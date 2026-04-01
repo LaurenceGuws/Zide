@@ -181,6 +181,10 @@ Validation note, 2026-03-31:
     handoff, content, queries, selection, interaction, and config helpers that
     are still genuinely wrapper-owned also live under
     `src/terminal/core/session/`
+  - the last obviously wrapper-owned flat residue is now there too:
+    host metadata/types, init options, input send/report helpers, input
+    snapshot state, and presentation feedback structs now also live under
+    `src/terminal/core/session/`
   - `pty_terminal_runtime.zig` now reads as allocator/core plus grouped subsystem
     state and explicit API seams, not as one broad undifferentiated owner.
   - the rename threshold is now crossed:

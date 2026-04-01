@@ -1,6 +1,6 @@
 const input_mod = @import("../../input/input.zig");
 const types = @import("../../model/types.zig");
-const session_input = @import("../session_input.zig");
+const session_input = @import("session_input.zig");
 
 pub fn sendKey(self: anytype, key: types.Key, mod: types.Modifier) !void {
     try session_input.sendKey(self, key, mod);

@@ -1,6 +1,6 @@
 const std = @import("std");
 const app_logger = @import("../../app_logger.zig");
-const session_host_types = @import("../core/session_host_types.zig");
+const session_host_types = @import("../core/session/session_host_types.zig");
 
 const ProgressState = session_host_types.ProgressState;
 

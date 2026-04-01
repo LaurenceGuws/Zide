@@ -6,7 +6,7 @@ const snapshot_mod = @import("snapshot.zig");
 const types = @import("../model/types.zig");
 const kitty_mod = @import("../kitty/graphics.zig");
 const semantic_prompt_mod = @import("semantic_prompt.zig");
-const session_host_types = @import("session_host_types.zig");
+const session_host_types = @import("session/session_host_types.zig");
 const palette_mod = @import("../protocol/palette.zig");
 
 const Screen = screen_mod.Screen;

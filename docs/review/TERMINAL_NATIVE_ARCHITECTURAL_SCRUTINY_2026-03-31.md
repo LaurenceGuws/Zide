@@ -137,6 +137,10 @@ Judgment:
   runtime, lifecycle, publication-state, publication-update, presentation-
   handoff, content, queries, selection, interaction, and config helpers that
   are still truly wrapper-owned now live there too
+- the last obviously wrapper-owned flat residue is now there as well:
+  host metadata/types, init options, input send/report helpers, input
+  snapshot state, and presentation feedback structs also live under
+  `src/terminal/core/session/`
 - current judgment:
   - this is no longer just "a broad session file with helpers extracted"
   - it is now allocator/core plus grouped subsystems and explicit API seams

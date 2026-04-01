@@ -1,5 +1,5 @@
 const input_mod = @import("../../input/input.zig");
-const session_input_snapshot = @import("../session_input_snapshot.zig");
+const session_input_snapshot = @import("session_input_snapshot.zig");
 
 pub const Fields = struct {
     bracketed_paste: bool,
