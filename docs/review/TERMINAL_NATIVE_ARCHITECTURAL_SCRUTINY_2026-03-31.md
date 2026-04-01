@@ -911,6 +911,8 @@ work:
   it directly
 - no investigation scaffolding left in hot files after the owning bug lane
   cools
+- once a facade file becomes a dead alias, delete it instead of preserving the
+  extra pathname as false structure
 
 ## Final Assessment
 

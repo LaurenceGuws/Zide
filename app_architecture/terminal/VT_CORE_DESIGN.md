@@ -1440,6 +1440,9 @@ These names are recommended to avoid ambiguity:
 That naming cut is now landed in code: the PTY-backed wrapper is
 `PtyTerminalRuntime`, not `TerminalSession`.
 
+The dead extra alias file is gone too: `terminal_runtime.zig` now owns the
+runtime type directly instead of forwarding through `pty_terminal_runtime.zig`.
+
 Avoid continuing to use `TerminalSession` as the name of the engine center once
 the new boundary exists.
 

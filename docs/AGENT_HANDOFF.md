@@ -60,8 +60,8 @@ not a progress log and should stay brief.
 - `TerminalCore` is real, but it is still not the only obvious center.
 - The broad remaining architectural enemy is not random compatibility debt. It
   is the collection of fake centers around the engine:
-  - the remaining `pty_terminal_runtime.zig` / host-wrapper gravity around
-    `PtyTerminalRuntime`
+  - the remaining host-wrapper gravity around `PtyTerminalRuntime`, now living
+    directly in `terminal_runtime.zig`
   - parser-hook text semantics above the engine boundary
   - duplicated publication/cache truth
   - oversized native widget/render coordination

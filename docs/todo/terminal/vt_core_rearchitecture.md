@@ -800,7 +800,7 @@ Validation note, 2026-03-31:
 ## Current Kill Order
 
 - [ ] finish destroying `PtyTerminalRuntime` as a false center, including the
-      remaining file/module gravity around the now-renamed `PtyTerminalRuntime`
+      remaining host-wrapper gravity around `PtyTerminalRuntime`
 - [ ] move printable semantics below the VT boundary
 - [x] move printable semantics below the VT boundary
 - [ ] replace duplicated publication/cache truth with one explicit center
@@ -814,8 +814,9 @@ Validation note, 2026-03-31:
 - The engine-center gap versus `libghostty-vt` is now mostly about obviousness
   and ownership gravity, not lack of subsystems.
 - The largest remaining architectural enemies are:
-  - the remaining `pty_terminal_runtime.zig` module/file gravity around
-    `PtyTerminalRuntime`
+  - the remaining host-wrapper gravity around `PtyTerminalRuntime`, now that
+    the dead `pty_terminal_runtime.zig` alias file is gone and
+    `terminal_runtime.zig` directly owns the runtime type
   - parser-hook semantics above the engine
   - duplicated publication truth
   - oversized native widget/render coordination
