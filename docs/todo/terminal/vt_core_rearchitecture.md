@@ -194,7 +194,6 @@ Validation note, 2026-03-31:
     `src/terminal/core/session/presentation_feedback.zig`,
     `src/terminal/core/session/lifecycle.zig`,
     `src/terminal/core/session/mode_effects.zig`,
-    `src/terminal/core/session/presentation_handoff.zig`,
     `src/terminal/core/session/thread_runtime.zig`, and
     `src/terminal/core/session/transport_runtime.zig`
     replace the old flat `session_*` naming inside the subtree.

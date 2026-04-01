@@ -1066,10 +1066,9 @@ Migration approach:
 - publication/diff, selection projection, plan/refinement, selection-dirty
   expansion, and damage helpers are split across focused `view_cache_*` modules
 - presented-generation acknowledgement, damage retirement, publication
-  triggering, and sync-update/view-cache update helpers now live directly
+  triggering, sync-update/view-cache update helpers, and presentation
+  capture/copy/feedback now live directly
   under `src/terminal/core/publication/terminal_publication.zig`
-- presentation capture/copy/feedback handoff now lives under
-  `src/terminal/core/session/presentation_handoff.zig`
 - PTY/external poll publication wake/update choreography now partially lives
   under `src/terminal/core/pty_poll_publication.zig` instead of staying fully
   mixed into `pty_io.zig`
