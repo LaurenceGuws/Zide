@@ -94,3 +94,59 @@ fn fileExists(path: []const u8) bool {
     handle.close();
     return true;
 }
+
+test "resolveSharedAssetPath prefers user asset root over dev fallback" {
+    var tmp = std.testing.tmpDir(.{});
+    defer tmp.cleanup();
+
+    try tmp.dir.makePath("user/tree-sitter-assets/syntax");
+    try tmp.dir.makePath("workspace/zide");
+    try tmp.dir.makePath("workspace/zide-tree-sitter/assets/syntax");
+
+    try tmp.dir.writeFile(.{
+        .sub_path = "user/tree-sitter-assets/syntax/generated.lua",
+        .data = "user",
+    });
+    try tmp.dir.writeFile(.{
+        .sub_path = "workspace/zide-tree-sitter/assets/syntax/generated.lua",
+        .data = "dev",
+    });
+
+    const root_path = try tmp.dir.realpathAlloc(std.testing.allocator, ".");
+    defer std.testing.allocator.free(root_path);
+
+    const workspace_root = try std.fs.path.join(std.testing.allocator, &.{ root_path, "workspace", "zide" });
+    defer std.testing.allocator.free(workspace_root);
+    const user_root = try std.fs.path.join(std.testing.allocator, &.{ root_path, "user" });
+    defer std.testing.allocator.free(user_root);
+
+    const previous_cwd = try std.process.getCwdAlloc(std.testing.allocator);
+    defer std.testing.allocator.free(previous_cwd);
+    try std.posix.chdir(workspace_root);
+    defer std.posix.chdir(previous_cwd) catch {};
+
+    const old_xdg = std.posix.getenv("XDG_CONFIG_HOME");
+    const old_home = std.posix.getenv("HOME");
+    try std.posix.setenvZ("XDG_CONFIG_HOME", user_root, true);
+    defer {
+        if (old_xdg) |value| {
+            std.posix.setenvZ("XDG_CONFIG_HOME", std.mem.sliceTo(value, 0), true) catch {};
+        } else {
+            std.posix.unsetenvZ("XDG_CONFIG_HOME") catch {};
+        }
+        if (old_home) |value| {
+            std.posix.setenvZ("HOME", std.mem.sliceTo(value, 0), true) catch {};
+        } else {
+            std.posix.unsetenvZ("HOME") catch {};
+        }
+    }
+    try std.posix.setenvZ("HOME", user_root, true);
+
+    const resolved = try resolveSharedAssetPath(std.testing.allocator, "syntax/generated.lua");
+    try std.testing.expect(resolved != null);
+    defer std.testing.allocator.free(resolved.?);
+
+    const expected = try std.fs.path.join(std.testing.allocator, &.{ user_root, "zide", "tree-sitter-assets", "syntax", "generated.lua" });
+    defer std.testing.allocator.free(expected);
+    try std.testing.expectEqualStrings(expected, resolved.?);
+}
