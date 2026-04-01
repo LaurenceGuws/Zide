@@ -99,6 +99,9 @@ Judgment:
   public surface, but it no longer routes shared input/selection/progress
   types through `pty_terminal_runtime.zig`; those names now come from their
   direct `session/` owners instead of reinforcing wrapper gravity
+- the same cleanup now applies to selection gesture types and key-mode flag
+  access, so the public runtime surface depends less on wrapper-owned aliases
+  even while staying a stable entrypoint
 - `src/terminal/core/session/runtime_api.zig` and
   `src/terminal/core/session/publication_api.zig` now carry the runtime and
   publication/present method groups that were previously written inline on

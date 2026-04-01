@@ -1,6 +1,7 @@
 const session_mod = @import("pty_terminal_runtime.zig");
 const host_types = @import("session/host_types.zig");
-const host_selection = @import("session/selection.zig");
+const interaction = @import("session/interaction.zig");
+const selection_mod = @import("selection.zig");
 const types_api = @import("session/types_api.zig");
 const workspace_mod = @import("workspace.zig");
 
@@ -39,7 +40,7 @@ pub const VTERM_KEY_LEFT_SUPER = types_api.VTERM_KEY_LEFT_SUPER;
 pub const VTERM_KEY_RIGHT_SUPER = types_api.VTERM_KEY_RIGHT_SUPER;
 pub const KeypadKey = types_api.KeypadKey;
 pub const KeyAction = types_api.KeyAction;
-pub const keyModeFlagsValue = session_mod.PtyTerminalRuntime.keyModeFlagsValue;
+pub const keyModeFlagsValue = interaction.keyModeFlagsValue;
 
 pub const VTERM_MOD_NONE = types_api.VTERM_MOD_NONE;
 pub const VTERM_MOD_SHIFT = types_api.VTERM_MOD_SHIFT;
@@ -54,5 +55,5 @@ pub const MouseEvent = types_api.MouseEvent;
 
 pub const SelectionPos = types_api.SelectionPos;
 pub const TerminalSelection = types_api.TerminalSelection;
-pub const SelectionGesture = host_selection.SelectionGesture;
-pub const ClickSelectionResult = host_selection.ClickSelectionResult;
+pub const SelectionGesture = selection_mod.SelectionGesture;
+pub const ClickSelectionResult = selection_mod.ClickSelectionResult;
