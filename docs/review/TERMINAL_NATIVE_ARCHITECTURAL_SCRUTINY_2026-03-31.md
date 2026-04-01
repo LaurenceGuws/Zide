@@ -166,6 +166,11 @@ Judgment:
   `src/terminal/protocol/csi_mode_query.zig`, and DECRQM now snapshots mode
   state directly from the live runtime object via
   `csi_mode_query.modeSnapshot(self)`
+- the CSI reply query shells are dead too:
+  `QueryContext` and `ScreenQueryContext` are deleted from
+  `src/terminal/protocol/csi_reply.zig`, and DSR/window-op reply handling
+  now passes raw query/screen state instead of bouncing through callback
+  wrappers for three values at a time
 - the stale `src/terminal/core/session_protocol.zig` forwarding shell is now
   deleted, so that API seam no longer routes through one extra session-named
   hop before reaching the real owners

@@ -48,9 +48,9 @@ fn effectiveSgrParamCount(action: parser_csi.CsiAction) usize {
 }
 
 pub const CsiWriter = csi_reply.CsiWriter;
-const QueryContext = csi_reply.QueryContext;
 const CursorReport = csi_reply.CursorReport;
-const ScreenQueryContext = csi_reply.ScreenQueryContext;
+const QueryState = csi_reply.QueryState;
+const ScreenState = csi_reply.ScreenState;
 
 pub fn handleCsi(self: anytype, action: parser_csi.CsiAction) void {
     handleCsiOnSession(self, action);
@@ -112,7 +112,19 @@ fn handleCsiOnSession(self: anytype, action: parser_csi.CsiAction) void {
             if (self.lockPtyWriter()) |writer_guard| {
                 var writer = writer_guard;
                 defer writer.unlock();
-                handleDsrQuery(QueryContext.from(self), CsiWriter.from(&writer), ScreenQueryContext.from(self.activeScreen()), action, param_len, p);
+                const screen = self.activeScreen();
+                handleDsrQuery(.{
+                    .color_scheme_dark = self.interaction.color_scheme_dark,
+                    .cell_height = self.interaction.cell_height,
+                    .cell_width = self.interaction.cell_width,
+                }, CsiWriter.from(&writer), .{
+                    .cursor_report = blk: {
+                        const pos = screen.cursorReport();
+                        break :blk .{ .row_1 = pos.row_1, .col_1 = pos.col_1 };
+                    },
+                    .rows = screen.grid.rows,
+                    .cols = screen.grid.cols,
+                }, action, param_len, p);
             }
         },
         'c' => { // DA
@@ -129,7 +141,19 @@ fn handleCsiOnSession(self: anytype, action: parser_csi.CsiAction) void {
                 if (self.lockPtyWriter()) |writer_guard| {
                     var writer = writer_guard;
                     defer writer.unlock();
-                    handleWindowOpQuery(QueryContext.from(self), CsiWriter.from(&writer), ScreenQueryContext.from(self.activeScreen()), param_len, p);
+                    const screen = self.activeScreen();
+                    handleWindowOpQuery(.{
+                        .color_scheme_dark = self.interaction.color_scheme_dark,
+                        .cell_height = self.interaction.cell_height,
+                        .cell_width = self.interaction.cell_width,
+                    }, CsiWriter.from(&writer), .{
+                        .cursor_report = blk: {
+                            const pos = screen.cursorReport();
+                            break :blk .{ .row_1 = pos.row_1, .col_1 = pos.col_1 };
+                        },
+                        .rows = screen.grid.rows,
+                        .cols = screen.grid.cols,
+                    }, param_len, p);
                 }
             }
         },
@@ -198,7 +222,7 @@ pub fn writeDecrqmReplyWithWriter(writer: CsiWriter, private: bool, mode: i32, s
     return true;
 }
 
-fn handleDsrQuery(query: QueryContext, writer: CsiWriter, screen: ScreenQueryContext, action: parser_csi.CsiAction, param_len: usize, params: [parser_csi.max_params]i32) void {
+fn handleDsrQuery(query: QueryState, writer: CsiWriter, screen: ScreenState, action: parser_csi.CsiAction, param_len: usize, params: [parser_csi.max_params]i32) void {
     csi_reply.handleDsrQuery(query, writer, screen, action, param_len, params);
 }
 
@@ -206,7 +230,7 @@ fn handleDaQuery(writer: CsiWriter) void {
     csi_reply.handleDaQuery(writer);
 }
 
-fn handleWindowOpQuery(query: QueryContext, writer: CsiWriter, screen: ScreenQueryContext, param_len: usize, params: [parser_csi.max_params]i32) void {
+fn handleWindowOpQuery(query: QueryState, writer: CsiWriter, screen: ScreenState, param_len: usize, params: [parser_csi.max_params]i32) void {
     csi_reply.handleWindowOpQuery(query, writer, screen, param_len, params);
 }
 
