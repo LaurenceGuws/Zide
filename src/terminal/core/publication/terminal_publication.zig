@@ -400,6 +400,11 @@ pub fn renderCache(self: anytype) *const RenderCache {
     return &self.publication.render_caches[idx];
 }
 
+pub fn renderCacheLocked(self: anytype, source: []const u8) *const RenderCache {
+    _ = applyPendingViewRefreshLocked(self, source);
+    return renderCache(self);
+}
+
 pub fn activeRenderCacheIndex(self: anytype) u8 {
     return self.publication.render_cache_index.load(.acquire);
 }
@@ -426,6 +431,11 @@ pub fn renderCacheForGeneration(self: anytype, generation: u64) ?*const RenderCa
         if (cache.generation == generation) return cache;
     }
     return null;
+}
+
+pub fn renderCacheForGenerationLocked(self: anytype, generation: u64, source: []const u8) ?*const RenderCache {
+    _ = applyPendingViewRefreshLocked(self, source);
+    return renderCacheForGeneration(self, generation);
 }
 
 fn clearPublishedDamageLocked(self: anytype) void {

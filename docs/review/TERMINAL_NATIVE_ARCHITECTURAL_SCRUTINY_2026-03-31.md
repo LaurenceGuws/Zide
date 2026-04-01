@@ -405,6 +405,11 @@ Evidence:
   publication now treats damage retirement as an internal locked concern
   instead of exporting another storage-oriented operation from
   `terminal_publication.zig`
+- the same publication-owned refresh rule now covers FFI export too:
+  `src/terminal/ffi/core_api.zig` now uses
+  `renderCacheLocked(...)` / `renderCacheForGenerationLocked(...)` from
+  `src/terminal/core/publication/terminal_publication.zig` instead of
+  reimplementing publication refresh choreography under the host lock
 - the outer CSI forwarding shell is gone too:
   `terminal_protocol_api.zig` now routes CSI directly into
   `src/terminal/protocol/csi.zig` without stepping through an extra

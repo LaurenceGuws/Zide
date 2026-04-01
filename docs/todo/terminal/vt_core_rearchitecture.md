@@ -258,6 +258,13 @@ Validation note, 2026-03-31:
     publication now treats damage retirement as an internal locked concern
     instead of exporting another storage-oriented operation from
     `terminal_publication.zig`
+  - FFI snapshot and diff export now follow the same publication-owned refresh
+    rule too:
+    `src/terminal/ffi/core_api.zig` uses
+    `renderCacheLocked(...)` / `renderCacheForGenerationLocked(...)` from
+    `src/terminal/core/publication/terminal_publication.zig` instead of
+    manually locking, checking `viewRefreshPending()`, and forcing locked
+    refresh work before reading publication state
   - the remaining publication/view-cache helper stubs and the special-case
     protocol `appendHyperlink` wrapper are no longer written inline on
     `pty_terminal_runtime.zig`; those exceptions now route through the explicit

@@ -259,6 +259,10 @@ Status note, 2026-03-31:
   - the damage-clear step is now publication-internal too:
     published damage is retired through publication-owned locked flow instead
     of remaining exposed as a separate storage-oriented helper
+  - the same publication-owned refresh rule now covers FFI export too:
+    snapshot/diff export in `src/terminal/ffi/core_api.zig` now asks
+    `terminal_publication.zig` for locked current/generation cache access
+    instead of reimplementing publication refresh choreography in host code
   - the same direct-owner cleanup now applies in `workspace.zig`: wrapper
     composition reads as runtime/workspace ownership, and progress-state typing
     no longer comes through `pty_terminal_runtime.zig`

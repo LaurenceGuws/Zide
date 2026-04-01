@@ -84,11 +84,7 @@ fn copyPublishedSnapshotExport(
     handle.session.lock();
     errdefer handle.session.unlock();
 
-    if (handle.session.viewRefreshPending()) {
-        handle.session.updateViewCacheForScrollLocked();
-    }
-
-    const cache = handle.session.renderCache();
+    const cache = terminal_publication.renderCacheLocked(handle.session, "ffi_snapshot");
     const cells = try allocator.alloc(shared.Cell, cache.cells.items.len);
     errdefer allocator.free(cells);
     for (cache.cells.items, 0..) |cell, i| {
@@ -126,10 +122,6 @@ fn copyPublishedSnapshotExport(
     };
 }
 
-fn renderCacheForGenerationLocked(session: *terminal_runtime.PtyTerminalRuntime, generation: u64) ?*const @import("../core/render_cache.zig").RenderCache {
-    return terminal_publication.renderCacheForGeneration(session, generation);
-}
-
 fn copyGranularSnapshotDiffExport(
     handle: *shared.Handle,
     allocator: std.mem.Allocator,
@@ -139,12 +131,8 @@ fn copyGranularSnapshotDiffExport(
     handle.session.lock();
     defer handle.session.unlock();
 
-    if (handle.session.viewRefreshPending()) {
-        handle.session.updateViewCacheForScrollLocked();
-    }
-
-    const current = handle.session.renderCache();
-    const previous = renderCacheForGenerationLocked(handle.session, base_generation) orelse {
+    const current = terminal_publication.renderCacheLocked(handle.session, "ffi_snapshot_diff");
+    const previous = terminal_publication.renderCacheForGenerationLocked(handle.session, base_generation, "ffi_snapshot_diff") orelse {
         out_state.* = .{
             .generation = current.generation,
             .base_generation = base_generation,
