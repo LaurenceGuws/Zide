@@ -257,7 +257,7 @@ Current note:
   - `--open-directly`
   - `16x100`
   - one aggregate late cursor-step update
-  - target file `fixtures/terminal/assets/nvim_real_config_cursor_sample.zig`
+  - target file `tests/fixtures/terminal/assets/nvim_real_config_cursor_sample.zig`
 - that shape now hydrates cleanly into
   `redraw_nvim_real_config_cursor_step_probe.*`
 - the wrapper also supports idle-control captures with `--step-count 0`, which

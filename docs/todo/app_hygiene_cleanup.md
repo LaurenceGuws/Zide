@@ -257,6 +257,11 @@ Progress note, 2026-04-01:
   entrypoint
 - this continues the rule that non-`src` Zig files must defend their location
   by ownership, not habit
+- the standalone Zig redraw fixture source was moved from `fixtures/` into
+  `tests/fixtures/` because it is test authority data, not a generic repo
+  fixture or product surface
+- this keeps non-`src` Zig closer to the ownership boundary that actually
+  justifies it
 
 ## Investigation Follow-up
 
