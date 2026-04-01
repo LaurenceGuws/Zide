@@ -231,6 +231,11 @@ Progress note, 2026-04-01:
   handling, and shared latency/perf logging into named helpers
 - this makes the frame pacing loop read as explicit control-flow phases instead
   of one long mixed redraw/idle slab
+- `src/app/reload_config_runtime.zig` now centralizes logger config, theme
+  application, font reload handling, terminal cursor resolution, and shell-icon
+  reload handling in named helpers
+- this makes config reload read more like staged policy application and less
+  like a long mutation script
 
 ## Investigation Follow-up
 

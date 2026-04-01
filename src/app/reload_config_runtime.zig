@@ -67,18 +67,7 @@ fn shellIconMappingsEqual(
     return true;
 }
 
-pub const Hooks = struct {
-    refresh_terminal_sizing: *const fn (*anyopaque) anyerror!void,
-    apply_current_tab_bar_width_mode: *const fn (*anyopaque) void,
-};
-
-pub fn handle(state: anytype, ctx: *anyopaque, hooks: Hooks) !void {
-    const log = app_logger.logger("config.reload");
-    var config = try config_mod.loadConfig(state.allocator);
-    defer config_mod.freeConfig(state.allocator, &config);
-
-    try manual_highlights_mod.applyConfig(state.allocator, &config);
-
+fn applyLoggerConfig(config: *const config_mod.Config) void {
     app_logger.resetConfig();
     if (config.log_file_filter) |filter| {
         app_logger.setFileFilterString(filter) catch |err| {
@@ -117,6 +106,101 @@ pub fn handle(state: anytype, ctx: *anyopaque, hooks: Hooks) !void {
             std.debug.print("reload log group sink setup error: {any}\n", .{err});
         };
     }
+}
+
+fn resolveTerminalCursorStyle(config: *const config_mod.Config) ?term_types.CursorStyle {
+    if (config.terminal_cursor_shape == null and config.terminal_cursor_blink == null) return null;
+
+    var cursor_style = term_types.default_cursor_style;
+    if (config.terminal_cursor_shape) |shape| {
+        cursor_style.shape = shape;
+    }
+    if (config.terminal_cursor_blink) |blink| {
+        cursor_style.blink = blink;
+    }
+    return cursor_style;
+}
+
+fn applyResolvedThemes(state: anytype, config: *const config_mod.Config) !void {
+    const resolved_themes = app_theme_utils.resolveConfigThemes(state.shell_base_theme, config);
+    const app_theme_changed = !std.meta.eql(state.app_theme, resolved_themes.app);
+    const editor_theme_changed = !std.meta.eql(state.editor_theme, resolved_themes.editor);
+    const terminal_theme_changed = !std.meta.eql(state.terminal_theme, resolved_themes.terminal);
+
+    if (!(app_theme_changed or editor_theme_changed or terminal_theme_changed)) return;
+
+    state.app_theme = resolved_themes.app;
+    state.editor_theme = resolved_themes.editor;
+    state.terminal_theme = resolved_themes.terminal;
+
+    if (app_theme_changed) {
+        state.shell.setTheme(state.app_theme);
+    }
+    if (editor_theme_changed) {
+        state.editor_render_cache.clear();
+        state.editor_cluster_cache.clear();
+    }
+    if (terminal_theme_changed) {
+        try app_terminal_theme_apply.notifyColorSchemeChanged(&state.terminal_widgets, &state.terminal_theme);
+        app_terminal_theme_apply.applyThemeToWidgets(&state.terminal_widgets, &state.terminal_theme);
+    }
+    state.needs_redraw = true;
+}
+
+fn applyFontReload(state: anytype, ctx: *anyopaque, hooks: Hooks, config: *const config_mod.Config, log: app_logger.Logger) !void {
+    const font_reload = try app_font_rendering.applyRendererReloadConfig(state.shell, config);
+    if (font_reload.rebuilt_fonts) {
+        state.editor_render_cache.clear();
+        state.editor_cluster_cache.clear();
+        try hooks.refresh_terminal_sizing(ctx);
+        state.needs_redraw = true;
+        log.logStdout(.info, "reload font renderer path/size/rendering changed choice={any} rendering={any} text={any}", .{
+            font_reload.font_choice_changed,
+            font_reload.font_rendering_changed,
+            font_reload.text_rendering_changed,
+        });
+    } else if (font_reload.text_rendering_changed) {
+        state.needs_redraw = true;
+        log.logStdout(.info, "reload font renderer text controls changed", .{});
+    }
+}
+
+fn reloadShellIcons(state: anytype, config: *const config_mod.Config, log: app_logger.Logger) !void {
+    const next_show_shell_icon = config.terminal_tab_bar_show_shell_icon orelse state.terminal_tab_bar_show_shell_icon;
+    const next_shell_icons = try app_terminal_shell_icon_runtime.dupMappings(
+        state.allocator,
+        config.terminal_tab_bar_shell_icons,
+    );
+    const changed = next_show_shell_icon != state.terminal_tab_bar_show_shell_icon or
+        !shellIconMappingsEqual(state.terminal_tab_bar_shell_icons, next_shell_icons);
+    if (changed) {
+        state.terminal_tab_bar_show_shell_icon = next_show_shell_icon;
+        app_terminal_shell_icon_runtime.freeMappings(state.allocator, state.terminal_tab_bar_shell_icons);
+        state.terminal_tab_bar_shell_icons = next_shell_icons;
+        state.tab_bar.clearTabIcons();
+        state.terminal_shell_icon_cache.clear(state.shell.rendererPtr());
+        state.needs_redraw = true;
+        log.logStdout(.info, "reload terminal.tab_bar.show_shell_icon={any}", .{
+            state.terminal_tab_bar_show_shell_icon,
+        });
+    } else {
+        app_terminal_shell_icon_runtime.freeMappings(state.allocator, next_shell_icons);
+    }
+}
+
+pub const Hooks = struct {
+    refresh_terminal_sizing: *const fn (*anyopaque) anyerror!void,
+    apply_current_tab_bar_width_mode: *const fn (*anyopaque) void,
+};
+
+pub fn handle(state: anytype, ctx: *anyopaque, hooks: Hooks) !void {
+    const log = app_logger.logger("config.reload");
+    var config = try config_mod.loadConfig(state.allocator);
+    defer config_mod.freeConfig(state.allocator, &config);
+
+    try manual_highlights_mod.applyConfig(state.allocator, &config);
+
+    applyLoggerConfig(&config);
     if (config.sdl_log_level) |level| {
         app_shell.setSdlLogLevel(level);
     }
@@ -127,31 +211,7 @@ pub fn handle(state: anytype, ctx: *anyopaque, hooks: Hooks) !void {
     if (config.editor_imported_theme_name) |name| {
         state.editor_imported_theme_name = try state.allocator.dupe(u8, name);
     }
-    {
-        const resolved_themes = app_theme_utils.resolveConfigThemes(state.shell_base_theme, &config);
-        const app_theme_changed = !std.meta.eql(state.app_theme, resolved_themes.app);
-        const editor_theme_changed = !std.meta.eql(state.editor_theme, resolved_themes.editor);
-        const terminal_theme_changed = !std.meta.eql(state.terminal_theme, resolved_themes.terminal);
-
-        if (app_theme_changed or editor_theme_changed or terminal_theme_changed) {
-            state.app_theme = resolved_themes.app;
-            state.editor_theme = resolved_themes.editor;
-            state.terminal_theme = resolved_themes.terminal;
-
-            if (app_theme_changed) {
-                state.shell.setTheme(state.app_theme);
-            }
-            if (editor_theme_changed) {
-                state.editor_render_cache.clear();
-                state.editor_cluster_cache.clear();
-            }
-            if (terminal_theme_changed) {
-                try app_terminal_theme_apply.notifyColorSchemeChanged(&state.terminal_widgets, &state.terminal_theme);
-                app_terminal_theme_apply.applyThemeToWidgets(&state.terminal_widgets, &state.terminal_theme);
-            }
-            state.needs_redraw = true;
-        }
-    }
+    try applyResolvedThemes(state, &config);
 
     state.editor_wrap = config.editor_wrap orelse state.editor_wrap;
     state.editor_large_jump_rows = config.editor_large_jump_rows orelse state.editor_large_jump_rows;
@@ -166,23 +226,7 @@ pub fn handle(state: anytype, ctx: *anyopaque, hooks: Hooks) !void {
         state.input_router.setBindings(binds);
     }
 
-    {
-        const font_reload = try app_font_rendering.applyRendererReloadConfig(state.shell, &config);
-        if (font_reload.rebuilt_fonts) {
-            state.editor_render_cache.clear();
-            state.editor_cluster_cache.clear();
-            try hooks.refresh_terminal_sizing(ctx);
-            state.needs_redraw = true;
-            log.logStdout(.info, "reload font renderer path/size/rendering changed choice={any} rendering={any} text={any}", .{
-                font_reload.font_choice_changed,
-                font_reload.font_rendering_changed,
-                font_reload.text_rendering_changed,
-            });
-        } else if (font_reload.text_rendering_changed) {
-            state.needs_redraw = true;
-            log.logStdout(.info, "reload font renderer text controls changed", .{});
-        }
-    }
+    try applyFontReload(state, ctx, hooks, &config, log);
 
     if (config.terminal_blink_style) |blink_style| {
         state.terminal_blink_style = switch (blink_style) {
@@ -269,14 +313,7 @@ pub fn handle(state: anytype, ctx: *anyopaque, hooks: Hooks) !void {
         });
     }
 
-    if (config.terminal_cursor_shape != null or config.terminal_cursor_blink != null) {
-        var cursor_style = term_types.default_cursor_style;
-        if (config.terminal_cursor_shape) |shape| {
-            cursor_style.shape = shape;
-        }
-        if (config.terminal_cursor_blink) |blink| {
-            cursor_style.blink = blink;
-        }
+    if (resolveTerminalCursorStyle(&config)) |cursor_style| {
         state.terminal_cursor_style = cursor_style;
         for (state.terminals.items) |term| {
             term.setConfiguredCursorStyle(cursor_style);
@@ -332,28 +369,7 @@ pub fn handle(state: anytype, ctx: *anyopaque, hooks: Hooks) !void {
             state.terminal_tab_bar_show_single_tab,
         });
     }
-    {
-        const next_show_shell_icon = config.terminal_tab_bar_show_shell_icon orelse state.terminal_tab_bar_show_shell_icon;
-        const next_shell_icons = try app_terminal_shell_icon_runtime.dupMappings(
-            state.allocator,
-            config.terminal_tab_bar_shell_icons,
-        );
-        const changed = next_show_shell_icon != state.terminal_tab_bar_show_shell_icon or
-            !shellIconMappingsEqual(state.terminal_tab_bar_shell_icons, next_shell_icons);
-        if (changed) {
-            state.terminal_tab_bar_show_shell_icon = next_show_shell_icon;
-            app_terminal_shell_icon_runtime.freeMappings(state.allocator, state.terminal_tab_bar_shell_icons);
-            state.terminal_tab_bar_shell_icons = next_shell_icons;
-            state.tab_bar.clearTabIcons();
-            state.terminal_shell_icon_cache.clear(state.shell.rendererPtr());
-            state.needs_redraw = true;
-            log.logStdout(.info, "reload terminal.tab_bar.show_shell_icon={any}", .{
-                state.terminal_tab_bar_show_shell_icon,
-            });
-        } else {
-            app_terminal_shell_icon_runtime.freeMappings(state.allocator, next_shell_icons);
-        }
-    }
+    try reloadShellIcons(state, &config, log);
     if (config.editor_tab_bar_width_mode != null) {
         state.editor_tab_bar_width_mode = app_tab_bar_width.mapMode(config.editor_tab_bar_width_mode);
         state.needs_redraw = true;
