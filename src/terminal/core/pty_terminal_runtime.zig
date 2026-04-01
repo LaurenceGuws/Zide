@@ -35,14 +35,12 @@ const terminal_publication = @import("publication/terminal_publication.zig");
 const config = @import("session/config.zig");
 const runtime = @import("session/runtime.zig");
 const debug_api = @import("session/debug_api.zig");
-const runtime_api = @import("session/runtime_api.zig");
 const publication_fields = @import("session/publication_fields.zig");
 const runtime_fields = @import("session/runtime_fields.zig");
 const interaction_fields = @import("session/interaction_fields.zig");
 const control_fields = @import("session/control_fields.zig");
 const input_api = @import("session/input_api.zig");
 const config_api = @import("session/config_api.zig");
-const lifecycle_api = @import("session/lifecycle_api.zig");
 const types_api = @import("session/types_api.zig");
 const osc_kitty_clipboard = @import("../protocol/osc_kitty_clipboard.zig");
 const terminal_transport = @import("runtime/terminal_transport.zig");
@@ -97,22 +95,23 @@ const debugSetGridRow = debug_api.debugSetGridRow;
 
 pub const PtyTerminalRuntime = struct {
     const Self = @This();
+    const ContentAPI = content_api.API(Self, Cell, ScrollbackInfo, ScrollbackRange);
 
     pub const InitOptions = init_options.InitOptions;
-    pub const scrollbackInfo = content_api.API(Self, Cell, ScrollbackInfo, ScrollbackRange).scrollbackInfo;
-    pub const copyScrollbackRange = content_api.API(Self, Cell, ScrollbackInfo, ScrollbackRange).copyScrollbackRange;
-    pub const selectionPlainTextAlloc = content_api.API(Self, Cell, ScrollbackInfo, ScrollbackRange).selectionPlainTextAlloc;
-    pub const scrollbackPlainTextAlloc = content_api.API(Self, Cell, ScrollbackInfo, ScrollbackRange).scrollbackPlainTextAlloc;
-    pub const scrollbackAnsiTextAlloc = content_api.API(Self, Cell, ScrollbackInfo, ScrollbackRange).scrollbackAnsiTextAlloc;
-    pub const setScrollOffset = content_api.API(Self, Cell, ScrollbackInfo, ScrollbackRange).setScrollOffset;
-    pub const setScrollOffsetLocked = content_api.API(Self, Cell, ScrollbackInfo, ScrollbackRange).setScrollOffsetLocked;
-    pub const resetToLiveBottomLocked = content_api.API(Self, Cell, ScrollbackInfo, ScrollbackRange).resetToLiveBottomLocked;
-    pub const resetToLiveBottomForInputLocked = content_api.API(Self, Cell, ScrollbackInfo, ScrollbackRange).resetToLiveBottomForInputLocked;
-    pub const setScrollOffsetFromNormalizedTrackLocked = content_api.API(Self, Cell, ScrollbackInfo, ScrollbackRange).setScrollOffsetFromNormalizedTrackLocked;
-    pub const scrollSelectionDragLocked = content_api.API(Self, Cell, ScrollbackInfo, ScrollbackRange).scrollSelectionDragLocked;
-    pub const scrollBy = content_api.API(Self, Cell, ScrollbackInfo, ScrollbackRange).scrollBy;
-    pub const scrollByLocked = content_api.API(Self, Cell, ScrollbackInfo, ScrollbackRange).scrollByLocked;
-    pub const scrollWheelLocked = content_api.API(Self, Cell, ScrollbackInfo, ScrollbackRange).scrollWheelLocked;
+    pub const scrollbackInfo = ContentAPI.scrollbackInfo;
+    pub const copyScrollbackRange = ContentAPI.copyScrollbackRange;
+    pub const selectionPlainTextAlloc = ContentAPI.selectionPlainTextAlloc;
+    pub const scrollbackPlainTextAlloc = ContentAPI.scrollbackPlainTextAlloc;
+    pub const scrollbackAnsiTextAlloc = ContentAPI.scrollbackAnsiTextAlloc;
+    pub const setScrollOffset = ContentAPI.setScrollOffset;
+    pub const setScrollOffsetLocked = ContentAPI.setScrollOffsetLocked;
+    pub const resetToLiveBottomLocked = ContentAPI.resetToLiveBottomLocked;
+    pub const resetToLiveBottomForInputLocked = ContentAPI.resetToLiveBottomForInputLocked;
+    pub const setScrollOffsetFromNormalizedTrackLocked = ContentAPI.setScrollOffsetFromNormalizedTrackLocked;
+    pub const scrollSelectionDragLocked = ContentAPI.scrollSelectionDragLocked;
+    pub const scrollBy = ContentAPI.scrollBy;
+    pub const scrollByLocked = ContentAPI.scrollByLocked;
+    pub const scrollWheelLocked = ContentAPI.scrollWheelLocked;
     pub const clearSelection = host_selection.clearSelection;
     pub const clearSelectionLocked = host_selection.clearSelectionLocked;
     pub const clearSelectionIfActiveLocked = host_selection.clearSelectionIfActiveLocked;
@@ -200,18 +199,26 @@ pub const PtyTerminalRuntime = struct {
     control: control_fields.Fields,
 
     pub fn init(allocator: std.mem.Allocator, rows: u16, cols: u16) !*PtyTerminalRuntime {
-        return lifecycle_api.init(PtyTerminalRuntime, allocator, rows, cols);
+        return initWithOptions(allocator, rows, cols, .{});
     }
 
     pub fn initWithOptions(allocator: std.mem.Allocator, rows: u16, cols: u16, options: InitOptions) !*PtyTerminalRuntime {
-        return lifecycle_api.initWithOptions(PtyTerminalRuntime, allocator, rows, cols, options);
+        return try runtime.init(PtyTerminalRuntime, allocator, rows, cols, options);
     }
 
-    pub const activeScreen = lifecycle_api.activeScreen;
-    pub const activeScreenConst = lifecycle_api.activeScreenConst;
-    pub const setInputPressure = lifecycle_api.setInputPressure;
+    pub fn activeScreen(self: *Self) *Screen {
+        return self.core.activeScreen();
+    }
 
-    pub const isAltActive = lifecycle_api.isAltActive;
+    pub fn activeScreenConst(self: *const Self) *const Screen {
+        return self.core.activeScreenConst();
+    }
+
+    pub const setInputPressure = runtime.setInputPressure;
+
+    pub fn isAltActive(self: *const Self) bool {
+        return self.core.isAltActive();
+    }
 
     pub const setDefaultColorsLocked = config_api.setDefaultColorsLocked;
     pub const setDefaultColors = config_api.setDefaultColors;
@@ -224,27 +231,47 @@ pub const PtyTerminalRuntime = struct {
     pub const applyThemePalette = config_api.applyThemePalette;
     pub const setConfiguredCursorStyle = config_api.setConfiguredCursorStyle;
 
-    pub const deinit = lifecycle_api.deinit;
+    pub const deinit = runtime.deinit;
 
-    pub const prepareForShutdown = runtime_api.prepareForShutdown;
-    pub const start = runtime_api.start;
-    pub const attachPtyTransport = runtime_api.attachPtyTransport;
-    pub const detachPtyTransport = runtime_api.detachPtyTransport;
-    pub const startNoThreads = runtime_api.startNoThreads;
-    pub const setLaunchShellPath = runtime_api.setLaunchShellPath;
-    pub const launchShellPath = runtime_api.launchShellPath;
-    pub const attachExternalTransport = runtime_api.attachExternalTransport;
-    pub const enqueueExternalBytes = runtime_api.enqueueExternalBytes;
-    pub const closeExternalTransport = runtime_api.closeExternalTransport;
-    pub const reportExternalChildExit = runtime_api.reportExternalChildExit;
-    pub const takeExternalOutgoingBytes = runtime_api.takeExternalOutgoingBytes;
-    pub const poll = runtime_api.poll;
-    pub const refreshChildExit = runtime_api.refreshChildExit;
-    pub const hasData = runtime_api.hasData;
+    pub const prepareForShutdown = runtime.prepareForShutdown;
+    pub const start = runtime.start;
+    pub const attachPtyTransport = runtime.attachPtyTransport;
+    pub const detachPtyTransport = runtime.detachPtyTransport;
+    pub const startNoThreads = runtime.startNoThreads;
+    pub const attachExternalTransport = runtime.attachExternalTransport;
+    pub const enqueueExternalBytes = runtime.enqueueExternalBytes;
+    pub const closeExternalTransport = runtime.closeExternalTransport;
+    pub const reportExternalChildExit = runtime.reportExternalChildExit;
+    pub const takeExternalOutgoingBytes = runtime.takeExternalOutgoingBytes;
+    pub const poll = runtime.poll;
+    pub const refreshChildExit = runtime.refreshChildExit;
+    pub const hasData = runtime.hasData;
 
-    pub const lock = lifecycle_api.lock;
-    pub const tryLock = lifecycle_api.tryLock;
-    pub const unlock = lifecycle_api.unlock;
+    pub fn setLaunchShellPath(self: *Self, shell_path: ?[]const u8) !void {
+        if (self.runtime.launch_shell_path) |old| {
+            self.allocator.free(old);
+            self.runtime.launch_shell_path = null;
+        }
+        if (shell_path) |path| {
+            self.runtime.launch_shell_path = try self.allocator.dupe(u8, path);
+        }
+    }
+
+    pub fn launchShellPath(self: *const Self) []const u8 {
+        return self.runtime.launch_shell_path orelse "";
+    }
+
+    pub fn lock(self: *Self) void {
+        self.control.state_mutex.lock();
+    }
+
+    pub fn tryLock(self: *Self) bool {
+        return self.control.state_mutex.tryLock();
+    }
+
+    pub fn unlock(self: *Self) void {
+        self.control.state_mutex.unlock();
+    }
 
     pub const pendingGeneration = terminal_publication.pendingGeneration;
     pub const publishedGeneration = terminal_publication.publishedGeneration;
@@ -252,9 +279,9 @@ pub const PtyTerminalRuntime = struct {
     pub const notePresentedGeneration = terminal_publication.notePresentedGeneration;
     pub const acknowledgePresentedGeneration = terminal_publication.acknowledgePresentedGeneration;
     pub const hasPublishedGenerationBacklog = terminal_publication.hasPublishedGenerationBacklog;
-    pub const pollBacklogHint = runtime_api.pollBacklogHint;
-    pub const lockPtyWriter = runtime_api.lockPtyWriter;
-    pub const writePtyBytes = runtime_api.writePtyBytes;
+    pub const pollBacklogHint = runtime.pollBacklogHint;
+    pub const lockPtyWriter = runtime.lockPtyWriter;
+    pub const writePtyBytes = runtime.writePtyBytes;
 
     pub const sendKey = input_api.sendKey;
     pub const sendKeyAction = input_api.sendKeyAction;
@@ -273,7 +300,7 @@ pub const PtyTerminalRuntime = struct {
     pub const reportFocusChanged = input_api.reportFocusChanged;
     pub const reportColorSchemeChanged = input_api.reportColorSchemeChanged;
 
-    pub const resize = lifecycle_api.resize;
+    pub const resize = runtime.resize;
 
     pub const setColumnMode132 = config_api.setColumnMode132;
     pub const setColumnMode132Locked = config_api.setColumnMode132Locked;

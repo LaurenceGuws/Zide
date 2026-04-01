@@ -148,11 +148,10 @@ Validation note, 2026-03-31:
   - `src/terminal/core/session_public_types.zig` is deleted; `pty_terminal_runtime.zig`
     now imports direct ownership modules instead of routing public-facing types
     through a mixed alias hub.
-  - the next extraction cut is also in:
-    - `src/terminal/core/session/runtime_api.zig`
   - host/runtime public methods are no longer written inline on
-    `pty_terminal_runtime.zig`; they are grouped behind an explicit runtime API
-    seam, while publication/present methods now re-export straight from
+    `pty_terminal_runtime.zig`; they now bind directly to
+    `src/terminal/core/session/runtime.zig`, while publication/present methods
+    re-export straight from
     `src/terminal/core/publication/terminal_publication.zig`
   - the wrapper behavior files now follow the same rule too:
     `src/terminal/core/session/runtime.zig`,
@@ -203,13 +202,12 @@ Validation note, 2026-03-31:
     acknowledgement, view-refresh queueing, sync-update publication, and feed
     publication; both `src/terminal/core/session/publication_state.zig` and
     `src/terminal/core/session/publication_updates.zig` are deleted.
-  - `src/terminal/core/session/lifecycle_api.zig` now owns the lifecycle and
-    composition block (`init`, screen access, input pressure, lock state,
-    resize, shutdown-facing methods) that was still written directly on the
-    session root.
-  - `src/terminal/core/session/surface_api.zig` now owns the content,
-    selection, host-query, and interaction alias slab that used to dominate
-    the top of `pty_terminal_runtime.zig`.
+  - the thin wrapper-side runtime/lifecycle API shells are now dead:
+    `src/terminal/core/session/runtime_api.zig` and
+    `src/terminal/core/session/lifecycle_api.zig` are deleted, so
+    `pty_terminal_runtime.zig` binds straight to
+    `src/terminal/core/session/runtime.zig` plus its few genuinely local
+    screen/lock helpers instead of routing through one more forwarding layer
   - `src/terminal/core/session/types_api.zig` now owns the bottom export slab
     for shared terminal constants and core-facing type aliases.
   - raw session state is no longer a flat lie:

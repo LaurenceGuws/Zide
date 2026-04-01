@@ -178,9 +178,12 @@ Status note, 2026-03-31:
   - `src/terminal/core/session_public_types.zig` is gone, so
     `pty_terminal_runtime.zig` no longer gets to hide direct ownership behind a
     mixed alias hub
-  - `src/terminal/core/session/runtime_api.zig` still holds the runtime
-    method group that was previously written inline on
-    `pty_terminal_runtime.zig`
+  - the thin wrapper-side API shells are now dead too:
+    `src/terminal/core/session/runtime_api.zig` and
+    `src/terminal/core/session/lifecycle_api.zig` are deleted, so
+    `pty_terminal_runtime.zig` binds straight to
+    `src/terminal/core/session/runtime.zig` plus its few genuinely local
+    screen/lock helpers instead of routing through one more forwarding layer
   - publication/present methods no longer route through a wrapper API seam;
     `pty_terminal_runtime.zig` now re-exports them straight from
     `src/terminal/core/publication/terminal_publication.zig`
@@ -206,12 +209,9 @@ Status note, 2026-03-31:
   - `src/terminal/core/session/content.zig` and
     `src/terminal/core/session/content_api.zig` now own the wrapper content
     seam without repeating `session_` in the file names
-  - `src/terminal/core/session/lifecycle_api.zig` now owns the lifecycle and
-    composition method block that was still written directly on
-    `pty_terminal_runtime.zig`
-  - `src/terminal/core/session/surface_api.zig` now owns the content,
-    selection, host-query, and interaction alias surface that used to dominate
-    the top of `pty_terminal_runtime.zig`
+  - `src/terminal/core/session/surface_api.zig` is gone too; the wrapper now
+    binds directly to the content, selection, host-query, and interaction
+    owners instead of routing through one more umbrella shell
   - `src/terminal/core/session/types_api.zig` now owns the shared terminal
     constant/type export slab that used to live at the bottom of
     `pty_terminal_runtime.zig`

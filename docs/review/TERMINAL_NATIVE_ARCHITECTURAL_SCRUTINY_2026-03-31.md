@@ -126,9 +126,12 @@ Judgment:
 - the PTY runtime regression tests now follow the same rule for snapshot,
   cell/color, dirty-state, and progress-state imports instead of reinforcing
   wrapper gravity through test-only barrel usage
-- `src/terminal/core/session/runtime_api.zig` still carries the runtime
-  method group that was previously written inline on
-  `pty_terminal_runtime.zig`
+- the thin wrapper-side API shells are now dead too:
+  `src/terminal/core/session/runtime_api.zig` and
+  `src/terminal/core/session/lifecycle_api.zig` are deleted, so
+  `pty_terminal_runtime.zig` binds straight to
+  `src/terminal/core/session/runtime.zig` plus its few genuinely local
+  screen/lock helpers instead of routing through one more forwarding layer
 - publication/present methods no longer route through a wrapper API seam;
   `pty_terminal_runtime.zig` now re-exports them straight from
   `src/terminal/core/publication/terminal_publication.zig`
@@ -172,12 +175,9 @@ Judgment:
   `src/terminal/core/session/thread_runtime.zig`, and
   `src/terminal/core/session/transport_runtime.zig` now follow the same rule:
   subtree ownership is explicit, so the repeated `session_` prefix is gone
-- `src/terminal/core/session/lifecycle_api.zig` now owns the lifecycle and
-  composition block instead of leaving those direct methods written on the root
-  session type
-- `src/terminal/core/session/surface_api.zig` now owns the giant content,
-  selection, host-query, and interaction alias surface instead of leaving that
-  umbrella slab at the top of `pty_terminal_runtime.zig`
+- `src/terminal/core/session/surface_api.zig` is gone too; the wrapper now
+  binds directly to the content, selection, host-query, and interaction owners
+  instead of routing through one more umbrella shell
 - `src/terminal/core/session/types_api.zig` now owns the shared constant/type
   export slab instead of leaving that import-umbrella surface at the bottom of
   `pty_terminal_runtime.zig`
