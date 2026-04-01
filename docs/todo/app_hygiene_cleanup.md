@@ -184,6 +184,15 @@ Done when:
 - runtime composition reads as intentional policy ownership, not callback
   forwarding scaffolding
 
+Progress note, 2026-04-01:
+
+- `src/app/post_preinput_hooks_runtime.zig` now centralizes repeated UI-scale
+  and window-chrome policy in local helpers instead of duplicating the same
+  closure-level logic across multiple hook sites
+- this is an extraction-only narrowing step: behavior is unchanged, but the
+  post-preinput frame path now reads more as orchestration and less as inline
+  policy sprawl
+
 ## Investigation Follow-up
 
 Next investigation pass should scrutinize these findings against:

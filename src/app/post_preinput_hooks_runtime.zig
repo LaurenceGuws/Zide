@@ -27,6 +27,55 @@ const input_types = shared_types.input;
 const layout_types = shared_types.layout;
 const WindowCaptionButton = app_state_types.WindowCaptionButton;
 
+fn applyCurrentTabBarWidthMode(state: anytype) void {
+    app_tab_bar_width.applyForMode(
+        &state.tab_bar,
+        state.app_mode,
+        state.terminal_window_chrome_mode,
+        state.editor_tab_bar_width_mode,
+        state.terminal_tab_bar_width_mode,
+    );
+}
+
+fn applyUiScale(state: anytype) void {
+    app_ui_layout_runtime.applyUiScale(
+        state,
+        state.shell.uiScaleFactor(),
+        @ptrCast(state),
+        .{
+            .apply_current_tab_bar_width_mode = struct {
+                fn call(scale_raw: *anyopaque) void {
+                    const cb_state: *@TypeOf(state.*) = @ptrCast(@alignCast(scale_raw));
+                    applyCurrentTabBarWidthMode(cb_state);
+                }
+            }.call,
+        },
+    );
+}
+
+fn syncWindowChrome(state: anytype, shell: *Shell, layout: layout_types.WidgetLayout) void {
+    if (app_terminal_window_chrome_runtime.isIntegratedActive(state.app_mode, state.terminal_window_chrome_mode)) {
+        const geometry = app_terminal_window_chrome_runtime.computeGeometry(
+            shell,
+            &state.tab_bar,
+            layout.tab_bar,
+            state.app_mode,
+            state.terminal_window_chrome_mode,
+        );
+        shell.setWindowChrome(app_terminal_window_chrome_runtime.windowChromeContract(geometry));
+    } else if (app_top_bar_window_chrome_runtime.isIntegratedActive(state.app_mode)) {
+        const geometry = app_top_bar_window_chrome_runtime.computeGeometry(
+            shell,
+            &state.top_bar,
+            layout.top_bar,
+            state.app_mode,
+        );
+        shell.setWindowChrome(app_top_bar_window_chrome_runtime.windowChromeContract(geometry));
+    } else {
+        shell.setWindowChrome(.{});
+    }
+}
+
 fn currentHoveredCaptionButton(shell: *Shell) ?WindowCaptionButton {
     if (!shell.integratedWindowChromeSinkActive()) return null;
     if (shell.integratedWindowChromeCloseHovered()) return .close;
@@ -54,25 +103,7 @@ pub fn handle(state: anytype, shell: *Shell, batch: *input_types.InputBatch, now
             .apply_ui_scale = struct {
                 fn inner(inner_raw: *anyopaque) void {
                     const inner_state: *State = @ptrCast(@alignCast(inner_raw));
-                    app_ui_layout_runtime.applyUiScale(
-                        inner_state,
-                        inner_state.shell.uiScaleFactor(),
-                        @ptrCast(inner_state),
-                        .{
-                            .apply_current_tab_bar_width_mode = struct {
-                                fn call(scale_raw: *anyopaque) void {
-                                    const cb_state: *State = @ptrCast(@alignCast(scale_raw));
-                                    app_tab_bar_width.applyForMode(
-                                        &cb_state.tab_bar,
-                                        cb_state.app_mode,
-                                        cb_state.terminal_window_chrome_mode,
-                                        cb_state.editor_tab_bar_width_mode,
-                                        cb_state.terminal_tab_bar_width_mode,
-                                    );
-                                }
-                            }.call,
-                        },
-                    );
+                    applyUiScale(inner_state);
                 }
             }.inner,
             .refresh_terminal_sizing = struct {
@@ -99,25 +130,7 @@ pub fn handle(state: anytype, shell: *Shell, batch: *input_types.InputBatch, now
                         &inner_state.window_resize_last_time,
                     );
                     if (result.ui_scale_changed) {
-                        app_ui_layout_runtime.applyUiScale(
-                            inner_state,
-                            inner_state.shell.uiScaleFactor(),
-                            @ptrCast(inner_state),
-                            .{
-                                .apply_current_tab_bar_width_mode = struct {
-                                    fn call(scale_raw: *anyopaque) void {
-                                        const cb_state: *State = @ptrCast(@alignCast(scale_raw));
-                                        app_tab_bar_width.applyForMode(
-                                            &cb_state.tab_bar,
-                                            cb_state.app_mode,
-                                            cb_state.terminal_window_chrome_mode,
-                                            cb_state.editor_tab_bar_width_mode,
-                                            cb_state.terminal_tab_bar_width_mode,
-                                        );
-                                    }
-                                }.call,
-                            },
-                        );
+                        applyUiScale(inner_state);
                     }
                     if (result.needs_redraw) inner_state.needs_redraw = true;
                 }
@@ -131,26 +144,7 @@ pub fn handle(state: anytype, shell: *Shell, batch: *input_types.InputBatch, now
             .sync_window_chrome = struct {
                 fn inner(inner_raw: *anyopaque, frame_shell: *Shell, layout: layout_types.WidgetLayout) void {
                     const inner_state: *State = @ptrCast(@alignCast(inner_raw));
-                    if (app_terminal_window_chrome_runtime.isIntegratedActive(inner_state.app_mode, inner_state.terminal_window_chrome_mode)) {
-                        const geometry = app_terminal_window_chrome_runtime.computeGeometry(
-                            frame_shell,
-                            &inner_state.tab_bar,
-                            layout.tab_bar,
-                            inner_state.app_mode,
-                            inner_state.terminal_window_chrome_mode,
-                        );
-                        frame_shell.setWindowChrome(app_terminal_window_chrome_runtime.windowChromeContract(geometry));
-                    } else if (app_top_bar_window_chrome_runtime.isIntegratedActive(inner_state.app_mode)) {
-                        const geometry = app_top_bar_window_chrome_runtime.computeGeometry(
-                            frame_shell,
-                            &inner_state.top_bar,
-                            layout.top_bar,
-                            inner_state.app_mode,
-                        );
-                        frame_shell.setWindowChrome(app_top_bar_window_chrome_runtime.windowChromeContract(geometry));
-                    } else {
-                        frame_shell.setWindowChrome(.{});
-                    }
+                    syncWindowChrome(inner_state, frame_shell, layout);
                 }
             }.inner,
             .handle_cursor_blink_arming = struct {
