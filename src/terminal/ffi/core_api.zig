@@ -1,7 +1,6 @@
 const std = @import("std");
 const terminal_runtime = @import("../core/terminal_runtime.zig");
 const terminal_publication = @import("../core/terminal_publication.zig");
-const terminal_transport = @import("../core/terminal_transport.zig");
 const types = @import("../model/types.zig");
 const screen = @import("../model/screen.zig");
 const app_logger = @import("../../app_logger.zig");
@@ -20,7 +19,7 @@ fn currentCloseConfirmSignals(handle: *shared.Handle) shared.CloseConfirmSignals
     const activity = handle.session.currentActivityMetadata();
     const foreground_process = @intFromBool(activity.foreground_process_present);
     const semantic_command = @intFromBool(activity.semantic_input_active or activity.semantic_output_active);
-    const alt_screen = @intFromBool(handle.session.core.isAltActive());
+    const alt_screen = @intFromBool(handle.session.altScreenActive());
     const mouse_reporting = @intFromBool(handle.session.mouseReportingEnabled());
     return .{
         .abi_version = shared.close_confirm_abi_version,
@@ -102,14 +101,10 @@ fn copyPublishedSnapshotExport(
     errdefer if (cwd.len > 0) allocator.free(cwd);
 
     if ((include_flags & @intFromEnum(shared.SnapshotIncludeFlags.title)) != 0) {
-        const title_text = if (terminal_transport.Transport.fromSession(handle.session)) |transport|
-            (transport.foregroundProcessLabel() orelse handle.session.core.titleText())
-        else
-            handle.session.core.titleText();
-        title = try allocator.dupe(u8, title_text);
+        title = try allocator.dupe(u8, handle.session.displayTitleText());
     }
     if ((include_flags & @intFromEnum(shared.SnapshotIncludeFlags.cwd)) != 0) {
-        cwd = try allocator.dupe(u8, handle.session.core.cwdText());
+        cwd = try allocator.dupe(u8, handle.session.cwdText());
     }
 
     out_state.* = .{

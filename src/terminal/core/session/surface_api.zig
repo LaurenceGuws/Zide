@@ -47,6 +47,10 @@ pub fn API(comptime Self: type, comptime Cell: type, comptime ScrollbackInfo: ty
         pub const copyHyperlinkUri = session_queries.copyHyperlinkUri;
 
         pub const copyMetadata = session_host_queries.copyMetadata;
+        pub const titleText = session_host_queries.titleText;
+        pub const displayTitleText = session_host_queries.displayTitleText;
+        pub const cwdText = session_host_queries.cwdText;
+        pub const altScreenActive = session_host_queries.altScreenActive;
         pub const currentActivityMetadata = session_host_queries.currentActivityMetadata;
         pub const copyActivityMetadata = session_host_queries.copyActivityMetadata;
         pub const isAlive = session_host_queries.isAlive;

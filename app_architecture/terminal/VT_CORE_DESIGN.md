@@ -1078,6 +1078,9 @@ Migration approach:
   false placeholder mapping sitting in the live core tree
 - host-facing metadata, liveness, and close-confirm queries live under
   `src/terminal/core/session/host_queries.zig`
+- FFI/workspace host-facing title, cwd, and alt-screen reads now route through
+  that explicit host-query surface instead of reaching through `session.core.*`
+  from outer host layers
 - publication/diff, selection projection, plan/refinement, selection-dirty
   expansion, and damage helpers are split across focused `view_cache_*` modules
 - presented-generation acknowledgement, damage retirement, publication

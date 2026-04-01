@@ -265,6 +265,12 @@ Validation note, 2026-03-31:
     module name are as honest as the type name already is.
 - [ ] `VTCORE-02` Make FFI a first-class core interface.
   Notes: shared FFI state plus `host_api` and `core_api` splits are landed; remaining work is maturity and convergence, not proving the shape. Recent slices closed real host-facing gaps such as close-confirm signals and backend-owned viewport control.
+  Progress note, 2026-04-01, later:
+  - FFI/workspace host-facing title, cwd, and alt-screen reads no longer reach
+    through `session.core.*`
+  - those reads now route through explicit host-query methods on
+    `PtyTerminalRuntime`, which is a better shared host/runtime contract than
+    direct core rummaging from outer host layers
   Done when:
   - the best host-facing terminal semantics reachable from native are also reachable through an explicit FFI/core contract, unless the difference is purely renderer-local.
   - FFI no longer needs to approximate native-only ownership or reconstruct backend truth from side channels.

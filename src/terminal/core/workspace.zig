@@ -196,7 +196,7 @@ pub const TerminalWorkspace = struct {
         return activity.foreground_process_present or
             activity.semantic_input_active or
             activity.semantic_output_active or
-            session.core.isAltActive() or
+            session.altScreenActive() or
             session.mouseReportingEnabled();
     }
 

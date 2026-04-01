@@ -591,8 +591,8 @@ fn currentDerivedEventState(handle: *Handle) !DerivedEventState {
     defer handle.session.unlock();
 
     return .{
-        .title = try copyTextInto(handle.allocator, &handle.scratch_title, handle.session.core.titleText()),
-        .cwd = try copyTextInto(handle.allocator, &handle.scratch_cwd, handle.session.core.cwdText()),
+        .title = try copyTextInto(handle.allocator, &handle.scratch_title, handle.session.titleText()),
+        .cwd = try copyTextInto(handle.allocator, &handle.scratch_cwd, handle.session.cwdText()),
         .alive = handle.session.isAlive(),
         .exit_code = session_lifecycle.childExitCode(handle.session),
     };

@@ -270,6 +270,10 @@ Evidence:
   `osc_kitty_clipboard.zig` still carries internal reply/state helpers, but
   its public entrypoints now take the live core/runtime object directly
   instead of requiring an outer `SessionFacade`
+- FFI/workspace host-facing title, cwd, and alt-screen reads no longer reach
+  through `session.core.*`; those now route through explicit host-query
+  methods on `PtyTerminalRuntime`, which is a better host/runtime boundary
+  than direct core access from outer layers
 - the remaining callback seam is narrower:
   - wrap/newline effects
   - insert-mode char insertion effects
