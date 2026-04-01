@@ -223,6 +223,7 @@ pub const PtyTerminalRuntime = struct {
     pub const resetAllPaletteColorsLocked = config_api.resetAllPaletteColorsLocked;
     pub const setDynamicColorCodeLocked = config_api.setDynamicColorCodeLocked;
     pub const applyThemePalette = config_api.applyThemePalette;
+    pub const setConfiguredCursorStyle = config_api.setConfiguredCursorStyle;
 
     pub const deinit = lifecycle_api.deinit;
 

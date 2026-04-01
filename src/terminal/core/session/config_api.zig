@@ -46,6 +46,10 @@ pub fn applyThemePalette(
     session_config.applyThemePalette(self, fg, bg, ansi);
 }
 
+pub fn setConfiguredCursorStyle(self: anytype, cursor_style: types.CursorStyle) void {
+    session_config.setConfiguredCursorStyle(self, cursor_style);
+}
+
 pub fn setColumnMode132(self: anytype, enabled: bool) void {
     session_config.setColumnMode132(self, enabled);
 }

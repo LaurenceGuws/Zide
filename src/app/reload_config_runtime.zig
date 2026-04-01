@@ -279,9 +279,7 @@ pub fn handle(state: anytype, ctx: *anyopaque, hooks: Hooks) !void {
         }
         state.terminal_cursor_style = cursor_style;
         for (state.terminals.items) |term| {
-            term.core.primary.cursor_style = cursor_style;
-            term.core.alt.cursor_style = cursor_style;
-            term.updateViewCacheForScroll();
+            term.setConfiguredCursorStyle(cursor_style);
         }
         state.needs_redraw = true;
         log.logStdout(.info, "reload terminal cursor shape={s} blink={any}", .{ @tagName(cursor_style.shape), cursor_style.blink });

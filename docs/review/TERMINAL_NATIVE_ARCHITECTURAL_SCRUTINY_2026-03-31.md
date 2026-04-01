@@ -278,6 +278,10 @@ Evidence:
   through `session.core.*`; those now route through explicit host-query
   methods on `PtyTerminalRuntime`, which is a better host/runtime boundary
   than direct core access from outer layers
+- app-side terminal cursor-style reload no longer mutates `core.primary` and
+  `core.alt` directly either; that now routes through an explicit runtime
+  config method, which is a better outer-host boundary than direct screen
+  mutation
 - the remaining callback seam is narrower:
   - wrap/newline effects
   - insert-mode char insertion effects

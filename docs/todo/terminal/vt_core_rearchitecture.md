@@ -275,6 +275,9 @@ Validation note, 2026-03-31:
   - those reads now route through explicit host-query methods on
     `PtyTerminalRuntime`, which is a better shared host/runtime contract than
     direct core rummaging from outer host layers
+  - app-side terminal cursor-style reload no longer mutates `core.primary` and
+    `core.alt` directly; it now routes through an explicit runtime config
+    method, which is a better host/runtime boundary than direct screen pokes
   Done when:
   - the best host-facing terminal semantics reachable from native are also reachable through an explicit FFI/core contract, unless the difference is purely renderer-local.
   - FFI no longer needs to approximate native-only ownership or reconstruct backend truth from side channels.
