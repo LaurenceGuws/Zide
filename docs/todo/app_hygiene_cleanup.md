@@ -244,6 +244,10 @@ Progress note, 2026-04-01:
   `src/app/ui_layout_runtime.zig`
 - this removes another repeated app-shell seam from init, post-preinput,
   pre-input shortcut, and render-idle hook paths
+- `src/app/new_terminal_runtime.zig` now separates initial grid calculation,
+  workspace launch, single-session launch, and shared post-start terminal sync
+- this makes terminal startup read more like explicit app policy phases and
+  less like one large branch-heavy launch script
 
 ## Investigation Follow-up
 
