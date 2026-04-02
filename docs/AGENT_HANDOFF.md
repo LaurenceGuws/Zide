@@ -6,9 +6,12 @@ not a progress log and should stay brief.
 ### Current Focus
 
 - Terminal is now the active invention lane on `main`.
-- The current mission is not incremental cleanup around the existing center. The
-  current mission is a ruthless architecture campaign against every terminal
-  seam that does not read as:
+- War 1 of the current terminal architecture campaign should be considered
+  closed.
+- The next mission is not to keep grinding the recently flattened micro-lanes.
+- The next mission is to start War 2 from a fresh top-level rerank against
+  live code and the strongest local references.
+- The quality bar is still ruthless: every terminal seam must read as:
   - engine-centered
   - loosely coupled
   - DRY
@@ -18,6 +21,7 @@ not a progress log and should stay brief.
   - compatibility residue is not a virtue
   - broad session facades are not sacred
   - native host convenience must not masquerade as engine truth
+  - recently cleaned local seams must not be reopened just for momentum
 - The native terminal path is the proving ground and the battlefield:
   - it must become the cleanest reference host over one engine truth
   - it must not remain a privileged semantic path over FFI/embedded hosts
@@ -29,21 +33,19 @@ not a progress log and should stay brief.
 
 ### Current Direction
 
-- Work sequentially, not timidly:
-  - identify one structural lie
-  - define the replacement shape
-  - cut through the full affected surface area with care
-  - validate hard
-  - remove the old seam instead of preserving it for comfort
+- War 2 should begin by reranking the full terminal system from the top:
+  - engine truth
+  - publication truth
+  - native host truth
+  - renderer/present truth
 - Default terminal work now should be:
-  - eliminate false centers around `TerminalCore`
-  - dismantle `PtyTerminalRuntime` as the de facto architectural center
-  - move semantic text/protocol behavior below the VT boundary where it
-    belongs
-  - collapse duplicated publication truth and compatibility mirrors
-  - shrink native widget/render code into a pure host/presentation consumer
-  - keep native and FFI aligned to one engine contract while doing all of the
-    above
+  - compare the live shape directly against the strongest local references
+  - identify the next top-level false center rather than another thin local
+    seam
+  - define the replacement shape
+  - cut through the real affected surface area
+  - validate hard
+  - delete the old seam instead of preserving it for comfort
 - Preferred execution style:
   - no compatibility theater
   - no fallback path without a deletion story
@@ -58,13 +60,11 @@ not a progress log and should stay brief.
 
 - The scene-owned composition path is active on `main`.
 - `TerminalCore` is real, but it is still not the only obvious center.
-- The broad remaining architectural enemy is not random compatibility debt. It
-  is the collection of fake centers around the engine:
-  - the remaining host-wrapper gravity around `PtyTerminalRuntime`, now living
-    directly in `terminal_runtime.zig`
-  - parser-hook text semantics above the engine boundary
-  - duplicated publication/cache truth
-  - oversized native widget/render coordination
+- The broad remaining architectural enemy is no longer the exact War 1 set of
+  local false centers. Those were materially reduced.
+- The current open question is broader:
+  - now that the obvious local lies are flatter, what still looks second-rate
+    at first glance when compared to the strongest references?
 - The archived `ascii-rain` lane is no longer the active driver. It should not
   dictate current architecture focus.
 - The native present lane still contains a live migration seam:
@@ -103,6 +103,7 @@ not a progress log and should stay brief.
 - Terminal core architecture and active queue:
   - `app_architecture/terminal/VT_CORE_DESIGN.md`
   - `docs/todo/terminal/vt_core_rearchitecture.md`
+  - `docs/review/TERMINAL_WAR_2_RERANK_2026-04-02.md`
   - `docs/review/TERMINAL_NATIVE_ARCHITECTURAL_SCRUTINY_2026-03-31.md`
   - `app_architecture/terminal/TERMINAL_ARCHITECTURE_COMPARISON.md`
   - `docs/review/TERMINAL_CORE_ARCHITECTURE_REVIEW_2026-03-10.md`

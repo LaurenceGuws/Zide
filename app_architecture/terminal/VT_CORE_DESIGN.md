@@ -282,6 +282,29 @@ Status note, 2026-03-31:
     refresh if any"; that owner action now lives under
     `src/terminal/core/publication/terminal_publication.zig` as
     `publishPollUpdateLocked(...)`
+
+Status note, 2026-04-02:
+
+- War 1 of the current terminal architecture campaign should now be considered
+  closed.
+- That war was the "destroy the false centers" phase.
+- Its major wins are now real:
+  - runtime/public wrapper gravity is much lower
+  - publication/native handoff is much cleaner
+  - workspace and visible-terminal host aggregation are materially flatter
+- The current risk is no longer insufficient aggression.
+- The current risk is continuing the old kill-order after it has reached
+  diminishing returns.
+- So the next phase should not inherit momentum blindly from the recent
+  micro-lanes.
+- War 2 should begin from a fresh top-level rerank of:
+  - engine truth
+  - publication truth
+  - native host truth
+  - renderer/present truth
+- The new question is harder:
+  - now that the obvious false centers are flatter, what still looks
+    structurally second-rate when compared to the strongest local references?
   - the DECRQM snapshot path is thinner too:
     `src/terminal/protocol/csi_mode_query.zig` now reads mouse-mode snapshot
     bits directly from `interaction.input_snapshot`, so the stable runtime

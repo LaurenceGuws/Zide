@@ -100,6 +100,11 @@ Focused follow-up lane:
     diminishing returns; the next terminal move should come from a broader
     engine/publication/native-host rerank, not more local host cleanup by
     momentum
+- `docs/review/TERMINAL_WAR_2_RERANK_2026-04-02.md`
+  Why: War 1 is now coherent enough to close. The next terminal campaign
+  should begin from a fresh top-level rerank against live code and the
+  strongest local references, not by inheriting momentum from the old
+  micro-lanes.
 
 ## Current Milestone
 
