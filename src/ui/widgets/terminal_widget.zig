@@ -9,6 +9,7 @@ const terminal_types = @import("../../terminal/model/types.zig");
 const key_encoder = @import("../../terminal/input/key_encoder.zig");
 const app_logger = @import("../../app_logger.zig");
 const shared_types = @import("../../types/mod.zig");
+const presentation_feedback = @import("../../terminal/core/publication/presentation_feedback.zig");
 const open_mod = @import("terminal_widget_open.zig");
 const hover_mod = @import("terminal_widget_hover.zig");
 const kitty_mod = @import("terminal_widget_kitty.zig");
@@ -234,7 +235,7 @@ pub const TerminalWidget = struct {
     pub fn completePendingPresentationFeedback(self: *TerminalWidget, submission: anytype) void {
         const pending = self.pending_presentation_feedback orelse return;
         defer self.pending_presentation_feedback = null;
-        terminal_publication.completeSubmittedPresentationFeedback(self.session, pending, submission);
+        presentation_feedback.completeSubmittedPresentationFeedback(self.session, pending, submission);
     }
 
     pub fn invalidateTextureCache(self: *TerminalWidget) void {

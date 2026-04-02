@@ -149,9 +149,11 @@ Focused follow-up lane:
   - the second larger cut landed too: low-level cache slot choreography now
     lives in `src/terminal/core/publication/view_cache_publication.zig`
     instead of inflating publication
-  - the next cut should target another whole publication-boundary slab, likely
-    capture/export shape or present-retirement shape, not another tiny helper
-    cleanup
+  - the third larger cut landed too: present-retirement policy now lives in
+    `src/terminal/core/publication/presentation_feedback.zig` instead of
+    inflating publication
+  - the next cut should only continue if one more large split still exists in
+    the reduced publication shape
 
 ## Current Milestone
 

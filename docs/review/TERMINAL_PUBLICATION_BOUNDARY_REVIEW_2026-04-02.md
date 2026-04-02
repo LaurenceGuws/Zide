@@ -51,8 +51,6 @@ responsibility at once:
 - frame-facing status summaries
 - view-refresh queueing
 - presentation capture
-- presentation retirement policy
-- terminal draw-state inspection helpers
 
 That is broader than the cleanest engine export boundary should read.
 
@@ -152,6 +150,11 @@ Status update:
   [view_cache_publication.zig](/home/home/personal/zide/src/terminal/core/publication/view_cache_publication.zig)
 - publication no longer directly reads like internal render-cache slot
   mechanics
+- the third larger cut has now landed
+- present-retirement policy no longer lives in publication
+- that slab now lives in
+  [presentation_feedback.zig](/home/home/personal/zide/src/terminal/core/publication/presentation_feedback.zig)
+- publication no longer directly reads like submission-retirement policy
 
 ## Best Next Review Question
 
@@ -162,7 +165,6 @@ More concretely:
 
 - which parts of `terminal_publication.zig` are true engine export contract
 - which parts are native draw inspection helpers
-- which parts are present-retirement policy that deserve a narrower owner
 
 ## Likely Hotspots
 
@@ -170,7 +172,6 @@ More concretely:
    around:
    - capture/preparation
    - frame state / generation summaries
-   - present completion
 
 2. [terminal_widget.zig](/home/home/personal/zide/src/ui/widgets/terminal_widget.zig)
    where widget-local draw/present behavior still leans directly on publication
@@ -200,5 +201,11 @@ Post-present War 2 is structurally clear again:
 
 `terminal_publication.zig` is still the strongest remaining non-engine center.
 
-The next campaign should open on whole-boundary shape, not on one more local
-publication helper.
+But the center is materially smaller now.
+
+After three whole-slab cuts, the strongest remaining publication question is
+much narrower:
+
+- should capture/preparation and frame/export summaries stay together as the
+  actual engine export boundary
+- or is there still one more large split hiding inside that reduced shape?
