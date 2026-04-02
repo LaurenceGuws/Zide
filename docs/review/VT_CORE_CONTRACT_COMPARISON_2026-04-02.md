@@ -175,6 +175,14 @@ Progress note, later on 2026-04-02:
 - `TerminalSession` no longer advertises that immutable export slab as if it
   were session-shell identity
 
+The next same-class move also now reads clearly:
+
+- simple engine metadata reads like title, cwd, and alt-screen state should be
+  taken from `TerminalCore` directly where possible
+- session-level host-query helpers should stay only where they actually add
+  runtime-shell meaning, such as transport liveness or foreground-process
+  aggregation
+
 ## Sprint Target
 
 The next `vt-sprint` question should be:

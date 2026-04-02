@@ -38,23 +38,11 @@ pub fn copyMetadata(
     };
 }
 
-pub fn titleText(self: anytype) []const u8 {
-    return self.core.titleText();
-}
-
-pub fn cwdText(self: anytype) []const u8 {
-    return self.core.cwdText();
-}
-
 pub fn displayTitleText(self: anytype) []const u8 {
     return if (terminal_transport.Transport.fromSession(self)) |transport|
         (transport.foregroundProcessLabel() orelse self.core.titleText())
     else
         self.core.titleText();
-}
-
-pub fn altScreenActive(self: anytype) bool {
-    return self.core.isAltActive();
 }
 
 pub fn currentActivityMetadata(self: anytype) ActivityMetadata {

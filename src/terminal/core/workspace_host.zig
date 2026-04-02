@@ -117,7 +117,7 @@ fn sessionNeedsCloseConfirm(session: *PtyTerminalRuntime) bool {
     return activity.foreground_process_present or
         activity.semantic_input_active or
         activity.semantic_output_active or
-        host_queries.altScreenActive(session) or
+        session.core.isAltActive() or
         session_interaction.mouseReportingEnabled(session);
 }
 

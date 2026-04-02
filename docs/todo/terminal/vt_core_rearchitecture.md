@@ -213,6 +213,9 @@ Focused follow-up lane:
   - the immutable selection-text export now moved the same way too
   - `TerminalSession` no longer advertises immutable selection/scrollback text
     export as its own public content slab
+  - the next same-class move is now in flight too:
+    simple engine metadata reads should come from `TerminalCore` directly
+    wherever they do not need runtime-shell aggregation
 
 - `docs/review/TERMINAL_NATIVE_ARCHITECTURAL_SCRUTINY_2026-03-31.md`
   Why: this is the current ruthless read on what still looks second-rate at

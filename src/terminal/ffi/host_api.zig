@@ -95,7 +95,7 @@ pub fn reportColorSchemeChanged(handle: ?*shared.ZideTerminalHandle, dark: u8, o
 
 pub fn setScrollbackOffset(handle: ?*shared.ZideTerminalHandle, offset_rows: u32) shared.Status {
     const h = shared.fromOpaqueActive(handle) orelse return .invalid_argument;
-    if (host_queries.altScreenActive(h.session) and offset_rows != 0) return .invalid_argument;
+    if (h.session.core.isAltActive() and offset_rows != 0) return .invalid_argument;
     h.session.setScrollOffset(offset_rows);
     return shared.syncDerivedEvents(h);
 }
