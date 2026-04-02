@@ -105,8 +105,7 @@ pub fn parseThreadMain(session: anytype) void {
             if (session.control.parse_bytes_since_publish > 0 and pending_refresh == null and !session.core.sync_updates_active) {
                 const publish_lock_start_ns = std.time.nanoTimestamp();
                 session.control.state_mutex.lock();
-                const generation_before = terminal_publication.pendingGeneration(session);
-                terminal_publication.publishGenerationLocked(session, generation_before, session.core.history.scrollOffset(), "parse_thread_idle_publish");
+                terminal_publication.publishPendingGenerationLocked(session, session.core.history.scrollOffset(), "parse_thread_idle_publish");
                 session.control.state_mutex.unlock();
                 _ = std.time.nanoTimestamp() - publish_lock_start_ns;
                 session.control.parse_publishes_since_log += 1;
@@ -118,7 +117,7 @@ pub fn parseThreadMain(session: anytype) void {
             if (pending_refresh) |request| {
                 session.control.state_mutex.lock();
                 if (!session.core.sync_updates_active) {
-                    terminal_publication.publishGenerationLocked(session, request.generation, request.scroll_offset, "parse_thread_pending_offset");
+                    terminal_publication.publishViewRefreshRequestLocked(session, request, "parse_thread_pending_offset");
                 }
                 session.control.state_mutex.unlock();
             }
@@ -228,8 +227,7 @@ pub fn parseThreadMain(session: anytype) void {
                         session.core.history.scrollOffset();
                     const publish_lock_start_ns = std.time.nanoTimestamp();
                     session.control.state_mutex.lock();
-                    const generation_before = terminal_publication.pendingGeneration(session);
-                    terminal_publication.publishGenerationLocked(session, generation_before, target_offset, "parse_thread_publish");
+                    terminal_publication.publishPendingGenerationLocked(session, target_offset, "parse_thread_publish");
                     session.control.state_mutex.unlock();
                     const publish_lock_ns = std.time.nanoTimestamp() - publish_lock_start_ns;
                     publish_lock_hold_ns += publish_lock_ns;

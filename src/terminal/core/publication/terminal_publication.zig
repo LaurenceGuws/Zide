@@ -411,6 +411,14 @@ pub fn bumpAndPublishCurrentViewLocked(self: anytype, source: []const u8) u64 {
     return generation;
 }
 
+pub fn publishPendingGenerationLocked(self: anytype, scroll_offset: usize, source: []const u8) void {
+    publishGenerationLocked(self, pendingGeneration(self), scroll_offset, source);
+}
+
+pub fn publishViewRefreshRequestLocked(self: anytype, request: ViewRefreshRequest, source: []const u8) void {
+    publishGenerationLocked(self, request.generation, request.scroll_offset, source);
+}
+
 pub fn replacePendingRefreshWithCurrentViewLocked(self: anytype, source: []const u8) void {
     clearPendingViewRefresh(self);
     publishCurrentViewLocked(self, source);

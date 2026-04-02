@@ -958,3 +958,10 @@ Validation note, 2026-03-31:
     choice now lives under
     `src/terminal/core/publication/terminal_publication.zig` as
     `requestViewRefreshIfOffsetChangedLocked(...)`
+  - parse-thread publication choreography is tighter too:
+    `src/terminal/core/runtime/io_threads.zig` no longer reconstructs
+    "publish current pending generation" or "publish queued refresh request"
+    from lower-level publication verbs; those owner actions now live under
+    `src/terminal/core/publication/terminal_publication.zig` as
+    `publishPendingGenerationLocked(...)` and
+    `publishViewRefreshRequestLocked(...)`
