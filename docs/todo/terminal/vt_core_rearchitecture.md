@@ -161,6 +161,16 @@ Focused follow-up lane:
   - the strongest remaining contradiction is likely the public root identity
   - the owning type is now `TerminalSession`, but the public root still only
     says `PtyTerminalRuntime`
+  Progress:
+  - the public root now exports `TerminalSession` directly
+  - `PtyTerminalRuntime` remains only as compatibility residue
+- `docs/review/TERMINAL_WAR_3_POST_IDENTITY_RERANK_2026-04-02.md`
+  Why: after the identity correction, War 3 needs another hard rerank before
+  any more cuts.
+  Current read:
+  - no new local whole-slab contradiction is immediately obvious
+  - the next honest question is whether `TerminalCore` now reads strongly
+    enough as the indisputable library center
 
 - `docs/review/TERMINAL_NATIVE_ARCHITECTURAL_SCRUTINY_2026-03-31.md`
   Why: this is the current ruthless read on what still looks second-rate at
