@@ -61,3 +61,13 @@ Current candidates:
 ## Bottom Line
 
 The next likely War 3 battlefield is runtime-shell shape, not publication.
+
+Status note, later on 2026-04-02:
+
+- the first runtime-shell slab is now moved
+- session allocation and storage-layout assembly no longer live in
+  [session/runtime.zig](/home/home/personal/zide/src/terminal/core/session/runtime.zig)
+- that whole constructor slab now lives in
+  [runtime_init.zig](/home/home/personal/zide/src/terminal/core/session/runtime_init.zig)
+- `session/runtime.zig` now reads more like entrypoint forwarding around the
+  narrower runtime owners instead of the place where the full session is born

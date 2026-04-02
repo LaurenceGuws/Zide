@@ -116,6 +116,11 @@ Focused follow-up lane:
   - but it still reads too much like important terminal ownership because it
     owns session allocation, storage-layout assembly, lifecycle entrypoints,
     and launch-shell-path state
+  Progress:
+  - the first runtime-shell slab is now landed
+  - session allocation and storage-layout assembly now live in
+    `src/terminal/core/session/runtime_init.zig`
+    instead of inflating `session/runtime.zig`
 
 - `docs/review/TERMINAL_NATIVE_ARCHITECTURAL_SCRUTINY_2026-03-31.md`
   Why: this is the current ruthless read on what still looks second-rate at
