@@ -24,6 +24,22 @@ center. This is still iterative work, but it is no longer gentle work. Each
 cut should remove a structural lie, not merely rearrange the same center of
 gravity into smaller files.
 
+## War 4
+
+- `docs/review/VT_WAR_4_SCOPE_AND_SEEDS_2026-04-03.md`
+  Why: the next scrutiny pass is no longer a cleanup sprint; it is a focused
+  design/comparison war around the remaining `zide-vt` plug-and-play gap.
+  Current read:
+  - the battlefield is now whether one specific missing `TerminalCore`
+    capability or host-contract weakness still blocks a credible swappable VT
+    library story
+  - the work should run as parallel scrutiny tracks:
+    engine sufficiency, shell legitimacy, public/FFI contract shape, internal
+    caller dependence, and mature-reference pressure
+  - success means either naming one real missing capability slab or concluding
+    that the remaining gap is mostly normalization/maturity rather than another
+    obvious architecture contradiction
+
 ## Priority Now
 
 Highest-value remaining items, ranked against the current `libghostty-vt` comparison:
@@ -1482,3 +1498,16 @@ Validation note, 2026-03-31:
     refresh if any"; that owner action now lives under
     `src/terminal/core/publication/terminal_publication.zig` as
     `publishPollUpdateLocked(...)`
+
+## Current Review Scope
+
+- `docs/review/VT_WAR_4_SCOPE_2026-04-03.md`
+  Why: the next scrutiny war needs a bounded scope before more code work.
+  Current read:
+  - the old false-center wars are largely closed
+  - the next live question is whether one specific `TerminalCore`
+    capability/contract gap still blocks a credible plug-and-play `zide-vt`
+    story beside Ghostty and WezTerm
+  - the war should be run in bounded cross-reference tracks:
+    engine sufficiency, shell legitimacy, public/FFI contract shape, and
+    caller dependence discipline
