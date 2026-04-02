@@ -5,7 +5,6 @@ const policy_catalog = @import("policy_catalog");
 pub fn main() !void {
     std.debug.print("build policy\n", .{});
     std.debug.print("mode: {s}\n", .{build_options.build_mode});
-    std.debug.print("renderer_backend: {s}\n", .{build_options.renderer_backend});
     std.debug.print("target: {s}-{s}-{s}\n", .{
         build_options.target_arch,
         build_options.target_os,

@@ -201,16 +201,6 @@ pub const MOUSE_LEFT = input_constants.MOUSE_LEFT;
 pub const MOUSE_RIGHT = input_constants.MOUSE_RIGHT;
 pub const MOUSE_MIDDLE = input_constants.MOUSE_MIDDLE;
 
-pub const RendererBackend = enum {
-    sdl_gl,
-};
-
-pub const renderer_backend: RendererBackend = parseRendererBackend(build_options.renderer_backend);
-
-fn parseRendererBackend(_: []const u8) RendererBackend {
-    return .sdl_gl;
-}
-
 const key_repeat_key_count: usize = sdl_api.scancode_count;
 const mouse_button_count: usize = 8;
 const input_queue_capacity: usize = 8192;

@@ -1,9 +1,5 @@
 const std = @import("std");
 
-pub const RendererBackend = enum {
-    sdl_gl,
-};
-
 pub const PlatformCapability = struct {
     os_tag: std.Target.Os.Tag,
     graphics_backend: []const u8,
@@ -21,10 +17,6 @@ pub const PlatformCapability = struct {
     ffi_frameworks: []const []const u8,
     sdl_test_system_libs: []const []const u8,
     sdl_test_frameworks: []const []const u8,
-};
-
-pub const supported_renderer_backends = [_]RendererBackend{
-    .sdl_gl,
 };
 
 pub const supported_platforms = [_]PlatformCapability{
@@ -83,19 +75,6 @@ pub const supported_platforms = [_]PlatformCapability{
         .sdl_test_frameworks = &.{},
     },
 };
-
-pub fn rendererBackendName(backend: RendererBackend) []const u8 {
-    return switch (backend) {
-        .sdl_gl => "sdl_gl",
-    };
-}
-
-pub fn isSupportedRendererBackend(raw: []const u8) bool {
-    inline for (supported_renderer_backends) |backend| {
-        if (std.mem.eql(u8, raw, rendererBackendName(backend))) return true;
-    }
-    return false;
-}
 
 pub fn platformCapability(os_tag: std.Target.Os.Tag) ?PlatformCapability {
     inline for (supported_platforms) |capability| {

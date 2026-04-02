@@ -64,7 +64,8 @@ Canonical references (do not diverge without a documented reason)
 Non-negotiable rules
 - We do not invent new rendering paradigms. We follow the reference repos unless forced by Zide's architecture.
 - Any deviation must be recorded in app_architecture/DECISIONS.md with a concrete reason.
-- A renderer backend is only added if a reference repo uses the same API on that OS or the OS requires it.
+- Renderer backend expansion is not active work. Current live runtime truth is
+  SDL3 + OpenGL.
 
 Architecture (modular, interface-driven)
 
@@ -116,9 +117,9 @@ flowchart TB
 - This is directly aligned with lite-xl.
 - Android uses SDL's Android backend (SDL handles the activity and surface lifecycle).
 
-2) Renderer API (backend-agnostic)
-- The UI code talks to a small, stable renderer interface.
-- Backends implement the interface and translate draw ops to native GPU calls.
+2) Renderer API
+- The UI code talks to a small, stable renderer interface over the live SDL3 +
+  OpenGL path.
 
 Renderer interface (required surface area)
 - init(renderer_config)
@@ -136,7 +137,7 @@ Draw primitives (minimal, GPU-friendly)
 - images (for terminal graphics and UI icons)
 - clip rects (nested clip stack)
 
-3) Backends (multi-backend but minimal)
+3) Backend direction
 - Linux: OpenGL 3.3 (via EGL for Wayland; GLX or EGL for X11)
 - Windows 11: OpenGL via WGL or EGL/ANGLE (keep the OpenGL path for parity with kitty/alacritty)
 - macOS: Metal (matches ghostty and zed)
@@ -152,13 +153,9 @@ Module layout (target)
 - src/app_shell.zig
   - SDL window and input, owns renderer instance
 - src/ui/renderer/
-  - renderer.zig (backend-agnostic interface)
+  - renderer.zig (SDL3/OpenGL renderer host/facade)
   - draw_list.zig (ops + batching format)
   - text_cache.zig (glyph atlas + font metrics)
-- src/ui/renderer/backends/
-  - gl.zig (Linux/Windows)
-  - metal.zig (macOS)
-  - gles.zig (Android)
 - src/ui/widgets/
   - editor_widget.zig
   - terminal_widget.zig
@@ -175,15 +172,15 @@ Phase 1 - Linux (SDL3 + OpenGL)
 - Replace raylib usage in renderer only (no UI behavior changes). (done)
 
 Phase 2 - Windows 11 (SDL3 + OpenGL)
-- Use same OpenGL backend via WGL or EGL/ANGLE.
+- Keep the same SDL-managed OpenGL path.
 - Validate input, DPI scaling, and swapchain behavior.
 
-Phase 3 - macOS (SDL3 + Metal)
-- Add a Metal backend and keep the renderer interface identical.
+Phase 3 - macOS
+- Re-rank backend work only when macOS becomes active product scope again.
 - Use CoreText only if required; otherwise keep FreeType/HarfBuzz.
 
-Phase 4 - Android (SDL3 + OpenGL ES)
-- GLES backend with the same draw list format.
+Phase 4 - Android
+- Re-rank GLES backend work only when Android becomes active product scope.
 - Handle activity pause/resume, surface loss, and context recreation.
 
 Phase 5 - Parity and quality
@@ -193,7 +190,7 @@ Phase 5 - Parity and quality
 What we do not do
 - No heavy UI frameworks.
 - No new experimental render tech that is not in the reference repos.
-- No backend proliferation.
+- No speculative backend proliferation.
 
 Validation
 - Compare render output and perf against reference repos and previously tagged/known-good Zide commits.

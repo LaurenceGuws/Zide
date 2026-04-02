@@ -170,9 +170,10 @@ The current execution order is:
 
 ### Phase 2 Renderer Backend
 
-- [x] `W2-01` Wire `-Drenderer-backend` to real backend selection or fail cleanly
+- [x] `W2-01` Make renderer backend policy honest
 - [x] `W2-02` Decide WGL vs SDL-managed GL
-  Current decision: SDL-managed GL remains the only selectable backend; WGL/EGL stay as non-selectable placeholders.
+  Current decision: SDL-managed GL is the live path; WGL/EGL stay out of the
+  build surface until they are real implementation work.
 - [ ] `W2-03` Expand renderer validation into a Windows DPI/present contract review
   - The old "renderer smoke test" wording is too weak.
   - Required checks now include:

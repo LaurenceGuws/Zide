@@ -32,10 +32,7 @@ pub fn initBootstrapOptions(b: *std.Build) BootstrapOptions {
     const build_mode = bootstrap_policy.parseBuildModeRaw(build_mode_raw);
     const target_os = target.result.os.tag;
 
-    const renderer_backend = bootstrap_policy.readRendererBackendOption(b);
-
     const build_options = b.addOptions();
-    build_options.addOption([]const u8, "renderer_backend", renderer_backend);
     build_options.addOption([]const u8, "build_mode", build_mode_raw);
     build_options.addOption([]const u8, "target_arch", @tagName(target.result.cpu.arch));
     build_options.addOption([]const u8, "target_os", @tagName(target_os));

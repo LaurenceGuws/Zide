@@ -19,5 +19,4 @@ pub fn main() !void {
     std.debug.print("supports_windows_shell_extension: {any}\n", .{capability.supports_windows_shell_extension});
     std.debug.print("uses_windows_gui_subsystem: {any}\n", .{capability.uses_windows_gui_subsystem});
     std.debug.print("supports_windows_resources: {any}\n", .{capability.supports_windows_resources});
-    std.debug.print("renderer_backend: {s}\n", .{build_options.renderer_backend});
 }

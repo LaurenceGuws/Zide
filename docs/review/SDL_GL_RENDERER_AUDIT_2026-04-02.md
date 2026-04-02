@@ -237,6 +237,12 @@ Judgment:
 - this creates a maturity gap on first inspection
 - either the repo has a real backend split or it should stop pretending to
 
+Status note, 2026-04-02:
+
+- the fake runtime/build backend selector is gone
+- the current build surface now states SDL3/OpenGL directly instead of
+  pretending backend choice exists
+
 ## External Comparison
 
 ### SDL3 official docs

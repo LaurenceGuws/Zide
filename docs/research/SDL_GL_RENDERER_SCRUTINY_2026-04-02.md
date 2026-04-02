@@ -213,6 +213,8 @@ Progress note, 2026-04-02:
 - `src/ui/renderer/targets.zig` was deleted; retained-target and renderer code
   now use `src/ui/renderer/gl_backend.zig` directly instead of routing through
   a fake backend boundary
+- the fake runtime/build backend selector is gone too; the branch no longer
+  advertises a selectable renderer backend when only SDL3/OpenGL exists
 
 ### Focus 2: SDL/GL host seam
 
