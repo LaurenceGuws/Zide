@@ -194,6 +194,17 @@ Focused follow-up lane:
 - `docs/review/TERMINAL_POST_WAR_3_RERANK_2026-04-02.md`
   Why: after closing War 3, the next battlefield must be chosen from the new
   baseline rather than inherited momentum.
+- `docs/review/VT_CORE_CONTRACT_COMPARISON_2026-04-02.md`
+  Why: `vt-sprint` now needs a direct cross-implementation contract read
+  against Zide, Ghostty, and WezTerm.
+  Current read:
+  - the directly comparable battlefield is the VT-core contract itself
+  - the strongest remaining mismatch is no longer publication or runtime file
+    weight
+  - the strongest mismatch is that `TerminalCore` still reads like the real
+    engine while `TerminalSession` still reads like the real public object
+  - the next sprint step must therefore choose the actual `zide-vt` library
+    object instead of continuing local cleanup around that ambiguity
 
 - `docs/review/TERMINAL_NATIVE_ARCHITECTURAL_SCRUTINY_2026-03-31.md`
   Why: this is the current ruthless read on what still looks second-rate at
