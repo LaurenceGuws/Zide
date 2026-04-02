@@ -268,8 +268,9 @@ Focused follow-up lane:
   - the VT root now exports `TerminalRuntimeShell` directly
   - live app/UI/workspace/replay/FFI callers now use `TerminalRuntimeShell`
     instead of `TerminalSession`
-  - `terminal_session.zig` is now compatibility residue instead of the live
-    shell identity
+  - `terminal_session.zig` was then deleted entirely
+  - the VT root no longer exports `TerminalSession`
+  - live `src/` code no longer depends on a `TerminalSession` type at all
 
 - `docs/review/TERMINAL_NATIVE_ARCHITECTURAL_SCRUTINY_2026-03-31.md`
   Why: this is the current ruthless read on what still looks second-rate at

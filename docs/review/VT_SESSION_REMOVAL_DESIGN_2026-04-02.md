@@ -176,3 +176,26 @@ to:
 The next blocker is no longer naming.
 It is whether construction, locking, and PTY writer access can be surfaced
 through that shell without preserving `TerminalSession` as a meaningful type.
+
+## Progress Note, Later On 2026-04-02 Again
+
+That cut is now landed too:
+
+- [terminal_session.zig](/home/home/personal/zide/src/terminal/core/session/terminal_session.zig)
+  is deleted
+- the VT root no longer exports `TerminalSession`
+- `src/` no longer contains live `TerminalSession` references
+- app/UI/workspace/replay/FFI/tests now use
+  [TerminalRuntimeShell](/home/home/personal/zide/src/terminal/core/session/terminal_runtime_shell.zig)
+  or the existing historical `PtyTerminalRuntime` alias
+
+So the sprint bar is now materially crossed:
+
+- `TerminalSession` is no longer blocking the live codebase
+
+What remains is narrower:
+
+- whether `PtyTerminalRuntime` should survive as historical compatibility
+  residue
+- how quickly contributor-facing docs and older authority docs should be
+  rewritten around `TerminalRuntimeShell`

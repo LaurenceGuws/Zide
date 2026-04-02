@@ -212,6 +212,22 @@ source of ambiguity:
 - the outer shell now reads like a shell
 - not like the thing that should win the public "real terminal" identity
 
+Session removal progress, later on 2026-04-02:
+
+- `TerminalSession` is now deleted from `src/`
+- the VT root no longer exports `TerminalSession`
+- live code now reads as:
+  - [TerminalCore](/home/home/personal/zide/src/terminal/core/terminal_core.zig)
+  - [TerminalRuntimeShell](/home/home/personal/zide/src/terminal/core/session/terminal_runtime_shell.zig)
+  - `PtyTerminalRuntime` as historical compatibility residue
+
+That materially improves the plug-and-play story:
+
+- the engine object is no longer paired with a second live public object named
+  `TerminalSession`
+- the remaining identity tension is now narrower: `TerminalCore` sufficiency
+  versus the outer runtime shell contract
+
 ## Sprint Target
 
 The next `vt-sprint` question should be:
