@@ -10,6 +10,7 @@ const host_types = @import("session/host_types.zig");
 const palette_mod = @import("../protocol/palette.zig");
 const terminal_core_selection = @import("terminal_core_selection.zig");
 const hyperlink_table = @import("hyperlink_table.zig");
+const session_host_types = @import("session/host_types.zig");
 
 const Screen = screen_mod.Screen;
 const Charset = parser_mod.Charset;
@@ -18,6 +19,7 @@ const SemanticPromptState = semantic_prompt_mod.SemanticPromptState;
 const ProgressState = host_types.ProgressState;
 const Hyperlink = snapshot_mod.Hyperlink;
 const Cell = types.Cell;
+const ProgressMetadata = session_host_types.ProgressMetadata;
 
 const dynamic_color_count: usize = 10;
 
@@ -42,6 +44,22 @@ pub const InitOptions = struct {
 pub const TerminalCore = struct {
     pub const SelectionGesture = terminal_core_selection.SelectionGesture;
     pub const ClickSelectionResult = terminal_core_selection.ClickSelectionResult;
+
+    pub const MetadataState = struct {
+        title: []const u8,
+        cwd: []const u8,
+        scrollback_count: usize,
+        scrollback_offset: usize,
+    };
+
+    pub const ActivityState = struct {
+        semantic_prompt_active: bool,
+        semantic_input_active: bool,
+        semantic_output_active: bool,
+        semantic_prompt_kind: semantic_prompt_mod.SemanticPromptKind,
+        semantic_prompt_exit_code: ?u8,
+        progress: ProgressMetadata,
+    };
 
     allocator: std.mem.Allocator,
     title: []const u8,
@@ -216,6 +234,30 @@ pub const TerminalCore = struct {
 
     pub fn cwdText(self: *const TerminalCore) []const u8 {
         return self.cwd;
+    }
+
+    pub fn metadataState(self: *const TerminalCore) MetadataState {
+        return .{
+            .title = self.titleText(),
+            .cwd = self.cwdText(),
+            .scrollback_count = self.scrollbackCount(),
+            .scrollback_offset = self.scrollbackOffset(),
+        };
+    }
+
+    pub fn activityState(self: *const TerminalCore) ActivityState {
+        const semantic_prompt = self.semantic_prompt;
+        return .{
+            .semantic_prompt_active = semantic_prompt.prompt_active or semantic_prompt.input_active or semantic_prompt.output_active,
+            .semantic_input_active = semantic_prompt.input_active,
+            .semantic_output_active = semantic_prompt.output_active,
+            .semantic_prompt_kind = semantic_prompt.kind,
+            .semantic_prompt_exit_code = semantic_prompt.exit_code,
+            .progress = .{
+                .state = self.progress_state,
+                .value = self.progress_value,
+            },
+        };
     }
 
     pub fn scrollbackOffset(self: *const TerminalCore) usize {

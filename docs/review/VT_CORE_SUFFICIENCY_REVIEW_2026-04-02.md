@@ -48,6 +48,23 @@ The first post-shell cut is now landed:
   [session/queries.zig](/home/home/personal/zide/src/terminal/core/session/queries.zig)
   is deleted
 
+The next same-class cut is now landed too:
+
+- [TerminalCore](/home/home/personal/zide/src/terminal/core/terminal_core.zig)
+  now packages its own metadata and semantic activity truth via:
+  - `metadataState(...)`
+  - `activityState(...)`
+- [host_queries.zig](/home/home/personal/zide/src/terminal/core/session/host_queries.zig)
+  is narrower now:
+  - core packages title/cwd/scrollback/semantic-prompt/progress truth
+  - shell aggregates transport liveness, exit state, and foreground-process
+    data
+
+That is the same correct rule one layer up:
+
+- core packages engine truth
+- shell adds only runtime truth
+
 That is the right direction because it makes the shell add only what it truly
 owns:
 

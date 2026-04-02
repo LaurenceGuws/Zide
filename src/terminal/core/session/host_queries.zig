@@ -21,18 +21,15 @@ pub fn copyMetadata(
     self.lock();
     defer self.unlock();
 
-    const title = self.core.titleText();
-    const cwd = self.core.cwdText();
-    const scrollback = self.core.scrollbackInfo();
-    const scroll_offset = self.core.scrollbackOffset();
+    const metadata_state = self.core.metadataState();
     const alive = if (terminal_transport.Transport.fromSession(self)) |transport| transport.isAlive() else false;
     const exit_code = session_lifecycle.childExitCode(self);
 
     return .{
-        .title = try copyTextInto(allocator, title_out, title),
-        .cwd = try copyTextInto(allocator, cwd_out, cwd),
-        .scrollback_count = scrollback.total_rows,
-        .scrollback_offset = scroll_offset,
+        .title = try copyTextInto(allocator, title_out, metadata_state.title),
+        .cwd = try copyTextInto(allocator, cwd_out, metadata_state.cwd),
+        .scrollback_count = metadata_state.scrollback_count,
+        .scrollback_offset = metadata_state.scrollback_offset,
         .alive = alive,
         .exit_code = exit_code,
     };
@@ -46,6 +43,7 @@ pub fn displayTitleText(self: anytype) []const u8 {
 }
 
 pub fn currentActivityMetadata(self: anytype) ActivityMetadata {
+    const activity_state = self.core.activityState();
     const alive = if (terminal_transport.Transport.fromSession(self)) |transport| transport.isAlive() else false;
     const foreground_process_present = if (terminal_transport.Transport.fromSession(self)) |transport|
         transport.hasForegroundProcessOutsideShell()
@@ -59,21 +57,17 @@ pub fn currentActivityMetadata(self: anytype) ActivityMetadata {
         transport.foregroundProcessCommandLabel() orelse foreground_process_label
     else
         "";
-    const semantic_prompt = self.core.semantic_prompt;
     return .{
         .running = alive,
         .foreground_process_present = foreground_process_present,
         .foreground_process_label = foreground_process_label,
         .foreground_process_command = foreground_process_command,
-        .semantic_prompt_active = semantic_prompt.prompt_active or semantic_prompt.input_active or semantic_prompt.output_active,
-        .semantic_input_active = semantic_prompt.input_active,
-        .semantic_output_active = semantic_prompt.output_active,
-        .semantic_prompt_kind = semantic_prompt.kind,
-        .semantic_prompt_exit_code = semantic_prompt.exit_code,
-        .progress = .{
-            .state = self.core.progress_state,
-            .value = self.core.progress_value,
-        },
+        .semantic_prompt_active = activity_state.semantic_prompt_active,
+        .semantic_input_active = activity_state.semantic_input_active,
+        .semantic_output_active = activity_state.semantic_output_active,
+        .semantic_prompt_kind = activity_state.semantic_prompt_kind,
+        .semantic_prompt_exit_code = activity_state.semantic_prompt_exit_code,
+        .progress = activity_state.progress,
     };
 }
 
