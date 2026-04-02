@@ -197,6 +197,14 @@ Focused follow-up lane:
   - host aggregation is now much closer to honest
   - parser/protocol still matter, but no longer dominate first-glance read
   - the next likely battlefield is now the widget / retained-render center
+- `docs/review/TERMINAL_WIDGET_RETAINED_RENDER_REVIEW_2026-04-02.md`
+  Why: the post-host rerank now points directly at the widget/render lane.
+  Current read:
+  - `terminal_widget.zig` now looks more like honest local widget state
+  - the real local pressure point is likely
+    `src/ui/widgets/terminal_widget_draw.zig`
+  - the next serious question is whether retained-surface planning/execution
+    inside that file still needs a clearer owner boundary
 
 ## Current Milestone
 
