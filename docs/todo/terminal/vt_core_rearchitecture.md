@@ -88,6 +88,10 @@ Focused follow-up lane:
   - widget presentation capture/preparation now lives in
     `src/terminal/core/publication/publication_capture.zig`
     instead of inflating `terminal_publication.zig`
+  - the third whole-slab move is now landed too
+  - host-facing generation/frame summary packaging now lives in
+    `src/terminal/core/publication/publication_state.zig`
+    instead of inflating `terminal_publication.zig`
   - callers now use that owner directly, so the next publication rerank can
     focus on the remaining export-edge contradiction
 

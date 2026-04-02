@@ -1,7 +1,7 @@
 const std = @import("std");
 const terminal_runtime = @import("terminal_runtime.zig");
 const workspace_mod = @import("workspace.zig");
-const terminal_publication = @import("publication/terminal_publication.zig");
+const publication_state = @import("publication/publication_state.zig");
 const workspace_polling = @import("workspace_polling.zig");
 const host_queries = @import("session/host_queries.zig");
 const session_interaction = @import("session/interaction.zig");
@@ -11,7 +11,7 @@ const runtime_policy = @import("../../app/runtime_policy.zig");
 const TerminalWorkspace = workspace_mod.TerminalWorkspace;
 const TabId = workspace_mod.TabId;
 const PtyTerminalRuntime = terminal_runtime.PtyTerminalRuntime;
-pub const ActiveFrameState = terminal_publication.FrameState;
+pub const ActiveFrameState = publication_state.FrameState;
 pub const PollFrameResult = workspace_mod.TerminalWorkspace.PollFrameResult;
 pub const PollPolicy = workspace_mod.TerminalWorkspace.PollPolicy;
 pub const PollFrameMetrics = workspace_mod.TerminalWorkspace.PollFrameMetrics;
@@ -62,7 +62,7 @@ pub const CloseConfirmContext = struct {
 pub fn activeFrameState(workspace: *const TerminalWorkspace) ActiveFrameState {
     if (workspace.tabs.items.len == 0) return .{};
     const session = workspace.tabs.items[workspace.activeIndex()].session;
-    return terminal_publication.frameState(session, session_runtime.hasData(session));
+    return publication_state.frameState(session, session_runtime.hasData(session));
 }
 
 pub fn pollForFrame(

@@ -1,5 +1,5 @@
 const std = @import("std");
-const terminal_publication = @import("../core/publication/terminal_publication.zig");
+const publication_state = @import("../core/publication/publication_state.zig");
 const terminal_runtime = @import("../core/terminal_runtime.zig");
 const host_queries = @import("../core/session/host_queries.zig");
 const session_lifecycle = @import("../core/session/lifecycle.zig");
@@ -603,7 +603,7 @@ fn currentDerivedEventState(handle: *Handle) !DerivedEventState {
 
 pub fn syncDerivedEvents(handle: *Handle) Status {
     if (handle.destroying.load(.acquire)) return .invalid_argument;
-    const generation = terminal_publication.publishedGeneration(handle.session);
+    const generation = publication_state.publishedGeneration(handle.session);
     if (handle.last_generation != generation) {
         queueEvent(handle, .redraw_ready, &[_]u8{}, 0, 0) catch |err| return mapError(err);
         handle.last_generation = generation;

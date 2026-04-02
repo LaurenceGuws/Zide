@@ -106,3 +106,18 @@ Status note, later on 2026-04-02 again:
   now uses that owner directly for latest-presentation preparation
 - publication now reads less like an active widget handoff center and more
   like a narrower export edge
+
+Status note, later on 2026-04-02 once more:
+
+- the third whole-slab cut is now in
+- host-facing generation/frame summary packaging no longer lives in
+  `terminal_publication.zig`
+- that slab now lives in
+  [publication_state.zig](/home/home/personal/zide/src/terminal/core/publication/publication_state.zig)
+- host-facing consumers now use that owner directly:
+  - [workspace_host.zig](/home/home/personal/zide/src/terminal/core/workspace_host.zig)
+  - [terminal_poll_runtime.zig](/home/home/personal/zide/src/app/terminal/terminal_poll_runtime.zig)
+  - [workspace_polling.zig](/home/home/personal/zide/src/terminal/core/workspace_polling.zig)
+  - FFI redraw-generation paths
+- publication is now closer again to a render-cache/snapshot export edge than a
+  host-summary center

@@ -2,6 +2,7 @@ const std = @import("std");
 const render_cache_mod = @import("render_cache.zig");
 const presentation_feedback = @import("presentation_feedback.zig");
 const publication_flow = @import("publication_flow.zig");
+const publication_state = @import("publication_state.zig");
 
 pub const RenderCache = render_cache_mod.RenderCache;
 pub const PresentedRenderCache = presentation_feedback.PresentedRenderCache;
@@ -15,11 +16,7 @@ pub const PresentationCapture = struct {
     presented: PresentedRenderCache,
 };
 
-pub const GenerationState = struct {
-    pending: u64,
-    published: u64,
-    presented: u64,
-};
+pub const GenerationState = publication_state.GenerationState;
 
 pub const LatestPresentationPreparation = struct {
     capture: PresentationCapture,
@@ -49,7 +46,7 @@ pub fn capturePresentation(self: anytype, dst: *RenderCache) !PresentationCaptur
 
 pub fn prepareLatestPresentation(self: anytype, dst: *RenderCache) !LatestPresentationPreparation {
     var capture = try capturePresentation(self, dst);
-    const published_now = publishedGeneration(self);
+    const published_now = publication_state.publishedGeneration(self);
     var refreshed = false;
     if (published_now > capture.presented.generation) {
         const refreshed_capture = try capturePresentation(self, dst);
@@ -66,19 +63,7 @@ pub fn prepareLatestPresentation(self: anytype, dst: *RenderCache) !LatestPresen
 }
 
 pub fn generationState(self: anytype) GenerationState {
-    return .{
-        .pending = publication_flow.pendingGeneration(self),
-        .published = publishedGeneration(self),
-        .presented = presentedGeneration(self),
-    };
-}
-
-pub fn publishedGeneration(self: anytype) u64 {
-    return renderCache(self).generation;
-}
-
-pub fn presentedGeneration(self: anytype) u64 {
-    return self.publication.presented_generation.load(.acquire);
+    return publication_state.generationState(self);
 }
 
 fn captureCopy(self: anytype, dst: *RenderCache) !CaptureCopy {

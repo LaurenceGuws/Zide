@@ -1,5 +1,6 @@
 const std = @import("std");
 const terminal_runtime = @import("../core/terminal_runtime.zig");
+const publication_state = @import("../core/publication/publication_state.zig");
 const terminal_publication = @import("../core/terminal_publication.zig");
 const terminal_core_feed = @import("../core/protocol/terminal_core_feed.zig");
 const host_queries = @import("../core/session/host_queries.zig");
@@ -42,7 +43,7 @@ fn currentCloseConfirmSignals(handle: *shared.Handle) shared.CloseConfirmSignals
 }
 
 fn currentPublishedGeneration(handle: *shared.Handle) u64 {
-    return terminal_publication.publishedGeneration(handle.session);
+    return publication_state.publishedGeneration(handle.session);
 }
 
 const SnapshotExportState = struct {
@@ -381,7 +382,7 @@ pub fn create(config: ?*const shared.CreateConfig, out_handle: *?*shared.ZideTer
         .exit_delivered = false,
     };
     session_runtime.attachExternalTransport(session);
-    handle.last_generation = terminal_publication.publishedGeneration(session);
+    handle.last_generation = publication_state.publishedGeneration(session);
     const initial_metadata = host_queries.copyMetadata(session, allocator, &handle.last_title, &handle.last_cwd) catch |err| {
         log.logf(.warning, "create metadata copy failed err={s}", .{@errorName(err)});
         return .out_of_memory;
