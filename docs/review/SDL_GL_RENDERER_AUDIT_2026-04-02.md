@@ -106,6 +106,8 @@ Status note, 2026-04-02:
   slab instead of two loose renderer-root fields
 - terminal recent-input full-publication policy now lives as one grouped state
   slab instead of two loose renderer-root fields
+- retained terminal/editor target state now lives as one grouped state slab
+  with the retained-target owner instead of four loose renderer-root fields
 - constructor/destructor now assemble and tear down grouped scale/font-config
   state through owner-level helpers instead of repeating that grouped-state
   lifecycle inline

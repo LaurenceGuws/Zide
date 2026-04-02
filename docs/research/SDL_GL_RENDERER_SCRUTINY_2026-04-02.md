@@ -186,6 +186,9 @@ Progress note, 2026-04-02:
   slab instead of two loose renderer-root fields
 - terminal recent-input full-publication policy now lives as one grouped state
   slab instead of two loose renderer-root fields
+- retained terminal/editor target state now lives as one grouped state slab
+  with `src/ui/renderer/retained_targets_runtime.zig` instead of four loose
+  renderer-root fields
 - renderer init/deinit now assemble and tear down grouped scale/font-config
   state through owner-level helpers instead of open-coding that grouped-state
   lifecycle inline

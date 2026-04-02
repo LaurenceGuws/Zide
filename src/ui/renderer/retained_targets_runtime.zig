@@ -9,6 +9,20 @@ const app_logger = @import("../../app_logger.zig");
 const renderer_root = @import("../renderer.zig");
 
 const Color = renderer_root.Color;
+const RenderTarget = gl_backend.RenderTarget;
+
+pub const RetainedTargetState = struct {
+    terminal: ?RenderTarget = null,
+    terminal_scroll: ?RenderTarget = null,
+    editor: ?RenderTarget = null,
+    drawing_editor: bool = false,
+};
+
+pub fn deinit(self: anytype) void {
+    self.destroyRenderTarget(&self.retained_targets.terminal);
+    self.destroyRenderTarget(&self.retained_targets.terminal_scroll);
+    self.destroyRenderTarget(&self.retained_targets.editor);
+}
 
 fn snapToDevicePixel(value: f32, render_scale: f32) f32 {
     const scale = if (render_scale > 0.0) render_scale else 1.0;
@@ -16,17 +30,17 @@ fn snapToDevicePixel(value: f32, render_scale: f32) f32 {
 }
 
 pub fn ensureTerminalTexture(self: anytype, width: i32, height: i32) bool {
-    const recreated = self.ensureRenderTargetScaled(&self.terminal_target, width, height, gl.c.GL_NEAREST);
-    _ = self.ensureRenderTargetScaled(&self.terminal_scroll_target, width, height, gl.c.GL_NEAREST);
+    const recreated = self.ensureRenderTargetScaled(&self.retained_targets.terminal, width, height, gl.c.GL_NEAREST);
+    _ = self.ensureRenderTargetScaled(&self.retained_targets.terminal_scroll, width, height, gl.c.GL_NEAREST);
     return recreated;
 }
 
 pub fn ensureEditorTexture(self: anytype, width: i32, height: i32) bool {
-    return self.ensureRenderTargetScaled(&self.editor_target, width, height, gl.c.GL_NEAREST);
+    return self.ensureRenderTargetScaled(&self.retained_targets.editor, width, height, gl.c.GL_NEAREST);
 }
 
 pub fn beginTerminalTexture(self: anytype) bool {
-    return self.beginRenderTarget(self.terminal_target);
+    return self.beginRenderTarget(self.retained_targets.terminal);
 }
 
 pub fn endTerminalTexture(self: anytype) void {
@@ -35,17 +49,17 @@ pub fn endTerminalTexture(self: anytype) void {
 
 pub fn beginEditorTexture(self: anytype) bool {
     scene_frame_runtime.noteEditorTextureUpdate(self);
-    self.drawing_editor_target = true;
-    return self.beginRenderTarget(self.editor_target);
+    self.retained_targets.drawing_editor = true;
+    return self.beginRenderTarget(self.retained_targets.editor);
 }
 
 pub fn endEditorTexture(self: anytype) void {
-    self.drawing_editor_target = false;
+    self.retained_targets.drawing_editor = false;
     scene_frame_runtime.restoreMainCompositionTarget(self);
 }
 
 pub fn drawTerminalTexture(self: anytype, x: f32, y: f32, width: f32, height: f32) void {
-    if (self.terminal_target) |target| {
+    if (self.retained_targets.terminal) |target| {
         const snapped_x = snapToDevicePixel(x, self.scale.render_scale);
         const snapped_y = snapToDevicePixel(y, self.scale.render_scale);
         const src = texture_draw.fullTextureSrcRect(target.texture);
@@ -89,11 +103,11 @@ pub fn drawTerminalTexture(self: anytype, x: f32, y: f32, width: f32, height: f3
 }
 
 pub fn scrollTerminalTexture(self: anytype, dx: i32, dy: i32) bool {
-    if (self.terminal_target) |target| {
+    if (self.retained_targets.terminal) |target| {
         return gl_backend.scrollRenderTarget(
             self,
-            self.terminal_target,
-            &self.terminal_scroll_target,
+            self.retained_targets.terminal,
+            &self.retained_targets.terminal_scroll,
             dx,
             dy,
             target.logical_width,
@@ -104,7 +118,7 @@ pub fn scrollTerminalTexture(self: anytype, dx: i32, dy: i32) bool {
 }
 
 pub fn drawEditorTexture(self: anytype, x: f32, y: f32) void {
-    if (self.editor_target) |target| {
+    if (self.retained_targets.editor) |target| {
         scene_frame_runtime.noteEditorTextureBlit(self);
         const snapped_x = snapToDevicePixel(x, self.scale.render_scale);
         const snapped_y = snapToDevicePixel(y, self.scale.render_scale);

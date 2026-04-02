@@ -80,6 +80,7 @@ pub const ScaleState = font_runtime.ScaleState;
 pub const FontConfigState = font_manager.FontConfigState;
 pub const ClipboardState = clipboard.ClipboardState;
 pub const TerminalTextState = text_runtime.TerminalTextState;
+pub const RetainedTargetState = retained_targets_runtime.RetainedTargetState;
 pub const TerminalDisableLigaturesStrategy = enum {
     never,
     cursor,
@@ -388,9 +389,7 @@ pub const Renderer = struct {
     terminal_font: TerminalFont,
     font_config: FontConfigState,
 
-    terminal_target: ?RenderTarget,
-    terminal_scroll_target: ?RenderTarget,
-    editor_target: ?RenderTarget,
+    retained_targets: RetainedTargetState,
     scene_target: SceneTargetState,
     window_chrome: WindowChromeState,
 
@@ -406,7 +405,6 @@ pub const Renderer = struct {
     start_counter: u64,
     perf_freq: f64,
     present: scene_frame_runtime.PresentState,
-    drawing_editor_target: bool,
 
     fn snapInt(value: f32) i32 {
         return @intFromFloat(std.math.round(value));
@@ -551,9 +549,7 @@ pub const Renderer = struct {
             },
             .terminal_font = undefined,
             .font_config = font_config,
-            .terminal_target = null,
-            .terminal_scroll_target = null,
-            .editor_target = null,
+            .retained_targets = .{},
             .scene_target = .{},
             .window_chrome = .{},
             .theme = .{},
@@ -567,7 +563,6 @@ pub const Renderer = struct {
             .start_counter = sdl_api.getPerformanceCounter(),
             .perf_freq = @as(f64, @floatFromInt(sdl_api.getPerformanceFrequency())),
             .present = .{},
-            .drawing_editor_target = false,
         };
 
         if (renderer.terminal_recent_input_policy.force_full_enabled) {
@@ -585,9 +580,7 @@ pub const Renderer = struct {
     }
 
     pub fn deinit(self: *Renderer) void {
-        self.destroyRenderTarget(&self.terminal_target);
-        self.destroyRenderTarget(&self.terminal_scroll_target);
-        self.destroyRenderTarget(&self.editor_target);
+        retained_targets_runtime.deinit(self);
         self.destroyRenderTarget(&self.scene_target.target);
 
         self.app_font.deinit();
@@ -824,7 +817,7 @@ pub const Renderer = struct {
 
     pub fn drawRect(self: *Renderer, x: i32, y: i32, w: i32, h: i32, color: Color) void {
         if (w <= 0 or h <= 0) return;
-        if (self.drawing_editor_target and w == self.target_width and h == self.target_height and x == 0 and y == 0) {
+        if (self.retained_targets.drawing_editor and w == self.target_width and h == self.target_height and x == 0 and y == 0) {
             scene_frame_runtime.noteCompositionFullPaneClear(self);
         }
         const dest = shape_utils.rectFromInts(x, y, w, h);
