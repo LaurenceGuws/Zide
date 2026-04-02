@@ -158,3 +158,16 @@ Status note, later on 2026-04-02 once more:
   - the next honest question is whether `PtyTerminalRuntime` itself should
     remain the visible root name/type, or whether the remaining contradiction
     has moved again
+
+Status note, later on 2026-04-02 yet again:
+
+- the aggregate type definition no longer lives in
+  `terminal_runtime.zig`
+- the owning session object now lives in
+  `src/terminal/core/session/terminal_session.zig` as `TerminalSession`
+- `terminal_runtime.zig` is now only the narrow public alias surface for
+  `PtyTerminalRuntime`
+- current rerank:
+  - the runtime root now reads more like an export edge than a type center
+  - the remaining contradiction is less about where the aggregate is defined
+    and more about whether the public root should still be `PtyTerminalRuntime`

@@ -83,3 +83,16 @@ Status note, later on 2026-04-02:
   - session shell state
 - that materially improves the first-glance library-center story even though
   `PtyTerminalRuntime` still remains the visible aggregate type
+
+Status note, later on 2026-04-02 once more:
+
+- the aggregate type definition no longer lives in
+  [terminal_runtime.zig](/home/home/personal/zide/src/terminal/core/terminal_runtime.zig)
+- the owning session object now lives in
+  [terminal_session.zig](/home/home/personal/zide/src/terminal/core/session/terminal_session.zig)
+  as `TerminalSession`
+- `terminal_runtime.zig` is now just the narrow public alias surface for
+  `PtyTerminalRuntime`
+- that makes the runtime root read less like the place where "the terminal" is
+  defined and more like the compatibility/public edge around a more honest
+  session owner

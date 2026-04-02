@@ -151,6 +151,9 @@ Focused follow-up lane:
     `src/terminal/core/session/session_fields.zig` slab as `session`
   - the visible library shape is materially cleaner than the earlier flat
     aggregate
+  - the aggregate type definition now also lives under
+    `src/terminal/core/session/terminal_session.zig` as `TerminalSession`
+    instead of being defined inline in `terminal_runtime.zig`
 
 - `docs/review/TERMINAL_NATIVE_ARCHITECTURAL_SCRUTINY_2026-03-31.md`
   Why: this is the current ruthless read on what still looks second-rate at
