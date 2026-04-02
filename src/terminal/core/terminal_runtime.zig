@@ -18,7 +18,6 @@ const input_snapshot = @import("session/input_snapshot.zig");
 const control = @import("session/control.zig");
 const mode_effects = @import("session/mode_effects.zig");
 const terminal_publication = @import("publication/terminal_publication.zig");
-const config = @import("session/config.zig");
 const runtime = @import("session/runtime.zig");
 const session_debug = @import("session/debug_ops.zig");
 const publication_fields = @import("session/publication_fields.zig");
@@ -97,9 +96,6 @@ pub const PtyTerminalRuntime = struct {
 
     pub const setInputPressure = runtime.setInputPressure;
 
-    pub const setDefaultColors = config.setDefaultColors;
-    pub const applyThemePalette = config.applyThemePalette;
-
     pub const deinit = runtime.deinit;
 
     pub const prepareForShutdown = runtime.prepareForShutdown;
@@ -138,8 +134,6 @@ pub const PtyTerminalRuntime = struct {
     pub const reportColorSchemeChanged = session_input.reportColorSchemeChanged;
 
     pub const resize = runtime.resize;
-
-    pub const setCellSize = config.setCellSize;
 
     pub const enterAltScreen = mode_effects.enterAltScreen;
     pub const exitAltScreen = mode_effects.exitAltScreen;

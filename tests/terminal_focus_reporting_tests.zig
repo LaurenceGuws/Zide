@@ -2,6 +2,7 @@ const std = @import("std");
 const builtin = @import("builtin");
 const posix = std.posix;
 
+const session_config = @import("../src/terminal/core/session/config.zig");
 const terminal_runtime = @import("../src/terminal/core/terminal_runtime.zig");
 const terminal_core_protocol = @import("../src/terminal/core/protocol/terminal_core_protocol.zig");
 const terminal_types = @import("../src/terminal/model/types.zig");
@@ -1209,7 +1210,7 @@ test "terminal in-band resize notifications ?2048 emit CSI 48 t when enabled" {
     try withSessionAndCapture(struct {
         fn run(session: *terminal_runtime.PtyTerminalRuntime, capture: *PipeCapture) !void {
             const allocator = std.testing.allocator;
-            session.setCellSize(8, 16);
+            session_config.setCellSize(session, 8, 16);
 
             try session.resize(7, 13);
             try capture.expectNoReply();
@@ -1393,7 +1394,7 @@ test "terminal DECSTR suppresses ?2031 and ?2048 live emissions after reset" {
     try withSessionAndCapture(struct {
         fn run(session: *terminal_runtime.PtyTerminalRuntime, capture: *PipeCapture) !void {
             const allocator = std.testing.allocator;
-            session.setCellSize(8, 16);
+            session_config.setCellSize(session, 8, 16);
 
             terminal_debug.debugFeedBytes(session, "\x1b[?2031h\x1b[?2048h");
 
@@ -2182,7 +2183,7 @@ test "terminal CSI 14 t reports text area size in pixels" {
             }
 
             // Once metrics are known, reply in pixels.
-            session.setCellSize(9, 21);
+            session_config.setCellSize(session, 9, 21);
             terminal_debug.debugFeedBytes(session, "\x1b[14t");
             {
                 const reply = try capture.readReply(allocator);
@@ -2221,7 +2222,7 @@ test "terminal CSI 16 t reports character cell size in pixels" {
                 try std.testing.expectEqualStrings("\x1b[6;0;0t", reply);
             }
 
-            session.setCellSize(9, 21);
+            session_config.setCellSize(session, 9, 21);
             terminal_debug.debugFeedBytes(session, "\x1b[16t");
             {
                 const reply = try capture.readReply(allocator);

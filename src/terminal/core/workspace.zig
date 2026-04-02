@@ -1,6 +1,7 @@
 const std = @import("std");
 const terminal_publication = @import("publication/terminal_publication.zig");
 const runtime_mod = @import("terminal_runtime.zig");
+const session_config = @import("session/config.zig");
 const host_types = @import("session/host_types.zig");
 const session_runtime = @import("session/runtime.zig");
 const app_logger = @import("../../app_logger.zig");
@@ -417,7 +418,7 @@ pub const TerminalWorkspace = struct {
 
     pub fn setCellSizeAll(self: *TerminalWorkspace, cell_width: u16, cell_height: u16) void {
         for (self.tabs.items) |tab| {
-            tab.session.setCellSize(cell_width, cell_height);
+            session_config.setCellSize(tab.session, cell_width, cell_height);
         }
     }
 

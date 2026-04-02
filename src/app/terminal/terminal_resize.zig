@@ -1,4 +1,5 @@
 const app_shell = @import("../../app_shell.zig");
+const session_config = @import("../../terminal/core/session/config.zig");
 const terminal_runtime = @import("../../terminal/core/terminal_runtime.zig");
 const workspace_mod = @import("../../terminal/core/workspace.zig");
 
@@ -25,7 +26,8 @@ pub fn resizeSessionWithShellCellSize(
     rows: u16,
     cols: u16,
 ) !void {
-    term.setCellSize(
+    session_config.setCellSize(
+        term,
         @intFromFloat(shell.terminalCellWidth()),
         @intFromFloat(shell.terminalCellHeight()),
     );

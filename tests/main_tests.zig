@@ -17,6 +17,7 @@ const editor_mod = @import("../src/editor/editor.zig");
 const grammar_manager_mod = @import("../src/editor/grammar_manager.zig");
 const text_store = @import("../src/editor/text_store.zig");
 const metrics_mod = @import("../src/terminal/model/metrics.zig");
+const session_config = @import("../src/terminal/core/session/config.zig");
 const terminal_core_protocol = @import("../src/terminal/core/protocol/terminal_core_protocol.zig");
 const terminal_runtime = @import("../src/terminal/core/terminal_runtime.zig");
 const workspace_mod = @import("../src/terminal/core/workspace.zig");
@@ -102,7 +103,7 @@ test "terminal ansi palette update remaps existing screen and scrollback cells" 
     }
     new_palette[palette_idx] = new_color;
 
-    term.applyThemePalette(term.primary.default_attrs.fg, term.primary.default_attrs.bg, new_palette);
+    session_config.applyThemePalette(term, term.primary.default_attrs.fg, term.primary.default_attrs.bg, new_palette);
 
     try std.testing.expectEqualDeep(new_color, term.primary.grid.cells.items[0].attrs.fg);
     try std.testing.expectEqualDeep(new_color, term.primary.grid.cells.items[0].attrs.bg);

@@ -1,6 +1,7 @@
 const std = @import("std");
 const app_theme_utils = @import("../theme_utils.zig");
 const app_shell = @import("../../app_shell.zig");
+const session_config = @import("../../terminal/core/session/config.zig");
 const term_types = @import("../../terminal/model/types.zig");
 const terminal_runtime = @import("../../terminal/core/terminal_runtime.zig");
 const widgets = @import("../../ui/widgets.zig");
@@ -26,7 +27,7 @@ pub fn setSessionPalette(term: *PtyTerminalRuntime, theme: *const app_shell.Them
         }
         break :blk colors;
     } else null;
-    term.applyThemePalette(fg, bg, ansi_colors);
+    session_config.applyThemePalette(term, fg, bg, ansi_colors);
 }
 
 pub fn notifyColorSchemeChanged(

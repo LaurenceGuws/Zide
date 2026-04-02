@@ -1,4 +1,5 @@
 const std = @import("std");
+const session_config = @import("../core/session/config.zig");
 const types = @import("../model/types.zig");
 const shared = @import("shared.zig");
 
@@ -19,7 +20,7 @@ pub fn resize(handle: ?*shared.ZideTerminalHandle, cols: u16, rows: u16, cell_wi
     const h = shared.fromOpaqueActive(handle) orelse return .invalid_argument;
     if (rows == 0 or cols == 0) return .invalid_argument;
     h.session.resize(rows, cols) catch |err| return shared.mapError(err);
-    h.session.setCellSize(cell_width, cell_height);
+    session_config.setCellSize(h.session, cell_width, cell_height);
     return shared.syncDerivedEvents(h);
 }
 

@@ -1,5 +1,6 @@
 const std = @import("std");
 const app_shell = @import("../../app_shell.zig");
+const session_config = @import("../../terminal/core/session/config.zig");
 const session_runtime = @import("../../terminal/core/session/runtime.zig");
 const terminal_runtime = @import("../../terminal/core/terminal_runtime.zig");
 const widgets = @import("../../ui/widgets.zig");
@@ -61,7 +62,8 @@ pub fn startSessionWithShellCellSize(
     launch_cwd: ?[]const u8,
     configured_shell_path: ?[]const u8,
 ) !void {
-    term.setCellSize(
+    session_config.setCellSize(
+        term,
         @intFromFloat(shell.terminalCellWidth()),
         @intFromFloat(shell.terminalCellHeight()),
     );

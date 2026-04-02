@@ -6,6 +6,7 @@ const terminal_publication = @import("publication/terminal_publication.zig");
 const terminal_core_feed = @import("protocol/terminal_core_feed.zig");
 const terminal_core_protocol = @import("protocol/terminal_core_protocol.zig");
 const input_modes = @import("input_modes.zig");
+const session_config = @import("session/config.zig");
 const mode_effects = @import("session/mode_effects.zig");
 const scrolling = @import("scrolling.zig");
 const host_types = @import("session/host_types.zig");
@@ -1567,7 +1568,7 @@ test "default color remap stays on partial path" {
 
     const old_attrs = session.primary.default_attrs;
     const new_fg = Color{ .r = 0xaa, .g = 0xbb, .b = 0xcc, .a = 0xff };
-    session.setDefaultColors(new_fg, old_attrs.bg);
+    session_config.setDefaultColors(session, new_fg, old_attrs.bg);
 
     const cache = terminal_publication.renderCache(session);
     try std.testing.expectEqual(Dirty.partial, cache.dirty);

@@ -326,6 +326,11 @@ Judgment:
   `src/terminal/core/session/queries.zig` directly from widget and FFI
   callers instead of sitting on the stable runtime surface as thin
   convenience exports
+- config-owned screen/palette mutation is off the runtime surface too:
+  `setDefaultColors`, `applyThemePalette`, and `setCellSize` now route
+  through `src/terminal/core/session/config.zig` from app, workspace, FFI,
+  and test callers instead of pretending to be stable host-level runtime
+  contract
   contract
 - protocol query helpers are shrinking the same way too: runtime/focus tests
   now use `terminal_core_protocol.zig` directly for `getCell` /
