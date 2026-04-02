@@ -87,6 +87,9 @@ Focused follow-up lane:
   - tab sync packaging now lives there too, so the next workspace question is
     whether the remaining workspace surface is now honest enough to stop, or
     whether another real host/runtime convenience slab still belongs elsewhere
+  - visible-frame follow-through started too: tab-bar sync no longer rides
+    inside `visible_terminal_frame_hooks_runtime.handle(...)`; callers now do
+    that post-step themselves, which narrows the visible-frame hook contract
   - the other likely host pressure point is the split across
     `visible_terminal_frame.zig`,
     `visible_terminal_frame_hooks_runtime.zig`, and

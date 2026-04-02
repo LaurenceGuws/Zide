@@ -196,12 +196,7 @@ pub fn handle(
                     state.metrics.noteInput(ts);
                 }
             }.call,
-            .sync_terminal_tab_bar = struct {
-                fn call(raw: *anyopaque) !void {
-                    const state = @as(*@TypeOf(runtime_state), @ptrCast(@alignCast(raw)));
-                    try state.user_hooks.sync_terminal_tab_bar(state.user_ctx);
-                }
-            }.call,
         },
     );
+    try hooks.sync_terminal_tab_bar(ctx);
 }

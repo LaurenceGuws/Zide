@@ -228,3 +228,12 @@ Current rerank:
 2. native draw/runtime orchestration split across `visible_terminal_frame*`
    and `terminal_draw_surface_runtime.zig`
 3. publication micro-cuts, still paused unless a larger seam appears
+
+Visible-frame follow-through also started:
+
+- `visible_terminal_frame_hooks_runtime.handle(...)` no longer carries
+  tab-bar sync as part of its hook contract
+- callers now do that post-step themselves
+
+That makes the visible-frame hook layer read slightly more like a true
+poll/input routing owner and less like a mixed terminal UI convenience center.

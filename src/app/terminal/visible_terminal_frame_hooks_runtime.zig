@@ -21,7 +21,6 @@ pub const Hooks = struct {
     open_file_at: *const fn (*anyopaque, []const u8, usize, ?usize) anyerror!void,
     mark_redraw: *const fn (*anyopaque) void,
     note_input: *const fn (*anyopaque, f64) void,
-    sync_terminal_tab_bar: *const fn (*anyopaque) anyerror!void,
 };
 
 fn hasTerminalInputActivity(batch: *const input_types.InputBatch) bool {
@@ -197,5 +196,4 @@ pub fn handle(
     );
 
     if (terminal_frame_result.needs_redraw) hooks.mark_redraw(ctx);
-    try hooks.sync_terminal_tab_bar(ctx);
 }

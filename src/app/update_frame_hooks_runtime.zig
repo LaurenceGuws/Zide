@@ -217,14 +217,9 @@ fn handleActiveView(
                         s.metrics.noteInput(t);
                     }
                 }.call,
-                .sync_terminal_tab_bar = struct {
-                    fn call(raw: *anyopaque) !void {
-                        const s: *@TypeOf(state.*) = @ptrCast(@alignCast(raw));
-                        try app_terminal_tab_bar_sync_runtime.syncIfWorkspace(s);
-                    }
-                }.call,
             },
         );
+        try app_terminal_tab_bar_sync_runtime.syncIfWorkspace(state);
         return;
     }
 
