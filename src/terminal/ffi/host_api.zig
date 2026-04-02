@@ -1,6 +1,5 @@
 const std = @import("std");
 const host_queries = @import("../core/session/host_queries.zig");
-const session_config = @import("../core/session/config.zig");
 const session_content = @import("../core/session/content.zig");
 const session_input = @import("../core/session/input.zig");
 const session_runtime = @import("../core/session/runtime.zig");
@@ -23,8 +22,7 @@ pub fn poll(handle: ?*shared.ZideTerminalHandle) shared.Status {
 pub fn resize(handle: ?*shared.ZideTerminalHandle, cols: u16, rows: u16, cell_width: u16, cell_height: u16) shared.Status {
     const h = shared.fromOpaqueActive(handle) orelse return .invalid_argument;
     if (rows == 0 or cols == 0) return .invalid_argument;
-    h.session.resize(rows, cols) catch |err| return shared.mapError(err);
-    session_config.setCellSize(h.session, cell_width, cell_height);
+    session_runtime.resizeWithCellSize(h.session, rows, cols, cell_width, cell_height) catch |err| return shared.mapError(err);
     return shared.syncDerivedEvents(h);
 }
 

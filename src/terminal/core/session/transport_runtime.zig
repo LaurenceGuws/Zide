@@ -55,6 +55,11 @@ pub fn resize(self: anytype, rows: u16, cols: u16) !void {
     try reportInBandResize2048(self, rows, cols);
 }
 
+pub fn resizeWithCellSize(self: anytype, rows: u16, cols: u16, cell_width: u16, cell_height: u16) !void {
+    try @import("../resize_reflow.zig").resizeWithCellSize(self, rows, cols, cell_width, cell_height);
+    try reportInBandResize2048(self, rows, cols);
+}
+
 fn reportInBandResize2048(self: anytype, rows: u16, cols: u16) !void {
     if (!self.session.interaction.inband_resize_notifications_2048) return;
     if (lockPtyWriter(self)) |writer_guard| {

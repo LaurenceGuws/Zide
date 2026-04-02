@@ -116,6 +116,21 @@ test "external transport sendText queues outbound bytes" {
     try std.testing.expectEqualStrings("abc", bytes);
 }
 
+test "resizeWithCellSize uses current cell metrics for in-band resize report" {
+    const allocator = std.testing.allocator;
+
+    var session = try TerminalRuntimeShell.init(allocator, 2, 12);
+    defer session.deinit();
+    session_runtime.attachExternalTransport(session);
+    session.session.interaction.inband_resize_notifications_2048 = true;
+
+    try session_runtime.resizeWithCellSize(session, 3, 4, 8, 16);
+
+    const bytes = (try session_runtime.takeExternalOutgoingBytes(session, allocator)).?;
+    defer allocator.free(bytes);
+    try std.testing.expectEqualStrings("\x1b[48;3;4;48;32t", bytes);
+}
+
 test "alt screen core helpers preserve cursor save restore behavior" {
     const allocator = std.testing.allocator;
 

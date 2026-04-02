@@ -270,6 +270,12 @@ pub const TerminalWorkspace = struct {
         }
     }
 
+    pub fn resizeAllWithCellSize(self: *TerminalWorkspace, rows: u16, cols: u16, cell_width: u16, cell_height: u16) !void {
+        for (self.tabs.items) |tab| {
+            try session_runtime.resizeWithCellSize(tab.session, rows, cols, cell_width, cell_height);
+        }
+    }
+
     fn resetPollRuntimeCounters(self: *TerminalWorkspace) void {
         self.poll_runtime_counters = .{
             .epoch = self.poll_runtime_counters.epoch + 1,

@@ -79,6 +79,16 @@ gravity into smaller files.
     clearly second-order
   - `host_queries.zig` and ABI breadth remain lower-priority guardrails, not
     the default war
+- `docs/review/VT_PUBLIC_RESIZE_WAR_2026-04-03.md`
+  Why: after the post-input rerank, public resize was the clearest next
+  concrete parity gap that still had a clean code slice.
+  Current read:
+  - the old public resize story was split across `setCellSize(...)` and
+    `resize(...)`, and FFI taught a different order than native paths
+  - the new host-facing contract is `resizeWithCellSize(...)`
+  - semantic resize stays core-owned, while locking, transport resize, and
+    in-band reporting stay shell/runtime-owned
+  - this improves the public VT story without reopening shell-thinning theater
 
 - `docs/review/VT_WAR_4_SCOPE_AND_SEEDS_2026-04-03.md`
   Why: the next scrutiny pass is no longer a cleanup sprint; it is a focused

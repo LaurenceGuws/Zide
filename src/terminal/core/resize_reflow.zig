@@ -14,7 +14,27 @@ const RowMapEntry = struct {
 };
 
 pub fn resize(self: anytype, rows: u16, cols: u16) !void {
+    try resizeInternal(self, rows, cols, null);
+}
+
+pub fn resizeWithCellSize(self: anytype, rows: u16, cols: u16, cell_width: u16, cell_height: u16) !void {
+    try resizeInternal(self, rows, cols, .{
+        .cell_width = cell_width,
+        .cell_height = cell_height,
+    });
+}
+
+fn resizeInternal(
+    self: anytype,
+    rows: u16,
+    cols: u16,
+    cell_size: ?struct { cell_width: u16, cell_height: u16 },
+) !void {
     self.session.control.state_mutex.lock();
+    if (cell_size) |size| {
+        self.session.interaction.cell_width = size.cell_width;
+        self.session.interaction.cell_height = size.cell_height;
+    }
     try self.core.resizeLocked(self, rows, cols);
     const cell_width = self.session.interaction.cell_width;
     const cell_height = self.session.interaction.cell_height;

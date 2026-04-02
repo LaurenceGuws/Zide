@@ -87,3 +87,7 @@ pub fn writePtyBytes(self: anytype, bytes: []const u8) !void {
 pub fn resize(self: anytype, rows: u16, cols: u16) !void {
     try session_transport_runtime.resize(self, rows, cols);
 }
+
+pub fn resizeWithCellSize(self: anytype, rows: u16, cols: u16, cell_width: u16, cell_height: u16) !void {
+    try session_transport_runtime.resizeWithCellSize(self, rows, cols, cell_width, cell_height);
+}

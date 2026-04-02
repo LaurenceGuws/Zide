@@ -18,7 +18,6 @@ const app_pointer_activity_frame = @import("pointer_activity_frame.zig");
 const app_terminal_scrollbar_runtime = @import("terminal/terminal_scrollbar_runtime.zig");
 const app_terminal_split_resize_frame = @import("terminal/terminal_split_resize_frame.zig");
 const app_shell = @import("../app_shell.zig");
-const session_config = @import("../terminal/core/session/config.zig");
 const session_runtime = @import("../terminal/core/session/runtime.zig");
 const shared_types = @import("../types/mod.zig");
 const app_state_types = @import("app_state_types.zig");
@@ -294,12 +293,13 @@ pub fn handle(state: anytype, shell: *Shell, batch: *input_types.InputBatch, now
                             );
                             const cols: u16 = grid.cols;
                             const rows: u16 = grid.rows;
-                            session_config.setCellSize(
+                            try session_runtime.resizeWithCellSize(
                                 term,
+                                rows,
+                                cols,
                                 @intFromFloat(frame_shell.terminalCellWidth()),
                                 @intFromFloat(frame_shell.terminalCellHeight()),
                             );
-                            try session_runtime.resize(term, rows, cols);
                         }
                     }
                     if (result.needs_redraw) inner_state.needs_redraw = true;
