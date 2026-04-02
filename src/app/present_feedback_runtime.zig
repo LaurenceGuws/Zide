@@ -14,12 +14,7 @@ fn flushTerminalPresentationFeedback(state: anytype, submission: anytype) void {
     }
 }
 
-pub fn completePresent(state: anytype, shell: anytype, submission: anytype) void {
-    if (comptime mode_build.focused_mode == .terminal) {
-        flushTerminalPresentationFeedback(state, submission);
-        return;
-    }
-
+fn logFramePresent(state: anytype, shell: anytype, submission: anytype) void {
     const trace = shell.lastPresentTrace();
     app_logger.logger("renderer.present").logFields(.info, "frame_present", &.{
         .{ .key = "frame", .value = .{ .unsigned = state.frame_id } },
@@ -36,6 +31,16 @@ pub fn completePresent(state: anytype, shell: anytype, submission: anytype) void
     if (trace.captured_path) |path| {
         app_logger.logger("editor.live_smoke").logf(.info, "captured_frame frame={d} path={s}", .{ state.frame_id, path });
     }
+}
+
+pub fn completePresent(state: anytype, shell: anytype, submission: anytype) void {
+    logFramePresent(state, shell, submission);
+
+    if (comptime mode_build.focused_mode == .terminal) {
+        flushTerminalPresentationFeedback(state, submission);
+        return;
+    }
+
     if (app_editor_live_smoke_runtime.keepDrivingFrames(state)) {
         state.needs_redraw = true;
     }

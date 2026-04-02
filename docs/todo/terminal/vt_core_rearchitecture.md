@@ -252,6 +252,14 @@ Focused follow-up lane:
   - the structural false-center wars are no longer the obvious default move
   - the next likely War 2 opener is now the concrete present composition
     omission bug path
+- `docs/review/TERMINAL_PRESENT_OMISSION_BUG_REVIEW_2026-04-02.md`
+  Why: the post-parser rerank now points back to a concrete native present
+  correctness hunt instead of another structural split.
+  Current read:
+  - if the terminal still disappears, it is now a real scene-composition
+    omission bug
+  - the next concrete question is whether the widget draw path is skipped, the
+    retained-surface blit is skipped, or the scene proof is wrong
 
 ## Current Milestone
 
