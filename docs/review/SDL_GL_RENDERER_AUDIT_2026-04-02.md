@@ -101,6 +101,8 @@ Status note, 2026-04-02:
   lifecycle inline
 - grouped scale-state initialization now lives with the font-runtime owner
   instead of staying as a renderer-local lifecycle helper
+- grouped font-config initialization and teardown now live with the
+  font-manager owner instead of staying as renderer-local lifecycle helpers
 - text-input start/stop and input queue/composition teardown now run through
   the input owner instead of living as raw renderer lifecycle verbs
 - window-chrome teardown now runs through the chrome owner instead of living as

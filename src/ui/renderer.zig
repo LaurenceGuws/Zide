@@ -419,109 +419,6 @@ pub const Renderer = struct {
         return @as(f32, @floatFromInt(@as(i32, @intFromFloat(std.math.round(value * scale))))) / scale;
     }
 
-    const OwnedFontPath = struct {
-        path: [*:0]const u8,
-        owned: ?[]u8,
-    };
-
-    fn resolveFontPath(allocator: std.mem.Allocator, raw: []const u8) !OwnedFontPath {
-        if (std.fs.path.isAbsolute(raw)) {
-            const owned = try allocator.alloc(u8, raw.len + 1);
-            std.mem.copyForwards(u8, owned[0..raw.len], raw);
-            owned[raw.len] = 0;
-            return .{ .path = @ptrCast(owned.ptr), .owned = owned };
-        }
-
-        if (std.fs.cwd().openFile(raw, .{})) |file| {
-            file.close();
-            const owned = try allocator.alloc(u8, raw.len + 1);
-            std.mem.copyForwards(u8, owned[0..raw.len], raw);
-            owned[raw.len] = 0;
-            return .{ .path = @ptrCast(owned.ptr), .owned = owned };
-        } else |_| {}
-
-        const exe_dir = std.fs.selfExeDirPathAlloc(allocator) catch null;
-        defer if (exe_dir) |dir| allocator.free(dir);
-
-        if (exe_dir) |dir| {
-            const joined = try std.fs.path.join(allocator, &.{ dir, raw });
-            return .{ .path = @ptrCast(joined.ptr), .owned = joined };
-        }
-
-        const owned = try allocator.alloc(u8, raw.len + 1);
-        std.mem.copyForwards(u8, owned[0..raw.len], raw);
-        owned[raw.len] = 0;
-        return .{ .path = @ptrCast(owned.ptr), .owned = owned };
-    }
-
-    fn dupFontPath(allocator: std.mem.Allocator, raw_opt: ?[]const u8) !OwnedFontPath {
-        if (raw_opt) |raw| {
-            return try resolveFontPath(allocator, raw);
-        }
-        return try resolveFontPath(allocator, std.mem.span(FONT_PATH));
-    }
-
-    fn initFontConfigState(
-        allocator: std.mem.Allocator,
-        init_options: InitOptions,
-    ) !FontConfigState {
-        const app_font_path = try dupFontPath(allocator, init_options.app_font_path);
-        errdefer if (app_font_path.owned) |owned| allocator.free(owned);
-        const editor_font_path = try dupFontPath(allocator, init_options.editor_font_path orelse init_options.app_font_path);
-        errdefer if (editor_font_path.owned) |owned| allocator.free(owned);
-        const terminal_font_path = try dupFontPath(allocator, init_options.terminal_font_path orelse init_options.app_font_path);
-        errdefer if (terminal_font_path.owned) |owned| allocator.free(owned);
-
-        return .{
-            .app_font_path = app_font_path.path,
-            .app_font_path_owned = app_font_path.owned,
-            .editor_font_path = editor_font_path.path,
-            .editor_font_path_owned = editor_font_path.owned,
-            .terminal_font_path = terminal_font_path.path,
-            .terminal_font_path_owned = terminal_font_path.owned,
-            .terminal_disable_ligatures = .never,
-            .terminal_font_features_raw = null,
-            .terminal_font_features = .{},
-            .editor_disable_ligatures = .never,
-            .editor_font_features_raw = null,
-            .editor_font_features = .{},
-            .font_rendering = init_options.font_rendering,
-            .font_cache = std.AutoHashMap(u32, *TerminalFont).init(allocator),
-        };
-    }
-
-    fn deinitFontConfigState(self: *Renderer) void {
-        var font_it = self.font_config.font_cache.iterator();
-        while (font_it.next()) |entry| {
-            entry.value_ptr.*.deinit();
-            self.allocator.destroy(entry.value_ptr.*);
-        }
-        self.font_config.font_cache.deinit();
-
-        if (self.font_config.terminal_font_features_raw) |owned| {
-            self.allocator.free(owned);
-            self.font_config.terminal_font_features_raw = null;
-        }
-        self.font_config.terminal_font_features.deinit(self.allocator);
-        if (self.font_config.editor_font_features_raw) |owned| {
-            self.allocator.free(owned);
-            self.font_config.editor_font_features_raw = null;
-        }
-        self.font_config.editor_font_features.deinit(self.allocator);
-        if (self.font_config.app_font_path_owned) |owned| {
-            self.allocator.free(owned);
-            self.font_config.app_font_path_owned = null;
-        }
-        if (self.font_config.editor_font_path_owned) |owned| {
-            self.allocator.free(owned);
-            self.font_config.editor_font_path_owned = null;
-        }
-        if (self.font_config.terminal_font_path_owned) |owned| {
-            self.allocator.free(owned);
-            self.font_config.terminal_font_path_owned = null;
-        }
-    }
-
     pub fn init(allocator: std.mem.Allocator, width: i32, height: i32, title: [*:0]const u8, init_options: InitOptions) !*Renderer {
         try window_init.initSdl();
         errdefer sdl.SDL_Quit();
@@ -548,7 +445,7 @@ pub const Renderer = struct {
         const editor_font_size = editor_base_font_size * scale.ui_scale;
         const terminal_font_size = terminal_base_font_size * scale.ui_scale;
         const terminal_shape_buffer = hb.hb_buffer_create() orelse return error.OutOfMemory;
-        const font_config = try initFontConfigState(allocator, init_options);
+        const font_config = try font_manager.initFontConfigState(allocator, init_options);
         errdefer {
             var font_config_cleanup = font_config;
             if (font_config_cleanup.terminal_font_features_raw) |owned| allocator.free(owned);
@@ -694,7 +591,7 @@ pub const Renderer = struct {
         self.editor_font.deinit();
         self.terminal_font.deinit();
         self.icon_font.deinit();
-        self.deinitFontConfigState();
+        font_manager.deinitFontConfigState(self);
 
         input_state.deinit(self.inputDomain());
         self.clipboard_buffer.deinit(self.allocator);

@@ -114,6 +114,9 @@ Progress note, 2026-04-02:
 - grouped scale-state initialization now lives with
   `src/ui/renderer/font_runtime.zig` instead of staying as a renderer-local
   lifecycle helper
+- grouped font-config initialization and teardown now live with
+  `src/ui/renderer/font_manager.zig` instead of staying as renderer-local
+  lifecycle helpers
 - the remaining work in this item is broader lifecycle shrink, not raw grouped
   state setup/teardown duplication
 

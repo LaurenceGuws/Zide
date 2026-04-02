@@ -24,10 +24,113 @@ pub const FontConfigState = struct {
     font_cache: std.AutoHashMap(u32, *TerminalFont),
 };
 
+const OwnedFontPath = struct {
+    path: [*:0]const u8,
+    owned: ?[]u8,
+};
+
 const FontInitResult = struct {
     font: TerminalFont,
     metrics: Renderer.ScaledFontMetrics,
 };
+
+fn resolveFontPath(allocator: std.mem.Allocator, raw: []const u8) !OwnedFontPath {
+    if (std.fs.path.isAbsolute(raw)) {
+        const owned = try allocator.alloc(u8, raw.len + 1);
+        std.mem.copyForwards(u8, owned[0..raw.len], raw);
+        owned[raw.len] = 0;
+        return .{ .path = @ptrCast(owned.ptr), .owned = owned };
+    }
+
+    if (std.fs.cwd().openFile(raw, .{})) |file| {
+        file.close();
+        const owned = try allocator.alloc(u8, raw.len + 1);
+        std.mem.copyForwards(u8, owned[0..raw.len], raw);
+        owned[raw.len] = 0;
+        return .{ .path = @ptrCast(owned.ptr), .owned = owned };
+    } else |_| {}
+
+    const exe_dir = std.fs.selfExeDirPathAlloc(allocator) catch null;
+    defer if (exe_dir) |dir| allocator.free(dir);
+
+    if (exe_dir) |dir| {
+        const joined = try std.fs.path.join(allocator, &.{ dir, raw });
+        return .{ .path = @ptrCast(joined.ptr), .owned = joined };
+    }
+
+    const owned = try allocator.alloc(u8, raw.len + 1);
+    std.mem.copyForwards(u8, owned[0..raw.len], raw);
+    owned[raw.len] = 0;
+    return .{ .path = @ptrCast(owned.ptr), .owned = owned };
+}
+
+fn dupFontPath(allocator: std.mem.Allocator, raw_opt: ?[]const u8) !OwnedFontPath {
+    if (raw_opt) |raw| {
+        return try resolveFontPath(allocator, raw);
+    }
+    return try resolveFontPath(allocator, std.mem.span(renderer_root.FONT_PATH));
+}
+
+pub fn initFontConfigState(
+    allocator: std.mem.Allocator,
+    init_options: Renderer.InitOptions,
+) !FontConfigState {
+    const app_font_path = try dupFontPath(allocator, init_options.app_font_path);
+    errdefer if (app_font_path.owned) |owned| allocator.free(owned);
+    const editor_font_path = try dupFontPath(allocator, init_options.editor_font_path orelse init_options.app_font_path);
+    errdefer if (editor_font_path.owned) |owned| allocator.free(owned);
+    const terminal_font_path = try dupFontPath(allocator, init_options.terminal_font_path orelse init_options.app_font_path);
+    errdefer if (terminal_font_path.owned) |owned| allocator.free(owned);
+
+    return .{
+        .app_font_path = app_font_path.path,
+        .app_font_path_owned = app_font_path.owned,
+        .editor_font_path = editor_font_path.path,
+        .editor_font_path_owned = editor_font_path.owned,
+        .terminal_font_path = terminal_font_path.path,
+        .terminal_font_path_owned = terminal_font_path.owned,
+        .terminal_disable_ligatures = .never,
+        .terminal_font_features_raw = null,
+        .terminal_font_features = .{},
+        .editor_disable_ligatures = .never,
+        .editor_font_features_raw = null,
+        .editor_font_features = .{},
+        .font_rendering = init_options.font_rendering,
+        .font_cache = std.AutoHashMap(u32, *TerminalFont).init(allocator),
+    };
+}
+
+pub fn deinitFontConfigState(renderer: anytype) void {
+    var font_it = renderer.font_config.font_cache.iterator();
+    while (font_it.next()) |entry| {
+        entry.value_ptr.*.deinit();
+        renderer.allocator.destroy(entry.value_ptr.*);
+    }
+    renderer.font_config.font_cache.deinit();
+
+    if (renderer.font_config.terminal_font_features_raw) |owned| {
+        renderer.allocator.free(owned);
+        renderer.font_config.terminal_font_features_raw = null;
+    }
+    renderer.font_config.terminal_font_features.deinit(renderer.allocator);
+    if (renderer.font_config.editor_font_features_raw) |owned| {
+        renderer.allocator.free(owned);
+        renderer.font_config.editor_font_features_raw = null;
+    }
+    renderer.font_config.editor_font_features.deinit(renderer.allocator);
+    if (renderer.font_config.app_font_path_owned) |owned| {
+        renderer.allocator.free(owned);
+        renderer.font_config.app_font_path_owned = null;
+    }
+    if (renderer.font_config.editor_font_path_owned) |owned| {
+        renderer.allocator.free(owned);
+        renderer.font_config.editor_font_path_owned = null;
+    }
+    if (renderer.font_config.terminal_font_path_owned) |owned| {
+        renderer.allocator.free(owned);
+        renderer.font_config.terminal_font_path_owned = null;
+    }
+}
 
 fn initFont(renderer: anytype, path: [*:0]const u8, layout_size: f32) !FontInitResult {
     const render_scale = if (renderer.scale.render_scale > 0.0) renderer.scale.render_scale else 1.0;
