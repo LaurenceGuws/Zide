@@ -39,6 +39,15 @@ What remains is not residue. It is ownership concentration.
 
 `src/ui/renderer.zig` is still too large and too semantically mixed.
 
+Status note, 2026-04-02:
+
+- after the owner moves and grouped-state cuts in this queue, the remaining
+  renderer root now reads much closer to honest render-core state
+- the loud fake-center pressure is materially lower than it was at the start of
+  this scrutiny round
+- the next move should be a re-rank before any more cuts, not automatic
+  repacking
+
 ## Target Read
 
 The renderer center should read as:
