@@ -235,6 +235,9 @@ Progress note, 2026-04-02:
 - editor pending-highlight redraw now lives in
   `src/app/editor/editor_draw_surface_runtime.zig` instead of remaining inline
   in `src/app/draw_frame_runtime.zig`
+- renderer full-pane-clear detection for editor retained surfaces now routes
+  through `src/ui/renderer/retained_targets_runtime.zig` instead of peeking
+  into retained-target state directly
 
 ### 4. The SDL/GL host seam is functionally decent but still reads like an
 investigation seam
