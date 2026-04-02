@@ -39,6 +39,16 @@ gravity into smaller files.
   - success means either naming one real missing capability slab or concluding
     that the remaining gap is mostly normalization/maturity rather than another
     obvious architecture contradiction
+- `docs/review/VT_WAR_4_INITIAL_FINDINGS_2026-04-03.md`
+  Why: the first master scan now has enough evidence to rank the likely
+  remaining contradiction before the full cross-reference wave is complete.
+  Current read:
+  - the strongest remaining mismatch is shell-anchored host instantiation and
+    opaque-handle identity, not shell file size
+  - `host_queries.zig` now reads mostly like honest mixed runtime aggregation
+  - the public contract is broader than Ghostty's `vt.h`, but the stronger
+    question is whether that broad host contract is still anchored on the shell
+    instead of a more engine-centered contract story
 
 ## Priority Now
 
