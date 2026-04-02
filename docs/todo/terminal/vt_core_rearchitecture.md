@@ -244,6 +244,10 @@ Focused follow-up lane:
   - the mutation alias slab is now deleted from `TerminalSession`; live code no
     longer treats it as the home for selection/scrollback convenience verbs
 
+- `docs/review/VT_SPRINT_POST_MUTATION_RERANK_2026-04-02.md`
+  Why: the sprint is now past helper cleanup; the next blocker is explicit
+  object-identity design around `TerminalCore` vs `TerminalSession`
+
 - `docs/review/TERMINAL_NATIVE_ARCHITECTURAL_SCRUTINY_2026-03-31.md`
   Why: this is the current ruthless read on what still looks second-rate at
   first glance and what should be demolished first.
