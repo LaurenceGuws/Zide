@@ -8,9 +8,13 @@ not a progress log and should stay brief.
 - Terminal is now the active invention lane on `main`.
 - War 1 of the current terminal architecture campaign should be considered
   closed.
-- The next mission is not to keep grinding the recently flattened micro-lanes.
-- The next mission is to start War 2 from a fresh top-level rerank against
-  live code and the strongest local references.
+- War 2 micro-lanes should now be treated as materially flattened unless a
+  fresh live repro or obvious false center reopens one.
+- The next mission is War 3:
+  - make the terminal engine/library center obvious enough that `zide-vt`
+    reads like a serious extraction target
+  - compare that shape directly against the strongest local references,
+    especially `libghostty-vt`
 - The quality bar is still ruthless: every terminal seam must read as:
   - engine-centered
   - loosely coupled
@@ -33,15 +37,14 @@ not a progress log and should stay brief.
 
 ### Current Direction
 
-- War 2 should begin by reranking the full terminal system from the top:
-  - engine truth
-  - publication truth
-  - native host truth
-  - renderer/present truth
+- War 3 should begin by reranking the terminal stack specifically as a library
+  boundary:
+  - engine/library truth
+  - runtime shell truth
+  - host boundary truth
 - Default terminal work now should be:
   - compare the live shape directly against the strongest local references
-  - identify the next top-level false center rather than another thin local
-    seam
+  - identify the next top-level obstacle to a serious `zide-vt` boundary
   - define the replacement shape
   - cut through the real affected surface area
   - validate hard
@@ -60,20 +63,20 @@ not a progress log and should stay brief.
 
 - The scene-owned composition path is active on `main`.
 - `TerminalCore` is real, but it is still not the only obvious center.
-- The broad remaining architectural enemy is no longer the exact War 1 set of
-  local false centers. Those were materially reduced.
-- The current open question is broader:
-  - now that the obvious local lies are flatter, what still looks second-rate
-    at first glance when compared to the strongest references?
+- The broad remaining architectural enemy is now more specific:
+  - the stack still does not read like one unmistakable engine/library center
+    plus runtime shell plus host boundary
+- The current open question is:
+  - what still prevents the live stack from reading like a serious `zide-vt`
+    extraction target at first glance?
 - The archived `ascii-rain` lane is no longer the active driver. It should not
   dictate current architecture focus.
-- The native present lane still contains a live migration seam:
-  - some cleared frames still submit with `terminal_texture_draws=0`
-  - that bug remains real
-  - but it is no longer the strategic center of the terminal campaign
+- The reopened present omission lane should now be treated as closed unless a
+  fresh live repro proves otherwise.
 - Flutty/FFI validation remains useful background proof:
   - the contract is already broad enough to support a serious host surface
-  - the bigger remaining gap is ownership clarity, not missing host API volume
+  - the bigger remaining gap is ownership clarity at the library center, not
+    missing host API volume
 - Current implementation authority lives in the terminal architecture docs and
   owning todos, not in stale bug lanes or historical cleanup assumptions.
 - Working model for terminal cuts now:
@@ -103,6 +106,7 @@ not a progress log and should stay brief.
 - Terminal core architecture and active queue:
   - `app_architecture/terminal/VT_CORE_DESIGN.md`
   - `docs/todo/terminal/vt_core_rearchitecture.md`
+  - `docs/review/TERMINAL_WAR_3_LIBRARY_BOUNDARY_RERANK_2026-04-02.md`
   - `docs/review/TERMINAL_WAR_2_RERANK_2026-04-02.md`
   - `docs/review/TERMINAL_NATIVE_ARCHITECTURAL_SCRUTINY_2026-03-31.md`
   - `app_architecture/terminal/TERMINAL_ARCHITECTURE_COMPARISON.md`

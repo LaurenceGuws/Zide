@@ -53,6 +53,15 @@ Supporting cuts:
 
 Focused follow-up lane:
 
+- `docs/review/TERMINAL_WAR_3_LIBRARY_BOUNDARY_RERANK_2026-04-02.md`
+  Why: War 2 micro-lanes are no longer the real center of gravity. The next
+  serious question is whether the live terminal stack reads like a real
+  `zide-vt` library boundary at all.
+  Current read:
+  - Zide is now rich enough at the host-contract layer
+  - the remaining blocker is architecture shape, not capability volume
+  - War 3 should open on the engine/library boundary itself
+
 - `docs/review/TERMINAL_NATIVE_ARCHITECTURAL_SCRUTINY_2026-03-31.md`
   Why: this is the current ruthless read on what still looks second-rate at
   first glance and what should be demolished first.
