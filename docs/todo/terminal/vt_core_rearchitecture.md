@@ -64,6 +64,10 @@ Focused follow-up lane:
   Why: the next terminal battlefield is no longer tiny publication helper
   cleanup; it is identifying the single dominant host-facing terminal
   frame/publication contract.
+  Progress:
+  - publication now owns the frame/publication snapshot shape directly and
+    workspace forwards the active-session contract instead of rebuilding those
+    booleans locally
 
 ## Current Milestone
 

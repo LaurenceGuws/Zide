@@ -202,6 +202,13 @@ This review should answer, with code:
 - whether the poll/pacing/widget path can read through one stronger contract
   instead of three adjacent summaries
 
+Progress note, 2026-04-02:
+
+- publication now owns the host-facing frame/publication snapshot shape via
+  `terminal_publication.FrameState`
+- workspace now forwards that contract for the active session instead of
+  rebuilding redraw/backlog/output-pressure locally
+
 ## Recommended Review Sequence
 
 1. Compare the current Zide host/publication contract against Ghostty’s

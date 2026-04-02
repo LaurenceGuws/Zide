@@ -74,16 +74,7 @@ pub const TerminalWorkspace = struct {
         semantic_command_active: bool = false,
     };
 
-    pub const ActiveFrameState = struct {
-        has_data: bool = false,
-        session_ptr: usize = 0,
-        pending_generation: u64 = 0,
-        published_generation: u64 = 0,
-        presented_generation: u64 = 0,
-        redraw_pending: bool = false,
-        parse_backlog: bool = false,
-        output_pressure: bool = false,
-    };
+    pub const ActiveFrameState = terminal_publication.FrameState;
 
     pub const PollFrameResult = struct {
         any_polled: bool = false,
@@ -241,20 +232,7 @@ pub const TerminalWorkspace = struct {
     pub fn activeFrameState(self: *const TerminalWorkspace) ActiveFrameState {
         if (self.tabs.items.len == 0) return .{};
         const session = self.tabs.items[self.activeIndex()].session;
-        const generation_state = terminal_publication.generationState(session);
-        const parse_backlog = generation_state.pending != generation_state.published;
-        const redraw_pending = generation_state.published != generation_state.presented;
-        const has_data = session_runtime.hasData(session);
-        return .{
-            .has_data = has_data,
-            .session_ptr = @intFromPtr(session),
-            .pending_generation = generation_state.pending,
-            .published_generation = generation_state.published,
-            .presented_generation = generation_state.presented,
-            .redraw_pending = redraw_pending,
-            .parse_backlog = parse_backlog,
-            .output_pressure = has_data or parse_backlog,
-        };
+        return terminal_publication.frameState(session, session_runtime.hasData(session));
     }
 
     pub fn firstConfirmCloseTab(self: *const TerminalWorkspace) ?TabTarget {
