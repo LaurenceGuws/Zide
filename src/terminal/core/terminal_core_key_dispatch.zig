@@ -9,6 +9,12 @@ pub const KeyActionDispatch = enum {
     encoded,
 };
 
+pub const KeypadActionDispatch = struct {
+    suppress: bool,
+    emit: bool,
+    app_keypad: bool,
+};
+
 pub fn decideKeyAction(
     _: anytype,
     key: types.Key,
@@ -34,5 +40,25 @@ pub fn appCursorSequence(key: types.Key) ?[]const u8 {
         types.VTERM_KEY_HOME => "\x1bOH",
         types.VTERM_KEY_END => "\x1bOF",
         else => null,
+    };
+}
+
+pub fn decideKeypadAction(
+    _: anytype,
+    action: input_mod.KeyAction,
+    auto_repeat_enabled: bool,
+    app_keypad_enabled: bool,
+) KeypadActionDispatch {
+    if (action == .repeat and !auto_repeat_enabled) {
+        return .{
+            .suppress = true,
+            .emit = false,
+            .app_keypad = app_keypad_enabled,
+        };
+    }
+    return .{
+        .suppress = false,
+        .emit = action == .press,
+        .app_keypad = app_keypad_enabled,
     };
 }

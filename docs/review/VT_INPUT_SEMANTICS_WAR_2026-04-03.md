@@ -101,6 +101,31 @@ What remains blocked:
 - char dispatch still carries the local-echo ambiguity
 - keypad and broader input/reporting still need their own honesty test
 
+Progress, later on 2026-04-03:
+
+- keypad-action dispatch is now landed too
+- the same owner module,
+  [terminal_core_key_dispatch.zig](/home/home/personal/zide/src/terminal/core/terminal_core_key_dispatch.zig),
+  now also owns keypad semantic dispatch
+- [session/input.zig](/home/home/personal/zide/src/terminal/core/session/input.zig)
+  now routes `sendKeypadAction(...)` through that core-owned decision
+- this keeps:
+  - repeat suppression
+  - press-only keypad emission
+  - app-keypad mode use
+  terminal-owned
+- while leaving:
+  - lock acquisition
+  - writer selection
+  - protocol encoding
+  shell-owned
+
+What remains blocked now:
+
+- char dispatch still carries the local-echo ambiguity
+- broader reporting/mouse/text lanes are still transport-shaped unless proven
+  otherwise
+
 ### 2. Broader host-driving input semantic contract
 
 Examples:
@@ -160,4 +185,5 @@ And inside that war, the only honest opener remains:
 Current state:
 
 - key-action dispatch is now a real first slice
+- keypad-action dispatch now follows the same pattern
 - char/input broadening is still not automatic from that win

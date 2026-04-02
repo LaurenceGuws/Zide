@@ -22,6 +22,11 @@ const KeyActionContext = struct {
     dispatch: @import("../terminal_core.zig").TerminalCore.KeyActionDispatch,
 };
 
+const KeypadActionContext = struct {
+    key_mode_flags: u32,
+    dispatch: @import("../terminal_core.zig").TerminalCore.KeypadActionDispatch,
+};
+
 fn echoCharLocallyIfEnabled(self: anytype, char: u32, mod: Modifier, action: input_mod.KeyAction) void {
     if (action == .release) return;
     if (mod != VTERM_MOD_NONE) return;
@@ -100,16 +105,27 @@ pub fn sendKeypad(self: anytype, key: input_mod.KeypadKey, mod: Modifier) !void 
     try sendKeypadAction(self, key, mod, input_mod.KeyAction.press);
 }
 
-pub fn sendKeypadAction(self: anytype, key: input_mod.KeypadKey, mod: Modifier, action: input_mod.KeyAction) !void {
-    if (action == .repeat and !self.session.interaction.input_snapshot.auto_repeat.load(.acquire)) return;
+fn keypadActionContext(self: anytype, action: input_mod.KeyAction) KeypadActionContext {
     const input_snapshot = self.session.interaction.input_snapshot;
     const key_mode_flags = input_snapshot.key_mode_flags.load(.acquire);
-    const app_keypad = input_snapshot.app_keypad.load(.acquire);
+    return .{
+        .key_mode_flags = key_mode_flags,
+        .dispatch = self.core.decideKeypadAction(
+            action,
+            input_snapshot.auto_repeat.load(.acquire),
+            input_snapshot.app_keypad.load(.acquire),
+        ),
+    };
+}
+
+pub fn sendKeypadAction(self: anytype, key: input_mod.KeypadKey, mod: Modifier, action: input_mod.KeyAction) !void {
+    const context = keypadActionContext(self, action);
+    if (context.dispatch.suppress) return;
     if (self.lockPtyWriter()) |writer_guard| {
         var writer = writer_guard;
         defer writer.unlock();
-        if (action == .press) {
-            _ = try writer.sendKeypad(key, mod, app_keypad, key_mode_flags);
+        if (context.dispatch.emit) {
+            _ = try writer.sendKeypad(key, mod, context.dispatch.app_keypad, context.key_mode_flags);
         }
     }
 }
@@ -265,6 +281,40 @@ test "key action repeat suppression comes from core dispatch" {
     @import("../input_modes.zig").setAutoRepeat(session, false);
 
     try sendKeyAction(session, VTERM_KEY_UP, VTERM_MOD_NONE, .repeat);
+
+    const bytes = (try session_runtime.takeExternalOutgoingBytes(session, allocator)).?;
+    defer allocator.free(bytes);
+    try std.testing.expectEqual(@as(usize, 0), bytes.len);
+}
+
+test "keypad action uses app keypad mode from core dispatch" {
+    const session_runtime = @import("runtime.zig");
+
+    const allocator = std.testing.allocator;
+    var session = try @import("terminal_runtime_shell.zig").TerminalRuntimeShell.init(allocator, 2, 2);
+    defer session.deinit();
+
+    session_runtime.attachExternalTransport(session);
+    @import("../input_modes.zig").setKeypadMode(session, true);
+
+    try sendKeypadAction(session, input_mod.KeypadKey.kp1, VTERM_MOD_NONE, .press);
+
+    const bytes = (try session_runtime.takeExternalOutgoingBytes(session, allocator)).?;
+    defer allocator.free(bytes);
+    try std.testing.expectEqualStrings("\x1bOq", bytes);
+}
+
+test "keypad repeat suppression comes from core dispatch" {
+    const session_runtime = @import("runtime.zig");
+
+    const allocator = std.testing.allocator;
+    var session = try @import("terminal_runtime_shell.zig").TerminalRuntimeShell.init(allocator, 2, 2);
+    defer session.deinit();
+
+    session_runtime.attachExternalTransport(session);
+    @import("../input_modes.zig").setAutoRepeat(session, false);
+
+    try sendKeypadAction(session, input_mod.KeypadKey.kp1, VTERM_MOD_NONE, .repeat);
 
     const bytes = (try session_runtime.takeExternalOutgoingBytes(session, allocator)).?;
     defer allocator.free(bytes);

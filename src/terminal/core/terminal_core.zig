@@ -46,6 +46,7 @@ pub const TerminalCore = struct {
     pub const SelectionGesture = terminal_core_selection.SelectionGesture;
     pub const ClickSelectionResult = terminal_core_selection.ClickSelectionResult;
     pub const KeyActionDispatch = terminal_core_key_dispatch.KeyActionDispatch;
+    pub const KeypadActionDispatch = terminal_core_key_dispatch.KeypadActionDispatch;
     pub const OutputFeedResult = struct {
         parsed: bool,
         scroll_offset: usize,
@@ -246,6 +247,20 @@ pub const TerminalCore = struct {
 
     pub fn appCursorSequence(_: *const TerminalCore, key: types.Key) ?[]const u8 {
         return terminal_core_key_dispatch.appCursorSequence(key);
+    }
+
+    pub fn decideKeypadAction(
+        self: *const TerminalCore,
+        action: @import("../input/input.zig").KeyAction,
+        auto_repeat_enabled: bool,
+        app_keypad_enabled: bool,
+    ) KeypadActionDispatch {
+        return terminal_core_key_dispatch.decideKeypadAction(
+            self,
+            action,
+            auto_repeat_enabled,
+            app_keypad_enabled,
+        );
     }
 
     pub fn glCharset(self: *const TerminalCore) Charset {

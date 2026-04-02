@@ -51,6 +51,9 @@ gravity into smaller files.
   - the first key-action slice is now landed
   - `TerminalCore` now owns the semantic key-action dispatch decision while
     shell input still owns lock/writer/encoding
+  - keypad-action dispatch is now landed under the same owner too
+  - `TerminalCore` now also owns repeat gating, press-only emission, and
+    app-keypad mode use for keypad input
   - char dispatch remains blocked by the local-echo ambiguity
 
 - `docs/review/VT_WAR_4_SCOPE_AND_SEEDS_2026-04-03.md`
