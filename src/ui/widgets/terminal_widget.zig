@@ -352,14 +352,14 @@ pub const TerminalWidget = struct {
     ) DrawOutcome {
         const draw_start = app_shell.getTime();
         const handoff_log = app_logger.logger("terminal.generation_handoff");
-        const latest_capture = terminal_publication.captureLatestPresentation(self.session, &self.draw_cache) catch |err| {
+        const latest_capture = terminal_publication.prepareLatestPresentation(self.session, &self.draw_cache) catch |err| {
             const log = app_logger.logger("terminal.ui.redraw");
             log.logf(.warning, "draw snapshot copy failed err={s}", .{@errorName(err)});
             return .{};
         };
         const capture = latest_capture.capture;
         if (handoff_log.enabled_file or handoff_log.enabled_console) {
-            const generation_state = terminal_publication.generationState(self.session);
+            const generation_state = latest_capture.generation_state;
             handoff_log.logf(
                 .info,
                 "stage=widget_prepare sid={x} last_render={d} captured={d} cur={d} pub={d} presented={d} texture_ready={d}",

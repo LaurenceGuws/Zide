@@ -207,7 +207,7 @@ Judgment:
   recapture for the common "prepare latest presentable capture" action; that
   owner contract now lives under
   `src/terminal/core/publication/terminal_publication.zig` as
-  `captureLatestPresentation(...)`
+  `prepareLatestPresentation(...)`
 - native draw/runtime presentation feedback staging is tighter too:
   app state no longer carries terminal-specific pending presentation feedback
   or submission-sequence residue; the active `TerminalWidget` now owns pending

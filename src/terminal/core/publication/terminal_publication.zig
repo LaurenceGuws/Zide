@@ -28,8 +28,9 @@ pub const PresentationCapture = struct {
     presented: PresentedRenderCache,
 };
 
-pub const LatestPresentationCapture = struct {
+pub const LatestPresentationPreparation = struct {
     capture: PresentationCapture,
+    generation_state: GenerationState,
     refreshed: bool,
 };
 
@@ -558,22 +559,21 @@ pub fn capturePresentation(self: anytype, dst: *RenderCache) !PresentationCaptur
     };
 }
 
-pub fn captureLatestPresentation(self: anytype, dst: *RenderCache) !LatestPresentationCapture {
+pub fn prepareLatestPresentation(self: anytype, dst: *RenderCache) !LatestPresentationPreparation {
     var capture = try capturePresentation(self, dst);
     const published_now = publishedGeneration(self);
+    var refreshed = false;
     if (published_now > capture.presented.generation) {
         const refreshed_capture = try capturePresentation(self, dst);
         if (refreshed_capture.presented.generation > capture.presented.generation) {
             capture = refreshed_capture;
-            return .{
-                .capture = capture,
-                .refreshed = true,
-            };
+            refreshed = true;
         }
     }
     return .{
         .capture = capture,
-        .refreshed = false,
+        .generation_state = generationState(self),
+        .refreshed = refreshed,
     };
 }
 
