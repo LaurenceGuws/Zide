@@ -84,6 +84,10 @@ Focused follow-up lane:
   - generation mutation, view-refresh choreography, and output-pending flow
     now live in `src/terminal/core/publication/publication_flow.zig`
     instead of inflating `terminal_publication.zig`
+  - the second whole-slab move is now landed too
+  - widget presentation capture/preparation now lives in
+    `src/terminal/core/publication/publication_capture.zig`
+    instead of inflating `terminal_publication.zig`
   - callers now use that owner directly, so the next publication rerank can
     focus on the remaining export-edge contradiction
 

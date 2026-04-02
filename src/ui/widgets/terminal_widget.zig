@@ -1,6 +1,7 @@
 const std = @import("std");
 const app_shell = @import("../../app_shell.zig");
 const terminal_runtime = @import("../../terminal/core/terminal_runtime.zig");
+const publication_capture = @import("../../terminal/core/publication/publication_capture.zig");
 const terminal_publication = @import("../../terminal/core/publication/terminal_publication.zig");
 const session_input = @import("../../terminal/core/session/input.zig");
 const session_interaction = @import("../../terminal/core/session/interaction.zig");
@@ -328,7 +329,7 @@ pub const TerminalWidget = struct {
     ) DrawOutcome {
         const draw_start = app_shell.getTime();
         const handoff_log = app_logger.logger("terminal.generation_handoff");
-        const latest_capture = terminal_publication.prepareLatestPresentation(self.session, &self.draw_cache) catch |err| {
+        const latest_capture = publication_capture.prepareLatestPresentation(self.session, &self.draw_cache) catch |err| {
             const log = app_logger.logger("terminal.ui.redraw");
             log.logf(.warning, "draw snapshot copy failed err={s}", .{@errorName(err)});
             return .{};

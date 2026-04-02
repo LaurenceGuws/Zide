@@ -94,3 +94,15 @@ Status note, later on 2026-04-02:
   [publication_flow.zig](/home/home/personal/zide/src/terminal/core/publication/publication_flow.zig)
 - callers were rewired directly to that owner instead of preserving
   `terminal_publication.zig` as the universal choreography surface
+
+Status note, later on 2026-04-02 again:
+
+- the second whole-slab cut is now in
+- widget presentation capture/preparation no longer lives in
+  `terminal_publication.zig`
+- that slab now lives in
+  [publication_capture.zig](/home/home/personal/zide/src/terminal/core/publication/publication_capture.zig)
+- [terminal_widget.zig](/home/home/personal/zide/src/ui/widgets/terminal_widget.zig)
+  now uses that owner directly for latest-presentation preparation
+- publication now reads less like an active widget handoff center and more
+  like a narrower export edge

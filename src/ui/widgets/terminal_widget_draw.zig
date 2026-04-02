@@ -1,5 +1,6 @@
 const std = @import("std");
 const app_shell = @import("../../app_shell.zig");
+const publication_capture = @import("../../terminal/core/publication/publication_capture.zig");
 const terminal_publication = @import("../../terminal/core/publication/terminal_publication.zig");
 const render_cache_mod = @import("../../terminal/core/publication/render_cache.zig");
 const app_logger = @import("../../app_logger.zig");
@@ -22,7 +23,7 @@ const Cell = terminal_publication.Cell;
 const Rgba = terminal_font_mod.Rgba;
 
 const RenderCache = render_cache_mod.RenderCache;
-const PresentationCapture = terminal_publication.PresentationCapture;
+const PresentationCapture = publication_capture.PresentationCapture;
 const PresentedRenderCache = terminal_publication.PresentedRenderCache;
 const PresentationFeedback = terminal_publication.PresentationFeedback;
 pub const FrameLatencyMetrics = draw_metrics.FrameLatencyMetrics;
