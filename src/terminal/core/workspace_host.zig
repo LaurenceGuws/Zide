@@ -9,6 +9,17 @@ const TerminalWorkspace = workspace_mod.TerminalWorkspace;
 const TabId = workspace_mod.TabId;
 const PtyTerminalRuntime = terminal_runtime.PtyTerminalRuntime;
 
+pub const TabTarget = struct {
+    index: usize,
+    id: TabId,
+};
+
+pub const CloseConfirmContext = struct {
+    foreground_process_present: bool = false,
+    foreground_process_label: []const u8 = "",
+    semantic_command_active: bool = false,
+};
+
 fn sessionNeedsCloseConfirm(session: *PtyTerminalRuntime) bool {
     if (!host_queries.isAlive(session)) return false;
     const activity = host_queries.currentActivityMetadata(session);
@@ -50,7 +61,7 @@ pub fn refreshActiveSessionChildExit(workspace: *TerminalWorkspace) void {
     session_runtime.refreshChildExit(workspace.tabs.items[workspace.activeIndex()].session);
 }
 
-pub fn firstConfirmCloseTab(workspace: *const TerminalWorkspace) ?workspace_mod.TabTarget {
+pub fn firstConfirmCloseTab(workspace: *const TerminalWorkspace) ?TabTarget {
     for (workspace.tabs.items, 0..) |tab, idx| {
         if (!sessionNeedsCloseConfirm(tab.session)) continue;
         return .{
@@ -64,7 +75,7 @@ pub fn firstConfirmCloseTab(workspace: *const TerminalWorkspace) ?workspace_mod.
 pub fn closeConfirmContextForTabId(
     workspace: *const TerminalWorkspace,
     tab_id: TabId,
-) ?TerminalWorkspace.CloseConfirmContext {
+) ?CloseConfirmContext {
     for (workspace.tabs.items) |tab| {
         if (tab.id != tab_id) continue;
         const activity = host_queries.currentActivityMetadata(tab.session);

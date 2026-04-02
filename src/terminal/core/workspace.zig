@@ -60,18 +60,7 @@ pub const TabSyncState = struct {
     tabs: []const TabSyncEntry,
 };
 
-pub const TabTarget = struct {
-    index: usize,
-    id: TabId,
-};
-
 pub const TerminalWorkspace = struct {
-    pub const CloseConfirmContext = struct {
-        foreground_process_present: bool = false,
-        foreground_process_label: []const u8 = "",
-        semantic_command_active: bool = false,
-    };
-
     pub const ActiveFrameState = terminal_publication.FrameState;
 
     pub const PollFrameResult = struct {

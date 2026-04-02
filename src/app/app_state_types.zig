@@ -6,6 +6,7 @@ const terminal_shell_icon_runtime = @import("terminal/terminal_shell_icon_runtim
 const editor_types = @import("../editor/types.zig");
 const app_logger = @import("../app_logger.zig");
 const terminal_runtime = @import("../terminal/core/terminal_runtime.zig");
+const workspace_host = @import("../terminal/core/workspace_host.zig");
 const workspace_mod = @import("../terminal/core/workspace.zig");
 const metrics_mod = @import("../terminal/model/metrics.zig");
 const term_types = @import("../terminal/model/types.zig");
@@ -54,7 +55,7 @@ pub const EditorClusterCache = widgets.EditorClusterCache;
 pub const PtyTerminalRuntime = terminal_runtime.PtyTerminalRuntime;
 pub const TerminalWorkspace = workspace_mod.TerminalWorkspace;
 pub const TerminalTabId = workspace_mod.TabId;
-pub const TerminalCloseConfirmContext = workspace_mod.TerminalWorkspace.CloseConfirmContext;
+pub const TerminalCloseConfirmContext = workspace_host.CloseConfirmContext;
 
 pub const Metrics = metrics_mod.Metrics;
 pub const Logger = app_logger.Logger;

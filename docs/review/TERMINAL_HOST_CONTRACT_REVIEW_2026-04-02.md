@@ -218,12 +218,13 @@ That leaves `workspace.zig` reading closer to its real center:
 - sizing and tab lifecycle
 - poll budgeting and counters
 - frame-state forwarding
-- tab sync packaging
+- host-specific packaging and close-confirm types no longer declared there
 
 Current rerank:
 
-1. remaining workspace host packaging, especially whether any close-confirm
-   packaging still deserves to sit on the main aggregate
+1. re-rank whether the remaining workspace surface is now honest enough to
+   stop, or whether another real host/runtime convenience slab still hides
+   there
 2. native draw/runtime orchestration split across `visible_terminal_frame*`
    and `terminal_draw_surface_runtime.zig`
 3. publication micro-cuts, still paused unless a larger seam appears
