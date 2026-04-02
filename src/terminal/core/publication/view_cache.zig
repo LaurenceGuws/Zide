@@ -5,6 +5,7 @@ const kitty_mod = @import("../../kitty/graphics.zig");
 const render_cache_mod = @import("render_cache.zig");
 const app_logger = @import("../../../app_logger.zig");
 const terminal_publication = @import("terminal_publication.zig");
+const publication_flow = @import("publication_flow.zig");
 const damage_mod = @import("view_cache_damage.zig");
 const publication = @import("view_cache_publication.zig");
 const plan_mod = @import("view_cache_plan.zig");
@@ -348,13 +349,13 @@ pub fn updateViewCacheNoLock(self: anytype, generation: u64, scroll_offset: usiz
 pub fn updateViewCacheForScroll(self: anytype) void {
     if (self.control.state_mutex.tryLock()) {
         defer self.control.state_mutex.unlock();
-        const request = terminal_publication.takePendingViewRefreshRequest(self) orelse return;
+        const request = publication_flow.takePendingViewRefreshRequest(self) orelse return;
         updateViewCacheNoLockTagged(self, request.generation, request.scroll_offset, "view_cache_for_scroll");
     }
 }
 
 pub fn updateViewCacheForScrollLocked(self: anytype) void {
-    const request = terminal_publication.takePendingViewRefreshRequest(self) orelse return;
+    const request = publication_flow.takePendingViewRefreshRequest(self) orelse return;
     updateViewCacheNoLockTagged(self, request.generation, request.scroll_offset, "view_cache_for_scroll_locked");
 }
 

@@ -1,9 +1,9 @@
 const types = @import("../../model/types.zig");
 const input_modes = @import("../input_modes.zig");
-const terminal_publication = @import("../publication/terminal_publication.zig");
+const publication_flow = @import("../publication/publication_flow.zig");
 
 fn publishConfigViewLocked(self: anytype, source: []const u8) void {
-    terminal_publication.publishCurrentViewLocked(self, source);
+    publication_flow.publishCurrentViewLocked(self, source);
 }
 
 fn setDefaultColorsNoPublishLocked(self: anytype, fg: types.Color, bg: types.Color) void {

@@ -1,7 +1,7 @@
 const std = @import("std");
 const parser_mod = @import("../../parser/parser.zig");
 const app_logger = @import("../../../app_logger.zig");
-const terminal_publication = @import("../publication/terminal_publication.zig");
+const publication_flow = @import("../publication/publication_flow.zig");
 
 pub const PtyPollResult = struct {
     queued_bytes: usize,
@@ -77,7 +77,7 @@ pub fn processBufferedPtyOutput(self: anytype, input_pressure: bool) PtyPollResu
         self.control.state_mutex.unlock();
         parse_lock_hold_ns += std.time.nanoTimestamp() - parse_lock_start_ns;
         processed += chunk_len;
-        _ = terminal_publication.noteParsedOutputLocked(self);
+        _ = publication_flow.noteParsedOutputLocked(self);
     }
 
     return .{
@@ -106,7 +106,7 @@ pub fn processExternalTransportOutput(self: anytype, transport: anytype, input_p
         const parse_lock_start_ns = std.time.nanoTimestamp();
         self.core.parser.handleSlice(self, buf[0..n.?]);
         parse_lock_hold_ns += std.time.nanoTimestamp() - parse_lock_start_ns;
-        _ = terminal_publication.noteParsedOutputLocked(self);
+        _ = publication_flow.noteParsedOutputLocked(self);
         if (processed >= max_bytes_per_poll) break;
     }
 

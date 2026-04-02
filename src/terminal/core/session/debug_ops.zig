@@ -4,6 +4,7 @@ const parser_mod = @import("../../parser/parser.zig");
 const selection_mod = @import("../selection.zig");
 const types = @import("../../model/types.zig");
 const terminal_publication = @import("../publication/terminal_publication.zig");
+const publication_flow = @import("../publication/publication_flow.zig");
 const kitty_mod = @import("../../kitty/graphics.zig");
 
 pub fn debugSnapshot(self: anytype) @import("../publication/snapshot.zig").DebugSnapshot {
@@ -41,7 +42,7 @@ pub fn debugFeedBytes(self: anytype, bytes: []const u8) void {
 pub fn debugScrollUp(self: anytype) void {
     if (!debugAccessAllowed()) @panic("debugScrollUp is test-only");
     @import("../scrolling.zig").scrollUp(self);
-    _ = terminal_publication.bumpAndPublishCurrentViewLocked(self, "debug_push_output");
+    _ = publication_flow.bumpAndPublishCurrentViewLocked(self, "debug_push_output");
 }
 
 pub fn debugSetScrollOffset(self: anytype, offset: usize) void {
@@ -50,7 +51,7 @@ pub fn debugSetScrollOffset(self: anytype, offset: usize) void {
     const before = self.core.history.scrollOffset();
     self.core.history.setScrollOffset(self.core.primary.grid.rows, offset);
     const after = self.core.history.scrollOffset();
-    terminal_publication.publishCurrentViewForScrollOffsetChangeLocked(self, before, after, "debug_apply_without_pending");
+    publication_flow.publishCurrentViewForScrollOffsetChangeLocked(self, before, after, "debug_apply_without_pending");
 }
 
 pub fn debugSetScrollbackCell(self: anytype, row: usize, col: usize, codepoint: u32) void {
@@ -59,7 +60,7 @@ pub fn debugSetScrollbackCell(self: anytype, row: usize, col: usize, codepoint: 
     if (col >= line.cells.len) return;
     line.cells[col].codepoint = codepoint;
     self.core.history.markScrollbackChanged();
-    _ = terminal_publication.bumpAndPublishCurrentViewLocked(self, "debug_scrollback_row");
+    _ = publication_flow.bumpAndPublishCurrentViewLocked(self, "debug_scrollback_row");
 }
 
 pub fn debugPushScrollbackRow(self: anytype, text: []const u8) void {
@@ -77,7 +78,7 @@ pub fn debugPushScrollbackRow(self: anytype, text: []const u8) void {
     }
     self.core.history.pushRow(row, false, base);
     self.core.history.ensureViewCache(cols, base);
-    _ = terminal_publication.bumpAndPublishCurrentViewLocked(self, "debug_grid_row");
+    _ = publication_flow.bumpAndPublishCurrentViewLocked(self, "debug_grid_row");
 }
 
 pub fn debugSetGridRow(self: anytype, row_index: usize, text: []const u8) void {
@@ -94,7 +95,7 @@ pub fn debugSetGridRow(self: anytype, row_index: usize, text: []const u8) void {
         self.core.primary.grid.cells.items[start + i].codepoint = text[i];
     }
     self.core.primary.grid.markDirtyRange(row_index, row_index, 0, cols - 1);
-    _ = terminal_publication.bumpAndPublishCurrentViewLocked(self, "debug_cursor");
+    _ = publication_flow.bumpAndPublishCurrentViewLocked(self, "debug_cursor");
 }
 
 pub const KittyStateSelector = enum {

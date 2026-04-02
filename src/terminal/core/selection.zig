@@ -1,6 +1,6 @@
 const types = @import("../model/types.zig");
 const selection_semantics = @import("../model/selection_semantics.zig");
-const terminal_publication = @import("publication/terminal_publication.zig");
+const publication_flow = @import("publication/publication_flow.zig");
 
 pub const SelectionGestureMode = enum {
     none,
@@ -28,7 +28,7 @@ pub fn clearSelection(self: anytype) void {
 
 pub fn clearSelectionLocked(self: anytype) void {
     self.core.clearSelection();
-    _ = terminal_publication.requestViewRefreshLocked(self, self.core.scrollbackOffset());
+    _ = publication_flow.requestViewRefreshLocked(self, self.core.scrollbackOffset());
 }
 
 pub fn clearSelectionIfActiveLocked(self: anytype) bool {
@@ -46,7 +46,7 @@ pub fn startSelection(self: anytype, row: usize, col: usize) void {
 pub fn startSelectionLocked(self: anytype, row: usize, col: usize) void {
     if (self.core.active == .alt) return;
     self.core.startSelection(row, col);
-    _ = terminal_publication.requestViewRefreshLocked(self, self.core.scrollbackOffset());
+    _ = publication_flow.requestViewRefreshLocked(self, self.core.scrollbackOffset());
 }
 
 pub fn updateSelection(self: anytype, row: usize, col: usize) void {
@@ -58,7 +58,7 @@ pub fn updateSelection(self: anytype, row: usize, col: usize) void {
 pub fn updateSelectionLocked(self: anytype, row: usize, col: usize) void {
     if (self.core.active == .alt) return;
     self.core.updateSelection(row, col);
-    _ = terminal_publication.requestViewRefreshLocked(self, self.core.scrollbackOffset());
+    _ = publication_flow.requestViewRefreshLocked(self, self.core.scrollbackOffset());
 }
 
 pub fn finishSelection(self: anytype) void {
@@ -70,7 +70,7 @@ pub fn finishSelection(self: anytype) void {
 pub fn finishSelectionLocked(self: anytype) void {
     if (self.core.active == .alt) return;
     self.core.finishSelection();
-    _ = terminal_publication.requestViewRefreshLocked(self, self.core.scrollbackOffset());
+    _ = publication_flow.requestViewRefreshLocked(self, self.core.scrollbackOffset());
 }
 
 pub fn finishSelectionIfActiveLocked(self: anytype) bool {
@@ -92,7 +92,7 @@ pub fn selectRangeLocked(self: anytype, start: types.SelectionPos, end: types.Se
     if (finished) {
         self.core.finishSelection();
     }
-    _ = terminal_publication.requestViewRefreshLocked(self, self.core.scrollbackOffset());
+    _ = publication_flow.requestViewRefreshLocked(self, self.core.scrollbackOffset());
 }
 
 pub fn selectCellLocked(self: anytype, pos: types.SelectionPos, finished: bool) void {

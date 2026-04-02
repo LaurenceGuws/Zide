@@ -2,6 +2,7 @@ const std = @import("std");
 const render_cache_mod = @import("render_cache.zig");
 const snapshot_mod = @import("snapshot.zig");
 const presentation_feedback = @import("presentation_feedback.zig");
+const publication_flow = @import("publication_flow.zig");
 const selection_mod = @import("../selection.zig");
 const view_cache = @import("view_cache.zig");
 const types = @import("../../model/types.zig");
@@ -32,10 +33,7 @@ pub const LatestPresentationPreparation = struct {
     refreshed: bool,
 };
 
-pub const ViewRefreshRequest = struct {
-    generation: u64,
-    scroll_offset: usize,
-};
+pub const ViewRefreshRequest = publication_flow.ViewRefreshRequest;
 
 const CaptureCopy = struct {
     presented: PresentedRenderCache,
@@ -71,10 +69,10 @@ pub const CellAttrs = types.CellAttrs;
 pub const Color = types.Color;
 
 pub fn snapshot(self: anytype) TerminalSnapshot {
-    if (viewRefreshPending(self)) {
+    if (publication_flow.viewRefreshPending(self)) {
         self.lock();
         defer self.unlock();
-        _ = applyPendingViewRefreshLocked(self, "snapshot");
+        _ = publication_flow.applyPendingViewRefreshLocked(self, "snapshot");
     }
 
     const cache = renderCache(self);
@@ -106,113 +104,6 @@ pub fn snapshot(self: anytype) TerminalSnapshot {
     };
 }
 
-pub fn publishFeedResultLocked(self: anytype, result: @import("../protocol/terminal_core_feed.zig").FeedResult) void {
-    if (!result.parsed) return;
-    _ = noteParsedOutputLocked(self);
-    view_cache.updateViewCacheNoLockTagged(self, pendingGeneration(self), result.scroll_offset, "publish_feed_result");
-}
-
-pub fn bumpGeneration(self: anytype) u64 {
-    return self.publication.pending_generation.fetchAdd(1, .acq_rel) + 1;
-}
-
-pub fn noteParsedOutputLocked(self: anytype) u64 {
-    return bumpGeneration(self);
-}
-
-pub fn requestViewRefreshLocked(self: anytype, scroll_offset: usize) u64 {
-    const generation = bumpGeneration(self);
-    queueViewRefreshLocked(self, scroll_offset);
-    return generation;
-}
-
-pub fn requestViewRefreshIfOffsetChangedLocked(self: anytype, before: usize, after: usize) u64 {
-    if (after != before) {
-        return requestViewRefreshLocked(self, after);
-    }
-    queueViewRefreshLocked(self, after);
-    return pendingGeneration(self);
-}
-
-pub fn refreshScrollViewForOffsetChangeLocked(self: anytype, before: usize, after: usize) u64 {
-    const generation = requestViewRefreshIfOffsetChangedLocked(self, before, after);
-    updateViewCacheForScrollLocked(self);
-    return generation;
-}
-
-pub fn refreshScrollViewLocked(self: anytype, scroll_offset: usize) void {
-    queueViewRefreshLocked(self, scroll_offset);
-    updateViewCacheForScrollLocked(self);
-}
-
-pub fn queueViewRefreshLocked(self: anytype, scroll_offset: usize) void {
-    self.publication.view_cache_request_offset.store(@intCast(scroll_offset), .release);
-    self.publication.view_cache_pending.store(true, .release);
-    self.runtime.io_wait_cond.signal();
-}
-
-fn clearPendingViewRefresh(self: anytype) void {
-    self.publication.view_cache_pending.store(false, .release);
-}
-
-pub fn publishGenerationLocked(self: anytype, generation: u64, scroll_offset: usize, source: []const u8) void {
-    view_cache.updateViewCacheNoLockTagged(self, generation, scroll_offset, source);
-}
-
-pub fn publishCurrentViewLocked(self: anytype, source: []const u8) void {
-    publishGenerationLocked(self, pendingGeneration(self), self.core.scrollbackOffset(), source);
-}
-
-pub fn bumpAndPublishCurrentViewLocked(self: anytype, source: []const u8) u64 {
-    const generation = bumpGeneration(self);
-    publishGenerationLocked(self, generation, self.core.scrollbackOffset(), source);
-    return generation;
-}
-
-pub fn publishPendingGenerationLocked(self: anytype, scroll_offset: usize, source: []const u8) void {
-    publishGenerationLocked(self, pendingGeneration(self), scroll_offset, source);
-}
-
-pub fn publishPendingOutputLocked(self: anytype, scroll_offset: usize, source: []const u8) void {
-    publishPendingGenerationLocked(self, scroll_offset, source);
-    markOutputPending(self);
-}
-
-pub fn publishViewRefreshRequestLocked(self: anytype, request: ViewRefreshRequest, source: []const u8) void {
-    publishGenerationLocked(self, request.generation, request.scroll_offset, source);
-}
-
-pub fn replacePendingRefreshWithCurrentViewLocked(self: anytype, source: []const u8) void {
-    clearPendingViewRefresh(self);
-    publishCurrentViewLocked(self, source);
-}
-
-pub fn publishCurrentViewForScrollOffsetChangeLocked(
-    self: anytype,
-    before: usize,
-    after: usize,
-    source: []const u8,
-) void {
-    if (after != before) {
-        _ = bumpGeneration(self);
-    }
-    replacePendingRefreshWithCurrentViewLocked(self, source);
-}
-
-pub fn applyPendingViewRefreshLocked(self: anytype, source: []const u8) bool {
-    if (!self.publication.view_cache_pending.swap(false, .acq_rel)) return false;
-    const offset: usize = @intCast(self.publication.view_cache_request_offset.load(.acquire));
-    view_cache.updateViewCacheNoLockTagged(self, pendingGeneration(self), offset, source);
-    return true;
-}
-
-pub fn publishPollUpdateLocked(self: anytype, had_data: bool, publish_source: []const u8, refresh_source: []const u8) bool {
-    if (had_data) {
-        publishCurrentViewLocked(self, publish_source);
-    }
-    return applyPendingViewRefreshLocked(self, refresh_source);
-}
-
 pub fn updateViewCacheForScroll(self: anytype) void {
     view_cache.updateViewCacheForScroll(self);
 }
@@ -227,7 +118,7 @@ pub fn renderCache(self: anytype) *const RenderCache {
 }
 
 pub fn renderCacheLocked(self: anytype, source: []const u8) *const RenderCache {
-    _ = applyPendingViewRefreshLocked(self, source);
+    _ = publication_flow.applyPendingViewRefreshLocked(self, source);
     return renderCache(self);
 }
 
@@ -240,7 +131,7 @@ fn renderCacheForGeneration(self: anytype, generation: u64) ?*const RenderCache 
 }
 
 pub fn renderCacheForGenerationLocked(self: anytype, generation: u64, source: []const u8) ?*const RenderCache {
-    _ = applyPendingViewRefreshLocked(self, source);
+    _ = publication_flow.applyPendingViewRefreshLocked(self, source);
     return renderCacheForGeneration(self, generation);
 }
 
@@ -296,13 +187,13 @@ pub fn setSyncUpdatesLocked(self: anytype, enabled: bool) void {
     const cache = renderCache(self);
     const presented_generation = presentedGeneration(self);
     if (cache.generation == presented_generation and cache.dirty == .none) return;
-    _ = bumpGeneration(self);
+    _ = publication_flow.bumpGeneration(self);
     const offset: usize = self.core.scrollbackOffset();
     view_cache.updateViewCacheNoLockTagged(self, pendingGeneration(self), offset, "set_sync_updates");
 }
 
 pub fn pendingGeneration(self: anytype) u64 {
-    return self.publication.pending_generation.load(.acquire);
+    return publication_flow.pendingGeneration(self);
 }
 
 pub fn generationState(self: anytype) GenerationState {
@@ -329,39 +220,6 @@ pub fn frameState(self: anytype, has_data: bool) FrameState {
     };
 }
 
-pub fn outputPending(self: anytype) bool {
-    return self.publication.output_pending.load(.acquire);
-}
-
-fn clearOutputPending(self: anytype) bool {
-    return self.publication.output_pending.swap(false, .acq_rel);
-}
-
-pub fn markOutputPending(self: anytype) void {
-    self.publication.output_pending.store(true, .release);
-}
-
-pub fn viewRefreshPending(self: anytype) bool {
-    return self.publication.view_cache_pending.load(.acquire);
-}
-
-fn takePendingViewRefresh(self: anytype) ?usize {
-    if (!self.publication.view_cache_pending.swap(false, .acq_rel)) return null;
-    return @intCast(self.publication.view_cache_request_offset.load(.acquire));
-}
-
-pub fn takePendingViewRefreshRequest(self: anytype) ?ViewRefreshRequest {
-    const scroll_offset = takePendingViewRefresh(self) orelse return null;
-    return .{
-        .generation = pendingGeneration(self),
-        .scroll_offset = scroll_offset,
-    };
-}
-
-fn takeAltExitPending(self: anytype) bool {
-    return self.publication.alt_exit_pending.swap(false, .acq_rel);
-}
-
 pub fn publishedGeneration(self: anytype) u64 {
     return renderCache(self).generation;
 }
@@ -376,18 +234,6 @@ pub fn presentedGeneration(self: anytype) u64 {
 
 pub const acknowledgePresentedGeneration = presentation_feedback.acknowledgePresentedGeneration;
 
-pub fn hasPublishedGenerationBacklog(self: anytype) bool {
-    return pendingGeneration(self) != publishedGeneration(self);
-}
-
-pub fn clearPublishedOutputPending(self: anytype) bool {
-    return clearOutputPending(self);
-}
-
-pub fn noteProcessedOutput(self: anytype, processed: usize) void {
-    if (processed > 0) _ = takeAltExitPending(self);
-}
-
 pub const noteAltExitPending = presentation_feedback.noteAltExitPending;
 pub const completeSubmittedPresentationFeedback = presentation_feedback.completeSubmittedPresentationFeedback;
 
@@ -398,9 +244,9 @@ fn captureCopy(self: anytype, dst: *RenderCache, log_capture: bool) !CaptureCopy
     defer self.unlock();
     const lock_acquired_ns = std.time.nanoTimestamp();
     var view_cache_ms: f64 = 0.0;
-    if (viewRefreshPending(self)) {
+    if (publication_flow.viewRefreshPending(self)) {
         const view_cache_start_ns = std.time.nanoTimestamp();
-        _ = applyPendingViewRefreshLocked(self, "capture_copy");
+        _ = publication_flow.applyPendingViewRefreshLocked(self, "capture_copy");
         const view_cache_end_ns = std.time.nanoTimestamp();
         view_cache_ms = @as(f64, @floatFromInt(view_cache_end_ns - view_cache_start_ns)) / @as(f64, @floatFromInt(std.time.ns_per_ms));
     }

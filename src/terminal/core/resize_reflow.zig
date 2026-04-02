@@ -2,7 +2,7 @@ const std = @import("std");
 const terminal_transport = @import("runtime/terminal_transport.zig");
 const scrollback_buffer = @import("../model/scrollback_buffer.zig");
 const types = @import("../model/types.zig");
-const terminal_publication = @import("publication/terminal_publication.zig");
+const publication_flow = @import("publication/publication_flow.zig");
 
 const PtySize = terminal_transport.PtySize;
 const Cell = types.Cell;
@@ -361,7 +361,7 @@ fn reflowResizePrimary(
         self.core.history.scrollback_offset = 0;
     } else {
         self.core.history.scrollback_offset = new_scroll_offset;
-        terminal_publication.refreshScrollViewLocked(self, self.core.history.scrollback_offset);
+        publication_flow.refreshScrollViewLocked(self, self.core.history.scrollback_offset);
     }
     const max_offset = self.core.history.maxScrollOffset(rows);
     if (self.core.history.saved_scrollback_offset > max_offset) {

@@ -1,6 +1,6 @@
 const std = @import("std");
 const terminal_transport = @import("../runtime/terminal_transport.zig");
-const terminal_publication = @import("../publication/terminal_publication.zig");
+const publication_flow = @import("../publication/publication_flow.zig");
 
 pub fn deinit(self: anytype) void {
     prepareForShutdown(self);
@@ -31,9 +31,9 @@ pub fn prepareForShutdown(self: anytype) void {
 pub fn hasData(self: anytype) bool {
     if (self.runtime.read_thread != null) {
         if (self.runtime.parse_thread != null) {
-            return terminal_publication.outputPending(self) or hasUnreadBufferedIo(self);
+            return publication_flow.outputPending(self) or hasUnreadBufferedIo(self);
         }
-        if (terminal_publication.outputPending(self)) return true;
+        if (publication_flow.outputPending(self)) return true;
         return hasUnreadBufferedIo(self);
     }
     if (terminal_transport.Transport.fromSession(self)) |transport| {
@@ -43,7 +43,7 @@ pub fn hasData(self: anytype) bool {
 }
 
 pub fn pollBacklogHint(self: anytype) bool {
-    return hasData(self) or @import("../publication/terminal_publication.zig").hasPublishedGenerationBacklog(self);
+    return hasData(self) or @import("../publication/publication_flow.zig").hasPublishedGenerationBacklog(self);
 }
 
 fn hasUnreadBufferedIo(self: anytype) bool {
@@ -83,7 +83,7 @@ test "hasData stays true for threaded session while unread parse buffer remains"
 
     session.runtime.read_thread = undefined;
     session.runtime.parse_thread = undefined;
-    terminal_publication.clearPublishedOutputPending(session);
+    publication_flow.clearPublishedOutputPending(session);
     try session.runtime.io_buffer.appendSlice(session.allocator, "queued");
     session.runtime.io_read_offset = 0;
 

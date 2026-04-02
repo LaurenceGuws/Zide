@@ -4,6 +4,7 @@ const app_logger = @import("../../../app_logger.zig");
 const app_lifecycle_runtime = @import("../../../app/lifecycle_runtime.zig");
 const terminal_transport = @import("terminal_transport.zig");
 const terminal_publication = @import("../publication/terminal_publication.zig");
+const publication_flow = @import("../publication/publication_flow.zig");
 
 fn shouldPublishParseBatch(
     sync_updates_active: bool,
@@ -57,12 +58,12 @@ pub fn readThreadMain(session: anytype) void {
                 session.runtime.io_mutex.unlock();
                 session.runtime.io_wait_cond.signal();
                 if (session.runtime.parse_thread == null) {
-                    terminal_publication.markOutputPending(session);
-                    _ = terminal_publication.noteParsedOutputLocked(session);
+                    publication_flow.markOutputPending(session);
+                    _ = publication_flow.noteParsedOutputLocked(session);
                 }
             }
             _ = start_ms;
-            terminal_publication.noteProcessedOutput(session, processed);
+            publication_flow.noteProcessedOutput(session, processed);
         } else {
             break;
         }
@@ -74,10 +75,10 @@ pub fn parseThreadMain(session: anytype) void {
 
     while (session.runtime.parse_thread_running.load(.acquire)) {
         const input_pressure = session.control.input_pressure.load(.acquire);
-        const presentation_backlog = terminal_publication.outputPending(session);
+        const presentation_backlog = publication_flow.outputPending(session);
         var max_bytes: usize = if (input_pressure) 64 * 1024 else 512 * 1024;
         var max_ms: i64 = if (input_pressure) 2 else 8;
-        const pending_refresh = terminal_publication.takePendingViewRefreshRequest(session);
+        const pending_refresh = publication_flow.takePendingViewRefreshRequest(session);
 
         var queued_bytes: usize = 0;
         session.runtime.io_mutex.lock();
@@ -105,7 +106,7 @@ pub fn parseThreadMain(session: anytype) void {
             if (session.control.parse_bytes_since_publish > 0 and pending_refresh == null and !session.core.sync_updates_active) {
                 const publish_lock_start_ns = std.time.nanoTimestamp();
                 session.control.state_mutex.lock();
-                terminal_publication.publishPendingOutputLocked(session, session.core.history.scrollOffset(), "parse_thread_idle_publish");
+                publication_flow.publishPendingOutputLocked(session, session.core.history.scrollOffset(), "parse_thread_idle_publish");
                 session.control.state_mutex.unlock();
                 _ = std.time.nanoTimestamp() - publish_lock_start_ns;
                 session.control.parse_publishes_since_log += 1;
@@ -116,7 +117,7 @@ pub fn parseThreadMain(session: anytype) void {
             if (pending_refresh) |request| {
                 session.control.state_mutex.lock();
                 if (!session.core.sync_updates_active) {
-                    terminal_publication.publishViewRefreshRequestLocked(session, request, "parse_thread_pending_offset");
+                    publication_flow.publishViewRefreshRequestLocked(session, request, "parse_thread_pending_offset");
                 }
                 session.control.state_mutex.unlock();
             }
@@ -184,7 +185,7 @@ pub fn parseThreadMain(session: anytype) void {
             session.control.state_mutex.unlock();
             parse_lock_hold_ns += std.time.nanoTimestamp() - parse_lock_start_ns;
             processed += chunk_len;
-            _ = terminal_publication.noteParsedOutputLocked(session);
+            _ = publication_flow.noteParsedOutputLocked(session);
         }
 
         session.runtime.io_mutex.lock();
@@ -226,7 +227,7 @@ pub fn parseThreadMain(session: anytype) void {
                         session.core.history.scrollOffset();
                     const publish_lock_start_ns = std.time.nanoTimestamp();
                     session.control.state_mutex.lock();
-                    terminal_publication.publishPendingOutputLocked(session, target_offset, "parse_thread_publish");
+                    publication_flow.publishPendingOutputLocked(session, target_offset, "parse_thread_publish");
                     session.control.state_mutex.unlock();
                     const publish_lock_ns = std.time.nanoTimestamp() - publish_lock_start_ns;
                     publish_lock_hold_ns += publish_lock_ns;

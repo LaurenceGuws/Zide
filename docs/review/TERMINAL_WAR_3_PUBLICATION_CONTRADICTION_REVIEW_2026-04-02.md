@@ -84,3 +84,13 @@ Current candidates:
 
 War 3's first concrete contradiction is publication still reading like a real
 center, not a boring edge.
+
+Status note, later on 2026-04-02:
+
+- the first whole-slab cut is now in
+- generation mutation, view-refresh choreography, and output-pending flow no
+  longer live in `terminal_publication.zig`
+- that slab now lives in
+  [publication_flow.zig](/home/home/personal/zide/src/terminal/core/publication/publication_flow.zig)
+- callers were rewired directly to that owner instead of preserving
+  `terminal_publication.zig` as the universal choreography surface

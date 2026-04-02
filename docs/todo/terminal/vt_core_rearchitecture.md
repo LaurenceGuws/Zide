@@ -79,7 +79,13 @@ Focused follow-up lane:
   - publication is the stronger contradiction than runtime
   - `session/runtime.zig` already reads closer to runtime shell
   - `terminal_publication.zig` still reads too much like a real center
-  - the next cut should come from publication, but only as a whole slab
+  Progress:
+  - the first whole-slab move is now landed
+  - generation mutation, view-refresh choreography, and output-pending flow
+    now live in `src/terminal/core/publication/publication_flow.zig`
+    instead of inflating `terminal_publication.zig`
+  - callers now use that owner directly, so the next publication rerank can
+    focus on the remaining export-edge contradiction
 
 - `docs/review/TERMINAL_NATIVE_ARCHITECTURAL_SCRUTINY_2026-03-31.md`
   Why: this is the current ruthless read on what still looks second-rate at
