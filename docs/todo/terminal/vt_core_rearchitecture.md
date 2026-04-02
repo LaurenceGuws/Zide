@@ -274,6 +274,16 @@ Focused follow-up lane:
   - the historical `PtyTerminalRuntime` alias was then deleted too
   - live `src/` code now reads as `TerminalCore` plus `TerminalRuntimeShell`
 
+- `docs/review/VT_SPRINT_POST_SHELL_RERANK_2026-04-02.md`
+  Why: with `TerminalSession` and `PtyTerminalRuntime` gone from live code, the
+  next blocker is no longer naming cleanup.
+  Current read:
+  - the outer shell is now honest enough in name and scope
+  - the next plug-and-play question is whether `TerminalCore` is sufficiently
+    complete beneath that shell
+  - the next code wave should therefore rank `TerminalCore` sufficiency against
+    shell-owned responsibilities instead of deleting more compatibility residue
+
 - `docs/review/TERMINAL_NATIVE_ARCHITECTURAL_SCRUTINY_2026-03-31.md`
   Why: this is the current ruthless read on what still looks second-rate at
   first glance and what should be demolished first.
