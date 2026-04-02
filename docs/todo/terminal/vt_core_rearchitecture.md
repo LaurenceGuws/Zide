@@ -110,6 +110,8 @@ gravity into smaller files.
     `TerminalCore` owns the semantic `feedOutputBytesLocked(...)` verb while
     `terminal_core_feed.zig` stays responsible for shell-owned locking and
     publication handoff
+  - runtime parse paths and debug feed now use that same core-owned verb too,
+    making output feed/apply materially coherent as one interaction slab
 
 ## Priority Now
 

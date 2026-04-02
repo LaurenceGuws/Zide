@@ -36,7 +36,7 @@ pub fn debugSetCursor(self: anytype, row: usize, col: usize) void {
 
 pub fn debugFeedBytes(self: anytype, bytes: []const u8) void {
     if (!debugAccessAllowed()) @panic("debugFeedBytes is test-only");
-    self.core.parser.handleSlice(self, bytes);
+    _ = self.core.feedOutputBytesLocked(self, bytes);
 }
 
 pub fn debugScrollUp(self: anytype) void {

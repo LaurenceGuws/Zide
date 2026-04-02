@@ -125,3 +125,9 @@ Progress note, later on 2026-04-03:
 - the next question is not whether feed/apply was the right slab
 - it is whether the same pattern should continue into a second interaction
   slice or stop here
+
+Follow-up note, later on 2026-04-03:
+
+- runtime parse paths and debug feed now also use that same core-owned verb
+- this means output feed/apply is no longer just conceptually ranked first
+- it is now materially the most coherent interaction slab in the live code

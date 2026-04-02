@@ -144,6 +144,17 @@ Progress note, later on 2026-04-03:
   - locking and publication remained outside the core
   - no transport/runtime concerns were pulled into `TerminalCore`
 
+Follow-up note, later on 2026-04-03:
+
+- the same semantic verb now backs the live runtime parse paths too:
+  - [io_threads.zig](/home/home/personal/zide/src/terminal/core/runtime/io_threads.zig)
+  - [pty_poll_processing.zig](/home/home/personal/zide/src/terminal/core/runtime/pty_poll_processing.zig)
+  - [debug_ops.zig](/home/home/personal/zide/src/terminal/core/session/debug_ops.zig)
+- direct `parser.handleSlice(...)` use is now largely concentrated in parser-
+  local code, not scattered output-application call sites
+- that makes output feed/apply much more physically coherent as one
+  engine-centered semantic slab
+
 ## Decision Bar
 
 Only open code cuts here if we can name one coherent interaction slab, such as:
