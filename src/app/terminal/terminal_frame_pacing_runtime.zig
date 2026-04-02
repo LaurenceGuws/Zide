@@ -71,7 +71,7 @@ pub const Snapshot = terminal_publication.FrameState;
 
 pub fn observe(state: anytype, now: f64) Snapshot {
     const pacing = &state.terminal_frame_pacing;
-    const frame_state = blk: {
+    var frame_state = blk: {
         const State = @TypeOf(state.*);
         if (!@hasField(State, "terminal_workspace")) break :blk Snapshot{};
         if (state.terminal_workspace) |*workspace| break :blk workspace.activeFrameState();
@@ -88,15 +88,9 @@ pub fn observe(state: anytype, now: f64) Snapshot {
         pacing.last_generation_change_time = now;
     }
 
-    return .{
-        .session_ptr = frame_state.session_ptr,
-        .pending_generation = pending_generation,
-        .published_generation = published_generation,
-        .presented_generation = frame_state.presented_generation,
-        .redraw_pending = frame_state.redraw_pending,
-        .parse_backlog = frame_state.parse_backlog,
-        .output_pressure = frame_state.output_pressure,
-    };
+    frame_state.pending_generation = pending_generation;
+    frame_state.published_generation = published_generation;
+    return frame_state;
 }
 
 pub fn consumeDrawMetrics(state: anytype) ?TerminalDrawLatencyMetrics {
