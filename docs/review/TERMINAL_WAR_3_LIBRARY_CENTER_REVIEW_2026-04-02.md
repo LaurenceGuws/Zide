@@ -122,3 +122,17 @@ It is the remaining three-way center-of-gravity split between:
 - engine
 - runtime shell
 - publication/export shell
+
+Status note, later on 2026-04-02:
+
+- the publication contradiction wave materially landed
+- publication flow, capture, state packaging, and sync-updates semantics no
+  longer inflate `terminal_publication.zig`
+- publication now reads much closer to a boring export edge than it did at the
+  opening of War 3
+- current rerank:
+  - publication is no longer the default enemy
+  - the next likely War 3 contradiction is runtime-shell assembly and storage
+    weight in `session/runtime.zig`
+  - the next right move is a focused runtime contradiction review, not more
+    publication cleanup by momentum

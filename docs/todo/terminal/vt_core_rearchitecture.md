@@ -101,6 +101,21 @@ Focused follow-up lane:
   - current rerank: the broad publication false-center is materially reduced;
     the next honest question is likely broader War 3 center-of-gravity again,
     not more publication-by-momentum cleanup
+- `docs/review/TERMINAL_WAR_3_POST_PUBLICATION_RERANK_2026-04-02.md`
+  Why: publication is no longer the default War 3 enemy after the recent
+  whole-slab cuts.
+  Current read:
+  - publication now reads much closer to a boring export edge
+  - the next likely contradiction is runtime-shell assembly and storage weight
+    in `session/runtime.zig`
+- `docs/review/TERMINAL_WAR_3_RUNTIME_CONTRADICTION_REVIEW_2026-04-02.md`
+  Why: with publication materially reduced, the next concrete War 3 question is
+  now runtime-shell shape.
+  Current read:
+  - `session/runtime.zig` is behaviorally narrower than before
+  - but it still reads too much like important terminal ownership because it
+    owns session allocation, storage-layout assembly, lifecycle entrypoints,
+    and launch-shell-path state
 
 - `docs/review/TERMINAL_NATIVE_ARCHITECTURAL_SCRUTINY_2026-03-31.md`
   Why: this is the current ruthless read on what still looks second-rate at
