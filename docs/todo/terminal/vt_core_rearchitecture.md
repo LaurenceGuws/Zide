@@ -138,6 +138,13 @@ gravity into smaller files.
   - the only plausible next candidate is key/char semantic dispatch before
     writer encoding
   - even that needs a stricter design line first, or War 4 should stop here
+- `docs/review/VT_WAR_4_STOP_MARKER_2026-04-03.md`
+  Why: War 4 now has two real interaction wins and one honest pause point.
+  Current read:
+  - feed/apply and resize/reporting were real ownership wins
+  - encoded host input did not yield a safe immediate cut
+  - continue only by opening a deeper key/char semantic-dispatch design step
+    or stop and rerank from this baseline
 
 ## Priority Now
 
@@ -156,6 +163,9 @@ Highest-value remaining items from the current live baseline:
    Design bar:
    - only continue if a clean semantic sub-slab can be separated from writer
      encoding and transport mechanics
+   Stop marker:
+   - War 4 is now at a legitimate pause point from a materially stronger
+     baseline
 2. `VTWAR4-02` keep handle identity as a checked-but-paused concern
    Why: the handle is already opaque and terminal-named publicly, so changing
    internal shell-backed storage alone risks cosmetic surgery.
