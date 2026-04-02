@@ -134,6 +134,16 @@ Focused follow-up lane:
     center
   - the next likely War 2 opener is a fresh publication-boundary review from
     the live post-present codebase, not more present cleanup by momentum
+- `docs/review/TERMINAL_PUBLICATION_BOUNDARY_REVIEW_2026-04-02.md`
+  Why: post-present, the next worthwhile terminal question is whole-boundary
+  shape.
+  Current read:
+  - publication still mixes storage choreography, export contract, capture,
+    retirement policy, and draw-state inspection helpers
+  - that is cleaner than War 1, but still broader than the narrowest engine
+    export boundary should read
+  - the next cut should target one larger publication-boundary shape change,
+    not another tiny helper cleanup
   acknowledged generation.
 
 ## Current Milestone
