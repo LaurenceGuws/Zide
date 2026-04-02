@@ -228,6 +228,8 @@ Progress note, 2026-04-02:
   `src/ui/renderer/draw_ops.zig` instead of another pure forwarding shell
 - `src/ui/renderer/target_draw.zig` was deleted after its last one-line filter
   helper died; scene/retained target code now uses the GL owner directly
+- dead `SdlInput` queue state/init hooks are gone from `src/ui/renderer.zig`;
+  the live input path now reflects direct polling only
 
 ### Focus 2: SDL/GL host seam
 

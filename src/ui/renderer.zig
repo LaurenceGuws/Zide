@@ -40,7 +40,6 @@ const platform_mouse = @import("../platform/mouse_state.zig");
 const build_options = @import("build_options");
 const gl = @import("renderer/gl.zig");
 const sdl_api = @import("../platform/sdl_api.zig");
-const sdl_input = @import("renderer/sdl_input.zig");
 const types = @import("renderer/types.zig");
 const app_logger = @import("../app_logger.zig");
 const builtin = @import("builtin");
@@ -441,7 +440,6 @@ pub const Renderer = struct {
     composing_cursor: i32,
     composing_selection_len: i32,
     composing_active: bool,
-    sdl_input: sdl_input.SdlInput,
     clipboard_buffer: std.ArrayList(u8),
     batch_vertices: std.ArrayList(Vertex),
     batch_draws: std.ArrayList(BatchDraw),
@@ -704,7 +702,6 @@ pub const Renderer = struct {
             .composing_cursor = 0,
             .composing_selection_len = 0,
             .composing_active = false,
-            .sdl_input = .{},
             .clipboard_buffer = std.ArrayList(u8).empty,
             .batch_vertices = std.ArrayList(Vertex).empty,
             .batch_draws = std.ArrayList(BatchDraw).empty,
@@ -743,15 +740,8 @@ pub const Renderer = struct {
         try renderer.initFonts();
 
         sdl_api.startTextInput(window);
-        try renderer.initInputThread();
-
         active_renderer = renderer;
         return renderer;
-    }
-
-    fn initInputThread(self: *Renderer) !void {
-        try self.sdl_input.init(self.allocator, input_queue_capacity);
-        errdefer self.sdl_input.deinit(self.allocator);
     }
 
     pub fn deinit(self: *Renderer) void {
@@ -798,7 +788,6 @@ pub const Renderer = struct {
         self.char_queue.deinit(self.allocator);
         self.focus_queue.deinit(self.allocator);
         self.composing_text.deinit(self.allocator);
-        self.sdl_input.deinit(self.allocator);
         self.clipboard_buffer.deinit(self.allocator);
         self.batch_vertices.deinit(self.allocator);
         self.batch_draws.deinit(self.allocator);
@@ -828,10 +817,6 @@ pub const Renderer = struct {
 
         if (active_renderer == self) active_renderer = null;
         self.allocator.destroy(self);
-    }
-
-    fn shutdownInputThread(self: *Renderer) void {
-        _ = self;
     }
 
     fn initGlResources(self: *Renderer) !void {

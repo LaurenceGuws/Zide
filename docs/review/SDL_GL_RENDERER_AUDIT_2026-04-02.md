@@ -66,6 +66,12 @@ Judgment:
 - the scene-target model inside the file is good
 - the ownership concentration around it is not
 
+Status note, 2026-04-02:
+
+- dead renderer-owned `SdlInput` queue state/init hooks are gone
+- the remaining center problem is still real, but one dead non-render slab is
+  no longer inflating it
+
 ### 2. The live renderer API still contradicts the declared target contract
 
 Severity: high
