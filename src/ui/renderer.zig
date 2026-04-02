@@ -324,6 +324,11 @@ pub const Renderer = struct {
         window_seconds: f64 = 0.375,
     };
 
+    const TerminalRenderPolicy = struct {
+        texture_shift_enabled: bool = true,
+        recent_input_full_publication: TerminalRecentInputPolicy = .{},
+    };
+
     pub const WindowChromeMode = window_chrome_runtime.WindowChromeMode;
     pub const WindowChromeContract = window_chrome_runtime.WindowChromeContract;
 
@@ -357,8 +362,7 @@ pub const Renderer = struct {
     text_contrast: f32,
     text_linear_correction: bool,
     selection_overlay: SelectionOverlayState,
-    terminal_texture_shift_enabled: bool,
-    terminal_recent_input_policy: TerminalRecentInputPolicy,
+    terminal_render_policy: TerminalRenderPolicy,
 
     // Text background behind glyphs (used for optional linear correction).
     // Default is alpha=0, which disables correction in the shader.
@@ -493,8 +497,7 @@ pub const Renderer = struct {
             .text_contrast = init_options.text_contrast,
             .text_linear_correction = init_options.text_linear_correction,
             .selection_overlay = .{},
-            .terminal_texture_shift_enabled = true,
-            .terminal_recent_input_policy = .{},
+            .terminal_render_policy = .{},
             .text_bg_rgba = .{ .r = 0, .g = 0, .b = 0, .a = 0 },
             .font_size = font_size,
             .base_font_size = base_font_size,
@@ -563,7 +566,7 @@ pub const Renderer = struct {
             .present = .{},
         };
 
-        if (renderer.terminal_recent_input_policy.force_full_enabled) {
+        if (renderer.terminal_render_policy.recent_input_full_publication.force_full_enabled) {
             if (!sdl_api.glSetSwapInterval(0)) {
                 app_logger.logger("sdl.gl").logStdout(.warning, "SDL_GL_SetSwapInterval failed interval=0 err={s}", .{sdl_api.getError()});
             }
@@ -664,32 +667,32 @@ pub const Renderer = struct {
     }
 
     pub fn setTerminalTextureShiftEnabled(self: *Renderer, enabled: bool) void {
-        self.terminal_texture_shift_enabled = enabled;
+        self.terminal_render_policy.texture_shift_enabled = enabled;
     }
 
     pub fn terminalTextureShiftEnabled(self: *const Renderer) bool {
-        return self.terminal_texture_shift_enabled;
+        return self.terminal_render_policy.texture_shift_enabled;
     }
 
     pub fn setTerminalRecentInputFullPublicationPolicy(self: *Renderer, enabled: bool, window_ms: ?usize) void {
-        self.terminal_recent_input_policy.force_full_enabled = enabled;
+        self.terminal_render_policy.recent_input_full_publication.force_full_enabled = enabled;
         if (window_ms) |value| {
             const clamped_ms = std.math.clamp(value, 50, 5000);
-            self.terminal_recent_input_policy.window_seconds = @as(f64, @floatFromInt(clamped_ms)) / 1000.0;
+            self.terminal_render_policy.recent_input_full_publication.window_seconds = @as(f64, @floatFromInt(clamped_ms)) / 1000.0;
         }
     }
 
     pub fn terminalRecentInputFullPublicationEnabled(self: *const Renderer) bool {
-        return self.terminal_recent_input_policy.force_full_enabled;
+        return self.terminal_render_policy.recent_input_full_publication.force_full_enabled;
     }
 
     pub fn terminalRecentInputFullPublicationConfiguredEnabled(self: *const Renderer) bool {
-        return self.terminal_recent_input_policy.force_full_enabled;
+        return self.terminal_render_policy.recent_input_full_publication.force_full_enabled;
     }
 
     pub fn terminalRecentInputFullPublicationWindowSeconds(self: *const Renderer) f64 {
         if (!self.terminalRecentInputFullPublicationEnabled()) return 0.0;
-        return self.terminal_recent_input_policy.window_seconds;
+        return self.terminal_render_policy.recent_input_full_publication.window_seconds;
     }
 
     pub fn terminalRecentInputFullPublicationWindowMs(self: *const Renderer) usize {

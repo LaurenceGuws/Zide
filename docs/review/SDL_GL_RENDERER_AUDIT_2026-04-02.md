@@ -110,6 +110,9 @@ Status note, 2026-04-02:
   with the retained-target owner instead of four loose renderer-root fields
 - mouse scale state now lives with the input owner instead of as a loose
   renderer-root field
+- terminal texture-shift and recent-input publication behavior now live as one
+  grouped terminal render policy slab instead of split renderer-root policy
+  fields
 - constructor/destructor now assemble and tear down grouped scale/font-config
   state through owner-level helpers instead of repeating that grouped-state
   lifecycle inline

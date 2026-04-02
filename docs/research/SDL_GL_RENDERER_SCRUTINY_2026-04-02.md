@@ -191,6 +191,9 @@ Progress note, 2026-04-02:
   renderer-root fields
 - mouse scale state now lives with `InputRuntimeState` instead of as a loose
   renderer-root field
+- terminal texture-shift and recent-input publication behavior now live as one
+  grouped terminal render policy slab instead of split renderer-root policy
+  fields
 - renderer init/deinit now assemble and tear down grouped scale/font-config
   state through owner-level helpers instead of open-coding that grouped-state
   lifecycle inline
