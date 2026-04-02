@@ -4,6 +4,7 @@ const app_logger = @import("../app_logger.zig");
 const app_shell = @import("../app_shell.zig");
 const terminal_font_mod = @import("terminal_font.zig");
 const renderer_mod = @import("renderer.zig");
+const retained_surface_api = @import("renderer/retained_surface_api.zig");
 const draw_ops = @import("renderer/draw_ops.zig");
 const iface = @import("renderer/interface.zig");
 const text_draw = @import("renderer/text_draw.zig");
@@ -156,12 +157,12 @@ pub const FontSampleView = struct {
 
         // Render into the offscreen target so we can do linear blending in a
         // controlled way (target is linear; presentation converts to sRGB).
-        if (r.ensureEditorTexture(@intFromFloat(w), @intFromFloat(h))) {
-            if (r.beginEditorTexture()) {
+        if (retained_surface_api.ensureEditorSurface(r, @intFromFloat(w), @intFromFloat(h))) {
+            if (retained_surface_api.beginEditorSurface(r)) {
                 r.clearToThemeBackground();
                 drawContents(self, r, theme, w, h);
-                r.endEditorTexture();
-                r.drawEditorTexture(0, 0);
+                retained_surface_api.endEditorSurface(r);
+                retained_surface_api.drawEditorSurface(r, 0, 0);
                 return;
             }
         }

@@ -15,6 +15,7 @@ const app_logger = @import("../../app_logger.zig");
 const overlay_mod = @import("editor_widget_draw_overlay.zig");
 const text_mod = @import("editor_widget_draw_text.zig");
 const cache_helpers = @import("editor_widget_draw_cache.zig");
+const retained_surface_api = @import("../renderer/retained_surface_api.zig");
 
 const HighlightToken = syntax_mod.HighlightToken;
 const SelectionRange = selection_mod.SelectionRange;
@@ -265,7 +266,7 @@ pub fn drawCached(
     const origin_y: f32 = 0;
     const draw_list = &cache.draw_list;
 
-    const texture_changed = r.ensureEditorTexture(@intFromFloat(width), @intFromFloat(height));
+    const texture_changed = retained_surface_api.ensureEditorSurface(r, @intFromFloat(width), @intFromFloat(height));
     var force_redraw = cache.beginFrame(
         frame_id,
         cols,
@@ -284,10 +285,10 @@ pub fn drawCached(
     var any_dirty = force_redraw;
 
     if (force_redraw) {
-        if (r.beginEditorTexture()) {
+        if (retained_surface_api.beginEditorSurface(r)) {
             r.drawRect(0, 0, @intFromFloat(width), @intFromFloat(height), r.theme.background);
             r.drawRect(0, 0, @intFromFloat(widget.gutter_width), @intFromFloat(height), r.theme.line_number_bg);
-            r.endEditorTexture();
+            retained_surface_api.endEditorSurface(r);
         }
     }
 
@@ -355,8 +356,8 @@ pub fn drawCached(
                 if (!(ctx.force_redraw or dirty)) return;
 
                 any_dirty_local.* = true;
-                if (!r_local.beginEditorTexture()) return;
-                defer r_local.endEditorTexture();
+                if (!retained_surface_api.beginEditorSurface(r_local)) return;
+                defer retained_surface_api.endEditorSurface(r_local);
 
                 const clip_h = clippedEditorRowHeight(seg_band.h_i, @as(i32, @intFromFloat(height_local)) - seg_band.y_i);
                 r_local.beginClip(
@@ -563,9 +564,9 @@ pub fn drawCached(
     }
 
     if (any_dirty or force_redraw) {
-        r.drawEditorTexture(draw_x, draw_y);
+        retained_surface_api.drawEditorSurface(r, draw_x, draw_y);
     } else {
-        r.drawEditorTexture(draw_x, draw_y);
+        retained_surface_api.drawEditorSurface(r, draw_x, draw_y);
     }
 
     // Draw scrollbars as final overlays (outside cached editor texture) to avoid

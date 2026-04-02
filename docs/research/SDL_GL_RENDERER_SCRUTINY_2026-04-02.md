@@ -144,6 +144,15 @@ Those APIs are still live on `src/ui/renderer.zig`.
 So the repo has already written down the right boundary but is still shipping
 the old one.
 
+Progress note, 2026-04-02:
+
+- retained-target implementation moved into
+  `src/ui/renderer/retained_targets_runtime.zig`
+- widget/view consumers now route through
+  `src/ui/renderer/retained_surface_api.zig`
+- the raw product-specific renderer methods still exist, but they are no longer
+  the primary widget-facing surface
+
 ### 4. The SDL/GL host seam is functionally decent but still reads like an
 investigation seam
 
