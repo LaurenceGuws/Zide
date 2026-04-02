@@ -233,9 +233,7 @@ pub const TerminalWidget = struct {
     pub fn completePendingPresentationFeedback(self: *TerminalWidget, submission: anytype) void {
         const pending = self.pending_presentation_feedback orelse return;
         defer self.pending_presentation_feedback = null;
-        if (submission.succeeded) {
-            terminal_publication.completePresentationFeedback(self.session, pending);
-        }
+        terminal_publication.completeSubmittedPresentationFeedback(self.session, pending, submission);
     }
 
     pub fn invalidateTextureCache(self: *TerminalWidget) void {

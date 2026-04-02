@@ -701,6 +701,11 @@ pub fn completePresentationFeedback(self: anytype, feedback: anytype) void {
     }
 }
 
+pub fn completeSubmittedPresentationFeedback(self: anytype, feedback: anytype, submission: anytype) void {
+    if (!submission.succeeded) return;
+    completePresentationFeedback(self, feedback);
+}
+
 fn retirePresentedGenerationLocked(self: anytype, generation: u64) bool {
     notePresentedGeneration(self, generation);
     if (pendingGeneration(self) != generation) return false;
