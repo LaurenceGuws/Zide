@@ -163,6 +163,7 @@ Status note, 2026-04-02:
 - the fake `src/ui/renderer/targets.zig` forwarding seam is gone
 - retained-target and renderer code now use `src/ui/renderer/gl_backend.zig`
   directly
+- the fake `src/ui/renderer/draw_batch.zig` forwarding seam is gone too
 - the remaining issue is still the oversized renderer center, not backend
   forwarding residue
 

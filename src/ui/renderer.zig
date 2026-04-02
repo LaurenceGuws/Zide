@@ -17,7 +17,6 @@ const input_state = @import("renderer/input_state.zig");
 const scale_utils = @import("renderer/scale_utils.zig");
 const text_draw = @import("renderer/text_draw.zig");
 const gl_resources = @import("renderer/gl_resources.zig");
-const draw_batch = @import("renderer/draw_batch.zig");
 const target_draw = @import("renderer/target_draw.zig");
 const shape_utils = @import("renderer/shape_utils.zig");
 const shape_draw = @import("renderer/shape_draw.zig");
@@ -1562,11 +1561,11 @@ pub const Renderer = struct {
     }
 
     pub fn beginTerminalBatch(self: *Renderer) void {
-        draw_batch.beginTerminalBatch(self);
+        draw_ops.beginTerminalBatch(self);
     }
 
     pub fn flushTerminalBatch(self: *Renderer) void {
-        draw_batch.flushTerminalBatch(self);
+        draw_ops.flushTerminalBatch(self);
     }
 
     pub fn beginTerminalGlyphBatch(self: *Renderer) void {

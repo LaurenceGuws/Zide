@@ -218,6 +218,8 @@ Progress note, 2026-04-02:
   a fake backend boundary
 - the fake runtime/build backend selector is gone too; the branch no longer
   advertises a selectable renderer backend when only SDL3/OpenGL exists
+- `src/ui/renderer/draw_batch.zig` was deleted; batching now routes directly to
+  `src/ui/renderer/draw_ops.zig` instead of another pure forwarding shell
 
 ### Focus 2: SDL/GL host seam
 
