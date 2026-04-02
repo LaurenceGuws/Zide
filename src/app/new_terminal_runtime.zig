@@ -12,7 +12,7 @@ const workspace_mod = @import("../terminal/core/workspace.zig");
 const workspace_host = @import("../terminal/core/workspace_host.zig");
 const app_logger = @import("../app_logger.zig");
 
-const PtyTerminalRuntime = terminal_runtime.PtyTerminalRuntime;
+const TerminalSession = terminal_runtime.TerminalSession;
 const TerminalWorkspace = workspace_mod.TerminalWorkspace;
 
 const StartupFailPoint = enum {
@@ -90,7 +90,7 @@ fn shouldInjectStartupFailure(point: StartupFailPoint) bool {
     });
 }
 
-fn injectStartupFailureIfRequested(point: StartupFailPoint, term: *PtyTerminalRuntime) !void {
+fn injectStartupFailureIfRequested(point: StartupFailPoint, term: *TerminalSession) !void {
     if (!shouldInjectStartupFailure(point)) return;
     std.debug.print("terminal_startup_failure_injected point={s} session_ptr={x}\n", .{
         switch (point) {
@@ -150,7 +150,7 @@ fn rollbackSingleSessionStartup(
     state: anytype,
     initial_terminal_count: usize,
     initial_widget_count: usize,
-    unowned_term: *?*PtyTerminalRuntime,
+    unowned_term: *?*TerminalSession,
 ) void {
     std.debug.print("terminal_startup_single_rollback_begin terminals_before={d} terminals_target={d} widgets_before={d} widgets_target={d} has_unowned_term={any}\n", .{
         state.terminals.items.len,
@@ -278,11 +278,11 @@ fn handleSingleLaunch(state: anytype, rows: u16, cols: u16) !void {
     const theme = &state.terminal_theme;
     const initial_terminal_count = state.terminals.items.len;
     const initial_widget_count = state.terminal_widgets.items.len;
-    const term = try PtyTerminalRuntime.initWithOptions(state.allocator, rows, cols, .{
+    const term = try TerminalSession.initWithOptions(state.allocator, rows, cols, .{
         .scrollback_rows = state.terminal_scrollback_rows,
         .cursor_style = state.terminal_cursor_style,
     });
-    var unowned_term: ?*PtyTerminalRuntime = term;
+    var unowned_term: ?*TerminalSession = term;
     errdefer rollbackSingleSessionStartup(state, initial_terminal_count, initial_widget_count, &unowned_term);
     app_terminal_theme_apply.setSessionPalette(term, theme);
     var launch_cwd = try fallbackDefaultStartLocation(state);

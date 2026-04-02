@@ -219,6 +219,8 @@ Focused follow-up lane:
   - the root VT surface now also exports `TerminalCore` directly so the engine
     object is no longer hidden behind only `TerminalSession`/`PtyTerminalRuntime`
     at the main entrypoint
+  - app/UI/FFI callers now use `TerminalSession` directly; `PtyTerminalRuntime`
+    is reduced to compatibility residue at the VT root
 
 - `docs/review/TERMINAL_NATIVE_ARCHITECTURAL_SCRUTINY_2026-03-31.md`
   Why: this is the current ruthless read on what still looks second-rate at

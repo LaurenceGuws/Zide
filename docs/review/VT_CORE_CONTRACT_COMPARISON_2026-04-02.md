@@ -190,6 +190,10 @@ Identity progress, later on 2026-04-02:
 - this does not finish the object-identity war, but it removes one more signal
   that the engine object is only an internal field instead of part of the real
   library face
+- app/UI/FFI consumers now speak `TerminalSession` directly instead of the
+  compatibility alias `PtyTerminalRuntime`
+- `PtyTerminalRuntime` is now reduced to VT-root compatibility residue rather
+  than the preferred owning type name in the live stack
 
 ## Sprint Target
 

@@ -6,7 +6,7 @@ const workspace_mod = @import("../../terminal/core/workspace.zig");
 
 const Shell = app_shell.Shell;
 const TerminalWorkspace = workspace_mod.TerminalWorkspace;
-const PtyTerminalRuntime = terminal_runtime.PtyTerminalRuntime;
+const TerminalSession = terminal_runtime.TerminalSession;
 
 pub fn resizeWorkspaceWithShellCellSize(
     workspace: *TerminalWorkspace,
@@ -22,7 +22,7 @@ pub fn resizeWorkspaceWithShellCellSize(
 }
 
 pub fn resizeSessionWithShellCellSize(
-    term: *PtyTerminalRuntime,
+    term: *TerminalSession,
     shell: *Shell,
     rows: u16,
     cols: u16,
@@ -36,7 +36,7 @@ pub fn resizeSessionWithShellCellSize(
 }
 
 pub fn resizeSessionsWithShellCellSize(
-    sessions: []*PtyTerminalRuntime,
+    sessions: []*TerminalSession,
     shell: *Shell,
     rows: u16,
     cols: u16,

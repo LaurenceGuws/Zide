@@ -8,7 +8,7 @@ const terminal_runtime = @import("../../terminal/core/terminal_runtime.zig");
 const terminal_publication = @import("../../terminal/core/publication/terminal_publication.zig");
 const hover_mod = @import("terminal_widget_hover.zig");
 
-const PtyTerminalRuntime = terminal_runtime.PtyTerminalRuntime;
+const TerminalSession = terminal_runtime.TerminalSession;
 const Cell = terminal_publication.Cell;
 
 pub const PendingOpen = struct {
@@ -19,7 +19,7 @@ pub const PendingOpen = struct {
 
 pub fn ctrlClickOpenVisibleMaybe(
     allocator: std.mem.Allocator,
-    session: *PtyTerminalRuntime,
+    session: *TerminalSession,
     pending_open: *?PendingOpen,
     view_cells: []const Cell,
     rows: usize,
@@ -152,7 +152,7 @@ fn decodePercent(allocator: std.mem.Allocator, text: []const u8) ?[]u8 {
     };
 }
 
-fn resolveLinkPath(allocator: std.mem.Allocator, session: *PtyTerminalRuntime, uri: []const u8) ?[]u8 {
+fn resolveLinkPath(allocator: std.mem.Allocator, session: *TerminalSession, uri: []const u8) ?[]u8 {
     const log = app_logger.logger("terminal.open");
     if (uri.len == 0) return null;
     if (builtin.os.tag == .windows) {

@@ -318,7 +318,7 @@ pub const PendingEvent = struct {
 
 pub const Handle = struct {
     allocator: std.mem.Allocator,
-    session: *terminal_runtime.PtyTerminalRuntime,
+    session: *terminal_runtime.TerminalSession,
     destroying: std.atomic.Value(bool),
     pending_events: std.ArrayList(PendingEvent),
     last_title: std.ArrayList(u8),

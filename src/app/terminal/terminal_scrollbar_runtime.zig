@@ -173,7 +173,7 @@ pub fn draw(
     );
 }
 
-fn updateFromMouse(session: *terminal_runtime.PtyTerminalRuntime, mouse_y: f32, geometry: terminal_scrollbar_mod.VerticalGeometry, grab_offset: f32) bool {
+fn updateFromMouse(session: *terminal_runtime.TerminalSession, mouse_y: f32, geometry: terminal_scrollbar_mod.VerticalGeometry, grab_offset: f32) bool {
     session.lock();
     defer session.unlock();
     const available = geometry.thumb.available;

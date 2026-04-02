@@ -52,7 +52,7 @@ pub const GrammarManager = grammar_manager_mod.GrammarManager;
 pub const EditorRenderCache = editor_render_cache_mod.EditorRenderCache;
 pub const EditorClusterCache = widgets.EditorClusterCache;
 
-pub const PtyTerminalRuntime = terminal_runtime.PtyTerminalRuntime;
+pub const TerminalSession = terminal_runtime.TerminalSession;
 pub const TerminalWorkspace = workspace_mod.TerminalWorkspace;
 pub const TerminalTabId = workspace_mod.TabId;
 pub const TerminalCloseConfirmContext = workspace_host.CloseConfirmContext;

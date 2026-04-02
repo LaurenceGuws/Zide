@@ -22,7 +22,7 @@ const view_state = @import("terminal_widget_view_state.zig");
 const render_cache_mod = @import("../../terminal/core/publication/render_cache.zig");
 
 const Shell = app_shell.Shell;
-const PtyTerminalRuntime = terminal_runtime.PtyTerminalRuntime;
+const TerminalSession = terminal_runtime.TerminalSession;
 const CursorPos = terminal_publication.CursorPos;
 const KittyImage = terminal_publication.KittyImage;
 const KittyPlacement = terminal_publication.KittyPlacement;
@@ -46,7 +46,7 @@ pub const TerminalWidget = struct {
         window,
         pane,
     };
-    session: *PtyTerminalRuntime,
+    session: *TerminalSession,
     blink_style: BlinkStyle = .kitty,
     kitty: kitty_mod.KittyState,
     hover: hover_mod.HoverState = .{},
@@ -77,7 +77,7 @@ pub const TerminalWidget = struct {
         scroll_offset: usize,
     };
 
-    pub fn init(session: *PtyTerminalRuntime, blink_style: BlinkStyle) TerminalWidget {
+    pub fn init(session: *TerminalSession, blink_style: BlinkStyle) TerminalWidget {
         return .{
             .session = session,
             .blink_style = blink_style,

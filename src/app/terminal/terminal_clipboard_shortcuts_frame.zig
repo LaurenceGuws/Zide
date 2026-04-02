@@ -14,7 +14,7 @@ pub fn handle(
     allocator: std.mem.Allocator,
     app_mode: app_bootstrap.AppMode,
     terminal_workspace: *?workspace_mod.TerminalWorkspace,
-    terminals: []*terminal_runtime.PtyTerminalRuntime,
+    terminals: []*terminal_runtime.TerminalSession,
     terminal_widgets: []widgets.TerminalWidget,
     shell: *app_shell.Shell,
     input_event_count: usize,

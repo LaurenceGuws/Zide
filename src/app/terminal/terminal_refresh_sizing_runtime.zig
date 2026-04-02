@@ -8,14 +8,14 @@ const terminal_runtime = @import("../../terminal/core/terminal_runtime.zig");
 const workspace_mod = @import("../../terminal/core/workspace.zig");
 
 const AppMode = app_bootstrap.AppMode;
-const PtyTerminalRuntime = terminal_runtime.PtyTerminalRuntime;
+const TerminalSession = terminal_runtime.TerminalSession;
 const TerminalWorkspace = workspace_mod.TerminalWorkspace;
 
 pub fn handle(
     state: anytype,
     app_mode: AppMode,
     terminal_workspace: *?TerminalWorkspace,
-    terminals: []*PtyTerminalRuntime,
+    terminals: []*TerminalSession,
     show_terminal: bool,
     terminal_height: f32,
     shell: anytype,

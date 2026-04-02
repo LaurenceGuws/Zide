@@ -357,7 +357,7 @@ pub fn create(config: ?*const shared.CreateConfig, out_handle: *?*shared.ZideTer
         },
         .blink = cfg.cursor_blink != 0,
     };
-    const session = terminal_runtime.PtyTerminalRuntime.initWithOptions(allocator, cfg.rows, cfg.cols, .{
+    const session = terminal_runtime.TerminalSession.initWithOptions(allocator, cfg.rows, cfg.cols, .{
         .scrollback_rows = cfg.scrollback_rows,
         .cursor_style = cursor_style,
     }) catch |err| return shared.mapError(err);
