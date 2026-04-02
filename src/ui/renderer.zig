@@ -403,7 +403,6 @@ pub const Renderer = struct {
     clipboard: ClipboardState,
     batch: BatchState,
     terminal_text: TerminalTextState,
-    should_close_flag: bool,
 
     start_counter: u64,
     perf_freq: f64,
@@ -560,7 +559,6 @@ pub const Renderer = struct {
             .clipboard = .{},
             .batch = .{},
             .terminal_text = terminal_text,
-            .should_close_flag = false,
             .start_counter = sdl_api.getPerformanceCounter(),
             .perf_freq = @as(f64, @floatFromInt(sdl_api.getPerformanceFrequency())),
             .present = .{},
@@ -777,7 +775,7 @@ pub const Renderer = struct {
     }
 
     pub fn shouldClose(self: *Renderer) bool {
-        return self.should_close_flag;
+        return self.input.should_close_flag;
     }
 
     pub fn windowFocused(self: *Renderer) bool {
@@ -1384,7 +1382,7 @@ pub const Renderer = struct {
             .allocator = self.allocator,
             .window = self.window,
             .mouse_scale = self.input.mouse_scale,
-            .should_close_flag = &self.should_close_flag,
+            .should_close_flag = &self.input.should_close_flag,
             .key_down = self.input.key_down[0..],
             .key_pressed = self.input.key_pressed[0..],
             .key_repeated = self.input.key_repeated[0..],

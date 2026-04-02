@@ -194,6 +194,8 @@ Progress note, 2026-04-02:
 - terminal texture-shift and recent-input publication behavior now live as one
   grouped terminal render policy slab instead of split renderer-root policy
   fields
+- close-request state now lives with `InputRuntimeState` instead of as a loose
+  renderer-root flag
 - renderer init/deinit now assemble and tear down grouped scale/font-config
   state through owner-level helpers instead of open-coding that grouped-state
   lifecycle inline

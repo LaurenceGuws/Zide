@@ -174,11 +174,11 @@ pub const Shell = struct {
     }
 
     pub fn requestClose(self: *Shell) void {
-        self.renderer.should_close_flag = true;
+        self.renderer.input.should_close_flag = true;
     }
 
     pub fn clearCloseRequest(self: *Shell) void {
-        self.renderer.should_close_flag = false;
+        self.renderer.input.should_close_flag = false;
     }
 
     pub fn width(self: *Shell) i32 {
