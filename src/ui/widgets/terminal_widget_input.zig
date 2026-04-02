@@ -14,6 +14,7 @@ const hover_mod = @import("terminal_widget_hover.zig");
 const keyboard_mod = @import("terminal_widget_keyboard.zig");
 const mouse_reporting_mod = @import("terminal_widget_mouse_reporting.zig");
 const pointer_mod = @import("terminal_widget_pointer.zig");
+const view_state = @import("terminal_widget_view_state.zig");
 const common = @import("common.zig");
 
 const Shell = app_shell.Shell;
@@ -38,7 +39,7 @@ pub fn handleInput(
     const view_cells = cache.cells.items;
     const rows = cache.rows;
     const cols = cache.cols;
-    const viewport = terminal_publication.viewportInfo(cache);
+    const viewport = view_state.viewportInfo(cache);
     const history_len = viewport.history_len;
     const total_lines = viewport.total_lines;
     const scroll_offset = viewport.scroll_offset;

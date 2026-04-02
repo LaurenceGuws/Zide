@@ -15,6 +15,7 @@ const kitty_mod = @import("terminal_widget_kitty.zig");
 const paste_mod = @import("terminal_widget_paste.zig");
 const draw_mod = @import("terminal_widget_draw.zig");
 const input_mod = @import("terminal_widget_input.zig");
+const view_state = @import("terminal_widget_view_state.zig");
 const render_cache_mod = @import("../../terminal/core/publication/render_cache.zig");
 
 const Shell = app_shell.Shell;
@@ -243,7 +244,7 @@ pub const TerminalWidget = struct {
     pub fn dumpVisibleAsciiView(self: *TerminalWidget) !void {
         var out = std.ArrayList(u8).empty;
         defer out.deinit(self.session.allocator);
-        const dump_info = terminal_publication.visibleViewDumpInfo(&self.draw_cache);
+        const dump_info = view_state.visibleViewDumpInfo(&self.draw_cache);
 
         try out.writer(self.session.allocator).print(
             "# Zide terminal visible-view dump\npath={s}\nrows={d} cols={d} generation={d} scroll_offset={d} alt_active={d} cursor={d}:{d} cursor_visible={d} screen_reverse={d}\n",
@@ -329,7 +330,7 @@ pub const TerminalWidget = struct {
 
     pub fn scrollbarModel(self: *const TerminalWidget) ScrollbarModel {
         const cache = &self.draw_cache;
-        const scrollbar = terminal_publication.scrollbarInfo(cache, session_interaction.mouseReportingEnabled(self.session));
+        const scrollbar = view_state.scrollbarInfo(cache, session_interaction.mouseReportingEnabled(self.session));
         return .{
             .allowed = scrollbar.allowed,
             .visible = scrollbar.allowed,
@@ -477,7 +478,7 @@ fn appendResolvedBackgroundRuns(
         return;
     }
 
-    const run_info = terminal_publication.backgroundRunInfo(&cache, row);
+    const run_info = view_state.backgroundRunInfo(&cache, row);
     try out.writer(allocator).print(
         "row={d:0>3} cursor_here={d} cursor_col={d} runs=",
         .{

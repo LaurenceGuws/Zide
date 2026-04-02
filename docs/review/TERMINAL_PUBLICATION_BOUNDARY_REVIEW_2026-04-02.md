@@ -141,6 +141,15 @@ So the problem is no longer thin duplication.
 
 The problem is now whole-boundary shape.
 
+Status update:
+
+- the first larger post-present cut has now landed
+- widget-facing cache inspection and draw/view helper state no longer lives in
+  publication
+- that slab now lives in
+  [terminal_widget_view_state.zig](/home/home/personal/zide/src/ui/widgets/terminal_widget_view_state.zig)
+- publication no longer directly reads like a widget draw inspection toolkit
+
 ## Best Next Review Question
 
 If publication is meant to be the engine export boundary, what must remain in
@@ -160,7 +169,6 @@ More concretely:
    - cache publication helpers
    - capture/preparation
    - frame state / generation summaries
-   - draw-state / dump helpers
    - present completion
 
 2. [terminal_widget.zig](/home/home/personal/zide/src/ui/widgets/terminal_widget.zig)

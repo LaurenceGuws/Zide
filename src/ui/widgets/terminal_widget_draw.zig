@@ -11,6 +11,7 @@ const scene_frame_runtime = @import("../renderer/scene_frame_runtime.zig");
 const draw_grid = @import("terminal_widget_draw_grid.zig");
 const draw_overlay = @import("terminal_widget_draw_overlay.zig");
 const draw_texture = @import("terminal_widget_draw_texture.zig");
+const view_state = @import("terminal_widget_view_state.zig");
 
 const hover_mod = @import("terminal_widget_hover.zig");
 const Shell = app_shell.Shell;
@@ -160,7 +161,7 @@ pub fn drawPrepared(
         const draw_ms_total = time_utils.secondsToMs(draw_end - draw_start);
         const render_ms = time_utils.secondsToMs(draw_end - render_phase_start);
         publishFrameLatencyMetrics(
-            terminal_publication.drawStateInfo(&self.draw_cache).generation,
+            view_state.drawStateInfo(&self.draw_cache).generation,
             lock_ms,
             lock_wait_ms,
             lock_hold_ms,
@@ -178,12 +179,12 @@ pub fn drawPrepared(
 
     const r = shell.rendererPtr();
     const cache = &self.draw_cache;
-    const lifecycle_transition = terminal_publication.lifecycleTransitionInfo(self.last_alt_active, cache);
+    const lifecycle_transition = view_state.lifecycleTransitionInfo(self.last_alt_active, cache);
     const alt_exit = lifecycle_transition.exited;
     self.last_alt_active = lifecycle_transition.current_alt_active;
     render_phase_start = app_shell.getTime();
 
-    const draw_state = terminal_publication.drawStateInfo(cache);
+    const draw_state = view_state.drawStateInfo(cache);
     const render_state = draw_state.render;
     const sync_updates = draw_state.sync_updates_active;
     const screen_reverse = render_state.screen_reverse;
@@ -192,7 +193,7 @@ pub fn drawPrepared(
     const rows = draw_state.rows;
     const cols = draw_state.cols;
     const view_cells = draw_state.cells;
-    const base_colors = terminal_publication.baseColorInfo(cache);
+    const base_colors = view_state.baseColorInfo(cache);
     if (sync_updates and view_cells.len > 0) {
         const bg_color = if (view_cells.len > 0) toShellColor(base_colors.resolved_background) else r.theme.background;
         r.drawRect(
@@ -303,7 +304,7 @@ pub fn drawPrepared(
         );
         var needs_full = update_plan.needs_full;
         var needs_partial = update_plan.needs_partial;
-        const partial_capture = terminal_publication.partialCaptureInfo(cache);
+        const partial_capture = view_state.partialCaptureInfo(cache);
         viewport_shift.rows = partial_capture.active_viewport_shift_rows;
         viewport_shift.exposed_only = partial_capture.shift_exposed_only;
         var shifted_rows: usize = 0;

@@ -142,8 +142,12 @@ Focused follow-up lane:
     retirement policy, and draw-state inspection helpers
   - that is cleaner than War 1, but still broader than the narrowest engine
     export boundary should read
-  - the next cut should target one larger publication-boundary shape change,
-    not another tiny helper cleanup
+  Progress:
+  - the first larger cut landed: widget-facing cache inspection and draw/view
+    helpers now live in `src/ui/widgets/terminal_widget_view_state.zig`
+    instead of inflating publication
+  - the next cut should target another whole publication-boundary slab, not
+    another tiny helper cleanup
   acknowledged generation.
 
 ## Current Milestone
