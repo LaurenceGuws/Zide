@@ -14,6 +14,11 @@ const SceneTargetContract = renderer_root.SceneTargetContract;
 const SceneTargetInvalidation = renderer_root.SceneTargetInvalidation;
 const WindowSizes = renderer_root.WindowSizes;
 
+pub const RetainedSurfaceKind = enum {
+    editor,
+    terminal,
+};
+
 pub const FrameSubmission = struct {
     succeeded: bool,
     sequence: u64,
@@ -168,22 +173,31 @@ pub fn noteCompositionClip(self: anytype) void {
     self.present.trace_current.composition_clip_count += 1;
 }
 
-pub fn noteEditorSurfaceUpdate(self: anytype) void {
-    self.present.drawing_editor_surface = true;
-    self.present.trace_current.editor_surface_update_count += 1;
+pub fn noteRetainedSurfaceUpdate(self: anytype, surface: RetainedSurfaceKind) void {
+    switch (surface) {
+        .editor => {
+            self.present.drawing_editor_surface = true;
+            self.present.trace_current.editor_surface_update_count += 1;
+        },
+        .terminal => {},
+    }
 }
 
-pub fn noteEditorSurfaceBlit(self: anytype) void {
-    self.present.trace_current.editor_surface_blit_count += 1;
+pub fn noteRetainedSurfaceBlit(self: anytype, surface: RetainedSurfaceKind, generation: ?u64) void {
+    switch (surface) {
+        .editor => self.present.trace_current.editor_surface_blit_count += 1,
+        .terminal => {
+            self.present.trace_current.terminal_surface_blit_count += 1;
+            if (generation) |value| self.present.trace_current.terminal_surface_generation = value;
+        },
+    }
 }
 
-pub fn noteTerminalSurfaceBlit(self: anytype, generation: ?u64) void {
-    self.present.trace_current.terminal_surface_blit_count += 1;
-    if (generation) |value| self.present.trace_current.terminal_surface_generation = value;
-}
-
-pub fn noteEditorSurfaceEnded(self: anytype) void {
-    self.present.drawing_editor_surface = false;
+pub fn noteRetainedSurfaceEnded(self: anytype, surface: RetainedSurfaceKind) void {
+    switch (surface) {
+        .editor => self.present.drawing_editor_surface = false,
+        .terminal => {},
+    }
 }
 
 pub fn noteEditorSurfaceFullPaneClear(self: anytype, x: i32, y: i32, w: i32, h: i32) void {

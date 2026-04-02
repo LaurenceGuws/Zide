@@ -58,7 +58,7 @@ pub fn beginSurface(self: anytype, surface: RetainedSurface) bool {
     switch (surface) {
         .terminal => return self.beginRenderTarget(self.retained_targets.terminal),
         .editor => {
-            scene_frame_runtime.noteEditorSurfaceUpdate(self);
+            scene_frame_runtime.noteRetainedSurfaceUpdate(self, .editor);
             return self.beginRenderTarget(self.retained_targets.editor);
         },
     }
@@ -74,7 +74,7 @@ pub fn surfaceAvailable(self: anytype, surface: RetainedSurface) bool {
 pub fn endSurface(self: anytype, surface: RetainedSurface) void {
     switch (surface) {
         .terminal => {},
-        .editor => scene_frame_runtime.noteEditorSurfaceEnded(self),
+        .editor => scene_frame_runtime.noteRetainedSurfaceEnded(self, .editor),
     }
     scene_frame_runtime.restoreMainCompositionTarget(self);
 }
@@ -82,7 +82,7 @@ pub fn endSurface(self: anytype, surface: RetainedSurface) void {
 pub fn drawSurface(self: anytype, surface: RetainedSurface, draw: SurfaceDraw) void {
     switch (surface) {
         .terminal => if (self.retained_targets.terminal) |target| {
-            scene_frame_runtime.noteTerminalSurfaceBlit(self, draw.generation);
+            scene_frame_runtime.noteRetainedSurfaceBlit(self, .terminal, draw.generation);
             const width = draw.width orelse return;
             const height = draw.height orelse return;
             const snapped_x = snapToDevicePixel(draw.x, self.scale.render_scale);
@@ -126,7 +126,7 @@ pub fn drawSurface(self: anytype, surface: RetainedSurface, draw: SurfaceDraw) v
             draw_ops.drawTextureRect(self, target.texture, src, dest, Color.white.toRgba(), types.Rgba{ .r = 0, .g = 0, .b = 0, .a = 0 }, .linear_premul);
         },
         .editor => if (self.retained_targets.editor) |target| {
-            scene_frame_runtime.noteEditorSurfaceBlit(self);
+            scene_frame_runtime.noteRetainedSurfaceBlit(self, .editor, null);
             const snapped_x = snapToDevicePixel(draw.x, self.scale.render_scale);
             const snapped_y = snapToDevicePixel(draw.y, self.scale.render_scale);
             const src = texture_draw.fullTextureSrcRect(target.texture);

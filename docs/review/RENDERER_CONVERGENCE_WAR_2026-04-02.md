@@ -59,3 +59,6 @@ Progress note, later on 2026-04-02:
   `drawSurface`) instead of its old editor-specific fake renderer verbs
 - retained-surface update/blit counters in that harness now use generic
   retained-surface names too
+- the retained-target owner now reports surface update/blit/end events to the
+  scene-frame owner through generic retained-surface trace verbs instead of
+  editor/terminal-specific trace helper names

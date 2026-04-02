@@ -76,6 +76,10 @@ Status note, later on 2026-04-02:
   - the editor scripted-input smoke harness now uses the same generic
     retained-surface vocabulary instead of preserving a second
     editor-specific fake-renderer dialect
+  - retained-surface trace/update handoff between
+    `src/ui/renderer/retained_targets_runtime.zig` and
+    `src/ui/renderer/scene_frame_runtime.zig` now uses generic retained-surface
+    verbs instead of product-specific trace helper names
 
 ## Target Read
 
