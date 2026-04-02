@@ -217,6 +217,15 @@ Replace:
 
 with a scene-completeness gate derived from the new submission truth.
 
+Status:
+
+- publication retirement now requires renderer-proven submitted scene truth:
+  - submission succeeded
+  - terminal retained surface was blitted into the submitted scene
+  - submitted terminal-surface generation matches the presented generation
+- widget-local texture upload and clean-cache state no longer retire terminal
+  presentation on their own
+
 ### Slice 4: keep old widget-local feedback fields only if still useful locally
 
 If `texture_updated` still helps widget-local heuristics or diagnostics, keep

@@ -717,9 +717,16 @@ pub fn noteAltExitPending(self: anytype) void {
     self.publication.alt_exit_time_ms.store(std.time.milliTimestamp(), .release);
 }
 
-pub fn completePresentationFeedback(self: anytype, feedback: anytype) void {
-    if (feedback.presented) |presented| {
-        if (feedback.texture_updated or presented.dirty == .none) {
+fn submittedPresentationMatchesFeedback(feedback: anytype, submission: anytype) bool {
+    const presented = feedback.presented orelse return false;
+    if (!submission.terminal_surface_blitted) return false;
+    const submitted_generation = submission.terminal_surface_generation orelse return false;
+    return submitted_generation == presented.generation;
+}
+
+pub fn completePresentationFeedback(self: anytype, feedback: anytype, submission: anytype) void {
+    if (submittedPresentationMatchesFeedback(feedback, submission)) {
+        if (feedback.presented) |presented| {
             _ = acknowledgePresentedGeneration(self, presented.generation);
         }
     }
@@ -736,7 +743,7 @@ pub fn completePresentationFeedback(self: anytype, feedback: anytype) void {
 
 pub fn completeSubmittedPresentationFeedback(self: anytype, feedback: anytype, submission: anytype) void {
     if (!submission.succeeded) return;
-    completePresentationFeedback(self, feedback);
+    completePresentationFeedback(self, feedback, submission);
 }
 
 fn retirePresentedGenerationLocked(self: anytype, generation: u64) bool {
