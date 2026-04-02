@@ -1,5 +1,5 @@
 const app_shell = @import("../../app_shell.zig");
-const session_content = @import("../../terminal/core/session/content.zig");
+const scrollback_view = @import("../../terminal/core/scrollback_view.zig");
 const shared_types = @import("../../types/mod.zig");
 const widgets = @import("../../ui/widgets.zig");
 const terminal_runtime = @import("../../terminal/core/terminal_runtime.zig");
@@ -180,7 +180,7 @@ fn updateFromMouse(session: *terminal_runtime.TerminalRuntimeShell, mouse_y: f32
     const available = geometry.thumb.available;
     const clamped_mouse = @min(@max(mouse_y - grab_offset, geometry.scrollbar_y), geometry.scrollbar_y + available);
     const ratio = if (available > 0) (clamped_mouse - geometry.scrollbar_y) / available else 0;
-    return session_content.setScrollOffsetFromNormalizedTrackLocked(session, ratio) != null;
+    return scrollback_view.setScrollOffsetFromNormalizedTrackLocked(session, ratio) != null;
 }
 
 fn pointInVerticalScrollbar(mouse: MousePos, geometry: terminal_scrollbar_mod.VerticalGeometry) bool {

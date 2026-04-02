@@ -97,6 +97,15 @@ gravity into smaller files.
   - `TerminalCore` sufficiency is still the top blocker
   - viewport/selection mutation surface is now the clearest concrete fallback
   - input, `host_queries`, and generic shell-thinning should remain paused
+- `docs/review/VT_VIEWPORT_SELECTION_WAR_2026-04-03.md`
+  Why: no crisp new `TerminalCore` sufficiency slab emerged immediately after
+  the resize rerank, so the concrete fallback war is now opened directly.
+  Current read:
+  - the first clean slice was deleting dead session mutation facades
+  - live callers now use the real mutation owners directly:
+    `scrollback_view.zig` and `selection.zig`
+  - this removes one more residual session-shaped layer from the host mutation
+    story without reopening generic shell-thinning
 
 - `docs/review/VT_WAR_4_SCOPE_AND_SEEDS_2026-04-03.md`
   Why: the next scrutiny pass is no longer a cleanup sprint; it is a focused

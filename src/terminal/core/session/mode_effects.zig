@@ -2,7 +2,7 @@ const std = @import("std");
 const core_modes = @import("../terminal_core_modes.zig");
 const input_modes = @import("../input_modes.zig");
 const terminal_publication = @import("../publication/terminal_publication.zig");
-const host_selection = @import("selection.zig");
+const host_selection = @import("../selection.zig");
 
 pub fn resetStateLocked(self: anytype) void {
     self.core.resetState(self);

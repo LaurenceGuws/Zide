@@ -11,9 +11,9 @@ const input_modes = @import("input_modes.zig");
 const session_config = @import("session/config.zig");
 const session_interaction = @import("session/interaction.zig");
 const mode_effects = @import("session/mode_effects.zig");
-const session_content = @import("session/content.zig");
+const scrollback_view = @import("scrollback_view.zig");
 const session_input = @import("session/input.zig");
-const session_selection = @import("session/selection.zig");
+const terminal_selection = @import("selection.zig");
 const host_queries = @import("session/host_queries.zig");
 const session_runtime = @import("session/runtime.zig");
 const scrolling = @import("scrolling.zig");
@@ -1137,7 +1137,7 @@ test "scrollback offset change publishes shift-exposed partial damage" {
     session.alt.clearDirty();
     try std.testing.expect(terminal_publication.acknowledgePresentedGeneration(session, terminal_publication.renderCache(session).generation));
 
-    session_content.setScrollOffset(session, 1);
+    scrollback_view.setScrollOffset(session, 1);
 
     const cache = terminal_publication.renderCache(session);
     try std.testing.expectEqual(Dirty.partial, cache.dirty);
@@ -1164,7 +1164,7 @@ test "scrollback offset change advances published generation" {
     try std.testing.expect(terminal_publication.acknowledgePresentedGeneration(session, terminal_publication.renderCache(session).generation));
 
     const baseline_generation = terminal_publication.renderCache(session).generation;
-    session_content.setScrollOffset(session, 1);
+    scrollback_view.setScrollOffset(session, 1);
 
     const cache = terminal_publication.renderCache(session);
     try std.testing.expectEqual(@as(usize, 1), cache.scroll_offset);
@@ -1184,7 +1184,7 @@ test "session snapshot reflects pinned scrollback viewport" {
     try expectSnapshotRow(live_snapshot, 0, "CCCC");
     try expectSnapshotRow(live_snapshot, 1, "DDDD");
 
-    session_content.setScrollOffset(session, 1);
+    scrollback_view.setScrollOffset(session, 1);
 
     const pinned_snapshot = terminal_publication.snapshot(session);
     try expectSnapshotRow(pinned_snapshot, 0, "BBBB");
@@ -1208,7 +1208,7 @@ test "acknowledgePresentedGeneration does not retire newer scrollback view publi
     try std.testing.expect(terminal_publication.acknowledgePresentedGeneration(session, terminal_publication.renderCache(session).generation));
 
     const baseline_generation = terminal_publication.renderCache(session).generation;
-    session_content.setScrollOffset(session, 1);
+    scrollback_view.setScrollOffset(session, 1);
 
     const cache = terminal_publication.renderCache(session);
     try std.testing.expectEqual(Dirty.partial, cache.dirty);
@@ -1892,13 +1892,13 @@ test "selection dirty expansion does not suppress repeated unpresented selection
     session.alt.clearDirty();
     try std.testing.expect(terminal_publication.acknowledgePresentedGeneration(session, terminal_publication.renderCache(session).generation));
 
-    session_selection.selectRange(session, .{ .row = 0, .col = 0 }, .{ .row = 0, .col = 0 }, true);
+    terminal_selection.selectRange(session, .{ .row = 0, .col = 0 }, .{ .row = 0, .col = 0 }, true);
 
     var cache = terminal_publication.renderCache(session);
     try std.testing.expectEqual(Dirty.partial, cache.dirty);
     try std.testing.expect(cache.dirty_rows.items[0]);
 
-    session_selection.selectRange(session, .{ .row = 0, .col = 0 }, .{ .row = 0, .col = 0 }, true);
+    terminal_selection.selectRange(session, .{ .row = 0, .col = 0 }, .{ .row = 0, .col = 0 }, true);
 
     cache = terminal_publication.renderCache(session);
     try std.testing.expectEqual(Dirty.partial, cache.dirty);
@@ -2047,9 +2047,9 @@ test "selection plain text export is terminal-owned across history and grid" {
     session.primary.grid.cells.items[0].codepoint = 'C';
     session.primary.grid.cells.items[1].codepoint = 'D';
 
-    session_selection.startSelection(session, 0, 1);
-    session_selection.updateSelection(session, 1, 1);
-    session_selection.finishSelection(session);
+    terminal_selection.startSelection(session, 0, 1);
+    terminal_selection.updateSelection(session, 1, 1);
+    terminal_selection.finishSelection(session);
 
     const text_opt = try session.core.selectionPlainTextAlloc(allocator);
     try std.testing.expect(text_opt != null);
@@ -2066,7 +2066,7 @@ test "selectRangeLocked applies and finishes selection in one backend step" {
     defer session.deinit();
 
     session.lock();
-    session_selection.selectRangeLocked(session, .{ .row = 0, .col = 1 }, .{ .row = 1, .col = 2 }, true);
+    terminal_selection.selectRangeLocked(session, .{ .row = 0, .col = 1 }, .{ .row = 1, .col = 2 }, true);
     session.unlock();
 
     const selection = session.selectionState().?;
@@ -2085,15 +2085,15 @@ test "selection helper clears and finishes only when active" {
     defer session.deinit();
 
     session.lock();
-    try std.testing.expect(!session_selection.clearSelectionIfActiveLocked(session));
-    try std.testing.expect(!session_selection.finishSelectionIfActiveLocked(session));
+    try std.testing.expect(!terminal_selection.clearSelectionIfActiveLocked(session));
+    try std.testing.expect(!terminal_selection.finishSelectionIfActiveLocked(session));
 
-    session_selection.selectCellLocked(session, .{ .row = 0, .col = 1 }, false);
-    try std.testing.expect(session_selection.clearSelectionIfActiveLocked(session));
+    terminal_selection.selectCellLocked(session, .{ .row = 0, .col = 1 }, false);
+    try std.testing.expect(terminal_selection.clearSelectionIfActiveLocked(session));
     try std.testing.expect(session.selectionState() == null);
 
-    session_selection.selectCellLocked(session, .{ .row = 1, .col = 0 }, false);
-    try std.testing.expect(session_selection.finishSelectionIfActiveLocked(session));
+    terminal_selection.selectCellLocked(session, .{ .row = 1, .col = 0 }, false);
+    try std.testing.expect(terminal_selection.finishSelectionIfActiveLocked(session));
     session.unlock();
 
     const selection = session.selectionState().?;
@@ -2112,15 +2112,15 @@ test "selection drag helpers update ordered ranges and late-start cells" {
     var row = [_]Cell{ base, base };
     row[1].codepoint = 'X';
 
-    try std.testing.expect(!session_selection.selectOrUpdateCellInRowLocked(session, &[_]Cell{ base, base }, 0, 0));
-    try std.testing.expect(session_selection.selectOrUpdateCellInRowLocked(session, &row, 1, 1));
+    try std.testing.expect(!terminal_selection.selectOrUpdateCellInRowLocked(session, &[_]Cell{ base, base }, 0, 0));
+    try std.testing.expect(terminal_selection.selectOrUpdateCellInRowLocked(session, &row, 1, 1));
     var selection = session.selectionState().?;
     try std.testing.expectEqual(@as(usize, 1), selection.start.row);
     try std.testing.expectEqual(@as(usize, 1), selection.start.col);
     try std.testing.expectEqual(@as(usize, 1), selection.end.row);
     try std.testing.expectEqual(@as(usize, 1), selection.end.col);
 
-    try std.testing.expect(session_selection.selectOrderedRangeLocked(
+    try std.testing.expect(terminal_selection.selectOrderedRangeLocked(
         session,
         .{ .row = 1, .col = 0 },
         .{ .row = 1, .col = 1 },
@@ -2151,22 +2151,22 @@ test "click selection helpers own word and line gesture policy" {
     row[3].codepoint = '!';
 
     session.lock();
-    const word_click = session_selection.beginClickSelectionLocked(session, &row, 3, 1, 2);
+    const word_click = terminal_selection.beginClickSelectionLocked(session, &row, 3, 1, 2);
     try std.testing.expect(word_click.started);
     try std.testing.expectEqual(.word, word_click.gesture.mode);
     try std.testing.expectEqual(@as(usize, 3), word_click.gesture.row);
     try std.testing.expectEqual(@as(usize, 0), word_click.gesture.col_start);
     try std.testing.expectEqual(@as(usize, 2), word_click.gesture.col_end);
 
-    try std.testing.expect(session_selection.extendGestureSelectionLocked(session, word_click.gesture, &row, 4, 3));
+    try std.testing.expect(terminal_selection.extendGestureSelectionLocked(session, word_click.gesture, &row, 4, 3));
     var selection = session.selectionState().?;
     try std.testing.expectEqual(@as(usize, 3), selection.start.row);
     try std.testing.expectEqual(@as(usize, 0), selection.start.col);
     try std.testing.expectEqual(@as(usize, 4), selection.end.row);
     try std.testing.expectEqual(@as(usize, 3), selection.end.col);
 
-    session_selection.clearSelectionLocked(session);
-    const line_click = session_selection.beginClickSelectionLocked(session, &row, 5, 2, 3);
+    terminal_selection.clearSelectionLocked(session);
+    const line_click = terminal_selection.beginClickSelectionLocked(session, &row, 5, 2, 3);
     try std.testing.expect(line_click.started);
     try std.testing.expectEqual(.line, line_click.gesture.mode);
     try std.testing.expectEqual(@as(usize, 5), line_click.gesture.row);
@@ -2195,9 +2195,9 @@ test "resetToLiveBottomLocked resets scrollback offset only when needed" {
     session.history.setScrollOffset(session.primary.grid.rows, 1);
 
     session.lock();
-    try std.testing.expect(session_content.resetToLiveBottomLocked(session));
+    try std.testing.expect(scrollback_view.resetToLiveBottomLocked(session));
     try std.testing.expectEqual(@as(usize, 0), session.history.scrollOffset());
-    try std.testing.expect(!session_content.resetToLiveBottomLocked(session));
+    try std.testing.expect(!scrollback_view.resetToLiveBottomLocked(session));
     session.unlock();
 }
 
@@ -2216,9 +2216,9 @@ test "scrollSelectionDragLocked scrolls history view in drag direction" {
     session.history.setScrollOffset(session.primary.grid.rows, 1);
 
     session.lock();
-    try std.testing.expect(session_content.scrollSelectionDragLocked(session, false));
+    try std.testing.expect(scrollback_view.scrollSelectionDragLocked(session, false));
     try std.testing.expectEqual(@as(usize, 0), session.history.scrollOffset());
-    try std.testing.expect(session_content.scrollSelectionDragLocked(session, true));
+    try std.testing.expect(scrollback_view.scrollSelectionDragLocked(session, true));
     try std.testing.expectEqual(@as(usize, 1), session.history.scrollOffset());
     session.unlock();
 }
@@ -2238,9 +2238,9 @@ test "setScrollOffsetFromNormalizedTrackLocked maps scrollbar track ratio to his
     session.history.ensureViewCache(session.primary.grid.cols, session.primary.defaultCell());
 
     session.lock();
-    try std.testing.expectEqual(@as(?usize, 3), session_content.setScrollOffsetFromNormalizedTrackLocked(session, 0.0));
+    try std.testing.expectEqual(@as(?usize, 3), scrollback_view.setScrollOffsetFromNormalizedTrackLocked(session, 0.0));
     try std.testing.expectEqual(@as(usize, 3), session.history.scrollOffset());
-    try std.testing.expectEqual(@as(?usize, 0), session_content.setScrollOffsetFromNormalizedTrackLocked(session, 1.0));
+    try std.testing.expectEqual(@as(?usize, 0), scrollback_view.setScrollOffsetFromNormalizedTrackLocked(session, 1.0));
     try std.testing.expectEqual(@as(usize, 0), session.history.scrollOffset());
     session.unlock();
 }
@@ -2260,11 +2260,11 @@ test "scrollWheelLocked applies backend wheel policy" {
     session.history.ensureViewCache(session.primary.grid.cols, session.primary.defaultCell());
 
     session.lock();
-    try std.testing.expect(session_content.scrollWheelLocked(session, 1));
+    try std.testing.expect(scrollback_view.scrollWheelLocked(session, 1));
     try std.testing.expectEqual(@as(usize, 3), session.history.scrollOffset());
-    try std.testing.expect(session_content.scrollWheelLocked(session, -1));
+    try std.testing.expect(scrollback_view.scrollWheelLocked(session, -1));
     try std.testing.expectEqual(@as(usize, 0), session.history.scrollOffset());
-    try std.testing.expect(!session_content.scrollWheelLocked(session, 0));
+    try std.testing.expect(!scrollback_view.scrollWheelLocked(session, 0));
     session.unlock();
 }
 

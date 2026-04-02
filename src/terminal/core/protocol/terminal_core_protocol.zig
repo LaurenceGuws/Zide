@@ -4,7 +4,7 @@ const types = @import("../../model/types.zig");
 const hyperlink_table = @import("../hyperlink_table.zig");
 const kitty_mod = @import("../../kitty/graphics.zig");
 const scrolling_mod = @import("../scrolling.zig");
-const session_selection = @import("../session/selection.zig");
+const terminal_selection = @import("../selection.zig");
 
 pub fn appendHyperlink(self: anytype, uri: []const u8, max_hyperlinks: usize) ?u32 {
     return hyperlink_table.appendHyperlink(self, uri, max_hyperlinks);
@@ -24,7 +24,7 @@ pub fn eraseDisplay(self: anytype, mode: i32) void {
     screen.eraseDisplay(mode, blank_cell);
     if (mode == 0 or mode == 2 or mode == 3) {
         if (mode == 2 or mode == 3) {
-            session_selection.clearSelectionLocked(self);
+            terminal_selection.clearSelectionLocked(self);
         }
         _ = self.core.clear_generation.fetchAdd(1, .acq_rel);
     }

@@ -1,7 +1,7 @@
 const std = @import("std");
 const builtin = @import("builtin");
 
-const session_content = @import("../../terminal/core/session/content.zig");
+const scrollback_view = @import("../../terminal/core/scrollback_view.zig");
 const session_interaction = @import("../../terminal/core/session/interaction.zig");
 const terminal_runtime = @import("../../terminal/core/terminal_runtime.zig");
 const session_input = @import("../../terminal/core/session/input.zig");
@@ -236,7 +236,7 @@ fn isSuppressedTerminalShortcut(
 fn clearLiveState(widget: anytype) void {
     widget.session.lock();
     defer widget.session.unlock();
-    _ = session_content.resetToLiveBottomLocked(widget.session);
+    _ = scrollback_view.resetToLiveBottomLocked(widget.session);
 }
 
 test "suppressed terminal clipboard shortcuts do not count as live-reset input" {
