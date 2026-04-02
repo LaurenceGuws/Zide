@@ -82,11 +82,16 @@ War 3 should not start with:
 - more parser cleanup
 - more host aggregation cleanup
 
-War 3 should start with the library-center question itself:
+War 3 should start by fixing the target shape in explicit terms:
 
-- what should the runtime shell around `TerminalCore` actually contain
-- what should publication/export contain as a narrow engine edge
-- and what must visibly collapse back into the engine center
+- `TerminalCore` is the library center
+- `session/runtime.zig` is runtime shell only
+- `terminal_publication.zig` is export boundary only
+
+Then the first code cut should be chosen by one rule:
+
+- identify the single largest current contradiction to that target shape
+- delete it in one whole-slab move
 
 ## Best Next Question
 
@@ -98,6 +103,15 @@ them from immediately saying:
 - "`terminal_publication.zig` is just the export boundary"
 
 That is the next War 3 target question.
+
+The wrong next move would be:
+
+- cautiously shaving those files because they still feel too large
+
+The right next move is:
+
+- pick the biggest lie relative to the target shape
+- remove that lie directly
 
 ## Bottom Line
 

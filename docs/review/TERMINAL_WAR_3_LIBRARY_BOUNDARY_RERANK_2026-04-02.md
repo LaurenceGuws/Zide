@@ -93,14 +93,22 @@ The remaining blocker is architecture shape, not capability volume.
 
 ## Best Next Question
 
-What is the single strongest remaining obstacle to reading the live terminal
-stack as:
+What is the target `zide-vt` shape in concrete terms, and what is the single
+largest contradiction still blocking it?
+
+That target shape is:
 
 - engine/library center
 - runtime shell around it
 - host boundary over it
 
-without ambiguity?
+The next move is not to "reduce files a bit more."
+
+The next move is:
+
+1. state that target shape explicitly
+2. identify the largest current violation of it
+3. delete that violation in one whole-slab cut
 
 ## Bottom Line
 

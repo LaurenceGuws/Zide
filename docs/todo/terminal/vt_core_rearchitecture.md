@@ -68,7 +68,11 @@ Focused follow-up lane:
   Current read:
   - the main blocker is now a three-way center-of-gravity split between
     `terminal_core.zig`, `session/runtime.zig`, and `terminal_publication.zig`
-  - the next cut should start from that library-center question directly
+  - the target shape is explicit:
+    `TerminalCore` as library center, `session/runtime.zig` as runtime shell,
+    `terminal_publication.zig` as export boundary
+  - the next cut should remove the single largest contradiction to that shape,
+    not merely shrink those files incrementally
 
 - `docs/review/TERMINAL_NATIVE_ARCHITECTURAL_SCRUTINY_2026-03-31.md`
   Why: this is the current ruthless read on what still looks second-rate at
