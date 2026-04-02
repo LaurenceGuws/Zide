@@ -60,6 +60,23 @@ pub const KittyState = struct {
         return self.images_view.items.len > 0 and self.placements_view.items.len > 0;
     }
 
+    pub fn prepareForDraw(
+        self: *KittyState,
+        allocator: std.mem.Allocator,
+        shell: *Shell,
+        rows: usize,
+        cols: usize,
+        session_images: []const KittyImage,
+        session_placements: []const KittyPlacement,
+    ) bool {
+        self.updateViews(allocator, rows, cols, session_images, session_placements);
+        if (self.images_view.items.len > 0) {
+            self.primeUploads(allocator);
+            _ = self.processPendingUploads(shell);
+        }
+        return self.hasKitty();
+    }
+
     pub fn updateViews(
         self: *KittyState,
         allocator: std.mem.Allocator,
@@ -169,6 +186,15 @@ pub const KittyState = struct {
                 .height = @as(f32, @floatFromInt(tex.texture.height)),
             };
             r.drawTexture(tex.texture, src, dest, Color.white);
+        }
+    }
+
+    pub fn finishDraw(self: *KittyState, allocator: std.mem.Allocator, generation: u64, has_kitty: bool) void {
+        if (!has_kitty and self.textures.count() > 0) {
+            self.cleanupTextures(allocator, self.images_view.items);
+        }
+        if (generation != self.last_generation) {
+            self.last_generation = generation;
         }
     }
 

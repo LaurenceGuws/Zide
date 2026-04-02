@@ -99,6 +99,15 @@ Some of this is draw work.
 But it is still a lot of different retained-render concerns in one place, and
 that is why the file still reads louder than the rest of the native path.
 
+Status update:
+
+- kitty upload/update orchestration no longer lives inline in the draw center
+- that flow now runs through
+  [terminal_widget_kitty.zig](/home/home/personal/zide/src/ui/widgets/terminal_widget_kitty.zig)
+
+That is another real reduction in mixed concern, even though the main retained
+surface planning/execution slab still remains.
+
 ### 2. Local present/draw bookkeeping is still split across widget and draw
 
 The current split is better than it was:

@@ -210,6 +210,9 @@ Focused follow-up lane:
   - draw latency metrics now live in
     `src/ui/widgets/terminal_widget_draw_metrics.zig`
     instead of inflating `terminal_widget_draw.zig`
+  - kitty upload/update orchestration now also runs through
+    `src/ui/widgets/terminal_widget_kitty.zig`
+    instead of living inline in `terminal_widget_draw.zig`
 
 ## Current Milestone
 

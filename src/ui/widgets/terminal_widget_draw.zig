@@ -176,14 +176,14 @@ pub fn drawPrepared(
     self.blink_phase_changed_pending = false;
     const blink_requires_partial = has_blink and blink_phase_changed;
 
-    self.kitty.updateViews(self.session.allocator, rows, cols, draw_state.kitty_images, draw_state.kitty_placements);
-
-    if (self.kitty.images_view.items.len > 0) {
-        self.kitty.primeUploads(self.session.allocator);
-        _ = self.kitty.processPendingUploads(shell);
-    }
-
-    const has_kitty = self.kitty.hasKitty();
+    const has_kitty = self.kitty.prepareForDraw(
+        self.session.allocator,
+        shell,
+        rows,
+        cols,
+        draw_state.kitty_images,
+        draw_state.kitty_placements,
+    );
     const bg_color = if (view_cells.len > 0) toShellColor(base_colors.background) else r.theme.background;
     r.drawRect(
         @intFromFloat(x),
@@ -488,9 +488,6 @@ pub fn drawPrepared(
                 }
             }
             scene_frame_runtime.restoreMainCompositionTarget(r);
-            if (kitty_generation != self.kitty.last_generation) {
-                self.kitty.last_generation = kitty_generation;
-            }
             self.retained.terminal_texture_ready = true;
             self.retained.last_render_generation = draw_state.generation;
             self.retained.last_render_clear_generation = draw_state.clear_generation;
@@ -527,9 +524,7 @@ pub fn drawPrepared(
     }
     texture_update_ms = time_utils.secondsToMs(app_shell.getTime() - texture_phase_start);
     const overlay_phase_start = app_shell.getTime();
-    if (!has_kitty and self.kitty.textures.count() > 0) {
-        self.kitty.cleanupTextures(self.session.allocator, self.kitty.images_view.items);
-    }
+    self.kitty.finishDraw(self.session.allocator, kitty_generation, has_kitty);
     drawOverlays(
         self,
         shell,
