@@ -87,7 +87,5 @@ pub const PtyTerminalRuntime = struct {
     pub const lockPtyWriter = runtime.lockPtyWriter;
     pub const writePtyBytes = runtime.writePtyBytes;
 
-    pub const resize = runtime.resize;
-
     pub const snapshot = terminal_publication.snapshot;
 };
