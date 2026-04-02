@@ -122,6 +122,14 @@ gravity into smaller files.
   - the first slice is now landed:
     `TerminalCore` owns the semantic `resizeLocked(...)` verb while
     `resize_reflow.zig` still owns shell locking and transport resize/reporting
+- `docs/review/VT_WAR_4_POST_RESIZE_RERANK_2026-04-03.md`
+  Why: after the first two interaction wins, the next move is no longer
+  automatic.
+  Current read:
+  - encoded host input is still the next candidate
+  - but it is more tightly coupled to writer/transport mechanics than the
+    first two slabs
+  - it needs one more design pass before code, or War 4 should stop and rerank
 
 ## Priority Now
 
@@ -135,6 +143,8 @@ Highest-value remaining items from the current live baseline:
    - output feed / apply
    Second slab:
    - resize / report contract
+   Current state:
+   - encoded host input is the next candidate, but not yet a safe immediate cut
 2. `VTWAR4-02` keep handle identity as a checked-but-paused concern
    Why: the handle is already opaque and terminal-named publicly, so changing
    internal shell-backed storage alone risks cosmetic surgery.
