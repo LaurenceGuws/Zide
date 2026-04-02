@@ -1,6 +1,7 @@
 const std = @import("std");
 const host_queries = @import("../core/session/host_queries.zig");
 const session_config = @import("../core/session/config.zig");
+const session_content = @import("../core/session/content.zig");
 const session_input = @import("../core/session/input.zig");
 const session_runtime = @import("../core/session/runtime.zig");
 const types = @import("../model/types.zig");
@@ -96,13 +97,13 @@ pub fn reportColorSchemeChanged(handle: ?*shared.ZideTerminalHandle, dark: u8, o
 pub fn setScrollbackOffset(handle: ?*shared.ZideTerminalHandle, offset_rows: u32) shared.Status {
     const h = shared.fromOpaqueActive(handle) orelse return .invalid_argument;
     if (h.session.core.isAltActive() and offset_rows != 0) return .invalid_argument;
-    h.session.setScrollOffset(offset_rows);
+    session_content.setScrollOffset(h.session, offset_rows);
     return shared.syncDerivedEvents(h);
 }
 
 pub fn followLiveBottom(handle: ?*shared.ZideTerminalHandle) shared.Status {
     const h = shared.fromOpaqueActive(handle) orelse return .invalid_argument;
-    h.session.setScrollOffset(0);
+    session_content.setScrollOffset(h.session, 0);
     return shared.syncDerivedEvents(h);
 }
 

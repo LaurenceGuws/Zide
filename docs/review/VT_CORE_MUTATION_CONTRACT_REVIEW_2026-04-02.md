@@ -114,6 +114,18 @@ Progress note, later on 2026-04-02:
 This is not the full viewport war yet, but it confirms the same split is
 working there too.
 
+Progress note, later on 2026-04-02:
+
+- the live host callers no longer need the mutation facade hanging off
+  `TerminalSession` for the common publication-aware paths
+- widget pointer/keyboard/paste, scrollbar runtime, and FFI scrollback control
+  now call the real session mutation owners directly:
+  - [session/content.zig](/home/home/personal/zide/src/terminal/core/session/content.zig)
+  - [session/selection.zig](/home/home/personal/zide/src/terminal/core/session/selection.zig)
+
+That matters because the remaining value of the mutation facade on
+`TerminalSession` is getting much thinner.
+
 ## Non-Goals
 
 - no more alias churn just to reduce `PtyTerminalRuntime` mentions

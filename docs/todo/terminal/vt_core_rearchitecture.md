@@ -238,6 +238,9 @@ Focused follow-up lane:
   - the first viewport follow-through is now in too:
     `TerminalCore` owns host-facing scrollback mutation verbs while
     `scrollback_view.zig` keeps lock + publication refresh + UI normalization
+  - live widget/FFI callers now use the real session mutation owners directly
+    for publication-aware mutation instead of routing those convenience verbs
+    through `TerminalSession`
 
 - `docs/review/TERMINAL_NATIVE_ARCHITECTURAL_SCRUTINY_2026-03-31.md`
   Why: this is the current ruthless read on what still looks second-rate at

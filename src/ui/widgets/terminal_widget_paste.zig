@@ -1,6 +1,7 @@
 const std = @import("std");
 
 const app_logger = @import("../../app_logger.zig");
+const session_content = @import("../../terminal/core/session/content.zig");
 const session_input = @import("../../terminal/core/session/input.zig");
 const session_interaction = @import("../../terminal/core/session/interaction.zig");
 
@@ -15,7 +16,7 @@ pub fn pasteSystemClipboard(
     if (!has_supported_clipboard_data) return false;
 
     if (widget.draw_cache.scroll_offset > 0) {
-        widget.session.setScrollOffset(0);
+        session_content.setScrollOffset(widget.session, 0);
     }
 
     return pasteClipboardWithPolicy(widget, clip_opt, html, uri_list, png, .system) catch false;

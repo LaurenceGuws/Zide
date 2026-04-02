@@ -1,7 +1,8 @@
 const std = @import("std");
 
-const terminal_runtime = @import("../../terminal/core/terminal_runtime.zig");
+const session_content = @import("../../terminal/core/session/content.zig");
 const session_input = @import("../../terminal/core/session/input.zig");
+const session_selection = @import("../../terminal/core/session/selection.zig");
 const terminal_types = @import("../../terminal/model/types.zig");
 const app_logger = @import("../../app_logger.zig");
 const shared_types = @import("../../types/mod.zig");
@@ -57,12 +58,12 @@ pub fn handlePointerInput(
     self.session.lock();
     defer self.session.unlock();
 
-    if (live_scroll_offset > 0 and self.session.resetToLiveBottomForInputLocked(saw_non_modifier_key_press, saw_text_input)) {
+    if (live_scroll_offset > 0 and session_content.resetToLiveBottomForInputLocked(self.session, saw_non_modifier_key_press, saw_text_input)) {
         live_scroll_offset = 0;
     }
 
     if (params.in_terminal and input_batch.mousePressed(.left) and selection_active) {
-        if (self.session.clearSelectionIfActiveLocked()) {
+        if (session_selection.clearSelectionIfActiveLocked(self.session)) {
             selection_active = false;
             result.handled = true;
         }
@@ -81,7 +82,8 @@ pub fn handlePointerInput(
                 self.selection_drag_active = false;
                 if (input_batch.mouseClicks(.left) >= 2) {
                     const row_cells = view_cells[clamped_row * params.cols .. (clamped_row + 1) * params.cols];
-                    const click_result = self.session.beginClickSelectionLocked(
+                    const click_result = session_selection.beginClickSelectionLocked(
+                        self.session,
                         row_cells,
                         global_row,
                         clamped_col,
@@ -114,7 +116,7 @@ pub fn handlePointerInput(
             const global_row = params.start_line + clamped_row;
             if (global_row < params.history_len + params.rows) {
                 const row_cells = view_cells[clamped_row * params.cols .. (clamped_row + 1) * params.cols];
-                if (self.session.extendGestureSelectionLocked(self.selection_gesture, row_cells, global_row, clamped_col)) {
+                if (session_selection.extendGestureSelectionLocked(self.session, self.selection_gesture, row_cells, global_row, clamped_col)) {
                     selection_active = true;
                     result.handled = true;
                 }
@@ -122,10 +124,10 @@ pub fn handlePointerInput(
 
             if (selection_active) {
                 if (params.mouse.y < params.y) {
-                    _ = self.session.scrollSelectionDragLocked(true);
+                    _ = session_content.scrollSelectionDragLocked(self.session, true);
                     result.handled = true;
                 } else if (params.mouse.y > params.y + params.height) {
-                    _ = self.session.scrollSelectionDragLocked(false);
+                    _ = session_content.scrollSelectionDragLocked(self.session, false);
                     result.handled = true;
                 }
             }
@@ -147,13 +149,13 @@ pub fn handlePointerInput(
                         .col = clamped_col,
                     };
                     if (anchor.row != target.row or anchor.col != target.col) {
-                        self.session.selectRangeLocked(anchor, target, false);
+                        session_selection.selectRangeLocked(self.session, anchor, target, false);
                         selection_active = true;
                         result.handled = true;
                     }
                 } else {
                     const row_cells = view_cells[clamped_row * params.cols .. (clamped_row + 1) * params.cols];
-                    if (self.session.selectOrUpdateCellInRowLocked(row_cells, global_row, clamped_col)) {
+                    if (session_selection.selectOrUpdateCellInRowLocked(self.session, row_cells, global_row, clamped_col)) {
                         selection_active = true;
                         result.handled = true;
                     }
@@ -162,17 +164,17 @@ pub fn handlePointerInput(
 
             if (selection_active) {
                 if (params.mouse.y < params.y) {
-                    _ = self.session.scrollSelectionDragLocked(true);
+                    _ = session_content.scrollSelectionDragLocked(self.session, true);
                     result.handled = true;
                 } else if (params.mouse.y > params.y + params.height) {
-                    _ = self.session.scrollSelectionDragLocked(false);
+                    _ = session_content.scrollSelectionDragLocked(self.session, false);
                     result.handled = true;
                 }
             }
         }
 
         if (input_batch.mouseReleased(.left)) {
-            if (selection_active and self.session.finishSelectionIfActiveLocked()) {
+            if (selection_active and session_selection.finishSelectionIfActiveLocked(self.session)) {
                 selection_active = true;
                 result.handled = true;
             }
@@ -192,7 +194,7 @@ pub fn handlePointerInput(
         }
     }
     if (params.in_terminal and wheel_steps.* != 0) {
-        if (self.session.scrollWheelLocked(wheel_steps.*)) {
+        if (session_content.scrollWheelLocked(self.session, wheel_steps.*)) {
             scroll_log.logf(.info, "scroll wheel steps={d}", .{wheel_steps.*});
             result.handled = true;
         }
