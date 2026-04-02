@@ -340,7 +340,7 @@ fn cellWithColors(codepoint: u32, fg: Color, bg: Color, reverse: bool) Cell {
 
 fn drawTextureGlyphCache(ctx: *anyopaque, texture: terminal_font_mod.Texture, src: terminal_font_mod.Rect, dest: terminal_font_mod.Rect, color: terminal_font_mod.Rgba, kind: terminal_font_mod.TextureKind) void {
     const rr: *Renderer = @ptrCast(@alignCast(ctx));
-    rr.terminal_glyph_cache.addQuad(texture, src, dest, color, rr.text_bg_rgba, kind);
+    rr.addTerminalGlyphQuad(texture, src, dest, color, kind);
 }
 
 fn addTerminalGlyphRect(ctx: *anyopaque, x: i32, y: i32, w: i32, h: i32, color: Color) void {
@@ -623,12 +623,11 @@ fn drawAlignedSpecialGlyphSprite(
                 }
             }
         }
-        rr.terminal_glyph_cache.addQuad(
+        rr.addTerminalGlyphQuad(
             rr.terminal_font.coverage_texture,
             sp.rect,
             .{ .x = dest_x, .y = y0, .width = dest_w, .height = snapped_h },
             fg_draw.toRgba(),
-            rr.text_bg_rgba,
             .font_coverage,
         );
         if (stats) |s| {
@@ -902,7 +901,7 @@ pub fn drawRowGlyphs(
             continue;
         }
 
-        const buffer = rr.terminal_shape_buffer;
+        const buffer = rr.terminalShapeBuffer();
         const shape_phase_start = app_shell.getTime();
         hb.hb_buffer_reset(buffer);
         hb.hb_buffer_set_content_type(buffer, hb.HB_BUFFER_CONTENT_TYPE_UNICODE);
@@ -954,20 +953,20 @@ pub fn drawRowGlyphs(
             cc += cwidth_units;
         }
 
-        rr.terminal_shape_first_pen_set.items.len = 0;
-        rr.terminal_shape_first_pen.items.len = 0;
-        rr.terminal_shape_first_pen_set.ensureTotalCapacity(rr.allocator, span_cols) catch {
+        rr.terminal_text.shape_first_pen_set.items.len = 0;
+        rr.terminal_text.shape_first_pen.items.len = 0;
+        rr.terminal_text.shape_first_pen_set.ensureTotalCapacity(rr.allocator, span_cols) catch {
             col = span_end_excl;
             continue;
         };
-        rr.terminal_shape_first_pen.ensureTotalCapacity(rr.allocator, span_cols) catch {
+        rr.terminal_text.shape_first_pen.ensureTotalCapacity(rr.allocator, span_cols) catch {
             col = span_end_excl;
             continue;
         };
-        rr.terminal_shape_first_pen_set.items.len = span_cols;
-        rr.terminal_shape_first_pen.items.len = span_cols;
-        @memset(rr.terminal_shape_first_pen_set.items, false);
-        @memset(rr.terminal_shape_first_pen.items, 0);
+        rr.terminal_text.shape_first_pen_set.items.len = span_cols;
+        rr.terminal_text.shape_first_pen.items.len = span_cols;
+        @memset(rr.terminal_text.shape_first_pen_set.items, false);
+        @memset(rr.terminal_text.shape_first_pen.items, 0);
 
         var length: c_uint = 0;
         const infos = hb.hb_buffer_get_glyph_infos(buffer, &length);
@@ -1037,11 +1036,11 @@ pub fn drawRowGlyphs(
             const cell_w_span = cell_w * @as(f32, @floatFromInt(@as(i32, @intCast(width_units))));
             const cell_h_span = cell_h;
 
-            if (!rr.terminal_shape_first_pen_set.items[cluster_rel]) {
-                rr.terminal_shape_first_pen_set.items[cluster_rel] = true;
-                rr.terminal_shape_first_pen.items[cluster_rel] = pen_before;
+            if (!rr.terminal_text.shape_first_pen_set.items[cluster_rel]) {
+                rr.terminal_text.shape_first_pen_set.items[cluster_rel] = true;
+                rr.terminal_text.shape_first_pen.items[cluster_rel] = pen_before;
             }
-            const pen_rel = pen_before - rr.terminal_shape_first_pen.items[cluster_rel];
+            const pen_rel = pen_before - rr.terminal_text.shape_first_pen.items[cluster_rel];
             if (cell.attrs.blink and blink_style_mode != BlinkStyleT.off) {
                 const period: f64 = if (cell.attrs.blink_fast) 0.5 else 1.0;
                 const phase = @mod(blink_time_s, period * 2.0);

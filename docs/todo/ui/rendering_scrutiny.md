@@ -84,6 +84,9 @@ Progress note, 2026-04-02:
   one more loose root field
 - terminal batch vertices/draw lists now live as one grouped state slab under
   `src/ui/renderer/draw_ops.zig` instead of two loose renderer-root fields
+- terminal glyph-cache and shaping scratch state now live with
+  `src/ui/renderer/text_runtime.zig` instead of staying as ad hoc renderer-root
+  fields
 
 ### RS-02 Init/Deinit Still Mix Too Many Responsibilities
 

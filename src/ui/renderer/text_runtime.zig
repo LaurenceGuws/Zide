@@ -7,12 +7,43 @@ const terminal_glyphs = @import("terminal_glyphs.zig");
 const terminal_underline = @import("terminal_underline.zig");
 const draw_ops = @import("draw_ops.zig");
 const font_runtime = @import("font_runtime.zig");
+const glyph_cache = @import("../glyph_cache.zig");
 const app_logger = @import("../../app_logger.zig");
 const types = @import("types.zig");
 const renderer_root = @import("../renderer.zig");
 
 const Color = renderer_root.Color;
 const Renderer = renderer_root.Renderer;
+
+pub const TerminalTextState = struct {
+    glyph_cache: glyph_cache.GlyphCache,
+    shape_buffer: *hb.hb_buffer_t,
+    shape_first_pen: std.ArrayListUnmanaged(f32) = .{},
+    shape_first_pen_set: std.ArrayListUnmanaged(bool) = .{},
+};
+
+pub fn initTerminalTextState(allocator: std.mem.Allocator) !TerminalTextState {
+    const shape_buffer = hb.hb_buffer_create() orelse return error.OutOfMemory;
+    return .{
+        .glyph_cache = glyph_cache.GlyphCache.init(allocator),
+        .shape_buffer = shape_buffer,
+    };
+}
+
+pub fn deinitTerminalTextState(self: *Renderer) void {
+    self.terminal_text.glyph_cache.deinit();
+    hb.hb_buffer_destroy(self.terminal_text.shape_buffer);
+    self.terminal_text.shape_first_pen.deinit(self.allocator);
+    self.terminal_text.shape_first_pen_set.deinit(self.allocator);
+}
+
+pub fn beginTerminalGlyphBatch(self: *Renderer) void {
+    self.terminal_text.glyph_cache.begin();
+}
+
+pub fn flushTerminalGlyphBatch(self: *Renderer) void {
+    self.terminal_text.glyph_cache.flush(self);
+}
 
 fn snapInt(value: f32) i32 {
     return @intFromFloat(std.math.round(value));
@@ -347,20 +378,20 @@ fn drawTextWithFontMonospaceShaped(self: *Renderer, font: *TerminalFont, metrics
             continue;
         }
         const span_len = span_end - span_start;
-        self.terminal_shape_first_pen_set.items.len = 0;
-        self.terminal_shape_first_pen.items.len = 0;
-        self.terminal_shape_first_pen_set.ensureTotalCapacity(self.allocator, span_len) catch |err| {
+        self.terminal_text.shape_first_pen_set.items.len = 0;
+        self.terminal_text.shape_first_pen.items.len = 0;
+        self.terminal_text.shape_first_pen_set.ensureTotalCapacity(self.allocator, span_len) catch |err| {
             log.logf(.warning, "shaped text first-pen-set capacity failed span_len={d} err={s}", .{ span_len, @errorName(err) });
             return false;
         };
-        self.terminal_shape_first_pen.ensureTotalCapacity(self.allocator, span_len) catch |err| {
+        self.terminal_text.shape_first_pen.ensureTotalCapacity(self.allocator, span_len) catch |err| {
             log.logf(.warning, "shaped text first-pen capacity failed span_len={d} err={s}", .{ span_len, @errorName(err) });
             return false;
         };
-        self.terminal_shape_first_pen_set.items.len = span_len;
-        self.terminal_shape_first_pen.items.len = span_len;
-        @memset(self.terminal_shape_first_pen_set.items, false);
-        @memset(self.terminal_shape_first_pen.items, 0);
+        self.terminal_text.shape_first_pen_set.items.len = span_len;
+        self.terminal_text.shape_first_pen.items.len = span_len;
+        @memset(self.terminal_text.shape_first_pen_set.items, false);
+        @memset(self.terminal_text.shape_first_pen.items, 0);
         const glyph_len: usize = @intCast(length);
         const render_scale = if (font.render_scale > 0.0) font.render_scale else 1.0;
         const inv_scale = 1.0 / render_scale;
@@ -372,11 +403,11 @@ fn drawTextWithFontMonospaceShaped(self: *Renderer, font: *TerminalFont, metrics
             pen_x += (@as(f32, @floatFromInt(positions[gi].x_advance)) / 64.0) * inv_scale;
             if (cluster_u32 >= span_len) continue;
             const cluster: usize = @intCast(cluster_u32);
-            if (!self.terminal_shape_first_pen_set.items[cluster]) {
-                self.terminal_shape_first_pen_set.items[cluster] = true;
-                self.terminal_shape_first_pen.items[cluster] = pen_before;
+            if (!self.terminal_text.shape_first_pen_set.items[cluster]) {
+                self.terminal_text.shape_first_pen_set.items[cluster] = true;
+                self.terminal_text.shape_first_pen.items[cluster] = pen_before;
             }
-            const pen_rel = pen_before - self.terminal_shape_first_pen.items[cluster];
+            const pen_rel = pen_before - self.terminal_text.shape_first_pen.items[cluster];
             const glyph = font.getGlyphById(start_choice.face, infos[gi].codepoint, start_choice.want_color, italic, positions[gi].x_advance) catch continue;
             const cell_x = x + @as(f32, @floatFromInt(span_start + cluster)) * metrics.cell_width;
             const baseline = y + metrics.baseline_from_top;
@@ -435,7 +466,7 @@ fn drawRectThunk(ctx: *anyopaque, x: i32, y: i32, w: i32, h: i32, color: Color) 
 
 fn drawTextureGlyphCacheThunk(ctx: *anyopaque, texture: types.Texture, src: types.Rect, dest: types.Rect, color: types.Rgba, kind: types.TextureKind) void {
     const renderer: *Renderer = @ptrCast(@alignCast(ctx));
-    renderer.terminal_glyph_cache.addQuad(texture, src, dest, color, renderer.text_bg_rgba, kind);
+    renderer.terminal_text.glyph_cache.addQuad(texture, src, dest, color, renderer.text_bg_rgba, kind);
 }
 
 fn addTerminalGlyphRectThunk(ctx: *anyopaque, x: i32, y: i32, w: i32, h: i32, color: Color) void {

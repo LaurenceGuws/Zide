@@ -33,7 +33,6 @@ const app_lifecycle_runtime = @import("../app/lifecycle_runtime.zig");
 const windows_snap_layout_sink = @import("../platform/windows_snap_layout_sink.zig");
 const windows_frame_material = @import("../platform/windows_frame_material.zig");
 const windows_integrated_frame = @import("../platform/windows_integrated_frame.zig");
-const glyph_cache = @import("glyph_cache.zig");
 const platform_window = @import("../platform/window_metrics.zig");
 const platform_input_events = @import("../platform/input_events.zig");
 const platform_mouse = @import("../platform/mouse_state.zig");
@@ -80,6 +79,7 @@ pub const WindowChromeState = window_chrome_runtime.WindowChromeState;
 pub const ScaleState = font_runtime.ScaleState;
 pub const FontConfigState = font_manager.FontConfigState;
 pub const ClipboardState = clipboard.ClipboardState;
+pub const TerminalTextState = text_runtime.TerminalTextState;
 pub const TerminalDisableLigaturesStrategy = enum {
     never,
     cursor,
@@ -392,12 +392,7 @@ pub const Renderer = struct {
     input: InputRuntimeState,
     clipboard: ClipboardState,
     batch: BatchState,
-    terminal_glyph_cache: glyph_cache.GlyphCache,
-
-    // Terminal run-based shaping scratch buffers.
-    terminal_shape_buffer: *hb.hb_buffer_t,
-    terminal_shape_first_pen: std.ArrayListUnmanaged(f32),
-    terminal_shape_first_pen_set: std.ArrayListUnmanaged(bool),
+    terminal_text: TerminalTextState,
     should_close_flag: bool,
 
     start_counter: u64,
@@ -443,7 +438,14 @@ pub const Renderer = struct {
         const font_size = base_font_size * scale.ui_scale;
         const editor_font_size = editor_base_font_size * scale.ui_scale;
         const terminal_font_size = terminal_base_font_size * scale.ui_scale;
-        const terminal_shape_buffer = hb.hb_buffer_create() orelse return error.OutOfMemory;
+        const terminal_text = try text_runtime.initTerminalTextState(allocator);
+        errdefer {
+            var terminal_text_cleanup = terminal_text;
+            terminal_text_cleanup.glyph_cache.deinit();
+            hb.hb_buffer_destroy(terminal_text_cleanup.shape_buffer);
+            terminal_text_cleanup.shape_first_pen.deinit(allocator);
+            terminal_text_cleanup.shape_first_pen_set.deinit(allocator);
+        }
         const font_config = try font_manager.initFontConfigState(allocator, init_options);
         errdefer {
             var font_config_cleanup = font_config;
@@ -554,10 +556,7 @@ pub const Renderer = struct {
             .input = .{},
             .clipboard = .{},
             .batch = .{},
-            .terminal_glyph_cache = glyph_cache.GlyphCache.init(allocator),
-            .terminal_shape_buffer = terminal_shape_buffer,
-            .terminal_shape_first_pen = .{},
-            .terminal_shape_first_pen_set = .{},
+            .terminal_text = terminal_text,
             .should_close_flag = false,
             .start_counter = sdl_api.getPerformanceCounter(),
             .perf_freq = @as(f64, @floatFromInt(sdl_api.getPerformanceFrequency())),
@@ -594,11 +593,7 @@ pub const Renderer = struct {
         input_state.deinit(self.inputDomain());
         clipboard.deinit(&self.clipboard, self.allocator);
         draw_ops.deinit(&self.batch, self.allocator);
-        self.terminal_glyph_cache.deinit();
-        hb.hb_buffer_destroy(self.terminal_shape_buffer);
-
-        self.terminal_shape_first_pen.deinit(self.allocator);
-        self.terminal_shape_first_pen_set.deinit(self.allocator);
+        text_runtime.deinitTerminalTextState(self);
 
         if (self.white_texture.id != 0) {
             gl.DeleteTextures(1, &self.white_texture.id);
@@ -1278,11 +1273,11 @@ pub const Renderer = struct {
     }
 
     pub fn beginTerminalGlyphBatch(self: *Renderer) void {
-        self.terminal_glyph_cache.begin();
+        text_runtime.beginTerminalGlyphBatch(self);
     }
 
     pub fn flushTerminalGlyphBatch(self: *Renderer) void {
-        self.terminal_glyph_cache.flush(self);
+        text_runtime.flushTerminalGlyphBatch(self);
     }
 
     fn drawTextureRect(self: *Renderer, texture: types.Texture, src: types.Rect, dest: types.Rect, color: types.Rgba) void {
@@ -1339,7 +1334,15 @@ pub const Renderer = struct {
     }
 
     pub fn addTerminalGlyphRect(self: *Renderer, x: i32, y: i32, w: i32, h: i32, color: Color) void {
-        self.terminal_glyph_cache.addRect(self.white_texture, x, y, w, h, color.toRgba());
+        self.terminal_text.glyph_cache.addRect(self.white_texture, x, y, w, h, color.toRgba());
+    }
+
+    pub fn addTerminalGlyphQuad(self: *Renderer, texture: types.Texture, src: types.Rect, dest: types.Rect, color: types.Rgba, kind: types.TextureKind) void {
+        self.terminal_text.glyph_cache.addQuad(texture, src, dest, color, self.text_bg_rgba, kind);
+    }
+
+    pub fn terminalShapeBuffer(self: *Renderer) *hb.hb_buffer_t {
+        return self.terminal_text.shape_buffer;
     }
 
     fn drawTextureBatchThunk(ctx: *anyopaque, texture: types.Texture, src: types.Rect, dest: types.Rect, color: types.Rgba, kind: types.TextureKind) void {
@@ -1349,7 +1352,7 @@ pub const Renderer = struct {
 
     fn drawTextureGlyphCacheThunk(ctx: *anyopaque, texture: types.Texture, src: types.Rect, dest: types.Rect, color: types.Rgba, kind: types.TextureKind) void {
         const renderer: *Renderer = @ptrCast(@alignCast(ctx));
-        renderer.terminal_glyph_cache.addQuad(texture, src, dest, color, renderer.text_bg_rgba, kind);
+        renderer.addTerminalGlyphQuad(texture, src, dest, color, kind);
     }
 
     fn addTerminalGlyphRectThunk(ctx: *anyopaque, x: i32, y: i32, w: i32, h: i32, color: Color) void {

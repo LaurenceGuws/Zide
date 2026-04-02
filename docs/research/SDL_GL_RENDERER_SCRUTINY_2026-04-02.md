@@ -179,6 +179,9 @@ Progress note, 2026-04-02:
   leaving clipboard buffering as an ad hoc renderer-root field
 - terminal batch vertex/draw storage now lives as one grouped state slab with
   `src/ui/renderer/draw_ops.zig` instead of two loose renderer-root fields
+- terminal glyph-cache and shaping scratch state now live with
+  `src/ui/renderer/text_runtime.zig` instead of staying as ad hoc
+  renderer-root fields
 - renderer init/deinit now assemble and tear down grouped scale/font-config
   state through owner-level helpers instead of open-coding that grouped-state
   lifecycle inline

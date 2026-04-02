@@ -100,6 +100,8 @@ Status note, 2026-04-02:
   clipboard buffering as an ad hoc renderer-root field
 - terminal batch vertex/draw storage now lives as one grouped state slab with
   the draw owner instead of two loose renderer-root fields
+- terminal glyph-cache and shaping scratch state now live with the text owner
+  instead of staying as ad hoc renderer-root fields
 - constructor/destructor now assemble and tear down grouped scale/font-config
   state through owner-level helpers instead of repeating that grouped-state
   lifecycle inline
