@@ -114,6 +114,11 @@ Focused follow-up lane:
   Why: that choice is now made. War 2 should open on present/render
   correctness discipline and define the exact native terminal present
   acknowledgement invariant before the next code cuts.
+- `docs/review/TERMINAL_WAR_2_PRESENT_INVARIANT_IMPLEMENTATION_2026-04-02.md`
+  Why: the first War 2 implementation contract is now explicit:
+  terminal presentation may only retire once submitted scene truth proves the
+  authoritative retained terminal surface was actually present for the
+  acknowledged generation.
 
 ## Current Milestone
 
