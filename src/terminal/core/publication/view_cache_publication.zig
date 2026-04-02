@@ -1,12 +1,52 @@
 const std = @import("std");
 const types = @import("../../model/types.zig");
 const screen_mod = @import("../../model/screen.zig");
+const RenderCache = @import("render_cache.zig").RenderCache;
 
 const Cell = types.Cell;
 const PublishedStateMatch = @import("render_cache.zig").RenderCache.PublishedStateMatch;
 const FullDirtyReason = screen_mod.FullDirtyReason;
 pub const RowDirtySpan = screen_mod.RowDirtySpan;
 pub const max_row_dirty_spans = screen_mod.max_row_dirty_spans;
+
+pub const CachePublicationTarget = struct {
+    target_index: u8,
+    active_cache: *RenderCache,
+    target_cache: *RenderCache,
+};
+
+fn activeRenderCacheIndex(self: anytype) u8 {
+    return self.publication.render_cache_index.load(.acquire);
+}
+
+fn inactiveRenderCacheIndex(self: anytype) u8 {
+    return if (activeRenderCacheIndex(self) == 0) 1 else 0;
+}
+
+fn activeRenderCache(self: anytype) *RenderCache {
+    return &self.publication.render_caches[activeRenderCacheIndex(self)];
+}
+
+fn inactiveRenderCache(self: anytype) *RenderCache {
+    return &self.publication.render_caches[inactiveRenderCacheIndex(self)];
+}
+
+fn publishRenderCacheIndex(self: anytype, index: u8) void {
+    self.publication.render_cache_index.store(index, .release);
+}
+
+pub fn beginCachePublication(self: anytype) CachePublicationTarget {
+    const target_index = inactiveRenderCacheIndex(self);
+    return .{
+        .target_index = target_index,
+        .active_cache = activeRenderCache(self),
+        .target_cache = inactiveRenderCache(self),
+    };
+}
+
+pub fn finishCachePublication(self: anytype, target: CachePublicationTarget) void {
+    publishRenderCacheIndex(self, target.target_index);
+}
 
 pub fn pickForcedFullDirtyReason(
     rows: usize,

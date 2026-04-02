@@ -47,7 +47,6 @@ That does not mean publication is wrong to exist.
 It means publication is still carrying too many different classes of
 responsibility at once:
 
-- render-cache publication/storage choreography
 - host-facing snapshot/export shapes
 - frame-facing status summaries
 - view-refresh queueing
@@ -63,8 +62,6 @@ That is broader than the cleanest engine export boundary should read.
 
 Examples in one file:
 
-- `beginCachePublication(...)`
-- `finishCachePublication(...)`
 - `renderCache(...)`
 - `renderCacheForGenerationLocked(...)`
 - `capturePresentation(...)`
@@ -76,9 +73,9 @@ Those are not one cohesive level of abstraction.
 
 They span:
 
-- low-level cache slot mechanics
 - host snapshot/export contract
 - native present retirement policy
+- cache-facing state access
 
 ### 2. Publication still owns both export shape and convenience summaries
 
@@ -149,6 +146,12 @@ Status update:
 - that slab now lives in
   [terminal_widget_view_state.zig](/home/home/personal/zide/src/ui/widgets/terminal_widget_view_state.zig)
 - publication no longer directly reads like a widget draw inspection toolkit
+- the second larger cut has now landed
+- low-level cache slot choreography no longer lives in publication
+- that slab now lives in
+  [view_cache_publication.zig](/home/home/personal/zide/src/terminal/core/publication/view_cache_publication.zig)
+- publication no longer directly reads like internal render-cache slot
+  mechanics
 
 ## Best Next Review Question
 
@@ -158,7 +161,6 @@ that boundary, and what should move below it or beside it?
 More concretely:
 
 - which parts of `terminal_publication.zig` are true engine export contract
-- which parts are cache-storage mechanics
 - which parts are native draw inspection helpers
 - which parts are present-retirement policy that deserve a narrower owner
 
@@ -166,7 +168,6 @@ More concretely:
 
 1. [terminal_publication.zig](/home/home/personal/zide/src/terminal/core/publication/terminal_publication.zig)
    around:
-   - cache publication helpers
    - capture/preparation
    - frame state / generation summaries
    - present completion

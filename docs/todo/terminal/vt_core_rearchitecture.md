@@ -146,9 +146,12 @@ Focused follow-up lane:
   - the first larger cut landed: widget-facing cache inspection and draw/view
     helpers now live in `src/ui/widgets/terminal_widget_view_state.zig`
     instead of inflating publication
-  - the next cut should target another whole publication-boundary slab, not
-    another tiny helper cleanup
-  acknowledged generation.
+  - the second larger cut landed too: low-level cache slot choreography now
+    lives in `src/terminal/core/publication/view_cache_publication.zig`
+    instead of inflating publication
+  - the next cut should target another whole publication-boundary slab, likely
+    capture/export shape or present-retirement shape, not another tiny helper
+    cleanup
 
 ## Current Milestone
 
