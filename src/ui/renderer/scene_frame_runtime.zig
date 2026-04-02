@@ -53,7 +53,7 @@ pub fn beginFrame(self: anytype) void {
     refreshSceneTargetContract(self);
     prepareSceneTarget(self, gl.c.GL_NEAREST);
 
-    self.text_bg_rgba = .{ .r = 0, .g = 0, .b = 0, .a = 0 };
+    self.text_render.bg_rgba = .{ .r = 0, .g = 0, .b = 0, .a = 0 };
 
     self.present.scene_frame_active = beginSceneFrame(self);
     if (!self.present.scene_frame_active) self.bindDefaultTarget();

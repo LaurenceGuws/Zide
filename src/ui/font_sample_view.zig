@@ -225,10 +225,10 @@ pub const FontSampleView = struct {
 
         var bg_rgba = bg.toRgba();
         bg_rgba.a = 255;
-        r.text_bg_rgba = bg_rgba;
+        r.text_render.bg_rgba = bg_rgba;
         drawColumnWithColor(self, r, left_x, content_y, col_w, self.left_name, &self.left, fg);
         drawColumnWithColor(self, r, right_x, content_y, col_w, self.right_name, &self.right, fg);
-        r.text_bg_rgba = .{ .r = 0, .g = 0, .b = 0, .a = 0 };
+        r.text_render.bg_rgba = .{ .r = 0, .g = 0, .b = 0, .a = 0 };
 
         return y + section_h;
     }
@@ -312,7 +312,7 @@ pub const FontSampleView = struct {
 
     fn drawTextureThunk(ctx: *anyopaque, texture: types.Texture, src: types.Rect, dest: types.Rect, color: types.Rgba, kind: types.TextureKind) void {
         const renderer: *Renderer = @ptrCast(@alignCast(ctx));
-        draw_ops.drawTextureRect(renderer, texture, src, dest, color, renderer.text_bg_rgba, kind);
+        draw_ops.drawTextureRect(renderer, texture, src, dest, color, renderer.text_render.bg_rgba, kind);
     }
 
     fn parseEnvF32(env_key: [:0]const u8, default_value: f32) f32 {

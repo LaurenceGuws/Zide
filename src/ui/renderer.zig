@@ -329,6 +329,14 @@ pub const Renderer = struct {
         recent_input_full_publication: TerminalRecentInputPolicy = .{},
     };
 
+    const TextRenderState = struct {
+        gamma: f32 = 1.0,
+        contrast: f32 = 1.0,
+        linear_correction: bool = true,
+        dst_linear_active: bool = false,
+        bg_rgba: types.Rgba = .{ .r = 0, .g = 0, .b = 0, .a = 0 },
+    };
+
     pub const WindowChromeMode = window_chrome_runtime.WindowChromeMode;
     pub const WindowChromeContract = window_chrome_runtime.WindowChromeContract;
 
@@ -355,18 +363,11 @@ pub const Renderer = struct {
     uniform_text_contrast: gl.GLint,
     uniform_dst_linear: gl.GLint,
     uniform_linear_correction: gl.GLint,
-    dst_linear_active: bool,
     white_texture: types.Texture,
 
-    text_gamma: f32,
-    text_contrast: f32,
-    text_linear_correction: bool,
+    text_render: TextRenderState,
     selection_overlay: SelectionOverlayState,
     terminal_render_policy: TerminalRenderPolicy,
-
-    // Text background behind glyphs (used for optional linear correction).
-    // Default is alpha=0, which disables correction in the shader.
-    text_bg_rgba: types.Rgba,
 
     font_size: f32,
     base_font_size: f32,
@@ -490,14 +491,14 @@ pub const Renderer = struct {
             .uniform_text_contrast = -1,
             .uniform_dst_linear = -1,
             .uniform_linear_correction = -1,
-            .dst_linear_active = false,
             .white_texture = .{ .id = 0, .width = 0, .height = 0 },
-            .text_gamma = init_options.text_gamma,
-            .text_contrast = init_options.text_contrast,
-            .text_linear_correction = init_options.text_linear_correction,
+            .text_render = .{
+                .gamma = init_options.text_gamma,
+                .contrast = init_options.text_contrast,
+                .linear_correction = init_options.text_linear_correction,
+            },
             .selection_overlay = .{},
             .terminal_render_policy = .{},
-            .text_bg_rgba = .{ .r = 0, .g = 0, .b = 0, .a = 0 },
             .font_size = font_size,
             .base_font_size = base_font_size,
             .char_width = font_size * 0.6,
@@ -796,7 +797,7 @@ pub const Renderer = struct {
         var gg = @as(f32, @floatFromInt(bg.g)) / 255.0;
         var bb = @as(f32, @floatFromInt(bg.b)) / 255.0;
         const aa = @as(f32, @floatFromInt(bg.a)) / 255.0;
-        if (self.dst_linear_active) {
+        if (self.text_render.dst_linear_active) {
             rr = srgbToLinear(rr);
             gg = srgbToLinear(gg);
             bb = srgbToLinear(bb);
@@ -1235,13 +1236,13 @@ pub const Renderer = struct {
     }
 
     pub fn bindDefaultTarget(self: *Renderer) void {
-        self.dst_linear_active = false;
+        self.text_render.dst_linear_active = false;
         gl_backend.bindDefaultTarget(self);
     }
 
     pub fn beginRenderTarget(self: *Renderer, target: ?RenderTarget) bool {
         const ok = gl_backend.beginRenderTarget(self, target);
-        if (ok) self.dst_linear_active = true;
+        if (ok) self.text_render.dst_linear_active = true;
         return ok;
     }
 
@@ -1282,7 +1283,7 @@ pub const Renderer = struct {
 
     fn drawTextureRectThunk(ctx: *anyopaque, texture: types.Texture, src: types.Rect, dest: types.Rect, color: types.Rgba, kind: types.TextureKind) void {
         const self: *Renderer = @ptrCast(@alignCast(ctx));
-        draw_ops.drawTextureRect(self, texture, src, dest, color, self.text_bg_rgba, kind);
+        draw_ops.drawTextureRect(self, texture, src, dest, color, self.text_render.bg_rgba, kind);
     }
 
     fn drawRectThunk(ctx: *anyopaque, x: i32, y: i32, w: i32, h: i32, color: Color) void {
@@ -1334,7 +1335,7 @@ pub const Renderer = struct {
     }
 
     pub fn addTerminalGlyphQuad(self: *Renderer, texture: types.Texture, src: types.Rect, dest: types.Rect, color: types.Rgba, kind: types.TextureKind) void {
-        self.terminal_text.glyph_cache.addQuad(texture, src, dest, color, self.text_bg_rgba, kind);
+        self.terminal_text.glyph_cache.addQuad(texture, src, dest, color, self.text_render.bg_rgba, kind);
     }
 
     pub fn terminalShapeBuffer(self: *Renderer) *hb.hb_buffer_t {
@@ -1343,7 +1344,7 @@ pub const Renderer = struct {
 
     fn drawTextureBatchThunk(ctx: *anyopaque, texture: types.Texture, src: types.Rect, dest: types.Rect, color: types.Rgba, kind: types.TextureKind) void {
         const renderer: *Renderer = @ptrCast(@alignCast(ctx));
-        draw_ops.addBatchQuad(renderer, texture, src, dest, color, renderer.text_bg_rgba, kind);
+        draw_ops.addBatchQuad(renderer, texture, src, dest, color, renderer.text_render.bg_rgba, kind);
     }
 
     fn drawTextureGlyphCacheThunk(ctx: *anyopaque, texture: types.Texture, src: types.Rect, dest: types.Rect, color: types.Rgba, kind: types.TextureKind) void {
@@ -1358,7 +1359,7 @@ pub const Renderer = struct {
 
     fn drawTextureThunk(ctx: *anyopaque, texture: types.Texture, src: types.Rect, dest: types.Rect, color: types.Rgba, kind: types.TextureKind) void {
         const renderer: *Renderer = @ptrCast(@alignCast(ctx));
-        draw_ops.drawTextureRect(renderer, texture, src, dest, color, renderer.text_bg_rgba, kind);
+        draw_ops.drawTextureRect(renderer, texture, src, dest, color, renderer.text_render.bg_rgba, kind);
     }
 
     pub fn createTextureFromRgba(_: *Renderer, width: i32, height: i32, data: []const u8, filter: i32) ?types.Texture {

@@ -49,20 +49,20 @@ pub fn setFontRenderingOptions(self: anytype, opts: RenderingOptions) void {
 
 pub fn setTextRenderingConfig(self: anytype, gamma: ?f32, contrast: ?f32, linear_correction: ?bool) void {
     if (gamma) |v| {
-        if (v > 0) self.text_gamma = v;
+        if (v > 0) self.text_render.gamma = v;
     }
     if (contrast) |v| {
-        if (v > 0) self.text_contrast = v;
+        if (v > 0) self.text_render.contrast = v;
     }
     if (linear_correction) |v| {
-        self.text_linear_correction = v;
+        self.text_render.linear_correction = v;
     }
 
     if (self.shader_program != 0) {
         gl.UseProgram(self.shader_program);
-        if (self.uniform_text_gamma >= 0) gl.Uniform1f(self.uniform_text_gamma, self.text_gamma);
-        if (self.uniform_text_contrast >= 0) gl.Uniform1f(self.uniform_text_contrast, self.text_contrast);
-        if (self.uniform_linear_correction >= 0) gl.Uniform1i(self.uniform_linear_correction, if (self.text_linear_correction) 1 else 0);
+        if (self.uniform_text_gamma >= 0) gl.Uniform1f(self.uniform_text_gamma, self.text_render.gamma);
+        if (self.uniform_text_contrast >= 0) gl.Uniform1f(self.uniform_text_contrast, self.text_render.contrast);
+        if (self.uniform_linear_correction >= 0) gl.Uniform1i(self.uniform_linear_correction, if (self.text_render.linear_correction) 1 else 0);
     }
 }
 

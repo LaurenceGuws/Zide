@@ -101,6 +101,9 @@ Progress note, 2026-04-02:
   fields
 - close-request state now lives with `InputRuntimeState` instead of as a loose
   renderer-root flag
+- text gamma/contrast, linear-correction, destination-linear state, and text
+  background color now live as one grouped text render slab instead of loose
+  renderer-root render-pass fields
 
 ### RS-02 Init/Deinit Still Mix Too Many Responsibilities
 

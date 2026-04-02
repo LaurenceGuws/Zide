@@ -795,7 +795,7 @@ pub fn drawRowGlyphs(
                 if (cell.codepoint == 0 or cell.codepoint == ' ') continue;
                 var behind_rgba = bg_draw.toRgba();
                 behind_rgba.a = 255;
-                rr.text_bg_rgba = behind_rgba;
+                rr.text_render.bg_rgba = behind_rgba;
 
                 const direct_choice_start = app_shell.getTime();
                 const choice = if (rr.terminal_font.directFastGlyphForCodepoint(cell.codepoint)) |fast|
@@ -865,7 +865,7 @@ pub fn drawRowGlyphs(
                 const bg_draw = if (cell_reverse) fg else bg;
                 var behind_rgba = bg_draw.toRgba();
                 behind_rgba.a = 255;
-                rr.text_bg_rgba = behind_rgba;
+                rr.text_render.bg_rgba = behind_rgba;
                 const box_x = base_x_local + @as(f32, @floatFromInt(@as(i32, @intCast(special_col)))) * cell_w;
                 const box_y = base_y_local + @as(f32, @floatFromInt(@as(i32, @intCast(row_idx)))) * cell_h;
                 const box_w = cell_w * @as(f32, @floatFromInt(@as(i32, @intCast(width_units))));
@@ -1061,7 +1061,7 @@ pub fn drawRowGlyphs(
             const bg_draw = if (cell_reverse) fg else bg;
             var behind_rgba = bg_draw.toRgba();
             behind_rgba.a = 255;
-            rr.text_bg_rgba = behind_rgba;
+            rr.text_render.bg_rgba = behind_rgba;
 
             if (cell.codepoint == 0 or cell.codepoint == kitty_unicode_placeholder) continue;
             if (cell.codepoint == ' ' and cell.combining_len == 0) {

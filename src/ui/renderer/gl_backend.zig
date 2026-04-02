@@ -131,11 +131,11 @@ pub fn initGlResources(renderer: anytype) !void {
     if (renderer.uniform_tex >= 0) gl.Uniform1i(renderer.uniform_tex, 0);
     if (renderer.uniform_kind >= 0) gl.Uniform1i(renderer.uniform_kind, 0);
     if (renderer.uniform_dst_linear >= 0) gl.Uniform1i(renderer.uniform_dst_linear, 0);
-    if (renderer.uniform_linear_correction >= 0) gl.Uniform1i(renderer.uniform_linear_correction, if (renderer.text_linear_correction) 1 else 0);
+    if (renderer.uniform_linear_correction >= 0) gl.Uniform1i(renderer.uniform_linear_correction, if (renderer.text_render.linear_correction) 1 else 0);
 
     // Coverage tuning (applies only to font coverage atlas).
-    if (renderer.uniform_text_gamma >= 0) gl.Uniform1f(renderer.uniform_text_gamma, clampPositive(renderer.text_gamma, 1.0));
-    if (renderer.uniform_text_contrast >= 0) gl.Uniform1f(renderer.uniform_text_contrast, clampPositive(renderer.text_contrast, 1.0));
+    if (renderer.uniform_text_gamma >= 0) gl.Uniform1f(renderer.uniform_text_gamma, clampPositive(renderer.text_render.gamma, 1.0));
+    if (renderer.uniform_text_contrast >= 0) gl.Uniform1f(renderer.uniform_text_contrast, clampPositive(renderer.text_render.contrast, 1.0));
 
     gl.GenVertexArrays(1, &renderer.vao);
     gl.GenBuffers(1, &renderer.vbo);

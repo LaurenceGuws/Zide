@@ -99,9 +99,9 @@ fn snapTextOrigin(self: *Renderer, x: f32, y: f32) TextOrigin {
 }
 
 pub fn drawText(self: *Renderer, text: []const u8, x: f32, y: f32, color: Color) void {
-    const prev = self.text_bg_rgba;
-    defer self.text_bg_rgba = prev;
-    self.text_bg_rgba = .{ .r = 0, .g = 0, .b = 0, .a = 0 };
+    const prev = self.text_render.bg_rgba;
+    defer self.text_render.bg_rgba = prev;
+    self.text_render.bg_rgba = .{ .r = 0, .g = 0, .b = 0, .a = 0 };
     drawTextWithFont(self, &self.app_font, self.app_metrics, text, x, y, color, false);
 }
 
@@ -110,9 +110,9 @@ pub fn drawTextMonospace(self: *Renderer, text: []const u8, x: f32, y: f32, colo
 }
 
 pub fn drawTextMonospacePolicy(self: *Renderer, text: []const u8, x: f32, y: f32, color: Color, disable_programming_ligatures: bool) void {
-    const prev = self.text_bg_rgba;
-    defer self.text_bg_rgba = prev;
-    self.text_bg_rgba = .{ .r = 0, .g = 0, .b = 0, .a = 0 };
+    const prev = self.text_render.bg_rgba;
+    defer self.text_render.bg_rgba = prev;
+    self.text_render.bg_rgba = .{ .r = 0, .g = 0, .b = 0, .a = 0 };
     drawTextWithFontMonospace(self, &self.editor_font, self.editor_metrics, text, x, y, color, disable_programming_ligatures, false);
 }
 
@@ -121,43 +121,43 @@ pub fn drawTextMonospaceOnBg(self: *Renderer, text: []const u8, x: f32, y: f32, 
 }
 
 pub fn drawTextMonospaceOnBgPolicy(self: *Renderer, text: []const u8, x: f32, y: f32, color: Color, bg: Color, disable_programming_ligatures: bool) void {
-    const prev = self.text_bg_rgba;
-    defer self.text_bg_rgba = prev;
+    const prev = self.text_render.bg_rgba;
+    defer self.text_render.bg_rgba = prev;
     var bg_rgba = bg.toRgba();
     bg_rgba.a = 255;
-    self.text_bg_rgba = bg_rgba;
+    self.text_render.bg_rgba = bg_rgba;
     drawTextWithFontMonospace(self, &self.editor_font, self.editor_metrics, text, x, y, color, disable_programming_ligatures, false);
 }
 
 pub fn drawTextMonospaceStyledPolicy(self: *Renderer, text: []const u8, x: f32, y: f32, color: Color, disable_programming_ligatures: bool, italic: bool) void {
-    const prev = self.text_bg_rgba;
-    defer self.text_bg_rgba = prev;
-    self.text_bg_rgba = .{ .r = 0, .g = 0, .b = 0, .a = 0 };
+    const prev = self.text_render.bg_rgba;
+    defer self.text_render.bg_rgba = prev;
+    self.text_render.bg_rgba = .{ .r = 0, .g = 0, .b = 0, .a = 0 };
     drawTextWithFontMonospace(self, &self.editor_font, self.editor_metrics, text, x, y, color, disable_programming_ligatures, italic);
 }
 
 pub fn drawTextMonospaceOnBgStyledPolicy(self: *Renderer, text: []const u8, x: f32, y: f32, color: Color, bg: Color, disable_programming_ligatures: bool, italic: bool) void {
-    const prev = self.text_bg_rgba;
-    defer self.text_bg_rgba = prev;
+    const prev = self.text_render.bg_rgba;
+    defer self.text_render.bg_rgba = prev;
     var bg_rgba = bg.toRgba();
     bg_rgba.a = 255;
-    self.text_bg_rgba = bg_rgba;
+    self.text_render.bg_rgba = bg_rgba;
     drawTextWithFontMonospace(self, &self.editor_font, self.editor_metrics, text, x, y, color, disable_programming_ligatures, italic);
 }
 
 pub fn drawTextOnBg(self: *Renderer, text: []const u8, x: f32, y: f32, color: Color, bg: Color) void {
-    const prev = self.text_bg_rgba;
-    defer self.text_bg_rgba = prev;
+    const prev = self.text_render.bg_rgba;
+    defer self.text_render.bg_rgba = prev;
     var bg_rgba = bg.toRgba();
     bg_rgba.a = 255;
-    self.text_bg_rgba = bg_rgba;
+    self.text_render.bg_rgba = bg_rgba;
     drawTextWithFont(self, &self.app_font, self.app_metrics, text, x, y, color, false);
 }
 
 pub fn drawTextSized(self: *Renderer, text: []const u8, x: f32, y: f32, size: f32, color: Color) void {
-    const prev = self.text_bg_rgba;
-    defer self.text_bg_rgba = prev;
-    self.text_bg_rgba = .{ .r = 0, .g = 0, .b = 0, .a = 0 };
+    const prev = self.text_render.bg_rgba;
+    defer self.text_render.bg_rgba = prev;
+    self.text_render.bg_rgba = .{ .r = 0, .g = 0, .b = 0, .a = 0 };
     const font = font_runtime.fontForSize(self, size) orelse {
         drawText(self, text, x, y, color);
         return;
@@ -174,9 +174,9 @@ pub fn drawTextSized(self: *Renderer, text: []const u8, x: f32, y: f32, size: f3
 }
 
 pub fn drawIconText(self: *Renderer, text: []const u8, x: f32, y: f32, color: Color) void {
-    const prev = self.text_bg_rgba;
-    defer self.text_bg_rgba = prev;
-    self.text_bg_rgba = .{ .r = 0, .g = 0, .b = 0, .a = 0 };
+    const prev = self.text_render.bg_rgba;
+    defer self.text_render.bg_rgba = prev;
+    self.text_render.bg_rgba = .{ .r = 0, .g = 0, .b = 0, .a = 0 };
     drawTextWithFont(self, &self.icon_font, self.icon_metrics, text, x, y, color, false);
 }
 
@@ -208,7 +208,7 @@ pub fn drawTerminalCell(self: *Renderer, codepoint: u32, x: f32, y: f32, cell_wi
         const behind = if (is_cursor) fg else bg;
         var behind_rgba = behind.toRgba();
         behind_rgba.a = 255;
-        self.text_bg_rgba = behind_rgba;
+        self.text_render.bg_rgba = behind_rgba;
         if (!drawTerminalBoxGlyph(self, codepoint, snapped_x, snapped_y, snapped_cell_width, snapped_cell_height, text_color)) {
             self.terminal_font.drawGlyph(draw, codepoint, snapped_x, snapped_y, snapped_cell_width, snapped_cell_height, followed_by_space, text_color.toRgba(), false);
         }
@@ -233,7 +233,7 @@ pub fn drawTerminalCellGrapheme(self: *Renderer, base: u32, combining: []const u
         const behind = if (is_cursor) fg else bg;
         var behind_rgba = behind.toRgba();
         behind_rgba.a = 255;
-        self.text_bg_rgba = behind_rgba;
+        self.text_render.bg_rgba = behind_rgba;
         if (!drawTerminalBoxGlyph(self, base, snapped_x, snapped_y, snapped_cell_width, snapped_cell_height, text_color)) {
             self.terminal_font.drawGrapheme(draw, base, combining, snapped_x, snapped_y, snapped_cell_width, snapped_cell_height, followed_by_space, text_color.toRgba(), false);
         }
@@ -256,7 +256,7 @@ pub fn drawTerminalCellGraphemeBatched(self: *Renderer, base: u32, combining: []
         const behind = if (is_cursor) fg else bg;
         var behind_rgba = behind.toRgba();
         behind_rgba.a = 255;
-        self.text_bg_rgba = behind_rgba;
+        self.text_render.bg_rgba = behind_rgba;
         if (!drawTerminalBoxGlyphBatched(self, base, snapped_x, snapped_y, snapped_cell_width, snapped_cell_height, text_color)) {
             self.terminal_font.drawGrapheme(draw, base, combining, snapped_x, snapped_y, snapped_cell_width, snapped_cell_height, followed_by_space, text_color.toRgba(), false);
         }
@@ -280,7 +280,7 @@ pub fn drawTerminalCellBatched(self: *Renderer, codepoint: u32, x: f32, y: f32, 
             const behind = if (is_cursor) fg else bg;
             var behind_rgba = behind.toRgba();
             behind_rgba.a = 255;
-            self.text_bg_rgba = behind_rgba;
+            self.text_render.bg_rgba = behind_rgba;
             self.terminal_font.drawGlyph(draw, codepoint, snapped_x, snapped_y, snapped_cell_width, snapped_cell_height, followed_by_space, text_color.toRgba(), false);
         }
         if (underline) terminal_underline.drawUnderline(addTerminalGlyphRectThunk, self, snapInt(snapped_x), snapInt(snapped_y), snapped_cell_w_i, snapped_cell_h_i, underline_color);
@@ -452,7 +452,7 @@ fn measureTextWidth(self: *Renderer, font: *TerminalFont, text: []const u8) f32 
 
 fn drawTextureRectThunk(ctx: *anyopaque, texture: types.Texture, src: types.Rect, dest: types.Rect, color: types.Rgba, kind: types.TextureKind) void {
     const self: *Renderer = @ptrCast(@alignCast(ctx));
-    draw_ops.drawTextureRect(self, texture, src, dest, color, self.text_bg_rgba, kind);
+    draw_ops.drawTextureRect(self, texture, src, dest, color, self.text_render.bg_rgba, kind);
 }
 
 fn drawTextureThunk(ctx: *anyopaque, texture: types.Texture, src: types.Rect, dest: types.Rect, color: types.Rgba, kind: types.TextureKind) void {
@@ -466,7 +466,7 @@ fn drawRectThunk(ctx: *anyopaque, x: i32, y: i32, w: i32, h: i32, color: Color) 
 
 fn drawTextureGlyphCacheThunk(ctx: *anyopaque, texture: types.Texture, src: types.Rect, dest: types.Rect, color: types.Rgba, kind: types.TextureKind) void {
     const renderer: *Renderer = @ptrCast(@alignCast(ctx));
-    renderer.terminal_text.glyph_cache.addQuad(texture, src, dest, color, renderer.text_bg_rgba, kind);
+    renderer.terminal_text.glyph_cache.addQuad(texture, src, dest, color, renderer.text_render.bg_rgba, kind);
 }
 
 fn addTerminalGlyphRectThunk(ctx: *anyopaque, x: i32, y: i32, w: i32, h: i32, color: Color) void {

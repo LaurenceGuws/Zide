@@ -134,9 +134,9 @@ pub fn applyRendererReloadConfig(shell: *Shell, config: *const config_mod.Config
     const font_choice_changed = app_changed or editor_changed or terminal_changed;
     const font_rendering_changed = !std.meta.eql(renderer.font_config.font_rendering, init.font_rendering);
     const text_rendering_changed =
-        !std.math.approxEqAbs(f32, renderer.text_gamma, init.text_gamma, 0.0001) or
-        !std.math.approxEqAbs(f32, renderer.text_contrast, init.text_contrast, 0.0001) or
-        renderer.text_linear_correction != init.text_linear_correction;
+        !std.math.approxEqAbs(f32, renderer.text_render.gamma, init.text_gamma, 0.0001) or
+        !std.math.approxEqAbs(f32, renderer.text_render.contrast, init.text_contrast, 0.0001) or
+        renderer.text_render.linear_correction != init.text_linear_correction;
 
     renderer.setFontRenderingOptions(init.font_rendering);
     renderer.setTextRenderingConfig(init.text_gamma, init.text_contrast, init.text_linear_correction);
