@@ -1,6 +1,7 @@
 const std = @import("std");
 
 const terminal_runtime = @import("../../terminal/core/terminal_runtime.zig");
+const session_input = @import("../../terminal/core/session/input.zig");
 const terminal_types = @import("../../terminal/model/types.zig");
 const app_logger = @import("../../app_logger.zig");
 const shared_types = @import("../../types/mod.zig");
@@ -184,7 +185,7 @@ pub fn handlePointerInput(
         }
     }
     if (params.in_terminal and wheel_steps.* != 0) {
-        if (try self.session.reportAlternateScrollWheel(wheel_steps.*, params.mod)) {
+        if (try session_input.reportAlternateScrollWheel(self.session, wheel_steps.*, params.mod)) {
             scroll_log.logf(.info, "alt-scroll wheel steps={d}", .{wheel_steps.*});
             result.handled = true;
             wheel_steps.* = 0;

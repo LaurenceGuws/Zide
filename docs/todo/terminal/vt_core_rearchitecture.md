@@ -510,6 +510,12 @@ Validation note, 2026-03-31:
     route through `src/terminal/core/session/runtime.zig` from app,
     workspace, replay, FFI, and tests instead of pretending to be stable
     host-level runtime contract
+  - input/reporting mechanics are off the runtime surface too:
+    sendText/sendBytes/sendKey/sendChar, mouse/focus/color-scheme reporting,
+    alternate-scroll reporting, and app-cursor/app-keypad queries now route
+    through `src/terminal/core/session/input.zig` from widget, app, protocol,
+    FFI, replay, and tests instead of pretending to be stable runtime
+    contract
   - protocol query helpers are shrinking the same way:
     runtime/focus tests now use `terminal_core_protocol.zig` directly for
     `getCell` / `getCursorPos`, so those no longer sit on the wrapper surface

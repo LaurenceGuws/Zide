@@ -1,6 +1,7 @@
 const std = @import("std");
 const host_queries = @import("../core/session/host_queries.zig");
 const session_config = @import("../core/session/config.zig");
+const session_input = @import("../core/session/input.zig");
 const session_runtime = @import("../core/session/runtime.zig");
 const types = @import("../model/types.zig");
 const shared = @import("shared.zig");
@@ -29,21 +30,21 @@ pub fn resize(handle: ?*shared.ZideTerminalHandle, cols: u16, rows: u16, cell_wi
 pub fn sendBytes(handle: ?*shared.ZideTerminalHandle, bytes: ?[*]const u8, len: usize) shared.Status {
     const h = shared.fromOpaqueActive(handle) orelse return .invalid_argument;
     const slice = shared.ptrLen(bytes, len) orelse return .invalid_argument;
-    h.session.sendBytes(slice) catch |err| return shared.mapError(err);
+    session_input.sendBytes(h.session, slice) catch |err| return shared.mapError(err);
     return .ok;
 }
 
 pub fn sendText(handle: ?*shared.ZideTerminalHandle, bytes: ?[*]const u8, len: usize) shared.Status {
     const h = shared.fromOpaqueActive(handle) orelse return .invalid_argument;
     const slice = shared.ptrLen(bytes, len) orelse return .invalid_argument;
-    h.session.sendText(slice) catch |err| return shared.mapError(err);
+    session_input.sendText(h.session, slice) catch |err| return shared.mapError(err);
     return .ok;
 }
 
 pub fn sendKey(handle: ?*shared.ZideTerminalHandle, event: ?*const shared.KeyEvent) shared.Status {
     const h = shared.fromOpaqueActive(handle) orelse return .invalid_argument;
     const key_event = event orelse return .invalid_argument;
-    h.session.sendKey(key_event.key, key_event.modifiers) catch |err| return shared.mapError(err);
+    session_input.sendKey(h.session, key_event.key, key_event.modifiers) catch |err| return shared.mapError(err);
     return .ok;
 }
 
@@ -74,20 +75,20 @@ pub fn sendMouse(handle: ?*shared.ZideTerminalHandle, event: ?*const shared.Mous
         .mod = mouse_event.modifiers,
         .buttons_down = mouse_event.buttons_down,
     };
-    _ = h.session.reportMouseEvent(mapped) catch |err| return shared.mapError(err);
+    _ = session_input.reportMouseEvent(h.session, mapped) catch |err| return shared.mapError(err);
     return .ok;
 }
 
 pub fn reportFocusChanged(handle: ?*shared.ZideTerminalHandle, focused: u8, out_reported: *u8) shared.Status {
     const h = shared.fromOpaqueActive(handle) orelse return .invalid_argument;
-    const reported = h.session.reportFocusChanged(focused != 0) catch |err| return shared.mapError(err);
+    const reported = session_input.reportFocusChanged(h.session, focused != 0) catch |err| return shared.mapError(err);
     out_reported.* = @intFromBool(reported);
     return .ok;
 }
 
 pub fn reportColorSchemeChanged(handle: ?*shared.ZideTerminalHandle, dark: u8, out_reported: *u8) shared.Status {
     const h = shared.fromOpaqueActive(handle) orelse return .invalid_argument;
-    const reported = h.session.reportColorSchemeChanged(dark != 0) catch |err| return shared.mapError(err);
+    const reported = session_input.reportColorSchemeChanged(h.session, dark != 0) catch |err| return shared.mapError(err);
     out_reported.* = @intFromBool(reported);
     return .ok;
 }

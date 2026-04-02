@@ -1,6 +1,7 @@
 const std = @import("std");
 
 const app_logger = @import("../../app_logger.zig");
+const session_input = @import("../../terminal/core/session/input.zig");
 const session_interaction = @import("../../terminal/core/session/interaction.zig");
 
 pub fn pasteSystemClipboard(
@@ -63,24 +64,24 @@ fn pasteClipboardWithPolicy(
         };
         defer if (source == .system and payload.ptr != clip_text.ptr) widget.session.allocator.free(payload);
 
-        widget.session.sendText("\x1b[200~") catch |err| {
+        session_input.sendText(widget.session, "\x1b[200~") catch |err| {
             log.logf(.warning, "paste failed sending bracketed prefix source={s} err={s}", .{ @tagName(source), @errorName(err) });
             return false;
         };
         if (payload.len > 0) {
-            widget.session.sendText(payload) catch |err| {
+            session_input.sendText(widget.session, payload) catch |err| {
                 log.logf(.warning, "paste failed sending payload source={s} err={s}", .{ @tagName(source), @errorName(err) });
                 return false;
             };
         }
-        widget.session.sendText("\x1b[201~") catch |err| {
+        session_input.sendText(widget.session, "\x1b[201~") catch |err| {
             log.logf(.warning, "paste failed sending bracketed suffix source={s} err={s}", .{ @tagName(source), @errorName(err) });
             return false;
         };
         return true;
     }
 
-    widget.session.sendText(clip_text) catch |err| {
+    session_input.sendText(widget.session, clip_text) catch |err| {
         log.logf(.warning, "paste failed sending clipboard source={s} err={s}", .{ @tagName(source), @errorName(err) });
         return false;
     };

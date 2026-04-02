@@ -3,6 +3,7 @@ const builtin = @import("builtin");
 const terminal_runtime = @import("core/terminal_runtime.zig");
 const terminal_publication = @import("core/terminal_publication.zig");
 const terminal_debug = @import("core/session/debug_ops.zig");
+const session_input = @import("core/session/input.zig");
 const session_runtime = @import("core/session/runtime.zig");
 const screen_mod = @import("model/screen.zig");
 const pty_mod = @import("io/pty.zig");
@@ -907,7 +908,7 @@ fn applyBaselineGridRows(session: *terminal_runtime.PtyTerminalRuntime, rows: []
 
 fn applyMouseActions(session: *terminal_runtime.PtyTerminalRuntime, actions: []const MouseAction) !void {
     for (actions) |action| {
-        _ = try session.reportMouseEvent(.{
+        _ = try session_input.reportMouseEvent(session, .{
             .kind = action.kind,
             .button = action.button,
             .row = action.row,

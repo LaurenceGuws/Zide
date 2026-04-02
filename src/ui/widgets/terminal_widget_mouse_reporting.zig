@@ -1,4 +1,5 @@
 const terminal_runtime = @import("../../terminal/core/terminal_runtime.zig");
+const session_input = @import("../../terminal/core/session/input.zig");
 const terminal_types = @import("../../terminal/model/types.zig");
 const shared_types = @import("../../types/mod.zig");
 
@@ -50,7 +51,7 @@ pub fn handleMouseReporting(
         var remaining = wheel_steps;
         while (remaining != 0) {
             const button: terminal_types.MouseButton = if (remaining > 0) .wheel_up else .wheel_down;
-            if (try self.session.reportMouseEvent(.{
+            if (try session_input.reportMouseEvent(self.session, .{
                 .kind = .wheel,
                 .button = button,
                 .row = row,
@@ -66,7 +67,7 @@ pub fn handleMouseReporting(
         }
     }
     if (input_batch.mousePressed(.left) and !skip_mouse_click) {
-        if (try self.session.reportMouseEvent(.{
+        if (try session_input.reportMouseEvent(self.session, .{
             .kind = .press,
             .button = .left,
             .row = row,
@@ -78,7 +79,7 @@ pub fn handleMouseReporting(
         })) handled = true;
     }
     if (input_batch.mousePressed(.middle)) {
-        if (try self.session.reportMouseEvent(.{
+        if (try session_input.reportMouseEvent(self.session, .{
             .kind = .press,
             .button = .middle,
             .row = row,
@@ -90,7 +91,7 @@ pub fn handleMouseReporting(
         })) handled = true;
     }
     if (input_batch.mousePressed(.right)) {
-        if (try self.session.reportMouseEvent(.{
+        if (try session_input.reportMouseEvent(self.session, .{
             .kind = .press,
             .button = .right,
             .row = row,
@@ -102,7 +103,7 @@ pub fn handleMouseReporting(
         })) handled = true;
     }
     if (input_batch.mouseReleased(.left)) {
-        if (try self.session.reportMouseEvent(.{
+        if (try session_input.reportMouseEvent(self.session, .{
             .kind = .release,
             .button = .left,
             .row = row,
@@ -114,7 +115,7 @@ pub fn handleMouseReporting(
         })) handled = true;
     }
     if (input_batch.mouseReleased(.middle)) {
-        if (try self.session.reportMouseEvent(.{
+        if (try session_input.reportMouseEvent(self.session, .{
             .kind = .release,
             .button = .middle,
             .row = row,
@@ -126,7 +127,7 @@ pub fn handleMouseReporting(
         })) handled = true;
     }
     if (input_batch.mouseReleased(.right)) {
-        if (try self.session.reportMouseEvent(.{
+        if (try session_input.reportMouseEvent(self.session, .{
             .kind = .release,
             .button = .right,
             .row = row,
@@ -137,7 +138,7 @@ pub fn handleMouseReporting(
             .buttons_down = buttons_down,
         })) handled = true;
     }
-    if (try self.session.reportMouseEvent(.{
+    if (try session_input.reportMouseEvent(self.session, .{
         .kind = .move,
         .button = .none,
         .row = row,

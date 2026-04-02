@@ -2,6 +2,7 @@ const std = @import("std");
 const app_theme_utils = @import("../theme_utils.zig");
 const app_shell = @import("../../app_shell.zig");
 const session_config = @import("../../terminal/core/session/config.zig");
+const session_input = @import("../../terminal/core/session/input.zig");
 const term_types = @import("../../terminal/model/types.zig");
 const terminal_runtime = @import("../../terminal/core/terminal_runtime.zig");
 const widgets = @import("../../ui/widgets.zig");
@@ -36,7 +37,7 @@ pub fn notifyColorSchemeChanged(
 ) !void {
     const dark = app_theme_utils.isDarkTheme(theme);
     for (terminal_widgets.items) |*widget| {
-        _ = try widget.session.reportColorSchemeChanged(dark);
+        _ = try session_input.reportColorSchemeChanged(widget.session, dark);
     }
 }
 

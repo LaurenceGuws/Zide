@@ -1,6 +1,7 @@
 const std = @import("std");
 const builtin = @import("builtin");
 const app_logger = @import("../../app_logger.zig");
+const session_input = @import("../../terminal/core/session/input.zig");
 const terminal_runtime = @import("../../terminal/core/terminal_runtime.zig");
 
 const PtyTerminalRuntime = terminal_runtime.PtyTerminalRuntime;
@@ -56,7 +57,7 @@ pub fn openInPager(
             .{abs_path},
         );
         defer allocator.free(cmd);
-        term.sendText(cmd) catch |err| {
+        session_input.sendText(term, cmd) catch |err| {
             log.logf(.warning, "open scrollback pager (windows) send failed: {s}", .{@errorName(err)});
             return false;
         };
@@ -90,7 +91,7 @@ pub fn openInPager(
         .{shell_script_path},
     );
     defer allocator.free(cmd);
-    term.sendText(cmd) catch |err| {
+    session_input.sendText(term, cmd) catch |err| {
         log.logf(.warning, "open scrollback pager send failed: {s}", .{@errorName(err)});
         return false;
     };

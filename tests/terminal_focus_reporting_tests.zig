@@ -4,6 +4,7 @@ const posix = std.posix;
 
 const session_config = @import("../src/terminal/core/session/config.zig");
 const session_interaction = @import("../src/terminal/core/session/interaction.zig");
+const session_input = @import("../src/terminal/core/session/input.zig");
 const terminal_runtime = @import("../src/terminal/core/terminal_runtime.zig");
 const terminal_core_protocol = @import("../src/terminal/core/protocol/terminal_core_protocol.zig");
 const terminal_types = @import("../src/terminal/model/types.zig");
@@ -87,14 +88,14 @@ test "terminal focus reporting writes focus in/out when enabled" {
         fn run(session: *terminal_runtime.PtyTerminalRuntime, capture: *PipeCapture) !void {
             const allocator = std.testing.allocator;
             terminal_debug.debugFeedBytes(session, "\x1b[?1004h");
-            try std.testing.expect(try session.reportFocusChanged(true));
+            try std.testing.expect(try session_input.reportFocusChanged(session, true));
             {
                 const reply = try capture.readReply(allocator);
                 defer allocator.free(reply);
                 try std.testing.expectEqualStrings("\x1b[I", reply);
             }
 
-            try std.testing.expect(try session.reportFocusChanged(false));
+            try std.testing.expect(try session_input.reportFocusChanged(session, false));
             {
                 const reply = try capture.readReply(allocator);
                 defer allocator.free(reply);
@@ -107,12 +108,12 @@ test "terminal focus reporting writes focus in/out when enabled" {
 test "terminal focus reporting suppresses writes when disabled or cleared" {
     try withSessionAndCapture(struct {
         fn run(session: *terminal_runtime.PtyTerminalRuntime, capture: *PipeCapture) !void {
-            try std.testing.expect(!(try session.reportFocusChanged(true)));
+            try std.testing.expect(!(try session_input.reportFocusChanged(session, true)));
             try capture.expectNoReply();
 
             terminal_debug.debugFeedBytes(session, "\x1b[?1004h");
             terminal_debug.debugFeedBytes(session, "\x1b[?1004l");
-            try std.testing.expect(!(try session.reportFocusChanged(true)));
+            try std.testing.expect(!(try session_input.reportFocusChanged(session, true)));
             try capture.expectNoReply();
         }
     }.run);
@@ -1056,7 +1057,7 @@ test "terminal SGR pixel mouse mode ?1016 emits pixel coordinates when enabled" 
             const allocator = std.testing.allocator;
             terminal_debug.debugFeedBytes(session, "\x1b[?1000h\x1b[?1002h\x1b[?1006h");
 
-            _ = try session.reportMouseEvent(.{
+            _ = try session_input.reportMouseEvent(session, .{
                 .kind = .press,
                 .button = .left,
                 .row = 1,
@@ -1073,7 +1074,7 @@ test "terminal SGR pixel mouse mode ?1016 emits pixel coordinates when enabled" 
             }
 
             terminal_debug.debugFeedBytes(session, "\x1b[?1016h");
-            _ = try session.reportMouseEvent(.{
+            _ = try session_input.reportMouseEvent(session, .{
                 .kind = .press,
                 .button = .left,
                 .row = 1,
@@ -1089,7 +1090,7 @@ test "terminal SGR pixel mouse mode ?1016 emits pixel coordinates when enabled" 
                 try std.testing.expectEqualStrings("\x1b[<0;20;34M", reply);
             }
 
-            _ = try session.reportMouseEvent(.{
+            _ = try session_input.reportMouseEvent(session, .{
                 .kind = .move,
                 .button = .none,
                 .row = 2,
@@ -1105,7 +1106,7 @@ test "terminal SGR pixel mouse mode ?1016 emits pixel coordinates when enabled" 
                 try std.testing.expectEqualStrings("\x1b[<32;28;50M", reply);
             }
 
-            _ = try session.reportMouseEvent(.{
+            _ = try session_input.reportMouseEvent(session, .{
                 .kind = .release,
                 .button = .left,
                 .row = 2,
@@ -1134,7 +1135,7 @@ test "terminal SGR pixel mouse mode ?1016 emits pixel coordinates when enabled" 
                 .{ .button = .wheel_down, .mod = terminal_types.VTERM_MOD_SHIFT | terminal_types.VTERM_MOD_CTRL, .expected = "\x1b[<85;41;61M" },
             };
             for (wheel_cases) |case| {
-                _ = try session.reportMouseEvent(.{
+                _ = try session_input.reportMouseEvent(session, .{
                     .kind = .wheel,
                     .button = case.button,
                     .row = 4,
@@ -1150,7 +1151,7 @@ test "terminal SGR pixel mouse mode ?1016 emits pixel coordinates when enabled" 
             }
 
             // Lock wheel up/down ordering explicitly in pixel-SGR mode.
-            _ = try session.reportMouseEvent(.{
+            _ = try session_input.reportMouseEvent(session, .{
                 .kind = .wheel,
                 .button = .wheel_down,
                 .row = 4,
@@ -1165,7 +1166,7 @@ test "terminal SGR pixel mouse mode ?1016 emits pixel coordinates when enabled" 
                 defer allocator.free(reply);
                 try std.testing.expectEqualStrings("\x1b[<65;41;61M", reply);
             }
-            _ = try session.reportMouseEvent(.{
+            _ = try session_input.reportMouseEvent(session, .{
                 .kind = .wheel,
                 .button = .wheel_up,
                 .row = 4,
@@ -1182,7 +1183,7 @@ test "terminal SGR pixel mouse mode ?1016 emits pixel coordinates when enabled" 
             }
 
             terminal_debug.debugFeedBytes(session, "\x1b[?1006l");
-            _ = try session.reportMouseEvent(.{
+            _ = try session_input.reportMouseEvent(session, .{
                 .kind = .press,
                 .button = .left,
                 .row = 1,
@@ -1258,11 +1259,11 @@ test "terminal color scheme notifications ?2031 reply to DSR ?996 and emit on ch
                 try std.testing.expectEqualStrings("\x1b[?997;1n", reply);
             }
 
-            try std.testing.expect(!(try session.reportColorSchemeChanged(false)));
+            try std.testing.expect(!(try session_input.reportColorSchemeChanged(session, false)));
             try capture.expectNoReply();
 
             terminal_debug.debugFeedBytes(session, "\x1b[?2031h");
-            try std.testing.expect(try session.reportColorSchemeChanged(false));
+            try std.testing.expect(try session_input.reportColorSchemeChanged(session, false));
             {
                 const reply = try capture.readReply(allocator);
                 defer allocator.free(reply);
@@ -1277,7 +1278,7 @@ test "terminal color scheme notifications ?2031 reply to DSR ?996 and emit on ch
             }
 
             terminal_debug.debugFeedBytes(session, "\x1b[?2031l");
-            try std.testing.expect(!(try session.reportColorSchemeChanged(true)));
+            try std.testing.expect(!(try session_input.reportColorSchemeChanged(session, true)));
             try capture.expectNoReply();
         }
     }.run);
@@ -1399,7 +1400,7 @@ test "terminal DECSTR suppresses ?2031 and ?2048 live emissions after reset" {
 
             terminal_debug.debugFeedBytes(session, "\x1b[?2031h\x1b[?2048h");
 
-            try std.testing.expect(try session.reportColorSchemeChanged(false));
+            try std.testing.expect(try session_input.reportColorSchemeChanged(session, false));
             {
                 const reply = try capture.readReply(allocator);
                 defer allocator.free(reply);
@@ -1416,7 +1417,7 @@ test "terminal DECSTR suppresses ?2031 and ?2048 live emissions after reset" {
             terminal_debug.debugFeedBytes(session, "\x1b[!p");
             try capture.expectNoReply();
 
-            try std.testing.expect(!(try session.reportColorSchemeChanged(true)));
+            try std.testing.expect(!(try session_input.reportColorSchemeChanged(session, true)));
             try capture.expectNoReply();
 
             try session.resize(8, 14);
@@ -1471,7 +1472,7 @@ test "terminal DECARM ?8 disables repeat key output" {
         fn run(session: *terminal_runtime.PtyTerminalRuntime, capture: *PipeCapture) !void {
             const allocator = std.testing.allocator;
 
-            try session.sendKeyAction(terminal_types.VTERM_KEY_UP, terminal_types.VTERM_MOD_NONE, .repeat);
+            try session_input.sendKeyAction(session, terminal_types.VTERM_KEY_UP, terminal_types.VTERM_MOD_NONE, .repeat);
             {
                 const reply = try capture.readReply(allocator);
                 defer allocator.free(reply);
@@ -1479,11 +1480,11 @@ test "terminal DECARM ?8 disables repeat key output" {
             }
 
             terminal_debug.debugFeedBytes(session, "\x1b[?8l");
-            try session.sendKeyAction(terminal_types.VTERM_KEY_UP, terminal_types.VTERM_MOD_NONE, .repeat);
+            try session_input.sendKeyAction(session, terminal_types.VTERM_KEY_UP, terminal_types.VTERM_MOD_NONE, .repeat);
             try capture.expectNoReply();
 
             terminal_debug.debugFeedBytes(session, "\x1b[?8h");
-            try session.sendKeyAction(terminal_types.VTERM_KEY_UP, terminal_types.VTERM_MOD_NONE, .repeat);
+            try session_input.sendKeyAction(session, terminal_types.VTERM_KEY_UP, terminal_types.VTERM_MOD_NONE, .repeat);
             {
                 const reply = try capture.readReply(allocator);
                 defer allocator.free(reply);
@@ -1498,11 +1499,11 @@ test "terminal alt-scroll ?1007 emits arrows in alt screen" {
         fn run(session: *terminal_runtime.PtyTerminalRuntime, capture: *PipeCapture) !void {
             const allocator = std.testing.allocator;
 
-            try std.testing.expect(!(try session.reportAlternateScrollWheel(1, terminal_types.VTERM_MOD_NONE)));
+            try std.testing.expect(!(try session_input.reportAlternateScrollWheel(session, 1, terminal_types.VTERM_MOD_NONE)));
             try capture.expectNoReply();
 
             terminal_debug.debugFeedBytes(session, "\x1b[?1049h");
-            try std.testing.expect(try session.reportAlternateScrollWheel(2, terminal_types.VTERM_MOD_NONE));
+            try std.testing.expect(try session_input.reportAlternateScrollWheel(session, 2, terminal_types.VTERM_MOD_NONE));
             {
                 const reply = try capture.readReply(allocator);
                 defer allocator.free(reply);
@@ -1510,11 +1511,11 @@ test "terminal alt-scroll ?1007 emits arrows in alt screen" {
             }
 
             terminal_debug.debugFeedBytes(session, "\x1b[?1007l");
-            try std.testing.expect(!(try session.reportAlternateScrollWheel(-1, terminal_types.VTERM_MOD_NONE)));
+            try std.testing.expect(!(try session_input.reportAlternateScrollWheel(session, -1, terminal_types.VTERM_MOD_NONE)));
             try capture.expectNoReply();
 
             terminal_debug.debugFeedBytes(session, "\x1b[?1007h");
-            try std.testing.expect(try session.reportAlternateScrollWheel(-1, terminal_types.VTERM_MOD_NONE));
+            try std.testing.expect(try session_input.reportAlternateScrollWheel(session, -1, terminal_types.VTERM_MOD_NONE));
             {
                 const reply = try capture.readReply(allocator);
                 defer allocator.free(reply);
@@ -1604,7 +1605,7 @@ test "terminal ANSI local echo mode 12 echoes chars only without PTY" {
     defer session.deinit();
 
     terminal_debug.debugFeedBytes(session, "\x1b[12h");
-    try session.sendChar('a', terminal_types.VTERM_MOD_NONE);
+    try session_input.sendChar(session, 'a', terminal_types.VTERM_MOD_NONE);
     {
         const snap = session.snapshot();
         try std.testing.expectEqual(@as(u32, 'a'), snap.cellAt(0, 0).codepoint);
@@ -1612,7 +1613,7 @@ test "terminal ANSI local echo mode 12 echoes chars only without PTY" {
     }
 
     terminal_debug.debugFeedBytes(session, "\x1b[12l");
-    try session.sendChar('b', terminal_types.VTERM_MOD_NONE);
+    try session_input.sendChar(session, 'b', terminal_types.VTERM_MOD_NONE);
     {
         const snap = session.snapshot();
         try std.testing.expectEqual(@as(u32, 0), snap.cellAt(0, 1).codepoint);
@@ -1715,8 +1716,8 @@ test "terminal DECSTR soft reset clears mode subset and preserves grid" {
             try std.testing.expect(session_interaction.focusReportingEnabled(session));
             try std.testing.expect(session_interaction.bracketedPasteEnabled(session));
             try std.testing.expect(session_interaction.mouseReportingEnabled(session));
-            try std.testing.expect(session.appCursorKeysEnabled());
-            try std.testing.expect(session.appKeypadEnabled());
+            try std.testing.expect(session_input.appCursorKeysEnabled(session));
+            try std.testing.expect(session_input.appKeypadEnabled(session));
             try std.testing.expect(session_interaction.keyModeFlagsValue(session) != 0);
 
             terminal_debug.debugFeedBytes(session, "\x1b[!p");
@@ -1730,8 +1731,8 @@ test "terminal DECSTR soft reset clears mode subset and preserves grid" {
             try std.testing.expect(!session_interaction.focusReportingEnabled(session));
             try std.testing.expect(!session_interaction.bracketedPasteEnabled(session));
             try std.testing.expect(!session_interaction.mouseReportingEnabled(session));
-            try std.testing.expect(!session.appCursorKeysEnabled());
-            try std.testing.expect(!session.appKeypadEnabled());
+            try std.testing.expect(!session_input.appCursorKeysEnabled(session));
+            try std.testing.expect(!session_input.appKeypadEnabled(session));
             try std.testing.expectEqual(@as(u32, 0), session_interaction.keyModeFlagsValue(session));
 
             // Active-screen soft reset defaults restored.

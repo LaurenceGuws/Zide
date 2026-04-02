@@ -3,6 +3,7 @@ const csi_mod = @import("csi.zig");
 const std = @import("std");
 const app_logger = @import("../../app_logger.zig");
 const session_interaction = @import("../core/session/interaction.zig");
+const session_input = @import("../core/session/input.zig");
 
 pub const ModeSnapshot = struct {
     app_cursor_keys: bool,
@@ -40,7 +41,7 @@ pub fn modeSnapshot(self: anytype) ModeSnapshot {
     const screen = self.core.activeScreen();
     const input_snapshot = self.interaction.input_snapshot;
     return .{
-        .app_cursor_keys = self.appCursorKeysEnabled(),
+        .app_cursor_keys = session_input.appCursorKeysEnabled(self),
         .column_mode_132 = self.core.column_mode_132,
         .screen_reverse = screen.screen_reverse,
         .origin_mode = screen.origin_mode,
@@ -53,7 +54,7 @@ pub fn modeSnapshot(self: anytype) ModeSnapshot {
         .left_right_margin_mode_69 = screen.left_right_margin_mode_69,
         .alt_active = self.core.active == .alt,
         .save_cursor_mode_1048 = screen.save_cursor_mode_1048,
-        .app_keypad = self.appKeypadEnabled(),
+        .app_keypad = session_input.appKeypadEnabled(self),
         .mouse_mode_button = input_snapshot.mouse_mode_button.load(.acquire),
         .mouse_mode_any = input_snapshot.mouse_mode_any.load(.acquire),
         .focus_reporting = session_interaction.focusReportingEnabled(self),

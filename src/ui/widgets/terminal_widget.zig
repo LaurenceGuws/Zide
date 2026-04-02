@@ -2,6 +2,7 @@ const std = @import("std");
 const app_shell = @import("../../app_shell.zig");
 const terminal_runtime = @import("../../terminal/core/terminal_runtime.zig");
 const terminal_publication = @import("../../terminal/core/publication/terminal_publication.zig");
+const session_input = @import("../../terminal/core/session/input.zig");
 const session_interaction = @import("../../terminal/core/session/interaction.zig");
 const terminal_selection = @import("../../terminal/core/selection.zig");
 const terminal_types = @import("../../terminal/model/types.zig");
@@ -138,7 +139,7 @@ pub const TerminalWidget = struct {
         if (self.last_focus_reported) |last| {
             if (last == focused) return ui_changed;
         }
-        if (try self.session.reportFocusChanged(focused)) {
+        if (try session_input.reportFocusChanged(self.session, focused)) {
             self.last_focus_reported = focused;
             return true;
         }

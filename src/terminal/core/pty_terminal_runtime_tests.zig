@@ -8,6 +8,7 @@ const terminal_core_protocol = @import("protocol/terminal_core_protocol.zig");
 const input_modes = @import("input_modes.zig");
 const session_config = @import("session/config.zig");
 const session_interaction = @import("session/interaction.zig");
+const session_input = @import("session/input.zig");
 const host_queries = @import("session/host_queries.zig");
 const session_runtime = @import("session/runtime.zig");
 const mode_effects = @import("session/mode_effects.zig");
@@ -104,7 +105,7 @@ test "external transport sendText queues outbound bytes" {
     defer session.deinit();
     session_runtime.attachExternalTransport(session);
 
-    try session.sendText("abc");
+    try session_input.sendText(session, "abc");
     const bytes = (try session_runtime.takeExternalOutgoingBytes(session, allocator)).?;
     defer allocator.free(bytes);
 
@@ -193,7 +194,7 @@ test "pty-backed session sendText writes through session writer boundary" {
     };
     session_runtime.attachPtyTransport(session, pty);
 
-    try session.sendText("abc");
+    try session_input.sendText(session, "abc");
 
     const start_ms = std.time.milliTimestamp();
     while (std.time.milliTimestamp() - start_ms < 3000) {
@@ -235,8 +236,8 @@ test "pty-backed session sendKey enter writes through session writer boundary" {
     };
     session_runtime.attachPtyTransport(session, pty);
 
-    try session.sendText("printf hi; exit");
-    try session.sendKey(VTERM_KEY_ENTER, VTERM_MOD_NONE);
+    try session_input.sendText(session, "printf hi; exit");
+    try session_input.sendKey(session, VTERM_KEY_ENTER, VTERM_MOD_NONE);
 
     const start_ms = std.time.milliTimestamp();
     while (std.time.milliTimestamp() - start_ms < 4000) {
@@ -2407,12 +2408,12 @@ test "terminal reset republishes input snapshot state" {
 
     input_modes.setKeypadMode(session, true);
     input_modes.setAppCursorKeys(session, true);
-    try std.testing.expect(session.appKeypadEnabled());
+    try std.testing.expect(session_input.appKeypadEnabled(session));
     try std.testing.expect(session.interaction.input_snapshot.interaction.app_cursor_keys.load(.acquire));
 
     mode_effects.resetState(session);
 
-    try std.testing.expect(!session.appKeypadEnabled());
+    try std.testing.expect(!session_input.appKeypadEnabled(session));
     try std.testing.expect(!session.interaction.input_snapshot.interaction.app_cursor_keys.load(.acquire));
 }
 
@@ -2423,10 +2424,10 @@ test "feedOutputBytes publishes keypad mode through locked parser path" {
     defer session.deinit();
 
     terminal_core_feed.feedOutputBytes(session, "\x1b=");
-    try std.testing.expect(session.appKeypadEnabled());
+    try std.testing.expect(session_input.appKeypadEnabled(session));
 
     terminal_core_feed.feedOutputBytes(session, "\x1b>");
-    try std.testing.expect(!session.appKeypadEnabled());
+    try std.testing.expect(!session_input.appKeypadEnabled(session));
 }
 
 test "feedOutputBytes publishes kitty key mode flags through locked parser path" {
@@ -2464,8 +2465,8 @@ test "feedOutputBytes RIS resets input modes and clears screen" {
     try std.testing.expect(session_interaction.bracketedPasteEnabled(session));
     try std.testing.expect(session_interaction.mouseReportingEnabled(session));
     try std.testing.expect(session.mouseModeSgrPixelsEnabled());
-    try std.testing.expect(session.appCursorKeysEnabled());
-    try std.testing.expect(session.appKeypadEnabled());
+    try std.testing.expect(session_input.appCursorKeysEnabled(session));
+    try std.testing.expect(session_input.appKeypadEnabled(session));
     try std.testing.expectEqual(@as(u32, 'A'), terminal_core_protocol.getCell(session, 0, 0).codepoint);
     try std.testing.expectEqual(@as(u32, 'B'), terminal_core_protocol.getCell(session, 0, 1).codepoint);
 
@@ -2475,8 +2476,8 @@ test "feedOutputBytes RIS resets input modes and clears screen" {
     try std.testing.expect(!session_interaction.bracketedPasteEnabled(session));
     try std.testing.expect(!session_interaction.mouseReportingEnabled(session));
     try std.testing.expect(!session.mouseModeSgrPixelsEnabled());
-    try std.testing.expect(!session.appCursorKeysEnabled());
-    try std.testing.expect(!session.appKeypadEnabled());
+    try std.testing.expect(!session_input.appCursorKeysEnabled(session));
+    try std.testing.expect(!session_input.appKeypadEnabled(session));
     try std.testing.expectEqual(@as(u32, 0), terminal_core_protocol.getCell(session, 0, 0).codepoint);
     try std.testing.expectEqual(@as(u32, 0), terminal_core_protocol.getCell(session, 0, 1).codepoint);
 }

@@ -88,19 +88,6 @@ pub const PtyTerminalRuntime = struct {
     pub const lockPtyWriter = runtime.lockPtyWriter;
     pub const writePtyBytes = runtime.writePtyBytes;
 
-    pub const sendKey = session_input.sendKey;
-    pub const sendKeyAction = session_input.sendKeyAction;
-    pub const sendKeypad = session_input.sendKeypad;
-    pub const appKeypadEnabled = session_input.appKeypadEnabled;
-    pub const appCursorKeysEnabled = session_input.appCursorKeysEnabled;
-    pub const sendChar = session_input.sendChar;
-    pub const reportMouseEvent = session_input.reportMouseEvent;
-    pub const reportAlternateScrollWheel = session_input.reportAlternateScrollWheel;
-    pub const sendText = session_input.sendText;
-    pub const sendBytes = session_input.sendBytes;
-    pub const reportFocusChanged = session_input.reportFocusChanged;
-    pub const reportColorSchemeChanged = session_input.reportColorSchemeChanged;
-
     pub const resize = runtime.resize;
 
     pub const enterAltScreen = mode_effects.enterAltScreen;
