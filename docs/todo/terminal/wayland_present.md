@@ -41,6 +41,20 @@ Status note, 2026-03-30:
   - the renderer-side root cause for the live rain failure is still unknown
   - do not treat `99 -> 100` columns as proof of an arbitrary renderer threshold by itself
 
+Status note, 2026-04-02:
+
+- War 2 present-invariant hardening is now active on `main`.
+- Landed correctness slices:
+  - terminal scene submission now records terminal-surface blit proof and
+    generation
+  - publication retirement now requires renderer-proven submitted-scene truth
+  - weak widget-local feedback fields no longer act as retirement authority
+- This changes the live bug read:
+  - if the terminal still disappears on an idle frame, that is now much more
+    clearly a real scene-composition omission bug
+  - it is no longer explainable as publication retirement trusting weak widget
+    feedback
+
 Authority note:
 
 - This file is the current architectural authority for the landed scene-owned

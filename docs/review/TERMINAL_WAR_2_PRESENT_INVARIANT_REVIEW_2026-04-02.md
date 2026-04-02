@@ -120,6 +120,27 @@ So War 2 should first make submitted terminal truth airtight.
 
 Then the next structural war can build on a correct downstream invariant.
 
+## Status Update
+
+The first implementation slices are now landed:
+
+- renderer scene submission now records terminal-surface blit proof and
+  generation
+- publication retirement now requires that renderer-proven submitted scene
+  truth
+- weak widget-local retirement signals are removed from the feedback contract
+
+That means the present invariant is materially stronger now.
+
+The remaining question in this lane is no longer:
+
+- "are we still retiring on weak widget feedback?"
+
+It is now:
+
+- "can the renderer still reach a frame that should have re-blitted terminal
+  scene truth but does not?"
+
 ## Required Review Question
 
 What exact signal should gate terminal present acknowledgement in native mode?
