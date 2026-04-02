@@ -318,6 +318,13 @@ That means the first high-value cuts should probably aim at:
 2. isolating the SDL/GL host seam from diagnostic/probe clutter
 3. making backend surface honesty match actual runtime truth
 
+Progress note, 2026-04-02:
+
+- the implementation for editor/terminal retained-target operations now lives
+  under `src/ui/renderer/retained_targets_runtime.zig`
+- `src/ui/renderer.zig` still exposes the same public methods for now, but no
+  longer owns that implementation slab directly
+
 ## Next Deliverable
 
 The next branch deliverable should be a ranked SDL/GL scrutiny memo with:

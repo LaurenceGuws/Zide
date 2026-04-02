@@ -94,6 +94,13 @@ Judgment:
 - the repo has already written down the right boundary
 - the code is still knowingly shipping the old one
 
+Status note after the first retained-target ownership cut:
+
+- the public renderer methods still exist for now
+- their implementation now lives in
+  `src/ui/renderer/retained_targets_runtime.zig`
+- `src/ui/renderer.zig` no longer owns that implementation slab directly
+
 ### 3. Scene ownership is structurally right, but product-retained-target
 choreography still shapes the steady-state path
 

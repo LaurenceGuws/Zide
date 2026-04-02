@@ -29,6 +29,7 @@ const input_logging = @import("renderer/input_logging.zig");
 const screenshot = @import("renderer/screenshot.zig");
 const input_runtime = @import("renderer/input_runtime.zig");
 const font_runtime = @import("renderer/font_runtime.zig");
+const retained_targets_runtime = @import("renderer/retained_targets_runtime.zig");
 const text_runtime = @import("renderer/text_runtime.zig");
 const window_chrome_runtime = @import("renderer/window_chrome_runtime.zig");
 const app_lifecycle_runtime = @import("../app/lifecycle_runtime.zig");
@@ -1240,7 +1241,7 @@ pub const Renderer = struct {
         gl.Enable(gl.c.GL_BLEND);
     }
 
-    fn restoreMainCompositionTarget(self: *Renderer) void {
+    pub fn restoreMainCompositionTarget(self: *Renderer) void {
         if (self.scene_frame_active) {
             if (!self.beginSceneFrame()) {
                 self.scene_frame_active = false;
@@ -1293,107 +1294,39 @@ pub const Renderer = struct {
     }
 
     pub fn ensureTerminalTexture(self: *Renderer, width: i32, height: i32) bool {
-        const recreated = self.ensureRenderTargetScaled(&self.terminal_target, width, height, target_draw.nearestFilter());
-        _ = self.ensureRenderTargetScaled(&self.terminal_scroll_target, width, height, target_draw.nearestFilter());
-        return recreated;
+        return retained_targets_runtime.ensureTerminalTexture(self, width, height);
     }
 
     pub fn ensureEditorTexture(self: *Renderer, width: i32, height: i32) bool {
-        return self.ensureRenderTargetScaled(&self.editor_target, width, height, target_draw.nearestFilter());
+        return retained_targets_runtime.ensureEditorTexture(self, width, height);
     }
 
     pub fn beginTerminalTexture(self: *Renderer) bool {
-        return self.beginRenderTarget(self.terminal_target);
+        return retained_targets_runtime.beginTerminalTexture(self);
     }
 
     pub fn endTerminalTexture(self: *Renderer) void {
-        self.restoreMainCompositionTarget();
+        retained_targets_runtime.endTerminalTexture(self);
     }
 
     pub fn beginEditorTexture(self: *Renderer) bool {
-        self.present_trace_current.editor_texture_update_count += 1;
-        self.drawing_editor_target = true;
-        return self.beginRenderTarget(self.editor_target);
+        return retained_targets_runtime.beginEditorTexture(self);
     }
 
     pub fn endEditorTexture(self: *Renderer) void {
-        self.drawing_editor_target = false;
-        self.restoreMainCompositionTarget();
+        retained_targets_runtime.endEditorTexture(self);
     }
 
     pub fn drawTerminalTexture(self: *Renderer, x: f32, y: f32, width: f32, height: f32) void {
-        if (self.terminal_target) |target| {
-            const snapped_x = snapToDevicePixel(x, self.render_scale);
-            const snapped_y = snapToDevicePixel(y, self.render_scale);
-            const src = texture_draw.fullTextureSrcRect(target.texture);
-            const dest = types.Rect{
-                .x = snapped_x,
-                .y = snapped_y,
-                .width = width,
-                .height = height,
-            };
-            const log = app_logger.logger("renderer.terminal_present");
-            if (log.enabled_file or log.enabled_console) {
-                log.logf(
-                    .info,
-                    "draw tex={d} tex_px={d}x{d} target_logical={d}x{d} src_rect={d:.2},{d:.2} {d:.2}x{d:.2} dest={d:.2},{d:.2} {d:.2}x{d:.2} framebuffer={d}x{d} target_px={d}x{d} window={d}x{d} render_scale={d:.3}",
-                    .{
-                        target.texture.id,
-                        target.texture.width,
-                        target.texture.height,
-                        target.logical_width,
-                        target.logical_height,
-                        src.x,
-                        src.y,
-                        src.width,
-                        src.height,
-                        dest.x,
-                        dest.y,
-                        dest.width,
-                        dest.height,
-                        self.render_width,
-                        self.render_height,
-                        self.target_pixel_width,
-                        self.target_pixel_height,
-                        self.width,
-                        self.height,
-                        self.render_scale,
-                    },
-                );
-            }
-            draw_ops.drawTextureRect(self, target.texture, src, dest, Color.white.toRgba(), types.Rgba{ .r = 0, .g = 0, .b = 0, .a = 0 }, .linear_premul);
-        }
+        retained_targets_runtime.drawTerminalTexture(self, x, y, width, height);
     }
 
     pub fn scrollTerminalTexture(self: *Renderer, dx: i32, dy: i32) bool {
-        if (self.terminal_target) |target| {
-            return targets.scrollRenderTarget(
-                self,
-                self.terminal_target,
-                &self.terminal_scroll_target,
-                dx,
-                dy,
-                target.logical_width,
-                target.logical_height,
-            );
-        }
-        return false;
+        return retained_targets_runtime.scrollTerminalTexture(self, dx, dy);
     }
 
     pub fn drawEditorTexture(self: *Renderer, x: f32, y: f32) void {
-        if (self.editor_target) |target| {
-            self.present_trace_current.editor_texture_blit_count += 1;
-            const snapped_x = snapToDevicePixel(x, self.render_scale);
-            const snapped_y = snapToDevicePixel(y, self.render_scale);
-            const src = texture_draw.fullTextureSrcRect(target.texture);
-            const dest = types.Rect{
-                .x = snapped_x,
-                .y = snapped_y,
-                .width = @floatFromInt(target.logical_width),
-                .height = @floatFromInt(target.logical_height),
-            };
-            draw_ops.drawTextureRect(self, target.texture, src, dest, Color.white.toRgba(), types.Rgba{ .r = 0, .g = 0, .b = 0, .a = 0 }, .linear_premul);
-        }
+        retained_targets_runtime.drawEditorTexture(self, x, y);
     }
 
     pub fn drawRect(self: *Renderer, x: i32, y: i32, w: i32, h: i32, color: Color) void {
@@ -1879,13 +1812,13 @@ pub const Renderer = struct {
         targets.bindDefaultTarget(self);
     }
 
-    fn beginRenderTarget(self: *Renderer, target: ?RenderTarget) bool {
+    pub fn beginRenderTarget(self: *Renderer, target: ?RenderTarget) bool {
         const ok = targets.beginRenderTarget(self, target);
         if (ok) self.dst_linear_active = true;
         return ok;
     }
 
-    fn ensureRenderTargetScaled(self: *Renderer, target: *?RenderTarget, logical_width: i32, logical_height: i32, filter: i32) bool {
+    pub fn ensureRenderTargetScaled(self: *Renderer, target: *?RenderTarget, logical_width: i32, logical_height: i32, filter: i32) bool {
         const scale = if (self.render_scale > 0.0) self.render_scale else 1.0;
         const width = @max(1, @as(i32, @intFromFloat(std.math.round(@as(f32, @floatFromInt(logical_width)) * scale))));
         const height = @max(1, @as(i32, @intFromFloat(std.math.round(@as(f32, @floatFromInt(logical_height)) * scale))));
