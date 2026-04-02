@@ -106,6 +106,15 @@ gravity into smaller files.
     `scrollback_view.zig` and `selection.zig`
   - this removes one more residual session-shaped layer from the host mutation
     story without reopening generic shell-thinning
+- `docs/review/VT_POST_VIEWPORT_SELECTION_RERANK_2026-04-03.md`
+  Why: after the first viewport/selection slice, the queue needs another
+  honesty check before more code.
+  Current read:
+  - `selection.zig` and `scrollback_view.zig` now read mostly honest:
+    lock ownership + publication refresh around core mutation truth
+  - this lane is close to a stop-marker now
+  - the stronger remaining pressure is broader `TerminalCore` sufficiency
+    again, not another obvious local mutation cut
 
 - `docs/review/VT_WAR_4_SCOPE_AND_SEEDS_2026-04-03.md`
   Why: the next scrutiny pass is no longer a cleanup sprint; it is a focused
