@@ -1,5 +1,6 @@
 const std = @import("std");
 const app_logger = @import("../../app_logger.zig");
+const terminal_publication = @import("../../terminal/core/publication/terminal_publication.zig");
 const runtime_policy = @import("../runtime_policy.zig");
 const terminal_widget_draw = @import("../../ui/widgets/terminal_widget_draw.zig");
 
@@ -66,15 +67,7 @@ pub const LatencyContext = struct {
     draw: ?TerminalDrawLatencyMetrics = null,
 };
 
-pub const Snapshot = struct {
-    session_ptr: usize = 0,
-    pending_generation: u64 = 0,
-    published_generation: u64 = 0,
-    presented_generation: u64 = 0,
-    redraw_pending: bool = false,
-    parse_backlog: bool = false,
-    output_pressure: bool = false,
-};
+pub const Snapshot = terminal_publication.FrameState;
 
 pub fn observe(state: anytype, now: f64) Snapshot {
     const pacing = &state.terminal_frame_pacing;
