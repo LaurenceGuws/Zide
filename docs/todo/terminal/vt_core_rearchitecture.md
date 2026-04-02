@@ -246,6 +246,12 @@ Focused follow-up lane:
     flow over a narrower engine-owned dispatch surface
   - do not keep cutting here by momentum unless one more real semantic slab
     becomes obvious
+- `docs/review/TERMINAL_WAR_2_POST_PARSER_RERANK_2026-04-02.md`
+  Why: after the first parser wave, the top-level War 2 ranking changes again.
+  Current read:
+  - the structural false-center wars are no longer the obvious default move
+  - the next likely War 2 opener is now the concrete present composition
+    omission bug path
 
 ## Current Milestone
 
