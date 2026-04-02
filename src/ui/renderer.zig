@@ -394,7 +394,6 @@ pub const Renderer = struct {
     window_chrome: WindowChromeState,
 
     theme: Theme,
-    mouse_scale: MousePos,
     scale: ScaleState,
     input: InputRuntimeState,
     clipboard: ClipboardState,
@@ -553,7 +552,6 @@ pub const Renderer = struct {
             .scene_target = .{},
             .window_chrome = .{},
             .theme = .{},
-            .mouse_scale = .{ .x = 1.0, .y = 1.0 },
             .scale = scale,
             .input = .{},
             .clipboard = .{},
@@ -1065,7 +1063,7 @@ pub const Renderer = struct {
     }
 
     pub fn getMousePos(self: *Renderer) MousePos {
-        const pos = platform_mouse.getScaledPos(.{ .x = self.mouse_scale.x, .y = self.mouse_scale.y });
+        const pos = platform_mouse.getScaledPos(.{ .x = self.input.mouse_scale.x, .y = self.input.mouse_scale.y });
         return .{ .x = pos.x, .y = pos.y };
     }
 
@@ -1194,7 +1192,7 @@ pub const Renderer = struct {
 
     pub fn updateMouseScale(self: *Renderer) void {
         const scale = platform_mouse.computeMouseScale(self.window);
-        self.mouse_scale = .{ .x = scale.x, .y = scale.y };
+        self.input.mouse_scale = .{ .x = scale.x, .y = scale.y };
     }
 
     pub fn getRenderSize(self: *Renderer) MousePos {
@@ -1382,7 +1380,7 @@ pub const Renderer = struct {
         return .{
             .allocator = self.allocator,
             .window = self.window,
-            .mouse_scale = self.mouse_scale,
+            .mouse_scale = self.input.mouse_scale,
             .should_close_flag = &self.should_close_flag,
             .key_down = self.input.key_down[0..],
             .key_pressed = self.input.key_pressed[0..],

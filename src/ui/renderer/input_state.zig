@@ -17,6 +17,7 @@ pub const TextComposition = struct {
 };
 
 pub const InputRuntimeState = struct {
+    mouse_scale: iface.MousePos = .{ .x = 1.0, .y = 1.0 },
     key_down: [key_repeat_key_count]bool = [_]bool{false} ** key_repeat_key_count,
     key_pressed: [key_repeat_key_count]bool = [_]bool{false} ** key_repeat_key_count,
     key_repeated: [key_repeat_key_count]bool = [_]bool{false} ** key_repeat_key_count,

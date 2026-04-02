@@ -189,6 +189,8 @@ Progress note, 2026-04-02:
 - retained terminal/editor target state now lives as one grouped state slab
   with `src/ui/renderer/retained_targets_runtime.zig` instead of four loose
   renderer-root fields
+- mouse scale state now lives with `InputRuntimeState` instead of as a loose
+  renderer-root field
 - renderer init/deinit now assemble and tear down grouped scale/font-config
   state through owner-level helpers instead of open-coding that grouped-state
   lifecycle inline

@@ -94,6 +94,8 @@ Progress note, 2026-04-02:
 - retained terminal/editor target state now lives as one grouped state slab
   under `src/ui/renderer/retained_targets_runtime.zig` instead of four loose
   renderer-root fields
+- mouse scale state now lives with `InputRuntimeState` instead of as a loose
+  renderer-root field
 
 ### RS-02 Init/Deinit Still Mix Too Many Responsibilities
 

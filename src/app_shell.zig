@@ -303,7 +303,7 @@ pub const Shell = struct {
     }
 
     pub fn mouseScale(self: *Shell) MousePos {
-        return self.renderer.mouse_scale;
+        return self.renderer.input.mouse_scale;
     }
 
     pub fn theme(self: *Shell) *const Theme {
