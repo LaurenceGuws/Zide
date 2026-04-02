@@ -96,6 +96,15 @@ gravity into smaller files.
     shell-owned than terminal-owned
   - transport/lifecycle/thread mechanics should stay shell-owned
   - the next code war should only open on one named interaction slab
+- `docs/review/VT_WAR_4_INTERACTION_SLAB_RANKING_2026-04-03.md`
+  Why: the interaction war should not open on a vague category.
+  It should open on the cleanest first slab.
+  Current read:
+  - output feed/apply is the strongest first target
+  - resize is second because it mixes real terminal resize with transport
+    reporting and in-band notifications
+  - encoded host input is third because it is more tightly coupled to writer
+    mechanics
 
 ## Priority Now
 
@@ -105,6 +114,8 @@ Highest-value remaining items from the current live baseline:
    Why: after the public-ABI check, this now looks like the stronger remaining
    plug-and-play pressure. Live terminal-driving semantics still feel more
    shell-owned than terminal-owned.
+   First slab:
+   - output feed / apply
 2. `VTWAR4-02` keep handle identity as a checked-but-paused concern
    Why: the handle is already opaque and terminal-named publicly, so changing
    internal shell-backed storage alone risks cosmetic surgery.
