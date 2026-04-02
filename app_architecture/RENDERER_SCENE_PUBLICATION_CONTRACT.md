@@ -280,6 +280,8 @@ The convergence rule is:
   and scene-layer submission
 - flatten any transition-only forwarding shell so retained-surface consumers
   talk to the retained-surface owner directly
+- move host scene assembly out of the frame-loop driver so scene ordering lives
+  with a dedicated host assembly owner
 - keep implementation internals retained and optimized
 
 ### Phase 4: Unified host draw reasoning

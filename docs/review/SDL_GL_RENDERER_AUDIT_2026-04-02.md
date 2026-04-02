@@ -174,6 +174,8 @@ Status note after the first retained-target ownership cut:
   `src/ui/renderer/retained_targets_runtime.zig` directly
 - the retained-target owner now exposes retained-surface vocabulary directly
   instead of the old product-specific texture-shaped transition names
+- host scene assembly now lives in `src/app/scene_assembly_runtime.zig`
+  instead of remaining inline in `src/app/draw_frame_runtime.zig`
 
 ### 3. Scene ownership is structurally right, but product-retained-target
 choreography still shapes the steady-state path

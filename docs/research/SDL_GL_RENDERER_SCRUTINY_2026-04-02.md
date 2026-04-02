@@ -224,6 +224,8 @@ Progress note, 2026-04-02:
   directly
 - the retained-target owner now exposes retained-surface vocabulary directly
   instead of texture-shaped transition names
+- host scene assembly now lives in `src/app/scene_assembly_runtime.zig`
+  instead of remaining inline in `src/app/draw_frame_runtime.zig`
 
 ### 4. The SDL/GL host seam is functionally decent but still reads like an
 investigation seam

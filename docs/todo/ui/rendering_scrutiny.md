@@ -45,7 +45,9 @@ Status note, 2026-04-02:
   renderer root now reads much closer to honest render-core state
 - the loud fake-center pressure is materially lower than it was at the start of
   this scrutiny round
-- the next move should be a re-rank before any more cuts, not automatic
+- host scene assembly now lives in `src/app/scene_assembly_runtime.zig`
+  instead of sitting inline in `src/app/draw_frame_runtime.zig`
+- the next move should be another re-rank before any more cuts, not automatic
   repacking
 
 ## Target Read
