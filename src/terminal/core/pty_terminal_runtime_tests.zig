@@ -168,7 +168,7 @@ test "full-region scroll publishes partial cache damage at live bottom" {
     try std.testing.expectEqual(@as(usize, 2), cache.damage.end_row);
     try std.testing.expectEqual(@as(usize, 0), cache.damage.start_col);
     try std.testing.expectEqual(@as(usize, 3), cache.damage.end_col);
-    try std.testing.expectEqual(@as(usize, 1), session.scrollbackInfo().total_rows);
+    try std.testing.expectEqual(@as(usize, 1), session.core.scrollbackInfo().total_rows);
 }
 
 test "pty-backed session sendText writes through session writer boundary" {
@@ -274,7 +274,7 @@ test "top-anchored partial scroll region retires rows into scrollback" {
     terminal_core_feed.feedOutputBytes(session, "\x1b[1;3r");
     terminal_core_protocol.scrollRegionUpWithOrigin(session, 1, "test.top_anchored_scroll_region");
 
-    try std.testing.expectEqual(@as(usize, 1), session.scrollbackInfo().total_rows);
+    try std.testing.expectEqual(@as(usize, 1), session.core.scrollbackInfo().total_rows);
     const history_row = session.scrollbackRow(0) orelse return error.TestExpectedEqual;
     try std.testing.expectEqual(@as(usize, 4), history_row.len);
     for (history_row) |cell| {
@@ -317,14 +317,14 @@ test "carriage return plus erase line rewrites current row in place" {
     terminal_core_feed.feedOutputBytes(session, "hello");
     terminal_core_feed.feedOutputBytes(session, "\r\x1b[2Kbye");
 
-    try std.testing.expectEqual(@as(usize, 0), session.scrollbackInfo().total_rows);
+    try std.testing.expectEqual(@as(usize, 0), session.core.scrollbackInfo().total_rows);
     const snapshot = session.snapshot();
     try expectSnapshotRow(snapshot, 0, "bye                 ");
 
     terminal_core_feed.feedOutputBytes(session, "\r\x1b[2Kstep 1");
     terminal_core_feed.feedOutputBytes(session, "\r\x1b[2Kstep 2");
 
-    try std.testing.expectEqual(@as(usize, 0), session.scrollbackInfo().total_rows);
+    try std.testing.expectEqual(@as(usize, 0), session.core.scrollbackInfo().total_rows);
     try expectSnapshotRow(session.snapshot(), 0, "step 2              ");
 }
 
@@ -424,7 +424,7 @@ test "synchronized zig progress redraw does not retire intermediate scrollback" 
     terminal_core_feed.feedOutputBytes(session, "\x1b[Jbuild one\nitem a\n\r\x1bM\x1bM");
     terminal_core_feed.feedOutputBytes(session, "\x1b[Jbuild two\nitem b\n\r\x1bM\x1bM");
 
-    try std.testing.expectEqual(@as(usize, 0), session.scrollbackInfo().total_rows);
+    try std.testing.expectEqual(@as(usize, 0), session.core.scrollbackInfo().total_rows);
 
     terminal_core_feed.feedOutputBytes(session, "\x1b[?2026l");
     try std.testing.expect(!sync_updates.active(session));
@@ -461,7 +461,7 @@ test "synchronized top-anchored partial scroll region retires rows into scrollba
     terminal_core_feed.feedOutputBytes(session, "\x1b[1;3r");
     terminal_core_protocol.scrollRegionUpWithOrigin(session, 1, "test.sync_top_anchored_scroll_region");
 
-    try std.testing.expectEqual(@as(usize, 1), session.scrollbackInfo().total_rows);
+    try std.testing.expectEqual(@as(usize, 1), session.core.scrollbackInfo().total_rows);
     const history_row = session.scrollbackRow(0) orelse return error.TestExpectedEqual;
     try std.testing.expectEqual(@as(usize, 4), history_row.len);
     for (history_row) |cell| {
@@ -482,7 +482,7 @@ test "single-chunk synchronized progress sequence keeps newline scroll inside sy
     debugSetCursor(&session, 67, 0);
     terminal_core_feed.feedOutputBytes(session, "\x1b[?2026h\x1b[Jbuild one\nitem a\r\x1bM\x1b[?2026l");
 
-    try std.testing.expectEqual(@as(usize, 0), session.scrollbackInfo().total_rows);
+    try std.testing.expectEqual(@as(usize, 0), session.core.scrollbackInfo().total_rows);
     try std.testing.expect(!sync_updates.active(session));
 
     const snapshot = session.snapshot();
@@ -526,7 +526,7 @@ test "real zig redraw chunk rewrites in place at bottom edge" {
             "\x1b[?2026l",
     );
 
-    try std.testing.expectEqual(@as(usize, 0), session.scrollbackInfo().total_rows);
+    try std.testing.expectEqual(@as(usize, 0), session.core.scrollbackInfo().total_rows);
     try std.testing.expect(!sync_updates.active(session));
 
     const snapshot = session.snapshot();
@@ -568,18 +568,18 @@ test "repeat guide chunks do not grow scrollback unexpectedly" {
 
     try std.testing.expect(try session_runtime.enqueueExternalBytes(session, "\x1b[H1| |aaa \x1b[2;1H2| |bbb \x1b[3;1H3| |ccc \x1b[4;1H4| |ddd "));
     try session_runtime.poll(session);
-    try std.testing.expectEqual(@as(usize, 0), session.scrollbackInfo().total_rows);
+    try std.testing.expectEqual(@as(usize, 0), session.core.scrollbackInfo().total_rows);
 
     try std.testing.expect(terminal_publication.acknowledgePresentedGeneration(session, terminal_publication.renderCache(session).generation));
 
     try std.testing.expect(try session_runtime.enqueueExternalBytes(session, "\x1b[H5\x1b[2;1H+>"));
     try session_runtime.poll(session);
-    try std.testing.expectEqual(@as(usize, 0), session.scrollbackInfo().total_rows);
+    try std.testing.expectEqual(@as(usize, 0), session.core.scrollbackInfo().total_rows);
 
     try std.testing.expect(try session_runtime.enqueueExternalBytes(session, "\x1b[1;4H|\x1b[2;4H|"));
     try session_runtime.poll(session);
 
-    try std.testing.expectEqual(@as(usize, 0), session.scrollbackInfo().total_rows);
+    try std.testing.expectEqual(@as(usize, 0), session.core.scrollbackInfo().total_rows);
 
     const snapshot = session.snapshot();
     try expectSnapshotRow(snapshot, 0, "5| |aaa   ");
@@ -2275,7 +2275,7 @@ test "scrollback plain text export is terminal-owned" {
     session.primary.grid.cells.items[4].codepoint = 'E';
     session.primary.grid.cells.items[5].codepoint = 'F';
 
-    const text = try session.scrollbackPlainTextAlloc(allocator);
+    const text = try session.core.scrollbackPlainTextAlloc(allocator);
     defer allocator.free(text);
 
     try std.testing.expectEqualStrings("AB\nCD\nEF\n", text);
@@ -2291,7 +2291,7 @@ test "scrollback ansi text export is terminal-owned" {
     cell.codepoint = 'A';
     session.primary.grid.cells.items[0] = cell;
 
-    const text = try session.scrollbackAnsiTextAlloc(allocator);
+    const text = try session.core.scrollbackAnsiTextAlloc(allocator);
     defer allocator.free(text);
 
     const expected = try std.fmt.allocPrint(
@@ -2332,7 +2332,7 @@ test "scrollback range export is terminal-owned" {
 
     var cells = std.ArrayList(Cell).empty;
     defer cells.deinit(allocator);
-    const range = try session.copyScrollbackRange(allocator, 0, 0, &cells);
+    const range = try session.core.copyScrollbackRange(allocator, 0, 0, &cells);
 
     try std.testing.expectEqual(@as(usize, 2), range.total_rows);
     try std.testing.expectEqual(@as(usize, 2), range.row_count);

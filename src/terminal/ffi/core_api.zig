@@ -709,7 +709,7 @@ pub fn scrollbackAcquire(handle: ?*shared.ZideTerminalHandle, start_row: u32, ma
     out_buffer.* = .{};
     const allocator = h.allocator;
 
-    const range = h.session.copyScrollbackRange(
+    const range = h.session.core.copyScrollbackRange(
         allocator,
         @intCast(start_row),
         @intCast(max_rows),
@@ -952,7 +952,7 @@ pub fn clipboardWrite(handle: ?*shared.ZideTerminalHandle, out_string: *shared.S
 
 pub fn scrollbackPlainText(handle: ?*shared.ZideTerminalHandle, out_string: *shared.StringBuffer) shared.Status {
     const h = shared.fromOpaqueActive(handle) orelse return .invalid_argument;
-    const text = h.session.scrollbackPlainTextAlloc(h.allocator) catch |err| {
+    const text = h.session.core.scrollbackPlainTextAlloc(h.allocator) catch |err| {
         return shared.mapError(err);
     };
     return shared.stringFromOwnedSlice(h.allocator, text, out_string);
@@ -960,7 +960,7 @@ pub fn scrollbackPlainText(handle: ?*shared.ZideTerminalHandle, out_string: *sha
 
 pub fn scrollbackAnsiText(handle: ?*shared.ZideTerminalHandle, out_string: *shared.StringBuffer) shared.Status {
     const h = shared.fromOpaqueActive(handle) orelse return .invalid_argument;
-    const text = h.session.scrollbackAnsiTextAlloc(h.allocator) catch |err| {
+    const text = h.session.core.scrollbackAnsiTextAlloc(h.allocator) catch |err| {
         return shared.mapError(err);
     };
     return shared.stringFromOwnedSlice(h.allocator, text, out_string);

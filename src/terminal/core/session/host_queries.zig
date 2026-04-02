@@ -1,5 +1,4 @@
 const std = @import("std");
-const scrollback_view = @import("../scrollback_view.zig");
 const terminal_transport = @import("../runtime/terminal_transport.zig");
 const session_host_types = @import("host_types.zig");
 const session_lifecycle = @import("lifecycle.zig");
@@ -24,7 +23,7 @@ pub fn copyMetadata(
 
     const title = self.core.titleText();
     const cwd = self.core.cwdText();
-    const scrollback = scrollback_view.scrollbackInfo(self);
+    const scrollback = self.core.scrollbackInfo();
     const scroll_offset = self.core.scrollbackOffset();
     const alive = if (terminal_transport.Transport.fromSession(self)) |transport| transport.isAlive() else false;
     const exit_code = session_lifecycle.childExitCode(self);

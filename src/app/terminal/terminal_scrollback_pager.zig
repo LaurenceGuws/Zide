@@ -26,7 +26,7 @@ pub fn openInPager(
     term: *PtyTerminalRuntime,
 ) !bool {
     const log = app_logger.logger("terminal.scrollback.pager");
-    const text = try term.scrollbackAnsiTextAlloc(allocator);
+    const text = try term.core.scrollbackAnsiTextAlloc(allocator);
     defer allocator.free(text);
     if (text.len == 0) return false;
 

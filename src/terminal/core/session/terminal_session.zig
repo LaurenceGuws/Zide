@@ -12,11 +12,7 @@ const TerminalCoreType = terminal_core_mod.TerminalCore;
 
 pub const TerminalSession = struct {
     pub const InitOptions = init_options.InitOptions;
-    pub const scrollbackInfo = content.scrollbackInfo;
-    pub const copyScrollbackRange = content.copyScrollbackRange;
     pub const selectionPlainTextAlloc = content.selectionPlainTextAlloc;
-    pub const scrollbackPlainTextAlloc = content.scrollbackPlainTextAlloc;
-    pub const scrollbackAnsiTextAlloc = content.scrollbackAnsiTextAlloc;
     pub const setScrollOffset = content.setScrollOffset;
     pub const setScrollOffsetLocked = content.setScrollOffsetLocked;
     pub const resetToLiveBottomLocked = content.resetToLiveBottomLocked;

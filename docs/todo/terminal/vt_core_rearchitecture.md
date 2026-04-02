@@ -205,6 +205,11 @@ Focused follow-up lane:
     engine while `TerminalSession` still reads like the real public object
   - the next sprint step must therefore choose the actual `zide-vt` library
     object instead of continuing local cleanup around that ambiguity
+  Progress:
+  - the first `vt-sprint` code cut is now the immutable scrollback/export slab
+  - `TerminalCore` now owns read-only scrollback summary and export directly
+  - `TerminalSession` no longer advertises the duplicate read-only scrollback
+    surface as if that immutable content were session-shell ownership
 
 - `docs/review/TERMINAL_NATIVE_ARCHITECTURAL_SCRUTINY_2026-03-31.md`
   Why: this is the current ruthless read on what still looks second-rate at

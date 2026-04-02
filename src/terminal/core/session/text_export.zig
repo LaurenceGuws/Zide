@@ -4,8 +4,6 @@ const selection_mod = @import("../selection.zig");
 const scrollback_view = @import("../scrollback_view.zig");
 
 const Cell = types.Cell;
-const CellAttrs = types.CellAttrs;
-const TerminalSelection = types.TerminalSelection;
 
 fn rowLastContentCol(row_cells: []const Cell, cols_count: usize) ?usize {
     if (cols_count == 0 or row_cells.len < cols_count) return null;
@@ -65,91 +63,6 @@ fn appendSelectionRange(
     }
 }
 
-fn appendPlainRow(
-    out: *std.ArrayList(u8),
-    allocator: std.mem.Allocator,
-    row_cells: []const Cell,
-) !void {
-    var line = std.ArrayList(u8).empty;
-    defer line.deinit(allocator);
-
-    for (row_cells) |cell| {
-        try appendCellText(&line, allocator, cell);
-    }
-
-    while (line.items.len > 0 and line.items[line.items.len - 1] == ' ') {
-        _ = line.pop();
-    }
-
-    try out.appendSlice(allocator, line.items);
-    try out.append(allocator, '\n');
-}
-
-fn attrsEqual(a: CellAttrs, b: CellAttrs) bool {
-    return a.fg.r == b.fg.r and
-        a.fg.g == b.fg.g and
-        a.fg.b == b.fg.b and
-        a.fg.a == b.fg.a and
-        a.bg.r == b.bg.r and
-        a.bg.g == b.bg.g and
-        a.bg.b == b.bg.b and
-        a.bg.a == b.bg.a and
-        a.bold == b.bold and
-        a.blink == b.blink and
-        a.blink_fast == b.blink_fast and
-        a.reverse == b.reverse and
-        a.underline == b.underline and
-        a.underline_color.r == b.underline_color.r and
-        a.underline_color.g == b.underline_color.g and
-        a.underline_color.b == b.underline_color.b and
-        a.underline_color.a == b.underline_color.a;
-}
-
-fn appendSgrForAttrs(out: *std.ArrayList(u8), allocator: std.mem.Allocator, attrs: CellAttrs) !void {
-    try out.writer(allocator).print(
-        "\x1b[0{s}{s}{s}{s};38;2;{d};{d};{d};48;2;{d};{d};{d};58;2;{d};{d};{d}m",
-        .{
-            if (attrs.bold) ";1" else "",
-            if (attrs.underline) ";4" else "",
-            if (attrs.reverse) ";7" else "",
-            if (attrs.blink) (if (attrs.blink_fast) ";6" else ";5") else "",
-            attrs.fg.r,
-            attrs.fg.g,
-            attrs.fg.b,
-            attrs.bg.r,
-            attrs.bg.g,
-            attrs.bg.b,
-            attrs.underline_color.r,
-            attrs.underline_color.g,
-            attrs.underline_color.b,
-        },
-    );
-}
-
-fn appendAnsiRow(
-    out: *std.ArrayList(u8),
-    allocator: std.mem.Allocator,
-    row_cells: []const Cell,
-) !void {
-    var active_attrs: ?CellAttrs = null;
-    var col_idx: usize = 0;
-    while (col_idx < row_cells.len) : (col_idx += 1) {
-        const cell = row_cells[col_idx];
-        if (cell.x != 0 or cell.y != 0) continue;
-
-        if (active_attrs == null or !attrsEqual(active_attrs.?, cell.attrs)) {
-            try appendSgrForAttrs(out, allocator, cell.attrs);
-            active_attrs = cell.attrs;
-        }
-        try appendCellText(out, allocator, cell);
-    }
-
-    if (active_attrs != null) {
-        try out.appendSlice(allocator, "\x1b[0m");
-    }
-    try out.append(allocator, '\n');
-}
-
 fn visibleRow(self: anytype, cells: []const Cell, rows: usize, cols: usize, history: usize, line_idx: usize) ?[]const Cell {
     if (line_idx < history) return scrollback_view.scrollbackRow(self, line_idx);
     const grid_row = line_idx - history;
@@ -197,48 +110,4 @@ pub fn selectionPlainTextAlloc(self: anytype, allocator: std.mem.Allocator) !?[]
 
     const text = try out.toOwnedSlice(allocator);
     return text;
-}
-
-pub fn scrollbackPlainTextAlloc(self: anytype, allocator: std.mem.Allocator) ![]u8 {
-    self.lock();
-    defer self.unlock();
-
-    const screen = self.core.activeScreenConst();
-    const view = screen.snapshotView();
-    const rows = view.rows;
-    const cols = view.cols;
-    const history = scrollback_view.scrollbackCount(self);
-
-    var out = std.ArrayList(u8).empty;
-    errdefer out.deinit(allocator);
-
-    var line_idx: usize = 0;
-    while (line_idx < history + rows) : (line_idx += 1) {
-        const row_cells = visibleRow(self, view.cells, rows, cols, history, line_idx) orelse continue;
-        try appendPlainRow(&out, allocator, row_cells);
-    }
-
-    return out.toOwnedSlice(allocator);
-}
-
-pub fn scrollbackAnsiTextAlloc(self: anytype, allocator: std.mem.Allocator) ![]u8 {
-    self.lock();
-    defer self.unlock();
-
-    const screen = self.core.activeScreenConst();
-    const view = screen.snapshotView();
-    const rows = view.rows;
-    const cols = view.cols;
-    const history = scrollback_view.scrollbackCount(self);
-
-    var out = std.ArrayList(u8).empty;
-    errdefer out.deinit(allocator);
-
-    var line_idx: usize = 0;
-    while (line_idx < history + rows) : (line_idx += 1) {
-        const row_cells = visibleRow(self, view.cells, rows, cols, history, line_idx) orelse continue;
-        try appendAnsiRow(&out, allocator, row_cells);
-    }
-
-    return out.toOwnedSlice(allocator);
 }

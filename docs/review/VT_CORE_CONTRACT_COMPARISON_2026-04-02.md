@@ -147,6 +147,22 @@ The direct comparison says:
 - the biggest remaining contradiction is that `TerminalCore` and
   `TerminalSession` still split "real engine" and "real public object"
 
+## First Sprint Cut
+
+The first real `vt-sprint` move is now identified and should be judged by this
+bar:
+
+- move immutable scrollback/export reads onto `TerminalCore`
+- stop advertising that read-only slab from `TerminalSession`
+
+Why this is the right opener:
+
+- it is already core-owned in substance
+- it is host-facing
+- it does not depend on PTY/runtime shell behavior
+- it makes hosts reach the engine object directly for immutable terminal
+  content instead of treating `TerminalSession` as the only real export face
+
 ## Sprint Target
 
 The next `vt-sprint` question should be:
