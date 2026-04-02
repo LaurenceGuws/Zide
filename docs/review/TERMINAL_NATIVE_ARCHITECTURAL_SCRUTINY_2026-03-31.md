@@ -214,6 +214,12 @@ Judgment:
   `src/terminal/core/publication/terminal_publication.zig` as
   `publishPendingGenerationLocked(...)` and
   `publishViewRefreshRequestLocked(...)`
+- poll-side publication choreography is tighter too:
+  `src/terminal/core/runtime/pty_poll_publication.zig` no longer manually
+  sequences "publish current view if data arrived, then apply pending refresh
+  if any"; that owner action now lives under
+  `src/terminal/core/publication/terminal_publication.zig` as
+  `publishPollUpdateLocked(...)`
 - the stale `src/terminal/core/session_protocol.zig` forwarding shell is now
   deleted, so that API seam no longer routes through one extra session-named
   hop before reaching the real owners

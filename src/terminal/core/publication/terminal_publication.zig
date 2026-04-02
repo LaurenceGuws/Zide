@@ -431,6 +431,13 @@ pub fn applyPendingViewRefreshLocked(self: anytype, source: []const u8) bool {
     return true;
 }
 
+pub fn publishPollUpdateLocked(self: anytype, had_data: bool, publish_source: []const u8, refresh_source: []const u8) bool {
+    if (had_data) {
+        publishCurrentViewLocked(self, publish_source);
+    }
+    return applyPendingViewRefreshLocked(self, refresh_source);
+}
+
 pub fn updateViewCacheForScroll(self: anytype) void {
     view_cache.updateViewCacheForScroll(self);
 }
