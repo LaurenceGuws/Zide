@@ -119,6 +119,22 @@ Focused follow-up lane:
   terminal presentation may only retire once submitted scene truth proves the
   authoritative retained terminal surface was actually present for the
   acknowledged generation.
+  Current read:
+  - the first present-invariant wave is materially complete
+  - renderer submission proof is now the retirement authority
+  - weak widget-local retirement signals are deleted
+  - the next honest question is no longer the ack gate itself
+  - it is whether a real scene-composition omission path still exists
+- `docs/review/TERMINAL_WAR_2_POST_PRESENT_RERANK_2026-04-02.md`
+  Why: after the present-invariant wave landed, the dominant terminal enemy
+  likely shifted back to structural pressure.
+  Current read:
+  - present acknowledgement ambiguity is no longer the center
+  - `terminal_publication.zig` is again the heaviest remaining non-engine
+    center
+  - the next likely War 2 opener is a fresh publication-boundary review from
+    the live post-present codebase, not more present cleanup by momentum
+  acknowledged generation.
 
 ## Current Milestone
 
