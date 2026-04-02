@@ -175,7 +175,7 @@ more like an accumulated issue-era probe surface.
 Build/runtime truth says only `sdl_gl` is real.
 
 Before this scrutiny round started, the repo still visibly carried backend
-stubs such as:
+stub references such as:
 
 - `src/ui/renderer/backends/egl.zig`
 - `src/ui/renderer/backends/wgl.zig`
@@ -188,6 +188,12 @@ That creates a first-glance maturity gap:
 - or there is not
 
 Right now the surface still gestures toward one that does not actually exist.
+
+Progress note, 2026-04-02:
+
+- the fake backend selector is gone from build/runtime code
+- the renderer docs are being narrowed to the live SDL3/OpenGL path instead of
+  a speculative backend matrix
 
 ## Focus Areas
 

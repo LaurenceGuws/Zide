@@ -197,5 +197,4 @@ Validation
 - Add per-OS smoke tests for window create, text render, and input.
 
 Open questions (to resolve later)
-- Decide whether Windows should use WGL or EGL/ANGLE.
 - Decide if macOS requires CoreText for font discovery or if FreeType is sufficient.

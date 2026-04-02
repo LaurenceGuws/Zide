@@ -224,7 +224,7 @@ Severity: medium
 Build/runtime policy clearly says only `sdl_gl` is implemented.
 
 Before the first code cut in this lane, the repo still visibly carried backend
-stubs:
+stub references:
 
 - `src/ui/renderer/backends/egl.zig`
 - `src/ui/renderer/backends/wgl.zig`
@@ -246,6 +246,8 @@ Status note, 2026-04-02:
 - the fake runtime/build backend selector is gone
 - the current build surface now states SDL3/OpenGL directly instead of
   pretending backend choice exists
+- the remaining stale backend references are documentation cleanup, not live
+  runtime truth
 
 ## External Comparison
 

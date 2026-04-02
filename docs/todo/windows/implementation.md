@@ -40,7 +40,7 @@ The current execution order is:
 - `build.zig`
 - `src/platform/*`
 - `src/ui/renderer.zig`
-- `src/ui/renderer/backends/*`
+- `src/ui/renderer/gl_backend.zig`
 - `src/ui/renderer/text_runtime.zig`
 - `src/ui/font/shaping.zig`
 - `src/ui/terminal_font.zig`
