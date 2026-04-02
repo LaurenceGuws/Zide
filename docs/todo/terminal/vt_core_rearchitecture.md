@@ -88,6 +88,14 @@ gravity into smaller files.
     first appeared
   - the stronger remaining War 4 pressure is now host-to-terminal interaction
     ownership, not handle storage shape by itself
+- `docs/review/VT_WAR_4_INTERACTION_OWNERSHIP_REVIEW_2026-04-03.md`
+  Why: after the handle check, the next strongest comparison pressure is no
+  longer handle identity but where live terminal-driving semantics terminate.
+  Current read:
+  - output application, host input/reporting, and resize still read more
+    shell-owned than terminal-owned
+  - transport/lifecycle/thread mechanics should stay shell-owned
+  - the next code war should only open on one named interaction slab
 
 ## Priority Now
 
