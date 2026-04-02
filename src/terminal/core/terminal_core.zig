@@ -48,6 +48,7 @@ pub const TerminalCore = struct {
     pub const KeyActionDispatch = terminal_core_key_dispatch.KeyActionDispatch;
     pub const KeypadActionDispatch = terminal_core_key_dispatch.KeypadActionDispatch;
     pub const AlternateScrollDispatch = terminal_core_key_dispatch.AlternateScrollDispatch;
+    pub const CharActionDispatch = terminal_core_key_dispatch.CharActionDispatch;
     pub const OutputFeedResult = struct {
         parsed: bool,
         scroll_offset: usize,
@@ -275,6 +276,24 @@ pub const TerminalCore = struct {
             wheel_steps,
             alternate_scroll_enabled,
             alt_active,
+        );
+    }
+
+    pub fn decideCharAction(
+        self: *const TerminalCore,
+        char: u32,
+        mod: types.Modifier,
+        action: @import("../input/input.zig").KeyAction,
+        auto_repeat_enabled: bool,
+        local_echo_mode_12: bool,
+    ) CharActionDispatch {
+        return terminal_core_key_dispatch.decideCharAction(
+            self,
+            char,
+            mod,
+            action,
+            auto_repeat_enabled,
+            local_echo_mode_12,
         );
     }
 

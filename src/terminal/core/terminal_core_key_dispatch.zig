@@ -20,6 +20,11 @@ pub const AlternateScrollDispatch = struct {
     key: ?types.Key,
 };
 
+pub const CharActionDispatch = struct {
+    suppress: bool,
+    local_echo_eligible: bool,
+};
+
 pub fn decideKeyAction(
     _: anytype,
     key: types.Key,
@@ -83,5 +88,31 @@ pub fn decideAlternateScrollStep(
     return .{
         .active = true,
         .key = if (wheel_steps > 0) types.VTERM_KEY_UP else types.VTERM_KEY_DOWN,
+    };
+}
+
+pub fn decideCharAction(
+    _: anytype,
+    char: u32,
+    mod: types.Modifier,
+    action: input_mod.KeyAction,
+    auto_repeat_enabled: bool,
+    local_echo_mode_12: bool,
+) CharActionDispatch {
+    if (action == .repeat and !auto_repeat_enabled) {
+        return .{
+            .suppress = true,
+            .local_echo_eligible = false,
+        };
+    }
+    return .{
+        .suppress = false,
+        .local_echo_eligible = action != .release and
+            mod == types.VTERM_MOD_NONE and
+            char >= 0x20 and
+            char != 0x7F and
+            char <= 0x10FFFF and
+            !(char >= 0xD800 and char <= 0xDFFF) and
+            local_echo_mode_12,
     };
 }

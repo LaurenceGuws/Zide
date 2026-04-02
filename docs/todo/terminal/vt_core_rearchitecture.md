@@ -57,7 +57,12 @@ gravity into smaller files.
   - alternate-scroll mapping is now landed under the same owner too
   - `TerminalCore` now also owns alternate-scroll mode gating, alt-screen
     gating, and arrow-key intent selection
-  - char dispatch remains blocked by the local-echo ambiguity
+  - char-action dispatch is now landed under the same owner too
+  - `TerminalCore` now also owns repeat suppression and local-echo
+    eligibility, while shell input still owns fallback execution when no
+    writer exists
+  - raw text/byte send and reporting lanes remain out of scope unless they
+    prove terminal-semantic rather than writer-shaped
 
 - `docs/review/VT_WAR_4_SCOPE_AND_SEEDS_2026-04-03.md`
   Why: the next scrutiny pass is no longer a cleanup sprint; it is a focused

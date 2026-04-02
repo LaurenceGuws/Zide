@@ -27,13 +27,13 @@ const KeypadActionContext = struct {
     dispatch: @import("../terminal_core.zig").TerminalCore.KeypadActionDispatch,
 };
 
-fn echoCharLocallyIfEnabled(self: anytype, char: u32, mod: Modifier, action: input_mod.KeyAction) void {
-    if (action == .release) return;
-    if (mod != VTERM_MOD_NONE) return;
-    if (char < 0x20 or char == 0x7F) return;
-    if (char > 0x10FFFF or (char >= 0xD800 and char <= 0xDFFF)) return;
-    const screen = self.core.activeScreen();
-    if (!screen.local_echo_mode_12) return;
+const CharActionContext = struct {
+    key_mode_flags: u32,
+    dispatch: @import("../terminal_core.zig").TerminalCore.CharActionDispatch,
+};
+
+fn echoCharLocallyIfEligible(self: anytype, char: u32, eligible: bool) void {
+    if (!eligible) return;
     terminal_core_text.handleCodepoint(self, char);
 }
 
@@ -142,16 +142,30 @@ pub fn sendChar(self: anytype, char: u32, mod: Modifier) !void {
     try sendCharAction(self, char, mod, input_mod.KeyAction.press);
 }
 
-pub fn sendCharAction(self: anytype, char: u32, mod: Modifier, action: input_mod.KeyAction) !void {
-    if (action == .repeat and !self.session.interaction.input_snapshot.auto_repeat.load(.acquire)) return;
+fn charActionContext(self: anytype, char: u32, mod: Modifier, action: input_mod.KeyAction) CharActionContext {
     const input_snapshot = self.session.interaction.input_snapshot;
     const key_mode_flags = input_snapshot.key_mode_flags.load(.acquire);
+    return .{
+        .key_mode_flags = key_mode_flags,
+        .dispatch = self.core.decideCharAction(
+            char,
+            mod,
+            action,
+            input_snapshot.auto_repeat.load(.acquire),
+            self.core.activeScreen().local_echo_mode_12,
+        ),
+    };
+}
+
+pub fn sendCharAction(self: anytype, char: u32, mod: Modifier, action: input_mod.KeyAction) !void {
+    const context = charActionContext(self, char, mod, action);
+    if (context.dispatch.suppress) return;
     if (self.lockPtyWriter()) |writer_guard| {
         var writer = writer_guard;
         defer writer.unlock();
-        _ = try writer.sendCharAction(char, mod, key_mode_flags, action);
+        _ = try writer.sendCharAction(char, mod, context.key_mode_flags, action);
     } else {
-        echoCharLocallyIfEnabled(self, char, mod, action);
+        echoCharLocallyIfEligible(self, char, context.dispatch.local_echo_eligible);
     }
 }
 
@@ -162,21 +176,20 @@ pub fn sendCharActionWithMetadata(
     action: input_mod.KeyAction,
     alternate_meta: ?types.KeyboardAlternateMetadata,
 ) !void {
-    if (action == .repeat and !self.session.interaction.input_snapshot.auto_repeat.load(.acquire)) return;
-    const input_snapshot = self.session.interaction.input_snapshot;
-    const key_mode_flags = input_snapshot.key_mode_flags.load(.acquire);
+    const context = charActionContext(self, char, mod, action);
+    if (context.dispatch.suppress) return;
     if (self.lockPtyWriter()) |writer_guard| {
         var writer = writer_guard;
         defer writer.unlock();
         _ = try writer.sendCharActionEvent(.{
             .codepoint = char,
             .mod = mod,
-            .key_mode_flags = key_mode_flags,
+            .key_mode_flags = context.key_mode_flags,
             .action = action,
             .protocol = .{ .alternate = alternate_meta },
         });
     } else {
-        echoCharLocallyIfEnabled(self, char, mod, action);
+        echoCharLocallyIfEligible(self, char, context.dispatch.local_echo_eligible);
     }
 }
 
@@ -342,4 +355,29 @@ test "alternate scroll mapping comes from core dispatch" {
     const bytes = (try session_runtime.takeExternalOutgoingBytes(session, allocator)).?;
     defer allocator.free(bytes);
     try std.testing.expectEqualStrings("\x1bOA", bytes);
+}
+
+test "char local echo eligibility comes from core dispatch" {
+    const allocator = std.testing.allocator;
+    var session = try @import("terminal_runtime_shell.zig").TerminalRuntimeShell.init(allocator, 2, 2);
+    defer session.deinit();
+
+    session.core.activeScreen().setLocalEchoMode12(true);
+
+    try sendCharAction(session, 'x', VTERM_MOD_NONE, .press);
+
+    try std.testing.expectEqual(@as(u32, 'x'), session.core.activeScreenConst().grid.cells.items[0].codepoint);
+}
+
+test "char repeat suppression comes from core dispatch" {
+    const allocator = std.testing.allocator;
+    var session = try @import("terminal_runtime_shell.zig").TerminalRuntimeShell.init(allocator, 2, 2);
+    defer session.deinit();
+
+    session.core.activeScreen().setLocalEchoMode12(true);
+    @import("../input_modes.zig").setAutoRepeat(session, false);
+
+    try sendCharAction(session, 'x', VTERM_MOD_NONE, .repeat);
+
+    try std.testing.expectEqual(@as(u32, 0), session.core.activeScreenConst().grid.cells.items[0].codepoint);
 }

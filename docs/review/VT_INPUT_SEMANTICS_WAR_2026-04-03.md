@@ -147,6 +147,31 @@ What still stayed outside core:
 - writer selection
 - protocol encoding
 
+Progress, later on 2026-04-03:
+
+- char-action dispatch is now landed too
+- [terminal_core_key_dispatch.zig](/home/home/personal/zide/src/terminal/core/terminal_core_key_dispatch.zig)
+  now owns:
+  - repeat suppression
+  - local-echo eligibility
+- [session/input.zig](/home/home/personal/zide/src/terminal/core/session/input.zig)
+  now routes both `sendCharAction(...)` and
+  `sendCharActionWithMetadata(...)` through that core-owned decision
+
+What this resolved:
+
+- core no longer needs to know whether a writer exists
+- shell still decides whether missing writer actually triggers fallback
+- local echo is now treated as:
+  - terminal-owned eligibility
+  - shell-owned execution when no writer path is available
+
+What still remains out of scope:
+
+- raw text/byte send
+- mouse reporting
+- focus/color-scheme reporting
+
 ### 2. Broader host-driving input semantic contract
 
 Examples:
@@ -208,4 +233,5 @@ Current state:
 - key-action dispatch is now a real first slice
 - keypad-action dispatch now follows the same pattern
 - alternate-scroll mapping now follows the same pattern
-- char/input broadening is still not automatic from that win
+- char-action dispatch now follows the same pattern too
+- broader reporting/text-send lanes are still not automatic from these wins
