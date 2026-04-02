@@ -96,6 +96,49 @@ That is the same contract rule in caller form:
 - do not ask the shell for a larger summary if the caller only needs a smaller
   core-owned answer
 
+## Current Rerank
+
+After the recent cuts, the remaining
+[host_queries.zig](/home/home/personal/zide/src/terminal/core/session/host_queries.zig)
+surface now reads much more honestly.
+
+What remains there is mostly one of two things:
+
+1. real runtime aggregation
+- liveness
+- exit code
+- foreground-process label / command
+- foreground-process presence
+
+2. mixed host-facing packaging that legitimately combines:
+- core truth
+- plus runtime/transport truth
+
+That means the easy fake-shell-summary cuts are mostly gone.
+
+## Current Stop Marker
+
+Do not keep cutting `host_queries` by momentum.
+
+From the current baseline:
+
+- `displayTitleText(...)` is runtime-shaped because it intentionally prefers
+  foreground-process label over raw title
+- `isAlive(...)` is runtime-shaped
+- `currentActivityMetadata(...)` is now mostly the honest mixed package for
+  close-confirm, FFI, and workspace sync consumers
+- `copyMetadata(...)` is now mostly the honest mixed package for title/cwd plus
+  liveness/exit metadata
+
+So the next move should not be:
+
+- shaving `host_queries` smaller just because it still exists
+
+It should be:
+
+- a fresh rerank of whether the next plug-and-play blocker is deeper
+  `TerminalCore` sufficiency or simply a legitimate outer-shell boundary
+
 That is the right direction because it makes the shell add only what it truly
 owns:
 
