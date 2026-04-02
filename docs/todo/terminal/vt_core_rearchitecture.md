@@ -252,6 +252,15 @@ Focused follow-up lane:
   - replay and regression callers use publication directly for snapshot export
   - the remaining `TerminalSession` story is now init + locking + PTY writer
     shell, which sharpens the next design decision
+- `docs/review/VT_SESSION_REMOVAL_DESIGN_2026-04-02.md`
+  Why: the sprint bar is now explicit.
+  Current read:
+  - `TerminalSession` should not merely get smaller; it should disappear
+  - the remaining blockers are no longer helper residue
+  - the remaining blockers are construction identity, lock ownership, and
+    PTY/runtime shell ownership
+  - the next code wave should therefore build the replacement shape for those
+    responsibilities instead of continuing opportunistic cleanup
 
 - `docs/review/TERMINAL_NATIVE_ARCHITECTURAL_SCRUTINY_2026-03-31.md`
   Why: this is the current ruthless read on what still looks second-rate at
