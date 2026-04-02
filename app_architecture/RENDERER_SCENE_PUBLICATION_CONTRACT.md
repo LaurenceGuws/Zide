@@ -282,6 +282,8 @@ The convergence rule is:
   talk to the retained-surface owner directly
 - move host scene assembly out of the frame-loop driver so scene ordering lives
   with a dedicated host assembly owner
+- move present completion and subsystem feedback out of the frame-loop driver
+  so acknowledgement policy lives with a dedicated host completion owner
 - keep implementation internals retained and optimized
 
 ### Phase 4: Unified host draw reasoning

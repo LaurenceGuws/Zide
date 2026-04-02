@@ -176,6 +176,9 @@ Status note after the first retained-target ownership cut:
   instead of the old product-specific texture-shaped transition names
 - host scene assembly now lives in `src/app/scene_assembly_runtime.zig`
   instead of remaining inline in `src/app/draw_frame_runtime.zig`
+- host present completion and subsystem feedback now live in
+  `src/app/present_feedback_runtime.zig` instead of remaining inline in
+  `src/app/draw_frame_runtime.zig`
 
 ### 3. Scene ownership is structurally right, but product-retained-target
 choreography still shapes the steady-state path

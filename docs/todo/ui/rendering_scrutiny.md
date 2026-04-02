@@ -47,6 +47,9 @@ Status note, 2026-04-02:
   this scrutiny round
 - host scene assembly now lives in `src/app/scene_assembly_runtime.zig`
   instead of sitting inline in `src/app/draw_frame_runtime.zig`
+- host present-completion and subsystem feedback now live in
+  `src/app/present_feedback_runtime.zig` instead of sitting inline in
+  `src/app/draw_frame_runtime.zig`
 - the next move should be another re-rank before any more cuts, not automatic
   repacking
 
