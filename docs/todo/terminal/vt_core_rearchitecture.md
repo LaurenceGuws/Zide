@@ -61,6 +61,14 @@ Focused follow-up lane:
   - Zide is now rich enough at the host-contract layer
   - the remaining blocker is architecture shape, not capability volume
   - War 3 should open on the engine/library boundary itself
+- `docs/review/TERMINAL_WAR_3_LIBRARY_CENTER_REVIEW_2026-04-02.md`
+  Why: the first concrete War 3 question is what still prevents the live stack
+  from reading like one unmistakable library center plus runtime shell plus
+  export boundary.
+  Current read:
+  - the main blocker is now a three-way center-of-gravity split between
+    `terminal_core.zig`, `session/runtime.zig`, and `terminal_publication.zig`
+  - the next cut should start from that library-center question directly
 
 - `docs/review/TERMINAL_NATIVE_ARCHITECTURAL_SCRUTINY_2026-03-31.md`
   Why: this is the current ruthless read on what still looks second-rate at
