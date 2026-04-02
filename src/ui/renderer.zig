@@ -25,7 +25,6 @@ const shape_draw = @import("renderer/shape_draw.zig");
 const terminal_glyphs = @import("renderer/terminal_glyphs.zig");
 const terminal_underline = @import("renderer/terminal_underline.zig");
 const texture_draw = @import("renderer/texture_draw.zig");
-const input_logging = @import("renderer/input_logging.zig");
 const screenshot = @import("renderer/screenshot.zig");
 const input_runtime = @import("renderer/input_runtime.zig");
 const font_runtime = @import("renderer/font_runtime.zig");
@@ -60,7 +59,6 @@ pub const WindowSizes = struct {
 
 var active_renderer: ?*Renderer = null;
 var mouse_wheel_delta: f32 = 0.0;
-var sdl_input_env_logged: bool = false;
 
 pub const FontFamily = iface.FontFamily;
 pub const FONT_FAMILY = iface.FONT_FAMILY;
@@ -1723,7 +1721,6 @@ pub const Renderer = struct {
         input_runtime.pollInputEvents(
             self,
             &mouse_wheel_delta,
-            &sdl_input_env_logged,
         );
     }
 };

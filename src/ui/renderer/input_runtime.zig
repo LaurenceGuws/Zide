@@ -3,24 +3,13 @@ const app_logger = @import("../../app_logger.zig");
 const platform_input_events = @import("../../platform/input_events.zig");
 const input_state = @import("input_state.zig");
 const text_input = @import("text_input.zig");
-const input_logging = @import("input_logging.zig");
 const sdl_api = @import("../../platform/sdl_api.zig");
 
 pub fn pollInputEvents(
     self: anytype,
     mouse_wheel_delta: *f32,
-    sdl_input_env_logged: *bool,
 ) void {
-    const input_log = app_logger.logger("input.sdl");
     const window_log = app_logger.logger("sdl.window");
-    if (!sdl_input_env_logged.*) {
-        input_log.logf(
-            .info,
-            "sdl build_version=sdl3 event_size={d}",
-            .{sdl_api.sdlEventSize()},
-        );
-        sdl_input_env_logged.* = true;
-    }
     compactInputQueue(@TypeOf(self.key_queue.items[0]), &self.key_queue, &self.key_queue_head);
     compactInputQueue(@TypeOf(self.char_queue.items[0]), &self.char_queue, &self.char_queue_head);
     compactInputQueue(bool, &self.focus_queue, &self.focus_queue_head);
@@ -47,25 +36,20 @@ pub fn pollInputEvents(
     @memset(self.mouse_press_pos_valid[0..], false);
     input_state.resetMouseWheel(mouse_wheel_delta);
 
-    var event_count: usize = 0;
     if (self.pending_wait_event_valid) {
-        event_count += 1;
-        handleEvent(self, &self.pending_wait_event, input_log, window_log, state);
+        handleEvent(self, &self.pending_wait_event, window_log, state);
         self.pending_wait_event_valid = false;
     }
 
     var event: sdl_api.c.SDL_Event = undefined;
     while (sdl_api.pollEvent(&event)) {
-        event_count += 1;
-        handleEvent(self, &event, input_log, window_log, state);
+        handleEvent(self, &event, window_log, state);
     }
-    if (event_count > 0) input_log.logf(.info, "sdl3 polled events={d}", .{event_count});
 }
 
 fn handleEvent(
     self: anytype,
     event: *const sdl_api.c.SDL_Event,
-    input_log: app_logger.Logger,
     window_log: app_logger.Logger,
     state: input_state.InputState,
 ) void {
@@ -98,7 +82,7 @@ fn handleEvent(
             });
         },
         sdl_api.EVENT_KEY_DOWN => {
-            const key_info = platform_input_events.handleKeyDown(
+            _ = platform_input_events.handleKeyDown(
                 event,
                 self.key_down[0..],
                 self.key_pressed[0..],
@@ -106,22 +90,17 @@ fn handleEvent(
                 &self.key_queue,
                 self.allocator,
             );
-            input_log.logf(.info, "keydown sc={d} sym={d} repeat={d}", .{ key_info.scancode, key_info.sym, key_info.repeat });
         },
         sdl_api.EVENT_KEY_UP => {
-            const key_info = platform_input_events.handleKeyUp(event, self.key_down[0..], self.key_released[0..]);
-            input_log.logf(.info, "keyup sc={d} sym={d}", .{ key_info.scancode, key_info.sym });
+            _ = platform_input_events.handleKeyUp(event, self.key_down[0..], self.key_released[0..]);
         },
         sdl_api.EVENT_TEXT_INPUT => {
             const text_was_composed = state.composing_active.*;
-            const text_len = platform_input_events.handleTextInput(event, &self.char_queue, self.allocator, text_was_composed);
+            _ = platform_input_events.handleTextInput(event, &self.char_queue, self.allocator, text_was_composed);
             input_state.applyTextInputReset(state);
-            input_logging.logTextInput(text_len);
-            input_log.logf(.info, "textinput type={d}", .{event.type});
         },
         sdl_api.EVENT_TEXT_EDITING => {
-            const edit_info = platform_input_events.handleTextEditing(event, &self.composing_text, &self.composing_cursor, &self.composing_selection_len, &self.composing_active, self.allocator);
-            input_logging.logTextEditing(edit_info.bytes, edit_info.cursor, edit_info.selection_len);
+            _ = platform_input_events.handleTextEditing(event, &self.composing_text, &self.composing_cursor, &self.composing_selection_len, &self.composing_active, self.allocator);
         },
         sdl_api.EVENT_MOUSE_BUTTON_DOWN => {
             platform_input_events.handleMouseButtonDown(event, self.mouse_down[0..], self.mouse_pressed[0..], self.mouse_clicks[0..]);

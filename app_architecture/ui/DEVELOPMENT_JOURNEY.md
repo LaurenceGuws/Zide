@@ -32,7 +32,9 @@ Status (2026-01-29)
   UI-side) lives in `docs/todo/ui/widget_modularization.md`.
 - SDL3 migration: SDL3-only build path; SDL2 fallback removed.
 - SDL3 terminal-only input now flows on Wayland when polling events on the main thread.
-- SDL3 input bring-up diagnostics for event-layout and text-pointer probing are gone; the live path keeps only normal input/event logging.
+- SDL3 input bring-up diagnostics and per-event SDL input noise are gone; the
+  live path keeps warning/error signal and narrower IME/window operational
+  logs.
 - Recent renderer cleanup extracted input constants, clipboard helpers, texture
   utilities, window event helpers, text input rect handling, timing helpers,
   input event helpers, SDL window/GL context init, input state helpers, mouse
