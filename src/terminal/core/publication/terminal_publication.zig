@@ -64,6 +64,8 @@ pub const AltExitPresentationInfo = struct {
 pub const PresentationFeedback = struct {
     presented: ?PresentedRenderCache = null,
     texture_updated: bool = false,
+    retained_surface_blitted: bool = false,
+    retained_surface_generation: ?u64 = null,
     alt_exit_info: ?AltExitPresentationInfo = null,
 };
 

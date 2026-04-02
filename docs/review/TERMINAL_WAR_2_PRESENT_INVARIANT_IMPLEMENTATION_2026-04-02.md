@@ -178,6 +178,16 @@ Add a stronger explicit signal shaped around scene submission, for example:
 
 This should be downstream-facing data, not a widget convenience bool.
 
+Status:
+
+- first payload step is now in:
+  `PresentationFeedback` carries explicit retained-surface fields
+  - `retained_surface_blitted`
+  - `retained_surface_generation`
+- widget draw now populates those fields when it actually reuses/blits the
+  retained terminal surface
+- retirement behavior is intentionally unchanged in this slice
+
 ### Slice 2: make scene composition record terminal-surface submission truth
 
 The renderer/present path must explicitly record:
