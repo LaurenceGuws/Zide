@@ -152,8 +152,10 @@ Focused follow-up lane:
   - the third larger cut landed too: present-retirement policy now lives in
     `src/terminal/core/publication/presentation_feedback.zig` instead of
     inflating publication
-  - the next cut should only continue if one more large split still exists in
-    the reduced publication shape
+  - current rerank: `terminal_publication.zig` is now much smaller and reads
+    closer to a real engine export boundary
+  - the next cut should only continue if a fresh review still finds one more
+    large false center in the reduced shape
 
 ## Current Milestone
 

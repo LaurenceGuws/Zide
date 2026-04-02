@@ -209,3 +209,30 @@ much narrower:
 - should capture/preparation and frame/export summaries stay together as the
   actual engine export boundary
 - or is there still one more large split hiding inside that reduced shape?
+
+## Rerank Point
+
+Current live read after the three slab moves:
+
+- [terminal_publication.zig](/home/home/personal/zide/src/terminal/core/publication/terminal_publication.zig)
+  is down to 425 lines
+- the remaining contents are now mostly:
+  - snapshot/export contract
+  - capture/preparation
+  - generation/frame summaries
+  - publication/view-refresh coordination
+  - a small sync-updates surface
+
+That means the burden of proof has changed.
+
+The next cut should **not** happen by default.
+
+It should happen only if a fresh review shows that one of these remaining
+clusters still reads like a real false center rather than the honest engine
+export boundary.
+
+Right now the most likely answer is:
+
+- publication is much closer to an honest boundary now
+- the next terminal war may need a broader rerank again instead of another
+  automatic publication split
