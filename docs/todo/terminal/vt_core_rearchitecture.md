@@ -213,6 +213,11 @@ Focused follow-up lane:
   - kitty upload/update orchestration now also runs through
     `src/ui/widgets/terminal_widget_kitty.zig`
     instead of living inline in `terminal_widget_draw.zig`
+  - current rerank: this lane is now approaching a stop-marker
+  - the remaining weight in `terminal_widget_draw.zig` is much closer to
+    actual retained-surface planning/execution
+  - do not keep splitting it by momentum unless one more real owner boundary
+    becomes obvious
 
 ## Current Milestone
 

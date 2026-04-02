@@ -177,6 +177,21 @@ It is more specifically:
 That is a better question than reopening `terminal_widget.zig` as if it were
 still the main enemy.
 
+Status update after the first wave:
+
+- retained-surface widget state is now grouped
+- latency publication is out
+- kitty upload/update orchestration is out
+
+That means the remaining weight in
+[terminal_widget_draw.zig](/home/home/personal/zide/src/ui/widgets/terminal_widget_draw.zig)
+is now much closer to actual retained-surface planning/execution.
+
+So this lane is approaching a rerank point.
+
+The next cut should only happen if it removes one more real owner boundary.
+If not, the honest move is to stop and rerank War 2 again from the top.
+
 ## Best Next Review Question
 
 Should retained terminal surface planning/execution now have one clearer owner
