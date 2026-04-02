@@ -154,6 +154,13 @@ Focused follow-up lane:
   - the aggregate type definition now also lives under
     `src/terminal/core/session/terminal_session.zig` as `TerminalSession`
     instead of being defined inline in `terminal_runtime.zig`
+- `docs/review/TERMINAL_WAR_3_POST_SESSION_OBJECT_RERANK_2026-04-02.md`
+  Why: the first session-object wave materially landed, so War 3 now needs a
+  narrower rerank from the cleaner baseline.
+  Current read:
+  - the strongest remaining contradiction is likely the public root identity
+  - the owning type is now `TerminalSession`, but the public root still only
+    says `PtyTerminalRuntime`
 
 - `docs/review/TERMINAL_NATIVE_ARCHITECTURAL_SCRUTINY_2026-03-31.md`
   Why: this is the current ruthless read on what still looks second-rate at
