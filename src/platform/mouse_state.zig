@@ -24,11 +24,6 @@ pub fn getScaledPos(scale: MouseScale) MousePos {
     return .{ .x = pos.x * scale.x, .y = pos.y * scale.y };
 }
 
-pub fn getScaledPosWithFactor(scale: f32) MousePos {
-    const pos = getMousePosRaw();
-    return .{ .x = pos.x * scale, .y = pos.y * scale };
-}
-
 pub fn computeMouseScale(window: *sdl.SDL_Window) MouseScale {
     _ = window;
     return .{ .x = 1.0, .y = 1.0 };

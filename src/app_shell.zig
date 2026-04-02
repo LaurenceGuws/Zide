@@ -369,10 +369,6 @@ pub const Shell = struct {
         return self.renderer.getMousePosRaw();
     }
 
-    pub fn getMousePosScaled(self: *Shell, scale: f32) MousePos {
-        return self.renderer.getMousePosScaled(scale);
-    }
-
     pub fn getMouseWheelMove(self: *Shell) f32 {
         return self.renderer.getMouseWheelMove();
     }

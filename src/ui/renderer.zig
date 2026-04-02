@@ -1389,11 +1389,6 @@ pub const Renderer = struct {
         return .{ .x = pos.x, .y = pos.y };
     }
 
-    pub fn getMousePosScaled(_: *Renderer, scale: f32) MousePos {
-        const pos = platform_mouse.getScaledPosWithFactor(scale);
-        return .{ .x = pos.x, .y = pos.y };
-    }
-
     pub fn getMousePosRaw(_: *Renderer) MousePos {
         const pos = platform_mouse.getMousePosRaw();
         return .{ .x = pos.x, .y = pos.y };
