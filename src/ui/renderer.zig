@@ -1,5 +1,4 @@
 const std = @import("std");
-const compositor = @import("../platform/compositor.zig");
 const iface = @import("renderer/interface.zig");
 const terminal_font_mod = @import("terminal_font.zig");
 const TerminalFont = terminal_font_mod.TerminalFont;
@@ -213,14 +212,6 @@ pub const renderer_backend: RendererBackend = parseRendererBackend(build_options
 
 fn parseRendererBackend(_: []const u8) RendererBackend {
     return .sdl_gl;
-}
-
-fn compositorName(kind: compositor.Compositor) []const u8 {
-    return switch (kind) {
-        .hyprland => "hyprland",
-        .kde => "kde",
-        .unknown => "unknown",
-    };
 }
 
 const key_repeat_key_count: usize = sdl_api.scancode_count;

@@ -1,8 +1,5 @@
 const std = @import("std");
-
-fn configureWindowsLinker(step: *std.Build.Step.Compile) void {
-    _ = step;
-}
+const compile_utils = @import("compile_utils.zig");
 
 pub fn addRunStepForArtifact(
     b: *std.Build,
@@ -76,19 +73,12 @@ pub fn addCheckExecutableStep(
     step_name: []const u8,
     description: []const u8,
 ) *std.Build.Step {
-    const exe = b.addExecutable(.{
-        .name = name,
-        .root_module = b.createModule(.{
-            .root_source_file = b.path(root_source_file),
-            .target = target,
-            .optimize = optimize,
-        }),
-    });
-    configureWindowsLinker(exe);
-    const run = b.addRunArtifact(exe);
-    const step = b.step(step_name, description);
-    step.dependOn(&run.step);
-    return step;
+    const exe = compile_utils.addExecutable(b, name, b.createModule(.{
+        .root_source_file = b.path(root_source_file),
+        .target = target,
+        .optimize = optimize,
+    }));
+    return compile_utils.addCompileRunStep(b, exe, step_name, description);
 }
 
 pub const CheckModuleImport = struct {
@@ -116,15 +106,8 @@ pub fn addCheckExecutableStepWithImports(
             .root_source_file = b.path(import_spec.root_source_file),
         }));
     }
-    const exe = b.addExecutable(.{
-        .name = name,
-        .root_module = root_module,
-    });
-    configureWindowsLinker(exe);
-    const run = b.addRunArtifact(exe);
-    const step = b.step(step_name, description);
-    step.dependOn(&run.step);
-    return step;
+    const exe = compile_utils.addExecutable(b, name, root_module);
+    return compile_utils.addCompileRunStep(b, exe, step_name, description);
 }
 
 pub fn addRunArtifactStep(

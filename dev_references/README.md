@@ -15,16 +15,18 @@ available while designing and reviewing Zide.
 
 Primary setup tool:
 
-- `python3 scripts/setup_reference_corpus.py`
+- `python3 ops/setup_reference_corpus.py`
 
 Related helper:
 
-- `scripts/setup_khronos_refpages_md.sh`
+- `ops/setup_khronos_refpages_md.sh`
 
 Reference groups currently used by the corpus:
 
 - `terminals/`
 - `editors/`
+- `zig_projects/`
+- `databases/`
 - `text/`
 - `backends/`
 - `fonts/`
@@ -33,4 +35,4 @@ Reference groups currently used by the corpus:
 
 The clone inventory for the Git-backed groups lives in:
 
-- `scripts/reference_corpus_inventory.json`
+- `ops/reference_corpus_inventory.json`

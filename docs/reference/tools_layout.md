@@ -26,6 +26,8 @@ domain-specific subdirectory.
 - `tools/editor/`
   - editor-specific tooling, including:
   - `theme/` for theme import and resolved-theme helpers
+  - `tree_sitter/` for repo-local consumer/proxy tooling around the
+    dedicated grammar producer repo
   - grammar-pack production tooling no longer lives in this repo; see sibling
     repo `../zide-tree-sitter`
 - `tools/observability/`

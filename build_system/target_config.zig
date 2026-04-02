@@ -1,9 +1,7 @@
 const std = @import("std");
 const app_types = @import("app_types.zig");
 const target_profile = @import("target_profile.zig");
-const links_windows = @import("platform_links_windows.zig");
-const links_linux = @import("platform_links_linux.zig");
-const links_macos = @import("platform_links_macos.zig");
+const platform_capabilities = @import("platform_capabilities.zig");
 
 fn linkSdl3(step: *std.Build.Step.Compile, sdl_lib: ?*std.Build.Step.Compile) void {
     step.linkLibrary(sdl_lib.?);
@@ -25,56 +23,68 @@ fn requireTreeSitter(ctx: app_types.AppLinkContext) *std.Build.Step.Compile {
     return ctx.treesitter orelse @panic("dependency policy violation: tree-sitter required but not resolved");
 }
 
+const TextStackDeps = struct {
+    freetype: *std.Build.Step.Compile,
+    harfbuzz: *std.Build.Step.Compile,
+};
+
+fn requireTextStack(ctx: app_types.AppLinkContext) TextStackDeps {
+    return .{
+        .freetype = ctx.freetype_lib orelse @panic("dependency policy violation: text stack requires freetype"),
+        .harfbuzz = ctx.harfbuzz_lib orelse @panic("dependency policy violation: text stack requires harfbuzz"),
+    };
+}
+
 fn linkTextStack(
     step: *std.Build.Step.Compile,
     target_os: std.Target.Os.Tag,
-    freetype_lib: ?*std.Build.Step.Compile,
-    harfbuzz_lib: ?*std.Build.Step.Compile,
+    text_stack: TextStackDeps,
 ) void {
-    if (freetype_lib) |lib| {
-        step.linkLibrary(lib);
-    } else {
-        step.linkSystemLibrary("freetype");
-    }
-    if (harfbuzz_lib) |lib| {
-        step.linkLibrary(lib);
-    } else {
-        step.linkSystemLibrary("harfbuzz");
-    }
-    if (target_os != .windows) {
+    const capability = platform_capabilities.platformCapability(target_os) orelse
+        @panic("dependency policy violation: unsupported target os for text stack");
+    step.linkLibrary(text_stack.freetype);
+    step.linkLibrary(text_stack.harfbuzz);
+    if (capability.needs_system_zlib) {
         step.linkSystemLibrary("z");
-    } else if (freetype_lib == null or harfbuzz_lib == null) {
-        step.linkSystemLibrary(if (target_os == .windows) "zlib" else "z");
     }
 }
 
 fn addTextStackIncludes(
     step: *std.Build.Step.Compile,
     target_os: std.Target.Os.Tag,
-    freetype_lib: ?*std.Build.Step.Compile,
-    harfbuzz_lib: ?*std.Build.Step.Compile,
+    text_stack: TextStackDeps,
 ) void {
-    if (freetype_lib) |lib| {
-        step.addIncludePath(lib.getEmittedIncludeTree());
-    } else {
-        step.addIncludePath(.{ .cwd_relative = "/usr/include/freetype2" });
+    const capability = platform_capabilities.platformCapability(target_os) orelse
+        @panic("dependency policy violation: unsupported target os for text stack includes");
+    step.addIncludePath(text_stack.freetype.getEmittedIncludeTree());
+    step.addIncludePath(text_stack.harfbuzz.getEmittedIncludeTree());
+    if (capability.fontconfig_include_dir) |include_dir| {
+        step.addIncludePath(.{ .cwd_relative = include_dir });
     }
-    if (harfbuzz_lib) |lib| {
-        step.addIncludePath(lib.getEmittedIncludeTree());
-    } else {
-        step.addIncludePath(.{ .cwd_relative = "/usr/include/harfbuzz" });
+}
+
+fn supportsFontconfig(target_os: std.Target.Os.Tag) bool {
+    return (platform_capabilities.platformCapability(target_os) orelse
+        @panic("dependency policy violation: unsupported target os for fontconfig")).supports_fontconfig;
+}
+
+fn linkSystemLibs(step: *std.Build.Step.Compile, libs: []const []const u8) void {
+    for (libs) |lib_name| {
+        step.linkSystemLibrary(lib_name);
     }
-    if (target_os == .linux) {
-        step.addIncludePath(.{ .cwd_relative = "/usr/include/fontconfig" });
+}
+
+fn linkFrameworks(step: *std.Build.Step.Compile, frameworks: []const []const u8) void {
+    for (frameworks) |framework_name| {
+        step.linkFramework(framework_name);
     }
 }
 
 fn linkCommonPlatformGraphics(exe: *std.Build.Step.Compile, target_os: std.Target.Os.Tag) void {
-    switch (target_os) {
-        .windows => links_windows.linkCommonPlatformGraphics(exe),
-        .macos => links_macos.linkCommonPlatformGraphics(exe),
-        else => links_linux.linkCommonPlatformGraphics(exe),
-    }
+    const capability = platform_capabilities.platformCapability(target_os) orelse
+        @panic("dependency policy violation: unsupported target os for common graphics linking");
+    linkSystemLibs(exe, capability.common_graphics_system_libs);
+    linkFrameworks(exe, capability.common_graphics_frameworks);
 }
 
 pub fn addVendorAndStb(step: *std.Build.Step.Compile) void {
@@ -86,19 +96,17 @@ pub fn addVendorAndStb(step: *std.Build.Step.Compile) void {
 }
 
 pub fn linkFfiPlatform(step: *std.Build.Step.Compile, target_os: std.Target.Os.Tag) void {
-    switch (target_os) {
-        .windows => links_windows.linkFfiPlatform(step),
-        .macos => links_macos.linkFfiPlatform(step),
-        else => links_linux.linkFfiPlatform(step),
-    }
+    const capability = platform_capabilities.platformCapability(target_os) orelse
+        @panic("dependency policy violation: unsupported target os for ffi linking");
+    linkSystemLibs(step, capability.ffi_system_libs);
+    linkFrameworks(step, capability.ffi_frameworks);
 }
 
 fn linkSdlTestGraphics(step: *std.Build.Step.Compile, target_os: std.Target.Os.Tag) void {
-    switch (target_os) {
-        .windows => links_windows.linkSdlTestGraphics(step),
-        .macos => links_macos.linkSdlTestGraphics(step),
-        else => links_linux.linkSdlTestGraphics(step),
-    }
+    const capability = platform_capabilities.platformCapability(target_os) orelse
+        @panic("dependency policy violation: unsupported target os for SDL test graphics linking");
+    linkSystemLibs(step, capability.sdl_test_system_libs);
+    linkFrameworks(step, capability.sdl_test_frameworks);
 }
 
 pub fn configureSdlTestTarget(
@@ -106,10 +114,11 @@ pub fn configureSdlTestTarget(
     ctx: app_types.AppLinkContext,
     profile: target_profile.LinkProfile,
 ) void {
+    const text_stack = if (profile.include_text_stack) requireTextStack(ctx) else null;
     linkSdl3(step, ctx.sdl_lib);
-    if (profile.include_text_stack) linkTextStack(step, ctx.target_os, ctx.freetype_lib, ctx.harfbuzz_lib);
+    if (text_stack) |deps| linkTextStack(step, ctx.target_os, deps);
     if (profile.include_lua and ctx.lua_lib != null) linkLua(step, ctx.lua_lib);
-    if (profile.include_fontconfig and ctx.target_os == .linux) {
+    if (profile.include_fontconfig and supportsFontconfig(ctx.target_os)) {
         step.linkSystemLibrary("fontconfig");
     }
     linkSdlTestGraphics(step, ctx.target_os);
@@ -117,9 +126,7 @@ pub fn configureSdlTestTarget(
     if (profile.include_treesitter) step.linkLibrary(requireTreeSitter(ctx));
     addVendorAndStb(step);
     if (profile.include_treesitter) addTreeSitterIncludes(step, requireTreeSitter(ctx));
-    if (profile.include_text_stack) {
-        addTextStackIncludes(step, ctx.target_os, ctx.freetype_lib, ctx.harfbuzz_lib);
-    }
+    if (text_stack) |deps| addTextStackIncludes(step, ctx.target_os, deps);
     if (profile.include_lua and ctx.lua_lib != null) {
         addLuaIncludes(step, ctx.lua_lib);
     }
@@ -131,25 +138,22 @@ pub fn configureAppExecutable(
     target_name: []const u8,
     profile: target_profile.LinkProfile,
 ) void {
+    const text_stack = if (profile.include_text_stack) requireTextStack(ctx) else null;
     if (std.mem.eql(u8, target_name, "zide-terminal") and profile.include_treesitter) {
         @panic("dependency policy violation: zide-terminal must not link tree-sitter");
     }
     if (profile.include_treesitter) exe.linkLibrary(requireTreeSitter(ctx));
-    if (profile.include_text_stack) {
-        linkTextStack(exe, ctx.target_os, ctx.freetype_lib, ctx.harfbuzz_lib);
-    }
+    if (text_stack) |deps| linkTextStack(exe, ctx.target_os, deps);
     if (profile.include_lua and ctx.lua_lib != null) {
         linkLua(exe, ctx.lua_lib);
     }
     linkSdl3(exe, ctx.sdl_lib);
-    if (profile.include_fontconfig and ctx.target_os == .linux) {
+    if (profile.include_fontconfig and supportsFontconfig(ctx.target_os)) {
         exe.linkSystemLibrary("fontconfig");
     }
     addVendorAndStb(exe);
     if (profile.include_treesitter) addTreeSitterIncludes(exe, requireTreeSitter(ctx));
-    if (profile.include_text_stack) {
-        addTextStackIncludes(exe, ctx.target_os, ctx.freetype_lib, ctx.harfbuzz_lib);
-    }
+    if (text_stack) |deps| addTextStackIncludes(exe, ctx.target_os, deps);
     if (profile.include_lua and ctx.lua_lib != null) {
         addLuaIncludes(exe, ctx.lua_lib);
     }

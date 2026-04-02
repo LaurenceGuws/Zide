@@ -3,7 +3,6 @@ const app_modes = @import("modes/mod.zig");
 const app_pre_input_shortcut_frame_runtime = @import("pre_input_shortcut_frame_runtime.zig");
 const app_reload_config_runtime = @import("reload_config_runtime.zig");
 const app_shell = @import("../app_shell.zig");
-const app_tab_bar_width = @import("tabs/tab_bar_width.zig");
 const app_terminal_close_active_runtime = @import("terminal/terminal_close_active_runtime.zig");
 const app_terminal_close_confirm_active_runtime = @import("terminal/terminal_close_confirm_active_runtime.zig");
 const app_terminal_close_confirm_decision_runtime = @import("terminal/terminal_close_confirm_decision_runtime.zig");
@@ -17,6 +16,112 @@ const app_update_prelude_frame_runtime = @import("update_prelude_frame_runtime.z
 
 const Shell = app_shell.Shell;
 const layout_types = shared_types.layout;
+
+fn refreshTerminalSizing(state: anytype) !void {
+    try app_terminal_refresh_sizing_runtime.handle(
+        state,
+        state.app_mode,
+        &state.terminal_workspace,
+        state.terminals.items,
+        state.show_terminal,
+        state.terminal_height,
+        state.shell,
+    );
+}
+
+fn applyCurrentTabBarWidthMode(state: anytype) void {
+    app_ui_layout_runtime.applyCurrentTabBarWidthMode(state);
+}
+
+fn reloadConfig(state: anytype) !void {
+    const State = @TypeOf(state.*);
+    try app_reload_config_runtime.handle(
+        state,
+        @ptrCast(state),
+        .{
+            .refresh_terminal_sizing = struct {
+                fn call(inner_raw: *anyopaque) !void {
+                    const inner_state: *State = @ptrCast(@alignCast(inner_raw));
+                    try refreshTerminalSizing(inner_state);
+                }
+            }.call,
+            .apply_current_tab_bar_width_mode = struct {
+                fn call(inner_raw: *anyopaque) void {
+                    const inner_state: *State = @ptrCast(@alignCast(inner_raw));
+                    applyCurrentTabBarWidthMode(inner_state);
+                }
+            }.call,
+        },
+    );
+}
+
+fn showReloadNotice(state: anytype, success: bool) void {
+    const notice = app_config_reload_notice_state.arm(app_shell.getTime(), success);
+    state.config_reload_notice_success = notice.success;
+    state.config_reload_notice_until = notice.until;
+    state.needs_redraw = true;
+}
+
+fn reconcileTerminalCloseModalActive(state: anytype) bool {
+    return app_terminal_close_confirm_active_runtime.reconcile(state);
+}
+
+fn syncTerminalModeTabBar(state: anytype) !void {
+    try app_terminal_tab_bar_sync_runtime.syncIfWorkspace(state);
+}
+
+fn noteInput(state: anytype, at: f64) void {
+    state.metrics.noteInput(at);
+}
+
+fn applyTerminalCloseConfirmDecision(state: anytype, decision: app_modes.ide.TerminalCloseConfirmDecision, now: f64) !bool {
+    const State = @TypeOf(state.*);
+    return try app_terminal_close_confirm_decision_runtime.applyDecision(
+        state,
+        decision,
+        now,
+        @ptrCast(state),
+        .{
+            .route_close_intent_and_sync = struct {
+                fn call(inner_raw: *anyopaque) !void {
+                    const inner_state: *State = @ptrCast(@alignCast(inner_raw));
+                    _ = try app_terminal_intent_route_runtime.routeActiveAndSync(inner_state, .close);
+                }
+            }.call,
+            .close_active_terminal_tab = struct {
+                fn call(inner_raw: *anyopaque) !bool {
+                    const inner_state: *State = @ptrCast(@alignCast(inner_raw));
+                    return try app_terminal_close_active_runtime.closeActive(
+                        inner_state,
+                        inner_raw,
+                        .{
+                            .sync_terminal_mode_tab_bar = struct {
+                                fn call(sync_raw: *anyopaque) !void {
+                                    const sync_state: *State = @ptrCast(@alignCast(sync_raw));
+                                    try syncTerminalModeTabBar(sync_state);
+                                }
+                            }.call,
+                        },
+                    );
+                }
+            }.call,
+            .note_input = struct {
+                fn call(inner_raw: *anyopaque, t: f64) void {
+                    const inner_state: *State = @ptrCast(@alignCast(inner_raw));
+                    noteInput(inner_state, t);
+                }
+            }.call,
+        },
+    );
+}
+
+fn computeLayout(state: anytype, w: f32, h: f32) layout_types.WidgetLayout {
+    return app_ui_layout_runtime.computeLayout(state, w, h);
+}
+
+fn markRedraw(state: anytype) void {
+    state.needs_redraw = true;
+}
 
 pub fn handle(
     state: anytype,
@@ -55,113 +160,43 @@ pub fn handle(
             .reload_config = struct {
                 fn call(raw: *anyopaque) !void {
                     const s: *State = @ptrCast(@alignCast(raw));
-                    try app_reload_config_runtime.handle(
-                        s,
-                        raw,
-                        .{
-                            .refresh_terminal_sizing = struct {
-                                fn call(inner_raw: *anyopaque) !void {
-                                    const inner_state: *State = @ptrCast(@alignCast(inner_raw));
-                                    try app_terminal_refresh_sizing_runtime.handle(
-                                        inner_state,
-                                        inner_state.app_mode,
-                                        &inner_state.terminal_workspace,
-                                        inner_state.terminals.items,
-                                        inner_state.show_terminal,
-                                        inner_state.terminal_height,
-                                        inner_state.shell,
-                                    );
-                                }
-                            }.call,
-                            .apply_current_tab_bar_width_mode = struct {
-                                fn call(inner_raw: *anyopaque) void {
-                                    const inner_state: *State = @ptrCast(@alignCast(inner_raw));
-                                    app_tab_bar_width.applyForMode(
-                                        &inner_state.tab_bar,
-                                        inner_state.app_mode,
-                                        inner_state.terminal_window_chrome_mode,
-                                        inner_state.editor_tab_bar_width_mode,
-                                        inner_state.terminal_tab_bar_width_mode,
-                                    );
-                                }
-                            }.call,
-                        },
-                    );
+                    try reloadConfig(s);
                 }
             }.call,
             .show_reload_notice = struct {
                 fn call(raw: *anyopaque, success: bool) void {
                     const s: *State = @ptrCast(@alignCast(raw));
-                    const notice = app_config_reload_notice_state.arm(app_shell.getTime(), success);
-                    s.config_reload_notice_success = notice.success;
-                    s.config_reload_notice_until = notice.until;
-                    s.needs_redraw = true;
+                    showReloadNotice(s, success);
                 }
             }.call,
             .reconcile_terminal_close_modal_active = struct {
                 fn call(raw: *anyopaque) bool {
                     const s: *State = @ptrCast(@alignCast(raw));
-                    return app_terminal_close_confirm_active_runtime.reconcile(s);
+                    return reconcileTerminalCloseModalActive(s);
                 }
             }.call,
             .apply_terminal_close_confirm_decision = struct {
                 fn call(raw: *anyopaque, decision: app_modes.ide.TerminalCloseConfirmDecision, now: f64) !bool {
                     const s: *State = @ptrCast(@alignCast(raw));
-                    return try app_terminal_close_confirm_decision_runtime.applyDecision(
-                        s,
-                        decision,
-                        now,
-                        raw,
-                        .{
-                            .route_close_intent_and_sync = struct {
-                                fn call(inner_raw: *anyopaque) !void {
-                                    const inner_state: *State = @ptrCast(@alignCast(inner_raw));
-                                    _ = try app_terminal_intent_route_runtime.routeActiveAndSync(inner_state, .close);
-                                }
-                            }.call,
-                            .close_active_terminal_tab = struct {
-                                fn call(inner_raw: *anyopaque) !bool {
-                                    const inner_state: *State = @ptrCast(@alignCast(inner_raw));
-                                    return try app_terminal_close_active_runtime.closeActive(
-                                        inner_state,
-                                        inner_raw,
-                                        .{
-                                            .sync_terminal_mode_tab_bar = struct {
-                                                fn call(sync_raw: *anyopaque) !void {
-                                                    const sync_state: *State = @ptrCast(@alignCast(sync_raw));
-                                                    try app_terminal_tab_bar_sync_runtime.syncIfWorkspace(sync_state);
-                                                }
-                                            }.call,
-                                        },
-                                    );
-                                }
-                            }.call,
-                            .note_input = struct {
-                                fn call(inner_raw: *anyopaque, t: f64) void {
-                                    const inner_state: *State = @ptrCast(@alignCast(inner_raw));
-                                    inner_state.metrics.noteInput(t);
-                                }
-                            }.call,
-                        },
-                    );
+                    return try applyTerminalCloseConfirmDecision(s, decision, now);
                 }
             }.call,
             .compute_layout = struct {
                 fn call(raw: *anyopaque, w: f32, h: f32) layout_types.WidgetLayout {
                     const s: *State = @ptrCast(@alignCast(raw));
-                    return app_ui_layout_runtime.computeLayout(s, w, h);
+                    return computeLayout(s, w, h);
                 }
             }.call,
             .mark_redraw = struct {
                 fn call(raw: *anyopaque) void {
                     const s: *State = @ptrCast(@alignCast(raw));
-                    s.needs_redraw = true;
+                    markRedraw(s);
                 }
             }.call,
             .note_input = struct {
                 fn call(raw: *anyopaque, t: f64) void {
                     const s: *State = @ptrCast(@alignCast(raw));
-                    s.metrics.noteInput(t);
+                    noteInput(s, t);
                 }
             }.call,
         },

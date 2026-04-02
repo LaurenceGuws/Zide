@@ -1,9 +1,6 @@
 const std = @import("std");
-
-fn configureWindowsLinker(step: *std.Build.Step.Compile, target: std.Build.ResolvedTarget) void {
-    _ = step;
-    _ = target;
-}
+const compile_utils = @import("compile_utils.zig");
+const platform_capabilities = @import("platform_capabilities.zig");
 
 pub const BuildDependencies = struct {
     treesitter: ?*std.Build.Step.Compile,
@@ -21,6 +18,8 @@ pub fn resolveDependencies(
     optimize: std.builtin.OptimizeMode,
     need_treesitter: bool,
 ) BuildDependencies {
+    const capability = platform_capabilities.platformCapability(target.result.os.tag) orelse
+        @panic("dependency policy violation: unsupported target os for dependency resolution");
     const tree_sitter_dep = if (need_treesitter)
         b.dependency("tree_sitter", .{
             .target = target,
@@ -29,14 +28,14 @@ pub fn resolveDependencies(
     else
         null;
     const treesitter = if (tree_sitter_dep) |dep| dep.artifact("tree-sitter") else null;
-    if (treesitter) |lib| configureWindowsLinker(lib, target);
+    if (treesitter) |lib| compile_utils.configureWindowsLinker(lib);
 
     const sdl_dep = b.dependency("sdl", .{
         .target = target,
         .optimize = optimize,
     });
     const sdl_lib = sdl_dep.artifact("SDL3");
-    configureWindowsLinker(sdl_lib, target);
+    compile_utils.configureWindowsLinker(sdl_lib);
 
     const zlua_dep = b.dependency("zlua", .{
         .target = target,
@@ -53,7 +52,7 @@ pub fn resolveDependencies(
     const freetype_dep = b.dependency("freetype", .{
         .target = target,
         .optimize = optimize,
-        .use_system_zlib = target.result.os.tag != .windows,
+        .use_system_zlib = capability.needs_system_zlib,
         .enable_brotli = false,
     });
 
@@ -61,14 +60,14 @@ pub fn resolveDependencies(
         .target = target,
         .optimize = optimize,
         .enable_freetype = true,
-        .freetype_use_system_zlib = target.result.os.tag != .windows,
+        .freetype_use_system_zlib = capability.needs_system_zlib,
         .freetype_enable_brotli = false,
     });
 
     const freetype_lib: ?*std.Build.Step.Compile = freetype_dep.artifact("freetype");
     const harfbuzz_lib: ?*std.Build.Step.Compile = harfbuzz_dep.artifact("harfbuzz");
-    if (freetype_lib) |lib| configureWindowsLinker(lib, target);
-    if (harfbuzz_lib) |lib| configureWindowsLinker(lib, target);
+    if (freetype_lib) |lib| compile_utils.configureWindowsLinker(lib);
+    if (harfbuzz_lib) |lib| compile_utils.configureWindowsLinker(lib);
 
     return .{
         .treesitter = treesitter,

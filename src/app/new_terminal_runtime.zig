@@ -222,16 +222,11 @@ fn launchWorkspaceStartupTabsFromArgs(state: anytype, workspace: *TerminalWorksp
     return true;
 }
 
-pub fn handle(state: anytype) !void {
+fn computeInitialGrid(state: anytype) struct { rows: u16, cols: u16 } {
     const shell = state.shell;
     const width = @as(f32, @floatFromInt(shell.width()));
     const height = @as(f32, @floatFromInt(shell.height()));
     const layout = app_ui_layout_runtime.computeLayout(state, width, height);
-    if (app_modes.ide.shouldUseTerminalWorkspace(state.app_mode)) {
-        state.active_kind = .terminal;
-    } else if (app_modes.ide.isEditorOnly(state.app_mode)) {
-        state.active_kind = .editor;
-    }
     const initial_grid = app_terminal_grid.computeWithEnvOverride(
         layout.terminal.width,
         layout.terminal.height,
@@ -240,38 +235,46 @@ pub fn handle(state: anytype) !void {
         80,
         24,
     );
-    const cols: u16 = initial_grid.cols;
-    const rows: u16 = initial_grid.rows;
-    const theme = &state.terminal_theme;
+    return .{
+        .rows = initial_grid.rows,
+        .cols = initial_grid.cols,
+    };
+}
 
-    if (app_modes.ide.shouldUseTerminalWorkspace(state.app_mode)) {
-        if (state.terminal_workspace) |*workspace| {
-            const initial_tab_count = workspace.tabCount();
-            const initial_widget_count = state.terminal_widgets.items.len;
-            errdefer rollbackWorkspaceStartup(state, workspace, initial_tab_count, initial_widget_count);
-            const launched_many = try launchWorkspaceStartupTabsFromArgs(state, workspace, rows, cols);
-            if (!launched_many) {
-                var launch_cwd = try launchCwdForWorkspaceNewTab(state, workspace);
-                defer launch_cwd.deinit(state.allocator);
-                try createWorkspaceTerminalTab(state, workspace, rows, cols, launch_cwd.value);
-            }
-            try app_terminal_tab_bar_sync_runtime.syncIfWorkspace(state);
-            try app_terminal_theme_apply.notifyColorSchemeChanged(&state.terminal_widgets, &state.terminal_theme);
-            state.show_terminal = true;
-            try app_terminal_refresh_sizing_runtime.handle(
-                state,
-                state.app_mode,
-                &state.terminal_workspace,
-                state.terminals.items,
-                state.show_terminal,
-                state.terminal_height,
-                state.shell,
-            );
-            return;
+fn syncTerminalStartupState(state: anytype) !void {
+    try app_terminal_theme_apply.notifyColorSchemeChanged(&state.terminal_widgets, &state.terminal_theme);
+    state.show_terminal = true;
+    try app_terminal_refresh_sizing_runtime.handle(
+        state,
+        state.app_mode,
+        &state.terminal_workspace,
+        state.terminals.items,
+        state.show_terminal,
+        state.terminal_height,
+        state.shell,
+    );
+}
+
+fn handleWorkspaceLaunch(state: anytype, rows: u16, cols: u16) !void {
+    if (state.terminal_workspace) |*workspace| {
+        const initial_tab_count = workspace.tabCount();
+        const initial_widget_count = state.terminal_widgets.items.len;
+        errdefer rollbackWorkspaceStartup(state, workspace, initial_tab_count, initial_widget_count);
+        const launched_many = try launchWorkspaceStartupTabsFromArgs(state, workspace, rows, cols);
+        if (!launched_many) {
+            var launch_cwd = try launchCwdForWorkspaceNewTab(state, workspace);
+            defer launch_cwd.deinit(state.allocator);
+            try createWorkspaceTerminalTab(state, workspace, rows, cols, launch_cwd.value);
         }
-        return error.TerminalWorkspaceMissing;
+        try app_terminal_tab_bar_sync_runtime.syncIfWorkspace(state);
+        try syncTerminalStartupState(state);
+        return;
     }
+    return error.TerminalWorkspaceMissing;
+}
 
+fn handleSingleLaunch(state: anytype, rows: u16, cols: u16) !void {
+    const theme = &state.terminal_theme;
     const initial_terminal_count = state.terminals.items.len;
     const initial_widget_count = state.terminal_widgets.items.len;
     const term = try PtyTerminalRuntime.initWithOptions(state.allocator, rows, cols, .{
@@ -283,7 +286,7 @@ pub fn handle(state: anytype) !void {
     app_terminal_theme_apply.setSessionPalette(term, theme);
     var launch_cwd = try fallbackDefaultStartLocation(state);
     defer launch_cwd.deinit(state.allocator);
-    try app_terminal_session_bootstrap.startSessionWithShellCellSize(term, shell, launch_cwd.value, state.terminal_shell_path);
+    try app_terminal_session_bootstrap.startSessionWithShellCellSize(term, state.shell, launch_cwd.value, state.terminal_shell_path);
     try injectStartupFailureIfRequested(.single_after_start, term);
     try state.terminals.append(state.allocator, term);
     unowned_term = null;
@@ -294,16 +297,22 @@ pub fn handle(state: anytype) !void {
         state.terminal_focus_report_pane_events,
     );
     try state.terminal_widgets.append(state.allocator, widget);
-    try app_terminal_theme_apply.notifyColorSchemeChanged(&state.terminal_widgets, &state.terminal_theme);
+    try syncTerminalStartupState(state);
+}
 
-    state.show_terminal = true;
-    try app_terminal_refresh_sizing_runtime.handle(
-        state,
-        state.app_mode,
-        &state.terminal_workspace,
-        state.terminals.items,
-        state.show_terminal,
-        state.terminal_height,
-        state.shell,
-    );
+pub fn handle(state: anytype) !void {
+    if (app_modes.ide.shouldUseTerminalWorkspace(state.app_mode)) {
+        state.active_kind = .terminal;
+    } else if (app_modes.ide.isEditorOnly(state.app_mode)) {
+        state.active_kind = .editor;
+    }
+
+    const initial_grid = computeInitialGrid(state);
+
+    if (app_modes.ide.shouldUseTerminalWorkspace(state.app_mode)) {
+        try handleWorkspaceLaunch(state, initial_grid.rows, initial_grid.cols);
+        return;
+    }
+
+    try handleSingleLaunch(state, initial_grid.rows, initial_grid.cols);
 }

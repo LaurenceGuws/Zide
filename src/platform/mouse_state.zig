@@ -1,4 +1,3 @@
-const compositor = @import("compositor.zig");
 const sdl_api = @import("sdl_api.zig");
 const std = @import("std");
 
@@ -35,11 +34,6 @@ pub fn computeMouseScale(window: *sdl.SDL_Window) MouseScale {
     _ = window;
     var sx: f32 = 1.0;
     var sy: f32 = 1.0;
-
-    if (compositor.isWayland()) {
-        // SDL already reports logical mouse coords; drawable/window ratio matches render scale.
-        // Avoid double-applying compositor scale here.
-    }
 
     if (std.c.getenv("ZIDE_MOUSE_SCALE")) |raw| {
         const s = std.mem.sliceTo(raw, 0);

@@ -70,7 +70,7 @@ The important registration lesson is how the item types map to behavior:
 For Zide, the relevant implementation and metadata are in:
 
 - `src/platform/windows_shell_extension/open_zide_terminal_here.cpp`
-- `tools/packaging/windows/windows_identity_contract.zig`
+- `build_system/windows_identity_contract.zig`
 - `ops/windows/Install-Zide.ps1`
 - `ops/windows/Register-ZidePackageIdentity.ps1`
 

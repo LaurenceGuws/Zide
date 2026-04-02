@@ -1,4 +1,5 @@
 const app_modes = @import("modes/mod.zig");
+const app_tab_bar_width = @import("tabs/tab_bar_width.zig");
 const app_terminal_tabs_runtime = @import("terminal/terminal_tabs_runtime.zig");
 const app_terminal_window_chrome_runtime = @import("terminal/window_chrome_runtime.zig");
 const shared_types = @import("../types/mod.zig");
@@ -8,6 +9,16 @@ const layout_types = shared_types.layout;
 pub const Hooks = struct {
     apply_current_tab_bar_width_mode: *const fn (*anyopaque) void,
 };
+
+pub fn applyCurrentTabBarWidthMode(state: anytype) void {
+    app_tab_bar_width.applyForMode(
+        &state.tab_bar,
+        state.app_mode,
+        state.terminal_window_chrome_mode,
+        state.editor_tab_bar_width_mode,
+        state.terminal_tab_bar_width_mode,
+    );
+}
 
 pub fn applyUiScale(state: anytype, scale: f32, ctx: *anyopaque, hooks: Hooks) void {
     state.top_bar.height = 26 * scale;
@@ -38,4 +49,22 @@ pub fn computeLayout(state: anytype, width: f32, height: f32) layout_types.Widge
             state.terminals.items.len,
         ),
     );
+}
+
+pub fn applyUiScaleForState(state: anytype, scale: f32) void {
+    const State = @TypeOf(state.*);
+    applyUiScale(
+        state,
+        scale,
+        @ptrCast(state),
+        .{
+            .apply_current_tab_bar_width_mode = struct {
+                fn call(raw: *anyopaque) void {
+                    const cb_state: *State = @ptrCast(@alignCast(raw));
+                    applyCurrentTabBarWidthMode(cb_state);
+                }
+            }.call,
+        },
+    );
+    applyCurrentTabBarWidthMode(state);
 }
