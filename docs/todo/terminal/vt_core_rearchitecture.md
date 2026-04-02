@@ -47,6 +47,11 @@ gravity into smaller files.
     before encoding
   - do not widen this into generic input cleanup, transport rewriting, or
     shell-thinning theater
+  Progress:
+  - the first key-action slice is now landed
+  - `TerminalCore` now owns the semantic key-action dispatch decision while
+    shell input still owns lock/writer/encoding
+  - char dispatch remains blocked by the local-echo ambiguity
 
 - `docs/review/VT_WAR_4_SCOPE_AND_SEEDS_2026-04-03.md`
   Why: the next scrutiny pass is no longer a cleanup sprint; it is a focused

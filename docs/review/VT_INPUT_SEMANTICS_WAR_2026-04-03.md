@@ -76,6 +76,31 @@ Current blocker:
 - local echo fallback is still selected on writer absence, so the line between
   terminal semantics and shell mechanics is not yet crisp enough
 
+Progress, later on 2026-04-03:
+
+- the key-action-only slice is now landed
+- [TerminalCore](/home/home/personal/zide/src/terminal/core/terminal_core.zig)
+  owns the semantic key-action dispatch decision
+- new owner module:
+  [terminal_core_key_dispatch.zig](/home/home/personal/zide/src/terminal/core/terminal_core_key_dispatch.zig)
+- [session/input.zig](/home/home/personal/zide/src/terminal/core/session/input.zig)
+  now routes both `sendKeyAction(...)` and
+  `sendKeyActionWithMetadata(...)` through that one core-owned decision
+- this keeps:
+  - repeat suppression
+  - app-cursor fallback selection
+  terminal-owned
+- while leaving:
+  - lock acquisition
+  - writer selection
+  - protocol encoding
+  shell-owned
+
+What remains blocked:
+
+- char dispatch still carries the local-echo ambiguity
+- keypad and broader input/reporting still need their own honesty test
+
 ### 2. Broader host-driving input semantic contract
 
 Examples:
@@ -131,3 +156,8 @@ The next uninterrupted VT focus is now explicit:
 And inside that war, the only honest opener remains:
 
 - key/char semantic dispatch before encoding
+
+Current state:
+
+- key-action dispatch is now a real first slice
+- char/input broadening is still not automatic from that win

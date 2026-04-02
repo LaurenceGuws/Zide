@@ -9,6 +9,7 @@ const semantic_prompt_mod = @import("semantic_prompt.zig");
 const host_types = @import("session/host_types.zig");
 const palette_mod = @import("../protocol/palette.zig");
 const terminal_core_selection = @import("terminal_core_selection.zig");
+const terminal_core_key_dispatch = @import("terminal_core_key_dispatch.zig");
 const hyperlink_table = @import("hyperlink_table.zig");
 const session_host_types = @import("session/host_types.zig");
 
@@ -44,6 +45,7 @@ pub const InitOptions = struct {
 pub const TerminalCore = struct {
     pub const SelectionGesture = terminal_core_selection.SelectionGesture;
     pub const ClickSelectionResult = terminal_core_selection.ClickSelectionResult;
+    pub const KeyActionDispatch = terminal_core_key_dispatch.KeyActionDispatch;
     pub const OutputFeedResult = struct {
         parsed: bool,
         scroll_offset: usize,
@@ -220,6 +222,30 @@ pub const TerminalCore = struct {
 
     pub fn resizeLocked(_: *TerminalCore, owner: anytype, rows: u16, cols: u16) !void {
         return try @import("resize_reflow.zig").resizeCoreLocked(owner, rows, cols);
+    }
+
+    pub fn decideKeyAction(
+        self: *const TerminalCore,
+        key: types.Key,
+        mod: types.Modifier,
+        action: @import("../input/input.zig").KeyAction,
+        auto_repeat_enabled: bool,
+        app_cursor_enabled: bool,
+        key_mode_flags: u32,
+    ) KeyActionDispatch {
+        return terminal_core_key_dispatch.decideKeyAction(
+            self,
+            key,
+            mod,
+            action,
+            auto_repeat_enabled,
+            app_cursor_enabled,
+            key_mode_flags,
+        );
+    }
+
+    pub fn appCursorSequence(_: *const TerminalCore, key: types.Key) ?[]const u8 {
+        return terminal_core_key_dispatch.appCursorSequence(key);
     }
 
     pub fn glCharset(self: *const TerminalCore) Charset {

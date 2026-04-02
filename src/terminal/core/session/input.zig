@@ -17,6 +17,11 @@ const VTERM_KEY_HOME = types.VTERM_KEY_HOME;
 const VTERM_KEY_END = types.VTERM_KEY_END;
 const VTERM_MOD_NONE = types.VTERM_MOD_NONE;
 
+const KeyActionContext = struct {
+    key_mode_flags: u32,
+    dispatch: @import("../terminal_core.zig").TerminalCore.KeyActionDispatch,
+};
+
 fn echoCharLocallyIfEnabled(self: anytype, char: u32, mod: Modifier, action: input_mod.KeyAction) void {
     if (action == .release) return;
     if (mod != VTERM_MOD_NONE) return;
@@ -31,30 +36,35 @@ pub fn sendKey(self: anytype, key: Key, mod: Modifier) !void {
     try sendKeyAction(self, key, mod, input_mod.KeyAction.press);
 }
 
-pub fn sendKeyAction(self: anytype, key: Key, mod: Modifier, action: input_mod.KeyAction) !void {
-    if (action == .repeat and !self.session.interaction.input_snapshot.auto_repeat.load(.acquire)) return;
+fn keyActionContext(self: anytype, key: Key, mod: Modifier, action: input_mod.KeyAction) KeyActionContext {
     const input_snapshot = self.session.interaction.input_snapshot;
     const key_mode_flags = input_snapshot.key_mode_flags.load(.acquire);
-    const app_cursor = input_snapshot.app_cursor_keys.load(.acquire);
+    return .{
+        .key_mode_flags = key_mode_flags,
+        .dispatch = self.core.decideKeyAction(
+            key,
+            mod,
+            action,
+            input_snapshot.auto_repeat.load(.acquire),
+            input_snapshot.app_cursor_keys.load(.acquire),
+            key_mode_flags,
+        ),
+    };
+}
+
+pub fn sendKeyAction(self: anytype, key: Key, mod: Modifier, action: input_mod.KeyAction) !void {
+    const context = keyActionContext(self, key, mod, action);
+    if (context.dispatch == .suppress) return;
     if (self.lockPtyWriter()) |writer_guard| {
         var writer = writer_guard;
         defer writer.unlock();
-        if (key_mode_flags == 0 and app_cursor and mod == VTERM_MOD_NONE and action == .press) {
-            const seq = switch (key) {
-                VTERM_KEY_UP => "\x1bOA",
-                VTERM_KEY_DOWN => "\x1bOB",
-                VTERM_KEY_RIGHT => "\x1bOC",
-                VTERM_KEY_LEFT => "\x1bOD",
-                VTERM_KEY_HOME => "\x1bOH",
-                VTERM_KEY_END => "\x1bOF",
-                else => "",
-            };
-            if (seq.len > 0) {
+        if (context.dispatch == .app_cursor) {
+            if (self.core.appCursorSequence(key)) |seq| {
                 _ = try writer.write(seq);
                 return;
             }
         }
-        _ = try writer.sendKeyAction(key, mod, key_mode_flags, action);
+        _ = try writer.sendKeyAction(key, mod, context.key_mode_flags, action);
     }
 }
 
@@ -65,24 +75,13 @@ pub fn sendKeyActionWithMetadata(
     action: input_mod.KeyAction,
     alternate_meta: ?types.KeyboardAlternateMetadata,
 ) !void {
-    if (action == .repeat and !self.session.interaction.input_snapshot.auto_repeat.load(.acquire)) return;
-    const input_snapshot = self.session.interaction.input_snapshot;
-    const key_mode_flags = input_snapshot.key_mode_flags.load(.acquire);
-    const app_cursor = input_snapshot.app_cursor_keys.load(.acquire);
+    const context = keyActionContext(self, key, mod, action);
+    if (context.dispatch == .suppress) return;
     if (self.lockPtyWriter()) |writer_guard| {
         var writer = writer_guard;
         defer writer.unlock();
-        if (key_mode_flags == 0 and app_cursor and mod == VTERM_MOD_NONE and action == .press) {
-            const seq = switch (key) {
-                VTERM_KEY_UP => "\x1bOA",
-                VTERM_KEY_DOWN => "\x1bOB",
-                VTERM_KEY_RIGHT => "\x1bOC",
-                VTERM_KEY_LEFT => "\x1bOD",
-                VTERM_KEY_HOME => "\x1bOH",
-                VTERM_KEY_END => "\x1bOF",
-                else => "",
-            };
-            if (seq.len > 0) {
+        if (context.dispatch == .app_cursor) {
+            if (self.core.appCursorSequence(key)) |seq| {
                 _ = try writer.write(seq);
                 return;
             }
@@ -90,7 +89,7 @@ pub fn sendKeyActionWithMetadata(
         _ = try writer.sendKeyActionEvent(.{
             .key = key,
             .mod = mod,
-            .key_mode_flags = key_mode_flags,
+            .key_mode_flags = context.key_mode_flags,
             .action = action,
             .protocol = .{ .alternate = alternate_meta },
         });
@@ -236,4 +235,38 @@ pub fn reportColorSchemeChanged(self: anytype, dark: bool) !bool {
     }
     std.log.warn("color-scheme report dropped dark={} reason=missing-pty", .{@intFromBool(dark)});
     return false;
+}
+
+test "key action uses app cursor fallback sequence from core dispatch" {
+    const session_runtime = @import("runtime.zig");
+
+    const allocator = std.testing.allocator;
+    var session = try @import("terminal_runtime_shell.zig").TerminalRuntimeShell.init(allocator, 2, 2);
+    defer session.deinit();
+
+    session_runtime.attachExternalTransport(session);
+    @import("../input_modes.zig").setAppCursorKeys(session, true);
+
+    try sendKeyAction(session, VTERM_KEY_UP, VTERM_MOD_NONE, .press);
+
+    const bytes = (try session_runtime.takeExternalOutgoingBytes(session, allocator)).?;
+    defer allocator.free(bytes);
+    try std.testing.expectEqualStrings("\x1bOA", bytes);
+}
+
+test "key action repeat suppression comes from core dispatch" {
+    const session_runtime = @import("runtime.zig");
+
+    const allocator = std.testing.allocator;
+    var session = try @import("terminal_runtime_shell.zig").TerminalRuntimeShell.init(allocator, 2, 2);
+    defer session.deinit();
+
+    session_runtime.attachExternalTransport(session);
+    @import("../input_modes.zig").setAutoRepeat(session, false);
+
+    try sendKeyAction(session, VTERM_KEY_UP, VTERM_MOD_NONE, .repeat);
+
+    const bytes = (try session_runtime.takeExternalOutgoingBytes(session, allocator)).?;
+    defer allocator.free(bytes);
+    try std.testing.expectEqual(@as(usize, 0), bytes.len);
 }
