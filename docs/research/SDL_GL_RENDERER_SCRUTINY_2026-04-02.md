@@ -152,6 +152,9 @@ Progress note, 2026-04-02:
   `src/ui/renderer/retained_surface_api.zig`
 - the raw product-specific renderer methods still exist, but they are no longer
   the primary widget-facing surface
+- the raw product-specific editor/terminal texture methods have now been
+  removed from `src/ui/renderer.zig`; the retained-surface shim talks to the
+  retained-target owner directly
 
 ### 4. The SDL/GL host seam is functionally decent but still reads like an
 investigation seam

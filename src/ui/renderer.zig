@@ -1062,42 +1062,6 @@ pub const Renderer = struct {
         text_input.setRect(&self.text_input_state, self.window, x, y, w, h);
     }
 
-    pub fn ensureTerminalTexture(self: *Renderer, width: i32, height: i32) bool {
-        return retained_targets_runtime.ensureTerminalTexture(self, width, height);
-    }
-
-    pub fn ensureEditorTexture(self: *Renderer, width: i32, height: i32) bool {
-        return retained_targets_runtime.ensureEditorTexture(self, width, height);
-    }
-
-    pub fn beginTerminalTexture(self: *Renderer) bool {
-        return retained_targets_runtime.beginTerminalTexture(self);
-    }
-
-    pub fn endTerminalTexture(self: *Renderer) void {
-        retained_targets_runtime.endTerminalTexture(self);
-    }
-
-    pub fn beginEditorTexture(self: *Renderer) bool {
-        return retained_targets_runtime.beginEditorTexture(self);
-    }
-
-    pub fn endEditorTexture(self: *Renderer) void {
-        retained_targets_runtime.endEditorTexture(self);
-    }
-
-    pub fn drawTerminalTexture(self: *Renderer, x: f32, y: f32, width: f32, height: f32) void {
-        retained_targets_runtime.drawTerminalTexture(self, x, y, width, height);
-    }
-
-    pub fn scrollTerminalTexture(self: *Renderer, dx: i32, dy: i32) bool {
-        return retained_targets_runtime.scrollTerminalTexture(self, dx, dy);
-    }
-
-    pub fn drawEditorTexture(self: *Renderer, x: f32, y: f32) void {
-        retained_targets_runtime.drawEditorTexture(self, x, y);
-    }
-
     pub fn drawRect(self: *Renderer, x: i32, y: i32, w: i32, h: i32, color: Color) void {
         if (w <= 0 or h <= 0) return;
         if (self.drawing_editor_target and w == self.target_width and h == self.target_height and x == 0 and y == 0) {
