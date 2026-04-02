@@ -238,6 +238,9 @@ Focused follow-up lane:
   - the ESC semantic effect slab now lives in
     `src/terminal/core/protocol/esc_effects.zig`
     instead of being coordinated inline from `parser.zig`
+  - decoded parser dispatch now also lives below the parser boundary in
+    `src/terminal/core/protocol/parser_dispatch.zig`
+    instead of being hand-routed inline from `parser.zig`
 
 ## Current Milestone
 

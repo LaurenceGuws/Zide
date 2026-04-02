@@ -1,13 +1,8 @@
 const std = @import("std");
 const stream_mod = @import("stream.zig");
 const csi_mod = @import("csi.zig");
-const control_handlers = @import("../core/protocol/control_handlers.zig");
 const esc_effects = @import("../core/protocol/esc_effects.zig");
-const terminal_core_protocol = @import("../core/protocol/terminal_core_protocol.zig");
-const terminal_core_text = @import("../core/protocol/terminal_core_text.zig");
-const protocol_csi = @import("../protocol/csi.zig");
-const osc = @import("../protocol/osc.zig");
-const dcs_apc = @import("../protocol/dcs_apc.zig");
+const parser_dispatch = @import("../core/protocol/parser_dispatch.zig");
 const app_logger = @import("../../app_logger.zig");
 
 pub const Parser = struct {
@@ -93,11 +88,7 @@ pub const Parser = struct {
                     return;
                 }
                 if (self.stream.feed(byte)) |event| {
-                    switch (event) {
-                        .codepoint => |cp| terminal_core_text.handleCodepoint(session, @intCast(cp)),
-                        .control => |c| control_handlers.handleControl(session, c),
-                        .invalid => terminal_core_text.handleCodepoint(session, 0xFFFD),
-                    }
+                    parser_dispatch.handleStreamEvent(session, event);
                 }
             },
             .esc => {
@@ -148,7 +139,7 @@ pub const Parser = struct {
             },
             .csi => {
                 if (self.csi.feed(byte)) |action| {
-                    protocol_csi.handleCsi(session, action);
+                    parser_dispatch.handleCsi(session, action);
                     self.esc_state = .ground;
                 }
             },
@@ -182,7 +173,7 @@ pub const Parser = struct {
                     i += 1;
                 }
                 if (i > start) {
-                    terminal_core_text.handleAsciiSlice(session, bytes[start..i]);
+                    parser_dispatch.handleAsciiSlice(session, bytes[start..i]);
                     continue;
                 }
             }
@@ -229,7 +220,7 @@ pub const Parser = struct {
     }
 
     fn finishOsc(self: *Parser, session: anytype) void {
-        osc.parseOsc(session, self.osc_buffer.items, self.osc_terminator);
+        parser_dispatch.handleOsc(session, self.osc_buffer.items, self.osc_terminator);
         self.osc_buffer.clearRetainingCapacity();
         self.osc_state = .idle;
     }
@@ -269,7 +260,7 @@ pub const Parser = struct {
     }
 
     fn finishApc(self: *Parser, session: anytype) void {
-        dcs_apc.parseApc(session, self.apc_buffer.items);
+        parser_dispatch.handleApc(session, self.apc_buffer.items);
         self.apc_buffer.clearRetainingCapacity();
         self.apc_state = .idle;
     }
@@ -304,7 +295,7 @@ pub const Parser = struct {
     }
 
     fn finishDcs(self: *Parser, session: anytype) void {
-        dcs_apc.parseDcs(session, self.dcs_buffer.items);
+        parser_dispatch.handleDcs(session, self.dcs_buffer.items);
         self.dcs_buffer.clearRetainingCapacity();
         self.dcs_state = .idle;
     }

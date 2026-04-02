@@ -153,6 +153,17 @@ Why:
 - but that is a larger shape decision
 - it should follow one concrete first cut, not precede it
 
+Status update:
+
+- that next step is now partially landed too
+- decoded parser dispatch now lives under
+  [parser_dispatch.zig](/home/home/personal/zide/src/terminal/core/protocol/parser_dispatch.zig)
+  instead of being hand-routed inline from `parser.zig`
+
+That is the right kind of move because it makes `parser.zig` read more like a
+state machine with parser-local state, not a place that knows every downstream
+effect owner directly.
+
 ## Current Judgment
 
 The strongest first cut in this lane is likely the ESC semantic effect slab.
