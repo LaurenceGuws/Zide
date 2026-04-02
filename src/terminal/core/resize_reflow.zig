@@ -3,6 +3,7 @@ const terminal_transport = @import("runtime/terminal_transport.zig");
 const scrollback_buffer = @import("../model/scrollback_buffer.zig");
 const types = @import("../model/types.zig");
 const publication_flow = @import("publication/publication_flow.zig");
+const scrollback_view = @import("scrollback_view.zig");
 
 const PtySize = terminal_transport.PtySize;
 const Cell = types.Cell;
@@ -54,7 +55,7 @@ fn resizeLocked(self: anytype, rows: u16, cols: u16) !void {
             }
             self.core.history.scrollback_offset = 0;
         } else {
-            self.setScrollOffsetLocked(self.core.history.scrollback_offset);
+            scrollback_view.setScrollOffsetLocked(self, self.core.history.scrollback_offset);
         }
     }
 }

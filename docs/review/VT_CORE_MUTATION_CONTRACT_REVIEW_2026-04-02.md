@@ -126,6 +126,18 @@ Progress note, later on 2026-04-02:
 That matters because the remaining value of the mutation facade on
 `TerminalSession` is getting much thinner.
 
+Progress note, later on 2026-04-02:
+
+- the mutation alias slab is now deleted from
+  [terminal_session.zig](/home/home/personal/zide/src/terminal/core/session/terminal_session.zig)
+- live callers are now fully rewired to:
+  - core-owned mutation truth where appropriate
+  - [session/content.zig](/home/home/personal/zide/src/terminal/core/session/content.zig)
+  - [session/selection.zig](/home/home/personal/zide/src/terminal/core/session/selection.zig)
+
+That is the first point where `TerminalSession` stops reading like the default
+home for mutable host interaction convenience.
+
 ## Non-Goals
 
 - no more alias churn just to reduce `PtyTerminalRuntime` mentions

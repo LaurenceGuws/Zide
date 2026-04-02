@@ -241,6 +241,8 @@ Focused follow-up lane:
   - live widget/FFI callers now use the real session mutation owners directly
     for publication-aware mutation instead of routing those convenience verbs
     through `TerminalSession`
+  - the mutation alias slab is now deleted from `TerminalSession`; live code no
+    longer treats it as the home for selection/scrollback convenience verbs
 
 - `docs/review/TERMINAL_NATIVE_ARCHITECTURAL_SCRUTINY_2026-03-31.md`
   Why: this is the current ruthless read on what still looks second-rate at

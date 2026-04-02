@@ -4,6 +4,7 @@ const terminal_runtime = @import("core/terminal_runtime.zig");
 const terminal_publication = @import("core/terminal_publication.zig");
 const terminal_debug = @import("core/session/debug_ops.zig");
 const session_input = @import("core/session/input.zig");
+const session_selection = @import("core/session/selection.zig");
 const session_runtime = @import("core/session/runtime.zig");
 const screen_mod = @import("model/screen.zig");
 const pty_mod = @import("io/pty.zig");
@@ -847,10 +848,11 @@ fn attrsEqual(a: terminal_publication.CellAttrs, b: terminal_publication.CellAtt
 fn applySelectionActions(session: *terminal_runtime.TerminalSession, actions: []const SelectionAction) void {
     for (actions) |action| {
         switch (action.op) {
-            .start => session.startSelection(action.row, action.col),
-            .update => session.updateSelection(action.row, action.col),
-            .finish => session.finishSelection(),
-            .select_range => session.selectRange(
+            .start => session_selection.startSelection(session, action.row, action.col),
+            .update => session_selection.updateSelection(session, action.row, action.col),
+            .finish => session_selection.finishSelection(session),
+            .select_range => session_selection.selectRange(
+                session,
                 .{ .row = action.row, .col = action.col },
                 .{ .row = action.end_row, .col = action.end_col },
                 action.finished,
