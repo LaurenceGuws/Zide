@@ -71,6 +71,9 @@ Focused follow-up lane:
   - frame pacing now consumes that publication-owned snapshot type directly,
     so the next likely ambiguity has shifted away from pacing summaries and
     toward remaining widget-local presentation handoff state
+  - that widget-local handoff state now appears mostly honest local host render
+    state, so this lane should not keep grinding tiny widget/publication
+    extractions without a broader new contract question
 
 ## Current Milestone
 

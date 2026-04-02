@@ -237,3 +237,16 @@ Rerank note, after the frame-state contract cuts:
   (`draw_cache`, `pending_presentation_feedback`, texture/generation tracking)
   is now the correct remaining local state, or whether part of it still belongs
   under a sharper publication/presentation contract
+
+Rerank note, after reviewing widget-local presentation state:
+
+- the remaining widget-local presentation state now reads mostly honest
+- `draw_cache`, texture readiness, render-generation tracking, and pending
+  presentation feedback are tightly coupled to the widget-owned retained
+  texture/update path
+- this no longer looks like publication truth leaking upward so much as local
+  host render state that consumes publication truth
+- the next worthwhile terminal review is therefore probably not another
+  widget/publication micro-cut
+- the stronger remaining question is broader engine/publication/native contract
+  clarity across the terminal host path as a whole
