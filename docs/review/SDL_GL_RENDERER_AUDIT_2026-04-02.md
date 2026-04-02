@@ -96,6 +96,8 @@ Status note, 2026-04-02:
 - `ScaleState` now lives with the font-runtime owner and `FontConfigState`
   now lives with the font-manager owner instead of being declared in
   `renderer.zig`
+- `ClipboardState` now lives with the clipboard owner instead of leaving
+  clipboard buffering as an ad hoc renderer-root field
 - constructor/destructor now assemble and tear down grouped scale/font-config
   state through owner-level helpers instead of repeating that grouped-state
   lifecycle inline

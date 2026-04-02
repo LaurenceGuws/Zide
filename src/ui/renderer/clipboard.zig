@@ -2,6 +2,10 @@ const app_logger = @import("../../app_logger.zig");
 const std = @import("std");
 const sdl_api = @import("../../platform/sdl_api.zig");
 
+pub const ClipboardState = struct {
+    buffer: std.ArrayList(u8) = std.ArrayList(u8).empty,
+};
+
 pub fn setText(text: [*:0]const u8) void {
     sdl_api.setClipboardText(text);
 }
@@ -37,6 +41,14 @@ pub fn copyText(allocator: std.mem.Allocator, buffer: *std.ArrayList(u8)) ?[]con
     };
     freeText(slice);
     return buffer.items;
+}
+
+pub fn deinit(state: *ClipboardState, allocator: std.mem.Allocator) void {
+    state.buffer.deinit(allocator);
+}
+
+pub fn copyTextState(state: *ClipboardState, allocator: std.mem.Allocator) ?[]const u8 {
+    return copyText(allocator, &state.buffer);
 }
 
 pub fn copyData(allocator: std.mem.Allocator, mime_type: [*:0]const u8) ?[]u8 {

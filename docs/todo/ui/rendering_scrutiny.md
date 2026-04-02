@@ -75,6 +75,14 @@ Done when:
 - the renderer struct reads like one owned rendering center instead of a grab
   bag of unrelated runtime domains.
 
+Progress note, 2026-04-02:
+
+- clipboard buffering state now lives with
+  `src/ui/renderer/clipboard.zig` instead of being declared ad hoc on the
+  renderer root
+- clipboard text copy now routes through that owner state instead of exposing
+  one more loose root field
+
 ### RS-02 Init/Deinit Still Mix Too Many Responsibilities
 
 Current pressure:

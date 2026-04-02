@@ -79,6 +79,7 @@ pub const InputRuntimeState = input_state.InputRuntimeState;
 pub const WindowChromeState = window_chrome_runtime.WindowChromeState;
 pub const ScaleState = font_runtime.ScaleState;
 pub const FontConfigState = font_manager.FontConfigState;
+pub const ClipboardState = clipboard.ClipboardState;
 pub const TerminalDisableLigaturesStrategy = enum {
     never,
     cursor,
@@ -390,7 +391,7 @@ pub const Renderer = struct {
     mouse_scale: MousePos,
     scale: ScaleState,
     input: InputRuntimeState,
-    clipboard_buffer: std.ArrayList(u8),
+    clipboard: ClipboardState,
     batch_vertices: std.ArrayList(Vertex),
     batch_draws: std.ArrayList(BatchDraw),
     terminal_glyph_cache: glyph_cache.GlyphCache,
@@ -553,7 +554,7 @@ pub const Renderer = struct {
             .mouse_scale = .{ .x = 1.0, .y = 1.0 },
             .scale = scale,
             .input = .{},
-            .clipboard_buffer = std.ArrayList(u8).empty,
+            .clipboard = .{},
             .batch_vertices = std.ArrayList(Vertex).empty,
             .batch_draws = std.ArrayList(BatchDraw).empty,
             .terminal_glyph_cache = glyph_cache.GlyphCache.init(allocator),
@@ -594,7 +595,7 @@ pub const Renderer = struct {
         font_manager.deinitFontConfigState(self);
 
         input_state.deinit(self.inputDomain());
-        self.clipboard_buffer.deinit(self.allocator);
+        clipboard.deinit(&self.clipboard, self.allocator);
         self.batch_vertices.deinit(self.allocator);
         self.batch_draws.deinit(self.allocator);
         self.terminal_glyph_cache.deinit();
@@ -852,7 +853,7 @@ pub const Renderer = struct {
     }
 
     pub fn getClipboardText(self: *Renderer) ?[]const u8 {
-        return clipboard.copyText(self.allocator, &self.clipboard_buffer);
+        return clipboard.copyTextState(&self.clipboard, self.allocator);
     }
 
     pub fn getClipboardMimeData(self: *Renderer, allocator: std.mem.Allocator, mime_type: [*:0]const u8) ?[]u8 {

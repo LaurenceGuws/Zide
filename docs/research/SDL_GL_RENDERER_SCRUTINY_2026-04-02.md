@@ -175,6 +175,8 @@ Progress note, 2026-04-02:
 - `ScaleState` now lives with `src/ui/renderer/font_runtime.zig` and
   `FontConfigState` now lives with `src/ui/renderer/font_manager.zig` instead
   of being declared in the renderer root
+- `ClipboardState` now lives with `src/ui/renderer/clipboard.zig` instead of
+  leaving clipboard buffering as an ad hoc renderer-root field
 - renderer init/deinit now assemble and tear down grouped scale/font-config
   state through owner-level helpers instead of open-coding that grouped-state
   lifecycle inline
