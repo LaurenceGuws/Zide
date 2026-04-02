@@ -937,7 +937,7 @@ pub fn eventsFree(events: *shared.EventBuffer) void {
 
 pub fn selectionText(handle: ?*shared.ZideTerminalHandle, out_string: *shared.StringBuffer) shared.Status {
     const h = shared.fromOpaqueActive(handle) orelse return .invalid_argument;
-    const text = (h.session.selectionPlainTextAlloc(h.allocator) catch |err| {
+    const text = (h.session.core.selectionPlainTextAlloc(h.allocator) catch |err| {
         return shared.mapError(err);
     }) orelse return shared.stringFromSlice(h.allocator, "", out_string);
     return shared.stringFromOwnedSlice(h.allocator, text, out_string);

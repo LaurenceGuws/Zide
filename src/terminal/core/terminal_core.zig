@@ -370,6 +370,43 @@ pub const TerminalCore = struct {
         return out.toOwnedSlice(allocator);
     }
 
+    pub fn selectionPlainTextAlloc(self: *TerminalCore, allocator: std.mem.Allocator) !?[]u8 {
+        const selection = self.selectionState() orelse return null;
+        const screen = self.activeScreenConst();
+        const view = screen.snapshotView();
+        const rows = view.rows;
+        const cols = view.cols;
+        const history = self.scrollbackCount();
+        const total_lines = history + rows;
+        if (rows == 0 or cols == 0 or total_lines == 0) return null;
+
+        var start_sel = selection.start;
+        var end_sel = selection.end;
+        if (start_sel.row > end_sel.row or (start_sel.row == end_sel.row and start_sel.col > end_sel.col)) {
+            const tmp = start_sel;
+            start_sel = end_sel;
+            end_sel = tmp;
+        }
+        start_sel.row = @min(start_sel.row, total_lines - 1);
+        end_sel.row = @min(end_sel.row, total_lines - 1);
+        start_sel.col = @min(start_sel.col, cols - 1);
+        end_sel.col = @min(end_sel.col, cols - 1);
+
+        var out = std.ArrayList(u8).empty;
+        errdefer out.deinit(allocator);
+
+        var row_idx: usize = start_sel.row;
+        while (row_idx <= end_sel.row and row_idx < total_lines) : (row_idx += 1) {
+            const row_cells = coreVisibleRow(self, view.cells, rows, cols, history, row_idx) orelse continue;
+            const col_start = if (row_idx == start_sel.row) start_sel.col else 0;
+            const col_end = if (row_idx == end_sel.row) end_sel.col else cols - 1;
+            try appendSelectionRange(&out, allocator, row_cells, cols, col_start, col_end);
+            if (row_idx != end_sel.row) try out.append(allocator, '\n');
+        }
+
+        return try out.toOwnedSlice(allocator);
+    }
+
     pub fn setSelectionState(self: *TerminalCore, selection: types.TerminalSelection) void {
         self.history.selection.selection = selection;
     }
@@ -672,6 +709,28 @@ fn appendPlainRow(out: *std.ArrayList(u8), allocator: std.mem.Allocator, row_cel
 
     try out.appendSlice(allocator, line.items);
     try out.append(allocator, '\n');
+}
+
+fn appendSelectionRange(
+    out: *std.ArrayList(u8),
+    allocator: std.mem.Allocator,
+    row_cells: []const Cell,
+    cols: usize,
+    col_start: usize,
+    col_end: usize,
+) !void {
+    const last_content_col = rowLastContentCol(row_cells, cols) orelse return;
+    const clamped_end = @min(col_end, last_content_col);
+    if (clamped_end < col_start) return;
+
+    var col_idx: usize = col_start;
+    while (col_idx <= clamped_end and col_idx < cols) : (col_idx += 1) {
+        try appendCellText(out, allocator, row_cells[col_idx]);
+    }
+
+    while (out.items.len > 0 and out.items[out.items.len - 1] == ' ') {
+        _ = out.pop();
+    }
 }
 
 fn attrsEqual(a: types.CellAttrs, b: types.CellAttrs) bool {

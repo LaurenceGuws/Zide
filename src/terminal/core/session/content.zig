@@ -1,10 +1,5 @@
 const std = @import("std");
 const scrollback_view = @import("../scrollback_view.zig");
-const text_export = @import("text_export.zig");
-
-pub fn selectionPlainTextAlloc(self: anytype, allocator: std.mem.Allocator) !?[]u8 {
-    return text_export.selectionPlainTextAlloc(self, allocator);
-}
 
 pub fn setScrollOffset(self: anytype, offset: usize) void {
     scrollback_view.setScrollOffset(self, offset);

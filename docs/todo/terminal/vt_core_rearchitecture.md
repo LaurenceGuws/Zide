@@ -210,6 +210,9 @@ Focused follow-up lane:
   - `TerminalCore` now owns read-only scrollback summary and export directly
   - `TerminalSession` no longer advertises the duplicate read-only scrollback
     surface as if that immutable content were session-shell ownership
+  - the immutable selection-text export now moved the same way too
+  - `TerminalSession` no longer advertises immutable selection/scrollback text
+    export as its own public content slab
 
 - `docs/review/TERMINAL_NATIVE_ARCHITECTURAL_SCRUTINY_2026-03-31.md`
   Why: this is the current ruthless read on what still looks second-rate at

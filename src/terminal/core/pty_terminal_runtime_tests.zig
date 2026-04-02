@@ -2034,7 +2034,7 @@ test "selection plain text export is terminal-owned across history and grid" {
     session.updateSelection(1, 1);
     session.finishSelection();
 
-    const text_opt = try session.selectionPlainTextAlloc(allocator);
+    const text_opt = try session.core.selectionPlainTextAlloc(allocator);
     try std.testing.expect(text_opt != null);
     const text = text_opt.?;
     defer allocator.free(text);

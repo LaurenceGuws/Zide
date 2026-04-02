@@ -12,7 +12,6 @@ const TerminalCoreType = terminal_core_mod.TerminalCore;
 
 pub const TerminalSession = struct {
     pub const InitOptions = init_options.InitOptions;
-    pub const selectionPlainTextAlloc = content.selectionPlainTextAlloc;
     pub const setScrollOffset = content.setScrollOffset;
     pub const setScrollOffsetLocked = content.setScrollOffsetLocked;
     pub const resetToLiveBottomLocked = content.resetToLiveBottomLocked;

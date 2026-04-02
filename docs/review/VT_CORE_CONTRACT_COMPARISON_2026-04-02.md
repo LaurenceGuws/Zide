@@ -163,6 +163,18 @@ Why this is the right opener:
 - it makes hosts reach the engine object directly for immutable terminal
   content instead of treating `TerminalSession` as the only real export face
 
+Progress note, later on 2026-04-02:
+
+- the immutable selection-text export path now moved the same way
+- `TerminalCore` now owns:
+  - `selectionPlainTextAlloc(...)`
+  - `scrollbackInfo(...)`
+  - `copyScrollbackRange(...)`
+  - `scrollbackPlainTextAlloc(...)`
+  - `scrollbackAnsiTextAlloc(...)`
+- `TerminalSession` no longer advertises that immutable export slab as if it
+  were session-shell identity
+
 ## Sprint Target
 
 The next `vt-sprint` question should be:

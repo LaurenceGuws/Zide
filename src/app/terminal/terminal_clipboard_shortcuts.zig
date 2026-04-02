@@ -28,7 +28,7 @@ pub fn handle(
             fn call(raw: *anyopaque) !bool {
                 const ctx: *RuntimeCtx = @ptrCast(@alignCast(raw));
                 const term = ctx.widget.session;
-                const text = (try term.selectionPlainTextAlloc(ctx.allocator)) orelse return false;
+                const text = (try term.core.selectionPlainTextAlloc(ctx.allocator)) orelse return false;
                 defer ctx.allocator.free(text);
                 const cstr = try ctx.allocator.dupeZ(u8, text);
                 defer ctx.allocator.free(cstr);
