@@ -1,5 +1,4 @@
 const sdl_api = @import("sdl_api.zig");
-const std = @import("std");
 
 const sdl = sdl_api.c;
 
@@ -32,15 +31,5 @@ pub fn getScaledPosWithFactor(scale: f32) MousePos {
 
 pub fn computeMouseScale(window: *sdl.SDL_Window) MouseScale {
     _ = window;
-    var sx: f32 = 1.0;
-    var sy: f32 = 1.0;
-
-    if (std.c.getenv("ZIDE_MOUSE_SCALE")) |raw| {
-        const s = std.mem.sliceTo(raw, 0);
-        const env_scale = std.fmt.parseFloat(f32, s) catch 1.0;
-        sx *= env_scale;
-        sy *= env_scale;
-    }
-
-    return .{ .x = sx, .y = sy };
+    return .{ .x = 1.0, .y = 1.0 };
 }

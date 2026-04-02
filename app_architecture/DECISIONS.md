@@ -21,7 +21,8 @@ Add a compositor-aware scaling helper with a small abstraction layer. Start with
 - **Hyprland:** query `hyprctl -j monitors` and parse `scale` for the active monitor.
 - **KDE:** use `kscreen-doctor` (preferred) as the compositor-specific source.
 
-Use this compositor-provided scale as the default mouse scale on Wayland. Keep `ZIDE_MOUSE_SCALE` as an override/escape hatch.
+Use the platform/renderer-provided scale path directly. Do not preserve
+environment-based mouse-scale escape hatches from the pre-SDL3 workaround era.
 
 **Consequences**
 - Accurate mouse hit-testing on fractional scaling without hardcoding a global scale.

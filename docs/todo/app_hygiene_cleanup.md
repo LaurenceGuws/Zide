@@ -186,6 +186,13 @@ Progress note, 2026-04-01:
   compositor check
 - `src/ui/renderer.zig` no longer imports compositor-only type residue
 
+Progress note, 2026-04-02:
+
+- the old `ZIDE_MOUSE_SCALE` escape hatch is gone from
+  `src/platform/mouse_state.zig`
+- mouse scale handling now reads as SDL3-native default behavior instead of
+  preserving one more migration-era workaround seam
+
 ### AH-02 Tree-sitter Consumer Contract Hardening
 
 Focus:
