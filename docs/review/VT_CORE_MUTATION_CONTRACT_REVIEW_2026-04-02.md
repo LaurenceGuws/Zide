@@ -73,6 +73,30 @@ host interaction:
 3. Only then cut the first whole mutable-host slab off
    `TerminalSession`.
 
+Progress note, later on 2026-04-02:
+
+- the first whole mutable-host slab has now moved in the selection lane
+- higher-level host selection semantics now live under
+  [terminal_core.zig](/home/home/personal/zide/src/terminal/core/terminal_core.zig)
+  via [terminal_core_selection.zig](/home/home/personal/zide/src/terminal/core/terminal_core_selection.zig):
+  - range selection
+  - ordered-range selection
+  - click-selection expansion
+  - gesture extension
+  - cell/update selection helpers
+- [selection.zig](/home/home/personal/zide/src/terminal/core/selection.zig) is now narrower:
+  - lock
+  - call core-owned mutation truth
+  - request publication refresh
+
+That is the right split:
+
+- mutation truth moved toward `TerminalCore`
+- publication invalidation stayed outside it
+
+The next same-class question is whether viewport / scrollback host mutation
+should move the same way.
+
 ## Non-Goals
 
 - no more alias churn just to reduce `PtyTerminalRuntime` mentions

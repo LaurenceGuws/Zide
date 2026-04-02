@@ -1,24 +1,9 @@
+const terminal_core_mod = @import("terminal_core.zig");
 const types = @import("../model/types.zig");
-const selection_semantics = @import("../model/selection_semantics.zig");
 const publication_flow = @import("publication/publication_flow.zig");
 
-pub const SelectionGestureMode = enum {
-    none,
-    word,
-    line,
-};
-
-pub const SelectionGesture = struct {
-    mode: SelectionGestureMode = .none,
-    row: usize = 0,
-    col_start: usize = 0,
-    col_end: usize = 0,
-};
-
-pub const ClickSelectionResult = struct {
-    gesture: SelectionGesture = .{},
-    started: bool = false,
-};
+pub const SelectionGesture = terminal_core_mod.TerminalCore.SelectionGesture;
+pub const ClickSelectionResult = terminal_core_mod.TerminalCore.ClickSelectionResult;
 
 pub fn clearSelection(self: anytype) void {
     self.session.control.state_mutex.lock();
@@ -32,8 +17,8 @@ pub fn clearSelectionLocked(self: anytype) void {
 }
 
 pub fn clearSelectionIfActiveLocked(self: anytype) bool {
-    if (selectionState(self) == null) return false;
-    clearSelectionLocked(self);
+    if (!self.core.clearSelectionIfActive()) return false;
+    _ = publication_flow.requestViewRefreshLocked(self, self.core.scrollbackOffset());
     return true;
 }
 
@@ -86,25 +71,18 @@ pub fn selectRange(self: anytype, start: types.SelectionPos, end: types.Selectio
 }
 
 pub fn selectRangeLocked(self: anytype, start: types.SelectionPos, end: types.SelectionPos, finished: bool) void {
-    if (self.core.active == .alt) return;
-    self.core.startSelection(start.row, start.col);
-    self.core.updateSelection(end.row, end.col);
-    if (finished) {
-        self.core.finishSelection();
-    }
+    if (!self.core.selectRange(start, end, finished)) return;
     _ = publication_flow.requestViewRefreshLocked(self, self.core.scrollbackOffset());
 }
 
 pub fn selectCellLocked(self: anytype, pos: types.SelectionPos, finished: bool) void {
-    selectRangeLocked(self, pos, pos, finished);
+    if (!self.core.selectCell(pos, finished)) return;
+    _ = publication_flow.requestViewRefreshLocked(self, self.core.scrollbackOffset());
 }
 
 pub fn selectOrUpdateCellLocked(self: anytype, pos: types.SelectionPos) bool {
-    if (selectionState(self) == null) {
-        selectCellLocked(self, pos, false);
-    } else {
-        updateSelectionLocked(self, pos.row, pos.col);
-    }
+    if (!self.core.selectOrUpdateCell(pos)) return false;
+    _ = publication_flow.requestViewRefreshLocked(self, self.core.scrollbackOffset());
     return true;
 }
 
@@ -116,8 +94,8 @@ pub fn selectOrderedRangeLocked(
     target_end: types.SelectionPos,
     finished: bool,
 ) bool {
-    const range = selection_semantics.orderedRange(anchor_start, anchor_end, target_start, target_end);
-    selectRangeLocked(self, range.start, range.end, finished);
+    if (!self.core.selectOrderedRange(anchor_start, anchor_end, target_start, target_end, finished)) return false;
+    _ = publication_flow.requestViewRefreshLocked(self, self.core.scrollbackOffset());
     return true;
 }
 
@@ -128,49 +106,11 @@ pub fn beginClickSelectionLocked(
     col: usize,
     click_count: u8,
 ) ClickSelectionResult {
-    const last_col = selection_semantics.rowLastContentCol(row_cells) orelse return .{};
-    if (click_count >= 3) {
-        const result: ClickSelectionResult = .{
-            .gesture = .{
-                .mode = .line,
-                .row = global_row,
-                .col_start = 0,
-                .col_end = last_col,
-            },
-            .started = true,
-        };
-        selectRangeLocked(
-            self,
-            .{ .row = global_row, .col = 0 },
-            .{ .row = global_row, .col = last_col },
-            true,
-        );
-        return result;
+    const result = self.core.beginClickSelection(row_cells, global_row, col, click_count);
+    if (result.started) {
+        _ = publication_flow.requestViewRefreshLocked(self, self.core.scrollbackOffset());
     }
-    if (click_count == 2) {
-        if (selection_semantics.wordSpan(row_cells, col, last_col)) |span| {
-            const result: ClickSelectionResult = .{
-                .gesture = .{
-                    .mode = .word,
-                    .row = global_row,
-                    .col_start = span.start,
-                    .col_end = span.end,
-                },
-                .started = true,
-            };
-            selectRangeLocked(
-                self,
-                .{ .row = global_row, .col = span.start },
-                .{ .row = global_row, .col = span.end },
-                true,
-            );
-            return result;
-        }
-        const sel_col = @min(col, last_col);
-        selectCellLocked(self, .{ .row = global_row, .col = sel_col }, false);
-        return .{ .started = true };
-    }
-    return .{};
+    return result;
 }
 
 pub fn selectOrUpdateCellInRowLocked(
@@ -179,9 +119,9 @@ pub fn selectOrUpdateCellInRowLocked(
     global_row: usize,
     col: usize,
 ) bool {
-    const last_col = selection_semantics.rowLastContentCol(row_cells) orelse return false;
-    const sel_col = @min(col, last_col);
-    return selectOrUpdateCellLocked(self, .{ .row = global_row, .col = sel_col });
+    if (!self.core.selectOrUpdateCellInRow(row_cells, global_row, col)) return false;
+    _ = publication_flow.requestViewRefreshLocked(self, self.core.scrollbackOffset());
+    return true;
 }
 
 pub fn extendGestureSelectionLocked(
@@ -191,45 +131,9 @@ pub fn extendGestureSelectionLocked(
     global_row: usize,
     col: usize,
 ) bool {
-    switch (gesture.mode) {
-        .none => return false,
-        .word => {
-            var target_start: usize = col;
-            var target_end: usize = col;
-            if (selection_semantics.rowLastContentCol(row_cells)) |last_col| {
-                if (selection_semantics.wordSpan(row_cells, col, last_col)) |span| {
-                    target_start = span.start;
-                    target_end = span.end;
-                } else {
-                    const sel_col = @min(col, last_col);
-                    target_start = sel_col;
-                    target_end = sel_col;
-                }
-            } else {
-                target_start = 0;
-                target_end = 0;
-            }
-            return selectOrderedRangeLocked(
-                self,
-                .{ .row = gesture.row, .col = gesture.col_start },
-                .{ .row = gesture.row, .col = gesture.col_end },
-                .{ .row = global_row, .col = target_start },
-                .{ .row = global_row, .col = target_end },
-                false,
-            );
-        },
-        .line => {
-            const target_last = selection_semantics.rowLastContentCol(row_cells) orelse 0;
-            return selectOrderedRangeLocked(
-                self,
-                .{ .row = gesture.row, .col = 0 },
-                .{ .row = gesture.row, .col = gesture.col_end },
-                .{ .row = global_row, .col = 0 },
-                .{ .row = global_row, .col = target_last },
-                false,
-            );
-        },
-    }
+    if (!self.core.extendGestureSelection(gesture, row_cells, global_row, col)) return false;
+    _ = publication_flow.requestViewRefreshLocked(self, self.core.scrollbackOffset());
+    return true;
 }
 
 pub fn selectionState(self: anytype) ?types.TerminalSelection {

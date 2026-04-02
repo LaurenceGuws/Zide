@@ -231,6 +231,12 @@ Focused follow-up lane:
   Why: immutable reads now look core-owned enough; the remaining serious
   plug-and-play blocker is mutable host interaction still needing
   `TerminalSession` because publication invalidation is coupled there
+  Progress:
+  - the first whole mutable-host slab has now moved in the selection lane
+  - higher-level selection semantics now live under `TerminalCore`
+  - session-side selection is narrower: lock, call core mutation, refresh
+  - the next same-class decision is whether scrollback viewport mutation should
+    follow the same split
 
 - `docs/review/TERMINAL_NATIVE_ARCHITECTURAL_SCRUTINY_2026-03-31.md`
   Why: this is the current ruthless read on what still looks second-rate at

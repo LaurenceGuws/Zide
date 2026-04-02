@@ -8,6 +8,7 @@ const kitty_mod = @import("../kitty/graphics.zig");
 const semantic_prompt_mod = @import("semantic_prompt.zig");
 const host_types = @import("session/host_types.zig");
 const palette_mod = @import("../protocol/palette.zig");
+const terminal_core_selection = @import("terminal_core_selection.zig");
 
 const Screen = screen_mod.Screen;
 const Charset = parser_mod.Charset;
@@ -38,6 +39,9 @@ pub const InitOptions = struct {
 };
 
 pub const TerminalCore = struct {
+    pub const SelectionGesture = terminal_core_selection.SelectionGesture;
+    pub const ClickSelectionResult = terminal_core_selection.ClickSelectionResult;
+
     allocator: std.mem.Allocator,
     title: []const u8,
     title_buffer: std.ArrayList(u8),
@@ -330,6 +334,62 @@ pub const TerminalCore = struct {
     pub fn selectionState(self: *TerminalCore) ?types.TerminalSelection {
         if (self.active == .alt) return null;
         return self.history.selectionState();
+    }
+
+    pub fn clearSelectionIfActive(self: *TerminalCore) bool {
+        return terminal_core_selection.clearSelectionIfActive(self);
+    }
+
+    pub fn selectRange(self: *TerminalCore, start: types.SelectionPos, end: types.SelectionPos, finished: bool) bool {
+        return terminal_core_selection.selectRange(self, start, end, finished);
+    }
+
+    pub fn selectCell(self: *TerminalCore, pos: types.SelectionPos, finished: bool) bool {
+        return terminal_core_selection.selectCell(self, pos, finished);
+    }
+
+    pub fn selectOrUpdateCell(self: *TerminalCore, pos: types.SelectionPos) bool {
+        return terminal_core_selection.selectOrUpdateCell(self, pos);
+    }
+
+    pub fn selectOrderedRange(
+        self: *TerminalCore,
+        anchor_start: types.SelectionPos,
+        anchor_end: types.SelectionPos,
+        target_start: types.SelectionPos,
+        target_end: types.SelectionPos,
+        finished: bool,
+    ) bool {
+        return terminal_core_selection.selectOrderedRange(self, anchor_start, anchor_end, target_start, target_end, finished);
+    }
+
+    pub fn beginClickSelection(
+        self: *TerminalCore,
+        row_cells: []const types.Cell,
+        global_row: usize,
+        col: usize,
+        click_count: u8,
+    ) ClickSelectionResult {
+        return terminal_core_selection.beginClickSelection(self, row_cells, global_row, col, click_count);
+    }
+
+    pub fn selectOrUpdateCellInRow(
+        self: *TerminalCore,
+        row_cells: []const types.Cell,
+        global_row: usize,
+        col: usize,
+    ) bool {
+        return terminal_core_selection.selectOrUpdateCellInRow(self, row_cells, global_row, col);
+    }
+
+    pub fn extendGestureSelection(
+        self: *TerminalCore,
+        gesture: SelectionGesture,
+        row_cells: []const types.Cell,
+        global_row: usize,
+        col: usize,
+    ) bool {
+        return terminal_core_selection.extendGestureSelection(self, gesture, row_cells, global_row, col);
     }
 
     pub fn scrollbackPlainTextAlloc(self: *TerminalCore, allocator: std.mem.Allocator) ![]u8 {
