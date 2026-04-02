@@ -199,15 +199,14 @@ Judgment:
 - the host seam is not obviously wrong
 - it is still too mixed to read as mature
 
-Status note after the first SDL/GL host seam cut:
+Status note after the SDL/GL host seam cleanup:
 
-- steady host setup now remains in `src/ui/renderer/window_init.zig`
-- diagnostic/probe logging moved to
-  `src/ui/renderer/window_init_diagnostics.zig`
+- steady host setup remains in `src/ui/renderer/window_init.zig`
+- the temporary SDL/GL/Wayland startup probe shell has been removed
 - Linux window icon policy moved to
   `src/ui/renderer/window_icon_runtime.zig`
 
-This improves the seam shape without changing behavior.
+This leaves the host seam smaller and less issue-era probe driven.
 
 ### 6. Backend surface honesty still lags runtime truth
 

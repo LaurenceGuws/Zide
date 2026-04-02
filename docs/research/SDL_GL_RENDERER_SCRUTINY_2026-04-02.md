@@ -231,8 +231,8 @@ Expected pressure:
 Progress note, 2026-04-02:
 
 - steady host setup remains in `src/ui/renderer/window_init.zig`
-- SDL/GL/Wayland diagnostic logging now lives in
-  `src/ui/renderer/window_init_diagnostics.zig`
+- the temporary SDL/GL/Wayland startup probe shell was removed after the
+  migration investigation
 - Linux window icon application now lives in
   `src/ui/renderer/window_icon_runtime.zig`
 

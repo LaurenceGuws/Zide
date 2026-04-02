@@ -318,8 +318,6 @@ Every phase should be checked against:
    - `zig build -Dmode=terminal -Doptimize=ReleaseFast`
 
 2. Static startup contract
-   - SDL GL realized attrs
-   - SDL EGL contract
    - drawable/window metrics on startup and resize
 
 3. Repro lanes

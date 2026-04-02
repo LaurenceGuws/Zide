@@ -1,7 +1,6 @@
 const gl = @import("gl.zig");
 const sdl_api = @import("../../platform/sdl_api.zig");
 const windows_app_identity = @import("../../platform/windows_app_identity.zig");
-const diagnostics = @import("window_init_diagnostics.zig");
 const window_icon_runtime = @import("window_icon_runtime.zig");
 const app_logger = @import("../../app_logger.zig");
 const std = @import("std");
@@ -78,8 +77,5 @@ pub fn createGlContext(window: *sdl.SDL_Window) !sdl.SDL_GLContext {
         app_logger.logger("sdl.gl").logStdout(.@"error", "SDL_GL_SetSwapInterval failed interval=1 err={s}", .{sdl_api.getError()});
         return error.SdlSwapIntervalFailed;
     }
-    diagnostics.logGlContext(window);
-    diagnostics.logWaylandNativeHandles(window);
-    diagnostics.logEglSurfaceContract(window);
     return gl_context;
 }
