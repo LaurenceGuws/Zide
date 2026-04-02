@@ -176,6 +176,15 @@ Focused follow-up lane:
   - WezTerm reinforces the same maturity bar
   - current Zide read is now close enough that the next move should come from
     a deeper object-model review or a stop-marker, not more local helper cuts
+- `docs/review/TERMINAL_WAR_3_CORE_CENTER_REVIEW_2026-04-02.md`
+  Why: the remaining War 3 question is no longer local ownership cleanup.
+  Current read:
+  - the stronger references still make the engine object itself read more
+    obviously like the library
+  - Zide is much closer now, but `TerminalCore` still reads more like the
+    dominant field inside `TerminalSession` than the fully sufficient public
+    center
+  - this is now too ambiguous for momentum-driven surgery
 
 - `docs/review/TERMINAL_NATIVE_ARCHITECTURAL_SCRUTINY_2026-03-31.md`
   Why: this is the current ruthless read on what still looks second-rate at
