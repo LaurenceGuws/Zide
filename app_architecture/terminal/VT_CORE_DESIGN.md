@@ -241,6 +241,12 @@ Status note, 2026-03-31:
     `handleDecrqmQuery(...)` in `src/terminal/protocol/csi_mode_query.zig`;
     CSI now computes the mode state and calls the writer-owned DECRQM reply
     function directly
+  - publication mutation composition is tighter too:
+    test/debug callers no longer hand-compose `bumpGeneration(...)` plus
+    `publishCurrentViewLocked(...)` for the common "new generation from current
+    view" action; that now lives under
+    `src/terminal/core/publication/terminal_publication.zig` as
+    `bumpAndPublishCurrentViewLocked(...)`
   - the DECRQM snapshot path is thinner too:
     `src/terminal/protocol/csi_mode_query.zig` now reads mouse-mode snapshot
     bits directly from `interaction.input_snapshot`, so the stable runtime

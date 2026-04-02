@@ -41,8 +41,7 @@ pub fn debugFeedBytes(self: anytype, bytes: []const u8) void {
 pub fn debugScrollUp(self: anytype) void {
     if (!debugAccessAllowed()) @panic("debugScrollUp is test-only");
     @import("../scrolling.zig").scrollUp(self);
-    _ = terminal_publication.bumpGeneration(self);
-    terminal_publication.publishCurrentViewLocked(self, "debug_push_output");
+    _ = terminal_publication.bumpAndPublishCurrentViewLocked(self, "debug_push_output");
 }
 
 pub fn debugSetScrollOffset(self: anytype, offset: usize) void {
@@ -63,8 +62,7 @@ pub fn debugSetScrollbackCell(self: anytype, row: usize, col: usize, codepoint: 
     if (col >= line.cells.len) return;
     line.cells[col].codepoint = codepoint;
     self.core.history.markScrollbackChanged();
-    _ = terminal_publication.bumpGeneration(self);
-    terminal_publication.publishCurrentViewLocked(self, "debug_scrollback_row");
+    _ = terminal_publication.bumpAndPublishCurrentViewLocked(self, "debug_scrollback_row");
 }
 
 pub fn debugPushScrollbackRow(self: anytype, text: []const u8) void {
@@ -82,8 +80,7 @@ pub fn debugPushScrollbackRow(self: anytype, text: []const u8) void {
     }
     self.core.history.pushRow(row, false, base);
     self.core.history.ensureViewCache(cols, base);
-    _ = terminal_publication.bumpGeneration(self);
-    terminal_publication.publishCurrentViewLocked(self, "debug_grid_row");
+    _ = terminal_publication.bumpAndPublishCurrentViewLocked(self, "debug_grid_row");
 }
 
 pub fn debugSetGridRow(self: anytype, row_index: usize, text: []const u8) void {
@@ -100,8 +97,7 @@ pub fn debugSetGridRow(self: anytype, row_index: usize, text: []const u8) void {
         self.core.primary.grid.cells.items[start + i].codepoint = text[i];
     }
     self.core.primary.grid.markDirtyRange(row_index, row_index, 0, cols - 1);
-    _ = terminal_publication.bumpGeneration(self);
-    terminal_publication.publishCurrentViewLocked(self, "debug_cursor");
+    _ = terminal_publication.bumpAndPublishCurrentViewLocked(self, "debug_cursor");
 }
 
 pub const KittyStateSelector = enum {

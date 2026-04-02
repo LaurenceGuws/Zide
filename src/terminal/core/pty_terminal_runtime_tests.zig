@@ -149,16 +149,14 @@ test "full-region scroll publishes partial cache damage at live bottom" {
     }
     session.primary.setCursor(2, 0);
 
-    _ = terminal_publication.bumpGeneration(session);
-    terminal_publication.publishCurrentViewLocked(session, "test_publication");
+    _ = terminal_publication.bumpAndPublishCurrentViewLocked(session, "test_publication");
 
     session.primary.clearDirty();
     session.alt.clearDirty();
     try std.testing.expect(terminal_publication.acknowledgePresentedGeneration(session, terminal_publication.renderCache(session).generation));
 
     scrolling.scrollUp(session);
-    _ = terminal_publication.bumpGeneration(session);
-    terminal_publication.publishCurrentViewLocked(session, "test_publication");
+    _ = terminal_publication.bumpAndPublishCurrentViewLocked(session, "test_publication");
 
     const cache = terminal_publication.renderCache(session);
     try std.testing.expectEqual(Dirty.partial, cache.dirty);
@@ -292,8 +290,7 @@ test "feedOutputBytes keeps incremental damage after baseline publish" {
     var session = try PtyTerminalRuntime.init(allocator, 1, 4);
     defer session.deinit();
 
-    _ = terminal_publication.bumpGeneration(session);
-    terminal_publication.publishCurrentViewLocked(session, "test_publication");
+    _ = terminal_publication.bumpAndPublishCurrentViewLocked(session, "test_publication");
 
     session.primary.clearDirty();
     session.alt.clearDirty();
@@ -355,8 +352,7 @@ test "zig progress redraw invalidates cleared tail rows" {
     debugSetCursor(&session, 4, 0);
     terminal_core_feed.feedOutputBytes(session, "\x1b[Jbuild one\nitem a\n\r\x1bM\x1bM");
 
-    _ = terminal_publication.bumpGeneration(session);
-    terminal_publication.publishCurrentViewLocked(session, "test_publication");
+    _ = terminal_publication.bumpAndPublishCurrentViewLocked(session, "test_publication");
 
     session.primary.clearDirty();
     session.alt.clearDirty();
@@ -385,8 +381,7 @@ test "bottom-edge in-place redraw keeps blank separator rows dirty" {
 
     terminal_core_feed.feedOutputBytes(session, "\x1b[Jfirst row\nsecond row\nthird row\nfourth row\r\x1bM\x1bM\x1bM\x1bM");
 
-    _ = terminal_publication.bumpGeneration(session);
-    terminal_publication.publishCurrentViewLocked(session, "test_publication");
+    _ = terminal_publication.bumpAndPublishCurrentViewLocked(session, "test_publication");
 
     session.primary.clearDirty();
     session.alt.clearDirty();
@@ -694,15 +689,13 @@ test "manual repeat guide publication still dirties bottom row today" {
     defer session.deinit();
 
     session.debugFeedBytes("\x1b[H1| |aaa \x1b[2;1H2| |bbb \x1b[3;1H3| |ccc \x1b[4;1H4| |ddd ");
-    _ = terminal_publication.bumpGeneration(session);
-    terminal_publication.publishCurrentViewLocked(session, "test_publication");
+    _ = terminal_publication.bumpAndPublishCurrentViewLocked(session, "test_publication");
     session.primary.clearDirty();
     session.alt.clearDirty();
     try std.testing.expect(terminal_publication.acknowledgePresentedGeneration(session, terminal_publication.renderCache(session).generation));
 
     session.debugFeedBytes("\x1b[H5\x1b[2;1H+>");
-    _ = terminal_publication.bumpGeneration(session);
-    terminal_publication.publishCurrentViewLocked(session, "test_publication");
+    _ = terminal_publication.bumpAndPublishCurrentViewLocked(session, "test_publication");
 
     session.debugFeedBytes("\x1b[1;4H|\x1b[2;4H|");
     const view = session.core.activeScreenConst().snapshotView();
@@ -711,8 +704,7 @@ test "manual repeat guide publication still dirties bottom row today" {
     try std.testing.expect(!view.dirty_rows[2]);
     try std.testing.expect(!view.dirty_rows[3]);
 
-    _ = terminal_publication.bumpGeneration(session);
-    terminal_publication.publishCurrentViewLocked(session, "test_publication");
+    _ = terminal_publication.bumpAndPublishCurrentViewLocked(session, "test_publication");
 
     const cache = terminal_publication.renderCache(session);
     try std.testing.expect(cache.dirty_rows.items[3]);
@@ -727,16 +719,14 @@ test "acknowledgePresentedGeneration derives sync dirty retirement from cache" {
     defer session.deinit();
 
     session.primary.markDirtyAllWithReason(.unknown, @src());
-    _ = terminal_publication.bumpGeneration(session);
-    terminal_publication.publishCurrentViewLocked(session, "test_publication");
+    _ = terminal_publication.bumpAndPublishCurrentViewLocked(session, "test_publication");
     const normal_generation = terminal_publication.renderCache(session).generation;
     try std.testing.expect(terminal_publication.acknowledgePresentedGeneration(session, normal_generation));
     try std.testing.expectEqual(Dirty.none, session.primary.grid.dirty);
 
     session.primary.markDirtyAllWithReason(.unknown, @src());
     terminal_publication.setSyncUpdates(session, true);
-    _ = terminal_publication.bumpGeneration(session);
-    terminal_publication.publishCurrentViewLocked(session, "test_publication");
+    _ = terminal_publication.bumpAndPublishCurrentViewLocked(session, "test_publication");
     const sync_generation = terminal_publication.renderCache(session).generation;
     try std.testing.expect(terminal_publication.acknowledgePresentedGeneration(session, sync_generation));
     try std.testing.expectEqual(Dirty.full, session.primary.grid.dirty);
@@ -760,8 +750,7 @@ test "row hash refinement does not skip unpresented top rows" {
     }
     session.primary.setCursor(2, 0);
 
-    _ = terminal_publication.bumpGeneration(session);
-    terminal_publication.publishCurrentViewLocked(session, "test_publication");
+    _ = terminal_publication.bumpAndPublishCurrentViewLocked(session, "test_publication");
     terminal_publication.notePresentedGeneration(session, terminal_publication.renderCache(session).generation);
 
     session.primary.clearDirty();
@@ -769,12 +758,10 @@ test "row hash refinement does not skip unpresented top rows" {
     try std.testing.expect(terminal_publication.acknowledgePresentedGeneration(session, terminal_publication.renderCache(session).generation));
 
     scrolling.scrollUp(session);
-    _ = terminal_publication.bumpGeneration(session);
-    terminal_publication.publishCurrentViewLocked(session, "test_publication");
+    _ = terminal_publication.bumpAndPublishCurrentViewLocked(session, "test_publication");
 
     scrolling.scrollUp(session);
-    _ = terminal_publication.bumpGeneration(session);
-    terminal_publication.publishCurrentViewLocked(session, "test_publication");
+    _ = terminal_publication.bumpAndPublishCurrentViewLocked(session, "test_publication");
 
     const cache = terminal_publication.renderCache(session);
     try std.testing.expectEqual(Dirty.partial, cache.dirty);
@@ -807,16 +794,14 @@ test "live-bottom history growth keeps blank exposed row dirty" {
     }
     session.primary.setCursor(2, 0);
 
-    _ = terminal_publication.bumpGeneration(session);
-    terminal_publication.publishCurrentViewLocked(session, "test_publication");
+    _ = terminal_publication.bumpAndPublishCurrentViewLocked(session, "test_publication");
 
     session.primary.clearDirty();
     session.alt.clearDirty();
     try std.testing.expect(terminal_publication.acknowledgePresentedGeneration(session, terminal_publication.renderCache(session).generation));
 
     scrolling.scrollUp(session);
-    _ = terminal_publication.bumpGeneration(session);
-    terminal_publication.publishCurrentViewLocked(session, "test_publication");
+    _ = terminal_publication.bumpAndPublishCurrentViewLocked(session, "test_publication");
 
     const cache = terminal_publication.renderCache(session);
     try std.testing.expectEqual(Dirty.partial, cache.dirty);
@@ -850,8 +835,7 @@ test "row hash refinement does not suppress newly dirty rows against unpresented
         }
     }
 
-    _ = terminal_publication.bumpGeneration(session);
-    terminal_publication.publishCurrentViewLocked(session, "test_publication");
+    _ = terminal_publication.bumpAndPublishCurrentViewLocked(session, "test_publication");
     terminal_publication.notePresentedGeneration(session, terminal_publication.renderCache(session).generation);
 
     session.primary.clearDirty();
@@ -862,8 +846,7 @@ test "row hash refinement does not suppress newly dirty rows against unpresented
     cell.codepoint = 'Z';
     session.primary.grid.cells.items[0] = cell;
     session.primary.grid.markDirtyRange(0, 0, 0, 0);
-    _ = terminal_publication.bumpGeneration(session);
-    terminal_publication.publishCurrentViewLocked(session, "test_publication");
+    _ = terminal_publication.bumpAndPublishCurrentViewLocked(session, "test_publication");
 
     const unpresented_generation = terminal_publication.renderCache(session).generation;
     try std.testing.expect(unpresented_generation != terminal_publication.presentedGeneration(session));
@@ -871,8 +854,7 @@ test "row hash refinement does not suppress newly dirty rows against unpresented
 
     session.primary.clearDirty();
     session.primary.grid.markDirtyRange(0, 0, 0, 0);
-    _ = terminal_publication.bumpGeneration(session);
-    terminal_publication.publishCurrentViewLocked(session, "test_publication");
+    _ = terminal_publication.bumpAndPublishCurrentViewLocked(session, "test_publication");
 
     const cache = terminal_publication.renderCache(session);
     try std.testing.expectEqual(Dirty.partial, cache.dirty);
@@ -917,8 +899,7 @@ test "view cache preserves disjoint same-row dirty spans" {
     session.primary.grid.markDirtyRangeWithOrigin("test.small_region", 0, 0, 2, 5);
     session.primary.grid.markDirtyRangeWithOrigin("test.body_rewrite", 0, 0, 10, 18);
 
-    _ = terminal_publication.bumpGeneration(session);
-    terminal_publication.publishCurrentViewLocked(session, "test_publication");
+    _ = terminal_publication.bumpAndPublishCurrentViewLocked(session, "test_publication");
 
     const cache = terminal_publication.renderCache(session);
     try std.testing.expect(cache.dirty_rows.items[0]);
@@ -938,8 +919,7 @@ test "setSyncUpdates enable does not force redraw when screen is otherwise clean
     var session = try PtyTerminalRuntime.init(allocator, 2, 4);
     defer session.deinit();
 
-    _ = terminal_publication.bumpGeneration(session);
-    terminal_publication.publishCurrentViewLocked(session, "test_publication");
+    _ = terminal_publication.bumpAndPublishCurrentViewLocked(session, "test_publication");
     session.primary.clearDirty();
     session.alt.clearDirty();
     try std.testing.expect(terminal_publication.acknowledgePresentedGeneration(session, terminal_publication.renderCache(session).generation));
@@ -958,8 +938,7 @@ test "setSyncUpdates enable does not publish dirty screen state on presented gen
     var session = try PtyTerminalRuntime.init(allocator, 2, 4);
     defer session.deinit();
 
-    _ = terminal_publication.bumpGeneration(session);
-    terminal_publication.publishCurrentViewLocked(session, "test_publication");
+    _ = terminal_publication.bumpAndPublishCurrentViewLocked(session, "test_publication");
     session.primary.clearDirty();
     session.alt.clearDirty();
     try std.testing.expect(terminal_publication.acknowledgePresentedGeneration(session, terminal_publication.renderCache(session).generation));
@@ -977,8 +956,7 @@ test "setSyncUpdates enable does not publish dirty screen state on presented gen
     try std.testing.expectEqual(baseline_generation, cache.generation);
     try std.testing.expectEqual(Dirty.none, cache.dirty);
 
-    _ = terminal_publication.bumpGeneration(session);
-    terminal_publication.publishCurrentViewLocked(session, "test_publication");
+    _ = terminal_publication.bumpAndPublishCurrentViewLocked(session, "test_publication");
 
     cache = terminal_publication.renderCache(session);
     try std.testing.expectEqual(baseline_generation + 1, cache.generation);
@@ -996,8 +974,7 @@ test "setSyncUpdates disable stays clean when no buffered changes exist" {
     defer session.deinit();
 
     terminal_publication.setSyncUpdates(session, true);
-    _ = terminal_publication.bumpGeneration(session);
-    terminal_publication.publishCurrentViewLocked(session, "test_publication");
+    _ = terminal_publication.bumpAndPublishCurrentViewLocked(session, "test_publication");
     session.primary.clearDirty();
     session.alt.clearDirty();
     try std.testing.expect(terminal_publication.acknowledgePresentedGeneration(session, terminal_publication.renderCache(session).generation));
@@ -1015,8 +992,7 @@ test "setSyncUpdates disable preserves buffered partial damage" {
     var session = try PtyTerminalRuntime.init(allocator, 2, 4);
     defer session.deinit();
 
-    _ = terminal_publication.bumpGeneration(session);
-    terminal_publication.publishCurrentViewLocked(session, "test_publication");
+    _ = terminal_publication.bumpAndPublishCurrentViewLocked(session, "test_publication");
     session.primary.clearDirty();
     session.alt.clearDirty();
     try std.testing.expect(terminal_publication.acknowledgePresentedGeneration(session, terminal_publication.renderCache(session).generation));
@@ -1027,8 +1003,7 @@ test "setSyncUpdates disable preserves buffered partial damage" {
     cell.codepoint = 'Z';
     session.primary.grid.cells.items[0] = cell;
     session.primary.grid.markDirtyRange(0, 0, 0, 0);
-    _ = terminal_publication.bumpGeneration(session);
-    terminal_publication.publishCurrentViewLocked(session, "test_publication");
+    _ = terminal_publication.bumpAndPublishCurrentViewLocked(session, "test_publication");
 
     terminal_publication.setSyncUpdates(session, false);
 
@@ -1058,8 +1033,7 @@ test "visible history changes publish partial cache damage without force-full" {
     session.history.ensureViewCache(session.primary.grid.cols, base);
     session.history.setScrollOffset(session.primary.grid.rows, 2);
 
-    _ = terminal_publication.bumpGeneration(session);
-    terminal_publication.publishCurrentViewLocked(session, "test_publication");
+    _ = terminal_publication.bumpAndPublishCurrentViewLocked(session, "test_publication");
     terminal_publication.notePresentedGeneration(session, terminal_publication.renderCache(session).generation);
 
     session.primary.clearDirty();
@@ -1094,8 +1068,7 @@ test "visible history changes without presented diff base stay partial" {
     session.history.ensureViewCache(session.primary.grid.cols, base);
     session.history.setScrollOffset(session.primary.grid.rows, 2);
 
-    _ = terminal_publication.bumpGeneration(session);
-    terminal_publication.publishCurrentViewLocked(session, "test_publication");
+    _ = terminal_publication.bumpAndPublishCurrentViewLocked(session, "test_publication");
 
     session.primary.clearDirty();
     session.alt.clearDirty();
@@ -1138,8 +1111,7 @@ test "scrollback offset change publishes shift-exposed partial damage" {
 
     session.history.ensureViewCache(session.primary.grid.cols, base);
     session.history.setScrollOffset(session.primary.grid.rows, 2);
-    _ = terminal_publication.bumpGeneration(session);
-    terminal_publication.publishCurrentViewLocked(session, "test_publication");
+    _ = terminal_publication.bumpAndPublishCurrentViewLocked(session, "test_publication");
     terminal_publication.notePresentedGeneration(session, terminal_publication.renderCache(session).generation);
 
     session.primary.clearDirty();
@@ -1232,8 +1204,7 @@ test "acknowledgePresentedGeneration does not retire newer normal publication" {
     var session = try PtyTerminalRuntime.init(allocator, 2, 4);
     defer session.deinit();
 
-    _ = terminal_publication.bumpGeneration(session);
-    terminal_publication.publishCurrentViewLocked(session, "test_publication");
+    _ = terminal_publication.bumpAndPublishCurrentViewLocked(session, "test_publication");
     terminal_publication.notePresentedGeneration(session, terminal_publication.renderCache(session).generation);
 
     session.primary.clearDirty();
@@ -1242,8 +1213,7 @@ test "acknowledgePresentedGeneration does not retire newer normal publication" {
 
     const baseline_generation = terminal_publication.renderCache(session).generation;
     session.primary.grid.markDirtyRange(0, 0, 0, 0);
-    _ = terminal_publication.bumpGeneration(session);
-    terminal_publication.publishCurrentViewLocked(session, "test_publication");
+    _ = terminal_publication.bumpAndPublishCurrentViewLocked(session, "test_publication");
 
     const cache = terminal_publication.renderCache(session);
     try std.testing.expectEqual(Dirty.partial, cache.dirty);
@@ -1279,8 +1249,7 @@ test "retired startup baseline allows first in-place overwrite to publish partia
     session.primary.grid.cells.items[8] = base;
     session.primary.grid.markDirtyRange(0, 0, 0, 7);
 
-    _ = terminal_publication.bumpGeneration(session);
-    terminal_publication.publishCurrentViewLocked(session, "test_publication");
+    _ = terminal_publication.bumpAndPublishCurrentViewLocked(session, "test_publication");
     const baseline_generation = terminal_publication.renderCache(session).generation;
     try std.testing.expectEqual(Dirty.partial, terminal_publication.renderCache(session).dirty);
     try std.testing.expect(terminal_publication.acknowledgePresentedGeneration(session, baseline_generation));
@@ -1294,8 +1263,7 @@ test "retired startup baseline allows first in-place overwrite to publish partia
     }
     session.primary.grid.markDirtyRange(0, 0, 0, 3);
 
-    _ = terminal_publication.bumpGeneration(session);
-    terminal_publication.publishCurrentViewLocked(session, "test_publication");
+    _ = terminal_publication.bumpAndPublishCurrentViewLocked(session, "test_publication");
 
     const cache = terminal_publication.renderCache(session);
     try std.testing.expectEqual(Dirty.partial, cache.dirty);
@@ -1327,8 +1295,7 @@ test "unretired full baseline promotes first in-place overwrite to full damage" 
     session.primary.grid.cells.items[8] = base;
     session.primary.markDirtyAllWithReason(.resize_reflow, @src());
 
-    _ = terminal_publication.bumpGeneration(session);
-    terminal_publication.publishCurrentViewLocked(session, "test_publication");
+    _ = terminal_publication.bumpAndPublishCurrentViewLocked(session, "test_publication");
     const baseline_generation = terminal_publication.renderCache(session).generation;
     terminal_publication.notePresentedGeneration(session, baseline_generation);
     try std.testing.expectEqual(Dirty.full, terminal_publication.renderCache(session).dirty);
@@ -1341,8 +1308,7 @@ test "unretired full baseline promotes first in-place overwrite to full damage" 
     }
     session.primary.grid.markDirtyRange(0, 0, 0, 3);
 
-    _ = terminal_publication.bumpGeneration(session);
-    terminal_publication.publishCurrentViewLocked(session, "test_publication");
+    _ = terminal_publication.bumpAndPublishCurrentViewLocked(session, "test_publication");
 
     const cache = terminal_publication.renderCache(session);
     try std.testing.expectEqual(Dirty.full, cache.dirty);
@@ -1359,8 +1325,7 @@ test "clean publication does not overwrite unpresented dirty publication" {
     var session = try PtyTerminalRuntime.init(allocator, 2, 4);
     defer session.deinit();
 
-    _ = terminal_publication.bumpGeneration(session);
-    terminal_publication.publishCurrentViewLocked(session, "test_publication");
+    _ = terminal_publication.bumpAndPublishCurrentViewLocked(session, "test_publication");
     terminal_publication.notePresentedGeneration(session, terminal_publication.renderCache(session).generation);
 
     session.primary.clearDirty();
@@ -1371,8 +1336,7 @@ test "clean publication does not overwrite unpresented dirty publication" {
     cell.codepoint = 'Z';
     session.primary.grid.cells.items[0] = cell;
     session.primary.grid.markDirtyRange(0, 0, 0, 0);
-    _ = terminal_publication.bumpGeneration(session);
-    terminal_publication.publishCurrentViewLocked(session, "test_publication");
+    _ = terminal_publication.bumpAndPublishCurrentViewLocked(session, "test_publication");
 
     const dirty_generation = terminal_publication.renderCache(session).generation;
     try std.testing.expectEqual(Dirty.partial, terminal_publication.renderCache(session).dirty);
@@ -1380,8 +1344,7 @@ test "clean publication does not overwrite unpresented dirty publication" {
 
     session.primary.clearDirty();
     session.alt.clearDirty();
-    _ = terminal_publication.bumpGeneration(session);
-    terminal_publication.publishCurrentViewLocked(session, "test_publication");
+    _ = terminal_publication.bumpAndPublishCurrentViewLocked(session, "test_publication");
 
     const cache = terminal_publication.renderCache(session);
     try std.testing.expectEqual(dirty_generation + 1, cache.generation);
@@ -1413,8 +1376,7 @@ test "cursor style updates publish through cache without texture invalidation" {
     var session = try PtyTerminalRuntime.init(allocator, 2, 4);
     defer session.deinit();
 
-    _ = terminal_publication.bumpGeneration(session);
-    terminal_publication.publishCurrentViewLocked(session, "test_publication");
+    _ = terminal_publication.bumpAndPublishCurrentViewLocked(session, "test_publication");
     session.primary.clearDirty();
     session.alt.clearDirty();
     try std.testing.expect(terminal_publication.acknowledgePresentedGeneration(session, terminal_publication.renderCache(session).generation));
@@ -1433,8 +1395,7 @@ test "kitty generation delta does not force full damage when cell damage is part
     var session = try PtyTerminalRuntime.init(allocator, 2, 4);
     defer session.deinit();
 
-    _ = terminal_publication.bumpGeneration(session);
-    terminal_publication.publishCurrentViewLocked(session, "test_publication");
+    _ = terminal_publication.bumpAndPublishCurrentViewLocked(session, "test_publication");
     terminal_publication.notePresentedGeneration(session, terminal_publication.renderCache(session).generation);
 
     session.primary.clearDirty();
@@ -1443,8 +1404,7 @@ test "kitty generation delta does not force full damage when cell damage is part
 
     session.kitty_primary.generation += 1;
     session.primary.grid.markDirtyRange(0, 0, 0, 0);
-    _ = terminal_publication.bumpGeneration(session);
-    terminal_publication.publishCurrentViewLocked(session, "test_publication");
+    _ = terminal_publication.bumpAndPublishCurrentViewLocked(session, "test_publication");
 
     const cache = terminal_publication.renderCache(session);
     try std.testing.expectEqual(Dirty.partial, cache.dirty);
@@ -1460,8 +1420,7 @@ test "kitty generation delta without visible damage stays clean" {
     var session = try PtyTerminalRuntime.init(allocator, 2, 4);
     defer session.deinit();
 
-    _ = terminal_publication.bumpGeneration(session);
-    terminal_publication.publishCurrentViewLocked(session, "test_publication");
+    _ = terminal_publication.bumpAndPublishCurrentViewLocked(session, "test_publication");
     terminal_publication.notePresentedGeneration(session, terminal_publication.renderCache(session).generation);
 
     session.primary.clearDirty();
@@ -1508,8 +1467,7 @@ test "kitty placement move stays dirty even when text cells are unchanged" {
     });
     session.kitty_primary.generation = 1;
 
-    _ = terminal_publication.bumpGeneration(session);
-    terminal_publication.publishCurrentViewLocked(session, "test_publication");
+    _ = terminal_publication.bumpAndPublishCurrentViewLocked(session, "test_publication");
     terminal_publication.notePresentedGeneration(session, terminal_publication.renderCache(session).generation);
 
     session.primary.clearDirty();
@@ -1522,8 +1480,7 @@ test "kitty placement move stays dirty even when text cells are unchanged" {
     session.primary.grid.markDirtyRange(0, 0, 0, 0);
     session.primary.grid.markDirtyRange(1, 1, 0, 0);
 
-    _ = terminal_publication.bumpGeneration(session);
-    terminal_publication.publishCurrentViewLocked(session, "test_publication");
+    _ = terminal_publication.bumpAndPublishCurrentViewLocked(session, "test_publication");
 
     const cache = terminal_publication.renderCache(session);
     try std.testing.expectEqual(Dirty.partial, cache.dirty);
@@ -1541,8 +1498,7 @@ test "clear generation delta without visible damage stays clean" {
     var session = try PtyTerminalRuntime.init(allocator, 2, 4);
     defer session.deinit();
 
-    _ = terminal_publication.bumpGeneration(session);
-    terminal_publication.publishCurrentViewLocked(session, "test_publication");
+    _ = terminal_publication.bumpAndPublishCurrentViewLocked(session, "test_publication");
     terminal_publication.notePresentedGeneration(session, terminal_publication.renderCache(session).generation);
 
     session.primary.clearDirty();
@@ -1562,8 +1518,7 @@ test "default color remap stays on partial path" {
     var session = try PtyTerminalRuntime.init(allocator, 2, 4);
     defer session.deinit();
 
-    _ = terminal_publication.bumpGeneration(session);
-    terminal_publication.publishCurrentViewLocked(session, "test_publication");
+    _ = terminal_publication.bumpAndPublishCurrentViewLocked(session, "test_publication");
     terminal_publication.notePresentedGeneration(session, terminal_publication.renderCache(session).generation);
 
     session.primary.clearDirty();
@@ -1589,8 +1544,7 @@ test "screen reverse toggle stays on partial path" {
     var session = try PtyTerminalRuntime.init(allocator, 2, 4);
     defer session.deinit();
 
-    _ = terminal_publication.bumpGeneration(session);
-    terminal_publication.publishCurrentViewLocked(session, "test_publication");
+    _ = terminal_publication.bumpAndPublishCurrentViewLocked(session, "test_publication");
     terminal_publication.notePresentedGeneration(session, terminal_publication.renderCache(session).generation);
 
     session.primary.clearDirty();
@@ -1626,8 +1580,7 @@ test "visible history change narrows to projected diff against presented base" {
     session.history.ensureViewCache(session.primary.grid.cols, base);
     session.history.setScrollOffset(session.primary.grid.rows, 2);
 
-    _ = terminal_publication.bumpGeneration(session);
-    terminal_publication.publishCurrentViewLocked(session, "test_publication");
+    _ = terminal_publication.bumpAndPublishCurrentViewLocked(session, "test_publication");
     terminal_publication.notePresentedGeneration(session, terminal_publication.renderCache(session).generation);
 
     session.primary.clearDirty();
@@ -1669,8 +1622,7 @@ test "visible history change stays conservative against unpresented base" {
     session.history.ensureViewCache(session.primary.grid.cols, base);
     session.history.setScrollOffset(session.primary.grid.rows, 2);
 
-    _ = terminal_publication.bumpGeneration(session);
-    terminal_publication.publishCurrentViewLocked(session, "test_publication");
+    _ = terminal_publication.bumpAndPublishCurrentViewLocked(session, "test_publication");
     terminal_publication.notePresentedGeneration(session, terminal_publication.renderCache(session).generation);
 
     session.primary.clearDirty();
@@ -1720,8 +1672,7 @@ test "visible history change with blank separator rows stays conservative agains
     session.history.ensureViewCache(session.primary.grid.cols, base);
     session.history.setScrollOffset(session.primary.grid.rows, 4);
 
-    _ = terminal_publication.bumpGeneration(session);
-    terminal_publication.publishCurrentViewLocked(session, "test_publication");
+    _ = terminal_publication.bumpAndPublishCurrentViewLocked(session, "test_publication");
     terminal_publication.notePresentedGeneration(session, terminal_publication.renderCache(session).generation);
 
     session.primary.clearDirty();
@@ -1915,8 +1866,7 @@ test "selection dirty expansion does not suppress repeated unpresented selection
     cell.codepoint = 'A';
     session.primary.grid.cells.items[0] = cell;
 
-    _ = terminal_publication.bumpGeneration(session);
-    terminal_publication.publishCurrentViewLocked(session, "test_publication");
+    _ = terminal_publication.bumpAndPublishCurrentViewLocked(session, "test_publication");
     terminal_publication.notePresentedGeneration(session, terminal_publication.renderCache(session).generation);
 
     session.primary.clearDirty();
@@ -1954,8 +1904,7 @@ test "eraseDisplay cursor-to-end keeps partial damage" {
     }
     session.primary.setCursor(1, 1);
 
-    _ = terminal_publication.bumpGeneration(session);
-    terminal_publication.publishCurrentViewLocked(session, "test_publication");
+    _ = terminal_publication.bumpAndPublishCurrentViewLocked(session, "test_publication");
     terminal_publication.notePresentedGeneration(session, terminal_publication.renderCache(session).generation);
 
     session.primary.clearDirty();
@@ -1963,8 +1912,7 @@ test "eraseDisplay cursor-to-end keeps partial damage" {
     try std.testing.expect(terminal_publication.acknowledgePresentedGeneration(session, terminal_publication.renderCache(session).generation));
 
     terminal_core_protocol.eraseDisplay(session, 0);
-    _ = terminal_publication.bumpGeneration(session);
-    terminal_publication.publishCurrentViewLocked(session, "test_publication");
+    _ = terminal_publication.bumpAndPublishCurrentViewLocked(session, "test_publication");
 
     const cache = terminal_publication.renderCache(session);
     try std.testing.expectEqual(Dirty.partial, cache.dirty);
@@ -1985,8 +1933,7 @@ test "eraseDisplay start-to-cursor keeps partial damage" {
     }
     session.primary.setCursor(1, 2);
 
-    _ = terminal_publication.bumpGeneration(session);
-    terminal_publication.publishCurrentViewLocked(session, "test_publication");
+    _ = terminal_publication.bumpAndPublishCurrentViewLocked(session, "test_publication");
     terminal_publication.notePresentedGeneration(session, terminal_publication.renderCache(session).generation);
 
     session.primary.clearDirty();
@@ -1994,8 +1941,7 @@ test "eraseDisplay start-to-cursor keeps partial damage" {
     try std.testing.expect(terminal_publication.acknowledgePresentedGeneration(session, terminal_publication.renderCache(session).generation));
 
     terminal_core_protocol.eraseDisplay(session, 1);
-    _ = terminal_publication.bumpGeneration(session);
-    terminal_publication.publishCurrentViewLocked(session, "test_publication");
+    _ = terminal_publication.bumpAndPublishCurrentViewLocked(session, "test_publication");
 
     const cache = terminal_publication.renderCache(session);
     try std.testing.expectEqual(Dirty.partial, cache.dirty);
@@ -2015,8 +1961,7 @@ test "eraseDisplay full keeps full-width partial damage" {
         cell.codepoint = @as(u32, 'A') + @as(u32, @intCast(idx % 4));
     }
 
-    _ = terminal_publication.bumpGeneration(session);
-    terminal_publication.publishCurrentViewLocked(session, "test_publication");
+    _ = terminal_publication.bumpAndPublishCurrentViewLocked(session, "test_publication");
     terminal_publication.notePresentedGeneration(session, terminal_publication.renderCache(session).generation);
 
     session.primary.clearDirty();
@@ -2024,8 +1969,7 @@ test "eraseDisplay full keeps full-width partial damage" {
     try std.testing.expect(terminal_publication.acknowledgePresentedGeneration(session, terminal_publication.renderCache(session).generation));
 
     terminal_core_protocol.eraseDisplay(session, 2);
-    _ = terminal_publication.bumpGeneration(session);
-    terminal_publication.publishCurrentViewLocked(session, "test_publication");
+    _ = terminal_publication.bumpAndPublishCurrentViewLocked(session, "test_publication");
 
     const cache = terminal_publication.renderCache(session);
     try std.testing.expectEqual(Dirty.partial, cache.dirty);
@@ -2047,8 +1991,7 @@ test "screen clear stays on partial path" {
         cell.codepoint = @as(u32, 'A') + @as(u32, @intCast(idx % 4));
     }
 
-    _ = terminal_publication.bumpGeneration(session);
-    terminal_publication.publishCurrentViewLocked(session, "test_publication");
+    _ = terminal_publication.bumpAndPublishCurrentViewLocked(session, "test_publication");
     terminal_publication.notePresentedGeneration(session, terminal_publication.renderCache(session).generation);
 
     session.primary.clearDirty();
@@ -2056,8 +1999,7 @@ test "screen clear stays on partial path" {
     try std.testing.expect(terminal_publication.acknowledgePresentedGeneration(session, terminal_publication.renderCache(session).generation));
 
     session.core.activeScreen().clear();
-    _ = terminal_publication.bumpGeneration(session);
-    terminal_publication.publishCurrentViewLocked(session, "test_publication");
+    _ = terminal_publication.bumpAndPublishCurrentViewLocked(session, "test_publication");
 
     const cache = terminal_publication.renderCache(session);
     try std.testing.expectEqual(Dirty.partial, cache.dirty);

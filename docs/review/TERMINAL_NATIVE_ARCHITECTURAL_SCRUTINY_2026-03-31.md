@@ -195,6 +195,12 @@ Judgment:
   `src/terminal/protocol/csi_mode_query.zig`, and DECRQM mode snapshots now
   construct `ModeSnapshot` directly instead of cloning it through a duplicate
   intermediate struct
+- publication mutation composition is tighter too:
+  test/debug callers no longer hand-compose `bumpGeneration(...)` plus
+  `publishCurrentViewLocked(...)` for the common "new generation from current
+  view" action; that now lives under
+  `src/terminal/core/publication/terminal_publication.zig` as
+  `bumpAndPublishCurrentViewLocked(...)`
 - the stale `src/terminal/core/session_protocol.zig` forwarding shell is now
   deleted, so that API seam no longer routes through one extra session-named
   hop before reaching the real owners

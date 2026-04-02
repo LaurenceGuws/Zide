@@ -946,3 +946,9 @@ Validation note, 2026-03-31:
 - The terminal campaign should now judge success by first-glance authority:
   when a strong maintainer opens the code, the engine must obviously be the
   engine.
+  - publication mutation composition is tighter too:
+    test/debug callers no longer hand-compose `bumpGeneration(...)` plus
+    `publishCurrentViewLocked(...)` for the common "new generation from current
+    view" action; that contract now lives under
+    `src/terminal/core/publication/terminal_publication.zig` as
+    `bumpAndPublishCurrentViewLocked(...)`
