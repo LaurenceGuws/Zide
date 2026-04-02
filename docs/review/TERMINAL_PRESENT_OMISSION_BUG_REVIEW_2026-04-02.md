@@ -21,6 +21,14 @@ This review asks:
   terminal surface
 - and what exact path still permits that
 
+Status note, later on 2026-04-02:
+
+- this is no longer a live bug queue
+- the user confirmed the disappearing-terminal idle-frame bug had already been
+  resolved before this review reopened it
+- the landed slices in this review should now be read as present-path
+  hardening and investigation cleanup, not as the current War 2 driver
+
 ## Inputs Reviewed
 
 Live code:
@@ -174,3 +182,6 @@ It is a repro-driven retained-target availability trace using:
 - `renderer.present`
 - `renderer.terminal_present`
 - `terminal_surface_unavailable_for_present`
+
+That said, this exact lane should now be treated as closed unless a fresh live
+repro proves otherwise.

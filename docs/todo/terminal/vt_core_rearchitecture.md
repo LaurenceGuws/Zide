@@ -256,10 +256,17 @@ Focused follow-up lane:
   Why: the post-parser rerank now points back to a concrete native present
   correctness hunt instead of another structural split.
   Current read:
-  - if the terminal still disappears, it is now a real scene-composition
-    omission bug
-  - the next concrete question is whether the widget draw path is skipped, the
-    retained-surface blit is skipped, or the scene proof is wrong
+  - this reopened lane is no longer a live bug queue
+  - the landed slices should be kept as present-path hardening, not ongoing
+    default momentum
+  - rerank War 2 from the top again instead of continuing stale bug pursuit
+- `docs/review/TERMINAL_WAR_2_POST_OMISSION_RERANK_2026-04-02.md`
+  Why: the reopened omission bug hunt turned out to be stale, so War 2 needs a
+  fresh top-level ranking again.
+  Current read:
+  - omission hardening stays landed
+  - the omission bug itself no longer deserves to drive the queue
+  - the next move should come from a fresh comparison of the live stack
 
 ## Current Milestone
 
