@@ -165,6 +165,16 @@ Focused follow-up lane:
     clarity
   - the strongest local fallback candidate is the widget/retained-render
     center if the host path now reads honest enough
+- `docs/review/TERMINAL_HOST_AGGREGATION_RERANK_2026-04-02.md`
+  Why: the next live War 2 decision is whether native host aggregation is
+  still too distributed.
+  Current read:
+  - broader native host aggregation clarity still beats the widget pair as the
+    next default battlefield
+  - the native host path still reads more distributed than the cleanest
+    reference-grade host/runtime split
+  - the next question is what the one unmistakable native host-facing terminal
+    aggregate should be now
 
 ## Current Milestone
 
