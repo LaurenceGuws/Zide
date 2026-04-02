@@ -817,7 +817,7 @@ pub const Renderer = struct {
 
     pub fn drawRect(self: *Renderer, x: i32, y: i32, w: i32, h: i32, color: Color) void {
         if (w <= 0 or h <= 0) return;
-        retained_targets_runtime.noteEditorSurfaceFullPaneClear(self, x, y, w, h);
+        scene_frame_runtime.noteEditorSurfaceFullPaneClear(self, x, y, w, h);
         const dest = shape_utils.rectFromInts(x, y, w, h);
         const src = texture_draw.unitSrcRect();
         self.drawTextureRect(self.white_texture, src, dest, color.toRgba());

@@ -130,7 +130,3 @@ pub fn drawEditorSurface(self: anytype, x: f32, y: f32) void {
         draw_ops.drawTextureRect(self, target.texture, src, dest, Color.white.toRgba(), types.Rgba{ .r = 0, .g = 0, .b = 0, .a = 0 }, .linear_premul);
     }
 }
-
-pub fn noteEditorSurfaceFullPaneClear(self: anytype, x: i32, y: i32, w: i32, h: i32) void {
-    scene_frame_runtime.noteEditorSurfaceFullPaneClear(self, x, y, w, h);
-}
