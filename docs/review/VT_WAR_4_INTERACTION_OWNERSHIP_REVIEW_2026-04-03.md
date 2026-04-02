@@ -132,6 +132,18 @@ Why:
 - it is the clearest remaining point where WezTerm still feels more obviously
   sufficient as "the terminal"
 
+Progress note, later on 2026-04-03:
+
+- the first narrow slice is now in:
+  [TerminalCore](/home/home/personal/zide/src/terminal/core/terminal_core.zig)
+  owns `feedOutputBytesLocked(...)` directly
+- [terminal_core_feed.zig](/home/home/personal/zide/src/terminal/core/protocol/terminal_core_feed.zig)
+  is now narrowed to shell-owned locking plus publication handoff
+- this is the right first test of the War 4 thesis:
+  - semantic output application moved closer to the engine center
+  - locking and publication remained outside the core
+  - no transport/runtime concerns were pulled into `TerminalCore`
+
 ## Decision Bar
 
 Only open code cuts here if we can name one coherent interaction slab, such as:

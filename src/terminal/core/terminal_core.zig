@@ -44,6 +44,10 @@ pub const InitOptions = struct {
 pub const TerminalCore = struct {
     pub const SelectionGesture = terminal_core_selection.SelectionGesture;
     pub const ClickSelectionResult = terminal_core_selection.ClickSelectionResult;
+    pub const OutputFeedResult = struct {
+        parsed: bool,
+        scroll_offset: usize,
+    };
 
     pub const MetadataState = struct {
         title: []const u8,
@@ -201,6 +205,17 @@ pub const TerminalCore = struct {
 
     pub fn activeScreen(self: *TerminalCore) *Screen {
         return if (self.active == .alt) &self.alt else &self.primary;
+    }
+
+    pub fn feedOutputBytesLocked(self: *TerminalCore, owner: anytype, bytes: []const u8) OutputFeedResult {
+        if (bytes.len == 0) {
+            return .{ .parsed = false, .scroll_offset = self.history.scrollOffset() };
+        }
+        self.parser.handleSlice(owner, bytes);
+        return .{
+            .parsed = true,
+            .scroll_offset = self.history.scrollOffset(),
+        };
     }
 
     pub fn glCharset(self: *const TerminalCore) Charset {

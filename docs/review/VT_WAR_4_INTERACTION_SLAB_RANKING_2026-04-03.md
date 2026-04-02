@@ -114,3 +114,14 @@ style and maturity than another real architecture contradiction.
 War 4 now has a first code target if we continue:
 
 - output feed / apply
+
+Progress note, later on 2026-04-03:
+
+- that first code slice is now landed
+- [TerminalCore](/home/home/personal/zide/src/terminal/core/terminal_core.zig)
+  owns the semantic `feedOutputBytesLocked(...)` verb
+- [terminal_core_feed.zig](/home/home/personal/zide/src/terminal/core/protocol/terminal_core_feed.zig)
+  now just owns locking and publication handoff
+- the next question is not whether feed/apply was the right slab
+- it is whether the same pattern should continue into a second interaction
+  slice or stop here

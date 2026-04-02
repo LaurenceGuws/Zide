@@ -1,15 +1,9 @@
-pub const FeedResult = struct {
-    parsed: bool,
-    scroll_offset: usize,
-};
+const terminal_core_mod = @import("../terminal_core.zig");
+
+pub const FeedResult = terminal_core_mod.TerminalCore.OutputFeedResult;
 
 pub fn feedOutputBytesLocked(self: anytype, bytes: []const u8) FeedResult {
-    if (bytes.len == 0) return .{ .parsed = false, .scroll_offset = self.core.history.scrollOffset() };
-    self.core.parser.handleSlice(self, bytes);
-    return .{
-        .parsed = true,
-        .scroll_offset = self.core.history.scrollOffset(),
-    };
+    return self.core.feedOutputBytesLocked(self, bytes);
 }
 
 pub fn feedOutputBytes(self: anytype, bytes: []const u8) void {

@@ -105,6 +105,11 @@ gravity into smaller files.
     reporting and in-band notifications
   - encoded host input is third because it is more tightly coupled to writer
     mechanics
+  Progress:
+  - the first feed/apply slice is now landed:
+    `TerminalCore` owns the semantic `feedOutputBytesLocked(...)` verb while
+    `terminal_core_feed.zig` stays responsible for shell-owned locking and
+    publication handoff
 
 ## Priority Now
 
