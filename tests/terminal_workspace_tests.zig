@@ -2,6 +2,7 @@ const std = @import("std");
 const terminal_runtime = @import("../src/terminal/core/terminal_runtime.zig");
 const terminal_debug = @import("../src/terminal/core/session/debug_ops.zig");
 const host_types = @import("../src/terminal/core/session/host_types.zig");
+const mode_effects = @import("../src/terminal/core/session/mode_effects.zig");
 const session_runtime = @import("../src/terminal/core/session/runtime.zig");
 const workspace_mod = @import("../src/terminal/core/workspace.zig");
 
@@ -70,7 +71,7 @@ test "terminal workspace first confirm close tab returns first matching tab" {
     try std.testing.expect(workspace.firstConfirmCloseTab() == null);
 
     try session_runtime.startNoThreads(first.session, null);
-    first.session.enterAltScreen(true, false);
+    mode_effects.enterAltScreen(first.session, true, false);
 
     const target = workspace.firstConfirmCloseTab() orelse return error.TestUnexpectedResult;
     try std.testing.expectEqual(@as(usize, 0), target.index);

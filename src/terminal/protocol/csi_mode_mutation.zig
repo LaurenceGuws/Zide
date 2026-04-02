@@ -3,6 +3,7 @@ const parser_csi = @import("../parser/csi.zig");
 const terminal_publication = @import("../core/publication/terminal_publication.zig");
 const terminal_core_modes = @import("../core/terminal_core_modes.zig");
 const config = @import("../core/session/config.zig");
+const mode_effects = @import("../core/session/mode_effects.zig");
 
 pub fn applyModeMutation(
     self: anytype,
@@ -46,7 +47,7 @@ fn applyPrivateModeMutation(self: anytype, param_len: usize, params: [parser_csi
             12 => self.core.activeScreen().*.setCursorBlink(enabled),
             25 => self.core.activeScreen().setCursorVisible(enabled),
             45 => self.core.activeScreen().*.setReverseWrap(enabled),
-            47 => if (enabled) self.enterAltScreen(false, false) else self.exitAltScreen(false),
+            47 => if (enabled) mode_effects.enterAltScreen(self, false, false) else mode_effects.exitAltScreen(self, false),
             69 => self.core.activeScreen().*.setLeftRightMarginMode69(enabled),
             1000 => input_modes.setMouseModeX10Locked(self, enabled),
             1002 => input_modes.setMouseModeButtonLocked(self, enabled),
@@ -55,7 +56,7 @@ fn applyPrivateModeMutation(self: anytype, param_len: usize, params: [parser_csi
             1006 => input_modes.setMouseModeSgrLocked(self, enabled),
             1007 => input_modes.setMouseAlternateScrollLocked(self, enabled),
             1016 => input_modes.setMouseModeSgrPixelsLocked(self, enabled),
-            1047 => if (enabled) self.enterAltScreen(true, false) else self.exitAltScreen(false),
+            1047 => if (enabled) mode_effects.enterAltScreen(self, true, false) else mode_effects.exitAltScreen(self, false),
             1048 => {
                 if (enabled) {
                     terminal_core_modes.saveCursor(self);
@@ -64,7 +65,7 @@ fn applyPrivateModeMutation(self: anytype, param_len: usize, params: [parser_csi
                 }
                 self.core.activeScreen().*.setSaveCursorMode1048(enabled);
             },
-            1049 => if (enabled) self.enterAltScreen(true, true) else self.exitAltScreen(true),
+            1049 => if (enabled) mode_effects.enterAltScreen(self, true, true) else mode_effects.exitAltScreen(self, true),
             2004 => input_modes.setBracketedPasteLocked(self, enabled),
             2026 => terminal_publication.setSyncUpdatesLocked(self, enabled),
             2027 => {

@@ -8,10 +8,10 @@ const terminal_core_protocol = @import("protocol/terminal_core_protocol.zig");
 const input_modes = @import("input_modes.zig");
 const session_config = @import("session/config.zig");
 const session_interaction = @import("session/interaction.zig");
+const mode_effects = @import("session/mode_effects.zig");
 const session_input = @import("session/input.zig");
 const host_queries = @import("session/host_queries.zig");
 const session_runtime = @import("session/runtime.zig");
-const mode_effects = @import("session/mode_effects.zig");
 const scrolling = @import("scrolling.zig");
 const host_types = @import("session/host_types.zig");
 const types = @import("../model/types.zig");
@@ -119,13 +119,13 @@ test "alt screen core helpers preserve cursor save restore behavior" {
     defer session.deinit();
 
     session.primary.setCursor(2, 3);
-    session.enterAltScreen(true, true);
+    mode_effects.enterAltScreen(session, true, true);
     try std.testing.expect(session.core.isAltActive());
     try std.testing.expectEqual(@as(usize, 0), session.core.activeScreen().cursor.row);
     try std.testing.expectEqual(@as(usize, 0), session.core.activeScreen().cursor.col);
 
     session.core.activeScreen().setCursor(1, 1);
-    session.exitAltScreen(true);
+    mode_effects.exitAltScreen(session, true);
     try std.testing.expect(!session.core.isAltActive());
     try std.testing.expectEqual(@as(usize, 2), session.core.activeScreen().cursor.row);
     try std.testing.expectEqual(@as(usize, 3), session.core.activeScreen().cursor.col);

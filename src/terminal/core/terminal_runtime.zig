@@ -90,8 +90,5 @@ pub const PtyTerminalRuntime = struct {
 
     pub const resize = runtime.resize;
 
-    pub const enterAltScreen = mode_effects.enterAltScreen;
-    pub const exitAltScreen = mode_effects.exitAltScreen;
-
     pub const snapshot = terminal_publication.snapshot;
 };
