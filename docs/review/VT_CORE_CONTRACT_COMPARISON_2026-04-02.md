@@ -183,6 +183,14 @@ The next same-class move also now reads clearly:
   runtime-shell meaning, such as transport liveness or foreground-process
   aggregation
 
+Identity progress, later on 2026-04-02:
+
+- the root VT surface now exports `TerminalCore` directly alongside
+  `TerminalSession`
+- this does not finish the object-identity war, but it removes one more signal
+  that the engine object is only an internal field instead of part of the real
+  library face
+
 ## Sprint Target
 
 The next `vt-sprint` question should be:

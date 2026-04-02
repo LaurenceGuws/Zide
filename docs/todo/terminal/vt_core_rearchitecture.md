@@ -216,6 +216,9 @@ Focused follow-up lane:
   - the next same-class move is now in flight too:
     simple engine metadata reads should come from `TerminalCore` directly
     wherever they do not need runtime-shell aggregation
+  - the root VT surface now also exports `TerminalCore` directly so the engine
+    object is no longer hidden behind only `TerminalSession`/`PtyTerminalRuntime`
+    at the main entrypoint
 
 - `docs/review/TERMINAL_NATIVE_ARCHITECTURAL_SCRUTINY_2026-03-31.md`
   Why: this is the current ruthless read on what still looks second-rate at
