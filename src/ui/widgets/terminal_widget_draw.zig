@@ -128,9 +128,9 @@ pub fn drawPrepared(
 
     const r = shell.rendererPtr();
     const cache = &self.draw_cache;
-    const lifecycle_transition = view_state.lifecycleTransitionInfo(self.last_alt_active, cache);
+    const lifecycle_transition = view_state.lifecycleTransitionInfo(self.retained.last_alt_active, cache);
     const alt_exit = lifecycle_transition.exited;
-    self.last_alt_active = lifecycle_transition.current_alt_active;
+    self.retained.last_alt_active = lifecycle_transition.current_alt_active;
     render_phase_start = app_shell.getTime();
 
     const draw_state = view_state.drawStateInfo(cache);
@@ -152,7 +152,7 @@ pub fn drawPrepared(
             @intFromFloat(height),
             bg_color,
         );
-        retained_targets_runtime.drawTerminalSurface(r, x, y, width, height, self.last_render_generation);
+        retained_targets_runtime.drawTerminalSurface(r, x, y, width, height, self.retained.last_render_generation);
         return outcome;
     }
     const draw_start_time = if (alt_exit) app_shell.getTime() else 0;
@@ -215,8 +215,8 @@ pub fn drawPrepared(
         const geom = r.terminalCellGeometry();
         cell_w_i = geom.cell_width_device_px;
         cell_h_i = geom.cell_height_device_px;
-        const cell_metrics_changed = cell_w_i != self.last_cell_w_i or cell_h_i != self.last_cell_h_i;
-        const render_scale_changed = r.scale.render_scale != self.last_render_scale;
+        const cell_metrics_changed = cell_w_i != self.retained.last_cell_w_i or cell_h_i != self.retained.last_cell_h_i;
+        const render_scale_changed = r.scale.render_scale != self.retained.last_render_scale;
         const padding_x_i: i32 = @max(2, @divTrunc(cell_w_i, 2));
         const scale = if (r.scale.render_scale > 0.0) r.scale.render_scale else 1.0;
         const texture_w = @as(i32, @intFromFloat(std.math.round(@as(f32, @floatFromInt(cell_w_i * @as(i32, @intCast(cols)) + padding_x_i)) / scale)));
@@ -230,8 +230,8 @@ pub fn drawPrepared(
         viewport_w = @as(f32, @floatFromInt(visible_w));
         viewport_h = @as(f32, @floatFromInt(visible_h));
         const recreated = retained_targets_runtime.ensureTerminalSurface(r, texture_w, texture_h);
-        const gen_changed = draw_state.generation != self.last_render_generation;
-        const clear_generation_changed = draw_state.clear_generation != self.last_render_clear_generation;
+        const gen_changed = draw_state.generation != self.retained.last_render_generation;
+        const clear_generation_changed = draw_state.clear_generation != self.retained.last_render_clear_generation;
         var update_plan = chooseTextureUpdatePlan(
             cache.dirty,
             recreated,
@@ -239,7 +239,7 @@ pub fn drawPrepared(
             cell_metrics_changed,
             render_scale_changed,
             blink_requires_partial,
-            self.terminal_texture_ready,
+            self.retained.terminal_texture_ready,
         );
         const plan_time = app_shell.getTime();
         const recent_input_window_active = r.forceFullTerminalTexturePublicationRecentInputWindow() and
@@ -265,7 +265,7 @@ pub fn drawPrepared(
             viewport_shift.exposed_only,
             scroll_offset,
             needs_full,
-            self.terminal_texture_ready,
+            self.retained.terminal_texture_ready,
             rows,
         )) {
             .attempt => |shift_rows| {
@@ -303,31 +303,31 @@ pub fn drawPrepared(
             }
         }
         if (!needs_full and needs_partial) {
-            self.partial_draw_rows.resize(self.session.allocator, rows) catch |err| {
+            self.retained.partial_draw_rows.resize(self.session.allocator, rows) catch |err| {
                 const log = app_logger.logger("terminal.ui.redraw");
                 log.logf(.warning, "partial row plan resize failed field=rows rows={d} err={s}", .{ rows, @errorName(err) });
                 needs_full = true;
                 needs_partial = false;
             };
-            self.partial_draw_cols_start.resize(self.session.allocator, rows) catch |err| {
+            self.retained.partial_draw_cols_start.resize(self.session.allocator, rows) catch |err| {
                 const log = app_logger.logger("terminal.ui.redraw");
                 log.logf(.warning, "partial row plan resize failed field=cols_start rows={d} err={s}", .{ rows, @errorName(err) });
                 needs_full = true;
                 needs_partial = false;
             };
-            self.partial_draw_cols_end.resize(self.session.allocator, rows) catch |err| {
+            self.retained.partial_draw_cols_end.resize(self.session.allocator, rows) catch |err| {
                 const log = app_logger.logger("terminal.ui.redraw");
                 log.logf(.warning, "partial row plan resize failed field=cols_end rows={d} err={s}", .{ rows, @errorName(err) });
                 needs_full = true;
                 needs_partial = false;
             };
-            self.partial_draw_span_counts.resize(self.session.allocator, rows) catch |err| {
+            self.retained.partial_draw_span_counts.resize(self.session.allocator, rows) catch |err| {
                 const log = app_logger.logger("terminal.ui.redraw");
                 log.logf(.warning, "partial row plan resize failed field=span_counts rows={d} err={s}", .{ rows, @errorName(err) });
                 needs_full = true;
                 needs_partial = false;
             };
-            self.partial_draw_spans.resize(self.session.allocator, rows) catch |err| {
+            self.retained.partial_draw_spans.resize(self.session.allocator, rows) catch |err| {
                 const log = app_logger.logger("terminal.ui.redraw");
                 log.logf(.warning, "partial row plan resize failed field=spans rows={d} err={s}", .{ rows, @errorName(err) });
                 needs_full = true;
@@ -336,11 +336,11 @@ pub fn drawPrepared(
             if (!needs_full and needs_partial) {
                 _ = buildPartialPlan(
                     cache,
-                    self.partial_draw_rows.items,
-                    self.partial_draw_span_counts.items,
-                    self.partial_draw_spans.items,
-                    self.partial_draw_cols_start.items,
-                    self.partial_draw_cols_end.items,
+                    self.retained.partial_draw_rows.items,
+                    self.retained.partial_draw_span_counts.items,
+                    self.retained.partial_draw_spans.items,
+                    self.retained.partial_draw_cols_start.items,
+                    self.retained.partial_draw_cols_end.items,
                     shifted_rows,
                     viewport_shift.rows,
                     shift_requires_fullwidth_partial,
@@ -387,32 +387,32 @@ pub fn drawPrepared(
                     texture_kitty_ms += time_utils.secondsToMs(app_shell.getTime() - kitty_phase_start);
                 }
             } else if (needs_partial) {
-                self.partial_draw_rows.resize(self.session.allocator, rows) catch |err| {
+                self.retained.partial_draw_rows.resize(self.session.allocator, rows) catch |err| {
                     const log = app_logger.logger("terminal.ui.redraw");
                     log.logf(.warning, "partial row plan resize failed field=rows rows={d} err={s}", .{ rows, @errorName(err) });
                     scene_frame_runtime.restoreMainCompositionTarget(r);
                     return outcome;
                 };
-                self.partial_draw_cols_start.resize(self.session.allocator, rows) catch |err| {
+                self.retained.partial_draw_cols_start.resize(self.session.allocator, rows) catch |err| {
                     const log = app_logger.logger("terminal.ui.redraw");
                     log.logf(.warning, "partial row plan resize failed field=cols_start rows={d} err={s}", .{ rows, @errorName(err) });
                     scene_frame_runtime.restoreMainCompositionTarget(r);
                     return outcome;
                 };
-                self.partial_draw_cols_end.resize(self.session.allocator, rows) catch |err| {
+                self.retained.partial_draw_cols_end.resize(self.session.allocator, rows) catch |err| {
                     const log = app_logger.logger("terminal.ui.redraw");
                     log.logf(.warning, "partial row plan resize failed field=cols_end rows={d} err={s}", .{ rows, @errorName(err) });
                     scene_frame_runtime.restoreMainCompositionTarget(r);
                     return outcome;
                 };
 
-                self.partial_draw_span_counts.resize(self.session.allocator, rows) catch |err| {
+                self.retained.partial_draw_span_counts.resize(self.session.allocator, rows) catch |err| {
                     const log = app_logger.logger("terminal.ui.redraw");
                     log.logf(.warning, "partial row plan resize failed field=span_counts rows={d} err={s}", .{ rows, @errorName(err) });
                     scene_frame_runtime.restoreMainCompositionTarget(r);
                     return outcome;
                 };
-                self.partial_draw_spans.resize(self.session.allocator, rows) catch |err| {
+                self.retained.partial_draw_spans.resize(self.session.allocator, rows) catch |err| {
                     const log = app_logger.logger("terminal.ui.redraw");
                     log.logf(.warning, "partial row plan resize failed field=spans rows={d} err={s}", .{ rows, @errorName(err) });
                     scene_frame_runtime.restoreMainCompositionTarget(r);
@@ -421,11 +421,11 @@ pub fn drawPrepared(
 
                 _ = buildPartialPlan(
                     cache,
-                    self.partial_draw_rows.items,
-                    self.partial_draw_span_counts.items,
-                    self.partial_draw_spans.items,
-                    self.partial_draw_cols_start.items,
-                    self.partial_draw_cols_end.items,
+                    self.retained.partial_draw_rows.items,
+                    self.retained.partial_draw_span_counts.items,
+                    self.retained.partial_draw_spans.items,
+                    self.retained.partial_draw_cols_start.items,
+                    self.retained.partial_draw_cols_end.items,
                     shifted_rows,
                     viewport_shift.rows,
                     shift_requires_fullwidth_partial,
@@ -435,11 +435,11 @@ pub fn drawPrepared(
                 const bg_phase_start = app_shell.getTime();
                 r.beginTerminalBatch();
                 for (0..rows) |row| {
-                    if (!self.partial_draw_rows.items[row]) continue;
-                    if (row < self.partial_draw_span_counts.items.len and row < self.partial_draw_spans.items.len and self.partial_draw_span_counts.items[row] > 0) {
+                    if (!self.retained.partial_draw_rows.items[row]) continue;
+                    if (row < self.retained.partial_draw_span_counts.items.len and row < self.retained.partial_draw_spans.items.len and self.retained.partial_draw_span_counts.items[row] > 0) {
                         var span_idx: usize = 0;
-                        while (span_idx < self.partial_draw_span_counts.items[row]) : (span_idx += 1) {
-                            const span = self.partial_draw_spans.items[row][span_idx];
+                        while (span_idx < self.retained.partial_draw_span_counts.items[row]) : (span_idx += 1) {
+                            const span = self.retained.partial_draw_spans.items[row][span_idx];
                             const col_start = @min(@as(usize, span.start), cols - 1);
                             const col_end = @min(@as(usize, span.end), cols - 1);
                             const draw_padding = col_end >= cols - 1;
@@ -447,8 +447,8 @@ pub fn drawPrepared(
                         }
                         continue;
                     }
-                    const col_start = @min(@as(usize, self.partial_draw_cols_start.items[row]), cols - 1);
-                    const col_end = @min(@as(usize, self.partial_draw_cols_end.items[row]), cols - 1);
+                    const col_start = @min(@as(usize, self.retained.partial_draw_cols_start.items[row]), cols - 1);
+                    const col_end = @min(@as(usize, self.retained.partial_draw_cols_end.items[row]), cols - 1);
                     const draw_padding = col_end >= cols - 1;
                     drawRowBackgrounds(shell, view_cells, cols, row, col_start, col_end, base_x_local, base_y_local, padding_x_i, draw_padding, screen_reverse, draw_cursor, cursor, cursor_style);
                 }
@@ -464,18 +464,18 @@ pub fn drawPrepared(
                 r.terminal_font.beginFrameAtlasStats();
                 r.beginTerminalGlyphBatch();
                 for (0..rows) |row| {
-                    if (!self.partial_draw_rows.items[row]) continue;
-                    if (row < self.partial_draw_span_counts.items.len and row < self.partial_draw_spans.items.len and self.partial_draw_span_counts.items[row] > 0) {
+                    if (!self.retained.partial_draw_rows.items[row]) continue;
+                    if (row < self.retained.partial_draw_span_counts.items.len and row < self.retained.partial_draw_spans.items.len and self.retained.partial_draw_span_counts.items[row] > 0) {
                         var span_idx: usize = 0;
-                        while (span_idx < self.partial_draw_span_counts.items[row]) : (span_idx += 1) {
-                            const span = self.partial_draw_spans.items[row][span_idx];
+                        while (span_idx < self.retained.partial_draw_span_counts.items[row]) : (span_idx += 1) {
+                            const span = self.retained.partial_draw_spans.items[row][span_idx];
                             const col_start = @min(@as(usize, span.start), cols - 1);
                             const col_end = @min(@as(usize, span.end), cols - 1);
                             drawRowGlyphs(shell, view_cells, cols, row, col_start, col_end, base_x_local, base_y_local, padding_x_i, hover_link_id, screen_reverse, blink_style, blink_time, draw_cursor, cursor, r.font_config.terminal_disable_ligatures, &glyph_draw_stats);
                         }
                     } else {
-                        const col_start = @min(@as(usize, self.partial_draw_cols_start.items[row]), cols - 1);
-                        const col_end = @min(@as(usize, self.partial_draw_cols_end.items[row]), cols - 1);
+                        const col_start = @min(@as(usize, self.retained.partial_draw_cols_start.items[row]), cols - 1);
+                        const col_end = @min(@as(usize, self.retained.partial_draw_cols_end.items[row]), cols - 1);
                         drawRowGlyphs(shell, view_cells, cols, row, col_start, col_end, base_x_local, base_y_local, padding_x_i, hover_link_id, screen_reverse, blink_style, blink_time, draw_cursor, cursor, r.font_config.terminal_disable_ligatures, &glyph_draw_stats);
                     }
                 }
@@ -491,12 +491,12 @@ pub fn drawPrepared(
             if (kitty_generation != self.kitty.last_generation) {
                 self.kitty.last_generation = kitty_generation;
             }
-            self.terminal_texture_ready = true;
-            self.last_render_generation = draw_state.generation;
-            self.last_render_clear_generation = draw_state.clear_generation;
-            self.last_cell_w_i = cell_w_i;
-            self.last_cell_h_i = cell_h_i;
-            self.last_render_scale = r.scale.render_scale;
+            self.retained.terminal_texture_ready = true;
+            self.retained.last_render_generation = draw_state.generation;
+            self.retained.last_render_clear_generation = draw_state.clear_generation;
+            self.retained.last_cell_w_i = cell_w_i;
+            self.retained.last_cell_h_i = cell_h_i;
+            self.retained.last_render_scale = r.scale.render_scale;
             if (visible_w > 0 and visible_h > 0) {
                 r.beginClip(
                     @intFromFloat(std.math.round(base_x)),
@@ -507,7 +507,7 @@ pub fn drawPrepared(
             }
             updated = true;
         }
-        if (!updated and self.terminal_texture_ready and visible_w > 0 and visible_h > 0) {
+        if (!updated and self.retained.terminal_texture_ready and visible_w > 0 and visible_h > 0) {
             r.beginClip(
                 @intFromFloat(std.math.round(base_x)),
                 @intFromFloat(std.math.round(base_y)),
@@ -521,8 +521,8 @@ pub fn drawPrepared(
                 r.drawRectF(base_x, base_y, viewport_w, viewport_h, bg);
             }
         }
-        if (self.terminal_texture_ready and visible_w > 0 and visible_h > 0) {
-            retained_targets_runtime.drawTerminalSurface(r, base_x, base_y, viewport_w, viewport_h, self.last_render_generation);
+        if (self.retained.terminal_texture_ready and visible_w > 0 and visible_h > 0) {
+            retained_targets_runtime.drawTerminalSurface(r, base_x, base_y, viewport_w, viewport_h, self.retained.last_render_generation);
         }
     }
     texture_update_ms = time_utils.secondsToMs(app_shell.getTime() - texture_phase_start);

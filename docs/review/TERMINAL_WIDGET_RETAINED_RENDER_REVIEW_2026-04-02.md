@@ -68,6 +68,17 @@ These parts mostly read as honest local widget/host retained-render state:
 
 Those are all plausible host/widget concerns.
 
+Status update:
+
+- the widget root no longer stores that retained-surface planning state as a
+  loose field pile
+- it now lives in
+  [terminal_widget_retained_state.zig](/home/home/personal/zide/src/ui/widgets/terminal_widget_retained_state.zig)
+  as one grouped retained owner slab
+
+That is a real improvement, but it does not settle the bigger question inside
+`terminal_widget_draw.zig`.
+
 ## What Still Looks Structurally Heavy
 
 ### 1. `terminal_widget_draw.zig` is still the loudest remaining local center
@@ -101,6 +112,10 @@ But the pair still spreads retained draw truth across:
 - `terminal_widget_draw.zig`
 - texture/grid/overlay helper files
 - `scene_frame_runtime.zig`
+
+The widget-root portion of that split is now cleaner because retained-surface
+state is grouped, but the draw center still carries the main retained-render
+planning/execution concentration.
 
 That may be honest enough, or it may still want one clearer retained-surface
 owner grouping.

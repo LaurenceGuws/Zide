@@ -16,6 +16,7 @@ const kitty_mod = @import("terminal_widget_kitty.zig");
 const paste_mod = @import("terminal_widget_paste.zig");
 const draw_mod = @import("terminal_widget_draw.zig");
 const input_mod = @import("terminal_widget_input.zig");
+const retained_state_mod = @import("terminal_widget_retained_state.zig");
 const view_state = @import("terminal_widget_view_state.zig");
 const render_cache_mod = @import("../../terminal/core/publication/render_cache.zig");
 
@@ -25,6 +26,7 @@ const CursorPos = terminal_publication.CursorPos;
 const KittyImage = terminal_publication.KittyImage;
 const KittyPlacement = terminal_publication.KittyPlacement;
 const RenderCache = render_cache_mod.RenderCache;
+const RetainedState = retained_state_mod.RetainedState;
 const DrawOutcome = draw_mod.DrawOutcome;
 const DrawPreparation = draw_mod.DrawPreparation;
 const Cell = terminal_publication.Cell;
@@ -50,24 +52,13 @@ pub const TerminalWidget = struct {
     pending_open: ?PendingOpen = null,
     pending_presentation_feedback: ?DrawOutcome = null,
     draw_cache: RenderCache,
-    partial_draw_rows: std.ArrayList(bool),
-    partial_draw_span_counts: std.ArrayList(u8),
-    partial_draw_spans: std.ArrayList([render_cache_mod.max_row_dirty_spans]render_cache_mod.RowDirtySpan),
-    partial_draw_cols_start: std.ArrayList(u16),
-    partial_draw_cols_end: std.ArrayList(u16),
+    retained: RetainedState,
     blink_last_slow_on: bool = true,
     blink_last_fast_on: bool = true,
     blink_last_active: bool = false,
     blink_phase_changed_pending: bool = false,
     cursor_blink_pause_until: f64 = 0,
     last_terminal_input_time: f64 = 0,
-    terminal_texture_ready: bool = false,
-    last_render_generation: u64 = 0,
-    last_render_clear_generation: u64 = 0,
-    last_alt_active: bool = false,
-    last_cell_w_i: i32 = 0,
-    last_cell_h_i: i32 = 0,
-    last_render_scale: f32 = 0,
     focus_report_window_events: bool = true,
     focus_report_pane_events: bool = false,
     last_focus_reported: ?bool = null,
@@ -94,23 +85,12 @@ pub const TerminalWidget = struct {
             .pending_open = null,
             .pending_presentation_feedback = null,
             .draw_cache = RenderCache.init(),
-            .partial_draw_rows = std.ArrayList(bool).empty,
-            .partial_draw_span_counts = std.ArrayList(u8).empty,
-            .partial_draw_spans = std.ArrayList([render_cache_mod.max_row_dirty_spans]render_cache_mod.RowDirtySpan).empty,
-            .partial_draw_cols_start = std.ArrayList(u16).empty,
-            .partial_draw_cols_end = std.ArrayList(u16).empty,
+            .retained = RetainedState.init(),
             .blink_last_slow_on = true,
             .blink_last_fast_on = true,
             .blink_last_active = false,
             .blink_phase_changed_pending = false,
             .last_terminal_input_time = 0,
-            .terminal_texture_ready = false,
-            .last_render_generation = 0,
-            .last_render_clear_generation = 0,
-            .last_alt_active = false,
-            .last_cell_w_i = 0,
-            .last_cell_h_i = 0,
-            .last_render_scale = 0,
             .focus_report_window_events = true,
             .focus_report_pane_events = false,
             .last_focus_reported = null,
@@ -214,11 +194,7 @@ pub const TerminalWidget = struct {
             self.pending_open = null;
         }
         self.draw_cache.deinit(self.session.allocator);
-        self.partial_draw_rows.deinit(self.session.allocator);
-        self.partial_draw_span_counts.deinit(self.session.allocator);
-        self.partial_draw_spans.deinit(self.session.allocator);
-        self.partial_draw_cols_start.deinit(self.session.allocator);
-        self.partial_draw_cols_end.deinit(self.session.allocator);
+        self.retained.deinit(self.session.allocator);
         self.kitty.deinit(self.session.allocator);
     }
 
@@ -239,7 +215,7 @@ pub const TerminalWidget = struct {
     }
 
     pub fn invalidateTextureCache(self: *TerminalWidget) void {
-        self.terminal_texture_ready = false;
+        self.retained.invalidateTextureCache();
     }
 
     pub fn dumpVisibleAsciiView(self: *TerminalWidget) !void {
@@ -365,12 +341,12 @@ pub const TerminalWidget = struct {
                 "stage=widget_prepare sid={x} last_render={d} captured={d} cur={d} pub={d} presented={d} texture_ready={d}",
                 .{
                     @intFromPtr(self.session),
-                    self.last_render_generation,
+                    self.retained.last_render_generation,
                     capture.presented.generation,
                     generation_state.pending,
                     generation_state.published,
                     generation_state.presented,
-                    @intFromBool(self.terminal_texture_ready),
+                    @intFromBool(self.retained.terminal_texture_ready),
                 },
             );
             if (latest_capture.refreshed) {
@@ -379,12 +355,12 @@ pub const TerminalWidget = struct {
                     "stage=widget_prepare_latest sid={x} last_render={d} captured={d} cur={d} pub={d} presented={d} texture_ready={d}",
                     .{
                         @intFromPtr(self.session),
-                        self.last_render_generation,
+                        self.retained.last_render_generation,
                         capture.presented.generation,
                         generation_state.pending,
                         generation_state.published,
                         generation_state.presented,
-                        @intFromBool(self.terminal_texture_ready),
+                        @intFromBool(self.retained.terminal_texture_ready),
                     },
                 );
             }
