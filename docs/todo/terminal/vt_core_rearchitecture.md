@@ -130,6 +130,14 @@ gravity into smaller files.
   - but it is more tightly coupled to writer/transport mechanics than the
     first two slabs
   - it needs one more design pass before code, or War 4 should stop and rerank
+- `docs/review/VT_WAR_4_INPUT_INTERACTION_DESIGN_2026-04-03.md`
+  Why: the remaining input lane needed a real design pass before any code cut.
+  Current read:
+  - text/byte send, focus/color-scheme reporting, and mouse reporting are all
+    too transport/writer-shaped to be good immediate core moves
+  - the only plausible next candidate is key/char semantic dispatch before
+    writer encoding
+  - even that needs a stricter design line first, or War 4 should stop here
 
 ## Priority Now
 
@@ -145,6 +153,9 @@ Highest-value remaining items from the current live baseline:
    - resize / report contract
    Current state:
    - encoded host input is the next candidate, but not yet a safe immediate cut
+   Design bar:
+   - only continue if a clean semantic sub-slab can be separated from writer
+     encoding and transport mechanics
 2. `VTWAR4-02` keep handle identity as a checked-but-paused concern
    Why: the handle is already opaque and terminal-named publicly, so changing
    internal shell-backed storage alone risks cosmetic surgery.
