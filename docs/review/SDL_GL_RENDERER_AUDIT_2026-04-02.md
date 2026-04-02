@@ -169,12 +169,11 @@ Status note after the first retained-target ownership cut:
 - their implementation now lives in
   `src/ui/renderer/retained_targets_runtime.zig`
 - `src/ui/renderer.zig` no longer owns that implementation slab directly
+- the forwarding shell `src/ui/renderer/retained_surface_api.zig` is now gone
 - widgets and the font sample now consume
-  `src/ui/renderer/retained_surface_api.zig` instead of calling the raw
-  renderer texture methods directly
-- the raw product-specific editor/terminal texture methods are now gone from
-  `src/ui/renderer.zig`; retained-surface consumers talk to the retained-target
-  owner instead
+  `src/ui/renderer/retained_targets_runtime.zig` directly
+- the retained-target owner now exposes retained-surface vocabulary directly
+  instead of the old product-specific texture-shaped transition names
 
 ### 3. Scene ownership is structurally right, but product-retained-target
 choreography still shapes the steady-state path

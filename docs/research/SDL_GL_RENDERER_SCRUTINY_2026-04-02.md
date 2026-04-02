@@ -219,13 +219,11 @@ Progress note, 2026-04-02:
   renderer root
 - retained-target implementation moved into
   `src/ui/renderer/retained_targets_runtime.zig`
-- widget/view consumers now route through
-  `src/ui/renderer/retained_surface_api.zig`
-- the raw product-specific renderer methods still exist, but they are no longer
-  the primary widget-facing surface
-- the raw product-specific editor/terminal texture methods have now been
-  removed from `src/ui/renderer.zig`; the retained-surface shim talks to the
-  retained-target owner directly
+- the forwarding shell `src/ui/renderer/retained_surface_api.zig` is gone
+- widget/view consumers now call `src/ui/renderer/retained_targets_runtime.zig`
+  directly
+- the retained-target owner now exposes retained-surface vocabulary directly
+  instead of texture-shaped transition names
 
 ### 4. The SDL/GL host seam is functionally decent but still reads like an
 investigation seam

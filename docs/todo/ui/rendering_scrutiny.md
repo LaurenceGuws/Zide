@@ -103,6 +103,8 @@ Progress note, 2026-04-02:
 - retained terminal/editor target state now lives as one grouped state slab
   under `src/ui/renderer/retained_targets_runtime.zig` instead of four loose
   renderer-root fields
+- the forwarding shell `src/ui/renderer/retained_surface_api.zig` is gone; the
+  retained-target owner now speaks the retained-surface vocabulary directly
 - mouse scale state now lives with `InputRuntimeState` instead of as a loose
   renderer-root field
 - terminal texture-shift and recent-input publication behavior now live as one

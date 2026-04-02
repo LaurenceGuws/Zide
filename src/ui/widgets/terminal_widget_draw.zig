@@ -6,7 +6,7 @@ const app_logger = @import("../../app_logger.zig");
 const shared_types = @import("../../types/mod.zig");
 const time_utils = @import("../renderer/time_utils.zig");
 const terminal_font_mod = @import("../terminal_font.zig");
-const retained_surface_api = @import("../renderer/retained_surface_api.zig");
+const retained_targets_runtime = @import("../renderer/retained_targets_runtime.zig");
 const draw_grid = @import("terminal_widget_draw_grid.zig");
 const draw_overlay = @import("terminal_widget_draw_overlay.zig");
 const draw_texture = @import("terminal_widget_draw_texture.zig");
@@ -201,7 +201,7 @@ pub fn drawPrepared(
             @intFromFloat(height),
             bg_color,
         );
-        retained_surface_api.drawTerminalSurface(r, x, y, width, height);
+        retained_targets_runtime.drawTerminalSurface(r, x, y, width, height);
         return outcome;
     }
     const draw_start_time = if (alt_exit) app_shell.getTime() else 0;
@@ -278,7 +278,7 @@ pub fn drawPrepared(
         visible_h = @intFromFloat(std.math.round(@as(f32, @floatFromInt(visible_rows * geom.cell_height_device_px)) / scale));
         viewport_w = @as(f32, @floatFromInt(visible_w));
         viewport_h = @as(f32, @floatFromInt(visible_h));
-        const recreated = retained_surface_api.ensureTerminalSurface(r, texture_w, texture_h);
+        const recreated = retained_targets_runtime.ensureTerminalSurface(r, texture_w, texture_h);
         const gen_changed = draw_state.generation != self.last_render_generation;
         const clear_generation_changed = draw_state.clear_generation != self.last_render_clear_generation;
         var update_plan = chooseTextureUpdatePlan(
@@ -319,7 +319,7 @@ pub fn drawPrepared(
         )) {
             .attempt => |shift_rows| {
                 const dy_pixels: i32 = -viewport_shift.rows * cell_h_i;
-                if (retained_surface_api.scrollTerminalSurface(r, 0, dy_pixels)) {
+                if (retained_targets_runtime.scrollTerminalSurface(r, 0, dy_pixels)) {
                     needs_partial = true;
                     shifted_rows = shift_rows;
                 } else {
@@ -397,7 +397,7 @@ pub fn drawPrepared(
                 );
             }
         }
-        if ((needs_full or needs_partial) and retained_surface_api.beginTerminalSurface(r)) {
+        if ((needs_full or needs_partial) and retained_targets_runtime.beginTerminalSurface(r)) {
             // Disable scissor while updating the offscreen texture.
             // The main draw pass will restore the clip for on-screen drawing.
             r.endClip();
@@ -439,32 +439,32 @@ pub fn drawPrepared(
                 self.partial_draw_rows.resize(self.session.allocator, rows) catch |err| {
                     const log = app_logger.logger("terminal.ui.redraw");
                     log.logf(.warning, "partial row plan resize failed field=rows rows={d} err={s}", .{ rows, @errorName(err) });
-                    retained_surface_api.endTerminalSurface(r);
+                    retained_targets_runtime.endTerminalSurface(r);
                     return outcome;
                 };
                 self.partial_draw_cols_start.resize(self.session.allocator, rows) catch |err| {
                     const log = app_logger.logger("terminal.ui.redraw");
                     log.logf(.warning, "partial row plan resize failed field=cols_start rows={d} err={s}", .{ rows, @errorName(err) });
-                    retained_surface_api.endTerminalSurface(r);
+                    retained_targets_runtime.endTerminalSurface(r);
                     return outcome;
                 };
                 self.partial_draw_cols_end.resize(self.session.allocator, rows) catch |err| {
                     const log = app_logger.logger("terminal.ui.redraw");
                     log.logf(.warning, "partial row plan resize failed field=cols_end rows={d} err={s}", .{ rows, @errorName(err) });
-                    retained_surface_api.endTerminalSurface(r);
+                    retained_targets_runtime.endTerminalSurface(r);
                     return outcome;
                 };
 
                 self.partial_draw_span_counts.resize(self.session.allocator, rows) catch |err| {
                     const log = app_logger.logger("terminal.ui.redraw");
                     log.logf(.warning, "partial row plan resize failed field=span_counts rows={d} err={s}", .{ rows, @errorName(err) });
-                    retained_surface_api.endTerminalSurface(r);
+                    retained_targets_runtime.endTerminalSurface(r);
                     return outcome;
                 };
                 self.partial_draw_spans.resize(self.session.allocator, rows) catch |err| {
                     const log = app_logger.logger("terminal.ui.redraw");
                     log.logf(.warning, "partial row plan resize failed field=spans rows={d} err={s}", .{ rows, @errorName(err) });
-                    retained_surface_api.endTerminalSurface(r);
+                    retained_targets_runtime.endTerminalSurface(r);
                     return outcome;
                 };
 
@@ -536,7 +536,7 @@ pub fn drawPrepared(
                     texture_kitty_ms += time_utils.secondsToMs(app_shell.getTime() - kitty_phase_start);
                 }
             }
-            retained_surface_api.endTerminalSurface(r);
+            retained_targets_runtime.endTerminalSurface(r);
             if (kitty_generation != self.kitty.last_generation) {
                 self.kitty.last_generation = kitty_generation;
             }
@@ -571,7 +571,7 @@ pub fn drawPrepared(
             }
         }
         if (self.terminal_texture_ready and visible_w > 0 and visible_h > 0) {
-            retained_surface_api.drawTerminalSurface(r, base_x, base_y, viewport_w, viewport_h);
+            retained_targets_runtime.drawTerminalSurface(r, base_x, base_y, viewport_w, viewport_h);
         }
     }
     texture_update_ms = time_utils.secondsToMs(app_shell.getTime() - texture_phase_start);

@@ -278,6 +278,8 @@ The convergence rule is:
 
 - replace editor/terminal-specific texture APIs with generic retained-surface
   and scene-layer submission
+- flatten any transition-only forwarding shell so retained-surface consumers
+  talk to the retained-surface owner directly
 - keep implementation internals retained and optimized
 
 ### Phase 4: Unified host draw reasoning

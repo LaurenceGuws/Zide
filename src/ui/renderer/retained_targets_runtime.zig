@@ -29,36 +29,36 @@ fn snapToDevicePixel(value: f32, render_scale: f32) f32 {
     return @as(f32, @floatFromInt(@as(i32, @intFromFloat(std.math.round(value * scale))))) / scale;
 }
 
-pub fn ensureTerminalTexture(self: anytype, width: i32, height: i32) bool {
+pub fn ensureTerminalSurface(self: anytype, width: i32, height: i32) bool {
     const recreated = self.ensureRenderTargetScaled(&self.retained_targets.terminal, width, height, gl.c.GL_NEAREST);
     _ = self.ensureRenderTargetScaled(&self.retained_targets.terminal_scroll, width, height, gl.c.GL_NEAREST);
     return recreated;
 }
 
-pub fn ensureEditorTexture(self: anytype, width: i32, height: i32) bool {
+pub fn ensureEditorSurface(self: anytype, width: i32, height: i32) bool {
     return self.ensureRenderTargetScaled(&self.retained_targets.editor, width, height, gl.c.GL_NEAREST);
 }
 
-pub fn beginTerminalTexture(self: anytype) bool {
+pub fn beginTerminalSurface(self: anytype) bool {
     return self.beginRenderTarget(self.retained_targets.terminal);
 }
 
-pub fn endTerminalTexture(self: anytype) void {
+pub fn endTerminalSurface(self: anytype) void {
     scene_frame_runtime.restoreMainCompositionTarget(self);
 }
 
-pub fn beginEditorTexture(self: anytype) bool {
+pub fn beginEditorSurface(self: anytype) bool {
     scene_frame_runtime.noteEditorTextureUpdate(self);
     self.retained_targets.drawing_editor = true;
     return self.beginRenderTarget(self.retained_targets.editor);
 }
 
-pub fn endEditorTexture(self: anytype) void {
+pub fn endEditorSurface(self: anytype) void {
     self.retained_targets.drawing_editor = false;
     scene_frame_runtime.restoreMainCompositionTarget(self);
 }
 
-pub fn drawTerminalTexture(self: anytype, x: f32, y: f32, width: f32, height: f32) void {
+pub fn drawTerminalSurface(self: anytype, x: f32, y: f32, width: f32, height: f32) void {
     if (self.retained_targets.terminal) |target| {
         const snapped_x = snapToDevicePixel(x, self.scale.render_scale);
         const snapped_y = snapToDevicePixel(y, self.scale.render_scale);
@@ -102,7 +102,7 @@ pub fn drawTerminalTexture(self: anytype, x: f32, y: f32, width: f32, height: f3
     }
 }
 
-pub fn scrollTerminalTexture(self: anytype, dx: i32, dy: i32) bool {
+pub fn scrollTerminalSurface(self: anytype, dx: i32, dy: i32) bool {
     if (self.retained_targets.terminal) |target| {
         return gl_backend.scrollRenderTarget(
             self,
@@ -117,7 +117,7 @@ pub fn scrollTerminalTexture(self: anytype, dx: i32, dy: i32) bool {
     return false;
 }
 
-pub fn drawEditorTexture(self: anytype, x: f32, y: f32) void {
+pub fn drawEditorSurface(self: anytype, x: f32, y: f32) void {
     if (self.retained_targets.editor) |target| {
         scene_frame_runtime.noteEditorTextureBlit(self);
         const snapped_x = snapToDevicePixel(x, self.scale.render_scale);

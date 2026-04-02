@@ -151,7 +151,7 @@ const FakeRenderer = struct {
         return self.terminal_selection_overlay_style;
     }
 
-    pub fn ensureEditorTexture(self: *FakeRenderer, width: i32, height: i32) bool {
+    pub fn ensureEditorSurface(self: *FakeRenderer, width: i32, height: i32) bool {
         _ = width;
         _ = height;
         if (!self.editor_texture_created) {
@@ -161,13 +161,13 @@ const FakeRenderer = struct {
         return false;
     }
 
-    pub fn beginEditorTexture(self: *FakeRenderer) bool {
+    pub fn beginEditorSurface(self: *FakeRenderer) bool {
         self.in_editor_texture = true;
         self.capture.editor_texture_update_count += 1;
         return true;
     }
 
-    pub fn endEditorTexture(self: *FakeRenderer) void {
+    pub fn endEditorSurface(self: *FakeRenderer) void {
         self.in_editor_texture = false;
     }
 
@@ -183,7 +183,7 @@ const FakeRenderer = struct {
         _ = self;
     }
 
-    pub fn drawEditorTexture(self: *FakeRenderer, x: f32, y: f32) void {
+    pub fn drawEditorSurface(self: *FakeRenderer, x: f32, y: f32) void {
         _ = x;
         _ = y;
         self.capture.editor_texture_blit_count += 1;
