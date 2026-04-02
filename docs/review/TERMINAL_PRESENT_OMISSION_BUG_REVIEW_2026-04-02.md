@@ -152,3 +152,25 @@ terminal surface:
 
 That warning should make the remaining live bug trivial to classify if it still
 reproduces.
+
+## Current Judgment
+
+The first obvious local omission branches are now materially reduced:
+
+- sync-update reuse no longer returns early without a real retained surface
+- partial retained-surface update aborts now fall back to the previous retained
+  surface instead of returning blank
+- stale widget-local retained readiness is cleared when the retained target is
+  absent
+
+That means the next live question is narrower than before:
+
+- if the bug still reproduces, why is the retained terminal surface unavailable
+  at all on the bad frame?
+
+So the next good move in this lane is not more blind widget-draw splitting.
+It is a repro-driven retained-target availability trace using:
+
+- `renderer.present`
+- `renderer.terminal_present`
+- `terminal_surface_unavailable_for_present`
