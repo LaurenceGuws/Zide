@@ -401,53 +401,16 @@ pub fn logInputLatency(state: anytype, poll_ms: f64, build_ms: f64, update_ms: f
     state.input_latency_logger.logFields(.info, "frame_latency", fields[0..next]);
 }
 
-fn activeFrameState(state: anytype) struct {
-    has_data: bool,
-    session_ptr: usize,
-    pending_generation: u64,
-    published_generation: u64,
-    presented_generation: u64,
-    redraw_pending: bool,
-    parse_backlog: bool,
-    output_pressure: bool,
-} {
+fn activeFrameState(state: anytype) Snapshot {
     const State = @TypeOf(state.*);
     if (!@hasField(State, "terminal_workspace")) {
-        return .{
-            .has_data = false,
-            .session_ptr = 0,
-            .pending_generation = 0,
-            .published_generation = 0,
-            .presented_generation = 0,
-            .redraw_pending = false,
-            .parse_backlog = false,
-            .output_pressure = false,
-        };
+        return .{};
     }
 
     if (state.terminal_workspace) |*workspace| {
-        const frame_state = workspace.activeFrameState();
-        return .{
-            .has_data = frame_state.has_data,
-            .session_ptr = frame_state.session_ptr,
-            .pending_generation = frame_state.pending_generation,
-            .published_generation = frame_state.published_generation,
-            .presented_generation = frame_state.presented_generation,
-            .redraw_pending = frame_state.redraw_pending,
-            .parse_backlog = frame_state.parse_backlog,
-            .output_pressure = frame_state.output_pressure,
-        };
+        return workspace.activeFrameState();
     }
-    return .{
-        .has_data = false,
-        .session_ptr = 0,
-        .pending_generation = 0,
-        .published_generation = 0,
-        .presented_generation = 0,
-        .redraw_pending = false,
-        .parse_backlog = false,
-        .output_pressure = false,
-    };
+    return .{};
 }
 
 test "default sleep policy stays hot while redraw or backlog is active" {
@@ -508,16 +471,7 @@ test "default sleep policy stays hot briefly after generation advancement" {
 
 test "observe keeps redraw pending until published generation is presented" {
     const Workspace = struct {
-        fn activeFrameState(_: *@This()) struct {
-            has_data: bool,
-            session_ptr: usize,
-            pending_generation: u64,
-            published_generation: u64,
-            presented_generation: u64,
-            redraw_pending: bool,
-            parse_backlog: bool,
-            output_pressure: bool,
-        } {
+        fn activeFrameState(_: *@This()) Snapshot {
             return .{
                 .has_data = false,
                 .session_ptr = 0x1234,
