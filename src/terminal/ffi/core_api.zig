@@ -19,10 +19,10 @@ const EventOwner = shared.EventOwner;
 pub var destroy_debug_pause_ms_for_tests = std.atomic.Value(u32).init(0);
 
 fn currentCloseConfirmSignals(handle: *shared.Handle) shared.CloseConfirmSignals {
-    const activity = handle.session.currentActivityMetadata();
+    const activity = host_queries.currentActivityMetadata(handle.session);
     const foreground_process = @intFromBool(activity.foreground_process_present);
     const semantic_command = @intFromBool(activity.semantic_input_active or activity.semantic_output_active);
-    const alt_screen = @intFromBool(handle.session.altScreenActive());
+    const alt_screen = @intFromBool(host_queries.altScreenActive(handle.session));
     const mouse_reporting = @intFromBool(session_interaction.mouseReportingEnabled(handle.session));
     return .{
         .abi_version = shared.close_confirm_abi_version,
@@ -103,7 +103,7 @@ fn copyPublishedSnapshotExport(
         title = try allocator.dupe(u8, host_queries.displayTitleText(handle.session));
     }
     if ((include_flags & @intFromEnum(shared.SnapshotIncludeFlags.cwd)) != 0) {
-        cwd = try allocator.dupe(u8, handle.session.cwdText());
+        cwd = try allocator.dupe(u8, host_queries.cwdText(handle.session));
     }
 
     out_state.* = .{
@@ -381,7 +381,7 @@ pub fn create(config: ?*const shared.CreateConfig, out_handle: *?*shared.ZideTer
     };
     session.attachExternalTransport();
     handle.last_generation = terminal_publication.publishedGeneration(session);
-    const initial_metadata = session.copyMetadata(allocator, &handle.last_title, &handle.last_cwd) catch |err| {
+    const initial_metadata = host_queries.copyMetadata(session, allocator, &handle.last_title, &handle.last_cwd) catch |err| {
         log.logf(.warning, "create metadata copy failed err={s}", .{@errorName(err)});
         return .out_of_memory;
     };
@@ -781,7 +781,7 @@ pub fn metadataAcquire(handle: ?*shared.ZideTerminalHandle, request: ?*const sha
     };
     errdefer allocator.destroy(owner);
 
-    const metadata = h.session.copyMetadata(allocator, &h.scratch_title, &h.scratch_cwd) catch |err| {
+    const metadata = host_queries.copyMetadata(h.session, allocator, &h.scratch_title, &h.scratch_cwd) catch |err| {
         log.logf(.warning, "metadata copy failed err={s}", .{@errorName(err)});
         return shared.mapError(err);
     };
@@ -810,7 +810,7 @@ pub fn metadataAcquire(handle: ?*shared.ZideTerminalHandle, request: ?*const sha
             return .out_of_memory;
         };
     errdefer allocator.free(cwd);
-    const activity = h.session.currentActivityMetadata();
+    const activity = host_queries.currentActivityMetadata(h.session);
     const foreground_process_label = if (include_activity)
         allocator.dupe(u8, activity.foreground_process_label) catch |err| {
             log.logf(.warning, "metadata foreground-process-label dup failed err={s}", .{@errorName(err)});

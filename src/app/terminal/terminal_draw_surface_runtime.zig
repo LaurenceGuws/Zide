@@ -4,6 +4,7 @@ const app_terminal_progress_runtime = @import("terminal_progress_runtime.zig");
 const app_terminal_scrollbar_runtime = @import("terminal_scrollbar_runtime.zig");
 const app_terminal_surface_gate = @import("terminal_surface_gate.zig");
 const terminal_publication = @import("../../terminal/core/publication/terminal_publication.zig");
+const host_queries = @import("../../terminal/core/session/host_queries.zig");
 const shared_types = @import("../../types/mod.zig");
 
 const layout_types = shared_types.layout;
@@ -40,7 +41,7 @@ pub fn draw(state: anytype, shell: anytype, layout: layout_types.WidgetLayout) v
         if (layout.terminal.width > 0 and term_height > 0) {
             shell.endClip();
         }
-        const activity = term_widget.session.currentActivityMetadata();
+        const activity = host_queries.currentActivityMetadata(term_widget.session);
         if (activity.progress.active()) {
             app_terminal_progress_runtime.drawActiveTabProgress(
                 shell,

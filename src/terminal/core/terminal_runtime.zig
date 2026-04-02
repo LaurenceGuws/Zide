@@ -64,12 +64,6 @@ pub const PtyTerminalRuntime = struct {
     pub const beginClickSelectionLocked = host_selection.beginClickSelectionLocked;
     pub const extendGestureSelectionLocked = host_selection.extendGestureSelectionLocked;
     pub const selectOrUpdateCellInRowLocked = host_selection.selectOrUpdateCellInRowLocked;
-    pub const copyMetadata = host_queries.copyMetadata;
-    pub const titleText = host_queries.titleText;
-    pub const cwdText = host_queries.cwdText;
-    pub const altScreenActive = host_queries.altScreenActive;
-    pub const currentActivityMetadata = host_queries.currentActivityMetadata;
-    pub const isAlive = host_queries.isAlive;
     allocator: std.mem.Allocator,
     runtime: runtime_fields.Fields,
     core: TerminalCoreType,

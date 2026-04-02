@@ -8,6 +8,7 @@ const terminal_core_protocol = @import("protocol/terminal_core_protocol.zig");
 const input_modes = @import("input_modes.zig");
 const session_config = @import("session/config.zig");
 const session_interaction = @import("session/interaction.zig");
+const host_queries = @import("session/host_queries.zig");
 const mode_effects = @import("session/mode_effects.zig");
 const scrolling = @import("scrolling.zig");
 const host_types = @import("session/host_types.zig");
@@ -58,7 +59,7 @@ test "external transport poll updates screen and metadata" {
     defer session.deinit();
     session.attachExternalTransport();
 
-    try std.testing.expect(session.isAlive());
+    try std.testing.expect(host_queries.isAlive(session));
 
     try std.testing.expect(try session.enqueueExternalBytes("\x1b]0;ext-title\x07hello\r\n"));
     try session.poll();
@@ -71,7 +72,7 @@ test "external transport poll updates screen and metadata" {
     defer title_buf.deinit(allocator);
     var cwd_buf = std.ArrayList(u8).empty;
     defer cwd_buf.deinit(allocator);
-    const metadata = try session.copyMetadata(allocator, &title_buf, &cwd_buf);
+    const metadata = try host_queries.copyMetadata(session, allocator, &title_buf, &cwd_buf);
     try std.testing.expect(metadata.alive);
     try std.testing.expectEqualStrings("ext-title", metadata.title);
 }
@@ -83,15 +84,15 @@ test "external transport close updates alive metadata" {
     defer session.deinit();
     session.attachExternalTransport();
 
-    try std.testing.expect(session.isAlive());
+    try std.testing.expect(host_queries.isAlive(session));
     try std.testing.expect(session.closeExternalTransport());
-    try std.testing.expect(!session.isAlive());
+    try std.testing.expect(!host_queries.isAlive(session));
 
     var title_buf = std.ArrayList(u8).empty;
     defer title_buf.deinit(allocator);
     var cwd_buf = std.ArrayList(u8).empty;
     defer cwd_buf.deinit(allocator);
-    const metadata = try session.copyMetadata(allocator, &title_buf, &cwd_buf);
+    const metadata = try host_queries.copyMetadata(session, allocator, &title_buf, &cwd_buf);
     try std.testing.expect(!metadata.alive);
 }
 
@@ -241,7 +242,7 @@ test "pty-backed session sendKey enter writes through session writer boundary" {
         try session.poll();
         const snapshot = session.snapshot();
         if (snapshotContainsAscii(snapshot, "hi")) return;
-        if (!session.isAlive()) break;
+        if (!host_queries.isAlive(session)) break;
         std.Thread.sleep(10 * std.time.ns_per_ms);
     }
 
@@ -544,17 +545,17 @@ test "osc 9;4 progress reports update structured host progress state" {
     defer session.deinit();
 
     terminal_core_feed.feedOutputBytes(session, "\x1b]9;4;1;42\x07");
-    var activity = session.currentActivityMetadata();
+    var activity = host_queries.currentActivityMetadata(session);
     try std.testing.expectEqual(host_types.ProgressState.set, activity.progress.state);
     try std.testing.expectEqual(@as(?u8, 42), activity.progress.value);
 
     terminal_core_feed.feedOutputBytes(session, "\x1b]9;4;3\x07");
-    activity = session.currentActivityMetadata();
+    activity = host_queries.currentActivityMetadata(session);
     try std.testing.expectEqual(host_types.ProgressState.indeterminate, activity.progress.state);
     try std.testing.expectEqual(@as(?u8, null), activity.progress.value);
 
     terminal_core_feed.feedOutputBytes(session, "\x1b]9;4;0\x07");
-    activity = session.currentActivityMetadata();
+    activity = host_queries.currentActivityMetadata(session);
     try std.testing.expectEqual(host_types.ProgressState.none, activity.progress.state);
     try std.testing.expectEqual(@as(?u8, null), activity.progress.value);
 }

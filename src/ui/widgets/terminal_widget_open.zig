@@ -2,6 +2,7 @@ const std = @import("std");
 const builtin = @import("builtin");
 const app_logger = @import("../../app_logger.zig");
 
+const host_queries = @import("../../terminal/core/session/host_queries.zig");
 const session_queries = @import("../../terminal/core/session/queries.zig");
 const terminal_runtime = @import("../../terminal/core/terminal_runtime.zig");
 const terminal_publication = @import("../../terminal/core/publication/terminal_publication.zig");
@@ -74,7 +75,7 @@ pub fn ctrlClickOpenVisibleMaybe(
                     defer title_buf.deinit(allocator);
                     var cwd_buf = std.ArrayList(u8).empty;
                     defer cwd_buf.deinit(allocator);
-                    const metadata = session.copyMetadata(allocator, &title_buf, &cwd_buf) catch |err| {
+                    const metadata = host_queries.copyMetadata(session, allocator, &title_buf, &cwd_buf) catch |err| {
                         log.logf(.warning, "ctrl-open failed copying metadata err={s}", .{@errorName(err)});
                         return false;
                     };
@@ -192,7 +193,7 @@ fn resolveLinkPath(allocator: std.mem.Allocator, session: *PtyTerminalRuntime, u
     defer title_buf.deinit(allocator);
     var cwd_buf = std.ArrayList(u8).empty;
     defer cwd_buf.deinit(allocator);
-    const metadata = session.copyMetadata(allocator, &title_buf, &cwd_buf) catch |err| {
+    const metadata = host_queries.copyMetadata(session, allocator, &title_buf, &cwd_buf) catch |err| {
         log.logf(.warning, "resolveLinkPath failed copying metadata err={s}", .{@errorName(err)});
         return null;
     };

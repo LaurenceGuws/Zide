@@ -338,6 +338,10 @@ Judgment:
   `src/terminal/core/session/interaction.zig` from widget, protocol, FFI,
   workspace, and test callers instead of pretending to be stable runtime
   contract
+- host-query metadata/state reads are off the runtime surface too:
+  title/cwd/alt-screen/alive/activity/metadata copy now route through
+  `src/terminal/core/session/host_queries.zig` from widget, app, workspace,
+  FFI, and test callers instead of pretending to be stable runtime contract
   contract
 - protocol query helpers are shrinking the same way too: runtime/focus tests
   now use `terminal_core_protocol.zig` directly for `getCell` /

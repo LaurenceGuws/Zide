@@ -1,6 +1,7 @@
 const std = @import("std");
 const terminal_publication = @import("publication/terminal_publication.zig");
 const runtime_mod = @import("terminal_runtime.zig");
+const host_queries = @import("session/host_queries.zig");
 const session_config = @import("session/config.zig");
 const session_interaction = @import("session/interaction.zig");
 const host_types = @import("session/host_types.zig");
@@ -195,12 +196,12 @@ pub const TerminalWorkspace = struct {
     }
 
     fn sessionNeedsCloseConfirm(session: *PtyTerminalRuntime) bool {
-        if (!session.isAlive()) return false;
-        const activity = session.currentActivityMetadata();
+        if (!host_queries.isAlive(session)) return false;
+        const activity = host_queries.currentActivityMetadata(session);
         return activity.foreground_process_present or
             activity.semantic_input_active or
             activity.semantic_output_active or
-            session.altScreenActive() or
+            host_queries.altScreenActive(session) or
             session_interaction.mouseReportingEnabled(session);
     }
 
@@ -215,7 +216,7 @@ pub const TerminalWorkspace = struct {
         };
         var title_buf = std.ArrayList(u8).empty;
         defer title_buf.deinit(allocator);
-        const metadata = try session.copyMetadata(allocator, &title_buf, out);
+        const metadata = try host_queries.copyMetadata(session, allocator, &title_buf, out);
         return metadata.cwd;
     }
 
@@ -226,7 +227,7 @@ pub const TerminalWorkspace = struct {
 
     pub fn activeSessionAlive(self: *const TerminalWorkspace) bool {
         if (self.tabs.items.len == 0) return false;
-        return self.tabs.items[self.activeIndex()].session.isAlive();
+        return host_queries.isAlive(self.tabs.items[self.activeIndex()].session);
     }
 
     pub fn refreshActiveSessionChildExit(self: *TerminalWorkspace) void {
@@ -261,7 +262,7 @@ pub const TerminalWorkspace = struct {
     pub fn closeConfirmContextForTabId(self: *const TerminalWorkspace, tab_id: TabId) ?CloseConfirmContext {
         for (self.tabs.items) |tab| {
             if (tab.id != tab_id) continue;
-            const activity = tab.session.currentActivityMetadata();
+            const activity = host_queries.currentActivityMetadata(tab.session);
             return .{
                 .foreground_process_present = activity.foreground_process_present,
                 .foreground_process_label = activity.foreground_process_label,
@@ -286,8 +287,8 @@ pub const TerminalWorkspace = struct {
         defer cwd_buf.deinit(allocator);
 
         for (self.tabs.items) |tab| {
-            const metadata = try tab.session.copyMetadata(allocator, &title_buf, &cwd_buf);
-            const activity = tab.session.currentActivityMetadata();
+            const metadata = try host_queries.copyMetadata(tab.session, allocator, &title_buf, &cwd_buf);
+            const activity = host_queries.currentActivityMetadata(tab.session);
 
             const title_offset = strings_out.items.len;
             try strings_out.appendSlice(allocator, metadata.title);

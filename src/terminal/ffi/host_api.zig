@@ -1,4 +1,5 @@
 const std = @import("std");
+const host_queries = @import("../core/session/host_queries.zig");
 const session_config = @import("../core/session/config.zig");
 const types = @import("../model/types.zig");
 const shared = @import("shared.zig");
@@ -92,7 +93,7 @@ pub fn reportColorSchemeChanged(handle: ?*shared.ZideTerminalHandle, dark: u8, o
 
 pub fn setScrollbackOffset(handle: ?*shared.ZideTerminalHandle, offset_rows: u32) shared.Status {
     const h = shared.fromOpaqueActive(handle) orelse return .invalid_argument;
-    if (h.session.altScreenActive() and offset_rows != 0) return .invalid_argument;
+    if (host_queries.altScreenActive(h.session) and offset_rows != 0) return .invalid_argument;
     h.session.setScrollOffset(offset_rows);
     return shared.syncDerivedEvents(h);
 }
@@ -105,12 +106,12 @@ pub fn followLiveBottom(handle: ?*shared.ZideTerminalHandle) shared.Status {
 
 pub fn isAlive(handle: ?*shared.ZideTerminalHandle) u8 {
     const h = shared.fromOpaqueActive(handle) orelse return 0;
-    return @intFromBool(h.session.isAlive());
+    return @intFromBool(host_queries.isAlive(h.session));
 }
 
 pub fn childExitStatus(handle: ?*shared.ZideTerminalHandle, out_code: *i32, out_has_status: *u8) shared.Status {
     const h = shared.fromOpaqueActive(handle) orelse return .invalid_argument;
-    const metadata = h.session.copyMetadata(h.allocator, &h.scratch_title, &h.scratch_cwd) catch |err| return shared.mapError(err);
+    const metadata = host_queries.copyMetadata(h.session, h.allocator, &h.scratch_title, &h.scratch_cwd) catch |err| return shared.mapError(err);
     if (metadata.exit_code) |code| {
         out_code.* = code;
         out_has_status.* = 1;
