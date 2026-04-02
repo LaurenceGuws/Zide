@@ -194,6 +194,8 @@ Identity progress, later on 2026-04-02:
   compatibility alias `PtyTerminalRuntime`
 - `PtyTerminalRuntime` is now reduced to VT-root compatibility residue rather
   than the preferred owning type name in the live stack
+- internal host/runtime infrastructure now follows that same identity:
+  workspace and replay-harness code speak `TerminalSession` directly too
 
 ## Sprint Target
 

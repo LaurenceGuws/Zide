@@ -221,6 +221,9 @@ Focused follow-up lane:
     at the main entrypoint
   - app/UI/FFI callers now use `TerminalSession` directly; `PtyTerminalRuntime`
     is reduced to compatibility residue at the VT root
+  - workspace and replay-harness infrastructure now use `TerminalSession`
+    directly too; the old PTY name is mostly down to compatibility and
+    historical test naming
 
 - `docs/review/TERMINAL_NATIVE_ARCHITECTURAL_SCRUTINY_2026-03-31.md`
   Why: this is the current ruthless read on what still looks second-rate at

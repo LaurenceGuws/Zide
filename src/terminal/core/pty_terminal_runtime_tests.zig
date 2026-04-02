@@ -21,7 +21,8 @@ const runtime_mod = @import("terminal_runtime.zig");
 const terminal_transport = @import("runtime/terminal_transport.zig");
 const pty_mod = @import("../io/pty.zig");
 
-const PtyTerminalRuntime = runtime_mod.PtyTerminalRuntime;
+const TerminalSession = runtime_mod.TerminalSession;
+const PtyTerminalRuntime = TerminalSession;
 const Cell = types.Cell;
 const Color = types.Color;
 const Dirty = render_cache.Dirty;
@@ -59,7 +60,7 @@ fn snapshotContainsAscii(snapshot: snapshot_mod.TerminalSnapshot, needle: []cons
 test "external transport poll updates screen and metadata" {
     const allocator = std.testing.allocator;
 
-    var session = try PtyTerminalRuntime.init(allocator, 2, 12);
+    var session = try TerminalSession.init(allocator, 2, 12);
     defer session.deinit();
     session_runtime.attachExternalTransport(session);
 
@@ -84,7 +85,7 @@ test "external transport poll updates screen and metadata" {
 test "external transport close updates alive metadata" {
     const allocator = std.testing.allocator;
 
-    var session = try PtyTerminalRuntime.init(allocator, 2, 12);
+    var session = try TerminalSession.init(allocator, 2, 12);
     defer session.deinit();
     session_runtime.attachExternalTransport(session);
 
@@ -103,7 +104,7 @@ test "external transport close updates alive metadata" {
 test "external transport sendText queues outbound bytes" {
     const allocator = std.testing.allocator;
 
-    var session = try PtyTerminalRuntime.init(allocator, 2, 12);
+    var session = try TerminalSession.init(allocator, 2, 12);
     defer session.deinit();
     session_runtime.attachExternalTransport(session);
 
@@ -117,7 +118,7 @@ test "external transport sendText queues outbound bytes" {
 test "alt screen core helpers preserve cursor save restore behavior" {
     const allocator = std.testing.allocator;
 
-    var session = try PtyTerminalRuntime.init(allocator, 3, 8);
+    var session = try TerminalSession.init(allocator, 3, 8);
     defer session.deinit();
 
     session.primary.setCursor(2, 3);
@@ -136,7 +137,7 @@ test "alt screen core helpers preserve cursor save restore behavior" {
 test "full-region scroll publishes partial cache damage at live bottom" {
     const allocator = std.testing.allocator;
 
-    var session = try PtyTerminalRuntime.init(allocator, 3, 4);
+    var session = try TerminalSession.init(allocator, 3, 4);
     defer session.deinit();
 
     const base = session.primary.defaultCell();
@@ -176,7 +177,7 @@ test "pty-backed session sendText writes through session writer boundary" {
 
     const allocator = std.testing.allocator;
 
-    var session = try PtyTerminalRuntime.init(allocator, 2, 8);
+    var session = try TerminalSession.init(allocator, 2, 8);
     defer session.deinit();
 
     var pty = Pty.init(
@@ -218,7 +219,7 @@ test "pty-backed session sendKey enter writes through session writer boundary" {
 
     const allocator = std.testing.allocator;
 
-    var session = try PtyTerminalRuntime.init(allocator, 4, 16);
+    var session = try TerminalSession.init(allocator, 4, 16);
     defer session.deinit();
 
     var pty = Pty.init(
@@ -254,7 +255,7 @@ test "pty-backed session sendKey enter writes through session writer boundary" {
 test "top-anchored partial scroll region retires rows into scrollback" {
     const allocator = std.testing.allocator;
 
-    var session = try PtyTerminalRuntime.init(allocator, 6, 4);
+    var session = try TerminalSession.init(allocator, 6, 4);
     defer session.deinit();
 
     const base = session.primary.defaultCell();
@@ -289,7 +290,7 @@ test "top-anchored partial scroll region retires rows into scrollback" {
 test "feedOutputBytes keeps incremental damage after baseline publish" {
     const allocator = std.testing.allocator;
 
-    var session = try PtyTerminalRuntime.init(allocator, 1, 4);
+    var session = try TerminalSession.init(allocator, 1, 4);
     defer session.deinit();
 
     _ = publication_flow.bumpAndPublishCurrentViewLocked(session, "test_publication");
@@ -311,7 +312,7 @@ test "feedOutputBytes keeps incremental damage after baseline publish" {
 test "carriage return plus erase line rewrites current row in place" {
     const allocator = std.testing.allocator;
 
-    var session = try PtyTerminalRuntime.init(allocator, 4, 20);
+    var session = try TerminalSession.init(allocator, 4, 20);
     defer session.deinit();
 
     terminal_core_feed.feedOutputBytes(session, "hello");
@@ -331,7 +332,7 @@ test "carriage return plus erase line rewrites current row in place" {
 test "zig progress redraw pattern rewrites block instead of appending" {
     const allocator = std.testing.allocator;
 
-    var session = try PtyTerminalRuntime.init(allocator, 6, 20);
+    var session = try TerminalSession.init(allocator, 6, 20);
     defer session.deinit();
 
     debugSetCursor(&session, 4, 0);
@@ -348,7 +349,7 @@ test "zig progress redraw pattern rewrites block instead of appending" {
 test "zig progress redraw invalidates cleared tail rows" {
     const allocator = std.testing.allocator;
 
-    var session = try PtyTerminalRuntime.init(allocator, 6, 20);
+    var session = try TerminalSession.init(allocator, 6, 20);
     defer session.deinit();
 
     debugSetCursor(&session, 4, 0);
@@ -373,7 +374,7 @@ test "zig progress redraw invalidates cleared tail rows" {
 test "bottom-edge in-place redraw keeps blank separator rows dirty" {
     const allocator = std.testing.allocator;
 
-    var session = try PtyTerminalRuntime.init(allocator, 68, 24);
+    var session = try TerminalSession.init(allocator, 68, 24);
     defer session.deinit();
 
     debugSetCursor(&session, 67, 0);
@@ -413,7 +414,7 @@ test "bottom-edge in-place redraw keeps blank separator rows dirty" {
 test "synchronized zig progress redraw does not retire intermediate scrollback" {
     const allocator = std.testing.allocator;
 
-    var session = try PtyTerminalRuntime.init(allocator, 68, 20);
+    var session = try TerminalSession.init(allocator, 68, 20);
     defer session.deinit();
 
     debugSetCursor(&session, 67, 0);
@@ -438,7 +439,7 @@ test "synchronized zig progress redraw does not retire intermediate scrollback" 
 test "synchronized top-anchored partial scroll region retires rows into scrollback" {
     const allocator = std.testing.allocator;
 
-    var session = try PtyTerminalRuntime.init(allocator, 6, 4);
+    var session = try TerminalSession.init(allocator, 6, 4);
     defer session.deinit();
 
     const base = session.primary.defaultCell();
@@ -476,7 +477,7 @@ test "synchronized top-anchored partial scroll region retires rows into scrollba
 test "single-chunk synchronized progress sequence keeps newline scroll inside sync window" {
     const allocator = std.testing.allocator;
 
-    var session = try PtyTerminalRuntime.init(allocator, 68, 20);
+    var session = try TerminalSession.init(allocator, 68, 20);
     defer session.deinit();
 
     debugSetCursor(&session, 67, 0);
@@ -494,7 +495,7 @@ test "single-chunk synchronized progress sequence keeps newline scroll inside sy
 test "reverse index moves cursor up inside scroll region" {
     const allocator = std.testing.allocator;
 
-    var session = try PtyTerminalRuntime.init(allocator, 6, 8);
+    var session = try TerminalSession.init(allocator, 6, 8);
     defer session.deinit();
 
     debugSetCursor(&session, 4, 2);
@@ -508,7 +509,7 @@ test "reverse index moves cursor up inside scroll region" {
 test "real zig redraw chunk rewrites in place at bottom edge" {
     const allocator = std.testing.allocator;
 
-    var session = try PtyTerminalRuntime.init(allocator, 68, 80);
+    var session = try TerminalSession.init(allocator, 68, 80);
     defer session.deinit();
 
     debugSetCursor(&session, 67, 0);
@@ -540,7 +541,7 @@ test "real zig redraw chunk rewrites in place at bottom edge" {
 test "osc 9;4 progress reports update structured host progress state" {
     const allocator = std.testing.allocator;
 
-    var session = try PtyTerminalRuntime.init(allocator, 4, 20);
+    var session = try TerminalSession.init(allocator, 4, 20);
     defer session.deinit();
 
     terminal_core_feed.feedOutputBytes(session, "\x1b]9;4;1;42\x07");
@@ -562,7 +563,7 @@ test "osc 9;4 progress reports update structured host progress state" {
 test "repeat guide chunks do not grow scrollback unexpectedly" {
     const allocator = std.testing.allocator;
 
-    var session = try PtyTerminalRuntime.init(allocator, 4, 10);
+    var session = try TerminalSession.init(allocator, 4, 10);
     defer session.deinit();
     session_runtime.attachExternalTransport(session);
 
@@ -591,7 +592,7 @@ test "repeat guide chunks do not grow scrollback unexpectedly" {
 test "repeat guide chunks publish current broad cache contract" {
     const allocator = std.testing.allocator;
 
-    var session = try PtyTerminalRuntime.init(allocator, 4, 10);
+    var session = try TerminalSession.init(allocator, 4, 10);
     defer session.deinit();
     session_runtime.attachExternalTransport(session);
 
@@ -616,7 +617,7 @@ test "repeat guide chunks publish current broad cache contract" {
 test "first repeat guide packet keeps bottom row clean today" {
     const allocator = std.testing.allocator;
 
-    var session = try PtyTerminalRuntime.init(allocator, 4, 10);
+    var session = try TerminalSession.init(allocator, 4, 10);
     defer session.deinit();
     session_runtime.attachExternalTransport(session);
 
@@ -637,7 +638,7 @@ test "first repeat guide packet keeps bottom row clean today" {
 test "repeat guide chunks mark unexpected bottom row dirty today" {
     const allocator = std.testing.allocator;
 
-    var session = try PtyTerminalRuntime.init(allocator, 4, 10);
+    var session = try TerminalSession.init(allocator, 4, 10);
     defer session.deinit();
     session_runtime.attachExternalTransport(session);
 
@@ -663,7 +664,7 @@ test "repeat guide chunks mark unexpected bottom row dirty today" {
 test "repeat guide second packet keeps raw screen bottom row clean" {
     const allocator = std.testing.allocator;
 
-    var session = try PtyTerminalRuntime.init(allocator, 4, 10);
+    var session = try TerminalSession.init(allocator, 4, 10);
     defer session.deinit();
     session_runtime.attachExternalTransport(session);
 
@@ -687,7 +688,7 @@ test "repeat guide second packet keeps raw screen bottom row clean" {
 test "manual repeat guide publication still dirties bottom row today" {
     const allocator = std.testing.allocator;
 
-    var session = try PtyTerminalRuntime.init(allocator, 4, 10);
+    var session = try TerminalSession.init(allocator, 4, 10);
     defer session.deinit();
 
     session.debugFeedBytes("\x1b[H1| |aaa \x1b[2;1H2| |bbb \x1b[3;1H3| |ccc \x1b[4;1H4| |ddd ");
@@ -717,7 +718,7 @@ test "manual repeat guide publication still dirties bottom row today" {
 test "acknowledgePresentedGeneration derives sync dirty retirement from cache" {
     const allocator = std.testing.allocator;
 
-    var session = try PtyTerminalRuntime.init(allocator, 1, 4);
+    var session = try TerminalSession.init(allocator, 1, 4);
     defer session.deinit();
 
     session.primary.markDirtyAllWithReason(.unknown, @src());
@@ -737,7 +738,7 @@ test "acknowledgePresentedGeneration derives sync dirty retirement from cache" {
 test "row hash refinement does not skip unpresented top rows" {
     const allocator = std.testing.allocator;
 
-    var session = try PtyTerminalRuntime.init(allocator, 3, 4);
+    var session = try TerminalSession.init(allocator, 3, 4);
     defer session.deinit();
 
     const base = session.primary.defaultCell();
@@ -774,7 +775,7 @@ test "row hash refinement does not skip unpresented top rows" {
 test "live-bottom history growth keeps blank exposed row dirty" {
     const allocator = std.testing.allocator;
 
-    var session = try PtyTerminalRuntime.init(allocator, 3, 4);
+    var session = try TerminalSession.init(allocator, 3, 4);
     defer session.deinit();
 
     const base = session.primary.defaultCell();
@@ -823,7 +824,7 @@ test "live-bottom history growth keeps blank exposed row dirty" {
 test "row hash refinement does not suppress newly dirty rows against unpresented cache" {
     const allocator = std.testing.allocator;
 
-    var session = try PtyTerminalRuntime.init(allocator, 2, 4);
+    var session = try TerminalSession.init(allocator, 2, 4);
     defer session.deinit();
 
     const base = session.primary.defaultCell();
@@ -872,7 +873,7 @@ test "row hash refinement does not suppress newly dirty rows against unpresented
 test "snapshot view preserves disjoint same-row dirty spans" {
     const allocator = std.testing.allocator;
 
-    var session = try PtyTerminalRuntime.init(allocator, 2, 20);
+    var session = try TerminalSession.init(allocator, 2, 20);
     defer session.deinit();
 
     session.primary.clearDirty();
@@ -894,7 +895,7 @@ test "snapshot view preserves disjoint same-row dirty spans" {
 test "view cache preserves disjoint same-row dirty spans" {
     const allocator = std.testing.allocator;
 
-    var session = try PtyTerminalRuntime.init(allocator, 2, 20);
+    var session = try TerminalSession.init(allocator, 2, 20);
     defer session.deinit();
 
     session.primary.clearDirty();
@@ -918,7 +919,7 @@ test "view cache preserves disjoint same-row dirty spans" {
 test "setSyncUpdates enable does not force redraw when screen is otherwise clean" {
     const allocator = std.testing.allocator;
 
-    var session = try PtyTerminalRuntime.init(allocator, 2, 4);
+    var session = try TerminalSession.init(allocator, 2, 4);
     defer session.deinit();
 
     _ = publication_flow.bumpAndPublishCurrentViewLocked(session, "test_publication");
@@ -937,7 +938,7 @@ test "setSyncUpdates enable does not force redraw when screen is otherwise clean
 test "setSyncUpdates enable does not publish dirty screen state on presented generation" {
     const allocator = std.testing.allocator;
 
-    var session = try PtyTerminalRuntime.init(allocator, 2, 4);
+    var session = try TerminalSession.init(allocator, 2, 4);
     defer session.deinit();
 
     _ = publication_flow.bumpAndPublishCurrentViewLocked(session, "test_publication");
@@ -972,7 +973,7 @@ test "setSyncUpdates enable does not publish dirty screen state on presented gen
 test "setSyncUpdates disable stays clean when no buffered changes exist" {
     const allocator = std.testing.allocator;
 
-    var session = try PtyTerminalRuntime.init(allocator, 2, 4);
+    var session = try TerminalSession.init(allocator, 2, 4);
     defer session.deinit();
 
     sync_updates.set(session, true);
@@ -991,7 +992,7 @@ test "setSyncUpdates disable stays clean when no buffered changes exist" {
 test "setSyncUpdates disable preserves buffered partial damage" {
     const allocator = std.testing.allocator;
 
-    var session = try PtyTerminalRuntime.init(allocator, 2, 4);
+    var session = try TerminalSession.init(allocator, 2, 4);
     defer session.deinit();
 
     _ = publication_flow.bumpAndPublishCurrentViewLocked(session, "test_publication");
@@ -1021,7 +1022,7 @@ test "setSyncUpdates disable preserves buffered partial damage" {
 test "visible history changes publish partial cache damage without force-full" {
     const allocator = std.testing.allocator;
 
-    var session = try PtyTerminalRuntime.init(allocator, 2, 4);
+    var session = try TerminalSession.init(allocator, 2, 4);
     defer session.deinit();
 
     const base = session.primary.defaultCell();
@@ -1056,7 +1057,7 @@ test "visible history changes publish partial cache damage without force-full" {
 test "visible history changes without presented diff base stay partial" {
     const allocator = std.testing.allocator;
 
-    var session = try PtyTerminalRuntime.init(allocator, 2, 4);
+    var session = try TerminalSession.init(allocator, 2, 4);
     defer session.deinit();
 
     const base = session.primary.defaultCell();
@@ -1094,7 +1095,7 @@ test "visible history changes without presented diff base stay partial" {
 test "scrollback offset change publishes shift-exposed partial damage" {
     const allocator = std.testing.allocator;
 
-    var session = try PtyTerminalRuntime.init(allocator, 2, 4);
+    var session = try TerminalSession.init(allocator, 2, 4);
     defer session.deinit();
 
     const base = session.primary.defaultCell();
@@ -1133,7 +1134,7 @@ test "scrollback offset change publishes shift-exposed partial damage" {
 test "scrollback offset change advances published generation" {
     const allocator = std.testing.allocator;
 
-    var session = try PtyTerminalRuntime.init(allocator, 2, 4);
+    var session = try TerminalSession.init(allocator, 2, 4);
     defer session.deinit();
 
     session.debugPushScrollbackRow("AAAA");
@@ -1157,7 +1158,7 @@ test "scrollback offset change advances published generation" {
 test "session snapshot reflects pinned scrollback viewport" {
     const allocator = std.testing.allocator;
 
-    var session = try PtyTerminalRuntime.init(allocator, 2, 4);
+    var session = try TerminalSession.init(allocator, 2, 4);
     defer session.deinit();
     session_runtime.attachExternalTransport(session);
 
@@ -1177,7 +1178,7 @@ test "session snapshot reflects pinned scrollback viewport" {
 test "acknowledgePresentedGeneration does not retire newer scrollback view publication" {
     const allocator = std.testing.allocator;
 
-    var session = try PtyTerminalRuntime.init(allocator, 2, 4);
+    var session = try TerminalSession.init(allocator, 2, 4);
     defer session.deinit();
 
     session.debugPushScrollbackRow("AAAA");
@@ -1203,7 +1204,7 @@ test "acknowledgePresentedGeneration does not retire newer scrollback view publi
 test "acknowledgePresentedGeneration does not retire newer normal publication" {
     const allocator = std.testing.allocator;
 
-    var session = try PtyTerminalRuntime.init(allocator, 2, 4);
+    var session = try TerminalSession.init(allocator, 2, 4);
     defer session.deinit();
 
     _ = publication_flow.bumpAndPublishCurrentViewLocked(session, "test_publication");

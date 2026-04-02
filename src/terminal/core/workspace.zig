@@ -7,12 +7,12 @@ const app_logger = @import("../../app_logger.zig");
 const runtime_policy = @import("../../app/runtime_policy.zig");
 const polling = @import("workspace_polling.zig");
 
-const PtyTerminalRuntime = runtime_mod.PtyTerminalRuntime;
+const TerminalSession = runtime_mod.TerminalSession;
 pub const TabId = u64;
 
 const Tab = struct {
     id: TabId,
-    session: *PtyTerminalRuntime,
+    session: *TerminalSession,
 };
 
 pub const TabSyncEntry = struct {
@@ -106,7 +106,7 @@ pub const TerminalWorkspace = struct {
     };
 
     allocator: std.mem.Allocator,
-    init_options: PtyTerminalRuntime.InitOptions,
+    init_options: TerminalSession.InitOptions,
     tabs: std.ArrayList(Tab),
     active_index: usize,
     next_tab_id: TabId,
@@ -116,7 +116,7 @@ pub const TerminalWorkspace = struct {
     last_poll_metrics: PollFrameMetrics,
     poll_runtime_counters: PollRuntimeCounters,
 
-    pub fn init(allocator: std.mem.Allocator, init_options: PtyTerminalRuntime.InitOptions) TerminalWorkspace {
+    pub fn init(allocator: std.mem.Allocator, init_options: TerminalSession.InitOptions) TerminalWorkspace {
         return .{
             .allocator = allocator,
             .init_options = init_options,
@@ -163,18 +163,18 @@ pub const TerminalWorkspace = struct {
         return self.tabs.items[self.activeIndex()].id;
     }
 
-    fn sessionAt(self: *TerminalWorkspace, index: usize) ?*PtyTerminalRuntime {
+    fn sessionAt(self: *TerminalWorkspace, index: usize) ?*TerminalSession {
         if (index >= self.tabs.items.len) return null;
         return self.tabs.items[index].session;
     }
 
     pub const CreatedTab = struct {
         id: TabId,
-        session: *PtyTerminalRuntime,
+        session: *TerminalSession,
     };
 
     pub fn createTabWithSession(self: *TerminalWorkspace, rows: u16, cols: u16) !CreatedTab {
-        const session = try PtyTerminalRuntime.initWithOptions(self.allocator, rows, cols, self.init_options);
+        const session = try TerminalSession.initWithOptions(self.allocator, rows, cols, self.init_options);
         errdefer session.deinit();
 
         const tab_id = self.next_tab_id;
