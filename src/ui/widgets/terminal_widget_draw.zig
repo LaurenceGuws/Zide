@@ -7,6 +7,7 @@ const shared_types = @import("../../types/mod.zig");
 const time_utils = @import("../renderer/time_utils.zig");
 const terminal_font_mod = @import("../terminal_font.zig");
 const retained_targets_runtime = @import("../renderer/retained_targets_runtime.zig");
+const scene_frame_runtime = @import("../renderer/scene_frame_runtime.zig");
 const draw_grid = @import("terminal_widget_draw_grid.zig");
 const draw_overlay = @import("terminal_widget_draw_overlay.zig");
 const draw_texture = @import("terminal_widget_draw_texture.zig");
@@ -439,32 +440,32 @@ pub fn drawPrepared(
                 self.partial_draw_rows.resize(self.session.allocator, rows) catch |err| {
                     const log = app_logger.logger("terminal.ui.redraw");
                     log.logf(.warning, "partial row plan resize failed field=rows rows={d} err={s}", .{ rows, @errorName(err) });
-                    retained_targets_runtime.endTerminalSurface(r);
+                    scene_frame_runtime.restoreMainCompositionTarget(r);
                     return outcome;
                 };
                 self.partial_draw_cols_start.resize(self.session.allocator, rows) catch |err| {
                     const log = app_logger.logger("terminal.ui.redraw");
                     log.logf(.warning, "partial row plan resize failed field=cols_start rows={d} err={s}", .{ rows, @errorName(err) });
-                    retained_targets_runtime.endTerminalSurface(r);
+                    scene_frame_runtime.restoreMainCompositionTarget(r);
                     return outcome;
                 };
                 self.partial_draw_cols_end.resize(self.session.allocator, rows) catch |err| {
                     const log = app_logger.logger("terminal.ui.redraw");
                     log.logf(.warning, "partial row plan resize failed field=cols_end rows={d} err={s}", .{ rows, @errorName(err) });
-                    retained_targets_runtime.endTerminalSurface(r);
+                    scene_frame_runtime.restoreMainCompositionTarget(r);
                     return outcome;
                 };
 
                 self.partial_draw_span_counts.resize(self.session.allocator, rows) catch |err| {
                     const log = app_logger.logger("terminal.ui.redraw");
                     log.logf(.warning, "partial row plan resize failed field=span_counts rows={d} err={s}", .{ rows, @errorName(err) });
-                    retained_targets_runtime.endTerminalSurface(r);
+                    scene_frame_runtime.restoreMainCompositionTarget(r);
                     return outcome;
                 };
                 self.partial_draw_spans.resize(self.session.allocator, rows) catch |err| {
                     const log = app_logger.logger("terminal.ui.redraw");
                     log.logf(.warning, "partial row plan resize failed field=spans rows={d} err={s}", .{ rows, @errorName(err) });
-                    retained_targets_runtime.endTerminalSurface(r);
+                    scene_frame_runtime.restoreMainCompositionTarget(r);
                     return outcome;
                 };
 
@@ -536,7 +537,7 @@ pub fn drawPrepared(
                     texture_kitty_ms += time_utils.secondsToMs(app_shell.getTime() - kitty_phase_start);
                 }
             }
-            retained_targets_runtime.endTerminalSurface(r);
+            scene_frame_runtime.restoreMainCompositionTarget(r);
             if (kitty_generation != self.kitty.last_generation) {
                 self.kitty.last_generation = kitty_generation;
             }

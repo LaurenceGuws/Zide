@@ -191,6 +191,9 @@ Status note after the first retained-target ownership cut:
 - editor-surface trace state now lives with `PresentState` in
   `src/ui/renderer/scene_frame_runtime.zig` instead of inflating retained-target
   storage
+- terminal retained-surface end now routes straight to
+  `src/ui/renderer/scene_frame_runtime.zig` instead of through a duplicate
+  one-hop bounce
 
 ### 3. Scene ownership is structurally right, but product-retained-target
 choreography still shapes the steady-state path

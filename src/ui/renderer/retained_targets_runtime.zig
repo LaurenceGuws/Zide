@@ -42,10 +42,6 @@ pub fn beginTerminalSurface(self: anytype) bool {
     return self.beginRenderTarget(self.retained_targets.terminal);
 }
 
-pub fn endTerminalSurface(self: anytype) void {
-    scene_frame_runtime.restoreMainCompositionTarget(self);
-}
-
 pub fn beginEditorSurface(self: anytype) bool {
     scene_frame_runtime.noteEditorSurfaceUpdate(self);
     return self.beginRenderTarget(self.retained_targets.editor);

@@ -122,6 +122,9 @@ Progress note, 2026-04-02:
 - editor-surface trace state now lives with `PresentState` in
   `src/ui/renderer/scene_frame_runtime.zig` instead of inflating retained-target
   storage
+- terminal retained-surface end now routes straight to
+  `src/ui/renderer/scene_frame_runtime.zig` instead of through a duplicate
+  one-hop bounce
 - mouse scale state now lives with `InputRuntimeState` instead of as a loose
   renderer-root field
 - terminal texture-shift and recent-input publication behavior now live as one

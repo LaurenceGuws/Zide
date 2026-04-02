@@ -241,6 +241,9 @@ Progress note, 2026-04-02:
 - editor-surface trace state now lives with `PresentState` in
   `src/ui/renderer/scene_frame_runtime.zig` instead of inflating retained-target
   storage
+- terminal retained-surface end now routes straight to
+  `src/ui/renderer/scene_frame_runtime.zig` instead of through a duplicate
+  one-hop bounce
 
 ### 4. The SDL/GL host seam is functionally decent but still reads like an
 investigation seam
