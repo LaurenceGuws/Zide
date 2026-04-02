@@ -136,6 +136,7 @@ pub fn drawPrepared(
     const draw_state = view_state.drawStateInfo(cache);
     const render_state = draw_state.render;
     const sync_updates = draw_state.sync_updates_active;
+    const retained_surface_ready = self.retained.terminal_texture_ready and retained_targets_runtime.terminalSurfaceAvailable(r);
     const screen_reverse = render_state.screen_reverse;
     const blink_style = self.blink_style;
     const blink_time = app_shell.getTime();
@@ -143,7 +144,7 @@ pub fn drawPrepared(
     const cols = draw_state.cols;
     const view_cells = draw_state.cells;
     const base_colors = view_state.baseColorInfo(cache);
-    if (sync_updates and view_cells.len > 0) {
+    if (sync_updates and view_cells.len > 0 and retained_surface_ready) {
         const bg_color = if (view_cells.len > 0) toShellColor(base_colors.resolved_background) else r.theme.background;
         r.drawRect(
             @intFromFloat(x),
@@ -504,7 +505,8 @@ pub fn drawPrepared(
             }
             updated = true;
         }
-        if (!updated and self.retained.terminal_texture_ready and visible_w > 0 and visible_h > 0) {
+        const retained_surface_ready_after_update = self.retained.terminal_texture_ready and retained_targets_runtime.terminalSurfaceAvailable(r);
+        if (!updated and retained_surface_ready_after_update and visible_w > 0 and visible_h > 0) {
             r.beginClip(
                 @intFromFloat(std.math.round(base_x)),
                 @intFromFloat(std.math.round(base_y)),
@@ -518,7 +520,7 @@ pub fn drawPrepared(
                 r.drawRectF(base_x, base_y, viewport_w, viewport_h, bg);
             }
         }
-        if (self.retained.terminal_texture_ready and visible_w > 0 and visible_h > 0) {
+        if (retained_surface_ready_after_update and visible_w > 0 and visible_h > 0) {
             retained_targets_runtime.drawTerminalSurface(r, base_x, base_y, viewport_w, viewport_h, self.retained.last_render_generation);
         }
     }

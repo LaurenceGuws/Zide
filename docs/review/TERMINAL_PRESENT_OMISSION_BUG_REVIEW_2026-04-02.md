@@ -78,18 +78,24 @@ Focused-terminal instrumentation note:
 
 ## Strongest Failure Candidates
 
-### 1. Sync-update or clean-cache fast path after a full scene clear
+### 1. Sync-update fast path returning before retained-surface availability is proven
 
 In [terminal_widget_draw.zig](/home/home/personal/zide/src/ui/widgets/terminal_widget_draw.zig),
-the sync-update fast path and the retained-texture reuse path can both draw the
-terminal surface without doing a texture update.
+the sync-update fast path can return before the normal retained-surface
+ensure/update path runs.
 
-That is fine if the retained surface exists and is actually blitted.
+That is only safe if the retained terminal surface is already available for
+blit.
 
-The concrete bug question is:
+This is now the strongest concrete failure candidate because the old shape was:
 
-- is there any path where the scene clears, but the retained surface draw is
-  skipped despite the frame still submitting?
+- clear scene background
+- call retained-surface draw
+- silently no-op if the retained target is missing
+- return early anyway
+
+That is exactly the kind of omission path that can produce a submitted frame
+with zero terminal-surface blits.
 
 ### 2. Retained terminal surface not ready on a frame that still presents
 

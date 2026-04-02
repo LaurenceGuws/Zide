@@ -47,6 +47,10 @@ pub fn beginEditorSurface(self: anytype) bool {
     return self.beginRenderTarget(self.retained_targets.editor);
 }
 
+pub fn terminalSurfaceAvailable(self: anytype) bool {
+    return self.retained_targets.terminal != null;
+}
+
 pub fn endEditorSurface(self: anytype) void {
     scene_frame_runtime.noteEditorSurfaceEnded(self);
     scene_frame_runtime.restoreMainCompositionTarget(self);
