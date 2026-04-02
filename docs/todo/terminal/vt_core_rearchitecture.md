@@ -184,6 +184,11 @@ Focused follow-up lane:
   - `src/app/terminal/terminal_poll_runtime.zig` is now narrowed to the
     single-session fallback path instead of acting as the workspace poll
     orchestration surface
+  - current rerank: this lane is now much closer to a stop-marker
+  - the remaining split across `workspace_host`, visible-frame hooks, and draw
+    now reads narrower and more honest than the earlier distributed host path
+  - do not keep cutting here by momentum unless a larger visible-frame false
+    center becomes obvious again
 
 ## Current Milestone
 

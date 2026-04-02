@@ -148,3 +148,35 @@ After the publication wave, the next strongest terminal enemy is still not the
 widget pair by default.
 
 It is the broader native host aggregation story.
+
+## Status After Workspace Poll Move
+
+One more real host-facing slab is now gone:
+
+- `workspace_host.zig` owns host-facing frame summary, poll counters, poll
+  metrics, poll policy, and the workspace poll route
+- visible-terminal polling now talks to that host aggregate directly for the
+  workspace case
+- `terminal_poll_runtime.zig` is reduced to the single-session fallback path
+
+That materially lowers the previous ambiguity around workspace versus app poll
+ownership.
+
+## Updated Rerank
+
+The host lane is now much closer to a stop-marker than it was at the start of
+this review.
+
+The remaining visible host split now reads more like:
+
+- `workspace_host.zig` for host-facing workspace aggregation and polling
+- `visible_terminal_frame_hooks_runtime.zig` for visible-frame poll/input
+  routing
+- `terminal_draw_surface_runtime.zig` for draw
+
+That may still not be the final best-in-class shape, but it is no longer an
+obvious false center in the same way.
+
+So the next move should not be automatic continuation here. It should be a
+fresh War 2 rerank unless a larger visible-frame orchestration lie becomes
+obvious again.
