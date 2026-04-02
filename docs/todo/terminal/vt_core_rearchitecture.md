@@ -233,6 +233,11 @@ Focused follow-up lane:
   - this lane is no longer about wrapper theater
   - the strongest first cut is likely the remaining ESC semantic effect slab
     still routed inline from `src/terminal/parser/parser.zig`
+  Progress:
+  - that first cut is now landed
+  - the ESC semantic effect slab now lives in
+    `src/terminal/core/protocol/esc_effects.zig`
+    instead of being coordinated inline from `parser.zig`
 
 ## Current Milestone
 

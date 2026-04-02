@@ -132,6 +132,16 @@ Why:
 - and it would make the parser read more like a decoder and less like a
   semantic router
 
+Status update:
+
+- that first cut is now landed
+- the remaining semantic ESC effect cluster moved below the parser boundary
+  into
+  [esc_effects.zig](/home/home/personal/zide/src/terminal/core/protocol/esc_effects.zig)
+
+That does not finish this lane, but it is the right opener because the parser
+no longer coordinates those effect owners inline.
+
 ### Candidate B: broader text/protocol command surface below parser
 
 This is the larger follow-up candidate.
