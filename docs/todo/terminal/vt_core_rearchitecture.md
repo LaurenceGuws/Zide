@@ -68,6 +68,17 @@ gravity into smaller files.
   - so this war should now stop from the stronger baseline unless a new input
     slab appears that is terminal-semantic in substance and separable from
     writer selection, protocol encoding, and transport/reporting
+- `docs/review/VT_POST_INPUT_RERANK_2026-04-03.md`
+  Why: now that the input war is closed, the VT queue needs a fresh top item
+  instead of stale momentum.
+  Current read:
+  - the top blocker is no longer shell-centered input semantics
+  - the top blocker is now `TerminalCore` sufficiency again
+  - public resize remains the next most concrete parity gap after that
+  - viewport/selection mutation surface is still worth watching, but is now
+    clearly second-order
+  - `host_queries.zig` and ABI breadth remain lower-priority guardrails, not
+    the default war
 
 - `docs/review/VT_WAR_4_SCOPE_AND_SEEDS_2026-04-03.md`
   Why: the next scrutiny pass is no longer a cleanup sprint; it is a focused

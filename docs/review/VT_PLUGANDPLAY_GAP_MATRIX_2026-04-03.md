@@ -56,7 +56,7 @@ The remaining gap is now design quality, not cleanup residue.
 
 ## Ranked Gap List
 
-### 1. Host-driving input semantics are still too shell-centered
+### 1. Host-driving input semantics were the top blocker, and are now materially lower
 
 Current Zide shape:
 
@@ -71,20 +71,22 @@ Current Zide shape:
 - FFI host input in [host_api.zig](/home/home/personal/zide/src/terminal/ffi/host_api.zig)
   terminates there too
 
-Why this is still the top blocker:
+Why this was the top blocker:
 
 - Ghostty and WezTerm both make terminal-driving interaction feel more
   terminal-owned
 - Zide already fixed output feed/apply and resize semantics enough to expose
   the remaining pressure clearly
-- War 4 proved the next candidate is key/char semantic dispatch before writer
-  encoding, but also proved it is not yet a clean code cut
+- the input semantics war then landed the clean semantic slices:
+  - key action dispatch
+  - keypad action dispatch
+  - alternate-scroll mapping
+  - char action dispatch
 
 What matters:
 
-- this is no longer "input is messy"
-- this is specifically that the terminal object does not yet feel sufficiently
-  like the owner of host-driving semantic interaction
+- the remaining input surface is now mostly writer/reporting-shaped
+- so input no longer deserves default-war status from the new baseline
 
 ### 2. `TerminalCore` still does not feel fully sufficient as the terminal object
 
@@ -109,10 +111,10 @@ Why it matters:
 - Zide is now close enough that this is a sufficiency problem, not a structural
   sludge problem
 
-This is the second-biggest blocker because:
+This is now the strongest remaining blocker because:
 
-- if input semantics were cleaner, this category would likely become the final
-  remaining gap
+- input semantics are materially cleaner now
+- this category is again the clearest remaining pressure
 
 ### 3. Public resize is still shell-first in feel
 
@@ -221,12 +223,13 @@ That work already paid off.
 
 ## What Deserves Uninterrupted Focus
 
-If the goal is plug-and-play pressure, the list is now clear:
+If the goal is plug-and-play pressure, the list from the newer baseline is now:
 
-1. key/char semantic dispatch before writer encoding
-2. broader host-driving input semantics after that
-3. public resize story if input is solved
-4. only then reconsider whether `TerminalCore` still lacks one more sufficiency slab
+1. `TerminalCore` sufficiency
+2. public resize story
+3. viewport/selection mutation surface
+4. only then reconsider whether host metadata packaging or ABI normalization
+   actually moved back up
 
 ## Bottom Line
 
@@ -235,8 +238,8 @@ The direct answer is:
 - Zide is now credibly extractable as `zide-vt`
 - it is still not near true plug-and-play parity with `libghostty-vt`
 - the strongest remaining blocker is no longer architecture sludge
-- the strongest remaining blocker is host-driving interaction semantics still
-  feeling more shell-centered than terminal-centered
+- the strongest remaining blocker is now `TerminalCore` sufficiency from the
+  new post-input baseline
 
 If we stay disciplined, the next wars should be judged against this exact list,
 not reopened from vague discomfort.
