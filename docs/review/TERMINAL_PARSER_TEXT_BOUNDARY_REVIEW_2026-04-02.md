@@ -166,30 +166,37 @@ effect owner directly.
 
 ## Current Judgment
 
-The strongest first cut in this lane is likely the ESC semantic effect slab.
+The first parser-boundary wave was worth doing.
 
 More concretely:
 
-- do not reopen this lane as a vague “parser is too big” complaint
-- target the inline ESC semantic routing that still forces `parser.zig` to
-  know too much about effect owners
+- the ESC semantic effect slab is out
+- decoded parser dispatch is out
+- `parser.zig` is now much closer to parser-local state plus state-machine flow
+
+That means this lane is approaching a rerank point too.
+
+The next cut should only happen if one more real semantic slab still sits too
+high above the VT boundary.
+
+If not, the honest move is to stop and rerank War 2 again from the top.
 
 ## Best Next Review Question
 
-What should the engine-owned ESC command surface be so that
+What, if anything, still prevents
 [parser.zig](/home/home/personal/zide/src/terminal/parser/parser.zig)
-stops directly coordinating:
+from reading like a parser-local state machine over a narrower engine-owned
+dispatch surface?
 
-- mode reset
-- cursor save/restore
-- tab setting
-- reverse index
-- keypad mode toggles
+More concretely:
+
+- is there one more semantic slab above the parser boundary
+- or has the lane now improved enough that the next top-level War 2 enemy is
+  elsewhere again
 
 ## Bottom Line
 
-If War 2 continues from here, the first parser/text cut should be:
+The first parser/text wave materially improved the boundary.
 
-- move the remaining ESC semantic effect slab below the parser boundary
-
-not another general parser tidy-up pass.
+Do not keep cutting here by momentum unless one more real semantic slab
+becomes obvious.

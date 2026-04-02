@@ -241,6 +241,11 @@ Focused follow-up lane:
   - decoded parser dispatch now also lives below the parser boundary in
     `src/terminal/core/protocol/parser_dispatch.zig`
     instead of being hand-routed inline from `parser.zig`
+  - current rerank: this lane is now approaching a stop-marker too
+  - `parser.zig` reads much closer to parser-local state plus state-machine
+    flow over a narrower engine-owned dispatch surface
+  - do not keep cutting here by momentum unless one more real semantic slab
+    becomes obvious
 
 ## Current Milestone
 
