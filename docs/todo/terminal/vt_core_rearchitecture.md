@@ -218,6 +218,14 @@ Focused follow-up lane:
     actual retained-surface planning/execution
   - do not keep splitting it by momentum unless one more real owner boundary
     becomes obvious
+- `docs/review/TERMINAL_WAR_2_POST_WIDGET_RERANK_2026-04-02.md`
+  Why: after the first widget/render wave, the top-level War 2 ranking
+  changes again.
+  Current read:
+  - widget/render is no longer obviously the default enemy
+  - publication and host aggregation remain paused
+  - the next likely structural battlefield is again parser / text semantics
+    below the VT boundary
 
 ## Current Milestone
 
