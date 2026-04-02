@@ -189,6 +189,14 @@ Focused follow-up lane:
     now reads narrower and more honest than the earlier distributed host path
   - do not keep cutting here by momentum unless a larger visible-frame false
     center becomes obvious again
+- `docs/review/TERMINAL_WAR_2_POST_HOST_RERANK_2026-04-02.md`
+  Why: after the host-aggregation wave, the top-level War 2 ranking changes
+  again.
+  Current read:
+  - publication is no longer the default enemy
+  - host aggregation is now much closer to honest
+  - parser/protocol still matter, but no longer dominate first-glance read
+  - the next likely battlefield is now the widget / retained-render center
 
 ## Current Milestone
 
