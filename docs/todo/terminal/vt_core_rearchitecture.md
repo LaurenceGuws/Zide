@@ -68,6 +68,9 @@ Focused follow-up lane:
   - publication now owns the frame/publication snapshot shape directly and
     workspace forwards the active-session contract instead of rebuilding those
     booleans locally
+  - frame pacing now consumes that publication-owned snapshot type directly,
+    so the next likely ambiguity has shifted away from pacing summaries and
+    toward remaining widget-local presentation handoff state
 
 ## Current Milestone
 

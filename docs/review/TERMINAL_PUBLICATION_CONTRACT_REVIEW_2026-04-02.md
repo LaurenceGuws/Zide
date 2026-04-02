@@ -208,6 +208,9 @@ Progress note, 2026-04-02:
   `terminal_publication.FrameState`
 - workspace now forwards that contract for the active session instead of
   rebuilding redraw/backlog/output-pressure locally
+- terminal frame pacing now consumes that same publication-owned snapshot type
+  directly instead of maintaining a parallel snapshot shape or local frame-state
+  mirrors
 
 ## Recommended Review Sequence
 
@@ -225,3 +228,12 @@ The next best move is a sharper review of the one remaining ambiguous seam:
 
 - what is the single authoritative host-facing terminal frame/publication
   contract?
+
+Rerank note, after the frame-state contract cuts:
+
+- the frame/pacing side of this seam is now close to diminishing returns
+- the next likely ambiguity is no longer pacing summary shape
+- the next likely ambiguity is whether widget-local presentation handoff state
+  (`draw_cache`, `pending_presentation_feedback`, texture/generation tracking)
+  is now the correct remaining local state, or whether part of it still belongs
+  under a sharper publication/presentation contract
