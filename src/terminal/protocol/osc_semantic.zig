@@ -4,14 +4,6 @@ const osc_util = @import("osc_util.zig");
 const semantic_prompt_mod = @import("../core/semantic_prompt.zig");
 
 pub fn parseSemanticPrompt(self: anytype, text: []const u8) void {
-    parseSemanticPromptDirect(self, text);
-}
-
-pub fn parseUserVar(self: anytype, text: []const u8) void {
-    parseUserVarDirect(self, text);
-}
-
-fn parseSemanticPromptDirect(self: anytype, text: []const u8) void {
     if (text.len == 0) return;
     const log = app_logger.logger("terminal.osc");
     const kind = text[0];
@@ -55,7 +47,7 @@ fn parseSemanticPromptDirect(self: anytype, text: []const u8) void {
     }
 }
 
-fn parseUserVarDirect(self: anytype, text: []const u8) void {
+pub fn parseUserVar(self: anytype, text: []const u8) void {
     const log = app_logger.logger("terminal.osc");
     const prefix = "SetUserVar=";
     if (!std.mem.startsWith(u8, text, prefix)) return;

@@ -26,54 +26,6 @@ pub const EVENT_MOUSE_BUTTON_DOWN: c_uint = c.SDL_EVENT_MOUSE_BUTTON_DOWN;
 pub const EVENT_MOUSE_BUTTON_UP: c_uint = c.SDL_EVENT_MOUSE_BUTTON_UP;
 pub const EVENT_MOUSE_WHEEL: c_uint = c.SDL_EVENT_MOUSE_WHEEL;
 
-pub const TextInputLayout = struct {
-    size: usize,
-    offset_type: usize,
-    offset_reserved: usize,
-    offset_timestamp: usize,
-    offset_window_id: usize,
-    offset_text: usize,
-};
-
-pub const TextEditingLayout = struct {
-    size: usize,
-    offset_type: usize,
-    offset_reserved: usize,
-    offset_timestamp: usize,
-    offset_window_id: usize,
-    offset_text: usize,
-    offset_start: usize,
-    offset_length: usize,
-    offset_cursor: usize,
-    offset_selection_len: usize,
-};
-
-pub fn textInputLayout() TextInputLayout {
-    return .{
-        .size = @sizeOf(c.SDL_TextInputEvent),
-        .offset_type = @offsetOf(c.SDL_TextInputEvent, "type"),
-        .offset_reserved = @offsetOf(c.SDL_TextInputEvent, "reserved"),
-        .offset_timestamp = @offsetOf(c.SDL_TextInputEvent, "timestamp"),
-        .offset_window_id = @offsetOf(c.SDL_TextInputEvent, "windowID"),
-        .offset_text = @offsetOf(c.SDL_TextInputEvent, "text"),
-    };
-}
-
-pub fn textEditingLayout() TextEditingLayout {
-    return .{
-        .size = @sizeOf(c.SDL_TextEditingEvent),
-        .offset_type = @offsetOf(c.SDL_TextEditingEvent, "type"),
-        .offset_reserved = @offsetOf(c.SDL_TextEditingEvent, "reserved"),
-        .offset_timestamp = @offsetOf(c.SDL_TextEditingEvent, "timestamp"),
-        .offset_window_id = @offsetOf(c.SDL_TextEditingEvent, "windowID"),
-        .offset_text = @offsetOf(c.SDL_TextEditingEvent, "text"),
-        .offset_start = @offsetOf(c.SDL_TextEditingEvent, "start"),
-        .offset_length = @offsetOf(c.SDL_TextEditingEvent, "length"),
-        .offset_cursor = @offsetOf(c.SDL_TextEditingEvent, "start"),
-        .offset_selection_len = @offsetOf(c.SDL_TextEditingEvent, "length"),
-    };
-}
-
 pub fn isWindowEventType(event_type: c_uint) bool {
     if (event_type == c.SDL_EVENT_WINDOW_SHOWN) return true;
     if (event_type == c.SDL_EVENT_WINDOW_HIDDEN) return true;

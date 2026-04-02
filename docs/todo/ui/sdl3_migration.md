@@ -29,5 +29,5 @@ Status note, 2026-03-15:
 - [x] `S3-02` Compile-only SDL3 smoke check
 - [x] `S4-01` Runtime smoke for window, input, and text input
 - [x] `S4-02` Fix SDL3 text input pointer lifetime
-- [ ] `S4-03` Clean up temporary SDL3 input logging
+- [x] `S4-03` Clean up temporary SDL3 input logging
 - [x] `S5-01` Drop the fallback build

@@ -965,6 +965,28 @@ Validation note, 2026-03-31:
     `src/terminal/core/publication/terminal_publication.zig` as
     `publishPendingGenerationLocked(...)` and
     `publishViewRefreshRequestLocked(...)`
+  - parse/debug publication intent is tighter too:
+    parse loops and debug scroll-offset staging no longer open-code
+    "parsed output bumps generation", "pending output publish also marks
+    output pending", or "offset change may need a generation bump before
+    current-view publish"; those owner actions now live under
+    `src/terminal/core/publication/terminal_publication.zig` as
+    `noteParsedOutputLocked(...)`,
+    `publishPendingOutputLocked(...)`, and
+    `publishCurrentViewForScrollOffsetChangeLocked(...)`
+  - config publication intent is tighter too:
+    `src/terminal/core/session/config.zig` no longer republish theme palette
+    changes by routing through multiple publishing setters; config mutation can
+    now stage palette/default-color updates without intermediate publication
+    churn and publish once for the whole logical change
+  - scroll-view refresh policy is tighter too:
+    `scrollback_view.zig` and `resize_reflow.zig` no longer coordinate
+    scroll-offset refresh choreography themselves; publication now owns those
+    owner actions via `refreshScrollViewForOffsetChangeLocked(...)` and
+    `refreshScrollViewLocked(...)`
+  - another small OSC trampoline is gone too:
+    `osc_semantic.zig` no longer routes `parseSemanticPrompt(...)` and
+    `parseUserVar(...)` through duplicate same-object `*Direct` helpers
   - poll-side publication choreography is tighter too:
     `src/terminal/core/runtime/pty_poll_publication.zig` no longer manually
     sequences "publish current view if data arrived, then apply pending

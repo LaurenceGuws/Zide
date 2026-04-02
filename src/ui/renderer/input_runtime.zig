@@ -10,8 +10,6 @@ pub fn pollInputEvents(
     self: anytype,
     mouse_wheel_delta: *f32,
     sdl_input_env_logged: *bool,
-    sdl3_textinput_layout_logged: *bool,
-    sdl3_textediting_layout_logged: *bool,
 ) void {
     const input_log = app_logger.logger("input.sdl");
     const window_log = app_logger.logger("sdl.window");
@@ -52,14 +50,14 @@ pub fn pollInputEvents(
     var event_count: usize = 0;
     if (self.pending_wait_event_valid) {
         event_count += 1;
-        handleEvent(self, &self.pending_wait_event, input_log, window_log, state, sdl3_textinput_layout_logged, sdl3_textediting_layout_logged);
+        handleEvent(self, &self.pending_wait_event, input_log, window_log, state);
         self.pending_wait_event_valid = false;
     }
 
     var event: sdl_api.c.SDL_Event = undefined;
     while (sdl_api.pollEvent(&event)) {
         event_count += 1;
-        handleEvent(self, &event, input_log, window_log, state, sdl3_textinput_layout_logged, sdl3_textediting_layout_logged);
+        handleEvent(self, &event, input_log, window_log, state);
     }
     if (event_count > 0) input_log.logf(.info, "sdl3 polled events={d}", .{event_count});
 }
@@ -70,8 +68,6 @@ fn handleEvent(
     input_log: app_logger.Logger,
     window_log: app_logger.Logger,
     state: input_state.InputState,
-    sdl3_textinput_layout_logged: *bool,
-    sdl3_textediting_layout_logged: *bool,
 ) void {
     const main_window_id = sdl_api.getWindowId(self.window);
     switch (event.type) {
@@ -122,32 +118,10 @@ fn handleEvent(
             input_state.applyTextInputReset(state);
             input_logging.logTextInput(text_len);
             input_log.logf(.info, "textinput type={d}", .{event.type});
-            if (!sdl3_textinput_layout_logged.*) {
-                const layout = sdl_api.textInputLayout();
-                input_logging.logTextInputLayout(layout.size, sdl_api.sdlEventSize(), layout.offset_type, layout.offset_reserved, layout.offset_timestamp, layout.offset_window_id, layout.offset_text);
-                input_logging.logEventBytes("textinput event", std.mem.asBytes(event));
-                sdl3_textinput_layout_logged.* = true;
-            }
-            input_logging.logTextInputPointer(text_len, sdl_api.textInputPointer(event));
-            if (text_len > 0) {
-                const text = sdl_api.textSpanWithLen(event.text.text, text_len);
-                input_logging.logTextInputRaw(text);
-            }
         },
         sdl_api.EVENT_TEXT_EDITING => {
             const edit_info = platform_input_events.handleTextEditing(event, &self.composing_text, &self.composing_cursor, &self.composing_selection_len, &self.composing_active, self.allocator);
             input_logging.logTextEditing(edit_info.bytes, edit_info.cursor, edit_info.selection_len);
-            if (!sdl3_textediting_layout_logged.*) {
-                const layout = sdl_api.textEditingLayout();
-                input_logging.logTextEditingLayout(layout.size, sdl_api.sdlEventSize(), layout.offset_type, layout.offset_reserved, layout.offset_timestamp, layout.offset_window_id, layout.offset_text, layout.offset_start, layout.offset_length, layout.offset_cursor, layout.offset_selection_len);
-                input_logging.logEventBytes("textedit event", std.mem.asBytes(event));
-                sdl3_textediting_layout_logged.* = true;
-            }
-            input_logging.logTextEditingPointer(edit_info.bytes, edit_info.cursor, edit_info.selection_len, sdl_api.textEditingPointer(event));
-            if (edit_info.bytes > 0) {
-                const text = sdl_api.textSpanWithLen(event.edit.text, edit_info.bytes);
-                input_logging.logTextEditingRaw(text, edit_info.cursor, edit_info.selection_len);
-            }
         },
         sdl_api.EVENT_MOUSE_BUTTON_DOWN => {
             platform_input_events.handleMouseButtonDown(event, self.mouse_down[0..], self.mouse_pressed[0..], self.mouse_clicks[0..]);

@@ -528,6 +528,21 @@ Evidence:
 - raw generation-cache lookup is now publication-internal too:
   host code only gets the locked publication contract for generation lookup,
   not the raw unlocked storage walk
+- parse/debug publication intent is tighter too:
+  parse loops and debug scroll-offset staging no longer open-code raw
+  generation/publish choreography; `terminal_publication.zig` now owns the
+  parsed-output generation bump, pending-output publish, and offset-change
+  publication actions directly
+- config publication intent is tighter too:
+  `src/terminal/core/session/config.zig` no longer routes one logical theme
+  palette change through multiple intermediate publishing setters; palette and
+  default-color mutation can stage first and publish once
+- scroll-view refresh policy is tighter too:
+  `scrollback_view.zig` and `resize_reflow.zig` no longer hand-sequence queue
+  refresh plus scroll-view cache rebuild; publication owns those actions now
+- another small protocol trampoline is gone too:
+  `src/terminal/protocol/osc_semantic.zig` no longer routes its public OSC
+  semantic entrypoints through duplicate same-object `*Direct` helpers
 - the CSI reply/query path lost another forwarding slab:
   `src/terminal/protocol/csi.zig` no longer carries local DA/DSR/window-op
   bounce helpers that only forwarded into `csi_reply.zig` /

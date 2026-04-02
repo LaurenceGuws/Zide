@@ -58,7 +58,7 @@ pub fn readThreadMain(session: anytype) void {
                 session.runtime.io_wait_cond.signal();
                 if (session.runtime.parse_thread == null) {
                     terminal_publication.markOutputPending(session);
-                    _ = terminal_publication.bumpGeneration(session);
+                    _ = terminal_publication.noteParsedOutputLocked(session);
                 }
             }
             _ = start_ms;
@@ -105,14 +105,13 @@ pub fn parseThreadMain(session: anytype) void {
             if (session.control.parse_bytes_since_publish > 0 and pending_refresh == null and !session.core.sync_updates_active) {
                 const publish_lock_start_ns = std.time.nanoTimestamp();
                 session.control.state_mutex.lock();
-                terminal_publication.publishPendingGenerationLocked(session, session.core.history.scrollOffset(), "parse_thread_idle_publish");
+                terminal_publication.publishPendingOutputLocked(session, session.core.history.scrollOffset(), "parse_thread_idle_publish");
                 session.control.state_mutex.unlock();
                 _ = std.time.nanoTimestamp() - publish_lock_start_ns;
                 session.control.parse_publishes_since_log += 1;
                 session.control.parse_bytes_since_log += session.control.parse_bytes_since_publish;
                 session.control.parse_bytes_since_publish = 0;
                 session.control.last_parse_publish_ms = std.time.milliTimestamp();
-                terminal_publication.markOutputPending(session);
             }
             if (pending_refresh) |request| {
                 session.control.state_mutex.lock();
@@ -185,7 +184,7 @@ pub fn parseThreadMain(session: anytype) void {
             session.control.state_mutex.unlock();
             parse_lock_hold_ns += std.time.nanoTimestamp() - parse_lock_start_ns;
             processed += chunk_len;
-            _ = terminal_publication.bumpGeneration(session);
+            _ = terminal_publication.noteParsedOutputLocked(session);
         }
 
         session.runtime.io_mutex.lock();
@@ -227,7 +226,7 @@ pub fn parseThreadMain(session: anytype) void {
                         session.core.history.scrollOffset();
                     const publish_lock_start_ns = std.time.nanoTimestamp();
                     session.control.state_mutex.lock();
-                    terminal_publication.publishPendingGenerationLocked(session, target_offset, "parse_thread_publish");
+                    terminal_publication.publishPendingOutputLocked(session, target_offset, "parse_thread_publish");
                     session.control.state_mutex.unlock();
                     const publish_lock_ns = std.time.nanoTimestamp() - publish_lock_start_ns;
                     publish_lock_hold_ns += publish_lock_ns;
@@ -235,7 +234,6 @@ pub fn parseThreadMain(session: anytype) void {
                     session.control.parse_bytes_since_log += session.control.parse_bytes_since_publish;
                     session.control.parse_bytes_since_publish = 0;
                     session.control.last_parse_publish_ms = end_ms;
-                    terminal_publication.markOutputPending(session);
                     if (presentation_backlog) {
                         std.Thread.yield() catch {};
                     }

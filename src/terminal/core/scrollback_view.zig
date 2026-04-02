@@ -88,8 +88,7 @@ pub fn setScrollOffset(self: anytype, offset: usize) void {
 pub fn setScrollOffsetLocked(self: anytype, offset: usize) void {
     const before = self.core.history.scrollOffset();
     const after = self.core.setScrollbackOffset(self.core.primary.grid.rows, self.core.primary.grid.cols, self.core.primary.defaultCell(), offset);
-    _ = terminal_publication.requestViewRefreshIfOffsetChangedLocked(self, before, after);
-    terminal_publication.updateViewCacheForScrollLocked(self);
+    _ = terminal_publication.refreshScrollViewForOffsetChangeLocked(self, before, after);
 }
 
 pub fn resetToLiveBottomLocked(self: anytype) bool {
@@ -140,6 +139,5 @@ pub fn scrollByLocked(self: anytype, delta: isize) void {
     if (delta == 0) return;
     const before = self.core.history.scrollOffset();
     const after = self.core.scrollScrollbackBy(self.core.primary.grid.rows, self.core.primary.grid.cols, self.core.primary.defaultCell(), delta);
-    _ = terminal_publication.requestViewRefreshIfOffsetChangedLocked(self, before, after);
-    terminal_publication.updateViewCacheForScrollLocked(self);
+    _ = terminal_publication.refreshScrollViewForOffsetChangeLocked(self, before, after);
 }

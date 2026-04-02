@@ -60,8 +60,6 @@ pub const WindowSizes = struct {
 
 var active_renderer: ?*Renderer = null;
 var mouse_wheel_delta: f32 = 0.0;
-var sdl3_textinput_layout_logged: bool = false;
-var sdl3_textediting_layout_logged: bool = false;
 var sdl_input_env_logged: bool = false;
 
 pub const FontFamily = iface.FontFamily;
@@ -1731,8 +1729,6 @@ pub const Renderer = struct {
             self,
             &mouse_wheel_delta,
             &sdl_input_env_logged,
-            &sdl3_textinput_layout_logged,
-            &sdl3_textediting_layout_logged,
         );
     }
 };

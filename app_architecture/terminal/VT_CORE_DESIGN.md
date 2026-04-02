@@ -539,6 +539,21 @@ Status note, 2026-03-31:
     `src/terminal/core/session/runtime.zig` now pull shared constants and
     types from their direct owners instead of routing them through one more
     wrapper-side export file
+  - publication intent is increasingly owner-shaped too:
+    parse loops and debug scroll-offset staging no longer open-code raw
+    generation/publish choreography; `terminal_publication.zig` now carries
+    explicit owner actions for parsed-output generation bumps, pending-output
+    publish, and scroll-offset-change publication
+  - config mutation is less publication-chatty too:
+    `session/config.zig` can now stage multi-step palette/default-color
+    mutation without routing that logical change through multiple intermediate
+    `publishCurrentViewLocked(...)` calls
+  - scroll-view refresh choreography is less ad hoc too:
+    scrollback movement and resize/reflow no longer hand-sequence queued
+    refresh plus scroll-view cache rebuild outside the publication owner
+  - protocol same-object trampolines are thinner too:
+    `osc_semantic.zig` no longer keeps duplicate `*Direct` entrypoints once
+    the public function already operates on the live runtime object
   - the flat root state has now been grouped into explicit subsystem-owned
     embedded structs:
     - `src/terminal/core/session/publication_fields.zig`

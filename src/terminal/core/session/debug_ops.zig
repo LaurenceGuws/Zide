@@ -50,10 +50,7 @@ pub fn debugSetScrollOffset(self: anytype, offset: usize) void {
     const before = self.core.history.scrollOffset();
     self.core.history.setScrollOffset(self.core.primary.grid.rows, offset);
     const after = self.core.history.scrollOffset();
-    if (after != before) {
-        _ = terminal_publication.bumpGeneration(self);
-    }
-    terminal_publication.replacePendingRefreshWithCurrentViewLocked(self, "debug_apply_without_pending");
+    terminal_publication.publishCurrentViewForScrollOffsetChangeLocked(self, before, after, "debug_apply_without_pending");
 }
 
 pub fn debugSetScrollbackCell(self: anytype, row: usize, col: usize, codepoint: u32) void {

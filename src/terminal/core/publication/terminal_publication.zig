@@ -365,12 +365,16 @@ pub fn snapshot(self: anytype) TerminalSnapshot {
 
 pub fn publishFeedResultLocked(self: anytype, result: @import("../protocol/terminal_core_feed.zig").FeedResult) void {
     if (!result.parsed) return;
-    _ = bumpGeneration(self);
+    _ = noteParsedOutputLocked(self);
     view_cache.updateViewCacheNoLockTagged(self, pendingGeneration(self), result.scroll_offset, "publish_feed_result");
 }
 
 pub fn bumpGeneration(self: anytype) u64 {
     return self.publication.pending_generation.fetchAdd(1, .acq_rel) + 1;
+}
+
+pub fn noteParsedOutputLocked(self: anytype) u64 {
+    return bumpGeneration(self);
 }
 
 pub fn requestViewRefreshLocked(self: anytype, scroll_offset: usize) u64 {
@@ -385,6 +389,17 @@ pub fn requestViewRefreshIfOffsetChangedLocked(self: anytype, before: usize, aft
     }
     queueViewRefreshLocked(self, after);
     return pendingGeneration(self);
+}
+
+pub fn refreshScrollViewForOffsetChangeLocked(self: anytype, before: usize, after: usize) u64 {
+    const generation = requestViewRefreshIfOffsetChangedLocked(self, before, after);
+    updateViewCacheForScrollLocked(self);
+    return generation;
+}
+
+pub fn refreshScrollViewLocked(self: anytype, scroll_offset: usize) void {
+    queueViewRefreshLocked(self, scroll_offset);
+    updateViewCacheForScrollLocked(self);
 }
 
 pub fn queueViewRefreshLocked(self: anytype, scroll_offset: usize) void {
@@ -415,6 +430,11 @@ pub fn publishPendingGenerationLocked(self: anytype, scroll_offset: usize, sourc
     publishGenerationLocked(self, pendingGeneration(self), scroll_offset, source);
 }
 
+pub fn publishPendingOutputLocked(self: anytype, scroll_offset: usize, source: []const u8) void {
+    publishPendingGenerationLocked(self, scroll_offset, source);
+    markOutputPending(self);
+}
+
 pub fn publishViewRefreshRequestLocked(self: anytype, request: ViewRefreshRequest, source: []const u8) void {
     publishGenerationLocked(self, request.generation, request.scroll_offset, source);
 }
@@ -422,6 +442,18 @@ pub fn publishViewRefreshRequestLocked(self: anytype, request: ViewRefreshReques
 pub fn replacePendingRefreshWithCurrentViewLocked(self: anytype, source: []const u8) void {
     clearPendingViewRefresh(self);
     publishCurrentViewLocked(self, source);
+}
+
+pub fn publishCurrentViewForScrollOffsetChangeLocked(
+    self: anytype,
+    before: usize,
+    after: usize,
+    source: []const u8,
+) void {
+    if (after != before) {
+        _ = bumpGeneration(self);
+    }
+    replacePendingRefreshWithCurrentViewLocked(self, source);
 }
 
 pub fn applyPendingViewRefreshLocked(self: anytype, source: []const u8) bool {
