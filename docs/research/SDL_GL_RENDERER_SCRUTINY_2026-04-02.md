@@ -232,6 +232,9 @@ Progress note, 2026-04-02:
 - editor live-smoke capture arming now lives in
   `src/app/editor/live_smoke_runtime.zig` instead of remaining inline in
   `src/app/draw_frame_runtime.zig`
+- editor pending-highlight redraw now lives in
+  `src/app/editor/editor_draw_surface_runtime.zig` instead of remaining inline
+  in `src/app/draw_frame_runtime.zig`
 
 ### 4. The SDL/GL host seam is functionally decent but still reads like an
 investigation seam

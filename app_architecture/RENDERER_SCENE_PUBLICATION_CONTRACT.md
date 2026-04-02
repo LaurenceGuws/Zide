@@ -286,6 +286,8 @@ The convergence rule is:
   so acknowledgement policy lives with a dedicated host completion owner
 - keep editor live-smoke capture arming with the editor-smoke owner instead of
   leaking that policy back into the frame-loop driver
+- keep editor pending-highlight redraw with the editor draw owner instead of
+  leaking that redraw policy back into the frame-loop driver
 - keep implementation internals retained and optimized
 
 ### Phase 4: Unified host draw reasoning

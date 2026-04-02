@@ -25,3 +25,11 @@ pub fn draw(state: anytype, shell: anytype, layout: layout_types.WidgetLayout) v
         state.last_input,
     );
 }
+
+pub fn redrawAfterPendingHighlight(state: anytype, shell: anytype, layout: layout_types.WidgetLayout) void {
+    if (!app_modes.ide.supportsEditorSurface(state.app_mode) or state.editors.items.len == 0) return;
+
+    const editor = app_active_editor_runtime.fromState(state) orelse return;
+    if (!editor.applyPendingVisibleHighlightResult(&state.editor_render_cache)) return;
+    draw(state, shell, layout);
+}

@@ -1,7 +1,7 @@
 const app_font_sample_draw_runtime = @import("font_sample_draw_runtime.zig");
 const app_terminal_draw_surface_runtime = @import("terminal/terminal_draw_surface_runtime.zig");
 const app_editor_live_smoke_runtime = @import("editor/live_smoke_runtime.zig");
-const app_active_editor_runtime = @import("editor/active_editor_runtime.zig");
+const app_editor_draw_surface_runtime = @import("editor/editor_draw_surface_runtime.zig");
 const app_present_feedback_runtime = @import("present_feedback_runtime.zig");
 const app_scene_assembly_runtime = @import("scene_assembly_runtime.zig");
 const mode_build = @import("mode_build.zig");
@@ -14,18 +14,6 @@ pub const Hooks = struct {
     apply_current_tab_bar_width_mode: *const fn (*anyopaque) void,
     terminal_close_confirm_active: *const fn (*anyopaque) bool,
 };
-
-fn redrawEditorAfterPendingHighlight(state: anytype, shell: anytype, layout: layout_types.WidgetLayout) void {
-    if (comptime mode_build.focused_mode == .terminal) return;
-
-    const editor = app_active_editor_runtime.fromState(state);
-    if (editor) |active_editor| {
-        if (active_editor.applyPendingVisibleHighlightResult(&state.editor_render_cache)) {
-            const app_editor_draw_surface_runtime = @import("editor/editor_draw_surface_runtime.zig");
-            app_editor_draw_surface_runtime.draw(state, shell, layout);
-        }
-    }
-}
 
 pub fn draw(state: anytype, shell: anytype, ctx: *anyopaque, hooks: Hooks) void {
     shell.beginFrame();
@@ -49,7 +37,9 @@ pub fn draw(state: anytype, shell: anytype, ctx: *anyopaque, hooks: Hooks) void 
             .terminal_close_confirm_active = hooks.terminal_close_confirm_active,
         },
     );
-    redrawEditorAfterPendingHighlight(state, shell, layout);
+    if (comptime mode_build.focused_mode != .terminal) {
+        app_editor_draw_surface_runtime.redrawAfterPendingHighlight(state, shell, layout);
+    }
 
     const capture_path = if (comptime mode_build.focused_mode == .terminal)
         null
