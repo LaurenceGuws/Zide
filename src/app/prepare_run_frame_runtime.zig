@@ -8,6 +8,7 @@ const app_signals = @import("signals.zig");
 const app_terminal_tab_navigation_runtime = @import("terminal/terminal_tab_navigation_runtime.zig");
 const app_editor_live_smoke_runtime = @import("editor/live_smoke_runtime.zig");
 const input_builder = @import("../input/input_builder.zig");
+const workspace_host = @import("../terminal/core/workspace_host.zig");
 
 pub fn prepare(state: anytype) !?app_run_loop_driver.FrameSetup {
     return try prepareWithMode(state, null);
@@ -79,8 +80,8 @@ fn shouldAutoCloseTerminalOnChildExit(state: anytype, app_mode: app_bootstrap.Ap
     if (state.terminal_window_close_pending or state.terminal_close_confirm_tab != null) return false;
     const workspace = if (state.terminal_workspace) |*workspace| workspace else return false;
     if (workspace.tabCount() == 0) return false;
-    workspace.refreshActiveSessionChildExit();
-    return !workspace.activeSessionAlive();
+    workspace_host.refreshActiveSessionChildExit(workspace);
+    return !workspace_host.activeSessionAlive(workspace);
 }
 
 fn handlePendingTerminalWindowClose(state: anytype, app_mode: app_bootstrap.AppMode) bool {
@@ -105,7 +106,7 @@ fn handlePendingTerminalWindowClose(state: anytype, app_mode: app_bootstrap.AppM
     }
 
     const active_idx = workspace.activeIndex();
-    const next_confirm = workspace.firstConfirmCloseTab() orelse {
+    const next_confirm = workspace_host.firstConfirmCloseTab(workspace) orelse {
         state.terminal_window_close_pending = false;
         return true;
     };

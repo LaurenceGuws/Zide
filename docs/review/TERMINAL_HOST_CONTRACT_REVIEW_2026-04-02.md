@@ -198,3 +198,31 @@ The next best move is a broader native terminal host review focused on:
 
 - workspace as aggregate center
 - draw/runtime orchestration as host center
+
+## Follow-Through
+
+First real host-aggregate cut landed:
+
+- active-session cwd copy
+- active-session child-exit refresh and liveness
+- active-session close-confirm requirement
+- close-confirm tab scan and context lookup
+
+These no longer live on `workspace.zig`; they now live under
+`src/terminal/core/workspace_host.zig`.
+
+That leaves `workspace.zig` reading closer to its real center:
+
+- tab ownership and activation
+- sizing and tab lifecycle
+- poll budgeting and counters
+- frame-state forwarding
+- tab sync packaging
+
+Current rerank:
+
+1. remaining workspace host packaging, especially tab sync and whether any
+   close-confirm packaging still deserves to sit on the main aggregate
+2. native draw/runtime orchestration split across `visible_terminal_frame*`
+   and `terminal_draw_surface_runtime.zig`
+3. publication micro-cuts, still paused unless a larger seam appears

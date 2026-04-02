@@ -1,6 +1,7 @@
 const app_modes = @import("../modes/mod.zig");
 const app_shell = @import("../../app_shell.zig");
 const app_state_types = @import("../app_state_types.zig");
+const workspace_host = @import("../../terminal/core/workspace_host.zig");
 const shared_types = @import("../../types/mod.zig");
 
 const Shell = app_shell.Shell;
@@ -27,7 +28,7 @@ pub fn draw(state: anytype, shell: *Shell, layout: WidgetLayout, app_theme: app_
     const cancel_bg = app_theme.ui_tab_inactive_bg;
     const confirm_ctx = if (state.terminal_workspace) |*workspace|
         if (state.terminal_close_confirm_tab) |tab_id|
-            workspace.closeConfirmContextForTabId(tab_id)
+            workspace_host.closeConfirmContextForTabId(workspace, tab_id)
         else
             null
     else

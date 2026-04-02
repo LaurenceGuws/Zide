@@ -2,6 +2,7 @@ const app_modes = @import("../modes/mod.zig");
 const app_terminal_active_widget = @import("terminal_active_widget.zig");
 const app_terminal_close_confirm_state = @import("terminal_close_confirm_state.zig");
 const app_terminal_refresh_sizing_runtime = @import("terminal_refresh_sizing_runtime.zig");
+const workspace_host = @import("../../terminal/core/workspace_host.zig");
 
 pub const Hooks = struct {
     sync_terminal_mode_tab_bar: *const fn (*anyopaque) anyerror!void,
@@ -15,7 +16,7 @@ pub fn closeActive(state: anytype, ctx: *anyopaque, hooks: Hooks) !bool {
             if (app_terminal_close_confirm_state.shouldArmCloseConfirm(
                 state.terminal_close_confirm_tab,
                 active_tab_id,
-                workspace.activeSessionShouldConfirmClose(),
+                workspace_host.activeSessionShouldConfirmClose(workspace),
             )) {
                 state.terminal_close_confirm_tab = active_tab_id;
                 state.needs_redraw = true;

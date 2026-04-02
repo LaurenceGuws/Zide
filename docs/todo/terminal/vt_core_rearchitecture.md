@@ -80,6 +80,10 @@ Focused follow-up lane:
   especially `workspace.zig` plus the draw/runtime path.
   Current read:
   - `workspace.zig` is now the strongest remaining native-host aggregate center
+  - first real host cut landed: active-session host convenience and
+    close-confirm routing now live under
+    `src/terminal/core/workspace_host.zig` instead of inflating the main
+    workspace aggregate
   - the other likely host pressure point is the split across
     `visible_terminal_frame.zig`,
     `visible_terminal_frame_hooks_runtime.zig`, and

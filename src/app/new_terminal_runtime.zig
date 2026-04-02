@@ -9,6 +9,7 @@ const app_ui_layout_runtime = @import("ui_layout_runtime.zig");
 const terminal_cli = @import("terminal_cli.zig");
 const terminal_runtime = @import("../terminal/core/terminal_runtime.zig");
 const workspace_mod = @import("../terminal/core/workspace.zig");
+const workspace_host = @import("../terminal/core/workspace_host.zig");
 const app_logger = @import("../app_logger.zig");
 
 const PtyTerminalRuntime = terminal_runtime.PtyTerminalRuntime;
@@ -67,7 +68,7 @@ fn launchCwdForWorkspaceNewTab(state: anytype, workspace: *TerminalWorkspace) !L
         .current => {
             var cwd_buf = std.ArrayList(u8).empty;
             defer cwd_buf.deinit(state.allocator);
-            const cwd = try workspace.copyActiveSessionCwd(state.allocator, &cwd_buf);
+            const cwd = try workspace_host.copyActiveSessionCwd(workspace, state.allocator, &cwd_buf);
             if (cwd.len > 0) {
                 const owned = try state.allocator.dupe(u8, cwd);
                 return .{

@@ -5,6 +5,7 @@ const host_types = @import("../src/terminal/core/session/host_types.zig");
 const mode_effects = @import("../src/terminal/core/session/mode_effects.zig");
 const session_runtime = @import("../src/terminal/core/session/runtime.zig");
 const workspace_mod = @import("../src/terminal/core/workspace.zig");
+const workspace_host = @import("../src/terminal/core/workspace_host.zig");
 
 test "terminal workspace create switch move close lifecycle" {
     var workspace = workspace_mod.TerminalWorkspace.init(std.testing.allocator, .{});
@@ -68,12 +69,12 @@ test "terminal workspace first confirm close tab returns first matching tab" {
     const first = try workspace.createTabWithSession(24, 80);
     const second = try workspace.createTabWithSession(24, 80);
 
-    try std.testing.expect(workspace.firstConfirmCloseTab() == null);
+    try std.testing.expect(workspace_host.firstConfirmCloseTab(&workspace) == null);
 
     try session_runtime.startNoThreads(first.session, null);
     mode_effects.enterAltScreen(first.session, true, false);
 
-    const target = workspace.firstConfirmCloseTab() orelse return error.TestUnexpectedResult;
+    const target = workspace_host.firstConfirmCloseTab(&workspace) orelse return error.TestUnexpectedResult;
     try std.testing.expectEqual(@as(usize, 0), target.index);
     try std.testing.expectEqual(first.id, target.id);
 
