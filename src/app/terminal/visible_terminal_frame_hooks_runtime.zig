@@ -2,10 +2,11 @@ const std = @import("std");
 const app_logger = @import("../../app_logger.zig");
 const app_bootstrap = @import("../bootstrap.zig");
 const app_modes = @import("../modes/mod.zig");
+const app_terminal_active_widget = @import("terminal_active_widget.zig");
 const app_poll_visible_terminal_sessions_runtime = @import("poll_visible_terminal_sessions_runtime.zig");
 const app_terminal_scrollbar_runtime = @import("terminal_scrollbar_runtime.zig");
+const app_terminal_surface_gate = @import("terminal_surface_gate.zig");
 const app_terminal_widget_input_hook_runtime = @import("terminal_widget_input_hook_runtime.zig");
-const app_visible_terminal_frame = @import("visible_terminal_frame.zig");
 const app_shell = @import("../../app_shell.zig");
 const shared_types = @import("../../types/mod.zig");
 const widgets = @import("../../ui/widgets.zig");
@@ -15,6 +16,10 @@ const input_types = shared_types.input;
 const ActiveMode = app_modes.ide.ActiveMode;
 const Shell = app_shell.Shell;
 const TerminalWidget = widgets.TerminalWidget;
+
+const Result = struct {
+    needs_redraw: bool = false,
+};
 
 pub const Hooks = struct {
     open_file: *const fn (*anyopaque, []const u8) anyerror!void,
@@ -34,6 +39,22 @@ fn hasTerminalInputActivity(batch: *const input_types.InputBatch) bool {
     if (batch.mouseReleased(.left) or batch.mouseReleased(.middle) or batch.mouseReleased(.right)) return true;
     if (batch.mouseDown(.left) or batch.mouseDown(.middle) or batch.mouseDown(.right)) return true;
     return batch.scroll.x != 0 or batch.scroll.y != 0;
+}
+
+fn hasPassiveMouseMoveOnly(input_batch: *input_types.InputBatch, in_terminal_rect: bool) bool {
+    if (!in_terminal_rect) return false;
+    if (!input_batch.mouseMoved()) return false;
+    if (input_batch.scroll.x != 0 or input_batch.scroll.y != 0) return false;
+    if (input_batch.mouseDown(.left) or input_batch.mouseDown(.middle) or input_batch.mouseDown(.right) or input_batch.mouseDown(.back) or input_batch.mouseDown(.forward) or input_batch.mouseDown(.other)) return false;
+    if (input_batch.mousePressed(.left) or input_batch.mousePressed(.middle) or input_batch.mousePressed(.right) or input_batch.mousePressed(.back) or input_batch.mousePressed(.forward) or input_batch.mousePressed(.other)) return false;
+    if (input_batch.mouseReleased(.left) or input_batch.mouseReleased(.middle) or input_batch.mouseReleased(.right) or input_batch.mouseReleased(.back) or input_batch.mouseReleased(.forward) or input_batch.mouseReleased(.other)) return false;
+    for (input_batch.events.items) |event| {
+        switch (event) {
+            .mouse => {},
+            else => return false,
+        }
+    }
+    return true;
 }
 
 pub fn handle(
@@ -58,7 +79,7 @@ pub fn handle(
     ctx: *anyopaque,
     hooks: Hooks,
 ) !void {
-    var runtime_state = struct {
+    const runtime_state = struct {
         app_mode: app_bootstrap.AppMode,
         show_terminal: bool,
         terminal_workspace: @TypeOf(terminal_workspace),
@@ -82,118 +103,91 @@ pub fn handle(
         .hooks = hooks,
     };
 
-    const terminal_frame_result = try app_visible_terminal_frame.handle(
-        app_mode,
-        show_terminal,
-        terminal_workspace,
-        terminals.len,
-        terminal_widgets,
-        tab_bar_dragging,
-        active_kind,
-        shell,
-        layout,
-        input_batch,
-        search_panel_consumed_input,
-        suppress_terminal_shortcuts,
-        terminal_close_modal_active,
-        now,
-        @ptrCast(&runtime_state),
-        .{
-            .poll_visible_sessions = struct {
-                fn call(route_raw: *anyopaque, poll_batch: *input_types.InputBatch) !void {
-                    const route = @as(*@TypeOf(runtime_state), @ptrCast(@alignCast(route_raw)));
-                    const wake_log = app_logger.logger("terminal.wake");
-                    const input_has_events = poll_batch.events.items.len > 0;
-                    const terminal_input_activity = hasTerminalInputActivity(poll_batch);
-                    const published_changed = try app_poll_visible_terminal_sessions_runtime.handle(
-                        route.app_mode,
-                        route.show_terminal,
-                        route.terminal_workspace,
-                        route.terminals,
-                        input_has_events,
-                        terminal_input_activity,
-                    );
-                    if (wake_log.enabled_file or wake_log.enabled_console) {
-                        wake_log.logFields(.info, "visible_poll", &.{
-                            .{ .key = "input_events", .value = .{ .boolean = input_has_events } },
-                            .{ .key = "terminal_input_activity", .value = .{ .boolean = terminal_input_activity } },
-                            .{ .key = "published_changed", .value = .{ .boolean = published_changed } },
-                        });
-                    }
-                    if (published_changed) route.hooks.mark_redraw(route.user_ctx);
-                }
-            }.call,
-            .handle_terminal_widget_input = struct {
-                fn call(
-                    route_raw: *anyopaque,
-                    term_widget: *TerminalWidget,
-                    term_shell: *Shell,
-                    term_x: f32,
-                    term_y_draw: f32,
-                    term_width: f32,
-                    term_draw_height: f32,
-                    allow_terminal_input: bool,
-                    frame_suppress_shortcuts: bool,
-                    term_input_batch: *input_types.InputBatch,
-                    frame_search_consumed_input: bool,
-                    term_now: f64,
-                ) !void {
-                    const route = @as(*@TypeOf(runtime_state), @ptrCast(@alignCast(route_raw)));
-                    try app_terminal_widget_input_hook_runtime.handle(
-                        term_widget,
-                        term_shell,
-                        term_x,
-                        term_y_draw,
-                        term_width,
-                        term_draw_height,
-                        allow_terminal_input,
-                        frame_suppress_shortcuts,
-                        term_input_batch,
-                        frame_search_consumed_input,
-                        route.allocator,
-                        term_now,
-                        route.user_ctx,
-                        .{
-                            .open_file = route.hooks.open_file,
-                            .open_file_at = route.hooks.open_file_at,
-                            .mark_redraw = route.hooks.mark_redraw,
-                            .note_input = route.hooks.note_input,
-                        },
-                    );
-                }
-            }.call,
-            .handle_terminal_scrollbar_input = struct {
-                fn call(
-                    route_raw: *anyopaque,
-                    term_widget: *TerminalWidget,
-                    term_shell: *Shell,
-                    term_x: f32,
-                    term_y_draw: f32,
-                    term_width: f32,
-                    term_draw_height: f32,
-                    term_input_batch: *input_types.InputBatch,
-                    term_now: f64,
-                ) bool {
-                    const route = @as(*@TypeOf(runtime_state), @ptrCast(@alignCast(route_raw)));
-                    const result = app_terminal_scrollbar_runtime.handleInput(
-                        term_widget,
-                        term_shell,
-                        term_x,
-                        term_y_draw,
-                        term_width,
-                        term_draw_height,
-                        term_input_batch,
-                        route.terminal_scrollbar_dragging,
-                        route.terminal_scrollbar_grab_offset,
-                        route.terminal_scrollbar_hovered,
-                    );
-                    if (result.needs_redraw) route.hooks.mark_redraw(route.user_ctx);
-                    if (result.note_input) route.hooks.note_input(route.user_ctx, term_now);
-                    return result.blocking;
-                }
-            }.call,
-        },
-    );
+    var terminal_frame_result: Result = .{};
+    if (app_terminal_surface_gate.hasVisibleTerminalTabs(app_mode, show_terminal, terminal_workspace.*, terminals.len)) {
+        const wake_log = app_logger.logger("terminal.wake");
+        const input_has_events = input_batch.events.items.len > 0;
+        const terminal_input_activity = hasTerminalInputActivity(input_batch);
+        const published_changed = try app_poll_visible_terminal_sessions_runtime.handle(
+            app_mode,
+            show_terminal,
+            terminal_workspace,
+            terminals,
+            input_has_events,
+            terminal_input_activity,
+        );
+        if (wake_log.enabled_file or wake_log.enabled_console) {
+            wake_log.logFields(.info, "visible_poll", &.{
+                .{ .key = "input_events", .value = .{ .boolean = input_has_events } },
+                .{ .key = "terminal_input_activity", .value = .{ .boolean = terminal_input_activity } },
+                .{ .key = "published_changed", .value = .{ .boolean = published_changed } },
+            });
+        }
+        if (published_changed) hooks.mark_redraw(ctx);
+
+        if (app_terminal_active_widget.resolveActive(
+            app_mode,
+            terminal_workspace,
+            terminals.len,
+            terminal_widgets,
+        )) |term_widget| {
+            const strip = app_modes.ide.terminalStrip(app_mode, layout.terminal.height);
+            const term_y_draw = layout.terminal.y + strip.offset_y;
+            const term_x = layout.terminal.x;
+            const term_draw_height = strip.draw_height;
+
+            if (term_widget.updateBlink(now)) {
+                terminal_frame_result.needs_redraw = true;
+            }
+
+            const suppress_terminal_input_for_tab_drag = app_modes.ide.suppressTerminalInputForTabDrag(app_mode, tab_bar_dragging);
+            const allow_terminal_input = active_kind == .terminal and !terminal_close_modal_active and !suppress_terminal_input_for_tab_drag;
+            const mouse = input_batch.mouse_pos;
+            const in_terminal_rect = mouse.x >= term_x and
+                mouse.x <= term_x + layout.terminal.width and
+                mouse.y >= term_y_draw and
+                mouse.y <= term_y_draw + term_draw_height;
+            const passive_move_only = hasPassiveMouseMoveOnly(input_batch, in_terminal_rect);
+            _ = passive_move_only;
+            const scrollbar_result = app_terminal_scrollbar_runtime.handleInput(
+                term_widget,
+                shell,
+                term_x,
+                term_y_draw,
+                layout.terminal.width,
+                term_draw_height,
+                input_batch,
+                runtime_state.terminal_scrollbar_dragging,
+                runtime_state.terminal_scrollbar_grab_offset,
+                runtime_state.terminal_scrollbar_hovered,
+            );
+            if (scrollbar_result.needs_redraw) hooks.mark_redraw(ctx);
+            if (scrollbar_result.note_input) hooks.note_input(ctx, now);
+            if (!scrollbar_result.blocking) {
+                try app_terminal_widget_input_hook_runtime.handle(
+                    term_widget,
+                    shell,
+                    term_x,
+                    term_y_draw,
+                    layout.terminal.width,
+                    term_draw_height,
+                    allow_terminal_input,
+                    suppress_terminal_shortcuts,
+                    input_batch,
+                    search_panel_consumed_input,
+                    allocator,
+                    now,
+                    ctx,
+                    .{
+                        .open_file = hooks.open_file,
+                        .open_file_at = hooks.open_file_at,
+                        .mark_redraw = hooks.mark_redraw,
+                        .note_input = hooks.note_input,
+                    },
+                );
+            }
+        }
+    }
 
     if (terminal_frame_result.needs_redraw) hooks.mark_redraw(ctx);
 }

@@ -234,6 +234,9 @@ Visible-frame follow-through also started:
 - `visible_terminal_frame_hooks_runtime.handle(...)` no longer carries
   tab-bar sync as part of its hook contract
 - callers now do that post-step themselves
+- the extra single-caller shell `visible_terminal_frame.zig` is now gone;
+  poll/input routing lives directly in
+  `visible_terminal_frame_hooks_runtime.zig`
 
 That makes the visible-frame hook layer read slightly more like a true
 poll/input routing owner and less like a mixed terminal UI convenience center.

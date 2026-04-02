@@ -90,9 +90,11 @@ Focused follow-up lane:
   - visible-frame follow-through started too: tab-bar sync no longer rides
     inside `visible_terminal_frame_hooks_runtime.handle(...)`; callers now do
     that post-step themselves, which narrows the visible-frame hook contract
-  - the other likely host pressure point is the split across
-    `visible_terminal_frame.zig`,
-    `visible_terminal_frame_hooks_runtime.zig`, and
+  - the extra single-caller shell `visible_terminal_frame.zig` is gone too;
+    the live visible-terminal poll/input routing now sits directly in
+    `visible_terminal_frame_hooks_runtime.zig`
+  - the other likely host pressure point is the remaining split across
+    `visible_terminal_frame_hooks_runtime.zig` and
     `terminal_draw_surface_runtime.zig`
 
 ## Current Milestone
