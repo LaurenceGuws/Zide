@@ -58,26 +58,36 @@ gravity into smaller files.
     honest runtime aggregation
   - the strongest remaining suspect is the FFI handle/constructor path that
     still makes the shell the universal host entrypoint
+- `docs/review/VT_WAR_4_SYNTHESIS_2026-04-03.md`
+  Why: the first comparison wave is now converged enough to stop broad
+  scanning and name the strongest remaining contradiction.
+  Current read:
+  - the shell itself is no longer the war
+  - `host_queries.zig` is no longer the main fake center
+  - the strongest remaining plug-and-play mismatch is shell-centered host
+    handle and constructor identity in the FFI boundary
+  - the next fallback target, if that handle story proves acceptable, is a
+    deeper host-to-terminal interaction slab that still feels more shell-owned
+    than terminal-owned
 
 ## Priority Now
 
-Highest-value remaining items, ranked against the current `libghostty-vt` comparison:
+Highest-value remaining items from the current live baseline:
 
-1. `VTCORE-01` break `PtyTerminalRuntime` as the architectural center
-   Why: this is still the most visible fake center in the native terminal
-   stack. As long as it reads like the real terminal, the architecture is
-   lying on first glance.
-2. `VTCORE-05` replace duplicated publication truth with an explicit engine-owned publication center
-   Why: mirror-heavy publication state keeps native rendering and backend
-   retirement too tightly coupled, and it weakens the contract story.
-3. `VTCORE-04` move the remaining semantic text/protocol ownership below the VT boundary
-   Why: parser-hook text semantics are still one of the clearest "wrong layer"
-   smells versus the strongest references.
-4. `VTCORE-02` keep the FFI boundary aligned with the stronger native contract
-   Why: native must become the cleanest reference host over one engine truth,
-   not a privileged semantic owner that FFI tries to imitate later.
-5. `VTCORE-06` keep input encoding transport-agnostic as the rest of the kill-order proceeds
-   Why: this must remain a peer subsystem, not collapse back into session glue.
+1. `VTWAR4-01` decide the FFI handle and constructor identity
+   Why: this is now the strongest remaining plug-and-play contradiction.
+   The host still learns "the thing I create and hold is the shell" even
+   though the engine increasingly owns the interesting truth.
+2. `VTWAR4-02` re-rank host-to-terminal interaction ownership
+   Why: if the handle story is not the real blocker, the next strongest
+   pressure from WezTerm/Ghostty is that live terminal-driving semantics still
+   feel more shell-owned than terminal-owned.
+3. `VTWAR4-03` keep `host_queries.zig` honest but paused
+   Why: this is now mostly legitimate mixed runtime aggregation and should not
+   be reopened by momentum.
+4. `VTWAR4-04` keep contract breadth under scrutiny without narrowing it by dogma
+   Why: Zide's host contract is broader than Ghostty's narrow `vt.h`, but the
+   key question is contract anchoring, not raw function count.
 
 Supporting cuts:
 
