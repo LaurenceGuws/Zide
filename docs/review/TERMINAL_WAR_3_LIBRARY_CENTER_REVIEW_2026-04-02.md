@@ -136,3 +136,13 @@ Status note, later on 2026-04-02:
     weight in `session/runtime.zig`
   - the next right move is a focused runtime contradiction review, not more
     publication cleanup by momentum
+
+Status note, later on 2026-04-02 again:
+
+- the first runtime-shell contradiction wave materially landed too
+- `session/runtime.zig` no longer owns init assembly, launch-shell-path state,
+  or lifecycle entrypoint concentration
+- current rerank:
+  - runtime root is no longer the default enemy either
+  - the next likely War 3 contradiction is the aggregate session object model
+    around `PtyTerminalRuntime`

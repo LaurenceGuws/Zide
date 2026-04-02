@@ -129,6 +129,20 @@ Focused follow-up lane:
   - teardown, child-exit refresh/reporting, and poll now live in
     `src/terminal/core/session/runtime_lifecycle.zig`
     instead of inflating `session/runtime.zig`
+- `docs/review/TERMINAL_WAR_3_POST_RUNTIME_RERANK_2026-04-02.md`
+  Why: the first runtime-shell wave materially landed, so War 3 needs a fresh
+  rerank from the cleaner baseline.
+  Current read:
+  - runtime and publication roots now read much closer to shell/export edges
+  - the next likely contradiction is the aggregate session object model around
+    `PtyTerminalRuntime`, not more runtime helper shaving
+- `docs/review/TERMINAL_WAR_3_SESSION_OBJECT_REVIEW_2026-04-02.md`
+  Why: the next concrete War 3 question is now the owning session/library
+  object model.
+  Current read:
+  - `PtyTerminalRuntime` still reads like the visible aggregate center
+  - `TerminalCore` is real, but still not visibly the owning library center
+  - the next likely battlefield is the aggregate session shape itself
 
 - `docs/review/TERMINAL_NATIVE_ARCHITECTURAL_SCRUTINY_2026-03-31.md`
   Why: this is the current ruthless read on what still looks second-rate at
