@@ -46,6 +46,7 @@ pub const TerminalWidget = struct {
     kitty: kitty_mod.KittyState,
     hover: hover_mod.HoverState = .{},
     pending_open: ?PendingOpen = null,
+    pending_presentation_feedback: ?DrawOutcome = null,
     draw_cache: RenderCache,
     partial_draw_rows: std.ArrayList(bool),
     partial_draw_span_counts: std.ArrayList(u8),
@@ -89,6 +90,7 @@ pub const TerminalWidget = struct {
             .kitty = kitty_mod.KittyState.init(session.allocator),
             .hover = .{},
             .pending_open = null,
+            .pending_presentation_feedback = null,
             .draw_cache = RenderCache.init(),
             .partial_draw_rows = std.ArrayList(bool).empty,
             .partial_draw_span_counts = std.ArrayList(u8).empty,
@@ -222,6 +224,18 @@ pub const TerminalWidget = struct {
         const value = self.pending_open;
         self.pending_open = null;
         return value;
+    }
+
+    pub fn stagePresentationFeedback(self: *TerminalWidget, feedback: DrawOutcome) void {
+        self.pending_presentation_feedback = feedback;
+    }
+
+    pub fn completePendingPresentationFeedback(self: *TerminalWidget, submission: anytype) void {
+        const pending = self.pending_presentation_feedback orelse return;
+        defer self.pending_presentation_feedback = null;
+        if (submission.succeeded) {
+            terminal_publication.completePresentationFeedback(self.session, pending);
+        }
     }
 
     pub fn invalidateTextureCache(self: *TerminalWidget) void {

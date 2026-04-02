@@ -7,7 +7,6 @@ const editor_types = @import("../editor/types.zig");
 const app_logger = @import("../app_logger.zig");
 const terminal_runtime = @import("../terminal/core/terminal_runtime.zig");
 const workspace_mod = @import("../terminal/core/workspace.zig");
-const terminal_publication = @import("../terminal/core/publication/terminal_publication.zig");
 const metrics_mod = @import("../terminal/model/metrics.zig");
 const term_types = @import("../terminal/model/types.zig");
 const shared_types = @import("../types/mod.zig");
@@ -55,13 +54,7 @@ pub const EditorClusterCache = widgets.EditorClusterCache;
 pub const PtyTerminalRuntime = terminal_runtime.PtyTerminalRuntime;
 pub const TerminalWorkspace = workspace_mod.TerminalWorkspace;
 pub const TerminalTabId = workspace_mod.TabId;
-pub const TerminalPresentationFeedback = terminal_publication.PresentationFeedback;
 pub const TerminalCloseConfirmContext = workspace_mod.TerminalWorkspace.CloseConfirmContext;
-
-pub const PendingTerminalPresentationFeedback = struct {
-    session: *PtyTerminalRuntime,
-    feedback: TerminalPresentationFeedback,
-};
 
 pub const Metrics = metrics_mod.Metrics;
 pub const Logger = app_logger.Logger;

@@ -959,6 +959,13 @@ Validation note, 2026-03-31:
     owner contract now lives under
     `src/terminal/core/publication/terminal_publication.zig` as
     `captureLatestPresentation(...)`
+  - native draw/runtime presentation feedback staging is tighter too:
+    app state no longer carries terminal-specific pending presentation feedback
+    or submission-sequence residue; the active `TerminalWidget` now owns
+    pending presentation feedback and
+    `src/app/terminal/terminal_draw_surface_runtime.zig` completes it through
+    the widget instead of staging terminal publication handoff in generic app
+    state
   - scrollback refresh generation policy is tighter too:
     `src/terminal/core/scrollback_view.zig` no longer decides inline whether a
     scrollback offset change should bump generation or only queue refresh; that

@@ -3,7 +3,6 @@ const app_terminal_active_widget = @import("terminal_active_widget.zig");
 const app_terminal_progress_runtime = @import("terminal_progress_runtime.zig");
 const app_terminal_scrollbar_runtime = @import("terminal_scrollbar_runtime.zig");
 const app_terminal_surface_gate = @import("terminal_surface_gate.zig");
-const terminal_publication = @import("../../terminal/core/publication/terminal_publication.zig");
 const host_queries = @import("../../terminal/core/session/host_queries.zig");
 const shared_types = @import("../../types/mod.zig");
 
@@ -61,19 +60,17 @@ pub fn draw(state: anytype, shell: anytype, layout: layout_types.WidgetLayout) v
             state.last_input.mouse_pos,
             state.terminal_scrollbar_dragging,
         );
-        state.pending_terminal_presentation_feedback = .{
-            .session = term_widget.session,
-            .feedback = draw_outcome,
-        };
+        term_widget.stagePresentationFeedback(draw_outcome);
     }
 }
 
 pub fn flushPresentationFeedback(state: anytype, submission: anytype) void {
-    if (state.pending_terminal_presentation_feedback) |pending| {
-        if (submission.succeeded) {
-            terminal_publication.completePresentationFeedback(pending.session, pending.feedback);
-            state.last_terminal_submission_sequence = submission.sequence;
-        }
-        state.pending_terminal_presentation_feedback = null;
+    if (app_terminal_active_widget.resolveActive(
+        state.app_mode,
+        &state.terminal_workspace,
+        state.terminals.items.len,
+        state.terminal_widgets.items,
+    )) |term_widget| {
+        term_widget.completePendingPresentationFeedback(submission);
     }
 }
