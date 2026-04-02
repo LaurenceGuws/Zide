@@ -2,6 +2,7 @@ const std = @import("std");
 const config_mod = @import("../../config/lua_config.zig");
 const app_terminal_shell_icon_runtime = @import("terminal_shell_icon_runtime.zig");
 const terminal_runtime = @import("../../terminal/core/terminal_runtime.zig");
+const workspace_host = @import("../../terminal/core/workspace_host.zig");
 const workspace_mod = @import("../../terminal/core/workspace.zig");
 const host_types = @import("../../terminal/core/session/host_types.zig");
 const widgets = @import("../../ui/widgets.zig");
@@ -114,7 +115,7 @@ pub fn syncFromWorkspace(
         defer string_buf.deinit(tab_bar.allocator);
         var label_buf = std.ArrayList(u8).empty;
         defer label_buf.deinit(tab_bar.allocator);
-        const sync_state = try workspace.copyTabSyncState(tab_bar.allocator, &entry_buf, &string_buf);
+        const sync_state = try workspace_host.copyTabSyncState(workspace, tab_bar.allocator, &entry_buf, &string_buf);
 
         var has_non_terminal = false;
         for (tab_bar.tabs.items) |tab| {

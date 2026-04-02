@@ -53,7 +53,7 @@ test "terminal workspace tab sync state is session-derived" {
     terminal_debug.debugFeedBytes(session, "\x1b]2;build-shell\x07");
     terminal_debug.debugFeedBytes(session, "\x1b]9;4;1;42\x07");
 
-    const sync_state = try workspace.copyTabSyncState(std.testing.allocator, &entry_buf, &string_buf);
+    const sync_state = try workspace_host.copyTabSyncState(&workspace, std.testing.allocator, &entry_buf, &string_buf);
     try std.testing.expectEqual(@as(usize, 1), sync_state.tabs.len);
     try std.testing.expectEqual(created.id, sync_state.active_tab_id.?);
     try std.testing.expectEqual(created.id, sync_state.tabs[0].id);

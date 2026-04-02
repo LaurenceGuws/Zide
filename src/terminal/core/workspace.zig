@@ -1,7 +1,6 @@
 const std = @import("std");
 const terminal_publication = @import("publication/terminal_publication.zig");
 const runtime_mod = @import("terminal_runtime.zig");
-const host_queries = @import("session/host_queries.zig");
 const session_config = @import("session/config.zig");
 const host_types = @import("session/host_types.zig");
 const session_runtime = @import("session/runtime.zig");
@@ -187,62 +186,6 @@ pub const TerminalWorkspace = struct {
         if (self.tabs.items.len == 0) return .{};
         const session = self.tabs.items[self.activeIndex()].session;
         return terminal_publication.frameState(session, session_runtime.hasData(session));
-    }
-
-    pub fn copyTabSyncState(
-        self: *TerminalWorkspace,
-        allocator: std.mem.Allocator,
-        entries_out: *std.ArrayList(TabSyncEntry),
-        strings_out: *std.ArrayList(u8),
-    ) !TabSyncState {
-        entries_out.clearRetainingCapacity();
-        strings_out.clearRetainingCapacity();
-
-        var title_buf = std.ArrayList(u8).empty;
-        defer title_buf.deinit(allocator);
-        var cwd_buf = std.ArrayList(u8).empty;
-        defer cwd_buf.deinit(allocator);
-
-        for (self.tabs.items) |tab| {
-            const metadata = try host_queries.copyMetadata(tab.session, allocator, &title_buf, &cwd_buf);
-            const activity = host_queries.currentActivityMetadata(tab.session);
-
-            const title_offset = strings_out.items.len;
-            try strings_out.appendSlice(allocator, metadata.title);
-            const foreground_process_label_offset = strings_out.items.len;
-            try strings_out.appendSlice(allocator, activity.foreground_process_label);
-            const foreground_process_command_offset = strings_out.items.len;
-            try strings_out.appendSlice(allocator, activity.foreground_process_command);
-            const cwd_offset = strings_out.items.len;
-            try strings_out.appendSlice(allocator, metadata.cwd);
-            const shell_path = session_runtime.launchShellPath(tab.session);
-            const shell_path_offset = strings_out.items.len;
-            try strings_out.appendSlice(allocator, shell_path);
-
-            try entries_out.append(allocator, .{
-                .id = tab.id,
-                .title_offset = title_offset,
-                .title_len = metadata.title.len,
-                .foreground_process_label_offset = foreground_process_label_offset,
-                .foreground_process_label_len = activity.foreground_process_label.len,
-                .foreground_process_command_offset = foreground_process_command_offset,
-                .foreground_process_command_len = activity.foreground_process_command.len,
-                .cwd_offset = cwd_offset,
-                .cwd_len = metadata.cwd.len,
-                .shell_path_offset = shell_path_offset,
-                .shell_path_len = shell_path.len,
-                .alive = metadata.alive,
-                .exit_code = metadata.exit_code,
-                .progress_state = activity.progress.state,
-                .progress_value = activity.progress.value,
-            });
-        }
-
-        return .{
-            .active_tab_id = self.activeTabId(),
-            .strings = strings_out.items,
-            .tabs = entries_out.items,
-        };
     }
 
     pub const CreatedTab = struct {

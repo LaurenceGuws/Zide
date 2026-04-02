@@ -76,3 +76,59 @@ pub fn closeConfirmContextForTabId(
     }
     return null;
 }
+
+pub fn copyTabSyncState(
+    workspace: *TerminalWorkspace,
+    allocator: std.mem.Allocator,
+    entries_out: *std.ArrayList(workspace_mod.TabSyncEntry),
+    strings_out: *std.ArrayList(u8),
+) !workspace_mod.TabSyncState {
+    entries_out.clearRetainingCapacity();
+    strings_out.clearRetainingCapacity();
+
+    var title_buf = std.ArrayList(u8).empty;
+    defer title_buf.deinit(allocator);
+    var cwd_buf = std.ArrayList(u8).empty;
+    defer cwd_buf.deinit(allocator);
+
+    for (workspace.tabs.items) |tab| {
+        const metadata = try host_queries.copyMetadata(tab.session, allocator, &title_buf, &cwd_buf);
+        const activity = host_queries.currentActivityMetadata(tab.session);
+
+        const title_offset = strings_out.items.len;
+        try strings_out.appendSlice(allocator, metadata.title);
+        const foreground_process_label_offset = strings_out.items.len;
+        try strings_out.appendSlice(allocator, activity.foreground_process_label);
+        const foreground_process_command_offset = strings_out.items.len;
+        try strings_out.appendSlice(allocator, activity.foreground_process_command);
+        const cwd_offset = strings_out.items.len;
+        try strings_out.appendSlice(allocator, metadata.cwd);
+        const shell_path = session_runtime.launchShellPath(tab.session);
+        const shell_path_offset = strings_out.items.len;
+        try strings_out.appendSlice(allocator, shell_path);
+
+        try entries_out.append(allocator, .{
+            .id = tab.id,
+            .title_offset = title_offset,
+            .title_len = metadata.title.len,
+            .foreground_process_label_offset = foreground_process_label_offset,
+            .foreground_process_label_len = activity.foreground_process_label.len,
+            .foreground_process_command_offset = foreground_process_command_offset,
+            .foreground_process_command_len = activity.foreground_process_command.len,
+            .cwd_offset = cwd_offset,
+            .cwd_len = metadata.cwd.len,
+            .shell_path_offset = shell_path_offset,
+            .shell_path_len = shell_path.len,
+            .alive = metadata.alive,
+            .exit_code = metadata.exit_code,
+            .progress_state = activity.progress.state,
+            .progress_value = activity.progress.value,
+        });
+    }
+
+    return .{
+        .active_tab_id = workspace.activeTabId(),
+        .strings = strings_out.items,
+        .tabs = entries_out.items,
+    };
+}

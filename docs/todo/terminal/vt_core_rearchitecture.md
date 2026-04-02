@@ -84,6 +84,9 @@ Focused follow-up lane:
     close-confirm routing now live under
     `src/terminal/core/workspace_host.zig` instead of inflating the main
     workspace aggregate
+  - tab sync packaging now lives there too, so the next workspace question is
+    whether any remaining close-confirm packaging still belongs on the main
+    aggregate
   - the other likely host pressure point is the split across
     `visible_terminal_frame.zig`,
     `visible_terminal_frame_hooks_runtime.zig`, and
