@@ -198,6 +198,17 @@ The renderer/present path must explicitly record:
 
 Without that, acknowledgement cannot be made reference-grade.
 
+Status:
+
+- first scene-proof step is now in:
+  - `retained_targets_runtime.drawTerminalSurface(...)` reports terminal-surface
+    blits to `scene_frame_runtime`
+  - `PresentTrace` and `FrameSubmission` now carry:
+    - terminal-surface blit count
+    - terminal-surface generation
+- this is still signal-shape only; retirement behavior remains unchanged until
+  the next slice
+
 ### Slice 3: change publication retirement to require the stronger proof
 
 Replace:

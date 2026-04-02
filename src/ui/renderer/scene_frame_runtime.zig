@@ -17,12 +17,16 @@ const WindowSizes = renderer_root.WindowSizes;
 pub const FrameSubmission = struct {
     succeeded: bool,
     sequence: u64,
+    terminal_surface_blitted: bool = false,
+    terminal_surface_generation: ?u64 = null,
 };
 
 pub const PresentTrace = struct {
     frame_seq: u64 = 0,
     editor_surface_update_count: usize = 0,
     editor_surface_blit_count: usize = 0,
+    terminal_surface_blit_count: usize = 0,
+    terminal_surface_generation: ?u64 = null,
     composition_clip_count: usize = 0,
     composition_full_pane_clear: bool = false,
     captured_path: ?[]const u8 = null,
@@ -102,6 +106,8 @@ pub fn submitFrame(self: anytype) FrameSubmission {
     return .{
         .succeeded = swap_ok,
         .sequence = self.present.submission_sequence,
+        .terminal_surface_blitted = self.present.trace_current.terminal_surface_blit_count > 0,
+        .terminal_surface_generation = self.present.trace_current.terminal_surface_generation,
     };
 }
 
@@ -169,6 +175,11 @@ pub fn noteEditorSurfaceUpdate(self: anytype) void {
 
 pub fn noteEditorSurfaceBlit(self: anytype) void {
     self.present.trace_current.editor_surface_blit_count += 1;
+}
+
+pub fn noteTerminalSurfaceBlit(self: anytype, generation: ?u64) void {
+    self.present.trace_current.terminal_surface_blit_count += 1;
+    if (generation) |value| self.present.trace_current.terminal_surface_generation = value;
 }
 
 pub fn noteEditorSurfaceEnded(self: anytype) void {

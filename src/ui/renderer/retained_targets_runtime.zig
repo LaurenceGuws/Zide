@@ -52,8 +52,9 @@ pub fn endEditorSurface(self: anytype) void {
     scene_frame_runtime.restoreMainCompositionTarget(self);
 }
 
-pub fn drawTerminalSurface(self: anytype, x: f32, y: f32, width: f32, height: f32) void {
+pub fn drawTerminalSurface(self: anytype, x: f32, y: f32, width: f32, height: f32, generation: ?u64) void {
     if (self.retained_targets.terminal) |target| {
+        scene_frame_runtime.noteTerminalSurfaceBlit(self, generation);
         const snapped_x = snapToDevicePixel(x, self.scale.render_scale);
         const snapped_y = snapToDevicePixel(y, self.scale.render_scale);
         const src = texture_draw.fullTextureSrcRect(target.texture);

@@ -203,7 +203,7 @@ pub fn drawPrepared(
             @intFromFloat(height),
             bg_color,
         );
-        retained_targets_runtime.drawTerminalSurface(r, x, y, width, height);
+        retained_targets_runtime.drawTerminalSurface(r, x, y, width, height, self.last_render_generation);
         if (self.terminal_texture_ready) {
             outcome.retained_surface_blitted = true;
             outcome.retained_surface_generation = self.last_render_generation;
@@ -577,7 +577,7 @@ pub fn drawPrepared(
             }
         }
         if (self.terminal_texture_ready and visible_w > 0 and visible_h > 0) {
-            retained_targets_runtime.drawTerminalSurface(r, base_x, base_y, viewport_w, viewport_h);
+            retained_targets_runtime.drawTerminalSurface(r, base_x, base_y, viewport_w, viewport_h, self.last_render_generation);
             retained_surface_generation = self.last_render_generation;
             outcome.retained_surface_blitted = true;
         }

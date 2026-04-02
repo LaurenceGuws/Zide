@@ -25,6 +25,8 @@ pub fn completePresent(state: anytype, shell: anytype, submission: anytype) void
         .{ .key = "frame", .value = .{ .unsigned = state.frame_id } },
         .{ .key = "frame_seq", .value = .{ .unsigned = trace.frame_seq } },
         .{ .key = "submission_seq", .value = .{ .unsigned = submission.sequence } },
+        .{ .key = "terminal_surface_blits", .value = .{ .unsigned = trace.terminal_surface_blit_count } },
+        .{ .key = "terminal_surface_generation", .value = .{ .unsigned = if (trace.terminal_surface_generation) |g| g else 0 } },
         .{ .key = "editor_surface_updates", .value = .{ .unsigned = trace.editor_surface_update_count } },
         .{ .key = "editor_surface_blits", .value = .{ .unsigned = trace.editor_surface_blit_count } },
         .{ .key = "composition_clips", .value = .{ .unsigned = trace.composition_clip_count } },
