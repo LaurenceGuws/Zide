@@ -66,6 +66,13 @@ Status note, later on 2026-04-02:
   architecture battlefield
 - the next move here should come from the generic scene/publication contract,
   not from more local renderer field surgery
+- the first convergence cut is now landed too:
+  retained-target ownership no longer speaks in product-shaped editor/terminal
+  surface verbs at the main API boundary
+  - `src/ui/renderer/retained_targets_runtime.zig` now exposes one generic
+    retained-surface contract
+  - editor, terminal, and font-sample callers now use that generic retained
+    surface API directly
 
 ## Target Read
 

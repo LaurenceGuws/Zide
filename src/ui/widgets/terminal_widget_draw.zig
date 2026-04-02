@@ -137,7 +137,7 @@ pub fn drawPrepared(
     const draw_state = view_state.drawStateInfo(cache);
     const render_state = draw_state.render;
     const sync_updates = draw_state.sync_updates_active;
-    const retained_surface_target_available = retained_targets_runtime.terminalSurfaceAvailable(r);
+    const retained_surface_target_available = retained_targets_runtime.surfaceAvailable(r, .terminal);
     if (!retained_surface_target_available) self.retained.terminal_texture_ready = false;
     const retained_surface_ready = self.retained.terminal_texture_ready and retained_surface_target_available;
     const screen_reverse = render_state.screen_reverse;
@@ -156,7 +156,13 @@ pub fn drawPrepared(
             @intFromFloat(height),
             bg_color,
         );
-        retained_targets_runtime.drawTerminalSurface(r, x, y, width, height, self.retained.last_render_generation);
+        retained_targets_runtime.drawSurface(r, .terminal, .{
+            .x = x,
+            .y = y,
+            .width = width,
+            .height = height,
+            .generation = self.retained.last_render_generation,
+        });
         return outcome;
     }
     const draw_start_time = if (alt_exit) app_shell.getTime() else 0;
@@ -233,7 +239,7 @@ pub fn drawPrepared(
         visible_h = @intFromFloat(std.math.round(@as(f32, @floatFromInt(visible_rows * geom.cell_height_device_px)) / scale));
         viewport_w = @as(f32, @floatFromInt(visible_w));
         viewport_h = @as(f32, @floatFromInt(visible_h));
-        const recreated = retained_targets_runtime.ensureTerminalSurface(r, texture_w, texture_h);
+        const recreated = retained_targets_runtime.ensureSurface(r, .terminal, texture_w, texture_h);
         const gen_changed = draw_state.generation != self.retained.last_render_generation;
         const clear_generation_changed = draw_state.clear_generation != self.retained.last_render_clear_generation;
         var update_plan = chooseTextureUpdatePlan(
@@ -274,7 +280,7 @@ pub fn drawPrepared(
         )) {
             .attempt => |shift_rows| {
                 const dy_pixels: i32 = -viewport_shift.rows * cell_h_i;
-                if (retained_targets_runtime.scrollTerminalSurface(r, 0, dy_pixels)) {
+                if (retained_targets_runtime.scrollSurface(r, .terminal, 0, dy_pixels)) {
                     needs_partial = true;
                     shifted_rows = shift_rows;
                 } else {
@@ -352,7 +358,7 @@ pub fn drawPrepared(
                 );
             }
         }
-        if ((needs_full or needs_partial) and retained_targets_runtime.beginTerminalSurface(r)) {
+        if ((needs_full or needs_partial) and retained_targets_runtime.beginSurface(r, .terminal)) {
             // Disable scissor while updating the offscreen texture.
             // The main draw pass will restore the clip for on-screen drawing.
             r.endClip();
@@ -508,7 +514,7 @@ pub fn drawPrepared(
                 updated = true;
             }
         }
-        const retained_surface_target_available_after_update = retained_targets_runtime.terminalSurfaceAvailable(r);
+        const retained_surface_target_available_after_update = retained_targets_runtime.surfaceAvailable(r, .terminal);
         if (!retained_surface_target_available_after_update) self.retained.terminal_texture_ready = false;
         const retained_surface_ready_after_update = self.retained.terminal_texture_ready and retained_surface_target_available_after_update;
         if (!updated and retained_surface_ready_after_update and visible_w > 0 and visible_h > 0) {
@@ -537,7 +543,13 @@ pub fn drawPrepared(
             });
         }
         if (retained_surface_ready_after_update and visible_w > 0 and visible_h > 0) {
-            retained_targets_runtime.drawTerminalSurface(r, base_x, base_y, viewport_w, viewport_h, self.retained.last_render_generation);
+            retained_targets_runtime.drawSurface(r, .terminal, .{
+                .x = base_x,
+                .y = base_y,
+                .width = viewport_w,
+                .height = viewport_h,
+                .generation = self.retained.last_render_generation,
+            });
         }
     }
     texture_update_ms = time_utils.secondsToMs(app_shell.getTime() - texture_phase_start);

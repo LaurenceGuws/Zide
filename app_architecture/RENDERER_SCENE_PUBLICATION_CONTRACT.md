@@ -51,6 +51,8 @@ What already exists:
 - scene target is composed to the default framebuffer on submit
 - terminal uses stronger publication semantics upstream
 - terminal fractional-scale cell geometry is now derived from raster/device metrics once per frame and reused across terminal-space consumers
+- retained-surface ownership now exposes a generic retained-surface API rather
+  than product-shaped editor/terminal surface verbs at the main boundary
 
 What is still weak:
 
