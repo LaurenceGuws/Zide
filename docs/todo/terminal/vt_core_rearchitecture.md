@@ -60,6 +60,10 @@ Focused follow-up lane:
   Why: the last two weeks materially changed the implementation, so current
   priority now needs to be judged from live code rather than only from older
   review pressure.
+- `docs/review/TERMINAL_PUBLICATION_CONTRACT_REVIEW_2026-04-02.md`
+  Why: the next terminal battlefield is no longer tiny publication helper
+  cleanup; it is identifying the single dominant host-facing terminal
+  frame/publication contract.
 
 ## Current Milestone
 
