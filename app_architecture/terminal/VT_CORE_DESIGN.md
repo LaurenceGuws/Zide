@@ -280,6 +280,12 @@ Status note, 2026-03-31:
     title/cwd/alt-screen/alive/activity/metadata copy now route through
     `src/terminal/core/session/host_queries.zig` from widget, app, workspace,
     FFI, and test callers instead of pretending to be stable runtime contract
+  - transport/poll lifecycle is off the runtime surface too:
+    start/startNoThreads, PTY or external transport attach/drain/close,
+    poll/hasData/backlog/input-pressure, and child-exit refresh/report now
+    route through `src/terminal/core/session/runtime.zig` from app,
+    workspace, replay, FFI, and tests instead of pretending to be stable
+    host-level runtime contract
   - protocol query helpers are shrinking the same way too: runtime/focus tests
     now use `terminal_core_protocol.zig` directly for `getCell` /
     `getCursorPos`, so those no longer inflate the wrapper surface

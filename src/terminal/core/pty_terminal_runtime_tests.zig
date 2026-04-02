@@ -9,6 +9,7 @@ const input_modes = @import("input_modes.zig");
 const session_config = @import("session/config.zig");
 const session_interaction = @import("session/interaction.zig");
 const host_queries = @import("session/host_queries.zig");
+const session_runtime = @import("session/runtime.zig");
 const mode_effects = @import("session/mode_effects.zig");
 const scrolling = @import("scrolling.zig");
 const host_types = @import("session/host_types.zig");
@@ -57,12 +58,12 @@ test "external transport poll updates screen and metadata" {
 
     var session = try PtyTerminalRuntime.init(allocator, 2, 12);
     defer session.deinit();
-    session.attachExternalTransport();
+    session_runtime.attachExternalTransport(session);
 
     try std.testing.expect(host_queries.isAlive(session));
 
-    try std.testing.expect(try session.enqueueExternalBytes("\x1b]0;ext-title\x07hello\r\n"));
-    try session.poll();
+    try std.testing.expect(try session_runtime.enqueueExternalBytes(session, "\x1b]0;ext-title\x07hello\r\n"));
+    try session_runtime.poll(session);
 
     const snapshot = session.snapshot();
     try std.testing.expectEqualStrings("ext-title", snapshot.title);
@@ -82,10 +83,10 @@ test "external transport close updates alive metadata" {
 
     var session = try PtyTerminalRuntime.init(allocator, 2, 12);
     defer session.deinit();
-    session.attachExternalTransport();
+    session_runtime.attachExternalTransport(session);
 
     try std.testing.expect(host_queries.isAlive(session));
-    try std.testing.expect(session.closeExternalTransport());
+    try std.testing.expect(session_runtime.closeExternalTransport(session));
     try std.testing.expect(!host_queries.isAlive(session));
 
     var title_buf = std.ArrayList(u8).empty;
@@ -101,10 +102,10 @@ test "external transport sendText queues outbound bytes" {
 
     var session = try PtyTerminalRuntime.init(allocator, 2, 12);
     defer session.deinit();
-    session.attachExternalTransport();
+    session_runtime.attachExternalTransport(session);
 
     try session.sendText("abc");
-    const bytes = (try session.takeExternalOutgoingBytes(allocator)).?;
+    const bytes = (try session_runtime.takeExternalOutgoingBytes(session, allocator)).?;
     defer allocator.free(bytes);
 
     try std.testing.expectEqualStrings("abc", bytes);
@@ -190,13 +191,13 @@ test "pty-backed session sendText writes through session writer boundary" {
         error.OpenPtyFailed => return,
         else => return err,
     };
-    session.attachPtyTransport(pty);
+    session_runtime.attachPtyTransport(session, pty);
 
     try session.sendText("abc");
 
     const start_ms = std.time.milliTimestamp();
     while (std.time.milliTimestamp() - start_ms < 3000) {
-        try session.poll();
+        try session_runtime.poll(session);
         const snapshot = session.snapshot();
         if (snapshot.rowSlice(0).len >= 3 and
             snapshot.rowSlice(0)[0].codepoint == 'a' and
@@ -232,14 +233,14 @@ test "pty-backed session sendKey enter writes through session writer boundary" {
         error.OpenPtyFailed => return,
         else => return err,
     };
-    session.attachPtyTransport(pty);
+    session_runtime.attachPtyTransport(session, pty);
 
     try session.sendText("printf hi; exit");
     try session.sendKey(VTERM_KEY_ENTER, VTERM_MOD_NONE);
 
     const start_ms = std.time.milliTimestamp();
     while (std.time.milliTimestamp() - start_ms < 4000) {
-        try session.poll();
+        try session_runtime.poll(session);
         const snapshot = session.snapshot();
         if (snapshotContainsAscii(snapshot, "hi")) return;
         if (!host_queries.isAlive(session)) break;
@@ -565,20 +566,20 @@ test "repeat guide chunks do not grow scrollback unexpectedly" {
 
     var session = try PtyTerminalRuntime.init(allocator, 4, 10);
     defer session.deinit();
-    session.attachExternalTransport();
+    session_runtime.attachExternalTransport(session);
 
-    try std.testing.expect(try session.enqueueExternalBytes("\x1b[H1| |aaa \x1b[2;1H2| |bbb \x1b[3;1H3| |ccc \x1b[4;1H4| |ddd "));
-    try session.poll();
+    try std.testing.expect(try session_runtime.enqueueExternalBytes(session, "\x1b[H1| |aaa \x1b[2;1H2| |bbb \x1b[3;1H3| |ccc \x1b[4;1H4| |ddd "));
+    try session_runtime.poll(session);
     try std.testing.expectEqual(@as(usize, 0), session.scrollbackInfo().total_rows);
 
     try std.testing.expect(terminal_publication.acknowledgePresentedGeneration(session, terminal_publication.renderCache(session).generation));
 
-    try std.testing.expect(try session.enqueueExternalBytes("\x1b[H5\x1b[2;1H+>"));
-    try session.poll();
+    try std.testing.expect(try session_runtime.enqueueExternalBytes(session, "\x1b[H5\x1b[2;1H+>"));
+    try session_runtime.poll(session);
     try std.testing.expectEqual(@as(usize, 0), session.scrollbackInfo().total_rows);
 
-    try std.testing.expect(try session.enqueueExternalBytes("\x1b[1;4H|\x1b[2;4H|"));
-    try session.poll();
+    try std.testing.expect(try session_runtime.enqueueExternalBytes(session, "\x1b[1;4H|\x1b[2;4H|"));
+    try session_runtime.poll(session);
 
     try std.testing.expectEqual(@as(usize, 0), session.scrollbackInfo().total_rows);
 
@@ -594,17 +595,17 @@ test "repeat guide chunks publish current broad cache contract" {
 
     var session = try PtyTerminalRuntime.init(allocator, 4, 10);
     defer session.deinit();
-    session.attachExternalTransport();
+    session_runtime.attachExternalTransport(session);
 
-    try std.testing.expect(try session.enqueueExternalBytes("\x1b[H1| |aaa \x1b[2;1H2| |bbb \x1b[3;1H3| |ccc \x1b[4;1H4| |ddd "));
-    try session.poll();
+    try std.testing.expect(try session_runtime.enqueueExternalBytes(session, "\x1b[H1| |aaa \x1b[2;1H2| |bbb \x1b[3;1H3| |ccc \x1b[4;1H4| |ddd "));
+    try session_runtime.poll(session);
     try std.testing.expect(terminal_publication.acknowledgePresentedGeneration(session, terminal_publication.renderCache(session).generation));
 
-    try std.testing.expect(try session.enqueueExternalBytes("\x1b[H5\x1b[2;1H+>"));
-    try session.poll();
+    try std.testing.expect(try session_runtime.enqueueExternalBytes(session, "\x1b[H5\x1b[2;1H+>"));
+    try session_runtime.poll(session);
 
-    try std.testing.expect(try session.enqueueExternalBytes("\x1b[1;4H|\x1b[2;4H|"));
-    try session.poll();
+    try std.testing.expect(try session_runtime.enqueueExternalBytes(session, "\x1b[1;4H|\x1b[2;4H|"));
+    try session_runtime.poll(session);
 
     const cache = terminal_publication.renderCache(session);
     try std.testing.expectEqual(Dirty.partial, cache.dirty);
@@ -619,14 +620,14 @@ test "first repeat guide packet keeps bottom row clean today" {
 
     var session = try PtyTerminalRuntime.init(allocator, 4, 10);
     defer session.deinit();
-    session.attachExternalTransport();
+    session_runtime.attachExternalTransport(session);
 
-    try std.testing.expect(try session.enqueueExternalBytes("\x1b[H1| |aaa \x1b[2;1H2| |bbb \x1b[3;1H3| |ccc \x1b[4;1H4| |ddd "));
-    try session.poll();
+    try std.testing.expect(try session_runtime.enqueueExternalBytes(session, "\x1b[H1| |aaa \x1b[2;1H2| |bbb \x1b[3;1H3| |ccc \x1b[4;1H4| |ddd "));
+    try session_runtime.poll(session);
     try std.testing.expect(terminal_publication.acknowledgePresentedGeneration(session, terminal_publication.renderCache(session).generation));
 
-    try std.testing.expect(try session.enqueueExternalBytes("\x1b[H5\x1b[2;1H+>"));
-    try session.poll();
+    try std.testing.expect(try session_runtime.enqueueExternalBytes(session, "\x1b[H5\x1b[2;1H+>"));
+    try session_runtime.poll(session);
 
     const cache = terminal_publication.renderCache(session);
     try std.testing.expect(cache.dirty_rows.items[0]);
@@ -640,17 +641,17 @@ test "repeat guide chunks mark unexpected bottom row dirty today" {
 
     var session = try PtyTerminalRuntime.init(allocator, 4, 10);
     defer session.deinit();
-    session.attachExternalTransport();
+    session_runtime.attachExternalTransport(session);
 
-    try std.testing.expect(try session.enqueueExternalBytes("\x1b[H1| |aaa \x1b[2;1H2| |bbb \x1b[3;1H3| |ccc \x1b[4;1H4| |ddd "));
-    try session.poll();
+    try std.testing.expect(try session_runtime.enqueueExternalBytes(session, "\x1b[H1| |aaa \x1b[2;1H2| |bbb \x1b[3;1H3| |ccc \x1b[4;1H4| |ddd "));
+    try session_runtime.poll(session);
     try std.testing.expect(terminal_publication.acknowledgePresentedGeneration(session, terminal_publication.renderCache(session).generation));
 
-    try std.testing.expect(try session.enqueueExternalBytes("\x1b[H5\x1b[2;1H+>"));
-    try session.poll();
+    try std.testing.expect(try session_runtime.enqueueExternalBytes(session, "\x1b[H5\x1b[2;1H+>"));
+    try session_runtime.poll(session);
 
-    try std.testing.expect(try session.enqueueExternalBytes("\x1b[1;4H|\x1b[2;4H|"));
-    try session.poll();
+    try std.testing.expect(try session_runtime.enqueueExternalBytes(session, "\x1b[1;4H|\x1b[2;4H|"));
+    try session_runtime.poll(session);
 
     const cache = terminal_publication.renderCache(session);
     try std.testing.expect(cache.dirty_rows.items[0]);
@@ -666,17 +667,17 @@ test "repeat guide second packet keeps raw screen bottom row clean" {
 
     var session = try PtyTerminalRuntime.init(allocator, 4, 10);
     defer session.deinit();
-    session.attachExternalTransport();
+    session_runtime.attachExternalTransport(session);
 
-    try std.testing.expect(try session.enqueueExternalBytes("\x1b[H1| |aaa \x1b[2;1H2| |bbb \x1b[3;1H3| |ccc \x1b[4;1H4| |ddd "));
-    try session.poll();
+    try std.testing.expect(try session_runtime.enqueueExternalBytes(session, "\x1b[H1| |aaa \x1b[2;1H2| |bbb \x1b[3;1H3| |ccc \x1b[4;1H4| |ddd "));
+    try session_runtime.poll(session);
     try std.testing.expect(terminal_publication.acknowledgePresentedGeneration(session, terminal_publication.renderCache(session).generation));
 
-    try std.testing.expect(try session.enqueueExternalBytes("\x1b[H5\x1b[2;1H+>"));
-    try session.poll();
+    try std.testing.expect(try session_runtime.enqueueExternalBytes(session, "\x1b[H5\x1b[2;1H+>"));
+    try session_runtime.poll(session);
 
-    try std.testing.expect(try session.enqueueExternalBytes("\x1b[1;4H|\x1b[2;4H|"));
-    try session.poll();
+    try std.testing.expect(try session_runtime.enqueueExternalBytes(session, "\x1b[1;4H|\x1b[2;4H|"));
+    try session_runtime.poll(session);
 
     const view = session.core.activeScreenConst().snapshotView();
     try std.testing.expect(view.dirty_rows[0]);
@@ -1183,7 +1184,7 @@ test "session snapshot reflects pinned scrollback viewport" {
 
     var session = try PtyTerminalRuntime.init(allocator, 2, 4);
     defer session.deinit();
-    session.attachExternalTransport();
+    session_runtime.attachExternalTransport(session);
 
     terminal_core_feed.feedOutputBytes(session, "AAAA\r\nBBBB\r\nCCCC\r\nDDDD\r\n");
 
@@ -1880,7 +1881,7 @@ test "debug scrollback helper with replay transport setup stays conservative on 
 
     var session = try PtyTerminalRuntime.init(allocator, 2, 4);
     defer session.deinit();
-    session.attachExternalTransport();
+    session_runtime.attachExternalTransport(session);
 
     session.debugSetCursor(1, 0);
     session.debugPushScrollbackRow("ABCD");

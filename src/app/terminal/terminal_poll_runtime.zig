@@ -1,6 +1,7 @@
 const std = @import("std");
 const app_logger = @import("../../app_logger.zig");
 const terminal_publication = @import("../../terminal/core/publication/terminal_publication.zig");
+const session_runtime = @import("../../terminal/core/session/runtime.zig");
 const runtime_policy = @import("../runtime_policy.zig");
 
 pub const PollProfile = struct {
@@ -70,11 +71,11 @@ pub fn pollWorkspace(workspace: anytype, input_active_index: ?usize, has_input: 
 pub fn pollSingleSession(term: anytype, has_input: bool) !bool {
     const wake_log = app_logger.logger("terminal.wake");
     const pubgen_pre = terminal_publication.publishedGeneration(term);
-    const had_data = term.hasData();
+    const had_data = session_runtime.hasData(term);
     var polled = false;
     if (had_data) {
-        term.setInputPressure(has_input);
-        try term.poll();
+        session_runtime.setInputPressure(term, has_input);
+        try session_runtime.poll(term);
         polled = true;
     }
     const pubgen_post = terminal_publication.publishedGeneration(term);

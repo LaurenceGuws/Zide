@@ -1,19 +1,20 @@
 const std = @import("std");
 const host_queries = @import("../core/session/host_queries.zig");
 const session_config = @import("../core/session/config.zig");
+const session_runtime = @import("../core/session/runtime.zig");
 const types = @import("../model/types.zig");
 const shared = @import("shared.zig");
 
 pub fn start(handle: ?*shared.ZideTerminalHandle, shell: ?[*:0]const u8) shared.Status {
     const h = shared.fromOpaqueActive(handle) orelse return .invalid_argument;
     const shell_slice: ?[:0]const u8 = if (shell) |value| std.mem.span(value) else null;
-    h.session.startNoThreads(shell_slice) catch |err| return shared.mapError(err);
+    session_runtime.startNoThreads(h.session, shell_slice) catch |err| return shared.mapError(err);
     return .ok;
 }
 
 pub fn poll(handle: ?*shared.ZideTerminalHandle) shared.Status {
     const h = shared.fromOpaqueActive(handle) orelse return .invalid_argument;
-    h.session.poll() catch |err| return shared.mapError(err);
+    session_runtime.poll(h.session) catch |err| return shared.mapError(err);
     return shared.syncDerivedEvents(h);
 }
 
@@ -125,6 +126,6 @@ pub fn childExitStatus(handle: ?*shared.ZideTerminalHandle, out_code: *i32, out_
 pub fn reportChildExit(handle: ?*shared.ZideTerminalHandle, code: i32, has_status: u8) shared.Status {
     const h = shared.fromOpaqueActive(handle) orelse return .invalid_argument;
     const status = if (has_status != 0) @as(?i32, code) else null;
-    if (!h.session.reportExternalChildExit(status)) return .invalid_argument;
+    if (!session_runtime.reportExternalChildExit(h.session, status)) return .invalid_argument;
     return shared.syncDerivedEvents(h);
 }

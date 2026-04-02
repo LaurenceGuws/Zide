@@ -3,6 +3,7 @@ const builtin = @import("builtin");
 const terminal_runtime = @import("core/terminal_runtime.zig");
 const terminal_publication = @import("core/terminal_publication.zig");
 const terminal_debug = @import("core/session/debug_ops.zig");
+const session_runtime = @import("core/session/runtime.zig");
 const screen_mod = @import("model/screen.zig");
 const pty_mod = @import("io/pty.zig");
 const snapshot_mod = @import("core/snapshot.zig");
@@ -390,13 +391,13 @@ pub fn runFixtureObservedWithOptions(
     var reply_capture: ?ReplayPtyCapture = null;
     if (fixture.meta.reply_hex != null) {
         reply_capture = try ReplayPtyCapture.init();
-        session.attachPtyTransport(reply_capture.?.pty);
+        session_runtime.attachPtyTransport(session, reply_capture.?.pty);
     } else {
-        session.attachExternalTransport();
+        session_runtime.attachExternalTransport(session);
     }
     defer {
         if (reply_capture != null) {
-            session.detachPtyTransport();
+            session_runtime.detachPtyTransport(session);
             var capture = reply_capture.?;
             capture.deinit();
         }
@@ -469,8 +470,8 @@ fn runFixtureInputPhase(session: *terminal_runtime.PtyTerminalRuntime, input: []
     if (uses_reply_capture) {
         terminal_debug.debugFeedBytes(session, input);
     } else {
-        _ = try session.enqueueExternalBytes(input);
-        try session.poll();
+        _ = try session_runtime.enqueueExternalBytes(session, input);
+        try session_runtime.poll(session);
     }
 }
 

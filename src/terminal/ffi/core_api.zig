@@ -4,6 +4,7 @@ const terminal_publication = @import("../core/terminal_publication.zig");
 const terminal_core_feed = @import("../core/protocol/terminal_core_feed.zig");
 const host_queries = @import("../core/session/host_queries.zig");
 const session_interaction = @import("../core/session/interaction.zig");
+const session_runtime = @import("../core/session/runtime.zig");
 const types = @import("../model/types.zig");
 const screen = @import("../model/screen.zig");
 const app_logger = @import("../../app_logger.zig");
@@ -379,7 +380,7 @@ pub fn create(config: ?*const shared.CreateConfig, out_handle: *?*shared.ZideTer
         .last_alive = true,
         .exit_delivered = false,
     };
-    session.attachExternalTransport();
+    session_runtime.attachExternalTransport(session);
     handle.last_generation = terminal_publication.publishedGeneration(session);
     const initial_metadata = host_queries.copyMetadata(session, allocator, &handle.last_title, &handle.last_cwd) catch |err| {
         log.logf(.warning, "create metadata copy failed err={s}", .{@errorName(err)});
@@ -465,8 +466,8 @@ pub fn destroy(handle: ?*shared.ZideTerminalHandle) void {
 pub fn feedOutput(handle: ?*shared.ZideTerminalHandle, bytes: ?[*]const u8, len: usize) shared.Status {
     const h = shared.fromOpaqueActive(handle) orelse return .invalid_argument;
     const slice = shared.ptrLen(bytes, len) orelse return .invalid_argument;
-    if (h.session.enqueueExternalBytes(slice) catch |err| return shared.mapError(err)) {
-        h.session.poll() catch |err| return shared.mapError(err);
+    if (session_runtime.enqueueExternalBytes(h.session, slice) catch |err| return shared.mapError(err)) {
+        session_runtime.poll(h.session) catch |err| return shared.mapError(err);
     } else {
         terminal_core_feed.feedOutputBytes(h.session, slice);
     }
@@ -475,13 +476,13 @@ pub fn feedOutput(handle: ?*shared.ZideTerminalHandle, bytes: ?[*]const u8, len:
 
 pub fn closeInput(handle: ?*shared.ZideTerminalHandle) shared.Status {
     const h = shared.fromOpaqueActive(handle) orelse return .invalid_argument;
-    if (!h.session.closeExternalTransport()) return .invalid_argument;
+    if (!session_runtime.closeExternalTransport(h.session)) return .invalid_argument;
     return shared.syncDerivedEvents(h);
 }
 
 pub fn pendingInputAcquire(handle: ?*shared.ZideTerminalHandle, out_buffer: *shared.ByteBuffer) shared.Status {
     const h = shared.fromOpaqueActive(handle) orelse return .invalid_argument;
-    const bytes = h.session.takeExternalOutgoingBytes(h.allocator) catch |err| return shared.mapError(err);
+    const bytes = session_runtime.takeExternalOutgoingBytes(h.session, h.allocator) catch |err| return shared.mapError(err);
     const slice = bytes orelse return .invalid_argument;
     return shared.byteBufferFromOwnedSlice(h.allocator, slice, out_buffer);
 }

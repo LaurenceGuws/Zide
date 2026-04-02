@@ -162,7 +162,7 @@ pub const TerminalWorkspace = struct {
 
     pub fn prepareForShutdown(self: *TerminalWorkspace) void {
         for (self.tabs.items) |tab| {
-            tab.session.prepareForShutdown();
+            session_runtime.prepareForShutdown(tab.session);
         }
     }
 
@@ -232,7 +232,7 @@ pub const TerminalWorkspace = struct {
 
     pub fn refreshActiveSessionChildExit(self: *TerminalWorkspace) void {
         if (self.tabs.items.len == 0) return;
-        self.tabs.items[self.activeIndex()].session.refreshChildExit();
+        session_runtime.refreshChildExit(self.tabs.items[self.activeIndex()].session);
     }
 
     pub fn activeFrameState(self: *const TerminalWorkspace) ActiveFrameState {
@@ -240,7 +240,7 @@ pub const TerminalWorkspace = struct {
         const session = self.tabs.items[self.activeIndex()].session;
         const generation_state = terminal_publication.generationState(session);
         return .{
-            .has_data = session.hasData(),
+            .has_data = session_runtime.hasData(session),
             .session_ptr = @intFromPtr(session),
             .pending_generation = generation_state.pending,
             .published_generation = generation_state.published,

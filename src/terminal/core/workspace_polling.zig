@@ -1,6 +1,7 @@
 const std = @import("std");
 const app_logger = @import("../../app_logger.zig");
 const terminal_publication = @import("publication/terminal_publication.zig");
+const session_runtime = @import("session/runtime.zig");
 const runtime_policy = @import("../../app/runtime_policy.zig");
 
 pub fn pollBudgeted(self: anytype, input_active_index: ?usize, policy: anytype) !bool {
@@ -161,7 +162,7 @@ pub fn pollForFrame(self: anytype, input_active_index: ?usize, policy: anytype) 
 pub fn clearInputPressure(self: anytype) void {
     if (self.input_pressure_index) |idx| {
         if (idx < self.tabs.items.len) {
-            self.tabs.items[idx].session.setInputPressure(false);
+            session_runtime.setInputPressure(self.tabs.items[idx].session, false);
         }
         self.input_pressure_index = null;
     }
@@ -183,8 +184,8 @@ pub fn normalizePollCursor(self: anytype) void {
 fn pollIndexIfReady(self: anytype, index: usize) !bool {
     if (index >= self.tabs.items.len) return false;
     const session = self.tabs.items[index].session;
-    if (!session.hasData()) return false;
-    try session.poll();
+    if (!session_runtime.hasData(session)) return false;
+    try session_runtime.poll(session);
     return true;
 }
 
@@ -194,12 +195,12 @@ fn updateInputPressure(self: anytype, input_active_index: ?usize, has_input: boo
     if (self.input_pressure_index) |current_index| {
         if (desired_index == null or desired_index.? != current_index) {
             if (current_index < count) {
-                self.tabs.items[current_index].session.setInputPressure(false);
+                session_runtime.setInputPressure(self.tabs.items[current_index].session, false);
             }
         }
     }
     if (desired_index) |idx| {
-        self.tabs.items[idx].session.setInputPressure(true);
+        session_runtime.setInputPressure(self.tabs.items[idx].session, true);
     }
     self.input_pressure_index = desired_index;
 }
@@ -215,7 +216,7 @@ fn normalizeIndex(index: ?usize, count: usize) ?usize {
 fn activePolledBacklogHint(self: anytype, active_idx: usize, active_polled_success: usize, active_polls: usize) bool {
     if (active_polled_success < active_polls) return false;
     if (active_idx >= self.tabs.items.len) return false;
-    return self.tabs.items[active_idx].session.pollBacklogHint();
+    return session_runtime.pollBacklogHint(self.tabs.items[active_idx].session);
 }
 
 fn recordPollMetrics(self: anytype, metrics: @TypeOf(self.last_poll_metrics)) void {

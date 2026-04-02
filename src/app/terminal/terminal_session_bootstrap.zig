@@ -102,7 +102,7 @@ pub fn startSessionWithShellCellSize(
         setLaunchCwdEnv(null);
     }
 
-    try term.start(if (shell_override_z) |value|
+    try session_runtime.start(term, if (shell_override_z) |value|
         value
     else
         null);

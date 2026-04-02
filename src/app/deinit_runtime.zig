@@ -4,6 +4,7 @@ const mode_build = @import("mode_build.zig");
 const app_terminal_shell_icon_runtime = @import("terminal/terminal_shell_icon_runtime.zig");
 const app_editor_live_smoke_runtime = @import("editor/live_smoke_runtime.zig");
 const app_lifecycle_runtime = @import("lifecycle_runtime.zig");
+const session_runtime = @import("../terminal/core/session/runtime.zig");
 
 pub fn handle(state: anytype) void {
     const lifecycle_log = app_logger.logger("app.lifecycle");
@@ -46,7 +47,7 @@ pub fn handle(state: anytype) void {
                 .{ .key = "index", .value = .{ .unsigned = idx } },
                 .{ .key = "session_ptr", .value = .{ .unsigned = @intFromPtr(t) } },
             });
-            t.prepareForShutdown();
+            session_runtime.prepareForShutdown(t);
             lifecycle_log.logFields(.info, "terminal_session_prepare_shutdown_end", &.{
                 .{ .key = "index", .value = .{ .unsigned = idx } },
                 .{ .key = "session_ptr", .value = .{ .unsigned = @intFromPtr(t) } },

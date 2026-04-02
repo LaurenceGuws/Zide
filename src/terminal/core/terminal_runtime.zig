@@ -79,29 +79,12 @@ pub const PtyTerminalRuntime = struct {
         return try runtime.init(PtyTerminalRuntime, allocator, rows, cols, options);
     }
 
-    pub const setInputPressure = runtime.setInputPressure;
-
     pub const deinit = runtime.deinit;
-
-    pub const prepareForShutdown = runtime.prepareForShutdown;
-    pub const start = runtime.start;
-    pub const attachPtyTransport = runtime.attachPtyTransport;
-    pub const detachPtyTransport = runtime.detachPtyTransport;
-    pub const startNoThreads = runtime.startNoThreads;
-    pub const attachExternalTransport = runtime.attachExternalTransport;
-    pub const enqueueExternalBytes = runtime.enqueueExternalBytes;
-    pub const closeExternalTransport = runtime.closeExternalTransport;
-    pub const reportExternalChildExit = runtime.reportExternalChildExit;
-    pub const takeExternalOutgoingBytes = runtime.takeExternalOutgoingBytes;
-    pub const poll = runtime.poll;
-    pub const refreshChildExit = runtime.refreshChildExit;
-    pub const hasData = runtime.hasData;
 
     pub const lock = control.lock;
     pub const tryLock = control.tryLock;
     pub const unlock = control.unlock;
 
-    pub const pollBacklogHint = runtime.pollBacklogHint;
     pub const lockPtyWriter = runtime.lockPtyWriter;
     pub const writePtyBytes = runtime.writePtyBytes;
 
