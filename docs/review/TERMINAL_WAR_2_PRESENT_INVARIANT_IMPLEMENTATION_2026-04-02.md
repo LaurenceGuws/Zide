@@ -263,3 +263,26 @@ It should ask:
 
 - "did the submitted scene definitely contain the authoritative terminal
   retained surface for the generation we are about to retire?"
+
+## Rerank Point After Slice 4
+
+The first present-invariant campaign is now materially complete:
+
+- renderer submission records terminal-surface scene proof
+- publication retirement requires that proof
+- dead widget-local retirement signals are deleted
+
+That means the remaining War 2 question is no longer:
+
+- "what should gate terminal present acknowledgement?"
+
+It is now:
+
+- "is there still a real scene-composition omission path where a frame that
+  should contain terminal scene truth fails to blit it?"
+
+If that bug still reproduces, the next work should target the concrete
+composition omission path in renderer/widget draw.
+
+If it does not, War 2 should pause this lane and rerank the broader terminal
+system again instead of inventing more present-contract cleanup.
