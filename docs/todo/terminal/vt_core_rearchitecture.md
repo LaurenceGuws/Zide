@@ -89,6 +89,14 @@ gravity into smaller files.
   - semantic resize stays core-owned, while locking, transport resize, and
     in-band reporting stay shell/runtime-owned
   - this improves the public VT story without reopening shell-thinning theater
+- `docs/review/VT_POST_RESIZE_RERANK_2026-04-03.md`
+  Why: after the resize wave, the VT queue needs another honest rerank from
+  the new baseline.
+  Current read:
+  - public resize is materially healthier and no longer the default next war
+  - `TerminalCore` sufficiency is still the top blocker
+  - viewport/selection mutation surface is now the clearest concrete fallback
+  - input, `host_queries`, and generic shell-thinning should remain paused
 
 - `docs/review/VT_WAR_4_SCOPE_AND_SEEDS_2026-04-03.md`
   Why: the next scrutiny pass is no longer a cleanup sprint; it is a focused

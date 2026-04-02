@@ -116,7 +116,7 @@ This is now the strongest remaining blocker because:
 - input semantics are materially cleaner now
 - this category is again the clearest remaining pressure
 
-### 3. Public resize is still shell-first in feel
+### 3. Public resize was a real gap, and is now materially lower
 
 Current Zide shape:
 
@@ -126,13 +126,14 @@ Current Zide shape:
   - [transport_runtime.zig](/home/home/personal/zide/src/terminal/core/session/transport_runtime.zig)
   - [host_api.zig](/home/home/personal/zide/src/terminal/ffi/host_api.zig)
 
-Why it matters:
+Why it mattered:
 
 - the semantic cut was real
-- but the public story still reads more like "resize the runtime shell" than
-  "resize the terminal, then let the shell report transport consequences"
+- the public story used to split host-supplied cell metrics from resize itself
+- the unified `resizeWithCellSize(...)` contract now materially reduces that
+  parity gap
 
-This is weaker than the top two, but still a real parity gap.
+This category is now lower pressure from the new baseline.
 
 ### 4. Viewport and selection mutation still look more shell-surfaced than core-surfaced
 
@@ -204,7 +205,7 @@ So this remains a difference, but not the top blocker.
 | Primary object identity | `TerminalCore` plus `TerminalRuntimeShell` | `Terminal` plus `Termio` | `Terminal` plus internal state | Zide is improved, but still slightly less obvious |
 | Engine state ownership | strong on `TerminalCore` | strong on `Terminal` | strong on `Terminal`/`TerminalState` | near parity |
 | Output feed/apply | core semantic verb now exists | terminal-centered | terminal-centered | materially improved |
-| Resize semantics | split between core semantic verb and shell public path | terminal-centered with runtime around it | terminal-centered | still a gap |
+| Resize semantics | unified host-facing resize contract over core semantic verb plus shell reporting | terminal-centered with runtime around it | terminal-centered | materially improved |
 | Input semantics | still shell-fronted | more terminal-centered in feel | more terminal-centered in feel | biggest gap |
 | Immutable metadata/export | mostly core-centered now | terminal-centered | terminal/state-centered | healthy |
 | Host runtime shell | mostly honest now | `Termio` is clearly shell | runtime around terminal is clear | mostly healthy |
@@ -226,8 +227,8 @@ That work already paid off.
 If the goal is plug-and-play pressure, the list from the newer baseline is now:
 
 1. `TerminalCore` sufficiency
-2. public resize story
-3. viewport/selection mutation surface
+2. viewport/selection mutation surface
+3. public resize story is now materially lower
 4. only then reconsider whether host metadata packaging or ABI normalization
    actually moved back up
 
