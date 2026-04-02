@@ -355,6 +355,7 @@ pub fn drawPrepared(
             r.endClip();
             const base_x_local: f32 = 0;
             const base_y_local: f32 = 0;
+            var texture_update_completed = false;
 
             if (needs_full) {
                 const bg_phase_start = app_shell.getTime();
@@ -387,37 +388,33 @@ pub fn drawPrepared(
                     self.kitty.drawImages(self.session.allocator, shell, base_x_local, base_y_local, true, start_line, rows, cols);
                     texture_kitty_ms += time_utils.secondsToMs(app_shell.getTime() - kitty_phase_start);
                 }
-            } else if (needs_partial) {
+                texture_update_completed = true;
+            } else if (needs_partial) partial_update: {
                 self.retained.partial_draw_rows.resize(self.session.allocator, rows) catch |err| {
                     const log = app_logger.logger("terminal.ui.redraw");
                     log.logf(.warning, "partial row plan resize failed field=rows rows={d} err={s}", .{ rows, @errorName(err) });
-                    scene_frame_runtime.restoreMainCompositionTarget(r);
-                    return outcome;
+                    break :partial_update;
                 };
                 self.retained.partial_draw_cols_start.resize(self.session.allocator, rows) catch |err| {
                     const log = app_logger.logger("terminal.ui.redraw");
                     log.logf(.warning, "partial row plan resize failed field=cols_start rows={d} err={s}", .{ rows, @errorName(err) });
-                    scene_frame_runtime.restoreMainCompositionTarget(r);
-                    return outcome;
+                    break :partial_update;
                 };
                 self.retained.partial_draw_cols_end.resize(self.session.allocator, rows) catch |err| {
                     const log = app_logger.logger("terminal.ui.redraw");
                     log.logf(.warning, "partial row plan resize failed field=cols_end rows={d} err={s}", .{ rows, @errorName(err) });
-                    scene_frame_runtime.restoreMainCompositionTarget(r);
-                    return outcome;
+                    break :partial_update;
                 };
 
                 self.retained.partial_draw_span_counts.resize(self.session.allocator, rows) catch |err| {
                     const log = app_logger.logger("terminal.ui.redraw");
                     log.logf(.warning, "partial row plan resize failed field=span_counts rows={d} err={s}", .{ rows, @errorName(err) });
-                    scene_frame_runtime.restoreMainCompositionTarget(r);
-                    return outcome;
+                    break :partial_update;
                 };
                 self.retained.partial_draw_spans.resize(self.session.allocator, rows) catch |err| {
                     const log = app_logger.logger("terminal.ui.redraw");
                     log.logf(.warning, "partial row plan resize failed field=spans rows={d} err={s}", .{ rows, @errorName(err) });
-                    scene_frame_runtime.restoreMainCompositionTarget(r);
-                    return outcome;
+                    break :partial_update;
                 };
 
                 _ = buildPartialPlan(
@@ -487,23 +484,26 @@ pub fn drawPrepared(
                     self.kitty.drawImages(self.session.allocator, shell, base_x_local, base_y_local, true, start_line, rows, cols);
                     texture_kitty_ms += time_utils.secondsToMs(app_shell.getTime() - kitty_phase_start);
                 }
+                texture_update_completed = true;
             }
             scene_frame_runtime.restoreMainCompositionTarget(r);
-            self.retained.terminal_texture_ready = true;
-            self.retained.last_render_generation = draw_state.generation;
-            self.retained.last_render_clear_generation = draw_state.clear_generation;
-            self.retained.last_cell_w_i = cell_w_i;
-            self.retained.last_cell_h_i = cell_h_i;
-            self.retained.last_render_scale = r.scale.render_scale;
-            if (visible_w > 0 and visible_h > 0) {
-                r.beginClip(
-                    @intFromFloat(std.math.round(base_x)),
-                    @intFromFloat(std.math.round(base_y)),
-                    visible_w,
-                    visible_h,
-                );
+            if (texture_update_completed) {
+                self.retained.terminal_texture_ready = true;
+                self.retained.last_render_generation = draw_state.generation;
+                self.retained.last_render_clear_generation = draw_state.clear_generation;
+                self.retained.last_cell_w_i = cell_w_i;
+                self.retained.last_cell_h_i = cell_h_i;
+                self.retained.last_render_scale = r.scale.render_scale;
+                if (visible_w > 0 and visible_h > 0) {
+                    r.beginClip(
+                        @intFromFloat(std.math.round(base_x)),
+                        @intFromFloat(std.math.round(base_y)),
+                        visible_w,
+                        visible_h,
+                    );
+                }
+                updated = true;
             }
-            updated = true;
         }
         const retained_surface_ready_after_update = self.retained.terminal_texture_ready and retained_targets_runtime.terminalSurfaceAvailable(r);
         if (!updated and retained_surface_ready_after_update and visible_w > 0 and visible_h > 0) {

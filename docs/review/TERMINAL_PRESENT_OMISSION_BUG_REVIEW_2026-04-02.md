@@ -97,6 +97,11 @@ This is now the strongest concrete failure candidate because the old shape was:
 That is exactly the kind of omission path that can produce a submitted frame
 with zero terminal-surface blits.
 
+That fast-path omission is now fixed on `main`:
+
+- sync-update reuse only returns early when a retained terminal surface is
+  actually available for blit
+
 ### 2. Retained terminal surface not ready on a frame that still presents
 
 The widget draw path gates scene blit reuse on:
@@ -107,6 +112,12 @@ The widget draw path gates scene blit reuse on:
 
 If those preconditions fall false on a frame that still reaches submit after a
 scene clear, the terminal can disappear.
+
+Another concrete branch in this area is now fixed too:
+
+- partial retained-surface update aborts no longer return early and skip the
+  final retained-surface blit
+- they now fall back to the previous retained surface if it is still available
 
 ### 3. Active terminal host path not drawing at all on some idle frames
 
