@@ -5,50 +5,38 @@ not a progress log and should stay brief.
 
 ### Current Focus
 
-- Terminal is now the active invention lane on `main`.
-- War 1 of the current terminal architecture campaign should be considered
-  closed.
-- War 2 micro-lanes should now be treated as materially flattened unless a
-  fresh live repro or obvious false center reopens one.
-- The next mission is War 3:
-  - make the terminal engine/library center obvious enough that `zide-vt`
-    reads like a serious extraction target
-  - compare that shape directly against the strongest local references,
-    especially `libghostty-vt`
+- Terminal War 3 should be considered closed.
+- The next default architecture battlefield is now renderer / scene /
+  publication convergence.
+- Terminal remains important, but the next terminal step is a deeper deliberate
+  design question, not the default implementation-first lane.
 - The quality bar is still ruthless: every terminal seam must read as:
   - engine-centered
   - loosely coupled
   - DRY
   - reference-grade
-- All agent-facing terminal focus should now assume:
+- All agent-facing architecture focus should now assume:
   - old fallback paths are guilty until proven necessary
   - compatibility residue is not a virtue
   - broad session facades are not sacred
   - native host convenience must not masquerade as engine truth
   - recently cleaned local seams must not be reopened just for momentum
-- The native terminal path is the proving ground and the battlefield:
-  - it must become the cleanest reference host over one engine truth
-  - it must not remain a privileged semantic path over FFI/embedded hosts
 - The quality bar is aggressive:
   - the architecture should not merely keep up with `kitty` / `ghostty`
   - it should make strong terminal maintainers stop and stare at first glance
 - Work outside this lane is deferred by default unless it directly unblocks the
-  terminal architecture campaign.
+  current architecture campaign.
 
 ### Current Direction
 
-- War 3 should begin by reranking the terminal stack specifically as a library
-  boundary:
-  - engine/library truth
-  - runtime shell truth
-  - host boundary truth
-- Default terminal work now should be:
-  - compare the live shape directly against the strongest local references
-  - identify the next top-level obstacle to a serious `zide-vt` boundary
-  - define the replacement shape
-  - cut through the real affected surface area
-  - validate hard
-  - delete the old seam instead of preserving it for comfort
+- The next default war is renderer / scene / publication convergence:
+  - generic subsystem publication
+  - cleaner host scene assembly
+  - renderer-owned scene truth without product-shaped APIs
+- Terminal follow-up work should now be:
+  - paused unless a fresh live bug appears, or
+  - explicitly framed as a deeper design step around `TerminalCore` vs
+    `TerminalSession`
 - Preferred execution style:
   - no compatibility theater
   - no fallback path without a deletion story
@@ -62,13 +50,14 @@ not a progress log and should stay brief.
 ### Current State
 
 - The scene-owned composition path is active on `main`.
-- `TerminalCore` is real, but it is still not the only obvious center.
-- The broad remaining architectural enemy is now more specific:
-  - the stack still does not read like one unmistakable engine/library center
-    plus runtime shell plus host boundary
-- The current open question is:
-  - what still prevents the live stack from reading like a serious `zide-vt`
-    extraction target at first glance?
+- Terminal War 3 materially improved the terminal library-boundary story.
+- The remaining terminal gap is now narrower and more ambiguous:
+  - whether `TerminalCore` should become a more fully sufficient library object
+    than "dominant field inside `TerminalSession`"
+- The stronger immediate architecture question is now renderer-side:
+  - can subsystem publication, host frame assembly, and scene composition be
+    made to read like one generic scene/publication model instead of a cleaner
+    transitional mix?
 - The archived `ascii-rain` lane is no longer the active driver. It should not
   dictate current architecture focus.
 - The reopened present omission lane should now be treated as closed unless a
@@ -106,11 +95,16 @@ not a progress log and should stay brief.
 - Terminal core architecture and active queue:
   - `app_architecture/terminal/VT_CORE_DESIGN.md`
   - `docs/todo/terminal/vt_core_rearchitecture.md`
-  - `docs/review/TERMINAL_WAR_3_LIBRARY_BOUNDARY_RERANK_2026-04-02.md`
-  - `docs/review/TERMINAL_WAR_2_RERANK_2026-04-02.md`
+  - `docs/review/TERMINAL_WAR_3_CLOSURE_2026-04-02.md`
+  - `docs/review/TERMINAL_POST_WAR_3_RERANK_2026-04-02.md`
+  - `docs/review/POST_WAR_3_REPO_RERANK_2026-04-02.md`
   - `docs/review/TERMINAL_NATIVE_ARCHITECTURAL_SCRUTINY_2026-03-31.md`
   - `app_architecture/terminal/TERMINAL_ARCHITECTURE_COMPARISON.md`
   - `docs/review/TERMINAL_CORE_ARCHITECTURE_REVIEW_2026-03-10.md`
+- Renderer / scene convergence authority:
+  - `app_architecture/RENDERER_SCENE_PUBLICATION_CONTRACT.md`
+  - `docs/todo/ui/rendering_scrutiny.md`
+  - `docs/review/SDL_GL_RENDERER_AUDIT_2026-04-02.md`
 - Repo workflow and doc ownership:
   - `AGENTS.md`
   - `docs/WORKFLOW.md`

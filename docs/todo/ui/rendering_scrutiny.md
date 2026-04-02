@@ -59,6 +59,14 @@ Status note, 2026-04-02:
 - the next move should be another re-rank before any more cuts, not automatic
   repacking
 
+Status note, later on 2026-04-02:
+
+- Terminal War 3 is now closed from the repo-wide rerank
+- renderer / scene / publication convergence is again the default next
+  architecture battlefield
+- the next move here should come from the generic scene/publication contract,
+  not from more local renderer field surgery
+
 ## Target Read
 
 The renderer center should read as:
