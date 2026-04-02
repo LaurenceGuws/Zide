@@ -65,6 +65,21 @@ That is the same correct rule one layer up:
 - core packages engine truth
 - shell adds only runtime truth
 
+The next narrower same-class cut is now landed too:
+
+- callers that only needed `cwd` no longer route through shell metadata
+  packaging
+- [workspace_host.zig](/home/home/personal/zide/src/terminal/core/workspace_host.zig)
+  and [terminal_widget_open.zig](/home/home/personal/zide/src/ui/widgets/terminal_widget_open.zig)
+  now lock the shell only for synchronization and read
+  [TerminalCore.cwdText(...)](/home/home/personal/zide/src/terminal/core/terminal_core.zig)
+  directly
+
+That is the same rule at an even smaller scale:
+
+- if the caller only needs one core-owned answer, do not force a shell summary
+  object in between
+
 That is the right direction because it makes the shell add only what it truly
 owns:
 
