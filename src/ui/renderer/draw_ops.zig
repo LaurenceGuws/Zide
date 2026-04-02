@@ -27,13 +27,23 @@ pub const Vertex = packed struct {
     ba: f32,
 };
 
+pub const BatchState = struct {
+    vertices: std.ArrayList(Vertex) = std.ArrayList(Vertex).empty,
+    draws: std.ArrayList(BatchDraw) = std.ArrayList(BatchDraw).empty,
+};
+
+pub fn deinit(state: *BatchState, allocator: std.mem.Allocator) void {
+    state.vertices.deinit(allocator);
+    state.draws.deinit(allocator);
+}
+
 pub fn beginTerminalBatch(renderer: anytype) void {
-    renderer.batch_vertices.clearRetainingCapacity();
-    renderer.batch_draws.clearRetainingCapacity();
+    renderer.batch.vertices.clearRetainingCapacity();
+    renderer.batch.draws.clearRetainingCapacity();
 }
 
 pub fn flushTerminalBatch(renderer: anytype) void {
-    const vertex_count = renderer.batch_vertices.items.len;
+    const vertex_count = renderer.batch.vertices.items.len;
     if (vertex_count == 0) return;
     ensureVboCapacity(renderer, vertex_count);
     gl.UseProgram(renderer.shader_program);
@@ -43,9 +53,9 @@ pub fn flushTerminalBatch(renderer: anytype) void {
         gl.c.GL_ARRAY_BUFFER,
         0,
         @as(gl.GLsizeiptr, @intCast(@sizeOf(Vertex) * vertex_count)),
-        renderer.batch_vertices.items.ptr,
+        renderer.batch.vertices.items.ptr,
     );
-    for (renderer.batch_draws.items) |draw| {
+    for (renderer.batch.draws.items) |draw| {
         if (draw.texture_id == 0) continue;
         gl.ActiveTexture(gl.c.GL_TEXTURE0);
         gl.BindTexture(gl.c.GL_TEXTURE_2D, draw.texture_id);
@@ -138,7 +148,7 @@ pub fn addBatchQuad(renderer: anytype, texture: types.Texture, src: types.Rect, 
     const x1 = dest.x + dest.width;
     const y1 = dest.y + dest.height;
 
-    const base = renderer.batch_vertices.items.len;
+    const base = renderer.batch.vertices.items.len;
     const verts = [_]Vertex{
         .{ .x = x0, .y = y0, .u = u_min, .v = v_min, .r = r, .g = g, .b = b, .a = a, .br = br, .bg = bg, .bb = bb, .ba = ba },
         .{ .x = x1, .y = y0, .u = u_max, .v = v_min, .r = r, .g = g, .b = b, .a = a, .br = br, .bg = bg, .bb = bb, .ba = ba },
@@ -147,18 +157,18 @@ pub fn addBatchQuad(renderer: anytype, texture: types.Texture, src: types.Rect, 
         .{ .x = x1, .y = y1, .u = u_max, .v = v_max, .r = r, .g = g, .b = b, .a = a, .br = br, .bg = bg, .bb = bb, .ba = ba },
         .{ .x = x0, .y = y1, .u = u_min, .v = v_max, .r = r, .g = g, .b = b, .a = a, .br = br, .bg = bg, .bb = bb, .ba = ba },
     };
-    renderer.batch_vertices.appendSlice(renderer.allocator, &verts) catch |err| {
+    renderer.batch.vertices.appendSlice(renderer.allocator, &verts) catch |err| {
         log.logf(.warning, "batch vertices append failed texture={d} err={s}", .{ texture.id, @errorName(err) });
         return;
     };
-    if (renderer.batch_draws.items.len > 0) {
-        const last_idx = renderer.batch_draws.items.len - 1;
-        if (renderer.batch_draws.items[last_idx].texture_id == texture.id and renderer.batch_draws.items[last_idx].kind == kind) {
-            renderer.batch_draws.items[last_idx].count += 6;
+    if (renderer.batch.draws.items.len > 0) {
+        const last_idx = renderer.batch.draws.items.len - 1;
+        if (renderer.batch.draws.items[last_idx].texture_id == texture.id and renderer.batch.draws.items[last_idx].kind == kind) {
+            renderer.batch.draws.items[last_idx].count += 6;
             return;
         }
     }
-    renderer.batch_draws.append(renderer.allocator, .{
+    renderer.batch.draws.append(renderer.allocator, .{
         .texture_id = texture.id,
         .kind = kind,
         .start = base,

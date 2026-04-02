@@ -177,6 +177,8 @@ Progress note, 2026-04-02:
   of being declared in the renderer root
 - `ClipboardState` now lives with `src/ui/renderer/clipboard.zig` instead of
   leaving clipboard buffering as an ad hoc renderer-root field
+- terminal batch vertex/draw storage now lives as one grouped state slab with
+  `src/ui/renderer/draw_ops.zig` instead of two loose renderer-root fields
 - renderer init/deinit now assemble and tear down grouped scale/font-config
   state through owner-level helpers instead of open-coding that grouped-state
   lifecycle inline

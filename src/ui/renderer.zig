@@ -200,8 +200,7 @@ const KeyPress = input_state.KeyPress;
 
 const RenderTarget = gl_backend.RenderTarget;
 
-const BatchDraw = draw_ops.BatchDraw;
-const Vertex = draw_ops.Vertex;
+const BatchState = draw_ops.BatchState;
 
 pub const SceneTargetInvalidation = packed struct(u8) {
     uninitialized: bool = false,
@@ -392,8 +391,7 @@ pub const Renderer = struct {
     scale: ScaleState,
     input: InputRuntimeState,
     clipboard: ClipboardState,
-    batch_vertices: std.ArrayList(Vertex),
-    batch_draws: std.ArrayList(BatchDraw),
+    batch: BatchState,
     terminal_glyph_cache: glyph_cache.GlyphCache,
 
     // Terminal run-based shaping scratch buffers.
@@ -555,8 +553,7 @@ pub const Renderer = struct {
             .scale = scale,
             .input = .{},
             .clipboard = .{},
-            .batch_vertices = std.ArrayList(Vertex).empty,
-            .batch_draws = std.ArrayList(BatchDraw).empty,
+            .batch = .{},
             .terminal_glyph_cache = glyph_cache.GlyphCache.init(allocator),
             .terminal_shape_buffer = terminal_shape_buffer,
             .terminal_shape_first_pen = .{},
@@ -596,8 +593,7 @@ pub const Renderer = struct {
 
         input_state.deinit(self.inputDomain());
         clipboard.deinit(&self.clipboard, self.allocator);
-        self.batch_vertices.deinit(self.allocator);
-        self.batch_draws.deinit(self.allocator);
+        draw_ops.deinit(&self.batch, self.allocator);
         self.terminal_glyph_cache.deinit();
         hb.hb_buffer_destroy(self.terminal_shape_buffer);
 

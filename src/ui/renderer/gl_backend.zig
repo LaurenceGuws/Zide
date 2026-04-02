@@ -143,21 +143,21 @@ pub fn initGlResources(renderer: anytype) !void {
     gl.BindBuffer(gl.c.GL_ARRAY_BUFFER, renderer.vbo);
     gl.BufferData(
         gl.c.GL_ARRAY_BUFFER,
-        gl_resources.computeBufferBytes(@sizeOf(@TypeOf(renderer.batch_vertices.items[0])), 6),
+        gl_resources.computeBufferBytes(@sizeOf(@TypeOf(renderer.batch.vertices.items[0])), 6),
         null,
         gl.c.GL_DYNAMIC_DRAW,
     );
     renderer.vbo_capacity_vertices = 6;
 
     gl.EnableVertexAttribArray(0);
-    gl.VertexAttribPointer(0, 2, gl.c.GL_FLOAT, gl.c.GL_FALSE, @sizeOf(@TypeOf(renderer.batch_vertices.items[0])), @ptrFromInt(0));
+    gl.VertexAttribPointer(0, 2, gl.c.GL_FLOAT, gl.c.GL_FALSE, @sizeOf(@TypeOf(renderer.batch.vertices.items[0])), @ptrFromInt(0));
     gl.EnableVertexAttribArray(1);
     gl.VertexAttribPointer(
         1,
         2,
         gl.c.GL_FLOAT,
         gl.c.GL_FALSE,
-        @sizeOf(@TypeOf(renderer.batch_vertices.items[0])),
+        @sizeOf(@TypeOf(renderer.batch.vertices.items[0])),
         @ptrFromInt(2 * @sizeOf(f32)),
     );
     gl.EnableVertexAttribArray(2);
@@ -166,7 +166,7 @@ pub fn initGlResources(renderer: anytype) !void {
         4,
         gl.c.GL_FLOAT,
         gl.c.GL_FALSE,
-        @sizeOf(@TypeOf(renderer.batch_vertices.items[0])),
+        @sizeOf(@TypeOf(renderer.batch.vertices.items[0])),
         @ptrFromInt(4 * @sizeOf(f32)),
     );
 
@@ -176,7 +176,7 @@ pub fn initGlResources(renderer: anytype) !void {
         4,
         gl.c.GL_FLOAT,
         gl.c.GL_FALSE,
-        @sizeOf(@TypeOf(renderer.batch_vertices.items[0])),
+        @sizeOf(@TypeOf(renderer.batch.vertices.items[0])),
         @ptrFromInt(8 * @sizeOf(f32)),
     );
 

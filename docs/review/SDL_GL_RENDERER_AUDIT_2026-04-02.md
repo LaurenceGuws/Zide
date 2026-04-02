@@ -98,6 +98,8 @@ Status note, 2026-04-02:
   `renderer.zig`
 - `ClipboardState` now lives with the clipboard owner instead of leaving
   clipboard buffering as an ad hoc renderer-root field
+- terminal batch vertex/draw storage now lives as one grouped state slab with
+  the draw owner instead of two loose renderer-root fields
 - constructor/destructor now assemble and tear down grouped scale/font-config
   state through owner-level helpers instead of repeating that grouped-state
   lifecycle inline
