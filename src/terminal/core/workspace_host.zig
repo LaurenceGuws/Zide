@@ -1,6 +1,7 @@
 const std = @import("std");
 const terminal_runtime = @import("terminal_runtime.zig");
 const workspace_mod = @import("workspace.zig");
+const terminal_publication = @import("publication/terminal_publication.zig");
 const host_queries = @import("session/host_queries.zig");
 const session_interaction = @import("session/interaction.zig");
 const session_runtime = @import("session/runtime.zig");
@@ -8,6 +9,9 @@ const session_runtime = @import("session/runtime.zig");
 const TerminalWorkspace = workspace_mod.TerminalWorkspace;
 const TabId = workspace_mod.TabId;
 const PtyTerminalRuntime = terminal_runtime.PtyTerminalRuntime;
+pub const ActiveFrameState = terminal_publication.FrameState;
+pub const PollFrameMetrics = workspace_mod.TerminalWorkspace.PollFrameMetrics;
+pub const PollRuntimeCounters = workspace_mod.TerminalWorkspace.PollRuntimeCounters;
 
 pub const TabTarget = struct {
     index: usize,
@@ -19,6 +23,20 @@ pub const CloseConfirmContext = struct {
     foreground_process_label: []const u8 = "",
     semantic_command_active: bool = false,
 };
+
+pub fn activeFrameState(workspace: *const TerminalWorkspace) ActiveFrameState {
+    if (workspace.tabs.items.len == 0) return .{};
+    const session = workspace.tabs.items[workspace.activeIndex()].session;
+    return terminal_publication.frameState(session, session_runtime.hasData(session));
+}
+
+pub fn lastPollFrameMetrics(workspace: *const TerminalWorkspace) PollFrameMetrics {
+    return workspace.last_poll_metrics;
+}
+
+pub fn pollRuntimeCounters(workspace: *const TerminalWorkspace) PollRuntimeCounters {
+    return workspace.poll_runtime_counters;
+}
 
 fn sessionNeedsCloseConfirm(session: *PtyTerminalRuntime) bool {
     if (!host_queries.isAlive(session)) return false;

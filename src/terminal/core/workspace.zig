@@ -1,5 +1,4 @@
 const std = @import("std");
-const terminal_publication = @import("publication/terminal_publication.zig");
 const runtime_mod = @import("terminal_runtime.zig");
 const session_config = @import("session/config.zig");
 const host_types = @import("session/host_types.zig");
@@ -61,8 +60,6 @@ pub const TabSyncState = struct {
 };
 
 pub const TerminalWorkspace = struct {
-    pub const ActiveFrameState = terminal_publication.FrameState;
-
     pub const PollFrameResult = struct {
         any_polled: bool = false,
         active_published_changed: bool = false,
@@ -171,12 +168,6 @@ pub const TerminalWorkspace = struct {
         return self.tabs.items[index].session;
     }
 
-    pub fn activeFrameState(self: *const TerminalWorkspace) ActiveFrameState {
-        if (self.tabs.items.len == 0) return .{};
-        const session = self.tabs.items[self.activeIndex()].session;
-        return terminal_publication.frameState(session, session_runtime.hasData(session));
-    }
-
     pub const CreatedTab = struct {
         id: TabId,
         session: *PtyTerminalRuntime,
@@ -281,14 +272,6 @@ pub const TerminalWorkspace = struct {
 
     pub fn pollForFrame(self: *TerminalWorkspace, input_active_index: ?usize, policy: PollPolicy) !PollFrameResult {
         return polling.pollForFrame(self, input_active_index, policy);
-    }
-
-    pub fn lastPollFrameMetrics(self: *const TerminalWorkspace) PollFrameMetrics {
-        return self.last_poll_metrics;
-    }
-
-    pub fn pollRuntimeCounters(self: *const TerminalWorkspace) PollRuntimeCounters {
-        return self.poll_runtime_counters;
     }
 
     fn resetPollRuntimeCounters(self: *TerminalWorkspace) void {

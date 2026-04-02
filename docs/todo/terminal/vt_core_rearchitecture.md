@@ -175,6 +175,10 @@ Focused follow-up lane:
     reference-grade host/runtime split
   - the next question is what the one unmistakable native host-facing terminal
     aggregate should be now
+  Progress:
+  - active frame state, poll metrics, and poll counters now live under
+    `src/terminal/core/workspace_host.zig` as host-facing summary accessors
+    instead of hanging off `workspace` directly
 
 ## Current Milestone
 

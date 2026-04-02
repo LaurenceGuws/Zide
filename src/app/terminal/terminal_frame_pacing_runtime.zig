@@ -1,6 +1,7 @@
 const std = @import("std");
 const app_logger = @import("../../app_logger.zig");
 const terminal_publication = @import("../../terminal/core/publication/terminal_publication.zig");
+const workspace_host = @import("../../terminal/core/workspace_host.zig");
 const runtime_policy = @import("../runtime_policy.zig");
 const terminal_widget_draw = @import("../../ui/widgets/terminal_widget_draw.zig");
 
@@ -74,7 +75,7 @@ pub fn observe(state: anytype, now: f64) Snapshot {
     var frame_state = blk: {
         const State = @TypeOf(state.*);
         if (!@hasField(State, "terminal_workspace")) break :blk Snapshot{};
-        if (state.terminal_workspace) |*workspace| break :blk workspace.activeFrameState();
+        if (state.terminal_workspace) |*workspace| break :blk workspace_host.activeFrameState(workspace);
         break :blk Snapshot{};
     };
     const pending_generation = frame_state.pending_generation;
@@ -107,7 +108,7 @@ pub fn consumePollMetrics(state: anytype) ?PollMetrics {
 
     if (state.terminal_workspace) |*workspace| {
         const pacing = &state.terminal_frame_pacing;
-        const metrics = workspace.lastPollFrameMetrics();
+        const metrics = workspace_host.lastPollFrameMetrics(workspace);
         if (metrics.seq == 0 or metrics.seq == pacing.last_poll_seq) return null;
         pacing.last_poll_seq = metrics.seq;
         return .{
@@ -137,7 +138,7 @@ pub fn pollCounters(state: anytype) ?PollCounters {
     if (!@hasField(State, "terminal_workspace")) return null;
 
     if (state.terminal_workspace) |*workspace| {
-        const counters = workspace.pollRuntimeCounters();
+        const counters = workspace_host.pollRuntimeCounters(workspace);
         return .{
             .epoch = counters.epoch,
             .frames = counters.frames,

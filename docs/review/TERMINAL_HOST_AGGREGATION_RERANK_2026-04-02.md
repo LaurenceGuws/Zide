@@ -61,6 +61,15 @@ Each piece is cleaner than before.
 But the overall host-facing terminal runtime still reads more like adjacent
 partial owners than one unmistakable host layer over engine truth.
 
+Status update:
+
+- the first host-facing summary cut is now landed
+- active frame state, poll metrics, and poll counters no longer hang off
+  `workspace` as host-facing summary accessors
+- that summary slab now lives in
+  [workspace_host.zig](/home/home/personal/zide/src/terminal/core/workspace_host.zig)
+- pacing now consumes that host-facing summary owner directly
+
 ### 2. Ghostty still looks cleaner at first glance
 
 Ghostty pressure is not about identical APIs.
@@ -93,8 +102,8 @@ host runtime path.
 ## Strongest Host-Aggregation Hotspots
 
 1. [workspace.zig](/home/home/personal/zide/src/terminal/core/workspace.zig)
-   - still owns active frame state and poll metrics/counters
-   - cleaner than before, but still the first host aggregate readers see
+   - cleaner now that host-facing summary accessors moved off it
+   - still the first host aggregate readers see
 
 2. [workspace_polling.zig](/home/home/personal/zide/src/terminal/core/workspace_polling.zig)
    - policy execution lives beside workspace state rather than behind a more
