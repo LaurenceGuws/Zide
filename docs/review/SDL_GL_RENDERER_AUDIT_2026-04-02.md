@@ -144,13 +144,10 @@ center of gravity enough.
 
 Examples:
 
-- `src/ui/renderer/targets.zig` is only a thin forwarder over
-  `src/ui/renderer/gl_backend.zig`
 - `src/ui/renderer.zig` still imports and re-exports most of the live surface
 
 References:
 
-- `src/ui/renderer/targets.zig`
 - `src/ui/renderer/gl_backend.zig`
 - `src/ui/renderer.zig`
 
@@ -158,6 +155,14 @@ Judgment:
 
 - file count increased
 - ownership clarity did not increase proportionally
+
+Status note, 2026-04-02:
+
+- the fake `src/ui/renderer/targets.zig` forwarding seam is gone
+- retained-target and renderer code now use `src/ui/renderer/gl_backend.zig`
+  directly
+- the remaining issue is still the oversized renderer center, not backend
+  forwarding residue
 
 ### 5. The SDL/GL host seam is functionally decent but still reads like an
 issue-era probe surface

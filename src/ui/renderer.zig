@@ -15,7 +15,6 @@ const time_utils = @import("renderer/time_utils.zig");
 const window_init = @import("renderer/window_init.zig");
 const input_state = @import("renderer/input_state.zig");
 const scale_utils = @import("renderer/scale_utils.zig");
-const targets = @import("renderer/targets.zig");
 const text_draw = @import("renderer/text_draw.zig");
 const gl_resources = @import("renderer/gl_resources.zig");
 const draw_batch = @import("renderer/draw_batch.zig");
@@ -217,7 +216,7 @@ const mouse_button_count: usize = 8;
 const input_queue_capacity: usize = 8192;
 const KeyPress = input_state.KeyPress;
 
-const RenderTarget = targets.RenderTarget;
+const RenderTarget = gl_backend.RenderTarget;
 
 const BatchDraw = draw_ops.BatchDraw;
 const Vertex = draw_ops.Vertex;
@@ -1584,11 +1583,11 @@ pub const Renderer = struct {
 
     pub fn bindDefaultTarget(self: *Renderer) void {
         self.dst_linear_active = false;
-        targets.bindDefaultTarget(self);
+        gl_backend.bindDefaultTarget(self);
     }
 
     pub fn beginRenderTarget(self: *Renderer, target: ?RenderTarget) bool {
-        const ok = targets.beginRenderTarget(self, target);
+        const ok = gl_backend.beginRenderTarget(self, target);
         if (ok) self.dst_linear_active = true;
         return ok;
     }
@@ -1597,15 +1596,15 @@ pub const Renderer = struct {
         const scale = if (self.render_scale > 0.0) self.render_scale else 1.0;
         const width = @max(1, @as(i32, @intFromFloat(std.math.round(@as(f32, @floatFromInt(logical_width)) * scale))));
         const height = @max(1, @as(i32, @intFromFloat(std.math.round(@as(f32, @floatFromInt(logical_height)) * scale))));
-        return targets.ensureRenderTarget(target, width, height, logical_width, logical_height, filter);
+        return gl_backend.ensureRenderTarget(target, width, height, logical_width, logical_height, filter);
     }
 
     pub fn destroyRenderTarget(_: *Renderer, target: *?RenderTarget) void {
-        targets.destroyRenderTarget(target);
+        gl_backend.destroyRenderTarget(target);
     }
 
     fn updateProjection(self: *Renderer, width: i32, height: i32) void {
-        targets.updateProjection(self, width, height);
+        gl_backend.updateProjection(self, width, height);
     }
 
     pub fn beginTerminalBatch(self: *Renderer) void {

@@ -208,6 +208,12 @@ Expected pressure:
 - helper-oriented splits that do not move the real center
 - product-specific API leaks
 
+Progress note, 2026-04-02:
+
+- `src/ui/renderer/targets.zig` was deleted; retained-target and renderer code
+  now use `src/ui/renderer/gl_backend.zig` directly instead of routing through
+  a fake backend boundary
+
 ### Focus 2: SDL/GL host seam
 
 Question:

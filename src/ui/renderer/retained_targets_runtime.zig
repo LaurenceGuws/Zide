@@ -1,7 +1,7 @@
 const std = @import("std");
 const draw_ops = @import("draw_ops.zig");
 const target_draw = @import("target_draw.zig");
-const targets = @import("targets.zig");
+const gl_backend = @import("gl_backend.zig");
 const texture_draw = @import("texture_draw.zig");
 const types = @import("types.zig");
 const app_logger = @import("../../app_logger.zig");
@@ -89,7 +89,7 @@ pub fn drawTerminalTexture(self: anytype, x: f32, y: f32, width: f32, height: f3
 
 pub fn scrollTerminalTexture(self: anytype, dx: i32, dy: i32) bool {
     if (self.terminal_target) |target| {
-        return targets.scrollRenderTarget(
+        return gl_backend.scrollRenderTarget(
             self,
             self.terminal_target,
             &self.terminal_scroll_target,
