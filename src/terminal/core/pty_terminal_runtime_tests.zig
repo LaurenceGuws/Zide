@@ -1042,7 +1042,7 @@ test "visible history changes publish partial cache damage without force-full" {
 
     const new_fg = Color{ .r = 0x11, .g = 0x22, .b = 0x33, .a = 0xff };
     session.history.updateDefaultColors(base.attrs.fg, base.attrs.bg, new_fg, base.attrs.bg);
-    terminal_publication.publishCurrentViewLocked(session, "test_publication");
+    _ = terminal_publication.bumpAndPublishCurrentViewLocked(session, "test_publication");
 
     const cache = terminal_publication.renderCache(session);
     try std.testing.expectEqual(Dirty.partial, cache.dirty);
@@ -1076,7 +1076,7 @@ test "visible history changes without presented diff base stay partial" {
 
     const new_fg = Color{ .r = 0x44, .g = 0x55, .b = 0x66, .a = 0xff };
     session.history.updateDefaultColors(base.attrs.fg, base.attrs.bg, new_fg, base.attrs.bg);
-    terminal_publication.publishCurrentViewLocked(session, "test_publication");
+    _ = terminal_publication.bumpAndPublishCurrentViewLocked(session, "test_publication");
 
     const cache = terminal_publication.renderCache(session);
     try std.testing.expectEqual(Dirty.partial, cache.dirty);
@@ -1382,7 +1382,7 @@ test "cursor style updates publish through cache without texture invalidation" {
     try std.testing.expect(terminal_publication.acknowledgePresentedGeneration(session, terminal_publication.renderCache(session).generation));
 
     session.primary.cursor_style = .{ .shape = .bar, .blink = false };
-    terminal_publication.publishCurrentViewLocked(session, "test_publication");
+    _ = terminal_publication.bumpAndPublishCurrentViewLocked(session, "test_publication");
 
     const cache = terminal_publication.renderCache(session);
     try std.testing.expectEqual(Dirty.none, cache.dirty);
@@ -1428,7 +1428,7 @@ test "kitty generation delta without visible damage stays clean" {
     try std.testing.expect(terminal_publication.acknowledgePresentedGeneration(session, terminal_publication.renderCache(session).generation));
 
     session.kitty_primary.generation += 1;
-    terminal_publication.publishCurrentViewLocked(session, "test_publication");
+    _ = terminal_publication.bumpAndPublishCurrentViewLocked(session, "test_publication");
 
     const cache = terminal_publication.renderCache(session);
     try std.testing.expectEqual(Dirty.none, cache.dirty);
@@ -1506,7 +1506,7 @@ test "clear generation delta without visible damage stays clean" {
     try std.testing.expect(terminal_publication.acknowledgePresentedGeneration(session, terminal_publication.renderCache(session).generation));
 
     _ = session.clear_generation.fetchAdd(1, .acq_rel);
-    terminal_publication.publishCurrentViewLocked(session, "test_publication");
+    _ = terminal_publication.bumpAndPublishCurrentViewLocked(session, "test_publication");
 
     const cache = terminal_publication.renderCache(session);
     try std.testing.expectEqual(Dirty.none, cache.dirty);
@@ -1552,7 +1552,7 @@ test "screen reverse toggle stays on partial path" {
     try std.testing.expect(terminal_publication.acknowledgePresentedGeneration(session, terminal_publication.renderCache(session).generation));
 
     session.core.activeScreen().setScreenReverse(true);
-    terminal_publication.publishCurrentViewLocked(session, "test_publication");
+    _ = terminal_publication.bumpAndPublishCurrentViewLocked(session, "test_publication");
 
     const cache = terminal_publication.renderCache(session);
     try std.testing.expectEqual(Dirty.partial, cache.dirty);
@@ -1590,7 +1590,7 @@ test "visible history change narrows to projected diff against presented base" {
     const history_row = session.history.scrollback.lineByIndexMut(0).?;
     history_row.cells[0].codepoint = 'Z';
     session.history.markScrollbackChanged();
-    terminal_publication.publishCurrentViewLocked(session, "test_publication");
+    _ = terminal_publication.bumpAndPublishCurrentViewLocked(session, "test_publication");
 
     const cache = terminal_publication.renderCache(session);
     try std.testing.expectEqual(Dirty.partial, cache.dirty);
@@ -1632,12 +1632,12 @@ test "visible history change stays conservative against unpresented base" {
     const first_update = session.history.scrollback.lineByIndexMut(0).?;
     first_update.cells[0].codepoint = 'Z';
     session.history.markScrollbackChanged();
-    terminal_publication.publishCurrentViewLocked(session, "test_publication");
+    _ = terminal_publication.bumpAndPublishCurrentViewLocked(session, "test_publication");
 
     const second_update = session.history.scrollback.lineByIndexMut(0).?;
     second_update.cells[1].codepoint = 'Y';
     session.history.markScrollbackChanged();
-    terminal_publication.publishCurrentViewLocked(session, "test_publication");
+    _ = terminal_publication.bumpAndPublishCurrentViewLocked(session, "test_publication");
 
     const cache = terminal_publication.renderCache(session);
     try std.testing.expectEqual(Dirty.partial, cache.dirty);
@@ -1682,14 +1682,14 @@ test "visible history change with blank separator rows stays conservative agains
     const first_update = session.history.scrollback.lineByIndexMut(0).?;
     first_update.cells[0].codepoint = 'Z';
     session.history.markScrollbackChanged();
-    terminal_publication.publishCurrentViewLocked(session, "test_publication");
+    _ = terminal_publication.bumpAndPublishCurrentViewLocked(session, "test_publication");
 
     const second_row = session.history.scrollback.lineByIndexMut(1).?;
     for (second_row.cells[0..4]) |*cell| cell.* = base;
     const fourth_row = session.history.scrollback.lineByIndexMut(3).?;
     for (fourth_row.cells[0..4]) |*cell| cell.* = base;
     session.history.markScrollbackChanged();
-    terminal_publication.publishCurrentViewLocked(session, "test_publication");
+    _ = terminal_publication.bumpAndPublishCurrentViewLocked(session, "test_publication");
 
     const cache = terminal_publication.renderCache(session);
     try std.testing.expectEqual(Dirty.partial, cache.dirty);
