@@ -115,6 +115,16 @@ gravity into smaller files.
   - this lane is close to a stop-marker now
   - the stronger remaining pressure is broader `TerminalCore` sufficiency
     again, not another obvious local mutation cut
+- `docs/review/VT_SPRINT_STOP_MARKER_2026-04-03.md`
+  Why: after the recent VT waves, the queue needs an explicit stop-marker so
+  we do not turn broader sufficiency discomfort into fake progress.
+  Current read:
+  - there is no new honest small-cut contradiction obvious enough to justify
+    more VT code right now
+  - the remaining gap versus Ghostty/WezTerm is now broader library-object
+    feel and design quality
+  - reopen VT only if a future pass names one specific deeper `TerminalCore`
+    capability or object-model gap
 
 - `docs/review/VT_WAR_4_SCOPE_AND_SEEDS_2026-04-03.md`
   Why: the next scrutiny pass is no longer a cleanup sprint; it is a focused
