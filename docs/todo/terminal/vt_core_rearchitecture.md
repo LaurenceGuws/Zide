@@ -38,6 +38,15 @@ gravity into smaller files.
     resize story, not publication/runtime sludge
   - immutable export, runtime shell size, and `host_queries.zig` no longer
     deserve default-war status
+- `docs/review/VT_INPUT_SEMANTICS_WAR_2026-04-03.md`
+  Why: the plug-and-play matrix now makes the next war explicit instead of
+  leaving "input" as a vague discomfort.
+  Current read:
+  - the next uninterrupted VT focus is host-driving input semantics
+  - the only honest opener inside that war remains key/char semantic dispatch
+    before encoding
+  - do not widen this into generic input cleanup, transport rewriting, or
+    shell-thinning theater
 
 - `docs/review/VT_WAR_4_SCOPE_AND_SEEDS_2026-04-03.md`
   Why: the next scrutiny pass is no longer a cleanup sprint; it is a focused
