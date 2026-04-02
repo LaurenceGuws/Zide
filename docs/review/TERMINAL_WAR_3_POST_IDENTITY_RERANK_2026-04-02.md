@@ -41,3 +41,26 @@ War 3 is near a real rerank point again.
 
 Do not keep cutting by momentum unless a fresh review finds another large,
 coherent contradiction to the `zide-vt` target shape.
+
+## Reference Pressure, Later on 2026-04-02
+
+Fresh comparison against the strongest local references reinforces the same
+read:
+
+- Ghostty still has the cleaner library-center story at first glance because
+  `Terminal` is plainly the engine and `Termio` is plainly the runtime shell
+- WezTerm still reinforces the same pressure from a more mature stack
+  direction: engine truth should be obvious before runtime/UI layers enter the
+  picture
+
+Current live Zide read from that cleaner baseline:
+
+- publication no longer dominates first-glance read
+- runtime no longer dominates first-glance read
+- the aggregate/session object and public identity are much cleaner now
+- the remaining question is not an obvious local whole-slab cut
+- the remaining question is whether `TerminalCore` now reads strongly enough as
+  the indisputable library center, or whether War 3 needs a deeper object-model
+  step later
+
+That is now too large and too ambiguous to keep cutting by local momentum.

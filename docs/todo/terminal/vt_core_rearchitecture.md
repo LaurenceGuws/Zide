@@ -171,6 +171,11 @@ Focused follow-up lane:
   - no new local whole-slab contradiction is immediately obvious
   - the next honest question is whether `TerminalCore` now reads strongly
     enough as the indisputable library center
+  Reference pressure:
+  - Ghostty still wins the cleanest first-glance library-center story
+  - WezTerm reinforces the same maturity bar
+  - current Zide read is now close enough that the next move should come from
+    a deeper object-model review or a stop-marker, not more local helper cuts
 
 - `docs/review/TERMINAL_NATIVE_ARCHITECTURAL_SCRUTINY_2026-03-31.md`
   Why: this is the current ruthless read on what still looks second-rate at
