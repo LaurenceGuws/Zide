@@ -1,6 +1,6 @@
 const std = @import("std");
 const draw_ops = @import("draw_ops.zig");
-const target_draw = @import("target_draw.zig");
+const gl = @import("gl.zig");
 const gl_backend = @import("gl_backend.zig");
 const texture_draw = @import("texture_draw.zig");
 const types = @import("types.zig");
@@ -15,13 +15,13 @@ fn snapToDevicePixel(value: f32, render_scale: f32) f32 {
 }
 
 pub fn ensureTerminalTexture(self: anytype, width: i32, height: i32) bool {
-    const recreated = self.ensureRenderTargetScaled(&self.terminal_target, width, height, target_draw.nearestFilter());
-    _ = self.ensureRenderTargetScaled(&self.terminal_scroll_target, width, height, target_draw.nearestFilter());
+    const recreated = self.ensureRenderTargetScaled(&self.terminal_target, width, height, gl.c.GL_NEAREST);
+    _ = self.ensureRenderTargetScaled(&self.terminal_scroll_target, width, height, gl.c.GL_NEAREST);
     return recreated;
 }
 
 pub fn ensureEditorTexture(self: anytype, width: i32, height: i32) bool {
-    return self.ensureRenderTargetScaled(&self.editor_target, width, height, target_draw.nearestFilter());
+    return self.ensureRenderTargetScaled(&self.editor_target, width, height, gl.c.GL_NEAREST);
 }
 
 pub fn beginTerminalTexture(self: anytype) bool {

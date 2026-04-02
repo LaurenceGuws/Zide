@@ -4,7 +4,6 @@ const sdl_api = @import("../../platform/sdl_api.zig");
 const platform_window = @import("../../platform/window_metrics.zig");
 const texture_draw = @import("texture_draw.zig");
 const draw_ops = @import("draw_ops.zig");
-const target_draw = @import("target_draw.zig");
 const app_logger = @import("../../app_logger.zig");
 const types = @import("types.zig");
 const renderer_root = @import("../renderer.zig");
@@ -24,7 +23,7 @@ pub fn beginFrame(self: anytype) void {
     self.render_width = sizes.render_width;
     self.render_height = sizes.render_height;
     refreshSceneTargetContract(self);
-    prepareSceneTarget(self, target_draw.nearestFilter());
+    prepareSceneTarget(self, gl.c.GL_NEAREST);
 
     self.text_bg_rgba = .{ .r = 0, .g = 0, .b = 0, .a = 0 };
 

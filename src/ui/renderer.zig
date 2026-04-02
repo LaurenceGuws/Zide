@@ -17,7 +17,6 @@ const input_state = @import("renderer/input_state.zig");
 const scale_utils = @import("renderer/scale_utils.zig");
 const text_draw = @import("renderer/text_draw.zig");
 const gl_resources = @import("renderer/gl_resources.zig");
-const target_draw = @import("renderer/target_draw.zig");
 const shape_utils = @import("renderer/shape_utils.zig");
 const shape_draw = @import("renderer/shape_draw.zig");
 const terminal_glyphs = @import("renderer/terminal_glyphs.zig");
