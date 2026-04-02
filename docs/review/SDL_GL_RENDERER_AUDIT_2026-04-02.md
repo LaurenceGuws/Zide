@@ -195,19 +195,18 @@ Severity: medium
 
 Build/runtime policy clearly says only `sdl_gl` is implemented.
 
-But the repo still visibly carries backend stubs:
+Before the first code cut in this lane, the repo still visibly carried backend
+stubs:
 
 - `src/ui/renderer/backends/egl.zig`
 - `src/ui/renderer/backends/wgl.zig`
 - `src/ui/renderer/backends/metal.zig`
+- `src/ui/renderer/backends/gles.zig`
 
 References:
 
 - `src/ui/renderer.zig:208`
 - `build_system/bootstrap_policy.zig`
-- `src/ui/renderer/backends/egl.zig`
-- `src/ui/renderer/backends/wgl.zig`
-- `src/ui/renderer/backends/metal.zig`
 
 Judgment:
 
@@ -281,8 +280,8 @@ This should be treated as the real center for future cuts.
    - stop letting them define the host module shape
 
 4. Make backend surface honesty match reality
-   - either quarantine or remove backend stubs until there is a real backend
-     split
+   - remove or quarantine unsupported backend surfaces until there is a real
+     backend split
 
 ## Bottom Line
 

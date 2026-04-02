@@ -161,11 +161,13 @@ and more like an accumulated issue-era probe surface.
 
 Build/runtime truth says only `sdl_gl` is real.
 
-But the repo still visibly carries backend stubs such as:
+Before this scrutiny round started, the repo still visibly carried backend
+stubs such as:
 
 - `src/ui/renderer/backends/egl.zig`
 - `src/ui/renderer/backends/wgl.zig`
 - `src/ui/renderer/backends/metal.zig`
+- `src/ui/renderer/backends/gles.zig`
 
 That creates a first-glance maturity gap:
 
@@ -246,13 +248,12 @@ Targets:
 
 - `src/ui/renderer/gl_backend.zig`
 - `src/ui/renderer/targets.zig`
-- `src/ui/renderer/backends/*.zig`
 - build/runtime renderer backend policy
 
 Expected pressure:
 
 - one real backend
-- multiple visible stub backends
+- a runtime/build surface that should not gesture beyond that
 - thin forwarder modules that do not create honest boundaries
 
 ## Subagent Angles Used For This Round
