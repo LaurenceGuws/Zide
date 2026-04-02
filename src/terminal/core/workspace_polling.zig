@@ -148,11 +148,10 @@ pub fn pollForFrame(self: anytype, input_active_index: ?usize, policy: anytype) 
     else
         0;
     const any_polled = try pollBudgeted(self, input_active_index, policy);
-    const published_post = if (active_idx) |idx|
-        terminal_publication.publishedGeneration(self.tabs.items[idx].session)
+    const active_published_changed = if (active_idx) |idx|
+        terminal_publication.publishedGenerationChangedSince(self.tabs.items[idx].session, published_pre)
     else
-        0;
-    const active_published_changed = published_post != published_pre;
+        false;
     return @TypeOf(self.*).PollFrameResult{
         .any_polled = any_polled,
         .active_published_changed = active_published_changed,

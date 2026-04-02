@@ -78,9 +78,9 @@ pub fn pollSingleSession(term: anytype, has_input: bool) !bool {
         try session_runtime.poll(term);
         polled = true;
     }
-    const pubgen_post = terminal_publication.publishedGeneration(term);
-    const published_changed = pubgen_post != pubgen_pre;
+    const published_changed = terminal_publication.publishedGenerationChangedSince(term, pubgen_pre);
     if (wake_log.enabled_file or wake_log.enabled_console) {
+        const pubgen_post = terminal_publication.publishedGeneration(term);
         wake_log.logFields(.info, "single_poll", &.{
             .{ .key = "has_input", .value = .{ .boolean = has_input } },
             .{ .key = "had_data", .value = .{ .boolean = had_data } },

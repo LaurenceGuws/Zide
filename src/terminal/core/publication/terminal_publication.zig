@@ -650,6 +650,10 @@ pub fn publishedGeneration(self: anytype) u64 {
     return renderCache(self).generation;
 }
 
+pub fn publishedGenerationChangedSince(self: anytype, baseline: u64) bool {
+    return publishedGeneration(self) != baseline;
+}
+
 pub fn presentedGeneration(self: anytype) u64 {
     return self.publication.presented_generation.load(.acquire);
 }
