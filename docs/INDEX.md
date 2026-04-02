@@ -97,6 +97,7 @@ Quick reading guide:
 - `docs/reference/README.md` — reference-doc placement and role.
 - `docs/research/README.md` — research-doc placement and role.
 - `docs/research/APP_HYGIENE_REFERENCE_SCRUTINY_2026-04-01.md` — official-doc and reference-repo scrutiny for the app hygiene cleanup lane.
+- `docs/research/SDL_GL_RENDERER_SCRUTINY_2026-04-02.md` — SDL3/OpenGL renderer scrutiny brief for renderer ownership, host seam, scene/present drift, and backend maturity.
 - `docs/research/editor/README.md` — editor research subtree entrypoint.
 - `docs/research/windows/README.md` — Windows shell/context-menu research subtree entrypoint.
 - `docs/research/editor/EDITOR_REFERENCE_COMPARISON_2026-03-18.md` — first focused editor reference comparison by concern.
