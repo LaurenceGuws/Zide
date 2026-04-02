@@ -11,6 +11,7 @@ const scene_frame_runtime = @import("../renderer/scene_frame_runtime.zig");
 const draw_grid = @import("terminal_widget_draw_grid.zig");
 const draw_overlay = @import("terminal_widget_draw_overlay.zig");
 const draw_texture = @import("terminal_widget_draw_texture.zig");
+const draw_metrics = @import("terminal_widget_draw_metrics.zig");
 const view_state = @import("terminal_widget_view_state.zig");
 
 const hover_mod = @import("terminal_widget_hover.zig");
@@ -24,25 +25,7 @@ const RenderCache = render_cache_mod.RenderCache;
 const PresentationCapture = terminal_publication.PresentationCapture;
 const PresentedRenderCache = terminal_publication.PresentedRenderCache;
 const PresentationFeedback = terminal_publication.PresentationFeedback;
-var frame_latency_seq: u64 = 0;
-var frame_latency_metrics: FrameLatencyMetrics = .{};
-
-pub const FrameLatencyMetrics = struct {
-    seq: u64 = 0,
-    generation: u64 = 0,
-    lock_ms: f64 = 0.0,
-    lock_wait_ms: f64 = 0.0,
-    lock_hold_ms: f64 = 0.0,
-    view_cache_ms: f64 = 0.0,
-    cache_copy_ms: f64 = 0.0,
-    texture_update_ms: f64 = 0.0,
-    texture_bg_ms: f64 = 0.0,
-    texture_glyph_ms: f64 = 0.0,
-    texture_kitty_ms: f64 = 0.0,
-    overlay_ms: f64 = 0.0,
-    render_ms: f64 = 0.0,
-    draw_ms: f64 = 0.0,
-};
+pub const FrameLatencyMetrics = draw_metrics.FrameLatencyMetrics;
 
 pub const DrawOutcome = PresentationFeedback;
 const drawRowBackgrounds = draw_grid.drawRowBackgrounds;
@@ -82,41 +65,7 @@ const ViewportShiftState = struct {
 };
 
 pub fn latestFrameLatencyMetrics() FrameLatencyMetrics {
-    return frame_latency_metrics;
-}
-
-fn publishFrameLatencyMetrics(
-    generation: u64,
-    lock_ms: f64,
-    lock_wait_ms: f64,
-    lock_hold_ms: f64,
-    view_cache_ms: f64,
-    cache_copy_ms: f64,
-    texture_update_ms: f64,
-    texture_bg_ms: f64,
-    texture_glyph_ms: f64,
-    texture_kitty_ms: f64,
-    overlay_ms: f64,
-    render_ms: f64,
-    draw_ms: f64,
-) void {
-    frame_latency_seq +%= 1;
-    frame_latency_metrics = .{
-        .seq = frame_latency_seq,
-        .generation = generation,
-        .lock_ms = lock_ms,
-        .lock_wait_ms = lock_wait_ms,
-        .lock_hold_ms = lock_hold_ms,
-        .view_cache_ms = view_cache_ms,
-        .cache_copy_ms = cache_copy_ms,
-        .texture_update_ms = texture_update_ms,
-        .texture_bg_ms = texture_bg_ms,
-        .texture_glyph_ms = texture_glyph_ms,
-        .texture_kitty_ms = texture_kitty_ms,
-        .overlay_ms = overlay_ms,
-        .render_ms = render_ms,
-        .draw_ms = draw_ms,
-    };
+    return draw_metrics.latestFrameLatencyMetrics();
 }
 
 fn snapToDevicePixel(value: f32, render_scale: f32) f32 {
@@ -160,7 +109,7 @@ pub fn drawPrepared(
         const draw_end = app_shell.getTime();
         const draw_ms_total = time_utils.secondsToMs(draw_end - draw_start);
         const render_ms = time_utils.secondsToMs(draw_end - render_phase_start);
-        publishFrameLatencyMetrics(
+        draw_metrics.publishFrameLatencyMetrics(
             view_state.drawStateInfo(&self.draw_cache).generation,
             lock_ms,
             lock_wait_ms,

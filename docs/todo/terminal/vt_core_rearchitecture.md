@@ -205,6 +205,11 @@ Focused follow-up lane:
     `src/ui/widgets/terminal_widget_draw.zig`
   - the next serious question is whether retained-surface planning/execution
     inside that file still needs a clearer owner boundary
+  Progress:
+  - the first non-draw secondary slab is now gone
+  - draw latency metrics now live in
+    `src/ui/widgets/terminal_widget_draw_metrics.zig`
+    instead of inflating `terminal_widget_draw.zig`
 
 ## Current Milestone
 

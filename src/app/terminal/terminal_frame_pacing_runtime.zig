@@ -3,9 +3,9 @@ const app_logger = @import("../../app_logger.zig");
 const terminal_publication = @import("../../terminal/core/publication/terminal_publication.zig");
 const workspace_host = @import("../../terminal/core/workspace_host.zig");
 const runtime_policy = @import("../runtime_policy.zig");
-const terminal_widget_draw = @import("../../ui/widgets/terminal_widget_draw.zig");
+const terminal_widget_draw_metrics = @import("../../ui/widgets/terminal_widget_draw_metrics.zig");
 
-const TerminalDrawLatencyMetrics = terminal_widget_draw.FrameLatencyMetrics;
+const TerminalDrawLatencyMetrics = terminal_widget_draw_metrics.FrameLatencyMetrics;
 const LogField = app_logger.Field;
 
 pub const SleepPolicy = struct {
@@ -96,7 +96,7 @@ pub fn observe(state: anytype, now: f64) Snapshot {
 
 pub fn consumeDrawMetrics(state: anytype) ?TerminalDrawLatencyMetrics {
     const pacing = &state.terminal_frame_pacing;
-    const metrics = terminal_widget_draw.latestFrameLatencyMetrics();
+    const metrics = terminal_widget_draw_metrics.latestFrameLatencyMetrics();
     if (metrics.seq == 0 or metrics.seq == pacing.last_draw_seq) return null;
     pacing.last_draw_seq = metrics.seq;
     return metrics;

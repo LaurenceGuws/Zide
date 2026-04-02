@@ -110,8 +110,15 @@ owner grouping.
 This is not obviously wrong, but it is one more sign that
 `terminal_widget_draw.zig` is carrying more than pure draw execution.
 
-If the next cut is in this lane, latency publication is one likely pressure
-point.
+Status update:
+
+- this first secondary slab is now moved out
+- draw latency metrics now live in
+  [terminal_widget_draw_metrics.zig](/home/home/personal/zide/src/ui/widgets/terminal_widget_draw_metrics.zig)
+  instead of inflating the retained-render center
+
+That was the right first cut because it removed a real non-draw concern
+without pretending the main retained-surface planning/execution slab is solved.
 
 ## What Does Not Currently Look Like The Problem
 
