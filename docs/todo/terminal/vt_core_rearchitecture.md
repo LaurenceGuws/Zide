@@ -179,6 +179,11 @@ Focused follow-up lane:
   - active frame state, poll metrics, and poll counters now live under
     `src/terminal/core/workspace_host.zig` as host-facing summary accessors
     instead of hanging off `workspace` directly
+  - the host-facing workspace poll entrypoint and poll policy slab now live
+    there too
+  - `src/app/terminal/terminal_poll_runtime.zig` is now narrowed to the
+    single-session fallback path instead of acting as the workspace poll
+    orchestration surface
 
 ## Current Milestone
 

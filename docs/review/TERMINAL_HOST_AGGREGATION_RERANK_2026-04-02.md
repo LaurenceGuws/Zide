@@ -51,7 +51,7 @@ Current native host flow still spans:
 
 - workspace active-session aggregation
 - workspace polling and poll metrics
-- app poll policy
+- host poll policy
 - frame pacing / idle policy
 - visible terminal input routing
 - draw-surface staging
@@ -73,8 +73,10 @@ Status update:
 - raw `workspace` no longer advertises the host-facing poll entrypoint
 - that poll entrypoint now lives in
   [workspace_host.zig](/home/home/personal/zide/src/terminal/core/workspace_host.zig)
-- app poll policy now reaches the host-facing owner directly instead of
-  treating raw workspace as the poll orchestration surface
+- the workspace poll policy slab moved there too
+- visible terminal polling now routes the workspace case straight to
+  `workspace_host`
+- `terminal_poll_runtime.zig` is now just the single-session fallback path
 
 ### 2. Ghostty still looks cleaner at first glance
 
@@ -116,9 +118,10 @@ host runtime path.
    - policy execution lives beside workspace state rather than behind a more
      unmistakable host runtime owner
 
-3. [terminal_poll_runtime.zig](/home/home/personal/zide/src/app/terminal/terminal_poll_runtime.zig)
-   - app-level poll policy still translates host intent separately from
-     workspace aggregation
+3. [workspace_host.zig](/home/home/personal/zide/src/terminal/core/workspace_host.zig)
+   - now the clearest native host aggregate candidate
+   - next question is whether more visible-frame routing should consolidate
+     toward it, or whether this shape is already honest enough
 
 4. [terminal_frame_pacing_runtime.zig](/home/home/personal/zide/src/app/terminal/terminal_frame_pacing_runtime.zig)
    - clean enough locally, but still one more host-facing state consumer that

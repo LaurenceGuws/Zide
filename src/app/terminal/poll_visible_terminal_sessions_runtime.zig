@@ -1,5 +1,6 @@
 const std = @import("std");
 const app_logger = @import("../../app_logger.zig");
+const workspace_host = @import("../../terminal/core/workspace_host.zig");
 const app_modes = @import("../modes/mod.zig");
 const app_terminal_poll_runtime = @import("terminal_poll_runtime.zig");
 const app_terminal_surface_gate = @import("terminal_surface_gate.zig");
@@ -17,7 +18,7 @@ pub fn handle(
     if (!app_terminal_surface_gate.hasVisibleTerminalTabs(app_mode, show_terminal, terminal_workspace.*, terminals.len)) return false;
 
     const wake_log = app_logger.logger("terminal.wake");
-    const input_pressure = app_terminal_poll_runtime.inputPressure(input_has_events, terminal_input_activity);
+    const input_pressure = workspace_host.inputPressure(input_has_events, terminal_input_activity);
 
     if (app_modes.ide.shouldUseTerminalWorkspace(app_mode)) {
         if (terminal_workspace.*) |*workspace| {
@@ -26,7 +27,7 @@ pub fn handle(
                 terminal_workspace.*,
                 terminals.len,
             );
-            const changed = try app_terminal_poll_runtime.pollWorkspace(workspace, active_idx_opt, input_pressure);
+            const changed = try workspace_host.pollWorkspace(workspace, active_idx_opt, input_pressure);
             if (wake_log.enabled_file or wake_log.enabled_console) {
                 wake_log.logFields(.info, "route_workspace", &.{
                     .{ .key = "input_events", .value = .{ .boolean = input_has_events } },

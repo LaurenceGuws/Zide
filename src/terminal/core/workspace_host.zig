@@ -6,6 +6,7 @@ const workspace_polling = @import("workspace_polling.zig");
 const host_queries = @import("session/host_queries.zig");
 const session_interaction = @import("session/interaction.zig");
 const session_runtime = @import("session/runtime.zig");
+const runtime_policy = @import("../../app/runtime_policy.zig");
 
 const TerminalWorkspace = workspace_mod.TerminalWorkspace;
 const TabId = workspace_mod.TabId;
@@ -15,6 +16,37 @@ pub const PollFrameResult = workspace_mod.TerminalWorkspace.PollFrameResult;
 pub const PollPolicy = workspace_mod.TerminalWorkspace.PollPolicy;
 pub const PollFrameMetrics = workspace_mod.TerminalWorkspace.PollFrameMetrics;
 pub const PollRuntimeCounters = workspace_mod.TerminalWorkspace.PollRuntimeCounters;
+
+pub const PollProfile = struct {
+    max_tabs_per_frame: usize,
+    max_background_tabs_per_frame: usize,
+    max_active_polls_per_frame: usize,
+};
+
+pub const PollProfiles = struct {
+    interactive: PollProfile,
+    idle: PollProfile,
+
+    pub fn select(self: PollProfiles, intent: runtime_policy.RuntimeIntent) PollProfile {
+        return switch (intent.work_class) {
+            .frame_critical, .interactive => self.interactive,
+            .background, .deferred => self.idle,
+        };
+    }
+};
+
+pub const default_poll_profiles: PollProfiles = .{
+    .interactive = .{
+        .max_tabs_per_frame = 3,
+        .max_background_tabs_per_frame = 1,
+        .max_active_polls_per_frame = 2,
+    },
+    .idle = .{
+        .max_tabs_per_frame = 6,
+        .max_background_tabs_per_frame = 3,
+        .max_active_polls_per_frame = 4,
+    },
+};
 
 pub const TabTarget = struct {
     index: usize,
@@ -39,6 +71,35 @@ pub fn pollForFrame(
     policy: PollPolicy,
 ) !PollFrameResult {
     return workspace_polling.pollForFrame(workspace, input_active_index, policy);
+}
+
+pub fn inputPressure(input_has_events: bool, terminal_input_activity: bool) bool {
+    return terminal_input_activity or input_has_events;
+}
+
+pub fn pollWorkspace(workspace: *TerminalWorkspace, input_active_index: ?usize, has_input: bool) !bool {
+    const result = try pollForFrame(
+        workspace,
+        input_active_index,
+        pollPolicyForTabCount(workspace.tabCount(), has_input),
+    );
+    return result.active_published_changed;
+}
+
+fn pollPolicyForTabCount(tab_count: usize, has_input: bool) PollPolicy {
+    const intents = runtime_policy.terminalWorkspaceIntents(tab_count, has_input);
+    const profile = default_poll_profiles.select(intents.active);
+    const background_budget = runtime_policy.terminalBackgroundTabBudget(
+        profile.max_background_tabs_per_frame,
+        intents.background,
+    );
+    return .{
+        .active_intent = intents.active,
+        .background_intent = intents.background,
+        .max_tabs_per_frame = profile.max_tabs_per_frame,
+        .max_background_tabs_per_frame = background_budget,
+        .max_active_polls_per_frame = profile.max_active_polls_per_frame,
+    };
 }
 
 pub fn lastPollFrameMetrics(workspace: *const TerminalWorkspace) PollFrameMetrics {
@@ -171,4 +232,16 @@ pub fn copyTabSyncState(
         .strings = strings_out.items,
         .tabs = entries_out.items,
     };
+}
+
+test "default poll profiles select interactive and idle budgets explicitly" {
+    const interactive = default_poll_profiles.select(runtime_policy.terminalVisibleIntent(true));
+    try std.testing.expectEqual(@as(usize, 3), interactive.max_tabs_per_frame);
+    try std.testing.expectEqual(@as(usize, 1), interactive.max_background_tabs_per_frame);
+    try std.testing.expectEqual(@as(usize, 2), interactive.max_active_polls_per_frame);
+
+    const idle = default_poll_profiles.select(runtime_policy.terminalVisibleIntent(false));
+    try std.testing.expectEqual(@as(usize, 6), idle.max_tabs_per_frame);
+    try std.testing.expectEqual(@as(usize, 3), idle.max_background_tabs_per_frame);
+    try std.testing.expectEqual(@as(usize, 4), idle.max_active_polls_per_frame);
 }
