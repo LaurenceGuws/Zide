@@ -212,7 +212,7 @@ Progress note, 2026-04-02:
 - app-facing present capture/trace and screenshot control now route through
   `src/ui/renderer/scene_frame_runtime.zig` instead of renderer-level
   convenience methods
-- composition clip/full-pane-clear and editor-texture trace bookkeeping now
+- composition clip/full-pane-clear and editor-surface trace bookkeeping now
   route through `src/ui/renderer/scene_frame_runtime.zig` too
 - `PresentState` / `PresentTrace` / `FrameSubmission` now live with
   `src/ui/renderer/scene_frame_runtime.zig` instead of being declared in the

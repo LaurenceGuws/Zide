@@ -39,8 +39,8 @@ const FrameSummary = struct {
     result_pending: bool,
     compute_in_flight: bool,
     styling_authority: []const u8,
-    editor_texture_update_count: usize,
-    editor_texture_blit_count: usize,
+    editor_surface_update_count: usize,
+    editor_surface_blit_count: usize,
     composition_clip_count: usize,
     composition_full_pane_clear: bool,
 };
@@ -101,8 +101,8 @@ const SelectionOverlayStyle = struct {
 };
 
 const CompositionCapture = struct {
-    editor_texture_update_count: usize = 0,
-    editor_texture_blit_count: usize = 0,
+    editor_surface_update_count: usize = 0,
+    editor_surface_blit_count: usize = 0,
     composition_clip_count: usize = 0,
     composition_full_pane_clear: bool = false,
 };
@@ -163,7 +163,7 @@ const FakeRenderer = struct {
 
     pub fn beginEditorSurface(self: *FakeRenderer) bool {
         self.in_editor_texture = true;
-        self.capture.editor_texture_update_count += 1;
+        self.capture.editor_surface_update_count += 1;
         return true;
     }
 
@@ -186,7 +186,7 @@ const FakeRenderer = struct {
     pub fn drawEditorSurface(self: *FakeRenderer, x: f32, y: f32) void {
         _ = x;
         _ = y;
-        self.capture.editor_texture_blit_count += 1;
+        self.capture.editor_surface_blit_count += 1;
     }
 
     pub fn drawRect(self: *FakeRenderer, x: i32, y: i32, w: i32, h: i32, color: FakeColor) void {
@@ -512,8 +512,8 @@ fn stageFrame(
         .result_pending = editor.hasPendingVisibleHighlightResult(),
         .compute_in_flight = editor.visibleHighlightComputeInFlight(),
         .styling_authority = authority,
-        .editor_texture_update_count = renderer.capture.editor_texture_update_count,
-        .editor_texture_blit_count = renderer.capture.editor_texture_blit_count,
+        .editor_surface_update_count = renderer.capture.editor_surface_update_count,
+        .editor_surface_blit_count = renderer.capture.editor_surface_blit_count,
         .composition_clip_count = renderer.capture.composition_clip_count,
         .composition_full_pane_clear = renderer.capture.composition_full_pane_clear,
     };
@@ -620,8 +620,8 @@ fn printHumanSummary(summary: RunSummary) void {
                 frame.result_pending,
                 frame.compute_in_flight,
                 frame.styling_authority,
-                frame.editor_texture_update_count,
-                frame.editor_texture_blit_count,
+                frame.editor_surface_update_count,
+                frame.editor_surface_blit_count,
                 frame.composition_clip_count,
                 frame.composition_full_pane_clear,
             },

@@ -15,7 +15,7 @@ pub const RetainedTargetState = struct {
     terminal: ?RenderTarget = null,
     terminal_scroll: ?RenderTarget = null,
     editor: ?RenderTarget = null,
-    drawing_editor: bool = false,
+    drawing_editor_surface: bool = false,
 };
 
 pub fn deinit(self: anytype) void {
@@ -48,13 +48,13 @@ pub fn endTerminalSurface(self: anytype) void {
 }
 
 pub fn beginEditorSurface(self: anytype) bool {
-    scene_frame_runtime.noteEditorTextureUpdate(self);
-    self.retained_targets.drawing_editor = true;
+    scene_frame_runtime.noteEditorSurfaceUpdate(self);
+    self.retained_targets.drawing_editor_surface = true;
     return self.beginRenderTarget(self.retained_targets.editor);
 }
 
 pub fn endEditorSurface(self: anytype) void {
-    self.retained_targets.drawing_editor = false;
+    self.retained_targets.drawing_editor_surface = false;
     scene_frame_runtime.restoreMainCompositionTarget(self);
 }
 
@@ -119,7 +119,7 @@ pub fn scrollTerminalSurface(self: anytype, dx: i32, dy: i32) bool {
 
 pub fn drawEditorSurface(self: anytype, x: f32, y: f32) void {
     if (self.retained_targets.editor) |target| {
-        scene_frame_runtime.noteEditorTextureBlit(self);
+        scene_frame_runtime.noteEditorSurfaceBlit(self);
         const snapped_x = snapToDevicePixel(x, self.scale.render_scale);
         const snapped_y = snapToDevicePixel(y, self.scale.render_scale);
         const src = texture_draw.fullTextureSrcRect(target.texture);

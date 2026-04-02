@@ -817,7 +817,7 @@ pub const Renderer = struct {
 
     pub fn drawRect(self: *Renderer, x: i32, y: i32, w: i32, h: i32, color: Color) void {
         if (w <= 0 or h <= 0) return;
-        if (self.retained_targets.drawing_editor and w == self.target_width and h == self.target_height and x == 0 and y == 0) {
+        if (self.retained_targets.drawing_editor_surface and w == self.target_width and h == self.target_height and x == 0 and y == 0) {
             scene_frame_runtime.noteCompositionFullPaneClear(self);
         }
         const dest = shape_utils.rectFromInts(x, y, w, h);

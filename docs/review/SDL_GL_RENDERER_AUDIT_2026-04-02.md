@@ -128,7 +128,7 @@ Status note, 2026-04-02:
   raw renderer cleanup verbs
 - app-facing present capture/trace and screenshot control now run through the
   present owner plus `Shell` instead of renderer-level convenience methods
-- composition clip/full-pane-clear and editor-texture trace bookkeeping now
+- composition clip/full-pane-clear and editor-surface trace bookkeeping now
   run through the present owner instead of direct renderer/retained-target
   mutation
 - `PresentState` / `PresentTrace` / `FrameSubmission` now live with the

@@ -21,8 +21,8 @@ pub const FrameSubmission = struct {
 
 pub const PresentTrace = struct {
     frame_seq: u64 = 0,
-    editor_texture_update_count: usize = 0,
-    editor_texture_blit_count: usize = 0,
+    editor_surface_update_count: usize = 0,
+    editor_surface_blit_count: usize = 0,
     composition_clip_count: usize = 0,
     composition_full_pane_clear: bool = false,
     captured_path: ?[]const u8 = null,
@@ -160,12 +160,12 @@ pub fn noteCompositionClip(self: anytype) void {
     self.present.trace_current.composition_clip_count += 1;
 }
 
-pub fn noteEditorTextureUpdate(self: anytype) void {
-    self.present.trace_current.editor_texture_update_count += 1;
+pub fn noteEditorSurfaceUpdate(self: anytype) void {
+    self.present.trace_current.editor_surface_update_count += 1;
 }
 
-pub fn noteEditorTextureBlit(self: anytype) void {
-    self.present.trace_current.editor_texture_blit_count += 1;
+pub fn noteEditorSurfaceBlit(self: anytype) void {
+    self.present.trace_current.editor_surface_blit_count += 1;
 }
 
 pub fn refreshSceneTargetContract(self: anytype) void {
