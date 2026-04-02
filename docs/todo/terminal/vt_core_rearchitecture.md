@@ -69,6 +69,15 @@ gravity into smaller files.
   - the next fallback target, if that handle story proves acceptable, is a
     deeper host-to-terminal interaction slab that still feels more shell-owned
     than terminal-owned
+- `docs/review/VT_WAR_4_HANDLE_IDENTITY_REVIEW_2026-04-03.md`
+  Why: the next question is no longer whether the shell is too large.
+  It is whether the public host entrypoint still teaches the wrong library
+  story.
+  Current read:
+  - the opaque FFI handle still stores `*TerminalRuntimeShell`
+  - creation is still shell-first and transport-attaching immediately after
+    shell construction
+  - this now looks like the strongest remaining plug-and-play mismatch
 
 ## Priority Now
 
