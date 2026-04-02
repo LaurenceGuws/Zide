@@ -147,15 +147,16 @@ the old one.
 ### 4. The SDL/GL host seam is functionally decent but still reads like an
 investigation seam
 
-`src/ui/renderer/window_init.zig` does real host work, but it also carries:
+At the start of this round, `src/ui/renderer/window_init.zig` did real host
+work, but it also carried:
 
 - realized-context logging
 - Wayland native-handle logging
 - EGL surface contract probing
 - Linux window icon setup
 
-That mix makes the host seam read less like a mature narrow runtime boundary
-and more like an accumulated issue-era probe surface.
+That mix made the host seam read less like a mature narrow runtime boundary and
+more like an accumulated issue-era probe surface.
 
 ### 5. Backend maturity still looks aspirational from the outside
 
@@ -217,6 +218,14 @@ Expected pressure:
 - setup vs diagnostics blur
 - issue-era Wayland/EGL probing still living in steady host init
 - platform-specific host policy that may not defend its location
+
+Progress note, 2026-04-02:
+
+- steady host setup remains in `src/ui/renderer/window_init.zig`
+- SDL/GL/Wayland diagnostic logging now lives in
+  `src/ui/renderer/window_init_diagnostics.zig`
+- Linux window icon application now lives in
+  `src/ui/renderer/window_icon_runtime.zig`
 
 ### Focus 3: Scene/present contract drift
 

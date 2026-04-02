@@ -189,6 +189,16 @@ Judgment:
 - the host seam is not obviously wrong
 - it is still too mixed to read as mature
 
+Status note after the first SDL/GL host seam cut:
+
+- steady host setup now remains in `src/ui/renderer/window_init.zig`
+- diagnostic/probe logging moved to
+  `src/ui/renderer/window_init_diagnostics.zig`
+- Linux window icon policy moved to
+  `src/ui/renderer/window_icon_runtime.zig`
+
+This improves the seam shape without changing behavior.
+
 ### 6. Backend surface honesty still lags runtime truth
 
 Severity: medium
