@@ -80,6 +80,22 @@ That is the same rule at an even smaller scale:
 - if the caller only needs one core-owned answer, do not force a shell summary
   object in between
 
+The next caller-specific cut is now landed too:
+
+- terminal draw progress no longer asks the shell for full activity metadata
+  just to discover progress state
+- [terminal_draw_surface_runtime.zig](/home/home/personal/zide/src/app/terminal/terminal_draw_surface_runtime.zig)
+  now reads
+  [TerminalCore.activityState(...)](/home/home/personal/zide/src/terminal/core/terminal_core.zig)
+  directly under the shell lock
+- [terminal_progress_runtime.zig](/home/home/personal/zide/src/app/terminal/terminal_progress_runtime.zig)
+  now takes plain progress metadata instead of the larger activity package
+
+That is the same contract rule in caller form:
+
+- do not ask the shell for a larger summary if the caller only needs a smaller
+  core-owned answer
+
 That is the right direction because it makes the shell add only what it truly
 owns:
 

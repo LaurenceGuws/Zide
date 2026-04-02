@@ -40,14 +40,16 @@ pub fn draw(state: anytype, shell: anytype, layout: layout_types.WidgetLayout) v
         if (layout.terminal.width > 0 and term_height > 0) {
             shell.endClip();
         }
-        const activity = host_queries.currentActivityMetadata(term_widget.session);
+        term_widget.session.lock();
+        const activity = term_widget.session.core.activityState();
+        term_widget.session.unlock();
         if (activity.progress.active()) {
             app_terminal_progress_runtime.drawActiveTabProgress(
                 shell,
                 layout.terminal.x,
                 term_y,
                 layout.terminal.width,
-                activity,
+                activity.progress,
             );
         }
         app_terminal_scrollbar_runtime.draw(
