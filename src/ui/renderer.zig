@@ -313,6 +313,11 @@ pub const Renderer = struct {
         pad_px: ?f32 = null,
     };
 
+    const SelectionOverlayState = struct {
+        editor: SelectionOverlayStyle = .{},
+        terminal: SelectionOverlayStyle = .{},
+    };
+
     pub const WindowChromeMode = window_chrome_runtime.WindowChromeMode;
     pub const WindowChromeContract = window_chrome_runtime.WindowChromeContract;
 
@@ -345,8 +350,7 @@ pub const Renderer = struct {
     text_gamma: f32,
     text_contrast: f32,
     text_linear_correction: bool,
-    editor_selection_overlay_style: SelectionOverlayStyle,
-    terminal_selection_overlay_style: SelectionOverlayStyle,
+    selection_overlay: SelectionOverlayState,
     terminal_texture_shift_enabled: bool,
     terminal_recent_input_force_full_enabled: bool,
     terminal_recent_input_force_full_window_seconds: f64,
@@ -487,8 +491,7 @@ pub const Renderer = struct {
             .text_gamma = init_options.text_gamma,
             .text_contrast = init_options.text_contrast,
             .text_linear_correction = init_options.text_linear_correction,
-            .editor_selection_overlay_style = .{},
-            .terminal_selection_overlay_style = .{},
+            .selection_overlay = .{},
             .terminal_texture_shift_enabled = true,
             .terminal_recent_input_force_full_enabled = true,
             .terminal_recent_input_force_full_window_seconds = 0.375,
@@ -641,31 +644,29 @@ pub const Renderer = struct {
     }
 
     pub fn setEditorSelectionOverlayStyle(self: *Renderer, smooth_enabled: ?bool, corner_px: ?f32, pad_px: ?f32) void {
-        if (smooth_enabled) |v| self.editor_selection_overlay_style.smooth_enabled = v;
-        if (corner_px) |v| {
-            if (v > 0) self.editor_selection_overlay_style.corner_px = v;
-        }
-        if (pad_px) |v| {
-            if (v > 0) self.editor_selection_overlay_style.pad_px = v;
-        }
+        applySelectionOverlayStyle(&self.selection_overlay.editor, smooth_enabled, corner_px, pad_px);
     }
 
     pub fn setTerminalSelectionOverlayStyle(self: *Renderer, smooth_enabled: ?bool, corner_px: ?f32, pad_px: ?f32) void {
-        if (smooth_enabled) |v| self.terminal_selection_overlay_style.smooth_enabled = v;
-        if (corner_px) |v| {
-            if (v > 0) self.terminal_selection_overlay_style.corner_px = v;
-        }
-        if (pad_px) |v| {
-            if (v > 0) self.terminal_selection_overlay_style.pad_px = v;
-        }
+        applySelectionOverlayStyle(&self.selection_overlay.terminal, smooth_enabled, corner_px, pad_px);
     }
 
     pub fn editorSelectionOverlayStyle(self: *const Renderer) SelectionOverlayStyle {
-        return self.editor_selection_overlay_style;
+        return self.selection_overlay.editor;
     }
 
     pub fn terminalSelectionOverlayStyle(self: *const Renderer) SelectionOverlayStyle {
-        return self.terminal_selection_overlay_style;
+        return self.selection_overlay.terminal;
+    }
+
+    fn applySelectionOverlayStyle(style: *SelectionOverlayStyle, smooth_enabled: ?bool, corner_px: ?f32, pad_px: ?f32) void {
+        if (smooth_enabled) |v| style.smooth_enabled = v;
+        if (corner_px) |v| {
+            if (v > 0) style.corner_px = v;
+        }
+        if (pad_px) |v| {
+            if (v > 0) style.pad_px = v;
+        }
     }
 
     pub fn setTerminalTextureShiftEnabled(self: *Renderer, enabled: bool) void {

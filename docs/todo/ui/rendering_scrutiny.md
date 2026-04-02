@@ -87,6 +87,8 @@ Progress note, 2026-04-02:
 - terminal glyph-cache and shaping scratch state now live with
   `src/ui/renderer/text_runtime.zig` instead of staying as ad hoc renderer-root
   fields
+- editor and terminal selection-overlay policy now live as one grouped state
+  slab instead of two loose renderer-root fields
 
 ### RS-02 Init/Deinit Still Mix Too Many Responsibilities
 
