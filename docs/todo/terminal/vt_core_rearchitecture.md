@@ -304,6 +304,16 @@ Focused follow-up lane:
     clean sprint stop-marker
   - the next move should not be another small extraction by momentum alone
 
+- `docs/review/VT_SPRINT_DEEPER_SUFFICIENCY_DECISION_2026-04-03.md`
+  Why: the sprint now needs an explicit go/no-go decision.
+  Current read:
+  - there is no fresh small-cut contradiction obvious enough to justify more
+    local extraction
+  - continue only if one specific missing `TerminalCore` capability slab can be
+    named first
+  - otherwise the honest move is to close `vt-sprint` cleanly from the current
+    baseline
+
 - `docs/review/TERMINAL_NATIVE_ARCHITECTURAL_SCRUTINY_2026-03-31.md`
   Why: this is the current ruthless read on what still looks second-rate at
   first glance and what should be demolished first.
