@@ -119,6 +119,7 @@ Quick reading guide:
 
 ## Reviews And Audits
 - `docs/review/` — past review notes (scope + date in file).
+  - `docs/review/SDL_GL_RENDERER_AUDIT_2026-04-02.md` — ranked SDL3/OpenGL renderer findings on ownership shape, host seam maturity, scene/present drift, and backend honesty.
   - `docs/review/TERMINAL_DOGFOOD_REVIEW_2026-03-17.md` — structured record of the first major native terminal dogfood pass, issue ids, and final dispositions.
   - `docs/review/TERMINAL_CORE_ARCHITECTURE_REVIEW_2026-03-10.md` — Ghostty-informed review of remaining terminal-core architectural blockers.
   - `docs/review/PERFORMANCE_REVIEW_1.md` — historical UI/terminal performance audit that still contains useful ownership notes.
