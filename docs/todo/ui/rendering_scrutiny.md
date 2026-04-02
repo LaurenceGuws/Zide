@@ -80,6 +80,10 @@ Status note, later on 2026-04-02:
     `src/ui/renderer/retained_targets_runtime.zig` and
     `src/ui/renderer/scene_frame_runtime.zig` now uses generic retained-surface
     verbs instead of product-specific trace helper names
+  - the next convergence target is broader again:
+    host scene assembly still composes product draw owners, and editor still
+    lacks the cleaner scene-facing publication input promised by
+    `EditorDisplaySnapshot`
 
 ## Target Read
 

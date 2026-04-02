@@ -62,3 +62,19 @@ Progress note, later on 2026-04-02:
 - the retained-target owner now reports surface update/blit/end events to the
   scene-frame owner through generic retained-surface trace verbs instead of
   editor/terminal-specific trace helper names
+
+## Rerank After Retained-Surface Wave
+
+The retained-surface vocabulary lane is no longer the default enemy.
+
+The next stronger convergence pressure is broader:
+
+- `src/app/scene_assembly_runtime.zig` still composes product draw owners rather
+  than cleaner scene-facing subsystem inputs
+- terminal already has stronger publication truth than editor
+- editor still lacks the cleaner scene-facing publication input described in
+  `EditorDisplaySnapshot`
+
+So the next honest renderer convergence battlefield is no longer retained
+surface naming. It is scene-assembly and subsystem-publication convergence,
+especially on the editor side.
