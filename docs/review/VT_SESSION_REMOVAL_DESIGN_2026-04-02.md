@@ -187,7 +187,6 @@ That cut is now landed too:
 - `src/` no longer contains live `TerminalSession` references
 - app/UI/workspace/replay/FFI/tests now use
   [TerminalRuntimeShell](/home/home/personal/zide/src/terminal/core/session/terminal_runtime_shell.zig)
-  or the existing historical `PtyTerminalRuntime` alias
 
 So the sprint bar is now materially crossed:
 
@@ -195,7 +194,7 @@ So the sprint bar is now materially crossed:
 
 What remains is narrower:
 
-- whether `PtyTerminalRuntime` should survive as historical compatibility
-  residue
 - how quickly contributor-facing docs and older authority docs should be
   rewritten around `TerminalRuntimeShell`
+- whether the next plug-and-play blocker is now `TerminalCore` sufficiency or
+  the outer runtime-shell contract

@@ -21,7 +21,7 @@ Status note, 2026-03-15:
 
 This doc now serves three narrower purposes:
 
-1. identify the live `TerminalSession` / `TerminalWorkspace` surface area
+1. identify the live `TerminalRuntimeShell` / `TerminalWorkspace` surface area
 2. record boundary ownership rules during cleanup
 3. point at fixture-backed hardening gaps
 
@@ -32,11 +32,11 @@ full engine split docs.
 
 ```mermaid
 flowchart LR
-    Host[app / host / UI] --> API[session + workspace API surface]
-    API --> Session[TerminalSession]
+    Host[app / host / UI] --> API[runtime shell + workspace API surface]
+    API --> Session[TerminalRuntimeShell]
     API --> Workspace[TerminalWorkspace]
-    Session --> Runtime[session runtime / publication shell]
-    Runtime <--> Core[terminal core / transport]
+    Session --> Runtime[runtime / publication shell]
+    Runtime <--> Core[TerminalCore / transport]
     Workspace --> Session
 ```
 
@@ -44,31 +44,31 @@ flowchart LR
 
 | API | Inputs | Outputs | Lifetime | Allocations | Invariants | Tests |
 | --- | ------ | ------- | -------- | ----------- | ---------- | ----- |
-| TerminalSession.init | allocator, rows, cols | *TerminalSession | caller owns session | allocates internal buffers | to be verified | replay:smoke |
-| TerminalSession.deinit | self | void | n/a | frees all owned buffers | to be verified | replay:smoke |
-| TerminalSession.start | shell? | void | n/a | PTY alloc | to be verified | pending |
-| TerminalSession.poll | - | void | n/a | to be verified | to be verified | pending |
-| TerminalSession.resize | rows, cols | void | n/a | to be verified | to be verified | terminal_reflow_tests |
-| TerminalSession.setCellSize | w, h | void | n/a | to be verified | to be verified | pending |
-| TerminalSession.sendKey | key, mod | void/error | n/a | to be verified | to be verified | encoder:csi_u_encoder_bytes |
-| TerminalSession.sendKeypad | key, mod | void/error | n/a | to be verified | to be verified | pending |
-| TerminalSession.sendChar | codepoint, mod | void/error | n/a | to be verified | to be verified | encoder:csi_u_encoder_bytes |
-| TerminalSession.sendText | text | void/error | n/a | to be verified | to be verified | replay:smoke |
-| TerminalSession.reportMouseEvent | event | bool/error | n/a | to be verified | to be verified | pending |
-| TerminalSession.snapshot | - | TerminalSnapshot | to be verified | to be verified | to be verified | replay:cursor_moves_basic |
-| TerminalSession.selectionState | - | ?TerminalSelection | to be verified | to be verified | to be verified | replay:selection_basic_flow |
-| TerminalSession.clearSelection | - | void | n/a | to be verified | to be verified | replay:selection_basic_flow |
-| TerminalSession.currentCwd | - | []const u8 | to be verified | to be verified | to be verified | replay:osc_cwd_st |
-| TerminalSession.takeOscClipboard | - | ?[]const u8 | to be verified | to be verified | to be verified | replay:osc_52_clipboard_bel |
-| TerminalSession.hyperlinkUri | link_id | ?[]const u8 | to be verified | to be verified | to be verified | replay:osc_8_hyperlink_bel |
-| TerminalSession.isAlive | - | bool | n/a | to be verified | to be verified | pending |
-| TerminalSession.lock/unlock | - | void | n/a | to be verified | to be verified | pending |
+| TerminalRuntimeShell.init | allocator, rows, cols | *TerminalRuntimeShell | caller owns runtime shell | allocates internal buffers | to be verified | replay:smoke |
+| TerminalRuntimeShell.deinit | self | void | n/a | frees all owned buffers | to be verified | replay:smoke |
+| TerminalRuntimeShell.start | shell? | void | n/a | PTY alloc | to be verified | pending |
+| TerminalRuntimeShell.poll | - | void | n/a | to be verified | to be verified | pending |
+| TerminalRuntimeShell.resize | rows, cols | void | n/a | to be verified | to be verified | terminal_reflow_tests |
+| TerminalRuntimeShell.setCellSize | w, h | void | n/a | to be verified | to be verified | pending |
+| TerminalRuntimeShell.sendKey | key, mod | void/error | n/a | to be verified | to be verified | encoder:csi_u_encoder_bytes |
+| TerminalRuntimeShell.sendKeypad | key, mod | void/error | n/a | to be verified | to be verified | pending |
+| TerminalRuntimeShell.sendChar | codepoint, mod | void/error | n/a | to be verified | to be verified | encoder:csi_u_encoder_bytes |
+| TerminalRuntimeShell.sendText | text | void/error | n/a | to be verified | to be verified | replay:smoke |
+| TerminalRuntimeShell.reportMouseEvent | event | bool/error | n/a | to be verified | to be verified | pending |
+| TerminalRuntimeShell.snapshot | - | TerminalSnapshot | to be verified | to be verified | to be verified | replay:cursor_moves_basic |
+| TerminalRuntimeShell.selectionState | - | ?TerminalSelection | to be verified | to be verified | to be verified | replay:selection_basic_flow |
+| TerminalRuntimeShell.clearSelection | - | void | n/a | to be verified | to be verified | replay:selection_basic_flow |
+| TerminalRuntimeShell.currentCwd | - | []const u8 | to be verified | to be verified | to be verified | replay:osc_cwd_st |
+| TerminalRuntimeShell.takeOscClipboard | - | ?[]const u8 | to be verified | to be verified | to be verified | replay:osc_52_clipboard_bel |
+| TerminalRuntimeShell.hyperlinkUri | link_id | ?[]const u8 | to be verified | to be verified | to be verified | replay:osc_8_hyperlink_bel |
+| TerminalRuntimeShell.isAlive | - | bool | n/a | to be verified | to be verified | pending |
+| TerminalRuntimeShell.lock/unlock | - | void | n/a | to be verified | to be verified | pending |
 
 Notes:
 - Populate test names as fixtures and unit tests land in `fixtures/terminal` and `src/terminal_*_tests.zig`.
 - Update this table with observed behavior once baseline fixtures exist.
 - Contracted behavior only after verified tests; do not assert guarantees early.
-- Implementation is now modularized across `src/terminal/core/*` helpers; API surface remains `TerminalSession`.
+- Implementation is now modularized across `src/terminal/core/*` helpers; live runtime-shell API surface is `TerminalRuntimeShell`.
 
 Interpretation rule:
 
@@ -115,7 +115,7 @@ more important than the exact file layout.
 
 ### Immediate Cleanup Rules
 
-1. `TerminalSession` should trend toward an orchestrator, not a universal owner.
+1. `TerminalRuntimeShell` should stay a narrow outer shell, not a universal owner.
 2. Widgets should consume published terminal state and emit intents; they
    should not participate in backend dirty-ack lifecycle.
 3. Protocol modules should mutate terminal state through an explicit facade or
@@ -126,18 +126,17 @@ more important than the exact file layout.
 
 ### Current Violations To Reduce
 
-- `TerminalSession` still owns too many domains.
+- older docs may still describe `TerminalSession`, but the live shell identity is now `TerminalRuntimeShell`.
 - widget/runtime flow still initiates presentation capture/completion, even though
-  backend retirement and alt-exit presentation policy are now behind
-  `TerminalSession.copyPublishedRenderCache(...)` and
-  `TerminalSession.completePresentationFeedback(...)`.
+  backend retirement and alt-exit presentation policy now live under the
+  publication/presentation owners instead of a broad session facade.
 - `view_cache` still embeds both cache publication and some redraw-policy knowledge.
 - poll/render runtime still carries terminal-global state in helper modules.
 - protocol handlers still rely on implicit `self` capabilities.
 
 ## Workspace API Contract (tabs)
 
-`TerminalWorkspace` lives in `src/terminal/core/workspace.zig` and owns tab/session orchestration above `TerminalSession`.
+`TerminalWorkspace` lives in `src/terminal/core/workspace.zig` and owns tab/runtime-shell orchestration above `TerminalRuntimeShell`.
 
 ### Workspace API vs Session API
 

@@ -24,7 +24,6 @@ const terminal_transport = @import("runtime/terminal_transport.zig");
 const pty_mod = @import("../io/pty.zig");
 
 const TerminalRuntimeShell = runtime_mod.TerminalRuntimeShell;
-const PtyTerminalRuntime = TerminalRuntimeShell;
 const Cell = types.Cell;
 const Color = types.Color;
 const Dirty = render_cache.Dirty;
@@ -1238,7 +1237,7 @@ test "acknowledgePresentedGeneration does not retire newer normal publication" {
 test "retired startup baseline allows first in-place overwrite to publish partial damage" {
     const allocator = std.testing.allocator;
 
-    var session = try PtyTerminalRuntime.init(allocator, 1, 9);
+    var session = try TerminalRuntimeShell.init(allocator, 1, 9);
     defer session.deinit();
 
     const base = session.primary.defaultCell();
@@ -1284,7 +1283,7 @@ test "retired startup baseline allows first in-place overwrite to publish partia
 test "unretired full baseline promotes first in-place overwrite to full damage" {
     const allocator = std.testing.allocator;
 
-    var session = try PtyTerminalRuntime.init(allocator, 1, 9);
+    var session = try TerminalRuntimeShell.init(allocator, 1, 9);
     defer session.deinit();
 
     const base = session.primary.defaultCell();
@@ -1327,7 +1326,7 @@ test "unretired full baseline promotes first in-place overwrite to full damage" 
 test "clean publication does not overwrite unpresented dirty publication" {
     const allocator = std.testing.allocator;
 
-    var session = try PtyTerminalRuntime.init(allocator, 2, 4);
+    var session = try TerminalRuntimeShell.init(allocator, 2, 4);
     defer session.deinit();
 
     _ = publication_flow.bumpAndPublishCurrentViewLocked(session, "test_publication");
@@ -1366,7 +1365,7 @@ test "clean publication does not overwrite unpresented dirty publication" {
 test "notePresentedGeneration does not regress presented generation" {
     const allocator = std.testing.allocator;
 
-    var session = try PtyTerminalRuntime.init(allocator, 2, 4);
+    var session = try TerminalRuntimeShell.init(allocator, 2, 4);
     defer session.deinit();
 
     terminal_publication.notePresentedGeneration(session, 7);
@@ -1378,7 +1377,7 @@ test "notePresentedGeneration does not regress presented generation" {
 test "cursor style updates publish through cache without texture invalidation" {
     const allocator = std.testing.allocator;
 
-    var session = try PtyTerminalRuntime.init(allocator, 2, 4);
+    var session = try TerminalRuntimeShell.init(allocator, 2, 4);
     defer session.deinit();
 
     _ = publication_flow.bumpAndPublishCurrentViewLocked(session, "test_publication");
@@ -1397,7 +1396,7 @@ test "cursor style updates publish through cache without texture invalidation" {
 test "kitty generation delta does not force full damage when cell damage is partial" {
     const allocator = std.testing.allocator;
 
-    var session = try PtyTerminalRuntime.init(allocator, 2, 4);
+    var session = try TerminalRuntimeShell.init(allocator, 2, 4);
     defer session.deinit();
 
     _ = publication_flow.bumpAndPublishCurrentViewLocked(session, "test_publication");
@@ -1422,7 +1421,7 @@ test "kitty generation delta does not force full damage when cell damage is part
 test "kitty generation delta without visible damage stays clean" {
     const allocator = std.testing.allocator;
 
-    var session = try PtyTerminalRuntime.init(allocator, 2, 4);
+    var session = try TerminalRuntimeShell.init(allocator, 2, 4);
     defer session.deinit();
 
     _ = publication_flow.bumpAndPublishCurrentViewLocked(session, "test_publication");
@@ -1442,7 +1441,7 @@ test "kitty generation delta without visible damage stays clean" {
 test "kitty placement move stays dirty even when text cells are unchanged" {
     const allocator = std.testing.allocator;
 
-    var session = try PtyTerminalRuntime.init(allocator, 2, 4);
+    var session = try TerminalRuntimeShell.init(allocator, 2, 4);
     defer session.deinit();
 
     const image_data = try allocator.alloc(u8, 4);
@@ -1500,7 +1499,7 @@ test "kitty placement move stays dirty even when text cells are unchanged" {
 test "clear generation delta without visible damage stays clean" {
     const allocator = std.testing.allocator;
 
-    var session = try PtyTerminalRuntime.init(allocator, 2, 4);
+    var session = try TerminalRuntimeShell.init(allocator, 2, 4);
     defer session.deinit();
 
     _ = publication_flow.bumpAndPublishCurrentViewLocked(session, "test_publication");
@@ -1520,7 +1519,7 @@ test "clear generation delta without visible damage stays clean" {
 test "default color remap stays on partial path" {
     const allocator = std.testing.allocator;
 
-    var session = try PtyTerminalRuntime.init(allocator, 2, 4);
+    var session = try TerminalRuntimeShell.init(allocator, 2, 4);
     defer session.deinit();
 
     _ = publication_flow.bumpAndPublishCurrentViewLocked(session, "test_publication");
@@ -1546,7 +1545,7 @@ test "default color remap stays on partial path" {
 test "screen reverse toggle stays on partial path" {
     const allocator = std.testing.allocator;
 
-    var session = try PtyTerminalRuntime.init(allocator, 2, 4);
+    var session = try TerminalRuntimeShell.init(allocator, 2, 4);
     defer session.deinit();
 
     _ = publication_flow.bumpAndPublishCurrentViewLocked(session, "test_publication");
@@ -1571,7 +1570,7 @@ test "screen reverse toggle stays on partial path" {
 test "visible history change narrows to projected diff against presented base" {
     const allocator = std.testing.allocator;
 
-    var session = try PtyTerminalRuntime.init(allocator, 2, 4);
+    var session = try TerminalRuntimeShell.init(allocator, 2, 4);
     defer session.deinit();
 
     const base = session.primary.defaultCell();
@@ -1613,7 +1612,7 @@ test "visible history change narrows to projected diff against presented base" {
 test "visible history change stays conservative against unpresented base" {
     const allocator = std.testing.allocator;
 
-    var session = try PtyTerminalRuntime.init(allocator, 2, 4);
+    var session = try TerminalRuntimeShell.init(allocator, 2, 4);
     defer session.deinit();
 
     const base = session.primary.defaultCell();
@@ -1657,7 +1656,7 @@ test "visible history change stays conservative against unpresented base" {
 test "visible history change with blank separator rows stays conservative against unpresented base" {
     const allocator = std.testing.allocator;
 
-    var session = try PtyTerminalRuntime.init(allocator, 4, 4);
+    var session = try TerminalRuntimeShell.init(allocator, 4, 4);
     defer session.deinit();
 
     const base = session.primary.defaultCell();
@@ -1715,7 +1714,7 @@ test "visible history change with blank separator rows stays conservative agains
 test "debug scrollback helpers preserve visible-history baseline shape" {
     const allocator = std.testing.allocator;
 
-    var session = try PtyTerminalRuntime.init(allocator, 2, 4);
+    var session = try TerminalRuntimeShell.init(allocator, 2, 4);
     defer session.deinit();
 
     session.debugPushScrollbackRow("ABCD");
@@ -1746,7 +1745,7 @@ test "debug scrollback helpers preserve visible-history baseline shape" {
 test "debug scrollback cell mutation keeps two-row visible-history shape" {
     const allocator = std.testing.allocator;
 
-    var session = try PtyTerminalRuntime.init(allocator, 2, 4);
+    var session = try TerminalRuntimeShell.init(allocator, 2, 4);
     defer session.deinit();
 
     session.debugPushScrollbackRow("ABCD");
@@ -1785,7 +1784,7 @@ test "debug scrollback cell mutation keeps two-row visible-history shape" {
 test "debug scrollback helper stays conservative on second unpresented visible-history mutation" {
     const allocator = std.testing.allocator;
 
-    var session = try PtyTerminalRuntime.init(allocator, 2, 4);
+    var session = try TerminalRuntimeShell.init(allocator, 2, 4);
     defer session.deinit();
 
     session.debugPushScrollbackRow("ABCD");
@@ -1810,7 +1809,7 @@ test "debug scrollback helper stays conservative on second unpresented visible-h
 test "debug scrollback helper with replay cursor setup stays conservative on second visible-history mutation" {
     const allocator = std.testing.allocator;
 
-    var session = try PtyTerminalRuntime.init(allocator, 2, 4);
+    var session = try TerminalRuntimeShell.init(allocator, 2, 4);
     defer session.deinit();
 
     session.debugSetCursor(1, 0);
@@ -1836,7 +1835,7 @@ test "debug scrollback helper with replay cursor setup stays conservative on sec
 test "debug scrollback helper with replay transport setup stays conservative on second visible-history mutation" {
     const allocator = std.testing.allocator;
 
-    var session = try PtyTerminalRuntime.init(allocator, 2, 4);
+    var session = try TerminalRuntimeShell.init(allocator, 2, 4);
     defer session.deinit();
     session_runtime.attachExternalTransport(session);
 
@@ -1863,7 +1862,7 @@ test "debug scrollback helper with replay transport setup stays conservative on 
 test "selection dirty expansion does not suppress repeated unpresented selection state" {
     const allocator = std.testing.allocator;
 
-    var session = try PtyTerminalRuntime.init(allocator, 2, 4);
+    var session = try TerminalRuntimeShell.init(allocator, 2, 4);
     defer session.deinit();
 
     const base = session.primary.defaultCell();
@@ -1899,7 +1898,7 @@ test "selection dirty expansion does not suppress repeated unpresented selection
 test "eraseDisplay cursor-to-end keeps partial damage" {
     const allocator = std.testing.allocator;
 
-    var session = try PtyTerminalRuntime.init(allocator, 3, 4);
+    var session = try TerminalRuntimeShell.init(allocator, 3, 4);
     defer session.deinit();
 
     const base = session.primary.defaultCell();
@@ -1928,7 +1927,7 @@ test "eraseDisplay cursor-to-end keeps partial damage" {
 test "eraseDisplay start-to-cursor keeps partial damage" {
     const allocator = std.testing.allocator;
 
-    var session = try PtyTerminalRuntime.init(allocator, 3, 4);
+    var session = try TerminalRuntimeShell.init(allocator, 3, 4);
     defer session.deinit();
 
     const base = session.primary.defaultCell();
@@ -1957,7 +1956,7 @@ test "eraseDisplay start-to-cursor keeps partial damage" {
 test "eraseDisplay full keeps full-width partial damage" {
     const allocator = std.testing.allocator;
 
-    var session = try PtyTerminalRuntime.init(allocator, 3, 4);
+    var session = try TerminalRuntimeShell.init(allocator, 3, 4);
     defer session.deinit();
 
     const base = session.primary.defaultCell();
@@ -1987,7 +1986,7 @@ test "eraseDisplay full keeps full-width partial damage" {
 test "screen clear stays on partial path" {
     const allocator = std.testing.allocator;
 
-    var session = try PtyTerminalRuntime.init(allocator, 2, 4);
+    var session = try TerminalRuntimeShell.init(allocator, 2, 4);
     defer session.deinit();
 
     const base = session.primary.defaultCell();
@@ -2017,7 +2016,7 @@ test "screen clear stays on partial path" {
 test "selection plain text export is terminal-owned across history and grid" {
     const allocator = std.testing.allocator;
 
-    var session = try PtyTerminalRuntime.init(allocator, 2, 4);
+    var session = try TerminalRuntimeShell.init(allocator, 2, 4);
     defer session.deinit();
 
     const base = session.primary.defaultCell();
@@ -2048,7 +2047,7 @@ test "selection plain text export is terminal-owned across history and grid" {
 test "selectRangeLocked applies and finishes selection in one backend step" {
     const allocator = std.testing.allocator;
 
-    var session = try PtyTerminalRuntime.init(allocator, 2, 4);
+    var session = try TerminalRuntimeShell.init(allocator, 2, 4);
     defer session.deinit();
 
     session.lock();
@@ -2067,7 +2066,7 @@ test "selectRangeLocked applies and finishes selection in one backend step" {
 test "selection helper clears and finishes only when active" {
     const allocator = std.testing.allocator;
 
-    var session = try PtyTerminalRuntime.init(allocator, 2, 2);
+    var session = try TerminalRuntimeShell.init(allocator, 2, 2);
     defer session.deinit();
 
     session.lock();
@@ -2090,7 +2089,7 @@ test "selection helper clears and finishes only when active" {
 test "selection drag helpers update ordered ranges and late-start cells" {
     const allocator = std.testing.allocator;
 
-    var session = try PtyTerminalRuntime.init(allocator, 2, 2);
+    var session = try TerminalRuntimeShell.init(allocator, 2, 2);
     defer session.deinit();
 
     session.lock();
@@ -2126,7 +2125,7 @@ test "selection drag helpers update ordered ranges and late-start cells" {
 test "click selection helpers own word and line gesture policy" {
     const allocator = std.testing.allocator;
 
-    var session = try PtyTerminalRuntime.init(allocator, 2, 4);
+    var session = try TerminalRuntimeShell.init(allocator, 2, 4);
     defer session.deinit();
 
     const base = session.primary.defaultCell();
@@ -2169,7 +2168,7 @@ test "click selection helpers own word and line gesture policy" {
 test "resetToLiveBottomLocked resets scrollback offset only when needed" {
     const allocator = std.testing.allocator;
 
-    var session = try PtyTerminalRuntime.init(allocator, 2, 2);
+    var session = try TerminalRuntimeShell.init(allocator, 2, 2);
     defer session.deinit();
 
     const base = session.primary.defaultCell();
@@ -2190,7 +2189,7 @@ test "resetToLiveBottomLocked resets scrollback offset only when needed" {
 test "scrollSelectionDragLocked scrolls history view in drag direction" {
     const allocator = std.testing.allocator;
 
-    var session = try PtyTerminalRuntime.init(allocator, 2, 2);
+    var session = try TerminalRuntimeShell.init(allocator, 2, 2);
     defer session.deinit();
 
     const base = session.primary.defaultCell();
@@ -2212,7 +2211,7 @@ test "scrollSelectionDragLocked scrolls history view in drag direction" {
 test "setScrollOffsetFromNormalizedTrackLocked maps scrollbar track ratio to history offset" {
     const allocator = std.testing.allocator;
 
-    var session = try PtyTerminalRuntime.init(allocator, 2, 2);
+    var session = try TerminalRuntimeShell.init(allocator, 2, 2);
     defer session.deinit();
 
     const base = session.primary.defaultCell();
@@ -2234,7 +2233,7 @@ test "setScrollOffsetFromNormalizedTrackLocked maps scrollbar track ratio to his
 test "scrollWheelLocked applies backend wheel policy" {
     const allocator = std.testing.allocator;
 
-    var session = try PtyTerminalRuntime.init(allocator, 2, 2);
+    var session = try TerminalRuntimeShell.init(allocator, 2, 2);
     defer session.deinit();
 
     const base = session.primary.defaultCell();
@@ -2257,7 +2256,7 @@ test "scrollWheelLocked applies backend wheel policy" {
 test "scrollback plain text export is terminal-owned" {
     const allocator = std.testing.allocator;
 
-    var session = try PtyTerminalRuntime.init(allocator, 2, 4);
+    var session = try TerminalRuntimeShell.init(allocator, 2, 4);
     defer session.deinit();
 
     const base = session.primary.defaultCell();
@@ -2288,7 +2287,7 @@ test "scrollback plain text export is terminal-owned" {
 test "scrollback ansi text export is terminal-owned" {
     const allocator = std.testing.allocator;
 
-    var session = try PtyTerminalRuntime.init(allocator, 1, 1);
+    var session = try TerminalRuntimeShell.init(allocator, 1, 1);
     defer session.deinit();
 
     var cell = session.primary.defaultCell();
@@ -2321,7 +2320,7 @@ test "scrollback ansi text export is terminal-owned" {
 test "scrollback range export is terminal-owned" {
     const allocator = std.testing.allocator;
 
-    var session = try PtyTerminalRuntime.init(allocator, 2, 3);
+    var session = try TerminalRuntimeShell.init(allocator, 2, 3);
     defer session.deinit();
 
     const base = session.primary.defaultCell();
@@ -2351,7 +2350,7 @@ test "scrollback range export is terminal-owned" {
 test "terminal reset republishes input snapshot state" {
     const allocator = std.testing.allocator;
 
-    var session = try PtyTerminalRuntime.init(allocator, 2, 2);
+    var session = try TerminalRuntimeShell.init(allocator, 2, 2);
     defer session.deinit();
 
     input_modes.setKeypadMode(session, true);
@@ -2368,7 +2367,7 @@ test "terminal reset republishes input snapshot state" {
 test "feedOutputBytes publishes keypad mode through locked parser path" {
     const allocator = std.testing.allocator;
 
-    var session = try PtyTerminalRuntime.init(allocator, 2, 2);
+    var session = try TerminalRuntimeShell.init(allocator, 2, 2);
     defer session.deinit();
 
     terminal_core_feed.feedOutputBytes(session, "\x1b=");
@@ -2381,7 +2380,7 @@ test "feedOutputBytes publishes keypad mode through locked parser path" {
 test "feedOutputBytes publishes kitty key mode flags through locked parser path" {
     const allocator = std.testing.allocator;
 
-    var session = try PtyTerminalRuntime.init(allocator, 2, 2);
+    var session = try TerminalRuntimeShell.init(allocator, 2, 2);
     defer session.deinit();
 
     terminal_core_feed.feedOutputBytes(session, "\x1b[>13u");
@@ -2394,7 +2393,7 @@ test "feedOutputBytes publishes kitty key mode flags through locked parser path"
 test "feedOutputBytes RIS resets input modes and clears screen" {
     const allocator = std.testing.allocator;
 
-    var session = try PtyTerminalRuntime.init(allocator, 2, 2);
+    var session = try TerminalRuntimeShell.init(allocator, 2, 2);
     defer session.deinit();
 
     terminal_core_feed.feedOutputBytes(

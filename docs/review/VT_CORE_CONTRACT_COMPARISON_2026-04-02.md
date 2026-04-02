@@ -219,7 +219,6 @@ Session removal progress, later on 2026-04-02:
 - live code now reads as:
   - [TerminalCore](/home/home/personal/zide/src/terminal/core/terminal_core.zig)
   - [TerminalRuntimeShell](/home/home/personal/zide/src/terminal/core/session/terminal_runtime_shell.zig)
-  - `PtyTerminalRuntime` as historical compatibility residue
 
 That materially improves the plug-and-play story:
 

@@ -271,6 +271,8 @@ Focused follow-up lane:
   - `terminal_session.zig` was then deleted entirely
   - the VT root no longer exports `TerminalSession`
   - live `src/` code no longer depends on a `TerminalSession` type at all
+  - the historical `PtyTerminalRuntime` alias was then deleted too
+  - live `src/` code now reads as `TerminalCore` plus `TerminalRuntimeShell`
 
 - `docs/review/TERMINAL_NATIVE_ARCHITECTURAL_SCRUTINY_2026-03-31.md`
   Why: this is the current ruthless read on what still looks second-rate at
