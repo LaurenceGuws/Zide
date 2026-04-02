@@ -74,6 +74,10 @@ Focused follow-up lane:
   - that widget-local handoff state now appears mostly honest local host render
     state, so this lane should not keep grinding tiny widget/publication
     extractions without a broader new contract question
+- `docs/review/TERMINAL_HOST_CONTRACT_REVIEW_2026-04-02.md`
+  Why: after the publication-contract cleanup wave, the next likely native
+  terminal battlefield is broader host aggregation and orchestration shape,
+  especially `workspace.zig` plus the draw/runtime path.
 
 ## Current Milestone
 
