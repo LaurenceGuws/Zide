@@ -6,6 +6,7 @@
   "runtimeMode": "local-dev",
   "defaultDoc": "README.md",
   "docsIndexPath": "./docs-index.zide.json",
+  "searchIndexPath": "./search-index.zide.json",
   "theme": {
     "dark": {
       "accent": "#d47a45",
