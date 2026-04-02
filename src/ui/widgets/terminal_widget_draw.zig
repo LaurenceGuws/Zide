@@ -136,7 +136,9 @@ pub fn drawPrepared(
     const draw_state = view_state.drawStateInfo(cache);
     const render_state = draw_state.render;
     const sync_updates = draw_state.sync_updates_active;
-    const retained_surface_ready = self.retained.terminal_texture_ready and retained_targets_runtime.terminalSurfaceAvailable(r);
+    const retained_surface_target_available = retained_targets_runtime.terminalSurfaceAvailable(r);
+    if (!retained_surface_target_available) self.retained.terminal_texture_ready = false;
+    const retained_surface_ready = self.retained.terminal_texture_ready and retained_surface_target_available;
     const screen_reverse = render_state.screen_reverse;
     const blink_style = self.blink_style;
     const blink_time = app_shell.getTime();
@@ -505,7 +507,9 @@ pub fn drawPrepared(
                 updated = true;
             }
         }
-        const retained_surface_ready_after_update = self.retained.terminal_texture_ready and retained_targets_runtime.terminalSurfaceAvailable(r);
+        const retained_surface_target_available_after_update = retained_targets_runtime.terminalSurfaceAvailable(r);
+        if (!retained_surface_target_available_after_update) self.retained.terminal_texture_ready = false;
+        const retained_surface_ready_after_update = self.retained.terminal_texture_ready and retained_surface_target_available_after_update;
         if (!updated and retained_surface_ready_after_update and visible_w > 0 and visible_h > 0) {
             r.beginClip(
                 @intFromFloat(std.math.round(base_x)),
@@ -526,7 +530,7 @@ pub fn drawPrepared(
                 .{ .key = "sync_updates", .value = .{ .boolean = sync_updates } },
                 .{ .key = "updated", .value = .{ .boolean = updated } },
                 .{ .key = "texture_ready", .value = .{ .boolean = self.retained.terminal_texture_ready } },
-                .{ .key = "target_available", .value = .{ .boolean = retained_targets_runtime.terminalSurfaceAvailable(r) } },
+                .{ .key = "target_available", .value = .{ .boolean = retained_surface_target_available_after_update } },
                 .{ .key = "visible_w", .value = .{ .integer = visible_w } },
                 .{ .key = "visible_h", .value = .{ .integer = visible_h } },
             });
