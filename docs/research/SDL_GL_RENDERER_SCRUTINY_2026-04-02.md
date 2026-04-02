@@ -178,6 +178,9 @@ Progress note, 2026-04-02:
 - renderer init/deinit now assemble and tear down grouped scale/font-config
   state through owner-level helpers instead of open-coding that grouped-state
   lifecycle inline
+- grouped scale-state initialization now lives with
+  `src/ui/renderer/font_runtime.zig` instead of staying as a renderer-local
+  lifecycle helper
 - text-input start/stop and input queue/composition teardown now run through
   `src/ui/renderer/input_state.zig`
 - window-chrome teardown now runs through

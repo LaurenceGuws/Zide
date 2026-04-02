@@ -99,6 +99,8 @@ Status note, 2026-04-02:
 - constructor/destructor now assemble and tear down grouped scale/font-config
   state through owner-level helpers instead of repeating that grouped-state
   lifecycle inline
+- grouped scale-state initialization now lives with the font-runtime owner
+  instead of staying as a renderer-local lifecycle helper
 - text-input start/stop and input queue/composition teardown now run through
   the input owner instead of living as raw renderer lifecycle verbs
 - window-chrome teardown now runs through the chrome owner instead of living as

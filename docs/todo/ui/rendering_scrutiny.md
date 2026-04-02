@@ -111,6 +111,9 @@ Progress note, 2026-04-02:
 - window-chrome teardown now runs through
   `src/ui/renderer/window_chrome_runtime.zig` instead of living as raw cleanup
   verbs in `renderer.zig`
+- grouped scale-state initialization now lives with
+  `src/ui/renderer/font_runtime.zig` instead of staying as a renderer-local
+  lifecycle helper
 - the remaining work in this item is broader lifecycle shrink, not raw grouped
   state setup/teardown duplication
 

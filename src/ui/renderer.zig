@@ -522,27 +522,6 @@ pub const Renderer = struct {
         }
     }
 
-    fn initScaleState(
-        allocator: std.mem.Allocator,
-        display_metrics: platform_window.DisplayMetrics,
-    ) ScaleState {
-        var wayland_scale = scale_utils.WaylandScaleState{
-            .cache = null,
-            .last_update = -1000.0,
-        };
-        const ui_scale = scale_utils.queryUiScale(allocator, display_metrics.dpi, 0.0, &wayland_scale);
-        return .{
-            .render_scale = display_metrics.render_scale,
-            .user_zoom = 1.0,
-            .user_zoom_target = 1.0,
-            .ui_scale = ui_scale,
-            .last_zoom_request_time = 0.0,
-            .last_zoom_apply_time = 0.0,
-            .wayland_scale_cache = wayland_scale.cache,
-            .wayland_scale_last_update = wayland_scale.last_update,
-        };
-    }
-
     pub fn init(allocator: std.mem.Allocator, width: i32, height: i32, title: [*:0]const u8, init_options: InitOptions) !*Renderer {
         try window_init.initSdl();
         errdefer sdl.SDL_Quit();
@@ -561,7 +540,7 @@ pub const Renderer = struct {
         errdefer allocator.destroy(renderer);
 
         const display_metrics = platform_window.collectDisplayMetrics(window);
-        const scale = initScaleState(allocator, display_metrics);
+        const scale = font_runtime.initScaleState(allocator, display_metrics);
         const base_font_size = if (init_options.app_font_size > 0.0) init_options.app_font_size else 16.0;
         const editor_base_font_size = if (init_options.editor_font_size) |value| if (value > 0.0) value else base_font_size else base_font_size;
         const terminal_base_font_size = if (init_options.terminal_font_size) |value| if (value > 0.0) value else base_font_size else base_font_size;

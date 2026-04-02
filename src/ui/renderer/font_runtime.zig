@@ -22,6 +22,27 @@ pub const ScaleState = struct {
     wayland_scale_last_update: f64 = 0.0,
 };
 
+pub fn initScaleState(
+    allocator: std.mem.Allocator,
+    display_metrics: platform_window.DisplayMetrics,
+) ScaleState {
+    var wayland_scale = scale_utils.WaylandScaleState{
+        .cache = null,
+        .last_update = -1000.0,
+    };
+    const ui_scale = scale_utils.queryUiScale(allocator, display_metrics.dpi, 0.0, &wayland_scale);
+    return .{
+        .render_scale = display_metrics.render_scale,
+        .user_zoom = 1.0,
+        .user_zoom_target = 1.0,
+        .ui_scale = ui_scale,
+        .last_zoom_request_time = 0.0,
+        .last_zoom_apply_time = 0.0,
+        .wayland_scale_cache = wayland_scale.cache,
+        .wayland_scale_last_update = wayland_scale.last_update,
+    };
+}
+
 pub fn setFontRenderingOptions(self: anytype, opts: RenderingOptions) void {
     self.font_config.font_rendering = opts;
 }
