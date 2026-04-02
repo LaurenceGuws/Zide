@@ -61,8 +61,13 @@ gravity into smaller files.
   - `TerminalCore` now also owns repeat suppression and local-echo
     eligibility, while shell input still owns fallback execution when no
     writer exists
-  - raw text/byte send and reporting lanes remain out of scope unless they
-    prove terminal-semantic rather than writer-shaped
+  - the remaining `session/input.zig` surface now reads mostly writer-shaped
+    or reporting-shaped:
+    `sendText(...)`, `sendBytes(...)`, mouse reporting, focus reporting, and
+    color-scheme reporting
+  - so this war should now stop from the stronger baseline unless a new input
+    slab appears that is terminal-semantic in substance and separable from
+    writer selection, protocol encoding, and transport/reporting
 
 - `docs/review/VT_WAR_4_SCOPE_AND_SEEDS_2026-04-03.md`
   Why: the next scrutiny pass is no longer a cleanup sprint; it is a focused

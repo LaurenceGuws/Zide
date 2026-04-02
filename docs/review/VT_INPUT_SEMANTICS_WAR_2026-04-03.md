@@ -235,3 +235,49 @@ Current state:
 - alternate-scroll mapping now follows the same pattern
 - char-action dispatch now follows the same pattern too
 - broader reporting/text-send lanes are still not automatic from these wins
+
+## Post-Char Rerank
+
+After landing key, keypad, alternate-scroll, and char semantic dispatch:
+
+- the remaining `session/input.zig` surface is no longer the same class of
+  contradiction
+- `sendText(...)` and `sendBytes(...)` read as direct writer verbs
+- `reportFocusChanged(...)` and `reportColorSchemeChanged(...)` read as
+  explicit shell/reporting paths
+- `reportMouseEvent(...)` remains tightly coupled to writer protocol encoding
+  and interaction-side mouse state
+
+That means the remaining input lane is now mostly:
+
+- writer-shaped
+- reporting-shaped
+- or explicitly shell/runtime-shaped
+
+not a clean terminal-semantic ownership lie.
+
+So this war should now stop from the stronger baseline unless a new input slab
+appears that is both:
+
+- terminal-semantic in substance
+- separable from writer selection, protocol encoding, and transport/reporting
+
+## Current Stop Marker
+
+Landed semantic wins:
+
+- key action dispatch
+- keypad action dispatch
+- alternate-scroll mapping
+- char action dispatch
+
+Out-of-scope / not-clean-enough continuations from this baseline:
+
+- raw text/byte send
+- mouse reporting
+- focus reporting
+- color-scheme reporting
+
+Those are not being left untouched out of caution.
+They are being left untouched because, from the live code, they no longer
+look like the same plug-and-play blocker this war was opened to solve.
