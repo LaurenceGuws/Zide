@@ -75,11 +75,6 @@ fn handleEvent(
                     window_log.logf(.warning, "focus queue append failed focused=0 err={s}", .{@errorName(err)});
                 };
             }
-            window_log.logf(.info, "event={s} data1={d} data2={d}", .{
-                sdl_api.windowEventName(event.type),
-                sdl_api.windowEventData1(event),
-                sdl_api.windowEventData2(event),
-            });
         },
         sdl_api.EVENT_KEY_DOWN => {
             _ = platform_input_events.handleKeyDown(
@@ -138,11 +133,6 @@ fn handleEvent(
                         window_log.logf(.warning, "focus queue append failed focused=0 err={s}", .{@errorName(err)});
                     };
                 }
-                window_log.logf(.info, "event={s} data1={d} data2={d}", .{
-                    sdl_api.windowEventName(event.type),
-                    sdl_api.windowEventData1(event),
-                    sdl_api.windowEventData2(event),
-                });
             }
         },
     }

@@ -1,4 +1,3 @@
-const app_logger = @import("../../app_logger.zig");
 const gl = @import("gl.zig");
 const sdl_api = @import("../../platform/sdl_api.zig");
 
@@ -30,8 +29,6 @@ pub fn setRect(state: *TextInputState, window: ?*sdl.SDL_Window, x: i32, y: i32,
     state.rect = rect;
     state.valid = true;
     sdl_api.setTextInputRect(window, &state.rect);
-    const log = app_logger.logger("sdl.ime");
-    log.logf(.info, "text_input_rect x={d} y={d} w={d} h={d}", .{ rect.x, rect.y, rect.w, rect.h });
 }
 
 pub fn reapplyRect(state: *TextInputState, window: ?*sdl.SDL_Window) void {
