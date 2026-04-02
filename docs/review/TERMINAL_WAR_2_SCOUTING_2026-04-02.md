@@ -344,3 +344,10 @@ It should start from one explicit choice between:
 and
 
 - present/render correctness discipline as the strongest remaining truth gap
+
+Follow-through result:
+
+- that decision review now exists as
+  `docs/review/TERMINAL_WAR_2_PRESENT_INVARIANT_REVIEW_2026-04-02.md`
+- current opening judgment is Candidate B:
+  present/render correctness discipline

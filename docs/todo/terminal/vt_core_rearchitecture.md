@@ -110,6 +110,10 @@ Focused follow-up lane:
   - structural recentering around one engine-owned host-state boundary
   - present/render correctness discipline around submitted terminal truth
   War 2 should start only after choosing explicitly between them.
+- `docs/review/TERMINAL_WAR_2_PRESENT_INVARIANT_REVIEW_2026-04-02.md`
+  Why: that choice is now made. War 2 should open on present/render
+  correctness discipline and define the exact native terminal present
+  acknowledgement invariant before the next code cuts.
 
 ## Current Milestone
 
