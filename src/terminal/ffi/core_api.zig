@@ -3,6 +3,7 @@ const terminal_runtime = @import("../core/terminal_runtime.zig");
 const terminal_publication = @import("../core/terminal_publication.zig");
 const terminal_core_feed = @import("../core/protocol/terminal_core_feed.zig");
 const host_queries = @import("../core/session/host_queries.zig");
+const session_interaction = @import("../core/session/interaction.zig");
 const types = @import("../model/types.zig");
 const screen = @import("../model/screen.zig");
 const app_logger = @import("../../app_logger.zig");
@@ -22,7 +23,7 @@ fn currentCloseConfirmSignals(handle: *shared.Handle) shared.CloseConfirmSignals
     const foreground_process = @intFromBool(activity.foreground_process_present);
     const semantic_command = @intFromBool(activity.semantic_input_active or activity.semantic_output_active);
     const alt_screen = @intFromBool(handle.session.altScreenActive());
-    const mouse_reporting = @intFromBool(handle.session.mouseReportingEnabled());
+    const mouse_reporting = @intFromBool(session_interaction.mouseReportingEnabled(handle.session));
     return .{
         .abi_version = shared.close_confirm_abi_version,
         .struct_size = @sizeOf(shared.CloseConfirmSignals),

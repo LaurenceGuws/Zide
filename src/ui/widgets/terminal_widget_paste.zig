@@ -1,6 +1,7 @@
 const std = @import("std");
 
 const app_logger = @import("../../app_logger.zig");
+const session_interaction = @import("../../terminal/core/session/interaction.zig");
 
 pub fn pasteSystemClipboard(
     widget: anytype,
@@ -47,12 +48,12 @@ fn pasteClipboardWithPolicy(
     const has_supported_clipboard_data = clip_opt != null or html != null or uri_list != null or png != null;
     if (!has_supported_clipboard_data) return false;
 
-    if (try widget.session.sendKittyPasteEvent5522WithMimeRich(clip, html, uri_list, png)) {
+    if (try session_interaction.sendKittyPasteEvent5522WithMimeRich(widget.session, clip, html, uri_list, png)) {
         return true;
     }
 
     const clip_text = clip_opt orelse return false;
-    if (widget.session.bracketedPasteEnabled()) {
+    if (session_interaction.bracketedPasteEnabled(widget.session)) {
         const payload = switch (source) {
             .system => filterBracketedPaste(widget.session.allocator, clip_text) catch |err| {
                 log.logf(.warning, "paste filter failed source={s} err={s}", .{ @tagName(source), @errorName(err) });

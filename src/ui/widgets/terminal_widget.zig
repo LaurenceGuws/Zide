@@ -2,6 +2,7 @@ const std = @import("std");
 const app_shell = @import("../../app_shell.zig");
 const terminal_runtime = @import("../../terminal/core/terminal_runtime.zig");
 const terminal_publication = @import("../../terminal/core/publication/terminal_publication.zig");
+const session_interaction = @import("../../terminal/core/session/interaction.zig");
 const terminal_selection = @import("../../terminal/core/selection.zig");
 const terminal_types = @import("../../terminal/model/types.zig");
 const key_encoder = @import("../../terminal/input/key_encoder.zig");
@@ -315,7 +316,7 @@ pub const TerminalWidget = struct {
 
     pub fn scrollbarModel(self: *const TerminalWidget) ScrollbarModel {
         const cache = &self.draw_cache;
-        const scrollbar = terminal_publication.scrollbarInfo(cache, self.session.mouseReportingEnabled());
+        const scrollbar = terminal_publication.scrollbarInfo(cache, session_interaction.mouseReportingEnabled(self.session));
         return .{
             .allowed = scrollbar.allowed,
             .visible = scrollbar.allowed,

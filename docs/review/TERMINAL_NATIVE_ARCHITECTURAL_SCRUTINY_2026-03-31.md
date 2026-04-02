@@ -331,6 +331,13 @@ Judgment:
   through `src/terminal/core/session/config.zig` from app, workspace, FFI,
   and test callers instead of pretending to be stable host-level runtime
   contract
+- interaction-owned input state and kitty-paste mechanics are off the runtime
+  surface too:
+  auto-repeat/focus/bracketed-paste/mouse-reporting/key-mode queries plus
+  OSC 5522 paste sending now route through
+  `src/terminal/core/session/interaction.zig` from widget, protocol, FFI,
+  workspace, and test callers instead of pretending to be stable runtime
+  contract
   contract
 - protocol query helpers are shrinking the same way too: runtime/focus tests
   now use `terminal_core_protocol.zig` directly for `getCell` /

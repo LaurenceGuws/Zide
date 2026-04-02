@@ -7,6 +7,7 @@ const terminal_core_feed = @import("protocol/terminal_core_feed.zig");
 const terminal_core_protocol = @import("protocol/terminal_core_protocol.zig");
 const input_modes = @import("input_modes.zig");
 const session_config = @import("session/config.zig");
+const session_interaction = @import("session/interaction.zig");
 const mode_effects = @import("session/mode_effects.zig");
 const scrolling = @import("scrolling.zig");
 const host_types = @import("session/host_types.zig");
@@ -2433,10 +2434,10 @@ test "feedOutputBytes publishes kitty key mode flags through locked parser path"
     defer session.deinit();
 
     terminal_core_feed.feedOutputBytes(session, "\x1b[>13u");
-    try std.testing.expectEqual(@as(u32, 13), session.keyModeFlagsValue());
+    try std.testing.expectEqual(@as(u32, 13), session_interaction.keyModeFlagsValue(session));
 
     terminal_core_feed.feedOutputBytes(session, "\x1b[<1u");
-    try std.testing.expectEqual(@as(u32, 0), session.keyModeFlagsValue());
+    try std.testing.expectEqual(@as(u32, 0), session_interaction.keyModeFlagsValue(session));
 }
 
 test "feedOutputBytes RIS resets input modes and clears screen" {
@@ -2457,9 +2458,9 @@ test "feedOutputBytes RIS resets input modes and clears screen" {
             "AB",
     );
 
-    try std.testing.expect(session.focusReportingEnabled());
-    try std.testing.expect(session.bracketedPasteEnabled());
-    try std.testing.expect(session.mouseReportingEnabled());
+    try std.testing.expect(session_interaction.focusReportingEnabled(session));
+    try std.testing.expect(session_interaction.bracketedPasteEnabled(session));
+    try std.testing.expect(session_interaction.mouseReportingEnabled(session));
     try std.testing.expect(session.mouseModeSgrPixelsEnabled());
     try std.testing.expect(session.appCursorKeysEnabled());
     try std.testing.expect(session.appKeypadEnabled());
@@ -2468,9 +2469,9 @@ test "feedOutputBytes RIS resets input modes and clears screen" {
 
     terminal_core_feed.feedOutputBytes(session, "\x1bc");
 
-    try std.testing.expect(!session.focusReportingEnabled());
-    try std.testing.expect(!session.bracketedPasteEnabled());
-    try std.testing.expect(!session.mouseReportingEnabled());
+    try std.testing.expect(!session_interaction.focusReportingEnabled(session));
+    try std.testing.expect(!session_interaction.bracketedPasteEnabled(session));
+    try std.testing.expect(!session_interaction.mouseReportingEnabled(session));
     try std.testing.expect(!session.mouseModeSgrPixelsEnabled());
     try std.testing.expect(!session.appCursorKeysEnabled());
     try std.testing.expect(!session.appKeypadEnabled());

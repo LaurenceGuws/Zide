@@ -2,6 +2,7 @@ const std = @import("std");
 
 const app_shell = @import("../../app_shell.zig");
 const terminal_publication = @import("../../terminal/core/publication/terminal_publication.zig");
+const session_interaction = @import("../../terminal/core/session/interaction.zig");
 const session_queries = @import("../../terminal/core/session/queries.zig");
 const terminal_runtime = @import("../../terminal/core/terminal_runtime.zig");
 const terminal_types = @import("../../terminal/model/types.zig");
@@ -81,7 +82,7 @@ pub fn handleInput(
         wheel_steps = if (rounded > 0) rounded else 1;
         if (wheel_delta < 0) wheel_steps = -wheel_steps;
     }
-    const mouse_reporting = allow_input and in_terminal and self.session.mouseReportingEnabled();
+    const mouse_reporting = allow_input and in_terminal and session_interaction.mouseReportingEnabled(self.session);
     var skip_mouse_click = false;
     if (allow_input and in_terminal and ctrl and input_batch.mousePressed(.left)) {
         if (has_visible_grid) {

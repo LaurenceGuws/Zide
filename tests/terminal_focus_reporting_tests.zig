@@ -3,6 +3,7 @@ const builtin = @import("builtin");
 const posix = std.posix;
 
 const session_config = @import("../src/terminal/core/session/config.zig");
+const session_interaction = @import("../src/terminal/core/session/interaction.zig");
 const terminal_runtime = @import("../src/terminal/core/terminal_runtime.zig");
 const terminal_core_protocol = @import("../src/terminal/core/protocol/terminal_core_protocol.zig");
 const terminal_types = @import("../src/terminal/model/types.zig");
@@ -74,11 +75,11 @@ test "terminal focus reporting toggles via CSI ?1004 h/l" {
     var session = try terminal_runtime.PtyTerminalRuntime.init(allocator, 6, 12);
     defer session.deinit();
 
-    try std.testing.expect(!session.focusReportingEnabled());
+    try std.testing.expect(!session_interaction.focusReportingEnabled(session));
     terminal_debug.debugFeedBytes(session, "\x1b[?1004h");
-    try std.testing.expect(session.focusReportingEnabled());
+    try std.testing.expect(session_interaction.focusReportingEnabled(session));
     terminal_debug.debugFeedBytes(session, "\x1b[?1004l");
-    try std.testing.expect(!session.focusReportingEnabled());
+    try std.testing.expect(!session_interaction.focusReportingEnabled(session));
 }
 
 test "terminal focus reporting writes focus in/out when enabled" {
@@ -868,10 +869,10 @@ test "terminal kitty paste events mode emits OSC 5522 mime list and serves text/
             const allocator = std.testing.allocator;
 
             terminal_debug.debugFeedBytes(session, "\x1b[?5522h");
-            try std.testing.expect(session.kittyPasteEvents5522Enabled());
+            try std.testing.expect(session_interaction.kittyPasteEvents5522Enabled(session));
 
             const png = [_]u8{ 0x89, 'P', 'N', 'G', '\r', '\n', 0x1a, '\n' };
-            try std.testing.expect(try session.sendKittyPasteEvent5522WithMimeRich("hi", "<b>hi</b>", "file:///tmp/a\n", &png));
+            try std.testing.expect(try session_interaction.sendKittyPasteEvent5522WithMimeRich(session, "hi", "<b>hi</b>", "file:///tmp/a\n", &png));
             {
                 const reply = try capture.readReply(allocator);
                 defer allocator.free(reply);
@@ -931,7 +932,7 @@ test "terminal kitty paste events mode supports image-only clipboard payloads" {
             const png = [_]u8{ 0x89, 'P', 'N', 'G', '\r', '\n', 0x1a, '\n' };
 
             terminal_debug.debugFeedBytes(session, "\x1b[?5522h");
-            try std.testing.expect(try session.sendKittyPasteEvent5522WithMimeRich("", null, null, &png));
+            try std.testing.expect(try session_interaction.sendKittyPasteEvent5522WithMimeRich(session, "", null, null, &png));
             {
                 const reply = try capture.readReply(allocator);
                 defer allocator.free(reply);
@@ -949,7 +950,7 @@ test "terminal OSC 5522 read echoes sanitized id metadata" {
         fn run(session: *terminal_runtime.PtyTerminalRuntime, capture: *PipeCapture) !void {
             const allocator = std.testing.allocator;
             terminal_debug.debugFeedBytes(session, "\x1b[?5522h");
-            try std.testing.expect(try session.sendKittyPasteEvent5522("hi"));
+            try std.testing.expect(try session_interaction.sendKittyPasteEvent5522(session, "hi"));
             {
                 const unsolicited = try capture.readReply(allocator);
                 defer allocator.free(unsolicited);
@@ -974,7 +975,7 @@ test "terminal OSC 5522 read preserves BEL terminator" {
         fn run(session: *terminal_runtime.PtyTerminalRuntime, capture: *PipeCapture) !void {
             const allocator = std.testing.allocator;
             terminal_debug.debugFeedBytes(session, "\x1b[?5522h");
-            try std.testing.expect(try session.sendKittyPasteEvent5522("hi"));
+            try std.testing.expect(try session_interaction.sendKittyPasteEvent5522(session, "hi"));
             {
                 const unsolicited = try capture.readReply(allocator);
                 defer allocator.free(unsolicited);
@@ -998,7 +999,7 @@ test "terminal OSC 5522 read returns ENOSYS for unsupported MIME request" {
         fn run(session: *terminal_runtime.PtyTerminalRuntime, capture: *PipeCapture) !void {
             const allocator = std.testing.allocator;
             terminal_debug.debugFeedBytes(session, "\x1b[?5522h");
-            try std.testing.expect(try session.sendKittyPasteEvent5522("hi"));
+            try std.testing.expect(try session_interaction.sendKittyPasteEvent5522(session, "hi"));
             {
                 const unsolicited = try capture.readReply(allocator);
                 defer allocator.free(unsolicited);
@@ -1019,7 +1020,7 @@ test "terminal OSC 5522 read returns ENOSYS for loc=primary" {
         fn run(session: *terminal_runtime.PtyTerminalRuntime, capture: *PipeCapture) !void {
             const allocator = std.testing.allocator;
             terminal_debug.debugFeedBytes(session, "\x1b[?5522h");
-            try std.testing.expect(try session.sendKittyPasteEvent5522("hi"));
+            try std.testing.expect(try session_interaction.sendKittyPasteEvent5522(session, "hi"));
             {
                 const unsolicited = try capture.readReply(allocator);
                 defer allocator.free(unsolicited);
@@ -1438,8 +1439,8 @@ test "terminal DECSTR suppresses ?5522 unsolicited paste events until re-enabled
             const allocator = std.testing.allocator;
 
             terminal_debug.debugFeedBytes(session, "\x1b[?5522h");
-            try std.testing.expect(session.kittyPasteEvents5522Enabled());
-            try std.testing.expect(try session.sendKittyPasteEvent5522("hi"));
+            try std.testing.expect(session_interaction.kittyPasteEvents5522Enabled(session));
+            try std.testing.expect(try session_interaction.sendKittyPasteEvent5522(session, "hi"));
             {
                 const reply = try capture.readReply(allocator);
                 defer allocator.free(reply);
@@ -1448,14 +1449,14 @@ test "terminal DECSTR suppresses ?5522 unsolicited paste events until re-enabled
 
             terminal_debug.debugFeedBytes(session, "\x1b[!p");
             try capture.expectNoReply();
-            try std.testing.expect(!session.kittyPasteEvents5522Enabled());
+            try std.testing.expect(!session_interaction.kittyPasteEvents5522Enabled(session));
 
-            try std.testing.expect(!(try session.sendKittyPasteEvent5522("hi")));
+            try std.testing.expect(!(try session_interaction.sendKittyPasteEvent5522(session, "hi")));
             try capture.expectNoReply();
 
             terminal_debug.debugFeedBytes(session, "\x1b[?5522h");
-            try std.testing.expect(session.kittyPasteEvents5522Enabled());
-            try std.testing.expect(try session.sendKittyPasteEvent5522("hi"));
+            try std.testing.expect(session_interaction.kittyPasteEvents5522Enabled(session));
+            try std.testing.expect(try session_interaction.sendKittyPasteEvent5522(session, "hi"));
             {
                 const reply = try capture.readReply(allocator);
                 defer allocator.free(reply);
@@ -1711,12 +1712,12 @@ test "terminal DECSTR soft reset clears mode subset and preserves grid" {
                     "\x1b[2;4r", // scroll region
             );
 
-            try std.testing.expect(session.focusReportingEnabled());
-            try std.testing.expect(session.bracketedPasteEnabled());
-            try std.testing.expect(session.mouseReportingEnabled());
+            try std.testing.expect(session_interaction.focusReportingEnabled(session));
+            try std.testing.expect(session_interaction.bracketedPasteEnabled(session));
+            try std.testing.expect(session_interaction.mouseReportingEnabled(session));
             try std.testing.expect(session.appCursorKeysEnabled());
             try std.testing.expect(session.appKeypadEnabled());
-            try std.testing.expect(session.keyModeFlagsValue() != 0);
+            try std.testing.expect(session_interaction.keyModeFlagsValue(session) != 0);
 
             terminal_debug.debugFeedBytes(session, "\x1b[!p");
             try capture.expectNoReply();
@@ -1726,12 +1727,12 @@ test "terminal DECSTR soft reset clears mode subset and preserves grid" {
             try std.testing.expectEqual(@as(u32, 'B'), terminal_core_protocol.getCell(session, 0, 1).codepoint);
 
             // Key global/session modes reset to defaults.
-            try std.testing.expect(!session.focusReportingEnabled());
-            try std.testing.expect(!session.bracketedPasteEnabled());
-            try std.testing.expect(!session.mouseReportingEnabled());
+            try std.testing.expect(!session_interaction.focusReportingEnabled(session));
+            try std.testing.expect(!session_interaction.bracketedPasteEnabled(session));
+            try std.testing.expect(!session_interaction.mouseReportingEnabled(session));
             try std.testing.expect(!session.appCursorKeysEnabled());
             try std.testing.expect(!session.appKeypadEnabled());
-            try std.testing.expectEqual(@as(u32, 0), session.keyModeFlagsValue());
+            try std.testing.expectEqual(@as(u32, 0), session_interaction.keyModeFlagsValue(session));
 
             // Active-screen soft reset defaults restored.
             const pos = terminal_core_protocol.getCursorPos(session);

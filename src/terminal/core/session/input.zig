@@ -2,6 +2,7 @@ const std = @import("std");
 const input_modes = @import("../input_modes.zig");
 const terminal_core_text = @import("../protocol/terminal_core_text.zig");
 const terminal_transport = @import("../runtime/terminal_transport.zig");
+const session_interaction = @import("interaction.zig");
 const input_mod = @import("../../input/input.zig");
 const types = @import("../../model/types.zig");
 
@@ -207,7 +208,7 @@ pub fn sendBytes(self: anytype, bytes: []const u8) !void {
 }
 
 pub fn reportFocusChanged(self: anytype, focused: bool) !bool {
-    if (!self.focusReportingEnabled()) {
+    if (!session_interaction.focusReportingEnabled(self)) {
         return false;
     }
     if (self.lockPtyWriter()) |writer_guard| {

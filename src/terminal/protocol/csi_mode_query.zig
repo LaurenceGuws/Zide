@@ -2,6 +2,7 @@ const parser_csi = @import("../parser/csi.zig");
 const csi_mod = @import("csi.zig");
 const std = @import("std");
 const app_logger = @import("../../app_logger.zig");
+const session_interaction = @import("../core/session/interaction.zig");
 
 pub const ModeSnapshot = struct {
     app_cursor_keys: bool,
@@ -44,7 +45,7 @@ pub fn modeSnapshot(self: anytype) ModeSnapshot {
         .screen_reverse = screen.screen_reverse,
         .origin_mode = screen.origin_mode,
         .auto_wrap = screen.auto_wrap,
-        .auto_repeat = self.autoRepeatEnabled(),
+        .auto_repeat = session_interaction.autoRepeatEnabled(self),
         .mouse_mode_x10 = input_snapshot.mouse_mode_x10.load(.acquire),
         .cursor_blink = screen.cursor_style.blink,
         .cursor_visible = screen.cursor_visible,
@@ -55,11 +56,11 @@ pub fn modeSnapshot(self: anytype) ModeSnapshot {
         .app_keypad = self.appKeypadEnabled(),
         .mouse_mode_button = input_snapshot.mouse_mode_button.load(.acquire),
         .mouse_mode_any = input_snapshot.mouse_mode_any.load(.acquire),
-        .focus_reporting = self.focusReportingEnabled(),
+        .focus_reporting = session_interaction.focusReportingEnabled(self),
         .mouse_mode_sgr = input_snapshot.mouse_mode_sgr.load(.acquire),
         .mouse_alternate_scroll = input_snapshot.mouse_alternate_scroll.load(.acquire),
         .mouse_mode_sgr_pixels = input_snapshot.mouse_mode_sgr_pixels_1016.load(.acquire),
-        .bracketed_paste = self.bracketedPasteEnabled(),
+        .bracketed_paste = session_interaction.bracketedPasteEnabled(self),
         .sync_updates_active = self.core.sync_updates_active,
         .grapheme_cluster_shaping_2027 = self.interaction.grapheme_cluster_shaping_2027,
         .report_color_scheme_2031 = self.interaction.report_color_scheme_2031,

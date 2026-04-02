@@ -1,6 +1,7 @@
 const std = @import("std");
 const builtin = @import("builtin");
 
+const session_interaction = @import("../../terminal/core/session/interaction.zig");
 const terminal_runtime = @import("../../terminal/core/terminal_runtime.zig");
 const session_input = @import("../../terminal/core/session/input.zig");
 const terminal_types = @import("../../terminal/model/types.zig");
@@ -33,7 +34,7 @@ pub fn handleKeyboardInput(
     const key_log = app_logger.logger("terminal.input.keys");
     const dump_log = app_logger.logger("terminal.ui.dump");
 
-    const key_mode_flags = self.session.keyModeFlagsValue();
+    const key_mode_flags = session_interaction.keyModeFlagsValue(self.session);
     const report_text_enabled = key_encoder.reportTextEnabled(key_mode_flags);
     const allow_terminal_key = !(builtin.target.os.tag == .macos and input_batch.mods.super);
 
@@ -66,7 +67,7 @@ pub fn handleKeyboardInput(
                 .{
                     key_mode_flags,
                     @intFromBool(report_text_enabled),
-                    @intFromBool(self.session.autoRepeatEnabled()),
+                    @intFromBool(session_interaction.autoRepeatEnabled(self.session)),
                     input_batch.events.items.len,
                 },
             );
@@ -143,7 +144,7 @@ pub fn handleKeyboardInput(
                 continue;
             }
             const action: input_mod.KeyAction = if (event.key.repeated) .repeat else .press;
-            if (action == .repeat and !self.session.autoRepeatEnabled()) {
+            if (action == .repeat and !session_interaction.autoRepeatEnabled(self.session)) {
                 key_log.logf(.info, "skip key={d} action=repeat reason=auto_repeat_disabled", .{@intFromEnum(key)});
                 continue;
             }

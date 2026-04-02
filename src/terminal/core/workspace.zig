@@ -2,6 +2,7 @@ const std = @import("std");
 const terminal_publication = @import("publication/terminal_publication.zig");
 const runtime_mod = @import("terminal_runtime.zig");
 const session_config = @import("session/config.zig");
+const session_interaction = @import("session/interaction.zig");
 const host_types = @import("session/host_types.zig");
 const session_runtime = @import("session/runtime.zig");
 const app_logger = @import("../../app_logger.zig");
@@ -200,7 +201,7 @@ pub const TerminalWorkspace = struct {
             activity.semantic_input_active or
             activity.semantic_output_active or
             session.altScreenActive() or
-            session.mouseReportingEnabled();
+            session_interaction.mouseReportingEnabled(session);
     }
 
     pub fn copyActiveSessionCwd(
