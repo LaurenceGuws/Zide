@@ -105,6 +105,11 @@ Focused follow-up lane:
   should begin from a fresh top-level rerank against live code and the
   strongest local references, not by inheriting momentum from the old
   micro-lanes.
+- `docs/review/TERMINAL_WAR_2_SCOUTING_2026-04-02.md`
+  Why: first War 2 scouting found two serious candidates:
+  - structural recentering around one engine-owned host-state boundary
+  - present/render correctness discipline around submitted terminal truth
+  War 2 should start only after choosing explicitly between them.
 
 ## Current Milestone
 
