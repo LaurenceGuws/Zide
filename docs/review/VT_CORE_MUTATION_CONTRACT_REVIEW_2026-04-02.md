@@ -1,0 +1,81 @@
+# VT Core Mutation Contract Review
+
+Date: 2026-04-02
+
+## Current Read
+
+The `vt-sprint` identity wave materially changed the public shape:
+
+- `TerminalCore` is exported at the VT root
+- immutable terminal content and metadata reads now route through
+  [terminal_core.zig](/home/home/personal/zide/src/terminal/core/terminal_core.zig)
+- app/UI/FFI/workspace/replay consumers now speak
+  [TerminalSession](/home/home/personal/zide/src/terminal/core/session/terminal_session.zig)
+  directly
+- `PtyTerminalRuntime` is effectively boxed into VT-root compatibility residue
+  plus the historical PTY-named regression file
+
+That means the next blocker is no longer public naming.
+
+## Strongest Remaining Contradiction
+
+`TerminalCore` now looks credible for immutable host-facing reads, but it still
+does not look sufficient for mutable host interaction.
+
+The clearest examples are still exported from
+[terminal_session.zig](/home/home/personal/zide/src/terminal/core/session/terminal_session.zig):
+
+- viewport / scrollback host actions from
+  [content.zig](/home/home/personal/zide/src/terminal/core/session/content.zig)
+- selection mutation and gesture helpers from
+  [selection.zig](/home/home/personal/zide/src/terminal/core/session/selection.zig)
+
+Those operations are not pure runtime-shell transport behavior.
+They are user-facing terminal state changes.
+
+The reason they still sit on `TerminalSession` is also clear:
+
+- they mutate core-owned state
+- they also need publication / view-refresh invalidation
+
+So the real remaining contradiction is:
+
+- `TerminalCore` looks like the engine for reads
+- `TerminalSession` still looks like the necessary object for mutable
+  host-facing terminal interaction
+
+That is a more serious blocker to a credible `zide-vt` boundary than the old
+`PtyTerminalRuntime` naming residue.
+
+## Comparison Pressure
+
+Against Ghostty / WezTerm pressure, the gap is no longer "too many wrappers."
+
+The gap is:
+
+- does the engine object own a coherent host-facing mutation contract
+- or does the host still need the runtime/session aggregate to do normal
+  terminal state interaction
+
+Right now Zide is still closer to the second story.
+
+## Best Next Move
+
+Do not keep shaving naming residue.
+
+The next `vt-sprint` step should be a deliberate design move around mutable
+host interaction:
+
+1. Define whether viewport/selection mutation belongs on `TerminalCore`
+   directly, or on an explicit engine-adjacent mutation contract rooted in core
+   truth.
+2. Separate the mutation truth from publication invalidation choreography.
+3. Only then cut the first whole mutable-host slab off
+   `TerminalSession`.
+
+## Non-Goals
+
+- no more alias churn just to reduce `PtyTerminalRuntime` mentions
+- no random helper extraction from session mutation code
+- no pretending the current mutation/publication coupling is already the right
+  library boundary

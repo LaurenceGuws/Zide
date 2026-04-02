@@ -224,6 +224,13 @@ Focused follow-up lane:
   - workspace and replay-harness infrastructure now use `TerminalSession`
     directly too; the old PTY name is mostly down to compatibility and
     historical test naming
+  - the next strongest `vt-sprint` contradiction is no longer naming; it is the
+    mutable host-interaction slab still living on `TerminalSession`
+
+- `docs/review/VT_CORE_MUTATION_CONTRACT_REVIEW_2026-04-02.md`
+  Why: immutable reads now look core-owned enough; the remaining serious
+  plug-and-play blocker is mutable host interaction still needing
+  `TerminalSession` because publication invalidation is coupled there
 
 - `docs/review/TERMINAL_NATIVE_ARCHITECTURAL_SCRUTINY_2026-03-31.md`
   Why: this is the current ruthless read on what still looks second-rate at
