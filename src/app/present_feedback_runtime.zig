@@ -1,11 +1,22 @@
-const app_terminal_draw_surface_runtime = @import("terminal/terminal_draw_surface_runtime.zig");
 const app_editor_live_smoke_runtime = @import("editor/live_smoke_runtime.zig");
 const app_logger = @import("../app_logger.zig");
 const mode_build = @import("mode_build.zig");
+const app_terminal_active_widget = @import("terminal/terminal_active_widget.zig");
+
+fn flushTerminalPresentationFeedback(state: anytype, submission: anytype) void {
+    if (app_terminal_active_widget.resolveActive(
+        state.app_mode,
+        &state.terminal_workspace,
+        state.terminals.items.len,
+        state.terminal_widgets.items,
+    )) |term_widget| {
+        term_widget.completePendingPresentationFeedback(submission);
+    }
+}
 
 pub fn completePresent(state: anytype, shell: anytype, submission: anytype) void {
     if (comptime mode_build.focused_mode == .terminal) {
-        app_terminal_draw_surface_runtime.flushPresentationFeedback(state, submission);
+        flushTerminalPresentationFeedback(state, submission);
         return;
     }
 
@@ -29,5 +40,5 @@ pub fn completePresent(state: anytype, shell: anytype, submission: anytype) void
     if (app_editor_live_smoke_runtime.shouldClose(state)) {
         shell.requestClose();
     }
-    app_terminal_draw_surface_runtime.flushPresentationFeedback(state, submission);
+    flushTerminalPresentationFeedback(state, submission);
 }

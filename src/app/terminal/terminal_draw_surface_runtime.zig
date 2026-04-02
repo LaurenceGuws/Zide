@@ -63,14 +63,3 @@ pub fn draw(state: anytype, shell: anytype, layout: layout_types.WidgetLayout) v
         term_widget.stagePresentationFeedback(draw_outcome);
     }
 }
-
-pub fn flushPresentationFeedback(state: anytype, submission: anytype) void {
-    if (app_terminal_active_widget.resolveActive(
-        state.app_mode,
-        &state.terminal_workspace,
-        state.terminals.items.len,
-        state.terminal_widgets.items,
-    )) |term_widget| {
-        term_widget.completePendingPresentationFeedback(submission);
-    }
-}

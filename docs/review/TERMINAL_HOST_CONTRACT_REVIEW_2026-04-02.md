@@ -240,3 +240,12 @@ Visible-frame follow-through also started:
 
 That makes the visible-frame hook layer read slightly more like a true
 poll/input routing owner and less like a mixed terminal UI convenience center.
+
+Another post-present ownership cut landed too:
+
+- terminal presentation-feedback flush no longer lives under
+  `terminal_draw_surface_runtime.zig`
+- that post-submission action now lives in `present_feedback_runtime.zig`
+
+That keeps the draw-surface lane closer to actual draw responsibility and keeps
+post-present cleanup with the present-completion owner.

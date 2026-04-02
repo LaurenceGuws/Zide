@@ -93,6 +93,9 @@ Focused follow-up lane:
   - the extra single-caller shell `visible_terminal_frame.zig` is gone too;
     the live visible-terminal poll/input routing now sits directly in
     `visible_terminal_frame_hooks_runtime.zig`
+  - post-present cleanup is tighter too: terminal presentation-feedback flush
+    no longer lives under `terminal_draw_surface_runtime.zig`; it now runs in
+    `present_feedback_runtime.zig` with the rest of present completion
   - the other likely host pressure point is the remaining split across
     `visible_terminal_frame_hooks_runtime.zig` and
     `terminal_draw_surface_runtime.zig`

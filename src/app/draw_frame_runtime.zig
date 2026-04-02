@@ -1,5 +1,4 @@
 const app_font_sample_draw_runtime = @import("font_sample_draw_runtime.zig");
-const app_terminal_draw_surface_runtime = @import("terminal/terminal_draw_surface_runtime.zig");
 const app_editor_live_smoke_runtime = @import("editor/live_smoke_runtime.zig");
 const app_editor_draw_surface_runtime = @import("editor/editor_draw_surface_runtime.zig");
 const app_present_feedback_runtime = @import("present_feedback_runtime.zig");
@@ -20,7 +19,7 @@ pub fn draw(state: anytype, shell: anytype, ctx: *anyopaque, hooks: Hooks) void 
 
     if (app_font_sample_draw_runtime.handle(state, shell)) {
         const submission = shell.endFrame();
-        app_terminal_draw_surface_runtime.flushPresentationFeedback(state, submission);
+        app_present_feedback_runtime.completePresent(state, shell, submission);
         return;
     }
 
