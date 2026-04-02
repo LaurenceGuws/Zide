@@ -12,6 +12,7 @@ Use it for:
 
 Current high-signal entrypoints:
 
+- `rendering_scrutiny.md` — active SDL3/OpenGL renderer-center scrutiny queue
 - `terminal_special_glyphs.md` — sprite/special-glyph quality lane
 - `font_rendering.md` — remaining text-rendering quality work
 
