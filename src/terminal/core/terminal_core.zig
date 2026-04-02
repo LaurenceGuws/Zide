@@ -47,6 +47,7 @@ pub const TerminalCore = struct {
     pub const ClickSelectionResult = terminal_core_selection.ClickSelectionResult;
     pub const KeyActionDispatch = terminal_core_key_dispatch.KeyActionDispatch;
     pub const KeypadActionDispatch = terminal_core_key_dispatch.KeypadActionDispatch;
+    pub const AlternateScrollDispatch = terminal_core_key_dispatch.AlternateScrollDispatch;
     pub const OutputFeedResult = struct {
         parsed: bool,
         scroll_offset: usize,
@@ -260,6 +261,20 @@ pub const TerminalCore = struct {
             action,
             auto_repeat_enabled,
             app_keypad_enabled,
+        );
+    }
+
+    pub fn decideAlternateScrollStep(
+        self: *const TerminalCore,
+        wheel_steps: i32,
+        alternate_scroll_enabled: bool,
+        alt_active: bool,
+    ) AlternateScrollDispatch {
+        return terminal_core_key_dispatch.decideAlternateScrollStep(
+            self,
+            wheel_steps,
+            alternate_scroll_enabled,
+            alt_active,
         );
     }
 

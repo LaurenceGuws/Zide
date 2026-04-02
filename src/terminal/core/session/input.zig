@@ -192,13 +192,16 @@ pub fn reportMouseEvent(self: anytype, event: MouseEvent) !bool {
 }
 
 pub fn reportAlternateScrollWheel(self: anytype, wheel_steps: i32, mod: Modifier) !bool {
-    if (wheel_steps == 0) return false;
-    if (!self.session.interaction.input_snapshot.mouse_alternate_scroll.load(.acquire)) return false;
-    if (!self.session.interaction.input_snapshot.alt_active.load(.acquire)) return false;
+    const input_snapshot = self.session.interaction.input_snapshot;
     var remaining = wheel_steps;
     while (remaining != 0) {
-        const key: Key = if (remaining > 0) VTERM_KEY_UP else VTERM_KEY_DOWN;
-        try sendKeyAction(self, key, mod, input_mod.KeyAction.press);
+        const dispatch = self.core.decideAlternateScrollStep(
+            remaining,
+            input_snapshot.mouse_alternate_scroll.load(.acquire),
+            input_snapshot.alt_active.load(.acquire),
+        );
+        if (!dispatch.active) return false;
+        try sendKeyAction(self, dispatch.key.?, mod, input_mod.KeyAction.press);
         remaining += if (remaining > 0) -1 else 1;
     }
     return true;
@@ -319,4 +322,24 @@ test "keypad repeat suppression comes from core dispatch" {
     const bytes = (try session_runtime.takeExternalOutgoingBytes(session, allocator)).?;
     defer allocator.free(bytes);
     try std.testing.expectEqual(@as(usize, 0), bytes.len);
+}
+
+test "alternate scroll mapping comes from core dispatch" {
+    const session_runtime = @import("runtime.zig");
+
+    const allocator = std.testing.allocator;
+    var session = try @import("terminal_runtime_shell.zig").TerminalRuntimeShell.init(allocator, 2, 2);
+    defer session.deinit();
+
+    session_runtime.attachExternalTransport(session);
+    @import("../input_modes.zig").setAppCursorKeys(session, true);
+    terminal_core_text.handleCodepoint(session, 'x');
+    session.core.active = .alt;
+    @import("../input_modes.zig").publishSnapshot(session);
+
+    try std.testing.expect(try reportAlternateScrollWheel(session, 1, VTERM_MOD_NONE));
+
+    const bytes = (try session_runtime.takeExternalOutgoingBytes(session, allocator)).?;
+    defer allocator.free(bytes);
+    try std.testing.expectEqualStrings("\x1bOA", bytes);
 }

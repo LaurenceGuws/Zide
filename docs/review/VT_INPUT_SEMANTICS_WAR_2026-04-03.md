@@ -126,6 +126,27 @@ What remains blocked now:
 - broader reporting/mouse/text lanes are still transport-shaped unless proven
   otherwise
 
+Progress, later on 2026-04-03:
+
+- alternate-scroll mapping is now landed under the same semantic owner
+- [terminal_core_key_dispatch.zig](/home/home/personal/zide/src/terminal/core/terminal_core_key_dispatch.zig)
+  now decides whether a wheel step becomes terminal arrow-key intent
+- [session/input.zig](/home/home/personal/zide/src/terminal/core/session/input.zig)
+  now routes `reportAlternateScrollWheel(...)` through that core-owned decision
+
+What this moved:
+
+- alternate-scroll mode gating
+- alt-screen gating
+- arrow-key intent selection
+
+What still stayed outside core:
+
+- the actual key emission path
+- lock acquisition
+- writer selection
+- protocol encoding
+
 ### 2. Broader host-driving input semantic contract
 
 Examples:
@@ -186,4 +207,5 @@ Current state:
 
 - key-action dispatch is now a real first slice
 - keypad-action dispatch now follows the same pattern
+- alternate-scroll mapping now follows the same pattern
 - char/input broadening is still not automatic from that win

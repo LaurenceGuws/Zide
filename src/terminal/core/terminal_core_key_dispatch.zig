@@ -15,6 +15,11 @@ pub const KeypadActionDispatch = struct {
     app_keypad: bool,
 };
 
+pub const AlternateScrollDispatch = struct {
+    active: bool,
+    key: ?types.Key,
+};
+
 pub fn decideKeyAction(
     _: anytype,
     key: types.Key,
@@ -60,5 +65,23 @@ pub fn decideKeypadAction(
         .suppress = false,
         .emit = action == .press,
         .app_keypad = app_keypad_enabled,
+    };
+}
+
+pub fn decideAlternateScrollStep(
+    _: anytype,
+    wheel_steps: i32,
+    alternate_scroll_enabled: bool,
+    alt_active: bool,
+) AlternateScrollDispatch {
+    if (wheel_steps == 0 or !alternate_scroll_enabled or !alt_active) {
+        return .{
+            .active = false,
+            .key = null,
+        };
+    }
+    return .{
+        .active = true,
+        .key = if (wheel_steps > 0) types.VTERM_KEY_UP else types.VTERM_KEY_DOWN,
     };
 }

@@ -54,6 +54,9 @@ gravity into smaller files.
   - keypad-action dispatch is now landed under the same owner too
   - `TerminalCore` now also owns repeat gating, press-only emission, and
     app-keypad mode use for keypad input
+  - alternate-scroll mapping is now landed under the same owner too
+  - `TerminalCore` now also owns alternate-scroll mode gating, alt-screen
+    gating, and arrow-key intent selection
   - char dispatch remains blocked by the local-echo ambiguity
 
 - `docs/review/VT_WAR_4_SCOPE_AND_SEEDS_2026-04-03.md`
