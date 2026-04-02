@@ -67,6 +67,8 @@ Continue only if the next move is explicitly:
 That deeper design step is now captured in:
 
 - [VT_WAR_4_KEYCHAR_DISPATCH_REVIEW_2026-04-03.md](/home/home/personal/zide/docs/review/VT_WAR_4_KEYCHAR_DISPATCH_REVIEW_2026-04-03.md)
+- [VT_WAR_4_KEYCHAR_RESULT_SHAPE_2026-04-03.md](/home/home/personal/zide/docs/review/VT_WAR_4_KEYCHAR_RESULT_SHAPE_2026-04-03.md)
+- [VT_WAR_4_KEYCHAR_DECISION_2026-04-03.md](/home/home/personal/zide/docs/review/VT_WAR_4_KEYCHAR_DECISION_2026-04-03.md)
 
 Otherwise, rerank from this stronger baseline instead of forcing a third input
 cut.

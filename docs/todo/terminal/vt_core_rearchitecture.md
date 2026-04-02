@@ -167,6 +167,16 @@ gravity into smaller files.
   - it must not embed writer handles, encoded bytes, or PTY/external transport
     choice
   - if that line cannot stay crisp, War 4 should remain closed
+- `docs/review/VT_WAR_4_KEYCHAR_DECISION_2026-04-03.md`
+  Why: the result-shape work needed an explicit go/no-go decision instead of
+  leaving War 4 in indefinite suspense.
+  Current read:
+  - local echo fallback is still selected on writer absence, which keeps the
+    key/char lane mixed at the shell boundary
+  - that means the lane improved in design clarity but still does not justify
+    a code cut from this baseline
+  - War 4 should remain closed unless that fallback ambiguity is resolved by a
+    stronger future design step
 
 ## Priority Now
 
@@ -186,8 +196,8 @@ Highest-value remaining items from the current live baseline:
    - only continue if key/char semantic dispatch can be separated cleanly from
      writer encoding and transport mechanics
    Stop marker:
-   - War 4 is now at a legitimate pause point from a materially stronger
-     baseline
+   - War 4 remains at a legitimate pause point from a materially stronger
+     baseline, even after the deeper key/char design pass
 2. `VTWAR4-02` keep handle identity as a checked-but-paused concern
    Why: the handle is already opaque and terminal-named publicly, so changing
    internal shell-backed storage alone risks cosmetic surgery.
