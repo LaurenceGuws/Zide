@@ -1,0 +1,86 @@
+# Terminal War 3 Publication Contradiction Review 2026-04-02
+
+## Purpose
+
+Choose the first concrete War 3 contradiction to the target `zide-vt` shape.
+
+Target shape:
+
+- `TerminalCore` is the library center
+- `session/runtime.zig` is runtime shell only
+- `terminal_publication.zig` is export boundary only
+
+## Current Read
+
+The first concrete contradiction is not evenly split across runtime and
+publication.
+
+It is publication.
+
+Why:
+
+- [session/runtime.zig](/home/home/personal/zide/src/terminal/core/session/runtime.zig)
+  is now relatively narrow and reads mostly like:
+  - init/boot assembly
+  - transport attach/open/close
+  - thread and backlog lifecycle
+  - PTY writer and resize
+- [terminal_publication.zig](/home/home/personal/zide/src/terminal/core/publication/terminal_publication.zig)
+  still reads like more than an export edge
+
+It still owns a broad mixed slab of:
+
+- generation state mutation
+- view-refresh request/choreography
+- cache publication flow
+- render-cache access
+- snapshot capture/export
+- host-facing frame/generation summaries
+
+That is too much gravity for something that is supposed to read like a boring
+engine export boundary.
+
+## Why This Matters
+
+Against the War 3 target shape, the current live stack still reads like:
+
+- engine center
+- plus publication center
+- plus runtime shell
+
+instead of:
+
+- engine center
+- runtime shell
+- export edge
+
+That means publication is still the clearest blocker to first-glance
+extractability of a serious `zide-vt`.
+
+## Current Judgment
+
+The first War 3 cut should start from publication, not runtime.
+
+More specifically:
+
+- the next move should identify the largest slab in
+  [terminal_publication.zig](/home/home/personal/zide/src/terminal/core/publication/terminal_publication.zig)
+  that is still engine-adjacent choreography rather than export boundary
+- then remove that slab in one whole move
+
+## Best Next Question
+
+Which current publication slab is the biggest contradiction to "publication as
+export boundary only"?
+
+Current candidates:
+
+1. generation mutation plus view-refresh choreography
+2. render-cache storage/query center
+3. snapshot capture/preparation center
+4. host-facing summary packaging
+
+## Bottom Line
+
+War 3's first concrete contradiction is publication still reading like a real
+center, not a boring edge.

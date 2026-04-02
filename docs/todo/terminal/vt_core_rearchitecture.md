@@ -73,6 +73,13 @@ Focused follow-up lane:
     `terminal_publication.zig` as export boundary
   - the next cut should remove the single largest contradiction to that shape,
     not merely shrink those files incrementally
+- `docs/review/TERMINAL_WAR_3_PUBLICATION_CONTRADICTION_REVIEW_2026-04-02.md`
+  Why: the first concrete War 3 contradiction is now clearer.
+  Current read:
+  - publication is the stronger contradiction than runtime
+  - `session/runtime.zig` already reads closer to runtime shell
+  - `terminal_publication.zig` still reads too much like a real center
+  - the next cut should come from publication, but only as a whole slab
 
 - `docs/review/TERMINAL_NATIVE_ARCHITECTURAL_SCRUTINY_2026-03-31.md`
   Why: this is the current ruthless read on what still looks second-rate at
