@@ -15,7 +15,7 @@ const RowMapEntry = struct {
 
 pub fn resize(self: anytype, rows: u16, cols: u16) !void {
     self.session.control.state_mutex.lock();
-    try resizeLocked(self, rows, cols);
+    try self.core.resizeLocked(self, rows, cols);
     const cell_width = self.session.interaction.cell_width;
     const cell_height = self.session.interaction.cell_height;
     self.session.control.state_mutex.unlock();
@@ -30,7 +30,7 @@ pub fn resize(self: anytype, rows: u16, cols: u16) !void {
     }
 }
 
-fn resizeLocked(self: anytype, rows: u16, cols: u16) !void {
+pub fn resizeCoreLocked(self: anytype, rows: u16, cols: u16) !void {
     const old_cols: u16 = self.core.primary.grid.cols;
     const old_rows: u16 = self.core.primary.grid.rows;
     self.core.history.ensureViewCache(old_cols, self.core.primary.defaultCell());

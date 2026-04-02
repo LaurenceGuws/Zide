@@ -218,6 +218,10 @@ pub const TerminalCore = struct {
         };
     }
 
+    pub fn resizeLocked(_: *TerminalCore, owner: anytype, rows: u16, cols: u16) !void {
+        return try @import("resize_reflow.zig").resizeCoreLocked(owner, rows, cols);
+    }
+
     pub fn glCharset(self: *const TerminalCore) Charset {
         return self.parser.gl_charset;
     }

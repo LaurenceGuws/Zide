@@ -112,6 +112,16 @@ gravity into smaller files.
     publication handoff
   - runtime parse paths and debug feed now use that same core-owned verb too,
     making output feed/apply materially coherent as one interaction slab
+- `docs/review/VT_WAR_4_RESIZE_REPORT_REVIEW_2026-04-03.md`
+  Why: output feed/apply is now coherent enough to stop by default.
+  The next clean interaction slab is resize/reporting.
+  Current read:
+  - terminal resize/reflow semantics should read more terminal-owned
+  - transport resize and in-band notifications should stay shell/runtime-owned
+  Progress:
+  - the first slice is now landed:
+    `TerminalCore` owns the semantic `resizeLocked(...)` verb while
+    `resize_reflow.zig` still owns shell locking and transport resize/reporting
 
 ## Priority Now
 
@@ -123,6 +133,8 @@ Highest-value remaining items from the current live baseline:
    shell-owned than terminal-owned.
    First slab:
    - output feed / apply
+   Second slab:
+   - resize / report contract
 2. `VTWAR4-02` keep handle identity as a checked-but-paused concern
    Why: the handle is already opaque and terminal-named publicly, so changing
    internal shell-backed storage alone risks cosmetic surgery.
