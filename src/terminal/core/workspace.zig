@@ -270,10 +270,6 @@ pub const TerminalWorkspace = struct {
         }
     }
 
-    pub fn pollForFrame(self: *TerminalWorkspace, input_active_index: ?usize, policy: PollPolicy) !PollFrameResult {
-        return polling.pollForFrame(self, input_active_index, policy);
-    }
-
     fn resetPollRuntimeCounters(self: *TerminalWorkspace) void {
         self.poll_runtime_counters = .{
             .epoch = self.poll_runtime_counters.epoch + 1,

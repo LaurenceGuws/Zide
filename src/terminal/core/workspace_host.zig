@@ -2,6 +2,7 @@ const std = @import("std");
 const terminal_runtime = @import("terminal_runtime.zig");
 const workspace_mod = @import("workspace.zig");
 const terminal_publication = @import("publication/terminal_publication.zig");
+const workspace_polling = @import("workspace_polling.zig");
 const host_queries = @import("session/host_queries.zig");
 const session_interaction = @import("session/interaction.zig");
 const session_runtime = @import("session/runtime.zig");
@@ -10,6 +11,8 @@ const TerminalWorkspace = workspace_mod.TerminalWorkspace;
 const TabId = workspace_mod.TabId;
 const PtyTerminalRuntime = terminal_runtime.PtyTerminalRuntime;
 pub const ActiveFrameState = terminal_publication.FrameState;
+pub const PollFrameResult = workspace_mod.TerminalWorkspace.PollFrameResult;
+pub const PollPolicy = workspace_mod.TerminalWorkspace.PollPolicy;
 pub const PollFrameMetrics = workspace_mod.TerminalWorkspace.PollFrameMetrics;
 pub const PollRuntimeCounters = workspace_mod.TerminalWorkspace.PollRuntimeCounters;
 
@@ -28,6 +31,14 @@ pub fn activeFrameState(workspace: *const TerminalWorkspace) ActiveFrameState {
     if (workspace.tabs.items.len == 0) return .{};
     const session = workspace.tabs.items[workspace.activeIndex()].session;
     return terminal_publication.frameState(session, session_runtime.hasData(session));
+}
+
+pub fn pollForFrame(
+    workspace: *TerminalWorkspace,
+    input_active_index: ?usize,
+    policy: PollPolicy,
+) !PollFrameResult {
+    return workspace_polling.pollForFrame(workspace, input_active_index, policy);
 }
 
 pub fn lastPollFrameMetrics(workspace: *const TerminalWorkspace) PollFrameMetrics {

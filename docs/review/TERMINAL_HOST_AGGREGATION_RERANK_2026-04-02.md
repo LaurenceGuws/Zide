@@ -69,6 +69,12 @@ Status update:
 - that summary slab now lives in
   [workspace_host.zig](/home/home/personal/zide/src/terminal/core/workspace_host.zig)
 - pacing now consumes that host-facing summary owner directly
+- the next host-facing cut is now landed too
+- raw `workspace` no longer advertises the host-facing poll entrypoint
+- that poll entrypoint now lives in
+  [workspace_host.zig](/home/home/personal/zide/src/terminal/core/workspace_host.zig)
+- app poll policy now reaches the host-facing owner directly instead of
+  treating raw workspace as the poll orchestration surface
 
 ### 2. Ghostty still looks cleaner at first glance
 
@@ -102,7 +108,8 @@ host runtime path.
 ## Strongest Host-Aggregation Hotspots
 
 1. [workspace.zig](/home/home/personal/zide/src/terminal/core/workspace.zig)
-   - cleaner now that host-facing summary accessors moved off it
+   - cleaner now that host-facing summary accessors and poll entrypoint moved
+     off it
    - still the first host aggregate readers see
 
 2. [workspace_polling.zig](/home/home/personal/zide/src/terminal/core/workspace_polling.zig)

@@ -1,6 +1,7 @@
 const std = @import("std");
 const app_logger = @import("../../app_logger.zig");
 const terminal_publication = @import("../../terminal/core/publication/terminal_publication.zig");
+const workspace_host = @import("../../terminal/core/workspace_host.zig");
 const session_runtime = @import("../../terminal/core/session/runtime.zig");
 const runtime_policy = @import("../runtime_policy.zig");
 
@@ -61,9 +62,10 @@ fn pollPolicyForTabCount(comptime Policy: type, tab_count: usize, has_input: boo
 }
 
 pub fn pollWorkspace(workspace: anytype, input_active_index: ?usize, has_input: bool) !bool {
-    const result = try workspace.pollForFrame(
+    const result = try workspace_host.pollForFrame(
+        workspace,
         input_active_index,
-        pollPolicyForTabCount(@TypeOf(workspace.*).PollPolicy, workspace.tabCount(), has_input),
+        pollPolicyForTabCount(workspace_host.PollPolicy, workspace.tabCount(), has_input),
     );
     return result.active_published_changed;
 }
