@@ -226,6 +226,13 @@ Focused follow-up lane:
   - publication and host aggregation remain paused
   - the next likely structural battlefield is again parser / text semantics
     below the VT boundary
+- `docs/review/TERMINAL_PARSER_TEXT_BOUNDARY_REVIEW_2026-04-02.md`
+  Why: the post-widget rerank now points directly at parser / semantic-text
+  boundary quality.
+  Current read:
+  - this lane is no longer about wrapper theater
+  - the strongest first cut is likely the remaining ESC semantic effect slab
+    still routed inline from `src/terminal/parser/parser.zig`
 
 ## Current Milestone
 
