@@ -117,7 +117,22 @@ Status note, later on 2026-04-02 once more:
 - host-facing consumers now use that owner directly:
   - [workspace_host.zig](/home/home/personal/zide/src/terminal/core/workspace_host.zig)
   - [terminal_poll_runtime.zig](/home/home/personal/zide/src/app/terminal/terminal_poll_runtime.zig)
-  - [workspace_polling.zig](/home/home/personal/zide/src/terminal/core/workspace_polling.zig)
+- [workspace_polling.zig](/home/home/personal/zide/src/terminal/core/workspace_polling.zig)
   - FFI redraw-generation paths
 - publication is now closer again to a render-cache/snapshot export edge than a
   host-summary center
+
+Rerank point, later on 2026-04-02:
+
+- `terminal_publication.zig` is now down to a much narrower shape
+- the broad mixed-center contradiction is materially reduced
+- what remains now reads mostly like:
+  - snapshot/render-cache export
+  - render-cache lookup for snapshot diff paths
+  - sync-updates bridge logic
+- the next honest question is no longer "is publication still a huge false
+  center?"
+- it is whether sync-updates belongs here at all, or is now a separate semantic
+  ownership problem below the export boundary
+- that means the next move should be a fresh War 3 rerank, not blind
+  continuation inside publication by momentum

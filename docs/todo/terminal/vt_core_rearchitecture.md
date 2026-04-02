@@ -94,6 +94,9 @@ Focused follow-up lane:
     instead of inflating `terminal_publication.zig`
   - callers now use that owner directly, so the next publication rerank can
     focus on the remaining export-edge contradiction
+  - current rerank: the broad publication false-center is materially reduced;
+    the next honest question is whether sync-updates still belongs on the
+    export edge at all, not whether publication is still a giant mixed center
 
 - `docs/review/TERMINAL_NATIVE_ARCHITECTURAL_SCRUTINY_2026-03-31.md`
   Why: this is the current ruthless read on what still looks second-rate at
