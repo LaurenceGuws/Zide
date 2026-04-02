@@ -71,7 +71,7 @@ test "external transport poll updates screen and metadata" {
     try std.testing.expect(try session_runtime.enqueueExternalBytes(session, "\x1b]0;ext-title\x07hello\r\n"));
     try session_runtime.poll(session);
 
-    const snapshot = session.snapshot();
+    const snapshot = terminal_publication.snapshot(session);
     try std.testing.expectEqualStrings("ext-title", snapshot.title);
     try expectSnapshotRow(snapshot, 0, "hello       ");
 
@@ -202,7 +202,7 @@ test "pty-backed session sendText writes through session writer boundary" {
     const start_ms = std.time.milliTimestamp();
     while (std.time.milliTimestamp() - start_ms < 3000) {
         try session_runtime.poll(session);
-        const snapshot = session.snapshot();
+        const snapshot = terminal_publication.snapshot(session);
         if (snapshot.rowSlice(0).len >= 3 and
             snapshot.rowSlice(0)[0].codepoint == 'a' and
             snapshot.rowSlice(0)[1].codepoint == 'b' and
@@ -213,7 +213,7 @@ test "pty-backed session sendText writes through session writer boundary" {
         std.Thread.sleep(10 * std.time.ns_per_ms);
     }
 
-    try expectSnapshotRow(session.snapshot(), 0, "abc     ");
+    try expectSnapshotRow(terminal_publication.snapshot(session), 0, "abc     ");
 }
 
 test "pty-backed session sendKey enter writes through session writer boundary" {
@@ -245,13 +245,13 @@ test "pty-backed session sendKey enter writes through session writer boundary" {
     const start_ms = std.time.milliTimestamp();
     while (std.time.milliTimestamp() - start_ms < 4000) {
         try session_runtime.poll(session);
-        const snapshot = session.snapshot();
+        const snapshot = terminal_publication.snapshot(session);
         if (snapshotContainsAscii(snapshot, "hi")) return;
         if (!host_queries.isAlive(session)) break;
         std.Thread.sleep(10 * std.time.ns_per_ms);
     }
 
-    try std.testing.expect(snapshotContainsAscii(session.snapshot(), "hi"));
+    try std.testing.expect(snapshotContainsAscii(terminal_publication.snapshot(session), "hi"));
 }
 
 test "top-anchored partial scroll region retires rows into scrollback" {
@@ -284,7 +284,7 @@ test "top-anchored partial scroll region retires rows into scrollback" {
         try std.testing.expectEqual(@as(u32, 'A'), cell.codepoint);
     }
 
-    const snapshot = session.snapshot();
+    const snapshot = terminal_publication.snapshot(session);
     try expectSnapshotRow(snapshot, 0, "BBBB");
     try expectSnapshotRow(snapshot, 1, "CCCC");
 }
@@ -321,14 +321,14 @@ test "carriage return plus erase line rewrites current row in place" {
     terminal_core_feed.feedOutputBytes(session, "\r\x1b[2Kbye");
 
     try std.testing.expectEqual(@as(usize, 0), session.core.scrollbackInfo().total_rows);
-    const snapshot = session.snapshot();
+    const snapshot = terminal_publication.snapshot(session);
     try expectSnapshotRow(snapshot, 0, "bye                 ");
 
     terminal_core_feed.feedOutputBytes(session, "\r\x1b[2Kstep 1");
     terminal_core_feed.feedOutputBytes(session, "\r\x1b[2Kstep 2");
 
     try std.testing.expectEqual(@as(usize, 0), session.core.scrollbackInfo().total_rows);
-    try expectSnapshotRow(session.snapshot(), 0, "step 2              ");
+    try expectSnapshotRow(terminal_publication.snapshot(session), 0, "step 2              ");
 }
 
 test "zig progress redraw pattern rewrites block instead of appending" {
@@ -342,7 +342,7 @@ test "zig progress redraw pattern rewrites block instead of appending" {
     terminal_core_feed.feedOutputBytes(session, "\x1b[Jbuild one\nitem a\n\r\x1bM\x1bM");
     terminal_core_feed.feedOutputBytes(session, "\x1b[Jbuild two\nitem b\n\r\x1bM\x1bM");
 
-    const snapshot = session.snapshot();
+    const snapshot = terminal_publication.snapshot(session);
     try std.testing.expectEqual(@as(usize, 0), snapshot.scrollback_count);
     try expectSnapshotRow(snapshot, 2, "build two           ");
     try expectSnapshotRow(snapshot, 3, "item b              ");
@@ -394,7 +394,7 @@ test "bottom-edge in-place redraw keeps blank separator rows dirty" {
 
     terminal_core_feed.feedOutputBytes(session, "\x1b[Jfull line\n\nnext header\n\n\r\x1bM\x1bM\x1bM\x1bM");
 
-    const snapshot = session.snapshot();
+    const snapshot = terminal_publication.snapshot(session);
     try std.testing.expectEqual(@as(usize, 0), snapshot.scrollback_count);
     try expectSnapshotRow(snapshot, 64, "full line               ");
     try expectSnapshotRow(snapshot, 65, "                        ");
@@ -432,7 +432,7 @@ test "synchronized zig progress redraw does not retire intermediate scrollback" 
     terminal_core_feed.feedOutputBytes(session, "\x1b[?2026l");
     try std.testing.expect(!sync_updates.active(session));
 
-    const snapshot = session.snapshot();
+    const snapshot = terminal_publication.snapshot(session);
     try std.testing.expectEqual(@as(usize, 0), snapshot.scrollback_count);
     try expectSnapshotRow(snapshot, 65, "build two           ");
     try expectSnapshotRow(snapshot, 66, "item b              ");
@@ -471,7 +471,7 @@ test "synchronized top-anchored partial scroll region retires rows into scrollba
         try std.testing.expectEqual(@as(u32, 'A'), cell.codepoint);
     }
 
-    const snapshot = session.snapshot();
+    const snapshot = terminal_publication.snapshot(session);
     try expectSnapshotRow(snapshot, 0, "BBBB");
     try expectSnapshotRow(snapshot, 1, "CCCC");
 }
@@ -488,7 +488,7 @@ test "single-chunk synchronized progress sequence keeps newline scroll inside sy
     try std.testing.expectEqual(@as(usize, 0), session.core.scrollbackInfo().total_rows);
     try std.testing.expect(!sync_updates.active(session));
 
-    const snapshot = session.snapshot();
+    const snapshot = terminal_publication.snapshot(session);
     try std.testing.expectEqual(@as(usize, 0), snapshot.scrollback_count);
     try expectSnapshotRow(snapshot, 66, "build one           ");
     try expectSnapshotRow(snapshot, 67, "item a              ");
@@ -532,7 +532,7 @@ test "real zig redraw chunk rewrites in place at bottom edge" {
     try std.testing.expectEqual(@as(usize, 0), session.core.scrollbackInfo().total_rows);
     try std.testing.expect(!sync_updates.active(session));
 
-    const snapshot = session.snapshot();
+    const snapshot = terminal_publication.snapshot(session);
     try expectSnapshotRow(snapshot, 63, "[3] Compile Build Script                                                         ");
     try expectSnapshotRow(snapshot, 64, "qq [1137/5878] Linking                                                           ");
     try expectSnapshotRow(snapshot, 65, "qq [1133/1376] Code Generation                                                   ");
@@ -1166,13 +1166,13 @@ test "session snapshot reflects pinned scrollback viewport" {
 
     terminal_core_feed.feedOutputBytes(session, "AAAA\r\nBBBB\r\nCCCC\r\nDDDD\r\n");
 
-    const live_snapshot = session.snapshot();
+    const live_snapshot = terminal_publication.snapshot(session);
     try expectSnapshotRow(live_snapshot, 0, "CCCC");
     try expectSnapshotRow(live_snapshot, 1, "DDDD");
 
     session_content.setScrollOffset(session, 1);
 
-    const pinned_snapshot = session.snapshot();
+    const pinned_snapshot = terminal_publication.snapshot(session);
     try expectSnapshotRow(pinned_snapshot, 0, "BBBB");
     try expectSnapshotRow(pinned_snapshot, 1, "CCCC");
 }

@@ -4,7 +4,6 @@ const init_options = @import("init_options.zig");
 const session_fields = @import("session_fields.zig");
 const runtime = @import("runtime.zig");
 const control = @import("control.zig");
-const terminal_publication = @import("../publication/terminal_publication.zig");
 
 const TerminalCoreType = terminal_core_mod.TerminalCore;
 
@@ -31,6 +30,4 @@ pub const TerminalSession = struct {
 
     pub const lockPtyWriter = runtime.lockPtyWriter;
     pub const writePtyBytes = runtime.writePtyBytes;
-
-    pub const snapshot = terminal_publication.snapshot;
 };

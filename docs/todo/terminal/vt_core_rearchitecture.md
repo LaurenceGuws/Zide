@@ -247,6 +247,11 @@ Focused follow-up lane:
 - `docs/review/VT_SPRINT_POST_MUTATION_RERANK_2026-04-02.md`
   Why: the sprint is now past helper cleanup; the next blocker is explicit
   object-identity design around `TerminalCore` vs `TerminalSession`
+  Progress:
+  - `snapshot` is now off `TerminalSession` too
+  - replay and regression callers use publication directly for snapshot export
+  - the remaining `TerminalSession` story is now init + locking + PTY writer
+    shell, which sharpens the next design decision
 
 - `docs/review/TERMINAL_NATIVE_ARCHITECTURAL_SCRUTINY_2026-03-31.md`
   Why: this is the current ruthless read on what still looks second-rate at

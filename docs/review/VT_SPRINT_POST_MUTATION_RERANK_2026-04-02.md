@@ -32,7 +32,19 @@ is now very small and reads like:
 - init
 - lock/unlock
 - PTY writer access
-- snapshot export
+
+Progress note, later on 2026-04-02:
+
+- `snapshot` is now off `TerminalSession` too
+- replay and regression callers now use
+  [terminal_publication.zig](/home/home/personal/zide/src/terminal/core/publication/terminal_publication.zig)
+  directly for snapshot export
+
+So the remaining `TerminalSession` story is now even narrower:
+
+- init
+- lock/unlock
+- PTY writer access
 
 That is much closer to a runtime shell around an engine-centered object than it
 was at the start of the sprint.

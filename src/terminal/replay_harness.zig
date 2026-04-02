@@ -447,7 +447,7 @@ pub fn runFixtureObservedWithOptions(
     }
     try applyMouseActions(session, fixture.meta.mouse);
 
-    const snapshot = session.snapshot();
+    const snapshot = terminal_publication.snapshot(session);
     const debug = terminal_debug.debugSnapshot(session);
     if (options.validate_assertions) {
         try validateAssertions(fixture, snapshot, debug, baseline_publication);
