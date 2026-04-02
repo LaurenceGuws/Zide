@@ -78,19 +78,28 @@ gravity into smaller files.
   - creation is still shell-first and transport-attaching immediately after
     shell construction
   - this now looks like the strongest remaining plug-and-play mismatch
+- `docs/review/VT_WAR_4_HANDLE_DECISION_2026-04-03.md`
+  Why: the stronger claim above needed one more pass against the actual public
+  ABI instead of internal storage alone.
+  Current read:
+  - the public API already exports an opaque terminal-named handle, not a
+    shell-named object
+  - shell-backed handle storage is therefore weaker as a contradiction than it
+    first appeared
+  - the stronger remaining War 4 pressure is now host-to-terminal interaction
+    ownership, not handle storage shape by itself
 
 ## Priority Now
 
 Highest-value remaining items from the current live baseline:
 
-1. `VTWAR4-01` decide the FFI handle and constructor identity
-   Why: this is now the strongest remaining plug-and-play contradiction.
-   The host still learns "the thing I create and hold is the shell" even
-   though the engine increasingly owns the interesting truth.
-2. `VTWAR4-02` re-rank host-to-terminal interaction ownership
-   Why: if the handle story is not the real blocker, the next strongest
-   pressure from WezTerm/Ghostty is that live terminal-driving semantics still
-   feel more shell-owned than terminal-owned.
+1. `VTWAR4-01` re-rank host-to-terminal interaction ownership
+   Why: after the public-ABI check, this now looks like the stronger remaining
+   plug-and-play pressure. Live terminal-driving semantics still feel more
+   shell-owned than terminal-owned.
+2. `VTWAR4-02` keep handle identity as a checked-but-paused concern
+   Why: the handle is already opaque and terminal-named publicly, so changing
+   internal shell-backed storage alone risks cosmetic surgery.
 3. `VTWAR4-03` keep `host_queries.zig` honest but paused
    Why: this is now mostly legitimate mixed runtime aggregation and should not
    be reopened by momentum.
