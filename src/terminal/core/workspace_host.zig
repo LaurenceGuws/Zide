@@ -4,6 +4,7 @@ const workspace_mod = @import("workspace.zig");
 const publication_state = @import("publication/publication_state.zig");
 const workspace_polling = @import("workspace_polling.zig");
 const host_queries = @import("session/host_queries.zig");
+const launch_shell_path = @import("session/launch_shell_path.zig");
 const session_interaction = @import("session/interaction.zig");
 const session_runtime = @import("session/runtime.zig");
 const runtime_policy = @import("../../app/runtime_policy.zig");
@@ -204,7 +205,7 @@ pub fn copyTabSyncState(
         try strings_out.appendSlice(allocator, activity.foreground_process_command);
         const cwd_offset = strings_out.items.len;
         try strings_out.appendSlice(allocator, metadata.cwd);
-        const shell_path = session_runtime.launchShellPath(tab.session);
+        const shell_path = launch_shell_path.get(tab.session);
         const shell_path_offset = strings_out.items.len;
         try strings_out.appendSlice(allocator, shell_path);
 

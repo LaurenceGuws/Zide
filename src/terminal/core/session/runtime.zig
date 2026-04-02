@@ -90,17 +90,3 @@ pub fn writePtyBytes(self: anytype, bytes: []const u8) !void {
 pub fn resize(self: anytype, rows: u16, cols: u16) !void {
     try session_transport_runtime.resize(self, rows, cols);
 }
-
-pub fn setLaunchShellPath(self: anytype, shell_path: ?[]const u8) !void {
-    if (self.runtime.launch_shell_path) |old| {
-        self.allocator.free(old);
-        self.runtime.launch_shell_path = null;
-    }
-    if (shell_path) |path| {
-        self.runtime.launch_shell_path = try self.allocator.dupe(u8, path);
-    }
-}
-
-pub fn launchShellPath(self: anytype) []const u8 {
-    return self.runtime.launch_shell_path orelse "";
-}

@@ -1,6 +1,7 @@
 const std = @import("std");
 const app_shell = @import("../../app_shell.zig");
 const session_config = @import("../../terminal/core/session/config.zig");
+const launch_shell_path_mod = @import("../../terminal/core/session/launch_shell_path.zig");
 const session_runtime = @import("../../terminal/core/session/runtime.zig");
 const terminal_runtime = @import("../../terminal/core/terminal_runtime.zig");
 const widgets = @import("../../ui/widgets.zig");
@@ -92,7 +93,7 @@ pub fn startSessionWithShellCellSize(
 
     const launch_shell_path = try resolveLaunchShellPathOwned(term.allocator, configured_shell_path, env_shell_override);
     defer if (launch_shell_path) |value| term.allocator.free(value);
-    try session_runtime.setLaunchShellPath(term, launch_shell_path);
+    try launch_shell_path_mod.set(term, launch_shell_path);
 
     if (launch_cwd) |cwd| {
         const z_cwd = try term.allocator.dupeZ(u8, cwd);

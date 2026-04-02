@@ -71,3 +71,12 @@ Status note, later on 2026-04-02:
   [runtime_init.zig](/home/home/personal/zide/src/terminal/core/session/runtime_init.zig)
 - `session/runtime.zig` now reads more like entrypoint forwarding around the
   narrower runtime owners instead of the place where the full session is born
+
+Status note, later on 2026-04-02 again:
+
+- launch-shell-path state no longer lives in
+  [session/runtime.zig](/home/home/personal/zide/src/terminal/core/session/runtime.zig)
+- that slab now lives in
+  [launch_shell_path.zig](/home/home/personal/zide/src/terminal/core/session/launch_shell_path.zig)
+- bootstrap and workspace host callers now use that owner directly
+- runtime is narrower again and less mixed with host bootstrap state

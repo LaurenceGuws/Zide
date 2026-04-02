@@ -121,6 +121,10 @@ Focused follow-up lane:
   - session allocation and storage-layout assembly now live in
     `src/terminal/core/session/runtime_init.zig`
     instead of inflating `session/runtime.zig`
+  - the next runtime-shell slab is now landed too
+  - launch-shell-path state now lives in
+    `src/terminal/core/session/launch_shell_path.zig`
+    instead of inflating `session/runtime.zig`
 
 - `docs/review/TERMINAL_NATIVE_ARCHITECTURAL_SCRUTINY_2026-03-31.md`
   Why: this is the current ruthless read on what still looks second-rate at
