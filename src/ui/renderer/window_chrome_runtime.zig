@@ -1,5 +1,10 @@
 const std = @import("std");
+const builtin = @import("builtin");
+const app_logger = @import("../../app_logger.zig");
 const sdl_api = @import("../../platform/sdl_api.zig");
+const windows_frame_material = @import("../../platform/windows_frame_material.zig");
+const windows_integrated_frame = @import("../../platform/windows_integrated_frame.zig");
+const windows_snap_layout_sink = @import("../../platform/windows_snap_layout_sink.zig");
 const shared_types = @import("../../types/mod.zig");
 
 const Rect = shared_types.layout.Rect;
@@ -19,6 +24,108 @@ pub const WindowChromeContract = struct {
     close_rect: Rect = .{ .x = 0, .y = 0, .width = 0, .height = 0 },
     resize_border_px: f32 = 8.0,
 };
+
+pub const WindowChromeState = struct {
+    contract: WindowChromeContract = .{},
+    applied_mode: WindowChromeMode = .native,
+    applied_material: windows_frame_material.Policy = .{},
+    integrated_frame: windows_integrated_frame.FrameOwner = .{},
+    snap_sink: windows_snap_layout_sink.Sink = .{},
+};
+
+pub const WindowChromeDomain = struct {
+    window: *sdl_api.c.SDL_Window,
+    window_focused: bool,
+    contract: *WindowChromeContract,
+    applied_mode: *WindowChromeMode,
+    applied_material: *windows_frame_material.Policy,
+    integrated_frame: *windows_integrated_frame.FrameOwner,
+    snap_sink: *windows_snap_layout_sink.Sink,
+    hit_test_callback: sdl_api.HitTest,
+    hit_test_data: ?*anyopaque,
+};
+
+pub fn applyContract(domain: WindowChromeDomain, contract: WindowChromeContract) void {
+    domain.contract.* = if (builtin.target.os.tag == .windows) contract else .{};
+    if (builtin.target.os.tag != .windows) return;
+
+    const material_policy = windows_frame_material.policyForChromeMode(domain.contract.mode, domain.window_focused);
+    if (!std.meta.eql(domain.applied_material.*, material_policy)) {
+        windows_frame_material.apply(domain.window, material_policy);
+        domain.applied_material.* = material_policy;
+    }
+
+    const integrated = domain.contract.mode != .native;
+    if (domain.applied_mode.* != domain.contract.mode) {
+        domain.applied_mode.* = domain.contract.mode;
+
+        if (!sdl_api.setWindowBordered(domain.window, !integrated)) {
+            app_logger.logger("sdl.window").logStdout(.warning, "SDL_SetWindowBordered failed integrated={d} err={s}", .{
+                @intFromBool(integrated),
+                sdl_api.getError(),
+            });
+        }
+        if (!sdl_api.setWindowHitTest(
+            domain.window,
+            if (integrated) domain.hit_test_callback else null,
+            if (integrated) domain.hit_test_data else null,
+        )) {
+            app_logger.logger("sdl.window").logStdout(.warning, "SDL_SetWindowHitTest failed integrated={d} err={s}", .{
+                @intFromBool(integrated),
+                sdl_api.getError(),
+            });
+        }
+        _ = sdl_api.syncWindow(domain.window);
+    }
+
+    domain.integrated_frame.sync(domain.window, domain.contract.mode, windowIsMaximized(domain.window), windowIsFullscreen(domain.window));
+    domain.snap_sink.sync(domain.window, domain.contract.*, windowIsMaximized(domain.window));
+}
+
+pub fn deinit(domain: WindowChromeDomain) void {
+    domain.integrated_frame.deinit();
+    domain.snap_sink.deinit();
+}
+
+pub fn sinkActive(sink: *const windows_snap_layout_sink.Sink) bool {
+    return sink.active();
+}
+
+pub fn minimizeHovered(sink: *const windows_snap_layout_sink.Sink) bool {
+    return sink.minimizeHovered();
+}
+
+pub fn maximizeHovered(sink: *const windows_snap_layout_sink.Sink) bool {
+    return sink.maximizeHovered();
+}
+
+pub fn closeHovered(sink: *const windows_snap_layout_sink.Sink) bool {
+    return sink.closeHovered();
+}
+
+pub fn minimizePressed(sink: *const windows_snap_layout_sink.Sink) bool {
+    return sink.minimizePressed();
+}
+
+pub fn maximizePressed(sink: *const windows_snap_layout_sink.Sink) bool {
+    return sink.maximizePressed();
+}
+
+pub fn closePressed(sink: *const windows_snap_layout_sink.Sink) bool {
+    return sink.closePressed();
+}
+
+pub fn sinkOwnsChrome(sink: *const windows_snap_layout_sink.Sink) bool {
+    return sink.ownsChrome();
+}
+
+pub fn windowIsMaximized(window: *sdl_api.c.SDL_Window) bool {
+    return (sdl_api.getWindowFlags(window) & sdl_api.c.SDL_WINDOW_MAXIMIZED) != 0;
+}
+
+pub fn windowIsFullscreen(window: *sdl_api.c.SDL_Window) bool {
+    return (sdl_api.getWindowFlags(window) & sdl_api.c.SDL_WINDOW_FULLSCREEN) != 0;
+}
 
 pub fn hitTest(
     contract: WindowChromeContract,

@@ -2,6 +2,7 @@ const std = @import("std");
 const draw_ops = @import("draw_ops.zig");
 const gl = @import("gl.zig");
 const gl_backend = @import("gl_backend.zig");
+const scene_frame_runtime = @import("scene_frame_runtime.zig");
 const texture_draw = @import("texture_draw.zig");
 const types = @import("types.zig");
 const app_logger = @import("../../app_logger.zig");
@@ -29,24 +30,24 @@ pub fn beginTerminalTexture(self: anytype) bool {
 }
 
 pub fn endTerminalTexture(self: anytype) void {
-    self.restoreMainCompositionTarget();
+    scene_frame_runtime.restoreMainCompositionTarget(self);
 }
 
 pub fn beginEditorTexture(self: anytype) bool {
-    self.present_trace_current.editor_texture_update_count += 1;
+    scene_frame_runtime.noteEditorTextureUpdate(self);
     self.drawing_editor_target = true;
     return self.beginRenderTarget(self.editor_target);
 }
 
 pub fn endEditorTexture(self: anytype) void {
     self.drawing_editor_target = false;
-    self.restoreMainCompositionTarget();
+    scene_frame_runtime.restoreMainCompositionTarget(self);
 }
 
 pub fn drawTerminalTexture(self: anytype, x: f32, y: f32, width: f32, height: f32) void {
     if (self.terminal_target) |target| {
-        const snapped_x = snapToDevicePixel(x, self.render_scale);
-        const snapped_y = snapToDevicePixel(y, self.render_scale);
+        const snapped_x = snapToDevicePixel(x, self.scale.render_scale);
+        const snapped_y = snapToDevicePixel(y, self.scale.render_scale);
         const src = texture_draw.fullTextureSrcRect(target.texture);
         const dest = types.Rect{
             .x = snapped_x,
@@ -79,7 +80,7 @@ pub fn drawTerminalTexture(self: anytype, x: f32, y: f32, width: f32, height: f3
                     self.target_pixel_height,
                     self.width,
                     self.height,
-                    self.render_scale,
+                    self.scale.render_scale,
                 },
             );
         }
@@ -104,9 +105,9 @@ pub fn scrollTerminalTexture(self: anytype, dx: i32, dy: i32) bool {
 
 pub fn drawEditorTexture(self: anytype, x: f32, y: f32) void {
     if (self.editor_target) |target| {
-        self.present_trace_current.editor_texture_blit_count += 1;
-        const snapped_x = snapToDevicePixel(x, self.render_scale);
-        const snapped_y = snapToDevicePixel(y, self.render_scale);
+        scene_frame_runtime.noteEditorTextureBlit(self);
+        const snapped_x = snapToDevicePixel(x, self.scale.render_scale);
+        const snapped_y = snapToDevicePixel(y, self.scale.render_scale);
         const src = texture_draw.fullTextureSrcRect(target.texture);
         const dest = types.Rect{
             .x = snapped_x,

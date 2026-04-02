@@ -6,72 +6,72 @@ const text_input = @import("text_input.zig");
 const sdl_api = @import("../../platform/sdl_api.zig");
 
 pub fn pollInputEvents(
-    self: anytype,
+    domain: input_state.InputDomain,
     mouse_wheel_delta: *f32,
 ) void {
     const window_log = app_logger.logger("sdl.window");
-    compactInputQueue(@TypeOf(self.key_queue.items[0]), &self.key_queue, &self.key_queue_head);
-    compactInputQueue(@TypeOf(self.char_queue.items[0]), &self.char_queue, &self.char_queue_head);
-    compactInputQueue(bool, &self.focus_queue, &self.focus_queue_head);
+    compactInputQueue(@TypeOf(domain.key_queue.items[0]), domain.key_queue, domain.key_queue_head);
+    compactInputQueue(@TypeOf(domain.char_queue.items[0]), domain.char_queue, domain.char_queue_head);
+    compactInputQueue(bool, domain.focus_queue, domain.focus_queue_head);
 
     const state = input_state.InputState{
-        .key_down = self.key_down[0..],
-        .key_pressed = self.key_pressed[0..],
-        .key_repeated = self.key_repeated[0..],
-        .key_released = self.key_released[0..],
-        .mouse_down = self.mouse_down[0..],
-        .mouse_pressed = self.mouse_pressed[0..],
-        .mouse_released = self.mouse_released[0..],
-        .mouse_clicks = self.mouse_clicks[0..],
-        .key_queue = &self.key_queue,
-        .char_queue = &self.char_queue,
-        .composing_text = &self.composing_text,
-        .composing_cursor = &self.composing_cursor,
-        .composing_selection_len = &self.composing_selection_len,
-        .composing_active = &self.composing_active,
+        .key_down = domain.key_down,
+        .key_pressed = domain.key_pressed,
+        .key_repeated = domain.key_repeated,
+        .key_released = domain.key_released,
+        .mouse_down = domain.mouse_down,
+        .mouse_pressed = domain.mouse_pressed,
+        .mouse_released = domain.mouse_released,
+        .mouse_clicks = domain.mouse_clicks,
+        .key_queue = domain.key_queue,
+        .char_queue = domain.char_queue,
+        .composing_text = domain.composing_text,
+        .composing_cursor = domain.composing_cursor,
+        .composing_selection_len = domain.composing_selection_len,
+        .composing_active = domain.composing_active,
         .mouse_wheel_delta = mouse_wheel_delta,
-        .window_resized_flag = &self.window_resized_flag,
+        .window_resized_flag = domain.window_resized_flag,
     };
     input_state.resetForFrame(state);
-    @memset(self.mouse_press_pos_valid[0..], false);
+    @memset(domain.mouse_press_pos_valid, false);
     input_state.resetMouseWheel(mouse_wheel_delta);
 
-    if (self.pending_wait_event_valid) {
-        handleEvent(self, &self.pending_wait_event, window_log, state);
-        self.pending_wait_event_valid = false;
+    if (domain.pending_wait_event_valid.*) {
+        handleEvent(domain, domain.pending_wait_event, window_log, state);
+        domain.pending_wait_event_valid.* = false;
     }
 
     var event: sdl_api.c.SDL_Event = undefined;
     while (sdl_api.pollEvent(&event)) {
-        handleEvent(self, &event, window_log, state);
+        handleEvent(domain, &event, window_log, state);
     }
 }
 
 fn handleEvent(
-    self: anytype,
+    domain: input_state.InputDomain,
     event: *const sdl_api.c.SDL_Event,
     window_log: app_logger.Logger,
     state: input_state.InputState,
 ) void {
-    const main_window_id = sdl_api.getWindowId(self.window);
+    const main_window_id = sdl_api.getWindowId(domain.window);
     switch (event.type) {
         sdl_api.EVENT_QUIT => {
-            self.should_close_flag = true;
+            domain.should_close_flag.* = true;
         },
         sdl_api.EVENT_WINDOW => {
             if (sdl_api.windowEventId(event) != main_window_id) return;
-            handleWindowEvent(event.type, &self.should_close_flag, &self.window_resized_flag);
+            handleWindowEvent(event.type, domain.should_close_flag, domain.window_resized_flag);
             if (sdl_api.isFocusGainedEvent(event.type)) {
-                sdl_api.startTextInput(self.window);
-                text_input.reapplyRect(&self.text_input_state, self.window);
-                self.window_focused = true;
-                self.focus_queue.append(self.allocator, true) catch |err| {
+                sdl_api.startTextInput(domain.window);
+                text_input.reapplyRect(domain.text_input_state, domain.window);
+                domain.window_focused.* = true;
+                domain.focus_queue.append(domain.allocator, true) catch |err| {
                     window_log.logf(.warning, "focus queue append failed focused=1 err={s}", .{@errorName(err)});
                 };
             }
             if (sdl_api.isFocusLostEvent(event.type)) {
-                self.window_focused = false;
-                self.focus_queue.append(self.allocator, false) catch |err| {
+                domain.window_focused.* = false;
+                domain.focus_queue.append(domain.allocator, false) catch |err| {
                     window_log.logf(.warning, "focus queue append failed focused=0 err={s}", .{@errorName(err)});
                 };
             }
@@ -79,57 +79,57 @@ fn handleEvent(
         sdl_api.EVENT_KEY_DOWN => {
             _ = platform_input_events.handleKeyDown(
                 event,
-                self.key_down[0..],
-                self.key_pressed[0..],
-                self.key_repeated[0..],
-                &self.key_queue,
-                self.allocator,
+                domain.key_down,
+                domain.key_pressed,
+                domain.key_repeated,
+                domain.key_queue,
+                domain.allocator,
             );
         },
         sdl_api.EVENT_KEY_UP => {
-            _ = platform_input_events.handleKeyUp(event, self.key_down[0..], self.key_released[0..]);
+            _ = platform_input_events.handleKeyUp(event, domain.key_down, domain.key_released);
         },
         sdl_api.EVENT_TEXT_INPUT => {
             const text_was_composed = state.composing_active.*;
-            _ = platform_input_events.handleTextInput(event, &self.char_queue, self.allocator, text_was_composed);
+            _ = platform_input_events.handleTextInput(event, domain.char_queue, domain.allocator, text_was_composed);
             input_state.applyTextInputReset(state);
         },
         sdl_api.EVENT_TEXT_EDITING => {
-            _ = platform_input_events.handleTextEditing(event, &self.composing_text, &self.composing_cursor, &self.composing_selection_len, &self.composing_active, self.allocator);
+            _ = platform_input_events.handleTextEditing(event, domain.composing_text, domain.composing_cursor, domain.composing_selection_len, domain.composing_active, domain.allocator);
         },
         sdl_api.EVENT_MOUSE_BUTTON_DOWN => {
-            platform_input_events.handleMouseButtonDown(event, self.mouse_down[0..], self.mouse_pressed[0..], self.mouse_clicks[0..]);
+            platform_input_events.handleMouseButtonDown(event, domain.mouse_down, domain.mouse_pressed, domain.mouse_clicks);
             const btn = @as(i32, @intCast(event.button.button));
             if (btn >= 0) {
                 const idx: usize = @intCast(btn);
-                if (idx < self.mouse_press_pos.len) {
+                if (idx < domain.mouse_press_pos.len) {
                     const raw_x = sdl_api.mouseButtonX(event);
                     const raw_y = sdl_api.mouseButtonY(event);
-                    self.mouse_press_pos[idx] = .{ .x = raw_x * self.mouse_scale.x, .y = raw_y * self.mouse_scale.y };
-                    self.mouse_press_pos_valid[idx] = true;
+                    domain.mouse_press_pos[idx] = .{ .x = raw_x * domain.mouse_scale.x, .y = raw_y * domain.mouse_scale.y };
+                    domain.mouse_press_pos_valid[idx] = true;
                 }
             }
         },
         sdl_api.EVENT_MOUSE_BUTTON_UP => {
-            platform_input_events.handleMouseButtonUp(event, self.mouse_down[0..], self.mouse_released[0..]);
+            platform_input_events.handleMouseButtonUp(event, domain.mouse_down, domain.mouse_released);
         },
         sdl_api.EVENT_MOUSE_WHEEL => input_state.addMouseWheel(state.mouse_wheel_delta, platform_input_events.wheelDelta(event)),
         else => {
             if (sdl_api.isRuntimeWakeEvent(event.type)) return;
             if (sdl_api.isWindowEventType(event.type)) {
                 if (sdl_api.windowEventId(event) != main_window_id) return;
-                handleWindowEvent(event.type, &self.should_close_flag, &self.window_resized_flag);
+                handleWindowEvent(event.type, domain.should_close_flag, domain.window_resized_flag);
                 if (sdl_api.isFocusGainedEvent(event.type)) {
-                    sdl_api.startTextInput(self.window);
-                    text_input.reapplyRect(&self.text_input_state, self.window);
-                    self.window_focused = true;
-                    self.focus_queue.append(self.allocator, true) catch |err| {
+                    sdl_api.startTextInput(domain.window);
+                    text_input.reapplyRect(domain.text_input_state, domain.window);
+                    domain.window_focused.* = true;
+                    domain.focus_queue.append(domain.allocator, true) catch |err| {
                         window_log.logf(.warning, "focus queue append failed focused=1 err={s}", .{@errorName(err)});
                     };
                 }
                 if (sdl_api.isFocusLostEvent(event.type)) {
-                    self.window_focused = false;
-                    self.focus_queue.append(self.allocator, false) catch |err| {
+                    domain.window_focused.* = false;
+                    domain.focus_queue.append(domain.allocator, false) catch |err| {
                         window_log.logf(.warning, "focus queue append failed focused=0 err={s}", .{@errorName(err)});
                     };
                 }

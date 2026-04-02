@@ -52,7 +52,7 @@ What it owns at once:
   - clipboard buffer
   - zoom and UI scale policy
   - window chrome state
-  - presentation capture state
+- presentation capture state
 
 Representative references:
 
@@ -69,6 +69,47 @@ Judgment:
 Status note, 2026-04-02:
 
 - dead renderer-owned `SdlInput` queue state/init hooks are gone
+- the live SDL input path now runs through
+  `src/ui/renderer/input_state.zig:InputDomain` instead of reaching directly
+  across `Renderer` field-by-field
+- renderer input query/pop methods now delegate through that same domain too
+- the main input batching path now goes through `Shell` instead of treating
+  the renderer as direct input authority
+- renderer input state is now grouped as one explicit slab instead of loose
+  top-level key/mouse/queue/composition/wake-event fields
+- focus/resize/wake-event semantics now route through the input owner instead
+  of exposing raw grouped input storage shape
+- `InputRuntimeState` now lives with the input owner instead of being declared
+  in `renderer.zig`
+- window-chrome application and sink query choreography now runs through
+  `src/ui/renderer/window_chrome_runtime.zig:WindowChromeDomain`
+- `WindowChromeState` now lives with the chrome owner instead of being
+  declared in `renderer.zig`
+- renderer window chrome state is now grouped as one explicit slab instead of
+  five unrelated top-level fields
+- present sequencing/trace/capture is now grouped as one explicit slab instead
+  of loose top-level renderer fields
+- zoom/UI-scale runtime state is now grouped and live through the font/runtime
+  path instead of loose top-level renderer fields
+- broader font/config policy state is now grouped and live through the
+  font/runtime path instead of scattered renderer fields
+- `ScaleState` now lives with the font-runtime owner and `FontConfigState`
+  now lives with the font-manager owner instead of being declared in
+  `renderer.zig`
+- constructor/destructor now assemble and tear down grouped scale/font-config
+  state through owner-level helpers instead of repeating that grouped-state
+  lifecycle inline
+- text-input start/stop and input queue/composition teardown now run through
+  the input owner instead of living as raw renderer lifecycle verbs
+- window-chrome teardown now runs through the chrome owner instead of living as
+  raw renderer cleanup verbs
+- app-facing present capture/trace and screenshot control now run through the
+  present owner plus `Shell` instead of renderer-level convenience methods
+- composition clip/full-pane-clear and editor-texture trace bookkeeping now
+  run through the present owner instead of direct renderer/retained-target
+  mutation
+- `PresentState` / `PresentTrace` / `FrameSubmission` now live with the
+  present owner instead of being declared in `renderer.zig`
 - the remaining center problem is still real, but one dead non-render slab is
   no longer inflating it
 

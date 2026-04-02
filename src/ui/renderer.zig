@@ -73,18 +73,12 @@ pub const Theme = iface.Theme;
 pub const EditorTextStyleFlags = iface.EditorTextStyleFlags;
 pub const editor_syntax_style_slots = iface.editor_syntax_style_slots;
 
-pub const FrameSubmission = struct {
-    succeeded: bool,
-    sequence: u64,
-};
-pub const PresentTrace = struct {
-    frame_seq: u64 = 0,
-    editor_texture_update_count: usize = 0,
-    editor_texture_blit_count: usize = 0,
-    composition_clip_count: usize = 0,
-    composition_full_pane_clear: bool = false,
-    captured_path: ?[]const u8 = null,
-};
+pub const FrameSubmission = scene_frame_runtime.FrameSubmission;
+pub const PresentTrace = scene_frame_runtime.PresentTrace;
+pub const InputRuntimeState = input_state.InputRuntimeState;
+pub const WindowChromeState = window_chrome_runtime.WindowChromeState;
+pub const ScaleState = font_runtime.ScaleState;
+pub const FontConfigState = font_manager.FontConfigState;
 pub const TerminalDisableLigaturesStrategy = enum {
     never,
     cursor,
@@ -378,68 +372,24 @@ pub const Renderer = struct {
     icon_char_width: f32,
     icon_char_height: f32,
     icon_metrics: ScaledFontMetrics,
-    app_font_path: [*:0]const u8,
-    app_font_path_owned: ?[]u8,
-    editor_font_path: [*:0]const u8,
-    editor_font_path_owned: ?[]u8,
     terminal_cell_width: f32,
     terminal_cell_height: f32,
     terminal_font_size: f32,
     terminal_base_font_size: f32,
     terminal_metrics: ScaledFontMetrics,
     terminal_font: TerminalFont,
-    terminal_font_path: [*:0]const u8,
-    terminal_font_path_owned: ?[]u8,
-    terminal_disable_ligatures: TerminalDisableLigaturesStrategy,
-    terminal_font_features_raw: ?[]u8,
-    terminal_font_features: std.ArrayListUnmanaged(hb.hb_feature_t),
-    editor_disable_ligatures: TerminalDisableLigaturesStrategy,
-    editor_font_features_raw: ?[]u8,
-    editor_font_features: std.ArrayListUnmanaged(hb.hb_feature_t),
-    font_rendering: FontRenderingOptions,
-    font_cache: std.AutoHashMap(u32, *TerminalFont),
+    font_config: FontConfigState,
 
     terminal_target: ?RenderTarget,
     terminal_scroll_target: ?RenderTarget,
     editor_target: ?RenderTarget,
     scene_target: SceneTargetState,
-    window_chrome: WindowChromeContract,
-    window_chrome_applied_mode: WindowChromeMode,
-    window_frame_material_applied: windows_frame_material.Policy,
-    window_integrated_frame: windows_integrated_frame.FrameOwner,
-    window_snap_sink: windows_snap_layout_sink.Sink,
+    window_chrome: WindowChromeState,
 
     theme: Theme,
     mouse_scale: MousePos,
-    render_scale: f32,
-    user_zoom: f32,
-    user_zoom_target: f32,
-    ui_scale: f32,
-    last_zoom_request_time: f64,
-    last_zoom_apply_time: f64,
-    wayland_scale_cache: ?f32,
-    wayland_scale_last_update: f64,
-    key_down: [key_repeat_key_count]bool,
-    key_pressed: [key_repeat_key_count]bool,
-    key_repeated: [key_repeat_key_count]bool,
-    key_released: [key_repeat_key_count]bool,
-    mouse_down: [mouse_button_count]bool,
-    mouse_pressed: [mouse_button_count]bool,
-    mouse_released: [mouse_button_count]bool,
-    mouse_clicks: [mouse_button_count]u8,
-    mouse_press_pos: [mouse_button_count]MousePos,
-    mouse_press_pos_valid: [mouse_button_count]bool,
-    key_queue: std.ArrayList(KeyPress),
-    key_queue_head: usize,
-    char_queue: std.ArrayList(TextPress),
-    char_queue_head: usize,
-    focus_queue: std.ArrayList(bool),
-    focus_queue_head: usize,
-    window_focused: bool,
-    composing_text: std.ArrayList(u8),
-    composing_cursor: i32,
-    composing_selection_len: i32,
-    composing_active: bool,
+    scale: ScaleState,
+    input: InputRuntimeState,
     clipboard_buffer: std.ArrayList(u8),
     batch_vertices: std.ArrayList(Vertex),
     batch_draws: std.ArrayList(BatchDraw),
@@ -450,24 +400,10 @@ pub const Renderer = struct {
     terminal_shape_first_pen: std.ArrayListUnmanaged(f32),
     terminal_shape_first_pen_set: std.ArrayListUnmanaged(bool),
     should_close_flag: bool,
-    window_resized_flag: bool,
-    text_input_state: text_input.TextInputState,
-    pending_wait_event: sdl_api.c.SDL_Event,
-    pending_wait_event_valid: bool,
 
     start_counter: u64,
     perf_freq: f64,
-    frame_seq: u64,
-    submission_sequence: u64,
-    last_present_counter: u64,
-    last_present_gap_ms: f64,
-    last_swap_ms: f64,
-    scene_frame_active: bool,
-    present_trace_current: PresentTrace,
-    present_trace_last: PresentTrace,
-    present_capture_path: ?[]const u8,
-    present_capture_armed: bool,
-    present_capture_frame_seq: u64,
+    present: scene_frame_runtime.PresentState,
     drawing_editor_target: bool,
 
     fn snapInt(value: f32) i32 {
@@ -525,6 +461,88 @@ pub const Renderer = struct {
         return try resolveFontPath(allocator, std.mem.span(FONT_PATH));
     }
 
+    fn initFontConfigState(
+        allocator: std.mem.Allocator,
+        init_options: InitOptions,
+    ) !FontConfigState {
+        const app_font_path = try dupFontPath(allocator, init_options.app_font_path);
+        errdefer if (app_font_path.owned) |owned| allocator.free(owned);
+        const editor_font_path = try dupFontPath(allocator, init_options.editor_font_path orelse init_options.app_font_path);
+        errdefer if (editor_font_path.owned) |owned| allocator.free(owned);
+        const terminal_font_path = try dupFontPath(allocator, init_options.terminal_font_path orelse init_options.app_font_path);
+        errdefer if (terminal_font_path.owned) |owned| allocator.free(owned);
+
+        return .{
+            .app_font_path = app_font_path.path,
+            .app_font_path_owned = app_font_path.owned,
+            .editor_font_path = editor_font_path.path,
+            .editor_font_path_owned = editor_font_path.owned,
+            .terminal_font_path = terminal_font_path.path,
+            .terminal_font_path_owned = terminal_font_path.owned,
+            .terminal_disable_ligatures = .never,
+            .terminal_font_features_raw = null,
+            .terminal_font_features = .{},
+            .editor_disable_ligatures = .never,
+            .editor_font_features_raw = null,
+            .editor_font_features = .{},
+            .font_rendering = init_options.font_rendering,
+            .font_cache = std.AutoHashMap(u32, *TerminalFont).init(allocator),
+        };
+    }
+
+    fn deinitFontConfigState(self: *Renderer) void {
+        var font_it = self.font_config.font_cache.iterator();
+        while (font_it.next()) |entry| {
+            entry.value_ptr.*.deinit();
+            self.allocator.destroy(entry.value_ptr.*);
+        }
+        self.font_config.font_cache.deinit();
+
+        if (self.font_config.terminal_font_features_raw) |owned| {
+            self.allocator.free(owned);
+            self.font_config.terminal_font_features_raw = null;
+        }
+        self.font_config.terminal_font_features.deinit(self.allocator);
+        if (self.font_config.editor_font_features_raw) |owned| {
+            self.allocator.free(owned);
+            self.font_config.editor_font_features_raw = null;
+        }
+        self.font_config.editor_font_features.deinit(self.allocator);
+        if (self.font_config.app_font_path_owned) |owned| {
+            self.allocator.free(owned);
+            self.font_config.app_font_path_owned = null;
+        }
+        if (self.font_config.editor_font_path_owned) |owned| {
+            self.allocator.free(owned);
+            self.font_config.editor_font_path_owned = null;
+        }
+        if (self.font_config.terminal_font_path_owned) |owned| {
+            self.allocator.free(owned);
+            self.font_config.terminal_font_path_owned = null;
+        }
+    }
+
+    fn initScaleState(
+        allocator: std.mem.Allocator,
+        display_metrics: platform_window.DisplayMetrics,
+    ) ScaleState {
+        var wayland_scale = scale_utils.WaylandScaleState{
+            .cache = null,
+            .last_update = -1000.0,
+        };
+        const ui_scale = scale_utils.queryUiScale(allocator, display_metrics.dpi, 0.0, &wayland_scale);
+        return .{
+            .render_scale = display_metrics.render_scale,
+            .user_zoom = 1.0,
+            .user_zoom_target = 1.0,
+            .ui_scale = ui_scale,
+            .last_zoom_request_time = 0.0,
+            .last_zoom_apply_time = 0.0,
+            .wayland_scale_cache = wayland_scale.cache,
+            .wayland_scale_last_update = wayland_scale.last_update,
+        };
+    }
+
     pub fn init(allocator: std.mem.Allocator, width: i32, height: i32, title: [*:0]const u8, init_options: InitOptions) !*Renderer {
         try window_init.initSdl();
         errdefer sdl.SDL_Quit();
@@ -543,25 +561,26 @@ pub const Renderer = struct {
         errdefer allocator.destroy(renderer);
 
         const display_metrics = platform_window.collectDisplayMetrics(window);
-        var wayland_scale = scale_utils.WaylandScaleState{
-            .cache = null,
-            .last_update = -1000.0,
-        };
-        const ui_scale = scale_utils.queryUiScale(allocator, display_metrics.dpi, 0.0, &wayland_scale);
+        const scale = initScaleState(allocator, display_metrics);
         const base_font_size = if (init_options.app_font_size > 0.0) init_options.app_font_size else 16.0;
         const editor_base_font_size = if (init_options.editor_font_size) |value| if (value > 0.0) value else base_font_size else base_font_size;
         const terminal_base_font_size = if (init_options.terminal_font_size) |value| if (value > 0.0) value else base_font_size else base_font_size;
-        const font_size = base_font_size * ui_scale;
-        const editor_font_size = editor_base_font_size * ui_scale;
-        const terminal_font_size = terminal_base_font_size * ui_scale;
-        const render_scale = display_metrics.render_scale;
+        const font_size = base_font_size * scale.ui_scale;
+        const editor_font_size = editor_base_font_size * scale.ui_scale;
+        const terminal_font_size = terminal_base_font_size * scale.ui_scale;
         const terminal_shape_buffer = hb.hb_buffer_create() orelse return error.OutOfMemory;
-        const app_font_path = try dupFontPath(allocator, init_options.app_font_path);
-        errdefer if (app_font_path.owned) |owned| allocator.free(owned);
-        const editor_font_path = try dupFontPath(allocator, init_options.editor_font_path orelse init_options.app_font_path);
-        errdefer if (editor_font_path.owned) |owned| allocator.free(owned);
-        const terminal_font_path = try dupFontPath(allocator, init_options.terminal_font_path orelse init_options.app_font_path);
-        errdefer if (terminal_font_path.owned) |owned| allocator.free(owned);
+        const font_config = try initFontConfigState(allocator, init_options);
+        errdefer {
+            var font_config_cleanup = font_config;
+            if (font_config_cleanup.terminal_font_features_raw) |owned| allocator.free(owned);
+            font_config_cleanup.terminal_font_features.deinit(allocator);
+            if (font_config_cleanup.editor_font_features_raw) |owned| allocator.free(owned);
+            font_config_cleanup.editor_font_features.deinit(allocator);
+            font_config_cleanup.font_cache.deinit();
+            if (font_config_cleanup.app_font_path_owned) |owned| allocator.free(owned);
+            if (font_config_cleanup.editor_font_path_owned) |owned| allocator.free(owned);
+            if (font_config_cleanup.terminal_font_path_owned) |owned| allocator.free(owned);
+        }
 
         renderer.* = .{
             .allocator = allocator,
@@ -635,10 +654,6 @@ pub const Renderer = struct {
                 .cell_height = font_size * 1.2,
                 .baseline_from_top = font_size,
             },
-            .app_font_path = app_font_path.path,
-            .app_font_path_owned = app_font_path.owned,
-            .editor_font_path = editor_font_path.path,
-            .editor_font_path_owned = editor_font_path.owned,
             .terminal_cell_width = terminal_font_size * 0.6,
             .terminal_cell_height = terminal_font_size * 1.2,
             .terminal_font_size = terminal_font_size,
@@ -652,56 +667,16 @@ pub const Renderer = struct {
                 .baseline_from_top = terminal_font_size,
             },
             .terminal_font = undefined,
-            .terminal_font_path = terminal_font_path.path,
-            .terminal_font_path_owned = terminal_font_path.owned,
-            .terminal_disable_ligatures = .never,
-            .terminal_font_features_raw = null,
-            .terminal_font_features = .{},
-            .editor_disable_ligatures = .never,
-            .editor_font_features_raw = null,
-            .editor_font_features = .{},
-            .font_rendering = init_options.font_rendering,
-            .font_cache = std.AutoHashMap(u32, *TerminalFont).init(allocator),
+            .font_config = font_config,
             .terminal_target = null,
             .terminal_scroll_target = null,
             .editor_target = null,
             .scene_target = .{},
             .window_chrome = .{},
-            .window_chrome_applied_mode = .native,
-            .window_frame_material_applied = .{},
-            .window_integrated_frame = .{},
-            .window_snap_sink = .{},
             .theme = .{},
             .mouse_scale = .{ .x = 1.0, .y = 1.0 },
-            .render_scale = render_scale,
-            .user_zoom = 1.0,
-            .user_zoom_target = 1.0,
-            .ui_scale = ui_scale,
-            .last_zoom_request_time = 0.0,
-            .last_zoom_apply_time = 0.0,
-            .wayland_scale_cache = wayland_scale.cache,
-            .wayland_scale_last_update = wayland_scale.last_update,
-            .key_down = [_]bool{false} ** key_repeat_key_count,
-            .key_pressed = [_]bool{false} ** key_repeat_key_count,
-            .key_repeated = [_]bool{false} ** key_repeat_key_count,
-            .key_released = [_]bool{false} ** key_repeat_key_count,
-            .mouse_down = [_]bool{false} ** mouse_button_count,
-            .mouse_pressed = [_]bool{false} ** mouse_button_count,
-            .mouse_released = [_]bool{false} ** mouse_button_count,
-            .mouse_clicks = [_]u8{0} ** mouse_button_count,
-            .mouse_press_pos = [_]MousePos{.{ .x = 0, .y = 0 }} ** mouse_button_count,
-            .mouse_press_pos_valid = [_]bool{false} ** mouse_button_count,
-            .key_queue = std.ArrayList(KeyPress).empty,
-            .key_queue_head = 0,
-            .char_queue = std.ArrayList(TextPress).empty,
-            .char_queue_head = 0,
-            .focus_queue = std.ArrayList(bool).empty,
-            .focus_queue_head = 0,
-            .window_focused = true,
-            .composing_text = std.ArrayList(u8).empty,
-            .composing_cursor = 0,
-            .composing_selection_len = 0,
-            .composing_active = false,
+            .scale = scale,
+            .input = .{},
             .clipboard_buffer = std.ArrayList(u8).empty,
             .batch_vertices = std.ArrayList(Vertex).empty,
             .batch_draws = std.ArrayList(BatchDraw).empty,
@@ -710,23 +685,9 @@ pub const Renderer = struct {
             .terminal_shape_first_pen = .{},
             .terminal_shape_first_pen_set = .{},
             .should_close_flag = false,
-            .window_resized_flag = false,
-            .text_input_state = text_input.initState(),
-            .pending_wait_event = undefined,
-            .pending_wait_event_valid = false,
             .start_counter = sdl_api.getPerformanceCounter(),
             .perf_freq = @as(f64, @floatFromInt(sdl_api.getPerformanceFrequency())),
-            .frame_seq = 0,
-            .submission_sequence = 0,
-            .last_present_counter = 0,
-            .last_present_gap_ms = 0.0,
-            .last_swap_ms = 0.0,
-            .scene_frame_active = false,
-            .present_trace_current = .{},
-            .present_trace_last = .{},
-            .present_capture_path = null,
-            .present_capture_armed = false,
-            .present_capture_frame_seq = 0,
+            .present = .{},
             .drawing_editor_target = false,
         };
 
@@ -739,7 +700,7 @@ pub const Renderer = struct {
         try renderer.initGlResources();
         try renderer.initFonts();
 
-        sdl_api.startTextInput(window);
+        input_state.startTextInput(renderer.inputDomain());
         active_renderer = renderer;
         return renderer;
     }
@@ -750,44 +711,13 @@ pub const Renderer = struct {
         self.destroyRenderTarget(&self.editor_target);
         self.destroyRenderTarget(&self.scene_target.target);
 
-        var font_it = self.font_cache.iterator();
-        while (font_it.next()) |entry| {
-            entry.value_ptr.*.deinit();
-            self.allocator.destroy(entry.value_ptr.*);
-        }
-        self.font_cache.deinit();
-
         self.app_font.deinit();
         self.editor_font.deinit();
         self.terminal_font.deinit();
         self.icon_font.deinit();
-        if (self.terminal_font_features_raw) |owned| {
-            self.allocator.free(owned);
-            self.terminal_font_features_raw = null;
-        }
-        self.terminal_font_features.deinit(self.allocator);
-        if (self.editor_font_features_raw) |owned| {
-            self.allocator.free(owned);
-            self.editor_font_features_raw = null;
-        }
-        self.editor_font_features.deinit(self.allocator);
-        if (self.app_font_path_owned) |owned| {
-            self.allocator.free(owned);
-            self.app_font_path_owned = null;
-        }
-        if (self.editor_font_path_owned) |owned| {
-            self.allocator.free(owned);
-            self.editor_font_path_owned = null;
-        }
-        if (self.terminal_font_path_owned) |owned| {
-            self.allocator.free(owned);
-            self.terminal_font_path_owned = null;
-        }
+        self.deinitFontConfigState();
 
-        self.key_queue.deinit(self.allocator);
-        self.char_queue.deinit(self.allocator);
-        self.focus_queue.deinit(self.allocator);
-        self.composing_text.deinit(self.allocator);
+        input_state.deinit(self.inputDomain());
         self.clipboard_buffer.deinit(self.allocator);
         self.batch_vertices.deinit(self.allocator);
         self.batch_draws.deinit(self.allocator);
@@ -808,9 +738,8 @@ pub const Renderer = struct {
             .uniform_tex = self.uniform_tex,
         });
 
-        sdl_api.stopTextInput(self.window);
-        self.window_integrated_frame.deinit();
-        self.window_snap_sink.deinit();
+        input_state.stopTextInput(self.inputDomain());
+        window_chrome_runtime.deinit(self.windowChromeDomain());
         sdl_api.glDeleteContext(self.gl_context);
         sdl.SDL_DestroyWindow(self.window);
         sdl.SDL_Quit();
@@ -954,15 +883,15 @@ pub const Renderer = struct {
     }
 
     pub fn uiScaleFactor(self: *const Renderer) f32 {
-        return self.ui_scale * self.user_zoom;
+        return self.scale.ui_scale * self.scale.user_zoom;
     }
 
     pub fn userZoomFactor(self: *const Renderer) f32 {
-        return self.user_zoom;
+        return self.scale.user_zoom;
     }
 
     pub fn userZoomTargetFactor(self: *const Renderer) f32 {
-        return self.user_zoom_target;
+        return self.scale.user_zoom_target;
     }
 
     pub fn baseFontSize(self: *const Renderer) f32 {
@@ -978,11 +907,15 @@ pub const Renderer = struct {
     }
 
     pub fn renderScaleFactor(self: *const Renderer) f32 {
-        return self.render_scale;
+        return self.scale.render_scale;
     }
 
     pub fn shouldClose(self: *Renderer) bool {
         return self.should_close_flag;
+    }
+
+    pub fn windowFocused(self: *Renderer) bool {
+        return input_state.windowFocused(self.inputDomain());
     }
 
     pub fn beginFrame(self: *Renderer) void {
@@ -991,34 +924,6 @@ pub const Renderer = struct {
 
     pub fn submitFrame(self: *Renderer) FrameSubmission {
         return scene_frame_runtime.submitFrame(self);
-    }
-
-    pub fn restoreMainCompositionTarget(self: *Renderer) void {
-        if (self.scene_frame_active) {
-            if (!scene_frame_runtime.beginSceneFrame(self)) {
-                self.scene_frame_active = false;
-                self.bindDefaultTarget();
-            }
-            return;
-        }
-        self.bindDefaultTarget();
-    }
-
-    pub fn dumpWindowScreenshotPpm(self: *Renderer, path: []const u8) !void {
-        // Ensure we're reading back the window framebuffer at the window pixel size.
-        self.bindDefaultTarget();
-        // Downscale to logical window size to keep captures stable across DPI/render scale.
-        try screenshot.dumpFramebufferPpmScaled(self.allocator, self.render_width, self.render_height, self.width, self.height, path);
-    }
-
-    pub fn dumpWindowScreenshotPpmSized(self: *Renderer, path: []const u8, out_width: i32, out_height: i32) !void {
-        if (out_width <= 0 or out_height <= 0) {
-            try self.dumpWindowScreenshotPpm(path);
-            return;
-        }
-        // Ensure we're reading back the window framebuffer at the window pixel size.
-        self.bindDefaultTarget();
-        try screenshot.dumpFramebufferPpmScaled(self.allocator, self.render_width, self.render_height, out_width, out_height, path);
     }
 
     pub fn clearToThemeBackground(self: *Renderer) void {
@@ -1042,13 +947,13 @@ pub const Renderer = struct {
     }
 
     pub fn setTextInputRect(self: *Renderer, x: i32, y: i32, w: i32, h: i32) void {
-        text_input.setRect(&self.text_input_state, self.window, x, y, w, h);
+        text_input.setRect(&self.input.text_input_state, self.window, x, y, w, h);
     }
 
     pub fn drawRect(self: *Renderer, x: i32, y: i32, w: i32, h: i32, color: Color) void {
         if (w <= 0 or h <= 0) return;
         if (self.drawing_editor_target and w == self.target_width and h == self.target_height and x == 0 and y == 0) {
-            self.present_trace_current.composition_full_pane_clear = true;
+            scene_frame_runtime.noteCompositionFullPaneClear(self);
         }
         const dest = shape_utils.rectFromInts(x, y, w, h);
         const src = texture_draw.unitSrcRect();
@@ -1128,7 +1033,7 @@ pub const Renderer = struct {
     }
 
     pub fn beginClip(self: *Renderer, x: i32, y: i32, w: i32, h: i32) void {
-        self.present_trace_current.composition_clip_count += 1;
+        scene_frame_runtime.noteCompositionClip(self);
         gl.Enable(gl.c.GL_SCISSOR_TEST);
         const scale_x = @as(f32, @floatFromInt(self.target_pixel_width)) / @as(f32, @floatFromInt(self.target_width));
         const scale_y = @as(f32, @floatFromInt(self.target_pixel_height)) / @as(f32, @floatFromInt(self.target_height));
@@ -1164,16 +1069,6 @@ pub const Renderer = struct {
 
     pub fn endClip(_: *Renderer) void {
         gl.Disable(gl.c.GL_SCISSOR_TEST);
-    }
-
-    pub fn armPresentCapture(self: *Renderer, path: []const u8) void {
-        self.present_capture_path = path;
-        self.present_capture_armed = true;
-        self.present_capture_frame_seq = self.frame_seq;
-    }
-
-    pub fn lastPresentTrace(self: *const Renderer) PresentTrace {
-        return self.present_trace_last;
     }
 
     pub fn drawTerminalCell(
@@ -1255,39 +1150,25 @@ pub const Renderer = struct {
     }
 
     pub fn getCharPressed(self: *Renderer) ?u32 {
-        if (self.char_queue_head >= self.char_queue.items.len) return null;
-        const value = self.char_queue.items[self.char_queue_head];
-        self.char_queue_head += 1;
-        return value.codepoint;
+        return input_state.popCharPressed(self.inputDomain());
     }
 
     pub fn getTextPressed(self: *Renderer) ?TextPress {
-        if (self.char_queue_head >= self.char_queue.items.len) return null;
-        const value = self.char_queue.items[self.char_queue_head];
-        self.char_queue_head += 1;
-        return value;
+        return input_state.popTextPressed(self.inputDomain());
     }
 
     pub fn getFocusEvent(self: *Renderer) ?bool {
-        if (self.focus_queue_head >= self.focus_queue.items.len) return null;
-        const value = self.focus_queue.items[self.focus_queue_head];
-        self.focus_queue_head += 1;
-        return value;
+        return input_state.popFocusQueued(self.inputDomain());
     }
 
     pub const TextComposition = input_state.TextComposition;
 
     pub fn getTextComposition(self: *Renderer) TextComposition {
-        return input_state.snapshotTextComposition(
-            self.composing_text.items,
-            self.composing_cursor,
-            self.composing_selection_len,
-            self.composing_active,
-        );
+        return input_state.snapshotTextCompositionDomain(self.inputDomain());
     }
 
     pub fn getKeyPressed(self: *Renderer) ?KeyPress {
-        return input_state.popKeyPress(&self.key_queue, &self.key_queue_head);
+        return input_state.popKeyPressed(self.inputDomain());
     }
 
     pub fn keycodeFromScancode(_: *Renderer, scancode: i32, shift: bool) i32 {
@@ -1303,19 +1184,19 @@ pub const Renderer = struct {
     }
 
     pub fn isKeyDown(self: *Renderer, key: i32) bool {
-        return input_state.isKeyActive(self.key_down[0..], key);
+        return input_state.isKeyDown(self.inputDomain(), key);
     }
 
     pub fn isKeyPressed(self: *Renderer, key: i32) bool {
-        return input_state.isKeyActive(self.key_pressed[0..], key);
+        return input_state.isKeyPressed(self.inputDomain(), key);
     }
 
     pub fn isKeyRepeated(self: *Renderer, key: i32) bool {
-        return input_state.isKeyActive(self.key_repeated[0..], key);
+        return input_state.isKeyRepeated(self.inputDomain(), key);
     }
 
     pub fn isKeyReleased(self: *Renderer, key: i32) bool {
-        return input_state.isKeyActive(self.key_released[0..], key);
+        return input_state.isKeyReleased(self.inputDomain(), key);
     }
 
     pub fn getMousePos(self: *Renderer) MousePos {
@@ -1344,41 +1225,22 @@ pub const Renderer = struct {
         return platform_window.getMonitorSize(self.window);
     }
 
+    fn windowChromeDomain(self: *Renderer) window_chrome_runtime.WindowChromeDomain {
+        return .{
+            .window = self.window,
+            .window_focused = self.input.window_focused,
+            .contract = &self.window_chrome.contract,
+            .applied_mode = &self.window_chrome.applied_mode,
+            .applied_material = &self.window_chrome.applied_material,
+            .integrated_frame = &self.window_chrome.integrated_frame,
+            .snap_sink = &self.window_chrome.snap_sink,
+            .hit_test_callback = windowHitTestCallback,
+            .hit_test_data = @ptrCast(self),
+        };
+    }
+
     pub fn setWindowChrome(self: *Renderer, contract: WindowChromeContract) void {
-        self.window_chrome = if (builtin.target.os.tag == .windows) contract else .{};
-        if (builtin.target.os.tag != .windows) return;
-
-        const material_policy = windows_frame_material.policyForChromeMode(self.window_chrome.mode, self.window_focused);
-        if (!std.meta.eql(self.window_frame_material_applied, material_policy)) {
-            windows_frame_material.apply(self.window, material_policy);
-            self.window_frame_material_applied = material_policy;
-        }
-
-        const integrated = self.window_chrome.mode != .native;
-        if (self.window_chrome_applied_mode != self.window_chrome.mode) {
-            self.window_chrome_applied_mode = self.window_chrome.mode;
-
-            if (!sdl_api.setWindowBordered(self.window, !integrated)) {
-                app_logger.logger("sdl.window").logStdout(.warning, "SDL_SetWindowBordered failed integrated={d} err={s}", .{
-                    @intFromBool(integrated),
-                    sdl_api.getError(),
-                });
-            }
-            if (!sdl_api.setWindowHitTest(
-                self.window,
-                if (integrated) windowHitTestCallback else null,
-                if (integrated) @ptrCast(self) else null,
-            )) {
-                app_logger.logger("sdl.window").logStdout(.warning, "SDL_SetWindowHitTest failed integrated={d} err={s}", .{
-                    @intFromBool(integrated),
-                    sdl_api.getError(),
-                });
-            }
-            _ = sdl_api.syncWindow(self.window);
-        }
-
-        self.window_integrated_frame.sync(self.window, self.window_chrome.mode, self.windowIsMaximized(), self.windowIsFullscreen());
-        self.window_snap_sink.sync(self.window, self.window_chrome, self.windowIsMaximized());
+        window_chrome_runtime.applyContract(self.windowChromeDomain(), contract);
     }
 
     pub fn minimizeWindow(self: *Renderer) bool {
@@ -1400,50 +1262,50 @@ pub const Renderer = struct {
     }
 
     pub fn windowIsMaximized(self: *Renderer) bool {
-        return (sdl_api.getWindowFlags(self.window) & sdl.SDL_WINDOW_MAXIMIZED) != 0;
+        return window_chrome_runtime.windowIsMaximized(self.window);
     }
 
     pub fn windowIsFullscreen(self: *Renderer) bool {
-        return (sdl_api.getWindowFlags(self.window) & sdl.SDL_WINDOW_FULLSCREEN) != 0;
+        return window_chrome_runtime.windowIsFullscreen(self.window);
     }
 
     pub fn integratedWindowChromeSinkActive(self: *const Renderer) bool {
-        return self.window_snap_sink.active();
+        return window_chrome_runtime.sinkActive(&self.window_chrome.snap_sink);
     }
 
     pub fn integratedWindowChromeMinimizeHovered(self: *const Renderer) bool {
-        return self.window_snap_sink.minimizeHovered();
+        return window_chrome_runtime.minimizeHovered(&self.window_chrome.snap_sink);
     }
 
     pub fn integratedWindowChromeMaximizeHovered(self: *const Renderer) bool {
-        return self.window_snap_sink.maximizeHovered();
+        return window_chrome_runtime.maximizeHovered(&self.window_chrome.snap_sink);
     }
 
     pub fn integratedWindowChromeCloseHovered(self: *const Renderer) bool {
-        return self.window_snap_sink.closeHovered();
+        return window_chrome_runtime.closeHovered(&self.window_chrome.snap_sink);
     }
 
     pub fn integratedWindowChromeMinimizePressed(self: *const Renderer) bool {
-        return self.window_snap_sink.minimizePressed();
+        return window_chrome_runtime.minimizePressed(&self.window_chrome.snap_sink);
     }
 
     pub fn integratedWindowChromeMaximizePressed(self: *const Renderer) bool {
-        return self.window_snap_sink.maximizePressed();
+        return window_chrome_runtime.maximizePressed(&self.window_chrome.snap_sink);
     }
 
     pub fn integratedWindowChromeClosePressed(self: *const Renderer) bool {
-        return self.window_snap_sink.closePressed();
+        return window_chrome_runtime.closePressed(&self.window_chrome.snap_sink);
     }
 
     pub fn integratedWindowChromeSinkOwnsChrome(self: *const Renderer) bool {
-        return self.window_snap_sink.ownsChrome();
+        return window_chrome_runtime.sinkOwnsChrome(&self.window_chrome.snap_sink);
     }
 
     fn windowHitTestCallback(_: ?*sdl.SDL_Window, area: [*c]const sdl.SDL_Point, data: ?*anyopaque) callconv(.c) sdl_api.HitTestResult {
         const raw = data orelse return sdl.SDL_HITTEST_NORMAL;
         const self: *Renderer = @ptrCast(@alignCast(raw));
         return window_chrome_runtime.hitTest(
-            self.window_chrome,
+            self.window_chrome.contract,
             self.width,
             self.height,
             self.windowIsMaximized(),
@@ -1476,37 +1338,27 @@ pub const Renderer = struct {
     }
 
     pub fn isMouseButtonPressed(self: *Renderer, button: i32) bool {
-        return input_state.isMouseButtonActive(self.mouse_pressed[0..], button);
+        return input_state.isMouseButtonPressed(self.inputDomain(), button);
     }
 
     pub fn isMouseButtonDown(self: *Renderer, button: i32) bool {
-        return input_state.isMouseButtonActive(self.mouse_down[0..], button);
+        return input_state.isMouseButtonDown(self.inputDomain(), button);
     }
 
     pub fn isMouseButtonReleased(self: *Renderer, button: i32) bool {
-        return input_state.isMouseButtonActive(self.mouse_released[0..], button);
+        return input_state.isMouseButtonReleased(self.inputDomain(), button);
     }
 
     pub fn mouseButtonClicks(self: *Renderer, button: i32) u8 {
-        if (button < 0) return 0;
-        const idx: usize = @intCast(button);
-        if (idx >= self.mouse_clicks.len) return 0;
-        return self.mouse_clicks[idx];
+        return input_state.mouseButtonClicks(self.inputDomain(), button);
     }
 
     pub fn mouseButtonPressPos(self: *Renderer, button: i32) ?MousePos {
-        if (button < 0) return null;
-        const idx: usize = @intCast(button);
-        if (idx >= self.mouse_press_pos_valid.len) return null;
-        if (!self.mouse_press_pos_valid[idx]) return null;
-        return self.mouse_press_pos[idx];
+        return input_state.mouseButtonPressPos(self.inputDomain(), button);
     }
 
     pub fn anyMouseButtonsDown(self: *Renderer) bool {
-        for (self.mouse_down) |down| {
-            if (down) return true;
-        }
-        return false;
+        return input_state.anyMouseButtonsDown(self.inputDomain());
     }
 
     pub fn getMouseWheelMove(self: *Renderer) f32 {
@@ -1530,7 +1382,7 @@ pub const Renderer = struct {
     }
 
     pub fn ensureRenderTargetScaled(self: *Renderer, target: *?RenderTarget, logical_width: i32, logical_height: i32, filter: i32) bool {
-        const scale = if (self.render_scale > 0.0) self.render_scale else 1.0;
+        const scale = if (self.scale.render_scale > 0.0) self.scale.render_scale else 1.0;
         const width = @max(1, @as(i32, @intFromFloat(std.math.round(@as(f32, @floatFromInt(logical_width)) * scale))));
         const height = @max(1, @as(i32, @intFromFloat(std.math.round(@as(f32, @floatFromInt(logical_height)) * scale))));
         return gl_backend.ensureRenderTarget(target, width, height, logical_width, logical_height, filter);
@@ -1599,7 +1451,7 @@ pub const Renderer = struct {
     }
 
     pub fn terminalCellGeometry(self: *Renderer) TerminalCellGeometry {
-        const scale = if (self.render_scale > 0.0) self.render_scale else 1.0;
+        const scale = if (self.scale.render_scale > 0.0) self.scale.render_scale else 1.0;
         const cell_width_device_px = @max(1, @as(i32, @intFromFloat(std.math.round(self.terminal_metrics.cell_width * scale))));
         const cell_height_device_px = @max(1, @as(i32, @intFromFloat(std.math.round(self.terminal_metrics.cell_height * scale))));
         const baseline_device_px = @max(1, @as(i32, @intFromFloat(std.math.round(self.terminal_metrics.baseline_from_top * scale))));
@@ -1653,9 +1505,43 @@ pub const Renderer = struct {
         self.drawTextureRect(texture, src, dest, color.toRgba());
     }
 
+    fn inputDomain(self: *Renderer) input_state.InputDomain {
+        return .{
+            .allocator = self.allocator,
+            .window = self.window,
+            .mouse_scale = self.mouse_scale,
+            .should_close_flag = &self.should_close_flag,
+            .key_down = self.input.key_down[0..],
+            .key_pressed = self.input.key_pressed[0..],
+            .key_repeated = self.input.key_repeated[0..],
+            .key_released = self.input.key_released[0..],
+            .mouse_down = self.input.mouse_down[0..],
+            .mouse_pressed = self.input.mouse_pressed[0..],
+            .mouse_released = self.input.mouse_released[0..],
+            .mouse_clicks = self.input.mouse_clicks[0..],
+            .mouse_press_pos = self.input.mouse_press_pos[0..],
+            .mouse_press_pos_valid = self.input.mouse_press_pos_valid[0..],
+            .key_queue = &self.input.key_queue,
+            .key_queue_head = &self.input.key_queue_head,
+            .char_queue = &self.input.char_queue,
+            .char_queue_head = &self.input.char_queue_head,
+            .focus_queue = &self.input.focus_queue,
+            .focus_queue_head = &self.input.focus_queue_head,
+            .window_focused = &self.input.window_focused,
+            .composing_text = &self.input.composing_text,
+            .composing_cursor = &self.input.composing_cursor,
+            .composing_selection_len = &self.input.composing_selection_len,
+            .composing_active = &self.input.composing_active,
+            .window_resized_flag = &self.input.window_resized_flag,
+            .text_input_state = &self.input.text_input_state,
+            .pending_wait_event = &self.input.pending_wait_event,
+            .pending_wait_event_valid = &self.input.pending_wait_event_valid,
+        };
+    }
+
     fn pollInputEvents(self: *Renderer) void {
         input_runtime.pollInputEvents(
-            self,
+            self.inputDomain(),
             &mouse_wheel_delta,
         );
     }
@@ -1679,13 +1565,12 @@ pub fn waitTime(seconds: f64) void {
 pub fn waitForWakeOrTimeout(seconds: f64) void {
     if (seconds <= 0) return;
     if (active_renderer) |renderer| {
-        if (renderer.pending_wait_event_valid) return;
+        if (input_state.hasPendingWaitEvent(renderer.inputDomain())) return;
         const timeout_ms: c_int = @intFromFloat(@ceil(seconds * 1000.0));
         if (timeout_ms <= 0) return;
         var event: sdl_api.c.SDL_Event = undefined;
         if (sdl_api.waitEventTimeout(&event, timeout_ms)) {
-            renderer.pending_wait_event = event;
-            renderer.pending_wait_event_valid = true;
+            input_state.stagePendingWaitEvent(renderer.inputDomain(), event);
             return;
         }
     }
@@ -1715,7 +1600,7 @@ pub fn setSdlLogLevel(level: c_int) void {
 
 pub fn isWindowResized() bool {
     if (active_renderer) |renderer| {
-        return renderer.window_resized_flag;
+        return input_state.windowResized(renderer.inputDomain());
     }
     return false;
 }

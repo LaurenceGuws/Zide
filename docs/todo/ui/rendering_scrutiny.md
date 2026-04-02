@@ -32,6 +32,8 @@ The easy SDL/GL lies are mostly dead:
 - fake forwarding shells removed
 - product-specific renderer target APIs removed from `renderer.zig`
 - dead SDL input slab removed
+- live SDL input polling now runs through an explicit `InputDomain` view
+  instead of reaching across `Renderer` field-by-field
 
 What remains is not residue. It is ownership concentration.
 
@@ -95,6 +97,23 @@ Done when:
 - setup/teardown read as renderer assembly over narrower sub-owners instead of
   one giant lifecycle slab.
 
+Progress note, 2026-04-02:
+
+- renderer init now assembles grouped scale state through
+  `initScaleState(...)` instead of open-coding zoom/UI-scale setup inline
+- renderer init now assembles grouped font/config state through
+  `initFontConfigState(...)` instead of open-coding font-path/config setup
+- renderer deinit now tears that grouped font/config state down through
+  `deinitFontConfigState(...)` instead of open-coding the same cleanup slab
+- text-input start/stop and input queue/composition teardown now run through
+  `src/ui/renderer/input_state.zig` instead of living as raw lifecycle verbs
+  in `renderer.zig`
+- window-chrome teardown now runs through
+  `src/ui/renderer/window_chrome_runtime.zig` instead of living as raw cleanup
+  verbs in `renderer.zig`
+- the remaining work in this item is broader lifecycle shrink, not raw grouped
+  state setup/teardown duplication
+
 ### RS-03 Input State Still Lives In Renderer
 
 Current pressure:
@@ -113,6 +132,24 @@ Done when:
 
 - renderer input state has a narrower owner or a clearly justified renderer
   boundary.
+
+Progress note, 2026-04-02:
+
+- event polling now operates on `src/ui/renderer/input_state.zig:InputDomain`
+- the live input path no longer reaches directly across `Renderer` just to
+  feed SDL events into queue/composition state
+- input query/pop helpers now ride the same domain instead of reading renderer
+  queue/button/key state directly
+- the main input consumer now talks through `Shell` instead of treating the
+  renderer as direct input authority
+- renderer input state is now grouped as one explicit slab instead of loose
+  key/mouse/queue/composition/wake-event fields
+- focus/resize/wake-event semantics now route through
+  `src/ui/renderer/input_state.zig` instead of exposing raw grouped input
+  storage shape
+- `InputRuntimeState` now lives with `src/ui/renderer/input_state.zig`
+  instead of being declared in the renderer root
+- the remaining work in this item is ownership shrink, not event-loop plumbing
 
 ### RS-04 Window Chrome Still Lives In Renderer
 
@@ -133,6 +170,20 @@ Done when:
 - host window-chrome ownership is narrower and no longer inflates the renderer
   core.
 
+Progress note, 2026-04-02:
+
+- window-chrome application now runs through
+  `src/ui/renderer/window_chrome_runtime.zig:WindowChromeDomain`
+- frame-material policy, integrated-frame sync, snap-sink sync, and sink query
+  helpers no longer live as direct renderer-local choreography
+- renderer window chrome state is now grouped as one explicit state slab
+  instead of five unrelated top-level fields
+- `WindowChromeState` now lives with
+  `src/ui/renderer/window_chrome_runtime.zig` instead of being declared in the
+  renderer root
+- the remaining work in this item is state-center shrink, not chrome policy
+  plumbing
+
 ### RS-05 Present Capture And Trace Still Live In Renderer
 
 Current pressure:
@@ -151,6 +202,23 @@ Done when:
 
 - present diagnostics/capture either have a narrower owner or clearly justify
   their place in the renderer center.
+
+Progress note, 2026-04-02:
+
+- present sequencing/trace/capture is now grouped as one explicit renderer
+  state slab instead of loose top-level fields
+- live scene-frame and retained-target paths now read through that grouped
+  state
+- app-driven capture/trace control now routes through
+  `src/ui/renderer/scene_frame_runtime.zig` plus `Shell` instead of through
+  renderer-level convenience methods
+- composition clip/full-pane-clear and editor texture trace bookkeeping now
+  route through `src/ui/renderer/scene_frame_runtime.zig` too
+- `PresentState` / `PresentTrace` / `FrameSubmission` now live with
+  `src/ui/renderer/scene_frame_runtime.zig` instead of being declared in the
+  renderer root
+- the remaining work in this item is deciding whether the grouped present
+  state still belongs in the renderer center or should narrow further
 
 ### RS-06 Font/Zoom/UI-Scale Policy Still Inflates Renderer
 
@@ -172,6 +240,20 @@ Done when:
 
 - renderer-facing font/runtime surface is smaller and the remaining font/zoom
   ownership is deliberate instead of inherited.
+
+Progress note, 2026-04-02:
+
+- zoom/UI-scale runtime state is now grouped as one explicit renderer slab
+  instead of loose top-level fields
+- live renderer accessors, font runtime, font manager, and the main
+  render-scale consumers now read through that grouped scale state
+- broader font/config policy state is now grouped as one explicit slab and the
+  live font/runtime consumers read through it
+- `ScaleState` now lives with `src/ui/renderer/font_runtime.zig` and
+  `FontConfigState` now lives with `src/ui/renderer/font_manager.zig` instead
+  of being declared in the renderer root
+- the remaining work in this item is broader font/config ownership, not raw
+  scale-field sprawl
 
 ## Recommended Order
 

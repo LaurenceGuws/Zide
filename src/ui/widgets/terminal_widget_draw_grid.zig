@@ -177,7 +177,7 @@ pub fn drawRowBackgrounds(
     const geom = rr.terminalCellGeometry();
     const cell_w = geom.cell_width_logical_exact;
     const cell_h = geom.cell_height_logical_exact;
-    const scale = if (rr.render_scale > 0.0) rr.render_scale else 1.0;
+    const scale = if (rr.scale.render_scale > 0.0) rr.scale.render_scale else 1.0;
     const padding_x = @as(f32, @floatFromInt(padding_x_i)) / scale;
 
     const row_cells = rowSlice(snapshot_cells, cols_count, row_idx);

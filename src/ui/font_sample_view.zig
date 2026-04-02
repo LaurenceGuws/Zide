@@ -24,7 +24,7 @@ pub const FontSampleView = struct {
     right_name: []const u8,
 
     pub fn init(allocator: std.mem.Allocator, renderer: *Renderer) !FontSampleView {
-        const render_scale = if (renderer.render_scale > 0.0) renderer.render_scale else 1.0;
+        const render_scale = if (renderer.scale.render_scale > 0.0) renderer.scale.render_scale else 1.0;
         const size = parseEnvF32("ZIDE_FONT_SAMPLE_SIZE", renderer.base_font_size);
         const raster_size = size * render_scale;
 
@@ -42,7 +42,7 @@ pub const FontSampleView = struct {
             iface.UNICODE_SANS_PATH,
             iface.EMOJI_COLOR_FALLBACK_PATH,
             iface.EMOJI_TEXT_FALLBACK_PATH,
-            renderer.font_rendering,
+            renderer.font_config.font_rendering,
         );
         errdefer left.deinit();
         left.render_scale = render_scale;
@@ -59,7 +59,7 @@ pub const FontSampleView = struct {
             iface.UNICODE_SANS_PATH,
             iface.EMOJI_COLOR_FALLBACK_PATH,
             iface.EMOJI_TEXT_FALLBACK_PATH,
-            renderer.font_rendering,
+            renderer.font_config.font_rendering,
         );
         errdefer right.deinit();
         right.render_scale = render_scale;
@@ -93,7 +93,7 @@ pub const FontSampleView = struct {
         const clamped = @max(6.0, @min(64.0, next));
         if (std.math.approxEqAbs(f32, clamped, self.size, 0.001)) return false;
 
-        const render_scale = if (renderer.render_scale > 0.0) renderer.render_scale else 1.0;
+        const render_scale = if (renderer.scale.render_scale > 0.0) renderer.scale.render_scale else 1.0;
         const raster_size = clamped * render_scale;
 
         const left_path: [*:0]const u8 = "assets/fonts/JetBrainsMonoNerdFont-Regular.ttf";
@@ -110,7 +110,7 @@ pub const FontSampleView = struct {
             iface.UNICODE_SANS_PATH,
             iface.EMOJI_COLOR_FALLBACK_PATH,
             iface.EMOJI_TEXT_FALLBACK_PATH,
-            renderer.font_rendering,
+            renderer.font_config.font_rendering,
         ) catch |err| {
             log.logf(.warning, "font sample left font rebuild failed err={s}", .{@errorName(err)});
             return false;
@@ -130,7 +130,7 @@ pub const FontSampleView = struct {
             iface.UNICODE_SANS_PATH,
             iface.EMOJI_COLOR_FALLBACK_PATH,
             iface.EMOJI_TEXT_FALLBACK_PATH,
-            renderer.font_rendering,
+            renderer.font_config.font_rendering,
         ) catch |err| {
             log.logf(.warning, "font sample right font rebuild failed err={s}", .{@errorName(err)});
             new_left.deinit();
@@ -214,7 +214,7 @@ pub const FontSampleView = struct {
         fg: Color,
     ) f32 {
         const section_pad_y: f32 = 8;
-        const line_h = self.left.line_height / (if (r.render_scale > 0.0) r.render_scale else 1.0);
+        const line_h = self.left.line_height / (if (r.scale.render_scale > 0.0) r.scale.render_scale else 1.0);
         const lines = sampleLines();
         const content_h: f32 = @as(f32, @floatFromInt(lines.len)) * line_h + baselineStressHeight(line_h);
         const section_h: f32 = r.char_height + section_pad_y + content_h + section_pad_y;
@@ -240,7 +240,7 @@ pub const FontSampleView = struct {
     fn drawColumnWithColor(self: *FontSampleView, r: *Renderer, x: f32, y: f32, w: f32, name: []const u8, font: *TerminalFont, fg: Color) void {
         _ = w;
         const theme = r.theme;
-        const scale = if (r.render_scale > 0.0) r.render_scale else 1.0;
+        const scale = if (r.scale.render_scale > 0.0) r.scale.render_scale else 1.0;
 
         var header_buf: [192]u8 = undefined;
         const header = std.fmt.bufPrint(
@@ -284,7 +284,7 @@ pub const FontSampleView = struct {
         color: Color,
     ) void {
         const draw_ctx = terminal_font_mod.DrawContext{ .ctx = r, .drawTexture = drawTextureThunk };
-        const scale = if (r.render_scale > 0.0) r.render_scale else 1.0;
+        const scale = if (r.scale.render_scale > 0.0) r.scale.render_scale else 1.0;
         text_draw.drawText(allocator, font, draw_ctx.ctx, draw_ctx.drawTexture, text, x, y, font.cell_width / scale, font.line_height / scale, color.toRgba(), true, false);
     }
 
@@ -299,7 +299,7 @@ pub const FontSampleView = struct {
         zoom: f32,
     ) void {
         const draw_ctx = terminal_font_mod.DrawContext{ .ctx = r, .drawTexture = drawTextureThunk };
-        const scale = if (r.render_scale > 0.0) r.render_scale else 1.0;
+        const scale = if (r.scale.render_scale > 0.0) r.scale.render_scale else 1.0;
         const cell_w = (font.cell_width / scale) * zoom;
         const cell_h = (font.line_height / scale) * zoom;
         text_draw.drawText(allocator, font, draw_ctx.ctx, draw_ctx.drawTexture, text, x, y, cell_w, cell_h, color.toRgba(), true, false);

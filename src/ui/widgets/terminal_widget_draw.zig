@@ -265,9 +265,9 @@ pub fn drawPrepared(
         cell_w_i = geom.cell_width_device_px;
         cell_h_i = geom.cell_height_device_px;
         const cell_metrics_changed = cell_w_i != self.last_cell_w_i or cell_h_i != self.last_cell_h_i;
-        const render_scale_changed = r.render_scale != self.last_render_scale;
+        const render_scale_changed = r.scale.render_scale != self.last_render_scale;
         const padding_x_i: i32 = @max(2, @divTrunc(cell_w_i, 2));
-        const scale = if (r.render_scale > 0.0) r.render_scale else 1.0;
+        const scale = if (r.scale.render_scale > 0.0) r.scale.render_scale else 1.0;
         const texture_w = @as(i32, @intFromFloat(std.math.round(@as(f32, @floatFromInt(cell_w_i * @as(i32, @intCast(cols)) + padding_x_i)) / scale)));
         const texture_h = @as(i32, @intFromFloat(std.math.round(@as(f32, @floatFromInt(cell_h_i * @as(i32, @intCast(rows)))) / scale)));
         const clip_w = @min(width, geom.cell_width_logical_exact * @as(f32, @floatFromInt(cols)));
@@ -426,7 +426,7 @@ pub fn drawPrepared(
                 r.beginTerminalGlyphBatch();
                 row = 0;
                 while (row < rows) : (row += 1) {
-                    drawRowGlyphs(shell, view_cells, cols, row, 0, cols - 1, base_x_local, base_y_local, padding_x_i, hover_link_id, screen_reverse, blink_style, blink_time, draw_cursor, cursor, r.terminal_disable_ligatures, &glyph_draw_stats);
+                    drawRowGlyphs(shell, view_cells, cols, row, 0, cols - 1, base_x_local, base_y_local, padding_x_i, hover_link_id, screen_reverse, blink_style, blink_time, draw_cursor, cursor, r.font_config.terminal_disable_ligatures, &glyph_draw_stats);
                 }
                 r.flushTerminalGlyphBatch();
                 texture_glyph_ms += time_utils.secondsToMs(app_shell.getTime() - glyph_phase_start);
@@ -520,12 +520,12 @@ pub fn drawPrepared(
                             const span = self.partial_draw_spans.items[row][span_idx];
                             const col_start = @min(@as(usize, span.start), cols - 1);
                             const col_end = @min(@as(usize, span.end), cols - 1);
-                            drawRowGlyphs(shell, view_cells, cols, row, col_start, col_end, base_x_local, base_y_local, padding_x_i, hover_link_id, screen_reverse, blink_style, blink_time, draw_cursor, cursor, r.terminal_disable_ligatures, &glyph_draw_stats);
+                            drawRowGlyphs(shell, view_cells, cols, row, col_start, col_end, base_x_local, base_y_local, padding_x_i, hover_link_id, screen_reverse, blink_style, blink_time, draw_cursor, cursor, r.font_config.terminal_disable_ligatures, &glyph_draw_stats);
                         }
                     } else {
                         const col_start = @min(@as(usize, self.partial_draw_cols_start.items[row]), cols - 1);
                         const col_end = @min(@as(usize, self.partial_draw_cols_end.items[row]), cols - 1);
-                        drawRowGlyphs(shell, view_cells, cols, row, col_start, col_end, base_x_local, base_y_local, padding_x_i, hover_link_id, screen_reverse, blink_style, blink_time, draw_cursor, cursor, r.terminal_disable_ligatures, &glyph_draw_stats);
+                        drawRowGlyphs(shell, view_cells, cols, row, col_start, col_end, base_x_local, base_y_local, padding_x_i, hover_link_id, screen_reverse, blink_style, blink_time, draw_cursor, cursor, r.font_config.terminal_disable_ligatures, &glyph_draw_stats);
                     }
                 }
                 r.flushTerminalGlyphBatch();
@@ -545,7 +545,7 @@ pub fn drawPrepared(
             self.last_render_clear_generation = draw_state.clear_generation;
             self.last_cell_w_i = cell_w_i;
             self.last_cell_h_i = cell_h_i;
-            self.last_render_scale = r.render_scale;
+            self.last_render_scale = r.scale.render_scale;
             if (visible_w > 0 and visible_h > 0) {
                 r.beginClip(
                     @intFromFloat(std.math.round(base_x)),

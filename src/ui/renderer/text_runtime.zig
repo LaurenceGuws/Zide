@@ -62,8 +62,8 @@ const TextOrigin = struct {
 
 fn snapTextOrigin(self: *Renderer, x: f32, y: f32) TextOrigin {
     return .{
-        .x = snapToDevicePixel(x, self.render_scale),
-        .y = snapVerticalDevicePixel(y, self.render_scale),
+        .x = snapToDevicePixel(x, self.scale.render_scale),
+        .y = snapVerticalDevicePixel(y, self.scale.render_scale),
     };
 }
 
@@ -131,7 +131,7 @@ pub fn drawTextSized(self: *Renderer, text: []const u8, x: f32, y: f32, size: f3
         drawText(self, text, x, y, color);
         return;
     };
-    const scale = if (self.render_scale > 0.0) self.render_scale else 1.0;
+    const scale = if (self.scale.render_scale > 0.0) self.scale.render_scale else 1.0;
     drawTextWithFont(self, font, .{
         .ascent = font.ascent / scale,
         .descent = font.descent / scale,
@@ -159,10 +159,10 @@ pub fn drawChar(self: *Renderer, char: u8, x: f32, y: f32, color: Color) void {
 }
 
 pub fn drawTerminalCell(self: *Renderer, codepoint: u32, x: f32, y: f32, cell_width: f32, cell_height: f32, fg: Color, bg: Color, underline_color: Color, bold: bool, underline: bool, is_cursor: bool, followed_by_space: bool, draw_bg: bool) void {
-    const snapped_x = snapToDevicePixel(x, self.render_scale);
-    const snapped_y = snapToDevicePixel(y, self.render_scale);
-    const snapped_cell_width = snapToDevicePixel(cell_width, self.render_scale);
-    const snapped_cell_height = snapToDevicePixel(cell_height, self.render_scale);
+    const snapped_x = snapToDevicePixel(x, self.scale.render_scale);
+    const snapped_y = snapToDevicePixel(y, self.scale.render_scale);
+    const snapped_cell_width = snapToDevicePixel(cell_width, self.scale.render_scale);
+    const snapped_cell_height = snapToDevicePixel(cell_height, self.scale.render_scale);
     const snapped_cell_w_i = snapInt(snapped_cell_width);
     const snapped_cell_h_i = snapInt(snapped_cell_height);
 
@@ -189,10 +189,10 @@ pub fn drawTerminalCell(self: *Renderer, codepoint: u32, x: f32, y: f32, cell_wi
 
 pub fn drawTerminalCellGrapheme(self: *Renderer, base: u32, combining: []const u32, x: f32, y: f32, cell_width: f32, cell_height: f32, fg: Color, bg: Color, underline_color: Color, bold: bool, underline: bool, is_cursor: bool, followed_by_space: bool, draw_bg: bool) void {
     if (combining.len == 0) return drawTerminalCell(self, base, x, y, cell_width, cell_height, fg, bg, underline_color, bold, underline, is_cursor, followed_by_space, draw_bg);
-    const snapped_x = snapToDevicePixel(x, self.render_scale);
-    const snapped_y = snapToDevicePixel(y, self.render_scale);
-    const snapped_cell_width = snapToDevicePixel(cell_width, self.render_scale);
-    const snapped_cell_height = snapToDevicePixel(cell_height, self.render_scale);
+    const snapped_x = snapToDevicePixel(x, self.scale.render_scale);
+    const snapped_y = snapToDevicePixel(y, self.scale.render_scale);
+    const snapped_cell_width = snapToDevicePixel(cell_width, self.scale.render_scale);
+    const snapped_cell_height = snapToDevicePixel(cell_height, self.scale.render_scale);
     const snapped_cell_w_i = snapInt(snapped_cell_width);
     const snapped_cell_h_i = snapInt(snapped_cell_height);
     if (draw_bg) self.drawRect(snapInt(snapped_x), snapInt(snapped_y), snapped_cell_w_i, snapped_cell_h_i, if (is_cursor) fg else bg);
@@ -212,10 +212,10 @@ pub fn drawTerminalCellGrapheme(self: *Renderer, base: u32, combining: []const u
 
 pub fn drawTerminalCellGraphemeBatched(self: *Renderer, base: u32, combining: []const u32, x: f32, y: f32, cell_width: f32, cell_height: f32, fg: Color, bg: Color, underline_color: Color, bold: bool, underline: bool, is_cursor: bool, followed_by_space: bool, draw_bg: bool) void {
     if (combining.len == 0) return drawTerminalCellBatched(self, base, x, y, cell_width, cell_height, fg, bg, underline_color, bold, underline, is_cursor, followed_by_space, draw_bg);
-    const snapped_x = snapToDevicePixel(x, self.render_scale);
-    const snapped_y = snapToDevicePixel(y, self.render_scale);
-    const snapped_cell_width = snapToDevicePixel(cell_width, self.render_scale);
-    const snapped_cell_height = snapToDevicePixel(cell_height, self.render_scale);
+    const snapped_x = snapToDevicePixel(x, self.scale.render_scale);
+    const snapped_y = snapToDevicePixel(y, self.scale.render_scale);
+    const snapped_cell_width = snapToDevicePixel(cell_width, self.scale.render_scale);
+    const snapped_cell_height = snapToDevicePixel(cell_height, self.scale.render_scale);
     const snapped_cell_w_i = snapInt(snapped_cell_width);
     const snapped_cell_h_i = snapInt(snapped_cell_height);
     if (draw_bg) self.addTerminalRect(snapInt(snapped_x), snapInt(snapped_y), snapped_cell_w_i, snapped_cell_h_i, if (is_cursor) fg else bg);
@@ -234,10 +234,10 @@ pub fn drawTerminalCellGraphemeBatched(self: *Renderer, base: u32, combining: []
 }
 
 pub fn drawTerminalCellBatched(self: *Renderer, codepoint: u32, x: f32, y: f32, cell_width: f32, cell_height: f32, fg: Color, bg: Color, underline_color: Color, bold: bool, underline: bool, is_cursor: bool, followed_by_space: bool, draw_bg: bool) void {
-    const snapped_x = snapToDevicePixel(x, self.render_scale);
-    const snapped_y = snapToDevicePixel(y, self.render_scale);
-    const snapped_cell_width = snapToDevicePixel(cell_width, self.render_scale);
-    const snapped_cell_height = snapToDevicePixel(cell_height, self.render_scale);
+    const snapped_x = snapToDevicePixel(x, self.scale.render_scale);
+    const snapped_y = snapToDevicePixel(y, self.scale.render_scale);
+    const snapped_cell_width = snapToDevicePixel(cell_width, self.scale.render_scale);
+    const snapped_cell_height = snapToDevicePixel(cell_height, self.scale.render_scale);
     const snapped_cell_w_i = snapInt(snapped_cell_width);
     const snapped_cell_h_i = snapInt(snapped_cell_height);
     if (draw_bg) self.addTerminalRect(snapInt(snapped_x), snapInt(snapped_y), snapped_cell_w_i, snapped_cell_h_i, if (is_cursor) fg else bg);
@@ -415,7 +415,7 @@ fn textLikelyNeedsShaping(text: []const u8) bool {
 }
 
 fn measureTextWidth(self: *Renderer, font: *TerminalFont, text: []const u8) f32 {
-    const scale = if (self.render_scale > 0.0) self.render_scale else 1.0;
+    const scale = if (self.scale.render_scale > 0.0) self.scale.render_scale else 1.0;
     return text_draw.measureTextWidth(font, text, font.cell_width / scale);
 }
 

@@ -112,9 +112,9 @@ pub fn drawHoverUnderlineOverlay(
                 col_idx += 1;
             }
             const rect_x = base_x + @as(f32, @floatFromInt(@as(i32, @intCast(start_col)))) * cell_w;
-            const rect_y = base_y + @as(f32, @floatFromInt(@as(i32, @intCast(row_idx)))) * cell_h + (cell_h - (2.0 / (if (r.render_scale > 0.0) r.render_scale else 1.0)));
+            const rect_y = base_y + @as(f32, @floatFromInt(@as(i32, @intCast(row_idx)))) * cell_h + (cell_h - (2.0 / (if (r.scale.render_scale > 0.0) r.scale.render_scale else 1.0)));
             const rect_w = cell_w * @as(f32, @floatFromInt(@as(i32, @intCast(col_idx - start_col))));
-            r.drawRectF(rect_x, rect_y, rect_w, 2.0 / (if (r.render_scale > 0.0) r.render_scale else 1.0), underline_color);
+            r.drawRectF(rect_x, rect_y, rect_w, 2.0 / (if (r.scale.render_scale > 0.0) r.scale.render_scale else 1.0), underline_color);
         }
     }
 }

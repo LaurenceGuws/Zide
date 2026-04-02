@@ -117,9 +117,9 @@ pub fn applyRendererReloadConfig(shell: *Shell, config: *const config_mod.Config
     const renderer = shell.rendererPtr();
     const init = buildRendererInitOptions(config);
 
-    const current_app_path = std.mem.span(renderer.app_font_path);
-    const current_editor_path = std.mem.span(renderer.editor_font_path);
-    const current_terminal_path = std.mem.span(renderer.terminal_font_path);
+    const current_app_path = std.mem.span(renderer.font_config.app_font_path);
+    const current_editor_path = std.mem.span(renderer.font_config.editor_font_path);
+    const current_terminal_path = std.mem.span(renderer.font_config.terminal_font_path);
     const next_app_path = init.app_font_path orelse std.mem.span(renderer_mod.FONT_PATH);
     const next_editor_path = init.editor_font_path orelse next_app_path;
     const next_terminal_path = init.terminal_font_path orelse next_app_path;
@@ -132,7 +132,7 @@ pub fn applyRendererReloadConfig(shell: *Shell, config: *const config_mod.Config
         !std.math.approxEqAbs(f32, renderer.terminal_base_font_size, init.terminal_font_size orelse renderer.base_font_size, 0.0001);
 
     const font_choice_changed = app_changed or editor_changed or terminal_changed;
-    const font_rendering_changed = !std.meta.eql(renderer.font_rendering, init.font_rendering);
+    const font_rendering_changed = !std.meta.eql(renderer.font_config.font_rendering, init.font_rendering);
     const text_rendering_changed =
         !std.math.approxEqAbs(f32, renderer.text_gamma, init.text_gamma, 0.0001) or
         !std.math.approxEqAbs(f32, renderer.text_contrast, init.text_contrast, 0.0001) or

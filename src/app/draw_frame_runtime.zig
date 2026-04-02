@@ -69,7 +69,7 @@ fn armLiveSmokeCapture(state: anytype, shell: anytype) ?[]u8 {
         break :blk null;
     };
     if (capture_path) |path| {
-        shell.rendererPtr().armPresentCapture(path);
+        shell.armPresentCapture(path);
     }
     return capture_path;
 }
@@ -80,7 +80,7 @@ fn handleCompletedPresent(state: anytype, shell: anytype, submission: anytype) v
         return;
     }
 
-    const trace = shell.rendererPtr().lastPresentTrace();
+    const trace = shell.lastPresentTrace();
     app_logger.logger("renderer.present").logFields(.info, "frame_present", &.{
         .{ .key = "frame", .value = .{ .unsigned = state.frame_id } },
         .{ .key = "frame_seq", .value = .{ .unsigned = trace.frame_seq } },

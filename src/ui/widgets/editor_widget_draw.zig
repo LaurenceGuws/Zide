@@ -99,7 +99,7 @@ pub fn draw(
                 const cursor_draw_y_local = ctx.cursor_draw_y;
                 const seg_y = y_local + @as(f32, @floatFromInt(seg_info.visual_row)) * r_local.editor_char_height;
                 const seg_band = overlay_mod.rowBandForRow(y_local, seg_info.visual_row, r_local.editor_char_height);
-                const disable_programming_ligatures = switch (r_local.editor_disable_ligatures) {
+                const disable_programming_ligatures = switch (r_local.font_config.editor_disable_ligatures) {
                     .never => false,
                     .always => true,
                     .cursor => seg_info.is_current and seg_info.seg_idx == seg_info.cursor_seg,
@@ -112,19 +112,19 @@ pub fn draw(
                     draw_list_local.clear();
                 } else if (seg_info.is_current) {
                     r_local.drawRect(
-                    @intFromFloat(x_local),
-                    seg_band.y_i,
-                    @intFromFloat(widget_local.gutter_width),
-                    seg_band.h_i,
-                    r_local.theme.current_line,
-                );
+                        @intFromFloat(x_local),
+                        seg_band.y_i,
+                        @intFromFloat(widget_local.gutter_width),
+                        seg_band.h_i,
+                        r_local.theme.current_line,
+                    );
                     r_local.drawRect(
-                    @intFromFloat(x_local + widget_local.gutter_width),
-                    seg_band.y_i,
-                    @intFromFloat(width_local - widget_local.gutter_width),
-                    seg_band.h_i,
-                    r_local.theme.current_line,
-                );
+                        @intFromFloat(x_local + widget_local.gutter_width),
+                        seg_band.y_i,
+                        @intFromFloat(width_local - widget_local.gutter_width),
+                        seg_band.h_i,
+                        r_local.theme.current_line,
+                    );
                 }
 
                 if (range_count_local > 0) {
@@ -331,7 +331,7 @@ pub fn drawCached(
 
                 const seg_y = origin_y_local + @as(f32, @floatFromInt(seg_info.visual_row)) * r_local.editor_char_height;
                 const seg_band = overlay_mod.rowBandForRow(origin_y_local, seg_info.visual_row, r_local.editor_char_height);
-                const disable_programming_ligatures = switch (r_local.editor_disable_ligatures) {
+                const disable_programming_ligatures = switch (r_local.font_config.editor_disable_ligatures) {
                     .never => false,
                     .always => true,
                     .cursor => seg_info.is_current and seg_info.seg_idx == seg_info.cursor_seg,

@@ -146,6 +146,50 @@ the old one.
 
 Progress note, 2026-04-02:
 
+- SDL event polling now runs through `src/ui/renderer/input_state.zig:InputDomain`
+  so the live input path no longer reaches across `Renderer` field-by-field
+- input queue/button/key queries now ride that same domain instead of reading
+  renderer-owned arrays directly
+- the main input batching path now consumes `Shell` input instead of treating
+  the renderer as direct input authority
+- renderer input state is now grouped as one explicit slab instead of loose
+  top-level key/mouse/queue/composition/wake-event fields
+- focus/resize/wake-event semantics now route through
+  `src/ui/renderer/input_state.zig` instead of exposing raw grouped input
+  storage shape
+- `InputRuntimeState` now lives with `src/ui/renderer/input_state.zig`
+  instead of being declared in the renderer root
+- window-chrome application and sink/frame-material queries now run through
+  `src/ui/renderer/window_chrome_runtime.zig:WindowChromeDomain`
+- `WindowChromeState` now lives with
+  `src/ui/renderer/window_chrome_runtime.zig` instead of being declared in the
+  renderer root
+- renderer window chrome state is now grouped as one explicit state slab
+  instead of five unrelated top-level fields
+- present sequencing/trace/capture is now grouped as one explicit state slab
+  instead of loose top-level renderer fields
+- zoom/UI-scale runtime state is now grouped and live through the font/runtime
+  path instead of loose top-level renderer fields
+- broader font/config policy state is now grouped and live through the
+  font/runtime path instead of scattered renderer fields
+- `ScaleState` now lives with `src/ui/renderer/font_runtime.zig` and
+  `FontConfigState` now lives with `src/ui/renderer/font_manager.zig` instead
+  of being declared in the renderer root
+- renderer init/deinit now assemble and tear down grouped scale/font-config
+  state through owner-level helpers instead of open-coding that grouped-state
+  lifecycle inline
+- text-input start/stop and input queue/composition teardown now run through
+  `src/ui/renderer/input_state.zig`
+- window-chrome teardown now runs through
+  `src/ui/renderer/window_chrome_runtime.zig`
+- app-facing present capture/trace and screenshot control now route through
+  `src/ui/renderer/scene_frame_runtime.zig` instead of renderer-level
+  convenience methods
+- composition clip/full-pane-clear and editor-texture trace bookkeeping now
+  route through `src/ui/renderer/scene_frame_runtime.zig` too
+- `PresentState` / `PresentTrace` / `FrameSubmission` now live with
+  `src/ui/renderer/scene_frame_runtime.zig` instead of being declared in the
+  renderer root
 - retained-target implementation moved into
   `src/ui/renderer/retained_targets_runtime.zig`
 - widget/view consumers now route through

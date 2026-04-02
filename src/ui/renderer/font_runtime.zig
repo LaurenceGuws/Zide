@@ -11,8 +11,19 @@ const platform_window = @import("../../platform/window_metrics.zig");
 const renderer_root = @import("../renderer.zig");
 const TerminalDisableLigaturesStrategy = renderer_root.TerminalDisableLigaturesStrategy;
 
+pub const ScaleState = struct {
+    render_scale: f32 = 1.0,
+    user_zoom: f32 = 1.0,
+    user_zoom_target: f32 = 1.0,
+    ui_scale: f32 = 1.0,
+    last_zoom_request_time: f64 = 0.0,
+    last_zoom_apply_time: f64 = 0.0,
+    wayland_scale_cache: ?f32 = null,
+    wayland_scale_last_update: f64 = 0.0,
+};
+
 pub fn setFontRenderingOptions(self: anytype, opts: RenderingOptions) void {
-    self.font_rendering = opts;
+    self.font_config.font_rendering = opts;
 }
 
 pub fn setTextRenderingConfig(self: anytype, gamma: ?f32, contrast: ?f32, linear_correction: ?bool) void {
@@ -35,13 +46,13 @@ pub fn setTextRenderingConfig(self: anytype, gamma: ?f32, contrast: ?f32, linear
 }
 
 pub fn setTerminalLigatureConfig(self: anytype, strategy: ?TerminalDisableLigaturesStrategy, features_raw: ?[]const u8) void {
-    if (strategy) |s| self.terminal_disable_ligatures = s;
-    if (features_raw) |raw| setFontFeatureListRaw(self, &self.terminal_font_features_raw, &self.terminal_font_features, raw);
+    if (strategy) |s| self.font_config.terminal_disable_ligatures = s;
+    if (features_raw) |raw| setFontFeatureListRaw(self, &self.font_config.terminal_font_features_raw, &self.font_config.terminal_font_features, raw);
 }
 
 pub fn setEditorLigatureConfig(self: anytype, strategy: ?TerminalDisableLigaturesStrategy, features_raw: ?[]const u8) void {
-    if (strategy) |s| self.editor_disable_ligatures = s;
-    if (features_raw) |raw| setFontFeatureListRaw(self, &self.editor_font_features_raw, &self.editor_font_features, raw);
+    if (strategy) |s| self.font_config.editor_disable_ligatures = s;
+    if (features_raw) |raw| setFontFeatureListRaw(self, &self.font_config.editor_font_features_raw, &self.font_config.editor_font_features, raw);
 }
 
 fn setFontFeatureListRaw(self: anytype, raw_slot: *?[]u8, list: *std.ArrayListUnmanaged(hb.hb_feature_t), raw: []const u8) void {
@@ -84,11 +95,11 @@ const hb_feature_all: u32 = 0xFFFFFFFF;
 pub fn collectShapeFeatures(self: anytype, domain: anytype, disable_programming_ligatures: bool, out: []hb.hb_feature_t) usize {
     var len: usize = 0;
     const base = switch (domain) {
-        .terminal => self.terminal_font_features.items,
-        .editor => if (self.editor_font_features_raw != null)
-            self.editor_font_features.items
+        .terminal => self.font_config.terminal_font_features.items,
+        .editor => if (self.font_config.editor_font_features_raw != null)
+            self.font_config.editor_font_features.items
         else
-            self.terminal_font_features.items,
+            self.font_config.terminal_font_features.items,
     };
 
     for (base) |f| {
@@ -112,84 +123,84 @@ pub fn collectShapeFeatures(self: anytype, domain: anytype, disable_programming_
 pub fn queryUiScale(self: anytype) f32 {
     const metrics = platform_window.collectDisplayMetrics(self.window);
     var wayland = scale_utils.WaylandScaleState{
-        .cache = self.wayland_scale_cache,
-        .last_update = self.wayland_scale_last_update,
+        .cache = self.scale.wayland_scale_cache,
+        .last_update = self.scale.wayland_scale_last_update,
     };
     const scale = scale_utils.queryUiScale(self.allocator, metrics.dpi, renderer_root.getTime(), &wayland);
-    self.wayland_scale_cache = wayland.cache;
-    self.wayland_scale_last_update = wayland.last_update;
+    self.scale.wayland_scale_cache = wayland.cache;
+    self.scale.wayland_scale_last_update = wayland.last_update;
     return scale;
 }
 
 pub fn applyFontScale(self: anytype) !void {
     try font_manager.applyFontScale(self);
-    text_input.reapplyRect(&self.text_input_state, self.window);
+    text_input.reapplyRect(&self.input.text_input_state, self.window);
 }
 
 pub fn queueUserZoom(self: anytype, delta: f32, now: f64) bool {
-    const result = scale_utils.queueUserZoom(self.user_zoom_target, delta, now, 0.5, 3.0);
-    self.user_zoom_target = result.next_target;
-    self.last_zoom_request_time = result.request_time;
+    const result = scale_utils.queueUserZoom(self.scale.user_zoom_target, delta, now, 0.5, 3.0);
+    self.scale.user_zoom_target = result.next_target;
+    self.scale.last_zoom_request_time = result.request_time;
     return result.changed;
 }
 
 pub fn resetUserZoomTarget(self: anytype, now: f64) bool {
-    const result = scale_utils.resetUserZoomTarget(self.user_zoom_target, now);
-    self.user_zoom_target = result.next_target;
-    self.last_zoom_request_time = result.request_time;
+    const result = scale_utils.resetUserZoomTarget(self.scale.user_zoom_target, now);
+    self.scale.user_zoom_target = result.next_target;
+    self.scale.last_zoom_request_time = result.request_time;
     return result.changed;
 }
 
 pub fn refreshUiScale(self: anytype) !bool {
     const metrics = platform_window.collectDisplayMetrics(self.window);
     var wayland = scale_utils.WaylandScaleState{
-        .cache = self.wayland_scale_cache,
-        .last_update = self.wayland_scale_last_update,
+        .cache = self.scale.wayland_scale_cache,
+        .last_update = self.scale.wayland_scale_last_update,
     };
     const next = scale_utils.queryUiScale(self.allocator, metrics.dpi, renderer_root.getTime(), &wayland);
-    self.wayland_scale_cache = wayland.cache;
-    self.wayland_scale_last_update = wayland.last_update;
+    self.scale.wayland_scale_cache = wayland.cache;
+    self.scale.wayland_scale_last_update = wayland.last_update;
     const next_render = metrics.render_scale;
-    const scale_changed = !std.math.approxEqAbs(f32, next, self.ui_scale, 0.0001);
-    const render_changed = !std.math.approxEqAbs(f32, next_render, self.render_scale, 0.0001);
+    const scale_changed = !std.math.approxEqAbs(f32, next, self.scale.ui_scale, 0.0001);
+    const render_changed = !std.math.approxEqAbs(f32, next_render, self.scale.render_scale, 0.0001);
     if (!scale_changed and !render_changed) return false;
     const log = app_logger.logger("ui.scale");
-    const layout_size = self.base_font_size * next * self.user_zoom;
+    const layout_size = self.base_font_size * next * self.scale.user_zoom;
     const raster_size = layout_size * next_render;
     log.logf(.info, "ui_scale window={d:.3} render={d:.3}->{d:.3} user_zoom={d:.3} font={d:.2}->{d:.2}", .{
         next,
-        self.render_scale,
+        self.scale.render_scale,
         next_render,
-        self.user_zoom,
+        self.scale.user_zoom,
         self.font_size,
         layout_size,
     });
     log.logf(.info, "ui_scale layout_size={d:.2} raster_size={d:.2}", .{ layout_size, raster_size });
-    self.ui_scale = next;
-    self.render_scale = next_render;
+    self.scale.ui_scale = next;
+    self.scale.render_scale = next_render;
     try applyFontScale(self);
     return true;
 }
 
 pub fn applyPendingZoom(self: anytype, now: f64) !bool {
     const result = scale_utils.applyPendingZoom(
-        self.user_zoom,
-        self.user_zoom_target,
+        self.scale.user_zoom,
+        self.scale.user_zoom_target,
         now,
-        self.last_zoom_request_time,
-        self.last_zoom_apply_time,
+        self.scale.last_zoom_request_time,
+        self.scale.last_zoom_apply_time,
         0.04,
         0.02,
     );
     if (!result.changed) return false;
-    self.user_zoom = result.next_zoom;
+    self.scale.user_zoom = result.next_zoom;
     const log = app_logger.logger("ui.scale");
-    const layout_size = self.base_font_size * self.ui_scale * self.user_zoom;
-    const raster_size = layout_size * self.render_scale;
+    const layout_size = self.base_font_size * self.scale.ui_scale * self.scale.user_zoom;
+    const raster_size = layout_size * self.scale.render_scale;
     log.logf(.info, "ui_zoom window={d:.3} render={d:.3} user_zoom={d:.3} font={d:.2}->{d:.2}", .{
-        self.ui_scale,
-        self.render_scale,
-        self.user_zoom,
+        self.scale.ui_scale,
+        self.scale.render_scale,
+        self.scale.user_zoom,
         self.font_size,
         layout_size,
     });
@@ -200,16 +211,16 @@ pub fn applyPendingZoom(self: anytype, now: f64) !bool {
         "ui_zoom_effective base={d:.2} ui={d:.3} zoom={d:.3} target={d:.3} render={d:.3} font={d:.2} term_cell={d:.2}x{d:.2}",
         .{
             self.base_font_size,
-            self.ui_scale,
-            self.user_zoom,
-            self.user_zoom_target,
-            self.render_scale,
+            self.scale.ui_scale,
+            self.scale.user_zoom,
+            self.scale.user_zoom_target,
+            self.scale.render_scale,
             self.font_size,
             self.terminal_cell_width,
             self.terminal_cell_height,
         },
     );
-    self.last_zoom_apply_time = result.apply_time;
+    self.scale.last_zoom_apply_time = result.apply_time;
     return true;
 }
 

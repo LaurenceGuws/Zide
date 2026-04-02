@@ -7,13 +7,30 @@ const iface = @import("interface.zig");
 
 const Renderer = renderer_root.Renderer;
 
+pub const FontConfigState = struct {
+    app_font_path: [*:0]const u8,
+    app_font_path_owned: ?[]u8 = null,
+    editor_font_path: [*:0]const u8,
+    editor_font_path_owned: ?[]u8 = null,
+    terminal_font_path: [*:0]const u8,
+    terminal_font_path_owned: ?[]u8 = null,
+    terminal_disable_ligatures: renderer_root.TerminalDisableLigaturesStrategy = .never,
+    terminal_font_features_raw: ?[]u8 = null,
+    terminal_font_features: std.ArrayListUnmanaged(terminal_font_mod.c.hb_feature_t) = .{},
+    editor_disable_ligatures: renderer_root.TerminalDisableLigaturesStrategy = .never,
+    editor_font_features_raw: ?[]u8 = null,
+    editor_font_features: std.ArrayListUnmanaged(terminal_font_mod.c.hb_feature_t) = .{},
+    font_rendering: terminal_font_mod.RenderingOptions = .{},
+    font_cache: std.AutoHashMap(u32, *TerminalFont),
+};
+
 const FontInitResult = struct {
     font: TerminalFont,
     metrics: Renderer.ScaledFontMetrics,
 };
 
 fn initFont(renderer: anytype, path: [*:0]const u8, layout_size: f32) !FontInitResult {
-    const render_scale = if (renderer.render_scale > 0.0) renderer.render_scale else 1.0;
+    const render_scale = if (renderer.scale.render_scale > 0.0) renderer.scale.render_scale else 1.0;
     const raster_size = layout_size * render_scale;
     var font = try TerminalFont.init(
         renderer.allocator,
@@ -26,7 +43,7 @@ fn initFont(renderer: anytype, path: [*:0]const u8, layout_size: f32) !FontInitR
         iface.UNICODE_SANS_PATH,
         iface.EMOJI_COLOR_FALLBACK_PATH,
         iface.EMOJI_TEXT_FALLBACK_PATH,
-        renderer.font_rendering,
+        renderer.font_config.font_rendering,
     );
     font.render_scale = render_scale;
     font.setAtlasFilterPoint();
@@ -55,32 +72,32 @@ fn setOwnedFontPath(renderer: anytype, owned_slot: *?[]u8, path_slot: *[*:0]cons
 
 pub fn initFonts(renderer: anytype) !void {
     const log = app_logger.logger("renderer.font");
-    const render_scale = if (renderer.render_scale > 0.0) renderer.render_scale else 1.0;
+    const render_scale = if (renderer.scale.render_scale > 0.0) renderer.scale.render_scale else 1.0;
 
     log.logf(
         .info,
         "initFonts app_path={s} app_base={d:.2} editor_path={s} editor_base={d:.2} terminal_path={s} terminal_base={d:.2} render_scale={d:.3} hinting={s} autohint={d} lcd={d}",
         .{
-            renderer.app_font_path,
+            renderer.font_config.app_font_path,
             renderer.font_size,
-            renderer.editor_font_path,
+            renderer.font_config.editor_font_path,
             renderer.editor_font_size,
-            renderer.terminal_font_path,
+            renderer.font_config.terminal_font_path,
             renderer.terminal_font_size,
             render_scale,
-            @tagName(renderer.font_rendering.hinting),
-            @intFromBool(renderer.font_rendering.autohint),
-            @intFromBool(renderer.font_rendering.lcd),
+            @tagName(renderer.font_config.font_rendering.hinting),
+            @intFromBool(renderer.font_config.font_rendering.autohint),
+            @intFromBool(renderer.font_config.font_rendering.lcd),
         },
     );
 
-    var app_init = try initFont(renderer, renderer.app_font_path, renderer.font_size);
+    var app_init = try initFont(renderer, renderer.font_config.app_font_path, renderer.font_size);
     errdefer app_init.font.deinit();
-    var editor_init = try initFont(renderer, renderer.editor_font_path, renderer.editor_font_size);
+    var editor_init = try initFont(renderer, renderer.font_config.editor_font_path, renderer.editor_font_size);
     errdefer editor_init.font.deinit();
-    var terminal_init = try initFont(renderer, renderer.terminal_font_path, renderer.terminal_font_size);
+    var terminal_init = try initFont(renderer, renderer.font_config.terminal_font_path, renderer.terminal_font_size);
     errdefer terminal_init.font.deinit();
-    var icon_init = try initFont(renderer, renderer.app_font_path, renderer.font_size * 2.0);
+    var icon_init = try initFont(renderer, renderer.font_config.app_font_path, renderer.font_size * 2.0);
     errdefer icon_init.font.deinit();
 
     renderer.app_font = app_init.font;
@@ -124,11 +141,11 @@ pub fn initFonts(renderer: anytype) !void {
 
 pub fn loadFont(renderer: anytype, path: [*:0]const u8, size: f32) void {
     const log = app_logger.logger("renderer.font");
-    if (renderer.app_font_path_owned) |owned| {
+    if (renderer.font_config.app_font_path_owned) |owned| {
         renderer.allocator.free(owned);
-        renderer.app_font_path_owned = null;
+        renderer.font_config.app_font_path_owned = null;
     }
-    renderer.app_font_path = path;
+    renderer.font_config.app_font_path = path;
     renderer.base_font_size = size;
     applyFontScale(renderer) catch |err| {
         log.logf(.warning, "load font apply scale failed err={s}", .{@errorName(err)});
@@ -136,15 +153,15 @@ pub fn loadFont(renderer: anytype, path: [*:0]const u8, size: f32) void {
 }
 
 pub fn setFontConfig(renderer: anytype, app_path: ?[]const u8, app_size: ?f32, editor_path: ?[]const u8, editor_size: ?f32, terminal_path: ?[]const u8, terminal_size: ?f32) !void {
-    if (app_path) |raw| try setOwnedFontPath(renderer, &renderer.app_font_path_owned, &renderer.app_font_path, raw);
+    if (app_path) |raw| try setOwnedFontPath(renderer, &renderer.font_config.app_font_path_owned, &renderer.font_config.app_font_path, raw);
     if (app_size) |value| {
         if (value > 0.0) renderer.base_font_size = value;
     }
-    if (editor_path) |raw| try setOwnedFontPath(renderer, &renderer.editor_font_path_owned, &renderer.editor_font_path, raw);
+    if (editor_path) |raw| try setOwnedFontPath(renderer, &renderer.font_config.editor_font_path_owned, &renderer.font_config.editor_font_path, raw);
     if (editor_size) |value| {
         if (value > 0.0) renderer.editor_base_font_size = value;
     }
-    if (terminal_path) |raw| try setOwnedFontPath(renderer, &renderer.terminal_font_path_owned, &renderer.terminal_font_path, raw);
+    if (terminal_path) |raw| try setOwnedFontPath(renderer, &renderer.font_config.terminal_font_path_owned, &renderer.font_config.terminal_font_path, raw);
     if (terminal_size) |value| {
         if (value > 0.0) renderer.terminal_base_font_size = value;
     }
@@ -152,16 +169,16 @@ pub fn setFontConfig(renderer: anytype, app_path: ?[]const u8, app_size: ?f32, e
 }
 
 pub fn applyFontScale(renderer: anytype) !void {
-    renderer.font_size = renderer.base_font_size * renderer.ui_scale * renderer.user_zoom;
-    renderer.editor_font_size = renderer.editor_base_font_size * renderer.ui_scale * renderer.user_zoom;
-    renderer.terminal_font_size = renderer.terminal_base_font_size * renderer.ui_scale * renderer.user_zoom;
+    renderer.font_size = renderer.base_font_size * renderer.scale.ui_scale * renderer.scale.user_zoom;
+    renderer.editor_font_size = renderer.editor_base_font_size * renderer.scale.ui_scale * renderer.scale.user_zoom;
+    renderer.terminal_font_size = renderer.terminal_base_font_size * renderer.scale.ui_scale * renderer.scale.user_zoom;
 
-    var font_it = renderer.font_cache.iterator();
+    var font_it = renderer.font_config.font_cache.iterator();
     while (font_it.next()) |entry| {
         entry.value_ptr.*.deinit();
         renderer.allocator.destroy(entry.value_ptr.*);
     }
-    renderer.font_cache.clearRetainingCapacity();
+    renderer.font_config.font_cache.clearRetainingCapacity();
 
     renderer.app_font.deinit();
     renderer.editor_font.deinit();
@@ -175,7 +192,7 @@ pub fn fontForSize(renderer: anytype, size: f32) ?*TerminalFont {
     if (std.math.approxEqAbs(f32, size, renderer.font_size, 0.01)) return &renderer.app_font;
     if (std.math.approxEqAbs(f32, size, renderer.icon_font_size, 0.01)) return &renderer.icon_font;
     const key: u32 = @intFromFloat(std.math.round(size));
-    if (renderer.font_cache.get(key)) |font_ptr| return font_ptr;
+    if (renderer.font_config.font_cache.get(key)) |font_ptr| return font_ptr;
 
     const font_ptr = renderer.allocator.create(TerminalFont) catch |err| {
         log.logf(.warning, "font cache alloc failed size_key={d} err={s}", .{ key, @errorName(err) });
@@ -183,8 +200,8 @@ pub fn fontForSize(renderer: anytype, size: f32) ?*TerminalFont {
     };
     font_ptr.* = TerminalFont.init(
         renderer.allocator,
-        renderer.app_font_path,
-        @as(f32, @floatFromInt(key)) * renderer.render_scale,
+        renderer.font_config.app_font_path,
+        @as(f32, @floatFromInt(key)) * renderer.scale.render_scale,
         iface.SYMBOLS_FALLBACK_PATH,
         iface.UNICODE_SYMBOLS2_PATH,
         iface.UNICODE_SYMBOLS_PATH,
@@ -192,14 +209,14 @@ pub fn fontForSize(renderer: anytype, size: f32) ?*TerminalFont {
         iface.UNICODE_SANS_PATH,
         iface.EMOJI_COLOR_FALLBACK_PATH,
         iface.EMOJI_TEXT_FALLBACK_PATH,
-        renderer.font_rendering,
+        renderer.font_config.font_rendering,
     ) catch {
         renderer.allocator.destroy(font_ptr);
         return null;
     };
-    font_ptr.render_scale = renderer.render_scale;
+    font_ptr.render_scale = renderer.scale.render_scale;
     font_ptr.setAtlasFilterPoint();
-    renderer.font_cache.put(key, font_ptr) catch |err| {
+    renderer.font_config.font_cache.put(key, font_ptr) catch |err| {
         log.logf(.warning, "font cache insert failed size_key={d} err={s}", .{ key, @errorName(err) });
         font_ptr.deinit();
         renderer.allocator.destroy(font_ptr);

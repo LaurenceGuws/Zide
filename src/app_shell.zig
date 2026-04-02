@@ -1,5 +1,6 @@
 const std = @import("std");
 const r = @import("ui/renderer.zig");
+const scene_frame_runtime = @import("ui/renderer/scene_frame_runtime.zig");
 const iface = @import("ui/renderer/interface.zig");
 const window = @import("platform/window_metrics.zig");
 const platform_input_events = @import("platform/input_events.zig");
@@ -169,7 +170,7 @@ pub const Shell = struct {
     }
 
     pub fn windowFocused(self: *Shell) bool {
-        return self.renderer.window_focused;
+        return self.renderer.windowFocused();
     }
 
     pub fn requestClose(self: *Shell) void {
@@ -325,6 +326,22 @@ pub const Shell = struct {
         return self.renderer.submitFrame();
     }
 
+    pub fn armPresentCapture(self: *Shell, path: []const u8) void {
+        scene_frame_runtime.armPresentCapture(self.renderer, path);
+    }
+
+    pub fn lastPresentTrace(self: *const Shell) r.PresentTrace {
+        return scene_frame_runtime.lastPresentTrace(self.renderer);
+    }
+
+    pub fn dumpWindowScreenshotPpm(self: *Shell, path: []const u8) !void {
+        try scene_frame_runtime.dumpWindowScreenshotPpm(self.renderer, path);
+    }
+
+    pub fn dumpWindowScreenshotPpmSized(self: *Shell, path: []const u8, out_width: i32, out_height: i32) !void {
+        try scene_frame_runtime.dumpWindowScreenshotPpmSized(self.renderer, path, out_width, out_height);
+    }
+
     pub fn beginClip(self: *Shell, x: i32, y: i32, w: i32, h: i32) void {
         self.renderer.beginClip(x, y, w, h);
     }
@@ -403,6 +420,30 @@ pub const Shell = struct {
 
     pub fn getTextPressed(self: *Shell) ?platform_input_events.TextPress {
         return self.renderer.getTextPressed();
+    }
+
+    pub fn getFocusEvent(self: *Shell) ?bool {
+        return self.renderer.getFocusEvent();
+    }
+
+    pub fn getTextComposition(self: *Shell) r.Renderer.TextComposition {
+        return self.renderer.getTextComposition();
+    }
+
+    pub fn getKeyPressed(self: *Shell) ?platform_input_events.KeyPress {
+        return self.renderer.getKeyPressed();
+    }
+
+    pub fn isKeyReleased(self: *Shell, key: i32) bool {
+        return self.renderer.isKeyReleased(key);
+    }
+
+    pub fn mouseButtonClicks(self: *Shell, button: i32) u8 {
+        return self.renderer.mouseButtonClicks(button);
+    }
+
+    pub fn mouseButtonPressPos(self: *Shell, button: i32) ?MousePos {
+        return self.renderer.mouseButtonPressPos(button);
     }
 
     pub fn setClipboardText(self: *Shell, text: [*:0]const u8) void {

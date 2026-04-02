@@ -6,17 +6,45 @@ const texture_draw = @import("texture_draw.zig");
 const draw_ops = @import("draw_ops.zig");
 const app_logger = @import("../../app_logger.zig");
 const types = @import("types.zig");
+const screenshot = @import("screenshot.zig");
 const renderer_root = @import("../renderer.zig");
 
 const Color = renderer_root.Color;
-const FrameSubmission = renderer_root.FrameSubmission;
 const SceneTargetContract = renderer_root.SceneTargetContract;
 const SceneTargetInvalidation = renderer_root.SceneTargetInvalidation;
 const WindowSizes = renderer_root.WindowSizes;
 
+pub const FrameSubmission = struct {
+    succeeded: bool,
+    sequence: u64,
+};
+
+pub const PresentTrace = struct {
+    frame_seq: u64 = 0,
+    editor_texture_update_count: usize = 0,
+    editor_texture_blit_count: usize = 0,
+    composition_clip_count: usize = 0,
+    composition_full_pane_clear: bool = false,
+    captured_path: ?[]const u8 = null,
+};
+
+pub const PresentState = struct {
+    frame_seq: u64 = 0,
+    submission_sequence: u64 = 0,
+    last_present_counter: u64 = 0,
+    last_present_gap_ms: f64 = 0.0,
+    last_swap_ms: f64 = 0.0,
+    scene_frame_active: bool = false,
+    trace_current: PresentTrace = .{},
+    trace_last: PresentTrace = .{},
+    capture_path: ?[]const u8 = null,
+    capture_armed: bool = false,
+    capture_frame_seq: u64 = 0,
+};
+
 pub fn beginFrame(self: anytype) void {
-    self.frame_seq +%= 1;
-    self.present_trace_current = .{ .frame_seq = self.frame_seq };
+    self.present.frame_seq +%= 1;
+    self.present.trace_current = .{ .frame_seq = self.present.frame_seq };
     const sizes = refreshWindowSizes(self.window);
     self.width = sizes.width;
     self.height = sizes.height;
@@ -27,8 +55,8 @@ pub fn beginFrame(self: anytype) void {
 
     self.text_bg_rgba = .{ .r = 0, .g = 0, .b = 0, .a = 0 };
 
-    self.scene_frame_active = beginSceneFrame(self);
-    if (!self.scene_frame_active) self.bindDefaultTarget();
+    self.present.scene_frame_active = beginSceneFrame(self);
+    if (!self.present.scene_frame_active) self.bindDefaultTarget();
     self.updateMouseScale();
     gl.Disable(gl.c.GL_SCISSOR_TEST);
 
@@ -43,17 +71,17 @@ pub fn beginFrame(self: anytype) void {
 }
 
 pub fn submitFrame(self: anytype) FrameSubmission {
-    if (self.scene_frame_active) drawSceneTargetToDefault(self);
-    if (self.present_capture_armed) {
-        if (self.present_capture_path) |path| {
-            self.dumpWindowScreenshotPpm(path) catch |err| {
+    if (self.present.scene_frame_active) drawSceneTargetToDefault(self);
+    if (self.present.capture_armed) {
+        if (self.present.capture_path) |path| {
+            dumpWindowScreenshotPpm(self, path) catch |err| {
                 app_logger.logger("renderer.present").logf(.warning, "capture failed frame_seq={d} path={s} err={s}", .{
-                    self.frame_seq,
+                    self.present.frame_seq,
                     path,
                     @errorName(err),
                 });
             };
-            self.present_trace_current.captured_path = path;
+            self.present.trace_current.captured_path = path;
         }
     }
     const swap_start = sdl_api.getPerformanceCounter();
@@ -62,17 +90,82 @@ pub fn submitFrame(self: anytype) FrameSubmission {
         app_logger.logger("sdl.gl").logStdout(.warning, "SDL_GL_SwapWindow failed err={s}", .{sdl_api.getError()});
     }
     const swap_end = sdl_api.getPerformanceCounter();
-    self.last_swap_ms = performanceDeltaMs(swap_start, swap_end, self.perf_freq);
-    self.scene_frame_active = false;
-    self.present_trace_last = self.present_trace_current;
-    self.present_capture_path = null;
-    self.present_capture_armed = false;
-    self.present_capture_frame_seq = 0;
-    if (swap_ok) self.submission_sequence += 1;
+    self.present.last_swap_ms = performanceDeltaMs(swap_start, swap_end, self.perf_freq);
+    self.present.scene_frame_active = false;
+    self.present.trace_last = self.present.trace_current;
+    self.present.capture_path = null;
+    self.present.capture_armed = false;
+    self.present.capture_frame_seq = 0;
+    if (swap_ok) self.present.submission_sequence += 1;
     return .{
         .succeeded = swap_ok,
-        .sequence = self.submission_sequence,
+        .sequence = self.present.submission_sequence,
     };
+}
+
+pub fn restoreMainCompositionTarget(self: anytype) void {
+    if (self.present.scene_frame_active) {
+        if (!beginSceneFrame(self)) {
+            self.present.scene_frame_active = false;
+            self.bindDefaultTarget();
+        }
+        return;
+    }
+    self.bindDefaultTarget();
+}
+
+pub fn dumpWindowScreenshotPpm(self: anytype, path: []const u8) !void {
+    self.bindDefaultTarget();
+    try screenshot.dumpFramebufferPpmScaled(
+        self.allocator,
+        self.render_width,
+        self.render_height,
+        self.width,
+        self.height,
+        path,
+    );
+}
+
+pub fn dumpWindowScreenshotPpmSized(self: anytype, path: []const u8, out_width: i32, out_height: i32) !void {
+    if (out_width <= 0 or out_height <= 0) {
+        try dumpWindowScreenshotPpm(self, path);
+        return;
+    }
+    self.bindDefaultTarget();
+    try screenshot.dumpFramebufferPpmScaled(
+        self.allocator,
+        self.render_width,
+        self.render_height,
+        out_width,
+        out_height,
+        path,
+    );
+}
+
+pub fn armPresentCapture(self: anytype, path: []const u8) void {
+    self.present.capture_path = path;
+    self.present.capture_armed = true;
+    self.present.capture_frame_seq = self.present.frame_seq;
+}
+
+pub fn lastPresentTrace(self: anytype) PresentTrace {
+    return self.present.trace_last;
+}
+
+pub fn noteCompositionFullPaneClear(self: anytype) void {
+    self.present.trace_current.composition_full_pane_clear = true;
+}
+
+pub fn noteCompositionClip(self: anytype) void {
+    self.present.trace_current.composition_clip_count += 1;
+}
+
+pub fn noteEditorTextureUpdate(self: anytype) void {
+    self.present.trace_current.editor_texture_update_count += 1;
+}
+
+pub fn noteEditorTextureBlit(self: anytype) void {
+    self.present.trace_current.editor_texture_blit_count += 1;
 }
 
 pub fn refreshSceneTargetContract(self: anytype) void {

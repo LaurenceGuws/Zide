@@ -14,11 +14,10 @@ var last_mouse_pos_raw: ?shared_types.input.MousePos = null;
 pub fn buildInputBatch(allocator: std.mem.Allocator, shell: *app_shell.Shell) shared_types.input.InputBatch {
     var batch = shared_types.input.InputBatch.init(allocator);
     const log = app_logger.logger("input.batch");
-    const r = shell.rendererPtr();
 
-    const pos = r.getMousePos();
+    const pos = shell.getMousePos();
     batch.mouse_pos = .{ .x = pos.x, .y = pos.y };
-    const pos_raw = r.getMousePosRaw();
+    const pos_raw = shell.getMousePosRaw();
     batch.mouse_pos_raw = .{ .x = pos_raw.x, .y = pos_raw.y };
     if (last_mouse_pos_raw) |prev| {
         batch.mouse_moved = prev.x != batch.mouse_pos_raw.x or prev.y != batch.mouse_pos_raw.y;
@@ -26,39 +25,39 @@ pub fn buildInputBatch(allocator: std.mem.Allocator, shell: *app_shell.Shell) sh
         batch.mouse_moved = false;
     }
     last_mouse_pos_raw = batch.mouse_pos_raw;
-    batch.scroll = .{ .x = 0, .y = r.getMouseWheelMove() };
+    batch.scroll = .{ .x = 0, .y = shell.getMouseWheelMove() };
 
-    batch.mouse_down[@intFromEnum(shared_types.input.MouseButton.left)] = r.isMouseButtonDown(app_shell.MOUSE_LEFT);
-    batch.mouse_down[@intFromEnum(shared_types.input.MouseButton.middle)] = r.isMouseButtonDown(app_shell.MOUSE_MIDDLE);
-    batch.mouse_down[@intFromEnum(shared_types.input.MouseButton.right)] = r.isMouseButtonDown(app_shell.MOUSE_RIGHT);
+    batch.mouse_down[@intFromEnum(shared_types.input.MouseButton.left)] = shell.isMouseButtonDown(app_shell.MOUSE_LEFT);
+    batch.mouse_down[@intFromEnum(shared_types.input.MouseButton.middle)] = shell.isMouseButtonDown(app_shell.MOUSE_MIDDLE);
+    batch.mouse_down[@intFromEnum(shared_types.input.MouseButton.right)] = shell.isMouseButtonDown(app_shell.MOUSE_RIGHT);
 
-    batch.mouse_pressed[@intFromEnum(shared_types.input.MouseButton.left)] = r.isMouseButtonPressed(app_shell.MOUSE_LEFT);
-    batch.mouse_pressed[@intFromEnum(shared_types.input.MouseButton.middle)] = r.isMouseButtonPressed(app_shell.MOUSE_MIDDLE);
-    batch.mouse_pressed[@intFromEnum(shared_types.input.MouseButton.right)] = r.isMouseButtonPressed(app_shell.MOUSE_RIGHT);
+    batch.mouse_pressed[@intFromEnum(shared_types.input.MouseButton.left)] = shell.isMouseButtonPressed(app_shell.MOUSE_LEFT);
+    batch.mouse_pressed[@intFromEnum(shared_types.input.MouseButton.middle)] = shell.isMouseButtonPressed(app_shell.MOUSE_MIDDLE);
+    batch.mouse_pressed[@intFromEnum(shared_types.input.MouseButton.right)] = shell.isMouseButtonPressed(app_shell.MOUSE_RIGHT);
 
-    batch.mouse_released[@intFromEnum(shared_types.input.MouseButton.left)] = r.isMouseButtonReleased(app_shell.MOUSE_LEFT);
-    batch.mouse_released[@intFromEnum(shared_types.input.MouseButton.middle)] = r.isMouseButtonReleased(app_shell.MOUSE_MIDDLE);
-    batch.mouse_released[@intFromEnum(shared_types.input.MouseButton.right)] = r.isMouseButtonReleased(app_shell.MOUSE_RIGHT);
-    batch.mouse_clicks[@intFromEnum(shared_types.input.MouseButton.left)] = r.mouseButtonClicks(app_shell.MOUSE_LEFT);
-    batch.mouse_clicks[@intFromEnum(shared_types.input.MouseButton.middle)] = r.mouseButtonClicks(app_shell.MOUSE_MIDDLE);
-    batch.mouse_clicks[@intFromEnum(shared_types.input.MouseButton.right)] = r.mouseButtonClicks(app_shell.MOUSE_RIGHT);
-    if (r.mouseButtonPressPos(app_shell.MOUSE_LEFT)) |pos_press| {
+    batch.mouse_released[@intFromEnum(shared_types.input.MouseButton.left)] = shell.isMouseButtonReleased(app_shell.MOUSE_LEFT);
+    batch.mouse_released[@intFromEnum(shared_types.input.MouseButton.middle)] = shell.isMouseButtonReleased(app_shell.MOUSE_MIDDLE);
+    batch.mouse_released[@intFromEnum(shared_types.input.MouseButton.right)] = shell.isMouseButtonReleased(app_shell.MOUSE_RIGHT);
+    batch.mouse_clicks[@intFromEnum(shared_types.input.MouseButton.left)] = shell.mouseButtonClicks(app_shell.MOUSE_LEFT);
+    batch.mouse_clicks[@intFromEnum(shared_types.input.MouseButton.middle)] = shell.mouseButtonClicks(app_shell.MOUSE_MIDDLE);
+    batch.mouse_clicks[@intFromEnum(shared_types.input.MouseButton.right)] = shell.mouseButtonClicks(app_shell.MOUSE_RIGHT);
+    if (shell.mouseButtonPressPos(app_shell.MOUSE_LEFT)) |pos_press| {
         batch.mouse_press_pos[@intFromEnum(shared_types.input.MouseButton.left)] = .{ .x = pos_press.x, .y = pos_press.y };
     }
-    if (r.mouseButtonPressPos(app_shell.MOUSE_MIDDLE)) |pos_press| {
+    if (shell.mouseButtonPressPos(app_shell.MOUSE_MIDDLE)) |pos_press| {
         batch.mouse_press_pos[@intFromEnum(shared_types.input.MouseButton.middle)] = .{ .x = pos_press.x, .y = pos_press.y };
     }
-    if (r.mouseButtonPressPos(app_shell.MOUSE_RIGHT)) |pos_press| {
+    if (shell.mouseButtonPressPos(app_shell.MOUSE_RIGHT)) |pos_press| {
         batch.mouse_press_pos[@intFromEnum(shared_types.input.MouseButton.right)] = .{ .x = pos_press.x, .y = pos_press.y };
     }
 
     batch.mods = .{
-        .shift = r.isKeyDown(app_shell.KEY_LEFT_SHIFT) or r.isKeyDown(app_shell.KEY_RIGHT_SHIFT),
-        .alt = r.isKeyDown(app_shell.KEY_LEFT_ALT) or r.isKeyDown(app_shell.KEY_RIGHT_ALT),
-        .ctrl = r.isKeyDown(app_shell.KEY_LEFT_CONTROL) or r.isKeyDown(app_shell.KEY_RIGHT_CONTROL),
-        .super = r.isKeyDown(app_shell.KEY_LEFT_SUPER) or r.isKeyDown(app_shell.KEY_RIGHT_SUPER),
+        .shift = shell.isKeyDown(app_shell.KEY_LEFT_SHIFT) or shell.isKeyDown(app_shell.KEY_RIGHT_SHIFT),
+        .alt = shell.isKeyDown(app_shell.KEY_LEFT_ALT) or shell.isKeyDown(app_shell.KEY_RIGHT_ALT),
+        .ctrl = shell.isKeyDown(app_shell.KEY_LEFT_CONTROL) or shell.isKeyDown(app_shell.KEY_RIGHT_CONTROL),
+        .super = shell.isKeyDown(app_shell.KEY_LEFT_SUPER) or shell.isKeyDown(app_shell.KEY_RIGHT_SUPER),
         // SDL MODE (AltGr) is event-scoped; batch-level state uses right-alt as a best-effort proxy.
-        .altgr = r.isKeyDown(app_shell.KEY_RIGHT_ALT),
+        .altgr = shell.isKeyDown(app_shell.KEY_RIGHT_ALT),
     };
 
     const key_map = [_]struct { key: shared_types.input.Key, code: i32 }{
@@ -164,13 +163,13 @@ pub fn buildInputBatch(allocator: std.mem.Allocator, shell: *app_shell.Shell) sh
     };
 
     for (key_map) |entry| {
-        batch.key_down[@intFromEnum(entry.key)] = r.isKeyDown(entry.code);
-        batch.key_pressed[@intFromEnum(entry.key)] = r.isKeyPressed(entry.code);
-        batch.key_repeated[@intFromEnum(entry.key)] = r.isKeyRepeated(entry.code);
-        batch.key_released[@intFromEnum(entry.key)] = r.isKeyReleased(entry.code);
+        batch.key_down[@intFromEnum(entry.key)] = shell.isKeyDown(entry.code);
+        batch.key_pressed[@intFromEnum(entry.key)] = shell.isKeyPressed(entry.code);
+        batch.key_repeated[@intFromEnum(entry.key)] = shell.isKeyRepeated(entry.code);
+        batch.key_released[@intFromEnum(entry.key)] = shell.isKeyReleased(entry.code);
     }
 
-    while (r.getKeyPressed()) |press| {
+    while (shell.getKeyPressed()) |press| {
         const key = inputKeyFromShell(press.scancode) orelse .unknown;
         var key_mods = batch.mods;
         key_mods.altgr = sdlModHasAltGr(press.mod_bits);
@@ -190,7 +189,7 @@ pub fn buildInputBatch(allocator: std.mem.Allocator, shell: *app_shell.Shell) sh
     }
 
     for (key_map) |entry| {
-        if (!r.isKeyReleased(entry.code)) continue;
+        if (!shell.isKeyReleased(entry.code)) continue;
         batch.append(.{
             .key = .{
                 .key = entry.key,
@@ -206,7 +205,7 @@ pub fn buildInputBatch(allocator: std.mem.Allocator, shell: *app_shell.Shell) sh
         };
     }
 
-    while (r.getTextPressed()) |text_press| {
+    while (shell.getTextPressed()) |text_press| {
         batch.append(.{ .text = .{
             .codepoint = text_press.codepoint,
             .utf8_len = text_press.utf8_len,
@@ -217,13 +216,13 @@ pub fn buildInputBatch(allocator: std.mem.Allocator, shell: *app_shell.Shell) sh
         };
     }
 
-    while (r.getFocusEvent()) |focused| {
+    while (shell.getFocusEvent()) |focused| {
         batch.append(.{ .focus = focused }) catch |err| {
             log.logf(.warning, "batch append focus failed focused={d} err={s}", .{ @intFromBool(focused), @errorName(err) });
         };
     }
 
-    const composition = r.getTextComposition();
+    const composition = shell.getTextComposition();
     if (composition.active and composition.text.len > 0) {
         batch.composing_buffer.clearRetainingCapacity();
         _ = batch.composing_buffer.appendSlice(allocator, composition.text) catch |err| blk: {
