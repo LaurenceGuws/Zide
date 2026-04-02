@@ -338,11 +338,12 @@ pub const TerminalWidget = struct {
     ) DrawOutcome {
         const draw_start = app_shell.getTime();
         const handoff_log = app_logger.logger("terminal.generation_handoff");
-        var capture = terminal_publication.capturePresentation(self.session, &self.draw_cache) catch |err| {
+        const latest_capture = terminal_publication.captureLatestPresentation(self.session, &self.draw_cache) catch |err| {
             const log = app_logger.logger("terminal.ui.redraw");
             log.logf(.warning, "draw snapshot copy failed err={s}", .{@errorName(err)});
             return .{};
         };
+        const capture = latest_capture.capture;
         if (handoff_log.enabled_file or handoff_log.enabled_console) {
             const generation_state = terminal_publication.generationState(self.session);
             handoff_log.logf(
@@ -358,46 +359,20 @@ pub const TerminalWidget = struct {
                     @intFromBool(self.terminal_texture_ready),
                 },
             );
-        }
-        const published_before_draw = terminal_publication.publishedGeneration(self.session);
-        if (published_before_draw > capture.presented.generation) {
-            if (handoff_log.enabled_file or handoff_log.enabled_console) {
-                const generation_state = terminal_publication.generationState(self.session);
+            if (latest_capture.refreshed) {
                 handoff_log.logf(
                     .info,
-                    "stage=widget_pre_draw_refresh sid={x} captured={d} pub_now={d} cur_now={d} presented_now={d}",
+                    "stage=widget_prepare_latest sid={x} last_render={d} captured={d} cur={d} pub={d} presented={d} texture_ready={d}",
                     .{
                         @intFromPtr(self.session),
+                        self.last_render_generation,
                         capture.presented.generation,
-                        published_before_draw,
                         generation_state.pending,
+                        generation_state.published,
                         generation_state.presented,
+                        @intFromBool(self.terminal_texture_ready),
                     },
                 );
-            }
-            const refreshed_capture = terminal_publication.capturePresentation(self.session, &self.draw_cache) catch |err| {
-                const log = app_logger.logger("terminal.ui.redraw");
-                log.logf(.warning, "pre-draw snapshot refresh failed err={s}", .{@errorName(err)});
-                return .{};
-            };
-            if (refreshed_capture.presented.generation > capture.presented.generation) {
-                if (handoff_log.enabled_file or handoff_log.enabled_console) {
-                    const generation_state = terminal_publication.generationState(self.session);
-                    handoff_log.logf(
-                        .info,
-                        "stage=widget_prepare_latest sid={x} last_render={d} captured={d} cur={d} pub={d} presented={d} texture_ready={d}",
-                        .{
-                            @intFromPtr(self.session),
-                            self.last_render_generation,
-                            refreshed_capture.presented.generation,
-                            generation_state.pending,
-                            generation_state.published,
-                            generation_state.presented,
-                            @intFromBool(self.terminal_texture_ready),
-                        },
-                    );
-                }
-                capture = refreshed_capture;
             }
         }
         return draw_mod.drawPrepared(self, shell, x, y, width, height, input, DrawPreparation.fromCapture(draw_start, capture));

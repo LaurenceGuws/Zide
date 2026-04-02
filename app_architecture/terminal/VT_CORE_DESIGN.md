@@ -247,6 +247,13 @@ Status note, 2026-03-31:
     view" action; that now lives under
     `src/terminal/core/publication/terminal_publication.zig` as
     `bumpAndPublishCurrentViewLocked(...)`
+  - widget-side publication capture choreography is tighter too:
+    `src/ui/widgets/terminal_widget.zig` no longer hand-composes
+    `capturePresentation(...)` plus `publishedGeneration(...)` plus conditional
+    recapture for the common "prepare latest presentable capture" action; that
+    owner contract now lives under
+    `src/terminal/core/publication/terminal_publication.zig` as
+    `captureLatestPresentation(...)`
   - scrollback refresh generation policy is tighter too:
     `src/terminal/core/scrollback_view.zig` no longer decides inline whether a
     scrollback offset change should bump generation or only queue refresh; that

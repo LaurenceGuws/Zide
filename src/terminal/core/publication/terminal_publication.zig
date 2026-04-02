@@ -28,6 +28,11 @@ pub const PresentationCapture = struct {
     presented: PresentedRenderCache,
 };
 
+pub const LatestPresentationCapture = struct {
+    capture: PresentationCapture,
+    refreshed: bool,
+};
+
 pub const CachePublicationTarget = struct {
     target_index: u8,
     active_cache: *RenderCache,
@@ -550,6 +555,25 @@ pub fn capturePresentation(self: anytype, dst: *RenderCache) !PresentationCaptur
         .view_cache_ms = copy.view_cache_ms,
         .cache_copy_ms = copy.cache_copy_ms,
         .presented = copy.presented,
+    };
+}
+
+pub fn captureLatestPresentation(self: anytype, dst: *RenderCache) !LatestPresentationCapture {
+    var capture = try capturePresentation(self, dst);
+    const published_now = publishedGeneration(self);
+    if (published_now > capture.presented.generation) {
+        const refreshed_capture = try capturePresentation(self, dst);
+        if (refreshed_capture.presented.generation > capture.presented.generation) {
+            capture = refreshed_capture;
+            return .{
+                .capture = capture,
+                .refreshed = true,
+            };
+        }
+    }
+    return .{
+        .capture = capture,
+        .refreshed = false,
     };
 }
 
