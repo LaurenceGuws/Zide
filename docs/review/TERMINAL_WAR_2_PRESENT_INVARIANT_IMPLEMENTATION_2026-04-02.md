@@ -180,13 +180,10 @@ This should be downstream-facing data, not a widget convenience bool.
 
 Status:
 
-- first payload step is now in:
-  `PresentationFeedback` carries explicit retained-surface fields
-  - `retained_surface_blitted`
-  - `retained_surface_generation`
-- widget draw now populates those fields when it actually reuses/blits the
-  retained terminal surface
-- retirement behavior is intentionally unchanged in this slice
+- this transitional widget payload was useful to stage the stronger proof path,
+  but it no longer survives in the final contract
+- scene submission truth, not widget feedback, is now the retained-surface
+  authority that matters
 
 ### Slice 2: make scene composition record terminal-surface submission truth
 
@@ -236,9 +233,11 @@ But it must stop acting as terminal-present retirement authority.
 Status:
 
 - `texture_updated` is now deleted from `PresentationFeedback`
-- the remaining widget payload is limited to retained-surface-local detail and
-  alt-exit timing, while scene submission truth remains the retirement
-  authority
+- retained-surface widget payload is also deleted now that renderer submission
+  proof is the only retirement authority
+- the remaining widget payload is limited to:
+  - presented generation metadata
+  - alt-exit timing
 
 ## Concrete Hotspots For Slice 1
 

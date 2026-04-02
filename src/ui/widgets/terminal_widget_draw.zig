@@ -155,7 +155,6 @@ pub fn drawPrepared(
     var overlay_ms: f64 = 0.0;
     var render_phase_start = draw_start;
     var outcome = DrawOutcome{ .presented = preparation.presented };
-    var retained_surface_generation: ?u64 = null;
     defer {
         const draw_end = app_shell.getTime();
         const draw_ms_total = time_utils.secondsToMs(draw_end - draw_start);
@@ -204,10 +203,6 @@ pub fn drawPrepared(
             bg_color,
         );
         retained_targets_runtime.drawTerminalSurface(r, x, y, width, height, self.last_render_generation);
-        if (self.terminal_texture_ready) {
-            outcome.retained_surface_blitted = true;
-            outcome.retained_surface_generation = self.last_render_generation;
-        }
         return outcome;
     }
     const draw_start_time = if (alt_exit) app_shell.getTime() else 0;
@@ -578,8 +573,6 @@ pub fn drawPrepared(
         }
         if (self.terminal_texture_ready and visible_w > 0 and visible_h > 0) {
             retained_targets_runtime.drawTerminalSurface(r, base_x, base_y, viewport_w, viewport_h, self.last_render_generation);
-            retained_surface_generation = self.last_render_generation;
-            outcome.retained_surface_blitted = true;
         }
     }
     texture_update_ms = time_utils.secondsToMs(app_shell.getTime() - texture_phase_start);
@@ -606,7 +599,6 @@ pub fn drawPrepared(
         cursor_style,
     );
 
-    outcome.retained_surface_generation = retained_surface_generation;
     overlay_ms = time_utils.secondsToMs(app_shell.getTime() - overlay_phase_start);
 
     if (alt_exit) {
