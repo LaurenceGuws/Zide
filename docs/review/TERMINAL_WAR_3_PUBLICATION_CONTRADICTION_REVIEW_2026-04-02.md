@@ -136,3 +136,15 @@ Rerank point, later on 2026-04-02:
   ownership problem below the export boundary
 - that means the next move should be a fresh War 3 rerank, not blind
   continuation inside publication by momentum
+
+Status note, later on 2026-04-02 again after rerank:
+
+- sync-updates no longer lives on the publication export edge
+- that slab now lives in
+  [sync_updates.zig](/home/home/personal/zide/src/terminal/core/protocol/sync_updates.zig)
+- protocol callers and runtime tests now use that semantic owner directly
+- `terminal_publication.zig` now reads even more narrowly as:
+  - snapshot/render-cache export
+  - render-cache lookup for snapshot diff paths
+  - presentation feedback aliases
+- publication is no longer the sync-updates semantic owner by habit

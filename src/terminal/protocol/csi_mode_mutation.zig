@@ -1,6 +1,6 @@
 const input_modes = @import("../core/input_modes.zig");
 const parser_csi = @import("../parser/csi.zig");
-const terminal_publication = @import("../core/publication/terminal_publication.zig");
+const sync_updates = @import("../core/protocol/sync_updates.zig");
 const terminal_core_modes = @import("../core/terminal_core_modes.zig");
 const config = @import("../core/session/config.zig");
 const mode_effects = @import("../core/session/mode_effects.zig");
@@ -67,7 +67,7 @@ fn applyPrivateModeMutation(self: anytype, param_len: usize, params: [parser_csi
             },
             1049 => if (enabled) mode_effects.enterAltScreen(self, true, true) else mode_effects.exitAltScreen(self, true),
             2004 => input_modes.setBracketedPasteLocked(self, enabled),
-            2026 => terminal_publication.setSyncUpdatesLocked(self, enabled),
+            2026 => sync_updates.setLocked(self, enabled),
             2027 => {
                 self.interaction.grapheme_cluster_shaping_2027 = enabled;
                 self.core.primary.setGraphemeClusterShaping2027(enabled);

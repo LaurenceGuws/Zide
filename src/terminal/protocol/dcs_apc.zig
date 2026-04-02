@@ -1,6 +1,6 @@
 const std = @import("std");
 const app_logger = @import("../../app_logger.zig");
-const terminal_publication = @import("../core/publication/terminal_publication.zig");
+const sync_updates = @import("../core/protocol/sync_updates.zig");
 const kitty_mod = @import("../kitty/graphics.zig");
 const terminal_core_protocol = @import("../core/protocol/terminal_core_protocol.zig");
 
@@ -182,8 +182,8 @@ fn handleLegacySyncUpdates(self: anytype, payload: []const u8) bool {
         return false;
     };
     switch (mode) {
-        1 => terminal_publication.setSyncUpdatesLocked(self, true),
-        2 => terminal_publication.setSyncUpdatesLocked(self, false),
+        1 => sync_updates.setLocked(self, true),
+        2 => sync_updates.setLocked(self, false),
         else => return false,
     }
     return true;

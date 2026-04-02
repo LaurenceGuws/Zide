@@ -107,26 +107,6 @@ fn clearPublishedDamageLocked(self: anytype) void {
     }
 }
 
-pub fn syncUpdatesActive(self: anytype) bool {
-    return self.core.syncUpdatesActive();
-}
-
-pub fn setSyncUpdates(self: anytype, enabled: bool) void {
-    self.lock();
-    defer self.unlock();
-    setSyncUpdatesLocked(self, enabled);
-}
-
-pub fn setSyncUpdatesLocked(self: anytype, enabled: bool) void {
-    if (!self.core.setSyncUpdates(enabled)) return;
-    const cache = renderCache(self);
-    const presented_generation = presentedGeneration(self);
-    if (cache.generation == presented_generation and cache.dirty == .none) return;
-    _ = publication_flow.bumpGeneration(self);
-    const offset: usize = self.core.scrollbackOffset();
-    view_cache.updateViewCacheNoLockTagged(self, pendingGeneration(self), offset, "set_sync_updates");
-}
-
 pub fn pendingGeneration(self: anytype) u64 {
     return publication_flow.pendingGeneration(self);
 }

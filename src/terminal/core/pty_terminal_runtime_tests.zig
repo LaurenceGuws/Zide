@@ -4,6 +4,7 @@ const snapshot_mod = @import("publication/snapshot.zig");
 const render_cache = @import("publication/render_cache.zig");
 const terminal_publication = @import("publication/terminal_publication.zig");
 const publication_flow = @import("publication/publication_flow.zig");
+const sync_updates = @import("protocol/sync_updates.zig");
 const terminal_core_feed = @import("protocol/terminal_core_feed.zig");
 const terminal_core_protocol = @import("protocol/terminal_core_protocol.zig");
 const input_modes = @import("input_modes.zig");
@@ -378,7 +379,7 @@ test "bottom-edge in-place redraw keeps blank separator rows dirty" {
     debugSetCursor(&session, 67, 0);
 
     terminal_core_feed.feedOutputBytes(session, "\x1b[?2026h");
-    try std.testing.expect(terminal_publication.syncUpdatesActive(session));
+    try std.testing.expect(sync_updates.active(session));
 
     terminal_core_feed.feedOutputBytes(session, "\x1b[Jfirst row\nsecond row\nthird row\nfourth row\r\x1bM\x1bM\x1bM\x1bM");
 
@@ -418,7 +419,7 @@ test "synchronized zig progress redraw does not retire intermediate scrollback" 
     debugSetCursor(&session, 67, 0);
 
     terminal_core_feed.feedOutputBytes(session, "\x1b[?2026h");
-    try std.testing.expect(terminal_publication.syncUpdatesActive(session));
+    try std.testing.expect(sync_updates.active(session));
 
     terminal_core_feed.feedOutputBytes(session, "\x1b[Jbuild one\nitem a\n\r\x1bM\x1bM");
     terminal_core_feed.feedOutputBytes(session, "\x1b[Jbuild two\nitem b\n\r\x1bM\x1bM");
@@ -426,7 +427,7 @@ test "synchronized zig progress redraw does not retire intermediate scrollback" 
     try std.testing.expectEqual(@as(usize, 0), session.scrollbackInfo().total_rows);
 
     terminal_core_feed.feedOutputBytes(session, "\x1b[?2026l");
-    try std.testing.expect(!terminal_publication.syncUpdatesActive(session));
+    try std.testing.expect(!sync_updates.active(session));
 
     const snapshot = session.snapshot();
     try std.testing.expectEqual(@as(usize, 0), snapshot.scrollback_count);
@@ -455,7 +456,7 @@ test "synchronized top-anchored partial scroll region retires rows into scrollba
     }
 
     terminal_core_feed.feedOutputBytes(session, "\x1b[?2026h");
-    try std.testing.expect(terminal_publication.syncUpdatesActive(session));
+    try std.testing.expect(sync_updates.active(session));
 
     terminal_core_feed.feedOutputBytes(session, "\x1b[1;3r");
     terminal_core_protocol.scrollRegionUpWithOrigin(session, 1, "test.sync_top_anchored_scroll_region");
@@ -482,7 +483,7 @@ test "single-chunk synchronized progress sequence keeps newline scroll inside sy
     terminal_core_feed.feedOutputBytes(session, "\x1b[?2026h\x1b[Jbuild one\nitem a\r\x1bM\x1b[?2026l");
 
     try std.testing.expectEqual(@as(usize, 0), session.scrollbackInfo().total_rows);
-    try std.testing.expect(!terminal_publication.syncUpdatesActive(session));
+    try std.testing.expect(!sync_updates.active(session));
 
     const snapshot = session.snapshot();
     try std.testing.expectEqual(@as(usize, 0), snapshot.scrollback_count);
@@ -526,7 +527,7 @@ test "real zig redraw chunk rewrites in place at bottom edge" {
     );
 
     try std.testing.expectEqual(@as(usize, 0), session.scrollbackInfo().total_rows);
-    try std.testing.expect(!terminal_publication.syncUpdatesActive(session));
+    try std.testing.expect(!sync_updates.active(session));
 
     const snapshot = session.snapshot();
     try expectSnapshotRow(snapshot, 63, "[3] Compile Build Script                                                         ");
@@ -726,7 +727,7 @@ test "acknowledgePresentedGeneration derives sync dirty retirement from cache" {
     try std.testing.expectEqual(Dirty.none, session.primary.grid.dirty);
 
     session.primary.markDirtyAllWithReason(.unknown, @src());
-    terminal_publication.setSyncUpdates(session, true);
+    sync_updates.set(session, true);
     _ = publication_flow.bumpAndPublishCurrentViewLocked(session, "test_publication");
     const sync_generation = terminal_publication.renderCache(session).generation;
     try std.testing.expect(terminal_publication.acknowledgePresentedGeneration(session, sync_generation));
@@ -925,10 +926,10 @@ test "setSyncUpdates enable does not force redraw when screen is otherwise clean
     session.alt.clearDirty();
     try std.testing.expect(terminal_publication.acknowledgePresentedGeneration(session, terminal_publication.renderCache(session).generation));
 
-    terminal_publication.setSyncUpdates(session, true);
+    sync_updates.set(session, true);
 
     const cache = terminal_publication.renderCache(session);
-    try std.testing.expect(terminal_publication.syncUpdatesActive(session));
+    try std.testing.expect(sync_updates.active(session));
     try std.testing.expectEqual(Dirty.none, cache.dirty);
     try std.testing.expectEqual(@as(u64, 0), cache.full_dirty_seq);
 }
@@ -950,10 +951,10 @@ test "setSyncUpdates enable does not publish dirty screen state on presented gen
     session.primary.grid.cells.items[0] = cell;
     session.primary.grid.markDirtyRange(0, 0, 0, 0);
 
-    terminal_publication.setSyncUpdates(session, true);
+    sync_updates.set(session, true);
 
     var cache = terminal_publication.renderCache(session);
-    try std.testing.expect(terminal_publication.syncUpdatesActive(session));
+    try std.testing.expect(sync_updates.active(session));
     try std.testing.expectEqual(baseline_generation, cache.generation);
     try std.testing.expectEqual(Dirty.none, cache.dirty);
 
@@ -974,16 +975,16 @@ test "setSyncUpdates disable stays clean when no buffered changes exist" {
     var session = try PtyTerminalRuntime.init(allocator, 2, 4);
     defer session.deinit();
 
-    terminal_publication.setSyncUpdates(session, true);
+    sync_updates.set(session, true);
     _ = publication_flow.bumpAndPublishCurrentViewLocked(session, "test_publication");
     session.primary.clearDirty();
     session.alt.clearDirty();
     try std.testing.expect(terminal_publication.acknowledgePresentedGeneration(session, terminal_publication.renderCache(session).generation));
 
-    terminal_publication.setSyncUpdates(session, false);
+    sync_updates.set(session, false);
 
     const cache = terminal_publication.renderCache(session);
-    try std.testing.expect(!terminal_publication.syncUpdatesActive(session));
+    try std.testing.expect(!sync_updates.active(session));
     try std.testing.expectEqual(Dirty.none, cache.dirty);
 }
 
@@ -998,7 +999,7 @@ test "setSyncUpdates disable preserves buffered partial damage" {
     session.alt.clearDirty();
     try std.testing.expect(terminal_publication.acknowledgePresentedGeneration(session, terminal_publication.renderCache(session).generation));
 
-    terminal_publication.setSyncUpdates(session, true);
+    sync_updates.set(session, true);
 
     var cell = session.primary.defaultCell();
     cell.codepoint = 'Z';
@@ -1006,10 +1007,10 @@ test "setSyncUpdates disable preserves buffered partial damage" {
     session.primary.grid.markDirtyRange(0, 0, 0, 0);
     _ = publication_flow.bumpAndPublishCurrentViewLocked(session, "test_publication");
 
-    terminal_publication.setSyncUpdates(session, false);
+    sync_updates.set(session, false);
 
     const cache = terminal_publication.renderCache(session);
-    try std.testing.expect(!terminal_publication.syncUpdatesActive(session));
+    try std.testing.expect(!sync_updates.active(session));
     try std.testing.expectEqual(Dirty.partial, cache.dirty);
     try std.testing.expectEqual(@as(usize, 0), cache.damage.start_row);
     try std.testing.expectEqual(@as(usize, 0), cache.damage.end_row);
