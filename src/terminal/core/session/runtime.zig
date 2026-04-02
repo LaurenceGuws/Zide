@@ -53,7 +53,7 @@ pub fn startNoThreads(self: anytype, shell: ?[:0]const u8) !void {
 }
 
 pub fn setInputPressure(self: anytype, value: bool) void {
-    self.control.input_pressure.store(value, .release);
+    self.session.control.input_pressure.store(value, .release);
 }
 
 pub fn poll(self: anytype) !void {

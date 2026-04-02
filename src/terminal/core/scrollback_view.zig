@@ -47,8 +47,8 @@ pub fn copyScrollbackRange(
     max_rows: usize,
     out: *std.ArrayList(Cell),
 ) !ScrollbackRange {
-    self.control.state_mutex.lock();
-    defer self.control.state_mutex.unlock();
+    self.session.control.state_mutex.lock();
+    defer self.session.control.state_mutex.unlock();
 
     out.clearRetainingCapacity();
     const info = scrollbackInfo(self);
@@ -80,8 +80,8 @@ pub fn scrollOffset(self: anytype) usize {
 }
 
 pub fn setScrollOffset(self: anytype, offset: usize) void {
-    self.control.state_mutex.lock();
-    defer self.control.state_mutex.unlock();
+    self.session.control.state_mutex.lock();
+    defer self.session.control.state_mutex.unlock();
     setScrollOffsetLocked(self, offset);
 }
 
@@ -129,8 +129,8 @@ pub fn scrollWheelLocked(self: anytype, wheel_steps: i32) bool {
 }
 
 pub fn scrollBy(self: anytype, delta: isize) void {
-    self.control.state_mutex.lock();
-    defer self.control.state_mutex.unlock();
+    self.session.control.state_mutex.lock();
+    defer self.session.control.state_mutex.unlock();
     scrollByLocked(self, delta);
 }
 

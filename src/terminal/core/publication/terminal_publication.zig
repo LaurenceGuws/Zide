@@ -78,8 +78,8 @@ pub fn updateViewCacheForScrollLocked(self: anytype) void {
 }
 
 pub fn renderCache(self: anytype) *const RenderCache {
-    const idx = self.publication.render_cache_index.load(.acquire);
-    return &self.publication.render_caches[idx];
+    const idx = self.session.publication.render_cache_index.load(.acquire);
+    return &self.session.publication.render_caches[idx];
 }
 
 pub fn renderCacheLocked(self: anytype, source: []const u8) *const RenderCache {
@@ -89,7 +89,7 @@ pub fn renderCacheLocked(self: anytype, source: []const u8) *const RenderCache {
 
 fn renderCacheForGeneration(self: anytype, generation: u64) ?*const RenderCache {
     inline for (0..2) |i| {
-        const cache = &self.publication.render_caches[i];
+        const cache = &self.session.publication.render_caches[i];
         if (cache.generation == generation) return cache;
     }
     return null;
@@ -102,8 +102,8 @@ pub fn renderCacheForGenerationLocked(self: anytype, generation: u64, source: []
 
 fn clearPublishedDamageLocked(self: anytype) void {
     inline for (0..2) |i| {
-        self.publication.render_caches[i].dirty = .none;
-        self.publication.render_caches[i].damage = .{ .start_row = 0, .end_row = 0, .start_col = 0, .end_col = 0 };
+        self.session.publication.render_caches[i].dirty = .none;
+        self.session.publication.render_caches[i].damage = .{ .start_row = 0, .end_row = 0, .start_col = 0, .end_col = 0 };
     }
 }
 

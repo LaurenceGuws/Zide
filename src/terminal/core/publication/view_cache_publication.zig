@@ -16,7 +16,7 @@ pub const CachePublicationTarget = struct {
 };
 
 fn activeRenderCacheIndex(self: anytype) u8 {
-    return self.publication.render_cache_index.load(.acquire);
+    return self.session.publication.render_cache_index.load(.acquire);
 }
 
 fn inactiveRenderCacheIndex(self: anytype) u8 {
@@ -24,15 +24,15 @@ fn inactiveRenderCacheIndex(self: anytype) u8 {
 }
 
 fn activeRenderCache(self: anytype) *RenderCache {
-    return &self.publication.render_caches[activeRenderCacheIndex(self)];
+    return &self.session.publication.render_caches[activeRenderCacheIndex(self)];
 }
 
 fn inactiveRenderCache(self: anytype) *RenderCache {
-    return &self.publication.render_caches[inactiveRenderCacheIndex(self)];
+    return &self.session.publication.render_caches[inactiveRenderCacheIndex(self)];
 }
 
 fn publishRenderCacheIndex(self: anytype, index: u8) void {
-    self.publication.render_cache_index.store(index, .release);
+    self.session.publication.render_cache_index.store(index, .release);
 }
 
 pub fn beginCachePublication(self: anytype) CachePublicationTarget {

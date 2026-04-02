@@ -143,6 +143,14 @@ Focused follow-up lane:
   - `PtyTerminalRuntime` still reads like the visible aggregate center
   - `TerminalCore` is real, but still not visibly the owning library center
   - the next likely battlefield is the aggregate session shape itself
+  Progress:
+  - the first session-object cut is now landed
+  - `PtyTerminalRuntime` no longer stores `runtime`, `interaction`,
+    `publication`, and `control` as peer root fields beside `core`
+  - those non-engine domains now live under one grouped
+    `src/terminal/core/session/session_fields.zig` slab as `session`
+  - the visible library shape is materially cleaner than the earlier flat
+    aggregate
 
 - `docs/review/TERMINAL_NATIVE_ARCHITECTURAL_SCRUTINY_2026-03-31.md`
   Why: this is the current ruthless read on what still looks second-rate at

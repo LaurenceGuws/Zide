@@ -20,12 +20,12 @@ pub const PresentationFeedback = struct {
 };
 
 pub fn consumeAltExitTimeMs(self: anytype) i64 {
-    return self.publication.alt_exit_time_ms.swap(-1, .acq_rel);
+    return self.session.publication.alt_exit_time_ms.swap(-1, .acq_rel);
 }
 
 pub fn noteAltExitPending(self: anytype) void {
-    self.publication.alt_exit_pending.store(true, .release);
-    self.publication.alt_exit_time_ms.store(std.time.milliTimestamp(), .release);
+    self.session.publication.alt_exit_pending.store(true, .release);
+    self.session.publication.alt_exit_time_ms.store(std.time.milliTimestamp(), .release);
 }
 
 pub fn acknowledgePresentedGeneration(self: anytype, generation: u64) bool {
@@ -82,24 +82,24 @@ fn shouldClearScreenDirtyOnPresentationRetirement(self: anytype, generation: u64
 }
 
 fn notePresentedGeneration(self: anytype, generation: u64) void {
-    var current = self.publication.presented_generation.load(.acquire);
+    var current = self.session.publication.presented_generation.load(.acquire);
     while (generation > current) {
-        current = self.publication.presented_generation.cmpxchgWeak(current, generation, .acq_rel, .acquire) orelse return;
+        current = self.session.publication.presented_generation.cmpxchgWeak(current, generation, .acq_rel, .acquire) orelse return;
     }
 }
 
 fn pendingGeneration(self: anytype) u64 {
-    return self.publication.pending_generation.load(.acquire);
+    return self.session.publication.pending_generation.load(.acquire);
 }
 
 fn renderCache(self: anytype) *const render_cache_mod.RenderCache {
-    const idx = self.publication.render_cache_index.load(.acquire);
-    return &self.publication.render_caches[idx];
+    const idx = self.session.publication.render_cache_index.load(.acquire);
+    return &self.session.publication.render_caches[idx];
 }
 
 fn renderCacheForGeneration(self: anytype, generation: u64) ?*const render_cache_mod.RenderCache {
     inline for (0..2) |i| {
-        const cache = &self.publication.render_caches[i];
+        const cache = &self.session.publication.render_caches[i];
         if (cache.generation == generation) return cache;
     }
     return null;
@@ -107,7 +107,7 @@ fn renderCacheForGeneration(self: anytype, generation: u64) ?*const render_cache
 
 fn clearPublishedDamageLocked(self: anytype) void {
     inline for (0..2) |i| {
-        self.publication.render_caches[i].dirty = .none;
-        self.publication.render_caches[i].damage = .{ .start_row = 0, .end_row = 0, .start_col = 0, .end_col = 0 };
+        self.session.publication.render_caches[i].dirty = .none;
+        self.session.publication.render_caches[i].damage = .{ .start_row = 0, .end_row = 0, .start_col = 0, .end_col = 0 };
     }
 }

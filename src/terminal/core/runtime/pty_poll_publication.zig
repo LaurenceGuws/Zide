@@ -4,9 +4,9 @@ const publication_flow = @import("../publication/publication_flow.zig");
 pub fn publishPtyPollResult(self: anytype, had_data: bool, processed: usize, input_pressure: bool, queued_bytes: usize, parse_lock_hold_ns: i128, publish_lock_hold_ns: *i128, start_ms: i64) void {
     if (had_data or publication_flow.viewRefreshPending(self)) {
         const publish_lock_start_ns = std.time.nanoTimestamp();
-        self.control.state_mutex.lock();
+        self.session.control.state_mutex.lock();
         _ = publication_flow.publishPollUpdateLocked(self, had_data, "pty_poll_publish", "pty_pending_offset");
-        self.control.state_mutex.unlock();
+        self.session.control.state_mutex.unlock();
         publish_lock_hold_ns.* += std.time.nanoTimestamp() - publish_lock_start_ns;
     }
 
@@ -16,15 +16,15 @@ pub fn publishPtyPollResult(self: anytype, had_data: bool, processed: usize, inp
         _ = queued_bytes;
         _ = parse_lock_hold_ns;
         _ = input_pressure;
-        self.control.last_parse_log_ms = end_ms;
+        self.session.control.last_parse_log_ms = end_ms;
         _ = elapsed_ms;
     }
 
-    self.runtime.io_mutex.lock();
-    if (self.runtime.io_buffer.items.len > self.runtime.io_read_offset) {
+    self.session.runtime.io_mutex.lock();
+    if (self.session.runtime.io_buffer.items.len > self.session.runtime.io_read_offset) {
         publication_flow.markOutputPending(self);
     }
-    self.runtime.io_mutex.unlock();
+    self.session.runtime.io_mutex.unlock();
 }
 
 pub fn publishTransportPollResult(self: anytype, had_data: bool, processed: usize, input_pressure: bool, parse_lock_hold_ns: i128, publish_lock_hold_ns: *i128, start_ms: i64) void {
@@ -39,6 +39,6 @@ pub fn publishTransportPollResult(self: anytype, had_data: bool, processed: usiz
         const end_ms = std.time.milliTimestamp();
         _ = parse_lock_hold_ns;
         _ = input_pressure;
-        self.control.last_parse_log_ms = end_ms;
+        self.session.control.last_parse_log_ms = end_ms;
     }
 }

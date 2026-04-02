@@ -21,8 +21,8 @@ pub const ClickSelectionResult = struct {
 };
 
 pub fn clearSelection(self: anytype) void {
-    self.control.state_mutex.lock();
-    defer self.control.state_mutex.unlock();
+    self.session.control.state_mutex.lock();
+    defer self.session.control.state_mutex.unlock();
     clearSelectionLocked(self);
 }
 
@@ -38,8 +38,8 @@ pub fn clearSelectionIfActiveLocked(self: anytype) bool {
 }
 
 pub fn startSelection(self: anytype, row: usize, col: usize) void {
-    self.control.state_mutex.lock();
-    defer self.control.state_mutex.unlock();
+    self.session.control.state_mutex.lock();
+    defer self.session.control.state_mutex.unlock();
     startSelectionLocked(self, row, col);
 }
 
@@ -50,8 +50,8 @@ pub fn startSelectionLocked(self: anytype, row: usize, col: usize) void {
 }
 
 pub fn updateSelection(self: anytype, row: usize, col: usize) void {
-    self.control.state_mutex.lock();
-    defer self.control.state_mutex.unlock();
+    self.session.control.state_mutex.lock();
+    defer self.session.control.state_mutex.unlock();
     updateSelectionLocked(self, row, col);
 }
 
@@ -62,8 +62,8 @@ pub fn updateSelectionLocked(self: anytype, row: usize, col: usize) void {
 }
 
 pub fn finishSelection(self: anytype) void {
-    self.control.state_mutex.lock();
-    defer self.control.state_mutex.unlock();
+    self.session.control.state_mutex.lock();
+    defer self.session.control.state_mutex.unlock();
     finishSelectionLocked(self);
 }
 
@@ -80,8 +80,8 @@ pub fn finishSelectionIfActiveLocked(self: anytype) bool {
 }
 
 pub fn selectRange(self: anytype, start: types.SelectionPos, end: types.SelectionPos, finished: bool) void {
-    self.control.state_mutex.lock();
-    defer self.control.state_mutex.unlock();
+    self.session.control.state_mutex.lock();
+    defer self.session.control.state_mutex.unlock();
     selectRangeLocked(self, start, end, finished);
 }
 

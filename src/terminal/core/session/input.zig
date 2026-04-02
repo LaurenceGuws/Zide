@@ -32,8 +32,8 @@ pub fn sendKey(self: anytype, key: Key, mod: Modifier) !void {
 }
 
 pub fn sendKeyAction(self: anytype, key: Key, mod: Modifier, action: input_mod.KeyAction) !void {
-    if (action == .repeat and !self.interaction.input_snapshot.auto_repeat.load(.acquire)) return;
-    const input_snapshot = self.interaction.input_snapshot;
+    if (action == .repeat and !self.session.interaction.input_snapshot.auto_repeat.load(.acquire)) return;
+    const input_snapshot = self.session.interaction.input_snapshot;
     const key_mode_flags = input_snapshot.key_mode_flags.load(.acquire);
     const app_cursor = input_snapshot.app_cursor_keys.load(.acquire);
     if (self.lockPtyWriter()) |writer_guard| {
@@ -65,8 +65,8 @@ pub fn sendKeyActionWithMetadata(
     action: input_mod.KeyAction,
     alternate_meta: ?types.KeyboardAlternateMetadata,
 ) !void {
-    if (action == .repeat and !self.interaction.input_snapshot.auto_repeat.load(.acquire)) return;
-    const input_snapshot = self.interaction.input_snapshot;
+    if (action == .repeat and !self.session.interaction.input_snapshot.auto_repeat.load(.acquire)) return;
+    const input_snapshot = self.session.interaction.input_snapshot;
     const key_mode_flags = input_snapshot.key_mode_flags.load(.acquire);
     const app_cursor = input_snapshot.app_cursor_keys.load(.acquire);
     if (self.lockPtyWriter()) |writer_guard| {
@@ -102,8 +102,8 @@ pub fn sendKeypad(self: anytype, key: input_mod.KeypadKey, mod: Modifier) !void 
 }
 
 pub fn sendKeypadAction(self: anytype, key: input_mod.KeypadKey, mod: Modifier, action: input_mod.KeyAction) !void {
-    if (action == .repeat and !self.interaction.input_snapshot.auto_repeat.load(.acquire)) return;
-    const input_snapshot = self.interaction.input_snapshot;
+    if (action == .repeat and !self.session.interaction.input_snapshot.auto_repeat.load(.acquire)) return;
+    const input_snapshot = self.session.interaction.input_snapshot;
     const key_mode_flags = input_snapshot.key_mode_flags.load(.acquire);
     const app_keypad = input_snapshot.app_keypad.load(.acquire);
     if (self.lockPtyWriter()) |writer_guard| {
@@ -120,7 +120,7 @@ pub fn appKeypadEnabled(self: anytype) bool {
 }
 
 pub fn appCursorKeysEnabled(self: anytype) bool {
-    return self.interaction.input_snapshot.app_cursor_keys.load(.acquire);
+    return self.session.interaction.input_snapshot.app_cursor_keys.load(.acquire);
 }
 
 pub fn sendChar(self: anytype, char: u32, mod: Modifier) !void {
@@ -128,8 +128,8 @@ pub fn sendChar(self: anytype, char: u32, mod: Modifier) !void {
 }
 
 pub fn sendCharAction(self: anytype, char: u32, mod: Modifier, action: input_mod.KeyAction) !void {
-    if (action == .repeat and !self.interaction.input_snapshot.auto_repeat.load(.acquire)) return;
-    const input_snapshot = self.interaction.input_snapshot;
+    if (action == .repeat and !self.session.interaction.input_snapshot.auto_repeat.load(.acquire)) return;
+    const input_snapshot = self.session.interaction.input_snapshot;
     const key_mode_flags = input_snapshot.key_mode_flags.load(.acquire);
     if (self.lockPtyWriter()) |writer_guard| {
         var writer = writer_guard;
@@ -147,8 +147,8 @@ pub fn sendCharActionWithMetadata(
     action: input_mod.KeyAction,
     alternate_meta: ?types.KeyboardAlternateMetadata,
 ) !void {
-    if (action == .repeat and !self.interaction.input_snapshot.auto_repeat.load(.acquire)) return;
-    const input_snapshot = self.interaction.input_snapshot;
+    if (action == .repeat and !self.session.interaction.input_snapshot.auto_repeat.load(.acquire)) return;
+    const input_snapshot = self.session.interaction.input_snapshot;
     const key_mode_flags = input_snapshot.key_mode_flags.load(.acquire);
     if (self.lockPtyWriter()) |writer_guard| {
         var writer = writer_guard;
@@ -171,15 +171,15 @@ pub fn reportMouseEvent(self: anytype, event: MouseEvent) !bool {
     if (self.lockPtyWriter()) |writer_guard| {
         var writer = writer_guard;
         defer writer.unlock();
-        return writer.reportMouseEvent(&self.interaction.input, event, screen.grid.rows, screen.grid.cols);
+        return writer.reportMouseEvent(&self.session.interaction.input, event, screen.grid.rows, screen.grid.cols);
     }
     return false;
 }
 
 pub fn reportAlternateScrollWheel(self: anytype, wheel_steps: i32, mod: Modifier) !bool {
     if (wheel_steps == 0) return false;
-    if (!self.interaction.input_snapshot.mouse_alternate_scroll.load(.acquire)) return false;
-    if (!self.interaction.input_snapshot.alt_active.load(.acquire)) return false;
+    if (!self.session.interaction.input_snapshot.mouse_alternate_scroll.load(.acquire)) return false;
+    if (!self.session.interaction.input_snapshot.alt_active.load(.acquire)) return false;
     var remaining = wheel_steps;
     while (remaining != 0) {
         const key: Key = if (remaining > 0) VTERM_KEY_UP else VTERM_KEY_DOWN;
@@ -222,8 +222,8 @@ pub fn reportFocusChanged(self: anytype, focused: bool) !bool {
 }
 
 pub fn reportColorSchemeChanged(self: anytype, dark: bool) !bool {
-    self.interaction.color_scheme_dark = dark;
-    if (!self.interaction.report_color_scheme_2031) {
+    self.session.interaction.color_scheme_dark = dark;
+    if (!self.session.interaction.report_color_scheme_2031) {
         return false;
     }
     if (self.lockPtyWriter()) |writer_guard| {

@@ -22,11 +22,11 @@ pub const TransportPollResult = struct {
 
 pub fn processBufferedPtyOutput(self: anytype, input_pressure: bool) PtyPollResult {
     var queued_bytes: usize = 0;
-    self.runtime.io_mutex.lock();
-    if (self.runtime.io_buffer.items.len > self.runtime.io_read_offset) {
-        queued_bytes = self.runtime.io_buffer.items.len - self.runtime.io_read_offset;
+    self.session.runtime.io_mutex.lock();
+    if (self.session.runtime.io_buffer.items.len > self.session.runtime.io_read_offset) {
+        queued_bytes = self.session.runtime.io_buffer.items.len - self.session.runtime.io_read_offset;
     }
-    self.runtime.io_mutex.unlock();
+    self.session.runtime.io_mutex.unlock();
 
     var max_bytes_per_poll: usize = if (input_pressure) 32 * 1024 else 64 * 1024;
     var max_ms: i64 = if (input_pressure) 1 else 2;
@@ -47,34 +47,34 @@ pub fn processBufferedPtyOutput(self: anytype, input_pressure: bool) PtyPollResu
 
     while (processed < max_bytes_per_poll and std.time.milliTimestamp() - start_ms < max_ms) {
         var chunk_len: usize = 0;
-        self.runtime.io_mutex.lock();
-        const available = if (self.runtime.io_buffer.items.len > self.runtime.io_read_offset)
-            self.runtime.io_buffer.items.len - self.runtime.io_read_offset
+        self.session.runtime.io_mutex.lock();
+        const available = if (self.session.runtime.io_buffer.items.len > self.session.runtime.io_read_offset)
+            self.session.runtime.io_buffer.items.len - self.session.runtime.io_read_offset
         else
             0;
         if (available > 0) {
             chunk_len = @min(temp.len, available);
-            std.mem.copyForwards(u8, temp[0..chunk_len], self.runtime.io_buffer.items[self.runtime.io_read_offset .. self.runtime.io_read_offset + chunk_len]);
-            self.runtime.io_read_offset += chunk_len;
+            std.mem.copyForwards(u8, temp[0..chunk_len], self.session.runtime.io_buffer.items[self.session.runtime.io_read_offset .. self.session.runtime.io_read_offset + chunk_len]);
+            self.session.runtime.io_read_offset += chunk_len;
             had_data = true;
-            if (self.runtime.io_read_offset >= self.runtime.io_buffer.items.len) {
-                self.runtime.io_buffer.items.len = 0;
-                self.runtime.io_read_offset = 0;
-            } else if (self.runtime.io_read_offset > 64 * 1024 and self.runtime.io_read_offset > self.runtime.io_buffer.items.len / 2) {
-                const remaining = self.runtime.io_buffer.items.len - self.runtime.io_read_offset;
-                std.mem.copyForwards(u8, self.runtime.io_buffer.items[0..remaining], self.runtime.io_buffer.items[self.runtime.io_read_offset..self.runtime.io_buffer.items.len]);
-                self.runtime.io_buffer.items.len = remaining;
-                self.runtime.io_read_offset = 0;
+            if (self.session.runtime.io_read_offset >= self.session.runtime.io_buffer.items.len) {
+                self.session.runtime.io_buffer.items.len = 0;
+                self.session.runtime.io_read_offset = 0;
+            } else if (self.session.runtime.io_read_offset > 64 * 1024 and self.session.runtime.io_read_offset > self.session.runtime.io_buffer.items.len / 2) {
+                const remaining = self.session.runtime.io_buffer.items.len - self.session.runtime.io_read_offset;
+                std.mem.copyForwards(u8, self.session.runtime.io_buffer.items[0..remaining], self.session.runtime.io_buffer.items[self.session.runtime.io_read_offset..self.session.runtime.io_buffer.items.len]);
+                self.session.runtime.io_buffer.items.len = remaining;
+                self.session.runtime.io_read_offset = 0;
             }
         }
-        self.runtime.io_mutex.unlock();
+        self.session.runtime.io_mutex.unlock();
 
         if (chunk_len == 0) break;
 
         const parse_lock_start_ns = std.time.nanoTimestamp();
-        self.control.state_mutex.lock();
+        self.session.control.state_mutex.lock();
         self.core.parser.handleSlice(self, temp[0..chunk_len]);
-        self.control.state_mutex.unlock();
+        self.session.control.state_mutex.unlock();
         parse_lock_hold_ns += std.time.nanoTimestamp() - parse_lock_start_ns;
         processed += chunk_len;
         _ = publication_flow.noteParsedOutputLocked(self);

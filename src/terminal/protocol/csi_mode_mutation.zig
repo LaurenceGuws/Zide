@@ -69,13 +69,13 @@ fn applyPrivateModeMutation(self: anytype, param_len: usize, params: [parser_csi
             2004 => input_modes.setBracketedPasteLocked(self, enabled),
             2026 => sync_updates.setLocked(self, enabled),
             2027 => {
-                self.interaction.grapheme_cluster_shaping_2027 = enabled;
+                self.session.interaction.grapheme_cluster_shaping_2027 = enabled;
                 self.core.primary.setGraphemeClusterShaping2027(enabled);
                 self.core.alt.setGraphemeClusterShaping2027(enabled);
             },
-            2031 => self.interaction.report_color_scheme_2031 = enabled,
-            2048 => self.interaction.inband_resize_notifications_2048 = enabled,
-            5522 => self.interaction.kitty_paste_events_5522 = enabled,
+            2031 => self.session.interaction.report_color_scheme_2031 = enabled,
+            2048 => self.session.interaction.inband_resize_notifications_2048 = enabled,
+            5522 => self.session.interaction.kitty_paste_events_5522 = enabled,
             else => {},
         }
     }

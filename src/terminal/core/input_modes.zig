@@ -26,26 +26,26 @@ pub fn publishSnapshot(self: anytype) void {
         else => @compileError("publishSnapshot expects a pointer receiver"),
     };
     const screen = if (session.core.active == .alt) &session.core.alt else &session.core.primary;
-    session.interaction.input_snapshot.app_cursor_keys.store(session.interaction.app_cursor_keys, .release);
-    session.interaction.input_snapshot.app_keypad.store(session.interaction.app_keypad, .release);
-    session.interaction.input_snapshot.key_mode_flags.store(keyModeFlags(session), .release);
-    session.interaction.input_snapshot.mouse_mode_x10.store(session.interaction.input.mouse_mode_x10, .release);
-    session.interaction.input_snapshot.mouse_mode_button.store(session.interaction.input.mouse_mode_button, .release);
-    session.interaction.input_snapshot.mouse_mode_any.store(session.interaction.input.mouse_mode_any, .release);
-    session.interaction.input_snapshot.mouse_mode_sgr.store(session.interaction.input.mouse_mode_sgr, .release);
-    session.interaction.input_snapshot.mouse_mode_sgr_pixels_1016.store(session.interaction.input.mouse_mode_sgr_pixels_1016, .release);
-    session.interaction.input_snapshot.focus_reporting.store(session.interaction.focus_reporting, .release);
-    session.interaction.input_snapshot.bracketed_paste.store(session.interaction.bracketed_paste, .release);
-    session.interaction.input_snapshot.auto_repeat.store(session.interaction.auto_repeat, .release);
-    session.interaction.input_snapshot.mouse_alternate_scroll.store(session.interaction.mouse_alternate_scroll, .release);
-    session.interaction.input_snapshot.alt_active.store(session.core.active == .alt, .release);
-    session.interaction.input_snapshot.screen_rows.store(screen.grid.rows, .release);
-    session.interaction.input_snapshot.screen_cols.store(screen.grid.cols, .release);
+    session.session.interaction.input_snapshot.app_cursor_keys.store(session.session.interaction.app_cursor_keys, .release);
+    session.session.interaction.input_snapshot.app_keypad.store(session.session.interaction.app_keypad, .release);
+    session.session.interaction.input_snapshot.key_mode_flags.store(keyModeFlags(session), .release);
+    session.session.interaction.input_snapshot.mouse_mode_x10.store(session.session.interaction.input.mouse_mode_x10, .release);
+    session.session.interaction.input_snapshot.mouse_mode_button.store(session.session.interaction.input.mouse_mode_button, .release);
+    session.session.interaction.input_snapshot.mouse_mode_any.store(session.session.interaction.input.mouse_mode_any, .release);
+    session.session.interaction.input_snapshot.mouse_mode_sgr.store(session.session.interaction.input.mouse_mode_sgr, .release);
+    session.session.interaction.input_snapshot.mouse_mode_sgr_pixels_1016.store(session.session.interaction.input.mouse_mode_sgr_pixels_1016, .release);
+    session.session.interaction.input_snapshot.focus_reporting.store(session.session.interaction.focus_reporting, .release);
+    session.session.interaction.input_snapshot.bracketed_paste.store(session.session.interaction.bracketed_paste, .release);
+    session.session.interaction.input_snapshot.auto_repeat.store(session.session.interaction.auto_repeat, .release);
+    session.session.interaction.input_snapshot.mouse_alternate_scroll.store(session.session.interaction.mouse_alternate_scroll, .release);
+    session.session.interaction.input_snapshot.alt_active.store(session.core.active == .alt, .release);
+    session.session.interaction.input_snapshot.screen_rows.store(screen.grid.rows, .release);
+    session.session.interaction.input_snapshot.screen_cols.store(screen.grid.cols, .release);
 }
 
 pub fn keyModePush(self: anytype, flags: u32) void {
-    self.control.state_mutex.lock();
-    defer self.control.state_mutex.unlock();
+    self.session.control.state_mutex.lock();
+    defer self.session.control.state_mutex.unlock();
     keyModePushLocked(self, flags);
 }
 
@@ -55,8 +55,8 @@ pub fn keyModePushLocked(self: anytype, flags: u32) void {
 }
 
 pub fn keyModePop(self: anytype, count: usize) void {
-    self.control.state_mutex.lock();
-    defer self.control.state_mutex.unlock();
+    self.session.control.state_mutex.lock();
+    defer self.session.control.state_mutex.unlock();
     keyModePopLocked(self, count);
 }
 
@@ -66,8 +66,8 @@ pub fn keyModePopLocked(self: anytype, count: usize) void {
 }
 
 pub fn keyModeModify(self: anytype, flags: u32, mode: u32) void {
-    self.control.state_mutex.lock();
-    defer self.control.state_mutex.unlock();
+    self.session.control.state_mutex.lock();
+    defer self.session.control.state_mutex.unlock();
     keyModeModifyLocked(self, flags, mode);
 }
 
@@ -77,13 +77,13 @@ pub fn keyModeModifyLocked(self: anytype, flags: u32, mode: u32) void {
 }
 
 pub fn keyModeQuery(self: anytype) void {
-    self.control.state_mutex.lock();
-    defer self.control.state_mutex.unlock();
+    self.session.control.state_mutex.lock();
+    defer self.session.control.state_mutex.unlock();
     keyModeQueryLocked(self);
 }
 
 pub fn keyModeQueryLocked(self: anytype) void {
-    const log = app_logger.logger("terminal.interaction.input.keys");
+    const log = app_logger.logger("terminal.session.interaction.input.keys");
     const flags = keyModeFlags(self);
     var buf: [32]u8 = undefined;
     const seq = std.fmt.bufPrint(&buf, "\x1b[?{d}u", .{flags}) catch |err| {
@@ -96,145 +96,145 @@ pub fn keyModeQueryLocked(self: anytype) void {
 }
 
 pub fn setKeypadMode(self: anytype, enabled: bool) void {
-    self.control.state_mutex.lock();
-    defer self.control.state_mutex.unlock();
+    self.session.control.state_mutex.lock();
+    defer self.session.control.state_mutex.unlock();
     setKeypadModeLocked(self, enabled);
 }
 
 pub fn setKeypadModeLocked(self: anytype, enabled: bool) void {
-    self.interaction.app_keypad = enabled;
+    self.session.interaction.app_keypad = enabled;
     publishSnapshot(self);
 }
 
 pub fn setAppCursorKeys(self: anytype, enabled: bool) void {
-    self.control.state_mutex.lock();
-    defer self.control.state_mutex.unlock();
+    self.session.control.state_mutex.lock();
+    defer self.session.control.state_mutex.unlock();
     setAppCursorKeysLocked(self, enabled);
 }
 
 pub fn setAppCursorKeysLocked(self: anytype, enabled: bool) void {
-    self.interaction.app_cursor_keys = enabled;
+    self.session.interaction.app_cursor_keys = enabled;
     publishSnapshot(self);
 }
 
 pub fn setAutoRepeat(self: anytype, enabled: bool) void {
-    self.control.state_mutex.lock();
-    defer self.control.state_mutex.unlock();
+    self.session.control.state_mutex.lock();
+    defer self.session.control.state_mutex.unlock();
     setAutoRepeatLocked(self, enabled);
 }
 
 pub fn setAutoRepeatLocked(self: anytype, enabled: bool) void {
-    self.interaction.auto_repeat = enabled;
+    self.session.interaction.auto_repeat = enabled;
     publishSnapshot(self);
 }
 
 pub fn setBracketedPaste(self: anytype, enabled: bool) void {
-    self.control.state_mutex.lock();
-    defer self.control.state_mutex.unlock();
+    self.session.control.state_mutex.lock();
+    defer self.session.control.state_mutex.unlock();
     setBracketedPasteLocked(self, enabled);
 }
 
 pub fn setBracketedPasteLocked(self: anytype, enabled: bool) void {
-    self.interaction.bracketed_paste = enabled;
+    self.session.interaction.bracketed_paste = enabled;
     publishSnapshot(self);
 }
 
 pub fn setFocusReporting(self: anytype, enabled: bool) void {
-    self.control.state_mutex.lock();
-    defer self.control.state_mutex.unlock();
+    self.session.control.state_mutex.lock();
+    defer self.session.control.state_mutex.unlock();
     setFocusReportingLocked(self, enabled);
 }
 
 pub fn setFocusReportingLocked(self: anytype, enabled: bool) void {
-    self.interaction.focus_reporting = enabled;
+    self.session.interaction.focus_reporting = enabled;
     publishSnapshot(self);
 }
 
 pub fn setMouseAlternateScroll(self: anytype, enabled: bool) void {
-    self.control.state_mutex.lock();
-    defer self.control.state_mutex.unlock();
+    self.session.control.state_mutex.lock();
+    defer self.session.control.state_mutex.unlock();
     setMouseAlternateScrollLocked(self, enabled);
 }
 
 pub fn setMouseAlternateScrollLocked(self: anytype, enabled: bool) void {
-    self.interaction.mouse_alternate_scroll = enabled;
+    self.session.interaction.mouse_alternate_scroll = enabled;
     publishSnapshot(self);
 }
 
 pub fn setMouseModeX10(self: anytype, enabled: bool) void {
-    self.control.state_mutex.lock();
-    defer self.control.state_mutex.unlock();
+    self.session.control.state_mutex.lock();
+    defer self.session.control.state_mutex.unlock();
     setMouseModeX10Locked(self, enabled);
 }
 
 pub fn setMouseModeX10Locked(self: anytype, enabled: bool) void {
-    self.interaction.input.mouse_mode_x10 = enabled;
+    self.session.interaction.input.mouse_mode_x10 = enabled;
     publishSnapshot(self);
 }
 
 pub fn setMouseModeButton(self: anytype, enabled: bool) void {
-    self.control.state_mutex.lock();
-    defer self.control.state_mutex.unlock();
+    self.session.control.state_mutex.lock();
+    defer self.session.control.state_mutex.unlock();
     setMouseModeButtonLocked(self, enabled);
 }
 
 pub fn setMouseModeButtonLocked(self: anytype, enabled: bool) void {
-    self.interaction.input.mouse_mode_button = enabled;
+    self.session.interaction.input.mouse_mode_button = enabled;
     publishSnapshot(self);
 }
 
 pub fn setMouseModeAny(self: anytype, enabled: bool) void {
-    self.control.state_mutex.lock();
-    defer self.control.state_mutex.unlock();
+    self.session.control.state_mutex.lock();
+    defer self.session.control.state_mutex.unlock();
     setMouseModeAnyLocked(self, enabled);
 }
 
 pub fn setMouseModeAnyLocked(self: anytype, enabled: bool) void {
-    self.interaction.input.mouse_mode_any = enabled;
+    self.session.interaction.input.mouse_mode_any = enabled;
     publishSnapshot(self);
 }
 
 pub fn setMouseModeSgr(self: anytype, enabled: bool) void {
-    self.control.state_mutex.lock();
-    defer self.control.state_mutex.unlock();
+    self.session.control.state_mutex.lock();
+    defer self.session.control.state_mutex.unlock();
     setMouseModeSgrLocked(self, enabled);
 }
 
 pub fn setMouseModeSgrLocked(self: anytype, enabled: bool) void {
-    self.interaction.input.mouse_mode_sgr = enabled;
+    self.session.interaction.input.mouse_mode_sgr = enabled;
     publishSnapshot(self);
 }
 
 pub fn setMouseModeSgrPixels(self: anytype, enabled: bool) void {
-    self.control.state_mutex.lock();
-    defer self.control.state_mutex.unlock();
+    self.session.control.state_mutex.lock();
+    defer self.session.control.state_mutex.unlock();
     setMouseModeSgrPixelsLocked(self, enabled);
 }
 
 pub fn setMouseModeSgrPixelsLocked(self: anytype, enabled: bool) void {
-    self.interaction.input.mouse_mode_sgr_pixels_1016 = enabled;
+    self.session.interaction.input.mouse_mode_sgr_pixels_1016 = enabled;
     publishSnapshot(self);
 }
 
 pub fn resetInputModes(self: anytype) void {
-    self.control.state_mutex.lock();
-    defer self.control.state_mutex.unlock();
+    self.session.control.state_mutex.lock();
+    defer self.session.control.state_mutex.unlock();
     resetInputModesLocked(self);
 }
 
 pub fn resetInputModesLocked(self: anytype) void {
-    self.interaction.app_cursor_keys = false;
-    self.interaction.app_keypad = false;
-    self.interaction.auto_repeat = true;
-    self.interaction.mouse_alternate_scroll = true;
-    self.interaction.input.resetMouse();
-    self.interaction.bracketed_paste = false;
-    self.interaction.focus_reporting = false;
+    self.session.interaction.app_cursor_keys = false;
+    self.session.interaction.app_keypad = false;
+    self.session.interaction.auto_repeat = true;
+    self.session.interaction.mouse_alternate_scroll = true;
+    self.session.interaction.input.resetMouse();
+    self.session.interaction.bracketed_paste = false;
+    self.session.interaction.focus_reporting = false;
     publishSnapshot(self);
 }
 
 pub fn appKeypadEnabled(self: anytype) bool {
-    return self.interaction.input_snapshot.app_keypad.load(.acquire);
+    return self.session.interaction.input_snapshot.app_keypad.load(.acquire);
 }
 
 test "sanitize key mode flags preserves alternate-key bit" {

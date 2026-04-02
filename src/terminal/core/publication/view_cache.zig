@@ -347,8 +347,8 @@ pub fn updateViewCacheNoLock(self: anytype, generation: u64, scroll_offset: usiz
 }
 
 pub fn updateViewCacheForScroll(self: anytype) void {
-    if (self.control.state_mutex.tryLock()) {
-        defer self.control.state_mutex.unlock();
+    if (self.session.control.state_mutex.tryLock()) {
+        defer self.session.control.state_mutex.unlock();
         const request = publication_flow.takePendingViewRefreshRequest(self) orelse return;
         updateViewCacheNoLockTagged(self, request.generation, request.scroll_offset, "view_cache_for_scroll");
     }

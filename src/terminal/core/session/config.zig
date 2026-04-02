@@ -107,6 +107,6 @@ pub fn setColumnMode132Locked(self: anytype, enabled: bool) void {
 pub fn setCellSize(self: anytype, cell_width: u16, cell_height: u16) void {
     self.lock();
     defer self.unlock();
-    self.interaction.cell_width = cell_width;
-    self.interaction.cell_height = cell_height;
+    self.session.interaction.cell_width = cell_width;
+    self.session.interaction.cell_height = cell_height;
 }

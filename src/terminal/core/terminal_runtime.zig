@@ -19,10 +19,7 @@ const control = @import("session/control.zig");
 const terminal_publication = @import("publication/terminal_publication.zig");
 const runtime = @import("session/runtime.zig");
 const session_debug = @import("session/debug_ops.zig");
-const publication_fields = @import("session/publication_fields.zig");
-const runtime_fields = @import("session/runtime_fields.zig");
-const interaction_fields = @import("session/interaction_fields.zig");
-const control_fields = @import("session/control_fields.zig");
+const session_fields = @import("session/session_fields.zig");
 const osc_kitty_clipboard = @import("../protocol/osc_kitty_clipboard.zig");
 const terminal_transport = @import("runtime/terminal_transport.zig");
 const TerminalCoreType = terminal_core_mod.TerminalCore;
@@ -64,11 +61,8 @@ pub const PtyTerminalRuntime = struct {
     pub const extendGestureSelectionLocked = host_selection.extendGestureSelectionLocked;
     pub const selectOrUpdateCellInRowLocked = host_selection.selectOrUpdateCellInRowLocked;
     allocator: std.mem.Allocator,
-    runtime: runtime_fields.Fields,
     core: TerminalCoreType,
-    interaction: interaction_fields.Fields,
-    publication: publication_fields.Fields,
-    control: control_fields.Fields,
+    session: session_fields.Fields,
 
     pub fn init(allocator: std.mem.Allocator, rows: u16, cols: u16) !*PtyTerminalRuntime {
         return initWithOptions(allocator, rows, cols, .{});

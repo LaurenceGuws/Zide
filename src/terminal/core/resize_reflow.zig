@@ -13,11 +13,11 @@ const RowMapEntry = struct {
 };
 
 pub fn resize(self: anytype, rows: u16, cols: u16) !void {
-    self.control.state_mutex.lock();
+    self.session.control.state_mutex.lock();
     try resizeLocked(self, rows, cols);
-    const cell_width = self.interaction.cell_width;
-    const cell_height = self.interaction.cell_height;
-    self.control.state_mutex.unlock();
+    const cell_width = self.session.interaction.cell_width;
+    const cell_height = self.session.interaction.cell_height;
+    self.session.control.state_mutex.unlock();
     if (terminal_transport.Transport.fromSession(self)) |transport| {
         const size = PtySize{
             .rows = rows,

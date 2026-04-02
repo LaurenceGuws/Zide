@@ -17,7 +17,7 @@ pub fn debugSnapshot(self: anytype) @import("../publication/snapshot.zig").Debug
         .hyperlinks = self.core.hyperlink_table.items,
         .scrollback_count = self.core.history.scrollbackCount(),
         .scrollback_offset = self.core.history.scrollOffset(),
-        .focus_reporting = self.interaction.focus_reporting,
+        .focus_reporting = self.session.interaction.focus_reporting,
         .selection = selection_mod.selectionState(self),
         .base_default_attrs = self.core.base_default_attrs,
         .render_cache = terminal_publication.renderCache(self),

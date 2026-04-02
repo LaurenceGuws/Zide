@@ -5,9 +5,9 @@ const pty_poll_publication = @import("pty_poll_publication.zig");
 const pty_poll_processing = @import("pty_poll_processing.zig");
 
 pub fn poll(self: anytype) !void {
-    const input_pressure = self.control.input_pressure.load(.acquire);
-    if (self.runtime.read_thread != null) {
-        if (self.runtime.parse_thread != null) {
+    const input_pressure = self.session.control.input_pressure.load(.acquire);
+    if (self.session.runtime.read_thread != null) {
+        if (self.session.runtime.parse_thread != null) {
             _ = publication_flow.clearPublishedOutputPending(self);
             return;
         }

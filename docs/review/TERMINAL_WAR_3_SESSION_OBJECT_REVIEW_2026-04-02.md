@@ -67,3 +67,19 @@ The next likely War 3 battlefield is the aggregate session object model.
 
 Do not reopen runtime/publication micro-cuts by momentum unless a fresh whole
 slab contradiction appears there first.
+
+Status note, later on 2026-04-02:
+
+- the first session-object cut is now landed
+- [terminal_runtime.zig](/home/home/personal/zide/src/terminal/core/terminal_runtime.zig)
+  no longer stores `runtime`, `interaction`, `publication`, and `control` as
+  peer root fields next to `core`
+- those non-engine domains now live under one grouped
+  [session_fields.zig](/home/home/personal/zide/src/terminal/core/session/session_fields.zig)
+  slab as `session`
+- the live root shape now reads closer to:
+  - allocator
+  - core
+  - session shell state
+- that materially improves the first-glance library-center story even though
+  `PtyTerminalRuntime` still remains the visible aggregate type

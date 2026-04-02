@@ -12,7 +12,7 @@ pub fn publishFeedResultLocked(self: anytype, result: @import("../protocol/termi
 }
 
 pub fn bumpGeneration(self: anytype) u64 {
-    return self.publication.pending_generation.fetchAdd(1, .acq_rel) + 1;
+    return self.session.publication.pending_generation.fetchAdd(1, .acq_rel) + 1;
 }
 
 pub fn noteParsedOutputLocked(self: anytype) u64 {
@@ -45,13 +45,13 @@ pub fn refreshScrollViewLocked(self: anytype, scroll_offset: usize) void {
 }
 
 pub fn queueViewRefreshLocked(self: anytype, scroll_offset: usize) void {
-    self.publication.view_cache_request_offset.store(@intCast(scroll_offset), .release);
-    self.publication.view_cache_pending.store(true, .release);
-    self.runtime.io_wait_cond.signal();
+    self.session.publication.view_cache_request_offset.store(@intCast(scroll_offset), .release);
+    self.session.publication.view_cache_pending.store(true, .release);
+    self.session.runtime.io_wait_cond.signal();
 }
 
 fn clearPendingViewRefresh(self: anytype) void {
-    self.publication.view_cache_pending.store(false, .release);
+    self.session.publication.view_cache_pending.store(false, .release);
 }
 
 pub fn publishGenerationLocked(self: anytype, generation: u64, scroll_offset: usize, source: []const u8) void {
@@ -99,8 +99,8 @@ pub fn publishCurrentViewForScrollOffsetChangeLocked(
 }
 
 pub fn applyPendingViewRefreshLocked(self: anytype, source: []const u8) bool {
-    if (!self.publication.view_cache_pending.swap(false, .acq_rel)) return false;
-    const offset: usize = @intCast(self.publication.view_cache_request_offset.load(.acquire));
+    if (!self.session.publication.view_cache_pending.swap(false, .acq_rel)) return false;
+    const offset: usize = @intCast(self.session.publication.view_cache_request_offset.load(.acquire));
     view_cache.updateViewCacheNoLockTagged(self, pendingGeneration(self), offset, source);
     return true;
 }
@@ -113,28 +113,28 @@ pub fn publishPollUpdateLocked(self: anytype, had_data: bool, publish_source: []
 }
 
 pub fn pendingGeneration(self: anytype) u64 {
-    return self.publication.pending_generation.load(.acquire);
+    return self.session.publication.pending_generation.load(.acquire);
 }
 
 pub fn outputPending(self: anytype) bool {
-    return self.publication.output_pending.load(.acquire);
+    return self.session.publication.output_pending.load(.acquire);
 }
 
 fn clearOutputPending(self: anytype) bool {
-    return self.publication.output_pending.swap(false, .acq_rel);
+    return self.session.publication.output_pending.swap(false, .acq_rel);
 }
 
 pub fn markOutputPending(self: anytype) void {
-    self.publication.output_pending.store(true, .release);
+    self.session.publication.output_pending.store(true, .release);
 }
 
 pub fn viewRefreshPending(self: anytype) bool {
-    return self.publication.view_cache_pending.load(.acquire);
+    return self.session.publication.view_cache_pending.load(.acquire);
 }
 
 fn takePendingViewRefresh(self: anytype) ?usize {
-    if (!self.publication.view_cache_pending.swap(false, .acq_rel)) return null;
-    return @intCast(self.publication.view_cache_request_offset.load(.acquire));
+    if (!self.session.publication.view_cache_pending.swap(false, .acq_rel)) return null;
+    return @intCast(self.session.publication.view_cache_request_offset.load(.acquire));
 }
 
 pub fn takePendingViewRefreshRequest(self: anytype) ?ViewRefreshRequest {
@@ -146,7 +146,7 @@ pub fn takePendingViewRefreshRequest(self: anytype) ?ViewRefreshRequest {
 }
 
 fn takeAltExitPending(self: anytype) bool {
-    return self.publication.alt_exit_pending.swap(false, .acq_rel);
+    return self.session.publication.alt_exit_pending.swap(false, .acq_rel);
 }
 
 pub fn hasPublishedGenerationBacklog(self: anytype) bool {

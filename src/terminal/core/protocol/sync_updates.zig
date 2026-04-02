@@ -23,6 +23,6 @@ pub fn setLocked(self: anytype, enabled: bool) void {
 }
 
 fn renderCache(self: anytype) *const @import("../publication/render_cache.zig").RenderCache {
-    const idx = self.publication.render_cache_index.load(.acquire);
-    return &self.publication.render_caches[idx];
+    const idx = self.session.publication.render_cache_index.load(.acquire);
+    return &self.session.publication.render_caches[idx];
 }

@@ -99,6 +99,6 @@ fn captureCopy(self: anytype, dst: *RenderCache) !CaptureCopy {
 }
 
 fn renderCache(self: anytype) *const RenderCache {
-    const idx = self.publication.render_cache_index.load(.acquire);
-    return &self.publication.render_caches[idx];
+    const idx = self.session.publication.render_cache_index.load(.acquire);
+    return &self.session.publication.render_caches[idx];
 }

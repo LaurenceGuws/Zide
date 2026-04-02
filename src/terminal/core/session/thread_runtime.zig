@@ -7,20 +7,20 @@ pub fn deinit(self: anytype) void {
     if (terminal_transport.Transport.fromSession(self)) |transport| {
         transport.deinit();
     }
-    if (self.runtime.launch_shell_path) |path| {
+    if (self.session.runtime.launch_shell_path) |path| {
         self.allocator.free(path);
-        self.runtime.launch_shell_path = null;
+        self.session.runtime.launch_shell_path = null;
     }
-    self.publication.render_caches[0].deinit(self.allocator);
-    self.publication.render_caches[1].deinit(self.allocator);
-    self.runtime.io_buffer.deinit(self.allocator);
+    self.session.publication.render_caches[0].deinit(self.allocator);
+    self.session.publication.render_caches[1].deinit(self.allocator);
+    self.session.runtime.io_buffer.deinit(self.allocator);
     self.core.deinit(self);
     self.allocator.destroy(self);
 }
 
 pub fn prepareForShutdown(self: anytype) void {
-    if (!self.runtime.tearing_down) {
-        self.runtime.tearing_down = true;
+    if (!self.session.runtime.tearing_down) {
+        self.session.runtime.tearing_down = true;
     }
     stopThreads(self);
     if (terminal_transport.Transport.fromSession(self)) |transport| {
@@ -29,8 +29,8 @@ pub fn prepareForShutdown(self: anytype) void {
 }
 
 pub fn hasData(self: anytype) bool {
-    if (self.runtime.read_thread != null) {
-        if (self.runtime.parse_thread != null) {
+    if (self.session.runtime.read_thread != null) {
+        if (self.session.runtime.parse_thread != null) {
             return publication_flow.outputPending(self) or hasUnreadBufferedIo(self);
         }
         if (publication_flow.outputPending(self)) return true;
@@ -48,25 +48,25 @@ pub fn pollBacklogHint(self: anytype) bool {
 
 fn hasUnreadBufferedIo(self: anytype) bool {
     var pending = false;
-    self.runtime.io_mutex.lock();
-    if (self.runtime.io_buffer.items.len > self.runtime.io_read_offset) {
+    self.session.runtime.io_mutex.lock();
+    if (self.session.runtime.io_buffer.items.len > self.session.runtime.io_read_offset) {
         pending = true;
     }
-    self.runtime.io_mutex.unlock();
+    self.session.runtime.io_mutex.unlock();
     return pending;
 }
 
 fn stopThreads(self: anytype) void {
-    if (self.runtime.read_thread) |thread| {
-        self.runtime.read_thread_running.store(false, .release);
+    if (self.session.runtime.read_thread) |thread| {
+        self.session.runtime.read_thread_running.store(false, .release);
         thread.join();
-        self.runtime.read_thread = null;
+        self.session.runtime.read_thread = null;
     }
-    if (self.runtime.parse_thread) |thread| {
-        self.runtime.parse_thread_running.store(false, .release);
-        self.runtime.io_wait_cond.signal();
+    if (self.session.runtime.parse_thread) |thread| {
+        self.session.runtime.parse_thread_running.store(false, .release);
+        self.session.runtime.io_wait_cond.signal();
         thread.join();
-        self.runtime.parse_thread = null;
+        self.session.runtime.parse_thread = null;
     }
 }
 
@@ -76,16 +76,16 @@ test "hasData stays true for threaded session while unread parse buffer remains"
     const allocator = std.testing.allocator;
     const session = try session_runtime.init(allocator, 24, 80, .{});
     defer {
-        session.runtime.read_thread = null;
-        session.runtime.parse_thread = null;
+        session.session.runtime.read_thread = null;
+        session.session.runtime.parse_thread = null;
         session.deinit();
     }
 
-    session.runtime.read_thread = undefined;
-    session.runtime.parse_thread = undefined;
+    session.session.runtime.read_thread = undefined;
+    session.session.runtime.parse_thread = undefined;
     publication_flow.clearPublishedOutputPending(session);
-    try session.runtime.io_buffer.appendSlice(session.allocator, "queued");
-    session.runtime.io_read_offset = 0;
+    try session.session.runtime.io_buffer.appendSlice(session.allocator, "queued");
+    session.session.runtime.io_read_offset = 0;
 
     try std.testing.expect(hasData(session));
 }

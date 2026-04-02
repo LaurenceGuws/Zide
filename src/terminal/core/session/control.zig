@@ -1,11 +1,11 @@
 pub fn lock(self: anytype) void {
-    self.control.state_mutex.lock();
+    self.session.control.state_mutex.lock();
 }
 
 pub fn tryLock(self: anytype) bool {
-    return self.control.state_mutex.tryLock();
+    return self.session.control.state_mutex.tryLock();
 }
 
 pub fn unlock(self: anytype) void {
-    self.control.state_mutex.unlock();
+    self.session.control.state_mutex.unlock();
 }

@@ -9,8 +9,8 @@ pub fn resetStateLocked(self: anytype) void {
 }
 
 pub fn resetState(self: anytype) void {
-    self.control.state_mutex.lock();
-    defer self.control.state_mutex.unlock();
+    self.session.control.state_mutex.lock();
+    defer self.session.control.state_mutex.unlock();
     resetStateLocked(self);
 }
 

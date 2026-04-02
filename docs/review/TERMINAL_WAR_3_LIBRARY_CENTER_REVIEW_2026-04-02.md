@@ -146,3 +146,15 @@ Status note, later on 2026-04-02 again:
   - runtime root is no longer the default enemy either
   - the next likely War 3 contradiction is the aggregate session object model
     around `PtyTerminalRuntime`
+
+Status note, later on 2026-04-02 once more:
+
+- the first aggregate-session-object cut is now landed too
+- `PtyTerminalRuntime` no longer stores `runtime`, `interaction`,
+  `publication`, and `control` as peer root fields beside `core`
+- those non-engine domains now live under one grouped `session` slab
+- current rerank:
+  - the visible library shape is materially cleaner
+  - the next honest question is whether `PtyTerminalRuntime` itself should
+    remain the visible root name/type, or whether the remaining contradiction
+    has moved again

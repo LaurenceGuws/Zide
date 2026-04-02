@@ -50,10 +50,10 @@ pub fn publishedGenerationChangedSince(self: anytype, baseline: u64) bool {
 }
 
 pub fn presentedGeneration(self: anytype) u64 {
-    return self.publication.presented_generation.load(.acquire);
+    return self.session.publication.presented_generation.load(.acquire);
 }
 
 fn renderCache(self: anytype) *const @import("render_cache.zig").RenderCache {
-    const idx = self.publication.render_cache_index.load(.acquire);
-    return &self.publication.render_caches[idx];
+    const idx = self.session.publication.render_cache_index.load(.acquire);
+    return &self.session.publication.render_caches[idx];
 }

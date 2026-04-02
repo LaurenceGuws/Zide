@@ -2353,12 +2353,12 @@ test "terminal reset republishes input snapshot state" {
     input_modes.setKeypadMode(session, true);
     input_modes.setAppCursorKeys(session, true);
     try std.testing.expect(session_input.appKeypadEnabled(session));
-    try std.testing.expect(session.interaction.input_snapshot.interaction.app_cursor_keys.load(.acquire));
+    try std.testing.expect(session.session.interaction.input_snapshot.app_cursor_keys.load(.acquire));
 
     mode_effects.resetState(session);
 
     try std.testing.expect(!session_input.appKeypadEnabled(session));
-    try std.testing.expect(!session.interaction.input_snapshot.interaction.app_cursor_keys.load(.acquire));
+    try std.testing.expect(!session.session.interaction.input_snapshot.app_cursor_keys.load(.acquire));
 }
 
 test "feedOutputBytes publishes keypad mode through locked parser path" {
