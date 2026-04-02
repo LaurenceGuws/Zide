@@ -233,6 +233,13 @@ it as local detail.
 
 But it must stop acting as terminal-present retirement authority.
 
+Status:
+
+- `texture_updated` is now deleted from `PresentationFeedback`
+- the remaining widget payload is limited to retained-surface-local detail and
+  alt-exit timing, while scene submission truth remains the retirement
+  authority
+
 ## Concrete Hotspots For Slice 1
 
 1. [terminal_widget_draw.zig](/home/home/personal/zide/src/ui/widgets/terminal_widget_draw.zig)

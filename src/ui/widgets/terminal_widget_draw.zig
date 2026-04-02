@@ -606,9 +606,6 @@ pub fn drawPrepared(
         cursor_style,
     );
 
-    if (updated or cache.dirty == .none) {
-        outcome.texture_updated = updated;
-    }
     outcome.retained_surface_generation = retained_surface_generation;
     overlay_ms = time_utils.secondsToMs(app_shell.getTime() - overlay_phase_start);
 
