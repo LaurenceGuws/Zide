@@ -109,6 +109,10 @@ shape such as:
 
 without embedding writer/transport mechanics into that result.
 
+That specific design bar is now written down in:
+
+- [VT_WAR_4_KEYCHAR_RESULT_SHAPE_2026-04-03.md](/home/home/personal/zide/docs/review/VT_WAR_4_KEYCHAR_RESULT_SHAPE_2026-04-03.md)
+
 ## Bottom Line
 
 The only credible War 4 continuation is now explicit:

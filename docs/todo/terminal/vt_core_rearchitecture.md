@@ -157,6 +157,16 @@ gravity into smaller files.
   - locking, writer selection, and protocol encoding still belong outside core
   - do not continue unless that line can be expressed as one crisp result
     shape without pulling transport mechanics into `TerminalCore`
+- `docs/review/VT_WAR_4_KEYCHAR_RESULT_SHAPE_2026-04-03.md`
+  Why: the next step after naming the key/char lane is defining the exact
+  semantic result shape that would justify code.
+  Current read:
+  - the result must stay terminal-semantic, not writer-shaped
+  - it can plausibly cover key intent, char intent, keypad intent, suppression,
+    and local fallback intent
+  - it must not embed writer handles, encoded bytes, or PTY/external transport
+    choice
+  - if that line cannot stay crisp, War 4 should remain closed
 
 ## Priority Now
 
