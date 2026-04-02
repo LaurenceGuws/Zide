@@ -284,6 +284,8 @@ The convergence rule is:
   with a dedicated host assembly owner
 - move present completion and subsystem feedback out of the frame-loop driver
   so acknowledgement policy lives with a dedicated host completion owner
+- keep editor live-smoke capture arming with the editor-smoke owner instead of
+  leaking that policy back into the frame-loop driver
 - keep implementation internals retained and optimized
 
 ### Phase 4: Unified host draw reasoning

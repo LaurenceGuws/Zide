@@ -229,6 +229,9 @@ Progress note, 2026-04-02:
 - host present completion and subsystem feedback now live in
   `src/app/present_feedback_runtime.zig` instead of remaining inline in
   `src/app/draw_frame_runtime.zig`
+- editor live-smoke capture arming now lives in
+  `src/app/editor/live_smoke_runtime.zig` instead of remaining inline in
+  `src/app/draw_frame_runtime.zig`
 
 ### 4. The SDL/GL host seam is functionally decent but still reads like an
 investigation seam

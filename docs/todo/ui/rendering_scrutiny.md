@@ -50,6 +50,9 @@ Status note, 2026-04-02:
 - host present-completion and subsystem feedback now live in
   `src/app/present_feedback_runtime.zig` instead of sitting inline in
   `src/app/draw_frame_runtime.zig`
+- editor live-smoke capture arming now lives in
+  `src/app/editor/live_smoke_runtime.zig` instead of sitting inline in
+  `src/app/draw_frame_runtime.zig`
 - the next move should be another re-rank before any more cuts, not automatic
   repacking
 

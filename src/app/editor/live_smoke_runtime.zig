@@ -103,6 +103,20 @@ pub fn capturePath(state: anytype, allocator: std.mem.Allocator) !?[]u8 {
     });
 }
 
+pub fn armPresentCapture(state: anytype, shell: anytype) ?[]u8 {
+    const capture_path = capturePath(state, state.allocator) catch |err| blk: {
+        app_logger.logger("editor.live_smoke").logf(.warning, "capture path build failed frame={d} err={s}", .{
+            state.frame_id,
+            @errorName(err),
+        });
+        break :blk null;
+    };
+    if (capture_path) |path| {
+        shell.armPresentCapture(path);
+    }
+    return capture_path;
+}
+
 pub fn keepDrivingFrames(state: anytype) bool {
     if (!state.editor_live_smoke.enabled) return false;
     return state.frame_id < state.editor_live_smoke.close_after_frame;
