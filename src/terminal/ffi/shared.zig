@@ -3,7 +3,6 @@ const publication_state = @import("../core/publication/publication_state.zig");
 const terminal_runtime = @import("../core/terminal_runtime.zig");
 const host_queries = @import("../core/session/host_queries.zig");
 const session_lifecycle = @import("../core/session/lifecycle.zig");
-const session_queries = @import("../core/session/queries.zig");
 const types = @import("../model/types.zig");
 const app_logger = @import("../../app_logger.zig");
 
@@ -612,7 +611,13 @@ pub fn syncDerivedEvents(handle: *Handle) Status {
     syncStringEvent(handle, .title_changed, &handle.last_title, state.title) catch |err| return mapError(err);
     syncStringEvent(handle, .cwd_changed, &handle.last_cwd, state.cwd) catch |err| return mapError(err);
 
-    if (session_queries.takeOscClipboardCopy(handle.session, handle.allocator, &handle.scratch_clipboard) catch |err| return mapError(err)) {
+    handle.session.lock();
+    const took_clipboard = handle.session.core.takeOscClipboardCopy(handle.allocator, &handle.scratch_clipboard) catch |err| {
+        handle.session.unlock();
+        return mapError(err);
+    };
+    handle.session.unlock();
+    if (took_clipboard) {
         const clip = handle.scratch_clipboard.items;
         const payload = if (clip.len > 0 and clip[clip.len - 1] == 0) clip[0 .. clip.len - 1] else clip;
         handle.pending_clipboard_write.clearRetainingCapacity();

@@ -9,6 +9,7 @@ const semantic_prompt_mod = @import("semantic_prompt.zig");
 const host_types = @import("session/host_types.zig");
 const palette_mod = @import("../protocol/palette.zig");
 const terminal_core_selection = @import("terminal_core_selection.zig");
+const hyperlink_table = @import("hyperlink_table.zig");
 
 const Screen = screen_mod.Screen;
 const Charset = parser_mod.Charset;
@@ -697,6 +698,10 @@ pub const TerminalCore = struct {
         try out.appendSlice(allocator, self.osc_clipboard.items);
         self.osc_clipboard_pending = false;
         return true;
+    }
+
+    pub fn hyperlinkUri(self: *const TerminalCore, link_id: u32) ?[]const u8 {
+        return hyperlink_table.hyperlinkUri(self, link_id);
     }
 
     pub fn setKittyOsc5522Clipboard(

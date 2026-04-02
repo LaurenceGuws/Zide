@@ -284,6 +284,17 @@ Focused follow-up lane:
   - the next code wave should therefore rank `TerminalCore` sufficiency against
     shell-owned responsibilities instead of deleting more compatibility residue
 
+- `docs/review/VT_CORE_SUFFICIENCY_REVIEW_2026-04-02.md`
+  Why: the next live sprint pressure is now engine sufficiency beneath the
+  shell, not shell identity.
+  Progress:
+  - the first post-shell sufficiency cut is landed
+  - immutable clipboard and hyperlink reads no longer route through
+    `src/terminal/core/session/queries.zig`
+  - FFI and widget callers now follow the cleaner contract:
+    shell provides synchronization, core provides the terminal answer
+  - `src/terminal/core/session/queries.zig` is deleted
+
 - `docs/review/TERMINAL_NATIVE_ARCHITECTURAL_SCRUTINY_2026-03-31.md`
   Why: this is the current ruthless read on what still looks second-rate at
   first glance and what should be demolished first.

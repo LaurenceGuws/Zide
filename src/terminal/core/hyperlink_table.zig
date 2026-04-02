@@ -24,6 +24,6 @@ pub fn appendHyperlink(self: anytype, uri: []const u8, max_hyperlinks: usize) ?u
 pub fn hyperlinkUri(self: anytype, link_id: u32) ?[]const u8 {
     if (link_id == 0) return null;
     const idx = link_id - 1;
-    if (idx >= self.core.hyperlink_table.items.len) return null;
-    return self.core.hyperlink_table.items[idx].uri;
+    if (idx >= self.hyperlink_table.items.len) return null;
+    return self.hyperlink_table.items[idx].uri;
 }
