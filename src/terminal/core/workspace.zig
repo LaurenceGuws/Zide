@@ -426,7 +426,7 @@ pub const TerminalWorkspace = struct {
 
     pub fn resizeAll(self: *TerminalWorkspace, rows: u16, cols: u16) !void {
         for (self.tabs.items) |tab| {
-            try tab.session.resize(rows, cols);
+            try session_runtime.resize(tab.session, rows, cols);
         }
     }
 

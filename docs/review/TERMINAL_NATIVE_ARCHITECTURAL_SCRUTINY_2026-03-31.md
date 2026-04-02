@@ -359,6 +359,11 @@ Judgment:
   `src/terminal/core/session/mode_effects.zig` from CSI mode mutation and
   regression callers instead of pretending to be stable host/runtime
   contract
+- resize is off the runtime surface too:
+  terminal resize/reflow now routes through
+  `src/terminal/core/session/runtime.zig` from app, workspace, and
+  regression callers instead of pretending to be a separate stable host
+  contract layer
 - protocol query helpers are shrinking the same way too: runtime/focus tests
   now use `terminal_core_protocol.zig` directly for `getCell` /
   `getCursorPos`, so those no longer sit on the wrapper surface

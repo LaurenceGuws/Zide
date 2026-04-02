@@ -1,5 +1,6 @@
 const app_shell = @import("../../app_shell.zig");
 const session_config = @import("../../terminal/core/session/config.zig");
+const session_runtime = @import("../../terminal/core/session/runtime.zig");
 const terminal_runtime = @import("../../terminal/core/terminal_runtime.zig");
 const workspace_mod = @import("../../terminal/core/workspace.zig");
 
@@ -31,7 +32,7 @@ pub fn resizeSessionWithShellCellSize(
         @intFromFloat(shell.terminalCellWidth()),
         @intFromFloat(shell.terminalCellHeight()),
     );
-    try term.resize(rows, cols);
+    try session_runtime.resize(term, rows, cols);
 }
 
 pub fn resizeSessionsWithShellCellSize(

@@ -16,7 +16,6 @@ const session_input = @import("session/input.zig");
 const init_options = @import("session/init_options.zig");
 const input_snapshot = @import("session/input_snapshot.zig");
 const control = @import("session/control.zig");
-const mode_effects = @import("session/mode_effects.zig");
 const terminal_publication = @import("publication/terminal_publication.zig");
 const runtime = @import("session/runtime.zig");
 const session_debug = @import("session/debug_ops.zig");

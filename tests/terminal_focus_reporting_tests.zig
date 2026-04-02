@@ -5,6 +5,7 @@ const posix = std.posix;
 const session_config = @import("../src/terminal/core/session/config.zig");
 const session_interaction = @import("../src/terminal/core/session/interaction.zig");
 const session_input = @import("../src/terminal/core/session/input.zig");
+const session_runtime = @import("../src/terminal/core/session/runtime.zig");
 const terminal_runtime = @import("../src/terminal/core/terminal_runtime.zig");
 const terminal_core_protocol = @import("../src/terminal/core/protocol/terminal_core_protocol.zig");
 const terminal_types = @import("../src/terminal/model/types.zig");
@@ -1214,11 +1215,11 @@ test "terminal in-band resize notifications ?2048 emit CSI 48 t when enabled" {
             const allocator = std.testing.allocator;
             session_config.setCellSize(session, 8, 16);
 
-            try session.resize(7, 13);
+            try session_runtime.resize(session, 7, 13);
             try capture.expectNoReply();
 
             terminal_debug.debugFeedBytes(session, "\x1b[?2048h");
-            try session.resize(7, 13);
+            try session_runtime.resize(session, 7, 13);
             {
                 const reply = try capture.readReply(allocator);
                 defer allocator.free(reply);
@@ -1226,7 +1227,7 @@ test "terminal in-band resize notifications ?2048 emit CSI 48 t when enabled" {
             }
 
             terminal_debug.debugFeedBytes(session, "\x1b[?2048l");
-            try session.resize(8, 14);
+            try session_runtime.resize(session, 8, 14);
             try capture.expectNoReply();
         }
     }.run);
@@ -1237,7 +1238,7 @@ test "terminal in-band resize notifications ?2048 use zero pixel fallback when c
         fn run(session: *terminal_runtime.PtyTerminalRuntime, capture: *PipeCapture) !void {
             const allocator = std.testing.allocator;
             terminal_debug.debugFeedBytes(session, "\x1b[?2048h");
-            try session.resize(6, 12);
+            try session_runtime.resize(session, 6, 12);
             {
                 const reply = try capture.readReply(allocator);
                 defer allocator.free(reply);
@@ -1407,7 +1408,7 @@ test "terminal DECSTR suppresses ?2031 and ?2048 live emissions after reset" {
                 try std.testing.expectEqualStrings("\x1b[?997;2n", reply);
             }
 
-            try session.resize(7, 13);
+            try session_runtime.resize(session, 7, 13);
             {
                 const reply = try capture.readReply(allocator);
                 defer allocator.free(reply);
@@ -1420,11 +1421,11 @@ test "terminal DECSTR suppresses ?2031 and ?2048 live emissions after reset" {
             try std.testing.expect(!(try session_input.reportColorSchemeChanged(session, true)));
             try capture.expectNoReply();
 
-            try session.resize(8, 14);
+            try session_runtime.resize(session, 8, 14);
             try capture.expectNoReply();
 
             terminal_debug.debugFeedBytes(session, "\x1b[?2048h");
-            try session.resize(9, 15);
+            try session_runtime.resize(session, 9, 15);
             {
                 const reply = try capture.readReply(allocator);
                 defer allocator.free(reply);

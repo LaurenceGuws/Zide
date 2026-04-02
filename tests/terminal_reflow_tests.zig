@@ -1,6 +1,7 @@
 const std = @import("std");
 const terminal_runtime = @import("../src/terminal/core/terminal_runtime.zig");
 const terminal_debug = @import("../src/terminal/core/session/debug_ops.zig");
+const session_runtime = @import("../src/terminal/core/session/runtime.zig");
 const terminal_core_modes = @import("../src/terminal/core/terminal_core_modes.zig");
 const terminal_publication = @import("../src/terminal/core/publication/terminal_publication.zig");
 
@@ -66,7 +67,7 @@ test "terminal reflow merges wrapped scrollback rows" {
     defer session.deinit();
 
     terminal_debug.debugFeedBytes(session, "ABCDEFG\nHIJ\n");
-    try session.resize(2, 8);
+    try session_runtime.resize(session, 2, 8);
 
     const snapshot = session.snapshot();
     const total_rows = snapshot.scrollback_count + snapshot.rows;
@@ -92,7 +93,7 @@ test "terminal reflow preserves trailing blank cursor and selection" {
     session.startSelection(0, 3);
     session.finishSelection();
 
-    try session.resize(1, 8);
+    try session_runtime.resize(session, 1, 8);
 
     const snapshot = session.snapshot();
     try std.testing.expectEqual(@as(usize, 3), snapshot.cursor.col);
@@ -112,7 +113,7 @@ test "terminal reflow wraps wide scrollback rows" {
     defer session.deinit();
 
     terminal_debug.debugFeedBytes(session, "ABCDEFGH\n");
-    try session.resize(1, 4);
+    try session_runtime.resize(session, 1, 4);
 
     const snapshot = session.snapshot();
     const total_rows = snapshot.scrollback_count + snapshot.rows;
@@ -143,7 +144,7 @@ test "terminal reflow preserves scrolled anchor line" {
     const start_line_before = total_lines_before - snapshot_before.rows - snapshot_before.scrollback_offset;
     const expected = firstCodepoint(session, start_line_before) orelse return error.MissingScrollback;
 
-    try session.resize(2, 6);
+    try session_runtime.resize(session, 2, 6);
 
     const snapshot_after = session.snapshot();
     const total_lines_after = snapshot_after.scrollback_count + snapshot_after.rows;
@@ -162,7 +163,7 @@ test "terminal reflow preserves bottom anchor when not scrolled" {
 
     const expected = bottomNonBlankRowFirstCodepoint(session) orelse return error.MissingScrollback;
 
-    try session.resize(2, 6);
+    try session_runtime.resize(session, 2, 6);
 
     const actual = bottomNonBlankRowFirstCodepoint(session) orelse return error.MissingScrollback;
     try std.testing.expectEqual(expected, actual);
@@ -185,7 +186,7 @@ test "terminal reflow keeps selection active when scrolled" {
     session.updateSelection(select_row, 2);
     session.finishSelection();
 
-    try session.resize(2, 6);
+    try session_runtime.resize(session, 2, 6);
 
     if (session.snapshot().selection) |selection| {
         try std.testing.expect(selection.active);
@@ -215,7 +216,7 @@ test "terminal reflow preserves selection content after resize" {
 
     const expected = codepointAt(session, select_row, 1) orelse return error.MissingSelection;
 
-    try session.resize(2, 6);
+    try session_runtime.resize(session, 2, 6);
 
     if (session.snapshot().selection) |selection| {
         const actual = codepointAt(session, selection.start.row, selection.start.col) orelse return error.MissingSelection;
@@ -234,7 +235,7 @@ test "terminal reflow expands scrollback when narrowing" {
     terminal_debug.debugFeedBytes(session, "AAAAAA\nBBBBBB\nCCCCCC\nDDDDDD\nEEEEEE\n");
 
     const scrollback_before = session.snapshot().scrollback_count;
-    try session.resize(2, 3);
+    try session_runtime.resize(session, 2, 3);
     const scrollback_after = session.snapshot().scrollback_count;
 
     try std.testing.expect(scrollback_after >= scrollback_before);
@@ -342,7 +343,7 @@ test "terminal reflow remaps saved cursor" {
     session.primary.setCursor(1, 1);
     terminal_core_modes.saveCursor(session);
 
-    try session.resize(2, 3);
+    try session_runtime.resize(session, 2, 3);
 
     try std.testing.expect(session.primary.saved_cursor.active);
     try std.testing.expect(session.primary.saved_cursor.cursor.row < 2);
@@ -375,7 +376,7 @@ test "terminal reflow preserves multi-row cell roots" {
         .attrs = default_cell.attrs,
     };
 
-    try session.resize(2, 3);
+    try session_runtime.resize(session, 2, 3);
 
     const snapshot = session.snapshot();
     try std.testing.expectEqual(@as(u32, 'X'), snapshot.cells[0 * 3 + 1].codepoint);
@@ -391,7 +392,7 @@ test "terminal reflow keeps top content visible without scrollback" {
 
     terminal_debug.debugFeedBytes(session, "HELLO\n");
 
-    try session.resize(2, 10);
+    try session_runtime.resize(session, 2, 10);
 
     const snapshot = session.snapshot();
     try std.testing.expectEqual(@as(usize, 0), snapshot.scrollback_count);
