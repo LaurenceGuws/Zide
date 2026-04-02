@@ -235,8 +235,9 @@ Focused follow-up lane:
   - the first whole mutable-host slab has now moved in the selection lane
   - higher-level selection semantics now live under `TerminalCore`
   - session-side selection is narrower: lock, call core mutation, refresh
-  - the next same-class decision is whether scrollback viewport mutation should
-    follow the same split
+  - the first viewport follow-through is now in too:
+    `TerminalCore` owns host-facing scrollback mutation verbs while
+    `scrollback_view.zig` keeps lock + publication refresh + UI normalization
 
 - `docs/review/TERMINAL_NATIVE_ARCHITECTURAL_SCRUTINY_2026-03-31.md`
   Why: this is the current ruthless read on what still looks second-rate at

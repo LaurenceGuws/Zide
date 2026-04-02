@@ -97,6 +97,23 @@ That is the right split:
 The next same-class question is whether viewport / scrollback host mutation
 should move the same way.
 
+Progress note, later on 2026-04-02:
+
+- the first viewport follow-through is now in too
+- [terminal_core.zig](/home/home/personal/zide/src/terminal/core/terminal_core.zig)
+  now owns host-facing scrollback mutation verbs:
+  - `maxHostScrollbackOffset(...)`
+  - `setHostScrollbackOffset(...)`
+  - `scrollHostScrollbackBy(...)`
+- [scrollback_view.zig](/home/home/personal/zide/src/terminal/core/scrollback_view.zig)
+  now uses those core-owned host verbs and keeps only:
+  - lock
+  - publication refresh
+  - a small amount of UI-facing normalization
+
+This is not the full viewport war yet, but it confirms the same split is
+working there too.
+
 ## Non-Goals
 
 - no more alias churn just to reduce `PtyTerminalRuntime` mentions

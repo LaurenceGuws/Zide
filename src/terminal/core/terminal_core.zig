@@ -298,6 +298,10 @@ pub const TerminalCore = struct {
         return self.history.maxScrollOffset(rows);
     }
 
+    pub fn maxHostScrollbackOffset(self: *TerminalCore) usize {
+        return self.maxScrollbackOffset(self.primary.grid.rows, self.primary.grid.cols, self.primary.defaultCell());
+    }
+
     pub fn setScrollbackOffset(self: *TerminalCore, rows: u16, cols: u16, default_cell: types.Cell, offset: usize) usize {
         if (self.active == .alt) {
             self.history.scrollback_offset = 0;
@@ -308,11 +312,19 @@ pub const TerminalCore = struct {
         return self.history.scrollOffset();
     }
 
+    pub fn setHostScrollbackOffset(self: *TerminalCore, offset: usize) usize {
+        return self.setScrollbackOffset(self.primary.grid.rows, self.primary.grid.cols, self.primary.defaultCell(), offset);
+    }
+
     pub fn scrollScrollbackBy(self: *TerminalCore, rows: u16, cols: u16, default_cell: types.Cell, delta: isize) usize {
         if (self.active == .alt) return 0;
         self.history.ensureViewCache(cols, default_cell);
         self.history.scrollBy(rows, delta);
         return self.history.scrollOffset();
+    }
+
+    pub fn scrollHostScrollbackBy(self: *TerminalCore, delta: isize) usize {
+        return self.scrollScrollbackBy(self.primary.grid.rows, self.primary.grid.cols, self.primary.defaultCell(), delta);
     }
 
     pub fn clearSelection(self: *TerminalCore) void {

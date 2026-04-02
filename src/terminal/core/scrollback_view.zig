@@ -87,7 +87,7 @@ pub fn setScrollOffset(self: anytype, offset: usize) void {
 
 pub fn setScrollOffsetLocked(self: anytype, offset: usize) void {
     const before = self.core.history.scrollOffset();
-    const after = self.core.setScrollbackOffset(self.core.primary.grid.rows, self.core.primary.grid.cols, self.core.primary.defaultCell(), offset);
+    const after = self.core.setHostScrollbackOffset(offset);
     _ = publication_flow.refreshScrollViewForOffsetChangeLocked(self, before, after);
 }
 
@@ -105,7 +105,7 @@ pub fn resetToLiveBottomForInputLocked(self: anytype, saw_non_modifier_key_press
 
 pub fn setScrollOffsetFromNormalizedTrackLocked(self: anytype, track_ratio: f32) ?usize {
     if (self.core.active == .alt) return null;
-    const max_offset = self.core.maxScrollbackOffset(self.core.primary.grid.rows, self.core.primary.grid.cols, self.core.primary.defaultCell());
+    const max_offset = self.core.maxHostScrollbackOffset();
     const clamped = std.math.clamp(track_ratio, 0.0, 1.0);
     const target_offset = @as(usize, @intFromFloat(@round(@as(f32, @floatFromInt(max_offset)) * (1.0 - clamped))));
     if (target_offset == self.core.history.scrollOffset()) return null;
@@ -138,6 +138,6 @@ pub fn scrollByLocked(self: anytype, delta: isize) void {
     if (self.core.active == .alt) return;
     if (delta == 0) return;
     const before = self.core.history.scrollOffset();
-    const after = self.core.scrollScrollbackBy(self.core.primary.grid.rows, self.core.primary.grid.cols, self.core.primary.defaultCell(), delta);
+    const after = self.core.scrollHostScrollbackBy(delta);
     _ = publication_flow.refreshScrollViewForOffsetChangeLocked(self, before, after);
 }
