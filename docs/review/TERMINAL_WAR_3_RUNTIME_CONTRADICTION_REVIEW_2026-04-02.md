@@ -80,3 +80,13 @@ Status note, later on 2026-04-02 again:
   [launch_shell_path.zig](/home/home/personal/zide/src/terminal/core/session/launch_shell_path.zig)
 - bootstrap and workspace host callers now use that owner directly
 - runtime is narrower again and less mixed with host bootstrap state
+
+Status note, later on 2026-04-02 once more:
+
+- lifecycle entrypoint concentration no longer lives directly in
+  [session/runtime.zig](/home/home/personal/zide/src/terminal/core/session/runtime.zig)
+- teardown, child-exit refresh, external child-exit reporting, and poll now
+  live in
+  [runtime_lifecycle.zig](/home/home/personal/zide/src/terminal/core/session/runtime_lifecycle.zig)
+- `session/runtime.zig` is now closer to transport/thread forwarding plus the
+  one remaining direct control write for input pressure

@@ -1,9 +1,8 @@
 const std = @import("std");
-const pty_io = @import("../runtime/pty_io.zig");
 const terminal_transport = @import("../runtime/terminal_transport.zig");
 const pty_mod = @import("../../io/pty.zig");
-const session_lifecycle = @import("lifecycle.zig");
 const runtime_init = @import("runtime_init.zig");
+const runtime_lifecycle = @import("runtime_lifecycle.zig");
 const session_transport_runtime = @import("transport_runtime.zig");
 const session_thread_runtime = @import("thread_runtime.zig");
 
@@ -38,16 +37,15 @@ pub fn closeExternalTransport(self: anytype) bool {
 }
 
 pub fn reportExternalChildExit(self: anytype, code: ?i32) bool {
-    return session_lifecycle.reportExternalChildExit(self, code);
+    return runtime_lifecycle.reportExternalChildExit(self, code);
 }
 
 pub fn deinit(self: anytype) void {
-    session_thread_runtime.deinit(self);
+    runtime_lifecycle.deinit(self);
 }
 
 pub fn prepareForShutdown(self: anytype) void {
-    session_lifecycle.refreshChildExit(self);
-    session_thread_runtime.prepareForShutdown(self);
+    runtime_lifecycle.prepareForShutdown(self);
 }
 
 pub fn startNoThreads(self: anytype, shell: ?[:0]const u8) !void {
@@ -59,12 +57,11 @@ pub fn setInputPressure(self: anytype, value: bool) void {
 }
 
 pub fn poll(self: anytype) !void {
-    session_lifecycle.maybeUpdateChildExit(self);
-    return pty_io.poll(self);
+    return runtime_lifecycle.poll(self);
 }
 
 pub fn refreshChildExit(self: anytype) void {
-    session_lifecycle.refreshChildExit(self);
+    runtime_lifecycle.refreshChildExit(self);
 }
 
 pub fn hasData(self: anytype) bool {
