@@ -145,6 +145,18 @@ gravity into smaller files.
   - encoded host input did not yield a safe immediate cut
   - continue only by opening a deeper key/char semantic-dispatch design step
     or stop and rerank from this baseline
+- `docs/review/VT_WAR_4_KEYCHAR_DISPATCH_REVIEW_2026-04-03.md`
+  Why: the stop-marker needed one explicit named continuation path instead of
+  vague "input" pressure.
+  Current read:
+  - the only credible continuation is key/char semantic dispatch before writer
+    encoding
+  - semantic decisions like app-cursor fallback, key-mode gating, ctrl/alt
+    char fallback, and alternate-scroll mapping still feel more
+    terminal-facing than writer-facing
+  - locking, writer selection, and protocol encoding still belong outside core
+  - do not continue unless that line can be expressed as one crisp result
+    shape without pulling transport mechanics into `TerminalCore`
 
 ## Priority Now
 
@@ -161,8 +173,8 @@ Highest-value remaining items from the current live baseline:
    Current state:
    - encoded host input is the next candidate, but not yet a safe immediate cut
    Design bar:
-   - only continue if a clean semantic sub-slab can be separated from writer
-     encoding and transport mechanics
+   - only continue if key/char semantic dispatch can be separated cleanly from
+     writer encoding and transport mechanics
    Stop marker:
    - War 4 is now at a legitimate pause point from a materially stronger
      baseline
