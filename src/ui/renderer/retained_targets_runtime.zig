@@ -15,7 +15,6 @@ pub const RetainedTargetState = struct {
     terminal: ?RenderTarget = null,
     terminal_scroll: ?RenderTarget = null,
     editor: ?RenderTarget = null,
-    drawing_editor_surface: bool = false,
 };
 
 pub fn deinit(self: anytype) void {
@@ -49,12 +48,11 @@ pub fn endTerminalSurface(self: anytype) void {
 
 pub fn beginEditorSurface(self: anytype) bool {
     scene_frame_runtime.noteEditorSurfaceUpdate(self);
-    self.retained_targets.drawing_editor_surface = true;
     return self.beginRenderTarget(self.retained_targets.editor);
 }
 
 pub fn endEditorSurface(self: anytype) void {
-    self.retained_targets.drawing_editor_surface = false;
+    scene_frame_runtime.noteEditorSurfaceEnded(self);
     scene_frame_runtime.restoreMainCompositionTarget(self);
 }
 
@@ -134,7 +132,5 @@ pub fn drawEditorSurface(self: anytype, x: f32, y: f32) void {
 }
 
 pub fn noteEditorSurfaceFullPaneClear(self: anytype, x: i32, y: i32, w: i32, h: i32) void {
-    if (!self.retained_targets.drawing_editor_surface) return;
-    if (x != 0 or y != 0 or w != self.target_width or h != self.target_height) return;
-    scene_frame_runtime.noteCompositionFullPaneClear(self);
+    scene_frame_runtime.noteEditorSurfaceFullPaneClear(self, x, y, w, h);
 }

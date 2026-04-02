@@ -35,6 +35,7 @@ pub const PresentState = struct {
     last_present_gap_ms: f64 = 0.0,
     last_swap_ms: f64 = 0.0,
     scene_frame_active: bool = false,
+    drawing_editor_surface: bool = false,
     trace_current: PresentTrace = .{},
     trace_last: PresentTrace = .{},
     capture_path: ?[]const u8 = null,
@@ -45,6 +46,7 @@ pub const PresentState = struct {
 pub fn beginFrame(self: anytype) void {
     self.present.frame_seq +%= 1;
     self.present.trace_current = .{ .frame_seq = self.present.frame_seq };
+    self.present.drawing_editor_surface = false;
     const sizes = refreshWindowSizes(self.window);
     self.width = sizes.width;
     self.height = sizes.height;
@@ -161,11 +163,22 @@ pub fn noteCompositionClip(self: anytype) void {
 }
 
 pub fn noteEditorSurfaceUpdate(self: anytype) void {
+    self.present.drawing_editor_surface = true;
     self.present.trace_current.editor_surface_update_count += 1;
 }
 
 pub fn noteEditorSurfaceBlit(self: anytype) void {
     self.present.trace_current.editor_surface_blit_count += 1;
+}
+
+pub fn noteEditorSurfaceEnded(self: anytype) void {
+    self.present.drawing_editor_surface = false;
+}
+
+pub fn noteEditorSurfaceFullPaneClear(self: anytype, x: i32, y: i32, w: i32, h: i32) void {
+    if (!self.present.drawing_editor_surface) return;
+    if (x != 0 or y != 0 or w != self.target_width or h != self.target_height) return;
+    noteCompositionFullPaneClear(self);
 }
 
 pub fn refreshSceneTargetContract(self: anytype) void {

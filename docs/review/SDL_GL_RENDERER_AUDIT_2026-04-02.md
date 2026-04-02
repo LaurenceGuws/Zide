@@ -188,6 +188,9 @@ Status note after the first retained-target ownership cut:
 - renderer full-pane-clear detection for editor retained surfaces now routes
   through `src/ui/renderer/retained_targets_runtime.zig` instead of peeking
   into retained-target state directly
+- editor-surface trace state now lives with `PresentState` in
+  `src/ui/renderer/scene_frame_runtime.zig` instead of inflating retained-target
+  storage
 
 ### 3. Scene ownership is structurally right, but product-retained-target
 choreography still shapes the steady-state path

@@ -238,6 +238,9 @@ Progress note, 2026-04-02:
 - renderer full-pane-clear detection for editor retained surfaces now routes
   through `src/ui/renderer/retained_targets_runtime.zig` instead of peeking
   into retained-target state directly
+- editor-surface trace state now lives with `PresentState` in
+  `src/ui/renderer/scene_frame_runtime.zig` instead of inflating retained-target
+  storage
 
 ### 4. The SDL/GL host seam is functionally decent but still reads like an
 investigation seam
