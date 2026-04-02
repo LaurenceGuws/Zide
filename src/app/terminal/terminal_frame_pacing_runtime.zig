@@ -90,16 +90,14 @@ pub fn observe(state: anytype, now: f64) Snapshot {
         pacing.last_generation_change_time = now;
     }
 
-    const redraw_pending = published_generation != frame_state.presented_generation;
-    const parse_backlog = pending_generation != published_generation;
     return .{
         .session_ptr = frame_state.session_ptr,
         .pending_generation = pending_generation,
         .published_generation = published_generation,
         .presented_generation = frame_state.presented_generation,
-        .redraw_pending = redraw_pending,
-        .parse_backlog = parse_backlog,
-        .output_pressure = frame_state.has_data or parse_backlog,
+        .redraw_pending = frame_state.redraw_pending,
+        .parse_backlog = frame_state.parse_backlog,
+        .output_pressure = frame_state.output_pressure,
     };
 }
 
@@ -416,6 +414,9 @@ fn activeFrameState(state: anytype) struct {
     pending_generation: u64,
     published_generation: u64,
     presented_generation: u64,
+    redraw_pending: bool,
+    parse_backlog: bool,
+    output_pressure: bool,
 } {
     const State = @TypeOf(state.*);
     if (!@hasField(State, "terminal_workspace")) {
@@ -425,6 +426,9 @@ fn activeFrameState(state: anytype) struct {
             .pending_generation = 0,
             .published_generation = 0,
             .presented_generation = 0,
+            .redraw_pending = false,
+            .parse_backlog = false,
+            .output_pressure = false,
         };
     }
 
@@ -436,6 +440,9 @@ fn activeFrameState(state: anytype) struct {
             .pending_generation = frame_state.pending_generation,
             .published_generation = frame_state.published_generation,
             .presented_generation = frame_state.presented_generation,
+            .redraw_pending = frame_state.redraw_pending,
+            .parse_backlog = frame_state.parse_backlog,
+            .output_pressure = frame_state.output_pressure,
         };
     }
     return .{
@@ -444,6 +451,9 @@ fn activeFrameState(state: anytype) struct {
         .pending_generation = 0,
         .published_generation = 0,
         .presented_generation = 0,
+        .redraw_pending = false,
+        .parse_backlog = false,
+        .output_pressure = false,
     };
 }
 
@@ -511,6 +521,9 @@ test "observe keeps redraw pending until published generation is presented" {
             pending_generation: u64,
             published_generation: u64,
             presented_generation: u64,
+            redraw_pending: bool,
+            parse_backlog: bool,
+            output_pressure: bool,
         } {
             return .{
                 .has_data = false,
@@ -518,6 +531,9 @@ test "observe keeps redraw pending until published generation is presented" {
                 .pending_generation = 14,
                 .published_generation = 13,
                 .presented_generation = 12,
+                .redraw_pending = true,
+                .parse_backlog = true,
+                .output_pressure = true,
             };
         }
     };

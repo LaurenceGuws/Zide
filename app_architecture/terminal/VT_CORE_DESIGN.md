@@ -254,6 +254,8 @@ Status note, 2026-03-31:
     owner contract now lives under
     `src/terminal/core/publication/terminal_publication.zig` as
     `prepareLatestPresentation(...)`
+    and active frame pacing should consume owner-shaped frame state instead of
+    deriving redraw/backlog/output-pressure from raw generations in app code
   - native draw/runtime presentation feedback staging is tighter too:
     app state no longer carries terminal-specific pending presentation
     feedback or submission-sequence residue; the active `TerminalWidget` now
