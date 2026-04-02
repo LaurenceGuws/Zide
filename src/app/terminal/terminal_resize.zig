@@ -6,7 +6,7 @@ const workspace_mod = @import("../../terminal/core/workspace.zig");
 
 const Shell = app_shell.Shell;
 const TerminalWorkspace = workspace_mod.TerminalWorkspace;
-const TerminalSession = terminal_runtime.TerminalSession;
+const TerminalRuntimeShell = terminal_runtime.TerminalRuntimeShell;
 
 pub fn resizeWorkspaceWithShellCellSize(
     workspace: *TerminalWorkspace,
@@ -22,7 +22,7 @@ pub fn resizeWorkspaceWithShellCellSize(
 }
 
 pub fn resizeSessionWithShellCellSize(
-    term: *TerminalSession,
+    term: *TerminalRuntimeShell,
     shell: *Shell,
     rows: u16,
     cols: u16,
@@ -36,7 +36,7 @@ pub fn resizeSessionWithShellCellSize(
 }
 
 pub fn resizeSessionsWithShellCellSize(
-    sessions: []*TerminalSession,
+    sessions: []*TerminalRuntimeShell,
     shell: *Shell,
     rows: u16,
     cols: u16,

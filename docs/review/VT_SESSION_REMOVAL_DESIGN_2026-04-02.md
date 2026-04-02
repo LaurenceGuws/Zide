@@ -152,3 +152,27 @@ from
 The sprint should now measure progress by one bar only:
 
 - does this make deleting `TerminalSession` more plausible?
+
+## Progress Note, Later On 2026-04-02
+
+The first identity step is now landed:
+
+- the outer shell is now explicitly named
+  [TerminalRuntimeShell](/home/home/personal/zide/src/terminal/core/session/terminal_runtime_shell.zig)
+- the VT root exports that shell directly
+- live app/UI/workspace/replay/FFI callers now use `TerminalRuntimeShell`
+  instead of `TerminalSession`
+- [terminal_session.zig](/home/home/personal/zide/src/terminal/core/session/terminal_session.zig)
+  is now just a compatibility alias
+
+That is the right direction because it changes the live story from:
+
+- "the public terminal object is `TerminalSession`"
+
+to:
+
+- "`TerminalCore` is the terminal, `TerminalRuntimeShell` is the outer shell"
+
+The next blocker is no longer naming.
+It is whether construction, locking, and PTY writer access can be surfaced
+through that shell without preserving `TerminalSession` as a meaningful type.

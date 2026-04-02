@@ -261,6 +261,15 @@ Focused follow-up lane:
     PTY/runtime shell ownership
   - the next code wave should therefore build the replacement shape for those
     responsibilities instead of continuing opportunistic cleanup
+  Progress:
+  - the first identity step is now landed
+  - the outer shell is explicitly named
+    `src/terminal/core/session/terminal_runtime_shell.zig`
+  - the VT root now exports `TerminalRuntimeShell` directly
+  - live app/UI/workspace/replay/FFI callers now use `TerminalRuntimeShell`
+    instead of `TerminalSession`
+  - `terminal_session.zig` is now compatibility residue instead of the live
+    shell identity
 
 - `docs/review/TERMINAL_NATIVE_ARCHITECTURAL_SCRUTINY_2026-03-31.md`
   Why: this is the current ruthless read on what still looks second-rate at

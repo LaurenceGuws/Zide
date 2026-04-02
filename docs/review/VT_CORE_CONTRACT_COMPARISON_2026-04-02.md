@@ -197,6 +197,21 @@ Identity progress, later on 2026-04-02:
 - internal host/runtime infrastructure now follows that same identity:
   workspace and replay-harness code speak `TerminalSession` directly too
 
+Shell identity progress, later on 2026-04-02:
+
+- the outer shell is now explicitly named
+  [TerminalRuntimeShell](/home/home/personal/zide/src/terminal/core/session/terminal_runtime_shell.zig)
+- the VT root exports `TerminalRuntimeShell` directly
+- live app/UI/workspace/replay/FFI callers now use `TerminalRuntimeShell`
+  instead of `TerminalSession`
+- `TerminalSession` is now reduced to compatibility residue
+
+This does not finish the library-object decision, but it removes another major
+source of ambiguity:
+
+- the outer shell now reads like a shell
+- not like the thing that should win the public "real terminal" identity
+
 ## Sprint Target
 
 The next `vt-sprint` question should be:

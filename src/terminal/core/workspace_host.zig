@@ -11,7 +11,7 @@ const runtime_policy = @import("../../app/runtime_policy.zig");
 
 const TerminalWorkspace = workspace_mod.TerminalWorkspace;
 const TabId = workspace_mod.TabId;
-const TerminalSession = terminal_runtime.TerminalSession;
+const TerminalRuntimeShell = terminal_runtime.TerminalRuntimeShell;
 pub const ActiveFrameState = publication_state.FrameState;
 pub const PollFrameResult = workspace_mod.TerminalWorkspace.PollFrameResult;
 pub const PollPolicy = workspace_mod.TerminalWorkspace.PollPolicy;
@@ -111,7 +111,7 @@ pub fn pollRuntimeCounters(workspace: *const TerminalWorkspace) PollRuntimeCount
     return workspace.poll_runtime_counters;
 }
 
-fn sessionNeedsCloseConfirm(session: *TerminalSession) bool {
+fn sessionNeedsCloseConfirm(session: *TerminalRuntimeShell) bool {
     if (!host_queries.isAlive(session)) return false;
     const activity = host_queries.currentActivityMetadata(session);
     return activity.foreground_process_present or

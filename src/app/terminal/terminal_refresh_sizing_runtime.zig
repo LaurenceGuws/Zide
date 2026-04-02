@@ -8,14 +8,14 @@ const terminal_runtime = @import("../../terminal/core/terminal_runtime.zig");
 const workspace_mod = @import("../../terminal/core/workspace.zig");
 
 const AppMode = app_bootstrap.AppMode;
-const TerminalSession = terminal_runtime.TerminalSession;
+const TerminalRuntimeShell = terminal_runtime.TerminalRuntimeShell;
 const TerminalWorkspace = workspace_mod.TerminalWorkspace;
 
 pub fn handle(
     state: anytype,
     app_mode: AppMode,
     terminal_workspace: *?TerminalWorkspace,
-    terminals: []*TerminalSession,
+    terminals: []*TerminalRuntimeShell,
     show_terminal: bool,
     terminal_height: f32,
     shell: anytype,

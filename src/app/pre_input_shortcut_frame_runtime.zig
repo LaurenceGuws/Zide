@@ -32,7 +32,7 @@ fn maybeConsumeScrollLockCapture(
     app_mode: app_bootstrap.AppMode,
     show_terminal: bool,
     terminal_workspace: *?workspace_mod.TerminalWorkspace,
-    terminals: []*terminal_runtime.TerminalSession,
+    terminals: []*terminal_runtime.TerminalRuntimeShell,
     terminal_widgets: anytype,
     live_layout: layout_types.WidgetLayout,
 ) ?app_update_prelude_frame_runtime.PreInputResult {
@@ -83,7 +83,7 @@ pub fn handle(
     terminal_window_chrome_mode: anytype,
     show_terminal: bool,
     terminal_workspace: *?workspace_mod.TerminalWorkspace,
-    terminals: []*terminal_runtime.TerminalSession,
+    terminals: []*terminal_runtime.TerminalRuntimeShell,
     terminal_widgets: anytype,
     allocator: std.mem.Allocator,
     editors: anytype,

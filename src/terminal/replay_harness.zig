@@ -386,7 +386,7 @@ pub fn runFixtureObservedWithOptions(
         return error.InvalidFixtureSize;
     }
 
-    var session = try terminal_runtime.TerminalSession.init(allocator, fixture.meta.rows, fixture.meta.cols);
+    var session = try terminal_runtime.TerminalRuntimeShell.init(allocator, fixture.meta.rows, fixture.meta.cols);
     defer session.deinit();
     var baseline_publication: BaselinePublication = .{};
 
@@ -468,7 +468,7 @@ pub fn runFixtureObservedWithOptions(
     };
 }
 
-fn runFixtureInputPhase(session: *terminal_runtime.TerminalSession, input: []const u8, uses_reply_capture: bool) !void {
+fn runFixtureInputPhase(session: *terminal_runtime.TerminalRuntimeShell, input: []const u8, uses_reply_capture: bool) !void {
     if (uses_reply_capture) {
         terminal_debug.debugFeedBytes(session, input);
     } else {
@@ -477,7 +477,7 @@ fn runFixtureInputPhase(session: *terminal_runtime.TerminalSession, input: []con
     }
 }
 
-fn seedOsc5522Clipboard(session: *terminal_runtime.TerminalSession, meta: FixtureMeta) !void {
+fn seedOsc5522Clipboard(session: *terminal_runtime.TerminalRuntimeShell, meta: FixtureMeta) !void {
     const png = if (meta.osc_5522_clipboard_png_hex) |hex| try decodeHex(session.allocator, hex) else null;
     defer if (png) |bytes| session.allocator.free(bytes);
     try terminal_debug.debugSeedOsc5522Clipboard(
@@ -845,7 +845,7 @@ fn attrsEqual(a: terminal_publication.CellAttrs, b: terminal_publication.CellAtt
         a.link_id == b.link_id;
 }
 
-fn applySelectionActions(session: *terminal_runtime.TerminalSession, actions: []const SelectionAction) void {
+fn applySelectionActions(session: *terminal_runtime.TerminalRuntimeShell, actions: []const SelectionAction) void {
     for (actions) |action| {
         switch (action.op) {
             .start => session_selection.startSelection(session, action.row, action.col),
@@ -864,7 +864,7 @@ fn applySelectionActions(session: *terminal_runtime.TerminalSession, actions: []
 
 fn applyOutputChunks(
     allocator: std.mem.Allocator,
-    session: *terminal_runtime.TerminalSession,
+    session: *terminal_runtime.TerminalRuntimeShell,
     chunks: []const []const u8,
     line_ending: LineEnding,
     uses_reply_capture: bool,
@@ -876,39 +876,39 @@ fn applyOutputChunks(
     }
 }
 
-fn applyScrollFullUp(session: *terminal_runtime.TerminalSession, count: usize) void {
+fn applyScrollFullUp(session: *terminal_runtime.TerminalRuntimeShell, count: usize) void {
     var i: usize = 0;
     while (i < count) : (i += 1) {
         terminal_debug.debugScrollUp(session);
     }
 }
 
-fn applyScrollOffsetActions(session: *terminal_runtime.TerminalSession, actions: []const ScrollOffsetAction) void {
+fn applyScrollOffsetActions(session: *terminal_runtime.TerminalRuntimeShell, actions: []const ScrollOffsetAction) void {
     for (actions) |action| {
         terminal_debug.debugSetScrollOffset(session, action.offset);
     }
 }
 
-fn applyScrollbackCellActions(session: *terminal_runtime.TerminalSession, fixture_name: []const u8, actions: []const ScrollbackCellAction) void {
+fn applyScrollbackCellActions(session: *terminal_runtime.TerminalRuntimeShell, fixture_name: []const u8, actions: []const ScrollbackCellAction) void {
     _ = fixture_name;
     for (actions) |action| {
         terminal_debug.debugSetScrollbackCell(session, action.row, action.col, action.codepoint);
     }
 }
 
-fn applyBaselineScrollbackRows(session: *terminal_runtime.TerminalSession, rows: []const []const u8) void {
+fn applyBaselineScrollbackRows(session: *terminal_runtime.TerminalRuntimeShell, rows: []const []const u8) void {
     for (rows) |row| {
         terminal_debug.debugPushScrollbackRow(session, row);
     }
 }
 
-fn applyBaselineGridRows(session: *terminal_runtime.TerminalSession, rows: []const []const u8) void {
+fn applyBaselineGridRows(session: *terminal_runtime.TerminalRuntimeShell, rows: []const []const u8) void {
     for (rows, 0..) |row, idx| {
         terminal_debug.debugSetGridRow(session, idx, row);
     }
 }
 
-fn applyMouseActions(session: *terminal_runtime.TerminalSession, actions: []const MouseAction) !void {
+fn applyMouseActions(session: *terminal_runtime.TerminalRuntimeShell, actions: []const MouseAction) !void {
     for (actions) |action| {
         _ = try session_input.reportMouseEvent(session, .{
             .kind = action.kind,

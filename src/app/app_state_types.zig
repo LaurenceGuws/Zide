@@ -52,7 +52,7 @@ pub const GrammarManager = grammar_manager_mod.GrammarManager;
 pub const EditorRenderCache = editor_render_cache_mod.EditorRenderCache;
 pub const EditorClusterCache = widgets.EditorClusterCache;
 
-pub const TerminalSession = terminal_runtime.TerminalSession;
+pub const TerminalRuntimeShell = terminal_runtime.TerminalRuntimeShell;
 pub const TerminalWorkspace = workspace_mod.TerminalWorkspace;
 pub const TerminalTabId = workspace_mod.TabId;
 pub const TerminalCloseConfirmContext = workspace_host.CloseConfirmContext;

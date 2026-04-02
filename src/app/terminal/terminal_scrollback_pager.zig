@@ -4,7 +4,7 @@ const app_logger = @import("../../app_logger.zig");
 const session_input = @import("../../terminal/core/session/input.zig");
 const terminal_runtime = @import("../../terminal/core/terminal_runtime.zig");
 
-const TerminalSession = terminal_runtime.TerminalSession;
+const TerminalRuntimeShell = terminal_runtime.TerminalRuntimeShell;
 
 fn shellSingleQuoteAlloc(allocator: std.mem.Allocator, value: []const u8) ![]u8 {
     var out = std.ArrayList(u8).empty;
@@ -23,7 +23,7 @@ fn shellSingleQuoteAlloc(allocator: std.mem.Allocator, value: []const u8) ![]u8 
 
 pub fn openInPager(
     allocator: std.mem.Allocator,
-    term: *TerminalSession,
+    term: *TerminalRuntimeShell,
 ) !bool {
     const log = app_logger.logger("terminal.scrollback.pager");
     const text = try term.core.scrollbackAnsiTextAlloc(allocator);

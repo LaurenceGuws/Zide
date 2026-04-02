@@ -17,7 +17,7 @@ pub const AppState = struct {
     status_bar: t.StatusBar,
 
     editors: std.ArrayList(*t.Editor),
-    terminals: std.ArrayList(*t.TerminalSession),
+    terminals: std.ArrayList(*t.TerminalRuntimeShell),
     terminal_widgets: std.ArrayList(t.TerminalWidget),
     terminal_workspace: ?t.TerminalWorkspace,
 
