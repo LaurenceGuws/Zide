@@ -49,6 +49,15 @@ gravity into smaller files.
   - the public contract is broader than Ghostty's `vt.h`, but the stronger
     question is whether that broad host contract is still anchored on the shell
     instead of a more engine-centered contract story
+- `docs/review/VT_WAR_4_CALLER_DEPENDENCE_REVIEW_2026-04-03.md`
+  Why: the caller map should prove whether the shell still has fake gravity or
+  whether the remaining problem is narrower contract identity.
+  Current read:
+  - most remaining shell use now looks legitimate
+  - widget and workspace paths mostly use the shell for synchronization or
+    honest runtime aggregation
+  - the strongest remaining suspect is the FFI handle/constructor path that
+    still makes the shell the universal host entrypoint
 
 ## Priority Now
 
