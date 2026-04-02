@@ -30,6 +30,7 @@ const screenshot = @import("renderer/screenshot.zig");
 const input_runtime = @import("renderer/input_runtime.zig");
 const font_runtime = @import("renderer/font_runtime.zig");
 const retained_targets_runtime = @import("renderer/retained_targets_runtime.zig");
+const scene_frame_runtime = @import("renderer/scene_frame_runtime.zig");
 const text_runtime = @import("renderer/text_runtime.zig");
 const window_chrome_runtime = @import("renderer/window_chrome_runtime.zig");
 const app_lifecycle_runtime = @import("../app/lifecycle_runtime.zig");
@@ -50,7 +51,7 @@ const builtin = @import("builtin");
 
 const sdl = gl.c;
 const TextPress = platform_input_events.TextPress;
-const WindowSizes = struct {
+pub const WindowSizes = struct {
     width: i32,
     height: i32,
     render_width: i32,
@@ -225,7 +226,7 @@ const RenderTarget = targets.RenderTarget;
 const BatchDraw = draw_ops.BatchDraw;
 const Vertex = draw_ops.Vertex;
 
-const SceneTargetInvalidation = packed struct(u8) {
+pub const SceneTargetInvalidation = packed struct(u8) {
     uninitialized: bool = false,
     drawable_resize: bool = false,
     display_change: bool = false,
@@ -233,7 +234,7 @@ const SceneTargetInvalidation = packed struct(u8) {
     target_recreate_failure: bool = false,
     _padding: u3 = 0,
 
-    fn any(self: SceneTargetInvalidation) bool {
+    pub fn any(self: SceneTargetInvalidation) bool {
         return self.uninitialized or
             self.drawable_resize or
             self.display_change or
@@ -242,7 +243,7 @@ const SceneTargetInvalidation = packed struct(u8) {
     }
 };
 
-const SceneTargetContract = struct {
+pub const SceneTargetContract = struct {
     logical_width: i32 = 0,
     logical_height: i32 = 0,
     drawable_width: i32 = 0,
@@ -251,7 +252,7 @@ const SceneTargetContract = struct {
     render_scale: f32 = 1.0,
 };
 
-fn sceneTargetContractFromDisplayMetrics(metrics: platform_window.DisplayMetrics) SceneTargetContract {
+pub fn sceneTargetContractFromDisplayMetrics(metrics: platform_window.DisplayMetrics) SceneTargetContract {
     return .{
         .logical_width = metrics.window_w,
         .logical_height = metrics.window_h,
@@ -269,7 +270,7 @@ const SceneTargetState = struct {
     ready: bool = false,
 };
 
-fn logSceneTargetState(
+pub fn logSceneTargetState(
     logger: app_logger.Logger,
     event: []const u8,
     contract: SceneTargetContract,
@@ -1017,233 +1018,16 @@ pub const Renderer = struct {
     }
 
     pub fn beginFrame(self: *Renderer) void {
-        self.frame_seq +%= 1;
-        self.present_trace_current = .{ .frame_seq = self.frame_seq };
-        const sizes = refreshWindowSizes(self.window);
-        self.width = sizes.width;
-        self.height = sizes.height;
-        self.render_width = sizes.render_width;
-        self.render_height = sizes.render_height;
-        self.refreshSceneTargetContract();
-        self.prepareSceneTarget(target_draw.nearestFilter());
-
-        // Avoid leaking background context across different text draws.
-        self.text_bg_rgba = .{ .r = 0, .g = 0, .b = 0, .a = 0 };
-
-        self.scene_frame_active = self.beginSceneFrame();
-        if (!self.scene_frame_active) self.bindDefaultTarget();
-        self.updateMouseScale();
-        gl.Disable(gl.c.GL_SCISSOR_TEST);
-
-        const bg = self.theme.background.toRgba();
-        gl.ClearColor(
-            @as(f32, @floatFromInt(bg.r)) / 255.0,
-            @as(f32, @floatFromInt(bg.g)) / 255.0,
-            @as(f32, @floatFromInt(bg.b)) / 255.0,
-            @as(f32, @floatFromInt(bg.a)) / 255.0,
-        );
-        gl.Clear(gl.c.GL_COLOR_BUFFER_BIT);
+        scene_frame_runtime.beginFrame(self);
     }
 
     pub fn submitFrame(self: *Renderer) FrameSubmission {
-        if (self.scene_frame_active) self.drawSceneTargetToDefault();
-        if (self.present_capture_armed) {
-            if (self.present_capture_path) |path| {
-                self.dumpWindowScreenshotPpm(path) catch |err| {
-                    app_logger.logger("renderer.present").logf(.warning, "capture failed frame_seq={d} path={s} err={s}", .{
-                        self.frame_seq,
-                        path,
-                        @errorName(err),
-                    });
-                };
-                self.present_trace_current.captured_path = path;
-            }
-        }
-        const swap_start = sdl_api.getPerformanceCounter();
-        const swap_ok = sdl_api.glSwapWindow(self.window);
-        if (!swap_ok) {
-            app_logger.logger("sdl.gl").logStdout(.warning, "SDL_GL_SwapWindow failed err={s}", .{sdl_api.getError()});
-        }
-        const swap_end = sdl_api.getPerformanceCounter();
-        self.last_swap_ms = performanceDeltaMs(swap_start, swap_end, self.perf_freq);
-        self.scene_frame_active = false;
-        self.present_trace_last = self.present_trace_current;
-        self.present_capture_path = null;
-        self.present_capture_armed = false;
-        self.present_capture_frame_seq = 0;
-        if (swap_ok) self.submission_sequence += 1;
-        return .{
-            .succeeded = swap_ok,
-            .sequence = self.submission_sequence,
-        };
-    }
-
-    fn performanceDeltaMs(start: u64, end: u64, freq: f64) f64 {
-        if (end <= start or freq <= 0.0) return 0.0;
-        return (@as(f64, @floatFromInt(end - start)) * 1000.0) / freq;
-    }
-
-    fn refreshWindowSizes(window: *sdl.SDL_Window) WindowSizes {
-        const display_metrics = platform_window.collectDisplayMetrics(window);
-        return .{
-            .width = display_metrics.window_w,
-            .height = display_metrics.window_h,
-            .render_width = display_metrics.drawable_w,
-            .render_height = display_metrics.drawable_h,
-        };
-    }
-
-    fn sceneTargetContractSnapshot(self: *const Renderer) SceneTargetContract {
-        return sceneTargetContractFromDisplayMetrics(platform_window.collectDisplayMetrics(self.window));
-    }
-
-    fn refreshSceneTargetContract(self: *Renderer) void {
-        const log = app_logger.logger("renderer.scene_target");
-        const next = self.sceneTargetContractSnapshot();
-        var reasons: SceneTargetInvalidation = .{};
-        const previous = self.scene_target.contract;
-
-        if (!self.scene_target.ready and self.scene_target.target == null) {
-            reasons.uninitialized = true;
-        }
-        if (previous.drawable_width != next.drawable_width or
-            previous.drawable_height != next.drawable_height or
-            previous.logical_width != next.logical_width or
-            previous.logical_height != next.logical_height)
-        {
-            reasons.drawable_resize = true;
-        }
-        if (previous.display_index != next.display_index) {
-            reasons.display_change = true;
-        }
-        if (!std.math.approxEqAbs(f32, previous.render_scale, next.render_scale, 0.0001)) {
-            reasons.render_scale_change = true;
-        }
-
-        self.scene_target.contract = next;
-        if (!reasons.any()) return;
-
-        self.scene_target.invalidation = reasons;
-        self.scene_target.ready = false;
-        if (self.scene_target.target != null) {
-            self.destroyRenderTarget(&self.scene_target.target);
-        }
-        logSceneTargetState(log, "invalidate", self.scene_target.contract, self.scene_target.invalidation, self.scene_target.ready);
-    }
-
-    fn noteSceneTargetRecreateFailure(self: *Renderer) void {
-        self.scene_target.invalidation.target_recreate_failure = true;
-        self.scene_target.ready = false;
-        logSceneTargetState(
-            app_logger.logger("renderer.scene_target"),
-            "recreate_failed",
-            self.scene_target.contract,
-            self.scene_target.invalidation,
-            self.scene_target.ready,
-        );
-    }
-
-    fn clearSceneTargetInvalidation(self: *Renderer) void {
-        self.scene_target.invalidation = .{};
-        self.scene_target.ready = true;
-        logSceneTargetState(
-            app_logger.logger("renderer.scene_target"),
-            "ready",
-            self.scene_target.contract,
-            self.scene_target.invalidation,
-            self.scene_target.ready,
-        );
-    }
-
-    fn ensureSceneTarget(self: *Renderer, filter: i32) bool {
-        const contract = self.scene_target.contract;
-        if (contract.logical_width <= 0 or contract.logical_height <= 0 or
-            contract.drawable_width <= 0 or contract.drawable_height <= 0)
-        {
-            self.noteSceneTargetRecreateFailure();
-            return false;
-        }
-
-        const recreated = self.ensureRenderTargetScaled(
-            &self.scene_target.target,
-            contract.logical_width,
-            contract.logical_height,
-            filter,
-        );
-        if (self.scene_target.target == null) {
-            self.noteSceneTargetRecreateFailure();
-            return false;
-        }
-        if (recreated or !self.scene_target.ready) {
-            self.clearSceneTargetInvalidation();
-        }
-        return recreated;
-    }
-
-    fn prepareSceneTarget(self: *Renderer, filter: i32) void {
-        const recreated = self.ensureSceneTarget(filter);
-        if (self.scene_target.target == null or !recreated) return;
-
-        if (!self.beginRenderTarget(self.scene_target.target)) {
-            self.noteSceneTargetRecreateFailure();
-            return;
-        }
-        gl.Disable(gl.c.GL_SCISSOR_TEST);
-        const bg = self.theme.background.toRgba();
-        gl.ClearColor(
-            @as(f32, @floatFromInt(bg.r)) / 255.0,
-            @as(f32, @floatFromInt(bg.g)) / 255.0,
-            @as(f32, @floatFromInt(bg.b)) / 255.0,
-            @as(f32, @floatFromInt(bg.a)) / 255.0,
-        );
-        gl.Clear(gl.c.GL_COLOR_BUFFER_BIT);
-        self.bindDefaultTarget();
-    }
-
-    fn beginSceneFrame(self: *Renderer) bool {
-        if (self.scene_target.target == null) return false;
-        if (!self.beginRenderTarget(self.scene_target.target)) {
-            self.noteSceneTargetRecreateFailure();
-            return false;
-        }
-        return true;
-    }
-
-    fn drawSceneTargetToDefault(self: *Renderer) void {
-        const target = self.scene_target.target orelse return;
-        self.bindDefaultTarget();
-        gl.Disable(gl.c.GL_SCISSOR_TEST);
-        const bg = self.theme.background.toRgba();
-        gl.ClearColor(
-            @as(f32, @floatFromInt(bg.r)) / 255.0,
-            @as(f32, @floatFromInt(bg.g)) / 255.0,
-            @as(f32, @floatFromInt(bg.b)) / 255.0,
-            @as(f32, @floatFromInt(bg.a)) / 255.0,
-        );
-        gl.Clear(gl.c.GL_COLOR_BUFFER_BIT);
-        const src = texture_draw.fullTextureSrcRect(target.texture);
-        const dest = types.Rect{
-            .x = 0,
-            .y = 0,
-            .width = @floatFromInt(target.logical_width),
-            .height = @floatFromInt(target.logical_height),
-        };
-        gl.Disable(gl.c.GL_BLEND);
-        draw_ops.drawTextureRect(
-            self,
-            target.texture,
-            src,
-            dest,
-            Color.white.toRgba(),
-            types.Rgba{ .r = 0, .g = 0, .b = 0, .a = 0 },
-            .linear_premul,
-        );
-        gl.Enable(gl.c.GL_BLEND);
+        return scene_frame_runtime.submitFrame(self);
     }
 
     pub fn restoreMainCompositionTarget(self: *Renderer) void {
         if (self.scene_frame_active) {
-            if (!self.beginSceneFrame()) {
+            if (!scene_frame_runtime.beginSceneFrame(self)) {
                 self.scene_frame_active = false;
                 self.bindDefaultTarget();
             }
@@ -1754,7 +1538,7 @@ pub const Renderer = struct {
         return platform_window.collectWindowMetrics(self.window, reason);
     }
 
-    fn updateMouseScale(self: *Renderer) void {
+    pub fn updateMouseScale(self: *Renderer) void {
         const scale = platform_mouse.computeMouseScale(self.window);
         self.mouse_scale = .{ .x = scale.x, .y = scale.y };
     }
@@ -1807,7 +1591,7 @@ pub const Renderer = struct {
         return font_runtime.fontForSize(self, size);
     }
 
-    fn bindDefaultTarget(self: *Renderer) void {
+    pub fn bindDefaultTarget(self: *Renderer) void {
         self.dst_linear_active = false;
         targets.bindDefaultTarget(self);
     }
@@ -1825,7 +1609,7 @@ pub const Renderer = struct {
         return targets.ensureRenderTarget(target, width, height, logical_width, logical_height, filter);
     }
 
-    fn destroyRenderTarget(_: *Renderer, target: *?RenderTarget) void {
+    pub fn destroyRenderTarget(_: *Renderer, target: *?RenderTarget) void {
         targets.destroyRenderTarget(target);
     }
 
