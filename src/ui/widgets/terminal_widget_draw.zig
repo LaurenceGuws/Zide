@@ -520,6 +520,17 @@ pub fn drawPrepared(
                 r.drawRectF(base_x, base_y, viewport_w, viewport_h, bg);
             }
         }
+        if (!retained_surface_ready_after_update and rows > 0 and cols > 0 and view_cells.len > 0 and visible_w > 0 and visible_h > 0) {
+            app_logger.logger("renderer.terminal_present").logFields(.warning, "terminal_surface_unavailable_for_present", &.{
+                .{ .key = "generation", .value = .{ .unsigned = draw_state.generation } },
+                .{ .key = "sync_updates", .value = .{ .boolean = sync_updates } },
+                .{ .key = "updated", .value = .{ .boolean = updated } },
+                .{ .key = "texture_ready", .value = .{ .boolean = self.retained.terminal_texture_ready } },
+                .{ .key = "target_available", .value = .{ .boolean = retained_targets_runtime.terminalSurfaceAvailable(r) } },
+                .{ .key = "visible_w", .value = .{ .integer = visible_w } },
+                .{ .key = "visible_h", .value = .{ .integer = visible_h } },
+            });
+        }
         if (retained_surface_ready_after_update and visible_w > 0 and visible_h > 0) {
             retained_targets_runtime.drawTerminalSurface(r, base_x, base_y, viewport_w, viewport_h, self.retained.last_render_generation);
         }

@@ -132,3 +132,12 @@ For this bug, the minimum useful live logging is now:
 - `renderer.terminal_present`
 
 That is the active `.zide.lua` logging scope for this investigation.
+
+Current live instrumentation also now emits an explicit warning when the widget
+is about to present visible terminal content without an available retained
+terminal surface:
+
+- `terminal_surface_unavailable_for_present`
+
+That warning should make the remaining live bug trivial to classify if it still
+reproduces.
