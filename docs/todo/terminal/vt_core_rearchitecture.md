@@ -156,6 +156,15 @@ Focused follow-up lane:
     closer to a real engine export boundary
   - the next cut should only continue if a fresh review still finds one more
     large false center in the reduced shape
+- `docs/review/TERMINAL_WAR_2_POST_PUBLICATION_RERANK_2026-04-02.md`
+  Why: after the publication-boundary wave, the default War 2 enemy changes
+  again.
+  Current read:
+  - publication is no longer obviously the main battlefield by default
+  - the next likely structural enemy is broader native host aggregation
+    clarity
+  - the strongest local fallback candidate is the widget/retained-render
+    center if the host path now reads honest enough
 
 ## Current Milestone
 
