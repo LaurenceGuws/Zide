@@ -1,7 +1,7 @@
 const std = @import("std");
 const r = @import("ui/renderer.zig");
 const iface = @import("ui/renderer/interface.zig");
-const window = @import("platform/window.zig");
+const window = @import("platform/window_metrics.zig");
 const input = @import("platform/input.zig");
 const platform_input_events = @import("platform/input_events.zig");
 

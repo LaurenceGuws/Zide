@@ -7,7 +7,7 @@ const font_manager = @import("font_manager.zig");
 const text_input = @import("text_input.zig");
 const gl = @import("gl.zig");
 const app_logger = @import("../../app_logger.zig");
-const platform_window = @import("../../platform/window.zig");
+const platform_window = @import("../../platform/window_metrics.zig");
 const renderer_root = @import("../renderer.zig");
 const TerminalDisableLigaturesStrategy = renderer_root.TerminalDisableLigaturesStrategy;
 
