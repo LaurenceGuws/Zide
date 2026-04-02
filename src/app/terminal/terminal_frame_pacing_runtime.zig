@@ -71,7 +71,12 @@ pub const Snapshot = terminal_publication.FrameState;
 
 pub fn observe(state: anytype, now: f64) Snapshot {
     const pacing = &state.terminal_frame_pacing;
-    const frame_state = activeFrameState(state);
+    const frame_state = blk: {
+        const State = @TypeOf(state.*);
+        if (!@hasField(State, "terminal_workspace")) break :blk Snapshot{};
+        if (state.terminal_workspace) |*workspace| break :blk workspace.activeFrameState();
+        break :blk Snapshot{};
+    };
     const pending_generation = frame_state.pending_generation;
     const published_generation = frame_state.published_generation;
     if (pending_generation != pacing.last_observed_pending_generation) {
@@ -399,18 +404,6 @@ pub fn logInputLatency(state: anytype, poll_ms: f64, build_ms: f64, update_ms: f
     appendTerminalRuntimeFields(fields[0..], &next);
     appendLatencyBaseFields(fields[0..], &next, poll_ms, build_ms, update_ms, draw_ms);
     state.input_latency_logger.logFields(.info, "frame_latency", fields[0..next]);
-}
-
-fn activeFrameState(state: anytype) Snapshot {
-    const State = @TypeOf(state.*);
-    if (!@hasField(State, "terminal_workspace")) {
-        return .{};
-    }
-
-    if (state.terminal_workspace) |*workspace| {
-        return workspace.activeFrameState();
-    }
-    return .{};
 }
 
 test "default sleep policy stays hot while redraw or backlog is active" {
