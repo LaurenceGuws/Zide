@@ -249,3 +249,34 @@ Another post-present ownership cut landed too:
 
 That keeps the draw-surface lane closer to actual draw responsibility and keeps
 post-present cleanup with the present-completion owner.
+
+## Rerank Point
+
+After the workspace-host cuts plus the visible-frame collapse, this lane is
+now close to diminishing returns.
+
+Current read from the live code:
+
+- `workspace.zig` now reads much closer to an honest tab/poll aggregate
+- `workspace_host.zig` carries the active-session host convenience that did not
+  belong on the main aggregate
+- `visible_terminal_frame_hooks_runtime.zig` now reads as the actual
+  poll/input routing owner for visible terminal interaction
+- `terminal_draw_surface_runtime.zig` is narrower and more draw-shaped after
+  losing post-present feedback flush
+
+That means the old question:
+
+- "is there still an obvious fake host center in the native terminal path?"
+
+now has a weaker answer than it did at the start of this review.
+
+Current judgment:
+
+1. pause this exact host-aggregation lane unless a new large false center
+   appears
+2. if terminal architecture work continues, the next step should come from a
+   broader top-level rerank against engine/publication/native-host clarity,
+   not from more local host cleanup by momentum
+3. compare the whole terminal host path to the strongest references again
+   before opening the next kill-order

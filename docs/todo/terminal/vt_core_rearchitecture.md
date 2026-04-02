@@ -96,9 +96,10 @@ Focused follow-up lane:
   - post-present cleanup is tighter too: terminal presentation-feedback flush
     no longer lives under `terminal_draw_surface_runtime.zig`; it now runs in
     `present_feedback_runtime.zig` with the rest of present completion
-  - the other likely host pressure point is the remaining split across
-    `visible_terminal_frame_hooks_runtime.zig` and
-    `terminal_draw_surface_runtime.zig`
+  - current rerank: this exact host-aggregation lane is now close to
+    diminishing returns; the next terminal move should come from a broader
+    engine/publication/native-host rerank, not more local host cleanup by
+    momentum
 
 ## Current Milestone
 
