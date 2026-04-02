@@ -185,6 +185,15 @@ Focused follow-up lane:
     dominant field inside `TerminalSession` than the fully sufficient public
     center
   - this is now too ambiguous for momentum-driven surgery
+- `docs/review/TERMINAL_WAR_3_CLOSURE_2026-04-02.md`
+  Why: War 3 reached its honest stop-marker.
+  Current read:
+  - the strongest visible library-boundary contradictions are materially gone
+  - the remaining gap is a deeper object-model design question, not a local
+    cleanup lane
+- `docs/review/TERMINAL_POST_WAR_3_RERANK_2026-04-02.md`
+  Why: after closing War 3, the next battlefield must be chosen from the new
+  baseline rather than inherited momentum.
 
 - `docs/review/TERMINAL_NATIVE_ARCHITECTURAL_SCRUTINY_2026-03-31.md`
   Why: this is the current ruthless read on what still looks second-rate at
