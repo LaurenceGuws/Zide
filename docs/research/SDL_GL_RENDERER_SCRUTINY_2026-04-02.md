@@ -184,6 +184,8 @@ Progress note, 2026-04-02:
   renderer-root fields
 - editor and terminal selection-overlay policy now live as one grouped state
   slab instead of two loose renderer-root fields
+- terminal recent-input full-publication policy now lives as one grouped state
+  slab instead of two loose renderer-root fields
 - renderer init/deinit now assemble and tear down grouped scale/font-config
   state through owner-level helpers instead of open-coding that grouped-state
   lifecycle inline

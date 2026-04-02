@@ -104,6 +104,8 @@ Status note, 2026-04-02:
   instead of staying as ad hoc renderer-root fields
 - editor and terminal selection-overlay policy now live as one grouped state
   slab instead of two loose renderer-root fields
+- terminal recent-input full-publication policy now lives as one grouped state
+  slab instead of two loose renderer-root fields
 - constructor/destructor now assemble and tear down grouped scale/font-config
   state through owner-level helpers instead of repeating that grouped-state
   lifecycle inline

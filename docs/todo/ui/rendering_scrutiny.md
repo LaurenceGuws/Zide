@@ -89,6 +89,8 @@ Progress note, 2026-04-02:
   fields
 - editor and terminal selection-overlay policy now live as one grouped state
   slab instead of two loose renderer-root fields
+- terminal recent-input full-publication policy now lives as one grouped state
+  slab instead of two loose renderer-root fields
 
 ### RS-02 Init/Deinit Still Mix Too Many Responsibilities
 
