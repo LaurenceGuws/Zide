@@ -58,7 +58,14 @@ pub fn getMonitorSize(window: *sdl.SDL_Window) iface.MousePos {
 }
 
 pub fn collectWindowMetrics(window: *sdl.SDL_Window, reason: []const u8) WindowMetrics {
-    const display = collectDisplayMetrics(window);
+    return collectWindowMetricsFromDisplayMetrics(collectDisplayMetrics(window), reason);
+}
+
+pub fn collectWindowMetricsFromDisplayMetrics(display: DisplayMetrics, reason: []const u8) WindowMetrics {
+    return buildWindowMetrics(display, reason);
+}
+
+fn buildWindowMetrics(display: DisplayMetrics, reason: []const u8) WindowMetrics {
     var rect: sdl.SDL_Rect = .{ .x = 0, .y = 0, .w = 0, .h = 0 };
     var display_w: i32 = 0;
     var display_h: i32 = 0;

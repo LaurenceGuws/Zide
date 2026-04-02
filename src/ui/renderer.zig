@@ -1477,7 +1477,7 @@ pub const Renderer = struct {
         self.render_width = display_metrics.drawable_w;
         self.render_height = display_metrics.drawable_h;
         self.updateMouseScale();
-        return platform_window.collectWindowMetrics(self.window, reason);
+        return platform_window.collectWindowMetricsFromDisplayMetrics(display_metrics, reason);
     }
 
     pub fn updateMouseScale(self: *Renderer) void {
