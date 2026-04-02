@@ -78,6 +78,12 @@ Focused follow-up lane:
   Why: after the publication-contract cleanup wave, the next likely native
   terminal battlefield is broader host aggregation and orchestration shape,
   especially `workspace.zig` plus the draw/runtime path.
+  Current read:
+  - `workspace.zig` is now the strongest remaining native-host aggregate center
+  - the other likely host pressure point is the split across
+    `visible_terminal_frame.zig`,
+    `visible_terminal_frame_hooks_runtime.zig`, and
+    `terminal_draw_surface_runtime.zig`
 
 ## Current Milestone
 

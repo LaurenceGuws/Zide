@@ -78,10 +78,10 @@ Current judgment:
 - this lane should pause by default
 - continue only if a new large contract split appears
 
-### 2. Workspace still deserves scrutiny as the native host aggregate
+### 2. Workspace is now the strongest remaining aggregate center
 
-`workspace.zig` now looks more honest than before, but it is still a powerful
-aggregate in the native host path:
+`workspace.zig` now looks more honest than before, but it is still the most
+powerful aggregate in the native host path:
 
 - tab ownership
 - active-session routing
@@ -89,14 +89,29 @@ aggregate in the native host path:
 - host-facing active frame state
 - tab sync and close-confirm context
 
-This may be correct.
+This may be correct in part.
 It may also still be the place where multiple host concerns get normalized into
-one center by convenience.
+one center by convenience rather than by a sharp host contract.
+
+Current live shape:
+
+- session creation and ownership
+- active-session routing
+- host metadata and sync packaging
+- close-confirm policy
+- poll budgeting and counters
+- host-facing frame-state forwarding
+
+That is enough responsibility concentration that it now reads like the
+strongest remaining native-host center-of-gravity candidate.
 
 Current judgment:
 
-- if there is a next terminal-host architecture review, workspace is a stronger
-  candidate than the publication/frame-pacing seam we just finished flattening
+- if there is a next terminal-host architecture review, workspace is the
+  strongest candidate
+- the next question is not “can we delete another publication helper?”
+- the next question is “which of these host responsibilities truly belong on
+  the workspace aggregate?”
 
 ### 3. Native terminal draw/runtime split is much better, but still the other likely host pressure point
 
@@ -114,6 +129,19 @@ This is not obviously wrong.
 But it is the other place where the host path could still hide a higher-level
 fake center after publication cleanup.
 
+Current live shape:
+
+- `visible_terminal_frame.zig` owns visible-terminal gating plus input-phase
+  orchestration
+- `visible_terminal_frame_hooks_runtime.zig` owns hook routing and terminal
+  runtime-state threading for poll/input/scrollbar hooks
+- `terminal_draw_surface_runtime.zig` owns draw clipping, progress/scrollbar
+  drawing, and widget presentation staging
+
+This is cleaner than before, but it still reads like three adjacent host
+orchestration slices rather than one obviously dominant native-terminal host
+layer.
+
 ## Comparison Pressure
 
 From Ghostty:
@@ -129,6 +157,14 @@ The remaining gap is no longer “publication helper sprawl.”
 The remaining gap is whether the native host as a whole has one sufficiently
 obvious aggregate center and one sufficiently obvious engine/publication truth
 under it.
+
+## Current Ranking
+
+1. `workspace.zig` as native host aggregate center
+2. native draw/runtime orchestration split across `visible_terminal_frame*`
+   plus `terminal_draw_surface_runtime.zig`
+3. publication/frame pacing seam, now mostly flattened and no longer the top
+   issue
 
 ## Recommended Next Battlefield
 
@@ -146,12 +182,12 @@ Why this beats more publication micro-cuts:
 
 ## Recommended Next Questions
 
-1. Is `workspace.zig` now the correct long-term host aggregate, or is it still
-   absorbing unrelated host/runtime responsibilities?
-2. Do the native draw/runtime files read like one clean host orchestration
-   layer, or like multiple adjacent partial owners?
+1. Which responsibilities on `workspace.zig` are true workspace concerns, and
+   which are just the next host/runtime convenience pile?
+2. Should visible-terminal poll/input/draw orchestration read as one explicit
+   host layer instead of three adjacent files?
 3. If we compare the whole native host path to the Ghostty surface/termio
-   split, what is still structurally second-rate at first glance?
+   split, what still looks second-rate at first glance?
 
 ## Bottom Line
 
