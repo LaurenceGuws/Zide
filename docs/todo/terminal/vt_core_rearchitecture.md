@@ -295,6 +295,15 @@ Focused follow-up lane:
     shell provides synchronization, core provides the terminal answer
   - `src/terminal/core/session/queries.zig` is deleted
 
+- `docs/review/VT_SPRINT_POST_CORE_SUFFICIENCY_RERANK_2026-04-03.md`
+  Why: the easiest `TerminalCore` sufficiency cuts are now largely landed.
+  Current read:
+  - the remaining `TerminalRuntimeShell` surface mostly reads as legitimate
+    runtime shell, not fake gravity
+  - the next gap is either a deeper `TerminalCore` sufficiency design step or a
+    clean sprint stop-marker
+  - the next move should not be another small extraction by momentum alone
+
 - `docs/review/TERMINAL_NATIVE_ARCHITECTURAL_SCRUTINY_2026-03-31.md`
   Why: this is the current ruthless read on what still looks second-rate at
   first glance and what should be demolished first.
