@@ -26,6 +26,19 @@ gravity into smaller files.
 
 ## War 4
 
+- `docs/review/VT_PLUGANDPLAY_GAP_MATRIX_2026-04-03.md`
+  Why: the next terminal push should stop hopping seam-by-seam and use one
+  ranked, comprehensive plug-and-play comparison instead.
+  Current read:
+  - Zide is now credibly extractable, but still not near true plug-and-play
+    parity with `libghostty-vt`
+  - the top blocker is host-driving input semantics still feeling too
+    shell-centered
+  - the next blockers after that are `TerminalCore` sufficiency and the public
+    resize story, not publication/runtime sludge
+  - immutable export, runtime shell size, and `host_queries.zig` no longer
+    deserve default-war status
+
 - `docs/review/VT_WAR_4_SCOPE_AND_SEEDS_2026-04-03.md`
   Why: the next scrutiny pass is no longer a cleanup sprint; it is a focused
   design/comparison war around the remaining `zide-vt` plug-and-play gap.
