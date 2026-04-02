@@ -56,6 +56,10 @@ Focused follow-up lane:
 - `docs/review/TERMINAL_NATIVE_ARCHITECTURAL_SCRUTINY_2026-03-31.md`
   Why: this is the current ruthless read on what still looks second-rate at
   first glance and what should be demolished first.
+- `docs/review/CURRENT_ARCHITECTURE_RERANK_2026-04-02.md`
+  Why: the last two weeks materially changed the implementation, so current
+  priority now needs to be judged from live code rather than only from older
+  review pressure.
 
 ## Current Milestone
 
