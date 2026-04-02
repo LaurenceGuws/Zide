@@ -952,3 +952,9 @@ Validation note, 2026-03-31:
     view" action; that contract now lives under
     `src/terminal/core/publication/terminal_publication.zig` as
     `bumpAndPublishCurrentViewLocked(...)`
+  - scrollback refresh generation policy is tighter too:
+    `src/terminal/core/scrollback_view.zig` no longer decides inline whether a
+    scrollback offset change should bump generation or only queue refresh; that
+    choice now lives under
+    `src/terminal/core/publication/terminal_publication.zig` as
+    `requestViewRefreshIfOffsetChangedLocked(...)`

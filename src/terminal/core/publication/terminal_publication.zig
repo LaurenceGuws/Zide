@@ -379,6 +379,14 @@ pub fn requestViewRefreshLocked(self: anytype, scroll_offset: usize) u64 {
     return generation;
 }
 
+pub fn requestViewRefreshIfOffsetChangedLocked(self: anytype, before: usize, after: usize) u64 {
+    if (after != before) {
+        return requestViewRefreshLocked(self, after);
+    }
+    queueViewRefreshLocked(self, after);
+    return pendingGeneration(self);
+}
+
 pub fn queueViewRefreshLocked(self: anytype, scroll_offset: usize) void {
     self.publication.view_cache_request_offset.store(@intCast(scroll_offset), .release);
     self.publication.view_cache_pending.store(true, .release);

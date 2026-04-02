@@ -88,11 +88,7 @@ pub fn setScrollOffset(self: anytype, offset: usize) void {
 pub fn setScrollOffsetLocked(self: anytype, offset: usize) void {
     const before = self.core.history.scrollOffset();
     const after = self.core.setScrollbackOffset(self.core.primary.grid.rows, self.core.primary.grid.cols, self.core.primary.defaultCell(), offset);
-    if (after != before) {
-        _ = terminal_publication.requestViewRefreshLocked(self, after);
-    } else {
-        terminal_publication.queueViewRefreshLocked(self, after);
-    }
+    _ = terminal_publication.requestViewRefreshIfOffsetChangedLocked(self, before, after);
     terminal_publication.updateViewCacheForScrollLocked(self);
 }
 
@@ -144,10 +140,6 @@ pub fn scrollByLocked(self: anytype, delta: isize) void {
     if (delta == 0) return;
     const before = self.core.history.scrollOffset();
     const after = self.core.scrollScrollbackBy(self.core.primary.grid.rows, self.core.primary.grid.cols, self.core.primary.defaultCell(), delta);
-    if (after != before) {
-        _ = terminal_publication.requestViewRefreshLocked(self, after);
-    } else {
-        terminal_publication.queueViewRefreshLocked(self, after);
-    }
+    _ = terminal_publication.requestViewRefreshIfOffsetChangedLocked(self, before, after);
     terminal_publication.updateViewCacheForScrollLocked(self);
 }

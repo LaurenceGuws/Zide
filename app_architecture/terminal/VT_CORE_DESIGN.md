@@ -247,6 +247,12 @@ Status note, 2026-03-31:
     view" action; that now lives under
     `src/terminal/core/publication/terminal_publication.zig` as
     `bumpAndPublishCurrentViewLocked(...)`
+  - scrollback refresh generation policy is tighter too:
+    `src/terminal/core/scrollback_view.zig` no longer decides inline whether a
+    scrollback offset change should bump generation or only queue refresh; that
+    choice now lives under
+    `src/terminal/core/publication/terminal_publication.zig` as
+    `requestViewRefreshIfOffsetChangedLocked(...)`
   - the DECRQM snapshot path is thinner too:
     `src/terminal/protocol/csi_mode_query.zig` now reads mouse-mode snapshot
     bits directly from `interaction.input_snapshot`, so the stable runtime

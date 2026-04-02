@@ -201,6 +201,12 @@ Judgment:
   view" action; that now lives under
   `src/terminal/core/publication/terminal_publication.zig` as
   `bumpAndPublishCurrentViewLocked(...)`
+- scrollback refresh generation policy is tighter too:
+  `src/terminal/core/scrollback_view.zig` no longer decides inline whether a
+  scrollback offset change should bump generation or only queue refresh; that
+  choice now lives under
+  `src/terminal/core/publication/terminal_publication.zig` as
+  `requestViewRefreshIfOffsetChangedLocked(...)`
 - the stale `src/terminal/core/session_protocol.zig` forwarding shell is now
   deleted, so that API seam no longer routes through one extra session-named
   hop before reaching the real owners
