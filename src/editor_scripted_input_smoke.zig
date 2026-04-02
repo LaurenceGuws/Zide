@@ -7,12 +7,15 @@ const frame_view_mod = @import("editor/view/frame.zig");
 const runtime_mod = @import("editor/view/runtime.zig");
 const draw_mod = @import("ui/widgets/editor_widget_draw.zig");
 const renderer_mod = @import("ui/renderer.zig");
+const retained_targets_runtime = @import("ui/renderer/retained_targets_runtime.zig");
 const shared_types = @import("types/mod.zig");
 
 const Editor = editor_mod.Editor;
 const EditorRenderCache = cache_mod.EditorRenderCache;
 const InputSnapshot = shared_types.input.InputSnapshot;
 const EditorTextStyleFlags = renderer_mod.EditorTextStyleFlags;
+const RetainedSurface = retained_targets_runtime.RetainedSurface;
+const SurfaceDraw = retained_targets_runtime.SurfaceDraw;
 const TokenKind = syntax_mod.TokenKind;
 
 const Scenario = enum {
@@ -39,8 +42,8 @@ const FrameSummary = struct {
     result_pending: bool,
     compute_in_flight: bool,
     styling_authority: []const u8,
-    editor_surface_update_count: usize,
-    editor_surface_blit_count: usize,
+    retained_surface_update_count: usize,
+    retained_surface_blit_count: usize,
     composition_clip_count: usize,
     composition_full_pane_clear: bool,
 };
@@ -101,8 +104,8 @@ const SelectionOverlayStyle = struct {
 };
 
 const CompositionCapture = struct {
-    editor_surface_update_count: usize = 0,
-    editor_surface_blit_count: usize = 0,
+    retained_surface_update_count: usize = 0,
+    retained_surface_blit_count: usize = 0,
     composition_clip_count: usize = 0,
     composition_full_pane_clear: bool = false,
 };
@@ -121,8 +124,8 @@ const FakeRenderer = struct {
     theme: FakeTheme = .{},
     editor_selection_overlay_style: SelectionOverlayStyle = .{},
     terminal_selection_overlay_style: SelectionOverlayStyle = .{},
-    editor_texture_created: bool = false,
-    in_editor_texture: bool = false,
+    retained_surface_created: bool = false,
+    in_retained_surface: bool = false,
     capture: CompositionCapture = .{},
 
     fn init(width: i32, height: i32, char_width: f32, char_height: f32) FakeRenderer {
@@ -151,24 +154,27 @@ const FakeRenderer = struct {
         return self.terminal_selection_overlay_style;
     }
 
-    pub fn ensureEditorSurface(self: *FakeRenderer, width: i32, height: i32) bool {
+    pub fn ensureSurface(self: *FakeRenderer, surface: RetainedSurface, width: i32, height: i32) bool {
+        std.debug.assert(surface == .editor);
         _ = width;
         _ = height;
-        if (!self.editor_texture_created) {
-            self.editor_texture_created = true;
+        if (!self.retained_surface_created) {
+            self.retained_surface_created = true;
             return true;
         }
         return false;
     }
 
-    pub fn beginEditorSurface(self: *FakeRenderer) bool {
-        self.in_editor_texture = true;
-        self.capture.editor_surface_update_count += 1;
+    pub fn beginSurface(self: *FakeRenderer, surface: RetainedSurface) bool {
+        std.debug.assert(surface == .editor);
+        self.in_retained_surface = true;
+        self.capture.retained_surface_update_count += 1;
         return true;
     }
 
-    pub fn endEditorSurface(self: *FakeRenderer) void {
-        self.in_editor_texture = false;
+    pub fn endSurface(self: *FakeRenderer, surface: RetainedSurface) void {
+        std.debug.assert(surface == .editor);
+        self.in_retained_surface = false;
     }
 
     pub fn beginClip(self: *FakeRenderer, x: i32, y: i32, w: i32, h: i32) void {
@@ -183,15 +189,15 @@ const FakeRenderer = struct {
         _ = self;
     }
 
-    pub fn drawEditorSurface(self: *FakeRenderer, x: f32, y: f32) void {
-        _ = x;
-        _ = y;
-        self.capture.editor_surface_blit_count += 1;
+    pub fn drawSurface(self: *FakeRenderer, surface: RetainedSurface, draw: SurfaceDraw) void {
+        std.debug.assert(surface == .editor);
+        _ = draw;
+        self.capture.retained_surface_blit_count += 1;
     }
 
     pub fn drawRect(self: *FakeRenderer, x: i32, y: i32, w: i32, h: i32, color: FakeColor) void {
         _ = color;
-        if (self.in_editor_texture and x == 0 and y == 0 and w == self.width and h == self.height) {
+        if (self.in_retained_surface and x == 0 and y == 0 and w == self.width and h == self.height) {
             self.capture.composition_full_pane_clear = true;
         }
     }
@@ -512,8 +518,8 @@ fn stageFrame(
         .result_pending = editor.hasPendingVisibleHighlightResult(),
         .compute_in_flight = editor.visibleHighlightComputeInFlight(),
         .styling_authority = authority,
-        .editor_surface_update_count = renderer.capture.editor_surface_update_count,
-        .editor_surface_blit_count = renderer.capture.editor_surface_blit_count,
+        .retained_surface_update_count = renderer.capture.retained_surface_update_count,
+        .retained_surface_blit_count = renderer.capture.retained_surface_blit_count,
         .composition_clip_count = renderer.capture.composition_clip_count,
         .composition_full_pane_clear = renderer.capture.composition_full_pane_clear,
     };
@@ -606,7 +612,7 @@ fn printHumanSummary(summary: RunSummary) void {
     });
     for (summary.frames) |frame| {
         std.debug.print(
-            "frame={d} action={s} invalidation_full={any} invalidation_ranges={d} full_redraw={any} request={any} apply={any} apply_lines={d} request_pending={any} result_pending={any} compute_in_flight={any} authority={s} texture_updates={d} texture_blits={d} clip_count={d} full_pane_clear={any}\n",
+            "frame={d} action={s} invalidation_full={any} invalidation_ranges={d} full_redraw={any} request={any} apply={any} apply_lines={d} request_pending={any} result_pending={any} compute_in_flight={any} authority={s} retained_updates={d} retained_blits={d} clip_count={d} full_pane_clear={any}\n",
             .{
                 frame.frame,
                 frame.action,
@@ -620,8 +626,8 @@ fn printHumanSummary(summary: RunSummary) void {
                 frame.result_pending,
                 frame.compute_in_flight,
                 frame.styling_authority,
-                frame.editor_surface_update_count,
-                frame.editor_surface_blit_count,
+                frame.retained_surface_update_count,
+                frame.retained_surface_blit_count,
                 frame.composition_clip_count,
                 frame.composition_full_pane_clear,
             },

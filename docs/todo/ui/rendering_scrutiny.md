@@ -73,6 +73,9 @@ Status note, later on 2026-04-02:
     retained-surface contract
   - editor, terminal, and font-sample callers now use that generic retained
     surface API directly
+  - the editor scripted-input smoke harness now uses the same generic
+    retained-surface vocabulary instead of preserving a second
+    editor-specific fake-renderer dialect
 
 ## Target Read
 

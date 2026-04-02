@@ -48,3 +48,14 @@ This is the right opener:
 - it cuts a real product-shaped renderer seam
 - it does not invent a new fake owner
 - it moves the native path closer to a generic scene/publication vocabulary
+
+Follow-on convergence cleanup is still valid where older test or smoke tooling
+keeps a second product-shaped retained-surface vocabulary alive.
+
+Progress note, later on 2026-04-02:
+
+- the editor scripted-input smoke harness now uses the same generic
+  retained-surface terms (`ensureSurface`, `beginSurface`, `endSurface`,
+  `drawSurface`) instead of its old editor-specific fake renderer verbs
+- retained-surface update/blit counters in that harness now use generic
+  retained-surface names too
