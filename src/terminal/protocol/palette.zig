@@ -3,6 +3,7 @@ const types = @import("../model/types.zig");
 const parser_mod = @import("../parser/parser.zig");
 const config = @import("../core/session/config.zig");
 const app_logger = @import("../../app_logger.zig");
+const protocol_runtime = @import("../core/session/protocol_runtime.zig");
 const OscTerminator = parser_mod.OscTerminator;
 
 const dynamic_color_base: u8 = 10;
@@ -155,7 +156,7 @@ fn writeOscColorReply(self: anytype, code: u8, color: types.Color, terminator: O
     };
     log.logf(.debug, "osc reply=\"{s}\"", .{seq});
     logOscReplyHex(log, seq);
-    _ = self.emitProtocolReplyBytes("terminal.osc", seq);
+    _ = protocol_runtime.emitReplyBytes(self, "terminal.osc", seq);
 }
 
 fn writeOscPaletteReply(self: anytype, idx: u8, color: types.Color, terminator: OscTerminator) void {
@@ -175,7 +176,7 @@ fn writeOscPaletteReply(self: anytype, idx: u8, color: types.Color, terminator: 
     };
     log.logf(.debug, "osc reply=\"{s}\"", .{seq});
     logOscReplyHex(log, seq);
-    _ = self.emitProtocolReplyBytes("terminal.osc", seq);
+    _ = protocol_runtime.emitReplyBytes(self, "terminal.osc", seq);
 }
 
 fn logOscReplyHex(log: app_logger.Logger, seq: []const u8) void {

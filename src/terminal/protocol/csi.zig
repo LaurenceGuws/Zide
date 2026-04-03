@@ -8,6 +8,7 @@ const csi_mode_query = @import("csi_mode_query.zig");
 const csi_mode_mutation = @import("csi_mode_mutation.zig");
 const csi_style_reset = @import("csi_style_reset.zig");
 const csi_exec = @import("csi_exec.zig");
+const protocol_runtime = @import("../core/session/protocol_runtime.zig");
 
 const Color = types.Color;
 
@@ -97,12 +98,12 @@ pub fn handleCsi(self: anytype, action: parser_csi.CsiAction) void {
                 switch (mode) {
                     6, 15, 25, 26, 55, 56, 75, 85 => {
                         if (csi_reply.dsrReplyInto(&buf, action.leader, mode, reply_snapshot.cursor_row_1, reply_snapshot.cursor_col_1)) |seq| {
-                            _ = self.emitProtocolReplyBytes("terminal.csi", seq);
+                            _ = protocol_runtime.emitReplyBytes(self, "terminal.csi", seq);
                         }
                     },
                     996 => {
                         if (csi_reply.colorSchemePreferenceReplyInto(&buf, reply_snapshot.color_scheme_dark)) |seq| {
-                            _ = self.emitProtocolReplyBytes("terminal.csi", seq);
+                            _ = protocol_runtime.emitReplyBytes(self, "terminal.csi", seq);
                         }
                     },
                     else => {},
@@ -111,7 +112,7 @@ pub fn handleCsi(self: anytype, action: parser_csi.CsiAction) void {
                 switch (mode) {
                     5, 6 => {
                         if (csi_reply.dsrReplyInto(&buf, action.leader, mode, reply_snapshot.cursor_row_1, reply_snapshot.cursor_col_1)) |seq| {
-                            _ = self.emitProtocolReplyBytes("terminal.csi", seq);
+                            _ = protocol_runtime.emitReplyBytes(self, "terminal.csi", seq);
                         }
                     },
                     else => {},
@@ -120,7 +121,7 @@ pub fn handleCsi(self: anytype, action: parser_csi.CsiAction) void {
         },
         'c' => { // DA
             if (action.leader == 0 or action.leader == '?') {
-                _ = self.emitProtocolReplyBytes("terminal.csi", csi_reply.daPrimaryReplyBytes());
+                _ = protocol_runtime.emitReplyBytes(self, "terminal.csi", csi_reply.daPrimaryReplyBytes());
             }
         },
         't' => { // Window ops (bounded subset)
@@ -135,22 +136,22 @@ pub fn handleCsi(self: anytype, action: parser_csi.CsiAction) void {
                             @as(u32, reply_snapshot.cell_height) * reply_snapshot.rows,
                             @as(u32, reply_snapshot.cell_width) * reply_snapshot.cols,
                         )) |seq| {
-                            _ = self.emitProtocolReplyBytes("terminal.csi", seq);
+                            _ = protocol_runtime.emitReplyBytes(self, "terminal.csi", seq);
                         }
                     },
                     16 => {
                         if (csi_reply.windowOpCellPixelsReplyInto(&buf, reply_snapshot.cell_height, reply_snapshot.cell_width)) |seq| {
-                            _ = self.emitProtocolReplyBytes("terminal.csi", seq);
+                            _ = protocol_runtime.emitReplyBytes(self, "terminal.csi", seq);
                         }
                     },
                     18 => {
                         if (csi_reply.windowOpCharsReplyInto(&buf, reply_snapshot.rows, reply_snapshot.cols)) |seq| {
-                            _ = self.emitProtocolReplyBytes("terminal.csi", seq);
+                            _ = protocol_runtime.emitReplyBytes(self, "terminal.csi", seq);
                         }
                     },
                     19 => {
                         if (csi_reply.windowOpScreenCharsReplyInto(&buf, reply_snapshot.rows, reply_snapshot.cols)) |seq| {
-                            _ = self.emitProtocolReplyBytes("terminal.csi", seq);
+                            _ = protocol_runtime.emitReplyBytes(self, "terminal.csi", seq);
                         }
                     },
                     else => {},
@@ -171,12 +172,12 @@ pub fn handleCsi(self: anytype, action: parser_csi.CsiAction) void {
                 if (action.leader == '?' and action.private) {
                     const state = csi_mode_query.decrqmPrivateModeState(snapshot, mode);
                     if (csi_mode_query.decrqmReplyInto(&buf, true, mode, state)) |seq| {
-                        _ = self.emitProtocolReplyBytes("terminal.csi", seq);
+                        _ = protocol_runtime.emitReplyBytes(self, "terminal.csi", seq);
                     }
                 } else if (action.leader == 0 and !action.private) {
                     const state = csi_mode_query.decrqmAnsiModeState(snapshot, mode);
                     if (csi_mode_query.decrqmReplyInto(&buf, false, mode, state)) |seq| {
-                        _ = self.emitProtocolReplyBytes("terminal.csi", seq);
+                        _ = protocol_runtime.emitReplyBytes(self, "terminal.csi", seq);
                     }
                 }
             }

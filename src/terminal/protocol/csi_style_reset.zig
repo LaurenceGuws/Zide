@@ -4,15 +4,14 @@ const input_modes = @import("../core/input_modes.zig");
 const sync_updates = @import("../core/protocol/sync_updates.zig");
 const terminal_core_reset = @import("../core/protocol/terminal_core_reset.zig");
 const terminal_core_protocol = @import("../core/protocol/terminal_core_protocol.zig");
+const protocol_runtime = @import("../core/session/protocol_runtime.zig");
 const app_logger = @import("../../app_logger.zig");
 
 const Color = types.Color;
 
 pub fn applyDecstrReset(self: anytype) void {
     terminal_core_reset.applyDecstrTerminalReset(self);
-    self.session.interaction.host_contract.report_color_scheme_2031 = false;
-    self.session.interaction.host_contract.inband_resize_notifications_2048 = false;
-    self.session.interaction.host_contract.kitty_paste_events_5522 = false;
+    protocol_runtime.resetCsiReportingModes(self);
     input_modes.resetInputModesLocked(self);
     sync_updates.setLocked(self, false);
     input_modes.publishSnapshot(self);

@@ -7,6 +7,7 @@ const terminal_core_csi_mode_query = @import("../core/protocol/terminal_core_csi
 const host_reporting = @import("../core/session/host_reporting.zig");
 const session_interaction = @import("../core/session/interaction.zig");
 const session_input = @import("../core/session/input.zig");
+const protocol_runtime = @import("../core/session/protocol_runtime.zig");
 
 pub const ModeSnapshot = struct {
     app_cursor_keys: bool,
@@ -43,6 +44,7 @@ pub const ModeSnapshot = struct {
 pub fn modeSnapshot(self: anytype) ModeSnapshot {
     const screen = self.core.activeScreen();
     const input_snapshot = self.session.interaction.derived_snapshot.input;
+    const reporting = protocol_runtime.reportingSnapshot(self);
     return .{
         .app_cursor_keys = session_input.appCursorKeysEnabled(self),
         .column_mode_132 = self.core.column_mode_132,
@@ -67,9 +69,9 @@ pub fn modeSnapshot(self: anytype) ModeSnapshot {
         .bracketed_paste = session_interaction.bracketedPasteEnabled(self),
         .sync_updates_active = self.core.sync_updates_active,
         .grapheme_cluster_shaping_2027 = self.session.interaction.protocol_modes.grapheme_cluster_shaping_2027,
-        .report_color_scheme_2031 = self.session.interaction.host_contract.report_color_scheme_2031,
-        .inband_resize_notifications_2048 = self.session.interaction.host_contract.inband_resize_notifications_2048,
-        .kitty_paste_events_5522 = self.session.interaction.host_contract.kitty_paste_events_5522,
+        .report_color_scheme_2031 = reporting.report_color_scheme_2031,
+        .inband_resize_notifications_2048 = reporting.inband_resize_notifications_2048,
+        .kitty_paste_events_5522 = reporting.kitty_paste_events_5522,
         .insert_mode = screen.insert_mode,
         .local_echo_mode_12 = screen.local_echo_mode_12,
         .newline_mode = screen.newline_mode,

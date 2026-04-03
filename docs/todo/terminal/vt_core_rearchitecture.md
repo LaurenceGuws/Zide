@@ -391,6 +391,13 @@ Current full-scope read:
     - protocol state / host-contract flags
     - reply/report/runtime hooks
   - the next code move must define one narrower execution surface first
+  Progress:
+  - parser/protocol reply and reporting hooks now go through one explicit
+    `protocol_runtime.zig` owner instead of broad shell exposure
+  - this is a real parser-feed ownership improvement, not just naming, because
+    protocol files now depend on a named runtime/report surface
+  - the remaining parser-feed problem is now protocol state shape more than
+    reply-sink exposure
 
 Current named category-1 contradiction:
 

@@ -73,3 +73,28 @@ That means the next code move is not "parser into core."
 It is:
 
 - define one narrower execution surface first
+
+The first real slice is now landed:
+
+- parser/protocol reply/report hooks no longer reach an implicit
+  shell-shaped surface by default
+- new explicit owner:
+  [protocol_runtime.zig](/home/home/personal/zide/src/terminal/core/session/protocol_runtime.zig)
+- protocol reply emission and reporting-side runtime reads now flow through
+  that owner across:
+  - [csi.zig](/home/home/personal/zide/src/terminal/protocol/csi.zig)
+  - [csi_mode_mutation.zig](/home/home/personal/zide/src/terminal/protocol/csi_mode_mutation.zig)
+  - [csi_mode_query.zig](/home/home/personal/zide/src/terminal/protocol/csi_mode_query.zig)
+  - [csi_style_reset.zig](/home/home/personal/zide/src/terminal/protocol/csi_style_reset.zig)
+  - [csi_reply.zig](/home/home/personal/zide/src/terminal/protocol/csi_reply.zig)
+  - [dcs_apc.zig](/home/home/personal/zide/src/terminal/protocol/dcs_apc.zig)
+  - [osc_clipboard.zig](/home/home/personal/zide/src/terminal/protocol/osc_clipboard.zig)
+  - [osc_kitty_clipboard.zig](/home/home/personal/zide/src/terminal/protocol/osc_kitty_clipboard.zig)
+  - [palette.zig](/home/home/personal/zide/src/terminal/protocol/palette.zig)
+
+This does not finish parser-feed ownership.
+
+It does remove one real lie:
+
+- protocol code no longer depends on "whatever the shell happens to expose"
+  for reply/report behavior

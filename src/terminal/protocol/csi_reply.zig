@@ -1,6 +1,7 @@
 const std = @import("std");
 const parser_csi = @import("../parser/csi.zig");
 const app_logger = @import("../../app_logger.zig");
+const protocol_runtime = @import("../core/session/protocol_runtime.zig");
 
 pub const Snapshot = struct {
     cursor_row_1: usize,
@@ -15,14 +16,15 @@ pub const Snapshot = struct {
 pub fn snapshot(self: anytype) Snapshot {
     const screen = self.core.activeScreen();
     const pos = screen.cursorReport();
+    const runtime_snapshot = protocol_runtime.csiReplyRuntimeSnapshot(self);
     return .{
         .cursor_row_1 = pos.row_1,
         .cursor_col_1 = pos.col_1,
         .rows = screen.grid.rows,
         .cols = screen.grid.cols,
-        .cell_height = self.session.interaction.host_contract.cell_height,
-        .cell_width = self.session.interaction.host_contract.cell_width,
-        .color_scheme_dark = self.session.interaction.host_contract.color_scheme_dark,
+        .cell_height = runtime_snapshot.cell_height,
+        .cell_width = runtime_snapshot.cell_width,
+        .color_scheme_dark = runtime_snapshot.color_scheme_dark,
     };
 }
 

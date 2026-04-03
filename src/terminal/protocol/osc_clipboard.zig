@@ -1,6 +1,7 @@
 const std = @import("std");
 const parser_mod = @import("../parser/parser.zig");
 const app_logger = @import("../../app_logger.zig");
+const protocol_runtime = @import("../core/session/protocol_runtime.zig");
 const OscTerminator = parser_mod.OscTerminator;
 
 pub fn parseClipboard(self: anytype, text: []const u8, terminator: OscTerminator) void {
@@ -94,5 +95,5 @@ fn writeClipboardReply(self: anytype, selection: []const u8, terminator: OscTerm
     };
 
     log.logf(.debug, "osc reply=\"{s}\"", .{seq.items});
-    _ = self.emitProtocolReplyBytes("terminal.osc", seq.items);
+    _ = protocol_runtime.emitReplyBytes(self, "terminal.osc", seq.items);
 }

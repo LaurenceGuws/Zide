@@ -3,6 +3,7 @@ const app_logger = @import("../../app_logger.zig");
 const sync_updates = @import("../core/protocol/sync_updates.zig");
 const kitty_mod = @import("../kitty/graphics.zig");
 const terminal_core_protocol = @import("../core/protocol/terminal_core_protocol.zig");
+const protocol_runtime = @import("../core/session/protocol_runtime.zig");
 
 pub fn parseDcs(self: anytype, payload: []const u8) void {
     if (payload.len < 2) return;
@@ -86,7 +87,7 @@ fn writeXtgettcapReply(self: anytype, ok: bool, cap_hex: []const u8, value: ?[]c
         log.logf(.warning, "xtgettcap reply terminator append failed: {s}", .{@errorName(err)});
         return;
     };
-    _ = self.emitProtocolReplyBytes("terminal.apc", reply.items);
+    _ = protocol_runtime.emitReplyBytes(self, "terminal.apc", reply.items);
 }
 
 fn writeDecrqssReply(self: anytype, ok: bool, value: ?[]const u8) void {
@@ -110,7 +111,7 @@ fn writeDecrqssReply(self: anytype, ok: bool, value: ?[]const u8) void {
         log.logf(.warning, "decrqss reply terminator append failed: {s}", .{@errorName(err)});
         return;
     };
-    _ = self.emitProtocolReplyBytes("terminal.apc", reply.items);
+    _ = protocol_runtime.emitReplyBytes(self, "terminal.apc", reply.items);
 }
 
 fn xtgettcapValue(name: []const u8) ?[]const u8 {

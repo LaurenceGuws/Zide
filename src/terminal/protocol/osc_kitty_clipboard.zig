@@ -1,6 +1,7 @@
 const std = @import("std");
 const parser_mod = @import("../parser/parser.zig");
 const app_logger = @import("../../app_logger.zig");
+const protocol_runtime = @import("../core/session/protocol_runtime.zig");
 
 const OscTerminator = parser_mod.OscTerminator;
 
@@ -270,7 +271,7 @@ fn appendOscTerminator(allocator: std.mem.Allocator, seq: *std.ArrayList(u8), te
 fn writeSeq(self: anytype, seq: []const u8) void {
     const log = app_logger.logger("terminal.osc");
     log.logf(.debug, "osc5522 reply=\"{s}\"", .{seq});
-    _ = self.emitProtocolReplyBytes("terminal.osc", seq);
+    _ = protocol_runtime.emitReplyBytes(self, "terminal.osc", seq);
 }
 
 fn sanitizeId(self: anytype, id: []const u8) struct { value: []const u8, owned: bool } {

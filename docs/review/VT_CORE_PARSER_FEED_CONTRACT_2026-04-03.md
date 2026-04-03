@@ -92,3 +92,24 @@ It is likely:
 
 If that shape does not get clean quickly, stop and rerank instead of forcing a
 halfway contract.
+
+## Progress
+
+The first contract slice is now explicit:
+
+- [protocol_runtime.zig](/home/home/personal/zide/src/terminal/core/session/protocol_runtime.zig)
+  groups:
+  - protocol reply sink emission
+  - CSI reply runtime snapshot reads
+  - reporting flag mutation/query/reset
+
+That means the first parser-facing runtime/state owner is real now, even
+though parser feed still has not crossed fully into a narrower execution
+surface.
+
+Current read after this slice:
+
+- reply/report hooks are now explicit enough to stop pretending the whole
+  session is the protocol runtime API
+- protocol state is still mixed enough that parser feed ownership is not done
+- the next cut must target protocol state shape, not just more sink rewiring
