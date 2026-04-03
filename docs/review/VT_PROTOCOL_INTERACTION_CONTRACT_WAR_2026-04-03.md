@@ -120,6 +120,18 @@ Concrete files:
 - [input_modes.zig](/home/home/personal/zide/src/terminal/core/input_modes.zig)
 - [input.zig](/home/home/personal/zide/src/terminal/core/session/input.zig)
 
+Progress now landed:
+
+- derived snapshot state no longer hides inside protocol mode state
+- [interaction_fields.zig](/home/home/personal/zide/src/terminal/core/session/interaction_fields.zig)
+  now carries a separate `derived_snapshot` owner
+- the input snapshot cache moved under that owner and the read-side consumers
+  now use it explicitly:
+  - [input_modes.zig](/home/home/personal/zide/src/terminal/core/input_modes.zig)
+  - [input.zig](/home/home/personal/zide/src/terminal/core/session/input.zig)
+  - [interaction.zig](/home/home/personal/zide/src/terminal/core/session/interaction.zig)
+  - [csi_mode_query.zig](/home/home/personal/zide/src/terminal/protocol/csi_mode_query.zig)
+
 ## War Hypothesis
 
 The next real maturity gain is not moving parser execution into core directly.

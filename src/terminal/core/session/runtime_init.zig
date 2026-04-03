@@ -55,7 +55,6 @@ pub fn init(self_type: type, allocator: std.mem.Allocator, rows: u16, cols: u16,
                     .mouse_alternate_scroll = true,
                     .grapheme_cluster_shaping_2027 = false,
                     .input = input_mod.InputState.init(),
-                    .input_snapshot = InputSnapshot.init(),
                 },
                 .host_contract = .{
                     .inband_resize_notifications_2048 = false,
@@ -64,6 +63,9 @@ pub fn init(self_type: type, allocator: std.mem.Allocator, rows: u16, cols: u16,
                     .kitty_paste_events_5522 = false,
                     .cell_width = 0,
                     .cell_height = 0,
+                },
+                .derived_snapshot = .{
+                    .input = InputSnapshot.init(),
                 },
             },
             .control = .{

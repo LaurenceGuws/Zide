@@ -10,7 +10,6 @@ pub const ProtocolModeState = struct {
     mouse_alternate_scroll: bool,
     grapheme_cluster_shaping_2027: bool,
     input: input_mod.InputState,
-    input_snapshot: session_input_snapshot.InputSnapshot,
 };
 
 pub const HostContractState = struct {
@@ -22,7 +21,12 @@ pub const HostContractState = struct {
     cell_height: u16,
 };
 
+pub const DerivedSnapshotState = struct {
+    input: session_input_snapshot.InputSnapshot,
+};
+
 pub const Fields = struct {
     protocol_modes: ProtocolModeState,
     host_contract: HostContractState,
+    derived_snapshot: DerivedSnapshotState,
 };

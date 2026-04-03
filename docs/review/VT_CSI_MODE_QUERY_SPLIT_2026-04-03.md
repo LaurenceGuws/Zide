@@ -194,3 +194,11 @@ The split is:
 - host-reporting contract state
 - display metric/live host state
 - derived snapshot state
+
+Progress now landed beyond the first slice:
+
+- derived snapshot state no longer lives under protocol mode state in the live
+  interaction owner
+- the input snapshot cache now sits under a separate `derived_snapshot`
+  contract, which makes the category-4 boundary explicit in code rather than
+  only in this review

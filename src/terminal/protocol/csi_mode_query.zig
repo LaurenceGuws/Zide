@@ -39,7 +39,7 @@ pub const ModeSnapshot = struct {
 
 pub fn modeSnapshot(self: anytype) ModeSnapshot {
     const screen = self.core.activeScreen();
-    const input_snapshot = self.session.interaction.protocol_modes.input_snapshot;
+    const input_snapshot = self.session.interaction.derived_snapshot.input;
     return .{
         .app_cursor_keys = session_input.appCursorKeysEnabled(self),
         .column_mode_132 = self.core.column_mode_132,
