@@ -282,6 +282,16 @@ Current named category-1 contradiction:
   - `csi_mode_query.zig` now delegates that terminal subset there while
     leaving input protocol state and host-contract flags outside
 
+- `docs/review/VT_CSI_MODE_EFFECTS_RERANK_2026-04-03.md`
+  Why: after the first full mutation/query wave, the lane needs an honesty
+  check before it keeps going under the wrong war name.
+  Current read:
+  - the terminal mode-and-screen-effects slab is materially landed
+  - the remaining pocket is now mostly input protocol and host-contract
+    reporting state
+  - if terminal continues immediately, that next war should be named as a new
+    CSI input/reporting contract lane, not more mode-effects cleanup
+
 ## War 4
 
 - `docs/review/VT_PLUGANDPLAY_GAP_MATRIX_2026-04-03.md`
