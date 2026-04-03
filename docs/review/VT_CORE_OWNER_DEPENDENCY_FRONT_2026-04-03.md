@@ -88,3 +88,25 @@ The next move must be:
 The next default VT front should be core owner dependency, starting with
 scrolling-side owner dependence unless a deeper parser slice proves cleaner
 immediately.
+
+## Progress
+
+The first owner-dependency slice is now landed.
+
+What changed:
+
+- `TerminalCore` newline/wrap-newline/reverse-index no longer take outer
+  `owner` just to decide their scroll consequence
+- they now return explicit `ScrollAction`
+- outer scrolling code consumes that action explicitly
+
+What this improves:
+
+- core now owns more of the semantic decision
+- outer owner shape is more clearly side-effect consumption, not hidden
+  completion
+
+What remains open:
+
+- the scroll consumer still owns kitty/history side effects
+- so scrolling is improved, not finished

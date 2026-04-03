@@ -31,15 +31,15 @@ pub fn insertChars(self: anytype, count: usize) void {
 }
 
 pub fn newline(self: anytype) void {
-    self.core.newlineLocked(self);
+    scrolling_mod.consumeScrollAction(self, self.core.newlineLocked());
 }
 
 pub fn wrapNewline(self: anytype) void {
-    self.core.wrapNewlineLocked(self);
+    scrolling_mod.consumeScrollAction(self, self.core.wrapNewlineLocked());
 }
 
 pub fn reverseIndex(self: anytype) void {
-    self.core.reverseIndexLocked(self);
+    scrolling_mod.consumeScrollAction(self, self.core.reverseIndexLocked());
 }
 
 pub fn deleteChars(self: anytype, count: usize) void {

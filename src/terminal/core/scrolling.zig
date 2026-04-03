@@ -1,4 +1,21 @@
 const kitty_mod = @import("../kitty/graphics.zig");
+const terminal_core_mod = @import("terminal_core.zig");
+
+const ScrollAction = terminal_core_mod.TerminalCore.ScrollAction;
+
+pub fn consumeScrollAction(self: anytype, action: ScrollAction) void {
+    switch (action) {
+        .none => {},
+        .scroll_region_up => |value| scrollRegionUpWithOrigin(self, value.count, value.origin),
+        .scroll_full_up => |count| {
+            var i: usize = 0;
+            while (i < count) : (i += 1) {
+                scrollUp(self);
+            }
+        },
+        .scroll_region_down => |count| scrollRegionDown(self, count),
+    }
+}
 
 pub fn scrollRegionUpWithOrigin(self: anytype, count: usize, origin: ?[]const u8) void {
     const screen = self.core.activeScreen();

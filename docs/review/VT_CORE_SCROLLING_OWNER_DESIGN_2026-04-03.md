@@ -75,3 +75,28 @@ front.
 If a clean explicit side-effect shape does not emerge quickly, the next
 subfront should fall back to parser feed owner dependency instead of forcing
 scrolling by momentum.
+
+## Progress
+
+The first explicit side-effect cut is now landed.
+
+What changed:
+
+- `TerminalCore` now returns explicit scroll actions for:
+  - newline
+  - wrap-newline
+  - reverse-index
+- scrolling-side effects are consumed outside core through
+  `scrolling.consumeScrollAction(...)`
+
+Why this counts:
+
+- this is not a cosmetic parameter removal
+- it moves the semantic decision itself inward
+
+What remains:
+
+- kitty placement consequences and history scroll effects are still consumed in
+  the outer scrolling path
+- the next question is whether that remaining consumer is now honest enough or
+  still hides another real owner dependency

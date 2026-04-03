@@ -55,6 +55,16 @@ pub const TerminalCore = struct {
         scroll_offset: usize,
     };
 
+    pub const ScrollAction = union(enum) {
+        none,
+        scroll_region_up: struct {
+            count: usize,
+            origin: ?[]const u8,
+        },
+        scroll_full_up: usize,
+        scroll_region_down: usize,
+    };
+
     pub const MetadataState = struct {
         title: []const u8,
         cwd: []const u8,
@@ -403,33 +413,34 @@ pub const TerminalCore = struct {
         screen.deleteLines(count, blank_cell);
     }
 
-    pub fn newlineLocked(self: *TerminalCore, owner: anytype) void {
+    pub fn newlineLocked(self: *TerminalCore) ScrollAction {
         const screen = self.activeScreen();
-        switch (screen.newlineAction()) {
-            .moved => {},
-            .scroll_region => @import("scrolling.zig").scrollRegionUpWithOrigin(owner, 1, "control.lf.scroll_region"),
-            .scroll_full => @import("scrolling.zig").scrollUp(owner),
-        }
+        return switch (screen.newlineAction()) {
+            .moved => .none,
+            .scroll_region => .{ .scroll_region_up = .{ .count = 1, .origin = "control.lf.scroll_region" } },
+            .scroll_full => .{ .scroll_full_up = 1 },
+        };
     }
 
-    pub fn wrapNewlineLocked(self: *TerminalCore, owner: anytype) void {
+    pub fn wrapNewlineLocked(self: *TerminalCore) ScrollAction {
         const screen = self.activeScreen();
-        switch (screen.wrapNewlineAction()) {
-            .moved => {},
-            .scroll_region => @import("scrolling.zig").scrollRegionUpWithOrigin(owner, 1, "control.wrap_newline.scroll_region"),
-            .scroll_full => @import("scrolling.zig").scrollUp(owner),
-        }
+        return switch (screen.wrapNewlineAction()) {
+            .moved => .none,
+            .scroll_region => .{ .scroll_region_up = .{ .count = 1, .origin = "control.wrap_newline.scroll_region" } },
+            .scroll_full => .{ .scroll_full_up = 1 },
+        };
     }
 
-    pub fn reverseIndexLocked(self: *TerminalCore, owner: anytype) void {
+    pub fn reverseIndexLocked(self: *TerminalCore) ScrollAction {
         const screen = self.activeScreen();
         if (screen.cursor.row > screen.scroll_top) {
             screen.cursorUp(1);
-            return;
+            return .none;
         }
         if (screen.cursor.row == screen.scroll_top) {
-            @import("scrolling.zig").scrollRegionDown(owner, 1);
+            return .{ .scroll_region_down = 1 };
         }
+        return .none;
     }
 
     pub fn scrollbackOffset(self: *const TerminalCore) usize {

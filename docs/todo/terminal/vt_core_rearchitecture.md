@@ -361,10 +361,11 @@ Current full-scope read:
   Why: scrolling is the first whole owner-dependency slice worth attacking,
   but it mixes core semantics with kitty placement effects and host metrics.
   Current read:
-  - the next move must separate core scroll/history semantics from kitty
-    side effects honestly
-  - if that line does not get clean quickly, fall back to parser feed owner
-    dependency instead of forcing scrolling by momentum
+  - the first explicit side-effect cut is now landed:
+    `TerminalCore` returns `ScrollAction` for newline/wrap-newline/reverse-index
+  - scrolling now consumes that action explicitly outside core
+  - the next question is whether the remaining kitty/history consumer is now
+    honest enough or still hides another real owner dependency
 
 Current named category-1 contradiction:
 
