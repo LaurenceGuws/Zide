@@ -247,6 +247,24 @@ Current named category-1 contradiction:
   - the next VT pressure should return to the broader `TerminalCore`
     protocol-execution maturity question
 
+- `docs/review/VT_POST_OSC_RERANK_2026-04-03.md`
+  Why: after the OSC stop-marker, VT needs a fresh ranking from the stronger
+  protocol baseline.
+  Current read:
+  - more OSC work does not win
+  - more sink work does not win
+  - the next default pressure is now CSI / ANSI mode semantics and screen
+    effects
+
+- `docs/review/VT_CSI_MODE_EFFECTS_WAR_2026-04-03.md`
+  Why: the post-OSC rerank now needs one named protocol-execution cluster
+  instead of broad parser-owner discomfort.
+  Current read:
+  - the next VT war is CSI / ANSI mode semantics and screen effects
+  - the opening boundary is terminal mode/screen effects versus host-contract
+    flag mutation
+  - do not treat this as permission for broad CSI cleanup
+
 ## War 4
 
 - `docs/review/VT_PLUGANDPLAY_GAP_MATRIX_2026-04-03.md`
