@@ -23,29 +23,21 @@ pub fn parseOsc5522(self: anytype, text: []const u8, terminator: OscTerminator) 
     const payload_b64 = text[split + 1 ..];
 
     var req = parseReadRequest(self, metadata, payload_b64) catch |err| {
-        if (self.lockPtyWriter()) |writer_guard| {
-            var writer = writer_guard;
-            defer writer.unlock();
-            switch (err) {
-                error.UnsupportedPacketType => {},
-                error.UnsupportedPrimarySelection => writeReadStatusWithId(self, &writer, terminator, "", "ENOSYS"),
-                else => writeReadStatusWithId(self, &writer, terminator, "", "EINVAL"),
-            }
+        switch (err) {
+            error.UnsupportedPacketType => {},
+            error.UnsupportedPrimarySelection => writeReadStatusWithId(self, terminator, "", "ENOSYS"),
+            else => writeReadStatusWithId(self, terminator, "", "EINVAL"),
         }
         return;
     };
 
-    if (self.lockPtyWriter()) |writer_guard| {
-        var writer = writer_guard;
-        defer writer.unlock();
-        replyReadRequest(self, &writer, &req, terminator);
-    }
+    replyReadRequest(self, &req, terminator);
 }
 
 pub fn sendPasteEventMimes(self: anytype, pty: anytype, terminator: OscTerminator) void {
-    const writer = pty;
+    _ = pty;
     var req = ReadReq{ .wants_targets = true };
-    replyReadRequest(self, writer, &req, terminator);
+    replyReadRequest(self, &req, terminator);
 }
 
 fn parseReadRequest(self: anytype, metadata: []const u8, payload_b64: []const u8) !ReadReq {
@@ -99,100 +91,100 @@ fn parseReadRequest(self: anytype, metadata: []const u8, payload_b64: []const u8
     return req;
 }
 
-fn replyReadRequest(self: anytype, writer: anytype, req: *const ReadReq, terminator: OscTerminator) void {
+fn replyReadRequest(self: anytype, req: *const ReadReq, terminator: OscTerminator) void {
     const id = sanitizeId(self, req.id);
     defer if (id.owned) self.allocator.free(id.value);
 
     if (req.wants_targets) {
-        writeReadStatusWithId(self, writer, terminator, id.value, "OK");
+        writeReadStatusWithId(self, terminator, id.value, "OK");
         if (self.core.kitty_osc5522_clipboard_text.items.len > 0) {
-            writeReadData(self, writer, terminator, id.value, ".", "text/plain\n");
+            writeReadData(self, terminator, id.value, ".", "text/plain\n");
         }
         if (self.core.kitty_osc5522_clipboard_html.items.len > 0) {
-            writeReadData(self, writer, terminator, id.value, ".", "text/html\n");
+            writeReadData(self, terminator, id.value, ".", "text/html\n");
         }
         if (self.core.kitty_osc5522_clipboard_uri_list.items.len > 0) {
-            writeReadData(self, writer, terminator, id.value, ".", "text/uri-list\n");
+            writeReadData(self, terminator, id.value, ".", "text/uri-list\n");
         }
         if (self.core.kitty_osc5522_clipboard_png.items.len > 0) {
-            writeReadData(self, writer, terminator, id.value, ".", "image/png\n");
+            writeReadData(self, terminator, id.value, ".", "image/png\n");
         }
-        writeReadStatusWithId(self, writer, terminator, id.value, "DONE");
+        writeReadStatusWithId(self, terminator, id.value, "DONE");
         return;
     }
 
     if (req.wants_text_plain) {
         const clip = self.core.kitty_osc5522_clipboard_text.items;
         if (clip.len == 0) {
-            writeReadStatusWithId(self, writer, terminator, id.value, "ENOSYS");
+            writeReadStatusWithId(self, terminator, id.value, "ENOSYS");
             return;
         }
-        writeReadStatusWithId(self, writer, terminator, id.value, "OK");
+        writeReadStatusWithId(self, terminator, id.value, "OK");
         var offset: usize = 0;
         while (offset < clip.len) {
             const end = @min(offset + data_chunk_max, clip.len);
-            writeReadData(self, writer, terminator, id.value, "text/plain", clip[offset..end]);
+            writeReadData(self, terminator, id.value, "text/plain", clip[offset..end]);
             offset = end;
         }
-        writeReadStatusWithId(self, writer, terminator, id.value, "DONE");
+        writeReadStatusWithId(self, terminator, id.value, "DONE");
         return;
     }
 
     if (req.wants_text_html) {
         const clip = self.core.kitty_osc5522_clipboard_html.items;
         if (clip.len == 0) {
-            writeReadStatusWithId(self, writer, terminator, id.value, "ENOSYS");
+            writeReadStatusWithId(self, terminator, id.value, "ENOSYS");
             return;
         }
-        writeReadStatusWithId(self, writer, terminator, id.value, "OK");
+        writeReadStatusWithId(self, terminator, id.value, "OK");
         var offset: usize = 0;
         while (offset < clip.len) {
             const end = @min(offset + data_chunk_max, clip.len);
-            writeReadData(self, writer, terminator, id.value, "text/html", clip[offset..end]);
+            writeReadData(self, terminator, id.value, "text/html", clip[offset..end]);
             offset = end;
         }
-        writeReadStatusWithId(self, writer, terminator, id.value, "DONE");
+        writeReadStatusWithId(self, terminator, id.value, "DONE");
         return;
     }
 
     if (req.wants_text_uri_list) {
         const clip = self.core.kitty_osc5522_clipboard_uri_list.items;
         if (clip.len == 0) {
-            writeReadStatusWithId(self, writer, terminator, id.value, "ENOSYS");
+            writeReadStatusWithId(self, terminator, id.value, "ENOSYS");
             return;
         }
-        writeReadStatusWithId(self, writer, terminator, id.value, "OK");
+        writeReadStatusWithId(self, terminator, id.value, "OK");
         var offset: usize = 0;
         while (offset < clip.len) {
             const end = @min(offset + data_chunk_max, clip.len);
-            writeReadData(self, writer, terminator, id.value, "text/uri-list", clip[offset..end]);
+            writeReadData(self, terminator, id.value, "text/uri-list", clip[offset..end]);
             offset = end;
         }
-        writeReadStatusWithId(self, writer, terminator, id.value, "DONE");
+        writeReadStatusWithId(self, terminator, id.value, "DONE");
         return;
     }
 
     if (req.wants_image_png) {
         const clip = self.core.kitty_osc5522_clipboard_png.items;
         if (clip.len == 0) {
-            writeReadStatusWithId(self, writer, terminator, id.value, "ENOSYS");
+            writeReadStatusWithId(self, terminator, id.value, "ENOSYS");
             return;
         }
-        writeReadStatusWithId(self, writer, terminator, id.value, "OK");
+        writeReadStatusWithId(self, terminator, id.value, "OK");
         var offset: usize = 0;
         while (offset < clip.len) {
             const end = @min(offset + data_chunk_max, clip.len);
-            writeReadData(self, writer, terminator, id.value, "image/png", clip[offset..end]);
+            writeReadData(self, terminator, id.value, "image/png", clip[offset..end]);
             offset = end;
         }
-        writeReadStatusWithId(self, writer, terminator, id.value, "DONE");
+        writeReadStatusWithId(self, terminator, id.value, "DONE");
         return;
     }
 
-    writeReadStatusWithId(self, writer, terminator, id.value, "ENOSYS");
+    writeReadStatusWithId(self, terminator, id.value, "ENOSYS");
 }
 
-fn writeReadStatusWithId(self: anytype, writer: anytype, terminator: OscTerminator, id: []const u8, status: []const u8) void {
+fn writeReadStatusWithId(self: anytype, terminator: OscTerminator, id: []const u8, status: []const u8) void {
     const log = app_logger.logger("terminal.osc");
     var seq = std.ArrayList(u8).empty;
     defer seq.deinit(self.allocator);
@@ -215,10 +207,10 @@ fn writeReadStatusWithId(self: anytype, writer: anytype, terminator: OscTerminat
         };
     }
     appendOscTerminator(self.allocator, &seq, terminator);
-    writeSeq(writer, seq.items);
+    writeSeq(self, seq.items);
 }
 
-fn writeReadData(self: anytype, writer: anytype, terminator: OscTerminator, id: []const u8, mime: []const u8, payload: []const u8) void {
+fn writeReadData(self: anytype, terminator: OscTerminator, id: []const u8, mime: []const u8, payload: []const u8) void {
     const log = app_logger.logger("terminal.osc");
     const mime_b64_len = std.base64.standard.Encoder.calcSize(mime.len);
     const payload_b64_len = std.base64.standard.Encoder.calcSize(payload.len);
@@ -266,7 +258,7 @@ fn writeReadData(self: anytype, writer: anytype, terminator: OscTerminator, id: 
         return;
     };
     appendOscTerminator(self.allocator, &seq, terminator);
-    writeSeq(writer, seq.items);
+    writeSeq(self, seq.items);
 }
 
 fn appendOscTerminator(allocator: std.mem.Allocator, seq: *std.ArrayList(u8), terminator: OscTerminator) void {
@@ -275,13 +267,10 @@ fn appendOscTerminator(allocator: std.mem.Allocator, seq: *std.ArrayList(u8), te
     };
 }
 
-fn writeSeq(writer: anytype, seq: []const u8) void {
+fn writeSeq(self: anytype, seq: []const u8) void {
     const log = app_logger.logger("terminal.osc");
     log.logf(.debug, "osc5522 reply=\"{s}\"", .{seq});
-    _ = writer.write(seq) catch |err| blk: {
-        log.logf(.warning, "osc5522 reply write failed len={d} err={s}", .{ seq.len, @errorName(err) });
-        break :blk 0;
-    };
+    _ = self.emitProtocolReplyBytes("terminal.osc", seq);
 }
 
 fn sanitizeId(self: anytype, id: []const u8) struct { value: []const u8, owned: bool } {

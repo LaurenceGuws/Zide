@@ -90,6 +90,9 @@ Progress now landed:
   - [dcs_apc.zig](/home/home/personal/zide/src/terminal/protocol/dcs_apc.zig)
   - [osc_clipboard.zig](/home/home/personal/zide/src/terminal/protocol/osc_clipboard.zig)
   - [palette.zig](/home/home/personal/zide/src/terminal/protocol/palette.zig)
+- the next coherent byte-built adopter family is also landed:
+  - [osc_kitty_clipboard.zig](/home/home/personal/zide/src/terminal/protocol/osc_kitty_clipboard.zig)
+    read replies now emit through the same sink
 
 ## Why This Wins Over Narrow Reporting Pockets
 

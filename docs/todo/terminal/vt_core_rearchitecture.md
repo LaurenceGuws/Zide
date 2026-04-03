@@ -172,6 +172,8 @@ Current named category-1 contradiction:
     replies
   - the prebuilt-byte reply family now uses that sink instead of direct
     `writePtyBytes(...)`
+  - kitty OSC read replies now use the same sink too, which removes the last
+    byte-built OSC reply family still anchored on a locked writer
   - CSI and kitty writer-driven replies remain intentionally out of this first
     slice
 

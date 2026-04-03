@@ -124,6 +124,13 @@ That first slice is now landed:
   - [osc_clipboard.zig](/home/home/personal/zide/src/terminal/protocol/osc_clipboard.zig)
   - [palette.zig](/home/home/personal/zide/src/terminal/protocol/palette.zig)
 
+Second-family progress now landed too:
+
+- [osc_kitty_clipboard.zig](/home/home/personal/zide/src/terminal/protocol/osc_kitty_clipboard.zig)
+  read replies now also emit through the same byte-oriented sink
+- that removes the remaining byte-built OSC reply path that was still anchored
+  on a locked writer
+
 Fake progress will be:
 
 - renaming `writePtyBytes(...)`
