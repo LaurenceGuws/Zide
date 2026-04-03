@@ -298,6 +298,19 @@ Current full-scope read:
     feels historically accumulated instead of boring and deliberate
   - strongest local suspects are `host_api.zig`, `host_queries.zig`, and
     `core_api.zig`
+  Progress:
+  - the first normalization slice is now landed
+  - terminal metadata and runtime metadata are explicit categories again at
+    the host query layer
+  - FFI metadata assembly now combines terminal metadata, runtime metadata,
+    and activity metadata deliberately instead of treating them as one blob
+
+- `docs/review/VT_HOST_METADATA_SPLIT_2026-04-03.md`
+  Why: the host normalization front needed one first concrete category split.
+  Current read:
+  - terminal metadata, runtime metadata, and activity metadata are explicit
+    again
+  - this improves host-contract clarity without premature ABI churn
 
 Current named category-1 contradiction:
 

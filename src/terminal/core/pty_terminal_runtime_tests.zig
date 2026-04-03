@@ -78,8 +78,9 @@ test "external transport poll updates screen and metadata" {
     defer title_buf.deinit(allocator);
     var cwd_buf = std.ArrayList(u8).empty;
     defer cwd_buf.deinit(allocator);
-    const metadata = try host_queries.copyMetadata(session, allocator, &title_buf, &cwd_buf);
-    try std.testing.expect(metadata.alive);
+    const metadata = try host_queries.copyTerminalMetadata(session, allocator, &title_buf, &cwd_buf);
+    const runtime_metadata = host_queries.currentRuntimeMetadata(session);
+    try std.testing.expect(runtime_metadata.alive);
     try std.testing.expectEqualStrings("ext-title", metadata.title);
 }
 
@@ -98,8 +99,9 @@ test "external transport close updates alive metadata" {
     defer title_buf.deinit(allocator);
     var cwd_buf = std.ArrayList(u8).empty;
     defer cwd_buf.deinit(allocator);
-    const metadata = try host_queries.copyMetadata(session, allocator, &title_buf, &cwd_buf);
-    try std.testing.expect(!metadata.alive);
+    _ = try host_queries.copyTerminalMetadata(session, allocator, &title_buf, &cwd_buf);
+    const runtime_metadata = host_queries.currentRuntimeMetadata(session);
+    try std.testing.expect(!runtime_metadata.alive);
 }
 
 test "external transport sendText queues outbound bytes" {

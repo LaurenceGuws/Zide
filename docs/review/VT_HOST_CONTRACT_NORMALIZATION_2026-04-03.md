@@ -97,3 +97,24 @@ The required bar is:
 
 The next active VT front should be host-contract normalization unless a stronger
 broader `TerminalCore` contradiction appears immediately from the same baseline.
+
+## Progress
+
+The first normalization slice is now landed.
+
+What changed:
+
+- terminal metadata and runtime metadata are no longer bundled together at the
+  host query layer
+- FFI metadata assembly now combines explicit categories instead of treating
+  them as one pre-mixed blob
+
+What this improves:
+
+- the host edge now teaches a clearer distinction between:
+  - immutable terminal truth
+  - runtime status
+  - activity state
+
+That is the right kind of normalization progress: category clarity first,
+public ABI churn second if still needed.

@@ -3,7 +3,8 @@ const terminal_transport = @import("../runtime/terminal_transport.zig");
 const session_host_types = @import("host_types.zig");
 const session_lifecycle = @import("lifecycle.zig");
 
-pub const SessionMetadata = session_host_types.SessionMetadata;
+pub const TerminalMetadata = session_host_types.TerminalMetadata;
+pub const RuntimeMetadata = session_host_types.RuntimeMetadata;
 pub const ActivityMetadata = session_host_types.ActivityMetadata;
 pub const ProgressMetadata = session_host_types.ProgressMetadata;
 
@@ -13,24 +14,28 @@ fn copyTextInto(allocator: std.mem.Allocator, out: *std.ArrayList(u8), text: []c
     return out.items;
 }
 
-pub fn copyMetadata(
+pub fn copyTerminalMetadata(
     self: anytype,
     allocator: std.mem.Allocator,
     title_out: *std.ArrayList(u8),
     cwd_out: *std.ArrayList(u8),
-) !SessionMetadata {
+) !TerminalMetadata {
     self.lock();
     defer self.unlock();
 
     const metadata_state = self.core.metadataState();
-    const alive = if (terminal_transport.Transport.fromSession(self)) |transport| transport.isAlive() else false;
-    const exit_code = session_lifecycle.childExitCode(self);
-
     return .{
         .title = try copyTextInto(allocator, title_out, metadata_state.title),
         .cwd = try copyTextInto(allocator, cwd_out, metadata_state.cwd),
         .scrollback_count = metadata_state.scrollback_count,
         .scrollback_offset = metadata_state.scrollback_offset,
+    };
+}
+
+pub fn currentRuntimeMetadata(self: anytype) RuntimeMetadata {
+    const alive = if (terminal_transport.Transport.fromSession(self)) |transport| transport.isAlive() else false;
+    const exit_code = session_lifecycle.childExitCode(self);
+    return .{
         .alive = alive,
         .exit_code = exit_code,
     };

@@ -191,17 +191,18 @@ pub fn copyTabSyncState(
     defer cwd_buf.deinit(allocator);
 
     for (workspace.tabs.items) |tab| {
-        const metadata = try host_queries.copyMetadata(tab.session, allocator, &title_buf, &cwd_buf);
+        const terminal_metadata = try host_queries.copyTerminalMetadata(tab.session, allocator, &title_buf, &cwd_buf);
+        const runtime_metadata = host_queries.currentRuntimeMetadata(tab.session);
         const activity = host_queries.currentActivityMetadata(tab.session);
 
         const title_offset = strings_out.items.len;
-        try strings_out.appendSlice(allocator, metadata.title);
+        try strings_out.appendSlice(allocator, terminal_metadata.title);
         const foreground_process_label_offset = strings_out.items.len;
         try strings_out.appendSlice(allocator, activity.foreground_process_label);
         const foreground_process_command_offset = strings_out.items.len;
         try strings_out.appendSlice(allocator, activity.foreground_process_command);
         const cwd_offset = strings_out.items.len;
-        try strings_out.appendSlice(allocator, metadata.cwd);
+        try strings_out.appendSlice(allocator, terminal_metadata.cwd);
         const shell_path = launch_shell_path.get(tab.session);
         const shell_path_offset = strings_out.items.len;
         try strings_out.appendSlice(allocator, shell_path);
@@ -209,17 +210,17 @@ pub fn copyTabSyncState(
         try entries_out.append(allocator, .{
             .id = tab.id,
             .title_offset = title_offset,
-            .title_len = metadata.title.len,
+            .title_len = terminal_metadata.title.len,
             .foreground_process_label_offset = foreground_process_label_offset,
             .foreground_process_label_len = activity.foreground_process_label.len,
             .foreground_process_command_offset = foreground_process_command_offset,
             .foreground_process_command_len = activity.foreground_process_command.len,
             .cwd_offset = cwd_offset,
-            .cwd_len = metadata.cwd.len,
+            .cwd_len = terminal_metadata.cwd.len,
             .shell_path_offset = shell_path_offset,
             .shell_path_len = shell_path.len,
-            .alive = metadata.alive,
-            .exit_code = metadata.exit_code,
+            .alive = runtime_metadata.alive,
+            .exit_code = runtime_metadata.exit_code,
             .progress_state = activity.progress.state,
             .progress_value = activity.progress.value,
         });

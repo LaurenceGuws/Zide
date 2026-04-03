@@ -37,11 +37,14 @@ pub const ActivityMetadata = struct {
     progress: ProgressMetadata = .{},
 };
 
-pub const SessionMetadata = struct {
+pub const TerminalMetadata = struct {
     title: []const u8,
     cwd: []const u8,
     scrollback_count: usize,
     scrollback_offset: usize,
+};
+
+pub const RuntimeMetadata = struct {
     alive: bool,
     exit_code: ?i32,
 };

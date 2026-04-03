@@ -383,11 +383,11 @@ pub fn create(config: ?*const shared.CreateConfig, out_handle: *?*shared.ZideTer
     };
     session_runtime.attachExternalTransport(shell);
     handle.last_generation = publication_state.publishedGeneration(shell);
-    const initial_metadata = host_queries.copyMetadata(shell, allocator, &handle.last_title, &handle.last_cwd) catch |err| {
+    _ = host_queries.copyTerminalMetadata(shell, allocator, &handle.last_title, &handle.last_cwd) catch |err| {
         log.logf(.warning, "create metadata copy failed err={s}", .{@errorName(err)});
         return .out_of_memory;
     };
-    handle.last_alive = initial_metadata.alive;
+    handle.last_alive = host_queries.currentRuntimeMetadata(shell).alive;
 
     out_handle.* = shared.toOpaque(handle);
     return .ok;
@@ -783,15 +783,16 @@ pub fn metadataAcquire(handle: ?*shared.ZideTerminalHandle, request: ?*const sha
     };
     errdefer allocator.destroy(owner);
 
-    const metadata = host_queries.copyMetadata(h.shell, allocator, &h.scratch_title, &h.scratch_cwd) catch |err| {
-        log.logf(.warning, "metadata copy failed err={s}", .{@errorName(err)});
+    const terminal_metadata = host_queries.copyTerminalMetadata(h.shell, allocator, &h.scratch_title, &h.scratch_cwd) catch |err| {
+        log.logf(.warning, "terminal metadata copy failed err={s}", .{@errorName(err)});
         return shared.mapError(err);
     };
+    const runtime_metadata = host_queries.currentRuntimeMetadata(h.shell);
     const include_title = (req.include_flags & @intFromEnum(shared.MetadataIncludeFlags.title)) != 0;
     const include_cwd = (req.include_flags & @intFromEnum(shared.MetadataIncludeFlags.cwd)) != 0;
     const include_activity = (req.include_flags & @intFromEnum(shared.MetadataIncludeFlags.activity)) != 0;
     const title = if (include_title)
-        allocator.dupe(u8, metadata.title) catch |err| {
+        allocator.dupe(u8, terminal_metadata.title) catch |err| {
             log.logf(.warning, "metadata title dup failed err={s}", .{@errorName(err)});
             return .out_of_memory;
         }
@@ -802,7 +803,7 @@ pub fn metadataAcquire(handle: ?*shared.ZideTerminalHandle, request: ?*const sha
         };
     errdefer allocator.free(title);
     const cwd = if (include_cwd)
-        allocator.dupe(u8, metadata.cwd) catch |err| {
+        allocator.dupe(u8, terminal_metadata.cwd) catch |err| {
             log.logf(.warning, "metadata cwd dup failed err={s}", .{@errorName(err)});
             return .out_of_memory;
         }
@@ -834,13 +835,13 @@ pub fn metadataAcquire(handle: ?*shared.ZideTerminalHandle, request: ?*const sha
     out_metadata.* = .{
         .abi_version = shared.metadata_abi_version,
         .struct_size = @sizeOf(shared.Metadata),
-        .scrollback_count = std.math.cast(u32, metadata.scrollback_count) orelse std.math.maxInt(u32),
-        .scrollback_offset = std.math.cast(u32, metadata.scrollback_offset) orelse std.math.maxInt(u32),
-        .alive = @intFromBool(metadata.alive),
-        .has_exit_code = @intFromBool(metadata.exit_code != null),
+        .scrollback_count = std.math.cast(u32, terminal_metadata.scrollback_count) orelse std.math.maxInt(u32),
+        .scrollback_offset = std.math.cast(u32, terminal_metadata.scrollback_offset) orelse std.math.maxInt(u32),
+        .alive = @intFromBool(runtime_metadata.alive),
+        .has_exit_code = @intFromBool(runtime_metadata.exit_code != null),
         .foreground_process_present = @intFromBool(activity.foreground_process_present),
         .semantic_prompt_active = @intFromBool(activity.semantic_prompt_active),
-        .exit_code = metadata.exit_code orelse 0,
+        .exit_code = runtime_metadata.exit_code orelse 0,
         .semantic_input_active = @intFromBool(activity.semantic_input_active),
         .semantic_output_active = @intFromBool(activity.semantic_output_active),
         .semantic_prompt_kind = @intFromEnum(activity.semantic_prompt_kind),

@@ -112,8 +112,8 @@ pub fn isAlive(handle: ?*shared.ZideTerminalHandle) u8 {
 
 pub fn childExitStatus(handle: ?*shared.ZideTerminalHandle, out_code: *i32, out_has_status: *u8) shared.Status {
     const h = shared.fromOpaqueActive(handle) orelse return .invalid_argument;
-    const metadata = host_queries.copyMetadata(h.shell, h.allocator, &h.scratch_title, &h.scratch_cwd) catch |err| return shared.mapError(err);
-    if (metadata.exit_code) |code| {
+    const runtime_metadata = host_queries.currentRuntimeMetadata(h.shell);
+    if (runtime_metadata.exit_code) |code| {
         out_code.* = code;
         out_has_status.* = 1;
     } else {
