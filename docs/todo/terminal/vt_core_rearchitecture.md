@@ -208,6 +208,14 @@ Current named category-1 contradiction:
   - the next maturity gain is likely one clearer core-side OSC semantic
     contract, not more shell/runtime surgery
 
+- `docs/review/VT_OSC_SEMANTIC_SLAB_RANKING_2026-04-03.md`
+  Why: the OSC war now needs one first code slab instead of broad OSC
+  discomfort.
+  Current read:
+  - the first slab is title / cwd / progress
+  - semantic prompt / user vars are second
+  - broad `osc.zig` routing is not the war
+
 ## War 4
 
 - `docs/review/VT_PLUGANDPLAY_GAP_MATRIX_2026-04-03.md`
