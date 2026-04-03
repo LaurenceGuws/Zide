@@ -135,6 +135,35 @@ Why:
 DA and DECRQM remain in the same cluster, but may not need to be the first cut
 if doing so muddies the contract.
 
+## Progress
+
+The first slice is now landed.
+
+What changed:
+
+- `src/terminal/protocol/csi_reply.zig` now exposes explicit byte-assembly
+  helpers for:
+  - DSR replies
+  - color-scheme preference reply
+  - bounded window-op replies
+- `src/terminal/protocol/csi.zig` no longer acquires a raw writer for those
+  branches
+- those replies now emit through the named protocol reply sink instead
+
+What this improves:
+
+- DSR and bounded window-op handling now reads less like ad hoc writer-finished
+  completion inside `csi.zig`
+- CSI reply assembly is more explicit without dragging runtime writer mechanics
+  into `TerminalCore`
+
+What remains:
+
+- DA is still a constant writer-driven reply family
+- DECRQM is still finished through the writer-shaped DECRQM reply path in
+  `csi_mode_query.zig`
+- this front is therefore stronger, but not finished
+
 ## What Must Stay Outside
 
 The following should remain explicitly outside the terminal/core-side contract:

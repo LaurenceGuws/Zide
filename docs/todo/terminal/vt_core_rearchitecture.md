@@ -176,6 +176,14 @@ Current full-scope read:
     already share one explicit snapshot owner without forcing DA/DECRQM into
     the same first shape
   - do not force CSI into the byte-oriented reply sink just for symmetry
+  Progress:
+  - the first slice is now landed
+  - `csi_reply.zig` now owns explicit byte assembly for DSR and bounded
+    window-op replies
+  - `csi.zig` no longer acquires a raw writer for those reply families; it
+    emits their bytes through the named protocol reply sink instead
+  - DA and DECRQM still remain as the next writer-driven CSI reply/query
+    pressure inside this same cluster
 
 Current named category-1 contradiction:
 

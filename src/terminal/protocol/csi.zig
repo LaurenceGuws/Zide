@@ -90,54 +90,70 @@ pub fn handleCsi(self: anytype, action: parser_csi.CsiAction) void {
             csi_exec.handleSpecialCsi(self, action, param_len, p);
         },
         'n' => { // DSR
-            if (self.lockPtyWriter()) |writer_guard| {
-                var writer = writer_guard;
-                defer writer.unlock();
-                const reply_snapshot = csi_reply.snapshot(self);
-                const mode = if (param_len > 0) p[0] else 0;
-                if (action.leader == '?') {
-                    switch (mode) {
-                        6 => _ = csi_reply.writeDsrReplyWithWriter(&writer, action.leader, mode, reply_snapshot.cursor_row_1, reply_snapshot.cursor_col_1),
-                        15, 25, 26, 55, 56, 75, 85 => _ = csi_reply.writeDsrReplyWithWriter(&writer, action.leader, mode, 0, 0),
-                        996 => _ = csi_reply.writeColorSchemePreferenceReplyWithWriter(&writer, reply_snapshot.color_scheme_dark),
-                        else => {},
-                    }
-                } else if (action.leader == 0) {
-                    switch (mode) {
-                        5 => _ = csi_reply.writeDsrReplyWithWriter(&writer, action.leader, mode, 0, 0),
-                        6 => _ = csi_reply.writeDsrReplyWithWriter(&writer, action.leader, mode, reply_snapshot.cursor_row_1, reply_snapshot.cursor_col_1),
-                        else => {},
-                    }
+            const reply_snapshot = csi_reply.snapshot(self);
+            const mode = if (param_len > 0) p[0] else 0;
+            var buf: [40]u8 = undefined;
+            if (action.leader == '?') {
+                switch (mode) {
+                    6, 15, 25, 26, 55, 56, 75, 85 => {
+                        if (csi_reply.dsrReplyInto(&buf, action.leader, mode, reply_snapshot.cursor_row_1, reply_snapshot.cursor_col_1)) |seq| {
+                            _ = self.emitProtocolReplyBytes("terminal.csi", seq);
+                        }
+                    },
+                    996 => {
+                        if (csi_reply.colorSchemePreferenceReplyInto(&buf, reply_snapshot.color_scheme_dark)) |seq| {
+                            _ = self.emitProtocolReplyBytes("terminal.csi", seq);
+                        }
+                    },
+                    else => {},
+                }
+            } else if (action.leader == 0) {
+                switch (mode) {
+                    5, 6 => {
+                        if (csi_reply.dsrReplyInto(&buf, action.leader, mode, reply_snapshot.cursor_row_1, reply_snapshot.cursor_col_1)) |seq| {
+                            _ = self.emitProtocolReplyBytes("terminal.csi", seq);
+                        }
+                    },
+                    else => {},
                 }
             }
         },
         'c' => { // DA
             if (action.leader == 0 or action.leader == '?') {
-                if (self.lockPtyWriter()) |writer_guard| {
-                    var writer = writer_guard;
-                    defer writer.unlock();
-                    _ = csi_reply.writeDaPrimaryReplyWithWriter(&writer);
-                }
+                _ = self.emitProtocolReplyBytes("terminal.csi", csi_reply.daPrimaryReplyBytes());
             }
         },
         't' => { // Window ops (bounded subset)
             if (action.leader == 0 and !action.private) {
-                if (self.lockPtyWriter()) |writer_guard| {
-                    var writer = writer_guard;
-                    defer writer.unlock();
-                    const reply_snapshot = csi_reply.snapshot(self);
-                    const mode = if (param_len > 0) p[0] else 0;
-                    switch (mode) {
-                        14 => _ = csi_reply.writeWindowOpPixelsReplyWithWriter(
-                            &writer,
+                const reply_snapshot = csi_reply.snapshot(self);
+                const mode = if (param_len > 0) p[0] else 0;
+                var buf: [40]u8 = undefined;
+                switch (mode) {
+                    14 => {
+                        if (csi_reply.windowOpPixelsReplyInto(
+                            &buf,
                             @as(u32, reply_snapshot.cell_height) * reply_snapshot.rows,
                             @as(u32, reply_snapshot.cell_width) * reply_snapshot.cols,
-                        ),
-                        16 => _ = csi_reply.writeWindowOpCellPixelsReplyWithWriter(&writer, reply_snapshot.cell_height, reply_snapshot.cell_width),
-                        18 => _ = csi_reply.writeWindowOpCharsReplyWithWriter(&writer, reply_snapshot.rows, reply_snapshot.cols),
-                        19 => _ = csi_reply.writeWindowOpScreenCharsReplyWithWriter(&writer, reply_snapshot.rows, reply_snapshot.cols),
-                        else => {},
-                    }
+                        )) |seq| {
+                            _ = self.emitProtocolReplyBytes("terminal.csi", seq);
+                        }
+                    },
+                    16 => {
+                        if (csi_reply.windowOpCellPixelsReplyInto(&buf, reply_snapshot.cell_height, reply_snapshot.cell_width)) |seq| {
+                            _ = self.emitProtocolReplyBytes("terminal.csi", seq);
+                        }
+                    },
+                    18 => {
+                        if (csi_reply.windowOpCharsReplyInto(&buf, reply_snapshot.rows, reply_snapshot.cols)) |seq| {
+                            _ = self.emitProtocolReplyBytes("terminal.csi", seq);
+                        }
+                    },
+                    19 => {
+                        if (csi_reply.windowOpScreenCharsReplyInto(&buf, reply_snapshot.rows, reply_snapshot.cols)) |seq| {
+                            _ = self.emitProtocolReplyBytes("terminal.csi", seq);
+                        }
+                    },
+                    else => {},
                 }
             }
         },
