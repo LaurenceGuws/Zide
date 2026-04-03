@@ -2,6 +2,7 @@ const parser_csi = @import("../parser/csi.zig");
 const csi_mod = @import("csi.zig");
 const std = @import("std");
 const app_logger = @import("../../app_logger.zig");
+const terminal_core_csi_input_modes = @import("../core/protocol/terminal_core_csi_input_modes.zig");
 const terminal_core_csi_mode_query = @import("../core/protocol/terminal_core_csi_mode_query.zig");
 const session_interaction = @import("../core/session/interaction.zig");
 const session_input = @import("../core/session/input.zig");
@@ -89,31 +90,23 @@ pub fn decrqmPrivateModeState(snapshot: ModeSnapshot, mode: i32) csi_mod.DecrpmS
         .local_echo_mode_12 = snapshot.local_echo_mode_12,
         .newline_mode = snapshot.newline_mode,
     }, mode)) |state| return state;
+    if (terminal_core_csi_input_modes.decrqmPrivateInputModeState(.{
+        .app_cursor_keys = snapshot.app_cursor_keys,
+        .auto_repeat = snapshot.auto_repeat,
+        .mouse_mode_x10 = snapshot.mouse_mode_x10,
+        .app_keypad = snapshot.app_keypad,
+        .mouse_mode_button = snapshot.mouse_mode_button,
+        .mouse_mode_any = snapshot.mouse_mode_any,
+        .focus_reporting = snapshot.focus_reporting,
+        .mouse_mode_sgr = snapshot.mouse_mode_sgr,
+        .mouse_alternate_scroll = snapshot.mouse_alternate_scroll,
+        .mouse_mode_sgr_pixels = snapshot.mouse_mode_sgr_pixels,
+        .bracketed_paste = snapshot.bracketed_paste,
+        .sync_updates_active = snapshot.sync_updates_active,
+        .grapheme_cluster_shaping_2027 = snapshot.grapheme_cluster_shaping_2027,
+    }, mode)) |state| return state;
     return switch (mode) {
-        1 => boolModeState(snapshot.app_cursor_keys),
         7 => boolModeState(snapshot.auto_wrap),
-        8 => boolModeState(snapshot.auto_repeat),
-        9 => boolModeState(snapshot.mouse_mode_x10),
-        66 => boolModeState(snapshot.app_keypad),
-        67 => .permanently_reset,
-        1000 => boolModeState(snapshot.mouse_mode_x10),
-        1001 => .permanently_reset,
-        1002 => boolModeState(snapshot.mouse_mode_button),
-        1003 => boolModeState(snapshot.mouse_mode_any),
-        1004 => boolModeState(snapshot.focus_reporting),
-        1005 => .permanently_reset,
-        1006 => boolModeState(snapshot.mouse_mode_sgr),
-        1007 => boolModeState(snapshot.mouse_alternate_scroll),
-        1015 => .permanently_reset,
-        1016 => boolModeState(snapshot.mouse_mode_sgr_pixels),
-        1034 => .permanently_reset,
-        1035 => .permanently_reset,
-        1036 => .permanently_reset,
-        1042 => .permanently_reset,
-        1070 => .permanently_reset,
-        2004 => boolModeState(snapshot.bracketed_paste),
-        2026 => boolModeState(snapshot.sync_updates_active),
-        2027 => boolModeState(snapshot.grapheme_cluster_shaping_2027),
         2031 => boolModeState(snapshot.report_color_scheme_2031),
         2048 => boolModeState(snapshot.inband_resize_notifications_2048),
         5522 => boolModeState(snapshot.kitty_paste_events_5522),

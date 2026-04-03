@@ -302,6 +302,18 @@ Current named category-1 contradiction:
   - do not collapse runtime-dependent reporting behavior into core just for
     symmetry
 
+- `docs/review/VT_CSI_INPUT_REPORTING_CONTRACT_2026-04-03.md`
+  Why: the new war needs one exact first split before code drifts into generic
+  remaining-CSI cleanup.
+  Current read:
+  - the first slice is input protocol mode mutation plus DECRQM query state
+  - host-reporting flags 2031/2048/5522 stay outside
+  Progress:
+  - `src/terminal/core/protocol/terminal_core_csi_input_modes.zig` now owns
+    the first input protocol mode/query slab
+  - `csi_mode_mutation.zig` and `csi_mode_query.zig` now delegate that subset
+    there while leaving host-reporting flags outside
+
 ## War 4
 
 - `docs/review/VT_PLUGANDPLAY_GAP_MATRIX_2026-04-03.md`

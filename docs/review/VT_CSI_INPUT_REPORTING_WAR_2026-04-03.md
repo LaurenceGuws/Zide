@@ -99,3 +99,13 @@ explicitly outside until they earn their own contract
 If VT continues immediately, the next war is now explicit:
 
 - CSI input/reporting contract state
+
+First progress now landed:
+
+- [terminal_core_csi_input_modes.zig](/home/home/personal/zide/src/terminal/core/protocol/terminal_core_csi_input_modes.zig)
+  now owns the first input protocol mode/query slab
+- [csi_mode_mutation.zig](/home/home/personal/zide/src/terminal/protocol/csi_mode_mutation.zig)
+  now delegates the input protocol mode subset there
+- [csi_mode_query.zig](/home/home/personal/zide/src/terminal/protocol/csi_mode_query.zig)
+  now delegates the matching DECRQM input-mode answers there
+- host-reporting flags 2031/2048/5522 remain explicitly outside that owner
