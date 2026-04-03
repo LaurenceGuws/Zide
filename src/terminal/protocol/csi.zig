@@ -93,20 +93,19 @@ pub fn handleCsi(self: anytype, action: parser_csi.CsiAction) void {
             if (self.lockPtyWriter()) |writer_guard| {
                 var writer = writer_guard;
                 defer writer.unlock();
-                const screen = self.core.activeScreen();
-                const pos = screen.cursorReport();
+                const reply_snapshot = csi_reply.snapshot(self);
                 const mode = if (param_len > 0) p[0] else 0;
                 if (action.leader == '?') {
                     switch (mode) {
-                        6 => _ = csi_reply.writeDsrReplyWithWriter(&writer, action.leader, mode, pos.row_1, pos.col_1),
+                        6 => _ = csi_reply.writeDsrReplyWithWriter(&writer, action.leader, mode, reply_snapshot.cursor_row_1, reply_snapshot.cursor_col_1),
                         15, 25, 26, 55, 56, 75, 85 => _ = csi_reply.writeDsrReplyWithWriter(&writer, action.leader, mode, 0, 0),
-                        996 => _ = csi_reply.writeColorSchemePreferenceReplyWithWriter(&writer, self.session.interaction.host_contract.color_scheme_dark),
+                        996 => _ = csi_reply.writeColorSchemePreferenceReplyWithWriter(&writer, reply_snapshot.color_scheme_dark),
                         else => {},
                     }
                 } else if (action.leader == 0) {
                     switch (mode) {
                         5 => _ = csi_reply.writeDsrReplyWithWriter(&writer, action.leader, mode, 0, 0),
-                        6 => _ = csi_reply.writeDsrReplyWithWriter(&writer, action.leader, mode, pos.row_1, pos.col_1),
+                        6 => _ = csi_reply.writeDsrReplyWithWriter(&writer, action.leader, mode, reply_snapshot.cursor_row_1, reply_snapshot.cursor_col_1),
                         else => {},
                     }
                 }
@@ -126,17 +125,17 @@ pub fn handleCsi(self: anytype, action: parser_csi.CsiAction) void {
                 if (self.lockPtyWriter()) |writer_guard| {
                     var writer = writer_guard;
                     defer writer.unlock();
-                    const screen = self.core.activeScreen();
+                    const reply_snapshot = csi_reply.snapshot(self);
                     const mode = if (param_len > 0) p[0] else 0;
                     switch (mode) {
                         14 => _ = csi_reply.writeWindowOpPixelsReplyWithWriter(
                             &writer,
-                            @as(u32, self.session.interaction.host_contract.cell_height) * screen.grid.rows,
-                            @as(u32, self.session.interaction.host_contract.cell_width) * screen.grid.cols,
+                            @as(u32, reply_snapshot.cell_height) * reply_snapshot.rows,
+                            @as(u32, reply_snapshot.cell_width) * reply_snapshot.cols,
                         ),
-                        16 => _ = csi_reply.writeWindowOpCellPixelsReplyWithWriter(&writer, self.session.interaction.host_contract.cell_height, self.session.interaction.host_contract.cell_width),
-                        18 => _ = csi_reply.writeWindowOpCharsReplyWithWriter(&writer, screen.grid.rows, screen.grid.cols),
-                        19 => _ = csi_reply.writeWindowOpScreenCharsReplyWithWriter(&writer, screen.grid.rows, screen.grid.cols),
+                        16 => _ = csi_reply.writeWindowOpCellPixelsReplyWithWriter(&writer, reply_snapshot.cell_height, reply_snapshot.cell_width),
+                        18 => _ = csi_reply.writeWindowOpCharsReplyWithWriter(&writer, reply_snapshot.rows, reply_snapshot.cols),
+                        19 => _ = csi_reply.writeWindowOpScreenCharsReplyWithWriter(&writer, reply_snapshot.rows, reply_snapshot.cols),
                         else => {},
                     }
                 }

@@ -169,6 +169,20 @@ Why:
   still mixes reply encoding with host metrics and runtime writer access
 - but it is less obviously separable than the mode/query split
 
+Progress now landed:
+
+- [csi.zig](/home/home/personal/zide/src/terminal/protocol/csi.zig)
+  no longer hand-assembles DSR/window-op reply inputs inline from mixed shell
+  reads
+- [csi_reply.zig](/home/home/personal/zide/src/terminal/protocol/csi_reply.zig)
+  now owns one explicit `Snapshot` for:
+  - cursor position
+  - rows/cols
+  - cell metrics
+  - color-scheme preference
+- writer ownership still stays outside that contract, but reply/report state is
+  now named and explicit instead of ad hoc inside the CSI switch
+
 ### 3. Kitty/reporting interaction flags
 
 This is third.

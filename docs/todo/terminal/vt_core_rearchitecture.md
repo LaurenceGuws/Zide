@@ -113,6 +113,9 @@ Current named category-1 contradiction:
     - `host_contract`
   - CSI mode mutation/query, input mode handling, transport resize/reporting,
     and adjacent interaction consumers now use that split directly
+  - CSI reply/report now also uses one explicit reply snapshot in
+    `csi_reply.zig` instead of hand-assembling cursor/geometry/color data
+    inline in `csi.zig`
   - the next question is no longer whether the mixed state should be
     reclassified; it is whether the next real slice is CSI reply/report
     ownership or a narrower remaining mixed-state pocket

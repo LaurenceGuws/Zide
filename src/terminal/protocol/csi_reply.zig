@@ -2,6 +2,30 @@ const std = @import("std");
 const parser_csi = @import("../parser/csi.zig");
 const app_logger = @import("../../app_logger.zig");
 
+pub const Snapshot = struct {
+    cursor_row_1: usize,
+    cursor_col_1: usize,
+    rows: u16,
+    cols: u16,
+    cell_height: u16,
+    cell_width: u16,
+    color_scheme_dark: bool,
+};
+
+pub fn snapshot(self: anytype) Snapshot {
+    const screen = self.core.activeScreen();
+    const pos = screen.cursorReport();
+    return .{
+        .cursor_row_1 = pos.row_1,
+        .cursor_col_1 = pos.col_1,
+        .rows = screen.grid.rows,
+        .cols = screen.grid.cols,
+        .cell_height = self.session.interaction.host_contract.cell_height,
+        .cell_width = self.session.interaction.host_contract.cell_width,
+        .color_scheme_dark = self.session.interaction.host_contract.color_scheme_dark,
+    };
+}
+
 pub fn writeDaPrimaryReplyWithWriter(writer: anytype) bool {
     const log = app_logger.logger("terminal.csi");
     _ = writer.write("\x1b[?62;1;2;4;6;7;8;9;15;18;21;22;28;29c") catch |err| {
