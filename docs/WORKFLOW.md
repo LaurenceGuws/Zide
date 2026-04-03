@@ -50,6 +50,14 @@ repository.
 - `docs/research/**` — exploratory research and technical writeups.
 - `docs/review/**` — historical audits, investigations, and review evidence.
 
+Current focus rule:
+
+- if `docs/AGENT_HANDOFF.md` names one indefinite architecture focus, treat
+  that as the default priority across sessions
+- do not substitute repo-wide reranks or side-war momentum for that focus
+- future work in that lane should come from the owning architecture authority,
+  not from opportunistic local cleanup
+
 Doc-placement authority:
 
 - This file is the normative doc-placement and doc-lifecycle policy.

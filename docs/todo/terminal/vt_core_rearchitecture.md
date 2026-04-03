@@ -18,11 +18,21 @@ Continue the post-rewrite split that makes the terminal core the architectural c
 
 ## Current Direction
 
-The passive cleanup phase is over. The active lane is now a deliberate assault
-on every architectural seam that keeps `TerminalCore` from being the obvious
-center. This is still iterative work, but it is no longer gentle work. Each
-cut should remove a structural lie, not merely rearrange the same center of
-gravity into smaller files.
+The passive cleanup phase is over.
+
+The active lane is now indefinite VT maturity purity, not opportunistic seam
+cleanup.
+
+Use
+[VT_MATURITY_PURITY_CAMPAIGN.md](/home/home/personal/zide/app_architecture/terminal/VT_MATURITY_PURITY_CAMPAIGN.md)
+as the governing authority for what counts as progress.
+
+That means:
+
+- do not hop to side wars by momentum
+- do not keep shaving wrappers unless the library-center story gets stronger
+- do not reopen flattened local lanes just because they still have files
+- only continue code when one named maturity contradiction is explicit
 
 ## War 4
 

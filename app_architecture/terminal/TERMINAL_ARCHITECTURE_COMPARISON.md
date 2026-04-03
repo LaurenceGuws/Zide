@@ -57,14 +57,17 @@ flowchart LR
 
 ### Notes
 
-- Zide already has a real `TerminalCore`, but `TerminalSession` is still the
-  main runtime-facing owner.
-- The strongest remaining structural weight is now concentrated more narrowly
-  than that older sentence suggests:
-  - `session_runtime.zig` still carries much of the thread/runtime/transport
-    assembly
-  - `session_rendering.zig` and `session_rendering_retirement.zig` still carry
-    much of the publication/present choreography
+- This diagram is now historical shape evidence, not the current live shape.
+- The live VT shape is now:
+  - [TerminalCore](/home/home/personal/zide/src/terminal/core/terminal_core.zig)
+  - [TerminalRuntimeShell](/home/home/personal/zide/src/terminal/core/session/terminal_runtime_shell.zig)
+- `TerminalSession` is gone.
+- `PtyTerminalRuntime` is gone.
+- The current remaining gap versus Ghostty/WezTerm is no longer fake-center
+  sludge; it is VT maturity purity:
+  - library-center sufficiency
+  - contract normalization
+  - first-glance terminal-object maturity
 - The native renderer is custom and retains widget-local targets where they
   still pay off.
 - The renderer now also owns an authoritative scene target before the final

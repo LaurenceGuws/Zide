@@ -2,6 +2,19 @@
 
 Date: 2026-03-10
 
+Status note, 2026-04-03:
+
+- The default architecture focus is now indefinite VT maturity purity.
+- Treat
+  [VT_MATURITY_PURITY_CAMPAIGN.md](/home/home/personal/zide/app_architecture/terminal/VT_MATURITY_PURITY_CAMPAIGN.md)
+  as the primary current authority for:
+  - what still blocks `zide-vt` maturity
+  - what kinds of cuts still count as progress
+  - what must stay paused unless a new named contradiction appears
+- The repo should no longer treat renderer convergence or generic repo reranks
+  as the default battlefield while VT maturity purity remains the named
+  primary campaign.
+
 Status note, 2026-03-14:
 
 - Current phase:

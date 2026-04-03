@@ -27,6 +27,14 @@ Follow this workflow for every feature/task:
 17. Once approved (or explicitly instructed to commit), commit each step labeled as the step header.
 18. Return to the todo and suggest 3 next changes.
 
+Current default priority rule:
+
+- if `docs/AGENT_HANDOFF.md` names one indefinite architecture focus, that
+  focus outranks opportunistic repo reranks and side-war momentum
+- do not drift to another architecture lane unless the user explicitly directs
+  it or the current focus is proven blocked by a stronger direct prerequisite
+- current repo focus is VT maturity purity until replaced by new authority
+
 ## Doc scope policy
 
 - `README.md` and the docs explorer repo are **customer-facing**.
