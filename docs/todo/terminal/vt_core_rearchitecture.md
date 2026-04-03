@@ -279,6 +279,16 @@ Current full-scope read:
   - the next pressure returns to broader `TerminalCore` sufficiency from the
     stronger baseline
 
+- `docs/review/VT_POST_PROTOCOL_OWNER_RERANK_2026-04-03.md`
+  Why: after the protocol-owner front is parked, VT needs a fresh top-level
+  rerank from the stronger baseline.
+  Current read:
+  - `terminal_core_protocol.zig` is no longer the next war
+  - the next contradiction is likely broader and more object-model or
+    contract-quality shaped
+  - the next move should name one exact broader `TerminalCore` sufficiency or
+    host-contract normalization weakness
+
 Current named category-1 contradiction:
 
 - `docs/review/VT_CORE_EXECUTION_CONTRADICTION_REVIEW_2026-04-03.md`
