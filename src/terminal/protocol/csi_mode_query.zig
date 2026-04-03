@@ -140,12 +140,8 @@ pub fn decrqmAnsiModeState(snapshot: ModeSnapshot, mode: i32) csi_mod.DecrpmStat
 pub fn writeDecrqmReplyWithWriter(writer: anytype, private: bool, mode: i32, state: csi_mod.DecrpmState) bool {
     const log = app_logger.logger("terminal.csi");
     var buf: [32]u8 = undefined;
-    const seq = if (private)
-        std.fmt.bufPrint(&buf, "\x1b[?{d};{d}$y", .{ mode, @intFromEnum(state) })
-    else
-        std.fmt.bufPrint(&buf, "\x1b[{d};{d}$y", .{ mode, @intFromEnum(state) });
-    const bytes = seq catch |err| {
-        log.logf(.warning, "DECRQM reply format failed mode={d} private={d}: {s}", .{ mode, @as(u8, @intFromBool(private)), @errorName(err) });
+    const bytes = decrqmReplyInto(&buf, private, mode, state) orelse {
+        log.logf(.warning, "DECRQM reply format failed mode={d} private={d}", .{ mode, @as(u8, @intFromBool(private)) });
         return false;
     };
     _ = writer.write(bytes) catch |err| {
@@ -153,6 +149,14 @@ pub fn writeDecrqmReplyWithWriter(writer: anytype, private: bool, mode: i32, sta
         return false;
     };
     return true;
+}
+
+pub fn decrqmReplyInto(buf: []u8, private: bool, mode: i32, state: csi_mod.DecrpmState) ?[]const u8 {
+    const seq = if (private)
+        std.fmt.bufPrint(buf, "\x1b[?{d};{d}$y", .{ mode, @intFromEnum(state) })
+    else
+        std.fmt.bufPrint(buf, "\x1b[{d};{d}$y", .{ mode, @intFromEnum(state) });
+    return seq catch null;
 }
 
 fn boolModeState(enabled: bool) csi_mod.DecrpmState {

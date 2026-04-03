@@ -182,8 +182,14 @@ Current full-scope read:
     window-op replies
   - `csi.zig` no longer acquires a raw writer for those reply families; it
     emits their bytes through the named protocol reply sink instead
-  - DA and DECRQM still remain as the next writer-driven CSI reply/query
-    pressure inside this same cluster
+  - the second slice is now landed too
+  - DA now emits through the named protocol reply sink from an explicit byte
+    reply contract
+  - DECRQM now formats reply bytes through `decrqmReplyInto(...)` and emits
+    them through the named protocol reply sink instead of taking a raw writer
+    in `csi.zig`
+  - this cluster is now close to a real stop-marker and should not reopen
+    without one new explicit contradiction
 
 Current named category-1 contradiction:
 

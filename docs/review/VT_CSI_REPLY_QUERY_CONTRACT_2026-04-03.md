@@ -159,10 +159,13 @@ What this improves:
 
 What remains:
 
-- DA is still a constant writer-driven reply family
-- DECRQM is still finished through the writer-shaped DECRQM reply path in
-  `csi_mode_query.zig`
-- this front is therefore stronger, but not finished
+- the remaining DA and DECRQM slice is now landed too
+- DA now emits through the named protocol reply sink from an explicit byte
+  reply contract
+- DECRQM now formats reply bytes through `decrqmReplyInto(...)` and emits them
+  through the named protocol reply sink instead of taking a raw writer in
+  `csi.zig`
+- this front is now materially flatter as a whole
 
 ## What Must Stay Outside
 
@@ -183,7 +186,14 @@ The next exact VT scrutiny front is writer-driven CSI reply/query assembly.
 Do not reopen generic shell cleanup or generic CSI cleanup before this cluster
 is judged.
 
-## Next Move
+## Stop Marker
 
-Define one explicit contract shape for the first CSI writer-driven reply/query
-slice, likely DSR plus bounded window-op replies, before touching code.
+This cluster is now close to a real stop-marker.
+
+Remaining differences here are no longer:
+
+- raw writer grabs in `csi.zig`
+- ad hoc CSI reply completion branches for the major reply/query family
+
+If this lane reopens, it should reopen only for one new explicit reply/query
+contract contradiction, not because CSI still has files.
