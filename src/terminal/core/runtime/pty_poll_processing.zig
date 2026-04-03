@@ -1,7 +1,7 @@
 const std = @import("std");
 const parser_mod = @import("../../parser/parser.zig");
 const app_logger = @import("../../../app_logger.zig");
-const publication_flow = @import("../publication/publication_flow.zig");
+const protocol_execution = @import("../session/protocol_execution.zig");
 
 pub const PtyPollResult = struct {
     queued_bytes: usize,
@@ -74,7 +74,8 @@ pub fn processBufferedPtyOutput(self: anytype, input_pressure: bool) PtyPollResu
         const parse_lock_start_ns = std.time.nanoTimestamp();
         self.session.control.state_mutex.lock();
         const result = self.core.feedOutputBytesLocked(self, temp[0..chunk_len]);
-        publication_flow.consumeFeedResultLocked(self, result, "pty_poll_buffered_output");
+        var exec = protocol_execution.ProtocolExecution.init(self, &self.core);
+        exec.consumeFeedResult(result, "pty_poll_buffered_output");
         self.session.control.state_mutex.unlock();
         parse_lock_hold_ns += std.time.nanoTimestamp() - parse_lock_start_ns;
         processed += chunk_len;
@@ -105,7 +106,8 @@ pub fn processExternalTransportOutput(self: anytype, transport: anytype, input_p
         processed += n.?;
         const parse_lock_start_ns = std.time.nanoTimestamp();
         const result = self.core.feedOutputBytesLocked(self, buf[0..n.?]);
-        publication_flow.consumeFeedResultLocked(self, result, "pty_poll_external_output");
+        var exec = protocol_execution.ProtocolExecution.init(self, &self.core);
+        exec.consumeFeedResult(result, "pty_poll_external_output");
         parse_lock_hold_ns += std.time.nanoTimestamp() - parse_lock_start_ns;
         if (processed >= max_bytes_per_poll) break;
     }

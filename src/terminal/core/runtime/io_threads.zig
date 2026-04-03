@@ -5,6 +5,7 @@ const app_lifecycle_runtime = @import("../../../app/lifecycle_runtime.zig");
 const terminal_transport = @import("terminal_transport.zig");
 const terminal_publication = @import("../publication/terminal_publication.zig");
 const publication_flow = @import("../publication/publication_flow.zig");
+const protocol_execution = @import("../session/protocol_execution.zig");
 
 fn shouldPublishParseBatch(
     sync_updates_active: bool,
@@ -58,8 +59,9 @@ pub fn readThreadMain(session: anytype) void {
                 session.session.runtime.io_mutex.unlock();
                 session.session.runtime.io_wait_cond.signal();
                 if (session.session.runtime.parse_thread == null) {
-                    publication_flow.markOutputPending(session);
-                    _ = publication_flow.noteParsedOutputLocked(session);
+                    var exec = protocol_execution.ProtocolExecution.init(session, &session.core);
+                    _ = exec.noteParsedOutput();
+                    exec.markOutputPending();
                 }
             }
             _ = start_ms;
@@ -182,7 +184,8 @@ pub fn parseThreadMain(session: anytype) void {
             const parse_lock_start_ns = std.time.nanoTimestamp();
             session.session.control.state_mutex.lock();
             const result = session.core.feedOutputBytesLocked(session, temp[0..chunk_len]);
-            publication_flow.consumeFeedResultLocked(session, result, "parse_thread_chunk");
+            var exec = protocol_execution.ProtocolExecution.init(session, &session.core);
+            exec.consumeFeedResult(result, "parse_thread_chunk");
             session.session.control.state_mutex.unlock();
             parse_lock_hold_ns += std.time.nanoTimestamp() - parse_lock_start_ns;
             processed += chunk_len;
@@ -227,7 +230,8 @@ pub fn parseThreadMain(session: anytype) void {
                         session.core.history.scrollOffset();
                     const publish_lock_start_ns = std.time.nanoTimestamp();
                     session.session.control.state_mutex.lock();
-                    publication_flow.publishPendingOutputLocked(session, target_offset, "parse_thread_publish");
+                    var exec = protocol_execution.ProtocolExecution.init(session, &session.core);
+                    exec.publishPendingOutput(target_offset, "parse_thread_publish");
                     session.session.control.state_mutex.unlock();
                     const publish_lock_ns = std.time.nanoTimestamp() - publish_lock_start_ns;
                     publish_lock_hold_ns += publish_lock_ns;

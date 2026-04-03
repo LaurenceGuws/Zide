@@ -248,3 +248,36 @@ Current read:
 - publication is still a surviving execution face
 - but one real publication contract is now explicit enough to keep cutting
   coherently, instead of attempting another failed whole-face shrink
+
+The rerank after that slice is now explicit:
+
+- publication still beats runtime
+- runtime is now second because its surviving dependence is more compatibility
+  residue than broad helper choreography
+- see
+  [VT_POST_SYNC_PUBLICATION_RERANK_2026-04-04.md](/home/home/personal/zide/docs/review/VT_POST_SYNC_PUBLICATION_RERANK_2026-04-04.md)
+
+The next coherent publication slice is now landed too:
+
+- parsed-output publication now goes through
+  [protocol_execution.zig](/home/home/personal/zide/src/terminal/core/session/protocol_execution.zig)
+  instead of direct
+  [publication_flow.zig](/home/home/personal/zide/src/terminal/core/publication/publication_flow.zig)
+  choreography across the active feed/runtime paths
+- explicit operations now exist for:
+  - `noteParsedOutput(...)`
+  - `consumeFeedResult(...)`
+  - `publishPendingOutput(...)`
+  - `markOutputPending(...)`
+- see
+  [VT_PROTOCOL_PUBLICATION_PARSED_OUTPUT_CONTRACT_2026-04-04.md](/home/home/personal/zide/docs/review/VT_PROTOCOL_PUBLICATION_PARSED_OUTPUT_CONTRACT_2026-04-04.md)
+
+Current read after this slice:
+
+- publication still survives
+- but two coherent publication contracts are now explicit on the execution
+  surface:
+  - synchronized updates
+  - parsed-output publication
+- the next rerank should now judge whether publication still beats runtime
+  from that narrower baseline

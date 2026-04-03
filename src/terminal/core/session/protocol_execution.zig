@@ -7,10 +7,12 @@ const publication_fields = @import("publication_fields.zig");
 const terminal_transport = @import("../runtime/terminal_transport.zig");
 const view_cache = @import("../publication/view_cache.zig");
 const render_cache_mod = @import("../publication/render_cache.zig");
+const terminal_core_feed = @import("../protocol/terminal_core_feed.zig");
 
 const TerminalCore = terminal_core_mod.TerminalCore;
 const RenderCache = render_cache_mod.RenderCache;
 const Pty = pty_mod.Pty;
+const FeedResult = terminal_core_feed.FeedResult;
 
 pub const SessionFaces = struct {
     runtime: *runtime_fields.Fields,
@@ -105,5 +107,24 @@ pub const ProtocolExecution = struct {
     pub fn publishSyncUpdate(self: *ProtocolExecution, scroll_offset: usize) void {
         _ = self.bumpPublicationGeneration();
         self.updateViewCacheForProtocol(self.pendingPublicationGeneration(), scroll_offset, "set_sync_updates");
+    }
+
+    pub fn noteParsedOutput(self: *ProtocolExecution) u64 {
+        return self.bumpPublicationGeneration();
+    }
+
+    pub fn consumeFeedResult(self: *ProtocolExecution, result: FeedResult, source: []const u8) void {
+        if (!result.parsed) return;
+        _ = self.noteParsedOutput();
+        self.updateViewCacheForProtocol(self.pendingPublicationGeneration(), result.scroll_offset, source);
+    }
+
+    pub fn publishPendingOutput(self: *ProtocolExecution, scroll_offset: usize, source: []const u8) void {
+        self.updateViewCacheForProtocol(self.pendingPublicationGeneration(), scroll_offset, source);
+        self.markOutputPending();
+    }
+
+    pub fn markOutputPending(self: *ProtocolExecution) void {
+        self.session.publication.output_pending.store(true, .release);
     }
 };

@@ -427,6 +427,20 @@ Current full-scope read:
     synchronized-update publication contract, not broad publication slimming
   - the first synchronized-update publication slice is now landed on
     `protocol_execution.zig` and `sync_updates.zig`
+  - the second parsed-output publication slice is now landed too:
+    `protocol_execution.zig` now owns:
+    - `noteParsedOutput(...)`
+    - `consumeFeedResult(...)`
+    - `publishPendingOutput(...)`
+    - `markOutputPending(...)`
+  - active feed/runtime paths no longer finish parsed output through direct
+    `publication_flow` choreography:
+    - `terminal_core_feed.zig`
+    - `pty_poll_processing.zig`
+    - `io_threads.zig`
+  - post-sync rerank: publication still beats runtime as the strongest fully
+    surviving execution face, because the active path still depends on the
+    broader view-cache/publication helper stack
 
 Current named category-1 contradiction:
 

@@ -198,3 +198,26 @@ That contract now has its first real code slice too:
 - [sync_updates.zig](/home/home/personal/zide/src/terminal/core/protocol/sync_updates.zig)
   now consumes explicit synchronized-update publication operations on
   [protocol_execution.zig](/home/home/personal/zide/src/terminal/core/session/protocol_execution.zig)
+
+The post-sync rerank is now explicit too:
+
+- [VT_POST_SYNC_PUBLICATION_RERANK_2026-04-04.md](/home/home/personal/zide/docs/review/VT_POST_SYNC_PUBLICATION_RERANK_2026-04-04.md)
+- publication still wins as the strongest fully surviving execution face
+
+The next coherent publication contract is now landed too:
+
+- [VT_PROTOCOL_PUBLICATION_PARSED_OUTPUT_CONTRACT_2026-04-04.md](/home/home/personal/zide/docs/review/VT_PROTOCOL_PUBLICATION_PARSED_OUTPUT_CONTRACT_2026-04-04.md)
+- parsed-output publication now lives on
+  [protocol_execution.zig](/home/home/personal/zide/src/terminal/core/session/protocol_execution.zig)
+  instead of being finished through direct
+  [publication_flow.zig](/home/home/personal/zide/src/terminal/core/publication/publication_flow.zig)
+  choreography across:
+  - [terminal_core_feed.zig](/home/home/personal/zide/src/terminal/core/protocol/terminal_core_feed.zig)
+  - [pty_poll_processing.zig](/home/home/personal/zide/src/terminal/core/runtime/pty_poll_processing.zig)
+  - [io_threads.zig](/home/home/personal/zide/src/terminal/core/runtime/io_threads.zig)
+
+Current read:
+
+- publication is still a surviving execution face
+- but the active feed/output publication path is now materially narrower than
+  the old sync-update-only baseline
