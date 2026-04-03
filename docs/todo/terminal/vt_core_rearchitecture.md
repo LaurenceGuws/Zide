@@ -117,6 +117,14 @@ Current full-scope read:
   - what remains is a narrower question about mutation and rendering-time
     locking, not a broad read-side shell habit
 
+- `docs/review/VT_SHELL_LOCK_POST_READ_RERANK_2026-04-03.md`
+  Why: after the first lock slice, the front needs a narrower kill-order.
+  Current read:
+  - broad read-side lock gravity is no longer the next problem
+  - mutation transaction locking is now the strongest remaining shell lock
+    front
+  - render/widget snapshot locking is second
+
 Current named category-1 contradiction:
 
 - `docs/review/VT_CORE_EXECUTION_CONTRADICTION_REVIEW_2026-04-03.md`
