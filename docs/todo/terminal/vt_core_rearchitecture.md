@@ -28,6 +28,10 @@ Use
 as the governing authority for what counts as progress.
 
 Use
+[VT_MATURITY_COMPLETION_LIST.md](/home/home/personal/zide/app_architecture/terminal/VT_MATURITY_COMPLETION_LIST.md)
+as the numbered sequential completion list for the same scrutiny war.
+
+Use
 [VT_MATURITY_FULL_SCOPE_2026-04-03.md](/home/home/personal/zide/docs/review/VT_MATURITY_FULL_SCOPE_2026-04-03.md)
 as the comprehensive ranked scope map before opening any new front inside the
 same VT scrutiny war.
@@ -36,6 +40,7 @@ That means:
 
 - do not hop to side wars by momentum
 - do not keep renaming local fronts as separate wars
+- do not replace the numbered completion list with ad hoc local win conditions
 - do not keep shaving wrappers unless the library-center story gets stronger
 - do not reopen flattened local lanes just because they still have files
 - only continue code when one named maturity contradiction is explicit

@@ -19,6 +19,13 @@ It remains the default architecture focus until we can honestly say the live
 VT contract is at least as strong as our peer references in the dimensions
 that matter for a serious standalone library center.
 
+Campaign exit criteria now live in:
+
+- [VT_MATURITY_COMPLETION_LIST.md](/home/home/personal/zide/app_architecture/terminal/VT_MATURITY_COMPLETION_LIST.md)
+
+Future work should march through that numbered list sequentially instead of
+inventing local victory conditions.
+
 ## Core Standard
 
 The standard is no longer:

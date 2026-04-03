@@ -9,6 +9,9 @@ not a progress log and should stay brief.
 - Treat
   [VT_MATURITY_PURITY_CAMPAIGN.md](/home/home/personal/zide/app_architecture/terminal/VT_MATURITY_PURITY_CAMPAIGN.md)
   as the primary authority for what work counts.
+- Treat
+  [VT_MATURITY_COMPLETION_LIST.md](/home/home/personal/zide/app_architecture/terminal/VT_MATURITY_COMPLETION_LIST.md)
+  as the numbered exit criteria for the same scrutiny war.
 - Treat VT maturity purity as one continuous scrutiny war, not a chain of
   small wars with new names every few commits.
 - The standard is no longer "find another cleanup seam."
@@ -63,6 +66,7 @@ not a progress log and should stay brief.
 
 - VT maturity campaign authority:
   - `app_architecture/terminal/VT_MATURITY_PURITY_CAMPAIGN.md`
+  - `app_architecture/terminal/VT_MATURITY_COMPLETION_LIST.md`
   - `app_architecture/terminal/VT_CORE_DESIGN.md`
   - `app_architecture/terminal/TERMINAL_ARCHITECTURE_COMPARISON.md`
   - `docs/todo/terminal/vt_core_rearchitecture.md`
