@@ -73,11 +73,11 @@ pub fn processBufferedPtyOutput(self: anytype, input_pressure: bool) PtyPollResu
 
         const parse_lock_start_ns = std.time.nanoTimestamp();
         self.session.control.state_mutex.lock();
-        _ = self.core.feedOutputBytesLocked(self, temp[0..chunk_len]);
+        const result = self.core.feedOutputBytesLocked(self, temp[0..chunk_len]);
+        publication_flow.consumeFeedResultLocked(self, result, "pty_poll_buffered_output");
         self.session.control.state_mutex.unlock();
         parse_lock_hold_ns += std.time.nanoTimestamp() - parse_lock_start_ns;
         processed += chunk_len;
-        _ = publication_flow.noteParsedOutputLocked(self);
     }
 
     return .{
@@ -104,9 +104,9 @@ pub fn processExternalTransportOutput(self: anytype, transport: anytype, input_p
         had_data = true;
         processed += n.?;
         const parse_lock_start_ns = std.time.nanoTimestamp();
-        _ = self.core.feedOutputBytesLocked(self, buf[0..n.?]);
+        const result = self.core.feedOutputBytesLocked(self, buf[0..n.?]);
+        publication_flow.consumeFeedResultLocked(self, result, "pty_poll_external_output");
         parse_lock_hold_ns += std.time.nanoTimestamp() - parse_lock_start_ns;
-        _ = publication_flow.noteParsedOutputLocked(self);
         if (processed >= max_bytes_per_poll) break;
     }
 

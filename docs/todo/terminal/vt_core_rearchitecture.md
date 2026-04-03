@@ -56,6 +56,11 @@ Current named category-1 contradiction:
   - top target: feed/apply publication path
   - fallback target: selection/viewport refresh choreography
   - do not reduce this to cosmetic shell-thinning
+  Progress:
+  - feed/apply publication now consumes one explicit core feed result across
+    the native feed path and runtime parse paths
+  - this removes one layer of ad hoc publication choreography
+  - the deeper owner-shaped parser dependency still remains open
 
 ## War 4
 

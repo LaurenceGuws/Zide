@@ -10,5 +10,5 @@ pub fn feedOutputBytes(self: anytype, bytes: []const u8) void {
     self.session.control.state_mutex.lock();
     defer self.session.control.state_mutex.unlock();
     const result = feedOutputBytesLocked(self, bytes);
-    @import("../publication/publication_flow.zig").publishFeedResultLocked(self, result);
+    @import("../publication/publication_flow.zig").consumeFeedResultLocked(self, result, "feed_output_bytes");
 }

@@ -161,6 +161,30 @@ Fallback target:
 That lane has the same shape, but feed/apply is the more central terminal
 behavior.
 
+## Progress
+
+The first execution-contract slice is now landed:
+
+- feed/apply publication no longer mixes one semantic core call with multiple
+  ad hoc publication consequences
+- [publication_flow.zig](/home/home/personal/zide/src/terminal/core/publication/publication_flow.zig)
+  now consumes one explicit feed result via `consumeFeedResultLocked(...)`
+- the same result contract is now used across:
+  - [terminal_core_feed.zig](/home/home/personal/zide/src/terminal/core/protocol/terminal_core_feed.zig)
+  - [pty_poll_processing.zig](/home/home/personal/zide/src/terminal/core/runtime/pty_poll_processing.zig)
+  - [io_threads.zig](/home/home/personal/zide/src/terminal/core/runtime/io_threads.zig)
+
+That is a real maturity improvement because outer publication is now a more
+explicit consumer of core feed effects rather than a set of open-coded side
+effects.
+
+What it does not solve yet:
+
+- `TerminalCore.feedOutputBytesLocked(...)` still depends on an outer owner for
+  parser execution
+- publication is still outside core by design
+- so the deeper contradiction remains open
+
 ## Bottom Line
 
 The next real VT maturity war is no longer vague `TerminalCore` discomfort.

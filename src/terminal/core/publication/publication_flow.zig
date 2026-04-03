@@ -5,10 +5,14 @@ pub const ViewRefreshRequest = struct {
     scroll_offset: usize,
 };
 
-pub fn publishFeedResultLocked(self: anytype, result: @import("../protocol/terminal_core_feed.zig").FeedResult) void {
+pub fn consumeFeedResultLocked(
+    self: anytype,
+    result: @import("../protocol/terminal_core_feed.zig").FeedResult,
+    source: []const u8,
+) void {
     if (!result.parsed) return;
     _ = noteParsedOutputLocked(self);
-    view_cache.updateViewCacheNoLockTagged(self, pendingGeneration(self), result.scroll_offset, "publish_feed_result");
+    view_cache.updateViewCacheNoLockTagged(self, pendingGeneration(self), result.scroll_offset, source);
 }
 
 pub fn bumpGeneration(self: anytype) u64 {

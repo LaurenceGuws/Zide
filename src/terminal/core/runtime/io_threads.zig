@@ -181,11 +181,11 @@ pub fn parseThreadMain(session: anytype) void {
 
             const parse_lock_start_ns = std.time.nanoTimestamp();
             session.session.control.state_mutex.lock();
-            _ = session.core.feedOutputBytesLocked(session, temp[0..chunk_len]);
+            const result = session.core.feedOutputBytesLocked(session, temp[0..chunk_len]);
+            publication_flow.consumeFeedResultLocked(session, result, "parse_thread_chunk");
             session.session.control.state_mutex.unlock();
             parse_lock_hold_ns += std.time.nanoTimestamp() - parse_lock_start_ns;
             processed += chunk_len;
-            _ = publication_flow.noteParsedOutputLocked(session);
         }
 
         session.session.runtime.io_mutex.lock();
