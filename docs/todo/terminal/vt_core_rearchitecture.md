@@ -63,6 +63,8 @@ Current named category-1 contradiction:
   - selection mutation now returns explicit core effects and the host wrapper
     consumes them through one publication-flow entrypoint instead of repeating
     refresh choreography after each core call
+  - viewport/scrollback offset mutations now consume one shared publication
+    entrypoint instead of repeating the same refresh choreography inline
   - the deeper owner-shaped parser dependency still remains open
 
 ## War 4

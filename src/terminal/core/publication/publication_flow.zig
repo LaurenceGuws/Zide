@@ -14,6 +14,13 @@ pub fn consumeSelectionMutationLocked(
     return true;
 }
 
+pub fn consumeScrollOffsetMutationLocked(self: anytype, before: usize, after: usize) bool {
+    const generation = requestViewRefreshIfOffsetChangedLocked(self, before, after);
+    _ = generation;
+    view_cache.updateViewCacheForScrollLocked(self);
+    return after != before;
+}
+
 pub fn consumeFeedResultLocked(
     self: anytype,
     result: @import("../protocol/terminal_core_feed.zig").FeedResult,

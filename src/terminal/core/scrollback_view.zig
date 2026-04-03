@@ -88,7 +88,7 @@ pub fn setScrollOffset(self: anytype, offset: usize) void {
 pub fn setScrollOffsetLocked(self: anytype, offset: usize) void {
     const before = self.core.history.scrollOffset();
     const after = self.core.setHostScrollbackOffset(offset);
-    _ = publication_flow.refreshScrollViewForOffsetChangeLocked(self, before, after);
+    _ = publication_flow.consumeScrollOffsetMutationLocked(self, before, after);
 }
 
 pub fn resetToLiveBottomLocked(self: anytype) bool {
@@ -139,5 +139,5 @@ pub fn scrollByLocked(self: anytype, delta: isize) void {
     if (delta == 0) return;
     const before = self.core.history.scrollOffset();
     const after = self.core.scrollHostScrollbackBy(delta);
-    _ = publication_flow.refreshScrollViewForOffsetChangeLocked(self, before, after);
+    _ = publication_flow.consumeScrollOffsetMutationLocked(self, before, after);
 }

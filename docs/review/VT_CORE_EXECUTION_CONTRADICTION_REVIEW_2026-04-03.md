@@ -205,6 +205,21 @@ not:
 
 - host wrapper repeats refresh choreography after each core call
 
+The third execution-contract slice is now landed too:
+
+- viewport/scrollback refresh no longer repeats the same publication-flow
+  choreography inline at each scroll-offset mutation site
+- [scrollback_view.zig](/home/home/personal/zide/src/terminal/core/scrollback_view.zig)
+  now routes offset mutations through
+  [publication_flow.consumeScrollOffsetMutationLocked(...)](/home/home/personal/zide/src/terminal/core/publication/publication_flow.zig)
+
+This is a smaller win than feed/apply or selection because the core still only
+returns the new offset rather than a richer effect object.
+But it is still a real step in the same direction:
+
+- one explicit publication consumer
+- less repeated outer completion choreography
+
 ## Bottom Line
 
 The next real VT maturity war is no longer vague `TerminalCore` discomfort.
