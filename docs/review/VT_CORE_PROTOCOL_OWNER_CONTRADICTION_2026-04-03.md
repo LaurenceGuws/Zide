@@ -175,3 +175,10 @@ Why that line is right:
 - terminal motion/scroll semantics now read as core-owned
 - the lower-level scroll machinery still stays in its focused helper owner
 - `terminal_core_protocol.zig` loses another major live behavioral center
+
+## Final Slab
+
+The last remaining whole semantic slab is now DECRQSS state/query assembly.
+
+That should move before any stop-marker, because it is still a coherent
+terminal-facing protocol capability rather than just tiny mechanical residue.

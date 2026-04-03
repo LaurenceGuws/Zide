@@ -262,6 +262,9 @@ Current full-scope read:
   - lower-level scrolling helpers remain in `scrolling.zig`
   - the strongest remaining pressure in `terminal_core_protocol.zig` is now
     DECRQSS state/query assembly plus small mechanical helpers
+  Final slab:
+  - DECRQSS now clearly beats the remaining tiny helpers and should be taken
+    before any stop-marker on this front
 
 Current named category-1 contradiction:
 
