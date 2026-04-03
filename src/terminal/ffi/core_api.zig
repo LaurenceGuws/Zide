@@ -61,8 +61,6 @@ const SnapshotExportState = struct {
 
 const SnapshotExport = struct {
     cells: []shared.Cell,
-    title: []u8,
-    cwd: []u8,
 };
 
 const SnapshotDiffExportState = struct {
@@ -84,7 +82,6 @@ const SnapshotDiffExportState = struct {
 fn copyPublishedSnapshotExport(
     handle: *shared.Handle,
     allocator: std.mem.Allocator,
-    include_flags: u32,
     out_state: *SnapshotExportState,
 ) !SnapshotExport {
     handle.shell.lock();
@@ -95,18 +92,6 @@ fn copyPublishedSnapshotExport(
     errdefer allocator.free(cells);
     for (cache.cells.items, 0..) |cell, i| {
         cells[i] = mapCell(cell);
-    }
-
-    var title: []u8 = &.{};
-    errdefer if (title.len > 0) allocator.free(title);
-    var cwd: []u8 = &.{};
-    errdefer if (cwd.len > 0) allocator.free(cwd);
-
-    if ((include_flags & @intFromEnum(shared.SnapshotIncludeFlags.title)) != 0) {
-        title = try allocator.dupe(u8, host_queries.displayTitleText(handle.shell));
-    }
-    if ((include_flags & @intFromEnum(shared.SnapshotIncludeFlags.cwd)) != 0) {
-        cwd = try allocator.dupe(u8, handle.shell.core.cwdText());
     }
 
     out_state.* = .{
@@ -123,8 +108,6 @@ fn copyPublishedSnapshotExport(
     handle.shell.unlock();
     return .{
         .cells = cells,
-        .title = title,
-        .cwd = cwd,
     };
 }
 
@@ -508,20 +491,16 @@ pub fn snapshotAcquire(handle: ?*shared.ZideTerminalHandle, request: ?*const sha
     errdefer allocator.destroy(owner);
 
     var state: SnapshotExportState = undefined;
-    const exported = copyPublishedSnapshotExport(h, allocator, req.include_flags, &state) catch |err| {
+    const exported = copyPublishedSnapshotExport(h, allocator, &state) catch |err| {
         log.logf(.warning, "snapshot export failed err={s}", .{@errorName(err)});
         return shared.mapError(err);
     };
     errdefer allocator.free(exported.cells);
-    errdefer allocator.free(exported.title);
-    errdefer allocator.free(exported.cwd);
     const cell_count = exported.cells.len;
 
     owner.* = .{
         .allocator = allocator,
         .cells = exported.cells,
-        .title = exported.title,
-        .cwd = exported.cwd,
     };
 
     out_snapshot.* = .{
@@ -548,10 +527,6 @@ pub fn snapshotAcquire(handle: ?*shared.ZideTerminalHandle, request: ?*const sha
         .damage_end_row = @intCast(state.damage.end_row),
         .damage_start_col = @intCast(state.damage.start_col),
         .damage_end_col = @intCast(state.damage.end_col),
-        .title_ptr = if (exported.title.len == 0) null else exported.title.ptr,
-        .title_len = exported.title.len,
-        .cwd_ptr = if (exported.cwd.len == 0) null else exported.cwd.ptr,
-        .cwd_len = exported.cwd.len,
         ._ctx = owner,
     };
     return .ok;
@@ -563,8 +538,6 @@ pub fn snapshotRelease(snapshot: *shared.Snapshot) void {
         return;
     };
     owner.allocator.free(owner.cells);
-    owner.allocator.free(owner.title);
-    owner.allocator.free(owner.cwd);
     owner.allocator.destroy(owner);
     snapshot.* = .{};
 }

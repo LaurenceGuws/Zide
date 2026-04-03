@@ -9,8 +9,7 @@ Status: milestone-1 baseline. This document describes the snapshot shape current
 Current maturity note:
 
 - milestone-1 still uses full-copy cells as the implemented baseline
-- snapshot acquire is now request-based for cold copied strings
-- metadata acquire is now also request-based for cold copied strings
+- metadata acquire is now request-based for cold copied strings
 - the next likely performance/maturity step is not "make snapshots cleverer at
   any cost"
 - it is to separate hot latest-state scalars from cold copied strings more
@@ -26,12 +25,11 @@ Current maturity note:
 
 ## Milestone 1 decision
 
-Milestone 1 uses copied full snapshots with request-based string inclusion.
+Milestone 1 uses copied full snapshots.
 
 That means:
 - snapshot acquisition allocates bridge-owned memory
 - cell data is copied out of the internal terminal snapshot
-- title and cwd strings are copied into bridge-owned memory only when requested
 - the host must call `zide_terminal_snapshot_release()` exactly once per acquired snapshot
 
 This is slower than a zero-copy design, but it is much safer for the first bridge.
@@ -39,9 +37,7 @@ This is slower than a zero-copy design, but it is much safer for the first bridg
 Current hot-path reading:
 
 - `snapshot_acquire(...)` still always copies the flat cell buffer
-- `snapshot_acquire(...)` reads the published render cache and optional
-  title/cwd in one locked pass
-- `snapshot_acquire(...)` only copies title/cwd when requested
+- `snapshot_acquire(...)` reads the published render cache in one locked pass
 - `metadata_acquire(...)` always fills hot scalar latest-state and only copies
   title/cwd when requested
 
@@ -54,7 +50,6 @@ Current exported snapshot surface lives in:
 Primary structs:
 - `ZideTerminalCell`
 - `ZideTerminalSnapshot`
-- `ZideTerminalSnapshotRequest`
 
 Snapshot header:
 - `abi_version`
@@ -119,8 +114,6 @@ Fields:
 - damage_end_row
 - damage_start_col
 - damage_end_col
-- title_ptr/title_len
-- cwd_ptr/cwd_len
 - internal context pointer used only by release
 
 Notes:
@@ -128,7 +121,6 @@ Notes:
 - `struct_size` allows future append-only expansion without guessing which build produced the snapshot
 - `cells` points to a flat array of `rows * cols` cells
 - row-major order
-- `title_ptr` and `cwd_ptr` are optional and may be null when len is zero
 - `_ctx` is opaque release bookkeeping and not host data
 
 ## Ownership contract
@@ -144,7 +136,7 @@ Release:
 - release zeroes the snapshot struct as a defensive measure
 
 Invalid usage:
-- retaining `cells`, `title_ptr`, or `cwd_ptr` after release
+- retaining `cells` after release
 - mutating bridge-owned memory
 - calling release twice on the same live snapshot without reacquiring
 
@@ -280,24 +272,15 @@ Current behavior:
 - `snapshot_acquire(...)` now avoids both:
   - the old temporary published-`RenderCache` copy
   - the old snapshot-title/cwd bounce through `copyMetadata(...)`
-- `snapshot_acquire(...)` duplicates title/cwd only when the request include
-  flags ask for them
+- `snapshot_acquire(...)` is now viewport/publication only
 - `metadata_acquire(...)` always fills hot scalar latest-state such as:
   - `scrollback_count`
   - `scrollback_offset`
-  - `alive`
-  - `exit_code`
-- `foreground_process_present`
-- `semantic_prompt_active`
-- `semantic_input_active`
-- `semantic_output_active`
-- `semantic_prompt_kind`
-- `semantic_prompt_exit_code_known`
-- `semantic_prompt_exit_code`
 - `metadata_acquire(...)` duplicates title/cwd only when the request include
   flags ask for them
-- `metadata_acquire(...)` duplicates `foreground_process_label` only when the
-  request include flags ask for activity/task semantics
+- `activity_acquire(...)` now owns semantic activity and optional foreground
+  process label
+- runtime status stays on explicit runtime getters
 
 What should not happen next:
 
@@ -311,10 +294,9 @@ What the next ABI-maturity step should optimize for instead:
 
 1. keep `redraw_state(...) -> snapshot_acquire(...) -> present_ack(...)` as the
    authoritative render loop
-2. keep `metadata_acquire(...)` as the authoritative latest-state summary
-3. reduce avoidable cold-string copy pressure where possible
-4. preserve one coherent latest-state surface instead of encouraging stitched
-   host usage
+2. keep `metadata_acquire(...)` as terminal-metadata truth
+3. keep `activity_acquire(...)` as semantic-activity truth
+4. reduce avoidable cold-string copy pressure where possible
 
 So the live direction is:
 
@@ -1396,43 +1378,31 @@ It does not create:
 
 The landed snapshot shape now also uses a request:
 
-1. new acquire request struct
+1. snapshot request struct
    - `abi_version`
    - `struct_size`
-   - `include_flags`
 2. snapshot acquire entrypoint
    - `snapshot_acquire(handle, request, out_snapshot)`
 3. snapshot result
    - preserves the current copied cell buffer
    - preserves one owned-result release model
-   - includes title/cwd only when requested
-
-Suggested inclusion flags:
-
-- `ZIDE_TERMINAL_SNAPSHOT_INCLUDE_TITLE`
-- `ZIDE_TERMINAL_SNAPSHOT_INCLUDE_CWD`
-- `ZIDE_TERMINAL_SNAPSHOT_INCLUDE_ALL_STRINGS`
+   - does not bundle terminal metadata
 
 Default intended host usage:
 
 - hot redraw-driven path:
-  - request no string flags
+  - snapshot only
 - title/cwd-aware inspection path:
-  - request title/cwd only when the host actually wants them in the snapshot
+  - snapshot plus metadata acquire when title/cwd are needed
 
 Expected semantics:
 
 - rows/cols/cells/cursor/damage/generation are always filled
-- `title_ptr/title_len` are only populated when `INCLUDE_TITLE` is requested
-- `cwd_ptr/cwd_len` are only populated when `INCLUDE_CWD` is requested
-- omitted strings must come back as:
-  - `ptr = null`
-  - `len = 0`
 - release remains unconditional and boring even when no strings were requested
 
 This keeps the snapshot cut narrow:
 
 - no per-row/per-cell micro-queries
-- no separate title/cwd snapshot getters
+- no title/cwd on the snapshot surface
 - no redraw contract change
 - no second snapshot surface carried in parallel during beta

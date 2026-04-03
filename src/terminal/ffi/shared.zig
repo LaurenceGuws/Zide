@@ -13,7 +13,7 @@ pub const Status = enum(c_int) {
     backend_error = 3,
 };
 
-pub const snapshot_abi_version: u32 = 2;
+pub const snapshot_abi_version: u32 = 3;
 pub const snapshot_diff_abi_version: u32 = 2;
 pub const event_abi_version: u32 = 4;
 pub const scrollback_abi_version: u32 = 1;
@@ -108,10 +108,6 @@ pub const Snapshot = extern struct {
     damage_end_row: u32 = 0,
     damage_start_col: u32 = 0,
     damage_end_col: u32 = 0,
-    title_ptr: ?[*]const u8 = null,
-    title_len: usize = 0,
-    cwd_ptr: ?[*]const u8 = null,
-    cwd_len: usize = 0,
     _ctx: ?*anyopaque = null,
 };
 
@@ -173,13 +169,8 @@ pub const SnapshotDiff = extern struct {
 pub const SnapshotRequest = extern struct {
     abi_version: u32 = 0,
     struct_size: u32 = 0,
-    include_flags: u32 = 0,
     reserved0: u32 = 0,
-};
-
-pub const SnapshotIncludeFlags = enum(u32) {
-    title = 1 << 0,
-    cwd = 1 << 1,
+    reserved1: u32 = 0,
 };
 
 pub const ScrollbackBuffer = extern struct {
@@ -352,8 +343,6 @@ pub const Handle = struct {
 pub const SnapshotOwner = struct {
     allocator: std.mem.Allocator,
     cells: []Cell,
-    title: []u8,
-    cwd: []u8,
 };
 
 pub const SnapshotDiffOwner = struct {

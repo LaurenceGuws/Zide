@@ -134,3 +134,8 @@ That means the host edge now teaches three clearer categories directly:
 The next likely normalization weakness is now narrower:
 
 - snapshot still duplicates title/cwd that already belong to terminal metadata
+
+That slice is now landed too:
+
+- snapshot is viewport/publication truth only
+- metadata is the sole terminal-metadata owner for title/cwd

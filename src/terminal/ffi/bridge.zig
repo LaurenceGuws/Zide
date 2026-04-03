@@ -18,7 +18,6 @@ pub const clipboard_abi_version = shared.clipboard_abi_version;
 pub const EventKind = shared.EventKind;
 pub const GlyphClassFlags = shared.GlyphClassFlags;
 pub const DamagePolicyFlags = shared.DamagePolicyFlags;
-pub const SnapshotIncludeFlags = shared.SnapshotIncludeFlags;
 pub const MetadataIncludeFlags = shared.MetadataIncludeFlags;
 pub const ActivityIncludeFlags = shared.ActivityIncludeFlags;
 pub const ZideTerminalHandle = shared.ZideTerminalHandle;

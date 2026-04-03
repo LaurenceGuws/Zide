@@ -326,10 +326,16 @@ Current full-scope read:
   longer mixed categories inside metadata; it is duplicated title/cwd truth
   across snapshot and metadata surfaces.
   Current read:
-  - snapshot and metadata still both answer title/cwd
-  - that teaches two public stories for the same terminal truth
-  - the next honest move is to decide whether snapshot should become pure
-    viewport publication truth
+  - snapshot and metadata no longer both answer title/cwd
+  - snapshot now reads more purely as viewport publication truth
+  - metadata now reads more purely as terminal metadata truth
+
+- `docs/review/VT_HOST_SNAPSHOT_METADATA_SPLIT_2026-04-03.md`
+  Why: once duplication was named, the next honest move was to remove
+  snapshot-owned title/cwd directly instead of preserving two host stories.
+  Current read:
+  - snapshot no longer carries title/cwd
+  - terminal metadata is now the sole host-facing owner of that truth
 
 Current named category-1 contradiction:
 

@@ -65,3 +65,17 @@ The next move should be:
 
 The next host-contract front should be snapshot-versus-metadata duplication
 unless a stronger broader `TerminalCore` contradiction appears immediately.
+
+## Progress
+
+The duplication slice is now landed.
+
+What changed:
+
+- snapshot no longer carries `title` or `cwd`
+- metadata is now the sole host-facing owner of that terminal truth
+
+What this improves:
+
+- snapshot reads more purely as publication state
+- metadata reads more purely as terminal metadata state
