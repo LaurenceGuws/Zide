@@ -346,6 +346,17 @@ Current full-scope read:
   - if host normalization continues, it should reopen only on one narrower
     overlap like latest-state/status surfaces
 
+- `docs/review/VT_CORE_OWNER_DEPENDENCY_FRONT_2026-04-03.md`
+  Why: after the host edge quieted down again, the strongest remaining
+  maturity contradiction is broader core sufficiency, specifically
+  owner-shaped completion around core semantics.
+  Current read:
+  - major core behaviors still depend on outer `owner` context
+  - the likely kill-order is:
+    - scrolling-side owner dependency
+    - parser feed owner dependency
+    - reset/kitty owner dependency
+
 Current named category-1 contradiction:
 
 - `docs/review/VT_CORE_EXECUTION_CONTRADICTION_REVIEW_2026-04-03.md`
