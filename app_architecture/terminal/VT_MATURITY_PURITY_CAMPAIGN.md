@@ -142,6 +142,9 @@ Current comprehensive scope authority:
 - [VT_CORE_EXECUTION_CONTRADICTION_REVIEW_2026-04-03.md](/home/home/personal/zide/docs/review/VT_CORE_EXECUTION_CONTRADICTION_REVIEW_2026-04-03.md)
   is the current named category-1 contradiction inside `TerminalCore`
   sufficiency
+- [VT_POST_EXECUTION_RERANK_2026-04-03.md](/home/home/personal/zide/docs/review/VT_POST_EXECUTION_RERANK_2026-04-03.md)
+  records the new category-1 form after the execution-contract wave:
+  mixed protocol interaction state
 
 ## What No Longer Counts As Progress
 

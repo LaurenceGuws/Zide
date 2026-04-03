@@ -78,6 +78,15 @@ Current named category-1 contradiction:
       mode/query and reply/report ownership
     - rerank or open that deeper design war before more code
 
+- `docs/review/VT_POST_EXECUTION_RERANK_2026-04-03.md`
+  Why: the recent execution-contract wave changed the shape of category 1 and
+  needed a fresh ranking against category 2.
+  Current read:
+  - category 1 still wins
+  - but the next war is now mixed protocol interaction state, not direct
+    parser-owner extraction
+  - public contract normalization remains second
+
 ## War 4
 
 - `docs/review/VT_PLUGANDPLAY_GAP_MATRIX_2026-04-03.md`
