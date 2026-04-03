@@ -2,29 +2,20 @@ const types = @import("../model/types.zig");
 const parser_csi = @import("../parser/csi.zig");
 const input_modes = @import("../core/input_modes.zig");
 const sync_updates = @import("../core/protocol/sync_updates.zig");
+const terminal_core_reset = @import("../core/protocol/terminal_core_reset.zig");
 const terminal_core_protocol = @import("../core/protocol/terminal_core_protocol.zig");
 const app_logger = @import("../../app_logger.zig");
 
 const Color = types.Color;
 
 pub fn applyDecstrReset(self: anytype) void {
-    self.core.resetParserState();
-    self.core.clearSavedCharsetState();
-    self.core.clearTitleBuffer();
-    self.core.setDefaultTitle();
+    terminal_core_reset.applyDecstrTerminalReset(self);
     self.session.interaction.host_contract.report_color_scheme_2031 = false;
-    self.session.interaction.protocol_modes.grapheme_cluster_shaping_2027 = false;
-    self.core.primary.setGraphemeClusterShaping2027(false);
-    self.core.alt.setGraphemeClusterShaping2027(false);
     self.session.interaction.host_contract.inband_resize_notifications_2048 = false;
     self.session.interaction.host_contract.kitty_paste_events_5522 = false;
     input_modes.resetInputModesLocked(self);
-    self.core.column_mode_132 = false;
     sync_updates.setLocked(self, false);
-    terminal_core_protocol.clearAllKittyImages(self);
-    self.core.activeScreen().resetState();
     input_modes.publishSnapshot(self);
-    self.core.activeScreen().markDirtyAllWithReason(.decstr_soft_reset, @src());
 }
 
 pub fn applySgr(self: anytype, action: parser_csi.CsiAction, effective_sgr_param_count: *const fn (action: parser_csi.CsiAction) usize) void {

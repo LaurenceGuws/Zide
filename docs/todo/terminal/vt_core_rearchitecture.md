@@ -211,6 +211,22 @@ Current full-scope read:
     host-reporting, sync-update, and refresh-adjacent outer effects
   - reset is a stronger terminal-object maturity signal than one more local
     mode/query or sink cleanup slice
+  Progress:
+  - the first split is now landed under
+    `src/terminal/core/protocol/terminal_core_reset.zig`
+  - DECSTR terminal-owned reset semantics now live behind one core-side owner
+  - `csi_style_reset.zig` keeps the explicit outer reset effects:
+    host-reporting reset, input-mode reset, sync-update reset, and input
+    snapshot publication
+
+- `docs/review/VT_PROTOCOL_RESET_SPLIT_2026-04-03.md`
+  Why: the reset front needed one exact ownership split instead of vague reset
+  discomfort.
+  Current read:
+  - terminal-owned DECSTR reset semantics are now grouped explicitly
+  - outer protocol/runtime effects remain explicit outside that owner
+  - this is a real maturity gain because reset now reads less like a
+    protocol-owned mixed script
 
 Current named category-1 contradiction:
 
