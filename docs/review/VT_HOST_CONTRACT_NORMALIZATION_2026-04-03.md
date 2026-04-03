@@ -130,3 +130,7 @@ That means the host edge now teaches three clearer categories directly:
 - terminal metadata
 - runtime status
 - semantic activity
+
+The next likely normalization weakness is now narrower:
+
+- snapshot still duplicates title/cwd that already belong to terminal metadata

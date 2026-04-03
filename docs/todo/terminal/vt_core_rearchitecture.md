@@ -321,6 +321,16 @@ Current full-scope read:
   - runtime state remains on explicit runtime getters instead of being
     re-bundled through terminal metadata
 
+- `docs/review/VT_HOST_SNAPSHOT_METADATA_DUPLICATION_2026-04-03.md`
+  Why: after the metadata/activity split, the next host-edge weakness is no
+  longer mixed categories inside metadata; it is duplicated title/cwd truth
+  across snapshot and metadata surfaces.
+  Current read:
+  - snapshot and metadata still both answer title/cwd
+  - that teaches two public stories for the same terminal truth
+  - the next honest move is to decide whether snapshot should become pure
+    viewport publication truth
+
 Current named category-1 contradiction:
 
 - `docs/review/VT_CORE_EXECUTION_CONTRADICTION_REVIEW_2026-04-03.md`
