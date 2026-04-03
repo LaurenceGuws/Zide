@@ -425,6 +425,8 @@ Current full-scope read:
     publication is still the next real execution-face contradiction
   - the next honest publication move is now named explicitly:
     synchronized-update publication contract, not broad publication slimming
+  - the first synchronized-update publication slice is now landed on
+    `protocol_execution.zig` and `sync_updates.zig`
 
 Current named category-1 contradiction:
 

@@ -62,3 +62,22 @@ The next code move must:
 
 The next default parser-feed publication move is a synchronized-update
 publication contract cut.
+
+## Progress
+
+The first synchronized-update publication contract slice is now landed:
+
+- [sync_updates.zig](/home/home/personal/zide/src/terminal/core/protocol/sync_updates.zig)
+  no longer orchestrates the publication choreography itself
+- [protocol_execution.zig](/home/home/personal/zide/src/terminal/core/session/protocol_execution.zig)
+  now owns the contract as two explicit operations:
+  - `syncUpdateNeedsPublication(...)`
+  - `publishSyncUpdate(...)`
+
+Current read after this slice:
+
+- the active protocol path no longer spells out the cache/generation/update
+  choreography inline
+- publication still survives as an execution face
+- but one coherent publication contract is now explicit instead of smeared
+  across protocol plus publication helpers

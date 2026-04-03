@@ -192,3 +192,9 @@ That publication contract is now named explicitly:
 - current target:
   - synchronized-update publication behavior
   - not broad publication slimming
+
+That contract now has its first real code slice too:
+
+- [sync_updates.zig](/home/home/personal/zide/src/terminal/core/protocol/sync_updates.zig)
+  now consumes explicit synchronized-update publication operations on
+  [protocol_execution.zig](/home/home/personal/zide/src/terminal/core/session/protocol_execution.zig)

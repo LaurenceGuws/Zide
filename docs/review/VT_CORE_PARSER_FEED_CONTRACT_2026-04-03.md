@@ -234,3 +234,17 @@ The first coherent publication contract is now named:
 - synchronized-update publication behavior
 - see
   [VT_PROTOCOL_PUBLICATION_SYNC_CONTRACT_2026-04-04.md](/home/home/personal/zide/docs/review/VT_PROTOCOL_PUBLICATION_SYNC_CONTRACT_2026-04-04.md)
+
+That contract is now partially landed:
+
+- the protocol path no longer performs the synchronized-update publication
+  steps inline
+- `protocol_execution` now owns:
+  - `syncUpdateNeedsPublication(...)`
+  - `publishSyncUpdate(...)`
+
+Current read:
+
+- publication is still a surviving execution face
+- but one real publication contract is now explicit enough to keep cutting
+  coherently, instead of attempting another failed whole-face shrink

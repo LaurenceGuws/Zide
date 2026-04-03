@@ -95,4 +95,15 @@ pub const ProtocolExecution = struct {
     pub fn updateViewCacheForProtocol(self: *ProtocolExecution, generation: u64, scroll_offset: usize, source: []const u8) void {
         view_cache.updateViewCacheNoLockTagged(self, generation, scroll_offset, source);
     }
+
+    pub fn syncUpdateNeedsPublication(self: *ProtocolExecution) bool {
+        const cache = self.currentRenderCache();
+        const presented_generation = self.presentedGeneration();
+        return !(cache.generation == presented_generation and cache.dirty == .none);
+    }
+
+    pub fn publishSyncUpdate(self: *ProtocolExecution, scroll_offset: usize) void {
+        _ = self.bumpPublicationGeneration();
+        self.updateViewCacheForProtocol(self.pendingPublicationGeneration(), scroll_offset, "set_sync_updates");
+    }
 };
