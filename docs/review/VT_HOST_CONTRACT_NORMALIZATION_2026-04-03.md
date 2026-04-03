@@ -118,3 +118,15 @@ What this improves:
 
 That is the right kind of normalization progress: category clarity first,
 public ABI churn second if still needed.
+
+- the second normalization slice is now landed too
+- `metadataAcquire(...)` is terminal-only now
+- semantic activity moved to its own `activityAcquire(...)` surface
+- runtime liveness/exit status remain on explicit runtime getters instead of
+  being re-bundled through terminal metadata
+
+That means the host edge now teaches three clearer categories directly:
+
+- terminal metadata
+- runtime status
+- semantic activity

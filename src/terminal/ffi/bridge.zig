@@ -9,6 +9,7 @@ pub const event_abi_version = shared.event_abi_version;
 pub const scrollback_abi_version = shared.scrollback_abi_version;
 pub const renderer_metadata_abi_version = shared.renderer_metadata_abi_version;
 pub const metadata_abi_version = shared.metadata_abi_version;
+pub const activity_abi_version = shared.activity_abi_version;
 pub const redraw_state_abi_version = shared.redraw_state_abi_version;
 pub const string_abi_version = shared.string_abi_version;
 pub const byte_buffer_abi_version = shared.byte_buffer_abi_version;
@@ -19,6 +20,7 @@ pub const GlyphClassFlags = shared.GlyphClassFlags;
 pub const DamagePolicyFlags = shared.DamagePolicyFlags;
 pub const SnapshotIncludeFlags = shared.SnapshotIncludeFlags;
 pub const MetadataIncludeFlags = shared.MetadataIncludeFlags;
+pub const ActivityIncludeFlags = shared.ActivityIncludeFlags;
 pub const ZideTerminalHandle = shared.ZideTerminalHandle;
 pub const CreateConfig = shared.CreateConfig;
 pub const Color = shared.Color;
@@ -32,6 +34,8 @@ pub const SnapshotRequest = shared.SnapshotRequest;
 pub const ScrollbackBuffer = shared.ScrollbackBuffer;
 pub const MetadataRequest = shared.MetadataRequest;
 pub const Metadata = shared.Metadata;
+pub const ActivityRequest = shared.ActivityRequest;
+pub const Activity = shared.Activity;
 pub const RedrawState = shared.RedrawState;
 pub const CloseConfirmSignals = shared.CloseConfirmSignals;
 pub const ByteBuffer = shared.ByteBuffer;
@@ -166,6 +170,14 @@ pub fn metadataRelease(metadata: *Metadata) void {
     core_api.metadataRelease(metadata);
 }
 
+pub fn activityAcquire(handle: ?*ZideTerminalHandle, request: ?*const ActivityRequest, out_activity: *Activity) Status {
+    return core_api.activityAcquire(handle, request, out_activity);
+}
+
+pub fn activityRelease(activity: *Activity) void {
+    core_api.activityRelease(activity);
+}
+
 pub fn eventDrain(handle: ?*ZideTerminalHandle, out_events: *EventBuffer) Status {
     return core_api.eventDrain(handle, out_events);
 }
@@ -228,6 +240,10 @@ pub fn rendererMetadataAbiVersion() u32 {
 
 pub fn redrawStateAbiVersion() u32 {
     return core_api.redrawStateAbiVersion();
+}
+
+pub fn activityAbiVersion() u32 {
+    return core_api.activityAbiVersion();
 }
 
 pub fn closeConfirmAbiVersion() u32 {

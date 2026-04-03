@@ -124,6 +124,14 @@ pub export fn zide_terminal_metadata_release(metadata: *c_api.ZideTerminalMetada
     c_api.zide_terminal_metadata_release(metadata);
 }
 
+pub export fn zide_terminal_activity_acquire(handle: ?*c_api.ZideTerminalHandle, request: ?*const c_api.ZideTerminalActivityRequest, out_activity: *c_api.ZideTerminalActivity) c_int {
+    return c_api.zide_terminal_activity_acquire(handle, request, out_activity);
+}
+
+pub export fn zide_terminal_activity_release(activity: *c_api.ZideTerminalActivity) void {
+    c_api.zide_terminal_activity_release(activity);
+}
+
 pub export fn zide_terminal_event_drain(handle: ?*c_api.ZideTerminalHandle, out_events: *c_api.ZideTerminalEventBuffer) c_int {
     return c_api.zide_terminal_event_drain(handle, out_events);
 }
@@ -174,6 +182,10 @@ pub export fn zide_terminal_metadata_abi_version() u32 {
 
 pub export fn zide_terminal_redraw_state_abi_version() u32 {
     return c_api.zide_terminal_redraw_state_abi_version();
+}
+
+pub export fn zide_terminal_activity_abi_version() u32 {
+    return c_api.zide_terminal_activity_abi_version();
 }
 
 pub export fn zide_terminal_string_abi_version() u32 {

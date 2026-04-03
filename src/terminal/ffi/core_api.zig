@@ -15,6 +15,7 @@ const Handle = shared.Handle;
 const SnapshotOwner = shared.SnapshotOwner;
 const SnapshotDiffOwner = shared.SnapshotDiffOwner;
 const MetadataOwner = shared.MetadataOwner;
+const ActivityOwner = shared.ActivityOwner;
 const ScrollbackOwner = shared.ScrollbackOwner;
 const EventOwner = shared.EventOwner;
 
@@ -787,10 +788,8 @@ pub fn metadataAcquire(handle: ?*shared.ZideTerminalHandle, request: ?*const sha
         log.logf(.warning, "terminal metadata copy failed err={s}", .{@errorName(err)});
         return shared.mapError(err);
     };
-    const runtime_metadata = host_queries.currentRuntimeMetadata(h.shell);
     const include_title = (req.include_flags & @intFromEnum(shared.MetadataIncludeFlags.title)) != 0;
     const include_cwd = (req.include_flags & @intFromEnum(shared.MetadataIncludeFlags.cwd)) != 0;
-    const include_activity = (req.include_flags & @intFromEnum(shared.MetadataIncludeFlags.activity)) != 0;
     const title = if (include_title)
         allocator.dupe(u8, terminal_metadata.title) catch |err| {
             log.logf(.warning, "metadata title dup failed err={s}", .{@errorName(err)});
@@ -813,46 +812,21 @@ pub fn metadataAcquire(handle: ?*shared.ZideTerminalHandle, request: ?*const sha
             return .out_of_memory;
         };
     errdefer allocator.free(cwd);
-    const activity = host_queries.currentActivityMetadata(h.shell);
-    const foreground_process_label = if (include_activity)
-        allocator.dupe(u8, activity.foreground_process_label) catch |err| {
-            log.logf(.warning, "metadata foreground-process-label dup failed err={s}", .{@errorName(err)});
-            return .out_of_memory;
-        }
-    else
-        allocator.alloc(u8, 0) catch |err| {
-            log.logf(.warning, "metadata empty foreground-process-label alloc failed err={s}", .{@errorName(err)});
-            return .out_of_memory;
-        };
-    errdefer allocator.free(foreground_process_label);
 
     owner.* = .{
         .allocator = allocator,
         .title = title,
         .cwd = cwd,
-        .foreground_process_label = foreground_process_label,
     };
     out_metadata.* = .{
         .abi_version = shared.metadata_abi_version,
         .struct_size = @sizeOf(shared.Metadata),
         .scrollback_count = std.math.cast(u32, terminal_metadata.scrollback_count) orelse std.math.maxInt(u32),
         .scrollback_offset = std.math.cast(u32, terminal_metadata.scrollback_offset) orelse std.math.maxInt(u32),
-        .alive = @intFromBool(runtime_metadata.alive),
-        .has_exit_code = @intFromBool(runtime_metadata.exit_code != null),
-        .foreground_process_present = @intFromBool(activity.foreground_process_present),
-        .semantic_prompt_active = @intFromBool(activity.semantic_prompt_active),
-        .exit_code = runtime_metadata.exit_code orelse 0,
-        .semantic_input_active = @intFromBool(activity.semantic_input_active),
-        .semantic_output_active = @intFromBool(activity.semantic_output_active),
-        .semantic_prompt_kind = @intFromEnum(activity.semantic_prompt_kind),
-        .semantic_prompt_exit_code_known = @intFromBool(activity.semantic_prompt_exit_code != null),
-        .semantic_prompt_exit_code = activity.semantic_prompt_exit_code orelse 0,
         .title_ptr = if (title.len == 0) null else title.ptr,
         .title_len = title.len,
         .cwd_ptr = if (cwd.len == 0) null else cwd.ptr,
         .cwd_len = cwd.len,
-        .foreground_process_label_ptr = if (foreground_process_label.len == 0) null else foreground_process_label.ptr,
-        .foreground_process_label_len = foreground_process_label.len,
         ._ctx = owner,
     };
     return .ok;
@@ -865,9 +839,69 @@ pub fn metadataRelease(metadata: *shared.Metadata) void {
     };
     owner.allocator.free(owner.title);
     owner.allocator.free(owner.cwd);
-    owner.allocator.free(owner.foreground_process_label);
     owner.allocator.destroy(owner);
     metadata.* = .{};
+}
+
+pub fn activityAcquire(handle: ?*shared.ZideTerminalHandle, request: ?*const shared.ActivityRequest, out_activity: *shared.Activity) shared.Status {
+    const log = app_logger.logger("terminal.ffi");
+    const h = shared.fromOpaqueActive(handle) orelse return .invalid_argument;
+    const req = request orelse return .invalid_argument;
+    out_activity.* = .{};
+    if (req.abi_version != shared.activity_abi_version) return .invalid_argument;
+    if (req.struct_size != @sizeOf(shared.ActivityRequest)) return .invalid_argument;
+
+    const allocator = h.allocator;
+    const owner = allocator.create(ActivityOwner) catch |err| {
+        log.logf(.warning, "activity owner alloc failed err={s}", .{@errorName(err)});
+        return .out_of_memory;
+    };
+    errdefer allocator.destroy(owner);
+
+    const activity = host_queries.currentActivityMetadata(h.shell);
+    const include_foreground_process_label =
+        (req.include_flags & @intFromEnum(shared.ActivityIncludeFlags.foreground_process_label)) != 0;
+    const foreground_process_label = if (include_foreground_process_label)
+        allocator.dupe(u8, activity.foreground_process_label) catch |err| {
+            log.logf(.warning, "activity foreground-process-label dup failed err={s}", .{@errorName(err)});
+            return .out_of_memory;
+        }
+    else
+        allocator.alloc(u8, 0) catch |err| {
+            log.logf(.warning, "activity empty foreground-process-label alloc failed err={s}", .{@errorName(err)});
+            return .out_of_memory;
+        };
+    errdefer allocator.free(foreground_process_label);
+
+    owner.* = .{
+        .allocator = allocator,
+        .foreground_process_label = foreground_process_label,
+    };
+    out_activity.* = .{
+        .abi_version = shared.activity_abi_version,
+        .struct_size = @sizeOf(shared.Activity),
+        .foreground_process_present = @intFromBool(activity.foreground_process_present),
+        .semantic_prompt_active = @intFromBool(activity.semantic_prompt_active),
+        .semantic_input_active = @intFromBool(activity.semantic_input_active),
+        .semantic_output_active = @intFromBool(activity.semantic_output_active),
+        .semantic_prompt_kind = @intFromEnum(activity.semantic_prompt_kind),
+        .semantic_prompt_exit_code_known = @intFromBool(activity.semantic_prompt_exit_code != null),
+        .semantic_prompt_exit_code = activity.semantic_prompt_exit_code orelse 0,
+        .foreground_process_label_ptr = if (foreground_process_label.len == 0) null else foreground_process_label.ptr,
+        .foreground_process_label_len = foreground_process_label.len,
+        ._ctx = owner,
+    };
+    return .ok;
+}
+
+pub fn activityRelease(activity: *shared.Activity) void {
+    const owner = shared.activityOwner(activity._ctx) orelse {
+        activity.* = .{};
+        return;
+    };
+    owner.allocator.free(owner.foreground_process_label);
+    owner.allocator.destroy(owner);
+    activity.* = .{};
 }
 
 pub fn eventDrain(handle: ?*shared.ZideTerminalHandle, out_events: *shared.EventBuffer) shared.Status {
@@ -999,6 +1033,10 @@ pub fn rendererMetadataAbiVersion() u32 {
 
 pub fn redrawStateAbiVersion() u32 {
     return shared.redraw_state_abi_version;
+}
+
+pub fn activityAbiVersion() u32 {
+    return shared.activity_abi_version;
 }
 
 pub fn closeConfirmAbiVersion() u32 {

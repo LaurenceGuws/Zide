@@ -312,6 +312,15 @@ Current full-scope read:
     again
   - this improves host-contract clarity without premature ABI churn
 
+- `docs/review/VT_HOST_ACTIVITY_SPLIT_2026-04-03.md`
+  Why: after the internal metadata split, the public ABI still taught one
+  mixed metadata story and needed a direct normalization cut.
+  Current read:
+  - `metadataAcquire(...)` is now terminal-only
+  - semantic activity moved to its own acquire/release surface
+  - runtime state remains on explicit runtime getters instead of being
+    re-bundled through terminal metadata
+
 Current named category-1 contradiction:
 
 - `docs/review/VT_CORE_EXECUTION_CONTRADICTION_REVIEW_2026-04-03.md`

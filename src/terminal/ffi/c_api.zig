@@ -7,6 +7,7 @@ pub const ZIDE_TERMINAL_EVENT_ABI_VERSION = bridge.event_abi_version;
 pub const ZIDE_TERMINAL_SCROLLBACK_ABI_VERSION = bridge.scrollback_abi_version;
 pub const ZIDE_TERMINAL_RENDERER_METADATA_ABI_VERSION = bridge.renderer_metadata_abi_version;
 pub const ZIDE_TERMINAL_METADATA_ABI_VERSION = bridge.metadata_abi_version;
+pub const ZIDE_TERMINAL_ACTIVITY_ABI_VERSION = bridge.activity_abi_version;
 pub const ZIDE_TERMINAL_REDRAW_STATE_ABI_VERSION = bridge.redraw_state_abi_version;
 pub const ZIDE_TERMINAL_STRING_ABI_VERSION = bridge.string_abi_version;
 pub const ZIDE_TERMINAL_CLOSE_CONFIRM_ABI_VERSION = bridge.close_confirm_abi_version;
@@ -17,8 +18,8 @@ pub const ZIDE_TERMINAL_SNAPSHOT_INCLUDE_CWD = @intFromEnum(bridge.SnapshotInclu
 pub const ZIDE_TERMINAL_SNAPSHOT_INCLUDE_ALL_STRINGS = ZIDE_TERMINAL_SNAPSHOT_INCLUDE_TITLE | ZIDE_TERMINAL_SNAPSHOT_INCLUDE_CWD;
 pub const ZIDE_TERMINAL_METADATA_INCLUDE_TITLE = @intFromEnum(bridge.MetadataIncludeFlags.title);
 pub const ZIDE_TERMINAL_METADATA_INCLUDE_CWD = @intFromEnum(bridge.MetadataIncludeFlags.cwd);
-pub const ZIDE_TERMINAL_METADATA_INCLUDE_ACTIVITY = @intFromEnum(bridge.MetadataIncludeFlags.activity);
-pub const ZIDE_TERMINAL_METADATA_INCLUDE_ALL_STRINGS = ZIDE_TERMINAL_METADATA_INCLUDE_TITLE | ZIDE_TERMINAL_METADATA_INCLUDE_CWD | ZIDE_TERMINAL_METADATA_INCLUDE_ACTIVITY;
+pub const ZIDE_TERMINAL_METADATA_INCLUDE_ALL_STRINGS = ZIDE_TERMINAL_METADATA_INCLUDE_TITLE | ZIDE_TERMINAL_METADATA_INCLUDE_CWD;
+pub const ZIDE_TERMINAL_ACTIVITY_INCLUDE_FOREGROUND_PROCESS_LABEL = @intFromEnum(bridge.ActivityIncludeFlags.foreground_process_label);
 pub const ZideTerminalCreateConfig = bridge.CreateConfig;
 pub const ZideTerminalColor = bridge.Color;
 pub const ZideTerminalCell = bridge.Cell;
@@ -31,6 +32,8 @@ pub const ZideTerminalSnapshotRequest = bridge.SnapshotRequest;
 pub const ZideTerminalScrollbackBuffer = bridge.ScrollbackBuffer;
 pub const ZideTerminalMetadataRequest = bridge.MetadataRequest;
 pub const ZideTerminalMetadata = bridge.Metadata;
+pub const ZideTerminalActivityRequest = bridge.ActivityRequest;
+pub const ZideTerminalActivity = bridge.Activity;
 pub const ZideTerminalRedrawState = bridge.RedrawState;
 pub const ZideTerminalCloseConfirmSignals = bridge.CloseConfirmSignals;
 pub const ZideTerminalKeyEvent = bridge.KeyEvent;
@@ -169,6 +172,14 @@ pub fn zide_terminal_metadata_release(metadata: *ZideTerminalMetadata) void {
     bridge.metadataRelease(metadata);
 }
 
+pub fn zide_terminal_activity_acquire(handle: ?*ZideTerminalHandle, request: ?*const ZideTerminalActivityRequest, out_activity: *ZideTerminalActivity) c_int {
+    return @intFromEnum(bridge.activityAcquire(handle, request, out_activity));
+}
+
+pub fn zide_terminal_activity_release(activity: *ZideTerminalActivity) void {
+    bridge.activityRelease(activity);
+}
+
 pub fn zide_terminal_event_drain(handle: ?*ZideTerminalHandle, out_events: *ZideTerminalEventBuffer) c_int {
     return @intFromEnum(bridge.eventDrain(handle, out_events));
 }
@@ -231,6 +242,10 @@ pub fn zide_terminal_metadata_abi_version() u32 {
 
 pub fn zide_terminal_redraw_state_abi_version() u32 {
     return bridge.redrawStateAbiVersion();
+}
+
+pub fn zide_terminal_activity_abi_version() u32 {
+    return bridge.activityAbiVersion();
 }
 
 pub fn zide_terminal_string_abi_version() u32 {

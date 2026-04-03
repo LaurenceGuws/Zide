@@ -1234,9 +1234,9 @@ Beta-stage release rule:
 - what still matters is not compatibility theater, but keeping the cut narrow,
   explicit, and easy for real hosts to adopt
 
-### Landed Request-Based Metadata Shape
+### Historical Request-Based Metadata Shape
 
-The landed metadata shape now looks like this conceptually:
+The original landed metadata shape looked like this conceptually:
 
 1. new acquire request struct
    - `abi_version`
@@ -1357,12 +1357,27 @@ Expected semantics:
   - `len = 0`
 - release remains unconditional and boring even when no strings were requested
 
-Why this sketch is intentionally conservative:
+Why this sketch was intentionally conservative:
 
 - the result shape still looks familiar to current hosts
 - the request shape is coarse and stable
 - there is no per-field scalar flag soup
 - ownership stays acquire/release, not borrowed conditional pointers
+
+### Current Metadata / Activity Direction
+
+This is no longer the live normalization target.
+
+Current direction at the host edge is:
+
+- `metadata_acquire(...)` is terminal metadata only
+- runtime state stays on explicit runtime getters like:
+  - `is_alive(...)`
+  - `child_exit_status(...)`
+- semantic activity moves through its own acquire/release surface
+
+That is the more honest contract story for VT maturity work because it stops
+teaching one mixed "metadata" category for three different kinds of state.
 
 Current rule:
 
