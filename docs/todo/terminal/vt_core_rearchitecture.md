@@ -158,6 +158,15 @@ Current named category-1 contradiction:
     reply-emission contract that keeps writer mechanics outside core while
     making protocol execution less shell-anchored
 
+- `docs/review/VT_PROTOCOL_REPLY_SINK_SHAPE_2026-04-03.md`
+  Why: the new blocker needs an exact first contract shape before code.
+  Current read:
+  - the first sink should be byte-oriented, not a vague writer-wrapper story
+  - the best opening slab is the prebuilt-byte reply family:
+    `dcs_apc.zig`, `osc_clipboard.zig`, and `palette.zig`
+  - do not force CSI writer-driven replies into the first slice just for
+    uniformity
+
 ## War 4
 
 - `docs/review/VT_PLUGANDPLAY_GAP_MATRIX_2026-04-03.md`
