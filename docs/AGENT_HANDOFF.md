@@ -61,6 +61,7 @@ not a progress log and should stay brief.
   - `app_architecture/terminal/VT_CORE_DESIGN.md`
   - `app_architecture/terminal/TERMINAL_ARCHITECTURE_COMPARISON.md`
   - `docs/todo/terminal/vt_core_rearchitecture.md`
+  - `docs/review/VT_MATURITY_FULL_SCOPE_2026-04-03.md`
   - `docs/review/VT_PLUGANDPLAY_GAP_MATRIX_2026-04-03.md`
   - `docs/review/VT_SPRINT_STOP_MARKER_2026-04-03.md`
 - Strongest current comparison pressure:

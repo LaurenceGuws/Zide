@@ -133,6 +133,13 @@ From the current baseline:
 3. only then any newly discovered terminal-semantic interaction slab
 4. only then any newly discovered mutation/publication lie
 
+Current comprehensive scope authority:
+
+- [VT_MATURITY_FULL_SCOPE_2026-04-03.md](/home/home/personal/zide/docs/review/VT_MATURITY_FULL_SCOPE_2026-04-03.md)
+  is the ranked full-scope map for what still separates `zide-vt` from mature
+  reference-grade library feel
+- do not reopen local VT seams without showing where they rank in that matrix
+
 ## What No Longer Counts As Progress
 
 These are guilty by default now:

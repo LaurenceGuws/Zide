@@ -27,12 +27,23 @@ Use
 [VT_MATURITY_PURITY_CAMPAIGN.md](/home/home/personal/zide/app_architecture/terminal/VT_MATURITY_PURITY_CAMPAIGN.md)
 as the governing authority for what counts as progress.
 
+Use
+[VT_MATURITY_FULL_SCOPE_2026-04-03.md](/home/home/personal/zide/docs/review/VT_MATURITY_FULL_SCOPE_2026-04-03.md)
+as the comprehensive ranked scope map before opening any new VT war.
+
 That means:
 
 - do not hop to side wars by momentum
 - do not keep shaving wrappers unless the library-center story gets stronger
 - do not reopen flattened local lanes just because they still have files
 - only continue code when one named maturity contradiction is explicit
+
+Current full-scope read:
+
+- top blocker: `TerminalCore` sufficiency
+- second blocker: public contract normalization
+- shell legitimacy, interaction ownership, and mutation/publication maturity
+  are now lower-pressure guardrails unless a fresh named contradiction appears
 
 ## War 4
 
