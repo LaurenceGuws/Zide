@@ -367,6 +367,21 @@ Current full-scope read:
   - the next question is whether the remaining kitty/history consumer is now
     honest enough or still hides another real owner dependency
 
+- `docs/review/VT_CORE_OWNER_POST_SCROLL_RERANK_2026-04-03.md`
+  Why: after the first scrolling slice, the front needs a fresh kill-order.
+  Current read:
+  - scrolling is improved enough to pause
+  - the next stronger contradiction is parser feed owner dependency
+
+- `docs/review/VT_CORE_PARSER_FEED_FRONT_2026-04-03.md`
+  Why: with scrolling no longer the default next contradiction, the next
+  exact owner-shaped completion path is parser feed.
+  Current read:
+  - `TerminalCore.feedOutputBytesLocked(...)` still depends on outer owner
+    shape for parser/protocol execution
+  - the next move must define a narrower execution contract there, not just
+    rename parameters
+
 Current named category-1 contradiction:
 
 - `docs/review/VT_CORE_EXECUTION_CONTRADICTION_REVIEW_2026-04-03.md`
