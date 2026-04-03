@@ -198,6 +198,16 @@ Current named category-1 contradiction:
   - the next war should therefore name one semantic protocol cluster, not
     “reply sinks continued”
 
+- `docs/review/VT_OSC_SEMANTIC_EFFECTS_WAR_2026-04-03.md`
+  Why: the post-sink rerank now needs one named semantic protocol cluster to
+  keep VT focused.
+  Current read:
+  - the next cluster is OSC semantic effects
+  - title, cwd, progress, semantic prompt, and user-var handling are already
+    mostly terminal-semantic in substance
+  - the next maturity gain is likely one clearer core-side OSC semantic
+    contract, not more shell/runtime surgery
+
 ## War 4
 
 - `docs/review/VT_PLUGANDPLAY_GAP_MATRIX_2026-04-03.md`
