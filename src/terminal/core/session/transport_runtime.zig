@@ -61,11 +61,11 @@ pub fn resizeWithCellSize(self: anytype, rows: u16, cols: u16, cell_width: u16, 
 }
 
 fn reportInBandResize2048(self: anytype, rows: u16, cols: u16) !void {
-    if (!self.session.interaction.inband_resize_notifications_2048) return;
+    if (!self.session.interaction.host_contract.inband_resize_notifications_2048) return;
     if (lockPtyWriter(self)) |writer_guard| {
         var writer = writer_guard;
-        const rows_px: u32 = @as(u32, rows) * @as(u32, self.session.interaction.cell_height);
-        const cols_px: u32 = @as(u32, cols) * @as(u32, self.session.interaction.cell_width);
+        const rows_px: u32 = @as(u32, rows) * @as(u32, self.session.interaction.host_contract.cell_height);
+        const cols_px: u32 = @as(u32, cols) * @as(u32, self.session.interaction.host_contract.cell_width);
         var buf: [64]u8 = undefined;
         const seq = try std.fmt.bufPrint(
             &buf,

@@ -164,6 +164,24 @@ Primary files:
 - [input_modes.zig](/home/home/personal/zide/src/terminal/core/input_modes.zig)
 - [interaction_fields.zig](/home/home/personal/zide/src/terminal/core/session/interaction_fields.zig)
 
+That first slice is now landed:
+
+- [interaction_fields.zig](/home/home/personal/zide/src/terminal/core/session/interaction_fields.zig)
+  now groups:
+  - `protocol_modes`
+  - `host_contract`
+- [csi_mode_mutation.zig](/home/home/personal/zide/src/terminal/protocol/csi_mode_mutation.zig)
+  now updates protocol mode fields separately from host-reporting flags
+- [csi_mode_query.zig](/home/home/personal/zide/src/terminal/protocol/csi_mode_query.zig)
+  now queries the same split directly
+- the same split now reaches the adjacent consumers that made the old bag feel
+  real:
+  [input_modes.zig](/home/home/personal/zide/src/terminal/core/input_modes.zig),
+  [interaction.zig](/home/home/personal/zide/src/terminal/core/session/interaction.zig),
+  [input.zig](/home/home/personal/zide/src/terminal/core/session/input.zig),
+  [transport_runtime.zig](/home/home/personal/zide/src/terminal/core/session/transport_runtime.zig),
+  and [csi.zig](/home/home/personal/zide/src/terminal/protocol/csi.zig)
+
 ## Bottom Line
 
 The first real step in this war is now explicit:

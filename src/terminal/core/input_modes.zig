@@ -26,21 +26,21 @@ pub fn publishSnapshot(self: anytype) void {
         else => @compileError("publishSnapshot expects a pointer receiver"),
     };
     const screen = if (session.core.active == .alt) &session.core.alt else &session.core.primary;
-    session.session.interaction.input_snapshot.app_cursor_keys.store(session.session.interaction.app_cursor_keys, .release);
-    session.session.interaction.input_snapshot.app_keypad.store(session.session.interaction.app_keypad, .release);
-    session.session.interaction.input_snapshot.key_mode_flags.store(keyModeFlags(session), .release);
-    session.session.interaction.input_snapshot.mouse_mode_x10.store(session.session.interaction.input.mouse_mode_x10, .release);
-    session.session.interaction.input_snapshot.mouse_mode_button.store(session.session.interaction.input.mouse_mode_button, .release);
-    session.session.interaction.input_snapshot.mouse_mode_any.store(session.session.interaction.input.mouse_mode_any, .release);
-    session.session.interaction.input_snapshot.mouse_mode_sgr.store(session.session.interaction.input.mouse_mode_sgr, .release);
-    session.session.interaction.input_snapshot.mouse_mode_sgr_pixels_1016.store(session.session.interaction.input.mouse_mode_sgr_pixels_1016, .release);
-    session.session.interaction.input_snapshot.focus_reporting.store(session.session.interaction.focus_reporting, .release);
-    session.session.interaction.input_snapshot.bracketed_paste.store(session.session.interaction.bracketed_paste, .release);
-    session.session.interaction.input_snapshot.auto_repeat.store(session.session.interaction.auto_repeat, .release);
-    session.session.interaction.input_snapshot.mouse_alternate_scroll.store(session.session.interaction.mouse_alternate_scroll, .release);
-    session.session.interaction.input_snapshot.alt_active.store(session.core.active == .alt, .release);
-    session.session.interaction.input_snapshot.screen_rows.store(screen.grid.rows, .release);
-    session.session.interaction.input_snapshot.screen_cols.store(screen.grid.cols, .release);
+    session.session.interaction.protocol_modes.input_snapshot.app_cursor_keys.store(session.session.interaction.protocol_modes.app_cursor_keys, .release);
+    session.session.interaction.protocol_modes.input_snapshot.app_keypad.store(session.session.interaction.protocol_modes.app_keypad, .release);
+    session.session.interaction.protocol_modes.input_snapshot.key_mode_flags.store(keyModeFlags(session), .release);
+    session.session.interaction.protocol_modes.input_snapshot.mouse_mode_x10.store(session.session.interaction.protocol_modes.input.mouse_mode_x10, .release);
+    session.session.interaction.protocol_modes.input_snapshot.mouse_mode_button.store(session.session.interaction.protocol_modes.input.mouse_mode_button, .release);
+    session.session.interaction.protocol_modes.input_snapshot.mouse_mode_any.store(session.session.interaction.protocol_modes.input.mouse_mode_any, .release);
+    session.session.interaction.protocol_modes.input_snapshot.mouse_mode_sgr.store(session.session.interaction.protocol_modes.input.mouse_mode_sgr, .release);
+    session.session.interaction.protocol_modes.input_snapshot.mouse_mode_sgr_pixels_1016.store(session.session.interaction.protocol_modes.input.mouse_mode_sgr_pixels_1016, .release);
+    session.session.interaction.protocol_modes.input_snapshot.focus_reporting.store(session.session.interaction.protocol_modes.focus_reporting, .release);
+    session.session.interaction.protocol_modes.input_snapshot.bracketed_paste.store(session.session.interaction.protocol_modes.bracketed_paste, .release);
+    session.session.interaction.protocol_modes.input_snapshot.auto_repeat.store(session.session.interaction.protocol_modes.auto_repeat, .release);
+    session.session.interaction.protocol_modes.input_snapshot.mouse_alternate_scroll.store(session.session.interaction.protocol_modes.mouse_alternate_scroll, .release);
+    session.session.interaction.protocol_modes.input_snapshot.alt_active.store(session.core.active == .alt, .release);
+    session.session.interaction.protocol_modes.input_snapshot.screen_rows.store(screen.grid.rows, .release);
+    session.session.interaction.protocol_modes.input_snapshot.screen_cols.store(screen.grid.cols, .release);
 }
 
 pub fn keyModePush(self: anytype, flags: u32) void {
@@ -102,7 +102,7 @@ pub fn setKeypadMode(self: anytype, enabled: bool) void {
 }
 
 pub fn setKeypadModeLocked(self: anytype, enabled: bool) void {
-    self.session.interaction.app_keypad = enabled;
+    self.session.interaction.protocol_modes.app_keypad = enabled;
     publishSnapshot(self);
 }
 
@@ -113,7 +113,7 @@ pub fn setAppCursorKeys(self: anytype, enabled: bool) void {
 }
 
 pub fn setAppCursorKeysLocked(self: anytype, enabled: bool) void {
-    self.session.interaction.app_cursor_keys = enabled;
+    self.session.interaction.protocol_modes.app_cursor_keys = enabled;
     publishSnapshot(self);
 }
 
@@ -124,7 +124,7 @@ pub fn setAutoRepeat(self: anytype, enabled: bool) void {
 }
 
 pub fn setAutoRepeatLocked(self: anytype, enabled: bool) void {
-    self.session.interaction.auto_repeat = enabled;
+    self.session.interaction.protocol_modes.auto_repeat = enabled;
     publishSnapshot(self);
 }
 
@@ -135,7 +135,7 @@ pub fn setBracketedPaste(self: anytype, enabled: bool) void {
 }
 
 pub fn setBracketedPasteLocked(self: anytype, enabled: bool) void {
-    self.session.interaction.bracketed_paste = enabled;
+    self.session.interaction.protocol_modes.bracketed_paste = enabled;
     publishSnapshot(self);
 }
 
@@ -146,7 +146,7 @@ pub fn setFocusReporting(self: anytype, enabled: bool) void {
 }
 
 pub fn setFocusReportingLocked(self: anytype, enabled: bool) void {
-    self.session.interaction.focus_reporting = enabled;
+    self.session.interaction.protocol_modes.focus_reporting = enabled;
     publishSnapshot(self);
 }
 
@@ -157,7 +157,7 @@ pub fn setMouseAlternateScroll(self: anytype, enabled: bool) void {
 }
 
 pub fn setMouseAlternateScrollLocked(self: anytype, enabled: bool) void {
-    self.session.interaction.mouse_alternate_scroll = enabled;
+    self.session.interaction.protocol_modes.mouse_alternate_scroll = enabled;
     publishSnapshot(self);
 }
 
@@ -168,7 +168,7 @@ pub fn setMouseModeX10(self: anytype, enabled: bool) void {
 }
 
 pub fn setMouseModeX10Locked(self: anytype, enabled: bool) void {
-    self.session.interaction.input.mouse_mode_x10 = enabled;
+    self.session.interaction.protocol_modes.input.mouse_mode_x10 = enabled;
     publishSnapshot(self);
 }
 
@@ -179,7 +179,7 @@ pub fn setMouseModeButton(self: anytype, enabled: bool) void {
 }
 
 pub fn setMouseModeButtonLocked(self: anytype, enabled: bool) void {
-    self.session.interaction.input.mouse_mode_button = enabled;
+    self.session.interaction.protocol_modes.input.mouse_mode_button = enabled;
     publishSnapshot(self);
 }
 
@@ -190,7 +190,7 @@ pub fn setMouseModeAny(self: anytype, enabled: bool) void {
 }
 
 pub fn setMouseModeAnyLocked(self: anytype, enabled: bool) void {
-    self.session.interaction.input.mouse_mode_any = enabled;
+    self.session.interaction.protocol_modes.input.mouse_mode_any = enabled;
     publishSnapshot(self);
 }
 
@@ -201,7 +201,7 @@ pub fn setMouseModeSgr(self: anytype, enabled: bool) void {
 }
 
 pub fn setMouseModeSgrLocked(self: anytype, enabled: bool) void {
-    self.session.interaction.input.mouse_mode_sgr = enabled;
+    self.session.interaction.protocol_modes.input.mouse_mode_sgr = enabled;
     publishSnapshot(self);
 }
 
@@ -212,7 +212,7 @@ pub fn setMouseModeSgrPixels(self: anytype, enabled: bool) void {
 }
 
 pub fn setMouseModeSgrPixelsLocked(self: anytype, enabled: bool) void {
-    self.session.interaction.input.mouse_mode_sgr_pixels_1016 = enabled;
+    self.session.interaction.protocol_modes.input.mouse_mode_sgr_pixels_1016 = enabled;
     publishSnapshot(self);
 }
 
@@ -223,18 +223,18 @@ pub fn resetInputModes(self: anytype) void {
 }
 
 pub fn resetInputModesLocked(self: anytype) void {
-    self.session.interaction.app_cursor_keys = false;
-    self.session.interaction.app_keypad = false;
-    self.session.interaction.auto_repeat = true;
-    self.session.interaction.mouse_alternate_scroll = true;
-    self.session.interaction.input.resetMouse();
-    self.session.interaction.bracketed_paste = false;
-    self.session.interaction.focus_reporting = false;
+    self.session.interaction.protocol_modes.app_cursor_keys = false;
+    self.session.interaction.protocol_modes.app_keypad = false;
+    self.session.interaction.protocol_modes.auto_repeat = true;
+    self.session.interaction.protocol_modes.mouse_alternate_scroll = true;
+    self.session.interaction.protocol_modes.input.resetMouse();
+    self.session.interaction.protocol_modes.bracketed_paste = false;
+    self.session.interaction.protocol_modes.focus_reporting = false;
     publishSnapshot(self);
 }
 
 pub fn appKeypadEnabled(self: anytype) bool {
-    return self.session.interaction.input_snapshot.app_keypad.load(.acquire);
+    return self.session.interaction.protocol_modes.input_snapshot.app_keypad.load(.acquire);
 }
 
 test "sanitize key mode flags preserves alternate-key bit" {

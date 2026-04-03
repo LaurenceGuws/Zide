@@ -122,7 +122,7 @@ test "resizeWithCellSize uses current cell metrics for in-band resize report" {
     var session = try TerminalRuntimeShell.init(allocator, 2, 12);
     defer session.deinit();
     session_runtime.attachExternalTransport(session);
-    session.session.interaction.inband_resize_notifications_2048 = true;
+    session.session.interaction.host_contract.inband_resize_notifications_2048 = true;
 
     try session_runtime.resizeWithCellSize(session, 3, 4, 8, 16);
 
@@ -2371,12 +2371,12 @@ test "terminal reset republishes input snapshot state" {
     input_modes.setKeypadMode(session, true);
     input_modes.setAppCursorKeys(session, true);
     try std.testing.expect(session_input.appKeypadEnabled(session));
-    try std.testing.expect(session.session.interaction.input_snapshot.app_cursor_keys.load(.acquire));
+    try std.testing.expect(session.session.interaction.protocol_modes.input_snapshot.app_cursor_keys.load(.acquire));
 
     mode_effects.resetState(session);
 
     try std.testing.expect(!session_input.appKeypadEnabled(session));
-    try std.testing.expect(!session.session.interaction.input_snapshot.app_cursor_keys.load(.acquire));
+    try std.testing.expect(!session.session.interaction.protocol_modes.input_snapshot.app_cursor_keys.load(.acquire));
 }
 
 test "feedOutputBytes publishes keypad mode through locked parser path" {

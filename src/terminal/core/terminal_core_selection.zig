@@ -129,7 +129,7 @@ pub fn selectOrUpdateCellInRow(
     global_row: usize,
     col: usize,
 ) SelectionMutationEffect {
-    const last_col = selection_semantics.rowLastContentCol(row_cells) orelse return false;
+    const last_col = selection_semantics.rowLastContentCol(row_cells) orelse return .{};
     const sel_col = @min(col, last_col);
     return selectOrUpdateCell(self, .{ .row = global_row, .col = sel_col });
 }

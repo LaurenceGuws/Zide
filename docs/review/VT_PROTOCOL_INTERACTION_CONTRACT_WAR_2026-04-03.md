@@ -187,6 +187,17 @@ Real progress would be:
 - one result where parser/protocol code reads more terminal-centered without
   moving writer/reporting mechanics into core
 
+Progress now landed:
+
+- [interaction_fields.zig](/home/home/personal/zide/src/terminal/core/session/interaction_fields.zig)
+  no longer stores one flat interaction bag
+- the first live split is explicit in code:
+  - `protocol_modes`
+  - `host_contract`
+- CSI mode mutation/query now read and write those categories separately
+- input/runtime/transport users that depended on those same fields were
+  rewired to the same split, so the new contract is not CSI-only theater
+
 Fake progress would be:
 
 - renaming `session.interaction`
@@ -202,3 +213,8 @@ The next VT war is now explicit:
 And the first serious battlefield inside it is:
 
 - CSI mode/query ownership
+
+The first code slice for that battlefield is now in:
+
+- terminal protocol mode state under `session.interaction.protocol_modes`
+- host-reporting/display contract state under `session.interaction.host_contract`

@@ -100,7 +100,7 @@ pub fn handleCsi(self: anytype, action: parser_csi.CsiAction) void {
                     switch (mode) {
                         6 => _ = csi_reply.writeDsrReplyWithWriter(&writer, action.leader, mode, pos.row_1, pos.col_1),
                         15, 25, 26, 55, 56, 75, 85 => _ = csi_reply.writeDsrReplyWithWriter(&writer, action.leader, mode, 0, 0),
-                        996 => _ = csi_reply.writeColorSchemePreferenceReplyWithWriter(&writer, self.session.interaction.color_scheme_dark),
+                        996 => _ = csi_reply.writeColorSchemePreferenceReplyWithWriter(&writer, self.session.interaction.host_contract.color_scheme_dark),
                         else => {},
                     }
                 } else if (action.leader == 0) {
@@ -131,10 +131,10 @@ pub fn handleCsi(self: anytype, action: parser_csi.CsiAction) void {
                     switch (mode) {
                         14 => _ = csi_reply.writeWindowOpPixelsReplyWithWriter(
                             &writer,
-                            @as(u32, self.session.interaction.cell_height) * screen.grid.rows,
-                            @as(u32, self.session.interaction.cell_width) * screen.grid.cols,
+                            @as(u32, self.session.interaction.host_contract.cell_height) * screen.grid.rows,
+                            @as(u32, self.session.interaction.host_contract.cell_width) * screen.grid.cols,
                         ),
-                        16 => _ = csi_reply.writeWindowOpCellPixelsReplyWithWriter(&writer, self.session.interaction.cell_height, self.session.interaction.cell_width),
+                        16 => _ = csi_reply.writeWindowOpCellPixelsReplyWithWriter(&writer, self.session.interaction.host_contract.cell_height, self.session.interaction.host_contract.cell_width),
                         18 => _ = csi_reply.writeWindowOpCharsReplyWithWriter(&writer, screen.grid.rows, screen.grid.cols),
                         19 => _ = csi_reply.writeWindowOpScreenCharsReplyWithWriter(&writer, screen.grid.rows, screen.grid.cols),
                         else => {},

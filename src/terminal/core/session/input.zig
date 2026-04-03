@@ -42,7 +42,7 @@ pub fn sendKey(self: anytype, key: Key, mod: Modifier) !void {
 }
 
 fn keyActionContext(self: anytype, key: Key, mod: Modifier, action: input_mod.KeyAction) KeyActionContext {
-    const input_snapshot = self.session.interaction.input_snapshot;
+    const input_snapshot = self.session.interaction.protocol_modes.input_snapshot;
     const key_mode_flags = input_snapshot.key_mode_flags.load(.acquire);
     return .{
         .key_mode_flags = key_mode_flags,
@@ -106,7 +106,7 @@ pub fn sendKeypad(self: anytype, key: input_mod.KeypadKey, mod: Modifier) !void 
 }
 
 fn keypadActionContext(self: anytype, action: input_mod.KeyAction) KeypadActionContext {
-    const input_snapshot = self.session.interaction.input_snapshot;
+    const input_snapshot = self.session.interaction.protocol_modes.input_snapshot;
     const key_mode_flags = input_snapshot.key_mode_flags.load(.acquire);
     return .{
         .key_mode_flags = key_mode_flags,
@@ -135,7 +135,7 @@ pub fn appKeypadEnabled(self: anytype) bool {
 }
 
 pub fn appCursorKeysEnabled(self: anytype) bool {
-    return self.session.interaction.input_snapshot.app_cursor_keys.load(.acquire);
+    return self.session.interaction.protocol_modes.input_snapshot.app_cursor_keys.load(.acquire);
 }
 
 pub fn sendChar(self: anytype, char: u32, mod: Modifier) !void {
@@ -143,7 +143,7 @@ pub fn sendChar(self: anytype, char: u32, mod: Modifier) !void {
 }
 
 fn charActionContext(self: anytype, char: u32, mod: Modifier, action: input_mod.KeyAction) CharActionContext {
-    const input_snapshot = self.session.interaction.input_snapshot;
+    const input_snapshot = self.session.interaction.protocol_modes.input_snapshot;
     const key_mode_flags = input_snapshot.key_mode_flags.load(.acquire);
     return .{
         .key_mode_flags = key_mode_flags,
@@ -199,13 +199,13 @@ pub fn reportMouseEvent(self: anytype, event: MouseEvent) !bool {
     if (self.lockPtyWriter()) |writer_guard| {
         var writer = writer_guard;
         defer writer.unlock();
-        return writer.reportMouseEvent(&self.session.interaction.input, event, screen.grid.rows, screen.grid.cols);
+        return writer.reportMouseEvent(&self.session.interaction.protocol_modes.input, event, screen.grid.rows, screen.grid.cols);
     }
     return false;
 }
 
 pub fn reportAlternateScrollWheel(self: anytype, wheel_steps: i32, mod: Modifier) !bool {
-    const input_snapshot = self.session.interaction.input_snapshot;
+    const input_snapshot = self.session.interaction.protocol_modes.input_snapshot;
     var remaining = wheel_steps;
     while (remaining != 0) {
         const dispatch = self.core.decideAlternateScrollStep(
@@ -253,8 +253,8 @@ pub fn reportFocusChanged(self: anytype, focused: bool) !bool {
 }
 
 pub fn reportColorSchemeChanged(self: anytype, dark: bool) !bool {
-    self.session.interaction.color_scheme_dark = dark;
-    if (!self.session.interaction.report_color_scheme_2031) {
+    self.session.interaction.host_contract.color_scheme_dark = dark;
+    if (!self.session.interaction.host_contract.report_color_scheme_2031) {
         return false;
     }
     if (self.lockPtyWriter()) |writer_guard| {

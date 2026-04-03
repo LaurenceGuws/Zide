@@ -12,12 +12,12 @@ pub fn applyDecstrReset(self: anytype) void {
     self.core.clearSavedCharsetState();
     self.core.clearTitleBuffer();
     self.core.setDefaultTitle();
-    self.session.interaction.report_color_scheme_2031 = false;
-    self.session.interaction.grapheme_cluster_shaping_2027 = false;
+    self.session.interaction.host_contract.report_color_scheme_2031 = false;
+    self.session.interaction.protocol_modes.grapheme_cluster_shaping_2027 = false;
     self.core.primary.setGraphemeClusterShaping2027(false);
     self.core.alt.setGraphemeClusterShaping2027(false);
-    self.session.interaction.inband_resize_notifications_2048 = false;
-    self.session.interaction.kitty_paste_events_5522 = false;
+    self.session.interaction.host_contract.inband_resize_notifications_2048 = false;
+    self.session.interaction.host_contract.kitty_paste_events_5522 = false;
     input_modes.resetInputModesLocked(self);
     self.core.column_mode_132 = false;
     sync_updates.setLocked(self, false);

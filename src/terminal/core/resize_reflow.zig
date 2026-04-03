@@ -32,12 +32,12 @@ fn resizeInternal(
 ) !void {
     self.session.control.state_mutex.lock();
     if (cell_size) |size| {
-        self.session.interaction.cell_width = size.cell_width;
-        self.session.interaction.cell_height = size.cell_height;
+        self.session.interaction.host_contract.cell_width = size.cell_width;
+        self.session.interaction.host_contract.cell_height = size.cell_height;
     }
     try self.core.resizeLocked(self, rows, cols);
-    const cell_width = self.session.interaction.cell_width;
-    const cell_height = self.session.interaction.cell_height;
+    const cell_width = self.session.interaction.host_contract.cell_width;
+    const cell_height = self.session.interaction.host_contract.cell_height;
     self.session.control.state_mutex.unlock();
     if (terminal_transport.Transport.fromSession(self)) |transport| {
         const size = PtySize{

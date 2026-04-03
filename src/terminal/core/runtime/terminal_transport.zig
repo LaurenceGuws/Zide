@@ -376,8 +376,8 @@ pub fn openPty(self: anytype, shell: ?[:0]const u8, spawn_threads: bool) !void {
     const size = PtySize{
         .rows = self.core.primary.grid.rows,
         .cols = self.core.primary.grid.cols,
-        .cell_width = self.session.interaction.cell_width,
-        .cell_height = self.session.interaction.cell_height,
+        .cell_width = self.session.interaction.host_contract.cell_width,
+        .cell_height = self.session.interaction.host_contract.cell_height,
     };
     const pty = try pty_mod.Pty.init(self.allocator, size, shell);
     attachPty(self, pty);

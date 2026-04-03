@@ -5,43 +5,43 @@ const osc_kitty_clipboard = @import("../../protocol/osc_kitty_clipboard.zig");
 const input_modes = @import("../input_modes.zig");
 
 pub fn bracketedPasteEnabled(self: anytype) bool {
-    return self.session.interaction.input_snapshot.bracketed_paste.load(.acquire);
+    return self.session.interaction.protocol_modes.input_snapshot.bracketed_paste.load(.acquire);
 }
 
 pub fn focusReportingEnabled(self: anytype) bool {
-    return self.session.interaction.input_snapshot.focus_reporting.load(.acquire);
+    return self.session.interaction.protocol_modes.input_snapshot.focus_reporting.load(.acquire);
 }
 
 pub fn autoRepeatEnabled(self: anytype) bool {
-    return self.session.interaction.input_snapshot.auto_repeat.load(.acquire);
+    return self.session.interaction.protocol_modes.input_snapshot.auto_repeat.load(.acquire);
 }
 
 pub fn mouseAlternateScrollEnabled(self: anytype) bool {
-    return self.session.interaction.input_snapshot.mouse_alternate_scroll.load(.acquire);
+    return self.session.interaction.protocol_modes.input_snapshot.mouse_alternate_scroll.load(.acquire);
 }
 
 pub fn mouseModeX10Enabled(self: anytype) bool {
-    return self.session.interaction.input_snapshot.mouse_mode_x10.load(.acquire);
+    return self.session.interaction.protocol_modes.input_snapshot.mouse_mode_x10.load(.acquire);
 }
 
 pub fn mouseModeButtonEnabled(self: anytype) bool {
-    return self.session.interaction.input_snapshot.mouse_mode_button.load(.acquire);
+    return self.session.interaction.protocol_modes.input_snapshot.mouse_mode_button.load(.acquire);
 }
 
 pub fn mouseModeAnyEnabled(self: anytype) bool {
-    return self.session.interaction.input_snapshot.mouse_mode_any.load(.acquire);
+    return self.session.interaction.protocol_modes.input_snapshot.mouse_mode_any.load(.acquire);
 }
 
 pub fn mouseModeSgrEnabled(self: anytype) bool {
-    return self.session.interaction.input_snapshot.mouse_mode_sgr.load(.acquire);
+    return self.session.interaction.protocol_modes.input_snapshot.mouse_mode_sgr.load(.acquire);
 }
 
 pub fn mouseModeSgrPixelsEnabled(self: anytype) bool {
-    return self.session.interaction.input_snapshot.mouse_mode_sgr_pixels_1016.load(.acquire);
+    return self.session.interaction.protocol_modes.input_snapshot.mouse_mode_sgr_pixels_1016.load(.acquire);
 }
 
 pub fn kittyPasteEvents5522Enabled(self: anytype) bool {
-    return self.session.interaction.kitty_paste_events_5522;
+    return self.session.interaction.host_contract.kitty_paste_events_5522;
 }
 
 pub fn sendKittyPasteEvent5522(self: anytype, clip: []const u8) !bool {
@@ -63,7 +63,7 @@ pub fn sendKittyPasteEvent5522WithMimeRich(
     uri_list: ?[]const u8,
     png: ?[]const u8,
 ) !bool {
-    if (!self.session.interaction.kitty_paste_events_5522) {
+    if (!self.session.interaction.host_contract.kitty_paste_events_5522) {
         return false;
     }
     if (!terminal_transport.Writer.exists(self)) {
@@ -84,7 +84,7 @@ pub fn sendKittyPasteEvent5522WithMimeRich(
 }
 
 pub fn mouseReportingEnabled(self: anytype) bool {
-    const input_snapshot = self.session.interaction.input_snapshot;
+    const input_snapshot = self.session.interaction.protocol_modes.input_snapshot;
     return input_snapshot.mouse_mode_x10.load(.acquire) or
         input_snapshot.mouse_mode_button.load(.acquire) or
         input_snapshot.mouse_mode_any.load(.acquire);
@@ -100,7 +100,7 @@ pub fn getDamage(self: anytype) ?struct {
 }
 
 pub fn keyModeFlagsValue(self: anytype) u32 {
-    return self.session.interaction.input_snapshot.key_mode_flags.load(.acquire);
+    return self.session.interaction.protocol_modes.input_snapshot.key_mode_flags.load(.acquire);
 }
 
 pub fn keyModePush(self: anytype, flags: u32) void {

@@ -105,6 +105,17 @@ Current named category-1 contradiction:
   - the key split is between terminal protocol mode state and host-reporting
     contract state
   - display metrics and derived snapshots are separate again
+  Progress:
+  - the first CSI ownership slice is now landed
+  - `interaction_fields.zig` no longer stores one flat interaction bag
+  - the live split is now explicit:
+    - `protocol_modes`
+    - `host_contract`
+  - CSI mode mutation/query, input mode handling, transport resize/reporting,
+    and adjacent interaction consumers now use that split directly
+  - the next question is no longer whether the mixed state should be
+    reclassified; it is whether the next real slice is CSI reply/report
+    ownership or a narrower remaining mixed-state pocket
 
 ## War 4
 

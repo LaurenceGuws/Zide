@@ -39,7 +39,7 @@ pub const ModeSnapshot = struct {
 
 pub fn modeSnapshot(self: anytype) ModeSnapshot {
     const screen = self.core.activeScreen();
-    const input_snapshot = self.session.interaction.input_snapshot;
+    const input_snapshot = self.session.interaction.protocol_modes.input_snapshot;
     return .{
         .app_cursor_keys = session_input.appCursorKeysEnabled(self),
         .column_mode_132 = self.core.column_mode_132,
@@ -63,10 +63,10 @@ pub fn modeSnapshot(self: anytype) ModeSnapshot {
         .mouse_mode_sgr_pixels = input_snapshot.mouse_mode_sgr_pixels_1016.load(.acquire),
         .bracketed_paste = session_interaction.bracketedPasteEnabled(self),
         .sync_updates_active = self.core.sync_updates_active,
-        .grapheme_cluster_shaping_2027 = self.session.interaction.grapheme_cluster_shaping_2027,
-        .report_color_scheme_2031 = self.session.interaction.report_color_scheme_2031,
-        .inband_resize_notifications_2048 = self.session.interaction.inband_resize_notifications_2048,
-        .kitty_paste_events_5522 = self.session.interaction.kitty_paste_events_5522,
+        .grapheme_cluster_shaping_2027 = self.session.interaction.protocol_modes.grapheme_cluster_shaping_2027,
+        .report_color_scheme_2031 = self.session.interaction.host_contract.report_color_scheme_2031,
+        .inband_resize_notifications_2048 = self.session.interaction.host_contract.inband_resize_notifications_2048,
+        .kitty_paste_events_5522 = self.session.interaction.host_contract.kitty_paste_events_5522,
         .insert_mode = screen.insert_mode,
         .local_echo_mode_12 = screen.local_echo_mode_12,
         .newline_mode = screen.newline_mode,
