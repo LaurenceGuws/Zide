@@ -220,6 +220,28 @@ But it is still a real step in the same direction:
 - one explicit publication consumer
 - less repeated outer completion choreography
 
+## Current Stop Marker
+
+The next apparent move after these three slices was the deeper parser-owner
+dependency.
+
+That line does not yet support a clean code cut.
+
+See:
+
+- [VT_CORE_PARSER_OWNER_DESIGN_2026-04-03.md](/home/home/personal/zide/docs/review/VT_CORE_PARSER_OWNER_DESIGN_2026-04-03.md)
+
+Current read:
+
+- parser/protocol execution still mixes:
+  - terminal semantics
+  - session interaction flags
+  - writer/reporting mechanics
+- forcing that move now would likely drag runtime/reporting concerns into core
+
+So this exact execution-contract lane should now stop cleanly unless a deeper
+design step is opened first.
+
 ## Bottom Line
 
 The next real VT maturity war is no longer vague `TerminalCore` discomfort.

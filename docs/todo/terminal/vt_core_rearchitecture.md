@@ -65,7 +65,18 @@ Current named category-1 contradiction:
     refresh choreography after each core call
   - viewport/scrollback offset mutations now consume one shared publication
     entrypoint instead of repeating the same refresh choreography inline
-  - the deeper owner-shaped parser dependency still remains open
+  - the deeper owner-shaped parser dependency still remains open, but is not
+    yet a safe code move because parser/protocol execution still mixes terminal
+    semantics with session interaction flags and writer/reporting mechanics
+  Next step:
+  - `docs/review/VT_CORE_PARSER_OWNER_DESIGN_2026-04-03.md`
+    Why: the next obvious move after the execution-effect wins needed a design
+    check before code.
+    Current read:
+    - do not force parser-owner extraction yet
+    - the real blocker is mixed protocol interaction state, especially CSI
+      mode/query and reply/report ownership
+    - rerank or open that deeper design war before more code
 
 ## War 4
 
