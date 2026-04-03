@@ -139,6 +139,9 @@ Current comprehensive scope authority:
   is the ranked full-scope map for what still separates `zide-vt` from mature
   reference-grade library feel
 - do not reopen local VT seams without showing where they rank in that matrix
+- [VT_CORE_EXECUTION_CONTRADICTION_REVIEW_2026-04-03.md](/home/home/personal/zide/docs/review/VT_CORE_EXECUTION_CONTRADICTION_REVIEW_2026-04-03.md)
+  is the current named category-1 contradiction inside `TerminalCore`
+  sufficiency
 
 ## What No Longer Counts As Progress
 

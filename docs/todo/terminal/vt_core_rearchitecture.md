@@ -45,6 +45,18 @@ Current full-scope read:
 - shell legitimacy, interaction ownership, and mutation/publication maturity
   are now lower-pressure guardrails unless a fresh named contradiction appears
 
+Current named category-1 contradiction:
+
+- `docs/review/VT_CORE_EXECUTION_CONTRADICTION_REVIEW_2026-04-03.md`
+  Why: the strongest remaining `TerminalCore` maturity gap is no longer
+  metadata or wrapper ownership; it is that major core behaviors still depend
+  on outer owner/publication choreography to become complete host-visible
+  terminal behavior.
+  Current read:
+  - top target: feed/apply publication path
+  - fallback target: selection/viewport refresh choreography
+  - do not reduce this to cosmetic shell-thinning
+
 ## War 4
 
 - `docs/review/VT_PLUGANDPLAY_GAP_MATRIX_2026-04-03.md`
