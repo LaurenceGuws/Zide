@@ -228,6 +228,16 @@ Current full-scope read:
   - this is a real maturity gain because reset now reads less like a
     protocol-owned mixed script
 
+- `docs/review/VT_PROTOCOL_RESET_RERANK_2026-04-03.md`
+  Why: after the first DECSTR split, the reset front needs an honesty check
+  before it drifts into local cleanup.
+  Current read:
+  - reset is close to a stop-marker
+  - the strongest omitted terminal-owned slab is already moved
+  - the remaining reset surface now reads mostly like explicit outer
+    consequences, not fake terminal ownership
+  - the default next pressure returns to broader `TerminalCore` sufficiency
+
 Current named category-1 contradiction:
 
 - `docs/review/VT_CORE_EXECUTION_CONTRADICTION_REVIEW_2026-04-03.md`
