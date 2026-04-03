@@ -265,6 +265,19 @@ Current named category-1 contradiction:
     flag mutation
   - do not treat this as permission for broad CSI cleanup
 
+- `docs/review/VT_CSI_MODE_EFFECTS_CONTRACT_2026-04-03.md`
+  Why: the new war needs one exact first contract split before code drifts
+  into generic CSI cleanup.
+  Current read:
+  - the first slice is terminal mode and screen effects
+  - input protocol modes, host-contract flags, sync updates, and column-mode
+    publishing stay outside
+  Progress:
+  - `src/terminal/core/protocol/terminal_core_csi_modes.zig` now owns the
+    first terminal mode-and-screen-effects slab
+  - `csi_mode_mutation.zig` now delegates that slab there instead of mixing it
+    inline with outer contract mutation
+
 ## War 4
 
 - `docs/review/VT_PLUGANDPLAY_GAP_MATRIX_2026-04-03.md`

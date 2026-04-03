@@ -91,3 +91,11 @@ It is:
 The next VT war is now explicit:
 
 - CSI / ANSI mode semantics and screen effects
+
+First progress now landed:
+
+- [terminal_core_csi_modes.zig](/home/home/personal/zide/src/terminal/core/protocol/terminal_core_csi_modes.zig)
+  now owns the first real terminal mode-and-screen-effects slab
+- [csi_mode_mutation.zig](/home/home/personal/zide/src/terminal/protocol/csi_mode_mutation.zig)
+  now delegates that slab there instead of mixing it inline with input modes,
+  host-contract flags, sync updates, and column-mode publishing
