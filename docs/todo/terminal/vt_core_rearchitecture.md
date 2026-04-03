@@ -137,6 +137,16 @@ Current named category-1 contradiction:
   - otherwise return to the deeper parser-owner / `TerminalCore` sufficiency
     question
 
+- `docs/review/VT_POST_PROTOCOL_INTERACTION_RERANK_2026-04-03.md`
+  Why: after the full protocol interaction wave, VT needs another top-level
+  maturity rerank from the cleaner baseline.
+  Current read:
+  - broad CSI cleanup is no longer the next war
+  - interaction bag splitting is no longer the next war
+  - the next default pressure is deeper parser-owner / `TerminalCore`
+    sufficiency again
+  - a narrow reporting pocket is now only the fallback, not the main war
+
 ## War 4
 
 - `docs/review/VT_PLUGANDPLAY_GAP_MATRIX_2026-04-03.md`
