@@ -124,6 +124,19 @@ Current named category-1 contradiction:
     reclassified; it is whether the next real slice is CSI reply/report
     ownership or a narrower remaining mixed-state pocket
 
+- `docs/review/VT_PROTOCOL_INTERACTION_POST_CSI_RERANK_2026-04-03.md`
+  Why: after the CSI ownership wave, the lane needs an honesty check before it
+  turns into more local protocol cleanup by momentum.
+  Current read:
+  - the broad CSI mixed-state lie is materially flattened
+  - protocol mode state, host contract state, derived snapshot state, and
+    reply/report snapshot state are all explicit now
+  - this lane is close to a stop-marker
+  - only reopen it for one narrow reporting pocket if that pocket is clearly
+    real
+  - otherwise return to the deeper parser-owner / `TerminalCore` sufficiency
+    question
+
 ## War 4
 
 - `docs/review/VT_PLUGANDPLAY_GAP_MATRIX_2026-04-03.md`
