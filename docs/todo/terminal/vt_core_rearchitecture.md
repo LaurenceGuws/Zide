@@ -97,6 +97,16 @@ Current full-scope read:
   - this removes one shell-first teaching path, but the public handle/create
     story still needs scrutiny
 
+- `docs/review/VT_SHELL_HANDLE_IDENTITY_RERANK_2026-04-03.md`
+  Why: after the constructor slice, the host-edge identity suspicion needs one
+  more honesty check at the FFI boundary.
+  Current read:
+  - the opaque ABI remains terminal-named
+  - the internal handle now admits that it stores a shell, not a vague
+    terminal session
+  - this weakens host-edge identity pressure again and likely promotes lock
+    choreography as the next shell-hostile front
+
 Current named category-1 contradiction:
 
 - `docs/review/VT_CORE_EXECUTION_CONTRADICTION_REVIEW_2026-04-03.md`

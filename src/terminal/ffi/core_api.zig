@@ -21,11 +21,11 @@ const EventOwner = shared.EventOwner;
 pub var destroy_debug_pause_ms_for_tests = std.atomic.Value(u32).init(0);
 
 fn currentCloseConfirmSignals(handle: *shared.Handle) shared.CloseConfirmSignals {
-    const activity = host_queries.currentActivityMetadata(handle.session);
+    const activity = host_queries.currentActivityMetadata(handle.shell);
     const foreground_process = @intFromBool(activity.foreground_process_present);
     const semantic_command = @intFromBool(activity.semantic_input_active or activity.semantic_output_active);
-    const alt_screen = @intFromBool(handle.session.core.isAltActive());
-    const mouse_reporting = @intFromBool(session_interaction.mouseReportingEnabled(handle.session));
+    const alt_screen = @intFromBool(handle.shell.core.isAltActive());
+    const mouse_reporting = @intFromBool(session_interaction.mouseReportingEnabled(handle.shell));
     return .{
         .abi_version = shared.close_confirm_abi_version,
         .struct_size = @sizeOf(shared.CloseConfirmSignals),
@@ -43,7 +43,7 @@ fn currentCloseConfirmSignals(handle: *shared.Handle) shared.CloseConfirmSignals
 }
 
 fn currentPublishedGeneration(handle: *shared.Handle) u64 {
-    return publication_state.publishedGeneration(handle.session);
+    return publication_state.publishedGeneration(handle.shell);
 }
 
 const SnapshotExportState = struct {
@@ -86,10 +86,10 @@ fn copyPublishedSnapshotExport(
     include_flags: u32,
     out_state: *SnapshotExportState,
 ) !SnapshotExport {
-    handle.session.lock();
-    errdefer handle.session.unlock();
+    handle.shell.lock();
+    errdefer handle.shell.unlock();
 
-    const cache = terminal_publication.renderCacheLocked(handle.session, "ffi_snapshot");
+    const cache = terminal_publication.renderCacheLocked(handle.shell, "ffi_snapshot");
     const cells = try allocator.alloc(shared.Cell, cache.cells.items.len);
     errdefer allocator.free(cells);
     for (cache.cells.items, 0..) |cell, i| {
@@ -102,10 +102,10 @@ fn copyPublishedSnapshotExport(
     errdefer if (cwd.len > 0) allocator.free(cwd);
 
     if ((include_flags & @intFromEnum(shared.SnapshotIncludeFlags.title)) != 0) {
-        title = try allocator.dupe(u8, host_queries.displayTitleText(handle.session));
+        title = try allocator.dupe(u8, host_queries.displayTitleText(handle.shell));
     }
     if ((include_flags & @intFromEnum(shared.SnapshotIncludeFlags.cwd)) != 0) {
-        cwd = try allocator.dupe(u8, handle.session.core.cwdText());
+        cwd = try allocator.dupe(u8, handle.shell.core.cwdText());
     }
 
     out_state.* = .{
@@ -119,7 +119,7 @@ fn copyPublishedSnapshotExport(
         .screen_reverse = cache.screen_reverse,
         .damage = cache.damage,
     };
-    handle.session.unlock();
+    handle.shell.unlock();
     return .{
         .cells = cells,
         .title = title,
@@ -133,11 +133,11 @@ fn copyGranularSnapshotDiffExport(
     base_generation: u64,
     out_state: *SnapshotDiffExportState,
 ) !?SnapshotDiffOwner {
-    handle.session.lock();
-    defer handle.session.unlock();
+    handle.shell.lock();
+    defer handle.shell.unlock();
 
-    const current = terminal_publication.renderCacheLocked(handle.session, "ffi_snapshot_diff");
-    const previous = terminal_publication.renderCacheForGenerationLocked(handle.session, base_generation, "ffi_snapshot_diff") orelse {
+    const current = terminal_publication.renderCacheLocked(handle.shell, "ffi_snapshot_diff");
+    const previous = terminal_publication.renderCacheForGenerationLocked(handle.shell, base_generation, "ffi_snapshot_diff") orelse {
         out_state.* = .{
             .generation = current.generation,
             .base_generation = base_generation,
@@ -357,15 +357,15 @@ pub fn create(config: ?*const shared.CreateConfig, out_handle: *?*shared.ZideTer
         },
         .blink = cfg.cursor_blink != 0,
     };
-    const session = terminal_runtime.initWithOptions(allocator, cfg.rows, cfg.cols, .{
+    const shell = terminal_runtime.initWithOptions(allocator, cfg.rows, cfg.cols, .{
         .scrollback_rows = cfg.scrollback_rows,
         .cursor_style = cursor_style,
     }) catch |err| return shared.mapError(err);
-    errdefer session.deinit();
+    errdefer shell.deinit();
 
     handle.* = .{
         .allocator = allocator,
-        .session = session,
+        .shell = shell,
         .destroying = std.atomic.Value(bool).init(false),
         .pending_events = .empty,
         .last_title = .empty,
@@ -381,9 +381,9 @@ pub fn create(config: ?*const shared.CreateConfig, out_handle: *?*shared.ZideTer
         .last_alive = true,
         .exit_delivered = false,
     };
-    session_runtime.attachExternalTransport(session);
-    handle.last_generation = publication_state.publishedGeneration(session);
-    const initial_metadata = host_queries.copyMetadata(session, allocator, &handle.last_title, &handle.last_cwd) catch |err| {
+    session_runtime.attachExternalTransport(shell);
+    handle.last_generation = publication_state.publishedGeneration(shell);
+    const initial_metadata = host_queries.copyMetadata(shell, allocator, &handle.last_title, &handle.last_cwd) catch |err| {
         log.logf(.warning, "create metadata copy failed err={s}", .{@errorName(err)});
         return .out_of_memory;
     };
@@ -398,7 +398,7 @@ pub fn presentAck(handle: ?*shared.ZideTerminalHandle, generation: u64) shared.S
     const published_generation = currentPublishedGeneration(h);
     if (generation > published_generation) return .invalid_argument;
     if (generation < h.last_acknowledged_generation) return .invalid_argument;
-    _ = terminal_publication.acknowledgePresentedGeneration(h.session, generation);
+    _ = terminal_publication.acknowledgePresentedGeneration(h.shell, generation);
     h.last_acknowledged_generation = generation;
     return .ok;
 }
@@ -460,30 +460,30 @@ pub fn destroy(handle: ?*shared.ZideTerminalHandle) void {
     h.scratch_clipboard.deinit(h.allocator);
     h.pending_clipboard_write.deinit(h.allocator);
     h.scratch_scrollback_cells.deinit(h.allocator);
-    h.session.deinit();
+    h.shell.deinit();
     h.allocator.destroy(h);
 }
 
 pub fn feedOutput(handle: ?*shared.ZideTerminalHandle, bytes: ?[*]const u8, len: usize) shared.Status {
     const h = shared.fromOpaqueActive(handle) orelse return .invalid_argument;
     const slice = shared.ptrLen(bytes, len) orelse return .invalid_argument;
-    if (session_runtime.enqueueExternalBytes(h.session, slice) catch |err| return shared.mapError(err)) {
-        session_runtime.poll(h.session) catch |err| return shared.mapError(err);
+    if (session_runtime.enqueueExternalBytes(h.shell, slice) catch |err| return shared.mapError(err)) {
+        session_runtime.poll(h.shell) catch |err| return shared.mapError(err);
     } else {
-        terminal_core_feed.feedOutputBytes(h.session, slice);
+        terminal_core_feed.feedOutputBytes(h.shell, slice);
     }
     return shared.syncDerivedEvents(h);
 }
 
 pub fn closeInput(handle: ?*shared.ZideTerminalHandle) shared.Status {
     const h = shared.fromOpaqueActive(handle) orelse return .invalid_argument;
-    if (!session_runtime.closeExternalTransport(h.session)) return .invalid_argument;
+    if (!session_runtime.closeExternalTransport(h.shell)) return .invalid_argument;
     return shared.syncDerivedEvents(h);
 }
 
 pub fn pendingInputAcquire(handle: ?*shared.ZideTerminalHandle, out_buffer: *shared.ByteBuffer) shared.Status {
     const h = shared.fromOpaqueActive(handle) orelse return .invalid_argument;
-    const bytes = session_runtime.takeExternalOutgoingBytes(h.session, h.allocator) catch |err| return shared.mapError(err);
+    const bytes = session_runtime.takeExternalOutgoingBytes(h.shell, h.allocator) catch |err| return shared.mapError(err);
     const slice = bytes orelse return .invalid_argument;
     return shared.byteBufferFromOwnedSlice(h.allocator, slice, out_buffer);
 }
@@ -709,7 +709,7 @@ pub fn scrollbackAcquire(handle: ?*shared.ZideTerminalHandle, start_row: u32, ma
     out_buffer.* = .{};
     const allocator = h.allocator;
 
-    const range = h.session.core.copyScrollbackRange(
+    const range = h.shell.core.copyScrollbackRange(
         allocator,
         @intCast(start_row),
         @intCast(max_rows),
@@ -783,7 +783,7 @@ pub fn metadataAcquire(handle: ?*shared.ZideTerminalHandle, request: ?*const sha
     };
     errdefer allocator.destroy(owner);
 
-    const metadata = host_queries.copyMetadata(h.session, allocator, &h.scratch_title, &h.scratch_cwd) catch |err| {
+    const metadata = host_queries.copyMetadata(h.shell, allocator, &h.scratch_title, &h.scratch_cwd) catch |err| {
         log.logf(.warning, "metadata copy failed err={s}", .{@errorName(err)});
         return shared.mapError(err);
     };
@@ -812,7 +812,7 @@ pub fn metadataAcquire(handle: ?*shared.ZideTerminalHandle, request: ?*const sha
             return .out_of_memory;
         };
     errdefer allocator.free(cwd);
-    const activity = host_queries.currentActivityMetadata(h.session);
+    const activity = host_queries.currentActivityMetadata(h.shell);
     const foreground_process_label = if (include_activity)
         allocator.dupe(u8, activity.foreground_process_label) catch |err| {
             log.logf(.warning, "metadata foreground-process-label dup failed err={s}", .{@errorName(err)});
@@ -937,7 +937,7 @@ pub fn eventsFree(events: *shared.EventBuffer) void {
 
 pub fn selectionText(handle: ?*shared.ZideTerminalHandle, out_string: *shared.StringBuffer) shared.Status {
     const h = shared.fromOpaqueActive(handle) orelse return .invalid_argument;
-    const text = (h.session.core.selectionPlainTextAlloc(h.allocator) catch |err| {
+    const text = (h.shell.core.selectionPlainTextAlloc(h.allocator) catch |err| {
         return shared.mapError(err);
     }) orelse return shared.stringFromSlice(h.allocator, "", out_string);
     return shared.stringFromOwnedSlice(h.allocator, text, out_string);
@@ -952,7 +952,7 @@ pub fn clipboardWrite(handle: ?*shared.ZideTerminalHandle, out_string: *shared.S
 
 pub fn scrollbackPlainText(handle: ?*shared.ZideTerminalHandle, out_string: *shared.StringBuffer) shared.Status {
     const h = shared.fromOpaqueActive(handle) orelse return .invalid_argument;
-    const text = h.session.core.scrollbackPlainTextAlloc(h.allocator) catch |err| {
+    const text = h.shell.core.scrollbackPlainTextAlloc(h.allocator) catch |err| {
         return shared.mapError(err);
     };
     return shared.stringFromOwnedSlice(h.allocator, text, out_string);
@@ -960,7 +960,7 @@ pub fn scrollbackPlainText(handle: ?*shared.ZideTerminalHandle, out_string: *sha
 
 pub fn scrollbackAnsiText(handle: ?*shared.ZideTerminalHandle, out_string: *shared.StringBuffer) shared.Status {
     const h = shared.fromOpaqueActive(handle) orelse return .invalid_argument;
-    const text = h.session.core.scrollbackAnsiTextAlloc(h.allocator) catch |err| {
+    const text = h.shell.core.scrollbackAnsiTextAlloc(h.allocator) catch |err| {
         return shared.mapError(err);
     };
     return shared.stringFromOwnedSlice(h.allocator, text, out_string);

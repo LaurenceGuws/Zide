@@ -317,7 +317,7 @@ pub const PendingEvent = struct {
 
 pub const Handle = struct {
     allocator: std.mem.Allocator,
-    session: *terminal_runtime.TerminalRuntimeShell,
+    shell: *terminal_runtime.TerminalRuntimeShell,
     destroying: std.atomic.Value(bool),
     pending_events: std.ArrayList(PendingEvent),
     last_title: std.ArrayList(u8),
@@ -589,20 +589,20 @@ fn copyTextInto(allocator: std.mem.Allocator, out: *std.ArrayList(u8), text: []c
 }
 
 fn currentDerivedEventState(handle: *Handle) !DerivedEventState {
-    handle.session.lock();
-    defer handle.session.unlock();
+    handle.shell.lock();
+    defer handle.shell.unlock();
 
     return .{
-        .title = try copyTextInto(handle.allocator, &handle.scratch_title, handle.session.core.titleText()),
-        .cwd = try copyTextInto(handle.allocator, &handle.scratch_cwd, handle.session.core.cwdText()),
-        .alive = host_queries.isAlive(handle.session),
-        .exit_code = session_lifecycle.childExitCode(handle.session),
+        .title = try copyTextInto(handle.allocator, &handle.scratch_title, handle.shell.core.titleText()),
+        .cwd = try copyTextInto(handle.allocator, &handle.scratch_cwd, handle.shell.core.cwdText()),
+        .alive = host_queries.isAlive(handle.shell),
+        .exit_code = session_lifecycle.childExitCode(handle.shell),
     };
 }
 
 pub fn syncDerivedEvents(handle: *Handle) Status {
     if (handle.destroying.load(.acquire)) return .invalid_argument;
-    const generation = publication_state.publishedGeneration(handle.session);
+    const generation = publication_state.publishedGeneration(handle.shell);
     if (handle.last_generation != generation) {
         queueEvent(handle, .redraw_ready, &[_]u8{}, 0, 0) catch |err| return mapError(err);
         handle.last_generation = generation;
@@ -611,12 +611,12 @@ pub fn syncDerivedEvents(handle: *Handle) Status {
     syncStringEvent(handle, .title_changed, &handle.last_title, state.title) catch |err| return mapError(err);
     syncStringEvent(handle, .cwd_changed, &handle.last_cwd, state.cwd) catch |err| return mapError(err);
 
-    handle.session.lock();
-    const took_clipboard = handle.session.core.takeOscClipboardCopy(handle.allocator, &handle.scratch_clipboard) catch |err| {
-        handle.session.unlock();
+    handle.shell.lock();
+    const took_clipboard = handle.shell.core.takeOscClipboardCopy(handle.allocator, &handle.scratch_clipboard) catch |err| {
+        handle.shell.unlock();
         return mapError(err);
     };
-    handle.session.unlock();
+    handle.shell.unlock();
     if (took_clipboard) {
         const clip = handle.scratch_clipboard.items;
         const payload = if (clip.len > 0 and clip[clip.len - 1] == 0) clip[0 .. clip.len - 1] else clip;
