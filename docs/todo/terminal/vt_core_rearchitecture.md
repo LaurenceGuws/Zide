@@ -292,6 +292,16 @@ Current named category-1 contradiction:
   - if terminal continues immediately, that next war should be named as a new
     CSI input/reporting contract lane, not more mode-effects cleanup
 
+- `docs/review/VT_CSI_INPUT_REPORTING_WAR_2026-04-03.md`
+  Why: the post-mode-effects rerank now needs the next named protocol cluster
+  instead of letting CSI drift under the wrong framing.
+  Current read:
+  - the next VT war is CSI input/reporting contract state
+  - the likely first boundary is input protocol mode/query state versus
+    host-reporting contract flags
+  - do not collapse runtime-dependent reporting behavior into core just for
+    symmetry
+
 ## War 4
 
 - `docs/review/VT_PLUGANDPLAY_GAP_MATRIX_2026-04-03.md`
