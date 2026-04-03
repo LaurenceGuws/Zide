@@ -19,27 +19,15 @@ pub fn clearAllKittyImages(self: anytype) void {
 }
 
 pub fn eraseDisplay(self: anytype, mode: i32) void {
-    const screen = self.core.activeScreen();
-    const blank_cell = screen.blankCell();
-    screen.eraseDisplay(mode, blank_cell);
-    if (mode == 0 or mode == 2 or mode == 3) {
-        if (mode == 2 or mode == 3) {
-            terminal_selection.clearSelectionLocked(self);
-        }
-        _ = self.core.clear_generation.fetchAdd(1, .acq_rel);
-    }
+    self.core.eraseDisplayLocked(self, mode);
 }
 
 pub fn eraseLine(self: anytype, mode: i32) void {
-    const screen = self.core.activeScreen();
-    const blank_cell = screen.blankCell();
-    screen.eraseLine(mode, blank_cell);
+    self.core.eraseLineLocked(mode);
 }
 
 pub fn insertChars(self: anytype, count: usize) void {
-    const screen = self.core.activeScreen();
-    const blank_cell = screen.blankCell();
-    screen.insertChars(count, blank_cell);
+    self.core.insertCharsLocked(count);
 }
 
 pub fn newline(self: anytype) void {
@@ -72,27 +60,19 @@ pub fn reverseIndex(self: anytype) void {
 }
 
 pub fn deleteChars(self: anytype, count: usize) void {
-    const screen = self.core.activeScreen();
-    const blank_cell = screen.blankCell();
-    screen.deleteChars(count, blank_cell);
+    self.core.deleteCharsLocked(count);
 }
 
 pub fn eraseChars(self: anytype, count: usize) void {
-    const screen = self.core.activeScreen();
-    const blank_cell = screen.blankCell();
-    screen.eraseChars(count, blank_cell);
+    self.core.eraseCharsLocked(count);
 }
 
 pub fn insertLines(self: anytype, count: usize) void {
-    const screen = self.core.activeScreen();
-    const blank_cell = screen.blankCell();
-    screen.insertLines(count, blank_cell);
+    self.core.insertLinesLocked(count);
 }
 
 pub fn deleteLines(self: anytype, count: usize) void {
-    const screen = self.core.activeScreen();
-    const blank_cell = screen.blankCell();
-    screen.deleteLines(count, blank_cell);
+    self.core.deleteLinesLocked(count);
 }
 
 pub fn scrollRegionUp(self: anytype, count: usize) void {

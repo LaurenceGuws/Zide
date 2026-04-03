@@ -248,6 +248,12 @@ Current full-scope read:
     belongs more naturally on `TerminalCore` itself
   - strongest candidate slabs are screen-edit/erase, scroll/newline/reverse-
     index, and DECRQSS state/query assembly
+  Progress:
+  - the first whole slab is now landed on `TerminalCore`
+  - erase display/line and insert/delete/erase char/line semantics no longer
+    read as primarily owned by `terminal_core_protocol.zig`
+  - the strongest remaining pressure in that file is now scroll/newline/
+    reverse-index plus DECRQSS state/query assembly
 
 Current named category-1 contradiction:
 

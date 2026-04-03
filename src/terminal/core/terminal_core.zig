@@ -355,6 +355,54 @@ pub const TerminalCore = struct {
         };
     }
 
+    pub fn eraseDisplayLocked(self: *TerminalCore, owner: anytype, mode: i32) void {
+        const screen = self.activeScreen();
+        const blank_cell = screen.blankCell();
+        screen.eraseDisplay(mode, blank_cell);
+        if (mode == 0 or mode == 2 or mode == 3) {
+            if (mode == 2 or mode == 3) {
+                @import("selection.zig").clearSelectionLocked(owner);
+            }
+            _ = self.clear_generation.fetchAdd(1, .acq_rel);
+        }
+    }
+
+    pub fn eraseLineLocked(self: *TerminalCore, mode: i32) void {
+        const screen = self.activeScreen();
+        const blank_cell = screen.blankCell();
+        screen.eraseLine(mode, blank_cell);
+    }
+
+    pub fn insertCharsLocked(self: *TerminalCore, count: usize) void {
+        const screen = self.activeScreen();
+        const blank_cell = screen.blankCell();
+        screen.insertChars(count, blank_cell);
+    }
+
+    pub fn deleteCharsLocked(self: *TerminalCore, count: usize) void {
+        const screen = self.activeScreen();
+        const blank_cell = screen.blankCell();
+        screen.deleteChars(count, blank_cell);
+    }
+
+    pub fn eraseCharsLocked(self: *TerminalCore, count: usize) void {
+        const screen = self.activeScreen();
+        const blank_cell = screen.blankCell();
+        screen.eraseChars(count, blank_cell);
+    }
+
+    pub fn insertLinesLocked(self: *TerminalCore, count: usize) void {
+        const screen = self.activeScreen();
+        const blank_cell = screen.blankCell();
+        screen.insertLines(count, blank_cell);
+    }
+
+    pub fn deleteLinesLocked(self: *TerminalCore, count: usize) void {
+        const screen = self.activeScreen();
+        const blank_cell = screen.blankCell();
+        screen.deleteLines(count, blank_cell);
+    }
+
     pub fn scrollbackOffset(self: *const TerminalCore) usize {
         return if (self.active == .alt) 0 else self.history.scrollOffset();
     }

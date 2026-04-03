@@ -103,3 +103,28 @@ The weakest candidates are:
 
 The next active VT front should be a focused owner split inside
 `terminal_core_protocol.zig`, not another shell or protocol cleanup detour.
+
+## Progress
+
+The first whole slab is now landed.
+
+What moved onto `TerminalCore`:
+
+- erase display
+- erase line
+- insert/delete/erase chars
+- insert/delete lines
+
+What this changes:
+
+- screen-edit and erase semantics no longer read as primarily owned by
+  `terminal_core_protocol.zig`
+- that file is less credible as a parallel semantic center
+- `TerminalCore` now reads more naturally as the owner of these terminal-edit
+  operations
+
+What remains strongest in `terminal_core_protocol.zig`:
+
+- scroll/newline/reverse-index semantics
+- DECRQSS state/query assembly
+- smaller mechanical helpers like palette lookup and tab/cursor helpers
