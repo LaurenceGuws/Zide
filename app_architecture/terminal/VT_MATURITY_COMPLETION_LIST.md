@@ -51,23 +51,27 @@ Current pressure:
 - deeper protocol execution maturity
 - remaining owner-shaped completion around core behavior
 
-### 2. `TerminalRuntimeShell` must read as plainly incidental
+### 2. `TerminalRuntimeShell` must survive only if it is irreducibly necessary
 
 Completion test:
 
-- [terminal_runtime_shell.zig](/home/home/personal/zide/src/terminal/core/session/terminal_runtime_shell.zig)
-  reads like:
-  - lock
-  - transport
-  - lifecycle
-  - shell-facing reporting
-- hosts use the shell because runtime exists, not because it still feels like
-  the real terminal API
+- every responsibility still living on
+  [terminal_runtime_shell.zig](/home/home/personal/zide/src/terminal/core/session/terminal_runtime_shell.zig)
+  has survived hostile scrutiny and proved it cannot honestly move inward or
+  outward without weakening the architecture
+- nothing remains on the shell because it is historically shell-shaped
+- if the shell still exists, it contains only irreducible:
+  - synchronization
+  - transport attachment / writer access
+  - lifecycle / process ownership
+  - runtime-dependent reporting that cannot belong to the terminal object
+- if the shell can disappear entirely, that is preferable to preserving it
+- hosts do not experience the shell as the real terminal API
 
 Current pressure:
 
-- keep shell boundaries honest
-- reject cosmetic shell-thinning that does not improve terminal identity
+- assume the shell is guilty until each surviving responsibility is defended
+- reject both cosmetic shell-thinning and sentimental shell preservation
 
 ### 3. Protocol execution must terminate on contracts that feel terminal-centered
 
@@ -152,7 +156,8 @@ Current pressure:
 Completion test:
 
 - FFI handles, constructor story, and public naming reinforce the idea that
-  the host is using a terminal library with an incidental runtime shell
+  the host is using a terminal library, not a shell-shaped object with a
+  terminal hidden inside it
 - the public edge does not make the shell feel like the real object
 
 Current pressure:

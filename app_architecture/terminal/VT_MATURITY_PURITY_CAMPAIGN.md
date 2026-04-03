@@ -42,7 +42,7 @@ More concretely:
 - [TerminalCore](/home/home/personal/zide/src/terminal/core/terminal_core.zig)
   must read like the terminal
 - [TerminalRuntimeShell](/home/home/personal/zide/src/terminal/core/session/terminal_runtime_shell.zig)
-  must read like synchronization, transport, and lifecycle only
+  is presumed guilty and must justify its existence under hostile scrutiny
 - the public host contract must feel deliberate, boring, and normalized
 - the remaining difference from Ghostty/WezTerm should become maturity/taste,
   not ownership ambiguity
@@ -55,11 +55,8 @@ Victory is this first-glance result:
 
 1. a strong terminal maintainer opens `terminal_core.zig` and immediately feels
    "this is the terminal"
-2. the shell looks plainly incidental:
-   - lock
-   - transport
-   - lifecycle
-   - no semantic surprise
+2. the shell either disappears or survives only as an irreducible runtime
+   boundary after aggressive scrutiny
 3. hosts drive terminal truth through a contract that cleanly separates:
    - immutable terminal truth
    - terminal-semantic mutation
@@ -162,6 +159,7 @@ Current comprehensive scope authority:
 These are guilty by default now:
 
 - shell thinning for appearance
+- shell survival justified only by history
 - helper extraction without a stronger library-center story
 - deleting wrappers that do not change first-glance architecture
 - reopening already-flattened lanes just because they still have files

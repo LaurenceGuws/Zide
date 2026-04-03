@@ -18,7 +18,8 @@ not a progress log and should stay brief.
 - The standard is:
   - make `TerminalCore` feel unquestionably sufficient and mature as the VT
     library center
-  - keep `TerminalRuntimeShell` obviously incidental
+  - treat `TerminalRuntimeShell` as guilty until every surviving
+    responsibility proves it is irreducible runtime boundary
   - normalize the host-facing VT contract until the remaining gap versus
     Ghostty/WezTerm is maturity/taste, not ownership ambiguity
 - Work outside this lane is deferred by default unless it directly unblocks VT
@@ -33,6 +34,7 @@ not a progress log and should stay brief.
 - The remaining VT work is now deeper and stricter:
   - no seam-hopping
   - no shell-thinning theater
+  - no shell-preservation theater
   - no renaming every front as its own war
   - no reopening solved local lanes by momentum
   - no code unless one named maturity contradiction is explicit first

@@ -49,8 +49,10 @@ Current full-scope read:
 
 - top blocker: `TerminalCore` sufficiency
 - second blocker: public contract normalization
-- shell legitimacy, interaction ownership, and mutation/publication maturity
-  are now lower-pressure guardrails unless a fresh named contradiction appears
+- shell survival is not assumed legitimate; it stays under hostile scrutiny as
+  part of the same maturity campaign
+- interaction ownership and mutation/publication maturity are now lower-pressure
+  guardrails unless a fresh named contradiction appears
 
 Current named category-1 contradiction:
 
