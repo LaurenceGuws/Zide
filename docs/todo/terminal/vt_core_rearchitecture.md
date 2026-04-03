@@ -191,6 +191,17 @@ Current full-scope read:
   - this cluster is now close to a real stop-marker and should not reopen
     without one new explicit contradiction
 
+- `docs/review/VT_POST_CSI_REPLY_QUERY_RERANK_2026-04-03.md`
+  Why: after the full CSI reply/query wave, VT needs a fresh maturity ranking
+  from the stronger protocol-execution baseline.
+  Current read:
+  - generic shell cleanup is no longer the main problem
+  - broad CSI reply/query discomfort is no longer the main problem
+  - sink uniformity is not a goal
+  - the next active front must now be one broader `TerminalCore`
+    protocol-execution sufficiency contradiction or one host-contract weakness
+    that clearly outranks everything else
+
 Current named category-1 contradiction:
 
 - `docs/review/VT_CORE_EXECUTION_CONTRADICTION_REVIEW_2026-04-03.md`
