@@ -420,6 +420,9 @@ Current full-scope read:
     still survives for active protocol/helper paths
   - publication remains the strongest fully surviving execution face unless a
     fresh rerank proves the remaining runtime compatibility is worse
+  - a direct publication-face shrink attempt did not survive the active
+    publication call graph cleanly, which strengthens the judgment that
+    publication is still the next real execution-face contradiction
 
 Current named category-1 contradiction:
 

@@ -212,3 +212,19 @@ Current read after this slice:
     protocol/helpers still rely on it
 - the next honest move is to pressure publication first, or prove that the
   remaining runtime compatibility is actually the stronger contradiction
+
+## Publication Pressure Decision
+
+The next direct publication pressure pass now has a concrete result:
+
+- trying to shrink publication to only a narrower field bundle did not survive
+  the active call graph cleanly
+- the protocol execution surface still reaches generic publication helpers that
+  assume the broader publication slab
+
+What that means:
+
+- publication remains the strongest fully surviving execution face
+- the next real move is not "smaller publication field set"
+- the next real move has to be one coherent publication-contract cut that
+  reduces those helper assumptions together

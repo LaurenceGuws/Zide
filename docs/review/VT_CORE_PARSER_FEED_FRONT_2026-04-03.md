@@ -172,3 +172,16 @@ That does not fully remove `session.runtime` from the execution object yet,
 because active protocol/helpers still assume that compatibility shape.
 
 It does make the runtime contradiction narrower and more explicit.
+
+The next publication pressure pass is now decided too:
+
+- a direct attempt to reduce publication to only a smaller field face did not
+  survive the active protocol/publication call graph cleanly
+- the generic publication stack still expects the broader publication slab in
+  code paths that the protocol execution surface actually touches
+
+That means the current publication judgment is stronger, not weaker:
+
+- publication is still the strongest fully surviving execution face
+- the next honest publication move must cut a coherent publication contract,
+  not just swap the struct field for a smaller bundle
