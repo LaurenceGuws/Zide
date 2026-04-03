@@ -103,6 +103,12 @@ pub fn resetToLiveBottomForInputLocked(self: anytype, saw_non_modifier_key_press
     return resetToLiveBottomLocked(self);
 }
 
+pub fn resetToLiveBottomForInput(self: anytype, saw_non_modifier_key_press: bool, saw_text_input: bool) bool {
+    self.session.control.state_mutex.lock();
+    defer self.session.control.state_mutex.unlock();
+    return resetToLiveBottomForInputLocked(self, saw_non_modifier_key_press, saw_text_input);
+}
+
 pub fn setScrollOffsetFromNormalizedTrack(self: anytype, track_ratio: f32) ?usize {
     self.session.control.state_mutex.lock();
     defer self.session.control.state_mutex.unlock();
@@ -125,6 +131,12 @@ pub fn scrollSelectionDragLocked(self: anytype, toward_top: bool) bool {
     return true;
 }
 
+pub fn scrollSelectionDrag(self: anytype, toward_top: bool) bool {
+    self.session.control.state_mutex.lock();
+    defer self.session.control.state_mutex.unlock();
+    return scrollSelectionDragLocked(self, toward_top);
+}
+
 pub fn scrollWheelLocked(self: anytype, wheel_steps: i32) bool {
     if (self.core.active == .alt) return false;
     if (wheel_steps == 0) return false;
@@ -132,6 +144,12 @@ pub fn scrollWheelLocked(self: anytype, wheel_steps: i32) bool {
     const delta: isize = @as(isize, @intCast(wheel_steps)) * default_wheel_lines_per_step;
     scrollByLocked(self, delta);
     return self.core.history.scrollOffset() != before;
+}
+
+pub fn scrollWheel(self: anytype, wheel_steps: i32) bool {
+    self.session.control.state_mutex.lock();
+    defer self.session.control.state_mutex.unlock();
+    return scrollWheelLocked(self, wheel_steps);
 }
 
 pub fn scrollBy(self: anytype, delta: isize) void {

@@ -55,15 +55,13 @@ pub fn handlePointerInput(
 
     var live_scroll_offset = params.scroll_offset;
     var selection_active = params.cache_selection_active;
-    self.session.lock();
-    defer self.session.unlock();
 
-    if (live_scroll_offset > 0 and scrollback_view.resetToLiveBottomForInputLocked(self.session, saw_non_modifier_key_press, saw_text_input)) {
+    if (live_scroll_offset > 0 and scrollback_view.resetToLiveBottomForInput(self.session, saw_non_modifier_key_press, saw_text_input)) {
         live_scroll_offset = 0;
     }
 
     if (params.in_terminal and input_batch.mousePressed(.left) and selection_active) {
-        if (terminal_selection.clearSelectionIfActiveLocked(self.session)) {
+        if (terminal_selection.clearSelectionIfActive(self.session)) {
             selection_active = false;
             result.handled = true;
         }
@@ -82,7 +80,7 @@ pub fn handlePointerInput(
                 self.selection_drag_active = false;
                 if (input_batch.mouseClicks(.left) >= 2) {
                     const row_cells = view_cells[clamped_row * params.cols .. (clamped_row + 1) * params.cols];
-                    const click_result = terminal_selection.beginClickSelectionLocked(
+                    const click_result = terminal_selection.beginClickSelection(
                         self.session,
                         row_cells,
                         global_row,
@@ -116,7 +114,7 @@ pub fn handlePointerInput(
             const global_row = params.start_line + clamped_row;
             if (global_row < params.history_len + params.rows) {
                 const row_cells = view_cells[clamped_row * params.cols .. (clamped_row + 1) * params.cols];
-                if (terminal_selection.extendGestureSelectionLocked(self.session, self.selection_gesture, row_cells, global_row, clamped_col)) {
+                if (terminal_selection.extendGestureSelection(self.session, self.selection_gesture, row_cells, global_row, clamped_col)) {
                     selection_active = true;
                     result.handled = true;
                 }
@@ -124,10 +122,10 @@ pub fn handlePointerInput(
 
             if (selection_active) {
                 if (params.mouse.y < params.y) {
-                    _ = scrollback_view.scrollSelectionDragLocked(self.session, true);
+                    _ = scrollback_view.scrollSelectionDrag(self.session, true);
                     result.handled = true;
                 } else if (params.mouse.y > params.y + params.height) {
-                    _ = scrollback_view.scrollSelectionDragLocked(self.session, false);
+                    _ = scrollback_view.scrollSelectionDrag(self.session, false);
                     result.handled = true;
                 }
             }
@@ -149,13 +147,13 @@ pub fn handlePointerInput(
                         .col = clamped_col,
                     };
                     if (anchor.row != target.row or anchor.col != target.col) {
-                        terminal_selection.selectRangeLocked(self.session, anchor, target, false);
+                        terminal_selection.selectRange(self.session, anchor, target, false);
                         selection_active = true;
                         result.handled = true;
                     }
                 } else {
                     const row_cells = view_cells[clamped_row * params.cols .. (clamped_row + 1) * params.cols];
-                    if (terminal_selection.selectOrUpdateCellInRowLocked(self.session, row_cells, global_row, clamped_col)) {
+                    if (terminal_selection.selectOrUpdateCellInRow(self.session, row_cells, global_row, clamped_col)) {
                         selection_active = true;
                         result.handled = true;
                     }
@@ -164,17 +162,17 @@ pub fn handlePointerInput(
 
             if (selection_active) {
                 if (params.mouse.y < params.y) {
-                    _ = scrollback_view.scrollSelectionDragLocked(self.session, true);
+                    _ = scrollback_view.scrollSelectionDrag(self.session, true);
                     result.handled = true;
                 } else if (params.mouse.y > params.y + params.height) {
-                    _ = scrollback_view.scrollSelectionDragLocked(self.session, false);
+                    _ = scrollback_view.scrollSelectionDrag(self.session, false);
                     result.handled = true;
                 }
             }
         }
 
         if (input_batch.mouseReleased(.left)) {
-            if (selection_active and terminal_selection.finishSelectionIfActiveLocked(self.session)) {
+            if (selection_active and terminal_selection.finishSelectionIfActive(self.session)) {
                 selection_active = true;
                 result.handled = true;
             }
@@ -194,7 +192,7 @@ pub fn handlePointerInput(
         }
     }
     if (params.in_terminal and wheel_steps.* != 0) {
-        if (scrollback_view.scrollWheelLocked(self.session, wheel_steps.*)) {
+        if (scrollback_view.scrollWheel(self.session, wheel_steps.*)) {
             scroll_log.logf(.info, "scroll wheel steps={d}", .{wheel_steps.*});
             result.handled = true;
         }

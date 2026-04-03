@@ -135,6 +135,17 @@ Current full-scope read:
   - the remaining mutation pressure is now the broader pointer-selection
     gesture path
 
+- `docs/review/VT_SHELL_MUTATION_POINTER_FRONT_2026-04-03.md`
+  Why: the remaining mutation-locking pressure was the oversized pointer
+  gesture transaction.
+  Current read:
+  - widget pointer input no longer opens one broad shell lock across the full
+    selection/scrollback gesture flow
+  - backend selection and scrollback verbs now own their own lock scope for
+    those mutations
+  - the remaining lock question is now narrower again, likely render-time
+    snapshot locking or final shell lock surface legitimacy
+
 Current named category-1 contradiction:
 
 - `docs/review/VT_CORE_EXECUTION_CONTRADICTION_REVIEW_2026-04-03.md`

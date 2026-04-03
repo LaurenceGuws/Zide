@@ -23,6 +23,12 @@ pub fn clearSelectionIfActiveLocked(self: anytype) bool {
     return publication_flow.consumeSelectionMutationLocked(self, self.core.clearSelectionIfActive());
 }
 
+pub fn clearSelectionIfActive(self: anytype) bool {
+    self.session.control.state_mutex.lock();
+    defer self.session.control.state_mutex.unlock();
+    return clearSelectionIfActiveLocked(self);
+}
+
 pub fn startSelection(self: anytype, row: usize, col: usize) void {
     self.session.control.state_mutex.lock();
     defer self.session.control.state_mutex.unlock();
@@ -74,6 +80,12 @@ pub fn finishSelectionIfActiveLocked(self: anytype) bool {
     return true;
 }
 
+pub fn finishSelectionIfActive(self: anytype) bool {
+    self.session.control.state_mutex.lock();
+    defer self.session.control.state_mutex.unlock();
+    return finishSelectionIfActiveLocked(self);
+}
+
 pub fn selectRange(self: anytype, start: types.SelectionPos, end: types.SelectionPos, finished: bool) void {
     self.session.control.state_mutex.lock();
     defer self.session.control.state_mutex.unlock();
@@ -123,6 +135,18 @@ pub fn beginClickSelectionLocked(
     return result;
 }
 
+pub fn beginClickSelection(
+    self: anytype,
+    row_cells: []const types.Cell,
+    global_row: usize,
+    col: usize,
+    click_count: u8,
+) ClickSelectionResult {
+    self.session.control.state_mutex.lock();
+    defer self.session.control.state_mutex.unlock();
+    return beginClickSelectionLocked(self, row_cells, global_row, col, click_count);
+}
+
 pub fn selectOrUpdateCellInRowLocked(
     self: anytype,
     row_cells: []const types.Cell,
@@ -133,6 +157,17 @@ pub fn selectOrUpdateCellInRowLocked(
         self,
         self.core.selectOrUpdateCellInRow(row_cells, global_row, col),
     );
+}
+
+pub fn selectOrUpdateCellInRow(
+    self: anytype,
+    row_cells: []const types.Cell,
+    global_row: usize,
+    col: usize,
+) bool {
+    self.session.control.state_mutex.lock();
+    defer self.session.control.state_mutex.unlock();
+    return selectOrUpdateCellInRowLocked(self, row_cells, global_row, col);
 }
 
 pub fn extendGestureSelectionLocked(
@@ -146,6 +181,18 @@ pub fn extendGestureSelectionLocked(
         self,
         self.core.extendGestureSelection(gesture, row_cells, global_row, col),
     );
+}
+
+pub fn extendGestureSelection(
+    self: anytype,
+    gesture: SelectionGesture,
+    row_cells: []const types.Cell,
+    global_row: usize,
+    col: usize,
+) bool {
+    self.session.control.state_mutex.lock();
+    defer self.session.control.state_mutex.unlock();
+    return extendGestureSelectionLocked(self, gesture, row_cells, global_row, col);
 }
 
 pub fn selectionState(self: anytype) ?types.TerminalSelection {
