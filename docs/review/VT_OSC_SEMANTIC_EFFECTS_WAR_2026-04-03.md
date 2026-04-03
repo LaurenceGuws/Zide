@@ -99,6 +99,14 @@ Progress now landed:
   - [osc_title.zig](/home/home/personal/zide/src/terminal/protocol/osc_title.zig)
   - [osc_progress.zig](/home/home/personal/zide/src/terminal/protocol/osc_progress.zig)
   - [osc_util.zig](/home/home/personal/zide/src/terminal/protocol/osc_util.zig)
+- the second OSC semantic slab is now grouped under one core-side owner:
+  [terminal_core_osc_semantic.zig](/home/home/personal/zide/src/terminal/core/protocol/terminal_core_osc_semantic.zig)
+- that owner now carries:
+  - semantic prompt phase transitions and options
+  - semantic command-line updates
+  - user-var mutation semantics
+- [osc_semantic.zig](/home/home/personal/zide/src/terminal/protocol/osc_semantic.zig)
+  now delegates there instead of carrying the mutation logic inline
 
 ## Bottom Line
 

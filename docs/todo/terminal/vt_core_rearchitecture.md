@@ -227,9 +227,14 @@ Current named category-1 contradiction:
   Why: after the first OSC slab, the war needs an honesty check before it
   either stops or drifts into small helper cleanup.
   Current read:
-  - OSC should continue one more time
-  - the next slab is semantic prompt / user-vars
-  - do not broaden back to routing changes or generic parser pressure
+  - the second slab is now landed under
+    `src/terminal/core/protocol/terminal_core_osc_semantic.zig`
+  - semantic prompt phase transitions/options, semantic command-line updates,
+    and user-var mutation now live behind one core-side owner
+  - `osc_semantic.zig` now delegates there instead of carrying the mutation
+    logic inline
+  - OSC is now close to a stop-marker unless one fresh whole semantic slab
+    appears
 
 ## War 4
 

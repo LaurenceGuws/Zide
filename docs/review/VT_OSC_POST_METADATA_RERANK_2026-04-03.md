@@ -65,20 +65,26 @@ Why:
 
 ## Current Judgment
 
-OSC should continue one more time.
+That second slab is now landed too:
 
-But only on:
+- [terminal_core_osc_semantic.zig](/home/home/personal/zide/src/terminal/core/protocol/terminal_core_osc_semantic.zig)
+  now owns:
+  - semantic prompt phase transitions and options
+  - semantic command-line updates
+  - user-var mutation semantics
+- [osc_semantic.zig](/home/home/personal/zide/src/terminal/protocol/osc_semantic.zig)
+  now delegates there instead of carrying the mutation logic inline
 
-- semantic prompt / user-vars as one whole slab
+OSC now reads much more like:
 
-Not on:
+- protocol routing and framing in `src/terminal/protocol/`
+- semantic ownership in core-side protocol owners
 
-- option-by-option cleanup
-- broad `osc.zig` routing changes
-- generic shell/runtime surgery
+That means the OSC war is close to a stop-marker unless one fresh, whole
+semantic slab appears.
 
 ## Bottom Line
 
-The next OSC semantic slab is now explicit:
+The ranked second slab is no longer pending:
 
-- semantic prompt / user-vars
+- semantic prompt / user-vars is landed
