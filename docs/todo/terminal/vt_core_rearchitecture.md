@@ -277,6 +277,10 @@ Current named category-1 contradiction:
     first terminal mode-and-screen-effects slab
   - `csi_mode_mutation.zig` now delegates that slab there instead of mixing it
     inline with outer contract mutation
+  - `src/terminal/core/protocol/terminal_core_csi_mode_query.zig` now owns the
+    corresponding read-side terminal mode snapshot/query slice
+  - `csi_mode_query.zig` now delegates that terminal subset there while
+    leaving input protocol state and host-contract flags outside
 
 ## War 4
 

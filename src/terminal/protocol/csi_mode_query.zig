@@ -2,6 +2,7 @@ const parser_csi = @import("../parser/csi.zig");
 const csi_mod = @import("csi.zig");
 const std = @import("std");
 const app_logger = @import("../../app_logger.zig");
+const terminal_core_csi_mode_query = @import("../core/protocol/terminal_core_csi_mode_query.zig");
 const session_interaction = @import("../core/session/interaction.zig");
 const session_input = @import("../core/session/input.zig");
 
@@ -74,20 +75,25 @@ pub fn modeSnapshot(self: anytype) ModeSnapshot {
 }
 
 pub fn decrqmPrivateModeState(snapshot: ModeSnapshot, mode: i32) csi_mod.DecrpmState {
+    if (terminal_core_csi_mode_query.decrqmPrivateTerminalModeState(.{
+        .column_mode_132 = snapshot.column_mode_132,
+        .screen_reverse = snapshot.screen_reverse,
+        .origin_mode = snapshot.origin_mode,
+        .cursor_blink = snapshot.cursor_blink,
+        .cursor_visible = snapshot.cursor_visible,
+        .reverse_wrap = snapshot.reverse_wrap,
+        .left_right_margin_mode_69 = snapshot.left_right_margin_mode_69,
+        .alt_active = snapshot.alt_active,
+        .save_cursor_mode_1048 = snapshot.save_cursor_mode_1048,
+        .insert_mode = snapshot.insert_mode,
+        .local_echo_mode_12 = snapshot.local_echo_mode_12,
+        .newline_mode = snapshot.newline_mode,
+    }, mode)) |state| return state;
     return switch (mode) {
         1 => boolModeState(snapshot.app_cursor_keys),
-        3 => boolModeState(snapshot.column_mode_132),
-        5 => boolModeState(snapshot.screen_reverse),
-        6 => boolModeState(snapshot.origin_mode),
         7 => boolModeState(snapshot.auto_wrap),
         8 => boolModeState(snapshot.auto_repeat),
         9 => boolModeState(snapshot.mouse_mode_x10),
-        12 => boolModeState(snapshot.cursor_blink),
-        25 => boolModeState(snapshot.cursor_visible),
-        45 => boolModeState(snapshot.reverse_wrap),
-        69 => boolModeState(snapshot.left_right_margin_mode_69),
-        47, 1047, 1049 => boolModeState(snapshot.alt_active),
-        1048 => boolModeState(snapshot.save_cursor_mode_1048),
         66 => boolModeState(snapshot.app_keypad),
         67 => .permanently_reset,
         1000 => boolModeState(snapshot.mouse_mode_x10),
@@ -116,10 +122,21 @@ pub fn decrqmPrivateModeState(snapshot: ModeSnapshot, mode: i32) csi_mod.DecrpmS
 }
 
 pub fn decrqmAnsiModeState(snapshot: ModeSnapshot, mode: i32) csi_mod.DecrpmState {
+    if (terminal_core_csi_mode_query.decrqmAnsiTerminalModeState(.{
+        .column_mode_132 = snapshot.column_mode_132,
+        .screen_reverse = snapshot.screen_reverse,
+        .origin_mode = snapshot.origin_mode,
+        .cursor_blink = snapshot.cursor_blink,
+        .cursor_visible = snapshot.cursor_visible,
+        .reverse_wrap = snapshot.reverse_wrap,
+        .left_right_margin_mode_69 = snapshot.left_right_margin_mode_69,
+        .alt_active = snapshot.alt_active,
+        .save_cursor_mode_1048 = snapshot.save_cursor_mode_1048,
+        .insert_mode = snapshot.insert_mode,
+        .local_echo_mode_12 = snapshot.local_echo_mode_12,
+        .newline_mode = snapshot.newline_mode,
+    }, mode)) |state| return state;
     return switch (mode) {
-        4 => boolModeState(snapshot.insert_mode),
-        12 => boolModeState(snapshot.local_echo_mode_12),
-        20 => boolModeState(snapshot.newline_mode),
         else => .not_recognized,
     };
 }

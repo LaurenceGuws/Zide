@@ -99,3 +99,8 @@ First progress now landed:
 - [csi_mode_mutation.zig](/home/home/personal/zide/src/terminal/protocol/csi_mode_mutation.zig)
   now delegates that slab there instead of mixing it inline with input modes,
   host-contract flags, sync updates, and column-mode publishing
+- [terminal_core_csi_mode_query.zig](/home/home/personal/zide/src/terminal/core/protocol/terminal_core_csi_mode_query.zig)
+  now owns the read-side terminal mode snapshot/query slice for DECRQM
+- [csi_mode_query.zig](/home/home/personal/zide/src/terminal/protocol/csi_mode_query.zig)
+  now delegates that same terminal subset there instead of keeping the whole
+  DECRQM state read mixed together

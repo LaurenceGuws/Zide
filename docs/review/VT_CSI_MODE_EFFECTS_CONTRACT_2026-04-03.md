@@ -70,3 +70,11 @@ the same owner.
 The first CSI mode-effects contract is now explicit:
 
 - terminal mode and screen effects group together on a core-side owner
+
+Read-side progress now landed too:
+
+- [terminal_core_csi_mode_query.zig](/home/home/personal/zide/src/terminal/core/protocol/terminal_core_csi_mode_query.zig)
+  now owns the corresponding terminal-mode snapshot/query slice for DECRQM
+- [csi_mode_query.zig](/home/home/personal/zide/src/terminal/protocol/csi_mode_query.zig)
+  now delegates that read-side terminal subset there while leaving input
+  protocol state and host-contract flags outside
