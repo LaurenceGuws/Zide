@@ -182,3 +182,13 @@ The last remaining whole semantic slab is now DECRQSS state/query assembly.
 
 That should move before any stop-marker, because it is still a coherent
 terminal-facing protocol capability rather than just tiny mechanical residue.
+
+## Stop Marker
+
+That final slab is now landed.
+
+The remaining `terminal_core_protocol.zig` surface is now mostly narrow helper
+support, not one more meaningful semantic center.
+
+This front should now stop unless a new explicit contradiction appears that is
+larger than helper tidying.

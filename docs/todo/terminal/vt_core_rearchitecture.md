@@ -265,6 +265,19 @@ Current full-scope read:
   Final slab:
   - DECRQSS now clearly beats the remaining tiny helpers and should be taken
     before any stop-marker on this front
+  Stop marker:
+  - that final slab is now landed
+  - the remaining `terminal_core_protocol.zig` surface is now mostly narrow
+    helper support, not a parallel semantic center
+
+- `docs/review/VT_CORE_PROTOCOL_OWNER_RERANK_2026-04-03.md`
+  Why: after the three real slabs landed, this front needed an explicit
+  stop-marker rerank.
+  Current read:
+  - `terminal_core_protocol.zig` is now close to a real stop-marker
+  - continuing here would mostly mean tiny helper cleanup and faux progress
+  - the next pressure returns to broader `TerminalCore` sufficiency from the
+    stronger baseline
 
 Current named category-1 contradiction:
 
