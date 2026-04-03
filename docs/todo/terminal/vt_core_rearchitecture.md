@@ -125,6 +125,16 @@ Current full-scope read:
     front
   - render/widget snapshot locking is second
 
+- `docs/review/VT_SHELL_MUTATION_SCROLLBAR_FRONT_2026-04-03.md`
+  Why: the mutation-locking front needs one clean opening slice before the
+  broader pointer-selection transaction is challenged.
+  Current read:
+  - scrollbar drag no longer opens the shell lock directly from app code
+  - `scrollback_view.zig` now owns the backend mutation transaction boundary
+    for normalized track scrolling
+  - the remaining mutation pressure is now the broader pointer-selection
+    gesture path
+
 Current named category-1 contradiction:
 
 - `docs/review/VT_CORE_EXECUTION_CONTRADICTION_REVIEW_2026-04-03.md`

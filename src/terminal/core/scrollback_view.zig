@@ -103,6 +103,12 @@ pub fn resetToLiveBottomForInputLocked(self: anytype, saw_non_modifier_key_press
     return resetToLiveBottomLocked(self);
 }
 
+pub fn setScrollOffsetFromNormalizedTrack(self: anytype, track_ratio: f32) ?usize {
+    self.session.control.state_mutex.lock();
+    defer self.session.control.state_mutex.unlock();
+    return setScrollOffsetFromNormalizedTrackLocked(self, track_ratio);
+}
+
 pub fn setScrollOffsetFromNormalizedTrackLocked(self: anytype, track_ratio: f32) ?usize {
     if (self.core.active == .alt) return null;
     const max_offset = self.core.maxHostScrollbackOffset();

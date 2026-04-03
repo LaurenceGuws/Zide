@@ -175,12 +175,10 @@ pub fn draw(
 }
 
 fn updateFromMouse(session: *terminal_runtime.TerminalRuntimeShell, mouse_y: f32, geometry: terminal_scrollbar_mod.VerticalGeometry, grab_offset: f32) bool {
-    session.lock();
-    defer session.unlock();
     const available = geometry.thumb.available;
     const clamped_mouse = @min(@max(mouse_y - grab_offset, geometry.scrollbar_y), geometry.scrollbar_y + available);
     const ratio = if (available > 0) (clamped_mouse - geometry.scrollbar_y) / available else 0;
-    return scrollback_view.setScrollOffsetFromNormalizedTrackLocked(session, ratio) != null;
+    return scrollback_view.setScrollOffsetFromNormalizedTrack(session, ratio) != null;
 }
 
 fn pointInVerticalScrollbar(mouse: MousePos, geometry: terminal_scrollbar_mod.VerticalGeometry) bool {
