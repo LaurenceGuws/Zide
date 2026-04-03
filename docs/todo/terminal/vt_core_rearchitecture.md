@@ -155,6 +155,16 @@ Current full-scope read:
   - what remains is mostly narrow snapshot locking or input/reporting transport
     pressure, not a generic shell-lock war
 
+- `docs/review/VT_POST_SHELL_CLEANUP_RERANK_2026-04-03.md`
+  Why: after the constructor, handle, and lock fronts, the shell needs a fresh
+  top-level rerank against `TerminalCore` sufficiency.
+  Current read:
+  - the shell is no longer the obvious enemy
+  - the strongest remaining VT pressure is broader `TerminalCore` sufficiency
+    and protocol-execution maturity again
+  - if the shell front reopens, it should reopen only on transport/reporting
+    survival, not generic cleanup
+
 Current named category-1 contradiction:
 
 - `docs/review/VT_CORE_EXECUTION_CONTRADICTION_REVIEW_2026-04-03.md`
