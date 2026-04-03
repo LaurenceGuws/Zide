@@ -131,11 +131,7 @@ pub fn copyActiveSessionCwd(
         return "";
     }
     const session = workspace.tabs.items[workspace.activeIndex()].session;
-    session.lock();
-    defer session.unlock();
-    out.clearRetainingCapacity();
-    try out.appendSlice(allocator, session.core.cwdText());
-    return out.items;
+    return try host_queries.copyCwdText(session, allocator, out);
 }
 
 pub fn activeSessionShouldConfirmClose(workspace: *const TerminalWorkspace) bool {

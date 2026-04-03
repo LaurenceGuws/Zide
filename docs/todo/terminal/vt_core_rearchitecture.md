@@ -107,6 +107,16 @@ Current full-scope read:
   - this weakens host-edge identity pressure again and likely promotes lock
     choreography as the next shell-hostile front
 
+- `docs/review/VT_SHELL_LOCK_READ_FRONT_2026-04-03.md`
+  Why: with constructor and handle identity flatter, the next shell-hostile
+  contradiction is explicit lock choreography.
+  Current read:
+  - the first read-side lock slab now lives under `host_queries.zig`
+  - host/UI callers no longer need to lock the shell themselves for cwd,
+    hyperlink, or progress reads
+  - what remains is a narrower question about mutation and rendering-time
+    locking, not a broad read-side shell habit
+
 Current named category-1 contradiction:
 
 - `docs/review/VT_CORE_EXECUTION_CONTRADICTION_REVIEW_2026-04-03.md`

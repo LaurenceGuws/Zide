@@ -43,15 +43,12 @@ pub fn ctrlClickOpenVisibleMaybe(
     if (link_id != 0) {
         var link_buf = std.ArrayList(u8).empty;
         defer link_buf.deinit(allocator);
-        session.lock();
-        defer session.unlock();
         link_buf.clearRetainingCapacity();
-        if (session.core.hyperlinkUri(link_id)) |uri| {
-            link_buf.appendSlice(allocator, uri) catch |err| {
-                log.logf(.warning, "ctrl-open hyperlink copy failed link_id={d} err={s}", .{ link_id, @errorName(err) });
-                return false;
-            };
-            const link = link_buf.items;
+        if ((host_queries.copyHyperlinkUri(session, allocator, &link_buf, link_id) catch |err| {
+            log.logf(.warning, "ctrl-open hyperlink copy failed link_id={d} err={s}", .{ link_id, @errorName(err) });
+            return false;
+        })) |uri| {
+            const link = uri;
             if (resolveLinkPath(allocator, session, link)) |path| {
                 setPendingOpen(allocator, pending_open, .{ .path = path });
                 return true;
@@ -77,14 +74,11 @@ pub fn ctrlClickOpenVisibleMaybe(
                 } else {
                     var cwd_buf = std.ArrayList(u8).empty;
                     defer cwd_buf.deinit(allocator);
-                    session.lock();
-                    cwd_buf.appendSlice(allocator, session.core.cwdText()) catch |err| {
-                        session.unlock();
+                    _ = host_queries.copyCwdText(session, allocator, &cwd_buf) catch |err| {
                         log.logf(.warning, "ctrl-open failed copying cwd err={s}", .{@errorName(err)});
                         return false;
                     };
                     const cwd = cwd_buf.items;
-                    session.unlock();
                     if (cwd.len > 0) {
                         resolved = std.fs.path.join(allocator, &.{ cwd, parsed.path }) catch |err| {
                             log.logf(.warning, "ctrl-open failed joining cwd-relative path err={s}", .{@errorName(err)});
@@ -196,14 +190,11 @@ fn resolveLinkPath(allocator: std.mem.Allocator, session: *TerminalRuntimeShell,
     }
     var cwd_buf = std.ArrayList(u8).empty;
     defer cwd_buf.deinit(allocator);
-    session.lock();
-    cwd_buf.appendSlice(allocator, session.core.cwdText()) catch |err| {
-        session.unlock();
+    _ = host_queries.copyCwdText(session, allocator, &cwd_buf) catch |err| {
         log.logf(.warning, "resolveLinkPath failed copying cwd err={s}", .{@errorName(err)});
         return null;
     };
     const cwd = cwd_buf.items;
-    session.unlock();
     if (cwd.len == 0) return null;
     return std.fs.path.join(allocator, &.{ cwd, uri }) catch |err| {
         log.logf(.warning, "resolveLinkPath failed joining cwd path err={s}", .{@errorName(err)});

@@ -5,6 +5,7 @@ const session_lifecycle = @import("lifecycle.zig");
 
 pub const SessionMetadata = session_host_types.SessionMetadata;
 pub const ActivityMetadata = session_host_types.ActivityMetadata;
+pub const ProgressMetadata = session_host_types.ProgressMetadata;
 
 fn copyTextInto(allocator: std.mem.Allocator, out: *std.ArrayList(u8), text: []const u8) ![]const u8 {
     out.clearRetainingCapacity();
@@ -33,6 +34,40 @@ pub fn copyMetadata(
         .alive = alive,
         .exit_code = exit_code,
     };
+}
+
+pub fn copyCwdText(
+    self: anytype,
+    allocator: std.mem.Allocator,
+    cwd_out: *std.ArrayList(u8),
+) ![]const u8 {
+    self.lock();
+    defer self.unlock();
+
+    return try copyTextInto(allocator, cwd_out, self.core.cwdText());
+}
+
+pub fn copyHyperlinkUri(
+    self: anytype,
+    allocator: std.mem.Allocator,
+    out: *std.ArrayList(u8),
+    link_id: u32,
+) !?[]const u8 {
+    self.lock();
+    defer self.unlock();
+
+    const uri = self.core.hyperlinkUri(link_id) orelse {
+        out.clearRetainingCapacity();
+        return null;
+    };
+    return try copyTextInto(allocator, out, uri);
+}
+
+pub fn currentProgress(self: anytype) ProgressMetadata {
+    self.lock();
+    defer self.unlock();
+
+    return self.core.activityState().progress;
 }
 
 pub fn displayTitleText(self: anytype) []const u8 {
