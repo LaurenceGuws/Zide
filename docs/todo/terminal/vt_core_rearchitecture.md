@@ -187,6 +187,17 @@ Current named category-1 contradiction:
   - otherwise this lane should stop and hand back to the deeper parser-owner /
     `TerminalCore` maturity question
 
+- `docs/review/VT_POST_REPLY_SINK_RERANK_2026-04-03.md`
+  Why: after the sink wave, VT needs a fresh maturity rerank from the stronger
+  protocol baseline.
+  Current read:
+  - more sink work does not win by default
+  - sink uniformity does not win at all
+  - the next default pressure is deeper protocol execution maturity around
+    `TerminalCore`
+  - the next war should therefore name one semantic protocol cluster, not
+    “reply sinks continued”
+
 ## War 4
 
 - `docs/review/VT_PLUGANDPLAY_GAP_MATRIX_2026-04-03.md`
