@@ -57,3 +57,19 @@ The next move must be:
 ## Decision
 
 The next default VT front is parser feed owner dependency.
+
+## Progress
+
+The blocking contract is now explicit.
+
+Parser/protocol execution still depends on one broad receiver for:
+
+- terminal semantics
+- protocol mode / host-contract state
+- reply/report/runtime hooks
+
+That means the next code move is not "parser into core."
+
+It is:
+
+- define one narrower execution surface first

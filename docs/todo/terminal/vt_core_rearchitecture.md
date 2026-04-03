@@ -382,6 +382,16 @@ Current full-scope read:
   - the next move must define a narrower execution contract there, not just
     rename parameters
 
+- `docs/review/VT_CORE_PARSER_FEED_CONTRACT_2026-04-03.md`
+  Why: parser feed is blocked less by parser mechanics than by mixed protocol
+  execution state.
+  Current read:
+  - parser/protocol still reaches one broad receiver for:
+    - terminal semantics
+    - protocol state / host-contract flags
+    - reply/report/runtime hooks
+  - the next code move must define one narrower execution surface first
+
 Current named category-1 contradiction:
 
 - `docs/review/VT_CORE_EXECUTION_CONTRADICTION_REVIEW_2026-04-03.md`
