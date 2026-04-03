@@ -13,6 +13,9 @@ project landing page.
 Quick reading guide:
 
 - start with `docs/AGENT_HANDOFF.md` if you are joining an active work session
+- if you are doing architecture work, treat
+  `app_architecture/terminal/VT_MATURITY_PURITY_CAMPAIGN.md` as the current
+  default priority and bar for what counts
 - use `docs/todo/` for current execution queues
 - use `app_architecture/` for current technical authority
 - use `docs/reference/`, `docs/research/`, and `docs/review/` for supporting material
@@ -21,6 +24,9 @@ Quick reading guide:
 - `docs/AGENT_HANDOFF.md` — current focus, constraints, and entrypoints.
 - `AGENTS.md` — workflow rules and constraints.
 - `docs/WORKFLOW.md` — doc roles and update rules.
+- `app_architecture/terminal/VT_MATURITY_PURITY_CAMPAIGN.md` — current
+  indefinite default architecture focus and the authority for what VT work
+  counts.
 
 ## Task tracking (source of truth)
 - `docs/todo/README.md` — active work-queue policy and ownership split.
@@ -33,7 +39,8 @@ Quick reading guide:
   - `docs/todo/editor/stress_and_reference.md` — editor stress-testing and cross-reference comparison queue.
   - `docs/todo/repo_structure.md` — non-product repo structure cleanup (tests, tools, stale docs/tests).
   - `docs/todo/file_layout.md` — file/folder layout cleanup queue (split large folders/files, collapse low-value micro-files).
-  - `docs/todo/terminal/vt_core_rearchitecture.md` — highest-value remaining terminal-core structural work.
+  - `docs/todo/terminal/vt_core_rearchitecture.md` — active VT maturity purity
+    queue; only continue when one named maturity contradiction is explicit.
   - `docs/todo/terminal/ffi_bridge.md` — terminal FFI/embedding contract maturation.
   - `docs/todo/terminal/ffi_host_migration.md` — mixed terminal/editor host migration follow-up.
   - `docs/todo/terminal/tabs.md` — terminal-only tab/workspace lifecycle follow-up.
@@ -65,6 +72,8 @@ Quick reading guide:
 - `app_architecture/editor/LSP_THEME_OVERLAY_BOUNDARY.md` — deferred LSP/semantic-token overlay boundary for editor theming.
 - `app_architecture/terminal/DESIGN.md` — terminal architecture + decisions.
 - `app_architecture/terminal/TERMINAL_WORKSPACE.md` — backend tab/workspace ownership contract for terminal mode.
+- `app_architecture/terminal/VT_MATURITY_PURITY_CAMPAIGN.md` — current
+  terminal architecture priority and maturity campaign authority.
 - `app_architecture/terminal/VT_CORE_DESIGN.md` — exact target split for terminal core, transport, host session, snapshot, and FFI.
 - `app_architecture/terminal/TERMINAL_SUBSYSTEM_LAYERS.md` — finer subsystem-layer ownership map for host, transport, engine, publication, and presentation.
 - `app_architecture/terminal/TERMINAL_BETA_CHECKPOINT.md` — high-level terminal checkpoint orientation for the current beta.

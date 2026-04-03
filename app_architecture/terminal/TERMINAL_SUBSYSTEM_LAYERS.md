@@ -9,6 +9,7 @@ split.
 
 This doc complements, but does not replace:
 
+- `app_architecture/terminal/VT_MATURITY_PURITY_CAMPAIGN.md`
 - `app_architecture/terminal/VT_CORE_DESIGN.md`
 - `app_architecture/terminal/TERMINAL_ARCHITECTURE_COMPARISON.md`
 - `docs/todo/terminal/vt_core_rearchitecture.md`
@@ -62,7 +63,7 @@ flowchart LR
     end
 
     subgraph HostRuntime
-        Session["TerminalSession / host wrapper"]
+        Shell["TerminalRuntimeShell / host wrapper"]
         Bridge["FFI bridge / host_api / core_api"]
     end
 
@@ -96,12 +97,12 @@ flowchart LR
         ForeignPresent["foreign host present ack"]
     end
 
-    Native --> Session
+    Native --> Shell
     FFI --> Bridge
     Replay --> Fixture
 
-    Session --> Encoder
-    Session --> Pty
+    Shell --> Encoder
+    Shell --> Pty
     Bridge --> Encoder
     Bridge --> External
     Bridge --> HostSignals
