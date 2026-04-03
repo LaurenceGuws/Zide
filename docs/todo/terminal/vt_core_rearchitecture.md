@@ -337,6 +337,15 @@ Current full-scope read:
   - snapshot no longer carries title/cwd
   - terminal metadata is now the sole host-facing owner of that truth
 
+- `docs/review/VT_HOST_CONTRACT_POST_SNAPSHOT_RERANK_2026-04-03.md`
+  Why: after the host metadata/activity/snapshot slices, the next move should
+  be justified by a fresh ranking, not by ABI symmetry.
+  Current read:
+  - host normalization is materially healthier now
+  - the broad host-contract contradiction is no longer the default next front
+  - if host normalization continues, it should reopen only on one narrower
+    overlap like latest-state/status surfaces
+
 Current named category-1 contradiction:
 
 - `docs/review/VT_CORE_EXECUTION_CONTRADICTION_REVIEW_2026-04-03.md`
