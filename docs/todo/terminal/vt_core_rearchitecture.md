@@ -87,6 +87,16 @@ Current named category-1 contradiction:
     parser-owner extraction
   - public contract normalization remains second
 
+- `docs/review/VT_PROTOCOL_INTERACTION_CONTRACT_WAR_2026-04-03.md`
+  Why: the post-execution rerank needs one explicit battlefield instead of
+  vague "mixed protocol state" discomfort.
+  Current read:
+  - the mixed state in `session.interaction` breaks into distinct categories:
+    terminal protocol mode state, host-reporting contract flags, display
+    metrics, and derived snapshots
+  - the best opening target is CSI mode/query ownership
+  - do not extract parser code before reclassifying that mixed state
+
 ## War 4
 
 - `docs/review/VT_PLUGANDPLAY_GAP_MATRIX_2026-04-03.md`

@@ -145,6 +145,8 @@ Current comprehensive scope authority:
 - [VT_POST_EXECUTION_RERANK_2026-04-03.md](/home/home/personal/zide/docs/review/VT_POST_EXECUTION_RERANK_2026-04-03.md)
   records the new category-1 form after the execution-contract wave:
   mixed protocol interaction state
+- [VT_PROTOCOL_INTERACTION_CONTRACT_WAR_2026-04-03.md](/home/home/personal/zide/docs/review/VT_PROTOCOL_INTERACTION_CONTRACT_WAR_2026-04-03.md)
+  is the active next-war authority inside category 1
 
 ## What No Longer Counts As Progress
 
