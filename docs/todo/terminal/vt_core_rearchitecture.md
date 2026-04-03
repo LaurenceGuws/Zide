@@ -202,6 +202,16 @@ Current full-scope read:
     protocol-execution sufficiency contradiction or one host-contract weakness
     that clearly outranks everything else
 
+- `docs/review/VT_PROTOCOL_RESET_CONTRACT_2026-04-03.md`
+  Why: after the CSI reply/query stop-marker, the next exact semantic protocol
+  cluster needed to be named instead of reopening leftover CSI or shell work.
+  Current read:
+  - the strongest next front is protocol reset and reset-adjacent mode cleanup
+  - `csi_style_reset.zig` still mixes terminal reset semantics with input-mode,
+    host-reporting, sync-update, and refresh-adjacent outer effects
+  - reset is a stronger terminal-object maturity signal than one more local
+    mode/query or sink cleanup slice
+
 Current named category-1 contradiction:
 
 - `docs/review/VT_CORE_EXECUTION_CONTRADICTION_REVIEW_2026-04-03.md`
