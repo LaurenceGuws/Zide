@@ -146,6 +146,15 @@ Current full-scope read:
   - the remaining lock question is now narrower again, likely render-time
     snapshot locking or final shell lock surface legitimacy
 
+- `docs/review/VT_SHELL_LOCK_POST_MUTATION_RERANK_2026-04-03.md`
+  Why: after the read-side and mutation slices, the lock front needs an
+  honesty check before more code.
+  Current read:
+  - lock choreography is close to a stop-marker
+  - the broad host-visible lock patterns are materially gone
+  - what remains is mostly narrow snapshot locking or input/reporting transport
+    pressure, not a generic shell-lock war
+
 Current named category-1 contradiction:
 
 - `docs/review/VT_CORE_EXECUTION_CONTRADICTION_REVIEW_2026-04-03.md`
