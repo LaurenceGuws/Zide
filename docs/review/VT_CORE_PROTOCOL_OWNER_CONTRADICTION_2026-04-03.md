@@ -128,3 +128,30 @@ What remains strongest in `terminal_core_protocol.zig`:
 - scroll/newline/reverse-index semantics
 - DECRQSS state/query assembly
 - smaller mechanical helpers like palette lookup and tab/cursor helpers
+
+## Rerank
+
+From the new baseline, the stronger remaining slab is:
+
+1. scroll/newline/reverse-index semantics
+2. DECRQSS state/query assembly
+
+Why scroll/newline/reverse-index wins:
+
+- it still shapes live terminal behavior continuously across text/control
+  execution
+- it still reads as a protocol helper owner for core movement/scroll behavior
+- Ghostty/WezTerm pressure is stronger on "basic terminal motion/scroll
+  semantics feel owned by the terminal" than on DECRQSS query polish
+
+Why DECRQSS is second:
+
+- it still matters for protocol-execution maturity
+- but it is a narrower query/reply contract, not the main live behavioral
+  center
+
+## Next Move
+
+Take the scroll/newline/reverse-index slab next.
+
+Do not jump to DECRQSS first just because it is smaller.

@@ -254,6 +254,9 @@ Current full-scope read:
     read as primarily owned by `terminal_core_protocol.zig`
   - the strongest remaining pressure in that file is now scroll/newline/
     reverse-index plus DECRQSS state/query assembly
+  Rerank:
+  - scroll/newline/reverse-index now clearly beats DECRQSS as the next slab
+  - do not take DECRQSS first just because it is smaller
 
 Current named category-1 contradiction:
 
