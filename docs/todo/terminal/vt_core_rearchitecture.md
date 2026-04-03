@@ -147,6 +147,17 @@ Current named category-1 contradiction:
     sufficiency again
   - a narrow reporting pocket is now only the fallback, not the main war
 
+- `docs/review/VT_PROTOCOL_REPLY_SINK_CONTRACT_2026-04-03.md`
+  Why: the post-protocol rerank needs one concrete parser-owner blocker
+  sharper than vague “protocol discomfort.”
+  Current read:
+  - the next real blocker is protocol reply sink ownership
+  - CSI, DCS, OSC, palette, and kitty reply paths still terminate directly on
+    shell writer mechanics
+  - the next credible war is therefore not more CSI cleanup, but a named
+    reply-emission contract that keeps writer mechanics outside core while
+    making protocol execution less shell-anchored
+
 ## War 4
 
 - `docs/review/VT_PLUGANDPLAY_GAP_MATRIX_2026-04-03.md`
