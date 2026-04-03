@@ -86,6 +86,20 @@ The first question for this war is:
 - which OSC semantic effects are already core-owned in substance and should be
   grouped behind a more explicit core-side protocol contract?
 
+Progress now landed:
+
+- the first OSC semantic slab is now grouped under one core-side owner:
+  [terminal_core_osc_metadata.zig](/home/home/personal/zide/src/terminal/core/protocol/terminal_core_osc_metadata.zig)
+- that owner now carries:
+  - title semantics
+  - cwd normalization/publication semantics
+  - progress semantics
+- protocol files now delegate to that owner instead of carrying the semantic
+  mutation logic inline:
+  - [osc_title.zig](/home/home/personal/zide/src/terminal/protocol/osc_title.zig)
+  - [osc_progress.zig](/home/home/personal/zide/src/terminal/protocol/osc_progress.zig)
+  - [osc_util.zig](/home/home/personal/zide/src/terminal/protocol/osc_util.zig)
+
 ## Bottom Line
 
 The next VT war is now:

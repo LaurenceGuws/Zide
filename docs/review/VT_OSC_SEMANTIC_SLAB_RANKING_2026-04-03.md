@@ -71,6 +71,15 @@ The first OSC semantic contract should target:
 The likely shape is one explicit core-side OSC metadata/activity semantic
 owner, not three isolated moves.
 
+That first slice is now landed:
+
+- [terminal_core_osc_metadata.zig](/home/home/personal/zide/src/terminal/core/protocol/terminal_core_osc_metadata.zig)
+  is the new core-side semantic owner
+- [osc_title.zig](/home/home/personal/zide/src/terminal/protocol/osc_title.zig),
+  [osc_progress.zig](/home/home/personal/zide/src/terminal/protocol/osc_progress.zig),
+  and [osc_util.zig](/home/home/personal/zide/src/terminal/protocol/osc_util.zig)
+  now delegate semantic mutation there
+
 ## Bottom Line
 
 The first code battlefield inside the OSC war is now explicit:

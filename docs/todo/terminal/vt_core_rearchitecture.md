@@ -215,6 +215,13 @@ Current named category-1 contradiction:
   - the first slab is title / cwd / progress
   - semantic prompt / user vars are second
   - broad `osc.zig` routing is not the war
+  Progress:
+  - the first slab is now landed under
+    `src/terminal/core/protocol/terminal_core_osc_metadata.zig`
+  - title, cwd normalization/publication, and progress semantics now live
+    behind one core-side owner
+  - protocol files now delegate there instead of carrying that semantic logic
+    inline
 
 ## War 4
 
