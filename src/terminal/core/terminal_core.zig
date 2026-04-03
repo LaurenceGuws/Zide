@@ -12,6 +12,7 @@ const terminal_core_selection = @import("terminal_core_selection.zig");
 const terminal_core_key_dispatch = @import("terminal_core_key_dispatch.zig");
 const hyperlink_table = @import("hyperlink_table.zig");
 const session_host_types = @import("session/host_types.zig");
+const protocol_execution = @import("session/protocol_execution.zig");
 
 const Screen = screen_mod.Screen;
 const Charset = parser_mod.Charset;
@@ -227,7 +228,8 @@ pub const TerminalCore = struct {
         if (bytes.len == 0) {
             return .{ .parsed = false, .scroll_offset = self.history.scrollOffset() };
         }
-        self.parser.handleSlice(owner, bytes);
+        var exec = protocol_execution.ProtocolExecution.init(owner, self);
+        self.parser.handleSlice(&exec, bytes);
         return .{
             .parsed = true,
             .scroll_offset = self.history.scrollOffset(),

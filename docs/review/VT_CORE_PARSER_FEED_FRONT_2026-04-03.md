@@ -114,3 +114,17 @@ That means the active parser/protocol surface now has explicit faces for:
 
 - reply/report runtime hooks
 - protocol state reads and the remaining grapheme-mode mutation/reset path
+
+The next direct feed-side cut is now landed too:
+
+- [TerminalCore.feedOutputBytesLocked(...)](/home/home/personal/zide/src/terminal/core/terminal_core.zig)
+  no longer feeds the parser the shell-shaped owner directly
+- new feed receiver:
+  [protocol_execution.zig](/home/home/personal/zide/src/terminal/core/session/protocol_execution.zig)
+- parser execution now runs through:
+  - `allocator`
+  - `core`
+  - protocol-relevant runtime/publication/control/interaction faces
+
+This is the first slice that directly changes the feed receiver itself rather
+than only flattening the helpers around it.

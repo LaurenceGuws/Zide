@@ -401,6 +401,11 @@ Current full-scope read:
     raw `session.interaction` reach from the active protocol surface
   - the remaining parser-feed problem is now narrower than both sink exposure
     and raw protocol-state reach
+  - `TerminalCore.feedOutputBytesLocked(...)` now feeds the parser an explicit
+    `protocol_execution.zig` receiver instead of the shell-shaped owner
+  - the remaining parser-feed question is now the quality and irreducibility
+    of that composite execution surface, not whether the shell is still the
+    parser receiver
 
 Current named category-1 contradiction:
 

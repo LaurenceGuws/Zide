@@ -138,3 +138,20 @@ Current read now:
 - the next problem is less "broad mixed session reach" and more whether feed
   execution can target a genuinely smaller composite protocol execution
   surface than the current shell-shaped owner
+
+## Feed Receiver Progress
+
+That composite execution surface is now real:
+
+- [protocol_execution.zig](/home/home/personal/zide/src/terminal/core/session/protocol_execution.zig)
+  now serves as the parser-feed receiver
+- [TerminalCore.feedOutputBytesLocked(...)](/home/home/personal/zide/src/terminal/core/terminal_core.zig)
+  now constructs that execution object and passes it to the parser instead of
+  the shell-shaped owner directly
+
+Current read after this slice:
+
+- parser feed no longer depends on the shell object as its execution receiver
+- the receiver is still not pure-core, and should not pretend to be
+- but it is now an explicit composite protocol execution surface instead of
+  accidental shell reach
