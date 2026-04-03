@@ -61,7 +61,7 @@ fn snapshotContainsAscii(snapshot: snapshot_mod.TerminalSnapshot, needle: []cons
 test "external transport poll updates screen and metadata" {
     const allocator = std.testing.allocator;
 
-    var session = try TerminalRuntimeShell.init(allocator, 2, 12);
+    var session = try runtime_mod.init(allocator, 2, 12);
     defer session.deinit();
     session_runtime.attachExternalTransport(session);
 
@@ -86,7 +86,7 @@ test "external transport poll updates screen and metadata" {
 test "external transport close updates alive metadata" {
     const allocator = std.testing.allocator;
 
-    var session = try TerminalRuntimeShell.init(allocator, 2, 12);
+    var session = try runtime_mod.init(allocator, 2, 12);
     defer session.deinit();
     session_runtime.attachExternalTransport(session);
 
@@ -105,7 +105,7 @@ test "external transport close updates alive metadata" {
 test "external transport sendText queues outbound bytes" {
     const allocator = std.testing.allocator;
 
-    var session = try TerminalRuntimeShell.init(allocator, 2, 12);
+    var session = try runtime_mod.init(allocator, 2, 12);
     defer session.deinit();
     session_runtime.attachExternalTransport(session);
 
@@ -119,7 +119,7 @@ test "external transport sendText queues outbound bytes" {
 test "resizeWithCellSize uses current cell metrics for in-band resize report" {
     const allocator = std.testing.allocator;
 
-    var session = try TerminalRuntimeShell.init(allocator, 2, 12);
+    var session = try runtime_mod.init(allocator, 2, 12);
     defer session.deinit();
     session_runtime.attachExternalTransport(session);
     session.session.interaction.host_contract.inband_resize_notifications_2048 = true;
@@ -134,7 +134,7 @@ test "resizeWithCellSize uses current cell metrics for in-band resize report" {
 test "alt screen core helpers preserve cursor save restore behavior" {
     const allocator = std.testing.allocator;
 
-    var session = try TerminalRuntimeShell.init(allocator, 3, 8);
+    var session = try runtime_mod.init(allocator, 3, 8);
     defer session.deinit();
 
     session.primary.setCursor(2, 3);
@@ -153,7 +153,7 @@ test "alt screen core helpers preserve cursor save restore behavior" {
 test "full-region scroll publishes partial cache damage at live bottom" {
     const allocator = std.testing.allocator;
 
-    var session = try TerminalRuntimeShell.init(allocator, 3, 4);
+    var session = try runtime_mod.init(allocator, 3, 4);
     defer session.deinit();
 
     const base = session.primary.defaultCell();
@@ -193,7 +193,7 @@ test "pty-backed session sendText writes through session writer boundary" {
 
     const allocator = std.testing.allocator;
 
-    var session = try TerminalRuntimeShell.init(allocator, 2, 8);
+    var session = try runtime_mod.init(allocator, 2, 8);
     defer session.deinit();
 
     var pty = Pty.init(
@@ -235,7 +235,7 @@ test "pty-backed session sendKey enter writes through session writer boundary" {
 
     const allocator = std.testing.allocator;
 
-    var session = try TerminalRuntimeShell.init(allocator, 4, 16);
+    var session = try runtime_mod.init(allocator, 4, 16);
     defer session.deinit();
 
     var pty = Pty.init(
@@ -271,7 +271,7 @@ test "pty-backed session sendKey enter writes through session writer boundary" {
 test "top-anchored partial scroll region retires rows into scrollback" {
     const allocator = std.testing.allocator;
 
-    var session = try TerminalRuntimeShell.init(allocator, 6, 4);
+    var session = try runtime_mod.init(allocator, 6, 4);
     defer session.deinit();
 
     const base = session.primary.defaultCell();
@@ -306,7 +306,7 @@ test "top-anchored partial scroll region retires rows into scrollback" {
 test "feedOutputBytes keeps incremental damage after baseline publish" {
     const allocator = std.testing.allocator;
 
-    var session = try TerminalRuntimeShell.init(allocator, 1, 4);
+    var session = try runtime_mod.init(allocator, 1, 4);
     defer session.deinit();
 
     _ = publication_flow.bumpAndPublishCurrentViewLocked(session, "test_publication");
@@ -328,7 +328,7 @@ test "feedOutputBytes keeps incremental damage after baseline publish" {
 test "carriage return plus erase line rewrites current row in place" {
     const allocator = std.testing.allocator;
 
-    var session = try TerminalRuntimeShell.init(allocator, 4, 20);
+    var session = try runtime_mod.init(allocator, 4, 20);
     defer session.deinit();
 
     terminal_core_feed.feedOutputBytes(session, "hello");
@@ -348,7 +348,7 @@ test "carriage return plus erase line rewrites current row in place" {
 test "zig progress redraw pattern rewrites block instead of appending" {
     const allocator = std.testing.allocator;
 
-    var session = try TerminalRuntimeShell.init(allocator, 6, 20);
+    var session = try runtime_mod.init(allocator, 6, 20);
     defer session.deinit();
 
     debugSetCursor(&session, 4, 0);
@@ -365,7 +365,7 @@ test "zig progress redraw pattern rewrites block instead of appending" {
 test "zig progress redraw invalidates cleared tail rows" {
     const allocator = std.testing.allocator;
 
-    var session = try TerminalRuntimeShell.init(allocator, 6, 20);
+    var session = try runtime_mod.init(allocator, 6, 20);
     defer session.deinit();
 
     debugSetCursor(&session, 4, 0);
@@ -390,7 +390,7 @@ test "zig progress redraw invalidates cleared tail rows" {
 test "bottom-edge in-place redraw keeps blank separator rows dirty" {
     const allocator = std.testing.allocator;
 
-    var session = try TerminalRuntimeShell.init(allocator, 68, 24);
+    var session = try runtime_mod.init(allocator, 68, 24);
     defer session.deinit();
 
     debugSetCursor(&session, 67, 0);
@@ -430,7 +430,7 @@ test "bottom-edge in-place redraw keeps blank separator rows dirty" {
 test "synchronized zig progress redraw does not retire intermediate scrollback" {
     const allocator = std.testing.allocator;
 
-    var session = try TerminalRuntimeShell.init(allocator, 68, 20);
+    var session = try runtime_mod.init(allocator, 68, 20);
     defer session.deinit();
 
     debugSetCursor(&session, 67, 0);
@@ -455,7 +455,7 @@ test "synchronized zig progress redraw does not retire intermediate scrollback" 
 test "synchronized top-anchored partial scroll region retires rows into scrollback" {
     const allocator = std.testing.allocator;
 
-    var session = try TerminalRuntimeShell.init(allocator, 6, 4);
+    var session = try runtime_mod.init(allocator, 6, 4);
     defer session.deinit();
 
     const base = session.primary.defaultCell();
@@ -493,7 +493,7 @@ test "synchronized top-anchored partial scroll region retires rows into scrollba
 test "single-chunk synchronized progress sequence keeps newline scroll inside sync window" {
     const allocator = std.testing.allocator;
 
-    var session = try TerminalRuntimeShell.init(allocator, 68, 20);
+    var session = try runtime_mod.init(allocator, 68, 20);
     defer session.deinit();
 
     debugSetCursor(&session, 67, 0);
@@ -511,7 +511,7 @@ test "single-chunk synchronized progress sequence keeps newline scroll inside sy
 test "reverse index moves cursor up inside scroll region" {
     const allocator = std.testing.allocator;
 
-    var session = try TerminalRuntimeShell.init(allocator, 6, 8);
+    var session = try runtime_mod.init(allocator, 6, 8);
     defer session.deinit();
 
     debugSetCursor(&session, 4, 2);
@@ -525,7 +525,7 @@ test "reverse index moves cursor up inside scroll region" {
 test "real zig redraw chunk rewrites in place at bottom edge" {
     const allocator = std.testing.allocator;
 
-    var session = try TerminalRuntimeShell.init(allocator, 68, 80);
+    var session = try runtime_mod.init(allocator, 68, 80);
     defer session.deinit();
 
     debugSetCursor(&session, 67, 0);
@@ -557,7 +557,7 @@ test "real zig redraw chunk rewrites in place at bottom edge" {
 test "osc 9;4 progress reports update structured host progress state" {
     const allocator = std.testing.allocator;
 
-    var session = try TerminalRuntimeShell.init(allocator, 4, 20);
+    var session = try runtime_mod.init(allocator, 4, 20);
     defer session.deinit();
 
     terminal_core_feed.feedOutputBytes(session, "\x1b]9;4;1;42\x07");
@@ -579,7 +579,7 @@ test "osc 9;4 progress reports update structured host progress state" {
 test "repeat guide chunks do not grow scrollback unexpectedly" {
     const allocator = std.testing.allocator;
 
-    var session = try TerminalRuntimeShell.init(allocator, 4, 10);
+    var session = try runtime_mod.init(allocator, 4, 10);
     defer session.deinit();
     session_runtime.attachExternalTransport(session);
 
@@ -608,7 +608,7 @@ test "repeat guide chunks do not grow scrollback unexpectedly" {
 test "repeat guide chunks publish current broad cache contract" {
     const allocator = std.testing.allocator;
 
-    var session = try TerminalRuntimeShell.init(allocator, 4, 10);
+    var session = try runtime_mod.init(allocator, 4, 10);
     defer session.deinit();
     session_runtime.attachExternalTransport(session);
 
@@ -633,7 +633,7 @@ test "repeat guide chunks publish current broad cache contract" {
 test "first repeat guide packet keeps bottom row clean today" {
     const allocator = std.testing.allocator;
 
-    var session = try TerminalRuntimeShell.init(allocator, 4, 10);
+    var session = try runtime_mod.init(allocator, 4, 10);
     defer session.deinit();
     session_runtime.attachExternalTransport(session);
 
@@ -654,7 +654,7 @@ test "first repeat guide packet keeps bottom row clean today" {
 test "repeat guide chunks mark unexpected bottom row dirty today" {
     const allocator = std.testing.allocator;
 
-    var session = try TerminalRuntimeShell.init(allocator, 4, 10);
+    var session = try runtime_mod.init(allocator, 4, 10);
     defer session.deinit();
     session_runtime.attachExternalTransport(session);
 
@@ -680,7 +680,7 @@ test "repeat guide chunks mark unexpected bottom row dirty today" {
 test "repeat guide second packet keeps raw screen bottom row clean" {
     const allocator = std.testing.allocator;
 
-    var session = try TerminalRuntimeShell.init(allocator, 4, 10);
+    var session = try runtime_mod.init(allocator, 4, 10);
     defer session.deinit();
     session_runtime.attachExternalTransport(session);
 
@@ -704,7 +704,7 @@ test "repeat guide second packet keeps raw screen bottom row clean" {
 test "manual repeat guide publication still dirties bottom row today" {
     const allocator = std.testing.allocator;
 
-    var session = try TerminalRuntimeShell.init(allocator, 4, 10);
+    var session = try runtime_mod.init(allocator, 4, 10);
     defer session.deinit();
 
     session.debugFeedBytes("\x1b[H1| |aaa \x1b[2;1H2| |bbb \x1b[3;1H3| |ccc \x1b[4;1H4| |ddd ");
@@ -734,7 +734,7 @@ test "manual repeat guide publication still dirties bottom row today" {
 test "acknowledgePresentedGeneration derives sync dirty retirement from cache" {
     const allocator = std.testing.allocator;
 
-    var session = try TerminalRuntimeShell.init(allocator, 1, 4);
+    var session = try runtime_mod.init(allocator, 1, 4);
     defer session.deinit();
 
     session.primary.markDirtyAllWithReason(.unknown, @src());
@@ -754,7 +754,7 @@ test "acknowledgePresentedGeneration derives sync dirty retirement from cache" {
 test "row hash refinement does not skip unpresented top rows" {
     const allocator = std.testing.allocator;
 
-    var session = try TerminalRuntimeShell.init(allocator, 3, 4);
+    var session = try runtime_mod.init(allocator, 3, 4);
     defer session.deinit();
 
     const base = session.primary.defaultCell();
@@ -791,7 +791,7 @@ test "row hash refinement does not skip unpresented top rows" {
 test "live-bottom history growth keeps blank exposed row dirty" {
     const allocator = std.testing.allocator;
 
-    var session = try TerminalRuntimeShell.init(allocator, 3, 4);
+    var session = try runtime_mod.init(allocator, 3, 4);
     defer session.deinit();
 
     const base = session.primary.defaultCell();
@@ -840,7 +840,7 @@ test "live-bottom history growth keeps blank exposed row dirty" {
 test "row hash refinement does not suppress newly dirty rows against unpresented cache" {
     const allocator = std.testing.allocator;
 
-    var session = try TerminalRuntimeShell.init(allocator, 2, 4);
+    var session = try runtime_mod.init(allocator, 2, 4);
     defer session.deinit();
 
     const base = session.primary.defaultCell();
@@ -889,7 +889,7 @@ test "row hash refinement does not suppress newly dirty rows against unpresented
 test "snapshot view preserves disjoint same-row dirty spans" {
     const allocator = std.testing.allocator;
 
-    var session = try TerminalRuntimeShell.init(allocator, 2, 20);
+    var session = try runtime_mod.init(allocator, 2, 20);
     defer session.deinit();
 
     session.primary.clearDirty();
@@ -911,7 +911,7 @@ test "snapshot view preserves disjoint same-row dirty spans" {
 test "view cache preserves disjoint same-row dirty spans" {
     const allocator = std.testing.allocator;
 
-    var session = try TerminalRuntimeShell.init(allocator, 2, 20);
+    var session = try runtime_mod.init(allocator, 2, 20);
     defer session.deinit();
 
     session.primary.clearDirty();
@@ -935,7 +935,7 @@ test "view cache preserves disjoint same-row dirty spans" {
 test "setSyncUpdates enable does not force redraw when screen is otherwise clean" {
     const allocator = std.testing.allocator;
 
-    var session = try TerminalRuntimeShell.init(allocator, 2, 4);
+    var session = try runtime_mod.init(allocator, 2, 4);
     defer session.deinit();
 
     _ = publication_flow.bumpAndPublishCurrentViewLocked(session, "test_publication");
@@ -954,7 +954,7 @@ test "setSyncUpdates enable does not force redraw when screen is otherwise clean
 test "setSyncUpdates enable does not publish dirty screen state on presented generation" {
     const allocator = std.testing.allocator;
 
-    var session = try TerminalRuntimeShell.init(allocator, 2, 4);
+    var session = try runtime_mod.init(allocator, 2, 4);
     defer session.deinit();
 
     _ = publication_flow.bumpAndPublishCurrentViewLocked(session, "test_publication");
@@ -989,7 +989,7 @@ test "setSyncUpdates enable does not publish dirty screen state on presented gen
 test "setSyncUpdates disable stays clean when no buffered changes exist" {
     const allocator = std.testing.allocator;
 
-    var session = try TerminalRuntimeShell.init(allocator, 2, 4);
+    var session = try runtime_mod.init(allocator, 2, 4);
     defer session.deinit();
 
     sync_updates.set(session, true);
@@ -1008,7 +1008,7 @@ test "setSyncUpdates disable stays clean when no buffered changes exist" {
 test "setSyncUpdates disable preserves buffered partial damage" {
     const allocator = std.testing.allocator;
 
-    var session = try TerminalRuntimeShell.init(allocator, 2, 4);
+    var session = try runtime_mod.init(allocator, 2, 4);
     defer session.deinit();
 
     _ = publication_flow.bumpAndPublishCurrentViewLocked(session, "test_publication");
@@ -1038,7 +1038,7 @@ test "setSyncUpdates disable preserves buffered partial damage" {
 test "visible history changes publish partial cache damage without force-full" {
     const allocator = std.testing.allocator;
 
-    var session = try TerminalRuntimeShell.init(allocator, 2, 4);
+    var session = try runtime_mod.init(allocator, 2, 4);
     defer session.deinit();
 
     const base = session.primary.defaultCell();
@@ -1073,7 +1073,7 @@ test "visible history changes publish partial cache damage without force-full" {
 test "visible history changes without presented diff base stay partial" {
     const allocator = std.testing.allocator;
 
-    var session = try TerminalRuntimeShell.init(allocator, 2, 4);
+    var session = try runtime_mod.init(allocator, 2, 4);
     defer session.deinit();
 
     const base = session.primary.defaultCell();
@@ -1111,7 +1111,7 @@ test "visible history changes without presented diff base stay partial" {
 test "scrollback offset change publishes shift-exposed partial damage" {
     const allocator = std.testing.allocator;
 
-    var session = try TerminalRuntimeShell.init(allocator, 2, 4);
+    var session = try runtime_mod.init(allocator, 2, 4);
     defer session.deinit();
 
     const base = session.primary.defaultCell();
@@ -1150,7 +1150,7 @@ test "scrollback offset change publishes shift-exposed partial damage" {
 test "scrollback offset change advances published generation" {
     const allocator = std.testing.allocator;
 
-    var session = try TerminalRuntimeShell.init(allocator, 2, 4);
+    var session = try runtime_mod.init(allocator, 2, 4);
     defer session.deinit();
 
     session.debugPushScrollbackRow("AAAA");
@@ -1174,7 +1174,7 @@ test "scrollback offset change advances published generation" {
 test "session snapshot reflects pinned scrollback viewport" {
     const allocator = std.testing.allocator;
 
-    var session = try TerminalRuntimeShell.init(allocator, 2, 4);
+    var session = try runtime_mod.init(allocator, 2, 4);
     defer session.deinit();
     session_runtime.attachExternalTransport(session);
 
@@ -1194,7 +1194,7 @@ test "session snapshot reflects pinned scrollback viewport" {
 test "acknowledgePresentedGeneration does not retire newer scrollback view publication" {
     const allocator = std.testing.allocator;
 
-    var session = try TerminalRuntimeShell.init(allocator, 2, 4);
+    var session = try runtime_mod.init(allocator, 2, 4);
     defer session.deinit();
 
     session.debugPushScrollbackRow("AAAA");
@@ -1220,7 +1220,7 @@ test "acknowledgePresentedGeneration does not retire newer scrollback view publi
 test "acknowledgePresentedGeneration does not retire newer normal publication" {
     const allocator = std.testing.allocator;
 
-    var session = try TerminalRuntimeShell.init(allocator, 2, 4);
+    var session = try runtime_mod.init(allocator, 2, 4);
     defer session.deinit();
 
     _ = publication_flow.bumpAndPublishCurrentViewLocked(session, "test_publication");
@@ -1252,7 +1252,7 @@ test "acknowledgePresentedGeneration does not retire newer normal publication" {
 test "retired startup baseline allows first in-place overwrite to publish partial damage" {
     const allocator = std.testing.allocator;
 
-    var session = try TerminalRuntimeShell.init(allocator, 1, 9);
+    var session = try runtime_mod.init(allocator, 1, 9);
     defer session.deinit();
 
     const base = session.primary.defaultCell();
@@ -1298,7 +1298,7 @@ test "retired startup baseline allows first in-place overwrite to publish partia
 test "unretired full baseline promotes first in-place overwrite to full damage" {
     const allocator = std.testing.allocator;
 
-    var session = try TerminalRuntimeShell.init(allocator, 1, 9);
+    var session = try runtime_mod.init(allocator, 1, 9);
     defer session.deinit();
 
     const base = session.primary.defaultCell();
@@ -1341,7 +1341,7 @@ test "unretired full baseline promotes first in-place overwrite to full damage" 
 test "clean publication does not overwrite unpresented dirty publication" {
     const allocator = std.testing.allocator;
 
-    var session = try TerminalRuntimeShell.init(allocator, 2, 4);
+    var session = try runtime_mod.init(allocator, 2, 4);
     defer session.deinit();
 
     _ = publication_flow.bumpAndPublishCurrentViewLocked(session, "test_publication");
@@ -1380,7 +1380,7 @@ test "clean publication does not overwrite unpresented dirty publication" {
 test "notePresentedGeneration does not regress presented generation" {
     const allocator = std.testing.allocator;
 
-    var session = try TerminalRuntimeShell.init(allocator, 2, 4);
+    var session = try runtime_mod.init(allocator, 2, 4);
     defer session.deinit();
 
     terminal_publication.notePresentedGeneration(session, 7);
@@ -1392,7 +1392,7 @@ test "notePresentedGeneration does not regress presented generation" {
 test "cursor style updates publish through cache without texture invalidation" {
     const allocator = std.testing.allocator;
 
-    var session = try TerminalRuntimeShell.init(allocator, 2, 4);
+    var session = try runtime_mod.init(allocator, 2, 4);
     defer session.deinit();
 
     _ = publication_flow.bumpAndPublishCurrentViewLocked(session, "test_publication");
@@ -1411,7 +1411,7 @@ test "cursor style updates publish through cache without texture invalidation" {
 test "kitty generation delta does not force full damage when cell damage is partial" {
     const allocator = std.testing.allocator;
 
-    var session = try TerminalRuntimeShell.init(allocator, 2, 4);
+    var session = try runtime_mod.init(allocator, 2, 4);
     defer session.deinit();
 
     _ = publication_flow.bumpAndPublishCurrentViewLocked(session, "test_publication");
@@ -1436,7 +1436,7 @@ test "kitty generation delta does not force full damage when cell damage is part
 test "kitty generation delta without visible damage stays clean" {
     const allocator = std.testing.allocator;
 
-    var session = try TerminalRuntimeShell.init(allocator, 2, 4);
+    var session = try runtime_mod.init(allocator, 2, 4);
     defer session.deinit();
 
     _ = publication_flow.bumpAndPublishCurrentViewLocked(session, "test_publication");
@@ -1456,7 +1456,7 @@ test "kitty generation delta without visible damage stays clean" {
 test "kitty placement move stays dirty even when text cells are unchanged" {
     const allocator = std.testing.allocator;
 
-    var session = try TerminalRuntimeShell.init(allocator, 2, 4);
+    var session = try runtime_mod.init(allocator, 2, 4);
     defer session.deinit();
 
     const image_data = try allocator.alloc(u8, 4);
@@ -1514,7 +1514,7 @@ test "kitty placement move stays dirty even when text cells are unchanged" {
 test "clear generation delta without visible damage stays clean" {
     const allocator = std.testing.allocator;
 
-    var session = try TerminalRuntimeShell.init(allocator, 2, 4);
+    var session = try runtime_mod.init(allocator, 2, 4);
     defer session.deinit();
 
     _ = publication_flow.bumpAndPublishCurrentViewLocked(session, "test_publication");
@@ -1534,7 +1534,7 @@ test "clear generation delta without visible damage stays clean" {
 test "default color remap stays on partial path" {
     const allocator = std.testing.allocator;
 
-    var session = try TerminalRuntimeShell.init(allocator, 2, 4);
+    var session = try runtime_mod.init(allocator, 2, 4);
     defer session.deinit();
 
     _ = publication_flow.bumpAndPublishCurrentViewLocked(session, "test_publication");
@@ -1560,7 +1560,7 @@ test "default color remap stays on partial path" {
 test "screen reverse toggle stays on partial path" {
     const allocator = std.testing.allocator;
 
-    var session = try TerminalRuntimeShell.init(allocator, 2, 4);
+    var session = try runtime_mod.init(allocator, 2, 4);
     defer session.deinit();
 
     _ = publication_flow.bumpAndPublishCurrentViewLocked(session, "test_publication");
@@ -1585,7 +1585,7 @@ test "screen reverse toggle stays on partial path" {
 test "visible history change narrows to projected diff against presented base" {
     const allocator = std.testing.allocator;
 
-    var session = try TerminalRuntimeShell.init(allocator, 2, 4);
+    var session = try runtime_mod.init(allocator, 2, 4);
     defer session.deinit();
 
     const base = session.primary.defaultCell();
@@ -1627,7 +1627,7 @@ test "visible history change narrows to projected diff against presented base" {
 test "visible history change stays conservative against unpresented base" {
     const allocator = std.testing.allocator;
 
-    var session = try TerminalRuntimeShell.init(allocator, 2, 4);
+    var session = try runtime_mod.init(allocator, 2, 4);
     defer session.deinit();
 
     const base = session.primary.defaultCell();
@@ -1671,7 +1671,7 @@ test "visible history change stays conservative against unpresented base" {
 test "visible history change with blank separator rows stays conservative against unpresented base" {
     const allocator = std.testing.allocator;
 
-    var session = try TerminalRuntimeShell.init(allocator, 4, 4);
+    var session = try runtime_mod.init(allocator, 4, 4);
     defer session.deinit();
 
     const base = session.primary.defaultCell();
@@ -1729,7 +1729,7 @@ test "visible history change with blank separator rows stays conservative agains
 test "debug scrollback helpers preserve visible-history baseline shape" {
     const allocator = std.testing.allocator;
 
-    var session = try TerminalRuntimeShell.init(allocator, 2, 4);
+    var session = try runtime_mod.init(allocator, 2, 4);
     defer session.deinit();
 
     session.debugPushScrollbackRow("ABCD");
@@ -1760,7 +1760,7 @@ test "debug scrollback helpers preserve visible-history baseline shape" {
 test "debug scrollback cell mutation keeps two-row visible-history shape" {
     const allocator = std.testing.allocator;
 
-    var session = try TerminalRuntimeShell.init(allocator, 2, 4);
+    var session = try runtime_mod.init(allocator, 2, 4);
     defer session.deinit();
 
     session.debugPushScrollbackRow("ABCD");
@@ -1799,7 +1799,7 @@ test "debug scrollback cell mutation keeps two-row visible-history shape" {
 test "debug scrollback helper stays conservative on second unpresented visible-history mutation" {
     const allocator = std.testing.allocator;
 
-    var session = try TerminalRuntimeShell.init(allocator, 2, 4);
+    var session = try runtime_mod.init(allocator, 2, 4);
     defer session.deinit();
 
     session.debugPushScrollbackRow("ABCD");
@@ -1824,7 +1824,7 @@ test "debug scrollback helper stays conservative on second unpresented visible-h
 test "debug scrollback helper with replay cursor setup stays conservative on second visible-history mutation" {
     const allocator = std.testing.allocator;
 
-    var session = try TerminalRuntimeShell.init(allocator, 2, 4);
+    var session = try runtime_mod.init(allocator, 2, 4);
     defer session.deinit();
 
     session.debugSetCursor(1, 0);
@@ -1850,7 +1850,7 @@ test "debug scrollback helper with replay cursor setup stays conservative on sec
 test "debug scrollback helper with replay transport setup stays conservative on second visible-history mutation" {
     const allocator = std.testing.allocator;
 
-    var session = try TerminalRuntimeShell.init(allocator, 2, 4);
+    var session = try runtime_mod.init(allocator, 2, 4);
     defer session.deinit();
     session_runtime.attachExternalTransport(session);
 
@@ -1877,7 +1877,7 @@ test "debug scrollback helper with replay transport setup stays conservative on 
 test "selection dirty expansion does not suppress repeated unpresented selection state" {
     const allocator = std.testing.allocator;
 
-    var session = try TerminalRuntimeShell.init(allocator, 2, 4);
+    var session = try runtime_mod.init(allocator, 2, 4);
     defer session.deinit();
 
     const base = session.primary.defaultCell();
@@ -1913,7 +1913,7 @@ test "selection dirty expansion does not suppress repeated unpresented selection
 test "eraseDisplay cursor-to-end keeps partial damage" {
     const allocator = std.testing.allocator;
 
-    var session = try TerminalRuntimeShell.init(allocator, 3, 4);
+    var session = try runtime_mod.init(allocator, 3, 4);
     defer session.deinit();
 
     const base = session.primary.defaultCell();
@@ -1942,7 +1942,7 @@ test "eraseDisplay cursor-to-end keeps partial damage" {
 test "eraseDisplay start-to-cursor keeps partial damage" {
     const allocator = std.testing.allocator;
 
-    var session = try TerminalRuntimeShell.init(allocator, 3, 4);
+    var session = try runtime_mod.init(allocator, 3, 4);
     defer session.deinit();
 
     const base = session.primary.defaultCell();
@@ -1971,7 +1971,7 @@ test "eraseDisplay start-to-cursor keeps partial damage" {
 test "eraseDisplay full keeps full-width partial damage" {
     const allocator = std.testing.allocator;
 
-    var session = try TerminalRuntimeShell.init(allocator, 3, 4);
+    var session = try runtime_mod.init(allocator, 3, 4);
     defer session.deinit();
 
     const base = session.primary.defaultCell();
@@ -2001,7 +2001,7 @@ test "eraseDisplay full keeps full-width partial damage" {
 test "screen clear stays on partial path" {
     const allocator = std.testing.allocator;
 
-    var session = try TerminalRuntimeShell.init(allocator, 2, 4);
+    var session = try runtime_mod.init(allocator, 2, 4);
     defer session.deinit();
 
     const base = session.primary.defaultCell();
@@ -2031,7 +2031,7 @@ test "screen clear stays on partial path" {
 test "selection plain text export is terminal-owned across history and grid" {
     const allocator = std.testing.allocator;
 
-    var session = try TerminalRuntimeShell.init(allocator, 2, 4);
+    var session = try runtime_mod.init(allocator, 2, 4);
     defer session.deinit();
 
     const base = session.primary.defaultCell();
@@ -2062,7 +2062,7 @@ test "selection plain text export is terminal-owned across history and grid" {
 test "selectRangeLocked applies and finishes selection in one backend step" {
     const allocator = std.testing.allocator;
 
-    var session = try TerminalRuntimeShell.init(allocator, 2, 4);
+    var session = try runtime_mod.init(allocator, 2, 4);
     defer session.deinit();
 
     session.lock();
@@ -2081,7 +2081,7 @@ test "selectRangeLocked applies and finishes selection in one backend step" {
 test "selection helper clears and finishes only when active" {
     const allocator = std.testing.allocator;
 
-    var session = try TerminalRuntimeShell.init(allocator, 2, 2);
+    var session = try runtime_mod.init(allocator, 2, 2);
     defer session.deinit();
 
     session.lock();
@@ -2104,7 +2104,7 @@ test "selection helper clears and finishes only when active" {
 test "selection drag helpers update ordered ranges and late-start cells" {
     const allocator = std.testing.allocator;
 
-    var session = try TerminalRuntimeShell.init(allocator, 2, 2);
+    var session = try runtime_mod.init(allocator, 2, 2);
     defer session.deinit();
 
     session.lock();
@@ -2140,7 +2140,7 @@ test "selection drag helpers update ordered ranges and late-start cells" {
 test "click selection helpers own word and line gesture policy" {
     const allocator = std.testing.allocator;
 
-    var session = try TerminalRuntimeShell.init(allocator, 2, 4);
+    var session = try runtime_mod.init(allocator, 2, 4);
     defer session.deinit();
 
     const base = session.primary.defaultCell();
@@ -2183,7 +2183,7 @@ test "click selection helpers own word and line gesture policy" {
 test "resetToLiveBottomLocked resets scrollback offset only when needed" {
     const allocator = std.testing.allocator;
 
-    var session = try TerminalRuntimeShell.init(allocator, 2, 2);
+    var session = try runtime_mod.init(allocator, 2, 2);
     defer session.deinit();
 
     const base = session.primary.defaultCell();
@@ -2204,7 +2204,7 @@ test "resetToLiveBottomLocked resets scrollback offset only when needed" {
 test "scrollSelectionDragLocked scrolls history view in drag direction" {
     const allocator = std.testing.allocator;
 
-    var session = try TerminalRuntimeShell.init(allocator, 2, 2);
+    var session = try runtime_mod.init(allocator, 2, 2);
     defer session.deinit();
 
     const base = session.primary.defaultCell();
@@ -2226,7 +2226,7 @@ test "scrollSelectionDragLocked scrolls history view in drag direction" {
 test "setScrollOffsetFromNormalizedTrackLocked maps scrollbar track ratio to history offset" {
     const allocator = std.testing.allocator;
 
-    var session = try TerminalRuntimeShell.init(allocator, 2, 2);
+    var session = try runtime_mod.init(allocator, 2, 2);
     defer session.deinit();
 
     const base = session.primary.defaultCell();
@@ -2248,7 +2248,7 @@ test "setScrollOffsetFromNormalizedTrackLocked maps scrollbar track ratio to his
 test "scrollWheelLocked applies backend wheel policy" {
     const allocator = std.testing.allocator;
 
-    var session = try TerminalRuntimeShell.init(allocator, 2, 2);
+    var session = try runtime_mod.init(allocator, 2, 2);
     defer session.deinit();
 
     const base = session.primary.defaultCell();
@@ -2271,7 +2271,7 @@ test "scrollWheelLocked applies backend wheel policy" {
 test "scrollback plain text export is terminal-owned" {
     const allocator = std.testing.allocator;
 
-    var session = try TerminalRuntimeShell.init(allocator, 2, 4);
+    var session = try runtime_mod.init(allocator, 2, 4);
     defer session.deinit();
 
     const base = session.primary.defaultCell();
@@ -2302,7 +2302,7 @@ test "scrollback plain text export is terminal-owned" {
 test "scrollback ansi text export is terminal-owned" {
     const allocator = std.testing.allocator;
 
-    var session = try TerminalRuntimeShell.init(allocator, 1, 1);
+    var session = try runtime_mod.init(allocator, 1, 1);
     defer session.deinit();
 
     var cell = session.primary.defaultCell();
@@ -2335,7 +2335,7 @@ test "scrollback ansi text export is terminal-owned" {
 test "scrollback range export is terminal-owned" {
     const allocator = std.testing.allocator;
 
-    var session = try TerminalRuntimeShell.init(allocator, 2, 3);
+    var session = try runtime_mod.init(allocator, 2, 3);
     defer session.deinit();
 
     const base = session.primary.defaultCell();
@@ -2365,7 +2365,7 @@ test "scrollback range export is terminal-owned" {
 test "terminal reset republishes input snapshot state" {
     const allocator = std.testing.allocator;
 
-    var session = try TerminalRuntimeShell.init(allocator, 2, 2);
+    var session = try runtime_mod.init(allocator, 2, 2);
     defer session.deinit();
 
     input_modes.setKeypadMode(session, true);
@@ -2382,7 +2382,7 @@ test "terminal reset republishes input snapshot state" {
 test "feedOutputBytes publishes keypad mode through locked parser path" {
     const allocator = std.testing.allocator;
 
-    var session = try TerminalRuntimeShell.init(allocator, 2, 2);
+    var session = try runtime_mod.init(allocator, 2, 2);
     defer session.deinit();
 
     terminal_core_feed.feedOutputBytes(session, "\x1b=");
@@ -2395,7 +2395,7 @@ test "feedOutputBytes publishes keypad mode through locked parser path" {
 test "feedOutputBytes publishes kitty key mode flags through locked parser path" {
     const allocator = std.testing.allocator;
 
-    var session = try TerminalRuntimeShell.init(allocator, 2, 2);
+    var session = try runtime_mod.init(allocator, 2, 2);
     defer session.deinit();
 
     terminal_core_feed.feedOutputBytes(session, "\x1b[>13u");
@@ -2408,7 +2408,7 @@ test "feedOutputBytes publishes kitty key mode flags through locked parser path"
 test "feedOutputBytes RIS resets input modes and clears screen" {
     const allocator = std.testing.allocator;
 
-    var session = try TerminalRuntimeShell.init(allocator, 2, 2);
+    var session = try runtime_mod.init(allocator, 2, 2);
     defer session.deinit();
 
     terminal_core_feed.feedOutputBytes(

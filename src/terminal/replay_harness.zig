@@ -386,7 +386,7 @@ pub fn runFixtureObservedWithOptions(
         return error.InvalidFixtureSize;
     }
 
-    var session = try terminal_runtime.TerminalRuntimeShell.init(allocator, fixture.meta.rows, fixture.meta.cols);
+    var session = try terminal_runtime.init(allocator, fixture.meta.rows, fixture.meta.cols);
     defer session.deinit();
     var baseline_publication: BaselinePublication = .{};
 

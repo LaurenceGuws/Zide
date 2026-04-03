@@ -261,7 +261,7 @@ test "key action uses app cursor fallback sequence from core dispatch" {
     const session_runtime = @import("runtime.zig");
 
     const allocator = std.testing.allocator;
-    var session = try @import("terminal_runtime_shell.zig").TerminalRuntimeShell.init(allocator, 2, 2);
+    var session = try @import("../terminal_runtime.zig").init(allocator, 2, 2);
     defer session.deinit();
 
     session_runtime.attachExternalTransport(session);
@@ -278,7 +278,7 @@ test "key action repeat suppression comes from core dispatch" {
     const session_runtime = @import("runtime.zig");
 
     const allocator = std.testing.allocator;
-    var session = try @import("terminal_runtime_shell.zig").TerminalRuntimeShell.init(allocator, 2, 2);
+    var session = try @import("../terminal_runtime.zig").init(allocator, 2, 2);
     defer session.deinit();
 
     session_runtime.attachExternalTransport(session);
@@ -295,7 +295,7 @@ test "keypad action uses app keypad mode from core dispatch" {
     const session_runtime = @import("runtime.zig");
 
     const allocator = std.testing.allocator;
-    var session = try @import("terminal_runtime_shell.zig").TerminalRuntimeShell.init(allocator, 2, 2);
+    var session = try @import("../terminal_runtime.zig").init(allocator, 2, 2);
     defer session.deinit();
 
     session_runtime.attachExternalTransport(session);
@@ -312,7 +312,7 @@ test "keypad repeat suppression comes from core dispatch" {
     const session_runtime = @import("runtime.zig");
 
     const allocator = std.testing.allocator;
-    var session = try @import("terminal_runtime_shell.zig").TerminalRuntimeShell.init(allocator, 2, 2);
+    var session = try @import("../terminal_runtime.zig").init(allocator, 2, 2);
     defer session.deinit();
 
     session_runtime.attachExternalTransport(session);
@@ -329,7 +329,7 @@ test "alternate scroll mapping comes from core dispatch" {
     const session_runtime = @import("runtime.zig");
 
     const allocator = std.testing.allocator;
-    var session = try @import("terminal_runtime_shell.zig").TerminalRuntimeShell.init(allocator, 2, 2);
+    var session = try @import("../terminal_runtime.zig").init(allocator, 2, 2);
     defer session.deinit();
 
     session_runtime.attachExternalTransport(session);
@@ -347,7 +347,7 @@ test "alternate scroll mapping comes from core dispatch" {
 
 test "char local echo eligibility comes from core dispatch" {
     const allocator = std.testing.allocator;
-    var session = try @import("terminal_runtime_shell.zig").TerminalRuntimeShell.init(allocator, 2, 2);
+    var session = try @import("../terminal_runtime.zig").init(allocator, 2, 2);
     defer session.deinit();
 
     session.core.activeScreen().setLocalEchoMode12(true);
@@ -359,7 +359,7 @@ test "char local echo eligibility comes from core dispatch" {
 
 test "char repeat suppression comes from core dispatch" {
     const allocator = std.testing.allocator;
-    var session = try @import("terminal_runtime_shell.zig").TerminalRuntimeShell.init(allocator, 2, 2);
+    var session = try @import("../terminal_runtime.zig").init(allocator, 2, 2);
     defer session.deinit();
 
     session.core.activeScreen().setLocalEchoMode12(true);

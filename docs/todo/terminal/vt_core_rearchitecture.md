@@ -86,6 +86,17 @@ Current full-scope read:
   - lock choreography is second
   - transport/lifecycle remain the most defensible shell buckets
 
+- `docs/review/VT_SHELL_CONSTRUCTOR_IDENTITY_FRONT_2026-04-03.md`
+  Why: the shell's strongest remaining contradiction now needs a direct code
+  slice instead of staying a rerank note only.
+  Current read:
+  - constructor ownership now lives on `terminal_runtime.zig`, not on
+    `TerminalRuntimeShell`
+  - live callers now enter through the VT root constructor path instead of
+    `TerminalRuntimeShell.init*`
+  - this removes one shell-first teaching path, but the public handle/create
+    story still needs scrutiny
+
 Current named category-1 contradiction:
 
 - `docs/review/VT_CORE_EXECUTION_CONTRADICTION_REVIEW_2026-04-03.md`

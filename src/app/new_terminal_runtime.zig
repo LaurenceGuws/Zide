@@ -278,7 +278,7 @@ fn handleSingleLaunch(state: anytype, rows: u16, cols: u16) !void {
     const theme = &state.terminal_theme;
     const initial_terminal_count = state.terminals.items.len;
     const initial_widget_count = state.terminal_widgets.items.len;
-    const term = try TerminalRuntimeShell.initWithOptions(state.allocator, rows, cols, .{
+    const term = try terminal_runtime.initWithOptions(state.allocator, rows, cols, .{
         .scrollback_rows = state.terminal_scrollback_rows,
         .cursor_style = state.terminal_cursor_style,
     });

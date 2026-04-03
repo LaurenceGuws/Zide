@@ -174,7 +174,7 @@ pub const TerminalWorkspace = struct {
     };
 
     pub fn createTabWithSession(self: *TerminalWorkspace, rows: u16, cols: u16) !CreatedTab {
-        const session = try TerminalRuntimeShell.initWithOptions(self.allocator, rows, cols, self.init_options);
+        const session = try runtime_mod.initWithOptions(self.allocator, rows, cols, self.init_options);
         errdefer session.deinit();
 
         const tab_id = self.next_tab_id;

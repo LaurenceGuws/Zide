@@ -14,14 +14,6 @@ pub const TerminalRuntimeShell = struct {
     core: TerminalCoreType,
     session: session_fields.Fields,
 
-    pub fn init(allocator: std.mem.Allocator, rows: u16, cols: u16) !*TerminalRuntimeShell {
-        return initWithOptions(allocator, rows, cols, .{});
-    }
-
-    pub fn initWithOptions(allocator: std.mem.Allocator, rows: u16, cols: u16, options: InitOptions) !*TerminalRuntimeShell {
-        return try runtime.init(TerminalRuntimeShell, allocator, rows, cols, options);
-    }
-
     pub const deinit = runtime.deinit;
 
     pub const lock = control.lock;
