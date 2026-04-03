@@ -29,11 +29,13 @@ as the governing authority for what counts as progress.
 
 Use
 [VT_MATURITY_FULL_SCOPE_2026-04-03.md](/home/home/personal/zide/docs/review/VT_MATURITY_FULL_SCOPE_2026-04-03.md)
-as the comprehensive ranked scope map before opening any new VT war.
+as the comprehensive ranked scope map before opening any new front inside the
+same VT scrutiny war.
 
 That means:
 
 - do not hop to side wars by momentum
+- do not keep renaming local fronts as separate wars
 - do not keep shaving wrappers unless the library-center story gets stronger
 - do not reopen flattened local lanes just because they still have files
 - only continue code when one named maturity contradiction is explicit

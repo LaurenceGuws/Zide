@@ -57,6 +57,9 @@ Current focus rule:
 - do not substitute repo-wide reranks or side-war momentum for that focus
 - future work in that lane should come from the owning architecture authority,
   not from opportunistic local cleanup
+- when that focus is a long-running architecture campaign, keep one stable
+  campaign identity and treat named subtopics as fronts within it, not as a
+  string of new wars
 
 Doc-placement authority:
 

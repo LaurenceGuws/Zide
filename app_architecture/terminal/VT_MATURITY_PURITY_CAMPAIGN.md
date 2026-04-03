@@ -13,9 +13,11 @@ indefinite priority:
 - chase VT maturity purity until `zide-vt` reads like a serious, reference-
   grade library center
 
-This is not a short war.
-This is now the default architecture focus until a stronger direct blocker to
-that outcome is proven.
+This is not a sequence of little wars.
+It is one continuous VT scrutiny war.
+It remains the default architecture focus until we can honestly say the live
+VT contract is at least as strong as our peer references in the dimensions
+that matter for a serious standalone library center.
 
 ## Core Standard
 
@@ -146,7 +148,7 @@ Current comprehensive scope authority:
   records the new category-1 form after the execution-contract wave:
   mixed protocol interaction state
 - [VT_PROTOCOL_INTERACTION_CONTRACT_WAR_2026-04-03.md](/home/home/personal/zide/docs/review/VT_PROTOCOL_INTERACTION_CONTRACT_WAR_2026-04-03.md)
-  is the active next-war authority inside category 1
+  is historical evidence from one front inside the same VT scrutiny war
 
 ## What No Longer Counts As Progress
 
@@ -165,6 +167,9 @@ VT work should continue only under one of these two conditions:
 1. one named deeper `TerminalCore` capability gap
 2. one named contract/object-model weakness that directly weakens
    `zide-vt` maturity
+
+Those are not separate wars.
+They are fronts within the same continuous scrutiny campaign.
 
 Not:
 
@@ -206,7 +211,13 @@ If the answer is precise:
 
 ## Bottom Line
 
-The repo should now treat VT maturity purity as the indefinite primary
-architecture focus.
+The repo should now treat VT maturity purity as the one indefinite primary
+architecture war.
+
+Do not call every ranked front a separate war.
+There is one war:
+
+- VT scrutiny until our VT contract maturity is no longer second-rate next to
+  the peers we actually respect
 
 Everything else is secondary unless it directly blocks that outcome.

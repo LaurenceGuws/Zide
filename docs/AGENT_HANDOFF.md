@@ -9,6 +9,8 @@ not a progress log and should stay brief.
 - Treat
   [VT_MATURITY_PURITY_CAMPAIGN.md](/home/home/personal/zide/app_architecture/terminal/VT_MATURITY_PURITY_CAMPAIGN.md)
   as the primary authority for what work counts.
+- Treat VT maturity purity as one continuous scrutiny war, not a chain of
+  small wars with new names every few commits.
 - The standard is no longer "find another cleanup seam."
 - The standard is:
   - make `TerminalCore` feel unquestionably sufficient and mature as the VT
@@ -28,6 +30,7 @@ not a progress log and should stay brief.
 - The remaining VT work is now deeper and stricter:
   - no seam-hopping
   - no shell-thinning theater
+  - no renaming every front as its own war
   - no reopening solved local lanes by momentum
   - no code unless one named maturity contradiction is explicit first
 - Preferred execution style:
@@ -53,6 +56,8 @@ not a progress log and should stay brief.
   - `host_queries`
 - Current implementation authority lives in the VT maturity docs, not in older
   war framing or repo-wide reranks.
+- We stay on this one war until we can honestly claim our VT contract quality
+  is no longer clearly behind the peer references that matter.
 
 ### Where To Look
 
