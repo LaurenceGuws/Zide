@@ -60,6 +60,9 @@ Current named category-1 contradiction:
   - feed/apply publication now consumes one explicit core feed result across
     the native feed path and runtime parse paths
   - this removes one layer of ad hoc publication choreography
+  - selection mutation now returns explicit core effects and the host wrapper
+    consumes them through one publication-flow entrypoint instead of repeating
+    refresh choreography after each core call
   - the deeper owner-shaped parser dependency still remains open
 
 ## War 4

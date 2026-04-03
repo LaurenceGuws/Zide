@@ -5,6 +5,15 @@ pub const ViewRefreshRequest = struct {
     scroll_offset: usize,
 };
 
+pub fn consumeSelectionMutationLocked(
+    self: anytype,
+    effect: @import("../terminal_core.zig").TerminalCore.SelectionMutationEffect,
+) bool {
+    if (!effect.changed) return false;
+    _ = requestViewRefreshLocked(self, effect.scroll_offset);
+    return true;
+}
+
 pub fn consumeFeedResultLocked(
     self: anytype,
     result: @import("../protocol/terminal_core_feed.zig").FeedResult,

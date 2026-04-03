@@ -19,31 +19,44 @@ pub const ClickSelectionResult = struct {
     started: bool = false,
 };
 
-pub fn clearSelectionIfActive(self: anytype) bool {
-    if (self.selectionState() == null) return false;
-    self.clearSelection();
-    return true;
+pub const SelectionMutationEffect = struct {
+    changed: bool = false,
+    scroll_offset: usize = 0,
+};
+
+fn unchanged(self: anytype) SelectionMutationEffect {
+    return .{ .changed = false, .scroll_offset = self.scrollbackOffset() };
 }
 
-pub fn selectRange(self: anytype, start: types.SelectionPos, end: types.SelectionPos, finished: bool) bool {
-    if (self.active == .alt) return false;
+fn changed(self: anytype) SelectionMutationEffect {
+    return .{ .changed = true, .scroll_offset = self.scrollbackOffset() };
+}
+
+pub fn clearSelectionIfActive(self: anytype) SelectionMutationEffect {
+    if (self.selectionState() == null) return unchanged(self);
+    self.clearSelection();
+    return changed(self);
+}
+
+pub fn selectRange(self: anytype, start: types.SelectionPos, end: types.SelectionPos, finished: bool) SelectionMutationEffect {
+    if (self.active == .alt) return unchanged(self);
     self.startSelection(start.row, start.col);
     self.updateSelection(end.row, end.col);
     if (finished) self.finishSelection();
-    return true;
+    return changed(self);
 }
 
-pub fn selectCell(self: anytype, pos: types.SelectionPos, finished: bool) bool {
+pub fn selectCell(self: anytype, pos: types.SelectionPos, finished: bool) SelectionMutationEffect {
     return selectRange(self, pos, pos, finished);
 }
 
-pub fn selectOrUpdateCell(self: anytype, pos: types.SelectionPos) bool {
+pub fn selectOrUpdateCell(self: anytype, pos: types.SelectionPos) SelectionMutationEffect {
     if (self.selectionState() == null) {
         return selectCell(self, pos, false);
     }
-    if (self.active == .alt) return false;
+    if (self.active == .alt) return unchanged(self);
     self.updateSelection(pos.row, pos.col);
-    return true;
+    return changed(self);
 }
 
 pub fn selectOrderedRange(
@@ -53,7 +66,7 @@ pub fn selectOrderedRange(
     target_start: types.SelectionPos,
     target_end: types.SelectionPos,
     finished: bool,
-) bool {
+) SelectionMutationEffect {
     const range = selection_semantics.orderedRange(anchor_start, anchor_end, target_start, target_end);
     return selectRange(self, range.start, range.end, finished);
 }
@@ -115,7 +128,7 @@ pub fn selectOrUpdateCellInRow(
     row_cells: []const types.Cell,
     global_row: usize,
     col: usize,
-) bool {
+) SelectionMutationEffect {
     const last_col = selection_semantics.rowLastContentCol(row_cells) orelse return false;
     const sel_col = @min(col, last_col);
     return selectOrUpdateCell(self, .{ .row = global_row, .col = sel_col });
@@ -127,9 +140,9 @@ pub fn extendGestureSelection(
     row_cells: []const types.Cell,
     global_row: usize,
     col: usize,
-) bool {
+) SelectionMutationEffect {
     switch (gesture.mode) {
-        .none => return false,
+        .none => return unchanged(self),
         .word => {
             var target_start: usize = col;
             var target_end: usize = col;

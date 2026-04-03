@@ -13,13 +13,14 @@ pub fn clearSelection(self: anytype) void {
 
 pub fn clearSelectionLocked(self: anytype) void {
     self.core.clearSelection();
-    _ = publication_flow.requestViewRefreshLocked(self, self.core.scrollbackOffset());
+    _ = publication_flow.consumeSelectionMutationLocked(self, .{
+        .changed = true,
+        .scroll_offset = self.core.scrollbackOffset(),
+    });
 }
 
 pub fn clearSelectionIfActiveLocked(self: anytype) bool {
-    if (!self.core.clearSelectionIfActive()) return false;
-    _ = publication_flow.requestViewRefreshLocked(self, self.core.scrollbackOffset());
-    return true;
+    return publication_flow.consumeSelectionMutationLocked(self, self.core.clearSelectionIfActive());
 }
 
 pub fn startSelection(self: anytype, row: usize, col: usize) void {
@@ -31,7 +32,10 @@ pub fn startSelection(self: anytype, row: usize, col: usize) void {
 pub fn startSelectionLocked(self: anytype, row: usize, col: usize) void {
     if (self.core.active == .alt) return;
     self.core.startSelection(row, col);
-    _ = publication_flow.requestViewRefreshLocked(self, self.core.scrollbackOffset());
+    _ = publication_flow.consumeSelectionMutationLocked(self, .{
+        .changed = true,
+        .scroll_offset = self.core.scrollbackOffset(),
+    });
 }
 
 pub fn updateSelection(self: anytype, row: usize, col: usize) void {
@@ -43,7 +47,10 @@ pub fn updateSelection(self: anytype, row: usize, col: usize) void {
 pub fn updateSelectionLocked(self: anytype, row: usize, col: usize) void {
     if (self.core.active == .alt) return;
     self.core.updateSelection(row, col);
-    _ = publication_flow.requestViewRefreshLocked(self, self.core.scrollbackOffset());
+    _ = publication_flow.consumeSelectionMutationLocked(self, .{
+        .changed = true,
+        .scroll_offset = self.core.scrollbackOffset(),
+    });
 }
 
 pub fn finishSelection(self: anytype) void {
@@ -55,7 +62,10 @@ pub fn finishSelection(self: anytype) void {
 pub fn finishSelectionLocked(self: anytype) void {
     if (self.core.active == .alt) return;
     self.core.finishSelection();
-    _ = publication_flow.requestViewRefreshLocked(self, self.core.scrollbackOffset());
+    _ = publication_flow.consumeSelectionMutationLocked(self, .{
+        .changed = true,
+        .scroll_offset = self.core.scrollbackOffset(),
+    });
 }
 
 pub fn finishSelectionIfActiveLocked(self: anytype) bool {
@@ -71,19 +81,15 @@ pub fn selectRange(self: anytype, start: types.SelectionPos, end: types.Selectio
 }
 
 pub fn selectRangeLocked(self: anytype, start: types.SelectionPos, end: types.SelectionPos, finished: bool) void {
-    if (!self.core.selectRange(start, end, finished)) return;
-    _ = publication_flow.requestViewRefreshLocked(self, self.core.scrollbackOffset());
+    _ = publication_flow.consumeSelectionMutationLocked(self, self.core.selectRange(start, end, finished));
 }
 
 pub fn selectCellLocked(self: anytype, pos: types.SelectionPos, finished: bool) void {
-    if (!self.core.selectCell(pos, finished)) return;
-    _ = publication_flow.requestViewRefreshLocked(self, self.core.scrollbackOffset());
+    _ = publication_flow.consumeSelectionMutationLocked(self, self.core.selectCell(pos, finished));
 }
 
 pub fn selectOrUpdateCellLocked(self: anytype, pos: types.SelectionPos) bool {
-    if (!self.core.selectOrUpdateCell(pos)) return false;
-    _ = publication_flow.requestViewRefreshLocked(self, self.core.scrollbackOffset());
-    return true;
+    return publication_flow.consumeSelectionMutationLocked(self, self.core.selectOrUpdateCell(pos));
 }
 
 pub fn selectOrderedRangeLocked(
@@ -94,9 +100,10 @@ pub fn selectOrderedRangeLocked(
     target_end: types.SelectionPos,
     finished: bool,
 ) bool {
-    if (!self.core.selectOrderedRange(anchor_start, anchor_end, target_start, target_end, finished)) return false;
-    _ = publication_flow.requestViewRefreshLocked(self, self.core.scrollbackOffset());
-    return true;
+    return publication_flow.consumeSelectionMutationLocked(
+        self,
+        self.core.selectOrderedRange(anchor_start, anchor_end, target_start, target_end, finished),
+    );
 }
 
 pub fn beginClickSelectionLocked(
@@ -108,7 +115,10 @@ pub fn beginClickSelectionLocked(
 ) ClickSelectionResult {
     const result = self.core.beginClickSelection(row_cells, global_row, col, click_count);
     if (result.started) {
-        _ = publication_flow.requestViewRefreshLocked(self, self.core.scrollbackOffset());
+        _ = publication_flow.consumeSelectionMutationLocked(self, .{
+            .changed = true,
+            .scroll_offset = self.core.scrollbackOffset(),
+        });
     }
     return result;
 }
@@ -119,9 +129,10 @@ pub fn selectOrUpdateCellInRowLocked(
     global_row: usize,
     col: usize,
 ) bool {
-    if (!self.core.selectOrUpdateCellInRow(row_cells, global_row, col)) return false;
-    _ = publication_flow.requestViewRefreshLocked(self, self.core.scrollbackOffset());
-    return true;
+    return publication_flow.consumeSelectionMutationLocked(
+        self,
+        self.core.selectOrUpdateCellInRow(row_cells, global_row, col),
+    );
 }
 
 pub fn extendGestureSelectionLocked(
@@ -131,9 +142,10 @@ pub fn extendGestureSelectionLocked(
     global_row: usize,
     col: usize,
 ) bool {
-    if (!self.core.extendGestureSelection(gesture, row_cells, global_row, col)) return false;
-    _ = publication_flow.requestViewRefreshLocked(self, self.core.scrollbackOffset());
-    return true;
+    return publication_flow.consumeSelectionMutationLocked(
+        self,
+        self.core.extendGestureSelection(gesture, row_cells, global_row, col),
+    );
 }
 
 pub fn selectionState(self: anytype) ?types.TerminalSelection {

@@ -185,6 +185,26 @@ What it does not solve yet:
 - publication is still outside core by design
 - so the deeper contradiction remains open
 
+The second execution-contract slice is now landed too:
+
+- selection refresh no longer open-codes publication choreography after each
+  core mutation
+- [terminal_core_selection.zig](/home/home/personal/zide/src/terminal/core/terminal_core_selection.zig)
+  now returns explicit `SelectionMutationEffect`
+- [selection.zig](/home/home/personal/zide/src/terminal/core/selection.zig)
+  now consumes that effect through
+  [publication_flow.consumeSelectionMutationLocked(...)](/home/home/personal/zide/src/terminal/core/publication/publication_flow.zig)
+
+That is another real maturity improvement because selection mutation now reads
+more like:
+
+- core returns semantic mutation effects
+- publication consumes them explicitly
+
+not:
+
+- host wrapper repeats refresh choreography after each core call
+
 ## Bottom Line
 
 The next real VT maturity war is no longer vague `TerminalCore` discomfort.

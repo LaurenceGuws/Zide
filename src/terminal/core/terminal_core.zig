@@ -45,6 +45,7 @@ pub const InitOptions = struct {
 pub const TerminalCore = struct {
     pub const SelectionGesture = terminal_core_selection.SelectionGesture;
     pub const ClickSelectionResult = terminal_core_selection.ClickSelectionResult;
+    pub const SelectionMutationEffect = terminal_core_selection.SelectionMutationEffect;
     pub const KeyActionDispatch = terminal_core_key_dispatch.KeyActionDispatch;
     pub const KeypadActionDispatch = terminal_core_key_dispatch.KeypadActionDispatch;
     pub const AlternateScrollDispatch = terminal_core_key_dispatch.AlternateScrollDispatch;
@@ -485,19 +486,19 @@ pub const TerminalCore = struct {
         return self.history.selectionState();
     }
 
-    pub fn clearSelectionIfActive(self: *TerminalCore) bool {
+    pub fn clearSelectionIfActive(self: *TerminalCore) SelectionMutationEffect {
         return terminal_core_selection.clearSelectionIfActive(self);
     }
 
-    pub fn selectRange(self: *TerminalCore, start: types.SelectionPos, end: types.SelectionPos, finished: bool) bool {
+    pub fn selectRange(self: *TerminalCore, start: types.SelectionPos, end: types.SelectionPos, finished: bool) SelectionMutationEffect {
         return terminal_core_selection.selectRange(self, start, end, finished);
     }
 
-    pub fn selectCell(self: *TerminalCore, pos: types.SelectionPos, finished: bool) bool {
+    pub fn selectCell(self: *TerminalCore, pos: types.SelectionPos, finished: bool) SelectionMutationEffect {
         return terminal_core_selection.selectCell(self, pos, finished);
     }
 
-    pub fn selectOrUpdateCell(self: *TerminalCore, pos: types.SelectionPos) bool {
+    pub fn selectOrUpdateCell(self: *TerminalCore, pos: types.SelectionPos) SelectionMutationEffect {
         return terminal_core_selection.selectOrUpdateCell(self, pos);
     }
 
@@ -508,7 +509,7 @@ pub const TerminalCore = struct {
         target_start: types.SelectionPos,
         target_end: types.SelectionPos,
         finished: bool,
-    ) bool {
+    ) SelectionMutationEffect {
         return terminal_core_selection.selectOrderedRange(self, anchor_start, anchor_end, target_start, target_end, finished);
     }
 
@@ -527,7 +528,7 @@ pub const TerminalCore = struct {
         row_cells: []const types.Cell,
         global_row: usize,
         col: usize,
-    ) bool {
+    ) SelectionMutationEffect {
         return terminal_core_selection.selectOrUpdateCellInRow(self, row_cells, global_row, col);
     }
 
@@ -537,7 +538,7 @@ pub const TerminalCore = struct {
         row_cells: []const types.Cell,
         global_row: usize,
         col: usize,
-    ) bool {
+    ) SelectionMutationEffect {
         return terminal_core_selection.extendGestureSelection(self, gesture, row_cells, global_row, col);
     }
 
