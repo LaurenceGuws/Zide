@@ -155,3 +155,22 @@ Current read after this slice:
 - the receiver is still not pure-core, and should not pretend to be
 - but it is now an explicit composite protocol execution surface instead of
   accidental shell reach
+
+## Execution Surface Audit Progress
+
+The first direct audit result is now in:
+
+- publication dependence is now explicit at the execution surface
+- [sync_updates.zig](/home/home/personal/zide/src/terminal/core/protocol/sync_updates.zig)
+  no longer reaches raw publication fields directly
+- [protocol_execution.zig](/home/home/personal/zide/src/terminal/core/session/protocol_execution.zig)
+  now names the publication operations the protocol path still needs
+
+Current read after this audit slice:
+
+- `control` is still mostly just lock choreography
+- `runtime` is still mostly transport/reply-write dependency
+- `publication` is still a real surviving execution face, but it is no longer
+  hidden behind raw field reach in the active protocol path
+- the next honest question is whether publication can shrink further, or
+  whether runtime/transport is now the stronger surviving contradiction

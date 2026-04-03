@@ -5,6 +5,8 @@ const interaction_fields = @import("interaction_fields.zig");
 const publication_fields = @import("publication_fields.zig");
 const control_fields = @import("control_fields.zig");
 const transport_runtime = @import("transport_runtime.zig");
+const view_cache = @import("../publication/view_cache.zig");
+const render_cache_mod = @import("../publication/render_cache.zig");
 
 const TerminalCore = terminal_core_mod.TerminalCore;
 
@@ -43,5 +45,26 @@ pub const ProtocolExecution = struct {
 
     pub fn writePtyBytes(self: *ProtocolExecution, bytes: []const u8) !void {
         try transport_runtime.writePtyBytes(self, bytes);
+    }
+
+    pub fn currentRenderCache(self: *ProtocolExecution) *const render_cache_mod.RenderCache {
+        const idx = self.session.publication.render_cache_index.load(.acquire);
+        return &self.session.publication.render_caches[idx];
+    }
+
+    pub fn presentedGeneration(self: *ProtocolExecution) u64 {
+        return self.session.publication.presented_generation.load(.acquire);
+    }
+
+    pub fn bumpPublicationGeneration(self: *ProtocolExecution) u64 {
+        return self.session.publication.pending_generation.fetchAdd(1, .acq_rel) + 1;
+    }
+
+    pub fn pendingPublicationGeneration(self: *ProtocolExecution) u64 {
+        return self.session.publication.pending_generation.load(.acquire);
+    }
+
+    pub fn updateViewCacheForProtocol(self: *ProtocolExecution, generation: u64, scroll_offset: usize, source: []const u8) void {
+        view_cache.updateViewCacheNoLockTagged(self, generation, scroll_offset, source);
     }
 };

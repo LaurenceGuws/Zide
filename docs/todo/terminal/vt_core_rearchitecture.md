@@ -406,6 +406,11 @@ Current full-scope read:
   - the remaining parser-feed question is now the quality and irreducibility
     of that composite execution surface, not whether the shell is still the
     parser receiver
+  - `sync_updates.zig` no longer reaches raw publication fields directly;
+    publication dependence is now explicit as execution-surface methods on
+    `protocol_execution.zig`
+  - the next parser-feed question is now which surviving execution face is
+    still the strongest contradiction: publication or runtime/transport
 
 Current named category-1 contradiction:
 

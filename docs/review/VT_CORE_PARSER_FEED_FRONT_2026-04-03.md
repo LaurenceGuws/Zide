@@ -128,3 +128,19 @@ The next direct feed-side cut is now landed too:
 
 This is the first slice that directly changes the feed receiver itself rather
 than only flattening the helpers around it.
+
+The next execution-surface slice is now landed too:
+
+- [sync_updates.zig](/home/home/personal/zide/src/terminal/core/protocol/sync_updates.zig)
+  no longer reaches raw publication fields directly
+- [protocol_execution.zig](/home/home/personal/zide/src/terminal/core/session/protocol_execution.zig)
+  now exposes explicit publication methods for the protocol path:
+  - current render cache
+  - presented generation
+  - pending-generation bump/read
+  - protocol-scoped view-cache update
+
+This does not prove publication is irreducible.
+
+It does make the remaining publication dependence explicit at the execution
+surface instead of hiding it as direct protocol-field reach.
