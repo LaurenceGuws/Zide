@@ -357,6 +357,15 @@ Current full-scope read:
     - parser feed owner dependency
     - reset/kitty owner dependency
 
+- `docs/review/VT_CORE_SCROLLING_OWNER_DESIGN_2026-04-03.md`
+  Why: scrolling is the first whole owner-dependency slice worth attacking,
+  but it mixes core semantics with kitty placement effects and host metrics.
+  Current read:
+  - the next move must separate core scroll/history semantics from kitty
+    side effects honestly
+  - if that line does not get clean quickly, fall back to parser feed owner
+    dependency instead of forcing scrolling by momentum
+
 Current named category-1 contradiction:
 
 - `docs/review/VT_CORE_EXECUTION_CONTRADICTION_REVIEW_2026-04-03.md`
