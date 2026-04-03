@@ -289,6 +289,16 @@ Current full-scope read:
   - the next move should name one exact broader `TerminalCore` sufficiency or
     host-contract normalization weakness
 
+- `docs/review/VT_HOST_CONTRACT_NORMALIZATION_2026-04-03.md`
+  Why: after the local owner seams flattened, the strongest remaining maturity
+  pressure appears to be contract quality at the host edge.
+  Current read:
+  - the next contradiction is host-contract normalization
+  - the risk is no longer lack of capability, but a rich contract that still
+    feels historically accumulated instead of boring and deliberate
+  - strongest local suspects are `host_api.zig`, `host_queries.zig`, and
+    `core_api.zig`
+
 Current named category-1 contradiction:
 
 - `docs/review/VT_CORE_EXECUTION_CONTRADICTION_REVIEW_2026-04-03.md`
