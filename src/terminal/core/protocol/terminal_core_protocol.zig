@@ -31,32 +31,15 @@ pub fn insertChars(self: anytype, count: usize) void {
 }
 
 pub fn newline(self: anytype) void {
-    const screen = self.core.activeScreen();
-    switch (screen.newlineAction()) {
-        .moved => {},
-        .scroll_region => scrollRegionUpWithOrigin(self, 1, "control.lf.scroll_region"),
-        .scroll_full => scrolling_mod.scrollUp(self),
-    }
+    self.core.newlineLocked(self);
 }
 
 pub fn wrapNewline(self: anytype) void {
-    const screen = self.core.activeScreen();
-    switch (screen.wrapNewlineAction()) {
-        .moved => {},
-        .scroll_region => scrollRegionUpWithOrigin(self, 1, "control.wrap_newline.scroll_region"),
-        .scroll_full => scrolling_mod.scrollUp(self),
-    }
+    self.core.wrapNewlineLocked(self);
 }
 
 pub fn reverseIndex(self: anytype) void {
-    const screen = self.core.activeScreen();
-    if (screen.cursor.row > screen.scroll_top) {
-        screen.cursorUp(1);
-        return;
-    }
-    if (screen.cursor.row == screen.scroll_top) {
-        scrollRegionDown(self, 1);
-    }
+    self.core.reverseIndexLocked(self);
 }
 
 pub fn deleteChars(self: anytype, count: usize) void {

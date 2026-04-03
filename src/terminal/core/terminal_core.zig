@@ -403,6 +403,35 @@ pub const TerminalCore = struct {
         screen.deleteLines(count, blank_cell);
     }
 
+    pub fn newlineLocked(self: *TerminalCore, owner: anytype) void {
+        const screen = self.activeScreen();
+        switch (screen.newlineAction()) {
+            .moved => {},
+            .scroll_region => @import("scrolling.zig").scrollRegionUpWithOrigin(owner, 1, "control.lf.scroll_region"),
+            .scroll_full => @import("scrolling.zig").scrollUp(owner),
+        }
+    }
+
+    pub fn wrapNewlineLocked(self: *TerminalCore, owner: anytype) void {
+        const screen = self.activeScreen();
+        switch (screen.wrapNewlineAction()) {
+            .moved => {},
+            .scroll_region => @import("scrolling.zig").scrollRegionUpWithOrigin(owner, 1, "control.wrap_newline.scroll_region"),
+            .scroll_full => @import("scrolling.zig").scrollUp(owner),
+        }
+    }
+
+    pub fn reverseIndexLocked(self: *TerminalCore, owner: anytype) void {
+        const screen = self.activeScreen();
+        if (screen.cursor.row > screen.scroll_top) {
+            screen.cursorUp(1);
+            return;
+        }
+        if (screen.cursor.row == screen.scroll_top) {
+            @import("scrolling.zig").scrollRegionDown(owner, 1);
+        }
+    }
+
     pub fn scrollbackOffset(self: *const TerminalCore) usize {
         return if (self.active == .alt) 0 else self.history.scrollOffset();
     }

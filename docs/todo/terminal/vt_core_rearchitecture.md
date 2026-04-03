@@ -257,6 +257,11 @@ Current full-scope read:
   Rerank:
   - scroll/newline/reverse-index now clearly beats DECRQSS as the next slab
   - do not take DECRQSS first just because it is smaller
+  Progress:
+  - scroll/newline/reverse-index is now landed on `TerminalCore`
+  - lower-level scrolling helpers remain in `scrolling.zig`
+  - the strongest remaining pressure in `terminal_core_protocol.zig` is now
+    DECRQSS state/query assembly plus small mechanical helpers
 
 Current named category-1 contradiction:
 

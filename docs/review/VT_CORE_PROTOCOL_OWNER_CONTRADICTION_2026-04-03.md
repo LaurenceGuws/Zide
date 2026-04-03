@@ -155,3 +155,23 @@ Why DECRQSS is second:
 Take the scroll/newline/reverse-index slab next.
 
 Do not jump to DECRQSS first just because it is smaller.
+
+## Progress
+
+The second whole slab is now landed.
+
+What moved onto `TerminalCore`:
+
+- newline semantics
+- wrap-newline semantics
+- reverse-index semantics
+
+What stayed outside:
+
+- lower-level scrolling helpers in `scrolling.zig`
+
+Why that line is right:
+
+- terminal motion/scroll semantics now read as core-owned
+- the lower-level scroll machinery still stays in its focused helper owner
+- `terminal_core_protocol.zig` loses another major live behavioral center
