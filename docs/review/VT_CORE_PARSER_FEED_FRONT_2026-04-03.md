@@ -185,3 +185,10 @@ That means the current publication judgment is stronger, not weaker:
 - publication is still the strongest fully surviving execution face
 - the next honest publication move must cut a coherent publication contract,
   not just swap the struct field for a smaller bundle
+
+That publication contract is now named explicitly:
+
+- [VT_PROTOCOL_PUBLICATION_SYNC_CONTRACT_2026-04-04.md](/home/home/personal/zide/docs/review/VT_PROTOCOL_PUBLICATION_SYNC_CONTRACT_2026-04-04.md)
+- current target:
+  - synchronized-update publication behavior
+  - not broad publication slimming

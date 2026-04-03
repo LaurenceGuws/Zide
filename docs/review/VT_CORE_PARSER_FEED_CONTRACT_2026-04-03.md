@@ -228,3 +228,9 @@ What that means:
 - the next real move is not "smaller publication field set"
 - the next real move has to be one coherent publication-contract cut that
   reduces those helper assumptions together
+
+The first coherent publication contract is now named:
+
+- synchronized-update publication behavior
+- see
+  [VT_PROTOCOL_PUBLICATION_SYNC_CONTRACT_2026-04-04.md](/home/home/personal/zide/docs/review/VT_PROTOCOL_PUBLICATION_SYNC_CONTRACT_2026-04-04.md)

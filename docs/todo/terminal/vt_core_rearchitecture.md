@@ -423,6 +423,8 @@ Current full-scope read:
   - a direct publication-face shrink attempt did not survive the active
     publication call graph cleanly, which strengthens the judgment that
     publication is still the next real execution-face contradiction
+  - the next honest publication move is now named explicitly:
+    synchronized-update publication contract, not broad publication slimming
 
 Current named category-1 contradiction:
 
