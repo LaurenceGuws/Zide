@@ -236,6 +236,17 @@ Current named category-1 contradiction:
   - OSC is now close to a stop-marker unless one fresh whole semantic slab
     appears
 
+- `docs/review/VT_OSC_STOP_MARKER_2026-04-03.md`
+  Why: the OSC war now needs an honest stop-marker after both real slabs
+  landed.
+  Current read:
+  - there is no third whole OSC semantic slab obvious enough to justify
+    continuing
+  - routing, hyperlink, and clipboard/kitty clipboard handling do not read
+    like the same kind of omitted core-side semantic owner
+  - the next VT pressure should return to the broader `TerminalCore`
+    protocol-execution maturity question
+
 ## War 4
 
 - `docs/review/VT_PLUGANDPLAY_GAP_MATRIX_2026-04-03.md`
