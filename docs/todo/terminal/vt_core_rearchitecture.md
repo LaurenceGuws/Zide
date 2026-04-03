@@ -76,6 +76,16 @@ Current full-scope read:
   - this does not prove the reporting boundary is final, but it stops the
     shell from surviving as reporting residue by default
 
+- `docs/review/VT_SHELL_POST_REPORTING_RERANK_2026-04-03.md`
+  Why: after the reporting bucket is normalized, the shell fronts need a fresh
+  kill-order.
+  Current read:
+  - reporting is materially less suspicious now
+  - constructor/object identity is now the strongest remaining shell
+    contradiction
+  - lock choreography is second
+  - transport/lifecycle remain the most defensible shell buckets
+
 Current named category-1 contradiction:
 
 - `docs/review/VT_CORE_EXECUTION_CONTRADICTION_REVIEW_2026-04-03.md`
