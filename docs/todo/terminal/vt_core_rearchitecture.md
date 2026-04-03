@@ -223,6 +223,14 @@ Current named category-1 contradiction:
   - protocol files now delegate there instead of carrying that semantic logic
     inline
 
+- `docs/review/VT_OSC_POST_METADATA_RERANK_2026-04-03.md`
+  Why: after the first OSC slab, the war needs an honesty check before it
+  either stops or drifts into small helper cleanup.
+  Current read:
+  - OSC should continue one more time
+  - the next slab is semantic prompt / user-vars
+  - do not broaden back to routing changes or generic parser pressure
+
 ## War 4
 
 - `docs/review/VT_PLUGANDPLAY_GAP_MATRIX_2026-04-03.md`
