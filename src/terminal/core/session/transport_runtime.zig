@@ -1,6 +1,7 @@
 const std = @import("std");
 const pty_mod = @import("../../io/pty.zig");
 const terminal_transport = @import("../runtime/terminal_transport.zig");
+const host_reporting = @import("host_reporting.zig");
 
 const Pty = pty_mod.Pty;
 
@@ -52,27 +53,10 @@ pub fn writePtyBytes(self: anytype, bytes: []const u8) !void {
 
 pub fn resize(self: anytype, rows: u16, cols: u16) !void {
     try @import("../resize_reflow.zig").resize(self, rows, cols);
-    try reportInBandResize2048(self, rows, cols);
+    try host_reporting.reportInBandResize2048(self, rows, cols);
 }
 
 pub fn resizeWithCellSize(self: anytype, rows: u16, cols: u16, cell_width: u16, cell_height: u16) !void {
     try @import("../resize_reflow.zig").resizeWithCellSize(self, rows, cols, cell_width, cell_height);
-    try reportInBandResize2048(self, rows, cols);
-}
-
-fn reportInBandResize2048(self: anytype, rows: u16, cols: u16) !void {
-    if (!self.session.interaction.host_contract.inband_resize_notifications_2048) return;
-    if (lockPtyWriter(self)) |writer_guard| {
-        var writer = writer_guard;
-        const rows_px: u32 = @as(u32, rows) * @as(u32, self.session.interaction.host_contract.cell_height);
-        const cols_px: u32 = @as(u32, cols) * @as(u32, self.session.interaction.host_contract.cell_width);
-        var buf: [64]u8 = undefined;
-        const seq = try std.fmt.bufPrint(
-            &buf,
-            "\x1b[48;{d};{d};{d};{d}t",
-            .{ rows, cols, rows_px, cols_px },
-        );
-        defer writer.unlock();
-        _ = try writer.write(seq);
-    }
+    try host_reporting.reportInBandResize2048(self, rows, cols);
 }

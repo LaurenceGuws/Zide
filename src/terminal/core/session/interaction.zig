@@ -1,7 +1,5 @@
 const std = @import("std");
-const app_logger = @import("../../../app_logger.zig");
-const terminal_transport = @import("../runtime/terminal_transport.zig");
-const osc_kitty_clipboard = @import("../../protocol/osc_kitty_clipboard.zig");
+const host_reporting = @import("host_reporting.zig");
 const input_modes = @import("../input_modes.zig");
 
 pub fn bracketedPasteEnabled(self: anytype) bool {
@@ -41,19 +39,19 @@ pub fn mouseModeSgrPixelsEnabled(self: anytype) bool {
 }
 
 pub fn kittyPasteEvents5522Enabled(self: anytype) bool {
-    return self.session.interaction.host_contract.kitty_paste_events_5522;
+    return host_reporting.kittyPasteEvents5522Enabled(self);
 }
 
 pub fn sendKittyPasteEvent5522(self: anytype, clip: []const u8) !bool {
-    return sendKittyPasteEvent5522WithMime(self, clip, null, null);
+    return host_reporting.sendKittyPasteEvent5522(self, clip);
 }
 
 pub fn sendKittyPasteEvent5522WithHtml(self: anytype, clip: []const u8, html: ?[]const u8) !bool {
-    return sendKittyPasteEvent5522WithMime(self, clip, html, null);
+    return host_reporting.sendKittyPasteEvent5522WithHtml(self, clip, html);
 }
 
 pub fn sendKittyPasteEvent5522WithMime(self: anytype, clip: []const u8, html: ?[]const u8, uri_list: ?[]const u8) !bool {
-    return sendKittyPasteEvent5522WithMimeRich(self, clip, html, uri_list, null);
+    return host_reporting.sendKittyPasteEvent5522WithMime(self, clip, html, uri_list);
 }
 
 pub fn sendKittyPasteEvent5522WithMimeRich(
@@ -63,24 +61,7 @@ pub fn sendKittyPasteEvent5522WithMimeRich(
     uri_list: ?[]const u8,
     png: ?[]const u8,
 ) !bool {
-    if (!self.session.interaction.host_contract.kitty_paste_events_5522) {
-        return false;
-    }
-    if (!terminal_transport.Writer.exists(self)) {
-        app_logger.logger("terminal.osc").logf(.warning, "osc5522 paste dropped reason=missing-pty", .{});
-        return false;
-    }
-
-    try self.core.setKittyOsc5522Clipboard(self.allocator, clip, html, uri_list, png);
-
-    if (self.lockPtyWriter()) |writer_guard| {
-        var writer = writer_guard;
-        defer writer.unlock();
-        osc_kitty_clipboard.sendPasteEventMimes(self, &writer, .st);
-        return true;
-    }
-    app_logger.logger("terminal.osc").logf(.warning, "osc5522 paste dropped after buffer prep reason=missing-pty", .{});
-    return false;
+    return host_reporting.sendKittyPasteEvent5522WithMimeRich(self, clip, html, uri_list, png);
 }
 
 pub fn mouseReportingEnabled(self: anytype) bool {

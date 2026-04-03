@@ -4,6 +4,7 @@ const std = @import("std");
 const app_logger = @import("../../app_logger.zig");
 const terminal_core_csi_input_modes = @import("../core/protocol/terminal_core_csi_input_modes.zig");
 const terminal_core_csi_mode_query = @import("../core/protocol/terminal_core_csi_mode_query.zig");
+const host_reporting = @import("../core/session/host_reporting.zig");
 const session_interaction = @import("../core/session/interaction.zig");
 const session_input = @import("../core/session/input.zig");
 
@@ -105,11 +106,13 @@ pub fn decrqmPrivateModeState(snapshot: ModeSnapshot, mode: i32) csi_mod.DecrpmS
         .sync_updates_active = snapshot.sync_updates_active,
         .grapheme_cluster_shaping_2027 = snapshot.grapheme_cluster_shaping_2027,
     }, mode)) |state| return state;
+    if (host_reporting.decrqmReportingModeState(.{
+        .report_color_scheme_2031 = snapshot.report_color_scheme_2031,
+        .inband_resize_notifications_2048 = snapshot.inband_resize_notifications_2048,
+        .kitty_paste_events_5522 = snapshot.kitty_paste_events_5522,
+    }, mode)) |state| return state;
     return switch (mode) {
         7 => boolModeState(snapshot.auto_wrap),
-        2031 => boolModeState(snapshot.report_color_scheme_2031),
-        2048 => boolModeState(snapshot.inband_resize_notifications_2048),
-        5522 => boolModeState(snapshot.kitty_paste_events_5522),
         else => .not_recognized,
     };
 }

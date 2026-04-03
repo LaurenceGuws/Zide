@@ -64,6 +64,18 @@ Current full-scope read:
   - constructor/object identity and lock choreography remain under active
     suspicion
 
+- `docs/review/VT_SHELL_REPORTING_FRONT_2026-04-03.md`
+  Why: the shell audit's first suspicious bucket needs one explicit code front
+  instead of staying a vague concern.
+  Current read:
+  - `2031`, `2048`, and `5522` now live under one explicit
+    `host_reporting.zig` owner
+  - CSI mutation/query and runtime-dependent reporting behavior now consume
+    that owner instead of spreading reporting across multiple shell-shaped
+    files
+  - this does not prove the reporting boundary is final, but it stops the
+    shell from surviving as reporting residue by default
+
 Current named category-1 contradiction:
 
 - `docs/review/VT_CORE_EXECUTION_CONTRADICTION_REVIEW_2026-04-03.md`

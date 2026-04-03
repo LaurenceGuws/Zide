@@ -2,6 +2,7 @@ const std = @import("std");
 const input_modes = @import("../input_modes.zig");
 const terminal_core_text = @import("../protocol/terminal_core_text.zig");
 const terminal_transport = @import("../runtime/terminal_transport.zig");
+const host_reporting = @import("host_reporting.zig");
 const session_interaction = @import("interaction.zig");
 const input_mod = @import("../../input/input.zig");
 const types = @import("../../model/types.zig");
@@ -253,20 +254,7 @@ pub fn reportFocusChanged(self: anytype, focused: bool) !bool {
 }
 
 pub fn reportColorSchemeChanged(self: anytype, dark: bool) !bool {
-    self.session.interaction.host_contract.color_scheme_dark = dark;
-    if (!self.session.interaction.host_contract.report_color_scheme_2031) {
-        return false;
-    }
-    if (self.lockPtyWriter()) |writer_guard| {
-        var writer = writer_guard;
-        var buf: [16]u8 = undefined;
-        const seq = try std.fmt.bufPrint(&buf, "\x1b[?997;{d}n", .{if (dark) @as(u8, 1) else @as(u8, 2)});
-        defer writer.unlock();
-        _ = try writer.write(seq);
-        return true;
-    }
-    std.log.warn("color-scheme report dropped dark={} reason=missing-pty", .{@intFromBool(dark)});
-    return false;
+    return try host_reporting.reportColorSchemeChanged(self, dark);
 }
 
 test "key action uses app cursor fallback sequence from core dispatch" {
