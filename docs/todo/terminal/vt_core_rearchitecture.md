@@ -411,6 +411,10 @@ Current full-scope read:
     `protocol_execution.zig`
   - the next parser-feed question is now which surviving execution face is
     still the strongest contradiction: publication or runtime/transport
+  - `control` no longer survives as a full execution face; the parser feed
+    contract now carries only a direct mutex pointer for locking
+  - the remaining execution-face pressure is now publication versus
+    runtime/transport, not control
 
 Current named category-1 contradiction:
 

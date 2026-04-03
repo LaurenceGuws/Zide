@@ -144,3 +144,16 @@ This does not prove publication is irreducible.
 
 It does make the remaining publication dependence explicit at the execution
 surface instead of hiding it as direct protocol-field reach.
+
+The first hostile rerank inside the execution surface is now explicit too:
+
+- `interaction` stays for now because the active protocol/helper path still
+  genuinely depends on input and kitty-related state there
+- `control` no longer survives as a whole face
+- [protocol_execution.zig](/home/home/personal/zide/src/terminal/core/session/protocol_execution.zig)
+  now carries only a direct `state_mutex` pointer for locking
+
+That is a real reduction:
+
+- the execution surface no longer pretends the whole control slab is part of
+  the protocol contract

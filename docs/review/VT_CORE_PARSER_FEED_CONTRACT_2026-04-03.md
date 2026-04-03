@@ -174,3 +174,20 @@ Current read after this audit slice:
   hidden behind raw field reach in the active protocol path
 - the next honest question is whether publication can shrink further, or
   whether runtime/transport is now the stronger surviving contradiction
+
+## Hostile Rerank Progress
+
+The first execution-face rerank has now turned into code:
+
+- `control` was the least defensible whole face
+- it is now reduced to one direct mutex pointer on
+  [protocol_execution.zig](/home/home/personal/zide/src/terminal/core/session/protocol_execution.zig)
+
+Current read after that cut:
+
+- `control` is no longer a meaningful surviving execution face
+- `interaction` still survives honestly enough for the active protocol/helper
+  path
+- the real remaining execution-face pressure is now:
+  - `publication`
+  - `runtime` / transport write dependency
