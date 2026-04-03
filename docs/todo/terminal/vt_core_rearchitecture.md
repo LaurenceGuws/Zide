@@ -177,6 +177,16 @@ Current named category-1 contradiction:
   - CSI and kitty writer-driven replies remain intentionally out of this first
     slice
 
+- `docs/review/VT_PROTOCOL_REPLY_SINK_RERANK_2026-04-03.md`
+  Why: after the byte-oriented sink wave, this lane needs a stop-marker check
+  before CSI gets forced into the same shape for symmetry.
+  Current read:
+  - the byte-oriented sink wave materially paid off
+  - the remaining CSI family is writer-driven, so continuation would require a
+    second explicit sink shape
+  - otherwise this lane should stop and hand back to the deeper parser-owner /
+    `TerminalCore` maturity question
+
 ## War 4
 
 - `docs/review/VT_PLUGANDPLAY_GAP_MATRIX_2026-04-03.md`
