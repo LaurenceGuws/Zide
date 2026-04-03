@@ -5,8 +5,6 @@ const app_logger = @import("../../app_logger.zig");
 const terminal_core_csi_input_modes = @import("../core/protocol/terminal_core_csi_input_modes.zig");
 const terminal_core_csi_mode_query = @import("../core/protocol/terminal_core_csi_mode_query.zig");
 const host_reporting = @import("../core/session/host_reporting.zig");
-const session_interaction = @import("../core/session/interaction.zig");
-const session_input = @import("../core/session/input.zig");
 const protocol_runtime = @import("../core/session/protocol_runtime.zig");
 
 pub const ModeSnapshot = struct {
@@ -43,32 +41,32 @@ pub const ModeSnapshot = struct {
 
 pub fn modeSnapshot(self: anytype) ModeSnapshot {
     const screen = self.core.activeScreen();
-    const input_snapshot = self.session.interaction.derived_snapshot.input;
+    const input_snapshot = terminal_core_csi_input_modes.inputModeSnapshot(self);
     const reporting = protocol_runtime.reportingSnapshot(self);
     return .{
-        .app_cursor_keys = session_input.appCursorKeysEnabled(self),
+        .app_cursor_keys = input_snapshot.app_cursor_keys,
         .column_mode_132 = self.core.column_mode_132,
         .screen_reverse = screen.screen_reverse,
         .origin_mode = screen.origin_mode,
         .auto_wrap = screen.auto_wrap,
-        .auto_repeat = session_interaction.autoRepeatEnabled(self),
-        .mouse_mode_x10 = input_snapshot.mouse_mode_x10.load(.acquire),
+        .auto_repeat = input_snapshot.auto_repeat,
+        .mouse_mode_x10 = input_snapshot.mouse_mode_x10,
         .cursor_blink = screen.cursor_style.blink,
         .cursor_visible = screen.cursor_visible,
         .reverse_wrap = screen.reverse_wrap,
         .left_right_margin_mode_69 = screen.left_right_margin_mode_69,
         .alt_active = self.core.active == .alt,
         .save_cursor_mode_1048 = screen.save_cursor_mode_1048,
-        .app_keypad = session_input.appKeypadEnabled(self),
-        .mouse_mode_button = input_snapshot.mouse_mode_button.load(.acquire),
-        .mouse_mode_any = input_snapshot.mouse_mode_any.load(.acquire),
-        .focus_reporting = session_interaction.focusReportingEnabled(self),
-        .mouse_mode_sgr = input_snapshot.mouse_mode_sgr.load(.acquire),
-        .mouse_alternate_scroll = input_snapshot.mouse_alternate_scroll.load(.acquire),
-        .mouse_mode_sgr_pixels = input_snapshot.mouse_mode_sgr_pixels_1016.load(.acquire),
-        .bracketed_paste = session_interaction.bracketedPasteEnabled(self),
+        .app_keypad = input_snapshot.app_keypad,
+        .mouse_mode_button = input_snapshot.mouse_mode_button,
+        .mouse_mode_any = input_snapshot.mouse_mode_any,
+        .focus_reporting = input_snapshot.focus_reporting,
+        .mouse_mode_sgr = input_snapshot.mouse_mode_sgr,
+        .mouse_alternate_scroll = input_snapshot.mouse_alternate_scroll,
+        .mouse_mode_sgr_pixels = input_snapshot.mouse_mode_sgr_pixels,
+        .bracketed_paste = input_snapshot.bracketed_paste,
         .sync_updates_active = self.core.sync_updates_active,
-        .grapheme_cluster_shaping_2027 = self.session.interaction.protocol_modes.grapheme_cluster_shaping_2027,
+        .grapheme_cluster_shaping_2027 = input_snapshot.grapheme_cluster_shaping_2027,
         .report_color_scheme_2031 = reporting.report_color_scheme_2031,
         .inband_resize_notifications_2048 = reporting.inband_resize_notifications_2048,
         .kitty_paste_events_5522 = reporting.kitty_paste_events_5522,

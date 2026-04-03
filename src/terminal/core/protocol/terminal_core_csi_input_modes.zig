@@ -1,6 +1,7 @@
 const input_modes = @import("../input_modes.zig");
 const sync_updates = @import("sync_updates.zig");
 const csi_mod = @import("../../protocol/csi.zig");
+const protocol_state = @import("../session/protocol_state.zig");
 
 pub const InputModeSnapshot = struct {
     app_cursor_keys: bool,
@@ -32,11 +33,7 @@ pub fn applyPrivateInputMode(self: anytype, mode: i32, enabled: bool) bool {
         1016 => input_modes.setMouseModeSgrPixelsLocked(self, enabled),
         2004 => input_modes.setBracketedPasteLocked(self, enabled),
         2026 => sync_updates.setLocked(self, enabled),
-        2027 => {
-            self.session.interaction.protocol_modes.grapheme_cluster_shaping_2027 = enabled;
-            self.core.primary.setGraphemeClusterShaping2027(enabled);
-            self.core.alt.setGraphemeClusterShaping2027(enabled);
-        },
+        2027 => protocol_state.setGraphemeClusterShaping2027(self, enabled),
         66 => input_modes.setKeypadModeLocked(self, enabled),
         else => return false,
     }
@@ -44,21 +41,7 @@ pub fn applyPrivateInputMode(self: anytype, mode: i32, enabled: bool) bool {
 }
 
 pub fn inputModeSnapshot(self: anytype) InputModeSnapshot {
-    return .{
-        .app_cursor_keys = input_modes.appCursorKeysEnabled(self),
-        .auto_repeat = self.session.interaction.derived_snapshot.input.auto_repeat.load(.acquire),
-        .mouse_mode_x10 = self.session.interaction.derived_snapshot.input.mouse_mode_x10.load(.acquire),
-        .app_keypad = input_modes.appKeypadEnabled(self),
-        .mouse_mode_button = self.session.interaction.derived_snapshot.input.mouse_mode_button.load(.acquire),
-        .mouse_mode_any = self.session.interaction.derived_snapshot.input.mouse_mode_any.load(.acquire),
-        .focus_reporting = self.session.interaction.derived_snapshot.input.focus_reporting.load(.acquire),
-        .mouse_mode_sgr = self.session.interaction.derived_snapshot.input.mouse_mode_sgr.load(.acquire),
-        .mouse_alternate_scroll = self.session.interaction.derived_snapshot.input.mouse_alternate_scroll.load(.acquire),
-        .mouse_mode_sgr_pixels = self.session.interaction.derived_snapshot.input.mouse_mode_sgr_pixels_1016.load(.acquire),
-        .bracketed_paste = self.session.interaction.derived_snapshot.input.bracketed_paste.load(.acquire),
-        .sync_updates_active = self.core.sync_updates_active,
-        .grapheme_cluster_shaping_2027 = self.session.interaction.protocol_modes.grapheme_cluster_shaping_2027,
-    };
+    return protocol_state.inputModeSnapshot(self);
 }
 
 pub fn decrqmPrivateInputModeState(snapshot: InputModeSnapshot, mode: i32) ?csi_mod.DecrpmState {

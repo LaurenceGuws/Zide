@@ -98,3 +98,19 @@ It does remove one real lie:
 
 - protocol code no longer depends on "whatever the shell happens to expose"
   for reply/report behavior
+
+The second real slice is now landed too:
+
+- parser/protocol state reads and the remaining grapheme-mode state mutation
+  no longer reach raw `session.interaction` from the active protocol surface
+- new explicit owner:
+  [protocol_state.zig](/home/home/personal/zide/src/terminal/core/session/protocol_state.zig)
+- active protocol/core files now consume that owner through:
+  - [terminal_core_csi_input_modes.zig](/home/home/personal/zide/src/terminal/core/protocol/terminal_core_csi_input_modes.zig)
+  - [csi_mode_query.zig](/home/home/personal/zide/src/terminal/protocol/csi_mode_query.zig)
+  - [terminal_core_reset.zig](/home/home/personal/zide/src/terminal/core/protocol/terminal_core_reset.zig)
+
+That means the active parser/protocol surface now has explicit faces for:
+
+- reply/report runtime hooks
+- protocol state reads and the remaining grapheme-mode mutation/reset path

@@ -113,3 +113,28 @@ Current read after this slice:
   session is the protocol runtime API
 - protocol state is still mixed enough that parser feed ownership is not done
 - the next cut must target protocol state shape, not just more sink rewiring
+
+## Further Progress
+
+The next contract slice is now explicit too:
+
+- [protocol_state.zig](/home/home/personal/zide/src/terminal/core/session/protocol_state.zig)
+  groups:
+  - CSI input-mode snapshot reads
+  - grapheme-cluster-shaping protocol mode state mutation/reset
+
+After this slice:
+
+- the active protocol/core surface no longer reads raw
+  `session.interaction.protocol_modes` or `session.interaction.derived_snapshot`
+  directly
+- parser/protocol now depends on two named outer faces instead:
+  - [protocol_runtime.zig](/home/home/personal/zide/src/terminal/core/session/protocol_runtime.zig)
+  - [protocol_state.zig](/home/home/personal/zide/src/terminal/core/session/protocol_state.zig)
+
+Current read now:
+
+- the remaining parser-feed contradiction is narrower still
+- the next problem is less "broad mixed session reach" and more whether feed
+  execution can target a genuinely smaller composite protocol execution
+  surface than the current shell-shaped owner

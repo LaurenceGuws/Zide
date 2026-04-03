@@ -396,8 +396,11 @@ Current full-scope read:
     `protocol_runtime.zig` owner instead of broad shell exposure
   - this is a real parser-feed ownership improvement, not just naming, because
     protocol files now depend on a named runtime/report surface
-  - the remaining parser-feed problem is now protocol state shape more than
-    reply-sink exposure
+  - parser/protocol state reads and the remaining grapheme-mode mutation/reset
+    path now go through one explicit `protocol_state.zig` owner instead of
+    raw `session.interaction` reach from the active protocol surface
+  - the remaining parser-feed problem is now narrower than both sink exposure
+    and raw protocol-state reach
 
 Current named category-1 contradiction:
 
