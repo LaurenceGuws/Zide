@@ -5,6 +5,7 @@ const runtime_init = @import("runtime_init.zig");
 const runtime_lifecycle = @import("runtime_lifecycle.zig");
 const session_transport_runtime = @import("transport_runtime.zig");
 const session_thread_runtime = @import("thread_runtime.zig");
+const protocol_reply_sink = @import("protocol_reply_sink.zig");
 
 const Pty = pty_mod.Pty;
 
@@ -82,6 +83,10 @@ pub fn takeExternalOutgoingBytes(self: anytype, allocator: std.mem.Allocator) !?
 
 pub fn writePtyBytes(self: anytype, bytes: []const u8) !void {
     try session_transport_runtime.writePtyBytes(self, bytes);
+}
+
+pub fn emitProtocolReplyBytes(self: anytype, log_scope: []const u8, bytes: []const u8) bool {
+    return protocol_reply_sink.emitBytes(self, log_scope, bytes);
 }
 
 pub fn resize(self: anytype, rows: u16, cols: u16) !void {

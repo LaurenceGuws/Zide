@@ -78,6 +78,19 @@ The important part is that protocol handlers stop teaching:
 
 - “reply generation is naturally done by locking a writer here”
 
+Progress now landed:
+
+- a first explicit shell/runtime sink owner now exists in
+  [protocol_reply_sink.zig](/home/home/personal/zide/src/terminal/core/session/protocol_reply_sink.zig)
+- the shell exports that sink through
+  [runtime.zig](/home/home/personal/zide/src/terminal/core/session/runtime.zig)
+  and
+  [terminal_runtime_shell.zig](/home/home/personal/zide/src/terminal/core/session/terminal_runtime_shell.zig)
+- the first adopter slab is the prebuilt-byte reply family:
+  - [dcs_apc.zig](/home/home/personal/zide/src/terminal/protocol/dcs_apc.zig)
+  - [osc_clipboard.zig](/home/home/personal/zide/src/terminal/protocol/osc_clipboard.zig)
+  - [palette.zig](/home/home/personal/zide/src/terminal/protocol/palette.zig)
+
 ## Why This Wins Over Narrow Reporting Pockets
 
 This contract is stronger than another local reporting cleanup because it spans

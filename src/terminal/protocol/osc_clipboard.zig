@@ -94,7 +94,5 @@ fn writeClipboardReply(self: anytype, selection: []const u8, terminator: OscTerm
     };
 
     log.logf(.debug, "osc reply=\"{s}\"", .{seq.items});
-    self.writePtyBytes(seq.items) catch |err| {
-        log.logf(.warning, "osc52 reply write failed len={d} err={s}", .{ seq.items.len, @errorName(err) });
-    };
+    _ = self.emitProtocolReplyBytes("terminal.osc", seq.items);
 }

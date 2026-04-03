@@ -86,10 +86,7 @@ fn writeXtgettcapReply(self: anytype, ok: bool, cap_hex: []const u8, value: ?[]c
         log.logf(.warning, "xtgettcap reply terminator append failed: {s}", .{@errorName(err)});
         return;
     };
-    self.writePtyBytes(reply.items) catch |err| {
-        log.logf(.warning, "xtgettcap reply write failed len={d} err={s}", .{ reply.items.len, @errorName(err) });
-        return;
-    };
+    _ = self.emitProtocolReplyBytes("terminal.apc", reply.items);
 }
 
 fn writeDecrqssReply(self: anytype, ok: bool, value: ?[]const u8) void {
@@ -113,10 +110,7 @@ fn writeDecrqssReply(self: anytype, ok: bool, value: ?[]const u8) void {
         log.logf(.warning, "decrqss reply terminator append failed: {s}", .{@errorName(err)});
         return;
     };
-    self.writePtyBytes(reply.items) catch |err| {
-        log.logf(.warning, "decrqss reply write failed len={d} err={s}", .{ reply.items.len, @errorName(err) });
-        return;
-    };
+    _ = self.emitProtocolReplyBytes("terminal.apc", reply.items);
 }
 
 fn xtgettcapValue(name: []const u8) ?[]const u8 {

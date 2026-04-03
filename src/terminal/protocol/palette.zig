@@ -155,9 +155,7 @@ fn writeOscColorReply(self: anytype, code: u8, color: types.Color, terminator: O
     };
     log.logf(.debug, "osc reply=\"{s}\"", .{seq});
     logOscReplyHex(log, seq);
-    self.writePtyBytes(seq) catch |err| {
-        log.logf(.warning, "osc reply write failed code={d} err={s}", .{ code, @errorName(err) });
-    };
+    _ = self.emitProtocolReplyBytes("terminal.osc", seq);
 }
 
 fn writeOscPaletteReply(self: anytype, idx: u8, color: types.Color, terminator: OscTerminator) void {
@@ -177,9 +175,7 @@ fn writeOscPaletteReply(self: anytype, idx: u8, color: types.Color, terminator: 
     };
     log.logf(.debug, "osc reply=\"{s}\"", .{seq});
     logOscReplyHex(log, seq);
-    self.writePtyBytes(seq) catch |err| {
-        log.logf(.warning, "osc palette reply write failed idx={d} err={s}", .{ idx, @errorName(err) });
-    };
+    _ = self.emitProtocolReplyBytes("terminal.osc", seq);
 }
 
 fn logOscReplyHex(log: app_logger.Logger, seq: []const u8) void {

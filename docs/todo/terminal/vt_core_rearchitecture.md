@@ -166,6 +166,14 @@ Current named category-1 contradiction:
     `dcs_apc.zig`, `osc_clipboard.zig`, and `palette.zig`
   - do not force CSI writer-driven replies into the first slice just for
     uniformity
+  Progress:
+  - the first byte-oriented sink slice is now landed
+  - `protocol_reply_sink.zig` owns shell/runtime reply emission for byte
+    replies
+  - the prebuilt-byte reply family now uses that sink instead of direct
+    `writePtyBytes(...)`
+  - CSI and kitty writer-driven replies remain intentionally out of this first
+    slice
 
 ## War 4
 

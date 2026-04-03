@@ -114,6 +114,16 @@ Real progress will be:
 - protocol handlers in the first family calling that sink instead of direct
   shell emission
 
+That first slice is now landed:
+
+- [protocol_reply_sink.zig](/home/home/personal/zide/src/terminal/core/session/protocol_reply_sink.zig)
+  owns byte-oriented reply emission through the shell/runtime layer
+- the prebuilt-byte reply family now uses it directly instead of
+  `writePtyBytes(...)`:
+  - [dcs_apc.zig](/home/home/personal/zide/src/terminal/protocol/dcs_apc.zig)
+  - [osc_clipboard.zig](/home/home/personal/zide/src/terminal/protocol/osc_clipboard.zig)
+  - [palette.zig](/home/home/personal/zide/src/terminal/protocol/palette.zig)
+
 Fake progress will be:
 
 - renaming `writePtyBytes(...)`
