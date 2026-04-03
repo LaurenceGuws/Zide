@@ -415,6 +415,11 @@ Current full-scope read:
     contract now carries only a direct mutex pointer for locking
   - the remaining execution-face pressure is now publication versus
     runtime/transport, not control
+  - runtime is now partially reduced too: `protocol_execution.zig` carries an
+    explicit write/wake runtime face, while compatibility `session.runtime`
+    still survives for active protocol/helper paths
+  - publication remains the strongest fully surviving execution face unless a
+    fresh rerank proves the remaining runtime compatibility is worse
 
 Current named category-1 contradiction:
 

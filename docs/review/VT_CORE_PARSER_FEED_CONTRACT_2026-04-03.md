@@ -191,3 +191,24 @@ Current read after that cut:
 - the real remaining execution-face pressure is now:
   - `publication`
   - `runtime` / transport write dependency
+
+## Runtime Face Progress
+
+The runtime side is now partially reduced too:
+
+- [protocol_execution.zig](/home/home/personal/zide/src/terminal/core/session/protocol_execution.zig)
+  now has an explicit runtime write/wake face
+- that face owns only:
+  - PTY/external transport write path
+  - writer mutex
+  - IO wake signaling
+
+Current read after this slice:
+
+- `publication` is still the strongest fully surviving execution face
+- `runtime` is now a split state:
+  - one exact write/wake face is explicit
+  - one compatibility `session.runtime` pointer still survives because active
+    protocol/helpers still rely on it
+- the next honest move is to pressure publication first, or prove that the
+  remaining runtime compatibility is actually the stronger contradiction

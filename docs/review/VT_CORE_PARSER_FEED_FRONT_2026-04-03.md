@@ -157,3 +157,18 @@ That is a real reduction:
 
 - the execution surface no longer pretends the whole control slab is part of
   the protocol contract
+
+The next surviving-face cut is now landed:
+
+- runtime is no longer treated as one undifferentiated execution slab
+- [protocol_execution.zig](/home/home/personal/zide/src/terminal/core/session/protocol_execution.zig)
+  now carries an explicit runtime write/wake face for:
+  - PTY write access
+  - external transport write access
+  - writer mutex
+  - IO wake signaling
+
+That does not fully remove `session.runtime` from the execution object yet,
+because active protocol/helpers still assume that compatibility shape.
+
+It does make the runtime contradiction narrower and more explicit.

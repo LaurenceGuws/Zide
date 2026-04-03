@@ -22,4 +22,5 @@ pub const TerminalRuntimeShell = struct {
 
     pub const lockPtyWriter = runtime.lockPtyWriter;
     pub const writePtyBytes = runtime.writePtyBytes;
+    pub const signalIoWait = runtime.signalIoWait;
 };

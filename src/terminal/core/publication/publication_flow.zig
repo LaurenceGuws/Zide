@@ -67,7 +67,7 @@ pub fn refreshScrollViewLocked(self: anytype, scroll_offset: usize) void {
 pub fn queueViewRefreshLocked(self: anytype, scroll_offset: usize) void {
     self.session.publication.view_cache_request_offset.store(@intCast(scroll_offset), .release);
     self.session.publication.view_cache_pending.store(true, .release);
-    self.session.runtime.io_wait_cond.signal();
+    self.signalIoWait();
 }
 
 fn clearPendingViewRefresh(self: anytype) void {

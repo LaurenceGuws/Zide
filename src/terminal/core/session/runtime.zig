@@ -84,6 +84,10 @@ pub fn writePtyBytes(self: anytype, bytes: []const u8) !void {
     try session_transport_runtime.writePtyBytes(self, bytes);
 }
 
+pub fn signalIoWait(self: anytype) void {
+    self.session.runtime.io_wait_cond.signal();
+}
+
 pub fn resize(self: anytype, rows: u16, cols: u16) !void {
     try session_transport_runtime.resize(self, rows, cols);
 }
