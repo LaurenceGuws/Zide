@@ -155,6 +155,10 @@ Primary files:
 - [csi_mode_query.zig](/home/home/personal/zide/src/terminal/protocol/csi_mode_query.zig)
 - [input_modes.zig](/home/home/personal/zide/src/terminal/core/input_modes.zig)
 
+Current design authority for that split:
+
+- [VT_CSI_MODE_QUERY_SPLIT_2026-04-03.md](/home/home/personal/zide/docs/review/VT_CSI_MODE_QUERY_SPLIT_2026-04-03.md)
+
 ### 2. CSI reply/report contract
 
 This is second.

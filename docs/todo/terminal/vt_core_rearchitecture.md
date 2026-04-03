@@ -97,6 +97,15 @@ Current named category-1 contradiction:
   - the best opening target is CSI mode/query ownership
   - do not extract parser code before reclassifying that mixed state
 
+- `docs/review/VT_CSI_MODE_QUERY_SPLIT_2026-04-03.md`
+  Why: the new war needs the exact field-level split before code.
+  Current read:
+  - CSI mode/query should stop treating `session.interaction` as one kind of
+    state
+  - the key split is between terminal protocol mode state and host-reporting
+    contract state
+  - display metrics and derived snapshots are separate again
+
 ## War 4
 
 - `docs/review/VT_PLUGANDPLAY_GAP_MATRIX_2026-04-03.md`
