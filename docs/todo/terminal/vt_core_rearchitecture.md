@@ -238,6 +238,17 @@ Current full-scope read:
     consequences, not fake terminal ownership
   - the default next pressure returns to broader `TerminalCore` sufficiency
 
+- `docs/review/VT_CORE_PROTOCOL_OWNER_CONTRADICTION_2026-04-03.md`
+  Why: after shell, reply/query, and reset fronts flattened, the next broader
+  `TerminalCore` sufficiency contradiction had to be named directly.
+  Current read:
+  - `src/terminal/core/protocol/terminal_core_protocol.zig` still carries too
+    much semantic gravity beside `TerminalCore`
+  - the strongest remaining question is which whole semantic slab there still
+    belongs more naturally on `TerminalCore` itself
+  - strongest candidate slabs are screen-edit/erase, scroll/newline/reverse-
+    index, and DECRQSS state/query assembly
+
 Current named category-1 contradiction:
 
 - `docs/review/VT_CORE_EXECUTION_CONTRADICTION_REVIEW_2026-04-03.md`
