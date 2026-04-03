@@ -165,6 +165,18 @@ Current full-scope read:
   - if the shell front reopens, it should reopen only on transport/reporting
     survival, not generic cleanup
 
+- `docs/review/VT_CSI_REPLY_QUERY_CONTRACT_2026-04-03.md`
+  Why: after the shell-cleanup wave, the next exact protocol-execution
+  contradiction needed to be named more sharply than vague parser discomfort.
+  Current read:
+  - the next remaining cluster is writer-driven CSI reply/query assembly
+  - DSR, DA, bounded window-op replies, and DECRQM still become complete
+    host-visible behavior only at the writer-anchored shell edge
+  - the first likely slice is DSR plus bounded window-op replies, because they
+    already share one explicit snapshot owner without forcing DA/DECRQM into
+    the same first shape
+  - do not force CSI into the byte-oriented reply sink just for symmetry
+
 Current named category-1 contradiction:
 
 - `docs/review/VT_CORE_EXECUTION_CONTRADICTION_REVIEW_2026-04-03.md`
