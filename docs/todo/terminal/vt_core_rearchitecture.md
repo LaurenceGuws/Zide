@@ -54,6 +54,16 @@ Current full-scope read:
 - interaction ownership and mutation/publication maturity are now lower-pressure
   guardrails unless a fresh named contradiction appears
 
+- `docs/review/VT_SHELL_HOSTILE_AUDIT_2026-04-03.md`
+  Why: with the wartime shell bar now explicit, the shell needs a hostile
+  responsibility audit instead of vague legitimacy language.
+  Current read:
+  - transport/writer access and lifecycle are the most defensible surviving
+    shell buckets
+  - reporting is now the strongest suspicious shell frontier
+  - constructor/object identity and lock choreography remain under active
+    suspicion
+
 Current named category-1 contradiction:
 
 - `docs/review/VT_CORE_EXECUTION_CONTRADICTION_REVIEW_2026-04-03.md`
