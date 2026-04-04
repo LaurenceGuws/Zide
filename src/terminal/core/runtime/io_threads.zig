@@ -80,7 +80,8 @@ pub fn parseThreadMain(session: anytype) void {
         const presentation_backlog = publication_flow.outputPending(session);
         var max_bytes: usize = if (input_pressure) 64 * 1024 else 512 * 1024;
         var max_ms: i64 = if (input_pressure) 2 else 8;
-        const pending_refresh = publication_flow.takePendingViewRefreshRequest(session);
+        var pending_exec = protocol_execution.ProtocolExecution.init(session, &session.core);
+        const pending_refresh = pending_exec.takePendingViewRefreshRequest();
 
         var queued_bytes: usize = 0;
         session.session.runtime.io_mutex.lock();
@@ -108,8 +109,8 @@ pub fn parseThreadMain(session: anytype) void {
             if (session.session.control.parse_bytes_since_publish > 0 and pending_refresh == null and !session.core.sync_updates_active) {
                 const publish_lock_start_ns = std.time.nanoTimestamp();
                 session.session.control.state_mutex.lock();
-                var exec = protocol_execution.ProtocolExecution.init(session, &session.core);
-                exec.publishPendingOutput(session.core.history.scrollOffset(), "parse_thread_idle_publish");
+                var publish_exec = protocol_execution.ProtocolExecution.init(session, &session.core);
+                publish_exec.publishPendingOutput(session.core.history.scrollOffset(), "parse_thread_idle_publish");
                 session.session.control.state_mutex.unlock();
                 _ = std.time.nanoTimestamp() - publish_lock_start_ns;
                 session.session.control.parse_publishes_since_log += 1;
@@ -120,7 +121,7 @@ pub fn parseThreadMain(session: anytype) void {
             if (pending_refresh) |request| {
                 session.session.control.state_mutex.lock();
                 if (!session.core.sync_updates_active) {
-                    publication_flow.publishViewRefreshRequestLocked(session, request, "parse_thread_pending_offset");
+                    pending_exec.publishViewRefreshRequest(request, "parse_thread_pending_offset");
                 }
                 session.session.control.state_mutex.unlock();
             }
@@ -185,8 +186,8 @@ pub fn parseThreadMain(session: anytype) void {
             const parse_lock_start_ns = std.time.nanoTimestamp();
             session.session.control.state_mutex.lock();
             const result = session.core.feedOutputBytesLocked(session, temp[0..chunk_len]);
-            var exec = protocol_execution.ProtocolExecution.init(session, &session.core);
-            exec.consumeFeedResult(result, "parse_thread_chunk");
+            var feed_exec = protocol_execution.ProtocolExecution.init(session, &session.core);
+            feed_exec.consumeFeedResult(result, "parse_thread_chunk");
             session.session.control.state_mutex.unlock();
             parse_lock_hold_ns += std.time.nanoTimestamp() - parse_lock_start_ns;
             processed += chunk_len;

@@ -241,3 +241,19 @@ That means the next surviving publication pressure is narrower again:
 See:
 
 - [VT_POST_PARSED_OUTPUT_PUBLICATION_RERANK_2026-04-04.md](/home/home/personal/zide/docs/review/VT_POST_PARSED_OUTPUT_PUBLICATION_RERANK_2026-04-04.md)
+
+That contract is now landed too:
+
+- [VT_PROTOCOL_PUBLICATION_POLL_CONTRACT_2026-04-04.md](/home/home/personal/zide/docs/review/VT_PROTOCOL_PUBLICATION_POLL_CONTRACT_2026-04-04.md)
+- pending-refresh / poll publication cadence now lives on
+  [protocol_execution.zig](/home/home/personal/zide/src/terminal/core/session/protocol_execution.zig)
+  through:
+  - `viewRefreshPending(...)`
+  - `takePendingViewRefreshRequest(...)`
+  - `publishViewRefreshRequest(...)`
+  - `publishPollUpdate(...)`
+- active runtime callers no longer depend on direct
+  [publication_flow.zig](/home/home/personal/zide/src/terminal/core/publication/publication_flow.zig)
+  choreography for that shared path:
+  - [pty_poll_publication.zig](/home/home/personal/zide/src/terminal/core/runtime/pty_poll_publication.zig)
+  - [io_threads.zig](/home/home/personal/zide/src/terminal/core/runtime/io_threads.zig)

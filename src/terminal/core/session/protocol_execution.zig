@@ -28,6 +28,11 @@ pub const RuntimeWriteFace = struct {
 };
 
 pub const ProtocolExecution = struct {
+    pub const ViewRefreshRequest = struct {
+        generation: u64,
+        scroll_offset: usize,
+    };
+
     allocator: std.mem.Allocator,
     core: *TerminalCore,
     session: SessionFaces,
@@ -126,5 +131,30 @@ pub const ProtocolExecution = struct {
 
     pub fn markOutputPending(self: *ProtocolExecution) void {
         self.session.publication.output_pending.store(true, .release);
+    }
+
+    pub fn viewRefreshPending(self: *ProtocolExecution) bool {
+        return self.session.publication.view_cache_pending.load(.acquire);
+    }
+
+    pub fn takePendingViewRefreshRequest(self: *ProtocolExecution) ?ViewRefreshRequest {
+        if (!self.session.publication.view_cache_pending.swap(false, .acq_rel)) return null;
+        return .{
+            .generation = self.pendingPublicationGeneration(),
+            .scroll_offset = @intCast(self.session.publication.view_cache_request_offset.load(.acquire)),
+        };
+    }
+
+    pub fn publishViewRefreshRequest(self: *ProtocolExecution, request: ViewRefreshRequest, source: []const u8) void {
+        self.updateViewCacheForProtocol(request.generation, request.scroll_offset, source);
+    }
+
+    pub fn publishPollUpdate(self: *ProtocolExecution, had_data: bool, publish_source: []const u8, refresh_source: []const u8) bool {
+        if (had_data) {
+            self.updateViewCacheForProtocol(self.pendingPublicationGeneration(), self.core.scrollbackOffset(), publish_source);
+        }
+        const request = self.takePendingViewRefreshRequest() orelse return false;
+        self.publishViewRefreshRequest(request, refresh_source);
+        return true;
     }
 };

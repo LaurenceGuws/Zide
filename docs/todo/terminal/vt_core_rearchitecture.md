@@ -443,6 +443,16 @@ Current full-scope read:
       for the idle publish path too
     - `pty_poll_publication.zig` now uses
       `protocol_execution.markOutputPending(...)` for unread buffered IO
+  - the next pending-refresh / poll publication cadence slice is now landed:
+    `protocol_execution.zig` now owns:
+    - `viewRefreshPending(...)`
+    - `takePendingViewRefreshRequest(...)`
+    - `publishViewRefreshRequest(...)`
+    - `publishPollUpdate(...)`
+  - runtime poll/parse callers no longer depend on direct
+    `publication_flow` choreography for that shared path:
+    - `pty_poll_publication.zig`
+    - `io_threads.zig`
   - post-sync rerank: publication still beats runtime as the strongest fully
     surviving execution face, because the active path still depends on the
     broader view-cache/publication helper stack

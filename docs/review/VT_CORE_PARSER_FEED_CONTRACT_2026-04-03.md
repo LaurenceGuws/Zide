@@ -290,3 +290,17 @@ That rerank is now tighter too:
   cadence
 - see
   [VT_POST_PARSED_OUTPUT_PUBLICATION_RERANK_2026-04-04.md](/home/home/personal/zide/docs/review/VT_POST_PARSED_OUTPUT_PUBLICATION_RERANK_2026-04-04.md)
+
+That pending-refresh / poll contract is now landed too:
+
+- [protocol_execution.zig](/home/home/personal/zide/src/terminal/core/session/protocol_execution.zig)
+  now owns:
+  - `viewRefreshPending(...)`
+  - `takePendingViewRefreshRequest(...)`
+  - `publishViewRefreshRequest(...)`
+  - `publishPollUpdate(...)`
+- active runtime callers now use that contract instead of direct
+  [publication_flow.zig](/home/home/personal/zide/src/terminal/core/publication/publication_flow.zig)
+  poll/refresh choreography
+- see
+  [VT_PROTOCOL_PUBLICATION_POLL_CONTRACT_2026-04-04.md](/home/home/personal/zide/docs/review/VT_PROTOCOL_PUBLICATION_POLL_CONTRACT_2026-04-04.md)

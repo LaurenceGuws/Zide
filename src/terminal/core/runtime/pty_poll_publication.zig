@@ -3,10 +3,11 @@ const publication_flow = @import("../publication/publication_flow.zig");
 const protocol_execution = @import("../session/protocol_execution.zig");
 
 pub fn publishPtyPollResult(self: anytype, had_data: bool, processed: usize, input_pressure: bool, queued_bytes: usize, parse_lock_hold_ns: i128, publish_lock_hold_ns: *i128, start_ms: i64) void {
-    if (had_data or publication_flow.viewRefreshPending(self)) {
+    var exec = protocol_execution.ProtocolExecution.init(self, &self.core);
+    if (had_data or exec.viewRefreshPending()) {
         const publish_lock_start_ns = std.time.nanoTimestamp();
         self.session.control.state_mutex.lock();
-        _ = publication_flow.publishPollUpdateLocked(self, had_data, "pty_poll_publish", "pty_pending_offset");
+        _ = exec.publishPollUpdate(had_data, "pty_poll_publish", "pty_pending_offset");
         self.session.control.state_mutex.unlock();
         publish_lock_hold_ns.* += std.time.nanoTimestamp() - publish_lock_start_ns;
     }
@@ -23,7 +24,6 @@ pub fn publishPtyPollResult(self: anytype, had_data: bool, processed: usize, inp
 
     self.session.runtime.io_mutex.lock();
     if (self.session.runtime.io_buffer.items.len > self.session.runtime.io_read_offset) {
-        var exec = protocol_execution.ProtocolExecution.init(self, &self.core);
         exec.markOutputPending();
     }
     self.session.runtime.io_mutex.unlock();
@@ -31,9 +31,10 @@ pub fn publishPtyPollResult(self: anytype, had_data: bool, processed: usize, inp
 
 pub fn publishTransportPollResult(self: anytype, had_data: bool, processed: usize, input_pressure: bool, parse_lock_hold_ns: i128, publish_lock_hold_ns: *i128, start_ms: i64) void {
     _ = start_ms;
-    if (had_data or publication_flow.viewRefreshPending(self)) {
+    var exec = protocol_execution.ProtocolExecution.init(self, &self.core);
+    if (had_data or exec.viewRefreshPending()) {
         const publish_lock_start_ns = std.time.nanoTimestamp();
-        _ = publication_flow.publishPollUpdateLocked(self, had_data, "transport_poll_publish", "transport_pending_offset");
+        _ = exec.publishPollUpdate(had_data, "transport_poll_publish", "transport_pending_offset");
         publish_lock_hold_ns.* += std.time.nanoTimestamp() - publish_lock_start_ns;
     }
     publication_flow.noteProcessedOutput(self, processed);
