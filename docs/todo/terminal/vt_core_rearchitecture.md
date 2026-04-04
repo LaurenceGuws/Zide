@@ -614,6 +614,24 @@ Current full-scope read:
     shape
   - the next honest move is a rerank between reporting-contract dependence and
     host-metric dependence, not another generic “host contract” cut
+  Progress:
+  - the host-metrics side is now split too
+  - `protocol_execution.zig` no longer carries one mixed host-metrics face
+  - the active feed receiver now carries:
+    - reporting contract
+    - color-scheme state
+    - cell metrics
+  - `protocol_runtime.zig` now builds CSI reply runtime state from explicit
+    color-scheme and cell-metric faces
+  - `host_reporting.zig` now uses:
+    - reporting contract plus cell metrics for in-band resize
+    - reporting contract plus color-scheme state for color reporting
+  - kitty placement now reads only cell metrics, not a broader host-metrics
+    shape
+  - the next honest rerank is now among:
+    - reporting contract flags
+    - cell metrics
+    - color-scheme state
 
 Current named category-1 contradiction:
 

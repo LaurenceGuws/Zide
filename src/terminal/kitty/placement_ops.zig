@@ -23,14 +23,14 @@ pub const KittyPlacementOps = struct {
         const screen = self.core.activeScreen();
         const kitty = common.kittyStateConst(self);
         const image = common.findKittyImageById(kitty.images.items, placement.image_id);
-        const host_metrics = host_reporting.hostMetrics(self);
+        const cell_metrics = host_reporting.cellMetrics(self);
         switch (common.kittyPlacementDirtyRegion(
             image,
             placement,
             screen.grid.rows,
             screen.grid.cols,
-            host_metrics.cell_width.*,
-            host_metrics.cell_height.*,
+            cell_metrics.cell_width.*,
+            cell_metrics.cell_height.*,
         )) {
             .none => {},
             .partial => |region| screen.grid.markDirtyRange(region.start_row, region.end_row, region.start_col, region.end_col),
@@ -65,7 +65,7 @@ pub const KittyPlacementOps = struct {
 
     pub fn effectiveColumns(self: anytype, control: common.KittyControl, image_id: u32) u32 {
         if (control.cols > 0) return control.cols;
-        const cell_w = @as(u32, host_reporting.hostMetrics(self).cell_width.*);
+        const cell_w = @as(u32, host_reporting.cellMetrics(self).cell_width.*);
         const width_px = if (control.width > 0) control.width else blk: {
             const kitty = common.kittyStateConst(self);
             const image = common.findKittyImageById(kitty.images.items, image_id) orelse break :blk 0;
@@ -77,7 +77,7 @@ pub const KittyPlacementOps = struct {
 
     pub fn effectiveRows(self: anytype, control: common.KittyControl, image_id: u32) u32 {
         if (control.rows > 0) return control.rows;
-        const cell_h = @as(u32, host_reporting.hostMetrics(self).cell_height.*);
+        const cell_h = @as(u32, host_reporting.cellMetrics(self).cell_height.*);
         const height_px = if (control.height > 0) control.height else blk: {
             const kitty = common.kittyStateConst(self);
             const image = common.findKittyImageById(kitty.images.items, image_id) orelse break :blk 0;

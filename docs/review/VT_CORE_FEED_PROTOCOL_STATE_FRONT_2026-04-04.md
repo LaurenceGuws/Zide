@@ -124,3 +124,33 @@ Current judgment after the host split:
   - or host metrics/color state
 - the next move should rerank those two explicitly instead of treating them as
   one surviving face
+
+## Even Narrower
+
+The host-metrics side is now split too.
+
+What changed:
+
+- [protocol_execution.zig](/home/home/personal/zide/src/terminal/core/session/protocol_execution.zig)
+  no longer carries one mixed host-metrics face
+- the active feed receiver now carries:
+  - reporting contract
+  - color-scheme state
+  - cell metrics
+- [protocol_runtime.zig](/home/home/personal/zide/src/terminal/core/session/protocol_runtime.zig)
+  now builds CSI reply runtime state from explicit color-scheme and cell
+  metric faces
+- [host_reporting.zig](/home/home/personal/zide/src/terminal/core/session/host_reporting.zig)
+  now uses:
+  - reporting contract plus cell metrics for in-band resize
+  - reporting contract plus color-scheme state for color reporting
+- [placement_ops.zig](/home/home/personal/zide/src/terminal/kitty/placement_ops.zig)
+  now reads only cell metrics, not a broader host-metrics shape
+
+Current judgment after the metric split:
+
+- the remaining feed-side host dependency is no longer one metric/state bag
+- the next honest rerank is now among:
+  - reporting contract flags
+  - cell metrics
+  - color-scheme state

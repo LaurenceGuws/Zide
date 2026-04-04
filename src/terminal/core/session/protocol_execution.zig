@@ -26,8 +26,11 @@ pub const ReportingContractFace = struct {
     kitty_paste_events_5522: *bool,
 };
 
-pub const HostMetricsFace = struct {
+pub const ColorSchemeStateFace = struct {
     color_scheme_dark: *bool,
+};
+
+pub const CellMetricsFace = struct {
     cell_width: *u16,
     cell_height: *u16,
 };
@@ -54,7 +57,8 @@ pub const ProtocolExecution = struct {
     core: *TerminalCore,
     session: SessionFaces,
     reporting_contract: ReportingContractFace,
-    host_metrics: HostMetricsFace,
+    color_scheme_state: ColorSchemeStateFace,
+    cell_metrics: CellMetricsFace,
     runtime: RuntimeWriteFace,
     state_mutex: *std.Thread.Mutex,
 
@@ -72,8 +76,10 @@ pub const ProtocolExecution = struct {
                 .inband_resize_notifications_2048 = &owner.session.interaction.host_contract.inband_resize_notifications_2048,
                 .kitty_paste_events_5522 = &owner.session.interaction.host_contract.kitty_paste_events_5522,
             },
-            .host_metrics = .{
+            .color_scheme_state = .{
                 .color_scheme_dark = &owner.session.interaction.host_contract.color_scheme_dark,
+            },
+            .cell_metrics = .{
                 .cell_width = &owner.session.interaction.host_contract.cell_width,
                 .cell_height = &owner.session.interaction.host_contract.cell_height,
             },

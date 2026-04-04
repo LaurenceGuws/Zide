@@ -16,8 +16,11 @@ pub const ReportingContractAccess = struct {
     kitty_paste_events_5522: *bool,
 };
 
-pub const HostMetricsAccess = struct {
+pub const ColorSchemeStateAccess = struct {
     color_scheme_dark: *bool,
+};
+
+pub const CellMetricsAccess = struct {
     cell_width: *u16,
     cell_height: *u16,
 };
@@ -48,27 +51,44 @@ pub fn reportingContract(self: anytype) ReportingContractAccess {
     };
 }
 
-pub fn hostMetrics(self: anytype) HostMetricsAccess {
+pub fn colorSchemeState(self: anytype) ColorSchemeStateAccess {
     switch (@typeInfo(@TypeOf(self))) {
         .pointer => {},
         else => @compileError("host_reporting expects a pointer receiver"),
     }
-    if (@hasField(@TypeOf(self.*), "host_metrics")) {
+    if (@hasField(@TypeOf(self.*), "color_scheme_state")) {
         return .{
-            .color_scheme_dark = self.host_metrics.color_scheme_dark,
-            .cell_width = self.host_metrics.cell_width,
-            .cell_height = self.host_metrics.cell_height,
+            .color_scheme_dark = self.color_scheme_state.color_scheme_dark,
         };
     }
-    if (@hasField(@TypeOf(self.session), "host_metrics")) {
+    if (@hasField(@TypeOf(self.session), "color_scheme_state")) {
         return .{
-            .color_scheme_dark = self.session.host_metrics.color_scheme_dark,
-            .cell_width = self.session.host_metrics.cell_width,
-            .cell_height = self.session.host_metrics.cell_height,
+            .color_scheme_dark = self.session.color_scheme_state.color_scheme_dark,
         };
     }
     return .{
         .color_scheme_dark = &self.session.interaction.host_contract.color_scheme_dark,
+    };
+}
+
+pub fn cellMetrics(self: anytype) CellMetricsAccess {
+    switch (@typeInfo(@TypeOf(self))) {
+        .pointer => {},
+        else => @compileError("host_reporting expects a pointer receiver"),
+    }
+    if (@hasField(@TypeOf(self.*), "cell_metrics")) {
+        return .{
+            .cell_width = self.cell_metrics.cell_width,
+            .cell_height = self.cell_metrics.cell_height,
+        };
+    }
+    if (@hasField(@TypeOf(self.session), "cell_metrics")) {
+        return .{
+            .cell_width = self.session.cell_metrics.cell_width,
+            .cell_height = self.session.cell_metrics.cell_height,
+        };
+    }
+    return .{
         .cell_width = &self.session.interaction.host_contract.cell_width,
         .cell_height = &self.session.interaction.host_contract.cell_height,
     };
@@ -105,12 +125,12 @@ pub fn decrqmReportingModeState(snapshot: ReportingSnapshot, mode: i32) ?csi_mod
 
 pub fn reportInBandResize2048(self: anytype, rows: u16, cols: u16) !void {
     const reporting_contract = reportingContract(self);
-    const host_metrics = hostMetrics(self);
+    const cell_metrics = cellMetrics(self);
     if (!reporting_contract.inband_resize_notifications_2048.*) return;
     if (self.lockPtyWriter()) |writer_guard| {
         var writer = writer_guard;
-        const rows_px: u32 = @as(u32, rows) * @as(u32, host_metrics.cell_height.*);
-        const cols_px: u32 = @as(u32, cols) * @as(u32, host_metrics.cell_width.*);
+        const rows_px: u32 = @as(u32, rows) * @as(u32, cell_metrics.cell_height.*);
+        const cols_px: u32 = @as(u32, cols) * @as(u32, cell_metrics.cell_width.*);
         var buf: [64]u8 = undefined;
         const seq = try std.fmt.bufPrint(
             &buf,
@@ -124,8 +144,8 @@ pub fn reportInBandResize2048(self: anytype, rows: u16, cols: u16) !void {
 
 pub fn reportColorSchemeChanged(self: anytype, dark: bool) !bool {
     const reporting_contract = reportingContract(self);
-    const host_metrics = hostMetrics(self);
-    host_metrics.color_scheme_dark.* = dark;
+    const color_state = colorSchemeState(self);
+    color_state.color_scheme_dark.* = dark;
     if (!reporting_contract.report_color_scheme_2031.*) {
         return false;
     }
