@@ -22,7 +22,7 @@ This is where `TerminalCore` still most clearly reads like:
 The pressure is concentrated in:
 
 - [terminal_core.zig](/home/home/personal/zide/src/terminal/core/terminal_core.zig)
-  - `resetState(self, owner)`
+  - `resetState(self)`
   - `eraseDisplayLocked(self, owner, mode)`
 - [terminal_core_modes.zig](/home/home/personal/zide/src/terminal/core/terminal_core_modes.zig)
   - `enterAltScreenCore(...)`
@@ -88,3 +88,25 @@ What remains:
 
 - reset and alt-screen mode transitions still read more owner-shaped than this
   new erase slice
+
+The second opening slice is now landed:
+
+- [TerminalCore.resetState(...)](/home/home/personal/zide/src/terminal/core/terminal_core.zig)
+  no longer takes outer owner shape just to reset kitty image state
+- it now performs that terminal-owned reset step through a tiny local kitty
+  shim with only:
+  - `allocator`
+  - `core`
+- [mode_effects.zig](/home/home/personal/zide/src/terminal/core/session/mode_effects.zig)
+  now keeps input-mode reset as the explicit outer consequence instead of
+  passing the whole shell into core reset
+
+Why this counts:
+
+- terminal reset semantics moved further inward
+- outer mode effects now read more like honest non-core reset consequences
+
+What remains now:
+
+- alt-screen enter/exit transitions
+- presentation/snapshot effects around those transitions

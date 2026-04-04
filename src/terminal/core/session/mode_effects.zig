@@ -5,7 +5,7 @@ const terminal_publication = @import("../publication/terminal_publication.zig");
 const host_selection = @import("../selection.zig");
 
 pub fn resetStateLocked(self: anytype) void {
-    self.core.resetState(self);
+    self.core.resetState();
     input_modes.resetInputModesLocked(self);
 }
 

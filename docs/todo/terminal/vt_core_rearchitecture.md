@@ -484,6 +484,11 @@ Current full-scope read:
     `EraseDisplayEffect` instead of taking outer owner shape just to clear
     selection
   - `terminal_core_protocol.zig` now consumes that consequence explicitly
+  - the second opening slice is now landed:
+    `TerminalCore.resetState(...)` no longer takes outer owner shape just to
+    reset kitty image state
+  - `mode_effects.zig` now keeps input-mode reset as the explicit outer
+    consequence instead of passing the whole shell into core reset
 
 Current named category-1 contradiction:
 

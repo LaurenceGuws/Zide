@@ -721,7 +721,11 @@ pub const TerminalCore = struct {
         self.history.selection.selection = selection;
     }
 
-    pub fn resetState(self: *TerminalCore, owner: anytype) void {
+    pub fn resetState(self: *TerminalCore) void {
+        const KittyOwner = struct {
+            allocator: std.mem.Allocator,
+            core: *TerminalCore,
+        };
         self.resetParserState();
         self.clearSavedCharsetState();
         self.primary.resetState();
@@ -729,7 +733,10 @@ pub const TerminalCore = struct {
         self.current_hyperlink_id = 0;
         self.primary.clear();
         self.alt.clear();
-        kitty_mod.clearKittyImages(owner);
+        kitty_mod.clearKittyImages(KittyOwner{
+            .allocator = self.allocator,
+            .core = self,
+        });
         _ = self.clear_generation.fetchAdd(1, .acq_rel);
     }
 
