@@ -69,7 +69,6 @@ pub fn beginFrame(self: anytype) void {
 
     self.present.scene_frame_active = beginSceneFrame(self);
     if (!self.present.scene_frame_active) self.bindDefaultTarget();
-    self.updateMouseScale();
     gl.Disable(gl.c.GL_SCISSOR_TEST);
 
     const bg = self.theme.background.toRgba();

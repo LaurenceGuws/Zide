@@ -1,8 +1,10 @@
 const app_bootstrap = @import("../bootstrap.zig");
 const app_modes = @import("../modes/mod.zig");
 const app_terminal_grid = @import("terminal_grid.zig");
+const app_shell = @import("../../app_shell.zig");
 const shared_types = @import("../../types/mod.zig");
 
+const TerminalCellGeometry = app_shell.TerminalCellGeometry;
 const layout_types = shared_types.layout;
 
 pub const Result = struct {
@@ -22,8 +24,7 @@ pub fn handle(
     layout: layout_types.WidgetLayout,
     terminal_height: f32,
     terminal_tab_count: usize,
-    terminal_cell_width: f32,
-    terminal_cell_height: f32,
+    terminal_cell_geometry: TerminalCellGeometry,
 ) Result {
     var out: Result = .{};
     if (!window_resize_pending.* or (now - window_resize_last_time) < 0.12) return out;
@@ -43,8 +44,7 @@ pub fn handle(
     const grid = app_terminal_grid.computeWithEnvOverride(
         layout.terminal.width,
         effective_height,
-        terminal_cell_width,
-        terminal_cell_height,
+        terminal_cell_geometry,
         1,
         1,
     );

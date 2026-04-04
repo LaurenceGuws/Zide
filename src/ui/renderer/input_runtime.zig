@@ -105,7 +105,7 @@ fn handleEvent(
                 if (idx < domain.mouse_press_pos.len) {
                     const raw_x = sdl_api.mouseButtonX(event);
                     const raw_y = sdl_api.mouseButtonY(event);
-                    domain.mouse_press_pos[idx] = .{ .x = raw_x * domain.mouse_scale.x, .y = raw_y * domain.mouse_scale.y };
+                    domain.mouse_press_pos[idx] = .{ .x = raw_x, .y = raw_y };
                     domain.mouse_press_pos_valid[idx] = true;
                 }
             }

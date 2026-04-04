@@ -17,7 +17,6 @@ pub const TextComposition = struct {
 };
 
 pub const InputRuntimeState = struct {
-    mouse_scale: iface.MousePos = .{ .x = 1.0, .y = 1.0 },
     should_close_flag: bool = false,
     key_down: [key_repeat_key_count]bool = [_]bool{false} ** key_repeat_key_count,
     key_pressed: [key_repeat_key_count]bool = [_]bool{false} ** key_repeat_key_count,
@@ -49,7 +48,6 @@ pub const InputRuntimeState = struct {
 pub const InputDomain = struct {
     allocator: std.mem.Allocator,
     window: *sdl_api.c.SDL_Window,
-    mouse_scale: iface.MousePos,
     should_close_flag: *bool,
     key_down: []bool,
     key_pressed: []bool,

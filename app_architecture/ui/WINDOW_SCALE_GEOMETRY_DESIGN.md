@@ -166,6 +166,9 @@ Rules:
 - it is already coherent and already snapped where required by renderer policy
 - terminal widget subsystems must not derive alternate origin/cell/baseline
   geometry from raw scale
+- terminal runtime sizing must use the same inner viewport contract as draw
+  does; it must not size against a larger outer pane height and then ask the
+  widget to paint a smaller stripped terminal rect
 
 Not included on purpose:
 
@@ -209,10 +212,16 @@ This is the right home for:
 - `Shell.uiScaleFactor()`
   - temporary survivor during migration
   - target state: most widget code should prefer `UiGeometryContext.ui_scale`
+- `Shell.terminalCellGeometry()`
+  - runtime-side survivor for terminal grid sizing and VT/PTTY cell metrics
+  - not a normal widget geometry surface
+  - widgets should still consume `TerminalViewGeometry`, not device-pixel cell
+    metrics
 - `Shell.terminalCellWidth()`
 - `Shell.terminalCellHeight()`
-  - temporary survivors only if needed by runtime code outside the terminal
-    widget migration front
+  - temporary survivors only for diagnostics/logging compatibility
+  - terminal grid sizing and VT resize must not depend on these rounded logical
+    float getters anymore
 
 ### Delete from normal widget use
 

@@ -228,11 +228,16 @@ fn computeInitialGrid(state: anytype) struct { rows: u16, cols: u16 } {
     const width = @as(f32, @floatFromInt(shell.width()));
     const height = @as(f32, @floatFromInt(shell.height()));
     const layout = app_ui_layout_runtime.computeLayout(state, width, height);
+    const effective_height = app_modes.ide.terminalEffectiveHeightForSizing(
+        state.app_mode,
+        state.show_terminal,
+        layout.terminal.height,
+        state.terminal_height,
+    );
     const initial_grid = app_terminal_grid.computeWithEnvOverride(
         layout.terminal.width,
-        layout.terminal.height,
-        shell.terminalCellWidth(),
-        shell.terminalCellHeight(),
+        effective_height,
+        shell.terminalCellGeometry(),
         80,
         24,
     );

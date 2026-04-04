@@ -128,6 +128,7 @@ pub const getScreenWidth = r.getScreenWidth;
 pub const getScreenHeight = r.getScreenHeight;
 pub const WindowMetrics = window.WindowMetrics;
 pub const UiGeometryContext = r.UiGeometryContext;
+pub const TerminalCellGeometry = r.Renderer.TerminalCellGeometry;
 pub const TerminalViewGeometry = r.TerminalViewGeometry;
 pub const RendererInitOptions = r.Renderer.InitOptions;
 pub const TextComposition = r.Renderer.TextComposition;
@@ -307,16 +308,16 @@ pub const Shell = struct {
         return self.renderer.terminalViewGeometry(viewport, rows, cols);
     }
 
+    pub fn terminalCellGeometry(self: *Shell) TerminalCellGeometry {
+        return self.renderer.terminalCellGeometry();
+    }
+
     pub fn terminalCellWidth(self: *Shell) f32 {
         return self.renderer.terminal_cell_width;
     }
 
     pub fn terminalCellHeight(self: *Shell) f32 {
         return self.renderer.terminal_cell_height;
-    }
-
-    pub fn mouseScale(self: *Shell) MousePos {
-        return self.renderer.input.mouse_scale;
     }
 
     pub fn theme(self: *Shell) *const Theme {

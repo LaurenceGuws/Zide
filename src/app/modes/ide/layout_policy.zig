@@ -86,7 +86,7 @@ pub fn terminalEffectiveHeightForSizing(
     terminal_height: f32,
 ) f32 {
     if (mode_build.effectiveMode(app_mode) == .ide and !show_terminal) return terminal_height;
-    return layout_terminal_height;
+    return terminalStrip(app_mode, layout_terminal_height).draw_height;
 }
 
 pub fn terminalStrip(app_mode: app_bootstrap.AppMode, layout_terminal_height: f32) TerminalStrip {

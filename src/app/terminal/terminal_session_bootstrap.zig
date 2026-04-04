@@ -63,10 +63,11 @@ pub fn startSessionWithShellCellSize(
     launch_cwd: ?[]const u8,
     configured_shell_path: ?[]const u8,
 ) !void {
+    const cell_geometry = shell.terminalCellGeometry();
     session_config.setCellSize(
         term,
-        @intFromFloat(shell.terminalCellWidth()),
-        @intFromFloat(shell.terminalCellHeight()),
+        @intCast(@max(1, cell_geometry.cell_width_device_px)),
+        @intCast(@max(1, cell_geometry.cell_height_device_px)),
     );
     const env_shell_override = try getEnvVarOwned(term.allocator, "ZIDE_TERMINAL_SHELL");
     defer if (env_shell_override) |value| term.allocator.free(value);

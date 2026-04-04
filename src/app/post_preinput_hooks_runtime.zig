@@ -139,11 +139,11 @@ pub fn handle(state: anytype, shell: *Shell, batch: *input_types.InputBatch, now
                         inner_state.terminals.items.len,
                         inner_state.terminal_widgets.items,
                     )) |term_widget| {
-                        const rc = &term_widget.draw_cache;
+                        const rc = term_widget.viewModel();
                         cache = app_cursor_blink_frame.Input{
-                            .cursor_visible = rc.cursor_visible,
-                            .cursor_blink = rc.cursor_style.blink,
-                            .scroll_offset = rc.scroll_offset,
+                            .cursor_visible = rc.render.draw_cursor_visible,
+                            .cursor_blink = rc.render.cursor_style.blink,
+                            .scroll_offset = rc.viewport.scroll_offset,
                         };
                     }
 
@@ -182,19 +182,54 @@ pub fn handle(state: anytype, shell: *Shell, batch: *input_types.InputBatch, now
                         layout,
                         inner_state.terminal_height,
                         app_terminal_tabs_runtime.count(inner_state.app_mode, inner_state.terminal_workspace, inner_state.terminals.items.len),
-                        frame_shell.terminalCellWidth(),
-                        frame_shell.terminalCellHeight(),
+                        frame_shell.terminalCellGeometry(),
                     );
                     if (!result.triggered) return;
 
                     if (result.should_resize_terminals) {
                         if (app_modes.ide.shouldUseTerminalWorkspace(inner_state.app_mode)) {
                             if (inner_state.terminal_workspace) |*workspace| {
-                                try app_terminal_resize.resizeWorkspaceWithShellCellSize(workspace, frame_shell, result.rows, result.cols);
+                                const terminal_grid = app_terminal_grid.computeWithEnvOverride(
+                                    layout.terminal.width,
+                                    app_modes.ide.terminalEffectiveHeightForSizing(
+                                        inner_state.app_mode,
+                                        inner_state.show_terminal,
+                                        layout.terminal.height,
+                                        inner_state.terminal_height,
+                                    ),
+                                    frame_shell.terminalCellGeometry(),
+                                    1,
+                                    1,
+                                );
+                                try app_terminal_resize.resizeWorkspaceWithCellSize(
+                                    workspace,
+                                    result.rows,
+                                    result.cols,
+                                    terminal_grid.cell_width,
+                                    terminal_grid.cell_height,
+                                );
                             }
                         } else {
                             const term = inner_state.terminals.items[0];
-                            try app_terminal_resize.resizeSessionWithShellCellSize(term, frame_shell, result.rows, result.cols);
+                            const terminal_grid = app_terminal_grid.computeWithEnvOverride(
+                                layout.terminal.width,
+                                app_modes.ide.terminalEffectiveHeightForSizing(
+                                    inner_state.app_mode,
+                                    inner_state.show_terminal,
+                                    layout.terminal.height,
+                                    inner_state.terminal_height,
+                                ),
+                                frame_shell.terminalCellGeometry(),
+                                1,
+                                1,
+                            );
+                            try app_terminal_resize.resizeSessionWithCellSize(
+                                term,
+                                result.rows,
+                                result.cols,
+                                terminal_grid.cell_width,
+                                terminal_grid.cell_height,
+                            );
                         }
                     }
                     if (result.needs_redraw) inner_state.needs_redraw = true;
@@ -264,6 +299,8 @@ pub fn handle(state: anytype, shell: *Shell, batch: *input_types.InputBatch, now
                     at: f64,
                 ) !void {
                     const inner_state: *State = @ptrCast(@alignCast(inner_raw));
+                    _ = frame_shell;
+                    _ = width;
                     const result = app_terminal_split_resize_frame.handle(
                         inner_state.app_mode,
                         inner_state.show_terminal,
@@ -283,11 +320,16 @@ pub fn handle(state: anytype, shell: *Shell, batch: *input_types.InputBatch, now
                         inner_state.terminal_height = new_height;
                         if (inner_state.terminals.items.len > 0) {
                             const term = inner_state.terminals.items[0];
-                            const grid = app_terminal_grid.computeWithEnvOverride(
-                                width,
+                            const effective_height = app_modes.ide.terminalEffectiveHeightForSizing(
+                                inner_state.app_mode,
+                                inner_state.show_terminal,
                                 inner_state.terminal_height,
-                                inner_state.shell.terminalCellWidth(),
-                                inner_state.shell.terminalCellHeight(),
+                                inner_state.terminal_height,
+                            );
+                            const grid = app_terminal_grid.computeWithEnvOverride(
+                                layout.terminal.width,
+                                effective_height,
+                                inner_state.shell.terminalCellGeometry(),
                                 1,
                                 1,
                             );
@@ -297,8 +339,8 @@ pub fn handle(state: anytype, shell: *Shell, batch: *input_types.InputBatch, now
                                 term,
                                 rows,
                                 cols,
-                                @intFromFloat(frame_shell.terminalCellWidth()),
-                                @intFromFloat(frame_shell.terminalCellHeight()),
+                                grid.cell_width,
+                                grid.cell_height,
                             );
                         }
                     }

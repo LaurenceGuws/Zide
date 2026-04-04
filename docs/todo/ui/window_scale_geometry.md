@@ -370,6 +370,32 @@ Manual:
       instead of recollecting SDL metrics independently every frame or
       recomputing invalidation locally
   - Current honest remainder:
+    - terminal grid sizing and VT resize no longer derive rows/cols from
+      rounded logical terminal font metrics:
+      - [terminal_grid.zig](/home/home/personal/zide/src/app/terminal/terminal_grid.zig)
+        now computes rows/cols from
+        `Shell.terminalCellGeometry().cell_*_logical_exact`
+      - [deferred_terminal_resize_frame.zig](/home/home/personal/zide/src/app/terminal/deferred_terminal_resize_frame.zig)
+      - [terminal_refresh_sizing_runtime.zig](/home/home/personal/zide/src/app/terminal/terminal_refresh_sizing_runtime.zig)
+      - [new_terminal_runtime.zig](/home/home/personal/zide/src/app/new_terminal_runtime.zig)
+      - [post_preinput_hooks_runtime.zig](/home/home/personal/zide/src/app/post_preinput_hooks_runtime.zig)
+        now share that same snapped logical sizing path
+      - [terminal_resize.zig](/home/home/personal/zide/src/app/terminal/terminal_resize.zig)
+        and [terminal_session_bootstrap.zig](/home/home/personal/zide/src/app/terminal/terminal_session_bootstrap.zig)
+        now send renderer-owned device-pixel cell metrics to VT/PTTY resize
+        instead of the old rounded logical float getters
+    - terminal sizing height now matches the actual drawn terminal inner rect
+      instead of the raw pane height:
+      - [layout_policy.zig](/home/home/personal/zide/src/app/modes/ide/layout_policy.zig)
+        `terminalEffectiveHeightForSizing(...)` now uses
+        `terminalStrip(...).draw_height`
+      - [new_terminal_runtime.zig](/home/home/personal/zide/src/app/new_terminal_runtime.zig)
+      - [post_preinput_hooks_runtime.zig](/home/home/personal/zide/src/app/post_preinput_hooks_runtime.zig)
+        now size terminal rows against the same inner draw height used by
+        [terminal_draw_surface_runtime.zig](/home/home/personal/zide/src/app/terminal/terminal_draw_surface_runtime.zig)
+    - this fixes the “dead unpaintable right side / cutoff bars at some zooms”
+      class of bug by making resize-count geometry and paintable terminal
+      geometry use the same snapped contract
     - terminal retained-surface presentation no longer squeezes a wider
       offscreen logical surface into a narrower on-screen viewport:
       - [retained_targets_runtime.zig](/home/home/personal/zide/src/ui/renderer/retained_targets_runtime.zig)
@@ -416,8 +442,11 @@ Manual:
   - fake mouse-scale seam
   - any remaining widget-visible SDL geometry vocabulary
   - Current strongest residue after the terminal drift fix and font-sample cut:
-    - [mouse_state.zig](/home/home/personal/zide/src/platform/mouse_state.zig)
-      still has the fake mouse-scale seam
+    - the fake mouse-scale seam has been deleted:
+      - [mouse_state.zig](/home/home/personal/zide/src/platform/mouse_state.zig)
+        is gone
+      - renderer/input now consume SDL mouse coordinates directly instead of
+        routing them through a hardcoded `1.0` scale shim
     - [shaping.zig](/home/home/personal/zide/src/ui/font/shaping.zig) and
       [text_runtime.zig](/home/home/personal/zide/src/ui/renderer/text_runtime.zig)
       still carry duplicated snap/quantize policy outside one renderer-owned

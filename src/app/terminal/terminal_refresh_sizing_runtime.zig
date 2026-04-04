@@ -33,8 +33,7 @@ pub fn handle(
     const grid = app_terminal_grid.computeWithEnvOverride(
         layout.terminal.width,
         effective_height,
-        shell.terminalCellWidth(),
-        shell.terminalCellHeight(),
+        shell.terminalCellGeometry(),
         1,
         1,
     );
@@ -42,9 +41,9 @@ pub fn handle(
     const rows: u16 = grid.rows;
     if (app_modes.ide.shouldUseTerminalWorkspace(app_mode)) {
         if (terminal_workspace.*) |*workspace| {
-            try app_terminal_resize.resizeWorkspaceWithShellCellSize(workspace, shell, rows, cols);
+            try app_terminal_resize.resizeWorkspaceWithCellSize(workspace, rows, cols, grid.cell_width, grid.cell_height);
         }
     } else {
-        try app_terminal_resize.resizeSessionsWithShellCellSize(terminals, shell, rows, cols);
+        try app_terminal_resize.resizeSessionsWithCellSize(terminals, rows, cols, grid.cell_width, grid.cell_height);
     }
 }

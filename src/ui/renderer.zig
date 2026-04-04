@@ -35,7 +35,6 @@ const windows_frame_material = @import("../platform/windows_frame_material.zig")
 const windows_integrated_frame = @import("../platform/windows_integrated_frame.zig");
 const platform_window = @import("../platform/window_metrics.zig");
 const platform_input_events = @import("../platform/input_events.zig");
-const platform_mouse = @import("../platform/mouse_state.zig");
 const build_options = @import("build_options");
 const gl = @import("renderer/gl.zig");
 const sdl_api = @import("../platform/sdl_api.zig");
@@ -921,7 +920,6 @@ pub const Renderer = struct {
         self.render_width = metrics.drawable_w;
         self.render_height = metrics.drawable_h;
         self.display_metrics = metrics;
-        self.updateMouseScale();
     }
 
     fn logWindowMetricsSnapshot(self: *Renderer, metrics: platform_window.DisplayMetrics, reason: []const u8) void {
@@ -1268,13 +1266,12 @@ pub const Renderer = struct {
     }
 
     pub fn getMousePos(self: *Renderer) MousePos {
-        const pos = platform_mouse.getScaledPos(.{ .x = self.input.mouse_scale.x, .y = self.input.mouse_scale.y });
-        return .{ .x = pos.x, .y = pos.y };
+        _ = self;
+        return getMousePosSdl();
     }
 
     pub fn getMousePosRaw(_: *Renderer) MousePos {
-        const pos = platform_mouse.getMousePosRaw();
-        return .{ .x = pos.x, .y = pos.y };
+        return getMousePosSdl();
     }
 
     fn windowChromeDomain(self: *Renderer) window_chrome_runtime.WindowChromeDomain {
@@ -1367,11 +1364,6 @@ pub const Renderer = struct {
     }
 
     pub const DisplayMetrics = platform_window.DisplayMetrics;
-
-    pub fn updateMouseScale(self: *Renderer) void {
-        const scale = platform_mouse.computeMouseScale(self.window);
-        self.input.mouse_scale = .{ .x = scale.x, .y = scale.y };
-    }
 
     pub fn isMouseButtonPressed(self: *Renderer, button: i32) bool {
         return input_state.isMouseButtonPressed(self.inputDomain(), button);
@@ -1586,7 +1578,6 @@ pub const Renderer = struct {
         return .{
             .allocator = self.allocator,
             .window = self.window,
-            .mouse_scale = self.input.mouse_scale,
             .should_close_flag = &self.input.should_close_flag,
             .key_down = self.input.key_down[0..],
             .key_pressed = self.input.key_pressed[0..],
@@ -1614,6 +1605,13 @@ pub const Renderer = struct {
             .pending_wait_event = &self.input.pending_wait_event,
             .pending_wait_event_valid = &self.input.pending_wait_event_valid,
         };
+    }
+
+    fn getMousePosSdl() MousePos {
+        var x: f32 = 0;
+        var y: f32 = 0;
+        sdl_api.getMouseState(&x, &y);
+        return .{ .x = x, .y = y };
     }
 
     fn pollInputEvents(self: *Renderer) void {
