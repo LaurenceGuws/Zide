@@ -373,11 +373,12 @@ pub const Transport = struct {
 };
 
 pub fn openPty(self: anytype, shell: ?[:0]const u8, spawn_threads: bool) !void {
+    const cell_metrics = self.core.currentCellMetrics();
     const size = PtySize{
         .rows = self.core.primary.grid.rows,
         .cols = self.core.primary.grid.cols,
-        .cell_width = self.session.interaction.host_contract.cell_width,
-        .cell_height = self.session.interaction.host_contract.cell_height,
+        .cell_width = cell_metrics.width,
+        .cell_height = cell_metrics.height,
     };
     const pty = try pty_mod.Pty.init(self.allocator, size, shell);
     attachPty(self, pty);

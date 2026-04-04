@@ -639,6 +639,19 @@ Current full-scope read:
   - color-scheme state is narrower than cell metrics and should not outrank it
   - if this front continues immediately, the next exact host-side
     contradiction is cell-metric dependence
+  Progress:
+  - the cell-metric contradiction is now materially cut
+  - `TerminalCore` now owns current cell metrics directly
+  - feed/protocol no longer needs a cell-metrics face on
+    `protocol_execution.zig`
+  - resize/config/transport now stage and consume cell metrics through core
+  - protocol replies, in-band resize reporting, and kitty placement now read
+    cell metrics from core-owned state instead of a host-contract bag
+  - the remaining host-side faces are now:
+    - reporting contract flags
+    - color-scheme state
+  - the next rerank should decide whether either of those still beats broader
+    `TerminalCore` sufficiency
 
 Current named category-1 contradiction:
 

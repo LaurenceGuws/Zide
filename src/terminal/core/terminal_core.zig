@@ -92,6 +92,11 @@ pub const TerminalCore = struct {
         progress: ProgressMetadata,
     };
 
+    pub const CellMetrics = struct {
+        width: u16,
+        height: u16,
+    };
+
     allocator: std.mem.Allocator,
     title: []const u8,
     title_buffer: std.ArrayList(u8),
@@ -125,6 +130,7 @@ pub const TerminalCore = struct {
     palette_default: [256]types.Color,
     palette_current: [256]types.Color,
     dynamic_colors: [dynamic_color_count]?types.Color,
+    cell_metrics: CellMetrics,
     sync_updates_active: bool,
     column_mode_132: bool,
     alt_last_active: bool,
@@ -193,6 +199,7 @@ pub const TerminalCore = struct {
             .palette_default = palette_default,
             .palette_current = palette_default,
             .dynamic_colors = [_]?types.Color{null} ** dynamic_color_count,
+            .cell_metrics = .{ .width = 0, .height = 0 },
             .sync_updates_active = false,
             .column_mode_132 = false,
             .alt_last_active = false,
@@ -232,6 +239,14 @@ pub const TerminalCore = struct {
 
     pub fn activeScreen(self: *TerminalCore) *Screen {
         return if (self.active == .alt) &self.alt else &self.primary;
+    }
+
+    pub fn setCellMetrics(self: *TerminalCore, width: u16, height: u16) void {
+        self.cell_metrics = .{ .width = width, .height = height };
+    }
+
+    pub fn currentCellMetrics(self: *const TerminalCore) CellMetrics {
+        return self.cell_metrics;
     }
 
     pub fn feedOutputBytesLocked(self: *TerminalCore, owner: anytype, bytes: []const u8) OutputFeedResult {

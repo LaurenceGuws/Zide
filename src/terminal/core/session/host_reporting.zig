@@ -76,21 +76,9 @@ pub fn cellMetrics(self: anytype) CellMetricsAccess {
         .pointer => {},
         else => @compileError("host_reporting expects a pointer receiver"),
     }
-    if (@hasField(@TypeOf(self.*), "cell_metrics")) {
-        return .{
-            .cell_width = self.cell_metrics.cell_width,
-            .cell_height = self.cell_metrics.cell_height,
-        };
-    }
-    if (@hasField(@TypeOf(self.session), "cell_metrics")) {
-        return .{
-            .cell_width = self.session.cell_metrics.cell_width,
-            .cell_height = self.session.cell_metrics.cell_height,
-        };
-    }
     return .{
-        .cell_width = &self.session.interaction.host_contract.cell_width,
-        .cell_height = &self.session.interaction.host_contract.cell_height,
+        .cell_width = &self.core.cell_metrics.width,
+        .cell_height = &self.core.cell_metrics.height,
     };
 }
 

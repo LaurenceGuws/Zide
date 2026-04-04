@@ -30,11 +30,6 @@ pub const ColorSchemeStateFace = struct {
     color_scheme_dark: *bool,
 };
 
-pub const CellMetricsFace = struct {
-    cell_width: *u16,
-    cell_height: *u16,
-};
-
 pub const RuntimeWriteFace = struct {
     pty: *?Pty,
     external_transport: *?terminal_transport.ExternalTransport,
@@ -58,7 +53,6 @@ pub const ProtocolExecution = struct {
     session: SessionFaces,
     reporting_contract: ReportingContractFace,
     color_scheme_state: ColorSchemeStateFace,
-    cell_metrics: CellMetricsFace,
     runtime: RuntimeWriteFace,
     state_mutex: *std.Thread.Mutex,
 
@@ -78,10 +72,6 @@ pub const ProtocolExecution = struct {
             },
             .color_scheme_state = .{
                 .color_scheme_dark = &owner.session.interaction.host_contract.color_scheme_dark,
-            },
-            .cell_metrics = .{
-                .cell_width = &owner.session.interaction.host_contract.cell_width,
-                .cell_height = &owner.session.interaction.host_contract.cell_height,
             },
             .runtime = .{
                 .pty = &owner.session.runtime.pty,

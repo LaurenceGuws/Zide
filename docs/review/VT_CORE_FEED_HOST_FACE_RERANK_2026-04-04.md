@@ -57,3 +57,31 @@ If the feed-execution front continues immediately, the next exact surviving
 host-side contradiction is cell-metric dependence.
 
 Do not reopen generic “host contract” cleanup from this baseline.
+
+## Progress
+
+The cell-metric contradiction is now materially cut.
+
+What changed:
+
+- [terminal_core.zig](/home/home/personal/zide/src/terminal/core/terminal_core.zig)
+  now owns current cell metrics directly
+- feed/protocol no longer needs a cell-metrics face on
+  [protocol_execution.zig](/home/home/personal/zide/src/terminal/core/session/protocol_execution.zig)
+- [resize_reflow.zig](/home/home/personal/zide/src/terminal/core/resize_reflow.zig),
+  [config.zig](/home/home/personal/zide/src/terminal/core/session/config.zig),
+  and [terminal_transport.zig](/home/home/personal/zide/src/terminal/core/runtime/terminal_transport.zig)
+  now stage and consume cell metrics through `TerminalCore`
+- [protocol_runtime.zig](/home/home/personal/zide/src/terminal/core/session/protocol_runtime.zig),
+  [host_reporting.zig](/home/home/personal/zide/src/terminal/core/session/host_reporting.zig),
+  and [placement_ops.zig](/home/home/personal/zide/src/terminal/kitty/placement_ops.zig)
+  now read cell metrics from core-owned state instead of a host-contract bag
+
+Current judgment after the cut:
+
+- cell metrics no longer survive as a feed-side host face
+- the remaining host-side faces are now:
+  - reporting contract flags
+  - color-scheme state
+- the next rerank should decide whether either of those still beats broader
+  `TerminalCore` sufficiency

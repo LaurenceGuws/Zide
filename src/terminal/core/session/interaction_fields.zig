@@ -17,8 +17,6 @@ pub const HostContractState = struct {
     report_color_scheme_2031: bool,
     color_scheme_dark: bool,
     kitty_paste_events_5522: bool,
-    cell_width: u16,
-    cell_height: u16,
 };
 
 pub const DerivedSnapshotState = struct {

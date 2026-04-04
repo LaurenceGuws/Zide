@@ -31,22 +31,20 @@ fn resizeInternal(
 ) !void {
     self.session.control.state_mutex.lock();
     if (cell_size) |size| {
-        self.session.interaction.host_contract.cell_width = size.cell_width;
-        self.session.interaction.host_contract.cell_height = size.cell_height;
+        self.core.setCellMetrics(size.cell_width, size.cell_height);
     }
     const effect = try self.core.resizeLocked(self, rows, cols);
     if (effect.refresh_scroll_view) {
         publication_flow.refreshScrollViewLocked(self, effect.scroll_offset);
     }
-    const cell_width = self.session.interaction.host_contract.cell_width;
-    const cell_height = self.session.interaction.host_contract.cell_height;
+    const cell_metrics = self.core.currentCellMetrics();
     self.session.control.state_mutex.unlock();
     if (terminal_transport.Transport.fromSession(self)) |transport| {
         const size = PtySize{
             .rows = rows,
             .cols = cols,
-            .cell_width = cell_width,
-            .cell_height = cell_height,
+            .cell_width = cell_metrics.width,
+            .cell_height = cell_metrics.height,
         };
         try transport.resize(size);
     }

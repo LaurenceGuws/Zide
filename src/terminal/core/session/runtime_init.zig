@@ -61,8 +61,6 @@ pub fn init(self_type: type, allocator: std.mem.Allocator, rows: u16, cols: u16,
                     .report_color_scheme_2031 = false,
                     .color_scheme_dark = true,
                     .kitty_paste_events_5522 = false,
-                    .cell_width = 0,
-                    .cell_height = 0,
                 },
                 .derived_snapshot = .{
                     .input = InputSnapshot.init(),
