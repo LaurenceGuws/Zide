@@ -632,6 +632,13 @@ Current full-scope read:
     - reporting contract flags
     - cell metrics
     - color-scheme state
+  Rerank:
+  - cell metrics now win
+  - reporting contract flags now read mostly honest as explicit host opt-in
+    contract
+  - color-scheme state is narrower than cell metrics and should not outrank it
+  - if this front continues immediately, the next exact host-side
+    contradiction is cell-metric dependence
 
 Current named category-1 contradiction:
 
