@@ -14,16 +14,15 @@ pub const Snapshot = struct {
 };
 
 pub fn snapshot(self: anytype) Snapshot {
-    const screen = self.core.activeScreen();
-    const pos = screen.cursorReport();
+    const core_snapshot = self.core.csiReplySnapshot();
     const runtime_snapshot = protocol_runtime.csiReplyRuntimeSnapshot(self);
     return .{
-        .cursor_row_1 = pos.row_1,
-        .cursor_col_1 = pos.col_1,
-        .rows = screen.grid.rows,
-        .cols = screen.grid.cols,
-        .cell_height = runtime_snapshot.cell_height,
-        .cell_width = runtime_snapshot.cell_width,
+        .cursor_row_1 = core_snapshot.cursor_row_1,
+        .cursor_col_1 = core_snapshot.cursor_col_1,
+        .rows = core_snapshot.rows,
+        .cols = core_snapshot.cols,
+        .cell_height = core_snapshot.cell_height,
+        .cell_width = core_snapshot.cell_width,
         .color_scheme_dark = runtime_snapshot.color_scheme_dark,
     };
 }

@@ -77,6 +77,16 @@ Current full-scope read:
   - scrollback and kitty follow-through remain explicit lower-level consumers,
     but they no longer keep text protocol-owned
 
+- `docs/review/VT_CORE_CSI_REPLY_SNAPSHOT_FRONT_2026-04-04.md`
+  Why: after text ownership landed, CSI reply snapshot truth was one clean
+  remaining query slab still assembled from protocol-local screen/runtime
+  reads.
+  Current read:
+  - cursor, geometry, and cell-metric reply truth now live on `TerminalCore`
+  - runtime reply state is reduced to color-scheme only
+  - reply assembly is flatter and more obviously composed from core truth plus
+    honest runtime state
+
 - `docs/review/VT_SHELL_HOSTILE_AUDIT_2026-04-03.md`
   Why: with the wartime shell bar now explicit, the shell needs a hostile
   responsibility audit instead of vague legitimacy language.

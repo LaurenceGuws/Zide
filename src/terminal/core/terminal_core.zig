@@ -101,6 +101,15 @@ pub const TerminalCore = struct {
         progress: ProgressMetadata,
     };
 
+    pub const CsiReplySnapshot = struct {
+        cursor_row_1: usize,
+        cursor_col_1: usize,
+        rows: u16,
+        cols: u16,
+        cell_height: u16,
+        cell_width: u16,
+    };
+
     pub const TerminalModeSnapshot = struct {
         column_mode_132: bool,
         screen_reverse: bool,
@@ -422,6 +431,20 @@ pub const TerminalCore = struct {
                 .state = self.progress_state,
                 .value = self.progress_value,
             },
+        };
+    }
+
+    pub fn csiReplySnapshot(self: *const TerminalCore) CsiReplySnapshot {
+        const screen = self.activeScreenConst();
+        const pos = screen.cursorReport();
+        const cell_metrics = self.currentCellMetrics();
+        return .{
+            .cursor_row_1 = pos.row_1,
+            .cursor_col_1 = pos.col_1,
+            .rows = screen.grid.rows,
+            .cols = screen.grid.cols,
+            .cell_height = cell_metrics.height,
+            .cell_width = cell_metrics.width,
         };
     }
 
