@@ -42,3 +42,23 @@ It is:
 
 The next default feed-execution front is protocol-state reach unless a
 stronger named contradiction overtakes it immediately.
+
+## Design Bar
+
+A protocol-state-only cut did not survive the active call graph cleanly.
+
+Why it failed:
+
+- [input_modes.zig](/home/home/personal/zide/src/terminal/core/input_modes.zig)
+  still mutates and republishes protocol mode state through full
+  `session.interaction` reach when called from active CSI paths
+- [protocol_runtime.zig](/home/home/personal/zide/src/terminal/core/session/protocol_runtime.zig)
+  still uses host-contract state for reporting/runtime hooks
+- kitty placement/runtime-adjacent helpers still read host-contract cell
+  metrics on the same receiver shape
+
+Current judgment:
+
+- the next honest move is not to pretend `interaction` can already disappear
+- the next honest move is to split one narrower feed-facing protocol-state
+  contract that survives those real dependencies

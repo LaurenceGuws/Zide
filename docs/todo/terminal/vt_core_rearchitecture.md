@@ -576,6 +576,14 @@ Current full-scope read:
   - lock access is still narrowed to the mutex
   - the remaining broad named state face on `protocol_execution.zig` is
     `interaction`, still reached indirectly through `protocol_state.zig`
+  - protocol-state-only did not survive the active call graph cleanly
+  - blocking dependencies still include:
+    - `input_modes.zig`
+    - `protocol_runtime.zig`
+    - kitty placement/runtime-adjacent host-contract metric reads
+  - the next move must split one narrower feed-facing protocol-state contract
+    that survives those dependencies instead of pretending `interaction` can
+    already disappear
 
 Current named category-1 contradiction:
 
