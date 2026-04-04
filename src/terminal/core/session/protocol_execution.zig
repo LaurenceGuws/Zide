@@ -15,7 +15,6 @@ const Pty = pty_mod.Pty;
 const FeedResult = terminal_core_feed.FeedResult;
 
 pub const SessionFaces = struct {
-    runtime: *runtime_fields.Fields,
     interaction: *interaction_fields.Fields,
     publication: *publication_fields.Fields,
 };
@@ -44,7 +43,6 @@ pub const ProtocolExecution = struct {
             .allocator = owner.allocator,
             .core = core,
             .session = .{
-                .runtime = &owner.session.runtime,
                 .interaction = &owner.session.interaction,
                 .publication = &owner.session.publication,
             },

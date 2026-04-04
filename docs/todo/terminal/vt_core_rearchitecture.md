@@ -453,12 +453,19 @@ Current full-scope read:
     `publication_flow` choreography for that shared path:
     - `pty_poll_publication.zig`
     - `io_threads.zig`
+  - the dead runtime compatibility residue is now gone from
+    `protocol_execution.zig`
+  - reply sink emission now uses the explicit `writePtyBytes(...)` contract
+    directly through `protocol_reply_sink.zig`
   - post-sync rerank: publication still beats runtime as the strongest fully
     surviving execution face, because the active path still depends on the
     broader view-cache/publication helper stack
   - post-parsed-output rerank: publication still wins, but its remaining shape
     is now pending-refresh / poll publication cadence rather than broad
     parsed-output publication
+  - post-poll rerank: runtime compatibility is no longer a broad surviving
+    execution face; the next move must freshly prove whether publication still
+    wins or whether execution-face cleanup is no longer the default front
 
 Current named category-1 contradiction:
 

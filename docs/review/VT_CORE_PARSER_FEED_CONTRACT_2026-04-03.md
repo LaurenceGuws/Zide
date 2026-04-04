@@ -304,3 +304,20 @@ That pending-refresh / poll contract is now landed too:
   poll/refresh choreography
 - see
   [VT_PROTOCOL_PUBLICATION_POLL_CONTRACT_2026-04-04.md](/home/home/personal/zide/docs/review/VT_PROTOCOL_PUBLICATION_POLL_CONTRACT_2026-04-04.md)
+
+The runtime side then lost one more fake face too:
+
+- `ProtocolExecution` no longer carries `session.runtime` as a generic
+  session face
+- `protocol_reply_sink.zig` now uses the explicit `writePtyBytes(...)`
+  contract directly instead of the generic transport helper path
+
+That means:
+
+- the runtime side is now much closer to an honest explicit write/wake
+  boundary
+- publication no longer gets to win by inertia alone
+
+See:
+
+- [VT_POST_POLL_PUBLICATION_RERANK_2026-04-04.md](/home/home/personal/zide/docs/review/VT_POST_POLL_PUBLICATION_RERANK_2026-04-04.md)

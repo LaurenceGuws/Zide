@@ -257,3 +257,16 @@ That contract is now landed too:
   choreography for that shared path:
   - [pty_poll_publication.zig](/home/home/personal/zide/src/terminal/core/runtime/pty_poll_publication.zig)
   - [io_threads.zig](/home/home/personal/zide/src/terminal/core/runtime/io_threads.zig)
+
+The runtime side then lost its dead compatibility residue too:
+
+- [protocol_execution.zig](/home/home/personal/zide/src/terminal/core/session/protocol_execution.zig)
+  no longer carries `session.runtime` as a generic session face
+- reply sink emission now uses the explicit `writePtyBytes(...)` contract
+  directly through
+  [protocol_reply_sink.zig](/home/home/personal/zide/src/terminal/core/session/protocol_reply_sink.zig)
+  instead of the generic transport helper path
+
+See:
+
+- [VT_POST_POLL_PUBLICATION_RERANK_2026-04-04.md](/home/home/personal/zide/docs/review/VT_POST_POLL_PUBLICATION_RERANK_2026-04-04.md)
