@@ -438,9 +438,17 @@ Current full-scope read:
     - `terminal_core_feed.zig`
     - `pty_poll_processing.zig`
     - `io_threads.zig`
+  - that parsed-output wave then tightened once more:
+    - `io_threads.zig` now uses `protocol_execution.publishPendingOutput(...)`
+      for the idle publish path too
+    - `pty_poll_publication.zig` now uses
+      `protocol_execution.markOutputPending(...)` for unread buffered IO
   - post-sync rerank: publication still beats runtime as the strongest fully
     surviving execution face, because the active path still depends on the
     broader view-cache/publication helper stack
+  - post-parsed-output rerank: publication still wins, but its remaining shape
+    is now pending-refresh / poll publication cadence rather than broad
+    parsed-output publication
 
 Current named category-1 contradiction:
 

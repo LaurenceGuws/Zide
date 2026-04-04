@@ -281,3 +281,12 @@ Current read after this slice:
   - parsed-output publication
 - the next rerank should now judge whether publication still beats runtime
   from that narrower baseline
+
+That rerank is now tighter too:
+
+- the remaining publication pressure is no longer broad parsed-output
+  publication
+- the remaining pressure is now closer to pending-refresh / poll publication
+  cadence
+- see
+  [VT_POST_PARSED_OUTPUT_PUBLICATION_RERANK_2026-04-04.md](/home/home/personal/zide/docs/review/VT_POST_PARSED_OUTPUT_PUBLICATION_RERANK_2026-04-04.md)

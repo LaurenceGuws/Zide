@@ -1,5 +1,6 @@
 const std = @import("std");
 const publication_flow = @import("../publication/publication_flow.zig");
+const protocol_execution = @import("../session/protocol_execution.zig");
 
 pub fn publishPtyPollResult(self: anytype, had_data: bool, processed: usize, input_pressure: bool, queued_bytes: usize, parse_lock_hold_ns: i128, publish_lock_hold_ns: *i128, start_ms: i64) void {
     if (had_data or publication_flow.viewRefreshPending(self)) {
@@ -22,7 +23,8 @@ pub fn publishPtyPollResult(self: anytype, had_data: bool, processed: usize, inp
 
     self.session.runtime.io_mutex.lock();
     if (self.session.runtime.io_buffer.items.len > self.session.runtime.io_read_offset) {
-        publication_flow.markOutputPending(self);
+        var exec = protocol_execution.ProtocolExecution.init(self, &self.core);
+        exec.markOutputPending();
     }
     self.session.runtime.io_mutex.unlock();
 }

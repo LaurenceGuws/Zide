@@ -221,3 +221,23 @@ Current read:
 - publication is still a surviving execution face
 - but the active feed/output publication path is now materially narrower than
   the old sync-update-only baseline
+
+The parsed-output publication wave then tightened once more:
+
+- [io_threads.zig](/home/home/personal/zide/src/terminal/core/runtime/io_threads.zig)
+  no longer uses direct
+  [publication_flow.publishPendingOutputLocked(...)](/home/home/personal/zide/src/terminal/core/publication/publication_flow.zig)
+  for the idle publish path
+- [pty_poll_publication.zig](/home/home/personal/zide/src/terminal/core/runtime/pty_poll_publication.zig)
+  no longer uses direct
+  [publication_flow.markOutputPending(...)](/home/home/personal/zide/src/terminal/core/publication/publication_flow.zig)
+  when unread buffered IO remains
+
+That means the next surviving publication pressure is narrower again:
+
+- no longer broad parsed-output publication
+- now closer to pending-refresh / poll publication cadence
+
+See:
+
+- [VT_POST_PARSED_OUTPUT_PUBLICATION_RERANK_2026-04-04.md](/home/home/personal/zide/docs/review/VT_POST_PARSED_OUTPUT_PUBLICATION_RERANK_2026-04-04.md)

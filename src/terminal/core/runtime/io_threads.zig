@@ -108,7 +108,8 @@ pub fn parseThreadMain(session: anytype) void {
             if (session.session.control.parse_bytes_since_publish > 0 and pending_refresh == null and !session.core.sync_updates_active) {
                 const publish_lock_start_ns = std.time.nanoTimestamp();
                 session.session.control.state_mutex.lock();
-                publication_flow.publishPendingOutputLocked(session, session.core.history.scrollOffset(), "parse_thread_idle_publish");
+                var exec = protocol_execution.ProtocolExecution.init(session, &session.core);
+                exec.publishPendingOutput(session.core.history.scrollOffset(), "parse_thread_idle_publish");
                 session.session.control.state_mutex.unlock();
                 _ = std.time.nanoTimestamp() - publish_lock_start_ns;
                 session.session.control.parse_publishes_since_log += 1;
