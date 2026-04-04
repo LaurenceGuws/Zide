@@ -69,6 +69,35 @@ Follow this order for a semver prerelease:
 7. If needed, publish a docs-explorer Pages snapshot from the release branch,
    not from `main`.
 
+## Current macOS GL Checkpoint Lane
+
+The active macOS branch is allowed to produce a macOS-only prerelease on the
+current SDL/OpenGL path before the later Metal migration, but only as an honest
+checkpoint release.
+
+Current policy for that lane:
+
+- do not frame the macOS GL release as the long-term renderer direction
+- keep dependency truth on published package pins; do not release from sibling
+  path overrides
+- require native macOS validation for:
+  - `zig build`
+  - `zig build -Dmode=editor`
+  - `zig build -Dmode=terminal`
+  - app launch
+  - terminal shell startup
+  - resize/scale behavior
+  - basic editor/terminal interaction
+- define the staged macOS artifact set explicitly on the release branch before
+  publishing; do not assume the current Linux bundle layout applies unchanged
+
+Current staged macOS checkpoint artifact set:
+
+- `releases/<tag>/macos-arm64/dist/zide-ide-bundle-<version>-macos-arm64.tar.gz`
+- `releases/<tag>/macos-arm64/dist/zide-editor-bundle-<version>-macos-arm64.tar.gz`
+- `releases/<tag>/macos-arm64/dist/zide-terminal-bundle-<version>-macos-arm64.tar.gz`
+- `releases/<tag>/macos-arm64/dist/SHA256SUMS-macos-arm64.txt`
+
 ## Publish to GitHub Release
 
 Example with GitHub CLI:

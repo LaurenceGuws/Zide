@@ -9,10 +9,16 @@ const c = @cImport({
     @cInclude("fcntl.h");
     @cInclude("sys/ioctl.h");
     @cInclude("termios.h");
-    @cInclude("pty.h");
+    if (builtin.os.tag == .macos) {
+        @cInclude("util.h");
+    } else {
+        @cInclude("pty.h");
+    }
     @cInclude("stdlib.h");
     @cInclude("signal.h");
-    @cInclude("sys/prctl.h");
+    if (builtin.os.tag == .linux) {
+        @cInclude("sys/prctl.h");
+    }
 });
 
 pub const Pty = struct {
@@ -606,14 +612,14 @@ fn childProcess(slave_fd: posix.fd_t, shell: ?[:0]const u8) !void {
     }
 
     if (builtin.os.tag == .macos and shell == null) {
-        const argv = [_:null]?[*:0]const u8{
-            "/usr/bin/login",
-            "-pfl",
-            shell_path.ptr,
-        };
+        const shell_name = std.fs.path.basename(shell_path);
+        var login_argv0_buf: [std.fs.max_name_bytes:0]u8 = undefined;
+        const login_argv0 = try std.fmt.bufPrintZ(&login_argv0_buf, "-{s}", .{shell_name});
+        const argv = [_:null]?[*:0]const u8{login_argv0.ptr};
+        env_log.logf(.info, "spawn exec login shell={s} argv0={s}", .{ shell_path, login_argv0 });
         const envp: [*:null]const ?[*:0]const u8 = @ptrCast(@constCast(std.c.environ));
-        const exec_err = posix.execvpeZ(argv[0].?, &argv, envp);
-        env_log.logf(.warning, "spawn exec login failed shell={s} err={s}", .{ shell_path, @errorName(exec_err) });
+        const exec_err = posix.execvpeZ(shell_path.ptr, &argv, envp);
+        env_log.logf(.warning, "spawn exec login shell failed shell={s} err={s}", .{ shell_path, @errorName(exec_err) });
         posix.exit(127);
     }
 

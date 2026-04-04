@@ -181,6 +181,39 @@ Windows follow-up checklist for the next native Windows session:
 5. Update `app_architecture/windows/INSTALLATION.md` once the Windows-native
    script shape is settled.
 
+### macOS
+
+Target direction:
+
+- `smoke`
+  - keep `zig build gui-smokes-manual` as the cross-platform smoke entrypoint
+  - focused native compile truth should also keep:
+    - `zig build`
+    - `zig build -Dmode=editor`
+    - `zig build -Dmode=terminal`
+- `install-local`
+  - not yet formalized
+  - do not pretend a durable Finder/app-bundle/install contract exists until it
+    is actually implemented and validated
+- `stage-release`
+  - current active goal is a macOS-only SDL/OpenGL checkpoint release before
+    the Metal migration
+  - that lane must stay explicit:
+    - macOS-only prerelease is allowed
+    - it is a checkpoint on the current GL path, not the destination renderer
+      story
+    - dependency truth must stay on published package pins, not sibling-path
+      overrides
+    - the staged artifact shape must be defined on the release branch before
+      publishing
+
+Immediate macOS tooling rule:
+
+- do not invent a fake installer/bundle pipeline just to say macOS has one
+- first establish honest smoke and stage-release truth
+- only add install-local tooling once the native runtime path and artifact shape
+  are stable enough to deserve it
+
 ## Non-Goals
 
 - force identical script languages across OSes

@@ -31,6 +31,7 @@ Quick reading guide:
 ## Task tracking (source of truth)
 - `docs/todo/README.md` — active work-queue policy and ownership split.
   - `docs/todo/linux/implementation.md` — temporary Linux-native catch-up queue after the Win11 integration sprint.
+  - `docs/todo/macos/implementation.md` — first-class macOS implementation journey and milestone tracker.
   - `docs/todo/terminal/README.md` — terminal queue map and ownership split.
   - `docs/todo/ui/README.md` — UI queue map and execution lanes.
   - `docs/todo/editor/README.md` — editor queue map and execution lanes.
@@ -101,7 +102,7 @@ Quick reading guide:
 
 ## Setup + Usage
 - `README.md` — customer-facing overview, links, and quick-start pointers.
-- `docs/releases/v0.1.0-beta.4.md` — current beta checkpoint release notes.
+- `docs/releases/v0.1.0-beta.5.md` — current beta checkpoint release notes.
 - `tests/README.md` — repo-wide test layout policy.
 - `app_architecture/BOOTSTRAP.md` — dependencies, bootstrap, build, run, test.
 - `dev_references/README.md` — local development reference corpus contract and setup entrypoint.

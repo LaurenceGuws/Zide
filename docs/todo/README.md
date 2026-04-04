@@ -19,6 +19,7 @@ Do not use it for:
 Ownership split:
 
 - `docs/todo/linux/implementation.md` — temporary Linux-native catch-up coordination queue after the Win11 sprint
+- `docs/todo/macos/implementation.md` — first-class macOS implementation journey and milestone tracker
 - `docs/todo/` — active work queues and implementation plans
 - `app_architecture/` — current architecture, boundaries, and technical design
 - `docs/reference/` — contributor/operator-facing technical reference

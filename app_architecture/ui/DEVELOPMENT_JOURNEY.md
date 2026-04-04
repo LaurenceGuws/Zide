@@ -66,6 +66,9 @@ Non-negotiable rules
 - Any deviation must be recorded in app_architecture/DECISIONS.md with a concrete reason.
 - Renderer backend expansion is not active work. Current live runtime truth is
   SDL3 + OpenGL.
+- macOS-first-class reopening is now tracked explicitly in
+  `docs/todo/macos/implementation.md`; do not treat the current macOS
+  SDL/OpenGL build truth as the destination architecture.
 
 Architecture (modular, interface-driven)
 
@@ -176,8 +179,15 @@ Phase 2 - Windows 11 (SDL3 + OpenGL)
 - Validate input, DPI scaling, and swapchain behavior.
 
 Phase 3 - macOS
-- Re-rank backend work only when macOS becomes active product scope again.
-- Use CoreText only if required; otherwise keep FreeType/HarfBuzz.
+- macOS is now an explicit tracked product lane:
+  - use `docs/todo/macos/implementation.md`
+- target renderer direction:
+  - Metal + AppKit/Cocoa
+- strongest reference pressure:
+  - `dev_references/terminals/ghostty/macos/`
+- do not mistake the current SDL3 + OpenGL runtime truth for the intended
+  macOS product shape
+- use CoreText only if required; otherwise keep FreeType/HarfBuzz.
 
 Phase 4 - Android
 - Re-rank GLES backend work only when Android becomes active product scope.

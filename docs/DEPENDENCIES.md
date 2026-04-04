@@ -25,7 +25,6 @@ build integration, not about pretending the runtime is pure Zig.
 The practical split is now:
 
 - Zig package manager owns the primary third-party app/library stack
-- `zlua-portable` is currently pinned to release tag `v0.1.0-beta.1`
 - the OS still provides platform/runtime linkage and system facilities
 
 So on Linux/macOS, manually sourcing SDL3, Lua, FreeType, HarfBuzz, and
@@ -33,11 +32,11 @@ tree-sitter from the host package manager is no longer the normal path.
 
 ## Local Co-Development Override
 
-Normal `zide` builds no longer require a sibling `zlua-portable` checkout.
+Normal repo truth is now back on published pinned package dependencies,
+including `zlua-portable`.
 
-If you are developing both repos together, you may temporarily replace the
-pinned dependency with a local path dependency. That is a development override,
-not the release/default repo layout.
+For ordinary co-development, a sibling path override remains the intended
+development escape hatch.
 
 Recommended override shape:
 
@@ -114,6 +113,12 @@ brew install zig
 
 If extra macOS platform/toolchain requirements become necessary, update this
 doc instead of reviving stale "install every library manually" guidance.
+
+Current macOS GL bring-up note:
+
+- compile/build truth is now green on the active arm64 host
+- `zlua-portable` is back on a published pinned package path after the
+  `v0.1.0-beta.2` package fix
 
 ## Windows
 
