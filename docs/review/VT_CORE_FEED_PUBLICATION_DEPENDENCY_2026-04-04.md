@@ -78,3 +78,27 @@ Current judgment:
 - publication still narrowly beats the other feed faces
 - the next slice, if this front continues, is poll-time publish-or-refresh
   behavior
+
+## Post-Poll Rerank
+
+That last poll-time slice is now landed.
+
+From this baseline, publication/update reach no longer wins clearly enough to
+remain the default feed contradiction by inertia.
+
+Why:
+
+- parsed-output publication is grouped
+- pending-refresh cadence is grouped
+- poll-time publish-or-refresh decision is grouped
+- the remaining publication surface is now mostly broad capability still
+  carried by
+  [protocol_execution.zig](/home/home/personal/zide/src/terminal/core/session/protocol_execution.zig),
+  not another obvious caller-side choreography lie
+
+Current judgment:
+
+- stop publication slicing as the default feed front
+- return to the broader feed-execution contradiction from this cleaner
+  baseline
+- only reopen publication if one new exact feed-publication contract is named

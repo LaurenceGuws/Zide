@@ -565,6 +565,11 @@ Current full-scope read:
     `protocol_execution.zig` now owns the poll-time
     `shouldPublishPollUpdate(...)` decision
   - `pty_poll_publication.zig` no longer re-derives that branch itself
+  - post-poll rerank:
+    publication/update reach no longer wins clearly enough to stay the default
+    feed contradiction by inertia
+  - the next default pressure returns to the broader feed-execution front from
+    this cleaner baseline unless one new exact publication contract is named
 
 Current named category-1 contradiction:
 
