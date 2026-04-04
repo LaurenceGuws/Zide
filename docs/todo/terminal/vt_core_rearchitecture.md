@@ -2656,6 +2656,16 @@ Validation note, 2026-03-31:
 
 ## Current Review Scope
 
+- `docs/review/VT_CORE_MODE_STATE_OWNER_FRONT_2026-04-04.md`
+  Why: after the cursor/tab owner cut, the next honest `TerminalCore`
+  sufficiency contradiction was that terminal mode mutation/query truth still
+  lived in helper owners beside core.
+  Current read:
+  - terminal mode mutation and DECRQM terminal-mode snapshot truth now live on
+    `TerminalCore`
+  - helper-owned CSI terminal mode state is gone
+  - honest outer alt-screen effects remain outside this slice
+
 - `docs/review/VT_CORE_CURSOR_TAB_OWNER_FRONT_2026-04-04.md`
   Why: after the kitty-storage owner cut, the next honest `TerminalCore`
   sufficiency contradiction was that basic cursor/tab/margin semantics still

@@ -1,8 +1,8 @@
 const input_modes = @import("../core/input_modes.zig");
 const parser_csi = @import("../parser/csi.zig");
 const terminal_core_csi_input_modes = @import("../core/protocol/terminal_core_csi_input_modes.zig");
-const terminal_core_csi_modes = @import("../core/protocol/terminal_core_csi_modes.zig");
 const config = @import("../core/session/config.zig");
+const mode_effects = @import("../core/session/mode_effects.zig");
 const protocol_runtime = @import("../core/session/protocol_runtime.zig");
 
 pub fn applyModeMutation(
@@ -24,14 +24,29 @@ pub fn applyModeMutation(
 fn applyAnsiModeMutation(self: anytype, param_len: usize, params: [parser_csi.max_params]i32, enabled: bool) void {
     var idx: u8 = 0;
     while (idx < param_len and idx < params.len) : (idx += 1) {
-        _ = terminal_core_csi_modes.applyAnsiTerminalMode(self, params[idx], enabled);
+        _ = self.core.applyAnsiTerminalModeLocked(params[idx], enabled);
     }
 }
 
 fn applyPrivateModeMutation(self: anytype, param_len: usize, params: [parser_csi.max_params]i32, enabled: bool) void {
     var idx: u8 = 0;
     while (idx < param_len and idx < params.len) : (idx += 1) {
-        if (terminal_core_csi_modes.applyPrivateTerminalMode(self, params[idx], enabled)) continue;
+        if (self.core.applyPrivateTerminalModeLocked(params[idx], enabled)) continue;
+        switch (params[idx]) {
+            47 => {
+                if (enabled) mode_effects.enterAltScreen(self, false, false) else mode_effects.exitAltScreen(self, false);
+                continue;
+            },
+            1047 => {
+                if (enabled) mode_effects.enterAltScreen(self, true, false) else mode_effects.exitAltScreen(self, false);
+                continue;
+            },
+            1049 => {
+                if (enabled) mode_effects.enterAltScreen(self, true, true) else mode_effects.exitAltScreen(self, true);
+                continue;
+            },
+            else => {},
+        }
         if (terminal_core_csi_input_modes.applyPrivateInputMode(self, params[idx], enabled)) continue;
         if (protocol_runtime.applyCsiReportingMode(self, params[idx], enabled)) continue;
         switch (params[idx]) {

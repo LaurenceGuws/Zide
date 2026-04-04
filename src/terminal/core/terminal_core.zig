@@ -93,6 +93,22 @@ pub const TerminalCore = struct {
         progress: ProgressMetadata,
     };
 
+    pub const TerminalModeSnapshot = struct {
+        column_mode_132: bool,
+        screen_reverse: bool,
+        origin_mode: bool,
+        auto_wrap: bool,
+        cursor_blink: bool,
+        cursor_visible: bool,
+        reverse_wrap: bool,
+        left_right_margin_mode_69: bool,
+        alt_active: bool,
+        save_cursor_mode_1048: bool,
+        insert_mode: bool,
+        local_echo_mode_12: bool,
+        newline_mode: bool,
+    };
+
     pub const CellMetrics = struct {
         width: u16,
         height: u16,
@@ -558,6 +574,57 @@ pub const TerminalCore = struct {
 
     pub fn setCursorStyleLocked(self: *TerminalCore, mode: i32) void {
         self.activeScreen().setCursorStyle(mode);
+    }
+
+    pub fn applyAnsiTerminalModeLocked(self: *TerminalCore, mode: i32, enabled: bool) bool {
+        switch (mode) {
+            4 => self.activeScreen().setInsertMode(enabled),
+            12 => self.activeScreen().setLocalEchoMode12(enabled),
+            20 => self.activeScreen().setNewlineMode(enabled),
+            else => return false,
+        }
+        return true;
+    }
+
+    pub fn applyPrivateTerminalModeLocked(self: *TerminalCore, mode: i32, enabled: bool) bool {
+        switch (mode) {
+            5 => self.activeScreen().setScreenReverse(enabled),
+            6 => self.activeScreen().setOriginMode(enabled),
+            7 => self.activeScreen().setAutowrap(enabled),
+            12 => self.activeScreen().setCursorBlink(enabled),
+            25 => self.activeScreen().setCursorVisible(enabled),
+            45 => self.activeScreen().setReverseWrap(enabled),
+            69 => self.activeScreen().setLeftRightMarginMode69(enabled),
+            1048 => {
+                if (enabled) {
+                    self.saveCursorState();
+                } else {
+                    self.restoreCursorState();
+                }
+                self.activeScreen().setSaveCursorMode1048(enabled);
+            },
+            else => return false,
+        }
+        return true;
+    }
+
+    pub fn terminalModeSnapshot(self: *const TerminalCore) TerminalModeSnapshot {
+        const screen = self.activeScreenConst();
+        return .{
+            .column_mode_132 = self.column_mode_132,
+            .screen_reverse = screen.screen_reverse,
+            .origin_mode = screen.origin_mode,
+            .auto_wrap = screen.auto_wrap,
+            .cursor_blink = screen.cursor_style.blink,
+            .cursor_visible = screen.cursor_visible,
+            .reverse_wrap = screen.reverse_wrap,
+            .left_right_margin_mode_69 = screen.left_right_margin_mode_69,
+            .alt_active = self.active == .alt,
+            .save_cursor_mode_1048 = screen.save_cursor_mode_1048,
+            .insert_mode = screen.insert_mode,
+            .local_echo_mode_12 = screen.local_echo_mode_12,
+            .newline_mode = screen.newline_mode,
+        };
     }
 
     pub fn scrollbackOffset(self: *const TerminalCore) usize {
