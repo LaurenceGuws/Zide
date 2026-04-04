@@ -13,6 +13,7 @@ const terminal_core_key_dispatch = @import("terminal_core_key_dispatch.zig");
 const hyperlink_table = @import("hyperlink_table.zig");
 const session_host_types = @import("session/host_types.zig");
 const protocol_execution = @import("session/protocol_execution.zig");
+const terminal_core_kitty_storage = @import("terminal_core_kitty_storage.zig");
 
 const Screen = screen_mod.Screen;
 const Charset = parser_mod.Charset;
@@ -208,7 +209,7 @@ pub const TerminalCore = struct {
         };
     }
 
-    pub fn deinit(self: *TerminalCore, owner: anytype) void {
+    pub fn deinit(self: *TerminalCore) void {
         self.history.deinit();
         self.primary.deinit();
         self.alt.deinit();
@@ -228,8 +229,8 @@ pub const TerminalCore = struct {
             self.allocator.free(entry.value_ptr.*);
         }
         self.user_vars.deinit();
-        kitty_mod.deinitKittyState(owner, &self.kitty_primary);
-        kitty_mod.deinitKittyState(owner, &self.kitty_alt);
+        terminal_core_kitty_storage.deinitState(self, &self.kitty_primary);
+        terminal_core_kitty_storage.deinitState(self, &self.kitty_alt);
         for (self.hyperlink_table.items) |link| {
             self.allocator.free(link.uri);
         }
@@ -247,6 +248,14 @@ pub const TerminalCore = struct {
 
     pub fn currentCellMetrics(self: *const TerminalCore) CellMetrics {
         return self.cell_metrics;
+    }
+
+    pub fn clearActiveKittyImages(self: *TerminalCore) void {
+        terminal_core_kitty_storage.clearActive(self);
+    }
+
+    pub fn clearAllKittyImages(self: *TerminalCore) void {
+        terminal_core_kitty_storage.clearAll(self);
     }
 
     pub fn feedOutputBytesLocked(self: *TerminalCore, owner: anytype, bytes: []const u8) OutputFeedResult {
@@ -742,10 +751,6 @@ pub const TerminalCore = struct {
     }
 
     pub fn resetState(self: *TerminalCore) void {
-        const KittyOwner = struct {
-            allocator: std.mem.Allocator,
-            core: *TerminalCore,
-        };
         self.resetParserState();
         self.clearSavedCharsetState();
         self.primary.resetState();
@@ -753,10 +758,7 @@ pub const TerminalCore = struct {
         self.current_hyperlink_id = 0;
         self.primary.clear();
         self.alt.clear();
-        kitty_mod.clearKittyImages(KittyOwner{
-            .allocator = self.allocator,
-            .core = self,
-        });
+        self.clearActiveKittyImages();
         _ = self.clear_generation.fetchAdd(1, .acq_rel);
     }
 

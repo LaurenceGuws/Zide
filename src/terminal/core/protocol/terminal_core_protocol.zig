@@ -2,7 +2,6 @@ const std = @import("std");
 const terminal_core_mod = @import("../terminal_core.zig");
 const types = @import("../../model/types.zig");
 const hyperlink_table = @import("../hyperlink_table.zig");
-const kitty_mod = @import("../../kitty/graphics.zig");
 const scrolling_mod = @import("../scrolling.zig");
 const terminal_core_decrqss = @import("terminal_core_decrqss.zig");
 
@@ -15,7 +14,7 @@ pub fn appendHyperlink2048(self: anytype, uri: []const u8) ?u32 {
 }
 
 pub fn clearAllKittyImages(self: anytype) void {
-    kitty_mod.clearAllKittyImages(self);
+    self.core.clearAllKittyImages();
 }
 
 pub fn eraseDisplay(self: anytype, mode: i32) void {

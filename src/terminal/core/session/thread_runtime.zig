@@ -14,7 +14,7 @@ pub fn deinit(self: anytype) void {
     self.session.publication.render_caches[0].deinit(self.allocator);
     self.session.publication.render_caches[1].deinit(self.allocator);
     self.session.runtime.io_buffer.deinit(self.allocator);
-    self.core.deinit(self);
+    self.core.deinit();
     self.allocator.destroy(self);
 }
 

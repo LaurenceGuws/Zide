@@ -2656,6 +2656,18 @@ Validation note, 2026-03-31:
 
 ## Current Review Scope
 
+- `docs/review/VT_CORE_KITTY_STORAGE_OWNER_FRONT_2026-04-04.md`
+  Why: after the feed host-face stop-marker, the next honest owner-shaped
+  contradiction was kitty storage cleanup still depending on outer-shaped
+  helpers.
+  Current read:
+  - kitty storage clear/deinit now lives on direct core-owned cleanup under
+    `src/terminal/core/terminal_core_kitty_storage.zig`
+  - `TerminalCore.deinit(...)` is no longer owner-shaped
+  - alt-screen and reset-side kitty cleanup now read more like direct core
+    state cleanup than outer completion
+  - protocol/reply/runtime kitty behavior stays outside this slice
+
 - `docs/review/VT_WAR_4_SCOPE_2026-04-03.md`
   Why: the next scrutiny war needs a bounded scope before more code work.
   Current read:
