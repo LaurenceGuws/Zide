@@ -494,6 +494,11 @@ Current full-scope read:
     for alt-screen enter/exit transitions
   - `mode_effects.zig` now consumes explicit post-transition consequences
     instead of hard-coding the whole outer completion sequence inline
+  - post-alt rerank: the remaining snapshot/publication consequences now read
+    mostly honest as outer derived-state/presentation work, so this front is
+    near a stop-marker
+  - the next default pressure returns to broader `TerminalCore` sufficiency
+    unless one new exact mode/reset contradiction appears
 
 Current named category-1 contradiction:
 

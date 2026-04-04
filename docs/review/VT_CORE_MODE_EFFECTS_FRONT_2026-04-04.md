@@ -132,3 +132,30 @@ What remains now:
 
 - whether snapshot/publication consequences around mode transitions should stay
   as outer effects or want one narrower explicit contract
+
+## Post-Alt Rerank
+
+That remaining question now reads mostly honest.
+
+Why:
+
+- [input_modes.zig](/home/home/personal/zide/src/terminal/core/input_modes.zig)
+  `publishSnapshot(...)` is derived input/publication state, not terminal
+  mode truth
+- [presentation_feedback.zig](/home/home/personal/zide/src/terminal/core/publication/presentation_feedback.zig)
+  `noteAltExitPending(...)` is explicitly presentation feedback, not terminal
+  transition semantics
+
+So this front is near a real stop-marker:
+
+- erase-display semantics are core-owned with explicit consequences
+- reset semantics are more core-owned and no longer need outer owner shape for
+  kitty reset
+- alt-screen transitions now return explicit mode effects instead of relying on
+  hidden shell completion
+
+Current judgment:
+
+- do not keep stretching mode/reset just to chase one more outer consequence
+- the next default pressure returns to broader `TerminalCore` sufficiency
+  unless one new exact mode/reset contradiction appears
